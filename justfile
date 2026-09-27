@@ -6,9 +6,6 @@
 # `just --list` shows the recipes; the default is `build`.
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
-# Recipe parameters arrive as $1, $2, ... (without this just interpolates {{param}}
-# and passes nothing).
-set positional-arguments
 
 module := "github.com/dat267/pier"
 bin := "bin/pier"
@@ -170,90 +167,3 @@ sync:
 	if [[ "$ahead" != "0" ]]; then
 		echo "$ahead commit(s) not pushed yet: git push"
 	fi
-
-# Bump the newest tag and push it: pushing the tag is the release — the
-# android-release workflow builds the binaries and attaches them to a GitHub
-# release, which is what `pier update` installs. The tag message lists the commits
-# since the last tag, and the workflow publishes it as the release body.
-# Bump and push a release tag (major, minor or patch).
-release part:
-	#!/usr/bin/env bash
-	set -euo pipefail
-
-	# `set positional-arguments` (top of this file) is what puts the parameter in
-	# $1; without it just interpolates {{part}} into the body and passes nothing.
-	bump="${1:-}"
-	case "$bump" in
-	major|minor|patch) ;;
-	*) echo "release: expected major, minor or patch, got '${bump}'" >&2; exit 1 ;;
-	esac
-
-	if ! git rev-parse --git-dir >/dev/null 2>&1; then
-		echo "release: not a git repository" >&2
-		exit 1
-	fi
-	branch="$(git symbolic-ref -q --short HEAD || true)"
-	if [[ -z "$branch" ]]; then
-		echo "release: HEAD is detached; check out the branch to release" >&2
-		exit 1
-	fi
-	if [[ -n "$(git status --porcelain)" ]]; then
-		echo "release: the working tree has uncommitted changes; commit or stash them first" >&2
-		exit 1
-	fi
-
-	remote="${REMOTE:-origin}"
-	git fetch --quiet --tags "$remote"
-	if ! git rev-parse --verify --quiet "$remote/$branch" >/dev/null; then
-		echo "release: $remote/$branch does not exist; push the branch first" >&2
-		exit 1
-	fi
-	if ! git merge-base --is-ancestor HEAD "$remote/$branch"; then
-		echo "release: HEAD is not pushed to $remote/$branch; push it first" >&2
-		exit 1
-	fi
-
-	# The newest version tag; a repository with none starts from v0.0.0.
-	latest="$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || echo v0.0.0)"
-	version="${latest#v}"
-	IFS=. read -r major minor patch <<<"$version"
-	minor="${minor:-0}"
-	patch="${patch:-0}"
-	if ! [[ "$major" =~ ^[0-9]+$ && "$minor" =~ ^[0-9]+$ && "$patch" =~ ^[0-9]+$ ]]; then
-		echo "release: cannot read $latest as major.minor.patch" >&2
-		exit 1
-	fi
-	case "$bump" in
-	major) major=$((major + 1)); minor=0; patch=0 ;;
-	minor) minor=$((minor + 1)); patch=0 ;;
-	patch) patch=$((patch + 1)) ;;
-	esac
-	next="v$major.$minor.$patch"
-	if git rev-parse --verify --quiet "refs/tags/$next" >/dev/null; then
-		echo "release: $next already exists" >&2
-		exit 1
-	fi
-
-	# The tag message becomes the release body, so it lists what is in the release.
-	if git rev-parse --verify --quiet "refs/tags/$latest" >/dev/null; then
-		range="$latest..HEAD"
-	else
-		range="HEAD"
-	fi
-	notes="$(git log --oneline --no-decorate $range | sed 's/^[0-9a-f]* //')"
-	message="pier $next"
-	if [[ -n "$notes" ]]; then
-		message="$message"$'\n\n'"$notes"
-	fi
-
-	git tag -a "$next" -m "$message"
-	git push "$remote" "$next"
-	echo "released $next (was $latest)"
-
-	# The release page, derived from the remote so a fork prints its own.
-	slug="$(git remote get-url "$remote")"
-	slug="${slug%.git}"
-	slug="${slug#git@github.com:}"
-	slug="${slug#https://github.com/}"
-	slug="${slug#ssh://git@github.com/}"
-	echo "binaries: https://github.com/$slug/releases/tag/$next"
