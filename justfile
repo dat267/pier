@@ -10,11 +10,13 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 module := "github.com/dat267/pier"
 bin := "bin/pier"
 
-# The CLI prints this for --version and uses it for changelog comparisons, so it
-# is left at the source default unless you pass VERSION — either way works:
-# `just VERSION=1.2.3 install` or `VERSION=1.2.3 just install`. The release
-# workflow stamps it the same way (coding.Version).
-VERSION := env_var_or_default("VERSION", "")
+# The CLI prints this for --version, so a local build names the commit it came from
+# (`git describe`; the port carries no tags, so that is the short SHA) instead of the
+# source default 0.0.0, which cannot answer "which build am I running?". VERSION
+# overrides it as before: `just VERSION=1.2.3 install`. A checkout without git (a
+# tarball) yields an empty version and falls back to the source default, and the
+# release workflow passes its own (android-release.yml stamps the tag or the SHA).
+VERSION := env_var_or_default("VERSION", `git describe --tags --always --dirty 2>/dev/null || true`)
 
 # Pure Go: no cgo anywhere in the port, and the release workflow builds the same
 # way (GOOS=android CGO_ENABLED=0).
