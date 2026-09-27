@@ -25,11 +25,12 @@ import (
 // Divergences: the collaborators are injected function values (D124); the
 // extension/resource seams stay out of scope (D41).
 
-// LatestRelease is the new-version notification payload. It carries a version
-// and nothing else: the module proxy this port checks reports only that, while
-// upstream's feed also carries release notes (D41).
+// LatestRelease is the new-version notification payload. Upstream's feed carries
+// release notes, which its card does not print either — it links to them — so the
+// port carries the release page URL next to the version (D174).
 type LatestRelease struct {
 	Version string
+	URL     string
 }
 
 // RunWiring drives init and the main loop.
@@ -203,11 +204,11 @@ func (w *RunWiring) ShowChatWarning(message string) {
 	w.requestRender()
 }
 
-// upgradeCommand is how this binary is upgraded, for the update card. Upstream
-// says `<app> update`, which is its package manager; the port has neither a
-// package manager nor an update command (D41), so the card names the install
-// path this module actually uses.
-const upgradeCommand = "go install github.com/dat267/pier@latest"
+// upgradeCommand is how this binary is upgraded, for the update card. Upstream's
+// card says `<app> update` and its command runs the package manager; the port has
+// that command now, installing the release asset from GitHub instead (D174), so
+// the card uses upstream's wording rather than naming `go install`.
+const upgradeCommand = "pier update"
 
 // ShowNewVersionNotification renders the update card.
 func (w *RunWiring) ShowNewVersionNotification(release LatestRelease, hyperlinks bool) {
@@ -215,12 +216,15 @@ func (w *RunWiring) ShowNewVersionNotification(release LatestRelease, hyperlinks
 		return
 	}
 	theme := ActiveTheme()
-	// Two lines, unlike upstream's one: the install path is longer than
-	// "<app> update", and a card is truncated to the terminal width.
 	action := theme.Fg("accent", upgradeCommand)
-	updateInstruction := theme.Fg("muted", "New version "+release.Version+" is available.") + "\n" +
-		theme.Fg("muted", "Upgrade with ") + action
-	changelogURL := "https://pi.dev/changelog"
+	updateInstruction := theme.Fg("muted", "New version "+release.Version+" is available. Run ") + action
+	// The release page, not upstream's pi.dev changelog: the notes that matter
+	// are this module's releases (D174). A payload without a page (the check
+	// always carries one) falls back to the release list.
+	changelogURL := release.URL
+	if changelogURL == "" {
+		changelogURL = coding.PortReleasesPage
+	}
 	changelogLink := theme.Fg("accent", changelogURL)
 	if hyperlinks {
 		changelogLink = tui.Hyperlink(theme.Fg("accent", changelogURL), changelogURL)
@@ -983,7 +987,7 @@ func versionNotification(release *coding.LatestRelease) (*LatestRelease, bool) {
 	if release == nil {
 		return nil, false
 	}
-	return &LatestRelease{Version: release.Version}, true
+	return &LatestRelease{Version: release.Version, URL: release.URL}, true
 }
 
 // stallLogThreshold defaults to 100ms so a freeze is captured even when the

@@ -681,3 +681,22 @@ only as the code comment that introduced them. The range is **D1–D173**.
   through the constructor so its shape matches upstream's; no caller changed.
   The rendered frame is pinned by the `m status compaction` row of
   `coding/interactive/testdata/message_golden.txt`.
+
+- D174 — **the update check reads GitHub releases, and `pier update` installs the
+  release asset.** Upstream's card says `<app> update`, and that command runs its
+  package manager (updating pi and its packages); the port has no package manager
+  (D41), so the check reads `api.github.com/repos/dat267/pier/releases/latest` and
+  `pier update` installs the `pier-<goos>-<goarch>` asset attached by
+  android-release.yml, verifying it against the `.sha256` beside it before
+  replacing the running binary (on Windows the running image is moved aside first,
+  which upstream calls its self-update quarantine). Three consequences worth
+  recording: the module proxy is no longer consulted, so nothing depends on the
+  port being published to proxy.golang.org, and the card names `pier update` and
+  links this module's release page instead of naming `go install` and pi.dev's
+  changelog; a build whose version cannot be ordered against a tag — the commit
+  hash `just install` stamps, or the unstamped 0.0.0 default — gets no card at
+  all, because upstream's `isNewerPackageVersion` falls back to string inequality
+  when a side is not semver, which the port can reach and upstream cannot (its
+  current version is always package.json's), so every source build would read as
+  out of date forever; and a release asset arrives without its executable bit,
+  which the update has to set.

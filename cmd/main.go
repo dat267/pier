@@ -51,6 +51,14 @@ func Execute() {
 		}
 		return
 	}
+	// `pier update` installs the newest release binary (D174). It runs off argv
+	// like `auth`: nothing needs to boot to replace this binary.
+	if handled, code := coding.RunUpdateCommand(appName, os.Args[1:], os.Stdout, os.Stderr); handled {
+		if code != 0 {
+			os.Exit(code)
+		}
+		return
+	}
 	// Startup timing instrumentation (upstream's resetTimings + time("parseArgs")
 	// at the top of main). PI_TIMING=1 makes the boot's cost visible, which the
 	// UI-loop stall log cannot see; there is no work when it is off.

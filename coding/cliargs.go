@@ -369,7 +369,8 @@ func PrintHelpNamed(appName string) string {
 	builder.WriteString("Usage:\n  " + appName + " [options] [--] [@files...] [messages...]\n\n")
 	builder.WriteString("Commands:\n")
 	builder.WriteString("  " + appName + " auth <command>            Print credentials or check provider readiness\n")
-	builder.WriteString("  " + appName + " auth --help              Show help for auth commands\n\n")
+	builder.WriteString("  " + appName + " auth --help              Show help for auth commands\n")
+	builder.WriteString("  " + appName + " update                   Install the newest release binary\n\n")
 	builder.WriteString("Options:\n")
 	for _, line := range helpOptionLines() {
 		builder.WriteString(line + "\n")

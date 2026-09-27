@@ -13,19 +13,26 @@ import (
 // Port of utils/version-check.ts, including the semver `valid`/`compare`
 // subset the release check needs (the Go port has no semver dependency).
 
-// PortReleaseURL is where this module's own releases are published: the Go
-// module proxy, which is what `go install github.com/dat267/pier@latest`
-// resolves. Upstream asks pi's release feed (utils/version-check.ts), whose
-// versions are pi's, not this port's.
-const PortReleaseURL = "https://proxy.golang.org/github.com/dat267/pier/@latest"
+// PortReleaseURL is where this module's own releases are published: GitHub
+// releases, whose assets are what `pier update` installs (the android-release
+// workflow attaches pier-<goos>-<goarch> and its sha256). Upstream asks pi's
+// release feed (utils/version-check.ts), whose versions are pi's, not this
+// port's. The Go module proxy is deliberately not consulted, so nothing here
+// depends on the port being published to proxy.golang.org.
+const PortReleaseURL = "https://api.github.com/repos/dat267/pier/releases/latest"
+
+// PortReleasesPage is the human-facing release list, used when a release payload
+// carries no page URL of its own.
+const PortReleasesPage = "https://github.com/dat267/pier/releases"
 
 // DefaultVersionCheckTimeoutMS bounds the version request.
 const DefaultVersionCheckTimeoutMS int64 = 10_000
 
-// LatestRelease is the published release info. The module proxy carries only a
-// version (no changelog note, unlike upstream's feed).
+// LatestRelease is the published release info. Upstream's feed carries notes as
+// well; a GitHub release carries the page URL of those notes instead.
 type LatestRelease struct {
 	Version string
+	URL     string
 }
 
 // ComparePackageVersions compares two semver strings; ok is false when either
@@ -257,16 +264,21 @@ func getLatestPortReleaseFrom(ctx context.Context, url, currentVersion string, c
 		return nil, err
 	}
 	var payload struct {
-		Version any `json:"Version"`
+		TagName any `json:"tag_name"`
+		HTMLURL any `json:"html_url"`
 	}
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return nil, err
 	}
-	version, ok := payload.Version.(string)
+	version, ok := payload.TagName.(string)
 	if !ok || strings.TrimSpace(version) == "" {
 		return nil, nil
 	}
-	return &LatestRelease{Version: strings.TrimSpace(version)}, nil
+	release := &LatestRelease{Version: strings.TrimSpace(version)}
+	if page, ok := payload.HTMLURL.(string); ok {
+		release.URL = strings.TrimSpace(page)
+	}
+	return release, nil
 }
 
 // checkForLatestPortReleaseFrom is the check over an explicit endpoint, so a
@@ -276,10 +288,28 @@ func checkForLatestPortReleaseFrom(ctx context.Context, url, currentVersion stri
 	if err != nil || release == nil {
 		return nil
 	}
+	if !isComparableVersion(currentVersion) {
+		return nil
+	}
 	if IsNewerPackageVersion(release.Version, currentVersion) {
 		return release
 	}
 	return nil
+}
+
+// isComparableVersion reports whether a running version can be ordered against a
+// release tag. Two cases cannot, and both must stay silent rather than notify:
+// a version that is not semver at all (a commit hash, which `just install`
+// stamps and which IsNewerPackageVersion would then compare as a string — the
+// inequality would read as "newer" forever), and the unstamped default, which
+// means "no version stamped" and sorts below every real release.
+func isComparableVersion(version string) bool {
+	trimmed := strings.TrimSpace(version)
+	if trimmed == "" || trimmed == "0.0.0" {
+		return false
+	}
+	_, ok := ComparePackageVersions(trimmed, trimmed)
+	return ok
 }
 
 // CheckForLatestPortRelease returns a newer release of this module, or nil

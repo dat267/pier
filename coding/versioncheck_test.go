@@ -275,7 +275,7 @@ func TestSemverComparison(t *testing.T) {
 
 func TestPortReleaseCheck(t *testing.T) {
 	var payload atomic.Value
-	payload.Store(`{"Version":"v1.2.4","Time":"2026-09-24T07:02:54Z","Origin":{"VCS":"git"}}`)
+	payload.Store(`{"tag_name":"v1.2.4","html_url":"https://github.com/dat267/pier/releases/tag/v1.2.4"}`)
 	var seenAgent string
 	var seenAccept string
 	var mu sync.Mutex
@@ -291,16 +291,19 @@ func TestPortReleaseCheck(t *testing.T) {
 	}))
 	defer server.Close()
 
-	// The URL is fixed to this module's proxy path; exercise the parsing through
-	// a local server with the explicit helper.
+	// The URL is fixed to this module's release endpoint; exercise the parsing
+	// through a local server with the explicit helper.
 	release, err := getLatestPortReleaseFrom(context.Background(), server.URL, "1.0.0", server.Client())
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The proxy reports Go module versions, so a tag keeps its "v" prefix, which
-	// the semver subset now accepts like npm's `valid`.
+	// A release tag keeps its "v" prefix, which the semver subset accepts like
+	// npm's `valid`; the release page travels with it for the update card.
 	if release == nil || release.Version != "v1.2.4" {
 		t.Fatalf("release = %+v", release)
+	}
+	if release.URL != "https://github.com/dat267/pier/releases/tag/v1.2.4" {
+		t.Fatalf("release URL = %q", release.URL)
 	}
 	mu.Lock()
 	agent, accept := seenAgent, seenAccept
@@ -309,9 +312,7 @@ func TestPortReleaseCheck(t *testing.T) {
 		t.Fatalf("headers = %q %q", agent, accept)
 	}
 
-	// Only a strictly newer version is a newer release; the port's built-in
-	// version is 0.0.0 unless stamped, and a pseudo-version of 0.0.0 sorts older
-	// than it, so an unstamped build is not nagged.
+	// Only a strictly newer version is a newer release.
 	if !IsNewerPackageVersion("v1.2.4", "1.0.0") {
 		t.Fatal("v1.2.4 must be newer than 1.0.0")
 	}
@@ -324,16 +325,28 @@ func TestPortReleaseCheck(t *testing.T) {
 	if release := checkForLatestPortReleaseFrom(context.Background(), server.URL, "1.0.0", server.Client()); release == nil {
 		t.Fatal("1.0.0 < v1.2.4 must notify")
 	}
+	if release := checkForLatestPortReleaseFrom(context.Background(), server.URL, "v1.2.3", server.Client()); release == nil {
+		t.Fatal("a release build behind the tag must notify")
+	}
+
+	// A build that cannot be ordered stays silent: the commit hash `just install`
+	// stamps (its string inequality used to read as newer, so the card appeared
+	// for every source build) and the unstamped 0.0.0 default.
+	for _, current := range []string{"87bc513", "87bc513-dirty", "0.0.0", "", "not-a-version"} {
+		if release := checkForLatestPortReleaseFrom(context.Background(), server.URL, current, server.Client()); release != nil {
+			t.Fatalf("current %q must not notify: %+v", current, release)
+		}
+	}
 
 	// Missing or non-string versions yield nothing.
-	for _, body := range []string{`{"Version":""}`, `{"Version":42}`, `{}`, `{"Version":"  "}`} {
+	for _, body := range []string{`{"tag_name":""}`, `{"tag_name":42}`, `{}`, `{"tag_name":"  "}`} {
 		payload.Store(body)
 		release, err := getLatestPortReleaseFrom(context.Background(), server.URL, "1.0.0", server.Client())
 		if err != nil || release != nil {
 			t.Fatalf("body %s: release = %+v err = %v", body, release, err)
 		}
 	}
-	// A module that is not published answers 404, which is not an error.
+	// A repository with no release answers 404, which is not an error.
 	missing := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(http.StatusNotFound)
 	}))

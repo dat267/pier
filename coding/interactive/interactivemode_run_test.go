@@ -63,33 +63,38 @@ func TestRunChatStatuses(t *testing.T) {
 
 // TestRunNotifications covers the update cards.
 func TestRunNotifications(t *testing.T) {
+	const page = "https://github.com/dat267/pier/releases/tag/v1.1.0"
 	wiring, _ := newRunTestWiring(t)
-	wiring.ShowNewVersionNotification(LatestRelease{Version: "v1.1.0"}, false)
+	wiring.ShowNewVersionNotification(LatestRelease{Version: "v1.1.0", URL: page}, false)
 	lines := strings.Join(wiring.Chat.Render(80), "\n")
 	if !strings.Contains(lines, "Update Available") || !strings.Contains(lines, "New version v1.1.0 is available") ||
-		!strings.Contains(lines, "https://pi.dev/changelog") {
+		!strings.Contains(lines, page) {
 		t.Fatalf("notification = %q", lines)
 	}
 
-	// Hyperlinks wrap the changelog URL.
+	// Hyperlinks wrap the release page, which is where the notes live.
 	linked, _ := newRunTestWiring(t)
-	linked.ShowNewVersionNotification(LatestRelease{Version: "1.1.0"}, true)
-	if got := strings.Join(linked.Chat.Render(80), "\n"); !strings.Contains(got, "\x1b]8;;https://pi.dev/changelog") {
+	linked.ShowNewVersionNotification(LatestRelease{Version: "1.1.0", URL: page}, true)
+	if got := strings.Join(linked.Chat.Render(80), "\n"); !strings.Contains(got, "\x1b]8;;"+page) {
 		t.Fatalf("hyperlink missing: %q", got)
 	}
 
-	// The card used to tell the user to run `<app> update`: upstream's command,
-	// which ships with its package manager. The port has no package manager and
-	// no update command (D41), so the card names the way this module is actually
-	// installed instead.
+	// The card names `<app> update`, as upstream's does: the port has that
+	// command, and it installs the release asset instead of running a package
+	// manager (D174). A payload with no page URL falls back to the release list.
 	version, _ := newRunTestWiring(t)
 	version.ShowNewVersionNotification(LatestRelease{Version: "1.1.0"}, false)
 	got := strings.Join(version.Chat.Render(80), "\n")
-	if strings.Contains(got, version.AppName+" update") {
-		t.Fatalf("version card instructs a command the port does not have: %q", got)
+	// The command is its own accent-coloured span, so the muted prefix and the
+	// command are asserted separately.
+	if !strings.Contains(got, "is available. Run ") || !strings.Contains(got, "pier update") {
+		t.Fatalf("version card does not name the update command: %q", got)
 	}
-	if !strings.Contains(got, "go install github.com/dat267/pier@latest") {
-		t.Fatalf("version card lost its upgrade path: %q", got)
+	if !strings.Contains(got, "https://github.com/dat267/pier/releases") {
+		t.Fatalf("version card does not link this module's releases: %q", got)
+	}
+	if strings.Contains(got, "pi.dev") {
+		t.Fatalf("version card links upstream's changelog: %q", got)
 	}
 }
 
