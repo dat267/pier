@@ -25,10 +25,10 @@ func (s *AgentSession) Reload() {
 	ai.ResetAPIProviders()
 	s.reloadResources()
 	s.RebuildSystemPrompt(s.ActiveToolNames())
-	// modeldefault (D151): a reload is a session start too, so the settings
+	// defaultsync (D151): a reload is a session start too, so the settings
 	// default reasserts itself over any model the session picked earlier.
-	if !s.modelDefaultSuspended() {
-		s.recordModelDefaultSync(s.SyncSessionModelToDefault(context.Background(), "reload"))
+	if !s.defaultSyncSuspended() {
+		s.recordDefaultSync(s.SyncSessionModelToDefault(context.Background(), "reload"))
 	}
 }
 

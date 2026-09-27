@@ -613,10 +613,10 @@ func (a *App) Run(ctx context.Context) {
 		a.startup.SetContext(ctx)
 	}
 	a.Init(ctx)
-	// modeldefault (D151): the session-start sync runs during creation, so its
+	// defaultsync (D151): the session-start sync runs during creation, so its
 	// notice is read back from the session and reported with the other startup
 	// diagnostics.
-	modelDefault := a.session.LastModelDefaultSync()
+	defaultSync := a.session.LastDefaultSync()
 	a.runner.Run(ctx, InitOptions{
 		ScopedModels:    a.session.ScopedModels(),
 		QuietStartup:    a.options.QuietStartup,
@@ -630,8 +630,8 @@ func (a *App) Run(ctx context.Context) {
 		InitialMessage:       a.options.InitialMessage,
 		InitialMessages:      a.options.InitialMessages,
 		InitialImages:        a.options.InitialImages,
-		ModelDefaultMessage:  modelDefault.Message,
-		ModelDefaultWarning:  modelDefault.Warning,
+		DefaultSyncMessage:   defaultSync.Message,
+		DefaultSyncWarning:   defaultSync.Warning,
 	})
 	a.Close()
 }

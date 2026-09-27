@@ -8,7 +8,7 @@ import (
 	"github.com/dat267/pier/ai"
 )
 
-// Port of the user's modeldefault extension (divergence D151).
+// Port of the user's defaultsync extension (divergence D151).
 //
 // The extension's tests are the spec: every session start syncs the session
 // onto the settings default model; a session already on the default is left
@@ -17,7 +17,7 @@ import (
 // availability synchronously (queueAvailabilityRefresh runs inline), so a
 // single attempt carries the same meaning and the warnings are the same.
 
-func modelDefaultSession(t *testing.T, runtime *ModelRuntime, settings *SettingsManager, current *ai.Model) *AgentSession {
+func defaultSyncSession(t *testing.T, runtime *ModelRuntime, settings *SettingsManager, current *ai.Model) *AgentSession {
 	t.Helper()
 	session, err := NewAgentSession(&SessionConfig{
 		Cwd:      t.TempDir(),
@@ -35,9 +35,9 @@ func modelDefaultSession(t *testing.T, runtime *ModelRuntime, settings *Settings
 	return session
 }
 
-// configuredModelDefaultRuntime builds a runtime with two stub providers and a
+// configuredDefaultSyncRuntime builds a runtime with two stub providers and a
 // key on alpha only, or on both when both are asked for.
-func configuredModelDefaultRuntime(t *testing.T, configure ...string) *ModelRuntime {
+func configuredDefaultSyncRuntime(t *testing.T, configure ...string) *ModelRuntime {
 	t.Helper()
 	runtime := runtimeWithProviders(t, stubProvider("alpha"), stubProvider("beta"))
 	for _, id := range configure {
@@ -58,32 +58,32 @@ func settingsWithDefault(t *testing.T, provider, model string) *SettingsManager 
 	return settings
 }
 
-func TestReadModelDefaultRef(t *testing.T) {
+func TestReadDefaultModelRef(t *testing.T) {
 	settings := settingsWithDefault(t, "alpha", "alpha-model")
-	ref := ReadModelDefaultRef(settings)
+	ref := ReadDefaultModelRef(settings)
 	if ref == nil || ref.Provider != "alpha" || ref.ID != "alpha-model" {
 		t.Fatalf("ref = %+v", ref)
 	}
 
 	// Either half missing (or blank) means no default at all.
 	blank := settingsWithDefault(t, "alpha", "")
-	if ref := ReadModelDefaultRef(blank); ref != nil {
+	if ref := ReadDefaultModelRef(blank); ref != nil {
 		t.Errorf("ref = %+v, want nil when the model id is empty", ref)
 	}
 	empty := settingsWithDefault(t, "", "")
-	if ref := ReadModelDefaultRef(empty); ref != nil {
+	if ref := ReadDefaultModelRef(empty); ref != nil {
 		t.Errorf("ref = %+v, want nil when no default is set", ref)
 	}
-	if ref := ReadModelDefaultRef(nil); ref != nil {
+	if ref := ReadDefaultModelRef(nil); ref != nil {
 		t.Errorf("ref = %+v, want nil for a nil settings manager", ref)
 	}
 }
 
-func TestModelDefaultSyncSwitchesToTheDefault(t *testing.T) {
-	runtime := configuredModelDefaultRuntime(t, "alpha")
+func TestDefaultSyncSwitchesToTheDefault(t *testing.T) {
+	runtime := configuredDefaultSyncRuntime(t, "alpha")
 	settings := settingsWithDefault(t, "alpha", "alpha-model")
 	current := runtime.GetModel("beta", "beta-model")
-	session := modelDefaultSession(t, runtime, settings, current)
+	session := defaultSyncSession(t, runtime, settings, current)
 
 	result := session.SyncSessionModelToDefault(context.Background(), "session start")
 
@@ -108,10 +108,10 @@ func TestModelDefaultSyncSwitchesToTheDefault(t *testing.T) {
 	}
 }
 
-func TestModelDefaultSyncLeavesTheDefaultAlone(t *testing.T) {
-	runtime := configuredModelDefaultRuntime(t, "alpha")
+func TestDefaultSyncLeavesTheDefaultAlone(t *testing.T) {
+	runtime := configuredDefaultSyncRuntime(t, "alpha")
 	settings := settingsWithDefault(t, "alpha", "alpha-model")
-	session := modelDefaultSession(t, runtime, settings, runtime.GetModel("alpha", "alpha-model"))
+	session := defaultSyncSession(t, runtime, settings, runtime.GetModel("alpha", "alpha-model"))
 
 	result := session.SyncSessionModelToDefault(context.Background(), "session start")
 
@@ -120,10 +120,10 @@ func TestModelDefaultSyncLeavesTheDefaultAlone(t *testing.T) {
 	}
 }
 
-func TestModelDefaultSyncDoesNothingWithoutADefault(t *testing.T) {
-	runtime := configuredModelDefaultRuntime(t, "alpha", "beta")
+func TestDefaultSyncDoesNothingWithoutADefault(t *testing.T) {
+	runtime := configuredDefaultSyncRuntime(t, "alpha", "beta")
 	settings := settingsWithDefault(t, "", "")
-	session := modelDefaultSession(t, runtime, settings, runtime.GetModel("beta", "beta-model"))
+	session := defaultSyncSession(t, runtime, settings, runtime.GetModel("beta", "beta-model"))
 
 	result := session.SyncSessionModelToDefault(context.Background(), "session start")
 
@@ -135,10 +135,10 @@ func TestModelDefaultSyncDoesNothingWithoutADefault(t *testing.T) {
 	}
 }
 
-func TestModelDefaultSyncWarnsWhenTheModelIsNotInTheCatalog(t *testing.T) {
-	runtime := configuredModelDefaultRuntime(t, "alpha", "beta")
+func TestDefaultSyncWarnsWhenTheModelIsNotInTheCatalog(t *testing.T) {
+	runtime := configuredDefaultSyncRuntime(t, "alpha", "beta")
 	settings := settingsWithDefault(t, "alpha", "ghost-model")
-	session := modelDefaultSession(t, runtime, settings, runtime.GetModel("beta", "beta-model"))
+	session := defaultSyncSession(t, runtime, settings, runtime.GetModel("beta", "beta-model"))
 
 	result := session.SyncSessionModelToDefault(context.Background(), "session start")
 
@@ -161,11 +161,11 @@ func TestModelDefaultSyncWarnsWhenTheModelIsNotInTheCatalog(t *testing.T) {
 	}
 }
 
-func TestModelDefaultSyncWarnsWhenTheProviderHasNoAuth(t *testing.T) {
+func TestDefaultSyncWarnsWhenTheProviderHasNoAuth(t *testing.T) {
 	// alpha is in the catalog but has no configured auth, so setModel refuses.
-	runtime := configuredModelDefaultRuntime(t, "beta")
+	runtime := configuredDefaultSyncRuntime(t, "beta")
 	settings := settingsWithDefault(t, "alpha", "alpha-model")
-	session := modelDefaultSession(t, runtime, settings, runtime.GetModel("beta", "beta-model"))
+	session := defaultSyncSession(t, runtime, settings, runtime.GetModel("beta", "beta-model"))
 
 	result := session.SyncSessionModelToDefault(context.Background(), "session start")
 
@@ -185,10 +185,10 @@ func TestModelDefaultSyncWarnsWhenTheProviderHasNoAuth(t *testing.T) {
 
 // A manual pick persisted in the session from an earlier run must not survive
 // the next start: the extension has no per-session claim, so the sync wins.
-func TestModelDefaultSyncOverridesAStaleSessionPick(t *testing.T) {
-	runtime := configuredModelDefaultRuntime(t, "alpha", "beta")
+func TestDefaultSyncOverridesAStaleSessionPick(t *testing.T) {
+	runtime := configuredDefaultSyncRuntime(t, "alpha", "beta")
 	settings := settingsWithDefault(t, "alpha", "alpha-model")
-	session := modelDefaultSession(t, runtime, settings, runtime.GetModel("beta", "beta-model"))
+	session := defaultSyncSession(t, runtime, settings, runtime.GetModel("beta", "beta-model"))
 
 	result := session.SyncSessionModelToDefault(context.Background(), "resume")
 
@@ -198,10 +198,10 @@ func TestModelDefaultSyncOverridesAStaleSessionPick(t *testing.T) {
 }
 
 // The switch is recorded in the session like any other model change.
-func TestModelDefaultSyncRecordsTheModelChange(t *testing.T) {
-	runtime := configuredModelDefaultRuntime(t, "alpha")
+func TestDefaultSyncRecordsTheModelChange(t *testing.T) {
+	runtime := configuredDefaultSyncRuntime(t, "alpha")
 	settings := settingsWithDefault(t, "alpha", "alpha-model")
-	session := modelDefaultSession(t, runtime, settings, runtime.GetModel("beta", "beta-model"))
+	session := defaultSyncSession(t, runtime, settings, runtime.GetModel("beta", "beta-model"))
 
 	if result := session.SyncSessionModelToDefault(context.Background(), "session start"); !result.Applied {
 		t.Fatalf("result = %+v, want the switch applied", result)
@@ -221,7 +221,7 @@ func TestModelDefaultSyncRecordsTheModelChange(t *testing.T) {
 
 // The wiring: session creation runs the sync, and an explicit CLI model
 // override is not overruled by it.
-func newModelDefaultCreateOptions(t *testing.T, runtime *ModelRuntime, settings *SettingsManager, model *ai.Model) *CreateAgentSessionOptions {
+func newDefaultSyncCreateOptions(t *testing.T, runtime *ModelRuntime, settings *SettingsManager, model *ai.Model) *CreateAgentSessionOptions {
 	t.Helper()
 	return &CreateAgentSessionOptions{
 		Cwd:             t.TempDir(),
@@ -245,13 +245,13 @@ func resumedSessionManager(t *testing.T, provider, model string) *SessionManager
 
 func TestCreateAgentSessionSyncsToTheDefault(t *testing.T) {
 	tempAgentDir(t)
-	runtime := configuredModelDefaultRuntime(t, "alpha", "beta")
+	runtime := configuredDefaultSyncRuntime(t, "alpha", "beta")
 	settings := settingsWithDefault(t, "alpha", "alpha-model")
 
 	// A resumed session on beta: without the sync it would keep beta forever,
 	// because pi only consults the settings default for sessions that never
 	// chose.
-	options := newModelDefaultCreateOptions(t, runtime, settings, nil)
+	options := newDefaultSyncCreateOptions(t, runtime, settings, nil)
 	options.SessionManager = resumedSessionManager(t, "beta", "beta-model")
 
 	created, err := CreateAgentSession(context.Background(), options)
@@ -262,22 +262,22 @@ func TestCreateAgentSessionSyncsToTheDefault(t *testing.T) {
 	if created.Session.Model().ID != "alpha-model" {
 		t.Fatalf("model = %q, want the settings default", created.Session.Model().ID)
 	}
-	if !strings.Contains(created.ModelDefaultMessage, "alpha/alpha-model") {
-		t.Errorf("message = %q, want the default named", created.ModelDefaultMessage)
+	if !strings.Contains(created.DefaultSyncMessage, "alpha/alpha-model") {
+		t.Errorf("message = %q, want the default named", created.DefaultSyncMessage)
 	}
-	if created.ModelDefaultWarning {
+	if created.DefaultSyncWarning {
 		t.Errorf("a successful sync must not be reported as a warning: %+v", created)
 	}
 }
 
 func TestCreateAgentSessionDefersToAnExplicitModelChoice(t *testing.T) {
 	tempAgentDir(t)
-	runtime := configuredModelDefaultRuntime(t, "alpha", "beta")
+	runtime := configuredDefaultSyncRuntime(t, "alpha", "beta")
 	settings := settingsWithDefault(t, "alpha", "alpha-model")
 
 	// A --model/--provider choice is the caller's decision for this session.
 	created, err := CreateAgentSession(context.Background(),
-		newModelDefaultCreateOptions(t, runtime, settings, runtime.GetModel("beta", "beta-model")))
+		newDefaultSyncCreateOptions(t, runtime, settings, runtime.GetModel("beta", "beta-model")))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -285,8 +285,8 @@ func TestCreateAgentSessionDefersToAnExplicitModelChoice(t *testing.T) {
 	if created.Session.Model().ID != "beta-model" {
 		t.Fatalf("model = %q, want the explicit choice kept", created.Session.Model().ID)
 	}
-	if created.ModelDefaultMessage != "" {
-		t.Errorf("message = %q, want a silent no-op", created.ModelDefaultMessage)
+	if created.DefaultSyncMessage != "" {
+		t.Errorf("message = %q, want a silent no-op", created.DefaultSyncMessage)
 	}
 
 	// The override survives a reload too, or reload would silently move it.
@@ -298,11 +298,11 @@ func TestCreateAgentSessionDefersToAnExplicitModelChoice(t *testing.T) {
 
 func TestCreateAgentSessionGivenNoDefaultLeavesTheModelAlone(t *testing.T) {
 	tempAgentDir(t)
-	runtime := configuredModelDefaultRuntime(t, "beta")
+	runtime := configuredDefaultSyncRuntime(t, "beta")
 	settings := settingsWithDefault(t, "", "")
 
 	created, err := CreateAgentSession(context.Background(),
-		newModelDefaultCreateOptions(t, runtime, settings, runtime.GetModel("beta", "beta-model")))
+		newDefaultSyncCreateOptions(t, runtime, settings, runtime.GetModel("beta", "beta-model")))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -310,18 +310,18 @@ func TestCreateAgentSessionGivenNoDefaultLeavesTheModelAlone(t *testing.T) {
 	if created.Session.Model().ID != "beta-model" {
 		t.Fatalf("model = %q, want it untouched", created.Session.Model().ID)
 	}
-	if created.ModelDefaultMessage != "" {
-		t.Errorf("message = %q, want a silent no-op", created.ModelDefaultMessage)
+	if created.DefaultSyncMessage != "" {
+		t.Errorf("message = %q, want a silent no-op", created.DefaultSyncMessage)
 	}
 }
 
 // A reload reasserts the settings default over a model the session picked.
 func TestReloadReassertsTheDefaultModel(t *testing.T) {
 	tempAgentDir(t)
-	runtime := configuredModelDefaultRuntime(t, "alpha", "beta")
+	runtime := configuredDefaultSyncRuntime(t, "alpha", "beta")
 	settings := settingsWithDefault(t, "", "")
 
-	options := newModelDefaultCreateOptions(t, runtime, settings, nil)
+	options := newDefaultSyncCreateOptions(t, runtime, settings, nil)
 	options.SessionManager = resumedSessionManager(t, "beta", "beta-model")
 	created, err := CreateAgentSession(context.Background(), options)
 	if err != nil {
@@ -338,7 +338,7 @@ func TestReloadReassertsTheDefaultModel(t *testing.T) {
 	if created.Session.Model().ID != "alpha-model" {
 		t.Fatalf("model = %q after reload, want the default applied", created.Session.Model().ID)
 	}
-	notice := created.Session.LastModelDefaultSync()
+	notice := created.Session.LastDefaultSync()
 	if !notice.Applied || notice.Warning {
 		t.Errorf("notice = %+v, want an applied information notice", notice)
 	}

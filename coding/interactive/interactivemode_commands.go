@@ -79,10 +79,10 @@ type CommandWiring struct {
 	Editor          tui.Component
 	// RunDetached runs the blocking reload work off the UI loop.
 	RunDetached func(fn func())
-	// ModelDefaultNotice reports the modeldefault sync outcome of the last
+	// DefaultSyncNotice reports the defaultsync sync outcome of the last
 	// reload (D151): the notice text, and whether it is a warning. A reload
 	// that moved the model must say so rather than change it silently.
-	ModelDefaultNotice func() (string, bool)
+	DefaultSyncNotice func() (string, bool)
 	// ReloadNow re-reads settings-dependent state off the UI loop (settings
 	// file, session queue modes, keybindings, implicit project trust). It
 	// returns the models.json error ("" = none) and whether implicit project
@@ -301,8 +301,8 @@ func (w *CommandWiring) HandleReloadCommand() {
 		} else {
 			w.showStatus("Reloaded " + reloadedItems)
 		}
-		if w.ModelDefaultNotice != nil {
-			if message, warning := w.ModelDefaultNotice(); message != "" {
+		if w.DefaultSyncNotice != nil {
+			if message, warning := w.DefaultSyncNotice(); message != "" {
 				if warning {
 					w.showWarning(message)
 				} else {
@@ -754,8 +754,8 @@ func newCommandWiring(app *App) *CommandWiring {
 		RequestRender:        func() { app.ui.RequestRender(false) },
 		ClearStatusIndicator: func() { app.uiState.ClearStatusIndicator("", false) },
 		MarkdownTheme:        func() tui.MarkdownTheme { return *app.markdownTheme() },
-		ModelDefaultNotice: func() (string, bool) {
-			result := app.session.LastModelDefaultSync()
+		DefaultSyncNotice: func() (string, bool) {
+			result := app.session.LastDefaultSync()
 			return result.Message, result.Warning
 		},
 		ExportToHTML: func(outputPath string) (string, error) {

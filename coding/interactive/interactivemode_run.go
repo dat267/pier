@@ -442,14 +442,14 @@ func (w *RunWiring) Run(ctx context.Context, options InitOptions, runOptions Run
 	if runOptions.ModelFallbackMessage != "" {
 		w.ShowChatWarning(runOptions.ModelFallbackMessage)
 	}
-	// modeldefault (D151): report the sync the way the extension notified on
+	// defaultsync (D151): report the sync the way the extension notified on
 	// session_start — informational when it switched, a warning when the
 	// configured default could not be applied.
-	if runOptions.ModelDefaultMessage != "" {
-		if runOptions.ModelDefaultWarning {
-			w.ShowChatWarning(runOptions.ModelDefaultMessage)
+	if runOptions.DefaultSyncMessage != "" {
+		if runOptions.DefaultSyncWarning {
+			w.ShowChatWarning(runOptions.DefaultSyncMessage)
 		} else {
-			w.ShowStatus(runOptions.ModelDefaultMessage)
+			w.ShowStatus(runOptions.DefaultSyncMessage)
 		}
 	}
 	if w.TakeCrash != nil {
@@ -848,11 +848,11 @@ type RunOptions struct {
 	MigratedProviders    []string
 	ModelsJSONError      string
 	ModelFallbackMessage string
-	// ModelDefaultMessage is the modeldefault sync notice (D151).
-	ModelDefaultMessage string
-	ModelDefaultWarning bool
-	InitialMessage      string
-	InitialMessages     []string
+	// DefaultSyncMessage is the defaultsync sync notice (D151).
+	DefaultSyncMessage string
+	DefaultSyncWarning bool
+	InitialMessage     string
+	InitialMessages    []string
 	// InitialImages are the @file image attachments belonging to InitialMessage
 	// (upstream attaches them to that first message).
 	InitialImages []ai.ImageContent

@@ -4,9 +4,9 @@ import (
 	"context"
 )
 
-// modeldefault — every session starts on the settings default model.
+// defaultsync — every session starts on the settings default model.
 //
-// This is a port of the user's modeldefault extension (divergence D151). pi
+// This is a port of the user's defaultsync extension (divergence D151). pi
 // scopes the model to the session: /model writes a model_change entry and
 // resuming restores it, so the settings default only reaches sessions that
 // never chose. The sync closes that gap from the other side — the settings
@@ -24,20 +24,20 @@ import (
 // failure outcomes — not in the catalog, or no configured auth — are reported
 // exactly as the extension reports them.
 
-// ModelDefaultRef is the default model named by settings.
-type ModelDefaultRef struct {
+// DefaultModelRef is the default model named by settings.
+type DefaultModelRef struct {
 	Provider string
 	ID       string
 }
 
 // String renders the ref the way the extension's messages do.
-func (r *ModelDefaultRef) String() string {
+func (r *DefaultModelRef) String() string {
 	return r.Provider + "/" + r.ID
 }
 
-// ReadModelDefaultRef returns the settings default model, or nil when settings
+// ReadDefaultModelRef returns the settings default model, or nil when settings
 // name no usable default (either half missing or blank).
-func ReadModelDefaultRef(settings *SettingsManager) *ModelDefaultRef {
+func ReadDefaultModelRef(settings *SettingsManager) *DefaultModelRef {
 	if settings == nil {
 		return nil
 	}
@@ -46,12 +46,12 @@ func ReadModelDefaultRef(settings *SettingsManager) *ModelDefaultRef {
 	if provider == nil || modelID == nil || *provider == "" || *modelID == "" {
 		return nil
 	}
-	return &ModelDefaultRef{Provider: *provider, ID: *modelID}
+	return &DefaultModelRef{Provider: *provider, ID: *modelID}
 }
 
-// ModelDefaultSyncResult reports what a sync did. A zero result means there was
+// DefaultSyncResult reports what a sync did. A zero result means there was
 // nothing to do and nothing to say.
-type ModelDefaultSyncResult struct {
+type DefaultSyncResult struct {
 	// Applied reports whether the session was moved onto the default.
 	Applied bool
 	// Message is the notification text (empty when silent).
@@ -66,28 +66,28 @@ type ModelDefaultSyncResult struct {
 // The full catalog model object is applied, never a bare reference: a ref
 // without its limits reaches the footer as "?/0" (the regression the
 // extension's suite guards).
-func (s *AgentSession) SyncSessionModelToDefault(ctx context.Context, reason string) ModelDefaultSyncResult {
-	ref := ReadModelDefaultRef(s.control.Settings)
+func (s *AgentSession) SyncSessionModelToDefault(ctx context.Context, reason string) DefaultSyncResult {
+	ref := ReadDefaultModelRef(s.control.Settings)
 	if ref == nil || s.control.ModelRuntime == nil {
-		return ModelDefaultSyncResult{}
+		return DefaultSyncResult{}
 	}
 	if current := s.Model(); current != nil && current.Provider == ref.Provider && current.ID == ref.ID {
-		return ModelDefaultSyncResult{}
+		return DefaultSyncResult{}
 	}
 
 	full := s.control.ModelRuntime.GetModel(ref.Provider, ref.ID)
 	if full != nil {
 		if err := s.SetModel(ctx, full, ModelMutationOptions{}); err == nil {
-			return ModelDefaultSyncResult{
+			return DefaultSyncResult{
 				Applied: true,
-				Message: "[modeldefault] using default " + ref.String() + " (" + reason + ")",
+				Message: "[defaultsync] using default " + ref.String() + " (" + reason + ")",
 			}
 		}
 	}
 
-	return ModelDefaultSyncResult{
+	return DefaultSyncResult{
 		Warning: true,
-		Message: "[modeldefault] default " + ref.String() + " is not available yet (" +
+		Message: "[defaultsync] default " + ref.String() + " is not available yet (" +
 			ref.unavailableReason(full != nil) + ") — staying on " + s.currentModelLabel(),
 	}
 }
@@ -95,7 +95,7 @@ func (s *AgentSession) SyncSessionModelToDefault(ctx context.Context, reason str
 // unavailableReason explains why the default could not be applied. From the
 // session's seat an absent model and an unauthenticated one are different
 // faults, so they are named differently.
-func (r *ModelDefaultRef) unavailableReason(inCatalog bool) string {
+func (r *DefaultModelRef) unavailableReason(inCatalog bool) string {
 	if inCatalog {
 		return "no configured auth"
 	}
@@ -111,34 +111,34 @@ func (s *AgentSession) currentModelLabel() string {
 	return current.Provider + "/" + current.ID
 }
 
-// recordModelDefaultSync stores the last sync result so the interactive layer
+// recordDefaultSync stores the last sync result so the interactive layer
 // can report it at session start and after a reload.
-func (s *AgentSession) recordModelDefaultSync(result ModelDefaultSyncResult) {
+func (s *AgentSession) recordDefaultSync(result DefaultSyncResult) {
 	s.control.stateMu.Lock()
 	defer s.control.stateMu.Unlock()
-	s.control.modelDefaultSync = result
+	s.control.defaultSync = result
 }
 
-// LastModelDefaultSync returns the most recent sync result (a zero result when
+// LastDefaultSync returns the most recent sync result (a zero result when
 // no sync has run or it had nothing to report).
-func (s *AgentSession) LastModelDefaultSync() ModelDefaultSyncResult {
+func (s *AgentSession) LastDefaultSync() DefaultSyncResult {
 	s.control.stateMu.Lock()
 	defer s.control.stateMu.Unlock()
-	return s.control.modelDefaultSync
+	return s.control.defaultSync
 }
 
-// suspendModelDefaultSync records that this session carries an explicit model
+// suspendDefaultSync records that this session carries an explicit model
 // override (a --model/--provider choice), so the settings default must not
 // reassert itself over it — including on reload.
-func (s *AgentSession) suspendModelDefaultSync() {
+func (s *AgentSession) suspendDefaultSync() {
 	s.control.stateMu.Lock()
 	defer s.control.stateMu.Unlock()
-	s.control.modelDefaultSuspended = true
+	s.control.defaultSyncSuspended = true
 }
 
-// modelDefaultSuspended reports whether an explicit override pinned the model.
-func (s *AgentSession) modelDefaultSuspended() bool {
+// defaultSyncSuspended reports whether an explicit override pinned the model.
+func (s *AgentSession) defaultSyncSuspended() bool {
 	s.control.stateMu.Lock()
 	defer s.control.stateMu.Unlock()
-	return s.control.modelDefaultSuspended
+	return s.control.defaultSyncSuspended
 }

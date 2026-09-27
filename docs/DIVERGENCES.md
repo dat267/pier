@@ -284,9 +284,9 @@ only as the code comment that introduced them. The range is **D1–D174**.
   `EEXIST` returns immediately rather than falling through. `renameNoReplace`
   is `//go:build linux` (Android satisfies the `linux` tag); elsewhere it
   reports `errors.ErrUnsupported` and the plain rename is the fallback.
-- D151 — **modeldefault builtin** (`coding/modeldefault.go`, wired in
+- D151 — **defaultsync builtin** (`coding/defaultsync.go`, wired in
   `coding/sdk.go` and `coding/agent_session_reload.go`). A port of the user's
-  modeldefault extension: pi scopes the model to the session, so a session that
+  defaultsync extension: pi scopes the model to the session, so a session that
   once picked a model keeps it across resumes and the settings default
   (`defaultProvider`/`defaultModel`) never reaches it again. Every session
   start — creation and `/reload` — now moves the session onto the settings
