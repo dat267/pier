@@ -98,3 +98,72 @@ cross:
 # Remove build output.
 clean:
 	rm -rf bin
+
+# Fast-forward when the history is linear, a merge commit when it is not. The tree
+# must be clean, and a conflict aborts the merge and reports the files instead of
+# leaving a half-finished one. Nothing is pushed, so the run ends by saying what is
+# still to send.
+# Sync the current branch with its upstream (fast-forward or merge).
+sync:
+	#!/usr/bin/env bash
+	set -euo pipefail
+
+	if ! git rev-parse --git-dir >/dev/null 2>&1; then
+		echo "sync: not a git repository" >&2
+		exit 1
+	fi
+
+	branch="$(git symbolic-ref -q --short HEAD || true)"
+	if [[ -z "$branch" ]]; then
+		echo "sync: HEAD is detached; check out a branch first" >&2
+		exit 1
+	fi
+
+	if [[ -f "$(git rev-parse --git-dir)/MERGE_HEAD" ]]; then
+		echo "sync: a merge is already in progress; finish it or run: git merge --abort" >&2
+		exit 1
+	fi
+
+	if ! upstream="$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null)"; then
+		echo "sync: $branch has no upstream; set one with:" >&2
+		echo "      git branch --set-upstream-to=origin/$branch $branch" >&2
+		exit 1
+	fi
+
+	if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
+		echo "sync: $branch has uncommitted changes; commit or stash them first" >&2
+		echo "      (a conflict would otherwise have to be unwound around them)" >&2
+		exit 1
+	fi
+
+	remote="${upstream%%/*}"
+	if ! git fetch --prune --quiet "$remote"; then
+		echo "sync: could not fetch from $remote; $branch is unchanged" >&2
+		exit 1
+	fi
+
+	before="$(git rev-parse HEAD)"
+	if ! git merge --ff --no-edit "$upstream"; then
+		if [[ -f "$(git rev-parse --git-dir)/MERGE_HEAD" ]]; then
+			echo "sync: conflicts in:" >&2
+			git diff --name-only --diff-filter=U | sed 's/^/      /' >&2
+			git merge --abort
+			echo "sync: merge aborted; $branch is unchanged" >&2
+			echo "      resolve them in the merge itself with: git merge $upstream" >&2
+		else
+			echo "sync: merge failed; $branch is unchanged" >&2
+		fi
+		exit 1
+	fi
+
+	after="$(git rev-parse HEAD)"
+	if [[ "$before" == "$after" ]]; then
+		echo "already up to date with $upstream"
+	else
+		echo "merged $upstream into $branch ($(git rev-parse --short "$before")..$(git rev-parse --short "$after"))"
+	fi
+
+	ahead="$(git rev-list --count "$upstream..HEAD")"
+	if [[ "$ahead" != "0" ]]; then
+		echo "$ahead commit(s) not pushed yet: git push"
+	fi
