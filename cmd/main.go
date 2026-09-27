@@ -44,6 +44,9 @@ var errAlreadyReported = errors.New("already reported")
 
 // Execute runs the CLI, exiting the process on a fatal error.
 func Execute() {
+	// Before anything can reach the network: android has no /etc/resolv.conf, so
+	// the pure-Go resolver needs a fallback there.
+	configureResolver()
 	appName := executableName()
 	// `pi auth check|print-api-key|print-bearer-token` runs before anything
 	// else, off the raw argv (upstream runAuthCommand at the top of main).

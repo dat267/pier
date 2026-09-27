@@ -700,3 +700,16 @@ only as the code comment that introduced them. The range is **D1–D173**.
   current version is always package.json's), so every source build would read as
   out of date forever; and a release asset arrives without its executable bit,
   which the update has to set.
+
+- D175 — **the android build gets a DNS resolver fallback.** Every build here is
+  CGO_ENABLED=0, so `net`'s pure-Go resolver reads `/etc/resolv.conf`; Android has
+  no such file, because `/etc` is a symlink to the read-only `/system/etc`. The
+  resolver then falls back to the loopback defaults, `127.0.0.1:53` and
+  `[::1]:53`, and every lookup fails with "connection refused" — so an android
+  release asset could not resolve anything on the device it exists for, while the
+  same source built by Termux's patched Go could, since Termux keeps its
+  nameservers in `$PREFIX/etc/resolv.conf`. On android, when the stock config is
+  missing, the port reads `$PREFIX/etc/resolv.conf` (or `PIER_RESOLV_CONF`) and
+  installs a `net.Resolver` that dials those nameservers, rotating between them.
+  Upstream has no equivalent: Node resolves through the platform's libc, which
+  never consults resolv.conf.
