@@ -29,7 +29,12 @@ jobs:
           - goos: windows
             goarch: arm64
     steps:
+      # fetch-depth 0 so the annotated tag object is present: the notes step reads
+      # its message, and a depth-1 fetch leaves only the ref, whose %(contents) is
+      # the commit message.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-go@v5
         with:
