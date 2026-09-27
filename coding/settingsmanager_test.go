@@ -633,3 +633,59 @@ func TestSettingsPersistLandsOffLoop(t *testing.T) {
 		t.Fatalf("in-memory theme = %v", manager.GetTheme())
 	}
 }
+
+// An unset optional setting must be omitted, never written as null. A typed
+// nil inside setAny's `any` is not `== nil`, so a nil *SettingsCompaction or a
+// nil []any passed through it serialized as json `null` and the full rewrite
+// re-added keys the user never set (compaction, branchSummary, retry, packages,
+// terminal, images, thinkingBudgets, markdown, warnings). Upstream merges into
+// the parsed file and never emits those keys.
+func TestSettingsMarshalOmitsUnsetOptionals(t *testing.T) {
+	encoded, err := (&Settings{}).marshalOrdered()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(encoded) != "{}" {
+		t.Fatalf("empty settings = %s, want {}", encoded)
+	}
+
+	// Setting one scalar must not drag the typed-nil holders along.
+	level := "high"
+	encoded, err = (&Settings{DefaultThinkingLevel: &level}).marshalOrdered()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(encoded) != `{"defaultThinkingLevel":"high"}` {
+		t.Fatalf("settings = %s", encoded)
+	}
+
+	// A nested object that IS set still serializes, and its own unset fields
+	// stay omitted rather than becoming nulls.
+	enabled := true
+	encoded, err = (&Settings{Compaction: &SettingsCompaction{Enabled: &enabled}}).marshalOrdered()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(encoded) != `{"compaction":{"enabled":true}}` {
+		t.Fatalf("settings = %s", encoded)
+	}
+}
+
+// The persisted file must not gain null-valued keys, because every write
+// rewrites the whole document and the user would see keys they never set.
+func TestSettingsPersistWritesNoNullKeys(t *testing.T) {
+	agentDir, projectDir := settingsDirs(t)
+	settingsPath := filepath.Join(agentDir, "settings.json")
+	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	manager.SetDefaultThinkingLevel("high")
+
+	saved := readSettingsFile(t, settingsPath)
+	if saved["defaultThinkingLevel"] != "high" {
+		t.Fatalf("saved = %#v", saved)
+	}
+	for key, value := range saved {
+		if value == nil {
+			t.Errorf("settings.json wrote %q: null", key)
+		}
+	}
+}

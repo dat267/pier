@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"sync"
@@ -841,6 +842,17 @@ func (o *orderedObject) setMap(key string, value map[string]string) {
 func (o *orderedObject) setAny(key string, value any) {
 	if value == nil {
 		return
+	}
+	// A typed nil (a nil *SettingsCompaction, a nil []any) stored in an `any`
+	// is not `== nil`, so json.Marshal would write `null`. Optional settings
+	// must be omitted, never null: the whole document is rewritten on every
+	// persist, so a null re-adds a key the user never set (upstream merges into
+	// the parsed file and never writes it at all).
+	switch rv := reflect.ValueOf(value); rv.Kind() {
+	case reflect.Pointer, reflect.Slice, reflect.Map, reflect.Interface, reflect.Func, reflect.Chan:
+		if rv.IsNil() {
+			return
+		}
 	}
 	o.set(key, value, true)
 }
