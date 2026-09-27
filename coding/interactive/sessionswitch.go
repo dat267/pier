@@ -163,6 +163,11 @@ func (a *App) applySessionReplacement(sessionManager *coding.SessionManager) (*S
 	// upstream rebindCurrentSession({renderBeforeBind: true}) → the session's own
 	// reset, which is the initial render and not the reload's rebuild.
 	a.startup.RenderCurrentSessionState()
+	// renderCurrentSessionState clears the loaded-resources container; upstream
+	// rebuilds it in bindCurrentSessionExtensions, whose last step is
+	// showLoadedResources. Without it, /new and a resume leave Context/Skills
+	// blank until the next /reload.
+	a.showLoadedResources(false)
 	a.ui.RequestRender(false)
 	return &SessionSwitchResult{}, nil
 }
