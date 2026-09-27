@@ -9,7 +9,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
@@ -237,27 +236,44 @@ func TestFileMutationQueueSerializesSameFile(t *testing.T) {
 
 	var mu sync.Mutex
 	order := []string{}
-	done := make(chan struct{})
+	record := func(event string) {
+		mu.Lock()
+		order = append(order, event)
+		mu.Unlock()
+	}
+
+	// The first operation holds the queue until it is released, so the second one's
+	// wait is observable without a timer: a sleep here could not promise that the
+	// first goroutine had been scheduled, and under a loaded machine it had not, so
+	// the second entered first and the test failed while the queue was correct.
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	firstDone := make(chan struct{})
 	go func() {
-		defer close(done)
+		defer close(firstDone)
 		_ = WithFileMutationQueue(file, func() error {
-			time.Sleep(30 * time.Millisecond)
-			mu.Lock()
-			order = append(order, "first-finish")
-			mu.Unlock()
+			close(entered)
+			<-release
+			record("first-finish")
 			return nil
 		})
 	}()
-	time.Sleep(5 * time.Millisecond)
+	<-entered
+
 	// Second operation on the same file must wait for the first.
-	_ = WithFileMutationQueue(file, func() error {
-		mu.Lock()
-		order = append(order, "second-start")
-		mu.Unlock()
-		return nil
-	})
-	<-done
-	if order[0] != "first-finish" {
-		t.Fatalf("order = %v", order)
+	secondDone := make(chan struct{})
+	go func() {
+		defer close(secondDone)
+		_ = WithFileMutationQueue(file, func() error {
+			record("second-start")
+			return nil
+		})
+	}()
+
+	close(release)
+	<-firstDone
+	<-secondDone
+	if len(order) != 2 || order[0] != "first-finish" || order[1] != "second-start" {
+		t.Fatalf("order = %v, want [first-finish second-start]", order)
 	}
 }
