@@ -77,8 +77,10 @@ the gate runs the `go` commands directly.
 
 The module root is the command: `main.go` is a thin wrapper over
 `cmd.Execute`, and the `cmd` package holds the flags, boot and session
-resolution. That makes `go install github.com/dat267/pier@latest` work and
-matches the layout of `github.com/dat267/min`.
+resolution. That layout is the one `github.com/dat267/min` uses; installing this
+port is `pier update` (its release asset), not
+`go install github.com/dat267/pier@latest`, which would publish the module to
+proxy.golang.org.
 
 The gate runs with `GOTRACEBACK=all` in CI so a hung test prints every
 goroutine. The PTY watchdogs reuse a prebuilt binary via `PIER_TEST_BIN`

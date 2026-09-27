@@ -49,3 +49,7 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" 2>/dev/null || true
           gh release upload "$GITHUB_REF_NAME" pier-android-arm64 pier-android-arm64.sha256 --clobber
+          # Publish the tag's message as the release body, which is where the update
+          # card sends the user for the notes. Best-effort: a lightweight tag has no
+          # message, and that must not fail the release.
+          gh release edit "$GITHUB_REF_NAME" --notes-from-tag 2>/dev/null || true

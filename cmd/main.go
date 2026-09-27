@@ -5,7 +5,9 @@
 // scope (see README).
 //
 // The module root's main.go is a thin wrapper over Execute, so the module is
-// installable with `go install github.com/dat267/pier@latest`.
+// installable from a release asset (`pier update`) rather than
+// `go install github.com/dat267/pier@latest`, which would publish this module to
+// proxy.golang.org.
 package cmd
 
 import (
