@@ -686,7 +686,7 @@ only as the code comment that introduced them. The range is **D1–D174**.
 - D174 — **the update check reads GitHub releases, and `pier update` installs the
   release asset.** Upstream's card says `<app> update`, and that command runs its
   package manager (updating pi and its packages); the port has no package manager
-  (D41), so the check reads `api.github.com/repos/dat267/pier/releases/latest` and
+  (D41), so the check reads `GitHub's `/releases/latest` redirect` and
   `pier update` installs the `pier-<goos>-<goarch>` asset attached by
   release.yml, verifying it against the `.sha256` beside it before
   replacing the running binary (on Windows the running image is moved aside first,
@@ -714,3 +714,9 @@ only as the code comment that introduced them. The range is **D1–D174**.
   installs a `net.Resolver` that dials those nameservers, rotating between them.
   Upstream has no equivalent: Node resolves through the platform's libc, which
   never consults resolv.conf.
+  The API is deliberately not used: an unauthenticated client gets 60 requests an
+  hour per IP and then a 403, and a mobile IP shares that budget with everyone
+  behind it, so `pier update` failed on a device that had never called the API —
+  measured as `x-ratelimit-remaining: 0` against `4991/5000` for an authenticated
+  client. The redirect is not rate-limited, and the asset names are known, so no
+  listing is needed either.

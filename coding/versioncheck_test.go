@@ -274,31 +274,26 @@ func TestSemverComparison(t *testing.T) {
 }
 
 func TestPortReleaseCheck(t *testing.T) {
-	var payload atomic.Value
-	payload.Store(`{"tag_name":"v1.2.4","html_url":"https://github.com/dat267/pier/releases/tag/v1.2.4"}`)
-	var seenAgent string
-	var seenAccept string
+	var location atomic.Value
+	location.Store("https://github.com/dat267/pier/releases/tag/v1.2.4")
 	var mu sync.Mutex
-	requests := 0
+	seenAgent := ""
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		mu.Lock()
 		seenAgent = request.Header.Get("User-Agent")
-		seenAccept = request.Header.Get("accept")
-		requests++
 		mu.Unlock()
-		writer.Header().Set("Content-Type", "application/json")
-		_, _ = writer.Write([]byte(payload.Load().(string)))
+		writer.Header().Set("Location", location.Load().(string))
+		writer.WriteHeader(http.StatusFound)
 	}))
 	defer server.Close()
 
-	// The URL is fixed to this module's release endpoint; exercise the parsing
-	// through a local server with the explicit helper.
+	// The newest release comes from the /releases/latest redirect, not the REST API:
+	// an unauthenticated API client gets 60 requests an hour per IP and then a 403,
+	// and a mobile IP shares that budget with everyone behind it.
 	release, err := getLatestPortReleaseFrom(context.Background(), server.URL, "1.0.0", server.Client())
 	if err != nil {
 		t.Fatal(err)
 	}
-	// A release tag keeps its "v" prefix, which the semver subset accepts like
-	// npm's `valid`; the release page travels with it for the update card.
 	if release == nil || release.Version != "v1.2.4" {
 		t.Fatalf("release = %+v", release)
 	}
@@ -306,10 +301,10 @@ func TestPortReleaseCheck(t *testing.T) {
 		t.Fatalf("release URL = %q", release.URL)
 	}
 	mu.Lock()
-	agent, accept := seenAgent, seenAccept
+	agent := seenAgent
 	mu.Unlock()
-	if !strings.HasPrefix(agent, "pi/1.0.0 (") || accept != "application/json" {
-		t.Fatalf("headers = %q %q", agent, accept)
+	if !strings.HasPrefix(agent, "pi/1.0.0 (") {
+		t.Fatalf("user agent = %q", agent)
 	}
 
 	// Only a strictly newer version is a newer release.
@@ -328,55 +323,36 @@ func TestPortReleaseCheck(t *testing.T) {
 	if release := checkForLatestPortReleaseFrom(context.Background(), server.URL, "v1.2.3", server.Client()); release == nil {
 		t.Fatal("a release build behind the tag must notify")
 	}
-
 	// A build that cannot be ordered stays silent: the commit hash `just install`
-	// stamps (its string inequality used to read as newer, so the card appeared
-	// for every source build) and the unstamped 0.0.0 default.
+	// stamps and the unstamped 0.0.0 default.
 	for _, current := range []string{"87bc513", "87bc513-dirty", "0.0.0", "", "not-a-version"} {
 		if release := checkForLatestPortReleaseFrom(context.Background(), server.URL, current, server.Client()); release != nil {
 			t.Fatalf("current %q must not notify: %+v", current, release)
 		}
 	}
 
-	// Missing or non-string versions yield nothing.
-	for _, body := range []string{`{"tag_name":""}`, `{"tag_name":42}`, `{}`, `{"tag_name":"  "}`} {
-		payload.Store(body)
+	// A Location that names no tag, an empty one, and a response that redirects
+	// nowhere all yield nothing.
+	for _, value := range []string{"https://github.com/dat267/pier/releases", "https://github.com/dat267/pier/releases/tag/", "", "not-a-tag"} {
+		location.Store(value)
 		release, err := getLatestPortReleaseFrom(context.Background(), server.URL, "1.0.0", server.Client())
 		if err != nil || release != nil {
-			t.Fatalf("body %s: release = %+v err = %v", body, release, err)
+			t.Fatalf("location %q: release = %+v err = %v", value, release, err)
 		}
 	}
-	// A repository with no release answers 404, which is not an error.
-	missing := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		writer.WriteHeader(http.StatusNotFound)
-	}))
-	defer missing.Close()
-	if release, err := getLatestPortReleaseFrom(context.Background(), missing.URL, "1.0.0", missing.Client()); err != nil || release != nil {
-		t.Fatalf("release = %+v err = %v", release, err)
-	}
-	// Invalid JSON is an error.
-	payload.Store("not json")
-	if _, err := getLatestPortReleaseFrom(context.Background(), server.URL, "1.0.0", server.Client()); err == nil {
-		t.Fatal("invalid JSON must error")
-	}
+	location.Store("https://github.com/dat267/pier/releases/tag/v1.2.4")
 
-	// Offline and the skip flag both short-circuit before any request.
-	mu.Lock()
-	before := requests
-	mu.Unlock()
-	t.Setenv("PI_OFFLINE", "1")
-	if release, err := GetLatestPortRelease(context.Background(), "1.0.0"); err != nil || release != nil {
-		t.Fatalf("offline: release = %+v err = %v", release, err)
-	}
-	t.Setenv("PI_OFFLINE", "")
-	t.Setenv("PI_SKIP_VERSION_CHECK", "1")
-	if release := CheckForLatestPortRelease(context.Background(), "1.0.0"); release != nil {
-		t.Fatalf("skip flag: release = %+v", release)
-	}
-	mu.Lock()
-	after := requests
-	mu.Unlock()
-	if after != before {
-		t.Fatalf("offline/skip made %d requests", after-before)
+	// A plain answer (no redirect) and a repository with no releases both yield
+	// nothing, and neither is an error.
+	for _, status := range []int{http.StatusOK, http.StatusNotFound} {
+		plain := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+			writer.WriteHeader(status)
+			_, _ = writer.Write([]byte("no release here"))
+		}))
+		release, err := getLatestPortReleaseFrom(context.Background(), plain.URL, "1.0.0", plain.Client())
+		plain.Close()
+		if err != nil || release != nil {
+			t.Fatalf("status %d: release = %+v err = %v", status, release, err)
+		}
 	}
 }

@@ -2,8 +2,6 @@ package coding
 
 import (
 	"context"
-	"encoding/json"
-	"io"
 	"net/http"
 	"os"
 	"strconv"
@@ -13,17 +11,25 @@ import (
 // Port of utils/version-check.ts, including the semver `valid`/`compare`
 // subset the release check needs (the Go port has no semver dependency).
 
-// PortReleaseURL is where this module's own releases are published: GitHub
-// releases, whose assets are what `pier update` installs (the release
-// workflow attaches pier-<goos>-<goarch> and its sha256). Upstream asks pi's
-// release feed (utils/version-check.ts), whose versions are pi's, not this
-// port's. The Go module proxy is deliberately not consulted, so nothing here
-// depends on the port being published to proxy.golang.org.
-const PortReleaseURL = "https://api.github.com/repos/dat267/pier/releases/latest"
+// PortRepositoryURL is this module's repository: releases live under it, and
+// `pier update` builds its asset URLs from it.
+const PortRepositoryURL = "https://github.com/dat267/pier"
+
+// PortReleaseURL is where the newest release is announced: GitHub's
+// /releases/latest redirect, whose Location is .../releases/tag/<tag>. It is
+// deliberately not the REST API: an unauthenticated API client gets 60 requests an
+// hour per IP and then a 403, and a mobile IP shares that budget with everyone
+// behind it, which is enough for `pier update` to fail on a device that has not
+// used the API at all. The redirect is not rate-limited and needs no credentials.
+//
+// Upstream asks pi's release feed (utils/version-check.ts), whose versions are
+// pi's, not this port's; the Go module proxy is not consulted either, so nothing
+// here depends on the port being published to proxy.golang.org.
+const PortReleaseURL = PortRepositoryURL + "/releases/latest"
 
 // PortReleasesPage is the human-facing release list, used when a release payload
 // carries no page URL of its own.
-const PortReleasesPage = "https://github.com/dat267/pier/releases"
+const PortReleasesPage = PortRepositoryURL + "/releases"
 
 // DefaultVersionCheckTimeoutMS bounds the version request.
 const DefaultVersionCheckTimeoutMS int64 = 10_000
@@ -238,47 +244,59 @@ func GetLatestPortRelease(ctx context.Context, currentVersion string) (*LatestRe
 	return getLatestPortReleaseFrom(ctx, PortReleaseURL, currentVersion, http.DefaultClient)
 }
 
-// getLatestPortReleaseFrom fetches and parses a module proxy @latest document
-// from a URL.
+// getLatestPortReleaseFrom resolves the newest release from a /releases/latest
+// redirect, whose Location names the tag. A server that answers without redirecting,
+// or whose Location names no tag, yields nothing rather than an error.
 func getLatestPortReleaseFrom(ctx context.Context, url, currentVersion string, client *http.Client) (*LatestRelease, error) {
 	if client == nil {
 		client = http.DefaultClient
 	}
+	// The redirect *is* the answer, so it is not followed: its target is the release
+	// page, whose HTML names nothing the tag does not.
+	noRedirect := *client
+	noRedirect.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
 	request.Header.Set("User-Agent", PiUserAgent(currentVersion))
-	request.Header.Set("accept", "application/json")
 	timeoutMS := DefaultVersionCheckTimeoutMS
-	response, err := FetchWithRetry(ctx, request, client, FetchRetryOptions{TimeoutMS: &timeoutMS})
+	response, err := FetchWithRetry(ctx, request, &noRedirect, FetchRetryOptions{TimeoutMS: &timeoutMS})
 	if err != nil {
 		return nil, err
 	}
 	defer response.Body.Close()
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
+	if response.StatusCode < 300 || response.StatusCode >= 400 {
 		return nil, nil
 	}
-	raw, err := io.ReadAll(io.LimitReader(response.Body, 1<<20))
+	location, err := response.Location()
 	if err != nil {
-		return nil, err
-	}
-	var payload struct {
-		TagName any `json:"tag_name"`
-		HTMLURL any `json:"html_url"`
-	}
-	if err := json.Unmarshal(raw, &payload); err != nil {
-		return nil, err
-	}
-	version, ok := payload.TagName.(string)
-	if !ok || strings.TrimSpace(version) == "" {
 		return nil, nil
 	}
-	release := &LatestRelease{Version: strings.TrimSpace(version)}
-	if page, ok := payload.HTMLURL.(string); ok {
-		release.URL = strings.TrimSpace(page)
+	tag := releaseTagFromLocation(location.Path)
+	if tag == "" {
+		return nil, nil
 	}
-	return release, nil
+	return &LatestRelease{Version: tag, URL: location.String()}, nil
+}
+
+// releaseTagFromLocation reads the tag out of a .../releases/tag/<tag> path. This
+// repository's releases are v-prefixed, so anything else (the release list, a path
+// with no tag) is not a release.
+func releaseTagFromLocation(path string) string {
+	tag := path[strings.LastIndex(path, "/")+1:]
+	if len(tag) < 2 || tag[0] != 'v' {
+		return ""
+	}
+	for _, r := range tag[1:] {
+		isDigit := r >= '0' && r <= '9'
+		isLetter := (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')
+		if !isDigit && !isLetter && r != '.' && r != '-' {
+			return ""
+		}
+	}
+	return tag
 }
 
 // checkForLatestPortReleaseFrom is the check over an explicit endpoint, so a

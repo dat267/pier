@@ -9,7 +9,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -52,23 +51,14 @@ func newUpdateServerFor(t *testing.T, tag string, payload []byte, asset string) 
 	server.assets[asset+".sha256"] = []byte(hex.EncodeToString(sum[:]) + "  " + asset + "\n")
 
 	server.Server = httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		if request.URL.Path == "/latest" {
-			server.mu.Lock()
-			names := make([]string, 0, len(server.assets))
-			for name := range server.assets {
-				names = append(names, name)
-			}
-			server.mu.Unlock()
-			sort.Strings(names)
-			assets := make([]string, 0, len(names))
-			for _, name := range names {
-				assets = append(assets, fmt.Sprintf(`{"name":%q,"browser_download_url":%q}`, name, server.URL+"/"+name))
-			}
-			writer.Header().Set("Content-Type", "application/json")
-			_, _ = writer.Write([]byte(fmt.Sprintf(`{"tag_name":%q,"assets":[%s]}`, tag, strings.Join(assets, ","))))
+		if request.URL.Path == "/releases/latest" {
+			// GitHub answers with a redirect and the updater reads its Location, so the
+			// release is found without an API call and without an asset listing.
+			writer.Header().Set("Location", server.URL+"/releases/tag/"+tag)
+			writer.WriteHeader(http.StatusFound)
 			return
 		}
-		name := strings.TrimPrefix(request.URL.Path, "/")
+		name := strings.TrimPrefix(request.URL.Path, "/releases/download/"+tag+"/")
 		server.mu.Lock()
 		body, ok := server.assets[name]
 		if ok {
@@ -147,11 +137,11 @@ func TestRunUpdateInstallsTheReleaseAsset(t *testing.T) {
 	target := tempTarget(t)
 
 	version, err := RunUpdate(context.Background(), UpdateOptions{
-		APIURL: server.URL + "/latest",
-		Client: server.Client(),
-		Target: target,
-		GOOS:   "linux",
-		GOARCH: "amd64",
+		RepoURL: server.URL,
+		Client:  server.Client(),
+		Target:  target,
+		GOOS:    "linux",
+		GOARCH:  "amd64",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -186,11 +176,11 @@ func TestRunUpdateVerifiesTheChecksum(t *testing.T) {
 	target := tempTarget(t)
 
 	_, err := RunUpdate(context.Background(), UpdateOptions{
-		APIURL: server.URL + "/latest",
-		Client: server.Client(),
-		Target: target,
-		GOOS:   "linux",
-		GOARCH: "amd64",
+		RepoURL: server.URL,
+		Client:  server.Client(),
+		Target:  target,
+		GOOS:    "linux",
+		GOARCH:  "amd64",
 	})
 	if err == nil || !strings.Contains(err.Error(), "checksum") {
 		t.Fatalf("err = %v", err)
@@ -210,13 +200,13 @@ func TestRunUpdateRefusesAnUnverifiableDownload(t *testing.T) {
 	target := tempTarget(t)
 
 	_, err := RunUpdate(context.Background(), UpdateOptions{
-		APIURL: server.URL + "/latest",
-		Client: server.Client(),
-		Target: target,
-		GOOS:   "linux",
-		GOARCH: "amd64",
+		RepoURL: server.URL,
+		Client:  server.Client(),
+		Target:  target,
+		GOOS:    "linux",
+		GOARCH:  "amd64",
 	})
-	if err == nil || !strings.Contains(err.Error(), "sha256") {
+	if err == nil || !strings.Contains(err.Error(), "has no pier-linux-amd64 asset") {
 		t.Fatalf("err = %v", err)
 	}
 	if got := readFile(t, target); got != "old binary" {
@@ -233,17 +223,17 @@ func TestRunUpdateNamesTheMissingPlatformAsset(t *testing.T) {
 	target := tempTarget(t)
 
 	_, err := RunUpdate(context.Background(), UpdateOptions{
-		APIURL: server.URL + "/latest",
-		Client: server.Client(),
-		Target: target,
-		GOOS:   "plan9",
-		GOARCH: "amd64",
+		RepoURL: server.URL,
+		Client:  server.Client(),
+		Target:  target,
+		GOOS:    "plan9",
+		GOARCH:  "amd64",
 	})
 	if err == nil || !strings.Contains(err.Error(), "pier-plan9-amd64") {
 		t.Fatalf("err = %v", err)
 	}
-	if !strings.Contains(err.Error(), "pier-linux-amd64") {
-		t.Fatalf("the error does not list what the release has: %v", err)
+	if !strings.Contains(err.Error(), "v9.9.9") {
+		t.Fatalf("the error does not name the release: %v", err)
 	}
 }
 
@@ -256,11 +246,11 @@ func TestRunUpdateReportsAReleaseWithNoReleases(t *testing.T) {
 	target := tempTarget(t)
 
 	_, err := RunUpdate(context.Background(), UpdateOptions{
-		APIURL: missing.URL + "/latest",
-		Client: missing.Client(),
-		Target: target,
-		GOOS:   "linux",
-		GOARCH: "amd64",
+		RepoURL: missing.URL,
+		Client:  missing.Client(),
+		Target:  target,
+		GOOS:    "linux",
+		GOARCH:  "amd64",
 	})
 	if err == nil || !strings.Contains(err.Error(), "no releases") {
 		t.Fatalf("err = %v", err)
@@ -285,12 +275,12 @@ func TestRunUpdateFallsBackToQuarantine(t *testing.T) {
 		return os.Rename(oldpath, newpath)
 	}
 	version, err := RunUpdate(context.Background(), UpdateOptions{
-		APIURL: server.URL + "/latest",
-		Client: server.Client(),
-		Target: target,
-		GOOS:   "linux",
-		GOARCH: "amd64",
-		rename: rename,
+		RepoURL: server.URL,
+		Client:  server.Client(),
+		Target:  target,
+		GOOS:    "linux",
+		GOARCH:  "amd64",
+		rename:  rename,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -312,11 +302,11 @@ func TestRunUpdateSkipsWhenAlreadyCurrent(t *testing.T) {
 	target := tempTarget(t)
 
 	version, err := RunUpdate(context.Background(), UpdateOptions{
-		APIURL: server.URL + "/latest",
-		Client: server.Client(),
-		Target: target,
-		GOOS:   "linux",
-		GOARCH: "amd64",
+		RepoURL: server.URL,
+		Client:  server.Client(),
+		Target:  target,
+		GOOS:    "linux",
+		GOARCH:  "amd64",
 	})
 	if err != nil || version != "" {
 		t.Fatalf("version = %q err = %v", version, err)
@@ -338,11 +328,11 @@ func TestRunUpdateInstallsOverAnUnorderedVersion(t *testing.T) {
 	target := tempTarget(t)
 
 	version, err := RunUpdate(context.Background(), UpdateOptions{
-		APIURL: server.URL + "/latest",
-		Client: server.Client(),
-		Target: target,
-		GOOS:   "linux",
-		GOARCH: "amd64",
+		RepoURL: server.URL,
+		Client:  server.Client(),
+		Target:  target,
+		GOOS:    "linux",
+		GOARCH:  "amd64",
 	})
 	if err != nil || version != "v9.9.9" {
 		t.Fatalf("version = %q err = %v", version, err)
@@ -357,7 +347,7 @@ func TestRunUpdateCommandParsing(t *testing.T) {
 	payload := []byte("new binary\n")
 	server := newUpdateServer(t, "v9.9.9", payload)
 	target := tempTarget(t)
-	options := UpdateOptions{APIURL: server.URL + "/latest", Client: server.Client(), Target: target, GOOS: "linux", GOARCH: "amd64"}
+	options := UpdateOptions{RepoURL: server.URL, Client: server.Client(), Target: target, GOOS: "linux", GOARCH: "amd64"}
 
 	// The prompt is not an update.
 	var stdout, stderr strings.Builder
@@ -402,7 +392,7 @@ func TestRunUpdateCommandReportsFailures(t *testing.T) {
 	var stdout, stderr strings.Builder
 
 	handled, code := runUpdateCommand("pier", []string{"update"}, &stdout, &stderr, UpdateOptions{
-		APIURL: server.URL + "/latest", Client: server.Client(), Target: target, GOOS: "linux", GOARCH: "amd64",
+		RepoURL: server.URL, Client: server.Client(), Target: target, GOOS: "linux", GOARCH: "amd64",
 	})
 	if !handled || code != 1 {
 		t.Fatalf("handled = %v code = %d", handled, code)
@@ -425,11 +415,11 @@ func TestRunUpdateFindsTheWindowsExeAsset(t *testing.T) {
 	target := tempTarget(t)
 
 	version, err := RunUpdate(context.Background(), UpdateOptions{
-		APIURL: server.URL + "/latest",
-		Client: server.Client(),
-		Target: target,
-		GOOS:   "windows",
-		GOARCH: "amd64",
+		RepoURL: server.URL,
+		Client:  server.Client(),
+		Target:  target,
+		GOOS:    "windows",
+		GOARCH:  "amd64",
 	})
 	if err != nil || version != "v9.9.9" {
 		t.Fatalf("version = %q err = %v", version, err)
