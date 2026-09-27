@@ -101,6 +101,12 @@ func ConvertOpenAICompletionsMessages(
 				for _, item := range m.Content.Blocks {
 					switch b := item.(type) {
 					case TextContent:
+						// An empty text part is dropped, not sent as an empty string
+						// (upstream #9797: a user message can carry an empty text block
+						// beside an image).
+						if b.Text == "" {
+							continue
+						}
 						content = append(content, OpenAIContentPart{Type: "text", Text: SanitizeSurrogates(b.Text)})
 					case ImageContent:
 						content = append(content, OpenAIContentPart{Type: "image_url",

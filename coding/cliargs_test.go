@@ -585,3 +585,36 @@ func TestArgsToolSelection(t *testing.T) {
 		})
 	}
 }
+
+// Ported from packages/coding-agent/test/args.test.ts "--mode flag" (upstream
+// #9045, pinned v0.87.1): --mode validates its value and reports missing or
+// invalid ones instead of silently ignoring them.
+func TestParseArgsModeValidation(t *testing.T) {
+	for _, mode := range []string{"text", "json", "rpc"} {
+		result := ParseArgs([]string{"--mode", mode})
+		if result.Mode != CLIMode(mode) || len(result.Diagnostics) != 0 {
+			t.Fatalf("--mode %s = %+v", mode, result)
+		}
+	}
+	for _, mode := range []string{"yaml", ""} {
+		result := ParseArgs([]string{"--mode", mode, "--version"})
+		want := `Invalid mode "` + mode + `". Valid values: text, json, rpc`
+		if result.Mode != "" || !result.Version || len(result.Messages) != 0 || len(result.Diagnostics) != 1 ||
+			result.Diagnostics[0].Message != want {
+			t.Fatalf("--mode %q = %+v", mode, result)
+		}
+	}
+	result := ParseArgs([]string{"--mode"})
+	if result.Mode != "" || len(result.Diagnostics) != 1 || result.Diagnostics[0].Message != "--mode requires text, json, or rpc" {
+		t.Fatalf("--mode missing = %+v", result)
+	}
+	result = ParseArgs([]string{"--mode", "--version"})
+	if result.Mode != "" || !result.Version || len(result.Diagnostics) != 1 ||
+		result.Diagnostics[0].Message != "--mode requires text, json, or rpc" {
+		t.Fatalf("--mode --version = %+v", result)
+	}
+	result = ParseArgs([]string{"--mode", "json", "--mode", "yaml"})
+	if len(result.Diagnostics) != 1 || result.Diagnostics[0].Message != `Invalid mode "yaml". Valid values: text, json, rpc` {
+		t.Fatalf("repeated --mode = %+v", result)
+	}
+}

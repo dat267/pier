@@ -324,3 +324,42 @@ func TestSummarizationFailureGuards(t *testing.T) {
 		t.Fatalf("failure = %q", got)
 	}
 }
+
+// Ported from packages/coding-agent/test/compaction-summary-reasoning.test.ts
+// (upstream #9652, pinned v0.87.1): the split-turn summary uses Markdown
+// boundaries and continuation wording so a reasoning model does not read the
+// conversation as a task to extend.
+func TestTurnPrefixPromptUsesMarkdownBoundaries(t *testing.T) {
+	var captured string
+	options := CompactionOptions{
+		Model: &ai.Model{ID: "mock", API: "openai-responses", Provider: "openai", MaxTokens: 8192},
+		StreamFn: func(model *ai.Model, context ai.TranscriptContext, streamOptions *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+			for _, m := range context.Messages {
+				if um, ok := m.(*ai.UserMessage); ok && len(um.Content.Blocks) > 0 {
+					if text, ok := um.Content.Blocks[0].(ai.TextContent); ok {
+						captured = text.Text
+					}
+				}
+			}
+			stream := ai.NewAssistantMessageEventStream()
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
+				Content: ai.ContentList{ai.TextContent{Text: "checkpoint"}},
+				API:     model.API, Provider: model.Provider, Model: model.ID, StopReason: ai.StopStop, Timestamp: 1,
+			}})
+			return stream
+		},
+	}
+	if _, err := generateTurnPrefixSummary(
+		[]ai.Message{&ai.UserMessage{Content: ai.StringOrBlocks{Text: "Summarize this."}, Timestamp: 1}}, options); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(captured, "<conversation>") {
+		t.Fatalf("stale XML boundary in the turn-prefix prompt:\n%s", captured)
+	}
+	if !strings.Contains(captured, "# Conversation\n") {
+		t.Fatalf("missing the Markdown conversation boundary:\n%s", captured)
+	}
+	if !strings.Contains(captured, "# Instructions\nThe messages above are earlier context from an ongoing conversation.") {
+		t.Fatalf("missing the continuation instructions:\n%s", captured)
+	}
+}

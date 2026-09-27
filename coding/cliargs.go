@@ -117,11 +117,22 @@ func ParseArgs(args []string) *Args {
 		case arg == "--version" || arg == "-v":
 			result.Version = true
 		case arg == "--mode":
-			if value, ok := next(); ok {
-				if value == CLIModeText || value == CLIModeJSON || value == CLIModeRPC {
-					result.Mode = value
-				}
+			// Upstream #9045: a missing value (end of args or the next token is
+			// another option) and an invalid value are reported, not ignored, and
+			// the option is never consumed as the value.
+			if i+1 >= len(args) || strings.HasPrefix(args[i+1], "-") {
+				result.Diagnostics = append(result.Diagnostics, CLIDiagnostic{Type: "error", Message: "--mode requires text, json, or rpc"})
+				continue
 			}
+			i++
+			value := args[i]
+			if value != CLIModeText && value != CLIModeJSON && value != CLIModeRPC {
+				result.Diagnostics = append(result.Diagnostics, CLIDiagnostic{
+					Type: "error", Message: `Invalid mode "` + value + `". Valid values: text, json, rpc`,
+				})
+				continue
+			}
+			result.Mode = value
 		case arg == "--continue" || arg == "-c":
 			result.Continue = true
 		case arg == "--resume" || arg == "-r":

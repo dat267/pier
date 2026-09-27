@@ -4,9 +4,29 @@ How much of upstream pi this port covers, package by package, plus the upstream
 pin's change log. The user-facing summary lives in `README.md`; this file is the
 authoritative per-area status.
 
-v0.87.0 refresh (the reference is the pinned tag, read from the `./pi` checkout
-in the workspace — see `AGENTS.md`; the previous pin `36b60d2e8` sits on a
-divergent upstream line with no common ancestor):
+v0.87.1 refresh (the reference is the pinned tag `f07218c4d`, read from the
+`./pi` checkout in the workspace — see `AGENTS.md`; the previous pin
+`16787ad5b` is the v0.87.0 release):
+
+- `ai`: the stealth Claude Code version is `2.1.280` (was `2.1.251`), and
+  `openai-completions` drops empty text parts from a user message that also
+  carries an image (#9797). Both ported with
+  `TestConvertOpenAICompletionsMessagesOmitsEmptyTextParts`.
+- `coding`: `--mode` validates `text`/`json`/`rpc` and reports a missing or
+  invalid value instead of silently ignoring it (#9045); the split-turn
+  summarization prompt uses Markdown `# Conversation` / `# Instructions`
+  boundaries so a reasoning model does not continue the prefix (#9652). Ported
+  with `TestParseArgsModeValidation` and
+  `TestTurnPrefixPromptUsesMarkdownBoundaries`.
+- Not ported, because the model catalog is a pinned models.dev snapshot rather
+  than a tag artifact: the generator's new models (Claude Opus 5.5, GPT-6
+  Sol/Luna, the Copilot entries), xai's `grok-4.7` default, and the
+  `inclusionai/ming-image-0.1-design` image entry. Until the catalog is
+  regenerated, `DefaultModelPerProvider` keeps `xai` on `grok-4.6` and those ids
+  stay absent.
+
+v0.87.0 refresh (the previous pin; `36b60d2e8` sat on a divergent upstream line
+with no common ancestor):
 
 - Tool renderer parity re-probed against the 0.87 sources (a probe script
   driving the upstream renderer): the edit block is byte-identical to the Go

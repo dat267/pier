@@ -16,8 +16,8 @@ reference packages closely, file for file.
 - Dependencies are offline-cached only: `golang.org/x/text`, `x/term`, `x/sys`,
   and `x/tools` (`internal/uiblock`'s SSA analysis).
 - Upstream checkout lives in the workspace at `./pi` (gitignored): clone
-  `https://github.com/earendil-works/pi` there at tag `v0.87.0`
-  (`16787ad5b`; see the README's pin table). The released tags are the
+  `https://github.com/earendil-works/pi` there at tag `v0.87.1`
+  (`f07218c4d`; see the README's pin table). The released tags are the
   reference: an installed bundle drifts and can sit on a divergent upstream
   line. Diff checks go through the `./pi` sources (`node
   --experimental-strip-types`, `FORCE_COLOR=1` for chalk parity).

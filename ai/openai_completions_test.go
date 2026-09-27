@@ -407,3 +407,31 @@ func TestShortHash(t *testing.T) {
 		t.Fatal("different inputs should hash differently")
 	}
 }
+
+// Regression for upstream #9797 (pinned v0.87.1): a user message whose text
+// part is empty must keep only its image part, not an empty text part.
+func TestConvertOpenAICompletionsMessagesOmitsEmptyTextParts(t *testing.T) {
+	model := testOpenAIModel()
+	compat := DetectOpenAICompletionsCompat(model)
+	messages := []Message{
+		&UserMessage{
+			Content: StringOrBlocks{Blocks: ContentList{
+				TextContent{Text: ""},
+				ImageContent{Data: "ZmFrZQ==", MimeType: "image/png"},
+			}},
+			Timestamp: 1,
+		},
+	}
+	params := ConvertOpenAICompletionsMessages(model, TranscriptContext{Messages: messages}, compat, nil)
+	if len(params) != 1 || params[0].Role != "user" {
+		t.Fatalf("params = %+v", params)
+	}
+	var parts []OpenAIContentPart
+	if err := json.Unmarshal(params[0].Content, &parts); err != nil {
+		t.Fatal(err)
+	}
+	if len(parts) != 1 || parts[0].Type != "image_url" || parts[0].ImageURL == nil ||
+		parts[0].ImageURL.URL != "data:image/png;base64,ZmFrZQ==" {
+		t.Fatalf("content parts = %+v", parts)
+	}
+}

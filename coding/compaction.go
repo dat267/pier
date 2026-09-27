@@ -610,20 +610,20 @@ Use this EXACT format:
 
 Keep each section concise. Preserve exact file paths, function names, and error messages.`
 
-const turnPrefixSummarizationPrompt = `This is the PREFIX of a turn that was too large to keep. The SUFFIX (recent work) is retained.
+const turnPrefixSummarizationPrompt = `The messages above are earlier context from an ongoing conversation. Later messages are stored separately and do not need to be reconstructed.
 
-Summarize the prefix to provide context for the retained suffix:
+Create a concise checkpoint of the user's request and the progress shown above. This checkpoint will be placed before the later messages so the conversation can continue with the necessary context.
 
 ## Original Request
-[What did the user ask for in this turn?]
+[What did the user ask for?]
 
-## Early Progress
-- [Key decisions and work done in the prefix]
+## Progress So Far
+- [Key decisions and work completed in these messages]
 
-## Context for Suffix
-- [Information needed to understand the retained recent work]
+## Context Needed to Continue
+- [Information from these messages needed to understand the later work]
 
-Be concise. Focus on what's needed to understand the kept suffix.`
+Only summarize information explicitly present above. Do not infer or recreate later messages.`
 
 // GetSummarizationFailure reports why a summarization response cannot safely
 // be persisted (a length stop holds partial text).
@@ -1035,7 +1035,7 @@ func generateTurnPrefixSummary(messages []ai.Message, options CompactionOptions)
 	}
 	llmMessages := ConvertToLlm(messages)
 	conversationText := SerializeConversation(llmMessages)
-	promptText := fmt.Sprintf("<conversation>\n%s\n</conversation>\n\n%s", conversationText, turnPrefixSummarizationPrompt)
+	promptText := fmt.Sprintf("# Conversation\n%s\n\n# Instructions\n%s", conversationText, turnPrefixSummarizationPrompt)
 
 	response, err := runSummarization(model, promptText, int(maxTokens), options, nil, options.ThinkingLevel)
 	if err != nil {
