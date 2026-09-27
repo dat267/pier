@@ -101,3 +101,32 @@ func TestRunAuthCommandIgnoresNonAuth(t *testing.T) {
 		t.Fatal("a non-auth invocation must not be handled")
 	}
 }
+
+// The auth help names the invoked binary, like PrintHelpNamed: installed as
+// "pier", it must not print a command that says "pi". `pi auth` is not a
+// substring of `pier auth`, so the negative check is exact.
+func TestRunAuthCommandHelpUsesTheInvokedName(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	handled, code := RunAuthCommandNamed("pier", []string{"auth", "--help"}, &stdout, &stderr)
+	if !handled || code != 0 {
+		t.Fatalf("handled=%v code=%d stderr=%s", handled, code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "pier auth print-api-key") {
+		t.Errorf("the help does not name the invoked binary:\n%s", stdout.String())
+	}
+	if strings.Contains(stdout.String(), "pi auth") {
+		t.Errorf("the help names the upstream binary:\n%s", stdout.String())
+	}
+}
+
+// The unknown-option hint names the invoked binary too.
+func TestRunAuthCommandUnknownOptionUsesTheInvokedName(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	handled, code := RunAuthCommandNamed("pier", []string{"auth", "check", "--nope"}, &stdout, &stderr)
+	if !handled || code != 1 {
+		t.Fatalf("handled=%v code=%d stderr=%s", handled, code, stderr.String())
+	}
+	if !strings.Contains(stderr.String(), `Use "pier --help"`) {
+		t.Errorf("the unknown-option hint does not name the invoked binary:\n%s", stderr.String())
+	}
+}

@@ -436,11 +436,21 @@ func authCommandErrorMessage(err error, fallback string) string {
 // RunAuthCommand handles a `pi auth ...` invocation. handled is false when the
 // first argument is not "auth"; otherwise the exit code is returned.
 func RunAuthCommand(args []string, stdout, stderr io.Writer) (bool, int) {
+	return RunAuthCommandNamed(AppName, args, stdout, stderr)
+}
+
+// RunAuthCommandNamed handles a `pi auth ...` invocation, naming the invoked
+// binary in the usage and error text — PrintHelpNamed's counterpart, since the
+// port's binary is not upstream's. An empty appName keeps the default.
+func RunAuthCommandNamed(appName string, args []string, stdout, stderr io.Writer) (bool, int) {
+	if appName == "" {
+		appName = AppName
+	}
 	if len(args) == 0 || args[0] != "auth" {
 		return false, 0
 	}
 	if IsAuthCommandHelp(args) {
-		fmt.Fprint(stdout, PrintAuthCommandHelp(AppName))
+		fmt.Fprint(stdout, PrintAuthCommandHelp(appName))
 		return true, 0
 	}
 	command, err := ParseAuthCommand(args)
@@ -457,7 +467,7 @@ func RunAuthCommand(args []string, stdout, stderr io.Writer) (bool, int) {
 			fmt.Fprintf(stderr, "Unknown option --%s for %q.\n", option, authCommandName(command.Kind))
 			break
 		}
-		fmt.Fprintf(stderr, "Use \"%s --help\" or \"%s\".\n", AppName, authCommandUsage(AppName, command.Kind))
+		fmt.Fprintf(stderr, "Use \"%s --help\" or \"%s\".\n", appName, authCommandUsage(appName, command.Kind))
 		return true, 1
 	}
 	if len(parsed.Diagnostics) > 0 {

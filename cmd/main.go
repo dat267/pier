@@ -45,7 +45,7 @@ func Execute() {
 	appName := executableName()
 	// `pi auth check|print-api-key|print-bearer-token` runs before anything
 	// else, off the raw argv (upstream runAuthCommand at the top of main).
-	if handled, code := coding.RunAuthCommand(os.Args[1:], os.Stdout, os.Stderr); handled {
+	if handled, code := coding.RunAuthCommandNamed(appName, os.Args[1:], os.Stdout, os.Stderr); handled {
 		if code != 0 {
 			os.Exit(code)
 		}
