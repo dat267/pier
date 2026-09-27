@@ -49,6 +49,41 @@ CI-only, and it is the only one that cannot be reproduced locally.
 
 ## Install the CLI
 
+Download the release binary — Linux x64/arm64, or Termux on Android:
+
+```sh
+base=https://github.com/dat267/pier/releases/latest/download
+asset=pier-linux-amd64   # pier-linux-arm64, or pier-android-arm64 in Termux
+curl -fsSL -o "$asset"        "$base/$asset"
+curl -fsSL -o "$asset.sha256" "$base/$asset.sha256"
+sha256sum -c "$asset.sha256"
+mkdir -p ~/.local/bin
+install -m 755 "$asset" ~/.local/bin/pier   # any directory on PATH
+```
+
+Windows (PowerShell):
+
+```powershell
+$base  = "https://github.com/dat267/pier/releases/latest/download"
+$asset = "pier-windows-amd64.exe"   # or pier-windows-arm64.exe
+$dest  = "$env:USERPROFILE\bin"     # any directory on PATH
+
+Invoke-WebRequest "$base/$asset"        -OutFile $asset -UseBasicParsing
+Invoke-WebRequest "$base/$asset.sha256" -OutFile "$asset.sha256" -UseBasicParsing
+$want = (Get-Content "$asset.sha256").Split()[0].ToLower()
+$got  = (Get-FileHash $asset -Algorithm SHA256).Hash.ToLower()
+if ($got -ne $want) { throw "checksum mismatch for $asset" }
+New-Item -ItemType Directory -Force -Path $dest | Out-Null
+Move-Item -Force $asset (Join-Path $dest "pier.exe")
+```
+
+There are no macOS or BSD assets; build those from source. Afterwards `pier
+update` replaces the binary in place with the newest release, verifying the same
+checksum; on Windows it moves the running `pier.exe` aside to `pier.exe.old`
+(the image is locked) and clears that on the next update.
+
+Or build from source:
+
 ```bash
 just install                 # into $(go env GOBIN), or $(go env GOPATH)/bin
 just VERSION=1.2.3 install   # stamps --version and the changelog comparison
