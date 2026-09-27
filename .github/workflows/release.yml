@@ -75,9 +75,13 @@ jobs:
           gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" 2>/dev/null || true
           gh release upload "$GITHUB_REF_NAME" "$ASSET" "$ASSET.sha256" --clobber
           # Publish the tag's message as the release body — the notes the update card
-          # links to. Best-effort: a lightweight tag has no message, and that must not
-          # fail the release. Every target writes the same text.
-          git tag -l --format='%(contents)' "$GITHUB_REF_NAME" > "$RUNNER_TEMP/notes.md"
-          if [ -s "$RUNNER_TEMP/notes.md" ]; then
+          # links to. Read from the API, not from the checkout: a checkout can carry
+          # the tag as a bare ref, whose %(contents) is the commit's message, which
+          # is what the first attempt published. Best-effort, because a lightweight
+          # tag has no annotation to fetch.
+          sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$GITHUB_REF_NAME" --jq '.object.sha' 2>/dev/null || true)"
+          notes="$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$sha" --jq '.message' 2>/dev/null || true)"
+          if [ -n "$notes" ]; then
+            printf '%s\n' "$notes" > "$RUNNER_TEMP/notes.md"
             gh release edit "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md" || true
           fi
