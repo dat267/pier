@@ -14,7 +14,7 @@ import (
 // subset the release check needs (the Go port has no semver dependency).
 
 // PortReleaseURL is where this module's own releases are published: GitHub
-// releases, whose assets are what `pier update` installs (the android-release
+// releases, whose assets are what `pier update` installs (the release
 // workflow attaches pier-<goos>-<goarch> and its sha256). Upstream asks pi's
 // release feed (utils/version-check.ts), whose versions are pi's, not this
 // port's. The Go module proxy is deliberately not consulted, so nothing here

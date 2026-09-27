@@ -1,0 +1,78 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    strategy:
+      # One platform failing must not cost the others their assets.
+      fail-fast: false
+      matrix:
+        include:
+          # The Termux architecture. Pure Go reaches android/arm64 without the NDK;
+          # android/amd64 and android/386 need cgo external linking and are skipped.
+          - goos: android
+            goarch: arm64
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: windows
+            goarch: amd64
+          - goos: windows
+            goarch: arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27"
+
+      # The asset name is what `pier update` looks for: pier-<goos>-<goarch>, plus
+      # the .exe suffix the updater falls back to on Windows. Nothing here is
+      # published to a module proxy; the binaries are the release.
+      - name: build ${{ matrix.goos }}/${{ matrix.goarch }}
+        env:
+          CGO_ENABLED: "0"
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          if [ -z "${VERSION#v}" ] || [ "$VERSION" = "main" ]; then VERSION="${GITHUB_SHA::7}"; fi
+          asset="pier-${GOOS}-${GOARCH}"
+          if [ "$GOOS" = "windows" ]; then asset="${asset}.exe"; fi
+          go build -trimpath -ldflags "-s -w -X github.com/dat267/pier/coding.Version=$VERSION" \
+            -o "$asset" .
+          file "$asset"
+          sha256sum "$asset" > "$asset.sha256"
+          echo "ASSET=$asset" >> "$GITHUB_ENV"
+
+      - name: upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ASSET }}
+          path: |
+            ${{ env.ASSET }}
+            ${{ env.ASSET }}.sha256
+
+      - name: attach to release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" 2>/dev/null || true
+          gh release upload "$GITHUB_REF_NAME" "$ASSET" "$ASSET.sha256" --clobber
+          # Publish the tag's message as the release body — the notes the update card
+          # links to. Best-effort: a lightweight tag has no message, and that must not
+          # fail the release. Every target writes the same text.
+          git tag -l --format='%(contents)' "$GITHUB_REF_NAME" > "$RUNNER_TEMP/notes.md"
+          if [ -s "$RUNNER_TEMP/notes.md" ]; then
+            gh release edit "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md" || true
+          fi

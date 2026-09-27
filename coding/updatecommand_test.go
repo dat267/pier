@@ -25,7 +25,7 @@ func withVersion(t *testing.T, version string) {
 }
 
 // updateServer serves a release: the latest-release document, the asset and its
-// checksum, under the names android-release.yml attaches. Deleting an entry from
+// checksum, under the names release.yml attaches. Deleting an entry from
 // assets removes it from the document too, which is how the missing-checksum case
 // is built.
 type updateServer struct {
@@ -39,10 +39,17 @@ type updateServer struct {
 
 func newUpdateServer(t *testing.T, tag string, payload []byte) *updateServer {
 	t.Helper()
+	return newUpdateServerFor(t, tag, payload, "pier-linux-amd64")
+}
+
+// newUpdateServerFor serves the release for a named asset, so a platform whose
+// asset name differs (Windows appends .exe) can be exercised.
+func newUpdateServerFor(t *testing.T, tag string, payload []byte, asset string) *updateServer {
+	t.Helper()
 	server := &updateServer{payload: payload, assets: map[string][]byte{}, hits: map[string]int{}}
 	sum := sha256.Sum256(payload)
-	server.assets["pier-linux-amd64"] = payload
-	server.assets["pier-linux-amd64.sha256"] = []byte(hex.EncodeToString(sum[:]) + "  pier-linux-amd64\n")
+	server.assets[asset] = payload
+	server.assets[asset+".sha256"] = []byte(hex.EncodeToString(sum[:]) + "  " + asset + "\n")
 
 	server.Server = httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.URL.Path == "/latest" {
@@ -405,5 +412,32 @@ func TestRunUpdateCommandReportsFailures(t *testing.T) {
 	}
 	if got := readFile(t, target); got != "old binary" {
 		t.Fatalf("target = %q", got)
+	}
+}
+
+// A Windows release names its asset with the .exe suffix, which updateAssetName
+// does not produce, so the updater has to try the suffix as well. The release
+// workflow builds pier-windows-amd64.exe, so this is the path Windows takes.
+func TestRunUpdateFindsTheWindowsExeAsset(t *testing.T) {
+	withVersion(t, "v0.0.1")
+	payload := []byte("MZ new binary\n")
+	server := newUpdateServerFor(t, "v9.9.9", payload, "pier-windows-amd64.exe")
+	target := tempTarget(t)
+
+	version, err := RunUpdate(context.Background(), UpdateOptions{
+		APIURL: server.URL + "/latest",
+		Client: server.Client(),
+		Target: target,
+		GOOS:   "windows",
+		GOARCH: "amd64",
+	})
+	if err != nil || version != "v9.9.9" {
+		t.Fatalf("version = %q err = %v", version, err)
+	}
+	if got := readFile(t, target); got != string(payload) {
+		t.Fatalf("target = %q", got)
+	}
+	if server.assetHits("pier-windows-amd64.exe") != 1 {
+		t.Fatal("the .exe asset was not fetched")
 	}
 }

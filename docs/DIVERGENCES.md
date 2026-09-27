@@ -687,7 +687,7 @@ only as the code comment that introduced them. The range is **D1–D173**.
   package manager (updating pi and its packages); the port has no package manager
   (D41), so the check reads `api.github.com/repos/dat267/pier/releases/latest` and
   `pier update` installs the `pier-<goos>-<goarch>` asset attached by
-  android-release.yml, verifying it against the `.sha256` beside it before
+  release.yml, verifying it against the `.sha256` beside it before
   replacing the running binary (on Windows the running image is moved aside first,
   which upstream calls its self-update quarantine). Three consequences worth
   recording: the module proxy is no longer consulted, so nothing depends on the

@@ -19,7 +19,7 @@ import (
 // same command, but it runs the package manager and updates its packages and
 // extensions with it (package-manager-cli.ts); extensions and the package manager
 // are out of scope for the port (D41), so the update is the release binary the
-// android-release workflow attaches, verified against the checksum it attaches
+// release workflow attaches, verified against the checksum it attaches
 // beside it. The command exists so the update card can name `<app> update` as
 // upstream's does.
 
@@ -33,7 +33,7 @@ type UpdateCommandError struct{ Message string }
 
 func (e *UpdateCommandError) Error() string { return e.Message }
 
-// updateAssetName is the release asset for a platform, as android-release.yml
+// updateAssetName is the release asset for a platform, as release.yml
 // names it (pier-android-arm64), not Go's GOOS/GOARCH separator conventions.
 func updateAssetName(goos, goarch string) string {
 	return "pier-" + goos + "-" + goarch
