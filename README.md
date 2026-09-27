@@ -1,30 +1,34 @@
-# pi (Go) — a faithful port of [pi](https://github.com/earendil-works/pi)
+# pier, a Go coding agent
 
-This is a from-scratch Go port of Mario Zechner's [pi](https://github.com/earendil-works/pi)
-(`@earendil-works/pi-ai`, `pi-agent-core`, `pi-coding-agent`). The TypeScript
-monorepo is **ground truth**: every type, field name, and behavior is ported
-from upstream source, not inferred. The porting rules live in `AGENTS.md`.
+A from-scratch Go implementation of an AI coding agent with a terminal UI,
+developed against Mario Zechner's [pi](https://github.com/earendil-works/pi)
+(`@earendil-works/pi-ai`, `pi-agent-core`, `pi-coding-agent`) as its strongest
+reference. pi is a reference, not a specification: this code follows its
+structure and behavior closely, and where it departs, the departure is a
+deliberate feature of this implementation. The development conventions live in
+`AGENTS.md`.
 
-## Upstream pin
+## Reference pin
 
 | What | Value |
 |---|---|
 | Repository | https://github.com/earendil-works/pi (cloned at `./pi`, gitignored) |
-| Pin | `16787ad5b` — Release v0.87.0 |
-| Stale upstream test | `packages/ai/test/faux-provider.test.ts` "estimates prompt and output tokens" still expects pre-`9e05370b2` faux serialization; source wins |
+| Pin | `16787ad5b` (Release v0.87.0) |
+| Stale reference test | `packages/ai/test/faux-provider.test.ts` "estimates prompt and output tokens" still expects pre-`9e05370b2` faux serialization; this implementation follows the current source |
 
 ## Status
 
-`docs/PORTING.md` is the authoritative per-area table — what is ported,
-partially ported or out of scope, file by file — plus the pin's change log.
-`docs/DIVERGENCES.md` logs the numbered D-rows, the places this port knowingly
-differs from upstream.
+`docs/PORTING.md` is the authoritative per-area table: what is implemented,
+partially implemented, or out of scope, file by file, plus the reference pin's
+change log. `docs/DIVERGENCES.md` records this implementation's own decisions:
+every numbered place it deliberately departs from the pi reference, with the
+scenario and the rationale.
 
-Every upstream runtime package is accounted for: `ai` (all ten wire APIs, all provider factories, the seven OAuth flows, image generation, the api/images registries, overflow detection), `agent` (the loop), `coding-agent` (the complete core: session, tools, compaction, branch summarization, retry, cache warming, model runtime/registry/composer, stores, exports, bug report, crash log, trust, utilities, and the createAgentSession assembly), `protocol`, `client`, `chord` (+delta/services/facets), `server` (+unix/testing), `telemetry`, and `durable`.
+Every runtime package in the pi reference has a counterpart here: `ai` (all ten wire APIs, all provider factories, the seven OAuth flows, image generation, the api/images registries, overflow detection), `agent` (the loop), `coding-agent` (the complete core: session, tools, compaction, branch summarization, retry, cache warming, model runtime/registry/composer, stores, exports, bug report, crash log, trust, utilities, and the createAgentSession assembly), `protocol`, `client`, `chord` (+delta/services/facets), `server` (+unix/testing), `telemetry`, and `durable`.
 
-The `pi-tui` library and the interactive coding-agent mode are ported (`tui/*` and `coding/interactive/*`), including the theme, every component, and the interactive-mode method groups; the root `main.go` and the `cmd` package compose them into a runnable CLI. The remaining items are the documented out-of-scope set below.
+The `pi-tui` library and the interactive coding-agent mode are implemented (`tui/*` and `coding/interactive/*`), including the theme, every component, and the interactive-mode method groups; the root `main.go` and the `cmd` package compose them into a runnable CLI. The remaining items are the documented out-of-scope set below.
 
-Deliberately out of scope, with divergences recorded in code: the extension mechanics (resource loader, sdk extension surface, agent-session services/runtime, package and tools managers), the native clipboard, the kitty/iterm image transport internals, the node-specific chord bundler, the bug-report upload transport, and the optional `session-backends` sqlite driver (a host-provided storage backend imported by no runtime package) plus the `evals` Docker harness (a development tool).
+Deliberately left out of scope, each with its decision recorded in code: the extension mechanics (resource loader, sdk extension surface, agent-session services/runtime, package and tools managers), the native clipboard, the kitty/iterm image transport internals, the node-specific chord bundler, the bug-report upload transport, and the optional `session-backends` sqlite driver (a host-provided storage backend imported by no runtime package) plus the `evals` Docker harness (a development tool).
 
 ## Build & test
 
@@ -48,6 +52,41 @@ android/arm64`) — so `just test-race` only fails on Termux. That check is
 CI-only, and it is the only one that cannot be reproduced locally.
 
 ## Install the CLI
+
+Download the release binary — Linux x64/arm64, or Termux on Android:
+
+```sh
+base=https://github.com/dat267/pier/releases/latest/download
+asset=pier-linux-amd64   # pier-linux-arm64, or pier-android-arm64 in Termux
+curl -fsSL -o "$asset"        "$base/$asset"
+curl -fsSL -o "$asset.sha256" "$base/$asset.sha256"
+sha256sum -c "$asset.sha256"
+mkdir -p ~/.local/bin
+install -m 755 "$asset" ~/.local/bin/pier   # any directory on PATH
+```
+
+Windows (PowerShell):
+
+```powershell
+$base  = "https://github.com/dat267/pier/releases/latest/download"
+$asset = "pier-windows-amd64.exe"   # or pier-windows-arm64.exe
+$dest  = "$env:USERPROFILE\bin"     # any directory on PATH
+
+Invoke-WebRequest "$base/$asset"        -OutFile $asset -UseBasicParsing
+Invoke-WebRequest "$base/$asset.sha256" -OutFile "$asset.sha256" -UseBasicParsing
+$want = (Get-Content "$asset.sha256").Split()[0].ToLower()
+$got  = (Get-FileHash $asset -Algorithm SHA256).Hash.ToLower()
+if ($got -ne $want) { throw "checksum mismatch for $asset" }
+New-Item -ItemType Directory -Force -Path $dest | Out-Null
+Move-Item -Force $asset (Join-Path $dest "pier.exe")
+```
+
+There are no macOS or BSD assets; build those from source. Afterwards `pier
+update` replaces the binary in place with the newest release, verifying the same
+checksum; on Windows it moves the running `pier.exe` aside to `pier.exe.old`
+(the image is locked) and clears that on the next update.
+
+Or build from source:
 
 ```bash
 just install                 # into $(go env GOBIN), or $(go env GOPATH)/bin
