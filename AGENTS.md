@@ -6,10 +6,11 @@ authoritative per-area port status is `docs/PORTING.md`, the divergence log is
 
 ## What this is
 
-A from-scratch Go port of Mario Zechner's **pi** (upstream:
-`https://github.com/earendil-works/pi`), an AI coding agent with a terminal UI.
-It is a sibling of the TypeScript monorepo, not a fork: the Go code mirrors the
-upstream packages file-for-file.
+A from-scratch Go implementation of an AI coding agent with a terminal UI,
+developed against Mario Zechner's **pi** (the reference:
+`https://github.com/earendil-works/pi`) as its strongest reference. It is a
+sibling of the TypeScript monorepo, not a fork: the Go code follows the
+reference packages closely, file for file.
 
 - Module: `github.com/dat267/pier`, Go `1.27`.
 - Dependencies are offline-cached only: `golang.org/x/text`, `x/term`, `x/sys`,
@@ -22,10 +23,12 @@ upstream packages file-for-file.
   --experimental-strip-types`, `FORCE_COLOR=1` for chalk parity).
 - License: MIT (see `LICENSE`).
 
-## Ground-truth rules
+## Reference rules
 
-1. **Upstream is the spec.** A port commit references the upstream file it
-   mirrors. Never infer behavior; read the TypeScript source.
+1. **pi is the reference, not the spec.** A commit cites the reference file it
+   follows. Never infer behavior; read the TypeScript source. Where this
+   implementation departs, the departure is a deliberate feature, not an
+   approximation to be silently corrected.
 2. **JSON is byte-parity.** Session files, transcripts and wire payloads must
    round-trip identically: same key names, same key order, no HTML escaping.
    Use `ai.MarshalJSON`, never `encoding/json.Marshal`, for anything persisted
@@ -623,11 +626,12 @@ snapshot under and deliver outside.
 
 ## Divergences
 
-Where upstream relies on JSON/JS semantics Go has no equivalent for, or where
-upstream has a defect, the port diverges deliberately: a numbered **D-row** in a
-code comment at the point of divergence, with the reproducing scenario, and an
-entry in `docs/DIVERGENCES.md` (range **D1–D169**). Prefer a D-row over silently
-approximating upstream.
+Where the reference relies on JSON/JS semantics Go has no equivalent for, where
+a reference behavior is a defect, or wherever this implementation makes a
+deliberate choice of its own, it departs from the reference: a numbered **D-row**
+in a code comment at the point of divergence, with the reproducing scenario, and
+an entry in `docs/DIVERGENCES.md` (range **D1–D174**). Prefer a D-row over
+silently approximating the reference.
 
 ## Out of scope (documented)
 
