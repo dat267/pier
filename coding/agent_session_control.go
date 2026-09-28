@@ -515,7 +515,10 @@ func (s *AgentSession) SetModel(ctx context.Context, model *ai.Model, options Mo
 		s.control.Settings.SetDefaultModelAndProvider(model.Provider, model.ID)
 		s.addPersistedDefaultToNonEmptyScope(model)
 	}
-	s.SetThinkingLevel(s.getThinkingLevelForModelSwitch(model, ""), ModelMutationOptions{Persist: options.Persist})
+	// Applying the thinking level for the new model must not persist it:
+	// upstream setModel calls setThinkingLevel with no options, so model
+	// persistence never rewrites the global thinking default (agent-session.ts:2131).
+	s.SetThinkingLevel(s.getThinkingLevelForModelSwitch(model, ""))
 	s.emitModelSelect(model, previous, "set")
 	return nil
 }
@@ -590,7 +593,10 @@ func (s *AgentSession) applyModelCycle(ctx context.Context, model *ai.Model, exp
 		s.control.Settings.SetDefaultModelAndProvider(model.Provider, model.ID)
 		s.addPersistedDefaultToNonEmptyScope(model)
 	}
-	s.SetThinkingLevel(s.getThinkingLevelForModelSwitch(model, explicitLevel), ModelMutationOptions{Persist: options.Persist})
+	// As in SetModel, a model change never persists the thinking level:
+	// upstream cycleScopedModel/cycleAvailableModel call setThinkingLevel with no
+	// options (agent-session.ts:2204,2236).
+	s.SetThinkingLevel(s.getThinkingLevelForModelSwitch(model, explicitLevel))
 	s.emitModelSelect(model, previous, "cycle")
 	return &ModelCycleResult{Model: model, ThinkingLevel: s.ThinkingLevel(), IsScoped: isScoped}, nil
 }

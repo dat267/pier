@@ -223,6 +223,72 @@ func TestSessionModelAndThinking(t *testing.T) {
 	}
 }
 
+// Saving a model persists the default model but must not rewrite the global
+// thinking default (upstream setModel calls setThinkingLevel with no options;
+// agent-session.ts:2131 "Model persistence does not implicitly rewrite the
+// global thinking default"). The target's own override still applies to the
+// session level.
+func TestSessionModelSaveDoesNotPersistThinkingLevel(t *testing.T) {
+	dir := t.TempDir()
+	settings := NewSettingsManagerFromFiles(dir, dir, SettingsManagerCreateOptions{})
+	settings.SetDefaultThinkingLevel(ai.ThinkHigh)
+	settings.SetModelThinkingLevel("anthropic", "m", ai.ThinkLow)
+
+	model := &ai.Model{
+		ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic",
+		Reasoning: true, ContextWindow: 1000, MaxTokens: 100,
+		ThinkingLevelMap: ai.ThinkingLevelMap{ai.ThinkMax: nil},
+	}
+	session := newControlSession(t, model, settings)
+	session.SetThinkingLevel(ai.ThinkHigh, ModelMutationOptions{})
+
+	if err := session.SetModel(ctxpkg.Background(), model, ModelMutationOptions{Persist: true}); err != nil {
+		t.Fatal(err)
+	}
+	// The model default is persisted (upstream behavior, unchanged).
+	if got := settings.GetDefaultModel(); got == nil || *got != "m" {
+		t.Fatalf("default model = %v", got)
+	}
+	if got := settings.GetDefaultProvider(); got == nil || *got != "anthropic" {
+		t.Fatalf("default provider = %v", got)
+	}
+	// The per-model override still applies to the session.
+	if session.ThinkingLevel() != ai.ThinkLow {
+		t.Fatalf("session level = %q", session.ThinkingLevel())
+	}
+	// But saving a model leaves the global default alone.
+	if got := settings.GetDefaultThinkingLevel(); got == nil || *got != ai.ThinkHigh {
+		t.Fatalf("default thinking level = %v (must stay %q)", got, ai.ThinkHigh)
+	}
+}
+
+func TestSessionModelCycleDoesNotPersistThinkingLevel(t *testing.T) {
+	runtime := runtimeWithProviders(t, stubProvider("anthropic"), stubProvider("beta"))
+	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
+	settings.SetDefaultThinkingLevel(ai.ThinkHigh)
+	// Whichever model comes next carries a differing per-model override, so the
+	// resolved level for the switch is "low".
+	settings.SetModelThinkingLevel("anthropic", "anthropic-model", ai.ThinkLow)
+	settings.SetModelThinkingLevel("beta", "beta-model", ai.ThinkLow)
+
+	session := newControlSession(t, runtime.GetModel("anthropic", "anthropic-model"), settings)
+	session.control.ModelRuntime = runtime
+	if err := runtime.SetRuntimeAPIKey("anthropic", "sk-1", ctxpkg.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.SetRuntimeAPIKey("beta", "sk-2", ctxpkg.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := session.CycleModel(ctxpkg.Background(), "forward", ModelMutationOptions{Persist: true})
+	if err != nil || result == nil {
+		t.Fatalf("result = %+v err = %v", result, err)
+	}
+	if got := settings.GetDefaultThinkingLevel(); got == nil || *got != ai.ThinkHigh {
+		t.Fatalf("default thinking level = %v (must stay %q)", got, ai.ThinkHigh)
+	}
+}
+
 func TestSessionModelSwitchAuth(t *testing.T) {
 	base := stubProvider("anthropic")
 	runtime := runtimeWithProviders(t, base)
