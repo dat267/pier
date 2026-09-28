@@ -720,3 +720,15 @@ only as the code comment that introduced them. The range is **D1–D174**.
   measured as `x-ratelimit-remaining: 0` against `4991/5000` for an authenticated
   client. The redirect is not rate-limited, and the asset names are known, so no
   listing is needed either.
+
+- D176 — **the system prompt omits upstream's documentation index.** Upstream's
+  `buildSystemPromptSections` emits a `docs` section that points the model at the
+  pi README, `docs/` and `examples/` and routes feature questions to specific
+  files (extensions.md, themes.md, skills.md, prompt-templates.md, tui.md,
+  keybindings.md, sdk.md, custom-provider.md, models.md, packages.md,
+  environment-variables.md). A pier install ships none of that tree: its `docs/`
+  holds PORTING.md, DIVERGENCES.md, architecture.md and locks.md, and there is no
+  `examples/`, so the section only routed the model to files that are not there.
+  The port drops the section (`coding/systemprompt.go`); the reference is
+  otherwise unchanged, including the preamble that still names pi as the harness
+  the port follows.

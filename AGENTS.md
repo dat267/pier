@@ -238,7 +238,7 @@ Where the reference relies on JSON/JS semantics Go has no equivalent for, where
 a reference behavior is a defect, or wherever this implementation makes a
 deliberate choice of its own, it departs from the reference: a numbered **D-row**
 in a code comment at the point of divergence, with the reproducing scenario, and
-an entry in `docs/DIVERGENCES.md` (range **D1–D174**). Prefer a D-row over
+an entry in `docs/DIVERGENCES.md` (range **D1–D176**). Prefer a D-row over
 silently approximating the reference.
 
 ## Out of scope (documented)

@@ -75,9 +75,8 @@ func currentPackageDir() string {
 	return packageDir
 }
 
-func GetReadmePath() string   { return resolveIn(currentPackageDir(), "README.md") }
-func GetDocsPath() string     { return resolveIn(currentPackageDir(), "docs") }
-func GetExamplesPath() string { return resolveIn(currentPackageDir(), "examples") }
+func GetReadmePath() string { return resolveIn(currentPackageDir(), "README.md") }
+func GetDocsPath() string   { return resolveIn(currentPackageDir(), "docs") }
 
 // GetChangelogPath is the CHANGELOG.md path.
 func GetChangelogPath() string { return resolveIn(currentPackageDir(), "CHANGELOG.md") }
@@ -200,15 +199,11 @@ func BuildSystemPromptSections(input BuildSystemPromptOptions) (SystemPromptSect
 		}
 		promptSections["tools"] = tools + "\n\nIn addition to the tools above, you may have access to other custom tools depending on the project."
 		promptSections["rules"] = buildRules(selectedTools, toolGuidelines, promptGuidelines)
-		promptSections["docs"] = fmt.Sprintf(`Pi documentation (read only when the user asks about pi itself, its SDK, extensions, themes, skills, or TUI):
-- Main documentation: %s
-- Additional docs: %s
-- Examples: %s (extensions, custom tools, SDK)
-- When reading pi docs or examples, resolve docs/... under Additional docs and examples/... under Examples, not the current working directory
-- When asked about: extensions (docs/extensions.md, examples/extensions/), themes (docs/themes.md), skills (docs/skills.md), prompt templates (docs/prompt-templates.md), TUI components (docs/tui.md), keybindings (docs/keybindings.md), SDK integrations (docs/sdk.md), custom providers (docs/custom-provider.md), adding models (docs/models.md), pi packages (docs/packages.md), environment variables (docs/environment-variables.md)
-- When working on pi topics, read the docs and examples, and follow .md cross-references before implementing
-- Always read pi .md files completely and follow links to related docs (e.g., tui.md for TUI API details)`,
-			GetReadmePath(), GetDocsPath(), GetExamplesPath())
+		// D176: upstream emits a `docs` section (the Pi documentation index).
+		// It routed the model to pi's docs/examples tree, which a pier install
+		// does not ship — the routing table names extensions.md, themes.md,
+		// sdk.md, packages.md, custom-provider.md and the like, none of which
+		// exist here — so the section only pointed at missing files.
 	}
 
 	if appendSystemPrompt != "" {
@@ -239,8 +234,9 @@ func BuildSystemPromptSections(input BuildSystemPromptOptions) (SystemPromptSect
 
 	sections := SystemPromptSections{"preamble": promptSections["preamble"]}
 	// Upstream renders sections in INSERTION order: preamble, tools, rules,
-	// docs, addendum, project_context, skills, cwd, then custom sections.
-	knownOrder := []string{"tools", "rules", "docs", "addendum", "project_context", "skills", "cwd"}
+	// addendum, project_context, skills, cwd, then custom sections (D176 drops
+	// upstream's `docs` section).
+	knownOrder := []string{"tools", "rules", "addendum", "project_context", "skills", "cwd"}
 	rendered := map[string]bool{"preamble": true}
 	for _, name := range knownOrder {
 		if content, ok := promptSections[name]; ok {
@@ -264,7 +260,7 @@ func BuildSystemPromptSections(input BuildSystemPromptOptions) (SystemPromptSect
 // sectionInsertionOrder recovers the render order: known sections in their
 // fixed sequence, then custom sections sorted.
 func sectionInsertionOrder(sections SystemPromptSections) []string {
-	knownOrder := []string{"tools", "rules", "docs", "addendum", "project_context", "skills", "cwd"}
+	knownOrder := []string{"tools", "rules", "addendum", "project_context", "skills", "cwd"}
 	var out []string
 	for _, name := range knownOrder {
 		if _, ok := sections[name]; ok {

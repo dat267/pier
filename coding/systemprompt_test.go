@@ -19,11 +19,15 @@ func TestBuildSystemPromptSectionsDefault(t *testing.T) {
 		t.Fatalf("preamble = %q", sections["preamble"])
 	}
 	// Non-preamble sections are XML-wrapped.
-	for _, name := range []string{"tools", "rules", "docs", "cwd"} {
+	for _, name := range []string{"tools", "rules", "cwd"} {
 		value, ok := sections[name]
 		if !ok || !strings.HasPrefix(value, "<"+name+">\n") || !strings.HasSuffix(value, "\n</"+name+">") {
 			t.Fatalf("section %s = %q", name, value)
 		}
+	}
+	// D176: upstream's `docs` index section is not emitted.
+	if _, ok := sections["docs"]; ok {
+		t.Fatalf("docs section must not be emitted (D176): %q", sections["docs"])
 	}
 	if !strings.Contains(sections["cwd"], "/proj") {
 		t.Fatalf("cwd section = %q", sections["cwd"])
@@ -42,8 +46,8 @@ func TestBuildSystemPromptCustomPromptReplacesPreamble(t *testing.T) {
 	if sections["preamble"] != "My custom persona." {
 		t.Fatalf("preamble = %q", sections["preamble"])
 	}
-	// No tools/rules/docs sections with a custom prompt.
-	for _, name := range []string{"tools", "rules", "docs"} {
+	// No tools/rules sections with a custom prompt.
+	for _, name := range []string{"tools", "rules"} {
 		if _, ok := sections[name]; ok {
 			t.Fatalf("section %s should not exist with a custom prompt", name)
 		}
