@@ -2,7 +2,9 @@
 
 Guidance for agents working in this repository. Read this first; the
 authoritative per-area port status is `docs/PORTING.md`, the divergence log is
-`docs/DIVERGENCES.md`, and the README covers install and usage.
+`docs/DIVERGENCES.md`, the architecture and performance notes are
+`docs/architecture.md`, the lock inventory is `docs/locks.md`, and the README
+covers install and usage.
 
 ## What this is
 
@@ -55,7 +57,7 @@ Packages mirror upstream `packages/`:
 | `chord`, `client`, `protocol`, `server`, `telemetry`, `durable` | same | supporting packages |
 | `internal/offloop`, `internal/uiblock` | — | port-local helpers: the off-loop work queues and the UI-blocking analyzer |
 | `scripts` | — | catalog generators |
-| `docs` | — | port status (`PORTING.md`) and the divergence log (`DIVERGENCES.md`) |
+| `docs` | — | port status (`PORTING.md`), the divergence log (`DIVERGENCES.md`), architecture notes (`architecture.md`) and the lock inventory (`locks.md`) |
 
 ## Build, test, run
 
@@ -130,383 +132,38 @@ browser opener (`interactive.SetBrowserOpener`), so the OAuth browser flow is a
 no-op; seed credentials with upstream pi or by hand. `--offline` skips the
 catalog refresh.
 
-## Concurrency architecture (UI event loop refactor)
+## Concurrency architecture
 
-The interactive mode is being moved from mutex-guarded shared state to a
-single-writer UI loop (upstream is single-threaded; every Go-side lock was
-invented to bridge that gap). Stage 1 has landed:
+The interactive mode is a single-writer UI loop, not mutex-guarded shared state
+(upstream is single-threaded; every Go-side lock was invented to bridge that
+gap, and **D143** records the divergence). Producers only enqueue:
+`sessionEventQueue` has a lossless channel and a latest-wins partial channel,
+and blocking work (a turn, session writes, settings persists, theme loads, the
+transcript pre-render, clipboard) runs off the loop through `internal/offloop`
+queues or `RunWiring.RunWork`. Every consumer select has a `ctx.Done()` arm; a
+producer parked on a full channel is released by cancellation or `Close`.
 
-- **`sessionEventQueue`** (`interactivemode_eventqueue.go`) decouples the
-  session-event producers from the UI. Two buffered channels:
-  `lossless` (cap 256: message start/end, tool end, agent settled, compaction,
-  retries) and `partial` (cap 8: `message_update`, `tool_execution_update`,
-  `bash_execution_update`), where partials are latest-wins with an explicit
-  drop-oldest policy so a fast token stream cannot back-pressure the agent or
-  starve input. The subscription callback only enqueues; producers never touch
-  UI state or UI locks. `Close` releases a producer parked on a full channel.
-- **`runLoop`** (`interactivemode_run.go`) is the single writer: a `select`
-  over the two event channels, the submission channel
-  (`StartupWiring.inputs`, cap 64), work completion, and `ctx.Done()`.
-  Blocking work (a turn, the compaction-queue flush, which can start a turn)
-  runs in its own goroutine through `RunWiring.RunWork`, so a turn's events
-  drain while it runs; the loop only accepts submissions when idle, matching
-  upstream's awaited prompt. Initial messages are seeded as pending loop work
-  ahead of submissions.
-- Every channel is buffered; every consumer select has a `ctx.Done()` arm;
-  producers blocked on a full channel are released by the run context's
-  cancellation or by the queue's `Close` (the terminal reader and event
-  subscribers never receive a context, so both arms are present).
-- **Slow-phase logging is on by default at 100 ms**; `PIER_STALL_MS=<ms>`
-  overrides the threshold and `PIER_STALL_MS=0` disables it. Every phase the
-  loop measures (`render`, `events`, `event-apply`, `partial-event-apply`, `beat`, `input`,
-  `raw-input`) that
-  exceeds the threshold is recorded to `<agentDir>/pier-stall.log`, each with a
-  goroutine dump. It exists for stutters that do not reproduce on the
-  development machine: a record names the phase and the stacks instead of only
-  how long it took. A phase still running at the threshold is also recorded
-  mid-flight by a timer goroutine, whose dump shows where the loop was — the
-  after-phase dump only shows the loop back in its event loop. Heavy tool-side
-  commands (test suites, builds) run `nice`d: on a 4-CPU machine an ungated
-  test run competes with the UI goroutine and looks like a freeze. It was opt-in first, but both post-fix freezes struck
-  sessions started without the variable, so the default flipped — a capture
-  that requires remembering to set an env var does not survive real usage.
-- **Keystroke latency is logged separately** to `<agentDir>/pier-input-latency.log`
-  when a round trip exceeds `PIER_INPUT_LAT_MS` (default 50 ms; `0` disables).
-  The terminal reader stamps the read (`ProcessTerminal.MarkInputRead`), the loop
-  tags the frame it paints (`RunWiring.markInputRead`), and the writer reports
-  the flush (`tui.InputLatencyObserver`), so a record splits the delay into
-  `read` (before the app) and `write` (console) rather than blaming a phase. It
-  exists to bisect a slow terminal (Windows ConPTY pauses while a selection is
-  active) in one run; the render itself is sub-millisecond warm on a large
-  session (`BenchmarkScrollWarmDiff`).
-- The loop calls a **watchdog beat** once per iteration
-  (`RunWiring.LoopBeats`, exposed as `App.LoopBeats`): a stalled loop stops
-  advancing it, so a watchdog can detect a hang.
-- **Blocking work runs off the loop on `internal/offloop` queues** (one
-  goroutine per domain, strict submission order, optional keyed coalescing):
-  session file writes, settings persists, theme loads, the transcript
-  pre-render, and clipboard/paste. An `offloop.Group` owns the queues of one
-  composition root, so teardown is a single `StopAll` (drain + stop) rather
-  than a hand-written enumeration — `App.StopMode` and the print-mode exit.
-  The queues are opt-in: a nil queue keeps the synchronous path for one-shot
-  CLI/SDK consumers and tests, and the interactive wiring is what opts in.
-- **D143** records the divergence: upstream is single-threaded (await +
-  microtask order), the port is an explicit select loop with off-loop work and
-  partial coalescing.
-Stage 3 (input and signals on the loop) has landed:
-
-- **Terminal producers.** The stdin reader delivers complete sequences on
-  `loopInputs` (cap 256) and the SIGWINCH watcher posts to `loopResizes`
-  (cap 1); the lifecycle's signal handlers post to `loopSignals` (cap 4,
-  non-blocking so shutdown signals coalesce). `Renderer.EnableLoopInput` (wired
-  in `App.newLoopTui`, so renderer swaps keep it) stops the renderer from
-  dispatching input inline; the run loop calls `HandleTerminalInput`, renders
-  on resize, and runs the signal shutdown work on its own goroutine.
-  `ProcessTerminal` caches the terminal size (`Start` primes it, the watcher
-  refreshes it): the render path calls `Columns()`/`Rows()` and must never
-  make the console query itself — on Windows that query is slow and blocks
-  during a mouse selection, which stalled every paint 100–400 ms. Windows has
-  no SIGWINCH, so its resize watcher is a 200 ms poller (off the loop); a
-  refresh repaints only when the size actually changed. Console **writes** run
-  on their own goroutine too: `Write` appends to a FIFO the goroutine drains,
-  so no caller blocks. Windows Terminal stops draining the pty while a mouse
-  drag-selection is active, and a synchronous write parked the UI loop for the
-  whole duration of the drag; `Stop` flushes the queue before restoring the
-  terminal, and `Renderer.Stop` flushes **again** after its post-stop hook, which
-  enqueues the alt-screen exit: the resume hint is written straight to stdout, so
-  without that flush it raced the writer and landed on the still-active alt
-  screen, mangled into the last frame (pinned by
-  `TestRendererStopFlushesAfterThePostStopHook`). The renderer brackets each
-  paint (`BeginFrame`/`EndFrame`) so a
-  paint's writes are submitted as one ordered batch. Frames are **not dropped**
-  when superseded: the screens are differential, so a queued frame is still
-  needed to reach the state the next diff was computed against. Dropping one
-  lost its content (the startup trust prompt vanished this way, caught by
-  `TestResumedSessionAsksTrustForItsOwnProject`); the async writer, not frame
-  dropping, is what keeps a paused console from blocking the loop.
-- The `DrainInput` last-input tracking is an atomic stamp written by the reader
-  instead of an `OnData` swap from another goroutine (one lock retired).
-- **`/compact` no longer blocks the UI**: the command is split into
-  `ClearCompactionStatus` (loop side) and `CompactSession` (off-loop through
-  `RunWiring.RunWork`), so the loop keeps dispatching input — including the
-  advertised ESC cancel — while the summarization runs.
-
-Stage 2 (rendering on the loop) has landed:
-
-- **`Renderer.EnableRenderTicks`** (`tui/render.go`) switches a renderer from
-  its internal timer to a caller-driven mode: `RequestRender` coalesces onto a
-  capacity-1 `renderTicks` channel (a channel send, so no callback runs under
-  the renderer lock) and no longer arms a timer. The app's renderers enable it
-  in `CreateInteractiveTui`. Channel default (timer + throttle) remains for the
-  standalone session picker and library users.
-- The run loop selects on `UI.RenderTicks()`, drains every already-queued
-  session event (`RunWiring.drainReadyEvents`) and paints once
-  (`renderUI`), so a burst of N messages produces one render, not N.
-- `Renderer.RenderCount()` counts paints (test seam).
-- **D144**: the interactive renderer is caller-driven (the loop owns the frame
-  schedule) where upstream schedules its own throttled frames. The loop keeps
-  upstream's 16 ms frame throttle for coalesced render ticks, so a streaming
-  delta burst cannot paint back-to-back; resize and animation paints stay
-  immediate.
-- **D164 input does not paint by default.** The terminal input arms paint only
-  when the dispatch queued a render request (`loopSchedule.paintIfRequested`,
-  which consumes the coalesced tick the request left) and first drain every
-  raw chunk already queued, so one input burst is one paint. Fullscreen mode
-  enables `?1003h`, so a bare pointer movement arrives as an event per pixel,
-  and one frame is O(the whole transcript): painting per chunk spent the loop's
-  entire budget on full repaints. Measured on the port: 60 mouse moves plus a
-  keystroke now cost 2–3 paints, down from 63. The loop also caches the
-  renderer's animation walk between paints (`loopSchedule.scanValid`, dropped
-  by a paint or, for a "nothing animates" answer, boxed by
-  `loopSchedule.scanAt`) because the walk visits every mounted component and
-  the loop asked for it once per input event. Asking for a frame also invalidates what animates
-  (upstream's tick calls `context.invalidate()`): clock-driven content changes
-  with no Invalidate firing, so a revision-carrying wrapper would report an
-  unchanged revision while its output has moved and a parent's cache would
-  serve the previous frame — a shell elapsed label stuck until a click
-  invalidates the block. That walk descends through
-  `childrenHolder` (`Container`, `Box`, and now `ScrollView`/`MouseRegion`): a
-  single-child wrapper that forgets `childComponents` hides any animator inside
-  it, which is how the elapsed-time label on a running tool froze (the
-  transcript's scroll view held its content in a field, not in the embedded
-  Container's Children, and the mouse region wrapped the result), and
-  `VisibleWidth` short-circuits
-  printable-ASCII text after stripping sequences (5.0 µs → 1.0 µs, 1104 →
-  324 B/op on a styled tool-output line) since styled lines never reached the
-  plain-ASCII fast path. The behavior change is that input which asks for no
-  paint is not painted; the tui renderer's own contract is that components call
-  `RequestRender`, and every keyboard path signals one in
-  `Renderer.HandleTerminalInput`, so only events that changed nothing skip a
-  frame. Tests: `TestMouseMotionBurstDoesNotRepaint`,
-  `TestAnimationScanCacheIsDroppedByAPaint`,
-  `TestAltScreenMouseMoveRequestsNoRender`,
-  `TestVisibleWidthStyledTextMatchesPlainText`.
-- **D163 low bandwidth over SSH.** Styled rows carry trailing padding to the
-  viewport width; over SSH those cells are bytes on the wire (one keystroke
-  measured 127 bytes, ~77 of them padding). When `SSH_CONNECTION`/`SSH_TTY` is
-  set (or `PIER_LOW_BANDWIDTH=1`; `=0` forces the upstream form),
-  `tui.SetLowBandwidth` makes both `AltScreen` and `MainScreen` trim trailing
-  spaces and skip a `[2K` the new row covers or the full-screen clear already
-  did. The visible result is identical; the keystroke frame drops to 48 bytes
-  (−62%). Default off, so the upstream-parity goldens keep asserting the padded
-  bytes. `ConfigureLowBandwidth` (called from `cmd`) is the boot hook.
-- **D165 terminal theme detection is a deferred listener, not a query.** The UI
-  loop is the only dispatcher of terminal replies, so upstream's synchronous
-  `queryTerminalBackgroundColor` can never complete on the loop (it always times
-  out), and a query written before raw mode is echoed into the input stream (the
-  SSH freeze that killed the first attempt). The port writes one OSC 11 query
-  (`Renderer.RequestTerminalBackgroundColor`) from `RunWiring.OnStarted`, after
-  `UI.Start`, and returns; the reply is consumed by `HandleTerminalInput`,
-  classified by luminance, and applied by an `OnTerminalBackgroundColorChange`
-  listener bound in `NewInteractiveThemeController` and re-bound on a renderer
-  swap (`RebindTUI`, called from `LifecycleOptions.OnTuiModeSwitched`). The
-  `CSI ? 2031` notification toggle is deferred the same way: before `Start` it
-  only flips a flag, and `Start` replays it. A terminal that does not answer
-  keeps the `COLORFGBG`/fallback theme.
-- **D166 the global theme is a stable handle (upstream's `theme` Proxy).**
-  Upstream's `theme` reads the global theme on every property access, so a
-  switch reaches any component that resolves colors at render. The port used to
-  return the current concrete `*Theme`, which components captured at
-  construction and therefore never recolored. `ActiveTheme()` now returns one
-  stable `*Theme` whose `Fg`/`Bg`/`GetFgAnsi`/`GetBgAnsi`/`ColorMode` resolve
-  `CurrentTheme()` at call time; factories (`GetMarkdownTheme`,
-  `GetEditorTheme`, …) and `GetThinkingBorderColor` closures built once from the
-  handle recolor after `Renderer.Invalidate()` on the next paint. This is what
-  lets `onChanged` stay `updateEditorBorderColor` (upstream's), with no
-  `rebuildForTheme`. Colors baked into a `Text` at construction stay baked in
-  both implementations.
-
-- Stage 1 also fixed the read side of `coding.SessionManager`
-  (`GetEntries`, `BuildContextEntriesForLeaf`, `BuildSessionContext` now take
-  `m.mu`; `AppendCompaction`/`GetSessionName` use the locked helpers): those
-  accessors were the first legitimate off-thread readers, and the agent writes
-  the same state from its own goroutine.
+Stages 2 (rendering) and 3 (input and signals) are also on the loop. Slow phases
+over `PIER_STALL_MS` (default 100; `0` disables) and keystroke round trips over
+`PIER_INPUT_LAT_MS` (default 50) append to `<agentDir>/pier-stall.log` and
+`<agentDir>/pier-input-latency.log` with goroutine dumps. The full design and the
+performance measurements are in `docs/architecture.md`.
 
 ## Architecture of the interactive mode
 
-Upstream `interactive-mode.ts` is one ~4000-line class. The Go port splits it
-into narrow, injectable wirings (all in `coding/interactive`):
+Upstream `interactive-mode.ts` is one ~4000-line class; the port splits it into
+narrow wirings in `coding/interactive` (`app.go` is the composition layer, and
+each `*Wiring` has a constructor next to its struct). The session projection
+lives in one module (`coding/session_projection.go`): it resolves the branch
+path, the compaction window, the context settings and the messages in one walk,
+caches by branch version, and is the single answer for `CurrentSystemMessage`,
+`LatestCompaction` and `ContextSignature`. Cache-miss notices are O(1)
+(`SessionManager.CacheMissFor`); large sessions attach a trailing window and
+materialize the rest per loop beat.
 
-- `app.go` — **the composition layer** (port of the `InteractiveMode`
-  constructor). It builds the containers, editor, footer, transcript, event
-  dispatcher, queue, selector slot, lifecycle, and every wiring, then exposes
-  `App.Init`/`App.Run`.
-- `interactivemode_lifecycle.go` — mount/stop, renderer swap, signals, shutdown.
-- `interactivemode_run.go` / `_startup.go` — init, the main input loop, helpers.
-- `interactivemode_handlers.go` — key wiring (`KeyWiring`) and submit dispatch
-  (`SubmitWiring`, the full slash-command chain).
-- `interactivemode_selectors.go`, `_settings.go`, `_models.go`, `_auth.go`,
-  `_commands.go`, `_queue.go`, `_events.go`, `_ui.go` — the named surfaces.
-- `transcript.go`, `footer.go`, `customeditor.go`, `tuirenderer.go`,
-  `extensionsselector.go`, `sessionshare.go`, `interactivemode_helpers.go`.
-- `main.go` (thin) and `cmd/main.go` — the `cmd` package boots
-  settings/auth/model-runtime/agent-session and runs the `App` (port of
-  `main.ts`'s boot); the root file only calls `cmd.Execute`.
-- Each `*Wiring` has a constructor next to its struct (`newCommandWiring(app)`,
-  `newRunWiring(app)`, …) that owns its full field wiring; `NewApp` is the
-  object graph plus a sequence of constructor calls. A field cannot be silently
-  skipped in the composition root because it lives with its struct —
-  `TestAppWiringCompleteness` pins the required hooks (the `/debug`
-  `WriteDebugLog` and right-click-paste hooks shipped unwired this way). Read the
-  target before wiring an unassigned seam: some seams are unassigned because
-  assigning them is wrong. `ConfigureHTTPIdleTimeout` fed a helper that wrote the
-  process-wide `http.DefaultTransport` — a data race against in-flight requests —
-  and the setting already reached the wire per request (D40).
-
-`tui/render.go` (+ `mainscreen.go`, `altscreen.go`, `terminal.go`,
-`stdinbuffer.go`) is the differential renderer core. Its lock discipline is
-load-bearing (see below).
-
-**The session projection lives in one module.** `coding/session_projection.go`
-owns what the next request carries: `SessionManager.Projection()` resolves the
-branch path, the compaction window, the context settings and the messages in one
-walk, caches the result by branch version (leaf + entry count), and hands its
-slices out with no spare capacity so a caller's append cannot write into the
-cache. `CurrentSystemMessage`, `LatestCompaction` and `ContextSignature` resolve
-from the same place. Before this, ten call sites assembled the projection by hand
-from `buildSessionPath` / `applyCompactionWindow` / `getSessionContextSettings` /
-`getEntriesLocked`, which is how the cache-warmer currency check ended up
-re-projecting the whole session per request: nothing owned the answer and the
-cost was invisible at the call site. Measured on the 45 MB / 19.4k-entry session:
-cold `Projection` 37 ms, cached 0, `AppendCompaction` 0 ms with a warm
-projection (247 ms originally, 56 ms before the cache).
-
-A resolution now walks the branch **by pointer** under the session lock
-(`branchPointersLocked`) and copies only the entries the compaction window
-keeps, instead of copying the whole entry tree and rebuilding an id map on every
-append. Profiling the 45 MB / 19.4k-entry session's projection after an append
-(the version changes on every append, so this ran per request) put 11 ms in
-`getEntriesLocked`'s entry copy, 17 ms in `buildSessionPath`'s value walk, 1 ms
-in the window, and **8 µs in decoding every message**: the session has 17
-compactions, so the decoded window was 3 entries. Decoding was never the cost;
-the copies were. With the pointer walk the projection is 3.3 ms cold and 2.3 ms
-after an append, and `coding/session_messagecache.go` memoizes each message
-entry's decoded messages and role (entries are append-only, so a memo never
-needs invalidation) for the uncompacted case, where the window is the whole
-path. `TestCompactedProjectionCostsTheWindowNotTheSession` pins the shape: a
-2001-entry session compacted to an 8-entry window resolves in 9.5 KB of
-allocation, where the tree copy measured ~800 KB. `BuildSessionContext` and
-`BuildContextEntries` stay as the value-based reference (the manager's
-resolution is compared against them by `TestProjectionCacheMatchesTheReference`),
-and `applyCompactionWindow` became a wrapper over `walkCompactionWindow`, which
-lets `ContextSignature` count the window without materializing it.
-
-**Cache-miss notices are O(1).** `SessionManager.CacheMissFor` answers the
-notice for an assistant message from `cacheScanState`, which advances as entries
-append (`appendEntry` consumes) and is seeded over the loaded entries in
-`buildIndex`. Upstream rescans parsed entries per assistant message
-(`detectCacheMiss(getEntries(), …)`); the port stores raw JSON, so the same call
-re-decoded every message entry: **713 ms** on the 45 MB session, on the UI loop,
-on every assistant message end, for anyone with `showCacheMissNotices: true`
-(which the reporting user had). The running state is 52 ns per notice and adds
-167 ms to loading that session, where a full scan of the seeded entries is
-504 ms. `CollectCacheMisses` keeps the full scan for transcript rebuilds (resume,
-compaction, reload), which still costs ~500 ms on that session.
-`TestCacheMissForMatchesTheFullScan` is the differential guard: the incremental
-notice must equal `DetectCacheMiss` on the session's entries for every assistant
-message, including after a compaction and a branch summary (which reset the
-scan). `scanAssistantRequest` reads only the role, usage, model and timestamp
-for the state; decoding the whole message (thinking, tool arguments) was what
-made seeding cost 500 ms.
-
-**Large-session rendering.** `RenderSessionItems` (`transcript.go`) renders a
-session eagerly below 400 items; above the threshold it collects the items into
-a collector container and attaches only the trailing window (120 components),
-materializing the rest 64 per loop beat via `RunWiring.OnBeat` →
-`MaterializeDeferred` (`Container.InsertChildAt`). Each chunk's render caches
-are warmed off the UI loop by `TranscriptRenderer.PrerenderQueue`
-(`internal/offloop`): a large entry's markdown lex + styling is the last long
-beat, so `tui.Preparer.Prepare` renders the chunk ahead of the attach and the
-loop only inserts an already-warmed chunk (a width change discards a chunk
-warmed for the old width; nil queue keeps the synchronous path). A 30 MB /
-15k-entry session paints its first frame in ~20 ms instead of ~400 ms.
-Resizing a huge session
-still costs ~350–430 ms per new width because the layout renders the whole
-attached scroll content at the content width (`ScrollContentLines` calls the
-component render) — this matches upstream `layout.ts` and is deliberately not
-staggered (a partial-width render would show stale text). A manual `/compact`
-on that session spent ~20 s and ~325 GB of allocations in `PrepareCompaction`
-before the summarization request was even built, because the port re-derived
-the context projection inside the loop over it (`BuildContextEntries` once per
-entry); it now builds the projection once (~105 ms at 15.5k entries), pinned by
-`TestPrepareCompactionProjectsTheContextOnce`. The other projection was on the
-request path: `cacheContextIsCurrent` (the cache-warmer currency check) built
-the whole `SessionManager` context — ~190 ms on that session — on **every**
-model request, and `BuildSessionContext` held the session mutex while it ran,
-so the UI thread (the footer re-reads the session on each status change) parked
-behind it and the TUI froze for ~200 ms right after every tool result, which is
-how it was reported ("running bash freezes the TUI"). The check now compares
-cheap `SessionManager.ContextSignature` values (branch-cache lookup + entry
-scan) and the projection snapshots the entries and projects outside the lock;
-see `TestCacheContextIsCurrentDoesNotProjectTheSession` (37 MB → 0 allocated per
-call) and `TestBuildSessionContextDoesNotHoldTheSessionLock`. The remaining
-frame cost was the bash preview: counting a command's output (for the
-"… (N earlier lines" hint) went through `tui.WrapTextWithAnsi` per line, ~1 ms
-and ~8000 allocations per 2000-line output, and a rebuilt transcript (compaction,
-`/reload`, resume) starts with every attached bash component cold, so the first
-frame after a rebuild stacked that into a 100+ ms frame (caught by a SIGQUIT
-dump inside `bashPreviewComponent.Render` → `visualLineCount`). Plain ASCII
-lines now count in one allocation-free pass (`plainWrappedLineCount`), pinned to
-the generic wrapper by `TestPlainWrappedLineCountMatchesTheGenericWrapper` and
-capped by `TestBashPreviewCountIsAllocationFree`. The **expanded** bash output
-had the same O(output²) shape: streaming recreated a `tui.Text` over the whole
-output every chunk and re-wrapped it (measured 468 ms per chunk at 20k lines).
-`bashExpandedComponent` styles and wraps each complete line once and re-wraps
-only the current partial line (`TestBashExpandedComponentMatchesReference`
-checks every prefix against the full-output reference;
-`TestBashExpandedStreamingIsLinear` bounds it). Two general width fast paths
-follow from the same profile: `isInTable` returns early for a rune below the
-first range, `graphemeWidth` returns 1 for printable ASCII, and `VisibleWidth`
-re-checks ASCII after stripping ANSI (styled tool output is ASCII underneath).
-Together the expanded 20k-line stream went 468 ms → 35 ms per frame, and the
-collapsed default stays sub-millisecond. **The remaining frame cost is the
-change-detection walk, not the post-processing.** A paint already only fills the
-terminal height (`RenderLayoutFrame` allocates `height` lines and `paintBox`
-fills those), and a warm walk is all cache hits (Markdown reports 100% via a
-`sync/atomic` probe), but the renderer re-walks every mounted component to find
-what changed, so a warm frame is O(components). `BenchmarkTranscriptFrameScaling`
-pins the curve: ~0.16 ms at 1k components, ~0.86 ms at ~4k, ~4.5 ms at 16k. The
-next optimization is a persistent subtree cache (or a per-component dirty/version
-signal propagated on `Invalidate`) so an unchanged transcript subtree is not
-walked; the open question is making that invalidation discipline complete, since
-components currently change state (e.g. `Text.SetText`) without telling the
-parent.
-
-**The flatten, not the walk, is what makes a streaming frame stall.** Reproduced
-on the live 61 MB session (25.4k attached children): a warm frame is 11 ms, but
-streaming a message made frames **100–190 ms** (52 `render` stall records across
-the log, all in the width/wrap/tokenize leaves, keystroke latency entirely
-`read`). `Container.Render` re-concatenated **every** child's lines into a fresh
-slice whenever any child changed; during streaming the last child changes every
-frame, so the whole transcript was re-flattened (and re-allocated) 60 times a
-second. It now finds the first changed child, keeps the unchanged prefix, and
-rewrites only the suffix **in place** (growing geometrically), which took the
-worst streaming frame 122 ms → 23 ms. Because the returned slice can now change
-contents while keeping its backing array, slice identity is no longer a valid
-change signal; `Container` carries a `version` bumped on every rebuild and
-exposes `RenderVersion`, and `firstChangedChild`/`zoneMarkedLines` compare it
-(the `MouseRegion` and `ScrollView` pass-throughs and the message/tool components
-that return a container's lines forward the revision). `TestContainerRenderReusesPrefixOnTailChange`
-and `TestContainerRenderDetectsInPlaceChildChange` pin both halves. The
-remaining cost is the O(components) walk above.
-
-`AppendCompaction` had the
-same shape: its entry records the projected system message, and the port
-resolved that from `buildSessionContextLocked` **while holding the session
-mutex** — 247 ms on a 45 MB session, so every UI read waited. It now projects
-before taking the lock (upstream is single-threaded and its parsed-object
-entries make the same projection cheap), and `getSessionContextSettings`
-resolves the model/thinking level by scanning the path backwards instead of
-decoding every message entry to find the last assistant, which cut a
-post-compaction projection from 210 ms to 56 ms. Pinned by
-`TestAppendCompactionDoesNotHoldTheSessionLock` and
-`TestProjectedSettingsResolveLastWriteWins`. Measured end-to-end (real binary in
-a pty, scripted model, the 45 MB / 19.4k-entry session resumed, bash tool call,
-both TUI modes, silent and output-streaming commands, with and without
-auto-compaction in the turn): the worst frame gap during the run is 82–83 ms,
-which is the spinner's own ~80 ms animation interval, with keystroke echo at
-5–6 ms; before these fixes the same run showed 200–300 ms lock-blocked stalls
-and a 121 ms frame after a transcript rebuild.
+Do not assemble the projection by hand, re-scan session entries per message, or
+run a value-shaped loop on the UI thread. The deep dives and their measurements
+are in `docs/architecture.md`.
 
 ## Conventions and gotchas
 
@@ -552,58 +209,9 @@ and a 121 ms frame after a transcript rebuild.
   prebuilds the binary and sets `PIER_TEST_BIN`. `TestMutexBlockedDetectorHasTeeth`
   proves the parser still catches a genuine mutex deadlock.
 
-### Lock inventory
-
-The `tui/` and `coding/interactive/` refactor retired every UI mutex. What
-remains in non-test code are narrow handoff and logging locks that never guard
-UI state, plus one documented `coding/` exception:
-
-| Lock | Where | Protects | Retirement |
-|---|---|---|---|
-| `Renderer.postMu` | `tui/render.go:143` | the posted-callback queue (`Post` is called from off-loop goroutines: loaders, watchers) | **retained (D146)**: serializes the handoff only; the owner drains it in the render pass and never runs a callback under it |
-| `ProcessTerminal.writeMu` | `tui/terminal.go:169` | terminal writes, raw-mode transitions, Kitty negotiation bookkeeping shared with the reader | **retained (D147)**: not UI state |
-| `ProcessTerminal.writesMu` | `tui/terminal.go:191` | the console-write FIFO (`Write` appends in submission order; a dedicated goroutine drains it) | **retained**: off-loop writer; the UI loop never writes to the console itself |
-| `resizeWatcherMu` | `tui/terminal_windows.go:30` | the Windows console-resize poller's stop/done channels | **retained**: the poller runs off the loop |
-| `prerenderState.mu` | `coding/interactive/transcript.go:105` | the transcript warm-ahead handoff (ready chunk, width, generation) | **retained**: loop ↔ warm-worker handoff, not UI state |
-| `inputLatencyRecorder.mu` | `coding/interactive/inputlatency.go:29` | keystroke-latency log appends from the off-loop logger | **retained**: log I/O only |
-| `stallWriteMu` | `coding/interactive/interactivemode_run.go:610` | the stall-log append, shared by the UI goroutine and the watchdog timer | **retained**: log I/O only |
-| `FooterDataProvider.mu` | `coding/footerdata.go` | cwd/git/status + listener registry, shared with its 500 ms git-HEAD watcher | **retained (D149)**: closing it needs the poll result posted to the loop and the listener fan-out delivered outside the lock; a `coding/` change outside this refactor |
-| `AgentSession.promptOptionsMu` | `coding/agent_session.go` | `SystemPromptOptions`, re-read by the prompt/tool loadout between turns | **retained**: the work goroutine re-applies the loadout while the UI loop rebuilds the options on `/reload` and tool changes; only a struct copy is taken under it |
-
-Retired along the way (all struck from the code; `grep 'sync.Mutex'
-tui/ coding/interactive/` outside tests returns only the locks tabulated above):
-
-| Lock | Where | Retired in |
-|---|---|---|
-| `Renderer.renderMu` | `tui/render.go` | D146 (input and painting share the owner goroutine) |
-| `Renderer.mu` | `tui/render.go` | D146 (loop-owned) |
-| `Container.mu` | `tui/component.go` | D146 (loop-owned) |
-| `Editor.mu` | `tui/editor.go` | D146 (loop-owned) |
-| `AltScreen.mu` | `tui/altscreen.go` | D146 (loop-owned) |
-| `ScrollView.mu` | `tui/scrollview.go` | D146; the scrollbar hide timer is a lazy deadline |
-| `Loader.mu` | `tui/selectlist.go` | stage 4 |
-| `AltScreenFlashContainer.mu` | `tui/selectlist.go` | stage 4 |
-| `StdinBuffer.mu` | `tui/stdinbuffer.go` | D147 (consumer-driven flush) |
-| `negotiationResult.lastDataMu` | `tui/terminal.go` | stage 3 (reader stamps an atomic) |
-| `KeybindingsManager.mu` | `tui/keybindings.go` | stage 4 |
-| `globalKeybindingsState.mu` | `tui/keybindings.go` | stage 4 |
-| `kittyProtocolState.mu` | `tui/keys.go` | stage 4 |
-| `lastEventTypeState.mu` | `tui/keys.go` | stage 4 |
-| `widthCacheMu` | `tui/width.go` | stage 4 |
-| `ModelSelectorComponent.mu` | `coding/interactive/modelselector.go` | stage 4 |
-| `ScopedModelsSelectorComponent.mu` | `coding/interactive/scopedmodelsselector.go` | stage 4 |
-| `SessionSelectorComponent.mu` | `coding/interactive/sessionselector.go` | stage 4 |
-| `scheduleOnce` local `mu` | `coding/interactive/sessionselector.go` | stage 4 |
-| `editCallComponent.previewMu` | `coding/interactive/toolrenderer_edit.go` | stage 4 |
-| `FooterComponent.cacheMu` | `coding/interactive/footer.go` | stage 4 |
-| `ModelCatalogRefreshCoordinator.mu` | `coding/interactive/catalogrefresh.go` | stage 4 (D148) |
-| `activeCatalogRefresh.mu` | `coding/interactive/catalogrefresh.go` | stage 4 (D148) |
-| `Lifecycle.mu` | `coding/interactive/interactivemode_lifecycle.go` | stage 4 |
-| `StartupWiring.mu` | `coding/interactive/interactivemode_startup.go` | stage 1 (input handoff is a channel) |
-| `Theme.mu`, `themeState.mu`, `trueColorState.mu`, `customThemesDirState.mu` | `coding/interactive/theme.go` | stage 4 (atomics / copy-on-write) |
-
-When retiring a lock, the invariant is unchanged: no user code under a lock;
-snapshot under and deliver outside.
+- **Lock inventory** (retained and retired locks, and the retirement invariant)
+  is in `docs/locks.md`: no user code under a lock; snapshot under and deliver
+  outside.
 
 - **Go 1.27 quirk.** Function literals passed as arguments need an explicit
   result type when the parameter's function type has one.
@@ -639,22 +247,3 @@ Native clipboard, kitty/iterm image transport internals beyond the
 line-detection helpers, extension mechanics, the package manager, and the rpc
 mode. Mermaid rendering needs `grok-mermaid` and is inert.
 
-## Session history (high level)
-
-The repository was built as a long port: the `ai`/`agent`/`coding` cores first,
-then the `pi-tui` library (renderer, layout, terminals, keys, markdown,
-components), then the interactive coding-agent mode (theme, every component,
-and the mode method groups), each round verified against upstream Node goldens
-and committed locally with a `docs/PORTING.md` update. The CLI
-(the root `main.go` over the `cmd` package, originally `cmd/pi`) and its
-composition layer (`app.go`) came last,
-followed by five deadlock fixes: D136 (editor submit), D137 (model selector),
-D138 (scroll) and D139 (exit) were found by driving the real binary in a PTY,
-and D156 (login) by reading the dispatch path, with a test that fails instead of
-hanging when the regression returns. The
-executable was then renamed from `pi` to `gpi` and finally to `pier` (the display name follows the
-invoked file name).
-
-To reproduce the exit/scroll checks, drive `bin/pier` under a PTY, exercise the
-flow, then send `SIGQUIT` to the process and look for goroutines blocked on
-`sync.Mutex`.
