@@ -270,6 +270,12 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		initialActiveToolNames = filtered
 	}
 
+	// The sandbox policy is per session: its backend is probed once and the
+	// default mode follows (workspace-write with a kernel backend, else
+	// read-only). The tools and the control block share the same instance so a
+	// `/permission` switch takes effect on the next tool call.
+	sandbox := NewSandbox(cwd, HomeForSandbox())
+
 	// The registry holds every built-in tool (upstream createAllToolDefinitions);
 	// the active selection is filtered by name.
 	// The read tool resolves its image limits and the non-vision note from the
@@ -280,6 +286,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 	// which would disable resizing).
 	var sessionForTools *AgentSession
 	toolByName := CreateAllTools(cwd, &ToolsOptions{
+		Sandbox: sandbox,
 		Read: &ReadToolOptions{
 			AutoResizeImages: settingsManager.GetImageAutoResize(),
 			Model: func() *ai.Model {
@@ -455,7 +462,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		Control: &AgentSessionControl{
 			ModelRuntime: modelRuntime, Settings: settingsManager,
 			Tools: map[string]AgentToolDefinition{}, autoCompaction: true, autoRetry: true,
-			PromptTemplates: promptTemplates,
+			PromptTemplates: promptTemplates, Sandbox: sandbox,
 		},
 		ConvertToLlm:    convertToLlmWithBlockImages,
 		SessionID:       sessionID,

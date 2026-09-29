@@ -32,6 +32,7 @@ var BuiltinSlashCommands = []BuiltinSlashCommand{
 	{Name: "model", Description: "Select model (opens selector UI)", ArgumentHint: "<provider/model>"},
 	{Name: "tree", Description: "Navigate session tree (switch branches)"},
 	{Name: "thinking", Description: "Set thinking level", ArgumentHint: "<level>"},
+	{Name: "permission", Description: "Set filesystem permission mode (bare shows the current mode)", ArgumentHint: "RO|WW|FA"},
 	{Name: "scoped-models", Description: "Enable/disable models for Ctrl+P cycling"},
 	{Name: "export", Description: "Export session (HTML default, or specify path: .html/.jsonl)"},
 	{Name: "import", Description: "Import and resume a session from a JSONL file"},

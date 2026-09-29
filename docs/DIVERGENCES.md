@@ -6,7 +6,7 @@ behaviour with no direct Go equivalent, or because a reference defect is fixed
 here; others are choices of this project's own. D-row numbers live in code
 comments at the point of divergence; this file is the log, and it is
 representative: the rows below carry a written-up rationale, while the rest live
-only as the code comment that introduced them. The range is **D1–D174**.
+only as the code comment that introduced them. The range is **D1–D177**.
 
 - D30 — startup timings read `PI_TIMING` **per call** instead of once at module
   load (upstream reads the flag when the timing module is first imported), so a
@@ -732,3 +732,23 @@ only as the code comment that introduced them. The range is **D1–D174**.
   The port drops the section (`coding/systemprompt.go`); the reference is
   otherwise unchanged, including the preamble that still names pi as the harness
   the port follows.
+
+- D177 — **the port has a native filesystem sandbox with three modes.** Upstream
+  pi has no built-in sandbox: it exposes the tools directly and leaves
+  confinement to an out-of-scope extension, and the user's own
+  `~/.pi/agent/extensions/sandbox` enforces a Landlock ruleset by compiling a C
+  gate at load time. The port takes the mode vocabulary from deepseek-harness
+  (`packages/sandbox/sandbox/src/index.ts`: `read-only`, `workspace-write` and
+  `danger-full-access`, named `full-access` here) and integrates the policy into
+  the session. `coding/sandbox.go` owns the modes, the writable allowlist
+  (workspace, devices, temp, GOPATH, toolchains, caches, `~/.pi`) and the
+  in-process write/edit path check; `coding/sandbox_linux.go` applies the
+  Landlock ruleset in a re-exec'd `pier __sandbox-exec` child, pure Go with no
+  cgo, which replaces gate.c's compiler dependency; the bash tool wraps its argv
+  under a confined mode; and the write/edit tools check their targets with
+  symlink resolution. Where no kernel backend exists (non-Linux, or an old
+  kernel) `workspace-write` cannot be enforced, so the default falls back to
+  `read-only` and only an explicit `/permission FA` lifts confinement; `full-access`
+  is never a default. The current mode is the first footer status
+  (`RO`/`WW`/`FA`, always shown) and a `sandbox` system-prompt section states the
+  policy, both derived from the same tables as the `/permission` parser.

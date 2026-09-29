@@ -33,6 +33,9 @@ type FooterSession interface {
 	Model() *ai.Model
 	SessionManager() *coding.SessionManager
 	GetContextUsage() *coding.ContextUsageReport
+	// SandboxMode is the active filesystem policy, shown as its two-letter code
+	// (RO/WW/FA) before the other statuses, whatever the backend.
+	SandboxMode() coding.SandboxMode
 }
 
 // FooterHomeDir returns the home directory used for path shortening.
@@ -240,6 +243,9 @@ func (f *FooterComponent) Render(width int) []string {
 	model := f.session.Model()
 
 	var statuses []string
+	// The sandbox code is always first and never depends on a toast: the footer
+	// is the one surface that survives a resume.
+	statuses = append(statuses, f.session.SandboxMode().Code())
 	extensionStatuses := f.footerData.GetExtensionStatuses()
 	if len(extensionStatuses) > 0 {
 		keys := make([]string, 0, len(extensionStatuses))

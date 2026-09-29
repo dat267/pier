@@ -126,8 +126,19 @@ func PrepareEditArguments(input json.RawMessage) json.RawMessage {
 	return mustMarshalJSON(args)
 }
 
+// firstSandbox returns the first non-nil sandbox from an optional list.
+func firstSandbox(sandboxes []*Sandbox) *Sandbox {
+	for _, sandbox := range sandboxes {
+		if sandbox != nil {
+			return sandbox
+		}
+	}
+	return nil
+}
+
 // CreateEditTool builds the edit tool.
-func CreateEditTool(cwd string) agent.AgentTool {
+func CreateEditTool(cwd string, sandbox ...*Sandbox) agent.AgentTool {
+	sb := firstSandbox(sandbox)
 	return agent.AgentTool{
 		Name:        "edit",
 		Description: EditToolDescription,
@@ -148,6 +159,9 @@ func CreateEditTool(cwd string) agent.AgentTool {
 				return agent.AgentToolResult{}, fmt.Errorf("Edit tool input is invalid. edits must contain at least one replacement.")
 			}
 			absolutePath := ResolveToCwd(input.Path, cwd)
+			if err := sb.CheckPath(absolutePath); err != nil {
+				return agent.AgentToolResult{}, err
+			}
 
 			var resultValue agent.AgentToolResult
 			var resultErr error

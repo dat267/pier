@@ -163,6 +163,7 @@ type SubmitHandlers struct {
 	ShowModelsSelector      func() error
 	HandleModelCommand      func(searchTerm string) error
 	HandleThinkingCommand   func(searchTerm string)
+	HandlePermissionCommand func(arg string)
 	HandleExportCommand     func(text string) error
 	HandleImportCommand     func(text string) error
 	HandleCopyCommand       func() error
@@ -266,6 +267,16 @@ func (w *SubmitWiring) HandleSubmit(ctx context.Context, text string) {
 		clearEditor()
 		if w.Handlers.HandleThinkingCommand != nil {
 			w.Handlers.HandleThinkingCommand(searchTerm)
+		}
+		return
+	case text == "/permission" || strings.HasPrefix(text, "/permission "):
+		arg := ""
+		if strings.HasPrefix(text, "/permission ") {
+			arg = strings.TrimSpace(text[len("/permission "):])
+		}
+		clearEditor()
+		if w.Handlers.HandlePermissionCommand != nil {
+			w.Handlers.HandlePermissionCommand(arg)
 		}
 		return
 	case text == "/export" || strings.HasPrefix(text, "/export "):
@@ -552,6 +563,36 @@ func newKeyWiring(app *App) *KeyWiring {
 	return wiring
 }
 
+// handlePermissionCommand handles `/permission [RO|WW|FA]`: a bare call reports
+// the current mode, a code switches it and repaints the footer.
+func (a *App) handlePermissionCommand(arg string) {
+	sandbox := a.session.Sandbox()
+	if sandbox == nil {
+		a.showWarning("Sandbox is not available in this session")
+		return
+	}
+	trimmed := strings.TrimSpace(arg)
+	backend := sandbox.Backend()
+	if trimmed == "" || strings.EqualFold(trimmed, "status") {
+		mode := sandbox.Mode()
+		a.transcript.ShowStatus("Permissions: " + mode.Code() + " — " + coding.SandboxModeDetail(mode, backend))
+		return
+	}
+	requested, ok := coding.SandboxModeFromCode(trimmed)
+	if !ok {
+		a.showWarning("Unknown permission mode \"" + trimmed + "\" — /permission RO|WW|FA")
+		return
+	}
+	effective, warning := a.session.SetSandboxMode(requested)
+	if warning != "" {
+		a.showWarning("[sandbox] " + warning)
+	} else {
+		a.transcript.ShowStatus("Permissions: " + effective.Code() + " — " + coding.SandboxModeDetail(effective, backend))
+	}
+	a.footer.Invalidate()
+	a.ui.RequestRender(false)
+}
+
 // newSubmitWiring assembles the SubmitWiring (port of the corresponding InteractiveMode wiring).
 func newSubmitWiring(app *App) *SubmitWiring {
 	return &SubmitWiring{
@@ -570,11 +611,12 @@ func newSubmitWiring(app *App) *SubmitWiring {
 				app.models.ShowModelSelector(context.Background(), searchTerm)
 				return nil
 			},
-			HandleThinkingCommand: app.selectors.HandleThinkingCommand,
-			HandleExportCommand:   func(text string) error { app.commands.HandleExportCommand(context.Background(), text); return nil },
-			HandleImportCommand:   func(text string) error { app.commands.HandleImportCommand(context.Background(), text); return nil },
-			HandleCopyCommand:     func() error { app.commands.HandleCopyCommand(false, false); return nil },
-			HandleNameCommand:     app.commands.HandleNameCommand,
+			HandleThinkingCommand:   app.selectors.HandleThinkingCommand,
+			HandlePermissionCommand: app.handlePermissionCommand,
+			HandleExportCommand:     func(text string) error { app.commands.HandleExportCommand(context.Background(), text); return nil },
+			HandleImportCommand:     func(text string) error { app.commands.HandleImportCommand(context.Background(), text); return nil },
+			HandleCopyCommand:       func() error { app.commands.HandleCopyCommand(false, false); return nil },
+			HandleNameCommand:       app.commands.HandleNameCommand,
 			// `!command` from the editor. Upstream emits a user_bash extension event
 			// first; extension mechanics are out of scope (D41), so the built-in
 			// execution is the whole path. The command deliberately runs off the UI

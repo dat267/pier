@@ -48,6 +48,12 @@ func Execute() {
 	// the pure-Go resolver needs a fallback there.
 	configureResolver()
 	appName := executableName()
+	// The hidden sandbox launcher runs before anything else: it applies the
+	// Landlock ruleset to this process and execs the command, so it must not
+	// boot the CLI or touch the network first.
+	if len(os.Args) > 1 && os.Args[1] == coding.SandboxLauncherSubcommand {
+		os.Exit(coding.RunSandboxLauncher(os.Args[1:]))
+	}
 	// `pi auth check|print-api-key|print-bearer-token` runs before anything
 	// else, off the raw argv (upstream runAuthCommand at the top of main).
 	if handled, code := coding.RunAuthCommandNamed(appName, os.Args[1:], os.Stdout, os.Stderr); handled {

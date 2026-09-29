@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/dat267/pier/ai"
@@ -35,11 +36,14 @@ type fakeFooterSession struct {
 	thinkingLevel string
 	contextUsage  *coding.ContextUsageReport
 	subscriptions map[string]bool
+	sandboxMode   coding.SandboxMode
 }
 
 func (f *fakeFooterSession) Model() *ai.Model { return f.model }
 
 func (f *fakeFooterSession) ThinkingLevel() ai.ThinkingLevel { return f.thinkingLevel }
+
+func (f *fakeFooterSession) SandboxMode() coding.SandboxMode { return f.sandboxMode }
 
 func (f *fakeFooterSession) SessionManager() *coding.SessionManager { return f.manager }
 
@@ -256,6 +260,37 @@ func TestFooterComponentRendersSingleDimLine(t *testing.T) {
 // TestAgentSessionSatisfiesFooterSession guards the seam.
 func TestAgentSessionSatisfiesFooterSession(t *testing.T) {
 	var _ FooterSession = (*coding.AgentSession)(nil)
+}
+
+// TestFooterShowsSandboxModeCode pins the sandbox code as the first status and
+// proves a live mode switch re-renders without an explicit invalidate (the
+// fingerprint covers it).
+func TestFooterShowsSandboxModeCode(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	InitTheme("dark", false)
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "s.jsonl")
+	manager, err := coding.OpenSession(path, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	session := &fakeFooterSession{
+		manager:     manager,
+		model:       &ai.Model{ID: "m", ContextWindow: 1000},
+		sandboxMode: coding.SandboxModeWorkspaceWrite,
+	}
+	footer := NewFooterComponent(session, &fakeFooterData{statuses: map[string]string{}})
+	if line := coding.StripAnsi(footer.Render(200)[0]); !strings.Contains(line, " · WW · ") {
+		t.Fatalf("footer = %q (want the WW code)", line)
+	}
+	session.sandboxMode = coding.SandboxModeReadOnly
+	if line := coding.StripAnsi(footer.Render(200)[0]); !strings.Contains(line, " · RO · ") {
+		t.Fatalf("footer after switch = %q (want the RO code)", line)
+	}
 }
 
 func floatPtr(v float64) *float64 { return &v }

@@ -296,7 +296,8 @@ var writeSchemaJSON = mustSchemaJSON(map[string]any{
 })
 
 // CreateWriteTool builds the write tool.
-func CreateWriteTool(cwd string) agent.AgentTool {
+func CreateWriteTool(cwd string, sandbox ...*Sandbox) agent.AgentTool {
+	sb := firstSandbox(sandbox)
 	return agent.AgentTool{
 		Name:        "write",
 		Description: WriteToolDescription,
@@ -311,6 +312,9 @@ func CreateWriteTool(cwd string) agent.AgentTool {
 				return agent.AgentToolResult{}, err
 			}
 			absolutePath := ResolveToCwd(input.Path, cwd)
+			if err := sb.CheckPath(absolutePath); err != nil {
+				return agent.AgentToolResult{}, err
+			}
 			dir := filepath.Dir(absolutePath)
 			err := WithFileMutationQueue(absolutePath, func() error {
 				if ctxErrOf(ctx) != nil {

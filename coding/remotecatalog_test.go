@@ -273,7 +273,7 @@ func TestBuiltinSlashCommands(t *testing.T) {
 			t.Errorf("missing command %q", expected)
 		}
 	}
-	if len(BuiltinSlashCommands) != 21 {
+	if len(BuiltinSlashCommands) != 22 {
 		t.Fatalf("commands = %d", len(BuiltinSlashCommands))
 	}
 	if !strings.Contains(BuiltinSlashCommands[len(BuiltinSlashCommands)-1].Description, AppName) {

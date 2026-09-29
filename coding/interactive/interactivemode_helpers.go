@@ -271,6 +271,20 @@ func (w *AutocompleteWiring) CreateBaseAutocompleteProvider() tui.AutocompletePr
 				}), true
 		}
 	}
+	// /permission argument completions.
+	for index := range commands {
+		if commands[index].Name != "permission" {
+			continue
+		}
+		commands[index].GetArgumentCompletions = func(prefix string) ([]tui.AutocompleteItem, bool) {
+			completions := coding.SandboxModeCompletions(prefix)
+			items := make([]tui.AutocompleteItem, 0, len(completions))
+			for _, completion := range completions {
+				items = append(items, tui.AutocompleteItem{Value: completion.Value, Label: completion.Label, Description: completion.Description})
+			}
+			return items, true
+		}
+	}
 	// /login argument completions.
 	for index := range commands {
 		if commands[index].Name != "login" {

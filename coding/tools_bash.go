@@ -353,6 +353,9 @@ type BashToolOptions struct {
 	ExposeSessionEnvironment *bool
 	// SessionEnv carries the PI_* values to expose (host-provided).
 	SessionEnv map[string]string
+	// Sandbox confines the command for the session's active mode. Nil means no
+	// policy (full access).
+	Sandbox *Sandbox
 }
 
 // BashToolDetails carries bash output details.
@@ -414,6 +417,7 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 	exposeSessionEnv := true
 	shellPath := ""
 	var sessionEnv map[string]string
+	var sandbox *Sandbox
 	if options != nil {
 		commandPrefix = options.CommandPrefix
 		if options.ExposeSessionEnvironment != nil {
@@ -421,6 +425,7 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 		}
 		shellPath = options.ShellPath
 		sessionEnv = options.SessionEnv
+		sandbox = options.Sandbox
 	}
 
 	return agent.AgentTool{
@@ -535,11 +540,18 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 
 			var cmd *exec.Cmd
 			commandFromStdin := shellConfig.CommandTransport == "stdin"
-			if commandFromStdin {
-				cmd = exec.Command(shellConfig.Shell, shellConfig.Args...)
-			} else {
-				cmd = exec.Command(shellConfig.Shell, append(append([]string{}, shellConfig.Args...), command)...)
+			shellArgv := append([]string{shellConfig.Shell}, shellConfig.Args...)
+			if !commandFromStdin {
+				shellArgv = append(shellArgv, command)
 			}
+			if sandbox != nil {
+				wrapped, wrapErr := sandbox.WrapArgv(shellArgv)
+				if wrapErr != nil {
+					return agent.AgentToolResult{}, wrapErr
+				}
+				shellArgv = wrapped
+			}
+			cmd = exec.Command(shellArgv[0], shellArgv[1:]...)
 			cmd.Dir = cwd
 			cmd.Env = shellEnv(sessionEnv, exposeSessionEnv)
 			// Detached process group for tree kills.
