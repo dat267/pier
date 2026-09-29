@@ -285,9 +285,18 @@ func SandboxWritableRoots(workspace, home string) []string {
 			home+"/go",      // GOPATH: module cache + go install binaries
 			home+"/.rustup", // RUSTUP_HOME
 			home+"/.cargo",  // CARGO_HOME
+			home+"/.sdkman", // SDKMAN_DIR: JDK/Maven/Gradle candidates
 			home+"/.cache",
-			home+"/.npm",
-			home+"/.pi", // agent state: sessions, settings, skills, credentials
+			home+"/.npm",                    // npm cache
+			home+"/.bun",                    // Bun install cache
+			home+"/.gradle",                 // GRADLE_USER_HOME: dependency and build caches
+			home+"/.m2",                     // Maven local repository
+			home+"/.local/share/uv",         // uv tools and managed Pythons
+			home+"/.local/share/fnm",        // fnm managed Node versions
+			home+"/.local/share/containers", // rootless podman storage
+			home+"/Android/Sdk",             // ANDROID_HOME: SDK platforms and build-tools
+			home+"/.android",                // adb keys and AVD state
+			home+"/.pi",                     // agent state: sessions, settings, skills, credentials
 		)
 	}
 	seen := map[string]bool{}
