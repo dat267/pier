@@ -567,15 +567,35 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 				return agent.AgentToolResult{}, err
 			}
 			pgid := cmd.Process.Pid
+			// The guard owns the tree's kill handle: a Windows job object, the
+			// process group identity on unix (D178).
+			guard := newProcessTreeGuard(pgid)
+			defer guard.Release()
 			procDone := make(chan struct{})
 			defer close(procDone)
+
+			// closeOutput releases the readers when the tree is killed. The shell
+			// and everything it started hold the write ends, so a descendant that
+			// outlives the kill keeps a reader parked forever, and the aborted
+			// command would look like it is still running (D178).
+			var closeOnce sync.Once
+			closeOutput := func() {
+				closeOnce.Do(func() {
+					_ = stdoutPipe.Close()
+					_ = stderrPipe.Close()
+				})
+			}
+			killTree := func() {
+				guard.Kill()
+				closeOutput()
+			}
 
 			// Abort and timeout kill the whole tree (upstream killProcessTree).
 			if ctx != nil {
 				go func() {
 					select {
 					case <-ctx.Done():
-						KillProcessTree(pgid)
+						killTree()
 					case <-procDone:
 					}
 				}()
@@ -584,18 +604,23 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 			if input.Timeout != nil {
 				timeoutDur, terr := ResolveTimeoutSeconds(*input.Timeout)
 				if terr != nil {
-					KillProcessTree(pgid)
+					killTree()
 					return agent.AgentToolResult{}, terr
 				}
 				timed := time.AfterFunc(timeoutDur, func() {
 					timedOut.Store(true)
-					KillProcessTree(pgid)
+					killTree()
 				})
 				defer timed.Stop()
 			}
 
+			streams := &sync.WaitGroup{}
+			activity := make(chan struct{}, 1)
+			started := make(chan struct{}, 2)
 			drain := func(reader interface{ Read([]byte) (int, error) }) {
+				defer streams.Done()
 				buf := make([]byte, 64*1024)
+				started <- struct{}{}
 				for {
 					n, err := reader.Read(buf)
 					if n > 0 {
@@ -603,17 +628,25 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 						copy(chunk, buf[:n])
 						_ = output.Append(chunk)
 						scheduleOutputUpdate()
+						select {
+						case activity <- struct{}{}:
+						default:
+						}
 					}
 					if err != nil {
 						return
 					}
 				}
 			}
-			drainDone := make(chan struct{}, 2)
-			go func() { drain(stdoutPipe); drainDone <- struct{}{} }()
-			go func() { drain(stderrPipe); drainDone <- struct{}{} }()
-			<-drainDone
-			<-drainDone
+			streams.Add(2)
+			go drain(stdoutPipe)
+			go drain(stderrPipe)
+			// Drain before Wait: os/exec closes the pipes it created when Wait
+			// reaps the process, which can truncate unread data (D127). The grace
+			// window then stops a detached descendant that inherited the pipes
+			// from hanging the drain once the shell is gone (port of
+			// waitForChildProcess).
+			waitForPipeDrain(streams, activity, started)
 
 			waitErr := cmd.Wait()
 			updateWG.Wait()

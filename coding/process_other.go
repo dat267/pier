@@ -1,4 +1,4 @@
-//go:build !unix
+//go:build !unix && !windows
 
 package coding
 
@@ -26,3 +26,25 @@ func killProcessTreePlatform(pid int) {
 	taskkill := filepath.Join(systemRoot, "System32", "taskkill.exe")
 	_ = exec.Command(taskkill, "/F", "/T", "/PID", strconv.Itoa(pid)).Run()
 }
+
+// processTreeGuard is the pid-tree kill on platforms with neither process
+// groups nor job objects: the tree is all there is to kill.
+type processTreeGuard struct {
+	pid    int
+	killed bool
+}
+
+// newProcessTreeGuard records the pid the tree kill will target.
+func newProcessTreeGuard(pid int) *processTreeGuard { return &processTreeGuard{pid: pid} }
+
+// Kill terminates the tree once.
+func (g *processTreeGuard) Kill() {
+	if g == nil || g.killed {
+		return
+	}
+	g.killed = true
+	killProcessTreePlatform(g.pid)
+}
+
+// Release has nothing to close off unix.
+func (g *processTreeGuard) Release() {}

@@ -3,10 +3,12 @@ package coding
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -237,5 +239,77 @@ func TestBashSessionEnvStripped(t *testing.T) {
 	}
 	if text := result.Content[0].(ai.TextContent).Text; strings.TrimSpace(text) != "gpt-5" {
 		t.Fatalf("PI_MODEL = %q", text)
+	}
+}
+
+// detachedWriterCommand returns the shell config and command for
+// TestBashAbortDetachedWriter: a command whose shell stays alive while a
+// descendant, deliberately outside the shell's tree, keeps writing to the
+// inherited stdout.
+func detachedWriterCommand() (ShellToolConfig, string) {
+	if runtime.GOOS == "windows" {
+		config := ShellToolConfig{
+			Name:           "cmd",
+			Label:          "cmd",
+			ShellName:      "cmd",
+			TempFilePrefix: "pi-cmd",
+			ResolveShell: func(string) (ShellConfig, error) {
+				return ShellConfig{Shell: "cmd.exe", Args: []string{"/c"}}, nil
+			},
+		}
+		// `start /b` leaves the writer orphaned, because the child cmd.exe that
+		// would be its parent exits at once: taskkill /T walks a live
+		// parent-child tree, so it cannot reach the writer. The trailing quiet
+		// ping keeps the shell alive, so the abort still has a pid to kill.
+		return config, `start /b cmd /c start /b cmd /c ping -n 10 127.0.0.1 & echo started & ping -n 10 127.0.0.1 >nul`
+	}
+	// `setsid` moves the writer into its own process group, out of reach of
+	// the group kill, so only closing the readers can end the drain. On a host
+	// without setsid the writer never starts and the test only stops
+	// discriminating, it does not fail.
+	return BashShellToolConfig, `setsid sh -c 'for i in $(seq 1 200); do echo tick; sleep 0.05; done' & echo started; sleep 15`
+}
+
+// TestBashAbortDetachedWriter pins D178: an abort must return even while a
+// descendant that escaped the tree holds the output pipe open. Upstream waits
+// for the stdio streams to close, which such a writer can prevent forever.
+func TestBashAbortDetachedWriter(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		requirePosixShell(t)
+	}
+	config, command := detachedWriterCommand()
+	tool := CreateShellTool(t.TempDir(), config, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	started := make(chan struct{}, 1)
+	onUpdate := func(result agent.AgentToolResult) {
+		for _, content := range result.Content {
+			if text, ok := content.(ai.TextContent); ok && strings.Contains(text.Text, "started") {
+				select {
+				case started <- struct{}{}:
+				default:
+				}
+			}
+		}
+	}
+	cancelledAt := make(chan time.Time, 1)
+	go func() {
+		select {
+		case <-started:
+		case <-time.After(15 * time.Second):
+		}
+		cancel()
+		cancelledAt <- time.Now()
+	}()
+
+	_, err := tool.Execute("c", json.RawMessage(fmt.Sprintf(`{"command":%s}`, strconv.Quote(command))), ctx, onUpdate)
+	returnedAt := time.Now()
+	if err == nil || !strings.Contains(err.Error(), "Command aborted") {
+		t.Fatalf("err = %v", err)
+	}
+	at := <-cancelledAt
+	if after := returnedAt.Sub(at); after > 3*time.Second {
+		t.Fatalf("abort took %v after cancelling: a detached writer held the output pipe", after)
 	}
 }

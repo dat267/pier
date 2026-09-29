@@ -22,3 +22,26 @@ func killProcessTreePlatform(pid int) {
 		_ = syscall.Kill(pid, syscall.SIGKILL)
 	}
 }
+
+// processTreeGuard holds the process group identity, which outlives the shell:
+// a group kill therefore reaches descendants that detached from the tree, unlike
+// a pid-based walk (D178).
+type processTreeGuard struct {
+	pid    int
+	killed bool
+}
+
+// newProcessTreeGuard records the group leader pid (the shell's).
+func newProcessTreeGuard(pid int) *processTreeGuard { return &processTreeGuard{pid: pid} }
+
+// Kill signals the group once.
+func (g *processTreeGuard) Kill() {
+	if g == nil || g.killed {
+		return
+	}
+	g.killed = true
+	killProcessTreePlatform(g.pid)
+}
+
+// Release has nothing to close off Windows.
+func (g *processTreeGuard) Release() {}

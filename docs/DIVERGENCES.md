@@ -6,7 +6,7 @@ behaviour with no direct Go equivalent, or because a reference defect is fixed
 here; others are choices of this project's own. D-row numbers live in code
 comments at the point of divergence; this file is the log, and it is
 representative: the rows below carry a written-up rationale, while the rest live
-only as the code comment that introduced them. The range is **D1–D177**.
+only as the code comment that introduced them. The range is **D1–D178**.
 
 - D30 — startup timings read `PI_TIMING` **per call** instead of once at module
   load (upstream reads the flag when the timing module is first imported), so a
@@ -757,3 +757,22 @@ only as the code comment that introduced them. The range is **D1–D177**.
   kernel ruleset, the in-process write/edit check and the prompt note all derive
   from one resolved `SandboxPolicy`, so the advertised writable set cannot drift
   from enforcement.
+
+- D178 — **a killed shell command cannot be held open by a descendant that
+  outlived it.** Upstream's abort and timeout kill the process tree by pid
+  (`taskkill /F /T` on win32) and then wait for the child's stdio streams to
+  close. A descendant the command left behind — a backgrounded server, a
+  `start /b`, a `setsid` — inherits the output pipe and keeps it open, so the
+  wait outlives the kill: the abort does nothing visible until the last writer
+  exits, even though the tree it killed is already gone. The port closes the
+  command's output readers as part of the kill, so the drain ends on the kill
+  rather than on the last writer, and it drains through `waitForPipeDrain` (the
+  grace window the sandbox launcher already used, a port of upstream's
+  `waitForChildProcess`). On Windows the tree is additionally held in a job
+  object, because `taskkill /T` walks a live parent-child tree and cannot reach
+  a process whose parent has already exited, while `TerminateJobObject` still
+  reaches it; the guard falls back to taskkill where the assignment fails. The
+  job is closed without terminating on a normal completion, so a process the
+  command deliberately left running survives, as upstream leaves it. Measured on
+  the case that started this: an abort that used to return 9s after cancelling,
+  when the detached writer finished, now returns in under 0.1s.
