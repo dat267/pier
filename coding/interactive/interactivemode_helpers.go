@@ -271,9 +271,9 @@ func (w *AutocompleteWiring) CreateBaseAutocompleteProvider() tui.AutocompletePr
 				}), true
 		}
 	}
-	// /permission argument completions.
+	// /permissions argument completions.
 	for index := range commands {
-		if commands[index].Name != "permission" {
+		if commands[index].Name != "permissions" {
 			continue
 		}
 		commands[index].GetArgumentCompletions = func(prefix string) ([]tui.AutocompleteItem, bool) {

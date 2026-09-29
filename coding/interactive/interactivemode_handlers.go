@@ -159,32 +159,32 @@ type SubmitSession interface {
 
 // SubmitHandlers are the slash-command handlers (injected; D115).
 type SubmitHandlers struct {
-	ShowSettingsSelector    func()
-	ShowModelsSelector      func() error
-	HandleModelCommand      func(searchTerm string) error
-	HandleThinkingCommand   func(searchTerm string)
-	HandlePermissionCommand func(arg string)
-	HandleExportCommand     func(text string) error
-	HandleImportCommand     func(text string) error
-	HandleCopyCommand       func() error
-	HandleNameCommand       func(text string)
-	HandleSessionCommand    func()
-	HandleHotkeysCommand    func()
-	ShowUserMessageSelector func()
-	HandleCloneCommand      func() error
-	ShowTreeSelector        func()
-	ShowTrustSelector       func()
-	HandleLoginCommand      func(providerRef string) error
-	ShowOAuthSelector       func(mode string)
-	HandleClearCommand      func() error
-	HandleCompactCommand    func(customInstructions string) error
-	HandleReloadCommand     func() error
-	HandleDebugCommand      func()
-	HandleArminSaysHi       func()
-	HandleDementedDelves    func()
-	ShowSessionSelector     func()
-	Shutdown                func() error
-	HandleBashCommand       func(command string, excludeFromContext bool) error
+	ShowSettingsSelector     func()
+	ShowModelsSelector       func() error
+	HandleModelCommand       func(searchTerm string) error
+	HandleThinkingCommand    func(searchTerm string)
+	HandlePermissionsCommand func(arg string)
+	HandleExportCommand      func(text string) error
+	HandleImportCommand      func(text string) error
+	HandleCopyCommand        func() error
+	HandleNameCommand        func(text string)
+	HandleSessionCommand     func()
+	HandleHotkeysCommand     func()
+	ShowUserMessageSelector  func()
+	HandleCloneCommand       func() error
+	ShowTreeSelector         func()
+	ShowTrustSelector        func()
+	HandleLoginCommand       func(providerRef string) error
+	ShowOAuthSelector        func(mode string)
+	HandleClearCommand       func() error
+	HandleCompactCommand     func(customInstructions string) error
+	HandleReloadCommand      func() error
+	HandleDebugCommand       func()
+	HandleArminSaysHi        func()
+	HandleDementedDelves     func()
+	ShowSessionSelector      func()
+	Shutdown                 func() error
+	HandleBashCommand        func(command string, excludeFromContext bool) error
 }
 
 // SubmitWiring handles editor submissions.
@@ -269,14 +269,14 @@ func (w *SubmitWiring) HandleSubmit(ctx context.Context, text string) {
 			w.Handlers.HandleThinkingCommand(searchTerm)
 		}
 		return
-	case text == "/permission" || strings.HasPrefix(text, "/permission "):
+	case text == "/permissions" || strings.HasPrefix(text, "/permissions "):
 		arg := ""
-		if strings.HasPrefix(text, "/permission ") {
-			arg = strings.TrimSpace(text[len("/permission "):])
+		if strings.HasPrefix(text, "/permissions ") {
+			arg = strings.TrimSpace(text[len("/permissions "):])
 		}
 		clearEditor()
-		if w.Handlers.HandlePermissionCommand != nil {
-			w.Handlers.HandlePermissionCommand(arg)
+		if w.Handlers.HandlePermissionsCommand != nil {
+			w.Handlers.HandlePermissionsCommand(arg)
 		}
 		return
 	case text == "/export" || strings.HasPrefix(text, "/export "):
@@ -563,9 +563,9 @@ func newKeyWiring(app *App) *KeyWiring {
 	return wiring
 }
 
-// handlePermissionCommand handles `/permission [RO|WW|FA]`: a bare call reports
+// handlePermissionsCommand handles `/permissions [RO|WW|FA]`: a bare call reports
 // the current mode, a code switches it and repaints the footer.
-func (a *App) handlePermissionCommand(arg string) {
+func (a *App) handlePermissionsCommand(arg string) {
 	sandbox := a.session.Sandbox()
 	if sandbox == nil {
 		a.showWarning("Sandbox is not available in this session")
@@ -580,7 +580,7 @@ func (a *App) handlePermissionCommand(arg string) {
 	}
 	requested, ok := coding.SandboxModeFromCode(trimmed)
 	if !ok {
-		a.showWarning("Unknown permission mode \"" + trimmed + "\" — /permission RO|WW|FA")
+		a.showWarning("Unknown permission mode \"" + trimmed + "\" — /permissions RO|WW|FA")
 		return
 	}
 	effective, warning := a.session.SetSandboxMode(requested)
@@ -611,12 +611,12 @@ func newSubmitWiring(app *App) *SubmitWiring {
 				app.models.ShowModelSelector(context.Background(), searchTerm)
 				return nil
 			},
-			HandleThinkingCommand:   app.selectors.HandleThinkingCommand,
-			HandlePermissionCommand: app.handlePermissionCommand,
-			HandleExportCommand:     func(text string) error { app.commands.HandleExportCommand(context.Background(), text); return nil },
-			HandleImportCommand:     func(text string) error { app.commands.HandleImportCommand(context.Background(), text); return nil },
-			HandleCopyCommand:       func() error { app.commands.HandleCopyCommand(false, false); return nil },
-			HandleNameCommand:       app.commands.HandleNameCommand,
+			HandleThinkingCommand:    app.selectors.HandleThinkingCommand,
+			HandlePermissionsCommand: app.handlePermissionsCommand,
+			HandleExportCommand:      func(text string) error { app.commands.HandleExportCommand(context.Background(), text); return nil },
+			HandleImportCommand:      func(text string) error { app.commands.HandleImportCommand(context.Background(), text); return nil },
+			HandleCopyCommand:        func() error { app.commands.HandleCopyCommand(false, false); return nil },
+			HandleNameCommand:        app.commands.HandleNameCommand,
 			// `!command` from the editor. Upstream emits a user_bash extension event
 			// first; extension mechanics are out of scope (D41), so the built-in
 			// execution is the whole path. The command deliberately runs off the UI

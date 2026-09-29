@@ -22,7 +22,7 @@ import (
 //
 // Only Linux can enforce a mode with a kernel backend (Landlock). Where no
 // backend exists workspace-write cannot be enforced, so the default falls back
-// to read-only and the agent only writes after an explicit `/permission FA`.
+// to read-only and the agent only writes after an explicit `/permissions FA`.
 //
 // Divergence D177: upstream pi has no built-in sandbox (confinement is an
 // out-of-scope extension); this is a port-local feature.
@@ -72,7 +72,7 @@ var sandboxModeOrder = []SandboxMode{SandboxModeReadOnly, SandboxModeWorkspaceWr
 // Code is the two-letter footer/command code for a mode.
 func (m SandboxMode) Code() string { return sandboxModeCodes[m] }
 
-// SandboxModeFromCode parses a `/permission` argument into a mode. It accepts
+// SandboxModeFromCode parses a `/permissions` argument into a mode. It accepts
 // the two-letter codes, the full mode names and an unambiguous prefix,
 // case-insensitively.
 func SandboxModeFromCode(arg string) (SandboxMode, bool) {
@@ -93,7 +93,7 @@ func SandboxModeFromCode(arg string) (SandboxMode, bool) {
 	return "", false
 }
 
-// SandboxModeCompletions are the `/permission` argument completions, derived
+// SandboxModeCompletions are the `/permissions` argument completions, derived
 // from the same table as the parser and the footer.
 func SandboxModeCompletions(prefix string) []SandboxModeCompletion {
 	wanted := strings.ToUpper(strings.TrimSpace(prefix))
@@ -108,7 +108,7 @@ func SandboxModeCompletions(prefix string) []SandboxModeCompletion {
 	return out
 }
 
-// SandboxModeCompletion is one `/permission` argument completion.
+// SandboxModeCompletion is one `/permissions` argument completion.
 type SandboxModeCompletion struct {
 	Value       string
 	Label       string
@@ -143,7 +143,7 @@ func DefaultSandboxMode(backend SandboxBackend) SandboxMode {
 
 // Sandbox is the session's filesystem policy: the active mode, the detected
 // backend and the workspace the policy is scoped to. Tool executions read it,
-// the `/permission` command writes it. A nil *Sandbox means "no policy" and
+// the `/permissions` command writes it. A nil *Sandbox means "no policy" and
 // reads as full-access, so a session built without one keeps its old behavior.
 type Sandbox struct {
 	mu        sync.RWMutex
@@ -237,12 +237,12 @@ func (s *Sandbox) WrapArgv(argv []string) ([]string, error) {
 		return argv, nil
 	case SandboxModeReadOnly:
 		if s.Backend() == SandboxBackendNone {
-			return nil, fmt.Errorf("sandbox: read-only mode cannot confine commands on this platform (no kernel backend); /permission FA to run unconfined")
+			return nil, fmt.Errorf("sandbox: read-only mode cannot confine commands on this platform (no kernel backend); /permissions FA to run unconfined")
 		}
 		return sandboxConfinementArgv(s.WritableRoots(), argv)
 	case SandboxModeWorkspaceWrite:
 		if s.Backend() == SandboxBackendNone {
-			return nil, fmt.Errorf("sandbox: workspace-write cannot be enforced on this platform (no kernel backend); /permission FA to run unconfined")
+			return nil, fmt.Errorf("sandbox: workspace-write cannot be enforced on this platform (no kernel backend); /permissions FA to run unconfined")
 		}
 		return sandboxConfinementArgv(s.WritableRoots(), argv)
 	}
@@ -257,7 +257,7 @@ func (s *Sandbox) CheckPath(target string) error {
 	case SandboxModeFullAccess:
 		return nil
 	case SandboxModeReadOnly:
-		return fmt.Errorf("sandbox: read-only mode blocks writing %s; /permission WW to allow the workspace or /permission FA for full access", target)
+		return fmt.Errorf("sandbox: read-only mode blocks writing %s; /permissions WW to allow the workspace or /permissions FA for full access", target)
 	case SandboxModeWorkspaceWrite:
 		if reason := InspectSandboxPath(target, s.Workspace(), SandboxWritableRoots(s.Workspace(), s.home)); reason != "" {
 			return fmt.Errorf("%s", reason)

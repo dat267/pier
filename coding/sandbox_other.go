@@ -10,7 +10,7 @@ import (
 // No kernel sandbox backend outside Linux. macOS Seatbelt and the Windows ACL
 // restricted-token runner are not ported: the mode model and the footer stay
 // identical, but workspace-write is unenforceable, so the default falls back to
-// read-only and only an explicit `/permission FA` lifts confinement.
+// read-only and only an explicit `/permissions FA` lifts confinement.
 
 // DetectSandboxBackend reports no backend on non-Linux hosts.
 func DetectSandboxBackend() SandboxBackend { return SandboxBackendNone }

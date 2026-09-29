@@ -273,7 +273,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 	// The sandbox policy is per session: its backend is probed once and the
 	// default mode follows (workspace-write with a kernel backend, else
 	// read-only). The tools and the control block share the same instance so a
-	// `/permission` switch takes effect on the next tool call.
+	// `/permissions` switch takes effect on the next tool call.
 	sandbox := NewSandbox(cwd, HomeForSandbox())
 
 	// The registry holds every built-in tool (upstream createAllToolDefinitions);

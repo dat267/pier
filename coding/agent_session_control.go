@@ -467,7 +467,7 @@ func (s *AgentSession) resolvedSystemPromptOptions() (BuildSystemPromptOptions, 
 	}
 	options.SelectedTools = selectedRegistryTools(options.SelectedTools, s.control.Tools)
 	options.ToolSnippets, options.ToolGuidelines = s.toolPromptContributions()
-	// The sandbox section is derived from the live policy, so a `/permission`
+	// The sandbox section is derived from the live policy, so a `/permissions`
 	// switch is reflected in the next prompt diff without a separate update path.
 	if sandbox := s.control.Sandbox; sandbox != nil {
 		sections := map[string]string{}
