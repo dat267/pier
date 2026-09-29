@@ -76,7 +76,7 @@ func TestSandboxWritableRoots(t *testing.T) {
 	for _, want := range []string{"/ws", "/tmp", "/var/tmp", "/dev", "/proc", "/sys",
 		home + "/go", home + "/.bun", home + "/.gradle", home + "/.m2",
 		home + "/.sdkman", home + "/.local/share/uv", home + "/.local/share/fnm",
-		home + "/.local/share/containers", home + "/Android/Sdk", home + "/.android", home + "/.pi"} {
+		home + "/.local/share/containers", home + "/Android/Sdk", home + "/.pi"} {
 		if !contains(roots, want) {
 			t.Fatalf("writable roots missing %q: %v", want, roots)
 		}
@@ -166,7 +166,7 @@ func TestSandboxWrapArgv(t *testing.T) {
 	}
 	// The package-manager caches reach the launcher argv, not just the list.
 	joined := strings.Join(wrapped, "\x00")
-	for _, want := range []string{"/home/u/.bun", "/home/u/.gradle", "/home/u/.m2", "/home/u/.sdkman", "/home/u/.local/share/uv", "/home/u/.local/share/fnm", "/home/u/.local/share/containers", "/home/u/Android/Sdk", "/home/u/.android"} {
+	for _, want := range []string{"/home/u/.bun", "/home/u/.gradle", "/home/u/.m2", "/home/u/.sdkman", "/home/u/.local/share/uv", "/home/u/.local/share/fnm", "/home/u/.local/share/containers", "/home/u/Android/Sdk"} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("launcher argv missing %q: %v", want, wrapped)
 		}

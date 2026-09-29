@@ -295,7 +295,6 @@ func SandboxWritableRoots(workspace, home string) []string {
 			home+"/.local/share/fnm",        // fnm managed Node versions
 			home+"/.local/share/containers", // rootless podman storage
 			home+"/Android/Sdk",             // ANDROID_HOME: SDK platforms and build-tools
-			home+"/.android",                // adb keys and AVD state
 			home+"/.pi",                     // agent state: sessions, settings, skills, credentials
 		)
 	}
