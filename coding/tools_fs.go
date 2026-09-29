@@ -181,9 +181,7 @@ func nonVisionImageNote(model *ai.Model) string {
 
 // imageResizeOptionsFor resolves the model's resize limits over the defaults, the
 // way upstream spreads model.inputLimits.images.resize over DEFAULT_OPTIONS: a
-// partially specified block keeps the default for every key it leaves out. No
-// builtin model carries the block (the catalogue the port embeds has no
-// inputLimits), so the defaults are the common case.
+// partially specified block keeps the default for every key it leaves out.
 func imageResizeOptionsFor(model *ai.Model) ImageResizeOptions {
 	options := DefaultImageResizeOptions
 	if model == nil || model.InputLimits == nil || model.InputLimits.Images == nil {

@@ -233,9 +233,9 @@ type ModelPromptCache map[CacheRetention]int
 
 // Model is the unified model descriptor.
 // ModelInputLimits bound what a model accepts in one request (upstream
-// ModelInputLimitsSchema). Only user models.json overrides set these; no builtin
-// model in the catalogue carries them, which is why callers fall back to their
-// own defaults.
+// ModelInputLimitsSchema). The embedded catalogue carries them for most builtin
+// models; callers still fall back to their own defaults when a model leaves
+// them unset.
 type ModelInputLimits struct {
 	MaxRequestBytes int64             `json:"maxRequestBytes,omitempty"`
 	Images          *ModelImageLimits `json:"images,omitempty"`

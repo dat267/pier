@@ -18,12 +18,14 @@ v0.87.1 refresh (the reference is the pinned tag `f07218c4d`, read from the
   boundaries so a reasoning model does not continue the prefix (#9652). Ported
   with `TestParseArgsModeValidation` and
   `TestTurnPrefixPromptUsesMarkdownBoundaries`.
-- Not ported, because the model catalog is a pinned models.dev snapshot rather
-  than a tag artifact: the generator's new models (Claude Opus 5.5, GPT-6
-  Sol/Luna, the Copilot entries), xai's `grok-4.7` default, and the
-  `inclusionai/ming-image-0.1-design` image entry. Until the catalog is
-  regenerated, `DefaultModelPerProvider` keeps `xai` on `grok-4.6` and those ids
-  stay absent.
+- The model catalog is regenerated from the tag's committed
+  `packages/ai/src/providers/data/` (`schemaVersion` 3, `generatedAt`
+  2026-09-26) with `scripts/gen_catalog.py`, and the image catalog from
+  `image-models.generated.ts` with `scripts/gen_image_catalog.py`. The refresh
+  adds the generator's new models (Claude Opus 5.5, GPT-6 Sol/Luna, the Copilot
+  entries), the `inclusionai/ming-image-0.1-design` image entry, and the
+  per-model `inputLimits` the newer generator emits; `DefaultModelPerProvider`
+  moves xai to `grok-4.7`.
 
 v0.87.0 refresh (the previous pin; `36b60d2e8` sat on a divergent upstream line
 with no common ancestor):

@@ -267,6 +267,25 @@
     ],
     "provider": "openrouter"
    },
+   "inclusionai/ming-image-0.1-design": {
+    "api": "openrouter-images",
+    "baseUrl": "https://openrouter.ai/api/v1",
+    "cost": {
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "input": 0,
+     "output": 0
+    },
+    "id": "inclusionai/ming-image-0.1-design",
+    "input": [
+     "text"
+    ],
+    "name": "inclusionAI: Ming Image 0.1 Design",
+    "output": [
+     "image"
+    ],
+    "provider": "openrouter"
+   },
    "krea/krea-2-large": {
     "api": "openrouter-images",
     "baseUrl": "https://openrouter.ai/api/v1",

@@ -421,7 +421,7 @@ func TestDefaultModelPerProviderTracksCurrentModels(t *testing.T) {
 		"cerebras":                   "gpt-oss-120b",
 		"ant-ling":                   "Ring-2.6-1T",
 		"vercel-ai-gateway":          "zai/glm-5.1",
-		"xai":                        "grok-4.6",
+		"xai":                        "grok-4.7",
 		"qwen-token-plan-individual": "qwen3.8-max",
 		"meta":                       "muse-spark-1.3",
 	}
