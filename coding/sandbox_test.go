@@ -226,6 +226,56 @@ func TestBashToolFullAccessRuns(t *testing.T) {
 	}
 }
 
+// TestBashToolSandboxConfinesCommand drives the real Landlock path through the
+// bash tool: os.Executable() is this test binary, whose TestMain dispatches the
+// __sandbox-exec subcommand. The missing home exercises the skip for
+// allowlist entries that do not exist.
+func TestBashToolSandboxConfinesCommand(t *testing.T) {
+	if DetectSandboxBackend() != SandboxBackendLandlock {
+		t.Skip("no Landlock backend on this host")
+	}
+	if _, err := exec.LookPath("sh"); err != nil {
+		t.Skip("no sh on PATH")
+	}
+	ws := t.TempDir()
+	sandbox := &Sandbox{mode: SandboxModeWorkspaceWrite, backend: SandboxBackendLandlock, workspace: ws, home: filepath.Join(ws, "no-such-home")}
+	tool := CreateBashTool(ws, &BashToolOptions{Sandbox: sandbox})
+	result, err := tool.Execute("c", json.RawMessage(`{"command":"echo hi > ok.txt && cat ok.txt"}`), context.Background(), nil)
+	if err != nil {
+		t.Fatalf("in-workspace write through the sandbox failed: %v", err)
+	}
+	if len(result.Content) == 0 || !strings.Contains(result.Content[0].(ai.TextContent).Text, "hi") {
+		t.Fatalf("result = %+v", result.Content)
+	}
+	if _, err := tool.Execute("c", json.RawMessage(`{"command":"echo no > /etc/pier-sbx-bash.txt"}`), context.Background(), nil); err == nil {
+		t.Fatal("out-of-allowlist write through the sandbox must be denied")
+	}
+}
+
+// TestBashToolSandboxReadOnlyDeniesWrites drives read-only mode, whose only
+// writable root is the /dev/null file: reads work, writes anywhere else fail.
+func TestBashToolSandboxReadOnlyDeniesWrites(t *testing.T) {
+	if DetectSandboxBackend() != SandboxBackendLandlock {
+		t.Skip("no Landlock backend on this host")
+	}
+	if _, err := exec.LookPath("sh"); err != nil {
+		t.Skip("no sh on PATH")
+	}
+	ws := t.TempDir()
+	sandbox := &Sandbox{mode: SandboxModeReadOnly, backend: SandboxBackendLandlock, workspace: ws, home: filepath.Join(ws, "no-such-home")}
+	tool := CreateBashTool(ws, &BashToolOptions{Sandbox: sandbox})
+	result, err := tool.Execute("c", json.RawMessage(`{"command":"cat /etc/hostname >/dev/null && echo read-ok"}`), context.Background(), nil)
+	if err != nil {
+		t.Fatalf("read-only read failed: %v", err)
+	}
+	if len(result.Content) == 0 || !strings.Contains(result.Content[0].(ai.TextContent).Text, "read-ok") {
+		t.Fatalf("result = %+v", result.Content)
+	}
+	if _, err := tool.Execute("c", json.RawMessage(`{"command":"echo x > /tmp/pier-sbx-ro-test.txt"}`), context.Background(), nil); err == nil {
+		t.Fatal("read-only must deny writes")
+	}
+}
+
 func TestWriteToolSandboxGating(t *testing.T) {
 	ws := t.TempDir()
 	ww := &Sandbox{mode: SandboxModeWorkspaceWrite, backend: SandboxBackendLandlock, workspace: ws, home: "/home/u"}

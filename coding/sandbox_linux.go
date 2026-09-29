@@ -3,6 +3,7 @@
 package coding
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -33,6 +34,15 @@ const (
 		unix.LANDLOCK_ACCESS_FS_MAKE_FIFO |
 		unix.LANDLOCK_ACCESS_FS_MAKE_BLOCK |
 		unix.LANDLOCK_ACCESS_FS_MAKE_SYM
+
+	// landlockFileBits is the subset of the access rights that apply to a
+	// non-directory path. A rule for a file that carries a directory-only right
+	// (READ_DIR, MAKE_*, REMOVE_*, REFER) is rejected with EINVAL, which is how a
+	// read-only rule for /dev/null failed before the mask was applied.
+	landlockFileBits = unix.LANDLOCK_ACCESS_FS_EXECUTE |
+		unix.LANDLOCK_ACCESS_FS_READ_FILE |
+		unix.LANDLOCK_ACCESS_FS_WRITE_FILE |
+		unix.LANDLOCK_ACCESS_FS_TRUNCATE
 )
 
 // DetectSandboxBackend probes the Landlock ABI (>= 1 means the kernel enforces
@@ -167,12 +177,24 @@ func landlockCreateRuleset(handled uint64) (int, error) {
 func landlockAddRule(rulesetFd int, access uint64, path string) error {
 	pathFd, err := unix.Open(path, unix.O_PATH|unix.O_CLOEXEC, 0)
 	if err != nil {
-		return fmt.Errorf("sandbox: cannot open %q: %v", path, err)
+		// A writable root that does not exist grants nothing, so skip it rather
+		// than refuse the command: an allowlist entry promises access where the
+		// path exists, it does not require the path to exist (~/.rustup and
+		// friends are commonly absent).
+		if errors.Is(err, unix.ENOENT) || errors.Is(err, unix.ENOTDIR) {
+			return nil
+		}
+		return fmt.Errorf("sandbox: cannot open %q: %w", path, err)
 	}
 	defer unix.Close(pathFd)
+	// A file (e.g. /dev/null) only accepts the file-applicable rights.
+	var stat unix.Stat_t
+	if err := unix.Fstat(pathFd, &stat); err == nil && stat.Mode&unix.S_IFMT != unix.S_IFDIR {
+		access &= landlockFileBits
+	}
 	attr := unix.LandlockPathBeneathAttr{Allowed_access: access, Parent_fd: int32(pathFd)}
 	if _, _, errno := unix.Syscall6(unix.SYS_LANDLOCK_ADD_RULE, uintptr(rulesetFd), unix.LANDLOCK_RULE_PATH_BENEATH, uintptr(unsafe.Pointer(&attr)), 0, 0, 0); errno != 0 {
-		return fmt.Errorf("sandbox: allow %q: %v", path, errno)
+		return fmt.Errorf("sandbox: allow %q: %w", path, errno)
 	}
 	return nil
 }
