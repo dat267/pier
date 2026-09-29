@@ -474,7 +474,7 @@ func (s *AgentSession) resolvedSystemPromptOptions() (BuildSystemPromptOptions, 
 		for name, value := range options.Sections {
 			sections[name] = value
 		}
-		sections["sandbox"] = SandboxPromptNote(sandbox.Mode(), sandbox.Backend(), sandbox.Workspace(), HomeForSandbox())
+		sections["sandbox"] = sandbox.Policy().PromptNote()
 		options.Sections = sections
 	}
 	return options, true

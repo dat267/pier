@@ -81,9 +81,46 @@ func TestSandboxWritableRoots(t *testing.T) {
 			t.Fatalf("writable roots missing %q: %v", want, roots)
 		}
 	}
-	ro := (&Sandbox{mode: SandboxModeReadOnly, backend: SandboxBackendLandlock, workspace: "/ws", home: home}).WritableRoots()
+	ro := (&Sandbox{mode: SandboxModeReadOnly, backend: SandboxBackendLandlock, workspace: "/ws", home: home}).Policy().Writable
 	if len(ro) != 1 || ro[0] != "/dev/null" {
 		t.Fatalf("read-only roots = %v (want [/dev/null])", ro)
+	}
+}
+
+// TestSandboxPolicyIsSingleSourceOfTruth pins the one policy all three surfaces
+// derive from: the kernel launcher argv, the in-process write/edit check and the
+// prompt note agree on the writable set, including the podman runtime dirs.
+func TestSandboxPolicyIsSingleSourceOfTruth(t *testing.T) {
+	runtime := t.TempDir()
+	containers := filepath.Join(runtime, "containers")
+	libpod := filepath.Join(runtime, "libpod")
+	ws := t.TempDir()
+	s := &Sandbox{
+		mode: SandboxModeWorkspaceWrite, backend: SandboxBackendLandlock,
+		workspace: ws, home: "/home/u",
+		runtimeDirs: []string{containers, libpod},
+	}
+	policy := s.Policy()
+	for _, want := range append([]string{ws, "/tmp", "/home/u/.pi"}, containers, libpod) {
+		if !contains(policy.Writable, want) {
+			t.Fatalf("policy writable roots missing %q: %v", want, policy.Writable)
+		}
+	}
+	// The in-process check must agree with the kernel grant: a write/edit target
+	// under the runtime dirs is allowed, not just bash.
+	if err := policy.CheckPath(filepath.Join(containers, "storage", "db.sql")); err != nil {
+		t.Fatalf("policy CheckPath denied a kernel-granted path: %v", err)
+	}
+	// The launcher argv carries every writable root.
+	argv, err := policy.WrapArgv([]string{"bash", "-c", "true"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(argv, "\x00")
+	for _, want := range policy.Writable {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("launcher argv missing writable root %q: %v", want, argv)
+		}
 	}
 }
 
@@ -129,14 +166,33 @@ func TestCheckPathPerMode(t *testing.T) {
 	}
 }
 
-func TestSandboxPromptNote(t *testing.T) {
-	note := SandboxPromptNote(SandboxModeReadOnly, SandboxBackendLandlock, "/ws", "/home/u")
-	if !strings.Contains(note, "mode: read-only") || !strings.Contains(note, "/ws") {
-		t.Fatalf("read-only note = %q", note)
-	}
-	full := SandboxPromptNote(SandboxModeFullAccess, SandboxBackendNone, "/ws", "/home/u")
+func TestSandboxPolicyPromptNote(t *testing.T) {
+	// full-access names the disabled state.
+	full := (&Sandbox{mode: SandboxModeFullAccess, backend: SandboxBackendNone}).Policy().PromptNote()
 	if !strings.Contains(full, "DISABLED") {
 		t.Fatalf("full-access note = %q", full)
+	}
+	// read-only advertises only what it can write, not the workspace allowlist.
+	ro := (&Sandbox{mode: SandboxModeReadOnly, backend: SandboxBackendLandlock, workspace: "/ws", home: "/home/u"}).Policy().PromptNote()
+	if !strings.Contains(ro, "mode: read-only") || !strings.Contains(ro, "/dev/null") {
+		t.Fatalf("read-only note = %q", ro)
+	}
+	if strings.Contains(ro, "/ws") || strings.Contains(ro, "~/.pi") {
+		t.Fatalf("read-only note advertised a non-writable path: %q", ro)
+	}
+	// workspace-write derives its prose from the same writable set, including
+	// the podman runtime dirs.
+	runtime := t.TempDir()
+	containers := filepath.Join(runtime, "containers")
+	libpod := filepath.Join(runtime, "libpod")
+	ww := (&Sandbox{
+		mode: SandboxModeWorkspaceWrite, backend: SandboxBackendLandlock,
+		workspace: "/ws", home: "/home/u", runtimeDirs: []string{containers, libpod},
+	}).Policy().PromptNote()
+	for _, want := range []string{"/ws", "~/.pi", containers, libpod} {
+		if !strings.Contains(ww, want) {
+			t.Fatalf("workspace-write note missing %q: %q", want, ww)
+		}
 	}
 }
 

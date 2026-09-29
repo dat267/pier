@@ -221,56 +221,112 @@ func (s *Sandbox) SetMode(requested SandboxMode) (SandboxMode, string) {
 	return requested, ""
 }
 
-// WritableRoots is the set of paths the active mode may write. read-only may
-// only write the null sink; workspace-write adds the shared allowlist and the
-// rootless-podman runtime directories.
-func (s *Sandbox) WritableRoots() []string {
-	if s.Mode() == SandboxModeReadOnly {
-		return []string{sandboxDevNull}
-	}
-	roots := SandboxWritableRoots(s.Workspace(), s.home)
-	return append(roots, s.runtimeDirs...)
+// SandboxPolicy is a resolved snapshot of the sandbox for one mode. It is the
+// single source of truth every surface derives from: the kernel launcher argv,
+// the in-process write/edit check and the system-prompt note.
+type SandboxPolicy struct {
+	Mode      SandboxMode
+	Backend   SandboxBackend
+	Workspace string
+	// Writable is the resolved writable allowlist for the mode, sorted and
+	// deduped. read-only holds only the null sink; full-access is empty because
+	// every path is writable.
+	Writable []string
+
+	home    string
+	runtime []string
 }
 
-// WrapArgv confines a command argv for the active mode. It returns the argv to
-// run unchanged under full-access, the launcher-wrapped argv under a confined
-// mode, or an error when the mode cannot be enforced (fail closed).
-func (s *Sandbox) WrapArgv(argv []string) ([]string, error) {
-	switch s.Mode() {
+// Policy resolves the active mode into the one policy the surfaces share. A nil
+// sandbox reads as full-access, so a session built without one keeps its old
+// behavior.
+func (s *Sandbox) Policy() SandboxPolicy {
+	if s == nil {
+		return SandboxPolicy{Mode: SandboxModeFullAccess}
+	}
+	s.mu.RLock()
+	policy := SandboxPolicy{
+		Mode:      s.mode,
+		Backend:   s.backend,
+		Workspace: s.workspace,
+		home:      s.home,
+		runtime:   append([]string(nil), s.runtimeDirs...),
+	}
+	s.mu.RUnlock()
+	switch policy.Mode {
+	case SandboxModeReadOnly:
+		policy.Writable = []string{sandboxDevNull}
+	case SandboxModeWorkspaceWrite:
+		policy.Writable = sortUniquePaths(append(SandboxWritableRoots(policy.Workspace, policy.home), policy.runtime...))
+	}
+	return policy
+}
+
+// sortUniquePaths sorts and dedupes paths in place.
+func sortUniquePaths(paths []string) []string {
+	sort.Strings(paths)
+	seen := map[string]bool{}
+	out := paths[:0]
+	for _, path := range paths {
+		if path == "" || seen[path] {
+			continue
+		}
+		seen[path] = true
+		out = append(out, path)
+	}
+	return out
+}
+
+// WrapArgv confines a command argv for the policy's mode. It returns the argv
+// unchanged under full-access, the launcher-wrapped argv under a confined mode,
+// or an error when the mode cannot be enforced (fail closed).
+func (p SandboxPolicy) WrapArgv(argv []string) ([]string, error) {
+	switch p.Mode {
 	case SandboxModeFullAccess:
 		return argv, nil
 	case SandboxModeReadOnly:
-		if s.Backend() == SandboxBackendNone {
+		if p.Backend == SandboxBackendNone {
 			return nil, fmt.Errorf("sandbox: read-only mode cannot confine commands on this platform (no kernel backend); /permissions FA to run unconfined")
 		}
-		return sandboxConfinementArgv(s.WritableRoots(), argv)
+		return sandboxConfinementArgv(p.Writable, argv)
 	case SandboxModeWorkspaceWrite:
-		if s.Backend() == SandboxBackendNone {
+		if p.Backend == SandboxBackendNone {
 			return nil, fmt.Errorf("sandbox: workspace-write cannot be enforced on this platform (no kernel backend); /permissions FA to run unconfined")
 		}
-		s.ensureRuntimeDirs()
-		return sandboxConfinementArgv(s.WritableRoots(), argv)
+		// The launcher skips a path that does not exist, and a confined process
+		// cannot mkdir under the ungranted XDG_RUNTIME_DIR, so create them first.
+		for _, dir := range p.runtime {
+			_ = os.MkdirAll(dir, 0o700)
+		}
+		return sandboxConfinementArgv(p.Writable, argv)
 	}
 	return argv, nil
 }
 
-// CheckPath rejects an in-process file mutation that the active mode does not
-// allow. The write/edit tools call it before touching the filesystem; bash is
-// confined by the kernel instead.
-func (s *Sandbox) CheckPath(target string) error {
-	switch s.Mode() {
+// CheckPath rejects an in-process file mutation that the policy does not allow.
+// The write/edit tools call it before touching the filesystem; bash is confined
+// by the kernel instead.
+func (p SandboxPolicy) CheckPath(target string) error {
+	switch p.Mode {
 	case SandboxModeFullAccess:
 		return nil
 	case SandboxModeReadOnly:
 		return fmt.Errorf("sandbox: read-only mode blocks writing %s; /permissions WW to allow the workspace or /permissions FA for full access", target)
 	case SandboxModeWorkspaceWrite:
-		if reason := InspectSandboxPath(target, s.Workspace(), SandboxWritableRoots(s.Workspace(), s.home)); reason != "" {
+		if reason := InspectSandboxPath(target, p.Workspace, p.Writable); reason != "" {
 			return fmt.Errorf("%s", reason)
 		}
 		return nil
 	}
 	return nil
 }
+
+// WrapArgv confines a command argv for the active mode (a nil sandbox is
+// full-access).
+func (s *Sandbox) WrapArgv(argv []string) ([]string, error) { return s.Policy().WrapArgv(argv) }
+
+// CheckPath rejects an in-process file mutation the active mode does not allow.
+func (s *Sandbox) CheckPath(target string) error { return s.Policy().CheckPath(target) }
 
 // SandboxRuntimeDirRoots returns the rootless-podman runtime directories under
 // XDG_RUNTIME_DIR. Only these two are granted, never their parent: the parent
@@ -286,15 +342,6 @@ func SandboxRuntimeDirRoots() []string {
 		return nil
 	}
 	return []string{filepath.Join(dir, "containers"), filepath.Join(dir, "libpod")}
-}
-
-// ensureRuntimeDirs creates the runtime roots so the launcher can grant them: a
-// confined process cannot mkdir under the ungranted XDG_RUNTIME_DIR, and the
-// launcher skips a path that does not exist.
-func (s *Sandbox) ensureRuntimeDirs() {
-	for _, dir := range s.runtimeDirs {
-		_ = os.MkdirAll(dir, 0o700)
-	}
 }
 
 // SandboxWritableRoots is the shared writable allowlist (policy.ts
@@ -402,37 +449,37 @@ func realResolve(path string) string {
 
 func cachedRealResolve(path string) string { return realResolve(path) }
 
-// SandboxPromptNote renders the sandbox system-prompt section: the writable
-// paths plus the mode's enforcement promise.
-func SandboxPromptNote(mode SandboxMode, backend SandboxBackend, workspace, home string) string {
+// PromptNote renders the sandbox system-prompt section: the writable paths the
+// policy resolves plus the mode's enforcement promise. It derives from the same
+// Writable set the kernel and the in-process check use, so the prose cannot
+// drift from enforcement.
+func (p SandboxPolicy) PromptNote() string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "Workspace filesystem policy (sandbox, mode: %s):\n", mode)
-	if mode == SandboxModeFullAccess {
+	fmt.Fprintf(&b, "Workspace filesystem policy (sandbox, mode: %s):\n", p.Mode)
+	if p.Mode == SandboxModeFullAccess {
 		b.WriteString("- The sandbox is DISABLED; all filesystem writes are unrestricted.")
-		if backend == SandboxBackendNone {
+		if p.Backend == SandboxBackendNone {
 			b.WriteString(" No kernel sandbox backend is available on this platform.")
 		}
 		return b.String()
 	}
-	roots := SandboxWritableRoots(workspace, home)
-	rendered := make([]string, 0, len(roots))
-	for _, root := range roots {
-		rendered = append(rendered, renderSandboxPath(root, home))
+	rendered := make([]string, 0, len(p.Writable))
+	for _, root := range p.Writable {
+		rendered = append(rendered, renderSandboxPath(root, p.home))
 	}
 	fmt.Fprintf(&b, "- Writable: %s.\n", strings.Join(rendered, ", "))
 	b.WriteString("- Every other directory is read-only. Reads are allowed everywhere.\n")
 	b.WriteString("- Use /tmp for scratch files and test artifacts.\n")
 	b.WriteString("- Deployments (chezmoi apply, extension installs) are run by the user in their own terminal, never by the agent.\n")
-	switch mode {
+	switch p.Mode {
 	case SandboxModeReadOnly:
-		if backend == SandboxBackendNone {
+		if p.Backend == SandboxBackendNone {
 			b.WriteString("- Enforcement: no kernel backend is available, so bash, write and edit are blocked in-process.")
 		} else {
 			b.WriteString("- Enforcement: shell commands run under a kernel Landlock ruleset that denies writes (writes return Permission denied); write and edit targets are checked in-process.")
 		}
 	case SandboxModeWorkspaceWrite:
 		b.WriteString("- Enforcement: shell commands run under a kernel Landlock ruleset (writes outside the list return Permission denied); write and edit targets are checked in-process with symlink resolution.\n")
-		b.WriteString("- The rootless-podman runtime directories ($XDG_RUNTIME_DIR/containers and $XDG_RUNTIME_DIR/libpod) are also writable.\n")
 	}
 	return b.String()
 }

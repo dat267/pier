@@ -753,4 +753,7 @@ only as the code comment that introduced them. The range is **D1–D177**.
   `read-only` and only an explicit `/permissions FA` lifts confinement; `full-access`
   is never a default. The current mode is the first footer status
   (`RO`/`WW`/`FA`, always shown) and a `sandbox` system-prompt section states the
-  policy, both derived from the same tables as the `/permissions` parser.
+  policy, both derived from the same tables as the `/permissions` parser. The
+  kernel ruleset, the in-process write/edit check and the prompt note all derive
+  from one resolved `SandboxPolicy`, so the advertised writable set cannot drift
+  from enforcement.
