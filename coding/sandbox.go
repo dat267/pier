@@ -146,21 +146,23 @@ func DefaultSandboxMode(backend SandboxBackend) SandboxMode {
 // the `/permissions` command writes it. A nil *Sandbox means "no policy" and
 // reads as full-access, so a session built without one keeps its old behavior.
 type Sandbox struct {
-	mu        sync.RWMutex
-	mode      SandboxMode
-	backend   SandboxBackend
-	workspace string
-	home      string
+	mu          sync.RWMutex
+	mode        SandboxMode
+	backend     SandboxBackend
+	workspace   string
+	home        string
+	runtimeDirs []string
 }
 
 // NewSandbox probes the backend and starts in the platform default mode.
 func NewSandbox(workspace, home string) *Sandbox {
 	backend := DetectSandboxBackend()
 	return &Sandbox{
-		mode:      DefaultSandboxMode(backend),
-		backend:   backend,
-		workspace: workspace,
-		home:      home,
+		mode:        DefaultSandboxMode(backend),
+		backend:     backend,
+		workspace:   workspace,
+		home:        home,
+		runtimeDirs: SandboxRuntimeDirRoots(),
 	}
 }
 
@@ -220,12 +222,14 @@ func (s *Sandbox) SetMode(requested SandboxMode) (SandboxMode, string) {
 }
 
 // WritableRoots is the set of paths the active mode may write. read-only may
-// only write the null sink; workspace-write adds the shared allowlist.
+// only write the null sink; workspace-write adds the shared allowlist and the
+// rootless-podman runtime directories.
 func (s *Sandbox) WritableRoots() []string {
 	if s.Mode() == SandboxModeReadOnly {
 		return []string{sandboxDevNull}
 	}
-	return SandboxWritableRoots(s.Workspace(), s.home)
+	roots := SandboxWritableRoots(s.Workspace(), s.home)
+	return append(roots, s.runtimeDirs...)
 }
 
 // WrapArgv confines a command argv for the active mode. It returns the argv to
@@ -244,6 +248,7 @@ func (s *Sandbox) WrapArgv(argv []string) ([]string, error) {
 		if s.Backend() == SandboxBackendNone {
 			return nil, fmt.Errorf("sandbox: workspace-write cannot be enforced on this platform (no kernel backend); /permissions FA to run unconfined")
 		}
+		s.ensureRuntimeDirs()
 		return sandboxConfinementArgv(s.WritableRoots(), argv)
 	}
 	return argv, nil
@@ -265,6 +270,31 @@ func (s *Sandbox) CheckPath(target string) error {
 		return nil
 	}
 	return nil
+}
+
+// SandboxRuntimeDirRoots returns the rootless-podman runtime directories under
+// XDG_RUNTIME_DIR. Only these two are granted, never their parent: the parent
+// also holds the live session IPC sockets (bus, pipewire/pulse, systemd, gnupg,
+// ssh-agent, kwallet), and Landlock has no deny rule, so granting it would let a
+// runaway command unlink or replace them.
+func SandboxRuntimeDirRoots() []string {
+	dir := os.Getenv("XDG_RUNTIME_DIR")
+	if dir == "" {
+		dir = fmt.Sprintf("/run/user/%d", os.Getuid())
+	}
+	if !filepath.IsAbs(dir) {
+		return nil
+	}
+	return []string{filepath.Join(dir, "containers"), filepath.Join(dir, "libpod")}
+}
+
+// ensureRuntimeDirs creates the runtime roots so the launcher can grant them: a
+// confined process cannot mkdir under the ungranted XDG_RUNTIME_DIR, and the
+// launcher skips a path that does not exist.
+func (s *Sandbox) ensureRuntimeDirs() {
+	for _, dir := range s.runtimeDirs {
+		_ = os.MkdirAll(dir, 0o700)
+	}
 }
 
 // SandboxWritableRoots is the shared writable allowlist (policy.ts
@@ -401,7 +431,8 @@ func SandboxPromptNote(mode SandboxMode, backend SandboxBackend, workspace, home
 			b.WriteString("- Enforcement: shell commands run under a kernel Landlock ruleset that denies writes (writes return Permission denied); write and edit targets are checked in-process.")
 		}
 	case SandboxModeWorkspaceWrite:
-		b.WriteString("- Enforcement: shell commands run under a kernel Landlock ruleset (writes outside the list return Permission denied); write and edit targets are checked in-process with symlink resolution.")
+		b.WriteString("- Enforcement: shell commands run under a kernel Landlock ruleset (writes outside the list return Permission denied); write and edit targets are checked in-process with symlink resolution.\n")
+		b.WriteString("- The rootless-podman runtime directories ($XDG_RUNTIME_DIR/containers and $XDG_RUNTIME_DIR/libpod) are also writable.\n")
 	}
 	return b.String()
 }

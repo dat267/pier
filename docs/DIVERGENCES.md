@@ -741,7 +741,9 @@ only as the code comment that introduced them. The range is **D1–D177**.
   (`packages/sandbox/sandbox/src/index.ts`: `read-only`, `workspace-write` and
   `danger-full-access`, named `full-access` here) and integrates the policy into
   the session. `coding/sandbox.go` owns the modes, the writable allowlist
-  (workspace, devices, temp, GOPATH, toolchains, caches, `~/.pi`) and the
+  (workspace, devices, temp, GOPATH, toolchains, caches, `~/.pi`, and the two
+  rootless-podman runtime dirs under `$XDG_RUNTIME_DIR`, granted individually so
+  the session IPC sockets that share that parent stay untouchable) and the
   in-process write/edit path check; `coding/sandbox_linux.go` applies the
   Landlock ruleset in a re-exec'd `pier __sandbox-exec` child, pure Go with no
   cgo, which replaces gate.c's compiler dependency; the bash tool wraps its argv

@@ -217,6 +217,50 @@ func TestSandboxLauncherHelper(t *testing.T) {
 	os.Exit(RunSandboxLauncher(append([]string{SandboxLauncherSubcommand}, os.Args[index:]...)))
 }
 
+func TestSandboxRuntimeDirRoots(t *testing.T) {
+	t.Setenv("XDG_RUNTIME_DIR", "/run/user/1234")
+	roots := SandboxRuntimeDirRoots()
+	want := []string{"/run/user/1234/containers", "/run/user/1234/libpod"}
+	if strings.Join(roots, ",") != strings.Join(want, ",") {
+		t.Fatalf("roots = %v (want %v)", roots, want)
+	}
+}
+
+// TestSandboxWrapArgvCreatesPodmanRuntimeDirs covers the podman grant: the two
+// runtime roots are created (a confined process cannot mkdir under
+// XDG_RUNTIME_DIR) and reach the launcher argv, while the parent directory is
+// never granted.
+func TestSandboxWrapArgvCreatesPodmanRuntimeDirs(t *testing.T) {
+	runtime := t.TempDir()
+	containers := filepath.Join(runtime, "containers")
+	libpod := filepath.Join(runtime, "libpod")
+	s := &Sandbox{
+		mode: SandboxModeWorkspaceWrite, backend: SandboxBackendLandlock,
+		workspace: t.TempDir(), home: "/home/u",
+		runtimeDirs: []string{containers, libpod},
+	}
+	argv, err := s.WrapArgv([]string{"bash", "-c", "true"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(argv, "\x00")
+	for _, want := range []string{containers, libpod} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("launcher argv missing %q: %v", want, argv)
+		}
+		if info, err := os.Stat(want); err != nil || !info.IsDir() {
+			t.Fatalf("runtime dir %q was not created: %v", want, err)
+		}
+	}
+	// The parent itself must never be granted, or the session IPC sockets
+	// become replaceable.
+	for _, arg := range argv {
+		if arg == runtime {
+			t.Fatalf("the XDG_RUNTIME_DIR parent was granted: %v", argv)
+		}
+	}
+}
+
 func TestBashToolSandboxFailsClosedWithoutBackend(t *testing.T) {
 	ws := t.TempDir()
 	tool := CreateBashTool(ws, &BashToolOptions{Sandbox: &Sandbox{mode: SandboxModeReadOnly, backend: SandboxBackendNone, workspace: ws}})
