@@ -8,7 +8,29 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"golang.org/x/sys/windows"
 )
+
+// TestProcessTreeGuardKillAfterReleaseUsesTaskkill pins the kill/release
+// ordering: once Release has closed the job handle (job is zero), Kill must not
+// hand the closed handle to TerminateJobObject, where a reused handle value could
+// terminate an unrelated job. It falls back to taskkill instead.
+func TestProcessTreeGuardKillAfterReleaseUsesTaskkill(t *testing.T) {
+	original := terminateJob
+	defer func() { terminateJob = original }()
+	var terminated []windows.Handle
+	terminateJob = func(handle windows.Handle, exitCode uint32) error {
+		terminated = append(terminated, handle)
+		return nil
+	}
+	// The state Release leaves behind: the job handle is closed and zeroed.
+	guard := &processTreeGuard{pid: 1 << 30, assigned: true, job: 0}
+	guard.Kill()
+	if len(terminated) != 0 {
+		t.Fatalf("Kill used a released job handle: %v", terminated)
+	}
+}
 
 // fileSize reads a file's size, failing the test when it is gone.
 func fileSize(t *testing.T, path string) int64 {

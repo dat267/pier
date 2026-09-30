@@ -70,20 +70,27 @@ func newProcessTreeGuard(pid int) *processTreeGuard {
 
 // Kill terminates the tree, through the job when it was assigned and through
 // taskkill otherwise.
+// terminateJob is the job terminate call, an indirection so the Windows test can
+// pin that a released handle is never used (production is windows.TerminateJobObject).
+var terminateJob = windows.TerminateJobObject
+
+// Kill terminates the tree, through the job when it was assigned and through
+// taskkill otherwise. The lock is held across the terminate so a concurrent
+// Release cannot close the job handle mid-call; once Release has run, g.job is
+// zero and the taskkill fallback is used instead of a closed handle.
 func (g *processTreeGuard) Kill() {
 	if g == nil {
 		return
 	}
 	g.killOnce.Do(func() {
 		g.mu.Lock()
-		assigned, job, pid := g.assigned, g.job, g.pid
-		g.mu.Unlock()
-		if assigned {
-			if err := windows.TerminateJobObject(job, 1); err == nil {
+		defer g.mu.Unlock()
+		if g.assigned && g.job != 0 {
+			if err := terminateJob(g.job, 1); err == nil {
 				return
 			}
 		}
-		killProcessTreePlatform(pid)
+		killProcessTreePlatform(g.pid)
 	})
 }
 
