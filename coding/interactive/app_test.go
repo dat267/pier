@@ -66,6 +66,9 @@ func TestAppEndToEndLoop(t *testing.T) {
 	// 63 s there and init missed 6 s (CI 36266574631). The condition is still
 	// required; only the poll window scales with the machine.
 	waitForConditionWithin(t, func() bool { return app.lifecycle.IsInitialized() }, 20*time.Second)
+	// Wait for the run loop to reach its first beat before queueing, so the input
+	// is read from the loop's select rather than racing startup.
+	waitForConditionWithin(t, func() bool { return app.runner != nil && app.runner.LoopBeats() > 0 }, 20*time.Second)
 	app.startup.QueueUserInput("hello from the smoke test")
 
 	// The loop forwards the input to the session; with no model the prompt
