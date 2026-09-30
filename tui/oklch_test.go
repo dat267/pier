@@ -37,12 +37,15 @@ func TestOklchAgainstUpstreamGolden(t *testing.T) {
 		}
 	}
 	for _, c := range golden.Parse {
-		got, ok := ParseColor(c.Value)
-		if !ok || got != c.RGB {
-			t.Fatalf("ParseColor(%q) = %+v, %v (want %+v)", c.Value, got, ok, c.RGB)
+		got, err := ParseColor(c.Value)
+		if err != nil {
+			t.Fatalf("ParseColor(%q): %v", c.Value, err)
+		}
+		if rgb := ColorToRgb(got); rgb != c.RGB {
+			t.Fatalf("ParseColor(%q) = %+v (want %+v)", c.Value, rgb, c.RGB)
 		}
 	}
-	if _, ok := ParseColor("someVariable"); ok {
+	if _, err := ParseColor("someVariable"); err == nil {
 		t.Fatal("a variable reference parsed as a color")
 	}
 }

@@ -63,11 +63,12 @@ type ThemeExport struct {
 
 // ThemeJSON is a validated theme document.
 type ThemeJSON struct {
-	Schema string                `json:"$schema"`
-	Name   string                `json:"name"`
-	Vars   map[string]ColorValue `json:"vars"`
-	Colors map[string]ColorValue `json:"colors"`
-	Export *ThemeExport          `json:"export,omitempty"`
+	Schema     string                `json:"$schema"`
+	Name       string                `json:"name"`
+	Appearance string                `json:"appearance,omitempty"`
+	Vars       map[string]ColorValue `json:"vars"`
+	Colors     map[string]ColorValue `json:"colors"`
+	Export     *ThemeExport          `json:"export,omitempty"`
 }
 
 // requiredThemeColors are the color tokens every theme must define.

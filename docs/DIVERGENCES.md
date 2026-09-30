@@ -776,3 +776,13 @@ only as the code comment that introduced them. The range is **D1–D178**.
   command deliberately left running survives, as upstream leaves it. Measured on
   the case that started this: an abort that used to return 9s after cancelling,
   when the detached writer finished, now returns in under 0.1s.
+
+- D179 — **`tui.ParseColor` takes only a string, and capabilities stay
+  injected.** Upstream's `parseColor(string | number)` returns a tagged `Color`,
+  and `detectCapabilitiesFromEnvironment()` derives truecolor from `COLORTERM`
+  and a `TERM` suffix of `-direct` (567469096). The port keeps palette indices in
+  the theme document's `ColorValue` (`IsIndex`/`Index`) and parses only the string
+  forms, and it keeps capabilities injectable (D69), so
+  `themeboot.EnableCapabilities` sets truecolor unconditionally.
+  `tui.TerminalDetectsTrueColor` mirrors the upstream environment rule (including
+  `-direct`) for a caller that wants it, but it is not yet wired to the boot.

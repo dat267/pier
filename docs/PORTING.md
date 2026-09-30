@@ -35,6 +35,19 @@ Ported from the v0.99.1 delta so far (the rest is still pending):
   TypeScript over the `system-theme.test.ts` terminals. The no-color tier's
   faint (`dim`) tokens render with SGR 2 (`Theme.dimTokens`, closed by
   `\x1b[22m`), matching the upstream `renders faint tokens with SGR 2` case.
+- `tui`/`coding/interactive`: color values and theme styling (`567469096`).
+  `packages/tui/src/colors.ts` becomes `tui/colors.go`: the `Color` value
+  (palette index, sRGB, OKLCH) with `ParseColor`, `ColorToRgb`/`ColorToHex`/
+  `ColorToOklch`/`ColorToOkhsl`, `MixColors`, and `ForegroundAnsi`/
+  `BackgroundAnsi`/`StyleText`. Theme JSON accepts `#rgb`, `oklch()` and
+  `okhsl()` values and an optional `appearance` (detected from the theme's own
+  colors; a palette-only theme follows the terminal background), `theme.style`
+  combines tokens or concrete colors with attributes, and `theme.colors`
+  exposes concrete colors, filling `""` tokens from the terminal's reported
+  defaults (OSC 10/11). `tui.TerminalDetectsTrueColor` adds the upstream
+  `TERM=*-direct` hint. Departures: palette indices stay a separate `ColorValue`
+  (so `ParseColor` takes only strings), and capabilities stay injected (D69),
+  leaving `TerminalDetectsTrueColor` unwired because the boot sets truecolor.
 
 v0.87.1 refresh (originally the pinned tag `f07218c4d`, now superseded by the
 v0.99.1 reference above, read from the

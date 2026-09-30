@@ -318,40 +318,6 @@ func isInSrgbGamut(linear okVector) bool {
 	return true
 }
 
-// ParseColor parses a theme color value: #rgb/#rrggbb, oklch(...) or okhsl(...).
-// It returns ok=false for anything else, such as a variable reference.
-func ParseColor(value string) (RgbColor, bool) {
-	if match := themeHexColorPattern.FindStringSubmatch(value); match != nil {
-		digits := match[1]
-		if len(digits) == 3 {
-			digits = string([]byte{digits[0], digits[0], digits[1], digits[1], digits[2], digits[2]})
-		}
-		r, _ := strconv.ParseInt(digits[0:2], 16, 32)
-		g, _ := strconv.ParseInt(digits[2:4], 16, 32)
-		b, _ := strconv.ParseInt(digits[4:6], 16, 32)
-		return RgbColor{R: int(r), G: int(g), B: int(b)}, true
-	}
-	if match := oklchColorPattern.FindStringSubmatch(value); match != nil {
-		lightness := colorParseFloat(match[1])
-		if match[2] != "" {
-			lightness /= 100
-		}
-		return OklchToRgb(colorClamp01(lightness), math.Max(0, colorParseFloat(match[3])), colorParseFloat(match[4])), true
-	}
-	if match := okhslColorPattern.FindStringSubmatch(value); match != nil {
-		saturation := colorParseFloat(match[2])
-		if match[3] != "" {
-			saturation /= 100
-		}
-		lightness := colorParseFloat(match[4])
-		if match[5] != "" {
-			lightness /= 100
-		}
-		return OkhslToRgb(colorParseFloat(match[1]), colorClamp01(saturation), colorClamp01(lightness)), true
-	}
-	return RgbColor{}, false
-}
-
 // OkhslToRgb converts OKHSL to sRGB channels (0-255, rounded), clipping
 // out-of-gamut channels.
 func OkhslToRgb(hue, saturation, lightness float64) RgbColor {
