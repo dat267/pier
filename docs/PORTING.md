@@ -28,8 +28,13 @@ Ported from the v0.99.1 delta so far (the rest is still pending):
   16-color palette; `tui.QueryTerminalColors` performs the OSC 10/11/4 burst
   ended by a DA1 request; the theme registry lists `system` first, the selector
   puts it above Automatic, and the controller probes the terminal once and
-  regenerates the active system theme. The generator is verified byte for byte
-  against the upstream TypeScript over the `system-theme.test.ts` terminals.
+  regenerates the active system theme. `tui.ParseColor`/`OklchToRgb` let theme
+  JSON use `oklch()` and `okhsl()` values, and `ThemedText` (plus the startup
+  header's `ExpandableText`) rebuilds its text on invalidation so baked-in
+  colors recolor. The generator is verified byte for byte against the upstream
+  TypeScript over the `system-theme.test.ts` terminals. The no-color tier's
+  faint (`dim`) tokens are generated but not yet rendered with SGR 2 (the port's
+  `Theme` has no faint surface).
 
 v0.87.1 refresh (originally the pinned tag `f07218c4d`, now superseded by the
 v0.99.1 reference above, read from the
