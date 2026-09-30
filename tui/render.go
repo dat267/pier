@@ -504,6 +504,13 @@ func (t *Renderer) QueryTerminalBackgroundColor(timeoutMS int) (RgbColor, bool) 
 	return t.queries.QueryBackground(t.Terminal, timeoutMS)
 }
 
+// QueryTerminalColors queries the terminal's default foreground (OSC 10),
+// background (OSC 11) and 16-color palette (OSC 4) in one burst ended by a DA1
+// request. Replies that arrive after timeoutMS go to onLateReply.
+func (t *Renderer) QueryTerminalColors(timeoutMS int, onLateReply func(TerminalColors)) TerminalColors {
+	return t.queries.QueryTerminalColors(t.Terminal, timeoutMS, onLateReply)
+}
+
 // QueryTerminalColorScheme queries the terminal's color-scheme preference with
 // DSR (`CSI ? 996 n`).
 func (t *Renderer) QueryTerminalColorScheme(timeoutMS int) (TerminalColorScheme, bool) {

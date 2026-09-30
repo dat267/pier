@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -199,4 +200,128 @@ func TestRendererDefersColorSchemeNotificationsUntilStart(t *testing.T) {
 		t.Fatal("notification not replayed by Start")
 	}
 	renderer.Stop(TuiStopOptions{})
+}
+
+// TestParseOscColorResponse ports the parseOscColorResponse cases from upstream
+// terminal-colors.test.ts (bf8e4b953).
+func TestParseOscColorResponse(t *testing.T) {
+	response, ok := ParseOscColorResponse("\x1b]10;rgb:ffff/ffff/ffff\x07")
+	if !ok || !response.Target.Foreground || !response.HasRGB || response.RGB != (RgbColor{R: 255, G: 255, B: 255}) {
+		t.Fatalf("foreground reply = %+v ok=%v", response, ok)
+	}
+	response, ok = ParseOscColorResponse("\x1b]4;13;#ff0080\x1b\\")
+	if !ok || response.Target.Foreground || response.Target.Background || response.Target.Index != 13 || !response.HasRGB || response.RGB != (RgbColor{R: 255, G: 0, B: 128}) {
+		t.Fatalf("palette reply = %+v ok=%v", response, ok)
+	}
+	response, ok = ParseOscColorResponse("\x1b]4;1;bogus\x07")
+	if !ok || response.Target.Index != 1 || response.HasRGB {
+		t.Fatalf("unparsable reply = %+v ok=%v", response, ok)
+	}
+	if _, ok := ParseOscColorResponse("\x1b]12;#ffffff\x07"); ok {
+		t.Fatal("OSC 12 parsed as a color response")
+	}
+}
+
+// waitForWritesAfter waits until the terminal has recorded more than before
+// writes.
+func waitForWritesAfter(t *testing.T, terminal *fakeTerminal, before int) {
+	t.Helper()
+	for i := 0; i < 20000; i++ {
+		if terminal.writeCount() > before {
+			return
+		}
+		timeSleepMicro()
+	}
+	t.Fatal("no new terminal write")
+}
+
+// TestRendererQueryTerminalColorsResolvesOnAllReplies ports the first
+// queryTerminalColors case: one write, all replies, no DA1 needed.
+func TestRendererQueryTerminalColorsResolvesOnAllReplies(t *testing.T) {
+	terminal := &fakeTerminal{width: 80, height: 24}
+	renderer := NewRenderer(terminal)
+	results := make(chan TerminalColors, 1)
+	before := terminal.writeCount()
+	go func() { results <- renderer.QueryTerminalColors(2000, nil) }()
+	waitForWritesAfter(t, terminal, before)
+	joined := terminal.joinedWrites()
+	if !strings.HasPrefix(joined, "\x1b]10;?\x07\x1b]11;?\x07\x1b]4;0;?\x07") || !strings.HasSuffix(joined, "\x1b[c") {
+		t.Fatalf("query write = %q", joined)
+	}
+	renderer.HandleTerminalInput("\x1b]10;#ffffff\x07")
+	renderer.HandleTerminalInput("\x1b]11;rgb:0000/0000/0000\x1b\\")
+	for index := 0; index < 16; index++ {
+		renderer.HandleTerminalInput(fmt.Sprintf("\x1b]4;%d;#000000\x07", index))
+	}
+	got := <-results
+	if got.Foreground == nil || *got.Foreground != (RgbColor{R: 255, G: 255, B: 255}) {
+		t.Fatalf("foreground = %+v", got.Foreground)
+	}
+	if got.Background == nil || *got.Background != (RgbColor{}) {
+		t.Fatalf("background = %+v", got.Background)
+	}
+	if len(got.Palette) != 16 {
+		t.Fatalf("palette = %d", len(got.Palette))
+	}
+}
+
+// TestRendererQueryTerminalColorsResolvesOnDA1 ports the second case: an
+// incomplete palette is dropped and DA1 resolves each query in order.
+func TestRendererQueryTerminalColorsResolvesOnDA1(t *testing.T) {
+	terminal := &fakeTerminal{width: 80, height: 24}
+	renderer := NewRenderer(terminal)
+	run := func(action func()) TerminalColors {
+		results := make(chan TerminalColors, 1)
+		before := terminal.writeCount()
+		go func() { results <- renderer.QueryTerminalColors(2000, nil) }()
+		waitForWritesAfter(t, terminal, before)
+		action()
+		return <-results
+	}
+	first := run(func() {
+		renderer.HandleTerminalInput("\x1b]11;#000000\x07")
+		for index := 0; index < 8; index++ {
+			renderer.HandleTerminalInput(fmt.Sprintf("\x1b]4;%d;#000000\x07", index))
+		}
+		renderer.HandleTerminalInput("\x1b[?62;22c")
+	})
+	if first.Foreground != nil || first.Background == nil || *first.Background != (RgbColor{}) || first.Palette != nil {
+		t.Fatalf("first = %+v", first)
+	}
+	second := run(func() { renderer.HandleTerminalInput("\x1b[?62;22c") })
+	if second.Foreground != nil || second.Background != nil || second.Palette != nil {
+		t.Fatalf("second = %+v", second)
+	}
+}
+
+// TestRendererQueryTerminalColorsLateReplies ports the timeout case: late
+// replies reach onLateReply until DA1.
+func TestRendererQueryTerminalColorsLateReplies(t *testing.T) {
+	terminal := &fakeTerminal{width: 80, height: 24}
+	renderer := NewRenderer(terminal)
+	late := make(chan TerminalColors, 1)
+	results := make(chan TerminalColors, 1)
+	before := terminal.writeCount()
+	go func() {
+		results <- renderer.QueryTerminalColors(1, func(colors TerminalColors) { late <- colors })
+	}()
+	waitForWritesAfter(t, terminal, before)
+	select {
+	case got := <-results:
+		if got.Background != nil {
+			t.Fatalf("timeout result = %+v", got)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("query did not time out")
+	}
+	renderer.HandleTerminalInput("\x1b]11;#ffffff\x07")
+	renderer.HandleTerminalInput("\x1b[?62;22c")
+	select {
+	case colors := <-late:
+		if colors.Background == nil || *colors.Background != (RgbColor{R: 255, G: 255, B: 255}) {
+			t.Fatalf("late = %+v", colors)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("no late reply")
+	}
 }

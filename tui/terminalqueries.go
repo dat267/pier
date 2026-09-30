@@ -1,6 +1,12 @@
 package tui
 
-import "time"
+import (
+	"fmt"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+)
 
 // Port of the terminal query protocol of upstream's TuiBase: the OSC 11
 // background-color query with its pending-query bookkeeping, the `CSI ? 996` /
@@ -57,6 +63,38 @@ type terminalQueries struct {
 	nextColorSchemeID    int
 	backgroundListeners  []backgroundListener
 	nextBackgroundID     int
+
+	// colorMu guards the terminal-colors query queue, which the blocking caller
+	// appends to while the owner loop's input dispatch reads it.
+	colorMu                     sync.Mutex
+	pendingTerminalColorQueries []*pendingTerminalColorQuery
+}
+
+const (
+	terminalPaletteSize     = 16
+	terminalColorReplyCount = 2 + terminalPaletteSize
+)
+
+// terminalColorQuery asks for the default foreground (OSC 10), background
+// (OSC 11) and all 16 palette colors (OSC 4), ended by a DA1 request that marks
+// the end of the replies (upstream TERMINAL_COLOR_QUERY).
+var terminalColorQuery = func() string {
+	var b strings.Builder
+	b.WriteString("\x1b]10;?\x07\x1b]11;?\x07")
+	for index := 0; index < terminalPaletteSize; index++ {
+		fmt.Fprintf(&b, "\x1b]4;%d;?\x07", index)
+	}
+	b.WriteString("\x1b[c")
+	return b.String()
+}()
+
+// pendingTerminalColorQuery is one in-flight terminal-colors query.
+type pendingTerminalColorQuery struct {
+	foreground *RgbColor
+	background *RgbColor
+	palette    [terminalPaletteSize]*RgbColor
+	replied    map[string]bool
+	deliver    func(TerminalColors)
 }
 
 // OnBackgroundChange subscribes to OSC 11 background-color replies. The listener
@@ -125,6 +163,114 @@ func (q *terminalQueries) QueryBackground(writer terminalQueryWriter, timeoutMS 
 			query.settled = true
 		}
 		return RgbColor{}, false
+	}
+}
+
+// QueryTerminalColors queries the terminal's default foreground and background
+// and its 16-color palette in one write. It resolves when the DA1 reply or every
+// color reply arrives, or after timeoutMS; replies that arrive later go to
+// onLateReply (upstream queryTerminalColors).
+func (q *terminalQueries) QueryTerminalColors(writer terminalQueryWriter, timeoutMS int, onLateReply func(TerminalColors)) TerminalColors {
+	if q.stopped {
+		return TerminalColors{}
+	}
+	query := &pendingTerminalColorQuery{palette: [terminalPaletteSize]*RgbColor{}, replied: map[string]bool{}}
+	result := make(chan TerminalColors, 1)
+	query.deliver = func(colors TerminalColors) {
+		select {
+		case result <- colors:
+		default:
+		}
+	}
+	q.colorMu.Lock()
+	q.pendingTerminalColorQueries = append(q.pendingTerminalColorQueries, query)
+	q.colorMu.Unlock()
+	if writer != nil {
+		writer.Write(terminalColorQuery)
+	}
+	timer := time.NewTimer(time.Duration(timeoutMS) * time.Millisecond)
+	defer timer.Stop()
+	select {
+	case colors := <-result:
+		return colors
+	case <-timer.C:
+		q.colorMu.Lock()
+		query.deliver = onLateReply
+		colors := terminalColorQueryResult(query)
+		q.colorMu.Unlock()
+		return colors
+	}
+}
+
+// consumeTerminalColorResponse routes a color reply or DA1 to the oldest pending
+// terminal-colors query.
+func (q *terminalQueries) consumeTerminalColorResponse(data string) bool {
+	q.colorMu.Lock()
+	defer q.colorMu.Unlock()
+	if len(q.pendingTerminalColorQueries) == 0 {
+		return false
+	}
+	query := q.pendingTerminalColorQueries[0]
+	if deviceAttributesResponsePattern.MatchString(data) {
+		q.pendingTerminalColorQueries = q.pendingTerminalColorQueries[1:]
+		q.completeTerminalColorQueryLocked(query)
+		return true
+	}
+	response, ok := ParseOscColorResponse(data)
+	if !ok {
+		return false
+	}
+	key := "palette:" + strconv.Itoa(response.Target.Index)
+	switch {
+	case response.Target.Foreground:
+		key = "foreground"
+	case response.Target.Background:
+		key = "background"
+	}
+	if query.deliver == nil || query.replied[key] {
+		return true
+	}
+	query.replied[key] = true
+	switch {
+	case response.Target.Foreground:
+		query.foreground = terminalColorResponseRGB(response)
+	case response.Target.Background:
+		query.background = terminalColorResponseRGB(response)
+	case response.Target.Index >= 0 && response.Target.Index < terminalPaletteSize:
+		query.palette[response.Target.Index] = terminalColorResponseRGB(response)
+	}
+	if len(query.replied) == terminalColorReplyCount {
+		q.completeTerminalColorQueryLocked(query)
+	}
+	return true
+}
+
+func terminalColorResponseRGB(response OscColorResponse) *RgbColor {
+	if !response.HasRGB {
+		return nil
+	}
+	color := response.RGB
+	return &color
+}
+
+func terminalColorQueryResult(query *pendingTerminalColorQuery) TerminalColors {
+	colors := TerminalColors{Foreground: query.foreground, Background: query.background}
+	palette := make([]RgbColor, 0, terminalPaletteSize)
+	for _, color := range query.palette {
+		if color == nil {
+			return colors
+		}
+		palette = append(palette, *color)
+	}
+	colors.Palette = palette
+	return colors
+}
+
+func (q *terminalQueries) completeTerminalColorQueryLocked(query *pendingTerminalColorQuery) {
+	deliver := query.deliver
+	query.deliver = nil
+	if deliver != nil {
+		deliver(terminalColorQueryResult(query))
 	}
 }
 
@@ -203,6 +349,9 @@ func (q *terminalQueries) NotifyOnStop(writer terminalQueryWriter) {
 // so it is consumed even when no query is pending; otherwise a proactive probe's
 // reply would leak into the editor.
 func (q *terminalQueries) ConsumeInput(data string) bool {
+	if q.consumeTerminalColorResponse(data) {
+		return true
+	}
 	if IsOsc11BackgroundColorResponse(data) {
 		q.resolveBackgroundResponse(data)
 		return true
