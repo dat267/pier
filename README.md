@@ -13,7 +13,7 @@ deliberate feature of this implementation. The development conventions live in
 | What | Value |
 |---|---|
 | Repository | https://github.com/earendil-works/pi (cloned at `./pi`, gitignored) |
-| Pin | `f07218c4d` (Release v0.87.1) |
+| Pin | `d86654abb` (Release v0.99.1) |
 | Stale reference test | `packages/ai/test/faux-provider.test.ts` "estimates prompt and output tokens" still expects pre-`9e05370b2` faux serialization; this implementation follows the current source |
 
 ## Status

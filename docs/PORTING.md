@@ -4,7 +4,16 @@ How much of upstream pi this port covers, package by package, plus the upstream
 pin's change log. The user-facing summary lives in `README.md`; this file is the
 authoritative per-area status.
 
-v0.87.1 refresh (the reference is the pinned tag `f07218c4d`, read from the
+v0.99.1 reference (pinned tag `d86654abb`, read from the `./pi` checkout): the
+delta from v0.87.1 is 92 commits across 672 files, and it is **not yet ported**.
+The per-area status below therefore still describes the v0.87.1 port. The delta
+adds the `codemode`, `mcp`, `session-backends` and `evals` packages (extension
+and package-manager mechanics, the out-of-scope set) plus changes across `ai`,
+`coding-agent`, `durable`, `chord` and `tui`. This paragraph is replaced by a
+refresh entry once the delta is reviewed and ported.
+
+v0.87.1 refresh (originally the pinned tag `f07218c4d`, now superseded by the
+v0.99.1 reference above, read from the
 `./pi` checkout in the workspace — see `AGENTS.md`; the previous pin
 `16787ad5b` is the v0.87.0 release):
 
