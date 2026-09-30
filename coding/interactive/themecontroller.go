@@ -16,6 +16,7 @@ type ThemeControllerUI interface {
 	OnTerminalColorSchemeChange(listener func(theme TerminalTheme)) (unsubscribe func())
 	OnTerminalBackgroundColorChange(listener func(color tui.RgbColor)) (unsubscribe func())
 	RequestTerminalBackgroundColor()
+	QueryTerminalColors(timeoutMs int, onLateReply func(tui.TerminalColors)) tui.TerminalColors
 }
 
 // ThemeSettings is the settings surface the controller needs.
@@ -71,6 +72,7 @@ type InteractiveThemeController struct {
 	unsubscribe         func()
 	unsubscribeBg       func()
 	probeStarted        bool
+	systemProbed        bool
 	marshal             func(func())
 	themeQueue          *offloop.Queue
 }
@@ -118,6 +120,7 @@ func (c *InteractiveThemeController) RebindTUI() {
 		c.unsubscribeBg = nil
 	}
 	c.probeStarted = false
+	c.systemProbed = false
 	c.bindTerminalColorSchemeListener()
 	c.bindTerminalBackgroundListener()
 	if c.ui != nil {
@@ -140,6 +143,25 @@ func (c *InteractiveThemeController) ProbeTerminalBackground() {
 	}
 	c.probeStarted = true
 	c.ui.RequestTerminalBackgroundColor()
+}
+
+// ProbeSystemColors queries the terminal's full color set once and stores it for
+// the system theme (upstream setTerminalColors). Callers must invoke it after
+// the terminal is in raw mode, like ProbeTerminalBackground; late replies
+// refresh the stored colors.
+func (c *InteractiveThemeController) ProbeSystemColors() {
+	if c.ui == nil || c.systemProbed {
+		return
+	}
+	c.systemProbed = true
+	apply := func(colors tui.TerminalColors) {
+		SetSystemTerminalColors(colors)
+		if c.activeThemeName == SystemThemeName {
+			c.applyThemeName(SystemThemeName, false)
+		}
+	}
+	colors := c.ui.QueryTerminalColors(c.timeoutMS, apply)
+	apply(colors)
 }
 
 // ApplyFromSettings applies the theme from the current settings.

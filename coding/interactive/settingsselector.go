@@ -216,20 +216,40 @@ func themeItems(availableThemes []string, currentTheme string) []tui.SelectItem 
 		if name == currentTheme {
 			prefix = "✓ "
 		}
-		items = append(items, tui.SelectItem{Value: name, Label: prefix + name})
+		item := tui.SelectItem{Value: name, Label: prefix + name}
+		if name == SystemThemeName {
+			item.Description = "Theme created from your terminal's colors"
+		}
+		items = append(items, item)
 	}
 	return items
 }
 
 const automaticThemeValue = "/"
 
+// singleModeThemeItems puts the system theme first, then automatic mode, then
+// the remaining themes (upstream singleModeThemeItems).
 func singleModeThemeItems(availableThemes []string, currentTheme string) []tui.SelectItem {
-	items := []tui.SelectItem{{
+	items := themeItems(availableThemes, currentTheme)
+	systemIndex := -1
+	for index, item := range items {
+		if item.Value == SystemThemeName {
+			systemIndex = index
+			break
+		}
+	}
+	var system []tui.SelectItem
+	if systemIndex != -1 {
+		system = append(system, items[systemIndex])
+		items = append(items[:systemIndex], items[systemIndex+1:]...)
+	}
+	out := append([]tui.SelectItem{}, system...)
+	out = append(out, tui.SelectItem{
 		Value:       automaticThemeValue,
 		Label:       "  Automatic",
 		Description: "Use separate themes for light and dark terminal appearance",
-	}}
-	return append(items, themeItems(availableThemes, currentTheme)...)
+	})
+	return append(out, items...)
 }
 
 func preferredTheme(availableThemes []string, preferred string, hasPreferred bool, fallback string) string {
@@ -251,7 +271,7 @@ func defaultAutomaticThemes(currentThemeSetting string, availableThemes []string
 	}
 	fixed := currentThemeSetting
 	hasFixed := !strings.Contains(currentThemeSetting, "/")
-	themeName := preferredTheme(availableThemes, fixed, hasFixed, "dark")
+	themeName := preferredTheme(availableThemes, fixed, hasFixed, SystemThemeName)
 	return themeName, themeName
 }
 

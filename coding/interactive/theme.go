@@ -490,21 +490,82 @@ type ThemeInfo struct {
 	Path string
 }
 
+// SystemThemeName is the terminal-derived theme (upstream SYSTEM_THEME_NAME).
+const SystemThemeName = "system"
+
+var systemThemeState struct {
+	mu     sync.Mutex
+	colors *tui.TerminalColors
+}
+
+// SetSystemTerminalColors records the terminal's reported colors; the system
+// theme is generated from them on the next load (upstream setTerminalColors).
+func SetSystemTerminalColors(colors tui.TerminalColors) {
+	systemThemeState.mu.Lock()
+	stored := colors
+	systemThemeState.colors = &stored
+	systemThemeState.mu.Unlock()
+}
+
+// buildSystemTheme generates the system theme for the active color mode.
+func buildSystemTheme(mode ColorMode) *Theme {
+	colorMode := mode
+	if colorMode == "" {
+		if terminalCapabilitiesTrueColor() {
+			colorMode = ColorModeTruecolor
+		} else {
+			colorMode = ColorMode256
+		}
+	}
+	systemThemeState.mu.Lock()
+	colors := systemThemeState.colors
+	systemThemeState.mu.Unlock()
+	input := SystemThemeInput{}
+	if colors != nil {
+		input.Foreground = colors.Foreground
+		input.Background = colors.Background
+		input.Palette = colors.Palette
+	}
+	generated := GenerateSystemThemeColors(input)
+	fgColors := map[string]ColorValue{}
+	bgColors := map[string]ColorValue{}
+	for token, value := range generated.Colors {
+		converted := generatedColorValue(value)
+		if backgroundColorKeys[token] {
+			bgColors[token] = converted
+		} else {
+			fgColors[token] = converted
+		}
+	}
+	return NewTheme(fgColors, bgColors, colorMode, SystemThemeName, "")
+}
+
+func generatedColorValue(value any) ColorValue {
+	switch typed := value.(type) {
+	case int:
+		return ColorValue{Index: typed, IsIndex: true}
+	case string:
+		return ColorValue{Value: typed}
+	}
+	return ColorValue{}
+}
+
 // ThemesDir returns the built-in themes directory.
 func ThemesDir() string {
 	return "themes"
 }
 
-// AvailableThemesWithPaths lists built-in, custom, and registered themes.
+// AvailableThemesWithPaths lists the system theme first, then the built-in,
+// custom, and registered themes sorted by name.
 func AvailableThemesWithPaths() []ThemeInfo {
-	var result []ThemeInfo
-	seen := map[string]bool{}
+	seen := map[string]bool{SystemThemeName: true}
+	rest := []ThemeInfo{}
 	add := func(info ThemeInfo) {
 		if seen[info.Name] {
 			return
 		}
 		seen[info.Name] = true
-		result = append(result, info)
+		rest = append(rest, info)
 	}
 	for name := range getBuiltinThemes() {
 		add(ThemeInfo{Name: name, Path: filepath.Join(ThemesDir(), name+".json")})
@@ -515,10 +576,10 @@ func AvailableThemesWithPaths() []ThemeInfo {
 	for name, theme := range registeredThemesSnapshot() {
 		add(ThemeInfo{Name: name, Path: theme.SourcePath})
 	}
-	sort.SliceStable(result, func(a, b int) bool {
-		return localeCompareTheme(result[a].Name, result[b].Name) < 0
+	sort.SliceStable(rest, func(a, b int) bool {
+		return localeCompareTheme(rest[a].Name, rest[b].Name) < 0
 	})
-	return result
+	return append([]ThemeInfo{{Name: SystemThemeName}}, rest...)
 }
 
 // AvailableThemes lists the theme names.
@@ -672,6 +733,9 @@ func loadThemeJSON(name string) (*ThemeJSON, error) {
 }
 
 func loadTheme(name string, mode ColorMode) (*Theme, error) {
+	if name == SystemThemeName {
+		return buildSystemTheme(mode), nil
+	}
 	if registered, ok := registeredThemesGet(name); ok {
 		return registered, nil
 	}

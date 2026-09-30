@@ -184,6 +184,16 @@ func (r *TuiReference) RequestTerminalBackgroundColor() {
 	}
 }
 
+// QueryTerminalColors forwards the OSC 10/11/4 query to the active renderer.
+func (r *TuiReference) QueryTerminalColors(timeoutMS int, onLateReply func(TerminalColors)) TerminalColors {
+	if q, ok := r.get().(interface {
+		QueryTerminalColors(int, func(TerminalColors)) TerminalColors
+	}); ok {
+		return q.QueryTerminalColors(timeoutMS, onLateReply)
+	}
+	return TerminalColors{}
+}
+
 // SetFocus sets the focused component.
 func (r *TuiReference) SetFocus(component Component) { r.get().SetFocus(component) }
 

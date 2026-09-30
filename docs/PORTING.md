@@ -22,6 +22,14 @@ Ported from the v0.99.1 delta so far (the rest is still pending):
   (clamped 1..100) and its row sits above Theme in `/settings`. Ported tests:
   the upstream `wheel-scroll.test.ts` cases and the runtime-update case from
   `tui-alt-screen.test.ts`.
+- `tui`/`coding/interactive`: the system theme (`bf8e4b953`). `tui/oklab.go`
+  ports Oklab/OKHSL/OKLCH; `coding/interactive/systemtheme.go` generates the
+  theme's colors from the terminal's reported foreground, background and
+  16-color palette; `tui.QueryTerminalColors` performs the OSC 10/11/4 burst
+  ended by a DA1 request; the theme registry lists `system` first, the selector
+  puts it above Automatic, and the controller probes the terminal once and
+  regenerates the active system theme. The generator is verified byte for byte
+  against the upstream TypeScript over the `system-theme.test.ts` terminals.
 
 v0.87.1 refresh (originally the pinned tag `f07218c4d`, now superseded by the
 v0.99.1 reference above, read from the

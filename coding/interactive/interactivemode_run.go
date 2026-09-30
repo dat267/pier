@@ -933,7 +933,7 @@ func newRunWiring(app *App) *RunWiring {
 			app.startup.MaybeWarnAboutAnthropicSubscriptionAuth(ctx, app.session.Model())
 		},
 		RequestRender: func() { app.ui.RequestRender(false) },
-		OnStarted:     func() { app.theme.ProbeTerminalBackground() },
+		OnStarted:     func() { app.theme.ProbeTerminalBackground(); app.theme.ProbeSystemColors() },
 	}
 }
 

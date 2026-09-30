@@ -216,3 +216,29 @@ func TestSystemThemeIndexedFallback(t *testing.T) {
 		t.Errorf("zero saturation error = %v (want \"\")", value)
 	}
 }
+
+// TestSystemThemeWiring pins that the generator is reachable through the theme
+// registry: "system" is listed first and its ANSI surface is built from the
+// terminal colors.
+func TestSystemThemeWiring(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	if names := AvailableThemes(); len(names) == 0 || names[0] != SystemThemeName {
+		t.Fatalf("available themes = %v", names)
+	}
+	background := systemTestHex(t, "#282a36")
+	foreground := systemTestHex(t, "#f8f8f2")
+	SetSystemTerminalColors(tui.TerminalColors{Background: &background, Foreground: &foreground})
+	theme := GetThemeByName(SystemThemeName)
+	if theme == nil {
+		t.Fatal("system theme did not load")
+	}
+	if got := theme.GetFgAnsi("text"); got != "\x1b[39m" {
+		t.Fatalf("text ansi = %q", got)
+	}
+	if got := theme.GetFgAnsi("error"); !strings.HasPrefix(got, "\x1b[38;") {
+		t.Fatalf("error ansi = %q", got)
+	}
+}

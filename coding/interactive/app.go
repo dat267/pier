@@ -997,6 +997,16 @@ func (t themeUIAdapter) RequestTerminalBackgroundColor() {
 	}
 }
 
+// QueryTerminalColors forwards the OSC 10/11/4 query.
+func (t themeUIAdapter) QueryTerminalColors(timeoutMS int, onLateReply func(tui.TerminalColors)) tui.TerminalColors {
+	if renderer, ok := t.ui.(interface {
+		QueryTerminalColors(int, func(tui.TerminalColors)) tui.TerminalColors
+	}); ok {
+		return renderer.QueryTerminalColors(timeoutMS, onLateReply)
+	}
+	return tui.TerminalColors{}
+}
+
 // themeSettingsAdapter adapts *coding.SettingsManager to ThemeSettings.
 type themeSettingsAdapter struct{ *coding.SettingsManager }
 

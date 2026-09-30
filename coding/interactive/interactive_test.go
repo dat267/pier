@@ -355,14 +355,49 @@ func TestCatalogRefreshCancellation(t *testing.T) {
 
 // ---- Theme controller ----
 
+// TestThemeControllerProbesSystemColors pins that the controller stores the
+// terminal's reported colors and rebuilds the active system theme.
+func TestThemeControllerProbesSystemColors(t *testing.T) {
+	dir := t.TempDir()
+	SetCustomThemesDir(dir)
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+
+	ui := &fakeThemeUI{}
+	background := tui.RgbColor{R: 0x28, G: 0x2a, B: 0x36}
+	foreground := tui.RgbColor{R: 0xf8, G: 0xf8, B: 0xf2}
+	ui.terminalColors = tui.TerminalColors{Background: &background, Foreground: &foreground}
+	settings := &fakeThemeSettings{}
+	controller := NewInteractiveThemeController(ThemeControllerOptions{
+		UI:                 ui,
+		GetSettingsManager: func() ThemeSettings { return settings },
+		Detector:           nil,
+		TimeoutMS:          1,
+		Env:                func(key string) string { return "" },
+	})
+	if result := controller.SetThemeName(SystemThemeName, false); !result.Success {
+		t.Fatalf("system theme did not load: %+v", result)
+	}
+	controller.ProbeSystemColors()
+	if ui.systemProbes == 0 {
+		t.Fatal("terminal colors were not queried")
+	}
+	if got := CurrentTheme().GetFgAnsi("text"); got != "\x1b[39m" {
+		t.Fatalf("system text ansi = %q", got)
+	}
+}
+
 type fakeThemeUI struct {
-	mu            sync.Mutex
-	invalidates   int
-	renders       int
-	notifications bool
-	listener      func(TerminalTheme)
-	bgListener    func(tui.RgbColor)
-	bgProbes      int
+	mu             sync.Mutex
+	invalidates    int
+	renders        int
+	notifications  bool
+	listener       func(TerminalTheme)
+	bgListener     func(tui.RgbColor)
+	bgProbes       int
+	systemProbes   int
+	terminalColors tui.TerminalColors
 }
 
 func (f *fakeThemeUI) Invalidate() {
@@ -401,6 +436,13 @@ func (f *fakeThemeUI) RequestTerminalBackgroundColor() {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.bgProbes++
+}
+
+func (f *fakeThemeUI) QueryTerminalColors(timeoutMS int, onLateReply func(tui.TerminalColors)) tui.TerminalColors {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.systemProbes++
+	return f.terminalColors
 }
 
 func (f *fakeThemeUI) emitBackground(color tui.RgbColor) {
