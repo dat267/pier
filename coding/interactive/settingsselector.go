@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"sort"
 	"strconv"
 	"strings"
 
@@ -61,86 +62,88 @@ func defaultProjectTrustByLabel(label string) (string, bool) {
 
 // SettingsConfig is the settings snapshot shown by the selector.
 type SettingsConfig struct {
-	AutoCompact             bool
-	DefaultModel            string
-	CurrentModel            *ai.Model
-	AvailableDefaultModels  []*ai.Model
-	ShowImages              bool
-	ImageWidthCells         int
-	AutoResizeImages        bool
-	BlockImages             bool
-	EnableSkillCommands     bool
-	SteeringMode            string
-	FollowUpMode            string
-	Transport               ai.Transport
-	HTTPIdleTimeoutMs       int64
-	CacheWarmingMode        string
-	ThinkingLevel           string
-	AvailableThinkingLevels []string
-	ModelThinkingLevels     map[string]string
-	CurrentTheme            string
-	TerminalTheme           TerminalTheme
-	AvailableThemes         []string
-	HideThinkingBlock       bool
-	MermaidRenderingMode    MermaidRenderingMode
-	ShowCacheMissNotices    bool
-	CollapseChangelog       bool
-	EnableInstallTelemetry  bool
-	DoubleEscapeAction      string
-	TreeFilterMode          string
-	ShowHardwareCursor      bool
-	EditorPaddingX          int
-	OutputPad               int
-	AutocompleteMaxVisible  int
-	QuietStartup            bool
-	DefaultProjectTrust     string
-	ClearOnShrink           bool
-	ShowTerminalProgress    bool
-	TuiMode                 string
-	FullscreenExitOutput    string
-	FullscreenScrollbar     string
-	FullscreenCopyOnSelect  bool
-	Warnings                WarningSettings
+	AutoCompact                bool
+	DefaultModel               string
+	CurrentModel               *ai.Model
+	AvailableDefaultModels     []*ai.Model
+	ShowImages                 bool
+	ImageWidthCells            int
+	AutoResizeImages           bool
+	BlockImages                bool
+	EnableSkillCommands        bool
+	SteeringMode               string
+	FollowUpMode               string
+	Transport                  ai.Transport
+	HTTPIdleTimeoutMs          int64
+	CacheWarmingMode           string
+	ThinkingLevel              string
+	AvailableThinkingLevels    []string
+	ModelThinkingLevels        map[string]string
+	CurrentTheme               string
+	TerminalTheme              TerminalTheme
+	AvailableThemes            []string
+	HideThinkingBlock          bool
+	MermaidRenderingMode       MermaidRenderingMode
+	ShowCacheMissNotices       bool
+	CollapseChangelog          bool
+	EnableInstallTelemetry     bool
+	DoubleEscapeAction         string
+	TreeFilterMode             string
+	ShowHardwareCursor         bool
+	EditorPaddingX             int
+	OutputPad                  int
+	AutocompleteMaxVisible     int
+	QuietStartup               bool
+	DefaultProjectTrust        string
+	ClearOnShrink              bool
+	ShowTerminalProgress       bool
+	TuiMode                    string
+	FullscreenExitOutput       string
+	FullscreenScrollbar        string
+	FullscreenCopyOnSelect     bool
+	FullscreenWheelScrollLines tui.WheelScrollLines
+	Warnings                   WarningSettings
 }
 
 // SettingsCallbacks receive the settings changes.
 type SettingsCallbacks struct {
-	OnAutoCompactChange            func(bool)
-	OnShowImagesChange             func(bool)
-	OnImageWidthCellsChange        func(int)
-	OnAutoResizeImagesChange       func(bool)
-	OnBlockImagesChange            func(bool)
-	OnEnableSkillCommandsChange    func(bool)
-	OnSteeringModeChange           func(string)
-	OnFollowUpModeChange           func(string)
-	OnTransportChange              func(ai.Transport)
-	OnHTTPIdleTimeoutMsChange      func(int64)
-	OnCacheWarmingModeChange       func(string)
-	OnModelThinkingLevelChange     func(provider string, modelID string, level string)
-	OnModelThinkingLevelRemove     func(provider string, modelID string)
-	OnThemeChange                  func(string)
-	OnThemePreview                 func(string)
-	OnHideThinkingBlockChange      func(bool)
-	OnMermaidRenderingModeChange   func(MermaidRenderingMode)
-	OnShowCacheMissNoticesChange   func(bool)
-	OnCollapseChangelogChange      func(bool)
-	OnEnableInstallTelemetryChange func(bool)
-	OnDoubleEscapeActionChange     func(string)
-	OnTreeFilterModeChange         func(string)
-	OnShowHardwareCursorChange     func(bool)
-	OnEditorPaddingXChange         func(int)
-	OnOutputPadChange              func(int)
-	OnAutocompleteMaxVisibleChange func(int)
-	OnQuietStartupChange           func(bool)
-	OnDefaultProjectTrustChange    func(string)
-	OnClearOnShrinkChange          func(bool)
-	OnShowTerminalProgressChange   func(bool)
-	OnTuiModeChange                func(string)
-	OnFullscreenExitOutputChange   func(string)
-	OnFullscreenScrollbarChange    func(string)
-	OnFullscreenCopyOnSelectChange func(bool)
-	OnWarningsChange               func(WarningSettings)
-	OnCancel                       func()
+	OnAutoCompactChange                func(bool)
+	OnShowImagesChange                 func(bool)
+	OnImageWidthCellsChange            func(int)
+	OnAutoResizeImagesChange           func(bool)
+	OnBlockImagesChange                func(bool)
+	OnEnableSkillCommandsChange        func(bool)
+	OnSteeringModeChange               func(string)
+	OnFollowUpModeChange               func(string)
+	OnTransportChange                  func(ai.Transport)
+	OnHTTPIdleTimeoutMsChange          func(int64)
+	OnCacheWarmingModeChange           func(string)
+	OnModelThinkingLevelChange         func(provider string, modelID string, level string)
+	OnModelThinkingLevelRemove         func(provider string, modelID string)
+	OnThemeChange                      func(string)
+	OnThemePreview                     func(string)
+	OnHideThinkingBlockChange          func(bool)
+	OnMermaidRenderingModeChange       func(MermaidRenderingMode)
+	OnShowCacheMissNoticesChange       func(bool)
+	OnCollapseChangelogChange          func(bool)
+	OnEnableInstallTelemetryChange     func(bool)
+	OnDoubleEscapeActionChange         func(string)
+	OnTreeFilterModeChange             func(string)
+	OnShowHardwareCursorChange         func(bool)
+	OnEditorPaddingXChange             func(int)
+	OnOutputPadChange                  func(int)
+	OnAutocompleteMaxVisibleChange     func(int)
+	OnQuietStartupChange               func(bool)
+	OnDefaultProjectTrustChange        func(string)
+	OnClearOnShrinkChange              func(bool)
+	OnShowTerminalProgressChange       func(bool)
+	OnTuiModeChange                    func(string)
+	OnFullscreenExitOutputChange       func(string)
+	OnFullscreenScrollbarChange        func(string)
+	OnFullscreenCopyOnSelectChange     func(bool)
+	OnFullscreenWheelScrollLinesChange func(tui.WheelScrollLines)
+	OnWarningsChange                   func(WarningSettings)
+	OnCancel                           func()
 }
 
 // warningSettingsSubmenu edits the warning toggles.
@@ -797,6 +800,13 @@ func NewSettingsSelectorComponent(config SettingsConfig, callbacks SettingsCallb
 			Values:       []string{"true", "false"},
 		},
 		{
+			ID:           "fullscreen-wheel-scroll-lines",
+			Label:        "Fullscreen wheel scrolling",
+			Description:  "Lines per mouse-wheel event in fullscreen mode; 'auto' speeds up fast wheel spins where the terminal does not",
+			CurrentValue: wheelScrollLinesValue(config.FullscreenWheelScrollLines),
+			Values:       wheelScrollLinesChoices(config.FullscreenWheelScrollLines),
+		},
+		{
 			ID:           "theme",
 			Label:        "Theme",
 			Description:  "Color theme for the interface",
@@ -1036,10 +1046,45 @@ func applySettingChange(id string, newValue string, callbacks SettingsCallbacks,
 		}
 	case "fullscreen-copy-on-select":
 		call(callbacks.OnFullscreenCopyOnSelectChange)
+	case "fullscreen-wheel-scroll-lines":
+		if callbacks.OnFullscreenWheelScrollLinesChange != nil {
+			lines := tui.AutoWheelScrollLines()
+			if parsed, err := strconv.Atoi(newValue); err == nil {
+				lines = tui.FixedWheelScrollLines(parsed)
+			}
+			callbacks.OnFullscreenWheelScrollLinesChange(lines)
+		}
 	case "theme":
 		if callbacks.OnThemeChange != nil {
 			callbacks.OnThemeChange(newValue)
 		}
 	}
 	_ = defaultModelByValue
+}
+
+// wheelScrollLinesValue renders the current setting for the list.
+func wheelScrollLinesValue(lines tui.WheelScrollLines) string {
+	if lines.Auto {
+		return "auto"
+	}
+	return strconv.Itoa(lines.Lines)
+}
+
+// wheelScrollLinesChoices is upstream's value list: "auto" plus the presets and
+// the current value, sorted.
+func wheelScrollLinesChoices(current tui.WheelScrollLines) []string {
+	set := map[int]bool{1: true, 2: true, 3: true, 5: true, 10: true}
+	if !current.Auto {
+		set[current.Lines] = true
+	}
+	numbers := make([]int, 0, len(set))
+	for value := range set {
+		numbers = append(numbers, value)
+	}
+	sort.Ints(numbers)
+	choices := []string{"auto"}
+	for _, value := range numbers {
+		choices = append(choices, strconv.Itoa(value))
+	}
+	return choices
 }

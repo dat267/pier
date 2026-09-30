@@ -24,42 +24,43 @@ type settingsCorpus struct {
 }
 
 type settingsConfigJSON struct {
-	AutoCompact            *bool             `json:"autoCompact"`
-	DefaultModel           *string           `json:"defaultModel"`
-	ShowImages             *bool             `json:"showImages"`
-	ImageWidthCells        *int              `json:"imageWidthCells"`
-	AutoResizeImages       *bool             `json:"autoResizeImages"`
-	BlockImages            *bool             `json:"blockImages"`
-	EnableSkillCommands    *bool             `json:"enableSkillCommands"`
-	SteeringMode           *string           `json:"steeringMode"`
-	FollowUpMode           *string           `json:"followUpMode"`
-	Transport              *string           `json:"transport"`
-	HTTPIdleTimeoutMs      *int64            `json:"httpIdleTimeoutMs"`
-	CacheWarmingMode       *string           `json:"cacheWarmingMode"`
-	ThinkingLevel          *string           `json:"thinkingLevel"`
-	ModelThinkingLevels    map[string]string `json:"modelThinkingLevels"`
-	CurrentTheme           *string           `json:"currentTheme"`
-	TerminalTheme          *string           `json:"terminalTheme"`
-	HideThinkingBlock      *bool             `json:"hideThinkingBlock"`
-	MermaidRenderingMode   *string           `json:"mermaidRenderingMode"`
-	ShowCacheMissNotices   *bool             `json:"showCacheMissNotices"`
-	CollapseChangelog      *bool             `json:"collapseChangelog"`
-	EnableInstallTelemetry *bool             `json:"enableInstallTelemetry"`
-	DoubleEscapeAction     *string           `json:"doubleEscapeAction"`
-	TreeFilterMode         *string           `json:"treeFilterMode"`
-	ShowHardwareCursor     *bool             `json:"showHardwareCursor"`
-	EditorPaddingX         *int              `json:"editorPaddingX"`
-	OutputPad              *int              `json:"outputPad"`
-	AutocompleteMaxVisible *int              `json:"autocompleteMaxVisible"`
-	QuietStartup           *bool             `json:"quietStartup"`
-	DefaultProjectTrust    *string           `json:"defaultProjectTrust"`
-	ClearOnShrink          *bool             `json:"clearOnShrink"`
-	ShowTerminalProgress   *bool             `json:"showTerminalProgress"`
-	TuiMode                *string           `json:"tuiMode"`
-	FullscreenExitOutput   *string           `json:"fullscreenExitOutput"`
-	FullscreenScrollbar    *string           `json:"fullscreenScrollbar"`
-	FullscreenCopyOnSelect *bool             `json:"fullscreenCopyOnSelect"`
-	Warnings               *WarningSettings  `json:"warnings"`
+	AutoCompact                *bool                 `json:"autoCompact"`
+	DefaultModel               *string               `json:"defaultModel"`
+	ShowImages                 *bool                 `json:"showImages"`
+	ImageWidthCells            *int                  `json:"imageWidthCells"`
+	AutoResizeImages           *bool                 `json:"autoResizeImages"`
+	BlockImages                *bool                 `json:"blockImages"`
+	EnableSkillCommands        *bool                 `json:"enableSkillCommands"`
+	SteeringMode               *string               `json:"steeringMode"`
+	FollowUpMode               *string               `json:"followUpMode"`
+	Transport                  *string               `json:"transport"`
+	HTTPIdleTimeoutMs          *int64                `json:"httpIdleTimeoutMs"`
+	CacheWarmingMode           *string               `json:"cacheWarmingMode"`
+	ThinkingLevel              *string               `json:"thinkingLevel"`
+	ModelThinkingLevels        map[string]string     `json:"modelThinkingLevels"`
+	CurrentTheme               *string               `json:"currentTheme"`
+	TerminalTheme              *string               `json:"terminalTheme"`
+	HideThinkingBlock          *bool                 `json:"hideThinkingBlock"`
+	MermaidRenderingMode       *string               `json:"mermaidRenderingMode"`
+	ShowCacheMissNotices       *bool                 `json:"showCacheMissNotices"`
+	CollapseChangelog          *bool                 `json:"collapseChangelog"`
+	EnableInstallTelemetry     *bool                 `json:"enableInstallTelemetry"`
+	DoubleEscapeAction         *string               `json:"doubleEscapeAction"`
+	TreeFilterMode             *string               `json:"treeFilterMode"`
+	ShowHardwareCursor         *bool                 `json:"showHardwareCursor"`
+	EditorPaddingX             *int                  `json:"editorPaddingX"`
+	OutputPad                  *int                  `json:"outputPad"`
+	AutocompleteMaxVisible     *int                  `json:"autocompleteMaxVisible"`
+	QuietStartup               *bool                 `json:"quietStartup"`
+	DefaultProjectTrust        *string               `json:"defaultProjectTrust"`
+	ClearOnShrink              *bool                 `json:"clearOnShrink"`
+	ShowTerminalProgress       *bool                 `json:"showTerminalProgress"`
+	TuiMode                    *string               `json:"tuiMode"`
+	FullscreenExitOutput       *string               `json:"fullscreenExitOutput"`
+	FullscreenScrollbar        *string               `json:"fullscreenScrollbar"`
+	FullscreenCopyOnSelect     *bool                 `json:"fullscreenCopyOnSelect"`
+	FullscreenWheelScrollLines *tui.WheelScrollLines `json:"fullscreenWheelScrollLines"`
+	Warnings                   *WarningSettings      `json:"warnings"`
 }
 
 func baseSettingsConfig(t *testing.T) SettingsConfig {
@@ -74,36 +75,37 @@ func baseSettingsConfig(t *testing.T) SettingsConfig {
 			{ID: "gpt-5.2", Provider: "openai", Reasoning: true},
 			{ID: "claude-sonnet-4-5", Provider: "anthropic", Reasoning: true},
 		},
-		ShowImages:              true,
-		ImageWidthCells:         80,
-		AutoResizeImages:        true,
-		EnableSkillCommands:     true,
-		SteeringMode:            "one-at-a-time",
-		FollowUpMode:            "all",
-		Transport:               "auto",
-		HTTPIdleTimeoutMs:       30000,
-		CacheWarmingMode:        "off",
-		ThinkingLevel:           "medium",
-		AvailableThinkingLevels: []string{"off", "minimal", "low", "medium", "high"},
-		ModelThinkingLevels:     map[string]string{"anthropic/claude-sonnet-4-5": "high"},
-		CurrentTheme:            "dark",
-		TerminalTheme:           TerminalThemeDark,
-		AvailableThemes:         AvailableThemes(),
-		MermaidRenderingMode:    "final",
-		ShowCacheMissNotices:    true,
-		CollapseChangelog:       true,
-		DoubleEscapeAction:      "tree",
-		TreeFilterMode:          "default",
-		EditorPaddingX:          1,
-		OutputPad:               1,
-		AutocompleteMaxVisible:  7,
-		DefaultProjectTrust:     "ask",
-		ClearOnShrink:           true,
-		TuiMode:                 "regular",
-		FullscreenExitOutput:    "transcript",
-		FullscreenScrollbar:     "auto",
-		FullscreenCopyOnSelect:  true,
-		Warnings:                WarningSettings{},
+		ShowImages:                 true,
+		ImageWidthCells:            80,
+		AutoResizeImages:           true,
+		EnableSkillCommands:        true,
+		SteeringMode:               "one-at-a-time",
+		FollowUpMode:               "all",
+		Transport:                  "auto",
+		HTTPIdleTimeoutMs:          30000,
+		CacheWarmingMode:           "off",
+		ThinkingLevel:              "medium",
+		AvailableThinkingLevels:    []string{"off", "minimal", "low", "medium", "high"},
+		ModelThinkingLevels:        map[string]string{"anthropic/claude-sonnet-4-5": "high"},
+		CurrentTheme:               "dark",
+		TerminalTheme:              TerminalThemeDark,
+		AvailableThemes:            AvailableThemes(),
+		MermaidRenderingMode:       "final",
+		ShowCacheMissNotices:       true,
+		CollapseChangelog:          true,
+		DoubleEscapeAction:         "tree",
+		TreeFilterMode:             "default",
+		EditorPaddingX:             1,
+		OutputPad:                  1,
+		AutocompleteMaxVisible:     7,
+		DefaultProjectTrust:        "ask",
+		ClearOnShrink:              true,
+		TuiMode:                    "regular",
+		FullscreenExitOutput:       "transcript",
+		FullscreenScrollbar:        "auto",
+		FullscreenCopyOnSelect:     true,
+		FullscreenWheelScrollLines: tui.AutoWheelScrollLines(),
+		Warnings:                   WarningSettings{},
 	}
 }
 
@@ -172,6 +174,9 @@ func applySettingsJSON(t *testing.T, config *SettingsConfig, raw json.RawMessage
 	setString(&config.FullscreenExitOutput, parsed.FullscreenExitOutput)
 	setString(&config.FullscreenScrollbar, parsed.FullscreenScrollbar)
 	setBool(&config.FullscreenCopyOnSelect, parsed.FullscreenCopyOnSelect)
+	if parsed.FullscreenWheelScrollLines != nil {
+		config.FullscreenWheelScrollLines = *parsed.FullscreenWheelScrollLines
+	}
 	if parsed.ModelThinkingLevels != nil {
 		config.ModelThinkingLevels = parsed.ModelThinkingLevels
 	}
@@ -238,6 +243,13 @@ func recordingCallbacks(events *[]string) SettingsCallbacks {
 		OnFullscreenExitOutputChange:   record("onFullscreenExitOutputChange"),
 		OnFullscreenScrollbarChange:    record("onFullscreenScrollbarChange"),
 		OnFullscreenCopyOnSelectChange: recordBool("onFullscreenCopyOnSelectChange"),
+		OnFullscreenWheelScrollLinesChange: func(lines tui.WheelScrollLines) {
+			if lines.Auto {
+				*events = append(*events, "onFullscreenWheelScrollLinesChange:auto")
+				return
+			}
+			*events = append(*events, "onFullscreenWheelScrollLinesChange:"+itoa(lines.Lines))
+		},
 		OnWarningsChange: func(warnings WarningSettings) {
 			encoded, _ := json.Marshal(warnings)
 			*events = append(*events, "onWarningsChange:"+string(encoded))
@@ -345,6 +357,35 @@ func TestSettingsSelectorHelpers(t *testing.T) {
 	}
 	if _, ok := defaultProjectTrustByLabel("nope"); ok {
 		t.Fatal("unexpected trust label")
+	}
+}
+
+// TestWheelScrollLinesCallbackCycle pins upstream's cycle values: a custom
+// settings.json value (7) stays in the cycle, and three steps go 10, auto, 1
+// (settings-selector.test.ts, f1927c2d5).
+func TestWheelScrollLinesCallbackCycle(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	InitTheme("dark", false)
+
+	config := baseSettingsConfig(t)
+	config.FullscreenWheelScrollLines = tui.FixedWheelScrollLines(7)
+	events := []string{}
+	component := NewSettingsSelectorComponent(config, recordingCallbacks(&events))
+	list := component.GetSettingsList()
+	list.SelectItem("fullscreen-wheel-scroll-lines")
+	for i := 0; i < 3; i++ {
+		list.HandleInput("\r")
+	}
+	want := []string{
+		"onFullscreenWheelScrollLinesChange:10",
+		"onFullscreenWheelScrollLinesChange:auto",
+		"onFullscreenWheelScrollLinesChange:1",
+	}
+	if strings.Join(events, ",") != strings.Join(want, ",") {
+		t.Fatalf("cycle = %v (want %v)", events, want)
 	}
 }
 

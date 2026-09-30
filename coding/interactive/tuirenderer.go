@@ -20,6 +20,9 @@ type InteractiveTuiOptions struct {
 	Terminal               tui.Terminal
 	OnRightClickPaste      func()
 	FullscreenCopyOnSelect *bool
+	// FullscreenWheelScrollLines is the wheel step; nil means the "auto"
+	// default (upstream's options.fullscreenWheelScrollLines ?? "auto").
+	FullscreenWheelScrollLines *tui.WheelScrollLines
 	// OnDebug runs the debug command. Upstream's renderer matches the global
 	// debug key and calls ui.onDebug, which interactive-mode.ts points at
 	// handleDebugCommand, so shift+ctrl+d and /debug do the same thing.
@@ -103,7 +106,14 @@ func createInteractiveTui(options InteractiveTuiOptions) tui.TUI {
 			return theme.Bg("searchMatchBg", theme.Fg("searchMatchText", text))
 		}
 		copyOnSelect := options.FullscreenCopyOnSelect
+		// Upstream passes options.fullscreenWheelScrollLines ?? "auto".
+		wheelScrollLines := options.FullscreenWheelScrollLines
+		if wheelScrollLines == nil {
+			auto := tui.AutoWheelScrollLines()
+			wheelScrollLines = &auto
+		}
 		screen := tui.NewAltScreen(terminal, options.ShowHardwareCursor, options.LogDirectory, tui.AltScreenOptions{
+			WheelScrollLines: wheelScrollLines,
 			SearchMatchStyle: func(text string) string {
 				return ActiveTheme().Underline(styleSearchMatch(text))
 			},

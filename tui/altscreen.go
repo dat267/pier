@@ -128,7 +128,9 @@ type altActiveSearch struct {
 
 // AltScreenOptions configure the fullscreen renderer.
 type AltScreenOptions struct {
-	WheelScrollLines            int
+	// WheelScrollLines is the wheel step: nil means one fixed line per event;
+	// AutoWheelScrollLines() accelerates fast spins.
+	WheelScrollLines            *WheelScrollLines
 	Mouse                       *bool
 	SearchMatchStyle            func(text string) string
 	SearchCurrentMatchStyle     func(text string) string
@@ -196,7 +198,7 @@ type AltScreen struct {
 		X, Y      int
 	}
 
-	wheelScrollLines            int
+	wheelScroll                 *WheelScrollAccelerator
 	mouseEnabled                bool
 	searchMatchStyle            func(string) string
 	searchCurrentMatchStyle     func(string) string
@@ -208,11 +210,21 @@ type AltScreen struct {
 	copySelection               func(string) (bool, bool, string)
 }
 
+// newAltScreenWheelScroll defaults an unset option to one fixed line per event
+// (upstream's `options.wheelScrollLines ?? 1`); the interactive renderer passes
+// AutoWheelScrollLines for the default system behavior.
+func newAltScreenWheelScroll(lines *WheelScrollLines) *WheelScrollAccelerator {
+	if lines == nil {
+		return NewWheelScrollAccelerator(FixedWheelScrollLines(1))
+	}
+	return NewWheelScrollAccelerator(*lines)
+}
+
 // NewAltScreen creates the fullscreen renderer.
 func NewAltScreen(terminal Terminal, showHardwareCursor bool, logDirectory string, options AltScreenOptions) *AltScreen {
 	screen := &AltScreen{
 		Renderer:                    NewRenderer(terminal),
-		wheelScrollLines:            max(1, options.WheelScrollLines),
+		wheelScroll:                 newAltScreenWheelScroll(options.WheelScrollLines),
 		mouseEnabled:                true,
 		searchMatchStyle:            options.SearchMatchStyle,
 		searchCurrentMatchStyle:     options.SearchCurrentMatchStyle,
@@ -316,6 +328,12 @@ func (s *AltScreen) GetCopyOnSelect() bool {
 // SetCopyOnSelect toggles copy-on-select.
 func (s *AltScreen) SetCopyOnSelect(enabled bool) {
 	s.copyOnSelect = enabled
+}
+
+// SetWheelScrollLines updates the wheel step and resets the gesture state
+// (upstream setWheelScrollLines).
+func (s *AltScreen) SetWheelScrollLines(lines WheelScrollLines) {
+	s.wheelScroll.SetLines(lines)
 }
 
 // HasActiveSelection reports whether the fullscreen viewport has a non-empty
@@ -819,7 +837,13 @@ func (s *AltScreen) handleViewportInput(data string) TuiInputListenerResult {
 	}
 
 	if wheel, ok := s.parseWheelEvent(data); ok {
-		event := s.createMouseEventLocked("wheel", wheel.Button, wheel.X, wheel.Y, wheel.Direction*s.getWheelScrollLines(wheel.Button), 0, false)
+		lines := s.wheelScroll.Next(wheel.Direction, nowMilliseconds())
+		delta := wheel.Direction * lines
+		// SGR mouse button codes use bit 3 (value 8) for the Alt modifier.
+		if wheel.Button&8 != 0 {
+			delta *= altWheelScrollMultiplier
+		}
+		event := s.createMouseEventLocked("wheel", wheel.Button, wheel.X, wheel.Y, delta, 0, false)
 		overlayHit, overlayResult := s.DispatchMouseToOverlay(event)
 		var result *TuiMouseDispatchResult
 		if overlayResult != nil {
@@ -836,7 +860,7 @@ func (s *AltScreen) handleViewportInput(data string) TuiInputListenerResult {
 		if s.shouldDeferViewportInputToOverlayLocked() {
 			return TuiInputListenerResult{}
 		}
-		s.routeWheelLocked(wheel)
+		s.routeWheelLocked(wheel, delta)
 		return TuiInputListenerResult{Consume: true}
 	}
 
@@ -1133,6 +1157,10 @@ func (s *AltScreen) handleMouseEventLocked(raw sgrMouseEvent) {
 	s.handleSelectionMouseEventLocked(raw)
 }
 
+// nowMilliseconds is the monotonic clock the wheel accelerator timestamps
+// events with (upstream performance.now()).
+func nowMilliseconds() float64 { return float64(time.Now().UnixNano()) / 1e6 }
+
 func (s *AltScreen) parseWheelEvent(data string) (altWheelEvent, bool) {
 	if match := wheelSgrRegex.FindStringSubmatch(data); match != nil {
 		button := atoiSafe(match[1])
@@ -1167,16 +1195,8 @@ func (s *AltScreen) parseWheelEvent(data string) (altWheelEvent, bool) {
 	return altWheelEvent{}, false
 }
 
-func (s *AltScreen) getWheelScrollLines(button int) int {
-	// SGR mouse button codes use bit 3 (value 8) for the Alt modifier.
-	if button&8 != 0 {
-		return s.wheelScrollLines * altWheelScrollMultiplier
-	}
-	return s.wheelScrollLines
-}
-
-func (s *AltScreen) routeWheelLocked(event altWheelEvent) {
-	remaining := event.Direction * s.getWheelScrollLines(event.Button)
+func (s *AltScreen) routeWheelLocked(event altWheelEvent, delta int) {
+	remaining := delta
 	seen := map[*ScrollView]bool{}
 	if s.currentLayout != nil {
 		for _, scrollView := range GetScrollViewsAt(*s.currentLayout, event.X, event.Y) {

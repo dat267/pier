@@ -123,30 +123,31 @@ func (w *SettingsWiring) BuildSettingsConfig() SettingsConfig {
 		AvailableThinkingLevels: []string{
 			"off", "minimal", "low", "medium", "high", "xhigh", "max",
 		},
-		ModelThinkingLevels:    settings.GetAllModelThinkingLevels(),
-		CurrentTheme:           "dark",
-		TerminalTheme:          TerminalThemeDark,
-		AvailableThemes:        AvailableThemes(),
-		HideThinkingBlock:      settings.GetHideThinkingBlock(),
-		MermaidRenderingMode:   settings.GetMermaidRenderingMode(),
-		CollapseChangelog:      settings.GetCollapseChangelog(),
-		EnableInstallTelemetry: settings.GetEnableInstallTelemetry(),
-		DoubleEscapeAction:     settings.GetDoubleEscapeAction(),
-		TreeFilterMode:         settings.GetTreeFilterMode(),
-		ShowHardwareCursor:     settings.GetShowHardwareCursor(),
-		ShowCacheMissNotices:   settings.GetShowCacheMissNotices(),
-		DefaultProjectTrust:    settings.GetDefaultProjectTrust(),
-		EditorPaddingX:         settings.GetEditorPaddingX(),
-		OutputPad:              settings.GetOutputPad(),
-		AutocompleteMaxVisible: settings.GetAutocompleteMaxVisible(),
-		QuietStartup:           settings.GetQuietStartup(),
-		ClearOnShrink:          settings.GetClearOnShrink(),
-		ShowTerminalProgress:   settings.GetShowTerminalProgress(),
-		TuiMode:                "regular",
-		FullscreenExitOutput:   settings.GetFullscreenExitOutput(),
-		FullscreenScrollbar:    settings.GetFullscreenScrollbar(),
-		FullscreenCopyOnSelect: settings.GetFullscreenCopyOnSelect(),
-		Warnings:               warningSettingsFromCoding(settings.GetWarnings()),
+		ModelThinkingLevels:        settings.GetAllModelThinkingLevels(),
+		CurrentTheme:               "dark",
+		TerminalTheme:              TerminalThemeDark,
+		AvailableThemes:            AvailableThemes(),
+		HideThinkingBlock:          settings.GetHideThinkingBlock(),
+		MermaidRenderingMode:       settings.GetMermaidRenderingMode(),
+		CollapseChangelog:          settings.GetCollapseChangelog(),
+		EnableInstallTelemetry:     settings.GetEnableInstallTelemetry(),
+		DoubleEscapeAction:         settings.GetDoubleEscapeAction(),
+		TreeFilterMode:             settings.GetTreeFilterMode(),
+		ShowHardwareCursor:         settings.GetShowHardwareCursor(),
+		ShowCacheMissNotices:       settings.GetShowCacheMissNotices(),
+		DefaultProjectTrust:        settings.GetDefaultProjectTrust(),
+		EditorPaddingX:             settings.GetEditorPaddingX(),
+		OutputPad:                  settings.GetOutputPad(),
+		AutocompleteMaxVisible:     settings.GetAutocompleteMaxVisible(),
+		QuietStartup:               settings.GetQuietStartup(),
+		ClearOnShrink:              settings.GetClearOnShrink(),
+		ShowTerminalProgress:       settings.GetShowTerminalProgress(),
+		TuiMode:                    "regular",
+		FullscreenExitOutput:       settings.GetFullscreenExitOutput(),
+		FullscreenScrollbar:        settings.GetFullscreenScrollbar(),
+		FullscreenCopyOnSelect:     settings.GetFullscreenCopyOnSelect(),
+		FullscreenWheelScrollLines: settings.GetFullscreenWheelScrollLines(),
+		Warnings:                   warningSettingsFromCoding(settings.GetWarnings()),
 	}
 	if value := settings.GetDefaultThinkingLevel(); value != nil && *value != "" {
 		config.ThinkingLevel = *value
@@ -383,6 +384,12 @@ func (w *SettingsWiring) BuildSettingsCallbacks(done func(), refresh func()) Set
 			settings.SetFullscreenCopyOnSelect(enabled)
 			if renderer, ok := tuiConcrete(w.Renderer).(*tui.AltScreen); ok {
 				renderer.SetCopyOnSelect(enabled)
+			}
+		},
+		OnFullscreenWheelScrollLinesChange: func(lines tui.WheelScrollLines) {
+			settings.SetFullscreenWheelScrollLines(lines)
+			if renderer, ok := tuiConcrete(w.Renderer).(*tui.AltScreen); ok {
+				renderer.SetWheelScrollLines(lines)
 			}
 		},
 		OnWarningsChange: func(warnings WarningSettings) {

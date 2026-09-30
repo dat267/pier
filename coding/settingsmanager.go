@@ -16,6 +16,7 @@ import (
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/internal/offloop"
+	"github.com/dat267/pier/tui"
 )
 
 // Port of core/settings-manager.ts (with the config constants it uses from
@@ -218,33 +219,34 @@ type Settings struct {
 	EnableAnalytics        *bool                  `json:"enableAnalytics,omitempty"`
 	TrackingID             *string                `json:"trackingId,omitempty"`
 	// Packages is an array of strings or package source filter objects.
-	Packages                  []any                    `json:"packages,omitempty"`
-	Extensions                []string                 `json:"extensions,omitempty"`
-	Skills                    []string                 `json:"skills,omitempty"`
-	Prompts                   []string                 `json:"prompts,omitempty"`
-	Themes                    []string                 `json:"themes,omitempty"`
-	EnableSkillCommands       *bool                    `json:"enableSkillCommands,omitempty"`
-	Terminal                  *SettingsTerminal        `json:"terminal,omitempty"`
-	Images                    *SettingsImages          `json:"images,omitempty"`
-	EnabledModels             []string                 `json:"enabledModels,omitempty"`
-	DefaultTools              []string                 `json:"defaultTools,omitempty"`
-	DoubleEscapeAction        *string                  `json:"doubleEscapeAction,omitempty"`
-	TreeFilterMode            *string                  `json:"treeFilterMode,omitempty"`
-	ThinkingBudgets           *SettingsThinkingBudgets `json:"thinkingBudgets,omitempty"`
-	EditorPaddingX            *int                     `json:"editorPaddingX,omitempty"`
-	OutputPad                 *int                     `json:"outputPad,omitempty"`
-	AutocompleteMaxVisible    *int                     `json:"autocompleteMaxVisible,omitempty"`
-	ShowHardwareCursor        *bool                    `json:"showHardwareCursor,omitempty"`
-	Markdown                  *SettingsMarkdown        `json:"markdown,omitempty"`
-	Warnings                  *SettingsWarnings        `json:"warnings,omitempty"`
-	SessionDir                *string                  `json:"sessionDir,omitempty"`
-	HTTPProxy                 *string                  `json:"httpProxy,omitempty"`
-	HTTPIdleTimeoutMS         any                      `json:"httpIdleTimeoutMs,omitempty"`
-	WebsocketConnectTimeoutMS any                      `json:"websocketConnectTimeoutMs,omitempty"`
-	TuiMode                   *string                  `json:"tuiMode,omitempty"`
-	FullscreenExitOutput      *string                  `json:"fullscreenExitOutput,omitempty"`
-	FullscreenScrollbar       *string                  `json:"fullscreenScrollbar,omitempty"`
-	FullscreenCopyOnSelect    *bool                    `json:"fullscreenCopyOnSelect,omitempty"`
+	Packages                   []any                    `json:"packages,omitempty"`
+	Extensions                 []string                 `json:"extensions,omitempty"`
+	Skills                     []string                 `json:"skills,omitempty"`
+	Prompts                    []string                 `json:"prompts,omitempty"`
+	Themes                     []string                 `json:"themes,omitempty"`
+	EnableSkillCommands        *bool                    `json:"enableSkillCommands,omitempty"`
+	Terminal                   *SettingsTerminal        `json:"terminal,omitempty"`
+	Images                     *SettingsImages          `json:"images,omitempty"`
+	EnabledModels              []string                 `json:"enabledModels,omitempty"`
+	DefaultTools               []string                 `json:"defaultTools,omitempty"`
+	DoubleEscapeAction         *string                  `json:"doubleEscapeAction,omitempty"`
+	TreeFilterMode             *string                  `json:"treeFilterMode,omitempty"`
+	ThinkingBudgets            *SettingsThinkingBudgets `json:"thinkingBudgets,omitempty"`
+	EditorPaddingX             *int                     `json:"editorPaddingX,omitempty"`
+	OutputPad                  *int                     `json:"outputPad,omitempty"`
+	AutocompleteMaxVisible     *int                     `json:"autocompleteMaxVisible,omitempty"`
+	ShowHardwareCursor         *bool                    `json:"showHardwareCursor,omitempty"`
+	Markdown                   *SettingsMarkdown        `json:"markdown,omitempty"`
+	Warnings                   *SettingsWarnings        `json:"warnings,omitempty"`
+	SessionDir                 *string                  `json:"sessionDir,omitempty"`
+	HTTPProxy                  *string                  `json:"httpProxy,omitempty"`
+	HTTPIdleTimeoutMS          any                      `json:"httpIdleTimeoutMs,omitempty"`
+	WebsocketConnectTimeoutMS  any                      `json:"websocketConnectTimeoutMs,omitempty"`
+	TuiMode                    *string                  `json:"tuiMode,omitempty"`
+	FullscreenExitOutput       *string                  `json:"fullscreenExitOutput,omitempty"`
+	FullscreenScrollbar        *string                  `json:"fullscreenScrollbar,omitempty"`
+	FullscreenCopyOnSelect     *bool                    `json:"fullscreenCopyOnSelect,omitempty"`
+	FullscreenWheelScrollLines *tui.WheelScrollLines    `json:"fullscreenWheelScrollLines,omitempty"`
 }
 
 // SettingsScope names one settings scope.
@@ -787,6 +789,7 @@ func (s *Settings) marshalOrdered() ([]byte, error) {
 	object.setString("fullscreenExitOutput", s.FullscreenExitOutput)
 	object.setString("fullscreenScrollbar", s.FullscreenScrollbar)
 	object.setBool("fullscreenCopyOnSelect", s.FullscreenCopyOnSelect)
+	object.setAny("fullscreenWheelScrollLines", s.FullscreenWheelScrollLines)
 	return object.marshal()
 }
 
@@ -2220,6 +2223,36 @@ func (m *SettingsManager) SetFullscreenCopyOnSelect(enabled bool) {
 	m.markModified("fullscreenCopyOnSelect", "")
 	m.save()
 }
+
+// GetFullscreenWheelScrollLines returns the fullscreen wheel step (default
+// "auto"; a fixed count is clamped 1..100). Upstream
+// getFullscreenWheelScrollLines.
+func (m *SettingsManager) GetFullscreenWheelScrollLines() tui.WheelScrollLines {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	value := m.settings.FullscreenWheelScrollLines
+	if value == nil || value.Auto {
+		return tui.AutoWheelScrollLines()
+	}
+	return tui.FixedWheelScrollLines(clampWheelScrollLines(value.Lines))
+}
+
+// SetFullscreenWheelScrollLines stores the fullscreen wheel step (global only).
+func (m *SettingsManager) SetFullscreenWheelScrollLines(lines tui.WheelScrollLines) {
+	if !lines.Auto {
+		lines = tui.FixedWheelScrollLines(clampWheelScrollLines(lines.Lines))
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	value := lines
+	m.globalSettings.FullscreenWheelScrollLines = &value
+	m.markModified("fullscreenWheelScrollLines", "")
+	m.save()
+}
+
+// clampWheelScrollLines bounds a fixed wheel step to 1..100 (upstream
+// get/setFullscreenWheelScrollLines).
+func clampWheelScrollLines(lines int) int { return max(1, min(100, lines)) }
 
 // GetImageAutoResize reports the image auto-resize toggle (default true).
 func (m *SettingsManager) GetImageAutoResize() bool {

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dat267/pier/internal/offloop"
+	"github.com/dat267/pier/tui"
 )
 
 // Tests ported from packages/coding-agent/test/settings-manager.test.ts (and
@@ -687,5 +688,34 @@ func TestSettingsPersistWritesNoNullKeys(t *testing.T) {
 		if value == nil {
 			t.Errorf("settings.json wrote %q: null", key)
 		}
+	}
+}
+
+// Port of the fullscreenWheelScrollLines cases in upstream
+// settings-manager.test.ts (f1927c2d5): default "auto", clamped 1..100, and the
+// two settings.json forms.
+func TestSettingsFullscreenWheelScrollLines(t *testing.T) {
+	manager := NewInMemorySettingsManager(nil, SettingsManagerCreateOptions{})
+	if got := manager.GetFullscreenWheelScrollLines(); !got.Auto {
+		t.Fatalf("default = %#v (want auto)", got)
+	}
+	manager.SetFullscreenWheelScrollLines(tui.FixedWheelScrollLines(0))
+	if got := manager.GetFullscreenWheelScrollLines(); got != tui.FixedWheelScrollLines(1) {
+		t.Fatalf("lower clamp = %#v", got)
+	}
+	manager.SetFullscreenWheelScrollLines(tui.FixedWheelScrollLines(500))
+	if got := manager.GetFullscreenWheelScrollLines(); got != tui.FixedWheelScrollLines(100) {
+		t.Fatalf("upper clamp = %#v", got)
+	}
+	manager.SetFullscreenWheelScrollLines(tui.FixedWheelScrollLines(3))
+	if encoded := marshalSettingsIndent(manager.globalSettings); !strings.Contains(encoded, `"fullscreenWheelScrollLines": 3`) {
+		t.Fatalf("fixed encoding = %s", encoded)
+	}
+	if reloaded := mapToSettings(settingsToMap(manager.settings)); reloaded.FullscreenWheelScrollLines == nil || *reloaded.FullscreenWheelScrollLines != tui.FixedWheelScrollLines(3) {
+		t.Fatalf("reload = %#v", reloaded.FullscreenWheelScrollLines)
+	}
+	manager.SetFullscreenWheelScrollLines(tui.AutoWheelScrollLines())
+	if encoded := marshalSettingsIndent(manager.globalSettings); !strings.Contains(encoded, `"fullscreenWheelScrollLines": "auto"`) {
+		t.Fatalf("auto encoding = %s", encoded)
 	}
 }

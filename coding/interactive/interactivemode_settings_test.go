@@ -114,6 +114,7 @@ func TestSettingsConfigAssembly(t *testing.T) {
 	settings.SetFullscreenExitOutput("resume-hint")
 	settings.SetFullscreenScrollbar("hidden")
 	settings.SetFullscreenCopyOnSelect(false)
+	settings.SetFullscreenWheelScrollLines(tui.FixedWheelScrollLines(5))
 	settings.SetWarnings(coding.SettingsWarnings{AnthropicExtraUsage: boolPtr(false)})
 	session.model = &ai.Model{ID: "claude-x", Provider: "anthropic", Reasoning: true}
 	session.models = []*ai.Model{session.model}
@@ -155,6 +156,7 @@ func TestSettingsConfigAssembly(t *testing.T) {
 		{"fullscreenExitOutput", config.FullscreenExitOutput, "resume-hint"},
 		{"fullscreenScrollbar", config.FullscreenScrollbar, "hidden"},
 		{"fullscreenCopyOnSelect", config.FullscreenCopyOnSelect, false},
+		{"fullscreenWheelScrollLines", config.FullscreenWheelScrollLines, tui.FixedWheelScrollLines(5)},
 		{"currentTheme", config.CurrentTheme, "light"},
 		{"terminalTheme", config.TerminalTheme, TerminalThemeLight},
 	}
@@ -291,6 +293,10 @@ func TestSettingsCallbacks(t *testing.T) {
 	callbacks.OnFullscreenCopyOnSelectChange(true)
 	if !settings.GetFullscreenCopyOnSelect() {
 		t.Fatal("copy on select not applied")
+	}
+	callbacks.OnFullscreenWheelScrollLinesChange(tui.FixedWheelScrollLines(2))
+	if settings.GetFullscreenWheelScrollLines() != tui.FixedWheelScrollLines(2) {
+		t.Fatalf("wheel scroll lines = %#v", settings.GetFullscreenWheelScrollLines())
 	}
 	callbacks.OnWarningsChange(WarningSettings{AnthropicExtraUsage: boolPtr(false)})
 	if warnings := settings.GetWarnings(); warnings.AnthropicExtraUsage == nil || *warnings.AnthropicExtraUsage {

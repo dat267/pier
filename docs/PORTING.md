@@ -12,6 +12,17 @@ and package-manager mechanics, the out-of-scope set) plus changes across `ai`,
 `coding-agent`, `durable`, `chord` and `tui`. This paragraph is replaced by a
 refresh entry once the delta is reviewed and ported.
 
+Ported from the v0.99.1 delta so far (the rest is still pending):
+
+- `tui`/`coding/interactive`: configurable fullscreen wheel scrolling with auto
+  acceleration (`f1927c2d5`). `WheelScrollLines` (`"auto"` or a fixed 1..100)
+  and `WheelScrollAccelerator` live in `tui/wheelscroll.go`; `AltScreen` uses
+  the accelerator per wheel event with the five-times Alt multiplier and gains
+  `SetWheelScrollLines`; the `fullscreenWheelScrollLines` setting is global-only
+  (clamped 1..100) and its row sits above Theme in `/settings`. Ported tests:
+  the upstream `wheel-scroll.test.ts` cases and the runtime-update case from
+  `tui-alt-screen.test.ts`.
+
 v0.87.1 refresh (originally the pinned tag `f07218c4d`, now superseded by the
 v0.99.1 reference above, read from the
 `./pi` checkout in the workspace — see `AGENTS.md`; the previous pin

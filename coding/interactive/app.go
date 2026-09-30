@@ -263,12 +263,13 @@ func NewApp(options AppOptions) *App {
 	app.loopInputsClosed = make(chan struct{})
 
 	aInitialUI := app.newLoopTui(InteractiveTuiOptions{
-		TuiMode:                options.TuiMode,
-		ShowHardwareCursor:     options.Settings.GetShowHardwareCursor(),
-		LogDirectory:           options.AgentDir,
-		Terminal:               terminal,
-		FullscreenCopyOnSelect: appBoolPtr(options.Settings.GetFullscreenCopyOnSelect()),
-		OnRightClickPaste:      app.handleRightClickPaste,
+		TuiMode:                    options.TuiMode,
+		ShowHardwareCursor:         options.Settings.GetShowHardwareCursor(),
+		LogDirectory:               options.AgentDir,
+		Terminal:                   terminal,
+		FullscreenCopyOnSelect:     appBoolPtr(options.Settings.GetFullscreenCopyOnSelect()),
+		FullscreenWheelScrollLines: appWheelScrollLinesPtr(options.Settings.GetFullscreenWheelScrollLines()),
+		OnRightClickPaste:          app.handleRightClickPaste,
 	})
 	app.initialUI = aInitialUI
 	app.ui = tui.NewTuiReference(func() tui.TUI {
@@ -425,12 +426,13 @@ func NewApp(options AppOptions) *App {
 		UI: aInitialUI,
 		CreateTui: func(mode string) tui.TUI {
 			return app.newLoopTui(InteractiveTuiOptions{
-				TuiMode:                mode,
-				ShowHardwareCursor:     options.Settings.GetShowHardwareCursor(),
-				LogDirectory:           options.AgentDir,
-				Terminal:               terminal,
-				FullscreenCopyOnSelect: appBoolPtr(options.Settings.GetFullscreenCopyOnSelect()),
-				OnRightClickPaste:      app.handleRightClickPaste,
+				TuiMode:                    mode,
+				ShowHardwareCursor:         options.Settings.GetShowHardwareCursor(),
+				LogDirectory:               options.AgentDir,
+				Terminal:                   terminal,
+				FullscreenCopyOnSelect:     appBoolPtr(options.Settings.GetFullscreenCopyOnSelect()),
+				FullscreenWheelScrollLines: appWheelScrollLinesPtr(options.Settings.GetFullscreenWheelScrollLines()),
+				OnRightClickPaste:          app.handleRightClickPaste,
 			})
 		},
 		Session:      app.session,
@@ -580,6 +582,7 @@ func (a *App) applySettingsDependentUI() {
 	a.applyFullscreenScrollbarSetting()
 	if altscreen, ok := tuiConcrete(a.ui).(*tui.AltScreen); ok {
 		altscreen.SetCopyOnSelect(a.settings.GetFullscreenCopyOnSelect())
+		altscreen.SetWheelScrollLines(a.settings.GetFullscreenWheelScrollLines())
 	}
 	a.ui.SetShowHardwareCursor(a.settings.GetShowHardwareCursor())
 	clearOnShrink := a.settings.GetClearOnShrink()
@@ -953,6 +956,8 @@ func (a themeSettingsControllerAdapter) SetThemeSetting(theme string) error {
 // --- adapters ---------------------------------------------------------------
 
 func appBoolPtr(value bool) *bool { return &value }
+
+func appWheelScrollLinesPtr(value tui.WheelScrollLines) *tui.WheelScrollLines { return &value }
 
 // themeUIAdapter adapts tui.TUI to ThemeControllerUI.
 type themeUIAdapter struct{ ui tui.TUI }

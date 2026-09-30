@@ -86,6 +86,8 @@ type LifecycleOptions struct {
 	OnRightClickPaste func()
 	// FullscreenCopyOnSelect seeds the fullscreen renderer.
 	FullscreenCopyOnSelect *bool
+	// FullscreenWheelScrollLines seeds the fullscreen renderer's wheel step.
+	FullscreenWheelScrollLines *tui.WheelScrollLines
 
 	// FormatResumeMessage renders the "To resume this session:" prefix.
 	FormatResumeMessage func(command string) string
@@ -143,7 +145,8 @@ func NewLifecycle(options LifecycleOptions) *Lifecycle {
 			return CreateInteractiveTui(InteractiveTuiOptions{
 				TuiMode: mode, LogDirectory: options.LogDirectory,
 				Terminal: options.Terminal, OnRightClickPaste: options.OnRightClickPaste,
-				FullscreenCopyOnSelect: options.FullscreenCopyOnSelect,
+				FullscreenCopyOnSelect:     options.FullscreenCopyOnSelect,
+				FullscreenWheelScrollLines: options.FullscreenWheelScrollLines,
 			})
 		}
 	}
