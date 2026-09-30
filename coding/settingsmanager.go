@@ -688,6 +688,67 @@ func mapToSettings(raw map[string]any) *Settings {
 	return &out
 }
 
+// DefaultToolNames are the tools enabled at startup when defaultTools does not
+// change them (upstream DEFAULT_TOOL_NAMES).
+var DefaultToolNames = []string{"read", "bash", "edit", "write"}
+
+func isToolModifier(entry string) bool {
+	return strings.HasPrefix(entry, "+") || strings.HasPrefix(entry, "-")
+}
+
+func overridesOnlyToolModifiers(entries []string) bool {
+	for _, entry := range entries {
+		if !isToolModifier(entry) {
+			return false
+		}
+	}
+	return true
+}
+
+// mergeDefaultTools merges two defaultTools layers: a list of only +name/-name
+// entries appends to the inherited list, anything else replaces it. nil means
+// the layer does not set defaultTools (upstream mergeDefaultTools).
+func mergeDefaultTools(base, overrides []string) []string {
+	if overrides == nil {
+		return nil
+	}
+	if !overridesOnlyToolModifiers(overrides) {
+		return overrides
+	}
+	return append(append([]string{}, base...), overrides...)
+}
+
+// resolveDefaultTools resolves a merged defaultTools list: plain names replace
+// DefaultToolNames, then +name adds and -name removes a tool in list order
+// (upstream resolveDefaultTools).
+func resolveDefaultTools(entries []string) []string {
+	plain := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if !isToolModifier(entry) {
+			plain = append(plain, entry)
+		}
+	}
+	var tools []string
+	if len(plain) > 0 || len(entries) == 0 {
+		tools = plain
+	} else {
+		tools = append([]string{}, DefaultToolNames...)
+	}
+	for _, entry := range entries {
+		if !isToolModifier(entry) {
+			continue
+		}
+		name := entry[1:]
+		index := indexOf(tools, name)
+		if strings.HasPrefix(entry, "+") && index == -1 && name != "" {
+			tools = append(tools, name)
+		} else if strings.HasPrefix(entry, "-") && index != -1 {
+			tools = append(tools[:index], tools[index+1:]...)
+		}
+	}
+	return tools
+}
+
 // DeepMergeSettings deep-merges overrides onto base; nested objects merge
 // recursively and arrays/primitives replace (upstream deepMergeSettings).
 func DeepMergeSettings(base, overrides *Settings) *Settings {
@@ -698,7 +759,13 @@ func DeepMergeSettings(base, overrides *Settings) *Settings {
 		return cloneSettings(base)
 	}
 	merged := deepMergeObjects(settingsToMap(base), settingsToMap(overrides))
-	return mapToSettings(merged)
+	result := mapToSettings(merged)
+	// defaultTools is the one array that merges: a modifier-only override layers
+	// on the inherited selection instead of replacing it.
+	if tools := mergeDefaultTools(base.DefaultTools, overrides.DefaultTools); tools != nil {
+		result.DefaultTools = tools
+	}
+	return result
 }
 
 func deepMergeObjects(base, overrides map[string]any) map[string]any {
@@ -2311,14 +2378,15 @@ func (m *SettingsManager) SetEnabledModels(patterns []string) {
 	m.save()
 }
 
-// GetDefaultTools returns the default tool selection.
+// GetDefaultTools returns the resolved default tool selection, or nil when no
+// settings layer sets defaultTools.
 func (m *SettingsManager) GetDefaultTools() []string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.settings.DefaultTools == nil {
 		return nil
 	}
-	return append([]string{}, m.settings.DefaultTools...)
+	return resolveDefaultTools(m.settings.DefaultTools)
 }
 
 // GetDoubleEscapeAction returns the double-escape action (default tree).

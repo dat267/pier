@@ -397,6 +397,46 @@ func TestSettingsExternalEditorAndTUISettings(t *testing.T) {
 	}
 }
 
+// TestSettingsDefaultToolModifiers is upstream's "applies +name and -name to the
+// default selection" case (30a1d1849).
+func TestSettingsDefaultToolModifiers(t *testing.T) {
+	manager := NewInMemorySettingsManager(&Settings{DefaultTools: []string{"+codemode", "-write"}}, SettingsManagerCreateOptions{})
+	if got := strings.Join(manager.GetDefaultTools(), ","); got != "read,bash,edit,codemode" {
+		t.Fatalf("+codemode -write = %q", got)
+	}
+	manager = NewInMemorySettingsManager(&Settings{DefaultTools: []string{"read", "+grep", "+read"}}, SettingsManagerCreateOptions{})
+	if got := strings.Join(manager.GetDefaultTools(), ","); got != "read,grep" {
+		t.Fatalf("read +grep +read = %q", got)
+	}
+}
+
+// TestSettingsDefaultToolsLayerModifiers is upstream's "layers project modifiers
+// on top of the global selection" case (30a1d1849).
+func TestSettingsDefaultToolsLayerModifiers(t *testing.T) {
+	agentDir, projectDir := settingsDirs(t)
+	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"defaultTools":["read","bash","+codemode"]}`)
+	writeSettingsFile(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"defaultTools":["-codemode","+tool_search"]}`)
+	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	if got := strings.Join(manager.GetDefaultTools(), ","); got != "read,bash,tool_search" {
+		t.Fatalf("layered defaultTools = %q", got)
+	}
+	manager.ApplyOverrides(&Settings{DefaultTools: []string{"+codemode"}})
+	if got := strings.Join(manager.GetDefaultTools(), ","); got != "read,bash,tool_search,codemode" {
+		t.Fatalf("override defaultTools = %q", got)
+	}
+}
+
+// TestSettingsDefaultToolsProjectOnlyModifiers is upstream's "applies project
+// modifiers to the built-in defaults without a global setting" case (30a1d1849).
+func TestSettingsDefaultToolsProjectOnlyModifiers(t *testing.T) {
+	agentDir, projectDir := settingsDirs(t)
+	writeSettingsFile(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"defaultTools":["+codemode"]}`)
+	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	if got := strings.Join(manager.GetDefaultTools(), ","); got != "read,bash,edit,write,codemode" {
+		t.Fatalf("project-only modifiers = %q", got)
+	}
+}
+
 func TestSettingsDefaultToolsAndPaths(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
 	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"defaultTools":["read","bash"],"sessionDir":"/tmp/sessions","shellPath":"~"}`)

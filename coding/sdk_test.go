@@ -223,6 +223,27 @@ func TestCreateAgentSessionToolSelection(t *testing.T) {
 		t.Fatalf("tools = %q", names)
 	}
 
+	// Modifier-only defaultTools layer on the built-in selection: +grep adds,
+	// -write removes (upstream default-tools-setting.test.ts, 30a1d1849).
+	modifierDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(modifierDir, ConfigDirName), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(modifierDir, ConfigDirName, "settings.json"),
+		[]byte(`{"defaultTools":["+grep","-write"]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	modifier := NewSettingsManagerFromFiles(modifierDir, agentDirForSettings(t), SettingsManagerCreateOptions{})
+	session, err = CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
+		Cwd: modifierDir, ModelRuntime: runtime, SettingsManager: modifier,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "read,bash,edit,grep" {
+		t.Fatalf("tools = %q", names)
+	}
+
 	// An explicitly empty defaultTools means no tools, not the built-in
 	// default: upstream reads it with nullish coalescing
 	// (`configured ?? defaultActiveToolNames`), so an empty array is a value

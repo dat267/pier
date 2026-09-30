@@ -21,9 +21,6 @@ import (
 // tools are extension mechanics and omitted; the tool set comes from the
 // built-in registry filtered by name.
 
-// defaultActiveToolNames is the default tool selection.
-var defaultActiveToolNames = []ToolName{ToolNameRead, ToolNameBash, ToolNameEdit, ToolNameWrite}
-
 // NoTools values, matching upstream's main.ts.
 const (
 	// NoToolsAll disables every tool, built-in or otherwise.
@@ -254,7 +251,10 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		// and only a missing key falls through to the built-in default.
 		initialActiveToolNames = append([]ToolName{}, configured...)
 	} else {
-		initialActiveToolNames = append([]ToolName{}, defaultActiveToolNames...)
+		initialActiveToolNames = make([]ToolName, 0, len(DefaultToolNames))
+		for _, name := range DefaultToolNames {
+			initialActiveToolNames = append(initialActiveToolNames, ToolName(name))
+		}
 	}
 	if len(options.ExcludeTools) > 0 {
 		excluded := map[ToolName]bool{}

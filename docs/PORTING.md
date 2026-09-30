@@ -52,6 +52,15 @@ Ported from the v0.99.1 delta so far (the rest is still pending):
   light/dark change: the port's combined OSC 10/11/4 burst consumes the
   background reply the renderer's probe routes, so re-running it in the scheme
   listener breaks that round trip (D179).
+- `coding`: `defaultTools` accepts `+name`/`-name` entries (`30a1d1849`). A
+  modifier-only list layers on the inherited selection (`mergeDefaultTools`), so
+  a project `["-codemode","+tool_search"]` applies to the global
+  `["read","bash","+codemode"]`, and `["+codemode"]` alone applies to the
+  built-in defaults; a list with any plain name replaces them, and an explicitly
+  empty list selects nothing (`resolveDefaultTools`). The built-in list is the
+  exported `DefaultToolNames`. Tests: the `settings-manager.test.ts` modifier and
+  layer cases plus the `default-tools-setting.test.ts` modifier case (the port's
+  `grep` stands in for the extension tool, which the port does not have).
 
 v0.87.1 refresh (originally the pinned tag `f07218c4d`, now superseded by the
 v0.99.1 reference above, read from the
