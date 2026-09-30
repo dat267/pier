@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"sync"
 )
 
 // configureDetachedCommand is a no-op off unix: upstream detaches the shell
@@ -30,20 +31,19 @@ func killProcessTreePlatform(pid int) {
 // processTreeGuard is the pid-tree kill on platforms with neither process
 // groups nor job objects: the tree is all there is to kill.
 type processTreeGuard struct {
-	pid    int
-	killed bool
+	pid  int
+	once sync.Once
 }
 
 // newProcessTreeGuard records the pid the tree kill will target.
 func newProcessTreeGuard(pid int) *processTreeGuard { return &processTreeGuard{pid: pid} }
 
-// Kill terminates the tree once.
+// Kill terminates the tree exactly once, safe under concurrent calls.
 func (g *processTreeGuard) Kill() {
-	if g == nil || g.killed {
+	if g == nil {
 		return
 	}
-	g.killed = true
-	killProcessTreePlatform(g.pid)
+	g.once.Do(func() { killProcessTreePlatform(g.pid) })
 }
 
 // Release has nothing to close off unix.

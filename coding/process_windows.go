@@ -43,7 +43,7 @@ type processTreeGuard struct {
 	job      windows.Handle
 	pid      int
 	assigned bool
-	killed   bool
+	killOnce sync.Once
 }
 
 // newProcessTreeGuard creates the job and moves the started shell into it. Any
@@ -74,20 +74,17 @@ func (g *processTreeGuard) Kill() {
 	if g == nil {
 		return
 	}
-	g.mu.Lock()
-	if g.killed {
+	g.killOnce.Do(func() {
+		g.mu.Lock()
+		assigned, job, pid := g.assigned, g.job, g.pid
 		g.mu.Unlock()
-		return
-	}
-	g.killed = true
-	assigned, job, pid := g.assigned, g.job, g.pid
-	g.mu.Unlock()
-	if assigned {
-		if err := windows.TerminateJobObject(job, 1); err == nil {
-			return
+		if assigned {
+			if err := windows.TerminateJobObject(job, 1); err == nil {
+				return
+			}
 		}
-	}
-	killProcessTreePlatform(pid)
+		killProcessTreePlatform(pid)
+	})
 }
 
 // Release closes the job handle without terminating it, so a process the

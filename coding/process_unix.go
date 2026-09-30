@@ -4,6 +4,7 @@ package coding
 
 import (
 	"os/exec"
+	"sync"
 	"syscall"
 )
 
@@ -27,21 +28,21 @@ func killProcessTreePlatform(pid int) {
 // a group kill therefore reaches descendants that detached from the tree, unlike
 // a pid-based walk (D178).
 type processTreeGuard struct {
-	pid    int
-	killed bool
+	pid  int
+	once sync.Once
 }
 
 // newProcessTreeGuard records the group leader pid (the shell's).
 func newProcessTreeGuard(pid int) *processTreeGuard { return &processTreeGuard{pid: pid} }
 
-// Kill signals the group once.
+// Kill signals the group exactly once. sync.Once makes it safe when the abort
+// goroutine and the timeout timer fire together.
 func (g *processTreeGuard) Kill() {
-	if g == nil || g.killed {
+	if g == nil {
 		return
 	}
-	g.killed = true
-	killProcessTreePlatform(g.pid)
+	g.once.Do(func() { killProcessTreePlatform(g.pid) })
 }
 
-// Release has nothing to close off Windows.
+// Release has nothing to close off unix.
 func (g *processTreeGuard) Release() {}
