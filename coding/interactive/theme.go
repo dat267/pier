@@ -61,6 +61,12 @@ type Theme struct {
 	fgColors map[string]string
 	bgColors map[string]string
 
+	// dimTokens are foreground tokens rendered faint (SGR 2) on top of their
+	// color. The system theme's no-color tier uses them for neutral tokens below
+	// body text, where the terminal's own bright-black would be invisible
+	// (upstream theme.ts `dimTokens`).
+	dimTokens map[string]bool
+
 	// resolve, when non-nil, makes this Theme a stable handle: reads forward to
 	// the current concrete theme, mirroring upstream's `theme` Proxy (which reads
 	// the global theme on every property access). A component that holds the
@@ -69,14 +75,19 @@ type Theme struct {
 	resolve func() *Theme
 }
 
-// NewTheme resolves the palettes into ANSI sequences.
-func NewTheme(fgColors map[string]ColorValue, bgColors map[string]ColorValue, mode ColorMode, name string, sourcePath string) *Theme {
+// NewTheme resolves the palettes into ANSI sequences. The optional dim tokens
+// are foreground tokens rendered faint (SGR 2).
+func NewTheme(fgColors map[string]ColorValue, bgColors map[string]ColorValue, mode ColorMode, name string, sourcePath string, dim ...string) *Theme {
 	theme := &Theme{
 		Name:       name,
 		SourcePath: sourcePath,
 		mode:       mode,
 		fgColors:   map[string]string{},
 		bgColors:   map[string]string{},
+		dimTokens:  map[string]bool{},
+	}
+	for _, token := range dim {
+		theme.dimTokens[token] = true
 	}
 
 	colors := withThemeColorFallbacks(fgColors)
@@ -108,6 +119,9 @@ func (t *Theme) Fg(color ThemeColor, text string) string {
 	ansi, ok := t.fgColors[color]
 	if !ok {
 		panic("Unknown theme color: " + color)
+	}
+	if t.dimTokens[color] {
+		return ansi + "\x1b[2m" + text + "\x1b[22;39m"
 	}
 	return ansi + text + "\x1b[39m"
 }
@@ -183,12 +197,16 @@ func (t *Theme) Strikethrough(text string) string {
 	return "\x1b[9m" + text + "\x1b[29m"
 }
 
-// GetFgAnsi returns the raw foreground sequence.
+// GetFgAnsi returns the raw foreground sequence. Faint tokens include SGR 2,
+// which `\x1b[22m` closes.
 func (t *Theme) GetFgAnsi(color ThemeColor) string {
 	t = t.concrete()
 	ansi, ok := t.fgColors[color]
 	if !ok {
 		panic("Unknown theme color: " + color)
+	}
+	if t.dimTokens[color] {
+		return ansi + "\x1b[2m"
 	}
 	return ansi
 }
@@ -541,7 +559,7 @@ func buildSystemTheme(mode ColorMode) *Theme {
 			fgColors[token] = converted
 		}
 	}
-	return NewTheme(fgColors, bgColors, colorMode, SystemThemeName, "")
+	return NewTheme(fgColors, bgColors, colorMode, SystemThemeName, "", generated.Dim...)
 }
 
 func generatedColorValue(value any) ColorValue {

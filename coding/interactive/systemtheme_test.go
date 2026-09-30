@@ -217,6 +217,27 @@ func TestSystemThemeIndexedFallback(t *testing.T) {
 	}
 }
 
+// TestSystemThemeFaintTokens is upstream's "renders faint tokens with SGR 2
+// and closes it" case: the no-color tier renders neutral tokens below body
+// text faint.
+func TestSystemThemeFaintTokens(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	SetSystemTerminalColors(tui.TerminalColors{})
+	theme := buildSystemTheme(ColorModeTruecolor)
+	if got := theme.GetFgAnsi("muted"); got != "\x1b[39m\x1b[2m" {
+		t.Errorf("getFgAnsi(muted) = %q, want %q", got, "\x1b[39m\x1b[2m")
+	}
+	if got := theme.Fg("muted", "x"); got != "\x1b[39m\x1b[2mx\x1b[22;39m" {
+		t.Errorf("fg(muted) = %q, want %q", got, "\x1b[39m\x1b[2mx\x1b[22;39m")
+	}
+	if got := theme.GetFgAnsi("error"); strings.Contains(got, "\x1b[2m") {
+		t.Errorf("error should not be faint: %q", got)
+	}
+}
+
 // TestSystemThemeWiring pins that the generator is reachable through the theme
 // registry: "system" is listed first and its ANSI surface is built from the
 // terminal colors.

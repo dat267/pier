@@ -33,8 +33,8 @@ Ported from the v0.99.1 delta so far (the rest is still pending):
   header's `ExpandableText`) rebuilds its text on invalidation so baked-in
   colors recolor. The generator is verified byte for byte against the upstream
   TypeScript over the `system-theme.test.ts` terminals. The no-color tier's
-  faint (`dim`) tokens are generated but not yet rendered with SGR 2 (the port's
-  `Theme` has no faint surface).
+  faint (`dim`) tokens render with SGR 2 (`Theme.dimTokens`, closed by
+  `\x1b[22m`), matching the upstream `renders faint tokens with SGR 2` case.
 
 v0.87.1 refresh (originally the pinned tag `f07218c4d`, now superseded by the
 v0.99.1 reference above, read from the
