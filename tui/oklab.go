@@ -239,6 +239,23 @@ type OkhslChannels struct {
 	L float64
 }
 
+// OklchChannels are OKLCH channels: Oklab lightness, chroma and hue in degrees.
+type OklchChannels struct {
+	L float64
+	C float64
+	H float64
+}
+
+// RgbToOklch converts sRGB channels (0-255) to OKLCH.
+func RgbToOklch(color RgbColor) OklchChannels {
+	lab := RgbToOklab(color)
+	return OklchChannels{
+		L: lab[0],
+		C: math.Hypot(lab[1], lab[2]),
+		H: math.Mod(math.Atan2(lab[2], lab[1])*180/math.Pi+360, 360),
+	}
+}
+
 // OkhslToRgb converts OKHSL to sRGB channels (0-255, rounded), clipping
 // out-of-gamut channels.
 func OkhslToRgb(hue, saturation, lightness float64) RgbColor {

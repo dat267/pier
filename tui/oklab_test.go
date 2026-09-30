@@ -30,6 +30,15 @@ type oklabGoldenFile struct {
 		X float64 `json:"x"`
 		Y float64 `json:"y"`
 	} `json:"lightness"`
+	Oklch []struct {
+		Hex   string   `json:"hex"`
+		RGB   RgbColor `json:"rgb"`
+		Oklch struct {
+			L float64 `json:"l"`
+			C float64 `json:"c"`
+			H float64 `json:"h"`
+		} `json:"oklch"`
+	} `json:"oklch"`
 }
 
 func loadOklabGolden(t *testing.T) oklabGoldenFile {
@@ -63,6 +72,24 @@ func TestRgbToOkhslAgainstUpstreamGolden(t *testing.T) {
 		}
 		if got := OkhslToRgb(channels.H, channels.S, channels.L); got != c.RGB {
 			t.Fatalf("round trip %s = %+v (want %+v)", c.Hex, got, c.RGB)
+		}
+	}
+}
+
+func TestRgbToOklchAgainstUpstreamGolden(t *testing.T) {
+	golden := loadOklabGolden(t)
+	for _, c := range golden.Oklch {
+		channels := RgbToOklch(c.RGB)
+		if math.Abs(channels.L-c.Oklch.L) > 1e-12 || math.Abs(channels.C-c.Oklch.C) > 1e-12 {
+			t.Fatalf("RgbToOklch(%s) = %+v (want %+v)", c.Hex, channels, c.Oklch)
+		}
+		// Hue is undefined for achromatic colors: the near-zero a/b components
+		// carry only float noise, so compare it only above a chroma threshold.
+		if c.Oklch.C <= 1e-7 {
+			continue
+		}
+		if math.Abs(channels.H-c.Oklch.H) > 1e-6 {
+			t.Fatalf("RgbToOklch(%s) hue = %v (want %v)", c.Hex, channels.H, c.Oklch.H)
 		}
 	}
 }
