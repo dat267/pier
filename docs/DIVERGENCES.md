@@ -786,3 +786,9 @@ only as the code comment that introduced them. The range is **D1–D178**.
   `themeboot.EnableCapabilities` sets truecolor unconditionally.
   `tui.TerminalDetectsTrueColor` mirrors the upstream environment rule (including
   `-direct`) for a caller that wants it, but it is not yet wired to the boot.
+  The theme controller likewise does not re-query the terminal's default colors
+  when the light/dark scheme changes (upstream `queryTerminalDefaultColors`):
+  the port's combined OSC 10/11/4 burst shares the OSC 11 reply with the
+  renderer's background probe, and re-running it from the scheme listener
+  swallows the reply that the probe routes
+  (`TestBackgroundProbeRoundTripThroughRenderer`).

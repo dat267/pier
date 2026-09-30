@@ -48,6 +48,10 @@ Ported from the v0.99.1 delta so far (the rest is still pending):
   `TERM=*-direct` hint. Departures: palette indices stay a separate `ColorValue`
   (so `ParseColor` takes only strings), and capabilities stay injected (D69),
   leaving `TerminalDetectsTrueColor` unwired because the boot sets truecolor.
+  The controller also does not re-query the terminal's default colors on a
+  light/dark change: the port's combined OSC 10/11/4 burst consumes the
+  background reply the renderer's probe routes, so re-running it in the scheme
+  listener breaks that round trip (D179).
 
 v0.87.1 refresh (originally the pinned tag `f07218c4d`, now superseded by the
 v0.99.1 reference above, read from the

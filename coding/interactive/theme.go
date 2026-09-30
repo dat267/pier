@@ -631,54 +631,6 @@ func hexTo256(hex string) (int, error) {
 	return rgbTo256(rgb.R, rgb.G, rgb.B), nil
 }
 
-func fgAnsi(color ColorValue, mode ColorMode) string {
-	if color.IsIndex {
-		return "\x1b[38;5;" + strconv.Itoa(color.Index) + "m"
-	}
-	if color.Value == "" {
-		return "\x1b[39m"
-	}
-	if strings.HasPrefix(color.Value, "#") {
-		if mode == ColorModeTruecolor {
-			rgb, err := hexToRgb(color.Value)
-			if err != nil {
-				panic(err.Error())
-			}
-			return fmt.Sprintf("\x1b[38;2;%d;%d;%dm", rgb.R, rgb.G, rgb.B)
-		}
-		index, err := hexTo256(color.Value)
-		if err != nil {
-			panic(err.Error())
-		}
-		return "\x1b[38;5;" + strconv.Itoa(index) + "m"
-	}
-	panic("Invalid color value: " + color.Value)
-}
-
-func bgAnsi(color ColorValue, mode ColorMode) string {
-	if color.IsIndex {
-		return "\x1b[48;5;" + strconv.Itoa(color.Index) + "m"
-	}
-	if color.Value == "" {
-		return "\x1b[49m"
-	}
-	if strings.HasPrefix(color.Value, "#") {
-		if mode == ColorModeTruecolor {
-			rgb, err := hexToRgb(color.Value)
-			if err != nil {
-				panic(err.Error())
-			}
-			return fmt.Sprintf("\x1b[48;2;%d;%d;%dm", rgb.R, rgb.G, rgb.B)
-		}
-		index, err := hexTo256(color.Value)
-		if err != nil {
-			panic(err.Error())
-		}
-		return "\x1b[48;5;" + strconv.Itoa(index) + "m"
-	}
-	panic("Invalid color value: " + color.Value)
-}
-
 func resolveVarRefs(value ColorValue, vars map[string]ColorValue, visited map[string]bool) ColorValue {
 	if value.IsIndex || value.Value == "" || strings.HasPrefix(value.Value, "#") {
 		return value
