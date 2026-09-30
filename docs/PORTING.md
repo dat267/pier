@@ -61,6 +61,13 @@ Ported from the v0.99.1 delta so far (the rest is still pending):
   exported `DefaultToolNames`. Tests: the `settings-manager.test.ts` modifier and
   layer cases plus the `default-tools-setting.test.ts` modifier case (the port's
   `grep` stands in for the extension tool, which the port does not have).
+- `coding`: a new session file is created at the first user or assistant message
+  (`ff72faba2`), so a first turn that never finishes still keeps the prompt on
+  disk and the session in `/resume`; setup entries alone (model, thinking level)
+  stay in memory, so starting and quitting without chatting leaves no file. The
+  branch/fork path uses the same `hasConversation` rule, so the two cannot drift
+  and write the header twice. Tests: the `file-operations.test.ts` "session file
+  creation" cases.
 
 v0.87.1 refresh (originally the pinned tag `f07218c4d`, now superseded by the
 v0.99.1 reference above, read from the

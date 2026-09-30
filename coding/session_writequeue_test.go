@@ -20,8 +20,8 @@ func TestSessionWritesLandInOrderOnTheQueue(t *testing.T) {
 		SessionDir: filepath.Join(dir, "sessions"),
 		WriteQueue: offloop.New(),
 	})
-	// The flush-on-first-assistant contract: the file is created by the
-	// rewrite that fires when the first assistant message lands.
+	// The flush-on-first-conversation contract: the file is created by the
+	// rewrite that fires when the first user or assistant message lands.
 	m.AppendMessage(createAssistantMessageT("seed"))
 	const n = 50
 	for i := 0; i < n; i++ {

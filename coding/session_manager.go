@@ -444,42 +444,43 @@ func (m *SessionManager) GetSessionID() string { return m.sessionID }
 // GetSessionFile returns the session file path ("" when unset).
 func (m *SessionManager) GetSessionFile() string { return m.sessionFile }
 
-// persist writes the entry, honoring the flush-on-first-assistant contract:
-// the file is only created once an assistant message exists (upstream
+// hasConversation reports whether the session contains a user or assistant
+// message. Setup entries alone (model, thinking level, system prompt) stay in
+// memory so opening and closing without chatting leaves no file, while starting
+// at the user message keeps the prompt on disk if the first turn never
+// completes (upstream _hasConversation, ff72faba2).
+func (m *SessionManager) hasConversation() bool {
+	for i := range m.fileEntries {
+		e := m.fileEntries[i].Entry
+		if e == nil || e.Type != "message" {
+			continue
+		}
+		var msg struct {
+			Role string `json:"role"`
+		}
+		if json.Unmarshal(e.Message, &msg) == nil && (msg.Role == "user" || msg.Role == "assistant") {
+			return true
+		}
+	}
+	return false
+}
+
+// persist writes the entry, honoring the flush-on-first-conversation contract:
+// the file is only created once a user or assistant message exists (upstream
 // _persist).
 func (m *SessionManager) persistEntry(entry *SessionEntry) {
 	if !m.persist || m.sessionFile == "" {
 		return
 	}
-	// Upstream checks `fileEntries.some(...)`: stop at the first assistant
-	// instead of unmarshalling every message on every append.
-	hasAssistant := false
-	for i := range m.fileEntries {
-		e := m.fileEntries[i].Entry
-		if e != nil && e.Type == "message" {
-			var msg struct {
-				Role string `json:"role"`
-			}
-			if json.Unmarshal(e.Message, &msg) == nil && msg.Role == "assistant" {
-				hasAssistant = true
-				break
-			}
-		}
-	}
-	if !hasAssistant {
-		if m.flushed {
-			m.appendLine(entry)
-		} else {
-			m.flushed = false
-		}
-		return
-	}
 	if !m.flushed {
+		if !m.hasConversation() {
+			return
+		}
 		m.rewriteFile()
 		m.flushed = true
-	} else {
-		m.appendLine(entry)
+		return
 	}
+	m.appendLine(entry)
 }
 
 func (m *SessionManager) appendLine(entry *SessionEntry) {
@@ -903,19 +904,10 @@ func (m *SessionManager) CreateBranchedSession(leafID string) (string, error) {
 	m.sessionFile = newSessionFile
 	m.buildIndex()
 
-	hasAssistant := false
-	for _, entry := range m.fileEntries {
-		if entry.Entry != nil && entry.Entry.Type == "message" {
-			var msg struct {
-				Role string `json:"role"`
-			}
-			if json.Unmarshal(entry.Entry.Message, &msg) == nil && msg.Role == "assistant" {
-				hasAssistant = true
-			}
-		}
-	}
+	// Use the same rule as persistEntry: write now if the branched path already
+	// has a conversation, otherwise let persistEntry create the file later.
 	if m.persist {
-		if hasAssistant {
+		if m.hasConversation() {
 			m.rewriteFile()
 			m.flushed = true
 		} else {

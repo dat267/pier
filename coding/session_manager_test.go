@@ -32,24 +32,29 @@ func TestSessionManagerNewSessionHeader(t *testing.T) {
 	if header.Cwd != ResolvePath(dir, "", PathInputOptions{}) {
 		t.Fatalf("cwd = %q", header.Cwd)
 	}
-	// The session file is only created once an assistant message arrives.
+	// A session with only setup entries stays in memory: opening and closing pi
+	// without chatting leaves no file (upstream ff72faba2).
+	m.AppendModelChange("anthropic", "claude-sonnet-4-5")
 	if _, err := os.Stat(m.GetSessionFile()); err == nil {
-		t.Fatal("file must not exist before the first assistant message")
+		t.Fatal("file must not exist for setup entries alone")
 	}
-
+	// The first user message creates the file, so the prompt survives a first
+	// turn that never produces an assistant message.
 	m.AppendMessage(createUserMessage("hi"))
-	if _, err := os.Stat(m.GetSessionFile()); err == nil {
-		t.Fatal("file must still not exist (no assistant message yet)")
-	}
-	m.AppendMessage(createAssistantMessageT("reply"))
 	if _, err := os.Stat(m.GetSessionFile()); err != nil {
-		t.Fatal("file must exist after the first assistant message")
+		t.Fatal("file must exist after the first user message")
 	}
-	// The file holds ALL entries (backfill on first assistant).
+	// The file holds ALL entries (backfill on first message).
 	data, _ := os.ReadFile(m.GetSessionFile())
 	lines := strings.Count(string(data), "\n")
 	if lines != 3 {
-		t.Fatalf("lines = %d; want 3 (header + 2 messages)", lines)
+		t.Fatalf("lines = %d; want 3 (header + model change + user message)", lines)
+	}
+	// Later entries append without rewriting the earlier ones.
+	m.AppendMessage(createAssistantMessageT("reply"))
+	data, _ = os.ReadFile(m.GetSessionFile())
+	if lines := strings.Count(string(data), "\n"); lines != 4 {
+		t.Fatalf("lines = %d; want 4 after the assistant message", lines)
 	}
 }
 
