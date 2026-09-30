@@ -42,30 +42,54 @@ func IsExpandable(value any) (Expandable, bool) {
 	return expandable, ok
 }
 
-// ExpandableText is a Text whose content depends on the expanded state.
+// ExpandableText is a Text whose content depends on the expanded state. It
+// rebuilds from its builders after every invalidation, so a theme change
+// recolors it (upstream's ThemedText for the startup header).
 type ExpandableText struct {
 	*tui.Text
 
 	getCollapsedText func() string
 	getExpandedText  func() string
+	expanded         bool
+	stale            bool
 }
 
 // NewExpandableText creates the component.
 func NewExpandableText(getCollapsedText func() string, getExpandedText func() string, expanded bool, paddingX int, paddingY int) *ExpandableText {
-	text := getCollapsedText()
-	if expanded {
-		text = getExpandedText()
-	}
-	return &ExpandableText{
-		Text:             tui.NewText(text, paddingX, paddingY, nil),
+	component := &ExpandableText{
+		Text:             tui.NewText("", paddingX, paddingY, nil),
 		getCollapsedText: getCollapsedText,
 		getExpandedText:  getExpandedText,
+		expanded:         expanded,
+		stale:            true,
 	}
+	component.refresh()
+	return component
 }
 
 // SetExpanded switches the text.
 func (e *ExpandableText) SetExpanded(expanded bool) {
-	if expanded {
+	e.expanded = expanded
+	e.refresh()
+}
+
+// Invalidate marks the text for a rebuild on the next render.
+func (e *ExpandableText) Invalidate() {
+	e.Text.Invalidate()
+	e.stale = true
+}
+
+// Render rebuilds the text when a theme change invalidated it.
+func (e *ExpandableText) Render(width int) []string {
+	if e.stale {
+		e.refresh()
+	}
+	return e.Text.Render(width)
+}
+
+func (e *ExpandableText) refresh() {
+	e.stale = false
+	if e.expanded {
 		e.Text.SetText(e.getExpandedText())
 		return
 	}

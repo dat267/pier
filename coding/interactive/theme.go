@@ -398,6 +398,10 @@ func resolveVarRefs(value ColorValue, vars map[string]ColorValue, visited map[st
 	if value.IsIndex || value.Value == "" || strings.HasPrefix(value.Value, "#") {
 		return value
 	}
+	// An okhsl()/oklch() value resolves to a concrete hex (upstream parseColor).
+	if rgb, ok := tui.ParseColor(value.Value); ok {
+		return ColorValue{Value: fmt.Sprintf("#%02x%02x%02x", rgb.R, rgb.G, rgb.B)}
+	}
 	if visited[value.Value] {
 		panic("Circular variable reference detected: " + value.Value)
 	}

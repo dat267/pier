@@ -1,6 +1,10 @@
 package tui
 
-import "math"
+import (
+	"math"
+	"regexp"
+	"strconv"
+)
 
 // Oklab and OKHSL <-> sRGB conversion, ported from packages/tui/src/oklab.ts
 // (upstream bf8e4b953). OKHSL's saturation is relative to the sRGB gamut at each
@@ -254,6 +258,98 @@ func RgbToOklch(color RgbColor) OklchChannels {
 		C: math.Hypot(lab[1], lab[2]),
 		H: math.Mod(math.Atan2(lab[2], lab[1])*180/math.Pi+360, 360),
 	}
+}
+
+const colorNumberPattern = `[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?`
+
+var (
+	themeHexColorPattern = regexp.MustCompile(`(?i)^#([0-9a-f]{3}|[0-9a-f]{6})$`)
+	oklchColorPattern    = regexp.MustCompile(`(?i)^oklch\(\s*(` + colorNumberPattern + `)(%)?\s+(` + colorNumberPattern + `)\s+(` + colorNumberPattern + `)(?:deg)?\s*\)$`)
+	okhslColorPattern    = regexp.MustCompile(`(?i)^okhsl\(\s*(` + colorNumberPattern + `)(?:deg)?\s+(` + colorNumberPattern + `)(%)?\s+(` + colorNumberPattern + `)(%)?\s*\)$`)
+)
+
+func colorClamp01(value float64) float64 { return math.Min(1, math.Max(0, value)) }
+
+func colorParseFloat(value string) float64 {
+	parsed, _ := strconv.ParseFloat(value, 64)
+	return parsed
+}
+
+// OklchToRgb gamut-maps an OKLCH color to sRGB, keeping the hue and reducing
+// chroma until the color fits (upstream oklchToRgb).
+func OklchToRgb(l, c, h float64) RgbColor {
+	l = colorClamp01(l)
+	if c < 0 {
+		c = 0
+	}
+	h = math.Mod(math.Mod(h, 360)+360, 360)
+	radians := h * math.Pi / 180
+	cosine := math.Cos(radians)
+	sine := math.Sin(radians)
+	atChroma := func(chroma float64) okVector {
+		return oklabToLinearSrgb(okVector{l, chroma * cosine, chroma * sine})
+	}
+	direct := atChroma(c)
+	if isInSrgbGamut(direct) {
+		return linearSrgbToRgb(direct)
+	}
+	linear := atChroma(0)
+	low, high := 0.0, c
+	for index := 0; index < 20; index++ {
+		chroma := (low + high) / 2
+		candidate := atChroma(chroma)
+		if isInSrgbGamut(candidate) {
+			low = chroma
+			linear = candidate
+		} else {
+			high = chroma
+		}
+	}
+	return linearSrgbToRgb(linear)
+}
+
+func isInSrgbGamut(linear okVector) bool {
+	const epsilon = 1e-7
+	for _, channel := range linear {
+		if channel < -epsilon || channel > 1+epsilon {
+			return false
+		}
+	}
+	return true
+}
+
+// ParseColor parses a theme color value: #rgb/#rrggbb, oklch(...) or okhsl(...).
+// It returns ok=false for anything else, such as a variable reference.
+func ParseColor(value string) (RgbColor, bool) {
+	if match := themeHexColorPattern.FindStringSubmatch(value); match != nil {
+		digits := match[1]
+		if len(digits) == 3 {
+			digits = string([]byte{digits[0], digits[0], digits[1], digits[1], digits[2], digits[2]})
+		}
+		r, _ := strconv.ParseInt(digits[0:2], 16, 32)
+		g, _ := strconv.ParseInt(digits[2:4], 16, 32)
+		b, _ := strconv.ParseInt(digits[4:6], 16, 32)
+		return RgbColor{R: int(r), G: int(g), B: int(b)}, true
+	}
+	if match := oklchColorPattern.FindStringSubmatch(value); match != nil {
+		lightness := colorParseFloat(match[1])
+		if match[2] != "" {
+			lightness /= 100
+		}
+		return OklchToRgb(colorClamp01(lightness), math.Max(0, colorParseFloat(match[3])), colorParseFloat(match[4])), true
+	}
+	if match := okhslColorPattern.FindStringSubmatch(value); match != nil {
+		saturation := colorParseFloat(match[2])
+		if match[3] != "" {
+			saturation /= 100
+		}
+		lightness := colorParseFloat(match[4])
+		if match[5] != "" {
+			lightness /= 100
+		}
+		return OkhslToRgb(colorParseFloat(match[1]), colorClamp01(saturation), colorClamp01(lightness)), true
+	}
+	return RgbColor{}, false
 }
 
 // OkhslToRgb converts OKHSL to sRGB channels (0-255, rounded), clipping

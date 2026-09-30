@@ -3,6 +3,7 @@ package interactive
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -465,5 +466,26 @@ func TestMarkdownThemeRecolorsAfterASwitch(t *testing.T) {
 
 	if dark == light {
 		t.Fatalf("markdown did not recolor:\n%s", dark)
+	}
+}
+
+// TestThemeColorsAcceptOklchAndOkhsl pins that theme JSON color values in OKLCH
+// or OKHSL resolve to the same hex ParseColor computes (upstream parseColor).
+func TestThemeColorsAcceptOklchAndOkhsl(t *testing.T) {
+	for _, value := range []string{
+		"oklch(62% 0.1 200)",
+		"oklch(0.627955 0.257683 29.2339)",
+		"OKHSL(250deg 60% 55%)",
+		"okhsl(29.23 100% 56.8%)",
+	} {
+		rgb, ok := tui.ParseColor(value)
+		if !ok {
+			t.Fatalf("ParseColor(%q) failed", value)
+		}
+		resolved := ResolveThemeColors(map[string]ColorValue{"token": {Value: value}}, nil)
+		want := fmt.Sprintf("#%02x%02x%02x", rgb.R, rgb.G, rgb.B)
+		if got := resolved["token"].Value; got != want {
+			t.Fatalf("%s resolved to %q (want %q)", value, got, want)
+		}
 	}
 }
