@@ -25,22 +25,30 @@ const RemoteCatalogAttemptTimeoutMS int64 = 4_000
 // RemoteCatalogRefreshIntervalMS is how long a stored catalog stays fresh.
 const RemoteCatalogRefreshIntervalMS int64 = 4 * 60 * 60 * 1000
 
-// mergeCatalogModels merges dynamic models over a baseline by model id.
+// mergeCatalogModels merges dynamic models over a baseline by model id. The
+// lookup is one map pass: upstream mergeModels ran a findIndex per remote
+// model, quadratic in catalog size (c34f2d6ad). Insertion order is preserved,
+// so a replacement lands at its first position and new ids append, matching the
+// upstream Map's values() order. The upstream key is `type\0id`; this catalog
+// is chat-only, so the type component is constant and id keying is equivalent.
 func mergeCatalogModels(baseline, dynamic []*ai.Model) []*ai.Model {
-	merged := append([]*ai.Model{}, baseline...)
+	index := make(map[string]int, len(baseline)+len(dynamic))
+	merged := make([]*ai.Model, 0, len(baseline)+len(dynamic))
+	for _, model := range baseline {
+		if at, ok := index[model.ID]; ok {
+			merged[at] = model
+			continue
+		}
+		index[model.ID] = len(merged)
+		merged = append(merged, model)
+	}
 	for _, model := range dynamic {
-		index := -1
-		for i, entry := range merged {
-			if entry.ID == model.ID {
-				index = i
-				break
-			}
+		if at, ok := index[model.ID]; ok {
+			merged[at] = model
+			continue
 		}
-		if index >= 0 {
-			merged[index] = model
-		} else {
-			merged = append(merged, model)
-		}
+		index[model.ID] = len(merged)
+		merged = append(merged, model)
 	}
 	return merged
 }

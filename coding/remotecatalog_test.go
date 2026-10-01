@@ -2,10 +2,12 @@ package coding
 
 import (
 	ctxpkg "context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/ai"
 )
@@ -278,5 +280,64 @@ func TestBuiltinSlashCommands(t *testing.T) {
 	}
 	if !strings.Contains(BuiltinSlashCommands[len(BuiltinSlashCommands)-1].Description, AppName) {
 		t.Fatal("quit must mention the app name")
+	}
+}
+
+// TestMergeCatalogModels pins mergeCatalogModels' semantics and its cost:
+// remote entries replace the baseline entry at its original position, new ids
+// append, and the merge is linear (upstream mergeModels was a findIndex per
+// remote model, quadratic in catalog size; c34f2d6ad). The upstream merge keys
+// by `type\0id`; the port is a chat-only catalog, so the type component is
+// constant and id keying is equivalent.
+func TestMergeCatalogModels(t *testing.T) {
+	build := func(count int) []*ai.Model {
+		models := make([]*ai.Model, 0, count)
+		for i := 0; i < count; i++ {
+			models = append(models, &ai.Model{ID: fmt.Sprintf("m%d", i), Provider: "p"})
+		}
+		return models
+	}
+
+	baseline := build(10)
+	dynamic := []*ai.Model{
+		{ID: "m3", Provider: "p"},     // replaces in place
+		{ID: "remote", Provider: "p"}, // appends
+	}
+	merged := mergeCatalogModels(baseline, dynamic)
+	if len(merged) != 11 {
+		t.Fatalf("merged = %d models, want 11", len(merged))
+	}
+	if merged[3].ID != "m3" {
+		t.Fatalf("replacement landed at %d (%s), want in place at 3", 3, merged[3].ID)
+	}
+	if merged[10].ID != "remote" {
+		t.Fatalf("new id landed at %d (%s), want appended at 10", 10, merged[10].ID)
+	}
+	// A duplicate inside the baseline keeps the first position and the last value.
+	dup := mergeCatalogModels([]*ai.Model{{ID: "a", Provider: "p"}, {ID: "a", Provider: "p", Name: "second"}}, nil)
+	if len(dup) != 1 || dup[0].Name != "second" {
+		t.Fatalf("baseline duplicate = %+v", dup)
+	}
+
+	// The lookup must be linear: the findIndex-per-model version costs ~2e9
+	// comparisons at this fixture size, far past the bound; the map version
+	// takes tens of milliseconds. (Quadratic time allocates nothing, so this
+	// probe is wall clock, not AllocsPerRun.)
+	prefixed := func(count int, prefix string) []*ai.Model {
+		models := make([]*ai.Model, 0, count)
+		for i := 0; i < count; i++ {
+			models = append(models, &ai.Model{ID: prefix + fmt.Sprintf("%d", i), Provider: "p"})
+		}
+		return models
+	}
+	big, additions := build(100000), prefixed(20000, "r")
+	start := time.Now()
+	mergedBig := mergeCatalogModels(big, additions)
+	elapsed := time.Since(start)
+	if len(mergedBig) != len(big)+len(additions) {
+		t.Fatalf("merged = %d models, want %d", len(mergedBig), len(big)+len(additions))
+	}
+	if elapsed > time.Second {
+		t.Fatalf("merge of 120k models took %v; the id lookup is not linear", elapsed)
 	}
 }
