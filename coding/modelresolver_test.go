@@ -413,7 +413,10 @@ func TestResolveCliModelCustomFallback(t *testing.T) {
 func TestDefaultModelPerProviderTracksCurrentModels(t *testing.T) {
 	expectations := map[ai.ProviderId]string{
 		"openai":                     "gpt-5.5",
-		"openai-codex":               "gpt-5.5",
+		"openai-codex":               "gpt-6.1-sol",
+		"fireworks":                  "accounts/fireworks/models/kimi-k3",
+		"together":                   "moonshotai/Kimi-K3",
+		"opencode-go":                "kimi-k3",
 		"zai":                        "glm-5.3",
 		"zai-coding-cn":              "glm-5.3",
 		"minimax":                    "MiniMax-M2.7",

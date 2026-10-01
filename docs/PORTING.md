@@ -74,6 +74,15 @@ Ported from the v0.99.1 delta so far (the rest is still pending):
   `aria-pressed` header button, and navigating to such an entry reveals them.
   The template also carries the codemode `nestedCalls` renderer, inert here
   (no codemode). Tests: `TestExportHiddenMessageToggle` (upstream adds none).
+- `ai`: the builtin model catalog is regenerated from the pinned v0.99.1.
+  `gen_catalog.py` now flattens the schema-6 role-prefixed provider data,
+  keeping only the chat catalog and dropping chat-less providers (the classifier
+  provider `typesafe` stays out). It adds `gpt-6.1-sol` and the newer
+  pricing/context metadata. `DefaultModelPerProvider` follows the pin:
+  `openai-codex` → `gpt-6.1-sol`, `fireworks` →
+  `accounts/fireworks/models/kimi-k3`, `together` → `moonshotai/Kimi-K3`,
+  `opencode-go` → `kimi-k3`. Tests:
+  `TestDefaultModelPerProviderTracksCurrentModels`.
 
 v0.87.1 refresh (originally the pinned tag `f07218c4d`, now superseded by the
 v0.99.1 reference above, read from the
