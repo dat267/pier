@@ -106,6 +106,14 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   message's tokens are collected between renders (`54c19a252`). The
   `flattenLines` half of that commit is a V8 string-representation concern with
   no Go equivalent (D180).
+- `coding`: the remote catalog merge is linear (`c34f2d6ad`); the branch model
+  resolution still walks its branch per submission (`a0660b174` is inside
+  upstream's `virtual-models.ts`, which the port has not ported yet). Dynamic
+  provider registration does not exist in the port, so `registerProvider`'s
+  provisional configured entry (`fddc968b9`) has no surface. Anthropic
+  workload identity federation (`a9424cd43`) stays deferred: the token
+  exchange lives in the TypeScript SDK the port does not use, and
+  reimplementing the OIDC federation clients is its own project.
 - `coding`: `/reload` enables tools newly added to the `defaultTools` setting
   (`db6cc71dc`): the session records whether its initial selection came from
   the setting (`SessionConfig.UsesDefaultTools`, set when neither `--tools` nor
