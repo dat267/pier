@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"unicode"
 )
 
 // Port of the provider implementation in src/autocomplete.ts
@@ -333,10 +334,14 @@ func (p *CombinedAutocompleteProvider) GetSuggestions(ctx context.Context, lines
 		return &AutocompleteSuggestions{Items: suggestions, Prefix: atPrefix}
 	}
 
-	if !force && strings.HasPrefix(textBeforeCursor, "/") {
-		spaceIndex := strings.Index(textBeforeCursor, " ")
+	// Leading whitespace does not stop command completion: the trimmed text
+	// drives the match and the completion replaces only the prefix, so the
+	// whitespace is preserved (upstream 65117e31f, #10218).
+	commandText := strings.TrimLeftFunc(textBeforeCursor, unicode.IsSpace)
+	if !force && strings.HasPrefix(commandText, "/") {
+		spaceIndex := strings.Index(commandText, " ")
 		if spaceIndex == -1 {
-			prefix := textBeforeCursor[1:]
+			prefix := commandText[1:]
 
 			type commandItem struct {
 				name        string
@@ -373,11 +378,11 @@ func (p *CombinedAutocompleteProvider) GetSuggestions(ctx context.Context, lines
 			if len(items) == 0 {
 				return nil
 			}
-			return &AutocompleteSuggestions{Items: items, Prefix: textBeforeCursor}
+			return &AutocompleteSuggestions{Items: items, Prefix: commandText}
 		}
 
-		commandName := textBeforeCursor[1:spaceIndex]
-		argumentText := textBeforeCursor[spaceIndex+1:]
+		commandName := commandText[1:spaceIndex]
+		argumentText := commandText[spaceIndex+1:]
 		for _, cmd := range p.commands {
 			if cmd.Name != commandName {
 				continue

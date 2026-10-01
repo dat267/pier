@@ -344,3 +344,57 @@ func TestAutocompleteFuzzyScoring(t *testing.T) {
 		t.Fatal("non-matching entry scored")
 	}
 }
+
+// TestAutocompleteCompletesCommandsAfterLeadingWhitespace ports
+// autocomplete-skill-slash.test.ts (65117e31f, #10218): command completion
+// works after leading whitespace, which is preserved, and argument completion
+// sees the trimmed argument text.
+func TestAutocompleteCompletesCommandsAfterLeadingWhitespace(t *testing.T) {
+	provider := NewCombinedAutocompleteProvider([]CommandEntry{{Name: "model"}}, ".", "")
+	for _, testCase := range []struct{ line, expected string }{
+		{" /", " /model "},
+		{"  /mod", "  /model "},
+		{"\t/mod", "\t/model "},
+	} {
+		result := provider.GetSuggestions(context.Background(), []string{testCase.line}, 0, len(testCase.line), false)
+		if result == nil {
+			t.Fatalf("%q: no suggestions", testCase.line)
+		}
+		if result.Prefix != strings.TrimLeft(testCase.line, " \t") {
+			t.Fatalf("%q: prefix = %q", testCase.line, result.Prefix)
+		}
+		if len(result.Items) != 1 || result.Items[0].Value != "model" {
+			t.Fatalf("%q: items = %+v", testCase.line, result.Items)
+		}
+		applied := provider.ApplyCompletion([]string{testCase.line}, 0, len(testCase.line), result.Items[0], result.Prefix)
+		if applied.Lines[0] != testCase.expected || applied.CursorCol != len(testCase.expected) {
+			t.Fatalf("%q: applied = %q@%d, want %q@%d",
+				testCase.line, applied.Lines[0], applied.CursorCol, testCase.expected, len(testCase.expected))
+		}
+	}
+}
+
+// TestAutocompleteCompletesArgumentsAfterLeadingWhitespace is upstream's
+// "completes command arguments after leading whitespace" case.
+func TestAutocompleteCompletesArgumentsAfterLeadingWhitespace(t *testing.T) {
+	seen := ""
+	provider := NewCombinedAutocompleteProvider([]CommandEntry{{
+		Name: "model",
+		GetArgumentCompletions: func(prefix string) ([]AutocompleteItem, bool) {
+			seen = prefix
+			return []AutocompleteItem{{Value: "sonnet", Label: "sonnet"}}, true
+		},
+	}}, ".", "")
+	line := "  /model son"
+	result := provider.GetSuggestions(context.Background(), []string{line}, 0, len(line), false)
+	if result == nil {
+		t.Fatal("no suggestions")
+	}
+	if result.Prefix != "son" || seen != "son" {
+		t.Fatalf("prefix = %q, argument prefix = %q", result.Prefix, seen)
+	}
+	applied := provider.ApplyCompletion([]string{line}, 0, len(line), result.Items[0], result.Prefix)
+	if applied.Lines[0] != "  /model sonnet" {
+		t.Fatalf("applied = %q", applied.Lines[0])
+	}
+}
