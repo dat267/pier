@@ -73,13 +73,16 @@ func validateServerRetryDelayMS(delayMS int64, maxRetryDelayMS *int, providerErr
 // (port of getRetryDelayMs).
 func GetRetryDelayMS(err *ProviderError, retryIndex int, maxRetryDelayMS *int) (int64, error) {
 	if err.Headers != nil {
+		// Number.isFinite, not a parse success: "NaN" and "Infinity" parse fine
+		// and converting them to a delay would be garbage; the unparseable
+		// value falls through to the exponential backoff (2bbfcca43).
 		if v := err.Headers.Get("retry-after-ms"); v != "" {
-			if f, parseErr := strconv.ParseFloat(v, 64); parseErr == nil {
+			if f, parseErr := strconv.ParseFloat(v, 64); parseErr == nil && !math.IsNaN(f) && !math.IsInf(f, 0) {
 				return validateServerRetryDelayMS(int64(f), maxRetryDelayMS, err.Message)
 			}
 		}
 		if v := err.Headers.Get("retry-after"); v != "" {
-			if seconds, parseErr := strconv.ParseFloat(v, 64); parseErr == nil {
+			if seconds, parseErr := strconv.ParseFloat(v, 64); parseErr == nil && !math.IsNaN(seconds) && !math.IsInf(seconds, 0) {
 				return validateServerRetryDelayMS(int64(seconds*1000), maxRetryDelayMS, err.Message)
 			}
 			if at, parseErr := http.ParseTime(v); parseErr == nil {
