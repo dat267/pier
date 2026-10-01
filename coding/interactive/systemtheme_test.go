@@ -217,6 +217,39 @@ func TestSystemThemeIndexedFallback(t *testing.T) {
 	}
 }
 
+// TestSystemThemePastelPalettesStayPastel is upstream's "keeps pastel palette
+// colors pastel at other lightnesses" case (409e808f5, #10255): a palette
+// color never gains OKLCH chroma when it moves to another lightness.
+func TestSystemThemePastelPalettesStayPastel(t *testing.T) {
+	bg := systemTestHex(t, "#303446")
+	fg := systemTestHex(t, "#c6d0f5")
+	hexes := []string{
+		"#51576d", "#e78284", "#a6d189", "#e5c890", "#8caaee", "#f4b8e4", "#81c8be", "#b5bfe2",
+		"#626880", "#e67172", "#8ec772", "#d9ba73", "#7b9ef0", "#f2a4db", "#5abfb5", "#a5adce",
+	}
+	palette := make([]tui.RgbColor, 0, 16)
+	for _, hex := range hexes {
+		palette = append(palette, systemTestHex(t, hex))
+	}
+	input := SystemThemeInput{Background: &bg, Foreground: &fg, Palette: palette}
+	chroma := func(color tui.RgbColor) float64 { return tui.RgbToOklch(color).C }
+	pink := palette[5]
+	accent := systemTestResolved(t, input, "accent")
+	// The accent is darker than the pink, but must not gain chroma (it was 2x
+	// before the cap).
+	if l := tui.RgbToOklch(accent).L; !(l < tui.RgbToOklch(pink).L-0.05) {
+		t.Fatalf("accent lightness %v not below pink-0.05", l)
+	}
+	if c := chroma(accent); c > chroma(pink)*1.03 {
+		t.Fatalf("accent chroma %v exceeds pink's %v", c, chroma(pink))
+	}
+	for _, panel := range []string{"userMessageBg", "customMessageBg"} {
+		if c := chroma(systemTestResolved(t, input, panel)); c > 0.1 {
+			t.Errorf("%s chroma = %v, want <= 0.1", panel, c)
+		}
+	}
+}
+
 // TestSystemThemeFaintTokens is upstream's "renders faint tokens with SGR 2
 // and closes it" case: the no-color tier renders neutral tokens below body
 // text faint.

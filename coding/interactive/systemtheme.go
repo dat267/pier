@@ -412,15 +412,36 @@ func systemIsPanel(token string) bool { return systemHasString(systemPanelTokens
 
 func systemOkhslOf(color tui.RgbColor) tui.OkhslChannels { return tui.RgbToOkhsl(color) }
 
+// systemSourceColor is a terminal color's OKHSL channels and its OKLCH chroma.
+type systemSourceColor struct {
+	tui.OkhslChannels
+	Chroma float64
+}
+
+func systemSourceOf(color tui.RgbColor) systemSourceColor {
+	return systemSourceColor{OkhslChannels: systemOkhslOf(color), Chroma: tui.RgbToOklch(color).C}
+}
+
 // systemAnchored is a source color's hue at another OKHSL lightness, with its
-// saturation falling off along the family's curve.
-func systemAnchored(source tui.OkhslChannels, family systemFamily, lightness, saturation float64) tui.RgbColor {
+// saturation falling off along the family's curve. OKHSL saturation is
+// relative to the most chroma sRGB allows at a lightness, so the same
+// saturation can mean more chroma elsewhere (Catppuccin Frappe's pink #f4b8e4,
+// chroma 0.089, would become #eb76d1 at the lightness the accent needs);
+// chroma is therefore also capped at the source's, with the same falloff, so a
+// pastel palette stays pastel (409e808f5).
+func systemAnchored(source systemSourceColor, family systemFamily, lightness, saturation float64) tui.RgbColor {
 	anchor := systemSaturationCurve(family, source.L)
 	falloff := 1.0
 	if anchor > 0 {
 		falloff = math.Min(1, systemSaturationCurve(family, lightness)/anchor)
 	}
-	return tui.OkhslToRgb(source.H, source.S*falloff*saturation, lightness)
+	color := tui.OkhslToRgb(source.H, source.S*falloff*saturation, lightness)
+	cap := source.Chroma * falloff * saturation
+	channels := tui.RgbToOklch(color)
+	if channels.C <= cap {
+		return color
+	}
+	return tui.OklchToRgb(channels.L, cap, source.H)
 }
 
 // systemWithTextContrast moves a text color toward white or black until it
@@ -469,11 +490,11 @@ func GenerateSystemThemeColors(input SystemThemeInput) SystemThemeColors {
 		return systemIndexedColors(saturation, input.AppearanceHint)
 	}
 	background := *input.Background
-	var palette []tui.OkhslChannels
+	var palette []systemSourceColor
 	if len(input.Palette) == 16 {
-		palette = make([]tui.OkhslChannels, 0, 16)
+		palette = make([]systemSourceColor, 0, 16)
 		for _, color := range input.Palette {
-			palette = append(palette, systemOkhslOf(color))
+			palette = append(palette, systemSourceOf(color))
 		}
 	}
 	appearance := TerminalAppearance(background, input.Foreground)
@@ -653,7 +674,7 @@ func GenerateSystemThemeColors(input SystemThemeInput) SystemThemeColors {
 					result[token] = ""
 					continue
 				}
-				text = systemAnchored(systemOkhslOf(*input.Foreground), systemFamilies["neutral"], tui.OklabToOkhslLightness(needed), saturation)
+				text = systemAnchored(systemSourceOf(*input.Foreground), systemFamilies["neutral"], tui.OklabToOkhslLightness(needed), saturation)
 				hasText = true
 			}
 		}
