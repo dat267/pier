@@ -421,3 +421,50 @@ func TestServiceTierPricing(t *testing.T) {
 }
 
 func strPtrT(s string) *string { return &s }
+
+// TestConvertResponsesMessagesDropsMismatchedItemIds ports constrained-sampling.test.ts
+// "drops foreign item ids when replaying grammar calls as custom Responses
+// items" (bc2d8dc1c, radius#115): foreign tool call ids are normalized to fc_*,
+// but a grammar tool replays as custom_tool_call, which requires ctc_* ids, so
+// the mismatched id is dropped rather than sent.
+func TestConvertResponsesMessagesDropsMismatchedItemIds(t *testing.T) {
+	model := testResponsesModel()
+	messages := []Message{
+		&AssistantMessage{
+			Content: ContentList{
+				ToolCall{ID: "call_1|ctc_1", Name: "sample_tool", Arguments: json.RawMessage(`{"payload":"abc"}`)},
+			},
+			API: "pi-messages", Provider: "radius", Model: "gpt-other",
+			StopReason: StopToolUse, Timestamp: 1,
+		},
+		&ToolResultMessage{
+			ToolCallID: "call_1|ctc_1", ToolName: "sample_tool",
+			Content: UserContentList{TextContent{Text: "done"}}, Timestamp: 2,
+		},
+	}
+	input, err := ConvertResponsesMessages(model, TranscriptContext{Messages: messages},
+		&ConvertResponsesMessagesOptions{GrammarToolInputProperties: map[string]string{"sample_tool": "payload"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The custom_tool_call item must carry no id at all: the foreign id was
+	// normalized to fc_* (openai_responses normalization), and a
+	// custom_tool_call requires ctc_* (upstream asserts `call.id` undefined).
+	var items []map[string]any
+	if err := json.Unmarshal(input, &items); err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range items {
+		if item["type"] != "custom_tool_call" {
+			continue
+		}
+		if item["call_id"] != "call_1" || item["input"] != "abc" {
+			t.Fatalf("custom_tool_call = %+v", item)
+		}
+		if _, hasID := item["id"]; hasID {
+			t.Fatalf("mismatched id replayed: %+v", item)
+		}
+		return
+	}
+	t.Fatal("no custom_tool_call item")
+}

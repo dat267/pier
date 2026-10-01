@@ -538,11 +538,17 @@ func convertResponsesAssistantMessage(model *Model, m *AssistantMessage, msgInde
 				customInputProperty = options.GrammarToolInputProperties[b.Name]
 			}
 
-			// Different-model messages omit fc_* ids to avoid pairing
-			// validation; custom-tool calls replayed as function calls drop
-			// non-fc_* ids too.
-			if (isDifferentModel && strings.HasPrefix(itemID, "fc_")) ||
-				(customInputProperty == "" && !strings.HasPrefix(itemID, "fc_")) {
+			// Different-model messages omit the item id entirely to avoid pairing
+			// validation. So do ids that do not match the replayed item type:
+			// function_call ids must be fc_* and custom_tool_call ids must be
+			// ctc_*. Foreign tool call ids are normalized to fc_*, and a call can
+			// switch between the two types when grammar tool support differs
+			// (bc2d8dc1c).
+			itemIdPrefix := "fc_"
+			if customInputProperty != "" {
+				itemIdPrefix = "ctc_"
+			}
+			if isDifferentModel || !strings.HasPrefix(itemID, itemIdPrefix) {
 				itemID = ""
 			}
 
