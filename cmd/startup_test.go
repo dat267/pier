@@ -31,6 +31,24 @@ func (s stubModelSource) GetAvailable(string, context.Context) ([]*ai.Model, err
 func (s stubModelSource) GetAvailableSnapshot() []*ai.Model { return s.models }
 func (s stubModelSource) HasConfiguredAuth(string) bool     { return true }
 
+// TestProviderRequiresModel pins 0c453048b: --provider without --model failed
+// silently before (the default model of another provider ran); it now errors.
+func TestProviderRequiresModel(t *testing.T) {
+	args := coding.ParseArgs([]string{"--provider", "anthropic"})
+	_, _, err := resolveCliModelFlags(args, stubModelSource{})
+	want := "--provider requires --model (for example: --provider anthropic --model <pattern>)"
+	if err == nil || err.Error() != want {
+		t.Fatalf("err = %v, want %q", err, want)
+	}
+	// --provider with --model still resolves.
+	args = coding.ParseArgs([]string{"--provider", "anthropic", "--model", "claude"})
+	if _, _, err := resolveCliModelFlags(args, stubModelSource{models: []*ai.Model{
+		{Provider: "anthropic", ID: "claude"},
+	}}); err != nil {
+		t.Fatalf("provider + model: %v", err)
+	}
+}
+
 func newTestSettings(t *testing.T) *coding.SettingsManager {
 	t.Helper()
 	isolatedAgentDir(t)

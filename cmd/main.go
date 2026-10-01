@@ -305,27 +305,9 @@ func run(appName string, args *coding.Args) error {
 	applyThemeSources(theme, args, settings, agentDir, runtimeCwd, trusted)
 
 	// Resolve the CLI model/thinking overrides.
-	var model *ai.Model
-	thinking := ai.ThinkingLevel("")
-	if args.Model != nil || args.Provider != nil {
-		provider := ""
-		if args.Provider != nil {
-			provider = *args.Provider
-		}
-		modelID := ""
-		if args.Model != nil {
-			modelID = *args.Model
-		}
-		resolved := coding.ResolveCliModel(coding.ResolveCliModelOptions{
-			CLIProvider: provider, CLIModel: modelID, ModelRuntime: runtime,
-		})
-		if resolved.Error != "" {
-			return fmt.Errorf("%s", resolved.Error)
-		}
-		model = resolved.Model
-		if resolved.HasThinking {
-			thinking = resolved.ThinkingLevel
-		}
+	model, thinking, err := resolveCliModelFlags(args, runtime)
+	if err != nil {
+		return err
 	}
 	if args.Thinking != nil {
 		thinking = *args.Thinking
@@ -573,6 +555,38 @@ func themePathsFor(args *coding.Args, settings *coding.SettingsManager, cwd stri
 // listModels prints the available-model table (upstream main.ts's --list-models
 // block): the settings diagnostics and the models.json load error go to stderr
 // first, then the table to stdout. An empty pattern lists everything.
+// resolveCliModelFlags resolves the CLI --provider/--model overrides
+// (upstream buildSessionOptions' "Model from CLI" block). --provider without
+// --model was ignored and another provider's default ran instead; it now fails
+// with an error (0c453048b).
+func resolveCliModelFlags(args *coding.Args, runtime coding.ModelRuntimeSource) (*ai.Model, ai.ThinkingLevel, error) {
+	if args.Provider != nil && args.Model == nil {
+		return nil, "", fmt.Errorf("--provider requires --model (for example: --provider %s --model <pattern>)", *args.Provider)
+	}
+	if args.Model == nil && args.Provider == nil {
+		return nil, "", nil
+	}
+	provider := ""
+	if args.Provider != nil {
+		provider = *args.Provider
+	}
+	modelID := ""
+	if args.Model != nil {
+		modelID = *args.Model
+	}
+	resolved := coding.ResolveCliModel(coding.ResolveCliModelOptions{
+		CLIProvider: provider, CLIModel: modelID, ModelRuntime: runtime,
+	})
+	if resolved.Error != "" {
+		return nil, "", fmt.Errorf("%s", resolved.Error)
+	}
+	var thinking ai.ThinkingLevel
+	if resolved.HasThinking {
+		thinking = resolved.ThinkingLevel
+	}
+	return resolved.Model, thinking, nil
+}
+
 func listModels(runtime *coding.ModelRuntime, settings *coding.SettingsManager, args *coding.Args, ctx context.Context) error {
 	for _, diagnostic := range coding.CollectSettingsDiagnostics(settings) {
 		fmt.Fprintln(os.Stderr, coding.FormatCLIDiagnostic(coding.CLIDiagnostic{

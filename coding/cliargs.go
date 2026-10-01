@@ -395,7 +395,7 @@ func PrintHelpNamed(appName string) string {
 
 func helpOptionLines() []string {
 	lines := []string{
-		"  --provider <name>              Provider name (default: google)",
+		"  --provider <name>              Provider to search for --model (requires --model)",
 		"  --model <pattern>              Model pattern or ID (supports \"provider/id\" and optional \":<thinking>\")",
 		"  --api-key <key>                API key (defaults to env vars)",
 		"  --system-prompt <text>         System prompt (default: coding assistant prompt)",
