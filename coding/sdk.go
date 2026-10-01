@@ -464,13 +464,17 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 			Tools: map[string]AgentToolDefinition{}, autoCompaction: true, autoRetry: true,
 			PromptTemplates: promptTemplates, Sandbox: sandbox,
 		},
-		ConvertToLlm:    convertToLlmWithBlockImages,
-		SessionID:       sessionID,
-		SteeringMode:    settingsManager.GetSteeringMode(),
-		FollowUpMode:    settingsManager.GetFollowUpMode(),
-		Transport:       ai.Transport(settingsManager.GetTransport()),
-		ThinkingBudgets: thinkingBudgetsOf(settingsManager.GetThinkingBudgets()),
-		MaxRetryDelayMS: &maxRetryDelay,
+		ConvertToLlm: convertToLlmWithBlockImages,
+		SessionID:    sessionID,
+		// Reload activates tools newly added to defaultTools only when the
+		// initial selection came from the setting (db6cc71dc).
+		UsesDefaultTools:  options.Tools == nil && options.NoTools == "",
+		ExcludedToolNames: options.ExcludeTools,
+		SteeringMode:      settingsManager.GetSteeringMode(),
+		FollowUpMode:      settingsManager.GetFollowUpMode(),
+		Transport:         ai.Transport(settingsManager.GetTransport()),
+		ThinkingBudgets:   thinkingBudgetsOf(settingsManager.GetThinkingBudgets()),
+		MaxRetryDelayMS:   &maxRetryDelay,
 	})
 	sessionForTools = session
 	if err != nil {

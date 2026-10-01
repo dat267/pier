@@ -91,6 +91,15 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   `coding/interactive/testdata/gen_systemtheme_golden.mjs`). Tests: upstream's
   "keeps pastel palette colors pastel at other lightnesses" case
   (`TestSystemThemePastelPalettesStayPastel`).
+- `coding`: `/reload` enables tools newly added to the `defaultTools` setting
+  (`db6cc71dc`): the session records whether its initial selection came from
+  the setting (`SessionConfig.UsesDefaultTools`, set when neither `--tools` nor
+  `--no-tools` was given) and its CLI exclusions, and Reload activates the
+  names the re-read selection adds. Removed names stay active, tools disabled
+  during the session stay off unless newly added, and explicit
+  `--tools`/`--no-tools` sessions never take the path. Tests:
+  `default-tools-setting.test.ts` "reload" (the extension tool stands in as the
+  built-in `grep`).
 - `ai`: an OpenAI Responses stream that completes with a tool call whose
   `output_item.done` never arrived now fails the stream instead of running it
   (`1b2aa0ca0`). Cut-off or mixed-up arguments (for example from a server that

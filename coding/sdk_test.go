@@ -4,6 +4,7 @@ import (
 	ctxpkg "context"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -152,6 +153,117 @@ func TestCreateAgentSessionModelResolveAndPersist(t *testing.T) {
 	}
 	if !fallback.Session.HasModel() {
 		t.Fatalf("model = %+v", fallback.Session.Model())
+	}
+}
+
+func newToolSelectionRuntime(t *testing.T) *ModelRuntime {
+	t.Helper()
+	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
+		AuthPath:        filepath.Join(GetAgentDir(), "auth.json"),
+		ModelsPath:      filepath.Join(GetAgentDir(), "models.json"),
+		Credentials:     newMemoryCredentialStore(),
+		RefreshOnCreate: boolPtr(false),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return runtime
+}
+
+// newReloadSettings builds a settings manager over a writable settings file
+// and returns the file's path for later rewrites.
+func newReloadSettings(t *testing.T) (*SettingsManager, string) {
+	t.Helper()
+	dir := t.TempDir()
+	path := filepath.Join(dir, ConfigDirName, "settings.json")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeReloadSettings(t, path, `{}`)
+	return NewSettingsManagerFromFiles(dir, agentDirForSettings(t), SettingsManagerCreateOptions{}), path
+}
+
+func writeReloadSettings(t *testing.T, path string, content string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestReloadActivatesToolsNewlyAddedToDefaultTools ports default-tools-setting.test.ts
+// "reload" (db6cc71dc, #10245): /reload enables tools newly added to
+// defaultTools; removals stay active, session-disabled tools stay off, and
+// explicit --tools/--no-tools/--exclude keep overriding.
+func TestReloadActivatesToolsNewlyAddedToDefaultTools(t *testing.T) {
+	tempAgentDir(t)
+	runtime := newToolSelectionRuntime(t)
+	settings, settingsPath := newReloadSettings(t)
+	session, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
+		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	active := func(s *AgentSession) string {
+		names := append([]string{}, s.ActiveToolNames()...)
+		sort.Strings(names)
+		return strings.Join(names, ",")
+	}
+	if got := active(session.Session); got != "bash,edit,read,write" {
+		t.Fatalf("initial tools = %q", got)
+	}
+	// bash disabled during the session stays off unless the setting newly adds it.
+	session.Session.SetActiveToolsByName([]string{"read", "edit", "write"})
+
+	writeReloadSettings(t, settingsPath, `{"defaultTools":["+grep"]}`)
+	session.Session.Reload()
+	if got := active(session.Session); got != "edit,grep,read,write" {
+		t.Fatalf("after +grep = %q", got)
+	}
+
+	// Removing tools from the setting does not disable them.
+	writeReloadSettings(t, settingsPath, `{"defaultTools":["-read"]}`)
+	session.Session.Reload()
+	if got := active(session.Session); got != "edit,grep,read,write" {
+		t.Fatalf("after -read = %q", got)
+	}
+
+	// Explicit --tools keeps overriding the setting.
+	allowlisted, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
+		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings, Tools: []ToolName{"read"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeReloadSettings(t, settingsPath, `{"defaultTools":["+grep"]}`)
+	allowlisted.Session.Reload()
+	if got := strings.Join(allowlisted.Session.ActiveToolNames(), ","); got != "read" {
+		t.Fatalf("--tools after reload = %q", got)
+	}
+
+	// --no-tools keeps overriding too.
+	builtinless, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
+		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings, NoTools: "builtin",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	builtinless.Session.Reload()
+	if got := builtinless.Session.ActiveToolNames(); len(got) != 0 {
+		t.Fatalf("--no-tools after reload = %v", got)
+	}
+
+	// CLI exclusions apply to newly added names as well.
+	excluded, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
+		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings, ExcludeTools: []ToolName{"grep"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeReloadSettings(t, settingsPath, `{"defaultTools":["+grep"]}`)
+	excluded.Session.Reload()
+	if got := active(excluded.Session); got != "bash,edit,read,write" {
+		t.Fatalf("excluded after reload = %q", got)
 	}
 }
 

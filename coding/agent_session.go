@@ -204,6 +204,12 @@ type AgentSession struct {
 	// of scope, D41/D140).
 	agentDir      string
 	promptSources PromptFileSources
+
+	// usesDefaultTools and excludedToolNames carry the tool-selection inputs
+	// Reload needs (upstream _usesDefaultTools and _excludedToolNames,
+	// db6cc71dc).
+	usesDefaultTools  bool
+	excludedToolNames map[string]bool
 }
 
 type sessionListenerKey struct {
@@ -249,6 +255,14 @@ type SessionConfig struct {
 	ConvertToLlm func(messages []ai.Message) []ai.Message
 	// SessionID is forwarded to providers for cache-aware backends.
 	SessionID string
+	// UsesDefaultTools records that the initial tool selection came from the
+	// `defaultTools` setting (or its built-in fallback) rather than explicit
+	// options: on Reload, tools newly added to the setting are activated
+	// (upstream AgentSessionConfig.usesDefaultTools, db6cc71dc).
+	UsesDefaultTools bool
+	// ExcludedToolNames are the CLI exclusions applied at creation and again on
+	// Reload when the setting adds tools (upstream _excludedToolNames).
+	ExcludedToolNames []string
 	// Agent-level request wiring from settings.
 	SteeringMode    QueueMode
 	FollowUpMode    QueueMode
@@ -328,8 +342,10 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 			PromptSourcePaths: append([]string{}, config.PromptSourcePaths...),
 			SelectedTools:     agentToolNames(config.Tools),
 		},
-		skillDiagnostics: config.SkillDiagnostics,
-		agentDir:         config.AgentDir,
+		skillDiagnostics:  config.SkillDiagnostics,
+		agentDir:          config.AgentDir,
+		usesDefaultTools:  config.UsesDefaultTools,
+		excludedToolNames: excludedToolNameSet(config.ExcludedToolNames),
 	}
 	if config.PromptSources != nil {
 		s.promptSources = *config.PromptSources
