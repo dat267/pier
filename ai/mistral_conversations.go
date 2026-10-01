@@ -941,7 +941,7 @@ func containsString(values []string, target string) bool {
 func toMistralFunctionTools(tools []Tool) []mistralFunctionTool {
 	out := make([]mistralFunctionTool, 0, len(tools))
 	for _, tool := range tools {
-		strict, unset, err := ResolveJSONSchemaStrictSampling(tool, true)
+		strict, unset, err := ResolveJSONSchemaStrictSampling(tool, true, nil)
 		if err != nil || unset {
 			strict = false
 		}

@@ -376,3 +376,77 @@ func contains(s, sub string) bool {
 		return false
 	})()
 }
+
+// TestAnthropicStrictToolSchema ports anthropic-strict-tool-schema.test.ts
+// (295cc72b0): strict json_schema tools send the full input schema with
+// strict: true, and "prefer" tools fall back to non-strict when the schema
+// uses a keyword Anthropic strict mode rejects (#9953).
+func TestAnthropicStrictToolSchema(t *testing.T) {
+	build := func(t *testing.T, tool Tool) AnthropicTool {
+		t.Helper()
+		params, err := BuildAnthropicParams(testAnthropicModel(), NormalizeContext(Context{
+			Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "Use the tool"}, Timestamp: 1}},
+			Tools:    []Tool{tool},
+		}), false, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(params.Tools) != 1 {
+			t.Fatalf("tools = %+v", params.Tools)
+		}
+		return params.Tools[0]
+	}
+
+	t.Run("only strict tools send the full schema", func(t *testing.T) {
+		legacy := build(t, Tool{
+			Name: "lookup", Description: "Look up a value",
+			Parameters: json.RawMessage(`{"type":"object","properties":{"value":{"type":"string"}},"required":["value"],"additionalProperties":false,"title":"LookupInput"}`),
+		})
+		if legacy.Strict != nil {
+			t.Fatalf("legacy strict = %v", *legacy.Strict)
+		}
+		if len(legacy.InputSchema) == 0 || string(legacy.InputSchema) == "null" {
+			t.Fatalf("legacy input_schema = %s", legacy.InputSchema)
+		}
+
+		strict := build(t, Tool{
+			Name: "lookup", Description: "Look up a value",
+			Parameters: json.RawMessage(`{"type":"object","properties":{"value":{"type":"string"},"optional":{"type":"number"}},"required":["value","optional"],"title":"StrictLookupInput"}`),
+			ConstrainedSampling: ConstrainedSamplingValue{Set: true,
+				Config: &ConstrainedSamplingConfig{Type: "json_schema", Strict: "prefer"}},
+		})
+		if strict.Strict == nil || !*strict.Strict {
+			t.Fatalf("strict = %+v", strict.Strict)
+		}
+	})
+	t.Run("rejected keywords fall back to non-strict", func(t *testing.T) {
+		parameters := []string{
+			// minimum/maximum on an integer.
+			`{"type":"object","properties":{"timeoutMs":{"type":"integer","minimum":1,"maximum":300000}},"required":["timeoutMs"]}`,
+			// minItems above 1.
+			`{"type":"object","properties":{"options":{"type":"object","properties":{"tags":{"type":"array","items":{"type":"string"},"minItems":2}}}},"required":["options"]}`,
+			// A format Anthropic strict does not accept.
+			`{"type":"object","properties":{"expression":{"type":"string","format":"regex"}},"required":["expression"]}`,
+		}
+		for _, parameter := range parameters {
+			tool := build(t, Tool{
+				Name: "lookup", Description: "Look up a value", Parameters: json.RawMessage(parameter),
+				ConstrainedSampling: ConstrainedSamplingValue{Set: true,
+					Config: &ConstrainedSamplingConfig{Type: "json_schema", Strict: "prefer"}},
+			})
+			if tool.Strict != nil {
+				t.Fatalf("strict = %v for %s", *tool.Strict, parameter)
+			}
+		}
+		// Accepted keywords keep strict mode.
+		supported := build(t, Tool{
+			Name: "lookup", Description: "Look up a value",
+			Parameters: json.RawMessage(`{"type":"object","properties":{"code":{"type":"string","minLength":1,"maxLength":1000,"pattern":"^[a-z]+$"},"url":{"type":"string","format":"uri"},"tags":{"type":"array","items":{"type":"string"},"minItems":1}},"required":["code","url","tags"]}`),
+			ConstrainedSampling: ConstrainedSamplingValue{Set: true,
+				Config: &ConstrainedSamplingConfig{Type: "json_schema", Strict: "prefer"}},
+		})
+		if supported.Strict == nil || !*supported.Strict {
+			t.Fatalf("supported strict = %+v", supported.Strict)
+		}
+	})
+}

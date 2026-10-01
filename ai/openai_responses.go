@@ -206,7 +206,7 @@ func ConvertResponsesTools(tools []Tool, options *ConvertResponsesToolsOptions) 
 			continue
 		}
 
-		constrainedStrict, unset, err := ResolveJSONSchemaStrictSampling(tool, options.SupportsStrictMode)
+		constrainedStrict, unset, err := ResolveJSONSchemaStrictSampling(tool, options.SupportsStrictMode, nil)
 		if err != nil {
 			return nil, err
 		}

@@ -498,7 +498,7 @@ func ConvertBedrockToolConfig(tools []Tool, toolChoice string, toolChoiceName st
 	}
 	bedrockTools := make([]any, 0, len(tools))
 	for _, tool := range tools {
-		strict, unset, err := ResolveJSONSchemaStrictSampling(tool, supportsStrictMode)
+		strict, unset, err := ResolveJSONSchemaStrictSampling(tool, supportsStrictMode, nil)
 		if err != nil {
 			strict = false
 		}

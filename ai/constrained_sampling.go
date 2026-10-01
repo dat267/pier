@@ -160,10 +160,48 @@ func schemaAllowsNull(data json.RawMessage) bool {
 	return false
 }
 
-func makeSchemaNodeStrict(node *schemaNode) error {
+// UnsupportedStrictSchemaKeywordCheck reports whether a provider's strict mode
+// rejects a schema keyword with this value (upstream
+// UnsupportedStrictSchemaKeywordCheck, 295cc72b0).
+type UnsupportedStrictSchemaKeywordCheck func(key string, value json.RawMessage) bool
+
+// AnthropicStrictUnsupportedKeyword is Anthropic's check: strict tool use
+// rejects these keywords with a 400 for the whole request, so "prefer" tools
+// that hit one fall back to non-strict.
+// https://platform.claude.com/docs/en/build-with-claude/structured-outputs#json-schema-limitations
+func AnthropicStrictUnsupportedKeyword(key string, value json.RawMessage) bool {
+	switch key {
+	case "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "multipleOf",
+		"maxItems", "uniqueItems", "minContains", "maxContains", "minProperties", "maxProperties":
+		return true
+	case "minItems":
+		return !(string(value) == "0" || string(value) == "1")
+	case "format":
+		var format string
+		if jsonUnmarshalStrict(value, &format) != nil {
+			return true
+		}
+		return !anthropicStrictStringFormats[format]
+	}
+	return false
+}
+
+var anthropicStrictStringFormats = map[string]bool{
+	"date-time": true, "time": true, "date": true, "duration": true,
+	"email": true, "hostname": true, "uri": true, "ipv4": true, "ipv6": true, "uuid": true,
+}
+
+func makeSchemaNodeStrict(node *schemaNode, check UnsupportedStrictSchemaKeywordCheck) error {
 	for _, key := range unsupportedStrictSchemaKeys {
 		if _, ok := node.raw(key); ok {
 			return &strictSchemaError{msg: key + " schemas are unsupported"}
+		}
+	}
+	if check != nil {
+		for _, key := range node.keys {
+			if check(key, node.fields[key]) {
+				return &strictSchemaError{msg: key + " is unsupported"}
+			}
 		}
 	}
 
@@ -176,7 +214,7 @@ func makeSchemaNodeStrict(node *schemaNode) error {
 			if isStructuredSchema(variant) {
 				return &strictSchemaError{msg: "object and array unions are unsupported"}
 			}
-			strict, err := makeStrictSubSchema(variant)
+			strict, err := makeStrictSubSchemaValue(variant, check)
 			if err != nil {
 				return err
 			}
@@ -191,7 +229,7 @@ func makeSchemaNodeStrict(node *schemaNode) error {
 		if err := jsonUnmarshalStrict(itemsData, &list); err == nil {
 			return &strictSchemaError{msg: "tuple schemas are unsupported"}
 		}
-		strict, err := makeStrictSubSchema(itemsData)
+		strict, err := makeStrictSubSchemaValue(itemsData, check)
 		if err != nil {
 			return err
 		}
@@ -248,7 +286,7 @@ func makeSchemaNodeStrict(node *schemaNode) error {
 	}
 	for _, key := range orderedProps {
 		property := properties[key]
-		if err := strictSubSchemaInPlace(property); err != nil {
+		if err := strictSubSchemaInPlace(property, check); err != nil {
 			return err
 		}
 		// Re-read: strictSubSchemaInPlace mutates via re-encoding below.
@@ -322,29 +360,28 @@ func orderedKeys(data json.RawMessage) []string {
 }
 
 // strictSubSchemaInPlace makes a raw sub-schema strict, re-encoding it.
-func strictSubSchemaInPlace(data json.RawMessage) error {
+func strictSubSchemaInPlace(data json.RawMessage, check UnsupportedStrictSchemaKeywordCheck) error {
 	node, err := decodeSchemaNode(data)
 	if err != nil {
 		return &strictSchemaError{msg: "boolean schemas are unsupported"}
 	}
-	if err := makeSchemaNodeStrict(node); err != nil {
+	if err := makeSchemaNodeStrict(node, check); err != nil {
 		return err
 	}
 	return nil
 }
 
-// makeStrictSubSchema returns the strict encoding of a sub-schema.
-func makeStrictSubSchema(data json.RawMessage) (json.RawMessage, error) {
+// makeStrictSubSchemaValue returns the strict encoding of a sub-schema without
+// the root object requirement: upstream recurses anyOf variants and array items
+// through makeJsonSchemaNodeStrict directly, and only the tool's root schema
+// must be an object.
+func makeStrictSubSchemaValue(data json.RawMessage, check UnsupportedStrictSchemaKeywordCheck) (json.RawMessage, error) {
 	node, err := decodeSchemaNode(data)
 	if err != nil {
-		return nil, &strictSchemaError{msg: "root schema must have type object"}
+		return nil, &strictSchemaError{msg: "boolean schemas are unsupported"}
 	}
-	if err := makeSchemaNodeStrict(node); err != nil {
+	if err := makeSchemaNodeStrict(node, check); err != nil {
 		return nil, err
-	}
-	t, _ := node.raw("type")
-	if string(t) != `"object"` {
-		return nil, &strictSchemaError{msg: "root schema must have type object"}
 	}
 	enc, err := node.encode()
 	if err != nil {
@@ -353,10 +390,27 @@ func makeStrictSubSchema(data json.RawMessage) (json.RawMessage, error) {
 	return enc, nil
 }
 
+// makeStrictSubSchema returns the strict encoding of a sub-schema.
+func makeStrictSubSchema(data json.RawMessage, check UnsupportedStrictSchemaKeywordCheck) (json.RawMessage, error) {
+	strict, err := makeStrictSubSchemaValue(data, check)
+	if err != nil {
+		return nil, err
+	}
+	node, err := decodeSchemaNode(strict)
+	if err != nil {
+		return nil, &strictSchemaError{msg: "root schema must have type object"}
+	}
+	t, _ := node.raw("type")
+	if string(t) != `"object"` {
+		return nil, &strictSchemaError{msg: "root schema must have type object"}
+	}
+	return strict, nil
+}
+
 // MakeStrictJSONSchema converts a tool schema to the strict subset expected
 // by provider constrained sampling (port of makeStrictJsonSchema).
 func MakeStrictJSONSchema(schema json.RawMessage) (json.RawMessage, error) {
-	return makeStrictSubSchema(schema)
+	return makeStrictSubSchema(schema, nil)
 }
 
 // GetJSONSchemaToolParameters returns the tool parameters for a strictness
@@ -374,14 +428,14 @@ func GetJSONSchemaToolParameters(tool Tool, strict bool) json.RawMessage {
 
 // ResolveJSONSchemaStrictSampling resolves whether a tool's json_schema
 // constrained sampling applies (port of resolveJsonSchemaStrictSampling).
-func ResolveJSONSchemaStrictSampling(tool Tool, supportsStrictMode bool) (strict bool, unset bool, err error) {
+func ResolveJSONSchemaStrictSampling(tool Tool, supportsStrictMode bool, check UnsupportedStrictSchemaKeywordCheck) (strict bool, unset bool, err error) {
 	config := tool.ConstrainedSampling
 	if !config.Set || config.False || config.Config == nil || config.Config.Type != "json_schema" {
 		return false, true, nil
 	}
 	cfg := config.Config
 	if supportsStrictMode {
-		if _, err := MakeStrictJSONSchema(tool.Parameters); err != nil {
+		if _, err := makeStrictSubSchema(tool.Parameters, check); err != nil {
 			if _, ok := err.(*strictSchemaError); ok {
 				if cfg.Strict != "require" {
 					return false, true, nil

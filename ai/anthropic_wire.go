@@ -645,7 +645,7 @@ func ConvertAnthropicTools(
 ) ([]AnthropicTool, error) {
 	var out []AnthropicTool
 	for index, tool := range tools {
-		strict, unset, err := ResolveJSONSchemaStrictSampling(tool, supportsStrictTools)
+		strict, unset, err := ResolveJSONSchemaStrictSampling(tool, supportsStrictTools, AnthropicStrictUnsupportedKeyword)
 		if err != nil {
 			return nil, err
 		}

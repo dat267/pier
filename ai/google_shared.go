@@ -418,7 +418,7 @@ func ConvertGoogleTools(tools []Tool, useParameters bool, supportsStrictMode boo
 	}
 	var declarations []GoogleFunctionDeclaration
 	for _, tool := range tools {
-		strict, unset, err := ResolveJSONSchemaStrictSampling(tool, supportsStrictMode)
+		strict, unset, err := ResolveJSONSchemaStrictSampling(tool, supportsStrictMode, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -474,7 +474,7 @@ func MapGoogleToolChoice(choice string) string {
 func ResolveGoogleFunctionCallingMode(tools []Tool, toolChoice string, supportsStrictMode bool) string {
 	useStrictMode := false
 	for _, tool := range tools {
-		strict, unset, err := ResolveJSONSchemaStrictSampling(tool, supportsStrictMode)
+		strict, unset, err := ResolveJSONSchemaStrictSampling(tool, supportsStrictMode, nil)
 		if err == nil && !unset && strict {
 			useStrictMode = true
 		}

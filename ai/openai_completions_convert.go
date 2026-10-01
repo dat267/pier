@@ -390,7 +390,7 @@ func ConvertOpenAICompletionsTools(tools []Tool, compat ResolvedOpenAICompletion
 			continue
 		}
 		supportsStrictMode := compat.SupportsStrictMode
-		strict, unset, err := ResolveJSONSchemaStrictSampling(tool, supportsStrictMode)
+		strict, unset, err := ResolveJSONSchemaStrictSampling(tool, supportsStrictMode, nil)
 		if err != nil {
 			return nil, err
 		}
