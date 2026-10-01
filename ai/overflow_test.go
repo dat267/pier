@@ -23,6 +23,8 @@ func overflowAssistant(provider string, stopReason string) *AssistantMessage {
 func TestIsContextOverflowPatterns(t *testing.T) {
 	overflowMessages := []string{
 		"prompt is too long: 213462 tokens > 200000 maximum",
+		"Prompt too long",           // z.ai
+		"Prompt exceeds max length", // z.ai CN endpoint (3dd803d7e)
 		`413 {"error":{"type":"request_too_large","message":"Request exceeds the maximum size"}}`,
 		"Input is too long for requested model",
 		"Your input exceeds the context window of this model",

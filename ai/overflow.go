@@ -9,7 +9,8 @@ import (
 // overflowPatterns match error messages returned when the input exceeds the
 // model's context window.
 var overflowPatterns = []*regexp.Regexp{
-	regexp.MustCompile(`(?i)prompt is too long`),                                                                          // Anthropic token overflow
+	regexp.MustCompile(`(?i)prompt (?:is )?too long`),                                                                     // Anthropic and z.ai token overflow
+	regexp.MustCompile(`(?i)prompt exceeds max length`),                                                                   // z.ai CN endpoint token overflow (3dd803d7e)
 	regexp.MustCompile(`(?i)request_too_large`),                                                                           // Anthropic request byte-size overflow (HTTP 413)
 	regexp.MustCompile(`(?i)input is too long for requested model`),                                                       // Amazon Bedrock
 	regexp.MustCompile(`(?i)exceeds the context window`),                                                                  // OpenAI (Completions & Responses API)
