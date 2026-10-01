@@ -68,6 +68,12 @@ Ported from the v0.99.1 delta so far (the rest is still pending):
   branch/fork path uses the same `hasConversation` rule, so the two cannot drift
   and write the header twice. Tests: the `file-operations.test.ts` "session file
   creation" cases.
+- `coding/interactive`: the vendored HTML-export templates are re-synced to the
+  pinned v0.99.1 (`b2bd111f2`; the port had the 0.86.1 files). Custom messages
+  with `display:false` export hidden by default behind an `H` toggle and an
+  `aria-pressed` header button, and navigating to such an entry reveals them.
+  The template also carries the codemode `nestedCalls` renderer, inert here
+  (no codemode). Tests: `TestExportHiddenMessageToggle` (upstream adds none).
 
 v0.87.1 refresh (originally the pinned tag `f07218c4d`, now superseded by the
 v0.99.1 reference above, read from the

@@ -145,6 +145,57 @@ func TestExportSessionToHTMLErrors(t *testing.T) {
 	}
 }
 
+// TestExportHiddenMessageToggle pins b2bd111f2: the export template grows an H
+// toggle for custom messages with display=false, and the entry carries
+// display:false into the embedded payload. Upstream adds no test for this.
+func TestExportHiddenMessageToggle(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	InitTheme("dark", false)
+
+	dir := t.TempDir()
+	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: boolPtr(true)})
+	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hi"}})
+	manager.AppendCustomMessageEntry("preset-state", "hidden payload", false, nil)
+
+	agentSession, err := coding.NewAgentSession(&coding.SessionConfig{
+		Cwd:   dir,
+		Model: &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic"},
+		StreamFn: func(*ai.Model, ai.TranscriptContext, *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+			return nil
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	agentSession.Sessions = manager
+
+	output := filepath.Join(dir, "hidden.html")
+	if _, err := (&AppSession{AgentSession: agentSession}).ExportSessionToHTML(output, "dark"); err != nil {
+		t.Fatal(err)
+	}
+	html, err := os.ReadFile(output)
+	if err != nil {
+		t.Fatal(err)
+	}
+	document := string(html)
+	for _, marker := range []string{
+		`data-action="toggle-hidden-messages"`,
+		"hook-message-hidden",
+		"show-hidden-messages",
+		"H toggle hidden messages",
+	} {
+		if !strings.Contains(document, marker) {
+			t.Errorf("export is missing %q", marker)
+		}
+	}
+	if payload := decodeExportPayload(t, document); !strings.Contains(payload, `"display":false`) {
+		t.Errorf("custom message display:false missing from payload: %s", payload)
+	}
+}
+
 // TestExportFromFile drives a session file that this process never opened,
 // which is what `pier --export <file>` does (upstream exportFromFile).
 func TestExportFromFile(t *testing.T) {

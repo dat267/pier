@@ -2,11 +2,13 @@ package interactive
 
 // Port of packages/coding-agent/src/core/export-html (index.ts and
 // ansi-to-html.ts): session HTML export for /export. The templates are the
-// upstream 0.86.1 files, embedded verbatim. Upstream pre-renders only tools
+// upstream v0.99.1 files, embedded verbatim. Upstream pre-renders only tools
 // whose definitions carry TUI renderers — stock tools have none (verified:
 // createGrepTool exposes no renderCall), so without extension renderers
 // (D41/D133) renderedTools is always omitted and the template's structured
-// fallback draws every tool, exactly like upstream.
+// fallback draws every tool, exactly like upstream. The template's nestedCalls
+// rendering (the renderNestedCalls block, from the codemode work) stays inert:
+// the port has no codemode, so no tool result carries that field.
 
 import (
 	_ "embed"
