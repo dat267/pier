@@ -91,6 +91,14 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   `coding/interactive/testdata/gen_systemtheme_golden.mjs`). Tests: upstream's
   "keeps pastel palette colors pastel at other lightnesses" case
   (`TestSystemThemePastelPalettesStayPastel`).
+- `ai`: an unparseable `Retry-After` falls back to the exponential backoff
+  (`2bbfcca43`; Go's `ParseFloat` accepts `NaN`/`Infinity` without error), and
+  the Z.AI CN endpoint's `Prompt exceeds max length` overflow message is
+  detected, while the first pattern regains the upstream
+  `prompt (?:is )?too long` shape the port had collapsed (`3dd803d7e`).
+- `cmd`: `--provider` without `--model` fails with an error instead of silently
+  running another provider's default, and the `--provider` help line drops the
+  outdated `default: google` (`0c453048b`).
 - `coding`: `/reload` enables tools newly added to the `defaultTools` setting
   (`db6cc71dc`): the session records whether its initial selection came from
   the setting (`SessionConfig.UsesDefaultTools`, set when neither `--tools` nor
