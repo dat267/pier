@@ -4,15 +4,14 @@ How much of upstream pi this port covers, package by package, plus the upstream
 pin's change log. The user-facing summary lives in `README.md`; this file is the
 authoritative per-area status.
 
-v0.99.1 reference (pinned tag `d86654abb`, read from the `./pi` checkout): the
-delta from v0.87.1 is 92 commits across 672 files, and it is **not yet ported**.
-The per-area status below therefore still describes the v0.87.1 port. The delta
-adds the `codemode`, `mcp`, `session-backends` and `evals` packages (extension
-and package-manager mechanics, the out-of-scope set) plus changes across `ai`,
-`coding-agent`, `durable`, `chord` and `tui`. This paragraph is replaced by a
-refresh entry once the delta is reviewed and ported.
+v1.0.0 reference (pinned tag `a13d35a74`, read from the `./pi` checkout): the
+delta from v0.99.1 is 62 commits across 682 files, and it is **not yet ported**.
+It releases the experimental `durable` packages and lands MCP and codemode
+work (both out of scope); the ported subset so far is the system-theme pastel
+fix (`409e808f5`, with a regenerated system-theme golden and its committed
+generator driver).
 
-Ported from the v0.99.1 delta so far (the rest is still pending):
+Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
 
 - `tui`/`coding/interactive`: configurable fullscreen wheel scrolling with auto
   acceleration (`f1927c2d5`). `WheelScrollLines` (`"auto"` or a fixed 1..100)
@@ -83,6 +82,15 @@ Ported from the v0.99.1 delta so far (the rest is still pending):
   `accounts/fireworks/models/kimi-k3`, `together` → `moonshotai/Kimi-K3`,
   `opencode-go` → `kimi-k3`. Tests:
   `TestDefaultModelPerProviderTracksCurrentModels`.
+- `coding/interactive`: the system theme keeps pastel palettes pastel
+  (`409e808f5`): a palette color carries its OKLCH chroma along with its OKHSL
+  channels, and `anchored` caps chroma at the source's times the same falloff,
+  so moving a color to another lightness never gains chroma. Lightness and hue
+  are unchanged. The system-theme golden is regenerated from the pinned
+  generator (the driver now lives beside it,
+  `coding/interactive/testdata/gen_systemtheme_golden.mjs`). Tests: upstream's
+  "keeps pastel palette colors pastel at other lightnesses" case
+  (`TestSystemThemePastelPalettesStayPastel`).
 - `ai`: an OpenAI Responses stream that completes with a tool call whose
   `output_item.done` never arrived now fails the stream instead of running it
   (`1b2aa0ca0`). Cut-off or mixed-up arguments (for example from a server that
