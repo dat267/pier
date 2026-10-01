@@ -123,13 +123,17 @@ const (
 	KindResponse
 )
 
-// IsJsonRpcId mirrors upstream's isJsonRpcId on a decoded value.
+// IsJsonRpcId mirrors upstream's isJsonRpcId on a decoded value. Numbers
+// arrive as json.Number when decoded with UseNumber.
 func IsJsonRpcId(value any) bool {
 	switch v := value.(type) {
 	case string:
 		return true
 	case float64:
 		return !math.IsNaN(v) && !math.IsInf(v, 0)
+	case json.Number:
+		n, err := v.Float64()
+		return err == nil && !math.IsNaN(n) && !math.IsInf(n, 0)
 	}
 	return false
 }
@@ -177,7 +181,9 @@ func IsJsonRpcResponse(message any) bool {
 	if !hasErr || errObj == nil {
 		return false
 	}
-	if _, ok := errObj["code"].(float64); !ok {
+	switch errObj["code"].(type) {
+	case float64, json.Number:
+	default:
 		return false
 	}
 	_, ok = errObj["message"].(string)
