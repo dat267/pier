@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -70,10 +71,15 @@ func moduleRoot() string {
 }
 
 func TestStdioTransportConnectsAndCapturesStderr(t *testing.T) {
-	var stderrChunks []string
+	var stderrMu sync.Mutex
+	stderrChunks := 0
 	transport := NewStdioTransport(StdioTransportOptions{
-		Command:  stdioFixtureBin,
-		OnStderr: func(chunk string) { stderrChunks = append(stderrChunks, chunk) },
+		Command: stdioFixtureBin,
+		OnStderr: func(chunk string) {
+			stderrMu.Lock()
+			stderrChunks++
+			stderrMu.Unlock()
+		},
 	})
 	client := NewClient(ClientOptions{Name: "stdio-test", Version: "1.0.0"})
 	if _, err := client.Connect(context.Background(), transport); err != nil {
@@ -100,7 +106,10 @@ func TestStdioTransportConnectsAndCapturesStderr(t *testing.T) {
 	if transport.Stderr() == "" || !strings.Contains(transport.Stderr(), "stdio fixture ready") {
 		t.Fatalf("stderr = %q", transport.Stderr())
 	}
-	if len(stderrChunks) == 0 {
+	stderrMu.Lock()
+	chunks := stderrChunks
+	stderrMu.Unlock()
+	if chunks == 0 {
 		t.Fatal("onStderr never fired")
 	}
 	if err := client.Close(context.Background()); err != nil {

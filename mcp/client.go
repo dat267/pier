@@ -268,7 +268,7 @@ func (c *Client) notifyInternal(ctx context.Context, method string, params any, 
 		}
 		message.Params = enc
 	}
-	return transport.Send(ctx, message)
+	return transport.Send(ctx, &message)
 }
 
 // Notify is the exported notification send.
@@ -507,7 +507,7 @@ func (c *Client) request(ctx context.Context, method string, params any, options
 		}
 		message.Params = enc
 	}
-	if sendErr := transport.Send(ctx, message); sendErr != nil {
+	if sendErr := transport.Send(ctx, &message); sendErr != nil {
 		c.cancelPending(id, sendErr, false, "")
 		<-entry.ch
 		return nil, sendErr
