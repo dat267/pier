@@ -3,6 +3,7 @@ package tui
 import (
 	"regexp"
 	"strings"
+	"weak"
 )
 
 // Port of the renderer half of src/components/markdown.ts: the Markdown
@@ -109,9 +110,16 @@ type Markdown struct {
 
 	// Incremental render cache. Streaming appends to the source, so the token
 	// list keeps a stable prefix; cacheTokenLines holds the final (wrapped,
-	// padded) lines for cacheTokens[:len(cacheTokens)-1] so an append only
-	// re-renders the changed tail instead of the whole message.
-	cacheTokens     []*MdToken
+	// padded) lines for the previous token list's prefix minus its last token,
+	// so an append only re-renders the changed tail instead of the whole
+	// message.
+	//
+	// The parsed token list is held weakly (upstream 54c19a252 holds its parse
+	// cache in a WeakRef): a token list is about ten times its source, and
+	// every transcript message keeps a Markdown component. The tokens survive
+	// a burst of re-renders, such as a theme preview, and are collected
+	// afterwards; when they are gone the next render just re-parses.
+	tokenCache      weak.Pointer[[]*MdToken]
 	cacheTokenLines [][]string
 	cacheWidth      int
 
@@ -210,7 +218,7 @@ func (m *Markdown) Invalidate() {
 	m.hasCachedText = false
 	m.hasCachedWidth = false
 	m.hasStylePrefix = false
-	m.cacheTokens = nil
+	m.tokenCache = weak.Pointer[[]*MdToken]{}
 	m.cacheTokenLines = nil
 	m.cacheWidth = 0
 }
@@ -243,7 +251,7 @@ func (m *Markdown) Render(width int) []string {
 		m.hasCachedWidth = true
 		m.cachedLines = []string{}
 		m.hasCachedLines = true
-		m.cacheTokens = nil
+		m.tokenCache = weak.Pointer[[]*MdToken]{}
 		m.cacheTokenLines = nil
 		m.cacheWidth = width
 		return m.cachedLines
@@ -256,7 +264,10 @@ func (m *Markdown) Render(width int) []string {
 
 	// Reuse the final lines of every token that did not change since the last
 	// render; only the changed tail is re-parsed and re-styled.
-	reuse := m.reusableTokens(tokens, width)
+	reuse := 0
+	if previous := m.tokenCache.Value(); previous != nil {
+		reuse = m.reusableTokens(tokens, *previous, width)
+	}
 
 	leftMargin := repeatSpaces(max(0, m.PaddingX))
 	rightMargin := leftMargin
@@ -284,7 +295,7 @@ func (m *Markdown) Render(width int) []string {
 			tokenLines = append(tokenLines, final)
 		}
 	}
-	m.cacheTokens = tokens
+	m.tokenCache = weak.Make(&tokens)
 	m.cacheTokenLines = tokenLines
 	m.cacheWidth = width
 
@@ -320,16 +331,21 @@ func (m *Markdown) Render(width int) []string {
 // reuse the cached final lines. A token's lines were rendered with the next
 // token's type as context, so the last matching token is only reused when its
 // successor also matches.
-func (m *Markdown) reusableTokens(tokens []*MdToken, width int) int {
+// D180: upstream 54c19a252 also flattens its cached lines (flattenLines): V8
+// keeps string concatenations as ropes, and an unflattened cache retains a tree
+// of the concatenated parts. Go strings are immutable flat buffers, so there is
+// no equivalent representation to flatten.
+
+func (m *Markdown) reusableTokens(tokens []*MdToken, previous []*MdToken, width int) int {
 	if m.cacheWidth != width || len(m.cacheTokenLines) == 0 {
 		return 0
 	}
 	limit := len(tokens)
-	if len(m.cacheTokens) < limit {
-		limit = len(m.cacheTokens)
+	if len(previous) < limit {
+		limit = len(previous)
 	}
 	matched := 0
-	for matched < limit && sameMarkdownToken(tokens[matched], m.cacheTokens[matched]) {
+	for matched < limit && sameMarkdownToken(tokens[matched], previous[matched]) {
 		matched++
 	}
 	reuse := matched - 1

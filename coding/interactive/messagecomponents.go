@@ -87,18 +87,20 @@ func (c *UserMessageComponent) SetText(text string) {
 func (c *UserMessageComponent) rebuild() {
 	c.Container.Clear()
 	theme := ActiveTheme()
-	contentBox := tui.NewBox(c.outputPad, 1, func(content string) string {
-		return theme.Bg("userMessageBg", content)
-	})
 	transform := CreateMarkdownTransform("user", false, c.transformers)
-	contentBox.AddChild(tui.NewMarkdown(c.text, 0, 0, c.markdownTheme,
-		&tui.DefaultTextStyle{Color: func(content string) string { return theme.Fg("userMessageText", content) }},
+	// The Markdown pads and colors its own background: a Box around it would
+	// keep a second full-width copy of every line, with identical output
+	// (upstream e792ba131).
+	c.Container.AddChild(tui.NewMarkdown(c.text, c.outputPad, 1, c.markdownTheme,
+		&tui.DefaultTextStyle{
+			Color:   func(content string) string { return theme.Fg("userMessageText", content) },
+			BgColor: func(content string) string { return theme.Bg("userMessageBg", content) },
+		},
 		tui.MarkdownOptions{
 			PreserveOrderedListMarkers: true,
 			PreserveBackslashEscapes:   true,
 			Transform:                  transform,
 		}))
-	c.Container.AddChild(contentBox)
 }
 
 // Render renders the message with the OSC 133 zone markers.

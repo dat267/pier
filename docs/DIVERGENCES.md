@@ -792,3 +792,18 @@ only as the code comment that introduced them. The range is **D1–D178**.
   renderer's background probe, and re-running it from the scheme listener
   swallows the reply that the probe routes
   (`TestBackgroundProbeRoundTripThroughRenderer`).
+
+## D180. No line flattening in render caches (upstream 54c19a252)
+
+Upstream's `flattenLines` runs over the cached render output of `Markdown`,
+`Text` and `Box`: V8 represents string concatenations as ropes, and a cache
+that keeps the concatenated parts retains a tree per line instead of a flat
+string. A long assistant message kept about a fifth of the heap this way.
+
+Go strings are immutable flat buffers; `strings.Builder` output is already a
+single buffer, so there is no rope representation to flatten and the port has
+no `flattenLines` equivalent.
+
+The token-cache half of the same commit IS ported: `Markdown` holds its parsed
+token list in a `weak.Pointer` (`tui/markdown.go`), so a transcript message's
+tokens are collected when nothing needs them and the next render re-parses.

@@ -99,6 +99,13 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
 - `cmd`: `--provider` without `--model` fails with an error instead of silently
   running another provider's default, and the `--provider` help line drops the
   outdated `default: google` (`0c453048b`).
+- `coding/interactive`: the user message's Markdown pads and colors its own
+  background, dropping the Box that kept a second full-width copy of every
+  rendered line with identical output (`e792ba131`).
+- `tui`: the Markdown's parsed token list is held weakly, so a transcript
+  message's tokens are collected between renders (`54c19a252`). The
+  `flattenLines` half of that commit is a V8 string-representation concern with
+  no Go equivalent (D180).
 - `coding`: `/reload` enables tools newly added to the `defaultTools` setting
   (`db6cc71dc`): the session records whether its initial selection came from
   the setting (`SessionConfig.UsesDefaultTools`, set when neither `--tools` nor
