@@ -325,6 +325,7 @@ func ProcessResponsesStream(
 	grammarToolInputProperties map[string]string,
 ) error {
 	sawTerminalResponseEvent := false
+	unfinishedToolCalls := map[int]bool{}
 	outputSlots := map[int]*responsesOutputSlot{}
 	reasoningBlocksByID := map[string]*ThinkingContent{}
 
@@ -365,6 +366,7 @@ func ProcessResponsesStream(
 				kind: "toolCall", contentIndex: len(output.Content) - 1,
 				toolCall: &responsesStreamingToolCall{call: call, partialJSON: &partial},
 			}
+			unfinishedToolCalls[slot.contentIndex] = true
 			outputSlots[outputIndex] = slot
 			stream.Push(AssistantMessageEvent{Type: EventToolcallStart, ContentIndex: slot.contentIndex, Partial: output})
 			return slot
@@ -391,6 +393,7 @@ func ProcessResponsesStream(
 					}{property: inputProperty},
 				},
 			}
+			unfinishedToolCalls[slot.contentIndex] = true
 			outputSlots[outputIndex] = slot
 			stream.Push(AssistantMessageEvent{Type: EventToolcallStart, ContentIndex: slot.contentIndex, Partial: output})
 			return slot
@@ -698,6 +701,7 @@ func ProcessResponsesStream(
 					slot.toolCall.call.Namespace = item.Namespace
 				}
 				slot.toolCall.partialJSON = nil
+				delete(unfinishedToolCalls, slot.contentIndex)
 				updateContent(slot)
 				call := slot.toolCall.call
 				stream.Push(AssistantMessageEvent{Type: EventToolcallEnd, ContentIndex: slot.contentIndex, ToolCall: &call, Partial: output})
@@ -712,6 +716,7 @@ func ProcessResponsesStream(
 					slot.toolCall.call.Namespace = item.Namespace
 				}
 				slot.toolCall.customInput = nil
+				delete(unfinishedToolCalls, slot.contentIndex)
 				updateContent(slot)
 				call := slot.toolCall.call
 				stream.Push(AssistantMessageEvent{Type: EventToolcallEnd, ContentIndex: slot.contentIndex, ToolCall: &call, Partial: output})
@@ -757,6 +762,20 @@ func ProcessResponsesStream(
 	}
 	if !sawTerminalResponseEvent {
 		return fmt.Errorf("OpenAI Responses stream ended before a terminal response event")
+	}
+	// The agent runs every tool call in the final message. Refuse to hand over
+	// calls whose output_item.done never arrived: their arguments may be cut off
+	// or mixed up, e.g. when a non-compliant server omits output_index. Finished
+	// calls clear their entry as the done event is handled (upstream 1b2aa0ca0).
+	if output.StopReason == StopToolUse {
+		for idx, block := range output.Content {
+			call, ok := block.(ToolCall)
+			if !ok || !unfinishedToolCalls[idx] {
+				continue
+			}
+			return fmt.Errorf("OpenAI Responses stream completed with an unfinished tool call: %s (%s)",
+				call.Name, call.ID)
+		}
 	}
 	return nil
 }

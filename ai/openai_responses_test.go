@@ -342,6 +342,51 @@ func TestProcessResponsesStreamFunctionCallAndErrors(t *testing.T) {
 		}
 	})
 
+	// The agent must not run tool calls whose output_item.done never arrived
+	// (upstream openai-responses-terminal-event.test.ts, 1b2aa0ca0).
+	runUnfinished := func(t *testing.T, events []string, want string) {
+		var chunks []string
+		for _, event := range events {
+			chunks = append(chunks, "data: "+event+"\n\n")
+		}
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			for _, chunk := range chunks {
+				_, _ = w.Write([]byte(chunk))
+			}
+		}))
+		defer server.Close()
+		model := testResponsesModel()
+		model.BaseURL = server.URL
+		stream := StreamOpenAIResponses(model, NormalizeContext(Context{}),
+			&OpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+		msg, _ := stream.Result(context.Background())
+		if msg.StopReason != StopError || msg.ErrorMessage == nil || !strings.Contains(*msg.ErrorMessage, want) {
+			t.Fatalf("message = %+v", msg)
+		}
+	}
+
+	t.Run("unfinished tool call", func(t *testing.T) {
+		runUnfinished(t, []string{
+			`{"type":"response.output_item.added","output_index":0,"item":{"type":"function_call","id":"fc_1","call_id":"call_1","name":"bash","arguments":""}}`,
+			`{"type":"response.function_call_arguments.delta","output_index":0,"item_id":"fc_1","delta":"{\"command\":\"rm -rf /tmp/build"}`,
+			`{"type":"response.completed","response":{"id":"resp_unfinished","status":"completed"}}`,
+		}, "unfinished tool call: bash (call_1|fc_1)")
+	})
+
+	// llama.cpp omits output_index from every event, so the port's index-keyed
+	// slots mix the parallel calls; the unfinished call is rejected either way.
+	t.Run("parallel tool calls without output_index", func(t *testing.T) {
+		runUnfinished(t, []string{
+			`{"type":"response.output_item.added","item":{"type":"function_call","id":"fc_a","call_id":"call_a","name":"bash","arguments":""}}`,
+			`{"type":"response.function_call_arguments.delta","item_id":"fc_a","delta":"{\"command\":\"echo a\"}"}`,
+			`{"type":"response.output_item.added","item":{"type":"function_call","id":"fc_b","call_id":"call_b","name":"bash","arguments":""}}`,
+			`{"type":"response.function_call_arguments.delta","item_id":"fc_b","delta":"{\"command\":\"echo b\"}"}`,
+			`{"type":"response.output_item.done","item":{"type":"function_call","id":"fc_a","call_id":"call_a","name":"bash","arguments":"{\"command\":\"echo a\"}"}}`,
+			`{"type":"response.output_item.done","item":{"type":"function_call","id":"fc_b","call_id":"call_b","name":"bash","arguments":"{\"command\":\"echo b\"}"}}`,
+			`{"type":"response.completed","response":{"id":"resp_no_output_index","status":"completed"}}`,
+		}, "unfinished tool call: bash (call_a|fc_a)")
+	})
+
 	t.Run("incomplete max_output_tokens is length", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_, _ = w.Write([]byte("data: {\"type\":\"response.incomplete\",\"response\":{\"status\":\"incomplete\",\"incomplete_details\":{\"reason\":\"max_output_tokens\"}}}\n\n"))

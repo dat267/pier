@@ -83,6 +83,12 @@ Ported from the v0.99.1 delta so far (the rest is still pending):
   `accounts/fireworks/models/kimi-k3`, `together` → `moonshotai/Kimi-K3`,
   `opencode-go` → `kimi-k3`. Tests:
   `TestDefaultModelPerProviderTracksCurrentModels`.
+- `ai`: an OpenAI Responses stream that completes with a tool call whose
+  `output_item.done` never arrived now fails the stream instead of running it
+  (`1b2aa0ca0`). Cut-off or mixed-up arguments (for example from a server that
+  omits `output_index`, like llama.cpp) no longer reach the tool loop. Tests:
+  the `openai-responses-terminal-event.test.ts` unfinished and
+  no-`output_index` cases.
 
 v0.87.1 refresh (originally the pinned tag `f07218c4d`, now superseded by the
 v0.99.1 reference above, read from the
