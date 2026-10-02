@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
 )
 
@@ -290,6 +291,30 @@ func TestCreateAgentSessionToolSelection(t *testing.T) {
 	}
 	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "read" {
 		t.Fatalf("tools = %q", names)
+	}
+
+	// Caller-supplied tools (MCP) join the registry and follow the same
+	// selection by name.
+	extra := agent.AgentTool{Name: "mcp__docs__search", Label: "docs/search", Description: "Docs search"}
+	session, err = CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
+		Cwd: cwd, ModelRuntime: runtime, SettingsManager: settings,
+		ExtraTools: []agent.AgentTool{extra}, Tools: []ToolName{"read", "mcp__docs__search"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "read,mcp__docs__search" {
+		t.Fatalf("extra tools = %q", names)
+	}
+	session, err = CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
+		Cwd: cwd, ModelRuntime: runtime, SettingsManager: settings,
+		ExtraTools: []agent.AgentTool{extra}, Tools: []ToolName{"read"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "read" {
+		t.Fatalf("unselected extra tool leaked: %q", names)
 	}
 
 	// noTools disables everything.

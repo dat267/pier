@@ -827,3 +827,32 @@ and re-raises. (pi/packages/mcp/src/transports/stdio.ts)
 Upstream treats fetch `TypeError`s as network failures and retries. Go's
 net/http reports failures as typed errors, so the transport retries any
 non-`McpHttpError`. (pi/packages/mcp/src/transports/streamable-http.ts)
+
+## D185. MCP integration without the extension system
+
+Upstream's MCP support is an extension: `core/mcp-servers.ts` holds the config
+shape and a registry that extensions register servers into, and
+`extensions/mcp/` connects them and exposes their tools through the extension
+tool model (exposure, namespaces, codemode, `tool_search`, resource tools, the
+`/mcp` sign-in and status UI, and `auth.json`-backed OAuth credentials). The
+port has no extension mechanics (AGENTS.md), so it ports the config, tool
+conversion and connection halves and wires them directly:
+
+- the agent dir's `mcp.json` plus a trusted project's `.pi/mcp.json` are read at
+  boot and the enabled servers connect before the session is created;
+- `direct`-exposure tools are appended to the built-in registry through
+  `CreateAgentSessionOptions.ExtraTools` and follow the same `--tools` /
+  `defaultTools` name selection; `codemode`, `deferred` and `hidden` tools are
+  registered but never exposed (no codemode, no `tool_search`);
+- OAuth credentials live in a per-process store instead of `auth.json` (the
+  `/mcp` sign-in that would persist them is unported), and resource reads
+  (`read_mcp_resource`) are not ported, so resource links do not name it;
+- the tool definition carries no upstream renderers, output schema or
+  annotations (the interactive layer's generic tool rendering draws MCP calls),
+  and an `isError` result becomes a Go error whose text is the converted
+  content (agent.AgentToolResult has no error flag);
+- a tool list changed after boot reaches `DirectTools`, but a running session
+  keeps the tools it was created with until it reloads (upstream registers into
+  the live registry).
+
+(pi/packages/coding-agent/src/extensions/mcp, core/mcp-servers.ts)

@@ -42,6 +42,11 @@ type CreateAgentSessionOptions struct {
 	Tools []ToolName
 	// ExcludeTools removes tools from the selection.
 	ExcludeTools []ToolName
+	// ExtraTools are caller-supplied tools (MCP servers), registered beside
+	// the built-ins and selectable by name through Tools/defaultTools
+	// (upstream registers extension tools in the same registry). Not a
+	// built-in: process-local seam for the CLI's MCP wiring (D185).
+	ExtraTools []agent.AgentTool
 	// NoTools disables the default set. NoToolsAll disables every tool;
 	// NoToolsBuiltin disables the built-ins while leaving the registry in
 	// place for caller-supplied tools. Any other non-empty value behaves like
@@ -297,6 +302,11 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 			},
 		},
 	})
+	for _, extra := range options.ExtraTools {
+		if extra.Name != "" {
+			toolByName[ToolName(extra.Name)] = extra
+		}
+	}
 	activeTools := make([]agent.AgentTool, 0, len(initialActiveToolNames))
 	for _, name := range initialActiveToolNames {
 		if tool, ok := toolByName[name]; ok {

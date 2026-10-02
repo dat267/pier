@@ -22,6 +22,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/coding/interactive"
@@ -359,6 +360,18 @@ func run(appName string, args *coding.Args) error {
 		}))
 	}
 
+	// MCP servers: the agent directory's mcp.json plus, for a trusted project,
+	// its .pi/mcp.json (upstream loads them during extension setup). Their
+	// direct-exposure tools join the built-ins below; a config or connection
+	// failure is a startup warning, never a boot failure.
+	mcpManager, mcpTools, mcpErrors := setupMCPServers(ctx, runtime, agentDir, runtimeCwd, trusted)
+	if mcpManager != nil {
+		defer func() { _ = mcpManager.Close(context.Background()) }()
+	}
+	for _, message := range mcpErrors {
+		fmt.Fprintln(os.Stderr, coding.FormatCLIDiagnostic(coding.CLIDiagnostic{Type: "warning", Message: message}))
+	}
+
 	// Tool flags reach the session through the same projection the tests
 	// exercise: --tools/--exclude-tools pass through and --no-tools /
 	// --no-builtin-tools map onto the noTools option.
@@ -379,6 +392,8 @@ func run(appName string, args *coding.Args) error {
 		Tools:        tools.Tools,
 		ExcludeTools: tools.ExcludeTools,
 		NoTools:      tools.NoTools,
+		// MCP tools, selectable by name like the built-ins.
+		ExtraTools: mcpTools,
 		// Model cycle scope (--models, or the settings' enabled models).
 		ScopedModels: scopedModels,
 		// Resource flags: explicit skill directories (resolved against cwd, as
@@ -862,3 +877,50 @@ func resumeSession(args *coding.Args, cwd string, agentDir string, settings *cod
 
 // ensure syscall is used on platforms where the signal set is empty.
 var _ = syscall.SIGTERM
+
+// providerTokenForMCP resolves the token of a `/login` provider for an MCP
+// server with `auth: { provider }` (upstream's providerToken callback). It
+// returns the provider's API key or OAuth access token.
+func providerTokenForMCP(runtime *coding.ModelRuntime, provider string) (string, error) {
+	if runtime == nil {
+		return "", nil
+	}
+	resolution, err := runtime.GetAuth(provider, nil)
+	if err != nil || resolution == nil {
+		return "", err
+	}
+	if resolution.Auth.APIKey != "" {
+		return resolution.Auth.APIKey, nil
+	}
+	return "", nil
+}
+
+// setupMCPServers loads mcp.json and connects the enabled servers, returning
+// the manager (nil when nothing is configured), the direct-exposure tools and
+// every config or connection error.
+func setupMCPServers(
+	ctx context.Context,
+	runtime *coding.ModelRuntime,
+	agentDir string,
+	cwd string,
+	trusted bool,
+) (*coding.McpManager, []agent.AgentTool, []string) {
+	config := coding.LoadMcpConfig(coding.McpConfigLoadOptions{AgentDir: agentDir, Cwd: cwd, ProjectTrusted: trusted})
+	enabled := 0
+	for _, server := range config.Servers {
+		if server.Config.Enabled == nil || *server.Config.Enabled {
+			enabled++
+		}
+	}
+	if enabled == 0 {
+		return nil, nil, config.Errors
+	}
+	manager := coding.NewMcpManager(ctx, coding.McpManagerOptions{
+		Config: config,
+		Cwd:    cwd,
+		ProviderToken: func(_ context.Context, provider string) (string, error) {
+			return providerTokenForMCP(runtime, provider)
+		},
+	})
+	return manager, manager.DirectTools(), manager.Errors()
+}

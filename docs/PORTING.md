@@ -112,6 +112,20 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   oauth.test.ts port. The exit hook watches terminating signals and
   re-raises (D182); the resource-contents arm is discriminated by key
   presence (D181).
+- `coding` (MCP integration): the config half of `core/mcp-servers.ts` and
+  `extensions/mcp/config.ts` (`coding/mcpservers.go`, `coding/mcpconfig.go`:
+  mcpServers shape, validation, exposure patterns, agent-dir plus trusted
+  project `mcp.json`), `extensions/mcp/tools.ts` (`coding/mcptools.go`:
+  `mcp__server__tool` names, CallToolResult conversion, 20 KB middle
+  truncation, `truncateMiddle` in `coding/truncate.go`) and
+  `extensions/mcp/runtime.ts` (`coding/mcpruntime.go`, `coding/mcpmanager.go`:
+  connections with lazy reconnect, HTTP connect retries, session-expiry retry,
+  the 401 -> needs-auth path, tool/resource list refresh, default
+  stdio/streamable-HTTP transports). The CLI loads the config and injects the
+  `direct`-exposure tools through `CreateAgentSessionOptions.ExtraTools`
+  (D185 covers what is not ported: the extension registry, codemode and
+  `tool_search` exposure, `/mcp` sign-in and status UI, resource reads, and a
+  durable OAuth store).
 - `durable`: the port's Storage surface (conversation/entry/task/submission)
   now has a SQLite backend on modernc.org/sqlite (user-approved dependency;
   the upstream sqlite migrations run verbatim and the Storage suite runs as
