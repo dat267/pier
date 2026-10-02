@@ -229,6 +229,14 @@ func (t *Renderer) GetMountedRoots() []Component {
 	return t.Children
 }
 
+// RawChildren returns the renderer's children regardless of the mounted-roots
+// override (the fullscreen renderer's layout root is not a child). Upstream
+// always manipulates `children` directly (switchTuiMode's
+// `[...previousUi.children]`).
+func (t *Renderer) RawChildren() []Component {
+	return t.Children
+}
+
 // NextAnimation reports whether any mounted component animates and how long
 // until its next frame. Components own no timers: the owner renders and asks
 // again (stage 4).

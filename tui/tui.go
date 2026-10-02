@@ -24,6 +24,10 @@ type TUI interface {
 	GetClearOnShrink() bool
 	SetClearOnShrink(enabled bool)
 	GetMountedRoots() []Component
+	// RawChildren returns the renderer's children even when the mounted-roots
+	// override differs (the fullscreen layout root). Upstream reads
+	// `previousUi.children` for the mode switch.
+	RawChildren() []Component
 	GetTerminal() Terminal
 	Start()
 	Stop(options TuiStopOptions)
@@ -100,6 +104,9 @@ func (r *TuiReference) SetClearOnShrink(enabled bool) { r.get().SetClearOnShrink
 
 // GetMountedRoots returns the mounted roots.
 func (r *TuiReference) GetMountedRoots() []Component { return r.get().GetMountedRoots() }
+
+// RawChildren forwards to the current renderer.
+func (r *TuiReference) RawChildren() []Component { return r.get().RawChildren() }
 
 // GetTerminal returns the active terminal.
 func (r *TuiReference) GetTerminal() Terminal { return r.get().GetTerminal() }

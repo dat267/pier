@@ -203,7 +203,7 @@ func (l *Lifecycle) SwitchTuiMode(mode string, restoreProgress bool, startRender
 		return false
 	}
 
-	components := previousUI.GetMountedRoots()
+	components := previousUI.RawChildren()
 	focus := previousUI.GetFocusedComponent()
 	terminal := previousUI.GetTerminal()
 	clearOnShrink := previousUI.GetClearOnShrink()

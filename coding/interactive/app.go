@@ -549,6 +549,10 @@ func (a *App) Init(ctx context.Context) {
 		ScrollbarThumbStyle: func(text string) string { return theme.Fg("scrollbarThumb", text) },
 	})
 	a.transcriptScrollView = viewport.Transcript
+	// The lifecycle keeps the fullscreen layout root for later mode switches:
+	// mounting a fresh fullscreen renderer without it leaves the viewport
+	// detached from the chat containers.
+	a.lifecycle.LayoutRoot = viewport.Root
 	a.lifecycle.MountInteractiveTui(a.currentRenderer(), []tui.Component{
 		a.documentContainer,
 		a.pendingMessages,

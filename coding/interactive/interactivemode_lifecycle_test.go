@@ -373,3 +373,44 @@ func TestLifecycleShutdownStopMode(t *testing.T) {
 		t.Fatalf("exits = %v", *exits3)
 	}
 }
+
+// TestLifecycleSwitchCarriesRawChildren pins the mount source: upstream
+// switches to `[...previousUi.children]` (the raw children), not the
+// mounted-roots override — a fullscreen screen's mounted root is its layout
+// root, which the regular screen does not lay out (interactive-mode.ts
+// switchTuiMode).
+func TestLifecycleSwitchCarriesRawChildren(t *testing.T) {
+	lifecycle, _, _, _ := newLifecycleTest(t)
+
+	// Regular first: mount the chat container, switch to fullscreen, give the
+	// fullscreen a layout root that does not contain the chat (the viewport),
+	// then switch back: the chat must be on the regular screen again.
+	chat := &tui.Container{}
+	chat.AddChild(&staticRendererComponent{lines: []string{"transcript text marker"}})
+	main := lifecycle.options.UI
+	main.AddChild(chat)
+
+	if !lifecycle.SwitchTuiMode("fullscreen", false, false) {
+		t.Fatal("switch to fullscreen failed")
+	}
+	alt, ok := lifecycle.options.UI.(*tui.AltScreen)
+	if !ok {
+		t.Fatalf("renderer = %T", lifecycle.options.UI)
+	}
+	// The fullscreen layout root replaces mounted roots for mount checks.
+	root := tui.NewVStack(nil, tui.StackOptions{})
+	root.AddChild(&staticRendererComponent{lines: []string{"viewport junk"}})
+	alt.SetLayoutRoot(root)
+
+	if !lifecycle.SwitchTuiMode("regular", false, false) {
+		t.Fatal("switch back failed")
+	}
+	back, ok := lifecycle.options.UI.(*tui.MainScreen)
+	if !ok {
+		t.Fatalf("renderer = %T", lifecycle.options.UI)
+	}
+	back.RenderNow(false)
+	if rendered := strings.Join(back.Render(80), "\n"); !strings.Contains(rendered, "transcript text marker") {
+		t.Fatalf("regular screen lost the chat content: %q", rendered)
+	}
+}
