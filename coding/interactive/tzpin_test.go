@@ -25,5 +25,16 @@ func TestMain(m *testing.M) {
 	noEditor := filepath.Join(os.TempDir(), "pier-test-no-external-editor")
 	os.Setenv("VISUAL", noEditor)
 	os.Setenv("EDITOR", noEditor)
-	os.Exit(m.Run())
+	// No test may write into the developer's real agent directory: a session
+	// manager built with the default agent dir created a session shard per temp
+	// cwd there. Pin it for the whole binary.
+	dir, err := os.MkdirTemp("", "pier-test-agent-")
+	if err == nil {
+		os.Setenv("PI_CODING_AGENT_DIR", dir)
+	}
+	code := m.Run()
+	if err == nil {
+		_ = os.RemoveAll(dir)
+	}
+	os.Exit(code)
 }
