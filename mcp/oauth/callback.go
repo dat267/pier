@@ -141,6 +141,15 @@ func (s *OAuthCallbackServer) WaitForCallback(state string) (OAuthCallback, erro
 	return result.callback, result.err
 }
 
+// Pending reports whether a waiter is registered for the state. Tests use it
+// to drive the redirect only after WaitForCallback has registered.
+func (s *OAuthCallbackServer) Pending(state string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	_, ok := s.pending[state]
+	return ok
+}
+
 // Close rejects pending waits and stops the listener (upstream close).
 func (s *OAuthCallbackServer) Close(ctx context.Context) error {
 	s.mu.Lock()

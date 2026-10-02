@@ -129,6 +129,71 @@ func mustJSON(value any) string {
 }
 
 // oauthFixtureServer is the /mcp endpoint that demands a bearer token.
+// awaitCallbackWaiter waits until WaitForCallback registered the state. The
+// callback server drops a callback that arrives with no waiter (like upstream),
+// so the redirect must be driven only after the waiter exists; otherwise a fast
+// loopback request races the registration.
+func awaitCallbackWaiter(t *testing.T, callback *oauth.OAuthCallbackServer, state string) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for !callback.Pending(state) {
+		if time.Now().After(deadline) {
+			t.Fatalf("callback waiter for %q never registered", state)
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
+// waitCallbackAfterRequest registers the waiter, drives request, and returns the
+// callback with the response.
+func waitCallbackAfterRequest(t *testing.T, callback *oauth.OAuthCallbackServer, state string, request func() (*http.Response, error)) (oauth.OAuthCallback, *http.Response) {
+	t.Helper()
+	waiter := make(chan oauth.OAuthCallback, 1)
+	waiterErr := make(chan error, 1)
+	go func() {
+		result, err := callback.WaitForCallback(state)
+		if err != nil {
+			waiterErr <- err
+			return
+		}
+		waiter <- result
+	}()
+	awaitCallbackWaiter(t, callback, state)
+	response, err := request()
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case result := <-waiter:
+		return result, response
+	case err := <-waiterErr:
+		t.Fatalf("callback: %v", err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("callback never resolved")
+	}
+	return oauth.OAuthCallback{}, nil
+}
+
+// waitCallbackErrorAfterRequest is the failure-path variant: the callback itself
+// carries the error (a denied authorization).
+func waitCallbackErrorAfterRequest(t *testing.T, callback *oauth.OAuthCallbackServer, state string, request func() (*http.Response, error)) (error, *http.Response) {
+	t.Helper()
+	waiterErr := make(chan error, 1)
+	go func() { _, err := callback.WaitForCallback(state); waiterErr <- err }()
+	awaitCallbackWaiter(t, callback, state)
+	response, err := request()
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case err := <-waiterErr:
+		return err, response
+	case <-time.After(5 * time.Second):
+		t.Fatal("callback never resolved")
+	}
+	return nil, nil
+}
+
 func TestOAuthFullFlow(t *testing.T) {
 	var expectedChallenge string
 	refreshes := 0
@@ -232,7 +297,7 @@ func TestOAuthFullFlow(t *testing.T) {
 		fmt.Fprintf(w, `{"jsonrpc":"2.0","id":%s,"result":%s}`, mustJSON(id), mustJSON(result))
 	})
 
-	callback, err := oauth.ListenCallbackServer(context.Background(), oauth.OAuthCallbackServerOptions{})
+	callback, err := oauth.ListenCallbackServer(context.Background(), oauth.OAuthCallbackServerOptions{TimeoutMs: 5000})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -281,34 +346,20 @@ func TestOAuthFullFlow(t *testing.T) {
 		t.Fatalf("resource = %q", got)
 	}
 
-	callbackWait := make(chan oauth.OAuthCallback, 1)
-	go func() {
-		result, err := callback.WaitForCallback("expected-state")
-		if err != nil {
-			t.Errorf("callback: %v", err)
-			return
-		}
-		callbackWait <- result
-	}()
 	// Drive the redirect: the authorization endpoint answers 302 with the
 	// code and state on the redirect_uri, which hits the callback server.
 	noRedirect := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error {
 		return http.ErrUseLastResponse
 	}}
-	response, err := noRedirect.Get(provider.authorizationURL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	location := response.Header.Get("location")
-	if _, err := http.Get(location); err != nil {
-		t.Fatal(err)
-	}
-	var redirectCallback oauth.OAuthCallback
-	select {
-	case redirectCallback = <-callbackWait:
-	case <-time.After(5 * time.Second):
-		t.Fatal("callback never arrived")
-	}
+	redirectCallback, _ := waitCallbackAfterRequest(t, callback, "expected-state", func() (*http.Response, error) {
+		response, err := noRedirect.Get(provider.authorizationURL)
+		if err != nil {
+			return nil, err
+		}
+		location := response.Header.Get("location")
+		_ = response.Body.Close()
+		return http.Get(location)
+	})
 	result, err := oauth.AuthorizeMcp(context.Background(), provider, oauth.FlowOptions{
 		ServerURL:         origin + "/mcp",
 		AuthorizationCode: redirectCallback.Code,
@@ -654,25 +705,14 @@ func TestOAuthIssParameter(t *testing.T) {
 // TestOAuthCallbackPages ports the OAuthCallbackServer page tests.
 func TestOAuthCallbackPages(t *testing.T) {
 	t.Run("plain text by default", func(t *testing.T) {
-		callback, err := oauth.ListenCallbackServer(context.Background(), oauth.OAuthCallbackServerOptions{})
+		callback, err := oauth.ListenCallbackServer(context.Background(), oauth.OAuthCallbackServerOptions{TimeoutMs: 5000})
 		if err != nil {
 			t.Fatal(err)
 		}
 		defer callback.Close(context.Background())
-		pending := make(chan oauth.OAuthCallback, 1)
-		pendingErr := make(chan error, 1)
-		go func() {
-			result, err := callback.WaitForCallback("s1")
-			if err != nil {
-				pendingErr <- err
-				return
-			}
-			pending <- result
-		}()
-		response, err := http.Get(callback.RedirectURL + "?code=abc&state=s1")
-		if err != nil {
-			t.Fatal(err)
-		}
+		result, response := waitCallbackAfterRequest(t, callback, "s1", func() (*http.Response, error) {
+			return http.Get(callback.RedirectURL + "?code=abc&state=s1")
+		})
 		body, _ := io.ReadAll(response.Body)
 		_ = response.Body.Close()
 		if got := response.Header.Get("content-type"); got != "text/plain; charset=utf-8" {
@@ -681,21 +721,15 @@ func TestOAuthCallbackPages(t *testing.T) {
 		if string(body) != "Authorization complete. You may close this window." {
 			t.Fatalf("page = %q", string(body))
 		}
-		select {
-		case result := <-pending:
-			if result.Code != "abc" {
-				t.Fatalf("callback = %+v", result)
-			}
-		case err := <-pendingErr:
-			t.Fatal(err)
-		case <-time.After(5 * time.Second):
-			t.Fatal("callback never resolved")
+		if result.Code != "abc" {
+			t.Fatalf("callback = %+v", result)
 		}
 	})
 	t.Run("renders pages through renderPage", func(t *testing.T) {
 		var pagesMu sync.Mutex
 		var pages []oauth.OAuthCallbackPage
 		callback, err := oauth.ListenCallbackServer(context.Background(), oauth.OAuthCallbackServerOptions{
+			TimeoutMs: 5000,
 			RenderPage: func(page oauth.OAuthCallbackPage) string {
 				pagesMu.Lock()
 				pages = append(pages, page)
@@ -710,26 +744,14 @@ func TestOAuthCallbackPages(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer callback.Close(context.Background())
-		denied := make(chan error, 1)
-		go func() {
-			_, err := callback.WaitForCallback("s1")
-			denied <- err
-		}()
-		time.Sleep(50 * time.Millisecond)
-		failure, err := http.Get(callback.RedirectURL + "?error=access_denied&error_description=Denied&state=s1")
-		if err != nil {
-			t.Fatal(err)
-		}
+		deniedErr, failure := waitCallbackErrorAfterRequest(t, callback, "s1", func() (*http.Response, error) {
+			return http.Get(callback.RedirectURL + "?error=access_denied&error_description=Denied&state=s1")
+		})
 		if got := failure.Header.Get("content-type"); got != "text/html; charset=utf-8" {
 			t.Fatalf("content-type = %q", got)
 		}
-		select {
-		case err := <-denied:
-			if err == nil || err.Error() != "Denied" {
-				t.Fatalf("denied err = %v", err)
-			}
-		case <-time.After(5 * time.Second):
-			t.Fatal("denied callback never resolved")
+		if deniedErr == nil || deniedErr.Error() != "Denied" {
+			t.Fatalf("denied err = %v", deniedErr)
 		}
 		pagesMu.Lock()
 		last := pages[len(pages)-1]
@@ -739,28 +761,16 @@ func TestOAuthCallbackPages(t *testing.T) {
 			t.Fatalf("page = %+v", last)
 		}
 
-		pending := make(chan oauth.OAuthCallback, 1)
-		go func() {
-			result, _ := callback.WaitForCallback("s2")
-			pending <- result
-		}()
-		time.Sleep(50 * time.Millisecond)
-		success, err := http.Get(callback.RedirectURL + "?code=abc&state=s2")
-		if err != nil {
-			t.Fatal(err)
-		}
+		result, success := waitCallbackAfterRequest(t, callback, "s2", func() (*http.Response, error) {
+			return http.Get(callback.RedirectURL + "?code=abc&state=s2")
+		})
 		body, _ := io.ReadAll(success.Body)
 		_ = success.Body.Close()
 		if string(body) != "<p>ok</p>" {
 			t.Fatalf("page = %q", string(body))
 		}
-		select {
-		case result := <-pending:
-			if result.Code != "abc" {
-				t.Fatalf("callback = %+v", result)
-			}
-		case <-time.After(5 * time.Second):
-			t.Fatal("callback never resolved")
+		if result.Code != "abc" {
+			t.Fatalf("callback = %+v", result)
 		}
 	})
 }
