@@ -256,6 +256,10 @@ func (s *SqliteStorage) Commit(ctx context.Context, writes []StorageWrite) (Seq,
 			if err := claimRecordID(ctx, tx, value.ID, "task"); err != nil {
 				return 0, err
 			}
+		// Documents are applied once per batch (one revision per document per
+		// commit), so they are collected and handled after the table writes.
+		case "document.create", "document.copy", "document.change", "document.retire":
+			continue
 		case "input":
 			value := write.Input
 			record, err := marshalJSONValue(value)
@@ -284,6 +288,10 @@ func (s *SqliteStorage) Commit(ctx context.Context, writes []StorageWrite) (Seq,
 		}
 	}
 
+	if err := commitSqliteDocuments(ctx, tx, writes, Seq(nextSeq)); err != nil {
+		return 0, err
+	}
+
 	mintedID, err := parseMetadataID(nextIDText)
 	if err != nil {
 		return 0, err
@@ -304,10 +312,14 @@ func (s *SqliteStorage) Commit(ctx context.Context, writes []StorageWrite) (Seq,
 }
 
 // recordTypeOf maps the port's write type to the storage table's record
-// type (the port calls submissions "input").
+// type (the port calls submissions "input"; the document write kinds share
+// one record type).
 func recordTypeOf(write StorageWrite) string {
-	if write.Type == "input" {
+	switch write.Type {
+	case "input":
 		return "submission"
+	case "document.create", "document.copy", "document.change", "document.retire":
+		return "document"
 	}
 	return write.Type
 }
@@ -770,6 +782,9 @@ func unmarshalRecord[T any](record string) (*T, error) {
 func checkImmutableIDs(writes []StorageWrite, recordType func(StorageWrite) string, tableContaining func(Id) (string, error)) error {
 	claimed := map[Id]string{}
 	for _, write := range writes {
+		if write.Type == "document.change" || write.Type == "document.retire" {
+			continue
+		}
 		table := recordType(write)
 		id := writeID(write)
 		existing, err := tableContaining(id)

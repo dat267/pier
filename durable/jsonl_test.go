@@ -184,14 +184,26 @@ func TestJsonlRejectsCorruption(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 
-	// Document operations (unported, D186) are reported rather than replayed.
+	// A document marker whose replay fails (no such document) is reported as
+	// invalid committed state.
 	dir = t.TempDir()
 	document := "{\"format\":1,\"type\":\"commit\",\"seq\":1,\"writes\":[{\"type\":\"document.retire\",\"id\":7}]}\n"
 	if err := os.WriteFile(filepath.Join(dir, "main.jsonl"), []byte(document), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := OpenJsonlStorage(context.Background(), dir, JsonlStorageOptions{}); err == nil ||
-		!strings.Contains(err.Error(), "document operations are not supported") {
+		!strings.Contains(err.Error(), "Invalid committed state") {
+		t.Fatalf("err = %v", err)
+	}
+
+	// A document creation without a record id is a malformed marker.
+	dir = t.TempDir()
+	badCreate := "{\"format\":1,\"type\":\"commit\",\"seq\":1,\"writes\":[{\"type\":\"document.create\",\"record\":{\"kind\":\"k\"},\"ordinal\":0}]}\n"
+	if err := os.WriteFile(filepath.Join(dir, "main.jsonl"), []byte(badCreate), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := OpenJsonlStorage(context.Background(), dir, JsonlStorageOptions{}); err == nil ||
+		!strings.Contains(err.Error(), "Invalid document creation") {
 		t.Fatalf("err = %v", err)
 	}
 }

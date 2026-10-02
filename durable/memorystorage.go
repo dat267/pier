@@ -15,17 +15,21 @@ import (
 // validation.
 
 type memoryState struct {
-	conversations     map[Id]*ConversationRecord
-	conversationIDs   []Id
-	entries           map[Id]*EntryRecord
-	entryIDs          map[Id][]Id
-	headEntryIDs      map[Id][]Id
-	entryCommitSeqs   map[Id]Seq
-	tasks             map[Id]*TaskRecord
-	taskIDs           []Id
-	taskIDsByStatus   map[string][]Id
-	inputs            map[Id]*Input
-	inputIDsByRequest map[Id]map[string]Id
+	recordTypes        map[Id]string
+	conversations      map[Id]*ConversationRecord
+	conversationIDs    []Id
+	entries            map[Id]*EntryRecord
+	entryIDs           map[Id][]Id
+	headEntryIDs       map[Id][]Id
+	entryCommitSeqs    map[Id]Seq
+	tasks              map[Id]*TaskRecord
+	taskIDs            []Id
+	taskIDsByStatus    map[string][]Id
+	inputs             map[Id]*Input
+	inputIDsByRequest  map[Id]map[string]Id
+	documents          map[Id]*storedDocumentState
+	documentAddresses  map[string]*documentAddressIndex
+	documentIDsByScope map[string][]Id
 }
 
 // MemoryStorage is the in-memory reference storage.
@@ -42,15 +46,19 @@ type MemoryStorage struct {
 func NewMemoryStorage() *MemoryStorage {
 	return &MemoryStorage{
 		state: memoryState{
-			conversations:     map[Id]*ConversationRecord{},
-			entries:           map[Id]*EntryRecord{},
-			entryIDs:          map[Id][]Id{},
-			headEntryIDs:      map[Id][]Id{},
-			entryCommitSeqs:   map[Id]Seq{},
-			tasks:             map[Id]*TaskRecord{},
-			taskIDsByStatus:   map[string][]Id{TaskPending: {}, TaskRunning: {}, TaskTerminal: {}},
-			inputs:            map[Id]*Input{},
-			inputIDsByRequest: map[Id]map[string]Id{},
+			recordTypes:        map[Id]string{},
+			conversations:      map[Id]*ConversationRecord{},
+			entries:            map[Id]*EntryRecord{},
+			entryIDs:           map[Id][]Id{},
+			headEntryIDs:       map[Id][]Id{},
+			entryCommitSeqs:    map[Id]Seq{},
+			tasks:              map[Id]*TaskRecord{},
+			taskIDsByStatus:    map[string][]Id{TaskPending: {}, TaskRunning: {}, TaskTerminal: {}},
+			inputs:             map[Id]*Input{},
+			inputIDsByRequest:  map[Id]map[string]Id{},
+			documents:          map[Id]*storedDocumentState{},
+			documentAddresses:  map[string]*documentAddressIndex{},
+			documentIDsByScope: map[string][]Id{},
 		},
 		nextID:  2,
 		nextSeq: 1,
@@ -179,6 +187,9 @@ func (s *MemoryStorage) tableContaining(id Id) string {
 	if _, ok := s.state.inputs[id]; ok {
 		return "input"
 	}
+	if _, ok := s.state.documents[id]; ok {
+		return "document"
+	}
 	return ""
 }
 
@@ -201,9 +212,10 @@ func pageOf[T any](values []T, limit int, idOf func(T) Id) Page[T] {
 // PreparedCommit). The JSONL backend uses the split to replay a recovered log
 // at its recorded sequences.
 type PreparedCommit struct {
-	Seq    Seq
-	Writes []StorageWrite
-	store  *MemoryStorage
+	Seq             Seq
+	Writes          []StorageWrite
+	store           *MemoryStorage
+	documentActions map[Id]*documentAction
 }
 
 // PrepareCommit validates and clones a batch at the next sequence.
@@ -233,18 +245,31 @@ func (s *MemoryStorage) prepareCommitAt(writes []StorageWrite, seq Seq) (*Prepar
 	for _, write := range writes {
 		prepared = append(prepared, cloneWrite(write))
 	}
-	if err := s.checkImmutableIDs(prepared); err != nil {
+	resolved, err := s.resolveDocumentCopies(prepared)
+	if err != nil {
 		return nil, err
 	}
-	for _, write := range prepared {
+	if err := s.checkImmutableIDs(resolved); err != nil {
+		return nil, err
+	}
+	documentActions, err := s.prepareDocumentActions(resolved)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.checkDocumentActions(documentActions); err != nil {
+		return nil, err
+	}
+	for _, write := range resolved {
 		switch write.Type {
-		case "conversation", "entry", "task", "input":
+		case "conversation", "entry", "task", "input", "document.create":
+			continue
+		case "document.change", "document.retire":
 			continue
 		default:
 			return nil, fmt.Errorf("unknown storage write type: %s", write.Type)
 		}
 	}
-	return &PreparedCommit{Seq: seq, Writes: prepared, store: s}, nil
+	return &PreparedCommit{Seq: seq, Writes: resolved, store: s, documentActions: documentActions}, nil
 }
 
 // Apply writes the batch to the store and advances the sequence (upstream
@@ -306,6 +331,9 @@ func (p *PreparedCommit) Apply() Seq {
 			s.bumpNextID(value.ID)
 		}
 	}
+	if p.documentActions != nil {
+		s.applyDocumentActions(p.documentActions, seq)
+	}
 	if seq >= s.nextSeq {
 		s.nextSeq = seq + 1
 	}
@@ -332,9 +360,47 @@ func cloneWrite(write StorageWrite) StorageWrite {
 		return StorageWrite{Type: write.Type, Task: cloneTask(write.Task)}
 	case "input":
 		return StorageWrite{Type: write.Type, Input: cloneInput(write.Input)}
+	case "document.create", "document.copy":
+		cloned := StorageWrite{
+			Type:           write.Type,
+			DocumentCreate: cloneDocumentCreate(write.DocumentCreate),
+			DocumentSource: cloneDocumentSource(write.DocumentSource),
+		}
+		if write.DocumentContent != nil {
+			content := cloneDocumentContent(*write.DocumentContent)
+			cloned.DocumentContent = &content
+		}
+		return cloned
+	case "document.change":
+		cloned := StorageWrite{Type: write.Type, DocumentID: write.DocumentID}
+		if write.DocumentContent != nil {
+			content := cloneDocumentContent(*write.DocumentContent)
+			cloned.DocumentContent = &content
+		}
+		return cloned
+	case "document.retire":
+		return StorageWrite{Type: write.Type, DocumentID: write.DocumentID}
 	default:
 		return write
 	}
+}
+
+func cloneDocumentCreate(value *DocumentCreate) *DocumentCreate {
+	if value == nil {
+		return nil
+	}
+	return cloneValue(value)
+}
+
+func cloneDocumentSource(value *DocumentCopySource) *DocumentCopySource {
+	if value == nil {
+		return nil
+	}
+	return cloneValue(value)
+}
+
+func cloneDocumentContent(value DocumentContent) DocumentContent {
+	return cloneValue(value)
 }
 
 func (s *MemoryStorage) bumpNextID(id Id) {
@@ -583,11 +649,17 @@ func (s *MemoryStorage) visibleEntries(conversationID Id, minEntryID, maxEntryID
 func (s *MemoryStorage) checkImmutableIDs(writes []StorageWrite) error {
 	claimed := map[Id]string{}
 	for _, write := range writes {
+		if write.Type == "document.change" || write.Type == "document.retire" {
+			continue
+		}
 		table := write.Type
+		if write.Type == "document.create" || write.Type == "document.copy" {
+			table = "document"
+		}
 		id := writeID(write)
 		existing := s.tableContaining(id)
 		earlier, claimedBefore := claimed[id]
-		if table == "conversation" || table == "entry" {
+		if table == "conversation" || table == "entry" || table == "document" {
 			if existing != "" {
 				return fmt.Errorf("ID %d already belongs to %s", id, existing)
 			}
@@ -609,6 +681,16 @@ func (s *MemoryStorage) checkImmutableIDs(writes []StorageWrite) error {
 
 func writeID(write StorageWrite) Id {
 	switch write.Type {
+	case "document.create", "document.copy":
+		if write.DocumentCreate == nil {
+			return 0
+		}
+		return write.DocumentCreate.ID
+	case "document.change", "document.retire":
+		if write.DocumentID == nil {
+			return 0
+		}
+		return *write.DocumentID
 	case "conversation":
 		return write.Conversation.ID
 	case "entry":

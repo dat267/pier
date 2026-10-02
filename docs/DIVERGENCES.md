@@ -856,18 +856,3 @@ conversion and connection halves and wires them directly:
   the live registry).
 
 (pi/packages/coding-agent/src/extensions/mcp, core/mcp-servers.ts)
-
-## D186. JSONL storage without document operations
-
-Upstream's JSONL log (`storage/jsonl/storage.ts`) carries conversation, entry,
-submission, task and *document* operations, with document snapshots in
-`doc-<id>.jsonl` sidecars, and it runs over an abstract `FileSystem`
-(`env/index.ts`). The port's `Storage` surface covers conversations, entries,
-tasks and inputs (documents are not ported; `durable/types.go` has only the
-record shapes), so the port's `JsonlStorage` keeps the upstream file format
-(version, marker/record shapes, sidecar naming, torn-tail truncation,
-`.reclaim` cleanup, poison-on-append-failure) but reports a log containing
-document operations as a corruption error instead of replaying it, and uses
-`os` directly instead of the `FileSystem` abstraction.
-
-(pi/packages/durable/src/storage/jsonl, pi/packages/durable/src/env)

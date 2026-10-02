@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,14 +17,14 @@ import (
 
 // Port of storage/jsonl (index.ts, storage.ts, node.ts): a log-structured
 // Storage that appends one commit marker per commit to `main.jsonl` and keeps
-// live (non-terminal) task snapshots in `task-<id>.jsonl` sidecars. Reads are
+// live snapshots in `task-<id>.jsonl` and `doc-<id>.jsonl` sidecars. Reads are
 // served from an in-memory mirror rebuilt at open.
 //
-// Divergence D186: the port's Storage surface covers conversations, entries,
-// tasks and inputs (no documents), so a log containing document operations is
-// rejected as unsupported instead of replayed; the file format is otherwise
-// upstream's (format version, marker/record shapes, sidecar naming, torn-tail
-// truncation, `.reclaim` cleanup, poison-on-append-failure).
+// The file format is upstream's: format version, marker/record shapes, sidecar
+// naming, torn-tail truncation, `.reclaim` cleanup, confirmed-record
+// truncation, reclamation of retired and superseded sidecars, and
+// poison-on-append-failure. The upstream `FileSystem` abstraction is replaced
+// by `os` (the other backends use their driver directly too).
 
 // jsonlFormatVersion is upstream FORMAT_VERSION.
 const jsonlFormatVersion = 1
@@ -69,6 +70,7 @@ type JsonlStorage struct {
 	fsync            bool
 	memory           *MemoryStorage
 	liveTaskSidecars map[Id]bool
+	currentOnlyDocs  map[Id]bool
 	closed           bool
 	poisoned         error
 }
@@ -90,6 +92,7 @@ func OpenJsonlStorage(ctx context.Context, directory string, options JsonlStorag
 		fsync:            options.Fsync,
 		memory:           NewMemoryStorage(),
 		liveTaskSidecars: map[Id]bool{},
+		currentOnlyDocs:  map[Id]bool{},
 	}
 	if err := storage.recover(); err != nil {
 		return nil, err
@@ -218,6 +221,30 @@ func (s *JsonlStorage) InputByRequest(ctx context.Context, conversationID Id, re
 	return s.memory.InputByRequest(ctx, conversationID, requestID)
 }
 
+// FindDocument returns the incarnation alive at the point for an exact address.
+func (s *JsonlStorage) FindDocument(ctx context.Context, address DocumentAddress, at DocumentPoint) (*DocumentRecord, error) {
+	if err := s.assertUsable(); err != nil {
+		return nil, err
+	}
+	return s.memory.FindDocument(ctx, address, at)
+}
+
+// Document materializes one incarnation at the point.
+func (s *JsonlStorage) Document(ctx context.Context, id Id, at DocumentPoint) (*StoredDocument, error) {
+	if err := s.assertUsable(); err != nil {
+		return nil, err
+	}
+	return s.memory.Document(ctx, id, at)
+}
+
+// ScanDocuments scans the incarnations alive in one scope at the point.
+func (s *JsonlStorage) ScanDocuments(ctx context.Context, query DocumentQuery, cursor Cursor, limit int) (Page[DocumentRecord], error) {
+	if err := s.assertUsable(); err != nil {
+		return Page[DocumentRecord]{}, err
+	}
+	return s.memory.ScanDocuments(ctx, query, cursor, limit)
+}
+
 // Close stops the storage (upstream close).
 func (s *JsonlStorage) Close(ctx context.Context) error {
 	s.mu.Lock()
@@ -326,6 +353,45 @@ func encodeJsonlCommit(prepared *PreparedCommit) (string, map[string]string, err
 			ordinal := addSidecar(jsonlSidecarFileName("task", write.Task.ID), jsonlSidecarPayload{Type: "task", Value: value})
 			id := write.Task.ID
 			mainWrites = append(mainWrites, jsonlMainOperation{Type: "task.sidecar", ID: &id, Ordinal: &ordinal})
+		case "document.create", "document.change":
+			if write.DocumentContent == nil {
+				return "", nil, fmt.Errorf("%s without content", write.Type)
+			}
+			var id Id
+			if write.Type == "document.create" {
+				if write.DocumentCreate == nil {
+					return "", nil, errors.New("document.create without a record")
+				}
+				id = write.DocumentCreate.ID
+			} else {
+				if write.DocumentID == nil {
+					return "", nil, errors.New("document.change without an id")
+				}
+				id = *write.DocumentID
+			}
+			content, err := json.Marshal(*write.DocumentContent)
+			if err != nil {
+				return "", nil, err
+			}
+			ordinal := addSidecar(jsonlSidecarFileName("doc", id), jsonlSidecarPayload{
+				Type: "document", ID: &id, Content: content,
+			})
+			operation := jsonlMainOperation{Type: write.Type, ID: &id, Ordinal: &ordinal}
+			if write.Type == "document.create" {
+				record, err := json.Marshal(*write.DocumentCreate)
+				if err != nil {
+					return "", nil, err
+				}
+				operation.Record = record
+			}
+			mainWrites = append(mainWrites, operation)
+		case "document.retire":
+			if write.DocumentID == nil {
+				return "", nil, errors.New("document.retire without an id")
+			}
+			mainWrites = append(mainWrites, jsonlMainOperation{Type: "document.retire", ID: write.DocumentID})
+		case "document.copy":
+			return "", nil, errors.New("unresolved document.copy write")
 		default:
 			return "", nil, fmt.Errorf("unknown storage write type: %s", write.Type)
 		}
@@ -417,13 +483,44 @@ func jsonlSidecarKey(file string, seq Id, ordinal int) string {
 // planReclamations decides which sidecars to drop or rewrite after a commit
 // (upstream planReclamations; documents are unsupported).
 func (s *JsonlStorage) planReclamations(writes []StorageWrite, sidecars map[string]string) map[string]string {
+	createdCurrentOnly := map[Id]bool{}
+	retired := map[Id]bool{}
+	baseDocuments := map[Id]bool{}
 	finalTasks := map[Id]*TaskRecord{}
 	for _, write := range writes {
-		if write.Type == "task" {
+		switch write.Type {
+		case "document.create":
+			if write.DocumentCreate != nil && isCurrentOnlyDocument(&DocumentRecord{Scope: write.DocumentCreate.Scope}) {
+				createdCurrentOnly[write.DocumentCreate.ID] = true
+			}
+		case "document.change":
+			if write.DocumentID != nil && write.DocumentContent != nil && write.DocumentContent.Kind == ContentBase {
+				baseDocuments[*write.DocumentID] = true
+			}
+		case "document.retire":
+			if write.DocumentID != nil {
+				retired[*write.DocumentID] = true
+			}
+		case "task":
 			finalTasks[write.Task.ID] = write.Task
 		}
 	}
+	isCurrentOnly := func(id Id) bool { return s.currentOnlyDocs[id] || createdCurrentOnly[id] }
 	replacements := map[string]string{}
+	for id := range retired {
+		if isCurrentOnly(id) {
+			replacements[jsonlSidecarFileName("doc", id)] = ""
+		}
+	}
+	for id := range baseDocuments {
+		if !isCurrentOnly(id) || retired[id] {
+			continue
+		}
+		file := jsonlSidecarFileName("doc", id)
+		if content := sidecars[file]; content != "" {
+			replacements[file] = content
+		}
+	}
 	for id, task := range finalTasks {
 		if task.State.Status == TaskTerminal && (s.liveTaskSidecars[id] || sidecars[jsonlSidecarFileName("task", id)] != "") {
 			replacements[jsonlSidecarFileName("task", id)] = ""
@@ -435,13 +532,18 @@ func (s *JsonlStorage) planReclamations(writes []StorageWrite, sidecars map[stri
 // adoptSidecarState records which tasks keep a live sidecar.
 func (s *JsonlStorage) adoptSidecarState(writes []StorageWrite) {
 	for _, write := range writes {
-		if write.Type != "task" {
-			continue
-		}
-		if write.Task.State.Status == TaskTerminal {
-			delete(s.liveTaskSidecars, write.Task.ID)
-		} else {
-			s.liveTaskSidecars[write.Task.ID] = true
+		switch write.Type {
+		case "task":
+			if write.Task.State.Status == TaskTerminal {
+				delete(s.liveTaskSidecars, write.Task.ID)
+			} else {
+				s.liveTaskSidecars[write.Task.ID] = true
+			}
+		case "document.create":
+			if write.DocumentCreate != nil &&
+				isCurrentOnlyDocument(&DocumentRecord{Scope: write.DocumentCreate.Scope}) {
+				s.currentOnlyDocs[write.DocumentCreate.ID] = true
+			}
 		}
 	}
 }
@@ -533,6 +635,10 @@ func (s *JsonlStorage) recover() error {
 		}
 	}
 
+	// The final state of every task and document address decides which sidecar
+	// records are optional (reclaimed) and which sidecars can be dropped.
+	currentOnlyDocuments := map[Id]bool{}
+	retiredDocuments := map[Id]bool{}
 	finalTaskIsLive := map[Id]bool{}
 	for _, line := range mainLines {
 		for _, operation := range line.value.Writes {
@@ -547,11 +653,25 @@ func (s *JsonlStorage) recover() error {
 				if operation.ID != nil {
 					finalTaskIsLive[*operation.ID] = true
 				}
-			case "document.retire", "document.create", "document.change":
-				return &JsonlCorruptionError{
-					Message: "JSONL document operations are not supported by this port (D186)",
+			case "document.create":
+				record, err := parseJsonlDocumentCreate(operation.Record)
+				if err != nil {
+					return err
+				}
+				if isCurrentOnlyDocument(&DocumentRecord{Scope: record.Scope}) {
+					currentOnlyDocuments[record.ID] = true
+				}
+			case "document.retire":
+				if operation.ID != nil {
+					retiredDocuments[*operation.ID] = true
 				}
 			}
+		}
+	}
+	retiredCurrentOnly := map[Id]bool{}
+	for id := range retiredDocuments {
+		if currentOnlyDocuments[id] {
+			retiredCurrentOnly[id] = true
 		}
 	}
 	terminalTasks := map[Id]bool{}
@@ -559,6 +679,53 @@ func (s *JsonlStorage) recover() error {
 		if !live {
 			terminalTasks[id] = true
 		}
+	}
+
+	// The newest stored base of a current-only document makes every earlier
+	// record optional: a reclaimed base is replaced by the marker's record.
+	latestBases := map[Id]jsonlSidecarRecord{}
+	for _, line := range mainLines {
+		for _, operation := range line.value.Writes {
+			var id Id
+			switch operation.Type {
+			case "document.create":
+				record, err := parseJsonlDocumentCreate(operation.Record)
+				if err != nil {
+					return err
+				}
+				id = record.ID
+			case "document.change":
+				if operation.ID == nil {
+					continue
+				}
+				id = *operation.ID
+			default:
+				continue
+			}
+			if !currentOnlyDocuments[id] || operation.Ordinal == nil {
+				continue
+			}
+			record, ok := recordByKey[jsonlSidecarKey(jsonlSidecarFileName("doc", id), line.value.Seq, *operation.Ordinal)]
+			if !ok || record.value.Payload.Type != "document" || record.value.Payload.ID == nil || *record.value.Payload.ID != id {
+				continue
+			}
+			var content DocumentContent
+			if err := json.Unmarshal(record.value.Payload.Content, &content); err != nil || content.Kind != ContentBase {
+				continue
+			}
+			previous, exists := latestBases[id]
+			if !exists || record.value.Seq > previous.Seq ||
+				(record.value.Seq == previous.Seq && record.value.Ordinal > previous.Ordinal) {
+				latestBases[id] = record.value
+			}
+		}
+	}
+	isBeforeLatestBase := func(id Id, seq Id, ordinal int) bool {
+		base, ok := latestBases[id]
+		if !ok {
+			return false
+		}
+		return seq < base.Seq || (seq == base.Seq && ordinal < base.Ordinal)
 	}
 
 	confirmed := map[string]bool{}
@@ -614,6 +781,58 @@ func (s *JsonlStorage) recover() error {
 				if !optional {
 					writes = append(writes, StorageWrite{Type: "task", Task: &value})
 				}
+			case "document.create", "document.change":
+				if operation.Ordinal == nil {
+					return &JsonlCorruptionError{Message: fmt.Sprintf("Invalid document write in commit %d", marker.Seq)}
+				}
+				var id Id
+				var record *DocumentCreate
+				if operation.Type == "document.create" {
+					parsed, err := parseJsonlDocumentCreate(operation.Record)
+					if err != nil {
+						return err
+					}
+					record = parsed
+					id = parsed.ID
+				} else {
+					if operation.ID == nil {
+						return &JsonlCorruptionError{Message: fmt.Sprintf("Invalid document change in commit %d", marker.Seq)}
+					}
+					id = *operation.ID
+				}
+				reclaimed := retiredCurrentOnly[id] || isBeforeLatestBase(id, marker.Seq, *operation.Ordinal)
+				sidecarRecord, err := confirmJsonlRecord(marker.Seq, *operation.Ordinal, jsonlSidecarFileName("doc", id), recordByKey, confirmed, reclaimed)
+				if err != nil {
+					return err
+				}
+				var content *DocumentContent
+				if sidecarRecord != nil {
+					if sidecarRecord.Payload.Type != "document" || sidecarRecord.Payload.ID == nil || *sidecarRecord.Payload.ID != id {
+						return &JsonlCorruptionError{Message: fmt.Sprintf("Confirmed document sidecar data does not match commit %d", marker.Seq)}
+					}
+					var decoded DocumentContent
+					if err := json.Unmarshal(sidecarRecord.Payload.Content, &decoded); err != nil {
+						return &JsonlCorruptionError{Message: fmt.Sprintf("Invalid document content in commit %d", marker.Seq), Cause: err}
+					}
+					content = &decoded
+				}
+				if operation.Type == "document.create" {
+					if content != nil && content.Kind != ContentBase {
+						return &JsonlCorruptionError{Message: fmt.Sprintf("Document creation lacks a confirmed base in commit %d", marker.Seq)}
+					}
+					use := DocumentContent{Version: 1, Kind: ContentBase, Value: json.RawMessage("{}")}
+					if !reclaimed && content != nil {
+						use = *content
+					}
+					writes = append(writes, StorageWrite{Type: "document.create", DocumentCreate: record, DocumentContent: &use})
+				} else if !reclaimed && content != nil {
+					writes = append(writes, StorageWrite{Type: "document.change", DocumentID: &id, DocumentContent: content})
+				}
+			case "document.retire":
+				if operation.ID == nil {
+					return &JsonlCorruptionError{Message: fmt.Sprintf("Invalid document retirement in commit %d", marker.Seq)}
+				}
+				writes = append(writes, StorageWrite{Type: "document.retire", DocumentID: operation.ID})
 			default:
 				return &JsonlCorruptionError{Message: fmt.Sprintf("Unknown write type in %s: %s", jsonlMainFile, operation.Type)}
 			}
@@ -625,8 +844,8 @@ func (s *JsonlStorage) recover() error {
 		prepared.Apply()
 	}
 
-	// Truncate unconfirmed sidecar tails and reclaim sidecars that the log no
-	// longer needs.
+	// Truncate unconfirmed sidecar tails and reclaim sidecars the log no longer
+	// needs.
 	reclamations := map[string]string{}
 	for file, lines := range parsedFiles {
 		unconfirmedAt := int64(-1)
@@ -649,8 +868,30 @@ func (s *JsonlStorage) recover() error {
 		}
 		id := sidecarIDSuffix(file)
 		var retained []string
-		if strings.HasPrefix(file, "task-") && id != nil && terminalTasks[*id] {
+		if id == nil {
+			continue
+		}
+		if strings.HasPrefix(file, "task-") && terminalTasks[*id] {
 			retained = []string{}
+		} else if strings.HasPrefix(file, "doc-") {
+			switch {
+			case retiredCurrentOnly[*id]:
+				retained = []string{}
+			case latestBases[*id].Payload.Type != "":
+				for _, line := range lines {
+					if !confirmed[jsonlSidecarKey(file, line.value.Seq, line.value.Ordinal)] {
+						continue
+					}
+					if isBeforeLatestBase(*id, line.value.Seq, line.value.Ordinal) {
+						continue
+					}
+					encoded, err := json.Marshal(line.value)
+					if err != nil {
+						return err
+					}
+					retained = append(retained, string(encoded)+"\n")
+				}
+			}
 		}
 		if retained != nil {
 			reclamations[file] = strings.Join(retained, "")
@@ -658,12 +899,24 @@ func (s *JsonlStorage) recover() error {
 	}
 	s.reclaimSidecars(reclamations)
 
+	for id := range currentOnlyDocuments {
+		s.currentOnlyDocs[id] = true
+	}
 	for id, live := range finalTaskIsLive {
 		if live {
 			s.liveTaskSidecars[id] = true
 		}
 	}
 	return nil
+}
+
+// parseJsonlDocumentCreate parses and validates a document.create record.
+func parseJsonlDocumentCreate(raw json.RawMessage) (*DocumentCreate, error) {
+	var record DocumentCreate
+	if err := json.Unmarshal(raw, &record); err != nil || record.ID < 1 {
+		return nil, &JsonlCorruptionError{Message: "Invalid document creation in " + jsonlMainFile}
+	}
+	return &record, nil
 }
 
 // confirmJsonlRecord marks one sidecar record as confirmed, requiring it unless
@@ -764,8 +1017,21 @@ func parseJsonlMainMarker(text []byte, line int) (jsonlMainMarker, error) {
 			if write.ID == nil || write.Ordinal == nil || *write.Ordinal < 0 {
 				return marker, &JsonlCorruptionError{Message: "Invalid task sidecar write in " + description}
 			}
-		case "document.retire", "document.create", "document.change":
-			return marker, &JsonlCorruptionError{Message: "JSONL document operations are not supported by this port (D186)"}
+		case "document.retire":
+			if write.ID == nil {
+				return marker, &JsonlCorruptionError{Message: "Invalid document retirement in " + description}
+			}
+		case "document.create":
+			if _, err := parseJsonlDocumentCreate(write.Record); err != nil {
+				return marker, &JsonlCorruptionError{Message: "Invalid document creation in " + description}
+			}
+			if write.Ordinal == nil || *write.Ordinal < 0 {
+				return marker, &JsonlCorruptionError{Message: "Invalid document creation in " + description}
+			}
+		case "document.change":
+			if write.ID == nil || write.Ordinal == nil || *write.Ordinal < 0 {
+				return marker, &JsonlCorruptionError{Message: "Invalid document change in " + description}
+			}
 		default:
 			return marker, &JsonlCorruptionError{Message: "Unknown write type in " + description}
 		}
@@ -791,7 +1057,22 @@ func parseJsonlSidecarRecord(text []byte, line int) (jsonlSidecarRecord, error) 
 			return record, &JsonlCorruptionError{Message: "Invalid live task record in " + description}
 		}
 	case "document":
-		return record, &JsonlCorruptionError{Message: "JSONL document operations are not supported by this port (D186)"}
+		if record.Payload.ID == nil {
+			return record, &JsonlCorruptionError{Message: "Invalid document record in " + description}
+		}
+		var content DocumentContent
+		if err := json.Unmarshal(record.Payload.Content, &content); err != nil {
+			return record, &JsonlCorruptionError{Message: "Invalid document content in " + description}
+		}
+		if content.Version < 1 || (content.Kind != ContentBase && content.Kind != ContentDelta) {
+			return record, &JsonlCorruptionError{Message: "Invalid document content in " + description}
+		}
+		if content.Kind == ContentBase && len(content.Value) == 0 {
+			return record, &JsonlCorruptionError{Message: "Invalid document content in " + description}
+		}
+		if content.Kind == ContentDelta && content.Ops == nil {
+			return record, &JsonlCorruptionError{Message: "Invalid document content in " + description}
+		}
 	default:
 		return record, &JsonlCorruptionError{Message: "Unknown sidecar record type in " + description}
 	}

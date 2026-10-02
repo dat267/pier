@@ -13,6 +13,8 @@ import (
 	"encoding/json"
 
 	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/chord/delta"
+	"strconv"
 )
 
 // Id is a session-global identifier shared by every durable record table.
@@ -189,15 +191,43 @@ type TaskRecord struct {
 	Memos map[string]json.RawMessage `json:"memos,omitempty"`
 }
 
-// Document scope kinds.
+// Document scope kinds (upstream DocumentRecord["scope"]["kind"]).
 const (
 	ScopeSession      = "session"
 	ScopeConversation = "conversation"
 	ScopeTask         = "task"
 )
 
+// Document history modes (conversation scope).
+const (
+	HistoryLatest     = "latest"
+	HistoryRewindable = "rewindable"
+)
+
+// Document fork modes (conversation scope).
+const (
+	ForkCurrent = "current"
+	ForkInitial = "initial"
+	ForkAsOf    = "asOf"
+)
+
+// DocumentScope is a document's ownership and lifetime. History and Fork are
+// set only for conversation scope (upstream nests them in the scope union).
+type DocumentScope struct {
+	// Kind is session, conversation, or task (see Scope* constants).
+	Kind string `json:"kind"`
+	// ConversationID applies to conversation-scoped documents.
+	ConversationID *Id `json:"conversationId,omitempty"`
+	// TaskID applies to task-scoped documents.
+	TaskID *Id `json:"taskId,omitempty"`
+	// History is "latest" or "rewindable" (conversation scope).
+	History *string `json:"history,omitempty"`
+	// Fork is "current" | "initial" | "asOf" (conversation scope).
+	Fork *string `json:"fork,omitempty"`
+}
+
 // DocumentRecord is the persisted lifecycle record for one create-to-retire
-// document incarnation.
+// document incarnation (upstream DocumentRecord).
 type DocumentRecord struct {
 	// ID is the unique incarnation ID; never reused when the same logical
 	// document is recreated.
@@ -211,28 +241,126 @@ type DocumentRecord struct {
 	// RetiredAt is the commit that retired the incarnation; absent while
 	// current.
 	RetiredAt *Seq `json:"retiredAt,omitempty"`
-	// Scope is session, conversation, or task (see Scope* constants).
-	Scope string `json:"scope"`
-	// ConversationID applies to conversation-scoped documents.
-	ConversationID *Id `json:"conversationId,omitempty"`
-	// TaskID applies to task-scoped documents.
-	TaskID *Id `json:"taskId,omitempty"`
-	// History is "latest" or "rewindable" (conversation scope).
-	History *string `json:"history,omitempty"`
-	// Fork is "current" | "initial" | "asOf" (conversation scope).
-	Fork *string `json:"fork,omitempty"`
+	// Scope carries the ownership and (for conversation documents) the history
+	// and fork behavior.
+	Scope DocumentScope `json:"scope"`
 }
 
-// DocumentCreate is the fields supplied when storage stamps a new document.
+// DocumentCreate is the fields supplied when storage stamps a new document
+// (upstream DocumentCreate: the record without its stamps).
 type DocumentCreate struct {
-	ID             Id      `json:"id"`
-	Kind           string  `json:"kind"`
-	Key            *string `json:"key,omitempty"`
-	Scope          string  `json:"scope"`
-	ConversationID *Id     `json:"conversationId,omitempty"`
-	TaskID         *Id     `json:"taskId,omitempty"`
-	History        *string `json:"history,omitempty"`
-	Fork           *string `json:"fork,omitempty"`
+	ID    Id            `json:"id"`
+	Kind  string        `json:"kind"`
+	Key   *string       `json:"key,omitempty"`
+	Scope DocumentScope `json:"scope"`
+}
+
+// Document content kinds.
+const (
+	ContentBase  = "base"
+	ContentDelta = "delta"
+)
+
+// DocumentContent is a complete checkpoint (base) or a chord operation batch
+// (delta). Ops hold the chord wire tuples (each delta.Op's Tuple()).
+type DocumentContent struct {
+	// Version is the stored definition version (positive).
+	Version int `json:"version"`
+	// Kind is ContentBase or ContentDelta.
+	Kind string `json:"kind"`
+	// Value is the base value; set for base content.
+	Value json.RawMessage `json:"value,omitempty"`
+	// Ops are the delta wire tuples; set for delta content.
+	Ops []any `json:"ops,omitempty"`
+}
+
+// BaseDocumentContent builds base content.
+func BaseDocumentContent(version int, value json.RawMessage) DocumentContent {
+	return DocumentContent{Version: version, Kind: ContentBase, Value: value}
+}
+
+// DeltaDocumentContent builds delta content from decoded chord operations.
+func DeltaDocumentContent(version int, ops []delta.Op) DocumentContent {
+	encoded := make([]any, 0, len(ops))
+	for _, op := range ops {
+		encoded = append(encoded, op.Tuple())
+	}
+	return DocumentContent{Version: version, Kind: ContentDelta, Ops: encoded}
+}
+
+// DecodedOps decodes the delta's chord operations, or nil for base content.
+func (c DocumentContent) DecodedOps() ([]delta.Op, error) {
+	if c.Kind != ContentDelta {
+		return nil, nil
+	}
+	wire := make([]delta.WireOp, 0, len(c.Ops))
+	for _, tuple := range c.Ops {
+		op, err := delta.ParseWireOp(tuple)
+		if err != nil {
+			return nil, err
+		}
+		wire = append(wire, op)
+	}
+	return delta.NewDecoder().Decode(wire)
+}
+
+// DocumentPoint selects current state or one historical commit sequence
+// (upstream DocumentPoint: Seq | "current").
+type DocumentPoint struct {
+	// Current selects the current incarnation.
+	Current bool
+	// Seq is the historical commit sequence when Current is false.
+	Seq Seq
+}
+
+// CurrentDocumentPoint selects current state.
+func CurrentDocumentPoint() DocumentPoint { return DocumentPoint{Current: true} }
+
+// DocumentPointAt selects one commit sequence.
+func DocumentPointAt(seq Seq) DocumentPoint { return DocumentPoint{Seq: seq} }
+
+// String renders the point (upstream's "current" | number).
+func (p DocumentPoint) String() string {
+	if p.Current {
+		return "current"
+	}
+	return strconv.FormatInt(int64(p.Seq), 10)
+}
+
+// DocumentAddress is the exact logical identity of a singleton or one keyed
+// family member.
+type DocumentAddress struct {
+	Kind  string
+	Scope DocumentScope
+	// Key absent selects the singleton; present selects one family member.
+	Key *string
+}
+
+// DocumentQuery is an ordered scan of document incarnations alive in one exact
+// scope at one point.
+type DocumentQuery struct {
+	Scope DocumentScope
+	At    DocumentPoint
+	// Kind filters the scan when set.
+	Kind *string
+}
+
+// DocumentCopySource is the exact persisted source of a definition-free copy.
+type DocumentCopySource struct {
+	ID Id
+	At DocumentPoint
+}
+
+// StoredDocument is a detached materialized value with its stored definition
+// version.
+type StoredDocument struct {
+	Record DocumentRecord
+	// Version is the stored definition version of the base that was read.
+	Version int
+	// Value is the materialized value.
+	Value json.RawMessage
+	// DeltasSinceBase counts the deltas replayed after the selected base.
+	DeltasSinceBase int
 }
 
 // Cursor is backend-owned JSON continuation state that callers only round-trip
@@ -270,16 +398,29 @@ type TaskQuery struct {
 	Background     *bool
 }
 
-// StorageWrite is one table mutation in an atomic storage commit. Task and
-// input writes replace whole records.
+// StorageWrite is one table or document mutation in an atomic storage commit.
+// Task and input writes replace whole records; document create/change/retire
+// write whole revisions.
 type StorageWrite struct {
-	// Type is "conversation" | "entry" | "task" | "input".
+	// Type is "conversation" | "entry" | "task" | "input" |
+	// "document.create" | "document.copy" | "document.change" |
+	// "document.retire".
 	Type string
 
 	Conversation *ConversationRecord
 	Entry        *EntryRecord
 	Task         *TaskRecord
 	Input        *Input
+
+	// DocumentID is the target of a document.change/retire write.
+	DocumentID *Id
+	// DocumentCreate is the record of a document.create/copy write.
+	DocumentCreate *DocumentCreate
+	// DocumentContent is the content of a document.create (base) or
+	// document.change write.
+	DocumentContent *DocumentContent
+	// DocumentSource is the copy source of a document.copy write.
+	DocumentSource *DocumentCopySource
 }
 
 // EntryCommit is one stored entry plus the commit that persisted it.
@@ -331,6 +472,17 @@ type Storage interface {
 	// InputByRequest finds an input by its conversation-scoped host
 	// deduplication key.
 	InputByRequest(ctx context.Context, conversationID Id, requestID string) (*Input, error)
+
+	// FindDocument returns the incarnation alive at the point for an exact
+	// address (upstream findDocument).
+	FindDocument(ctx context.Context, address DocumentAddress, at DocumentPoint) (*DocumentRecord, error)
+
+	// Document materializes one incarnation at the point (upstream document).
+	Document(ctx context.Context, id Id, at DocumentPoint) (*StoredDocument, error)
+
+	// ScanDocuments scans the incarnations alive in one scope at the point, in
+	// ascending id order (upstream scanDocuments).
+	ScanDocuments(ctx context.Context, query DocumentQuery, cursor Cursor, limit int) (Page[DocumentRecord], error)
 
 	// Close releases backend resources; all later operations must reject.
 	Close(ctx context.Context) error
