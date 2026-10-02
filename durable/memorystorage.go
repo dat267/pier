@@ -15,21 +15,21 @@ import (
 // validation.
 
 type memoryState struct {
-	recordTypes        map[Id]string
-	conversations      map[Id]*ConversationRecord
-	conversationIDs    []Id
-	entries            map[Id]*EntryRecord
-	entryIDs           map[Id][]Id
-	headEntryIDs       map[Id][]Id
-	entryCommitSeqs    map[Id]Seq
-	tasks              map[Id]*TaskRecord
-	taskIDs            []Id
-	taskIDsByStatus    map[string][]Id
-	inputs             map[Id]*Input
-	inputIDsByRequest  map[Id]map[string]Id
-	documents          map[Id]*storedDocumentState
-	documentAddresses  map[string]*documentAddressIndex
-	documentIDsByScope map[string][]Id
+	recordTypes            map[Id]string
+	conversations          map[Id]*ConversationRecord
+	conversationIDs        []Id
+	entries                map[Id]*EntryRecord
+	entryIDs               map[Id][]Id
+	headEntryIDs           map[Id][]Id
+	entryCommitSeqs        map[Id]Seq
+	tasks                  map[Id]*TaskRecord
+	taskIDs                []Id
+	taskIDsByStatus        map[string][]Id
+	submissions            map[Id]*SubmissionRecord
+	submissionIDsByRequest map[Id]map[string]Id
+	documents              map[Id]*storedDocumentState
+	documentAddresses      map[string]*documentAddressIndex
+	documentIDsByScope     map[string][]Id
 }
 
 // MemoryStorage is the in-memory reference storage.
@@ -46,19 +46,19 @@ type MemoryStorage struct {
 func NewMemoryStorage() *MemoryStorage {
 	return &MemoryStorage{
 		state: memoryState{
-			recordTypes:        map[Id]string{},
-			conversations:      map[Id]*ConversationRecord{},
-			entries:            map[Id]*EntryRecord{},
-			entryIDs:           map[Id][]Id{},
-			headEntryIDs:       map[Id][]Id{},
-			entryCommitSeqs:    map[Id]Seq{},
-			tasks:              map[Id]*TaskRecord{},
-			taskIDsByStatus:    map[string][]Id{TaskPending: {}, TaskRunning: {}, TaskTerminal: {}},
-			inputs:             map[Id]*Input{},
-			inputIDsByRequest:  map[Id]map[string]Id{},
-			documents:          map[Id]*storedDocumentState{},
-			documentAddresses:  map[string]*documentAddressIndex{},
-			documentIDsByScope: map[string][]Id{},
+			recordTypes:            map[Id]string{},
+			conversations:          map[Id]*ConversationRecord{},
+			entries:                map[Id]*EntryRecord{},
+			entryIDs:               map[Id][]Id{},
+			headEntryIDs:           map[Id][]Id{},
+			entryCommitSeqs:        map[Id]Seq{},
+			tasks:                  map[Id]*TaskRecord{},
+			taskIDsByStatus:        map[string][]Id{TaskPending: {}, TaskRunning: {}, TaskTerminal: {}},
+			submissions:            map[Id]*SubmissionRecord{},
+			submissionIDsByRequest: map[Id]map[string]Id{},
+			documents:              map[Id]*storedDocumentState{},
+			documentAddresses:      map[string]*documentAddressIndex{},
+			documentIDsByScope:     map[string][]Id{},
 		},
 		nextID:  2,
 		nextSeq: 1,
@@ -104,7 +104,7 @@ func cloneTask(value *TaskRecord) *TaskRecord {
 	return cloneValue(value)
 }
 
-func cloneInput(value *Input) *Input {
+func cloneSubmission(value *SubmissionRecord) *SubmissionRecord {
 	if value == nil {
 		return nil
 	}
@@ -184,8 +184,8 @@ func (s *MemoryStorage) tableContaining(id Id) string {
 	if _, ok := s.state.tasks[id]; ok {
 		return "task"
 	}
-	if _, ok := s.state.inputs[id]; ok {
-		return "input"
+	if _, ok := s.state.submissions[id]; ok {
+		return "submission"
 	}
 	if _, ok := s.state.documents[id]; ok {
 		return "document"
@@ -261,7 +261,7 @@ func (s *MemoryStorage) prepareCommitAt(writes []StorageWrite, seq Seq) (*Prepar
 	}
 	for _, write := range resolved {
 		switch write.Type {
-		case "conversation", "entry", "task", "input", "document.create":
+		case "conversation", "entry", "task", "submission", "document.create":
 			continue
 		case "document.change", "document.retire":
 			continue
@@ -307,24 +307,24 @@ func (p *PreparedCommit) Apply() Seq {
 			}
 			s.state.tasks[value.ID] = value
 			s.bumpNextID(value.ID)
-		case "input":
-			value := write.Input
-			if previous, ok := s.state.inputs[value.ID]; ok && previous.RequestID != nil {
-				if requests := s.state.inputIDsByRequest[previous.ConversationID]; requests != nil {
+		case "submission":
+			value := write.Submission
+			if previous, ok := s.state.submissions[value.ID]; ok && previous.RequestID != nil {
+				if requests := s.state.submissionIDsByRequest[previous.ConversationID]; requests != nil {
 					if requests[*previous.RequestID] == value.ID {
 						delete(requests, *previous.RequestID)
 						if len(requests) == 0 {
-							delete(s.state.inputIDsByRequest, previous.ConversationID)
+							delete(s.state.submissionIDsByRequest, previous.ConversationID)
 						}
 					}
 				}
 			}
-			s.state.inputs[value.ID] = value
+			s.state.submissions[value.ID] = value
 			if value.RequestID != nil {
-				requests := s.state.inputIDsByRequest[value.ConversationID]
+				requests := s.state.submissionIDsByRequest[value.ConversationID]
 				if requests == nil {
 					requests = map[string]Id{}
-					s.state.inputIDsByRequest[value.ConversationID] = requests
+					s.state.submissionIDsByRequest[value.ConversationID] = requests
 				}
 				requests[*value.RequestID] = value.ID
 			}
@@ -358,8 +358,8 @@ func cloneWrite(write StorageWrite) StorageWrite {
 		return StorageWrite{Type: write.Type, Entry: cloneEntry(write.Entry)}
 	case "task":
 		return StorageWrite{Type: write.Type, Task: cloneTask(write.Task)}
-	case "input":
-		return StorageWrite{Type: write.Type, Input: cloneInput(write.Input)}
+	case "submission":
+		return StorageWrite{Type: write.Type, Submission: cloneSubmission(write.Submission)}
 	case "document.create", "document.copy":
 		cloned := StorageWrite{
 			Type:           write.Type,
@@ -576,24 +576,25 @@ func (s *MemoryStorage) ScanTasks(ctx context.Context, query TaskQuery, cursor C
 	return pageOf(values, limit, func(value TaskRecord) Id { return value.ID }), nil
 }
 
-// Input looks up one input.
-func (s *MemoryStorage) Input(ctx context.Context, id Id) (*Input, error) {
+// Submission looks up one submission.
+func (s *MemoryStorage) Submission(ctx context.Context, id Id) (*SubmissionRecord, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.assertOpen(); err != nil {
 		return nil, err
 	}
-	return cloneInput(s.state.inputs[id]), nil
+	return cloneSubmission(s.state.submissions[id]), nil
 }
 
-// InputByRequest finds an input by its conversation-scoped request key.
-func (s *MemoryStorage) InputByRequest(ctx context.Context, conversationID Id, requestID string) (*Input, error) {
+// SubmissionByRequest finds a submission by its conversation-scoped request
+// key.
+func (s *MemoryStorage) SubmissionByRequest(ctx context.Context, conversationID Id, requestID string) (*SubmissionRecord, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.assertOpen(); err != nil {
 		return nil, err
 	}
-	requests := s.state.inputIDsByRequest[conversationID]
+	requests := s.state.submissionIDsByRequest[conversationID]
 	if requests == nil {
 		return nil, nil
 	}
@@ -601,7 +602,7 @@ func (s *MemoryStorage) InputByRequest(ctx context.Context, conversationID Id, r
 	if !ok {
 		return nil, nil
 	}
-	return cloneInput(s.state.inputs[id]), nil
+	return cloneSubmission(s.state.submissions[id]), nil
 }
 
 // Close releases the storage; later operations reject.
@@ -697,8 +698,8 @@ func writeID(write StorageWrite) Id {
 		return write.Entry.ID
 	case "task":
 		return write.Task.ID
-	case "input":
-		return write.Input.ID
+	case "submission":
+		return write.Submission.ID
 	default:
 		return 0
 	}

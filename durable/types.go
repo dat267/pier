@@ -104,31 +104,63 @@ type EntryDraft struct {
 	Edits    []ContextEdit `json:"edits,omitempty"`
 }
 
-// Input lifecycle statuses.
+// Submission record types and lifecycle statuses (upstream SubmissionRecord).
 const (
-	InputQueued     = "queued"
-	InputPlaced     = "placed"
-	InputDone       = "done"
-	InputUnanswered = "unanswered"
+	SubmissionTypeInput = "input"
+	SubmissionTypeWrite = "write"
 )
 
-// Input is the durable lifecycle of one admitted host input.
-type Input struct {
+// Submission lifecycle statuses.
+const (
+	SubmissionQueued     = "queued"
+	SubmissionPlaced     = "placed"
+	SubmissionDone       = "done"
+	SubmissionUnanswered = "unanswered"
+)
+
+// SubmissionRecord is the durable lifecycle of one admitted user input or
+// passive entry write (upstream SubmissionRecord).
+type SubmissionRecord struct {
 	ID             Id `json:"id"`
 	ConversationID Id `json:"conversationId"`
+	// Type is "input" or "write".
+	Type string `json:"type"`
 	// RequestID is the host-provided deduplication key, scoped to the
 	// conversation.
 	RequestID *string `json:"requestId,omitempty"`
 	// Status is one of queued/placed/done/unanswered.
 	Status string `json:"status"`
-	// Entry is the user transcript entry created when this input was placed
-	// (placed/done/unanswered).
+	// Entry is the user transcript entry created when this submission was
+	// placed (placed/done/unanswered).
 	Entry *Id `json:"entry,omitempty"`
 	// Answer is the assistant answer entry (done, absent for passive writes).
 	Answer *Id `json:"answer,omitempty"`
 	// Reason is a stable machine-readable explanation ("aborted", "stale").
 	Reason *string `json:"reason,omitempty"`
 	// Detail is optional structured diagnostic data.
+	Detail json.RawMessage `json:"detail,omitempty"`
+}
+
+// SubmissionCreate is a submission record before the Session assigns an id
+// (upstream SubmissionCreate).
+type SubmissionCreate struct {
+	ConversationID Id              `json:"conversationId"`
+	Type           string          `json:"type"`
+	RequestID      *string         `json:"requestId,omitempty"`
+	Status         string          `json:"status"`
+	Entry          *Id             `json:"entry,omitempty"`
+	Answer         *Id             `json:"answer,omitempty"`
+	Reason         *string         `json:"reason,omitempty"`
+	Detail         json.RawMessage `json:"detail,omitempty"`
+}
+
+// SubmissionSettlement is the terminal status staged for a submission
+// (upstream SubmissionSettlement): done with an answer, or unanswered with a
+// reason.
+type SubmissionSettlement struct {
+	Status string          `json:"status"`
+	Answer *Id             `json:"answer,omitempty"`
+	Reason *string         `json:"reason,omitempty"`
 	Detail json.RawMessage `json:"detail,omitempty"`
 }
 
@@ -402,7 +434,7 @@ type TaskQuery struct {
 // Task and input writes replace whole records; document create/change/retire
 // write whole revisions.
 type StorageWrite struct {
-	// Type is "conversation" | "entry" | "task" | "input" |
+	// Type is "conversation" | "entry" | "task" | "submission" |
 	// "document.create" | "document.copy" | "document.change" |
 	// "document.retire".
 	Type string
@@ -410,7 +442,7 @@ type StorageWrite struct {
 	Conversation *ConversationRecord
 	Entry        *EntryRecord
 	Task         *TaskRecord
-	Input        *Input
+	Submission   *SubmissionRecord
 
 	// DocumentID is the target of a document.change/retire write.
 	DocumentID *Id
@@ -466,12 +498,13 @@ type Storage interface {
 	// ScanTasks scans task records matching every supplied filter.
 	ScanTasks(ctx context.Context, query TaskQuery, cursor Cursor, limit int) (Page[TaskRecord], error)
 
-	// Input looks up the latest complete record for one admitted input.
-	Input(ctx context.Context, id Id) (*Input, error)
+	// Submission looks up the latest complete record for one admitted
+	// submission.
+	Submission(ctx context.Context, id Id) (*SubmissionRecord, error)
 
-	// InputByRequest finds an input by its conversation-scoped host
+	// SubmissionByRequest finds a submission by its conversation-scoped host
 	// deduplication key.
-	InputByRequest(ctx context.Context, conversationID Id, requestID string) (*Input, error)
+	SubmissionByRequest(ctx context.Context, conversationID Id, requestID string) (*SubmissionRecord, error)
 
 	// FindDocument returns the incarnation alive at the point for an exact
 	// address (upstream findDocument).

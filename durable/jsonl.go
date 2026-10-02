@@ -205,20 +205,21 @@ func (s *JsonlStorage) ScanTasks(ctx context.Context, query TaskQuery, cursor Cu
 	return s.memory.ScanTasks(ctx, query, cursor, limit)
 }
 
-// Input looks up one input.
-func (s *JsonlStorage) Input(ctx context.Context, id Id) (*Input, error) {
+// Submission looks up one submission.
+func (s *JsonlStorage) Submission(ctx context.Context, id Id) (*SubmissionRecord, error) {
 	if err := s.assertUsable(); err != nil {
 		return nil, err
 	}
-	return s.memory.Input(ctx, id)
+	return s.memory.Submission(ctx, id)
 }
 
-// InputByRequest finds an input by its conversation-scoped request key.
-func (s *JsonlStorage) InputByRequest(ctx context.Context, conversationID Id, requestID string) (*Input, error) {
+// SubmissionByRequest finds a submission by its conversation-scoped request
+// key.
+func (s *JsonlStorage) SubmissionByRequest(ctx context.Context, conversationID Id, requestID string) (*SubmissionRecord, error) {
 	if err := s.assertUsable(); err != nil {
 		return nil, err
 	}
-	return s.memory.InputByRequest(ctx, conversationID, requestID)
+	return s.memory.SubmissionByRequest(ctx, conversationID, requestID)
 }
 
 // FindDocument returns the incarnation alive at the point for an exact address.
@@ -325,16 +326,12 @@ func encodeJsonlCommit(prepared *PreparedCommit) (string, map[string]string, err
 	}
 	for _, write := range prepared.Writes {
 		switch write.Type {
-		case "conversation", "input":
+		case "conversation", "submission":
 			value, err := json.Marshal(writeValue(write))
 			if err != nil {
 				return "", nil, err
 			}
-			wireType := write.Type
-			if wireType == "input" {
-				wireType = "submission"
-			}
-			mainWrites = append(mainWrites, jsonlMainOperation{Type: wireType, Value: value})
+			mainWrites = append(mainWrites, jsonlMainOperation{Type: write.Type, Value: value})
 		case "entry":
 			value, err := json.Marshal(write.Entry)
 			if err != nil {
@@ -418,10 +415,10 @@ func encodeJsonlCommit(prepared *PreparedCommit) (string, map[string]string, err
 	return string(encodedMarker) + "\n", sidecars, nil
 }
 
-// writeValue is the persisted value of a conversation/input write.
+// writeValue is the persisted value of a conversation/submission write.
 func writeValue(write StorageWrite) any {
-	if write.Type == "input" {
-		return write.Input
+	if write.Type == "submission" {
+		return write.Submission
 	}
 	return write.Conversation
 }
@@ -750,11 +747,11 @@ func (s *JsonlStorage) recover() error {
 				}
 				writes = append(writes, StorageWrite{Type: "entry", Entry: &value})
 			case "submission":
-				var value Input
+				var value SubmissionRecord
 				if err := json.Unmarshal(operation.Value, &value); err != nil {
 					return &JsonlCorruptionError{Message: fmt.Sprintf("Invalid submission write in commit %d", marker.Seq), Cause: err}
 				}
-				writes = append(writes, StorageWrite{Type: "input", Input: &value})
+				writes = append(writes, StorageWrite{Type: "submission", Submission: &value})
 			case "task":
 				var value TaskRecord
 				if err := json.Unmarshal(operation.Value, &value); err != nil {

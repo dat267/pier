@@ -55,8 +55,9 @@ func NewSqliteStorage(db *sql.DB) (*SqliteStorage, error) {
 }
 
 // sqliteMigrations mirrors upstream migrations.ts: one migration, contiguous
-// version 1. `submissions.request_id`/`status` carry the port's Input
-// lifecycle; upstream's task-status CHECK matches the port's states.
+// version 1. `submissions.request_id`/`status` carry the submission lifecycle
+// (the record's own JSON carries its type); upstream's task-status CHECK
+// matches the port's states.
 const sqliteInitialSchema = `
 CREATE TABLE durable_metadata (
 	singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
@@ -260,8 +261,8 @@ func (s *SqliteStorage) Commit(ctx context.Context, writes []StorageWrite) (Seq,
 		// commit), so they are collected and handled after the table writes.
 		case "document.create", "document.copy", "document.change", "document.retire":
 			continue
-		case "input":
-			value := write.Input
+		case "submission":
+			value := write.Submission
 			record, err := marshalJSONValue(value)
 			if err != nil {
 				return 0, err
@@ -311,13 +312,10 @@ func (s *SqliteStorage) Commit(ctx context.Context, writes []StorageWrite) (Seq,
 	return Seq(nextSeq), nil
 }
 
-// recordTypeOf maps the port's write type to the storage table's record
-// type (the port calls submissions "input"; the document write kinds share
-// one record type).
+// recordTypeOf maps the write type to the storage table's record type (the
+// document write kinds share one record type).
 func recordTypeOf(write StorageWrite) string {
 	switch write.Type {
-	case "input":
-		return "submission"
 	case "document.create", "document.copy", "document.change", "document.retire":
 		return "document"
 	}
@@ -682,8 +680,8 @@ func (s *SqliteStorage) ScanTasks(ctx context.Context, query TaskQuery, cursor C
 	return pageOf(values, limit, func(value TaskRecord) Id { return value.ID }), nil
 }
 
-// Input looks up the latest record for one input.
-func (s *SqliteStorage) Input(ctx context.Context, id Id) (*Input, error) {
+// Submission looks up the latest record for one submission.
+func (s *SqliteStorage) Submission(ctx context.Context, id Id) (*SubmissionRecord, error) {
 	if err := s.assertOpen(); err != nil {
 		return nil, err
 	}
@@ -695,12 +693,12 @@ func (s *SqliteStorage) Input(ctx context.Context, id Id) (*Input, error) {
 	if err != nil {
 		return nil, err
 	}
-	return unmarshalRecord[Input](record)
+	return unmarshalRecord[SubmissionRecord](record)
 }
 
-// InputByRequest finds an input by its conversation-scoped deduplication
-// key.
-func (s *SqliteStorage) InputByRequest(ctx context.Context, conversationID Id, requestID string) (*Input, error) {
+// SubmissionByRequest finds a submission by its conversation-scoped
+// deduplication key.
+func (s *SqliteStorage) SubmissionByRequest(ctx context.Context, conversationID Id, requestID string) (*SubmissionRecord, error) {
 	if err := s.assertOpen(); err != nil {
 		return nil, err
 	}
@@ -714,7 +712,7 @@ func (s *SqliteStorage) InputByRequest(ctx context.Context, conversationID Id, r
 	if err != nil {
 		return nil, err
 	}
-	return unmarshalRecord[Input](record)
+	return unmarshalRecord[SubmissionRecord](record)
 }
 
 // Close releases the backend; later operations reject.

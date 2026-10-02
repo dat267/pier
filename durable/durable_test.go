@@ -106,7 +106,7 @@ func testImmutableIDOwnership(t *testing.T, storage Storage) {
 	// Two record types for one id in one batch fails.
 	if _, err := storage.Commit(context.Background(), []StorageWrite{
 		{Type: "task", Task: &TaskRecord{ID: 7, State: TaskState{Status: TaskPending}}},
-		{Type: "input", Input: &Input{ID: 7, Status: InputQueued}},
+		{Type: "submission", Submission: &SubmissionRecord{ID: 7, Type: SubmissionTypeInput, Status: SubmissionQueued}},
 	}); err == nil || !strings.Contains(err.Error(), "two record types") {
 		t.Fatalf("err = %v", err)
 	}
@@ -311,41 +311,41 @@ func testTaskScanningAndStatusIndex(t *testing.T, storage Storage) {
 	}
 }
 
-func testInputLifecycleAndDeduplication(t *testing.T, storage Storage) {
-	mustCommit(t, storage, StorageWrite{Type: "input", Input: &Input{
-		ID: 2, ConversationID: 10, RequestID: strPtr("req-1"), Status: InputQueued,
+func testSubmissionLifecycleAndDeduplication(t *testing.T, storage Storage) {
+	mustCommit(t, storage, StorageWrite{Type: "submission", Submission: &SubmissionRecord{
+		ID: 2, ConversationID: 10, Type: SubmissionTypeInput, RequestID: strPtr("req-1"), Status: SubmissionQueued,
 	}})
 	// The request key dedupes within the conversation.
-	found, err := storage.InputByRequest(context.Background(), 10, "req-1")
-	if err != nil || found == nil || found.ID != 2 || found.Status != InputQueued {
+	found, err := storage.SubmissionByRequest(context.Background(), 10, "req-1")
+	if err != nil || found == nil || found.ID != 2 || found.Status != SubmissionQueued || found.Type != SubmissionTypeInput {
 		t.Fatalf("found = %+v, %v", found, err)
 	}
-	if missing, _ := storage.InputByRequest(context.Background(), 10, "nope"); missing != nil {
+	if missing, _ := storage.SubmissionByRequest(context.Background(), 10, "nope"); missing != nil {
 		t.Fatal("unknown request must be nil")
 	}
-	if missing, _ := storage.InputByRequest(context.Background(), 11, "req-1"); missing != nil {
+	if missing, _ := storage.SubmissionByRequest(context.Background(), 11, "req-1"); missing != nil {
 		t.Fatal("request keys are conversation-scoped")
 	}
 
 	// Advancing the lifecycle replaces the whole record.
-	mustCommit(t, storage, StorageWrite{Type: "input", Input: &Input{
-		ID: 2, ConversationID: 10, RequestID: strPtr("req-1"), Status: InputPlaced, Entry: idPtr(20),
+	mustCommit(t, storage, StorageWrite{Type: "submission", Submission: &SubmissionRecord{
+		ID: 2, ConversationID: 10, Type: SubmissionTypeInput, RequestID: strPtr("req-1"), Status: SubmissionPlaced, Entry: idPtr(20),
 	}})
-	found, _ = storage.Input(context.Background(), 2)
-	if found.Status != InputPlaced || found.Entry == nil || *found.Entry != 20 {
-		t.Fatalf("input = %+v", found)
+	found, _ = storage.Submission(context.Background(), 2)
+	if found.Status != SubmissionPlaced || found.Entry == nil || *found.Entry != 20 {
+		t.Fatalf("submission = %+v", found)
 	}
 
 	// A replacement that drops the request key clears the index.
-	mustCommit(t, storage, StorageWrite{Type: "input", Input: &Input{
-		ID: 2, ConversationID: 10, Status: InputUnanswered, Reason: strPtr("aborted"),
+	mustCommit(t, storage, StorageWrite{Type: "submission", Submission: &SubmissionRecord{
+		ID: 2, ConversationID: 10, Type: SubmissionTypeInput, Status: SubmissionUnanswered, Reason: strPtr("aborted"),
 	}})
-	if cleared, _ := storage.InputByRequest(context.Background(), 10, "req-1"); cleared != nil {
+	if cleared, _ := storage.SubmissionByRequest(context.Background(), 10, "req-1"); cleared != nil {
 		t.Fatalf("request index not cleared: %+v", cleared)
 	}
-	found, _ = storage.Input(context.Background(), 2)
+	found, _ = storage.Submission(context.Background(), 2)
 	if found.Reason == nil || *found.Reason != "aborted" {
-		t.Fatalf("input = %+v", found)
+		t.Fatalf("submission = %+v", found)
 	}
 }
 
@@ -408,11 +408,11 @@ func testCloseRejectsEveryOperation(t *testing.T, storage Storage) {
 	if _, err := storage.ScanTasks(ctx, TaskQuery{}, nil, 1); err == nil {
 		t.Fatal("scanTasks must reject")
 	}
-	if _, err := storage.Input(ctx, 1); err == nil {
-		t.Fatal("input must reject")
+	if _, err := storage.Submission(ctx, 1); err == nil {
+		t.Fatal("submission must reject")
 	}
-	if _, err := storage.InputByRequest(ctx, 1, "x"); err == nil {
-		t.Fatal("inputByRequest must reject")
+	if _, err := storage.SubmissionByRequest(ctx, 1, "x"); err == nil {
+		t.Fatal("submissionByRequest must reject")
 	}
 }
 
@@ -471,9 +471,9 @@ func TestTaskScanningAndStatusIndex(t *testing.T) {
 }
 
 func TestInputLifecycleAndDeduplication(t *testing.T) {
-	t.Run("memory", func(t *testing.T) { testInputLifecycleAndDeduplication(t, NewMemoryStorage()) })
-	t.Run("jsonl", func(t *testing.T) { testInputLifecycleAndDeduplication(t, newJsonlStorageConformance(t)) })
-	t.Run("sqlite", func(t *testing.T) { testInputLifecycleAndDeduplication(t, newSqliteStorageConformance(t)) })
+	t.Run("memory", func(t *testing.T) { testSubmissionLifecycleAndDeduplication(t, NewMemoryStorage()) })
+	t.Run("jsonl", func(t *testing.T) { testSubmissionLifecycleAndDeduplication(t, newJsonlStorageConformance(t)) })
+	t.Run("sqlite", func(t *testing.T) { testSubmissionLifecycleAndDeduplication(t, newSqliteStorageConformance(t)) })
 }
 
 func TestDetachedValues(t *testing.T) {
@@ -486,4 +486,31 @@ func TestCloseRejectsEveryOperation(t *testing.T) {
 	t.Run("memory", func(t *testing.T) { testCloseRejectsEveryOperation(t, NewMemoryStorage()) })
 	t.Run("jsonl", func(t *testing.T) { testCloseRejectsEveryOperation(t, newJsonlStorageConformance(t)) })
 	t.Run("sqlite", func(t *testing.T) { testCloseRejectsEveryOperation(t, newSqliteStorageConformance(t)) })
+}
+
+// TestSubmissionJSONShape pins the persisted submission shape to upstream
+// SubmissionRecord: the record carries its own `type`, mirroring the JSON a
+// storage backend writes.
+func TestSubmissionJSONShape(t *testing.T) {
+	answer := Id(21)
+	record := SubmissionRecord{
+		ID: 2, ConversationID: 10, Type: SubmissionTypeInput, RequestID: strPtr("req-1"),
+		Status: SubmissionDone, Entry: idPtr(20), Answer: &answer,
+	}
+	encoded, err := marshalJSONValue(record)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `{"id":2,"conversationId":10,"type":"input","requestId":"req-1","status":"done","entry":20,"answer":21}`
+	if encoded != want {
+		t.Fatalf("json = %s, want %s", encoded, want)
+	}
+	// A passive write carries its own type and has no answer.
+	write, err := marshalJSONValue(SubmissionRecord{ID: 3, ConversationID: 10, Type: SubmissionTypeWrite, Status: SubmissionQueued})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if write != `{"id":3,"conversationId":10,"type":"write","status":"queued"}` {
+		t.Fatalf("write json = %s", write)
+	}
 }

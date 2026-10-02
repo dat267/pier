@@ -127,6 +127,10 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   `tool_search` exposure, `/mcp` sign-in and status UI, resource reads, and a
   durable OAuth store).
 - `durable`: the port's Storage surface (conversation/entry/task/submission)
+  uses upstream's submission record shape (`SubmissionRecord` with its own
+  `type`, `SubmissionCreate`/`SubmissionSettlement`, `submission`/
+  `submissionByRequest` and the `submission` write kind; the earlier port
+  called these records "inputs" and omitted the type) and
   now has a SQLite backend on modernc.org/sqlite (user-approved dependency;
   the upstream sqlite migrations run verbatim and the Storage suite runs as
   a memory/sqlite conformance pair). The jsonl backend, document storage, and

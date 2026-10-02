@@ -21,8 +21,8 @@ func TestJsonlLogFormat(t *testing.T) {
 	defer func() { _ = storage.Close(context.Background()) }()
 
 	mustCommit(t, storage, conversationWrite(2))
-	mustCommit(t, storage, StorageWrite{Type: "input", Input: &Input{
-		ID: 3, ConversationID: 2, RequestID: strPtr("req-1"), Status: InputQueued,
+	mustCommit(t, storage, StorageWrite{Type: "submission", Submission: &SubmissionRecord{
+		ID: 3, ConversationID: 2, Type: SubmissionTypeInput, RequestID: strPtr("req-1"), Status: SubmissionQueued,
 	}})
 	mustCommit(t, storage, StorageWrite{Type: "task", Task: &TaskRecord{
 		ID: 4, ConversationID: 2, Kind: "t", State: TaskState{Status: TaskRunning},
@@ -79,8 +79,8 @@ func TestJsonlReopenReplaysCommits(t *testing.T) {
 	mustCommit(t, storage, StorageWrite{Type: "task", Task: &TaskRecord{
 		ID: 4, ConversationID: 2, Kind: "t", State: TaskState{Status: TaskRunning},
 	}})
-	mustCommit(t, storage, StorageWrite{Type: "input", Input: &Input{
-		ID: 5, ConversationID: 2, RequestID: strPtr("req-1"), Status: InputPlaced, Entry: idPtr(10),
+	mustCommit(t, storage, StorageWrite{Type: "submission", Submission: &SubmissionRecord{
+		ID: 5, ConversationID: 2, Type: SubmissionTypeInput, RequestID: strPtr("req-1"), Status: SubmissionPlaced, Entry: idPtr(10),
 	}})
 	if err := storage.Close(context.Background()); err != nil {
 		t.Fatal(err)
@@ -103,9 +103,9 @@ func TestJsonlReopenReplaysCommits(t *testing.T) {
 	if err != nil || task == nil || task.State.Status != TaskRunning {
 		t.Fatalf("task = %+v err=%v", task, err)
 	}
-	input, err := reopened.InputByRequest(context.Background(), 2, "req-1")
-	if err != nil || input == nil || input.ID != 5 || input.Entry == nil || *input.Entry != 10 {
-		t.Fatalf("input = %+v err=%v", input, err)
+	submission, err := reopened.SubmissionByRequest(context.Background(), 2, "req-1")
+	if err != nil || submission == nil || submission.ID != 5 || submission.Entry == nil || *submission.Entry != 10 {
+		t.Fatalf("submission = %+v err=%v", submission, err)
 	}
 	// A new commit continues the sequence.
 	if seq := mustCommit(t, reopened, conversationWrite(20)); seq != 5 {
