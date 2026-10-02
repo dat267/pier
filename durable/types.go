@@ -28,6 +28,11 @@ type Seq = int64
 // RootConversationID is the reserved ID of the root conversation.
 const RootConversationID Id = 1
 
+// MaxSafeInteger is the largest identifier the reference can mint: ids are
+// JSON numbers, so a value above the double-precision safe-integer range would
+// not round-trip (upstream Number.MAX_SAFE_INTEGER).
+const MaxSafeInteger Id = 9007199254740991
+
 // StoredError is a JSON-safe error snapshot persisted instead of a runtime
 // error object.
 type StoredError struct {
@@ -435,6 +440,15 @@ type ConversationQuery struct {
 	OwnerTaskID *Id
 }
 
+// SubmissionQuery filters an ordered scan of submissions (upstream
+// SubmissionQuery).
+type SubmissionQuery struct {
+	// ConversationID filters by the submission's conversation.
+	ConversationID *Id
+	// Status filters by lifecycle status.
+	Status *string
+}
+
 // EntryQuery is the inclusive id bounds for a newest-first scan of one
 // conversation's fork-aware history.
 type EntryQuery struct {
@@ -526,6 +540,10 @@ type Storage interface {
 	// Submission looks up the latest complete record for one admitted
 	// submission.
 	Submission(ctx context.Context, id Id) (*SubmissionRecord, error)
+
+	// ScanSubmissions scans submissions matching the query in ascending id
+	// order.
+	ScanSubmissions(ctx context.Context, query SubmissionQuery, cursor Cursor, limit int) (Page[SubmissionRecord], error)
 
 	// SubmissionByRequest finds a submission by its conversation-scoped host
 	// deduplication key.

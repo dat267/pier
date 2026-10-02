@@ -205,6 +205,14 @@ func (s *JsonlStorage) ScanTasks(ctx context.Context, query TaskQuery, cursor Cu
 	return s.memory.ScanTasks(ctx, query, cursor, limit)
 }
 
+// ScanSubmissions scans submissions matching the query.
+func (s *JsonlStorage) ScanSubmissions(ctx context.Context, query SubmissionQuery, cursor Cursor, limit int) (Page[SubmissionRecord], error) {
+	if err := s.assertUsable(); err != nil {
+		return Page[SubmissionRecord]{}, err
+	}
+	return s.memory.ScanSubmissions(ctx, query, cursor, limit)
+}
+
 // Submission looks up one submission.
 func (s *JsonlStorage) Submission(ctx context.Context, id Id) (*SubmissionRecord, error) {
 	if err := s.assertUsable(); err != nil {

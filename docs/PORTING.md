@@ -147,7 +147,14 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   snapshots and as-of snapshots, document states and exact-frame watches
   attached to committed incarnations with version-aware operations, commit and
   close listeners, post-admission poisoning, and `unloadDocuments`. Still
-  unported: the harness/tools and the upstream conformance runner.
+  unported: the harness/tools and the remaining upstream conformance cases.
+  `ScanSubmissions` (`SubmissionQuery` by conversation and status) is ported;
+  the storage conformance suite from `testing/storage-conformance.ts` is
+  replayed in Go for the cases the port needs (entry ordering and cursors,
+  conversation owner filters and paging, complete task replacement and status
+  scans including waiting/completing, submission request indexing and passive
+  writes, exact-scope document address scans with prototype-like keys, the
+  global ID namespace and exhausted minting at Number.MAX_SAFE_INTEGER).
 - `coding`: the remote catalog merge is linear (`c34f2d6ad`); the branch model
   resolution still walks its branch per submission (`a0660b174` is inside
   upstream's `virtual-models.ts`, which the port has not ported yet). Dynamic

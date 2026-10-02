@@ -358,6 +358,9 @@ func (s *SqliteStorage) MintID(ctx context.Context) (Id, error) {
 	if err != nil {
 		return 0, err
 	}
+	if mintedID > MaxSafeInteger {
+		return 0, fmt.Errorf("ID space is exhausted")
+	}
 	if _, err := tx.ExecContext(ctx, "UPDATE durable_metadata SET next_id = ? WHERE singleton = 1", formatMetadataID(mintedID+1)); err != nil {
 		return 0, err
 	}
@@ -690,6 +693,59 @@ func (s *SqliteStorage) ScanTasks(ctx context.Context, query TaskQuery, cursor C
 		return Page[TaskRecord]{}, err
 	}
 	return pageOf(values, limit, func(value TaskRecord) Id { return value.ID }), nil
+}
+
+// ScanSubmissions scans submissions matching the query in ascending id order.
+func (s *SqliteStorage) ScanSubmissions(ctx context.Context, filter SubmissionQuery, cursor Cursor, limit int) (Page[SubmissionRecord], error) {
+	if err := s.assertOpen(); err != nil {
+		return Page[SubmissionRecord]{}, err
+	}
+	after, err := sqliteCursorID(cursor)
+	if err != nil {
+		return Page[SubmissionRecord]{}, err
+	}
+	query := "SELECT id, record FROM submissions"
+	conditions := []string{}
+	args := []any{}
+	if after != nil {
+		conditions = append(conditions, "id > ?")
+		args = append(args, *after)
+	}
+	if filter.ConversationID != nil {
+		conditions = append(conditions, "conversation_id = ?")
+		args = append(args, *filter.ConversationID)
+	}
+	if filter.Status != nil {
+		conditions = append(conditions, "status = ?")
+		args = append(args, *filter.Status)
+	}
+	if len(conditions) > 0 {
+		query += " WHERE " + joinConditions(conditions)
+	}
+	query += " ORDER BY id LIMIT ?"
+	args = append(args, limit+1)
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return Page[SubmissionRecord]{}, err
+	}
+	defer rows.Close()
+	var values []SubmissionRecord
+	for rows.Next() {
+		var id Id
+		var record string
+		if err := rows.Scan(&id, &record); err != nil {
+			return Page[SubmissionRecord]{}, err
+		}
+		value, err := unmarshalRecord[SubmissionRecord](record)
+		if err != nil {
+			return Page[SubmissionRecord]{}, err
+		}
+		values = append(values, *value)
+	}
+	if err := rows.Err(); err != nil {
+		return Page[SubmissionRecord]{}, err
+	}
+	return pageOf(values, limit, func(value SubmissionRecord) Id { return value.ID }), nil
 }
 
 // Submission looks up the latest record for one submission.

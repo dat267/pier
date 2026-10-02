@@ -26,6 +26,7 @@ type memoryState struct {
 	taskIDs                []Id
 	taskIDsByStatus        map[string][]Id
 	submissions            map[Id]*SubmissionRecord
+	submissionIDs          []Id
 	submissionIDsByRequest map[Id]map[string]Id
 	documents              map[Id]*storedDocumentState
 	documentAddresses      map[string]*documentAddressIndex
@@ -319,6 +320,9 @@ func (p *PreparedCommit) Apply() Seq {
 					}
 				}
 			}
+			if _, existed := s.state.submissions[value.ID]; !existed {
+				s.state.submissionIDs = insertSorted(s.state.submissionIDs, value.ID)
+			}
 			s.state.submissions[value.ID] = value
 			if value.RequestID != nil {
 				requests := s.state.submissionIDsByRequest[value.ConversationID]
@@ -416,7 +420,7 @@ func (s *MemoryStorage) MintID(ctx context.Context) (Id, error) {
 	if err := s.assertOpen(); err != nil {
 		return 0, err
 	}
-	if s.nextID == math.MaxInt64 {
+	if s.nextID > MaxSafeInteger {
 		return 0, fmt.Errorf("ID space is exhausted")
 	}
 	id := s.nextID
@@ -584,6 +588,31 @@ func (s *MemoryStorage) ScanTasks(ctx context.Context, query TaskQuery, cursor C
 		values = append(values, *value)
 	}
 	return pageOf(values, limit, func(value TaskRecord) Id { return value.ID }), nil
+}
+
+// ScanSubmissions scans submissions matching the query in ascending id order.
+func (s *MemoryStorage) ScanSubmissions(ctx context.Context, query SubmissionQuery, cursor Cursor, limit int) (Page[SubmissionRecord], error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.assertOpen(); err != nil {
+		return Page[SubmissionRecord]{}, err
+	}
+	start := 0
+	if after := cursorID(cursor); after != nil {
+		start = upperBound(s.state.submissionIDs, *after)
+	}
+	var values []SubmissionRecord
+	for index := start; index < len(s.state.submissionIDs) && len(values) <= limit; index++ {
+		value := s.state.submissions[s.state.submissionIDs[index]]
+		if query.ConversationID != nil && value.ConversationID != *query.ConversationID {
+			continue
+		}
+		if query.Status != nil && value.Status != *query.Status {
+			continue
+		}
+		values = append(values, *value)
+	}
+	return pageOf(values, limit, func(value SubmissionRecord) Id { return value.ID }), nil
 }
 
 // Submission looks up one submission.
