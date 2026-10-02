@@ -327,6 +327,41 @@ func TestSettingsHTTPIdleTimeout(t *testing.T) {
 	}
 }
 
+// TestSettingsTuiMode mirrors settings-manager.test.ts's "TUI mode" block:
+// the mode defaults to fullscreen, an explicit regular mode is persisted, and
+// unsupported values (including the retired uiMode key) fall back to
+// fullscreen.
+func TestSettingsTuiMode(t *testing.T) {
+	agentDir, projectDir := settingsDirs(t)
+	settingsPath := filepath.Join(agentDir, "settings.json")
+
+	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	if got := manager.GetTuiMode(); got != "fullscreen" {
+		t.Fatalf("default tui mode = %q; want fullscreen", got)
+	}
+
+	manager.SetTuiMode("regular")
+	if got := manager.GetTuiMode(); got != "regular" {
+		t.Fatalf("regular tui mode = %q", got)
+	}
+	if saved := readSettingsFile(t, settingsPath); saved["tuiMode"] != "regular" {
+		t.Fatalf("tuiMode = %#v", saved["tuiMode"])
+	}
+
+	writeSettingsFile(t, settingsPath, `{"tuiMode":"other"}`)
+	unsupported := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	if got := unsupported.GetTuiMode(); got != "fullscreen" {
+		t.Fatalf("unsupported tui mode = %q; want fullscreen", got)
+	}
+
+	// The retired uiMode key is not read.
+	writeSettingsFile(t, settingsPath, `{"uiMode":"regular"}`)
+	legacy := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	if got := legacy.GetTuiMode(); got != "fullscreen" {
+		t.Fatalf("legacy uiMode tui mode = %q; want fullscreen", got)
+	}
+}
+
 func TestSettingsExternalEditorAndTUISettings(t *testing.T) {
 	t.Setenv("VISUAL", "")
 	t.Setenv("EDITOR", "")
@@ -355,11 +390,11 @@ func TestSettingsExternalEditorAndTUISettings(t *testing.T) {
 	}
 
 	// TUI mode, output padding, mermaid, and shell command prefix.
-	if got := manager.GetTuiMode(); got != "regular" {
+	if got := manager.GetTuiMode(); got != "fullscreen" {
 		t.Fatalf("tui mode = %s", got)
 	}
-	manager.SetTuiMode("fullscreen")
-	if got := manager.GetTuiMode(); got != "fullscreen" {
+	manager.SetTuiMode("regular")
+	if got := manager.GetTuiMode(); got != "regular" {
 		t.Fatalf("tui mode = %s", got)
 	}
 	if got := manager.GetOutputPad(); got != 1 {

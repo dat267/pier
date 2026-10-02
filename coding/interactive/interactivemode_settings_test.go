@@ -310,10 +310,13 @@ func TestSettingsTuiModeRejection(t *testing.T) {
 	statuses := []string{}
 	wiring.ShowStatus = func(message string) { statuses = append(statuses, message) }
 	wiring.SwitchTuiMode = func(mode string) bool { return false }
+	// Start from an explicit regular mode: the default is fullscreen, so the
+	// rejected switch must leave the stored mode alone.
+	settings.SetTuiMode("regular")
 	refreshed := 0
 	callbacks := wiring.BuildSettingsCallbacks(nil, func() { refreshed++ })
 	callbacks.OnTuiModeChange("fullscreen")
-	if settings.GetTuiMode() == "fullscreen" {
+	if settings.GetTuiMode() != "regular" {
 		t.Fatal("mode should not be persisted on rejection")
 	}
 	if refreshed != 1 || statuses[len(statuses)-1] != "Close active overlays before changing TUI mode" {

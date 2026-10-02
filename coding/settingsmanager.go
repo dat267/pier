@@ -2212,14 +2212,14 @@ func (m *SettingsManager) SetShowTerminalProgress(enabled bool) {
 	m.save()
 }
 
-// GetTuiMode returns the TUI mode (regular unless fullscreen).
+// GetTuiMode returns the TUI mode (fullscreen unless explicitly regular).
 func (m *SettingsManager) GetTuiMode() string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.settings.TuiMode != nil && *m.settings.TuiMode == "fullscreen" {
-		return "fullscreen"
+	if m.settings.TuiMode != nil && *m.settings.TuiMode == "regular" {
+		return "regular"
 	}
-	return "regular"
+	return "fullscreen"
 }
 
 // SetTuiMode stores the TUI mode.

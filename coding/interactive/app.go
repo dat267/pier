@@ -211,8 +211,11 @@ func NewApp(options AppOptions) *App {
 	if options.AgentDir == "" {
 		options.AgentDir = coding.GetAgentDir()
 	}
+	// Upstream resolves a missing option through the settings manager, whose
+	// default is fullscreen; the CLI passes the resolved mode, so this is the
+	// fallback for direct construction.
 	if options.TuiMode == "" {
-		options.TuiMode = "regular"
+		options.TuiMode = "fullscreen"
 	}
 	if options.Exit == nil {
 		options.Exit = os.Exit
