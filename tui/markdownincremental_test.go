@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -59,6 +60,10 @@ func TestMarkdownStreamingReusesStablePrefix(t *testing.T) {
 		t.Fatalf("first render rendered %d tokens, want the whole sample", full)
 	}
 
+	// The reuse cache must not depend on GC timing: force a collection between
+	// the two renders (a live transcript lets the GC run at any frame).
+	runtime.GC()
+	runtime.GC()
 	m.SetText(incrementalSample + " one more word")
 	m.Render(80)
 	if tail := m.renderedTokens - full; tail > 3 {

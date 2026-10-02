@@ -3,7 +3,6 @@ package tui
 import (
 	"regexp"
 	"strings"
-	"weak"
 )
 
 // Port of the renderer half of src/components/markdown.ts: the Markdown
@@ -114,12 +113,15 @@ type Markdown struct {
 	// so an append only re-renders the changed tail instead of the whole
 	// message.
 	//
-	// The parsed token list is held weakly (upstream 54c19a252 holds its parse
-	// cache in a WeakRef): a token list is about ten times its source, and
-	// every transcript message keeps a Markdown component. The tokens survive
-	// a burst of re-renders, such as a theme preview, and are collected
-	// afterwards; when they are gone the next render just re-parses.
-	tokenCache      weak.Pointer[[]*MdToken]
+	// The comparison key is held strongly (a small value per top-level token)
+	// while the parsed token trees are not retained between renders: a token
+	// tree is about ten times its source and every transcript message keeps a
+	// Markdown component (upstream 54c19a252 holds its parse cache weakly for
+	// the same reason). The key carries the fields that decide whether a token
+	// changed, so the prefix reuse does not depend on GC timing; the strings it
+	// references are substrings of the cached source text, which is retained
+	// anyway.
+	cacheTokenKeys  []mdTokenKey
 	cacheTokenLines [][]string
 	cacheWidth      int
 
@@ -218,7 +220,7 @@ func (m *Markdown) Invalidate() {
 	m.hasCachedText = false
 	m.hasCachedWidth = false
 	m.hasStylePrefix = false
-	m.tokenCache = weak.Pointer[[]*MdToken]{}
+	m.cacheTokenKeys = nil
 	m.cacheTokenLines = nil
 	m.cacheWidth = 0
 }
@@ -251,7 +253,7 @@ func (m *Markdown) Render(width int) []string {
 		m.hasCachedWidth = true
 		m.cachedLines = []string{}
 		m.hasCachedLines = true
-		m.tokenCache = weak.Pointer[[]*MdToken]{}
+		m.cacheTokenKeys = nil
 		m.cacheTokenLines = nil
 		m.cacheWidth = width
 		return m.cachedLines
@@ -264,10 +266,7 @@ func (m *Markdown) Render(width int) []string {
 
 	// Reuse the final lines of every token that did not change since the last
 	// render; only the changed tail is re-parsed and re-styled.
-	reuse := 0
-	if previous := m.tokenCache.Value(); previous != nil {
-		reuse = m.reusableTokens(tokens, *previous, width)
-	}
+	reuse := m.reusableTokens(tokens, m.cacheTokenKeys, width)
 
 	leftMargin := repeatSpaces(max(0, m.PaddingX))
 	rightMargin := leftMargin
@@ -295,7 +294,7 @@ func (m *Markdown) Render(width int) []string {
 			tokenLines = append(tokenLines, final)
 		}
 	}
-	m.tokenCache = weak.Make(&tokens)
+	m.cacheTokenKeys = markdownTokenKeys(tokens)
 	m.cacheTokenLines = tokenLines
 	m.cacheWidth = width
 
@@ -336,7 +335,7 @@ func (m *Markdown) Render(width int) []string {
 // of the concatenated parts. Go strings are immutable flat buffers, so there is
 // no equivalent representation to flatten.
 
-func (m *Markdown) reusableTokens(tokens []*MdToken, previous []*MdToken, width int) int {
+func (m *Markdown) reusableTokens(tokens []*MdToken, previous []mdTokenKey, width int) int {
 	if m.cacheWidth != width || len(m.cacheTokenLines) == 0 {
 		return 0
 	}
@@ -345,7 +344,7 @@ func (m *Markdown) reusableTokens(tokens []*MdToken, previous []*MdToken, width 
 		limit = len(previous)
 	}
 	matched := 0
-	for matched < limit && sameMarkdownToken(tokens[matched], previous[matched]) {
+	for matched < limit && sameMarkdownTokenKey(tokens[matched], previous[matched]) {
 		matched++
 	}
 	reuse := matched - 1
@@ -368,18 +367,55 @@ func (m *Markdown) reusableTokens(tokens []*MdToken, previous []*MdToken, width 
 // sameMarkdownToken reports whether two parse tokens are the same source
 // region rendered the same way. Raw is the exact source slice, so equal Raw
 // and Type imply an identical parse.
-func sameMarkdownToken(a, b *MdToken) bool {
-	if a == b {
-		return true
+// mdTokenKey is the set of top-level fields that decide whether a token
+// changed since the previous render (sameMarkdownToken), held without the
+// token trees themselves.
+type mdTokenKey struct {
+	Type         string
+	Raw          string
+	Depth        int
+	Text         string
+	Href         string
+	Title        string
+	Lang         string
+	Ordered      bool
+	Start        int
+	HasStart     bool
+	CellAlign    string
+	HasCellAlign bool
+	AlignLen     int
+	ItemsLen     int
+	TokensLen    int
+}
+
+func markdownTokenKey(token *MdToken) mdTokenKey {
+	return mdTokenKey{
+		Type: token.Type, Raw: token.Raw, Depth: token.Depth, Text: token.Text,
+		Href: token.Href, Title: token.Title, Lang: token.Lang,
+		Ordered: token.Ordered, Start: token.Start, HasStart: token.HasStart,
+		CellAlign: token.CellAlign, HasCellAlign: token.HasCellAlign,
+		AlignLen: len(token.Align), ItemsLen: len(token.Items), TokensLen: len(token.Tokens),
 	}
-	if a == nil || b == nil {
+}
+
+func markdownTokenKeys(tokens []*MdToken) []mdTokenKey {
+	keys := make([]mdTokenKey, len(tokens))
+	for i, token := range tokens {
+		keys[i] = markdownTokenKey(token)
+	}
+	return keys
+}
+
+func sameMarkdownTokenKey(token *MdToken, key mdTokenKey) bool {
+	if token == nil {
 		return false
 	}
-	return a.Type == b.Type && a.Raw == b.Raw && a.Depth == b.Depth && a.Text == b.Text &&
-		a.Href == b.Href && a.Title == b.Title && a.Lang == b.Lang &&
-		a.Ordered == b.Ordered && a.Start == b.Start && a.HasStart == b.HasStart &&
-		a.CellAlign == b.CellAlign && a.HasCellAlign == b.HasCellAlign &&
-		len(a.Align) == len(b.Align) && len(a.Items) == len(b.Items) && len(a.Tokens) == len(b.Tokens)
+	return token.Type == key.Type && token.Raw == key.Raw && token.Depth == key.Depth &&
+		token.Text == key.Text && token.Href == key.Href && token.Title == key.Title &&
+		token.Lang == key.Lang && token.Ordered == key.Ordered && token.Start == key.Start &&
+		token.HasStart == key.HasStart && token.CellAlign == key.CellAlign &&
+		token.HasCellAlign == key.HasCellAlign && len(token.Align) == key.AlignLen &&
+		len(token.Items) == key.ItemsLen && len(token.Tokens) == key.TokensLen
 }
 
 // finalizeTokenLines wraps one token's rendered lines and applies the left and
