@@ -6,7 +6,17 @@ behaviour with no direct Go equivalent, or because a reference defect is fixed
 here; others are choices of this project's own. D-row numbers live in code
 comments at the point of divergence; this file is the log, and it is
 representative: the rows below carry a written-up rationale, while the rest live
-only as the code comment that introduced them. The range is **D1–D178**.
+only as the code comment that introduced them. The range is **D1–D185**.
+- D11 — upstream's chord delta is a JavaScript Proxy draft that records
+  operations as the caller mutates it; Go has no proxies, so the port's
+  tracker (`chord/delta/tracker.go`) keeps the upstream lifecycle (tracker
+  value/revision, beginChange, prepare, adopt, prepareReplace, staleness and
+  abort rules, no-op adoption) but hands out an explicit mutable draft and
+  materializes its batch with the same diff engine when it settles. Upstream
+  documents that a batch is "exact but not canonical", so the op tuples may
+  differ while the resulting value matches. The ops/wire tuples themselves are
+  structs rather than heterogeneous tuples (the same row covers the delta
+  package's Op/WireOp shapes).
 
 - D30 — startup timings read `PI_TIMING` **per call** instead of once at module
   load (upstream reads the flag when the timing module is first imported), so a
