@@ -178,13 +178,19 @@ func TestCommittedWatchOverflowCollapses(t *testing.T) {
 	if len(firstOps) != 1 || firstOps[0].Verb != delta.VerbReplace {
 		t.Fatalf("first ops = %+v", firstOps)
 	}
-	// Wait for the appended frames to drain.
+	// The pending window holds maxPendingWatchFrames (100) advances; the 101st
+	// collapses the queue into one replacement frame, and the four advances
+	// after it append normally, so five frames are delivered in total.
+	const wantFrames = int32(5)
 	deadline := time.Now().Add(2 * time.Second)
-	for atomic.LoadInt32(&frames) < 2 && time.Now().Before(deadline) {
+	for atomic.LoadInt32(&frames) < wantFrames && time.Now().Before(deadline) {
 		time.Sleep(time.Millisecond)
 	}
+	if got := atomic.LoadInt32(&frames); got != wantFrames {
+		t.Fatalf("frames = %d last = %d", got, last.Load())
+	}
 	if last.Load() != int64(maxPendingWatchFrames+4) {
-		t.Fatalf("last = %d frames = %d", last.Load(), frames)
+		t.Fatalf("last = %d", last.Load())
 	}
 	watch.Stop()
 }
