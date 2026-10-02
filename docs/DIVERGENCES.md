@@ -807,3 +807,16 @@ no `flattenLines` equivalent.
 The token-cache half of the same commit IS ported: `Markdown` holds its parsed
 token list in a `weak.Pointer` (`tui/markdown.go`), so a transcript message's
 tokens are collected when nothing needs them and the next render re-parses.
+
+## D182 — mcp stdio exit hook watches signals
+
+Upstream kills live MCP stdio process groups in a `process.once("exit")`
+hook. Go libraries cannot hook `os.Exit`, so `mcp.installExitHook` watches
+SIGTERM/SIGINT/SIGHUP, kills the live groups, restores the default action,
+and re-raises. (pi/packages/mcp/src/transports/stdio.ts)
+
+## D183 — streamable-HTTP retryable errors
+
+Upstream treats fetch `TypeError`s as network failures and retries. Go's
+net/http reports failures as typed errors, so the transport retries any
+non-`McpHttpError`. (pi/packages/mcp/src/transports/streamable-http.ts)

@@ -106,6 +106,17 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   message's tokens are collected between renders (`54c19a252`). The
   `flattenLines` half of that commit is a V8 string-representation concern with
   no Go equivalent (D180).
+- `mcp`: the protocol layer, transports (in-memory, stdio, streamable HTTP),
+  the client, and the oauth module are ported (`mcp/`, `mcp/protocol/`,
+  `mcp/oauth/`), with Go fixture ports for the stdio tests and the full
+  oauth.test.ts port. The exit hook watches terminating signals and
+  re-raises (D182); the resource-contents arm is discriminated by key
+  presence (D181).
+- `durable`: the port's Storage surface (conversation/entry/task/submission)
+  now has a SQLite backend on modernc.org/sqlite (user-approved dependency;
+  the upstream sqlite migrations run verbatim and the Storage suite runs as
+  a memory/sqlite conformance pair). The jsonl backend, document storage,
+  and the harness layers are still unported.
 - `coding`: the remote catalog merge is linear (`c34f2d6ad`); the branch model
   resolution still walks its branch per submission (`a0660b174` is inside
   upstream's `virtual-models.ts`, which the port has not ported yet). Dynamic
