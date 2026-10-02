@@ -10,6 +10,7 @@ import (
 
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
+	"sync/atomic"
 )
 
 func newRunTestWiring(t *testing.T) (*RunWiring, *coding.SettingsManager) {
@@ -336,5 +337,77 @@ func TestAnimationWalkReachesARunningToolInTheLayout(t *testing.T) {
 	}
 	if probe.frames == 0 {
 		t.Fatal("animation probe was not visited")
+	}
+}
+
+// idleBeatHost stubs the loop seam without a renderer.
+type idleBeatHost struct {
+	w *RunWiring
+}
+
+func (h idleBeatHost) NextAnimation() (bool, time.Duration) { return false, 0 }
+func (h idleBeatHost) NextInputFlushDeadline() (time.Time, bool) {
+	return time.Time{}, false
+}
+func (h idleBeatHost) FlushPendingInput() {}
+func (h idleBeatHost) RenderTicks() <-chan struct{} {
+	return nil
+}
+func (h idleBeatHost) HasPendingBeatWork() bool {
+	return h.w.PendingBeatWork != nil && h.w.PendingBeatWork()
+}
+
+// TestScheduleKeepsTickingWhileBeatWorkPending pins that the loop arms a
+// wake-up while a beat's work is pending (deferred transcript chunks, the
+// thinking sweep): with no animation and no input the select below has no
+// other wake-up, so a resumed session's replay would never materialize.
+func TestScheduleKeepsTickingWhileBeatWorkPending(t *testing.T) {
+	wiring, _ := newRunTestWiring(t)
+	wiring.PendingBeatWork = func() bool { return true }
+	schedule := newLoopSchedule(idleBeatHost{wiring}, func() {}, nil)
+	defer schedule.close()
+	if ch := schedule.arm(); ch == nil || schedule.deadline.IsZero() {
+		t.Fatal("pending beat work did not arm a wake-up")
+	}
+	// Without pending work the loop may sleep; nothing must arm.
+	wiringPending := wiring.PendingBeatWork
+	wiring.PendingBeatWork = func() bool { return false }
+	schedule.deadline = time.Time{}
+	schedule.animationTimer.Stop()
+	schedule.scanValid = false
+	if ch := schedule.arm(); ch != nil {
+		t.Fatalf("idle loop armed anyway: %v", ch)
+	}
+	wiring.PendingBeatWork = wiringPending
+}
+
+// TestRunLoopMaterializesPendingWorkWhileIdle runs the loop without input and
+// without any animation; the beat must keep running (draining a resumed
+// session's deferred transcript) instead of parking forever after the first
+// one.
+func TestRunLoopMaterializesPendingWorkWhileIdle(t *testing.T) {
+	wiring, _ := newRunTestWiring(t)
+	beats := int32(0)
+	wiring.PendingBeatWork = func() bool { return atomic.LoadInt32(&beats) < 3 }
+	wiring.OnBeat = func() { atomic.AddInt32(&beats, 1) }
+	wiring.Events = nil
+	// Run returns without a prompt handler; the loop is what is under test.
+	wiring.Prompt = func(context.Context, string, []ai.ImageContent) error { return nil }
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		deadline := time.Now().Add(3 * time.Second)
+		for time.Now().Before(deadline) {
+			if atomic.LoadInt32(&beats) >= 3 {
+				break
+			}
+			time.Sleep(5 * time.Millisecond)
+		}
+		cancel()
+	}()
+	wiring.Run(ctx, InitOptions{QuietStartup: true, Mount: func() {}}, RunOptions{Offline: true})
+	<-ctx.Done()
+	if got := atomic.LoadInt32(&beats); got < 3 {
+		t.Fatalf("loop ran %d beats, wanted >=3; the loop parked after the first", got)
 	}
 }

@@ -126,6 +126,12 @@ type RunWiring struct {
 	// beats counts loop iterations (the watchdog beat: a stalled loop stops
 	// advancing it, so a watchdog can detect a hang).
 	beats atomic.Uint64
+	// PendingBeatWork reports whether a beat still has pending work (a
+	// deferred transcript chunk, a thinking sweep). While it does, the loop
+	// keeps ticking between frames: with no animation and no input the select
+	// below has no wake-up, so a resumed session's replay would never
+	// materialize.
+	PendingBeatWork func() bool
 	// OnBeat runs once per loop iteration (on the loop goroutine): the lazy
 	// transcript materializer uses it to attach deferred chunks between
 	// paints.
@@ -672,6 +678,13 @@ func (h runLoopHost) FlushPendingInput() {
 
 func (h runLoopHost) RenderTicks() <-chan struct{} { return h.w.renderTicks() }
 
+func (h runLoopHost) HasPendingBeatWork() bool {
+	if h.w.PendingBeatWork == nil {
+		return false
+	}
+	return h.w.PendingBeatWork()
+}
+
 // runLoop is the UI's single writer. It applies session events and user input
 // in arrival order and runs blocking work in a goroutine so a turn's events
 // keep draining while it runs (upstream awaits the prompt and processes the
@@ -873,6 +886,9 @@ func newRunWiring(app *App) *RunWiring {
 				app.transcript.MaterializeDeferred(app.terminalWidth())
 			}
 			app.queue.MaterializeThinkingChunk()
+		},
+		PendingBeatWork: func() bool {
+			return app.transcript.HasDeferred() || app.queue.HasThinkingChunk()
 		},
 		RawTerminal:     app.rawTerminal,
 		RawInputs:       app.loopRawInputs,

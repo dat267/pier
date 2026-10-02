@@ -531,3 +531,9 @@ func (c *QueueController) ToggleThinkingBlockVisibility(hideThinkingBlock *bool)
 func userMessage(text string) ai.Message {
 	return &ai.UserMessage{Content: ai.StringOrBlocks{Text: text}}
 }
+
+// HasThinkingChunk reports whether the thinking sweep still has deferred
+// messages (the loop's pending-work arm).
+func (c *QueueController) HasThinkingChunk() bool {
+	return len(c.deferredThinking) > 0
+}

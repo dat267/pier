@@ -15,7 +15,10 @@ type fakeLoopHost struct {
 	flushAt    time.Time
 	flushed    int
 	renderTick chan struct{}
+	beatWork   bool
 }
+
+func (h *fakeLoopHost) HasPendingBeatWork() bool { return h.beatWork }
 
 func (h *fakeLoopHost) NextAnimation() (bool, time.Duration) {
 	h.animCalls++

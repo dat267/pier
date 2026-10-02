@@ -52,6 +52,10 @@ type loopHost interface {
 	// NextInputFlushDeadline reports when pending input must be flushed (a lone
 	// ESC, an incomplete sequence, a split keyboard-protocol response).
 	NextInputFlushDeadline() (time.Time, bool)
+	// HasPendingBeatWork reports whether a beat still has pending work (a
+	// deferred transcript chunk, a thinking sweep); the loop keeps ticking
+	// while it does.
+	HasPendingBeatWork() bool
 	// FlushPendingInput dispatches the sequences whose deadlines expired.
 	FlushPendingInput()
 	// RenderTicks is the renderer's coalesced render-request channel: a pending
@@ -200,6 +204,10 @@ func (s *loopSchedule) flushExpiredInput() { s.host.FlushPendingInput() }
 // the next iteration re-walks and re-arms.
 func (s *loopSchedule) animationFired() { s.deadline = time.Time{} }
 
+// beatWorkInterval is the wake interval while a beat's work is pending (one
+// chunk per beat, like upstream's microtask cadence scaled to a frame).
+const beatWorkInterval = 16 * time.Millisecond
+
 // paintNow paints the current state and records when, so the next render tick
 // can be coalesced against it.
 func (s *loopSchedule) paintNow() {
@@ -266,6 +274,18 @@ func (s *loopSchedule) arm() <-chan time.Time {
 			s.deadline = flushDeadline
 			return s.animationTimer.C
 		}
+	}
+	// A beat that left pending work (deferred transcript chunks, the thinking
+	// sweep) keeps the loop ticking: with no animation, deadline, or event the
+	// select below has no wake-up, so the work would never continue (a resumed
+	// session's replay stayed empty until the first input arrived).
+	if s.host.HasPendingBeatWork() {
+		next := time.Now().Add(beatWorkInterval)
+		if s.deadline.IsZero() || next.Before(s.deadline) {
+			s.animationTimer.Reset(beatWorkInterval)
+			s.deadline = next
+		}
+		return s.animationTimer.C
 	}
 	// The animation walk visits every mounted component, and this runs once per
 	// loop iteration — once per input event. Reuse the last walk while it still
