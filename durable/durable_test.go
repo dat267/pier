@@ -9,18 +9,32 @@ import (
 
 // durable tests keyed to upstream (types.ts, memory-storage.ts): commit
 // sequences, id ownership, pagination cursors, task status indexing, input
-// deduplication, and fork-aware history scans.
+// deduplication, and fork-aware history scans. Every Storage test runs
+// against both the memory backend and the SQLite backend (modernc.org/sqlite,
+// user-approved dependency) as a conformance pair.
 
 func idPtr(id Id) *Id         { return &id }
 func strPtr(s string) *string { return &s }
 
-func mustCommit(t *testing.T, storage *MemoryStorage, writes ...StorageWrite) Seq {
+func mustCommit(t *testing.T, storage Storage, writes ...StorageWrite) Seq {
 	t.Helper()
 	seq, err := storage.Commit(context.Background(), writes)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return seq
+}
+
+// newSqliteStorageConformance builds a sqlite backend over a temp file,
+// exercising the same suite as the memory backend.
+func newSqliteStorageConformance(t *testing.T) *SqliteStorage {
+	t.Helper()
+	storage, err := OpenSqliteStorage(t.TempDir() + "/durable.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = storage.Close(context.Background()) })
+	return storage
 }
 
 func conversationWrite(id Id) StorageWrite {
@@ -31,8 +45,7 @@ func entryWrite(id, conversationID Id, head *Id) StorageWrite {
 	return StorageWrite{Type: "entry", Entry: &EntryRecord{ID: id, ConversationID: conversationID, Kind: "message", Head: head}}
 }
 
-func TestCommitSequencesAndMintedIDs(t *testing.T) {
-	storage := NewMemoryStorage()
+func testCommitSequencesAndMintedIDs(t *testing.T, storage Storage) {
 	// The root conversation reserves id 1, so minting starts at 2.
 	first, err := storage.MintID(context.Background())
 	if err != nil || first != 2 {
@@ -59,8 +72,7 @@ func TestCommitSequencesAndMintedIDs(t *testing.T) {
 	}
 }
 
-func TestImmutableIDOwnership(t *testing.T) {
-	storage := NewMemoryStorage()
+func testImmutableIDOwnership(t *testing.T, storage Storage) {
 	mustCommit(t, storage, conversationWrite(2))
 
 	// Re-creating a conversation id fails.
@@ -98,8 +110,7 @@ func TestImmutableIDOwnership(t *testing.T) {
 	}
 }
 
-func TestScanConversationsPagination(t *testing.T) {
-	storage := NewMemoryStorage()
+func testScanConversationsPagination(t *testing.T, storage Storage) {
 	for _, id := range []Id{2, 4, 6, 8} {
 		mustCommit(t, storage, conversationWrite(id))
 	}
@@ -131,8 +142,7 @@ func TestScanConversationsPagination(t *testing.T) {
 	}
 }
 
-func TestScanEntriesAndHeadMarkers(t *testing.T) {
-	storage := NewMemoryStorage()
+func testScanEntriesAndHeadMarkers(t *testing.T, storage Storage) {
 	mustCommit(t, storage, conversationWrite(2))
 	// Entries 10..13; entries 10 and 12 are head markers.
 	mustCommit(t, storage,
@@ -190,8 +200,7 @@ func TestScanEntriesAndHeadMarkers(t *testing.T) {
 	}
 }
 
-func TestForkAwareHistoryScans(t *testing.T) {
-	storage := NewMemoryStorage()
+func testForkAwareHistoryScans(t *testing.T, storage Storage) {
 	parent := &ConversationRecord{ID: 2}
 	// Conversation 3 forks from conversation 2 at entry 11 (inclusive).
 	fork := &ConversationRecord{ID: 3, Parent: &ConversationParent{ConversationID: 2, At: 11}}
@@ -237,8 +246,7 @@ func TestForkAwareHistoryScans(t *testing.T) {
 	}
 }
 
-func TestTaskScanningAndStatusIndex(t *testing.T) {
-	storage := NewMemoryStorage()
+func testTaskScanningAndStatusIndex(t *testing.T, storage Storage) {
 	writeTask := func(id Id, status, kind string, background, abort bool) StorageWrite {
 		return StorageWrite{Type: "task", Task: &TaskRecord{
 			ID: id, ConversationID: 2, Kind: kind, Background: background, AbortRequested: abort,
@@ -291,8 +299,7 @@ func TestTaskScanningAndStatusIndex(t *testing.T) {
 	}
 }
 
-func TestInputLifecycleAndDeduplication(t *testing.T) {
-	storage := NewMemoryStorage()
+func testInputLifecycleAndDeduplication(t *testing.T, storage Storage) {
 	mustCommit(t, storage, StorageWrite{Type: "input", Input: &Input{
 		ID: 2, ConversationID: 10, RequestID: strPtr("req-1"), Status: InputQueued,
 	}})
@@ -330,8 +337,7 @@ func TestInputLifecycleAndDeduplication(t *testing.T) {
 	}
 }
 
-func TestDetachedValues(t *testing.T) {
-	storage := NewMemoryStorage()
+func testDetachedValues(t *testing.T, storage Storage) {
 	record := &ConversationRecord{ID: 2}
 	mustCommit(t, storage, StorageWrite{Type: "conversation", Conversation: record})
 	// Mutating the caller's record after the commit must not change storage.
@@ -358,8 +364,7 @@ func TestDetachedValues(t *testing.T) {
 	}
 }
 
-func TestCloseRejectsEveryOperation(t *testing.T) {
-	storage := NewMemoryStorage()
+func testCloseRejectsEveryOperation(t *testing.T, storage Storage) {
 	if err := storage.Close(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -404,10 +409,59 @@ func TestRootConversationID(t *testing.T) {
 		t.Fatalf("root conversation id = %d", RootConversationID)
 	}
 	// The root conversation can be created explicitly with id 1.
-	storage := NewMemoryStorage()
+	t.Run("memory", func(t *testing.T) { testRootConversationID(t, NewMemoryStorage()) })
+	t.Run("sqlite", func(t *testing.T) { testRootConversationID(t, newSqliteStorageConformance(t)) })
+}
+
+func testRootConversationID(t *testing.T, storage Storage) {
 	mustCommit(t, storage, conversationWrite(RootConversationID))
 	root, err := storage.Conversation(context.Background(), RootConversationID)
 	if err != nil || root == nil || root.ID != 1 {
 		t.Fatalf("root = %+v, %v", root, err)
 	}
+}
+
+func TestCommitSequencesAndMintedIDs(t *testing.T) {
+	t.Run("memory", func(t *testing.T) { testCommitSequencesAndMintedIDs(t, NewMemoryStorage()) })
+	t.Run("sqlite", func(t *testing.T) { testCommitSequencesAndMintedIDs(t, newSqliteStorageConformance(t)) })
+}
+
+func TestImmutableIDOwnership(t *testing.T) {
+	t.Run("memory", func(t *testing.T) { testImmutableIDOwnership(t, NewMemoryStorage()) })
+	t.Run("sqlite", func(t *testing.T) { testImmutableIDOwnership(t, newSqliteStorageConformance(t)) })
+}
+
+func TestScanConversationsPagination(t *testing.T) {
+	t.Run("memory", func(t *testing.T) { testScanConversationsPagination(t, NewMemoryStorage()) })
+	t.Run("sqlite", func(t *testing.T) { testScanConversationsPagination(t, newSqliteStorageConformance(t)) })
+}
+
+func TestScanEntriesAndHeadMarkers(t *testing.T) {
+	t.Run("memory", func(t *testing.T) { testScanEntriesAndHeadMarkers(t, NewMemoryStorage()) })
+	t.Run("sqlite", func(t *testing.T) { testScanEntriesAndHeadMarkers(t, newSqliteStorageConformance(t)) })
+}
+
+func TestForkAwareHistoryScans(t *testing.T) {
+	t.Run("memory", func(t *testing.T) { testForkAwareHistoryScans(t, NewMemoryStorage()) })
+	t.Run("sqlite", func(t *testing.T) { testForkAwareHistoryScans(t, newSqliteStorageConformance(t)) })
+}
+
+func TestTaskScanningAndStatusIndex(t *testing.T) {
+	t.Run("memory", func(t *testing.T) { testTaskScanningAndStatusIndex(t, NewMemoryStorage()) })
+	t.Run("sqlite", func(t *testing.T) { testTaskScanningAndStatusIndex(t, newSqliteStorageConformance(t)) })
+}
+
+func TestInputLifecycleAndDeduplication(t *testing.T) {
+	t.Run("memory", func(t *testing.T) { testInputLifecycleAndDeduplication(t, NewMemoryStorage()) })
+	t.Run("sqlite", func(t *testing.T) { testInputLifecycleAndDeduplication(t, newSqliteStorageConformance(t)) })
+}
+
+func TestDetachedValues(t *testing.T) {
+	t.Run("memory", func(t *testing.T) { testDetachedValues(t, NewMemoryStorage()) })
+	t.Run("sqlite", func(t *testing.T) { testDetachedValues(t, newSqliteStorageConformance(t)) })
+}
+
+func TestCloseRejectsEveryOperation(t *testing.T) {
+	t.Run("memory", func(t *testing.T) { testCloseRejectsEveryOperation(t, NewMemoryStorage()) })
+	t.Run("sqlite", func(t *testing.T) { testCloseRejectsEveryOperation(t, newSqliteStorageConformance(t)) })
 }
