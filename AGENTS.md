@@ -65,7 +65,8 @@ Packages mirror upstream `packages/`:
 go build ./...                     # everything
 go vet ./...                       # must be clean
 gofmt -l .                         # must be empty
-go test -race -count=2 -timeout 300s ./...   # the completion gate (all packages)
+                               # the local gate: fast, no race detector
+go test -count=1 ./...             # CI adds -race -count=2 -timeout 300s
 
 # the CLI (binary derives its display name from the file name)
 go build -o bin/pier .
@@ -73,7 +74,16 @@ go build -o bin/pier .
 ./bin/pier -r                       # resume the newest session
 ```
 
-A `justfile` wraps the commands above (`just`, `just check`, `just --list`;
+**Local gate vs CI gate.** Develop against `go build ./...`, `go vet ./...`,
+`gofmt -l .` and `go test -count=1 ./...` — do not run the race detector
+locally; it slows every path 5-10x and the full gate (`go test -race -count=2
+-p 2 -timeout 300s ./...`) runs in CI on every push. A test that only fails
+under `-race` (timing, scheduling, GC) is still a bug: reproduce it locally
+with `-race -count=<n> -run <Test>` when a CI run points at it, fix it, and
+leave the race gate to CI.
+
+A `justfile` wraps the commands above (`just`, `just check` — the local gate,
+`just test-race` for the rare local race reproduction — and `just --list`;
 `just VERSION=1.2.3 install` stamps the version `make install` used to, and the
 recipe names match the old Makefile targets). `install` has a `[windows]`
 (PowerShell) variant so it does not need a POSIX shell on PATH; the other
@@ -87,8 +97,8 @@ port is `pier update` (its release asset), not
 `go install github.com/dat267/pier@latest`, which would publish the module to
 proxy.golang.org.
 
-The gate runs with `GOTRACEBACK=all` in CI so a hung test prints every
-goroutine. The PTY watchdogs reuse a prebuilt binary via `PIER_TEST_BIN`
+The full gate (CI) runs with `GOTRACEBACK=all` so a hung test prints every
+goroutine, and with `-race -count=2`. The PTY watchdogs reuse a prebuilt binary via `PIER_TEST_BIN`
 (CI builds `.` first); locally they fall back to `./bin/pier`. The test job
 builds only linux/amd64, so a second CI job cross-builds and cross-`vet`s the
 port for Windows (both arches), Linux/arm64, Android/arm64 and macOS (both
@@ -96,9 +106,11 @@ arches) — `vet` also compiles every `_test.go`. That matrix is the guard again
 `syscall` code that exists on only some OSes (`SysProcAttr{Setpgid}`,
 `syscall.Kill`, `Stat_t.Ctim`) reaching a user's `go install`.
 
-Keep the suite quick — the race detector slows every path 5-10x, and the gate
-runs each test twice (`-p 8` overlaps the test-binary builds; the whole gate is
-~50 s, `-race -count=1` ~30 s on four cores):
+Keep the suite quick — CI's race gate slows every path 5-10x and runs each test
+twice, so a slow fixture costs ten times there (`-p 8` overlaps the test-binary
+builds; the whole CI gate is ~50 s, `-race -count=1` ~30 s on four cores). The
+same rules apply to the local `-count=1` loop, which is what you run while
+working:
 
 - Size fixtures to the *property*, not to production scale. The projection tests
   assert ratios (window vs session, warm memo vs cold), so a few hundred

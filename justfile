@@ -62,9 +62,9 @@ install:
 	}
 	if (-not $onPath) { Write-Output ("note: " + $dir + " is not on PATH") }
 
-# Run the test suite.
+# Run the test suite (the local gate; CI adds -race -count=2).
 test:
-	go test ./...
+	go test -count=1 ./...
 
 # Run the test suite under the race detector (not available on android/arm64 — CI runs this).
 test-race:
