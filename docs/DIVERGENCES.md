@@ -6,7 +6,14 @@ behaviour with no direct Go equivalent, or because a reference defect is fixed
 here; others are choices of this project's own. D-row numbers live in code
 comments at the point of divergence; this file is the log, and it is
 representative: the rows below carry a written-up rationale, while the rest live
-only as the code comment that introduced them. The range is **D1–D187**.
+only as the code comment that introduced them. The range is **D1–D188**.
+- D188 — the durable execution environment (`env/index.ts`, `env/node.ts`)
+  returns failures as Go errors (`*FileError`, `*ExecutionError`, the upstream
+  codes preserved) where the reference returns a `Result` value; the `Result`
+  helpers exist for callers that need the upstream shape. Filesystem paths,
+  `~`/file-URL resolution, the error-code mapping and the tracked temp
+  directory/file cleanup match the reference. The shell half of
+  `env/node.ts` is not ported yet.
 - D187 — the attached replicated state (`chord/services/attachedstate.go`, the
   attachment half of upstream `services/state.ts`) delivers callbacks
   synchronously instead of through upstream's per-subscription asynchronous

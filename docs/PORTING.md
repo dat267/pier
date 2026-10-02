@@ -155,6 +155,12 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   scans including waiting/completing, submission request indexing and passive
   writes, exact-scope document address scans with prototype-like keys, the
   global ID namespace and exhausted minting at Number.MAX_SAFE_INTEGER).
+  The typed helpers are ported (`entries.ts` entry kinds and guards,
+  `tasks.ts` DefineTask, the harness `ToolDiagnostic` and `CompactionReason`
+  types) and the local execution environment's filesystem half (`env/index.ts`
+  + `env/node.ts`: portable `FileSystem`, path resolution, error codes and
+  tracked temp cleanup; D188). The shell half and the `tools/` package are
+  unported.
 - `coding`: the remote catalog merge is linear (`c34f2d6ad`); the branch model
   resolution still walks its branch per submission (`a0660b174` is inside
   upstream's `virtual-models.ts`, which the port has not ported yet). Dynamic
