@@ -53,7 +53,7 @@ func TestDocumentLifecycleReconstructsRewindable(t *testing.T) {
 		history, fork := HistoryRewindable, ForkAsOf
 		firstRecord := &DocumentCreate{
 			ID: firstID, Kind: "conversation.notes",
-			Scope: DocumentScope{Kind: ScopeConversation, ConversationID: &rootID, History: &history, Fork: &fork},
+			Scope: DocumentScope{Kind: ScopeConversation, ConversationID: &rootID}, History: &history, Fork: &fork,
 		}
 		createdAt := mustCommit(t, storage, StorageWrite{
 			Type: "document.create", DocumentCreate: firstRecord,
@@ -131,7 +131,7 @@ func TestDocumentLifecycleReconstructsRewindable(t *testing.T) {
 		retiredAt := mustCommit(t, storage,
 			StorageWrite{Type: "document.create", DocumentCreate: &DocumentCreate{
 				ID: secondID, Kind: "conversation.notes",
-				Scope: DocumentScope{Kind: ScopeConversation, ConversationID: &rootID, History: &history, Fork: &fork},
+				Scope: DocumentScope{Kind: ScopeConversation, ConversationID: &rootID}, History: &history, Fork: &fork,
 			}, DocumentContent: &DocumentContent{Version: 1, Kind: ContentBase, Value: json.RawMessage(`{"items":["new"]}`)}},
 			StorageWrite{Type: "document.retire", DocumentID: &firstID},
 			StorageWrite{Type: "document.change", DocumentID: &firstID, DocumentContent: &DocumentContent{
@@ -176,9 +176,9 @@ func TestDocumentCopyCoversUpstreamSource(t *testing.T) {
 		mustCommit(t, storage, conversationWrite(rootID))
 		sourceID := mustMintID(t, storage)
 		history, fork := HistoryRewindable, ForkAsOf
-		scope := DocumentScope{Kind: ScopeConversation, ConversationID: &rootID, History: &history, Fork: &fork}
+		scope := DocumentScope{Kind: ScopeConversation, ConversationID: &rootID}
 		sourceAt := mustCommit(t, storage, StorageWrite{
-			Type: "document.create", DocumentCreate: &DocumentCreate{ID: sourceID, Kind: "notes", Scope: scope},
+			Type: "document.create", DocumentCreate: &DocumentCreate{ID: sourceID, Kind: "notes", Scope: scope, History: &history, Fork: &fork},
 			DocumentContent: &DocumentContent{Version: 1, Kind: ContentBase, Value: json.RawMessage(`{"v":1}`)},
 		})
 		mustCommit(t, storage, StorageWrite{
@@ -193,15 +193,15 @@ func TestDocumentCopyCoversUpstreamSource(t *testing.T) {
 			StorageWrite{Type: "conversation", Conversation: &ConversationRecord{ID: firstChild}},
 			StorageWrite{Type: "conversation", Conversation: &ConversationRecord{ID: secondChild}},
 		)
-		childScope := func(conversationID Id) DocumentScope {
-			return DocumentScope{Kind: ScopeConversation, ConversationID: &conversationID, History: &history, Fork: &fork}
+		childCreate := func(id Id, conversationID Id) *DocumentCreate {
+			return &DocumentCreate{ID: id, Kind: "notes", Scope: DocumentScope{Kind: ScopeConversation, ConversationID: &conversationID}, History: &history, Fork: &fork}
 		}
 		historicalCopy := mustMintID(t, storage)
 		currentCopy := mustMintID(t, storage)
 		mustCommit(t, storage,
-			StorageWrite{Type: "document.copy", DocumentCreate: &DocumentCreate{ID: historicalCopy, Kind: "notes", Scope: childScope(firstChild)},
+			StorageWrite{Type: "document.copy", DocumentCreate: childCreate(historicalCopy, firstChild),
 				DocumentSource: &DocumentCopySource{ID: sourceID, At: DocumentPointAt(sourceAt)}},
-			StorageWrite{Type: "document.copy", DocumentCreate: &DocumentCreate{ID: currentCopy, Kind: "notes", Scope: childScope(secondChild)},
+			StorageWrite{Type: "document.copy", DocumentCreate: childCreate(currentCopy, secondChild),
 				DocumentSource: &DocumentCopySource{ID: sourceID, At: CurrentDocumentPoint()}},
 		)
 		historical, err := storage.Document(ctx, historicalCopy, CurrentDocumentPoint())
@@ -219,7 +219,7 @@ func TestDocumentCopyCoversUpstreamSource(t *testing.T) {
 		mustCommit(t, storage, StorageWrite{Type: "conversation", Conversation: &ConversationRecord{ID: thirdChild}})
 		ambiguous := mustMintID(t, storage)
 		_, err = storage.Commit(ctx, []StorageWrite{
-			{Type: "document.copy", DocumentCreate: &DocumentCreate{ID: ambiguous, Kind: "notes", Scope: childScope(thirdChild)},
+			{Type: "document.copy", DocumentCreate: childCreate(ambiguous, thirdChild),
 				DocumentSource: &DocumentCopySource{ID: sourceID, At: CurrentDocumentPoint()}},
 			{Type: "document.change", DocumentID: &sourceID, DocumentContent: &DocumentContent{
 				Version: 1, Kind: ContentDelta, Ops: []any{[]any{"s", []any{"v"}, 3}},
@@ -231,7 +231,7 @@ func TestDocumentCopyCoversUpstreamSource(t *testing.T) {
 		// A mismatching kind is rejected.
 		mismatch := mustMintID(t, storage)
 		_, err = storage.Commit(ctx, []StorageWrite{
-			{Type: "document.copy", DocumentCreate: &DocumentCreate{ID: mismatch, Kind: "other", Scope: childScope(thirdChild)},
+			{Type: "document.copy", DocumentCreate: &DocumentCreate{ID: mismatch, Kind: "other", Scope: DocumentScope{Kind: ScopeConversation, ConversationID: &thirdChild}, History: &history, Fork: &fork},
 				DocumentSource: &DocumentCopySource{ID: sourceID, At: CurrentDocumentPoint()}},
 		})
 		if err == nil || !strings.Contains(err.Error(), "does not match the copied record") {
@@ -248,10 +248,10 @@ func TestDocumentErrorsAndLatestHistory(t *testing.T) {
 		rootID := RootConversationID
 		mustCommit(t, storage, conversationWrite(rootID))
 		historyLatest, forkCurrent := HistoryLatest, ForkCurrent
-		scope := DocumentScope{Kind: ScopeConversation, ConversationID: &rootID, History: &historyLatest, Fork: &forkCurrent}
+		scope := DocumentScope{Kind: ScopeConversation, ConversationID: &rootID}
 		id := mustMintID(t, storage)
 		createdAt := mustCommit(t, storage, StorageWrite{
-			Type: "document.create", DocumentCreate: &DocumentCreate{ID: id, Kind: "latest", Scope: scope},
+			Type: "document.create", DocumentCreate: &DocumentCreate{ID: id, Kind: "latest", Scope: scope, History: &historyLatest, Fork: &forkCurrent},
 			DocumentContent: &DocumentContent{Version: 1, Kind: ContentBase, Value: json.RawMessage(`{"n":1}`)},
 		})
 		changedAt := mustCommit(t, storage, StorageWrite{
@@ -303,7 +303,7 @@ func TestDocumentErrorsAndLatestHistory(t *testing.T) {
 		// An address may not have two current incarnations.
 		second := mustMintID(t, storage)
 		if _, err := storage.Commit(ctx, []StorageWrite{
-			{Type: "document.create", DocumentCreate: &DocumentCreate{ID: second, Kind: "latest", Scope: scope},
+			{Type: "document.create", DocumentCreate: &DocumentCreate{ID: second, Kind: "latest", Scope: scope, History: &historyLatest, Fork: &forkCurrent},
 				DocumentContent: &DocumentContent{Version: 1, Kind: ContentBase, Value: json.RawMessage(`{}`)}},
 		}); err == nil || !strings.Contains(err.Error(), "already has a current incarnation") {
 			t.Fatalf("duplicate address = %v", err)

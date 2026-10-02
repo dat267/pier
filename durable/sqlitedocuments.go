@@ -75,8 +75,8 @@ func commitSqliteDocuments(ctx context.Context, tx *sql.Tx, writes []StorageWrit
 				}
 				if stored.Record.Scope.Kind != ScopeConversation || record.Scope.Kind != ScopeConversation ||
 					stored.Record.Kind != record.Kind || !sameOptionalString(stored.Record.Key, record.Key) ||
-					!sameOptionalString(stored.Record.Scope.History, record.Scope.History) ||
-					!sameOptionalString(stored.Record.Scope.Fork, record.Scope.Fork) {
+					!sameOptionalString(stored.Record.History, record.History) ||
+					!sameOptionalString(stored.Record.Fork, record.Fork) {
 					return fmt.Errorf("Fork source document %d does not match the copied record", action.copySource.ID)
 				}
 				copied := DocumentContent{Version: stored.Version, Kind: ContentBase, Value: stored.Value}
@@ -101,6 +101,7 @@ func commitSqliteDocuments(ctx context.Context, tx *sql.Tx, writes []StorageWrit
 			}
 			recordJSON := marshalRecordString(DocumentRecord{
 				ID: record.ID, Kind: record.Kind, Key: record.Key, Scope: record.Scope,
+				History: record.History, Fork: record.Fork,
 			})
 			if _, err := tx.ExecContext(ctx,
 				`INSERT INTO documents (id, kind, family, key_value, scope_kind, owner_id, created_at, retired_at, record)

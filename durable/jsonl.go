@@ -490,7 +490,9 @@ func (s *JsonlStorage) planReclamations(writes []StorageWrite, sidecars map[stri
 	for _, write := range writes {
 		switch write.Type {
 		case "document.create":
-			if write.DocumentCreate != nil && isCurrentOnlyDocument(&DocumentRecord{Scope: write.DocumentCreate.Scope}) {
+			if write.DocumentCreate != nil && isCurrentOnlyDocument(&DocumentRecord{
+				Scope: write.DocumentCreate.Scope, History: write.DocumentCreate.History, Fork: write.DocumentCreate.Fork,
+			}) {
 				createdCurrentOnly[write.DocumentCreate.ID] = true
 			}
 		case "document.change":
@@ -540,8 +542,9 @@ func (s *JsonlStorage) adoptSidecarState(writes []StorageWrite) {
 				s.liveTaskSidecars[write.Task.ID] = true
 			}
 		case "document.create":
-			if write.DocumentCreate != nil &&
-				isCurrentOnlyDocument(&DocumentRecord{Scope: write.DocumentCreate.Scope}) {
+			if write.DocumentCreate != nil && isCurrentOnlyDocument(&DocumentRecord{
+				Scope: write.DocumentCreate.Scope, History: write.DocumentCreate.History, Fork: write.DocumentCreate.Fork,
+			}) {
 				s.currentOnlyDocs[write.DocumentCreate.ID] = true
 			}
 		}
@@ -658,7 +661,7 @@ func (s *JsonlStorage) recover() error {
 				if err != nil {
 					return err
 				}
-				if isCurrentOnlyDocument(&DocumentRecord{Scope: record.Scope}) {
+				if isCurrentOnlyDocument(&DocumentRecord{Scope: record.Scope, History: record.History, Fork: record.Fork}) {
 					currentOnlyDocuments[record.ID] = true
 				}
 			case "document.retire":

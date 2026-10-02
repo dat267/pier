@@ -211,8 +211,7 @@ const (
 	ForkAsOf    = "asOf"
 )
 
-// DocumentScope is a document's ownership and lifetime. History and Fork are
-// set only for conversation scope (upstream nests them in the scope union).
+// DocumentScope is a document's ownership: session, conversation, or task.
 type DocumentScope struct {
 	// Kind is session, conversation, or task (see Scope* constants).
 	Kind string `json:"kind"`
@@ -220,10 +219,6 @@ type DocumentScope struct {
 	ConversationID *Id `json:"conversationId,omitempty"`
 	// TaskID applies to task-scoped documents.
 	TaskID *Id `json:"taskId,omitempty"`
-	// History is "latest" or "rewindable" (conversation scope).
-	History *string `json:"history,omitempty"`
-	// Fork is "current" | "initial" | "asOf" (conversation scope).
-	Fork *string `json:"fork,omitempty"`
 }
 
 // DocumentRecord is the persisted lifecycle record for one create-to-retire
@@ -241,18 +236,23 @@ type DocumentRecord struct {
 	// RetiredAt is the commit that retired the incarnation; absent while
 	// current.
 	RetiredAt *Seq `json:"retiredAt,omitempty"`
-	// Scope carries the ownership and (for conversation documents) the history
-	// and fork behavior.
+	// Scope carries the ownership.
 	Scope DocumentScope `json:"scope"`
+	// History is "latest" or "rewindable" (conversation documents).
+	History *string `json:"history,omitempty"`
+	// Fork is "current" | "initial" | "asOf" (conversation documents).
+	Fork *string `json:"fork,omitempty"`
 }
 
 // DocumentCreate is the fields supplied when storage stamps a new document
 // (upstream DocumentCreate: the record without its stamps).
 type DocumentCreate struct {
-	ID    Id            `json:"id"`
-	Kind  string        `json:"kind"`
-	Key   *string       `json:"key,omitempty"`
-	Scope DocumentScope `json:"scope"`
+	ID      Id            `json:"id"`
+	Kind    string        `json:"kind"`
+	Key     *string       `json:"key,omitempty"`
+	Scope   DocumentScope `json:"scope"`
+	History *string       `json:"history,omitempty"`
+	Fork    *string       `json:"fork,omitempty"`
 }
 
 // Document content kinds.

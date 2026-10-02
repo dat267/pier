@@ -88,7 +88,7 @@ func isDocumentAliveAt(record *DocumentRecord, at DocumentPoint) bool {
 // isCurrentOnlyDocument mirrors upstream isCurrentOnly: only conversation
 // documents with "rewindable" history retain past revisions.
 func isCurrentOnlyDocument(record *DocumentRecord) bool {
-	return record.Scope.Kind != ScopeConversation || record.Scope.History == nil || *record.Scope.History == HistoryLatest
+	return record.Scope.Kind != ScopeConversation || record.History == nil || *record.History == HistoryLatest
 }
 
 // documentDeltaOps walks the deltas after a base, enforcing the version
@@ -313,7 +313,8 @@ func (s *MemoryStorage) applyDocumentActions(actions map[Id]*documentAction, seq
 		if action.create != nil {
 			record := DocumentRecord{
 				ID: action.create.ID, Kind: action.create.Kind, Key: action.create.Key,
-				Scope: action.create.Scope, CreatedAt: seq,
+				Scope: action.create.Scope, History: action.create.History, Fork: action.create.Fork,
+				CreatedAt: seq,
 			}
 			if action.retire {
 				retired := seq
@@ -414,7 +415,8 @@ func (s *MemoryStorage) resolveDocumentCopies(writes []StorageWrite) ([]StorageW
 		source, target := stored.Record.Scope, write.DocumentCreate.Scope
 		if source.Kind != ScopeConversation || target.Kind != ScopeConversation ||
 			stored.Record.Kind != write.DocumentCreate.Kind || !sameOptionalString(stored.Record.Key, write.DocumentCreate.Key) ||
-			!sameOptionalString(source.History, target.History) || !sameOptionalString(source.Fork, target.Fork) {
+			!sameOptionalString(stored.Record.History, write.DocumentCreate.History) ||
+			!sameOptionalString(stored.Record.Fork, write.DocumentCreate.Fork) {
 			return nil, fmt.Errorf("Fork source document %d does not match the copied record", write.DocumentSource.ID)
 		}
 		resolved = append(resolved, StorageWrite{
