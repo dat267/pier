@@ -827,3 +827,12 @@ and re-raises. (pi/packages/mcp/src/transports/stdio.ts)
 Upstream treats fetch `TypeError`s as network failures and retries. Go's
 net/http reports failures as typed errors, so the transport retries any
 non-`McpHttpError`. (pi/packages/mcp/src/transports/streamable-http.ts)
+
+## D184 — the SQLite backend is unavailable on DragonFly, Solaris and AIX
+
+Upstream's sqlite storage runs wherever its bundled driver does (Node's
+built-in SQLite). The port uses modernc.org/sqlite, whose libc has no
+DragonFly, Solaris or AIX support, so `OpenSqliteStorage` reports an explicit
+error there while the code still compiles. The `Storage` interface keeps the
+memory backend (and a future jsonl backend) usable on those platforms.
+(pi/packages/durable/src/storage/sqlite/)

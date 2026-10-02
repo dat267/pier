@@ -115,8 +115,9 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
 - `durable`: the port's Storage surface (conversation/entry/task/submission)
   now has a SQLite backend on modernc.org/sqlite (user-approved dependency;
   the upstream sqlite migrations run verbatim and the Storage suite runs as
-  a memory/sqlite conformance pair). The jsonl backend, document storage,
-  and the harness layers are still unported.
+  a memory/sqlite conformance pair). The SQLite backend is unavailable on
+  DragonFly, Solaris and AIX because modernc.org/libc lacks them (D184). The
+  jsonl backend, document storage, and the harness layers are still unported.
 - `coding`: the remote catalog merge is linear (`c34f2d6ad`); the branch model
   resolution still walks its branch per submission (`a0660b174` is inside
   upstream's `virtual-models.ts`, which the port has not ported yet). Dynamic
