@@ -193,9 +193,10 @@ func (w *RunWiring) ShowChatError(message string) {
 	if w.Chat == nil {
 		return
 	}
-	theme := ActiveTheme()
+	errorMessage := message
+	outputPad := w.Display.OutputPad
 	w.Chat.AddChild(tui.NewSpacer(1))
-	w.Chat.AddChild(tui.NewText(theme.Fg("error", "Error: "+message), w.Display.OutputPad, 0, nil))
+	w.Chat.AddChild(NewThemedText(func() string { return ActiveTheme().Fg("error", "Error: "+errorMessage) }, outputPad, 0))
 	w.requestRender()
 }
 
@@ -204,9 +205,9 @@ func (w *RunWiring) ShowChatWarning(message string) {
 	if w.Chat == nil {
 		return
 	}
-	theme := ActiveTheme()
+	warningMessage := message
 	w.Chat.AddChild(tui.NewSpacer(1))
-	w.Chat.AddChild(tui.NewText(theme.Fg("warning", "Warning: "+message), 1, 0, nil))
+	w.Chat.AddChild(NewThemedText(func() string { return ActiveTheme().Fg("warning", "Warning: "+warningMessage) }, 1, 0))
 	w.requestRender()
 }
 
@@ -221,9 +222,6 @@ func (w *RunWiring) ShowNewVersionNotification(release LatestRelease, hyperlinks
 	if w.Chat == nil {
 		return
 	}
-	theme := ActiveTheme()
-	action := theme.Fg("accent", upgradeCommand)
-	updateInstruction := theme.Fg("muted", "New version "+release.Version+" is available. Run ") + action
 	// The release page, not upstream's pi.dev changelog: the notes that matter
 	// are this module's releases (D174). A payload without a page (the check
 	// always carries one) falls back to the release list.
@@ -231,17 +229,26 @@ func (w *RunWiring) ShowNewVersionNotification(release LatestRelease, hyperlinks
 	if changelogURL == "" {
 		changelogURL = coding.PortReleasesPage
 	}
-	changelogLink := theme.Fg("accent", changelogURL)
-	if hyperlinks {
-		changelogLink = tui.Hyperlink(theme.Fg("accent", changelogURL), changelogURL)
-	}
-	changelogLine := theme.Fg("muted", "Changelog: ") + changelogLink
-
-	warningBorder := func(text string) string { return theme.Fg("warning", text) }
+	// Built through themed text so a theme change after startup (the system
+	// theme receiving the terminal's colors) recolors the card (upstream
+	// showNewVersionNotification).
+	warningBorder := func(text string) string { return ActiveTheme().Fg("warning", text) }
 	w.Chat.AddChild(tui.NewSpacer(1))
 	w.Chat.AddChild(NewDynamicBorder(warningBorder))
-	w.Chat.AddChild(tui.NewText(theme.Bold(theme.Fg("warning", "Update Available"))+"\n"+updateInstruction, 1, 0, nil))
-	w.Chat.AddChild(tui.NewText(changelogLine, 1, 0, nil))
+	w.Chat.AddChild(NewThemedText(func() string {
+		theme := ActiveTheme()
+		action := theme.Fg("accent", upgradeCommand)
+		updateInstruction := theme.Fg("muted", "New version "+release.Version+" is available. Run ") + action
+		return theme.Bold(theme.Fg("warning", "Update Available")) + "\n" + updateInstruction
+	}, 1, 0))
+	w.Chat.AddChild(NewThemedText(func() string {
+		theme := ActiveTheme()
+		changelogLink := theme.Fg("accent", changelogURL)
+		if hyperlinks {
+			changelogLink = tui.Hyperlink(changelogLink, changelogURL)
+		}
+		return theme.Fg("muted", "Changelog: ") + changelogLink
+	}, 1, 0))
 	w.Chat.AddChild(NewDynamicBorder(warningBorder))
 	w.requestRender()
 }

@@ -76,7 +76,8 @@ type TranscriptRenderer struct {
 
 	pendingTools             map[string]*ToolExecutionComponent
 	lastStatusSpacer         *tui.Spacer
-	lastStatusText           *tui.Text
+	lastStatusText           *ThemedText
+	lastStatusMessage        string
 	managedToolStatusStarted bool
 
 	// Lazy materialization: on a large session load only the last window of
@@ -140,7 +141,6 @@ func (r *TranscriptRenderer) GetUserMessageText(message ai.Message) string {
 
 // ShowManagedToolStatus shows a managed-tool status update in the chat.
 func (r *TranscriptRenderer) ShowManagedToolStatus(status ManagedToolStatus) {
-	theme := ActiveTheme()
 	if !r.managedToolStatusStarted {
 		r.Chat.AddChild(tui.NewSpacer(1))
 		r.managedToolStatusStarted = true
@@ -153,7 +153,9 @@ func (r *TranscriptRenderer) ShowManagedToolStatus(status ManagedToolStatus) {
 	if status.Type == "warning" {
 		color = "warning"
 	}
-	r.Chat.AddChild(tui.NewText(theme.Fg(color, message), 1, 0, nil))
+	statusMessage := message
+	statusColor := color
+	r.Chat.AddChild(NewThemedText(func() string { return ActiveTheme().Fg(statusColor, statusMessage) }, 1, 0))
 	r.lastStatusSpacer = nil
 	r.lastStatusText = nil
 	r.requestRender()
@@ -161,7 +163,6 @@ func (r *TranscriptRenderer) ShowManagedToolStatus(status ManagedToolStatus) {
 
 // ShowStatus shows a status message, replacing a previous consecutive status.
 func (r *TranscriptRenderer) ShowStatus(message string) {
-	theme := ActiveTheme()
 	children := r.Chat.Children
 	var last, secondLast tui.Component
 	if len(children) > 0 {
@@ -172,13 +173,18 @@ func (r *TranscriptRenderer) ShowStatus(message string) {
 	}
 
 	if last != nil && secondLast != nil && last == tui.Component(r.lastStatusText) && secondLast == tui.Component(r.lastStatusSpacer) {
-		r.lastStatusText.SetText(theme.Fg("dim", message))
+		// The themed text re-evaluates its style on the next render, so a
+		// theme change (the system theme receiving the terminal's colors)
+		// cannot leave the line stale (upstream showStatus).
+		r.lastStatusMessage = message
+		r.lastStatusText.Invalidate()
 		r.requestRender()
 		return
 	}
 
 	spacer := tui.NewSpacer(1)
-	text := tui.NewText(theme.Fg("dim", message), 1, 0, nil)
+	r.lastStatusMessage = message
+	text := NewThemedText(func() string { return ActiveTheme().Fg("dim", r.lastStatusMessage) }, 1, 0)
 	r.Chat.AddChild(spacer)
 	r.Chat.AddChild(text)
 	r.lastStatusSpacer = spacer

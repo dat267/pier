@@ -147,6 +147,44 @@ func TestTranscriptSpecialMessages(t *testing.T) {
 }
 
 // TestTranscriptStatusLines covers showStatus/showManagedToolStatus.
+// TestTranscriptThemedLinesFollowTheTheme pins the stale-color class: the
+// status/error/warning lines re-evaluate their theme color on the next render
+// (upstream renders them through ThemedText). The system theme receiving the
+// terminal's colors after startup used to leave them with the colors they were
+// built with.
+func TestTranscriptThemedLinesFollowTheTheme(t *testing.T) {
+	renderer, _ := newTranscriptTestRenderer(t, false)
+	renderer.ShowStatus("Session compacted 38 times")
+	// The error/warning lines are built by the run wiring, which shares the
+	// chat container.
+	wiring := &RunWiring{Chat: renderer.Chat, Display: &DisplayOptions{OutputPad: 1}}
+	wiring.ShowChatError("boom")
+	wiring.ShowChatWarning("careful")
+	wiring.ShowNewVersionNotification(LatestRelease{Version: "v1.1.0", URL: "https://example.com/releases/v1.1.0"}, false)
+
+	dark := strings.Join(renderChat(t, renderer.Chat), "\n")
+
+	InitTheme("light", false)
+	renderer.Chat.Invalidate()
+	light := strings.Join(renderChat(t, renderer.Chat), "\n")
+
+	if dark == light {
+		t.Fatalf("themed chat lines did not re-render after a theme change:\n%s", dark)
+	}
+	for _, text := range []string{"Session compacted 38 times", "Error: boom", "Warning: careful", "New version v1.1.0 is available"} {
+		if !strings.Contains(light, text) {
+			t.Fatalf("missing %q after the theme change: %q", text, light)
+		}
+	}
+	// The message update path rebuilds through the same component.
+	renderer.ShowStatus("Session compacted 39 times")
+	renderer.Chat.Invalidate()
+	updated := strings.Join(renderChat(t, renderer.Chat), "\n")
+	if !strings.Contains(updated, "Session compacted 39 times") || strings.Contains(updated, "38 times") {
+		t.Fatalf("status update did not replace the text: %q", updated)
+	}
+}
+
 func TestTranscriptStatusLines(t *testing.T) {
 	renderer, _ := newTranscriptTestRenderer(t, false)
 

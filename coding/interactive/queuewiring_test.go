@@ -9,11 +9,16 @@ import (
 
 // transcriptTexts collects the chat's text components, which is where a status
 // line lands (upstream showStatus appends a dim line to the chat container).
+// Status/error/warning lines are ThemedText (they re-evaluate their theme color
+// on render), so they are rendered rather than read from Text().
 func transcriptTexts(app *App) []string {
 	texts := make([]string, 0, len(app.chat.Children))
 	for _, child := range app.chat.Children {
-		if text, ok := child.(*tui.Text); ok {
-			texts = append(texts, text.Text())
+		switch typed := child.(type) {
+		case *ThemedText:
+			texts = append(texts, strings.Join(typed.Render(10000), "\n"))
+		case *tui.Text:
+			texts = append(texts, typed.Text())
 		}
 	}
 	return texts
