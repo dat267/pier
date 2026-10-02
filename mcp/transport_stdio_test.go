@@ -6,9 +6,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
-	"syscall"
 	"testing"
 	"time"
 )
@@ -121,6 +121,9 @@ func TestStdioTransportConnectsAndCapturesStderr(t *testing.T) {
 }
 
 func TestStdioTransportKillsStubbornServerIncludingChildren(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the stubborn fixture relies on POSIX signals")
+	}
 	transport := NewStdioTransport(StdioTransportOptions{
 		Command:        stubbornFixtureBin,
 		CloseTimeoutMs: 100,
@@ -148,11 +151,12 @@ func TestStdioTransportKillsStubbornServerIncludingChildren(t *testing.T) {
 	}
 	// The grandchild must be gone: the group kill reached it.
 	for i := 0; i < 100; i++ {
-		if err := syscall.Kill(grandchild, 0); err != nil {
-			if _, ok := err.(syscall.Errno); ok && err == syscall.ESRCH {
-				return
-			}
-			t.Fatalf("kill(0) err = %v", err)
+		alive, err := processAlive(grandchild)
+		if err != nil {
+			t.Fatalf("probe err = %v", err)
+		}
+		if !alive {
+			return
 		}
 		time.Sleep(20 * time.Millisecond)
 	}

@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -365,24 +364,17 @@ func (t *StdioTransport) closeStdin() error {
 }
 
 // killProcessTree signals the whole process group (upstream
-// killProcessTree); Windows has no graceful signals, so taskkill /T /F does
-// it instead.
+// killProcessTree); the group kill keeps wrappers like npx or uvx from
+// leaving the server behind, and the direct kill is the fallback for a
+// process that was never made a group leader.
 func killProcessTree(pid int, sig syscall.Signal) {
 	if pid <= 0 {
 		return
 	}
-	if runtime.GOOS == "windows" {
-		cmd := exec.Command("taskkill", "/pid", fmt.Sprint(pid), "/T", "/F")
-		_ = cmd.Run()
+	if err := killProcessGroup(pid, sig); err == nil {
 		return
 	}
-	// Negative pid: the whole group, so wrappers like npx or uvx do not
-	// leave the server behind.
-	if err := syscall.Kill(-pid, sig); err == nil {
-		return
-	}
-	// The group is gone or was never created; fall back to the direct child.
-	_ = syscall.Kill(pid, sig)
+	_ = killProcess(pid, sig)
 }
 
 // Live process groups, killed if the host exits without closing them
@@ -424,7 +416,7 @@ func installExitHook() {
 		// the way it would have.
 		if sig, ok := received.(syscall.Signal); ok {
 			signal.Reset(sig)
-			_ = syscall.Kill(os.Getpid(), sig)
+			_ = raiseSelf(sig)
 		}
 	}()
 }
@@ -433,6 +425,6 @@ func killLiveProcessGroups() {
 	liveProcessGroupsMu.Lock()
 	defer liveProcessGroupsMu.Unlock()
 	for pid := range liveProcessGroups {
-		_ = syscall.Kill(-pid, syscall.SIGTERM)
+		_ = killProcessGroup(pid, syscall.SIGTERM)
 	}
 }
