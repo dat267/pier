@@ -104,6 +104,22 @@ func (f *httpFixture) countMethod(method string) int {
 
 // headerOf returns the header of the first request whose JSON-RPC message
 // has the given method.
+// waitForMethod waits until the fixture recorded a request with the given
+// HTTP method. The server-to-client GET stream opens on its own goroutine
+// (upstream dispatches it asynchronously too), and a Close aborts a GET that
+// has not reached the server yet, so the assertions must wait for it instead
+// of racing it.
+func waitForMethod(t *testing.T, fixture *httpFixture, method string) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for fixture.countMethod(method) == 0 {
+		if time.Now().After(deadline) {
+			t.Fatalf("no %s request recorded", method)
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+}
+
 func (f *httpFixture) headerOf(messageMethod string, header string) string {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -172,6 +188,7 @@ func TestStreamableHTTPHandlesJSONAndSSEResponses(t *testing.T) {
 	if len(result.Content) != 1 || result.Content[0].Text != "hello" {
 		t.Fatalf("result = %+v", result.Content)
 	}
+	waitForMethod(t, fixture, "GET")
 	if err := client.Close(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -303,6 +320,7 @@ func TestStreamableHTTPOpensGetStreamAfterInitialization(t *testing.T) {
 	if _, err := client.ListTools(context.Background(), RequestOptions{}); err != nil {
 		t.Fatal(err)
 	}
+	waitForMethod(t, fixture, "GET")
 	if err := client.Close(context.Background()); err != nil {
 		t.Fatal(err)
 	}
