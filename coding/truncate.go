@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/dat267/pier/ai"
+	"strconv"
 )
 
 // Port of core/tools/truncate.ts.
@@ -74,6 +75,49 @@ func splitLinesForCounting(content string) []string {
 		lines = lines[:len(lines)-1]
 	}
 	return lines
+}
+
+// MiddleTruncationResult is the truncate-middle outcome (upstream
+// MiddleTruncationResult).
+type MiddleTruncationResult struct {
+	Content      string
+	Truncated    bool
+	RemovedChars int
+	TotalBytes   int
+	TotalLines   int
+}
+
+// TruncateMiddle keeps the start and the end of content (half of maxBytes
+// each) and replaces the middle with a `…N chars truncated…` marker, like
+// Codex does for tool output. Cuts only at character boundaries (upstream
+// truncateMiddle).
+func TruncateMiddle(content string, maxBytes int) MiddleTruncationResult {
+	totalLines := len(splitLinesForCounting(content))
+	if len(content) <= maxBytes {
+		return MiddleTruncationResult{Content: content, TotalBytes: len(content), TotalLines: totalLines}
+	}
+	// Continuation bytes (10xxxxxx) are not character starts.
+	isBoundary := func(index int) bool {
+		return index >= len(content) || content[index]&0xc0 != 0x80
+	}
+	headEnd := maxBytes / 2
+	for headEnd > 0 && !isBoundary(headEnd) {
+		headEnd--
+	}
+	tailStart := len(content) - (maxBytes - maxBytes/2)
+	for tailStart < len(content) && !isBoundary(tailStart) {
+		tailStart++
+	}
+	head := content[:headEnd]
+	tail := content[tailStart:]
+	removedChars := len([]rune(content[headEnd:tailStart]))
+	return MiddleTruncationResult{
+		Content:      head + "…" + strconv.Itoa(removedChars) + " chars truncated…" + tail,
+		Truncated:    true,
+		RemovedChars: removedChars,
+		TotalBytes:   len(content),
+		TotalLines:   totalLines,
+	}
 }
 
 // FormatSize formats bytes as a human-readable size.
