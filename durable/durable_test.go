@@ -25,6 +25,18 @@ func mustCommit(t *testing.T, storage Storage, writes ...StorageWrite) Seq {
 	return seq
 }
 
+// newJsonlStorageConformance builds a JSONL backend over a temp directory,
+// exercising the same suite as the memory and sqlite backends.
+func newJsonlStorageConformance(t *testing.T) Storage {
+	t.Helper()
+	storage, err := OpenJsonlStorage(context.Background(), t.TempDir(), JsonlStorageOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = storage.Close(context.Background()) })
+	return storage
+}
+
 // newSqliteStorageConformance builds a sqlite backend over a temp file,
 // exercising the same suite as the memory backend.
 func newSqliteStorageConformance(t *testing.T) *SqliteStorage {
@@ -410,6 +422,7 @@ func TestRootConversationID(t *testing.T) {
 	}
 	// The root conversation can be created explicitly with id 1.
 	t.Run("memory", func(t *testing.T) { testRootConversationID(t, NewMemoryStorage()) })
+	t.Run("jsonl", func(t *testing.T) { testRootConversationID(t, newJsonlStorageConformance(t)) })
 	t.Run("sqlite", func(t *testing.T) { testRootConversationID(t, newSqliteStorageConformance(t)) })
 }
 
@@ -423,45 +436,54 @@ func testRootConversationID(t *testing.T, storage Storage) {
 
 func TestCommitSequencesAndMintedIDs(t *testing.T) {
 	t.Run("memory", func(t *testing.T) { testCommitSequencesAndMintedIDs(t, NewMemoryStorage()) })
+	t.Run("jsonl", func(t *testing.T) { testCommitSequencesAndMintedIDs(t, newJsonlStorageConformance(t)) })
 	t.Run("sqlite", func(t *testing.T) { testCommitSequencesAndMintedIDs(t, newSqliteStorageConformance(t)) })
 }
 
 func TestImmutableIDOwnership(t *testing.T) {
 	t.Run("memory", func(t *testing.T) { testImmutableIDOwnership(t, NewMemoryStorage()) })
+	t.Run("jsonl", func(t *testing.T) { testImmutableIDOwnership(t, newJsonlStorageConformance(t)) })
 	t.Run("sqlite", func(t *testing.T) { testImmutableIDOwnership(t, newSqliteStorageConformance(t)) })
 }
 
 func TestScanConversationsPagination(t *testing.T) {
 	t.Run("memory", func(t *testing.T) { testScanConversationsPagination(t, NewMemoryStorage()) })
+	t.Run("jsonl", func(t *testing.T) { testScanConversationsPagination(t, newJsonlStorageConformance(t)) })
 	t.Run("sqlite", func(t *testing.T) { testScanConversationsPagination(t, newSqliteStorageConformance(t)) })
 }
 
 func TestScanEntriesAndHeadMarkers(t *testing.T) {
 	t.Run("memory", func(t *testing.T) { testScanEntriesAndHeadMarkers(t, NewMemoryStorage()) })
+	t.Run("jsonl", func(t *testing.T) { testScanEntriesAndHeadMarkers(t, newJsonlStorageConformance(t)) })
 	t.Run("sqlite", func(t *testing.T) { testScanEntriesAndHeadMarkers(t, newSqliteStorageConformance(t)) })
 }
 
 func TestForkAwareHistoryScans(t *testing.T) {
 	t.Run("memory", func(t *testing.T) { testForkAwareHistoryScans(t, NewMemoryStorage()) })
+	t.Run("jsonl", func(t *testing.T) { testForkAwareHistoryScans(t, newJsonlStorageConformance(t)) })
 	t.Run("sqlite", func(t *testing.T) { testForkAwareHistoryScans(t, newSqliteStorageConformance(t)) })
 }
 
 func TestTaskScanningAndStatusIndex(t *testing.T) {
 	t.Run("memory", func(t *testing.T) { testTaskScanningAndStatusIndex(t, NewMemoryStorage()) })
+	t.Run("jsonl", func(t *testing.T) { testTaskScanningAndStatusIndex(t, newJsonlStorageConformance(t)) })
 	t.Run("sqlite", func(t *testing.T) { testTaskScanningAndStatusIndex(t, newSqliteStorageConformance(t)) })
 }
 
 func TestInputLifecycleAndDeduplication(t *testing.T) {
 	t.Run("memory", func(t *testing.T) { testInputLifecycleAndDeduplication(t, NewMemoryStorage()) })
+	t.Run("jsonl", func(t *testing.T) { testInputLifecycleAndDeduplication(t, newJsonlStorageConformance(t)) })
 	t.Run("sqlite", func(t *testing.T) { testInputLifecycleAndDeduplication(t, newSqliteStorageConformance(t)) })
 }
 
 func TestDetachedValues(t *testing.T) {
 	t.Run("memory", func(t *testing.T) { testDetachedValues(t, NewMemoryStorage()) })
+	t.Run("jsonl", func(t *testing.T) { testDetachedValues(t, newJsonlStorageConformance(t)) })
 	t.Run("sqlite", func(t *testing.T) { testDetachedValues(t, newSqliteStorageConformance(t)) })
 }
 
 func TestCloseRejectsEveryOperation(t *testing.T) {
 	t.Run("memory", func(t *testing.T) { testCloseRejectsEveryOperation(t, NewMemoryStorage()) })
+	t.Run("jsonl", func(t *testing.T) { testCloseRejectsEveryOperation(t, newJsonlStorageConformance(t)) })
 	t.Run("sqlite", func(t *testing.T) { testCloseRejectsEveryOperation(t, newSqliteStorageConformance(t)) })
 }

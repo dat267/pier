@@ -197,23 +197,64 @@ func pageOf[T any](values []T, limit int, idOf func(T) Id) Page[T] {
 	return result
 }
 
-// Commit atomically persists one batch.
-func (s *MemoryStorage) Commit(ctx context.Context, writes []StorageWrite) (Seq, error) {
+// PreparedCommit is a validated, cloned batch ready to apply (upstream
+// PreparedCommit). The JSONL backend uses the split to replay a recovered log
+// at its recorded sequences.
+type PreparedCommit struct {
+	Seq    Seq
+	Writes []StorageWrite
+	store  *MemoryStorage
+}
+
+// PrepareCommit validates and clones a batch at the next sequence.
+func (s *MemoryStorage) PrepareCommit(writes []StorageWrite) (*PreparedCommit, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.assertOpen(); err != nil {
-		return 0, err
+		return nil, err
 	}
+	return s.prepareCommitAt(writes, s.nextSeq)
+}
+
+// PrepareCommitAt validates and clones a batch at an explicit sequence, for
+// log replay (upstream prepareCommit(writes, seq)).
+func (s *MemoryStorage) PrepareCommitAt(writes []StorageWrite, seq Seq) (*PreparedCommit, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.assertOpen(); err != nil {
+		return nil, err
+	}
+	return s.prepareCommitAt(writes, seq)
+}
+
+// prepareCommitAt runs under the lock.
+func (s *MemoryStorage) prepareCommitAt(writes []StorageWrite, seq Seq) (*PreparedCommit, error) {
 	prepared := make([]StorageWrite, 0, len(writes))
 	for _, write := range writes {
 		prepared = append(prepared, cloneWrite(write))
 	}
 	if err := s.checkImmutableIDs(prepared); err != nil {
-		return 0, err
+		return nil, err
 	}
-	seq := s.nextSeq
-
 	for _, write := range prepared {
+		switch write.Type {
+		case "conversation", "entry", "task", "input":
+			continue
+		default:
+			return nil, fmt.Errorf("unknown storage write type: %s", write.Type)
+		}
+	}
+	return &PreparedCommit{Seq: seq, Writes: prepared, store: s}, nil
+}
+
+// Apply writes the batch to the store and advances the sequence (upstream
+// apply).
+func (p *PreparedCommit) Apply() Seq {
+	s := p.store
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	seq := p.Seq
+	for _, write := range p.Writes {
 		switch write.Type {
 		case "conversation":
 			value := write.Conversation
@@ -263,12 +304,22 @@ func (s *MemoryStorage) Commit(ctx context.Context, writes []StorageWrite) (Seq,
 				requests[*value.RequestID] = value.ID
 			}
 			s.bumpNextID(value.ID)
-		default:
-			return 0, fmt.Errorf("unknown storage write type: %s", write.Type)
 		}
 	}
-	s.nextSeq++
-	return seq, nil
+	if seq >= s.nextSeq {
+		s.nextSeq = seq + 1
+	}
+	return seq
+}
+
+// Commit atomically persists one batch.
+func (s *MemoryStorage) Commit(ctx context.Context, writes []StorageWrite) (Seq, error) {
+	_ = ctx
+	prepared, err := s.PrepareCommit(writes)
+	if err != nil {
+		return 0, err
+	}
+	return prepared.Apply(), nil
 }
 
 func cloneWrite(write StorageWrite) StorageWrite {
