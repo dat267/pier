@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
 )
 
@@ -24,43 +25,43 @@ type settingsCorpus struct {
 }
 
 type settingsConfigJSON struct {
-	AutoCompact                *bool                 `json:"autoCompact"`
-	DefaultModel               *string               `json:"defaultModel"`
-	ShowImages                 *bool                 `json:"showImages"`
-	ImageWidthCells            *int                  `json:"imageWidthCells"`
-	AutoResizeImages           *bool                 `json:"autoResizeImages"`
-	BlockImages                *bool                 `json:"blockImages"`
-	EnableSkillCommands        *bool                 `json:"enableSkillCommands"`
-	SteeringMode               *string               `json:"steeringMode"`
-	FollowUpMode               *string               `json:"followUpMode"`
-	Transport                  *string               `json:"transport"`
-	HTTPIdleTimeoutMs          *int64                `json:"httpIdleTimeoutMs"`
-	CacheWarmingMode           *string               `json:"cacheWarmingMode"`
-	ThinkingLevel              *string               `json:"thinkingLevel"`
-	ModelThinkingLevels        map[string]string     `json:"modelThinkingLevels"`
-	CurrentTheme               *string               `json:"currentTheme"`
-	TerminalTheme              *string               `json:"terminalTheme"`
-	HideThinkingBlock          *bool                 `json:"hideThinkingBlock"`
-	MermaidRenderingMode       *string               `json:"mermaidRenderingMode"`
-	ShowCacheMissNotices       *bool                 `json:"showCacheMissNotices"`
-	CollapseChangelog          *bool                 `json:"collapseChangelog"`
-	EnableInstallTelemetry     *bool                 `json:"enableInstallTelemetry"`
-	DoubleEscapeAction         *string               `json:"doubleEscapeAction"`
-	TreeFilterMode             *string               `json:"treeFilterMode"`
-	ShowHardwareCursor         *bool                 `json:"showHardwareCursor"`
-	EditorPaddingX             *int                  `json:"editorPaddingX"`
-	OutputPad                  *int                  `json:"outputPad"`
-	AutocompleteMaxVisible     *int                  `json:"autocompleteMaxVisible"`
-	QuietStartup               *bool                 `json:"quietStartup"`
-	DefaultProjectTrust        *string               `json:"defaultProjectTrust"`
-	ClearOnShrink              *bool                 `json:"clearOnShrink"`
-	ShowTerminalProgress       *bool                 `json:"showTerminalProgress"`
-	TuiMode                    *string               `json:"tuiMode"`
-	FullscreenExitOutput       *string               `json:"fullscreenExitOutput"`
-	FullscreenScrollbar        *string               `json:"fullscreenScrollbar"`
-	FullscreenCopyOnSelect     *bool                 `json:"fullscreenCopyOnSelect"`
-	FullscreenWheelScrollLines *tui.WheelScrollLines `json:"fullscreenWheelScrollLines"`
-	Warnings                   *WarningSettings      `json:"warnings"`
+	AutoCompact                *bool                       `json:"autoCompact"`
+	DefaultModel               *string                     `json:"defaultModel"`
+	ShowImages                 *bool                       `json:"showImages"`
+	ImageWidthCells            *int                        `json:"imageWidthCells"`
+	AutoResizeImages           *bool                       `json:"autoResizeImages"`
+	BlockImages                *bool                       `json:"blockImages"`
+	EnableSkillCommands        *bool                       `json:"enableSkillCommands"`
+	SteeringMode               *string                     `json:"steeringMode"`
+	FollowUpMode               *string                     `json:"followUpMode"`
+	Transport                  *string                     `json:"transport"`
+	HTTPIdleTimeoutMs          *int64                      `json:"httpIdleTimeoutMs"`
+	CacheWarmingMode           *string                     `json:"cacheWarmingMode"`
+	ThinkingLevel              *string                     `json:"thinkingLevel"`
+	ModelThinkingLevels        map[string]string           `json:"modelThinkingLevels"`
+	CurrentTheme               *string                     `json:"currentTheme"`
+	TerminalTheme              *string                     `json:"terminalTheme"`
+	HideThinkingBlock          *bool                       `json:"hideThinkingBlock"`
+	MermaidRenderingMode       *string                     `json:"mermaidRenderingMode"`
+	ShowCacheMissNotices       *bool                       `json:"showCacheMissNotices"`
+	CollapseChangelog          *bool                       `json:"collapseChangelog"`
+	EnableInstallTelemetry     *bool                       `json:"enableInstallTelemetry"`
+	DoubleEscapeAction         *string                     `json:"doubleEscapeAction"`
+	TreeFilterMode             *string                     `json:"treeFilterMode"`
+	ShowHardwareCursor         *bool                       `json:"showHardwareCursor"`
+	EditorPaddingX             *int                        `json:"editorPaddingX"`
+	OutputPad                  *int                        `json:"outputPad"`
+	AutocompleteMaxVisible     *int                        `json:"autocompleteMaxVisible"`
+	QuietStartup               *coding.QuietStartupSetting `json:"quietStartup"`
+	DefaultProjectTrust        *string                     `json:"defaultProjectTrust"`
+	ClearOnShrink              *bool                       `json:"clearOnShrink"`
+	ShowTerminalProgress       *bool                       `json:"showTerminalProgress"`
+	TuiMode                    *string                     `json:"tuiMode"`
+	FullscreenExitOutput       *string                     `json:"fullscreenExitOutput"`
+	FullscreenScrollbar        *string                     `json:"fullscreenScrollbar"`
+	FullscreenCopyOnSelect     *bool                       `json:"fullscreenCopyOnSelect"`
+	FullscreenWheelScrollLines *tui.WheelScrollLines       `json:"fullscreenWheelScrollLines"`
+	Warnings                   *WarningSettings            `json:"warnings"`
 }
 
 func baseSettingsConfig(t *testing.T) SettingsConfig {
@@ -166,7 +167,9 @@ func applySettingsJSON(t *testing.T, config *SettingsConfig, raw json.RawMessage
 	setInt(&config.EditorPaddingX, parsed.EditorPaddingX)
 	setInt(&config.OutputPad, parsed.OutputPad)
 	setInt(&config.AutocompleteMaxVisible, parsed.AutocompleteMaxVisible)
-	setBool(&config.QuietStartup, parsed.QuietStartup)
+	if parsed.QuietStartup != nil {
+		config.QuietStartup = *parsed.QuietStartup
+	}
 	setString(&config.DefaultProjectTrust, parsed.DefaultProjectTrust)
 	setBool(&config.ClearOnShrink, parsed.ClearOnShrink)
 	setBool(&config.ShowTerminalProgress, parsed.ShowTerminalProgress)
@@ -235,7 +238,9 @@ func recordingCallbacks(events *[]string) SettingsCallbacks {
 		OnEditorPaddingXChange:         func(value int) { *events = append(*events, "onEditorPaddingXChange:"+itoa(value)) },
 		OnOutputPadChange:              func(value int) { *events = append(*events, "onOutputPadChange:"+itoa(value)) },
 		OnAutocompleteMaxVisibleChange: func(value int) { *events = append(*events, "onAutocompleteMaxVisibleChange:"+itoa(value)) },
-		OnQuietStartupChange:           recordBool("onQuietStartupChange"),
+		OnQuietStartupChange: func(value coding.QuietStartupSetting) {
+			*events = append(*events, "onQuietStartupChange:"+coding.QuietStartupValueString(value))
+		},
 		OnDefaultProjectTrustChange:    record("onDefaultProjectTrustChange"),
 		OnClearOnShrinkChange:          recordBool("onClearOnShrinkChange"),
 		OnShowTerminalProgressChange:   recordBool("onShowTerminalProgressChange"),

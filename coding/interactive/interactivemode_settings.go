@@ -290,7 +290,7 @@ func (w *SettingsWiring) BuildSettingsCallbacks(done func(), refresh func()) Set
 		},
 		OnCollapseChangelogChange:      func(collapsed bool) { settings.SetCollapseChangelog(collapsed) },
 		OnEnableInstallTelemetryChange: func(enabled bool) { settings.SetEnableInstallTelemetry(enabled) },
-		OnQuietStartupChange:           func(enabled bool) { settings.SetQuietStartup(enabled) },
+		OnQuietStartupChange:           func(value coding.QuietStartupSetting) { settings.SetQuietStartup(value) },
 		OnDefaultProjectTrustChange:    func(trust string) { settings.SetDefaultProjectTrust(trust) },
 		OnDoubleEscapeActionChange:     func(action string) { settings.SetDoubleEscapeAction(action) },
 		OnTreeFilterModeChange:         func(mode string) { settings.SetTreeFilterMode(mode) },

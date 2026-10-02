@@ -194,7 +194,7 @@ func TestRunInit(t *testing.T) {
 	wiring.Events = dispatcher
 
 	wiring.Init(context.Background(), nil, func() { order = append(order, "signals") },
-		func() { order = append(order, "mount") }, false)
+		func() { order = append(order, "mount") }, coding.QuietStartupSetting{})
 
 	if !wiring.initialized {
 		t.Fatal("not initialized")
@@ -207,7 +207,7 @@ func TestRunInit(t *testing.T) {
 		t.Fatalf("header children = %d", len(wiring.HeaderContainer.Children))
 	}
 	// A second init is a no-op.
-	wiring.Init(context.Background(), nil, nil, nil, false)
+	wiring.Init(context.Background(), nil, nil, nil, coding.QuietStartupSetting{})
 	if strings.Join(order, ",") != want {
 		t.Fatalf("order after second init = %v", order)
 	}
@@ -224,7 +224,7 @@ func TestRunInit(t *testing.T) {
 // TestRunInitQuiet covers the silenced header.
 func TestRunInitQuiet(t *testing.T) {
 	wiring, _ := newRunTestWiring(t)
-	wiring.Init(context.Background(), nil, nil, nil, true)
+	wiring.Init(context.Background(), nil, nil, nil, coding.QuietStartupSetting{Enabled: true})
 	if len(wiring.HeaderContainer.Children) != 1 {
 		t.Fatalf("header children = %d", len(wiring.HeaderContainer.Children))
 	}
@@ -264,7 +264,7 @@ func TestRunLoop(t *testing.T) {
 		waitForConditionWithin(t, func() bool { return len(recordedPrompts()) >= 3 }, 5*time.Second)
 		cancel()
 	}()
-	wiring.Run(ctx, InitOptions{QuietStartup: true}, RunOptions{
+	wiring.Run(ctx, InitOptions{QuietStartup: coding.QuietStartupSetting{Enabled: true}}, RunOptions{
 		Offline:              true,
 		StartupDiagnostics:   diagnostics,
 		MigratedProviders:    []string{"p"},
@@ -405,7 +405,7 @@ func TestRunLoopMaterializesPendingWorkWhileIdle(t *testing.T) {
 		}
 		cancel()
 	}()
-	wiring.Run(ctx, InitOptions{QuietStartup: true, Mount: func() {}}, RunOptions{Offline: true})
+	wiring.Run(ctx, InitOptions{QuietStartup: coding.QuietStartupSetting{Enabled: true}, Mount: func() {}}, RunOptions{Offline: true})
 	<-ctx.Done()
 	if got := atomic.LoadInt32(&beats); got < 3 {
 		t.Fatalf("loop ran %d beats, wanted >=3; the loop parked after the first", got)

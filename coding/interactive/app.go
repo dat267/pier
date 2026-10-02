@@ -55,7 +55,7 @@ type AppOptions struct {
 	TuiMode      string
 	Version      string
 	AppName      string
-	QuietStartup bool
+	QuietStartup coding.QuietStartupSetting
 	Verbose      bool
 
 	Settings    *coding.SettingsManager

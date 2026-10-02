@@ -73,7 +73,7 @@ func TestSwitchSessionResetsTheTranscriptState(t *testing.T) {
 func TestSessionReplacementReshowsLoadedResources(t *testing.T) {
 	app, cleanup := newTestApp(t)
 	defer cleanup()
-	app.options.QuietStartup = false
+	app.options.QuietStartup = coding.QuietStartupSetting{}
 	app.Init(context.Background())
 
 	// A skill the new session's resource loader picks up from the agent dir (the

@@ -108,7 +108,7 @@ func TestSettingsConfigAssembly(t *testing.T) {
 	settings.SetEditorPaddingX(2)
 	settings.SetOutputPad(1)
 	settings.SetAutocompleteMaxVisible(15)
-	settings.SetQuietStartup(true)
+	settings.SetQuietStartup(coding.QuietStartupSetting{Enabled: true})
 	settings.SetClearOnShrink(false)
 	settings.SetShowTerminalProgress(true)
 	settings.SetFullscreenExitOutput("resume-hint")
@@ -149,7 +149,7 @@ func TestSettingsConfigAssembly(t *testing.T) {
 		{"editorPaddingX", config.EditorPaddingX, 2},
 		{"outputPad", config.OutputPad, 1},
 		{"autocompleteMaxVisible", config.AutocompleteMaxVisible, 15},
-		{"quietStartup", config.QuietStartup, true},
+		{"quietStartup", config.QuietStartup, coding.QuietStartupSetting{Enabled: true}},
 		{"clearOnShrink", config.ClearOnShrink, false},
 		{"showTerminalProgress", config.ShowTerminalProgress, true},
 		{"tuiMode", config.TuiMode, "regular"},

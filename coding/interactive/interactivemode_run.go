@@ -310,7 +310,7 @@ func (w *RunWiring) BuildMinimalHeader() tui.Component {
 }
 
 // Init mounts the UI, renders the header and wires the startup handlers.
-func (w *RunWiring) Init(ctx context.Context, scopedModels []coding.ScopedModel, registerSignals func(), mount func(), quietStartup bool) {
+func (w *RunWiring) Init(ctx context.Context, scopedModels []coding.ScopedModel, registerSignals func(), mount func(), quietStartup coding.QuietStartupSetting) {
 	if w.initialized {
 		return
 	}
@@ -327,7 +327,7 @@ func (w *RunWiring) Init(ctx context.Context, scopedModels []coding.ScopedModel,
 
 	// Header (unless silenced).
 	if w.HeaderContainer != nil {
-		if w.Verbose || !quietStartup {
+		if w.Verbose || !quietStartup.Enabled {
 			w.BuiltInHeader = w.BuildStartupHeader(scopedModels)
 			w.HeaderContainer.AddChild(tui.NewSpacer(1))
 			w.HeaderContainer.AddChild(w.BuiltInHeader)
@@ -406,7 +406,7 @@ func (w *RunWiring) Init(ctx context.Context, scopedModels []coding.ScopedModel,
 // InitOptions are the init orchestration knobs.
 type InitOptions struct {
 	ScopedModels    []coding.ScopedModel
-	QuietStartup    bool
+	QuietStartup    coding.QuietStartupSetting
 	RegisterSignals func()
 	Mount           func()
 }

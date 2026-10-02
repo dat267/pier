@@ -362,6 +362,62 @@ func TestSettingsTuiMode(t *testing.T) {
 	}
 }
 
+// TestSettingsQuietStartup covers the QuietStartup union (boolean | "header",
+// settings-manager.test.ts): the mode round-trips, and writing it keeps every
+// other key — an unrepresentable value used to collapse the file.
+func TestSettingsQuietStartup(t *testing.T) {
+	agentDir, projectDir := settingsDirs(t)
+	settingsPath := filepath.Join(agentDir, "settings.json")
+	writeSettingsFile(t, settingsPath, `{"quietStartup":"header","defaultModel":"claude-sonnet","theme":"dark"}`)
+
+	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	if got := manager.GetQuietStartup(); !got.Header || got.Enabled {
+		t.Fatalf("getQuietStartup = %+v", got)
+	}
+	manager.SetQuietStartup(QuietStartupSetting{Enabled: true})
+	saved := readSettingsFile(t, settingsPath)
+	if saved["quietStartup"] != true || saved["defaultModel"] != "claude-sonnet" || saved["theme"] != "dark" {
+		t.Fatalf("saved = %#v", saved)
+	}
+	manager.SetQuietStartup(QuietStartupSetting{Header: true})
+	if saved := readSettingsFile(t, settingsPath); saved["quietStartup"] != "header" {
+		t.Fatalf("quietStartup = %#v", saved["quietStartup"])
+	}
+	// The file's key order survives the write (upstream merges into the parsed
+	// object).
+	raw, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(raw)
+	if !(strings.Index(text, `"quietStartup"`) < strings.Index(text, `"defaultModel"`) &&
+		strings.Index(text, `"defaultModel"`) < strings.Index(text, `"theme"`)) {
+		t.Fatalf("key order changed:\n%s", text)
+	}
+}
+
+// TestSettingsPersistKeepsValuesTheTypeCannotRepresent pins the settings
+// clobber: the persist path merges into the raw file object (upstream's
+// withLock), so a value the typed settings cannot parse survives a save
+// instead of the file being rewritten to just the modified field.
+func TestSettingsPersistKeepsValuesTheTypeCannotRepresent(t *testing.T) {
+	agentDir, projectDir := settingsDirs(t)
+	settingsPath := filepath.Join(agentDir, "settings.json")
+	writeSettingsFile(t, settingsPath, `{"outputPad":"wide","defaultModel":"claude-sonnet","tuiMode":"fullscreen"}`)
+
+	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	manager.SetHideThinkingBlock(true)
+	saved := readSettingsFile(t, settingsPath)
+	for _, key := range []string{"outputPad", "defaultModel", "tuiMode"} {
+		if _, ok := saved[key]; !ok {
+			t.Fatalf("lost %q: %#v", key, saved)
+		}
+	}
+	if saved["outputPad"] != "wide" {
+		t.Fatalf("outputPad = %#v", saved["outputPad"])
+	}
+}
+
 func TestSettingsExternalEditorAndTUISettings(t *testing.T) {
 	t.Setenv("VISUAL", "")
 	t.Setenv("EDITOR", "")

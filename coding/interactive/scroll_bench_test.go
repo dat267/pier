@@ -130,7 +130,7 @@ func newTestAppB(tb testing.TB) (*App, func()) {
 	app := NewApp(AppOptions{
 		Cwd: dir, AgentDir: dir,
 		Terminal: &fakeRendererTerminal{width: 100, height: 30},
-		TuiMode:  "fullscreen", Version: "1.0.0", AppName: "pi", QuietStartup: true,
+		TuiMode:  "fullscreen", Version: "1.0.0", AppName: "pi", QuietStartup: coding.QuietStartupSetting{Enabled: true},
 		Settings: settings, Session: created.Session, Runtime: runtime, SessionMgr: sessions,
 		Keybindings: appKeybindings, InitialThemeSetting: &dark,
 		Exit:           func(int) {},

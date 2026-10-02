@@ -93,7 +93,7 @@ type SettingsConfig struct {
 	EditorPaddingX             int
 	OutputPad                  int
 	AutocompleteMaxVisible     int
-	QuietStartup               bool
+	QuietStartup               coding.QuietStartupSetting
 	DefaultProjectTrust        string
 	ClearOnShrink              bool
 	ShowTerminalProgress       bool
@@ -133,7 +133,7 @@ type SettingsCallbacks struct {
 	OnEditorPaddingXChange             func(int)
 	OnOutputPadChange                  func(int)
 	OnAutocompleteMaxVisibleChange     func(int)
-	OnQuietStartupChange               func(bool)
+	OnQuietStartupChange               func(coding.QuietStartupSetting)
 	OnDefaultProjectTrustChange        func(string)
 	OnClearOnShrinkChange              func(bool)
 	OnShowTerminalProgressChange       func(bool)
@@ -627,9 +627,9 @@ func NewSettingsSelectorComponent(config SettingsConfig, callbacks SettingsCallb
 		{
 			ID:           "quiet-startup",
 			Label:        "Quiet startup",
-			Description:  "Disable verbose printing at startup",
-			CurrentValue: boolStr(config.QuietStartup),
-			Values:       []string{"true", "false"},
+			Description:  "Disable verbose printing at startup (header: keep only the startup header)",
+			CurrentValue: coding.QuietStartupValueString(config.QuietStartup),
+			Values:       []string{"true", "header", "false"},
 		},
 		{
 			ID:           "install-telemetry",
@@ -1015,7 +1015,9 @@ func applySettingChange(id string, newValue string, callbacks SettingsCallbacks,
 	case "collapse-changelog":
 		call(callbacks.OnCollapseChangelogChange)
 	case "quiet-startup":
-		call(callbacks.OnQuietStartupChange)
+		if callbacks.OnQuietStartupChange != nil {
+			callbacks.OnQuietStartupChange(coding.QuietStartupFromString(newValue))
+		}
 	case "install-telemetry":
 		call(callbacks.OnEnableInstallTelemetryChange)
 	case "default-project-trust":

@@ -245,7 +245,7 @@ func (a *App) showLoadedResources(force bool) {
 	}
 	a.loadedResourcesContainer.Clear()
 
-	showListing := force || a.options.Verbose || !a.options.QuietStartup
+	showListing := force || a.options.Verbose || (!a.options.QuietStartup.Enabled && !a.options.QuietStartup.Header)
 	if !showListing {
 		return
 	}

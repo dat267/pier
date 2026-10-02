@@ -159,7 +159,7 @@ func newTestApp(t *testing.T) (*App, func()) {
 		TuiMode:             "regular",
 		Version:             "1.0.0",
 		AppName:             "pi",
-		QuietStartup:        true,
+		QuietStartup:        coding.QuietStartupSetting{Enabled: true},
 		Settings:            settings,
 		Session:             created.Session,
 		Runtime:             runtime,

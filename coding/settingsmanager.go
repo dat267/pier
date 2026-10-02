@@ -17,6 +17,7 @@ import (
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/internal/offloop"
 	"github.com/dat267/pier/tui"
+	"sort"
 )
 
 // Port of core/settings-manager.ts (with the config constants it uses from
@@ -187,6 +188,67 @@ type SettingsPackageSource struct {
 	Themes     []string `json:"themes,omitempty"`
 }
 
+// QuietStartupSetting is upstream's QuietStartup: the boolean toggle or the
+// "header" mode that keeps only the startup header. Unknown values read as
+// false so one odd value can never fail the whole settings parse, and the raw
+// value stays in the file until the setting is modified.
+type QuietStartupSetting struct {
+	// Enabled is the value `true` (silence everything).
+	Enabled bool
+	// Header is the value `"header"` (keep only the startup header).
+	Header bool
+}
+
+// MarshalJSON writes the union the way upstream serializes it.
+func (q QuietStartupSetting) MarshalJSON() ([]byte, error) {
+	if q.Header {
+		return []byte(`"header"`), nil
+	}
+	if q.Enabled {
+		return []byte("true"), nil
+	}
+	return []byte("false"), nil
+}
+
+// UnmarshalJSON accepts a boolean or "header"; anything else reads as false.
+func (q *QuietStartupSetting) UnmarshalJSON(data []byte) error {
+	var boolean bool
+	if err := json.Unmarshal(data, &boolean); err == nil {
+		q.Enabled = boolean
+		q.Header = false
+		return nil
+	}
+	var text string
+	if err := json.Unmarshal(data, &text); err == nil && text == "header" {
+		q.Header = true
+		q.Enabled = false
+	}
+	return nil
+}
+
+// QuietStartupValueString renders the union for the settings selector row
+// (upstream's String(config.quietStartup)).
+func QuietStartupValueString(setting QuietStartupSetting) string {
+	if setting.Header {
+		return "header"
+	}
+	if setting.Enabled {
+		return "true"
+	}
+	return "false"
+}
+
+// QuietStartupFromString parses a settings-selector value.
+func QuietStartupFromString(value string) QuietStartupSetting {
+	switch value {
+	case "true":
+		return QuietStartupSetting{Enabled: true}
+	case "header":
+		return QuietStartupSetting{Header: true}
+	}
+	return QuietStartupSetting{}
+}
+
 // Settings is the settings document (upstream Settings). Optional fields are
 // pointers so absent settings stay absent in the persisted JSON.
 type Settings struct {
@@ -210,7 +272,7 @@ type Settings struct {
 	ShowCacheMissNotices   *bool                  `json:"showCacheMissNotices,omitempty"`
 	ExternalEditor         *string                `json:"externalEditor,omitempty"`
 	ShellPath              *string                `json:"shellPath,omitempty"`
-	QuietStartup           *bool                  `json:"quietStartup,omitempty"`
+	QuietStartup           *QuietStartupSetting   `json:"quietStartup,omitempty"`
 	DefaultProjectTrust    *string                `json:"defaultProjectTrust,omitempty"`
 	ShellCommandPrefix     *string                `json:"shellCommandPrefix,omitempty"`
 	NpmCommand             []string               `json:"npmCommand,omitempty"`
@@ -594,7 +656,26 @@ func MigrateSettings(settings *Settings) *Settings {
 }
 
 // MigrateSettingsRaw applies the migrations to a raw settings object.
+// MigrateSettingsRaw parses a raw settings object after the legacy-key
+// migrations (upstream migrateSettings).
 func MigrateSettingsRaw(settings map[string]any) *Settings {
+	settings = migrateSettingsMap(settings)
+	encoded, err := marshalJSONNoEscape(settings)
+	if err != nil {
+		return &Settings{}
+	}
+	var out Settings
+	if err := json.Unmarshal(encoded, &out); err != nil {
+		return &Settings{}
+	}
+	return &out
+}
+
+// migrateSettingsMap applies the legacy-key migrations to a raw settings
+// object (the map half of upstream migrateSettings). The port's persist path
+// merges into this map rather than re-marshalling the typed struct, so a value
+// the struct cannot represent survives a save.
+func migrateSettingsMap(settings map[string]any) map[string]any {
 	if settings == nil {
 		settings = map[string]any{}
 	}
@@ -652,16 +733,7 @@ func MigrateSettingsRaw(settings map[string]any) *Settings {
 		}
 		delete(rawRetry, "maxDelayMs")
 	}
-
-	encoded, err := marshalJSONNoEscape(settings)
-	if err != nil {
-		return &Settings{}
-	}
-	var out Settings
-	if err := json.Unmarshal(encoded, &out); err != nil {
-		return &Settings{}
-	}
-	return &out
+	return settings
 }
 
 func settingsToMap(settings *Settings) map[string]any {
@@ -821,7 +893,7 @@ func (s *Settings) marshalOrdered() ([]byte, error) {
 	object.setBool("showCacheMissNotices", s.ShowCacheMissNotices)
 	object.setString("externalEditor", s.ExternalEditor)
 	object.setString("shellPath", s.ShellPath)
-	object.setBool("quietStartup", s.QuietStartup)
+	object.setAny("quietStartup", s.QuietStartup)
 	object.setString("defaultProjectTrust", s.DefaultProjectTrust)
 	object.setString("shellCommandPrefix", s.ShellCommandPrefix)
 	object.setStrings("npmCommand", s.NpmCommand)
@@ -972,6 +1044,92 @@ func marshalSettingsIndent(settings *Settings) string {
 	encoder.SetEscapeHTML(false)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(json.RawMessage(ordered)); err != nil {
+		return "{}"
+	}
+	return strings.TrimRight(buffer.String(), "\n")
+}
+
+// settingsRawKeyOrder returns the top-level keys of a JSON settings object in
+// the order the file lists them (upstream merges into the parsed object and
+// writes that order back).
+func settingsRawKeyOrder(text string) []string {
+	decoder := json.NewDecoder(strings.NewReader(text))
+	decoder.UseNumber()
+	token, err := decoder.Token()
+	if err != nil || token != json.Delim('{') {
+		return nil
+	}
+	keys := []string{}
+	for decoder.More() {
+		keyToken, err := decoder.Token()
+		if err != nil {
+			return keys
+		}
+		key, ok := keyToken.(string)
+		if !ok {
+			return keys
+		}
+		keys = append(keys, key)
+		var value json.RawMessage
+		if err := decoder.Decode(&value); err != nil {
+			return keys
+		}
+	}
+	return keys
+}
+
+// settingsDeclarationOrder is the order the typed writer emits known fields.
+func settingsDeclarationOrder() []string {
+	encoded, err := (&Settings{}).marshalOrdered()
+	if err != nil {
+		return nil
+	}
+	return settingsRawKeyOrder(string(encoded))
+}
+
+// marshalSettingsMapIndent renders a merged settings object like
+// JSON.stringify(value, null, 2). The file's keys keep their positions, then
+// the remaining known fields follow in declaration order, then any other key
+// (a value the typed settings cannot represent, kept verbatim).
+func marshalSettingsMapIndent(fileKeys []string, merged map[string]any) string {
+	ordered := orderedObject{}
+	seen := map[string]bool{}
+	add := func(key string) {
+		if seen[key] {
+			return
+		}
+		value, ok := merged[key]
+		if !ok {
+			return
+		}
+		seen[key] = true
+		ordered.set(key, value, true)
+	}
+	for _, key := range fileKeys {
+		add(key)
+	}
+	for _, key := range settingsDeclarationOrder() {
+		add(key)
+	}
+	remaining := make([]string, 0, len(merged)-len(ordered.keys))
+	for key := range merged {
+		if !seen[key] {
+			remaining = append(remaining, key)
+		}
+	}
+	sort.Strings(remaining)
+	for _, key := range remaining {
+		add(key)
+	}
+	encoded, err := ordered.marshal()
+	if err != nil {
+		return "{}"
+	}
+	var buffer bytes.Buffer
+	encoder := json.NewEncoder(&buffer)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(json.RawMessage(encoded)); err != nil {
 		return "{}"
 	}
 	return strings.TrimRight(buffer.String(), "\n")
@@ -1203,15 +1361,21 @@ func (m *SettingsManager) persistScopedSettings(
 	modifiedNested map[string]map[string]bool,
 ) error {
 	return m.storage.WithLock(scope, func(current *string) *string {
-		currentSettings := &Settings{}
+		// The merge base is the raw file object (upstream merges into the parsed
+		// JSON, never through its typed view): unknown keys and values the
+		// settings type cannot represent survive a save instead of the file
+		// being rewritten to just the modified field.
+		merged := map[string]any{}
+		var fileKeys []string
 		if current != nil && *current != "" {
+			text := StripBom(*current)
 			var raw map[string]any
-			if err := json.Unmarshal([]byte(StripBom(*current)), &raw); err != nil {
+			if err := json.Unmarshal([]byte(text), &raw); err != nil {
 				return nil
 			}
-			currentSettings = MigrateSettingsRaw(raw)
+			fileKeys = settingsRawKeyOrder(text)
+			merged = migrateSettingsMap(raw)
 		}
-		merged := settingsToMap(currentSettings)
 		snapshotMap := settingsToMap(snapshot)
 		for field := range modified {
 			value, has := snapshotMap[field]
@@ -1234,7 +1398,7 @@ func (m *SettingsManager) persistScopedSettings(
 			}
 			merged[field] = value
 		}
-		content := marshalSettingsIndent(mapToSettings(merged))
+		content := marshalSettingsMapIndent(fileKeys, merged)
 		return &content
 	})
 }
@@ -1824,15 +1988,18 @@ func (m *SettingsManager) SetShellPath(path *string) {
 	m.save()
 }
 
-// GetQuietStartup reports the quiet-startup toggle.
-func (m *SettingsManager) GetQuietStartup() bool {
+// GetQuietStartup reports the quiet-startup mode (false unless set).
+func (m *SettingsManager) GetQuietStartup() QuietStartupSetting {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	return m.settings.QuietStartup != nil && *m.settings.QuietStartup
+	if m.settings.QuietStartup == nil {
+		return QuietStartupSetting{}
+	}
+	return *m.settings.QuietStartup
 }
 
-// SetQuietStartup stores the quiet-startup toggle.
-func (m *SettingsManager) SetQuietStartup(quiet bool) {
+// SetQuietStartup stores the quiet-startup mode.
+func (m *SettingsManager) SetQuietStartup(quiet QuietStartupSetting) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.globalSettings.QuietStartup = &quiet
