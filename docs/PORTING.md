@@ -132,9 +132,17 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   `submissionByRequest` and the `submission` write kind; the earlier port
   called these records "inputs" and omitted the type) and
   now has a SQLite backend on modernc.org/sqlite (user-approved dependency;
-  the upstream sqlite migrations run verbatim and the Storage suite runs as
-  a memory/sqlite conformance pair). The jsonl backend, document storage, and
-  the harness layers are still unported.
+  the upstream sqlite migrations run verbatim and the Storage suite runs
+  against memory, SQLite and JSONL). Conversation scans take the upstream
+  `ConversationQuery` owner filter. The transaction kernel
+  (`session/transaction.ts`) is ported over the synchronous storage:
+  conversation create/fork (with the fork document copies), entry append with
+  task attribution, task create/set with owner validation and terminal task
+  document retirement, submission create/place/settle, document acquire/
+  create/retire with the tracker, the base-vs-delta plan with the checkpoint
+  predicate, storage-admission assembly and adoption publications. Still
+  unported: `session/session.ts` (the session kernel), the harness/tools and
+  the upstream conformance runner.
 - `coding`: the remote catalog merge is linear (`c34f2d6ad`); the branch model
   resolution still walks its branch per submission (`a0660b174` is inside
   upstream's `virtual-models.ts`, which the port has not ported yet). Dynamic

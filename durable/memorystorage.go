@@ -434,8 +434,9 @@ func (s *MemoryStorage) Conversation(ctx context.Context, id Id) (*ConversationR
 	return cloneConversation(s.state.conversations[id]), nil
 }
 
-// ScanConversations scans conversations in ascending id order.
-func (s *MemoryStorage) ScanConversations(ctx context.Context, cursor Cursor, limit int) (Page[ConversationRecord], error) {
+// ScanConversations scans conversations matching the query in ascending id
+// order.
+func (s *MemoryStorage) ScanConversations(ctx context.Context, query ConversationQuery, cursor Cursor, limit int) (Page[ConversationRecord], error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.assertOpen(); err != nil {
@@ -445,10 +446,19 @@ func (s *MemoryStorage) ScanConversations(ctx context.Context, cursor Cursor, li
 	if after := cursorID(cursor); after != nil {
 		start = upperBound(s.state.conversationIDs, *after)
 	}
-	end := min(start+limit+1, len(s.state.conversationIDs))
-	values := make([]ConversationRecord, 0, end-start)
-	for _, id := range s.state.conversationIDs[start:end] {
-		values = append(values, *s.state.conversations[id])
+	values := make([]ConversationRecord, 0, limit+1)
+	for _, id := range s.state.conversationIDs[start:] {
+		record := s.state.conversations[id]
+		if query.OwnerConversationID != nil && (record.Owner == nil || record.Owner.ConversationID != *query.OwnerConversationID) {
+			continue
+		}
+		if query.OwnerTaskID != nil && (record.Owner == nil || record.Owner.TaskID != *query.OwnerTaskID) {
+			continue
+		}
+		values = append(values, *record)
+		if len(values) > limit {
+			break
+		}
 	}
 	return pageOf(values, limit, func(value ConversationRecord) Id { return value.ID }), nil
 }

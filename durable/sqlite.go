@@ -384,7 +384,7 @@ func (s *SqliteStorage) Conversation(ctx context.Context, id Id) (*ConversationR
 }
 
 // ScanConversations scans conversations in ascending id order.
-func (s *SqliteStorage) ScanConversations(ctx context.Context, cursor Cursor, limit int) (Page[ConversationRecord], error) {
+func (s *SqliteStorage) ScanConversations(ctx context.Context, filter ConversationQuery, cursor Cursor, limit int) (Page[ConversationRecord], error) {
 	if err := s.assertOpen(); err != nil {
 		return Page[ConversationRecord]{}, err
 	}
@@ -393,10 +393,22 @@ func (s *SqliteStorage) ScanConversations(ctx context.Context, cursor Cursor, li
 		return Page[ConversationRecord]{}, err
 	}
 	query := "SELECT id, record FROM conversations"
+	conditions := []string{}
 	args := []any{}
 	if after != nil {
-		query += " WHERE id > ?"
+		conditions = append(conditions, "id > ?")
 		args = append(args, *after)
+	}
+	if filter.OwnerConversationID != nil {
+		conditions = append(conditions, "owner_conversation_id = ?")
+		args = append(args, *filter.OwnerConversationID)
+	}
+	if filter.OwnerTaskID != nil {
+		conditions = append(conditions, "owner_task_id = ?")
+		args = append(args, *filter.OwnerTaskID)
+	}
+	if len(conditions) > 0 {
+		query += " WHERE " + joinConditions(conditions)
 	}
 	query += " ORDER BY id LIMIT ?"
 	args = append(args, limit+1)

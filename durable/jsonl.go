@@ -158,11 +158,11 @@ func (s *JsonlStorage) Conversation(ctx context.Context, id Id) (*ConversationRe
 }
 
 // ScanConversations scans conversations.
-func (s *JsonlStorage) ScanConversations(ctx context.Context, cursor Cursor, limit int) (Page[ConversationRecord], error) {
+func (s *JsonlStorage) ScanConversations(ctx context.Context, query ConversationQuery, cursor Cursor, limit int) (Page[ConversationRecord], error) {
 	if err := s.assertUsable(); err != nil {
 		return Page[ConversationRecord]{}, err
 	}
-	return s.memory.ScanConversations(ctx, cursor, limit)
+	return s.memory.ScanConversations(ctx, query, cursor, limit)
 }
 
 // Entry looks up one entry.

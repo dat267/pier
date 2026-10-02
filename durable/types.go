@@ -424,6 +424,15 @@ type Page[T any] struct {
 	Next  Cursor
 }
 
+// ConversationQuery filters an ordered scan of conversations (upstream
+// ConversationQuery).
+type ConversationQuery struct {
+	// OwnerConversationID filters by the conversation that created them.
+	OwnerConversationID *Id
+	// OwnerTaskID filters by the task that created them.
+	OwnerTaskID *Id
+}
+
 // EntryQuery is the inclusive id bounds for a newest-first scan of one
 // conversation's fork-aware history.
 type EntryQuery struct {
@@ -492,8 +501,9 @@ type Storage interface {
 	// Conversation looks up one conversation by exact id.
 	Conversation(ctx context.Context, id Id) (*ConversationRecord, error)
 
-	// ScanConversations scans conversations in ascending id order.
-	ScanConversations(ctx context.Context, cursor Cursor, limit int) (Page[ConversationRecord], error)
+	// ScanConversations scans conversations matching the query in ascending id
+	// order.
+	ScanConversations(ctx context.Context, query ConversationQuery, cursor Cursor, limit int) (Page[ConversationRecord], error)
 
 	// Entry looks up one global entry and the commit that persisted it.
 	Entry(ctx context.Context, id Id) (*EntryCommit, error)
@@ -532,4 +542,134 @@ type Storage interface {
 
 	// Close releases backend resources; all later operations must reject.
 	Close(ctx context.Context) error
+}
+
+// Conversation ownership selected when a conversation is created (upstream
+// ConversationOwnership).
+const (
+	ConversationOwnerless   = "ownerless"
+	ConversationOwnedByTask = "task"
+)
+
+// ConversationOwnership selects who owns a newly created conversation.
+type ConversationOwnership struct {
+	// Kind is ConversationOwnerless or ConversationOwnedByTask.
+	Kind string
+	// TaskID is the owning task for ConversationOwnedByTask.
+	TaskID *Id
+}
+
+// Task ownership (upstream TaskOwnership).
+const (
+	TaskOwnedByConversation = "conversation"
+	TaskOwnedByTask         = "task"
+)
+
+// TaskOwnership names what owns a newly created task.
+type TaskOwnership struct {
+	// Kind is TaskOwnedByConversation or TaskOwnedByTask.
+	Kind string
+	// TaskID is the owning task for TaskOwnedByTask.
+	TaskID *Id
+}
+
+// TaskOptions are the creation options for a durable task (upstream
+// TaskOptions).
+type TaskOptions struct {
+	// Ownership is required: a task always names its owner.
+	Ownership TaskOwnership
+	// ConversationID defaults to the owner task's conversation, or the
+	// transaction's bound conversation.
+	ConversationID *Id
+	// Background excludes a conversation-owned task from ordinary idle waits,
+	// conversation aborts and cascades.
+	Background bool
+}
+
+// TaskDefinition is the registered definition of one durable task kind
+// (upstream TaskDefinition). The transaction uses the definition metadata and
+// the initial checkpoint; phases, abort and hooks are the task runtime's.
+type TaskDefinition struct {
+	// Name is the registered task kind persisted in TaskRecord.Kind.
+	Name string
+	// Version is the definition version persisted with live input and
+	// checkpoints.
+	Version int
+	// Initial builds the first durable checkpoint for a new task.
+	Initial func(input json.RawMessage) (json.RawMessage, error)
+	// Migrate converts a record stored by an older supported version.
+	Migrate func(input, checkpoint json.RawMessage, fromVersion int) (json.RawMessage, json.RawMessage, error)
+}
+
+// Task is a typed executable task definition (upstream Task).
+type Task struct {
+	Definition TaskDefinition
+}
+
+// Entry is an entry-kind token (upstream Entry<D>): the Go port narrows by
+// kind rather than by a phantom data type.
+type Entry struct {
+	Kind string
+}
+
+// NewEntry declares an entry kind token.
+func NewEntry(kind string) Entry { return Entry{Kind: kind} }
+
+// Matches reports whether a record is of this entry kind.
+func (e Entry) Matches(record *EntryRecord) bool {
+	return record != nil && record.Kind == e.Kind
+}
+
+// DocumentCommitChange describes what one adopted document plan publishes to
+// observers (upstream DocumentCommitChange): a whole document revision, or a
+// fork copy at its new location.
+type DocumentCommitChange struct {
+	// Type is "document" or "document.copy".
+	Type string
+	// Record is the committed incarnation.
+	Record DocumentRecord
+	// ConversationID is the conversation whose observers see the change.
+	ConversationID *Id
+	// Version is the stored definition version (document changes only).
+	Version *int
+	// Value is the published value (document changes only); nil for a
+	// retirement.
+	Value json.RawMessage
+	// Ops is the exact batch that produced Value (empty for a new incarnation).
+	Ops []delta.Op
+	// Source is the copy source (document.copy only).
+	Source *DocumentCopySource
+}
+
+// LoadedDocument is one committed document incarnation owned by a session's
+// tracker cache (upstream LoadedDocument).
+type LoadedDocument struct {
+	AddressID string
+	Record    DocumentRecord
+	// StoredVersion is the persisted definition version.
+	StoredVersion int
+	// ValueVersion is the definition version the tracked value has.
+	ValueVersion int
+	// DeltasSinceBase counts the stored deltas after the newest base.
+	DeltasSinceBase int
+	Tracker         *delta.Tracker
+}
+
+// TransactionHost is the session's document cache and conversation hook as one
+// transaction sees it (upstream TransactionHost).
+type TransactionHost interface {
+	// Storage is the session's storage.
+	Storage() Storage
+	// Cached returns the cached current incarnation without loading.
+	Cached(addressID string) *LoadedDocument
+	// Load returns the cached current incarnation, cold-loading and migrating
+	// it when necessary.
+	Load(ctx context.Context, definition DocDefinition, addressID string, address DocumentAddress) (*LoadedDocument, error)
+	// Install installs a newly committed incarnation.
+	Install(document LoadedDocument)
+	// Evict removes a retired incarnation if it is still the cached occupant.
+	Evict(addressID string, recordID Id)
+	// ConversationCreated stages the writes every newly created or forked
+	// conversation needs, in its creating transaction.
+	ConversationCreated(tx *Transaction, record ConversationRecord) error
 }

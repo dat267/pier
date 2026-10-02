@@ -126,7 +126,7 @@ func testScanConversationsPagination(t *testing.T, storage Storage) {
 	for _, id := range []Id{2, 4, 6, 8} {
 		mustCommit(t, storage, conversationWrite(id))
 	}
-	first, err := storage.ScanConversations(context.Background(), nil, 2)
+	first, err := storage.ScanConversations(context.Background(), ConversationQuery{}, nil, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func testScanConversationsPagination(t *testing.T, storage Storage) {
 	if first.Next == nil {
 		t.Fatal("expected a continuation cursor")
 	}
-	second, err := storage.ScanConversations(context.Background(), first.Next, 2)
+	second, err := storage.ScanConversations(context.Background(), ConversationQuery{}, first.Next, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,7 +148,7 @@ func testScanConversationsPagination(t *testing.T, storage Storage) {
 		t.Fatalf("unexpected cursor: %v", second.Next)
 	}
 	// A short page also has no cursor.
-	third, _ := storage.ScanConversations(context.Background(), nil, 10)
+	third, _ := storage.ScanConversations(context.Background(), ConversationQuery{}, nil, 10)
 	if len(third.Items) != 4 || third.Next != nil {
 		t.Fatalf("full scan = %+v", third)
 	}
@@ -390,7 +390,7 @@ func testCloseRejectsEveryOperation(t *testing.T, storage Storage) {
 	if _, err := storage.Conversation(ctx, 1); err == nil {
 		t.Fatal("conversation must reject")
 	}
-	if _, err := storage.ScanConversations(ctx, nil, 1); err == nil {
+	if _, err := storage.ScanConversations(ctx, ConversationQuery{}, nil, 1); err == nil {
 		t.Fatal("scanConversations must reject")
 	}
 	if _, err := storage.Entry(ctx, 1); err == nil {
@@ -543,5 +543,38 @@ func TestTaskJSONShape(t *testing.T) {
 	want = `{"id":8,"conversationId":2,"kind":"t","version":1,"input":{},"background":false,"abortRequested":false,"state":{"status":"completing","outcome":{"status":"completed","result":1}}}`
 	if encoded != want {
 		t.Fatalf("json = %s\nwant %s", encoded, want)
+	}
+}
+
+// TestScanConversationsOwnerFilter covers upstream ConversationQuery: an owner
+// conversation or owner task filters the scan.
+func TestScanConversationsOwnerFilter(t *testing.T) {
+	for _, storage := range []struct {
+		name    string
+		storage Storage
+	}{
+		{"memory", NewMemoryStorage()},
+		{"jsonl", newJsonlStorageConformance(t)},
+		{"sqlite", newSqliteStorageConformance(t)},
+	} {
+		t.Run(storage.name, func(t *testing.T) {
+			mustCommit(t, storage.storage, conversationWrite(1))
+			ownerConversation := ConversationOwner{ConversationID: 1, TaskID: 5}
+			ownerTask := ConversationOwner{ConversationID: 1, TaskID: 6}
+			mustCommit(t, storage.storage,
+				StorageWrite{Type: "conversation", Conversation: &ConversationRecord{ID: 2, Owner: &ownerConversation}},
+				StorageWrite{Type: "conversation", Conversation: &ConversationRecord{ID: 3, Owner: &ownerTask}},
+			)
+			taskID := Id(5)
+			page, err := storage.storage.ScanConversations(context.Background(), ConversationQuery{OwnerTaskID: &taskID}, nil, 10)
+			if err != nil || len(page.Items) != 1 || page.Items[0].ID != 2 {
+				t.Fatalf("owner task = %+v, %v", page.Items, err)
+			}
+			conversationID := Id(1)
+			page, err = storage.storage.ScanConversations(context.Background(), ConversationQuery{OwnerConversationID: &conversationID}, nil, 10)
+			if err != nil || len(page.Items) != 2 {
+				t.Fatalf("owner conversation = %+v, %v", page.Items, err)
+			}
+		})
 	}
 }
