@@ -6,7 +6,18 @@ behaviour with no direct Go equivalent, or because a reference defect is fixed
 here; others are choices of this project's own. D-row numbers live in code
 comments at the point of divergence; this file is the log, and it is
 representative: the rows below carry a written-up rationale, while the rest live
-only as the code comment that introduced them. The range is **D1–D185**.
+only as the code comment that introduced them. The range is **D1–D187**.
+- D187 — the attached replicated state (`chord/services/attachedstate.go`, the
+  attachment half of upstream `services/state.ts`) delivers callbacks
+  synchronously instead of through upstream's per-subscription asynchronous
+  queue (a 100-delivery pending window with newest-wins overflow). The
+  observable rules the durable session depends on are kept: snapshot capture
+  is atomic, buffered frames drain in commit order, a cursor gap reports an
+  error and disposes the broken attachment, source values and op batches are
+  republished by reference, and a listener that subscribes during a
+  publication hydrates after the current drain at the then-current sequence,
+  which hides the updates its hydration covers (upstream's late-hydration
+  rule).
 - D11 — upstream's chord delta is a JavaScript Proxy draft that records
   operations as the caller mutates it; Go has no proxies, so the port's
   tracker (`chord/delta/tracker.go`) keeps the upstream lifecycle (tracker
