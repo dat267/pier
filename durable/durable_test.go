@@ -514,3 +514,34 @@ func TestSubmissionJSONShape(t *testing.T) {
 		t.Fatalf("write json = %s", write)
 	}
 }
+
+// TestTaskJSONShape pins the task record shape to upstream TaskRecord: the
+// owner edge, the waiting join fields and the completing outcome.
+func TestTaskJSONShape(t *testing.T) {
+	owner := Id(4)
+	waiting := TaskRecord{
+		ID: 5, ConversationID: 2, Kind: "t", Version: 2, Input: json.RawMessage(`{"n":1}`), Owner: &owner,
+		Background: false, AbortRequested: false,
+		State: TaskState{Status: TaskWaiting, Checkpoint: json.RawMessage(`{"phase":"park"}`), On: []Id{6, 7}, Policy: JoinAllSettled},
+	}
+	encoded, err := marshalJSONValue(waiting)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `{"id":5,"conversationId":2,"kind":"t","version":2,"input":{"n":1},"owner":4,"background":false,"abortRequested":false,"state":{"status":"waiting","checkpoint":{"phase":"park"},"on":[6,7],"policy":"allSettled"}}`
+	if encoded != want {
+		t.Fatalf("json = %s\nwant %s", encoded, want)
+	}
+	completing := TaskRecord{
+		ID: 8, ConversationID: 2, Kind: "t", Version: 1, Input: json.RawMessage(`{}`),
+		State: TaskState{Status: TaskCompleting, Outcome: &TaskOutcome{Status: OutcomeCompleted, Result: json.RawMessage(`1`)}},
+	}
+	encoded, err = marshalJSONValue(completing)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want = `{"id":8,"conversationId":2,"kind":"t","version":1,"input":{},"background":false,"abortRequested":false,"state":{"status":"completing","outcome":{"status":"completed","result":1}}}`
+	if encoded != want {
+		t.Fatalf("json = %s\nwant %s", encoded, want)
+	}
+}

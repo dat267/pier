@@ -53,7 +53,7 @@ func NewMemoryStorage() *MemoryStorage {
 			headEntryIDs:           map[Id][]Id{},
 			entryCommitSeqs:        map[Id]Seq{},
 			tasks:                  map[Id]*TaskRecord{},
-			taskIDsByStatus:        map[string][]Id{TaskPending: {}, TaskRunning: {}, TaskTerminal: {}},
+			taskIDsByStatus:        map[string][]Id{TaskPending: {}, TaskRunning: {}, TaskWaiting: {}, TaskCompleting: {}, TaskTerminal: {}},
 			submissions:            map[Id]*SubmissionRecord{},
 			submissionIDsByRequest: map[Id]map[string]Id{},
 			documents:              map[Id]*storedDocumentState{},

@@ -183,19 +183,31 @@ type TaskOutcome struct {
 
 // Task state statuses.
 const (
-	TaskPending  = "pending"
-	TaskRunning  = "running"
-	TaskTerminal = "terminal"
+	TaskPending    = "pending"
+	TaskRunning    = "running"
+	TaskWaiting    = "waiting"
+	TaskCompleting = "completing"
+	TaskTerminal   = "terminal"
+)
+
+// Join policies for a waiting task (upstream JoinPolicy).
+const (
+	JoinFailFast   = "failFast"
+	JoinAllSettled = "allSettled"
 )
 
 // TaskState is the complete durable execution state of a task.
 type TaskState struct {
-	// Status is one of pending/running/terminal.
+	// Status is one of pending/running/waiting/completing/terminal.
 	Status string `json:"status"`
 	// Checkpoint is the complete durable state from which execution resumes
-	// (pending/running only).
+	// (pending/running/waiting only).
 	Checkpoint json.RawMessage `json:"checkpoint,omitempty"`
-	// Outcome is set for terminal tasks.
+	// On lists the tasks a waiting task parks on.
+	On []Id `json:"on,omitempty"`
+	// Policy is how a waiting task treats the tasks it waits on.
+	Policy string `json:"policy,omitempty"`
+	// Outcome is set for completing and terminal tasks.
 	Outcome *TaskOutcome `json:"outcome,omitempty"`
 }
 
@@ -209,15 +221,16 @@ type TaskRecord struct {
 	// Version is the definition version used to migrate input/checkpoints.
 	Version int `json:"version"`
 	// Input is the original task input, retained while live or terminal.
-	Input json.RawMessage `json:"input,omitempty"`
-	// After lists tasks that must be terminal before ordinary execution.
-	After []Id `json:"after,omitempty"`
+	Input json.RawMessage `json:"input"`
+	// Owner is the owning task of a child task; absent for a task its
+	// conversation owns. Immutable.
+	Owner *Id `json:"owner,omitempty"`
 	// Background excludes this task from ordinary idle waits and conversation
 	// aborts.
-	Background bool `json:"background,omitempty"`
+	Background bool `json:"background"`
 	// AbortRequested is the durable abort mark checked before run-mode
 	// progress is committed.
-	AbortRequested bool      `json:"abortRequested,omitempty"`
+	AbortRequested bool      `json:"abortRequested"`
 	State          TaskState `json:"state"`
 	// Memos are small first-writer-wins values retained while the task is live.
 	Memos map[string]json.RawMessage `json:"memos,omitempty"`
