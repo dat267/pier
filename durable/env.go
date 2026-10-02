@@ -225,8 +225,9 @@ type ShellExecOptions struct {
 	Cwd        string
 	Env        map[string]string
 	InheritEnv bool
-	// Timeout is in seconds.
-	Timeout  float64
+	// Timeout is in seconds; nil selects no timeout (an explicit zero is
+	// rejected, as upstream does).
+	Timeout  *float64
 	OnOutput func(text string, ctx context.Context)
 	Spill    *ShellSpillOptions
 }

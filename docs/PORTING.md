@@ -159,8 +159,11 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   `tasks.ts` DefineTask, the harness `ToolDiagnostic` and `CompactionReason`
   types) and the local execution environment's filesystem half (`env/index.ts`
   + `env/node.ts`: portable `FileSystem`, path resolution, error codes and
-  tracked temp cleanup; D188). The shell half and the `tools/` package are
-  unported.
+  tracked temp cleanup; D188). The shell half is ported too (`OSShell`: bash
+  resolution with the Windows Git Bash candidates and `sh -c` fallback, timeout
+  validation, combined stdout/stderr in arrival order, the output spill rule,
+  process-tree kill on timeout or cancellation, `onOutput` and the
+  callback-error path). The `tools/` package and the harness are unported.
 - `coding`: the remote catalog merge is linear (`c34f2d6ad`); the branch model
   resolution still walks its branch per submission (`a0660b174` is inside
   upstream's `virtual-models.ts`, which the port has not ported yet). Dynamic

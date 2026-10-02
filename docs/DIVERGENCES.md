@@ -13,7 +13,12 @@ only as the code comment that introduced them. The range is **D1–D188**.
   helpers exist for callers that need the upstream shape. Filesystem paths,
   `~`/file-URL resolution, the error-code mapping and the tracked temp
   directory/file cleanup match the reference. The shell half of
-  `env/node.ts` is not ported yet.
+  `env/node.ts` is ported too (shell resolution with the Windows Git Bash
+  candidates and the `sh -c` fallback, timeout validation, combined output,
+  the spill rule, process-tree kill on timeout/cancellation, `onOutput` and
+  the callback-error path); it reads one combined output pipe instead of
+  upstream's two backpressured streams, so `onOutput` sees the same bytes in
+  the same arrival order without the stream-level pause/resume.
 - D187 — the attached replicated state (`chord/services/attachedstate.go`, the
   attachment half of upstream `services/state.ts`) delivers callbacks
   synchronously instead of through upstream's per-subscription asynchronous
