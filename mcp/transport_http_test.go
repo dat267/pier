@@ -102,8 +102,6 @@ func (f *httpFixture) countMethod(method string) int {
 	return count
 }
 
-// headerOf returns the header of the first request whose JSON-RPC message
-// has the given method.
 // waitForMethod waits until the fixture recorded a request with the given
 // HTTP method. The server-to-client GET stream opens on its own goroutine
 // (upstream dispatches it asynchronously too), and a Close aborts a GET that
@@ -120,6 +118,8 @@ func waitForMethod(t *testing.T, fixture *httpFixture, method string) {
 	}
 }
 
+// headerOf returns the header of the first request whose JSON-RPC message
+// has the given method.
 func (f *httpFixture) headerOf(messageMethod string, header string) string {
 	f.mu.Lock()
 	defer f.mu.Unlock()
