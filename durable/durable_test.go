@@ -29,9 +29,6 @@ func mustCommit(t *testing.T, storage Storage, writes ...StorageWrite) Seq {
 // exercising the same suite as the memory backend.
 func newSqliteStorageConformance(t *testing.T) *SqliteStorage {
 	t.Helper()
-	if !sqliteDriverSupported {
-		t.Skip("the SQLite backend is unavailable on this platform")
-	}
 	storage, err := OpenSqliteStorage(t.TempDir() + "/durable.db")
 	if err != nil {
 		t.Fatal(err)

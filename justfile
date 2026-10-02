@@ -88,8 +88,8 @@ check: fmt vet test
 cross:
 	#!/usr/bin/env bash
 	set -euo pipefail
-	for pair in windows/amd64 darwin/arm64 darwin/amd64 linux/arm64 \
-		freebsd/amd64 openbsd/amd64 netbsd/amd64 dragonfly/amd64 solaris/amd64 aix/ppc64; do
+	for pair in windows/amd64 windows/arm64 darwin/arm64 darwin/amd64 linux/arm64 \
+		android/arm64; do
 		echo "$pair"
 		CGO_ENABLED=0 GOOS="${pair%/*}" GOARCH="${pair#*/}" go build ./...
 		CGO_ENABLED=0 GOOS="${pair%/*}" GOARCH="${pair#*/}" go vet ./...

@@ -10,6 +10,9 @@ import (
 	"strings"
 
 	ai "github.com/dat267/pier/ai"
+
+	// Pure-Go SQLite driver (user-approved dependency; no cgo).
+	_ "modernc.org/sqlite"
 )
 
 // SqliteStorage is the SQLite-backed Storage backend (upstream
@@ -22,9 +25,6 @@ type SqliteStorage struct {
 // OpenSqliteStorage opens (creating if needed) the database at path and
 // applies pending migrations.
 func OpenSqliteStorage(path string) (*SqliteStorage, error) {
-	if !sqliteDriverSupported {
-		return nil, fmt.Errorf("SqliteStorage is not supported on this platform")
-	}
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
 		return nil, err
@@ -46,9 +46,6 @@ func OpenSqliteStorage(path string) (*SqliteStorage, error) {
 
 // NewSqliteStorage wraps an open database handle.
 func NewSqliteStorage(db *sql.DB) (*SqliteStorage, error) {
-	if !sqliteDriverSupported {
-		return nil, fmt.Errorf("SqliteStorage is not supported on this platform")
-	}
 	db.SetMaxOpenConns(1)
 	storage := &SqliteStorage{db: db}
 	if err := storage.applyMigrations(); err != nil {

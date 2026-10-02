@@ -81,7 +81,7 @@ New-Item -ItemType Directory -Force -Path $dest | Out-Null
 Move-Item -Force $asset (Join-Path $dest "pier.exe")
 ```
 
-There are no macOS or BSD assets; build those from source. Afterwards `pier
+There are no macOS assets; build from source on macOS. Afterwards `pier
 update` replaces the binary in place with the newest release, verifying the same
 checksum; on Windows it moves the running `pier.exe` aside to `pier.exe.old`
 (the image is locked) and clears that on the next update.

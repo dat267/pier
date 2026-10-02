@@ -40,11 +40,11 @@ jobs:
         # (coding/interactive), so any added test tripped it.
         run: go test -race -count=2 -timeout 300s ./...
 
-  # The port is pure Go and targets Windows and the BSDs, but the test job only
-  # builds linux/amd64. A GOOS/GOARCH matrix over build and vet (vet also
-  # compiles every _test.go) catches platform-specific use of syscall before a
-  # user's `go install` does — the Setpgid / syscall.Kill / Stat_t.Ctim class.
-  # The unix members also pin the Ctim-vs-Ctimespec split.
+  # The port is pure Go and targets Windows, Linux, Android and macOS, but the
+  # test job only builds linux/amd64. A GOOS/GOARCH matrix over build and vet
+  # (vet also compiles every _test.go) catches platform-specific use of syscall
+  # before a user's `go install` does — the Setpgid / syscall.Kill /
+  # Stat_t.Ctim class. The unix members also pin the Ctim-vs-Ctimespec split.
   cross-build:
     runs-on: ubuntu-latest
     strategy:
@@ -52,15 +52,12 @@ jobs:
       matrix:
         include:
           - { goos: windows, goarch: amd64 }
+          - { goos: windows, goarch: arm64 }
+          - { goos: linux, goarch: arm64 }
+          # android/amd64 and android/arm need the cgo external linker.
+          - { goos: android, goarch: arm64 }
           - { goos: darwin, goarch: arm64 }
           - { goos: darwin, goarch: amd64 }
-          - { goos: linux, goarch: arm64 }
-          - { goos: freebsd, goarch: amd64 }
-          - { goos: openbsd, goarch: amd64 }
-          - { goos: netbsd, goarch: amd64 }
-          - { goos: dragonfly, goarch: amd64 }
-          - { goos: solaris, goarch: amd64 }
-          - { goos: aix, goarch: ppc64 }
     name: ${{ matrix.goos }}/${{ matrix.goarch }}
     env:
       GOOS: ${{ matrix.goos }}
