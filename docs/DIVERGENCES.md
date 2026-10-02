@@ -808,6 +808,13 @@ The token-cache half of the same commit IS ported: `Markdown` holds its parsed
 token list in a `weak.Pointer` (`tui/markdown.go`), so a transcript message's
 tokens are collected when nothing needs them and the next render re-parses.
 
+## D181 — resource contents arm by key presence
+
+Upstream distinguishes a text resource from a blob resource by key presence
+("text" in resource), which matters for an empty text payload. The Go
+`ResourceContents` records `TextArm` on decode and marshals the text member
+whenever it is active. (pi/packages/mcp/src/protocol/content.ts)
+
 ## D182 — mcp stdio exit hook watches signals
 
 Upstream kills live MCP stdio process groups in a `process.once("exit")`
