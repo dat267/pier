@@ -163,7 +163,12 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   resolution with the Windows Git Bash candidates and `sh -c` fallback, timeout
   validation, combined stdout/stderr in arrival order, the output spill rule,
   process-tree kill on timeout or cancellation, `onOutput` and the
-  callback-error path). The `tools/` package and the harness are unported.
+  callback-error path). The `tools/` helpers that depend only on the
+  environment are ported (`path-utils.ts`: Unicode-space and `@` normalization
+  with the meridiem/NFD/apostrophe read-path variants; `file-mutation-queue.ts`:
+  per-filesystem, per-canonical-path mutation serialization, with a
+  not-yet-created file keyed through its canonical parent). The tool
+  definitions, `edit-diff.ts` and the harness are unported.
 - `coding`: the remote catalog merge is linear (`c34f2d6ad`); the branch model
   resolution still walks its branch per submission (`a0660b174` is inside
   upstream's `virtual-models.ts`, which the port has not ported yet). Dynamic
