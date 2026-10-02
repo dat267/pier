@@ -872,7 +872,7 @@ func (tx *Transaction) Adopt(seq Seq) []DocumentCommitChange {
 			version := change.version
 			publications = append(publications, DocumentCommitChange{
 				Type: "document", Record: record, ConversationID: plan.conversationID,
-				Version: &version, Value: jsonValueBytes(change.prepared.Value()), Ops: ops,
+				Version: &version, Value: change.prepared.Value(), Ops: ops,
 			})
 		}
 	}

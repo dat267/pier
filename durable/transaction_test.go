@@ -182,8 +182,8 @@ func TestTransactionDocumentCreateAndAdopt(t *testing.T) {
 	if len(publications) != 1 || publications[0].Type != "document" {
 		t.Fatalf("publications = %+v", publications)
 	}
-	if string(publications[0].Value) != `{"count":3}` {
-		t.Fatalf("value = %s", publications[0].Value)
+	if encoded, _ := json.Marshal(publications[0].Value); string(encoded) != `{"count":3}` {
+		t.Fatalf("value = %s", encoded)
 	}
 	if publications[0].Version == nil || *publications[0].Version != 1 {
 		t.Fatalf("version = %+v", publications[0].Version)

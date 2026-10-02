@@ -140,9 +140,14 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   task attribution, task create/set with owner validation and terminal task
   document retirement, submission create/place/settle, document acquire/
   create/retire with the tracker, the base-vs-delta plan with the checkpoint
-  predicate, storage-admission assembly and adoption publications. Still
-  unported: `session/session.ts` (the session kernel), the harness/tools and
-  the upstream conformance runner.
+  predicate, storage-admission assembly and adoption publications. The
+  session kernel (`session/session.ts`) is ported as a mutex-serialized mutation
+  line: commit callbacks with the transaction host (loaded tracker cache,
+  cold-loading and migration on version change), read-on-line derivations,
+  snapshots and as-of snapshots, document states and exact-frame watches
+  attached to committed incarnations with version-aware operations, commit and
+  close listeners, post-admission poisoning, and `unloadDocuments`. Still
+  unported: the harness/tools and the upstream conformance runner.
 - `coding`: the remote catalog merge is linear (`c34f2d6ad`); the branch model
   resolution still walks its branch per submission (`a0660b174` is inside
   upstream's `virtual-models.ts`, which the port has not ported yet). Dynamic

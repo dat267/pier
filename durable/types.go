@@ -10,7 +10,9 @@ package durable
 
 import (
 	"context"
+
 	"encoding/json"
+	"github.com/dat267/pier/chord"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/chord/delta"
@@ -634,7 +636,7 @@ type DocumentCommitChange struct {
 	Version *int
 	// Value is the published value (document changes only); nil for a
 	// retirement.
-	Value json.RawMessage
+	Value chord.JsonValue
 	// Ops is the exact batch that produced Value (empty for a new incarnation).
 	Ops []delta.Op
 	// Source is the copy source (document.copy only).
