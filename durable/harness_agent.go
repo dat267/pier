@@ -434,6 +434,10 @@ func (m *orderedMap[T]) Delete(key string) {
 	}
 }
 
+func (m *orderedMap[T]) Keys() []string {
+	return append([]string{}, m.order...)
+}
+
 func (m *orderedMap[T]) Values() []T {
 	values := make([]T, 0, len(m.order))
 	for _, key := range m.order {
