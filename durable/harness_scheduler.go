@@ -429,6 +429,10 @@ func (i *Invocation) End() {
 	close(i.done)
 }
 
+// Signal cancels the invocation's context without ending the invocation, so a
+// run invocation's next step observes it.
+func (i *Invocation) Signal() { i.cancel() }
+
 // AssertLive rejects an operation issued after the invocation ended.
 func (i *Invocation) AssertLive() error {
 	if i.ended.Load() {
@@ -677,7 +681,7 @@ func (m *SchedulerMirror) Graph() SchedulerGraph {
 type MirrorEffects struct {
 	// Terminal are the records that became terminal; the caller resolves the
 	// task waiters for them.
-	Terminal []Id
+	Terminal []TaskRecord
 	// SignalInvocations are the newly abort-marked tasks whose run invocation
 	// is signalled.
 	SignalInvocations []Id
@@ -711,7 +715,7 @@ func (m *SchedulerMirror) Observe(publication CommitPublication) MirrorEffects {
 			if m.ConversationOwners[record.ID] {
 				m.Settled[record.ID] = NodeOf(record)
 			}
-			effects.Terminal = append(effects.Terminal, record.ID)
+			effects.Terminal = append(effects.Terminal, record)
 			effects.ScheduleReconcile = true
 			continue
 		}

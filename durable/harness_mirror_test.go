@@ -34,7 +34,7 @@ func TestSchedulerMirrorTracksLiveAndTerminal(t *testing.T) {
 	mirror.ConversationOwners[1] = true
 	terminal := traversalRecord(1, nil, false, TaskTerminal)
 	effects = mirror.Observe(taskPublication(terminal))
-	if len(effects.Terminal) != 1 || effects.Terminal[0] != 1 || !effects.ScheduleReconcile {
+	if len(effects.Terminal) != 1 || effects.Terminal[0].ID != 1 || !effects.ScheduleReconcile {
 		t.Fatalf("effects = %+v", effects)
 	}
 	if _, present := mirror.Live[1]; present {
