@@ -186,7 +186,11 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   (`task-graph.ts`: the session-line mount built by its first observer from
   live task records and owned conversations, advanced from commit publications
   with per-node and conversation-ownership operations, and the disposable state
-  and exact-frame watch surfaces).
+  and exact-frame watch surfaces). The committed transcript context is ported
+  (`context.ts`: bounds captured on the session line with two O(1) reads, the
+  active-entry selection around the newest head marker, edits resolved
+  newest-first, excluded assistant stop reasons, and tool results ordered after
+  their assistant in call order with a synthesized result for a missing one).
 - `coding`: the remote catalog merge is linear (`c34f2d6ad`); the branch model
   resolution still walks its branch per submission (`a0660b174` is inside
   upstream's `virtual-models.ts`, which the port has not ported yet). Dynamic
