@@ -128,6 +128,62 @@ func (s *TaskScheduler) Closing() bool {
 	return s.closing
 }
 
+// Reserve reserves every eligible task in one commit: load the owner scopes,
+// plan the reservations, orphan the abort-marked tasks no definition can take,
+// stage the running states, and register an invocation per reserved task.
+func (s *TaskScheduler) Reserve(ctx chord.Context) ([]*Invocation, error) {
+	s.mu.Lock()
+	if !s.enabled || s.closing {
+		s.mu.Unlock()
+		return nil, nil
+	}
+	s.mu.Unlock()
+	registered := []*Invocation{}
+	err := s.session.Commit(s.Context(), func(tx *Transaction) error {
+		if _, err := LoadScopes(false, s.mirror, s.storage, s.Context()); err != nil {
+			return err
+		}
+		records := s.LiveRecords()
+		var snapshot RegistrySnapshot
+		if s.registry != nil {
+			snapshot = s.registry.Snapshot()
+		}
+		plans, orphans := PlanReservations(records, s.mirror.Graph(), snapshot, s.RunningInvocations(), s.mirror.FailedMigrations, s.report)
+		for index := range orphans {
+			reason := orphans[index].Reason
+			outcome := &TaskOutcome{Status: OutcomeOrphaned, Reason: &reason}
+			if err := TerminateTask(tx, records, orphans[index].Record, outcome, s.settle); err != nil {
+				return err
+			}
+		}
+		for _, plan := range plans {
+			if plan.SetRunning != nil {
+				if err := tx.SetTask(plan.SetRunning); err != nil {
+					return err
+				}
+			}
+			invocation := NewInvocation(plan.TaskID, plan.Record.ConversationID, plan.Mode, s.Context())
+			s.mu.Lock()
+			s.invocations[plan.TaskID] = invocation
+			s.mu.Unlock()
+			registered = append(registered, invocation)
+		}
+		return nil
+	})
+	if err != nil {
+		s.mu.Lock()
+		for _, invocation := range registered {
+			if s.invocations[invocation.TaskID] == invocation {
+				delete(s.invocations, invocation.TaskID)
+			}
+		}
+		s.mu.Unlock()
+		_ = ctx
+		return nil, err
+	}
+	return registered, nil
+}
+
 // Observe applies one publication to the mirror and signals what changed.
 func (s *TaskScheduler) Observe(publication CommitPublication) {
 	s.mu.Lock()
