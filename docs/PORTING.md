@@ -191,6 +191,13 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   active-entry selection around the newest head marker, edits resolved
   newest-first, excluded assistant stop reasons, and tool results ordered after
   their assistant in call order with a synthesized result for a missing one).
+  The inbox is ported (`inbox.ts`: the `pi.inbox` queue document, the boundary
+  read, the boundary placement of writes/steers/follow-ups with the reset
+  promotion and stale-write settlement, item removal, and the queued-input
+  withdrawal that keeps writes). Entry records and drafts gained their
+  persisted codecs: the message list is encoded per message so concrete roles
+  round-trip (`entryRecordJSON`/`entryDraftJSON`), and the draft's `head` is
+  the upstream `id | "self"` value.
 - `coding`: the remote catalog merge is linear (`c34f2d6ad`); the branch model
   resolution still walks its branch per submission (`a0660b174` is inside
   upstream's `virtual-models.ts`, which the port has not ported yet). Dynamic

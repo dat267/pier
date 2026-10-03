@@ -81,34 +81,160 @@ type ContextEdit struct {
 // EntryRecord is an immutable transcript event with separate model-facing and
 // application-facing payloads.
 type EntryRecord struct {
-	ID             Id `json:"id"`
-	ConversationID Id `json:"conversationId"`
+	ID             Id
+	ConversationID Id
 	// Kind is the application-defined entry discriminator.
-	Kind string `json:"kind"`
+	Kind string
 	// Model holds messages contributed to model context (absent for display
 	// or bookkeeping entries).
-	Model []ai.Message `json:"model,omitempty"`
+	Model []ai.Message
 	// Data is the JSON payload consumed by views, plugins, or bookkeeping.
-	Data json.RawMessage `json:"data,omitempty"`
+	Data json.RawMessage
 	// Head is the first entry in the active context selected by this entry.
-	Head *Id `json:"head,omitempty"`
+	Head *Id
 	// Edits are context-only overrides of earlier visible entries.
-	Edits []ContextEdit `json:"edits,omitempty"`
+	Edits []ContextEdit
 	// ByTaskID is the task that appended this entry, for durable work.
-	ByTaskID *Id `json:"byTaskId,omitempty"`
+	ByTaskID *Id
+}
+
+// entryRecordJSON is the persisted shape of an EntryRecord; the message list is
+// encoded per message so its concrete role survives.
+type entryRecordJSON struct {
+	ID             Id                `json:"id"`
+	ConversationID Id                `json:"conversationId"`
+	Kind           string            `json:"kind"`
+	Model          []json.RawMessage `json:"model,omitempty"`
+	Data           json.RawMessage   `json:"data,omitempty"`
+	Head           *Id               `json:"head,omitempty"`
+	Edits          []ContextEdit     `json:"edits,omitempty"`
+	ByTaskID       *Id               `json:"byTaskId,omitempty"`
+}
+
+// MarshalJSON emits the persisted entry shape.
+func (e EntryRecord) MarshalJSON() ([]byte, error) {
+	model, err := marshalEntryModel(e.Model)
+	if err != nil {
+		return nil, err
+	}
+	return marshalJSON(entryRecordJSON{
+		ID: e.ID, ConversationID: e.ConversationID, Kind: e.Kind, Model: model,
+		Data: e.Data, Head: e.Head, Edits: e.Edits, ByTaskID: e.ByTaskID,
+	})
+}
+
+// UnmarshalJSON decodes the persisted entry shape.
+func (e *EntryRecord) UnmarshalJSON(data []byte) error {
+	var decoded entryRecordJSON
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	model, err := unmarshalEntryModel(decoded.Model)
+	if err != nil {
+		return err
+	}
+	e.ID = decoded.ID
+	e.ConversationID = decoded.ConversationID
+	e.Kind = decoded.Kind
+	e.Model = model
+	e.Data = decoded.Data
+	e.Head = decoded.Head
+	e.Edits = decoded.Edits
+	e.ByTaskID = decoded.ByTaskID
+	return nil
+}
+
+// marshalEntryModel encodes a message list.
+func marshalEntryModel(messages []ai.Message) ([]json.RawMessage, error) {
+	if len(messages) == 0 {
+		return nil, nil
+	}
+	return ai.MarshalMessages(messages)
+}
+
+// unmarshalEntryModel decodes a message list.
+func unmarshalEntryModel(raw []json.RawMessage) ([]ai.Message, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	return ai.UnmarshalMessages(raw)
 }
 
 // EntryDraft is entry content supplied before the session assigns identity and
 // task attribution.
+//
+// Upstream's `head` is `EntryId | "self"`; the port keeps the two cases in
+// separate fields and marshals them back to the single upstream `head` value
+// (EntryDraftJSON), so a stored draft round-trips with upstream JSON.
 type EntryDraft struct {
-	Kind  string          `json:"kind"`
-	Model []ai.Message    `json:"model,omitempty"`
-	Data  json.RawMessage `json:"data,omitempty"`
+	Kind  string
+	Model []ai.Message
+	Data  json.RawMessage
 	// Head: nil starts no active context; HeadSelf starts it at the newly
 	// assigned entry id; otherwise the given entry id.
-	Head     *Id           `json:"head,omitempty"`
-	HeadSelf bool          `json:"headSelf,omitempty"`
-	Edits    []ContextEdit `json:"edits,omitempty"`
+	Head     *Id
+	HeadSelf bool
+	Edits    []ContextEdit
+}
+
+// entryDraftJSON is the persisted shape of an EntryDraft.
+type entryDraftJSON struct {
+	Kind  string            `json:"kind"`
+	Model []json.RawMessage `json:"model,omitempty"`
+	Data  json.RawMessage   `json:"data,omitempty"`
+	Head  any               `json:"head,omitempty"`
+	Edits []ContextEdit     `json:"edits,omitempty"`
+}
+
+// MarshalJSON emits the upstream draft shape (`head` is an id or "self").
+func (d EntryDraft) MarshalJSON() ([]byte, error) {
+	model, err := marshalEntryModel(d.Model)
+	if err != nil {
+		return nil, err
+	}
+	encoded := entryDraftJSON{Kind: d.Kind, Model: model, Data: d.Data, Edits: d.Edits}
+	switch {
+	case d.HeadSelf:
+		encoded.Head = "self"
+	case d.Head != nil:
+		encoded.Head = *d.Head
+	}
+	return marshalJSON(encoded)
+}
+
+// UnmarshalJSON decodes the upstream draft shape.
+func (d *EntryDraft) UnmarshalJSON(data []byte) error {
+	var decoded entryDraftJSON
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	model, err := unmarshalEntryModel(decoded.Model)
+	if err != nil {
+		return err
+	}
+	d.Kind = decoded.Kind
+	d.Model = model
+	d.Data = decoded.Data
+	d.Edits = decoded.Edits
+	d.Head = nil
+	d.HeadSelf = false
+	switch head := decoded.Head.(type) {
+	case string:
+		if head == "self" {
+			d.HeadSelf = true
+		}
+	case float64:
+		id := Id(head)
+		d.Head = &id
+	case json.Number:
+		id, err := head.Int64()
+		if err != nil {
+			return err
+		}
+		converted := Id(id)
+		d.Head = &converted
+	}
+	return nil
 }
 
 // Submission record types and lifecycle statuses (upstream SubmissionRecord).

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // durable tests keyed to upstream (types.ts, memory-storage.ts): commit
@@ -577,4 +579,76 @@ func TestScanConversationsOwnerFilter(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestEntryDraftJSONShape pins the draft codec to upstream's `head:
+// EntryId | "self"` shape.
+func TestEntryDraftJSONShape(t *testing.T) {
+	self := EntryDraft{Kind: "pi.reset", HeadSelf: true}
+	encoded, err := marshalJSONValue(self)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if encoded != `{"kind":"pi.reset","head":"self"}` {
+		t.Fatalf("self = %s", encoded)
+	}
+	id := Id(12)
+	explicit := EntryDraft{Kind: "message", Head: &id}
+	encoded, err = marshalJSONValue(explicit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if encoded != `{"kind":"message","head":12}` {
+		t.Fatalf("explicit = %s", encoded)
+	}
+	// Round trip both arms.
+	var decoded EntryDraft
+	if err := json.Unmarshal([]byte(`{"kind":"pi.reset","head":"self"}`), &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if !decoded.HeadSelf || decoded.Head != nil {
+		t.Fatalf("decoded self = %+v", decoded)
+	}
+	if err := json.Unmarshal([]byte(`{"kind":"message","head":12}`), &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if decoded.HeadSelf || decoded.Head == nil || *decoded.Head != 12 {
+		t.Fatalf("decoded explicit = %+v", decoded)
+	}
+}
+
+// TestConformanceRoundTripsEntryModel pins the entry codec: the concrete
+// message types of a stored entry survive every backend.
+func TestConformanceRoundTripsEntryModel(t *testing.T) {
+	conformance(t, func(t *testing.T, storage Storage) {
+		ctx := context.Background()
+		mustCommit(t, storage, conversationWrite(RootConversationID))
+		model := []ai.Message{
+			&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hi"}, Timestamp: 1},
+			&ai.AssistantMessage{
+				Content: ai.ContentList{ai.ToolCall{ID: "c1", Name: "bash"}}, StopReason: ai.StopToolUse, Timestamp: 2,
+			},
+		}
+		mustCommit(t, storage, StorageWrite{Type: "entry", Entry: &EntryRecord{
+			ID: 10, ConversationID: RootConversationID, Kind: "message", Model: model,
+		}})
+		commit, err := storage.Entry(ctx, 10)
+		if err != nil || commit == nil {
+			t.Fatalf("entry = %+v, %v", commit, err)
+		}
+		if len(commit.Entry.Model) != 2 {
+			t.Fatalf("model = %+v", commit.Entry.Model)
+		}
+		user, ok := commit.Entry.Model[0].(*ai.UserMessage)
+		if !ok || user.Content.Text != "hi" {
+			t.Fatalf("user = %+v", commit.Entry.Model[0])
+		}
+		assistant, ok := commit.Entry.Model[1].(*ai.AssistantMessage)
+		if !ok || assistant.StopReason != ai.StopToolUse || len(assistant.Content) != 1 {
+			t.Fatalf("assistant = %+v", commit.Entry.Model[1])
+		}
+		if call, ok := assistant.Content[0].(ai.ToolCall); !ok || call.ID != "c1" || call.Name != "bash" {
+			t.Fatalf("call = %+v", assistant.Content[0])
+		}
+	})
 }
