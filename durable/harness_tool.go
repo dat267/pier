@@ -45,6 +45,11 @@ var ToolTask = Task{Definition: TaskDefinition{
 	Initial: func(json.RawMessage) (json.RawMessage, error) {
 		return json.RawMessage(`{"phase":"call"}`), nil
 	},
+	Phases: map[string]PhaseHandler{
+		ToolPhaseCall:    toolCallPhase,
+		ToolPhaseExecute: toolExecutePhase,
+	},
+	Abort: toolAbortHandler,
 }}
 
 // InvalidArguments is the result of arguments that fail validation.

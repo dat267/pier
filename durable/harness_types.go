@@ -441,7 +441,7 @@ type ToolExecutionApi interface {
 	Commit(change func(tx *Transaction) (any, error), ctx chord.Context) (any, error)
 	Memo(ctx chord.Context, name string) (chord.JsonValue, bool, error)
 	MemoSet(ctx chord.Context, name string, candidate chord.JsonValue) (chord.JsonValue, error)
-	CreateTask(input chord.JsonValue, options TaskOptions, ctx chord.Context) (Id, error)
+	CreateTask(task Task, input chord.JsonValue, options TaskOptions, ctx chord.Context) (Id, error)
 	GetTask(id Id, ctx chord.Context) (*TaskRecord, error)
 	WaitForTask(id Id, ctx chord.Context) (SettledTask, error)
 	Conversation(id Id, ctx chord.Context) (ConversationHandle, bool, error)
