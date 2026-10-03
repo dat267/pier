@@ -21,8 +21,11 @@ type waiter[T any] struct {
 	err   error
 }
 
-// Add waits for the key until Resolve, RejectAll or context cancellation.
-func (w *Waiters[K, T]) Add(key K, ctx context.Context) (T, error) {
+// Register adds a pending wait without blocking and returns the await. Where a
+// caller must check and register atomically (the Session line), it registers
+// there and awaits outside, so no settling publication can fall between the
+// check and the registration.
+func (w *Waiters[K, T]) Register(key K, ctx context.Context) func() (T, error) {
 	w.mu.Lock()
 	if w.sets == nil {
 		w.sets = map[K]map[*waiter[T]]struct{}{}
@@ -36,9 +39,9 @@ func (w *Waiters[K, T]) Add(key K, ctx context.Context) (T, error) {
 	set[pending] = struct{}{}
 	w.mu.Unlock()
 
+	var stop chan struct{}
 	if ctx != nil && ctx.Done() != nil {
-		stop := make(chan struct{})
-		defer close(stop)
+		stop = make(chan struct{})
 		go func() {
 			select {
 			case <-ctx.Done():
@@ -56,12 +59,26 @@ func (w *Waiters[K, T]) Add(key K, ctx context.Context) (T, error) {
 			}
 		}()
 	}
-	value := <-pending.done
-	if pending.err != nil {
-		var zero T
-		return zero, pending.err
+	var stopOnce sync.Once
+	finish := func() {
+		if stop != nil {
+			stopOnce.Do(func() { close(stop) })
+		}
 	}
-	return value, nil
+	return func() (T, error) {
+		value := <-pending.done
+		finish()
+		if pending.err != nil {
+			var zero T
+			return zero, pending.err
+		}
+		return value, nil
+	}
+}
+
+// Add waits for the key until Resolve, RejectAll or context cancellation.
+func (w *Waiters[K, T]) Add(key K, ctx context.Context) (T, error) {
+	return w.Register(key, ctx)()
 }
 
 // Keys lists the keys with pending waits.

@@ -18,7 +18,7 @@ var sectionKeyPattern = regexp.MustCompile(`^[a-z][a-z0-9_-]*$`)
 // generation.ts, compaction.ts); the registry only reads their names and
 // versions here.
 var BuiltinTasks = []Task{
-	{Definition: TaskDefinition{Name: RunTaskKind, Version: 1, Initial: emptyTaskInitial}},
+	GenerationTask,
 	{Definition: TaskDefinition{Name: ToolTaskKind, Version: 1, Initial: emptyTaskInitial}},
 	{Definition: TaskDefinition{Name: CompactionTaskKind, Version: 1, Initial: emptyTaskInitial}},
 }

@@ -210,6 +210,19 @@ func ApplyBoundary(tx *Transaction, boundary *Boundary, at string, now int64) (B
 	return BoundaryResult{Users: placed, Reset: reset}, nil
 }
 
+// AppendInboxItem appends one queued item to the inbox draft.
+func AppendInboxItem(inbox chord.JsonValue, item InboxItem) error {
+	state, err := decodeInboxState(inbox)
+	if err != nil {
+		return err
+	}
+	state.Items = append(state.Items, item)
+	if container, ok := inbox.(map[string]any); ok {
+		AssignJSON(container, "items", inboxItemsValue(state.Items))
+	}
+	return nil
+}
+
 // IsStale reports whether a head write targets an entry before the active
 // range.
 func IsStale(boundary *Boundary, entry EntryDraft) bool {
