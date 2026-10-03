@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -901,4 +903,122 @@ func sameIDs(entries []EntryRecord, ids []Id) bool {
 		}
 	}
 	return true
+}
+
+type longTailRow struct {
+	Value  int    `json:"value"`
+	Stable string `json:"stable"`
+}
+
+type longTail struct {
+	Revision int           `json:"revision"`
+	Rows     []longTailRow `json:"rows"`
+}
+
+func buildLongTail(revision, valueBase int, stablePrefix string) longTail {
+	rows := make([]longTailRow, 512)
+	for index := range rows {
+		rows[index] = longTailRow{Value: valueBase + index, Stable: stablePrefix + strconv.Itoa(index)}
+	}
+	return longTail{Revision: revision, Rows: rows}
+}
+
+func cloneLongTail(value longTail) longTail {
+	rows := make([]longTailRow, len(value.Rows))
+	copy(rows, value.Rows)
+	return longTail{Revision: value.Revision, Rows: rows}
+}
+
+func longTailAt(t *testing.T, storage Storage, id Id, point DocumentPoint) longTail {
+	t.Helper()
+	stored, err := storage.Document(context.Background(), id, point)
+	if err != nil || stored == nil {
+		t.Fatalf("document = %+v, %v", stored, err)
+	}
+	var value longTail
+	if err := json.Unmarshal(stored.Value, &value); err != nil {
+		t.Fatal(err)
+	}
+	return value
+}
+
+// TestConformanceLongDocumentTails covers upstream's "streams long document
+// tails across root replacement deltas".
+func TestConformanceLongDocumentTails(t *testing.T) {
+	documentBackends(t, func(t *testing.T, storage Storage) {
+		mustCommit(t, storage, conversationWrite(RootConversationID))
+		root := RootConversationID
+		id := mustMintID(t, storage)
+		history, fork := HistoryRewindable, ForkAsOf
+		initial := buildLongTail(0, 0, "row-")
+		initialValue, err := jsonValueOf(initial)
+		if err != nil {
+			t.Fatal(err)
+		}
+		createdAt := mustCommit(t, storage, StorageWrite{
+			Type: "document.create",
+			DocumentCreate: &DocumentCreate{ID: id, Kind: "conversation.long-tail",
+				Scope: DocumentScope{Kind: ScopeConversation, ConversationID: &root}, History: &history, Fork: &fork},
+			DocumentContent: &DocumentContent{Version: 1, Kind: ContentBase, Value: json.RawMessage(string(dataJSON(initialValue)))},
+		})
+		before := buildLongTail(0, 0, "row-")
+		beforeAt := DocumentPointAt(createdAt)
+		for revision := 1; revision <= 24; revision++ {
+			index := (revision * 17) % len(before.Rows)
+			before.Rows[index].Value = -revision
+			before.Revision = revision
+			beforeAt = DocumentPointAt(mustCommit(t, storage, StorageWrite{
+				Type: "document.change", DocumentID: &id,
+				DocumentContent: &DocumentContent{Version: 1, Kind: ContentDelta, Ops: []any{
+					[]any{"s", []any{"rows", index, "value"}, -revision},
+					[]any{"s", []any{"revision"}, revision},
+				}},
+			}))
+		}
+		replacement := buildLongTail(100, 10_000, "new-")
+		replacementSnapshot := cloneLongTail(replacement)
+		replacementValue, err := jsonValueOf(replacement)
+		if err != nil {
+			t.Fatal(err)
+		}
+		replacementAt := DocumentPointAt(mustCommit(t, storage, StorageWrite{
+			Type: "document.change", DocumentID: &id,
+			DocumentContent: &DocumentContent{Version: 1, Kind: ContentDelta, Ops: []any{
+				[]any{"r", replacementValue},
+			}},
+		}))
+		// Mutating the source after the commit does not change the stored value.
+		replacement.Rows[0].Value = -999
+		current := cloneLongTail(replacementSnapshot)
+		for revision := 101; revision <= 124; revision++ {
+			index := (revision * 19) % len(current.Rows)
+			current.Rows[index].Value = -revision
+			current.Revision = revision
+			mustCommit(t, storage, StorageWrite{
+				Type: "document.change", DocumentID: &id,
+				DocumentContent: &DocumentContent{Version: 1, Kind: ContentDelta, Ops: []any{
+					[]any{"s", []any{"rows", index, "value"}, -revision},
+					[]any{"s", []any{"revision"}, revision},
+				}},
+			})
+		}
+		if got := longTailAt(t, storage, id, DocumentPointAt(createdAt)); !reflect.DeepEqual(got, initial) {
+			t.Fatalf("initial = %+v", got.Revision)
+		}
+		if got := longTailAt(t, storage, id, beforeAt); !reflect.DeepEqual(got, before) {
+			t.Fatalf("before = %+v", got.Revision)
+		}
+		if got := longTailAt(t, storage, id, replacementAt); !reflect.DeepEqual(got, replacementSnapshot) {
+			t.Fatalf("replacement = %+v", got.Revision)
+		}
+		read := longTailAt(t, storage, id, CurrentDocumentPoint())
+		if !reflect.DeepEqual(read, current) {
+			t.Fatalf("current = %+v", read.Revision)
+		}
+		// A returned value is detached from the store.
+		read.Rows[0].Value = -1_000
+		if again := longTailAt(t, storage, id, CurrentDocumentPoint()); !reflect.DeepEqual(again, current) {
+			t.Fatalf("current = %+v", again.Revision)
+		}
+	})
 }
