@@ -458,6 +458,39 @@ func GateTask(invocation *Invocation, found *TaskRecord, closing bool) (TaskReco
 	return *found, nil
 }
 
+// SchedulerScanPageSize is the scheduler's scan page size.
+const SchedulerScanPageSize = 256
+
+// LoadLiveTasks loads every live task into the mirror and changes surviving
+// running tasks back to pending. Every table read happens before the first
+// write.
+func LoadLiveTasks(tx *Transaction, mirror *SchedulerMirror) error {
+	records := []TaskRecord{}
+	for _, status := range liveTaskStatuses {
+		statusValue := status
+		page, err := ScanAll(func(cursor Cursor) (Page[TaskRecord], error) {
+			return tx.ScanTasks(TaskQuery{Status: &statusValue}, SchedulerScanPageSize, cursor)
+		})
+		if err != nil {
+			return err
+		}
+		records = append(records, page...)
+	}
+	for _, record := range records {
+		mirror.Live[record.ID] = record
+		if record.State.Status == TaskRunning {
+			pending := WithState(record, TaskState{Status: TaskPending, Checkpoint: record.State.Checkpoint})
+			if err := tx.SetTask(&pending); err != nil {
+				return err
+			}
+		}
+		if record.State.Status == TaskWaiting && record.State.Policy == JoinFailFast {
+			mirror.FailFastChecks[record.ID] = true
+		}
+	}
+	return nil
+}
+
 // SchedulerMirror mirrors every committed non-terminal task record and the
 // ownership fields a walk passes through.
 type SchedulerMirror struct {
