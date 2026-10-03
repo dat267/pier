@@ -27,6 +27,10 @@ const (
 	maxTimeoutMs = 2_147_483_647
 	// spillHighWaterMark is upstream SPILL_HIGH_WATER_MARK.
 	spillHighWaterMark = 1024 * 1024
+	// exitStdioGrace is upstream EXIT_STDIO_GRACE_MS: after the process exits,
+	// output already in the pipe is still drained for this long before a
+	// descendant holding the write end is abandoned.
+	exitStdioGrace = 100 * time.Millisecond
 )
 
 // OSShell executes commands through the local shell.
@@ -219,6 +223,12 @@ func (s *OSShell) Exec(command string, options *ShellExecOptions, ctx context.Co
 	case <-interrupted:
 		killProcessTree(cmd)
 		waitErr = <-waitDone
+	}
+	// Let the reader drain output the process already wrote; a descendant that
+	// inherited the write end is abandoned after the grace period.
+	select {
+	case <-outputDone:
+	case <-time.After(exitStdioGrace):
 	}
 	_ = reader.Close()
 	<-outputDone
