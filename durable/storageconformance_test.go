@@ -578,3 +578,140 @@ func documentCreateWrite(id Id, kind string, key *string, scope DocumentScope, v
 }
 
 var _ = errors.New
+
+// TestConformanceReservesRootID covers upstream's "reserves ID 1 for the
+// immutable root conversation".
+func TestConformanceReservesRootID(t *testing.T) {
+	conformance(t, func(t *testing.T, storage Storage) {
+		ctx := context.Background()
+		id := mustMintID(t, storage)
+		if id != 2 {
+			t.Fatalf("first minted id = %d, want 2", id)
+		}
+		mustCommit(t, storage, conversationWrite(RootConversationID))
+		record, err := storage.Conversation(ctx, RootConversationID)
+		if err != nil || record == nil || record.ID != RootConversationID {
+			t.Fatalf("record = %+v, %v", record, err)
+		}
+		_, err = storage.Commit(ctx, []StorageWrite{{
+			Type: "conversation", Conversation: &ConversationRecord{ID: RootConversationID},
+		}})
+		if err == nil || !strings.Contains(err.Error(), "already belongs to conversation") {
+			t.Fatalf("err = %v", err)
+		}
+	})
+}
+
+// TestConformanceMixedWritesAtomic covers upstream's "commits mixed table
+// writes atomically and rolls all of them back on failure".
+func TestConformanceMixedWritesAtomic(t *testing.T) {
+	conformance(t, func(t *testing.T, storage Storage) {
+		ctx := context.Background()
+		mustCommit(t, storage, conversationWrite(RootConversationID))
+		entryID := mustMintID(t, storage)
+		taskID := mustMintID(t, storage)
+		submissionID := mustMintID(t, storage)
+		task := pendingTaskRecord(taskID, RootConversationID)
+		input := &SubmissionRecord{
+			ID: submissionID, ConversationID: RootConversationID, RequestID: stringPointer("request-1"),
+			Type: SubmissionTypeInput, Status: SubmissionPlaced, Entry: &entryID,
+		}
+		initialSeq := mustCommit(t, storage,
+			StorageWrite{Type: "entry", Entry: &EntryRecord{ID: entryID, ConversationID: RootConversationID, Kind: "user", Data: dataJSON(map[string]any{"text": "hello"})}},
+			StorageWrite{Type: "task", Task: task},
+			StorageWrite{Type: "submission", Submission: input},
+		)
+		commit, err := storage.Entry(ctx, entryID)
+		if err != nil || commit == nil || commit.CommitSeq != initialSeq {
+			t.Fatalf("entry = %+v, %v", commit, err)
+		}
+		transientID := mustMintID(t, storage)
+		running := *task
+		running.State = TaskState{Status: TaskRunning, Checkpoint: dataJSON(map[string]any{"phase": "effect"})}
+		done := *input
+		done.Status = SubmissionDone
+		done.Answer = &transientID
+		_, err = storage.Commit(ctx, []StorageWrite{
+			{Type: "task", Task: &running},
+			{Type: "submission", Submission: &done},
+			{Type: "entry", Entry: &EntryRecord{ID: transientID, ConversationID: RootConversationID, Kind: "assistant"}},
+			{Type: "conversation", Conversation: &ConversationRecord{ID: RootConversationID}},
+		})
+		if err == nil {
+			t.Fatal("a duplicate conversation must fail the commit")
+		}
+		storedTask, _ := storage.Task(ctx, taskID)
+		if storedTask == nil || storedTask.State.Status != TaskPending {
+			t.Fatalf("task = %+v", storedTask)
+		}
+		storedInput, _ := storage.Submission(ctx, submissionID)
+		if storedInput == nil || storedInput.Status != SubmissionPlaced {
+			t.Fatalf("submission = %+v", storedInput)
+		}
+		if entry, _ := storage.Entry(ctx, transientID); entry != nil {
+			t.Fatalf("transient entry = %+v", entry)
+		}
+		afterSeq := mustCommit(t, storage, StorageWrite{
+			Type: "entry", Entry: &EntryRecord{ID: mustMintID(t, storage), ConversationID: RootConversationID, Kind: "after-rollback"},
+		})
+		if afterSeq <= initialSeq {
+			t.Fatalf("afterSeq = %d, initialSeq = %d", afterSeq, initialSeq)
+		}
+	})
+}
+
+// TestConformanceDetachesRecords covers upstream's "detaches retained writes
+// and every returned record".
+func TestConformanceDetachesRecords(t *testing.T) {
+	conformance(t, func(t *testing.T, storage Storage) {
+		ctx := context.Background()
+		mustCommit(t, storage, conversationWrite(RootConversationID))
+		entryID := mustMintID(t, storage)
+		source := []byte(`{"nested":[1,2]}`)
+		mustCommit(t, storage, StorageWrite{Type: "entry", Entry: &EntryRecord{
+			ID: entryID, ConversationID: RootConversationID, Kind: "note", Data: source,
+		}})
+		// Mutating the source bytes after the commit does not change the store.
+		for index := range source {
+			source[index] = 'x'
+		}
+		commit, err := storage.Entry(ctx, entryID)
+		if err != nil || commit == nil || string(commit.Entry.Data) != `{"nested":[1,2]}` {
+			t.Fatalf("entry = %+v, %v", commit, err)
+		}
+		// Mutating the returned record does not change the store either.
+		commit.Entry.Data[0] = 'x'
+		again, _ := storage.Entry(ctx, entryID)
+		if again == nil || string(again.Entry.Data) != `{"nested":[1,2]}` {
+			t.Fatalf("entry = %+v", again)
+		}
+	})
+}
+
+// TestConformancePrototypeKeys covers upstream's "detaches prototype-like JSON
+// keys without changing object prototypes".
+func TestConformancePrototypeKeys(t *testing.T) {
+	conformance(t, func(t *testing.T, storage Storage) {
+		ctx := context.Background()
+		mustCommit(t, storage, conversationWrite(RootConversationID))
+		entryID := mustMintID(t, storage)
+		data := json.RawMessage(`{"__proto__":{"polluted":false},"constructor":{"label":"stored"},"toString":"value"}`)
+		mustCommit(t, storage, StorageWrite{Type: "entry", Entry: &EntryRecord{
+			ID: entryID, ConversationID: RootConversationID, Kind: "note", Data: data,
+		}})
+		commit, err := storage.Entry(ctx, entryID)
+		if err != nil || commit == nil {
+			t.Fatalf("entry = %+v, %v", commit, err)
+		}
+		var decoded map[string]any
+		if err := json.Unmarshal(commit.Entry.Data, &decoded); err != nil {
+			t.Fatal(err)
+		}
+		if decoded["toString"] != "value" {
+			t.Fatalf("data = %+v", decoded)
+		}
+		if _, present := decoded["constructor"]; !present {
+			t.Fatalf("data = %+v", decoded)
+		}
+	})
+}
