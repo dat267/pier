@@ -182,7 +182,11 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   `recordUsage`), plus the bounded output layer (`output.ts`: control-character
   sanitization, the exact head/tail byte-or-line slice, the chunked
   `OutputBuffer` with head/tail retention and exact dropped totals, and the
-  adaptive `Progress` committer).
+  adaptive `Progress` committer). The task graph is ported too
+  (`task-graph.ts`: the session-line mount built by its first observer from
+  live task records and owned conversations, advanced from commit publications
+  with per-node and conversation-ownership operations, and the disposable state
+  and exact-frame watch surfaces).
 - `coding`: the remote catalog merge is linear (`c34f2d6ad`); the branch model
   resolution still walks its branch per submission (`a0660b174` is inside
   upstream's `virtual-models.ts`, which the port has not ported yet). Dynamic
