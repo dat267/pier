@@ -458,6 +458,170 @@ func GateTask(invocation *Invocation, found *TaskRecord, closing bool) (TaskReco
 	return *found, nil
 }
 
+// SchedulerMirror mirrors every committed non-terminal task record and the
+// ownership fields a walk passes through.
+type SchedulerMirror struct {
+	// Live is the committed non-terminal records.
+	Live map[Id]TaskRecord
+	// Settled holds the ownership fields of terminal tasks that own a loaded
+	// conversation.
+	Settled map[Id]SchedulerTaskNode
+	// Edges maps a loaded conversation to its owner task; a present nil means
+	// ownerless.
+	Edges map[Id]*Id
+	// ConversationOwners marks tasks that own a loaded conversation.
+	ConversationOwners map[Id]bool
+	// FailedMigrations remembers migrations already tried.
+	FailedMigrations map[Id]FailedMigration
+	// FailFastChecks are the failFast waiters the next reconcile checks.
+	FailFastChecks map[Id]bool
+}
+
+// NewSchedulerMirror builds an empty mirror.
+func NewSchedulerMirror() *SchedulerMirror {
+	return &SchedulerMirror{
+		Live: map[Id]TaskRecord{}, Settled: map[Id]SchedulerTaskNode{}, Edges: map[Id]*Id{},
+		ConversationOwners: map[Id]bool{}, FailedMigrations: map[Id]FailedMigration{}, FailFastChecks: map[Id]bool{},
+	}
+}
+
+// Graph is the ownership graph of the mirror.
+func (m *SchedulerMirror) Graph() SchedulerGraph {
+	settled := make(map[Id]TaskRecord, len(m.Settled))
+	for id, node := range m.Settled {
+		owner := node.Owner
+		settled[id] = TaskRecord{ID: id, ConversationID: node.ConversationID, Owner: owner, Background: node.Background}
+	}
+	return SchedulerGraph{Live: m.Live, Settled: settled, Edges: m.Edges}
+}
+
+// MirrorEffects are the side effects of applying one publication.
+type MirrorEffects struct {
+	// Terminal are the records that became terminal; the caller resolves the
+	// task waiters for them.
+	Terminal []Id
+	// SignalInvocations are the newly abort-marked tasks whose run invocation
+	// is signalled.
+	SignalInvocations []Id
+	// NewEdges are the conversations whose owner edge was learned.
+	NewEdges map[Id]*Id
+	// Updated are the non-terminal records in publication order.
+	Updated []TaskRecord
+
+	CascadePending    bool
+	ScheduleReconcile bool
+}
+
+// Observe applies one publication to the mirror.
+func (m *SchedulerMirror) Observe(publication CommitPublication) MirrorEffects {
+	effects := MirrorEffects{NewEdges: map[Id]*Id{}}
+	updated := []TaskRecord{}
+	failed := []Id{}
+	for _, change := range publication.Changes {
+		if change.Write == nil || change.Write.Type != "task" || change.Write.Task == nil {
+			continue
+		}
+		record := *change.Write.Task
+		previous, had := m.Live[record.ID]
+		if FailedOutcome(record) && (!had || !FailedOutcome(previous)) {
+			failed = append(failed, record.ID)
+		}
+		if record.State.Status == TaskTerminal {
+			delete(m.Live, record.ID)
+			delete(m.FailedMigrations, record.ID)
+			delete(m.FailFastChecks, record.ID)
+			if m.ConversationOwners[record.ID] {
+				m.Settled[record.ID] = NodeOf(record)
+			}
+			effects.Terminal = append(effects.Terminal, record.ID)
+			effects.ScheduleReconcile = true
+			continue
+		}
+		if record.AbortRequested && !(had && previous.AbortRequested) {
+			effects.CascadePending = true
+			// Signal a run invocation of the newly marked task; its next step
+			// ends it.
+			effects.SignalInvocations = append(effects.SignalInvocations, record.ID)
+		}
+		status := record.State.Status
+		if status == TaskCompleting && !(had && previous.State.Status == TaskCompleting) {
+			if CancellationIntent(record) {
+				effects.CascadePending = true
+			}
+			effects.ScheduleReconcile = true
+		}
+		if status == TaskWaiting && record.State.Policy == JoinFailFast &&
+			!(had && previous.State.Status == TaskWaiting) {
+			m.FailFastChecks[record.ID] = true
+			effects.ScheduleReconcile = true
+		}
+		m.Live[record.ID] = record
+		updated = append(updated, record)
+	}
+	for _, id := range failed {
+		for _, record := range m.Live {
+			state := record.State
+			if state.Status == TaskWaiting && state.Policy == JoinFailFast && idListContains(state.On, id) {
+				m.FailFastChecks[record.ID] = true
+				effects.ScheduleReconcile = true
+			}
+		}
+	}
+	for _, change := range publication.Changes {
+		if change.Write == nil || change.Write.Type != "conversation" || change.Write.Conversation == nil {
+			continue
+		}
+		conversation := change.Write.Conversation
+		if _, present := m.Edges[conversation.ID]; present {
+			continue
+		}
+		var owner *Id
+		if conversation.Owner != nil {
+			taskID := conversation.Owner.TaskID
+			owner = &taskID
+		}
+		m.Edges[conversation.ID] = owner
+		effects.NewEdges[conversation.ID] = owner
+	}
+	graph := m.Graph()
+	for _, change := range publication.Changes {
+		// A queued input below a cancelled owner is withdrawn, even after its
+		// cascade.
+		if change.Write == nil || change.Write.Type != "submission" || change.Write.Submission == nil {
+			continue
+		}
+		submission := change.Write.Submission
+		if submission.Status != SubmissionQueued || submission.Type != SubmissionTypeInput {
+			continue
+		}
+		conversation := submission.ConversationID
+		if !ChainKnown(SchedulerUp{Conversation: &conversation}, graph) ||
+			BelowCancelled(SchedulerUp{Conversation: &conversation}, graph) {
+			effects.CascadePending = true
+		}
+	}
+	for _, record := range updated {
+		// Work created below a cancelled owner, even after its cascade, is
+		// aborted too.
+		if !ChainKnown(ParentOf(NodeOf(record)), graph) {
+			effects.ScheduleReconcile = true
+		} else if !record.Background && !record.AbortRequested && BelowCancelled(ParentOf(NodeOf(record)), graph) {
+			effects.CascadePending = true
+		}
+	}
+	effects.Updated = updated
+	return effects
+}
+
+func idListContains(ids []Id, target Id) bool {
+	for _, id := range ids {
+		if id == target {
+			return true
+		}
+	}
+	return false
+}
+
 // ReconcileTasks runs one reconcile pass: derive cancellation marks from
 // intentful owners and failFast checks, withdraw the inputs of cancelled
 // conversations, and finalize every completing task that is free. It returns
