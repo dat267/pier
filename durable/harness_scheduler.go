@@ -354,6 +354,81 @@ func WaitingOn(record TaskRecord, owned map[Id][]Id, live map[Id]TaskRecord) []I
 	return on
 }
 
+// DeriveCancellationMarks is the ids a reconcile pass marks: every live
+// non-background task whose owner chain carries cancellation intent, skipping
+// tasks already marked.
+func DeriveCancellationMarks(live []TaskRecord, graph SchedulerGraph) []Id {
+	marks := []Id{}
+	seen := map[Id]bool{}
+	for _, record := range live {
+		if record.Background || record.AbortRequested || seen[record.ID] {
+			continue
+		}
+		if BelowCancelled(ParentOf(NodeOf(record)), graph) {
+			seen[record.ID] = true
+			marks = append(marks, record.ID)
+		}
+	}
+	return marks
+}
+
+// AnyFailed reports whether any of ids holds or ended with an outcome other
+// than completed, falling back to load for tasks not in the live view.
+func AnyFailed(ids []Id, live map[Id]TaskRecord, load func(id Id) (*TaskRecord, error)) (bool, error) {
+	for _, id := range ids {
+		record, present := live[id]
+		if !present {
+			loaded, err := load(id)
+			if err != nil {
+				return false, err
+			}
+			if loaded == nil {
+				continue
+			}
+			record = *loaded
+		}
+		if FailedOutcome(record) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// FailFastMarks is the ids a failFast check marks once a wait's `on` has a
+// failed member: every other live member, so the failed one keeps its own
+// outcome.
+func FailFastMarks(waiter TaskRecord, live map[Id]TaskRecord, anyFailed func(ids []Id) (bool, error)) ([]Id, error) {
+	if waiter.State.Status != TaskWaiting {
+		return nil, nil
+	}
+	failed, err := anyFailed(waiter.State.On)
+	if err != nil || !failed {
+		return nil, err
+	}
+	marks := []Id{}
+	for _, id := range waiter.State.On {
+		record, present := live[id]
+		if present && !FailedOutcome(record) {
+			marks = append(marks, id)
+		}
+	}
+	return marks, nil
+}
+
+// CancelledScopes is the conversations (with queued submissions) whose owner
+// chain carries cancellation intent, and whose inputs a reconcile pass
+// withdraws.
+func CancelledScopes(conversations []Id, graph SchedulerGraph) []Id {
+	cancelled := []Id{}
+	for _, id := range conversations {
+		conversation := id
+		if BelowCancelled(SchedulerUp{Conversation: &conversation}, graph) {
+			cancelled = append(cancelled, id)
+		}
+	}
+	return cancelled
+}
+
 // MemoSet stores candidate unless a memo already exists; it returns the
 // durable winner. A memo is owned by the task record it is written into.
 func MemoSet(tx *Transaction, current TaskRecord, name string, candidate json.RawMessage) (json.RawMessage, error) {
