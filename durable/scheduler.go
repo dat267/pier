@@ -19,8 +19,18 @@ type TaskSchedulerOptions struct {
 	Session  *Session
 	Storage  Storage
 	Registry RegistryReader
-	Now      func() int64
-	Report   func(error)
+	// Models is the pi-ai model access used by generation.
+	Models *aiModels
+	// Agent resolves a conversation's agent against a snapshot.
+	Agent func(conversationID Id, snapshot RegistrySnapshot, ctx chord.Context) (Agent, error)
+	// Settings resolves the harness settings, read at each access.
+	Settings func() Settings
+	// Env builds a conversation's environment.
+	Env func(conversationID Id, ctx chord.Context) (ExecutionEnv, error)
+	// Conversation is an invocation-bound handle of an existing conversation.
+	Conversation func(id Id, invocation *Invocation, ctx chord.Context) (ConversationHandle, bool, error)
+	Now          func() int64
+	Report       func(error)
 	// SettleOutcome is the harness cleanup staged in the commit that makes an
 	// outcome the scheduler wrote itself terminal.
 	SettleOutcome func(tx *Transaction, record TaskRecord, outcome *TaskOutcome) error
@@ -32,14 +42,19 @@ type TaskSchedulerOptions struct {
 
 // TaskScheduler is the durable task scheduler of one harness.
 type TaskScheduler struct {
-	session  *Session
-	storage  Storage
-	registry RegistryReader
-	now      func() int64
-	report   func(error)
-	settle   func(tx *Transaction, record TaskRecord, outcome *TaskOutcome) error
-	withdraw func(tx *Transaction, conversationID Id) error
-	context  chord.Context
+	session      *Session
+	storage      Storage
+	registry     RegistryReader
+	models       *aiModels
+	agent        func(conversationID Id, snapshot RegistrySnapshot, ctx chord.Context) (Agent, error)
+	settings     func() Settings
+	env          func(conversationID Id, ctx chord.Context) (ExecutionEnv, error)
+	conversation func(id Id, invocation *Invocation, ctx chord.Context) (ConversationHandle, bool, error)
+	now          func() int64
+	report       func(error)
+	settle       func(tx *Transaction, record TaskRecord, outcome *TaskOutcome) error
+	withdraw     func(tx *Transaction, conversationID Id) error
+	context      chord.Context
 
 	unsubscribeRegistry func()
 
@@ -64,7 +79,9 @@ type idleKey struct {
 func NewTaskScheduler(options TaskSchedulerOptions) *TaskScheduler {
 	return &TaskScheduler{
 		session: options.Session, storage: options.Storage, registry: options.Registry,
-		now: options.Now, report: options.Report, settle: options.SettleOutcome,
+		models: options.Models, agent: options.Agent, settings: options.Settings, env: options.Env,
+		conversation: options.Conversation,
+		now:          options.Now, report: options.Report, settle: options.SettleOutcome,
 		withdraw: options.WithdrawInputs, context: options.Context,
 		mirror:      NewSchedulerMirror(),
 		invocations: map[Id]*Invocation{},
@@ -128,17 +145,25 @@ func (s *TaskScheduler) Closing() bool {
 	return s.closing
 }
 
+// SchedulerReservation is one reserved task: its invocation, definition and
+// record.
+type SchedulerReservation struct {
+	Invocation *Invocation
+	Task       *Task
+	Record     TaskRecord
+}
+
 // Reserve reserves every eligible task in one commit: load the owner scopes,
 // plan the reservations, orphan the abort-marked tasks no definition can take,
 // stage the running states, and register an invocation per reserved task.
-func (s *TaskScheduler) Reserve(ctx chord.Context) ([]*Invocation, error) {
+func (s *TaskScheduler) Reserve(ctx chord.Context) ([]SchedulerReservation, error) {
 	s.mu.Lock()
 	if !s.enabled || s.closing {
 		s.mu.Unlock()
 		return nil, nil
 	}
 	s.mu.Unlock()
-	registered := []*Invocation{}
+	registered := []SchedulerReservation{}
 	err := s.session.Commit(s.Context(), func(tx *Transaction) error {
 		if _, err := LoadScopes(false, s.mirror, s.storage, s.Context()); err != nil {
 			return err
@@ -166,13 +191,14 @@ func (s *TaskScheduler) Reserve(ctx chord.Context) ([]*Invocation, error) {
 			s.mu.Lock()
 			s.invocations[plan.TaskID] = invocation
 			s.mu.Unlock()
-			registered = append(registered, invocation)
+			registered = append(registered, SchedulerReservation{Invocation: invocation, Task: plan.Task, Record: plan.Record})
 		}
 		return nil
 	})
 	if err != nil {
 		s.mu.Lock()
-		for _, invocation := range registered {
+		for _, reservation := range registered {
+			invocation := reservation.Invocation
 			if s.invocations[invocation.TaskID] == invocation {
 				delete(s.invocations, invocation.TaskID)
 			}
@@ -323,6 +349,146 @@ func (s *TaskScheduler) Inspect(snapshot RegistrySnapshot) HarnessInspection {
 	closing, enabled := s.closing, s.enabled
 	s.mu.Unlock()
 	return BuildInspection(records, s.mirror, snapshot, s.RunningInvocations(), closing, enabled)
+}
+
+// RegistrySnapshot is the current registry snapshot, or nil without a
+// registry.
+func (s *TaskScheduler) RegistrySnapshot() RegistrySnapshot {
+	if s.registry == nil {
+		return nil
+	}
+	return s.registry.Snapshot()
+}
+
+// RunInvocation runs a task's phases until it ends.
+func (s *TaskScheduler) RunInvocation(invocation *Invocation, task *Task, record TaskRecord) {
+	if invocation.Mode == "abort" {
+		s.runAbort(invocation, task, record)
+		return
+	}
+	state := &PhaseState{
+		Task: task, Snapshot: s.RegistrySnapshot(),
+		Refresh: func() RegistrySnapshot { return s.RegistrySnapshot() },
+	}
+	phase := &runtimePhase{
+		snapshot: func() RegistrySnapshot { return state.Snapshot },
+		task:     func() Task { return *state.Task },
+	}
+	runtime := &schedulerRuntime{scheduler: s, invocation: invocation, phase: phase}
+	var previous *PhaseResult
+	for {
+		current, cont, err := s.step(invocation, func(tx *Transaction, current TaskRecord) (PhaseDecision, error) {
+			return DecidePhase(tx, current, previous, state, s.report)
+		})
+		if err != nil || !cont {
+			return
+		}
+		checkpoint := current.State.Checkpoint
+		// Each phase handler resolves its agent afresh, at first use.
+		phase.agentSet = false
+		phaseName := CheckpointPhase(checkpoint)
+		handler := task.Definition.Phases[phaseName]
+		if handler == nil {
+			previous = &PhaseResult{
+				Checkpoint: checkpoint, HasFailure: true,
+				Failure: fmt.Errorf("Task %s has no phase %s", task.Definition.Name, phaseName),
+			}
+			continue
+		}
+		if err := handler(RunningTask{current}, runtime, invocation.Context()); err != nil {
+			previous = &PhaseResult{Checkpoint: checkpoint, HasFailure: true, Failure: err}
+		} else {
+			previous = &PhaseResult{Checkpoint: checkpoint}
+		}
+	}
+}
+
+// runAbort runs the abort handler once; returning without an outcome faults.
+func (s *TaskScheduler) runAbort(invocation *Invocation, task *Task, record TaskRecord) {
+	s.mu.Lock()
+	current, present := s.mirror.Live[invocation.TaskID]
+	closing := s.closing
+	s.mu.Unlock()
+	if !present || closing {
+		return
+	}
+	var failure error
+	phase := &runtimePhase{
+		snapshot: func() RegistrySnapshot { return s.RegistrySnapshot() },
+		task:     func() Task { return *task },
+	}
+	runtime := &schedulerRuntime{scheduler: s, invocation: invocation, phase: phase}
+	if task.Definition.Abort != nil {
+		if err := task.Definition.Abort(RunningTask{current}, runtime, invocation.Context()); err != nil {
+			failure = err
+		}
+	}
+	message := fmt.Errorf("Abort handler of task %d returned without a terminal outcome", invocation.TaskID)
+	_, _, _ = s.step(invocation, func(tx *Transaction, current TaskRecord) (PhaseDecision, error) {
+		fault := failure
+		if fault == nil {
+			fault = message
+		}
+		return PhaseDecision{Fault: fault}, nil
+	})
+}
+
+// step makes one synchronous decision on the Session line.
+func (s *TaskScheduler) step(invocation *Invocation, decide func(tx *Transaction, current TaskRecord) (PhaseDecision, error)) (TaskRecord, bool, error) {
+	var result TaskRecord
+	cont := false
+	err := s.session.Commit(s.Context(), func(tx *Transaction) error {
+		s.mu.Lock()
+		record, present := s.mirror.Live[invocation.TaskID]
+		closing := s.closing
+		s.mu.Unlock()
+		var decision PhaseDecision
+		if present && record.State.Status == TaskRunning && !closing {
+			var decideErr error
+			decision, decideErr = decide(tx, record)
+			if decideErr != nil {
+				return decideErr
+			}
+		}
+		if decision.Continue {
+			result = record
+			cont = true
+			return nil
+		}
+		invocation.End()
+		if decision.Fault != nil {
+			message := decision.Fault.Error()
+			outcome := &TaskOutcome{Status: OutcomeFaulted, Error: &StoredError{Message: message}}
+			return TerminateTask(tx, s.LiveRecords(), record, outcome, s.settle)
+		}
+		return nil
+	})
+	if err != nil {
+		invocation.End()
+		if !s.Closing() && s.report != nil {
+			s.report(err)
+		}
+		return TaskRecord{}, false, err
+	}
+	return result, cont, nil
+}
+
+// StartInvocation runs an invocation off the loop and frees its task when it
+// ends.
+func (s *TaskScheduler) StartInvocation(reservation SchedulerReservation) {
+	go func() {
+		invocation := reservation.Invocation
+		defer func() {
+			invocation.End()
+			s.mu.Lock()
+			if s.invocations[invocation.TaskID] == invocation {
+				delete(s.invocations, invocation.TaskID)
+			}
+			s.mu.Unlock()
+			s.scheduleReconcile()
+		}()
+		s.RunInvocation(invocation, reservation.Task, reservation.Record)
+	}()
 }
 
 func (s *TaskScheduler) scheduleReconcile() {

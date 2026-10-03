@@ -21,13 +21,13 @@ func TestTaskSchedulerReserve(t *testing.T) {
 	}
 	scheduler := newTestScheduler(t, session, storage)
 	// Scheduling is paused, so nothing reserves.
-	if invocations, err := scheduler.Reserve(ctx); err != nil || len(invocations) != 0 {
-		t.Fatalf("invocations = %+v, %v", invocations, err)
+	if reservations, err := scheduler.Reserve(ctx); err != nil || len(reservations) != 0 {
+		t.Fatalf("invocations = %+v, %v", reservations, err)
 	}
 	scheduler.Resume()
-	invocations, err := scheduler.Reserve(ctx)
-	if err != nil || len(invocations) != 1 || invocations[0].Mode != "run" || invocations[0].TaskID != taskID {
-		t.Fatalf("invocations = %+v, %v", invocations, err)
+	reservations, err := scheduler.Reserve(ctx)
+	if err != nil || len(reservations) != 1 || reservations[0].Invocation.Mode != "run" || reservations[0].Invocation.TaskID != taskID {
+		t.Fatalf("invocations = %+v, %v", reservations, err)
 	}
 	if !scheduler.RunningInvocations()[taskID] {
 		t.Fatal("the invocation is registered")
@@ -37,8 +37,8 @@ func TestTaskSchedulerReserve(t *testing.T) {
 		t.Fatalf("record = %+v, %v", record, err)
 	}
 	// A task with a live invocation is not reserved again.
-	if invocations, err := scheduler.Reserve(ctx); err != nil || len(invocations) != 0 {
-		t.Fatalf("invocations = %+v, %v", invocations, err)
+	if reservations, err := scheduler.Reserve(ctx); err != nil || len(reservations) != 0 {
+		t.Fatalf("invocations = %+v, %v", reservations, err)
 	}
 }
 

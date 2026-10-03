@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"sort"
 	"sync/atomic"
 	"time"
@@ -1317,7 +1318,7 @@ func DecidePhase(tx *Transaction, current TaskRecord, previous *PhaseResult, sta
 		return PhaseDecision{Continue: true}, nil
 	}
 	next := state.Snapshot.Task(current.Kind)
-	if next != state.Task {
+	if !sameTaskDefinition(next, state.Task) {
 		if next != nil && CanReserve(*next, current) {
 			pending := WithState(current, TaskState{Status: TaskPending, Checkpoint: current.State.Checkpoint})
 			if err := tx.SetTask(&pending); err != nil {
@@ -1325,7 +1326,7 @@ func DecidePhase(tx *Transaction, current TaskRecord, previous *PhaseResult, sta
 			}
 			return PhaseDecision{}, nil
 		}
-		if state.Reported == nil || state.Reported != next {
+		if state.Reported == nil || !sameTaskDefinition(state.Reported, next) {
 			state.Reported = next
 			cause := "missing_task"
 			if next != nil {
@@ -1337,6 +1338,22 @@ func DecidePhase(tx *Transaction, current TaskRecord, previous *PhaseResult, sta
 		}
 	}
 	return PhaseDecision{Continue: true}, nil
+}
+
+// sameTaskDefinition reports whether two resolved definitions are the same
+// one. The registry returns fresh task values per lookup, so identity is
+// compared by name, version and the initial checkpoint's code pointer.
+func sameTaskDefinition(left, right *Task) bool {
+	if left == nil || right == nil {
+		return left == nil && right == nil
+	}
+	if left.Definition.Name != right.Definition.Name || left.Definition.Version != right.Definition.Version {
+		return false
+	}
+	if left.Definition.Initial == nil || right.Definition.Initial == nil {
+		return true
+	}
+	return reflect.ValueOf(left.Definition.Initial).Pointer() == reflect.ValueOf(right.Definition.Initial).Pointer()
 }
 
 func decodeJSONValue(raw json.RawMessage) chord.JsonValue {
