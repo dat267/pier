@@ -39,6 +39,62 @@ type ToolTaskResult struct {
 	Control *ToolControl `json:"control,omitempty"`
 }
 
+// ToolTask is the built-in tool task definition.
+var ToolTask = Task{Definition: TaskDefinition{
+	Name: ToolTaskKind, Version: 1,
+	Initial: func(json.RawMessage) (json.RawMessage, error) {
+		return json.RawMessage(`{"phase":"call"}`), nil
+	},
+}}
+
+// InvalidArguments is the result of arguments that fail validation.
+func InvalidArguments(message string) ToolExecutionResult {
+	return HarnessError("invalid_arguments", message)
+}
+
+// FromSlot rebuilds an error result from a slot's durable partial output,
+// details and diagnostics.
+func FromSlot(slot map[string]any, code, message string) ToolExecutionResult {
+	diagnostics := []ToolDiagnostic{}
+	if slot != nil {
+		if list, ok := slot["diagnostics"].([]any); ok {
+			for _, item := range list {
+				if diagnostic, ok := decodeJSONInto[ToolDiagnostic](item); ok {
+					diagnostics = append(diagnostics, diagnostic)
+				}
+			}
+		}
+	}
+	droppedBytes := 0
+	droppedLines := 0
+	if slot != nil {
+		if value, ok := jsonID(slot["droppedBytes"]); ok {
+			droppedBytes = int(value)
+		}
+		if value, ok := jsonID(slot["droppedLines"]); ok {
+			droppedLines = int(value)
+		}
+	}
+	if droppedBytes > 0 {
+		diagnostics = append(diagnostics, Truncated(droppedBytes, droppedLines, nil))
+	}
+	diagnostics = append(diagnostics, ToolDiagnosticOf(code, message))
+	content := []ai.UserContent{}
+	if slot != nil {
+		if output, ok := slot["output"].(string); ok && output != "" {
+			content = append(content, ai.TextContent{Text: output})
+		}
+	}
+	isError := true
+	result := ToolExecutionResult{Content: content, IsError: &isError, Diagnostics: diagnostics}
+	if slot != nil {
+		if details, present := slot["details"]; present && details != nil {
+			result.Details = details
+		}
+	}
+	return result
+}
+
 // HarnessError is an error result the Harness writes itself: no content and
 // one `error` diagnostic with code.
 func HarnessError(code, message string) ToolExecutionResult {

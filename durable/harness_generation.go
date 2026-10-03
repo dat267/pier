@@ -46,6 +46,17 @@ func CreateGeneration(tx *Transaction, conversationID Id) (Id, error) {
 		TaskOptions{Ownership: TaskOwnership{Kind: TaskOwnedByConversation}, ConversationID: &conversationID})
 }
 
+// CreateToolTask creates a tool task for call callID, owned by the
+// generation.
+func CreateToolTask(tx *Transaction, owner Id, assistant Id, callID string) (Id, error) {
+	encoded, err := marshalJSONValue(ToolTaskInput{Assistant: assistant, CallID: callID})
+	if err != nil {
+		return 0, err
+	}
+	return tx.CreateTask(ToolTask.Definition, json.RawMessage(encoded),
+		TaskOptions{Ownership: TaskOwnership{Kind: TaskOwnedByTask, TaskID: &owner}})
+}
+
 // HandOver hands run control from one task to another; the run's inputs move
 // with it.
 func HandOver(live chord.JsonValue, from, to Id) {

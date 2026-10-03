@@ -95,6 +95,77 @@ Use this EXACT format:
 Keep each section concise. Preserve exact file paths, function names, and error messages.`
 )
 
+// CompactionTask is the built-in compaction task definition.
+var CompactionTask = Task{Definition: TaskDefinition{
+	Name: CompactionTaskKind, Version: 1,
+	Initial: func(json.RawMessage) (json.RawMessage, error) {
+		return json.RawMessage(`{"phase":"select"}`), nil
+	},
+}}
+
+// Threshold compaction outcomes.
+const (
+	ThresholdBlocking   = "blocking"
+	ThresholdBackground = "background"
+)
+
+// ThresholdCompaction is which threshold compaction preparation starts before
+// its request (spec §8.3), or "" for none.
+func ThresholdCompaction(view ContextView, planned []EntryDraft, contextWindow int, policy CompactionPolicy) string {
+	if !policy.Enabled || contextWindow <= 0 {
+		return ""
+	}
+	extra := []ai.Message{}
+	for _, entry := range planned {
+		extra = append(extra, entry.Model...)
+	}
+	tokens := EstimateContext(view, extra)
+	blocking := contextWindow - policy.ReserveTokens
+	background := blocking - policy.BackgroundTokens
+	over := ""
+	switch {
+	case tokens > blocking:
+		over = ThresholdBlocking
+	case policy.BackgroundTokens > 0 && tokens > background:
+		over = ThresholdBackground
+	}
+	if over == "" || SelectCut(view, policy.KeepRecentTokens) == nil {
+		return ""
+	}
+	return over
+}
+
+// CreateCompaction creates a compaction task with its status in this commit.
+// owner is the generation that waits for it; without one the task is
+// conversation-owned and background unless manual.
+func CreateCompaction(tx *Transaction, conversationID Id, input CompactionInput, owner *Id) (Id, error) {
+	ownership := TaskOwnership{Kind: TaskOwnedByConversation}
+	if owner != nil {
+		ownership = TaskOwnership{Kind: TaskOwnedByTask, TaskID: owner}
+	}
+	background := owner == nil && input.Reason != CompactionManual
+	encoded, err := marshalJSONValue(input)
+	if err != nil {
+		return 0, err
+	}
+	taskID, err := tx.CreateTask(CompactionTask.Definition, json.RawMessage(encoded), TaskOptions{
+		Ownership: ownership, ConversationID: &conversationID, Background: background,
+	})
+	if err != nil {
+		return 0, err
+	}
+	live, err := tx.Doc(LiveDoc.Definition, conversationID)
+	if err != nil {
+		return 0, err
+	}
+	if err := AddCompactionStatus(live, CompactionStatus{
+		TaskID: taskID, Reason: input.Reason, Blocking: owner != nil, Attempt: 1,
+	}); err != nil {
+		return 0, err
+	}
+	return taskID, nil
+}
+
 // SelectCut is the index in view.Entries of the first entry a summary keeps,
 // or nil when there is nothing to compact (spec §8.7).
 func SelectCut(view ContextView, keepRecentTokens int) *int {

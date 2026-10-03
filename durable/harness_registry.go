@@ -1,7 +1,6 @@
 package durable
 
 import (
-	"encoding/json"
 	"fmt"
 	"regexp"
 )
@@ -19,11 +18,9 @@ var sectionKeyPattern = regexp.MustCompile(`^[a-z][a-z0-9_-]*$`)
 // versions here.
 var BuiltinTasks = []Task{
 	GenerationTask,
-	{Definition: TaskDefinition{Name: ToolTaskKind, Version: 1, Initial: emptyTaskInitial}},
-	{Definition: TaskDefinition{Name: CompactionTaskKind, Version: 1, Initial: emptyTaskInitial}},
+	ToolTask,
+	CompactionTask,
 }
-
-func emptyTaskInitial(json.RawMessage) (json.RawMessage, error) { return json.RawMessage(`{}`), nil }
 
 // registryState is the immutable published registry state.
 type registryState struct {
