@@ -339,8 +339,8 @@ type RegistryReader interface {
 // Registry is the application-owned registry of extensions.
 type Registry interface {
 	RegistryReader
-	Install(extension Extension)
-	Uninstall(extension Extension)
+	Install(extension Extension) error
+	Uninstall(extension Extension) error
 }
 
 // ToolControl is the post-tools control a tool result may request.
