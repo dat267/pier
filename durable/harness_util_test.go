@@ -11,8 +11,10 @@ import (
 
 func TestWaitersResolve(t *testing.T) {
 	var waiters Waiters[string, int]
-	done := make(chan int, 2)
-	for index := 0; index < 2; index++ {
+	// Waiters are added one at a time: a waiter that registers after Resolve
+	// belongs to the next round (upstream's per-key promise set).
+	for round := 0; round < 2; round++ {
+		done := make(chan int, 1)
 		go func() {
 			value, err := waiters.Add("key", context.Background())
 			if err != nil {
@@ -20,15 +22,18 @@ func TestWaitersResolve(t *testing.T) {
 			}
 			done <- value
 		}()
-	}
-	deadline := time.Now().Add(time.Second)
-	for len(waiters.Keys()) < 1 && time.Now().Before(deadline) {
-		time.Sleep(time.Millisecond)
-	}
-	waiters.Resolve("key", 7)
-	for index := 0; index < 2; index++ {
-		if value := <-done; value != 7 {
-			t.Fatalf("value = %d", value)
+		deadline := time.Now().Add(2 * time.Second)
+		for len(waiters.Keys()) == 0 && time.Now().Before(deadline) {
+			time.Sleep(time.Millisecond)
+		}
+		waiters.Resolve("key", 7)
+		select {
+		case value := <-done:
+			if value != 7 {
+				t.Fatalf("value = %d", value)
+			}
+		case <-time.After(2 * time.Second):
+			t.Fatalf("waiter %d did not settle", round)
 		}
 	}
 	if len(waiters.Keys()) != 0 {
