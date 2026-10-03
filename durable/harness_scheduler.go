@@ -354,6 +354,65 @@ func WaitingOn(record TaskRecord, owned map[Id][]Id, live map[Id]TaskRecord) []I
 	return on
 }
 
+// MemoSet stores candidate unless a memo already exists; it returns the
+// durable winner. A memo is owned by the task record it is written into.
+func MemoSet(tx *Transaction, current TaskRecord, name string, candidate json.RawMessage) (json.RawMessage, error) {
+	if winner, present := MemoOf(&current, name); present {
+		return winner, nil
+	}
+	memos := make(map[string]json.RawMessage, len(current.Memos)+1)
+	for key, value := range current.Memos {
+		memos[key] = value
+	}
+	memos[name] = candidate
+	replacement := current
+	replacement.Memos = memos
+	if err := tx.SetTask(&replacement); err != nil {
+		return nil, err
+	}
+	return candidate, nil
+}
+
+// FinalizeCompleting writes the terminal record of every completing task
+// without live ordinary owned work. Finalizing one can free its owner, so it
+// repeats over the commit's candidates until nothing changes; a faulted or
+// orphaned outcome gets its harness cleanup here.
+func FinalizeCompleting(
+	tx *Transaction,
+	live []TaskRecord,
+	settleOutcome func(tx *Transaction, record TaskRecord, outcome *TaskOutcome) error,
+) error {
+	for {
+		overlay := OverlayOf(tx)
+		graph := SchedulerGraph{Live: RecordsByID(live), Overlay: &overlay}
+		records := LiveRecordsWithOverlay(live, overlay)
+		owned := OwnedTaskIDs(records, graph)
+		done := []TaskRecord{}
+		for _, record := range records {
+			if record.State.Status == TaskCompleting && !owned[record.ID] {
+				done = append(done, record)
+			}
+		}
+		if len(done) == 0 {
+			return nil
+		}
+		for _, record := range done {
+			outcome := record.State.Outcome
+			terminal := WithState(record, TaskState{Status: TaskTerminal, Outcome: outcome})
+			if err := tx.SetTask(&terminal); err != nil {
+				return err
+			}
+			// Only the scheduler writes faulted and orphaned; their cleanup
+			// waits for this commit.
+			if outcome != nil && (outcome.Status == OutcomeFaulted || outcome.Status == OutcomeOrphaned) && settleOutcome != nil {
+				if err := settleOutcome(tx, record, outcome); err != nil {
+					return err
+				}
+			}
+		}
+	}
+}
+
 // RecordsByID indexes records by id.
 func RecordsByID(records []TaskRecord) map[Id]TaskRecord {
 	byID := make(map[Id]TaskRecord, len(records))
