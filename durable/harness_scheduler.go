@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/dat267/pier/chord"
@@ -352,6 +353,109 @@ func WaitingOn(record TaskRecord, owned map[Id][]Id, live map[Id]TaskRecord) []I
 		}
 	}
 	return on
+}
+
+// EndedInvocationError reports work that used an invocation after it ended.
+type EndedInvocationError struct {
+	TaskID Id
+}
+
+func (e *EndedInvocationError) Error() string {
+	return fmt.Sprintf("Task %d invocation has ended", e.TaskID)
+}
+
+// StoppableWatch is a watch an invocation stops when it ends.
+type StoppableWatch interface {
+	Stop() WatchEnd
+}
+
+// Invocation is one in-memory execution of a task in run or abort mode.
+type Invocation struct {
+	TaskID         Id
+	ConversationID Id
+	// Mode is "run" or "abort".
+	Mode string
+
+	context context.Context
+	cancel  context.CancelFunc
+	watches []StoppableWatch
+	done    chan struct{}
+	ended   atomic.Bool
+}
+
+// NewInvocation builds an invocation bound to parent, in run or abort mode.
+func NewInvocation(taskID, conversationID Id, mode string, parent context.Context) *Invocation {
+	if parent == nil {
+		parent = context.Background()
+	}
+	context, cancel := context.WithCancel(parent)
+	return &Invocation{
+		TaskID: taskID, ConversationID: conversationID, Mode: mode,
+		context: context, cancel: cancel, done: make(chan struct{}),
+	}
+}
+
+// Context is the invocation's signalled context. It is cancelled when the
+// invocation ends.
+func (i *Invocation) Context() context.Context { return i.context }
+
+// Done settles when the invocation ends.
+func (i *Invocation) Done() <-chan struct{} { return i.done }
+
+// Ended reports whether the invocation has ended; its operations reject from
+// then on.
+func (i *Invocation) Ended() bool { return i.ended.Load() }
+
+// AddWatch registers a watch stopped at invocation end.
+func (i *Invocation) AddWatch(watch StoppableWatch) {
+	if i.ended.Load() {
+		watch.Stop()
+		return
+	}
+	i.watches = append(i.watches, watch)
+}
+
+// End ends the invocation: its runtime operations reject from now on, its
+// signal aborts, and its watches stop.
+func (i *Invocation) End() {
+	if i.ended.Swap(true) {
+		return
+	}
+	for _, watch := range i.watches {
+		watch.Stop()
+	}
+	i.watches = nil
+	i.cancel()
+	close(i.done)
+}
+
+// AssertLive rejects an operation issued after the invocation ended.
+func (i *Invocation) AssertLive() error {
+	if i.ended.Load() {
+		return &EndedInvocationError{TaskID: i.TaskID}
+	}
+	return nil
+}
+
+// GateTask applies the invocation gate to a reread task on the line, returning
+// the running record or the error that ends the operation.
+func GateTask(invocation *Invocation, found *TaskRecord, closing bool) (TaskRecord, error) {
+	if err := invocation.AssertLive(); err != nil {
+		return TaskRecord{}, err
+	}
+	if closing {
+		return TaskRecord{}, ClosedError()
+	}
+	if found == nil {
+		return TaskRecord{}, fmt.Errorf("Task %d is terminal", invocation.TaskID)
+	}
+	if found.State.Status != TaskRunning {
+		return TaskRecord{}, fmt.Errorf("Task %d is %s", invocation.TaskID, found.State.Status)
+	}
+	if invocation.Mode == "run" && found.AbortRequested {
+		return TaskRecord{}, fmt.Errorf("Task %d has a durable abort mark", invocation.TaskID)
+	}
+	return *found, nil
 }
 
 // DeriveCancellationMarks is the ids a reconcile pass marks: every live
