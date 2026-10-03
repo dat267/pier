@@ -715,3 +715,190 @@ func TestConformancePrototypeKeys(t *testing.T) {
 		}
 	})
 }
+
+// TestConformancePaginatesConversationsByCursor covers upstream's "paginates
+// conversations by opaque cursor in ascending ID order".
+func TestConformancePaginatesConversationsByCursor(t *testing.T) {
+	conformance(t, func(t *testing.T, storage Storage) {
+		ctx := context.Background()
+		mustCommit(t, storage, conversationWrite(RootConversationID))
+		secondID := mustMintID(t, storage)
+		thirdID := mustMintID(t, storage)
+		mustCommit(t, storage,
+			StorageWrite{Type: "conversation", Conversation: &ConversationRecord{ID: thirdID}},
+			StorageWrite{Type: "conversation", Conversation: &ConversationRecord{ID: secondID}},
+		)
+		first, err := storage.ScanConversations(ctx, ConversationQuery{}, nil, 2)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(first.Items) != 2 || first.Items[0].ID != RootConversationID || first.Items[1].ID != secondID {
+			t.Fatalf("first = %+v", first.Items)
+		}
+		if first.Next == nil {
+			t.Fatal("the first page must have a cursor")
+		}
+		encoded, err := json.Marshal(first.Next)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var cursor Cursor
+		if err := json.Unmarshal(encoded, &cursor); err != nil {
+			t.Fatal(err)
+		}
+		second, err := storage.ScanConversations(ctx, ConversationQuery{}, cursor, 2)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(second.Items) != 1 || second.Items[0].ID != thirdID {
+			t.Fatalf("second = %+v", second.Items)
+		}
+		if second.Next != nil {
+			t.Fatalf("second cursor = %+v", second.Next)
+		}
+	})
+}
+
+// TestConformanceRejectsAfterClose covers upstream's "rejects every operation
+// after close".
+func TestConformanceRejectsAfterClose(t *testing.T) {
+	conformance(t, func(t *testing.T, storage Storage) {
+		ctx := context.Background()
+		mustCommit(t, storage, conversationWrite(RootConversationID))
+		if err := storage.Close(ctx); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := storage.Conversation(ctx, RootConversationID); err == nil ||
+			!strings.Contains(err.Error(), "closed") {
+			t.Fatalf("conversation err = %v", err)
+		}
+		if _, err := storage.Commit(ctx, []StorageWrite{}); err == nil ||
+			!strings.Contains(err.Error(), "closed") {
+			t.Fatalf("commit err = %v", err)
+		}
+		if _, err := storage.MintID(ctx); err == nil || !strings.Contains(err.Error(), "closed") {
+			t.Fatalf("mint err = %v", err)
+		}
+	})
+}
+
+// TestConformanceDeepForkHistory covers upstream's "scans deep fork history
+// newest-first through every ancestor cap".
+func TestConformanceDeepForkHistory(t *testing.T) {
+	conformance(t, func(t *testing.T, storage Storage) {
+		ctx := context.Background()
+		mustCommit(t, storage, conversationWrite(RootConversationID))
+		rootFirst := mustMintID(t, storage)
+		rootForkPoint := mustMintID(t, storage)
+		rootExcludedSameCommit := mustMintID(t, storage)
+		rootSeq := mustCommit(t, storage,
+			StorageWrite{Type: "entry", Entry: &EntryRecord{ID: rootFirst, ConversationID: RootConversationID, Kind: "message"}},
+			StorageWrite{Type: "entry", Entry: &EntryRecord{ID: rootForkPoint, ConversationID: RootConversationID, Kind: "marker", Head: &rootFirst}},
+			StorageWrite{Type: "entry", Entry: &EntryRecord{ID: rootExcludedSameCommit, ConversationID: RootConversationID, Kind: "message"}},
+		)
+		childID := mustMintID(t, storage)
+		mustCommit(t, storage, StorageWrite{Type: "conversation", Conversation: &ConversationRecord{
+			ID: childID, Parent: &ConversationParent{ConversationID: RootConversationID, At: rootForkPoint},
+		}})
+		childForkPoint := mustMintID(t, storage)
+		childExcluded := mustMintID(t, storage)
+		mustCommit(t, storage,
+			StorageWrite{Type: "entry", Entry: &EntryRecord{ID: childForkPoint, ConversationID: childID, Kind: "note"}},
+			StorageWrite{Type: "entry", Entry: &EntryRecord{ID: childExcluded, ConversationID: childID, Kind: "message"}},
+		)
+		rootExcludedLater := mustMintID(t, storage)
+		mustCommit(t, storage, StorageWrite{Type: "entry", Entry: &EntryRecord{ID: rootExcludedLater, ConversationID: RootConversationID, Kind: "message"}})
+		grandchildID := mustMintID(t, storage)
+		mustCommit(t, storage, StorageWrite{Type: "conversation", Conversation: &ConversationRecord{
+			ID: grandchildID, Parent: &ConversationParent{ConversationID: childID, At: childForkPoint},
+		}})
+		grandchildHead := mustMintID(t, storage)
+		grandchildTail := mustMintID(t, storage)
+		grandchildSeq := mustCommit(t, storage,
+			StorageWrite{Type: "entry", Entry: &EntryRecord{ID: grandchildHead, ConversationID: grandchildID, Kind: "marker", Head: &grandchildHead}},
+			StorageWrite{Type: "entry", Entry: &EntryRecord{ID: grandchildTail, ConversationID: grandchildID, Kind: "message"}},
+		)
+		childExcludedLater := mustMintID(t, storage)
+		mustCommit(t, storage, StorageWrite{Type: "entry", Entry: &EntryRecord{ID: childExcludedLater, ConversationID: childID, Kind: "message"}})
+
+		first := scanEntryIDs(t, storage, EntryQuery{ConversationID: grandchildID}, 2, nil)
+		if !sameIDs(first.Items, []Id{grandchildTail, grandchildHead}) {
+			t.Fatalf("first = %+v", first.Items)
+		}
+		second := scanEntryIDs(t, storage, EntryQuery{ConversationID: grandchildID}, 2, first.Next)
+		if !sameIDs(second.Items, []Id{childForkPoint, rootForkPoint}) {
+			t.Fatalf("second = %+v", second.Items)
+		}
+		third := scanEntryIDs(t, storage, EntryQuery{ConversationID: grandchildID}, 2, second.Next)
+		if !sameIDs(third.Items, []Id{rootFirst}) || third.Next != nil {
+			t.Fatalf("third = %+v", third)
+		}
+		// Head markers resolve at and before the tail.
+		current, err := storage.FindLatestHeadMarker(ctx, grandchildID, nil)
+		if err != nil || current == nil || current.ID != grandchildHead || current.Head == nil || *current.Head != grandchildHead {
+			t.Fatalf("current marker = %+v, %v", current, err)
+		}
+		historical, err := storage.FindLatestHeadMarker(ctx, grandchildID, &childForkPoint)
+		if err != nil || historical == nil || historical.ID != rootForkPoint || historical.Head == nil || *historical.Head != rootFirst {
+			t.Fatalf("historical marker = %+v, %v", historical, err)
+		}
+		if marker, _ := storage.FindLatestHeadMarker(ctx, grandchildID, &rootFirst); marker != nil {
+			t.Fatalf("marker = %+v", marker)
+		}
+		// The active range starts at the marker's head.
+		activeFirst := scanEntryIDs(t, storage, EntryQuery{ConversationID: grandchildID, MinEntryID: current.Head}, 1, nil)
+		if !sameIDs(activeFirst.Items, []Id{grandchildTail}) || activeFirst.Next == nil {
+			t.Fatalf("activeFirst = %+v", activeFirst)
+		}
+		activeSecond := scanEntryIDs(t, storage, EntryQuery{ConversationID: grandchildID, MinEntryID: current.Head}, 1, activeFirst.Next)
+		if !sameIDs(activeSecond.Items, []Id{grandchildHead}) || activeSecond.Next != nil {
+			t.Fatalf("activeSecond = %+v", activeSecond)
+		}
+		historicalRange := scanEntryIDs(t, storage, EntryQuery{
+			ConversationID: grandchildID, MinEntryID: historical.Head, MaxEntryID: &childForkPoint,
+		}, 10, nil)
+		if !sameIDs(historicalRange.Items, []Id{childForkPoint, rootForkPoint, rootFirst}) {
+			t.Fatalf("historicalRange = %+v", historicalRange.Items)
+		}
+		// Commit sequences match the commits that persisted each entry.
+		if commit, _ := storage.Entry(ctx, rootForkPoint); commit == nil || commit.CommitSeq != rootSeq {
+			t.Fatalf("root fork point = %+v", commit)
+		}
+		if commit, _ := storage.Entry(ctx, grandchildTail); commit == nil || commit.CommitSeq != grandchildSeq {
+			t.Fatalf("grandchild tail = %+v", commit)
+		}
+		// Conversation-scoped visibility follows the fork chain.
+		if commit, _ := visibleEntry(ctx, storage, grandchildID, rootFirst); commit == nil || commit.Entry.ConversationID != RootConversationID {
+			t.Fatalf("root first = %+v", commit)
+		}
+		if commit, _ := visibleEntry(ctx, storage, grandchildID, childForkPoint); commit == nil || commit.Entry.ConversationID != childID {
+			t.Fatalf("child fork point = %+v", commit)
+		}
+		for _, hidden := range []Id{rootExcludedSameCommit, rootExcludedLater, childExcluded, childExcludedLater} {
+			if commit, _ := visibleEntry(ctx, storage, grandchildID, hidden); commit != nil {
+				t.Fatalf("hidden %d = %+v", hidden, commit)
+			}
+		}
+	})
+}
+
+func scanEntryIDs(t *testing.T, storage Storage, query EntryQuery, limit int, cursor Cursor) Page[EntryRecord] {
+	t.Helper()
+	page, err := storage.ScanEntries(context.Background(), query, cursor, limit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return page
+}
+
+func sameIDs(entries []EntryRecord, ids []Id) bool {
+	if len(entries) != len(ids) {
+		return false
+	}
+	for index := range entries {
+		if entries[index].ID != ids[index] {
+			return false
+		}
+	}
+	return true
+}
