@@ -354,6 +354,125 @@ func WaitingOn(record TaskRecord, owned map[Id][]Id, live map[Id]TaskRecord) []I
 	return on
 }
 
+// FailedMigration records a definition whose migration could not take a task;
+// it is retried only once the registry resolves another definition.
+type FailedMigration struct {
+	TaskName string
+	Version  int
+	Error    error
+}
+
+// SchedulerFit is a definition that can take a record, or why none can.
+type SchedulerFit struct {
+	Task     *Task
+	Migrates bool
+	Reason   string
+	Error    error
+}
+
+// FitRecord decides whether a definition can take the record, deciding it
+// without running task code.
+func FitRecord(record TaskRecord, task *Task, failed map[Id]FailedMigration) SchedulerFit {
+	if task == nil {
+		return SchedulerFit{Reason: BlockedMissingTask}
+	}
+	version := task.Definition.Version
+	if version == record.Version {
+		return SchedulerFit{Task: task}
+	}
+	if version < record.Version {
+		return SchedulerFit{Reason: BlockedTaskTooOld}
+	}
+	if failure, present := failed[record.ID]; present &&
+		failure.TaskName == task.Definition.Name && failure.Version == task.Definition.Version {
+		return SchedulerFit{Task: task, Reason: BlockedMigrationFailed, Error: failure.Error}
+	}
+	return SchedulerFit{Task: task, Migrates: true}
+}
+
+// Scheduler resolution kinds.
+const (
+	SchedulerReady   = "ready"
+	SchedulerBlocked = "blocked"
+)
+
+// SchedulerResolution is a definition that can take a record, or why none can.
+type SchedulerResolution struct {
+	Kind   string
+	Task   *Task
+	Record TaskRecord
+	Reason string
+}
+
+// ResolveRecord resolves the record's definition by kind, migrating an older
+// stored version.
+func ResolveRecord(record TaskRecord, snapshot RegistrySnapshot, failed map[Id]FailedMigration, report func(error)) SchedulerResolution {
+	fit := FitRecord(record, snapshot.Task(record.Kind), failed)
+	if fit.Reason != "" {
+		return SchedulerResolution{Kind: SchedulerBlocked, Reason: fit.Reason}
+	}
+	if !fit.Migrates {
+		return SchedulerResolution{Kind: SchedulerReady, Task: fit.Task, Record: record}
+	}
+	definition := fit.Task.Definition
+	if definition.Migrate == nil {
+		return SchedulerResolution{Kind: SchedulerBlocked, Reason: BlockedMigrationFailed}
+	}
+	input, checkpoint, err := definition.Migrate(record.Input, record.State.Checkpoint, record.Version)
+	if err != nil {
+		failed[record.ID] = FailedMigration{TaskName: definition.Name, Version: definition.Version, Error: err}
+		if report != nil {
+			report(err)
+		}
+		return SchedulerResolution{Kind: SchedulerBlocked, Reason: BlockedMigrationFailed}
+	}
+	migrated := record
+	migrated.Version = definition.Version
+	migrated.Input = copyRawJSON(input)
+	migrated.State = record.State
+	migrated.State.Checkpoint = copyRawJSON(checkpoint)
+	return SchedulerResolution{Kind: SchedulerReady, Task: fit.Task, Record: migrated}
+}
+
+func copyRawJSON(value json.RawMessage) json.RawMessage {
+	if value == nil {
+		return nil
+	}
+	return append(json.RawMessage{}, value...)
+}
+
+// InspectTask is the derived scheduling state of one live task; it runs no
+// task code.
+func InspectTask(
+	record TaskRecord,
+	snapshot RegistrySnapshot,
+	owned map[Id][]Id,
+	live map[Id]TaskRecord,
+	running map[Id]bool,
+	failed map[Id]FailedMigration,
+) TaskInspection {
+	if running[record.ID] {
+		return TaskInspection{Record: record, Kind: TaskInspectionRunning}
+	}
+	if record.State.Status == TaskCompleting {
+		return TaskInspection{Record: record, Kind: TaskInspectionCompleting}
+	}
+	if on := WaitingOn(record, owned, live); len(on) > 0 {
+		return TaskInspection{Record: record, Kind: TaskInspectionWaiting, On: on}
+	}
+	fit := FitRecord(record, snapshot.Task(record.Kind), failed)
+	if fit.Reason != "" {
+		return TaskInspection{Record: record, Kind: TaskInspectionBlocked, Reason: fit.Reason, Error: fit.Error}
+	}
+	if fit.Migrates && fit.Task.Definition.Migrate == nil {
+		return TaskInspection{
+			Record: record, Kind: TaskInspectionBlocked, Reason: BlockedMigrationFailed,
+			Error: MissingMigration(record, fit.Task.Definition),
+		}
+	}
+	return TaskInspection{Record: record, Kind: TaskInspectionReady, Migrates: fit.Migrates}
+}
+
 // Task inspection kinds (upstream TaskInspection).
 const (
 	TaskInspectionRunning    = "running"
