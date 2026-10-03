@@ -40,17 +40,21 @@ type ToolTaskResult struct {
 }
 
 // ToolTask is the built-in tool task definition.
-var ToolTask = Task{Definition: TaskDefinition{
-	Name: ToolTaskKind, Version: 1,
-	Initial: func(json.RawMessage) (json.RawMessage, error) {
-		return json.RawMessage(`{"phase":"call"}`), nil
-	},
-	Phases: map[string]PhaseHandler{
-		ToolPhaseCall:    toolCallPhase,
-		ToolPhaseExecute: toolExecutePhase,
-	},
-	Abort: toolAbortHandler,
-}}
+var ToolTask Task
+
+func init() {
+	ToolTask = Task{Definition: TaskDefinition{
+		Name: ToolTaskKind, Version: 1,
+		Initial: func(json.RawMessage) (json.RawMessage, error) {
+			return json.RawMessage(`{"phase":"call"}`), nil
+		},
+		Phases: map[string]PhaseHandler{
+			ToolPhaseCall:    toolCallPhase,
+			ToolPhaseExecute: toolExecutePhase,
+		},
+		Abort: toolAbortHandler,
+	}}
+}
 
 // InvalidArguments is the result of arguments that fail validation.
 func InvalidArguments(message string) ToolExecutionResult {

@@ -115,7 +115,7 @@ func TestTaskSchedulerInspect(t *testing.T) {
 		t.Fatal(err)
 	}
 	scheduler := newTestScheduler(t, session, storage)
-	registry := registryWithTasks(BuiltinTasks...)
+	registry := registryWithTasks(BuiltinTaskDefinitions()...)
 	if inspection := scheduler.Inspect(registry); inspection.Scheduling != SchedulingPaused || len(inspection.Tasks) != 1 {
 		t.Fatalf("inspection = %+v", inspection)
 	}

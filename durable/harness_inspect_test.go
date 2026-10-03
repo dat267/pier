@@ -16,7 +16,7 @@ func TestBuildInspection(t *testing.T) {
 	mirror := NewSchedulerMirror()
 	mirror.Live = RecordsByID(records)
 	mirror.Edges = map[Id]*Id{1: nil}
-	registry := registryWithTasks(BuiltinTasks...)
+	registry := registryWithTasks(BuiltinTaskDefinitions()...)
 	inspection := BuildInspection(records, mirror, registry, nil, false, true)
 	if inspection.Scheduling != SchedulingRunning || len(inspection.Tasks) != 2 {
 		t.Fatalf("inspection = %+v", inspection)

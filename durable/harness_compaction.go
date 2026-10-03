@@ -96,18 +96,22 @@ Keep each section concise. Preserve exact file paths, function names, and error 
 )
 
 // CompactionTask is the built-in compaction task definition.
-var CompactionTask = Task{Definition: TaskDefinition{
-	Name: CompactionTaskKind, Version: 1,
-	Initial: func(json.RawMessage) (json.RawMessage, error) {
-		return json.RawMessage(`{"phase":"select"}`), nil
-	},
-	Phases: map[string]PhaseHandler{
-		CompactionPhaseSelect:    compactionSelect,
-		CompactionPhaseSummarize: compactionSummarize,
-		CompactionPhaseRetry:     compactionRetry,
-	},
-	Abort: compactionAbort,
-}}
+var CompactionTask Task
+
+func init() {
+	CompactionTask = Task{Definition: TaskDefinition{
+		Name: CompactionTaskKind, Version: 1,
+		Initial: func(json.RawMessage) (json.RawMessage, error) {
+			return json.RawMessage(`{"phase":"select"}`), nil
+		},
+		Phases: map[string]PhaseHandler{
+			CompactionPhaseSelect:    compactionSelect,
+			CompactionPhaseSummarize: compactionSummarize,
+			CompactionPhaseRetry:     compactionRetry,
+		},
+		Abort: compactionAbort,
+	}}
+}
 
 // Threshold compaction outcomes.
 const (

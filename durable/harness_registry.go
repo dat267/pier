@@ -10,16 +10,10 @@ import (
 // sectionKeyPattern is upstream SECTION_KEY.
 var sectionKeyPattern = regexp.MustCompile(`^[a-z][a-z0-9_-]*$`)
 
-// BuiltinTasks are the task definitions every registry holds; they are not an
-// extension and cannot be removed or replaced.
-//
-// The task bodies land with the task runtime (harness/tool.ts,
-// generation.ts, compaction.ts); the registry only reads their names and
-// versions here.
-var BuiltinTasks = []Task{
-	GenerationTask,
-	ToolTask,
-	CompactionTask,
+// BuiltinTaskDefinitions are the task definitions every registry holds; they
+// are not an extension and cannot be removed or replaced.
+func BuiltinTaskDefinitions() []Task {
+	return []Task{GenerationTask, ToolTask, CompactionTask}
 }
 
 // registryState is the immutable published registry state.
@@ -39,7 +33,7 @@ func newRegistryState(extensions []Extension) (*registryState, error) {
 	for _, extension := range extensions {
 		state.byName[extension.Name] = extension
 	}
-	for _, task := range BuiltinTasks {
+	for _, task := range BuiltinTaskDefinitions() {
 		state.tasks[task.Definition.Name] = task
 		state.taskOrder = append(state.taskOrder, task.Definition.Name)
 	}

@@ -14,7 +14,7 @@ func TestPlanReservationsWaitsForOwnedWork(t *testing.T) {
 	parent.AbortRequested = true
 	child := traversalRecord(3, owner, false, TaskPending)
 	child.Kind = ToolTaskKind
-	registry := registryWithTasks(BuiltinTasks...)
+	registry := registryWithTasks(BuiltinTaskDefinitions()...)
 	graph := SchedulerGraph{Live: RecordsByID([]TaskRecord{parent, child}), Edges: map[Id]*Id{1: nil}}
 	plans, orphans := PlanReservations([]TaskRecord{parent, child}, graph, registry, nil, map[Id]FailedMigration{}, nil)
 	if len(orphans) != 0 {
@@ -38,7 +38,7 @@ func TestPlanReservationsOrphansBlockedAbort(t *testing.T) {
 	marked.AbortRequested = true
 	unmarked := traversalRecord(5, nil, false, TaskPending)
 	unmarked.Kind = "pi.missing"
-	registry := registryWithTasks(BuiltinTasks...)
+	registry := registryWithTasks(BuiltinTaskDefinitions()...)
 	graph := SchedulerGraph{Live: RecordsByID([]TaskRecord{marked, unmarked}), Edges: map[Id]*Id{1: nil}}
 	plans, orphans := PlanReservations([]TaskRecord{marked, unmarked}, graph, registry, nil, map[Id]FailedMigration{}, nil)
 	if len(plans) != 0 {
@@ -52,7 +52,7 @@ func TestPlanReservationsOrphansBlockedAbort(t *testing.T) {
 func TestPlanReservationsSkipsBusy(t *testing.T) {
 	record := traversalRecord(6, nil, false, TaskPending)
 	record.Kind = RunTaskKind
-	registry := registryWithTasks(BuiltinTasks...)
+	registry := registryWithTasks(BuiltinTaskDefinitions()...)
 	graph := SchedulerGraph{Live: RecordsByID([]TaskRecord{record}), Edges: map[Id]*Id{1: nil}}
 	if plans, _ := PlanReservations([]TaskRecord{record}, graph, registry, map[Id]bool{record.ID: true}, map[Id]FailedMigration{}, nil); len(plans) != 0 {
 		t.Fatalf("plans = %+v", plans)

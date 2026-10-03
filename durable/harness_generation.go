@@ -3,6 +3,7 @@ package durable
 import (
 	"encoding/json"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/chord"
 )
 
@@ -17,13 +18,59 @@ type GenerationResult struct {
 	EntryID Id `json:"entryId"`
 }
 
+// Generation checkpoint phases.
+const (
+	GenerationPhasePrepare = "prepare"
+	GenerationPhaseRequest = "request"
+	GenerationPhaseRetry   = "retry"
+	GenerationPhasePoll    = "poll"
+	GenerationPhaseTools   = "tools"
+)
+
+// GenerationCheckpoint is the generation task's durable checkpoint.
+type GenerationCheckpoint struct {
+	Phase string `json:"phase"`
+	// Attempt counts the request attempts.
+	Attempt int `json:"attempt,omitempty"`
+	// Compacted is the blocking compaction this generation waited for.
+	Compacted *Id `json:"compacted,omitempty"`
+	// Overflow is the overflow text checked once when prepare resumes.
+	Overflow *string `json:"overflow,omitempty"`
+	// Request phase.
+	Model         *ModelRef                 `json:"model,omitempty"`
+	ThinkingLevel string                    `json:"thinkingLevel,omitempty"`
+	StreamOptions ConversationStreamOptions `json:"streamOptions,omitempty"`
+	Cutoff        *Id                       `json:"cutoff,omitempty"`
+	// Retry phase.
+	Until *int64 `json:"until,omitempty"`
+	// Poll phase.
+	Handle *ai.DeferredHandle `json:"handle,omitempty"`
+	PollAt *int64             `json:"pollAt,omitempty"`
+	// Tools phase.
+	Assistant Id       `json:"assistant,omitempty"`
+	Tools     []Id     `json:"tools,omitempty"`
+	Pending   []string `json:"pending,omitempty"`
+}
+
 // GenerationTask is the built-in generation task definition.
-var GenerationTask = Task{Definition: TaskDefinition{
-	Name: RunTaskKind, Version: 1,
-	Initial: func(json.RawMessage) (json.RawMessage, error) {
-		return json.RawMessage(`{"phase":"prepare","attempt":1}`), nil
-	},
-}}
+var GenerationTask Task
+
+func init() {
+	GenerationTask = Task{Definition: TaskDefinition{
+		Name: RunTaskKind, Version: 1,
+		Initial: func(json.RawMessage) (json.RawMessage, error) {
+			return json.RawMessage(`{"phase":"prepare","attempt":1}`), nil
+		},
+		Phases: map[string]PhaseHandler{
+			GenerationPhasePrepare: generationPrepare,
+			GenerationPhaseRequest: generationRequest,
+			GenerationPhaseRetry:   generationRetry,
+			GenerationPhasePoll:    generationPoll,
+			GenerationPhaseTools:   generationTools,
+		},
+		Abort: generationAbort,
+	}}
+}
 
 // StartRun creates a conversation-owned generation task and sets it as the
 // run control of `live`.
