@@ -461,6 +461,78 @@ func GateTask(invocation *Invocation, found *TaskRecord, closing bool) (TaskReco
 // SchedulerScanPageSize is the scheduler's scan page size.
 const SchedulerScanPageSize = 256
 
+// ReservationPlan is one task the scheduler reserves: its definition, the
+// record to run, the running state to stage when it changed, and the mode.
+type ReservationPlan struct {
+	TaskID Id
+	Task   *Task
+	Record TaskRecord
+	// SetRunning is the running state to write when the record changed or was
+	// not already running.
+	SetRunning *TaskRecord
+	// Mode is "run" or "abort".
+	Mode string
+}
+
+// OrphanTermination is an abort-marked task no registered definition can take;
+// the scheduler settles it as orphaned.
+type OrphanTermination struct {
+	Record TaskRecord
+	Reason string
+}
+
+// PlanReservations reserves every eligible task in one pass. A task waits for
+// its live ordinary owned work when abort-marked, otherwise for the live part
+// of a wait's `on`; a completing task is left to finalization. An abort-marked
+// task no definition can take is orphaned.
+func PlanReservations(
+	records []TaskRecord,
+	graph SchedulerGraph,
+	registry RegistrySnapshot,
+	invocations map[Id]bool,
+	failed map[Id]FailedMigration,
+	report func(error),
+) ([]ReservationPlan, []OrphanTermination) {
+	if registry == nil {
+		return nil, nil
+	}
+	live := RecordsByID(records)
+	owned := OwnedLive(records, graph)
+	plans := []ReservationPlan{}
+	orphans := []OrphanTermination{}
+	for _, record := range records {
+		if invocations[record.ID] {
+			continue
+		}
+		if len(WaitingOn(record, owned, live)) > 0 {
+			continue
+		}
+		if record.State.Status == TaskCompleting {
+			continue
+		}
+		mode := "run"
+		if record.AbortRequested {
+			mode = "abort"
+		}
+		resolution := ResolveRecord(record, registry, failed, report)
+		if resolution.Kind == SchedulerBlocked {
+			if mode == "abort" {
+				orphans = append(orphans, OrphanTermination{Record: record, Reason: resolution.Reason})
+			}
+			continue
+		}
+		plan := ReservationPlan{TaskID: record.ID, Task: resolution.Task, Record: resolution.Record, Mode: mode}
+		if resolution.Migrated || record.State.Status != TaskRunning {
+			running := WithState(resolution.Record, TaskState{
+				Status: TaskRunning, Checkpoint: resolution.Record.State.Checkpoint,
+			})
+			plan.SetRunning = &running
+		}
+		plans = append(plans, plan)
+	}
+	return plans, orphans
+}
+
 // LoadLiveTasks loads every live task into the mirror and changes surviving
 // running tasks back to pending. Every table read happens before the first
 // write.
@@ -1176,6 +1248,9 @@ type SchedulerResolution struct {
 	Task   *Task
 	Record TaskRecord
 	Reason string
+	// Migrated reports that the record was converted to the definition's
+	// version.
+	Migrated bool
 }
 
 // ResolveRecord resolves the record's definition by kind, migrating an older

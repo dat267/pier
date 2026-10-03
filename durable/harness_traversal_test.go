@@ -8,7 +8,7 @@ import (
 
 func traversalRecord(id Id, owner *Id, background bool, status string) TaskRecord {
 	return TaskRecord{
-		ID: id, ConversationID: 1, Owner: owner, Background: background,
+		ID: id, ConversationID: 1, Version: 1, Owner: owner, Background: background,
 		State: TaskState{Status: status},
 	}
 }
