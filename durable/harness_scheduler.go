@@ -354,6 +354,160 @@ func WaitingOn(record TaskRecord, owned map[Id][]Id, live map[Id]TaskRecord) []I
 	return on
 }
 
+// PhaseResult is the outcome of the phase that just returned.
+type PhaseResult struct {
+	Checkpoint json.RawMessage
+	// HasFailure marks a phase that failed; Failure is its error (which may
+	// itself be nil).
+	HasFailure bool
+	Failure    error
+}
+
+// PhaseState is what a phase decision refreshes: the definition in use, the
+// registry snapshot, and the replacement definition already reported.
+type PhaseState struct {
+	Task     *Task
+	Snapshot RegistrySnapshot
+	Refresh  func() RegistrySnapshot
+	Reported *Task
+}
+
+// PhaseDecision is a step decision: continue with the next phase, end the
+// invocation, or end it by writing `faulted`.
+type PhaseDecision struct {
+	Continue bool
+	Fault    error
+}
+
+// CheckpointPhase reads a checkpoint's phase.
+func CheckpointPhase(checkpoint json.RawMessage) string {
+	var probe struct {
+		Phase string `json:"phase"`
+	}
+	if err := json.Unmarshal(checkpoint, &probe); err != nil {
+		return ""
+	}
+	return probe.Phase
+}
+
+// DefinitionMismatchError reports a task that keeps running under its old
+// definition because the registry resolved no replacement that can take it.
+type DefinitionMismatchError struct {
+	TaskID Id
+	Kind   string
+	Cause  string
+}
+
+func (e *DefinitionMismatchError) Error() string {
+	return fmt.Sprintf("Task %d keeps running under its old %s definition", e.TaskID, e.Kind)
+}
+
+// DecidePhase applies the precedence rules for a run invocation, on the line.
+// It returns whether the invocation continues with the next phase.
+func DecidePhase(tx *Transaction, current TaskRecord, previous *PhaseResult, state *PhaseState, report func(error)) (PhaseDecision, error) {
+	// Abort mark: end; a fresh abort invocation starts once the task's ordinary
+	// owned work is gone.
+	if current.AbortRequested {
+		return PhaseDecision{}, nil
+	}
+	if previous == nil {
+		return PhaseDecision{Continue: true}, nil
+	}
+	if previous.HasFailure {
+		return PhaseDecision{Fault: previous.Failure}, nil
+	}
+	// No durable progress.
+	if JSONEqual(decodeJSONValue(current.State.Checkpoint), decodeJSONValue(previous.Checkpoint)) {
+		return PhaseDecision{Fault: fmt.Errorf(
+			"Task %s phase %s returned without durable progress", current.Kind, CheckpointPhase(previous.Checkpoint),
+		)}, nil
+	}
+	// Progress: refresh the snapshot; hand over to a replacement definition
+	// that can take the task.
+	if state.Refresh != nil {
+		state.Snapshot = state.Refresh()
+	}
+	if state.Snapshot == nil {
+		return PhaseDecision{Continue: true}, nil
+	}
+	next := state.Snapshot.Task(current.Kind)
+	if next != state.Task {
+		if next != nil && CanReserve(*next, current) {
+			pending := WithState(current, TaskState{Status: TaskPending, Checkpoint: current.State.Checkpoint})
+			if err := tx.SetTask(&pending); err != nil {
+				return PhaseDecision{}, err
+			}
+			return PhaseDecision{}, nil
+		}
+		if state.Reported == nil || state.Reported != next {
+			state.Reported = next
+			cause := "missing_task"
+			if next != nil {
+				cause = "incompatible_task"
+			}
+			if report != nil {
+				report(&DefinitionMismatchError{TaskID: current.ID, Kind: current.Kind, Cause: cause})
+			}
+		}
+	}
+	return PhaseDecision{Continue: true}, nil
+}
+
+func decodeJSONValue(raw json.RawMessage) chord.JsonValue {
+	if len(raw) == 0 {
+		return nil
+	}
+	var value chord.JsonValue
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return nil
+	}
+	return value
+}
+
+// ValidateWait checks that a wait names existing tasks other than the waiter
+// and its owners; failFast only tasks the waiter owns. An abort handler cannot
+// wait.
+func ValidateWait(mode string, current TaskRecord, on []Id, policy string, owners map[Id]bool, member func(id Id) (*TaskRecord, error)) error {
+	if mode == "abort" {
+		return fmt.Errorf("Abort handler of task %d cannot wait", current.ID)
+	}
+	for _, id := range on {
+		if id == current.ID || owners[id] {
+			return fmt.Errorf("Task %d cannot wait on itself or its owner %d", current.ID, id)
+		}
+		record, err := member(id)
+		if err != nil {
+			return err
+		}
+		if record == nil {
+			return fmt.Errorf("Task %d does not exist", id)
+		}
+		if policy == JoinFailFast && (record.Owner == nil || *record.Owner != current.ID) {
+			return fmt.Errorf("Task %d can wait failFast only on tasks it owns; %d is not one", current.ID, id)
+		}
+	}
+	return nil
+}
+
+// Idle reports whether a scope has no live non-background task; a task whose
+// owner edges are not loaded yet counts as inside.
+func Idle(conversationID *Id, records []TaskRecord, graph SchedulerGraph) bool {
+	scope := SchedulerScope{Conversation: conversationID}
+	if conversationID == nil {
+		scope = SchedulerScope{Roots: true}
+	}
+	for _, record := range records {
+		if record.Background {
+			continue
+		}
+		inScope, known := InScope(ParentOf(NodeOf(record)), scope, false, graph)
+		if !known || inScope {
+			return false
+		}
+	}
+	return true
+}
+
 // FailedMigration records a definition whose migration could not take a task;
 // it is retried only once the registry resolves another definition.
 type FailedMigration struct {
