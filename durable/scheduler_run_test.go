@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/chord"
 )
@@ -60,6 +61,11 @@ func TestTaskSchedulerRunInvocationPhases(t *testing.T) {
 	if settled.State.Status != TaskTerminal || settled.State.Outcome == nil ||
 		settled.State.Outcome.Status != OutcomeCompleted {
 		t.Fatalf("settled = %+v", settled)
+	}
+	// The invocation is freed just after its done signal, so poll briefly.
+	deadline := time.Now().Add(2 * time.Second)
+	for scheduler.RunningInvocations()[taskID] && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
 	}
 	if scheduler.RunningInvocations()[taskID] {
 		t.Fatal("the invocation must be freed")
