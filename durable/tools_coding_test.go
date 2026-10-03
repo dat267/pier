@@ -20,10 +20,18 @@ type testToolEnv struct {
 
 type fakeToolApi struct {
 	ToolExecutionApi
-	env ExecutionEnv
+	env         ExecutionEnv
+	output      strings.Builder
+	diagnostics []ToolDiagnostic
 }
 
 func (a *fakeToolApi) Env() ExecutionEnv { return a.env }
+
+func (a *fakeToolApi) Output(chunk []byte) { a.output.Write(chunk) }
+
+func (a *fakeToolApi) Diagnostic(diagnostic ToolDiagnostic) {
+	a.diagnostics = append(a.diagnostics, diagnostic)
+}
 
 func (e *testToolEnv) Cwd() string                       { return e.OSFileSystem.Cwd() }
 func (e *testToolEnv) SetCwd(path string)                { e.OSFileSystem.SetCwd(path) }
@@ -37,7 +45,11 @@ func newToolTestEnv(t *testing.T) (*testToolEnv, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &testToolEnv{OSFileSystem: fs}, dir
+	shell, err := NewOSShell(dir, "", nil)
+	if err != nil {
+		t.Skipf("no shell available: %v", err)
+	}
+	return &testToolEnv{OSFileSystem: fs, OSShell: shell}, dir
 }
 
 func TestReadTool(t *testing.T) {
