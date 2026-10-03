@@ -174,7 +174,12 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   `core/tools/edit-diff.ts` (the two upstream files differ only in the
   coding-agent's extra preview helper), so it is already ported in
   `coding/editdiff.go` and the durable tool definitions will reuse it. The
-  harness tool API and the tool definitions are unported.
+  harness tool API and the tool definitions are unported. The harness
+  foundation is started: `json.ts` (leaf-by-leaf assignment), `util.ts`
+  (keyed waiters, scan-all, closed error) and `usage.ts` (the `pi.usage`
+  document and its typed ledger: counter addition with the optional
+  cacheWrite1h/reasoning fields, bucket merging and the commit-time
+  `recordUsage`).
 - `coding`: the remote catalog merge is linear (`c34f2d6ad`); the branch model
   resolution still walks its branch per submission (`a0660b174` is inside
   upstream's `virtual-models.ts`, which the port has not ported yet). Dynamic
