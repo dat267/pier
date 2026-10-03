@@ -1022,3 +1022,177 @@ func TestConformanceLongDocumentTails(t *testing.T) {
 		}
 	})
 }
+
+// TestConformanceDocumentVersionTransitions covers upstream's "uses bases for
+// version transitions and rejects historical reads of current-only documents".
+func TestConformanceDocumentVersionTransitions(t *testing.T) {
+	documentBackends(t, func(t *testing.T, storage Storage) {
+		ctx := context.Background()
+		mustCommit(t, storage, conversationWrite(RootConversationID))
+		id := mustMintID(t, storage)
+		mustCommit(t, storage, StorageWrite{
+			Type: "document.create",
+			DocumentCreate: &DocumentCreate{ID: id, Kind: "session.settings",
+				Scope: DocumentScope{Kind: ScopeSession}},
+			DocumentContent: &DocumentContent{Version: 1, Kind: ContentBase, Value: json.RawMessage(`{"count":1}`)},
+		})
+		mustCommit(t, storage, StorageWrite{
+			Type: "document.change", DocumentID: &id,
+			DocumentContent: &DocumentContent{Version: 1, Kind: ContentDelta, Ops: []any{[]any{"s", []any{"count"}, 2}}},
+		})
+		migratedAt := mustCommit(t, storage, StorageWrite{
+			Type: "document.change", DocumentID: &id,
+			DocumentContent: &DocumentContent{Version: 2, Kind: ContentBase, Value: json.RawMessage(`{"count":3}`)},
+		})
+		current, err := storage.Document(ctx, id, CurrentDocumentPoint())
+		if err != nil || current == nil || current.Version != 2 || documentValue(t, current)["count"] != 3.0 {
+			t.Fatalf("current = %+v, %v", current, err)
+		}
+		// A current-only (latest history) document rejects a historical read.
+		if _, err := storage.Document(ctx, id, DocumentPointAt(migratedAt)); err == nil ||
+			!strings.Contains(err.Error(), "does not retain historical content") {
+			t.Fatalf("historical err = %v", err)
+		}
+		// A delta from an older version without a base is rejected.
+		if _, err := storage.Commit(ctx, []StorageWrite{{
+			Type: "document.change", DocumentID: &id,
+			DocumentContent: &DocumentContent{Version: 1, Kind: ContentDelta, Ops: []any{[]any{"s", []any{"count"}, 4}}},
+		}}); err == nil || !strings.Contains(err.Error(), "version transition requires a base") {
+			t.Fatalf("transition err = %v", err)
+		}
+		current, _ = storage.Document(ctx, id, CurrentDocumentPoint())
+		if documentValue(t, current)["count"] != 3.0 {
+			t.Fatalf("current = %v", documentValue(t, current))
+		}
+		mustCommit(t, storage, StorageWrite{Type: "document.retire", DocumentID: &id})
+		if retired, _ := storage.Document(ctx, id, CurrentDocumentPoint()); retired != nil {
+			t.Fatalf("retired = %+v", retired)
+		}
+	})
+}
+
+// TestConformanceDocumentLifecycleAtomic covers upstream's "keeps document
+// lifecycle failures atomic and gives create-plus-retire an empty lifetime".
+func TestConformanceDocumentLifecycleAtomic(t *testing.T) {
+	documentBackends(t, func(t *testing.T, storage Storage) {
+		ctx := context.Background()
+		mustCommit(t, storage, conversationWrite(RootConversationID))
+		firstID := mustMintID(t, storage)
+		secondID := mustMintID(t, storage)
+		record := &DocumentCreate{ID: firstID, Kind: "singleton", Scope: DocumentScope{Kind: ScopeSession}}
+		mustCommit(t, storage, StorageWrite{
+			Type: "document.create", DocumentCreate: record,
+			DocumentContent: &DocumentContent{Version: 1, Kind: ContentBase, Value: json.RawMessage(`{"value":1}`)},
+		})
+		// A second incarnation at the same address fails the whole commit.
+		_, err := storage.Commit(ctx, []StorageWrite{
+			{Type: "document.create", DocumentCreate: &DocumentCreate{ID: secondID, Kind: "singleton", Scope: DocumentScope{Kind: ScopeSession}},
+				DocumentContent: &DocumentContent{Version: 1, Kind: ContentBase, Value: json.RawMessage(`{"value":2}`)}},
+			{Type: "document.change", DocumentID: &firstID,
+				DocumentContent: &DocumentContent{Version: 1, Kind: ContentDelta, Ops: []any{}}},
+		})
+		if err == nil || !strings.Contains(err.Error(), "already has a current incarnation") {
+			t.Fatalf("err = %v", err)
+		}
+		first, _ := storage.Document(ctx, firstID, CurrentDocumentPoint())
+		if first == nil || documentValue(t, first)["value"] != 1.0 {
+			t.Fatalf("first = %+v", first)
+		}
+		if second, _ := storage.Document(ctx, secondID, CurrentDocumentPoint()); second != nil {
+			t.Fatalf("second = %+v", second)
+		}
+		// Create plus retire in one commit gives an empty lifetime.
+		emptyID := mustMintID(t, storage)
+		root := RootConversationID
+		key := "empty"
+		emptyAt := mustCommit(t, storage, StorageWrite{
+			Type: "document.create",
+			DocumentCreate: &DocumentCreate{ID: emptyID, Kind: "singleton", Key: &key,
+				Scope:   DocumentScope{Kind: ScopeConversation, ConversationID: &[]Id{RootConversationID}[0]},
+				History: stringPointer(HistoryRewindable), Fork: stringPointer(ForkInitial)},
+			DocumentContent: &DocumentContent{Version: 1, Kind: ContentBase, Value: json.RawMessage(`{}`)},
+		}, StorageWrite{Type: "document.retire", DocumentID: &emptyID})
+		if empty, _ := storage.Document(ctx, emptyID, CurrentDocumentPoint()); empty != nil {
+			t.Fatalf("empty = %+v", empty)
+		}
+		if empty, _ := storage.Document(ctx, emptyID, DocumentPointAt(emptyAt)); empty != nil {
+			t.Fatalf("empty at = %+v", empty)
+		}
+		address := DocumentAddress{Kind: "singleton", Key: &key,
+			Scope: DocumentScope{Kind: ScopeConversation, ConversationID: &root}}
+		if found, _ := storage.FindDocument(ctx, address, DocumentPointAt(emptyAt)); found != nil {
+			t.Fatalf("found = %+v", found)
+		}
+	})
+}
+
+// TestConformanceDocumentCommandRollback covers upstream's "rolls back record
+// tables and secondary indexes when a document command fails".
+func TestConformanceDocumentCommandRollback(t *testing.T) {
+	conformance(t, func(t *testing.T, storage Storage) {
+		ctx := context.Background()
+		mustCommit(t, storage, conversationWrite(RootConversationID))
+		taskID := mustMintID(t, storage)
+		submissionID := mustMintID(t, storage)
+		documentID := mustMintID(t, storage)
+		task := pendingTaskRecord(taskID, RootConversationID)
+		submission := &SubmissionRecord{ID: submissionID, ConversationID: RootConversationID,
+			RequestID: stringPointer("atomic"), Type: SubmissionTypeInput, Status: SubmissionQueued}
+		baseline := mustCommit(t, storage,
+			StorageWrite{Type: "task", Task: task},
+			StorageWrite{Type: "submission", Submission: submission},
+			StorageWrite{Type: "document.create",
+				DocumentCreate:  &DocumentCreate{ID: documentID, Kind: "atomic", Scope: DocumentScope{Kind: ScopeSession}},
+				DocumentContent: &DocumentContent{Version: 1, Kind: ContentBase, Value: json.RawMessage(`{"count":1}`)}},
+		)
+		entryID := mustMintID(t, storage)
+		conflictingID := mustMintID(t, storage)
+		running := *task
+		running.State = TaskState{Status: TaskRunning, Checkpoint: json.RawMessage(`{"phase":"effect"}`)}
+		settled := *submission
+		failed := "failed"
+		settled.Status = SubmissionUnanswered
+		settled.Reason = &failed
+		_, err := storage.Commit(ctx, []StorageWrite{
+			{Type: "task", Task: &running},
+			{Type: "submission", Submission: &settled},
+			{Type: "entry", Entry: &EntryRecord{ID: entryID, ConversationID: RootConversationID, Kind: "transient"}},
+			{Type: "document.create",
+				DocumentCreate:  &DocumentCreate{ID: conflictingID, Kind: "atomic", Scope: DocumentScope{Kind: ScopeSession}},
+				DocumentContent: &DocumentContent{Version: 1, Kind: ContentBase, Value: json.RawMessage(`{"count":2}`)}},
+		})
+		if err == nil || !strings.Contains(err.Error(), "already has a current incarnation") {
+			t.Fatalf("err = %v", err)
+		}
+		storedTask, _ := storage.Task(ctx, taskID)
+		if storedTask == nil || !reflect.DeepEqual(storedTask.State, task.State) {
+			t.Fatalf("task = %+v", storedTask)
+		}
+		page, err := storage.ScanTasks(ctx, TaskQuery{Status: stringPointer(TaskPending)}, nil, 10)
+		if err != nil || len(page.Items) != 1 {
+			t.Fatalf("pending = %+v, %v", page.Items, err)
+		}
+		storedSubmission, _ := storage.SubmissionByRequest(ctx, RootConversationID, "atomic")
+		if storedSubmission == nil || storedSubmission.Status != SubmissionQueued {
+			t.Fatalf("submission = %+v", storedSubmission)
+		}
+		if entry, _ := storage.Entry(ctx, entryID); entry != nil {
+			t.Fatalf("entry = %+v", entry)
+		}
+		if conflicting, _ := storage.Document(ctx, conflictingID, CurrentDocumentPoint()); conflicting != nil {
+			t.Fatalf("conflicting = %+v", conflicting)
+		}
+		found, _ := storage.FindDocument(ctx,
+			DocumentAddress{Kind: "atomic", Scope: DocumentScope{Kind: ScopeSession}}, CurrentDocumentPoint())
+		if found == nil || found.ID != documentID {
+			t.Fatalf("found = %+v", found)
+		}
+		after := mustCommit(t, storage, StorageWrite{
+			Type: "document.change", DocumentID: &documentID,
+			DocumentContent: &DocumentContent{Version: 1, Kind: ContentDelta, Ops: []any{[]any{"s", []any{"count"}, 3}}},
+		})
+		if after <= baseline {
+			t.Fatalf("after = %d, baseline = %d", after, baseline)
+		}
+	})
+}
