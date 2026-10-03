@@ -161,6 +161,227 @@ func Delay(ms int64, ctx context.Context) error {
 	return nil
 }
 
+// SchedulerScope is the traversal scope of an idle wait: one conversation, or
+// every ownerless root.
+type SchedulerScope struct {
+	Conversation *Id
+	Roots        bool
+}
+
+// SchedulerStep is one step of a walk up the ownership tree.
+type SchedulerStep struct {
+	Unknown      bool
+	Task         *Id
+	Node         *SchedulerTaskNode
+	Conversation *Id
+}
+
+// SchedulerGraph is the loaded task/conversation graph a walk reads.
+type SchedulerGraph struct {
+	Live    map[Id]TaskRecord
+	Settled map[Id]TaskRecord
+	// Edges maps a loaded conversation to its owner task; a present nil means
+	// ownerless.
+	Edges map[Id]*Id
+	// Overlay, when set, replaces committed records and edges.
+	Overlay *SchedulerOverlay
+}
+
+// Node is the graph's view of a task node: the overlay, then live, then
+// settled.
+func (g SchedulerGraph) Node(id Id) (SchedulerTaskNode, bool) {
+	if g.Overlay != nil {
+		if record, present := g.Overlay.Tasks[id]; present {
+			return NodeOf(record), true
+		}
+	}
+	if record, present := g.Live[id]; present {
+		return NodeOf(record), true
+	}
+	if record, present := g.Settled[id]; present {
+		return NodeOf(record), true
+	}
+	return SchedulerTaskNode{}, false
+}
+
+// LiveOf is the graph's live view of a task record.
+func (g SchedulerGraph) LiveOf(id Id) (TaskRecord, bool) {
+	if g.Overlay != nil {
+		if record, present := g.Overlay.Tasks[id]; present {
+			return record, true
+		}
+	}
+	record, present := g.Live[id]
+	return record, present
+}
+
+// Edge is the owner task of a conversation; present nil means ownerless.
+func (g SchedulerGraph) Edge(id Id) (*Id, bool) {
+	if g.Overlay != nil {
+		if owner, present := g.Overlay.Edges[id]; present {
+			return owner, true
+		}
+	}
+	owner, present := g.Edges[id]
+	return owner, present
+}
+
+// Above walks up from start: owner tasks and conversations, ending at an
+// ownerless root or an edge not loaded yet.
+func Above(start SchedulerUp, graph SchedulerGraph) []SchedulerStep {
+	steps := []SchedulerStep{}
+	at := start
+	present := true
+	for present {
+		if at.Task != nil {
+			node, ok := graph.Node(*at.Task)
+			if !ok {
+				return append(steps, SchedulerStep{Unknown: true})
+			}
+			taskID := *at.Task
+			nodeCopy := node
+			steps = append(steps, SchedulerStep{Task: &taskID, Node: &nodeCopy})
+			at = ParentOf(node)
+			continue
+		}
+		conversation := *at.Conversation
+		steps = append(steps, SchedulerStep{Conversation: &conversation})
+		edge, ok := graph.Edge(*at.Conversation)
+		if !ok {
+			return append(steps, SchedulerStep{Unknown: true})
+		}
+		if edge == nil {
+			present = false
+			continue
+		}
+		at = SchedulerUp{Task: edge}
+	}
+	return steps
+}
+
+// ChainKnown reports whether every owner above start is loaded.
+func ChainKnown(start SchedulerUp, graph SchedulerGraph) bool {
+	for _, step := range Above(start, graph) {
+		if step.Unknown {
+			return false
+		}
+	}
+	return true
+}
+
+// OwnedLive maps every owner task to the live non-background tasks below it,
+// up to and including the first background owner. Records must be supplied in
+// the scheduler's live order.
+func OwnedLive(records []TaskRecord, graph SchedulerGraph) map[Id][]Id {
+	owned := map[Id][]Id{}
+	for _, record := range records {
+		if record.Background {
+			continue
+		}
+		for _, step := range Above(ParentOf(NodeOf(record)), graph) {
+			if step.Unknown {
+				break
+			}
+			if step.Task == nil {
+				continue
+			}
+			owned[*step.Task] = append(owned[*step.Task], record.ID)
+			if step.Node.Background {
+				break
+			}
+		}
+	}
+	return owned
+}
+
+// InScope reports whether ordinary traversal from start reaches scope: walking
+// up reaches the scope's conversation, or an ownerless one for roots, without
+// crossing a background owner unless crossBackground. The second result is
+// false while an edge is not loaded.
+func InScope(start SchedulerUp, scope SchedulerScope, crossBackground bool, graph SchedulerGraph) (bool, bool) {
+	for _, step := range Above(start, graph) {
+		if step.Unknown {
+			return false, false
+		}
+		if step.Conversation != nil {
+			if scope.Conversation != nil && *step.Conversation == *scope.Conversation {
+				return true, true
+			}
+		} else if step.Node.Background && !crossBackground {
+			return false, true
+		}
+	}
+	return scope.Roots, true
+}
+
+// BelowCancelled reports whether a live owner's cancellation intent reaches
+// start: walking up finds an owner with intent before a background owner
+// without it. Terminal owners never cascade.
+func BelowCancelled(start SchedulerUp, graph SchedulerGraph) bool {
+	for _, step := range Above(start, graph) {
+		if step.Unknown {
+			return false
+		}
+		if step.Task == nil {
+			continue
+		}
+		if live, present := graph.LiveOf(*step.Task); present && CancellationIntent(live) {
+			return true
+		}
+		if step.Node.Background {
+			return false
+		}
+	}
+	return false
+}
+
+// WaitingOn is the live tasks a task waits for before its next invocation: its
+// live ordinary owned work when abort-marked, otherwise the live part of a
+// wait's `on`.
+func WaitingOn(record TaskRecord, owned map[Id][]Id, live map[Id]TaskRecord) []Id {
+	if record.AbortRequested {
+		return owned[record.ID]
+	}
+	if record.State.Status != TaskWaiting {
+		return nil
+	}
+	on := []Id{}
+	for _, id := range record.State.On {
+		if _, present := live[id]; present {
+			on = append(on, id)
+		}
+	}
+	return on
+}
+
+// Task inspection kinds (upstream TaskInspection).
+const (
+	TaskInspectionRunning    = "running"
+	TaskInspectionReady      = "ready"
+	TaskInspectionWaiting    = "waiting"
+	TaskInspectionCompleting = "completing"
+	TaskInspectionBlocked    = "blocked"
+)
+
+// TaskInspection is a live task and what the scheduler would do with it.
+type TaskInspection struct {
+	Record   TaskRecord
+	Kind     string
+	Migrates bool
+	On       []Id
+	Reason   string
+	Error    error
+}
+
+// HarnessInspection is a point-in-time view of live work.
+type HarnessInspection struct {
+	// Scheduling is "paused", "running" or "closing".
+	Scheduling string
+	Tasks      []TaskInspection
+	// Submissions are the queued and placed submissions, in id order.
+	Submissions []SubmissionRecord
+}
+
 // JSONEqual is structural equality of two JSON values; object key order is
 // ignored.
 func JSONEqual(left, right chord.JsonValue) bool {
