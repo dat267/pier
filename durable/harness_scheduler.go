@@ -354,6 +354,121 @@ func WaitingOn(record TaskRecord, owned map[Id][]Id, live map[Id]TaskRecord) []I
 	return on
 }
 
+// RecordsByID indexes records by id.
+func RecordsByID(records []TaskRecord) map[Id]TaskRecord {
+	byID := make(map[Id]TaskRecord, len(records))
+	for _, record := range records {
+		byID[record.ID] = record
+	}
+	return byID
+}
+
+// LiveRecordsWithOverlay returns the live records with the overlay's
+// candidates replacing committed ones; terminal candidates are dropped.
+func LiveRecordsWithOverlay(live []TaskRecord, overlay SchedulerOverlay) []TaskRecord {
+	result := []TaskRecord{}
+	seen := map[Id]bool{}
+	for _, record := range live {
+		candidate, present := overlay.Tasks[record.ID]
+		if present {
+			record = candidate
+		}
+		seen[record.ID] = true
+		if record.State.Status != TaskTerminal {
+			result = append(result, record)
+		}
+	}
+	for _, record := range overlay.Tasks {
+		if seen[record.ID] || record.State.Status == TaskTerminal {
+			continue
+		}
+		result = append(result, record)
+	}
+	return result
+}
+
+// OwnedTaskIDs is the set of owner tasks with live non-background work below
+// them, up to and including the first background owner.
+func OwnedTaskIDs(records []TaskRecord, graph SchedulerGraph) map[Id]bool {
+	owned := map[Id]bool{}
+	for _, record := range records {
+		if record.Background {
+			continue
+		}
+		for _, step := range Above(ParentOf(NodeOf(record)), graph) {
+			if step.Unknown {
+				break
+			}
+			if step.Task == nil {
+				continue
+			}
+			owned[*step.Task] = true
+			if step.Node.Background {
+				break
+			}
+		}
+	}
+	return owned
+}
+
+// CommitTaskState replaces a running task's state with what it committed. A
+// terminal state holds as completing while ordinary owned work is live, judged
+// on the commit's candidates, so work the same commit creates below the task
+// counts. A wait is validated first.
+func CommitTaskState(
+	tx *Transaction,
+	live []TaskRecord,
+	current TaskRecord,
+	next NextTaskState,
+	validateWait func(on []Id, policy string) error,
+) error {
+	if next.Status == TaskWaiting && validateWait != nil {
+		if err := validateWait(next.On, next.Policy); err != nil {
+			return err
+		}
+	}
+	overlay := OverlayOf(tx)
+	graph := SchedulerGraph{Live: RecordsByID(live), Overlay: &overlay}
+	if next.Status == TaskTerminal {
+		records := LiveRecordsWithOverlay(live, overlay)
+		if OwnedTaskIDs(records, graph)[current.ID] {
+			completing := WithState(current, TaskState{Status: TaskCompleting, Outcome: next.Outcome})
+			return tx.SetTask(&completing)
+		}
+	}
+	replacement := WithState(current, TaskState{
+		Status: next.Status, Checkpoint: next.Checkpoint, On: next.On, Policy: next.Policy, Outcome: next.Outcome,
+	})
+	return tx.SetTask(&replacement)
+}
+
+// TerminateTask writes an outcome the scheduler decided. While the task's
+// ordinary owned work is live it holds as completing and its harness cleanup
+// waits for the final commit; otherwise it is terminal with its cleanup.
+func TerminateTask(
+	tx *Transaction,
+	live []TaskRecord,
+	record TaskRecord,
+	outcome *TaskOutcome,
+	settleOutcome func(tx *Transaction, record TaskRecord, outcome *TaskOutcome) error,
+) error {
+	overlay := OverlayOf(tx)
+	graph := SchedulerGraph{Live: RecordsByID(live), Overlay: &overlay}
+	records := LiveRecordsWithOverlay(live, overlay)
+	if OwnedTaskIDs(records, graph)[record.ID] {
+		completing := WithState(record, TaskState{Status: TaskCompleting, Outcome: outcome})
+		return tx.SetTask(&completing)
+	}
+	terminal := WithState(record, TaskState{Status: TaskTerminal, Outcome: outcome})
+	if err := tx.SetTask(&terminal); err != nil {
+		return err
+	}
+	if settleOutcome != nil {
+		return settleOutcome(tx, record, outcome)
+	}
+	return nil
+}
+
 // PhaseResult is the outcome of the phase that just returned.
 type PhaseResult struct {
 	Checkpoint json.RawMessage
