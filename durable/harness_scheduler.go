@@ -461,6 +461,41 @@ func GateTask(invocation *Invocation, found *TaskRecord, closing bool) (TaskReco
 // SchedulerScanPageSize is the scheduler's scan page size.
 const SchedulerScanPageSize = 256
 
+// Scheduler state names.
+const (
+	SchedulingPaused  = "paused"
+	SchedulingRunning = "running"
+	SchedulingClosing = "closing"
+)
+
+// BuildInspection derives a point-in-time view of live work. Records must be
+// supplied in the scheduler's live order; it runs no task code beyond the
+// derived state.
+func BuildInspection(
+	records []TaskRecord,
+	mirror *SchedulerMirror,
+	snapshot RegistrySnapshot,
+	running map[Id]bool,
+	closing bool,
+	enabled bool,
+) HarnessInspection {
+	graph := mirror.Graph()
+	owned := OwnedLive(records, graph)
+	live := RecordsByID(records)
+	tasks := make([]TaskInspection, 0, len(records))
+	for _, record := range records {
+		tasks = append(tasks, InspectTask(record, snapshot, owned, live, running, mirror.FailedMigrations))
+	}
+	scheduling := SchedulingPaused
+	if enabled {
+		scheduling = SchedulingRunning
+	}
+	if closing {
+		scheduling = SchedulingClosing
+	}
+	return HarnessInspection{Scheduling: scheduling, Tasks: tasks}
+}
+
 // AbortPlan is what one abort request does: mark the task, settle it as
 // terminal, or orphan it, and whether the caller joins a run invocation.
 type AbortPlan struct {
