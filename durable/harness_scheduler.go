@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"sync/atomic"
 	"time"
 
@@ -610,6 +611,103 @@ func PlanReservations(
 	return plans, orphans
 }
 
+// LoadChain loads the owner edges and task nodes from start up to its
+// ownerless root.
+func LoadChain(start SchedulerUp, mirror *SchedulerMirror, storage Storage, ctx chord.Context) error {
+	at := &start
+	for at != nil {
+		if at.Task != nil {
+			node, present := mirror.Node(*at.Task)
+			if !present {
+				record, err := storage.Task(ctx, *at.Task)
+				if err != nil {
+					return err
+				}
+				if record == nil {
+					return nil
+				}
+				node = NodeOf(*record)
+				if record.State.Status == TaskTerminal {
+					mirror.Settled[record.ID] = node
+				}
+			}
+			next := ParentOf(node)
+			at = &next
+			continue
+		}
+		edge, present := mirror.Edges[*at.Conversation]
+		if !present {
+			record, err := storage.Conversation(ctx, *at.Conversation)
+			if err != nil {
+				return err
+			}
+			var owner *Id
+			if record != nil && record.Owner != nil {
+				taskID := record.Owner.TaskID
+				owner = &taskID
+			}
+			mirror.SetEdge(*at.Conversation, owner)
+			edge = owner
+		}
+		if edge == nil {
+			at = nil
+			continue
+		}
+		next := SchedulerUp{Task: edge}
+		at = &next
+	}
+	return nil
+}
+
+// LoadScopes loads the owner chains of every live task and, when queued, of
+// every conversation with queued submissions; it returns the latter.
+func LoadScopes(queued bool, mirror *SchedulerMirror, storage Storage, ctx chord.Context) ([]Id, error) {
+	ids := make([]Id, 0, len(mirror.Live))
+	for id := range mirror.Live {
+		ids = append(ids, id)
+	}
+	sortIDs(ids)
+	for _, id := range ids {
+		record := mirror.Live[id]
+		parent := ParentOf(NodeOf(record))
+		if !ChainKnown(parent, mirror.Graph()) {
+			if err := LoadChain(parent, mirror, storage, ctx); err != nil {
+				return nil, err
+			}
+		}
+	}
+	if !queued {
+		return nil, nil
+	}
+	status := SubmissionQueued
+	submissions, err := ScanAll(func(cursor Cursor) (Page[SubmissionRecord], error) {
+		return storage.ScanSubmissions(ctx, SubmissionQuery{Status: &status}, cursor, SchedulerScanPageSize)
+	})
+	if err != nil {
+		return nil, err
+	}
+	conversations := []Id{}
+	seen := map[Id]bool{}
+	for _, submission := range submissions {
+		if seen[submission.ConversationID] {
+			continue
+		}
+		seen[submission.ConversationID] = true
+		conversations = append(conversations, submission.ConversationID)
+	}
+	for _, id := range conversations {
+		conversation := id
+		if err := LoadChain(SchedulerUp{Conversation: &conversation}, mirror, storage, ctx); err != nil {
+			return nil, err
+		}
+	}
+	return conversations, nil
+}
+
+func sortIDs(ids []Id) {
+	sort.Slice(ids, func(left, right int) bool { return ids[left] < ids[right] })
+}
+
 // LoadLiveTasks loads every live task into the mirror and changes surviving
 // running tasks back to pending. Every table read happens before the first
 // write.
@@ -664,6 +762,25 @@ func NewSchedulerMirror() *SchedulerMirror {
 	return &SchedulerMirror{
 		Live: map[Id]TaskRecord{}, Settled: map[Id]SchedulerTaskNode{}, Edges: map[Id]*Id{},
 		ConversationOwners: map[Id]bool{}, FailedMigrations: map[Id]FailedMigration{}, FailFastChecks: map[Id]bool{},
+	}
+}
+
+// Node is the mirror's view of a task node: live first, then settled.
+func (m *SchedulerMirror) Node(id Id) (SchedulerTaskNode, bool) {
+	if record, present := m.Live[id]; present {
+		return NodeOf(record), true
+	}
+	if node, present := m.Settled[id]; present {
+		return node, true
+	}
+	return SchedulerTaskNode{}, false
+}
+
+// SetEdge records a conversation's owner edge and marks the owner.
+func (m *SchedulerMirror) SetEdge(conversationID Id, owner *Id) {
+	m.Edges[conversationID] = owner
+	if owner != nil {
+		m.ConversationOwners[*owner] = true
 	}
 }
 
