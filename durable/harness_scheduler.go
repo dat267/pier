@@ -458,6 +458,76 @@ func GateTask(invocation *Invocation, found *TaskRecord, closing bool) (TaskReco
 	return *found, nil
 }
 
+// ReconcileTasks runs one reconcile pass: derive cancellation marks from
+// intentful owners and failFast checks, withdraw the inputs of cancelled
+// conversations, and finalize every completing task that is free. It returns
+// the first failure, which the caller reports and retries with the next commit
+// since any pass may have staged marks.
+func ReconcileTasks(
+	tx *Transaction,
+	live []TaskRecord,
+	graph SchedulerGraph,
+	queuedConversations []Id,
+	failFastChecks []Id,
+	load func(id Id) (*TaskRecord, error),
+	withdrawInputs func(tx *Transaction, conversationID Id) error,
+	settleOutcome func(tx *Transaction, record TaskRecord, outcome *TaskOutcome) error,
+) error {
+	liveByID := RecordsByID(live)
+	marked := map[Id]bool{}
+	mark := func(record TaskRecord) error {
+		if record.AbortRequested || marked[record.ID] {
+			return nil
+		}
+		marked[record.ID] = true
+		replacement := record
+		replacement.AbortRequested = true
+		return tx.SetTask(&replacement)
+	}
+	// Loading edges can reveal a cancelled owner, so marks are derived on
+	// every pass.
+	for _, record := range live {
+		if record.Background {
+			continue
+		}
+		if BelowCancelled(ParentOf(NodeOf(record)), graph) {
+			if err := mark(record); err != nil {
+				return err
+			}
+		}
+	}
+	for _, id := range failFastChecks {
+		waiter, present := liveByID[id]
+		if !present || waiter.State.Status != TaskWaiting {
+			continue
+		}
+		failed, err := AnyFailed(waiter.State.On, liveByID, load)
+		if err != nil {
+			return err
+		}
+		if !failed {
+			continue
+		}
+		// Every other live task: the failed one keeps its own outcome.
+		for _, member := range waiter.State.On {
+			if record, present := liveByID[member]; present && !FailedOutcome(record) {
+				if err := mark(record); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	for _, id := range queuedConversations {
+		conversation := id
+		if BelowCancelled(SchedulerUp{Conversation: &conversation}, graph) {
+			if err := withdrawInputs(tx, id); err != nil {
+				return err
+			}
+		}
+	}
+	return FinalizeCompleting(tx, live, settleOutcome)
+}
+
 // DeriveCancellationMarks is the ids a reconcile pass marks: every live
 // non-background task whose owner chain carries cancellation intent, skipping
 // tasks already marked.
