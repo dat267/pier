@@ -179,7 +179,10 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   (keyed waiters, scan-all, closed error) and `usage.ts` (the `pi.usage`
   document and its typed ledger: counter addition with the optional
   cacheWrite1h/reasoning fields, bucket merging and the commit-time
-  `recordUsage`).
+  `recordUsage`), plus the bounded output layer (`output.ts`: control-character
+  sanitization, the exact head/tail byte-or-line slice, the chunked
+  `OutputBuffer` with head/tail retention and exact dropped totals, and the
+  adaptive `Progress` committer).
 - `coding`: the remote catalog merge is linear (`c34f2d6ad`); the branch model
   resolution still walks its branch per submission (`a0660b174` is inside
   upstream's `virtual-models.ts`, which the port has not ported yet). Dynamic

@@ -93,9 +93,11 @@ func TestWithFileMutationQueueSerializesOneFile(t *testing.T) {
 			}
 			time.Sleep(30 * time.Millisecond)
 			<-inside
-			done <- struct{}{}
 			return struct{}{}, nil
 		})
+		// Signal only after the queue released the key (the deferred cleanup
+		// runs before WithFileMutationQueue returns).
+		done <- struct{}{}
 	}
 	go run()
 	time.Sleep(5 * time.Millisecond)
