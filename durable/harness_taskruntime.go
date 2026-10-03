@@ -48,6 +48,7 @@ type HookRunner interface {
 // rejects after the invocation ends; watches acquired through it stop at
 // invocation end. Generic upstream methods are erased to `any`.
 type TaskRuntime interface {
+	HookApi
 	DocumentObserver
 	DocumentReader
 

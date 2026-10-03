@@ -101,6 +101,12 @@ var CompactionTask = Task{Definition: TaskDefinition{
 	Initial: func(json.RawMessage) (json.RawMessage, error) {
 		return json.RawMessage(`{"phase":"select"}`), nil
 	},
+	Phases: map[string]PhaseHandler{
+		CompactionPhaseSelect:    compactionSelect,
+		CompactionPhaseSummarize: compactionSummarize,
+		CompactionPhaseRetry:     compactionRetry,
+	},
+	Abort: compactionAbort,
 }}
 
 // Threshold compaction outcomes.
