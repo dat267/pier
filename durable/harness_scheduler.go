@@ -461,6 +461,44 @@ func GateTask(invocation *Invocation, found *TaskRecord, closing bool) (TaskReco
 // SchedulerScanPageSize is the scheduler's scan page size.
 const SchedulerScanPageSize = 256
 
+// AbortPlan is what one abort request does: mark the task, settle it as
+// terminal, or orphan it, and whether the caller joins a run invocation.
+type AbortPlan struct {
+	// Result is "marked" or "terminal".
+	Result string
+	// Orphan is set when the task settles as orphaned because no definition can
+	// take it and nothing it owns is live.
+	Orphan *SchedulerOutcome
+	// Mark stages the abort mark.
+	Mark bool
+	// JoinRun is the run invocation the caller joins after the commit.
+	JoinRun *Invocation
+}
+
+// PlanAbort decides what one abort request does. A terminal task is reported;
+// otherwise the abort mark is staged, and a task no registered definition can
+// take while nothing it owns is live settles as orphaned. A completing task is
+// only marked.
+func PlanAbort(current TaskRecord, invocation *Invocation, ownedHas bool, resolution *SchedulerResolution) AbortPlan {
+	if current.State.Status == TaskTerminal {
+		return AbortPlan{Result: "terminal"}
+	}
+	if invocation == nil && current.State.Status != TaskCompleting && !ownedHas {
+		if resolution != nil && resolution.Kind == SchedulerBlocked {
+			reason := resolution.Reason
+			return AbortPlan{
+				Result: "marked",
+				Orphan: &SchedulerOutcome{Status: OutcomeOrphaned, Reason: &reason},
+			}
+		}
+	}
+	plan := AbortPlan{Result: "marked", Mark: !current.AbortRequested}
+	if invocation != nil && invocation.Mode == "run" {
+		plan.JoinRun = invocation
+	}
+	return plan
+}
+
 // ReservationPlan is one task the scheduler reserves: its definition, the
 // record to run, the running state to stage when it changed, and the mode.
 type ReservationPlan struct {
