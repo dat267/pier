@@ -167,8 +167,14 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   environment are ported (`path-utils.ts`: Unicode-space and `@` normalization
   with the meridiem/NFD/apostrophe read-path variants; `file-mutation-queue.ts`:
   per-filesystem, per-canonical-path mutation serialization, with a
-  not-yet-created file keyed through its canonical parent). The tool
-  definitions, `edit-diff.ts` and the harness are unported.
+  not-yet-created file keyed through its canonical parent). `truncate.ts`
+  (bounded head truncation with the two independent limits) and
+  `tools/image.ts` (the PNG/JPEG/GIF/WEBP/BMP signature sniffer) are ported.
+  `tools/edit-diff.ts` is the same shared engine as the coding-agent's
+  `core/tools/edit-diff.ts` (the two upstream files differ only in the
+  coding-agent's extra preview helper), so it is already ported in
+  `coding/editdiff.go` and the durable tool definitions will reuse it. The
+  harness tool API and the tool definitions are unported.
 - `coding`: the remote catalog merge is linear (`c34f2d6ad`); the branch model
   resolution still walks its branch per submission (`a0660b174` is inside
   upstream's `virtual-models.ts`, which the port has not ported yet). Dynamic
