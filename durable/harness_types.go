@@ -385,6 +385,15 @@ type CompactionResult struct {
 	SubmissionID *Id `json:"submissionId,omitempty"`
 }
 
+// ConversationCreateOptions are the options of a conversation creation.
+type ConversationCreateOptions struct {
+	Ownership ConversationOwnership
+	// Agent is applied in the creating commit after the creation hook's copy,
+	// before Init.
+	Agent *AgentChange
+	Init  func(tx *Transaction, conversationID Id) error
+}
+
 // ConversationAbortOptions configures a conversation abort.
 type ConversationAbortOptions struct {
 	Background bool
