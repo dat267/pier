@@ -58,15 +58,17 @@ type TaskScheduler struct {
 
 	unsubscribeRegistry func()
 
-	mu             sync.Mutex
-	mirror         *SchedulerMirror
-	invocations    map[Id]*Invocation
-	taskWaiters    *Waiters[Id, SettledTask]
-	idleWaiters    *Waiters[idleKey, struct{}]
-	enabled        bool
-	closing        bool
-	cascadePending bool
-	reconcileDue   bool
+	mu                 sync.Mutex
+	mirror             *SchedulerMirror
+	invocations        map[Id]*Invocation
+	taskWaiters        *Waiters[Id, SettledTask]
+	idleWaiters        *Waiters[idleKey, struct{}]
+	enabled            bool
+	closing            bool
+	cascadePending     bool
+	dirty              bool
+	draining           bool
+	reconcileScheduled bool
 }
 
 // idleKey identifies an idle wait: one conversation, or the ownerless roots
@@ -124,11 +126,12 @@ func (s *TaskScheduler) Open(ctx chord.Context) error {
 	return nil
 }
 
-// Resume enables scheduling.
+// Resume enables scheduling and kicks the drain.
 func (s *TaskScheduler) Resume() {
 	s.mu.Lock()
 	s.enabled = true
 	s.mu.Unlock()
+	s.Kick()
 }
 
 // Enabled reports whether scheduling is enabled.
@@ -163,17 +166,24 @@ func (s *TaskScheduler) Reserve(ctx chord.Context) ([]SchedulerReservation, erro
 		return nil, nil
 	}
 	s.mu.Unlock()
+	var snapshot RegistrySnapshot
+	if s.registry != nil {
+		snapshot = s.registry.Snapshot()
+	}
+	s.mu.Lock()
+	if _, err := LoadScopes(false, s.mirror, s.storage, s.Context()); err != nil {
+		s.mu.Unlock()
+		return nil, err
+	}
+	records := s.liveRecordsUnlocked()
+	var migrationErr error
+	plans, orphans := PlanReservations(records, s.mirror.Graph(), snapshot, s.runningInvocationsUnlocked(), s.mirror.FailedMigrations, func(err error) { migrationErr = err })
+	s.mu.Unlock()
+	if migrationErr != nil && s.report != nil {
+		s.report(migrationErr)
+	}
 	registered := []SchedulerReservation{}
 	err := s.session.Commit(s.Context(), func(tx *Transaction) error {
-		if _, err := LoadScopes(false, s.mirror, s.storage, s.Context()); err != nil {
-			return err
-		}
-		records := s.LiveRecords()
-		var snapshot RegistrySnapshot
-		if s.registry != nil {
-			snapshot = s.registry.Snapshot()
-		}
-		plans, orphans := PlanReservations(records, s.mirror.Graph(), snapshot, s.RunningInvocations(), s.mirror.FailedMigrations, s.report)
 		for index := range orphans {
 			reason := orphans[index].Reason
 			outcome := &TaskOutcome{Status: OutcomeOrphaned, Reason: &reason}
@@ -322,11 +332,16 @@ func (s *TaskScheduler) WaitForTask(ctx chord.Context, id Id) (SettledTask, erro
 // LiveRecords is the mirror's live records in ascending id order.
 func (s *TaskScheduler) LiveRecords() []TaskRecord {
 	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.liveRecordsUnlocked()
+}
+
+// liveRecordsUnlocked is LiveRecords with the lock held.
+func (s *TaskScheduler) liveRecordsUnlocked() []TaskRecord {
 	records := make([]TaskRecord, 0, len(s.mirror.Live))
 	for _, record := range s.mirror.Live {
 		records = append(records, record)
 	}
-	s.mu.Unlock()
 	sort.Slice(records, func(left, right int) bool { return records[left].ID < records[right].ID })
 	return records
 }
@@ -335,6 +350,11 @@ func (s *TaskScheduler) LiveRecords() []TaskRecord {
 func (s *TaskScheduler) RunningInvocations() map[Id]bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.runningInvocationsUnlocked()
+}
+
+// runningInvocationsUnlocked is RunningInvocations with the lock held.
+func (s *TaskScheduler) runningInvocationsUnlocked() map[Id]bool {
 	running := make(map[Id]bool, len(s.invocations))
 	for id := range s.invocations {
 		running[id] = true
@@ -344,11 +364,9 @@ func (s *TaskScheduler) RunningInvocations() map[Id]bool {
 
 // Inspect derives the point-in-time view of live work.
 func (s *TaskScheduler) Inspect(snapshot RegistrySnapshot) HarnessInspection {
-	records := s.LiveRecords()
 	s.mu.Lock()
-	closing, enabled := s.closing, s.enabled
-	s.mu.Unlock()
-	return BuildInspection(records, s.mirror, snapshot, s.RunningInvocations(), closing, enabled)
+	defer s.mu.Unlock()
+	return BuildInspection(s.liveRecordsUnlocked(), s.mirror, snapshot, s.runningInvocationsUnlocked(), s.closing, s.enabled)
 }
 
 // RegistrySnapshot is the current registry snapshot, or nil without a
@@ -491,8 +509,14 @@ func (s *TaskScheduler) StartInvocation(reservation SchedulerReservation) {
 	}()
 }
 
+// scheduleReconcile schedules one reconcile pass.
 func (s *TaskScheduler) scheduleReconcile() {
 	s.mu.Lock()
-	s.reconcileDue = true
+	if s.reconcileScheduled || s.closing {
+		s.mu.Unlock()
+		return
+	}
+	s.reconcileScheduled = true
 	s.mu.Unlock()
+	go s.reconcile()
 }
