@@ -734,7 +734,7 @@ type TaskOptions struct {
 
 // TaskDefinition is the registered definition of one durable task kind
 // (upstream TaskDefinition). The transaction uses the definition metadata and
-// the initial checkpoint; phases, abort and hooks are the task runtime's.
+// the initial checkpoint; the task runtime dispatches Phases and Abort.
 type TaskDefinition struct {
 	// Name is the registered task kind persisted in TaskRecord.Kind.
 	Name string
@@ -743,8 +743,15 @@ type TaskDefinition struct {
 	Version int
 	// Initial builds the first durable checkpoint for a new task.
 	Initial func(input json.RawMessage) (json.RawMessage, error)
+	// Phases is the exhaustive phase map of the task runtime.
+	Phases map[string]PhaseHandler
+	// Abort runs in a fresh invocation after an abort mark and must commit a
+	// terminal outcome.
+	Abort func(task RunningTask, runtime TaskRuntime, ctx chord.Context) error
 	// Migrate converts a record stored by an older supported version.
 	Migrate func(input, checkpoint json.RawMessage, fromVersion int) (json.RawMessage, json.RawMessage, error)
+	// Hooks are the definition's hook handler map.
+	Hooks any
 }
 
 // Task is a typed executable task definition (upstream Task).
