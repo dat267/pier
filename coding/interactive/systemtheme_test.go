@@ -217,6 +217,42 @@ func TestSystemThemeIndexedFallback(t *testing.T) {
 	}
 }
 
+// TestSystemThemeNoColorTierKeepsSignalPanels pins D193: when the terminal
+// reports no colors, the port keeps its four signal fills so a running, failed
+// and successful tool call stay distinguishable and a user message still reads
+// as a panel. Upstream's indexedColors leaves every panel transparent
+// (system-theme.ts), which filledBackgroundColors deliberately diverges from.
+func TestSystemThemeNoColorTierKeepsSignalPanels(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	SetSystemTerminalColors(tui.TerminalColors{})
+	for _, tc := range []struct{ name, colorfgbg, appearance string }{
+		{name: "dark", colorfgbg: "", appearance: "dark"},
+		{name: "light", colorfgbg: "0;15", appearance: "light"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("COLORFGBG", tc.colorfgbg)
+			theme := buildSystemTheme(ColorModeTruecolor)
+			want := pierSignalPanelColors(tc.appearance)
+			for _, token := range filledBackgroundColors {
+				value, ok := want[token]
+				if !ok {
+					t.Fatalf("%s is not a port signal panel", token)
+				}
+				wantAnsi, _, _, err := colorValueAnsi(ColorValue{Value: value}, ColorModeTruecolor, true)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got := theme.GetBgAnsi(token); got != wantAnsi {
+					t.Errorf("%s ansi = %q, want %q", token, got, wantAnsi)
+				}
+			}
+		})
+	}
+}
+
 // TestSystemThemePastelPalettesStayPastel is upstream's "keeps pastel palette
 // colors pastel at other lightnesses" case (409e808f5, #10255): a palette
 // color never gains OKLCH chroma when it moves to another lightness.

@@ -780,6 +780,16 @@ func buildSystemTheme(mode ColorMode) *Theme {
 			fgColors[token] = converted
 		}
 	}
+	// D193: a terminal that reported nothing leaves every panel transparent in
+	// upstream's indexed tier, so a failed tool call renders identically to a
+	// successful one and a user message is indistinguishable from body text. The
+	// port keeps its own signal fills for the four filledBackgroundColors panels
+	// (decoration stays transparent, matching transparentBackgroundColors).
+	if colors == nil || colors.Background == nil {
+		for token, value := range pierSignalPanelColors(getTerminalTheme()) {
+			bgColors[token] = ColorValue{Value: value}
+		}
+	}
 	return NewTheme(fgColors, bgColors, colorMode, SystemThemeName, "", generated.Dim...)
 }
 

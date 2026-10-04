@@ -58,6 +58,48 @@ var toolStateBackgroundColors = []string{
 // the port's palette is meant to be recognisable at a glance.
 var filledBackgroundColors = append(append([]string{}, toolStateBackgroundColors...), "userMessageBg")
 
+// pierSignalPanelHex are the fills filledBackgroundColors paints, per
+// appearance. They are the single source for both the registered palette
+// (pierDarkJSON/pierLightJSON) and the system theme's no-color tier (D193): a
+// terminal that reports nothing must still tell a running call from a failed
+// one and a user message from body text.
+var pierSignalPanelHex = map[string]map[string]string{
+	"dark": {
+		"toolPendingBg": "#2b2b2b",
+		"toolSuccessBg": "#22302a",
+		"toolErrorBg":   "#3a2424",
+		"userMessageBg": "#393630",
+	},
+	"light": {
+		"toolPendingBg": "#ececec",
+		"toolSuccessBg": "#e6f2e9",
+		"toolErrorBg":   "#f7e7e7",
+		"userMessageBg": "#f4eee1",
+	},
+}
+
+// pierSignalPanelColors returns a copy of the signal fills for an appearance.
+func pierSignalPanelColors(appearance string) map[string]string {
+	out := map[string]string{}
+	for token, value := range pierSignalPanelHex[appearance] {
+		out[token] = value
+	}
+	return out
+}
+
+// withPierPanels merges the appearance's signal fills into a palette's hex map,
+// so the registered palette and the system theme's fallback cannot drift.
+func withPierPanels(hex map[string]string, appearance string) map[string]string {
+	out := make(map[string]string, len(hex)+len(pierSignalPanelHex[appearance]))
+	for token, value := range hex {
+		out[token] = value
+	}
+	for token, value := range pierSignalPanelHex[appearance] {
+		out[token] = value
+	}
+	return out
+}
+
 func pierColors(hex map[string]string) map[string]ColorValue {
 	colors := make(map[string]ColorValue, len(hex)+len(transparentBackgroundColors))
 	for _, key := range transparentBackgroundColors {
@@ -83,7 +125,7 @@ func pierExport(pageBg, cardBg, infoBg string) *ThemeExport {
 func pierDarkJSON() *ThemeJSON {
 	return &ThemeJSON{
 		Name: "dark",
-		Colors: pierColors(map[string]string{
+		Colors: pierColors(withPierPanels(map[string]string{
 			// Primary text is the terminal's own foreground.
 			"text":         "",
 			"accent":       "#ffb454",
@@ -103,18 +145,8 @@ func pierDarkJSON() *ThemeJSON {
 			"customMessageText":  "",
 			"customMessageLabel": "#c792ea",
 
-			// The tool-state fills: a neutral panel while a call runs, and the
-			// success/error hues as a tint of it. With userMessageBg below they are
-			// the only things the palette paints behind text — see
-			// filledBackgroundColors.
-			"toolPendingBg": "#2b2b2b",
-			"toolSuccessBg": "#22302a",
-			"toolErrorBg":   "#3a2424",
-
-			// Your own messages get a warm panel tied to the amber accent, where
-			// upstream's is a cool blue-gray (#343541). Same lightness as
-			// upstream's, so a transcript reads the same way.
-			"userMessageBg": "#393630",
+			// The tool-state fills (toolPendingBg/toolSuccessBg/toolErrorBg) and
+			// userMessageBg come from pierSignalPanelHex, merged by withPierPanels.
 
 			"mdHeading":         "#ffb454",
 			"mdLink":            "#6cb6ff",
@@ -154,7 +186,7 @@ func pierDarkJSON() *ThemeJSON {
 			"scrollbarTrack":  "#5f5f5f",
 			"scrollbarThumb":  "",
 			"searchMatchText": "",
-		}),
+		}, "dark")),
 		Export: pierExport("#101010", "#171717", "#2a2318"),
 	}
 }
@@ -164,7 +196,7 @@ func pierDarkJSON() *ThemeJSON {
 func pierLightJSON() *ThemeJSON {
 	return &ThemeJSON{
 		Name: "light",
-		Colors: pierColors(map[string]string{
+		Colors: pierColors(withPierPanels(map[string]string{
 			"text":         "",
 			"accent":       "#b45309",
 			"border":       "#c9c9c9",
@@ -183,14 +215,8 @@ func pierLightJSON() *ThemeJSON {
 			"customMessageText":  "",
 			"customMessageLabel": "#8250df",
 
-			// Warm-neutral while a call runs; the success/error hues as a light tint.
-			"toolPendingBg": "#ececec",
-			"toolSuccessBg": "#e6f2e9",
-			"toolErrorBg":   "#f7e7e7",
-
-			// A warm cream for your own messages, where upstream's is plain grey
-			// (#e8e8e8).
-			"userMessageBg": "#f4eee1",
+			// The signal fills come from pierSignalPanelHex, merged by
+			// withPierPanels (the same four tokens as the dark palette).
 
 			"mdHeading":         "#b45309",
 			"mdLink":            "#0969da",
@@ -230,7 +256,7 @@ func pierLightJSON() *ThemeJSON {
 			"scrollbarTrack":  "#c9c9c9",
 			"scrollbarThumb":  "",
 			"searchMatchText": "",
-		}),
+		}, "light")),
 		Export: pierExport("#ffffff", "#f6f8fa", "#fff4e5"),
 	}
 }

@@ -940,3 +940,25 @@ transcript; the durable entry cards carry the visible history. The reload
 `session_start` reason is wired from `/reload`.
 
 (~/.pi/agent/extensions/goal/index.ts, machine.ts)
+## D193. The system theme's no-color tier keeps the port's signal fills
+
+Upstream's `indexedColors` is the system theme's tier for a terminal that
+reports nothing (no OSC 10/11/4 reply): it leaves every panel transparent,
+because indices 0-15 with the terminal's own background fit any theme. The
+consequence is that a running, failed and successful tool call render
+identically, and a user message is indistinguishable from body text. That is
+the exact signal `filledBackgroundColors` exists to keep (`piertheme.go`): the
+port's own palette paints `toolPendingBg`/`toolSuccessBg`/`toolErrorBg` and
+`userMessageBg`, because for a failed call the fill is the only cue.
+
+The port therefore fills those four panels in the system theme's no-color tier
+with the port's own signal colors for the detected appearance
+(`pierSignalPanelHex`). Decoration (`selectedBg`, `searchMatchBg`,
+`customMessageBg`) stays transparent, matching
+`transparentBackgroundColors`. The generator itself stays byte-parity with
+upstream: the fallback is applied when the theme is assembled
+(`buildSystemTheme`), so `GenerateSystemThemeColors` and the system-theme
+golden are unchanged.
+
+(pi/packages/coding-agent/src/modes/interactive/theme/system-theme.ts,
+`indexedColors`; the port's `filledBackgroundColors` guarantee)
