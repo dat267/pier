@@ -121,6 +121,21 @@ func SupportsAdaptiveThinking(modelID, modelName string) bool {
 	return false
 }
 
+// SupportsThinkingBlockBinding reports whether the model accepts
+// thinking.block_binding. Opus 4.6 and Sonnet 4.6 reject it with
+// "thinking.adaptive.block_binding: Extra inputs are not permitted"
+// (upstream supportsThinkingBlockBinding).
+func SupportsThinkingBlockBinding(model *Model) bool {
+	for _, candidate := range GetModelMatchCandidates(model.ID, model.Name) {
+		for _, needle := range []string{"opus-4-7", "opus-4-8", "opus-5", "sonnet-5", "fable-5"} {
+			if strings.Contains(candidate, needle) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // SupportsNativeXhighEffort reports native xhigh support.
 func SupportsNativeXhighEffort(model *Model) bool {
 	for _, candidate := range GetModelMatchCandidates(model.ID, model.Name) {
@@ -546,9 +561,14 @@ func BuildBedrockAdditionalModelRequestFields(model *Model, options *BedrockOpti
 	if display == "" {
 		display = "summarized"
 	}
-	if IsGovCloudBedrockTarget(model, options) {
+	isGovCloud := IsGovCloudBedrockTarget(model, options)
+	if isGovCloud {
 		display = ""
 	}
+	// Replayed signed thinking blocks are bound to the system prompt and tools
+	// they were created with; Bedrock 400s on replay after either changes unless
+	// stale blocks are dropped. Skipped on GovCloud like display.
+	useBlockBinding := !isGovCloud && SupportsThinkingBlockBinding(model)
 
 	var result map[string]any
 	if SupportsAdaptiveThinking(model.ID, model.Name) {
@@ -556,9 +576,15 @@ func BuildBedrockAdditionalModelRequestFields(model *Model, options *BedrockOpti
 		if display != "" {
 			thinking["display"] = display
 		}
+		if useBlockBinding {
+			thinking["block_binding"] = map[string]any{"prefix_mismatch_behavior": "drop_block"}
+		}
 		result = map[string]any{
 			"thinking":      thinking,
 			"output_config": map[string]any{"effort": MapThinkingLevelToBedrockEffort(model, options.Reasoning)},
+		}
+		if useBlockBinding {
+			result["anthropic_beta"] = []any{ThinkingBindingControlsBeta}
 		}
 	} else {
 		defaultBudgets := map[ThinkingLevel]int{

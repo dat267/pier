@@ -33,6 +33,17 @@ ported. Ported so far:
   a trailing comma no longer adds a substring-match-everything pattern; the
   NVIDIA default is `nvidia/nemotron-3-ultra-550b-a55b` (`49b9df489`); and the
   retryable-provider-error pattern accepts `model is at capacity` (`3874b3e98`).
+- `ai` (Bedrock): stale-thinking-block replay (`69f0be6f0`).
+  `SupportsThinkingBlockBinding` covers Opus 4.7/4.8/5, Sonnet 5 and Fable 5;
+  `BuildBedrockAdditionalModelRequestFields` adds
+  `thinking.block_binding.prefix_mismatch_behavior = drop_block` and the
+  `thinking-binding-controls-2026-08-01` beta for those adaptive models (Opus
+  4.6 and Sonnet 4.6 reject it; GovCloud is skipped).
+- `ai` (OpenAI Codex OAuth): a held callback port fails sign-in (`eeac84ca9`).
+  `StartOpenAICodexCallbackServer` now returns a port-in-use error (checked with
+  a build-tagged `isAddressInUse`, `windows.WSAEADDRINUSE` on Windows) instead
+  of falling back to the paste prompt, whose browser callback would reach the
+  other listener and be rejected as a state mismatch.
 
 Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
 

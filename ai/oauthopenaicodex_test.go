@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -346,4 +348,22 @@ func withCodexURLs(t *testing.T, base string, run func()) {
 		}
 	}()
 	run()
+}
+
+// TestOpenAICodexCallbackPortInUse pins that a held fixed port fails the login
+// with a clear error instead of racing the other listener (eeac84ca9).
+func TestOpenAICodexCallbackPortInUse(t *testing.T) {
+	host := oauthCallbackHost()
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, OpenAICodexCallbackPort))
+	if err != nil {
+		t.Skipf("port %d is not free: %v", OpenAICodexCallbackPort, err)
+	}
+	defer listener.Close()
+	server, err := StartOpenAICodexCallbackServer("state")
+	if server != nil {
+		t.Fatal("a held port must not start the callback server")
+	}
+	if err == nil || !strings.Contains(err.Error(), fmt.Sprintf("Port %d is in use", OpenAICodexCallbackPort)) {
+		t.Fatalf("err = %v", err)
+	}
 }

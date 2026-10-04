@@ -124,6 +124,30 @@ func TestBedrockThinkingFields(t *testing.T) {
 	if _, hasDisplay := thinking["display"]; hasDisplay {
 		t.Fatalf("GovCloud must omit display: %#v", thinking)
 	}
+	// Opus 4.7 binds replayed thinking blocks so stale ones are dropped, and
+	// sends the binding-controls beta; Opus 4.6 rejects both and GovCloud skips
+	// them.
+	bindingModel := &Model{ID: "anthropic.claude-opus-4-7-v1:0", Name: "Claude Opus 4.7", Reasoning: true}
+	fields = BuildBedrockAdditionalModelRequestFields(bindingModel, &BedrockOptions{Reasoning: ThinkHigh})
+	thinking, _ = fields["thinking"].(map[string]any)
+	binding, _ := thinking["block_binding"].(map[string]any)
+	if binding["prefix_mismatch_behavior"] != "drop_block" {
+		t.Fatalf("block_binding = %#v", thinking["block_binding"])
+	}
+	beta, _ = fields["anthropic_beta"].([]any)
+	if len(beta) != 1 || beta[0] != ThinkingBindingControlsBeta {
+		t.Fatalf("beta = %#v", fields["anthropic_beta"])
+	}
+	if fields := BuildBedrockAdditionalModelRequestFields(adaptive, &BedrockOptions{Reasoning: ThinkHigh}); fields["anthropic_beta"] != nil {
+		t.Fatalf("opus-4-6 must not send block binding: %#v", fields)
+	}
+	fields = BuildBedrockAdditionalModelRequestFields(bindingModel, &BedrockOptions{StreamOptions: StreamOptions{
+		Env: ProviderEnv{"AWS_REGION": "us-gov-west-1"},
+	}, Reasoning: ThinkHigh})
+	if fields["anthropic_beta"] != nil {
+		t.Fatalf("GovCloud must skip block binding: %#v", fields)
+	}
+
 	// Non-Claude models and missing reasoning produce no fields.
 	if fields := BuildBedrockAdditionalModelRequestFields(&Model{ID: "amazon.nova-pro-v1:0", Reasoning: true}, &BedrockOptions{Reasoning: ThinkHigh}); fields != nil {
 		t.Fatalf("fields = %#v", fields)
