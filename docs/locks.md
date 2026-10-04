@@ -14,6 +14,8 @@ UI state, plus one documented `coding/` exception:
 | `ProcessTerminal.writesMu` | `tui/terminal.go:191` | the console-write FIFO (`Write` appends in submission order; a dedicated goroutine drains it) | **retained**: off-loop writer; the UI loop never writes to the console itself |
 | `resizeWatcherMu` | `tui/terminal_windows.go:30` | the Windows console-resize poller's stop/done channels | **retained**: the poller runs off the loop |
 | `prerenderState.mu` | `coding/interactive/transcript.go:105` | the transcript warm-ahead handoff (ready chunk, width, generation) | **retained**: loop ↔ warm-worker handoff, not UI state |
+| `systemThemeState.mu` | `coding/interactive/theme.go:739` | the terminal-report colors the system theme is generated from (written by the terminal query reply path, read at theme load) | **retained**: a pointer swap of two values, never UI state |
+| `terminalColors.colorMu` | `tui/terminalqueries.go:69` | the terminal-colors query queue the blocking caller appends to while the owner loop's input dispatch reads it | **retained**: query bookkeeping, not UI state |
 | `inputLatencyRecorder.mu` | `coding/interactive/inputlatency.go:29` | keystroke-latency log appends from the off-loop logger | **retained**: log I/O only |
 | `stallWriteMu` | `coding/interactive/interactivemode_run.go:610` | the stall-log append, shared by the UI goroutine and the watchdog timer | **retained**: log I/O only |
 | `FooterDataProvider.mu` | `coding/footerdata.go` | cwd/git/status + listener registry, shared with its 500 ms git-HEAD watcher | **retained (D149)**: closing it needs the poll result posted to the loop and the listener fan-out delivered outside the lock; a `coding/` change outside this refactor |
@@ -53,4 +55,11 @@ tui/ coding/interactive/` outside tests returns only the locks tabulated above):
 
 When retiring a lock, the invariant is unchanged: no user code under a lock;
 snapshot under and deliver outside.
+
+The D136–D139 mutex-deadlock PTY watchdog flows consumed this list: while a UI
+mutex existed, a flow could park the loop behind one, so the suite drove the real
+binary through the offending interaction and checked the `SIGQUIT` dump. With
+every UI-state lock retired, no such flow can park the loop; `internal/uiblock`
+carries the invariant statically instead, and the watchdog flows' functional
+coverage moved to `coding/interactive/ptyflow_test.go` (**D192**).
 

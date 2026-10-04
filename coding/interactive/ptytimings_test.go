@@ -15,6 +15,9 @@ import (
 // Upstream marks its boot phases in main.ts and prints the table right before
 // entering the run loop; the port does the same, with the labels that exist here.
 func TestStartupTimingsArePrinted(t *testing.T) {
+	if testing.Short() {
+		t.Skip("short mode: spawns the real binary through a pty")
+	}
 	t.Setenv("PI_TIMING", "1")
 	session := startPier(t)
 	if !session.waitForOutput("Startup Timings: main", 30*time.Second) {
@@ -39,6 +42,9 @@ func TestStartupTimingsArePrinted(t *testing.T) {
 
 // Opt-in, like upstream: no PI_TIMING, no table.
 func TestStartupTimingsAreOptIn(t *testing.T) {
+	if testing.Short() {
+		t.Skip("short mode: spawns the real binary through a pty")
+	}
 	session := startPier(t)
 	if !session.waitForOutput("Press ctrl+o", 30*time.Second) {
 		t.Fatalf("pier did not start:\n%s", session.output())

@@ -55,6 +55,9 @@ func trustRequiringProject(t *testing.T) string {
 // without a prompt, and an untrusted answer hides the project's resources — the
 // warning says so.
 func TestResumedSessionAsksTrustForItsOwnProject(t *testing.T) {
+	if testing.Short() {
+		t.Skip("short mode: spawns the real binary through a pty")
+	}
 	project := trustRequiringProject(t)
 	sessionFile := sessionInProject(t, project)
 

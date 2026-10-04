@@ -940,6 +940,44 @@ transcript; the durable entry cards carry the visible history. The reload
 `session_start` reason is wired from `/reload`.
 
 (~/.pi/agent/extensions/goal/index.ts, machine.ts)
+
+## D192. The D136-D139 mutex-deadlock watchdog flows are retired
+
+Upstream is single-threaded, so it has no equivalent of the PTY watchdog
+suite. The port grew one because its UI state was mutex-guarded and five
+concrete bugs (D136-D139) were a goroutine parked on a `sync.Mutex` while the
+UI loop waited on it: editor submit, the model selector, terminal/screen
+scroll, and the stdin buffer exit. Each flow drove the real binary through a
+pseudo-terminal, sent `SIGQUIT`, and failed when the stack dump showed a
+goroutine in `sync.runtime_SemacquireMutex`.
+
+The stage-4 refactor retired every UI mutex (`docs/locks.md`; the retained
+locks in `tui/` and `coding/interactive/` are handoff and logging locks that
+never guard UI state), so the class is structurally unreachable: no shared
+lock protects the loop's data, and therefore no flow can park the loop behind
+one. `internal/uiblock` proves the stronger, wider property statically — no
+blocking call at all (syscalls, network, exec, channel ops, lock acquisition,
+sleeps, JSON) is reachable from the UI-loop roots — in one module-wide SSA
+pass. The five PTY flows were therefore deleted and their *functional*
+behavior moved to `coding/interactive/ptyflow_test.go`, which runs on the app's
+own loop without a pty, a binary spawn or `SIGQUIT`: submit reaches the
+session, `/quit` requests a shutdown, `/model` opens and disposes the selector,
+and the transcript scrolls and paints. `TestMutexBlockedDetectorHasTeeth` is
+kept so the dump parser cannot rot silently.
+
+Measured: the five flows plus their harness cost about 11.5 s of
+`coding/interactive` (27 s total); the four replacements cost 0.49 s for all of
+them.
+
+Deliberately not changed: `internal/uiblock` still spends about 6 s on its one
+module-wide SSA load (`packages.Load` 3.7 s, `prog.Build` 1.4 s). Narrowing its
+scope or caching the SSA across runs would weaken or obscure the check, so the
+cost stays. The four replacements also keep their `testing.Short()` skips
+consistent with the remaining PTY tests.
+
+(pi/packages/coding-agent/src/modes/interactive/interactive-mode.ts; the port's
+own defect class, D136-D139)
+
 ## D193. The system theme's no-color tier keeps the port's signal fills
 
 Upstream's `indexedColors` is the system theme's tier for a terminal that

@@ -2,12 +2,17 @@
 
 package interactive
 
-// PTY watchdog tests for the D136-D139 deadlock class. Each test drives the
-// real pier binary through a flow inside a pseudo-terminal, sends SIGQUIT at
-// teardown, and fails when the runtime stack dump shows a goroutine blocked
-// on a sync.Mutex. The harness is Linux-specific: it unlocks the pty master
-// with TIOCSPTLCK and reads the slave name with TIOCGPTN, neither of which the
-// BSDs have.
+// PTY harness plus the watchdog self-test. The D136-D139 mutex-deadlock flow
+// tests that used to live here are gone: docs/locks.md records that the stage-4
+// refactor retired every UI mutex, so a goroutine parked on a sync.Mutex while
+// the loop waits cannot occur in this architecture, and internal/uiblock proves
+// the weaker property statically in milliseconds rather than driving the real
+// binary through a pty for seconds per flow. What remains is the reusable pty
+// harness (startPier and friends, used by ptytrust_test.go and
+// ptypermissions_test.go) and TestMutexBlockedDetectorHasTeeth, which keeps the
+// dump parser honest so a future watchdog cannot pass vacuously. The harness is
+// Linux-specific: it unlocks the pty master with TIOCSPTLCK and reads the slave
+// name with TIOCGPTN, neither of which the BSDs have.
 
 import (
 	"bytes"
@@ -284,28 +289,6 @@ func (s *ptySession) typeAndSubmit(text string) {
 	s.send("\r")
 }
 
-// quitAndDump sends SIGQUIT and returns everything the process wrote after
-// the signal (the goroutine dump lands on stderr, which is the pty).
-// alreadyExited reports whether the process was gone before the signal.
-func (s *ptySession) quitAndDump(timeout time.Duration) (dump string, alreadyExited bool) {
-	if s.exited() {
-		return "", true
-	}
-	_ = s.cmd.Process.Signal(unix.SIGQUIT)
-	mark := len(s.output())
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		if s.exited() {
-			break
-		}
-		time.Sleep(50 * time.Millisecond)
-	}
-	time.Sleep(200 * time.Millisecond)
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.buf.String()[mark:], false
-}
-
 func (s *ptySession) exited() bool {
 	select {
 	case <-s.done:
@@ -313,35 +296,6 @@ func (s *ptySession) exited() bool {
 	default:
 		return false
 	}
-}
-
-// mutexBlockedRe matches a goroutine parked while acquiring a sync.Mutex or
-// sync.RWMutex (runtime_SemacquireMutex is the parking primitive both use;
-// plain Semacquire would also match WaitGroups, which are unrelated).
-var mutexBlockedRe = regexp.MustCompile(`sync\.runtime_SemacquireMutex`)
-
-// assertNoMutexBlocked fails when the SIGQUIT dump shows a goroutine blocked
-// on a mutex.
-func assertNoMutexBlocked(t *testing.T, dump string) {
-	t.Helper()
-	if !strings.Contains(dump, "SIGQUIT: quit") {
-		t.Fatalf("expected a SIGQUIT goroutine dump, got: %.400s", dump)
-	}
-	if !mutexBlockedRe.MatchString(dump) {
-		return
-	}
-	// Extract the offending goroutine blocks for the failure message.
-	blocks := dump
-	if groups := regexp.MustCompile(`(?s)goroutine \d+ gp=.*?(?=\ngoroutine \d+ gp=|\z)`).FindAllString(dump, -1); len(groups) > 0 {
-		var blocked []string
-		for _, g := range groups {
-			if mutexBlockedRe.MatchString(g) {
-				blocked = append(blocked, g)
-			}
-		}
-		blocks = strings.Join(blocked, "\n\n")
-	}
-	t.Fatalf("goroutines blocked on sync.Mutex after SIGQUIT:\n%s", truncate(blocks, 4000))
 }
 
 // stripAnsiForLog removes escape sequences so failures show readable state.
@@ -388,152 +342,6 @@ func openPty() (master int, slave int, err error) {
 	return master, slave, nil
 }
 
-// startFullscreenPier starts pier with fullscreen TUI mode so scroll and
-// selector flows exercise the alt-screen renderer.
-func startFullscreenPier(t *testing.T) *ptySession {
-	t.Helper()
-	return startPierConfigured(t, func(agentDir string) {
-		settings := `{"tuiMode":"fullscreen"}`
-		if err := os.WriteFile(filepath.Join(agentDir, "settings.json"), []byte(settings), 0o644); err != nil {
-			t.Fatalf("write settings: %v", err)
-		}
-	})
-}
-
-// TestPTYEditorSubmitNoMutexDeadlock drives the D136 flow: type a prompt and
-// submit it, then dump stacks. A mutex-blocked goroutine fails the test.
-func TestPTYEditorSubmitNoMutexDeadlock(t *testing.T) {
-	if testing.Short() {
-		t.Skip("short mode")
-	}
-	session := startPier(t)
-	if !session.waitForOutput("v0.0.0", 10*time.Second) {
-		t.Fatalf("pier did not start:\n%.600s", session.output())
-	}
-	session.typeAndSubmit("hello from the watchdog test")
-	time.Sleep(1500 * time.Millisecond)
-
-	dump, exited := session.quitAndDump(5 * time.Second)
-	if exited {
-		t.Fatalf("pier exited before SIGQUIT after a submit; output:\n%.1500s", stripAnsiForLog(session.output()))
-	}
-	assertNoMutexBlocked(t, dump)
-}
-
-// TestPTYBackgroundProbeNoInputCorruption drives the D165 flow against the real
-// binary: the auto theme's OSC 11 query is written after startup, the terminal
-// reply is consumed (not typed into the editor), and input still works.
-func TestPTYBackgroundProbeNoInputCorruption(t *testing.T) {
-	if testing.Short() {
-		t.Skip("short mode")
-	}
-	session := startPierConfigured(t, func(agentDir string) {
-		settings := `{"theme":"light/dark"}`
-		if err := os.WriteFile(filepath.Join(agentDir, "settings.json"), []byte(settings), 0o644); err != nil {
-			t.Fatalf("write settings: %v", err)
-		}
-	})
-	if !session.waitForOutput("v0.0.0", 10*time.Second) {
-		t.Fatalf("pier did not start:\n%.600s", session.output())
-	}
-	if !session.waitForOutput("]11;?", 5*time.Second) {
-		t.Fatalf("the OSC 11 probe was not written:\n%.600s", session.output())
-	}
-	// Answer the way a terminal would; the reply must be consumed, not editor
-	// input, and must not freeze the loop.
-	session.send("\x1b]11;#ffffff\x07")
-	time.Sleep(300 * time.Millisecond)
-	session.typeAndSubmit("hello after the background reply")
-	time.Sleep(1500 * time.Millisecond)
-
-	dump, exited := session.quitAndDump(5 * time.Second)
-	if exited {
-		t.Fatalf("pier exited before SIGQUIT after the reply; output:\n%.1500s", stripAnsiForLog(session.output()))
-	}
-	assertNoMutexBlocked(t, dump)
-}
-
-// TestPTYModelSelectorNoMutexDeadlock drives the D137 flow: open the model
-// selector, move the selection, cancel.
-func TestPTYModelSelectorNoMutexDeadlock(t *testing.T) {
-	if testing.Short() {
-		t.Skip("short mode")
-	}
-	session := startFullscreenPier(t)
-	if !session.waitForOutput("v0.0.0", 10*time.Second) {
-		t.Fatalf("pier did not start:\n%.600s", session.output())
-	}
-	session.send("/model")
-	time.Sleep(300 * time.Millisecond)
-	session.send("\r")
-	time.Sleep(1200 * time.Millisecond)
-	session.send("\x1b[B")
-	time.Sleep(200 * time.Millisecond)
-	session.send("\x1b")
-	time.Sleep(500 * time.Millisecond)
-
-	dump, exited := session.quitAndDump(5 * time.Second)
-	if exited {
-		t.Fatal("pier exited before SIGQUIT; expected it to stay running after the selector flow")
-	}
-	assertNoMutexBlocked(t, dump)
-}
-
-// TestPTYScrollNoMutexDeadlock drives the D138 flow: fullscreen scrolling with
-// wheel and page keys.
-func TestPTYScrollNoMutexDeadlock(t *testing.T) {
-	if testing.Short() {
-		t.Skip("short mode")
-	}
-	session := startFullscreenPier(t)
-	if !session.waitForOutput("v0.0.0", 10*time.Second) {
-		t.Fatalf("pier did not start:\n%.600s", session.output())
-	}
-	// Wheel up/down (SGR press + release) and page keys.
-	for i := 0; i < 5; i++ {
-		session.send("\x1b[<64;10;10M\x1b[<64;10;10m")
-		time.Sleep(60 * time.Millisecond)
-	}
-	session.send("\x1b[5~") // PageUp
-	time.Sleep(200 * time.Millisecond)
-	session.send("\x1b[6~") // PageDown
-	for i := 0; i < 5; i++ {
-		session.send("\x1b[<65;10;10M\x1b[<65;10;10m")
-		time.Sleep(60 * time.Millisecond)
-	}
-	time.Sleep(500 * time.Millisecond)
-
-	dump, exited := session.quitAndDump(5 * time.Second)
-	if exited {
-		t.Fatal("pier exited before SIGQUIT; expected it to stay running after scrolling")
-	}
-	assertNoMutexBlocked(t, dump)
-}
-
-// TestPTYExitNoMutexDeadlock drives the D139 flow: /quit must exit cleanly and
-// promptly; a hang is dumped and reported.
-func TestPTYExitNoMutexDeadlock(t *testing.T) {
-	if testing.Short() {
-		t.Skip("short mode")
-	}
-	session := startPier(t)
-	if !session.waitForOutput("v0.0.0", 10*time.Second) {
-		t.Fatalf("pier did not start:\n%.600s", session.output())
-	}
-	session.typeAndSubmit("/quit")
-
-	deadline := time.Now().Add(5 * time.Second)
-	for time.Now().Before(deadline) {
-		if session.exited() {
-			return // clean exit
-		}
-		time.Sleep(50 * time.Millisecond)
-	}
-	dump, _ := session.quitAndDump(3 * time.Second)
-	assertNoMutexBlocked(t, dump)
-	t.Fatalf("/quit did not exit within 5s (D139 regression); dump:\n%s", truncate(dump, 4000))
-}
-
 // TestDeadlockHelper is the re-exec'd child for TestMutexBlockedDetectorHasTeeth:
 // it parks a goroutine on a mutex forever so SIGQUIT produces a stack dump with
 // a mutex-blocked goroutine.
@@ -560,6 +368,11 @@ func TestDeadlockHelper(t *testing.T) {
 // deadlockReadyMarker is printed by TestDeadlockHelper once its goroutine is
 // about to park on the mutex.
 const deadlockReadyMarker = "PIER_DEADLOCK_READY"
+
+// mutexBlockedRe matches a goroutine parked while acquiring a sync.Mutex or
+// sync.RWMutex (runtime_SemacquireMutex is the parking primitive both use;
+// plain Semacquire would also match WaitGroups, which are unrelated).
+var mutexBlockedRe = regexp.MustCompile(`sync\.runtime_SemacquireMutex`)
 
 // TestMutexBlockedDetectorHasTeeth spawns a process that deadlocks on a mutex,
 // SIGQUITs it, and asserts the watchdog's parser flags the dump. Without this
