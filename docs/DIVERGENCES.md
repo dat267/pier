@@ -922,3 +922,19 @@ Upstream's rebuild re-wrapped every running tool's full output once a second:
 
 (pi/packages/coding-agent/src/modes/interactive/components/tool-execution.ts,
 pi/packages/coding-agent/src/core/tools/renderers/bash.ts)
+
+## D191. The goal round is delivered as a follow-up user message
+
+The goal extension sends its continuation prompt with
+`pi.sendMessage({ customType, content, display: false }, { triggerTurn: true,
+deliverAs: "followUp" })`: the message enters the LLM context as a custom
+message and a turn is triggered. The port's `SessionGoalSink.SendGoalMessage`
+uses `AgentSession.FollowUp` with a user message for the triggered round (and
+`AppendCustomMessage` for the wrap-up), because the port's follow-up queue owns
+the turn trigger. The prompt text and the observable behavior (a new round
+starts at settle, `<goal_round>` reaches the model) match. The
+`pi-goal-event` message renderer and the reload `session_start` reason are not
+separately wired: the durable entry cards carry the transcript, and a fresh boot
+replays with reason "startup".
+
+(~/.pi/agent/extensions/goal/index.ts, machine.ts)
