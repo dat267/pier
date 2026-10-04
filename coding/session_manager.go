@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -662,6 +663,71 @@ func (m *SessionManager) GetLabel(id string) string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.labelsByID[id]
+}
+
+// AppendContextEdit appends a context_edit entry for targetID (upstream
+// appendContextEdit): a null replacement omits the target from model context, a
+// {"content": ...} replacement replaces only its content. Assistant and
+// tool-result string replacements are stored wrapped as a text block.
+func (m *SessionManager) AppendContextEdit(targetID string, replacement json.RawMessage) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	trimmed := bytes.TrimSpace(replacement)
+	isNull := len(replacement) == 0 || bytes.Equal(trimmed, []byte("null"))
+	var content json.RawMessage
+	if !isNull {
+		var holder struct {
+			Content json.RawMessage `json:"content"`
+		}
+		if err := json.Unmarshal(replacement, &holder); err != nil {
+			return "", fmt.Errorf("Context edit replacement must be null or contain string/array content")
+		}
+		content = bytes.TrimSpace(holder.Content)
+		if len(content) == 0 || (content[0] != '"' && content[0] != '[') {
+			return "", fmt.Errorf("Context edit replacement must be null or contain string/array content")
+		}
+	}
+	target, ok := m.byID[targetID]
+	if !ok {
+		return "", fmt.Errorf("Entry %s not found", targetID)
+	}
+	onBranch := false
+	for _, entry := range m.branchPointersLocked("") {
+		if entry.ID == targetID {
+			onBranch = true
+			break
+		}
+	}
+	if !onBranch {
+		return "", fmt.Errorf("Entry %s is not on the active branch", targetID)
+	}
+	role := ""
+	editable := target.Type == "custom_message"
+	if target.Type == "message" {
+		var probe struct {
+			Role string `json:"role"`
+		}
+		_ = json.Unmarshal(target.Message, &probe)
+		role = probe.Role
+		editable = role == string(ai.RoleUser) || role == string(ai.RoleAssistant) || role == string(ai.RoleToolResult)
+	}
+	if !editable {
+		return "", fmt.Errorf("Entry %s does not contribute editable model content", targetID)
+	}
+	if !isNull && (role == string(ai.RoleAssistant) || role == string(ai.RoleToolResult)) && content[0] == '"' {
+		var text string
+		if err := json.Unmarshal(content, &text); err == nil {
+			if encoded, err := ai.MarshalJSON(ai.ContentList{ai.TextContent{Text: text}}); err == nil {
+				if normalized, err := ai.MarshalJSON(map[string]json.RawMessage{"content": encoded}); err == nil {
+					replacement = normalized
+				}
+			}
+		}
+	}
+	entry := m.nextEntry("context_edit")
+	entry.TargetID = targetID
+	entry.Replacement = replacement
+	return m.appendEntry(&entry), nil
 }
 
 // AppendLabelChange sets or clears a label bookmark.

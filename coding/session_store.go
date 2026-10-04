@@ -88,6 +88,10 @@ type SessionEntry struct {
 	// session_info
 	Name *string `json:"name,omitempty"`
 
+	// context_edit: null omits the target from model context; a value replaces
+	// only its content (upstream ContextEditEntry.replacement).
+	Replacement json.RawMessage `json:"replacement,omitempty"`
+
 	// usage: model-attributed usage that is not part of LLM context
 	Kind  string  `json:"kind,omitempty"`
 	Model string  `json:"model,omitempty"`
@@ -965,9 +969,14 @@ func buildSessionContext(entries []SessionEntry, leafID *string, byID map[string
 func buildSessionContextFromPointers(path []*SessionEntry, cache *messageCache) SessionContext {
 	thinkingLevel, model := getSessionContextSettingsFromPointers(path)
 	contextEntries := compactionWindowFromPointers(path, cache)
+	edits := contextEditsFromEntries(contextEntries)
 	messages := make([]ai.Message, 0, len(contextEntries))
 	for i := range contextEntries {
-		messages = append(messages, projectedMessages(&contextEntries[i], cache)...)
+		projected := projectedMessages(&contextEntries[i], cache)
+		if edit := edits[contextEntries[i].ID]; edit != nil {
+			projected = applyContextEdit(projected, edit.Replacement)
+		}
+		messages = append(messages, projected...)
 	}
 	return SessionContext{Messages: messages, ThinkingLevel: thinkingLevel, Model: model, Entries: contextEntries}
 }
@@ -1124,4 +1133,86 @@ func (m *SessionManager) AppendUsage(kind, provider, model string, usage ai.Usag
 	}
 	m.appendEntry(&entry)
 	return &entry
+}
+
+// applyContextEdit applies a context_edit entry to a target's projected
+// messages (upstream projectContextEntry): a null replacement omits them, a
+// value replaces each message's content (assistant and tool-result messages
+// wrap a string replacement as a text block).
+func applyContextEdit(messages []ai.Message, replacement json.RawMessage) []ai.Message {
+	if len(replacement) == 0 {
+		return messages
+	}
+	trimmed := bytes.TrimSpace(replacement)
+	if bytes.Equal(trimmed, []byte("null")) {
+		return nil
+	}
+	var holder struct {
+		Content json.RawMessage `json:"content"`
+	}
+	if err := json.Unmarshal(replacement, &holder); err != nil {
+		return messages
+	}
+	content := bytes.TrimSpace(holder.Content)
+	if len(content) == 0 {
+		return messages
+	}
+	isString := content[0] == '"'
+	out := make([]ai.Message, 0, len(messages))
+	for _, message := range messages {
+		switch message.(type) {
+		case *ai.UserMessage, *ai.AssistantMessage, *ai.ToolResultMessage, *ai.CustomMessage:
+		default:
+			out = append(out, message)
+			continue
+		}
+		effective := content
+		if isString {
+			switch message.(type) {
+			case *ai.AssistantMessage, *ai.ToolResultMessage:
+				var text string
+				if err := json.Unmarshal(content, &text); err == nil {
+					if encoded, err := ai.MarshalJSON(ai.ContentList{ai.TextContent{Text: text}}); err == nil {
+						effective = encoded
+					}
+				}
+			}
+		}
+		out = append(out, withReplacedContent(message, effective))
+	}
+	return out
+}
+
+// withReplacedContent rebuilds a message with its content member replaced.
+func withReplacedContent(message ai.Message, content json.RawMessage) ai.Message {
+	encoded, err := ai.MarshalMessage(message)
+	if err != nil {
+		return message
+	}
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(encoded, &object); err != nil {
+		return message
+	}
+	object["content"] = content
+	rebuilt, err := ai.MarshalJSON(object)
+	if err != nil {
+		return message
+	}
+	replaced, err := ai.UnmarshalMessage(rebuilt)
+	if err != nil {
+		return message
+	}
+	return replaced
+}
+
+// contextEditsFromEntries maps each edited target id to its context_edit entry
+// in the active context window (upstream buildSessionProjection).
+func contextEditsFromEntries(entries []SessionEntry) map[string]*SessionEntry {
+	edits := map[string]*SessionEntry{}
+	for i := range entries {
+		if entries[i].Type == "context_edit" && entries[i].TargetID != "" {
+			edits[entries[i].TargetID] = &entries[i]
+		}
+	}
+	return edits
 }
