@@ -382,6 +382,17 @@ which is the spinner's own ~80 ms animation interval, with keystroke echo at
 5–6 ms; before these fixes the same run showed 200–300 ms lock-blocked stalls
 and a 121 ms frame after a transcript rebuild.
 
+## Frame cost
+
+The full layout pass (`RenderLayoutFrame`) is cheap enough to run on every
+requested frame: a scroll view over 500 wrapped text lines measures ~19us and
+~1.8 KB per pass, and a 50-child nested box tree ~14us
+(`BenchmarkRenderLayoutFrame*` in `tui/layout_bench_test.go`). Component render
+results are cached, so a frame re-measures and re-paints rather than
+re-rendering the content; the markdown and box caches are the ones that keep
+large messages off the loop's critical path. The benchmarks are the guard
+against a future per-frame cost that scales with content.
+
 ## Session history (high level)
 
 The repository was built as a long port: the `ai`/`agent`/`coding` cores first,
