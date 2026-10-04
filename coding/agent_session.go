@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -350,6 +351,20 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 	if config.PromptSources != nil {
 		s.promptSources = *config.PromptSources
 	}
+	// The builtin goal controller: register its tools, feed it provider
+	// responses, and expose the lifecycle hooks.
+	if control.Goal != nil {
+		control.Goal.AttachSession(s)
+		for _, tool := range control.Goal.GoalTools() {
+			if _, ok := control.Tools[tool.Name]; !ok {
+				control.Tools[tool.Name] = AgentToolDefinition{Tool: tool, PromptGuidelines: goalToolGuidelines[tool.Name]}
+			}
+		}
+		a.OnResponse = func(response ai.ProviderResponse, _ *ai.Model) {
+			control.Goal.ProviderResponse(response.Status, retryAfterHeader(response.Headers))
+		}
+		control.Goal.SyncTools()
+	}
 	// Always subscribed: session persistence, queue tracking, compaction,
 	// retry logic.
 	a.Subscribe(func(event agent.AgentEvent, ctx context.Context) error {
@@ -407,12 +422,51 @@ func (s *AgentSession) Subscribe(listener SessionEventListener) func() {
 }
 
 func (s *AgentSession) emit(event *SessionEvent) {
+	if s.control != nil && s.control.Goal != nil {
+		switch event.Type {
+		case SessionAgentStart:
+			s.control.Goal.AgentStart()
+		case SessionAgentEnd:
+			s.control.Goal.AgentEnd(goalAborted(event))
+		case SessionAgentSettled:
+			s.control.Goal.AgentSettled(s.PendingMessageCount() > 0)
+		}
+	}
 	s.listenerMu.Lock()
 	listeners := append([]*sessionListenerKey{}, s.listeners...)
 	s.listenerMu.Unlock()
 	for _, key := range listeners {
 		key.fn(event)
 	}
+}
+
+// goalAborted reports whether the run that ended was cancelled.
+func goalAborted(event *SessionEvent) bool {
+	if event == nil || event.Agent == nil {
+		return false
+	}
+	for index := len(event.Agent.Messages) - 1; index >= 0; index-- {
+		if assistant, ok := event.Agent.Messages[index].(*ai.AssistantMessage); ok {
+			return assistant.StopReason == ai.StopAborted
+		}
+	}
+	return false
+}
+
+// retryAfterHeader parses a Retry-After header (seconds) into milliseconds.
+func retryAfterHeader(headers map[string]string) *int64 {
+	for key, value := range headers {
+		if !strings.EqualFold(key, "retry-after") {
+			continue
+		}
+		seconds, err := strconv.Atoi(strings.TrimSpace(value))
+		if err != nil || seconds <= 0 {
+			return nil
+		}
+		milliseconds := int64(seconds) * 1000
+		return &milliseconds
+	}
+	return nil
 }
 
 // handleAgentEvent ports the persistence/queue/compaction event handling.

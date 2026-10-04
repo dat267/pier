@@ -384,6 +384,24 @@ func NewApp(options AppOptions) *App {
 	app.transcript.Editor = app.defaultEditor
 	app.transcript.Display = app.display
 	app.transcript.MarkdownTheme = app.markdownTheme()
+	// The builtin goal controller: its notifications/render requests route
+	// through the transcript, and /goal set asks before replacing a live goal.
+	if controller := app.session.Goal(); controller != nil {
+		if sink := controller.SessionSink(); sink != nil {
+			sink.Notify = func(message string, level string) {
+				if level == "warning" {
+					app.showWarning(message)
+					return
+				}
+				app.transcript.ShowStatus(message)
+			}
+			sink.Render = func() { app.ui.RequestRender(false) }
+			sink.Confirm = func(title string, message string, onAnswer func(confirmed bool)) {
+				app.askConfirm(title, message, onAnswer)
+			}
+		}
+		controller.SessionStartFromSession("startup", app.sessionMgr)
+	}
 	// Upstream's renderInitialMessages draws the untrusted-project warning, so the
 	// warning appears at startup and again whenever the transcript is rebuilt.
 	if app.trust != nil {

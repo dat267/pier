@@ -40,6 +40,7 @@ var BuiltinSlashCommands = []BuiltinSlashCommand{
 	{Name: "name", Description: "Set session display name"},
 	{Name: "session", Description: "Show session info and stats"},
 	{Name: "changelog", Description: "Show changelog entries"},
+	{Name: "goal", Description: "Manage the session goal — /goal toggles the banner", ArgumentHint: "set|status|pause|resume|clear"},
 	{Name: "hotkeys", Description: "Show all keyboard shortcuts"},
 	{Name: "fork", Description: "Create a new fork from a previous user message"},
 	{Name: "clone", Description: "Duplicate the current session at the current position"},

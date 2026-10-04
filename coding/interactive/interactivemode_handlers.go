@@ -170,6 +170,7 @@ type SubmitHandlers struct {
 	HandleNameCommand        func(text string)
 	HandleSessionCommand     func()
 	HandleChangelogCommand   func()
+	HandleGoalCommand        func(args string)
 	HandleHotkeysCommand     func()
 	ShowUserMessageSelector  func()
 	HandleCloneCommand       func() error
@@ -313,6 +314,12 @@ func (w *SubmitWiring) HandleSubmit(ctx context.Context, text string) {
 	case text == "/changelog":
 		if w.Handlers.HandleChangelogCommand != nil {
 			w.Handlers.HandleChangelogCommand()
+		}
+		clearEditor()
+		return
+	case text == "/goal" || strings.HasPrefix(text, "/goal "):
+		if w.Handlers.HandleGoalCommand != nil {
+			w.Handlers.HandleGoalCommand(strings.TrimSpace(strings.TrimPrefix(text, "/goal")))
 		}
 		clearEditor()
 		return
@@ -675,8 +682,13 @@ func newSubmitWiring(app *App) *SubmitWiring {
 				})
 				return nil
 			},
-			HandleSessionCommand:    func() { app.commands.HandleSessionCommand(time.Now().UnixMilli()) },
-			HandleChangelogCommand:  app.commands.HandleChangelogCommand,
+			HandleSessionCommand:   func() { app.commands.HandleSessionCommand(time.Now().UnixMilli()) },
+			HandleChangelogCommand: app.commands.HandleChangelogCommand,
+			HandleGoalCommand: func(args string) {
+				if controller := app.session.Goal(); controller != nil {
+					controller.HandleCommand(args)
+				}
+			},
 			HandleHotkeysCommand:    app.commands.HandleHotkeysCommand,
 			ShowUserMessageSelector: func() { app.selectors.ShowUserMessageSelector(context.Background()) },
 			ShowTreeSelector:        func() { app.selectors.ShowTreeSelector(context.Background(), "", false) },

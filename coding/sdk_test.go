@@ -51,7 +51,7 @@ func TestCreateAgentSessionDefaults(t *testing.T) {
 		t.Fatalf("thinking level = %q", session.ThinkingLevel())
 	}
 	// The default tool set is read/bash/edit/write.
-	if names := strings.Join(session.GetActiveToolNames(), ","); names != "read,bash,edit,write" {
+	if names := strings.Join(session.GetActiveToolNames(), ","); names != "bash,create_goal,edit,read,write" {
 		t.Fatalf("tools = %q", names)
 	}
 	// The initial state is persisted for resume.
@@ -210,7 +210,7 @@ func TestReloadActivatesToolsNewlyAddedToDefaultTools(t *testing.T) {
 		sort.Strings(names)
 		return strings.Join(names, ",")
 	}
-	if got := active(session.Session); got != "bash,edit,read,write" {
+	if got := active(session.Session); got != "bash,create_goal,edit,read,write" {
 		t.Fatalf("initial tools = %q", got)
 	}
 	// bash disabled during the session stays off unless the setting newly adds it.
@@ -238,7 +238,7 @@ func TestReloadActivatesToolsNewlyAddedToDefaultTools(t *testing.T) {
 	}
 	writeReloadSettings(t, settingsPath, `{"defaultTools":["+grep"]}`)
 	allowlisted.Session.Reload()
-	if got := strings.Join(allowlisted.Session.ActiveToolNames(), ","); got != "read" {
+	if got := strings.Join(allowlisted.Session.ActiveToolNames(), ","); got != "create_goal,read" {
 		t.Fatalf("--tools after reload = %q", got)
 	}
 
@@ -263,7 +263,7 @@ func TestReloadActivatesToolsNewlyAddedToDefaultTools(t *testing.T) {
 	}
 	writeReloadSettings(t, settingsPath, `{"defaultTools":["+grep"]}`)
 	excluded.Session.Reload()
-	if got := active(excluded.Session); got != "bash,edit,read,write" {
+	if got := active(excluded.Session); got != "bash,create_goal,edit,read,write" {
 		t.Fatalf("excluded after reload = %q", got)
 	}
 }
@@ -289,7 +289,7 @@ func TestCreateAgentSessionToolSelection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "read" {
+	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "create_goal,read" {
 		t.Fatalf("tools = %q", names)
 	}
 
@@ -303,7 +303,7 @@ func TestCreateAgentSessionToolSelection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "read,mcp__docs__search" {
+	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "create_goal,mcp__docs__search,read" {
 		t.Fatalf("extra tools = %q", names)
 	}
 	session, err = CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
@@ -313,7 +313,7 @@ func TestCreateAgentSessionToolSelection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "read" {
+	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "create_goal,read" {
 		t.Fatalf("unselected extra tool leaked: %q", names)
 	}
 
@@ -335,7 +335,7 @@ func TestCreateAgentSessionToolSelection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "read,edit" {
+	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "create_goal,edit,read" {
 		t.Fatalf("tools = %q", names)
 	}
 
@@ -356,7 +356,7 @@ func TestCreateAgentSessionToolSelection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "read,grep" {
+	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "create_goal,grep,read" {
 		t.Fatalf("tools = %q", names)
 	}
 
@@ -377,7 +377,7 @@ func TestCreateAgentSessionToolSelection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "read,bash,edit,grep" {
+	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "bash,create_goal,edit,grep,read" {
 		t.Fatalf("tools = %q", names)
 	}
 
@@ -416,7 +416,7 @@ func TestCreateAgentSessionToolSelection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "read,grep" {
+	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "create_goal,grep,read" {
 		t.Fatalf("tools = %q, want the CLI allowlist applied", names)
 	}
 }
