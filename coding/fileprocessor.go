@@ -188,6 +188,10 @@ func resizeInlineImage(data []byte, mimeType string, options ImageResizeOptions)
 	if err != nil {
 		return nil
 	}
+	// EXIF orientation is applied before measuring and scaling (upstream
+	// applyExifOrientation); the pass-through still returns the original bytes,
+	// which keep their orientation metadata.
+	source = ApplyExifOrientation(source, ExifOrientation(data))
 	bounds := source.Bounds()
 	originalWidth, originalHeight := bounds.Dx(), bounds.Dy()
 
