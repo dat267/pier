@@ -8,6 +8,15 @@ import (
 
 // Port of the TaskScheduler reservation commit.
 
+// enableSchedulingWithoutDrain turns scheduling on without kicking the drain
+// loop, so a manual Reserve is not raced by it (the run-invocation tests use
+// the drain deliberately).
+func enableSchedulingWithoutDrain(scheduler *TaskScheduler) {
+	scheduler.mu.Lock()
+	scheduler.enabled = true
+	scheduler.mu.Unlock()
+}
+
 func TestTaskSchedulerReserve(t *testing.T) {
 	session, storage := newRootSession(t)
 	ctx := context.Background()
@@ -24,7 +33,7 @@ func TestTaskSchedulerReserve(t *testing.T) {
 	if reservations, err := scheduler.Reserve(ctx); err != nil || len(reservations) != 0 {
 		t.Fatalf("invocations = %+v, %v", reservations, err)
 	}
-	scheduler.Resume()
+	enableSchedulingWithoutDrain(scheduler)
 	reservations, err := scheduler.Reserve(ctx)
 	if err != nil || len(reservations) != 1 || reservations[0].Invocation.Mode != "run" || reservations[0].Invocation.TaskID != taskID {
 		t.Fatalf("invocations = %+v, %v", reservations, err)
