@@ -124,11 +124,18 @@ func (s *TaskScheduler) WaitForIdle(conversationID *Id, ctx chord.Context) error
 		return ClosedError()
 	}
 	key := idleKey{Conversation: conversationID}
+	// Register before the idle check: a drain that turns the scope idle can no
+	// longer settle between the check and the registration, which left the
+	// waiter parked forever under load. If the scope is already idle (or a
+	// concurrent drain just made it idle), resolve it now; otherwise ensure a
+	// reconcile runs to wake it.
+	settle := s.idleWaiters.Register(key, ctx)
 	if s.isIdle(key) {
-		return nil
+		s.idleWaiters.Resolve(key, struct{}{})
+	} else {
+		s.scheduleReconcile()
 	}
-	s.scheduleReconcile()
-	_, err := s.idleWaiters.Add(key, ctx)
+	_, err := settle()
 	return err
 }
 
