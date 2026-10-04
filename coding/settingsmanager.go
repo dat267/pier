@@ -1399,7 +1399,14 @@ func (m *SettingsManager) persistScopedSettings(
 					mergedNested[key] = entry
 				}
 				for nestedKey := range nestedKeys {
-					mergedNested[nestedKey] = valueObject[nestedKey]
+					// Upstream assigns the in-memory value, which is undefined for a
+					// removed nested field; JSON.stringify drops it, so delete it here
+					// rather than writing null.
+					if nestedValue, ok := valueObject[nestedKey]; ok {
+						mergedNested[nestedKey] = nestedValue
+					} else {
+						delete(mergedNested, nestedKey)
+					}
 				}
 				merged[field] = mergedNested
 				continue
