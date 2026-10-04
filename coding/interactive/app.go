@@ -10,6 +10,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/dat267/pier/ai"
+
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/internal/offloop"
 	"github.com/dat267/pier/tui"
@@ -384,6 +385,9 @@ func NewApp(options AppOptions) *App {
 	app.transcript.Editor = app.defaultEditor
 	app.transcript.Display = app.display
 	app.transcript.MarkdownTheme = app.markdownTheme()
+	// The builtin goal controller: durable lifecycle and round entries render
+	// as goal cards in the transcript.
+	app.transcript.EntryRenderer = GoalEntryRenderer
 	// The builtin goal controller: its notifications/render requests route
 	// through the transcript, and /goal set asks before replacing a live goal.
 	if controller := app.session.Goal(); controller != nil {
