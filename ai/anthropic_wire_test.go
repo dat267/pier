@@ -217,7 +217,10 @@ func TestConvertAnthropicMessagesThinkingReplay(t *testing.T) {
 			StopReason: StopStop, Timestamp: 1,
 		},
 	}
-	converted := ConvertAnthropicMessages(messages, false, nil, false, "", false)
+	converted, err := ConvertAnthropicMessages(messages, false, nil, false, "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 	var blocks []AnthropicContentBlock
 	if err := json.Unmarshal(converted.Messages[0].Content, &blocks); err != nil {
 		t.Fatal(err)
@@ -237,13 +240,16 @@ func TestConvertAnthropicMessagesThinkingReplay(t *testing.T) {
 	}
 
 	// allowEmptySignature preserves the block with an empty signature.
-	converted = ConvertAnthropicMessages([]Message{
+	converted, err = ConvertAnthropicMessages([]Message{
 		&AssistantMessage{
 			Content: ContentList{ThinkingContent{Thinking: "unsigned", ThinkingSignature: &emptySig}},
 			API:     APIAnthropicMessages, Provider: "anthropic", Model: "m",
 			StopReason: StopStop, Timestamp: 1,
 		},
-	}, false, nil, true, "", false)
+	}, false, nil, true, "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 	var emptySigBlocks []AnthropicContentBlock
 	if err := json.Unmarshal(converted.Messages[0].Content, &emptySigBlocks); err != nil {
 		t.Fatal(err)

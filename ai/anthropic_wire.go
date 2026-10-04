@@ -200,7 +200,7 @@ type AnthropicContentBlock struct {
 	Content   json.RawMessage `json:"content,omitempty"` // string | ContentBlock[]
 	IsError   *bool           `json:"is_error,omitempty"`
 	// tool_addition / tool_removal
-	Tool *AnthropicToolReference `json:"tool,omitempty"`
+	Tool *AnthropicToolChange `json:"tool,omitempty"`
 	// cache_control (injected on selected blocks)
 	CacheControl *AnthropicCacheControl `json:"cache_control,omitempty"`
 }
@@ -216,6 +216,14 @@ type AnthropicImageSource struct {
 type AnthropicToolReference struct {
 	Type string `json:"type"` // "tool_reference"
 	Name string `json:"name"`
+}
+
+// AnthropicToolChange is a tool_addition / tool_removal payload: a name
+// reference, or (inline-tools-2026-09-15) a later tool defined by value.
+type AnthropicToolChange struct {
+	Type       string         `json:"type"` // "tool_reference" | "tool_definition"
+	Name       string         `json:"name,omitempty"`
+	Definition *AnthropicTool `json:"definition,omitempty"`
 }
 
 // AnthropicMessage is one wire message (role + content).
@@ -295,7 +303,7 @@ const (
 	ServerSideFallbackBeta          = "server-side-fallback-2026-07-01"
 	MidConversationOutputConfigBeta = "mid-conversation-output-config-2026-07-01"
 	ThinkingBindingControlsBeta     = "thinking-binding-controls-2026-08-01"
-	MidConversationToolChangesBeta  = "mid-conversation-tool-changes-2026-07-01"
+	InlineToolsBeta                 = "inline-tools-2026-09-15"
 )
 
 // deferredToolPlaceholder is declared whenever native tool changes are in
@@ -407,8 +415,10 @@ func ConvertAnthropicMessages(
 	cacheControl *AnthropicCacheControl,
 	allowEmptySignature bool,
 	managedProvider string,
-	nativeToolChanges bool,
-) ConvertedAnthropicMessages {
+	// convertToolDefinitions converts the tools a later system message adds;
+	// nil when tool changes are not native.
+	convertToolDefinitions func([]Tool) ([]AnthropicTool, error),
+) (ConvertedAnthropicMessages, error) {
 	var params []AnthropicMessage
 	assistantLevels := map[int]AnthropicEffort{}
 	var pendingSystemMessages []AnthropicMessage
@@ -426,25 +436,36 @@ func ConvertAnthropicMessages(
 			if len(text) > 0 {
 				blocks = append(blocks, AnthropicContentBlock{Type: "text", Text: SanitizeSurrogates(text)})
 			}
-			if nativeToolChanges {
+			if convertToolDefinitions != nil {
+				added := m.ToolsAdded
+				redefined := map[string]bool{}
+				for _, tool := range added {
+					redefined[tool.Name] = true
+				}
 				for _, tool := range m.ToolsRemoved {
+					// A new definition under the same name replaces the old one, so
+					// no removal is needed.
+					if redefined[tool.Name] {
+						continue
+					}
 					name := tool.Name
 					if isOAuthToken {
 						name = toClaudeCodeName(name)
 					}
 					blocks = append(blocks, AnthropicContentBlock{
 						Type: "tool_removal",
-						Tool: &AnthropicToolReference{Type: "tool_reference", Name: name},
+						Tool: &AnthropicToolChange{Type: "tool_reference", Name: name},
 					})
 				}
-				for _, tool := range m.ToolsAdded {
-					name := tool.Name
-					if isOAuthToken {
-						name = toClaudeCodeName(name)
-					}
+				definitions, err := convertToolDefinitions(added)
+				if err != nil {
+					return ConvertedAnthropicMessages{}, err
+				}
+				for _, definition := range definitions {
+					decision := definition
 					blocks = append(blocks, AnthropicContentBlock{
 						Type: "tool_addition",
-						Tool: &AnthropicToolReference{Type: "tool_reference", Name: name},
+						Tool: &AnthropicToolChange{Type: "tool_definition", Definition: &decision},
 					})
 				}
 			}
@@ -594,7 +615,7 @@ func ConvertAnthropicMessages(
 		}
 	}
 
-	return ConvertedAnthropicMessages{Messages: params, AssistantLevels: assistantLevels}
+	return ConvertedAnthropicMessages{Messages: params, AssistantLevels: assistantLevels}, nil
 }
 
 func deref(s *string) string {
@@ -803,7 +824,7 @@ func GetBetaFeatures(model *Model, context TranscriptContext, isOAuthToken, nati
 		add(ThinkingBindingControlsBeta)
 	}
 	if nativeToolChanges {
-		add(MidConversationToolChangesBeta)
+		add(InlineToolsBeta)
 	}
 	return features
 }
@@ -830,23 +851,32 @@ func BuildAnthropicParams(model *Model, context TranscriptContext, isOAuthToken 
 	if initialSystemMessage != nil {
 		conversationMessages = transformedMessages[1:]
 	}
-	// Native tool changes reference tools by name, so a redefined name
-	// cannot be expressed, and Anthropic rejects a tool list where every
-	// tool is deferred, so there must be an initial active tool to anchor
-	// the deferred ones.
+	// Native tool changes keep the request-level tool list fixed and define every
+	// later tool by value in a tool_addition block, which also expresses same-name
+	// redefinitions. Anthropic rejects a tool list where every tool is deferred,
+	// so there must be an initial active tool to anchor the placeholder.
 	initialTools := []Tool{}
 	if initialSystemMessage != nil {
 		initialTools = initialSystemMessage.ToolsAdded
 	}
 	nativeToolChanges := compat.SupportsMidConvoSystemMessages && compat.SupportsMidConvoToolChanges &&
-		len(initialTools) > 0 && !HasToolRedefinitions(context.Messages)
+		len(initialTools) > 0
 
 	managedProvider := ""
 	if model.Compat != nil && model.Compat.AnthropicMessages != nil &&
 		model.Compat.AnthropicMessages.SupportsMidConvoEffort != nil && *model.Compat.AnthropicMessages.SupportsMidConvoEffort {
 		managedProvider = model.Provider
 	}
-	converted := ConvertAnthropicMessages(conversationMessages, isOAuthToken, cacheControl, compat.AllowEmptySignature, managedProvider, nativeToolChanges)
+	var convertToolDefinitions func([]Tool) ([]AnthropicTool, error)
+	if nativeToolChanges {
+		convertToolDefinitions = func(tools []Tool) ([]AnthropicTool, error) {
+			return ConvertAnthropicTools(tools, isOAuthToken, compat.SupportsEagerToolInputStreaming, compat.SupportsStrictTools, nil)
+		}
+	}
+	converted, err := ConvertAnthropicMessages(conversationMessages, isOAuthToken, cacheControl, compat.AllowEmptySignature, managedProvider, convertToolDefinitions)
+	if err != nil {
+		return nil, err
+	}
 
 	activeEffort := options.Effort
 	if activeEffort == "" {
@@ -905,33 +935,16 @@ func BuildAnthropicParams(model *Model, context TranscriptContext, isOAuthToken 
 		toolCacheControl = nil
 	}
 	if nativeToolChanges {
-		// Initial tools stay active with the cache breakpoint on the last
-		// one; every later declaration is deferred. The request-level list
-		// only grows, keeping the cached prefix intact across tool changes.
-		initialNames := map[string]bool{}
-		for _, tool := range initialTools {
-			initialNames[tool.Name] = true
-		}
-		var laterTools []Tool
-		for _, tool := range GetDeclaredTools(context.Messages) {
-			if !initialNames[tool.Name] {
-				laterTools = append(laterTools, tool)
-			}
-		}
+		// Initial tools stay active with the cache breakpoint on the last one,
+		// followed by the placeholder. The list never changes afterwards: later
+		// tools are defined by value in tool_addition blocks and withdrawn by
+		// tool_removal, so the cached prefix survives every tool change.
 		initial, err := ConvertAnthropicTools(initialTools, isOAuthToken, compat.SupportsEagerToolInputStreaming, compat.SupportsStrictTools, toolCacheControl)
 		if err != nil {
 			return nil, err
 		}
 		params.Tools = append(params.Tools, initial...)
 		params.Tools = append(params.Tools, deferredToolPlaceholder)
-		later, err := ConvertAnthropicTools(laterTools, isOAuthToken, compat.SupportsEagerToolInputStreaming, compat.SupportsStrictTools, nil)
-		if err != nil {
-			return nil, err
-		}
-		for _, tool := range later {
-			tool.DeferLoading = boolPtr(true)
-			params.Tools = append(params.Tools, tool)
-		}
 	} else {
 		tools := GetCurrentTools(context.Messages)
 		if len(tools) > 0 {

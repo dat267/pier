@@ -44,6 +44,13 @@ ported. Ported so far:
   a build-tagged `isAddressInUse`, `windows.WSAEADDRINUSE` on Windows) instead
   of falling back to the paste prompt, whose browser callback would reach the
   other listener and be rejected as a state mismatch.
+- `ai` (Anthropic mid-conversation tools): inline tool definitions
+  (`b271b0a52`). Native tool changes now use the `inline-tools-2026-09-15` beta
+  (`InlineToolsBeta`): the request-level list stays fixed at the initial tools
+  plus the deferred placeholder, and later tools are defined by value in
+  `tool_addition` blocks (`tool_definition`), so a same-name redefinition no
+  longer falls back to resending the full tool list (the matching
+  `tool_removal` is skipped). `HasToolRedefinitions` is deprecated.
 
 Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
 
