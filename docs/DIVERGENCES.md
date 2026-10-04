@@ -6,7 +6,7 @@ behaviour with no direct Go equivalent, or because a reference defect is fixed
 here; others are choices of this project's own. D-row numbers live in code
 comments at the point of divergence; this file is the log, and it is
 representative: the rows below carry a written-up rationale, while the rest live
-only as the code comment that introduced them. The range is **D1–D188**.
+only as the code comment that introduced them. The range is **D1–D189**.
 - D188 — the durable execution environment (`env/index.ts`, `env/node.ts`)
   returns failures as Go errors (`*FileError`, `*ExecutionError`, the upstream
   codes preserved) where the reference returns a `Result` value; the `Result`
@@ -889,3 +889,17 @@ conversion and connection halves and wires them directly:
   the live registry).
 
 (pi/packages/coding-agent/src/extensions/mcp, core/mcp-servers.ts)
+
+## D189. Virtual models: the provider wrapper is deferred
+
+`core/virtual-models.ts` registers virtual catalog entries by wrapping a
+provider (`withVirtualModels`): it overrides `getModels`/`getAllModels`,
+`filterModels`/`filterAllModels` and the stream functions on the provider
+object. The Go `ai.Provider` keeps its model accessor and stream dispatch
+unexported, so a `coding` function cannot wrap them the way upstream spreads
+the provider. The port keeps the pure half (`IsVirtualModel`,
+`FindLatestResponse`, `GetBranchSelection`, `GetVirtualModelState`,
+`CreateVirtualModel` and the state/route types); the provider wrapper would
+need an `ai`-level seam (`WithModels`) and is deferred.
+
+(pi/packages/coding-agent/src/core/virtual-models.ts)
