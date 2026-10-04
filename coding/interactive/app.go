@@ -304,6 +304,9 @@ func NewApp(options AppOptions) *App {
 	app.headerContainer = &tui.Container{}
 	app.loadedResourcesContainer = &tui.Container{}
 	app.chat = &tui.Container{}
+	// A scroll-only frame must not walk every mounted message and tool; the
+	// transcript components bump their revision on every mutation (MarkDirty).
+	app.chat.SkipUnchangedChildren = true
 	app.documentContainer = &tui.Container{}
 	app.documentContainer.AddChild(app.headerContainer)
 	app.documentContainer.AddChild(app.loadedResourcesContainer)

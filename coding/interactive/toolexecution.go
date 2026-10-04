@@ -405,6 +405,10 @@ func (c *ToolExecutionComponent) updateDisplay() {
 	if c.hasRendererDefinition() && !hasContent {
 		c.hideComponent = true
 	}
+	// The content lives in contentBox/the self container; bump the outer
+	// revision so a parent that skips unchanged versioned children re-renders
+	// this tool.
+	c.Container.MarkDirty()
 }
 
 func safeRenderCall(renderer func(any, *Theme, *ToolRenderContext) tui.Component, args any, theme *Theme, context *ToolRenderContext) (component tui.Component) {

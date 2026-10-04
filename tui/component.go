@@ -209,10 +209,23 @@ type Container struct {
 	// cacheChildVersions holds each child's render revision at the cached pass,
 	// for children whose Render reuses its backing array (see renderVersioner).
 	cacheChildVersions []uint64
-	// version increments whenever cacheLines is rebuilt. Render may return the
-	// same backing array with new contents, so a parent cannot rely on slice
-	// identity alone; this is the explicit change signal it compares instead.
+	// cacheChildComponents holds the child identity per index: a removed child
+	// replaced by a fresh one can share a version (both start at 0), so the
+	// skip path must match the component, not only the revision.
+	cacheChildComponents []Component
+	// version increments whenever cacheLines is rebuilt (and on every explicit
+	// cache drop). Render may return the same backing array with new contents, so
+	// a parent cannot rely on slice identity alone; this is the explicit change
+	// signal it compares instead.
 	version uint64
+
+	// SkipUnchangedChildren makes Render skip a child's Render call when the
+	// child reports an unchanged render revision. It is opt-in: it is only
+	// correct for a container whose children bump their revision on every
+	// mutation (see renderVersioner and Container.MarkDirty). Enabled on the
+	// transcript's chat so a scroll-only frame does not walk every mounted
+	// message and tool.
+	SkipUnchangedChildren bool
 
 	// frame scratch, reused across renders so a frame does not allocate for
 	// every child and every line.
@@ -292,7 +305,17 @@ func (c *Container) dropRenderCache() {
 	c.cacheLines = nil
 	c.cacheChildren = nil
 	c.cacheWidth = 0
+	// Bump the revision on an explicit drop so a parent that skips unchanged
+	// versioned children (SkipUnchangedChildren) re-renders this container after
+	// a structural change or an explicit Invalidate, before Render has run.
+	c.version++
 }
+
+// MarkDirty bumps the container's revision and drops its own cache without
+// invalidating the children. A component whose own output changed by mutating
+// a child it manages (a streaming message's markdown, a tool result) calls it
+// so an ancestor comparing revisions re-renders it.
+func (c *Container) MarkDirty() { c.dropRenderCache() }
 
 // Invalidate invalidates every child.
 func (c *Container) Invalidate() {
@@ -359,7 +382,10 @@ func (c *Container) Render(width int) []string {
 	}
 	c.childRenders = c.childRenders[:len(c.childrenSnapshot)]
 	for i, child := range c.childrenSnapshot {
-		childLines := child.Render(width)
+		childLines, ok := c.reusableChildLines(i, child, width)
+		if !ok {
+			childLines = child.Render(width)
+		}
 		c.childRenders[i] = childLines
 		c.mouseLayout = append(c.mouseLayout, mouseChild{component: child, height: len(childLines)})
 	}
@@ -404,6 +430,7 @@ func (c *Container) Render(width int) []string {
 	}
 
 	c.cacheChildren = append(c.cacheChildren[:0], c.childRenders...)
+	c.cacheChildComponents = append(c.cacheChildComponents[:0], c.childrenSnapshot...)
 	c.cacheChildVersions = c.cacheChildVersions[:0]
 	for _, child := range c.childrenSnapshot {
 		version := uint64(0)
@@ -432,6 +459,25 @@ type renderVersioner interface {
 // RenderVersion reports the revision of the current rendered lines.
 func (c *Container) RenderVersion() (uint64, bool) { return c.version, true }
 
+// reusableChildLines returns the child's cached lines when the container is
+// skipping unchanged children and the child's render revision is unchanged.
+func (c *Container) reusableChildLines(index int, child Component, width int) ([]string, bool) {
+	if !c.SkipUnchangedChildren || c.cacheWidth != width ||
+		index >= len(c.cacheChildren) || index >= len(c.cacheChildVersions) ||
+		index >= len(c.cacheChildComponents) || c.cacheChildComponents[index] != child {
+		return nil, false
+	}
+	versioned, ok := child.(renderVersioner)
+	if !ok {
+		return nil, false
+	}
+	version, has := versioned.RenderVersion()
+	if !has || version != c.cacheChildVersions[index] {
+		return nil, false
+	}
+	return c.cacheChildren[index], true
+}
+
 // firstChangedChild reports the first child whose rendered lines differ from
 // the cached pass, or -1 when cacheLines still describes every child.
 func (c *Container) firstChangedChild(width int) int {
@@ -440,6 +486,11 @@ func (c *Container) firstChangedChild(width int) int {
 	}
 	for index, cached := range c.cacheChildren {
 		lines := c.childRenders[index]
+		// A replaced child can share a revision with the one it replaced (both
+		// start at 0), so identity decides before the revision does.
+		if index >= len(c.cacheChildComponents) || c.cacheChildComponents[index] != c.childrenSnapshot[index] {
+			return index
+		}
 		if versioned, ok := c.childrenSnapshot[index].(renderVersioner); ok {
 			if version, has := versioned.RenderVersion(); has {
 				if c.cacheChildVersions[index] != version {

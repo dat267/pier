@@ -362,3 +362,14 @@ func TestRenderInitialMessagesWarnsAboutUntrustedProject(t *testing.T) {
 		t.Errorf("the trust warning is missing from the transcript:\n%s", rendered)
 	}
 }
+
+// TestAppChatSkipsUnchangedChildren pins the wiring for the scroll fast path:
+// the transcript's chat must be the container that skips re-rendering
+// unchanged versioned children.
+func TestAppChatSkipsUnchangedChildren(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	if !app.chat.SkipUnchangedChildren {
+		t.Fatal("app.chat must skip unchanged versioned children")
+	}
+}

@@ -317,6 +317,9 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 		c.contentContainer.AddChild(tui.NewSpacer(1))
 		c.contentContainer.AddChild(tui.NewText(theme.Fg("error", "Error: "+errorMessage), c.outputPad, 0, nil))
 	}
+	// The content lives in contentContainer; bump the outer revision so a parent
+	// that skips unchanged versioned children re-renders this message.
+	c.Container.MarkDirty()
 }
 
 func trimmedNonEmpty(value string) bool { return strings.TrimSpace(value) != "" }

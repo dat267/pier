@@ -405,6 +405,14 @@ upstream's `setInterval(context.invalidate)` cadence; the same scroll measures
 10–26 ms, once per second. `TestAnimationWalkTicksAnAnimatorOncePerDelay` pins
 it.
 
+The per-frame walk is bounded the same way. The transcript's chat container sets
+`SkipUnchangedChildren`, so a child that reports an unchanged render revision
+(every message and tool component bumps it on mutation, `Container.MarkDirty`)
+is not re-rendered on a scroll-only frame. A 500-tool chat measures 93 µs →
+11 µs per warm frame (8.2×, `BenchmarkChatWarmRender`). The skip also made
+`firstChangedChild` compare child identity, closing a latent stale-line bug when
+a child is replaced in place at the same revision.
+
 ## Session history (high level)
 
 The repository was built as a long port: the `ai`/`agent`/`coding` cores first,

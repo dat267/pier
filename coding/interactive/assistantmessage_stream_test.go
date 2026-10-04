@@ -122,3 +122,35 @@ func TestAssistantMessageThinkingReuse(t *testing.T) {
 		t.Fatalf("text after update = %q", hidden)
 	}
 }
+
+// TestAssistantMessageUpdateReachesSkippingParent pins the chat's
+// SkipUnchangedChildren contract for streaming: UpdateContent must bump the
+// message revision, or the parent serves the previous frame's lines.
+func TestAssistantMessageUpdateReachesSkippingParent(t *testing.T) {
+	newRendererTestTheme(t)
+	chat := &tui.Container{SkipUnchangedChildren: true}
+	component := NewAssistantMessageComponent(streamingAssistant("first paragraph", ai.StopPending), false, nil, "", 0, nil)
+	chat.AddChild(component)
+	if rendered := strings.Join(chat.Render(80), "\n"); !strings.Contains(rendered, "first paragraph") {
+		t.Fatalf("first render = %q", rendered)
+	}
+	component.UpdateContent(streamingAssistant("second paragraph", ai.StopPending), true)
+	if rendered := strings.Join(chat.Render(80), "\n"); !strings.Contains(rendered, "second paragraph") {
+		t.Fatalf("stale assistant lines after UpdateContent: %q", rendered)
+	}
+}
+
+// TestUserMessageUpdateReachesSkippingParent is the same for the user message.
+func TestUserMessageUpdateReachesSkippingParent(t *testing.T) {
+	newRendererTestTheme(t)
+	chat := &tui.Container{SkipUnchangedChildren: true}
+	component := NewUserMessageComponent("first prompt", nil, 0, nil)
+	chat.AddChild(component)
+	if rendered := strings.Join(chat.Render(80), "\n"); !strings.Contains(rendered, "first prompt") {
+		t.Fatalf("first render = %q", rendered)
+	}
+	component.SetText("second prompt")
+	if rendered := strings.Join(chat.Render(80), "\n"); !strings.Contains(rendered, "second prompt") {
+		t.Fatalf("stale user lines after SetText: %q", rendered)
+	}
+}
