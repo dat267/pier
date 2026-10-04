@@ -286,4 +286,6 @@ type Model struct {
 	// Unset when the provider's cache behavior is unknown; a missing tier means
 	// the lifetime is unknown and pi does not warm such caches.
 	PromptCache ModelPromptCache `json:"promptCache,omitempty"`
+	// Type is the model type; absent means chat (upstream Model.type).
+	Type string `json:"type,omitempty"`
 }
