@@ -388,6 +388,7 @@ Update the pin whenever upstream source is re-read for a port.
 | Go package | Upstream | Status |
 |---|---|---|
 | `ai` | `packages/ai` core (`types.ts`, `utils/event-stream.ts`, `utils/text.ts`, `utils/transcript.ts`, `utils/diagnostics.ts`) | ported |
+| `ai` (assistant message frames) | `utils/assistant-message-frame.ts` — the compact replayable stream codec (`AssistantMessageFrame`, `AssistantMessageFrameEncoder`, `reduceAssistantMessageFrames`) | not ported: an SDK surface with no in-repo consumer (only re-exported by `index.ts`); the port's providers, agent and durable harness track streaming state directly, so the codec would be inert. The `content` union (a block object on `*_start`, a string on `*_end`) is a JS-only shape |
 | `ai` | `packages/ai` models/compat (`models.ts` surface, compat interfaces) | ported (types) |
 | `ai/providers` (faux) | `packages/ai/src/providers/faux.ts` | ported |
 | `ai` (auth) | `packages/ai/src/auth/*` (types, resolve, credential-store, helpers) | ported |
