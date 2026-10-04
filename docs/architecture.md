@@ -430,11 +430,15 @@ The animation walk also caches its animator list: the walk visits every mounted
 component and a paint invalidates the scan (D164), so it used to traverse the
 whole tree on every paint. `Renderer.NextAnimation` reuses the list until
 `AnimationTreeRevision` changes (bumped by `Container.AddChild`/`Clear`, not by
-a tick) or a 1 s box expires. The width cache holds 8192 styled lines instead of
-512, because a large boxed transcript evicted its own lines and re-stripped them
-on every `applyBg` (`VisibleWidth` → `StripTerminalSequences`). Together the
-scroll-window CPU samples fell from ~1.27 s to ~0.99 s over 20 s on the 97 MB
-session (`TestRendererCachesTheAnimatorWalk` pins the walk).
+a tick) or a 1 s box expires. The width cache holds 32768 styled lines
+instead of 512, because a large boxed transcript evicted its own lines and
+re-stripped them on every `applyBg` (`VisibleWidth` → `StripTerminalSequences`).
+A child Container reports where its last Render started rewriting
+(`Container.ChangedFrom`), so a Box re-applies the background only from that
+line after an in-place suffix rebuild. Together the scroll-window CPU samples
+fell from ~1.27 s to ~0.88 s over 20 s on the 97 MB session
+(`TestRendererCachesTheAnimatorWalk` and
+`TestBoxReusesPrefixForAnInPlaceContainerChange` pin the changes).
 
 ## Session history (high level)
 

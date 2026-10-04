@@ -100,3 +100,35 @@ func TestBoxReappliesBackgroundOnlyToTheChangedSuffix(t *testing.T) {
 		t.Fatalf("changed tail missing")
 	}
 }
+
+// TestBoxReusesPrefixForAnInPlaceContainerChange is the ticked-tool case: a
+// child Container rewrites its suffix in place (the same backing array), which
+// the line comparison cannot see; the changed-from report lets the box reuse the
+// backgrounded prefix.
+func TestBoxReusesPrefixForAnInPlaceContainerChange(t *testing.T) {
+	calls := 0
+	container := &Container{}
+	var sb strings.Builder
+	for i := 0; i < 50; i++ {
+		fmt.Fprintf(&sb, "line %d\n", i)
+	}
+	container.AddChild(NewText(strings.TrimSuffix(sb.String(), "\n"), 0, 0, nil))
+	tail := NewText("tail", 0, 0, nil)
+	container.AddChild(tail)
+	box := NewBox(0, 1, func(value string) string {
+		calls++
+		return "<bg>" + value + "</bg>"
+	})
+	box.AddChild(container)
+	box.Render(40)
+
+	before := calls
+	tail.SetText("tail changed")
+	lines := box.Render(40)
+	if reapplied := calls - before; reapplied > 4 {
+		t.Fatalf("background reapplied to %d lines, want only the changed suffix", reapplied)
+	}
+	if !strings.Contains(strings.Join(lines, "\n"), "tail changed") {
+		t.Fatalf("stale output after an in-place change")
+	}
+}

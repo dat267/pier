@@ -503,7 +503,21 @@ var spacingMarkRanges = [][2]rune{
 }
 
 // widthCache caches widths for non-ASCII strings.
-const widthCacheSize = 8192
+// widthCacheSize is the production cap.
+const widthCacheSize = 32768
+
+// widthCacheCap is the effective cap. It is a variable so the eviction test can
+// exercise a small cache; production never changes it.
+var widthCacheCap = widthCacheSize
+
+// resetWidthCacheForTest empties the cache and its counter (test seam).
+func resetWidthCacheForTest() {
+	widthCache.Range(func(key, _ any) bool {
+		widthCache.Delete(key)
+		return true
+	})
+	widthCacheEntries.Store(0)
+}
 
 // widthCacheEvictBatch is how many entries a full cache drops at once. Evicting
 // (or even counting entries) one at a time meant a full sync.Map range per miss:
@@ -534,7 +548,7 @@ func widthCacheStore(text string, width int) {
 	if _, loaded := widthCache.LoadOrStore(text, width); loaded {
 		return
 	}
-	if widthCacheEntries.Add(1) <= widthCacheSize {
+	if widthCacheEntries.Add(1) <= int64(widthCacheCap) {
 		return
 	}
 	evicted := 0

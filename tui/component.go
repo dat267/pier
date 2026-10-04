@@ -231,6 +231,10 @@ type Container struct {
 	// a parent cannot rely on slice identity alone; this is the explicit change
 	// signal it compares instead.
 	version uint64
+	// lastChangedFrom is the flattened line index where the last Render started
+	// rewriting cacheLines, or -1 when nothing changed. A Box uses it to reuse
+	// the backgrounded prefix after an in-place suffix rebuild.
+	lastChangedFrom int
 
 	// SkipUnchangedChildren makes Render skip a child's Render call when the
 	// child reports an unchanged render revision. It is opt-in: it is only
@@ -416,9 +420,15 @@ func (c *Container) Render(width int) []string {
 
 	firstChanged := c.firstChangedChild(width)
 	if firstChanged < 0 {
+		c.lastChangedFrom = -1
 		return c.cacheLines
 	}
 	c.version++
+	if firstChanged < len(c.cacheOffsets) {
+		c.lastChangedFrom = c.cacheOffsets[firstChanged]
+	} else {
+		c.lastChangedFrom = 0
+	}
 
 	total := 0
 	for _, childLines := range c.childRenders {
@@ -479,8 +489,22 @@ type renderVersioner interface {
 	RenderVersion() (uint64, bool)
 }
 
+// changedFromReporter reports the first line index a component rewrote in its
+// last Render (the flattened child-line offset), and whether it can report it.
+// A Box uses it to reuse the backgrounded prefix when a child Container rewrote
+// its suffix in place (the same backing array, which a line comparison cannot
+// see). -1 means nothing changed.
+type changedFromReporter interface {
+	ChangedFrom() (int, bool)
+}
+
 // RenderVersion reports the revision of the current rendered lines.
 func (c *Container) RenderVersion() (uint64, bool) { return c.version, true }
+
+// ChangedFrom reports the first line index the last Render rewrote (the
+// flattened child-line offset), or -1 when nothing changed. It is always known
+// for a Container.
+func (c *Container) ChangedFrom() (int, bool) { return c.lastChangedFrom, true }
 
 // reusableChildLines returns the child's cached lines when the container is
 // skipping unchanged children and the child's render revision is unchanged.

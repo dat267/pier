@@ -138,6 +138,18 @@ func (b *Box) matchCache(width int, bgSample string, hasBgSample bool) bool {
 func (b *Box) firstChangedChildLine() int {
 	global := 0
 	for i, cached := range b.cache.childLines {
+		child := b.Children[i]
+		// A Container reports where its last Render started rewriting, which an
+		// in-place suffix rebuild would otherwise hide.
+		if reporter, ok := child.(changedFromReporter); ok {
+			if from, known := reporter.ChangedFrom(); known {
+				if from >= 0 {
+					return global + from
+				}
+				global += len(b.childLines[i])
+				continue
+			}
+		}
 		lines := b.childLines[i]
 		common := min(len(cached), len(lines))
 		for j := 0; j < common; j++ {

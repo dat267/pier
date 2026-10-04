@@ -150,11 +150,20 @@ func TestGraphemeWidthSpecials(t *testing.T) {
 // the sync.Map iterator alone. A full cache must therefore drop a batch of
 // entries, not one per miss, and must stay bounded.
 func TestWidthCacheEvictsInBatches(t *testing.T) {
+	// Exercise a small cache so filling it stays fast under -race; the
+	// production cap is much larger.
+	previousCap := widthCacheCap
+	widthCacheCap = 128
+	resetWidthCacheForTest()
+	t.Cleanup(func() {
+		widthCacheCap = previousCap
+		resetWidthCacheForTest()
+	})
 	// The cache is process-global, so the probe keys must be unique per run
 	// (the suite runs with -count=2).
 	widthCacheProbeNonce++
 	fillUntilFull := func() {
-		for index := 0; index < widthCacheSize*4; index++ {
+		for index := 0; index < widthCacheCap*4; index++ {
 			VisibleWidth(fmt.Sprintf("batch-probe-%d-%d日", widthCacheProbeNonce, index))
 			if widthCacheEntryCount() >= widthCacheSize {
 				return
@@ -163,12 +172,12 @@ func TestWidthCacheEvictsInBatches(t *testing.T) {
 	}
 	fillUntilFull()
 	before := widthCacheEntryCount()
-	if before != widthCacheSize {
-		t.Fatalf("cache filled to %d entries, want the cap %d", before, widthCacheSize)
+	if before != widthCacheCap {
+		t.Fatalf("cache filled to %d entries, want the cap %d", before, widthCacheCap)
 	}
 	VisibleWidth(fmt.Sprintf("batch-probe-%d-overflow-日", widthCacheProbeNonce))
 	after := widthCacheEntryCount()
-	if after > widthCacheSize {
+	if after > widthCacheCap {
 		t.Fatalf("cache size %d exceeds the cap after a miss", after)
 	}
 	if dropped := before - after; dropped < 2 {

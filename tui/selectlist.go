@@ -696,6 +696,14 @@ func (m *MouseRegion) RenderVersion() (uint64, bool) {
 	return 0, false
 }
 
+// ChangedFrom forwards the wrapped child's changed-from line when it reports.
+func (m *MouseRegion) ChangedFrom() (int, bool) {
+	if reporter, ok := m.child.(changedFromReporter); ok {
+		return reporter.ChangedFrom()
+	}
+	return -1, false
+}
+
 // HandleMouse forwards to the child first, then the region handler.
 func (m *MouseRegion) HandleMouse(event TuiMouseEvent) *TuiMouseDispatchResult {
 	if result := DispatchMouseEvent(m.child, event); result != nil {
