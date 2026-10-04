@@ -391,18 +391,23 @@ func NewApp(options AppOptions) *App {
 	app.transcript.EntryRenderer = GoalEntryRenderer
 	// The builtin goal controller: its notifications/render requests route
 	// through the transcript, and /goal set asks before replacing a live goal.
+	// The controller's effects fire from the agent worker (AgentSettled) and
+	// from its retry timer, never on the UI loop, so every callback that
+	// touches the UI is posted (D143: producers only enqueue).
 	if controller := app.session.Goal(); controller != nil {
 		if sink := controller.SessionSink(); sink != nil {
 			sink.Notify = func(message string, level string) {
-				if level == "warning" {
-					app.showWarning(message)
-					return
-				}
-				app.transcript.ShowStatus(message)
+				app.ui.Post(func() {
+					if level == "warning" {
+						app.showWarning(message)
+						return
+					}
+					app.transcript.ShowStatus(message)
+				})
 			}
-			sink.Render = func() { app.renderGoalWidget() }
+			sink.Render = func() { app.ui.Post(app.renderGoalWidget) }
 			sink.Confirm = func(title string, message string, onAnswer func(confirmed bool)) {
-				app.askConfirm(title, message, onAnswer)
+				app.ui.Post(func() { app.askConfirm(title, message, onAnswer) })
 			}
 		}
 		controller.SessionStartFromSession("startup", app.sessionMgr)
