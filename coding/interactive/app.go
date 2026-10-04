@@ -12,6 +12,7 @@ import (
 	"github.com/dat267/pier/ai"
 
 	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/goal"
 	"github.com/dat267/pier/internal/offloop"
 	"github.com/dat267/pier/tui"
 )
@@ -399,12 +400,15 @@ func NewApp(options AppOptions) *App {
 				}
 				app.transcript.ShowStatus(message)
 			}
-			sink.Render = func() { app.ui.RequestRender(false) }
+			sink.Render = func() { app.renderGoalWidget() }
 			sink.Confirm = func(title string, message string, onAnswer func(confirmed bool)) {
 				app.askConfirm(title, message, onAnswer)
 			}
 		}
 		controller.SessionStartFromSession("startup", app.sessionMgr)
+		// The banner reflects a goal resumed from the session too; startup only
+		// repaints when a renderStatus effect fires.
+		app.renderGoalWidget()
 	}
 	// Upstream's renderInitialMessages draws the untrusted-project warning, so the
 	// warning appears at startup and again whenever the transcript is rebuilt.
@@ -1050,3 +1054,30 @@ type editorHostAdapter struct{ ui tui.TUI }
 
 func (h editorHostAdapter) Rows() int                { return h.ui.GetTerminal().Rows() }
 func (h editorHostAdapter) RequestRender(force bool) { h.ui.RequestRender(force) }
+
+// goalBannerLines builds the goal status-widget lines (upstream updateStatusBar):
+// the widget clears when there is no goal or the banner is off.
+func goalBannerLines(snapshot goal.MachineSnapshot, theme *Theme) ([]string, bool) {
+	if snapshot.Goal == nil || !snapshot.BannerEnabled {
+		return nil, false
+	}
+	lines := []string{
+		theme.Fg("customMessageLabel", theme.Bold("goal")) + " " + theme.Fg("text", goal.TruncateObjective(snapshot.Goal.Objective, 72)),
+	}
+	armed := ""
+	if snapshot.Armed {
+		armed = theme.Fg("accent", "▶ ")
+	}
+	lines = append(lines, armed+theme.Fg("dim", goal.StatusLine(snapshot.Goal)))
+	return lines, true
+}
+
+// renderGoalWidget renders the goal banner as a widget above the editor.
+func (app *App) renderGoalWidget() {
+	controller := app.session.Goal()
+	if controller == nil || app.uiState == nil {
+		return
+	}
+	lines, hasContent := goalBannerLines(controller.Snapshot(), ActiveTheme())
+	app.uiState.SetExtensionWidget(goal.GoalCustomType, lines, hasContent, ExtensionWidgetOptions{Placement: "aboveEditor"})
+}

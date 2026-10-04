@@ -58,6 +58,12 @@ func NewGoalController(machine *goal.GoalMachine, sink GoalSink) *GoalController
 	return &GoalController{machine: machine, sink: sink}
 }
 
+// Snapshot exposes the machine state so the interactive banner can render the
+// goal widget (upstream updateStatusBar reads machine.snapshot directly).
+func (c *GoalController) Snapshot() goal.MachineSnapshot {
+	return c.machine.Snapshot()
+}
+
 // Machine exposes the underlying state machine.
 func (c *GoalController) Machine() *goal.GoalMachine { return c.machine }
 
