@@ -243,8 +243,8 @@ func TestShellElapsedDuration(t *testing.T) {
 	for _, child := range container.Children {
 		if animator, ok := child.(tui.Animator); ok {
 			want, delay := animator.AnimationFrame(time.Now())
-			if !want || delay <= 0 || delay > time.Second {
-				t.Fatalf("running animator = want %v delay %v", want, delay)
+			if !want || delay != 100*time.Millisecond {
+				t.Fatalf("running animator = want %v delay %v, want a 100ms tick", want, delay)
 			}
 			animated = true
 		}
@@ -267,6 +267,24 @@ func TestShellElapsedDuration(t *testing.T) {
 			if want, _ := animator.AnimationFrame(time.Now()); want {
 				t.Fatal("a finished tool must not keep animating")
 			}
+		}
+	}
+}
+
+// TestFormatDurationTenths pins the 0.1s display resolution of the shell
+// elapsed label (D194; it ticks every 0.1s).
+func TestFormatDurationTenths(t *testing.T) {
+	for _, tc := range []struct {
+		ms   float64
+		want string
+	}{
+		{ms: 3450, want: "3.5s"},
+		{ms: 10, want: "0.0s"},
+		{ms: 60_000, want: "1m 0s"},
+		{ms: 3_600_000, want: "1h 0m 0s"},
+	} {
+		if got := formatDuration(tc.ms); got != tc.want {
+			t.Errorf("formatDuration(%v) = %q, want %q", tc.ms, got, tc.want)
 		}
 	}
 }

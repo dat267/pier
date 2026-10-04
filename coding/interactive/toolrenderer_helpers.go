@@ -213,6 +213,8 @@ func truncationSuffix(details any, theme *Theme) string {
 func formatDuration(ms float64) string {
 	seconds := ms / 1000
 	if seconds < 60 {
+		// Tenths, like upstream's toFixed(1); the running label advances one
+		// tenth per shellElapsedTick (D194).
 		return fmt.Sprintf("%.1fs", seconds)
 	}
 	totalSeconds := int(seconds)

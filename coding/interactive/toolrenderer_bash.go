@@ -439,10 +439,14 @@ type shellCallState struct {
 	preview bashResultState
 }
 
+// shellElapsedTick is how often the running elapsed label is repainted. D194: a
+// 100ms tick makes the label step by 0.1s, where upstream arms a 1000ms redraw.
+const shellElapsedTick = 100 * time.Millisecond
+
 // shellElapsedComponent renders the running/final duration. The value is
 // computed at render time (so a frame shows the current elapsed time), and
-// AnimationFrame keeps the owner re-rendering once a second while the call
-// runs. Upstream arms the same 1s redraw with setInterval(context.invalidate).
+// AnimationFrame keeps the owner re-rendering every shellElapsedTick while the
+// call runs. Upstream arms a 1s redraw with setInterval(context.invalidate).
 type shellElapsedComponent struct {
 	state *shellCallState
 	theme *Theme
@@ -470,7 +474,7 @@ func (c *shellElapsedComponent) AnimationFrame(now time.Time) (bool, time.Durati
 	if c.state.startedAtMS == 0 || c.state.endedAtMS != 0 {
 		return false, 0
 	}
-	return true, time.Second
+	return true, shellElapsedTick
 }
 
 func shellCallStateFor(context *ToolRenderContext) *shellCallState {
@@ -488,5 +492,9 @@ func shellCallStateFor(context *ToolRenderContext) *shellCallState {
 var bashRenderers = CreateShellRenderers("$")
 
 var powershellRenderers = CreateShellRenderers("PS>")
+
+// isShellTool reports whether a tool name uses the shell renderers, whose
+// elapsed label ticks at shellElapsedTick (D194).
+func isShellTool(name string) bool { return name == "bash" || name == "powershell" }
 
 // --- write ------------------------------------------------------------------

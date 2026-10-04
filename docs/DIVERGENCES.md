@@ -1000,3 +1000,23 @@ golden are unchanged.
 
 (pi/packages/coding-agent/src/modes/interactive/theme/system-theme.ts,
 `indexedColors`; the port's `filledBackgroundColors` guarantee)
+
+## D194. The shell elapsed label ticks every 0.1s
+
+Upstream's bash renderer formats the elapsed duration with `toFixed(1)` (0.1s
+resolution) and repaints it with `setInterval(context.invalidate, 1000)`, so
+the running label moves about once a second. The port keeps the tenths display
+(`formatDuration` is `%.1fs` below a minute, matching `toFixed(1)`) but arms a
+running shell tool's animation frame at `shellElapsedTick` (100ms), so the
+label advances one tenth at a time.
+`ToolExecutionComponent.AnimationFrame` picks that tick only for `bash` and
+`powershell` (`isShellTool`); every other running tool keeps the upstream 1s
+frame, because a repaint of those buys nothing. The tool-level frame is the one
+that matters: the animation walk reaches the tool as a direct chat child, and
+its `AnimationTick` bumps the revision the label needs, so the nested
+`shellElapsedComponent`'s 100ms frame alone would paint without unfreezing the
+line.
+
+Cost: a running shell call repaints the loop at 10fps. The label renders one
+line, and the tool's `AnimationTick` is the narrow bump (D190), but the whole
+screen still paints per frame.

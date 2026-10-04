@@ -282,14 +282,18 @@ func (c *ToolExecutionComponent) RenderVersion() (uint64, bool) {
 	return c.Container.RenderVersion()
 }
 
-// AnimationFrame keeps a running tool repainting once a second, so the shell
-// elapsed label ticks. It is reported at the tool level: the animation walk
-// finds the tool as a direct chat child, so it does not depend on descending
-// through the result wrappers (content box, mouse region) to reach the elapsed
-// component.
+// AnimationFrame keeps a running tool repainting, so the shell elapsed label
+// ticks. It is reported at the tool level: the animation walk finds the tool as
+// a direct chat child, so it does not depend on descending through the result
+// wrappers (content box, mouse region) to reach the elapsed component. A shell
+// tool ticks at shellElapsedTick so the label steps by 0.1s (D194); every other
+// running tool keeps the upstream 1s tick, where a repaint buys nothing.
 func (c *ToolExecutionComponent) AnimationFrame(now time.Time) (bool, time.Duration) {
 	if !c.executionStarted || !c.isPartial {
 		return false, 0
+	}
+	if isShellTool(c.toolName) {
+		return true, shellElapsedTick
 	}
 	return true, time.Second
 }
