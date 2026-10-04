@@ -933,8 +933,8 @@ uses `AgentSession.FollowUp` with a user message for the triggered round (and
 `AppendCustomMessage` for the wrap-up), because the port's follow-up queue owns
 the turn trigger. The prompt text and the observable behavior (a new round
 starts at settle, `<goal_round>` reaches the model) match. The
-`pi-goal-event` message renderer and the reload `session_start` reason are not
-separately wired: the durable entry cards carry the transcript, and a fresh boot
-replays with reason "startup".
+`pi-goal-event` message renderer is not wired because the extension's own
+round/wrap-up messages are `display: false` (context-only) and never reach the
+transcript; the durable entry cards carry the visible history.
 
 (~/.pi/agent/extensions/goal/index.ts, machine.ts)
