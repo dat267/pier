@@ -19,6 +19,9 @@ type OpenBrowserFn func(url string)
 
 var browserOpener OpenBrowserFn = func(string) {}
 
+// BrowserOpener is the installed browser opener (for tests).
+func BrowserOpener() OpenBrowserFn { return browserOpener }
+
 // SetBrowserOpener installs the browser opener (D92).
 func SetBrowserOpener(opener OpenBrowserFn) {
 	if opener == nil {

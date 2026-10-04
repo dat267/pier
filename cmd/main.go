@@ -460,6 +460,7 @@ func run(appName string, args *coding.Args) error {
 	// A remote shell pays for every byte written to the terminal; trim the
 	// render padding unless the user overrides it.
 	interactive.ConfigureLowBandwidth()
+	installBrowserOpener()
 
 	app := interactive.NewApp(interactive.AppOptions{
 		Cwd:          runtimeCwd,
@@ -539,6 +540,12 @@ func readPipedStdin() (string, bool, error) {
 // sequence itself). The theme setting is only readable once the project is
 // trusted, so cmd calls this once before the trust decision for the -r picker
 // and again after it.
+// installBrowserOpener wires the platform browser opener, so the OAuth login
+// flow can open the authorization URL (upstream utils/open-browser.ts).
+func installBrowserOpener() {
+	interactive.SetBrowserOpener(coding.OpenBrowser)
+}
+
 func applyThemeSources(boot *interactive.ThemeBoot, args *coding.Args, settings *coding.SettingsManager, agentDir, cwd string, trusted bool) {
 	boot.ApplySources(interactive.ThemeSources{
 		AgentDir:   agentDir,

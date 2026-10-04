@@ -139,10 +139,11 @@ working:
   instead of opening an editor.
 
 The interactive mode reads credentials from `~/.pi/agent/auth.json` (or
-`PI_CODING_AGENT_DIR`). `/login` is wired, but the CLI does not install a
-browser opener (`interactive.SetBrowserOpener`), so the OAuth browser flow is a
-no-op; seed credentials with upstream pi or by hand. `--offline` skips the
-catalog refresh.
+`PI_CODING_AGENT_DIR`). `/login` is wired and the CLI installs a browser
+opener (`installBrowserOpener` → `coding.OpenBrowser`, the port of
+`utils/open-browser.ts`: `open` on macOS, `rundll32 url.dll,FileProtocolHandler`
+on Windows, `xdg-open` elsewhere, never a shell), so the OAuth browser flow
+opens the authorization URL. `--offline` skips the catalog refresh.
 
 ## Concurrency architecture
 
