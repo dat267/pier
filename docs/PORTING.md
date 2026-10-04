@@ -22,6 +22,13 @@ ported. Ported so far:
   resolves the medium level. `models.json` gains the field with the
   seven-level schema (`off`..`max`), the per-level override merge, and the
   custom-model pass-through.
+- `durable`: provider session identities (`70eceaade`). `durable/harness_provider.go`
+  ports `harness/provider.ts`: the `pi.provider` document (kind `pi.provider`,
+  latest history, initial fork) initializes to a UUIDv7, the built-in
+  conversation-creation hook writes it (`harness.go`), the view mounts it, and
+  `EnsureProviderSessionID` returns the persisted id or lazily backfills a
+  legacy conversation in one commit. Generation and compaction requests forward
+  it as the model request's session id for prompt-cache affinity.
 
 Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
 

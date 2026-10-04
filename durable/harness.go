@@ -117,6 +117,9 @@ func NewHarness(storage Storage, options HarnessOptions, ctx chord.Context) *Har
 		if _, err := tx.Doc(UsageDoc.Definition, record.ID); err != nil {
 			return err
 		}
+		if _, err := tx.Doc(ProviderDoc.Definition, record.ID); err != nil {
+			return err
+		}
 		if err := CreateAgent(tx, record); err != nil {
 			return err
 		}

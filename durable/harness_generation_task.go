@@ -285,6 +285,11 @@ func generationRequest(task RunningTask, runtime TaskRuntime, ctx chord.Context)
 		return err
 	}
 	options := generationStreamOptions(checkpoint.StreamOptions, checkpoint.ThinkingLevel, runtime.Signal())
+	sessionID, err := EnsureProviderSessionID(runtime, ctx)
+	if err != nil {
+		return err
+	}
+	options.SessionID = sessionID
 	message, err := streamGenerationResponse(runtime, model, messages, options, checkpoint.Attempt, ctx)
 	if err != nil {
 		return err

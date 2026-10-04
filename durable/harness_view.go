@@ -42,7 +42,7 @@ type ViewPublisher interface {
 }
 
 // mountedDocs are the built-in documents a mount shows.
-var mountedDocs = []DocToken{AgentDoc, LiveDoc, InboxDoc, UsageDoc}
+var mountedDocs = []DocToken{AgentDoc, LiveDoc, InboxDoc, ProviderDoc, UsageDoc}
 
 func mountedDocKinds() map[string]bool {
 	kinds := map[string]bool{}

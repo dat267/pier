@@ -171,6 +171,11 @@ func compactionSummarize(task RunningTask, runtime TaskRuntime, ctx chord.Contex
 		return compactionFailNoModel(runtime, &ref, ctx)
 	}
 	options := summaryStreamOptions(checkpoint.StreamOptions, checkpoint.MaxTokens, checkpoint.ThinkingLevel, runtime.Signal())
+	sessionID, err := EnsureProviderSessionID(runtime, ctx)
+	if err != nil {
+		return err
+	}
+	options.SessionID = sessionID
 	message, err := runtime.Models().CompleteSimple(model, ai.Context{Messages: messages}, &ai.ModelsSimpleStreamOptions{SimpleStreamOptions: options})
 	if err != nil {
 		return err
