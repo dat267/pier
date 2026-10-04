@@ -25,7 +25,8 @@ type ConnectionStateChange struct {
 	Err   error
 }
 
-const maxUint32 = 0xffff_ffff
+// maxUint32 is int64-typed so the frame length checks compile on a 32-bit int.
+const maxUint32 = int64(0xffff_ffff)
 
 // ConnectionOptions configure a connection.
 type ConnectionOptions struct {

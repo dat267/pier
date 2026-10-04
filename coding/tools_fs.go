@@ -436,7 +436,7 @@ func CreateLsTool(cwd string) agent.AgentTool {
 			}
 
 			rawOutput := strings.Join(results, "\n")
-			truncation := TruncateHead(rawOutput, TruncationOptions{MaxLines: 1 << 53})
+			truncation := TruncateHead(rawOutput, TruncationOptions{MaxLines: uncappedLines})
 			output := truncation.Content
 			var notices []string
 			details := LsToolDetails{}

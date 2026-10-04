@@ -8,6 +8,7 @@ package coding
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -27,6 +28,11 @@ const (
 	DefaultMaxBytes = 50 * 1024
 	// GrepMaxLineLength is the max chars per grep match line.
 	GrepMaxLineLength = 500
+	// uncappedLines is the largest line limit an int can hold, used where a
+	// tool reads a whole result and limits only by bytes (upstream uses
+	// Number.MAX_SAFE_INTEGER; the platform int is the port's equivalent and
+	// fits a 32-bit int).
+	uncappedLines = math.MaxInt
 )
 
 // TruncatedBy identifies which limit fired.

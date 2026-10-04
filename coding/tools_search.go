@@ -163,7 +163,7 @@ func CreateFindTool(cwd string) agent.AgentTool {
 			}
 			resultLimitReached := len(relativized) >= effectiveLimit
 			rawOutput2 := strings.Join(relativized, "\n")
-			truncation := TruncateHead(rawOutput2, TruncationOptions{MaxLines: 1 << 53})
+			truncation := TruncateHead(rawOutput2, TruncationOptions{MaxLines: uncappedLines})
 			resultOutput := truncation.Content
 			details := FindToolDetails{}
 			var notices []string
@@ -414,7 +414,7 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 			}
 
 			rawOutput := strings.Join(outputLines, "\n")
-			truncation := TruncateHead(rawOutput, TruncationOptions{MaxLines: 1 << 53})
+			truncation := TruncateHead(rawOutput, TruncationOptions{MaxLines: uncappedLines})
 			output := truncation.Content
 			details := GrepToolDetails{}
 			var notices []string

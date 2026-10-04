@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -196,6 +197,13 @@ func TestMainScreenHelpers(t *testing.T) {
 	}
 	if header, ok := parseKittyImageHeader("\x1b_Gi=0,r=-1;\x1b\\"); !ok || len(header.IDs) != 0 || header.Rows != 1 {
 		t.Fatalf("invalid params parsed: %+v", header)
+	}
+	// Upstream caps an id at 0xffffffff (tui-main-screen.ts). The guard keeps
+	// the assertion off 32-bit ints, where strconv.Atoi rejects the id first.
+	if strconv.IntSize == 64 {
+		if header, ok := parseKittyImageHeader("\x1b_Gi=4294967295,i=4294967296;\x1b\\"); !ok || len(header.IDs) != 1 || int64(header.IDs[0]) != kittyImageIDMax {
+			t.Fatalf("id bound parsed: %+v", header)
+		}
 	}
 	if ids := extractKittyImageIDs("\x1b_Gi=9,i=10;\x1b\\"); len(ids) != 2 || ids[0] != 9 || ids[1] != 10 {
 		t.Fatalf("ids = %v", ids)

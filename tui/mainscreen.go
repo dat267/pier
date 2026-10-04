@@ -82,6 +82,11 @@ type kittyImageHeader struct {
 	Rows int
 }
 
+// kittyImageIDMax is the largest kitty image id (a uint32). It is typed int64
+// so the comparison compiles where int is 32 bits, where strconv.Atoi has
+// already rejected anything above the id range.
+const kittyImageIDMax = int64(0xffffffff)
+
 func parseKittyImageHeader(line string) (kittyImageHeader, bool) {
 	sequenceStart := indexOf(line, kittyPrefix)
 	if sequenceStart == -1 {
@@ -101,7 +106,7 @@ func parseKittyImageHeader(line string) (kittyImageHeader, bool) {
 			continue
 		}
 		numberValue, err := strconv.Atoi(value)
-		if err != nil || numberValue <= 0 || numberValue > 0xffffffff {
+		if err != nil || numberValue <= 0 || int64(numberValue) > kittyImageIDMax {
 			continue
 		}
 		switch key {

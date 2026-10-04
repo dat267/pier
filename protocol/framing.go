@@ -9,8 +9,10 @@ import (
 
 const (
 	frameHeaderLength = 4
-	maxUint32Value    = 0xffff_ffff
-	payloadBlockSize  = 64 * 1024
+	// maxUint32Value is int64-typed so the frame length checks compile on a
+	// 32-bit int, where the constant does not fit an int.
+	maxUint32Value   = int64(0xffff_ffff)
+	payloadBlockSize = 64 * 1024
 )
 
 // DefaultMaxFrameLength is the default upper bound for one framed payload.
@@ -45,7 +47,7 @@ func resolveMaxFrameLength(options *FrameDecoderOptions) (int, error) {
 
 // EncodeFrame prefixes a payload with its unsigned 32-bit big-endian length.
 func EncodeFrame(payload []byte) ([]byte, error) {
-	if len(payload) > maxUint32Value {
+	if int64(len(payload)) > maxUint32Value {
 		return nil, fmt.Errorf("Frame payload exceeds the unsigned 32-bit length limit")
 	}
 	frame := make([]byte, frameHeaderLength+len(payload))

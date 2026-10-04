@@ -2,10 +2,7 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"math"
-	"strconv"
 	"sync"
 	"time"
 
@@ -18,7 +15,7 @@ import (
 
 const (
 	defaultHandshakeTimeoutMS = 5_000
-	maxUint32Value            = 0xffff_ffff
+	maxUint32Value            = int64(0xffff_ffff)
 	maxTimerDelayMS           = 2_147_483_647
 )
 
@@ -871,9 +868,3 @@ func wireInstanceValue(instance *services.WireServiceInstanceSnapshot) any {
 	}
 	return value
 }
-
-var (
-	_ = json.Marshal
-	_ = math.MaxInt64
-	_ = strconv.Itoa
-)
