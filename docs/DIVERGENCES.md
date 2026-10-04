@@ -923,18 +923,20 @@ Upstream's rebuild re-wrapped every running tool's full output once a second:
 (pi/packages/coding-agent/src/modes/interactive/components/tool-execution.ts,
 pi/packages/coding-agent/src/core/tools/renderers/bash.ts)
 
-## D191. The goal round is delivered as a follow-up user message
+## D191. The goal round is delivered as an invisible custom message
 
 The goal extension sends its continuation prompt with
 `pi.sendMessage({ customType, content, display: false }, { triggerTurn: true,
 deliverAs: "followUp" })`: the message enters the LLM context as a custom
-message and a turn is triggered. The port's `SessionGoalSink.SendGoalMessage`
-uses `AgentSession.FollowUp` with a user message for the triggered round (and
-`AppendCustomMessage` for the wrap-up), because the port's follow-up queue owns
-the turn trigger. The prompt text and the observable behavior (a new round
-starts at settle, `<goal_round>` reaches the model) match. The
-`pi-goal-event` message renderer is not wired because the extension's own
-round/wrap-up messages are `display: false` (context-only) and never reach the
-transcript; the durable entry cards carry the visible history.
+message and a turn is triggered. The port matches this: `SessionGoalSink.SendGoalMessage`
+encodes the round as an `ai.CustomMessage` with role `"custom"` and the
+`{customType, content, display: false, details}` envelope, queues it with
+`AgentSession.FollowUp` (which starts the turn at settle), and `ConvertToLlm`
+turns it into a model-visible user message while the transcript's
+`decodeCustomMessage` skips it. The wrap-up is appended the same way without a
+triggering turn. The `pi-goal-event` message renderer is not wired because the
+extension's own round/wrap-up messages are `display: false` and never reach the
+transcript; the durable entry cards carry the visible history. The reload
+`session_start` reason is wired from `/reload`.
 
 (~/.pi/agent/extensions/goal/index.ts, machine.ts)

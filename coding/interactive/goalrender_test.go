@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/dat267/pier/goal"
@@ -39,5 +40,19 @@ func TestGoalEntryRendererRendersCards(t *testing.T) {
 
 	if GoalEntryRenderer("pi-other") != nil {
 		t.Fatal("unknown custom type resolved a renderer")
+	}
+}
+
+// TestGoalRoundDecodesAsHidden pins the transcript half of D191: the goal round
+// custom message decodes to display:false, so it is not rendered even though it
+// is in the model context.
+func TestGoalRoundDecodesAsHidden(t *testing.T) {
+	raw := []byte(`{"customType":"pi-goal-event","content":"<goal_round>round 1</goal_round>","display":false,"details":{"kind":"round","turn":1}}`)
+	customType, text, display := decodeCustomMessage(raw)
+	if customType != goal.GoalEventType || display {
+		t.Fatalf("customType = %q display = %v", customType, display)
+	}
+	if !strings.Contains(text, "<goal_round>") {
+		t.Fatalf("text = %q", text)
 	}
 }

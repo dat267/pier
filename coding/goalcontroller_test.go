@@ -277,3 +277,37 @@ func itoaTest(value int) string {
 	encoded, _ := json.Marshal(value)
 	return string(encoded)
 }
+
+// TestGoalEventMessageIsInvisibleButReachesTheModel pins D191's replacement: the
+// goal round is a display:false custom message (so it stays out of the
+// transcript) whose content still converts to a model-visible user message.
+func TestGoalEventMessageIsInvisibleButReachesTheModel(t *testing.T) {
+	message := goalEventMessage(goal.GoalEventType, "<goal_round>round 1</goal_round>", false, json.RawMessage(`{"kind":"round","turn":1}`))
+	if message.Role != RoleCustom {
+		t.Fatalf("role = %q", message.Role)
+	}
+	var fields customMessageFields
+	if err := json.Unmarshal(message.Content, &fields); err != nil {
+		t.Fatal(err)
+	}
+	if fields.CustomType != goal.GoalEventType || fields.Display {
+		t.Fatalf("fields = %+v", fields)
+	}
+	var text string
+	if err := json.Unmarshal(fields.Content, &text); err != nil || !strings.Contains(text, "<goal_round>") {
+		t.Fatalf("content = %q err = %v", string(fields.Content), err)
+	}
+
+	converted := ConvertToLlm([]ai.Message{message})
+	if len(converted) != 1 {
+		t.Fatalf("converted = %d", len(converted))
+	}
+	user, ok := converted[0].(*ai.UserMessage)
+	if !ok || len(user.Content.Blocks) == 0 {
+		t.Fatalf("converted = %#v", converted[0])
+	}
+	block, ok := user.Content.Blocks[0].(ai.TextContent)
+	if !ok || !strings.Contains(block.Text, "<goal_round>") {
+		t.Fatalf("block = %#v", user.Content.Blocks[0])
+	}
+}

@@ -404,12 +404,35 @@ func (s *SessionGoalSink) SendGoalMessage(customType string, content string, dis
 		return
 	}
 	if triggerTurn {
-		// Upstream `sendMessage(..., { triggerTurn: true, deliverAs: "followUp" })`.
-		s.session.FollowUp(&ai.UserMessage{Content: ai.StringOrBlocks{Text: content}})
+		// Upstream `sendMessage(..., { triggerTurn: true, deliverAs: "followUp" })`:
+		// the round prompt enters the context as a display:false custom message
+		// (invisible in the transcript) and the queued follow-up starts the turn.
+		s.session.FollowUp(goalEventMessage(customType, content, display, details))
 		return
 	}
 	encoded, _ := json.Marshal(content)
 	s.session.AppendCustomMessage(&ai.CustomMessage{Role: customType, Content: encoded})
+}
+
+// goalEventMessage encodes a goal round/wrap-up as the extension's custom
+// message: role "custom" with the {customType, content, display, details}
+// envelope, so ConvertToLlm reaches the model and a display:false message stays
+// out of the transcript.
+func goalEventMessage(customType string, content string, display bool, details json.RawMessage) *ai.CustomMessage {
+	contentJSON, err := json.Marshal(content)
+	if err != nil {
+		contentJSON = json.RawMessage(`""`)
+	}
+	fields, err := json.Marshal(customMessageFields{
+		CustomType: customType,
+		Content:    contentJSON,
+		Display:    display,
+		Details:    details,
+	})
+	if err != nil {
+		fields = []byte(`{}`)
+	}
+	return &ai.CustomMessage{Role: RoleCustom, Content: fields}
 }
 
 // NotifyGoal surfaces a notification (no-op without a sink).
