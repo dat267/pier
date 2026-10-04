@@ -51,6 +51,13 @@ ported. Ported so far:
   `tool_addition` blocks (`tool_definition`), so a same-name redefinition no
   longer falls back to resending the full tool list (the matching
   `tool_removal` is skipped). `HasToolRedefinitions` is deprecated.
+- `coding` (MCP config): project `mcp.json` overrides (`1387af7b4`). A project
+  entry without `command`, `url` or `type` merges with the global server of the
+  same name and may set only `enabled`, `exposure` and `toolExposure`; the
+  entry keeps its global scope and records the overriding project path
+  (`McpServerEntry.Override`), and `LoadedMcpConfig.ProjectConfig` carries the
+  trusted project's `mcp.json` path. A base-less or extra-key override is a
+  load error.
 
 Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
 

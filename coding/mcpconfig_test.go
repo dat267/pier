@@ -345,3 +345,80 @@ func TestLoadMcpConfigProjectCannotReplaceProviderAuth(t *testing.T) {
 		t.Fatalf("errors = %v", loaded.Errors)
 	}
 }
+
+// TestLoadMcpConfigProjectOverrides covers the override branch: a project entry
+// without command, url, or type overrides only enabled/exposure/toolExposure of
+// the global server with the same name, keeping the rest of the global entry.
+func TestLoadMcpConfigProjectOverrides(t *testing.T) {
+	global := `{
+	  "mcpServers": {
+	    "internal-tools": {
+	      "command": "internal",
+	      "args": ["serve"],
+	      "exposure": "direct",
+	      "toolExposure": { "read*": "direct", "*": "codemode" }
+	    },
+	    "other": { "url": "https://example.com/mcp" },
+	    "bad-extra": { "command": "x" }
+	  }
+	}`
+	project := `{
+	  "mcpServers": {
+	    "internal-tools": { "enabled": false, "exposure": "codemode" },
+	    "other": { "command": "replacement" },
+	    "new-server": { "enabled": false },
+	    "bad-extra": { "enabled": false, "description": "nope" }
+	  }
+	}`
+	agentDir, projectDir := writeMCPFile(t, global, project)
+	loaded := LoadMcpConfig(McpConfigLoadOptions{AgentDir: agentDir, Cwd: projectDir, ProjectTrusted: true})
+
+	// The project config path is reported for /mcp to save overrides into.
+	if loaded.ProjectConfig != filepath.Join(projectDir, ConfigDirName, "mcp.json") {
+		t.Fatalf("projectConfig = %q", loaded.ProjectConfig)
+	}
+	byName := map[string]McpServerEntry{}
+	for _, entry := range loaded.Servers {
+		byName[entry.Name] = entry
+	}
+	tools := byName["internal-tools"]
+	if tools.Override == "" || tools.Scope != McpScopeGlobal {
+		t.Fatalf("internal-tools = %+v", tools)
+	}
+	// The global transport is kept; the override applies enabled and exposure.
+	if tools.Config.Command != "internal" || len(tools.Config.Args) != 1 {
+		t.Fatalf("internal-tools config = %+v", tools.Config)
+	}
+	if tools.Config.Enabled == nil || *tools.Config.Enabled {
+		t.Fatalf("enabled = %+v", tools.Config.Enabled)
+	}
+	if tools.Config.Exposure == nil || *tools.Config.Exposure != McpExposureCodemode {
+		t.Fatalf("exposure = %+v", tools.Config.Exposure)
+	}
+	// A project entry with a transport replaces the global server.
+	if other := byName["other"]; other.Scope != McpScopeProject || other.Override != "" || other.Config.Command != "replacement" {
+		t.Fatalf("other = %+v", other)
+	}
+	// An override without a global server is an error, as is an extra key.
+	joined := strings.Join(loaded.Errors, "\n")
+	if !strings.Contains(joined, `"new-server" needs "command" or "url"`) {
+		t.Fatalf("errors = %v", loaded.Errors)
+	}
+	if !strings.Contains(joined, `"bad-extra": an override can only set enabled, exposure, toolExposure`) {
+		t.Fatalf("errors = %v", loaded.Errors)
+	}
+	if _, ok := byName["new-server"]; ok {
+		t.Fatal("an override without a base must not create a server")
+	}
+
+	// An untrusted project reads nothing and reports no project config.
+	untrusted := LoadMcpConfig(McpConfigLoadOptions{AgentDir: agentDir, Cwd: projectDir, ProjectTrusted: false})
+	if untrusted.ProjectConfig != "" {
+		t.Fatalf("projectConfig = %q", untrusted.ProjectConfig)
+	}
+	for _, entry := range untrusted.Servers {
+		if entry.Override != "" {
+			t.Fatalf("override applied while untrusted: %+v", entry)
+		}
+	}
+}

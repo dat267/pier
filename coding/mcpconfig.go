@@ -34,6 +34,13 @@ type McpServerEntry struct {
 	// Source is the config file that defined the entry (or an extension path).
 	Source string
 	Scope  McpServerScope
+	// Override is the project `mcp.json` that overrides only this global
+	// server's enabled/exposure/toolExposure (upstream McpServerEntry.override).
+	Override string
+
+	// raw is the entry's config object as written, kept so a project override
+	// merges with the global entry before revalidation.
+	raw json.RawMessage
 }
 
 // LoadedMcpConfig is the merged configuration (upstream LoadedMcpConfig).
@@ -45,6 +52,9 @@ type LoadedMcpConfig struct {
 	AutoEnableCodemode *bool
 	// Errors are per-file load and validation failures.
 	Errors []string
+	// ProjectConfig is the project `mcp.json` path when the project is trusted
+	// (upstream LoadedMcpConfig.projectConfig).
+	ProjectConfig string
 }
 
 // McpConfigLoadOptions are LoadMcpConfig inputs.
@@ -59,14 +69,16 @@ type McpConfigLoadOptions struct {
 func LoadMcpConfig(options McpConfigLoadOptions) LoadedMcpConfig {
 	state := &mcpConfigState{servers: map[string]McpServerEntry{}, order: []string{}}
 	readMcpConfigFile(filepath.Join(options.AgentDir, "mcp.json"), McpScopeGlobal, state)
+	projectConfig := ""
 	if options.ProjectTrusted {
-		readMcpConfigFile(filepath.Join(options.Cwd, ConfigDirName, "mcp.json"), McpScopeProject, state)
+		projectConfig = filepath.Join(options.Cwd, ConfigDirName, "mcp.json")
+		readMcpConfigFile(projectConfig, McpScopeProject, state)
 	}
 	servers := make([]McpServerEntry, 0, len(state.order))
 	for _, name := range state.order {
 		servers = append(servers, state.servers[name])
 	}
-	return LoadedMcpConfig{Servers: servers, AutoEnableCodemode: state.autoEnableCodemode, Errors: state.errors}
+	return LoadedMcpConfig{Servers: servers, AutoEnableCodemode: state.autoEnableCodemode, Errors: state.errors, ProjectConfig: projectConfig}
 }
 
 // mcpConfigState accumulates entries in first-definition order: a project entry
@@ -122,6 +134,12 @@ func readMcpConfigFile(path string, scope McpServerScope, state *mcpConfigState)
 			state.errors = append(state.errors, fmt.Sprintf("%s: server %q must be an object", path, name))
 			continue
 		}
+		// A project entry without command, url, or type overrides only the
+		// enabled/exposure/toolExposure of the global server with the same name.
+		if scope == McpScopeProject && isMcpOverrideValue(value) {
+			applyMcpOverride(path, name, raw, state)
+			continue
+		}
 		config, validationErr := ValidateMcpServerConfig(name, value)
 		if validationErr != nil {
 			state.errors = append(state.errors, fmt.Sprintf("%s: %s", path, validationErr.Error()))
@@ -150,8 +168,86 @@ func readMcpConfigFile(path string, scope McpServerScope, state *mcpConfigState)
 		if _, exists := state.servers[name]; !exists {
 			state.order = append(state.order, name)
 		}
-		state.servers[name] = McpServerEntry{Name: name, Config: config, Source: path, Scope: scope}
+		state.servers[name] = McpServerEntry{Name: name, Config: config, Source: path, Scope: scope, raw: raw}
 	}
+}
+
+// isMcpOverrideValue reports whether a project entry overrides a server defined
+// elsewhere instead of defining one (upstream isOverride).
+func isMcpOverrideValue(value any) bool {
+	record, ok := value.(map[string]any)
+	if !ok {
+		return false
+	}
+	_, hasCommand := record["command"]
+	_, hasURL := record["url"]
+	_, hasType := record["type"]
+	return !hasCommand && !hasURL && !hasType
+}
+
+// mcpOverrideKeys are the only keys a project override may set.
+var mcpOverrideKeys = map[string]bool{"enabled": true, "exposure": true, "toolExposure": true}
+
+// applyMcpOverride merges a project override into the global entry with the
+// same name (upstream readConfigFile's override branch).
+func applyMcpOverride(path, name string, raw json.RawMessage, state *mcpConfigState) {
+	base, ok := state.servers[name]
+	if !ok {
+		state.errors = append(state.errors, fmt.Sprintf("%s: server %q needs \"command\" or \"url\", or a global server to override", path, name))
+		return
+	}
+	keys, _, err := readJSONObjectOrdered(raw)
+	if err != nil {
+		state.errors = append(state.errors, fmt.Sprintf("%s: server %q must be an object", path, name))
+		return
+	}
+	for _, key := range keys {
+		if !mcpOverrideKeys[key] {
+			state.errors = append(state.errors, fmt.Sprintf("%s: server %q: an override can only set enabled, exposure, toolExposure", path, name))
+			return
+		}
+	}
+	merged, err := mergeJSONObjects(base.raw, raw)
+	if err != nil {
+		state.errors = append(state.errors, fmt.Sprintf("%s: server %q: %s", path, name, err.Error()))
+		return
+	}
+	var mergedValue any
+	if err := json.Unmarshal(merged, &mergedValue); err != nil {
+		state.errors = append(state.errors, fmt.Sprintf("%s: server %q: %s", path, name, err.Error()))
+		return
+	}
+	config, validationErr := ValidateMcpServerConfig(name, mergedValue)
+	if validationErr != nil {
+		state.errors = append(state.errors, fmt.Sprintf("%s: %s", path, validationErr.Error()))
+		return
+	}
+	if order := jsonObjectKeyOrder(raw, "toolExposure"); order != nil {
+		config.toolExposureOrder = order
+	} else {
+		config.toolExposureOrder = base.Config.toolExposureOrder
+	}
+	base.Config = config
+	base.Override = path
+	state.servers[name] = base
+}
+
+// mergeJSONObjects merges override's keys over base (shallow).
+func mergeJSONObjects(base, override json.RawMessage) (json.RawMessage, error) {
+	baseObject := map[string]any{}
+	if len(base) > 0 {
+		if err := json.Unmarshal(base, &baseObject); err != nil {
+			return nil, err
+		}
+	}
+	overrideObject := map[string]any{}
+	if err := json.Unmarshal(override, &overrideObject); err != nil {
+		return nil, err
+	}
+	for key, value := range overrideObject {
+		baseObject[key] = value
+	}
+	return json.Marshal(baseObject)
 }
 
 // readJSONObjectOrdered decodes a JSON object, returning its keys in document
