@@ -221,17 +221,26 @@ func TestCommittedWatchStartNeverInline(t *testing.T) {
 	type stateValue map[string]any
 	watch := NewCommittedWatch[stateValue](stateValue{"value": float64(0)}, nil, nil)
 	watch.Advance(stateValue{"value": float64(1)}, nil, context.Background())
-	var inline atomic.Bool
-	inline.Store(true)
+	// The listener blocks until Start has returned, so Start running it inline
+	// deadlocks and the timeout fails the test. This is deterministic where an
+	// atomic flag raced the async listener under the race detector.
+	release := make(chan struct{})
 	done := make(chan struct{})
-	watch.Start(func(_ stateValue, _ []delta.Op, _ chord.Context) error {
-		if inline.Load() {
-			t.Error("listener ran inline with start")
-		}
-		close(done)
-		return nil
-	})
-	inline.Store(false)
+	started := make(chan struct{})
+	go func() {
+		watch.Start(func(_ stateValue, _ []delta.Op, _ chord.Context) error {
+			<-release
+			close(done)
+			return nil
+		})
+		close(started)
+	}()
+	select {
+	case <-started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("start did not return: the listener ran inline")
+	}
+	close(release)
 	select {
 	case <-done:
 	case <-time.After(2 * time.Second):
