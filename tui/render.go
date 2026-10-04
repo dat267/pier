@@ -268,14 +268,16 @@ func nextAnimationForTicked(components []Component, now time.Time, ticks map[Com
 		needs bool
 		best  time.Duration
 	)
-	seen := make(map[Component]bool, len(ticks))
+	// seen collects only the animators (few), not every component: the walk
+	// visits the whole tree, and a map entry per component was 40% of the walk.
+	var seen []Component
 	var walk func(component Component)
 	walk = func(component Component) {
 		if component == nil {
 			return
 		}
-		seen[component] = true
 		if animator, ok := component.(Animator); ok {
+			seen = append(seen, component)
 			if want, delay := animator.AnimationFrame(now); want {
 				// Asking for a frame invalidates what animates. Upstream's per-call
 				// setInterval calls context.invalidate(), and the invalidate is the
@@ -321,7 +323,14 @@ func nextAnimationForTicked(components []Component, now time.Time, ticks map[Com
 	// Drop the tick entries for components no longer mounted, so a long session
 	// does not accumulate one per tool ever rendered.
 	for component := range ticks {
-		if !seen[component] {
+		found := false
+		for _, mounted := range seen {
+			if mounted == component {
+				found = true
+				break
+			}
+		}
+		if !found {
 			delete(ticks, component)
 		}
 	}

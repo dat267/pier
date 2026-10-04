@@ -127,3 +127,27 @@ func BenchmarkChatWarmRender(b *testing.B) {
 		})
 	}
 }
+
+// TestContainerBumpRevisionKeepsTheChildCache pins the narrow tick's signal:
+// BumpRevision makes the parent re-render the child, but the child's own cache
+// survives, so Render reuses its cached lines instead of re-flattening.
+func TestContainerBumpRevisionKeepsTheChildCache(t *testing.T) {
+	chat := &Container{SkipUnchangedChildren: true}
+	child := &countingVersioned{Container: &Container{}}
+	child.Container.AddChild(NewText("hello", 0, 0, nil))
+	chat.AddChild(child)
+	if lines := chat.Render(40); !hasLine(lines, "hello") {
+		t.Fatalf("first render = %q", lines)
+	}
+	if child.renders != 1 {
+		t.Fatalf("renders = %d, want 1", child.renders)
+	}
+	// The tick bumps only the revision; the parent re-renders the child.
+	child.BumpRevision()
+	if lines := chat.Render(40); !hasLine(lines, "hello") {
+		t.Fatalf("render after BumpRevision = %q", lines)
+	}
+	if child.renders != 2 {
+		t.Fatalf("renders = %d after BumpRevision, want 2", child.renders)
+	}
+}

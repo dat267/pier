@@ -300,7 +300,7 @@ func (c *ToolExecutionComponent) AnimationFrame(now time.Time) (bool, time.Durat
 // invalidate() rebuilds the whole display (super.invalidate() + updateDisplay()),
 // which dropped the result Text's wrap cache and re-wrapped every running
 // tool's output once a second (D190).
-func (c *ToolExecutionComponent) AnimationTick() { c.Container.MarkDirty() }
+func (c *ToolExecutionComponent) AnimationTick() { c.Container.BumpRevision() }
 
 // HandleMouse forwards mouse events for the self-render shell.
 func (c *ToolExecutionComponent) HandleMouse(event tui.TuiMouseEvent) *tui.TuiMouseDispatchResult {

@@ -419,8 +419,12 @@ calls `AnimationTicker.AnimationTick` when a component implements it, so
 elapsed label still updates, because `Box.matchCache` checks a versioned child's
 revision (a child `Container` rewrites its suffix in place) and `Box.Render`
 re-applies the background only from the first changed line; the result `Text`'s
-wrap cache survives (`BenchmarkToolAnimationTick`: 2.15 ms → 0.07 ms for a
-2000-line result, 139 µs → 0.9 µs for a bash preview).
+wrap cache survives (`BenchmarkToolAnimationTick`: 2.15 ms → 0.005 ms (0 allocs)
+for a 2000-line result, 139 µs → 0.7 µs for a bash preview). The walk also
+collects only the animators for its prune set, not every mounted component; a
+map entry per component was 40% of the walk. `Box.applyBg` measures the line's
+width once (it used to reach `ApplyBackgroundToLine`, which measured the padded
+line again).
 
 ## Session history (high level)
 

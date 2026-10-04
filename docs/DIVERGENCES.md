@@ -909,7 +909,7 @@ Upstream's `ToolExecutionComponent.invalidate()` is `super.invalidate()` +
 (`core/tools/renderers/bash.ts`). The port keeps `invalidate()` as upstream,
 but the animation walk ticks a component through `tui.AnimationTicker` when it
 implements it: `ToolExecutionComponent.AnimationTick` bumps the tool's revision
-only (`Container.MarkDirty`). The clock-driven elapsed label still updates,
+only (`Container.BumpRevision`, which keeps the cache). The clock-driven elapsed label still updates,
 because `Box.matchCache` now checks a versioned child's revision (a child
 `Container` rebuilds its suffix in place, so comparing the line slices cannot
 see the change) and `Box.Render` re-applies the background from the first

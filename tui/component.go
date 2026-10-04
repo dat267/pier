@@ -317,6 +317,12 @@ func (c *Container) dropRenderCache() {
 // so an ancestor comparing revisions re-renders it.
 func (c *Container) MarkDirty() { c.dropRenderCache() }
 
+// BumpRevision advances the render revision without dropping any cache. It is
+// the change signal for a component whose content may be unchanged (a
+// clock-driven animation tick): Render then reuses the cached lines unless a
+// descendant reports a change, instead of re-flattening the whole container.
+func (c *Container) BumpRevision() { c.version++ }
+
 // Invalidate invalidates every child.
 func (c *Container) Invalidate() {
 	c.dropRenderCache()

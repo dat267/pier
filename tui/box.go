@@ -291,10 +291,13 @@ func (b *Box) Render(width int) []string {
 }
 
 func (b *Box) applyBg(line string, width int) string {
+	// VisibleWidth is computed here, so apply the background directly rather
+	// than through ApplyBackgroundToLine, which would compute it again on the
+	// already-padded line.
 	padNeeded := max(0, width-VisibleWidth(line))
 	padded := line + strings.Repeat(" ", padNeeded)
 	if b.bgFn != nil {
-		return ApplyBackgroundToLine(padded, width, b.bgFn)
+		return b.bgFn(padded)
 	}
 	return padded
 }
