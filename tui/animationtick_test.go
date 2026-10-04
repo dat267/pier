@@ -82,3 +82,35 @@ func TestAnimationWalkUsesTheNarrowTick(t *testing.T) {
 		t.Fatalf("Invalidate called %d times; the narrow tick must not invalidate", animator.frames)
 	}
 }
+
+// countingHolder counts how often the walk asks for its children.
+type countingHolder struct {
+	children []Component
+	calls    int
+}
+
+func (h *countingHolder) Render(int) []string          { return nil }
+func (h *countingHolder) Invalidate()                  {}
+func (h *countingHolder) childComponents() []Component { h.calls++; return h.children }
+
+// TestRendererCachesTheAnimatorWalk pins the scroll fix: NextAnimation reuses
+// the collected animator list across paints and re-walks only on a structural
+// change (or when its box expires).
+func TestRendererCachesTheAnimatorWalk(t *testing.T) {
+	animator := &gatedAnimator{delay: time.Second}
+	holder := &countingHolder{children: []Component{animator}}
+	renderer := &Renderer{clock: time.Now, MountedRoots: func() []Component { return []Component{holder} }}
+
+	renderer.NextAnimation()
+	renderer.NextAnimation()
+	if holder.calls != 1 {
+		t.Fatalf("walked %d times, want 1 (cached)", holder.calls)
+	}
+	// A structural change re-walks and finds the new animator.
+	holder.children = append(holder.children, &gatedAnimator{delay: time.Second})
+	bumpAnimationTreeRevision()
+	renderer.NextAnimation()
+	if holder.calls != 2 {
+		t.Fatalf("structural change did not re-walk: %d", holder.calls)
+	}
+}

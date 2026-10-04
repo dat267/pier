@@ -138,8 +138,13 @@ type Renderer struct {
 	// tool (ToolExecutionComponent.Invalidate -> updateDisplay re-wraps the tool's
 	// entire output), which made scrolling a large session laggy.
 	animationTicks map[Component]time.Time
-	stopped        atomic.Bool
-	started        atomic.Bool
+	// animationAnimators caches the mounted animators and animationRevision the
+	// structural revision they were collected at, so a paint reuses the walk.
+	animationAnimators []Component
+	animationRevision  uint64
+	animationWalkedAt  time.Time
+	stopped            atomic.Bool
+	started            atomic.Bool
 
 	renderRequested bool
 	fullRedrawCount int
@@ -252,64 +257,43 @@ func (t *Renderer) NextAnimation() (bool, time.Duration) {
 	if t.animationTicks == nil {
 		t.animationTicks = map[Component]time.Time{}
 	}
-	return nextAnimationForTicked(t.GetMountedRoots(), now, t.animationTicks)
+	// The walk visits every mounted component, and a paint invalidates the
+	// cached scan, so this used to re-walk the whole tree on every paint. Cache
+	// the animator list and re-walk only when the tree structure changed (or
+	// the box expired, to catch a component that started animating without a
+	// structural change).
+	revision := AnimationTreeRevision()
+	if t.animationAnimators == nil || t.animationRevision != revision || now.Sub(t.animationWalkedAt) >= animationWalkBox {
+		t.animationAnimators = collectAnimators(t.GetMountedRoots())
+		t.animationRevision = revision
+		t.animationWalkedAt = now
+	}
+	return evaluateAnimators(t.animationAnimators, now, t.animationTicks)
 }
+
+// animationWalkBox bounds how long the cached animator list is trusted.
+const animationWalkBox = time.Second
 
 // nextAnimationFor walks the component tree for the earliest animation frame.
 func nextAnimationFor(components []Component, now time.Time) (bool, time.Duration) {
 	return nextAnimationForTicked(components, now, nil)
 }
 
-// nextAnimationForTicked walks like nextAnimationFor, ticking each animating
-// component only when its own delay has elapsed since the last tick (ticks is
-// the per-component last-tick time; nil ticks every animator).
+// nextAnimationForTicked walks and ticks (the uncached path tests use).
 func nextAnimationForTicked(components []Component, now time.Time, ticks map[Component]time.Time) (bool, time.Duration) {
-	var (
-		needs bool
-		best  time.Duration
-	)
-	// seen collects only the animators (few), not every component: the walk
-	// visits the whole tree, and a map entry per component was 40% of the walk.
-	var seen []Component
+	return evaluateAnimators(collectAnimators(components), now, ticks)
+}
+
+// collectAnimators gathers the mounted animators in tree order.
+func collectAnimators(components []Component) []Component {
+	var animators []Component
 	var walk func(component Component)
 	walk = func(component Component) {
 		if component == nil {
 			return
 		}
-		if animator, ok := component.(Animator); ok {
-			seen = append(seen, component)
-			if want, delay := animator.AnimationFrame(now); want {
-				// Asking for a frame invalidates what animates. Upstream's per-call
-				// setInterval calls context.invalidate(), and the invalidate is the
-				// half that matters: a revision-carrying wrapper around clock-driven
-				// content changes without any Invalidate firing, so a parent
-				// comparing revisions concludes "unchanged" and serves its previous
-				// frame — a frozen elapsed label on a tool nothing else invalidates.
-				// The tick is what bumps the revision.
-				//
-				// The tick is gated by the component's own delay: the walk runs on
-				// every paint, and ticking on every walk rebuilt every running tool's
-				// whole subtree each frame (the scroll-lag bug).
-				if delay <= 0 {
-					delay = time.Millisecond
-				}
-				ticked, hasTicked := ticks[component]
-				if !hasTicked || now.Sub(ticked) >= delay {
-					// A ticker can narrow the tick to its own revision; a plain animator
-					// is invalidated (its descendants re-render).
-					if ticker, ok := component.(AnimationTicker); ok {
-						ticker.AnimationTick()
-					} else {
-						component.Invalidate()
-					}
-					if ticks != nil {
-						ticks[component] = now
-					}
-				}
-				if !needs || delay < best {
-					needs, best = true, delay
-				}
-			}
+		if _, ok := component.(Animator); ok {
+			animators = append(animators, component)
 		}
 		if holder, ok := component.(childrenHolder); ok {
 			for _, child := range holder.childComponents() {
@@ -320,18 +304,65 @@ func nextAnimationForTicked(components []Component, now time.Time, ticks map[Com
 	for _, component := range components {
 		walk(component)
 	}
-	// Drop the tick entries for components no longer mounted, so a long session
-	// does not accumulate one per tool ever rendered.
-	for component := range ticks {
-		found := false
-		for _, mounted := range seen {
-			if mounted == component {
-				found = true
-				break
+	return animators
+}
+
+// evaluateAnimators applies the per-delay tick gate to an animator list.
+func evaluateAnimators(animators []Component, now time.Time, ticks map[Component]time.Time) (bool, time.Duration) {
+	var (
+		needs bool
+		best  time.Duration
+	)
+	for _, component := range animators {
+		animator, ok := component.(Animator)
+		if !ok {
+			continue
+		}
+		want, delay := animator.AnimationFrame(now)
+		if !want {
+			continue
+		}
+		// Asking for a frame invalidates what animates. Upstream's per-call
+		// setInterval calls context.invalidate(), and the invalidate is the
+		// half that matters: a revision-carrying wrapper around clock-driven
+		// content changes without any Invalidate firing, so a parent comparing
+		// revisions concludes "unchanged" and serves its previous frame — a
+		// frozen elapsed label on a tool nothing else invalidates.
+		//
+		// The tick is gated by the component's own delay: ticking on every
+		// paint rebuilt every running tool's whole subtree each frame (the
+		// scroll-lag bug).
+		if delay <= 0 {
+			delay = time.Millisecond
+		}
+		ticked, hasTicked := ticks[component]
+		if !hasTicked || now.Sub(ticked) >= delay {
+			// A ticker can narrow the tick to its own revision; a plain
+			// animator is invalidated (its descendants re-render).
+			if ticker, ok := component.(AnimationTicker); ok {
+				ticker.AnimationTick()
+			} else {
+				component.Invalidate()
+			}
+			if ticks != nil {
+				ticks[component] = now
 			}
 		}
-		if !found {
-			delete(ticks, component)
+		if !needs || delay < best {
+			needs, best = true, delay
+		}
+	}
+	// Drop the tick entries for components no longer mounted, so a long
+	// session does not accumulate one per tool ever rendered.
+	if ticks != nil {
+		present := make(map[Component]bool, len(animators))
+		for _, animator := range animators {
+			present[animator] = true
+		}
+		for component := range ticks {
+			if !present[component] {
+				delete(ticks, component)
+			}
 		}
 	}
 	return needs, best

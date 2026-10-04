@@ -1,5 +1,7 @@
 package tui
 
+import "sync/atomic"
+
 // Port of the component model from src/tui.ts: the Component interface, the
 // mouse event types, focusability, and the Container.
 
@@ -186,6 +188,17 @@ type childrenHolder interface {
 	childComponents() []Component
 }
 
+// animationTreeRevision counts structural mutations of every container. The
+// renderer's animation walk caches the animator list and re-walks only when the
+// tree changed (or its own box expired), instead of visiting every mounted
+// component on each paint.
+var animationTreeRevision atomic.Uint64
+
+// AnimationTreeRevision is the current structural revision.
+func AnimationTreeRevision() uint64 { return animationTreeRevision.Load() }
+
+func bumpAnimationTreeRevision() { animationTreeRevision.Add(1) }
+
 // Container is a component that contains other components.
 type Container struct {
 	Children []Component
@@ -269,6 +282,7 @@ func (c *Container) Prepare(width int) {
 func (c *Container) AddChild(component Component) {
 	c.Children = append(c.Children, component)
 	c.dropRenderCache()
+	bumpAnimationTreeRevision()
 }
 
 // InsertChildAt inserts a child at the given index (clamped to the current
@@ -281,6 +295,7 @@ func (c *Container) InsertChildAt(index int, component Component) {
 	copy(c.Children[index+1:], c.Children[index:])
 	c.Children[index] = component
 	c.dropRenderCache()
+	bumpAnimationTreeRevision()
 }
 
 // RemoveChild removes a child component.
@@ -289,6 +304,7 @@ func (c *Container) RemoveChild(component Component) {
 		if child == component {
 			c.Children = append(c.Children[:i], c.Children[i+1:]...)
 			c.dropRenderCache()
+			bumpAnimationTreeRevision()
 			return
 		}
 	}
@@ -298,6 +314,7 @@ func (c *Container) RemoveChild(component Component) {
 func (c *Container) Clear() {
 	c.Children = nil
 	c.dropRenderCache()
+	bumpAnimationTreeRevision()
 }
 
 // dropRenderCache clears the cached concatenation.

@@ -426,6 +426,16 @@ map entry per component was 40% of the walk. `Box.applyBg` measures the line's
 width once (it used to reach `ApplyBackgroundToLine`, which measured the padded
 line again).
 
+The animation walk also caches its animator list: the walk visits every mounted
+component and a paint invalidates the scan (D164), so it used to traverse the
+whole tree on every paint. `Renderer.NextAnimation` reuses the list until
+`AnimationTreeRevision` changes (bumped by `Container.AddChild`/`Clear`, not by
+a tick) or a 1 s box expires. The width cache holds 8192 styled lines instead of
+512, because a large boxed transcript evicted its own lines and re-stripped them
+on every `applyBg` (`VisibleWidth` → `StripTerminalSequences`). Together the
+scroll-window CPU samples fell from ~1.27 s to ~0.99 s over 20 s on the 97 MB
+session (`TestRendererCachesTheAnimatorWalk` pins the walk).
+
 ## Session history (high level)
 
 The repository was built as a long port: the `ai`/`agent`/`coding` cores first,

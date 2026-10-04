@@ -503,7 +503,7 @@ var spacingMarkRanges = [][2]rune{
 }
 
 // widthCache caches widths for non-ASCII strings.
-const widthCacheSize = 512
+const widthCacheSize = 8192
 
 // widthCacheEvictBatch is how many entries a full cache drops at once. Evicting
 // (or even counting entries) one at a time meant a full sync.Map range per miss:
