@@ -248,8 +248,11 @@ func GitHubCopilotProvider() *ai.Provider {
 		ID:      "github-copilot",
 		Name:    "GitHub Copilot",
 		BaseURL: "https://api.individual.githubcopilot.com",
-		Auth:    ai.ProviderAuth{APIKey: ai.EnvApiKeyAuth("GitHub Copilot token", []string{"COPILOT_GITHUB_TOKEN"})},
-		Models:  ai.GetBuiltinModels("github-copilot"),
+		Auth: ai.ProviderAuth{
+			APIKey: ai.EnvApiKeyAuth("GitHub Copilot token", []string{"COPILOT_GITHUB_TOKEN"}),
+			OAuth:  ai.GitHubCopilotOAuth(),
+		},
+		Models: ai.GetBuiltinModels("github-copilot"),
 		FilterModels: func(models []*ai.Model, credential *ai.Credential) []*ai.Model {
 			if credential == nil || credential.Type != ai.CredentialOAuth || credential.OAuth == nil {
 				return models

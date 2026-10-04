@@ -60,7 +60,11 @@ scope; MCP and `durable` are ported). The v1.0.1 (`a7229ddc`) → v1.0.2
   provider next to its api-key auth; `coding` gains
   `SettingsManager.GetOrCreateDeviceID` (global `deviceId`) and the login wiring
   forwards it through `AuthInteraction.GetDeviceID`. This closes the port's
-  missing eighth OAuth flow.
+  missing OpenAI ChatGPT flow.
+- `ai` (GitHub Copilot OAuth): `GitHubCopilotOAuth()` existed but was never
+  attached, so the provider offered only api-key auth. `GitHubCopilotProvider`
+  now wires it, and a new `TestBuiltinProviderOAuthSurface` pins every
+  provider's OAuth presence and flow name so a lost or added flow fails.
 - `ai` (Anthropic mid-conversation tools): inline tool definitions
   (`b271b0a52`). Native tool changes now use the `inline-tools-2026-09-15` beta
   (`InlineToolsBeta`): the request-level list stays fixed at the initial tools
