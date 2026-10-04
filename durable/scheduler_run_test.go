@@ -48,12 +48,9 @@ func TestTaskSchedulerRunInvocationPhases(t *testing.T) {
 	if err := scheduler.Open(ctx); err != nil {
 		t.Fatal(err)
 	}
+	// The drain loop owns reservation and invocation; waiting for the task
+	// observes the phase loop without racing a manual Reserve.
 	scheduler.Resume()
-	reservations, err := scheduler.Reserve(ctx)
-	if err != nil || len(reservations) != 1 {
-		t.Fatalf("reservations = %+v, %v", reservations, err)
-	}
-	scheduler.StartInvocation(reservations[0])
 	settled, err := scheduler.WaitForTask(ctx, taskID)
 	if err != nil {
 		t.Fatal(err)
@@ -101,12 +98,9 @@ func TestTaskSchedulerRunInvocationFaultsWithoutProgress(t *testing.T) {
 	if err := scheduler.Open(ctx); err != nil {
 		t.Fatal(err)
 	}
+	// The drain loop owns reservation and invocation; waiting for the task
+	// observes the fault without racing a manual Reserve.
 	scheduler.Resume()
-	reservations, err := scheduler.Reserve(ctx)
-	if err != nil || len(reservations) != 1 {
-		t.Fatalf("reservations = %+v, %v", reservations, err)
-	}
-	scheduler.StartInvocation(reservations[0])
 	settled, err := scheduler.WaitForTask(ctx, taskID)
 	if err != nil {
 		t.Fatal(err)
