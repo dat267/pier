@@ -58,7 +58,10 @@ type TaskScheduler struct {
 
 	unsubscribeRegistry func()
 
-	mu                 sync.Mutex
+	mu sync.Mutex
+	// reserveMu serializes reservation commits, so a direct Reserve cannot
+	// interleave with the drain's and both stage a terminal record.
+	reserveMu          sync.Mutex
 	mirror             *SchedulerMirror
 	invocations        map[Id]*Invocation
 	taskWaiters        *Waiters[Id, SettledTask]
@@ -160,6 +163,8 @@ type SchedulerReservation struct {
 // plan the reservations, orphan the abort-marked tasks no definition can take,
 // stage the running states, and register an invocation per reserved task.
 func (s *TaskScheduler) Reserve(ctx chord.Context) ([]SchedulerReservation, error) {
+	s.reserveMu.Lock()
+	defer s.reserveMu.Unlock()
 	s.mu.Lock()
 	if !s.enabled || s.closing {
 		s.mu.Unlock()
