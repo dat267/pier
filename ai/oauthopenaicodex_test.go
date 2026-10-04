@@ -350,8 +350,9 @@ func withCodexURLs(t *testing.T, base string, run func()) {
 	run()
 }
 
-// TestOpenAICodexCallbackPortInUse pins that a held fixed port fails the login
-// with a clear error instead of racing the other listener (eeac84ca9).
+// TestOpenAICodexCallbackPortInUse pins the paste fallback: the fixed port is
+// shared with the Codex CLI, so when it is held the server reports no callback
+// and the login falls back to the pasted redirect URL (openai-codex.ts).
 func TestOpenAICodexCallbackPortInUse(t *testing.T) {
 	host := oauthCallbackHost()
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, OpenAICodexCallbackPort))
@@ -359,11 +360,9 @@ func TestOpenAICodexCallbackPortInUse(t *testing.T) {
 		t.Skipf("port %d is not free: %v", OpenAICodexCallbackPort, err)
 	}
 	defer listener.Close()
-	server, err := StartOpenAICodexCallbackServer("state")
-	if server != nil {
-		t.Fatal("a held port must not start the callback server")
-	}
-	if err == nil || !strings.Contains(err.Error(), fmt.Sprintf("Port %d is in use", OpenAICodexCallbackPort)) {
-		t.Fatalf("err = %v", err)
+	server := StartOpenAICodexCallbackServer("state")
+	defer server.Close()
+	if code, ok := server.WaitForCode(); ok || code != "" {
+		t.Fatalf("a held port must fall back to manual input: %q, %v", code, ok)
 	}
 }

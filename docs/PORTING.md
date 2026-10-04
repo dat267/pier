@@ -46,11 +46,11 @@ scope; MCP and `durable` are ported). The v1.0.1 (`a7229ddc`) → v1.0.2
   `thinking.block_binding.prefix_mismatch_behavior = drop_block` and the
   `thinking-binding-controls-2026-08-01` beta for those adaptive models (Opus
   4.6 and Sonnet 4.6 reject it; GovCloud is skipped).
-- `ai` (OpenAI Codex OAuth): a held callback port fails sign-in (`eeac84ca9`).
-  `StartOpenAICodexCallbackServer` now returns a port-in-use error (checked with
-  a build-tagged `isAddressInUse`, `windows.WSAEADDRINUSE` on Windows) instead
-  of falling back to the paste prompt, whose browser callback would reach the
-  other listener and be rejected as a state mismatch.
+- `ai` (OpenAI Codex OAuth): the held-callback-port handling stays the paste
+  fallback of `openai-codex.ts` (port 1455 is shared with the Codex CLI). The
+  `eeac84ca9` "fail on port in use" change applies to the separate
+  `openai-chatgpt.ts` ChatGPT-subscription flow, which this port does not
+  implement, so it is not carried over to the Codex provider.
 - `ai` (Anthropic mid-conversation tools): inline tool definitions
   (`b271b0a52`). Native tool changes now use the `inline-tools-2026-09-15` beta
   (`InlineToolsBeta`): the request-level list stays fixed at the initial tools

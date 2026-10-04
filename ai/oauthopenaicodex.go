@@ -373,12 +373,13 @@ func CreateOpenAICodexAuthorizationFlow(originator string) (*OpenAICodexAuthoriz
 	return &OpenAICodexAuthorizationFlow{Verifier: pkce.Verifier, State: state, URL: parsed.String()}, nil
 }
 
-// OpenAICodexCallbackServer is the loopback callback server for the fixed
-// port. A bind failure is reported to the login flow, which fails with a
-// port-in-use error instead of racing another listener.
+// OpenAICodexCallbackServer is the loopback callback server. When the fixed
+// port is unavailable the server reports a null wait so the manual paste path
+// takes over (upstream's listen-error handling).
 type OpenAICodexCallbackServer struct {
-	server   *http.Server
-	listener net.Listener
+	server      *http.Server
+	listener    net.Listener
+	unavailable bool
 
 	mu      sync.Mutex
 	settled bool
@@ -386,21 +387,17 @@ type OpenAICodexCallbackServer struct {
 	done    chan struct{}
 }
 
-// StartOpenAICodexCallbackServer serves /auth/callback on the fixed port. A
-// port held by another pending login (another pi session or the Codex CLI)
-// fails with a clear error, because the browser's callback would otherwise
-// reach that listener and be rejected as a state mismatch.
-func StartOpenAICodexCallbackServer(expectedState string) (*OpenAICodexCallbackServer, error) {
+// StartOpenAICodexCallbackServer serves /auth/callback on the fixed port.
+func StartOpenAICodexCallbackServer(expectedState string) *OpenAICodexCallbackServer {
 	callback := &OpenAICodexCallbackServer{
 		result: make(chan string, 1),
 		done:   make(chan struct{}),
 	}
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", oauthCallbackHost(), OpenAICodexCallbackPort))
 	if err != nil {
-		if isAddressInUse(err) {
-			return nil, fmt.Errorf("Port %d is in use, probably by an unfinished login in another pi session or by the Codex CLI. Cancel that login and try again.", OpenAICodexCallbackPort)
-		}
-		return nil, err
+		callback.unavailable = true
+		close(callback.done)
+		return callback
 	}
 	callback.listener = listener
 	mux := http.NewServeMux()
@@ -428,7 +425,7 @@ func StartOpenAICodexCallbackServer(expectedState string) (*OpenAICodexCallbackS
 	})
 	callback.server = &http.Server{Handler: mux}
 	go func() { _ = callback.server.Serve(listener) }()
-	return callback, nil
+	return callback
 }
 
 func (s *OpenAICodexCallbackServer) settle(code string) {
@@ -456,8 +453,11 @@ func (s *OpenAICodexCallbackServer) CancelWait() {
 }
 
 // WaitForCode returns the callback code; ok is false when the wait was
-// cancelled.
+// cancelled or the listener was unavailable.
 func (s *OpenAICodexCallbackServer) WaitForCode() (string, bool) {
+	if s.unavailable {
+		return "", false
+	}
 	<-s.done
 	select {
 	case code := <-s.result:
@@ -533,10 +533,7 @@ func LoginOpenAICodex(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	server, err := StartOpenAICodexCallbackServer(flow.State)
-	if err != nil {
-		return nil, err
-	}
+	server := StartOpenAICodexCallbackServer(flow.State)
 	defer server.Close()
 
 	type manualResult struct {
