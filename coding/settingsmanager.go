@@ -1385,6 +1385,9 @@ func (m *SettingsManager) persistScopedSettings(
 		for field := range modified {
 			value, has := snapshotMap[field]
 			if !has {
+				// Upstream sets the field to undefined, which JSON.stringify drops:
+				// a cleared setting is removed from the file rather than kept.
+				delete(merged, field)
 				continue
 			}
 			nestedKeys, hasNested := modifiedNested[field]
