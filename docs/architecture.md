@@ -393,6 +393,18 @@ re-rendering the content; the markdown and box caches are the ones that keep
 large messages off the loop's critical path. The benchmarks are the guard
 against a future per-frame cost that scales with content.
 
+One per-frame cost did scale with content: the animation walk. A paint drops the
+cached walk (D164), so the walk runs on every paint, and it used to tick
+(`Invalidate`) every animator it found. `ToolExecutionComponent.Invalidate`
+rebuilds its whole output (`updateDisplay` re-creates and re-wraps every result
+`Text`), so scrolling a session with a running tool re-wrapped every tool's full
+output on every frame: a 97 MB session measured 100–143 ms `render` phases per
+wheel event (`pier-stall.log`). The walk now ticks each animator only once per
+its own delay (`Renderer.animationTicks`, `nextAnimationForTicked`), matching
+upstream's `setInterval(context.invalidate)` cadence; the same scroll measures
+10–26 ms, once per second. `TestAnimationWalkTicksAnAnimatorOncePerDelay` pins
+it.
+
 ## Session history (high level)
 
 The repository was built as a long port: the `ai`/`agent`/`coding` cores first,

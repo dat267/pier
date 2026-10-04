@@ -129,10 +129,17 @@ type Renderer struct {
 	// postMu guards the posted-callback queue: Post is called from off-loop
 	// goroutines (loaders, watchers) and drained by the owner's render pass
 	// (D146: queue serialization only — no UI state under the lock).
-	postMu  sync.Mutex
-	posted  []func()
-	stopped atomic.Bool
-	started atomic.Bool
+	postMu sync.Mutex
+	posted []func()
+	// animationTicks is when each animating component was last ticked. The
+	// animation walk runs on every paint (a paint can change animation state,
+	// D164), but a component must only be ticked once per own delay: ticking it
+	// on every paint invalidates—and rebuilds—the whole subtree of every running
+	// tool (ToolExecutionComponent.Invalidate -> updateDisplay re-wraps the tool's
+	// entire output), which made scrolling a large session laggy.
+	animationTicks map[Component]time.Time
+	stopped        atomic.Bool
+	started        atomic.Bool
 
 	renderRequested bool
 	fullRedrawCount int
@@ -242,20 +249,32 @@ func (t *Renderer) RawChildren() []Component {
 // again (stage 4).
 func (t *Renderer) NextAnimation() (bool, time.Duration) {
 	now := t.clock()
-	return nextAnimationFor(t.GetMountedRoots(), now)
+	if t.animationTicks == nil {
+		t.animationTicks = map[Component]time.Time{}
+	}
+	return nextAnimationForTicked(t.GetMountedRoots(), now, t.animationTicks)
 }
 
 // nextAnimationFor walks the component tree for the earliest animation frame.
 func nextAnimationFor(components []Component, now time.Time) (bool, time.Duration) {
+	return nextAnimationForTicked(components, now, nil)
+}
+
+// nextAnimationForTicked walks like nextAnimationFor, ticking each animating
+// component only when its own delay has elapsed since the last tick (ticks is
+// the per-component last-tick time; nil ticks every animator).
+func nextAnimationForTicked(components []Component, now time.Time, ticks map[Component]time.Time) (bool, time.Duration) {
 	var (
 		needs bool
 		best  time.Duration
 	)
+	seen := make(map[Component]bool, len(ticks))
 	var walk func(component Component)
 	walk = func(component Component) {
 		if component == nil {
 			return
 		}
+		seen[component] = true
 		if animator, ok := component.(Animator); ok {
 			if want, delay := animator.AnimationFrame(now); want {
 				// Asking for a frame invalidates what animates. Upstream's per-call
@@ -265,9 +284,19 @@ func nextAnimationFor(components []Component, now time.Time) (bool, time.Duratio
 				// comparing revisions concludes "unchanged" and serves its previous
 				// frame — a frozen elapsed label on a tool nothing else invalidates.
 				// The tick is what bumps the revision.
-				component.Invalidate()
+				//
+				// The tick is gated by the component's own delay: the walk runs on
+				// every paint, and ticking on every walk rebuilt every running tool's
+				// whole subtree each frame (the scroll-lag bug).
 				if delay <= 0 {
 					delay = time.Millisecond
+				}
+				ticked, hasTicked := ticks[component]
+				if !hasTicked || now.Sub(ticked) >= delay {
+					component.Invalidate()
+					if ticks != nil {
+						ticks[component] = now
+					}
 				}
 				if !needs || delay < best {
 					needs, best = true, delay
@@ -282,6 +311,13 @@ func nextAnimationFor(components []Component, now time.Time) (bool, time.Duratio
 	}
 	for _, component := range components {
 		walk(component)
+	}
+	// Drop the tick entries for components no longer mounted, so a long session
+	// does not accumulate one per tool ever rendered.
+	for component := range ticks {
+		if !seen[component] {
+			delete(ticks, component)
+		}
 	}
 	return needs, best
 }
