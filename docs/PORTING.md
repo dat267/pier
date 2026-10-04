@@ -90,6 +90,12 @@ scope; MCP and `durable` are ported). The v1.0.1 (`a7229ddc`) → v1.0.2
   entry (newest first, links normalized) between dynamic borders, and
   `changelog` is in `BuiltinSlashCommands` for autocomplete. (`/share` and
   `/bug` remain out of scope with the upload transport.)
+- `coding`: the `terminal.trueColor`/`terminal.hyperlinks` capability overrides
+  were ignored. `SettingsManager.GetTerminalCapabilityOverrides` (upstream
+  `getTerminalCapabilityOverrides`) resolves them, `cmd` forces truecolor before
+  the theme boot's capability stage and passes hyperlinks to the app, and
+  `ThemeBoot.SetTrueColorOverride` applies it. The image override is inert like
+  every other image path (D26/D140).
 - `mcp` (OAuth client ID metadata documents, `1499466d8`): the generic
   `mcp/oauth` layer — `OAuthClientMetadataDocument`, the provider's
   `ClientMetadataDocument` chooser, the document's redirect URI threaded through

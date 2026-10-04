@@ -186,6 +186,10 @@ func run(appName string, args *coding.Args) error {
 	// fallback for library consumers and as what the upstream-parity test corpus
 	// renders with.
 	theme := interactive.NewThemeBoot()
+	// terminal.trueColor from the settings forces the capability before the
+	// palette bakes its escapes (upstream setCapabilityOverrides).
+	terminalOverrides := settings.GetTerminalCapabilityOverrides()
+	theme.SetTrueColorOverride(terminalOverrides.TrueColor)
 	theme.EnableCapabilities()
 	// The source stage runs twice: project-local themes need the trust decision,
 	// which the pre-boot install cannot read (ThemeBoot explains the sequence).
@@ -464,6 +468,7 @@ func run(appName string, args *coding.Args) error {
 
 	app := interactive.NewApp(interactive.AppOptions{
 		Cwd:          runtimeCwd,
+		Hyperlinks:   terminalOverrides.Hyperlinks != nil && *terminalOverrides.Hyperlinks,
 		AgentDir:     agentDir,
 		TuiMode:      tuiMode,
 		Version:      coding.Version,

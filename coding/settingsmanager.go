@@ -2365,6 +2365,47 @@ func (m *SettingsManager) SetImageWidthCells(width int) {
 	m.save()
 }
 
+// TerminalCapabilityOverrides are the terminal capability overrides from the
+// settings (upstream getTerminalCapabilityOverrides). Images stays inert in
+// this port, so HasImages only records whether the override was present.
+type TerminalCapabilityOverrides struct {
+	Images     any
+	HasImages  bool
+	TrueColor  *bool
+	Hyperlinks *bool
+}
+
+// GetTerminalCapabilityOverrides resolves the terminal.trueColor, hyperlinks
+// and images overrides (upstream getTerminalCapabilityOverrides).
+func (m *SettingsManager) GetTerminalCapabilityOverrides() TerminalCapabilityOverrides {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var out TerminalCapabilityOverrides
+	terminal := m.settings.Terminal
+	if terminal == nil {
+		return out
+	}
+	switch images := terminal.Images.(type) {
+	case string:
+		if images == "kitty" || images == "iterm2" {
+			out.Images, out.HasImages = images, true
+		}
+	case bool:
+		if !images {
+			out.Images, out.HasImages = nil, true
+		}
+	}
+	if trueColor, ok := terminal.TrueColor.(bool); ok {
+		value := trueColor
+		out.TrueColor = &value
+	}
+	if hyperlinks, ok := terminal.Hyperlinks.(bool); ok {
+		value := hyperlinks
+		out.Hyperlinks = &value
+	}
+	return out
+}
+
 // GetClearOnShrink reports the clear-on-shrink toggle (settings, then
 // PI_CLEAR_ON_SHRINK, then false).
 func (m *SettingsManager) GetClearOnShrink() bool {

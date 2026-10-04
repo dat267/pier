@@ -101,3 +101,26 @@ func containsTheme(names []string, want string) bool {
 	}
 	return false
 }
+
+// TestThemeBootTrueColorOverride pins that terminal.trueColor forces the
+// capability before the palette bakes its escapes.
+func TestThemeBootTrueColorOverride(t *testing.T) {
+	previous := terminalCapabilitiesTrueColor()
+	t.Cleanup(func() { SetTrueColorSupport(previous) })
+
+	off := false
+	NewThemeBoot().EnableCapabilities()
+	boot := NewThemeBoot()
+	boot.SetTrueColorOverride(&off)
+	boot.EnableCapabilities()
+	if terminalCapabilitiesTrueColor() {
+		t.Fatal("terminal.trueColor=false must disable truecolor")
+	}
+	on := true
+	boot = NewThemeBoot()
+	boot.SetTrueColorOverride(&on)
+	boot.EnableCapabilities()
+	if !terminalCapabilitiesTrueColor() {
+		t.Fatal("terminal.trueColor=true must enable truecolor")
+	}
+}

@@ -52,8 +52,13 @@ type ThemeSources struct {
 // capability stage once and the source stage as many times as the trust
 // decision requires.
 type ThemeBoot struct {
-	capabilities bool
+	capabilities      bool
+	trueColorOverride *bool
 }
+
+// SetTrueColorOverride forces the truecolor capability before the capability
+// stage (terminal.trueColor). Nil keeps the default (on).
+func (b *ThemeBoot) SetTrueColorOverride(value *bool) { b.trueColorOverride = value }
 
 // NewThemeBoot creates a boot that has performed no stage yet.
 func NewThemeBoot() *ThemeBoot { return &ThemeBoot{} }
@@ -63,7 +68,11 @@ func NewThemeBoot() *ThemeBoot { return &ThemeBoot{} }
 // escapes on creation, so the capability switch has to precede the install
 // (D154). It is idempotent, and it must precede ApplySources.
 func (b *ThemeBoot) EnableCapabilities() {
-	SetTrueColorSupport(true)
+	trueColor := true
+	if b.trueColorOverride != nil {
+		trueColor = *b.trueColorOverride
+	}
+	SetTrueColorSupport(trueColor)
 	SetStyleColorsEnabled(true)
 	InstallPierTheme()
 	b.capabilities = true
