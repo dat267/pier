@@ -65,10 +65,10 @@ func TestAppEndToEndLoop(t *testing.T) {
 	// These deadlines must cover a loaded 2-core runner: the whole package took
 	// 63 s there and init missed 6 s (CI 36266574631). The condition is still
 	// required; only the poll window scales with the machine.
-	waitForConditionWithin(t, func() bool { return app.lifecycle.IsInitialized() }, 20*time.Second)
+	waitForConditionWithin(t, func() bool { return app.lifecycle.IsInitialized() }, 30*time.Second)
 	// Wait for the run loop to reach its first beat before queueing, so the input
 	// is read from the loop's select rather than racing startup.
-	waitForConditionWithin(t, func() bool { return app.runner != nil && app.runner.LoopBeats() > 0 }, 20*time.Second)
+	waitForConditionWithin(t, func() bool { return app.runner != nil && app.runner.LoopBeats() > 0 }, 30*time.Second)
 	app.startup.QueueUserInput("hello from the smoke test")
 
 	// The loop forwards the input to the session; with no model the prompt
@@ -88,12 +88,12 @@ func TestAppEndToEndLoop(t *testing.T) {
 			}
 		}
 		return sawUser && sawAssistant
-	}, 15*time.Second)
+	}, 30*time.Second)
 
 	cancel()
 	select {
 	case <-done:
-	case <-time.After(3 * time.Second):
+	case <-time.After(10 * time.Second):
 		t.Fatal("run loop did not exit after cancellation")
 	}
 }
