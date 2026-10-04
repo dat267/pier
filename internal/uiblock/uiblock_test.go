@@ -73,7 +73,7 @@ func TestGoroutineBlockClassifierHasTeeth(t *testing.T) {
 	if testing.Short() {
 		t.Skip("loads and builds SSA for the whole module")
 	}
-	m, err := loadModule("../..")
+	m, err := cachedModule("../..")
 	if err != nil {
 		t.Fatalf("analysis failed: %v", err)
 	}

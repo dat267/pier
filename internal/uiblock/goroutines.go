@@ -21,7 +21,7 @@ import (
 // counted as "blocking work"; file/network/exec I/O, lock acquisition, and
 // CPU-bound JSON are.
 func FindGoroutines(dir string) ([]Finding, error) {
-	m, err := loadModule(dir)
+	m, err := cachedModule(dir)
 	if err != nil {
 		return nil, err
 	}

@@ -30,6 +30,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 
 	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/go/ssa"
@@ -135,6 +136,26 @@ type module struct {
 	pierMethods map[string][]*ssa.Function
 }
 
+// moduleCache shares one loaded SSA world per directory. The package's three
+// tests each want it, and building it is the dominant cost of the test suite
+// (a full module load under -race); the module is read-only after loading, so
+// sharing it is safe.
+var moduleCache sync.Map // dir -> *moduleLoad
+
+type moduleLoad struct {
+	once   sync.Once
+	module *module
+	err    error
+}
+
+// cachedModule returns the shared module for dir, loading it once.
+func cachedModule(dir string) (*module, error) {
+	value, _ := moduleCache.LoadOrStore(dir, &moduleLoad{})
+	load := value.(*moduleLoad)
+	load.once.Do(func() { load.module, load.err = loadModule(dir) })
+	return load.module, load.err
+}
+
 // loadModule builds the SSA program and computes the UI-loop roots.
 func loadModule(dir string) (*module, error) {
 	cfg := &packages.Config{Mode: packages.LoadAllSyntax, Dir: dir}
@@ -229,7 +250,7 @@ func loadModule(dir string) (*module, error) {
 
 // Find runs the analysis over the module rooted at dir.
 func Find(dir string) ([]Finding, error) {
-	m, err := loadModule(dir)
+	m, err := cachedModule(dir)
 	if err != nil {
 		return nil, err
 	}
