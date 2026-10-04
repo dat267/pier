@@ -278,7 +278,7 @@ var nonRetryableProviderLimitErrorPattern = regexp.MustCompile(`(?i)` + strings.
 
 // Retryable provider/transport errors.
 var retryableProviderErrorPattern = regexp.MustCompile(`(?i)` + strings.Join([]string{
-	`overloaded`, `currently experiencing high demand`, `rate.?limit`, `too many requests`,
+	`overloaded`, `currently experiencing high demand`, `model is at capacity`, `rate.?limit`, `too many requests`,
 	`429`, `500`, `502`, `503`, `504`, `520`, `524`,
 	`service.?unavailable`, `server.?error`, `internal.?error`,
 	`provider.?returned.?error`, `exceeded request buffer limit while retrying upstream`,

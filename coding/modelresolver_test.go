@@ -427,6 +427,7 @@ func TestDefaultModelPerProviderTracksCurrentModels(t *testing.T) {
 		"xai":                        "grok-4.7",
 		"qwen-token-plan-individual": "qwen3.8-max",
 		"meta":                       "muse-spark-1.3",
+		"nvidia":                     "nvidia/nemotron-3-ultra-550b-a55b",
 	}
 	for provider, want := range expectations {
 		if got := DefaultModelPerProvider[provider]; got != want {

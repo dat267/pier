@@ -29,6 +29,10 @@ ported. Ported so far:
   `EnsureProviderSessionID` returns the persisted id or lazily backfills a
   legacy conversation in one commit. Generation and compaction requests forward
   it as the model request's session id for prompt-cache affinity.
+- `coding`/`ai`: small fixes. `--models` drops empty entries (`9b3c19da5`), so
+  a trailing comma no longer adds a substring-match-everything pattern; the
+  NVIDIA default is `nvidia/nemotron-3-ultra-550b-a55b` (`49b9df489`); and the
+  retryable-provider-error pattern accepts `model is at capacity` (`3874b3e98`).
 
 Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
 

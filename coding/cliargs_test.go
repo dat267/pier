@@ -101,6 +101,12 @@ func TestParseArgsValueFlags(t *testing.T) {
 		result.Models[0] != "gpt-4o" || result.Models[2] != "gemini-pro" {
 		t.Fatalf("--models = %#v", result.Models)
 	}
+	// A trailing or doubled comma must not add an empty pattern, which would
+	// substring-match every model (9b3c19da5).
+	if result := ParseArgs([]string{"--models", "gpt-4o,,claude-sonnet,"}); len(result.Models) != 2 ||
+		result.Models[0] != "gpt-4o" || result.Models[1] != "claude-sonnet" {
+		t.Fatalf("--models empty entries = %#v", result.Models)
+	}
 }
 
 func TestParseArgsNameAndSessions(t *testing.T) {

@@ -183,7 +183,9 @@ func ParseArgs(args []string) *Args {
 			}
 		case arg == "--models":
 			if value, ok := next(); ok {
-				result.Models = splitTrimmed(value)
+				// A trailing comma must not produce an empty pattern, which
+				// would substring-match every model (9b3c19da5).
+				result.Models = splitNonEmpty(value)
 			}
 		case arg == "--no-tools" || arg == "-nt":
 			result.NoTools = true

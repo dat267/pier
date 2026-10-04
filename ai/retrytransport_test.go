@@ -33,3 +33,13 @@ func TestTransportPatternsDoNotOverrideTheLimitGuard(t *testing.T) {
 		t.Error("a usage-limit error was retried because its text mentioned a reset")
 	}
 }
+
+// A provider that reports its selected model is at capacity is retrying a
+// transient load condition, not returning a caller error (3874b3e98).
+func TestCapacityErrorsAreRetryable(t *testing.T) {
+	message := "Selected model is at capacity. Please try a different model."
+	response := &AssistantMessage{StopReason: StopError, ErrorMessage: &message}
+	if !IsRetryableAssistantError(response) {
+		t.Error("a model-at-capacity error was not retried")
+	}
+}
