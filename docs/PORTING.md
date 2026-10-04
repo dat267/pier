@@ -90,16 +90,20 @@ scope; MCP and `durable` are ported). The v1.0.1 (`a7229ddc`) → v1.0.2
   entry (newest first, links normalized) between dynamic borders, and
   `changelog` is in `BuiltinSlashCommands` for autocomplete. (`/share` and
   `/bug` remain out of scope with the upload transport.)
+- `mcp` (OAuth client ID metadata documents, `1499466d8`): the generic
+  `mcp/oauth` layer — `OAuthClientMetadataDocument`, the provider's
+  `ClientMetadataDocument` chooser, the document's redirect URI threaded through
+  the authorization and token requests, and the callback server's
+  `ExtraPaths`/per-waiter path matching.
 
 Not ported from the v1.0.1/v1.0.2 delta, with the reason:
 
 - `ai` catalog docs (`221cbcb02`) and the Together model-ID set change
   (`28eaccb8e`, whose new ID the regenerated catalog already carries).
-- `coding`/MCP (`1499466d8` OAuth client ID metadata documents): the port
-  connects MCP servers with stored tokens and has no `/mcp` sign-in UI (the
-  extension boundary), so the config field and the flow's per-server document
-  have no reachable effect. The generic `mcp/oauth` callback-path work is
-  likewise unused.
+- `coding`/MCP sign-in (`1499466d8`): the `clientRegistration: "cimd"` config
+  field and the `/mcp` sign-in UI are not ported; the port connects MCP servers
+  with stored tokens and has no sign-in UI (the extension boundary), so they
+  have no reachable effect. The generic `mcp/oauth` layer above is ported.
 - `coding`/extensions (`11449730c` tool-renderer resolvers): the port has no
   extension system, and its MCP tools carry no renderers, so the resolver has
   nothing to resolve.

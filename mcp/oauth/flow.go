@@ -23,12 +23,24 @@ const (
 // AddClientAuthentication).
 type AddClientAuthentication func(headers map[string]string, params url.Values, tokenURL string, metadata *AuthorizationServerMetadata) error
 
+// OAuthClientMetadataDocument is a Client ID Metadata Document: an https URL
+// used as `client_id`, and a redirect URI it lists (upstream
+// OAuthClientMetadataDocument).
+type OAuthClientMetadataDocument struct {
+	URL         string
+	RedirectURL string
+}
+
 // OAuthClientProvider abstracts where credentials live (upstream
 // OAuthClientProvider).
 type OAuthClientProvider interface {
 	RedirectURL() string
 	ClientMetadata() OAuthClientMetadata
-	ClientMetadataURL() *string
+	// ClientMetadataDocument chooses a Client ID Metadata Document to identify
+	// as instead of registering dynamically, or nil to register. Called when no
+	// client information is stored; the document is not stored. metadata is nil
+	// when the authorization server has none.
+	ClientMetadataDocument(metadata *AuthorizationServerMetadata) *OAuthClientMetadataDocument
 	State(ctx context.Context) (string, error)
 	ClientInformation(ctx context.Context) (*OAuthClientInformation, error)
 	SaveClientInformation(ctx context.Context, information *OAuthClientInformationFull) error
@@ -535,31 +547,39 @@ func runFlow(ctx context.Context, provider OAuthClientProvider, options FlowOpti
 	if err != nil {
 		return "", err
 	}
+	var clientDocument *OAuthClientMetadataDocument
+	if client == nil {
+		clientDocument = provider.ClientMetadataDocument(metadata)
+	}
+	if clientDocument != nil {
+		documentURL, err := url.Parse(clientDocument.URL)
+		if err != nil || documentURL.Scheme != "https" || documentURL.Path == "/" {
+			return "", fmt.Errorf("Invalid OAuth client metadata URL")
+		}
+	}
+	if client == nil && clientDocument != nil {
+		client = &OAuthClientInformation{ClientID: clientDocument.URL}
+	}
 	if client == nil {
 		if options.AuthorizationCode != "" {
 			return "", fmt.Errorf("OAuth client information is missing during code exchange")
 		}
-		if metadata != nil && metadata.ClientIDMetadataDocumentSupported != nil && *metadata.ClientIDMetadataDocumentSupported && provider.ClientMetadataURL() != nil {
-			documentURL, err := url.Parse(*provider.ClientMetadataURL())
-			if err != nil || documentURL.Scheme != "https" || documentURL.Path == "/" {
-				return "", fmt.Errorf("Invalid OAuth client metadata URL")
-			}
-			client = &OAuthClientInformation{ClientID: *provider.ClientMetadataURL()}
-			if err := provider.SaveClientInformation(ctx, &OAuthClientInformationFull{OAuthClientInformation: *client}); err != nil {
-				return "", err
-			}
-		} else {
-			registered, err := RegisterClient(ctx, discovered.AuthorizationServerURL, RegisterClientOptions{
-				Metadata: metadata, ClientMetadata: provider.ClientMetadata(), Scope: scope, Fetch: fetch,
-			})
-			if err != nil {
-				return "", err
-			}
-			client = &registered.OAuthClientInformation
-			if err := provider.SaveClientInformation(ctx, registered); err != nil {
-				return "", err
-			}
+		registered, err := RegisterClient(ctx, discovered.AuthorizationServerURL, RegisterClientOptions{
+			Metadata: metadata, ClientMetadata: provider.ClientMetadata(), Scope: scope, Fetch: fetch,
+		})
+		if err != nil {
+			return "", err
 		}
+		client = &registered.OAuthClientInformation
+		if err := provider.SaveClientInformation(ctx, registered); err != nil {
+			return "", err
+		}
+	}
+	// The document's redirect URI may differ from the provider's, for example
+	// by a server-specific path.
+	redirectURL := provider.RedirectURL()
+	if clientDocument != nil {
+		redirectURL = clientDocument.RedirectURL
 	}
 	tokenOptions := TokenRequestOptions{
 		Metadata: metadata, ClientInformation: client, Resource: resource,
@@ -589,7 +609,7 @@ func runFlow(ctx context.Context, provider OAuthClientProvider, options FlowOpti
 			TokenRequestOptions: tokenOptions,
 			Code:                options.AuthorizationCode,
 			CodeVerifier:        verifier,
-			RedirectURL:         provider.RedirectURL(),
+			RedirectURL:         redirectURL,
 		})
 		if err != nil {
 			return "", err
@@ -633,7 +653,7 @@ func runFlow(ctx context.Context, provider OAuthClientProvider, options FlowOpti
 		return "", err
 	}
 	authorization, err := StartAuthorization(discovered.AuthorizationServerURL, StartAuthorizationOptions{
-		Metadata: metadata, ClientInformation: client, RedirectURL: provider.RedirectURL(),
+		Metadata: metadata, ClientInformation: client, RedirectURL: redirectURL,
 		Scope: scope, State: state, Resource: resource,
 	})
 	if err != nil {

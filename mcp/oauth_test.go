@@ -28,6 +28,7 @@ type testProvider struct {
 	redirectURL      string
 	clientMetadata   oauth.OAuthClientMetadata
 	client           *oauth.OAuthClientInformationFull
+	clientDocument   *oauth.OAuthClientMetadataDocument
 	tokenSet         *oauth.OAuthTokens
 	verifier         string
 	discovery        *oauth.OAuthDiscoveryState
@@ -49,8 +50,10 @@ func newTestProvider(redirectURL string) *testProvider {
 
 func (p *testProvider) RedirectURL() string                       { return p.redirectURL }
 func (p *testProvider) ClientMetadata() oauth.OAuthClientMetadata { return p.clientMetadata }
-func (p *testProvider) ClientMetadataURL() *string                { return nil }
-func (p *testProvider) State(context.Context) (string, error)     { return "expected-state", nil }
+func (p *testProvider) ClientMetadataDocument(*oauth.AuthorizationServerMetadata) *oauth.OAuthClientMetadataDocument {
+	return p.clientDocument
+}
+func (p *testProvider) State(context.Context) (string, error) { return "expected-state", nil }
 func (p *testProvider) ClientInformation(context.Context) (*oauth.OAuthClientInformation, error) {
 	if p.client == nil {
 		return nil, nil
@@ -773,4 +776,105 @@ func TestOAuthCallbackPages(t *testing.T) {
 			t.Fatalf("callback = %+v", result)
 		}
 	})
+}
+
+// TestOAuthClientMetadataDocument covers the inline Client ID Metadata Document:
+// the document's URL is the client_id, its redirect URI is used for the
+// authorization and token requests, and no client is registered.
+func TestOAuthClientMetadataDocument(t *testing.T) {
+	mux := http.NewServeMux()
+	server := httptest.NewServer(mux)
+	defer server.Close()
+	origin := server.URL
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		t.Errorf("the document must not register a client: %s %s", r.Method, r.URL.Path)
+	})
+	provider := newTestProvider("http://127.0.0.1/callback")
+	provider.discovery = &oauth.OAuthDiscoveryState{
+		AuthorizationServerURL: origin,
+		AuthorizationServerMetadata: &oauth.AuthorizationServerMetadata{
+			Issuer: origin, AuthorizationEndpoint: origin + "/authorize", TokenEndpoint: origin + "/token",
+			ResponseTypesSupported: []string{"code"},
+		},
+	}
+	provider.clientDocument = &oauth.OAuthClientMetadataDocument{
+		URL: "https://pi.dev/oauth/abc/client.json", RedirectURL: "http://127.0.0.1:1455/callback/abc",
+	}
+	result, err := oauth.AuthorizeMcp(context.Background(), provider, oauth.FlowOptions{ServerURL: origin + "/mcp"})
+	if err != nil || result != oauth.ResultRedirect {
+		t.Fatalf("authorize = %s, %v", result, err)
+	}
+	authorizationURL, err := url.Parse(provider.authorizationURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := authorizationURL.Query().Get("client_id"); got != "https://pi.dev/oauth/abc/client.json" {
+		t.Fatalf("client_id = %q", got)
+	}
+	if got := authorizationURL.Query().Get("redirect_uri"); got != "http://127.0.0.1:1455/callback/abc" {
+		t.Fatalf("redirect_uri = %q", got)
+	}
+	if provider.client != nil {
+		t.Fatal("a client document must not be stored")
+	}
+	// A non-https or root-path document URL is rejected.
+	for _, invalid := range []string{"http://pi.dev/oauth/client.json", "https://pi.dev/"} {
+		provider.clientDocument = &oauth.OAuthClientMetadataDocument{URL: invalid, RedirectURL: "http://127.0.0.1/callback"}
+		if _, err := oauth.AuthorizeMcp(context.Background(), provider, oauth.FlowOptions{ServerURL: origin + "/mcp"}); err == nil {
+			t.Fatalf("%q must be rejected", invalid)
+		}
+	}
+}
+
+// TestOAuthCallbackExtraPath covers the server-specific callback path: a
+// response on an allowed-but-wrong path is rejected.
+func TestOAuthCallbackExtraPath(t *testing.T) {
+	callback, err := oauth.ListenCallbackServer(context.Background(), oauth.OAuthCallbackServerOptions{
+		Port: 0, ExtraPaths: []string{"/callback/abc"},
+	})
+	if err != nil {
+		t.Skipf("loopback callback server unavailable: %v", err)
+	}
+	defer callback.Close(context.Background())
+	base := callback.RedirectURL // http://host:port/callback
+
+	drive := func(path, state string, waitPath string) (oauth.OAuthCallback, error) {
+		resultCh := make(chan oauth.OAuthCallback, 1)
+		errCh := make(chan error, 1)
+		go func() {
+			result, err := callback.WaitForCallback(state, waitPath)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			resultCh <- result
+		}()
+		awaitCallbackWaiter(t, callback, state)
+		requestURL := strings.Replace(base, "/callback", path, 1) + "?code=abc&state=" + state
+		response, err := http.Get(requestURL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		response.Body.Close()
+		select {
+		case result := <-resultCh:
+			return result, nil
+		case err := <-errCh:
+			return oauth.OAuthCallback{}, err
+		case <-time.After(5 * time.Second):
+			t.Fatal("callback never resolved")
+		}
+		return oauth.OAuthCallback{}, nil
+	}
+
+	// A response on the base path when the waiter expects the server-specific
+	// path fails.
+	if _, err := drive("/callback", "state-wrong", "/callback/abc"); err == nil || !strings.Contains(err.Error(), "another redirect URI") {
+		t.Fatalf("wrong path err = %v", err)
+	}
+	// The exact server-specific path succeeds.
+	result, err := drive("/callback/abc", "state-right", "/callback/abc")
+	if err != nil || result.Code != "abc" {
+		t.Fatalf("result = %+v, %v", result, err)
+	}
 }

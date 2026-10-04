@@ -112,10 +112,13 @@ type McpOAuthProviderOptions struct {
 	ServerURL      string
 	RedirectURL    string
 	ClientMetadata OAuthClientMetadata
-	ClientID       string
-	ClientSecret   string
-	Store          McpOAuthStateStore
-	OnRedirect     func(ctx context.Context, url string) error
+	// ClientMetadataDocument chooses a Client ID Metadata Document instead of
+	// dynamic registration (upstream clientMetadataDocument).
+	ClientMetadataDocument func(metadata *AuthorizationServerMetadata) *OAuthClientMetadataDocument
+	ClientID               string
+	ClientSecret           string
+	Store                  McpOAuthStateStore
+	OnRedirect             func(ctx context.Context, url string) error
 }
 
 // McpOAuthProvider is the default stateful provider for one exact MCP server
@@ -128,6 +131,7 @@ type McpOAuthProvider struct {
 	// Metadata is the effective RFC 7591 client metadata with the defaults
 	// applied (upstream's clientMetadata property).
 	Metadata         OAuthClientMetadata
+	metadataDocument func(metadata *AuthorizationServerMetadata) *OAuthClientMetadataDocument
 	serverURL        string
 	configuredClient *OAuthClientInformation
 	store            McpOAuthStateStore
@@ -174,6 +178,7 @@ func NewMcpOAuthProvider(options McpOAuthProviderOptions) *McpOAuthProvider {
 	return &McpOAuthProvider{
 		redirectURL:      options.RedirectURL,
 		Metadata:         metadata,
+		metadataDocument: options.ClientMetadataDocument,
 		serverURL:        options.ServerURL,
 		configuredClient: configuredClient,
 		store:            store,
@@ -193,8 +198,14 @@ func (p *McpOAuthProvider) AddClientAuthentication() AddClientAuthentication { r
 // clientMetadata property).
 func (p *McpOAuthProvider) ClientMetadata() OAuthClientMetadata { return p.Metadata }
 
-// ClientMetadataURL is unused by the default provider.
-func (p *McpOAuthProvider) ClientMetadataURL() *string { return nil }
+// ClientMetadataDocument delegates to the configured chooser, or nil to
+// register dynamically (upstream clientMetadataDocument).
+func (p *McpOAuthProvider) ClientMetadataDocument(metadata *AuthorizationServerMetadata) *OAuthClientMetadataDocument {
+	if p.metadataDocument == nil {
+		return nil
+	}
+	return p.metadataDocument(metadata)
+}
 
 // State returns the pending oauth state parameter, generating it on first
 // use (upstream state).
