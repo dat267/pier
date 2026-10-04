@@ -169,6 +169,7 @@ type SubmitHandlers struct {
 	HandleCopyCommand        func() error
 	HandleNameCommand        func(text string)
 	HandleSessionCommand     func()
+	HandleChangelogCommand   func()
 	HandleHotkeysCommand     func()
 	ShowUserMessageSelector  func()
 	HandleCloneCommand       func() error
@@ -306,6 +307,12 @@ func (w *SubmitWiring) HandleSubmit(ctx context.Context, text string) {
 	case text == "/session":
 		if w.Handlers.HandleSessionCommand != nil {
 			w.Handlers.HandleSessionCommand()
+		}
+		clearEditor()
+		return
+	case text == "/changelog":
+		if w.Handlers.HandleChangelogCommand != nil {
+			w.Handlers.HandleChangelogCommand()
 		}
 		clearEditor()
 		return
@@ -669,6 +676,7 @@ func newSubmitWiring(app *App) *SubmitWiring {
 				return nil
 			},
 			HandleSessionCommand:    func() { app.commands.HandleSessionCommand(time.Now().UnixMilli()) },
+			HandleChangelogCommand:  app.commands.HandleChangelogCommand,
 			HandleHotkeysCommand:    app.commands.HandleHotkeysCommand,
 			ShowUserMessageSelector: func() { app.selectors.ShowUserMessageSelector(context.Background()) },
 			ShowTreeSelector:        func() { app.selectors.ShowTreeSelector(context.Background(), "", false) },

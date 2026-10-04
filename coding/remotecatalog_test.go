@@ -270,12 +270,12 @@ func TestBuiltinSlashCommands(t *testing.T) {
 			t.Errorf("%s must have a description", command.Name)
 		}
 	}
-	for _, expected := range []string{"model", "compact", "login", "quit"} {
+	for _, expected := range []string{"model", "compact", "login", "changelog", "quit"} {
 		if !found[expected] {
 			t.Errorf("missing command %q", expected)
 		}
 	}
-	if len(BuiltinSlashCommands) != 22 {
+	if len(BuiltinSlashCommands) != 23 {
 		t.Fatalf("commands = %d", len(BuiltinSlashCommands))
 	}
 	if !strings.Contains(BuiltinSlashCommands[len(BuiltinSlashCommands)-1].Description, AppName) {

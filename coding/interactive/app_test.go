@@ -281,6 +281,7 @@ func TestAppWiringCompleteness(t *testing.T) {
 		{"Submit.Handlers.HandleCompactCommand", app.submit.Handlers.HandleCompactCommand != nil},
 		{"Submit.Handlers.HandleExportCommand", app.submit.Handlers.HandleExportCommand != nil},
 		{"Submit.Handlers.HandleHotkeysCommand", app.submit.Handlers.HandleHotkeysCommand != nil},
+		{"Submit.Handlers.HandleChangelogCommand", app.submit.Handlers.HandleChangelogCommand != nil},
 		{"Submit.Handlers.ShowTrustSelector", app.submit.Handlers.ShowTrustSelector != nil},
 		{"Submit.Handlers.Shutdown", app.submit.Handlers.Shutdown != nil},
 		{"Trust.Stop", app.trust.Stop != nil},

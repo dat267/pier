@@ -274,6 +274,18 @@ func TestCommandHotkeys(t *testing.T) {
 	}
 }
 
+func TestCommandChangelog(t *testing.T) {
+	wiring, _, _ := newCommandTestWiring(t)
+	wiring.HandleChangelogCommand()
+	lines := coding.StripAnsi(strings.Join(wiring.Chat.Render(120), "\n"))
+	if !strings.Contains(lines, "What's New") {
+		t.Errorf("missing the changelog title in:\n%s", lines)
+	}
+	if !strings.Contains(lines, "No changelog entries found.") && !strings.Contains(lines, "# Changelog") && !strings.Contains(lines, "##") {
+		t.Errorf("no changelog content rendered:\n%s", lines)
+	}
+}
+
 // TestCommandClearDebugEggs covers the remaining handlers.
 func TestCommandClearDebugEggs(t *testing.T) {
 	wiring, _, _ := newCommandTestWiring(t)

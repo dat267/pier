@@ -71,6 +71,11 @@ scope; MCP and `durable` are ported). The v1.0.1 (`a7229ddc`) → v1.0.2
   URL on the clipboard (off-loop, reporting the outcome in the hint). The
   dialog clears it on a device-code or details step. (The MCP-extension sign-in
   UI that also uses it stays out of scope with the extension system.)
+- `coding/interactive`: the `/changelog` command (upstream
+  `handleChangelogCommand`), which was missing: it renders every changelog
+  entry (newest first, links normalized) between dynamic borders, and
+  `changelog` is in `BuiltinSlashCommands` for autocomplete. (`/share` and
+  `/bug` remain out of scope with the upload transport.)
 
 Not ported from the v1.0.1/v1.0.2 delta, with the reason:
 

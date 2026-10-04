@@ -579,6 +579,29 @@ func (w *CommandWiring) HandleHotkeysCommand() {
 	w.requestRender()
 }
 
+// HandleChangelogCommand renders the full changelog (upstream
+// handleChangelogCommand).
+func (w *CommandWiring) HandleChangelogCommand() {
+	theme := ActiveTheme()
+	entries := coding.ParseChangelog(coding.GetChangelogPath())
+	markdown := "No changelog entries found."
+	if len(entries) > 0 {
+		parts := make([]string, 0, len(entries))
+		for i := len(entries) - 1; i >= 0; i-- {
+			parts = append(parts, coding.NormalizeChangelogLinks(entries[i].Content, changelogEntryVersion(entries[i])))
+		}
+		markdown = strings.Join(parts, "\n\n")
+	}
+
+	w.Chat.AddChild(tui.NewSpacer(1))
+	w.Chat.AddChild(NewDynamicBorder(nil))
+	w.Chat.AddChild(tui.NewText(theme.Bold(theme.Fg("accent", "What's New")), 1, 0, nil))
+	w.Chat.AddChild(tui.NewSpacer(1))
+	w.Chat.AddChild(tui.NewMarkdown(markdown, 1, 1, w.markdownTheme(), nil, tui.MarkdownOptions{}))
+	w.Chat.AddChild(NewDynamicBorder(nil))
+	w.requestRender()
+}
+
 // HandleClearCommand starts a new session.
 func (w *CommandWiring) HandleClearCommand(ctx context.Context) {
 	if w.ClearStatusIndicator != nil {
