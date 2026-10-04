@@ -266,10 +266,13 @@ func IsOAuthAnthropicToken(apiKey string) bool {
 // anthropicClientOptions carry the client construction inputs (port of
 // createClient's header assembly).
 type anthropicClientOptions struct {
-	APIKey         string
-	Headers        ProviderHeaders
-	SessionID      string
-	DynamicHeaders map[string]string
+	APIKey    string
+	Headers   ProviderHeaders
+	SessionID string
+	// FederationBearer is a workload-identity access token; it authorizes the
+	// request as a Bearer token when no key or auth header is present.
+	FederationBearer string
+	DynamicHeaders   map[string]string
 }
 
 // BuildAnthropicRequest builds the HTTP request for the messages API,
@@ -306,6 +309,10 @@ func BuildAnthropicRequest(ctx context.Context, model *Model, params *AnthropicM
 		req.Header.Del("x-api-key")
 	} else if options.APIKey != "" {
 		req.Header.Set("X-Api-Key", options.APIKey)
+	} else if options.FederationBearer != "" {
+		// Workload identity federation: the exchanged token is a Bearer token
+		// (upstream's SDK-shaped federation auth).
+		req.Header.Set("Authorization", "Bearer "+options.FederationBearer)
 	}
 
 	// Session affinity headers for cache routing.
@@ -427,6 +434,18 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 				}
 			}
 		}
+		federationBearer := ""
+		if !hasAuth {
+			bearer, present, ferr := anthropicFederationBearer(ctx, model, options.Env)
+			if ferr != nil {
+				fail(ferr)
+				return
+			}
+			if present {
+				federationBearer = bearer
+				hasAuth = true
+			}
+		}
 		if !hasAuth {
 			fail(fmt.Errorf("No API key for provider: %s", model.Provider))
 			return
@@ -449,9 +468,10 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 		}
 
 		clientOpts := anthropicClientOptions{
-			APIKey:    options.APIKey,
-			Headers:   options.Headers,
-			SessionID: options.SessionID,
+			APIKey:           options.APIKey,
+			Headers:          options.Headers,
+			SessionID:        options.SessionID,
+			FederationBearer: federationBearer,
 		}
 		if clientOpts.SessionID != "" && ResolveCacheRetention(options.CacheRetention, options.Env) == CacheRetentionNone {
 			clientOpts.SessionID = ""
@@ -821,3 +841,32 @@ func mapThinkingLevelToEffort(model *Model, level ThinkingLevel) AnthropicEffort
 }
 
 var _ = sync.Mutex{}
+
+// federationCaches caches exchanged tokens per federation config, so a
+// sequence of requests reuses one exchange (the SDK reuses one client for the
+// same reason).
+var federationCaches sync.Map
+
+// anthropicFederationBearer exchanges a workload identity token when the model
+// is Anthropic and no key or auth header was resolved. The token is cached per
+// configuration.
+func anthropicFederationBearer(ctx context.Context, model *Model, env ProviderEnv) (string, bool, error) {
+	if model.Provider != "anthropic" {
+		return "", false, nil
+	}
+	config, present := ResolveFederationConfig(env)
+	if !present {
+		return "", false, nil
+	}
+	config.BaseURL = strings.TrimSuffix(model.BaseURL, "/")
+	key := strings.Join([]string{
+		config.FederationRuleID, config.OrganizationID, config.IdentityTokenFile,
+		config.ServiceAccountID, config.WorkspaceID, config.BaseURL,
+	}, "\x00")
+	value, _ := federationCaches.LoadOrStore(key, NewFederationTokenCache(*config))
+	token, err := value.(*FederationTokenCache).Token(ctx)
+	if err != nil {
+		return "", false, err
+	}
+	return token, true, nil
+}

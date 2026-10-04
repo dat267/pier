@@ -209,9 +209,16 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   per submission (`a0660b174`). Dynamic
   provider registration does not exist in the port, so `registerProvider`'s
   provisional configured entry (`fddc968b9`) has no surface. Anthropic
-  workload identity federation (`a9424cd43`) stays deferred: the token
-  exchange lives in the TypeScript SDK the port does not use, and
-  reimplementing the OIDC federation clients is its own project.
+  workload identity federation (`a9424cd43`) is ported at the protocol level
+  (`ai/federation.go`): the five `ANTHROPIC_FEDERATION_*` env names,
+  `ResolveFederationConfig`, the secure-endpoint and redaction rules, the
+  RFC 7523 jwt-bearer exchange against `{baseURL}/v1/oauth/token` with the
+  federation beta header, and the per-config token cache (the port has no
+  Anthropic SDK, so the exchange the SDK performs is implemented). The
+  exchange is wired into the Anthropic request auth: when no key or auth
+  header is resolved, the federation env resolves a cached token and the
+  request carries `Authorization: Bearer` (the SDK's client-level federation
+  config).
 - `coding`: `/reload` enables tools newly added to the `defaultTools` setting
   (`db6cc71dc`): the session records whether its initial selection came from
   the setting (`SessionConfig.UsesDefaultTools`, set when neither `--tools` nor
