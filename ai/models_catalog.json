@@ -9364,7 +9364,7 @@
      },
      "type": "chat"
     },
-    "claude-fable-5.1": {
+    "claude-fable-5-1": {
      "api": "anthropic-messages",
      "baseUrl": "https://gateway.ai.cloudflare.com/v1/{CLOUDFLARE_ACCOUNT_ID}/{CLOUDFLARE_GATEWAY_ID}/anthropic",
      "compat": {
@@ -9378,7 +9378,7 @@
       "input": 10,
       "output": 50
      },
-     "id": "claude-fable-5.1",
+     "id": "claude-fable-5-1",
      "input": [
       "text",
       "image"
@@ -9404,7 +9404,7 @@
      },
      "type": "chat"
     },
-    "claude-haiku-4.5": {
+    "claude-haiku-4-5": {
      "api": "anthropic-messages",
      "baseUrl": "https://gateway.ai.cloudflare.com/v1/{CLOUDFLARE_ACCOUNT_ID}/{CLOUDFLARE_GATEWAY_ID}/anthropic",
      "compat": {
@@ -9417,7 +9417,7 @@
       "input": 1,
       "output": 5
      },
-     "id": "claude-haiku-4.5",
+     "id": "claude-haiku-4-5",
      "input": [
       "text",
       "image"
@@ -9438,7 +9438,7 @@
      "reasoning": true,
      "type": "chat"
     },
-    "claude-opus-4.5": {
+    "claude-opus-4-5": {
      "api": "anthropic-messages",
      "baseUrl": "https://gateway.ai.cloudflare.com/v1/{CLOUDFLARE_ACCOUNT_ID}/{CLOUDFLARE_GATEWAY_ID}/anthropic",
      "compat": {
@@ -9451,7 +9451,7 @@
       "input": 5,
       "output": 25
      },
-     "id": "claude-opus-4.5",
+     "id": "claude-opus-4-5",
      "input": [
       "text",
       "image"
@@ -9472,7 +9472,7 @@
      "reasoning": true,
      "type": "chat"
     },
-    "claude-opus-4.6": {
+    "claude-opus-4-6": {
      "api": "anthropic-messages",
      "baseUrl": "https://gateway.ai.cloudflare.com/v1/{CLOUDFLARE_ACCOUNT_ID}/{CLOUDFLARE_GATEWAY_ID}/anthropic",
      "compat": {
@@ -9486,7 +9486,7 @@
       "input": 5,
       "output": 25
      },
-     "id": "claude-opus-4.6",
+     "id": "claude-opus-4-6",
      "input": [
       "text",
       "image"
@@ -9510,7 +9510,7 @@
      },
      "type": "chat"
     },
-    "claude-opus-4.7": {
+    "claude-opus-4-7": {
      "api": "anthropic-messages",
      "baseUrl": "https://gateway.ai.cloudflare.com/v1/{CLOUDFLARE_ACCOUNT_ID}/{CLOUDFLARE_GATEWAY_ID}/anthropic",
      "compat": {
@@ -9525,7 +9525,7 @@
       "input": 5,
       "output": 25
      },
-     "id": "claude-opus-4.7",
+     "id": "claude-opus-4-7",
      "input": [
       "text",
       "image"
@@ -9550,7 +9550,7 @@
      },
      "type": "chat"
     },
-    "claude-opus-4.8": {
+    "claude-opus-4-8": {
      "api": "anthropic-messages",
      "baseUrl": "https://gateway.ai.cloudflare.com/v1/{CLOUDFLARE_ACCOUNT_ID}/{CLOUDFLARE_GATEWAY_ID}/anthropic",
      "compat": {
@@ -9565,7 +9565,7 @@
       "input": 5,
       "output": 25
      },
-     "id": "claude-opus-4.8",
+     "id": "claude-opus-4-8",
      "input": [
       "text",
       "image"
@@ -9630,7 +9630,7 @@
      },
      "type": "chat"
     },
-    "claude-opus-5.5": {
+    "claude-opus-5-5": {
      "api": "anthropic-messages",
      "baseUrl": "https://gateway.ai.cloudflare.com/v1/{CLOUDFLARE_ACCOUNT_ID}/{CLOUDFLARE_GATEWAY_ID}/anthropic",
      "compat": {
@@ -9645,7 +9645,7 @@
       "input": 4,
       "output": 20
      },
-     "id": "claude-opus-5.5",
+     "id": "claude-opus-5-5",
      "input": [
       "text",
       "image"
@@ -9670,7 +9670,7 @@
      },
      "type": "chat"
     },
-    "claude-sonnet-4.5": {
+    "claude-sonnet-4-5": {
      "api": "anthropic-messages",
      "baseUrl": "https://gateway.ai.cloudflare.com/v1/{CLOUDFLARE_ACCOUNT_ID}/{CLOUDFLARE_GATEWAY_ID}/anthropic",
      "compat": {
@@ -9683,7 +9683,7 @@
       "input": 3,
       "output": 15
      },
-     "id": "claude-sonnet-4.5",
+     "id": "claude-sonnet-4-5",
      "input": [
       "text",
       "image"
@@ -9704,7 +9704,7 @@
      "reasoning": true,
      "type": "chat"
     },
-    "claude-sonnet-4.6": {
+    "claude-sonnet-4-6": {
      "api": "anthropic-messages",
      "baseUrl": "https://gateway.ai.cloudflare.com/v1/{CLOUDFLARE_ACCOUNT_ID}/{CLOUDFLARE_GATEWAY_ID}/anthropic",
      "compat": {
@@ -9718,7 +9718,7 @@
       "input": 3,
       "output": 15
      },
-     "id": "claude-sonnet-4.6",
+     "id": "claude-sonnet-4-6",
      "input": [
       "text",
       "image"

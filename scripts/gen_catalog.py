@@ -57,6 +57,20 @@ def main() -> None:
                 chat[model_id] = model
             if chat:
                 by_api[api] = chat
+        # Upstream generate-models.ts maps Cloudflare AI Gateway's anthropic
+        # passthrough models with dotted versions (claude-opus-5.5) onto dashed
+        # IDs (claude-opus-5-5): the gateway forwards the ID to Anthropic
+        # unchanged, which rejects the dots (c10bfb0d7).
+        if file.stem == "cloudflare-ai-gateway":
+            anthropic = by_api.get("anthropic-messages")
+            if anthropic:
+                renamed = {}
+                for model_id, model in anthropic.items():
+                    dashed = model_id.replace(".", "-")
+                    model = dict(model)
+                    model["id"] = dashed
+                    renamed[dashed] = model
+                by_api["anthropic-messages"] = renamed
         if by_api:
             providers[file.stem] = by_api
 

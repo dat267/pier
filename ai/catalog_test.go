@@ -234,3 +234,22 @@ func TestGetEnvApiKey(t *testing.T) {
 		t.Fatalf("bedrock partial IAM = %q", got)
 	}
 }
+
+// TestCloudflareGatewayClaudeIDsAreDashed pins the Cloudflare AI Gateway
+// Anthropic passthrough IDs: the gateway forwards the model ID to Anthropic
+// unchanged, which rejects the dotted models.dev versions (c10bfb0d7).
+func TestCloudflareGatewayClaudeIDsAreDashed(t *testing.T) {
+	for _, id := range []string{
+		"claude-opus-5-5", "claude-sonnet-4-5", "claude-sonnet-4-6", "claude-fable-5-1",
+		"claude-haiku-4-5", "claude-opus-4-6",
+	} {
+		if model := GetBuiltinModel("cloudflare-ai-gateway", id); model == nil {
+			t.Errorf("missing dashed Cloudflare gateway model %q", id)
+		}
+	}
+	for _, id := range []string{"claude-opus-5.5", "claude-fable-5.1", "claude-haiku-4.5"} {
+		if model := GetBuiltinModel("cloudflare-ai-gateway", id); model != nil {
+			t.Errorf("dotted Cloudflare gateway model %q must not exist", id)
+		}
+	}
+}

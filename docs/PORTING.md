@@ -64,6 +64,37 @@ ported. Ported so far:
   URL on the clipboard (off-loop, reporting the outcome in the hint). The
   dialog clears it on a device-code or details step. (The MCP-extension sign-in
   UI that also uses it stays out of scope with the extension system.)
+- `ai` (catalog data): Cloudflare AI Gateway dashed Claude IDs (`c10bfb0d7`).
+  `scripts/gen_catalog.py` normalizes the provider's `anthropic-messages` model
+  IDs (dots to dashes, which Anthropic requires for the gateway's passthrough)
+  and the embedded `ai/models_catalog.json` carries the nine resulting IDs; a
+  test pins both the dashed models and the absence of the dotted ones.
+
+Not ported from the v1.0.1/v1.0.2 delta, with the reason:
+
+- `ai`/catalog data (`4812cb268` Cloudflare Clef classifiers, `4665fafb4`
+  Bedrock models.dev pricing tiers, `221cbcb02` docs): these need upstream's
+  generator output regenerated. `ai/models_catalog.json` is generated from
+  `scripts/generate-models.ts` and the pinned tags do not commit that data;
+  regenerating needs the upstream generator with its network dependencies, so
+  it is pending. The catalog already carries the new Together ID
+  (`28eaccb8e`).
+- `coding`/MCP (`1499466d8` OAuth client ID metadata documents): the port
+  connects MCP servers with stored tokens and has no `/mcp` sign-in UI (the
+  extension boundary), so the config field and the flow's per-server document
+  have no reachable effect. The generic `mcp/oauth` callback-path work is
+  likewise unused.
+- `coding`/extensions (`11449730c` tool-renderer resolvers): the port has no
+  extension system, and its MCP tools carry no renderers, so the resolver has
+  nothing to resolve.
+- `tui`/images (`672000c80` WezTerm scroll, `a276dabe5` non-PNG Kitty): the
+  kitty/iterm image transport internals are documented out of scope.
+- `coding`/easter eggs (`7fbbd5f4a`, `1c1e9c0ef`, `c450f2c0f`): the 3D Armin/pi
+  logo animation is cosmetic, and the port keeps the existing half-block
+  easter eggs rather than the lazy 3D renderer.
+- npm and Nix build tooling (`581e7ba78`, `0495646a8`, `9fba660cf`, `c71a496ff`,
+  `83692682f`), codemode output capping (`319fecb89`) and the changelog/docs
+  commits.
 
 Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
 
