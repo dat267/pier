@@ -58,6 +58,12 @@ ported. Ported so far:
   (`McpServerEntry.Override`), and `LoadedMcpConfig.ProjectConfig` carries the
   trusted project's `mcp.json` path. A base-less or extra-key override is a
   load error.
+- `coding/interactive`: copy the OAuth sign-in URL (`ced72c2f0`). The new
+  `AuthUrlComponent` replaces the login dialog's raw OSC 8 lines: it renders
+  the URL plus a click hint and an `app.message.copy` hint, and `Copy` puts the
+  URL on the clipboard (off-loop, reporting the outcome in the hint). The
+  dialog clears it on a device-code or details step. (The MCP-extension sign-in
+  UI that also uses it stays out of scope with the extension system.)
 
 Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
 

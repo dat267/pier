@@ -51,7 +51,9 @@ type LoginDialogComponent struct {
 	// selectList is the active select prompt's list; the dialog owns input
 	// routing, so a select needs no focus switch.
 	selectList *tui.SelectList
-	focused    bool
+	// authUrl is the shown sign-in URL, which app.message.copy copies.
+	authUrl *AuthUrlComponent
+	focused bool
 }
 
 // NewLoginDialogComponent creates the dialog. post marshals mutations from the
@@ -149,15 +151,8 @@ func (c *LoginDialogComponent) ShowAuth(url string, instructions string) {
 		theme := ActiveTheme()
 		c.contentContainer.Clear()
 		c.contentContainer.AddChild(tui.NewSpacer(1))
-		linkedURL := "\x1b]8;;" + url + "\x07" + url + "\x1b]8;;\x07"
-		c.contentContainer.AddChild(tui.NewText(theme.Fg("accent", linkedURL), 1, 0, nil))
-
-		clickHint := "Ctrl+click to open"
-		if runtime.GOOS == "darwin" {
-			clickHint = "Cmd+click to open"
-		}
-		hyperlink := "\x1b]8;;" + url + "\x07" + clickHint + "\x1b]8;;\x07"
-		c.contentContainer.AddChild(tui.NewText(theme.Fg("dim", hyperlink), 1, 0, nil))
+		c.authUrl = NewAuthUrlComponent(c.host, c.post, url)
+		c.contentContainer.AddChild(c.authUrl)
 
 		if instructions != "" {
 			c.contentContainer.AddChild(tui.NewSpacer(1))
@@ -171,6 +166,7 @@ func (c *LoginDialogComponent) ShowAuth(url string, instructions string) {
 func (c *LoginDialogComponent) ShowDeviceCode(verificationURI string, userCode string) {
 	c.runOnUI(func() {
 		theme := ActiveTheme()
+		c.authUrl = nil
 		c.contentContainer.Clear()
 		c.contentContainer.AddChild(tui.NewSpacer(1))
 		linkedURL := "\x1b]8;;" + verificationURI + "\x07" + verificationURI + "\x1b]8;;\x07"
@@ -280,6 +276,7 @@ const loginSelectVisibleRows = 8
 // ShowDetails replaces the content with informational lines.
 func (c *LoginDialogComponent) ShowDetails(lines []string) {
 	c.runOnUI(func() {
+		c.authUrl = nil
 		c.contentContainer.Clear()
 		c.contentContainer.AddChild(tui.NewSpacer(1))
 		for _, line := range lines {
@@ -340,6 +337,10 @@ func (c *LoginDialogComponent) HandleInput(data string) {
 	if c.selectList != nil {
 		c.selectList.HandleInput(data)
 		c.requestRender()
+		return
+	}
+	if c.authUrl != nil && kb.Matches(data, "app.message.copy") {
+		c.authUrl.Copy()
 		return
 	}
 	c.input.HandleInput(data)
