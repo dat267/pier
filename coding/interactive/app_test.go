@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -63,12 +64,13 @@ func TestAppEndToEndLoop(t *testing.T) {
 	}()
 
 	// These deadlines must cover a loaded 2-core runner: the whole package took
-	// 63 s there and init missed 6 s (CI 36266574631). The condition is still
-	// required; only the poll window scales with the machine.
-	waitForConditionWithin(t, func() bool { return app.lifecycle.IsInitialized() }, 30*time.Second)
+	// 63 s there and init missed 6 s (CI 36266574631), and 95 s on a loaded
+	// 4-core box under the full race gate. The condition is still required; only
+	// the poll window scales with the machine.
+	waitForConditionWithin(t, func() bool { return app.lifecycle.IsInitialized() }, 45*time.Second)
 	// Wait for the run loop to reach its first beat before queueing, so the input
 	// is read from the loop's select rather than racing startup.
-	waitForConditionWithin(t, func() bool { return app.runner != nil && app.runner.LoopBeats() > 0 }, 30*time.Second)
+	waitForConditionWithin(t, func() bool { return app.runner != nil && app.runner.LoopBeats() > 0 }, 45*time.Second)
 	app.startup.QueueUserInput("hello from the smoke test")
 
 	// The loop forwards the input to the session; with no model the prompt
@@ -88,7 +90,7 @@ func TestAppEndToEndLoop(t *testing.T) {
 			}
 		}
 		return sawUser && sawAssistant
-	}, 30*time.Second)
+	}, 60*time.Second)
 
 	cancel()
 	select {
@@ -206,6 +208,10 @@ func waitForConditionWithin(t *testing.T, condition func() bool, timeout time.Du
 		}
 		time.Sleep(5 * time.Millisecond)
 	}
+	// A timeout is either genuine machine starvation or a stalled loop; the
+	// dump makes the difference visible in CI output.
+	buffer := make([]byte, 1<<20)
+	t.Logf("goroutines at timeout:\n%s", buffer[:runtime.Stack(buffer, true)])
 	t.Fatal("condition not met before timeout")
 }
 
