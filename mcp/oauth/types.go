@@ -11,8 +11,6 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
-
-	"github.com/dat267/pier/mcp/protocol"
 )
 
 // OAuthProtectedResourceMetadata is RFC 9728 (upstream
@@ -119,9 +117,6 @@ type OAuthChallenge struct {
 }
 
 // --- structural validation -------------------------------------------------
-
-// IsObject reports whether a decoded value is a JSON object.
-func IsObject(value any) bool { return protocol.IsObject(value) }
 
 func object(value any, name string) (map[string]any, error) {
 	m, ok := value.(map[string]any)

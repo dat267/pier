@@ -2,7 +2,6 @@ package interactive
 
 import (
 	"math"
-	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -36,18 +35,6 @@ type FooterSession interface {
 	// SandboxMode is the active filesystem policy, shown as its two-letter code
 	// (RO/WW/FA) before the other statuses, whatever the backend.
 	SandboxMode() coding.SandboxMode
-}
-
-// FooterHomeDir returns the home directory used for path shortening.
-var FooterHomeDir = func() string { return homeDirValue() }
-
-func homeDirValue() string {
-	for _, key := range []string{"HOME", "USERPROFILE"} {
-		if value := os.Getenv(key); value != "" {
-			return value
-		}
-	}
-	return ""
 }
 
 // FormatTokens formats token counts for the compact footer display (upstream

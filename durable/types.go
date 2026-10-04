@@ -452,11 +452,6 @@ type DocumentContent struct {
 	Ops []any `json:"ops,omitempty"`
 }
 
-// BaseDocumentContent builds base content.
-func BaseDocumentContent(version int, value json.RawMessage) DocumentContent {
-	return DocumentContent{Version: version, Kind: ContentBase, Value: value}
-}
-
 // DeltaDocumentContent builds delta content from decoded chord operations.
 func DeltaDocumentContent(version int, ops []delta.Op) DocumentContent {
 	encoded := make([]any, 0, len(ops))
@@ -764,9 +759,6 @@ type Task struct {
 type Entry struct {
 	Kind string
 }
-
-// NewEntry declares an entry kind token.
-func NewEntry(kind string) Entry { return Entry{Kind: kind} }
 
 // Matches reports whether a record is of this entry kind.
 func (e Entry) Matches(record *EntryRecord) bool {

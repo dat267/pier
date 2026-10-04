@@ -99,9 +99,6 @@ func (b *FileAuthStorageBackend) acquireAuthLockSync() (func(), error) {
 
 var errAuthLocked = errors.New("auth storage is locked")
 
-// errAuthLockCompromised reports a lock that was removed while held.
-var errAuthLockCompromised = errors.New("Auth storage lock was compromised")
-
 // acquireAuthLockDir creates the lock directory, treating a stale directory as
 // free.
 func acquireAuthLockDir(path string) (func(), error) {

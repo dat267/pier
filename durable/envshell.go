@@ -25,8 +25,7 @@ import (
 const (
 	// maxTimeoutMs is upstream MAX_TIMEOUT_MS.
 	maxTimeoutMs = 2_147_483_647
-	// spillHighWaterMark is upstream SPILL_HIGH_WATER_MARK.
-	spillHighWaterMark = 1024 * 1024
+
 	// exitStdioGrace is upstream EXIT_STDIO_GRACE_MS: after the process exits,
 	// output already in the pipe is still drained for this long before a
 	// descendant holding the write end is abandoned.

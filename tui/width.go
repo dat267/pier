@@ -678,14 +678,6 @@ func IsWhitespaceChar(char string) bool {
 	return len(char) > 0
 }
 
-// IsPunctuationChar reports whether a character is ASCII punctuation.
-func IsPunctuationChar(char string) bool {
-	for _, r := range char {
-		return punctuationChars[r]
-	}
-	return false
-}
-
 func isLetterRune(r rune) bool { return unicode.IsLetter(r) }
 
 func isDigitRune(r rune) bool { return unicode.IsDigit(r) }

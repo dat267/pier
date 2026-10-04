@@ -38,10 +38,6 @@ type ToolInfo struct {
 	SourceInfo       *SourceInfo
 }
 
-// ToolPromptGuidelines supplies prompt guidelines for tools that carry them
-// outside the agent tool definition (upstream reads them from the tool).
-type ToolPromptGuidelines = map[string][]string
-
 // ModelMutationOptions control model/thinking mutations.
 type ModelMutationOptions struct {
 	// Persist writes the change to global settings.

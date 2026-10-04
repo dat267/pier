@@ -118,12 +118,6 @@ func (c *QueueController) showError(message string) {
 	}
 }
 
-func (c *QueueController) showWarning(message string) {
-	if c.ShowWarning != nil {
-		c.ShowWarning(message)
-	}
-}
-
 // GetAllQueuedMessages returns the session queues plus the compaction queue.
 func (c *QueueController) GetAllQueuedMessages() (steering []string, followUp []string) {
 	steering = append(steering, c.Session.GetSteeringMessages()...)

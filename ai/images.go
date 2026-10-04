@@ -75,9 +75,6 @@ type AssistantImages struct {
 	Timestamp    int64                 `json:"timestamp"`
 }
 
-// generateImagesFunc is the uniform image API contract.
-type generateImagesFunc func(model *ImagesModel, context ImagesContext, options *ImagesOptions) *AssistantImages
-
 // ProviderImages is the uniform image API implementation (upstream
 // ProviderImages).
 type ProviderImages interface {

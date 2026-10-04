@@ -82,29 +82,6 @@ type JsonRpcErrorObject struct {
 	Data    json.RawMessage `json:"data,omitempty"`
 }
 
-// JsonRpcSuccessResponse is a successful response (upstream
-// JsonRpcSuccessResponse).
-type JsonRpcSuccessResponse struct {
-	JSONRPC string          `json:"jsonrpc"`
-	ID      JsonRpcId       `json:"id"`
-	Result  json.RawMessage `json:"result"`
-}
-
-// JsonRpcErrorResponse is a failed response (upstream JsonRpcErrorResponse).
-type JsonRpcErrorResponse struct {
-	JSONRPC string             `json:"jsonrpc"`
-	ID      JsonRpcId          `json:"id"`
-	Error   JsonRpcErrorObject `json:"error"`
-}
-
-// JsonRpcMessage is any JSON-RPC message. Requests and notifications are
-// decoded into their concrete shapes; responses carry the id and either a
-// result or an error.
-type JsonRpcMessage interface{ jsonRpcMessage() }
-
-func (JsonRpcRequest) jsonRpcMessage()      {}
-func (JsonRpcNotification) jsonRpcMessage() {}
-
 // JsonRpcResponse is upstream's success-or-error union, kept as a struct so
 // decoders can branch on the members without a second parse.
 type JsonRpcResponse struct {
@@ -113,15 +90,6 @@ type JsonRpcResponse struct {
 	Result  json.RawMessage     `json:"result,omitempty"`
 	Error   *JsonRpcErrorObject `json:"error,omitempty"`
 }
-
-// MessageKind discriminates parsed messages.
-type MessageKind int
-
-const (
-	KindRequest MessageKind = iota
-	KindNotification
-	KindResponse
-)
 
 // IsJsonRpcId mirrors upstream's isJsonRpcId on a decoded value. Numbers
 // arrive as json.Number when decoded with UseNumber.

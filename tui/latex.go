@@ -22,10 +22,9 @@ const (
 )
 
 var (
-	latexNamedOperatorLeftSpacing = regexp.MustCompile(`^\s$`)
-	latexLayoutMarkerRegex        = regexp.MustCompile("\U000F0000(\\d+)\U000F0001")
-	latexTrailingMarkerRegex      = regexp.MustCompile("\U000F0000(\\d+)\U000F0001$")
-	latexWhitespaceRunRegex       = regexp.MustCompile(`[ \t]+`)
+	latexLayoutMarkerRegex   = regexp.MustCompile("\U000F0000(\\d+)\U000F0001")
+	latexTrailingMarkerRegex = regexp.MustCompile("\U000F0000(\\d+)\U000F0001$")
+	latexWhitespaceRunRegex  = regexp.MustCompile(`[ \t]+`)
 	// Row separators are double backslashes; Go raw strings need four to
 	// express two literal backslashes.
 	latexEnvironmentRowRegex  = regexp.MustCompile(`\\\\(?:\[[^\]\n]*\])?`)

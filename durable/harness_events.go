@@ -59,19 +59,6 @@ type SnapshotGeneration struct {
 	Deferred *LiveDeferred        `json:"deferred,omitempty"`
 }
 
-// SnapshotEvent is the initial state of one conversation's event stream.
-type SnapshotEvent struct {
-	Type        string              `json:"type"`
-	Entries     []EntryRecord       `json:"entries"`
-	Run         *RunInputs          `json:"run,omitempty"`
-	Generation  *SnapshotGeneration `json:"generation,omitempty"`
-	Tools       []ToolSlot          `json:"tools"`
-	Compactions []CompactionStatus  `json:"compactions"`
-	Inbox       []QueuedItem        `json:"inbox"`
-	Agent       AgentState          `json:"agent"`
-	Usage       UsageState          `json:"usage"`
-}
-
 // ToolOutput is a front trim and an append of the retained window, or its
 // replacement.
 type ToolOutput struct {

@@ -219,9 +219,6 @@ func (c *FirstTimeSetupComponent) HandleInput(data string) {
 	}
 }
 
-// Step returns the current step (test helper).
-func (c *FirstTimeSetupComponent) Step() string { return c.step }
-
 // EarendilAnnouncementComponent is the announcement card.
 type EarendilAnnouncementComponent struct {
 	*tui.Container

@@ -39,45 +39,6 @@ type ImageContent struct {
 	Meta        json.RawMessage     `json:"_meta,omitempty"`
 }
 
-// AudioContent is a base64-encoded audio block (upstream AudioContent).
-type AudioContent struct {
-	Data        string              `json:"data"`
-	MimeType    string              `json:"mimeType"`
-	Annotations *ContentAnnotations `json:"annotations,omitempty"`
-	Meta        json.RawMessage     `json:"_meta,omitempty"`
-}
-
-// ResourceLinkContent links to a resource the server did not embed (upstream
-// ResourceLinkContent).
-type ResourceLinkContent struct {
-	URI         string              `json:"uri"`
-	Name        string              `json:"name"`
-	Title       *string             `json:"title,omitempty"`
-	Description *string             `json:"description,omitempty"`
-	MimeType    *string             `json:"mimeType,omitempty"`
-	Size        *int64              `json:"size,omitempty"`
-	Annotations *ContentAnnotations `json:"annotations,omitempty"`
-	Meta        json.RawMessage     `json:"_meta,omitempty"`
-}
-
-// TextResourceContents is inline text for a resource (upstream
-// TextResourceContents).
-type TextResourceContents struct {
-	URI      string          `json:"uri"`
-	MimeType *string         `json:"mimeType,omitempty"`
-	Text     string          `json:"text"`
-	Meta     json.RawMessage `json:"_meta,omitempty"`
-}
-
-// BlobResourceContents is inline base64 data for a resource (upstream
-// BlobResourceContents).
-type BlobResourceContents struct {
-	URI      string          `json:"uri"`
-	MimeType *string         `json:"mimeType,omitempty"`
-	Blob     string          `json:"blob"`
-	Meta     json.RawMessage `json:"_meta,omitempty"`
-}
-
 // ResourceContents is TextResourceContents or BlobResourceContents.
 // Upstream discriminates the arm by key presence ("text" in resource), which
 // matters for an empty text payload; TextArm records that (D181).
@@ -128,14 +89,6 @@ func (r ResourceContents) MarshalJSON() ([]byte, error) {
 		a.Blob = &blob
 	}
 	return json.Marshal(a)
-}
-
-// EmbeddedResourceContent is a resource the server embedded in a content
-// block (upstream EmbeddedResourceContent).
-type EmbeddedResourceContent struct {
-	Resource    ResourceContents    `json:"resource"`
-	Annotations *ContentAnnotations `json:"annotations,omitempty"`
-	Meta        json.RawMessage     `json:"_meta,omitempty"`
 }
 
 // Content block type discriminators.

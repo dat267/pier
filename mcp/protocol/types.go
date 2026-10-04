@@ -56,14 +56,6 @@ type ServerCapabilities struct {
 	Completions json.RawMessage `json:"completions,omitempty"`
 }
 
-// InitializeParams is the client's `initialize` request (upstream
-// InitializeParams).
-type InitializeParams struct {
-	ProtocolVersion string             `json:"protocolVersion"`
-	Capabilities    ClientCapabilities `json:"capabilities"`
-	ClientInfo      Implementation     `json:"clientInfo"`
-}
-
 // InitializeResult is the server's `initialize` result (upstream
 // InitializeResult).
 type InitializeResult struct {
@@ -80,13 +72,6 @@ type ProgressNotification struct {
 	Progress      float64  `json:"progress"`
 	Total         *float64 `json:"total,omitempty"`
 	Message       *string  `json:"message,omitempty"`
-}
-
-// CancelledNotification cancels an in-flight request (upstream
-// CancelledNotification).
-type CancelledNotification struct {
-	RequestID JsonRpcId `json:"requestId"`
-	Reason    *string   `json:"reason,omitempty"`
 }
 
 // ToolAnnotations are UI hints about a tool (upstream ToolAnnotations).
@@ -113,13 +98,6 @@ type Tool struct {
 	Annotations  *ToolAnnotations `json:"annotations,omitempty"`
 	Execution    *ToolExecution   `json:"execution,omitempty"`
 	Meta         json.RawMessage  `json:"_meta,omitempty"`
-}
-
-// ListToolsResult is a `tools/list` page (upstream ListToolsResult).
-type ListToolsResult struct {
-	Tools      []Tool          `json:"tools"`
-	NextCursor *string         `json:"nextCursor,omitempty"`
-	Meta       json.RawMessage `json:"_meta,omitempty"`
 }
 
 // Resource is a resource a server lists in `resources/list` (upstream

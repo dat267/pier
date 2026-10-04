@@ -26,14 +26,6 @@ type VirtualModelStateData struct {
 	State    json.RawMessage `json:"state,omitempty"`
 }
 
-// Model route reasons.
-const (
-	ModelRouteUser         = "user"
-	ModelRouteContinuation = "continuation"
-	ModelRouteRetry        = "retry"
-	ModelRouteDirect       = "direct"
-)
-
 // ModelRouteSelection is a physical model and thinking level, or a branch's
 // recorded provider/model id.
 type ModelRouteSelection struct {

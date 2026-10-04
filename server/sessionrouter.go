@@ -38,16 +38,6 @@ type clientAttachment struct {
 	lease      RoutedSessionAttachment
 }
 
-func (a *clientAttachment) track(result func()) {
-	a.opMu.Lock()
-	a.operations.Add(1)
-	a.opMu.Unlock()
-	go func() {
-		defer a.operations.Done()
-		result()
-	}()
-}
-
 // hostedSession is one open session handle plus its attachments.
 type hostedSession struct {
 	id          string

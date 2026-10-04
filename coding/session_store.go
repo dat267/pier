@@ -638,21 +638,6 @@ func migrateToCurrentVersion(entries []FileEntry) bool {
 	return true
 }
 
-// ParseSessionEntries parses JSONL content skipping malformed lines
-// (port of parseSessionEntries).
-func ParseSessionEntries(content string) []FileEntry {
-	var entries []FileEntry
-	for _, line := range strings.Split(strings.Trim(content, "\n"), "\n") {
-		if strings.TrimSpace(line) == "" {
-			continue
-		}
-		if entry, err := UnmarshalFileEntry(line); err == nil {
-			entries = append(entries, *entry)
-		}
-	}
-	return entries
-}
-
 // GetLatestCompactionEntry scans entries in reverse.
 func GetLatestCompactionEntry(entries []SessionEntry) *SessionEntry {
 	for i := len(entries) - 1; i >= 0; i-- {
@@ -699,11 +684,6 @@ func buildSessionPath(entries []SessionEntry, leafID *string, byID map[string]*S
 		path[i], path[j] = path[j], path[i]
 	}
 	return path
-}
-
-// getSessionContextSettings resolves thinking level and model from the path.
-func getSessionContextSettings(path []SessionEntry) (thinkingLevel string, model *SessionModelRef) {
-	return getSessionContextSettingsFromPointers(materializePointers(path))
 }
 
 // getSessionContextSettingsFromPointers resolves thinking level and model from
@@ -857,13 +837,6 @@ func BuildContextEntries(entries []SessionEntry, leafID *string, byID map[string
 // session's message cache (nil is the reference path).
 func buildContextEntries(entries []SessionEntry, leafID *string, byID map[string]*SessionEntry, cache *messageCache) []SessionEntry {
 	return compactionWindowFromValues(buildSessionPath(entries, leafID, byID), cache)
-}
-
-// applyCompactionWindow drops the entries a compaction replaced, keeping the
-// summary and the window after firstKeptEntryId (the tail of
-// BuildContextEntries, reusable on an already-resolved path).
-func applyCompactionWindow(path []SessionEntry) []SessionEntry {
-	return compactionWindowFromValues(path, nil)
 }
 
 // compactionWindowFromValues is the window applied to a value path. Without a

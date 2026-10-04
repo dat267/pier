@@ -240,42 +240,4 @@ func editorTriggerMatch(text string, triggerCharacters []string, includeAtUnquot
 	return false
 }
 
-// editorDebounceMatch reports whether the token before the cursor is a symbol
-// based completion context (upstream's buildDebouncePattern, which excludes
-// the bare trigger characters other than @).
-func editorDebounceMatch(text string, triggerCharacters []string) bool {
-	runes := []rune(text)
-	if len(runes) == 0 {
-		return false
-	}
-	start := len(runes)
-	for start > 0 {
-		previous := runes[start-1]
-		next := rune(0)
-		hasNext := start < len(runes)
-		if hasNext {
-			next = runes[start]
-		}
-		if isAutocompleteSeparator(previous, next, hasNext) {
-			break
-		}
-		start--
-	}
-	token := string(runes[start:])
-	if token == "" {
-		return false
-	}
-	if strings.HasPrefix(token, `@"`) || strings.HasPrefix(token, "@") {
-		// @ followed by a quoted or unquoted suffix.
-		return true
-	}
-	for _, trigger := range triggerCharacters {
-		if trigger == "@" || trigger == "" {
-			continue
-		}
-		if strings.HasPrefix(token, trigger) {
-			return true
-		}
-	}
-	return false
-}
+// @ followed by a quoted or unquoted suffix.

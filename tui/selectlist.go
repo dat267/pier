@@ -613,9 +613,6 @@ func (l *Loader) refreshDisplay() {
 
 // ---- CancellableLoader ----
 
-// DefaultLoaderMessage is upstream's default loader message.
-const DefaultLoaderMessage = "Loading..."
-
 // CancellableLoader is a loader that can be cancelled with Escape.
 type CancellableLoader struct {
 	*Loader

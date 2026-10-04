@@ -224,14 +224,6 @@ func AppendToolResult(tx *Transaction, conversationID Id, call ai.ToolCall, resu
 	})
 }
 
-// ErrorText is an error's message.
-func ErrorText(err error) string {
-	if err == nil {
-		return ""
-	}
-	return err.Error()
-}
-
 // PrepareArguments is the call's arguments as repaired by the tool; a failing
 // repair makes them invalid.
 func PrepareArguments(tool ToolRegistration, args JsonObject) (JsonObject, *string) {

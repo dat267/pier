@@ -106,9 +106,6 @@ func NewShowImagesSelectorComponent(currentValue bool, onSelect func(show bool),
 	return component
 }
 
-// GetSelectList returns the underlying list.
-func (c *ShowImagesSelectorComponent) GetSelectList() *tui.SelectList { return c.selectList }
-
 // ThinkingLevelDescriptions maps thinking levels to descriptions.
 var ThinkingLevelDescriptions = map[string]string{
 	"off":     "No reasoning",

@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 )
 
 // Port of packages/ai/src/auth/types.ts, helpers.ts, credential-store.ts,
@@ -417,63 +416,6 @@ type OAuthAuth struct {
 type ProviderAuth struct {
 	APIKey *ApiKeyAuth
 	OAuth  *OAuthAuth
-}
-
-// LazyOAuth wraps a lazily-loaded OAuthAuth so provider definitions can
-// advertise OAuth without importing the implementation (port of lazyOAuth).
-type LazyOAuth struct {
-	Name           string
-	IsSubscription bool
-	LoginLabel     string
-	Load           func() (*OAuthAuth, error)
-
-	once   sync.Once
-	loaded *OAuthAuth
-	err    error
-}
-
-func (l *LazyOAuth) impl() (*OAuthAuth, error) {
-	l.once.Do(func() {
-		l.loaded, l.err = l.Load()
-	})
-	return l.loaded, l.err
-}
-
-func (l *LazyOAuth) Login(interaction *AuthInteraction) (*OAuthCredential, error) {
-	impl, err := l.impl()
-	if err != nil {
-		return nil, err
-	}
-	return impl.Login(interaction)
-}
-
-func (l *LazyOAuth) Refresh(credential *OAuthCredential, ctx context.Context) (*OAuthCredential, error) {
-	impl, err := l.impl()
-	if err != nil {
-		return nil, err
-	}
-	return impl.Refresh(credential, ctx)
-}
-
-func (l *LazyOAuth) ToAuth(credential *OAuthCredential) (*ModelAuth, error) {
-	impl, err := l.impl()
-	if err != nil {
-		return nil, err
-	}
-	return impl.ToAuth(credential)
-}
-
-// AsOAuthAuth adapts a LazyOAuth to the OAuthAuth interface shape used by
-// ProviderAuth.
-func (l *LazyOAuth) AsOAuthAuth() *OAuthAuth {
-	return &OAuthAuth{
-		Name:           l.Name,
-		IsSubscription: l.IsSubscription,
-		LoginLabel:     l.LoginLabel,
-		Login:          l.Login,
-		Refresh:        l.Refresh,
-		ToAuth:         l.ToAuth,
-	}
 }
 
 // EnvApiKeyAuth is standard api-key auth: a stored credential key wins,

@@ -23,11 +23,10 @@ import (
 
 // Codex defaults.
 const (
-	defaultCodexBaseURL       = "https://chatgpt.com/backend-api"
-	codexDefaultMaxRetries    = 0
-	codexBaseDelayMS          = 1000
-	codexMaxRetryDelayMS      = 60_000
-	codexToolCallProvidersKey = "openai-codex"
+	defaultCodexBaseURL    = "https://chatgpt.com/backend-api"
+	codexDefaultMaxRetries = 0
+	codexBaseDelayMS       = 1000
+	codexMaxRetryDelayMS   = 60_000
 )
 
 // codexToolCallProviders accepts the `call_id|item_id` tool-call id form.

@@ -81,16 +81,6 @@ func (n *schemaNode) set(key string, value json.RawMessage) {
 	n.fields[key] = value
 }
 
-func (n *schemaNode) delete(key string) {
-	delete(n.fields, key)
-	for i, k := range n.keys {
-		if k == key {
-			n.keys = append(n.keys[:i], n.keys[i+1:]...)
-			break
-		}
-	}
-}
-
 func schemaTypes(data json.RawMessage) []string {
 	var single string
 	if err := jsonUnmarshalStrict(data, &single); err == nil {

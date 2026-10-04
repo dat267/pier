@@ -95,15 +95,6 @@ func StartSpanValue[T any](ctx TelemetryContext, options SpanOptions, fn func(sp
 // TelemetryAttributeType names an attribute's wire type.
 type TelemetryAttributeType = string
 
-const (
-	AttributeTypeString   TelemetryAttributeType = "string"
-	AttributeTypeNumber   TelemetryAttributeType = "number"
-	AttributeTypeBoolean  TelemetryAttributeType = "boolean"
-	AttributeTypeStrings  TelemetryAttributeType = "string[]"
-	AttributeTypeNumbers  TelemetryAttributeType = "number[]"
-	AttributeTypeBooleans TelemetryAttributeType = "boolean[]"
-)
-
 // TelemetryAttributeMetadata describes one attribute.
 type TelemetryAttributeMetadata struct {
 	Description string

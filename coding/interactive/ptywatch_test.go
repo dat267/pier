@@ -289,25 +289,9 @@ func (s *ptySession) typeAndSubmit(text string) {
 	s.send("\r")
 }
 
-func (s *ptySession) exited() bool {
-	select {
-	case <-s.done:
-		return true
-	default:
-		return false
-	}
-}
-
 // stripAnsiForLog removes escape sequences so failures show readable state.
 func stripAnsiForLog(s string) string {
 	return ansiSequenceRe.ReplaceAllString(s, "")
-}
-
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n] + "\n... (truncated)"
 }
 
 // openPty allocates a pseudo-terminal pair through /dev/ptmx (the x/sys/unix

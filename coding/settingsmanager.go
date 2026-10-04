@@ -178,16 +178,6 @@ type SettingsWarnings struct {
 	AnthropicExtraUsage *bool `json:"anthropicExtraUsage,omitempty"`
 }
 
-// SettingsPackageSource is the object form of a package source.
-type SettingsPackageSource struct {
-	Source     string   `json:"source"`
-	Autoload   *bool    `json:"autoload,omitempty"`
-	Extensions []string `json:"extensions,omitempty"`
-	Skills     []string `json:"skills,omitempty"`
-	Prompts    []string `json:"prompts,omitempty"`
-	Themes     []string `json:"themes,omitempty"`
-}
-
 // QuietStartupSetting is upstream's QuietStartup: the boolean toggle or the
 // "header" mode that keeps only the startup header. Unknown values read as
 // false so one odd value can never fail the whole settings parse, and the raw
@@ -518,11 +508,6 @@ func NewSettingsManagerFromFiles(cwd, agentDir string, options SettingsManagerCr
 	manager.cwd = resolvedCwd
 	manager.agentDir = resolvedAgentDir
 	return manager
-}
-
-// NewSettingsManagerFromStorage builds a manager over an arbitrary storage.
-func NewSettingsManagerFromStorage(storage SettingsStorage, options SettingsManagerCreateOptions) *SettingsManager {
-	return newSettingsManagerFromStorage(storage, options, nil)
 }
 
 // settingsPathsFor is where the two scopes' files live for a cwd and agent dir.

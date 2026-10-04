@@ -1071,10 +1071,6 @@ func (m *Models) CancelDeferred(model *Model, handle *DeferredHandle, options *M
 	return provider.CancelDeferred(model, handle, &requestOptions.StreamOptions)
 }
 
-// HasAPI reports whether a dynamically looked-up model uses the given API
-// (upstream type guard hasApi).
-func HasAPI(model *Model, api Api) bool { return model.API == api }
-
 // CalculateCost computes usage cost from model rates and mutates
 // usage.Cost in place, returning it (upstream calculateCost).
 func CalculateCost(model *Model, usage *Usage) UsageCost {

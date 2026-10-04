@@ -39,9 +39,6 @@ func cjkPunctuation(r rune) bool {
 // space character).
 func isSpaceRune(r rune) bool { return r == ' ' }
 
-// isPunctuationRune reports ASCII punctuation.
-func isPunctuationRune(r rune) bool { return punctuationChars[r] }
-
 // splitIntoTokensWithAnsi splits into word/space tokens, keeping ANSI codes
 // attached to the following visible content. CJK characters break anywhere.
 func splitIntoTokensWithAnsi(text string) []string {

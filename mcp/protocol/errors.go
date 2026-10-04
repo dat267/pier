@@ -30,11 +30,6 @@ type McpError struct {
 
 func (e *McpError) Error() string { return e.Msg }
 
-// NewMcpError builds an McpError.
-func NewMcpError(code int, message string, data any) *McpError {
-	return &McpError{Code: code, Data: data, Msg: message}
-}
-
 // McpConnectionClosedError signals a closed transport (upstream
 // McpConnectionClosedError, default message "MCP connection closed").
 type McpConnectionClosedError struct{ Msg string }
@@ -62,13 +57,6 @@ func (e *McpAbortError) Error() string {
 		return "MCP request aborted"
 	}
 	return e.Msg
-}
-
-// IsObject reports whether a decoded JSON value is an object (upstream
-// isObject: arrays are not objects).
-func IsObject(value any) bool {
-	m, ok := value.(map[string]any)
-	return ok && m != nil
 }
 
 // ToError mirrors upstream's toError: pass the value through when it is

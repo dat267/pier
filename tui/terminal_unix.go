@@ -5,7 +5,6 @@ package tui
 import (
 	"os"
 	"runtime"
-	"syscall"
 )
 
 // Platform helpers for the terminal port (unix build).
@@ -17,17 +16,6 @@ func isWindows() bool { return runtime.GOOS == "windows" }
 // needs the native platform helper (C/ObjC). Out of scope (divergence D52);
 // native Shift+Enter detection stays disabled.
 func nativeShiftPressed() bool { return false }
-
-// killSelfSIGWINCH sends SIGWINCH to this process. Best-effort: restricted
-// seccomp or LSM policies may return EACCES for kill(2); the refresh is
-// skipped rather than crashing (upstream regression test:
-// regression-sigwinch-kill-eacces).
-func killSelfSIGWINCH() {
-	if os.Getpid() <= 0 {
-		return
-	}
-	_ = syscall.Kill(os.Getpid(), syscall.SIGWINCH)
-}
 
 // resizeWatcher delivers SIGWINCH-driven resize notifications.
 var resizeWatcher struct {

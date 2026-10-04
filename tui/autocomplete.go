@@ -25,14 +25,7 @@ type AutocompleteSuggestions struct {
 	Prefix string
 }
 
-// SlashCommand describes a slash command for completion.
-type SlashCommand struct {
-	Name         string
-	Description  string
-	ArgumentHint string
-	// GetArgumentCompletions returns argument completions, or nil.
-	GetArgumentCompletions func(argumentPrefix string) ([]AutocompleteItem, bool)
-}
+// GetArgumentCompletions returns argument completions, or nil.
 
 // CompletionResult is the text state after applying a completion.
 type CompletionResult struct {

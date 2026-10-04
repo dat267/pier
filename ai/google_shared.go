@@ -503,12 +503,3 @@ func MapGoogleStopReason(reason string) StopReason {
 		return StopError
 	}
 }
-
-// GoogleErrorPatterns are the finish reasons that map to errors (exhaustive
-// upstream list, kept for documentation value).
-var googleErrorFinishReasons = []string{
-	"BLOCKLIST", "PROHIBITED_CONTENT", "SPII", "SAFETY", "IMAGE_SAFETY",
-	"IMAGE_PROHIBITED_CONTENT", "IMAGE_RECITATION", "IMAGE_OTHER", "RECITATION",
-	"FINISH_REASON_UNSPECIFIED", "OTHER", "LANGUAGE", "MALFORMED_FUNCTION_CALL",
-	"UNEXPECTED_TOOL_CALL", "TOO_MANY_TOOL_CALLS", "NO_IMAGE",
-}

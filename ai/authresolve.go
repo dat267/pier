@@ -14,12 +14,10 @@ import (
 type ModelsErrorCode = string
 
 const (
-	ErrCodeModelSource     ModelsErrorCode = "model_source"
-	ErrCodeModelValidation ModelsErrorCode = "model_validation"
-	ErrCodeProvider        ModelsErrorCode = "provider"
-	ErrCodeStream          ModelsErrorCode = "stream"
-	ErrCodeAuth            ModelsErrorCode = "auth"
-	ErrCodeOAuth           ModelsErrorCode = "oauth"
+	ErrCodeProvider ModelsErrorCode = "provider"
+	ErrCodeStream   ModelsErrorCode = "stream"
+	ErrCodeAuth     ModelsErrorCode = "auth"
+	ErrCodeOAuth    ModelsErrorCode = "oauth"
 )
 
 // ModelsError is the error type surfaced by the Models collection.
@@ -59,12 +57,6 @@ const (
 	oauthMinimumValidityMS = 5 * 60 * 1000
 	oauthRefreshTimeoutMS  = 15 * 1000
 )
-
-// providerAuthSource narrows what resolveProviderAuth needs from a Provider.
-type providerAuthSource interface {
-	ProviderID() string
-	ProviderAuth() ProviderAuth
-}
 
 // ResolveProviderAuth resolves auth for a provider. A stored credential owns
 // the provider: ambient/env is consulted only when nothing is stored. No

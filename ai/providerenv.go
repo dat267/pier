@@ -29,13 +29,4 @@ func GetProviderEnvValueOr(name string, env ProviderEnv) string {
 	return v
 }
 
-// ProviderEnvLookup is the env lookup used by ambient credential checks so
-// tests can inject scoped env (upstream passes ProviderEnv through).
-func ProviderEnvLookup(ctx AuthContext, env ProviderEnv, name string) (string, bool) {
-	if v, ok := env[name]; ok && v != "" {
-		return v, true
-	}
-	return ctx.Env(name)
-}
-
 var _ = context.Background

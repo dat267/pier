@@ -29,9 +29,6 @@ type AuthStatus struct {
 	Label  string
 }
 
-// ClearAPIKeyCache clears the configured-value command cache.
-func ClearAPIKeyCache() { ClearConfigValueCache() }
-
 // nestedCompatKeys are the compat fields merged key-by-key rather than
 // replaced wholesale.
 var nestedCompatKeys = []string{"openRouterRouting", "vercelGatewayRouting", "chatTemplateKwargs", "chatTemplateArgs"}

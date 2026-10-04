@@ -154,12 +154,6 @@ type RunWiring struct {
 	initialized bool
 }
 
-func (w *RunWiring) showError(message string) {
-	if w.ShowError != nil {
-		w.ShowError(message)
-	}
-}
-
 func (w *RunWiring) showWarning(message string) {
 	if w.ShowWarning != nil {
 		w.ShowWarning(message)
@@ -251,13 +245,6 @@ func (w *RunWiring) ShowNewVersionNotification(release LatestRelease, hyperlinks
 	}, 1, 0))
 	w.Chat.AddChild(NewDynamicBorder(warningBorder))
 	w.requestRender()
-}
-
-func (w *RunWiring) markdownTheme() tui.MarkdownTheme {
-	if w.Startup != nil {
-		return w.Startup.GetMarkdownThemeWithSettings(GetMarkdownTheme())
-	}
-	return GetMarkdownTheme()
 }
 
 // GetStartupExpansionState reports whether the header starts expanded.

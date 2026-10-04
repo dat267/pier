@@ -10,10 +10,6 @@ import (
 	"github.com/dat267/pier/tui"
 )
 
-type transcriptTestSettings struct {
-	showCacheMiss bool
-}
-
 func newTranscriptTestRenderer(t *testing.T, showCacheMiss bool) (*TranscriptRenderer, *coding.SettingsManager) {
 	t.Helper()
 	SetCustomThemesDir(t.TempDir())

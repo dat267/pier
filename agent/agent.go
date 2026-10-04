@@ -591,8 +591,6 @@ func (a *Agent) runContext() context.Context {
 	return runContextStore(a)
 }
 
-type runKey struct{ a *Agent }
-
 var runContexts sync.Map
 
 func runContextStore(a *Agent) context.Context {

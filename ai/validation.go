@@ -648,19 +648,3 @@ func ValidateToolArguments(tool Tool, toolCall ToolCall) (json.RawMessage, error
 	return nil, fmt.Errorf("Validation failed for tool %q:\n%s\n\nReceived arguments:\n%s",
 		toolCall.Name, strings.Join(errorLines, "\n"), received)
 }
-
-// ValidateToolCall finds a tool by name and validates the tool call arguments
-// against its schema (port of validateToolCall).
-func ValidateToolCall(tools []Tool, toolCall ToolCall) (json.RawMessage, error) {
-	var tool *Tool
-	for i := range tools {
-		if tools[i].Name == toolCall.Name {
-			tool = &tools[i]
-			break
-		}
-	}
-	if tool == nil {
-		return nil, fmt.Errorf("Tool %q not found", toolCall.Name)
-	}
-	return ValidateToolArguments(*tool, toolCall)
-}

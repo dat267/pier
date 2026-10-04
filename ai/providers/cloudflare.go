@@ -11,12 +11,7 @@ import (
 
 // Cloudflare endpoint constants.
 const (
-	// CloudflareWorkersAIBaseURL is the Workers AI direct endpoint.
-	CloudflareWorkersAIBaseURL = "https://api.cloudflare.com/client/v4/accounts/{CLOUDFLARE_ACCOUNT_ID}/ai/v1"
-	// CloudflareAIGatewayCompatBaseURL is the AI Gateway Unified API.
-	CloudflareAIGatewayCompatBaseURL = "https://gateway.ai.cloudflare.com/v1/{CLOUDFLARE_ACCOUNT_ID}/{CLOUDFLARE_GATEWAY_ID}/compat"
-	// CloudflareAIGatewayOpenAIBaseURL is the OpenAI passthrough route.
-	CloudflareAIGatewayOpenAIBaseURL = "https://gateway.ai.cloudflare.com/v1/{CLOUDFLARE_ACCOUNT_ID}/{CLOUDFLARE_GATEWAY_ID}/openai"
+
 	// CloudflareAIGatewayAnthropicBaseURL is the Anthropic passthrough route.
 	CloudflareAIGatewayAnthropicBaseURL = "https://gateway.ai.cloudflare.com/v1/{CLOUDFLARE_ACCOUNT_ID}/{CLOUDFLARE_GATEWAY_ID}/anthropic"
 )

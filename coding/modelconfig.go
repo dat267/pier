@@ -125,14 +125,6 @@ func (k ModelsJSONChatTemplateKwarg) MarshalJSON() ([]byte, error) {
 	return ai.MarshalJSON(k.Scalar)
 }
 
-// ModelsJSONPercentileCutoffs is OpenRouter's throughput/latency percentile map.
-type ModelsJSONPercentileCutoffs struct {
-	P50 *float64 `json:"p50,omitempty"`
-	P75 *float64 `json:"p75,omitempty"`
-	P90 *float64 `json:"p90,omitempty"`
-	P99 *float64 `json:"p99,omitempty"`
-}
-
 // ModelsJSONOpenRouterRouting is the OpenRouter routing policy.
 type ModelsJSONOpenRouterRouting struct {
 	AllowFallbacks         *bool    `json:"allow_fallbacks,omitempty"`
@@ -248,11 +240,6 @@ type ModelsJSONProvider struct {
 	AuthHeader     *bool                              `json:"authHeader,omitempty"`
 	Models         []ModelsJSONModel                  `json:"models,omitempty"`
 	ModelOverrides map[string]ModelsJSONModelOverride `json:"modelOverrides,omitempty"`
-}
-
-// ModelsJSON is the whole models.json document.
-type ModelsJSON struct {
-	Providers map[string]ModelsJSONProvider `json:"providers"`
 }
 
 // ModelConfig is one immutable load of models.json.

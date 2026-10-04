@@ -93,12 +93,6 @@ func (w *StartupWiring) showWarning(message string) {
 	}
 }
 
-func (w *StartupWiring) showStatus(message string) {
-	if w.ShowStatus != nil {
-		w.ShowStatus(message)
-	}
-}
-
 // InitInputs creates the submission channel. The app calls it once at
 // composition; the channel is loop-consumed (no lock on either side).
 func (w *StartupWiring) InitInputs() {

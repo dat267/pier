@@ -28,12 +28,6 @@ var (
 	xaiTokenURLValue = "https://auth.x.ai/oauth2/token"
 )
 
-// XAIDeviceCodeURL returns the device authorization endpoint.
-func XAIDeviceCodeURL() string { return xaiDeviceCodeURL }
-
-// XAITokenURL returns the token endpoint.
-func XAITokenURL() string { return xaiTokenURLValue }
-
 const (
 	// xaiRefreshSkewMS refreshes slightly before the reported expiry.
 	xaiRefreshSkewMS            = 5 * 60 * 1000

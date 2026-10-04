@@ -906,13 +906,6 @@ type openAIResponsesStreamConfig struct {
 	) (*http.Request, error)
 }
 
-var defaultOpenAIResponsesStreamConfig = &openAIResponsesStreamConfig{
-	errorPrefix:         defaultOpenAIErrorPrefix(nil),
-	noStopReasonMessage: "OpenAI Responses stream ended without a stop reason",
-	toolCallProviders:   openAIToolCallProviders,
-	buildRequest:        buildOpenAIResponsesRequest,
-}
-
 func defaultOpenAIErrorPrefix(model *Model) string {
 	prefix := "OpenAI"
 	if model != nil && model.Provider != "openai" {

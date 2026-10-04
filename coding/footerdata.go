@@ -2,7 +2,6 @@ package coding
 
 import (
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -287,12 +286,3 @@ type ReadonlyFooterDataProvider interface {
 }
 
 var _ ReadonlyFooterDataProvider = (*FooterDataProvider)(nil)
-
-// GitHeadDirectory returns the directory containing HEAD (used by hosts that
-// watch git metadata themselves).
-func GitHeadDirectory(gitPaths *GitPaths) string {
-	if gitPaths == nil {
-		return ""
-	}
-	return filepath.Dir(gitPaths.HeadPath)
-}

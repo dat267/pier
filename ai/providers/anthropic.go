@@ -144,8 +144,5 @@ func AnthropicProvider(streams ai.ProviderStreams) *ai.Provider {
 	})
 }
 
-// FirstAnthropicModel returns the first catalog model for smoke wiring.
-func FirstAnthropicModel() *ai.Model { return ai.GetBuiltinModels("anthropic")[0] }
-
 var _ = json.Marshal
 var _ = fmt.Sprintf

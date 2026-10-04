@@ -244,10 +244,6 @@ func plainWrappedLineCount(line string, width int) (int, bool) {
 	return emitted, true
 }
 
-// plainIsSpaceByte reports the bytes tui.wrapSingleLine treats as whitespace
-// once tabs were expanded to three spaces.
-func plainIsSpaceByte(char byte) bool { return char == ' ' || char == '\t' }
-
 // visualLineCount returns the number of visual lines the whole output wraps
 // to. Wrapping is per logical line, so only the lines appended since the last
 // call are counted.

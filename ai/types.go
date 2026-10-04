@@ -83,10 +83,9 @@ const (
 type Transport = string
 
 const (
-	TransportSSE             Transport = "sse"
-	TransportWebSocket       Transport = "websocket"
-	TransportWebSocketCached Transport = "websocket-cached"
-	TransportAuto            Transport = "auto"
+	TransportSSE Transport = "sse"
+
+	TransportAuto Transport = "auto"
 )
 
 // ProviderEnv is provider-scoped environment overrides. Values take
@@ -101,9 +100,9 @@ type ProviderHeaders map[string]*string
 type SessionAffinityFormat = string
 
 const (
-	SessionAffinityOpenAI       SessionAffinityFormat = "openai"
-	SessionAffinityOpenAINoSess SessionAffinityFormat = "openai-nosession"
-	SessionAffinityOpenRouter   SessionAffinityFormat = "openrouter"
+	SessionAffinityOpenAI SessionAffinityFormat = "openai"
+
+	SessionAffinityOpenRouter SessionAffinityFormat = "openrouter"
 )
 
 // ProviderResponse is the raw HTTP response surface exposed to onResponse.
@@ -117,9 +116,7 @@ type ProviderResponse struct {
 type ThinkingTokenBudgetField = string
 
 const (
-	ThinkingTokenBudgetVLLM     ThinkingTokenBudgetField = "thinking_token_budget"
-	ThinkingTokenBudgetQwen     ThinkingTokenBudgetField = "thinking_budget"
-	ThinkingTokenBudgetLLamaCpp ThinkingTokenBudgetField = "thinking_budget_tokens"
+	ThinkingTokenBudgetVLLM ThinkingTokenBudgetField = "thinking_token_budget"
 )
 
 // ThinkingBudgets holds token budgets for each thinking level

@@ -49,14 +49,6 @@ type TrustCrashWiring struct {
 	// bugReportHintShown dedupes the /bug hint.
 }
 
-func (w *TrustCrashWiring) requestRender() {
-	if w.RequestRender != nil {
-		w.RequestRender()
-	} else if w.UI != nil {
-		w.UI.RequestRender(false)
-	}
-}
-
 // RenderProjectTrustWarningIfNeeded warns when the project is untrusted.
 func (w *TrustCrashWiring) RenderProjectTrustWarningIfNeeded() {
 	if w.Settings == nil || w.SessionInfo == nil {

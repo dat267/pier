@@ -10,13 +10,6 @@ import (
 // Port of the auto-retry section of core/agent-session.ts and the post-run
 // continuation loop of _handlePostAgentRun.
 
-// retryState tracks the in-flight retry.
-type retryState struct {
-	cancel  context.CancelFunc
-	active  bool
-	attempt int
-}
-
 // IsRetryableError reports whether an assistant error is worth retrying.
 // Context overflow is handled by compaction instead.
 func (s *AgentSession) IsRetryableError(message *ai.AssistantMessage) bool {

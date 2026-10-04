@@ -13,11 +13,6 @@ import (
 // BackgroundContext is the empty root context (upstream BACKGROUND_CONTEXT).
 var BackgroundContext = context.Background()
 
-// TodoContext is the placeholder context (upstream TODO_CONTEXT).
-var TodoContext = context.WithValue(context.Background(), todoContextKey{}, "[Context TODO_CONTEXT]")
-
-type todoContextKey struct{}
-
 // ContextKey is a typed context key (upstream ContextKey).
 type ContextKey[T any] struct {
 	name string

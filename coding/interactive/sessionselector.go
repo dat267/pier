@@ -48,9 +48,6 @@ type SessionFileDeleter func(sessionPath string) SessionDeleteResult
 
 var sessionFileDeleter SessionFileDeleter = DeleteSessionFile
 
-// SetSessionFileDeleter overrides the session file deleter (test seam, D102).
-func SetSessionFileDeleter(deleter SessionFileDeleter) { sessionFileDeleter = deleter }
-
 // DeleteSessionFile deletes a session file, trying the `trash` CLI first and
 // falling back to a permanent unlink.
 func DeleteSessionFile(sessionPath string) SessionDeleteResult {

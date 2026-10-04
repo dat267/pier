@@ -45,9 +45,6 @@ var (
 	openAICodexDeviceVerifyURL   = OpenAICodexAuthBaseURL + "/codex/device"
 )
 
-// OpenAICodexDeviceVerificationURI is the device verification page.
-func OpenAICodexDeviceVerificationURI() string { return openAICodexDeviceVerifyURL }
-
 // OpenAICodexTokenResponse is one token endpoint response.
 type OpenAICodexTokenResponse struct {
 	Access  string

@@ -87,17 +87,11 @@ type ReplicatedState[T any] interface {
 	Subscribe(listener func(value T, ctx Context, delivery ReplicatedStateDelivery)) func()
 }
 
-// MutableReplicatedState is host-owned state that publishes diffs (upstream
-// MutableReplicatedState).
-type MutableReplicatedState[T any] interface {
-	ReplicatedState[T]
-	// Published is the immutable published value (upstream `value`).
-	Published() T
-	// State is the mutable tracked state; all writes must go through it.
-	State() T
-	// Publish emits the changes made through State since the last publication.
-	Publish(ctx Context) error
-}
+// Published is the immutable published value (upstream `value`).
+
+// State is the mutable tracked state; all writes must go through it.
+
+// Publish emits the changes made through State since the last publication.
 
 // JSONValue renders a service call as a plain JSON value for the wire
 // (upstream passes the call object itself, which is already JSON).

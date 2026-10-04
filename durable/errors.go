@@ -14,11 +14,6 @@ type StorageRejectedError struct {
 func (e *StorageRejectedError) Error() string { return e.Message }
 func (e *StorageRejectedError) Unwrap() error { return e.Cause }
 
-// NewStorageRejected wraps a rejection with its cause.
-func NewStorageRejected(message string, cause error) *StorageRejectedError {
-	return &StorageRejectedError{Message: message, Cause: cause}
-}
-
 // ReadAfterWriteError reports a transaction that read a table after its first
 // table write (upstream ReadAfterWrite). Read every required row before
 // writing.

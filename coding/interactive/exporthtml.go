@@ -42,16 +42,6 @@ var exportMarkedJS string
 //go:embed exporthtml/vendor/highlight.min.js
 var exportHighlightJS string
 
-// D-row: upstream iterates the theme colors object in theme-file order; the
-// Go port emits CSS custom properties in alphabetical key order. CSS custom
-// property order has no rendering effect.
-//
-// templateRenderedTools mirrors upstream TEMPLATE_RENDERED_TOOLS: tools the
-// HTML template draws itself instead of consuming pre-rendered HTML.
-var templateRenderedTools = map[string]bool{
-	"bash": true, "read": true, "write": true, "edit": true, "ls": true,
-}
-
 // ---- ANSI to HTML (ansi-to-html.ts) ----
 
 var ansiColors = [16]string{

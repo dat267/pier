@@ -351,15 +351,6 @@ func TerminalDetectsTrueColor(env func(string) string) bool {
 	return strings.HasSuffix(strings.ToLower(env("TERM")), "-direct")
 }
 
-// GetTerminalColorMode returns the escape mode matching the injected terminal
-// capabilities (upstream getTerminalColorMode).
-func GetTerminalColorMode() TerminalColorMode {
-	if GetTerminalCapabilities().TrueColor {
-		return TerminalColorModeTruecolor
-	}
-	return TerminalColorMode256
-}
-
 // StyleText styles text with concrete colors and attributes.
 func StyleText(text string, options TextStyle, mode TerminalColorMode) string {
 	fgAnsi := ""

@@ -20,12 +20,6 @@ type StorageBenchmarkScale struct {
 	DocumentCount int
 }
 
-// StorageMemoryScales are the in-memory benchmark scales.
-var StorageMemoryScales = []StorageBenchmarkScale{
-	{Name: "1k", EntryCount: 1_000, TaskCount: 200, DocumentCount: 200},
-	{Name: "10k", EntryCount: 10_000, TaskCount: 2_000, DocumentCount: 2_000},
-}
-
 // TimingScale is the small scale used for timing benchmarks.
 var TimingScale = StorageBenchmarkScale{Name: "timing", EntryCount: 1_000, TaskCount: 300, DocumentCount: 300}
 
@@ -37,13 +31,6 @@ const (
 	entriesPerFork       = 32
 	benchmarkBatchSize   = 100
 )
-
-// StorageBenchmarkPrimaryRecordCount is the number of primary records the seed
-// writes.
-func StorageBenchmarkPrimaryRecordCount(scale StorageBenchmarkScale) int {
-	return 1 + scale.EntryCount + scale.TaskCount + scale.DocumentCount + len(replayTails) + 1 +
-		forkDepth*(1+entriesPerFork)
-}
 
 // StorageBenchmarkDataset is the deterministic dataset the read benchmarks use.
 type StorageBenchmarkDataset struct {

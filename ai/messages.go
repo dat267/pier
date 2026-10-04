@@ -245,12 +245,6 @@ func (m *SystemMessage) Clone() *SystemMessage {
 	return out
 }
 
-// orderedSections is the upstream JSON shape of `sections`.
-type orderedSections []struct {
-	Name  string  `json:"name"`
-	Value *string `json:"value"`
-}
-
 func encodeSections(m *SystemMessage) (json.RawMessage, error) {
 	if len(m.Sections) == 0 {
 		return nil, nil

@@ -35,9 +35,6 @@ type configValueReference struct {
 	parts     []templatePart
 }
 
-// commandConfig returns the command text (with the leading "!").
-func (r configValueReference) commandConfig() string { return r.config }
-
 func appendConfigLiteral(parts []templatePart, value string) []templatePart {
 	if value == "" {
 		return parts

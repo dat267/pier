@@ -33,9 +33,6 @@ const (
 // and mocks fetch).
 var openRouterTokenURLValue = OpenRouterTokenEndpoint
 
-// OpenRouterTokenURLValue returns the key-exchange endpoint.
-func OpenRouterTokenURLValue() string { return openRouterTokenURLValue }
-
 // oauthCallbackHost returns the loopback host for OAuth callbacks
 // (PI_OAUTH_CALLBACK_HOST overrides it).
 func oauthCallbackHost() string {

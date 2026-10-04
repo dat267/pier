@@ -91,15 +91,9 @@ type WireOp struct {
 // IsReplace reports whether an op replaces the whole value.
 func IsReplace(op Op) bool { return op.Verb == VerbReplace }
 
-// IsWireReplace reports whether a wire op replaces the whole value.
-func IsWireReplace(op WireOp) bool { return op.Verb == VerbReplace }
-
 // IsBase reports whether a batch begins with a replacement (Flush guarantees
 // `r` is at index 0 or absent).
 func IsBase(ops []Op) bool { return len(ops) > 0 && ops[0].Verb == VerbReplace }
-
-// IsWireBase is the wire-vocabulary form.
-func IsWireBase(ops []WireOp) bool { return len(ops) > 0 && ops[0].Verb == VerbReplace }
 
 // Overlap returns the longest suffix of a that is a prefix of b, bounded by
 // scan; probe/maxCandidates mirror upstream's tuned parameters.

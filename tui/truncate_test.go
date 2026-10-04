@@ -77,13 +77,6 @@ func TestSliceWithWidth(t *testing.T) {
 	}
 }
 
-type sliceCase struct {
-	line     string
-	startCol int
-	length   int
-	strict   bool
-}
-
 func TestSliceByColumnASCII(t *testing.T) {
 	if got := SliceByColumn("hello", 1, 3, false); got != "ell" {
 		t.Fatalf("got %q", got)

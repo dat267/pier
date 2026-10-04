@@ -2,23 +2,6 @@ package coding
 
 // Port of core/slash-commands.ts: the built-in slash commands.
 
-// SlashCommandSource names where a slash command came from.
-type SlashCommandSource = string
-
-const (
-	SlashCommandSourceExtension SlashCommandSource = "extension"
-	SlashCommandSourcePrompt    SlashCommandSource = "prompt"
-	SlashCommandSourceSkill     SlashCommandSource = "skill"
-)
-
-// SlashCommandInfo describes one registered slash command.
-type SlashCommandInfo struct {
-	Name        string
-	Description string
-	Source      SlashCommandSource
-	SourceInfo  SourceInfo
-}
-
 // BuiltinSlashCommand is one built-in command.
 type BuiltinSlashCommand struct {
 	Name         string

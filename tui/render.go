@@ -64,9 +64,6 @@ type TuiStopOptions struct {
 	PreserveScreen bool
 }
 
-// MinRenderIntervalMS is the floor between throttled renders.
-const MinRenderIntervalMS = 16
-
 type renderedOverlayLayout struct {
 	entry  *overlayEntry
 	row    int
@@ -499,12 +496,6 @@ func (t *Renderer) DisableAutoRender() {}
 // requestRender is RequestRender for internal callers.
 func (t *Renderer) requestRender(force bool) {
 	t.RequestRender(force)
-}
-
-// requestImmediateRender requests a paint (owner-driven; same as
-// RequestRender now that the internal timer is gone).
-func (t *Renderer) requestImmediateRender() {
-	t.RequestRender(false)
 }
 
 // resetRenderState invokes the screen's reset hook.

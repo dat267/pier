@@ -82,7 +82,7 @@ func NewFrameDecoder(options *FrameDecoderOptions) (*FrameDecoder, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &FrameDecoder{maxFrameLength: maxFrameLength}, nil
+	return &FrameDecoder{maxFrameLength: maxFrameLength, state: decoderOpen}, nil
 }
 
 // MaxFrameLength returns the configured limit (used by the codec).

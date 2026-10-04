@@ -741,68 +741,7 @@ type ModelRuntimeSource interface {
 	HasConfiguredAuth(providerID string) bool
 }
 
-// ModelsRuntime adapts a bare ai.Models registry to ModelRuntimeSource. It is
-// used when no *ModelRuntime is available (for example a registry built by hand
-// in tests); the real runtime satisfies ModelRuntimeSource directly.
-//
-// D21: upstream ModelRuntime keeps a pushed snapshot of available models and
-// configured providers; this adapter queries the registry on demand and caches
-// the most recent successful availability listing.
-type ModelsRuntime struct {
-	Models *ai.Models
-	ctx    context.Context
-	// cache is the last full availability listing.
-	cache []*ai.Model
-}
-
-// NewModelsRuntime wraps an ai.Models registry.
-func NewModelsRuntime(models *ai.Models) *ModelsRuntime {
-	return &ModelsRuntime{Models: models, ctx: context.Background()}
-}
-
-// GetModels lists registered models, optionally scoped to a provider.
-func (r *ModelsRuntime) GetModels(providerID string) []*ai.Model {
-	return r.Models.GetModels(providerID)
-}
-
-// GetModel looks one model up.
-func (r *ModelsRuntime) GetModel(providerID, modelID string) *ai.Model {
-	return r.Models.GetModel(providerID, modelID)
-}
-
-// GetAvailable lists models with usable auth.
-func (r *ModelsRuntime) GetAvailable(providerID string, ctx context.Context) ([]*ai.Model, error) {
-	if ctx == nil {
-		ctx = r.ctx
-	}
-	available, err := r.Models.GetAvailable(providerID, ctx)
-	if err != nil {
-		return nil, err
-	}
-	if providerID == "" {
-		r.cache = available
-	}
-	return available, nil
-}
-
-// GetAvailableSnapshot is the last availability listing.
-func (r *ModelsRuntime) GetAvailableSnapshot() []*ai.Model {
-	if r.cache != nil {
-		return r.cache
-	}
-	available, err := r.Models.GetAvailable("", r.ctx)
-	if err != nil {
-		return nil
-	}
-	r.cache = available
-	return available
-}
-
-// HasConfiguredAuth reports whether a provider has usable credentials.
-func (r *ModelsRuntime) HasConfiguredAuth(providerID string) bool {
-	check, err := r.Models.CheckAuth(providerID, r.ctx)
-	return err == nil && check != nil
-}
+// cache is the last full availability listing.
 
 // ResolveModelScopeWithDiagnostics resolves patterns against the runtime.
 func ResolveModelScopeWithDiagnostics(patterns []string, runtime ModelRuntimeSource, ctx context.Context) (ResolveModelScopeResult, error) {
@@ -811,14 +750,4 @@ func ResolveModelScopeWithDiagnostics(patterns []string, runtime ModelRuntimeSou
 		return ResolveModelScopeResult{}, err
 	}
 	return ResolveModelScopeFromModels(patterns, models), nil
-}
-
-// ResolveModelScope resolves patterns and returns the scoped models (warnings
-// are returned as the result's diagnostics).
-func ResolveModelScope(patterns []string, runtime ModelRuntimeSource, ctx context.Context) ([]ScopedModel, error) {
-	result, err := ResolveModelScopeWithDiagnostics(patterns, runtime, ctx)
-	if err != nil {
-		return nil, err
-	}
-	return result.ScopedModels, nil
 }

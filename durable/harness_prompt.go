@@ -29,9 +29,6 @@ func ReplaySections(messages []ai.Message) *orderedMap[string] {
 	return shown
 }
 
-// SectionRender is one section's rendered text and whether it is present.
-type SectionRender func(input PromptInput, ctx chord.Context) (string, bool, error)
-
 // RenderSections renders the agent's sections in order. A section that reports
 // absent is omitted; tagged text is wrapped; a section that fails keeps its
 // shown text and is reported, while a failure after the context is cancelled

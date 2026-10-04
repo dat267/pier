@@ -306,17 +306,6 @@ func (f messageFacts) assistantMessage() ai.AssistantMessage {
 	return message
 }
 
-// scanAssistantRequest builds the scan state an assistant message contributes.
-// It shares the facts decode with consume, so the running prev and the recorded
-// candidates cannot disagree.
-func scanAssistantRequest(raw json.RawMessage, reportedCache bool) *previousRequest {
-	facts := scanMessageFacts(raw)
-	if facts.Usage == nil || (*facts.Usage == ai.Usage{} && facts.Provider == "" && facts.Model == "") {
-		return nil
-	}
-	return newPreviousRequest(*facts.Usage, facts.Provider, facts.Model, facts.Timestamp, reportedCache)
-}
-
 // reset drops the state, for a fresh session or a load that reseeds it.
 func (s *cacheScanState) reset() {
 	s.prev = nil

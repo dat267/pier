@@ -86,16 +86,7 @@ func IsAppleTerminalSession() bool {
 	return isDarwin() && os.Getenv("TERM_PROGRAM") == "Apple_Terminal"
 }
 
-// RefreshTerminalDimensions sends SIGWINCH to this process so the terminal
-// dimensions refresh. Best-effort: restricted environments may return EACCES,
-// in which case the refresh is skipped.
-func RefreshTerminalDimensions() {
-	if isWindows() {
-		return
-	}
-	// syscall.Kill on our own pid; a permission error is ignored (best-effort).
-	killSelfSIGWINCH()
-}
+// syscall.Kill on our own pid; a permission error is ignored (best-effort).
 
 // NormalizeNativeShiftEnterInput maps a bare CR to the native Shift+Enter
 // sequence when the native modifier detection is available. Upstream consults

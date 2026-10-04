@@ -187,9 +187,6 @@ func (s *loopSchedule) finishWork() {
 	}
 }
 
-// renderTicks is the renderer's coalesced render-request channel.
-func (s *loopSchedule) renderTicks() <-chan struct{} { return s.host.RenderTicks() }
-
 // paintChannel is the pending coalesced-paint timer, nil when none is armed.
 func (s *loopSchedule) paintChannel() <-chan time.Time { return s.paintCh }
 

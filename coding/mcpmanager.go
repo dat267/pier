@@ -2,7 +2,6 @@ package coding
 
 import (
 	"context"
-	"strings"
 	"sync"
 
 	"github.com/dat267/pier/agent"
@@ -176,9 +175,4 @@ type mcpClientCaller struct {
 // CallTool runs one tool call on the client.
 func (c mcpClientCaller) CallTool(ctx context.Context, name string, args map[string]any, options mcp.RequestOptions) (*protocol.CallToolResult, error) {
 	return c.client.CallTool(ctx, name, args, options)
-}
-
-// McpNamespaceLabel renders a server's tool namespace for status output.
-func McpNamespaceLabel(server string) string {
-	return strings.TrimPrefix(McpNamespace(server), "mcp__")
 }

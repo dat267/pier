@@ -44,16 +44,6 @@ func OpenSqliteStorage(path string) (*SqliteStorage, error) {
 	return storage, nil
 }
 
-// NewSqliteStorage wraps an open database handle.
-func NewSqliteStorage(db *sql.DB) (*SqliteStorage, error) {
-	db.SetMaxOpenConns(1)
-	storage := &SqliteStorage{db: db}
-	if err := storage.applyMigrations(); err != nil {
-		return nil, err
-	}
-	return storage, nil
-}
-
 // sqliteMigrations mirrors upstream migrations.ts: one migration, contiguous
 // version 1. `submissions.request_id`/`status` carry the submission lifecycle
 // (the record's own JSON carries its type); upstream's task-status CHECK

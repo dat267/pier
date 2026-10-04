@@ -337,13 +337,6 @@ func (s *Session) UnloadDocuments() {
 	s.documents = map[string]*LoadedDocument{}
 }
 
-// SubscribeOnly is the number of registered commit listeners (test seam).
-func (s *Session) commitListenerCount() int {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return len(s.commitListeners)
-}
-
 // ─── Internals ──────────────────────────────────────────────────────────────
 
 // sessionHost implements TransactionHost over the session.

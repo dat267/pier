@@ -66,13 +66,6 @@ func (c *ProtocolTestClient) Closed() bool {
 	return c.closed
 }
 
-// Messages returns a snapshot of every received server message.
-func (c *ProtocolTestClient) Messages() []*protocol.ServerMessage {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return append([]*protocol.ServerMessage{}, c.messages...)
-}
-
 // Hello sends hello and resolves with hello or hello_error.
 func (c *ProtocolTestClient) Hello(version int64) (*protocol.ServerMessage, error) {
 	waiter, err := c.prepareNext(func(message *protocol.ServerMessage) bool {
@@ -150,9 +143,6 @@ func (c *ProtocolTestClient) SendMessage(message *protocol.ClientMessage) error 
 	}
 	return c.channel.Send(frame)
 }
-
-// SendBytes sends raw bytes.
-func (c *ProtocolTestClient) SendBytes(chunk []byte) error { return c.channel.Send(chunk) }
 
 // SendFragmentedMessage splits one encoded message at splitAt.
 func (c *ProtocolTestClient) SendFragmentedMessage(message *protocol.ClientMessage, splitAt int) error {

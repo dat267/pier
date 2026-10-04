@@ -59,21 +59,6 @@ func stableMDValue(value any) string {
 	}
 }
 
-func stableJSONValue(t *testing.T, value any) string {
-	t.Helper()
-	var encoded string
-	if text, ok := value.(string); ok {
-		encoded = text
-	} else {
-		encoded = mustJSON(value)
-	}
-	var parsed any
-	if err := json.Unmarshal([]byte(encoded), &parsed); err != nil {
-		t.Fatalf("bad JSON %q: %v", encoded, err)
-	}
-	return stableMDValue(parsed)
-}
-
 func sortStrings(values []string) {
 	for i := 1; i < len(values); i++ {
 		for j := i; j > 0 && values[j] < values[j-1]; j-- {

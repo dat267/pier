@@ -47,18 +47,3 @@ func (openaiResponsesStreams) Stream(model *ai.Model, context ai.TranscriptConte
 func (openaiResponsesStreams) StreamSimple(model *ai.Model, context ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 	return ai.StreamOpenAIResponsesSimple(model, context, options)
 }
-
-// OpenAIResponsesProvider builds a Responses-API provider for a given id and
-// base URL (used for the openai provider's Responses-API models and for
-// Codex/Azure-style deployments).
-func OpenAIResponsesProvider(id, name, baseURL string, envVars []string) *ai.Provider {
-	models := ai.GetBuiltinModels(id)
-	return ai.CreateProvider(ai.CreateProviderOptions{
-		ID:      id,
-		Name:    name,
-		BaseURL: baseURL,
-		Auth:    ai.ProviderAuth{APIKey: ai.EnvApiKeyAuth(name+" API key", envVars)},
-		Models:  models,
-		Single:  openaiResponsesStreams{},
-	})
-}

@@ -233,29 +233,6 @@ func (b *BorderedLoader) loaderComponent() tui.Component {
 	return b.loader
 }
 
-// Done exposes the cancellation channel (upstream's AbortSignal).
-func (b *BorderedLoader) Done() <-chan struct{} {
-	if b.cancellable {
-		return b.cancelLoader.Done()
-	}
-	return nil
-}
-
-// SetOnAbort installs the abort callback.
-func (b *BorderedLoader) SetOnAbort(fn func()) {
-	b.onAbort = fn
-	if b.cancellable {
-		b.cancelLoader.OnAbort = fn
-	}
-}
-
-// HandleInput forwards input to the cancellable loader.
-func (b *BorderedLoader) HandleInput(data string) {
-	if b.cancellable {
-		b.cancelLoader.HandleInput(data)
-	}
-}
-
 // Dispose stops the loader.
 func (b *BorderedLoader) Dispose() {
 	if b.cancellable {

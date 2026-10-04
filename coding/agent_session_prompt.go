@@ -43,9 +43,7 @@ type PromptOptions struct {
 type InputSource = string
 
 const (
-	InputSourceInteractive InputSource = "interactive"
-	InputSourceExtension   InputSource = "extension"
-	InputSourceRPC         InputSource = "rpc"
+	InputSourceExtension InputSource = "extension"
 )
 
 // promptState is the session's prompt buffering state.

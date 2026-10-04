@@ -34,10 +34,6 @@ type EditorHost interface {
 	RequestRender(force bool)
 }
 
-const (
-	attachmentAutocompleteDebounceMS = 20
-)
-
 var (
 	defaultAutocompleteTriggerCharacters = []string{"@", "#"}
 	slashCommandSelectListLayout         = SelectListLayoutOptions{

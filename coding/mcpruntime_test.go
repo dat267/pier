@@ -100,12 +100,6 @@ func (s *mcpFakeServer) recordedMethods() []string {
 	return append([]string{}, s.methods...)
 }
 
-func (s *mcpFakeServer) callCount() int {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.calls
-}
-
 // failingTransport injects one error into the next request of one method
 // (upstream's send-override tests). An empty method fails the next request.
 type failingTransport struct {

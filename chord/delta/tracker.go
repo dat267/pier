@@ -204,20 +204,6 @@ func ApplyImmutableBatches(target chord.JsonValue, batches [][]Op) (chord.JsonVa
 	return root, nil
 }
 
-// ApplyBatches is the mutable variant: each batch is applied in order (upstream
-// apply with several batches is a loop).
-func ApplyBatches(target chord.JsonValue, batches [][]Op) (chord.JsonValue, error) {
-	root := target
-	for _, batch := range batches {
-		var err error
-		root, err = Apply(root, batch)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return root, nil
-}
-
 // String renders the tracker's revision state for diagnostics.
 func (t *Tracker) String() string {
 	t.mu.Lock()

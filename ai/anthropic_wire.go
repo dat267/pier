@@ -17,8 +17,8 @@ const (
 	AnthropicEffortLow    AnthropicEffort = "low"
 	AnthropicEffortMedium AnthropicEffort = "medium"
 	AnthropicEffortHigh   AnthropicEffort = "high"
-	AnthropicEffortXHigh  AnthropicEffort = "xhigh"
-	AnthropicEffortMax    AnthropicEffort = "max"
+
+	AnthropicEffortMax AnthropicEffort = "max"
 )
 
 // AnthropicThinkingDisplay controls how thinking content is returned.
@@ -26,7 +26,6 @@ type AnthropicThinkingDisplay = string
 
 const (
 	ThinkingDisplaySummarized AnthropicThinkingDisplay = "summarized"
-	ThinkingDisplayOmitted    AnthropicThinkingDisplay = "omitted"
 )
 
 // AnthropicOptions extends StreamOptions for the anthropic-messages API.
@@ -212,11 +211,7 @@ type AnthropicImageSource struct {
 	Data     string `json:"data"`
 }
 
-// AnthropicToolReference references a tool by name.
-type AnthropicToolReference struct {
-	Type string `json:"type"` // "tool_reference"
-	Name string `json:"name"`
-}
+// "tool_reference"
 
 // AnthropicToolChange is a tool_addition / tool_removal payload: a name
 // reference, or (inline-tools-2026-09-15) a later tool defined by value.

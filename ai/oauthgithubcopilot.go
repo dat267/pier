@@ -2,7 +2,6 @@ package ai
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -698,13 +697,4 @@ func jsonRawStringSlice(values []string) json.RawMessage {
 		return json.RawMessage(`[]`)
 	}
 	return encoded
-}
-
-// decodeBase64Secret decodes an embedded base64 secret (upstream `decode`).
-func decodeBase64Secret(encoded string) string {
-	decoded, err := base64.StdEncoding.DecodeString(encoded)
-	if err != nil {
-		return ""
-	}
-	return string(decoded)
 }

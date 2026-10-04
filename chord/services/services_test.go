@@ -103,25 +103,6 @@ func TestParseServiceCatalogue(t *testing.T) {
 	}
 }
 
-func wireSnapshot() *WireServiceSubscriptionSnapshot {
-	encoder := delta.NewEncoder()
-	wireOps := encoder.Encode([]delta.Op{
-		{Verb: delta.VerbReplace, Value: map[string]any{"count": float64(0)}},
-		{Verb: delta.VerbSet, Path: delta.Path{"count"}, Value: float64(3)},
-	})
-	return &WireServiceSubscriptionSnapshot{
-		ServiceID: "sessions",
-		Mode:      chord.ServiceModeKeyed,
-		Instances: []WireServiceInstanceSnapshot{{
-			Instance: &chord.ServiceInstanceAddress{Key: "k1", Generation: 1},
-			Members: []WireServiceMemberSnapshot{
-				{Name: "list", Kind: MemberMethod},
-				{Name: "state", Kind: MemberState, Sequence: 2, Ops: wireOps},
-			},
-		}},
-	}
-}
-
 func TestParseWireSubscriptionSnapshot(t *testing.T) {
 	// Render the wire snapshot as JSON values, then parse it back.
 	value := map[string]any{

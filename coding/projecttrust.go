@@ -12,16 +12,6 @@ import (
 // extension mechanics and omitted; the remaining decision order (override,
 // no-resource fast path, stored decision, default, UI selection) is ported.
 
-// AppMode is the active application mode.
-type AppMode = string
-
-const (
-	AppModeInteractive AppMode = "interactive"
-	AppModePrint       AppMode = "print"
-	AppModeJSON        AppMode = "json"
-	AppModeRPC         AppMode = "rpc"
-)
-
 // ResolveProjectTrustedOptions are the trust resolution inputs.
 type ResolveProjectTrustedOptions struct {
 	Cwd           string

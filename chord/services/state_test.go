@@ -257,17 +257,6 @@ func TestStateReplicaReportsListenerFailures(t *testing.T) {
 	}
 }
 
-type testEntry struct {
-	key        string
-	generation int
-	service    any
-}
-
-func (e *testEntry) EntryKey() string     { return e.key }
-func (e *testEntry) EntryGeneration() int { return e.generation }
-func (e *testEntry) EntryService() any    { return e.service }
-func (e *testEntry) Deactivate()          {}
-
 func TestDirectoryInsertReplaceRemove(t *testing.T) {
 	var deactivated []string
 	entry := &deactivatingEntry{key: "a", generation: 1, onDeactivate: func() { deactivated = append(deactivated, "a") }}

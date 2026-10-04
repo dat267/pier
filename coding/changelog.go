@@ -32,10 +32,6 @@ var (
 	changelogVersionRe   = regexp.MustCompile(`##\s+\[?(\d+)\.(\d+)\.(\d+)\]?`)
 )
 
-func changelogEntryVersion(entry ChangelogEntry) string {
-	return strconv.Itoa(entry.Major) + "." + strconv.Itoa(entry.Minor) + "." + strconv.Itoa(entry.Patch)
-}
-
 func normalizeChangelogTag(version string) string {
 	if strings.HasPrefix(version, "v") {
 		return version

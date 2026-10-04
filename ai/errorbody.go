@@ -73,15 +73,6 @@ func TruncateErrorText(text string, maxChars int) string {
 	return JSSlice(text, 0, maxChars) + fmt.Sprintf("... [truncated %d chars]", JSLength(text)-maxChars)
 }
 
-// SafeJSONStringify serializes or falls back to String(value).
-func SafeJSONStringify(v any) string {
-	enc, err := MarshalJSON(v)
-	if err != nil {
-		return fmt.Sprintf("%v", v)
-	}
-	return string(enc)
-}
-
 // ShortHash is a fast deterministic hash to shorten long strings
 // (port of utils/hash.ts shortHash with JS 32-bit integer semantics).
 func ShortHash(str string) string {

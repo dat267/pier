@@ -234,16 +234,6 @@ func compareInts(left, right int) int {
 	}
 }
 
-// GetLatestPortRelease fetches this module's latest published version, or nil
-// when offline or the proxy has nothing to report (a module with no tags or no
-// published version answers 404).
-func GetLatestPortRelease(ctx context.Context, currentVersion string) (*LatestRelease, error) {
-	if os.Getenv("PI_OFFLINE") != "" {
-		return nil, nil
-	}
-	return getLatestPortReleaseFrom(ctx, PortReleaseURL, currentVersion, http.DefaultClient)
-}
-
 // getLatestPortReleaseFrom resolves the newest release from a /releases/latest
 // redirect, whose Location names the tag. A server that answers without redirecting,
 // or whose Location names no tag, yields nothing rather than an error.

@@ -765,8 +765,6 @@ func WriteDebugLogFile(content string) error {
 	return os.WriteFile(debugLogPath, []byte(content), 0o644)
 }
 
-var errNotAvailable = errors.New("not available")
-
 // newCommandWiring assembles the CommandWiring (port of the corresponding InteractiveMode wiring).
 func newCommandWiring(app *App) *CommandWiring {
 	return &CommandWiring{

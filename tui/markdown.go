@@ -27,11 +27,6 @@ var terminalCapabilitiesState struct {
 	capabilities TerminalCapabilities
 }
 
-// SetTerminalCapabilities sets the capability flags.
-func SetTerminalCapabilities(capabilities TerminalCapabilities) {
-	terminalCapabilitiesState.capabilities = capabilities
-}
-
 // GetTerminalCapabilities returns the capability flags.
 func GetTerminalCapabilities() TerminalCapabilities {
 	return terminalCapabilitiesState.capabilities

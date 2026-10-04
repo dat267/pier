@@ -10,14 +10,6 @@ import (
 // Port of harness/generation.ts: the generation task definition and the run
 // lifecycle helpers. The phases land with the task runtime.
 
-// GenerationInput is the empty generation task input.
-type GenerationInput = struct{}
-
-// GenerationResult is the generation task result: the committed answer entry.
-type GenerationResult struct {
-	EntryID Id `json:"entryId"`
-}
-
 // Generation checkpoint phases.
 const (
 	GenerationPhasePrepare = "prepare"

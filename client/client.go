@@ -93,20 +93,6 @@ func NewClient(options ClientOptions) (*Client, error) {
 	return client, nil
 }
 
-// ConnectClient builds a client and connects it, disposing on failure
-// (upstream Client.connect static).
-func ConnectClient(ctx context.Context, options ClientOptions) (*Client, error) {
-	client, err := NewClient(options)
-	if err != nil {
-		return nil, err
-	}
-	if _, err := client.Connect(ctx); err != nil {
-		_ = client.Dispose()
-		return nil, err
-	}
-	return client, nil
-}
-
 // Disposed reports whether the client is disposed.
 func (c *Client) Disposed() bool {
 	c.mu.Lock()

@@ -127,12 +127,6 @@ type Focusable interface {
 // SetFocused/IsFocused: divergence D43.)
 const CursorMarker = "\x1b_pi:c\x07"
 
-// IsFocusable reports whether a component implements Focusable.
-func IsFocusable(component Component) bool {
-	_, ok := component.(Focusable)
-	return ok
-}
-
 // DispatchMouseEvent dispatches an event to a component and retains the exact
 // target and coordinate transform. Containers use this when forwarding events
 // to nested children.

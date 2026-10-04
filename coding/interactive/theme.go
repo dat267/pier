@@ -1222,11 +1222,6 @@ func SetRegisteredThemes(themes []*Theme) {
 	themeState.registered.Store(&registered)
 }
 
-// SetThemeJSONValidator installs the document validator.
-func SetThemeJSONValidator(validator func(label string, raw json.RawMessage) (*ThemeJSON, error)) {
-	themeState.validator.Store(&validator)
-}
-
 // InitTheme loads the given theme (or the detected default) into the global slot.
 func InitTheme(themeName string, enableWatcher bool) {
 	name := themeName

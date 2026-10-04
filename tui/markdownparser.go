@@ -350,21 +350,6 @@ func lexFencedCode(source string, marker string, lang string) (*MdToken, string)
 	return token, rest
 }
 
-func splitLinesKeepEnds(source string) []string {
-	var lines []string
-	position := 0
-	for position < len(source) {
-		index := strings.IndexByte(source[position:], '\n')
-		if index == -1 {
-			lines = append(lines, source[position:])
-			break
-		}
-		lines = append(lines, source[position:position+index+1])
-		position += index + 1
-	}
-	return lines
-}
-
 func lexIndentedCode(source string) (*MdToken, string) {
 	var body strings.Builder
 	position := 0

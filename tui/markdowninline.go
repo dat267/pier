@@ -14,12 +14,7 @@ var (
 	mdInlineLinkRegex     = regexp.MustCompile(`^\[((?:[^\[\]]|\[[^\]]*\])*)\]\(([^()\s]*(?:\([^()]*\)[^()\s]*)*)(?:\s+"([^"]*)")?\)`)
 	mdInlineImageRegex    = regexp.MustCompile(`^!\[((?:[^\[\]]|\[[^\]]*\])*)\]\(([^()\s]*(?:\([^()]*\)[^()\s]*)*)(?:\s+"([^"]*)")?\)`)
 	mdEscapeRegex         = regexp.MustCompile("^\\\\([!\"#$%&'()*+,\\-./:;<=>?@\\[\\\\\\]^_`{|}~])")
-	mdLatexInlineRegex    = regexp.MustCompile(`^\$([^$\n]+)\$|^\\\(([\s\S]*?)\\\)|^\\\[([\s\S]*?)\\\]`)
 )
-
-type mdInline struct {
-	lexer *mdLexer
-}
 
 // lexInline lexes inline tokens.
 func (l *mdLexer) lexInline(source string) []*MdToken {

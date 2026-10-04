@@ -128,13 +128,3 @@ func CreateBashTool(options *BashToolOptions) ToolRegistration {
 		},
 	}
 }
-
-// CodingTools is the read, write, edit and bash extension.
-func CodingTools() Extension {
-	return Extension{
-		Name: "coding-tools",
-		Tools: []ToolRegistration{
-			CreateReadTool(), CreateWriteTool(), CreateEditTool(), CreateBashTool(nil),
-		},
-	}
-}

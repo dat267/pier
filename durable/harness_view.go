@@ -121,12 +121,6 @@ func ConversationViewsFor(harness *Session) (*ConversationViews, error) {
 	return value.(*ConversationViews), nil
 }
 
-func (v *ConversationViews) isClosed() bool {
-	v.mu.Lock()
-	defer v.mu.Unlock()
-	return v.closed
-}
-
 // State is a disposable read-only Chord state of the view.
 func (v *ConversationViews) State(id Id, ctx chord.Context) (*services.AttachedState[ConversationView], error) {
 	var source *CommittedStateSource[ConversationView]

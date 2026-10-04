@@ -24,8 +24,6 @@ func isWindows() bool { return runtime.GOOS == "windows" }
 
 func nativeShiftPressed() bool { return false }
 
-func killSelfSIGWINCH() {}
-
 var (
 	resizeWatcherMu   sync.Mutex
 	resizeWatcherStop chan struct{}

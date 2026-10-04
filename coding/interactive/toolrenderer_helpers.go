@@ -110,13 +110,6 @@ func toolContainerComponent(context *ToolRenderContext) *tui.Container {
 	return &tui.Container{}
 }
 
-// linkPath wraps a styled path in an OSC 8 hyperlink (upstream checks the
-// terminal's hyperlink capability).
-func linkPath(styledText string, rawPath string, cwd string) string {
-	absolute := coding.ResolveToCwd(rawPath, cwd)
-	return tui.Hyperlink(styledText, "file://"+absolute)
-}
-
 // --- read -------------------------------------------------------------------
 
 func toPosixPath(filePath string) string {

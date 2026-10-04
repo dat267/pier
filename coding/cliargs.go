@@ -328,15 +328,6 @@ func ParseArgs(args []string) *Args {
 	return result
 }
 
-func splitTrimmed(value string) []string {
-	parts := strings.Split(value, ",")
-	out := make([]string, 0, len(parts))
-	for _, part := range parts {
-		out = append(out, strings.TrimSpace(part))
-	}
-	return out
-}
-
 func splitNonEmpty(value string) []string {
 	parts := strings.Split(value, ",")
 	out := []string{}

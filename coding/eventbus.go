@@ -112,8 +112,3 @@ func toError(value any) error {
 	}
 	return fmt.Errorf("%v", value)
 }
-
-// FormatEventHandlerError renders the upstream log line.
-func FormatEventHandlerError(channel string, err error) string {
-	return fmt.Sprintf("Event handler error (%s): %v", channel, err)
-}

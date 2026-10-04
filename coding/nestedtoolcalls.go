@@ -23,14 +23,9 @@ var NestedCallLimits = struct {
 	MaxErrorChars           int
 }{MaxCalls: 256, MaxArgumentBytesPerCall: 8 * 1024, MaxArgumentBytesTotal: 32 * 1024, MaxErrorChars: 500}
 
-// NestedCallSummary is what the nested calls of one model-issued tool call
-// leave on its tool result message.
-type NestedCallSummary struct {
-	// Calls becomes nestedCalls; nil when no nested call was made.
-	Calls *ai.NestedToolCalls
-	// Usage is the summed usage of the nested results, added to the message's.
-	Usage *ai.Usage
-}
+// Calls becomes nestedCalls; nil when no nested call was made.
+
+// Usage is the summed usage of the nested results, added to the message's.
 
 // NestedCallRecorder collects the nested calls of one model-issued tool call,
 // including calls made by nested tools.
@@ -124,11 +119,6 @@ func (r *NestedCallRecorder) Snapshot() *ai.NestedToolCalls {
 		}
 	}
 	return &ai.NestedToolCalls{Calls: calls, Complete: r.complete && allFinished}
-}
-
-// Summary builds the message additions for the recorder.
-func (r *NestedCallRecorder) Summary() NestedCallSummary {
-	return NestedCallSummary{Calls: r.Snapshot(), Usage: r.TotalUsage()}
 }
 
 // truncateUTF16 keeps the first max UTF-16 code units (upstream `.slice`).

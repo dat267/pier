@@ -21,32 +21,6 @@ type Result[TValue any, TError any] struct {
 	Err   TError
 }
 
-// Ok builds a successful result.
-func Ok[TValue any, TError any](value TValue) Result[TValue, TError] {
-	return Result[TValue, TError]{OK: true, Value: value}
-}
-
-// Err builds a failed result.
-func Err[TValue any, TError any](err TError) Result[TValue, TError] {
-	return Result[TValue, TError]{OK: false, Err: err}
-}
-
-// GetOrThrow returns the value or returns the error.
-func GetOrThrow[TValue any, TError error](result Result[TValue, TError]) (TValue, error) {
-	if !result.OK {
-		return result.Value, result.Err
-	}
-	return result.Value, nil
-}
-
-// GetOrUndefined returns the value or nil when the result is a failure.
-func GetOrUndefined[TValue any, TError any](result Result[TValue, TError]) *TValue {
-	if !result.OK {
-		return nil
-	}
-	return &result.Value
-}
-
 // ToError normalizes an unknown failure to an error.
 func ToError(value any) error {
 	switch typed := value.(type) {

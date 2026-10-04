@@ -97,17 +97,6 @@ func GetAPIProvider(api Api) ProviderStreams {
 	return entry.streams
 }
 
-// GetAPIProviders lists every registered implementation.
-func GetAPIProviders() []ProviderStreams {
-	apiProviderMu.RLock()
-	defer apiProviderMu.RUnlock()
-	out := make([]ProviderStreams, 0, len(apiProviderRegistry))
-	for _, entry := range apiProviderRegistry {
-		out = append(out, entry.streams)
-	}
-	return out
-}
-
 // UnregisterAPIProviders removes every implementation registered with a source
 // id.
 func UnregisterAPIProviders(sourceID string) {
