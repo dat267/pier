@@ -413,6 +413,15 @@ is not re-rendered on a scroll-only frame. A 500-tool chat measures 93 µs →
 `firstChangedChild` compare child identity, closing a latent stale-line bug when
 a child is replaced in place at the same revision.
 
+The once-per-second tick of a running tool is narrow (D190): the animation walk
+calls `AnimationTicker.AnimationTick` when a component implements it, so
+`ToolExecutionComponent` bumps its revision without rebuilding its display. The
+elapsed label still updates, because `Box.matchCache` checks a versioned child's
+revision (a child `Container` rewrites its suffix in place) and `Box.Render`
+re-applies the background only from the first changed line; the result `Text`'s
+wrap cache survives (`BenchmarkToolAnimationTick`: 2.15 ms → 0.07 ms for a
+2000-line result, 139 µs → 0.9 µs for a bash preview).
+
 ## Session history (high level)
 
 The repository was built as a long port: the `ai`/`agent`/`coding` cores first,

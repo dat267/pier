@@ -9,12 +9,17 @@ type boxRenderCache struct {
 	// childLines holds each child's rendered lines as returned by the child (no
 	// padding applied), so validating the cache does not build a padded copy of
 	// every line.
-	childLines  [][]string
-	paddingX    int
-	width       int
-	bgSample    string
-	hasBgSample bool
-	lines       []string
+	childLines [][]string
+	// childVersions and childComponents mirror the children at the cached pass.
+	// A child Container rebuilds its suffix in place (the same backing array), so
+	// comparing the line slices alone cannot see the change; the revision can.
+	childVersions   []uint64
+	childComponents []Component
+	paddingX        int
+	width           int
+	bgSample        string
+	hasBgSample     bool
+	lines           []string
 }
 
 // Box applies padding and a background to all children.
@@ -99,6 +104,19 @@ func (b *Box) matchCache(width int, bgSample string, hasBgSample bool) bool {
 		return false
 	}
 	for i, cached := range cache.childLines {
+		child := b.Children[i]
+		if i >= len(cache.childComponents) || cache.childComponents[i] != child {
+			return false
+		}
+		if versioned, ok := child.(renderVersioner); ok {
+			if version, has := versioned.RenderVersion(); has {
+				if i >= len(cache.childVersions) || cache.childVersions[i] != version {
+					return false
+				}
+				// The revision covers the child's lines.
+				continue
+			}
+		}
 		lines := b.childLines[i]
 		if len(cached) != len(lines) {
 			return false
@@ -110,6 +128,31 @@ func (b *Box) matchCache(width int, bgSample string, hasBgSample bool) bool {
 		}
 	}
 	return true
+}
+
+// firstChangedChildLine returns the flattened index of the first child line
+// whose text differs from the cached pass, or -1 when every line matches. It is
+// only meaningful when the cache geometry (width, padding, background, child
+// count) already matches; Render guards it before reusing the backgrounded
+// prefix.
+func (b *Box) firstChangedChildLine() int {
+	global := 0
+	for i, cached := range b.cache.childLines {
+		lines := b.childLines[i]
+		common := min(len(cached), len(lines))
+		for j := 0; j < common; j++ {
+			if cached[j] != lines[j] {
+				return global + j
+			}
+		}
+		if len(cached) != len(lines) {
+			// Lines appended or dropped at the end: the common prefix still
+			// matches, so the first change starts after it.
+			return global + common
+		}
+		global += len(lines)
+	}
+	return -1
 }
 
 // HandleMouse forwards an event to the child under the pointer.
@@ -196,21 +239,52 @@ func (b *Box) Render(width int) []string {
 		return b.cache.lines
 	}
 
+	// Reuse the backgrounded prefix when only a suffix changed. A running tool's
+	// elapsed label changes one trailing line, and re-applying the background
+	// (VisibleWidth re-parses the ANSI) to every line of a long output was the
+	// animation tick's remaining cost.
+	firstChanged := -1
+	if b.cache != nil && b.cache.width == width && b.cache.paddingX == b.paddingX &&
+		b.cache.hasBgSample == hasBgSample && b.cache.bgSample == bgSample &&
+		len(b.cache.childLines) == len(b.childLines) {
+		firstChanged = b.firstChangedChildLine()
+	}
+	reuse := 0
+	if firstChanged >= 0 {
+		reuse = min(b.paddingY+firstChanged, len(b.cache.lines))
+	}
+
 	result := make([]string, 0, totalLines+b.paddingY*2)
-	for i := 0; i < b.paddingY; i++ {
+	if reuse > 0 {
+		result = append(result, b.cache.lines[:reuse]...)
+	}
+	for i := len(result); i < b.paddingY; i++ {
 		result = append(result, b.applyBg("", width))
 	}
+	global := 0
 	for _, lines := range b.childLines {
 		for _, line := range lines {
-			result = append(result, b.applyBg(leftPad+line, width))
+			if global >= firstChanged || firstChanged < 0 {
+				result = append(result, b.applyBg(leftPad+line, width))
+			}
+			global++
 		}
 	}
 	for i := 0; i < b.paddingY; i++ {
 		result = append(result, b.applyBg("", width))
 	}
 
+	childVersions := make([]uint64, len(b.Children))
+	for i, child := range b.Children {
+		if versioned, ok := child.(renderVersioner); ok {
+			if version, has := versioned.RenderVersion(); has {
+				childVersions[i] = version
+			}
+		}
+	}
 	b.cache = &boxRenderCache{
 		childLines: append([][]string{}, b.childLines...), paddingX: b.paddingX,
+		childVersions: childVersions, childComponents: append([]Component{}, b.Children...),
 		width: width, bgSample: bgSample, hasBgSample: hasBgSample, lines: result,
 	}
 	return result

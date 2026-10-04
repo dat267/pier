@@ -294,6 +294,14 @@ func (c *ToolExecutionComponent) AnimationFrame(now time.Time) (bool, time.Durat
 	return true, time.Second
 }
 
+// AnimationTick narrows the animation tick to the tool's own revision: the
+// shell elapsed label reads the clock in Render, so bumping the revision makes
+// the parent re-render the tool and the label updates. Upstream's
+// invalidate() rebuilds the whole display (super.invalidate() + updateDisplay()),
+// which dropped the result Text's wrap cache and re-wrapped every running
+// tool's output once a second (D190).
+func (c *ToolExecutionComponent) AnimationTick() { c.Container.MarkDirty() }
+
 // HandleMouse forwards mouse events for the self-render shell.
 func (c *ToolExecutionComponent) HandleMouse(event tui.TuiMouseEvent) *tui.TuiMouseDispatchResult {
 	if !c.hasRendererDefinition() || c.renderShell() != "self" {

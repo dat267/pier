@@ -900,3 +900,25 @@ filtering keeps virtual models, and an unrouted stream fails) matches
 upstream's `withVirtualModels`. Withdrawn as a divergence.
 
 (pi/packages/coding-agent/src/core/virtual-models.ts)
+
+## D190. A running tool's animation tick does not rebuild its display
+
+Upstream's `ToolExecutionComponent.invalidate()` is `super.invalidate()` +
+`updateDisplay()`, and the shell renderer's 1s
+`setInterval(() => context.invalidate())` calls it
+(`core/tools/renderers/bash.ts`). The port keeps `invalidate()` as upstream,
+but the animation walk ticks a component through `tui.AnimationTicker` when it
+implements it: `ToolExecutionComponent.AnimationTick` bumps the tool's revision
+only (`Container.MarkDirty`). The clock-driven elapsed label still updates,
+because `Box.matchCache` now checks a versioned child's revision (a child
+`Container` rebuilds its suffix in place, so comparing the line slices cannot
+see the change) and `Box.Render` re-applies the background from the first
+changed line. `bashPreviewComponent.Invalidate` also keeps its incremental line
+count.
+
+Upstream's rebuild re-wrapped every running tool's full output once a second:
+2.15 ms per tick for a 2000-line result and 139 µs for a bash preview, against
+0.07 ms and 0.0009 ms with the narrow tick.
+
+(pi/packages/coding-agent/src/modes/interactive/components/tool-execution.ts,
+pi/packages/coding-agent/src/core/tools/renderers/bash.ts)

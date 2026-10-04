@@ -305,13 +305,13 @@ func (c *bashPreviewComponent) tailVisualLines(width int) []string {
 
 func (c *bashPreviewComponent) Invalidate() {
 	state := c.state
+	// Only the rendered lines carry the theme's colours; the incremental line
+	// count is keyed by width and output prefix and stays valid, so an invalidate
+	// does not re-count (and re-wrap) the whole output.
 	state.hasCached = false
 	state.cachedOutput = ""
 	state.cachedWidth = 0
 	state.cachedRendered = nil
-	state.countWidth = 0
-	state.countedText = ""
-	state.totalVisual = 0
 }
 
 // bashExpandedComponent renders the full (expanded) bash output. Streaming
@@ -386,6 +386,10 @@ func (c *bashExpandedComponent) wrapLine(line string, width int) []string {
 	return wrapped
 }
 
+// shellNow is time.Now for the shell elapsed timer. Tests stub it so the label
+// can be advanced without sleeping a real second.
+var shellNow = time.Now
+
 // CreateShellRenderers builds the shell tool renderers (bash and powershell
 // differ only in the prompt they display).
 func CreateShellRenderers(prompt string) ToolRenderers {
@@ -393,7 +397,7 @@ func CreateShellRenderers(prompt string) ToolRenderers {
 		RenderCall: func(args any, theme *Theme, context *ToolRenderContext) tui.Component {
 			state := shellCallStateFor(context)
 			if context != nil && context.ExecutionStarted && state.startedAtMS == 0 {
-				state.startedAtMS = time.Now().UnixMilli()
+				state.startedAtMS = shellNow().UnixMilli()
 				state.endedAtMS = 0
 			}
 			text := toolTextComponent(context)
@@ -405,7 +409,7 @@ func CreateShellRenderers(prompt string) ToolRenderers {
 			// Upstream stops the timer on the final (or error) result
 			// (`!isPartial || isError`), not on a partial update.
 			if state.startedAtMS != 0 && state.endedAtMS == 0 && (!options.IsPartial || (context != nil && context.IsError)) {
-				state.endedAtMS = time.Now().UnixMilli()
+				state.endedAtMS = shellNow().UnixMilli()
 			}
 			container := &tui.Container{}
 			if context != nil {
@@ -454,7 +458,7 @@ func (c *shellElapsedComponent) Render(width int) []string {
 	}
 	end := c.state.endedAtMS
 	if end == 0 {
-		end = time.Now().UnixMilli()
+		end = shellNow().UnixMilli()
 	}
 	return []string{"", c.theme.Fg("muted", fmt.Sprintf("%s %s", label, formatDuration(float64(end-c.state.startedAtMS))))}
 }

@@ -56,3 +56,29 @@ func TestAnimationWalkTicksAnAnimatorOncePerDelay(t *testing.T) {
 		t.Fatalf("unmounted animator left %d tick entries", len(ticks))
 	}
 }
+
+// tickingAnimator implements both Animator and AnimationTicker.
+type tickingAnimator struct {
+	delay  time.Duration
+	frames int
+	ticks  int
+}
+
+func (a *tickingAnimator) Render(int) []string                                { return nil }
+func (a *tickingAnimator) Invalidate()                                        { a.frames++ }
+func (a *tickingAnimator) AnimationFrame(now time.Time) (bool, time.Duration) { return true, a.delay }
+func (a *tickingAnimator) AnimationTick()                                     { a.ticks++ }
+
+// TestAnimationWalkUsesTheNarrowTick pins the D190 hook: an animator that
+// implements AnimationTicker is ticked, not invalidated, so its subtree's
+// render caches survive the clock tick.
+func TestAnimationWalkUsesTheNarrowTick(t *testing.T) {
+	animator := &tickingAnimator{delay: time.Second}
+	nextAnimationForTicked([]Component{animator}, time.Now(), map[Component]time.Time{})
+	if animator.ticks != 1 {
+		t.Fatalf("ticks = %d, want 1", animator.ticks)
+	}
+	if animator.frames != 0 {
+		t.Fatalf("Invalidate called %d times; the narrow tick must not invalidate", animator.frames)
+	}
+}

@@ -439,6 +439,15 @@ type Animator interface {
 	AnimationFrame(now time.Time) (bool, time.Duration)
 }
 
+// AnimationTicker is an Animator whose per-frame tick is narrower than
+// Invalidate: the tick bumps the component's own revision so the owner
+// re-renders the clock-driven part (a tool's elapsed label), without dropping
+// the subtree's render caches. Components that do not implement it are ticked
+// with Invalidate.
+type AnimationTicker interface {
+	AnimationTick()
+}
+
 // Loader is an animated spinner with a message. The frame is derived from the
 // clock at render time, so the component holds no animation goroutine and no
 // lock.

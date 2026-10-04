@@ -293,7 +293,13 @@ func nextAnimationForTicked(components []Component, now time.Time, ticks map[Com
 				}
 				ticked, hasTicked := ticks[component]
 				if !hasTicked || now.Sub(ticked) >= delay {
-					component.Invalidate()
+					// A ticker can narrow the tick to its own revision; a plain animator
+					// is invalidated (its descendants re-render).
+					if ticker, ok := component.(AnimationTicker); ok {
+						ticker.AnimationTick()
+					} else {
+						component.Invalidate()
+					}
 					if ticks != nil {
 						ticks[component] = now
 					}

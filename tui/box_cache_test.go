@@ -70,3 +70,33 @@ func BenchmarkBoxWarmRender(b *testing.B) {
 		_ = box.Render(80)
 	}
 }
+
+// TestBoxReappliesBackgroundOnlyToTheChangedSuffix pins the incremental
+// backgrounding: a change to one trailing line must not re-apply the background
+// (VisibleWidth re-parses the ANSI) to every line of a long child. This is the
+// running tool's elapsed label, once a second.
+func TestBoxReappliesBackgroundOnlyToTheChangedSuffix(t *testing.T) {
+	calls := 0
+	var sb strings.Builder
+	for i := 0; i < 50; i++ {
+		fmt.Fprintf(&sb, "line %d\n", i)
+	}
+	body := strings.TrimSuffix(sb.String(), "\n")
+	text := NewText(body, 0, 0, nil)
+	box := NewBox(0, 1, func(value string) string {
+		calls++
+		return "<bg>" + value + "</bg>"
+	})
+	box.AddChild(text)
+	box.Render(40)
+
+	before := calls
+	text.SetText(body + "\nchanged tail")
+	lines := box.Render(40)
+	if reapplied := calls - before; reapplied > 4 {
+		t.Fatalf("background reapplied to %d lines, want only the changed suffix", reapplied)
+	}
+	if !strings.Contains(strings.Join(lines, "\n"), "changed tail") {
+		t.Fatalf("changed tail missing")
+	}
+}
