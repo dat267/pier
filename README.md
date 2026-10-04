@@ -13,7 +13,7 @@ deliberate feature of this implementation. The development conventions live in
 | What | Value |
 |---|---|
 | Repository | https://github.com/earendil-works/pi (cloned at `./pi`, gitignored) |
-| Pin | `a13d35a74` (Release v1.0.0); the applicable runtime changes from v1.0.1 (`a7229ddc`) and v1.0.2 (`cd32f772`) are ported — see `docs/PORTING.md` for the delta's ported and deferred commits |
+| Pin | `cd32f772` (Release v1.0.2); the applicable runtime and catalog changes from v1.0.1 are included — see `docs/PORTING.md` for the delta's ported and not-ported commits |
 | Stale reference test | `packages/ai/test/faux-provider.test.ts` "estimates prompt and output tokens" still expects pre-`9e05370b2` faux serialization; this implementation follows the current source |
 
 ## Status

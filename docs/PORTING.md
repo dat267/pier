@@ -4,16 +4,23 @@ How much of upstream pi this port covers, package by package, plus the upstream
 pin's change log. The user-facing summary lives in `README.md`; this file is the
 authoritative per-area status.
 
-v1.0.0 reference (pinned tag `a13d35a74`, read from the `./pi` checkout): the
-delta from v0.99.1 is 62 commits across 682 files, and it is **not yet ported**.
-It releases the experimental `durable` packages and lands MCP and codemode
-work (both out of scope); the ported subset so far is the system-theme pastel
-fix (`409e808f5`, with a regenerated system-theme golden and its committed
-generator driver).
+Reference pin: `cd32f772` (Release v1.0.2), read from the `./pi` checkout.
+`ai/models_catalog.json` is regenerated from the pin's own generator
+(`packages/ai/scripts/generate-models.ts --strict --data-only`, which fetches
+models.dev) through `scripts/gen_catalog.py`.
 
-v1.0.1 (`a7229ddc`) and v1.0.2 (`cd32f772`) extend the pin; the delta is being
-ported. Ported so far:
+The v0.99.1→v1.0.0 delta (62 commits) is ported: it released the experimental
+`durable` packages and landed MCP and codemode work (codemode stays out of
+scope; MCP and `durable` are ported). The v1.0.1 (`a7229ddc`) → v1.0.2
+(`cd32f772`) delta's applicable runtime and catalog changes are ported:
 
+- `ai` (catalog): regenerated from the v1.0.2 generator, which adds the
+  models.dev pricing tiers for Amazon Bedrock models (`4665fafb4`, the
+  long-context tier above 272k input tokens), the Cloudflare Clef classifiers
+  (classifier-role entries, which the chat catalog drops) and the dashed
+  Cloudflare AI Gateway Claude IDs (`c10bfb0d7`). `scripts/gen_catalog.py`
+  normalizes the gateway IDs so a regen from older data cannot reintroduce the
+  dots; a test pins them.
 - `ai`/`coding`: per-thinking-level sampling parameters (`76dfb88f6`, #9776).
   `ai.Model.SamplingParamsByThinkingLevel` and `ai.ResolveSamplingParams`
   (model defaults, then the clamped thinking level, then the request keys)
@@ -64,21 +71,11 @@ ported. Ported so far:
   URL on the clipboard (off-loop, reporting the outcome in the hint). The
   dialog clears it on a device-code or details step. (The MCP-extension sign-in
   UI that also uses it stays out of scope with the extension system.)
-- `ai` (catalog data): Cloudflare AI Gateway dashed Claude IDs (`c10bfb0d7`).
-  `scripts/gen_catalog.py` normalizes the provider's `anthropic-messages` model
-  IDs (dots to dashes, which Anthropic requires for the gateway's passthrough)
-  and the embedded `ai/models_catalog.json` carries the nine resulting IDs; a
-  test pins both the dashed models and the absence of the dotted ones.
 
 Not ported from the v1.0.1/v1.0.2 delta, with the reason:
 
-- `ai`/catalog data (`4812cb268` Cloudflare Clef classifiers, `4665fafb4`
-  Bedrock models.dev pricing tiers, `221cbcb02` docs): these need upstream's
-  generator output regenerated. `ai/models_catalog.json` is generated from
-  `scripts/generate-models.ts` and the pinned tags do not commit that data;
-  regenerating needs the upstream generator with its network dependencies, so
-  it is pending. The catalog already carries the new Together ID
-  (`28eaccb8e`).
+- `ai` catalog docs (`221cbcb02`) and the Together model-ID set change
+  (`28eaccb8e`, whose new ID the regenerated catalog already carries).
 - `coding`/MCP (`1499466d8` OAuth client ID metadata documents): the port
   connects MCP servers with stored tokens and has no `/mcp` sign-in UI (the
   extension boundary), so the config field and the flow's per-server document
