@@ -152,8 +152,11 @@ func (t *StdioTransport) Start(ctx context.Context) error {
 		go t.pumpStderr(stderrPipe)
 	}
 	go t.pumpStdout(stdoutPipe)
-	go t.watchExit(cmd, t.pid)
 	installExitHook()
+	// Register before watchExit starts: an instantly-exiting server must not
+	// unregister an entry that was never added.
+	registerLiveProcessGroup(t.pid)
+	go t.watchExit(cmd, t.pid)
 	return nil
 }
 

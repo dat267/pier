@@ -162,3 +162,31 @@ func TestStdioTransportKillsStubbornServerIncludingChildren(t *testing.T) {
 	}
 	t.Fatalf("grandchild %d still alive", grandchild)
 }
+
+// TestStdioTransportRegistersLiveProcessGroup pins the exit hook's live set:
+// without the registration the hook has nothing to kill, so an MCP server's
+// process group outlives the host on SIGTERM (upstream stdio.ts
+// liveProcessGroups.add after installExitHook).
+func TestStdioTransportRegistersLiveProcessGroup(t *testing.T) {
+	transport := NewStdioTransport(StdioTransportOptions{Command: stdioFixtureBin})
+	client := NewClient(ClientOptions{Name: "stdio-test", Version: "1.0.0"})
+	if _, err := client.Connect(context.Background(), transport); err != nil {
+		t.Fatal(err)
+	}
+	pid := transport.PID()
+	if !liveProcessGroupRegistered(pid) {
+		t.Fatalf("pid %d was not registered with the exit hook", pid)
+	}
+	if err := client.Close(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if liveProcessGroupRegistered(pid) {
+		t.Fatalf("pid %d stayed registered after close", pid)
+	}
+}
+
+func liveProcessGroupRegistered(pid int) bool {
+	liveProcessGroupsMu.Lock()
+	defer liveProcessGroupsMu.Unlock()
+	return liveProcessGroups[pid]
+}
