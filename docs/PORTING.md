@@ -202,10 +202,11 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   selection helpers (`core/virtual-models.ts`) are ported (`coding/virtualmodels.go`:
   `IsVirtualModel`, `FindLatestResponse`, `GetBranchSelection`,
   `GetVirtualModelState`, `CreateVirtualModel`, the route/state types and the
-  `pi-virtual`/`pi.virtual-model-state` constants), while the provider wrapper
-  (`withVirtualModels`) is deferred (D189) because the Go `ai.Provider` keeps
-  its model accessor unexported; the branch model resolution still walks its
-  branch per submission (`a0660b174`). Dynamic
+  `pi-virtual`/`pi.virtual-model-state` constants) and the provider wrapper
+  (`WithVirtualModels`, through `ai.WrapProviderWithVirtualModels`, so a
+  virtual model hides a same-id physical one, filtering keeps virtuals and an
+  unrouted stream fails); the branch model resolution still walks its branch
+  per submission (`a0660b174`). Dynamic
   provider registration does not exist in the port, so `registerProvider`'s
   provisional configured entry (`fddc968b9`) has no surface. Anthropic
   workload identity federation (`a9424cd43`) stays deferred: the token

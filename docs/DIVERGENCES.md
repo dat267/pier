@@ -890,16 +890,13 @@ conversion and connection halves and wires them directly:
 
 (pi/packages/coding-agent/src/extensions/mcp, core/mcp-servers.ts)
 
-## D189. Virtual models: the provider wrapper is deferred
+## D189 (withdrawn). Virtual models: the provider wrapper
 
-`core/virtual-models.ts` registers virtual catalog entries by wrapping a
-provider (`withVirtualModels`): it overrides `getModels`/`getAllModels`,
-`filterModels`/`filterAllModels` and the stream functions on the provider
-object. The Go `ai.Provider` keeps its model accessor and stream dispatch
-unexported, so a `coding` function cannot wrap them the way upstream spreads
-the provider. The port keeps the pure half (`IsVirtualModel`,
-`FindLatestResponse`, `GetBranchSelection`, `GetVirtualModelState`,
-`CreateVirtualModel` and the state/route types); the provider wrapper would
-need an `ai`-level seam (`WithModels`) and is deferred.
+The virtual-model provider wrapper is ported, but the seam lives in `ai`
+(`ai.WrapProviderWithVirtualModels`) rather than in `coding`, because a Go
+provider's model accessor and stream dispatch are package-private; the
+observable behavior (a virtual model hides a physical model with its id,
+filtering keeps virtual models, and an unrouted stream fails) matches
+upstream's `withVirtualModels`. Withdrawn as a divergence.
 
 (pi/packages/coding-agent/src/core/virtual-models.ts)

@@ -120,3 +120,12 @@ func TestGetVirtualModelState(t *testing.T) {
 		t.Fatal("another provider has no state")
 	}
 }
+
+func TestWithVirtualModels(t *testing.T) {
+	virtual := CreateVirtualModel(VirtualModelDefinition{Provider: "p", ID: "auto", Name: "Auto"})
+	provider := WithVirtualModels("p", nil, []*ai.Model{virtual})
+	models := provider.GetModels()
+	if len(models) != 1 || models[0].ID != "auto" || models[0].API != VirtualModelAPI {
+		t.Fatalf("models = %+v", models)
+	}
+}

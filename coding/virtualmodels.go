@@ -8,8 +8,8 @@ import (
 )
 
 // Port of core/virtual-models.ts: catalog entries that route each request to a
-// physical model. The provider-wrapper half (`withVirtualModels`) is deferred
-// (D189): the Go ai.Provider keeps its model accessor unexported.
+// physical model. The provider wrapper delegates to ai.WrapProviderWithVirtualModels,
+// which owns the provider's package-private model accessor and stream dispatch.
 
 // VirtualModelAPI is the API id of virtual catalog entries; a request for it
 // fails unless routed first.
@@ -185,6 +185,13 @@ func GetVirtualModelState(branch []SessionEntry, provider, modelID string) (json
 		}
 	}
 	return nil, false
+}
+
+// WithVirtualModels adds virtual models to a provider's catalog (upstream
+// withVirtualModels); a nil provider yields a keyless provider that only lists
+// them.
+func WithVirtualModels(providerID string, provider *ai.Provider, virtualModels []*ai.Model) *ai.Provider {
+	return ai.WrapProviderWithVirtualModels(providerID, provider, VirtualModelAPI, virtualModels)
 }
 
 // CreateVirtualModel builds the catalog entry of a virtual model.
