@@ -7,19 +7,22 @@ package interactive
 // Three deliberate differences from upstream's dark.json/light.json:
 //
 //   - **The decorative backgrounds are the terminal's.** The fills that only
-//     group content — the selected list row, search matches, custom messages —
-//     are left unset, which renders as the terminal's default background
-//     (\x1b[49m) rather than a panel colour, so the theme never paints over a
-//     transparent or blurred terminal. This is why every list marks its
-//     selection with an accent-coloured "→ " prefix instead of a fill.
+//     group content — the selected list row and search matches — are left
+//     unset, which renders as the terminal's default background (\x1b[49m)
+//     rather than a panel colour, so the theme never paints over a transparent
+//     or blurred terminal. This is why every list marks its selection with an
+//     accent-coloured "→ " prefix instead of a fill.
 //   - **The signal backgrounds are carried, in this port's colours.**
 //     toolPendingBg / toolSuccessBg / toolErrorBg and userMessageBg are kept,
 //     because they are not decoration: the first three are the only thing that
 //     says a tool call is running, failed or succeeded, and the fourth is the
 //     only thing that says a block is yours. Left unset, a failed `bash` call
-//     was byte-identical to a successful one. They are not upstream's values
-//     either — your messages get a warm panel tied to the accent, where
-//     upstream's is a cool blue-gray — so the palette stays recognisable.
+//     was byte-identical to a successful one. customMessageBg is kept for the
+//     same reason: it is what frames a compaction summary, a goal card or a
+//     custom entry, and without it those blocks read as body text. They are not
+//     upstream's values either — your messages get a warm panel tied to the
+//     accent, where upstream's is a cool blue-gray — so the palette stays
+//     recognisable.
 //   - **The accent is amber, not teal.** Upstream's accent (#8abeb7, with blue
 //     borders) is replaced throughout, so the palette is recognisably this port
 //     at a glance — the header wordmark, borders, selection and list bullets all
@@ -38,7 +41,7 @@ package interactive
 // The filled tokens are the exception — see filledBackgroundColors — and
 // pierColors gives a hex in the palette precedence over this list.
 var transparentBackgroundColors = []string{
-	"selectedBg", "searchMatchBg", "customMessageBg",
+	"selectedBg", "searchMatchBg",
 }
 
 // toolStateBackgroundColors are the three tokens that say whether a tool call is
@@ -52,11 +55,13 @@ var toolStateBackgroundColors = []string{
 }
 
 // filledBackgroundColors are every background token the palette paints: the
-// tool states above plus userMessageBg, the fill that marks a block as yours
-// (upstream components/user-message.ts, and the assistant message has no fill).
-// Not decoration, so not transparent — and not upstream's colour either, since
-// the port's palette is meant to be recognisable at a glance.
-var filledBackgroundColors = append(append([]string{}, toolStateBackgroundColors...), "userMessageBg")
+// tool states above, userMessageBg (the fill that marks a block as yours,
+// upstream components/user-message.ts, where the assistant message has no
+// fill), and customMessageBg (the frame around a compaction summary, a goal
+// card or a custom entry). Not decoration, so not transparent — and not
+// upstream's colours either, since the port's palette is meant to be
+// recognisable at a glance.
+var filledBackgroundColors = append(append([]string{}, toolStateBackgroundColors...), "userMessageBg", "customMessageBg")
 
 // pierSignalPanelHex are the fills filledBackgroundColors paints, per
 // appearance. They are the single source for both the registered palette
@@ -65,16 +70,18 @@ var filledBackgroundColors = append(append([]string{}, toolStateBackgroundColors
 // one and a user message from body text.
 var pierSignalPanelHex = map[string]map[string]string{
 	"dark": {
-		"toolPendingBg": "#2b2b2b",
-		"toolSuccessBg": "#22302a",
-		"toolErrorBg":   "#3a2424",
-		"userMessageBg": "#393630",
+		"toolPendingBg":   "#2b2b2b",
+		"toolSuccessBg":   "#22302a",
+		"toolErrorBg":     "#3a2424",
+		"userMessageBg":   "#393630",
+		"customMessageBg": "#2e2640",
 	},
 	"light": {
-		"toolPendingBg": "#ececec",
-		"toolSuccessBg": "#e6f2e9",
-		"toolErrorBg":   "#f7e7e7",
-		"userMessageBg": "#f4eee1",
+		"toolPendingBg":   "#ececec",
+		"toolSuccessBg":   "#e6f2e9",
+		"toolErrorBg":     "#f7e7e7",
+		"userMessageBg":   "#f4eee1",
+		"customMessageBg": "#f0e9fb",
 	},
 }
 

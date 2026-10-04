@@ -146,9 +146,9 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   faint (`dim`) tokens render with SGR 2 (`Theme.dimTokens`, closed by
   `\x1b[22m`), matching the upstream `renders faint tokens with SGR 2` case.
   Departure (**D193**): when the terminal reports nothing, the port fills the
-  four `filledBackgroundColors` panels from `pierSignalPanelHex` so tool calls
-  and user messages keep their signals; the generator and the golden stay
-  upstream-parity.
+  `filledBackgroundColors` panels from `pierSignalPanelHex` so tool calls, user
+  messages and custom-message frames keep their signals; the generator and the
+  golden stay upstream-parity.
 - `tui`/`coding/interactive`: color values and theme styling (`567469096`).
   `packages/tui/src/colors.ts` becomes `tui/colors.go`: the `Color` value
   (palette index, sRGB, OKLCH) with `ParseColor`, `ColorToRgb`/`ColorToHex`/

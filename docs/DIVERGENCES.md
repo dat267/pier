@@ -989,10 +989,11 @@ the exact signal `filledBackgroundColors` exists to keep (`piertheme.go`): the
 port's own palette paints `toolPendingBg`/`toolSuccessBg`/`toolErrorBg` and
 `userMessageBg`, because for a failed call the fill is the only cue.
 
-The port therefore fills those four panels in the system theme's no-color tier
-with the port's own signal colors for the detected appearance
-(`pierSignalPanelHex`). Decoration (`selectedBg`, `searchMatchBg`,
-`customMessageBg`) stays transparent, matching
+The port therefore fills those panels in the system theme's no-color tier with
+the port's own signal colors for the detected appearance
+(`pierSignalPanelHex`): the three tool states, `userMessageBg`, and
+`customMessageBg` (the compaction-summary/goal-card/custom-entry frame).
+Decoration (`selectedBg`, `searchMatchBg`) stays transparent, matching
 `transparentBackgroundColors`. The generator itself stays byte-parity with
 upstream: the fallback is applied when the theme is assembled
 (`buildSystemTheme`), so `GenerateSystemThemeColors` and the system-theme
