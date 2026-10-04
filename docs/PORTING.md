@@ -51,6 +51,16 @@ scope; MCP and `durable` are ported). The v1.0.1 (`a7229ddc`) → v1.0.2
   `eeac84ca9` "fail on port in use" change applies to the separate
   `openai-chatgpt.ts` ChatGPT-subscription flow, which this port does not
   implement, so it is not carried over to the Codex provider.
+- `ai` (OpenAI ChatGPT subscription OAuth): the `openai-chatgpt` flow
+  (`auth/oauth/openai-chatgpt.ts`): dynamic per-login client registration
+  (`client_id=dynamic_agent_client` + `ext_agent_host_id` from the
+  installation UUID), the callback's issued client id used for the token
+  exchange and refresh, the direct-token scope check, and the credential's
+  `clientId`/`scopes` keys. `ai.OpenAIChatGPTOAuth` is attached to the `openai`
+  provider next to its api-key auth; `coding` gains
+  `SettingsManager.GetOrCreateDeviceID` (global `deviceId`) and the login wiring
+  forwards it through `AuthInteraction.GetDeviceID`. This closes the port's
+  missing eighth OAuth flow.
 - `ai` (Anthropic mid-conversation tools): inline tool definitions
   (`b271b0a52`). Native tool changes now use the `inline-tools-2026-09-15` beta
   (`InlineToolsBeta`): the request-level list stays fixed at the initial tools

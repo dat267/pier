@@ -29,7 +29,7 @@ func OpenAIProvider() *ai.Provider {
 		BaseURL: openaiBaseURL,
 		Auth: ai.ProviderAuth{
 			APIKey: ai.EnvApiKeyAuth("OpenAI API key", []string{"OPENAI_API_KEY"}),
-			// OAuth lands with the Codex OAuth flow port.
+			OAuth:  ai.OpenAIChatGPTOAuth(),
 		},
 		Models: models,
 		Single: openaiCompletionsStreams{},

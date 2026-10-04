@@ -359,6 +359,9 @@ type AuthInteraction struct {
 	Ctx    context.Context
 	Prompt func(prompt AuthPrompt) (string, error)
 	Notify func(event AuthEvent)
+	// GetDeviceID is the installation's stable UUID, when a flow needs an
+	// agent host id (Sign in with ChatGPT).
+	GetDeviceID func() string
 }
 
 // ApiKeyAuth is api-key auth: stored key/provider env plus ambient sources

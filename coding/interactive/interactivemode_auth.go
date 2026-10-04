@@ -436,6 +436,12 @@ func (w *AuthWiring) LoginProvider(ctx context.Context, dialog *LoginDialogCompo
 		Ctx:    ctx,
 		Prompt: func(prompt ai.AuthPrompt) (string, error) { return w.ShowAuthPrompt(dialog, prompt) },
 		Notify: func(event ai.AuthEvent) { w.NotifyAuthDialog(dialog, event) },
+		GetDeviceID: func() string {
+			if w.Settings == nil {
+				return ""
+			}
+			return w.Settings.GetOrCreateDeviceID()
+		},
 	}
 	_, err := w.Session.ModelRuntime().Login(providerID, method, interaction)
 	return err

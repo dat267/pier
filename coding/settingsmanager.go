@@ -280,6 +280,10 @@ type Settings struct {
 	EnableInstallTelemetry *bool                  `json:"enableInstallTelemetry,omitempty"`
 	EnableAnalytics        *bool                  `json:"enableAnalytics,omitempty"`
 	TrackingID             *string                `json:"trackingId,omitempty"`
+	// DeviceID is this installation's stable UUID, created on first use for
+	// the agent-host id (Sign in with ChatGPT). Global only, so a committed
+	// project settings file cannot pin every clone to the same id.
+	DeviceID *string `json:"deviceId,omitempty"`
 	// Packages is an array of strings or package source filter objects.
 	Packages                   []any                    `json:"packages,omitempty"`
 	Extensions                 []string                 `json:"extensions,omitempty"`
@@ -901,6 +905,7 @@ func (s *Settings) marshalOrdered() ([]byte, error) {
 	object.setBool("enableInstallTelemetry", s.EnableInstallTelemetry)
 	object.setBool("enableAnalytics", s.EnableAnalytics)
 	object.setString("trackingId", s.TrackingID)
+	object.setString("deviceId", s.DeviceID)
 	object.setAny("packages", s.Packages)
 	object.setStrings("extensions", s.Extensions)
 	object.setStrings("skills", s.Skills)
@@ -2115,6 +2120,20 @@ func (m *SettingsManager) GetTrackingID() *string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.settings.TrackingID
+}
+
+// GetOrCreateDeviceID returns this installation's stable UUID, creating and
+// persisting it on first use. Global only (upstream getOrCreateDeviceId).
+func (m *SettingsManager) GetOrCreateDeviceID() string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.globalSettings.DeviceID == nil || *m.globalSettings.DeviceID == "" {
+		id := newTrackingID()
+		m.globalSettings.DeviceID = &id
+		m.markModified("deviceId", "")
+		m.save()
+	}
+	return *m.globalSettings.DeviceID
 }
 
 // SetEnableAnalytics stores the analytics opt-in, generating a tracking id on

@@ -61,7 +61,7 @@ func (m *Models) Login(providerID string, authType AuthType, interaction *AuthIn
 	}
 
 	credential, err := raceWithContext(ctx, func() (*Credential, error) {
-		return login(&AuthInteraction{Ctx: ctx, Prompt: interaction.Prompt, Notify: interaction.Notify})
+		return login(&AuthInteraction{Ctx: ctx, Prompt: interaction.Prompt, Notify: interaction.Notify, GetDeviceID: interaction.GetDeviceID})
 	})
 	if err != nil {
 		return nil, err
