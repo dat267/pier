@@ -435,6 +435,28 @@ type AssistantMessage struct {
 
 func (*AssistantMessage) messageRole() Role { return RoleAssistant }
 
+// NestedToolCallRecord is one call a tool made to another tool (upstream
+// NestedToolCallRecord). Arguments are omitted when over the size limits;
+// ArgumentsBytes then gives their size.
+type NestedToolCallRecord struct {
+	ID             string          `json:"id"`
+	Name           string          `json:"name"`
+	Arguments      json.RawMessage `json:"arguments,omitempty"`
+	ArgumentsBytes *int            `json:"argumentsBytes,omitempty"`
+	// Status is "ok", "error" or "unfinished".
+	Status     string  `json:"status"`
+	DurationMs *int64  `json:"durationMs,omitempty"`
+	Error      *string `json:"error,omitempty"`
+}
+
+// NestedToolCalls is the record of the calls one model-issued tool call made.
+// Complete is false when calls were dropped, arguments omitted, or calls had
+// not finished.
+type NestedToolCalls struct {
+	Calls    []NestedToolCallRecord `json:"calls"`
+	Complete bool                   `json:"complete"`
+}
+
 // ToolResultMessage is a tool execution result fed back to the model.
 type ToolResultMessage struct {
 	ToolCallID string          `json:"toolCallId"`
@@ -444,9 +466,12 @@ type ToolResultMessage struct {
 	Details json.RawMessage `json:"details,omitempty"`
 	// Usage from the tool execution itself, if available. Not part of main
 	// LLM context accounting.
-	Usage     *Usage `json:"usage,omitempty"`
-	IsError   bool   `json:"isError"`
-	Timestamp int64  `json:"timestamp"`
+	Usage *Usage `json:"usage,omitempty"`
+	// NestedCalls are the calls this tool made to other tools; kept for the
+	// session record, not sent to the model.
+	NestedCalls *NestedToolCalls `json:"nestedCalls,omitempty"`
+	IsError     bool             `json:"isError"`
+	Timestamp   int64            `json:"timestamp"`
 }
 
 func (*ToolResultMessage) messageRole() Role { return RoleToolResult }
