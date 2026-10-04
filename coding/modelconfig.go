@@ -203,35 +203,37 @@ type ModelsJSONCompat struct {
 
 // ModelsJSONModel is one model definition in models.json.
 type ModelsJSONModel struct {
-	ID               string               `json:"id"`
-	Name             string               `json:"name,omitempty"`
-	API              string               `json:"api,omitempty"`
-	BaseURL          string               `json:"baseUrl,omitempty"`
-	Reasoning        *bool                `json:"reasoning,omitempty"`
-	ThinkingLevelMap ai.ThinkingLevelMap  `json:"thinkingLevelMap,omitempty"`
-	Input            []string             `json:"input,omitempty"`
-	InputLimits      *ai.ModelInputLimits `json:"inputLimits,omitempty"`
-	Cost             *ModelsJSONCost      `json:"cost,omitempty"`
-	ContextWindow    *float64             `json:"contextWindow,omitempty"`
-	MaxTokens        *float64             `json:"maxTokens,omitempty"`
-	SamplingParams   map[string]any       `json:"samplingParams,omitempty"`
-	Headers          map[string]string    `json:"headers,omitempty"`
-	Compat           *ModelsJSONCompat    `json:"compat,omitempty"`
+	ID                            string                    `json:"id"`
+	Name                          string                    `json:"name,omitempty"`
+	API                           string                    `json:"api,omitempty"`
+	BaseURL                       string                    `json:"baseUrl,omitempty"`
+	Reasoning                     *bool                     `json:"reasoning,omitempty"`
+	ThinkingLevelMap              ai.ThinkingLevelMap       `json:"thinkingLevelMap,omitempty"`
+	Input                         []string                  `json:"input,omitempty"`
+	InputLimits                   *ai.ModelInputLimits      `json:"inputLimits,omitempty"`
+	Cost                          *ModelsJSONCost           `json:"cost,omitempty"`
+	ContextWindow                 *float64                  `json:"contextWindow,omitempty"`
+	MaxTokens                     *float64                  `json:"maxTokens,omitempty"`
+	SamplingParams                map[string]any            `json:"samplingParams,omitempty"`
+	SamplingParamsByThinkingLevel map[string]map[string]any `json:"samplingParamsByThinkingLevel,omitempty"`
+	Headers                       map[string]string         `json:"headers,omitempty"`
+	Compat                        *ModelsJSONCompat         `json:"compat,omitempty"`
 }
 
 // ModelsJSONModelOverride is a partial override of a built-in model.
 type ModelsJSONModelOverride struct {
-	Name             string                  `json:"name,omitempty"`
-	Reasoning        *bool                   `json:"reasoning,omitempty"`
-	ThinkingLevelMap ai.ThinkingLevelMap     `json:"thinkingLevelMap,omitempty"`
-	Input            []string                `json:"input,omitempty"`
-	InputLimits      *ai.ModelInputLimits    `json:"inputLimits,omitempty"`
-	Cost             *ModelsJSONCostOverride `json:"cost,omitempty"`
-	ContextWindow    *float64                `json:"contextWindow,omitempty"`
-	MaxTokens        *float64                `json:"maxTokens,omitempty"`
-	SamplingParams   map[string]any          `json:"samplingParams,omitempty"`
-	Headers          map[string]string       `json:"headers,omitempty"`
-	Compat           *ModelsJSONCompat       `json:"compat,omitempty"`
+	Name                          string                    `json:"name,omitempty"`
+	Reasoning                     *bool                     `json:"reasoning,omitempty"`
+	ThinkingLevelMap              ai.ThinkingLevelMap       `json:"thinkingLevelMap,omitempty"`
+	Input                         []string                  `json:"input,omitempty"`
+	InputLimits                   *ai.ModelInputLimits      `json:"inputLimits,omitempty"`
+	Cost                          *ModelsJSONCostOverride   `json:"cost,omitempty"`
+	ContextWindow                 *float64                  `json:"contextWindow,omitempty"`
+	MaxTokens                     *float64                  `json:"maxTokens,omitempty"`
+	SamplingParams                map[string]any            `json:"samplingParams,omitempty"`
+	SamplingParamsByThinkingLevel map[string]map[string]any `json:"samplingParamsByThinkingLevel,omitempty"`
+	Headers                       map[string]string         `json:"headers,omitempty"`
+	Compat                        *ModelsJSONCompat         `json:"compat,omitempty"`
 }
 
 // ModelsJSONProvider is one provider entry in models.json.
@@ -507,6 +509,7 @@ func validateModelDefinition(value any, path string, errors *[]validationError) 
 	validateOptionalNumber(model, "contextWindow", path, errors)
 	validateOptionalNumber(model, "maxTokens", path, errors)
 	validateUnknownRecord(model, "samplingParams", path, errors)
+	validateSamplingParamsByThinkingLevel(model, path, errors)
 	validateStringRecord(model, "headers", path, errors)
 	if compat, ok := model["compat"]; ok {
 		validateCompat(compat, path+".compat", errors)
@@ -530,6 +533,7 @@ func validateModelOverride(value any, path string, errors *[]validationError) {
 	validateOptionalNumber(model, "contextWindow", path, errors)
 	validateOptionalNumber(model, "maxTokens", path, errors)
 	validateUnknownRecord(model, "samplingParams", path, errors)
+	validateSamplingParamsByThinkingLevel(model, path, errors)
 	validateStringRecord(model, "headers", path, errors)
 	if compat, ok := model["compat"]; ok {
 		validateCompat(compat, path+".compat", errors)
@@ -1045,6 +1049,32 @@ func validateUnknownRecord(record map[string]any, name, path string, errors *[]v
 	}
 	if _, ok := entry.(map[string]any); !ok {
 		*errors = append(*errors, validationError{path: path + "." + name, message: expectedMessage("object")})
+	}
+}
+
+// validateSamplingParamsByThinkingLevel checks the per-level sampling-params
+// object: each of the seven levels must be a record when present.
+func validateSamplingParamsByThinkingLevel(record map[string]any, path string, errors *[]validationError) {
+	value, ok := record["samplingParamsByThinkingLevel"]
+	if !ok {
+		return
+	}
+	levelObject, ok := value.(map[string]any)
+	if !ok {
+		*errors = append(*errors, validationError{path: path + ".samplingParamsByThinkingLevel", message: expectedMessage("object")})
+		return
+	}
+	for _, level := range []string{"off", "minimal", "low", "medium", "high", "xhigh", "max"} {
+		entry, ok := levelObject[level]
+		if !ok {
+			continue
+		}
+		if _, ok := entry.(map[string]any); !ok {
+			*errors = append(*errors, validationError{
+				path:    fmt.Sprintf("%s.samplingParamsByThinkingLevel.%s", path, level),
+				message: expectedMessage("object"),
+			})
+		}
 	}
 }
 

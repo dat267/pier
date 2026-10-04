@@ -99,8 +99,12 @@ func BuildOpenAIResponsesParamsWithProviders(
 		params.ToolChoice = options.ToolChoice
 	}
 
+	reasoningEffort := options.ReasoningEffort
+	if reasoningEffort == "" && options.ReasoningSummary != "" {
+		reasoningEffort = "medium"
+	}
 	if model.Reasoning {
-		if options.ReasoningEffort != "" || options.ReasoningSummary != "" {
+		if reasoningEffort != "" {
 			effort := "medium"
 			if options.ReasoningEffort != "" {
 				if mapped, ok := model.ThinkingLevelMap[options.ReasoningEffort]; ok && mapped != nil {
@@ -108,6 +112,8 @@ func BuildOpenAIResponsesParamsWithProviders(
 				} else {
 					effort = options.ReasoningEffort
 				}
+			} else {
+				effort = reasoningEffort
 			}
 			summary := options.ReasoningSummary
 			if summary == "" {
@@ -130,8 +136,8 @@ func BuildOpenAIResponsesParamsWithProviders(
 		}
 	}
 
-	if len(options.SamplingParams) > 0 {
-		params.SamplingExtras = options.SamplingParams
+	if extras := ResolveSamplingParams(model, samplingThinkingLevel(reasoningEffort), options.SamplingParams); len(extras) > 0 {
+		params.SamplingExtras = extras
 	}
 	return params, nil
 }

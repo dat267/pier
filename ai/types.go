@@ -63,6 +63,13 @@ const ThinkOff ModelThinkingLevel = "off"
 // Missing keys use provider defaults; nil marks a level as unsupported.
 type ThinkingLevelMap map[ModelThinkingLevel]*string
 
+// SamplingParams are provider sampling parameters.
+type SamplingParams = map[string]json.RawMessage
+
+// SamplingParamsByThinkingLevel selects sampling parameters by effective pi
+// thinking level.
+type SamplingParamsByThinkingLevel = map[ModelThinkingLevel]SamplingParams
+
 // CacheRetention is a prompt cache retention preference.
 type CacheRetention = string
 
@@ -142,7 +149,7 @@ type StreamOptions struct {
 	// default headers. A nil value suppresses a default header.
 	Headers                   ProviderHeaders
 	Temperature               *float64
-	SamplingParams            map[string]json.RawMessage
+	SamplingParams            SamplingParams
 	MaxTokens                 *int
 	Transport                 Transport
 	CacheRetention            CacheRetention

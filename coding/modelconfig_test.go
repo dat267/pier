@@ -217,6 +217,15 @@ func TestModelConfigErrors(t *testing.T) {
 	if config.GetError() != "" {
 		t.Fatalf("error = %q", config.GetError())
 	}
+	// Per-thinking-level sampling params: each level must be a record.
+	config = LoadModelConfig(write(t, `{"providers":{"p":{"models":[{"id":"m","samplingParamsByThinkingLevel":{"low":{"top_p":0.5},"max":{"temperature":1}}}]}}}`))
+	if config.GetError() != "" {
+		t.Fatalf("error = %q", config.GetError())
+	}
+	config = LoadModelConfig(write(t, `{"providers":{"p":{"models":[{"id":"m","samplingParamsByThinkingLevel":{"low":5}}]}}}`))
+	if !strings.Contains(config.GetError(), "- providers.p.models.0.samplingParamsByThinkingLevel.low: Expected object") {
+		t.Fatalf("error = %q", config.GetError())
+	}
 	// Unknown compat keys are allowed (typebox does not reject them).
 	config = LoadModelConfig(write(t, `{"providers":{"p":{"compat":{"futureOption":true}}}}`))
 	if config.GetError() != "" {

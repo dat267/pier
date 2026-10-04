@@ -700,9 +700,10 @@ func BuildOpenAICompletionsParams(model *Model, context TranscriptContext, optio
 		}
 	}
 
-	// Sampling params merged last so custom keys override the named fields.
-	if len(options.SamplingParams) > 0 {
-		params.SamplingExtras = options.SamplingParams
+	// Sampling params merged last so custom keys override the named fields,
+	// with the thinking-level override between the model and the request.
+	if extras := ResolveSamplingParams(model, samplingThinkingLevel(options.ReasoningEffort), options.SamplingParams); len(extras) > 0 {
+		params.SamplingExtras = extras
 	}
 
 	return params, nil

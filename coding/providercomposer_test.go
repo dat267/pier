@@ -87,7 +87,7 @@ func TestApplyModelsJSONCustomModels(t *testing.T) {
 		BaseURL: "https://custom.example.com/v1",
 		API:     ai.APIOpenAICompletions,
 		Models: []ModelsJSONModel{
-			{ID: "custom-model", Name: "Custom"},
+			{ID: "custom-model", Name: "Custom", SamplingParamsByThinkingLevel: map[string]map[string]any{"high": {"temperature": 0.8}}},
 			{ID: "builtin-model", Name: "Replaced", ContextWindow: floatPtr(1000)},
 		},
 	}
@@ -120,6 +120,10 @@ func TestApplyModelsJSONCustomModels(t *testing.T) {
 	}
 	if custom.ContextWindow != 128000 || custom.MaxTokens != 16384 {
 		t.Fatalf("custom = %+v", custom)
+	}
+	// The custom model carries its per-level sampling parameters.
+	if string(custom.SamplingParamsByThinkingLevel["high"]["temperature"]) != "0.8" {
+		t.Fatalf("custom per-level = %+v", custom.SamplingParamsByThinkingLevel)
 	}
 	// The name falls back to the id.
 	config = &ModelsJSONProvider{API: ai.APIOpenAICompletions, BaseURL: "https://x"}
@@ -177,6 +181,9 @@ func TestApplyModelOverride(t *testing.T) {
 	base := anthropicBaseModel()
 	base.ThinkingLevelMap = ai.ThinkingLevelMap{ai.ThinkLow: strPtr("low")}
 	base.SamplingParams = map[string]json.RawMessage{"temperature": json.RawMessage("0.1")}
+	base.SamplingParamsByThinkingLevel = map[string]map[string]json.RawMessage{
+		"high": {"temperature": json.RawMessage("0.8"), "top_p": json.RawMessage("0.9")},
+	}
 	base.Compat = &ai.ModelCompat{AnthropicMessages: &ai.AnthropicMessagesCompat{}}
 
 	override := ModelsJSONModelOverride{
@@ -188,7 +195,11 @@ func TestApplyModelOverride(t *testing.T) {
 		ContextWindow:    floatPtr(500),
 		MaxTokens:        floatPtr(100),
 		SamplingParams:   map[string]any{"temperature": 0.7, "topP": 0.9},
-		Compat:           &ModelsJSONCompat{SupportsTemperature: boolPtr(true)},
+		SamplingParamsByThinkingLevel: map[string]map[string]any{
+			"high": {"temperature": 0.5},
+			"low":  {"top_k": 20},
+		},
+		Compat: &ModelsJSONCompat{SupportsTemperature: boolPtr(true)},
 	}
 	updated, err := applyModelOverride(base, override)
 	if err != nil {
@@ -220,6 +231,16 @@ func TestApplyModelOverride(t *testing.T) {
 	}
 	if _, ok := updated.SamplingParams["topP"]; !ok {
 		t.Fatalf("samplingParams = %+v", updated.SamplingParams)
+	}
+	// Per-level sampling params merge per level: the override's high entry
+	// wins only its keys, the base's other high keys and the untouched base
+	// levels survive, and the new low level is added.
+	high := updated.SamplingParamsByThinkingLevel["high"]
+	if string(high["temperature"]) != "0.5" || string(high["top_p"]) != "0.9" {
+		t.Fatalf("high level = %+v", high)
+	}
+	if string(updated.SamplingParamsByThinkingLevel["low"]["top_k"]) != "20" {
+		t.Fatalf("low level = %+v", updated.SamplingParamsByThinkingLevel["low"])
 	}
 	// Compat merges into the typed variant.
 	if updated.Compat == nil || updated.Compat.AnthropicMessages == nil ||

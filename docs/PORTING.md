@@ -11,6 +11,18 @@ work (both out of scope); the ported subset so far is the system-theme pastel
 fix (`409e808f5`, with a regenerated system-theme golden and its committed
 generator driver).
 
+v1.0.1 (`a7229ddc`) and v1.0.2 (`cd32f772`) extend the pin; the delta is being
+ported. Ported so far:
+
+- `ai`/`coding`: per-thinking-level sampling parameters (`76dfb88f6`, #9776).
+  `ai.Model.SamplingParamsByThinkingLevel` and `ai.ResolveSamplingParams`
+  (model defaults, then the clamped thinking level, then the request keys)
+  feed the OpenAI-compatible adapters (`BuildOpenAICompletionsParams`,
+  `BuildOpenAIResponsesParams`), and a summary-only Responses/Azure request
+  resolves the medium level. `models.json` gains the field with the
+  seven-level schema (`off`..`max`), the per-level override merge, and the
+  custom-model pass-through.
+
 Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
 
 - `tui`/`coding/interactive`: configurable fullscreen wheel scrolling with auto

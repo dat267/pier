@@ -217,6 +217,7 @@ func applyModelOverride(model *ai.Model, override ModelsJSONModelOverride) (*ai.
 		}
 		updated.SamplingParams = merged
 	}
+	updated.SamplingParamsByThinkingLevel = mergeSamplingParamsByThinkingLevel(model.SamplingParamsByThinkingLevel, override.SamplingParamsByThinkingLevel)
 	compat, err := mergeCompatJSON(model.API, model.Compat, override.Compat)
 	if err != nil {
 		return nil, err
@@ -304,34 +305,93 @@ func modelFromJSON(providerID string, definition ModelsJSONModel, providerConfig
 	if err != nil {
 		return nil, err
 	}
-	samplingParams := map[string]json.RawMessage{}
-	for key, value := range definition.SamplingParams {
-		encoded, err := ai.MarshalJSON(value)
+	samplingParams := encodeSamplingParams(definition.SamplingParams)
+
+	return &ai.Model{
+		ID:                            definition.ID,
+		Name:                          name,
+		API:                           api,
+		Provider:                      providerID,
+		BaseURL:                       baseURL,
+		Reasoning:                     reasoning,
+		ThinkingLevelMap:              definition.ThinkingLevelMap,
+		Input:                         append([]string{}, input...),
+		InputLimits:                   definition.InputLimits,
+		Cost:                          cost,
+		ContextWindow:                 contextWindow,
+		MaxTokens:                     maxTokens,
+		SamplingParams:                samplingParams,
+		SamplingParamsByThinkingLevel: samplingParamsByThinkingLevel(definition.SamplingParamsByThinkingLevel),
+		Compat:                        compat,
+	}, nil
+}
+
+// encodeSamplingParams encodes a JSON sampling-params object.
+func encodeSamplingParams(params map[string]any) map[string]json.RawMessage {
+	if len(params) == 0 {
+		return nil
+	}
+	encoded := map[string]json.RawMessage{}
+	for key, value := range params {
+		raw, err := ai.MarshalJSON(value)
 		if err != nil {
 			continue
 		}
-		samplingParams[key] = encoded
+		encoded[key] = raw
 	}
-	if len(samplingParams) == 0 {
-		samplingParams = nil
+	if len(encoded) == 0 {
+		return nil
 	}
+	return encoded
+}
 
-	return &ai.Model{
-		ID:               definition.ID,
-		Name:             name,
-		API:              api,
-		Provider:         providerID,
-		BaseURL:          baseURL,
-		Reasoning:        reasoning,
-		ThinkingLevelMap: definition.ThinkingLevelMap,
-		Input:            append([]string{}, input...),
-		InputLimits:      definition.InputLimits,
-		Cost:             cost,
-		ContextWindow:    contextWindow,
-		MaxTokens:        maxTokens,
-		SamplingParams:   samplingParams,
-		Compat:           compat,
-	}, nil
+// samplingParamsByThinkingLevel decodes a JSON per-level sampling-params
+// object.
+func samplingParamsByThinkingLevel(raw map[string]map[string]any) map[string]map[string]json.RawMessage {
+	if len(raw) == 0 {
+		return nil
+	}
+	out := map[string]map[string]json.RawMessage{}
+	for level, params := range raw {
+		if encoded := encodeSamplingParams(params); encoded != nil {
+			out[level] = encoded
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+// mergeSamplingParamsByThinkingLevel merges an override per level (upstream
+// mergeSamplingParamsByThinkingLevel). A nil override passes the base through.
+func mergeSamplingParamsByThinkingLevel(base map[string]map[string]json.RawMessage, override map[string]map[string]any) map[string]map[string]json.RawMessage {
+	if override == nil {
+		return base
+	}
+	merged := map[string]map[string]json.RawMessage{}
+	for level, params := range base {
+		merged[level] = params
+	}
+	for _, level := range []string{"off", "minimal", "low", "medium", "high", "xhigh", "max"} {
+		params, ok := override[level]
+		if !ok {
+			continue
+		}
+		inner := map[string]json.RawMessage{}
+		for key, value := range base[level] {
+			inner[key] = value
+		}
+		for key, value := range params {
+			encoded, err := ai.MarshalJSON(value)
+			if err != nil {
+				continue
+			}
+			inner[key] = encoded
+		}
+		merged[level] = inner
+	}
+	return merged
 }
 
 // compatFromConfig decodes a provider-level compat for an api.

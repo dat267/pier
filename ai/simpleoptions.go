@@ -31,6 +31,37 @@ var DefaultThinkingBudgets = ThinkingBudgets{
 	High:    intPtr(16384),
 }
 
+// samplingThinkingLevel maps an absent reasoning effort to off, the
+// `options?.reasoningEffort ?? "off"` the sampling resolver expects.
+func samplingThinkingLevel(effort ThinkingLevel) ModelThinkingLevel {
+	if effort == "" {
+		return ThinkOff
+	}
+	return effort
+}
+
+// ResolveSamplingParams merges the model defaults, the parameters selected by
+// the effective thinking level, and the request parameters, in that order (the
+// port of resolveSamplingParams in api/simple-options.ts).
+func ResolveSamplingParams(model *Model, thinkingLevel ModelThinkingLevel, requestParams SamplingParams) SamplingParams {
+	effective := ClampThinkingLevel(model, thinkingLevel)
+	levelParams := model.SamplingParamsByThinkingLevel[effective]
+	if model.SamplingParams == nil && levelParams == nil && len(requestParams) == 0 {
+		return nil
+	}
+	merged := SamplingParams{}
+	for key, value := range model.SamplingParams {
+		merged[key] = value
+	}
+	for key, value := range levelParams {
+		merged[key] = value
+	}
+	for key, value := range requestParams {
+		merged[key] = value
+	}
+	return merged
+}
+
 func intPtr(n int) *int { return &n }
 
 // ClampReasoning maps xhigh/max down to high for budget-based thinking.
