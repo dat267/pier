@@ -757,6 +757,20 @@ func parseStreamingArgs(args json.RawMessage) json.RawMessage {
 	return enc
 }
 
+// ParseStreamingJSONText parses a partially streamed JSON object, repairing an
+// incomplete tail; an empty or unparseable input yields {}. The exported
+// wrapper is used by the agent proxy stream (upstream parseStreamingJson with
+// the `|| {}` default).
+func ParseStreamingJSONText(text string) json.RawMessage {
+	var parsed map[string]any
+	parseStreamingJSONInto(text, &parsed)
+	if parsed == nil {
+		parsed = map[string]any{}
+	}
+	enc, _ := MarshalJSON(parsed)
+	return enc
+}
+
 // StreamAnthropicSimple maps simple reasoning levels onto the anthropic
 // options (port of streamSimple).
 func StreamAnthropicSimple(model *Model, context TranscriptContext, options *SimpleStreamOptions) *AssistantMessageEventStream {
