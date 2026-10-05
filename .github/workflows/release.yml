@@ -10,28 +10,10 @@ permissions:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
-    strategy:
-      # One platform failing must not cost the others their assets.
-      fail-fast: false
-      matrix:
-        include:
-          # The Termux architecture. Pure Go reaches android/arm64 without the NDK;
-          # android/amd64 and android/386 need cgo external linking and are skipped.
-          - goos: android
-            goarch: arm64
-          - goos: linux
-            goarch: amd64
-          - goos: linux
-            goarch: arm64
-          - goos: windows
-            goarch: amd64
-          - goos: windows
-            goarch: arm64
+    # Build every asset on one runner instead of requiring five hosted runners.
+    runs-on: ubuntu-24.04
     steps:
-      # fetch-depth 0 so the annotated tag object is present: the notes step reads
-      # its message, and a depth-1 fetch leaves only the ref, whose %(contents) is
-      # the commit message.
+      # fetch-depth 0 so the annotated tag object is present.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -40,45 +22,46 @@ jobs:
         with:
           go-version: "1.27"
 
-      # The asset name is what `pier update` looks for: pier-<goos>-<goarch>, plus
-      # the .exe suffix the updater falls back to on Windows. Nothing here is
-      # published to a module proxy; the binaries are the release.
-      - name: build ${{ matrix.goos }}/${{ matrix.goarch }}
+      # Keep the asset names used by pier update. Pure Go reaches android/arm64
+      # without the NDK; android/amd64 and android/386 need external linking.
+      - name: build release assets
         env:
           CGO_ENABLED: "0"
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
           VERSION: ${{ github.ref_name }}
+        shell: bash
         run: |
+          set -euo pipefail
           if [ -z "${VERSION#v}" ] || [ "$VERSION" = "main" ]; then VERSION="${GITHUB_SHA::7}"; fi
-          asset="pier-${GOOS}-${GOARCH}"
-          if [ "$GOOS" = "windows" ]; then asset="${asset}.exe"; fi
-          go build -trimpath -ldflags "-s -w -X github.com/dat267/pier/coding.Version=$VERSION" \
-            -o "$asset" .
-          file "$asset"
-          sha256sum "$asset" > "$asset.sha256"
-          echo "ASSET=$asset" >> "$GITHUB_ENV"
+          mkdir -p dist
+          for target in android/arm64 linux/amd64 linux/arm64 windows/amd64 windows/arm64; do
+            export GOOS="${target%/*}" GOARCH="${target#*/}"
+            asset="pier-${GOOS}-${GOARCH}"
+            if [ "$GOOS" = "windows" ]; then asset="${asset}.exe"; fi
+            echo "::group::$target"
+            go build -trimpath -ldflags "-s -w -X github.com/dat267/pier/coding.Version=$VERSION" \
+              -o "dist/$asset" .
+            file "dist/$asset"
+            (cd dist && sha256sum "$asset" > "$asset.sha256")
+            echo "::endgroup::"
+          done
 
-      - name: upload artifact
+      - name: upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.ASSET }}
-          path: |
-            ${{ env.ASSET }}
-            ${{ env.ASSET }}.sha256
+          name: pier-release
+          path: dist/*
 
       - name: attach to release
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
+          set -euo pipefail
           gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" 2>/dev/null || true
-          gh release upload "$GITHUB_REF_NAME" "$ASSET" "$ASSET.sha256" --clobber
-          # Publish the tag's message as the release body — the notes the update card
-          # links to. Read from the API, not from the checkout: a checkout can carry
-          # the tag as a bare ref, whose %(contents) is the commit's message, which
-          # is what the first attempt published. Best-effort, because a lightweight
-          # tag has no annotation to fetch.
+          gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+          # Publish the annotated tag's message as the release body. Best-effort,
+          # because a lightweight tag has no annotation to fetch.
           sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$GITHUB_REF_NAME" --jq '.object.sha' 2>/dev/null || true)"
           notes="$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$sha" --jq '.message' 2>/dev/null || true)"
           if [ -n "$notes" ]; then

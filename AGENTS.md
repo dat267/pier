@@ -99,10 +99,12 @@ proxy.golang.org.
 
 The full gate (CI) runs with `GOTRACEBACK=all` so a hung test prints every
 goroutine, and with `-race -count=2`. The PTY watchdogs reuse a prebuilt binary via `PIER_TEST_BIN`
-(CI builds `.` first); locally they fall back to `./bin/pier`. The test job
-builds only linux/amd64, so a second CI job cross-builds and cross-`vet`s the
-port for Windows (both arches), Linux/arm64, Android/arm64 and macOS (both
-arches) — `vet` also compiles every `_test.go`. That matrix is the guard against
+(CI builds `.` first); locally they fall back to `./bin/pier`. One pinned
+Ubuntu 24.04 runner executes the native gates, then cross-builds and cross-`vet`s
+Windows (both arches), Linux/arm64, Android/arm64 and macOS (both arches).
+`vet` also compiles every `_test.go`. Keeping the targets on one runner avoids
+matrix jobs failing before execution when GitHub cannot acquire hosted runners.
+These checks guard against
 `syscall` code that exists on only some OSes (`SysProcAttr{Setpgid}`,
 `syscall.Kill`, `Stat_t.Ctim`) reaching a user's `go install`.
 
