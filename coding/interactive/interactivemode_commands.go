@@ -48,9 +48,6 @@ type CommandWiring struct {
 	ShowStatus  func(message string)
 	ShowError   func(message string)
 	ShowWarning func(message string)
-	// ReloadGoal replays the goal durable state after a reload (the extension's
-	// session_start reason "reload" pauses a live goal).
-	ReloadGoal func()
 	// RequestRender requests a render.
 	RequestRender func()
 	// ClearStatusIndicator clears the active indicator.
@@ -314,9 +311,6 @@ func (w *CommandWiring) HandleReloadCommand() {
 			}
 		}
 		restore()
-		if w.ReloadGoal != nil {
-			w.ReloadGoal()
-		}
 	}
 
 	if w.RunDetached != nil {
@@ -768,21 +762,16 @@ func WriteDebugLogFile(content string) error {
 // newCommandWiring assembles the CommandWiring (port of the corresponding InteractiveMode wiring).
 func newCommandWiring(app *App) *CommandWiring {
 	return &CommandWiring{
-		Chat:        app.chat,
-		UI:          app.ui,
-		Settings:    app.settings,
-		Session:     app.commandSession(),
-		SessionInfo: app.sessionMgr,
-		AppName:     app.options.AppName,
-		Platform:    app.options.Platform,
-		ShowStatus:  func(message string) { app.transcript.ShowStatus(message) },
-		ShowError:   func(message string) { app.showError(message) },
-		ShowWarning: func(message string) { app.showWarning(message) },
-		ReloadGoal: func() {
-			if controller := app.session.Goal(); controller != nil {
-				controller.SessionStartFromSession("reload", app.sessionMgr)
-			}
-		},
+		Chat:                 app.chat,
+		UI:                   app.ui,
+		Settings:             app.settings,
+		Session:              app.commandSession(),
+		SessionInfo:          app.sessionMgr,
+		AppName:              app.options.AppName,
+		Platform:             app.options.Platform,
+		ShowStatus:           func(message string) { app.transcript.ShowStatus(message) },
+		ShowError:            func(message string) { app.showError(message) },
+		ShowWarning:          func(message string) { app.showWarning(message) },
 		RequestRender:        func() { app.ui.RequestRender(false) },
 		ClearStatusIndicator: func() { app.uiState.ClearStatusIndicator("", false) },
 		MarkdownTheme:        func() tui.MarkdownTheme { return *app.markdownTheme() },

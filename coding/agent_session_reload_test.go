@@ -109,21 +109,21 @@ func TestReloadKeepsTheActiveTools(t *testing.T) {
 		}
 		return session.SystemPromptOptions.SelectedTools
 	}
-	if names := session.ActiveToolNames(); len(names) != 3 {
+	if names := session.ActiveToolNames(); len(names) != 2 {
 		t.Fatalf("active tools = %v", names)
 	}
 	// The prompt is built from the selected tool names, so they are recorded at
 	// session creation (upstream _buildRuntime passes activeToolNames).
-	if got := strings.Join(selected(), ","); got != "create_goal,grep,read" {
+	if got := strings.Join(selected(), ","); got != "read,grep" {
 		t.Fatalf("selected tools = %q", got)
 	}
 
 	session.Reload()
 
-	if names := session.ActiveToolNames(); len(names) != 3 {
+	if names := session.ActiveToolNames(); len(names) != 2 {
 		t.Fatalf("reload changed the active tools: %v", names)
 	}
-	if got := strings.Join(selected(), ","); got != "create_goal,grep,read" {
+	if got := strings.Join(selected(), ","); got != "read,grep" {
 		t.Fatalf("reload lost the tool selection: %q", got)
 	}
 }

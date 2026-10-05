@@ -923,23 +923,24 @@ Upstream's rebuild re-wrapped every running tool's full output once a second:
 (pi/packages/coding-agent/src/modes/interactive/components/tool-execution.ts,
 pi/packages/coding-agent/src/core/tools/renderers/bash.ts)
 
-## D191. The goal round is delivered as an invisible custom message
+## D191. The goal extension is removed (was: the goal round as an invisible custom message)
 
-The goal extension sends its continuation prompt with
-`pi.sendMessage({ customType, content, display: false }, { triggerTurn: true,
-deliverAs: "followUp" })`: the message enters the LLM context as a custom
-message and a turn is triggered. The port matches this: `SessionGoalSink.SendGoalMessage`
-encodes the round as an `ai.CustomMessage` with role `"custom"` and the
-`{customType, content, display: false, details}` envelope, queues it with
-`AgentSession.FollowUp` (which starts the turn at settle), and `ConvertToLlm`
-turns it into a model-visible user message while the transcript's
-`decodeCustomMessage` skips it. The wrap-up is appended the same way without a
-triggering turn. The `pi-goal-event` message renderer is not wired because the
-extension's own round/wrap-up messages are `display: false` and never reach the
-transcript; the durable entry cards carry the visible history. The reload
-`session_start` reason is wired from `/reload`.
+The goal extension (upstream `~/.pi/agent/extensions/goal`, the Go port's
+`goal/` package + `GoalController` builtin) was removed from the port. It was
+upstream an installed user extension, not part of the tree, and the port's
+commitment to byte-parity stops where upstream relies on the extension host
+(D41/D133). Until v0.0.14 the port carried it as a built-in; the unwiring makes
+the port behave like a stock pi install without the extension installed.
 
-(~/.pi/agent/extensions/goal/index.ts, machine.ts)
+Historical, for the record: while the builtin existed, a goal round was
+delivered as an invisible custom message — `SessionGoalSink.SendGoalMessage`
+encoded the round as an `ai.CustomMessage` with role `"custom"` and the
+`{customType, content, display: false, details}` envelope, queued it with
+`AgentSession.FollowUp` (which started the turn at settle), and `ConvertToLlm`
+turned it into a model-visible user message while the transcript's
+`decodeCustomMessage` skipped it. Session files with `pi-goal` entries still
+replay (custom entries render as generic cards; the goal-specific renderers are
+gone).
 
 ## D192. The D136-D139 mutex-deadlock watchdog flows are retired
 

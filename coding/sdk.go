@@ -9,7 +9,6 @@ import (
 
 	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
-	"github.com/dat267/pier/goal"
 )
 
 // Port of the extension-free core of core/sdk.ts createAgentSession: the
@@ -454,12 +453,6 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 	}
 	promptOverrides := LoadPromptOverrides(promptSources)
 
-	// The goal controller is a builtin: --no-tools and --no-builtin-tools
-	// disable it (upstream always has the extension host available).
-	var goalController *GoalController
-	if options.NoTools == "" && len(activeTools) > 0 {
-		goalController = NewGoalController(goal.NewGoalMachine(), &SessionGoalSink{})
-	}
 	session, err := NewAgentSession(&SessionConfig{
 		Cwd:                cwd,
 		Model:              model,
@@ -480,7 +473,6 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 			ModelRuntime: modelRuntime, Settings: settingsManager,
 			Tools: map[string]AgentToolDefinition{}, autoCompaction: true, autoRetry: true,
 			PromptTemplates: promptTemplates, Sandbox: sandbox,
-			Goal: goalController,
 		},
 		ConvertToLlm: convertToLlmWithBlockImages,
 		SessionID:    sessionID,

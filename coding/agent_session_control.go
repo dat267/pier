@@ -68,9 +68,6 @@ type AgentSessionControl struct {
 	// Sandbox is the session's filesystem policy: the active mode and the
 	// detected backend. Nil means no policy (full access).
 	Sandbox *Sandbox
-	// Goal is the builtin session-goal controller (port of the goal extension).
-	// Nil disables the feature.
-	Goal *GoalController
 
 	stateMu             sync.Mutex
 	scopedModels        []ScopedModel

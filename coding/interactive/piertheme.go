@@ -18,7 +18,7 @@ package interactive
 //     says a tool call is running, failed or succeeded, and the fourth is the
 //     only thing that says a block is yours. Left unset, a failed `bash` call
 //     was byte-identical to a successful one. customMessageBg is kept for the
-//     same reason: it is what frames a compaction summary, a goal card or a
+//     same reason: it is what frames a compaction summary, an error card or a
 //     custom entry, and without it those blocks read as body text. They are not
 //     upstream's values either — your messages get a warm panel tied to the
 //     accent, where upstream's is a cool blue-gray — so the palette stays
@@ -57,7 +57,7 @@ var toolStateBackgroundColors = []string{
 // filledBackgroundColors are every background token the palette paints: the
 // tool states above, userMessageBg (the fill that marks a block as yours,
 // upstream components/user-message.ts, where the assistant message has no
-// fill), and customMessageBg (the frame around a compaction summary, a goal
+// fill), and customMessageBg (the frame around a compaction summary, an error
 // card or a custom entry). Not decoration, so not transparent — and not
 // upstream's colours either, since the port's palette is meant to be
 // recognisable at a glance.
