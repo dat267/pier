@@ -32,7 +32,7 @@ func OpenAIProvider() *ai.Provider {
 			OAuth:  ai.OpenAIChatGPTOAuth(),
 		},
 		Models: models,
-		Single: openaiCompletionsStreams{},
+		Single: openaiResponsesStreams{},
 	})
 }
 

@@ -60,7 +60,12 @@ scope; MCP and `durable` are ported). The v1.0.1 (`a7229ddc`) → v1.0.2
   provider next to its api-key auth; `coding` gains
   `SettingsManager.GetOrCreateDeviceID` (global `deviceId`) and the login wiring
   forwards it through `AuthInteraction.GetDeviceID`. This closes the port's
-  missing OpenAI ChatGPT flow.
+  missing OpenAI ChatGPT flow. The built-in `OpenAIProvider` uses the
+  Responses adapter, matching `providers/openai.ts`; both `Stream` and
+  `StreamSimple` post to `/v1/responses`. The former Chat Completions adapter
+  sent valid ChatGPT OAuth tokens to `/v1/chat/completions`, which OpenAI
+  rejected with `rejected_by_access_enforcement` / `no_matching_rule` (401).
+  `TestOpenAIProviderUsesResponses` pins both public streaming paths.
 - `ai` (GitHub Copilot OAuth): `GitHubCopilotOAuth()` existed but was never
   attached, so the provider offered only api-key auth. `GitHubCopilotProvider`
   now wires it, and a new `TestBuiltinProviderOAuthSurface` pins every
