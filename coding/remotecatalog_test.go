@@ -275,7 +275,10 @@ func TestBuiltinSlashCommands(t *testing.T) {
 			t.Errorf("missing command %q", expected)
 		}
 	}
-	if len(BuiltinSlashCommands) != 23 {
+	if found["permissions"] {
+		t.Fatal("permissions is extension-owned in pi, not a built-in command")
+	}
+	if len(BuiltinSlashCommands) != 22 {
 		t.Fatalf("commands = %d", len(BuiltinSlashCommands))
 	}
 	if !strings.Contains(BuiltinSlashCommands[len(BuiltinSlashCommands)-1].Description, AppName) {

@@ -65,9 +65,6 @@ type AgentSessionControl struct {
 	Tools map[string]AgentToolDefinition
 	// PromptTemplates are the file-based prompt templates (resource loader).
 	PromptTemplates []PromptTemplate
-	// Sandbox is the session's filesystem policy: the active mode and the
-	// detected backend. Nil means no policy (full access).
-	Sandbox *Sandbox
 
 	stateMu             sync.Mutex
 	scopedModels        []ScopedModel
@@ -107,23 +104,6 @@ func (s *AgentSession) Model() *ai.Model { return s.Agent.State().Model }
 // session was created without one).
 func (s *AgentSession) ModelRuntime() *ModelRuntime {
 	return s.control.ModelRuntime
-}
-
-// Sandbox returns the session's filesystem policy (nil when none is
-// installed).
-func (s *AgentSession) Sandbox() *Sandbox { return s.control.Sandbox }
-
-// SandboxMode returns the active sandbox mode (full-access without a policy).
-func (s *AgentSession) SandboxMode() SandboxMode { return s.control.Sandbox.Mode() }
-
-// SandboxBackend returns the detected sandbox backend.
-func (s *AgentSession) SandboxBackend() SandboxBackend { return s.control.Sandbox.Backend() }
-
-// SetSandboxMode switches the filesystem policy. It returns the effective mode
-// and a warning when the request had to be changed (workspace-write on a host
-// with no kernel backend falls back to read-only).
-func (s *AgentSession) SetSandboxMode(mode SandboxMode) (SandboxMode, string) {
-	return s.control.Sandbox.SetMode(mode)
 }
 
 // GetAvailableModels returns the runtime's available-model snapshot (the
@@ -506,16 +486,6 @@ func (s *AgentSession) resolvedSystemPromptOptions() (BuildSystemPromptOptions, 
 	}
 	options.SelectedTools = selectedRegistryTools(options.SelectedTools, s.control.Tools)
 	options.ToolSnippets, options.ToolGuidelines = s.toolPromptContributions()
-	// The sandbox section is derived from the live policy, so a `/permissions`
-	// switch is reflected in the next prompt diff without a separate update path.
-	if sandbox := s.control.Sandbox; sandbox != nil {
-		sections := map[string]string{}
-		for name, value := range options.Sections {
-			sections[name] = value
-		}
-		sections["sandbox"] = sandbox.Policy().PromptNote()
-		options.Sections = sections
-	}
 	return options, true
 }
 

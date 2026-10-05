@@ -8,8 +8,8 @@ package interactive
 // the loop waits cannot occur in this architecture, and internal/uiblock proves
 // the weaker property statically in milliseconds rather than driving the real
 // binary through a pty for seconds per flow. What remains is the reusable pty
-// harness (startPier and friends, used by ptytrust_test.go and
-// ptypermissions_test.go) and TestMutexBlockedDetectorHasTeeth, which keeps the
+// harness (startPier and friends, used by ptytrust_test.go) and
+// TestMutexBlockedDetectorHasTeeth, which keeps the
 // dump parser honest so a future watchdog cannot pass vacuously. The harness is
 // Linux-specific: it unlocks the pty master with TIOCSPTLCK and reads the slave
 // name with TIOCGPTN, neither of which the BSDs have.

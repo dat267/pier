@@ -28,6 +28,12 @@ Every runtime package in the pi reference has a counterpart here: `ai` (all ten 
 
 The pi `goal` extension is not carried (D191): it ships upstream as an installed user extension (`~/.pi/agent/extensions/goal`), and the port has no extension host (D41), so the port behaves like a stock pi install without it. The `pi-tui` library and the interactive coding-agent mode are implemented (`tui/*` and `coding/interactive/*`), including the theme, every component, and the interactive-mode method groups; the root `main.go` and the `cmd` package compose them into a runnable CLI. The remaining items are the documented out-of-scope set below.
 
+Like stock pi, pier has no built-in filesystem sandbox (D177). Shell commands,
+write, and edit run with the OS user's permissions, including access outside the
+workspace. There is no `/permissions` command, sandbox prompt section, or
+RO/WW/FA footer indicator. Use external confinement when needed; restrictions
+inherited from the launching process still apply.
+
 Deliberately left out of scope, each with its decision recorded in code: the extension mechanics (resource loader, sdk extension surface, agent-session services/runtime, package and tools managers), the native clipboard, the kitty/iterm image transport internals, the node-specific chord bundler, the bug-report upload transport, and the optional `session-backends` sqlite driver (a host-provided storage backend imported by no runtime package) plus the `evals` Docker harness (a development tool).
 
 ## Build & test

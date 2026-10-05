@@ -55,23 +55,6 @@ type ToolsOptions struct {
 	Read       *ReadToolOptions
 	Bash       *BashToolOptions
 	PowerShell *BashToolOptions
-	// Sandbox confines shell commands and gates write/edit targets for the
-	// session's active mode. Nil means no policy.
-	Sandbox *Sandbox
-}
-
-// withSandboxBashOptions copies the shell options and attaches the sandbox, so
-// every shell variant (bash, powershell) carries the policy.
-func withSandboxBashOptions(options *BashToolOptions, sandbox *Sandbox) *BashToolOptions {
-	if sandbox == nil {
-		return options
-	}
-	copied := BashToolOptions{}
-	if options != nil {
-		copied = *options
-	}
-	copied.Sandbox = sandbox
-	return &copied
 }
 
 // CreateTool builds one built-in tool by name (upstream createTool).
@@ -83,13 +66,13 @@ func CreateTool(toolName ToolName, cwd string, options *ToolsOptions) (agent.Age
 	case ToolNameRead:
 		return CreateReadTool(cwd, options.Read), nil
 	case ToolNameBash:
-		return CreateBashTool(cwd, withSandboxBashOptions(options.Bash, options.Sandbox)), nil
+		return CreateBashTool(cwd, options.Bash), nil
 	case ToolNamePowerShell:
-		return CreatePowerShellTool(cwd, withSandboxBashOptions(options.PowerShell, options.Sandbox)), nil
+		return CreatePowerShellTool(cwd, options.PowerShell), nil
 	case ToolNameEdit:
-		return CreateEditTool(cwd, options.Sandbox), nil
+		return CreateEditTool(cwd), nil
 	case ToolNameWrite:
-		return CreateWriteTool(cwd, options.Sandbox), nil
+		return CreateWriteTool(cwd), nil
 	case ToolNameGrep:
 		return CreateGrepTool(cwd), nil
 	case ToolNameFind:
@@ -109,9 +92,9 @@ func CreateCodingTools(cwd string, options *ToolsOptions) []agent.AgentTool {
 	}
 	return []agent.AgentTool{
 		CreateReadTool(cwd, options.Read),
-		CreateBashTool(cwd, withSandboxBashOptions(options.Bash, options.Sandbox)),
-		CreateEditTool(cwd, options.Sandbox),
-		CreateWriteTool(cwd, options.Sandbox),
+		CreateBashTool(cwd, options.Bash),
+		CreateEditTool(cwd),
+		CreateWriteTool(cwd),
 	}
 }
 
@@ -139,13 +122,12 @@ func CreateAllTools(cwd string, options *ToolsOptions) map[ToolName]agent.AgentT
 	if powerShellOptions == nil {
 		powerShellOptions = options.Bash
 	}
-	powerShellOptions = withSandboxBashOptions(powerShellOptions, options.Sandbox)
 	return map[ToolName]agent.AgentTool{
 		ToolNameRead:       CreateReadTool(cwd, options.Read),
-		ToolNameBash:       CreateBashTool(cwd, withSandboxBashOptions(options.Bash, options.Sandbox)),
+		ToolNameBash:       CreateBashTool(cwd, options.Bash),
 		ToolNamePowerShell: CreatePowerShellTool(cwd, powerShellOptions),
-		ToolNameEdit:       CreateEditTool(cwd, options.Sandbox),
-		ToolNameWrite:      CreateWriteTool(cwd, options.Sandbox),
+		ToolNameEdit:       CreateEditTool(cwd),
+		ToolNameWrite:      CreateWriteTool(cwd),
 		ToolNameGrep:       CreateGrepTool(cwd),
 		ToolNameFind:       CreateFindTool(cwd),
 		ToolNameLS:         CreateLsTool(cwd),

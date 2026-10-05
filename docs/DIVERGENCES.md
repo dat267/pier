@@ -766,30 +766,16 @@ only as the code comment that introduced them. The range is **D1–D189**.
   otherwise unchanged, including the preamble that still names pi as the harness
   the port follows.
 
-- D177 — **the port has a native filesystem sandbox with three modes.** Upstream
-  pi has no built-in sandbox: it exposes the tools directly and leaves
-  confinement to an out-of-scope extension, and the user's own
-  `~/.pi/agent/extensions/sandbox` enforces a Landlock ruleset by compiling a C
-  gate at load time. The port takes the mode vocabulary from deepseek-harness
-  (`packages/sandbox/sandbox/src/index.ts`: `read-only`, `workspace-write` and
-  `danger-full-access`, named `full-access` here) and integrates the policy into
-  the session. `coding/sandbox.go` owns the modes, the writable allowlist
-  (workspace, devices, temp, GOPATH, toolchains, caches, `~/.pi`, and the two
-  rootless-podman runtime dirs under `$XDG_RUNTIME_DIR`, granted individually so
-  the session IPC sockets that share that parent stay untouchable) and the
-  in-process write/edit path check; `coding/sandbox_linux.go` applies the
-  Landlock ruleset in a re-exec'd `pier __sandbox-exec` child, pure Go with no
-  cgo, which replaces gate.c's compiler dependency; the bash tool wraps its argv
-  under a confined mode; and the write/edit tools check their targets with
-  symlink resolution. Where no kernel backend exists (non-Linux, or an old
-  kernel) `workspace-write` cannot be enforced, so the default falls back to
-  `read-only` and only an explicit `/permissions FA` lifts confinement; `full-access`
-  is never a default. The current mode is the first footer status
-  (`RO`/`WW`/`FA`, always shown) and a `sandbox` system-prompt section states the
-  policy, both derived from the same tables as the `/permissions` parser. The
-  kernel ruleset, the in-process write/edit check and the prompt note all derive
-  from one resolved `SandboxPolicy`, so the advertised writable set cannot drift
-  from enforcement.
+- D177: **native filesystem sandbox removed to restore stock pi parity.**
+  The port previously added read-only, workspace-write, and full-access modes,
+  a Linux Landlock launcher, write/edit path guards, `/permissions`, footer
+  mode codes, and a sandbox system-prompt section. All are now removed.
+  Upstream `core/tools/{bash,edit,write}.ts` executes tools with the process's
+  ordinary OS permissions and has no built-in sandbox. `coding/sdk.go` now
+  assembles tools the same way on every platform, with no backend probe or
+  read-only fallback. External confinement, including restrictions inherited
+  from a parent process, remains outside this feature. The row number is
+  retained as removal history; it no longer describes an active divergence.
 
 - D178 — **a killed shell command cannot be held open by a descendant that
   outlived it.** Upstream's abort and timeout kill the process tree by pid
