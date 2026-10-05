@@ -317,6 +317,33 @@ func TestClaudeCodeToolNaming(t *testing.T) {
 	}
 }
 
+func TestBuildAnthropicOAuthCompactionOmitsCacheControl(t *testing.T) {
+	// Upstream api/anthropic-messages.ts getCacheControl receives OAuth auth
+	// mode; compaction's cacheRetention=none must not add cache_control blocks.
+	params, err := BuildAnthropicParams(testAnthropicModel(), NormalizeContext(Context{
+		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "Summarize session"}}},
+	}), true, &AnthropicOptions{StreamOptions: StreamOptions{CacheRetention: CacheRetentionNone}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, message := range params.Messages {
+		var blocks []AnthropicContentBlock
+		if err := json.Unmarshal(message.Content, &blocks); err != nil {
+			continue
+		}
+		for _, block := range blocks {
+			if block.CacheControl != nil {
+				t.Fatalf("OAuth message block contains cache_control: %+v", block.CacheControl)
+			}
+		}
+	}
+	for _, tool := range params.Tools {
+		if tool.CacheControl != nil {
+			t.Fatalf("OAuth tool contains cache_control: %+v", tool.CacheControl)
+		}
+	}
+}
+
 func TestGetCacheControlRetention(t *testing.T) {
 	// Default short.
 	retention, cc := GetCacheControl(testAnthropicModel(), "", nil)
