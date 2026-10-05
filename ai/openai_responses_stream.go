@@ -62,6 +62,10 @@ func BuildOpenAIResponsesParamsWithProviders(
 	}
 
 	cacheRetention := ResolveCacheRetention(options.CacheRetention, options.Env)
+	// Port of isChatGPTSignIn/buildParams: subscription tokens sent directly
+	// to OpenAI reject cache controls, output-token caps, and temperature.
+	omitUnsupportedFields := model.Provider == "openai" && model.BaseURL == OpenAIChatGPTResource &&
+		options.APIKey != "" && !strings.HasPrefix(options.APIKey, "sk-")
 	params := &OpenAIResponsesParams{
 		Model:  model.ID,
 		Input:  input,
@@ -72,16 +76,18 @@ func BuildOpenAIResponsesParamsWithProviders(
 		clamped := ClampOpenAIPromptCacheKey(options.SessionID)
 		params.PromptCacheKey = &clamped
 	}
-	if retention := GetPromptCacheRetention(*compat, cacheRetention); retention != "" {
-		params.PromptCacheRetention = &retention
+	if !omitUnsupportedFields {
+		if retention := GetPromptCacheRetention(*compat, cacheRetention); retention != "" {
+			params.PromptCacheRetention = &retention
+		}
+		params.PromptCacheOptions = GetPromptCacheOptions(*compat, cacheRetention)
 	}
-	params.PromptCacheOptions = GetPromptCacheOptions(*compat, cacheRetention)
 
-	if options.MaxTokens != nil && compat.SupportsMaxOutputTokens {
+	if options.MaxTokens != nil && compat.SupportsMaxOutputTokens && !omitUnsupportedFields {
 		tokens := int64(max(*options.MaxTokens, openAIResponsesMinOutputTokens))
 		params.MaxOutputTokens = &tokens
 	}
-	if options.Temperature != nil {
+	if options.Temperature != nil && !omitUnsupportedFields {
 		params.Temperature = options.Temperature
 	}
 	if options.ServiceTier != "" {

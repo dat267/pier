@@ -66,6 +66,14 @@ scope; MCP and `durable` are ported). The v1.0.1 (`a7229ddc`) → v1.0.2
   sent valid ChatGPT OAuth tokens to `/v1/chat/completions`, which OpenAI
   rejected with `rejected_by_access_enforcement` / `no_matching_rule` (401).
   `TestOpenAIProviderUsesResponses` pins both public streaming paths.
+  `BuildOpenAIResponsesParams` also follows `isChatGPTSignIn` in
+  `api/openai-responses.ts`: direct ChatGPT OAuth requests omit
+  `prompt_cache_options`, `prompt_cache_retention`, `max_output_tokens`, and
+  `temperature`. This includes compaction's `cacheRetention=none` request;
+  sending explicit cache options there caused a 400 `invalid_parameter`.
+  API keys and proxy endpoints retain their controls, and ordinary cached
+  requests retain their session prompt-cache key. The credential-specific
+  regression tests live in `ai/openai_responses_oauth_test.go`.
 - `ai` (GitHub Copilot OAuth): `GitHubCopilotOAuth()` existed but was never
   attached, so the provider offered only api-key auth. `GitHubCopilotProvider`
   now wires it, and a new `TestBuiltinProviderOAuthSurface` pins every
