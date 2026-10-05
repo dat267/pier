@@ -74,6 +74,12 @@ scope; MCP and `durable` are ported). The v1.0.1 (`a7229ddc`) → v1.0.2
   API keys and proxy endpoints retain their controls, and ordinary cached
   requests retain their session prompt-cache key. The credential-specific
   regression tests live in `ai/openai_responses_oauth_test.go`.
+  The `error` stream event follows the openai SDK's flattening
+  (`lib/responses/ResponseStream.ts`): first-party OpenAI nests the payload as
+  `{"error":{...}}`, so the nested message becomes the displayed error instead
+  of an empty `Error Code :`; flat events fall back to their own message. A
+  subscription-limit message also gains the ChatGPT usage URL, matching
+  `api/openai-responses.ts`.
 - `ai` (GitHub Copilot OAuth): `GitHubCopilotOAuth()` existed but was never
   attached, so the provider offered only api-key auth. `GitHubCopilotProvider`
   now wires it, and a new `TestBuiltinProviderOAuthSurface` pins every

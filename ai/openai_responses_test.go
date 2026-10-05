@@ -327,6 +327,41 @@ func TestProcessResponsesStreamFunctionCallAndErrors(t *testing.T) {
 		}
 	})
 
+	t.Run("error event with nested error payload", func(t *testing.T) {
+		// OpenAI nests first-party error payloads; the SDK flattens them and
+		// throws an APIError whose message is the nested error message
+		// (openai lib/responses/ResponseStream.ts), so that text is what pi shows.
+		want := "The ChatGPT user has reached their Subscription Sharing usage limit. Ask the user to try again after their usage limit resets or use an API key instead."
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, _ = w.Write([]byte(`data: {"type":"error","error":{"type":"invalid_request_error","code":"subscription_sharing_usage_limit_exceeded","message":"` + want + `","param":null},"sequence_number":2}` + "\n\n"))
+		}))
+		defer server.Close()
+		model := testResponsesModel()
+		model.BaseURL = server.URL
+		stream := StreamOpenAIResponses(model, NormalizeContext(Context{}),
+			&OpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+		msg, _ := stream.Result(context.Background())
+		if msg.StopReason != StopError || msg.ErrorMessage == nil || *msg.ErrorMessage != want {
+			t.Fatalf("message = %+v", msg)
+		}
+	})
+
+	t.Run("flat error event uses its message", func(t *testing.T) {
+		// The SDK falls back to event.message when the payload is not nested.
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, _ = w.Write([]byte("data: {\"type\":\"error\",\"code\":\"server_error\",\"message\":\"boom\"}\n\n"))
+		}))
+		defer server.Close()
+		model := testResponsesModel()
+		model.BaseURL = server.URL
+		stream := StreamOpenAIResponses(model, NormalizeContext(Context{}),
+			&OpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+		msg, _ := stream.Result(context.Background())
+		if msg.StopReason != StopError || msg.ErrorMessage == nil || *msg.ErrorMessage != "boom" {
+			t.Fatalf("message = %+v", msg)
+		}
+	})
+
 	t.Run("no terminal event", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_, _ = w.Write([]byte("data: {\"type\":\"response.created\",\"response\":{\"id\":\"r\"}}\n\n"))

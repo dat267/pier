@@ -256,6 +256,34 @@ type responsesStreamEvent struct {
 	Response    json.RawMessage `json:"response,omitempty"`
 	Code        string          `json:"code,omitempty"`
 	Message     string          `json:"message,omitempty"`
+	// Error is the nested payload first-party OpenAI sends on an `error`
+	// event, which the SDK flattens before surfacing it
+	// (openai lib/responses/ResponseStream.ts).
+	Error *struct {
+		Type    string  `json:"type,omitempty"`
+		Code    string  `json:"code,omitempty"`
+		Message string  `json:"message,omitempty"`
+		Param   *string `json:"param,omitempty"`
+	} `json:"error,omitempty"`
+}
+
+// openAIResponsesErrorMessage mirrors the openai SDK's error-event handling
+// (lib/responses/ResponseStream.ts): first-party providers nest the payload, so
+// the nested error is flattened, and its message (else its JSON) becomes the
+// thrown error text. Flat events fall back to the event's own message/JSON.
+func openAIResponsesErrorMessage(event responsesStreamEvent) string {
+	if event.Error != nil {
+		if event.Error.Message != "" {
+			return event.Error.Message
+		}
+		if encoded, err := MarshalJSON(event.Error); err == nil {
+			return string(encoded)
+		}
+	}
+	if event.Message != "" {
+		return event.Message
+	}
+	return string(event.Raw)
 }
 
 // responsesItem is the parsed subset of a Responses output item.
@@ -740,7 +768,7 @@ func ProcessResponsesStream(
 				finalizeResponse(&response)
 			}
 		case "error":
-			panic(fmt.Errorf("Error Code %s: %s", event.Code, event.Message))
+			panic(fmt.Errorf("%s", openAIResponsesErrorMessage(*event)))
 		case "response.failed":
 			sawTerminalResponseEvent = true
 			var response responsesTerminalResponse
@@ -1010,6 +1038,11 @@ func streamOpenAIResponses(model *Model, context TranscriptContext, options *Ope
 				output.StopReason = StopError
 			}
 			message := FormatProviderError(NormalizeProviderError(err), config.errorPrefix)
+			// Sign in with ChatGPT shares the subscription's usage limit with
+			// other apps (pi api/openai-responses.ts CHATGPT_USAGE_URL).
+			if strings.Contains(message, "subscription_sharing_usage_limit_exceeded") {
+				message += "\nCheck your ChatGPT usage: " + OpenAIChatGPTUsageURL
+			}
 			output.ErrorMessage = &message
 			stream.Push(AssistantMessageEvent{Type: EventError, Reason: output.StopReason, Error: output})
 			stream.End(&output)

@@ -36,6 +36,10 @@ const (
 	OpenAIChatGPTScope            = "openid profile email offline_access resource.invoke " + OpenAIChatGPTDirectTokenScope
 )
 
+// OpenAIChatGPTUsageURL is where a subscription-limit error points
+// (upstream CHATGPT_USAGE_URL).
+const OpenAIChatGPTUsageURL = "https://chatgpt.com/settings/usage"
+
 // OpenAIChatGPTRedirectURI is the loopback redirect the dynamic client is
 // registered against.
 func OpenAIChatGPTRedirectURI() string {
