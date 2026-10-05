@@ -215,6 +215,7 @@ type AgentSession struct {
 	// before_agent_start; the MCP first-prompt wait installs here).
 	beforeFirstTurn func(ctx context.Context)
 	firstTurnOnce   sync.Once
+	firstTurnRan    bool
 }
 
 type sessionListenerKey struct {
@@ -288,6 +289,15 @@ func (s *AgentSession) SetBeforeFirstTurn(hook func(ctx context.Context)) {
 	s.mu.Lock()
 	s.beforeFirstTurn = hook
 	s.mu.Unlock()
+}
+
+// HasRunFirstTurn reports whether a turn already ran (the once-per-session
+// pre-turn hook has fired or been skipped; a later install would never run).
+func (s *AgentSession) HasRunFirstTurn() bool {
+	s.mu.Lock()
+	ran := s.firstTurnRan
+	s.mu.Unlock()
+	return ran
 }
 
 // NewAgentSession builds the wired session.

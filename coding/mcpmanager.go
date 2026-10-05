@@ -42,8 +42,10 @@ type McpManager struct {
 	connections []*McpServerConnection
 	tools       []agent.AgentTool
 	options     McpManagerOptions
-	// onToolsChange fires after every tool-set rebuild (the CLI wiring uses it
-	// to attach late tools to the live session).
+	session     *AgentSession
+	// onToolsChange fires after every tool-set rebuild: the CLI wiring attaches
+	// late tools to the live session; the session-attached manager re-attaches
+	// after every rebuild, `/reload` included (upstream _pendingToolNames).
 	onToolsChange func()
 }
 
@@ -139,6 +141,40 @@ func (m *McpManager) SetOnToolsChange(onToolsChange func()) {
 	m.mu.Lock()
 	m.onToolsChange = onToolsChange
 	m.mu.Unlock()
+}
+
+// AttachSession binds the session the manager serves: every tool-set build
+// then activates into the session live (upstream the extension's registry
+// refresh, which reaches the connected session without a new turn). The
+// manager is CLI-owned, so the session holds no reference back.
+func (m *McpManager) AttachSession(session *AgentSession) {
+	m.mu.Lock()
+	m.session = session
+	m.onToolsChange = func() { _ = session.AttachExtraTools(m.DirectTools()) }
+	m.mu.Unlock()
+	_ = session.AttachExtraTools(m.DirectTools())
+}
+
+// McpSessionFactory builds a fresh manager from re-read config (upstream the
+// extension's session_start handler re-running loadConfig).
+type McpSessionFactory func(ctx context.Context, config LoadedMcpConfig) *McpManager
+
+// ReloadMCPExchange shuts the old manager down and starts a fresh one from a
+// re-read config (upstream reload(): session_shutdown invalidates the old
+// extension's connections and session_start reconnects them). The factory
+// carries the CLI's transport/provider wiring; nil keeps the old manager's
+// options with new config.
+func ReloadMCPExchange(ctx context.Context, manager *McpManager, factory McpSessionFactory, config LoadedMcpConfig, fallback func(entry McpServerEntry, cwd string, auth mcp.AuthProvider) (mcp.Transport, error)) *McpManager {
+	_ = manager.Close(ctx)
+	if factory != nil {
+		return factory(ctx, config)
+	}
+	options := manager.options
+	options.Config = config
+	if options.CreateTransport == nil && fallback != nil {
+		options.CreateTransport = fallback
+	}
+	return NewMcpManagerAsync(ctx, options)
 }
 
 // Errors reports the config errors plus every failed connection's message.

@@ -88,6 +88,13 @@ type CommandWiring struct {
 	// returns the models.json error ("" = none) and whether implicit project
 	// trust was saved.
 	ReloadNow func() (modelsJSONError string, savedTrust bool, err error)
+	// ReloadMCP re-reads mcp.json and exchanges the session's MCP manager
+	// (upstream reload(): session_shutdown invalidates the extension's
+	// connections and session_start reconnects them). Nil manager = none was
+	// configured; nil func = no MCP wiring. The rebuilt manager attaches to
+	// the session itself (AttachSession), and its connection failures are the
+	// second return.
+	ReloadMCP func(ctx context.Context) (*coding.McpManager, []string)
 	// ApplyReloadedSettings re-applies settings-dependent UI state on the
 	// loop (runtime settings, chat rebuild, themes, autocomplete).
 	ApplyReloadedSettings func()
@@ -232,14 +239,11 @@ func (w *CommandWiring) HandleImportCommand(ctx context.Context, text string) {
 	})
 }
 
-// reloadedItems names what a reload re-reads, for the /reload notice. Upstream's
-// text leads with "extensions", which the port does not implement (D41) — the
-// box and the status line would announce a reload that never happens. The rest
-// is real: CommandWiring.ReloadNow re-reads settings, queue modes, context
-// files, skills and the system/append prompt files, re-reads keybindings and
-// saves implicit project trust, and App.applyReloadedSettings re-applies the
-// theme and the settings-dependent UI state.
-const reloadedItems = "keybindings, skills, prompts, themes, and context files"
+// reloadedItems names what a reload re-reads, for the /reload notice. The MCP
+// manager re-reads mcp.json and reconnects (ReloadMCP), so the text now names
+// what the port actually re-reads: upstream's text leads with "extensions", and
+// the MCP half runs through the CLI-owned manager instead of an extension.
+const reloadedItems = "keybindings, skills, prompts, themes, context files, and MCP servers"
 
 // HandleReloadCommand runs /reload (upstream handleReloadCommand): guard
 // streaming/compacting, swap the editor for a reload box, run the reload
@@ -284,7 +288,7 @@ func (w *CommandWiring) HandleReloadCommand() {
 			w.UI.RequestRender(false)
 		}
 	}
-	finish := func(modelsJSONError string, savedTrust bool, err error) {
+	finish := func(modelsJSONError string, savedTrust bool, err error, connectionErrors []string) {
 		if err != nil {
 			restore()
 			w.showError("Reload failed: " + err.Error())
@@ -295,6 +299,9 @@ func (w *CommandWiring) HandleReloadCommand() {
 		}
 		if modelsJSONError != "" {
 			w.showError("models.json error: " + modelsJSONError)
+		}
+		for _, message := range connectionErrors {
+			w.showWarning(message)
 		}
 		if savedTrust {
 			w.showStatus("Reloaded " + reloadedItems + "; saved project trust")
@@ -316,15 +323,31 @@ func (w *CommandWiring) HandleReloadCommand() {
 	if w.RunDetached != nil {
 		w.RunDetached(func() {
 			modelsJSONError, savedTrust, err := w.ReloadNow()
+			// The MCP exchange re-reads the config and reconnects; failures are
+			// the rebuilt manager's connection errors (reported below, like the
+			// boot's startup warnings).
+			var connectionErrors []string
+			if w.ReloadMCP != nil {
+				if manager, errors := w.ReloadMCP(context.Background()); manager != nil {
+					connectionErrors = errors
+				}
+			}
 			if w.UI != nil {
-				w.UI.Post(func() { finish(modelsJSONError, savedTrust, err) })
+				w.UI.Post(func() { finish(modelsJSONError, savedTrust, err, connectionErrors) })
 				return
 			}
-			finish(modelsJSONError, savedTrust, err)
+			finish(modelsJSONError, savedTrust, err, connectionErrors)
 		})
 		return
 	}
-	finish(w.ReloadNow())
+	var connectionErrors []string
+	if w.ReloadMCP != nil {
+		if _, errors := w.ReloadMCP(context.Background()); errors != nil {
+			connectionErrors = errors
+		}
+	}
+	onlyModelsJSONError, savedTrust, err := w.ReloadNow()
+	finish(onlyModelsJSONError, savedTrust, err, connectionErrors)
 }
 
 // HandleCopyCommand copies the selection or the last assistant message.
@@ -843,6 +866,13 @@ func newCommandWiring(app *App) *CommandWiring {
 			app.keybindings.Reload()
 			savedTrust := app.trust.MaybeSaveImplicitProjectTrustAfterReload(app.autoTrustOnReloadCwd)
 			return app.session.ModelRuntime().GetError(), savedTrust, nil
+		},
+		// The MCP half of the reload: re-read mcp.json, close and restart the
+		// manager's connections, wire the fresh manager (upstream session_start
+		// reason "reload"). The connection failures land in the wiring's error
+		// report; the tools attach through the rebuilt manager's callbacks.
+		ReloadMCP: func(ctx context.Context) (*coding.McpManager, []string) {
+			return app.mcpManager, app.reloadMCP(ctx, app.sessionMgr.GetCwd())
 		},
 		ApplyReloadedSettings: app.applyReloadedSettings}
 }

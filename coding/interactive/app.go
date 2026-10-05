@@ -160,6 +160,12 @@ type App struct {
 	display    *DisplayOptions
 	uiState    *InteractiveUIState
 	transcript *TranscriptRenderer
+	// mcpManager is the session's MCP manager, swapped on /reload (nil = none
+	// configured). reloadMCP builds a fresh one from the re-read config.
+	mcpManager *coding.McpManager
+	// mcpAgentDir is the agent directory the manager's config re-reads on
+	// /reload (options.AgentDir, resolved in NewApp).
+	mcpAgentDir string
 	// TranscriptScrollView is the fullscreen transcript scroll view (upstream's
 	// transcriptScrollView).
 	transcriptScrollView *tui.ScrollView
@@ -252,6 +258,7 @@ func NewApp(options AppOptions) *App {
 		sessionMgr:  options.SessionMgr,
 		runtime:     options.Runtime,
 		keybindings: keybindings,
+		mcpAgentDir: options.AgentDir,
 	}
 
 	// One owner for the off-loop queues. The command passes its group so a
@@ -393,19 +400,9 @@ func NewApp(options AppOptions) *App {
 	// The MCP wiring: the first turn waits for the direct-tool servers (bounded,
 	// upstream DEFAULT_STARTUP_WAIT_MS), attaches whatever connected, reports
 	// the connection failures, and every later tool-set change attaches live.
+	app.mcpManager = options.MCP
 	if manager := options.MCP; manager != nil {
-		manager.SetOnToolsChange(func() {
-			app.ui.Post(func() { _ = app.session.AttachExtraTools(manager.DirectTools()) })
-		})
-		app.session.SetBeforeFirstTurn(func(ctx context.Context) {
-			if !manager.WaitForDirectTools(ctx, time.Duration(coding.McpStartupWaitMs)*time.Millisecond) {
-				app.transcript.ShowStatus("MCP servers are still connecting; their tools become available once connected.")
-			}
-			_ = app.session.AttachExtraTools(manager.DirectTools())
-			for _, message := range manager.ConnectionErrors() {
-				app.showWarning(message)
-			}
-		})
+		app.wireMcpManager(manager)
 	}
 	// Upstream's renderInitialMessages draws the untrusted-project warning, so the
 	// warning appears at startup and again whenever the transcript is rebuilt.
@@ -903,6 +900,82 @@ func (a *App) showWarning(message string) {
 		return
 	}
 	a.transcript.ShowStatus(message)
+}
+
+// wireMcpManager installs the live wiring of one manager into the session:
+// rebuilds attach the tools (posted to the loop), the first turn waits bounded
+// for the direct-tool servers then attaches and reports, and the early tool
+// sets activate through AttachSession. Called again after a /reload exchange
+// with the fresh manager.
+func (a *App) wireMcpManager(manager *coding.McpManager) {
+	manager.SetOnToolsChange(func() {
+		a.ui.Post(func() { _ = a.session.AttachExtraTools(manager.DirectTools()) })
+	})
+	manager.AttachSession(a.session.AgentSession)
+	// The first-turn hook is once-per-session: only the manager the first turn
+	// will actually see can own the wait, so install it while no turn ran yet.
+	if !a.session.HasRunFirstTurn() {
+		a.session.SetBeforeFirstTurn(func(ctx context.Context) {
+			if !manager.WaitForDirectTools(ctx, time.Duration(coding.McpStartupWaitMs)*time.Millisecond) {
+				a.transcript.ShowStatus("MCP servers are still connecting; their tools become available once connected.")
+			}
+			_ = a.session.AttachExtraTools(manager.DirectTools())
+			for _, message := range manager.ConnectionErrors() {
+				a.showWarning(message)
+			}
+		})
+	}
+}
+
+// reloadMCP exchanges the session's MCP manager for one built from the re-read
+// config (upstream reload(): the extension's session_start re-runs loadConfig
+// and reconnects). Called off the loop; the wiring posts the rebuilt tools onto
+// the loop through the callbacks registered here.
+func (a *App) reloadMCP(ctx context.Context, cwd string) []string {
+	config := coding.LoadMcpConfig(coding.McpConfigLoadOptions{AgentDir: a.mcpAgentDir, Cwd: cwd, ProjectTrusted: true})
+	var next *coding.McpManager
+	if a.mcpManager == nil {
+		enabled := 0
+		for _, server := range config.Servers {
+			if server.Config.Enabled == nil || *server.Config.Enabled {
+				enabled++
+			}
+		}
+		if enabled == 0 {
+			return config.Errors
+		}
+		next = coding.NewMcpManagerAsync(ctx, a.mcpOptions(config))
+	} else {
+		next = coding.ReloadMCPExchange(ctx, a.mcpManager, func(mcpCtx context.Context, reloaded coding.LoadedMcpConfig) *coding.McpManager {
+			return coding.NewMcpManagerAsync(mcpCtx, a.mcpOptions(reloaded))
+		}, config, nil)
+	}
+	a.mcpManager = next
+	if next != nil {
+		a.wireMcpManager(next)
+	}
+	return config.Errors
+}
+
+// mcpOptions builds a manager option set for the CLI wiring: the config plus
+// the provider-token seam (upstream's providerToken callback, resolved through
+// the runtime the CLI booted). The Cwd is the session's (upstream sessionCwd).
+func (a *App) mcpOptions(config coding.LoadedMcpConfig) coding.McpManagerOptions {
+	runtime := a.runtime
+	return coding.McpManagerOptions{
+		Config: config,
+		Cwd:    a.sessionMgr.GetCwd(),
+		ProviderToken: func(_ context.Context, provider string) (string, error) {
+			if runtime == nil {
+				return "", nil
+			}
+			resolution, err := runtime.GetAuth(provider, nil)
+			if err != nil || resolution == nil {
+				return "", err
+			}
+			return resolution.Auth.APIKey, nil
+		},
+	}
 }
 
 func (a *App) updateEditorBorderColor() {

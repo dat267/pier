@@ -280,7 +280,12 @@ func (s *AgentSession) runAgentPrompt(ctx context.Context, messages []ai.Message
 	hook := s.beforeFirstTurn
 	s.mu.Unlock()
 	if hook != nil {
-		s.firstTurnOnce.Do(func() { hook(ctx) })
+		s.firstTurnOnce.Do(func() {
+			s.mu.Lock()
+			s.firstTurnRan = true
+			s.mu.Unlock()
+			hook(ctx)
+		})
 	}
 	state := s.prompt()
 	state.mu.Lock()

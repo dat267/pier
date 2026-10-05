@@ -1042,10 +1042,19 @@ UI status line. The 1.0.2-era synchronous boot (which cost a full TLS
 handshake before the TUI came up) is gone; the connecting status line (the
 "Connecting to MCP server "name"..." diagnostic) stays.
 
+`/reload` reaches MCP too: the CLI-owned manager is exchanged for one built
+from the re-read config (`ReloadMCPExchange` closes the old connections and
+`NewMcpManagerAsync` restarts them; `AttachSession` re-installs the live
+wiring), matching upstream session_shutdown (reason "reload") ->
+session_start (reason "reload") -> reconnect. The manager re-reads
+`~/.pi/agent/mcp.json` and the trusted project's file on every reload.
+
 Divergences from upstream:
 - Connection failures surface at the first turn's wait completion (print
   stderr, interactive warning) instead of upstream's startup report; the
-  config errors still surface at boot.
+  config errors still surface at boot. After `/reload` they surface in the
+  reload's error report (the status line names "MCP servers" among the
+  reloaded items), mirroring the startup report.
 - No `mcp_servers` system-prompt section: upstream lists the servers whose
   tools are not declared there, which only matters for codemode/deferred
   exposure, and the port does not expose those (D185).
