@@ -907,6 +907,27 @@ func providerTokenForMCP(runtime *coding.ModelRuntime, provider string) (string,
 	return "", nil
 }
 
+// mcpStatusWriter is the stderr seam the connecting status prints to (tests
+// capture it instead of writing the real terminal).
+var mcpStatusWriter io.Writer = os.Stderr
+
+// printMCPConnectingStatus names the servers the boot is about to connect to,
+// singular quoted name for one and a counted list for several (matching the
+// "MCP server \"name\" failed to connect" phrasing of the error reports).
+func printMCPConnectingStatus(w io.Writer, names []string) {
+	if len(names) == 0 {
+		return
+	}
+	var message string
+	if len(names) == 1 {
+		message = "Connecting to MCP server \"" + names[0] + "\"..."
+	} else {
+		message = fmt.Sprintf("Connecting to %d MCP servers: %s...", len(names), strings.Join(names, ", "))
+	}
+	// An untyped diagnostic renders dim with no prefix: status, not a problem.
+	fmt.Fprintln(w, coding.FormatCLIDiagnostic(coding.CLIDiagnostic{Type: "status", Message: message}))
+}
+
 // setupMCPServers loads mcp.json and connects the enabled servers, returning
 // the manager (nil when nothing is configured), the direct-exposure tools and
 // every config or connection error.
@@ -918,15 +939,18 @@ func setupMCPServers(
 	trusted bool,
 ) (*coding.McpManager, []agent.AgentTool, []string) {
 	config := coding.LoadMcpConfig(coding.McpConfigLoadOptions{AgentDir: agentDir, Cwd: cwd, ProjectTrusted: trusted})
-	enabled := 0
+	enabledNames := []string{}
 	for _, server := range config.Servers {
 		if server.Config.Enabled == nil || *server.Config.Enabled {
-			enabled++
+			enabledNames = append(enabledNames, server.Name)
 		}
 	}
-	if enabled == 0 {
+	if len(enabledNames) == 0 {
 		return nil, nil, config.Errors
 	}
+	// The connect is synchronous and can take seconds over TLS, so name what
+	// the wait is before it starts (the TUI is not up yet in interactive mode).
+	printMCPConnectingStatus(mcpStatusWriter, enabledNames)
 	manager := coding.NewMcpManager(ctx, coding.McpManagerOptions{
 		Config: config,
 		Cwd:    cwd,

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
@@ -91,5 +92,65 @@ func writeMCPConfig(t *testing.T, agentDir string, content string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(agentDir, "mcp.json"), []byte(content), 0o644); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// TestPrintMCPConnectingStatus pins the startup status line: the wait before
+// the TUI is the synchronous MCP connect, so the CLI names what it is
+// connecting to (singular quoted name, plural count + list, none silent).
+func TestPrintMCPConnectingStatus(t *testing.T) {
+	var buf bytes.Buffer
+	printMCPConnectingStatus(&buf, nil)
+	if buf.Len() != 0 {
+		t.Fatalf("no servers: wrote %q", buf.String())
+	}
+
+	buf.Reset()
+	printMCPConnectingStatus(&buf, []string{"deepwiki"})
+	if got := buf.String(); !strings.Contains(got, `Connecting to MCP server "deepwiki"`) {
+		t.Fatalf("single: got %q", got)
+	}
+
+	buf.Reset()
+	printMCPConnectingStatus(&buf, []string{"a", "b"})
+	if got := buf.String(); !strings.Contains(got, "Connecting to 2 MCP servers: a, b") {
+		t.Fatalf("plural: got %q", got)
+	}
+}
+
+// TestSetupMCPServersPrintsConnectingStatus covers the wiring: an enabled
+// server prints the line; a disabled one does not.
+func TestSetupMCPServersPrintsConnectingStatus(t *testing.T) {
+	agentDir := t.TempDir()
+	cwd := t.TempDir()
+
+	var buf bytes.Buffer
+	restored := false
+	mcpStatusWriter = &buf
+	defer func() {
+		if !restored {
+			mcpStatusWriter = os.Stderr
+		}
+	}()
+
+	writeMCPConfig(t, agentDir, `{"mcpServers":{"deepwiki":{"url":"https://mcp.deepwiki.invalid/mcp"}}}`)
+	manager, _, _ := setupMCPServers(context.Background(), nil, agentDir, cwd, false)
+	if manager != nil {
+		_ = manager.Close(context.Background())
+	}
+	if !strings.Contains(buf.String(), `Connecting to MCP server "deepwiki"`) {
+		t.Fatalf("enabled server: got %q", buf.String())
+	}
+
+	restored = true
+	mcpStatusWriter = os.Stderr
+	buf.Reset()
+	writeMCPConfig(t, agentDir, `{"mcpServers":{"off":{"command":"/nonexistent/pier-mcp-test","enabled":false}}}`)
+	manager, _, _ = setupMCPServers(context.Background(), nil, agentDir, cwd, false)
+	if manager != nil {
+		_ = manager.Close(context.Background())
+	}
+	if buf.Len() != 0 {
+		t.Fatalf("disabled server: wrote %q", buf.String())
 	}
 }
