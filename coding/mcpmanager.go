@@ -108,8 +108,11 @@ func newMcpManager(ctx context.Context, options McpManagerOptions) (*McpManager,
 		}()
 	}
 	// The connections publish before any can settle, so both variants see the
-	// full set immediately (the sync variant then waits them out).
+	// full set immediately; the write takes the manager mutex because a connect
+	// goroutine can settle and call rebuildTools before this returns.
+	manager.mu.Lock()
 	manager.connections = connections
+	manager.mu.Unlock()
 	return manager, &wait
 }
 
@@ -149,7 +152,10 @@ func (m *McpManager) Errors() []string {
 func (m *McpManager) ConnectionErrors() []string {
 	var errors []string
 	for _, connection := range m.Connections() {
-		if connection.State == McpServerFailed && connection.Error != "" {
+		connection.mu.Lock()
+		failed := connection.State == McpServerFailed && connection.Error != ""
+		connection.mu.Unlock()
+		if failed {
 			errors = append(errors, "MCP server \""+connection.Name()+"\" failed to connect: "+connection.Error)
 		}
 	}
@@ -173,7 +179,10 @@ func (m *McpManager) rebuildTools() {
 	taken := map[string]bool{}
 	tools := []agent.AgentTool{}
 	for _, connection := range connections {
-		if connection.State != McpServerConnected {
+		connection.mu.Lock()
+		connected := connection.State == McpServerConnected
+		connection.mu.Unlock()
+		if !connected {
 			continue
 		}
 		name := connection.Name()
