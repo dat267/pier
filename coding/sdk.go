@@ -47,6 +47,10 @@ type CreateAgentSessionOptions struct {
 	// (upstream registers extension tools in the same registry). Not a
 	// built-in: process-local seam for the CLI's MCP wiring (D185).
 	ExtraTools []agent.AgentTool
+	// BeforeFirstTurn runs once before the session's first agent turn
+	// (upstream before_agent_start, where the MCP extension waits for the
+	// direct-tool servers); print mode installs the MCP wait here.
+	BeforeFirstTurn func(ctx context.Context)
 	// NoTools disables the default set. NoToolsAll disables every tool;
 	// NoToolsBuiltin disables the built-ins while leaving the registry in
 	// place for caller-supplied tools. Any other non-empty value behaves like
@@ -484,6 +488,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		FollowUpMode:      settingsManager.GetFollowUpMode(),
 		Transport:         ai.Transport(settingsManager.GetTransport()),
 		ThinkingBudgets:   thinkingBudgetsOf(settingsManager.GetThinkingBudgets()),
+		BeforeFirstTurn:   options.BeforeFirstTurn,
 		MaxRetryDelayMS:   &maxRetryDelay,
 	})
 	sessionForTools = session

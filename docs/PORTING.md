@@ -236,11 +236,14 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   `extensions/mcp/runtime.ts` (`coding/mcpruntime.go`, `coding/mcpmanager.go`:
   connections with lazy reconnect, HTTP connect retries, session-expiry retry,
   the 401 -> needs-auth path, tool/resource list refresh, default
-  stdio/streamable-HTTP transports). The CLI loads the config and injects the
-  `direct`-exposure tools through `CreateAgentSessionOptions.ExtraTools`
-  (D185 covers what is not ported: the extension registry, codemode and
-  `tool_search` exposure, `/mcp` sign-in and status UI, resource reads, and a
-  durable OAuth store).
+  stdio/streamable-HTTP transports). The CLI starts the connections in the
+  background at boot (`NewMcpManagerAsync`), waits once at the first turn for
+  the direct-tool servers (bounded by `McpStartupWaitMs`, upstream
+  `DEFAULT_STARTUP_WAIT_MS`), and attaches the late tools to the live session
+  (`AgentSession.AttachExtraTools`, the once-per-session `BeforeFirstTurn`
+  hook at `runAgentPrompt`; D195). D185 covers what is not ported: the
+  extension registry, codemode and `tool_search` exposure, `/mcp` sign-in and
+  status UI, resource reads, and a durable OAuth store.
 - `durable`: the port's Storage surface (conversation/entry/task/submission)
   uses upstream's submission record shape (`SubmissionRecord` with its own
   `type`, `SubmissionCreate`/`SubmissionSettlement`, `submission`/

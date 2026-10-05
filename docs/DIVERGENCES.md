@@ -1022,3 +1022,32 @@ line.
 Cost: a running shell call repaints the loop at 10fps. The label renders one
 line, and the tool's `AnimationTick` is the narrow bump (D190), but the whole
 screen still paints per frame.
+
+## D195. The MCP connect is asynchronous and the tools attach to the live session
+
+Upstream's MCP extension (packages/coding-agent/src/extensions/mcp/index.ts)
+starts every configured connection at boot without blocking the boot, waits
+once at `before_agent_start` for the servers whose tools are declared to the
+model (`hasDirectTools`: the configured exposures contain "direct"), races
+that wait against `DEFAULT_STARTUP_WAIT_MS` (10s), and reports "MCP servers
+are still connecting; their tools become available once connected." when the
+cap expires. Its tools register into the live registry as they connect.
+
+The port matches the design: `NewMcpManagerAsync` starts the connections and
+returns; the session gained a once-per-session `BeforeFirstTurn` hook (fired
+at the first `runAgentPrompt`, the `before_agent_start` equivalent) and
+`AttachExtraTools` registers and activates the late tools. Print mode waits
+in the same hook and reports to stderr; interactive mode reports through the
+UI status line. The 1.0.2-era synchronous boot (which cost a full TLS
+handshake before the TUI came up) is gone; the connecting status line (the
+"Connecting to MCP server "name"..." diagnostic) stays.
+
+Divergences from upstream:
+- Connection failures surface at the first turn's wait completion (print
+  stderr, interactive warning) instead of upstream's startup report; the
+  config errors still surface at boot.
+- No `mcp_servers` system-prompt section: upstream lists the servers whose
+  tools are not declared there, which only matters for codemode/deferred
+  exposure, and the port does not expose those (D185).
+- `WaitForDirectTools` polls connection state (20ms) instead of awaiting the
+  ready promises; equivalent observation, no shared future.

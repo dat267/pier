@@ -210,6 +210,11 @@ type AgentSession struct {
 	// db6cc71dc).
 	usesDefaultTools  bool
 	excludedToolNames map[string]bool
+
+	// beforeFirstTurn runs once before the first agent turn (upstream
+	// before_agent_start; the MCP first-prompt wait installs here).
+	beforeFirstTurn func(ctx context.Context)
+	firstTurnOnce   sync.Once
 }
 
 type sessionListenerKey struct {
@@ -269,6 +274,20 @@ type SessionConfig struct {
 	Transport       ai.Transport
 	ThinkingBudgets *ai.ThinkingBudgets
 	MaxRetryDelayMS *int
+	// BeforeFirstTurn runs once before the first agent turn starts (upstream
+	// before_agent_start, where the MCP extension awaits the direct-tool
+	// servers, bounded). The caller owns the wait; long work here delays the
+	// first request by design.
+	BeforeFirstTurn func(ctx context.Context)
+}
+
+// SetBeforeFirstTurn installs the once-per-session pre-turn hook (the
+// interactive mode wires the MCP first-prompt wait after session creation;
+// a turn that already ran never sees it).
+func (s *AgentSession) SetBeforeFirstTurn(hook func(ctx context.Context)) {
+	s.mu.Lock()
+	s.beforeFirstTurn = hook
+	s.mu.Unlock()
 }
 
 // NewAgentSession builds the wired session.
@@ -346,6 +365,7 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 		agentDir:          config.AgentDir,
 		usesDefaultTools:  config.UsesDefaultTools,
 		excludedToolNames: excludedToolNameSet(config.ExcludedToolNames),
+		beforeFirstTurn:   config.BeforeFirstTurn,
 	}
 	if config.PromptSources != nil {
 		s.promptSources = *config.PromptSources

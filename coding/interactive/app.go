@@ -64,6 +64,11 @@ type AppOptions struct {
 	Runtime     *coding.ModelRuntime
 	SessionMgr  *coding.SessionManager
 	Keybindings *AppKeybindingsManager
+	// MCP is the session's MCP manager (nil when nothing is configured). Its
+	// connections started before the app; the app wires the first-turn wait
+	// and attaches the late tools to the live session (upstream's extension
+	// registers its tools as they connect).
+	MCP *coding.McpManager
 
 	// Offloop is the command's off-loop queue group. The app registers its own
 	// queues (theme, pre-render) here and StopMode stops them all at teardown;
@@ -385,6 +390,23 @@ func NewApp(options AppOptions) *App {
 	app.transcript.Editor = app.defaultEditor
 	app.transcript.Display = app.display
 	app.transcript.MarkdownTheme = app.markdownTheme()
+	// The MCP wiring: the first turn waits for the direct-tool servers (bounded,
+	// upstream DEFAULT_STARTUP_WAIT_MS), attaches whatever connected, reports
+	// the connection failures, and every later tool-set change attaches live.
+	if manager := options.MCP; manager != nil {
+		manager.SetOnToolsChange(func() {
+			app.ui.Post(func() { _ = app.session.AttachExtraTools(manager.DirectTools()) })
+		})
+		app.session.SetBeforeFirstTurn(func(ctx context.Context) {
+			if !manager.WaitForDirectTools(ctx, time.Duration(coding.McpStartupWaitMs)*time.Millisecond) {
+				app.transcript.ShowStatus("MCP servers are still connecting; their tools become available once connected.")
+			}
+			_ = app.session.AttachExtraTools(manager.DirectTools())
+			for _, message := range manager.ConnectionErrors() {
+				app.showWarning(message)
+			}
+		})
+	}
 	// Upstream's renderInitialMessages draws the untrusted-project warning, so the
 	// warning appears at startup and again whenever the transcript is rebuilt.
 	if app.trust != nil {

@@ -551,6 +551,7 @@ func (s *AgentSession) RestoreToolsFromTranscript() {
 	if current == nil {
 		return
 	}
+	s.control.stateMu.Lock()
 	var toolNames []string
 	var tools []agentTool
 	for _, tool := range current.ToolsAdded {
@@ -561,6 +562,7 @@ func (s *AgentSession) RestoreToolsFromTranscript() {
 		toolNames = append(toolNames, tool.Name)
 		tools = append(tools, entry.Tool)
 	}
+	s.control.stateMu.Unlock()
 	s.Agent.SetTools(tools)
 	s.RebuildSystemPrompt(toolNames)
 }

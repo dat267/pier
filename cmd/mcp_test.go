@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/coding"
 )
@@ -18,42 +19,51 @@ func TestSetupMCPServers(t *testing.T) {
 	cwd := t.TempDir()
 
 	// No mcp.json: nothing configured, no manager.
-	manager, tools, errors := setupMCPServers(context.Background(), nil, agentDir, cwd, false)
-	if manager != nil || tools != nil || len(errors) != 0 {
-		t.Fatalf("unconfigured: manager=%v tools=%v errors=%v", manager, tools, errors)
+	manager, errors := startMCPServers(context.Background(), nil, agentDir, cwd, false)
+	if manager != nil || len(errors) != 0 {
+		t.Fatalf("unconfigured: manager=%v errors=%v", manager, errors)
 	}
 
 	// An invalid entry is reported and no server is registered.
 	writeMCPConfig(t, agentDir, `{"mcpServers":{"bad name":{"command":"x"}}}`)
-	manager, tools, errors = setupMCPServers(context.Background(), nil, agentDir, cwd, false)
-	if manager != nil || tools != nil {
-		t.Fatalf("invalid config: manager=%v tools=%v", manager, tools)
+	manager, errors = startMCPServers(context.Background(), nil, agentDir, cwd, false)
+	if manager != nil {
+		t.Fatalf("invalid config: manager=%v", manager)
 	}
 	if len(errors) != 1 || !strings.Contains(errors[0], `invalid server name "bad name"`) {
 		t.Fatalf("errors = %v", errors)
 	}
 
 	// A server whose command cannot run fails to connect; the manager keeps
-	// the connection and reports it, and exposes no tools.
+	// the connection and reports it, and exposes no tools. The connect runs in
+	// the background, so the failure surfaces on the connection, not in the
+	// boot-time errors (which are config errors only).
 	writeMCPConfig(t, agentDir, `{"mcpServers":{"broken":{"command":"/nonexistent/pier-mcp-test"}}}`)
-	manager, tools, errors = setupMCPServers(context.Background(), nil, agentDir, cwd, false)
+	manager, errors = startMCPServers(context.Background(), nil, agentDir, cwd, false)
 	if manager == nil {
 		t.Fatal("missing manager")
 	}
 	broken := manager
 	defer func() { _ = broken.Close(context.Background()) }()
-	if len(tools) != 0 {
-		t.Fatalf("tools = %+v", tools)
+	if len(errors) != 0 {
+		t.Fatalf("boot errors = %v", errors)
 	}
-	if len(errors) != 1 || !strings.Contains(errors[0], "failed to connect") {
-		t.Fatalf("errors = %v", errors)
+	deadline := time.Now().Add(10 * time.Second)
+	for len(broken.ConnectionErrors()) == 0 && time.Now().Before(deadline) {
+		time.Sleep(20 * time.Millisecond)
+	}
+	if connectionErrors := broken.ConnectionErrors(); len(connectionErrors) != 1 || !strings.Contains(connectionErrors[0], "failed to connect") {
+		t.Fatalf("connection errors = %v", connectionErrors)
+	}
+	if len(broken.DirectTools()) != 0 {
+		t.Fatalf("tools = %+v", broken.DirectTools())
 	}
 
 	// A disabled server is not connected.
 	writeMCPConfig(t, agentDir, `{"mcpServers":{"off":{"command":"/nonexistent/pier-mcp-test","enabled":false}}}`)
-	manager, tools, errors = setupMCPServers(context.Background(), nil, agentDir, cwd, false)
-	if manager != nil || tools != nil || len(errors) != 0 {
-		t.Fatalf("disabled: manager=%v tools=%v errors=%v", manager, tools, errors)
+	manager, errors = startMCPServers(context.Background(), nil, agentDir, cwd, false)
+	if manager != nil || len(errors) != 0 {
+		t.Fatalf("disabled: manager=%v errors=%v", manager, errors)
 	}
 }
 
@@ -69,12 +79,13 @@ func TestSetupMCPServersProjectScope(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Untrusted: the project file is ignored.
-	manager, _, errors := setupMCPServers(context.Background(), nil, agentDir, cwd, false)
+	manager, errors := startMCPServers(context.Background(), nil, agentDir, cwd, false)
 	if manager != nil || len(errors) != 0 {
 		t.Fatalf("untrusted: manager=%v errors=%v", manager, errors)
 	}
-	// Trusted: it is loaded (and the server fails to start, which is reported).
-	manager, _, errors = setupMCPServers(context.Background(), nil, agentDir, cwd, true)
+	// Trusted: it is loaded (and the server fails to start, which is reported
+	// on the connection once the background connect settles).
+	manager, errors = startMCPServers(context.Background(), nil, agentDir, cwd, true)
 	if manager == nil {
 		t.Fatal("trusted project config ignored")
 	}
@@ -83,8 +94,12 @@ func TestSetupMCPServersProjectScope(t *testing.T) {
 	if len(manager.Connections()) != 1 || manager.Connections()[0].Name() != "proj" {
 		t.Fatalf("connections = %+v", manager.Connections())
 	}
-	if len(errors) != 1 || !strings.Contains(errors[0], "failed to connect") {
-		t.Fatalf("errors = %v", errors)
+	deadline := time.Now().Add(10 * time.Second)
+	for len(manager.ConnectionErrors()) == 0 && time.Now().Before(deadline) {
+		time.Sleep(20 * time.Millisecond)
+	}
+	if connectionErrors := manager.ConnectionErrors(); len(connectionErrors) != 1 || !strings.Contains(connectionErrors[0], "failed to connect") {
+		t.Fatalf("connection errors = %v", connectionErrors)
 	}
 }
 
@@ -95,9 +110,10 @@ func writeMCPConfig(t *testing.T, agentDir string, content string) {
 	}
 }
 
-// TestPrintMCPConnectingStatus pins the startup status line: the wait before
-// the TUI is the synchronous MCP connect, so the CLI names what it is
-// connecting to (singular quoted name, plural count + list, none silent).
+// TestPrintMCPConnectingStatus pins the startup status line: the connect runs
+// in the background while the boot continues, so the CLI names what it is
+// connecting to when it starts it (singular quoted name, plural count + list,
+// none silent).
 func TestPrintMCPConnectingStatus(t *testing.T) {
 	var buf bytes.Buffer
 	printMCPConnectingStatus(&buf, nil)
@@ -134,7 +150,7 @@ func TestSetupMCPServersPrintsConnectingStatus(t *testing.T) {
 	}()
 
 	writeMCPConfig(t, agentDir, `{"mcpServers":{"deepwiki":{"url":"https://mcp.deepwiki.invalid/mcp"}}}`)
-	manager, _, _ := setupMCPServers(context.Background(), nil, agentDir, cwd, false)
+	manager, _ := startMCPServers(context.Background(), nil, agentDir, cwd, false)
 	if manager != nil {
 		_ = manager.Close(context.Background())
 	}
@@ -146,7 +162,7 @@ func TestSetupMCPServersPrintsConnectingStatus(t *testing.T) {
 	mcpStatusWriter = os.Stderr
 	buf.Reset()
 	writeMCPConfig(t, agentDir, `{"mcpServers":{"off":{"command":"/nonexistent/pier-mcp-test","enabled":false}}}`)
-	manager, _, _ = setupMCPServers(context.Background(), nil, agentDir, cwd, false)
+	manager, _ = startMCPServers(context.Background(), nil, agentDir, cwd, false)
 	if manager != nil {
 		_ = manager.Close(context.Background())
 	}

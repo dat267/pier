@@ -384,6 +384,8 @@ func (s *AgentSession) GetActiveToolNames() []string {
 
 // GetAllTools lists every configured tool with its metadata.
 func (s *AgentSession) GetAllTools() []ToolInfo {
+	s.control.stateMu.Lock()
+	defer s.control.stateMu.Unlock()
 	if len(s.control.Tools) == 0 {
 		return nil
 	}
@@ -408,6 +410,8 @@ func (s *AgentSession) GetAllTools() []ToolInfo {
 
 // GetToolDefinition returns a registered tool by name.
 func (s *AgentSession) GetToolDefinition(name string) *agent.AgentTool {
+	s.control.stateMu.Lock()
+	defer s.control.stateMu.Unlock()
 	entry, ok := s.control.Tools[name]
 	if !ok {
 		return nil
@@ -415,9 +419,47 @@ func (s *AgentSession) GetToolDefinition(name string) *agent.AgentTool {
 	return &entry.Tool
 }
 
+// AttachExtraTools registers caller-supplied tools (the MCP manager's direct
+// set) into the live session and activates the new names (upstream registers
+// the extension's tools as they connect, so a session started before a server
+// answered still gets the tools). Names already registered or excluded are
+// skipped; the returned list is what was newly added.
+func (s *AgentSession) AttachExtraTools(tools []agent.AgentTool) []string {
+	s.control.stateMu.Lock()
+	added := make([]string, 0, len(tools))
+	for _, tool := range tools {
+		if tool.Name == "" {
+			continue
+		}
+		if _, ok := s.control.Tools[tool.Name]; ok {
+			continue
+		}
+		s.control.Tools[tool.Name] = AgentToolDefinition{Tool: tool}
+		added = append(added, tool.Name)
+	}
+	s.control.stateMu.Unlock()
+	if len(added) == 0 {
+		return nil
+	}
+	names := append([]string{}, s.ActiveToolNames()...)
+	names = append(names, added...)
+	filtered := make([]string, 0, len(names))
+	seen := map[string]bool{}
+	for _, name := range names {
+		if seen[name] || s.excludedToolNames[name] {
+			continue
+		}
+		seen[name] = true
+		filtered = append(filtered, name)
+	}
+	s.SetActiveToolsByName(filtered)
+	return added
+}
+
 // SetActiveToolsByName enables the named registry tools (unknown names are
 // ignored) and rebuilds the system prompt.
 func (s *AgentSession) SetActiveToolsByName(names []string) {
+	s.control.stateMu.Lock()
 	tools := make([]agent.AgentTool, 0, len(names))
 	validNames := make([]string, 0, len(names))
 	for _, name := range names {
@@ -428,6 +470,7 @@ func (s *AgentSession) SetActiveToolsByName(names []string) {
 		tools = append(tools, entry.Tool)
 		validNames = append(validNames, name)
 	}
+	s.control.stateMu.Unlock()
 	s.Agent.SetTools(tools)
 	s.RebuildSystemPrompt(validNames)
 }
@@ -487,10 +530,12 @@ func (s *AgentSession) preparePromptAndToolLoadout() *ai.SystemMessage {
 		return nil
 	}
 
+	s.control.stateMu.Lock()
 	tools := make([]agent.AgentTool, 0, len(options.SelectedTools))
 	for _, name := range options.SelectedTools {
 		tools = append(tools, s.control.Tools[name].Tool)
 	}
+	s.control.stateMu.Unlock()
 	s.Agent.SetTools(tools)
 
 	previous := map[string]string{}

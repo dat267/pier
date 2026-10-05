@@ -273,6 +273,15 @@ func (s *AgentSession) validateModelAuth(ctx context.Context) error {
 // runAgentPrompt runs one agent prompt with the run-active flag and idle
 // resolution.
 func (s *AgentSession) runAgentPrompt(ctx context.Context, messages []ai.Message) error {
+	// The once-per-session pre-turn hook (upstream before_agent_start): the
+	// MCP first-prompt wait installs here, so the first request carries the
+	// tools that connected in time.
+	s.mu.Lock()
+	hook := s.beforeFirstTurn
+	s.mu.Unlock()
+	if hook != nil {
+		s.firstTurnOnce.Do(func() { hook(ctx) })
+	}
 	state := s.prompt()
 	state.mu.Lock()
 	state.runActive = true

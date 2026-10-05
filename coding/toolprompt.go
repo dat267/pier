@@ -32,6 +32,8 @@ var builtinToolPromptGuidelines = map[string][]string{
 // registered tool (upstream `_rebuildSystemPrompt`'s toolSnippets and
 // toolGuidelines).
 func (s *AgentSession) toolPromptContributions() (map[string]string, map[string][]string) {
+	s.control.stateMu.Lock()
+	defer s.control.stateMu.Unlock()
 	snippets := map[string]string{}
 	guidelines := map[string][]string{}
 	for name := range s.control.Tools {

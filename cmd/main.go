@@ -21,8 +21,8 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
-	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/coding/interactive"
@@ -365,10 +365,12 @@ func run(appName string, args *coding.Args) error {
 	}
 
 	// MCP servers: the agent directory's mcp.json plus, for a trusted project,
-	// its .pi/mcp.json (upstream loads them during extension setup). Their
-	// direct-exposure tools join the built-ins below; a config or connection
-	// failure is a startup warning, never a boot failure.
-	mcpManager, mcpTools, mcpErrors := setupMCPServers(ctx, runtime, agentDir, runtimeCwd, trusted)
+	// its .pi/mcp.json (upstream loads them during extension setup). The
+	// connections start here and run in the background: the boot does not wait
+	// for them (upstream's extension connects asynchronously), so the TUI comes
+	// up immediately. The first turn waits for the direct-tool servers instead
+	// (bounded, McpStartupWaitMs), and late tools attach to the live session.
+	mcpManager, mcpErrors := startMCPServers(ctx, runtime, agentDir, runtimeCwd, trusted)
 	if mcpManager != nil {
 		defer func() { _ = mcpManager.Close(context.Background()) }()
 	}
@@ -380,6 +382,29 @@ func run(appName string, args *coding.Args) error {
 	// exercise: --tools/--exclude-tools pass through and --no-tools /
 	// --no-builtin-tools map onto the noTools option.
 	tools := args.ToolSelection()
+
+	// Print mode waits for the direct-tool servers at the first turn (upstream
+	// waits inside before_agent_start, print mode included), attaches whatever
+	// connected, and reports the connection failures; the interactive mode
+	// wires the same wait with UI notification (AppOptions.MCP).
+	var mcpSession *coding.AgentSession
+	var beforeFirstTurn func(ctx context.Context)
+	if mcpManager != nil && printMode {
+		beforeFirstTurn = func(mcpCtx context.Context) {
+			if !mcpManager.WaitForDirectTools(mcpCtx, time.Duration(coding.McpStartupWaitMs)*time.Millisecond) {
+				fmt.Fprintln(os.Stderr, coding.FormatCLIDiagnostic(coding.CLIDiagnostic{
+					Type:    "status",
+					Message: "MCP servers are still connecting; their tools become available once connected.",
+				}))
+			}
+			if session := mcpSession; session != nil {
+				session.AttachExtraTools(mcpManager.DirectTools())
+			}
+			for _, message := range mcpManager.ConnectionErrors() {
+				fmt.Fprintln(os.Stderr, coding.FormatCLIDiagnostic(coding.CLIDiagnostic{Type: "warning", Message: message}))
+			}
+		}
+	}
 	created, err := coding.CreateAgentSession(ctx, &coding.CreateAgentSessionOptions{
 		Cwd:             runtimeCwd,
 		AgentDir:        agentDir,
@@ -396,8 +421,9 @@ func run(appName string, args *coding.Args) error {
 		Tools:        tools.Tools,
 		ExcludeTools: tools.ExcludeTools,
 		NoTools:      tools.NoTools,
-		// MCP tools, selectable by name like the built-ins.
-		ExtraTools: mcpTools,
+		// The print mode's MCP first-turn wait (the interactive mode wires its
+		// own through the app).
+		BeforeFirstTurn: beforeFirstTurn,
 		// Model cycle scope (--models, or the settings' enabled models).
 		ScopedModels: scopedModels,
 		// Resource flags: explicit skill directories (resolved against cwd, as
@@ -412,6 +438,7 @@ func run(appName string, args *coding.Args) error {
 	if err != nil {
 		return err
 	}
+	mcpSession = created.Session
 	coding.Time("createAgentSession", coding.TimingMain)
 
 	// --api-key pins the credential for this run. It needs a model to attach to,
@@ -481,6 +508,7 @@ func run(appName string, args *coding.Args) error {
 		SessionMgr:   sessions,
 		Offloop:      offloopGroup,
 		Offline:      args.Offline,
+		MCP:          mcpManager,
 		// The first message carries any @file text ahead of the first positional
 		// message; the rest stay queued behind it.
 		InitialMessage:       initialPrompt.Message,
@@ -928,16 +956,18 @@ func printMCPConnectingStatus(w io.Writer, names []string) {
 	fmt.Fprintln(w, coding.FormatCLIDiagnostic(coding.CLIDiagnostic{Type: "status", Message: message}))
 }
 
-// setupMCPServers loads mcp.json and connects the enabled servers, returning
-// the manager (nil when nothing is configured), the direct-exposure tools and
-// every config or connection error.
-func setupMCPServers(
+// startMCPServers loads mcp.json, names the servers it is about to connect to,
+// and starts the enabled connections in the background (upstream's extension
+// connects asynchronously), returning the manager (nil when nothing is
+// configured) and the config errors. The direct tools are collected later: at
+// the first turn's bounded wait, or live via OnToolsChange.
+func startMCPServers(
 	ctx context.Context,
 	runtime *coding.ModelRuntime,
 	agentDir string,
 	cwd string,
 	trusted bool,
-) (*coding.McpManager, []agent.AgentTool, []string) {
+) (*coding.McpManager, []string) {
 	config := coding.LoadMcpConfig(coding.McpConfigLoadOptions{AgentDir: agentDir, Cwd: cwd, ProjectTrusted: trusted})
 	enabledNames := []string{}
 	for _, server := range config.Servers {
@@ -946,17 +976,18 @@ func setupMCPServers(
 		}
 	}
 	if len(enabledNames) == 0 {
-		return nil, nil, config.Errors
+		return nil, config.Errors
 	}
-	// The connect is synchronous and can take seconds over TLS, so name what
-	// the wait is before it starts (the TUI is not up yet in interactive mode).
+	// The connect is network-bound and can take seconds over TLS, so name what
+	// is being connected to while it runs (the TUI is not up yet in
+	// interactive mode).
 	printMCPConnectingStatus(mcpStatusWriter, enabledNames)
-	manager := coding.NewMcpManager(ctx, coding.McpManagerOptions{
+	manager := coding.NewMcpManagerAsync(ctx, coding.McpManagerOptions{
 		Config: config,
 		Cwd:    cwd,
 		ProviderToken: func(_ context.Context, provider string) (string, error) {
 			return providerTokenForMCP(runtime, provider)
 		},
 	})
-	return manager, manager.DirectTools(), manager.Errors()
+	return manager, config.Errors
 }
