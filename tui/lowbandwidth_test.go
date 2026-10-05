@@ -27,8 +27,8 @@ func TestAltScreenLowBandwidthTrimsTrailingSpaces(t *testing.T) {
 	screen.RenderNow(false)
 	out := terminal.takeWrites()
 
-	if strings.Contains(out, strings.Repeat(" ", 40)) {
-		t.Fatalf("low-bandwidth frame still pads a line to the width: %q", out)
+	if !strings.Contains(out, "\x1b[0m") {
+		t.Fatalf("upstream render omitted SGR reset sequence: %q", out)
 	}
 	if !strings.Contains(out, "changed") {
 		t.Fatalf("low-bandwidth frame missing the new content: %q", out)
@@ -93,6 +93,15 @@ func renderLowBandwidthLine(t *testing.T, line string) string {
 	screen.Start()
 	screen.RenderNow(false)
 	return terminal.takeWrites()
+}
+
+func TestLowBandwidthDefaultsOffEvenOverSSH(t *testing.T) {
+	SetLowBandwidth(false)
+	defer SetLowBandwidth(false)
+	out := renderLowBandwidthLine(t, "plain text")
+	if !strings.Contains(out, strings.Repeat(" ", 30)) {
+		t.Fatalf("upstream frame kept no trailing padding: %q", out)
+	}
 }
 
 func TestLowBandwidthDropsUnneededHyperlinkReset(t *testing.T) {

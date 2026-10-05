@@ -155,15 +155,10 @@ Stage 2 (rendering on the loop) has landed:
   `TestAnimationScanCacheIsDroppedByAPaint`,
   `TestAltScreenMouseMoveRequestsNoRender`,
   `TestVisibleWidthStyledTextMatchesPlainText`.
-- **D163 low bandwidth over SSH.** Styled rows carry trailing padding to the
-  viewport width; over SSH those cells are bytes on the wire (one keystroke
-  measured 127 bytes, ~77 of them padding). When `SSH_CONNECTION`/`SSH_TTY` is
-  set (or `PIER_LOW_BANDWIDTH=1`; `=0` forces the upstream form),
-  `tui.SetLowBandwidth` makes both `AltScreen` and `MainScreen` trim trailing
-  spaces and skip a `[2K` the new row covers or the full-screen clear already
-  did. The visible result is identical; the keystroke frame drops to 48 bytes
-  (−62%). Default off, so the upstream-parity goldens keep asserting the padded
-  bytes. `ConfigureLowBandwidth` (called from `cmd`) is the boot hook.
+- **D163 upstream-parity rendering.** Interactive startup does not enable
+  low-bandwidth rendering. `tui.SetLowBandwidth` remains available to explicit
+  renderer clients, but SSH sessions receive the upstream padded frame output.
+  SSH Escape timeout and wheel acceleration follow upstream behavior.
 - **D165 terminal theme detection is a deferred listener, not a query.** The UI
   loop is the only dispatcher of terminal replies, so upstream's synchronous
   `queryTerminalBackgroundColor` can never complete on the loop (it always times

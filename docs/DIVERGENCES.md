@@ -558,18 +558,10 @@ only as the code comment that introduced them. The range is **D1–D189**.
   ignored (D153); extensions and the runtime-rebind plumbing upstream carries
   are out of scope (D41).
 
-- D163 — **the renderer trims trailing padding over a remote shell**. Upstream
-  pads every styled line to the viewport width and emits the padding, so an
-  editor keystroke writes roughly a full row per changed row. Over SSH those
-  cells are bytes on the wire (and this project's SSH users feel it): measured
-  on the port, one keystroke cost 127 bytes, of which ~77 were trailing spaces
-  after the visible text. When `SSH_CONNECTION`/`SSH_TTY` is set (or
-  `PIER_LOW_BANDWIDTH=1`; `=0` forces the upstream form), the renderer trims
-  trailing spaces from each emitted row, relies on the per-row `[2K` (already
-  emitted) to clear the remainder, and skips the `[2K` when the new row is at
-  least as wide as the old one or after a full-screen clear. The visible result
-  is identical; the same keystroke drops to 48 bytes (−62%). The default path is
-  untouched so the upstream-parity goldens keep asserting the padded bytes.
+- D163 — **renderer low-bandwidth mode**. Retained as port history: this mode
+  was removed for upstream parity. SSH rendering now uses upstream's padded
+  frame output; SSH Escape timeout and wheel-scroll behavior remain aligned
+  with pi's `packages/tui/src/terminal.ts` and `wheel-scroll.ts`.
 
 - D164 — **input paints only when the dispatch asked for one**. The interactive
   loop's input arms used to call `paint()` for every raw stdin chunk. Fullscreen
