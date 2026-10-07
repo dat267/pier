@@ -433,3 +433,34 @@ func TestAgentBeforeToolCallReachesTheLoop(t *testing.T) {
 		t.Errorf("result = %+v, want the hook's reason", blocked.Content)
 	}
 }
+
+// A run failure from a canceled context is an abort; the failure message must
+// carry the canonical abort text so the transcript shows "Operation aborted"
+// instead of the transport's raw "context canceled" (upstream throws
+// Error("Request was aborted") when the signal is aborted).
+func TestHandleRunFailureMapsCanceledContextToAbortMessage(t *testing.T) {
+	agent, err := NewAgent(&AgentOptions{StreamFn: unusedStreamFn()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	agent.handleRunFailure(context.Background(), context.Canceled, true)
+
+	messages := agent.State().Messages
+	if len(messages) == 0 {
+		t.Fatal("no failure message emitted")
+	}
+	failure, ok := messages[len(messages)-1].(*ai.AssistantMessage)
+	if !ok {
+		t.Fatalf("failure message = %T", messages[len(messages)-1])
+	}
+	if failure.StopReason != ai.StopAborted {
+		t.Fatalf("stopReason = %s, want aborted", failure.StopReason)
+	}
+	if failure.ErrorMessage == nil || *failure.ErrorMessage != ai.RequestAbortedMessage {
+		got := "<nil>"
+		if failure.ErrorMessage != nil {
+			got = *failure.ErrorMessage
+		}
+		t.Fatalf("errorMessage = %q, want %q", got, ai.RequestAbortedMessage)
+	}
+}

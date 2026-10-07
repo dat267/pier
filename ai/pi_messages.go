@@ -310,6 +310,9 @@ func createPiMessagesErrorEvent(model *Model, err error, aborted bool) Assistant
 	if err != nil {
 		message = err.Error()
 	}
+	if aborted {
+		message = RequestAbortedMessage
+	}
 	assistant := &AssistantMessage{
 		API: model.API, Provider: model.Provider, Model: model.ID,
 		Usage: emptyPiMessagesUsage(), StopReason: reason,

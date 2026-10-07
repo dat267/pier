@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -658,6 +659,11 @@ func (a *Agent) handleRunFailure(ctx context.Context, err error, aborted bool) {
 		stopReason = ai.StopAborted
 	}
 	message := err.Error()
+	if aborted && errors.Is(err, context.Canceled) {
+		// Upstream throws Error("Request was aborted") when the run's signal is
+		// aborted; the transcript maps that to "Operation aborted".
+		message = ai.RequestAbortedMessage
+	}
 	failureMessage := &ai.AssistantMessage{
 		Content:      []ai.Content{ai.TextContent{Text: ""}},
 		API:          a.State().Model.API,

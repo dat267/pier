@@ -1,7 +1,9 @@
 package ai
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -12,6 +14,11 @@ import (
 // status and raw body, so the SDK-shape probing collapses to reading those.
 
 const MaxProviderErrorBodyChars = 4000
+
+// RequestAbortedMessage is the canonical text for a canceled request. Upstream
+// throws Error("Request was aborted") when the request signal is aborted, and
+// the transcript renders it as "Operation aborted".
+const RequestAbortedMessage = "Request was aborted"
 
 // NormalizedProviderError is the shared error surface providers compose into
 // display strings.
@@ -31,6 +38,11 @@ type NormalizedProviderError struct {
 func NormalizeProviderError(err error) NormalizedProviderError {
 	if err == nil {
 		return NormalizedProviderError{Message: "undefined"}
+	}
+	// A canceled request is an abort, not a provider failure: report the
+	// canonical abort text so the transcript shows "Operation aborted".
+	if errors.Is(err, context.Canceled) {
+		return NormalizedProviderError{Message: RequestAbortedMessage}
 	}
 	pe, ok := err.(*ProviderError)
 	if !ok {
