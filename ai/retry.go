@@ -274,6 +274,9 @@ var nonRetryableProviderLimitErrorPattern = regexp.MustCompile(`(?i)` + strings.
 	`GoUsageLimitError`, `FreeUsageLimitError`,
 	`Monthly usage limit reached`, `available balance`,
 	`insufficient_quota`, `out of budget`, `quota exceeded`, `billing`,
+	// Sign in with ChatGPT: the subscription's shared usage limit, which
+	// resets after hours rather than seconds.
+	`subscription_sharing_usage_limit_exceeded`,
 }, "|"))
 
 // Retryable provider/transport errors.
@@ -297,6 +300,9 @@ var retryableProviderErrorPattern = regexp.MustCompile(`(?i)` + strings.Join([]s
 	`retry delay`,
 	`you can retry your request`, `try your request again`, `please retry your request`,
 	`ResourceExhausted`,
+	// Sign in with ChatGPT: usage or user data temporarily unavailable. Usage
+	// failures can arrive mid-stream without an HTTP 503 in the message.
+	`subscription_sharing_usage_unavailable`, `subscription_sharing_user_unavailable`,
 }, "|"))
 
 // IsRetryableAssistantError classifies whether a failed assistant message

@@ -43,3 +43,29 @@ func TestCapacityErrorsAreRetryable(t *testing.T) {
 		t.Error("a model-at-capacity error was not retried")
 	}
 }
+
+// Sign in with ChatGPT reports temporary usage/user-data unavailability
+// mid-stream; upstream retries it (retry.ts RETRYABLE_PROVIDER_ERROR_PATTERN).
+func TestChatGPTSubscriptionUnavailableIsRetryable(t *testing.T) {
+	for _, message := range []string{
+		"subscription_sharing_usage_unavailable",
+		"subscription_sharing_user_unavailable",
+	} {
+		message := message
+		response := &AssistantMessage{StopReason: StopError, ErrorMessage: &message}
+		if !IsRetryableAssistantError(response) {
+			t.Errorf("a ChatGPT subscription unavailability error was not retried: %q", message)
+		}
+	}
+}
+
+// The ChatGPT subscription's shared usage limit resets after hours, so it is a
+// non-retryable account limit (retry.ts NON_RETRYABLE_PROVIDER_LIMIT_ERROR_PATTERN).
+// It must not be retried even when the same message also carries 429 text.
+func TestChatGPTSubscriptionLimitIsNotRetryable(t *testing.T) {
+	message := "429 subscription_sharing_usage_limit_exceeded rate limit"
+	response := &AssistantMessage{StopReason: StopError, ErrorMessage: &message}
+	if IsRetryableAssistantError(response) {
+		t.Error("a ChatGPT subscription usage limit was retried")
+	}
+}
