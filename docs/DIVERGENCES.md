@@ -6,7 +6,7 @@ behaviour with no direct Go equivalent, or because a reference defect is fixed
 here; others are choices of this project's own. D-row numbers live in code
 comments at the point of divergence; this file is the log, and it is
 representative: the rows below carry a written-up rationale, while the rest live
-only as the code comment that introduced them. The range is **D1–D209**.
+only as the code comment that introduced them. The range is **D1–D210**.
 - D188 — the durable execution environment (`env/index.ts`, `env/node.ts`)
   returns failures as Go errors (`*FileError`, `*ExecutionError`, the upstream
   codes preserved) where the reference returns a `Result` value; the `Result`
@@ -1506,3 +1506,41 @@ suffix. Cache invalidation, capacity growth, large headers, busy clock copies an
 global GC remain limits. Tests observe reused first-child storage, zero warm
 change allocations, removed-reference clearing, output/growth/width correctness
 and version-aware nested propagation.
+
+## D210. Session persistence failures are reported, not swallowed
+
+Reference: `packages/coding-agent/src/core/session-manager.ts` writes with
+synchronous filesystem calls (`writeFileSync`, `appendFileSync`, `openSync`),
+so a permission error, a missing directory or a failed close throws at the
+caller. The Go port moved session writes onto the `internal/offloop` worker so
+the UI owner loop never blocks on disk (D199), but the moved helpers returned
+nothing: `rewriteFile` and `writeSessionLine` discarded their `os` errors,
+`FlushWrites` only proved the queue drained, and a failed initial write still
+set `flushed = true`, so later appends could produce a headerless or truncated
+file while reporting success. A missing serializer branch even dropped entries
+silently from an otherwise successful rewrite.
+
+The port now records every persistence failure (rewrite, append, marshal,
+mkdir) in a `SessionWriteError` buffer with its path and operation.
+`FlushWrites` waits for accepted work and then returns the unresolved failures
+as an error, so queue completion and successful persistence are distinct;
+`DrainWriteErrors` hands out and clears the diagnostics without waiting on disk.
+`WriteErrorsReady` is a coalesced, non-blocking wakeup so an owner loop can
+report failures that occur while it is idle. A failed write marks the session's
+write state uninitialized, so the next save rewrites the complete accepted
+prefix rather than appending to a file that never opened; each queued append
+captures its own immutable prefix view (the entry slice is append-only), so a
+recovery rewrite cannot duplicate entries queued behind it. New sessions and
+branches replace the write state, so a worker completing an old generation
+cannot apply its result to a replacement session.
+
+Consumers report on the owner loop: the interactive run loop selects on the
+wakeup channel and shows a chat error, graceful teardown drains writes and
+writes any unresolved failure through D200's terminal output grace rather than
+direct stdout, and print mode flushes on every ordinary return and exits
+nonzero on a persistence failure (stderr keeps JSON stdout clean). No saved
+session JSON, settings JSON or wire payload changes. Tests observe failed
+initial writes and appends (sync and queued), full-prefix recovery with entry
+truncation invariants, per-task prefix recovery against duplicate appends,
+coalesced notification, idle owner-loop reporting, graceful-shutdown
+diagnostics and print-mode exit codes.

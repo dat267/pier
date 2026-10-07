@@ -57,8 +57,19 @@ func (p *printStdout) flush() {
 
 // RunPrintMode runs print mode and returns the process exit code: 0 on
 // success, 1 when a prompt fails or the final assistant message ended in
-// error/abort (upstream reports those on stderr and exits nonzero).
-func RunPrintMode(session *AgentSession, sessions *SessionManager, options PrintModeOptions) int {
+// error/abort, or accepted session writes could not be persisted.
+func RunPrintMode(session *AgentSession, sessions *SessionManager, options PrintModeOptions) (exitCode int) {
+	// D210: a completed queue is not proof of a saved session. Flush on every
+	// ordinary return, including provider errors, and keep JSON stdout clean.
+	defer func() {
+		writeErr := sessions.FlushWrites()
+		for _, failure := range sessions.DrainWriteErrors() {
+			fmt.Fprintln(os.Stderr, failure.String())
+		}
+		if writeErr != nil {
+			exitCode = 1
+		}
+	}()
 	mode := options.Mode
 	out := &printStdout{w: bufio.NewWriter(os.Stdout)}
 

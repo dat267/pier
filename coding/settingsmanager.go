@@ -858,67 +858,17 @@ func cloneSettings(settings *Settings) *Settings {
 // omitting unset optional fields but keeping explicitly false/0/"" values and
 // empty arrays (upstream distinguishes undefined from falsy settings).
 //
-// D25: upstream preserves the existing file's key order for unchanged keys
-// because it merges into the parsed file object; the Go port writes the
-// declaration order instead. Values are identical.
+// Settings' JSON tags are the single schema for field names and ordering.
+// Persistence separately retains the existing file's key order when merging.
 func (s *Settings) marshalOrdered() ([]byte, error) {
 	if s == nil {
 		return []byte("{}"), nil
 	}
 	object := orderedObject{}
-	object.setString("lastChangelogVersion", s.LastChangelogVersion)
-	object.setString("defaultProvider", s.DefaultProvider)
-	object.setString("defaultModel", s.DefaultModel)
-	object.setString("defaultThinkingLevel", s.DefaultThinkingLevel)
-	object.setMap("modelThinkingLevels", s.ModelThinkingLevels)
-	object.setString("transport", s.Transport)
-	object.setString("steeringMode", s.SteeringMode)
-	object.setString("followUpMode", s.FollowUpMode)
-	object.setString("theme", s.Theme)
-	object.setAny("compaction", s.Compaction)
-	object.setAny("branchSummary", s.BranchSummary)
-	object.setAny("retry", s.Retry)
-	object.setBool("hideThinkingBlock", s.HideThinkingBlock)
-	object.setBool("showCacheMissNotices", s.ShowCacheMissNotices)
-	object.setString("externalEditor", s.ExternalEditor)
-	object.setString("shellPath", s.ShellPath)
-	object.setAny("quietStartup", s.QuietStartup)
-	object.setString("defaultProjectTrust", s.DefaultProjectTrust)
-	object.setString("shellCommandPrefix", s.ShellCommandPrefix)
-	object.setStrings("npmCommand", s.NpmCommand)
-	object.setBool("collapseChangelog", s.CollapseChangelog)
-	object.setBool("enableInstallTelemetry", s.EnableInstallTelemetry)
-	object.setBool("enableAnalytics", s.EnableAnalytics)
-	object.setString("trackingId", s.TrackingID)
-	object.setString("deviceId", s.DeviceID)
-	object.setAny("packages", s.Packages)
-	object.setStrings("extensions", s.Extensions)
-	object.setStrings("skills", s.Skills)
-	object.setStrings("prompts", s.Prompts)
-	object.setStrings("themes", s.Themes)
-	object.setBool("enableSkillCommands", s.EnableSkillCommands)
-	object.setAny("terminal", s.Terminal)
-	object.setAny("images", s.Images)
-	object.setStrings("enabledModels", s.EnabledModels)
-	object.setStrings("defaultTools", s.DefaultTools)
-	object.setString("doubleEscapeAction", s.DoubleEscapeAction)
-	object.setString("treeFilterMode", s.TreeFilterMode)
-	object.setAny("thinkingBudgets", s.ThinkingBudgets)
-	object.setInt("editorPaddingX", s.EditorPaddingX)
-	object.setInt("outputPad", s.OutputPad)
-	object.setInt("autocompleteMaxVisible", s.AutocompleteMaxVisible)
-	object.setBool("showHardwareCursor", s.ShowHardwareCursor)
-	object.setAny("markdown", s.Markdown)
-	object.setAny("warnings", s.Warnings)
-	object.setString("sessionDir", s.SessionDir)
-	object.setString("httpProxy", s.HTTPProxy)
-	object.setAny("httpIdleTimeoutMs", s.HTTPIdleTimeoutMS)
-	object.setAny("websocketConnectTimeoutMs", s.WebsocketConnectTimeoutMS)
-	object.setString("tuiMode", s.TuiMode)
-	object.setString("fullscreenExitOutput", s.FullscreenExitOutput)
-	object.setString("fullscreenScrollbar", s.FullscreenScrollbar)
-	object.setBool("fullscreenCopyOnSelect", s.FullscreenCopyOnSelect)
-	object.setAny("fullscreenWheelScrollLines", s.FullscreenWheelScrollLines)
+	value := reflect.ValueOf(s).Elem()
+	for i, key := range settingsDeclarationOrder() {
+		object.setAny(key, value.Field(i).Interface())
+	}
 	return object.marshal()
 }
 
@@ -934,41 +884,6 @@ func (o *orderedObject) set(key string, value any, set bool) {
 	}
 	o.keys = append(o.keys, key)
 	o.values = append(o.values, value)
-}
-
-func (o *orderedObject) setString(key string, value *string) {
-	if value == nil {
-		return
-	}
-	o.set(key, *value, true)
-}
-
-func (o *orderedObject) setBool(key string, value *bool) {
-	if value == nil {
-		return
-	}
-	o.set(key, *value, true)
-}
-
-func (o *orderedObject) setInt(key string, value *int) {
-	if value == nil {
-		return
-	}
-	o.set(key, *value, true)
-}
-
-func (o *orderedObject) setStrings(key string, value []string) {
-	if value == nil {
-		return
-	}
-	o.set(key, value, true)
-}
-
-func (o *orderedObject) setMap(key string, value map[string]string) {
-	if value == nil {
-		return
-	}
-	o.set(key, value, true)
 }
 
 func (o *orderedObject) setAny(key string, value any) {
@@ -1014,13 +929,7 @@ func (o *orderedObject) marshal() ([]byte, error) {
 
 // marshalJSONNoEscape marshals without HTML escaping (JSON.stringify parity).
 func marshalJSONNoEscape(value any) ([]byte, error) {
-	var buffer bytes.Buffer
-	encoder := json.NewEncoder(&buffer)
-	encoder.SetEscapeHTML(false)
-	if err := encoder.Encode(value); err != nil {
-		return nil, err
-	}
-	return bytes.TrimRight(buffer.Bytes(), "\n"), nil
+	return ai.MarshalJSON(value)
 }
 
 // marshalSettingsIndent renders settings like JSON.stringify(value, null, 2).
@@ -1070,11 +979,12 @@ func settingsRawKeyOrder(text string) []string {
 
 // settingsDeclarationOrder is the order the typed writer emits known fields.
 func settingsDeclarationOrder() []string {
-	encoded, err := (&Settings{}).marshalOrdered()
-	if err != nil {
-		return nil
+	schema := reflect.TypeFor[Settings]()
+	keys := make([]string, schema.NumField())
+	for i := range keys {
+		keys[i] = strings.Split(schema.Field(i).Tag.Get("json"), ",")[0]
 	}
-	return settingsRawKeyOrder(string(encoded))
+	return keys
 }
 
 // marshalSettingsMapIndent renders a merged settings object like

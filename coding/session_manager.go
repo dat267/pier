@@ -31,11 +31,20 @@ type SessionManager struct {
 	sessionDir  string
 	cwd         string
 	persist     bool
-	flushed     bool
+	// writeStarted tracks admission of the initial rewrite, not disk success.
+	writeStarted bool
+	writeState   *sessionWriteState
 
 	// writeQueue, when wired, carries the file writes (offloop); nil keeps
 	// them synchronous. See SessionManagerOptions.WriteQueue.
 	writeQueue *offloop.Queue
+
+	// writeErrorsMu protects persistence diagnostics, not manager/UI state.
+	// Workers report results without acquiring mu or invoking callbacks.
+	writeErrorsMu    sync.Mutex
+	writeErrors      []SessionWriteError
+	writeFailures    map[string]error
+	writeErrorsReady chan struct{}
 
 	fileEntries []FileEntry
 	// loadedData is the file buffer OpenSession loaded from. Raw message and
@@ -132,12 +141,14 @@ func NewSessionManager(cwd string, options *SessionManagerOptions) *SessionManag
 	if persist && m.sessionDir == "" {
 		m.sessionDir = DefaultSessionDir(cwd, "")
 	}
+	var directoryErr error
 	if persist && m.sessionDir != "" {
-		if _, err := os.Stat(m.sessionDir); err != nil {
-			_ = os.MkdirAll(m.sessionDir, 0o755)
-		}
+		directoryErr = os.MkdirAll(m.sessionDir, 0o755)
 	}
 	m.NewSession(nil)
+	if directoryErr != nil {
+		m.recordWriteResult(m.sessionFile, "mkdir", directoryErr)
+	}
 	return m
 }
 
@@ -181,7 +192,8 @@ func (m *SessionManager) NewSession(options *NewSessionOptions) string {
 	m.cacheSeedGen++
 	m.cacheScanSeeding = false
 	m.cacheScanPending = nil
-	m.flushed = false
+	m.writeStarted = false
+	m.writeState = &sessionWriteState{}
 
 	if m.persist {
 		fileTimestamp := strings.NewReplacer(":", "-", ".", "-").Replace(timestamp)
@@ -197,6 +209,7 @@ func OpenSession(path string, sessionDir string, cwdOverride string) (*SessionMa
 	resolvedPath := ResolvePath(path, "", PathInputOptions{})
 	m := &SessionManager{
 		persist:         true,
+		writeState:      &sessionWriteState{initialized: true},
 		byID:            map[string]*SessionEntry{},
 		labelsByID:      map[string]string{},
 		labelTimestamps: map[string]string{},
@@ -231,14 +244,14 @@ func OpenSession(path string, sessionDir string, cwdOverride string) (*SessionMa
 			m.NewSession(nil)
 			m.sessionFile = resolvedPath
 			m.rewriteFile()
-			m.flushed = true
+			m.writeStarted = true
 			return m, nil
 		}
 		m.sessionFile = resolvedPath
 		m.lazySeedPending = true
 		m.loadEntries(entries, nil)
 		m.seedCacheScanInBackground()
-		m.flushed = true
+		m.writeStarted = true
 	} else {
 		m.NewSession(nil)
 		m.sessionFile = resolvedPath
@@ -382,45 +395,17 @@ func (m *SessionManager) rewriteFile() {
 	if !m.persist || m.sessionFile == "" {
 		return
 	}
+	path, state := m.sessionFile, m.writeState
 	if m.writeQueue == nil {
-		var buf strings.Builder
-		for _, entry := range m.fileEntries {
-			line, err := MarshalFileEntry(entry)
-			if err != nil {
-				continue
-			}
-			buf.WriteString(line)
-		}
-		_ = os.WriteFile(m.sessionFile, []byte(buf.String()), 0o644)
+		m.recordWriteResult(path, "rewrite", state.rewrite(path, m.fileEntries))
 		return
 	}
-	// Queued: snapshot the entries (a shallow pointer copy taken under the
-	// manager lock) and let the worker marshal and write them, ordered behind
-	// any queued appends by the same FIFO. The marshal moves off the loop with
-	// the write; on a large loaded session that is the expensive part.
-	snapshot := make([]FileEntry, len(m.fileEntries))
-	copy(snapshot, m.fileEntries)
-	path := m.sessionFile
+	// Snapshot under the manager lock; the worker serializes and writes in
+	// FIFO order and touches only its captured write state and diagnostics.
+	snapshot := append([]FileEntry(nil), m.fileEntries...)
 	m.writeQueue.Go(func() {
-		var buf strings.Builder
-		for _, entry := range snapshot {
-			line, err := MarshalFileEntry(entry)
-			if err != nil {
-				continue
-			}
-			buf.WriteString(line)
-		}
-		_ = os.WriteFile(path, []byte(buf.String()), 0o644)
+		m.recordWriteResult(path, "rewrite", state.rewrite(path, snapshot))
 	})
-}
-
-// FlushWrites blocks until every queued session file write has finished.
-// Shutdown calls it so a clean exit cannot lose the session tail; nil-queue
-// managers have nothing to flush.
-func (m *SessionManager) FlushWrites() {
-	if m.writeQueue != nil {
-		m.writeQueue.Flush()
-	}
 }
 
 // GetWriteQueue returns the wired write queue, or nil for synchronous writes.
@@ -473,41 +458,31 @@ func (m *SessionManager) persistEntry(entry *SessionEntry) {
 	if !m.persist || m.sessionFile == "" {
 		return
 	}
-	if !m.flushed {
+	if !m.writeStarted {
 		if !m.hasConversation() {
 			return
 		}
 		m.rewriteFile()
-		m.flushed = true
+		m.writeStarted = true
 		return
 	}
 	m.appendLine(entry)
 }
 
 func (m *SessionManager) appendLine(entry *SessionEntry) {
-	line, err := MarshalFileEntry(FileEntry{Entry: entry})
-	if err != nil {
-		return
-	}
-	// The path and the marshaled line are captured under the manager lock;
-	// the worker touches no manager state.
-	path := m.sessionFile
-	write := func() { writeSessionLine(path, line) }
+	line, marshalErr := MarshalFileEntry(FileEntry{Entry: entry})
+	path, state := m.sessionFile, m.writeState
+	// File-entry slots are append-only. This immutable prefix view costs O(1)
+	// and lets a failed append recover all accepted entries on the next save.
+	// New sessions/branches replace the slice and write state, so an old worker
+	// cannot apply its completion to a replacement session.
+	snapshot := m.fileEntries[:len(m.fileEntries):len(m.fileEntries)]
+	write := func() { m.recordWriteResult(path, "append", state.append(path, line, marshalErr, snapshot)) }
 	if m.writeQueue == nil {
 		write()
 		return
 	}
 	m.writeQueue.Go(write)
-}
-
-// writeSessionLine appends one pre-marshaled line to the session file.
-func writeSessionLine(path string, line string) {
-	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
-	if err != nil {
-		return
-	}
-	defer file.Close()
-	_, _ = file.WriteString(line)
 }
 
 func (m *SessionManager) appendEntry(entry *SessionEntry) string {
@@ -957,17 +932,10 @@ func (m *SessionManager) CreateBranchedSession(leafID string) (string, error) {
 		newEntries = append(newEntries, FileEntry{Entry: &entry})
 	}
 
-	var buf strings.Builder
-	headerLine, _ := MarshalFileEntry(FileEntry{Header: &header})
-	buf.WriteString(headerLine)
-	for _, entry := range newEntries {
-		line, _ := MarshalFileEntry(entry)
-		buf.WriteString(line)
-	}
-
 	m.fileEntries = append([]FileEntry{{Header: &header}}, newEntries...)
 	m.sessionID = newSessionID
 	m.sessionFile = newSessionFile
+	m.writeState = &sessionWriteState{}
 	m.buildIndex()
 
 	// Use the same rule as persistEntry: write now if the branched path already
@@ -975,9 +943,9 @@ func (m *SessionManager) CreateBranchedSession(leafID string) (string, error) {
 	if m.persist {
 		if m.hasConversation() {
 			m.rewriteFile()
-			m.flushed = true
+			m.writeStarted = true
 		} else {
-			m.flushed = false
+			m.writeStarted = false
 		}
 		return newSessionFile, nil
 	}

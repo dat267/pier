@@ -39,7 +39,10 @@ type RunWiring struct {
 
 	UI       tui.TUI
 	Settings *coding.SettingsManager
-	Terminal tui.Terminal
+	// SessionManager resolves the active manager on-owner after session swaps.
+	// D210: persistence error notifications wake the loop without blocking saves.
+	SessionManager func() *coding.SessionManager
+	Terminal       tui.Terminal
 
 	// HeaderContainer holds the built-in/custom header.
 	HeaderContainer *tui.Container
@@ -753,8 +756,20 @@ func (w *RunWiring) runLoop(ctx context.Context, initialWork []string, initialIm
 			doneCh = schedule.workDone()
 		}
 		animationCh = schedule.arm()
+		var writeErrors <-chan struct{}
+		var sessionManager *coding.SessionManager
+		if w.SessionManager != nil {
+			sessionManager = w.SessionManager()
+			if sessionManager != nil {
+				writeErrors = sessionManager.WriteErrorsReady()
+			}
+		}
 
 		select {
+		case <-writeErrors:
+			for _, failure := range sessionManager.DrainWriteErrors() {
+				w.ShowChatError(failure.String())
+			}
 		case <-ctx.Done():
 			return
 		case event, ok := <-w.SessionEvents:
@@ -915,6 +930,7 @@ func newRunWiring(app *App) *RunWiring {
 		OnSignal:        app.lifecycle.HandleSignal,
 		UI:              app.ui,
 		Settings:        app.settings,
+		SessionManager:  func() *coding.SessionManager { return app.sessionMgr },
 		Terminal:        app.ui.GetTerminal(),
 		HeaderContainer: app.headerContainer,
 		Chat:            app.chat,

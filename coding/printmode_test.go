@@ -8,6 +8,7 @@ import (
 
 	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/internal/offloop"
 )
 
 // RunPrintMode drives an AgentSession to completion headlessly: text mode
@@ -46,6 +47,53 @@ func newPrintSession(t *testing.T, responses ...*ai.AssistantMessage) (*AgentSes
 		t.Fatal(err)
 	}
 	return session, sessions
+}
+
+func TestPrintModeReportsPersistenceFailure(t *testing.T) {
+	for _, mode := range []CLIMode{CLIModeText, CLIModeJSON} {
+		for _, queued := range []bool{false, true} {
+			name := string(mode) + "/" + map[bool]string{false: "sync", true: "queued"}[queued]
+			t.Run(name, func(t *testing.T) {
+				session, sessions := newPrintSession(t, createAssistantMessageT("reply"))
+				if queued {
+					queue := offloop.New()
+					t.Cleanup(queue.Stop)
+					sessions.SetWriteQueue(queue)
+				}
+				if err := os.Mkdir(sessions.GetSessionFile(), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				var exitCode int
+				var output string
+				diagnostics := captureStdout(t, func() {
+					// The outer pipe captures stderr; the inner pipe keeps stdout
+					// separate so JSON consumers never see diagnostic text.
+					stderr := os.Stderr
+					os.Stderr = os.Stdout
+					defer func() { os.Stderr = stderr }()
+					output = captureStdout(t, func() {
+						exitCode = RunPrintMode(session, sessions, PrintModeOptions{Mode: mode, InitialMessage: "save this"})
+					})
+				})
+				if exitCode != 1 {
+					t.Fatalf("exit code = %d, want 1 for persistence failure", exitCode)
+				}
+				if !strings.Contains(diagnostics, "Session rewrite failed") {
+					t.Fatalf("persistence diagnostic missing from stderr: %q", diagnostics)
+				}
+				if strings.Contains(output, "Session rewrite failed") {
+					t.Fatal("persistence diagnostic leaked into stdout")
+				}
+				if mode == CLIModeJSON {
+					for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
+						if !json.Valid([]byte(line)) {
+							t.Fatalf("invalid JSON stdout line: %q", line)
+						}
+					}
+				}
+			})
+		}
+	}
 }
 
 func TestPrintModeTextPrintsTheFinalResponse(t *testing.T) {

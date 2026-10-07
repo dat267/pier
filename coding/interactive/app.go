@@ -958,7 +958,19 @@ func (a *App) StopMode(fullscreenExitOutput string) {
 		a.settings.FlushPersists()
 	}
 	if a.sessionMgr != nil {
-		a.sessionMgr.FlushWrites()
+		if writeErr := a.sessionMgr.FlushWrites(); writeErr != nil {
+			// D210: report unresolved saves after terminal restoration/replay.
+			// D200: use the remaining output grace, never direct console I/O.
+			defer func() {
+				message := "\r\n" + writeErr.Error() + "\r\n"
+				terminal := a.lifecycle.outputTerminal()
+				if sink, ok := terminal.(interface{ WriteShutdownOutput(string) bool }); ok {
+					sink.WriteShutdownOutput(message)
+				} else if terminal != nil {
+					terminal.Write(message)
+				}
+			}()
+		}
 	}
 	if a.commands == nil {
 		// Teardown before Init finished: stop the renderer only.
