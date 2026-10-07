@@ -381,6 +381,68 @@ func TestScheduleKeepsTickingWhileBeatWorkPending(t *testing.T) {
 	wiring.PendingBeatWork = wiringPending
 }
 
+// TestRunLoopInputPaintsDuringContinuousEvents keeps both event channels ready
+// while a keystroke requests a frame. Another keystroke cancels the run, so the
+// public input/render boundary also observes loop progress under that traffic.
+func TestRunLoopInputPaintsDuringContinuousEvents(t *testing.T) {
+	wiring, _ := newRunTestWiring(t)
+	dispatcher, _, _, _ := newEventTestDispatcher(t)
+	queue := newSessionEventQueue()
+	defer queue.Close()
+	wiring.Events = dispatcher
+	wiring.SessionEvents = queue.Events()
+	wiring.PartialEvents = queue.Partials()
+	inputs := make(chan string, 2)
+	wiring.InputEvents = inputs
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	queue.SetContext(ctx)
+	lossless, partial := 0, 0
+	dispatcher.CheckShutdownRequested = func() {
+		lossless++
+		if lossless < 1000 && ctx.Err() == nil {
+			queue.enqueue(&coding.SessionEvent{Type: coding.SessionAgentSettled})
+		}
+	}
+	wiring.OnPartialEventApplied = func() {
+		partial++
+		if partial < 1000 && ctx.Err() == nil {
+			queue.enqueue(&coding.SessionEvent{Type: coding.SessionMessageUpdate})
+		}
+	}
+	screen := wiring.UI.(*tui.MainScreen)
+	typed := ""
+	screen.AddInputListener(func(data string) tui.TuiInputListenerResult {
+		typed += data
+		if data == "a" {
+			queue.enqueue(&coding.SessionEvent{Type: coding.SessionAgentSettled})
+			queue.enqueue(&coding.SessionEvent{Type: coding.SessionMessageUpdate})
+			screen.RequestRender(false)
+		} else {
+			cancel()
+		}
+		return tui.TuiInputListenerResult{Consume: true}
+	})
+	paintedAt := 0
+	screen.DoRender = func() {
+		if paintedAt == 0 {
+			paintedAt = lossless + partial
+			inputs <- "b"
+		}
+	}
+	inputs <- "a"
+	wiring.runLoop(ctx, nil, nil)
+	if paintedAt == 0 || paintedAt > 64 {
+		t.Fatalf("first input painted after %d events, want between 1 and 64", paintedAt)
+	}
+	if typed != "ab" || ctx.Err() != context.Canceled {
+		t.Fatalf("input/cancellation stalled: typed=%q error=%v", typed, ctx.Err())
+	}
+	if wiring.LoopBeats() < 2 {
+		t.Fatal("loop did not resume its watchdog beats")
+	}
+}
+
 // TestRunLoopMaterializesPendingWorkWhileIdle runs the loop without input and
 // without any animation; the beat must keep running (draining a resumed
 // session's deferred transcript) instead of parking forever after the first

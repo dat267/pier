@@ -78,7 +78,7 @@ type CommandWiring struct {
 	EditorContainer *tui.Container
 	Editor          tui.Component
 	// RunDetached runs the blocking reload work off the UI loop.
-	RunDetached func(fn func())
+	RunDetached func(fn func()) bool
 	// DefaultSyncNotice reports the defaultsync sync outcome of the last
 	// reload (D151): the notice text, and whether it is a warning. A reload
 	// that moved the model must say so rather than change it silently.
@@ -321,7 +321,7 @@ func (w *CommandWiring) HandleReloadCommand() {
 	}
 
 	if w.RunDetached != nil {
-		w.RunDetached(func() {
+		accepted := w.RunDetached(func() {
 			modelsJSONError, savedTrust, err := w.ReloadNow()
 			// The MCP exchange re-reads the config and reconnects; failures are
 			// the rebuilt manager's connection errors (reported below, like the
@@ -338,6 +338,9 @@ func (w *CommandWiring) HandleReloadCommand() {
 			}
 			finish(modelsJSONError, savedTrust, err, connectionErrors)
 		})
+		if !accepted {
+			restore()
+		}
 		return
 	}
 	var connectionErrors []string
@@ -816,12 +819,15 @@ func newCommandWiring(app *App) *CommandWiring {
 			// serving a selection, a wedged clipboard daemon), so it runs off
 			// the loop; the command confirms optimistically and failures are
 			// marshaled back through the error seam.
-			coding.CopyTextToClipboardAsync(text, func(err error) {
+			accepted := app.tryCopyClipboard(text, func(err error) {
 				if err == nil {
 					return
 				}
 				app.ui.Post(func() { app.showError(err.Error()) })
 			})
+			if !accepted {
+				return false, errClipboardBusy.Error()
+			}
 			return true, ""
 		},
 		WriteDebugLog:   WriteDebugLogFile,
@@ -854,8 +860,8 @@ func newCommandWiring(app *App) *CommandWiring {
 			}
 			return result.Cancelled, nil
 		},
-		RunDetached: func(fn func()) {
-			app.runDetached(func(ctx context.Context) error { fn(); return nil })
+		RunDetached: func(fn func()) bool {
+			return app.runDetached(func(ctx context.Context) error { fn(); return nil })
 		},
 		ReloadNow: func() (string, bool, error) {
 			// Upstream session.reload and then the mode's follow-ups: settings

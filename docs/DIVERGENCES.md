@@ -1039,28 +1039,221 @@ Divergences from upstream:
 - `WaitForDirectTools` polls connection state (20ms) instead of awaiting the
   ready promises; equivalent observation, no shared future.
 
-## D199. Optional rendering queues cancel instead of draining
+## D196. Assistant partials are scoped to their producing stream
 
-Rendering queues use `Group.OptionalQueue`. Shutdown cancels their context,
-discards pending optional tasks and does not wait for a running task that ignores
-cancellation. Mandatory queues still drain accepted saves without a deadline.
-Transcript warming checks cancellation before publishing private caches.
-The optional queue tests exercise rejection, cancellation and mandatory drains.
+The split session-event channels (D143) do not preserve ordering between
+lossless lifecycle events and coalesced streaming updates. If assistant A's
+partial remains queued while A's end and assistant B's start are applied, that
+partial must not replace B's content or create A's tool components in B's
+stream.
 
-## D200. Preparation completions are gated by mode lifetime
+The UI queue stamps assistant events with a monotonically increasing generation
+at each assistant start. Both run-loop event-application paths reject message
+updates whose generation differs from the applied assistant start. A partial
+that overtakes its own start is discarded too; the lossless message end carries
+the complete content. Generations belong only to the internal queue envelope,
+not session events, persisted JSON, or provider payloads. Direct dispatcher
+callers retain the ordered-event contract.
 
-The stable `modeUI` forwarding reference rejects posts after cancellation and
-checks cancellation again when a previously posted callback runs. This prevents
-optional rendering completions from mutating a torn-down UI. App teardown
-cancels that lifetime before stopping its queues.
+`TestQueuedMessageUpdateCannotOverwriteTheNextMessage` queues A's delayed
+partial before A's end and B's start, drains the split channels, and checks the
+rendered transcript and pending tools. It also checks that B's own subsequent
+partial still renders.
 
-## D201. Optional queue admission is bounded
+## D197. Pre-paint event drains yield after a bounded, fair batch
 
-`Queue.TryGoContext` bounds queued plus running jobs without blocking its caller.
-Assistant and tool preparation share a four-job optional queue. The queue also
-supports one newest-pending replacement per key through `GoLatestContext`.
-Mandatory persistence continues to use lossless admission. Queue admission
-tests cover rejection, capacity recovery and newest-pending replacement.
+The explicit UI loop (D143) previously drained lossless events until that
+channel was empty, then partial updates, before painting. A producer can keep
+refilling a bounded channel while the loop consumes it, so channel capacity
+alone did not bound the drain. Sustained lossless traffic also prevented
+partials from receiving service inside it.
+
+Each pre-paint drain now applies at most 64 events. Each round attempts one
+lossless event and one partial, spending unused capacity on whichever class
+remains ready. FIFO order within each channel is unchanged; lossless events
+are not dropped. Remaining queued events wake subsequent main-select
+iterations, so painting, input, cancellation and watchdog beats can progress.
+This bounds event count, not the execution time of an individual handler.
+
+Tests refill channels synchronously from the loop-side application hooks,
+which guarantees sustained traffic without scheduler-dependent timing.
+`TestDrainReadyEventsYieldsUnderContinuousRefill` checks the batch bound and
+complete eventual lossless delivery; `TestDrainReadyEventsDoesNotStarvePartials`
+checks service for both ready classes. `TestRunLoopInputPaintsDuringContinuousEvents`
+checks a keystroke's paint, a subsequent cancellation keystroke and advancing
+loop beats while both channels remain ready.
+
+## D198. The interactive loop defers new paints when output backs up
+
+The async terminal writer keeps a paused console off the UI loop, but generating
+frames indefinitely can grow its FIFO. The interactive schedule now samples
+`ProcessTerminal.PendingWriteBytes`, an atomic snapshot of queued and in-flight
+committed output. Unlike `WriteBacklog`, this does not acquire the terminal
+handoff mutex on the UI loop. Uncommitted frame bytes are excluded.
+
+At 256 KiB or more, the schedule defers new paints. Once paused, it waits until
+output falls to 128 KiB or less before resuming. A pending paint is retained on
+the existing paint timer, retried at 16 ms intervals even without another render
+request. Repeated requests cannot keep pushing an outstanding retry into the
+future. Input dispatch, input-flush deadlines, session events and cancellation
+continue while painting is deferred. Input-latency tagging occurs only when
+the deferred input paint is actually generated.
+
+Already generated differential frames and durable terminal writes are never
+dropped or reordered. The thresholds are scheduling watermarks, not hard byte
+caps: one large frame can overshoot, and direct writes can still grow the FIFO.
+The policy applies to the interactive run-loop schedule, not standalone startup
+screens, direct renderer clients, mandatory persistence or shutdown flushing.
+Terminals without the optional lock-free snapshot retain existing behavior.
+
+`TestLoopScheduleDefersPaintsUntilOutputDrains` exercises all scheduled paint
+paths, watermark hysteresis, retry wake-ups and deferred input tagging under
+`testing/synctest`. `TestRunLoopWithBlockedConsole` uses a real `ProcessTerminal`
+writing into a pipe without a reader: repeated input/render requests do not grow
+the committed backlog, events and cancellation remain responsive, and releasing
+the reader delivers all committed output followed by one up-to-date frame
+without another request. The terminal backlog test also checks the atomic
+snapshot through queued, in-flight, open-frame and drained states.
+
+## D199. Shutdown cancels optional queues but drains accepted saves
+
+This is a Go-only lifecycle policy for `internal/offloop`, not a change to
+session serialization or provider requests. `Group.Queue` remains mandatory:
+accepted work drains in FIFO order with no cancellation deadline. Session and
+settings queues retain that classification. `Group.OptionalQueue` instead
+rejects new work, cancels its context and discards waiting tasks on shutdown;
+it does not wait for a running worker that ignores cancellation. `StopAll`
+begins shutdown on every queue before waiting for mandatory drains, so a
+blocked save cannot postpone optional cancellation.
+
+The interactive app classifies theme loads, transcript pre-rendering and
+keyboard clipboard reads as optional. Paste coalescing is now per app rather
+than process-wide. Both `StopMode` and `Close` stop the owned queues; `StopMode`
+also retains explicit flushes for settings/session collaborators outside the
+group. Theme loads check cancellation after their blocking read, before
+publishing global state. Theme watcher lifetimes follow their queue context.
+Theme switches, previews and paste inserts check cancellation again inside
+already-posted UI callbacks. Transcript warms check between components and do
+not publish a ready chunk or request a render after cancellation.
+
+Cancellation does not forcibly terminate a goroutine, filesystem operation,
+component preparation or legacy clipboard provider. Such work can finish later,
+but its canceled result is ignored. Clipboard subprocess helpers retain their
+existing timeouts. Process-wide clipboard-copy queues and detached work are not
+covered by this app-owned policy. Explicit `Flush`/`FlushAll` still wait for
+running optional work. Mandatory persistence and terminal flushing can still
+wait indefinitely; no blanket shutdown timeout or save abandonment is added.
+
+`TestGroupShutdownCancelsOptionalWorkButDrainsSaves` uses `testing/synctest` to
+hold a save and a cancellation-ignoring optional worker: optional cancellation
+arrives before the save is released, saves finish in order, shutdown returns
+without releasing the optional worker, and queued/late optional tasks never
+run. Interactive tests cover real `StopMode` and `Close` queue ownership,
+late theme loads and watcher reloads, already-posted switch/preview completions,
+late keyboard paste results and canceled transcript warm publication.
+
+## D200. Mode-owned optional producers and a bounded terminal-exit grace
+
+The interactive CLI now extends D199's queue policy to clipboard copies and
+explicit detached work. `/copy`, fullscreen selections and OAuth URL copies
+share the app's optional clipboard FIFO rather than the legacy process-wide
+queue. Platform clipboard helpers receive their queue context; cancellation
+stops command fallback and never falls through to OSC 52 after observing a
+canceled context. Keyboard and Windows right-click reads use the same owned,
+coalesced paste queue. Right-click focus checks and insertion occur on the
+owner loop, not on the clipboard worker.
+
+Detached bash/compaction work inherits both the mode lifetime and the active
+run context. Stopping or closing the app cancels the mode lifetime before
+mandatory drains. The stable UI forwarding reference gates every posted
+completion both at submission and execution, including posts already queued
+when shutdown begins. Existing standalone clipboard/component APIs retain
+their legacy defaults; their callers may opt into the new context-aware helpers.
+Cancellation cannot forcibly terminate arbitrary goroutines or console syscalls.
+
+After accepted session/settings saves have drained, graceful permanent
+interactive terminal teardown opens one **2 s** output grace period. Fullscreen-to-regular
+replay, terminal protocol restoration, post-stop hooks and the optional resume
+hint all share that deadline. Temporary renderer stops, editor handoffs and
+ordinary library terminal stops remain lossless and unbounded unless the caller
+explicitly starts a shutdown grace. `App.Close` uses the same permanent terminal
+policy when run-context cancellation bypasses `Lifecycle.Shutdown`.
+
+On timeout, flush waits return without dropping or reordering the committed
+FIFO in memory. The CLI skips the resume hint and exits; undelivered terminal
+output may therefore be lost at process exit, including display/protocol cleanup
+sequences; OS raw-mode restoration is still attempted. On successful delivery, the hint
+is queued through the same terminal writer and remaining budget, never written
+directly to stdout. Finalization closes output admission and tells the writer
+to drain retained bytes and exit if the console recovers. It does not kill or
+close the process's stdout. Accepted persistence still has no timeout, and
+session serialization and provider payloads are unchanged.
+
+Virtual-time tests assert the exact 2 s boundary, shared deadline, FIFO retention,
+late output rejection and writer finalization. Lifecycle tests assert hint
+suppression, bounded hint routing, finalization before Exit and the canceled-run
+Close path. Mode tests cover clipboard copy cancellation, selection/OAuth copy
+ownership, asynchronous right-click reads, detached-work cancellation and
+rejection of already-posted results. Clipboard helper tests reject pre-canceled
+operations before command launch or OSC 52 fallback.
+
+## D201. Optional-work admission is bounded during normal operation
+
+Shutdown cancellation alone does not bound a live mode's retained work. The
+interactive app now applies per-domain admission policies, separate from D198's
+paint watermarks and D200's exit grace:
+
+- Clipboard copies retain at most four accepted requests in total (one running
+  and three waiting). `Queue.TryGoContext` tests running plus pending count under
+  the existing handoff lock and rejects excess requests without waiting. Accepted
+  distinct requests remain FIFO. `/copy` and fullscreen selection callers receive
+  a false/busy result rather than claiming success; OAuth URL callbacks receive
+  the same busy error through their UI-marshaling seam.
+- Theme settings switches and previews share one fixed newest-pending key.
+  `Queue.GoLatestContext` replaces its pending callback in O(1), so at most one
+  load runs and one successor waits. Running work is not canceled or reordered;
+  intermediate pending previews/settings applications are deliberately superseded.
+  The newest selection still determines the final theme. Theme JSON and saved
+  settings formats are unchanged.
+- Explicit detached bash, compaction and reload work has four parallel slots
+  and no pending list. Excess requests are rejected with visible feedback.
+  Slots are reclaimed when workers return, even on cancellation; a worker that
+  ignores cancellation continues to occupy its slot. Rejection warnings have
+  at most one pending UI notification, preventing a burst from creating one
+  warning per rejected worker. The reload admission seam returns a boolean so
+  rejection restores its temporary loading screen and editor focus.
+
+Clipboard/paste reads already coalesce overlapping requests, and transcript
+pre-rendering already admits one chunk at a time; those policies are unchanged.
+These are task-count bounds, not byte caps or global limits on arbitrary SDK
+queue users, UI posts, model-turn queues or direct terminal writes. Mandatory
+session/settings writes keep unbounded, lossless admission and FIFO draining.
+No committed differential terminal frames are evicted during normal operation.
+
+Blocked-worker tests reproduce the pre-change clipboard backlog of 64 waiting
+copies plus one running copy, and 65 waiting theme requests plus one running
+load. After admission changes, the same bursts retain three waiting copies plus
+one running copy, and one pending theme successor plus one running load.
+Queue tests assert FIFO, capacity reuse, latest replacement and shutdown
+rejection. Interactive tests assert busy feedback, coalesced rejection warnings,
+reload restoration, final theme selection and real owner-loop input painting
+while a clipboard daemon is blocked.
+
+## D202. Optional terminal output waits before admission
+
+The direct-output audit is in [terminal-output.md](terminal-output.md). At
+256 KiB of committed output, title and active-progress refreshes retain one
+newest-uncommitted hint each; the writer admits them after recovery to 128 KiB.
+Progress clear remains essential and invalidates delayed active hints. Permanent
+shutdown drops uncommitted metadata, never committed differential frames.
+Interactive OSC 52 fallback now uses the stable terminal FIFO through a
+cancellation-aware off-loop API, rather than raw stdout. Whole packets wait for
+256 KiB capacity and a closed renderer frame; oversize packets are rejected.
+Accepted frames and packets remain FIFO. Essential protocol/lifecycle output,
+generic SDK writes and standalone APIs retain their admission behavior, so this
+is not a global byte cap. A single oversized title can overshoot. Regressions
+observe blocked-writer backlog, cancellation, atomic recovery, stale progress
+suppression, oversized-title progress and app-owned clipboard routing.
 
 ## D203. Transcript resize cache warming yields between chunks
 

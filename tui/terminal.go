@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"context"
+	"errors"
 	"os"
 	"regexp"
 	"strconv"
@@ -182,9 +184,23 @@ type ProcessTerminal struct {
 	writesMu      sync.Mutex
 	writesCond    *sync.Cond
 	writes        []terminalWrite
-	writesStarted bool
-	inFlight      bool
-	writeFn       func(string)
+	queuedBytes   int
+	inFlightBytes int
+	// pendingWriteBytes mirrors queuedBytes + inFlightBytes for lock-free
+	// owner-loop paint scheduling. Writers update it under writesMu.
+	pendingWriteBytes atomic.Int64
+	writesStarted     bool
+	inFlight          bool
+	writeFn           func(string)
+	// D200: one shared deadline covers every graceful-exit flush, including
+	// renderer swaps and the final hint. Normal/temporary stops remain lossless.
+	shutdownContext  context.Context
+	shutdownCancel   context.CancelFunc
+	shutdownTimedOut atomic.Bool
+	writesFinishing  bool
+	// D202: at most one uncommitted title and active-progress hint wait for
+	// recovery. These are optional state hints, never differential frames.
+	deferredHints [2]string
 
 	// frameDepth/frameBuf bracket a renderer paint (BeginFrame/EndFrame). While
 	// a frame is open its writes accumulate here; on EndFrame the frame is
@@ -675,8 +691,9 @@ func (t *ProcessTerminal) Stop() {
 	t.setInputHandler(nil)
 	stopResizeWatcher()
 
-	// Drain the queued disable sequences before restoring the terminal, so no
-	// escape sequence is left to run after the mode is restored.
+	// Normal stops drain protocol sequences before restoring raw mode. D200
+	// permits graceful exit to restore raw mode after the output grace expires;
+	// undelivered terminal protocol/display cleanup may then be lost at exit.
 	t.flushWrites()
 
 	// Restore raw mode state. The stdin buffer and the negotiation state are
@@ -716,6 +733,10 @@ func (t *ProcessTerminal) writeLocked(data string) {
 		return
 	}
 	t.writesMu.Lock()
+	if t.writesFinishing {
+		t.writesMu.Unlock()
+		return
+	}
 	if t.frameDepth > 0 {
 		t.frameBuf.WriteString(data)
 		t.writesMu.Unlock()
@@ -727,7 +748,12 @@ func (t *ProcessTerminal) writeLocked(data string) {
 
 // enqueueLocked appends a write and starts the writer on first use.
 func (t *ProcessTerminal) enqueueLocked(item terminalWrite) {
+	if t.writesFinishing {
+		return
+	}
 	t.writes = append(t.writes, item)
+	t.queuedBytes += len(item.data)
+	t.pendingWriteBytes.Store(int64(t.queuedBytes) + int64(t.inFlightBytes))
 	if !t.writesStarted {
 		t.writesStarted = true
 		go t.writeLoop()
@@ -798,6 +824,8 @@ func (t *ProcessTerminal) EndFrame() {
 	t.frameBuf.Reset()
 	if data == "" {
 		t.pendingInputReadAt = time.Time{}
+		t.flushDeferredHintsLocked()
+		t.writesCond.Broadcast()
 		t.writesMu.Unlock()
 		return
 	}
@@ -812,6 +840,8 @@ func (t *ProcessTerminal) EndFrame() {
 		}
 	}
 	t.enqueueLocked(terminalWrite{data: data, frame: true, inputReadAt: readAt, inputPaintAt: paintAt})
+	t.flushDeferredHintsLocked()
+	t.writesCond.Broadcast()
 	t.writesMu.Unlock()
 }
 
@@ -838,8 +868,12 @@ func (t *ProcessTerminal) writeLoop() {
 	var batch strings.Builder
 	for {
 		t.writesMu.Lock()
-		for len(t.writes) == 0 {
+		for len(t.writes) == 0 && !t.writesFinishing {
 			t.writesCond.Wait()
+		}
+		if len(t.writes) == 0 {
+			t.writesMu.Unlock()
+			return
 		}
 		batch.Reset()
 		var taggedReadAt, taggedPaintAt time.Time
@@ -850,6 +884,8 @@ func (t *ProcessTerminal) writeLoop() {
 			}
 		}
 		t.writes = nil
+		t.inFlightBytes = t.queuedBytes
+		t.queuedBytes = 0
 		t.inFlight = true
 		observer := t.inputLatencyObserver
 		t.writesMu.Unlock()
@@ -862,26 +898,154 @@ func (t *ProcessTerminal) writeLoop() {
 
 		t.writesMu.Lock()
 		t.inFlight = false
+		t.inFlightBytes = 0
+		t.pendingWriteBytes.Store(int64(t.queuedBytes))
+		t.flushDeferredHintsLocked()
 		t.writesCond.Broadcast()
 		t.writesMu.Unlock()
 	}
 }
 
-// flushWrites blocks until every queued write has reached the console. Stop
-// calls it before restoring the terminal so no escape sequence is left queued.
+// flushWrites waits for queued console delivery. Normal stops are lossless;
+// D200 graceful-exit stops use the shared shutdown deadline instead.
 func (t *ProcessTerminal) flushWrites() {
 	t.writesMu.Lock()
-	defer t.writesMu.Unlock()
-	for len(t.writes) > 0 || t.inFlight {
-		t.writesCond.Wait()
+	ctx := t.shutdownContext
+	t.writesMu.Unlock()
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if t.FlushWritesContext(ctx) != nil {
+		t.shutdownTimedOut.Store(true)
 	}
 }
 
-// FlushWrites blocks until every queued write has reached the console. Stop
-// flushes internally; the renderer calls this again after its post-stop hook,
-// whose alt-screen exit would otherwise still be queued when the caller writes
-// the resume hint straight to stdout.
+// FlushWritesContext waits for delivery or cancellation, without discarding
+// committed bytes. It cannot interrupt a console syscall already in progress.
+func (t *ProcessTerminal) FlushWritesContext(ctx context.Context) error {
+	wake := context.AfterFunc(ctx, func() {
+		t.writesMu.Lock()
+		t.writesCond.Broadcast()
+		t.writesMu.Unlock()
+	})
+	defer wake()
+	t.writesMu.Lock()
+	defer t.writesMu.Unlock()
+	for len(t.writes) > 0 || t.inFlight {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		t.writesCond.Wait()
+	}
+	return nil
+}
+
+// BeginShutdownOutput starts the graceful-exit budget once. Repeated calls
+// share the same deadline, rather than giving each renderer stop a new budget.
+func (t *ProcessTerminal) BeginShutdownOutput(timeout time.Duration) {
+	t.writesMu.Lock()
+	defer t.writesMu.Unlock()
+	if t.shutdownContext == nil {
+		t.shutdownContext, t.shutdownCancel = context.WithTimeout(context.Background(), timeout)
+		t.deferredHints = [2]string{}
+		t.writesCond.Broadcast()
+	}
+}
+
+// ShutdownOutputComplete reports whether graceful output is still safe to add.
+func (t *ProcessTerminal) ShutdownOutputComplete() bool {
+	t.writesMu.Lock()
+	ctx := t.shutdownContext
+	finishing := t.writesFinishing
+	t.writesMu.Unlock()
+	return !finishing && !t.shutdownTimedOut.Load() && (ctx == nil || ctx.Err() == nil)
+}
+
+// WriteShutdownOutput adds an optional final hint to the FIFO and waits only
+// for the remaining graceful-exit budget. Never write directly to stdout here.
+// BeginShutdownOutput must precede this call.
+func (t *ProcessTerminal) WriteShutdownOutput(text string) bool {
+	if !t.ShutdownOutputComplete() {
+		return false
+	}
+	t.Write(text)
+	t.flushWrites()
+	return t.ShutdownOutputComplete()
+}
+
+// FinishShutdownOutput closes permanent output admission. The writer drains
+// retained bytes if the console recovers, then exits; it is never forcibly
+// killed. Do not use this for temporary renderer stops or editor handoffs.
+func (t *ProcessTerminal) FinishShutdownOutput() {
+	t.writesMu.Lock()
+	t.writesFinishing = true
+	t.deferredHints = [2]string{}
+	cancel := t.shutdownCancel
+	t.writesCond.Broadcast()
+	t.writesMu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+}
+
+// PendingWriteBytes reports committed output still queued or in flight without
+// taking a lock. Uncommitted frame bytes are excluded. D198: the interactive
+// loop samples this before generating a new differential frame.
+func (t *ProcessTerminal) PendingWriteBytes() int64 {
+	return t.pendingWriteBytes.Load()
+}
+
+// WriteBacklog snapshots output bytes in the FIFO, the writer's current batch,
+// and an uncommitted frame. ANSI sequences and UTF-8 count as bytes. The
+// snapshot is O(1); it neither blocks on console I/O nor imposes an output
+// limit. In-flight bytes remain counted until the writer completes the batch.
+func (t *ProcessTerminal) WriteBacklog() (queuedBytes, inFlightBytes, frameBytes int) {
+	t.writesMu.Lock()
+	defer t.writesMu.Unlock()
+	return t.queuedBytes, t.inFlightBytes, t.frameBuf.Len()
+}
+
+// FlushWrites waits for queued writes. It is unbounded normally, or uses the
+// shared deadline during D200 graceful exit. The renderer calls it again after
+// its post-stop hook so the alt-screen exit precedes any resume hint.
 func (t *ProcessTerminal) FlushWrites() { t.flushWrites() }
+
+// D202: optional, atomic off-loop payloads share the committed-output budget.
+// Essential protocol writes and differential frames never wait for admission.
+const maxOptionalOutputBytes = 256 * 1024
+
+var ErrOptionalOutputTooLarge = errors.New("Optional terminal output exceeds 256 KiB admission limit")
+var ErrTerminalOutputClosed = errors.New("Terminal output is closing")
+
+// WriteOptionalContext waits before enqueueing one complete optional payload.
+// It must only be called off the UI loop. A payload is never split across
+// differential frames, and cancellation leaves committed output untouched.
+func (t *ProcessTerminal) WriteOptionalContext(ctx context.Context, data string) error {
+	if len(data) > maxOptionalOutputBytes {
+		return ErrOptionalOutputTooLarge
+	}
+	wake := context.AfterFunc(ctx, func() {
+		t.writesMu.Lock()
+		t.writesCond.Broadcast()
+		t.writesMu.Unlock()
+	})
+	defer wake()
+	t.writesMu.Lock()
+	defer t.writesMu.Unlock()
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if t.writesFinishing || t.shutdownContext != nil {
+			return ErrTerminalOutputClosed
+		}
+		if t.frameDepth == 0 && t.queuedBytes+t.inFlightBytes <= maxOptionalOutputBytes-len(data) {
+			t.enqueueLocked(terminalWrite{data: data})
+			return nil
+		}
+		t.writesCond.Wait()
+	}
+}
 
 // Write writes output to the terminal.
 func (t *ProcessTerminal) Write(data string) {
@@ -996,7 +1160,7 @@ func (t *ProcessTerminal) ClearScreen() {
 func (t *ProcessTerminal) SetTitle(title string) {
 	t.writeMu.Lock()
 	defer t.writeMu.Unlock()
-	t.writeLocked("\x1b]0;" + title + "\x07")
+	t.writeHintLocked(0, "\x1b]0;"+title+"\x07")
 }
 
 // SetProgress drives the OSC 9;4 progress indicator; active shows an
@@ -1005,7 +1169,7 @@ func (t *ProcessTerminal) SetProgress(active bool) {
 	t.writeMu.Lock()
 	defer t.writeMu.Unlock()
 	if active {
-		t.writeLocked(terminalProgressActiveSequence)
+		t.writeHintLocked(1, terminalProgressActiveSequence)
 		if t.progressInterval == nil {
 			t.progressInterval = time.NewTicker(terminalProgressKeepaliveMS * time.Millisecond)
 			t.progressDone = make(chan struct{})
@@ -1016,7 +1180,9 @@ func (t *ProcessTerminal) SetProgress(active bool) {
 						return
 					case <-ticker.C:
 						t.writeMu.Lock()
-						t.writeLocked(terminalProgressActiveSequence)
+						if t.progressInterval == ticker {
+							t.writeHintLocked(1, terminalProgressActiveSequence)
+						}
 						t.writeMu.Unlock()
 					}
 				}
@@ -1030,6 +1196,9 @@ func (t *ProcessTerminal) SetProgress(active bool) {
 }
 
 func (t *ProcessTerminal) clearProgressIntervalLocked() bool {
+	t.writesMu.Lock()
+	t.deferredHints[1] = ""
+	t.writesMu.Unlock()
 	if t.progressInterval == nil {
 		return false
 	}
@@ -1038,6 +1207,38 @@ func (t *ProcessTerminal) clearProgressIntervalLocked() bool {
 	t.progressInterval = nil
 	t.progressDone = nil
 	return true
+}
+
+// writeHintLocked is nonblocking admission for redundant metadata. The newest
+// pending hint replaces only uncommitted state; accepted FIFO entries survive.
+func (t *ProcessTerminal) writeHintLocked(kind int, data string) {
+	t.writesMu.Lock()
+	defer t.writesMu.Unlock()
+	if t.writesFinishing || t.shutdownContext != nil {
+		return
+	}
+	pending := t.queuedBytes + t.inFlightBytes
+	if t.deferredHints[kind] != "" || (pending > 0 && pending > maxOptionalOutputBytes-len(data)) {
+		t.deferredHints[kind] = data
+		return
+	}
+	if t.frameDepth > 0 {
+		t.frameBuf.WriteString(data)
+		return
+	}
+	t.enqueueLocked(terminalWrite{data: data})
+}
+
+func (t *ProcessTerminal) flushDeferredHintsLocked() {
+	if t.writesFinishing || t.shutdownContext != nil || t.frameDepth > 0 || t.queuedBytes+t.inFlightBytes > maxOptionalOutputBytes/2 {
+		return
+	}
+	for kind, data := range t.deferredHints {
+		if data != "" {
+			t.deferredHints[kind] = ""
+			t.enqueueLocked(terminalWrite{data: data})
+		}
+	}
 }
 
 // ---- regex helpers ----

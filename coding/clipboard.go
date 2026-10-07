@@ -132,15 +132,46 @@ func clipboardUnavailableError() error {
 // copyToClipboard): platform command writers, then OSC 52 for remote
 // sessions.
 func CopyTextToClipboard(text string) error {
+	return CopyTextToClipboardContext(context.Background(), text)
+}
+
+// CopyTextToClipboardContext cancels clipboard subprocesses with the caller's
+// lifetime. D200: cancellation must not fall through to OSC 52 output.
+func CopyTextToClipboardContext(ctx context.Context, text string) error {
+	return CopyTextToClipboardWithOSC52(ctx, text, func(_ context.Context, data string) error {
+		if _, err := os.Stdout.WriteString(data); err != nil {
+			return clipboardUnavailableError()
+		}
+		return nil
+	})
+}
+
+// CopyTextToClipboardWithOSC52 retains platform command order, but sends the
+// complete OSC 52 fallback packet through the caller's output sink. D202: the
+// interactive sink shares terminal ordering and optional-output admission.
+func CopyTextToClipboardWithOSC52(ctx context.Context, text string, write func(context.Context, string) error) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	copied := false
 	for _, command := range copyCommands() {
-		if runClipboardCommand(context.Background(), command[0], command[1:], clipboardCommandOptions{input: text, timeoutMS: 5000}) != nil {
+		if runClipboardCommand(ctx, command[0], command[1:], clipboardCommandOptions{input: text, timeoutMS: 5000}) != nil {
 			copied = true
 			break
 		}
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+	}
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 	if !copied && isRemoteSession() {
-		copied = emitOSC52(text)
+		encoded := base64.StdEncoding.EncodeToString([]byte(text))
+		if len(encoded) > MaxOSC52EncodedLength || write == nil {
+			return clipboardUnavailableError()
+		}
+		return write(ctx, "\x1b]52;c;"+encoded+"\x07")
 	}
 	if !copied {
 		return clipboardUnavailableError()
@@ -167,9 +198,20 @@ func CopyTextToClipboardAsync(text string, onDone func(error)) {
 // readClipboardText; the native clipboard fallback has no Go counterpart).
 // Empty text returns ("", nil) like upstream's null.
 func ReadClipboardText() (string, error) {
+	return ReadClipboardTextContext(context.Background())
+}
+
+// ReadClipboardTextContext cancels platform clipboard readers with their mode.
+func ReadClipboardTextContext(ctx context.Context) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	for _, command := range pasteCommands() {
-		if bytes := runClipboardCommand(context.Background(), command[0], command[1:], clipboardCommandOptions{timeoutMS: 5000}); bytes != nil {
+		if bytes := runClipboardCommand(ctx, command[0], command[1:], clipboardCommandOptions{timeoutMS: 5000}); bytes != nil {
 			return string(bytes), nil
+		}
+		if err := ctx.Err(); err != nil {
+			return "", err
 		}
 	}
 	return "", nil

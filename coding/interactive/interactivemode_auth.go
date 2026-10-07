@@ -38,6 +38,8 @@ type AuthWiring struct {
 	UI              tui.TUI
 	Session         AuthSession
 	Settings        *coding.SettingsManager
+	// D200: interactive dialogs inherit the mode-owned clipboard backend.
+	CopyClipboard func(string, func(error))
 
 	// ShowAuthSelect shows the select prompt (extension UI seam; D41).
 	ShowAuthSelect func(dialog *LoginDialogComponent, prompt ai.AuthPrompt) (string, error)
@@ -486,7 +488,7 @@ func (w *AuthWiring) startLogin(ctx context.Context, dialog *LoginDialogComponen
 // ShowLoginDialog runs an OAuth login.
 func (w *AuthWiring) ShowLoginDialog(ctx context.Context, providerID string, providerName string) {
 	previousModel := w.Session.Model()
-	dialog := NewLoginDialogComponent(w.UI, w.post, providerID, func(bool, string) {}, providerName, "")
+	dialog := w.newLoginDialog(providerID, providerName, "", func(bool, string) {})
 	w.showDialog(dialog)
 	w.startLogin(ctx, dialog, providerID, providerName, "oauth", previousModel)
 }
@@ -494,7 +496,7 @@ func (w *AuthWiring) ShowLoginDialog(ctx context.Context, providerID string, pro
 // ShowApiKeyLoginDialog runs an API-key login.
 func (w *AuthWiring) ShowApiKeyLoginDialog(ctx context.Context, providerID string, providerName string) {
 	previousModel := w.Session.Model()
-	dialog := NewLoginDialogComponent(w.UI, w.post, providerID, func(bool, string) {}, providerName, "")
+	dialog := w.newLoginDialog(providerID, providerName, "", func(bool, string) {})
 	if providerID == "amazon-bedrock" {
 		theme := ActiveTheme()
 		docsPath := "providers.md"
@@ -522,6 +524,12 @@ func (w *AuthWiring) reportLoginError(err error, providerName string, syncPrefix
 	}
 }
 
+func (w *AuthWiring) newLoginDialog(providerID, providerName, title string, onComplete func(bool, string)) *LoginDialogComponent {
+	dialog := NewLoginDialogComponent(w.UI, w.post, providerID, onComplete, providerName, title)
+	dialog.copyClipboard = w.CopyClipboard
+	return dialog
+}
+
 func (w *AuthWiring) showDialog(dialog *LoginDialogComponent) {
 	if w.EditorContainer == nil {
 		return
@@ -536,8 +544,7 @@ func (w *AuthWiring) showDialog(dialog *LoginDialogComponent) {
 
 // ShowAmbientAuthDialog shows the ambient-auth info dialog.
 func (w *AuthWiring) ShowAmbientAuthDialog(providerOption AuthSelectorProvider) {
-	dialog := NewLoginDialogComponent(w.UI, w.post, providerOption.ID,
-		func(bool, string) { w.restoreEditor() }, providerOption.Name, providerOption.Name+" setup")
+	dialog := w.newLoginDialog(providerOption.ID, providerOption.Name, providerOption.Name+" setup", func(bool, string) { w.restoreEditor() })
 	methodName := "Authentication"
 	switch typed := providerOption.Method.(type) {
 	case *ai.ApiKeyAuth:
@@ -701,6 +708,7 @@ func newAuthWiring(app *App) *AuthWiring {
 			timer := time.AfterFunc(time.Duration(ms)*time.Millisecond, fn)
 			return func() { timer.Stop() }
 		},
+		CopyClipboard:                app.copyClipboardAsync,
 		Slot:                         app.slot,
 		EditorContainer:              app.editorContainer,
 		Editor:                       app.defaultEditor,

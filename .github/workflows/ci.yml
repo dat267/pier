@@ -6,8 +6,8 @@ on:
   pull_request:
 
 env:
-  # Every goroutine stack on a hang or crash (the PTY watchdogs parse the
-  # SIGQUIT dump for mutex-blocked goroutines).
+  # Every goroutine stack on a hang or crash, including the deliberate
+  # deadlock helper used to test the SIGQUIT stack parser.
   GOTRACEBACK: all
 
 jobs:
@@ -31,15 +31,14 @@ jobs:
       - name: vet
         run: go vet ./...
 
-      - name: build pier (used by the PTY watchdogs)
+      - name: build pier (used by the real-binary PTY tests)
         run: go build -o pier .
 
       - name: test
         env:
           PIER_TEST_BIN: ${{ github.workspace }}/pier
-        # -race -count=2 doubles the work; the timeout is a hang guard, not a
-        # budget. At 60s the suite sat at ~55s (ai) and ~35s
-        # (coding/interactive), so any added test tripped it.
+        # Run every test twice under the race detector. The timeout is a hang
+        # guard, not a performance budget; measure suite duration separately.
         run: go test -race -count=2 -timeout 300s ./...
 
       # vet also compiles every _test.go, catching platform-specific syscall

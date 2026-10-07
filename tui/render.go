@@ -15,8 +15,9 @@ import (
 // Upstream's TuiBase declares an abstract doRender() implemented by
 // TuiMainScreen/TuiAltScreen. Go has no abstract methods, so Renderer carries a
 // DoRender hook that the concrete screen constructor sets (divergence D44).
-// The renderer is single-goroutine driven (an event loop); a mutex guards the
-// timer callbacks that arrive from other goroutines (divergence D45).
+// Input, rendering and UI mutation share the owner goroutine (D146). There
+// is no internal render timer; postMu protects only the off-loop callback
+// handoff, not renderer or component state.
 
 // Terminal is the terminal abstraction used by the renderer (see
 // src/terminal.ts). Getters are methods in Go (divergence D46). The concrete
@@ -165,11 +166,6 @@ type Renderer struct {
 	renderTicks chan struct{}
 	// renderCount counts completed paints (test seam for coalescing).
 	renderCount int64
-
-	// mu guards the render scheduling, focus, overlay, and listener state.
-	// Upstream is single-threaded (Node's event loop); the Go port drives the
-	// renderer from one goroutine but timer callbacks arrive on others
-	// (divergence D45).
 }
 
 // NewRenderer creates a renderer rooted at the given terminal.
@@ -229,8 +225,8 @@ func (t *Renderer) Invalidate() {
 	}
 }
 
-// GetMountedRoots returns the mounted root components. It is a plain field
-// access; callers that race with rendering hold the renderer lock.
+// GetMountedRoots returns the mounted root components. Renderer state is
+// owner-goroutine-only; workers must marshal changes through Post.
 func (t *Renderer) GetMountedRoots() []Component {
 	if t.MountedRoots != nil {
 		return t.MountedRoots()
@@ -446,7 +442,7 @@ func (t *Renderer) RemoveInputListener(listener TuiInputListener) {
 // at construction, so requests never race its initialization).
 func (t *Renderer) EnableRenderTicks() {}
 
-// RenderTicks returns the render-request channel (nil until EnableRenderTicks).
+// RenderTicks returns the render-request channel created at construction.
 func (t *Renderer) RenderTicks() <-chan struct{} {
 	return t.renderTicks
 }

@@ -205,17 +205,25 @@ type App struct {
 	initialized      bool
 
 	// prerenderQueue warms deferred transcript components off the UI loop.
-	// Registered in offloopGroup; stopped by StopMode so a warm cannot touch the
-	// renderer after teardown.
-	prerenderQueue  *offloop.Queue
-	markdownQueue   *offloop.Queue
-	optionalContext context.Context
-	cancelOptional  context.CancelFunc
+	// Registered as optional work (D199). A canceled warm may finish private
+	// cache work, but cannot publish its result after teardown.
+	prerenderQueue *offloop.Queue
+	// D199: clipboard reads belong to this mode, not a process-wide queue.
+	pasteQueue     *offloop.Queue
+	clipboardQueue *offloop.Queue
+	markdownQueue  *offloop.Queue
+	copyText       func(context.Context, string) error
 
-	// offloopGroup owns the app's off-loop queues (theme, pre-render) so
+	// offloopGroup owns the app's off-loop queues (theme, pre-render, paste) so
 	// teardown is one StopAll. In production the command passes its group, which
 	// also owns the settings and session queues.
 	offloopGroup *offloop.Group
+	// D200: lifetime for detached optional producers and their UI completions.
+	optionalContext context.Context
+	cancelOptional  context.CancelFunc
+	// D201: no pending detached list, at most four running jobs.
+	detachedSlots       chan struct{}
+	detachedBusyPending atomic.Bool
 }
 
 // NewApp builds the interactive-mode object graph.
@@ -273,6 +281,22 @@ func NewApp(options AppOptions) *App {
 	}
 
 	app.optionalContext, app.cancelOptional = context.WithCancel(context.Background())
+	app.clipboardQueue = app.offloopGroup.OptionalQueue()
+	app.detachedSlots = make(chan struct{}, 4)
+	app.copyText = func(ctx context.Context, text string) error {
+		return coding.CopyTextToClipboardWithOSC52(ctx, text, func(ctx context.Context, data string) error {
+			if output, ok := terminal.(interface {
+				WriteOptionalContext(context.Context, string) error
+			}); ok {
+				return output.WriteOptionalContext(ctx, data)
+			}
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			terminal.Write(data) // custom terminal; still serialized through its sink
+			return nil
+		})
+	}
 
 	// Renderer + theme. app.UI is the stable forwarding reference (upstream's
 	// createInteractiveTuiReference(() => this.renderer)): SwitchTuiMode swaps
@@ -315,7 +339,7 @@ func NewApp(options AppOptions) *App {
 		// Theme loads read files from disk; the selector paths that reach the
 		// controller run on the UI loop, so they load off it.
 		Marshal:    func(fn func()) { app.ui.Post(fn) },
-		ThemeQueue: app.offloopGroup.Queue(),
+		ThemeQueue: app.offloopGroup.OptionalQueue(),
 	})
 
 	// Containers.
@@ -401,6 +425,7 @@ func NewApp(options AppOptions) *App {
 
 	app.transcript = NewTranscriptRenderer(app.chat, app.ui, app.settings, app.session, app.sessionMgr)
 	app.prerenderQueue = app.offloopGroup.OptionalQueue()
+	app.pasteQueue = app.offloopGroup.OptionalQueue()
 	app.transcript.PrerenderQueue = app.prerenderQueue
 	app.markdownQueue = app.offloopGroup.OptionalQueue()
 	markdownPreparation := &tui.MarkdownPreparation{
@@ -702,6 +727,18 @@ func (a *App) Run(ctx context.Context) {
 // Close unsubscribes and disposes the app.
 func (a *App) Close() {
 	a.cancelOptional()
+	// D200: a canceled run can return without invoking Shutdown. Restore the
+	// terminal through the same post-persistence grace policy on that path.
+	if a.lifecycle != nil && a.lifecycle.IsInitialized() && !a.lifecycle.shuttingDown.Load() {
+		output := "transcript"
+		if a.lifecycle.options.FullscreenExitOutput != nil {
+			output = a.lifecycle.options.FullscreenExitOutput()
+		}
+		a.StopMode(output)
+		a.lifecycle.finishShutdownOutput()
+	}
+	// D199: context cancellation can bypass StopMode. Close the owned queues
+	// even on that exit path.
 	if a.offloopGroup != nil {
 		a.offloopGroup.StopAll()
 	}
@@ -730,6 +767,22 @@ func (a *App) lifecycleCheckShutdown() { a.lifecycle.CheckShutdownRequested() }
 // receives RAW stdin chunks; the loop reassembles them through FeedInput on
 // the loop goroutine.
 func (a *App) newLoopTui(options InteractiveTuiOptions) tui.TUI {
+	options.CopySelection = func(text string) (bool, string) {
+		accepted := a.tryCopyClipboard(text, func(err error) {
+			if err == nil {
+				return
+			}
+			a.ui.Post(func() {
+				if screen, ok := a.currentRenderer().(*tui.AltScreen); ok {
+					screen.Flash(err.Error(), 0)
+				}
+			})
+		})
+		if !accepted {
+			return false, errClipboardBusy.Error()
+		}
+		return true, ""
+	}
 	// The global debug key runs the debug command (upstream sets
 	// `ui.onDebug = () => this.handleDebugCommand()` after creating the renderer).
 	if options.OnDebug == nil {
@@ -794,8 +847,8 @@ func (a *App) loopBeats() uint64 {
 // loop is running; it reports whether the work was dispatched. Callers use the
 // non-dispatched path for direct/test invocation.
 // runDetached runs event-only work in its own goroutine without occupying
-// RunWork's single work slot, so it cannot queue behind the active turn. It
-// uses the run loop's context so shutdown cancellation still reaches it.
+// RunWork's single work slot, so it cannot queue behind the active turn. Both
+// mode teardown and run-context cancellation reach the child context.
 // handleRightClickPaste reads the clipboard and feeds it to the focused
 // component as a bracketed paste, mirroring upstream's onRightClickPaste
 // (interactive-mode.ts handleRightClickPaste). The renderer only invokes it on
@@ -807,29 +860,62 @@ func (a *App) handleRightClickPaste() {
 	if target == nil {
 		return
 	}
-	text, err := readClipboardText()
-	if err != nil || text == "" {
-		return
-	}
-	if a.ui.GetFocusedComponent() != target {
-		return
-	}
-	handler, ok := target.(tui.InputHandler)
-	if !ok {
-		return
-	}
-	handler.HandleInput("\x1b[200~" + text + "\x1b[201~")
-	a.ui.RequestRender(false)
+	a.pasteQueue.GoCoalescedContext("paste", func(ctx context.Context) {
+		if ctx.Err() != nil {
+			return
+		}
+		text, err := readClipboardTextContext(ctx)
+		if err != nil || text == "" || ctx.Err() != nil {
+			return
+		}
+		a.ui.Post(func() {
+			if a.ui.GetFocusedComponent() != target {
+				return
+			}
+			handler, ok := target.(tui.InputHandler)
+			if !ok {
+				return
+			}
+			handler.HandleInput("\x1b[200~" + text + "\x1b[201~")
+			a.ui.RequestRender(false)
+		})
+	})
 }
 
-func (a *App) runDetached(fn func(ctx context.Context) error) {
-	ctx := context.Background()
+func (a *App) runDetached(fn func(ctx context.Context) error) bool {
+	if a.optionalContext.Err() != nil {
+		return false
+	}
+	select {
+	case a.detachedSlots <- struct{}{}:
+	default:
+		if a.detachedBusyPending.CompareAndSwap(false, true) {
+			a.ui.Post(func() {
+				defer a.detachedBusyPending.Store(false)
+				a.showWarning("Background work busy; try again after current tasks finish.")
+			})
+		}
+		return false
+	}
+	ctx, cancel := context.WithCancel(a.optionalContext)
+	stopLoop := func() bool { return false }
 	if a.runner != nil {
 		if loopCtx := a.runner.LoopContext(); loopCtx != nil {
-			ctx = loopCtx
+			stopLoop = context.AfterFunc(loopCtx, cancel)
+			if loopCtx.Err() != nil {
+				cancel()
+			}
 		}
 	}
-	go func() { _ = fn(ctx) }()
+	go func() {
+		defer func() { <-a.detachedSlots }()
+		defer cancel()
+		defer stopLoop()
+		if ctx.Err() == nil {
+			_ = fn(ctx)
+		}
+	}()
+	return true
 }
 
 // currentRenderer returns the concrete active renderer (upstream's
@@ -862,18 +948,17 @@ func (a *App) terminalWidth() int {
 // renderer (with the fullscreen exit output setting) and the signal handlers.
 func (a *App) StopMode(fullscreenExitOutput string) {
 	a.cancelOptional()
-	// Drain the settings and session queues (a clean exit cannot lose the last
-	// save; signals route through the same hook), then stop every off-loop
-	// queue the app owns — including the theme queue, which nothing used to
-	// stop.
+	// D199: reject new submissions and cancel optional work before draining
+	// mandatory saves. Explicit flushes also cover collaborators whose queues
+	// were supplied outside this group; no persistence timeout is introduced.
+	if a.offloopGroup != nil {
+		a.offloopGroup.StopAll()
+	}
 	if a.settings != nil {
 		a.settings.FlushPersists()
 	}
 	if a.sessionMgr != nil {
 		a.sessionMgr.FlushWrites()
-	}
-	if a.offloopGroup != nil {
-		a.offloopGroup.StopAll()
 	}
 	if a.commands == nil {
 		// Teardown before Init finished: stop the renderer only.

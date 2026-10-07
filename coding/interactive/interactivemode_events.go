@@ -62,6 +62,7 @@ type EventDispatcher struct {
 	MarkdownTheme *tui.MarkdownTheme
 	Transformers  []MarkdownTransformer
 
+	messageGeneration  uint64
 	streamingComponent *AssistantMessageComponent
 	streamingMessage   *ai.AssistantMessage
 	pendingTools       map[string]*ToolExecutionComponent
@@ -99,6 +100,22 @@ func (d *EventDispatcher) requestRender() {
 	if d.Transcript != nil {
 		d.Transcript.requestRender()
 	}
+}
+
+// handleQueuedEvent rejects assistant partials from another stream (D196).
+// A partial that overtakes its own start is also safe to discard: message_end
+// carries the complete content. Direct HandleEvent callers retain upstream's
+// ordered event contract.
+func (d *EventDispatcher) handleQueuedEvent(event queuedSessionEvent) {
+	if event.Type == coding.SessionMessageUpdate && event.messageGeneration != d.messageGeneration {
+		return
+	}
+	if event.Type == coding.SessionMessageStart && event.Agent != nil {
+		if _, ok := event.Agent.Message.(*ai.AssistantMessage); ok {
+			d.messageGeneration = event.messageGeneration
+		}
+	}
+	d.HandleEvent(event.SessionEvent)
 }
 
 // HandleEvent processes one session event.

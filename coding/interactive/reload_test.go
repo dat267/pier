@@ -62,7 +62,7 @@ func TestHandleReloadCommand(t *testing.T) {
 		return modelsJSONError, savedTrust, reloadErr
 	}
 	detached := 0
-	wiring.RunDetached = func(fn func()) { detached++; fn() }
+	wiring.RunDetached = func(fn func()) bool { detached++; fn(); return true }
 	wiring.HandleReloadCommand()
 
 	if !reloaded || detached != 1 {

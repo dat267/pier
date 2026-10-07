@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"context"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -1257,16 +1258,31 @@ func setGlobalTheme(name string, theme *Theme) {
 // SetTheme switches the global theme.
 func SetTheme(name string, enableWatcher bool) (bool, string) {
 	themeState.currentName.Store(&name)
-	theme, err := loadTheme(name, "")
+	return setThemeContext(context.Background(), name, enableWatcher, loadTheme)
+}
+
+// D199: an optional load may outlive StopMode. Do not publish its result if
+// cancellation occurred while reading the file. Synchronous SetTheme retains
+// its early currentName update; async switches publish only completed loads.
+func setThemeContext(ctx context.Context, name string, enableWatcher bool, load func(string, ColorMode) (*Theme, error)) (bool, string) {
+	if ctx.Err() != nil {
+		return false, ""
+	}
+	theme, err := load(name, "")
+	if ctx.Err() != nil {
+		return false, ""
+	}
 	if err != nil {
 		setGlobalTheme("dark", mustLoadTheme("dark"))
 		return false, err.Error()
 	}
 	setGlobalTheme(name, theme)
 	if enableWatcher {
-		startThemeWatcher(name)
+		startThemeWatcherContext(ctx, name)
 	}
-	notifyThemeChange()
+	if ctx.Err() == nil {
+		notifyThemeChange()
+	}
 	return true, ""
 }
 
@@ -1306,6 +1322,10 @@ func CurrentThemeName() string {
 // startThemeWatcher polls a custom theme file for changes (D75: no fs.watch in
 // the Go port).
 func startThemeWatcher(themeName string) {
+	startThemeWatcherContext(context.Background(), themeName)
+}
+
+func startThemeWatcherContext(ctx context.Context, themeName string) {
 	stopThemeWatcher()
 	if themeName == "" || themeName == "dark" || themeName == "light" {
 		return
@@ -1314,7 +1334,7 @@ func startThemeWatcher(themeName string) {
 	if themeFile == "" {
 		return
 	}
-	if _, err := os.Stat(themeFile); err != nil {
+	if _, err := os.Stat(themeFile); err != nil || ctx.Err() != nil {
 		return
 	}
 
@@ -1330,6 +1350,8 @@ func startThemeWatcher(themeName string) {
 		defer ticker.Stop()
 		for {
 			select {
+			case <-ctx.Done():
+				return
 			case <-stop:
 				return
 			case <-ticker.C:
@@ -1345,8 +1367,9 @@ func startThemeWatcher(themeName string) {
 				}
 				lastMod = info.ModTime()
 				reloaded, err := LoadThemeFromPath(themeFile, "")
-				if err != nil {
-					// The file may be mid-write; ignore and retry on the next tick.
+				if err != nil || ctx.Err() != nil {
+					// The file may be mid-write or shutdown may have canceled
+					// the read. Never publish a late reload.
 					continue
 				}
 				if registered := themeState.registered.Load(); registered != nil {

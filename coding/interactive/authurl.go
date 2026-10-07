@@ -14,10 +14,11 @@ import (
 // AuthUrlComponent is the sign-in URL block.
 type AuthUrlComponent struct {
 	*tui.Container
-	url  string
-	hint *tui.Text
-	host tui.RenderRequester
-	post func(func())
+	url           string
+	hint          *tui.Text
+	host          tui.RenderRequester
+	post          func(func())
+	copyClipboard func(string, func(error))
 }
 
 // NewAuthUrlComponent builds the block; post marshals the clipboard result onto
@@ -40,7 +41,11 @@ var authURLCopier = coding.CopyTextToClipboardAsync
 
 // Copy copies the URL to the clipboard and reports the outcome in the hint.
 func (c *AuthUrlComponent) Copy() {
-	authURLCopier(c.url, func(err error) {
+	copyClipboard := c.copyClipboard
+	if copyClipboard == nil {
+		copyClipboard = authURLCopier
+	}
+	copyClipboard(c.url, func(err error) {
 		apply := func() {
 			if err != nil {
 				c.setHint(ActiveTheme().Fg("error", err.Error()))

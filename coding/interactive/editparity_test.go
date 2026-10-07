@@ -59,6 +59,8 @@ func TestEditToolRenderUpstreamParity(t *testing.T) {
 		},
 		ToolExecutionOptions{}, &editRenderers, nil, dir)
 
+	// The preview starts only once streamed arguments are complete.
+	component.SetArgsComplete()
 	// Wait for the async preview worker (computeEditsPreview) to publish.
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
@@ -66,6 +68,11 @@ func TestEditToolRenderUpstreamParity(t *testing.T) {
 			break
 		}
 		time.Sleep(5 * time.Millisecond)
+	}
+
+	state, ok := component.rendererState.(*editCallComponent)
+	if !ok || state.snapshotPreview() == nil {
+		t.Fatal("edit preview did not publish")
 	}
 
 	first := 1

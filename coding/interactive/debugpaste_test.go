@@ -55,6 +55,8 @@ func TestHandleRightClickPasteInsertsClipboard(t *testing.T) {
 	t.Cleanup(func() { SetClipboardReader(coding.ReadClipboardText) })
 
 	app.handleRightClickPaste()
+	app.pasteQueue.Flush()
+	app.ui.RenderNow(false)
 
 	if got := app.defaultEditor.GetText(); !strings.Contains(got, "hello paste") {
 		t.Fatalf("editor text = %q, want it to contain the pasted clipboard", got)

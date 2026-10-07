@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"context"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
 )
@@ -27,6 +28,9 @@ type InteractiveTuiOptions struct {
 	// debug key and calls ui.onDebug, which interactive-mode.ts points at
 	// handleDebugCommand, so shift+ctrl+d and /debug do the same thing.
 	OnDebug func()
+	// CopySelection supplies a lifetime-owned copier. Nil retains the legacy
+	// process-wide seam for standalone library clients.
+	CopySelection CopySelectionFn
 }
 
 // debugKeyPattern is the global debug key upstream matches in its renderer
@@ -49,15 +53,16 @@ func SetClipboardCopier(copier CopySelectionFn) { clipboardCopier = copier }
 // ClipboardReadFn reads plain text from the system clipboard.
 type ClipboardReadFn func() (string, error)
 
-var clipboardReader ClipboardReadFn = coding.ReadClipboardText
+var clipboardReader ClipboardReadFn // nil selects the context-aware default
 
 // SetClipboardReader installs the clipboard reader (D106 test seam).
 func SetClipboardReader(reader ClipboardReadFn) { clipboardReader = reader }
 
-// readClipboardText runs the configured clipboard reader.
-func readClipboardText() (string, error) {
+// readClipboardTextContext runs the configured reader; legacy injected readers
+// may ignore cancellation, so callers still gate their results.
+func readClipboardTextContext(ctx context.Context) (string, error) {
 	if clipboardReader == nil {
-		return coding.ReadClipboardText()
+		return coding.ReadClipboardTextContext(ctx)
 	}
 	return clipboardReader()
 }
@@ -141,10 +146,14 @@ func createInteractiveTui(options InteractiveTuiOptions) tui.TUI {
 			OnRightClickPaste: options.OnRightClickPaste,
 			CopyOnSelect:      copyOnSelect,
 			CopySelection: func(text string) (bool, bool, string) {
-				if clipboardCopier == nil {
+				copier := options.CopySelection
+				if copier == nil {
+					copier = clipboardCopier
+				}
+				if copier == nil {
 					return false, false, ""
 				}
-				ok, message := clipboardCopier(text)
+				ok, message := copier(text)
 				return true, ok, message
 			},
 		})

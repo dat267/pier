@@ -41,6 +41,14 @@ const animationScanBox = time.Second
 // already rare and latency-sensitive.
 const minInteractiveFrameInterval = 16 * time.Millisecond
 
+// D198: defer new paints at 256 KiB of committed output and resume at 128 KiB.
+// Already generated differential frames remain lossless. One frame may exceed
+// the high-water mark; this is a scheduling threshold, not a hard byte cap.
+const (
+	terminalOutputHighWaterBytes = 256 * 1024
+	terminalOutputLowWaterBytes  = 128 * 1024
+)
+
 // loopHost is the schedule's window on the outside world: the renderer's
 // animation walk and render ticks, and the raw terminal's input-flush
 // deadlines. It exists so the schedule's decisions can be tested without a
@@ -61,6 +69,12 @@ type loopHost interface {
 	// RenderTicks is the renderer's coalesced render-request channel: a pending
 	// tick means "a paint is wanted".
 	RenderTicks() <-chan struct{}
+}
+
+// outputBacklog is optional for terminals and schedule hosts. Reporting must
+// be lock-free because the UI loop samples it before each paint.
+type outputBacklog interface {
+	PendingWriteBytes() int64
 }
 
 // runnerWorkState is the loop-owned work bookkeeping: at most one blocking
@@ -95,9 +109,12 @@ type loopSchedule struct {
 	scanNeeds      bool
 	scanAt         time.Time
 
-	paintTimer *time.Timer
-	paintCh    <-chan time.Time
-	lastPaint  time.Time
+	paintTimer        *time.Timer
+	paintCh           <-chan time.Time
+	lastPaint         time.Time
+	paintAt           time.Time
+	outputPaused      bool
+	inputPaintPending bool
 }
 
 func newLoopSchedule(host loopHost, paint, markInputRead func()) *loopSchedule {
@@ -208,6 +225,22 @@ const beatWorkInterval = 16 * time.Millisecond
 // paintNow paints the current state and records when, so the next render tick
 // can be coalesced against it.
 func (s *loopSchedule) paintNow() {
+	var pending int64
+	if host, ok := s.host.(outputBacklog); ok {
+		pending = host.PendingWriteBytes()
+	}
+	if pending >= terminalOutputHighWaterBytes || (s.outputPaused && pending > terminalOutputLowWaterBytes) {
+		s.outputPaused = true
+		s.armPaint(minInteractiveFrameInterval)
+		return
+	}
+	s.outputPaused = false
+	if s.inputPaintPending {
+		if s.markInputRead != nil {
+			s.markInputRead()
+		}
+		s.inputPaintPending = false
+	}
 	s.paint()
 	// A paint is the only thing that can change a component's animation state,
 	// so it invalidates the cached walk: the next iteration re-walks and
@@ -235,10 +268,20 @@ func (s *loopSchedule) paintIfRequested() {
 	default:
 		return
 	}
-	if s.markInputRead != nil {
-		s.markInputRead()
-	}
+	s.inputPaintPending = true
 	s.paintNow()
+}
+
+// armPaint preserves an earlier retry deadline, so repeated render requests
+// cannot postpone recovery forever. An expired retry is rearmed if still paused.
+func (s *loopSchedule) armPaint(wait time.Duration) {
+	now := time.Now()
+	next := now.Add(wait)
+	if s.paintCh == nil || !now.Before(s.paintAt) || next.Before(s.paintAt) {
+		s.paintTimer.Reset(wait)
+		s.paintCh = s.paintTimer.C
+		s.paintAt = next
+	}
 }
 
 // coalescePaint handles one render tick: paint now, or arm the frame timer when
@@ -246,10 +289,7 @@ func (s *loopSchedule) paintIfRequested() {
 // paints once rather than once per delta.
 func (s *loopSchedule) coalescePaint() {
 	if wait := minInteractiveFrameInterval - time.Since(s.lastPaint); wait > 0 {
-		if s.paintCh == nil {
-			s.paintTimer.Reset(wait)
-			s.paintCh = s.paintTimer.C
-		}
+		s.armPaint(wait)
 		return
 	}
 	s.paintNow()

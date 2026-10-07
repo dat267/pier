@@ -3,20 +3,24 @@ package interactive
 import (
 	"context"
 	"testing"
+	"testing/synctest"
 	"time"
 )
 
 // fakeLoopHost stands in for the renderer and the raw terminal: the four things
 // the loop's scheduling asks the outside world.
 type fakeLoopHost struct {
-	animCalls  int
-	animNeeds  bool
-	animDelay  time.Duration
-	flushAt    time.Time
-	flushed    int
-	renderTick chan struct{}
-	beatWork   bool
+	animCalls   int
+	animNeeds   bool
+	animDelay   time.Duration
+	flushAt     time.Time
+	flushed     int
+	renderTick  chan struct{}
+	beatWork    bool
+	outputBytes int64
 }
+
+func (h *fakeLoopHost) PendingWriteBytes() int64 { return h.outputBytes }
 
 func (h *fakeLoopHost) HasPendingBeatWork() bool { return h.beatWork }
 
@@ -197,6 +201,71 @@ func TestLoopSchedulePaintsInputOnlyWhenARenderTickIsPending(t *testing.T) {
 	if h.paints != 1 || h.reads != 1 {
 		t.Fatalf("paints = %d reads = %d, want one of each", h.paints, h.reads)
 	}
+}
+
+// TestLoopScheduleDefersPaintsUntilOutputDrains pins D198: all paint paths
+// retain a request while the console is backed up, rather than generating
+// differential frames that cannot yet be delivered.
+func TestLoopScheduleDefersPaintsUntilOutputDrains(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		h := newScheduleHarness()
+		defer h.schedule.close()
+		h.host.outputBytes = 256 * 1024
+		for i := 0; i < 100; i++ {
+			h.host.pushRenderTick()
+			h.schedule.paintIfRequested()
+			h.schedule.paintNow() // resize and animation use this path too
+			h.schedule.coalescePaint()
+		}
+		if h.paints != 0 {
+			t.Fatalf("backed-up console generated %d frames, want none", h.paints)
+		}
+		if h.reads != 0 {
+			t.Fatalf("tagged %d input paints that were never generated", h.reads)
+		}
+		if h.schedule.paintChannel() == nil {
+			t.Fatal("deferred render request has no retry wake-up")
+		}
+		// Hysteresis prevents a nearly full writer from repeatedly repainting.
+		h.host.outputBytes = 128*1024 + 1
+		<-h.schedule.paintChannel()
+		h.schedule.paintNow()
+		if h.paints != 0 || h.schedule.paintChannel() == nil {
+			t.Fatal("paint resumed before the low-water mark")
+		}
+		// No new render request is required after the writer catches up.
+		h.host.outputBytes = 128 * 1024
+		<-h.schedule.paintChannel()
+		h.schedule.paintNow()
+		if h.paints != 1 || h.reads != 1 || h.schedule.paintChannel() != nil {
+			t.Fatalf("drained console paints=%d reads=%d retry=%v, want one final input paint and no retry", h.paints, h.reads, h.schedule.paintChannel())
+		}
+	})
+}
+
+func TestDeferredPaintRetryIsNotPostponedByRenderRequests(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		h := newScheduleHarness()
+		defer h.schedule.close()
+		h.host.outputBytes = 256 * 1024
+		h.schedule.paintNow()
+		for i := 0; i < 8; i++ {
+			time.Sleep(time.Millisecond)
+			h.host.pushRenderTick()
+			h.schedule.paintIfRequested()
+		}
+		time.Sleep(8 * time.Millisecond)
+		h.host.outputBytes = 0
+		select {
+		case <-h.schedule.paintChannel():
+			h.schedule.paintNow()
+		default:
+			t.Fatal("render requests postponed the original 16 ms retry")
+		}
+		if h.paints != 1 {
+			t.Fatalf("recovery paints = %d, want one", h.paints)
+		}
+	})
 }
 
 // TestLoopScheduleRunsOneWorkAtATime pins the work queue: at most one blocking

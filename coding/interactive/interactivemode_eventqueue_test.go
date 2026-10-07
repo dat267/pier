@@ -14,6 +14,43 @@ import (
 	"github.com/dat267/pier/coding"
 )
 
+// TestQueuedMessageUpdateCannotOverwriteTheNextMessage exercises the D143
+// split-queue handoff. Upstream interactive-mode.ts applies message events in
+// emission order; a delayed partial must not cross an assistant boundary here.
+func TestQueuedMessageUpdateCannotOverwriteTheNextMessage(t *testing.T) {
+	dispatcher, _, transcript, _ := newEventTestDispatcher(t)
+	queue := newSessionEventQueue()
+	defer queue.Close()
+	runner := &RunWiring{Events: dispatcher, SessionEvents: queue.Events(), PartialEvents: queue.Partials()}
+	first := &ai.AssistantMessage{Content: ai.ContentList{ai.TextContent{Text: "first message"}}}
+	second := &ai.AssistantMessage{Content: ai.ContentList{ai.TextContent{Text: "second message"}}}
+	stale := &ai.AssistantMessage{Content: ai.ContentList{
+		ai.TextContent{Text: "stale partial"},
+		ai.ToolCall{ID: "stale-tool", Name: "bash", Arguments: []byte(`{"command":"echo stale"}`)},
+	}}
+	queue.enqueue(&coding.SessionEvent{Type: coding.SessionMessageStart, Agent: agentEvent("message_start", first)})
+	runner.drainReadyEvents()
+	queue.enqueue(&coding.SessionEvent{Type: coding.SessionMessageUpdate, Agent: agentEvent("message_update", stale)})
+	queue.enqueue(&coding.SessionEvent{Type: coding.SessionMessageEnd, Agent: agentEvent("message_end", first)})
+	queue.enqueue(&coding.SessionEvent{Type: coding.SessionMessageStart, Agent: agentEvent("message_start", second)})
+	runner.drainReadyEvents()
+
+	lines := strings.Join(renderChat(t, transcript.Chat), "\n")
+	if !strings.Contains(lines, "second message") || strings.Contains(lines, "stale partial") || strings.Contains(lines, "echo stale") {
+		t.Fatalf("delayed partial crossed the message boundary: %q", lines)
+	}
+	if len(dispatcher.PendingTools()) != 0 {
+		t.Fatal("delayed partial created a stale tool")
+	}
+	current := &ai.AssistantMessage{Content: ai.ContentList{ai.TextContent{Text: "current partial"}}}
+	queue.enqueue(&coding.SessionEvent{Type: coding.SessionMessageUpdate, Agent: agentEvent("message_update", current)})
+	runner.drainReadyEvents()
+	lines = strings.Join(renderChat(t, transcript.Chat), "\n")
+	if !strings.Contains(lines, "current partial") || strings.Contains(lines, "stale partial") {
+		t.Fatalf("current stream's partial was not rendered: %q", lines)
+	}
+}
+
 // TestSessionEventQueueCoalescesPartials asserts the drop-oldest policy:
 // partials are latest-wins (the newest survives, older pending ones are
 // dropped) while terminal events are never dropped.
@@ -290,6 +327,64 @@ func TestRunLoopAppliesEventsWhileTurnRuns(t *testing.T) {
 	case <-done:
 	case <-time.After(2 * time.Second):
 		t.Fatal("run loop did not exit within 2s of cancellation")
+	}
+}
+
+// TestDrainReadyEventsYieldsUnderContinuousRefill exercises the D143 handoff:
+// a producer can keep a bounded channel ready forever, so each pre-paint drain
+// must yield without discarding lossless events.
+func TestDrainReadyEventsYieldsUnderContinuousRefill(t *testing.T) {
+	dispatcher, _, _, _ := newEventTestDispatcher(t)
+	queue := newSessionEventQueue()
+	defer queue.Close()
+	runner := &RunWiring{Events: dispatcher, SessionEvents: queue.Events(), PartialEvents: queue.Partials()}
+	const total = 1000
+	applied := 0
+	dispatcher.CheckShutdownRequested = func() {
+		applied++
+		if applied < total {
+			queue.enqueue(&coding.SessionEvent{Type: coding.SessionAgentSettled})
+		}
+	}
+	queue.enqueue(&coding.SessionEvent{Type: coding.SessionAgentSettled})
+	runner.drainReadyEvents()
+	if applied == 0 || applied > 64 {
+		t.Fatalf("drain applied %d events before yielding, want between 1 and 64", applied)
+	}
+	// Subsequent loop iterations must still deliver every lossless event.
+	for applied < total {
+		runner.drainReadyEvents()
+	}
+	if applied != total {
+		t.Fatalf("applied %d events, want %d", applied, total)
+	}
+}
+
+// TestDrainReadyEventsDoesNotStarvePartials keeps both channels ready and
+// checks that streaming updates receive service before lossless traffic ends.
+func TestDrainReadyEventsDoesNotStarvePartials(t *testing.T) {
+	dispatcher, _, _, _ := newEventTestDispatcher(t)
+	queue := newSessionEventQueue()
+	defer queue.Close()
+	runner := &RunWiring{Events: dispatcher, SessionEvents: queue.Events(), PartialEvents: queue.Partials()}
+	lossless, partial := 0, 0
+	dispatcher.CheckShutdownRequested = func() {
+		lossless++
+		if lossless < 1000 {
+			queue.enqueue(&coding.SessionEvent{Type: coding.SessionAgentSettled})
+		}
+	}
+	runner.OnPartialEventApplied = func() {
+		partial++
+		if partial < 1000 {
+			queue.enqueue(&coding.SessionEvent{Type: coding.SessionMessageUpdate})
+		}
+	}
+	queue.enqueue(&coding.SessionEvent{Type: coding.SessionAgentSettled})
+	queue.enqueue(&coding.SessionEvent{Type: coding.SessionMessageUpdate})
+	runner.drainReadyEvents()
+	if lossless == 0 || partial == 0 {
+		t.Fatalf("drain starved a ready channel: lossless=%d partial=%d", lossless, partial)
 	}
 }
 

@@ -686,6 +686,7 @@ func TestThemeSettingAppliesOnTheQueue(t *testing.T) {
 		ThemeQueue: offloop.New(),
 	})
 	controller.SetThemeSetting("light")
+	controller.ThemeQueueFlushForTest() // observe this accepted load before the next selection
 	controller.SetThemeSetting("dark")
 	controller.ThemeQueueFlushForTest()
 	if CurrentThemeName() != "dark" {

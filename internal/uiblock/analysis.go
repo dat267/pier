@@ -158,7 +158,10 @@ func cachedModule(dir string) (*module, error) {
 
 // loadModule builds the SSA program and computes the UI-loop roots.
 func loadModule(dir string) (*module, error) {
-	cfg := &packages.Config{Mode: packages.LoadAllSyntax, Dir: dir}
+	// Every repository package is an initial package. Keep external type and
+	// function declarations for call-site classification, but do not parse or
+	// build external bodies: traversal only follows isPier callees.
+	cfg := &packages.Config{Mode: packages.LoadSyntax, Dir: dir}
 	pkgs, err := packages.Load(cfg, "./...")
 	if err != nil {
 		return nil, err
@@ -166,7 +169,7 @@ func loadModule(dir string) (*module, error) {
 	if packages.PrintErrors(pkgs) > 0 {
 		return nil, fmt.Errorf("type errors during load")
 	}
-	prog, _ := ssautil.AllPackages(pkgs, ssa.BuilderMode(0))
+	prog, _ := ssautil.Packages(pkgs, ssa.BuilderMode(0))
 	prog.Build()
 	all := ssautil.AllFunctions(prog)
 

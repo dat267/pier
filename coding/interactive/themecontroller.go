@@ -1,6 +1,8 @@
 package interactive
 
 import (
+	"context"
+
 	"github.com/dat267/pier/internal/offloop"
 	"github.com/dat267/pier/tui"
 )
@@ -75,6 +77,8 @@ type InteractiveThemeController struct {
 	systemProbed        bool
 	marshal             func(func())
 	themeQueue          *offloop.Queue
+	// Immutable per-controller load seam, also used by cancellation tests.
+	loadTheme func(string, ColorMode) (*Theme, error)
 }
 
 // NewInteractiveThemeController creates and initializes the controller.
@@ -90,6 +94,7 @@ func NewInteractiveThemeController(options ThemeControllerOptions) *InteractiveT
 		currentThemeSetting: options.InitialThemeSetting,
 		marshal:             options.Marshal,
 		themeQueue:          options.ThemeQueue,
+		loadTheme:           loadTheme,
 	}
 	if controller.timeoutMS == 0 {
 		controller.timeoutMS = 100
@@ -236,19 +241,26 @@ func (c *InteractiveThemeController) SetThemeSetting(themeSetting string) {
 	c.applyThemeNameAsync(themeSetting)
 }
 
-// applyThemeNameAsync is applyThemeName off the loop: SetTheme loads the theme
+// applyThemeNameAsync is applyThemeName off the loop: setThemeContext loads the theme
 // file and swaps the global atomics on the worker (its notifyThemeChange
 // callback already marshals the UI invalidation onto the loop), and the
 // controller's own state update marshals back through the wiring's Marshal
-// seam. Ordered submissions make the last switch win.
+// seam. D201: settings switches and previews share one newest-pending slot;
+// a running load completes before its newest successor.
 func (c *InteractiveThemeController) applyThemeNameAsync(themeName string) {
 	if c.themeQueue == nil {
 		c.applyThemeNameSync(themeName)
 		return
 	}
-	c.themeQueue.Go(func() {
-		success, message := SetTheme(themeName, true)
+	c.themeQueue.GoLatestContext("theme", func(ctx context.Context) {
+		success, message := setThemeContext(ctx, themeName, true, c.loadTheme)
+		if ctx.Err() != nil {
+			return
+		}
 		c.onUI(func() {
+			if ctx.Err() != nil {
+				return
+			}
 			if success {
 				c.activeThemeName = themeName
 			} else {
@@ -298,12 +310,14 @@ func (c *InteractiveThemeController) Preview(themeSettingOrName string) {
 		}
 		return
 	}
-	// Preview loads run on the theme queue like real switches; ordered
-	// submissions make the last previewed theme win.
-	c.themeQueue.Go(func() {
-		success, _ := SetTheme(themeName, true)
-		if success {
+	// D201: previews share the newest-pending theme slot with settings switches.
+	c.themeQueue.GoLatestContext("theme", func(ctx context.Context) {
+		success, _ := setThemeContext(ctx, themeName, true, c.loadTheme)
+		if success && ctx.Err() == nil {
 			c.onUI(func() {
+				if ctx.Err() != nil {
+					return
+				}
 				if c.ui != nil {
 					c.ui.Invalidate()
 					c.ui.RequestRender()

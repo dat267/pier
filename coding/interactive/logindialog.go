@@ -44,6 +44,7 @@ type LoginDialogComponent struct {
 	input            *tui.Input
 	host             tui.RenderRequester
 	post             func(func())
+	copyClipboard    func(string, func(error))
 	onComplete       func(success bool, message string)
 
 	aborted chan struct{}
@@ -152,6 +153,7 @@ func (c *LoginDialogComponent) ShowAuth(url string, instructions string) {
 		c.contentContainer.Clear()
 		c.contentContainer.AddChild(tui.NewSpacer(1))
 		c.authUrl = NewAuthUrlComponent(c.host, c.post, url)
+		c.authUrl.copyClipboard = c.copyClipboard
 		c.contentContainer.AddChild(c.authUrl)
 
 		if instructions != "" {

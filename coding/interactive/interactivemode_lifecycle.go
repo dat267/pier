@@ -182,6 +182,7 @@ func (l *Lifecycle) MountInteractiveTui(renderer tui.TUI, components []tui.Compo
 // StopInteractiveTui stops the renderer, replaying the transcript when leaving
 // fullscreen mode with the transcript output.
 func (l *Lifecycle) StopInteractiveTui(fullscreenExitOutput string) {
+	l.beginShutdownOutput()
 	if TuiMode(l.options.UI) == "fullscreen" && fullscreenExitOutput == "transcript" {
 		for l.options.UI.HasOverlayEntries() {
 			l.options.UI.HideOverlay()
@@ -327,6 +328,7 @@ func (l *Lifecycle) Shutdown(fromSignal bool) {
 			_ = l.options.Terminal.DrainInput(1000, 0)
 		}
 		l.stopMode()
+		l.finishShutdownOutput()
 		l.options.Exit(0)
 		return
 	}
@@ -341,18 +343,52 @@ func (l *Lifecycle) Shutdown(fromSignal bool) {
 	if l.options.DisposeRuntime != nil {
 		l.options.DisposeRuntime()
 	}
-	if l.options.ResumeCommand != nil {
+	if l.outputComplete() && l.options.ResumeCommand != nil {
 		if command := l.options.ResumeCommand(); command != "" {
 			message := command
 			if l.options.FormatResumeMessage != nil {
 				message = l.options.FormatResumeMessage(command)
 			}
-			if l.options.WriteOut != nil {
+			if terminal, ok := l.outputTerminal().(interface{ WriteShutdownOutput(string) bool }); ok {
+				terminal.WriteShutdownOutput(message + "\n")
+			} else if l.options.WriteOut != nil {
 				l.options.WriteOut(message + "\n")
 			}
 		}
 	}
+	l.finishShutdownOutput()
 	l.options.Exit(0)
+}
+
+// D200: only permanent mode teardown gets the shared 2 s terminal budget.
+// StopMode drains accepted saves before it reaches StopInteractiveTui.
+func (l *Lifecycle) beginShutdownOutput() {
+	if terminal, ok := l.outputTerminal().(interface{ BeginShutdownOutput(time.Duration) }); ok {
+		terminal.BeginShutdownOutput(2 * time.Second)
+	}
+}
+
+func (l *Lifecycle) outputTerminal() tui.Terminal {
+	if l.options.Terminal != nil {
+		return l.options.Terminal
+	}
+	if l.options.UI != nil {
+		return l.options.UI.GetTerminal()
+	}
+	return nil
+}
+
+func (l *Lifecycle) outputComplete() bool {
+	if terminal, ok := l.outputTerminal().(interface{ ShutdownOutputComplete() bool }); ok {
+		return terminal.ShutdownOutputComplete()
+	}
+	return true
+}
+
+func (l *Lifecycle) finishShutdownOutput() {
+	if terminal, ok := l.outputTerminal().(interface{ FinishShutdownOutput() }); ok {
+		terminal.FinishShutdownOutput()
+	}
 }
 
 // stopMode tears the mode down (upstream's stop(), which reads the
@@ -372,6 +408,7 @@ func (l *Lifecycle) stopMode() {
 
 // Stop stops the renderer.
 func (l *Lifecycle) Stop() {
+	l.beginShutdownOutput()
 	if l.options.UI != nil {
 		l.options.UI.Stop(tui.TuiStopOptions{})
 	}

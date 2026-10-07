@@ -6,9 +6,15 @@ measurements needed only when working on these areas.
 
 ## Concurrency architecture (UI event loop refactor)
 
-The interactive mode is being moved from mutex-guarded shared state to a
-single-writer UI loop (upstream is single-threaded; every Go-side lock was
-invented to bridge that gap). Stage 1 has landed:
+The interactive mode uses a single-writer UI loop, replacing the earlier
+mutex-guarded shared state (upstream is single-threaded). Input dispatch,
+painting and UI mutation share the owner goroutine; producers only hand off
+work or data. UI-state locks and the internal render timer have been retired
+(D146/D147). Narrow handoff and I/O locks remain; `docs/locks.md` is the
+authoritative inventory. The sections below describe the completed stages,
+with historical measurements retained to explain the design.
+
+### Session events and background work (stage 1)
 
 - **`sessionEventQueue`** (`interactivemode_eventqueue.go`) decouples the
   session-event producers from the UI. Two buffered channels:
@@ -18,6 +24,11 @@ invented to bridge that gap). Stage 1 has landed:
   drop-oldest policy so a fast token stream cannot back-pressure the agent or
   starve input. The subscription callback only enqueues; producers never touch
   UI state or UI locks. `Close` releases a producer parked on a full channel.
+  The channels do not preserve ordering across event classes. **D196** stamps
+  assistant starts and updates with a UI-local generation; both loop-side
+  application paths reject a partial from another stream. A partial that
+  arrives before its start can be dropped because message end carries the
+  complete content.
 - **`runLoop`** (`interactivemode_run.go`) is the single writer: a `select`
   over the two event channels, the submission channel
   (`StartupWiring.inputs`, cap 64), work completion, and `ctx.Done()`.
@@ -26,10 +37,12 @@ invented to bridge that gap). Stage 1 has landed:
   drain while it runs; the loop only accepts submissions when idle, matching
   upstream's awaited prompt. Initial messages are seeded as pending loop work
   ahead of submissions.
-- Every channel is buffered; every consumer select has a `ctx.Done()` arm;
-  producers blocked on a full channel are released by the run context's
-  cancellation or by the queue's `Close` (the terminal reader and event
-  subscribers never receive a context, so both arms are present).
+- The main run-loop select has a `ctx.Done()` arm. Pre-paint event drains use
+  non-blocking selects with a 64-event budget (D197); they return to the main
+  loop instead of waiting for a channel to become empty. Blocking event and
+  terminal-input sends select on cancellation and queue/input closure. The
+  standalone startup/picker loop exits when its selection is settled, not
+  through the app's run context.
 - **Slow-phase logging is on by default at 100 ms**; `PIER_STALL_MS=<ms>`
   overrides the threshold and `PIER_STALL_MS=0` disables it. Every phase the
   loop measures (`render`, `events`, `event-apply`, `partial-event-apply`, `beat`, `input`,
@@ -54,25 +67,61 @@ invented to bridge that gap). Stage 1 has landed:
   active) in one run; the render itself is sub-millisecond warm on a large
   session (`BenchmarkScrollWarmDiff`).
 - The loop calls a **watchdog beat** once per iteration
-  (`RunWiring.LoopBeats`, exposed as `App.LoopBeats`): a stalled loop stops
+  (`RunWiring.LoopBeats`, read by the app's `loopBeats` test seam): a stalled loop stops
   advancing it, so a watchdog can detect a hang.
 - **Blocking work runs off the loop on `internal/offloop` queues** (one
   goroutine per domain, strict submission order, optional keyed coalescing):
   session file writes, settings persists, theme loads, the transcript
   pre-render, and clipboard/paste. An `offloop.Group` owns the queues of one
-  composition root, so teardown is a single `StopAll` (drain + stop) rather
-  than a hand-written enumeration — `App.StopMode` and the print-mode exit.
+  composition root, so teardown uses `StopAll` rather than a hand-written
+  enumeration. **D199** separates mandatory session/settings writes (`Queue`)
+  from optional theme loads, transcript warming and keyboard clipboard reads
+  (`OptionalQueue`). `StopAll` rejects new work and cancels optional contexts
+  before waiting for every accepted mandatory save. Optional waiting tasks are
+  discarded; a running worker that ignores cancellation does not delay exit.
+  `App.StopMode` and `App.Close` both close the owned queues. Theme completions
+  and paste inserts check cancellation again when their UI posts execute;
+  canceled loads and warms do not publish late results.
   The queues are opt-in: a nil queue keeps the synchronous path for one-shot
   CLI/SDK consumers and tests, and the interactive wiring is what opts in.
+  Offloading alone is not a backlog bound. **D201** caps clipboard copies at
+  four accepted jobs (one running, three waiting), detached jobs at four parallel
+  slots with no pending list, and theme loads at one running plus one newest
+  pending selection shared by settings and previews. Excess copies/detached jobs
+  report busy status; detached rejection notices coalesce while pending, and
+  rejected reloads restore the editor. Existing paste coalescing and one-chunk
+  transcript warming remain unchanged. These are per-domain count bounds, not
+  byte caps or a global queue/output limit. Mandatory `Queue.Stop`
+  still drains accepted saves without a deadline. **D200** extends optional
+  ownership to `/copy`, fullscreen selections, OAuth URL copies and explicit
+  detached bash/compaction work. Clipboard subprocesses receive cancellation
+  contexts, and right-click reads run off the input loop. The mode's forwarding
+  UI reference rejects posts at both submission and execution after teardown.
+  Optional cancellation cannot forcibly interrupt filesystem reads, component
+  preparation, legacy providers or console syscalls; such workers may finish
+  later. Legacy standalone clipboard APIs retain their defaults. Explicit
+  `Flush`/`FlushAll` still wait for running optional work and are not used to
+  cancel it.
+  `Queue.Backlog` snapshots queued and running task counts;
+  `ProcessTerminal.WriteBacklog` snapshots queued bytes, bytes in the writer's
+  current batch, and bytes in an uncommitted frame. Both are O(1) observations
+  under existing handoff locks, not memory-allocation measurements or admission
+  limits. The blocked-worker regression tests hold a worker/console on a
+  channel, measure retained work, then release it and verify lossless ordered
+  draining. The queue shutdown test uses `testing/synctest` to prove `Stop`
+  waits and rejects later submissions without a wall-clock sleep.
 - **D143** records the divergence: upstream is single-threaded (await +
   microtask order), the port is an explicit select loop with off-loop work and
   partial coalescing.
-Stage 3 (input and signals on the loop) has landed:
 
-- **Terminal producers.** The stdin reader delivers complete sequences on
-  `loopInputs` (cap 256) and the SIGWINCH watcher posts to `loopResizes`
-  (cap 1); the lifecycle's signal handlers post to `loopSignals` (cap 4,
-  non-blocking so shutdown signals coalesce). `Renderer.EnableLoopInput` (wired
+### Input, signals and terminal I/O (stage 3)
+
+- **Terminal producers.** A raw-capable terminal posts stdin chunks on
+  `loopRawInputs` (cap 256); the loop feeds the input buffer and dispatches
+  complete sequences. Other terminals post sequences on `loopInputs` (cap
+  256). The resize watcher posts to `loopResizes` (cap 1); the lifecycle's
+  signal handlers post to `loopSignals` (cap 4, non-blocking so shutdown
+  signals coalesce). `Renderer.EnableLoopInput` (wired
   in `App.newLoopTui`, so renderer swaps keep it) stops the renderer from
   dispatching input inline; the run loop calls `HandleTerminalInput`, renders
   on resize, and runs the signal shutdown work on its own goroutine.
@@ -83,14 +132,23 @@ Stage 3 (input and signals on the loop) has landed:
   no SIGWINCH, so its resize watcher is a 200 ms poller (off the loop); a
   refresh repaints only when the size actually changed. Console **writes** run
   on their own goroutine too: `Write` appends to a FIFO the goroutine drains,
-  so no caller blocks. Windows Terminal stops draining the pty while a mouse
+  so console backpressure parks the writer rather than the UI loop. Windows
+  Terminal stops draining the pty while a mouse
   drag-selection is active, and a synchronous write parked the UI loop for the
   whole duration of the drag; `Stop` flushes the queue before restoring the
   terminal, and `Renderer.Stop` flushes **again** after its post-stop hook, which
   enqueues the alt-screen exit: the resume hint is written straight to stdout, so
   without that flush it raced the writer and landed on the still-active alt
   screen, mangled into the last frame (pinned by
-  `TestRendererStopFlushesAfterThePostStopHook`). The renderer brackets each
+  `TestRendererStopFlushesAfterThePostStopHook`). **D200** scopes graceful
+  permanent CLI teardown to one 2 s output grace, started after mandatory saves drain.
+  Every stop, replay, post-stop flush and optional resume hint shares that
+  deadline. A timeout skips the hint and permits exit with undelivered display
+  output; the saved session is unaffected. A successful hint uses the FIFO and
+  remaining budget rather than direct stdout. Finalization rejects later writes
+  and lets the writer drain and exit if the console recovers. Temporary stops
+  remain unbounded/lossless, and an explicit `FlushWritesContext` can request
+  a caller-controlled wait without discarding queued bytes. The renderer brackets each
   paint (`BeginFrame`/`EndFrame`) so a
   paint's writes are submitted as one ordered batch. Frames are **not dropped**
   when superseded: the screens are differential, so a queued frame is still
@@ -105,17 +163,34 @@ Stage 3 (input and signals on the loop) has landed:
   `RunWiring.RunWork`), so the loop keeps dispatching input — including the
   advertised ESC cancel — while the summarization runs.
 
-Stage 2 (rendering on the loop) has landed:
+### Rendering on the owner loop (stage 2)
 
-- **`Renderer.EnableRenderTicks`** (`tui/render.go`) switches a renderer from
-  its internal timer to a caller-driven mode: `RequestRender` coalesces onto a
-  capacity-1 `renderTicks` channel (a channel send, so no callback runs under
-  the renderer lock) and no longer arms a timer. The app's renderers enable it
-  in `CreateInteractiveTui`. Channel default (timer + throttle) remains for the
-  standalone session picker and library users.
-- The run loop selects on `UI.RenderTicks()`, drains every already-queued
-  session event (`RunWiring.drainReadyEvents`) and paints once
-  (`renderUI`), so a burst of N messages produces one render, not N.
+- **Every renderer is caller-driven (D146).** Construction creates the
+  capacity-1 `renderTicks` channel. `RequestRender` coalesces onto it; the owner
+  consumes requests and calls `RenderNow`. There is no internal render timer
+  or renderer-owned throttle. `EnableRenderTicks` and `DisableAutoRender` are
+  compatibility no-ops. The interactive app owns its frame schedule; the
+  standalone picker and startup selectors use `RunStartupScreenLoop`, while
+  library clients must drive their own input/render loop.
+- The run loop selects on `UI.RenderTicks()`, applies a bounded batch of
+  queued session events (`RunWiring.drainReadyEvents`) and paints once
+  (`renderUI`), so a small burst produces one render, not one per event.
+  **D197** caps each drain at 64 events and gives both ready event classes a
+  turn per round. Continuously refilled channels cannot keep the loop inside
+  a pre-paint drain or starve partial updates there; remaining events wake
+  subsequent iterations, allowing input, cancellation and watchdog beats.
+- **D198 output backpressure defers painting, not input.** The interactive
+  schedule uses the terminal's optional lock-free `PendingWriteBytes` snapshot
+  (queued plus in-flight committed bytes). At 256 KiB it pauses new paints;
+  it resumes at 128 KiB, retrying a retained paint on the existing timer every
+  16 ms without requiring a new render request. Input, session events and
+  cancellation continue. Committed differential frames and durable writes
+  remain lossless. One large frame can overshoot the threshold, and direct
+  generic SDK writes remain unbounded. **D202** adds admission for interactive
+  OSC 52 packets on clipboard workers, and newest-pending title/progress hints;
+  essential protocol/lifecycle writes do not wait. The inventory, packet limits
+  and oversized-title exception are in [terminal-output.md](terminal-output.md).
+  Startup screens and standalone renderer clients are unchanged.
 - **D203 transcript resize preparation yields cooperatively.** The composed chat
   document retains its last complete frame while warming at most 64 children
   per Render call for the new width. It requests continuation, prevents ancestor
@@ -306,16 +381,18 @@ into narrow, injectable wirings (all in `coding/interactive`):
   and the setting already reached the wire per request (D40).
 
 `tui/render.go` (+ `mainscreen.go`, `altscreen.go`, `terminal.go`,
-`stdinbuffer.go`) is the differential renderer core. Its lock discipline is
-load-bearing (see below).
+`stdinbuffer.go`) is the differential renderer core. Its owner-loop and
+handoff discipline is load-bearing; see `docs/locks.md`. Historical deadlock
+fixes do not imply that component/render mutexes still exist.
 
 **The session projection lives in one module.** `coding/session_projection.go`
 owns what the next request carries: `SessionManager.Projection()` resolves the
 branch path, the compaction window, the context settings and the messages in one
 walk, caches the result by branch version (leaf + entry count), and hands its
 slices out with no spare capacity so a caller's append cannot write into the
-cache. `CurrentSystemMessage`, `LatestCompaction` and `ContextSignature` resolve
-from the same place. Before this, ten call sites assembled the projection by hand
+cache. `CurrentSystemMessage` uses that projection. `LatestCompaction` and
+`ContextSignature` inspect the current branch without decoding the full
+message projection. Before this, ten call sites assembled the projection by hand
 from `buildSessionPath` / `applyCompactionWindow` / `getSessionContextSettings` /
 `getEntriesLocked`, which is how the cache-warmer currency check ended up
 re-projecting the whole session per request: nothing owned the answer and the
@@ -462,6 +539,11 @@ and a 121 ms frame after a transcript rebuild.
 
 ## Frame cost
 
+The measurements below and in the session-performance discussion above were
+collected at successive optimization stages. Later changes supersede earlier
+bottlenecks and proposed next steps; these figures are historical observations,
+not current test-duration or performance guarantees.
+
 The full layout pass (`RenderLayoutFrame`) is cheap enough to run on every
 requested frame: a scroll view over 500 wrapped text lines measures ~19us and
 ~1.8 KB per pass, and a 50-child nested box tree ~14us
@@ -534,6 +616,10 @@ hanging when the regression returns. The
 executable was then renamed from `pi` to `gpi` and finally to `pier` (the display name follows the
 invoked file name).
 
-To reproduce the exit/scroll checks, drive `bin/pier` under a PTY, exercise the
-flow, then send `SIGQUIT` to the process and look for goroutines blocked on
-`sync.Mutex`.
+D192 later retired the real-binary D136–D139 mutex-deadlock watchdog flows.
+Their functional coverage now lives in `coding/interactive/ptyflow_test.go`
+(in-process despite the filename), while `internal/uiblock` enforces the
+blocking-work invariant statically. Real-binary PTY tests still cover other
+flows, and `TestMutexBlockedDetectorHasTeeth` retains the deliberate deadlock
+helper. For a current hang, stall logs and an optional `SIGQUIT` dump are
+useful diagnostics, but the cause need not be a retired UI-state mutex.

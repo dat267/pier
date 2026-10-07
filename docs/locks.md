@@ -1,5 +1,14 @@
 # Lock inventory
 
+Retained and retired locks, and the invariant that governs retirement.
+Referenced from `AGENTS.md`.
+
+The `tui/` and `coding/interactive/` refactor retired every UI-state mutex.
+This is the authoritative inventory for that ownership boundary: retained UI
+handoff, terminal I/O and logging locks, plus selected cross-goroutine `coding/`
+collaborators. It is not an inventory of every core, provider or storage lock.
+File paths intentionally omit line numbers so ordinary edits do not stale them.
+
 D205 adds no lock: tool result generations, displayed lines and shell elapsed
 state stay on-owner. Workers mutate only private component snapshots and return
 owner-applied completions through D204's bounded optional queue and UI-post gate.
@@ -21,29 +30,23 @@ D209 extends owner-only in-place Container flattening to first-child changes.
 Revision/change-offset metadata guards parent caches, and removed string slots
 are cleared on shrink. No shared UI mutation or additional lock is introduced.
 
-Retained and retired locks, and the invariant that governs retirement.
-Referenced from `AGENTS.md`.
-
-The `tui/` and `coding/interactive/` refactor retired every UI mutex. What
-remains in non-test code are narrow handoff and logging locks that never guard
-UI state, plus one documented `coding/` exception:
-
 | Lock | Where | Protects | Retirement |
 |---|---|---|---|
-| `Renderer.postMu` | `tui/render.go:143` | the posted-callback queue (`Post` is called from off-loop goroutines: loaders, watchers) | **retained (D146)**: serializes the handoff only; the owner drains it in the render pass and never runs a callback under it |
-| `ProcessTerminal.writeMu` | `tui/terminal.go:169` | terminal writes, raw-mode transitions, Kitty negotiation bookkeeping shared with the reader | **retained (D147)**: not UI state |
-| `ProcessTerminal.writesMu` | `tui/terminal.go:191` | the console-write FIFO (`Write` appends in submission order; a dedicated goroutine drains it) | **retained**: off-loop writer; the UI loop never writes to the console itself |
-| `resizeWatcherMu` | `tui/terminal_windows.go:30` | the Windows console-resize poller's stop/done channels | **retained**: the poller runs off the loop |
-| `prerenderState.mu` | `coding/interactive/transcript.go:105` | the transcript warm-ahead handoff (ready chunk, width, generation) | **retained**: loop ↔ warm-worker handoff, not UI state |
-| `systemThemeState.mu` | `coding/interactive/theme.go:739` | the terminal-report colors the system theme is generated from (written by the terminal query reply path, read at theme load) | **retained**: a pointer swap of two values, never UI state |
-| `terminalColors.colorMu` | `tui/terminalqueries.go:69` | the terminal-colors query queue the blocking caller appends to while the owner loop's input dispatch reads it | **retained**: query bookkeeping, not UI state |
-| `inputLatencyRecorder.mu` | `coding/interactive/inputlatency.go:29` | keystroke-latency log appends from the off-loop logger | **retained**: log I/O only |
-| `stallWriteMu` | `coding/interactive/interactivemode_run.go:610` | the stall-log append, shared by the UI goroutine and the watchdog timer | **retained**: log I/O only |
+| `Renderer.postMu` | `tui/render.go` | the posted-callback queue (`Post` is called from off-loop goroutines: loaders, watchers) | **retained (D146)**: serializes the handoff only; the owner drains it in the render pass and never runs a callback under it |
+| `ProcessTerminal.writeMu` | `tui/terminal.go` | terminal writes, raw-mode transitions, Kitty negotiation bookkeeping shared with the reader | **retained (D147)**: not UI state |
+| `ProcessTerminal.writesMu` | `tui/terminal.go` | the console-write FIFO, byte backlog counters, open-frame buffer, deferred metadata hints and cancellation-aware optional-admission waiters (`Write` appends essential output in submission order; a dedicated goroutine drains it) | **retained**: off-loop writer; the UI loop never writes to the console itself |
+| `resizeWatcherMu` | `tui/terminal_windows.go` | the Windows console-resize poller's stop/done channels | **retained**: the poller runs off the loop |
+| `prerenderState.mu` | `coding/interactive/transcript.go` | the transcript warm-ahead handoff (ready chunk, width, generation) | **retained**: loop ↔ warm-worker handoff, not UI state |
+| `systemThemeState.mu` | `coding/interactive/theme.go` | the terminal-report colors the system theme is generated from (written by the terminal query reply path, read at theme load) | **retained**: a pointer swap of two values, never UI state |
+| `terminalColors.colorMu` | `tui/terminalqueries.go` | the terminal-colors query queue the blocking caller appends to while the owner loop's input dispatch reads it | **retained**: query bookkeeping, not UI state |
+| `inputLatencyRecorder.mu` | `coding/interactive/inputlatency.go` | keystroke-latency log appends from the off-loop logger | **retained**: log I/O only |
+| `stallWriteMu` | `coding/interactive/interactivemode_run.go` | the stall-log append, shared by the UI goroutine and the watchdog timer | **retained**: log I/O only |
 | `FooterDataProvider.mu` | `coding/footerdata.go` | cwd/git/status + listener registry, shared with its 500 ms git-HEAD watcher | **retained (D149)**: closing it needs the poll result posted to the loop and the listener fan-out delivered outside the lock; a `coding/` change outside this refactor |
 | `AgentSession.promptOptionsMu` | `coding/agent_session.go` | `SystemPromptOptions`, re-read by the prompt/tool loadout between turns | **retained**: the work goroutine re-applies the loadout while the UI loop rebuilds the options on `/reload` and tool changes; only a struct copy is taken under it |
 
-Retired along the way (all struck from the code; `grep 'sync.Mutex'
-tui/ coding/interactive/` outside tests returns only the locks tabulated above):
+Retired along the way (all struck from the code). Searching non-test Go files
+in `tui/` and `coding/interactive/` for mutex declarations finds only the
+retained locks listed above:
 
 | Lock | Where | Retired in |
 |---|---|---|
@@ -80,7 +83,10 @@ snapshot under and deliver outside.
 The D136–D139 mutex-deadlock PTY watchdog flows consumed this list: while a UI
 mutex existed, a flow could park the loop behind one, so the suite drove the real
 binary through the offending interaction and checked the `SIGQUIT` dump. With
-every UI-state lock retired, no such flow can park the loop; `internal/uiblock`
-carries the invariant statically instead, and the watchdog flows' functional
-coverage moved to `coding/interactive/ptyflow_test.go` (**D192**).
+every UI-state lock retired, those specific deadlock paths are gone. Core
+locks and blocking work can still stall the loop, so `internal/uiblock` guards
+the owner-loop invariant statically. The watchdog flows' functional coverage
+moved to `coding/interactive/ptyflow_test.go` (**D192**), which drives the app
+in process rather than spawning a PTY. Other real-binary PTY tests and the
+deliberately deadlocking parser helper remain.
 

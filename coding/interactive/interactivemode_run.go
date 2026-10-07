@@ -104,8 +104,8 @@ type RunWiring struct {
 	// SessionEvents carries the lossless session events and PartialEvents the
 	// coalescable streaming updates (interactivemode_eventqueue.go). Both are
 	// producer-written, loop-consumed channels.
-	SessionEvents <-chan *coding.SessionEvent
-	PartialEvents <-chan *coding.SessionEvent
+	SessionEvents <-chan queuedSessionEvent
+	PartialEvents <-chan queuedSessionEvent
 	// InputEvents carries complete terminal sequences from the stdin reader and
 	// ResizeEvents the resize ticks (stage 3). The loop dispatches both.
 	InputEvents  <-chan string
@@ -488,39 +488,51 @@ func (w *RunWiring) renderTicks() <-chan struct{} {
 	return w.UI.RenderTicks()
 }
 
-// drainReadyEvents applies every session event that is already queued. The
-// caller then paints once (loop-side coalescing).
+// sessionEventDrainBudget bounds each pre-paint drain independently of producer
+// activity. D197: a continuously refilled channel must not pin the UI loop.
+const sessionEventDrainBudget = 64
+
+// drainReadyEvents applies a bounded batch of queued session events. The
+// caller then paints once (loop-side coalescing) and returns to the main select.
 func (w *RunWiring) drainReadyEvents() {
 	defer w.phase("events")()
-	for {
+	for drained := 0; drained < sessionEventDrainBudget; {
+		before := drained
 		select {
 		case event, ok := <-w.SessionEvents:
 			if !ok {
 				w.SessionEvents = nil
 				continue
 			}
+			drained++
 			if w.Events != nil {
-				w.Events.HandleEvent(event)
+				w.Events.handleQueuedEvent(event)
 			}
-			continue
 		default:
 		}
+		if drained == sessionEventDrainBudget {
+			return
+		}
+		// Give both classes a turn while they are ready (D197). Lossless-first
+		// draining alone starves partials when a producer keeps refilling it.
 		select {
 		case event, ok := <-w.PartialEvents:
 			if !ok {
 				w.PartialEvents = nil
 				continue
 			}
+			drained++
 			if w.Events != nil {
-				w.Events.HandleEvent(event)
+				w.Events.handleQueuedEvent(event)
 			}
 			if w.OnPartialEventApplied != nil {
 				w.OnPartialEventApplied()
 			}
-			continue
 		default:
 		}
-		return
+		if drained == before {
+			return
+		}
 	}
 }
 
@@ -647,6 +659,13 @@ func (w *RunWiring) LoopContext() context.Context {
 // seam (loopHost). Every method tolerates a missing renderer or terminal.
 type runLoopHost struct{ w *RunWiring }
 
+func (h runLoopHost) PendingWriteBytes() int64 {
+	if terminal, ok := h.w.Terminal.(outputBacklog); ok {
+		return terminal.PendingWriteBytes()
+	}
+	return 0
+}
+
 func (h runLoopHost) NextAnimation() (bool, time.Duration) {
 	if h.w.UI == nil {
 		return false, 0
@@ -746,7 +765,7 @@ func (w *RunWiring) runLoop(ctx context.Context, initialWork []string, initialIm
 			if w.Events != nil {
 				func() {
 					defer w.phase("event-apply")()
-					w.Events.HandleEvent(event)
+					w.Events.handleQueuedEvent(event)
 				}()
 			}
 		case event, ok := <-w.PartialEvents:
@@ -760,7 +779,7 @@ func (w *RunWiring) runLoop(ctx context.Context, initialWork []string, initialIm
 				// (the blind spot the first armed sessions exposed).
 				func() {
 					defer w.phase("partial-event-apply")()
-					w.Events.HandleEvent(event)
+					w.Events.handleQueuedEvent(event)
 				}()
 			}
 			if w.OnPartialEventApplied != nil {
@@ -817,8 +836,8 @@ func (w *RunWiring) runLoop(ctx context.Context, initialWork []string, initialIm
 			schedule.flushExpiredInput()
 			schedule.paintNow()
 		case <-w.renderTicks():
-			// Coalesce: apply every event already queued, then paint once, so
-			// a burst of N messages produces one render rather than N.
+			// Coalesce a bounded batch of ready events, then paint once. Any
+			// remaining events wake subsequent iterations (D197).
 			w.drainReadyEvents()
 			schedule.coalescePaint()
 		case <-schedule.paintChannel():

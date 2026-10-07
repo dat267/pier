@@ -5,6 +5,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 )
 
@@ -43,10 +44,20 @@ const inputQueueCapacity = 64
 // the loop drains.
 const loopInputCapacity = 256
 
+// D196: split channels do not preserve upstream's emission order. Stamp
+// assistant events at the producer so a delayed partial cannot update a later
+// message, even when its start overtakes the partial in the lossless channel.
+// The envelope is UI-local and is never persisted or sent to providers.
+type queuedSessionEvent struct {
+	*coding.SessionEvent
+	messageGeneration uint64
+}
+
 type sessionEventQueue struct {
-	lossless chan *coding.SessionEvent
-	partial  chan *coding.SessionEvent
-	closed   chan struct{}
+	messageGeneration atomic.Uint64
+	lossless          chan queuedSessionEvent
+	partial           chan queuedSessionEvent
+	closed            chan struct{}
 
 	// ctx is the run context; producers also unblock on its cancellation
 	// (stage 4 gap: every send selects on ctx.Done() as well as Close).
@@ -57,8 +68,8 @@ type sessionEventQueue struct {
 
 func newSessionEventQueue() *sessionEventQueue {
 	return &sessionEventQueue{
-		lossless: make(chan *coding.SessionEvent, sessionEventLosslessCapacity),
-		partial:  make(chan *coding.SessionEvent, sessionEventPartialCapacity),
+		lossless: make(chan queuedSessionEvent, sessionEventLosslessCapacity),
+		partial:  make(chan queuedSessionEvent, sessionEventPartialCapacity),
 		closed:   make(chan struct{}),
 	}
 }
@@ -81,8 +92,8 @@ func (q *sessionEventQueue) done() <-chan struct{} {
 }
 
 // Events/Lossless/Partials expose the consumer sides to the run loop.
-func (q *sessionEventQueue) Events() <-chan *coding.SessionEvent   { return q.lossless }
-func (q *sessionEventQueue) Partials() <-chan *coding.SessionEvent { return q.partial }
+func (q *sessionEventQueue) Events() <-chan queuedSessionEvent   { return q.lossless }
+func (q *sessionEventQueue) Partials() <-chan queuedSessionEvent { return q.partial }
 
 // enqueue is the producer entry point (the session subscription callback). It
 // never blocks on a full partial channel and never calls into the UI.
@@ -90,9 +101,16 @@ func (q *sessionEventQueue) enqueue(event *coding.SessionEvent) {
 	if q == nil || event == nil {
 		return
 	}
+	generation := q.messageGeneration.Load()
+	if event.Type == coding.SessionMessageStart && event.Agent != nil {
+		if _, ok := event.Agent.Message.(*ai.AssistantMessage); ok {
+			generation = q.messageGeneration.Add(1)
+		}
+	}
+	queued := queuedSessionEvent{SessionEvent: event, messageGeneration: generation}
 	if isPartialSessionEvent(event.Type) {
 		select {
-		case q.partial <- event:
+		case q.partial <- queued:
 		default:
 			// Latest wins: drop the oldest pending partial, then retry once.
 			select {
@@ -100,14 +118,14 @@ func (q *sessionEventQueue) enqueue(event *coding.SessionEvent) {
 			default:
 			}
 			select {
-			case q.partial <- event:
+			case q.partial <- queued:
 			default:
 			}
 		}
 		return
 	}
 	select {
-	case q.lossless <- event:
+	case q.lossless <- queued:
 	case <-q.closed:
 		// Shutting down: the consumer is gone, so unblock the producer.
 	case <-q.done():
