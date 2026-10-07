@@ -70,8 +70,7 @@ func GetTextOutput(result *SortToolResultContent, showImages bool) string {
 	}
 	output := strings.Join(textBlocks, "\n")
 
-	caps := tui.GetTerminalCapabilities()
-	if len(imageBlocks) > 0 && (caps.Images == "" || !showImages) {
+	if len(imageBlocks) > 0 && (!showImages || tui.GetTerminalCapabilities().Images == "") {
 		indicators := make([]string, 0, len(imageBlocks))
 		for _, block := range imageBlocks {
 			mimeType := block.MimeType

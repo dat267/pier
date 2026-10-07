@@ -166,6 +166,33 @@ performance measurements are in `docs/architecture.md`.
 
 ## Architecture of the interactive mode
 
+D203 warms transcript width changes cooperatively: at most 64 direct children
+per Render call, retaining the previous complete frame until ready. The resize
+wrapper remains owner-loop state; it never warms attached components on workers.
+D204 prepares built-in assistant Markdown of 64 KiB or more on private worker
+snapshots, with four total admitted jobs and owner-applied generation checks.
+Standalone renderers and custom transformers retain their synchronous defaults.
+D205 uses that same four-job budget for text-only expanded read and both shell
+result modes at 64 KiB. Workers capture content/theme/metadata; elapsed timers
+and result-generation application stay on-owner. Custom callbacks remain
+synchronous, and detached tool warming never submits nested work.
+D206 finishes eligible tool Box padding/backgrounds in the same private worker
+job and adopts its cache on-owner after the generation check. Header snapshots
+and elapsed clocks stay on-owner; original mouse callbacks are not replaced.
+D207 retains the completed tool frame while replacements prepare, avoiding
+owner-side repainting of old raw output after invalidation. Clock rows remain
+live; resize hit testing uses displayed geometry. D208 leaves unadmitted/busy
+work unversioned so skipping parents retry; accepted pending work uses owner
+revisions and updates clock rows in place without copying the complete frame.
+D209 reuses flattened Container storage for first-child changes as well as tail
+changes, preserving revision/change-offset signals and clearing removed string
+slots on shrink. Invalidation and capacity growth still rebuild on-owner.
+Tool frame lifecycle state is owned by `coding/interactive/toolframes.go`:
+callers capture safe input and delegate rendering/revisions/hit testing, never
+inspect pending/ready or prepared/displayed state. The executor remains the
+owner-applied preparation seam; no attached state is accessed by workers.
+
+
 Upstream `interactive-mode.ts` is one ~4000-line class; the port splits it into
 narrow wirings in `coding/interactive` (`app.go` is the composition layer, and
 each `*Wiring` has a constructor next to its struct). The session projection

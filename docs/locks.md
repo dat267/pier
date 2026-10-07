@@ -1,5 +1,26 @@
 # Lock inventory
 
+D205 adds no lock: tool result generations, displayed lines and shell elapsed
+state stay on-owner. Workers mutate only private component snapshots and return
+owner-applied completions through D204's bounded optional queue and UI-post gate.
+D206 extends those private snapshots through Box padding/background preparation.
+Only the owner adopts the completed cache, rebinding cache and mouse metadata to
+its original children; elapsed clocks and arbitrary callbacks never run on the
+worker. No additional lock or queue is introduced.
+D207's completed-frame retention, live clock-row refresh and displayed-width
+mouse dispatch are owner-only state. Prepared and displayed metadata remain
+separate, and parent render-version skipping cannot suppress pending admission.
+D208 uses owner revisions for accepted pending clock updates, mutating only the
+owner's retained frame rows. Unadmitted work remains unversioned and copies rows
+when needed; detached worker snapshots remain immutable after handoff.
+The tool frame lifecycle is consolidated in `coding/interactive/toolframes.go`;
+callers supply captured input and delegate render/hit-test metadata without
+reading its admission or publication state. The executor seam and lock inventory
+are unchanged.
+D209 extends owner-only in-place Container flattening to first-child changes.
+Revision/change-offset metadata guards parent caches, and removed string slots
+are cleared on shrink. No shared UI mutation or additional lock is introduced.
+
 Retained and retired locks, and the invariant that governs retirement.
 Referenced from `AGENTS.md`.
 

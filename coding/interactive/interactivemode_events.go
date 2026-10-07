@@ -27,13 +27,14 @@ type EventSession interface {
 
 // EventDispatcher handles the session events for the interactive mode.
 type EventDispatcher struct {
-	Transcript  *TranscriptRenderer
-	UIState     *InteractiveUIState
-	Footer      *FooterComponent
-	Settings    *coding.SettingsManager
-	Session     EventSession
-	SessionInfo *coding.SessionManager
-	Editor      *CustomEditor
+	MarkdownPreparation *tui.MarkdownPreparation
+	Transcript          *TranscriptRenderer
+	UIState             *InteractiveUIState
+	Footer              *FooterComponent
+	Settings            *coding.SettingsManager
+	Session             EventSession
+	SessionInfo         *coding.SessionManager
+	Editor              *CustomEditor
 
 	// TerminalProgress toggles the OSC 9;4 progress indicator.
 	TerminalProgress func(active bool)
@@ -313,6 +314,7 @@ func (d *EventDispatcher) handleMessageStart(event *coding.SessionEvent) {
 		}
 		d.streamingComponent = NewAssistantMessageComponent(nil, d.Display.HideThinkingBlock, d.MarkdownTheme,
 			d.Display.HiddenThinkingLabel, d.Display.OutputPad, d.Transformers)
+		d.streamingComponent.SetMarkdownPreparation(d.MarkdownPreparation)
 		d.streamingMessage = typed
 		d.Transcript.Chat.AddChild(d.streamingComponent)
 		d.Transcript.StreamingComponent = d.streamingComponent
@@ -372,6 +374,7 @@ func (d *EventDispatcher) newToolComponent(toolName string, toolCallID string, a
 		cwd = d.SessionInfo.GetCwd()
 	}
 	component := NewToolExecutionComponent(toolName, toolCallID, args, options, definition, d.Transcript.UI, cwd)
+	component.SetResultPreparation(d.MarkdownPreparation)
 	component.SetExpanded(d.Display.ToolOutputExpanded)
 	d.Transcript.Chat.AddChild(component)
 	return component

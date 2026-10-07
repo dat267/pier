@@ -175,7 +175,7 @@ func TuiMode(ui tui.TUI) string {
 // tuiConcrete unwraps the UI forwarding reference so type assertions see the
 // active renderer (upstream reads this.renderer where the port holds app.UI).
 func tuiConcrete(ui tui.TUI) tui.TUI {
-	if reference, ok := ui.(*tui.TuiReference); ok {
+	if reference, ok := ui.(interface{ Current() tui.TUI }); ok {
 		return reference.Current()
 	}
 	return ui

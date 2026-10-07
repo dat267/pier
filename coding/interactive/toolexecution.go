@@ -82,6 +82,7 @@ type ToolExecutionComponent struct {
 	argsComplete     bool
 	result           *SortToolResultContent
 	hideComponent    bool
+	frames           *toolFrames
 }
 
 // NewToolExecutionComponent creates the component.
@@ -111,6 +112,7 @@ func NewToolExecutionComponent(toolName string, toolCallID string, args any, opt
 	pendingBg := func(text string) string { return theme.Bg("toolPendingBg", text) }
 	component.AddChild(tui.NewSpacer(1))
 	component.contentBox = tui.NewBox(1, 1, pendingBg)
+	component.frames = newToolFrames(component.Container, component.contentBox)
 	component.contentText = tui.NewText("", 1, 1, pendingBg)
 	component.contentTextRegion = component.createResultRegion(component.contentText)
 	component.selfRenderContainer = &tui.Container{}
@@ -269,7 +271,7 @@ func (c *ToolExecutionComponent) Render(width int) []string {
 		lines = append(lines, contentLines...)
 		return lines
 	}
-	return c.Container.Render(width)
+	return c.frames.Render(width)
 }
 
 // RenderVersion forwards the content container's revision. The self-render
@@ -279,8 +281,10 @@ func (c *ToolExecutionComponent) RenderVersion() (uint64, bool) {
 	if c.hasRendererDefinition() && c.renderShell() == "self" {
 		return 0, false
 	}
-	return c.Container.RenderVersion()
+	return c.frames.RenderVersion()
 }
+
+func (c *ToolExecutionComponent) ChangedFrom() (int, bool) { return c.frames.ChangedFrom() }
 
 // AnimationFrame keeps a running tool repainting, so the shell elapsed label
 // ticks. It is reported at the tool level: the animation walk finds the tool as
@@ -309,7 +313,7 @@ func (c *ToolExecutionComponent) AnimationTick() { c.Container.BumpRevision() }
 // HandleMouse forwards mouse events for the self-render shell.
 func (c *ToolExecutionComponent) HandleMouse(event tui.TuiMouseEvent) *tui.TuiMouseDispatchResult {
 	if !c.hasRendererDefinition() || c.renderShell() != "self" {
-		return c.Container.HandleMouse(event)
+		return c.frames.HandleMouse(event)
 	}
 	if event.Y <= 0 || event.Y > c.selfRenderHeight {
 		return nil
@@ -391,9 +395,13 @@ func (c *ToolExecutionComponent) updateDisplay() {
 				}
 			} else {
 				resultContext := c.renderContext(c.resultRendererComponent)
-				if component := safeRenderResult(c.definition.RenderResult, c.result,
-					ToolRenderResultOptions{Expanded: c.expanded, IsPartial: c.isPartial},
-					theme, resultContext); component != nil {
+				component := c.frames.Update(c.captureBuiltinResult(theme, resultContext))
+				if component == nil {
+					component = safeRenderResult(c.definition.RenderResult, c.result,
+						ToolRenderResultOptions{Expanded: c.expanded, IsPartial: c.isPartial},
+						theme, resultContext)
+				}
+				if component != nil {
 					c.rendererState = resultContext.State
 					c.resultRendererComponent = component
 					addChild(c.createResultRegion(component))

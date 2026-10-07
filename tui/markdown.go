@@ -122,6 +122,13 @@ type Markdown struct {
 
 	// renderedTokens counts renderToken calls (test seam).
 	renderedTokens int
+
+	preparation           *MarkdownPreparation
+	preparationGeneration uint64
+	preparing             bool
+	preparingText         string
+	preparingWidth        int
+	displayLines          []string
 }
 
 // NewMarkdown creates a markdown component.
@@ -188,6 +195,8 @@ func withDefaultMarkdownTheme(theme MarkdownTheme) MarkdownTheme {
 // SetText updates the markdown source. The incremental cache is kept: Render
 // reuses the prefix that is still identical and re-renders the changed tail.
 func (m *Markdown) SetText(text string) {
+	m.preparationGeneration++
+	m.preparing = false
 	m.Text = text
 	m.cachedLines = nil
 	m.hasCachedLines = false
@@ -210,6 +219,8 @@ func (m *Markdown) SetTextIfChanged(text string) {
 
 // Invalidate drops the render cache.
 func (m *Markdown) Invalidate() {
+	m.preparationGeneration++
+	m.preparing = false
 	m.cachedLines = nil
 	m.hasCachedLines = false
 	m.hasCachedText = false
@@ -226,13 +237,24 @@ func (m *Markdown) Invalidate() {
 // calling it here is safe as long as the component is not attached to the
 // rendered tree (the loop must not Render the same instance concurrently).
 func (m *Markdown) Prepare(width int) {
+	preparation := m.preparation
+	m.preparation = nil
+	defer func() { m.preparation = preparation }()
 	_ = m.Render(width)
 }
 
 // Render renders the markdown at the given width.
 func (m *Markdown) Render(width int) []string {
+	if m.preparing && m.preparingWidth != width {
+		m.preparationGeneration++
+		m.preparing = false
+	}
 	if m.hasCachedLines && m.hasCachedText && m.cachedText == m.Text && m.hasCachedWidth && m.cachedWidth == width {
 		return m.cachedLines
+	}
+
+	if m.preparation != nil && len(m.Text) >= largeMarkdownBytes {
+		return m.prepareLarge(width)
 	}
 
 	contentWidth := max(1, width-m.PaddingX*2)
@@ -248,6 +270,7 @@ func (m *Markdown) Render(width int) []string {
 		m.hasCachedWidth = true
 		m.cachedLines = []string{}
 		m.hasCachedLines = true
+		m.displayLines = m.cachedLines
 		m.cacheTokenKeys = nil
 		m.cacheTokenLines = nil
 		m.cacheWidth = width
@@ -314,6 +337,7 @@ func (m *Markdown) Render(width int) []string {
 	m.hasCachedWidth = true
 	m.cachedLines = result
 	m.hasCachedLines = true
+	m.displayLines = result
 
 	if len(result) > 0 {
 		return result

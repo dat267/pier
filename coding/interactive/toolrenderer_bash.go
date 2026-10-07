@@ -109,9 +109,10 @@ func rebuildBashResult(result *SortToolResultContent, options ToolRenderResultOp
 
 // bashPreviewComponent renders the collapsed streaming preview.
 type bashPreviewComponent struct {
-	output string
-	state  *bashResultState
-	theme  *Theme
+	expandHint string // captured by D205 detached snapshots
+	output     string
+	state      *bashResultState
+	theme      *Theme
 }
 
 // styleBashOutput applies the tool-output style per logical line.
@@ -138,8 +139,12 @@ func (c *bashPreviewComponent) Render(width int) []string {
 	lines := make([]string, 0, len(tail)+2)
 	lines = append(lines, "")
 	if skipped > 0 {
+		expandHint := c.expandHint
+		if expandHint == "" {
+			expandHint = KeyHint("app.tools.expand", "to expand")
+		}
 		hint := c.theme.Fg("muted", fmt.Sprintf("... (%d earlier lines,", skipped)) +
-			" " + KeyHint("app.tools.expand", "to expand") + c.theme.Fg("muted", ")")
+			" " + expandHint + c.theme.Fg("muted", ")")
 		lines = append(lines, tui.TruncateToWidth(hint, width, "...", false))
 	}
 	lines = append(lines, tail...)

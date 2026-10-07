@@ -13,6 +13,7 @@ import (
 
 // AssistantMessageComponent renders a complete assistant message.
 type AssistantMessageComponent struct {
+	markdownPreparation *tui.MarkdownPreparation
 	*tui.Container
 
 	contentContainer *tui.Container
@@ -151,6 +152,31 @@ func (c *AssistantMessageComponent) Render(width int) []string {
 // detect an in-place change (the has-tool-calls path returns its lines).
 func (c *AssistantMessageComponent) RenderVersion() (uint64, bool) {
 	return c.Container.RenderVersion()
+}
+
+// SetMarkdownPreparation enables captured, detached rendering for built-in
+// transforms only. User-supplied transformers retain their owner-loop contract.
+func (c *AssistantMessageComponent) SetMarkdownPreparation(preparation *tui.MarkdownPreparation) {
+	c.markdownPreparation = preparation
+	if preparation == nil || len(c.transformers) != 0 {
+		return
+	}
+	bound := *preparation
+	bound.RequestRender = func() {
+		c.contentContainer.MarkDirty()
+		c.Container.MarkDirty()
+		if preparation.RequestRender != nil {
+			preparation.RequestRender()
+		}
+	}
+	for _, component := range c.blockComponents {
+		if markdown, ok := component.(*tui.Markdown); ok {
+			markdown.SetPreparation(&bound)
+		}
+	}
+	for _, markdown := range c.thinkingMarkdowns {
+		markdown.SetPreparation(&bound)
+	}
 }
 
 // UpdateContent rebuilds the content for a message.
@@ -320,6 +346,7 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 	// The content lives in contentContainer; bump the outer revision so a parent
 	// that skips unchanged versioned children re-renders this message.
 	c.Container.MarkDirty()
+	c.SetMarkdownPreparation(c.markdownPreparation)
 }
 
 func trimmedNonEmpty(value string) bool { return strings.TrimSpace(value) != "" }

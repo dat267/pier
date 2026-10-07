@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"context"
 	"encoding/json"
 	"sync"
 
@@ -46,11 +47,12 @@ type ManagedToolStatus struct {
 // TranscriptRenderer renders messages and session entries into a chat
 // container.
 type TranscriptRenderer struct {
-	Chat        *tui.Container
-	UI          tui.RenderRequester
-	Settings    *coding.SettingsManager
-	Session     TranscriptSession
-	SessionInfo *coding.SessionManager
+	MarkdownPreparation *tui.MarkdownPreparation
+	Chat                *tui.Container
+	UI                  tui.RenderRequester
+	Settings            *coding.SettingsManager
+	Session             TranscriptSession
+	SessionInfo         *coding.SessionManager
 
 	Footer *FooterComponent
 	Editor *CustomEditor
@@ -293,6 +295,7 @@ func (r *TranscriptRenderer) AddMessageToChat(message ai.Message, populateHistor
 	case *ai.AssistantMessage:
 		component := NewAssistantMessageComponent(typed, r.Display.HideThinkingBlock, r.MarkdownTheme,
 			r.Display.HiddenThinkingLabel, r.Display.OutputPad, r.Transformers)
+		component.SetMarkdownPreparation(r.MarkdownPreparation)
 		r.Chat.AddChild(component)
 	case *ai.ToolResultMessage:
 		// Tool results render inline with their tool calls.
@@ -461,18 +464,21 @@ func (r *TranscriptRenderer) MaterializeDeferred(width int) bool {
 	r.pre.busy = true
 	r.pre.mu.Unlock()
 
-	r.PrerenderQueue.Go(func() {
-		warmComponents(components, width)
+	r.PrerenderQueue.GoContext(func(ctx context.Context) {
+		warmComponentsContext(ctx, components, width)
 		r.pre.mu.Lock()
-		if r.pre.gen == gen {
+		if r.pre.gen == gen && ctx.Err() == nil {
 			r.pre.ready = true
 			r.pre.width = width
 			r.pre.count = count
 		}
 		r.pre.busy = false
 		r.pre.mu.Unlock()
-		// Wake the loop so the next beat attaches the warmed chunk.
-		r.requestRender()
+		// D199: a detached warm may finish after shutdown. Its private caches
+		// are harmless, but it must not wake the torn-down renderer.
+		if ctx.Err() == nil {
+			r.requestRender()
+		}
 	})
 	return true
 }
@@ -509,7 +515,14 @@ func (r *TranscriptRenderer) resetDeferred() {
 
 // warmComponents pre-renders every component in the list at width.
 func warmComponents(components []tui.Component, width int) {
+	warmComponentsContext(context.Background(), components, width)
+}
+
+func warmComponentsContext(ctx context.Context, components []tui.Component, width int) {
 	for _, component := range components {
+		if ctx.Err() != nil {
+			return
+		}
 		if p, ok := component.(tui.Preparer); ok {
 			p.Prepare(width)
 		}
@@ -576,6 +589,7 @@ func (r *TranscriptRenderer) renderSessionItems(items []RenderSessionItem, updat
 				}
 				component := NewToolExecutionComponent(toolCall.Name, toolCall.ID, toolCall.Arguments,
 					options, definition, r.UI, cwd)
+				component.SetResultPreparation(r.MarkdownPreparation)
 				component.SetExpanded(r.Display.ToolOutputExpanded)
 				r.Chat.AddChild(component)
 

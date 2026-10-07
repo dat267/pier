@@ -116,6 +116,77 @@ Stage 2 (rendering on the loop) has landed:
 - The run loop selects on `UI.RenderTicks()`, drains every already-queued
   session event (`RunWiring.drainReadyEvents`) and paints once
   (`renderUI`), so a burst of N messages produces one render, not N.
+- **D203 transcript resize preparation yields cooperatively.** The composed chat
+  document retains its last complete frame while warming at most 64 children
+  per Render call for the new width. It requests continuation, prevents ancestor
+  cache skipping while pending, and restarts on width/child changes. Attached
+  components remain exclusively owner-loop state. `BenchmarkOwnerLoopContent`
+  measures paste, tool-update and resize phases; the resize subbenchmark times
+  the first chunk, completing remaining chunks outside its timed region.
+  Profiling 500 message pairs found a 35.53 ms/10.48 MB resize before this change;
+  the first chunk afterward is 1.45 ms/0.59 MB (Linux/amd64, 10 iterations).
+  This bounds width-cold child count per call, not individual child latency,
+  total resize work, initial cold renders or multiple layout calls in a paint.
+- **D204 large assistant Markdown uses detached snapshots.** At 64 KiB, built-in
+  text/thinking blocks render on an app-owned optional worker queue (four total
+  admitted jobs). The owner keeps complete prior lines or a cold pending label;
+  worker completions pass content/width/theme generation checks and mode-lifetime
+  UI-post guards. Only private immutable snapshots are mutated on workers.
+  Detached `Prepare` remains synchronous, while custom transformers retain their
+  existing contract. The single-message benchmark measured 296.63 ms/114.11 MB
+  cold work versus 0.024 ms/3,704 bytes owner admission (Linux/amd64, three runs).
+  Admission timing uses a fake sink, not an end-to-end claim. Background parse,
+  GC, final flattening and plain-text tool-result work are not reduced by it.
+- **D205 large built-in tool results use private snapshots.** Text-only expanded
+  read and both bash/powershell display modes at 64 KiB share D204's four-job
+  optional queue. Workers sanitize, style and wrap captured output; elapsed
+  timers and generation checks remain on-owner. Completed output is identical
+  to synchronous rendering. Unknown metadata objects, JSON metadata above
+  16 KiB, image-bearing results and custom callbacks remain synchronous.
+  Detached transcript warming also remains synchronous. A 1,050,000-byte
+  expanded fixture measured 60.31 ms/28.39 MB cold read work and 59.00 ms/23.18 MB
+  cold bash work, versus 0.077 ms/21,216 bytes and 0.034 ms/5,592 bytes for owner
+  admission (Linux/amd64, three runs, admission-only sink). This moves formatting
+  and wrapping off-owner, not total work, GC or final container flattening.
+- **D206 tool completion adopts a prepared Box frame.** Eligible D205 tools with
+  built-in headers/default shells finish padding and backgrounds on the same
+  private worker. Header lines, theme and clock labels are captured on-owner;
+  generation checks guard cache adoption, which preserves original owner mouse
+  targets. Custom headers/self shells retain their current contracts. A
+  1,050,000-byte fixture's owner completion/render pass dropped from 15.90 ms
+  (read) and 14.65 ms (bash), about 10.63 MB/90,000 allocations, to 1.47 ms and
+  0.994 ms, 1,024,312 bytes/8 allocations each (Linux/amd64, three runs). Worker
+  work and construction are excluded; this is not end-to-end latency. Timer
+  advances repaint only the trailing rows. Final flattening, large headers,
+  retained-output repaints after invalidation and global GC remain limits.
+- **D207 pending tools retain the complete frame.** Eligible D206 tools admit
+  replacement work without repainting retained raw output after content, width
+  or theme changes. Completed header/padding/background stay visible; only live
+  clock rows change. Display metadata is separate from prepared metadata, and
+  mouse dispatch uses displayed width. Pending tools do not report a stable
+  version, so skipping parents still retry busy admission. For a 1,050,000-byte
+  fixture, pending owner work dropped from 14.83 ms (read)/15.88 ms (bash), about
+  10.15 MB/90,000 allocations, to 0.061 ms/1,997 bytes/48 allocations and
+  0.039 ms/1,800 bytes/43 allocations (Linux/amd64, three runs). Initial/worker
+  preparation is excluded, not an end-to-end latency claim. Large headers, clock
+  slice copies, final flattening and global GC remain limits.
+- **D208 accepted pending clocks update in place.** Only unadmitted/busy work
+  remains unversioned to force parent-cache retries. Accepted pending work uses
+  owner revisions and reports the changed tail row, so live clock rows can update
+  without copying the complete retained frame. For a 1,050,000-byte fixture,
+  isolated clock tick/render dropped from 1.055 ms/484,070 bytes/17 allocations
+  to 0.002456 ms/684 bytes/16 allocations (Linux/amd64, 20 runs). Worker work,
+  parent flattening and end-to-end input latency are excluded. Busy clock copies,
+  large headers, final flattening and global GC remain limits.
+- **D209 first-child Container changes reuse storage.** The changed suffix is
+  rewritten in owner storage even when it begins at child zero, avoiding a
+  scratch flatten plus fresh allocation/copy. Growth remains geometric and
+  shrink clears removed string slots. Existing revisions and change offsets
+  protect version-aware parents from stale in-place output. A warm 30,000-line
+  fixture changed at child zero measured 1.406 ms/540,672 bytes/one allocation
+  before, 0.0265 ms/zero bytes/zero allocations after (Linux/amd64, 20 runs).
+  This isolates flattening, not end-to-end latency. Changed-suffix copy work,
+  invalidation, growth, large headers, busy clock copies and global GC remain.
 - `Renderer.RenderCount()` counts paints (test seam).
 - **D144**: the interactive renderer is caller-driven (the loop owns the frame
   schedule) where upstream schedules its own throttled frames. The loop keeps
@@ -192,6 +263,18 @@ Stage 2 (rendering on the loop) has landed:
   the same state from its own goroutine.
 
 ## Architecture of the interactive mode
+
+The tool frame lifecycle is a deep module in
+`coding/interactive/toolframes.go`. Its interface accepts captured rendering
+input and delegates render, revision/change reporting, detached preparation and
+hit testing. It hides admission, generations, private Box cache adoption,
+prepared-versus-displayed metadata and live retained clock updates.
+`toolresult_prepare.go` only selects safe built-in renderers and captures their
+immutable input; `toolexecution.go` assembles the shell and delegates lifecycle
+operations without inspecting pending/ready state. The owner-supplied preparation
+executor is the seam for deterministic rejection and reordered-completion tests.
+The former `toolframe.go` and `toolretained.go` splits are removed. D205-D208
+behavior and the existing shared four-job budget are unchanged.
 
 Upstream `interactive-mode.ts` is one ~4000-line class. The Go port splits it
 into narrow, injectable wirings (all in `coding/interactive`):

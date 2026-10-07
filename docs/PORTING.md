@@ -419,6 +419,14 @@ Update the pin whenever upstream source is re-read for a port.
 
 ## Per-area status (mirrors upstream `packages/`)
 
+Rendering update (D203-D209): transcript resize warming is cooperative; large
+built-in assistant and text-only tool results share a bounded optional snapshot
+queue. Eligible tool jobs prepare full Box frames, retain completed display
+geometry during replacement and update clock rows with owner revisions. Container
+flattening reuses storage for first-child changes. The deep tool frame lifecycle
+is centralized in `coding/interactive/toolframes.go`, with generation-checked
+publication and owner-only hit testing. Custom callbacks remain synchronous.
+
 | Go package | Upstream | Status |
 |---|---|---|
 | `ai` | `packages/ai` core (`types.ts`, `utils/event-stream.ts`, `utils/text.ts`, `utils/transcript.ts`, `utils/diagnostics.ts`) | ported |

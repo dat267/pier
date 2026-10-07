@@ -6,7 +6,7 @@ behaviour with no direct Go equivalent, or because a reference defect is fixed
 here; others are choices of this project's own. D-row numbers live in code
 comments at the point of divergence; this file is the log, and it is
 representative: the rows below carry a written-up rationale, while the rest live
-only as the code comment that introduced them. The range is **D1–D189**.
+only as the code comment that introduced them. The range is **D1–D209**.
 - D188 — the durable execution environment (`env/index.ts`, `env/node.ts`)
   returns failures as Go errors (`*FileError`, `*ExecutionError`, the upstream
   codes preserved) where the reference returns a `Result` value; the `Result`
@@ -1038,3 +1038,278 @@ Divergences from upstream:
   exposure, and the port does not expose those (D185).
 - `WaitForDirectTools` polls connection state (20ms) instead of awaiting the
   ready promises; equivalent observation, no shared future.
+
+## D199. Optional rendering queues cancel instead of draining
+
+Rendering queues use `Group.OptionalQueue`. Shutdown cancels their context,
+discards pending optional tasks and does not wait for a running task that ignores
+cancellation. Mandatory queues still drain accepted saves without a deadline.
+Transcript warming checks cancellation before publishing private caches.
+The optional queue tests exercise rejection, cancellation and mandatory drains.
+
+## D200. Preparation completions are gated by mode lifetime
+
+The stable `modeUI` forwarding reference rejects posts after cancellation and
+checks cancellation again when a previously posted callback runs. This prevents
+optional rendering completions from mutating a torn-down UI. App teardown
+cancels that lifetime before stopping its queues.
+
+## D201. Optional queue admission is bounded
+
+`Queue.TryGoContext` bounds queued plus running jobs without blocking its caller.
+Assistant and tool preparation share a four-job optional queue. The queue also
+supports one newest-pending replacement per key through `GoLatestContext`.
+Mandatory persistence continues to use lossless admission. Queue admission
+tests cover rejection, capacity recovery and newest-pending replacement.
+
+## D203. Transcript resize cache warming yields between chunks
+
+Measurements of individual owner-loop phases found the largest fixture cost in
+transcript width changes: 500 user/assistant pairs took 35.53 ms and allocated
+10.48 MB per resize (10 iterations). The CPU/allocation profiles identified the
+full Container child-render walk, Markdown lexing/wrapping and GC, not queue
+handoff or console I/O. A roughly 1 MB paste took 17.30 ms; a roughly 1 MB tool
+update took 18.26 ms in the initial single-iteration probe.
+
+The interactive document now wraps its chat container in an owner-loop-only
+resize document. After a complete frame exists, a width change warms at most
+64 direct transcript children per Render call and requests another paint while
+work remains. The previous complete flattened frame stays visible while caches
+warm; partial new-width transcript frames are not published. Ancestor render
+cache skipping is disabled while a resize generation is incomplete. Width or
+child-identity changes restart the warm snapshot, and publication renders the
+current children so newer content is not replaced by an old prepared snapshot.
+No worker mutates attached components; no UI mutex or goroutine is added.
+
+The same benchmark's first resize chunk now takes 1.45 ms and allocates 0.59 MB
+(10 iterations on Linux/amd64). Remaining chunks are completed outside its timed
+region, so this is a per-call latency improvement, not a reduction of total
+resize work. Benchmarks remain opt-in and are not ordinary test timing assertions.
+Regression tests assert the 64-child bound, continuation through cached parents,
+composition in the app, ordered final frames and superseded width/child snapshots.
+
+This is a cooperative bound on the number of width-cold children per Render,
+not a universal wall-time bound on a loop beat. One large child, initial cold
+mount, paste processing, streaming updates, flattening and non-cacheable custom
+components remain separate work. Layout may call Render multiple times during
+a paint. The previous transcript can be briefly stale during a resize; terminal
+output continues to use differential frames and D198/D202 backpressure. Saved
+JSON, provider payloads, standalone container behavior and component ownership
+are unchanged.
+
+## D204. Large built-in assistant Markdown renders detached snapshots
+
+A single cold assistant fixture (16,000 heading/paragraph pairs, about 1 MB)
+rendered in 296.63 ms and allocated 114.11 MB (Linux/amd64, three iterations).
+CPU profiling located the cost in Markdown rendering/token keys and GC. The
+D203 child-count budget cannot yield inside this one component. Plain-text tool
+updates remain a distinct workload, not silently covered by this Markdown fix.
+
+The interactive app opts built-in assistant text/thinking Markdown into immutable
+snapshot preparation at 64 KiB of source or more. Render submits a fresh private
+Markdown instance to an app-owned optional queue and returns the previous complete
+lines, or `Preparing message...` for a cold message. The queue admits at most four
+jobs total (one running, three pending); rejected admission requests a later paint
+instead of blocking or retaining more queued work. The snapshot copies text,
+width, padding, captured theme/style and transform configuration, never live render
+caches. The worker's completion is posted through the mode-owned UI reference.
+
+Text changes, width requests (including a return to a cached width), and explicit
+style/theme invalidation supersede older preparation generations. Only a matching
+completion installs prepared caches on the owner. Ancestor caches are dirtied on
+publication so skipped live assistant subtrees cannot hide the new frame. Mode
+shutdown cancels the queue, discards waiting tasks and rejects late UI posts.
+An in-progress Markdown parse is not forcibly interrupted; it operates on its
+private snapshot and its canceled result is ignored. No UI-state mutex is added.
+
+Detached session `Prepare` retains synchronous warming, avoiding recursive task
+submission from prerender workers. Standalone Markdown and user-supplied assistant
+transformers retain their synchronous contract unless explicitly opted in with a
+captured-safe backend. Saved JSON/provider messages are unchanged. Old complete
+lines can briefly show during content, width or theme changes; an empty complete
+frame is also retained correctly rather than resurrecting earlier content.
+
+Owner admission for the same assistant fixture measured 0.024 ms and 3,704 bytes
+(three iterations). This benchmark uses an admission-only sink, so it measures
+owner-side dispatch, not end-to-end latency or reduced background render work.
+Worker parsing/allocations, global GC pressure, final container flattening, huge
+plain-text tool results and custom callback cost remain separate limits. Tests
+observe byte-identical completed Markdown, blocked-worker input service, bounded
+owned admission, live-message composition, cached-width/content/theme stale-result
+rejection, empty-frame retention and synchronous detached warming.
+
+## D205. Large built-in tool results prepare private snapshots
+
+Reference: `packages/coding-agent/src/core/tools/renderers/{read,bash}.ts`
+formats expanded read output and both shell display modes synchronously. D204
+moved large assistant Markdown off the owner loop, but one large tool result
+could still monopolize it in sanitizing, styling and ANSI-aware wrapping.
+
+Live and replayed built-in read (expanded), bash and powershell results now opt
+into the same optional preparation backend at 64 KiB of text content. Assistant
+Markdown and tool results share four total admitted jobs, not four per domain.
+Workers build private components from captured content blocks, expansion/partial
+state, a concrete theme, key hint and copied truncation/full-output metadata.
+Strings remain immutable; content slices and metadata pointers are copied.
+Persisted JSON metadata of at most 16 KiB is copied, not decoded on the owner.
+Shell elapsed state stays on-owner and keeps ticking while output prepares.
+
+The owner retains previous complete result lines, or a cold
+`Preparing tool output...` label. Result updates, width changes (including a
+return to a cached width), expansion changes, theme invalidation and backend
+changes obsolete outstanding generations. Only matching completions apply
+and request a render through the mode-lifetime-gated UI post. Rejected admission
+retains no work and retries on later renders. Detached `Prepare` remains
+synchronous, with no nested submissions. Custom callbacks, image-bearing
+results, unknown metadata objects and oversized JSON metadata keep their
+synchronous contracts. Raw fallback rendering and other built-in tool types
+are unchanged. Saved session/provider JSON is unchanged.
+
+Linux/amd64, three iterations of a 1,050,000-byte expanded plain-text fixture:
+read cold work measured 60.31 ms and 28,389,757 bytes, versus 0.077 ms and 21,216
+bytes for owner admission; bash measured 59.00 ms and 23,180,128 bytes, versus
+0.034 ms and 5,592 bytes for admission. Admission uses a sink and includes
+component construction and UpdateResult; it is not an end-to-end latency claim.
+A cold CPU profile shows ANSI tracking/wrapping, concatenation and allocation/GC
+cost. That work still runs in the background; final container padding/flattening,
+GC pressure and unsupported/custom render paths remain limits. Tests observe
+byte-identical completed output, live/replayed composition, input service with
+a blocked queue, stale-generation rejection, copied result values, custom
+callback ownership, persisted metadata and synchronous detached warming.
+
+## D206. Tool workers finish the Box background and padding pass
+
+Reference: `packages/tui/src/components/box.ts` applies horizontal/vertical
+padding and backgrounds after rendering its children. D205 moved tool result
+formatting and wrapping off-owner, but completion still triggered another full
+Box pass on-owner. A 1,050,000-byte expanded output fixture spent 15.90 ms
+(read) or 14.65 ms (bash) and about 10.63 MB/90,000 allocations in that owner
+publication pass alone.
+
+Eligible D205 tools with built-in call headers and the default Box shell now
+capture immutable header lines, the concrete background theme and elapsed-label
+text on-owner before submitting work. The same private worker formats the result
+and finishes a detached Box frame. A generation-matching completion installs the
+raw result and adopts the prepared Box cache, rebinding cache/mouse metadata to
+the original owner children. No attached component, callback or elapsed clock
+runs on the worker. This shares the existing four-job admission and canceled
+UI-post guards; there is no new queue or UI-state lock. Standalone Box rendering
+and detached synchronous tool warming are unchanged. Custom call renderers and
+self-render shells do not use the prepared Box handoff.
+
+`Box.AdoptPreparedFrame` is an explicit owner-only handoff: its caller must check
+the generation and ensure captured child lines match current children at the
+prepared width. Padding, child count and background sampling must match. The
+private snapshot must not be mutated after handoff. Later owner changes still
+invalidate the cache normally, and original mouse callbacks/coordinates remain.
+If the shell clock advanced during work, only its trailing rows and bottom
+padding are repainted; timer state stays on-owner.
+
+Linux/amd64, three iterations of the same fixture after the change: owner
+publication measured 1.47 ms (read) and 0.994 ms (bash), with 1,024,312 bytes and
+8 allocations each. The benchmark excludes fixture construction and worker work
+but includes completion application and the first owner render. These are not
+end-to-end latency measurements: padding work moved, not vanished. Final
+container flattening, large headers, retained-output repaints after invalidation
+and global GC pressure remain limits. Tests observe identical full frames,
+no full owner background pass after completion, stale-result rejection, timer
+updates, custom-header ownership, geometry/background rejection and original
+mouse targets after adoption.
+
+## D207. Pending tool updates retain the completed Box frame
+
+Reference: `packages/coding-agent/src/modes/interactive/components/tool-execution.ts`
+rebuilds the tool shell after result/argument/theme changes, and
+`packages/tui/src/components/box.ts` pads and backgrounds the resulting lines.
+D205 retained complete raw output while D206 prepared replacement Box frames,
+but an invalidation still sent the retained raw output through another full
+owner-side Box pass. A 1,050,000-byte fixture measured 14.83 ms (read) or
+15.88 ms (bash), about 10.15 MB and 90,000 allocations, for a pending update's
+invalidation/admission/render alone.
+
+Eligible D206 tools now retain the actual completed tool frame, including its
+header, padding and background, until matching replacement work completes.
+Result updates, target width changes and theme invalidation admit new private
+work but do not repaint the old large result on-owner. Prepared-frame metadata
+and displayed-frame metadata are separate: a completion that has not yet been
+painted cannot replace the metadata of the frame actually retained. A cold tool
+still uses the pending label; synchronous fallback/collapse/empty paths retain
+their existing behavior. Custom headers and self-render shells do not opt in.
+
+Elapsed clocks remain live. Only the two clock rows are styled with the retained
+frame's concrete background and original width; the slice is copied only when
+those rows change. `ChangedFrom` describes the frame actually returned, allowing
+parent Boxes to reuse the unchanged prefix. Pending tools report no stable
+render version, so a parent that skips unchanged children still admits/retries
+work, including after busy rejection. Mouse dispatch uses the displayed width
+and previous layout, not the pending target width; resize clicks cannot trigger
+an attached full-Box render. Original result click callbacks still act on current
+owner state. No new worker, queue, lock or saved/wire JSON change is introduced.
+D204/D205's shared four-job admission, generation checks and teardown guards
+remain in force.
+
+Linux/amd64, three iterations of the same fixture after the change: read pending
+owner work measured 0.061 ms, 1,997 bytes and 48 allocations; bash measured
+0.039 ms, 1,800 bytes and 43 allocations. Initial preparation and worker execution
+are excluded; these are not end-to-end latency claims. The old header/theme/width
+can remain visible until work completes. Large headers still render on-owner;
+clock slice copies, final container flattening and global GC remain limits.
+Tests observe complete-frame retention without attached background calls for
+content/width/theme changes, matching completed replacements, live clocks through
+parent caches, admission retry in skipping parents, stale rejection and resize
+mouse dispatch without a full attached repaint.
+
+## D208. Accepted pending clock updates reuse a versioned frame
+
+Reference: `packages/coding-agent/src/core/tools/renderers/bash.ts` updates a
+trailing elapsed label while output streams. D207 avoided full retained-output
+repainting, but copied the complete retained line slice whenever that label
+changed because all pending tools reported no stable render version. The
+unversioned parent-cache contract treats a reused slice as unchanged, so those
+copies were required to keep the clock visible.
+
+Only unadmitted/rejected work now reports no stable revision. Accepted pending
+work reports the owner's container revision; each changed retained clock tail
+bumps that revision and records its first changed row. The owner can mutate those
+two retained rows in place, with version-aware parents detecting the change and
+Boxes reusing the unchanged backgrounded prefix. No private worker snapshot is
+mutated. Busy/unadmitted clock updates still copy the line slice and remain
+unversioned, so skipping parents retry admission and cannot miss clock changes.
+Completion and source updates keep the existing invalidation/generation protocol.
+No new queue, lock, worker or saved/wire JSON change is introduced.
+
+Linux/amd64, 20 iterations over a 1,050,000-byte output fixture with accepted
+replacement work blocked: a clock tick fell from 1.055 ms, 484,070 bytes and
+17 allocations to 0.002456 ms, 684 bytes and 16 allocations. This benchmark
+isolates the tool's tick/render, not parent flattening, worker work or end-to-end
+input latency. Large headers, busy clock copies, final container flattening and
+global GC remain limits. Tests observe reused backing storage with a changed
+render revision, live clocks in skipping parents, busy admission retries,
+parent Box tail updates, stale-result rejection and displayed resize geometry.
+
+## D209. First-child Container changes reuse flattened owner storage
+
+Reference: `packages/tui/src/tui.ts`'s `Container.render` builds a fresh flattened
+line array each time. The port already reused storage when a later child changed,
+but a changed first child used a separate scratch flatten followed by a fresh
+allocation and another full copy. Nested containers with a single transcript/tool
+child therefore still allocated a content-sized array after every clock update.
+
+The owner now rewrites the changed suffix in existing Container storage for all
+child indices, including zero. Capacity grows geometrically when necessary;
+initial rendering, explicit invalidation and structural cache drops still rebuild
+normally. The redundant full-frame scratch array is removed. Render revisions
+and `ChangedFrom` continue to signal in-place changes to parent Containers and
+Boxes. Shrinking a frame clears removed string slots so reusable backing storage
+does not keep dropped output alive. All mutations remain on-owner; no new worker,
+queue, lock or saved/wire JSON change is introduced.
+
+Linux/amd64, 20 iterations changing the first child of a 30,000-line warm
+Container: flattening fell from 1.406 ms, 540,672 bytes and one allocation to
+0.0265 ms, zero bytes and zero allocations. The child renderer is an allocation-free
+fixture; this measures flattening alone, not Markdown, worker work, terminal
+painting or end-to-end input latency. Copy work is still linear in the changed
+suffix. Cache invalidation, capacity growth, large headers, busy clock copies and
+global GC remain limits. Tests observe reused first-child storage, zero warm
+change allocations, removed-reference clearing, output/growth/width correctness
+and version-aware nested propagation.

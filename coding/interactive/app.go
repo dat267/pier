@@ -207,7 +207,10 @@ type App struct {
 	// prerenderQueue warms deferred transcript components off the UI loop.
 	// Registered in offloopGroup; stopped by StopMode so a warm cannot touch the
 	// renderer after teardown.
-	prerenderQueue *offloop.Queue
+	prerenderQueue  *offloop.Queue
+	markdownQueue   *offloop.Queue
+	optionalContext context.Context
+	cancelOptional  context.CancelFunc
 
 	// offloopGroup owns the app's off-loop queues (theme, pre-render) so
 	// teardown is one StopAll. In production the command passes its group, which
@@ -269,6 +272,8 @@ func NewApp(options AppOptions) *App {
 		app.offloopGroup = offloop.NewGroup()
 	}
 
+	app.optionalContext, app.cancelOptional = context.WithCancel(context.Background())
+
 	// Renderer + theme. app.UI is the stable forwarding reference (upstream's
 	// createInteractiveTuiReference(() => this.renderer)): SwitchTuiMode swaps
 	// the lifecycle's renderer and every holder of app.UI follows it.
@@ -288,14 +293,14 @@ func NewApp(options AppOptions) *App {
 		OnRightClickPaste:          app.handleRightClickPaste,
 	})
 	app.initialUI = aInitialUI
-	app.ui = tui.NewTuiReference(func() tui.TUI {
+	app.ui = &modeUI{TuiReference: tui.NewTuiReference(func() tui.TUI {
 		if app.lifecycle != nil {
 			if current := app.lifecycle.CurrentUI(); current != nil {
 				return current
 			}
 		}
 		return app.initialUI
-	})
+	}), ctx: app.optionalContext}
 	app.ui.SetClearOnShrink(options.Settings.GetClearOnShrink())
 	app.theme = NewInteractiveThemeController(ThemeControllerOptions{
 		UI:                  themeUIAdapter{ui: app.ui},
@@ -323,7 +328,11 @@ func NewApp(options AppOptions) *App {
 	app.documentContainer = &tui.Container{}
 	app.documentContainer.AddChild(app.headerContainer)
 	app.documentContainer.AddChild(app.loadedResourcesContainer)
-	app.documentContainer.AddChild(app.chat)
+	app.documentContainer.AddChild(newResizeDocument(app.chat, func() {
+		if app.ui != nil {
+			app.ui.RequestRender(false)
+		}
+	}))
 	app.pendingMessages = &tui.Container{}
 	app.statusContainer = &tui.Container{}
 	app.widgetAbove = &tui.Container{}
@@ -391,8 +400,28 @@ func NewApp(options AppOptions) *App {
 	app.uiState.WorkingMessage = app.uiState.DefaultWorkingMessage
 
 	app.transcript = NewTranscriptRenderer(app.chat, app.ui, app.settings, app.session, app.sessionMgr)
-	app.prerenderQueue = app.offloopGroup.Queue()
+	app.prerenderQueue = app.offloopGroup.OptionalQueue()
 	app.transcript.PrerenderQueue = app.prerenderQueue
+	app.markdownQueue = app.offloopGroup.OptionalQueue()
+	markdownPreparation := &tui.MarkdownPreparation{
+		Submit: func(work func() func()) bool {
+			return app.markdownQueue.TryGoContext(4, func(ctx context.Context) {
+				if ctx.Err() != nil {
+					return
+				}
+				apply := work()
+				if ctx.Err() == nil {
+					app.ui.Post(apply)
+				}
+			})
+		},
+		RequestRender: func() {
+			app.chat.MarkDirty()
+			app.documentContainer.MarkDirty()
+			app.ui.RequestRender(false)
+		},
+	}
+	app.transcript.MarkdownPreparation = markdownPreparation
 	app.transcript.Footer = app.footer
 	app.transcript.Editor = app.defaultEditor
 	app.transcript.Display = app.display
@@ -420,6 +449,7 @@ func NewApp(options AppOptions) *App {
 	app.queue.ShowWarning = func(message string) { app.showWarning(message) }
 
 	app.events = NewEventDispatcher(app.transcript, app.uiState, app.footer, app.settings, app.session, app.sessionMgr, app.defaultEditor)
+	app.events.MarkdownPreparation = markdownPreparation
 	app.events.ShowError = func(message string) { app.showError(message) }
 	app.events.UpdatePendingMessagesDisplay = app.queue.UpdatePendingMessagesDisplay
 	app.events.Display = app.display
@@ -671,6 +701,10 @@ func (a *App) Run(ctx context.Context) {
 
 // Close unsubscribes and disposes the app.
 func (a *App) Close() {
+	a.cancelOptional()
+	if a.offloopGroup != nil {
+		a.offloopGroup.StopAll()
+	}
 	if a.unsubscribe != nil {
 		a.unsubscribe()
 		a.unsubscribe = nil
@@ -827,6 +861,7 @@ func (a *App) terminalWidth() int {
 // the footer and its data provider, the session-event subscription, the
 // renderer (with the fullscreen exit output setting) and the signal handlers.
 func (a *App) StopMode(fullscreenExitOutput string) {
+	a.cancelOptional()
 	// Drain the settings and session queues (a clean exit cannot lose the last
 	// save; signals route through the same hook), then stop every off-loop
 	// queue the app owns — including the theme queue, which nothing used to

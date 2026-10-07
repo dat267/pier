@@ -242,7 +242,6 @@ type Container struct {
 	// every child and every line.
 	childrenSnapshot []Component
 	childRenders     [][]string
-	lineScratch      []string
 }
 
 type mouseChild struct {
@@ -429,32 +428,25 @@ func (c *Container) Render(width int) []string {
 		total += len(childLines)
 	}
 
-	if firstChanged > 0 {
-		// Rebuild from the first changed child and reuse the prefix already in
-		// cacheLines. A streaming message changes only the last child, so
-		// re-flattening (and re-allocating) the whole transcript every frame is
-		// what made a long session stutter. Grow geometrically so monotonic
-		// growth does not reallocate on every frame.
-		if cap(c.cacheLines) < total {
-			grown := make([]string, len(c.cacheLines), max(total, 2*cap(c.cacheLines)))
-			copy(grown, c.cacheLines)
-			c.cacheLines = grown
-		}
-		lines := c.cacheLines[:total]
-		position := c.cacheOffsets[firstChanged]
-		for index := firstChanged; index < len(c.childRenders); index++ {
-			position += copy(lines[position:], c.childRenders[index])
-		}
-		c.cacheLines = lines
-	} else {
-		c.lineScratch = c.lineScratch[:0]
-		for _, childLines := range c.childRenders {
-			c.lineScratch = append(c.lineScratch, childLines...)
-		}
-		lines := make([]string, len(c.lineScratch), max(len(c.lineScratch)+len(c.lineScratch)/8, 8))
-		copy(lines, c.lineScratch)
-		c.cacheLines = lines
+	// D209: reuse owner storage even when child zero changed. The revision
+	// and ChangedFrom contract make an in-place rewrite visible to parents.
+	if cap(c.cacheLines) < total {
+		grown := make([]string, len(c.cacheLines), max(total, total+total/8, 2*cap(c.cacheLines), 8))
+		copy(grown, c.cacheLines)
+		c.cacheLines = grown
 	}
+	lines := c.cacheLines[:total]
+	position := 0
+	if firstChanged > 0 {
+		position = c.cacheOffsets[firstChanged]
+	}
+	for index := firstChanged; index < len(c.childRenders); index++ {
+		position += copy(lines[position:], c.childRenders[index])
+	}
+	if total < len(c.cacheLines) {
+		clear(c.cacheLines[total:])
+	}
+	c.cacheLines = lines
 
 	c.cacheChildren = append(c.cacheChildren[:0], c.childRenders...)
 	c.cacheChildComponents = append(c.cacheChildComponents[:0], c.childrenSnapshot...)
