@@ -301,3 +301,105 @@ func TestCredentialJSONRoundTrip(t *testing.T) {
 }
 
 func strPtr(s string) *string { return &s }
+
+// capturingStreams records the options a Models request reaches the provider
+// with (the ai-layer counterpart of the coding ModelRuntime contract tests).
+type capturingStreams struct {
+	stream       func(*Model, TranscriptContext, *StreamOptions) *AssistantMessageEventStream
+	streamSimple func(*Model, TranscriptContext, *SimpleStreamOptions) *AssistantMessageEventStream
+}
+
+func (c capturingStreams) Stream(m *Model, t TranscriptContext, o *StreamOptions) *AssistantMessageEventStream {
+	return c.stream(m, t, o)
+}
+
+func (c capturingStreams) StreamSimple(m *Model, t TranscriptContext, o *SimpleStreamOptions) *AssistantMessageEventStream {
+	return c.streamSimple(m, t, o)
+}
+
+func doneStream() *AssistantMessageEventStream {
+	stream := NewAssistantMessageEventStream()
+	go func() {
+		msg := &AssistantMessage{StopReason: StopStop, Usage: Usage{Cost: UsageCost{}}}
+		stream.Push(AssistantMessageEvent{Type: EventDone, Reason: StopStop, Message: msg})
+		stream.End(&msg)
+	}()
+	return stream
+}
+
+// Models.StreamSimple must resolve auth into the provider request and forward
+// the simple options (reasoning, tool choice, budgets) unchanged, applying the
+// header transform exactly once.
+func TestModelsStreamSimpleAppliesResolvedAuthAndSimpleOptions(t *testing.T) {
+	models := CreateModels(&CreateModelsOptions{Credentials: NewInMemoryCredentialStore()})
+	var gotModel *Model
+	var gotSimple *SimpleStreamOptions
+	provider := CreateProvider(CreateProviderOptions{
+		ID: "p",
+		Auth: ProviderAuth{APIKey: &ApiKeyAuth{Name: "p", Resolve: func(AuthResolveInput) (*AuthResult, error) {
+			return &AuthResult{Auth: ModelAuth{
+				APIKey:  "sk",
+				Headers: ProviderHeaders{"X-Auth": strPtr("1")},
+			}, Source: "test"}, nil
+		}}},
+		Models: []*Model{{ID: "m", Name: "m", Provider: "p", API: APIOpenAICompletions, Input: []string{"text"}, ContextWindow: 1000, MaxTokens: 100}},
+		Single: capturingStreams{streamSimple: func(m *Model, _ TranscriptContext, o *SimpleStreamOptions) *AssistantMessageEventStream {
+			gotModel, gotSimple = m, o
+			return doneStream()
+		}},
+	})
+	models.SetProvider(provider)
+	model := models.GetModel("p", "m")
+	if model == nil {
+		t.Fatal("model missing")
+	}
+	toolChoice := ToolChoice("required")
+	highBudget := 4096
+	transformed := 0
+	_, err := models.StreamSimple(model, Context{}, &ModelsSimpleStreamOptions{SimpleStreamOptions: SimpleStreamOptions{
+		StreamOptions: StreamOptions{
+			TransformHeaders: func(headers ProviderHeaders) ProviderHeaders {
+				transformed++
+				out := ProviderHeaders{}
+				for key, value := range headers {
+					out[key] = value
+				}
+				out["X-Transform"] = strPtr("2")
+				return out
+			},
+		},
+		Reasoning:       ThinkHigh,
+		ToolChoice:      &toolChoice,
+		ThinkingBudgets: &ThinkingBudgets{High: &highBudget},
+	}}).Result(bgCtx())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gotSimple == nil || gotModel == nil {
+		t.Fatal("the provider's StreamSimple never ran")
+	}
+	if gotSimple.APIKey != "sk" {
+		t.Fatalf("apiKey = %q, want resolved sk", gotSimple.APIKey)
+	}
+	if transformed != 1 {
+		t.Fatalf("TransformHeaders ran %d times, want 1", transformed)
+	}
+	if gotSimple.TransformHeaders != nil {
+		t.Fatal("TransformHeaders was not consumed before the provider ran")
+	}
+	if value := gotSimple.Headers["X-Auth"]; value == nil || *value != "1" {
+		t.Fatalf("X-Auth = %v, want 1", value)
+	}
+	if value := gotSimple.Headers["X-Transform"]; value == nil || *value != "2" {
+		t.Fatalf("X-Transform = %v, want 2", value)
+	}
+	if gotSimple.Reasoning != ThinkHigh {
+		t.Fatalf("Reasoning = %q, want %q", gotSimple.Reasoning, ThinkHigh)
+	}
+	if gotSimple.ToolChoice == nil || *gotSimple.ToolChoice != toolChoice {
+		t.Fatalf("ToolChoice = %v, want %q", gotSimple.ToolChoice, toolChoice)
+	}
+	if gotSimple.ThinkingBudgets == nil || gotSimple.ThinkingBudgets.High == nil || *gotSimple.ThinkingBudgets.High != 4096 {
+		t.Fatalf("ThinkingBudgets = %+v, want high 4096", gotSimple.ThinkingBudgets)
+	}
+}

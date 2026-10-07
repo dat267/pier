@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/dat267/pier/internal/offloop"
@@ -24,11 +25,15 @@ func TestSessionWritesLandInOrderOnTheQueue(t *testing.T) {
 	// rewrite that fires when the first user or assistant message lands.
 	m.AppendMessage(createAssistantMessageT("seed"))
 	const n = 50
+	want := []string{"session", "message"} // header, then the seed message
 	for i := 0; i < n; i++ {
 		m.AppendMessage(createUserMessage("message number"))
 		m.AppendSessionInfo("name")
+		want = append(want, "message", "session_info")
 	}
-	m.FlushWrites()
+	if err := m.FlushWrites(); err != nil {
+		t.Fatal(err)
+	}
 
 	f, err := os.Open(m.GetSessionFile())
 	if err != nil {
@@ -37,34 +42,23 @@ func TestSessionWritesLandInOrderOnTheQueue(t *testing.T) {
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
 	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
-	messages, infos := 0, 0
-	lastMessageIndex, lastIndexIndex := -1, -1
+	var got []string
 	for scanner.Scan() {
 		var entry struct {
 			Type string `json:"type"`
 		}
 		if err := json.Unmarshal(scanner.Bytes(), &entry); err != nil {
-			t.Fatalf("line %d: %v", messages+infos, err)
+			t.Fatalf("line %d: %v", len(got), err)
 		}
-		switch entry.Type {
-		case "message":
-			if messages <= lastIndexIndex && infos > 0 {
-				// ordering checked below via absolute counters
-			}
-			lastMessageIndex = messages + infos
-			messages++
-		case "session_info":
-			lastIndexIndex = messages + infos
-			infos++
-		}
+		got = append(got, entry.Type)
 	}
-	if messages != n+1 || infos != n { // +1: the seed assistant message
-		t.Fatalf("messages=%d infos=%d, want %d/%d", messages, infos, n+1, n)
+	if err := scanner.Err(); err != nil {
+		t.Fatal(err)
 	}
-	// Interleaved appends must land in submission order: every session_info
-	// line comes after the message appended just before it.
-	if lastMessageIndex > lastIndexIndex {
-		t.Fatalf("file order diverged from submission order: last message line %d, last info line %d", lastMessageIndex, lastIndexIndex)
+	// The complete persisted order must match submission order exactly, not just
+	// the final interleave: a reordered or duplicated middle entry fails here.
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("persisted order = %v, want %v", got, want)
 	}
 }
 

@@ -901,54 +901,23 @@ type preparedStream struct {
 }
 
 func (r *ModelRuntime) prepareStreamRequest(model *ai.Model, options *ai.ModelsStreamOptions) (*preparedStream, error) {
-	var apiKey string
-	var env map[string]string
-	var headers ai.ProviderHeaders
-	var transform func(ai.ProviderHeaders) ai.ProviderHeaders
 	var requestOptions ai.StreamOptions
 	if options != nil {
 		requestOptions = options.StreamOptions
-		apiKey = options.APIKey
-		env = options.Env
-		headers = options.Headers
-		transform = options.TransformHeaders
 	}
 	provider := r.models.GetProvider(model.Provider)
 	if provider == nil {
 		return nil, ai.NewModelsError(ai.ErrCodeProvider, fmt.Sprintf("Unknown provider: %s", model.Provider), nil)
 	}
-	resolution, err := r.GetAuthForModel(model, &ModelRuntimeAuthOverrides{APIKey: apiKey, Env: env})
+	resolution, err := r.GetAuthForModel(model, &ModelRuntimeAuthOverrides{APIKey: requestOptions.APIKey, Env: requestOptions.Env})
 	if err != nil {
 		return nil, err
 	}
 	if resolution == nil {
 		return nil, ai.NewModelsError(ai.ErrCodeAuth, fmt.Sprintf("Provider is not configured: %s", model.Provider), nil)
 	}
-	merged := ai.MergeHeaders(resolution.Auth.Headers, headers)
-	if transform != nil {
-		merged = transform(merged)
-	}
-	mergedEnv := map[string]string{}
-	for key, value := range resolution.Env {
-		mergedEnv[key] = value
-	}
-	for key, value := range env {
-		mergedEnv[key] = value
-	}
-	requestModel := model
-	if resolution.Auth.BaseURL != "" {
-		copied := *model
-		copied.BaseURL = resolution.Auth.BaseURL
-		requestModel = &copied
-	}
-	if requestOptions.APIKey == "" {
-		requestOptions.APIKey = resolution.Auth.APIKey
-	}
-	requestOptions.Headers = merged
-	if len(mergedEnv) > 0 {
-		requestOptions.Env = mergedEnv
-	}
-	return &preparedStream{Provider: provider, Model: requestModel, Options: &requestOptions}, nil
+	requestModel, resolved := ai.ApplyResolvedAuth(model, resolution.Auth, resolution.Env, requestOptions)
+	return &preparedStream{Provider: provider, Model: requestModel, Options: &resolved}, nil
 }
 
 func (r *ModelRuntime) prepareSimpleRequest(model *ai.Model, options *ai.ModelsSimpleStreamOptions) (*preparedStream, error) {

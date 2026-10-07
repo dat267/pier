@@ -596,9 +596,12 @@ func TestModelRuntimeStreamSimpleForwardsSimpleOptions(t *testing.T) {
 		t.Fatal("model missing")
 	}
 	toolChoice := ai.ToolChoice("required")
+	highBudget := 4096
+	budgets := &ai.ThinkingBudgets{High: &highBudget}
 	_, _ = runtime.StreamSimple(model, ai.Context{}, &ai.ModelsSimpleStreamOptions{SimpleStreamOptions: ai.SimpleStreamOptions{
-		Reasoning:  ai.ThinkHigh,
-		ToolChoice: &toolChoice,
+		Reasoning:       ai.ThinkHigh,
+		ToolChoice:      &toolChoice,
+		ThinkingBudgets: budgets,
 	}}).Result(ctx)
 
 	if got == nil {
@@ -609,5 +612,82 @@ func TestModelRuntimeStreamSimpleForwardsSimpleOptions(t *testing.T) {
 	}
 	if got.ToolChoice == nil || *got.ToolChoice != toolChoice {
 		t.Fatalf("ToolChoice = %v, want %q", got.ToolChoice, toolChoice)
+	}
+	if got.ThinkingBudgets == nil || got.ThinkingBudgets.High == nil || *got.ThinkingBudgets.High != 4096 {
+		t.Fatalf("ThinkingBudgets = %+v, want high 4096", got.ThinkingBudgets)
+	}
+}
+
+// ModelRuntime.Stream must apply the resolved credential and request transform
+// exactly once over the merged headers, deleting an overridden request header,
+// before the provider runs.
+func TestModelRuntimeStreamAppliesResolvedAuthToProvider(t *testing.T) {
+	ctx := ctxpkg.Background()
+	var gotOptions *ai.StreamOptions
+	provider := ai.CreateProvider(ai.CreateProviderOptions{
+		ID: "alpha", Name: "alpha provider",
+		Auth: ai.ProviderAuth{APIKey: &ai.ApiKeyAuth{
+			Name: "alpha key",
+			Resolve: func(input ai.AuthResolveInput) (*ai.AuthResult, error) {
+				return &ai.AuthResult{Auth: ai.ModelAuth{
+					APIKey:  "sk",
+					Headers: ai.ProviderHeaders{"X-Auth": stringPtr("1"), "X-Delete": stringPtr("gone")},
+				}, Source: "test"}, nil
+			},
+		}},
+		Models: []*ai.Model{{
+			ID: "alpha-model", Name: "alpha model", API: ai.APIOpenAICompletions, Provider: "alpha",
+			Input: []string{"text"}, ContextWindow: 1000, MaxTokens: 100,
+		}},
+		Single: funcStreams{stream: func(_ *ai.Model, _ ai.TranscriptContext, options *ai.StreamOptions) *ai.AssistantMessageEventStream {
+			gotOptions = options
+			stream := ai.NewAssistantMessageEventStream()
+			go func() {
+				msg := &ai.AssistantMessage{StopReason: ai.StopStop, Usage: ai.Usage{Cost: ai.UsageCost{}}}
+				stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: msg})
+				stream.End(&msg)
+			}()
+			return stream
+		}},
+	})
+	runtime := runtimeWithProviders(t, provider)
+	model := runtime.GetModel("alpha", "alpha-model")
+	if model == nil {
+		t.Fatal("model missing")
+	}
+	transformed := 0
+	_, _ = runtime.Stream(model, ai.Context{}, &ai.ModelsStreamOptions{StreamOptions: ai.StreamOptions{
+		Headers: ai.ProviderHeaders{"X-Request": stringPtr("2"), "X-Delete": nil},
+		TransformHeaders: func(headers ai.ProviderHeaders) ai.ProviderHeaders {
+			transformed++
+			out := ai.ProviderHeaders{}
+			for key, value := range headers {
+				out[key] = value
+			}
+			out["X-Transform"] = stringPtr("3")
+			return out
+		},
+	}}).Result(ctx)
+
+	if gotOptions == nil {
+		t.Fatal("the provider's Stream never ran")
+	}
+	if gotOptions.APIKey != "sk" {
+		t.Fatalf("apiKey = %q, want resolved sk", gotOptions.APIKey)
+	}
+	if transformed != 1 {
+		t.Fatalf("TransformHeaders ran %d times, want 1", transformed)
+	}
+	if gotOptions.TransformHeaders != nil {
+		t.Fatal("TransformHeaders was not consumed before the provider ran")
+	}
+	if value := gotOptions.Headers["X-Delete"]; value != nil {
+		t.Fatalf("X-Delete = %q, want the nil delete marker", *value)
+	}
+	for name, want := range map[string]string{"X-Auth": "1", "X-Request": "2", "X-Transform": "3"} {
+		value := gotOptions.Headers[name]
+		if value == nil || *value != want {
+			t.Fatalf("header %s = %v, want %q", name, value, want)
+		}
 	}
 }

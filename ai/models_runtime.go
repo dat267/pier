@@ -950,8 +950,17 @@ func (m *Models) applyAuth(model *Model, options *ModelsStreamOptions) (*Model, 
 	if resolution == nil {
 		return nil, nil, NewModelsError(ErrCodeAuth, fmt.Sprintf("Provider is not configured: %s", model.Provider), nil)
 	}
-	auth := resolution.Auth
+	requestModel, requestOptions := ApplyResolvedAuth(model, resolution.Auth, resolution.Env, options.StreamOptions)
+	return requestModel, &ModelsStreamOptions{StreamOptions: requestOptions}, nil
+}
 
+// ApplyResolvedAuth layers an already-resolved credential onto a request: the
+// explicit option fields win per-field, the resolved environment is overlaid
+// first, and the header transform runs last over the merged set. The returned
+// options drop TransformHeaders so it runs exactly once. It is the shared pure
+// step behind ai.Models.applyAuth and the coding ModelRuntime's request
+// preparation; credential resolution stays with each layer.
+func ApplyResolvedAuth(model *Model, auth ModelAuth, resolutionEnv ProviderEnv, options StreamOptions) (*Model, StreamOptions) {
 	apiKey := options.APIKey
 	if apiKey == "" {
 		apiKey = auth.APIKey
@@ -961,9 +970,9 @@ func (m *Models) applyAuth(model *Model, options *ModelsStreamOptions) (*Model, 
 		headers = options.TransformHeaders(headers)
 	}
 	var env ProviderEnv
-	if resolution.Env != nil || options.Env != nil {
+	if resolutionEnv != nil || options.Env != nil {
 		env = ProviderEnv{}
-		for k, v := range resolution.Env {
+		for k, v := range resolutionEnv {
 			env[k] = v
 		}
 		for k, v := range options.Env {
@@ -976,12 +985,12 @@ func (m *Models) applyAuth(model *Model, options *ModelsStreamOptions) (*Model, 
 		cloned.BaseURL = auth.BaseURL
 		requestModel = &cloned
 	}
-	requestOptions := *options
+	requestOptions := options
 	requestOptions.APIKey = apiKey
 	requestOptions.Headers = headers
 	requestOptions.Env = env
 	requestOptions.TransformHeaders = nil
-	return requestModel, &requestOptions, nil
+	return requestModel, requestOptions
 }
 
 // Stream normalizes the context, resolves auth, and delegates to the owning

@@ -267,13 +267,8 @@ func (w *SettingsWiring) BuildSettingsCallbacks(done func(), refresh func()) Set
 			}
 		},
 		OnHideThinkingBlockChange: func(hidden bool) {
-			if w.HideThinkingBlock != nil {
-				*w.HideThinkingBlock = hidden
-			}
 			settings.SetHideThinkingBlock(hidden)
-			if w.UpdateThinkingBlockVisibility != nil {
-				w.UpdateThinkingBlockVisibility(hidden)
-			}
+			w.applyThinkingBlockVisibility(hidden)
 		},
 		OnMermaidRenderingModeChange: func(mode string) {
 			settings.SetMermaidRenderingMode(mode)
@@ -296,67 +291,23 @@ func (w *SettingsWiring) BuildSettingsCallbacks(done func(), refresh func()) Set
 		OnTreeFilterModeChange:         func(mode string) { settings.SetTreeFilterMode(mode) },
 		OnShowHardwareCursorChange: func(enabled bool) {
 			settings.SetShowHardwareCursor(enabled)
-			if w.UI != nil {
-				w.UI.SetShowHardwareCursor(enabled)
-			}
+			w.applyShowHardwareCursor(enabled)
 		},
 		OnEditorPaddingXChange: func(padding int) {
 			settings.SetEditorPaddingX(padding)
-			if w.DefaultEditor != nil {
-				w.DefaultEditor.SetPaddingX(padding)
-			}
-			if w.Editor != nil && w.Editor != tui.Component(w.DefaultEditor) {
-				if editor, ok := w.Editor.(interface{ SetPaddingX(int) }); ok {
-					editor.SetPaddingX(padding)
-				}
-			}
+			w.applyEditorPaddingX(padding)
 		},
 		OnOutputPadChange: func(padding int) {
 			settings.SetOutputPad(padding)
-			if w.OutputPad != nil {
-				*w.OutputPad = padding
-			}
-			streaming := w.StreamingComponent != nil || session.IsStreaming()
-			if streaming {
-				for _, child := range chatChildren(w.Chat) {
-					switch component := child.(type) {
-					case *AssistantMessageComponent:
-						component.SetOutputPad(padding)
-					case *CustomMessageComponent:
-						component.SetOutputPad(padding)
-					case *UserMessageComponent:
-						component.SetOutputPad(padding)
-					}
-				}
-				if w.StreamingComponent != nil {
-					w.StreamingComponent.SetOutputPad(padding)
-				}
-				w.requestRender()
-				return
-			}
-			if w.RebuildChatFromMessages != nil {
-				w.RebuildChatFromMessages()
-			}
+			w.applyOutputPad(padding)
 		},
 		OnAutocompleteMaxVisibleChange: func(maxVisible int) {
 			settings.SetAutocompleteMaxVisible(maxVisible)
-			if w.DefaultEditor != nil {
-				w.DefaultEditor.SetAutocompleteMaxVisible(maxVisible)
-			}
-			if w.Editor != nil && w.Editor != tui.Component(w.DefaultEditor) {
-				if editor, ok := w.Editor.(interface{ SetAutocompleteMaxVisible(int) }); ok {
-					editor.SetAutocompleteMaxVisible(maxVisible)
-				}
-			}
+			w.applyAutocompleteMaxVisible(maxVisible)
 		},
 		OnClearOnShrinkChange: func(enabled bool) {
 			settings.SetClearOnShrink(enabled)
-			if w.UI != nil {
-				w.UI.SetClearOnShrink(enabled)
-			}
-			if !enabled && w.ClearStatusContainerIfIdle != nil {
-				w.ClearStatusContainerIfIdle()
-			}
+			w.applyClearOnShrink(enabled)
 		},
 		OnShowTerminalProgressChange: func(enabled bool) { settings.SetShowTerminalProgress(enabled) },
 		OnTuiModeChange: func(mode string) {
@@ -382,15 +333,11 @@ func (w *SettingsWiring) BuildSettingsCallbacks(done func(), refresh func()) Set
 		},
 		OnFullscreenCopyOnSelectChange: func(enabled bool) {
 			settings.SetFullscreenCopyOnSelect(enabled)
-			if renderer, ok := tuiConcrete(w.Renderer).(*tui.AltScreen); ok {
-				renderer.SetCopyOnSelect(enabled)
-			}
+			w.applyFullscreenCopyOnSelect(enabled)
 		},
 		OnFullscreenWheelScrollLinesChange: func(lines tui.WheelScrollLines) {
 			settings.SetFullscreenWheelScrollLines(lines)
-			if renderer, ok := tuiConcrete(w.Renderer).(*tui.AltScreen); ok {
-				renderer.SetWheelScrollLines(lines)
-			}
+			w.applyFullscreenWheelScrollLines(lines)
 		},
 		OnWarningsChange: func(warnings WarningSettings) {
 			settings.SetWarnings(coding.SettingsWarnings{AnthropicExtraUsage: warnings.AnthropicExtraUsage})
@@ -470,5 +417,98 @@ func newSettingsWiring(app *App) *SettingsWiring {
 		SwitchTuiMode:             func(mode string) bool { return app.lifecycle.SwitchTuiMode(mode, true, true) },
 		ShowStatus:                func(message string) { app.transcript.ShowStatus(message) },
 		RequestRender:             func() { app.ui.RequestRender(false) },
+	}
+}
+
+// The apply* methods are the single owner-loop application of one settings
+// value. The /settings callbacks persist then apply; applySettingsDependentUI
+// applies without persisting, so a /reload or session switch never writes the
+// setting back and both paths reach the same final state.
+
+func (w *SettingsWiring) applyThinkingBlockVisibility(hidden bool) {
+	if w.HideThinkingBlock != nil {
+		*w.HideThinkingBlock = hidden
+	}
+	if w.UpdateThinkingBlockVisibility != nil {
+		w.UpdateThinkingBlockVisibility(hidden)
+	}
+}
+
+func (w *SettingsWiring) applyShowHardwareCursor(enabled bool) {
+	if w.UI != nil {
+		w.UI.SetShowHardwareCursor(enabled)
+	}
+}
+
+func (w *SettingsWiring) applyEditorPaddingX(padding int) {
+	if w.DefaultEditor != nil {
+		w.DefaultEditor.SetPaddingX(padding)
+	}
+	if w.Editor != nil && w.Editor != tui.Component(w.DefaultEditor) {
+		if editor, ok := w.Editor.(interface{ SetPaddingX(int) }); ok {
+			editor.SetPaddingX(padding)
+		}
+	}
+}
+
+func (w *SettingsWiring) applyAutocompleteMaxVisible(maxVisible int) {
+	if w.DefaultEditor != nil {
+		w.DefaultEditor.SetAutocompleteMaxVisible(maxVisible)
+	}
+	if w.Editor != nil && w.Editor != tui.Component(w.DefaultEditor) {
+		if editor, ok := w.Editor.(interface{ SetAutocompleteMaxVisible(int) }); ok {
+			editor.SetAutocompleteMaxVisible(maxVisible)
+		}
+	}
+}
+
+func (w *SettingsWiring) applyClearOnShrink(enabled bool) {
+	if w.UI != nil {
+		w.UI.SetClearOnShrink(enabled)
+	}
+	if !enabled && w.ClearStatusContainerIfIdle != nil {
+		w.ClearStatusContainerIfIdle()
+	}
+}
+
+func (w *SettingsWiring) applyFullscreenCopyOnSelect(enabled bool) {
+	if renderer, ok := tuiConcrete(w.Renderer).(*tui.AltScreen); ok {
+		renderer.SetCopyOnSelect(enabled)
+	}
+}
+
+func (w *SettingsWiring) applyFullscreenWheelScrollLines(lines tui.WheelScrollLines) {
+	if renderer, ok := tuiConcrete(w.Renderer).(*tui.AltScreen); ok {
+		renderer.SetWheelScrollLines(lines)
+	}
+}
+
+// applyOutputPad installs the padding and refreshes the rendered messages: an
+// active stream's components update in place, otherwise the transcript
+// rebuilds with the new padding.
+func (w *SettingsWiring) applyOutputPad(padding int) {
+	if w.OutputPad != nil {
+		*w.OutputPad = padding
+	}
+	streaming := w.StreamingComponent != nil || (w.Session != nil && w.Session.IsStreaming())
+	if streaming {
+		for _, child := range chatChildren(w.Chat) {
+			switch component := child.(type) {
+			case *AssistantMessageComponent:
+				component.SetOutputPad(padding)
+			case *CustomMessageComponent:
+				component.SetOutputPad(padding)
+			case *UserMessageComponent:
+				component.SetOutputPad(padding)
+			}
+		}
+		if w.StreamingComponent != nil {
+			w.StreamingComponent.SetOutputPad(padding)
+		}
+		w.requestRender()
+		return
+	}
+	if w.RebuildChatFromMessages != nil {
+		w.RebuildChatFromMessages()
 	}
 }

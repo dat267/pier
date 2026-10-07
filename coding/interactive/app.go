@@ -3,6 +3,7 @@ package interactive
 import (
 	"context"
 	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -588,7 +589,75 @@ func NewApp(options AppOptions) *App {
 
 	app.autocomplete = newAutocompleteWiring(app)
 
+	// A seam left nil is a silent no-op at runtime (the queue reporters once
+	// were: every status they raised was dropped). Validate the production
+	// composition once so a forgotten assignment fails loudly here instead of
+	// during a session.
+	if missing := app.validateWiring(); len(missing) > 0 {
+		panic("interactive app wiring incomplete: " + strings.Join(missing, ", "))
+	}
+
 	return app
+}
+
+// validateWiring returns the names of required production seams that NewApp
+// left unset. It is the guard behind the panic in NewApp and is exported to
+// tests in this package through unexported access only.
+func (a *App) validateWiring() []string {
+	var missing []string
+	require := func(name string, present bool) {
+		if !present {
+			missing = append(missing, name)
+		}
+	}
+	require("ui", a.ui != nil)
+	require("uiState", a.uiState != nil)
+	require("display", a.display != nil)
+	require("transcript", a.transcript != nil)
+	require("settings", a.settings != nil)
+	require("queue", a.queue != nil)
+	require("events", a.events != nil)
+	require("footer", a.footer != nil)
+	require("footerData", a.footerData != nil)
+	require("slot", a.slot != nil)
+	require("lifecycle", a.lifecycle != nil)
+	require("startup", a.startup != nil)
+	require("runner", a.runner != nil)
+	require("sessionEvents", a.sessionEvents != nil)
+	require("defaultEditor", a.defaultEditor != nil)
+	require("key", a.key != nil)
+	require("submit", a.submit != nil)
+	require("selectors", a.selectors != nil)
+	require("settingsW", a.settingsW != nil)
+	require("models", a.models != nil)
+	require("sessions", a.sessions != nil)
+	require("auth", a.auth != nil)
+	require("commands", a.commands != nil)
+	require("trust", a.trust != nil)
+	require("autocomplete", a.autocomplete != nil)
+
+	if a.queue != nil {
+		require("queue.ShowStatus", a.queue.ShowStatus != nil)
+		require("queue.ShowError", a.queue.ShowError != nil)
+		require("queue.ShowWarning", a.queue.ShowWarning != nil)
+	}
+	if a.events != nil {
+		require("events.ShowError", a.events.ShowError != nil)
+		require("events.UpdatePendingMessagesDisplay", a.events.UpdatePendingMessagesDisplay != nil)
+		require("events.FlushCompactionQueue", a.events.FlushCompactionQueue != nil)
+		require("events.CheckShutdownRequested", a.events.CheckShutdownRequested != nil)
+		require("events.Init", a.events.Init != nil)
+	}
+	if a.transcript != nil {
+		require("transcript.Footer", a.transcript.Footer != nil)
+		require("transcript.Editor", a.transcript.Editor != nil)
+		require("transcript.Display", a.transcript.Display != nil)
+		require("transcript.MarkdownTheme", a.transcript.MarkdownTheme != nil)
+	}
+	if a.runner != nil {
+		require("runner.SessionManager", a.runner.SessionManager != nil)
+	}
+	return missing
 }
 
 // skillCommands converts the session's loaded skills into autocomplete slash
@@ -660,23 +729,19 @@ func (a *App) Init(ctx context.Context) {
 // /reload and after a session switch re-points the settings manager at another
 // project.
 func (a *App) applySettingsDependentUI() {
-	hidden := a.settings.GetHideThinkingBlock()
-	pad := a.settings.GetOutputPad()
-	a.updateThinkingBlockVisibility(hidden)
-	a.display.OutputPad = pad
+	// The apply* methods are the same ones the /settings callbacks use; this
+	// path only re-reads the values, so a reload or session switch never writes
+	// the setting back and both paths converge on the same UI state.
+	w := a.settingsW
+	w.applyThinkingBlockVisibility(a.settings.GetHideThinkingBlock())
+	w.applyOutputPad(a.settings.GetOutputPad())
 	a.applyFullscreenScrollbarSetting()
-	if altscreen, ok := tuiConcrete(a.ui).(*tui.AltScreen); ok {
-		altscreen.SetCopyOnSelect(a.settings.GetFullscreenCopyOnSelect())
-		altscreen.SetWheelScrollLines(a.settings.GetFullscreenWheelScrollLines())
-	}
-	a.ui.SetShowHardwareCursor(a.settings.GetShowHardwareCursor())
-	clearOnShrink := a.settings.GetClearOnShrink()
-	a.ui.SetClearOnShrink(clearOnShrink)
-	if !clearOnShrink && a.uiState != nil {
-		a.uiState.ClearStatusContainerIfIdle()
-	}
-	a.defaultEditor.SetPaddingX(a.settings.GetEditorPaddingX())
-	a.defaultEditor.SetAutocompleteMaxVisible(a.settings.GetAutocompleteMaxVisible())
+	w.applyFullscreenCopyOnSelect(a.settings.GetFullscreenCopyOnSelect())
+	w.applyFullscreenWheelScrollLines(a.settings.GetFullscreenWheelScrollLines())
+	w.applyShowHardwareCursor(a.settings.GetShowHardwareCursor())
+	w.applyClearOnShrink(a.settings.GetClearOnShrink())
+	w.applyEditorPaddingX(a.settings.GetEditorPaddingX())
+	w.applyAutocompleteMaxVisible(a.settings.GetAutocompleteMaxVisible())
 }
 
 // runContext is the active run's context (producers select on it).
