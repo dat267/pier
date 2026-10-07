@@ -2,6 +2,7 @@ package coding
 
 import (
 	ctxpkg "context"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -227,6 +228,9 @@ func TestAbortRetry(t *testing.T) {
 
 func TestRetrySettingsToggle(t *testing.T) {
 	dir := t.TempDir()
+	// Exercise file-backed settings without sleeping the production default.
+	// TestSettingsRetryDefaultsAndOverrides separately pins the 2000 ms default.
+	writeSettingsFile(t, filepath.Join(dir, "settings.json"), `{"retry":{"baseDelayMs":1}}`)
 	settings := NewSettingsManagerFromFiles(dir, dir, SettingsManagerCreateOptions{})
 	session := retrySession(t, &ai.RetryPolicy{Enabled: true, MaxRetries: 2, BaseDelayMS: 1}, erroringStreamFn(0, ""))
 	session.control.Settings = settings
@@ -245,6 +249,15 @@ func TestRetrySettingsToggle(t *testing.T) {
 		t.Fatal("setting must be persisted")
 	}
 	// The settings-backed policy drives PrepareRetry.
+	starts := 0
+	session.Subscribe(func(event *SessionEvent) {
+		if event.Type == SessionAutoRetryStart {
+			starts++
+			if event.DelayMS != 1 || event.MaxAttempts != 3 {
+				t.Fatalf("settings-backed retry delay = %d ms, max attempts = %d; want 1 ms and 3", event.DelayMS, event.MaxAttempts)
+			}
+		}
+	})
 	session.SetRetryEnabled(true)
 	message := &ai.AssistantMessage{
 		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",
@@ -254,8 +267,8 @@ func TestRetrySettingsToggle(t *testing.T) {
 	if err != nil || !retry {
 		t.Fatalf("retry = %v err = %v", retry, err)
 	}
-	if session.RetryAttempt() != 1 {
-		t.Fatalf("attempt = %d", session.RetryAttempt())
+	if session.RetryAttempt() != 1 || starts != 1 {
+		t.Fatalf("attempt = %d retry starts = %d", session.RetryAttempt(), starts)
 	}
 }
 

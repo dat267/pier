@@ -7,8 +7,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 // Tests for auth/oauth/github-copilot.ts.
@@ -248,6 +250,7 @@ func TestRefreshGitHubCopilotAccessToken(t *testing.T) {
 
 func TestEnableGitHubCopilotModels(t *testing.T) {
 	fastDeviceCodeFlows(t)
+	delays := fastOAuthRetries(t)
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.Method != http.MethodPost {
 			t.Errorf("method = %s", request.Method)
@@ -287,6 +290,11 @@ func TestEnableGitHubCopilotModels(t *testing.T) {
 		enabled, err := EnableGitHubCopilotModels(context.Background(), token, []string{"gpt-5", "boom", "gpt-5"}, domain)
 		if err != nil || len(enabled) != 1 || enabled[0] != "gpt-5" {
 			t.Fatalf("enabled = %#v err = %v", enabled, err)
+		}
+		// The rate-limit retry backed off 500ms then 1000ms before giving up on
+		// "boom" (500ms*(1<<0), 500ms*(1<<1)).
+		if want := []time.Duration{500 * time.Millisecond, time.Second}; !reflect.DeepEqual(*delays, want) {
+			t.Fatalf("backoff schedule = %v, want %v", *delays, want)
 		}
 	})
 }

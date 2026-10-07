@@ -278,7 +278,7 @@ func FetchWithCopilotRateLimitRetry(
 		}
 		_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 1<<16))
 		response.Body.Close()
-		if err := AbortableSleep(ctx, delay, "Login cancelled"); err != nil {
+		if err := oauthRetrySleep(ctx, delay, "Login cancelled"); err != nil {
 			return nil, err
 		}
 	}

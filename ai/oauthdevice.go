@@ -532,7 +532,7 @@ func RefreshKimiToken(ctx context.Context, oauthHost, refreshToken string) (*kim
 	for attempt := 0; attempt <= KimiCodingRefreshMaxRetries; attempt++ {
 		if attempt > 0 {
 			backoff := time.Duration(1000*(1<<(attempt-1))) * time.Millisecond
-			if err := AbortableSleep(ctx, backoff, "Kimi Code token refresh aborted"); err != nil {
+			if err := oauthRetrySleep(ctx, backoff, "Kimi Code token refresh aborted"); err != nil {
 				return nil, err
 			}
 		}

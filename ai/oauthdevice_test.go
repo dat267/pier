@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 // Tests for auth/oauth/xai.ts and auth/oauth/kimi-coding.ts.
@@ -322,6 +324,7 @@ func TestKimiTokenPollErrors(t *testing.T) {
 }
 
 func TestKimiRefresh(t *testing.T) {
+	delays := fastOAuthRetries(t)
 	t.Setenv("KIMI_CODE_OAUTH_HOST", "")
 	t.Setenv("KIMI_OAUTH_HOST", "")
 
@@ -345,6 +348,10 @@ func TestKimiRefresh(t *testing.T) {
 	}
 	if token.Access != "new" || token.Refresh != "rotated" || attempts != 2 {
 		t.Fatalf("token = %+v attempts = %d", token, attempts)
+	}
+	// The 503 was retried after a 1000ms backoff (1000ms*(1<<(attempt-1))).
+	if want := []time.Duration{time.Second}; !reflect.DeepEqual(*delays, want) {
+		t.Fatalf("backoff schedule = %v, want %v", *delays, want)
 	}
 
 	// A 401 is terminal with upstream's message.

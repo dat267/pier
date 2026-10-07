@@ -63,6 +63,12 @@ type OAuthDeviceCodePollResult[T any] struct {
 // spending ~25 s of the suite asleep.
 var deviceCodeSleep = AbortableSleep
 
+// oauthRetrySleep is the backoff sleep of the OAuth retry loops (the Copilot
+// rate-limit retry and the Kimi refresh). The requested delay is production
+// behavior under test, so the tests record the schedule and return instead of
+// sleeping it.
+var oauthRetrySleep = AbortableSleep
+
 // OAuthDeviceCodePollOptions configure PollOAuthDeviceCodeFlow.
 type OAuthDeviceCodePollOptions[T any] struct {
 	IntervalSeconds     *int

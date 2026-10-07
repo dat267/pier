@@ -385,3 +385,19 @@ func fastDeviceCodeFlows(t *testing.T) {
 	}
 	t.Cleanup(func() { deviceCodeSleep = previous })
 }
+
+// fastOAuthRetries records the delays the OAuth backoff loops request and
+// returns immediately, so a retry test asserts the schedule instead of
+// sleeping it. The expected values are the production backoff formulas
+// (Copilot 500ms*(1<<retry), Kimi 1000ms*(1<<(attempt-1))).
+func fastOAuthRetries(t *testing.T) *[]time.Duration {
+	t.Helper()
+	previous := oauthRetrySleep
+	delays := &[]time.Duration{}
+	oauthRetrySleep = func(_ context.Context, duration time.Duration, _ string) error {
+		*delays = append(*delays, duration)
+		return nil
+	}
+	t.Cleanup(func() { oauthRetrySleep = previous })
+	return delays
+}
