@@ -179,12 +179,24 @@ var editRenderers = ToolRenderers{
 			requestKey := argsKey
 			cwd := context.Cwd
 			invalidate := context.Invalidate
+			post := context.Post
 			go func() {
 				preview := computeEditsPreview(request.Path, request.Edits, cwd)
-				component.setPreviewResult(requestKey, preview)
-				if invalidate != nil {
-					invalidate()
+				if post != nil {
+					// Apply on the owner loop: setPreviewResult and Invalidate touch
+					// the component's render tree, which belongs to the caller.
+					post(func() {
+						component.setPreviewResult(requestKey, preview)
+						if invalidate != nil {
+							invalidate()
+						}
+					})
+					return
 				}
+				// No owner-loop seam (standalone renderer/tests): publish the atomic
+				// preview state only; the caller re-renders. Touching the render tree
+				// here would race a concurrent updateDisplay.
+				component.setPreviewResult(requestKey, preview)
 			}()
 		}
 		component.build(previewInput, theme, context.Cwd)

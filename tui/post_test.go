@@ -78,9 +78,17 @@ func TestPostCallbackMayRequestRender(t *testing.T) {
 	drain := make(chan struct{})
 	go func() {
 		defer close(drain)
-		for screen.RenderCount() == 0 {
-			<-screen.RenderTicks()
-			screen.RenderNow(false)
+		// Pump until the posted callback has run. Exiting on the first paint
+		// (the earlier RenderCount()!=0 condition) is a race: if the Post lands
+		// after that paint, its render request has no consumer and the callback
+		// never drains.
+		for {
+			select {
+			case <-done:
+				return
+			case <-screen.RenderTicks():
+				screen.RenderNow(false)
+			}
 		}
 	}()
 	screen.Start()

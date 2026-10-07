@@ -20,9 +20,15 @@ const fallbackPreviewLines = 10
 
 // ToolRenderContext is passed to the tool renderers.
 type ToolRenderContext struct {
-	Args             any
-	ToolCallID       string
-	Invalidate       func()
+	Args       any
+	ToolCallID string
+	// Invalidate rebuilds the rendered component. When called off the owner
+	// loop it must be marshaled through Post.
+	Invalidate func()
+	// Post runs fn on the owner loop (the host's tui Post). Renderers that
+	// compute off-loop must apply their component mutations through it; nil
+	// means no owner loop is wired (standalone renderer/tests).
+	Post             func(func())
 	LastComponent    tui.Component
 	State            any
 	Cwd              string
@@ -76,7 +82,10 @@ type ToolExecutionComponent struct {
 	isPartial  bool
 	definition *ToolRenderers
 	host       tui.RenderRequester
-	cwd        string
+	// post marshals off-loop renderer mutations onto the owner loop; nil when
+	// the host does not expose tui's Post (tests, standalone renderers).
+	post func(func())
+	cwd  string
 
 	executionStarted bool
 	argsComplete     bool
@@ -105,6 +114,7 @@ func NewToolExecutionComponent(toolName string, toolCallID string, args any, opt
 		isPartial:       true,
 		definition:      definition,
 		host:            host,
+		post:            toolPostFor(host),
 		cwd:             cwd,
 	}
 
@@ -140,6 +150,17 @@ func (c *ToolExecutionComponent) renderShell() string {
 	return c.definition.RenderShell
 }
 
+// toolPostFor returns the host's owner-loop Post seam when the concrete host
+// exposes tui's Post (every tui.TUI does; the narrow RenderRequester field hides
+// it). Nil means no owner loop is wired, so renderers must not mutate the
+// component's render tree off the caller's goroutine.
+func toolPostFor(host tui.RenderRequester) func(func()) {
+	if poster, ok := host.(interface{ Post(func()) }); ok {
+		return poster.Post
+	}
+	return nil
+}
+
 func (c *ToolExecutionComponent) renderContext(lastComponent tui.Component) *ToolRenderContext {
 	return &ToolRenderContext{
 		Args:       c.args,
@@ -150,6 +171,7 @@ func (c *ToolExecutionComponent) renderContext(lastComponent tui.Component) *Too
 				c.host.RequestRender(false)
 			}
 		},
+		Post:             c.post,
 		LastComponent:    lastComponent,
 		State:            c.rendererState,
 		Cwd:              c.cwd,
