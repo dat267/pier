@@ -559,3 +559,55 @@ func TestModelRuntimeReadsModelsJSONFromTheAgentDir(t *testing.T) {
 		t.Fatalf("the cwd's models.json was loaded; providers=%v", runtime.providerIDs())
 	}
 }
+
+// ModelRuntime.StreamSimple must forward the SimpleStreamOptions it was given.
+// Dropping Reasoning meant the OpenAI Responses request never carried
+// `reasoning.summary`, so the model returned an empty reasoning item and the
+// transcript showed no thinking block.
+func TestModelRuntimeStreamSimpleForwardsSimpleOptions(t *testing.T) {
+	ctx := ctxpkg.Background()
+	var got *ai.SimpleStreamOptions
+	provider := ai.CreateProvider(ai.CreateProviderOptions{
+		ID: "alpha", Name: "alpha provider",
+		Auth: ai.ProviderAuth{APIKey: &ai.ApiKeyAuth{
+			Name: "alpha key",
+			Resolve: func(input ai.AuthResolveInput) (*ai.AuthResult, error) {
+				return &ai.AuthResult{Auth: ai.ModelAuth{APIKey: "sk"}, Source: "test"}, nil
+			},
+		}},
+		Models: []*ai.Model{{
+			ID: "alpha-model", Name: "alpha model", API: ai.APIOpenAICompletions, Provider: "alpha",
+			Input: []string{"text"}, ContextWindow: 1000, MaxTokens: 100,
+		}},
+		Single: funcStreams{streamSimple: func(_ *ai.Model, _ ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+			got = options
+			stream := ai.NewAssistantMessageEventStream()
+			go func() {
+				msg := &ai.AssistantMessage{StopReason: ai.StopStop, Usage: ai.Usage{Cost: ai.UsageCost{}}}
+				stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: msg})
+				stream.End(&msg)
+			}()
+			return stream
+		}},
+	})
+	runtime := runtimeWithProviders(t, provider)
+	model := runtime.GetModel("alpha", "alpha-model")
+	if model == nil {
+		t.Fatal("model missing")
+	}
+	toolChoice := ai.ToolChoice("required")
+	_, _ = runtime.StreamSimple(model, ai.Context{}, &ai.ModelsSimpleStreamOptions{SimpleStreamOptions: ai.SimpleStreamOptions{
+		Reasoning:  ai.ThinkHigh,
+		ToolChoice: &toolChoice,
+	}}).Result(ctx)
+
+	if got == nil {
+		t.Fatal("the provider's StreamSimple never ran")
+	}
+	if got.Reasoning != ai.ThinkHigh {
+		t.Fatalf("Reasoning = %q, want %q", got.Reasoning, ai.ThinkHigh)
+	}
+	if got.ToolChoice == nil || *got.ToolChoice != toolChoice {
+		t.Fatalf("ToolChoice = %v, want %q", got.ToolChoice, toolChoice)
+	}
+}

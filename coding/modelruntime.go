@@ -952,17 +952,23 @@ func (r *ModelRuntime) prepareStreamRequest(model *ai.Model, options *ai.ModelsS
 }
 
 func (r *ModelRuntime) prepareSimpleRequest(model *ai.Model, options *ai.ModelsSimpleStreamOptions) (*preparedStream, error) {
-	streamOptions := &ai.ModelsStreamOptions{}
+	var simple ai.SimpleStreamOptions
 	if options != nil {
-		streamOptions.StreamOptions = options.SimpleStreamOptions.StreamOptions
+		simple = options.SimpleStreamOptions
+	}
+	streamOptions := &ai.ModelsStreamOptions{StreamOptions: simple.StreamOptions}
+	if options != nil {
 		streamOptions.TransformHeaders = options.TransformHeaders
 	}
 	prepared, err := r.prepareStreamRequest(model, streamOptions)
 	if err != nil {
 		return nil, err
 	}
-	simple := &ai.SimpleStreamOptions{StreamOptions: *prepared.Options}
-	return &preparedStream{Provider: prepared.Provider, Model: prepared.Model, Options: prepared.Options, Simple: simple}, nil
+	// prepareStreamRequest resolves auth into the StreamOptions; keep the simple
+	// fields it does not model (Reasoning, ToolChoice, ThinkingBudgets) or the
+	// provider never sees the requested thinking level.
+	simple.StreamOptions = *prepared.Options
+	return &preparedStream{Provider: prepared.Provider, Model: prepared.Model, Options: prepared.Options, Simple: &simple}, nil
 }
 
 // StreamDeferred fetches a deferred response.
