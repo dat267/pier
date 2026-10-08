@@ -373,3 +373,28 @@ func TestAppChatSkipsUnchangedChildren(t *testing.T) {
 		t.Fatal("app.chat must skip unchanged versioned children")
 	}
 }
+
+// #9311: RenderSessionEntries is the funnel every transcript rebuild goes through, so
+// it drops the fullscreen selection before the transcript it points into is replaced.
+func TestRenderSessionEntriesDropsTheFullscreenSelection(t *testing.T) {
+	transcript := NewTranscriptRenderer(&tui.Container{}, nil, nil, nil, nil)
+	calls := 0
+	transcript.ResetTextSelection = func() { calls++ }
+	transcript.RenderSessionEntries(nil, false, false)
+	if calls != 1 {
+		t.Fatalf("selection reset called %d times, want 1", calls)
+	}
+}
+
+// The app installs the reset on its transcript renderer, and resolves the renderer when
+// a rebuild happens, so a mode change is followed instead of captured.
+func TestAppInstallsTheTranscriptSelectionReset(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	if app.transcript == nil || app.transcript.ResetTextSelection == nil {
+		t.Fatal("the app did not install the transcript selection reset")
+	}
+	// An inline renderer tracks no selection, so this has to be a no-op rather than a
+	// panic or an assertion failure.
+	app.transcript.ResetTextSelection()
+}

@@ -425,6 +425,14 @@ func NewApp(options AppOptions) *App {
 	app.uiState.WorkingMessage = app.uiState.DefaultWorkingMessage
 
 	app.transcript = NewTranscriptRenderer(app.chat, app.ui, app.settings, app.session, app.sessionMgr)
+	// Replacing the transcript drops the fullscreen selection, whose coordinates point into
+	// the transcript that is going away (#9311). The renderer is resolved when a rebuild
+	// happens rather than now, because the mode can change in between.
+	app.transcript.ResetTextSelection = func() {
+		if screen, ok := app.currentRenderer().(*tui.AltScreen); ok {
+			screen.ResetTextSelection()
+		}
+	}
 	app.prerenderQueue = app.offloopGroup.OptionalQueue()
 	app.pasteQueue = app.offloopGroup.OptionalQueue()
 	app.transcript.PrerenderQueue = app.prerenderQueue

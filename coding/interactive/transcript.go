@@ -50,9 +50,13 @@ type TranscriptRenderer struct {
 	MarkdownPreparation *tui.MarkdownPreparation
 	Chat                *tui.Container
 	UI                  tui.RenderRequester
-	Settings            *coding.SettingsManager
-	Session             TranscriptSession
-	SessionInfo         *coding.SessionManager
+	// ResetTextSelection drops a fullscreen text selection before the transcript it
+	// points into is replaced; nil when the host tracks no selection (upstream
+	// renderSessionEntries resets when the renderer is an AltScreen, #9311).
+	ResetTextSelection func()
+	Settings           *coding.SettingsManager
+	Session            TranscriptSession
+	SessionInfo        *coding.SessionManager
 
 	Footer *FooterComponent
 	Editor *CustomEditor
@@ -647,6 +651,10 @@ func (r *TranscriptRenderer) renderSessionItems(items []RenderSessionItem, updat
 
 // RenderSessionEntries renders compaction-aware session entries.
 func (r *TranscriptRenderer) RenderSessionEntries(entries []coding.SessionEntry, updateFooter bool, populateHistory bool) {
+	// The transcript these coordinates point into is about to be replaced (#9311).
+	if r.ResetTextSelection != nil {
+		r.ResetTextSelection()
+	}
 	var items []RenderSessionItem
 	for index := range entries {
 		entry := &entries[index]

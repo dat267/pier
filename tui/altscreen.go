@@ -352,6 +352,16 @@ func (s *AltScreen) CopyActiveSelectionToClipboard() bool {
 	return s.copyTextToClipboard(text)
 }
 
+// ResetTextSelection drops the selection and the multi-click history. A host about to
+// replace the transcript calls it, because the selection coordinates point into the
+// transcript that is going away (upstream #9311).
+//
+// Owner-loop only, like every other UI mutation here (D146).
+func (s *AltScreen) ResetTextSelection() {
+	s.clearTextSelectionLocked()
+	s.lastClick = nil
+}
+
 // SetLayoutRoot installs the viewport layout root.
 func (s *AltScreen) SetLayoutRoot(component Component) {
 	if s.getLayoutRoot() == component {
