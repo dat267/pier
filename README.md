@@ -13,7 +13,7 @@ deliberate feature of this implementation. The development conventions live in
 | What | Value |
 |---|---|
 | Repository | https://github.com/earendil-works/pi (cloned at `./pi`, gitignored) |
-| Pin | `cd32f772` (Release v1.0.2); the applicable runtime and catalog changes from v1.0.1 are included — see `docs/PORTING.md` for the delta's ported and not-ported commits |
+| Pin | `cd32f772` (Release v1.0.2); the applicable runtime and catalog changes from v1.0.1 are included — see `docs/PORTING.md` for the delta's ported and not-ported commits. Upstream has since released v1.0.3, v1.0.4 and v1.1.0 (104 commits, none of them ported or recorded yet); `docs/PORTING.md` records that known drift |
 | Stale reference test | `packages/ai/test/faux-provider.test.ts` "estimates prompt and output tokens" still expects pre-`9e05370b2` faux serialization; this implementation follows the current source |
 
 ## Status
@@ -41,6 +41,7 @@ Deliberately left out of scope, each with its decision recorded in code: the ext
 ```bash
 just build   # bin/pier: pure Go (CGO_ENABLED=0), the flags the release workflow uses
 just check   # gofmt + go vet + go test
+just reference # is ./pi at the pinned tag, and how far has upstream moved past it
 just --list  # the other recipes (install, test-race, cross, clean)
 ```
 

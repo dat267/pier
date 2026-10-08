@@ -15,7 +15,7 @@ bin := "bin/pier"
 # source default 0.0.0, which cannot answer "which build am I running?". VERSION
 # overrides it as before: `just VERSION=1.2.3 install`. A checkout without git (a
 # tarball) yields an empty version and falls back to the source default, and the
-# release workflow passes its own (android-release.yml stamps the tag or the SHA).
+# release workflow passes its own (release.yml stamps the tag or the SHA).
 VERSION := env_var_or_default("VERSION", `git describe --tags --always --dirty 2>/dev/null || true`)
 
 # Pure Go: no cgo anywhere in the port, and the release workflow builds the same
@@ -98,6 +98,56 @@ cross:
 # Remove build output.
 clean:
 	rm -rf bin
+
+# The reference checkout is only as useful as the tags it holds: a diff against "the
+# latest pi" reads them, and a checkout at the wrong tag silently answers the wrong
+# question. The pin itself is in docs/PORTING.md; these read and check that state.
+# Fetch upstream tags into ./pi without moving it off the pinned tag.
+reference-fetch:
+	git -C pi fetch --tags --quiet origin
+	@echo "fetched upstream tags into pi"
+
+# Reads local state only, so it works offline; `just reference-fetch` refreshes the
+# tags it can see. It fails when the checkout is at another tag, because that is the
+# state in which an "against upstream" review quietly becomes wrong.
+# Check that ./pi is at the pin in docs/PORTING.md, and report upstream's drift.
+reference:
+	#!/usr/bin/env bash
+	set -euo pipefail
+
+	if [[ ! -d pi/.git ]]; then
+		echo "reference: no ./pi checkout; clone it at the pin:" >&2
+		echo "      git clone https://github.com/earendil-works/pi pi" >&2
+		echo "      git -C pi checkout --detach v1.0.2   # the pin, see docs/PORTING.md" >&2
+		exit 1
+	fi
+
+	# "Reference pin: `cd32f772` (Release v1.0.2), read from the `./pi` checkout."
+	pin_commit="$(sed -n 's/^Reference pin: `\([0-9a-f]*\)`.*/\1/p' docs/PORTING.md | head -1)"
+	pin_tag="$(sed -n 's/^Reference pin: `[0-9a-f]*` (Release \([^)]*\)).*/\1/p' docs/PORTING.md | head -1)"
+	if [[ -z "$pin_commit" || -z "$pin_tag" ]]; then
+		echo "reference: no pin in docs/PORTING.md (expected a 'Reference pin:' line)" >&2
+		exit 1
+	fi
+
+	head_commit="$(git -C pi rev-parse HEAD)"
+	at="$(git -C pi describe --tags --exact-match HEAD 2>/dev/null || git -C pi describe --tags --always HEAD)"
+	echo "pin:      $pin_tag ($pin_commit), from docs/PORTING.md"
+	echo "checkout: $at ($(git -C pi rev-parse --short HEAD))"
+
+	latest="$(git -C pi tag --sort=-v:refname | head -1)"
+	if [[ -n "$latest" && "$latest" != "$pin_tag" ]]; then
+		behind="$(git -C pi rev-list --count "$pin_tag..$latest" 2>/dev/null || echo '?')"
+		echo "upstream: $latest is $behind commit(s) past the pin; not ported (see the known drift in docs/PORTING.md)"
+	fi
+
+	if [[ "$head_commit" == "$pin_commit"* ]]; then
+		echo "reference: ok, ./pi is at the pin"
+		exit 0
+	fi
+	echo "reference: ./pi is at $at, not the pin $pin_tag" >&2
+	echo "      check it out with: git -C pi checkout --detach $pin_tag" >&2
+	exit 1
 
 # Fast-forward when the history is linear, a merge commit when it is not. The tree
 # must be clean, and a conflict aborts the merge and reports the files instead of

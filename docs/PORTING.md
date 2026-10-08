@@ -5,9 +5,24 @@ pin's change log. The user-facing summary lives in `README.md`; this file is the
 authoritative per-area status.
 
 Reference pin: `cd32f772` (Release v1.0.2), read from the `./pi` checkout.
+`just reference` checks that the checkout really is at that tag, and
+`just reference-fetch` refreshes its tags without moving the checkout.
 `ai/models_catalog.json` is regenerated from the pin's own generator
 (`packages/ai/scripts/generate-models.ts --strict --data-only`, which fetches
 models.dev) through `scripts/gen_catalog.py`.
+
+**Known drift.** Upstream has released v1.0.3, v1.0.4 and v1.1.0 since the pin.
+`git -C pi log --oneline v1.0.2..v1.1.0` counts 104 commits over 340 files,
+concentrated in `coding-agent` (44), `durable` (33), `ai` (29), `env` (17),
+`tui` (12), `mcp` (9), `codemode` (9) and `agent` (8). Nothing in that delta is
+ported or recorded below: the not-ported list in this file stops at v1.0.2.
+Checked against v1.1.0 and known absent — the Anthropic OAuth callback has no
+free-port fallback (`ai/oauthanthropic.go` pins port 53692; upstream `8d8ae2fc2`),
+OSC 7501 program status is not emitted (upstream `503c60552`), the model catalog
+predates `claude-haiku-5.5` (upstream `f76c1db66`), Herdr is not in the terminal
+detection, and reading the Termux clipboard (upstream `592fb57b7`) stays out of
+scope under **D120**. The rest of the delta is unreviewed: those counts say how
+much there is, not which commits.
 
 The v0.99.1→v1.0.0 delta (62 commits) is ported: it released the experimental
 `durable` packages and landed MCP and codemode work (codemode stays out of
