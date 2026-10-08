@@ -242,6 +242,18 @@ type Container struct {
 	// every child and every line.
 	childrenSnapshot []Component
 	childRenders     [][]string
+	// childVersions/childHasVersion hold each child's render revision read once
+	// during the render loop, so the first-changed scan and the cache refresh
+	// reuse that read instead of dispatching RenderVersion again.
+	childVersions   []uint64
+	childHasVersion []bool
+	// childReusable records, per child, whether this frame can serve the cached
+	// lines (the fast path read the revision once and the walk reuses it).
+	childReusable []bool
+	// renderWalks counts frames that walked and flattened the child list, as
+	// opposed to serving the cached frame. Test seam for the warm-frame fast
+	// path.
+	renderWalks uint64
 }
 
 type mouseChild struct {
@@ -384,6 +396,17 @@ func (c *Container) HandleMouse(event TuiMouseEvent) *TuiMouseDispatchResult {
 
 // Render renders every child and records the mouse layout.
 func (c *Container) Render(width int) []string {
+	// Fast path: when every child can serve its cached lines, the cached frame
+	// and mouse layout still describe the container. Reading each child's
+	// revision once and returning avoids snapshotting the child list, rebuilding
+	// the mouse layout, and re-flattening the frame on every warm paint. The
+	// revisions read here are reused by the walk below.
+	if c.allChildrenReusable(width) {
+		c.lastChangedFrom = -1
+		return c.cacheLines
+	}
+	c.renderWalks++
+
 	// Snapshot the children: a child's Render may re-enter and mutate
 	// c.Children. The scratch buffer is reused, not reallocated.
 	if cap(c.childrenSnapshot) < len(c.Children) {
@@ -402,12 +425,16 @@ func (c *Container) Render(width int) []string {
 	}
 	c.childRenders = c.childRenders[:len(c.childrenSnapshot)]
 	for i, child := range c.childrenSnapshot {
-		childLines, ok := c.reusableChildLines(i, child, width)
-		if !ok {
-			childLines = child.Render(width)
+		if c.childReusable[i] {
+			c.childRenders[i] = c.cacheChildren[i]
+		} else {
+			childLines := child.Render(width)
+			// Read after Render: a container bumps its revision while rendering,
+			// and the parent must cache the post-render revision.
+			c.childVersions[i], c.childHasVersion[i] = childRenderVersion(child)
+			c.childRenders[i] = childLines
 		}
-		c.childRenders[i] = childLines
-		c.mouseLayout = append(c.mouseLayout, mouseChild{component: child, height: len(childLines)})
+		c.mouseLayout = append(c.mouseLayout, mouseChild{component: child, height: len(c.childRenders[i])})
 	}
 	c.mouseLayoutWidth = width
 
@@ -451,12 +478,10 @@ func (c *Container) Render(width int) []string {
 	c.cacheChildren = append(c.cacheChildren[:0], c.childRenders...)
 	c.cacheChildComponents = append(c.cacheChildComponents[:0], c.childrenSnapshot...)
 	c.cacheChildVersions = c.cacheChildVersions[:0]
-	for _, child := range c.childrenSnapshot {
+	for i := range c.childrenSnapshot {
 		version := uint64(0)
-		if versioned, ok := child.(renderVersioner); ok {
-			if value, has := versioned.RenderVersion(); has {
-				version = value
-			}
+		if c.childHasVersion[i] {
+			version = c.childVersions[i]
 		}
 		c.cacheChildVersions = append(c.cacheChildVersions, version)
 	}
@@ -492,27 +517,83 @@ func (c *Container) RenderVersion() (uint64, bool) { return c.version, true }
 // for a Container.
 func (c *Container) ChangedFrom() (int, bool) { return c.lastChangedFrom, true }
 
-// reusableChildLines returns the child's cached lines when the container is
-// skipping unchanged children and the child's render revision is unchanged.
-func (c *Container) reusableChildLines(index int, child Component, width int) ([]string, bool) {
-	if !c.SkipUnchangedChildren || c.cacheWidth != width ||
-		index >= len(c.cacheChildren) || index >= len(c.cacheChildVersions) ||
-		index >= len(c.cacheChildComponents) || c.cacheChildComponents[index] != child {
-		return nil, false
-	}
+// childRenderVersion reports a child's render revision, and whether it has one.
+func childRenderVersion(child Component) (uint64, bool) {
 	versioned, ok := child.(renderVersioner)
 	if !ok {
-		return nil, false
+		return 0, false
 	}
-	version, has := versioned.RenderVersion()
-	if !has || version != c.cacheChildVersions[index] {
-		return nil, false
+	return versioned.RenderVersion()
+}
+
+// RenderWalks counts frames that walked and flattened the child list, rather
+// than serving the cached frame from the warm-frame fast path. It is a test
+// seam for the walk cost.
+func (c *Container) RenderWalks() uint64 { return c.renderWalks }
+
+// allChildrenReusable reads each child's revision once, records whether the
+// child can serve its cached lines, and reports whether every child can. A true
+// result means no child can rewrite its lines this frame, so Render may return
+// the cached frame without snapshotting, re-flattening, or rebuilding the
+// mouse layout. The recorded revisions and reuse flags are consumed by that
+// walk when the result is false, so the revision is never dispatched twice.
+func (c *Container) allChildrenReusable(width int) bool {
+	count := len(c.Children)
+	if cap(c.childVersions) < count {
+		c.childVersions = make([]uint64, count)
 	}
-	return c.cacheChildren[index], true
+	c.childVersions = c.childVersions[:count]
+	if cap(c.childHasVersion) < count {
+		c.childHasVersion = make([]bool, count)
+	}
+	c.childHasVersion = c.childHasVersion[:count]
+	if cap(c.childReusable) < count {
+		c.childReusable = make([]bool, count)
+	}
+	c.childReusable = c.childReusable[:count]
+
+	// Reuse is only defined for a container that skips unchanged children and
+	// whose cache still matches the current width and child count.
+	if !c.SkipUnchangedChildren || c.cacheLines == nil || c.cacheWidth != width ||
+		count == 0 || count != len(c.cacheChildren) || count != len(c.cacheChildVersions) ||
+		count != len(c.cacheChildComponents) {
+		for index := range c.Children {
+			c.childVersions[index], c.childHasVersion[index], c.childReusable[index] = 0, false, false
+		}
+		return false
+	}
+
+	allReusable := true
+	for index, child := range c.Children {
+		version, hasVersion, reusable := c.childCacheState(index, child)
+		c.childVersions[index], c.childHasVersion[index], c.childReusable[index] = version, hasVersion, reusable
+		if !reusable {
+			allReusable = false
+		}
+	}
+	return allReusable
+}
+
+// childCacheState reports whether the child at index can serve its cached lines
+// this frame, along with the revision it read. The caller has already checked
+// skip mode, width, cache length and cacheLines.
+func (c *Container) childCacheState(index int, child Component) (version uint64, hasVersion, reusable bool) {
+	// A replaced child can share a revision with the one it replaced (both
+	// start at 0), so identity decides before the revision does.
+	if c.cacheChildComponents[index] != child {
+		return 0, false, false
+	}
+	version, hasVersion = childRenderVersion(child)
+	if !hasVersion || version != c.cacheChildVersions[index] {
+		return version, hasVersion, false
+	}
+	return version, hasVersion, true
 }
 
 // firstChangedChild reports the first child whose rendered lines differ from
-// the cached pass, or -1 when cacheLines still describes every child.
+// the cached pass, or -1 when cacheLines still describes every child. It uses
+// the revisions the render loop already read (childVersions/childHasVersion)
+// rather than dispatching RenderVersion a second time.
 func (c *Container) firstChangedChild(width int) int {
 	if c.cacheLines == nil || c.cacheWidth != width || len(c.cacheChildren) != len(c.childRenders) || len(c.cacheChildVersions) != len(c.childRenders) {
 		return 0
@@ -524,13 +605,11 @@ func (c *Container) firstChangedChild(width int) int {
 		if index >= len(c.cacheChildComponents) || c.cacheChildComponents[index] != c.childrenSnapshot[index] {
 			return index
 		}
-		if versioned, ok := c.childrenSnapshot[index].(renderVersioner); ok {
-			if version, has := versioned.RenderVersion(); has {
-				if c.cacheChildVersions[index] != version {
-					return index
-				}
-				continue
+		if c.childHasVersion[index] {
+			if c.cacheChildVersions[index] != c.childVersions[index] {
+				return index
 			}
+			continue
 		}
 		if len(cached) != len(lines) {
 			return index

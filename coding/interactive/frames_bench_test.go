@@ -30,13 +30,16 @@ func BenchmarkTranscriptFrameCold(b *testing.B) {
 }
 
 // BenchmarkTranscriptFrameScaling measures the warm fullscreen frame cost at
-// growing transcript sizes. A frame re-walks every mounted component to detect
-// changes (each component then returns its cached lines, and Markdown reports
-// 100% cache hits), so the cost is O(components), not O(visible lines):
-// ~0.17 ms at 1k components, ~4.5 ms at 16k. A single paint is already windowed
-// to the terminal height; what scales is the change-detection walk. This pins
-// the curve so a regression, or the viewport/versioned-cache fix described in
-// AGENTS.md, is visible.
+// growing transcript sizes. A frame normally re-walks every mounted component
+// to detect changes (each component then returns its cached lines, and Markdown
+// reports 100% cache hits), so the cost is O(components), not O(visible lines).
+// A Container whose children are all reusable now returns its cached frame
+// without walking, snapshotting the child list, or rebuilding the mouse layout
+// (Container.allChildrenReusable), and when it does walk it reads each child's
+// revision once. The curve is ~50 us at 500 message pairs, ~150 us at 2,000 and
+// ~1.4 ms at 8,000 (down from ~74 us, ~260 us and ~2.0 ms before the fast path).
+// This pins the curve so a regression, or the global-revision follow-up
+// described in docs/architecture.md, is visible.
 func BenchmarkTranscriptFrameScaling(b *testing.B) {
 	for _, messages := range []int{500, 2000, 8000} {
 		b.Run(itoa(messages)+"msgs", func(b *testing.B) {

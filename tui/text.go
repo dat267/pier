@@ -12,6 +12,9 @@ type Spacer struct {
 	// message, so re-allocating it on every paint was the largest per-frame
 	// allocator (and it is a pure function of Lines).
 	cached []string
+	// version advances on every content change so a SkipUnchangedChildren
+	// parent can reuse an unchanged spacer without calling Render.
+	version uint64
 }
 
 // NewSpacer creates a spacer with the given line count.
@@ -23,10 +26,17 @@ func NewSpacer(lines int) *Spacer {
 func (s *Spacer) SetLines(lines int) {
 	s.Lines = lines
 	s.cached = nil
+	s.version++
 }
 
 // Invalidate drops cached state (none).
-func (s *Spacer) Invalidate() { s.cached = nil }
+func (s *Spacer) Invalidate() {
+	s.cached = nil
+	s.version++
+}
+
+// RenderVersion reports the revision of the spacer's rendered lines.
+func (s *Spacer) RenderVersion() (uint64, bool) { return s.version, true }
 
 // Render renders the empty lines.
 func (s *Spacer) Render(width int) []string {

@@ -494,12 +494,27 @@ terminal height (`RenderLayoutFrame` allocates `height` lines and `paintBox`
 fills those), and a warm walk is all cache hits (Markdown reports 100% via a
 `sync/atomic` probe), but the renderer re-walks every mounted component to find
 what changed, so a warm frame is O(components). `BenchmarkTranscriptFrameScaling`
-pins the curve: ~0.16 ms at 1k components, ~0.86 ms at ~4k, ~4.5 ms at 16k. The
-next optimization is a persistent subtree cache (or a per-component dirty/version
-signal propagated on `Invalidate`) so an unchanged transcript subtree is not
-walked; the open question is making that invalidation discipline complete, since
-components currently change state (e.g. `Text.SetText`) without telling the
-parent.
+pins the curve: ~50 us at 1k components, ~150 us at ~4k, ~1.4 ms at 16k.
+
+A warm-frame fast path removes most of that constant. `Container.Render` first
+calls `allChildrenReusable`: it reads each child's revision once into a per-frame
+scratch slice and records whether the child can serve its cached lines. If every
+child can, the container returns the cached frame without snapshotting the child
+list, rebuilding the mouse layout, or re-flattening. The walk below reuses the
+revisions and reuse flags that scan already read, so a frame never dispatches
+`RenderVersion` twice for one child. `Spacer` now reports a revision (bumped by
+`SetLines`/`Invalidate`), so the spacer between every message is reused like any
+other versioned child instead of re-rendering. `Container.RenderWalks` is the
+test seam, and `TestContainerWarmFrameSkipsTheChildWalk`,
+`TestContainerWarmFrameKeepsTheMouseLayout` and
+`TestContainerReadsEachChildVersionOncePerWarmFrame` pin the behavior. That took
+the 8,000-pair warm frame from ~2.0 ms to ~1.4 ms (2,000: ~260 us -> ~150 us),
+with no streaming regression (`BenchmarkStreamingAssistantDelta` is unchanged).
+The remaining cost is the memory-bound revision reads (one pointer chase per
+child per frame); the next optimization is a global render revision bumped
+whenever a version does, so an unchanged frame is O(1). The open question is
+making that invalidation discipline complete, since components currently change
+state (e.g. `Text.SetText`) without telling the parent.
 
 **The flatten, not the walk, is what makes a streaming frame stall.** Reproduced
 on the live 61 MB session (25.4k attached children): a warm frame is 11 ms, but
@@ -517,7 +532,7 @@ exposes `RenderVersion`, and `firstChangedChild`/`zoneMarkedLines` compare it
 (the `MouseRegion` and `ScrollView` pass-throughs and the message/tool components
 that return a container's lines forward the revision). `TestContainerRenderReusesPrefixOnTailChange`
 and `TestContainerRenderDetectsInPlaceChildChange` pin both halves. The
-remaining cost is the O(components) walk above.
+remaining cost is the per-child revision read described above.
 
 `AppendCompaction` had the
 same shape: its entry records the projected system message, and the port
