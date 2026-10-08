@@ -691,3 +691,37 @@ func TestModelRuntimeStreamAppliesResolvedAuthToProvider(t *testing.T) {
 		}
 	}
 }
+
+// A whole-set rebuild must publish the set in one step. Upstream clears the provider map
+// and then adds the providers back one at a time, so a reader that lands in that window
+// sees a provider that exists as missing, and `checkAuth` answers "not configured" for a
+// provider whose credential is stored. That surfaces as a spurious "No API key found"
+// at the first prompt, which is how this was found: TestSubmitFromEditorReachesSession
+// failed on CI with that message after a `rebuildProviders` raced the prompt.
+func TestRebuildProvidersPublishesTheWholeSet(t *testing.T) {
+	runtime := runtimeWithProviders(t, stubProvider("alpha"), stubProvider("beta"))
+	stop := make(chan struct{})
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+				runtime.rebuildProviders()
+			}
+		}
+	}()
+	for iteration := 0; iteration < 2000; iteration++ {
+		for _, id := range []string{"alpha", "beta"} {
+			if runtime.models.GetProvider(id) == nil {
+				close(stop)
+				<-done
+				t.Fatalf("a rebuild made provider %q disappear (iteration %d)", id, iteration)
+			}
+		}
+	}
+	close(stop)
+	<-done
+}

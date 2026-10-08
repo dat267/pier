@@ -255,46 +255,72 @@ func (r *ModelRuntime) providerIDs() []string {
 	return out
 }
 
-// recomposeProvider rebuilds one provider from the built-in and models.json
-// layers.
-func (r *ModelRuntime) recomposeProvider(providerID string) {
+// composeProvider builds one provider from the built-in and models.json layers without
+// publishing it, so a whole-set rebuild can publish the result in one step. A nil
+// provider means no layer defines it any more. A non-empty failure is the composition
+// error to record, in which case the provider is the builtin fallback.
+func (r *ModelRuntime) composeProvider(providerID string) (*ai.Provider, string) {
 	base := r.builtins[providerID]
 	config := r.config.GetProvider(providerID)
 	if base == nil && config == nil {
-		r.models.DeleteProvider(providerID)
-		delete(r.compositionErrors, providerID)
-		return
+		return nil, ""
 	}
 	if base != nil && config == nil {
 		// No overlays: use the builtin untouched so its auth/login/stream
 		// behavior is exact.
-		r.models.SetProvider(base)
-		delete(r.compositionErrors, providerID)
-		return
+		return base, ""
 	}
 	provider, err := ComposeModelProvider(providerID, base, r.config)
 	if err != nil {
-		r.compositionErrors[providerID] = err.Error()
-		if base != nil {
-			r.models.SetProvider(base)
-		} else {
-			r.models.DeleteProvider(providerID)
-		}
+		return base, err.Error()
+	}
+	return provider, ""
+}
+
+// recomposeProvider rebuilds one provider from the built-in and models.json
+// layers.
+func (r *ModelRuntime) recomposeProvider(providerID string) {
+	provider, failure := r.composeProvider(providerID)
+	if provider == nil {
+		r.models.DeleteProvider(providerID)
+	} else {
+		r.models.SetProvider(provider)
+	}
+	if failure != "" {
+		r.compositionErrors[providerID] = failure
 		return
 	}
-	r.models.SetProvider(provider)
 	delete(r.compositionErrors, providerID)
 }
 
-// rebuildProviders recomposes every provider.
+// rebuildProviders recomposes every provider and publishes the set in one step.
+//
+// D211: upstream clears the provider set and then adds each provider back
+// (`clearProviders()`, then `recomposeProvider(id)` per id), so a reader that lands in
+// that window sees a provider that exists as missing. Its auth check answers "not
+// configured" for a provider whose credential is stored, and the prompt path turns that
+// into "No API key found", which is a spurious login error at the first prompt after any
+// credential change, settings write or catalog refresh. The port builds the whole set
+// first and swaps it in once (`ai.Models.ReplaceProviders`).
+// TestRebuildProvidersPublishesTheWholeSet hammers a rebuild while reading providers and
+// fails on the upstream shape.
 func (r *ModelRuntime) rebuildProviders() {
-	r.models.ClearProviders()
-	r.mu.Lock()
-	r.compositionErrors = map[string]string{}
-	r.mu.Unlock()
-	for _, providerID := range r.providerIDs() {
-		r.recomposeProvider(providerID)
+	providerIDs := r.providerIDs()
+	providers := make([]*ai.Provider, 0, len(providerIDs))
+	failures := map[string]string{}
+	for _, providerID := range providerIDs {
+		provider, failure := r.composeProvider(providerID)
+		if provider != nil {
+			providers = append(providers, provider)
+		}
+		if failure != "" {
+			failures[providerID] = failure
+		}
 	}
+	r.models.ReplaceProviders(providers)
+	r.mu.Lock()
+	r.compositionErrors = failures
+	r.mu.Unlock()
 	r.updateModelSnapshot()
 }
 

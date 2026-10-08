@@ -474,6 +474,26 @@ func (m *Models) ClearProviders() {
 	m.mu.Unlock()
 }
 
+// ReplaceProviders installs a complete provider set in one step. Clearing the set and
+// adding the providers back one at a time leaves a window in which a reader sees the set
+// empty or half-filled; a whole-set swap has no such window. See D211 in coding's
+// rebuildProviders, which is the caller that needs it.
+func (m *Models) ReplaceProviders(providers []*Provider) {
+	next := make(map[string]*Provider, len(providers))
+	for _, provider := range providers {
+		if provider == nil {
+			continue
+		}
+		next[provider.ID] = provider
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for id := range m.providers {
+		m.supersedeProviderRefreshLocked(id)
+	}
+	m.providers = next
+}
+
 // GetProviders returns all providers.
 func (m *Models) GetProviders() []*Provider {
 	m.mu.Lock()

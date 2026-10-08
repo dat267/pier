@@ -6,7 +6,7 @@ behaviour with no direct Go equivalent, or because a reference defect is fixed
 here; others are choices of this project's own. D-row numbers live in code
 comments at the point of divergence; this file is the log, and it is
 representative: the rows below carry a written-up rationale, while the rest live
-only as the code comment that introduced them. The range is **D1–D210**.
+only as the code comment that introduced them. The range is **D1–D211**.
 - D188 — the durable execution environment (`env/index.ts`, `env/node.ts`)
   returns failures as Go errors (`*FileError`, `*ExecutionError`, the upstream
   codes preserved) where the reference returns a `Result` value; the `Result`
@@ -1544,3 +1544,31 @@ initial writes and appends (sync and queued), full-prefix recovery with entry
 truncation invariants, per-task prefix recovery against duplicate appends,
 coalesced notification, idle owner-loop reporting, graceful-shutdown
 diagnostics and print-mode exit codes.
+
+## D211. A provider rebuild publishes the whole set, not an empty one
+
+Reference: `packages/coding-agent/src/core/model-runtime.ts` `rebuildProviders`
+calls `this.models.clearProviders()` and then `this.recomposeProvider(id)` for
+every id, each of which publishes one provider (`setProvider`/`deleteProvider`).
+Between the clear and the last add, a reader of the provider set sees a provider
+that exists as missing, and nothing is locked across the rebuild, so the window is
+reachable from any goroutine.
+
+That is not theoretical: while a rebuild ran, the session's pre-prompt auth check
+asked `Models.CheckAuth` for the provider and got "provider not composed", which
+`CheckAuth` reports as "no auth configured" rather than an error. The prompt path
+turns that into `FormatNoAPIKeyFoundMessage`, so a configured provider produced
+"No API key found for anthropic." at the first prompt. It surfaced as a flaky
+`TestSubmitFromEditorReachesSession` failure (30 s deadline, then the chat error)
+and was reproduced deterministically under CPU load: 7 failures in 200 runs, with
+the composition check printing "provider not composed for anthropic" five times.
+The port departs from the reference by building the composed providers first
+(`composeProvider`, which does not publish) and installing the complete set in one
+step (`ai.Models.ReplaceProviders`, a single locked map swap that supersedes
+in-flight refreshes for the replaced ids). The reference's one-provider path is
+unchanged: `recomposeProvider` still publishes a single provider for the callers
+that change only one.
+
+`TestRebuildProvidersPublishesTheWholeSet` runs rebuilds in a loop while another
+goroutine reads the provider set and fails if any provider disappears; it fails on
+the reference's shape at iteration ~1650 of 2000.

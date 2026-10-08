@@ -10,6 +10,7 @@ package interactive
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -55,6 +56,41 @@ func sessionHasUserMessage(app *App, text string) bool {
 	return false
 }
 
+// waitForPromptRecorded waits for the session to record a submitted prompt. On timeout
+// it prints the chat first: a turn that failed only leaves its error in the transcript,
+// so a failed turn and a slow one look identical to a poll over the session, and the
+// error text is what identifies the failure.
+func waitForPromptRecorded(t *testing.T, app *App, prompt string) {
+	t.Helper()
+	deadline := time.Now().Add(30 * time.Second)
+	nextChatCheck := time.Now().Add(250 * time.Millisecond)
+	for time.Now().Before(deadline) {
+		if sessionHasUserMessage(app, prompt) {
+			return
+		}
+		// A turn that failed adds its error to the transcript, and the session then never
+		// records the prompt, so polling the session alone cannot tell a failed turn from a
+		// slow one. Checking the chat is the expensive half, so it runs at its own cadence.
+		if time.Now().After(nextChatCheck) {
+			nextChatCheck = time.Now().Add(250 * time.Millisecond)
+			if chat := chatText(app); strings.Contains(chat, "Error: ") {
+				t.Fatalf("the prompt was not recorded; the turn failed:\n%s", chat)
+			}
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Logf("chat at timeout:\n%s", chatText(app))
+	// Report through the shared helper, which adds the goroutine dump.
+	waitForConditionWithin(t, func() bool { return sessionHasUserMessage(app, prompt) }, time.Millisecond)
+}
+
+// chatText renders the chat on the loop goroutine, where the containers live (D146).
+func chatText(app *App) string {
+	return postValue(app, func() string {
+		return coding.StripAnsi(strings.Join(app.chat.Render(120), "\n"))
+	})
+}
+
 // TestSubmitFromEditorReachesSession covers what the editor-submit PTY flow
 // asserted functionally: a submitted prompt is recorded in the session and the
 // model's reply renders, with no pty, no binary spawn and no SIGQUIT.
@@ -67,7 +103,7 @@ func TestSubmitFromEditorReachesSession(t *testing.T) {
 	const prompt = "hello from the submit replacement"
 	app.startup.QueueUserInput(prompt)
 
-	waitForConditionWithin(t, func() bool { return sessionHasUserMessage(app, prompt) }, 30*time.Second)
+	waitForPromptRecorded(t, app, prompt)
 	// The faux stream replies "ack"; the reply must reach the session too, which
 	// is what the PTY flow's "did not exit / still responsive" assertion checked
 	// indirectly.
