@@ -30,8 +30,9 @@ type mainScreenSpec struct {
 
 // recordingTerminal captures writes and exposes mutable dimensions.
 type recordingTerminal struct {
-	width  int
-	height int
+	programStatuses []ProgramStatus
+	width           int
+	height          int
 	// mu guards writes: the renderer's timer-driven renders write from other
 	// goroutines.
 	mu     sync.Mutex
@@ -73,6 +74,11 @@ func (t *recordingTerminal) ClearFromCursor()                            {}
 func (t *recordingTerminal) ClearScreen()                                {}
 func (t *recordingTerminal) SetTitle(title string)                       {}
 func (t *recordingTerminal) SetProgress(active bool)                     {}
+
+// SetProgramStatus records reports so a test can assert what would have been sent.
+func (t *recordingTerminal) SetProgramStatus(status ProgramStatus) {
+	t.programStatuses = append(t.programStatuses, status)
+}
 
 // scriptedComponent renders the current scripted lines padded to the width.
 type scriptedComponent struct {

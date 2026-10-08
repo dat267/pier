@@ -38,9 +38,15 @@ support, Herdr included (#10573). The last one is `coding.HyperlinksSupported`,
 which is what first installs the capabilities the tui package reads (D69), so
 `terminal.hyperlinks` and the whole OSC 8 branch now work.
 
-Checked against v1.1.0 and still absent — OSC 7501 program status is not emitted
-(upstream `503c60552`), and reading the Termux clipboard (upstream `592fb57b7`) stays
-out of scope under **D120**. The rest of the delta is unreviewed: those counts say how
+Ported as well: OSC 7501 program status (`tui/programstatus.go` for the encoding, the
+query and the reply match, the terminal's support detection with `PI_PROGRAM_STATUS=1|0`
+and the clear/restore around `Stop`, and `coding/interactive`'s reporter for runs,
+compaction and the settle outcome). The port's `SetBlocked` is in place for dialogs;
+upstream also marks logins blocked and resets the reporter when the session is rebound,
+and those two call sites are not wired yet.
+
+Checked against v1.1.0 and still absent — reading the Termux clipboard (upstream
+`592fb57b7`) stays out of scope under **D120**. The rest of the delta is unreviewed: those counts say how
 much there is, not which commits.
 
 The v0.99.1→v1.0.0 delta (62 commits) is ported: it released the experimental

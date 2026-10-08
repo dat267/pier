@@ -38,6 +38,8 @@ type EventDispatcher struct {
 
 	// TerminalProgress toggles the OSC 9;4 progress indicator.
 	TerminalProgress func(active bool)
+	// ProgramStatus folds one session event into the OSC 7501 program status.
+	ProgramStatus func(event *coding.SessionEvent)
 	// ShowError reports an error to the user.
 	ShowError func(message string)
 	// UpdatePendingMessagesDisplay refreshes the queued steering/follow-up
@@ -128,6 +130,10 @@ func (d *EventDispatcher) HandleEvent(event *coding.SessionEvent) {
 	}
 	if d.Footer != nil {
 		d.Footer.Invalidate()
+	}
+
+	if d.ProgramStatus != nil {
+		d.ProgramStatus(event)
 	}
 
 	switch event.Type {

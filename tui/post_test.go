@@ -129,3 +129,4 @@ func (f *fakePostTerminal) ClearFromCursor()                            {}
 func (f *fakePostTerminal) ClearScreen()                                {}
 func (f *fakePostTerminal) SetTitle(title string)                       {}
 func (f *fakePostTerminal) SetProgress(active bool)                     {}
+func (f *fakePostTerminal) SetProgramStatus(status ProgramStatus)       {}

@@ -148,8 +148,9 @@ func TestInteractiveTuiReferenceForwarding(t *testing.T) {
 
 // fakeRendererTerminal is an in-memory terminal for the renderer tests.
 type fakeRendererTerminal struct {
-	width  int
-	height int
+	programStatuses []tui.ProgramStatus
+	width           int
+	height          int
 }
 
 func (f *fakeRendererTerminal) Start(onInput func(string), onResize func()) {}
@@ -167,6 +168,11 @@ func (f *fakeRendererTerminal) ClearFromCursor()                            {}
 func (f *fakeRendererTerminal) ClearScreen()                                {}
 func (f *fakeRendererTerminal) SetTitle(title string)                       {}
 func (f *fakeRendererTerminal) SetProgress(active bool)                     {}
+
+// SetProgramStatus records the reports the interactive mode would have sent (OSC 7501).
+func (f *fakeRendererTerminal) SetProgramStatus(status tui.ProgramStatus) {
+	f.programStatuses = append(f.programStatuses, status)
+}
 
 // staticRendererComponent renders fixed lines.
 type staticRendererComponent struct {

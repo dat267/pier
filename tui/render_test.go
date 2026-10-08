@@ -64,6 +64,7 @@ func (f *fakeTerminal) ClearFromCursor()                            {}
 func (f *fakeTerminal) ClearScreen()                                {}
 func (f *fakeTerminal) SetTitle(title string)                       {}
 func (f *fakeTerminal) SetProgress(active bool)                     {}
+func (f *fakeTerminal) SetProgramStatus(status ProgramStatus)       {}
 
 func (f *fakeTerminal) FlushWrites() {
 	f.mu.Lock()

@@ -46,6 +46,9 @@ type Terminal interface {
 	SetTitle(title string)
 	// SetProgress drives the OSC 9;4 progress indicator.
 	SetProgress(active bool)
+	// SetProgramStatus reports what the program is doing (OSC 7501); it goes out only to a
+	// terminal that confirmed support.
+	SetProgramStatus(status ProgramStatus)
 }
 
 // TuiInputListenerResult is a listener's verdict on an input chunk.

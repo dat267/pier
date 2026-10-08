@@ -161,6 +161,8 @@ type App struct {
 	display    *DisplayOptions
 	uiState    *InteractiveUIState
 	transcript *TranscriptRenderer
+	// programStatus reports OSC 7501 state to terminals that support it.
+	programStatus *ProgramStatusReporter
 	// mcpManager is the session's MCP manager, swapped on /reload (nil = none
 	// configured). reloadMCP builds a fresh one from the re-read config.
 	mcpManager *coding.McpManager
@@ -483,6 +485,17 @@ func NewApp(options AppOptions) *App {
 	app.queue.ShowWarning = func(message string) { app.showWarning(message) }
 
 	app.events = NewEventDispatcher(app.transcript, app.uiState, app.footer, app.settings, app.session, app.sessionMgr, app.defaultEditor)
+	app.programStatus = NewProgramStatusReporter(
+		func() tui.Terminal { return app.options.Terminal },
+		func() string { return app.options.AppName },
+		func() string {
+			if app.sessionMgr == nil {
+				return ""
+			}
+			return app.sessionMgr.GetSessionName()
+		},
+	)
+	app.events.ProgramStatus = app.programStatus.HandleEvent
 	app.events.MarkdownPreparation = markdownPreparation
 	app.events.ShowError = func(message string) { app.showError(message) }
 	app.events.UpdatePendingMessagesDisplay = app.queue.UpdatePendingMessagesDisplay
@@ -720,6 +733,9 @@ func (a *App) Init(ctx context.Context) {
 	a.ui.SetFocus(a.defaultEditor)
 	a.initialized = true
 	a.lifecycle.MarkInitialized()
+	if a.programStatus != nil {
+		a.programStatus.Report()
+	}
 
 	if a.unsubscribe == nil {
 		// Pure producer: the callback only enqueues; the run loop applies the

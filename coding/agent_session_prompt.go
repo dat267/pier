@@ -307,7 +307,13 @@ func (s *AgentSession) runAgentPrompt(ctx context.Context, messages []ai.Message
 	if s.CacheWarmer != nil {
 		s.CacheWarmer.OnAgentSettled()
 	}
-	s.emit(&SessionEvent{Type: SessionAgentSettled})
+	// A cancelled run reports idle rather than the interrupted run's outcome, so the
+	// settle event carries whether the run was aborted (upstream agent_settled.aborted).
+	aborted := false
+	if last := s.findLastAssistantMessage(); last != nil {
+		aborted = last.StopReason == ai.StopAborted
+	}
+	s.emit(&SessionEvent{Type: SessionAgentSettled, Aborted: aborted})
 	s.resolveIdleWaitIfIdle()
 	return err
 }

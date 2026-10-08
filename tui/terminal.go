@@ -45,7 +45,11 @@ const (
 )
 
 // kittyKeyboardProtocolQuery is built from desiredKittyKeyboardProtocolFlag.
-var kittyKeyboardProtocolQuery = "\x1b[>" + strconv.Itoa(desiredKittyKeyboardProtocolFlag) + "u\x1b[?u\x1b[c"
+var kittyKeyboardProtocolQuery = "\x1b[>" + strconv.Itoa(desiredKittyKeyboardProtocolFlag) + "u\x1b[?u"
+
+// deviceAttributesQuery is the sentinel shared by the keyboard and program-status queries: a
+// terminal that supports OSC 7501 answers that query before this one.
+const deviceAttributesQuery = "\x1b[c"
 
 const (
 	defaultEscapeTimeoutMSValue = 10
@@ -170,10 +174,20 @@ type ProcessTerminal struct {
 	useRawInput                       bool
 	keyboardProtocolNegotiationBuffer string
 	negotiationDeadline               time.Time
-	stdinBuffer                       *StdinBuffer
-	progressInterval                  *time.Ticker
-	progressDone                      chan struct{}
-	writeLogPath                      string
+	// programStatus is the latest OSC 7501 status, kept so a restart reports it again.
+	programStatus ProgramStatus
+	// programStatusSet distinguishes a set status from the zero value, which is a clear.
+	programStatusSet bool
+	// programStatusSupported is whether the terminal confirmed OSC 7501 support, or
+	// PI_PROGRAM_STATUS=1 asked for it.
+	programStatusSupported bool
+	// programStatusQueryPending is whether the support query is unanswered, with no DA
+	// sentinel yet.
+	programStatusQueryPending bool
+	stdinBuffer               *StdinBuffer
+	progressInterval          *time.Ticker
+	progressDone              chan struct{}
+	writeLogPath              string
 
 	// Console writes run on a dedicated goroutine (writesMu/writes/writesCond).
 	// The UI loop must never make a console write itself: on Windows the
@@ -349,6 +363,10 @@ func (t *ProcessTerminal) setupLegacyStdinBuffer() {
 	t.stdinBuffer = NewStdinBuffer(StdinBufferOptions{EscapeTimeout: ResolveEscapeTimeoutMs(os.Getenv)})
 	t.stdinBuffer.OnData = func(sequence string) {
 		t.lastInputAt.Store(time.Now().UnixNano())
+		if IsProgramStatusReply(sequence) {
+			t.handleProgramStatusReply()
+			return
+		}
 		negotiationSequence, pendingInput := t.readKeyboardProtocolNegotiationSequence(sequence)
 		if negotiationSequence.kind == "pending" {
 			t.negotiationDeadline = time.Now().Add(keyboardProtocolResponseFragmentTimeoutMS * time.Millisecond)
@@ -452,6 +470,10 @@ func (t *ProcessTerminal) FlushPendingInput() []string {
 // filterInputSequence runs the keyboard-protocol negotiation filter for one
 // complete sequence (loop-owned; no locking).
 func (t *ProcessTerminal) filterInputSequence(sequences []string, sequence string) []string {
+	if IsProgramStatusReply(sequence) {
+		t.handleProgramStatusReply()
+		return sequences
+	}
 	negotiationSequence, pendingInput := t.readKeyboardProtocolNegotiationSequence(sequence)
 	if negotiationSequence.kind == "pending" {
 		// Wait briefly for the rest of a split Kitty response.
@@ -481,7 +503,18 @@ func (t *ProcessTerminal) queryAndEnableKittyProtocol() {
 	t.writeMu.Lock()
 	t.keyboardProtocolPushed.Store(true)
 	t.clearKeyboardProtocolNegotiationBuffer()
-	t.writeLocked(kittyKeyboardProtocolQuery)
+	// The OSC 7501 support query rides along with DA as its sentinel: a terminal that
+	// supports program status answers before DA, so DA arriving first means no support.
+	// PI_PROGRAM_STATUS=1 or 0 skips the query (upstream queryAndEnableKittyProtocol).
+	override := os.Getenv("PI_PROGRAM_STATUS")
+	t.programStatusSupported = override == "1"
+	t.programStatusQueryPending = override != "1" && override != "0"
+	query := ""
+	if t.programStatusQueryPending {
+		query = ProgramStatusQuery
+	}
+	t.writeLocked(kittyKeyboardProtocolQuery + query + deviceAttributesQuery)
+	t.writeProgramStatusLocked()
 	t.writeMu.Unlock()
 }
 
@@ -504,6 +537,10 @@ func (t *ProcessTerminal) handleKeyboardProtocolNegotiationSequence(negotiationS
 		return true
 	}
 
+	// This DA answers the latest query, which got no program status reply first.
+	t.writeMu.Lock()
+	t.programStatusQueryPending = false
+	t.writeMu.Unlock()
 	if !t.kittyProtocolActive.Load() {
 		t.enableModifyOtherKeys()
 	}
@@ -672,6 +709,13 @@ func (t *ProcessTerminal) Stop() {
 	if t.clearProgressIntervalLocked() {
 		t.writeLocked(terminalProgressClearSequence)
 	}
+	// Remove the status while stopped, for example after exit or while suspended; Start
+	// reports it again.
+	if t.programStatusSupported && t.programStatusSet {
+		t.writeLocked(FormatProgramStatus(ProgramStatus{State: ProgramStatusClear}))
+	}
+	t.programStatusSupported = false
+	t.programStatusQueryPending = false
 
 	// Disable bracketed paste mode.
 	t.writeLocked("\x1b[?2004l")
@@ -1161,6 +1205,38 @@ func (t *ProcessTerminal) SetTitle(title string) {
 	t.writeMu.Lock()
 	defer t.writeMu.Unlock()
 	t.writeHintLocked(0, "\x1b]0;"+title+"\x07")
+}
+
+// SetProgramStatus reports what the program is doing (OSC 7501). The report goes out only
+// to a terminal that confirmed support, and the latest status is re-sent when support is
+// confirmed or the terminal restarts (upstream setProgramStatus).
+func (t *ProcessTerminal) SetProgramStatus(status ProgramStatus) {
+	t.writeMu.Lock()
+	defer t.writeMu.Unlock()
+	t.programStatus = status
+	t.programStatusSet = status.State != ProgramStatusClear
+	if t.programStatusSupported {
+		t.writeLocked(FormatProgramStatus(status))
+	}
+}
+
+// handleProgramStatusReply records confirmed OSC 7501 support and reports the pending status.
+func (t *ProcessTerminal) handleProgramStatusReply() {
+	t.writeMu.Lock()
+	defer t.writeMu.Unlock()
+	if !t.programStatusQueryPending {
+		return
+	}
+	t.programStatusQueryPending = false
+	t.programStatusSupported = true
+	t.writeProgramStatusLocked()
+}
+
+// writeProgramStatusLocked re-reports the latest status. The caller holds writeMu.
+func (t *ProcessTerminal) writeProgramStatusLocked() {
+	if t.programStatusSupported && t.programStatusSet {
+		t.writeLocked(FormatProgramStatus(t.programStatus))
+	}
 }
 
 // SetProgress drives the OSC 9;4 progress indicator; active shows an
