@@ -265,6 +265,13 @@ are in `docs/architecture.md`.
   `TMPDIR`, so a test that exercises temp-file code paths pins it
   (`t.Setenv("TMPDIR", t.TempDir())`). Two leaks came from ignoring this: 492
   empty `pi-agent-dir*` directories, and 215 `pi-typing-probe-*.log` files.
+- **A stub that reports through a file writes then renames.** A shell stub that
+  writes `printf '%s' "$1" > out` creates `out` empty *before* it has content, and
+  under Android's `/bin/sh` (mksh) that window measures tens of milliseconds,
+  because printf is a separate process there. A polling reader can then see an
+  existing, empty file and fail: `openbrowser_test.go` did so 3 runs out of 3 on a
+  phone while never failing on a desktop. Write `out.part`, then `mv` it into
+  place, so the file exists only complete.
 - **Render cost scales with content.** The loop is one goroutine, so a
   value-shaped loop on it is a freeze rather than a slowdown. `renderInlineTokens`
   accumulated a rendered message into a string with `result += ...` while looping
