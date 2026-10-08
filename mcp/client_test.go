@@ -320,6 +320,16 @@ func TestClientReturnsStructuredToolContentAndSurfacesErrors(t *testing.T) {
 
 func TestClientRenewsTimeoutOnProgress(t *testing.T) {
 	client, server := connectTestClient(t)
+	const (
+		progressInterval = 20 * time.Millisecond
+		progressCount    = 10
+		// The timeout has to clear one progress interval by a wide margin, so that
+		// scheduler jitter cannot make the timeout win the race, and it has to sit well
+		// below the handler's total time, so that a non-renewing timer still fails the
+		// call. A 40ms notification against a 50ms timeout gave jitter ten milliseconds,
+		// which lost under a full-suite load.
+		requestTimeout = 100 * time.Millisecond
+	)
 	server.setHandler("tools/call", func(request *protocol.JsonRpcRequest) (any, error) {
 		var params struct {
 			Meta struct {
@@ -328,22 +338,23 @@ func TestClientRenewsTimeoutOnProgress(t *testing.T) {
 		}
 		_ = json.Unmarshal(request.Params, &params)
 		token := params.Meta.ProgressToken
-		time.AfterFunc(40*time.Millisecond, func() {
-			enc, _ := json.Marshal(map[string]any{"progressToken": token, "progress": 1, "total": 2})
+		for count := 1; count <= progressCount; count++ {
+			time.Sleep(progressInterval)
+			enc, _ := json.Marshal(map[string]any{"progressToken": token, "progress": count, "total": progressCount})
 			_ = server.transport.Send(context.Background(), protocol.JsonRpcNotification{
 				JSONRPC: protocol.JSONRPCVersion, Method: "notifications/progress", Params: enc,
 			})
-		})
-		time.Sleep(80 * time.Millisecond)
+		}
 		return map[string]any{"content": []any{map[string]any{"type": "text", "text": "done"}}}, nil
 	})
 	var mu sync.Mutex
 	var progress []*protocol.ProgressNotification
+	done := make(chan error, 1)
 	go func() {
-		// The request runs with a 50ms timeout that progress renews; a
-		// regression to the non-renewing timer would time out at 50ms.
+		// Every notification renews the timeout, so the call outlives requestTimeout; a
+		// regression to the non-renewing timer would fail it at requestTimeout.
 		result, err := client.CallTool(context.Background(), "slow", map[string]any{}, RequestOptions{
-			TimeoutMs: 50,
+			TimeoutMs: int64(requestTimeout / time.Millisecond),
 			OnProgress: func(notification *protocol.ProgressNotification) {
 				mu.Lock()
 				progress = append(progress, notification)
@@ -351,17 +362,26 @@ func TestClientRenewsTimeoutOnProgress(t *testing.T) {
 			},
 		})
 		if err != nil {
-			t.Errorf("slow call: %v", err)
+			done <- err
 			return
 		}
 		if len(result.Content) != 1 || result.Content[0].Text != "done" {
-			t.Errorf("result = %s", jsonNormalize(t, result))
+			done <- fmt.Errorf("result = %s", jsonNormalize(t, result))
+			return
 		}
+		done <- nil
 	}()
-	time.Sleep(300 * time.Millisecond)
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("slow call: %v", err)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("the call did not finish")
+	}
 	mu.Lock()
 	defer mu.Unlock()
-	if len(progress) != 1 || progress[0].Progress != 1 || progress[0].Total == nil || *progress[0].Total != 2 {
+	if len(progress) == 0 || progress[0].Progress != 1 || progress[0].Total == nil || *progress[0].Total != progressCount {
 		t.Fatalf("progress = %s", jsonNormalize(t, progress))
 	}
 	if err := client.Close(context.Background()); err != nil {
