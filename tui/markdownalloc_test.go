@@ -72,10 +72,13 @@ func TestMarkdownLexerInlineAllocationBudget(t *testing.T) {
 	if paragraphs != 100 {
 		t.Fatalf("paragraphs = %d, want 100", paragraphs)
 	}
-	// The original lexer allocated about 1,909 objects, including one large
-	// MdToken object per plain-text run and growing pointer slices for each
-	// marked-up paragraph. Keep headroom without allowing those costs back.
-	if allocations > 1150 {
-		t.Fatalf("lexing %d bytes allocated %.0f objects, want at most 1150", len(source), allocations)
+	// The budget is per build: the race detector's instrumentation defeats part of the
+	// escape analysis the batching relies on, so the same lexer allocates about 2.3x more
+	// objects under -race (see markdownalloc_{race,norace}_test.go for the measurements).
+	// The pre-fix lexer allocated about 1,909 objects, including one large MdToken object
+	// per plain-text run and growing pointer slices for each marked-up paragraph; each
+	// build's budget keeps headroom without allowing those costs back.
+	if allocations > markdownLexerAllocationBudget {
+		t.Fatalf("lexing %d bytes allocated %.0f objects, want at most %d", len(source), allocations, markdownLexerAllocationBudget)
 	}
 }
