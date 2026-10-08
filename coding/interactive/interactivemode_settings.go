@@ -485,8 +485,9 @@ func (w *SettingsWiring) applyFullscreenWheelScrollLines(lines tui.WheelScrollLi
 
 // applyOutputPad installs the padding and refreshes the rendered messages: an
 // active stream's components update in place, otherwise the transcript
-// rebuilds with the new padding.
-func (w *SettingsWiring) applyOutputPad(padding int) {
+// rebuilds with the new padding. It returns whether a rebuild was performed,
+// letting reload reuse that work instead of rebuilding the transcript twice.
+func (w *SettingsWiring) applyOutputPad(padding int) bool {
 	if w.OutputPad != nil {
 		*w.OutputPad = padding
 	}
@@ -506,9 +507,11 @@ func (w *SettingsWiring) applyOutputPad(padding int) {
 			w.StreamingComponent.SetOutputPad(padding)
 		}
 		w.requestRender()
-		return
+		return false
 	}
 	if w.RebuildChatFromMessages != nil {
 		w.RebuildChatFromMessages()
+		return true
 	}
+	return false
 }

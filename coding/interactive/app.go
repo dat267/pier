@@ -727,14 +727,14 @@ func (a *App) Init(ctx context.Context) {
 // applyRuntimeSettings, minus the terminal-capability and HTTP-dispatcher parts;
 // the latter is configured once before any request exists, D40). It runs after
 // /reload and after a session switch re-points the settings manager at another
-// project.
-func (a *App) applySettingsDependentUI() {
+// project. It returns whether applying output padding rebuilt the transcript.
+func (a *App) applySettingsDependentUI() bool {
 	// The apply* methods are the same ones the /settings callbacks use; this
 	// path only re-reads the values, so a reload or session switch never writes
 	// the setting back and both paths converge on the same UI state.
 	w := a.settingsW
 	w.applyThinkingBlockVisibility(a.settings.GetHideThinkingBlock())
-	w.applyOutputPad(a.settings.GetOutputPad())
+	rebuilt := w.applyOutputPad(a.settings.GetOutputPad())
 	a.applyFullscreenScrollbarSetting()
 	w.applyFullscreenCopyOnSelect(a.settings.GetFullscreenCopyOnSelect())
 	w.applyFullscreenWheelScrollLines(a.settings.GetFullscreenWheelScrollLines())
@@ -742,6 +742,7 @@ func (a *App) applySettingsDependentUI() {
 	w.applyClearOnShrink(a.settings.GetClearOnShrink())
 	w.applyEditorPaddingX(a.settings.GetEditorPaddingX())
 	w.applyAutocompleteMaxVisible(a.settings.GetAutocompleteMaxVisible())
+	return rebuilt
 }
 
 // runContext is the active run's context (producers select on it).
@@ -1187,9 +1188,11 @@ func (a *App) updateEditorBorderColor() {
 // the UI loop. Terminal capability overrides and the HTTP dispatcher have no
 // port counterpart (D41 scope).
 func (a *App) applyReloadedSettings() {
-	a.applySettingsDependentUI()
-	// Upstream rebuildChatFromMessages (the reload's beforeSessionStart hook).
-	if a.startup != nil {
+	rebuilt := a.applySettingsDependentUI()
+	// Upstream restores the transcript once. Idle output-padding application
+	// already rebuilt it; streaming application updates components in place,
+	// so that path still needs the reload's full rebuild.
+	if !rebuilt && a.startup != nil {
 		a.startup.RebuildChatFromMessages()
 	}
 	// Header expansion (upstream activeHeader.setExpanded).
