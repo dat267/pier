@@ -807,7 +807,9 @@ func mapMistralStopReason(reason string) (StopReason, string) {
 	case "tool_calls":
 		return StopToolUse, ""
 	case "error":
-		return StopError, "Provider stopped with: error"
+		// Mistral reports transient server failures this way, and the "server error"
+		// wording is what makes the message retryable (upstream #10487).
+		return StopError, "Provider stopped with: error (server error)"
 	default:
 		return StopError, "Provider stopped with: " + reason
 	}

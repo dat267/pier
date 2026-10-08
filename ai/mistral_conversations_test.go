@@ -345,7 +345,7 @@ func TestMistralStopReasonMapping(t *testing.T) {
 		{"length", StopLength, ""},
 		{"model_length", StopLength, ""},
 		{"tool_calls", StopToolUse, ""},
-		{"error", StopError, "Provider stopped with: error"},
+		{"error", StopError, "Provider stopped with: error (server error)"},
 		{"mystery", StopError, "Provider stopped with: mystery"},
 	}
 	for _, testCase := range cases {
@@ -353,5 +353,27 @@ func TestMistralStopReasonMapping(t *testing.T) {
 		if reason != testCase.want || message != testCase.error {
 			t.Errorf("mapMistralStopReason(%q) = %s/%q, want %s/%q", testCase.reason, reason, message, testCase.want, testCase.error)
 		}
+	}
+}
+
+// Mistral ends a transient server failure with finish_reason "error", and the
+// sender retries on the "server error" wording; an unmapped reason stays fatal
+// (upstream #10487).
+func TestMistralFinishReasonErrorIsRetryable(t *testing.T) {
+	reason, message := mapMistralStopReason("error")
+	if reason != StopError || message != "Provider stopped with: error (server error)" {
+		t.Fatalf("error: %v %q", reason, message)
+	}
+	retryable := &AssistantMessage{StopReason: reason, ErrorMessage: &message}
+	if !IsRetryableAssistantError(retryable) {
+		t.Error("a Mistral finish_reason error was not retried")
+	}
+	reason, message = mapMistralStopReason("unmapped_error")
+	if reason != StopError {
+		t.Fatalf("unmapped_error: %v", reason)
+	}
+	fatal := &AssistantMessage{StopReason: reason, ErrorMessage: &message}
+	if IsRetryableAssistantError(fatal) {
+		t.Error("an unmapped Mistral stop reason was retried")
 	}
 }
