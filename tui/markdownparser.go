@@ -48,11 +48,6 @@ type MdToken struct {
 	Pending bool
 	// Loose marks a list whose items are separated by blank lines.
 	Loose bool
-
-	// textSource is the item content with the task marker removed (used to
-	// build the list item text; not part of the token projection).
-	textSource    string
-	hasTextSource bool
 }
 
 // LexMarkdown lexes markdown into Marked-compatible tokens.
@@ -63,6 +58,10 @@ func LexMarkdown(source string) []*MdToken {
 
 type mdLexer struct {
 	source string
+	// Plain-text tokens occupy owned, nonmoving chunks for this parse only.
+	// Their pointers remain valid after LexMarkdown returns; no storage is
+	// pooled or shared with a later parse.
+	textTokens []MdToken
 }
 
 var (
@@ -712,12 +711,8 @@ func (l *mdLexer) lexList(source string) (*MdToken, string) {
 		item := entry.item
 		item.Tokens = tokens
 		// Only a blank line between items keeps the trailing newline in the
-		// item text (Marked).
-		textSource := entry.raw.content
-		if item.hasTextSource {
-			textSource = item.textSource
-		}
-		item.Text = itemTextFor(textSource, entry.raw.trailingBlank && index < len(pending)-1)
+		// item text (Marked). lexListItem already removed any task marker.
+		item.Text = itemTextFor(item.Text, entry.raw.trailingBlank && index < len(pending)-1)
 		token.Items = append(token.Items, item)
 	}
 	token.Loose = loose
@@ -772,8 +767,9 @@ func (l *mdLexer) lexListItem(content string, raw string) (*MdToken, bool) {
 	}
 
 	item.Tokens = append(item.Tokens, l.lexBlocks(trimmed, false)...)
-	item.textSource = trimmed
-	item.hasTextSource = true
+	// Carry the marker-stripped source until lexList applies its final
+	// whitespace rules. No list-only scratch fields are needed on every token.
+	item.Text = trimmed
 	return item, strings.Contains(content, "\n\n")
 }
 

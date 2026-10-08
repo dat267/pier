@@ -24,8 +24,35 @@ func (l *mdLexer) lexInline(source string) []*MdToken {
 	return l.lexInlineTokens(source)
 }
 
+// textToken batches plain-text nodes without changing the token tree. Start
+// with one slot for small inputs and cap chunks at 16 to bound unused storage
+// and retention when a caller keeps only one token. Never grow a live chunk:
+// returned token pointers must not move or alias subsequent parses.
+func (l *mdLexer) textToken(raw string) *MdToken {
+	// Small documents do not amortize the final chunk's unused slots.
+	if len(l.source) < 4096 {
+		return &MdToken{Type: "text", Raw: raw, Text: raw}
+	}
+	if len(l.textTokens) == cap(l.textTokens) {
+		size := min(16, max(1, cap(l.textTokens)*2))
+		l.textTokens = make([]MdToken, 0, size)
+	}
+	index := len(l.textTokens)
+	l.textTokens = l.textTokens[:index+1]
+	token := &l.textTokens[index]
+	*token = MdToken{Type: "text", Raw: raw, Text: raw}
+	return token
+}
+
 func (l *mdLexer) lexInlineTokens(source string) []*MdToken {
 	var tokens []*MdToken
+	// Longer markup spans commonly emit several tokens. Reserve a small
+	// pointer slice instead of growing it repeatedly; plain prose and short
+	// labels retain their minimal allocations. This is only a size hint and
+	// does not change which rules run or which tokens are emitted.
+	if len(source) >= 64 && strings.ContainsAny(source, "$\\`![<*_~") {
+		tokens = make([]*MdToken, 0, 8)
+	}
 	position := 0
 	textStart := 0
 
@@ -34,7 +61,7 @@ func (l *mdLexer) lexInlineTokens(source string) []*MdToken {
 			return
 		}
 		raw := source[textStart:end]
-		tokens = append(tokens, &MdToken{Type: "text", Raw: raw, Text: raw})
+		tokens = append(tokens, l.textToken(raw))
 	}
 
 	for position < len(source) {

@@ -600,6 +600,35 @@ fell from ~1.27 s to ~0.88 s over 20 s on the 97 MB session
 (`TestRendererCachesTheAnimatorWalk` and
 `TestBoxReusesPrefixForAnInPlaceContainerChange` pin the changes).
 
+## Full-lexer allocation overhead
+
+`Markdown.Render` still lexes the complete changed source, following
+`packages/tui/src/components/markdown.ts`; no append-only parser or new token
+cache is introduced. The Go lexer reduces allocation overhead by batching
+plain-text nodes into parse-owned, nonmoving chunks for documents of at least
+4 KiB. Chunks grow from one slot to at most 16, are never pooled across parses,
+and keep returned token pointers independent and valid. Longer markup spans
+reserve a small inline pointer slice rather than repeatedly growing one;
+short labels and plain prose retain minimal allocations. List-item parsing now
+carries its temporary marker-stripped source in the item's existing `Text`
+field until final whitespace processing, removing two private scratch fields
+from every token. On amd64 this reduces `MdToken` from 304 to 280 bytes without
+changing its exported fields or final values.
+
+On Linux/amd64 (Intel N150, Go 1.27.1), a 7,900-byte, 100-paragraph lexer fixture
+falls from 1,909 allocations to 1,050. Three 100-update streaming benchmark runs
+with a roughly 35-43 KB message fall from about 9,334 allocations and 2.10 MB
+per update to 5,443 allocations and 1.95 MB. Timing remains about 2.6-2.9 ms per
+update, so this is primarily an allocation improvement, not an end-to-end
+latency claim. A synchronous roughly 1 MB assistant render drops from about
+112 MB allocated to 108 MB in paired three-iteration measurements; worker
+admission, rendering cadence, and terminal output policies are unchanged.
+
+Lexer/render upstream goldens, parse ownership across garbage collection,
+and an allocation-budget regression test cover the change. A temporary
+before/after comparison of 1,768 streaming prefixes (the golden corpus plus a
+large mixed-markup document) produced identical token trees and rendered lines.
+
 ## Session history (high level)
 
 The repository was built as a long port: the `ai`/`agent`/`coding` cores first,
