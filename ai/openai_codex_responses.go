@@ -177,7 +177,11 @@ func ResolveCodexWebSocketURL(baseURL string) string {
 // BuildCodexBaseHeaders applies the shared Codex auth headers
 // (upstream buildBaseCodexHeaders).
 func BuildCodexBaseHeaders(initHeaders map[string]string, additionalHeaders ProviderHeaders, accountID, token string) http.Header {
+	// Defaults first, so model headers and caller headers override them like the other
+	// providers do; the auth headers set afterwards still win (upstream #10429).
 	headers := http.Header{}
+	headers.Set("originator", "pi")
+	headers.Set("User-Agent", GetPiUserAgent())
 	for name, value := range initHeaders {
 		headers.Set(name, value)
 	}
@@ -190,8 +194,6 @@ func BuildCodexBaseHeaders(initHeaders map[string]string, additionalHeaders Prov
 	}
 	headers.Set("Authorization", "Bearer "+token)
 	headers.Set("chatgpt-account-id", accountID)
-	headers.Set("originator", "pi")
-	headers.Set("User-Agent", GetPiUserAgent())
 	return headers
 }
 

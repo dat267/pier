@@ -88,8 +88,23 @@ func TestCodexHeaders(t *testing.T) {
 	if headers.Get("User-Agent") == "" {
 		t.Fatal("user agent missing")
 	}
+	// A model or caller header overrides the originator and User-Agent defaults,
+	// while the auth header set after them still wins (upstream #10429).
+	headers = BuildCodexSSEHeaders(
+		map[string]string{"originator": "my-app", "User-Agent": "my-agent/1.0"},
+		ProviderHeaders{"chatgpt-account-id": strPtr("caller")}, "acct-2", "token-2", "")
+	if got := headers.Get("originator"); got != "my-app" {
+		t.Errorf("originator = %q, want my-app", got)
+	}
+	if got := headers.Get("User-Agent"); got != "my-agent/1.0" {
+		t.Errorf("User-Agent = %q, want my-agent/1.0", got)
+	}
+	if got := headers.Get("chatgpt-account-id"); got != "acct-2" {
+		t.Errorf("chatgpt-account-id = %q, want acct-2", got)
+	}
+
 	// A nil override deletes a caller-visible header, but the SSE headers set
-	// after the overrides (accept/content-type, auth, originator) always win.
+	// after the overrides (accept/content-type, auth) still win.
 	headers = BuildCodexSSEHeaders(map[string]string{"x-extra": "1"}, ProviderHeaders{"x-extra": nil}, "acct", "token", "")
 	if headers.Get("x-extra") != "" {
 		t.Fatalf("x-extra = %q", headers.Get("x-extra"))
