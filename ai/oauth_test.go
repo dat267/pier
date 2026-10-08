@@ -5,6 +5,8 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -155,7 +157,7 @@ func TestParseAuthorizationInput(t *testing.T) {
 }
 
 func TestAnthropicAuthorizeURL(t *testing.T) {
-	authURL := AnthropicAuthorizeURL("challenge-value", "verifier-value")
+	authURL := AnthropicAuthorizeURL("challenge-value", "verifier-value", AnthropicRedirectURI)
 	parsed, err := url.Parse(authURL)
 	if err != nil {
 		t.Fatal(err)
@@ -184,7 +186,7 @@ func TestAnthropicAuthorizeURL(t *testing.T) {
 }
 
 func TestOAuthCallbackServer(t *testing.T) {
-	server, err := StartOAuthCallbackServer("expected-state")
+	server, err := StartOAuthCallbackServer("expected-state", AnthropicCallbackPort)
 	if err != nil {
 		t.Skipf("loopback callback port unavailable: %v", err)
 	}
@@ -206,7 +208,7 @@ func TestOAuthCallbackServer(t *testing.T) {
 	}
 
 	// A state mismatch serves the failure page and does not settle.
-	server2, err := StartOAuthCallbackServer("expected-2")
+	server2, err := StartOAuthCallbackServer("expected-2", AnthropicCallbackPort)
 	if err != nil {
 		t.Skipf("loopback callback port unavailable: %v", err)
 	}
@@ -401,3 +403,68 @@ func fastOAuthRetries(t *testing.T) *[]time.Duration {
 	t.Cleanup(func() { oauthRetrySleep = previous })
 	return delays
 }
+
+// A server bound to port 0 has to advertise the port it actually got: that URI is
+// what the browser is sent back to.
+func TestOAuthCallbackServerAdvertisesTheBoundPort(t *testing.T) {
+	server, err := StartOAuthCallbackServer("state", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer server.Close()
+	parsed, err := url.Parse(server.RedirectURI)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if parsed.Hostname() != "localhost" || parsed.Path != "/callback" {
+		t.Fatalf("redirect uri = %s", server.RedirectURI)
+	}
+	port := parsed.Port()
+	if port == "" || port == "0" {
+		t.Fatalf("redirect uri names no bound port: %s", server.RedirectURI)
+	}
+
+	// The advertised URI is the one that answers.
+	go func() {
+		response, err := http.Get(server.RedirectURI + "?code=abc&state=state")
+		if err == nil {
+			response.Body.Close()
+		}
+	}()
+	result, ok := server.WaitForCode(context.Background())
+	if !ok || result.Code != "abc" {
+		t.Fatalf("result = %+v ok = %v", result, ok)
+	}
+}
+
+// The preferred port keeps the callback forwardable into a container or over SSH, so
+// the login only moves to a free port when it cannot be bound (#10571). The browser
+// then comes back to the free port, which is why the redirect URI follows it.
+func TestAnthropicCallbackServerFallsBackToAFreePort(t *testing.T) {
+	blocker, err := net.Listen("tcp", "127.0.0.1:"+itoaAnthropicPort())
+	if err != nil {
+		t.Skipf("port %d is already in use, so this cannot be set up: %v", AnthropicCallbackPort, err)
+	}
+	defer blocker.Close()
+
+	server := startAnthropicCallbackServer("state")
+	if server == nil {
+		t.Fatal("no callback server was started")
+	}
+	defer server.Close()
+	if server.RedirectURI == AnthropicRedirectURI {
+		t.Fatalf("the occupied port was advertised anyway: %s", server.RedirectURI)
+	}
+	go func() {
+		response, err := http.Get(server.RedirectURI + "?code=fallback&state=state")
+		if err == nil {
+			response.Body.Close()
+		}
+	}()
+	result, ok := server.WaitForCode(context.Background())
+	if !ok || result.Code != "fallback" {
+		t.Fatalf("result = %+v ok = %v", result, ok)
+	}
+}
+
+func itoaAnthropicPort() string { return fmt.Sprintf("%d", AnthropicCallbackPort) }

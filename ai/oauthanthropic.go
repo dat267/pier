@@ -34,7 +34,9 @@ const (
 	anthropicCallbackPath = "/callback"
 	anthropicScopes       = "org:create_api_key user:profile user:inference user:sessions:claude_code " +
 		"user:mcp_servers user:file_upload"
-	// AnthropicCallbackPort is the fixed loopback port the redirect URI uses.
+	// AnthropicCallbackPort is the preferred loopback port, so a login can be forwarded
+	// into a container or over SSH. Anthropic accepts any loopback port, so a port that
+	// cannot be bound falls back to a free one (#10571).
 	AnthropicCallbackPort = 53692
 )
 
@@ -109,16 +111,24 @@ type OAuthCallbackServer struct {
 	finished chan struct{}
 }
 
-// StartOAuthCallbackServer binds the loopback port and serves the callback.
-func StartOAuthCallbackServer(expectedState string) (*OAuthCallbackServer, error) {
+// StartOAuthCallbackServer binds one loopback port and serves the callback; port 0
+// asks the operating system for a free one. The advertised URI names the port that was
+// actually bound, because that is what the browser is told to come back to.
+func StartOAuthCallbackServer(expectedState string, port int) (*OAuthCallbackServer, error) {
 	host := AnthropicCallbackHost()
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, AnthropicCallbackPort))
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
 		return nil, err
 	}
+	boundPort := port
+	if address, ok := listener.Addr().(*net.TCPAddr); ok {
+		boundPort = address.Port
+	}
 	callback := &OAuthCallbackServer{
-		listener:    listener,
-		RedirectURI: AnthropicRedirectURI,
+		listener: listener,
+		// The advertised host stays "localhost" even when the bound host is 127.0.0.1
+		// (upstream redirectHost).
+		RedirectURI: fmt.Sprintf("http://localhost:%d%s", boundPort, anthropicCallbackPath),
 		result:      make(chan OAuthAuthorizationInput, 1),
 		finished:    make(chan struct{}),
 	}
@@ -301,17 +311,30 @@ func RefreshAnthropicToken(ctx context.Context, refreshToken string) (*OAuthCred
 
 // AnthropicAuthorizeURL builds the authorize URL for a PKCE challenge
 // (upstream login's auth params).
-func AnthropicAuthorizeURL(challenge, verifier string) string {
+func AnthropicAuthorizeURL(challenge, verifier string, redirectURI string) string {
 	params := url.Values{}
 	params.Set("code", "true")
 	params.Set("client_id", AnthropicOAuthClientID)
 	params.Set("response_type", "code")
-	params.Set("redirect_uri", AnthropicRedirectURI)
+	params.Set("redirect_uri", redirectURI)
 	params.Set("scope", anthropicScopes)
 	params.Set("code_challenge", challenge)
 	params.Set("code_challenge_method", "S256")
 	params.Set("state", verifier)
 	return anthropicAuthorizeURL + "?" + params.Encode()
+}
+
+// startAnthropicCallbackServer binds the preferred port and falls back to a free one.
+// A nil result means neither could be bound, and the login continues with the pasted
+// redirect URL (upstream's `.catch(() => undefined)`).
+func startAnthropicCallbackServer(expectedState string) *OAuthCallbackServer {
+	if server, err := StartOAuthCallbackServer(expectedState, AnthropicCallbackPort); err == nil {
+		return server
+	}
+	if server, err := StartOAuthCallbackServer(expectedState, 0); err == nil {
+		return server
+	}
+	return nil
 }
 
 // LoginAnthropic runs the interactive Anthropic OAuth flow (upstream
@@ -325,11 +348,15 @@ func LoginAnthropic(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if err != nil {
 		return nil, err
 	}
-	server, err := StartOAuthCallbackServer(pkce.Verifier)
-	if err != nil {
-		return nil, err
+	// The login still works without a callback server: the user pastes the redirect URL.
+	server := startAnthropicCallbackServer(pkce.Verifier)
+	if server != nil {
+		defer server.Close()
 	}
-	defer server.Close()
+	redirectURI := AnthropicRedirectURI
+	if server != nil {
+		redirectURI = server.RedirectURI
+	}
 
 	ctx := interaction.Ctx
 	if ctx == nil {
@@ -347,7 +374,7 @@ func LoginAnthropic(interaction *AuthInteraction) (*OAuthCredential, error) {
 		input, perr := interaction.Prompt(AuthPrompt{
 			Type:        AuthPromptManualCode,
 			Message:     "Complete login in your browser, or paste the authorization code / redirect URL here:",
-			Placeholder: AnthropicRedirectURI,
+			Placeholder: redirectURI,
 		})
 		manualCh <- manualResult{input: input, err: perr}
 		manualCtxCancelFor(manualCtx, cancelManual)
@@ -356,14 +383,18 @@ func LoginAnthropic(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if interaction.Notify != nil {
 		interaction.Notify(AuthEvent{
 			Type: AuthEventAuthURL,
-			URL:  AnthropicAuthorizeURL(pkce.Challenge, pkce.Verifier),
+			URL:  AnthropicAuthorizeURL(pkce.Challenge, pkce.Verifier, redirectURI),
 			Instructions: "Complete login in your browser. If the browser is on another machine, " +
 				"paste the final redirect URL here.",
 		})
 	}
 
 	var code, state string
-	result, ok := server.WaitForCode(manualCtx)
+	var result OAuthAuthorizationInput
+	ok := false
+	if server != nil {
+		result, ok = server.WaitForCode(manualCtx)
+	}
 	if ok && result.Code != "" {
 		code = result.Code
 		state = result.State
@@ -392,7 +423,7 @@ func LoginAnthropic(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if interaction.Notify != nil {
 		interaction.Notify(AuthEvent{Type: AuthEventProgress, Message: "Exchanging authorization code for tokens..."})
 	}
-	return ExchangeAnthropicAuthorizationCode(ctx, code, state, pkce.Verifier, AnthropicRedirectURI)
+	return ExchangeAnthropicAuthorizationCode(ctx, code, state, pkce.Verifier, redirectURI)
 }
 
 // manualCtxCancelFor cancels the manual wait once the prompt settled.

@@ -20,18 +20,18 @@ still stops at v1.0.2; the delta is being ported item by item.
 Ported from it so far: the retryable `server_busy`, `servers are currently busy`
 and `pending stream has been canceled` provider patterns (#10543, #10379), the
 Mistral `finish_reason: "error"` retry (#10487), model and caller headers
-overriding the Codex `originator` and `User-Agent` (#10429), and the environment
-detection of OSC 8 hyperlink support, Herdr included (#10573). The last one is
-`coding.HyperlinksSupported`, which is what first installs the capabilities the
-tui package reads (D69), so `terminal.hyperlinks` and the whole OSC 8 branch now
-work.
+overriding the Codex `originator` and `User-Agent` (#10429), the 3.5
+characters-per-token request estimate (#10497), the Anthropic OAuth fallback to a
+free loopback port (#10571), and the environment detection of OSC 8 hyperlink
+support, Herdr included (#10573). The last one is `coding.HyperlinksSupported`,
+which is what first installs the capabilities the tui package reads (D69), so
+`terminal.hyperlinks` and the whole OSC 8 branch now work.
 
-Checked against v1.1.0 and still absent — the Anthropic OAuth callback has no
-free-port fallback (`ai/oauthanthropic.go` pins port 53692; upstream `8d8ae2fc2`),
-OSC 7501 program status is not emitted (upstream `503c60552`), the model catalog
-predates `claude-haiku-5.5` (upstream `f76c1db66`), and reading the Termux
-clipboard (upstream `592fb57b7`) stays out of scope under **D120**. The rest of
-the delta is unreviewed: those counts say how much there is, not which commits.
+Checked against v1.1.0 and still absent — OSC 7501 program status is not emitted
+(upstream `503c60552`), the model catalog predates `claude-haiku-5.5` (upstream
+`f76c1db66`), and reading the Termux clipboard (upstream `592fb57b7`) stays out of
+scope under **D120**. The rest of the delta is unreviewed: those counts say how
+much there is, not which commits.
 
 The v0.99.1→v1.0.0 delta (62 commits) is ported: it released the experimental
 `durable` packages and landed MCP and codemode work (codemode stays out of
