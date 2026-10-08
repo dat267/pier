@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	goruntime "runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -27,6 +28,7 @@ import (
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/coding/interactive"
 	"github.com/dat267/pier/internal/offloop"
+	"github.com/dat267/pier/tui"
 )
 
 // executableName returns the invoked binary name (without the .exe suffix),
@@ -486,10 +488,18 @@ func run(appName string, args *coding.Args) error {
 	// render padding unless the user overrides it.
 	interactive.ConfigureLowBandwidth()
 	installBrowserOpener()
+	// The explicit setting wins; otherwise the terminal is asked through the environment
+	// detection upstream uses. The port injects capabilities instead of detecting them
+	// inside the tui package (D69), so this is where they are installed.
+	hyperlinks := coding.HyperlinksSupported(os.Getenv, goruntime.GOOS, coding.TmuxForwardsHyperlinks)
+	if terminalOverrides.Hyperlinks != nil {
+		hyperlinks = *terminalOverrides.Hyperlinks
+	}
+	tui.SetTerminalCapabilities(tui.TerminalCapabilities{Hyperlinks: hyperlinks})
 
 	app := interactive.NewApp(interactive.AppOptions{
 		Cwd:          runtimeCwd,
-		Hyperlinks:   terminalOverrides.Hyperlinks != nil && *terminalOverrides.Hyperlinks,
+		Hyperlinks:   hyperlinks,
 		AgentDir:     agentDir,
 		TuiMode:      tuiMode,
 		Version:      coding.Version,

@@ -14,15 +14,24 @@ models.dev) through `scripts/gen_catalog.py`.
 **Known drift.** Upstream has released v1.0.3, v1.0.4 and v1.1.0 since the pin.
 `git -C pi log --oneline v1.0.2..v1.1.0` counts 104 commits over 340 files,
 concentrated in `coding-agent` (44), `durable` (33), `ai` (29), `env` (17),
-`tui` (12), `mcp` (9), `codemode` (9) and `agent` (8). Nothing in that delta is
-ported or recorded below: the not-ported list in this file stops at v1.0.2.
-Checked against v1.1.0 and known absent — the Anthropic OAuth callback has no
+`tui` (12), `mcp` (9), `codemode` (9) and `agent` (8). The not-ported list below
+still stops at v1.0.2; the delta is being ported item by item.
+
+Ported from it so far: the retryable `server_busy`, `servers are currently busy`
+and `pending stream has been canceled` provider patterns (#10543, #10379), the
+Mistral `finish_reason: "error"` retry (#10487), model and caller headers
+overriding the Codex `originator` and `User-Agent` (#10429), and the environment
+detection of OSC 8 hyperlink support, Herdr included (#10573). The last one is
+`coding.HyperlinksSupported`, which is what first installs the capabilities the
+tui package reads (D69), so `terminal.hyperlinks` and the whole OSC 8 branch now
+work.
+
+Checked against v1.1.0 and still absent — the Anthropic OAuth callback has no
 free-port fallback (`ai/oauthanthropic.go` pins port 53692; upstream `8d8ae2fc2`),
 OSC 7501 program status is not emitted (upstream `503c60552`), the model catalog
-predates `claude-haiku-5.5` (upstream `f76c1db66`), Herdr is not in the terminal
-detection, and reading the Termux clipboard (upstream `592fb57b7`) stays out of
-scope under **D120**. The rest of the delta is unreviewed: those counts say how
-much there is, not which commits.
+predates `claude-haiku-5.5` (upstream `f76c1db66`), and reading the Termux
+clipboard (upstream `592fb57b7`) stays out of scope under **D120**. The rest of
+the delta is unreviewed: those counts say how much there is, not which commits.
 
 The v0.99.1→v1.0.0 delta (62 commits) is ported: it released the experimental
 `durable` packages and landed MCP and codemode work (codemode stays out of
@@ -128,8 +137,13 @@ scope; MCP and `durable` are ported). The v1.0.1 (`a7229ddc`) → v1.0.2
   were ignored. `SettingsManager.GetTerminalCapabilityOverrides` (upstream
   `getTerminalCapabilityOverrides`) resolves them, `cmd` forces truecolor before
   the theme boot's capability stage and passes hyperlinks to the app, and
-  `ThemeBoot.SetTrueColorOverride` applies it. The image override is inert like
-  every other image path (D26/D140).
+  `ThemeBoot.SetTrueColorOverride` applies it. Hyperlinks also default to the ported
+  environment detection (`coding.HyperlinksSupported`, upstream
+  `detectCapabilitiesFromEnvironment`), which `cmd` installs into the renderer
+  through `tui.SetTerminalCapabilities`; before that, nothing wrote the capability
+  state, so the OSC 8 branch was unreachable and the answer was always the legacy
+  `text (url)` form. The image override is inert like every other image path
+  (D26/D140).
 - `mcp` (OAuth client ID metadata documents, `1499466d8`): the generic
   `mcp/oauth` layer — `OAuthClientMetadataDocument`, the provider's
   `ClientMetadataDocument` chooser, the document's redirect URI threaded through

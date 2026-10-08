@@ -32,6 +32,13 @@ func GetTerminalCapabilities() TerminalCapabilities {
 	return terminalCapabilitiesState.capabilities
 }
 
+// SetTerminalCapabilities installs the capability flags the markdown renderer and the
+// alternate screen consult. The interactive mode installs them at boot; D69 keeps them
+// injected rather than detected inside this package.
+func SetTerminalCapabilities(capabilities TerminalCapabilities) {
+	terminalCapabilitiesState.capabilities = capabilities
+}
+
 // DefaultTextStyle is the base styling applied to markdown text.
 type DefaultTextStyle struct {
 	Color         func(text string) string
