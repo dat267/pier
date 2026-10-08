@@ -44,6 +44,24 @@ func TestCapacityErrorsAreRetryable(t *testing.T) {
 	}
 }
 
+// A provider that reports itself busy is retrying load, not returning a caller
+// error (#10543), and Bedrock reports a stalled HTTP/2 connection it canceled the
+// same way (#10379). Both are additions in the v1.1.0 delta.
+func TestBusyAndCanceledStreamErrorsAreRetryable(t *testing.T) {
+	messages := []string{
+		`{"error":{"message":"server_busy"}}`,
+		"Servers are currently busy. Please try again later.",
+		"The pending stream has been canceled (cause: null)",
+	}
+	for _, message := range messages {
+		message := message
+		response := &AssistantMessage{StopReason: StopError, ErrorMessage: &message}
+		if !IsRetryableAssistantError(response) {
+			t.Errorf("a transient provider error was not retried: %q", message)
+		}
+	}
+}
+
 // Sign in with ChatGPT reports temporary usage/user-data unavailability
 // mid-stream; upstream retries it (retry.ts RETRYABLE_PROVIDER_ERROR_PATTERN).
 func TestChatGPTSubscriptionUnavailableIsRetryable(t *testing.T) {

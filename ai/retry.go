@@ -281,7 +281,7 @@ var nonRetryableProviderLimitErrorPattern = regexp.MustCompile(`(?i)` + strings.
 
 // Retryable provider/transport errors.
 var retryableProviderErrorPattern = regexp.MustCompile(`(?i)` + strings.Join([]string{
-	`overloaded`, `currently experiencing high demand`, `model is at capacity`, `rate.?limit`, `too many requests`,
+	`overloaded`, `server_busy`, `servers are currently busy`, `currently experiencing high demand`, `model is at capacity`, `rate.?limit`, `too many requests`,
 	`429`, `500`, `502`, `503`, `504`, `520`, `524`,
 	`service.?unavailable`, `server.?error`, `internal.?error`,
 	`provider.?returned.?error`, `exceeded request buffer limit while retrying upstream`,
@@ -297,6 +297,8 @@ var retryableProviderErrorPattern = regexp.MustCompile(`(?i)` + strings.Join([]s
 	`websocket.?closed`, `websocket.?error`,
 	`ended without`, `stream ended before message_stop`,
 	`stream ended before a terminal response event`, `http2 request did not get a response`,
+	// Bedrock cancels a stalled HTTP/2 connection with this text (#10379).
+	`pending stream has been canceled`,
 	`retry delay`,
 	`you can retry your request`, `try your request again`, `please retry your request`,
 	`ResourceExhausted`,
