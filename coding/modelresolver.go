@@ -19,7 +19,7 @@ var DefaultModelPerProvider = map[ai.ProviderId]string{
 	"ant-ling":                   "Ring-2.6-1T",
 	"anthropic":                  "claude-opus-4-8",
 	"openai":                     "gpt-5.5",
-	"azure-openai-responses":     "gpt-5.4",
+	"azure":                      "gpt-5.4",
 	"openai-codex":               "gpt-6.1-sol",
 	"radius":                     "balanced",
 	"nvidia":                     "nvidia/nemotron-3-ultra-550b-a55b",
@@ -664,7 +664,7 @@ func FindInitialModel(options FindInitialModelOptions) InitialModelResult {
 // D21: upstream iterates the object keys of defaultModelPerProvider (insertion
 // order); Go maps have no order, so the declaration order is kept explicitly.
 var DefaultProviderOrder = []ai.ProviderId{
-	"amazon-bedrock", "ant-ling", "anthropic", "openai", "azure-openai-responses", "openai-codex",
+	"amazon-bedrock", "ant-ling", "anthropic", "openai", "azure", "openai-codex",
 	"radius", "nvidia", "deepseek", "google", "google-vertex", "github-copilot", "openrouter",
 	"vercel-ai-gateway", "xai", "groq", "cerebras", "zai", "zai-coding-cn", "mistral", "minimax",
 	"minimax-cn", "moonshotai", "moonshotai-cn", "huggingface", "fireworks", "together", "baseten",

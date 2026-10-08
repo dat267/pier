@@ -63,6 +63,11 @@ func EnvAPIKeyProvider(spec EnvAPIKeyProviderSpec) *ai.Provider {
 	}
 	if spec.Azure {
 		streams[ai.APIAzureOpenAIResponses] = azureOpenAIResponsesStreams{}
+		// Azure also serves Foundry Chat Completions deployments, which need the same
+		// endpoint and deployment resolution (upstream azureProvider wires both APIs).
+		if completions, ok := streams[ai.APIOpenAICompletions]; ok {
+			streams[ai.APIOpenAICompletions] = azureStreams{inner: completions}
+		}
 	}
 	if spec.OpenCode {
 		for api, implementation := range streams {
@@ -222,10 +227,10 @@ func derefCopy(options *ai.StreamOptions) ai.StreamOptions {
 // MistralProvider builds the built-in Mistral provider.
 func MistralProvider() *ai.Provider { return EnvAPIKeyProvider(thinByID("mistral")) }
 
-// AzureOpenAIResponsesProvider builds the built-in Azure OpenAI provider.
-func AzureOpenAIResponsesProvider() *ai.Provider {
+// AzureProvider builds the built-in Azure provider.
+func AzureProvider() *ai.Provider {
 	return EnvAPIKeyProvider(EnvAPIKeyProviderSpec{
-		ID: "azure-openai-responses", Name: "Azure OpenAI", Azure: true,
+		ID: "azure", Name: "Azure", Azure: true, Completions: true,
 		AuthName: "Azure OpenAI API key", EnvVars: []string{"AZURE_OPENAI_API_KEY"},
 	})
 }
@@ -303,7 +308,7 @@ func RadiusProvider(gateway string) *ai.Provider {
 
 // BuiltinProviderIDs is the upstream builtinProviders() order.
 var BuiltinProviderIDs = []string{
-	"amazon-bedrock", "ant-ling", "anthropic", "azure-openai-responses", "baseten", "cerebras",
+	"amazon-bedrock", "ant-ling", "anthropic", "azure", "baseten", "cerebras",
 	"cloudflare-ai-gateway", "cloudflare-workers-ai", "deepseek", "fireworks", "github-copilot",
 	"google", "google-vertex", "groq", "huggingface", "kimi-coding", "meta", "minimax", "minimax-cn",
 	"mistral", "moonshotai", "moonshotai-cn", "nvidia", "openai", "openai-codex", "opencode",
@@ -352,8 +357,8 @@ func builtinProvider(id string) *ai.Provider {
 		return GoogleVertexProvider()
 	case "openai":
 		return OpenAIProvider()
-	case "azure-openai-responses":
-		return AzureOpenAIResponsesProvider()
+	case "azure":
+		return AzureProvider()
 	case "github-copilot":
 		return GitHubCopilotProvider()
 	case "cloudflare-ai-gateway":

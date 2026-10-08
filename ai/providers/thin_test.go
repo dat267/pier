@@ -104,7 +104,7 @@ func TestBuiltinProviderSpecs(t *testing.T) {
 	}
 	// Azure and Vertex resolve their base URL per request, and OpenCode's models
 	// carry their own base URLs (upstream declares no baseUrl for them).
-	for _, id := range []string{"azure-openai-responses", "google-vertex", "opencode", "opencode-go"} {
+	for _, id := range []string{"azure", "google-vertex", "opencode", "opencode-go"} {
 		if provider := byID[id]; provider == nil || provider.BaseURL != "" {
 			t.Fatalf("%s baseUrl = %q, want empty", id, provider.BaseURL)
 		}
@@ -117,7 +117,7 @@ func TestThinSpecsMatchCatalogAPIs(t *testing.T) {
 	for _, spec := range append(ThinProviderSpecs, EnvAPIKeyProviderSpec{
 		ID: "google-vertex", Vertex: true,
 	}, EnvAPIKeyProviderSpec{
-		ID: "azure-openai-responses", Azure: true,
+		ID: "azure", Azure: true, Completions: true,
 	}) {
 		enabled := map[string]bool{}
 		if spec.Anthropic {

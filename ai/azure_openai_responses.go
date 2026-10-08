@@ -17,7 +17,7 @@ const DefaultAzureAPIVersion = "v1"
 
 // azureToolCallProviders accepts the `call_id|item_id` tool-call id form.
 var azureToolCallProviders = map[string]bool{
-	"openai": true, "openai-codex": true, "opencode": true, "azure-openai-responses": true,
+	"openai": true, "openai-codex": true, "opencode": true, "azure": true,
 }
 
 // AzureOpenAIResponsesOptions are the Azure Responses stream options.

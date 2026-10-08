@@ -319,7 +319,7 @@ func TestResolveCliModelCases(t *testing.T) {
 	}
 
 	// Ambiguous bare exact ids need a unique authenticated provider.
-	azure := testModel("gpt-5.6-sol", "GPT 5.6 Sol", "azure-openai-responses", false)
+	azure := testModel("gpt-5.6-sol", "GPT 5.6 Sol", "azure", false)
 	codex := testModel("gpt-5.6-sol", "GPT 5.6 Sol", "openai-codex", false)
 	ambiguous := &fakeRuntime{models: []*ai.Model{azure, codex}, configuredProviders: map[string]bool{"openai-codex": true}}
 	result = ResolveCliModel(ResolveCliModelOptions{CLIModel: "gpt-5.6-sol", ModelRuntime: ambiguous})
@@ -329,7 +329,7 @@ func TestResolveCliModelCases(t *testing.T) {
 	ambiguousBoth := &fakeRuntime{models: []*ai.Model{azure, codex}}
 	result = ResolveCliModel(ResolveCliModelOptions{CLIModel: "gpt-5.6-sol", ModelRuntime: ambiguousBoth})
 	if result.Model != nil || !strings.Contains(result.Error, `Model "gpt-5.6-sol" is ambiguous across providers`) ||
-		!strings.Contains(result.Error, "azure-openai-responses/gpt-5.6-sol") ||
+		!strings.Contains(result.Error, "azure/gpt-5.6-sol") ||
 		!strings.Contains(result.Error, "openai-codex/gpt-5.6-sol") ||
 		!strings.Contains(result.Error, "Use --provider or provider/model") {
 		t.Fatalf("ambiguous = %+v", result)

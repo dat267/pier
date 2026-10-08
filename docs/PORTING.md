@@ -17,7 +17,18 @@ concentrated in `coding-agent` (44), `durable` (33), `ai` (29), `env` (17),
 `tui` (12), `mcp` (9), `codemode` (9) and `agent` (8). The not-ported list below
 still stops at v1.0.2; the delta is being ported item by item.
 
-Ported from it so far: the retryable `server_busy`, `servers are currently busy`
+Ported from it so far: the built-in catalog, regenerated from the tag's own generator
+(`claude-haiku-5-5`, the prompt-length pricing tiers for 154 models, and the model churn
+that comes with live models.dev data: 89 added, 58 removed). The regeneration also carries
+the Azure provider rename, `azure-openai-responses` to `azure` (upstream `9714`), which is
+breaking for `auth.json`, `settings.json` and `models.json` entries, and Azure's second
+API: Foundry Chat Completions deployments now stream through the endpoint and deployment
+resolution the provider shares with the Responses API (`ai/providers/azure.go`).
+`ai/image_catalog.json` is *not* regenerated: its upstream input
+(`image-models.generated.ts`) is produced by a script that is not present at the tag, so a
+re-run needs that tool first.
+
+Also ported: the retryable `server_busy`, `servers are currently busy`
 and `pending stream has been canceled` provider patterns (#10543, #10379), the
 Mistral `finish_reason: "error"` retry (#10487), model and caller headers
 overriding the Codex `originator` and `User-Agent` (#10429), the 3.5
@@ -28,9 +39,8 @@ which is what first installs the capabilities the tui package reads (D69), so
 `terminal.hyperlinks` and the whole OSC 8 branch now work.
 
 Checked against v1.1.0 and still absent — OSC 7501 program status is not emitted
-(upstream `503c60552`), the model catalog predates `claude-haiku-5.5` (upstream
-`f76c1db66`), and reading the Termux clipboard (upstream `592fb57b7`) stays out of
-scope under **D120**. The rest of the delta is unreviewed: those counts say how
+(upstream `503c60552`), and reading the Termux clipboard (upstream `592fb57b7`) stays
+out of scope under **D120**. The rest of the delta is unreviewed: those counts say how
 much there is, not which commits.
 
 The v0.99.1→v1.0.0 delta (62 commits) is ported: it released the experimental
@@ -464,7 +474,7 @@ Update the pin whenever upstream source is re-read for a port.
 | `ai` (google-vertex) | `api/google-vertex.ts` — Vertex AI dialect over the shared Google streaming loop: `{location}`-templated and custom base URLs with API-version detection, project/location resolution with upstream's error messages, Vertex API keys (including the ADC marker and `<placeholder>` fallback), Application Default Credentials (authorized-user refresh-token and GCE metadata flows with token caching; service-account keys reported per D27), bearer + `x-goog-user-project` headers, and the Vertex thinking budget/level mapping | ported |
 | `ai` (azure-openai-responses) | `api/azure-openai-responses.ts` — Azure dialect over the shared Responses loop: base-URL resolution (options → env → resource name → model base URL) with Azure-host normalization to `/openai/v1`, query stripping only on Azure hosts, `v1` default API version, the `api-version` query parameter, `api-key` header auth, deployment-name resolution (explicit → `AZURE_OPENAI_DEPLOYMENT_NAME_MAP` → model id) sent as the body model, and the Azure tool-call provider set | ported |
 | `ai` (mistral) | `api/mistral-conversations.ts` — the native Mistral chat completions endpoint: SDK-to-wire key remapping (maxTokens/toolChoice/promptMode/... and per-message/per-chunk keys), message conversion (string user content, image data URLs with omission notes, assistant thinking parts and tool calls, tool-result text forms), function tools with strict sampling, deterministic 9-character tool-call id normalization, prompt caching via `prompt_cache_key` plus the `x-affinity` header, the CRLF-tolerant SSE event reader with the `[DONE]` sentinel, streaming assembly of text/thinking/tool-call blocks with incremental argument parsing, cached-token usage accounting, reasoning effort vs prompt mode per model, and upstream's error formatting with body truncation | ported |
-| `ai/providers` (factories) | `providers/{all,thin factories,opencode-headers,github-copilot,google-vertex,azure-openai-responses,mistral,meta}.ts` — the built-in provider list in upstream order with per-provider base URLs, names, and env API-key auth (29 thin specs plus the anthropic/google/vertex/openai/azure/mistral/copilot/meta factories), the OpenCode session-header wrapper, the GitHub Copilot OAuth available-model filter, a `builtinProviders`/`builtinModels` aggregate, and spec/catalog api consistency | ported (all built-in provider factories, including Meta's Muse OAuth) |
+| `ai/providers` (factories) | `providers/{all,thin factories,opencode-headers,github-copilot,google-vertex,azure,mistral,meta}.ts` — the built-in provider list in upstream order with per-provider base URLs, names, and env API-key auth (29 thin specs plus the anthropic/google/vertex/openai/azure/mistral/copilot/meta factories), the OpenCode session-header wrapper, the GitHub Copilot OAuth available-model filter, a `builtinProviders`/`builtinModels` aggregate, and spec/catalog api consistency | ported (all built-in provider factories, including Meta's Muse OAuth) |
 | `ai` (cloudflare) | `providers/{cloudflare-auth,cloudflare-stream}.ts` + the endpoint constants in `api/cloudflare.ts` — per-field credential/env merging for the API key plus account/gateway ids (a key-only credential still picks those up from the environment), the Workers AI key auth vs. the AI Gateway `cf-aig-authorization` form with the SDK placeholder headers suppressed, the login prompts, `{CLOUDFLARE_ACCOUNT_ID}`/`{CLOUDFLARE_GATEWAY_ID}` base-URL materialization before dispatch (cloning only when the URL changes), and both providers registered with the gateway's three-API map pinned | ported (the Workers AI binding fetch is Workers-runtime specific and out of scope) |
 | `ai` (oauth) | `auth/oauth/{pkce,device-code,oauth-page,anthropic}.ts` — PKCE (S256) generation, the RFC 8628 device-code polling loop with `slow_down` interval handling and the upstream cancel/timeout/clock-drift messages, the OAuth callback pages (logo, escaping, success/error), the loopback callback server (fixed port, state validation, success/error pages, cancel), manual-paste parsing (URL, `code#state`, query string, bare code), the Anthropic Claude Pro/Max flow (authorize URL, code exchange, refresh with the five-minute expiry margin, upstream error messages, api-key derivation) wired into the Anthropic provider's OAuth slot | ported |
 | `ai` (oauth, device code) | `auth/oauth/{xai,kimi-coding,meta}.ts` — RFC 8628 device-authorization flows over the shared poller: the xAI flow (form POST, `referrer=pi`, https-only verification URIs, interval 0 fallback, non-rotated refresh tokens, upstream failure messages per error code), the Kimi Code flow (host override envs, trusted http(s) verification URIs, 30s request timeouts, raw failure text in messages, refresh with exponential backoff, terminal 401/403/invalid_grant handling), and the Meta Muse flow (device authorization against auth.meta.com, the identity token exchanged through the Muse Code key-mint endpoint with the identity token stored as the refresh token and the minted key as the access token, so a 401/403 from mint reports the session dead), all wired into their providers' OAuth slots | ported |
