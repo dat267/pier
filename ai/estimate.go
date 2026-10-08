@@ -7,7 +7,10 @@ import (
 // Port of utils/estimate.ts.
 
 const (
-	charsPerToken       = 4
+	// charsPerToken is 3.5 since upstream v1.1.0 (#10497): estimating fewer characters
+	// per token leaves the request more room for a reply, which is where context-limit
+	// failures were coming from.
+	charsPerToken       = 3.5
 	estimatedImageChars = 4800
 )
 
@@ -44,8 +47,10 @@ func EstimateTextTokens(text string) int {
 	return ceilDiv(JSLength(text), charsPerToken)
 }
 
-func ceilDiv(a, b int) int {
-	return (a + b - 1) / b
+// ceilDiv rounds a character count up to whole tokens, matching upstream's
+// Math.ceil(chars / CHARS_PER_TOKEN).
+func ceilDiv(chars int, perToken float64) int {
+	return int(math.Ceil(float64(chars) / perToken))
 }
 
 // estimateTextAndImageContentChars of user/tool-result content.
