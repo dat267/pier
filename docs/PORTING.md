@@ -69,6 +69,12 @@ Also ported from the delta: the MCP session `DELETE` reuses the token of the las
 instead of asking the auth provider, whose `Token()` call can refresh over the network before
 a close that is happening anyway (`mcp/transport_http.go`, upstream #10565).
 
+Ported as well: rotated OAuth tokens persist when a refresh is cancelled (`bde882c74`).
+`refreshStoredOAuthCredential` (`ai/authresolve.go`) lets the caller's cancellation stop only
+the wait for the credential lock; once a refresh starts it completes under the 15 s timeout and
+is persisted, and the request-auth and model-list-refresh paths share it. The caller still
+observes the abort, matching upstream's `raceWithAbortSignal`.
+
 Ported ahead of the reference pin: Home/End remain editor line-start/end keys, while
 Ctrl+Home/Ctrl+End move the fullscreen transcript, matching upstream v1.1.0
 (`#10314`, `6100fe5a8`). The component and fullscreen-renderer goldens now record

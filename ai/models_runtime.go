@@ -754,23 +754,19 @@ func (m *Models) resolveRefreshCredential(provider *Provider, stored *Credential
 		if ctxDone(signal) {
 			return nil, nil
 		}
-		post, err := m.credentials.Modify(provider.ID, func(current *Credential) (*Credential, error) {
-			if current == nil || current.Type != CredentialOAuth || nowUnixMilli() < current.OAuth.Expires {
-				return nil, nil
-			}
-			refreshed, err := oauth.Refresh(current.OAuth, signal)
-			if err != nil {
-				return nil, err
-			}
-			return &Credential{Type: CredentialOAuth, OAuth: refreshed}, nil
+		// A refresh that has started survives cancellation or a superseding
+		// model refresh, so a rotated refresh token is always persisted
+		// (upstream bde882c74).
+		refreshed, err := refreshStoredOAuthCredential(m.credentials, provider.ID, oauth, func(current *OAuthCredential) bool {
+			return nowUnixMilli() >= current.Expires
 		}, signal)
 		if err != nil {
 			return nil, err
 		}
-		if post != nil && post.Type == CredentialOAuth {
-			return post, nil
+		if refreshed == nil {
+			return nil, nil
 		}
-		return nil, nil
+		return &Credential{Type: CredentialOAuth, OAuth: refreshed}, nil
 	}
 
 	apiKey := provider.Auth.APIKey

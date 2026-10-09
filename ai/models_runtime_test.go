@@ -146,6 +146,96 @@ func TestResolveStoredOAuthRefreshesUnderLock(t *testing.T) {
 	}
 }
 
+func TestResolveStoredOAuthPersistsRefreshStartedBeforeCancellation(t *testing.T) {
+	// Upstream bde882c74: a provider that rotates refresh tokens has already
+	// invalidated the old one by the time the caller cancels, so a refresh
+	// that started must complete and persist or the next request fails with
+	// refresh_token_invalidated. The caller still observes the cancellation.
+	store := NewInMemoryCredentialStore()
+	if _, err := store.Modify("p", func(*Credential) (*Credential, error) {
+		return &Credential{Type: CredentialOAuth, OAuth: &OAuthCredential{OAuthCredentials{
+			Refresh: "old-refresh", Access: "old", Expires: 0, // expired
+		}}}, nil
+	}, bgCtx()); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	oauth := &OAuthAuth{
+		Name: "Test OAuth",
+		Refresh: func(credential *OAuthCredential, refreshCtx context.Context) (*OAuthCredential, error) {
+			// The provider rotates the token, then the caller cancels before
+			// the refresh returns.
+			cancel()
+			return &OAuthCredential{OAuthCredentials{
+				Refresh: "new-refresh", Access: "new", Expires: nowUnixMilli() + 3600_000,
+			}}, nil
+		},
+		ToAuth: func(credential *OAuthCredential) (*ModelAuth, error) {
+			return &ModelAuth{APIKey: credential.Access}, nil
+		},
+	}
+
+	if _, err := ResolveProviderAuth("p", ProviderAuth{OAuth: oauth}, store, &fakeAuthContext{},
+		&AuthResolutionOverrides{Ctx: ctx}); err == nil {
+		t.Fatal("expected the cancellation to surface")
+	}
+
+	stored, err := store.Read("p", bgCtx())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stored == nil || stored.Type != CredentialOAuth || stored.OAuth.Refresh != "new-refresh" {
+		t.Fatalf("rotated credential not persisted: %+v", stored)
+	}
+}
+
+func TestModelsRefreshPersistsOAuthRefreshStartedBeforeCancellation(t *testing.T) {
+	// Upstream bde882c74: a model-list refresh that is cancelled (or
+	// superseded) while an OAuth refresh is in flight must still persist the
+	// rotated credential.
+	store := NewInMemoryCredentialStore()
+	if _, err := store.Modify("p1", func(*Credential) (*Credential, error) {
+		return &Credential{Type: CredentialOAuth, OAuth: &OAuthCredential{OAuthCredentials{
+			Refresh: "old-refresh", Access: "old", Expires: 0, // expired
+		}}}, nil
+	}, bgCtx()); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	oauth := &OAuthAuth{
+		Name: "Test OAuth",
+		Refresh: func(credential *OAuthCredential, refreshCtx context.Context) (*OAuthCredential, error) {
+			cancel()
+			return &OAuthCredential{OAuthCredentials{
+				Refresh: "new-refresh", Access: "new", Expires: nowUnixMilli() + 3600_000,
+			}}, nil
+		},
+	}
+	models := CreateModels(&CreateModelsOptions{Credentials: store, AuthContext: &fakeAuthContext{}})
+	models.SetProvider(&Provider{
+		ID:            "p1",
+		Auth:          ProviderAuth{OAuth: oauth},
+		RefreshModels: func(*RefreshModelsContext) error { return nil },
+	})
+
+	result := models.Refresh(&ModelsRefreshOptions{Ctx: ctx})
+	if !result.Aborted {
+		t.Fatalf("refresh = %+v; want aborted", result)
+	}
+
+	stored, err := store.Read("p1", bgCtx())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stored == nil || stored.Type != CredentialOAuth || stored.OAuth.Refresh != "new-refresh" {
+		t.Fatalf("rotated credential not persisted: %+v", stored)
+	}
+}
+
 func TestCalculateCostWithTiersAndLongCacheWrites(t *testing.T) {
 	// Port of models.ts calculateCost: tier selection by total input usage
 	// and Anthropic's 2x base input for 1h cache writes.
