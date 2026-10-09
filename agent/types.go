@@ -67,6 +67,8 @@ type AgentToolResult struct {
 	// Usage from the final tool execution itself, if available. Not used for
 	// main LLM context accounting.
 	Usage *ai.Usage
+	// IsError reports failure without throwing; the loop preserves the result content and details.
+	IsError bool
 	// Terminate hints that the agent should stop after the current tool
 	// batch. Early termination only happens when every finalized tool
 	// result in the batch sets this to true.
@@ -149,8 +151,41 @@ type AfterToolCallContext struct {
 	Context          AgentContext
 }
 
-// ShouldStopAfterTurnContext is passed to ShouldStopAfterTurn.
-type ShouldStopAfterTurnContext struct {
+// AgentToolCallOutcome is a tool result after hooks have run.
+type AgentToolCallOutcome struct {
+	ToolCall ai.ToolCall
+	Result   AgentToolResult
+	IsError  bool
+}
+
+// RunToolCallOptions configures one tool call without loop events or transcript mutation.
+type RunToolCallOptions struct {
+	Tools            []AgentTool
+	AssistantMessage *ai.AssistantMessage
+	Context          AgentContext
+	Signal           context.Context
+	BeforeToolCall   func(context *BeforeToolCallContext, ctx context.Context) (*BeforeToolCallResult, error)
+	AfterToolCall    func(context *AfterToolCallContext, ctx context.Context) (*AfterToolCallResult, error)
+	OnUpdate         func(result AgentToolResult)
+}
+
+// PrepareRequestContext is the runtime state immediately before a provider request.
+type PrepareRequestContext struct {
+	Context       AgentContext
+	Model         *ai.Model
+	ThinkingLevel ai.ThinkingLevel
+}
+
+// AgentRequestUpdate replaces runtime state for this and later requests in the run.
+type AgentRequestUpdate struct {
+	Context          *AgentContext
+	Model            *ai.Model
+	ThinkingLevel    ai.ThinkingLevel
+	HasThinkingLevel bool
+}
+
+// AgentTurnContext is passed to FinishTurn and legacy ShouldStopAfterTurn callbacks.
+type AgentTurnContext struct {
 	Message     *ai.AssistantMessage
 	ToolResults []ai.Message
 	Context     AgentContext
@@ -158,6 +193,25 @@ type ShouldStopAfterTurnContext struct {
 	// here (prompt runs include the initial prompts; continuation runs do
 	// not include pre-existing context).
 	NewMessages []ai.Message
+}
+
+// PrepareNextTurnContext is the context passed to PrepareNextTurn.
+type PrepareNextTurnContext = AgentTurnContext
+
+// ShouldStopAfterTurnContext remains as a source-compatible name for AgentTurnContext.
+type ShouldStopAfterTurnContext = AgentTurnContext
+
+// AgentTurnAction is the scheduling decision returned after a completed turn.
+type AgentTurnAction string
+
+const (
+	AgentTurnContinue AgentTurnAction = "continue"
+	AgentTurnEnd      AgentTurnAction = "end"
+)
+
+// AgentTurnDecision controls whether the run ends or requests one more provider turn.
+type AgentTurnDecision struct {
+	Action AgentTurnAction
 }
 
 // AgentLoopTurnUpdate is replacement runtime state before the next request.
@@ -182,11 +236,15 @@ type AgentLoopConfig struct {
 	TransformContext func(messages []ai.Message, ctx context.Context) []ai.Message
 	// GetAPIKey resolves an API key per call (expiring tokens).
 	GetAPIKey func(provider string, ctx context.Context) (string, error)
-	// ShouldStopAfterTurn runs after turn_end; true exits before polling
-	// queues.
-	ShouldStopAfterTurn func(context *ShouldStopAfterTurnContext) bool
+	// PrepareRequest runs before every provider request, including the first.
+	PrepareRequest func(request *PrepareRequestContext, ctx context.Context) (*AgentRequestUpdate, error)
+	// FinishTurn runs after assistant and tool-result messages, before turn_end.
+	// An end decision stops the run; continue requests one more provider turn.
+	FinishTurn func(turn *AgentTurnContext, ctx context.Context) (*AgentTurnDecision, error)
+	// ShouldStopAfterTurn is the legacy post-turn callback. FinishTurn supersedes it.
+	ShouldStopAfterTurn func(context *AgentTurnContext) bool
 	// PrepareNextTurn runs before the next turn when continuing.
-	PrepareNextTurn func(context *ShouldStopAfterTurnContext) (*AgentLoopTurnUpdate, error)
+	PrepareNextTurn func(context *PrepareNextTurnContext) (*AgentLoopTurnUpdate, error)
 	// GetSteeringMessages returns mid-run steering messages.
 	GetSteeringMessages func(ctx context.Context) ([]ai.Message, error)
 	// GetFollowUpMessages returns post-run follow-up messages.

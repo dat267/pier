@@ -55,15 +55,18 @@ type AgentOptions struct {
 	ConvertToLlm     func(messages []ai.Message) []ai.Message
 	TransformContext func(messages []ai.Message, ctx context.Context) []ai.Message
 	// StreamFn is required.
-	StreamFn                   StreamFn
-	GetAPIKey                  func(provider string, ctx context.Context) (string, error)
-	OnPayload                  func(payload json.RawMessage, model *ai.Model) json.RawMessage
-	OnResponse                 func(response ai.ProviderResponse, model *ai.Model)
-	BeforeToolCall             func(context *BeforeToolCallContext, ctx context.Context) (*BeforeToolCallResult, error)
-	AfterToolCall              func(context *AfterToolCallContext, ctx context.Context) (*AfterToolCallResult, error)
-	ShouldStopAfterTurn        func(context *ShouldStopAfterTurnContext, ctx context.Context) bool
+	StreamFn       StreamFn
+	GetAPIKey      func(provider string, ctx context.Context) (string, error)
+	OnPayload      func(payload json.RawMessage, model *ai.Model) json.RawMessage
+	OnResponse     func(response ai.ProviderResponse, model *ai.Model)
+	BeforeToolCall func(context *BeforeToolCallContext, ctx context.Context) (*BeforeToolCallResult, error)
+	AfterToolCall  func(context *AfterToolCallContext, ctx context.Context) (*AfterToolCallResult, error)
+	PrepareRequest func(request *PrepareRequestContext, ctx context.Context) (*AgentRequestUpdate, error)
+	FinishTurn     func(turn *AgentTurnContext, ctx context.Context) (*AgentTurnDecision, error)
+	// Deprecated: use FinishTurn.
+	ShouldStopAfterTurn        func(turn *AgentTurnContext, ctx context.Context) bool
 	PrepareNextTurn            func(ctx context.Context) (*AgentLoopTurnUpdate, error)
-	PrepareNextTurnWithContext func(context *ShouldStopAfterTurnContext, ctx context.Context) (*AgentLoopTurnUpdate, error)
+	PrepareNextTurnWithContext func(*PrepareNextTurnContext, context.Context) (*AgentLoopTurnUpdate, error)
 	SteeringMode               QueueMode
 	FollowUpMode               QueueMode
 	// SessionID is forwarded to providers for cache-aware backends.
@@ -154,17 +157,20 @@ type Agent struct {
 	followUpQueue *pendingMessageQueue
 
 	// Options surface (upstream public fields).
-	ConvertToLlm               func(messages []ai.Message) []ai.Message
-	TransformContext           func(messages []ai.Message, ctx context.Context) []ai.Message
-	StreamFunction             StreamFn
-	GetAPIKey                  func(provider string, ctx context.Context) (string, error)
-	OnPayload                  func(payload json.RawMessage, model *ai.Model) json.RawMessage
-	OnResponse                 func(response ai.ProviderResponse, model *ai.Model)
-	BeforeToolCall             func(context *BeforeToolCallContext, ctx context.Context) (*BeforeToolCallResult, error)
-	AfterToolCall              func(context *AfterToolCallContext, ctx context.Context) (*AfterToolCallResult, error)
-	ShouldStopAfterTurn        func(context *ShouldStopAfterTurnContext, ctx context.Context) bool
+	ConvertToLlm     func(messages []ai.Message) []ai.Message
+	TransformContext func(messages []ai.Message, ctx context.Context) []ai.Message
+	StreamFunction   StreamFn
+	GetAPIKey        func(provider string, ctx context.Context) (string, error)
+	OnPayload        func(payload json.RawMessage, model *ai.Model) json.RawMessage
+	OnResponse       func(response ai.ProviderResponse, model *ai.Model)
+	BeforeToolCall   func(context *BeforeToolCallContext, ctx context.Context) (*BeforeToolCallResult, error)
+	AfterToolCall    func(context *AfterToolCallContext, ctx context.Context) (*AfterToolCallResult, error)
+	PrepareRequest   func(request *PrepareRequestContext, ctx context.Context) (*AgentRequestUpdate, error)
+	FinishTurn       func(turn *AgentTurnContext, ctx context.Context) (*AgentTurnDecision, error)
+	// Deprecated: use FinishTurn.
+	ShouldStopAfterTurn        func(turn *AgentTurnContext, ctx context.Context) bool
 	PrepareNextTurn            func(ctx context.Context) (*AgentLoopTurnUpdate, error)
-	PrepareNextTurnWithContext func(context *ShouldStopAfterTurnContext, ctx context.Context) (*AgentLoopTurnUpdate, error)
+	PrepareNextTurnWithContext func(*PrepareNextTurnContext, context.Context) (*AgentLoopTurnUpdate, error)
 	SessionID                  string
 	ThinkingBudgets            *ai.ThinkingBudgets
 	Transport                  ai.Transport
@@ -259,6 +265,8 @@ func NewAgent(options *AgentOptions) (*Agent, error) {
 		OnResponse:                 options.OnResponse,
 		BeforeToolCall:             options.BeforeToolCall,
 		AfterToolCall:              options.AfterToolCall,
+		PrepareRequest:             options.PrepareRequest,
+		FinishTurn:                 options.FinishTurn,
 		ShouldStopAfterTurn:        options.ShouldStopAfterTurn,
 		PrepareNextTurn:            options.PrepareNextTurn,
 		PrepareNextTurnWithContext: options.PrepareNextTurnWithContext,
@@ -545,9 +553,19 @@ func (a *Agent) createLoopConfig(skipInitialSteeringPoll bool) *AgentLoopConfig 
 	if a.ThinkingBudgets != nil {
 		config.ThinkingBudgets = a.ThinkingBudgets
 	}
+	if a.PrepareRequest != nil {
+		config.PrepareRequest = func(request *PrepareRequestContext, ctx context.Context) (*AgentRequestUpdate, error) {
+			return a.PrepareRequest(request, a.runContext())
+		}
+	}
+	if a.FinishTurn != nil {
+		config.FinishTurn = func(turn *AgentTurnContext, ctx context.Context) (*AgentTurnDecision, error) {
+			return a.FinishTurn(turn, a.runContext())
+		}
+	}
 	if a.ShouldStopAfterTurn != nil {
-		config.ShouldStopAfterTurn = func(context *ShouldStopAfterTurnContext) bool {
-			return a.ShouldStopAfterTurn(context, a.runContext())
+		config.ShouldStopAfterTurn = func(turn *AgentTurnContext) bool {
+			return a.ShouldStopAfterTurn(turn, a.runContext())
 		}
 	}
 	if a.PrepareNextTurnWithContext != nil || a.PrepareNextTurn != nil {

@@ -28,6 +28,13 @@ resolution the provider shares with the Responses API (`ai/providers/azure.go`).
 (`image-models.generated.ts`) is produced by a script that is not present at the tag, so a
 re-run needs that tool first.
 
+The agent loop now follows the pinned `packages/agent` callback contract: `PrepareRequest` runs
+before every provider request, `FinishTurn` runs before `turn_end` and can end or explicitly
+continue the run, and loop-level callback errors enter the run-failure lifecycle. `RunToolCall`
+exposes the single-tool execution path with the same validation and tool hooks; tool-hook errors
+remain tool results. `ShouldStopAfterTurn` remains as a
+deprecated compatibility callback; new code should use `FinishTurn`.
+
 Also ported: the retryable `server_busy`, `servers are currently busy`
 and `pending stream has been canceled` provider patterns (#10543, #10379), the
 Mistral `finish_reason: "error"` retry (#10487), model and caller headers

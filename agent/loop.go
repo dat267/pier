@@ -145,8 +145,13 @@ func runLoop(
 	var lastCompletedTurn *ShouldStopAfterTurnContext
 	// Check for steering messages at start (user may have typed while waiting).
 	var pendingMessages []ai.Message
+	explicitContinuation := false
 	if config.GetSteeringMessages != nil {
-		pendingMessages, _ = config.GetSteeringMessages(ctx)
+		var err error
+		pendingMessages, err = config.GetSteeringMessages(ctx)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	// Outer loop: continues when queued follow-up messages arrive after the
@@ -159,7 +164,11 @@ func runLoop(
 			var preparedMessages []ai.Message
 			if lastCompletedTurn != nil {
 				if config.PrepareNextTurn != nil {
-					if nextTurnSnapshot, err := config.PrepareNextTurn(lastCompletedTurn); err == nil && nextTurnSnapshot != nil {
+					nextTurnSnapshot, err := config.PrepareNextTurn(lastCompletedTurn)
+					if err != nil {
+						panic(err)
+					}
+					if nextTurnSnapshot != nil {
 						if nextTurnSnapshot.Context != nil {
 							currentContext = *nextTurnSnapshot.Context
 						}
@@ -181,7 +190,11 @@ func runLoop(
 				// earlier poll returned nothing (one-at-a-time mode would
 				// otherwise deliver two messages in one turn).
 				if len(pendingMessages) == 0 && config.GetSteeringMessages != nil {
-					pendingMessages, _ = config.GetSteeringMessages(ctx)
+					var err error
+					pendingMessages, err = config.GetSteeringMessages(ctx)
+					if err != nil {
+						panic(err)
+					}
 				}
 				mustEmit(emit, AgentEvent{Type: TurnStart})
 			}
@@ -197,11 +210,49 @@ func runLoop(
 			}
 			pendingMessages = nil
 
+			if config.PrepareRequest != nil {
+				thinkingLevel := config.Reasoning
+				if thinkingLevel == "" {
+					thinkingLevel = ai.ThinkOff
+				}
+				request := &PrepareRequestContext{
+					Context: currentContext, Model: config.Model, ThinkingLevel: thinkingLevel,
+				}
+				update, err := config.PrepareRequest(request, ctx)
+				if err != nil {
+					panic(err)
+				}
+				if update != nil {
+					if update.Context != nil {
+						currentContext = *update.Context
+					}
+					if update.Model != nil {
+						config.Model = update.Model
+					}
+					if update.HasThinkingLevel {
+						if update.ThinkingLevel == ai.ThinkOff {
+							config.Reasoning = ""
+						} else {
+							config.Reasoning = update.ThinkingLevel
+						}
+					}
+				}
+			}
+
 			// Stream assistant response.
 			message := streamAssistantResponse(&currentContext, &config, ctx, emit, streamFunction)
 			*newMessages = append(*newMessages, message)
 
 			if message.StopReason == ai.StopError || message.StopReason == ai.StopAborted {
+				turn := &AgentTurnContext{
+					Message: message, ToolResults: []ai.Message{},
+					Context: currentContext, NewMessages: *newMessages,
+				}
+				if config.FinishTurn != nil {
+					if _, err := config.FinishTurn(turn, ctx); err != nil {
+						panic(err)
+					}
+				}
 				mustEmit(emit, AgentEvent{Type: TurnEnd, Message: message, ToolResults: []ai.Message{}})
 				mustEmit(emit, AgentEvent{Type: AgentEnd, Messages: *newMessages})
 				return
@@ -236,30 +287,58 @@ func runLoop(
 				}
 			}
 
-			mustEmit(emit, AgentEvent{Type: TurnEnd, Message: message, ToolResults: toolResults})
-
-			lastCompletedTurn = &ShouldStopAfterTurnContext{
+			lastCompletedTurn = &AgentTurnContext{
 				Message: message, ToolResults: toolResults,
 				Context: currentContext, NewMessages: *newMessages,
 			}
+			var decision *AgentTurnDecision
+			if config.FinishTurn != nil {
+				var err error
+				decision, err = config.FinishTurn(lastCompletedTurn, ctx)
+				if err != nil {
+					panic(err)
+				}
+			}
+			mustEmit(emit, AgentEvent{Type: TurnEnd, Message: message, ToolResults: toolResults})
 
-			if config.ShouldStopAfterTurn != nil && config.ShouldStopAfterTurn(lastCompletedTurn) {
+			if decision != nil && decision.Action == AgentTurnEnd {
+				mustEmit(emit, AgentEvent{Type: AgentEnd, Messages: *newMessages})
+				return
+			}
+			if config.FinishTurn == nil && config.ShouldStopAfterTurn != nil && config.ShouldStopAfterTurn(lastCompletedTurn) {
 				mustEmit(emit, AgentEvent{Type: AgentEnd, Messages: *newMessages})
 				return
 			}
 
+			explicitContinuation = decision != nil && decision.Action == AgentTurnContinue
 			if config.GetSteeringMessages != nil {
-				pendingMessages, _ = config.GetSteeringMessages(ctx)
+				var err error
+				pendingMessages, err = config.GetSteeringMessages(ctx)
+				if err != nil {
+					panic(err)
+				}
+			}
+			if hasMoreToolCalls || len(pendingMessages) > 0 {
+				explicitContinuation = false
 			}
 		}
 
 		// Agent would stop here. Check for follow-up messages.
 		var followUpMessages []ai.Message
 		if config.GetFollowUpMessages != nil {
-			followUpMessages, _ = config.GetFollowUpMessages(ctx)
+			var err error
+			followUpMessages, err = config.GetFollowUpMessages(ctx)
+			if err != nil {
+				panic(err)
+			}
 		}
 		if len(followUpMessages) > 0 {
+			explicitContinuation = false
 			pendingMessages = followUpMessages
+			continue
+		}
+		if explicitContinuation {
+			explicitContinuation = false
 			continue
 		}
 		break
@@ -371,7 +450,11 @@ func streamAssistantResponse(
 	// Resolve API key (important for expiring tokens).
 	resolvedAPIKey := config.APIKey
 	if config.GetAPIKey != nil {
-		if key, err := config.GetAPIKey(config.Model.Provider, ctx); err == nil && key != "" {
+		key, err := config.GetAPIKey(config.Model.Provider, ctx)
+		if err != nil {
+			failStreamAssistant(err)
+		}
+		if key != "" {
 			resolvedAPIKey = key
 		}
 	}
@@ -777,7 +860,7 @@ func executePreparedToolCall(prepared *preparedToolCallValue, ctx context.Contex
 	durationMS := time.Since(startedAt).Milliseconds()
 	updateWG.Wait()
 	if err == nil {
-		return executedToolCallOutcome{result: result, isError: false, durationMS: durationMS}
+		return executedToolCallOutcome{result: result, isError: result.IsError, durationMS: durationMS}
 	}
 	return executedToolCallOutcome{result: createErrorToolResult(err.Error()), isError: true, durationMS: durationMS}
 }
@@ -895,5 +978,36 @@ func ctxDone(ctx context.Context) bool {
 		return true
 	default:
 		return false
+	}
+}
+
+// RunToolCall runs one tool through preparation, validation, hooks and execution.
+// It emits no loop events and does not append messages to the supplied context.
+func RunToolCall(toolCall ai.ToolCall, options RunToolCallOptions) AgentToolCallOutcome {
+	ctx := contextOrBackground(options.Signal)
+	currentContext := options.Context
+	currentContext.Tools = append([]AgentTool{}, options.Tools...)
+	config := &AgentLoopConfig{
+		BeforeToolCall: options.BeforeToolCall,
+		AfterToolCall:  options.AfterToolCall,
+	}
+	preparation := prepareToolCall(&currentContext, options.AssistantMessage, toolCall, config, ctx)
+	if preparation.immediate != nil {
+		return AgentToolCallOutcome{
+			ToolCall: toolCall, Result: preparation.immediate.result, IsError: preparation.immediate.isError,
+		}
+	}
+	emitUpdate := func(event AgentEvent) error {
+		if event.Type == ToolExecutionUpdate && options.OnUpdate != nil {
+			options.OnUpdate(event.PartialResult)
+		}
+		return nil
+	}
+	executed := executePreparedToolCall(preparation.prepared, ctx, emitUpdate)
+	finalized := finalizeExecutedToolCall(
+		&currentContext, options.AssistantMessage, preparation.prepared, executed, config, ctx,
+	)
+	return AgentToolCallOutcome{
+		ToolCall: finalized.toolCall, Result: finalized.result, IsError: finalized.isError,
 	}
 }
