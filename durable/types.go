@@ -537,10 +537,11 @@ type StoredDocument struct {
 }
 
 // Cursor is backend-owned JSON continuation state that callers only round-trip
-// to the same scan.
+// to the same scan. Scan cursors preserve their order; legacy cursors use the
+// scan's default order.
 type Cursor = map[string]json.RawMessage
 
-// CursorAfter builds a cursor positioned after an id.
+// CursorAfter builds a legacy cursor positioned after an id. Scans continue it in their default order.
 func CursorAfter(id Id) Cursor {
 	encoded, _ := json.Marshal(id)
 	return Cursor{"after": encoded}
@@ -552,41 +553,57 @@ type Page[T any] struct {
 	Next  Cursor
 }
 
-// ConversationQuery filters an ordered scan of conversations (upstream
+// ScanOrder selects whether an ordered ID scan runs from oldest to newest or newest to oldest.
+type ScanOrder string
+
+const (
+	ScanOrderAscending  ScanOrder = "ascending"
+	ScanOrderDescending ScanOrder = "descending"
+)
+
+// ConversationQuery filters and orders a conversation scan (upstream
 // ConversationQuery).
 type ConversationQuery struct {
 	// OwnerConversationID filters by the conversation that created them.
 	OwnerConversationID *Id
 	// OwnerTaskID filters by the task that created them.
 	OwnerTaskID *Id
+	// Order defaults to ascending; cursors continue in their stored order.
+	Order ScanOrder
 }
 
-// SubmissionQuery filters an ordered scan of submissions (upstream
+// SubmissionQuery filters and orders a submission scan (upstream
 // SubmissionQuery).
 type SubmissionQuery struct {
 	// ConversationID filters by the submission's conversation.
 	ConversationID *Id
 	// Status filters by lifecycle status.
 	Status *string
+	// Order defaults to ascending; cursors continue in their stored order.
+	Order ScanOrder
 }
 
-// EntryQuery is the inclusive id bounds for a newest-first scan of one
-// conversation's fork-aware history.
+// EntryQuery is the inclusive ID bounds and order for one conversation's
+// fork-aware history scan.
 type EntryQuery struct {
 	ConversationID Id
 	// MinEntryID is the oldest entry id that may be returned.
 	MinEntryID *Id
 	// MaxEntryID is the newest entry id that may be returned.
 	MaxEntryID *Id
+	// Order defaults to descending; cursors continue in their stored order.
+	Order ScanOrder
 }
 
-// TaskQuery filters an ordered scan of durable task records.
+// TaskQuery filters and orders a scan of durable task records.
 type TaskQuery struct {
 	ConversationID *Id
 	Kind           *string
 	Status         *string
 	AbortRequested *bool
 	Background     *bool
+	// Order defaults to ascending; cursors continue in their stored order.
+	Order ScanOrder
 }
 
 // StorageWrite is one table or document mutation in an atomic storage commit.
@@ -638,8 +655,7 @@ type Storage interface {
 	// Conversation looks up one conversation by exact id.
 	Conversation(ctx context.Context, id Id) (*ConversationRecord, error)
 
-	// ScanConversations scans conversations matching the query in ascending id
-	// order.
+	// ScanConversations scans matching conversations in query.Order, defaulting to ascending ID order.
 	ScanConversations(ctx context.Context, query ConversationQuery, cursor Cursor, limit int) (Page[ConversationRecord], error)
 
 	// Entry looks up one global entry and the commit that persisted it.
@@ -649,21 +665,20 @@ type Storage interface {
 	// below the optional inclusive cutoff.
 	FindLatestHeadMarker(ctx context.Context, conversationID Id, atOrBeforeEntryID *Id) (*EntryRecord, error)
 
-	// ScanEntries scans the inclusive visible range newest-first.
+	// ScanEntries scans the inclusive visible range in query.Order, defaulting to descending ID order.
 	ScanEntries(ctx context.Context, query EntryQuery, cursor Cursor, limit int) (Page[EntryRecord], error)
 
 	// Task looks up the latest complete record for one task.
 	Task(ctx context.Context, id Id) (*TaskRecord, error)
 
-	// ScanTasks scans task records matching every supplied filter.
+	// ScanTasks scans matching task records in query.Order, defaulting to ascending ID order.
 	ScanTasks(ctx context.Context, query TaskQuery, cursor Cursor, limit int) (Page[TaskRecord], error)
 
 	// Submission looks up the latest complete record for one admitted
 	// submission.
 	Submission(ctx context.Context, id Id) (*SubmissionRecord, error)
 
-	// ScanSubmissions scans submissions matching the query in ascending id
-	// order.
+	// ScanSubmissions scans matching submissions in query.Order, defaulting to ascending ID order.
 	ScanSubmissions(ctx context.Context, query SubmissionQuery, cursor Cursor, limit int) (Page[SubmissionRecord], error)
 
 	// SubmissionByRequest finds a submission by its conversation-scoped host

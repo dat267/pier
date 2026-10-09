@@ -438,20 +438,20 @@ func (s *MemoryStorage) Conversation(ctx context.Context, id Id) (*ConversationR
 	return cloneConversation(s.state.conversations[id]), nil
 }
 
-// ScanConversations scans conversations matching the query in ascending id
-// order.
+// ScanConversations scans matching conversations in query.Order, defaulting to ascending ID order.
 func (s *MemoryStorage) ScanConversations(ctx context.Context, query ConversationQuery, cursor Cursor, limit int) (Page[ConversationRecord], error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.assertOpen(); err != nil {
 		return Page[ConversationRecord]{}, err
 	}
-	start := 0
-	if after := cursorID(cursor); after != nil {
-		start = upperBound(s.state.conversationIDs, *after)
+	start, err := scanStart(query.Order, cursor, ScanOrderAscending)
+	if err != nil {
+		return Page[ConversationRecord]{}, err
 	}
 	values := make([]ConversationRecord, 0, limit+1)
-	for _, id := range s.state.conversationIDs[start:] {
+	for index, end, step := scanIndexRange(s.state.conversationIDs, start); index != end; index += step {
+		id := s.state.conversationIDs[index]
 		record := s.state.conversations[id]
 		if query.OwnerConversationID != nil && (record.Owner == nil || record.Owner.ConversationID != *query.OwnerConversationID) {
 			continue
@@ -464,7 +464,7 @@ func (s *MemoryStorage) ScanConversations(ctx context.Context, query Conversatio
 			break
 		}
 	}
-	return pageOf(values, limit, func(value ConversationRecord) Id { return value.ID }), nil
+	return pageOfOrder(values, limit, func(value ConversationRecord) Id { return value.ID }, start.order), nil
 }
 
 // Entry looks up one entry and its commit sequence.
@@ -516,33 +516,47 @@ func (s *MemoryStorage) FindLatestHeadMarker(ctx context.Context, conversationID
 	}
 }
 
-// ScanEntries scans the inclusive visible range newest-first.
+// ScanEntries scans the inclusive visible range in query.Order, defaulting to descending ID order.
 func (s *MemoryStorage) ScanEntries(ctx context.Context, query EntryQuery, cursor Cursor, limit int) (Page[EntryRecord], error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.assertOpen(); err != nil {
 		return Page[EntryRecord]{}, err
 	}
+	start, err := scanStart(query.Order, cursor, ScanOrderDescending)
+	if err != nil {
+		return Page[EntryRecord]{}, err
+	}
 	maxEntryID := Id(math.MaxInt64)
 	if query.MaxEntryID != nil {
 		maxEntryID = *query.MaxEntryID
-	}
-	if after := cursorID(cursor); after != nil && *after-1 < maxEntryID {
-		maxEntryID = *after - 1
 	}
 	minEntryID := Id(math.MinInt64)
 	if query.MinEntryID != nil {
 		minEntryID = *query.MinEntryID
 	}
+	if start.after != nil {
+		if start.order == ScanOrderDescending && *start.after-1 < maxEntryID {
+			maxEntryID = *start.after - 1
+		} else if start.order == ScanOrderAscending && *start.after+1 > minEntryID {
+			minEntryID = *start.after + 1
+		}
+	}
 
 	var visible []EntryRecord
-	for _, entry := range s.visibleEntries(query.ConversationID, minEntryID, maxEntryID) {
+	var entries []EntryRecord
+	if start.order == ScanOrderAscending {
+		entries = s.visibleEntriesAscending(query.ConversationID, minEntryID, maxEntryID)
+	} else {
+		entries = s.visibleEntries(query.ConversationID, minEntryID, maxEntryID)
+	}
+	for _, entry := range entries {
 		visible = append(visible, entry)
 		if len(visible) > limit {
 			break
 		}
 	}
-	return pageOf(visible, limit, func(value EntryRecord) Id { return value.ID }), nil
+	return pageOfOrder(visible, limit, func(value EntryRecord) Id { return value.ID }, start.order), nil
 }
 
 // Task looks up the latest record for one task.
@@ -555,23 +569,23 @@ func (s *MemoryStorage) Task(ctx context.Context, id Id) (*TaskRecord, error) {
 	return cloneTask(s.state.tasks[id]), nil
 }
 
-// ScanTasks scans task records matching every supplied filter.
+// ScanTasks scans matching task records in query.Order, defaulting to ascending ID order.
 func (s *MemoryStorage) ScanTasks(ctx context.Context, query TaskQuery, cursor Cursor, limit int) (Page[TaskRecord], error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.assertOpen(); err != nil {
 		return Page[TaskRecord]{}, err
 	}
+	start, err := scanStart(query.Order, cursor, ScanOrderAscending)
+	if err != nil {
+		return Page[TaskRecord]{}, err
+	}
 	ids := s.state.taskIDs
 	if query.Status != nil {
 		ids = s.state.taskIDsByStatus[*query.Status]
 	}
-	start := 0
-	if after := cursorID(cursor); after != nil {
-		start = upperBound(ids, *after)
-	}
 	var values []TaskRecord
-	for index := start; index < len(ids) && len(values) <= limit; index++ {
+	for index, end, step := scanIndexRange(ids, start); index != end; index += step {
 		value := s.state.tasks[ids[index]]
 		if query.ConversationID != nil && value.ConversationID != *query.ConversationID {
 			continue
@@ -586,23 +600,26 @@ func (s *MemoryStorage) ScanTasks(ctx context.Context, query TaskQuery, cursor C
 			continue
 		}
 		values = append(values, *value)
+		if len(values) > limit {
+			break
+		}
 	}
-	return pageOf(values, limit, func(value TaskRecord) Id { return value.ID }), nil
+	return pageOfOrder(values, limit, func(value TaskRecord) Id { return value.ID }, start.order), nil
 }
 
-// ScanSubmissions scans submissions matching the query in ascending id order.
+// ScanSubmissions scans matching submissions in query.Order, defaulting to ascending ID order.
 func (s *MemoryStorage) ScanSubmissions(ctx context.Context, query SubmissionQuery, cursor Cursor, limit int) (Page[SubmissionRecord], error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.assertOpen(); err != nil {
 		return Page[SubmissionRecord]{}, err
 	}
-	start := 0
-	if after := cursorID(cursor); after != nil {
-		start = upperBound(s.state.submissionIDs, *after)
+	start, err := scanStart(query.Order, cursor, ScanOrderAscending)
+	if err != nil {
+		return Page[SubmissionRecord]{}, err
 	}
 	var values []SubmissionRecord
-	for index := start; index < len(s.state.submissionIDs) && len(values) <= limit; index++ {
+	for index, end, step := scanIndexRange(s.state.submissionIDs, start); index != end; index += step {
 		value := s.state.submissions[s.state.submissionIDs[index]]
 		if query.ConversationID != nil && value.ConversationID != *query.ConversationID {
 			continue
@@ -611,8 +628,11 @@ func (s *MemoryStorage) ScanSubmissions(ctx context.Context, query SubmissionQue
 			continue
 		}
 		values = append(values, *value)
+		if len(values) > limit {
+			break
+		}
 	}
-	return pageOf(values, limit, func(value SubmissionRecord) Id { return value.ID }), nil
+	return pageOfOrder(values, limit, func(value SubmissionRecord) Id { return value.ID }, start.order), nil
 }
 
 // Submission looks up one submission.
@@ -682,6 +702,46 @@ func (s *MemoryStorage) visibleEntries(conversationID Id, minEntryID, maxEntryID
 		currentID = conversation.Parent.ConversationID
 	}
 	return out
+}
+
+// visibleEntriesAscending yields the fork-aware visible range oldest-first.
+func (s *MemoryStorage) visibleEntriesAscending(conversationID Id, minEntryID, maxEntryID Id) []EntryRecord {
+	if _, ok := s.state.conversations[conversationID]; !ok {
+		return nil
+	}
+	type segment struct {
+		conversationID Id
+		upper          Id
+	}
+	segments := make([]segment, 0)
+	currentID := conversationID
+	upperEntryID := maxEntryID
+	for {
+		segments = append(segments, segment{conversationID: currentID, upper: upperEntryID})
+		conversation := s.state.conversations[currentID]
+		if conversation.Parent == nil {
+			break
+		}
+		if conversation.Parent.At < upperEntryID {
+			upperEntryID = conversation.Parent.At
+		}
+		if upperEntryID < minEntryID {
+			break
+		}
+		currentID = conversation.Parent.ConversationID
+	}
+	var entries []EntryRecord
+	for index := len(segments) - 1; index >= 0; index-- {
+		current := segments[index]
+		ids := s.state.entryIDs[current.conversationID]
+		for _, id := range ids[lowerBound(ids, minEntryID):] {
+			if id > current.upper {
+				break
+			}
+			entries = append(entries, *s.state.entries[id])
+		}
+	}
+	return entries
 }
 
 // checkImmutableIDs enforces global id ownership and immutable

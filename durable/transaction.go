@@ -188,7 +188,7 @@ func (tx *Transaction) Task(id Id) (*TaskRecord, error) {
 	return result, nil
 }
 
-// ScanConversations scans conversations in ascending id order.
+// ScanConversations scans matching conversations in query.Order, defaulting to ascending ID order.
 func (tx *Transaction) ScanConversations(query ConversationQuery, limit int, cursor Cursor) (Page[ConversationRecord], error) {
 	var result Page[ConversationRecord]
 	if err := tx.read("scanConversations", func() error {
@@ -201,7 +201,7 @@ func (tx *Transaction) ScanConversations(query ConversationQuery, limit int, cur
 	return result, nil
 }
 
-// ScanEntries scans the visible entry range newest-first.
+// ScanEntries scans the visible entry range in query.Order, defaulting to descending ID order.
 func (tx *Transaction) ScanEntries(query EntryQuery, limit int, cursor Cursor) (Page[EntryRecord], error) {
 	var result Page[EntryRecord]
 	if err := tx.read("scanEntries", func() error {
@@ -227,7 +227,7 @@ func (tx *Transaction) LatestHeadMarker(conversationID Id) (*EntryRecord, error)
 	return result, nil
 }
 
-// ScanTasks scans task records matching every supplied filter.
+// ScanTasks scans matching task records in query.Order, defaulting to ascending ID order.
 func (tx *Transaction) ScanTasks(query TaskQuery, limit int, cursor Cursor) (Page[TaskRecord], error) {
 	var result Page[TaskRecord]
 	if err := tx.read("scanTasks", func() error {

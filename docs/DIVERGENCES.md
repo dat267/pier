@@ -6,7 +6,7 @@ behaviour with no direct Go equivalent, or because a reference defect is fixed
 here; others are choices of this project's own. D-row numbers live in code
 comments at the point of divergence; this file is the log, and it is
 representative: the rows below carry a written-up rationale, while the rest live
-only as the code comment that introduced them. The range is **D1–D212**.
+only as the code comment that introduced them. The range is **D1–D213**.
 - D188 — the durable execution environment (`env/index.ts`, `env/node.ts`)
   returns failures as Go errors (`*FileError`, `*ExecutionError`, the upstream
   codes preserved) where the reference returns a `Result` value; the `Result`
@@ -1587,3 +1587,15 @@ messages and persisted entries in place; `ContextView.Contributions` also retain
 committed order. `TestDeriveContextLeadsWithInitialSystemMessage` covers initial
 user messages, a later assistant and system message, and unchanged contribution
 order.
+
+## D213. SQLite ordered scans leave first-page ID bounds open
+
+Reference: `packages/durable/src/storage/sqlite/storage.ts` `scanSql` uses
+`id < Number.MAX_SAFE_INTEGER` for a descending scan without a cursor. This
+omits the valid maximum safe ID, while memory scans include it, so SQLite's first
+page can disagree with memory.
+
+The Go SQLite scans omit cursor predicates on first pages and add strict `>` or
+`<` predicates only when continuing a cursor. `TestConformanceScansIntegerBoundaryIDsInBothOrders`
+asserts the maximum safe ID survives ascending and descending scans across
+backends.

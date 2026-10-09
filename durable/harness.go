@@ -464,7 +464,7 @@ func (c *HarnessConversation) Context(ctx chord.Context) (ContextView, error) {
 	return ReadContext(ctx, c.host.harness.Session, c.host.storage, c.id, nil)
 }
 
-// Entries scans the conversation's visible history newest-first.
+// Entries scans visible history in query.Order, defaulting to newest-first.
 func (c *HarnessConversation) Entries(ctx chord.Context, query EntryQuery, limit int, cursor Cursor) (Page[EntryRecord], error) {
 	query.ConversationID = c.id
 	var page Page[EntryRecord]

@@ -376,21 +376,22 @@ func (s *SqliteStorage) Conversation(ctx context.Context, id Id) (*ConversationR
 	return unmarshalRecord[ConversationRecord](record)
 }
 
-// ScanConversations scans conversations in ascending id order.
+// ScanConversations scans matching conversations in query.Order, defaulting to ascending ID order.
 func (s *SqliteStorage) ScanConversations(ctx context.Context, filter ConversationQuery, cursor Cursor, limit int) (Page[ConversationRecord], error) {
 	if err := s.assertOpen(); err != nil {
 		return Page[ConversationRecord]{}, err
 	}
-	after, err := sqliteCursorID(cursor)
+	start, err := scanStart(filter.Order, cursor, ScanOrderAscending)
 	if err != nil {
 		return Page[ConversationRecord]{}, err
 	}
 	query := "SELECT id, record FROM conversations"
+	clause, after, direction := scanSQL(start)
 	conditions := []string{}
 	args := []any{}
-	if after != nil {
-		conditions = append(conditions, "id > ?")
-		args = append(args, *after)
+	if clause != "" {
+		conditions = append(conditions, clause)
+		args = append(args, after)
 	}
 	if filter.OwnerConversationID != nil {
 		conditions = append(conditions, "owner_conversation_id = ?")
@@ -403,7 +404,7 @@ func (s *SqliteStorage) ScanConversations(ctx context.Context, filter Conversati
 	if len(conditions) > 0 {
 		query += " WHERE " + joinConditions(conditions)
 	}
-	query += " ORDER BY id LIMIT ?"
+	query += " ORDER BY id " + direction + " LIMIT ?"
 	args = append(args, limit+1)
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -426,7 +427,7 @@ func (s *SqliteStorage) ScanConversations(ctx context.Context, filter Conversati
 	if err := rows.Err(); err != nil {
 		return Page[ConversationRecord]{}, err
 	}
-	return pageOf(values, limit, func(value ConversationRecord) Id { return value.ID }), nil
+	return pageOfOrder(values, limit, func(value ConversationRecord) Id { return value.ID }, start.order), nil
 }
 
 // Entry looks up one entry and its commit sequence.
@@ -496,26 +497,15 @@ func (s *SqliteStorage) FindLatestHeadMarker(ctx context.Context, conversationID
 	}
 }
 
-// ScanEntries scans the inclusive visible range newest-first (fork-aware,
-// like the memory backend's visibleEntries walk).
+// ScanEntries scans the inclusive visible range in query.Order (fork-aware,
+// defaulting to descending ID order like the memory backend's visibleEntries walk).
 func (s *SqliteStorage) ScanEntries(ctx context.Context, query EntryQuery, cursor Cursor, limit int) (Page[EntryRecord], error) {
 	if err := s.assertOpen(); err != nil {
 		return Page[EntryRecord]{}, err
 	}
-	maxEntryID := Id(math.MaxInt64)
-	if query.MaxEntryID != nil {
-		maxEntryID = *query.MaxEntryID
-	}
-	after, err := sqliteCursorID(cursor)
+	start, err := scanStart(query.Order, cursor, ScanOrderDescending)
 	if err != nil {
 		return Page[EntryRecord]{}, err
-	}
-	if after != nil && *after-1 < maxEntryID {
-		maxEntryID = *after - 1
-	}
-	minEntryID := Id(math.MinInt64)
-	if query.MinEntryID != nil {
-		minEntryID = *query.MinEntryID
 	}
 	exists, err := s.conversationExists(ctx, query.ConversationID)
 	if err != nil {
@@ -523,6 +513,20 @@ func (s *SqliteStorage) ScanEntries(ctx context.Context, query EntryQuery, curso
 	}
 	if !exists {
 		return Page[EntryRecord]{}, nil
+	}
+	if start.order == ScanOrderAscending {
+		return s.scanEntriesAscending(ctx, query, limit, start.after)
+	}
+	maxEntryID := Id(math.MaxInt64)
+	if query.MaxEntryID != nil {
+		maxEntryID = *query.MaxEntryID
+	}
+	if start.after != nil && *start.after-1 < maxEntryID {
+		maxEntryID = *start.after - 1
+	}
+	minEntryID := Id(math.MinInt64)
+	if query.MinEntryID != nil {
+		minEntryID = *query.MinEntryID
 	}
 	var visible []EntryRecord
 	currentID := query.ConversationID
@@ -579,7 +583,101 @@ func (s *SqliteStorage) ScanEntries(ctx context.Context, query EntryQuery, curso
 		}
 		currentID = parent.ConversationID
 	}
-	return pageOf(visible, limit, func(value EntryRecord) Id { return value.ID }), nil
+	return pageOfOrder(visible, limit, func(value EntryRecord) Id { return value.ID }, ScanOrderDescending), nil
+}
+
+func (s *SqliteStorage) scanEntriesAscending(ctx context.Context, query EntryQuery, limit int, after *Id) (Page[EntryRecord], error) {
+	type segment struct {
+		conversationID Id
+		upper          *Id
+	}
+	segments := make([]segment, 0)
+	conversationID := query.ConversationID
+	conversation, err := s.Conversation(ctx, conversationID)
+	if err != nil {
+		return Page[EntryRecord]{}, err
+	}
+	if conversation == nil {
+		return Page[EntryRecord]{}, fmt.Errorf("Unknown conversation: %d", conversationID)
+	}
+	upper := query.MaxEntryID
+	for {
+		segments = append(segments, segment{conversationID: conversationID, upper: upper})
+		if conversation.Parent == nil {
+			break
+		}
+		parentAt := conversation.Parent.At
+		if upper == nil || parentAt < *upper {
+			upper = &parentAt
+		}
+		if query.MinEntryID != nil && *upper < *query.MinEntryID {
+			break
+		}
+		conversationID = conversation.Parent.ConversationID
+		conversation, err = s.Conversation(ctx, conversationID)
+		if err != nil {
+			return Page[EntryRecord]{}, err
+		}
+		if conversation == nil {
+			return Page[EntryRecord]{}, fmt.Errorf("Unknown conversation: %d", conversationID)
+		}
+	}
+	lower := query.MinEntryID
+	if after != nil {
+		afterNext := *after + 1
+		if lower == nil || afterNext > *lower {
+			lower = &afterNext
+		}
+	}
+	values := make([]EntryRecord, 0, limit+1)
+	for index := len(segments) - 1; index >= 0; index-- {
+		current := segments[index]
+		if lower != nil && current.upper != nil && *lower > *current.upper {
+			continue
+		}
+		conditions := []string{"conversation_id = ?"}
+		args := []any{current.conversationID}
+		if lower != nil {
+			conditions = append(conditions, "id >= ?")
+			args = append(args, *lower)
+		}
+		if current.upper != nil {
+			conditions = append(conditions, "id <= ?")
+			args = append(args, *current.upper)
+		}
+		args = append(args, limit+1-len(values))
+		rows, err := s.db.QueryContext(ctx,
+			"SELECT id, record FROM entries WHERE "+strings.Join(conditions, " AND ")+" ORDER BY id ASC LIMIT ?",
+			args...)
+		if err != nil {
+			return Page[EntryRecord]{}, err
+		}
+		for rows.Next() {
+			var id Id
+			var record string
+			if err := rows.Scan(&id, &record); err != nil {
+				rows.Close()
+				return Page[EntryRecord]{}, err
+			}
+			entry, err := unmarshalRecord[EntryRecord](record)
+			if err != nil {
+				rows.Close()
+				return Page[EntryRecord]{}, err
+			}
+			values = append(values, *entry)
+		}
+		rowsErr := rows.Err()
+		if err := rows.Close(); err != nil && rowsErr == nil {
+			rowsErr = err
+		}
+		if rowsErr != nil {
+			return Page[EntryRecord]{}, rowsErr
+		}
+		if len(values) > limit {
+			break
+		}
+	}
+	return pageOfOrder(values, limit, func(value EntryRecord) Id { return value.ID }, ScanOrderAscending), nil
 }
 
 func (s *SqliteStorage) conversationExists(ctx context.Context, id Id) (bool, error) {
@@ -624,13 +722,22 @@ func (s *SqliteStorage) Task(ctx context.Context, id Id) (*TaskRecord, error) {
 	return unmarshalRecord[TaskRecord](record)
 }
 
-// ScanTasks scans task records matching every supplied filter.
+// ScanTasks scans matching task records in query.Order, defaulting to ascending ID order.
 func (s *SqliteStorage) ScanTasks(ctx context.Context, query TaskQuery, cursor Cursor, limit int) (Page[TaskRecord], error) {
 	if err := s.assertOpen(); err != nil {
 		return Page[TaskRecord]{}, err
 	}
+	start, err := scanStart(query.Order, cursor, ScanOrderAscending)
+	if err != nil {
+		return Page[TaskRecord]{}, err
+	}
+	clause, after, direction := scanSQL(start)
 	conditions := []string{"1 = 1"}
 	args := []any{}
+	if clause != "" {
+		conditions = append(conditions, clause)
+		args = append(args, after)
+	}
 	if query.ConversationID != nil {
 		conditions = append(conditions, "conversation_id = ?")
 		args = append(args, *query.ConversationID)
@@ -651,17 +758,9 @@ func (s *SqliteStorage) ScanTasks(ctx context.Context, query TaskQuery, cursor C
 		conditions = append(conditions, "background = ?")
 		args = append(args, boolInt(*query.Background))
 	}
-	after, err := sqliteCursorID(cursor)
-	if err != nil {
-		return Page[TaskRecord]{}, err
-	}
-	if after != nil {
-		conditions = append(conditions, "id > ?")
-		args = append(args, *after)
-	}
 	args = append(args, limit+1)
 	rows, err := s.db.QueryContext(ctx,
-		"SELECT record FROM tasks WHERE "+strings.Join(conditions, " AND ")+" ORDER BY id LIMIT ?",
+		"SELECT record FROM tasks WHERE "+strings.Join(conditions, " AND ")+" ORDER BY id "+direction+" LIMIT ?",
 		args...)
 	if err != nil {
 		return Page[TaskRecord]{}, err
@@ -682,24 +781,25 @@ func (s *SqliteStorage) ScanTasks(ctx context.Context, query TaskQuery, cursor C
 	if err := rows.Err(); err != nil {
 		return Page[TaskRecord]{}, err
 	}
-	return pageOf(values, limit, func(value TaskRecord) Id { return value.ID }), nil
+	return pageOfOrder(values, limit, func(value TaskRecord) Id { return value.ID }, start.order), nil
 }
 
-// ScanSubmissions scans submissions matching the query in ascending id order.
+// ScanSubmissions scans matching submissions in query.Order, defaulting to ascending ID order.
 func (s *SqliteStorage) ScanSubmissions(ctx context.Context, filter SubmissionQuery, cursor Cursor, limit int) (Page[SubmissionRecord], error) {
 	if err := s.assertOpen(); err != nil {
 		return Page[SubmissionRecord]{}, err
 	}
-	after, err := sqliteCursorID(cursor)
+	start, err := scanStart(filter.Order, cursor, ScanOrderAscending)
 	if err != nil {
 		return Page[SubmissionRecord]{}, err
 	}
 	query := "SELECT id, record FROM submissions"
+	clause, after, direction := scanSQL(start)
 	conditions := []string{}
 	args := []any{}
-	if after != nil {
-		conditions = append(conditions, "id > ?")
-		args = append(args, *after)
+	if clause != "" {
+		conditions = append(conditions, clause)
+		args = append(args, after)
 	}
 	if filter.ConversationID != nil {
 		conditions = append(conditions, "conversation_id = ?")
@@ -712,7 +812,7 @@ func (s *SqliteStorage) ScanSubmissions(ctx context.Context, filter SubmissionQu
 	if len(conditions) > 0 {
 		query += " WHERE " + joinConditions(conditions)
 	}
-	query += " ORDER BY id LIMIT ?"
+	query += " ORDER BY id " + direction + " LIMIT ?"
 	args = append(args, limit+1)
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -735,7 +835,7 @@ func (s *SqliteStorage) ScanSubmissions(ctx context.Context, filter SubmissionQu
 	if err := rows.Err(); err != nil {
 		return Page[SubmissionRecord]{}, err
 	}
-	return pageOf(values, limit, func(value SubmissionRecord) Id { return value.ID }), nil
+	return pageOfOrder(values, limit, func(value SubmissionRecord) Id { return value.ID }, start.order), nil
 }
 
 // Submission looks up the latest record for one submission.

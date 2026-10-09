@@ -761,6 +761,218 @@ func TestConformancePaginatesConversationsByCursor(t *testing.T) {
 	})
 }
 
+// Port of "scans tables in either ID order and continues a cursor in its order"
+// from packages/durable/src/testing/storage-conformance.ts at pi v1.1.0 commit 4dd2af42c.
+func TestConformanceScansConversationsDescendingAndContinuesCursorOrder(t *testing.T) {
+	conformance(t, func(t *testing.T, storage Storage) {
+		ctx := context.Background()
+		for _, id := range []Id{2, 4, 6, 8} {
+			mustCommit(t, storage, conversationWrite(id))
+		}
+		first, err := storage.ScanConversations(ctx, ConversationQuery{Order: ScanOrderDescending}, nil, 2)
+		if err != nil || len(first.Items) != 2 || first.Items[0].ID != 8 || first.Items[1].ID != 6 || first.Next == nil {
+			t.Fatalf("descending first page = %+v, %v", first, err)
+		}
+		encoded, err := json.Marshal(first.Next)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var cursor Cursor
+		if err := json.Unmarshal(encoded, &cursor); err != nil {
+			t.Fatal(err)
+		}
+		second, err := storage.ScanConversations(ctx, ConversationQuery{}, cursor, 2)
+		if err != nil || len(second.Items) != 2 || second.Items[0].ID != 4 || second.Items[1].ID != 2 || second.Next != nil {
+			t.Fatalf("cursor continuation = %+v, %v", second, err)
+		}
+	})
+}
+
+// D213 regression for the SQLite first-page sentinel in packages/durable/src/storage/sqlite/storage.ts.
+func TestConformanceScansIntegerBoundaryIDsInBothOrders(t *testing.T) {
+	conformance(t, func(t *testing.T, storage Storage) {
+		for _, id := range []Id{2, MaxSafeInteger} {
+			mustCommit(t, storage, conversationWrite(id))
+		}
+		ascending, err := storage.ScanConversations(context.Background(), ConversationQuery{Order: ScanOrderAscending}, nil, 2)
+		if err != nil || len(ascending.Items) != 2 || ascending.Items[0].ID != 2 || ascending.Items[1].ID != MaxSafeInteger {
+			t.Fatalf("ascending boundary IDs = %+v, %v", ascending.Items, err)
+		}
+		descending, err := storage.ScanConversations(context.Background(), ConversationQuery{Order: ScanOrderDescending}, nil, 2)
+		if err != nil || len(descending.Items) != 2 || descending.Items[0].ID != MaxSafeInteger || descending.Items[1].ID != 2 {
+			t.Fatalf("descending boundary IDs = %+v, %v", descending.Items, err)
+		}
+	})
+}
+
+// Port of "scans tables in either ID order and continues a cursor in its order"
+// from packages/durable/src/testing/storage-conformance.ts at pi v1.1.0 commit 4dd2af42c.
+func TestConformanceScansTasksDescendingAndContinuesCursorOrder(t *testing.T) {
+	conformance(t, func(t *testing.T, storage Storage) {
+		ctx := context.Background()
+		conversationID := Id(2)
+		mustCommit(t, storage, conversationWrite(conversationID))
+		for _, id := range []Id{10, 12, 14, 16} {
+			mustCommit(t, storage, StorageWrite{Type: "task", Task: pendingTaskRecord(id, conversationID)})
+		}
+		first, err := storage.ScanTasks(ctx, TaskQuery{Order: ScanOrderDescending}, nil, 2)
+		if err != nil || len(first.Items) != 2 || first.Items[0].ID != 16 || first.Items[1].ID != 14 || first.Next == nil {
+			t.Fatalf("descending first page = %+v, %v", first, err)
+		}
+		second, err := storage.ScanTasks(ctx, TaskQuery{}, first.Next, 2)
+		if err != nil || len(second.Items) != 2 || second.Items[0].ID != 12 || second.Items[1].ID != 10 || second.Next != nil {
+			t.Fatalf("cursor continuation = %+v, %v", second, err)
+		}
+	})
+}
+
+// Port of "scans tables in either ID order and continues a cursor in its order"
+// from packages/durable/src/testing/storage-conformance.ts at pi v1.1.0 commit 4dd2af42c.
+func TestConformanceScansSubmissionsDescendingAndContinuesCursorOrder(t *testing.T) {
+	conformance(t, func(t *testing.T, storage Storage) {
+		ctx := context.Background()
+		conversationID := Id(2)
+		mustCommit(t, storage, conversationWrite(conversationID))
+		for _, id := range []Id{10, 12, 14, 16} {
+			mustCommit(t, storage, StorageWrite{Type: "submission", Submission: &SubmissionRecord{
+				ID: id, ConversationID: conversationID, Type: SubmissionTypeInput, Status: SubmissionQueued,
+			}})
+		}
+		first, err := storage.ScanSubmissions(ctx, SubmissionQuery{Order: ScanOrderDescending}, nil, 2)
+		if err != nil || len(first.Items) != 2 || first.Items[0].ID != 16 || first.Items[1].ID != 14 || first.Next == nil {
+			t.Fatalf("descending first page = %+v, %v", first, err)
+		}
+		second, err := storage.ScanSubmissions(ctx, SubmissionQuery{}, first.Next, 2)
+		if err != nil || len(second.Items) != 2 || second.Items[0].ID != 12 || second.Items[1].ID != 10 || second.Next != nil {
+			t.Fatalf("cursor continuation = %+v, %v", second, err)
+		}
+	})
+}
+
+// Port of ascending fork-history cases from
+// packages/durable/src/testing/storage-conformance.ts at pi v1.1.0 commit 4dd2af42c.
+func TestConformanceScansForkHistoryAscending(t *testing.T) {
+	conformance(t, func(t *testing.T, storage Storage) {
+		ctx := context.Background()
+		root, child, grandchild := Id(2), Id(30), Id(50)
+		mustCommit(t, storage,
+			conversationWrite(root),
+			StorageWrite{Type: "entry", Entry: testEntry(10, root, "message", nil)},
+			StorageWrite{Type: "entry", Entry: testEntry(20, root, "message", nil)},
+			StorageWrite{Type: "entry", Entry: testEntry(25, root, "message", nil)},
+		)
+		mustCommit(t, storage,
+			StorageWrite{Type: "conversation", Conversation: &ConversationRecord{
+				ID: child, Parent: &ConversationParent{ConversationID: root, At: 20},
+			}},
+			StorageWrite{Type: "entry", Entry: testEntry(40, child, "message", nil)},
+			StorageWrite{Type: "entry", Entry: testEntry(45, child, "message", nil)},
+		)
+		mustCommit(t, storage,
+			StorageWrite{Type: "conversation", Conversation: &ConversationRecord{
+				ID: grandchild, Parent: &ConversationParent{ConversationID: child, At: 40},
+			}},
+			StorageWrite{Type: "entry", Entry: testEntry(60, grandchild, "message", nil)},
+		)
+		first, err := storage.ScanEntries(ctx, EntryQuery{ConversationID: grandchild, Order: ScanOrderAscending}, nil, 2)
+		if err != nil || !sameIDs(first.Items, []Id{10, 20}) || first.Next == nil {
+			t.Fatalf("ascending first page = %+v, %v", first.Items, err)
+		}
+		second, err := storage.ScanEntries(ctx, EntryQuery{ConversationID: grandchild}, first.Next, 2)
+		if err != nil || !sameIDs(second.Items, []Id{40, 60}) || second.Next != nil {
+			t.Fatalf("ascending cursor continuation = %+v, %v", second.Items, err)
+		}
+		minEntry, maxEntry := Id(20), Id(40)
+		bounded, err := storage.ScanEntries(ctx, EntryQuery{
+			ConversationID: grandchild, MinEntryID: &minEntry, MaxEntryID: &maxEntry, Order: ScanOrderAscending,
+		}, nil, 10)
+		if err != nil || !sameIDs(bounded.Items, []Id{20, 40}) {
+			t.Fatalf("ascending bounded history = %+v, %v", bounded.Items, err)
+		}
+	})
+}
+
+// Port of cursor validation from packages/durable/src/storage/scan.ts at pi v1.1.0
+// commit 4dd2af42c.
+func TestConformanceRejectsNonNumericCursorID(t *testing.T) {
+	conformance(t, func(t *testing.T, storage Storage) {
+		mustCommit(t, storage, conversationWrite(2))
+		cursor := Cursor{"after": json.RawMessage(`"2"`)}
+		_, err := storage.ScanConversations(context.Background(), ConversationQuery{}, cursor, 1)
+		if err == nil || !strings.Contains(err.Error(), "Invalid storage cursor") {
+			t.Fatalf("invalid cursor ID error = %v", err)
+		}
+	})
+}
+
+// Port of legacy cursor fallback from packages/durable/src/storage/scan.ts at pi v1.1.0
+// commit 4dd2af42c.
+func TestConformanceLegacyCursorsUseDefaultScanOrder(t *testing.T) {
+	conformance(t, func(t *testing.T, storage Storage) {
+		ctx := context.Background()
+		for _, id := range []Id{2, 4, 6} {
+			mustCommit(t, storage, conversationWrite(id))
+		}
+		mustCommit(t, storage,
+			StorageWrite{Type: "entry", Entry: testEntry(10, 2, "message", nil)},
+			StorageWrite{Type: "entry", Entry: testEntry(20, 2, "message", nil)},
+			StorageWrite{Type: "entry", Entry: testEntry(30, 2, "message", nil)},
+		)
+		conversations, err := storage.ScanConversations(ctx, ConversationQuery{}, CursorAfter(2), 2)
+		if err != nil || len(conversations.Items) != 2 || conversations.Items[0].ID != 4 || conversations.Items[1].ID != 6 {
+			t.Fatalf("legacy conversation cursor = %+v, %v", conversations.Items, err)
+		}
+		entries, err := storage.ScanEntries(ctx, EntryQuery{ConversationID: 2}, CursorAfter(20), 2)
+		if err != nil || !sameIDs(entries.Items, []Id{10}) {
+			t.Fatalf("legacy entry cursor = %+v, %v", entries.Items, err)
+		}
+	})
+}
+
+// Port of cursor validation from packages/durable/src/storage/scan.ts at pi v1.1.0
+// commit 4dd2af42c.
+func TestConformanceRejectsInvalidCursorOrder(t *testing.T) {
+	conformance(t, func(t *testing.T, storage Storage) {
+		mustCommit(t, storage, conversationWrite(2))
+		cursor := Cursor{"after": json.RawMessage(`2`), "order": json.RawMessage(`"sideways"`)}
+		_, err := storage.ScanConversations(context.Background(), ConversationQuery{}, cursor, 1)
+		if err == nil || !strings.Contains(err.Error(), "Invalid storage cursor") {
+			t.Fatalf("invalid cursor error = %v", err)
+		}
+	})
+}
+
+// Port of scan-order validation from packages/durable/src/storage/scan.ts at pi v1.1.0
+// commit 4dd2af42c.
+func TestConformanceRejectsInvalidScanOrder(t *testing.T) {
+	conformance(t, func(t *testing.T, storage Storage) {
+		mustCommit(t, storage, conversationWrite(2))
+		_, err := storage.ScanConversations(context.Background(), ConversationQuery{Order: ScanOrder("sideways")}, nil, 1)
+		if err == nil || !strings.Contains(err.Error(), "Invalid scan order") {
+			t.Fatalf("invalid scan order error = %v", err)
+		}
+	})
+}
+
+// Port of cursor-order mismatch validation from packages/durable/src/storage/scan.ts at pi v1.1.0
+// commit 4dd2af42c.
+func TestConformanceRejectsCursorWithDifferentScanOrder(t *testing.T) {
+	conformance(t, func(t *testing.T, storage Storage) {
+		ctx := context.Background()
+		for _, id := range []Id{2, 4, 6} {
+			mustCommit(t, storage, conversationWrite(id))
+		}
+		first, err := storage.ScanConversations(ctx, ConversationQuery{Order: ScanOrderDescending}, nil, 1)
+		if err != nil || first.Next == nil {
+			t.Fatalf("first page = %+v, %v", first, err)
+		}
+		_, err = storage.ScanConversations(ctx, ConversationQuery{Order: ScanOrderAscending}, first.Next, 1)
+		if err == nil || !strings.Contains(err.Error(), "cursor") {
+			t.Fatalf("mismatched cursor order error = %v", err)
+		}
+	})
+}
+
 // TestConformanceRejectsAfterClose covers upstream's "rejects every operation
 // after close".
 func TestConformanceRejectsAfterClose(t *testing.T) {
