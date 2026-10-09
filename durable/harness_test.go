@@ -11,7 +11,8 @@ import (
 func openTestHarness(t *testing.T) (*Harness, Storage) {
 	t.Helper()
 	storage := NewMemoryStorage()
-	harness, err := OpenHarness(storage, HarnessOptions{Registry: NewRegistry()}, context.Background())
+	// Pin fixture timestamps; tests that need a changing clock pass one explicitly.
+	harness, err := OpenHarness(storage, HarnessOptions{Registry: NewRegistry(), Now: func() int64 { return 0 }}, context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}

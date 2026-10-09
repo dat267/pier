@@ -517,8 +517,8 @@ func TestSubmissionJSONShape(t *testing.T) {
 	}
 }
 
-// TestTaskJSONShape pins the task record shape to upstream TaskRecord: the
-// owner edge, the waiting join fields and the completing outcome.
+// TestTaskJSONShape pins upstream TaskRecord key order for ownership, waits,
+// outcomes and appended lifecycle timestamps.
 func TestTaskJSONShape(t *testing.T) {
 	owner := Id(4)
 	waiting := TaskRecord{
@@ -545,6 +545,37 @@ func TestTaskJSONShape(t *testing.T) {
 	want = `{"id":8,"conversationId":2,"kind":"t","version":1,"input":{},"background":false,"abortRequested":false,"state":{"status":"completing","outcome":{"status":"completed","result":1}}}`
 	if encoded != want {
 		t.Fatalf("json = %s\nwant %s", encoded, want)
+	}
+
+	// session/transaction.ts #stampTimes appends lifecycle keys after prior
+	// TaskRecord keys (pi v1.1.0, commit 36a686ee8).
+	startedAt, endedAt := int64(1_000), int64(2_000)
+	terminal := TaskRecord{
+		ID: 9, ConversationID: 2, Kind: "t", Version: 1, Input: json.RawMessage(`{}`),
+		State:     TaskState{Status: TaskTerminal, Outcome: &TaskOutcome{Status: OutcomeCompleted, Result: json.RawMessage(`1`)}},
+		StartedAt: &startedAt, EndedAt: &endedAt,
+	}
+	encoded, err = marshalJSONValue(terminal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want = `{"id":9,"conversationId":2,"kind":"t","version":1,"input":{},"background":false,"abortRequested":false,"state":{"status":"terminal","outcome":{"status":"completed","result":1}},"startedAt":1000,"endedAt":2000}`
+	if encoded != want {
+		t.Fatalf("timestamped task json = %s\nwant %s", encoded, want)
+	}
+
+	live := TaskRecord{
+		ID: 10, ConversationID: 2, Kind: "t", Version: 1, Input: json.RawMessage(`{}`),
+		State:     TaskState{Status: TaskRunning, Checkpoint: json.RawMessage(`{}`)},
+		StartedAt: &startedAt, Memos: map[string]json.RawMessage{"first": json.RawMessage(`true`)},
+	}
+	encoded, err = marshalJSONValue(live)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want = `{"id":10,"conversationId":2,"kind":"t","version":1,"input":{},"background":false,"abortRequested":false,"state":{"status":"running","checkpoint":{}},"startedAt":1000,"memos":{"first":true}}`
+	if encoded != want {
+		t.Fatalf("live task json = %s\nwant %s", encoded, want)
 	}
 }
 

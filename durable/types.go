@@ -365,6 +365,12 @@ type TaskRecord struct {
 	// progress is committed.
 	AbortRequested bool      `json:"abortRequested"`
 	State          TaskState `json:"state"`
+	// Keep lifecycle times after state and before Memos to match Session's
+	// append order in persisted JSON. StartedAt is the wall-clock millisecond
+	// of the first transition to running; waits and recovery preserve it.
+	StartedAt *int64 `json:"startedAt,omitempty"`
+	// EndedAt is the wall-clock millisecond of the transition to terminal.
+	EndedAt *int64 `json:"endedAt,omitempty"`
 	// Memos are small first-writer-wins values retained while the task is live.
 	Memos map[string]json.RawMessage `json:"memos,omitempty"`
 }
@@ -820,6 +826,8 @@ type LoadedDocument struct {
 type TransactionHost interface {
 	// Storage is the session's storage.
 	Storage() Storage
+	// Now is the session's wall clock in milliseconds.
+	Now() int64
 	// Cached returns the cached current incarnation without loading.
 	Cached(addressID string) *LoadedDocument
 	// Load returns the cached current incarnation, cold-loading and migrating

@@ -973,6 +973,25 @@ func TestConformanceRejectsCursorWithDifferentScanOrder(t *testing.T) {
 	})
 }
 
+// Port of persisted lifecycle times from packages/durable/test/harness-tasks-recovery.test.ts
+// at pi v1.1.0 commit 36a686ee8.
+func TestConformancePersistsTaskLifecycleTimes(t *testing.T) {
+	conformance(t, func(t *testing.T, storage Storage) {
+		ctx := context.Background()
+		mustCommit(t, storage, conversationWrite(RootConversationID))
+		startedAt, endedAt := int64(1_000), int64(2_000)
+		task := pendingTaskRecord(7, RootConversationID)
+		task.State = TaskState{Status: TaskTerminal, Outcome: &TaskOutcome{Status: OutcomeCompleted}}
+		task.StartedAt, task.EndedAt = &startedAt, &endedAt
+		mustCommit(t, storage, StorageWrite{Type: "task", Task: task})
+		loaded, err := storage.Task(ctx, task.ID)
+		if err != nil || loaded == nil || loaded.StartedAt == nil || *loaded.StartedAt != startedAt ||
+			loaded.EndedAt == nil || *loaded.EndedAt != endedAt {
+			t.Fatalf("persisted task times = %+v, %v", loaded, err)
+		}
+	})
+}
+
 // TestConformanceRejectsAfterClose covers upstream's "rejects every operation
 // after close".
 func TestConformanceRejectsAfterClose(t *testing.T) {

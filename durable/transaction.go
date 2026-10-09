@@ -527,7 +527,24 @@ func (tx *Transaction) SetTask(value *TaskRecord) error {
 	task.writeKind = kind
 	// The caller keeps ownership of the record it passed; stage a detached copy
 	// so later mutations cannot alias the candidate (upstream copyJson).
+	// Port of session/transaction.ts #stampTimes: preserve first lifecycle times
+	// and stamp missing transitions.
+	candidate := task.write
 	task.write = cloneTask(value)
+	if candidate != nil && candidate.StartedAt != nil {
+		startedAt := *candidate.StartedAt
+		task.write.StartedAt = &startedAt
+	} else if task.write.StartedAt == nil && task.write.State.Status == TaskRunning {
+		startedAt := tx.host.Now()
+		task.write.StartedAt = &startedAt
+	}
+	if candidate != nil && candidate.EndedAt != nil {
+		endedAt := *candidate.EndedAt
+		task.write.EndedAt = &endedAt
+	} else if task.write.EndedAt == nil && task.write.State.Status == TaskTerminal {
+		endedAt := tx.host.Now()
+		task.write.EndedAt = &endedAt
+	}
 	return nil
 }
 

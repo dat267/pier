@@ -33,7 +33,8 @@ type HarnessOptions struct {
 	// ConversationCreated runs in every commit that creates or forks a
 	// conversation, after the built-in pi.* documents.
 	ConversationCreated func(tx *Transaction, record ConversationRecord) error
-	// Now is the harness clock; nil means zero.
+	// Now is the harness wall clock; nil defaults to current Unix time in
+	// milliseconds.
 	Now func() int64
 	// OnReport receives extension failures that do not fail the caller.
 	OnReport func(error)
@@ -64,17 +65,17 @@ type conversationHost struct {
 
 // NewHarness builds a harness over storage; Open must be called before use.
 func NewHarness(storage Storage, options HarnessOptions, ctx chord.Context) *Harness {
-	session := NewSession(storage)
+	now := options.Now
+	if now == nil {
+		now = wallClockMillis
+	}
+	session := NewSessionWithClock(storage, now)
 	harness := &Harness{
 		Session: session, storage: storage, options: options,
 		report: func(error) {},
 	}
 	if options.OnReport != nil {
 		harness.report = options.OnReport
-	}
-	now := options.Now
-	if now == nil {
-		now = func() int64 { return 0 }
 	}
 	settings := func() Settings { return ResolveSettings(options.Settings) }
 	harness.tasks = NewTaskScheduler(TaskSchedulerOptions{

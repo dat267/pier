@@ -19,6 +19,7 @@ type testTransactionHost struct {
 	storage Storage
 	docs    map[string]*LoadedDocument
 	created []ConversationRecord
+	now     func() int64
 }
 
 func newTestTransactionHost(storage Storage) *testTransactionHost {
@@ -26,6 +27,13 @@ func newTestTransactionHost(storage Storage) *testTransactionHost {
 }
 
 func (h *testTransactionHost) Storage() Storage { return h.storage }
+
+func (h *testTransactionHost) Now() int64 {
+	if h.now != nil {
+		return h.now()
+	}
+	return 0
+}
 
 func (h *testTransactionHost) Cached(addressID string) *LoadedDocument { return h.docs[addressID] }
 

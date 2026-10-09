@@ -90,8 +90,9 @@ changes. Ported the initial system-message ordering fix (upstream #10542,
 `4dd2af42c`; D213 fixes SQLite's maximum-safe-ID boundary). Context reads now
 reuse scanned ranges within one task invocation
 (`68ccef176`), but still re-derive the full view and do not retain ranges across
-invocations (`da866ada1`). Remaining gaps: task records lack
-`startedAt`/`endedAt` (upstream #10549, `36a686ee8`);
+invocations (`da866ada1`). Task records now stamp wall-clock `startedAt` at
+first run and `endedAt` at terminal transition, with injectable clock defaulting
+to current time (upstream #10549, `36a686ee8`). Remaining gaps:
 `ToolExecutionApi` and
 `HookApi` lack `models` (upstream #10395, `b0114ef5f`); public conversation
 context cannot read as of an entry (upstream #10512, `76f6b06da`); progress

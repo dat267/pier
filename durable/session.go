@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/dat267/pier/chord"
 	"github.com/dat267/pier/chord/delta"
@@ -45,6 +46,7 @@ type Session struct {
 	// mu guards the documents, listeners, closing flag and poison.
 	mu        sync.Mutex
 	storage   Storage
+	now       func() int64
 	documents map[string]*LoadedDocument
 
 	commitListeners map[int]CommitListener
@@ -64,8 +66,18 @@ type Session struct {
 
 // NewSession opens a session kernel over one storage backend.
 func NewSession(storage Storage) *Session {
+	return NewSessionWithClock(storage, nil)
+}
+
+// NewSessionWithClock opens a session with an injected wall clock for task
+// lifecycle times; nil uses current Unix milliseconds.
+func NewSessionWithClock(storage Storage, now func() int64) *Session {
+	if now == nil {
+		now = wallClockMillis
+	}
 	return &Session{
 		storage:         storage,
+		now:             now,
 		documents:       map[string]*LoadedDocument{},
 		commitListeners: map[int]CommitListener{},
 		closeListeners:  map[int]func(){},
@@ -342,7 +354,11 @@ func (s *Session) UnloadDocuments() {
 // sessionHost implements TransactionHost over the session.
 type sessionHost struct{ session *Session }
 
+func wallClockMillis() int64 { return time.Now().UnixMilli() }
+
 func (h sessionHost) Storage() Storage { return h.session.storage }
+
+func (h sessionHost) Now() int64 { return h.session.now() }
 
 func (h sessionHost) Cached(addressID string) *LoadedDocument {
 	h.session.mu.Lock()
