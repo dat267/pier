@@ -69,6 +69,15 @@ func NewText(text string, paddingX int, paddingY int, customBgFn func(text strin
 }
 
 // SetText updates the text and clears the cache.
+// SetPaddingX changes the horizontal padding in place (upstream setPaddingX).
+func (t *Text) SetPaddingX(paddingX int) {
+	if t.paddingX == paddingX {
+		return
+	}
+	t.paddingX = paddingX
+	t.invalidateCache()
+}
+
 func (t *Text) SetText(text string) {
 	t.text = text
 	t.invalidateCache()

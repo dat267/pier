@@ -501,6 +501,9 @@ func (w *SettingsWiring) applyOutputPad(padding int) bool {
 				component.SetOutputPad(padding)
 			case *UserMessageComponent:
 				component.SetOutputPad(padding)
+			case *ToolExecutionComponent:
+				// Tool output is padded like the rest of the transcript (upstream #10557).
+				component.SetOutputPad(padding)
 			}
 		}
 		if w.StreamingComponent != nil {

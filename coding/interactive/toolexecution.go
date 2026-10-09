@@ -33,6 +33,9 @@ type ToolRenderContext struct {
 	State            any
 	Cwd              string
 	ExecutionStarted bool
+	// OutputPad is the horizontal padding the transcript is using; a renderer with its own
+	// shell applies it itself.
+	OutputPad int
 	// DurationMs is the tool's own execution time, recorded on the final result. Renderers
 	// prefer it over wall-clock time between the events, so a replayed result shows the same
 	// value instead of measuring nothing (upstream #10549).
@@ -92,6 +95,8 @@ type ToolExecutionComponent struct {
 	cwd  string
 
 	executionStarted bool
+	// outputPad is the transcript's horizontal padding, applied to the content box.
+	outputPad int
 	// durationMs is the recorded execution time of the finished call, when the tool reported
 	// one.
 	durationMs    *int64
@@ -183,6 +188,7 @@ func (c *ToolExecutionComponent) renderContext(lastComponent tui.Component) *Too
 		State:            c.rendererState,
 		Cwd:              c.cwd,
 		ExecutionStarted: c.executionStarted,
+		OutputPad:        c.outputPad,
 		DurationMs:       c.durationMs,
 		ArgsComplete:     c.argsComplete,
 		IsPartial:        c.isPartial,
@@ -239,6 +245,17 @@ func (c *ToolExecutionComponent) UpdateArgs(args any) {
 
 // MarkExecutionStarted records that execution began.
 // SetResultDuration records the tool's own execution time, reported with the final result.
+// SetOutputPad applies the outputPad setting to the tool's content box, so tool output is
+// padded like the rest of the transcript (upstream applies it through the render context).
+func (c *ToolExecutionComponent) SetOutputPad(padding int) {
+	if c.contentBox == nil {
+		return
+	}
+	c.outputPad = padding
+	c.contentBox.SetPaddingX(padding)
+	c.Invalidate()
+}
+
 func (c *ToolExecutionComponent) SetResultDuration(durationMs *int64) {
 	c.durationMs = durationMs
 }

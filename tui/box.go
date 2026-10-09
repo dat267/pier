@@ -48,6 +48,16 @@ func NewBox(paddingX int, paddingY int, bgFn func(text string) string) *Box {
 	return &Box{paddingX: paddingX, paddingY: paddingY, bgFn: bgFn}
 }
 
+// SetPaddingX changes the horizontal padding in place, so a component that follows a setting
+// (the tool content box follows outputPad) does not have to be rebuilt (upstream setPaddingX).
+func (b *Box) SetPaddingX(paddingX int) {
+	if b.paddingX == paddingX {
+		return
+	}
+	b.paddingX = paddingX
+	b.cache = nil
+}
+
 // AddChild appends a child.
 func (b *Box) AddChild(component Component) {
 	b.Children = append(b.Children, component)
