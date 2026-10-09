@@ -121,6 +121,12 @@ type TextLine struct {
 	Terminated bool
 }
 
+// DirReader pages through one opened directory.
+type DirReader interface {
+	Next(ctx context.Context, maxEntries int) ([]FileInfo, bool, error)
+	Close(ctx context.Context) error
+}
+
 // TextLineReader streams lines without loading the whole file.
 type TextLineReader interface {
 	ReadLine(ctx context.Context) (*TextLine, error)
@@ -170,6 +176,7 @@ type FileSystem interface {
 	RenameFile(sourcePath string, destinationPath string, ctx context.Context) error
 	FileInfo(path string, ctx context.Context) (*FileInfo, error)
 	ListDir(path string, ctx context.Context) ([]FileInfo, error)
+	OpenDirReader(path string, ctx context.Context) (DirReader, error)
 	CanonicalPath(path string, ctx context.Context) (string, error)
 	Exists(path string, ctx context.Context) (bool, error)
 	CreateDir(path string, options *CreateDirOptions, ctx context.Context) error

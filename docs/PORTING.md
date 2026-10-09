@@ -96,11 +96,11 @@ entry cutoff (upstream #10512, `76f6c06da`). Task records stamp wall-clock
 clock defaulting to current time (upstream #10549, `36a686ee8`); durable tool and
 hook APIs expose `models` (upstream #10395, `b0114ef5f`). Progress commits now
 use configurable partial and output intervals (upstream #10357, `674d64f09`).
-Remaining gaps: the environment API still lacks bounded directory readers,
-filesystem watching, argv execution, and windowed shell output, with no
-PowerShell tool (`4748c627a`, `a84510819`, `cdf79797b`, `68c22123b`). The read
-tool now uses a positional binary reader and fixed-size line scans, so it no
-longer materializes entire files before truncating output.
+Bounded directory readers are ported (upstream `4748c627a`). Remaining gaps:
+the environment API still lacks filesystem watching, argv execution, and
+windowed shell output, with no PowerShell tool (`a84510819`, `cdf79797b`,
+`68c22123b`). The read tool uses a positional binary reader and fixed-size
+line scans, so it no longer materializes entire files before truncating output.
 D188 already documents combined stdout/stderr delivery. Other package deltas
 remain unreviewed: the commit counts say how much there is, not which commits.
 

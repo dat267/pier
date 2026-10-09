@@ -261,6 +261,37 @@ func (e *OSFileSystem) ListDir(path string, ctx context.Context) ([]FileInfo, er
 	return infos, nil
 }
 
+// OpenDirReader opens a paged directory listing.
+func (e *OSFileSystem) OpenDirReader(path string, ctx context.Context) (DirReader, error) {
+	resolved, err := e.resolvePath(path)
+	if err != nil {
+		return nil, err
+	}
+	if ctx != nil && ctx.Err() != nil {
+		return nil, toFileError(ctx.Err(), resolved)
+	}
+	info, err := os.Stat(resolved)
+	if err != nil {
+		return nil, toFileError(err, resolved)
+	}
+	if !info.IsDir() {
+		return nil, &FileError{Code: FileErrorNotDirectory, Message: "Not a directory", Path: resolved}
+	}
+	file, err := os.Open(resolved)
+	if err != nil {
+		return nil, toFileError(err, resolved)
+	}
+	opened, err := file.Stat()
+	if err != nil || !opened.IsDir() {
+		_ = file.Close()
+		if err != nil {
+			return nil, toFileError(err, resolved)
+		}
+		return nil, &FileError{Code: FileErrorNotDirectory, Message: "Not a directory", Path: resolved}
+	}
+	return &osDirReader{file: file, path: resolved}, nil
+}
+
 // CanonicalPath resolves symlinks.
 func (e *OSFileSystem) CanonicalPath(path string, ctx context.Context) (string, error) {
 	resolved, err := e.resolvePath(path)
@@ -461,6 +492,63 @@ func toFileError(err error, fallbackPath string) error {
 		code = FileErrorInvalid
 	}
 	return &FileError{Code: code, Message: err.Error(), Path: path, Cause: err}
+}
+
+type osDirReader struct {
+	file   *os.File
+	path   string
+	closed bool
+}
+
+func (r *osDirReader) Next(ctx context.Context, maxEntries int) ([]FileInfo, bool, error) {
+	if ctx != nil && ctx.Err() != nil {
+		return nil, false, toFileError(ctx.Err(), r.path)
+	}
+	if r.closed {
+		return nil, false, &FileError{Code: FileErrorInvalid, Message: "Directory reader is closed", Path: r.path}
+	}
+	if maxEntries <= 0 {
+		return nil, false, &FileError{Code: FileErrorInvalid, Message: "maxEntries must be positive", Path: r.path}
+	}
+	entries, err := r.file.ReadDir(maxEntries)
+	done := errors.Is(err, io.EOF)
+	if err != nil && !done {
+		return nil, false, toFileError(err, r.path)
+	}
+	infos := make([]FileInfo, 0, len(entries))
+	for _, entry := range entries {
+		if ctx != nil && ctx.Err() != nil {
+			return nil, false, toFileError(ctx.Err(), r.path)
+		}
+		path := filepath.Join(r.path, entry.Name())
+		info, err := os.Lstat(path)
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return nil, false, toFileError(err, path)
+		}
+		if !info.IsDir() && !info.Mode().IsRegular() && info.Mode()&os.ModeSymlink == 0 {
+			continue
+		}
+		converted, err := fileInfoFromStat(path, info)
+		if err != nil {
+			return nil, false, err
+		}
+		infos = append(infos, *converted)
+	}
+	return infos, done, nil
+}
+
+func (r *osDirReader) Close(_ context.Context) error {
+	if r.closed {
+		return nil
+	}
+	r.closed = true
+	if err := r.file.Close(); err != nil {
+		return toFileError(err, r.path)
+	}
+	return nil
 }
 
 // osTextLineReader streams one open file.

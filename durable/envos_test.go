@@ -147,6 +147,63 @@ func TestOSFileSystemDirsAndRename(t *testing.T) {
 	}
 }
 
+// Port of FileSystem.openDirReader paging from packages/durable/src/env/node.ts at pi v1.1.0 commit 4748c627a.
+func TestOSFileSystemDirectoryReaderPagesEntries(t *testing.T) {
+	fsys, _ := newTestFileSystem(t)
+	ctx := context.Background()
+	for _, name := range []string{"alpha", "beta", "gamma"} {
+		if err := fsys.WriteFile(name, []byte(name), ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := fsys.CreateDir("nested", nil, ctx); err != nil {
+		t.Fatal(err)
+	}
+	reader, err := fsys.OpenDirReader(".", ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reader.Close(ctx)
+	if _, _, err := reader.Next(ctx, 0); err == nil {
+		t.Fatal("non-positive page size must fail")
+	} else {
+		var fileError *FileError
+		if !errors.As(err, &fileError) || fileError.Code != FileErrorInvalid {
+			t.Fatalf("page-size error = %v", err)
+		}
+	}
+	seen := map[string]bool{}
+	for {
+		entries, done, err := reader.Next(ctx, 2)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(entries) > 2 || (!done && len(entries) == 0) {
+			t.Fatalf("page = %+v, done=%t", entries, done)
+		}
+		for _, entry := range entries {
+			seen[entry.Name] = true
+			if entry.Path == "" || entry.Name == "" {
+				t.Fatalf("entry metadata = %+v", entry)
+			}
+		}
+		if done {
+			break
+		}
+	}
+	for _, name := range []string{"alpha", "beta", "gamma", "nested"} {
+		if !seen[name] {
+			t.Fatalf("directory listing omitted %q: %+v", name, seen)
+		}
+	}
+	if err := reader.Close(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := reader.Next(ctx, 1); err == nil {
+		t.Fatal("closed directory reader rejects next")
+	}
+}
+
 func TestOSFileSystemErrorCodes(t *testing.T) {
 	fsys, dir := newTestFileSystem(t)
 	ctx := context.Background()
