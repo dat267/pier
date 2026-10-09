@@ -79,6 +79,50 @@ func TestHarnessConversationSurface(t *testing.T) {
 	_ = storage
 }
 
+// Port of Conversation.context({ at }) from
+// packages/durable/src/harness/harness.ts at pi v1.1.0 commit 76f6c06da.
+func TestHarnessConversationContextAsOfEntry(t *testing.T) {
+	harness, _ := openTestHarness(t)
+	ctx := context.Background()
+	root, err := harness.Root(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var first, second Id
+	if err := root.Commit(ctx, func(tx *Transaction) error {
+		var err error
+		entry, err := tx.AppendEntry(root.ID(), EntryDraft{Kind: "note"})
+		if err != nil {
+			return err
+		}
+		first = entry.ID
+		entry, err = tx.AppendEntry(root.ID(), EntryDraft{Kind: "note"})
+		if err == nil {
+			second = entry.ID
+		}
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	view, err := root.Context(ctx, ConversationContextOptions{At: &first})
+	if err != nil || len(view.Entries) != 1 || view.Entries[0].ID != first {
+		t.Fatalf("context as of %d = %+v, want entry %d only (second is %d), err=%v", first, view.Entries, first, second, err)
+	}
+}
+
+func TestHarnessConversationContextRejectsInvisibleCutoff(t *testing.T) {
+	harness, _ := openTestHarness(t)
+	ctx := context.Background()
+	root, err := harness.Root(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	invisible := Id(999)
+	if _, err := root.Context(ctx, ConversationContextOptions{At: &invisible}); err == nil {
+		t.Fatal("context cutoff rejects an entry outside the conversation")
+	}
+}
+
 func TestHarnessTaskAndSubmissionSurface(t *testing.T) {
 	harness, storage := openTestHarness(t)
 	ctx := context.Background()

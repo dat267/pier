@@ -394,6 +394,12 @@ type ConversationCreateOptions struct {
 	Init  func(tx *Transaction, conversationID Id) error
 }
 
+// ConversationContextOptions configures a committed context read.
+type ConversationContextOptions struct {
+	// At limits context to the visible history through this entry.
+	At *Id
+}
+
 // ConversationAbortOptions configures a conversation abort.
 type ConversationAbortOptions struct {
 	Background bool

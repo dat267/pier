@@ -90,12 +90,12 @@ changes. Ported the initial system-message ordering fix (upstream #10542,
 `4dd2af42c`; D213 fixes SQLite's maximum-safe-ID boundary). Context reads now
 reuse scanned ranges within one task invocation
 (`68ccef176`), but still re-derive the full view and do not retain ranges across
-invocations (`da866ada1`). Task records now stamp wall-clock `startedAt` at
-first run and `endedAt` at terminal transition, with injectable clock defaulting
+invocations (`da866ada1`). Public conversation context now supports an `at`
+entry cutoff (upstream #10512, `76f6c06da`). Task records stamp wall-clock
+`startedAt` at first run and `endedAt` at terminal transition, with injectable clock defaulting
 to current time (upstream #10549, `36a686ee8`); durable tool and hook APIs expose
-`models` (upstream #10395, `b0114ef5f`). Remaining gaps: public conversation
-context cannot read as of an entry (upstream #10512, `76f6b06da`); progress
-commit intervals are fixed rather than configurable (upstream #10357,
+`models` (upstream #10395, `b0114ef5f`). Remaining gaps: progress commit
+intervals are fixed rather than configurable (upstream #10357,
 `674d64f09`); and the environment API still lacks bounded directory readers,
 filesystem watching, argv execution, and windowed shell output, with no
 PowerShell tool (`4748c627a`, `a84510819`, `cdf79797b`, `68c22123b`). The read

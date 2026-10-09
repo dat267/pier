@@ -460,9 +460,13 @@ func (c *HarnessConversation) Commit(ctx chord.Context, change func(tx *Transact
 	return c.host.harness.Session.CommitWith(ctx, change, scope)
 }
 
-// Context derives the committed transcript and model context.
-func (c *HarnessConversation) Context(ctx chord.Context) (ContextView, error) {
-	return ReadContext(ctx, c.host.harness.Session, c.host.storage, c.id, nil)
+// Context derives the committed transcript and model context, optionally as of an entry.
+func (c *HarnessConversation) Context(ctx chord.Context, options ...ConversationContextOptions) (ContextView, error) {
+	var at *Id
+	if len(options) > 0 {
+		at = options[0].At
+	}
+	return ReadContext(ctx, c.host.harness.Session, c.host.storage, c.id, at)
 }
 
 // Entries scans visible history in query.Order, defaulting to newest-first.
