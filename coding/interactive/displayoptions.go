@@ -15,7 +15,7 @@ const defaultHiddenThinkingLabel = "Thinking..."
 // and custom-entry components always started collapsed), and
 // RunWiring.OutputPad went stale on /reload.
 type DisplayOptions struct {
-	// OutputPad is the horizontal padding for status/error lines.
+	// OutputPad is the horizontal padding for transcript content (upstream's wording, #10557).
 	OutputPad int
 	// HideThinkingBlock hides assistant thinking blocks.
 	HideThinkingBlock bool
