@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"sync"
+	"time"
 )
 
 // EventStream is a port of upstream's utils/event-stream.ts EventStream<T, R>:
@@ -180,12 +181,19 @@ func (s *EventStream[T, R]) Events(ctx context.Context) []T {
 // implementation: it terminates with done (message) or error (error message).
 type AssistantMessageEventStream struct {
 	*EventStream[AssistantMessageEvent, *AssistantMessage]
+	// startedAt is the wall clock when the stream was created, compared against a message's
+	// timestamp to tell a response this stream saw start from one it only forwards.
+	startedAt int64
+	// startedAtMonotonic is the same instant, for the elapsed measurement.
+	startedAtMonotonic time.Time
 }
 
 // NewAssistantMessageEventStream builds a stream whose result is the final
 // AssistantMessage extracted from the terminal done/error event.
 func NewAssistantMessageEventStream() *AssistantMessageEventStream {
 	return &AssistantMessageEventStream{
+		startedAt:          time.Now().UnixMilli(),
+		startedAtMonotonic: time.Now(),
 		EventStream: NewEventStream(
 			IsTerminalEvent,
 			func(event AssistantMessageEvent) *AssistantMessage {
@@ -198,4 +206,41 @@ func NewAssistantMessageEventStream() *AssistantMessageEventStream {
 			},
 		),
 	}
+}
+
+// Push forwards an event, timing a response's final message (upstream
+// AssistantMessageEventStream.push).
+func (s *AssistantMessageEventStream) Push(event AssistantMessageEvent) {
+	switch event.Type {
+	case EventDone:
+		s.timeMessage(event.Message)
+	case EventError:
+		s.timeMessage(event.Error)
+	}
+	s.EventStream.Push(event)
+}
+
+// End settles the stream, timing a result passed directly to it (upstream
+// AssistantMessageEventStream.end). The result pointer matches the embedded stream's
+// signature so callers stay unchanged.
+func (s *AssistantMessageEventStream) End(result **AssistantMessage) {
+	if result != nil && *result != nil {
+		s.timeMessage(*result)
+	}
+	s.EventStream.End(result)
+}
+
+// timeMessage stamps durationMs with the monotonic time since the stream was created. A
+// message that already carries one is left alone, as is one whose timestamp predates the
+// stream: a stream that only forwards a response, such as a deferred result fetched later,
+// must not time it (upstream #10549).
+func (s *AssistantMessageEventStream) timeMessage(message *AssistantMessage) {
+	if message == nil || s.EventStream.done || message.DurationMs != nil {
+		return
+	}
+	if message.Timestamp < s.startedAt {
+		return
+	}
+	duration := time.Since(s.startedAtMonotonic).Milliseconds()
+	message.DurationMs = &duration
 }

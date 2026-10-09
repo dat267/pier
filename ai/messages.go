@@ -425,6 +425,10 @@ type AssistantMessage struct {
 	// agent control flow.
 	EndTurn   *bool `json:"endTurn,omitempty"`
 	Timestamp int64 `json:"timestamp"`
+	// DurationMs is the wall time from the request start to the final message, measured with
+	// a monotonic clock by the stream that saw the response start. Absent for a message that
+	// was only forwarded, such as a deferred result fetched later (upstream #10549).
+	DurationMs *int64 `json:"durationMs,omitempty"`
 }
 
 func (*AssistantMessage) messageRole() Role { return RoleAssistant }
@@ -465,7 +469,10 @@ type ToolResultMessage struct {
 	// session record, not sent to the model.
 	NestedCalls *NestedToolCalls `json:"nestedCalls,omitempty"`
 	IsError     bool             `json:"isError"`
-	Timestamp   int64            `json:"timestamp"`
+	// DurationMs is how long the tool call took, measured with a monotonic clock, excluding
+	// hooks and the update drain. Absent for a call that never ran (upstream #10549).
+	DurationMs *int64 `json:"durationMs,omitempty"`
+	Timestamp  int64  `json:"timestamp"`
 }
 
 func (*ToolResultMessage) messageRole() Role { return RoleToolResult }

@@ -236,4 +236,7 @@ type AgentEvent struct {
 	PartialResult AgentToolResult
 	Result        AgentToolResult
 	IsError       bool
+	// DurationMs is how long a tool call took, in milliseconds; absent for a call that never
+	// ran (upstream #10549).
+	DurationMs *int64
 }

@@ -508,6 +508,8 @@ type finalizedToolCallOutcome struct {
 	toolCall ai.ToolCall
 	result   AgentToolResult
 	isError  bool
+	// durationMS is how long the call took; a call that never ran has none.
+	durationMS *int64
 }
 
 func executeToolCallsSequential(
@@ -753,6 +755,7 @@ func executePreparedToolCall(prepared *preparedToolCallValue, ctx context.Contex
 	acceptingUpdates := true
 	defer func() { acceptingUpdates = false }()
 
+	startedAt := time.Now()
 	result, err := prepared.tool.Execute(prepared.toolCall.ID, prepared.args, ctx, func(partialResult AgentToolResult) {
 		if !acceptingUpdates {
 			return
@@ -769,16 +772,22 @@ func executePreparedToolCall(prepared *preparedToolCallValue, ctx context.Contex
 			_ = emit(event)
 		}()
 	})
+	// The measurement stops when Execute returns, before the update events drain, so a slow
+	// emitter cannot inflate the tool's own time (upstream captures it at the same point).
+	durationMS := time.Since(startedAt).Milliseconds()
 	updateWG.Wait()
 	if err == nil {
-		return executedToolCallOutcome{result: result, isError: false}
+		return executedToolCallOutcome{result: result, isError: false, durationMS: durationMS}
 	}
-	return executedToolCallOutcome{result: createErrorToolResult(err.Error()), isError: true}
+	return executedToolCallOutcome{result: createErrorToolResult(err.Error()), isError: true, durationMS: durationMS}
 }
 
 type executedToolCallOutcome struct {
 	result  AgentToolResult
 	isError bool
+	// durationMS is how long Execute took, measured with a monotonic clock and excluding the
+	// update-event drain and any hook (upstream #10549).
+	durationMS int64
 }
 
 func finalizeExecutedToolCall(
@@ -827,7 +836,9 @@ func finalizeExecutedToolCall(
 		}
 	}
 
-	return finalizedToolCallOutcome{toolCall: prepared.toolCall, result: result, isError: isError}
+	return finalizedToolCallOutcome{
+		toolCall: prepared.toolCall, result: result, isError: isError, durationMS: &executed.durationMS,
+	}
 }
 
 func createErrorToolResult(message string) AgentToolResult {
@@ -841,6 +852,7 @@ func emitToolExecutionEnd(finalized finalizedToolCallOutcome, emit AgentEventSin
 	mustEmit(emit, AgentEvent{
 		Type: ToolExecutionEnd, ToolCallID: finalized.toolCall.ID,
 		ToolName: finalized.toolCall.Name, Result: finalized.result, IsError: finalized.isError,
+		DurationMs: finalized.durationMS,
 	})
 }
 
@@ -860,6 +872,7 @@ func createToolResultMessage(finalized finalizedToolCallOutcome) *ai.ToolResultM
 	return &ai.ToolResultMessage{
 		ToolCallID: finalized.toolCall.ID,
 		ToolName:   finalized.toolCall.Name,
+		DurationMs: finalized.durationMS,
 		Content:    content,
 		Details:    finalized.result.Details,
 		Usage:      finalized.result.Usage,
