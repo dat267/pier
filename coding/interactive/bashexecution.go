@@ -133,11 +133,14 @@ type BashExecutionComponent struct {
 	fullOutputPath   string
 	expanded         bool
 	contentContainer *tui.Container
-	colorKey         string
+	// outputPad is the transcript's horizontal padding; the header, output and status lines all
+	// use it (upstream #10557).
+	outputPad int
+	colorKey  string
 }
 
 // NewBashExecutionComponent creates the component.
-func NewBashExecutionComponent(command string, host tui.RenderRequester, excludeFromContext bool) *BashExecutionComponent {
+func NewBashExecutionComponent(command string, host tui.RenderRequester, excludeFromContext bool, outputPad int) *BashExecutionComponent {
 	colorKey := "bashMode"
 	if excludeFromContext {
 		colorKey = "dim"
@@ -151,13 +154,14 @@ func NewBashExecutionComponent(command string, host tui.RenderRequester, exclude
 		status:           "running",
 		contentContainer: &tui.Container{},
 		colorKey:         colorKey,
+		outputPad:        outputPad,
 	}
 
 	component.AddChild(tui.NewSpacer(1))
 	component.AddChild(NewDynamicBorder(borderColor))
 	component.AddChild(component.contentContainer)
 
-	header := tui.NewText(theme.Fg(colorKey, theme.Bold("$ "+command)), 1, 0, nil)
+	header := tui.NewText(theme.Fg(colorKey, theme.Bold("$ "+command)), outputPad, 0, nil)
 	component.contentContainer.AddChild(header)
 
 	component.loader = tui.NewLoader(host,
@@ -168,6 +172,16 @@ func NewBashExecutionComponent(command string, host tui.RenderRequester, exclude
 
 	component.AddChild(NewDynamicBorder(borderColor))
 	return component
+}
+
+// SetOutputPad changes the padding of the header, output and status lines (upstream
+// setOutputPad).
+func (c *BashExecutionComponent) SetOutputPad(outputPad int) {
+	if c.outputPad == outputPad {
+		return
+	}
+	c.outputPad = outputPad
+	c.updateDisplay()
 }
 
 // SetExpanded toggles the preview/full output.
@@ -235,7 +249,7 @@ func (c *BashExecutionComponent) updateDisplay() {
 	hiddenLineCount := len(availableLines) - len(previewLogicalLines)
 
 	c.contentContainer.Clear()
-	header := tui.NewText(theme.Fg("bashMode", theme.Bold("$ "+c.command)), 1, 0, nil)
+	header := tui.NewText(theme.Fg("bashMode", theme.Bold("$ "+c.command)), c.outputPad, 0, nil)
 	c.contentContainer.AddChild(header)
 
 	if len(availableLines) > 0 {
@@ -244,7 +258,7 @@ func (c *BashExecutionComponent) updateDisplay() {
 			for _, line := range availableLines {
 				styled = append(styled, theme.Fg("muted", line))
 			}
-			c.contentContainer.AddChild(tui.NewText("\n"+strings.Join(styled, "\n"), 1, 0, nil))
+			c.contentContainer.AddChild(tui.NewText("\n"+strings.Join(styled, "\n"), c.outputPad, 0, nil))
 		} else {
 			styled := make([]string, 0, len(previewLogicalLines))
 			for _, line := range previewLogicalLines {
@@ -286,7 +300,7 @@ func (c *BashExecutionComponent) updateDisplay() {
 	}
 
 	if len(statusParts) > 0 {
-		c.contentContainer.AddChild(tui.NewText("\n"+strings.Join(statusParts, "\n"), 1, 0, nil))
+		c.contentContainer.AddChild(tui.NewText("\n"+strings.Join(statusParts, "\n"), c.outputPad, 0, nil))
 	}
 }
 

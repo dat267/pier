@@ -14,7 +14,7 @@ func TestBashExecutionAppendDoesNotScaleWithOutput(t *testing.T) {
 	newRendererTestTheme(t)
 
 	build := func(lines int) *BashExecutionComponent {
-		component := NewBashExecutionComponent("go test ./...", nil, false)
+		component := NewBashExecutionComponent("go test ./...", nil, false, 1)
 		for i := 0; i < lines; i++ {
 			component.AppendOutput("a line of command output\n")
 		}
@@ -42,7 +42,7 @@ func TestBashExecutionAppendDoesNotScaleWithOutput(t *testing.T) {
 func TestBashExecutionAppendKeepsTheTailWindow(t *testing.T) {
 	newRendererTestTheme(t)
 
-	component := NewBashExecutionComponent("seq 1 3000", nil, false)
+	component := NewBashExecutionComponent("seq 1 3000", nil, false, 1)
 	for i := 0; i < 2500; i++ {
 		component.AppendOutput("output line " + itoa(i) + "\n")
 	}

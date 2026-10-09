@@ -140,7 +140,7 @@ func TestMessagesAgainstUpstreamGolden(t *testing.T) {
 	sortStrings(branchLabels)
 	for _, label := range branchLabels {
 		spec := corpus.Branch[label]
-		component := NewBranchSummaryMessageComponent(spec.Summary, nil)
+		component := NewBranchSummaryMessageComponent(spec.Summary, nil, 1)
 		checkMessageGolden(t, golden, "branch "+label+"@"+itoa(spec.Width), component.Render(spec.Width))
 		component.SetExpanded(true)
 		checkMessageGolden(t, golden, "branch "+label+"-expanded@"+itoa(spec.Width), component.Render(spec.Width))
@@ -153,7 +153,7 @@ func TestMessagesAgainstUpstreamGolden(t *testing.T) {
 	sortStrings(compactionLabels)
 	for _, label := range compactionLabels {
 		spec := corpus.Compaction[label]
-		component := NewCompactionSummaryMessageComponent(spec.Summary, 1234, nil)
+		component := NewCompactionSummaryMessageComponent(spec.Summary, 1234, nil, 1)
 		checkMessageGolden(t, golden, "compaction "+label+"@"+itoa(spec.Width), component.Render(spec.Width))
 		component.SetExpanded(true)
 		checkMessageGolden(t, golden, "compaction "+label+"-expanded@"+itoa(spec.Width), component.Render(spec.Width))

@@ -589,7 +589,8 @@ func newSubmitWiring(app *App) *SubmitWiring {
 			// this goroutine.
 			HandleBashCommand: func(command string, excludeFromContext bool) error {
 				app.runDetached(func(ctx context.Context) error {
-					component := NewBashExecutionComponent(command, app.ui, excludeFromContext)
+					// The `!` command output follows the transcript's padding (upstream #10557).
+					component := NewBashExecutionComponent(command, app.ui, excludeFromContext, app.settings.GetOutputPad())
 					deferred := app.session.IsStreaming()
 					app.ui.Post(func() {
 						if deferred {

@@ -175,10 +175,15 @@ type BranchSummaryMessageComponent struct {
 }
 
 // NewBranchSummaryMessageComponent creates the component.
-func NewBranchSummaryMessageComponent(summary string, markdownTheme *tui.MarkdownTheme) *BranchSummaryMessageComponent {
+// SetOutputPad changes the summary block's padding (upstream setOutputPad).
+func (c *BranchSummaryMessageComponent) SetOutputPad(outputPad int) {
+	c.Box.SetPaddingX(outputPad)
+}
+
+func NewBranchSummaryMessageComponent(summary string, markdownTheme *tui.MarkdownTheme, outputPad int) *BranchSummaryMessageComponent {
 	theme := ActiveTheme()
 	component := &BranchSummaryMessageComponent{
-		Box:           tui.NewBox(1, 1, func(text string) string { return theme.Bg("customMessageBg", text) }),
+		Box:           tui.NewBox(outputPad, 1, func(text string) string { return theme.Bg("customMessageBg", text) }),
 		summary:       summary,
 		markdownTheme: markdownThemeValue(markdownTheme),
 	}
@@ -279,10 +284,15 @@ type CompactionSummaryMessageComponent struct {
 }
 
 // NewCompactionSummaryMessageComponent creates the component.
-func NewCompactionSummaryMessageComponent(summary string, tokensBefore int64, markdownTheme *tui.MarkdownTheme) *CompactionSummaryMessageComponent {
+// SetOutputPad changes the summary block's padding (upstream setOutputPad).
+func (c *CompactionSummaryMessageComponent) SetOutputPad(outputPad int) {
+	c.Box.SetPaddingX(outputPad)
+}
+
+func NewCompactionSummaryMessageComponent(summary string, tokensBefore int64, markdownTheme *tui.MarkdownTheme, outputPad int) *CompactionSummaryMessageComponent {
 	theme := ActiveTheme()
 	component := &CompactionSummaryMessageComponent{
-		Box:           tui.NewBox(1, 1, func(text string) string { return theme.Bg("customMessageBg", text) }),
+		Box:           tui.NewBox(outputPad, 1, func(text string) string { return theme.Bg("customMessageBg", text) }),
 		summary:       summary,
 		tokensBefore:  tokensBefore,
 		markdownTheme: markdownThemeValue(markdownTheme),

@@ -118,7 +118,7 @@ func TestExecComponentsAgainstUpstreamGolden(t *testing.T) {
 
 	for _, label := range sortedKeys(corpus.Bash) {
 		spec := corpus.Bash[label]
-		component := NewBashExecutionComponent(spec.Command, nil, spec.Exclude)
+		component := NewBashExecutionComponent(spec.Command, nil, spec.Exclude, 1)
 		for _, chunk := range spec.Chunks {
 			component.AppendOutput(chunk)
 		}

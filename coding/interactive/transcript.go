@@ -233,7 +233,7 @@ func (r *TranscriptRenderer) AddMessageToChat(message ai.Message, populateHistor
 		switch typed.Role {
 		case coding.RoleBashExecution:
 			fields := decodeBashExecutionMessage(typed.Content)
-			component := NewBashExecutionComponent(fields.Command, r.UI, fields.ExcludeFromContext)
+			component := NewBashExecutionComponent(fields.Command, r.UI, fields.ExcludeFromContext, r.Display.OutputPad)
 			if fields.Output != "" {
 				component.AppendOutput(fields.Output)
 			}
@@ -250,13 +250,13 @@ func (r *TranscriptRenderer) AddMessageToChat(message ai.Message, populateHistor
 		case coding.RoleCompactionSummary:
 			summary, tokensBefore := decodeCompactionSummary(typed.Content)
 			r.Chat.AddChild(tui.NewSpacer(1))
-			component := NewCompactionSummaryMessageComponent(summary, tokensBefore, r.MarkdownTheme)
+			component := NewCompactionSummaryMessageComponent(summary, tokensBefore, r.MarkdownTheme, r.Display.OutputPad)
 			component.SetExpanded(r.Display.ToolOutputExpanded)
 			r.Chat.AddChild(component)
 		case coding.RoleBranchSummary:
 			summary := decodeBranchSummary(typed.Content)
 			r.Chat.AddChild(tui.NewSpacer(1))
-			component := NewBranchSummaryMessageComponent(summary, r.MarkdownTheme)
+			component := NewBranchSummaryMessageComponent(summary, r.MarkdownTheme, r.Display.OutputPad)
 			component.SetExpanded(r.Display.ToolOutputExpanded)
 			r.Chat.AddChild(component)
 		default:
