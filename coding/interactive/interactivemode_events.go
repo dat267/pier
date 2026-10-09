@@ -397,6 +397,10 @@ func (d *EventDispatcher) newToolComponent(toolName string, toolCallID string, a
 		cwd = d.SessionInfo.GetCwd()
 	}
 	component := NewToolExecutionComponent(toolName, toolCallID, args, options, definition, d.Transcript.UI, cwd)
+	// Tool output follows the transcript's padding from the moment it exists (upstream #10557).
+	if d.Display != nil {
+		component.SetOutputPad(d.Display.OutputPad)
+	}
 	component.SetResultPreparation(d.MarkdownPreparation)
 	component.SetExpanded(d.Display.ToolOutputExpanded)
 	d.Transcript.Chat.AddChild(component)

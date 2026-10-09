@@ -595,6 +595,8 @@ func (r *TranscriptRenderer) renderSessionItems(items []RenderSessionItem, updat
 					options, definition, r.UI, cwd)
 				component.SetResultPreparation(r.MarkdownPreparation)
 				component.SetExpanded(r.Display.ToolOutputExpanded)
+				// A replayed transcript pads tool output exactly like a live one (upstream #10557).
+				component.SetOutputPad(r.Display.OutputPad)
 				r.Chat.AddChild(component)
 
 				if assistant.StopReason == ai.StopAborted || assistant.StopReason == ai.StopError {
