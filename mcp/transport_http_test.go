@@ -712,3 +712,74 @@ func TestStreamableHTTPClassifiesExpiredSession(t *testing.T) {
 }
 
 func boolPtr(b bool) *bool { return &b }
+
+// countingAuthProvider counts Token calls so a test can assert that a path does not refresh.
+type countingAuthProvider struct {
+	token string
+	mu    sync.Mutex
+	calls int
+}
+
+func (p *countingAuthProvider) Token(ctx context.Context) (string, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.calls++
+	return p.token, nil
+}
+
+func (p *countingAuthProvider) OnUnauthorized(ctx context.Context, info UnauthorizedInfo) error {
+	return nil
+}
+
+func (p *countingAuthProvider) count() int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.calls
+}
+
+// #10565: closing a session must not ask the auth provider for a token, because that call can
+// refresh over the network before a DELETE for a session that is going away anyway. The DELETE
+// reuses the token of the last request instead.
+func TestStreamableHTTPCloseReusesTheLastToken(t *testing.T) {
+	var fixture *httpFixture
+	var mu sync.Mutex
+	var deleteAuth string
+	fixture = newHTTPFixture(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodDelete {
+			mu.Lock()
+			deleteAuth = r.Header.Get("Authorization")
+			mu.Unlock()
+		}
+		fixture.protocolHandler(w, r, nil)
+	})
+	defer fixture.close(t)
+
+	provider := &countingAuthProvider{token: "token-1"}
+	transport := NewStreamableHttpTransport(StreamableHttpTransportOptions{
+		URL: fixture.url, AuthProvider: provider,
+	})
+	client := NewClient(ClientOptions{Name: "http-test", Version: "1.0.0"})
+	if _, err := client.Connect(context.Background(), transport); err != nil {
+		t.Fatal(err)
+	}
+	if provider.count() == 0 {
+		t.Fatal("the transport never asked for a token, so the test proves nothing")
+	}
+
+	before := provider.count()
+	if err := client.Close(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if after := provider.count(); after != before {
+		t.Fatalf("closing asked for a token %d more time(s); it must reuse the last one", after-before)
+	}
+	if fixture.countMethod("DELETE") == 0 {
+		t.Fatal("no DELETE on close")
+	}
+	mu.Lock()
+	got := deleteAuth
+	mu.Unlock()
+	if got != "Bearer token-1" {
+		t.Fatalf("DELETE authorization = %q, want the token of the last request", got)
+	}
+}
