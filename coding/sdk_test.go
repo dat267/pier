@@ -419,6 +419,35 @@ func TestCreateAgentSessionToolSelection(t *testing.T) {
 	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "read,grep" {
 		t.Fatalf("tools = %q, want the CLI allowlist applied", names)
 	}
+
+	// A pattern entry selects every tool it matches (upstream #10343), so `re*` takes read and
+	// leaves everything else out.
+	cli = ParseArgs([]string{"--tools", "re*"})
+	selection = cli.ToolSelection()
+	session, err = CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
+		Cwd: cwd, ModelRuntime: runtime, SettingsManager: settings,
+		Tools: selection.Tools, ExcludeTools: selection.ExcludeTools, NoTools: selection.NoTools,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "read" {
+		t.Fatalf("tools = %q, want the pattern to select read alone", names)
+	}
+
+	// A pattern entry removes every tool it matches, applied to the built-in defaults.
+	cli = ParseArgs([]string{"--exclude-tools", "re*,*sh"})
+	selection = cli.ToolSelection()
+	session, err = CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
+		Cwd: cwd, ModelRuntime: runtime, SettingsManager: settings,
+		Tools: selection.Tools, ExcludeTools: selection.ExcludeTools, NoTools: selection.NoTools,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if names := strings.Join(session.Session.GetActiveToolNames(), ","); strings.Contains(names, "read") || strings.Contains(names, "bash") {
+		t.Fatalf("tools = %q, want the patterns to remove read and bash", names)
+	}
 }
 
 func TestCreateAgentSessionBlockImages(t *testing.T) {
