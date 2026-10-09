@@ -834,35 +834,57 @@ func prepareToolCall(
 
 func executePreparedToolCall(prepared *preparedToolCallValue, ctx context.Context, emit AgentEventSink) executedToolCallOutcome {
 	var updateWG sync.WaitGroup
-	updateEvents := 0
+	var updateMu sync.Mutex
 	acceptingUpdates := true
-	defer func() { acceptingUpdates = false }()
+	var updateErr error
 
 	startedAt := time.Now()
 	result, err := prepared.tool.Execute(prepared.toolCall.ID, prepared.args, ctx, func(partialResult AgentToolResult) {
+		updateMu.Lock()
 		if !acceptingUpdates {
+			updateMu.Unlock()
 			return
 		}
+		updateWG.Add(1)
+		updateMu.Unlock()
+
 		event := AgentEvent{
 			Type: ToolExecutionUpdate, ToolCallID: prepared.toolCall.ID,
 			ToolName: prepared.toolCall.Name, Args: prepared.toolCall.Arguments,
 			PartialResult: partialResult,
 		}
-		updateWG.Add(1)
-		updateEvents++
 		go func() {
 			defer updateWG.Done()
-			_ = emit(event)
+			if emitErr := emit(event); emitErr != nil {
+				updateMu.Lock()
+				if updateErr == nil {
+					updateErr = emitErr
+				}
+				updateMu.Unlock()
+			}
 		}()
 	})
 	// The measurement stops when Execute returns, before the update events drain, so a slow
 	// emitter cannot inflate the tool's own time (upstream captures it at the same point).
-	durationMS := time.Since(startedAt).Milliseconds()
+	durationMS := roundDurationMilliseconds(time.Since(startedAt))
+	updateMu.Lock()
+	acceptingUpdates = false
+	updateMu.Unlock()
 	updateWG.Wait()
+	updateMu.Lock()
+	errFromUpdate := updateErr
+	updateMu.Unlock()
+	if errFromUpdate != nil {
+		err = errFromUpdate
+	}
 	if err == nil {
 		return executedToolCallOutcome{result: result, isError: result.IsError, durationMS: durationMS}
 	}
 	return executedToolCallOutcome{result: createErrorToolResult(err.Error()), isError: true, durationMS: durationMS}
+}
+
+func roundDurationMilliseconds(elapsed time.Duration) int64 {
+	return elapsed.Round(time.Millisecond).Milliseconds()
 }
 
 type executedToolCallOutcome struct {
@@ -897,7 +919,7 @@ func finalizeExecutedToolCall(
 			return finalizedToolCallOutcome{
 				toolCall: prepared.toolCall,
 				result:   createErrorToolResult(err.Error()),
-				isError:  true,
+				isError:  true, durationMS: &executed.durationMS,
 			}
 		}
 		if afterResult != nil {
@@ -1009,5 +1031,6 @@ func RunToolCall(toolCall ai.ToolCall, options RunToolCallOptions) AgentToolCall
 	)
 	return AgentToolCallOutcome{
 		ToolCall: finalized.toolCall, Result: finalized.result, IsError: finalized.isError,
+		DurationMs: finalized.durationMS,
 	}
 }

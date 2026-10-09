@@ -28,12 +28,13 @@ resolution the provider shares with the Responses API (`ai/providers/azure.go`).
 (`image-models.generated.ts`) is produced by a script that is not present at the tag, so a
 re-run needs that tool first.
 
-The agent loop now follows the pinned `packages/agent` callback contract: `PrepareRequest` runs
-before every provider request, `FinishTurn` runs before `turn_end` and can end or explicitly
+The agent loop now follows latest released `packages/agent` contract (v1.1.0): `PrepareRequest`
+runs before every provider request, `FinishTurn` runs before `turn_end` and can end or explicitly
 continue the run, and loop-level callback errors enter the run-failure lifecycle. `RunToolCall`
-exposes the single-tool execution path with the same validation and tool hooks; tool-hook errors
-remain tool results. `ShouldStopAfterTurn` remains as a
-deprecated compatibility callback; new code should use `FinishTurn`.
+exposes the single-tool execution path with the same validation and tool hooks, including returned
+`isError` and execution duration; tool-hook errors remain tool results. Tool update listener errors
+also fail the tool call, matching upstream's awaited update events. `ShouldStopAfterTurn` remains as
+a deprecated compatibility callback; new code should use `FinishTurn`.
 
 Also ported: the retryable `server_busy`, `servers are currently busy`
 and `pending stream has been canceled` provider patterns (#10543, #10379), the
@@ -48,8 +49,9 @@ which is what first installs the capabilities the tui package reads (D69), so
 Ported as well: the recorded response and tool-execution times of #10549. `ai`'s
 `AssistantMessageEventStream` stamps `durationMs` on the final message of a response it saw
 start (a forwarded or deferred message stays untimed), the agent measures `Execute` with a
-monotonic clock and carries it on the tool result message and the `tool_execution_end` event,
-both message shapes carry the field with its wire name, and the shell `Took` label renders the
+monotonic clock and rounds to the nearest millisecond, carrying duration on the tool result message,
+the `tool_execution_end` event and `RunToolCall` outcome. Both message shapes carry the field with
+its wire name, and the shell `Took` label renders the
 recorded value: `ToolRenderContext.DurationMs` reaches it from the live event and from the
 session replay, so a replayed result shows the same `Took` it did live instead of measuring
 nothing, and a live one no longer counts the steps between the events. The port's JSON event

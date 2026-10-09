@@ -156,6 +156,8 @@ type AgentToolCallOutcome struct {
 	ToolCall ai.ToolCall
 	Result   AgentToolResult
 	IsError  bool
+	// DurationMs is Execute time, rounded to milliseconds; nil when the tool did not run.
+	DurationMs *int64
 }
 
 // RunToolCallOptions configures one tool call without loop events or transcript mutation.
