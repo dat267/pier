@@ -86,8 +86,9 @@ func CreateBashTool(options *BashToolOptions) ToolRegistration {
 			}
 			result, execErr := env.Exec(execution.Command, &ShellExecOptions{
 				Cwd: execution.Cwd, Env: execution.Env, InheritEnv: execution.InheritEnv, Timeout: input.Timeout,
-				OnOutput: func(text string, _ chord.Context) { api.Output([]byte(text)) },
+				OnOutput: func(text string, _ chord.Context, info ShellOutputInfo) { api.Output([]byte(text), info.Skipped) },
 				Spill:    &ShellSpillOptions{AfterBytes: DefaultMaxBytes, AfterLines: DefaultMaxLines},
+				Window:   api.OutputWindow(),
 			}, ctx)
 			spillPath := result.SpillPath
 			var executionError *ExecutionError

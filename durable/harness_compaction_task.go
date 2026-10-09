@@ -54,7 +54,7 @@ func compactionSelect(task RunningTask, runtime TaskRuntime, ctx chord.Context) 
 		return compactionFailNoModel(runtime, ref, ctx)
 	}
 	policy := settings.Compaction
-	view, err := runtime.Context(conversationID, ctx, nil)
+	view, err := runtime.Context(conversationID, ctx)
 	if err != nil {
 		return err
 	}
@@ -145,7 +145,7 @@ func compactionSummarize(task RunningTask, runtime TaskRuntime, ctx chord.Contex
 		return compactionFailNoModel(runtime, &ref, ctx)
 	}
 	tail := checkpoint.Tail
-	view, err := runtime.Context(runtime.ConversationID(), ctx, &tail)
+	view, err := runtime.Context(runtime.ConversationID(), ctx, ConversationContextOptions{At: &tail})
 	if err != nil {
 		return err
 	}

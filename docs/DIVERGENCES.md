@@ -6,7 +6,7 @@ behaviour with no direct Go equivalent, or because a reference defect is fixed
 here; others are choices of this project's own. D-row numbers live in code
 comments at the point of divergence; this file is the log, and it is
 representative: the rows below carry a written-up rationale, while the rest live
-only as the code comment that introduced them. The range is **D1–D213**.
+only as the code comment that introduced them. The range is **D1–D215**.
 - D188 — the durable execution environment (`env/index.ts`, `env/node.ts`)
   returns failures as Go errors (`*FileError`, `*ExecutionError`, the upstream
   codes preserved) where the reference returns a `Result` value; the `Result`
@@ -14,11 +14,12 @@ only as the code comment that introduced them. The range is **D1–D213**.
   `~`/file-URL resolution, the error-code mapping and the tracked temp
   directory/file cleanup match the reference. The shell half of
   `env/node.ts` is ported too (shell resolution with the Windows Git Bash
-  candidates and the `sh -c` fallback, timeout validation, combined output,
-  the spill rule, process-tree kill on timeout/cancellation, `onOutput` and
-  the callback-error path); it reads one combined output pipe instead of
-  upstream's two backpressured streams, so `onOutput` sees the same bytes in
-  the same arrival order without the stream-level pause/resume.
+  candidates and the `sh -c` fallback, direct argv execution, timeout
+  validation, the spill rule, process-tree kill on timeout/cancellation, and
+  stream-tagged `onOutput`); stdout and stderr use separate reader goroutines
+  multiplexed through a bounded Go channel, so cross-stream ordering follows
+  goroutine send order rather than a shared OS pipe's byte order. Callback
+  delivery is synchronous on that consumer, not Node's per-stream flow control.
 - D187 — the attached replicated state (`chord/services/attachedstate.go`, the
   attachment half of upstream `services/state.ts`) delivers callbacks
   synchronously instead of through upstream's per-subscription asynchronous
@@ -1599,3 +1600,22 @@ The Go SQLite scans omit cursor predicates on first pages and add strict `>` or
 `<` predicates only when continuing a cursor. `TestConformanceScansIntegerBoundaryIDsInBothOrders`
 asserts the maximum safe ID survives ascending and descending scans across
 backends.
+
+## D214. Go separates shell strings from argv commands
+
+Reference: `packages/durable/src/env/index.ts` gives `Shell.exec` a string-or-argv
+union. The Go `Shell` keeps `Exec(string, ...)` for shell scripts and adds
+`ExecArgv([]string, ...)` for direct execution, instead of erasing this choice
+with `any`. `TestOSShellExecArgvDoesNotParseArguments` verifies arguments reach
+program without shell parsing.
+
+## D215. OS filesystem watches use polling on every platform
+
+Reference: `packages/durable/src/env/node-watch.ts` prefers native file-system
+watchers and polls only on unreliable file systems. Go's standard library has no
+portable watcher, so `OSFileSystem.Watch` polls snapshots every 2 seconds on all
+platforms and reports mode `polling`. Persistent changes are reported, but a
+change undone between scans may be missed. Directory growth beyond watch budget
+ends watcher with an error. `TestOSFileSystemWatchReportsRecursiveChanges` and
+`TestOSFileSystemWatchStopsWhenTreeExceedsDirectoryBudget` cover coverage and
+resource limits (upstream `a84510819`).

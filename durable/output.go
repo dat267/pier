@@ -248,8 +248,26 @@ func NewOutputBuffer(limits OutputLimits) *OutputBuffer {
 // chunk.
 func (b *OutputBuffer) StoredBytes() int { return b.storedBytes }
 
-// Push accepts a chunk; it reports whether anything was accepted.
-func (b *OutputBuffer) Push(text string) bool { return b.accept(text) }
+// Push accepts a chunk and any text the environment omitted immediately before it.
+func (b *OutputBuffer) Push(text string, skipped ...*ShellOutputSkip) bool {
+	if len(skipped) == 0 || skipped[0] == nil {
+		return b.accept(text)
+	}
+	if b.limits.Retain != RetainTail {
+		panic("Skipped output requires tail retention")
+	}
+	omitted := skipped[0]
+	if omitted.Bytes > 0 {
+		b.totalBytes += omitted.Bytes
+		b.totalNewlines += omitted.Newlines
+		b.endsWithNewline = omitted.EndsWithNewline
+		b.chunks = nil
+		b.storedBytes = 0
+		b.storedNewlines = 0
+	}
+	b.accept(text)
+	return true
+}
 
 // End flushes an incomplete trailing character; call when the stream ends.
 func (b *OutputBuffer) End() { b.accept("") }
@@ -300,8 +318,8 @@ func (b *OutputBuffer) Snapshot() BoundedOutput {
 	keptLines := storedLines - kept.DroppedLines
 	if b.limits.Retain == RetainTail || len(b.chunks) > 1 {
 		if b.limits.Retain == RetainTail {
-			text := kept.Text
-			bytes := kept.Bytes
+			text := tailMargin(stored, b.limits)
+			bytes := UTF8ByteLength(text)
 			if text == "" {
 				b.chunks = nil
 			} else {
@@ -323,6 +341,29 @@ func (b *OutputBuffer) Snapshot() BoundedOutput {
 		DroppedBytes: b.totalBytes - kept.Bytes,
 		DroppedLines: lineCountNumber(b.totalNewlines, b.endsWithNewline) - keptLines,
 	}
+}
+
+// tailMargin keeps enough context before the current tail to compute the next tail without the full stream.
+func tailMargin(text string, limits OutputLimits) string {
+	data := []byte(text)
+	byteStart := 0
+	if len(data) > limits.MaxBytes {
+		byteStart = CharacterEnd(data, len(data)-limits.MaxBytes-1)
+	}
+	lineStart := 0
+	newlines := 0
+	for index := bytes.LastIndexByte(data, newlineByte); index != -1; index = bytes.LastIndexByte(data[:index], newlineByte) {
+		newlines++
+		if newlines > limits.MaxLines {
+			lineStart = index
+			break
+		}
+		if index == 0 {
+			break
+		}
+	}
+	start := max(byteStart, lineStart)
+	return string(data[start:])
 }
 
 // lineCountNumber is lines of text with newlines newlines; a final unterminated

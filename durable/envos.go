@@ -23,10 +23,12 @@ import (
 
 // OSFileSystem is the local filesystem capability.
 type OSFileSystem struct {
-	mu        sync.Mutex
-	cwd       string
-	tempDirs  []string
-	tempFiles []string
+	mu                  sync.Mutex
+	cwd                 string
+	tempDirs            []string
+	tempFiles           []string
+	watchPollInterval   time.Duration
+	maxWatchDirectories int
 }
 
 // NewOSFileSystem builds the local filesystem capability over one working
@@ -39,7 +41,7 @@ func NewOSFileSystem(cwd string) (*OSFileSystem, error) {
 		}
 		cwd = current
 	}
-	return &OSFileSystem{cwd: cwd}, nil
+	return &OSFileSystem{cwd: cwd, watchPollInterval: 2 * time.Second, maxWatchDirectories: 10_000}, nil
 }
 
 // ID is the shared local namespace.

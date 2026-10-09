@@ -86,8 +86,8 @@ type TaskRuntime interface {
 	Conversation(id Id, ctx chord.Context) (ConversationHandle, bool, error)
 	// Entry reads a committed entry visible from the task's conversation.
 	Entry(ctx chord.Context, id Id) (*EntryRecord, error)
-	// Context derives the committed transcript and model context.
-	Context(conversationID Id, ctx chord.Context, at *Id) (ContextView, error)
+	// Context derives the committed transcript and model context, optionally as of an entry.
+	Context(conversationID Id, ctx chord.Context, options ...ConversationContextOptions) (ContextView, error)
 	// Now is the harness clock.
 	Now() int64
 	// Report forwards a non-fatal failure to the harness.

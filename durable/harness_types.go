@@ -471,7 +471,8 @@ type ToolExecutionApi interface {
 	// Models is the HarnessOptions model catalog shared with generation.
 	Models() *ai.Models
 	Env() ExecutionEnv
-	Output(chunk []byte)
+	OutputWindow() *ShellOutputWindow
+	Output(chunk []byte, skipped ...*ShellOutputSkip)
 	Diagnostic(diagnostic ToolDiagnostic)
 	Details(value chord.JsonValue, ctx chord.Context) error
 	Commit(change func(tx *Transaction) (any, error), ctx chord.Context) (any, error)

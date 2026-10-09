@@ -22,14 +22,26 @@ type testToolEnv struct {
 
 type fakeToolApi struct {
 	ToolExecutionApi
-	env         ExecutionEnv
-	output      strings.Builder
-	diagnostics []ToolDiagnostic
+	env          ExecutionEnv
+	outputWindow *ShellOutputWindow
+	outputBuffer *OutputBuffer
+	output       strings.Builder
+	diagnostics  []ToolDiagnostic
 }
 
-func (a *fakeToolApi) Env() ExecutionEnv { return a.env }
+func (a *fakeToolApi) Env() ExecutionEnv                { return a.env }
+func (a *fakeToolApi) OutputWindow() *ShellOutputWindow { return a.outputWindow }
 
-func (a *fakeToolApi) Output(chunk []byte) { a.output.Write(chunk) }
+func (a *fakeToolApi) Output(chunk []byte, skipped ...*ShellOutputSkip) {
+	a.output.Write(chunk)
+	if a.outputBuffer != nil {
+		var omitted *ShellOutputSkip
+		if len(skipped) > 0 {
+			omitted = skipped[0]
+		}
+		a.outputBuffer.Push(string(chunk), omitted)
+	}
+}
 
 func (a *fakeToolApi) Diagnostic(diagnostic ToolDiagnostic) {
 	a.diagnostics = append(a.diagnostics, diagnostic)

@@ -260,12 +260,13 @@ type reportedTool struct {
 
 // toolExecutionApi is the operation set available to one tool invocation.
 type toolExecutionApi struct {
-	runtime  TaskRuntime
-	call     ai.ToolCall
-	reported *reportedTool
-	progress *Progress
-	env      ExecutionEnv
-	ended    bool
+	runtime      TaskRuntime
+	call         ai.ToolCall
+	reported     *reportedTool
+	progress     *Progress
+	env          ExecutionEnv
+	outputWindow *ShellOutputWindow
+	ended        bool
 }
 
 func (a *toolExecutionApi) assertLive() error {
@@ -284,12 +285,17 @@ func (a *toolExecutionApi) Registry() RegistrySnapshot {
 func (a *toolExecutionApi) Agent(ctx chord.Context) (Agent, error) { return a.runtime.Agent(ctx) }
 func (a *toolExecutionApi) Models() *ai.Models                     { return a.runtime.Models() }
 func (a *toolExecutionApi) Env() ExecutionEnv                      { return a.env }
+func (a *toolExecutionApi) OutputWindow() *ShellOutputWindow       { return a.outputWindow }
 
-func (a *toolExecutionApi) Output(chunk []byte) {
+func (a *toolExecutionApi) Output(chunk []byte, skipped ...*ShellOutputSkip) {
 	if a.assertLive() != nil {
 		return
 	}
-	if a.reported.output.Push(string(chunk)) {
+	var omitted *ShellOutputSkip
+	if len(skipped) > 0 {
+		omitted = skipped[0]
+	}
+	if a.reported.output.Push(string(chunk), omitted) {
 		a.progress.Mark()
 	}
 }
@@ -388,8 +394,18 @@ func runTool(runtime TaskRuntime, call ai.ToolCall, tool ToolRegistration, args 
 		}
 	}
 	reported := &reportedTool{output: NewOutputBuffer(limits), limits: limits}
-	progress := publishToolProgress(runtime, reported, ctx)
-	api := &toolExecutionApi{runtime: runtime, call: call, reported: reported, progress: progress}
+	progressSettings := runtime.Settings().Progress
+	progress := publishToolProgress(runtime, reported, ctx, progressSettings.OutputIntervalMs)
+	var outputWindow *ShellOutputWindow
+	if limits.Retain == RetainTail {
+		outputWindow = &ShellOutputWindow{
+			MaxBytes: limits.MaxBytes, MaxLines: limits.MaxLines,
+			MinIntervalMs: progressSettings.OutputIntervalMs, BytesPerSecond: defaultProgressBytesPerSecond,
+		}
+	}
+	api := &toolExecutionApi{
+		runtime: runtime, call: call, reported: reported, progress: progress, outputWindow: outputWindow,
+	}
 	var result ToolExecutionResult
 	ending := toolCompleted
 	env, envErr := runtime.Env(ctx)
@@ -448,7 +464,7 @@ type writtenTool struct {
 }
 
 // publishToolProgress commits what the tool reported into its tool slot.
-func publishToolProgress(runtime TaskRuntime, reported *reportedTool, ctx chord.Context) *Progress {
+func publishToolProgress(runtime TaskRuntime, reported *reportedTool, ctx chord.Context, intervalMs int) *Progress {
 	written := &writtenTool{}
 	return NewProgress(func() (int, error) {
 		snapshot := reported.output.Snapshot()
@@ -511,7 +527,7 @@ func publishToolProgress(runtime TaskRuntime, reported *reportedTool, ctx chord.
 		if runtime.Signal().Err() == nil {
 			runtime.Report(err)
 		}
-	}, runtime.Settings().Progress.OutputIntervalMs)
+	}, intervalMs)
 }
 
 // finalToolResult is the settled result: retained output and last details as

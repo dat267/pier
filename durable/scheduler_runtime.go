@@ -214,7 +214,11 @@ func (r *schedulerRuntime) Entry(ctx chord.Context, id Id) (*EntryRecord, error)
 	return &commit.Entry, nil
 }
 
-func (r *schedulerRuntime) Context(conversationID Id, ctx chord.Context, at *Id) (ContextView, error) {
+func (r *schedulerRuntime) Context(conversationID Id, ctx chord.Context, options ...ConversationContextOptions) (ContextView, error) {
+	var at *Id
+	if len(options) > 0 {
+		at = options[0].At
+	}
 	if err := r.invocation.AssertLive(); err != nil {
 		return ContextView{}, err
 	}

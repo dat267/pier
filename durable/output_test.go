@@ -2,9 +2,11 @@ package durable
 
 import (
 	"errors"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 // Port of harness/output.ts.
@@ -73,8 +75,8 @@ func TestOutputBufferTailDropsOldChunks(t *testing.T) {
 	if snapshot.Text != "d\ne\n" || snapshot.DroppedLines != 3 {
 		t.Fatalf("snapshot = %+v", snapshot)
 	}
-	// After a snapshot the stored window is the retained slice.
-	if buffer.StoredBytes() != 4 {
+	// The retained tail keeps one line of margin so a later append can recompute its first line.
+	if buffer.StoredBytes() != 5 {
 		t.Fatalf("stored = %d", buffer.StoredBytes())
 	}
 	snapshot = buffer.Snapshot()
@@ -100,6 +102,44 @@ func TestOutputBufferTotalsAcrossPushes(t *testing.T) {
 	buffer.Push("a\x00b")
 	if snapshot := buffer.Snapshot(); snapshot.Text != "ab" {
 		t.Fatalf("sanitized = %q", snapshot.Text)
+	}
+}
+
+// Port of bounded tail retention across snapshots from packages/durable/src/harness/output.ts at pi v1.1.0 commit cdf79797b.
+func TestOutputBufferTailSnapshotDoesNotChangeFutureTail(t *testing.T) {
+	alphabet := []string{"a", "\n", "é"}
+	for length := 0; length <= 5; length++ {
+		count := 1
+		for index := 0; index < length; index++ {
+			count *= len(alphabet)
+		}
+		for encoded := 0; encoded < count; encoded++ {
+			remaining := encoded
+			var text strings.Builder
+			for index := 0; index < length; index++ {
+				text.WriteString(alphabet[remaining%len(alphabet)])
+				remaining /= len(alphabet)
+			}
+			whole := text.String()
+			for cut := 0; cut <= len(whole); cut++ {
+				if cut < len(whole) && !utf8.RuneStart(whole[cut]) {
+					continue
+				}
+				for maxBytes := 1; maxBytes <= 6; maxBytes++ {
+					for maxLines := 1; maxLines <= 3; maxLines++ {
+						limits := OutputLimits{Retain: RetainTail, MaxBytes: maxBytes, MaxLines: maxLines}
+						full, sampled := NewOutputBuffer(limits), NewOutputBuffer(limits)
+						full.Push(whole)
+						sampled.Push(whole[:cut])
+						sampled.Snapshot()
+						sampled.Push(whole[cut:])
+						if got, want := sampled.Snapshot(), full.Snapshot(); got != want {
+							t.Fatalf("tail changed after snapshot: text=%q cut=%d limits=%+v got=%+v want=%+v", whole, cut, limits, got, want)
+						}
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -141,8 +181,44 @@ func TestProgressCommitsAndStops(t *testing.T) {
 	}
 }
 
-// Port of configurable minimum progress pacing from
-// packages/durable/src/harness/output.ts at pi v1.1.0 commit 674d64f09.
+// Port of ShellOutputSkip accounting from packages/durable/src/harness/output.ts at pi v1.1.0 commit cdf79797b.
+func TestOutputBufferCountsSkippedTailPrefix(t *testing.T) {
+	limits := OutputLimits{MaxBytes: 100, MaxLines: 2, Retain: RetainTail}
+	full := NewOutputBuffer(limits)
+	full.Push("one\ntwo\nthree\nfour\n")
+	skipped := NewOutputBuffer(limits)
+	skipped.Push("two\nthree\nfour\n", &ShellOutputSkip{Bytes: 4, Newlines: 1, EndsWithNewline: true})
+	if got, want := skipped.Snapshot(), full.Snapshot(); got != want {
+		t.Fatalf("skipped output = %+v, full output = %+v", got, want)
+	}
+
+	limits = OutputLimits{MaxBytes: 1000, MaxLines: 2, Retain: RetainTail}
+	full = NewOutputBuffer(limits)
+	skipped = NewOutputBuffer(limits)
+	omitted, retained := "one\ntwo\nthr", "ee\nfour\nfive\nsix"
+	full.Push(omitted + retained)
+	skipped.Push(retained, &ShellOutputSkip{Bytes: 11, Newlines: 2, EndsWithNewline: false})
+	if got := skipped.Snapshot(); got != (BoundedOutput{Text: "five\nsix", DroppedBytes: 19, DroppedLines: 4}) {
+		t.Fatalf("continued-line skip = %+v", got)
+	}
+	if got, want := skipped.Snapshot(), full.Snapshot(); got != want {
+		t.Fatalf("continued-line skip = %+v, full output = %+v", got, want)
+	}
+}
+
+func TestOutputBufferRejectsSkippedHeadOutput(t *testing.T) {
+	buffer := NewOutputBuffer(OutputLimits{Retain: RetainHead, MaxBytes: 10, MaxLines: 2})
+	panicked := false
+	func() {
+		defer func() { panicked = recover() != nil }()
+		buffer.Push("tail", &ShellOutputSkip{Bytes: 4, Newlines: 1, EndsWithNewline: true})
+	}()
+	if !panicked {
+		t.Fatal("head retention accepted skipped output")
+	}
+}
+
+// Port of configurable minimum progress pacing from packages/durable/src/harness/output.ts at pi v1.1.0 commit 674d64f09.
 func TestProgressUsesConfiguredMinimumInterval(t *testing.T) {
 	var writes int32
 	progress := NewProgress(func() (int, error) {

@@ -155,7 +155,7 @@ func generationPrepare(task RunningTask, runtime TaskRuntime, ctx chord.Context)
 			return failGenerationModelError(runtime, *checkpoint.Overflow, ctx)
 		}
 	}
-	view, err := runtime.Context(conversationID, ctx, nil)
+	view, err := runtime.Context(conversationID, ctx)
 	if err != nil {
 		return err
 	}
@@ -263,7 +263,7 @@ func generationRequest(task RunningTask, runtime TaskRuntime, ctx chord.Context)
 	if model == nil {
 		return failGenerationNoModel(runtime, checkpoint.Model, ctx)
 	}
-	view, err := runtime.Context(conversationID, ctx, checkpoint.Cutoff)
+	view, err := runtime.Context(conversationID, ctx, ConversationContextOptions{At: checkpoint.Cutoff})
 	if err != nil {
 		return err
 	}
@@ -509,7 +509,7 @@ func classifyGeneration(runtime TaskRuntime, request generationRequestInfo, mess
 	overflow := message.StopReason == ai.StopError && modelOverflow(runtime, request, message)
 	if overflow && request.Compacted == nil && settings.Compaction.Enabled {
 		policy := settings.Compaction
-		view, err := runtime.Context(conversationID, ctx, request.Cutoff)
+		view, err := runtime.Context(conversationID, ctx, ConversationContextOptions{At: request.Cutoff})
 		if err != nil {
 			return err
 		}
@@ -674,7 +674,7 @@ func startToolRound(runtime TaskRuntime, request generationRequestInfo, message 
 	conversationID := runtime.ConversationID()
 	messages := request.Messages
 	if messages == nil {
-		view, err := runtime.Context(conversationID, ctx, request.Cutoff)
+		view, err := runtime.Context(conversationID, ctx, ConversationContextOptions{At: request.Cutoff})
 		if err != nil {
 			return err
 		}

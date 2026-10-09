@@ -5,8 +5,10 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
+	"time"
 )
 
 // Port of the filesystem half of env/node.ts.
@@ -201,6 +203,162 @@ func TestOSFileSystemDirectoryReaderPagesEntries(t *testing.T) {
 	}
 	if _, _, err := reader.Next(ctx, 1); err == nil {
 		t.Fatal("closed directory reader rejects next")
+	}
+}
+
+// Port of recursive FileSystem.watch from packages/durable/src/env/node-watch.ts at pi v1.1.0 commit a84510819.
+func TestOSFileSystemWatchReportsRecursiveChanges(t *testing.T) {
+	fsys, dir := newTestFileSystem(t)
+	fsys.watchPollInterval = 5 * time.Millisecond
+	ctx := context.Background()
+	changes := make(chan WatchChange, 4)
+	watcher, err := fsys.Watch([]WatchTarget{{Path: "watched", Recursive: true}}, func(change WatchChange) {
+		changes <- change
+	}, ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if watcher.Mode() != WatchModePolling {
+		t.Fatalf("watch mode = %q, want polling", watcher.Mode())
+	}
+	if err := fsys.CreateDir(filepath.Join(dir, "watched", "sub"), &CreateDirOptions{Recursive: true}, ctx); err != nil {
+		t.Fatal(err)
+	}
+	file := filepath.Join(dir, "watched", "sub", "file.txt")
+	if err := fsys.WriteFile(file, []byte("data"), ctx); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.NewTimer(time.Second)
+	defer deadline.Stop()
+	for {
+		select {
+		case change := <-changes:
+			for _, path := range change.Paths {
+				if path == file {
+					if err := watcher.Close(ctx); err != nil {
+						t.Fatal(err)
+					}
+					return
+				}
+			}
+		case <-deadline.C:
+			_ = watcher.Close(ctx)
+			t.Fatal("watch did not report nested file creation")
+		}
+	}
+}
+
+// Port of recursive watch bounds from packages/durable/src/env/node-watch.ts at pi v1.1.0 commit a84510819.
+func TestOSFileSystemWatchStopsWhenTreeExceedsDirectoryBudget(t *testing.T) {
+	fsys, dir := newTestFileSystem(t)
+	fsys.watchPollInterval = 5 * time.Millisecond
+	fsys.maxWatchDirectories = 2
+	ctx := context.Background()
+	root := filepath.Join(dir, "watched")
+	if err := fsys.CreateDir(filepath.Join(root, "sub"), &CreateDirOptions{Recursive: true}, ctx); err != nil {
+		t.Fatal(err)
+	}
+	changes := make(chan WatchChange, 2)
+	watcher, err := fsys.Watch([]WatchTarget{{Path: root, Recursive: true}}, func(change WatchChange) {
+		changes <- change
+	}, ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer watcher.Close(ctx)
+	if err := fsys.CreateDir(filepath.Join(root, "sub", "next"), nil, ctx); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case change := <-changes:
+		if change.Error == nil || change.Error.Code != FileErrorInvalid {
+			t.Fatalf("budget overflow change = %+v", change)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("watch did not report directory-budget overflow")
+	}
+}
+
+// Port of FileWatcher.close from packages/durable/src/env/node-watch.ts at pi v1.1.0 commit a84510819.
+func TestOSFileSystemWatchStopsAfterClose(t *testing.T) {
+	fsys, dir := newTestFileSystem(t)
+	fsys.watchPollInterval = 5 * time.Millisecond
+	ctx := context.Background()
+	root := filepath.Join(dir, "watched")
+	if err := fsys.CreateDir(root, nil, ctx); err != nil {
+		t.Fatal(err)
+	}
+	changes := make(chan WatchChange, 4)
+	watcher, err := fsys.Watch([]WatchTarget{{Path: root}}, func(change WatchChange) {
+		changes <- change
+	}, ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := fsys.WriteFile(filepath.Join(root, "first"), []byte("one"), ctx); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-changes:
+	case <-time.After(time.Second):
+		t.Fatal("watch missed first file")
+	}
+	if err := watcher.Close(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := fsys.WriteFile(filepath.Join(root, "second"), []byte("two"), ctx); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case change := <-changes:
+		t.Fatalf("watch reported after close: %+v", change)
+	case <-time.After(20 * time.Millisecond):
+	}
+}
+
+// Port of WatchExclude from packages/durable/src/env/node-watch.ts at pi v1.1.0 commit a84510819.
+func TestOSFileSystemWatchFiltersExcludedEntries(t *testing.T) {
+	fsys, dir := newTestFileSystem(t)
+	fsys.watchPollInterval = 5 * time.Millisecond
+	ctx := context.Background()
+	root := filepath.Join(dir, "watched")
+	if err := fsys.CreateDir(root, &CreateDirOptions{Recursive: true}, ctx); err != nil {
+		t.Fatal(err)
+	}
+	for name, content := range map[string]string{"keep.txt": "before", ".hidden": "before", "skip.txt": "before"} {
+		if err := fsys.WriteFile(filepath.Join(root, name), []byte(content), ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	changes := make(chan WatchChange, 4)
+	watcher, err := fsys.Watch([]WatchTarget{{Path: root, Recursive: true, Exclude: &WatchExclude{
+		Hidden: true, Names: []string{"skip.txt"},
+	}}}, func(change WatchChange) { changes <- change }, ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer watcher.Close(ctx)
+	for name, content := range map[string]string{"keep.txt": "after", ".hidden": "after", "skip.txt": "after"} {
+		if err := fsys.WriteFile(filepath.Join(root, name), []byte(content), ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	deadline := time.NewTimer(time.Second)
+	defer deadline.Stop()
+	for {
+		select {
+		case change := <-changes:
+			if slices.Contains(change.Paths, filepath.Join(root, "keep.txt")) {
+				for _, path := range change.Paths {
+					if path == filepath.Join(root, ".hidden") || path == filepath.Join(root, "skip.txt") {
+						t.Fatalf("excluded path reported: %+v", change)
+					}
+				}
+				return
+			}
+		case <-deadline.C:
+			t.Fatal("watch missed included file change")
+		}
 	}
 }
 

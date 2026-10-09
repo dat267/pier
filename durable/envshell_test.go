@@ -2,6 +2,7 @@ package durable
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -37,7 +38,7 @@ func TestOSShellOutputAndExitCode(t *testing.T) {
 	ctx := context.Background()
 	var output strings.Builder
 	result, err := shell.Exec("printf 'one\\ntwo\\n'", &ShellExecOptions{
-		OnOutput: func(text string, _ context.Context) { output.WriteString(text) },
+		OnOutput: func(text string, _ context.Context, _ ShellOutputInfo) { output.WriteString(text) },
 	}, ctx)
 	if err != nil || result.ExitCode != 0 {
 		t.Fatalf("result = %+v, %v", result, err)
@@ -49,6 +50,78 @@ func TestOSShellOutputAndExitCode(t *testing.T) {
 	result, err = shell.Exec("exit 3", nil, ctx)
 	if err != nil || result.ExitCode != 3 {
 		t.Fatalf("result = %+v, %v", result, err)
+	}
+}
+
+// Port of Shell.exec argv dispatch from packages/durable/src/env/node.ts at pi v1.1.0 commit 4748c627a.
+func TestOSShellExecArgvDoesNotParseArguments(t *testing.T) {
+	shell, dir := newTestShell(t)
+	capture := filepath.Join(dir, "argv.json")
+	want := []string{"$HOME; echo no-shell", "space stays", "quote'"}
+	argv := append([]string{os.Args[0], "-test.run=^TestOSShellArgvHelper$", "--"}, want...)
+	result, err := shell.ExecArgv(argv, &ShellExecOptions{
+		Cwd: dir, InheritEnv: true, Env: map[string]string{"PIER_ARGV_HELPER": "1", "PIER_ARGV_CAPTURE": capture},
+	}, context.Background())
+	if err != nil || result.ExitCode != 0 {
+		t.Fatalf("exec argv = %+v, %v", result, err)
+	}
+	encoded, err := os.ReadFile(capture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	if err := json.Unmarshal(encoded, &got); err != nil || len(got) != len(want) {
+		t.Fatalf("captured argv = %s, %v", encoded, err)
+	}
+	for index := range want {
+		if got[index] != want[index] {
+			t.Fatalf("argv[%d] = %q, want %q", index, got[index], want[index])
+		}
+	}
+}
+
+func TestOSShellArgvHelper(t *testing.T) {
+	if os.Getenv("PIER_ARGV_HELPER") != "1" {
+		return
+	}
+	separator := -1
+	for index, arg := range os.Args {
+		if arg == "--" {
+			separator = index
+			break
+		}
+	}
+	if separator < 0 {
+		t.Fatal("argv separator missing")
+	}
+	encoded, err := json.Marshal(os.Args[separator+1:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(os.Getenv("PIER_ARGV_CAPTURE"), encoded, 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Port of ShellOutputInfo.stream from packages/durable/src/env/index.ts at pi v1.1.0 commit 4748c627a.
+func TestOSShellOutputReportsStream(t *testing.T) {
+	requireShell(t)
+	shell, _ := newTestShell(t)
+	var stdout, stderr strings.Builder
+	_, err := shell.Exec("printf out; printf err >&2", &ShellExecOptions{
+		OnOutput: func(text string, _ context.Context, info ShellOutputInfo) {
+			switch info.Stream {
+			case "stdout":
+				stdout.WriteString(text)
+			case "stderr":
+				stderr.WriteString(text)
+			default:
+				t.Errorf("output stream = %q", info.Stream)
+			}
+		},
+	}, context.Background())
+	if err != nil || stdout.String() != "out" || stderr.String() != "err" {
+		t.Fatalf("stdout=%q stderr=%q err=%v", stdout.String(), stderr.String(), err)
 	}
 }
 
@@ -167,7 +240,7 @@ func TestOSShellWorkingDirectoryAndEnv(t *testing.T) {
 	if _, err := shell.Exec("printf %s \"$PIER_SHELL_TEST\"", &ShellExecOptions{
 		InheritEnv: false,
 		Env:        map[string]string{"PIER_SHELL_TEST": "explicit"},
-		OnOutput:   func(text string, _ context.Context) { output.WriteString(text) },
+		OnOutput:   func(text string, _ context.Context, _ ShellOutputInfo) { output.WriteString(text) },
 	}, ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -180,7 +253,7 @@ func TestOSShellCallbackError(t *testing.T) {
 	requireShell(t)
 	shell, _ := newTestShell(t)
 	_, err := shell.Exec("echo boom", &ShellExecOptions{
-		OnOutput: func(string, context.Context) { panic("listener exploded") },
+		OnOutput: func(string, context.Context, ShellOutputInfo) { panic("listener exploded") },
 	}, context.Background())
 	var executionError *ExecutionError
 	if !errors.As(err, &executionError) || executionError.Code != ExecutionErrorCallback ||

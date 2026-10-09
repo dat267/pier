@@ -119,7 +119,7 @@ func TestCachedContextViewsCannotMutateKeptRange(t *testing.T) {
 	invocation := NewInvocation(100, root, "run", ctx)
 	defer invocation.End()
 	runtime := TaskRuntime(&schedulerRuntime{scheduler: scheduler, invocation: invocation, phase: &runtimePhase{}})
-	first, err := runtime.Context(root, ctx, nil)
+	first, err := runtime.Context(root, ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +127,7 @@ func TestCachedContextViewsCannotMutateKeptRange(t *testing.T) {
 	first.Contributions[0][0].(*ai.UserMessage).Content.Text = "changed contribution"
 	first.Entries[0].Model[0].(*ai.UserMessage).Content.Text = "changed entry"
 
-	second, err := runtime.Context(root, ctx, nil)
+	second, err := runtime.Context(root, ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +156,7 @@ func TestInvocationContextScansOnlyEntriesAfterCachedTail(t *testing.T) {
 	runtime := TaskRuntime(&schedulerRuntime{
 		scheduler: scheduler, invocation: invocation, phase: &runtimePhase{},
 	})
-	first, err := runtime.Context(root, ctx, nil)
+	first, err := runtime.Context(root, ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,7 +167,7 @@ func TestInvocationContextScansOnlyEntriesAfterCachedTail(t *testing.T) {
 	mustCommit(t, storage, contextEntry(12, root, nil, []ai.Message{userMessage("second", 2)}, nil))
 
 	callStart := len(storage.calls)
-	second, err := runtime.Context(root, ctx, nil)
+	second, err := runtime.Context(root, ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,7 +185,7 @@ func TestInvocationContextScansOnlyEntriesAfterCachedTail(t *testing.T) {
 
 	mustCommit(t, storage, contextEntry(14, root, nil, nil, []ContextEdit{{Target: 10, Action: EditOmit}}))
 	callStart = len(storage.calls)
-	edited, err := runtime.Context(root, ctx, nil)
+	edited, err := runtime.Context(root, ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -200,9 +200,10 @@ func TestInvocationContextScansOnlyEntriesAfterCachedTail(t *testing.T) {
 		t.Fatalf("edit extension scan = %+v", incremental)
 	}
 
+	// TaskRuntime.context takes cutoff through options.at in pi v1.1.0 commit 636703a0a.
 	previousTail = 12
 	callStart = len(storage.calls)
-	cutoff, err := runtime.Context(root, ctx, &previousTail)
+	cutoff, err := runtime.Context(root, ctx, ConversationContextOptions{At: &previousTail})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,7 +215,7 @@ func TestInvocationContextScansOnlyEntriesAfterCachedTail(t *testing.T) {
 	head := Id(16)
 	mustCommit(t, storage, contextEntry(head, root, &head, []ai.Message{userMessage("fresh", 3)}, nil))
 	callStart = len(storage.calls)
-	reset, err := runtime.Context(root, ctx, nil)
+	reset, err := runtime.Context(root, ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -242,7 +243,7 @@ func TestContextExtensionsReorderNewToolResultsAndPreserveEarlierPairs(t *testin
 	runtime := TaskRuntime(&schedulerRuntime{scheduler: scheduler, invocation: invocation, phase: &runtimePhase{}})
 	read := func() ContextView {
 		t.Helper()
-		view, err := runtime.Context(root, ctx, nil)
+		view, err := runtime.Context(root, ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -297,7 +298,7 @@ func TestContextRangeIsReusedAcrossTaskInvocations(t *testing.T) {
 		Phases: map[string]PhaseHandler{
 			"run": func(_ RunningTask, runtime TaskRuntime, taskContext chord.Context) error {
 				before := len(storage.calls)
-				if _, err := runtime.Context(RootConversationID, taskContext, nil); err != nil {
+				if _, err := runtime.Context(RootConversationID, taskContext); err != nil {
 					return err
 				}
 				reads = append(reads, len(storage.calls)-before)
@@ -307,7 +308,7 @@ func TestContextRangeIsReusedAcrossTaskInvocations(t *testing.T) {
 						return err
 					}
 					before = len(storage.calls)
-					if _, err := runtime.Context(RootConversationID, taskContext, nil); err != nil {
+					if _, err := runtime.Context(RootConversationID, taskContext); err != nil {
 						return err
 					}
 					reads = append(reads, len(storage.calls)-before)
@@ -393,7 +394,7 @@ func TestIdleContextRangeExpiresWithoutFurtherTaskChanges(t *testing.T) {
 		Initial: func(json.RawMessage) (json.RawMessage, error) { return json.RawMessage(`{"phase":"run"}`), nil },
 		Phases: map[string]PhaseHandler{
 			"run": func(_ RunningTask, runtime TaskRuntime, taskContext chord.Context) error {
-				if _, err := runtime.Context(RootConversationID, taskContext, nil); err != nil {
+				if _, err := runtime.Context(RootConversationID, taskContext); err != nil {
 					return err
 				}
 				return runtime.Commit(func(tx *Transaction, _ RunningTask) (*NextTaskState, error) {

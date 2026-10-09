@@ -16,11 +16,10 @@ import (
 
 // Port of the shell half of env/node.ts: the local command capability.
 //
-// The reference keeps two decoders and stream backpressure; the Go port reads
-// one combined output pipe (stdout and stderr are the same file descriptor for
-// the reader, preserving arrival order) and applies the same spill rule: once
-// the output crosses either threshold, the complete raw output moves to a
-// temporary spill file and the result reports its path.
+// The Go port runs argv directly when requested and reads stdout/stderr from
+// separate pipes. A bounded event channel multiplexes chunks for the callback
+// and spill writer, so cross-stream order follows goroutine send order rather
+// than a shared OS pipe's byte order (D188).
 
 const (
 	// maxTimeoutMs is upstream MAX_TIMEOUT_MS.
@@ -80,8 +79,20 @@ func resolveTimeoutMs(timeout *float64) (time.Duration, bool, error) {
 	return time.Duration(millis) * time.Millisecond, true, nil
 }
 
-// Exec runs one command (upstream NodeExecutionEnv.exec).
+// Exec runs one command through the shell.
 func (s *OSShell) Exec(command string, options *ShellExecOptions, ctx context.Context) (ShellExecResult, error) {
+	return s.execCommand(command, nil, false, options, ctx)
+}
+
+// ExecArgv runs a program directly with arguments, without shell parsing.
+func (s *OSShell) ExecArgv(argv []string, options *ShellExecOptions, ctx context.Context) (ShellExecResult, error) {
+	if len(argv) == 0 || argv[0] == "" {
+		return ShellExecResult{}, &ExecutionError{Code: ExecutionErrorSpawn, Message: "Empty argv: no program to run"}
+	}
+	return s.execCommand("", argv, true, options, ctx)
+}
+
+func (s *OSShell) execCommand(command string, argv []string, direct bool, options *ShellExecOptions, ctx context.Context) (ShellExecResult, error) {
 	if ctx != nil {
 		if err := ctx.Err(); err != nil {
 			return ShellExecResult{}, &ExecutionError{Code: ExecutionErrorAborted, Message: "aborted", Cause: err}
@@ -104,9 +115,24 @@ func (s *OSShell) Exec(command string, options *ShellExecOptions, ctx context.Co
 			cwd = filepath.Clean(options.Cwd)
 		}
 	}
-	shell, args, stdinTransport, err := s.resolveShell()
-	if err != nil {
-		return ShellExecResult{}, err
+	var program string
+	var commandArgs []string
+	stdinCommand := false
+	if direct {
+		program = argv[0]
+		commandArgs = argv[1:]
+	} else {
+		shell, args, stdinTransport, err := s.resolveShell()
+		if err != nil {
+			return ShellExecResult{}, err
+		}
+		program = shell
+		commandArgs = args
+		if !stdinTransport {
+			commandArgs = append(append([]string{}, args...), command)
+		} else {
+			stdinCommand = true
+		}
 	}
 	if _, statErr := os.Stat(cwd); statErr != nil {
 		return ShellExecResult{}, &ExecutionError{
@@ -115,29 +141,34 @@ func (s *OSShell) Exec(command string, options *ShellExecOptions, ctx context.Co
 		}
 	}
 
-	commandArgs := args
-	if !stdinTransport {
-		commandArgs = append(append([]string{}, args...), command)
-	}
-	cmd := exec.Command(shell, commandArgs...)
+	cmd := exec.Command(program, commandArgs...)
 	cmd.Dir = cwd
 	cmd.Env = shellEnv(s.shellEnv, options)
 	configureProcessGroup(cmd)
-	reader, writer, pipeErr := os.Pipe()
+	stdoutReader, stdoutWriter, pipeErr := os.Pipe()
 	if pipeErr != nil {
 		return ShellExecResult{}, &ExecutionError{Code: ExecutionErrorSpawn, Message: pipeErr.Error(), Cause: pipeErr}
 	}
-	cmd.Stdout = writer
-	cmd.Stderr = writer
-	if stdinTransport {
+	stderrReader, stderrWriter, pipeErr := os.Pipe()
+	if pipeErr != nil {
+		_ = stdoutReader.Close()
+		_ = stdoutWriter.Close()
+		return ShellExecResult{}, &ExecutionError{Code: ExecutionErrorSpawn, Message: pipeErr.Error(), Cause: pipeErr}
+	}
+	cmd.Stdout = stdoutWriter
+	cmd.Stderr = stderrWriter
+	if stdinCommand {
 		cmd.Stdin = strings.NewReader(command)
 	}
 	if startErr := cmd.Start(); startErr != nil {
-		_ = reader.Close()
-		_ = writer.Close()
+		_ = stdoutReader.Close()
+		_ = stdoutWriter.Close()
+		_ = stderrReader.Close()
+		_ = stderrWriter.Close()
 		return ShellExecResult{}, &ExecutionError{Code: ExecutionErrorSpawn, Message: startErr.Error(), Cause: startErr}
 	}
-	_ = writer.Close()
+	_ = stdoutWriter.Close()
+	_ = stderrWriter.Close()
 
 	// Kill the tree on timeout or caller cancellation.
 	interrupted := make(chan struct{}, 1)
@@ -181,56 +212,92 @@ func (s *OSShell) Exec(command string, options *ShellExecOptions, ctx context.Co
 		spillOptions = options.Spill
 	}
 	spillState := &shellSpillState{options: spillOptions}
+	type outputChunk struct {
+		stream string
+		bytes  []byte
+	}
+	chunks := make(chan outputChunk, 8)
+	pumpDone := make(chan struct{}, 2)
+	pump := func(reader *os.File, stream string) {
+		go func() {
+			buffer := make([]byte, 32*1024)
+			for {
+				count, readErr := reader.Read(buffer)
+				if count > 0 {
+					chunk := append([]byte(nil), buffer[:count]...)
+					chunks <- outputChunk{stream: stream, bytes: chunk}
+				}
+				if readErr != nil {
+					break
+				}
+			}
+			pumpDone <- struct{}{}
+		}()
+	}
+	pump(stdoutReader, "stdout")
+	pump(stderrReader, "stderr")
+	stdoutDecoder, stderrDecoder := &utf8ChunkReader{}, &utf8ChunkReader{}
+	// Like upstream env/node.ts, OSShell emits every chunk; Window is for environments that can omit text safely.
 	var callbackError error
-	outputReader := &utf8ChunkReader{}
 	var spillError error
-	outputDone := make(chan struct{})
-	go func() {
-		defer close(outputDone)
-		buffer := make([]byte, 32*1024)
-		for {
-			count, readErr := reader.Read(buffer)
-			if count > 0 {
-				chunk := outputReader.decode(buffer[:count])
-				if chunk != "" && callbackError == nil && options != nil && options.OnOutput != nil {
-					func() {
-						defer func() {
-							if recovered := recover(); recovered != nil {
-								cause := ToError(recovered)
-								callbackError = &ExecutionError{Code: ExecutionErrorCallback, Message: cause.Error(), Cause: cause}
-							}
-						}()
-						options.OnOutput(chunk, ctx)
-					}()
-				}
-				if callbackError == nil && spillError == nil {
-					if spillErr := s.appendSpill(spillState, buffer[:count]); spillErr != nil {
-						spillError = spillErr
-					}
-				}
-			}
-			if readErr != nil {
-				return
-			}
+	emit := func(text, stream string) {
+		if text == "" || callbackError != nil || options == nil || options.OnOutput == nil {
+			return
 		}
-	}()
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				cause := ToError(recovered)
+				callbackError = &ExecutionError{Code: ExecutionErrorCallback, Message: cause.Error(), Cause: cause}
+			}
+		}()
+		options.OnOutput(text, ctx, ShellOutputInfo{Stream: stream})
+	}
 	waitDone := make(chan error, 1)
 	go func() { waitDone <- cmd.Wait() }()
 	var waitErr error
-	select {
-	case waitErr = <-waitDone:
-	case <-interrupted:
-		killProcessTree(cmd)
-		waitErr = <-waitDone
+	waitChannel := (<-chan error)(waitDone)
+	interruptedChannel := (<-chan struct{})(interrupted)
+	var graceTimer *time.Timer
+	var graceChannel <-chan time.Time
+	completedPumps := 0
+	for {
+		if waitChannel == nil && completedPumps == 2 && len(chunks) == 0 {
+			break
+		}
+		select {
+		case chunk := <-chunks:
+			decoder := stdoutDecoder
+			if chunk.stream == "stderr" {
+				decoder = stderrDecoder
+			}
+			emit(decoder.decode(chunk.bytes), chunk.stream)
+			if callbackError == nil && spillError == nil {
+				if err := s.appendSpill(spillState, chunk.bytes); err != nil {
+					spillError = err
+				}
+			}
+		case <-pumpDone:
+			completedPumps++
+		case waitErr = <-waitChannel:
+			waitChannel = nil
+			graceTimer = time.NewTimer(exitStdioGrace)
+			graceChannel = graceTimer.C
+		case <-interruptedChannel:
+			interruptedChannel = nil
+			killProcessTree(cmd)
+		case <-graceChannel:
+			graceChannel = nil
+			_ = stdoutReader.Close()
+			_ = stderrReader.Close()
+		}
 	}
-	// Let the reader drain output the process already wrote; a descendant that
-	// inherited the write end is abandoned after the grace period.
-	select {
-	case <-outputDone:
-	case <-time.After(exitStdioGrace):
+	if graceTimer != nil {
+		graceTimer.Stop()
 	}
-	_ = reader.Close()
-	<-outputDone
+	_ = stdoutReader.Close()
+	_ = stderrReader.Close()
+	emit(stdoutDecoder.decode(nil), "stdout")
+	emit(stderrDecoder.decode(nil), "stderr")
 	close(stopWatcher)
 	if !timer.Stop() {
 		select {

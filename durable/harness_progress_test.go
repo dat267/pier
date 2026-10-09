@@ -32,7 +32,7 @@ func TestGenerationPartialIntervalUsesProgressSettings(t *testing.T) {
 func TestToolProgressUsesOutputIntervalSetting(t *testing.T) {
 	runtime := &outputIntervalRuntime{settings: Settings{Progress: ProgressPolicy{OutputIntervalMs: 0}}}
 	reported := &reportedTool{output: NewOutputBuffer(OutputLimits{MaxBytes: 100, MaxLines: 10})}
-	progress := publishToolProgress(runtime, reported, context.Background())
+	progress := publishToolProgress(runtime, reported, context.Background(), 0)
 	defer progress.Stop()
 	reported.output.Push("first")
 	if err := progress.MarkAndWait().Wait(); err != nil {

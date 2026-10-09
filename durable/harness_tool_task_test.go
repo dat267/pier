@@ -54,11 +54,14 @@ func TestToolTaskExecutesAndAppendsResult(t *testing.T) {
 	}
 	models := ai.CreateModels(nil)
 	seenModels := make(chan *ai.Models, 2)
+	var outputWindow *ShellOutputWindow
 	echo := ToolRegistration{
+		OutputLimits: &OutputLimits{Retain: RetainTail},
 		Tool: ai.Tool{Name: "echo", Description: "echoes",
 			Parameters: json.RawMessage(`{"type":"object","properties":{"text":{"type":"string"}},"required":["text"]}`)},
 		Execute: func(args chord.JsonValue, api ToolExecutionApi, ctx chord.Context) (ToolExecutionResult, error) {
 			seenModels <- api.Models()
+			outputWindow = api.OutputWindow()
 			api.Output([]byte("out"))
 			return ToolExecutionResult{Content: []ai.UserContent{ai.TextContent{Text: "done"}}}, nil
 		},
@@ -93,6 +96,13 @@ func TestToolTaskExecutesAndAppendsResult(t *testing.T) {
 	}
 	if first, second := <-seenModels, <-seenModels; first != models || second != models {
 		t.Fatalf("tool/hook models = (%p, %p), want (%p, %p)", first, second, models, models)
+	}
+	wantWindow := ShellOutputWindow{
+		MaxBytes: DefaultMaxBytes, MaxLines: DefaultMaxLines,
+		MinIntervalMs: defaultProgressMinIntervalMs, BytesPerSecond: defaultProgressBytesPerSecond,
+	}
+	if outputWindow == nil || *outputWindow != wantWindow {
+		t.Fatalf("output window = %+v, want %+v", outputWindow, wantWindow)
 	}
 	// The result entry is a tool result with the tool's content.
 	page, err := storage.ScanEntries(ctx, EntryQuery{ConversationID: RootConversationID}, nil, 20)

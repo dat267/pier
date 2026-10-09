@@ -106,6 +106,42 @@ type ExecutionError struct {
 func (e *ExecutionError) Error() string { return e.Message }
 func (e *ExecutionError) Unwrap() error { return e.Cause }
 
+// WatchTarget is a file or directory to watch; missing paths are watched for creation.
+type WatchTarget struct {
+	Path      string
+	Recursive bool
+	Exclude   *WatchExclude
+}
+
+// WatchExclude filters child entry names during watch scans.
+type WatchExclude struct {
+	Hidden bool
+	Names  []string
+}
+
+// WatchChange reports paths that may have changed, uncertainty, or a terminal watcher error.
+type WatchChange struct {
+	// Paths lists changed file or directory paths.
+	Paths []string
+	// Overflow means watcher could not establish complete change coverage.
+	Overflow bool
+	// Error is terminal; no later changes are sent.
+	Error *FileError
+}
+
+// WatchMode is how a filesystem watcher observes changes.
+type WatchMode string
+
+const WatchModePolling WatchMode = "polling"
+
+// FileWatcher is one filesystem watch registration.
+type FileWatcher interface {
+	// Mode reports how the watcher observes changes.
+	Mode() WatchMode
+	// Close stops future notifications; it is idempotent.
+	Close(ctx context.Context) error
+}
+
 // FileInfo describes one filesystem entry.
 type FileInfo struct {
 	Name    string   `json:"name"`
@@ -123,7 +159,9 @@ type TextLine struct {
 
 // DirReader pages through one opened directory.
 type DirReader interface {
+	// Next returns up to maxEntries supported entries and whether listing is complete.
 	Next(ctx context.Context, maxEntries int) ([]FileInfo, bool, error)
+	// Close releases the directory handle; it is idempotent.
 	Close(ctx context.Context) error
 }
 
@@ -176,7 +214,10 @@ type FileSystem interface {
 	RenameFile(sourcePath string, destinationPath string, ctx context.Context) error
 	FileInfo(path string, ctx context.Context) (*FileInfo, error)
 	ListDir(path string, ctx context.Context) ([]FileInfo, error)
+	// OpenDirReader opens one directory for paged listing.
 	OpenDirReader(path string, ctx context.Context) (DirReader, error)
+	// Watch observes changes to files and directories until the returned watcher closes.
+	Watch(targets []WatchTarget, onChange func(WatchChange), ctx context.Context) (FileWatcher, error)
 	CanonicalPath(path string, ctx context.Context) (string, error)
 	Exists(path string, ctx context.Context) (bool, error)
 	CreateDir(path string, options *CreateDirOptions, ctx context.Context) error
@@ -202,6 +243,35 @@ type ShellExecResult struct {
 	SpillPath string
 }
 
+// ShellOutputInfo identifies the command stream and any output omitted before this chunk.
+type ShellOutputInfo struct {
+	// Stream is "stdout" or "stderr".
+	Stream string
+	// Skipped counts decoded text omitted immediately before this chunk.
+	Skipped *ShellOutputSkip
+}
+
+// ShellOutputWindow describes the tail a caller retains and its progress pace.
+type ShellOutputWindow struct {
+	// MaxBytes and MaxLines bound retained decoded text.
+	MaxBytes int
+	MaxLines int
+	// MinIntervalMs is the minimum pause between caller progress commits.
+	MinIntervalMs int
+	// BytesPerSecond adds a pause proportional to each progress commit's size.
+	BytesPerSecond int
+}
+
+// ShellOutputSkip counts decoded text omitted immediately before an output chunk.
+type ShellOutputSkip struct {
+	// Bytes is the UTF-8 byte length of omitted text.
+	Bytes int
+	// Newlines counts U+000A characters in omitted text.
+	Newlines int
+	// EndsWithNewline records whether omitted text ends in U+000A.
+	EndsWithNewline bool
+}
+
 // ShellExecOptions configures one command.
 type ShellExecOptions struct {
 	Cwd        string
@@ -210,13 +280,17 @@ type ShellExecOptions struct {
 	// Timeout is in seconds; nil selects no timeout (an explicit zero is
 	// rejected, as upstream does).
 	Timeout  *float64
-	OnOutput func(text string, ctx context.Context)
+	OnOutput func(text string, ctx context.Context, info ShellOutputInfo)
 	Spill    *ShellSpillOptions
+	// Window lets environments skip output outside a caller's retained tail.
+	Window *ShellOutputWindow
 }
 
+// D214: Go exposes argv execution separately instead of weakening Exec's command type to any.
 // Shell is the portable command capability.
 type Shell interface {
 	Exec(command string, options *ShellExecOptions, ctx context.Context) (ShellExecResult, error)
+	ExecArgv(argv []string, options *ShellExecOptions, ctx context.Context) (ShellExecResult, error)
 	Cleanup(ctx context.Context) error
 }
 

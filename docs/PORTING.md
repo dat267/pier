@@ -90,19 +90,22 @@ changes. Ported the initial system-message ordering fix (upstream #10542,
 `4dd2af42c`; D213 fixes SQLite's maximum-safe-ID boundary). Context ranges
 incrementally extend scanned and derived views within invocations and persist
 per conversation across tasks with configurable idle retention (`68ccef176`,
-`da866ada1`). Public conversation context supports an `at`
-entry cutoff (upstream #10512, `76f6c06da`). Task records stamp wall-clock
+`da866ada1`). Conversation and TaskRuntime context accept an `at` entry cutoff
+(upstream #10512, `76f6c06da`, `636703a0a`). Task records stamp wall-clock
 `startedAt` at first run and `endedAt` at terminal transition, with injectable
 clock defaulting to current time (upstream #10549, `36a686ee8`); durable tool and
 hook APIs expose `models` (upstream #10395, `b0114ef5f`). Progress commits now
 use configurable partial and output intervals (upstream #10357, `674d64f09`).
-Bounded directory readers are ported (upstream `4748c627a`). Remaining gaps:
-the environment API still lacks filesystem watching, argv execution, and
-windowed shell output, with no PowerShell tool (`a84510819`, `cdf79797b`,
-`68c22123b`). The read tool uses a positional binary reader and fixed-size
-line scans, so it no longer materializes entire files before truncating output.
-D188 already documents combined stdout/stderr delivery. Other package deltas
-remain unreviewed: the commit counts say how much there is, not which commits.
+Bounded directory readers, direct argv execution and stream-tagged output are
+ported (upstream `4748c627a`; D214), as are output-window metadata and skipped
+output accounting (`cdf79797b`). `OSShell` emits every chunk, matching upstream
+`env/node.ts`; optimized environments may omit text and report skip counts. The
+PowerShell tool is ported (`68c22123b`). `FileSystem.watch` uses polling on all
+platforms (D215; upstream `a84510819`). The read tool uses a positional
+binary reader and fixed-size line scans, so it no longer materializes entire
+files before truncating output. D188 documents Go cross-stream multiplex
+ordering. Other package deltas remain unreviewed: the commit counts say how much
+there is, not which commits.
 
 The v0.99.1→v1.0.0 delta (62 commits) is ported: it released the experimental
 `durable` packages and landed MCP and codemode work (codemode stays out of
@@ -398,11 +401,11 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   `tasks.ts` DefineTask, the harness `ToolDiagnostic` and `CompactionReason`
   types) and the local execution environment's filesystem half (`env/index.ts`
   + `env/node.ts`: portable `FileSystem`, path resolution, error codes and
-  tracked temp cleanup; D188). The shell half is ported too (`OSShell`: bash
+  tracked temp cleanup; D188). The shell half is ported too (`OSShell`: shell
   resolution with the Windows Git Bash candidates and `sh -c` fallback, timeout
-  validation, combined stdout/stderr in arrival order, the output spill rule,
-  process-tree kill on timeout or cancellation, `onOutput` and the
-  callback-error path). The `tools/` helpers that depend only on the
+  validation, direct argv execution, stream-tagged `onOutput`, output spill,
+  process-tree kill on timeout or cancellation, and callback-error handling).
+  The `tools/` helpers that depend only on the
   environment are ported (`path-utils.ts`: Unicode-space and `@` normalization
   with the meridiem/NFD/apostrophe read-path variants; `file-mutation-queue.ts`:
   per-filesystem, per-canonical-path mutation serialization, with a
