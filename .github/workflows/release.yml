@@ -14,11 +14,11 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       # fetch-depth 0 so the annotated tag object is present.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: "1.27"
 
