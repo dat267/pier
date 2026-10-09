@@ -86,11 +86,12 @@ Checked against v1.1.0 and still absent — reading the Termux clipboard (upstre
 `592fb57b7`) stays out of scope under **D120**. The `durable` delta is also audited
 against v1.1.0 (`abe508e1`); `origin/main` at `f1b2e77` has no later durable source
 changes. Ported the initial system-message ordering fix (upstream #10542,
-`92216ada1`; D212). Remaining gaps: context reads rescan and re-derive the full
-range instead of reusing per-invocation and retained conversation ranges
-(`68ccef176`, `da866ada1`); the four storage scan queries lack `order` and
-order-aware cursors (upstream #10546, `4dd2af42c`); task records lack
-`startedAt`/`endedAt` (upstream #10549, `36a686ee8`); `ToolExecutionApi` and
+`92216ada1`; D212). Context reads now reuse scanned ranges within one task
+invocation (`68ccef176`), but still re-derive the full view and do not retain
+ranges across invocations (`da866ada1`). Remaining gaps: the four storage scan
+queries lack `order` and order-aware cursors (upstream #10546, `4dd2af42c`);
+task records lack `startedAt`/`endedAt` (upstream #10549, `36a686ee8`);
+`ToolExecutionApi` and
 `HookApi` lack `models` (upstream #10395, `b0114ef5f`); public conversation
 context cannot read as of an entry (upstream #10512, `76f6b06da`); progress
 commit intervals are fixed rather than configurable (upstream #10357,

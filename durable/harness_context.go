@@ -31,6 +31,13 @@ type ContextBounds struct {
 	Tail Id
 }
 
+// contextRange holds one invocation's scanned history for reuse by its next read.
+type contextRange struct {
+	conversationID Id
+	bounds         *ContextBounds
+	entries        []EntryRecord
+}
+
 // ContextView is the raw active transcript and the derived model context.
 type ContextView struct {
 	// Head is the newest applicable head marker, if any.
@@ -78,15 +85,61 @@ func CaptureContextBounds(ctx chord.Context, storage Storage, conversationID Id,
 // ReadContext captures the bounds on the session line and derives the context
 // off it.
 func ReadContext(ctx chord.Context, session *Session, storage Storage, conversationID Id, at *Id) (ContextView, error) {
+	view, _, err := readContextFrom(ctx, session, storage, conversationID, at, nil)
+	return view, err
+}
+
+// readContextFrom extends a prior range when conversation and head marker still match.
+func readContextFrom(ctx chord.Context, session *Session, storage Storage, conversationID Id, at *Id, previous *contextRange) (ContextView, *contextRange, error) {
 	var bounds *ContextBounds
 	var captureErr error
 	if err := session.ReadOnLine(func() error {
 		bounds, captureErr = CaptureContextBounds(ctx, storage, conversationID, at)
 		return captureErr
 	}); err != nil {
-		return ContextView{}, err
+		return ContextView{}, nil, err
 	}
-	return DeriveContext(ctx, storage, conversationID, bounds)
+	if bounds == nil {
+		return ContextView{Entries: []EntryRecord{}, Contributions: [][]ai.Message{}, Messages: []ai.Message{}}, nil, nil
+	}
+
+	var rangeEntries []EntryRecord
+	switch {
+	case previous == nil || previous.conversationID != conversationID || !sameContextHead(previous.bounds, bounds):
+		var err error
+		rangeEntries, err = scanContextRange(ctx, storage, conversationID, bounds)
+		if err != nil {
+			return ContextView{}, nil, err
+		}
+	case bounds.Tail <= previous.bounds.Tail:
+		rangeEntries = make([]EntryRecord, 0, len(previous.entries))
+		for _, entry := range previous.entries {
+			if entry.ID <= bounds.Tail {
+				rangeEntries = append(rangeEntries, entry)
+			}
+		}
+	default:
+		minEntryID := previous.bounds.Tail + 1
+		added, err := scanContextEntries(ctx, storage, EntryQuery{
+			ConversationID: conversationID, MinEntryID: &minEntryID, MaxEntryID: &bounds.Tail,
+		})
+		if err != nil {
+			return ContextView{}, nil, err
+		}
+		rangeEntries = make([]EntryRecord, 0, len(previous.entries)+len(added))
+		rangeEntries = append(rangeEntries, previous.entries...)
+		rangeEntries = append(rangeEntries, added...)
+	}
+	view := deriveContextView(bounds, rangeEntries)
+	view.Entries = append([]EntryRecord(nil), view.Entries...)
+	return view, &contextRange{conversationID: conversationID, bounds: bounds, entries: rangeEntries}, nil
+}
+
+func sameContextHead(left, right *ContextBounds) bool {
+	if left.Head == nil || right.Head == nil {
+		return left.Head == nil && right.Head == nil
+	}
+	return left.Head.ID == right.Head.ID
 }
 
 // DeriveContext derives the active transcript and model context within
@@ -99,6 +152,10 @@ func DeriveContext(ctx chord.Context, storage Storage, conversationID Id, bounds
 	if err != nil {
 		return ContextView{}, err
 	}
+	return deriveContextView(bounds, rangeEntries), nil
+}
+
+func deriveContextView(bounds *ContextBounds, rangeEntries []EntryRecord) ContextView {
 	edits := map[Id]ContextEdit{}
 	// Edits of every entry in the range count, including older head markers.
 	for _, entry := range rangeEntries {
@@ -132,7 +189,7 @@ func DeriveContext(ctx chord.Context, storage Storage, conversationID Id, bounds
 	return ContextView{
 		Head: bounds.Head, Entries: entries, Contributions: contributions,
 		Messages: leadWithSystem(OrderToolResults(flattenMessages(contributions))),
-	}, nil
+	}
 }
 
 // ActiveEntries returns the raw active entries within captured bounds.
@@ -151,30 +208,31 @@ func ActiveEntries(ctx chord.Context, storage Storage, conversationID Id, bounds
 // the transcript start, through the tail, oldest first.
 func scanContextRange(ctx chord.Context, storage Storage, conversationID Id, bounds *ContextBounds) ([]EntryRecord, error) {
 	query := EntryQuery{ConversationID: conversationID, MaxEntryID: &bounds.Tail}
-	if bounds.Head != nil {
-		head := bounds.Head.Head
-		if head != nil {
-			query.MinEntryID = head
-		}
+	if bounds.Head != nil && bounds.Head.Head != nil {
+		query.MinEntryID = bounds.Head.Head
 	}
-	var rangeEntries []EntryRecord
+	return scanContextEntries(ctx, storage, query)
+}
+
+func scanContextEntries(ctx chord.Context, storage Storage, query EntryQuery) ([]EntryRecord, error) {
+	var entries []EntryRecord
 	var cursor Cursor
 	for {
 		page, err := storage.ScanEntries(ctx, query, cursor, contextScanPageSize)
 		if err != nil {
 			return nil, err
 		}
-		rangeEntries = append(rangeEntries, page.Items...)
+		entries = append(entries, page.Items...)
 		cursor = page.Next
 		if cursor == nil {
 			break
 		}
 	}
 	// Newest-first becomes oldest-first.
-	for left, right := 0, len(rangeEntries)-1; left < right; left, right = left+1, right-1 {
-		rangeEntries[left], rangeEntries[right] = rangeEntries[right], rangeEntries[left]
+	for left, right := 0, len(entries)-1; left < right; left, right = left+1, right-1 {
+		entries[left], entries[right] = entries[right], entries[left]
 	}
-	return rangeEntries, nil
+	return entries, nil
 }
 
 // selectActive is the head marker followed by the range's non-head entries, or

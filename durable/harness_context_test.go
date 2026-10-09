@@ -87,6 +87,140 @@ func TestDeriveContextLeadsWithInitialSystemMessage(t *testing.T) {
 	}
 }
 
+type contextScanCall struct {
+	query EntryQuery
+	limit int
+}
+
+type contextScanStorage struct {
+	Storage
+	calls []contextScanCall
+}
+
+func (s *contextScanStorage) ScanEntries(ctx context.Context, query EntryQuery, cursor Cursor, limit int) (Page[EntryRecord], error) {
+	s.calls = append(s.calls, contextScanCall{query: query, limit: limit})
+	return s.Storage.ScanEntries(ctx, query, cursor, limit)
+}
+
+// Port of packages/durable/src/harness/context.ts at pi v1.1.0 commit 68ccef176.
+func TestInvocationContextScansOnlyEntriesAfterCachedTail(t *testing.T) {
+	base := NewMemoryStorage()
+	storage := &contextScanStorage{Storage: base}
+	session := NewSession(storage)
+	ctx := context.Background()
+	root := RootConversationID
+	mustCommit(t, storage,
+		conversationWrite(root),
+		contextEntry(10, root, nil, []ai.Message{userMessage("first", 1)}, nil),
+	)
+	scheduler := &TaskScheduler{session: session, storage: storage}
+	invocation := NewInvocation(100, root, "run", ctx)
+	defer invocation.End()
+	runtime := TaskRuntime(&schedulerRuntime{
+		scheduler: scheduler, invocation: invocation, phase: &runtimePhase{},
+	})
+	first, err := runtime.Context(root, ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(first.Messages) != 1 || first.Messages[0].(*ai.UserMessage).Content.Text != "first" {
+		t.Fatalf("first context = %+v", first.Messages)
+	}
+	previousTail := Id(10)
+	mustCommit(t, storage, contextEntry(12, root, nil, []ai.Message{userMessage("second", 2)}, nil))
+
+	callStart := len(storage.calls)
+	second, err := runtime.Context(root, ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(second.Messages) != 2 || second.Messages[1].(*ai.UserMessage).Content.Text != "second" {
+		t.Fatalf("second context = %+v", second.Messages)
+	}
+	if got := len(storage.calls) - callStart; got != 2 {
+		t.Fatalf("storage scans on second read = %d, want tail lookup and incremental scan", got)
+	}
+	incremental := storage.calls[callStart+1]
+	if incremental.query.MinEntryID == nil || *incremental.query.MinEntryID != previousTail+1 ||
+		incremental.query.MaxEntryID == nil || *incremental.query.MaxEntryID != 12 || incremental.limit != contextScanPageSize {
+		t.Fatalf("incremental scan = %+v, want ids 11 through 12", incremental)
+	}
+
+	mustCommit(t, storage, contextEntry(14, root, nil, nil, []ContextEdit{{Target: 10, Action: EditOmit}}))
+	callStart = len(storage.calls)
+	edited, err := runtime.Context(root, ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(edited.Messages) != 1 || edited.Messages[0].(*ai.UserMessage).Content.Text != "second" {
+		t.Fatalf("edited context = %+v", edited.Messages)
+	}
+	if len(storage.calls)-callStart != 2 {
+		t.Fatalf("edit extension scans = %+v", storage.calls[callStart:])
+	}
+	incremental = storage.calls[callStart+1]
+	if incremental.query.MinEntryID == nil || *incremental.query.MinEntryID != 13 {
+		t.Fatalf("edit extension scan = %+v", incremental)
+	}
+
+	previousTail = 12
+	callStart = len(storage.calls)
+	cutoff, err := runtime.Context(root, ctx, &previousTail)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cutoff.Messages) != 2 || cutoff.Messages[0].(*ai.UserMessage).Content.Text != "first" ||
+		cutoff.Messages[1].(*ai.UserMessage).Content.Text != "second" || len(storage.calls)-callStart != 1 {
+		t.Fatalf("earlier cutoff = %+v, scans = %+v", cutoff.Messages, storage.calls[callStart:])
+	}
+
+	head := Id(16)
+	mustCommit(t, storage, contextEntry(head, root, &head, []ai.Message{userMessage("fresh", 3)}, nil))
+	callStart = len(storage.calls)
+	reset, err := runtime.Context(root, ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(reset.Messages) != 1 || reset.Messages[0].(*ai.UserMessage).Content.Text != "fresh" ||
+		len(storage.calls)-callStart != 2 || storage.calls[callStart+1].query.MinEntryID == nil ||
+		*storage.calls[callStart+1].query.MinEntryID != head {
+		t.Fatalf("new head did not replace cached range: messages=%+v scans=%+v", reset.Messages, storage.calls[callStart:])
+	}
+}
+
+func TestInvocationSleepDropsCachedContextRange(t *testing.T) {
+	storage := &contextScanStorage{Storage: NewMemoryStorage()}
+	session := NewSession(storage)
+	ctx := context.Background()
+	root := RootConversationID
+	mustCommit(t, storage,
+		conversationWrite(root),
+		contextEntry(10, root, nil, []ai.Message{userMessage("first", 1)}, nil),
+	)
+	scheduler := &TaskScheduler{session: session, storage: storage, now: func() int64 { return 0 }}
+	invocation := NewInvocation(100, root, "run", ctx)
+	defer invocation.End()
+	runtime := TaskRuntime(&schedulerRuntime{
+		scheduler: scheduler, invocation: invocation, phase: &runtimePhase{},
+	})
+	if _, err := runtime.Context(root, ctx, nil); err != nil {
+		t.Fatal(err)
+	}
+	callStart := len(storage.calls)
+	if err := runtime.Sleep(0, ctx); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := runtime.Context(root, ctx, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := len(storage.calls) - callStart; got != 2 {
+		t.Fatalf("storage scans after sleep = %d, want tail lookup and fresh range scan", got)
+	}
+	if storage.calls[callStart+1].query.MinEntryID != nil {
+		t.Fatalf("post-sleep context reused prior range: %+v", storage.calls[callStart+1])
+	}
+}
+
 func TestCaptureAndDeriveContext(t *testing.T) {
 	storage := NewMemoryStorage()
 	ctx := context.Background()

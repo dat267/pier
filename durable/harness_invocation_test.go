@@ -55,6 +55,16 @@ func TestInvocationLifecycle(t *testing.T) {
 	}
 }
 
+// Port of the context-range lifecycle in packages/durable/src/harness/scheduler.ts at pi v1.1.0 commit 68ccef176.
+func TestInvocationEndDropsCachedContextRange(t *testing.T) {
+	invocation := NewInvocation(7, 3, "run", context.Background())
+	invocation.contextRange = &contextRange{}
+	invocation.End()
+	if invocation.contextRange != nil {
+		t.Fatal("ended invocation retains context range")
+	}
+}
+
 func TestGateTask(t *testing.T) {
 	invocation := NewInvocation(7, 3, "run", context.Background())
 	running := &TaskRecord{ID: 7, State: TaskState{Status: TaskRunning}}

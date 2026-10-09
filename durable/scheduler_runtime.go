@@ -218,7 +218,27 @@ func (r *schedulerRuntime) Context(conversationID Id, ctx chord.Context, at *Id)
 	if err := r.invocation.AssertLive(); err != nil {
 		return ContextView{}, err
 	}
-	return ReadContext(ctx, r.scheduler.session, r.scheduler.storage, conversationID, at)
+	r.invocation.contextMu.Lock()
+	previous := r.invocation.contextRange
+	generation := r.invocation.contextGeneration
+	r.invocation.contextMu.Unlock()
+	if err := r.invocation.AssertLive(); err != nil {
+		return ContextView{}, err
+	}
+	view, cached, err := readContextFrom(ctx, r.scheduler.session, r.scheduler.storage,
+		conversationID, at, previous)
+	if err != nil {
+		return ContextView{}, err
+	}
+	if !r.invocation.Ended() {
+		r.invocation.contextMu.Lock()
+		if r.invocation.contextGeneration == generation && r.invocation.contextRange == previous {
+			r.invocation.contextRange = cached
+			r.invocation.contextGeneration++
+		}
+		r.invocation.contextMu.Unlock()
+	}
+	return view, nil
 }
 
 func (r *schedulerRuntime) Now() int64 {
@@ -244,6 +264,7 @@ func (r *schedulerRuntime) Sleep(until int64, ctx chord.Context) error {
 	if err := r.invocation.AssertLive(); err != nil {
 		return err
 	}
+	r.invocation.clearContextRange()
 	signals := []context.Context{r.invocation.Context()}
 	if ctx != nil && ctx.Done() != nil {
 		signals = append(signals, ctx)

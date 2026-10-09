@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -381,8 +382,12 @@ type Invocation struct {
 	context context.Context
 	cancel  context.CancelFunc
 	watches []StoppableWatch
-	done    chan struct{}
-	ended   atomic.Bool
+	// contextMu protects cache handoff only; storage reads run outside it.
+	contextMu         sync.Mutex
+	contextRange      *contextRange
+	contextGeneration uint64
+	done              chan struct{}
+	ended             atomic.Bool
 }
 
 // NewInvocation builds an invocation bound to parent, in run or abort mode.
@@ -428,7 +433,15 @@ func (i *Invocation) End() {
 	}
 	i.watches = nil
 	i.cancel()
+	i.clearContextRange()
 	close(i.done)
+}
+
+func (i *Invocation) clearContextRange() {
+	i.contextMu.Lock()
+	i.contextRange = nil
+	i.contextGeneration++
+	i.contextMu.Unlock()
 }
 
 // Signal cancels the invocation's context without ending the invocation, so a
