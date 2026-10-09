@@ -3,6 +3,7 @@ package durable
 import (
 	"context"
 	"encoding/json"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -291,7 +292,7 @@ func TestContextRangeIsReusedAcrossTaskInvocations(t *testing.T) {
 	}
 	reads := []int{}
 	slept := false
-	retentionMs := 0
+	var retentionMs atomic.Int64
 	definition := TaskDefinition{
 		Name: "test.shared-context-range", Version: 1,
 		Initial: func(json.RawMessage) (json.RawMessage, error) { return json.RawMessage(`{"phase":"run"}`), nil },
@@ -331,7 +332,7 @@ func TestContextRangeIsReusedAcrossTaskInvocations(t *testing.T) {
 	scheduler := NewTaskScheduler(TaskSchedulerOptions{
 		Session: session, Storage: storage, Registry: registry, Settings: func() Settings {
 			settings := ResolveSettings(nil)
-			settings.ContextRetentionMs = retentionMs
+			settings.ContextRetentionMs = int(retentionMs.Load())
 			return settings
 		},
 		Now: func() int64 { return 1_000 }, Context: ctx,
@@ -356,7 +357,10 @@ func TestContextRangeIsReusedAcrossTaskInvocations(t *testing.T) {
 	}
 	for index := 0; index < 3; index++ {
 		if index == 1 {
-			retentionMs = defaultContextRetentionMs
+			// WaitForIdle may resolve before queued reconciliation refreshes cached
+			// ranges. Apply the zero-retention cleanup before enabling retention.
+			scheduler.refreshContextRetention()
+			retentionMs.Store(defaultContextRetentionMs)
 		}
 		id := create()
 		scheduler.Kick()
