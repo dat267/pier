@@ -42,6 +42,10 @@ type AuthWiring struct {
 	CopyClipboard func(string, func(error))
 
 	// ShowAuthSelect shows the select prompt (extension UI seam; D41).
+	// ProgramStatus reports the login as blocked over OSC 7501 while it waits for the user.
+	ProgramStatus *ProgramStatusReporter
+
+	// ShowAuthSelect shows the select prompt (extension UI seam; D41).
 	ShowAuthSelect func(dialog *LoginDialogComponent, prompt ai.AuthPrompt) (string, error)
 	// ShowStatus/ShowError/ShowWarning report messages.
 	ShowStatus  func(message string)
@@ -469,7 +473,16 @@ func (w *AuthWiring) post(fn func()) {
 // errors and synchronizing the model all mutate UI and session state.
 func (w *AuthWiring) startLogin(ctx context.Context, dialog *LoginDialogComponent, providerID string, providerName string, authType string, previousModel *ai.Model) {
 	go func() {
+		// A login waits on the user, which is what the terminal reports as blocked (#10607).
+		if w.ProgramStatus != nil {
+			w.ProgramStatus.SetBlocked("login", &BlockedStatus{
+				Kind: tui.ProgramStatusKindAuth, Message: "Log in to " + providerID,
+			})
+		}
 		err := w.LoginProvider(ctx, dialog, providerID, authType)
+		if w.ProgramStatus != nil {
+			w.ProgramStatus.SetBlocked("login", nil)
+		}
 		w.post(func() {
 			w.restoreEditor()
 			if err != nil {

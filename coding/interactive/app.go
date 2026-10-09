@@ -601,6 +601,7 @@ func NewApp(options AppOptions) *App {
 	app.sessions = newSessionWiring(app)
 
 	app.auth = newAuthWiring(app)
+	app.auth.ProgramStatus = app.programStatus
 
 	app.commands = newCommandWiring(app)
 

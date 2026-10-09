@@ -24,6 +24,11 @@ func (a *App) switchSession(ctx context.Context, sessionPath string, cwdOverride
 	if err := coding.AssertSessionCwdExists(sessionManager, a.options.Cwd); err != nil {
 		return nil, err
 	}
+	// The previous session's run is gone, so its working or done status must not linger over
+	// the new one (upstream resets the reporter when the session is bound).
+	if a.programStatus != nil {
+		a.programStatus.Reset()
+	}
 	return a.applySessionReplacement(sessionManager)
 }
 

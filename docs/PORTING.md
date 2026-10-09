@@ -52,9 +52,17 @@ print/json modes, which are out of scope.
 Ported as well: OSC 7501 program status (`tui/programstatus.go` for the encoding, the
 query and the reply match, the terminal's support detection with `PI_PROGRAM_STATUS=1|0`
 and the clear/restore around `Stop`, and `coding/interactive`'s reporter for runs,
-compaction and the settle outcome). The port's `SetBlocked` is in place for dialogs;
-upstream also marks logins blocked and resets the reporter when the session is rebound,
-and those two call sites are not wired yet.
+compaction and the settle outcome). `SetBlocked` also marks a login blocked while it waits
+for the user, and a session switch resets the reporter so the previous session's status does
+not linger.
+
+Also ported from the delta: the MCP session `DELETE` reuses the token of the last request
+instead of asking the auth provider, whose `Token()` call can refresh over the network before
+a close that is happening anyway (`mcp/transport_http.go`, upstream #10565).
+
+Known gap, not a bug: the port binds no `Home`/`End` key at all, so the upstream 1.0.3 change
+that kept those keys for the editor and moved the fullscreen transcript to
+`Ctrl+Home`/`Ctrl+End` has nothing to conflict with here; the keys simply do nothing.
 
 Checked against v1.1.0 and still absent — reading the Termux clipboard (upstream
 `592fb57b7`) stays out of scope under **D120**. The rest of the delta is unreviewed: those counts say how

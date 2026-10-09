@@ -249,6 +249,9 @@ type StreamableHttpTransport struct {
 	sessionID        string
 	protocolVersion  string
 	getStreamStarted bool
+	// lastToken is the token the most recent request used, kept so Close can reuse it instead
+	// of asking the auth provider again.
+	lastToken string
 }
 
 // NewStreamableHttpTransport builds a transport; Start only validates.
@@ -393,7 +396,9 @@ func (t *StreamableHttpTransport) Close(ctx context.Context) error {
 	t.stop()
 	if t.started && sessionID != "" {
 		deleteCtx, cancel := context.WithTimeout(context.Background(), sessionDeleteTimeoutMs*time.Millisecond)
-		headers, _, err := t.headers(nil, "")
+		// Reuse the token of the last request: asking the auth provider here may refresh over
+		// the network before the session DELETE, delaying a close for no benefit (#10565).
+		headers, _, err := t.lastRequestHeaders()
 		if err == nil {
 			request, buildErr := http.NewRequestWithContext(deleteCtx, http.MethodDelete, t.parsedURL.String(), nil)
 			if buildErr == nil {
@@ -476,6 +481,32 @@ func (t *StreamableHttpTransport) headers(extra map[string]string, _ string) (ma
 		if token != "" {
 			headers["Authorization"] = "Bearer " + token
 		}
+		t.mu.Lock()
+		t.lastToken = token
+		t.mu.Unlock()
+	}
+	return headers, token, nil
+}
+
+// lastRequestHeaders builds the session DELETE headers from the token of the last request.
+// Close uses it instead of headers(), whose Token() call may refresh over the network and
+// delay closing a session that is going away anyway (upstream #10565).
+func (t *StreamableHttpTransport) lastRequestHeaders() (map[string]string, string, error) {
+	headers := map[string]string{}
+	for key, value := range t.options.Headers {
+		headers[key] = value
+	}
+	t.mu.Lock()
+	if t.sessionID != "" {
+		headers["Mcp-Session-Id"] = t.sessionID
+	}
+	if t.protocolVersion != "" {
+		headers["MCP-Protocol-Version"] = t.protocolVersion
+	}
+	token := t.lastToken
+	t.mu.Unlock()
+	if token != "" {
+		headers["Authorization"] = "Bearer " + token
 	}
 	return headers, token, nil
 }
