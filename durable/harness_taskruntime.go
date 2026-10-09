@@ -3,7 +3,6 @@ package durable
 import (
 	"context"
 
-	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/chord"
 )
 
@@ -63,7 +62,6 @@ type TaskRuntime interface {
 	Agent(ctx chord.Context) (Agent, error)
 	// Settings is the harness settings, resolved at each access.
 	Settings() Settings
-	Models() *ai.Models
 	// Env builds the conversation's environment.
 	Env(ctx chord.Context) (ExecutionEnv, error)
 	// Hooks are the handlers of this task's name from the selected extensions,

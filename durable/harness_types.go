@@ -443,6 +443,8 @@ type ToolExecutionApi interface {
 	CallID() string
 	Registry() RegistrySnapshot
 	Agent(ctx chord.Context) (Agent, error)
+	// Models is the HarnessOptions model catalog shared with generation.
+	Models() *ai.Models
 	Env() ExecutionEnv
 	Output(chunk []byte)
 	Diagnostic(diagnostic ToolDiagnostic)

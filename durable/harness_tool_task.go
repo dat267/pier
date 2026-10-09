@@ -282,6 +282,7 @@ func (a *toolExecutionApi) Registry() RegistrySnapshot {
 	return a.runtime.Registry()
 }
 func (a *toolExecutionApi) Agent(ctx chord.Context) (Agent, error) { return a.runtime.Agent(ctx) }
+func (a *toolExecutionApi) Models() *ai.Models                     { return a.runtime.Models() }
 func (a *toolExecutionApi) Env() ExecutionEnv                      { return a.env }
 
 func (a *toolExecutionApi) Output(chunk []byte) {

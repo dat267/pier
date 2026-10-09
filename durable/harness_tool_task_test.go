@@ -11,6 +11,8 @@ import (
 
 // Port of the built-in tool task.
 
+// Port of "gives tools and hooks the Harness's models" from
+// packages/durable/test/harness-tools.test.ts at pi v1.1.0 commit b0114ef5f.
 func TestToolTaskExecutesAndAppendsResult(t *testing.T) {
 	session, storage := newRootSession(t)
 	ctx := context.Background()
@@ -50,18 +52,27 @@ func TestToolTaskExecutesAndAppendsResult(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
+	models := ai.CreateModels(nil)
+	seenModels := make(chan *ai.Models, 2)
 	echo := ToolRegistration{
 		Tool: ai.Tool{Name: "echo", Description: "echoes",
 			Parameters: json.RawMessage(`{"type":"object","properties":{"text":{"type":"string"}},"required":["text"]}`)},
 		Execute: func(args chord.JsonValue, api ToolExecutionApi, ctx chord.Context) (ToolExecutionResult, error) {
+			seenModels <- api.Models()
 			api.Output([]byte("out"))
 			return ToolExecutionResult{Content: []ai.UserContent{ai.TextContent{Text: "done"}}}, nil
 		},
 	}
+	modelsHook := Extension{Name: "models-hook", Hooks: []HookRegistration{Hook(ToolTask, ToolHooks{
+		BeforeTool: func(call ai.ToolCall, api HookApi, ctx chord.Context) (*ToolDecision, error) {
+			seenModels <- api.Models()
+			return nil, nil
+		},
+	})}}
 	scheduler := NewTaskScheduler(TaskSchedulerOptions{
-		Session: session, Storage: storage, Registry: NewRegistry(), Context: context.Background(),
+		Session: session, Storage: storage, Registry: NewRegistry(), Models: models, Context: context.Background(),
 		Agent: func(conversationID Id, snapshot RegistrySnapshot, ctx chord.Context) (Agent, error) {
-			return Agent{ThinkingLevel: "off", Tools: []ToolRegistration{echo}}, nil
+			return Agent{ThinkingLevel: "off", Tools: []ToolRegistration{echo}, Extensions: []Extension{modelsHook}}, nil
 		},
 		Now: func() int64 { return 1000 },
 	})
@@ -76,6 +87,12 @@ func TestToolTaskExecutesAndAppendsResult(t *testing.T) {
 	if settled.State.Status != TaskTerminal || settled.State.Outcome == nil ||
 		settled.State.Outcome.Status != OutcomeCompleted {
 		t.Fatalf("settled = %+v", settled)
+	}
+	if got := len(seenModels); got != 2 {
+		t.Fatalf("tool and hook received models %d times, want 2", got)
+	}
+	if first, second := <-seenModels, <-seenModels; first != models || second != models {
+		t.Fatalf("tool/hook models = (%p, %p), want (%p, %p)", first, second, models, models)
 	}
 	// The result entry is a tool result with the tool's content.
 	page, err := storage.ScanEntries(ctx, EntryQuery{ConversationID: RootConversationID}, nil, 20)

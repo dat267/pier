@@ -39,6 +39,8 @@ func WrapSection(key string, wrapper func(PromptSection) PromptSection) Wrap {
 type HookApi interface {
 	TaskID() Id
 	ConversationID() Id
+	// Models is the HarnessOptions model catalog shared with generation.
+	Models() *ai.Models
 	Memo(ctx chord.Context, name string) (chord.JsonValue, bool, error)
 	MemoSet(ctx chord.Context, name string, candidate chord.JsonValue) (chord.JsonValue, error)
 }

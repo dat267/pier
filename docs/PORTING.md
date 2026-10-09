@@ -92,9 +92,8 @@ reuse scanned ranges within one task invocation
 (`68ccef176`), but still re-derive the full view and do not retain ranges across
 invocations (`da866ada1`). Task records now stamp wall-clock `startedAt` at
 first run and `endedAt` at terminal transition, with injectable clock defaulting
-to current time (upstream #10549, `36a686ee8`). Remaining gaps:
-`ToolExecutionApi` and
-`HookApi` lack `models` (upstream #10395, `b0114ef5f`); public conversation
+to current time (upstream #10549, `36a686ee8`); durable tool and hook APIs expose
+`models` (upstream #10395, `b0114ef5f`). Remaining gaps: public conversation
 context cannot read as of an entry (upstream #10512, `76f6b06da`); progress
 commit intervals are fixed rather than configurable (upstream #10357,
 `674d64f09`); and the environment API still lacks bounded directory readers,
