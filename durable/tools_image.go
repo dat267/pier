@@ -1,11 +1,73 @@
 package durable
 
-import "bytes"
+import (
+	"bytes"
+	"context"
+)
 
 // Port of tools/image.ts: detect the MIME type of a supported image from its
 // leading bytes, rejecting animated PNGs and malformed bitmaps.
 
 var pngSignature = []byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a}
+
+// detectSupportedImageMimeTypeFromReader detects supported images without loading file contents.
+func detectSupportedImageMimeTypeFromReader(reader BinaryReader, size int64, ctx context.Context) (string, error) {
+	const headerBytes = 32
+	const blockBytes = 64 * 1024
+	header, err := reader.Read(0, headerBytes, ctx)
+	if err != nil {
+		return "", err
+	}
+	if !startsWithBytes(header, pngSignature) {
+		return DetectSupportedImageMimeType(header), nil
+	}
+	if !isPng(header) {
+		return "", nil
+	}
+
+	var block []byte
+	blockStart := int64(-1)
+	readAt := func(offset int64, length int) ([]byte, error) {
+		if offset < blockStart || offset+int64(length) > blockStart+int64(len(block)) {
+			blockStart = offset
+			readLength := blockBytes
+			if remaining := size - offset; remaining < int64(readLength) {
+				readLength = int(remaining)
+			}
+			block, err = reader.Read(offset, readLength, ctx)
+			if err != nil {
+				return nil, err
+			}
+		}
+		start := int(offset - blockStart)
+		if start < 0 || start+length > len(block) {
+			return nil, nil
+		}
+		return block[start : start+length], nil
+	}
+	for offset := int64(len(pngSignature)); offset+8 <= size; {
+		chunkHeader, err := readAt(offset, 8)
+		if err != nil {
+			return "", err
+		}
+		if len(chunkHeader) != 8 {
+			return "image/png", nil
+		}
+		chunkLength := int64(readUint32BE(chunkHeader, 0))
+		if startsWithAscii(chunkHeader, 4, "acTL") {
+			return "", nil
+		}
+		if startsWithAscii(chunkHeader, 4, "IDAT") {
+			return "image/png", nil
+		}
+		next := offset + 8 + chunkLength + 4
+		if chunkLength < 0 || next <= offset || next > size {
+			return "image/png", nil
+		}
+		offset = next
+	}
+	return "image/png", nil
+}
 
 // DetectSupportedImageMimeType returns the MIME type of a supported image, or
 // "".

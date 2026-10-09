@@ -94,9 +94,11 @@ order-aware cursors (upstream #10546, `4dd2af42c`); task records lack
 `HookApi` lack `models` (upstream #10395, `b0114ef5f`); public conversation
 context cannot read as of an entry (upstream #10512, `76f6b06da`); progress
 commit intervals are fixed rather than configurable (upstream #10357,
-`674d64f09`); and the environment API lacks bounded binary/directory readers,
+`674d64f09`); and the environment API still lacks bounded directory readers,
 filesystem watching, argv execution, and windowed shell output, with no
-PowerShell tool (`4748c627a`, `a84510819`, `cdf79797b`, `68c22123b`). The current read tool therefore loads entire files.
+PowerShell tool (`4748c627a`, `a84510819`, `cdf79797b`, `68c22123b`). The read
+tool now uses a positional binary reader and fixed-size line scans, so it no
+longer materializes entire files before truncating output.
 D188 already documents combined stdout/stderr delivery. Other package deltas
 remain unreviewed: the commit counts say how much there is, not which commits.
 

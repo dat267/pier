@@ -159,6 +159,7 @@ type FileSystem interface {
 	AbsolutePath(path string, ctx context.Context) (string, error)
 	JoinPath(parts []string, ctx context.Context) (string, error)
 	ReadTextFile(path string, ctx context.Context) (string, error)
+	OpenBinaryReader(path string, ctx context.Context) (BinaryReader, error)
 	OpenTextLineReader(path string, ctx context.Context) (TextLineReader, error)
 	ReadTextLines(path string, options *ReadTextLinesOptions, ctx context.Context) ([]string, error)
 	ReadBinaryFile(path string, ctx context.Context) ([]byte, error)
