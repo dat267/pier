@@ -288,3 +288,37 @@ func TestFormatDurationTenths(t *testing.T) {
 		}
 	}
 }
+
+// #10549: the label shows the tool's recorded execution time, so a replayed result (which has
+// no start or end event and therefore no timestamps) still reports Took, and a live call does
+// not count the wall-clock steps between the events.
+func TestShellElapsedUsesTheRecordedDuration(t *testing.T) {
+	theme := newRendererTestTheme(t)
+	recorded := int64(1500)
+
+	// Replay: the session re-renders the tool result with its recorded duration and nothing else.
+	ctx := &ToolRenderContext{Cwd: "/tmp/proj", Args: map[string]any{"command": "sleep 1.5"}, DurationMs: &recorded}
+	component := bashRenderers.RenderResult(textResult("done"), ToolRenderResultOptions{}, theme, ctx)
+	rendered := coding.StripAnsi(strings.Join(component.Render(120), "\n"))
+	if !strings.Contains(rendered, "Took 1.5s") {
+		t.Fatalf("replayed label = %q, want Took 1.5s", rendered)
+	}
+	if strings.Contains(rendered, "Elapsed") {
+		t.Fatalf("a replayed result must not show a running label: %q", rendered)
+	}
+
+	// Live: the wall clock says five seconds, the tool reported 1.5.
+	ctx = &ToolRenderContext{Cwd: "/tmp/proj", Args: map[string]any{"command": "sleep 1.5"}, ExecutionStarted: true}
+	bashRenderers.RenderCall(ctx.Args, theme, ctx)
+	state, ok := ctx.State.(*shellCallState)
+	if !ok {
+		t.Fatalf("state = %T", ctx.State)
+	}
+	state.startedAtMS = time.Now().Add(-5 * time.Second).UnixMilli()
+	ctx.DurationMs = &recorded
+	component = bashRenderers.RenderResult(textResult("done"), ToolRenderResultOptions{}, theme, ctx)
+	rendered = coding.StripAnsi(strings.Join(component.Render(120), "\n"))
+	if !strings.Contains(rendered, "Took 1.5s") || strings.Contains(rendered, "Took 5.") {
+		t.Fatalf("live label = %q, want the recorded 1.5s rather than five seconds of wall clock", rendered)
+	}
+}

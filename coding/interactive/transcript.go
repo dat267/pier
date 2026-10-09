@@ -634,6 +634,7 @@ func (r *TranscriptRenderer) renderSessionItems(items []RenderSessionItem, updat
 
 		if toolResult, ok := item.Message.(*ai.ToolResultMessage); ok {
 			if component, ok := renderedPendingTools[toolResult.ToolCallID]; ok {
+				component.SetResultDuration(toolResult.DurationMs)
 				component.UpdateResult(sortToolResultFromMessage(toolResult), false)
 				delete(renderedPendingTools, toolResult.ToolCallID)
 			}

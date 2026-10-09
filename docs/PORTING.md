@@ -38,14 +38,16 @@ support, Herdr included (#10573). The last one is `coding.HyperlinksSupported`,
 which is what first installs the capabilities the tui package reads (D69), so
 `terminal.hyperlinks` and the whole OSC 8 branch now work.
 
-Partly ported: the recorded response and tool-execution times of #10549. `ai`'s
-`AssistantMessageEventStream` now stamps `durationMs` on the final message of a response it
-saw start (a forwarded or deferred message stays untimed), the agent measures `Execute` with a
+Ported as well: the recorded response and tool-execution times of #10549. `ai`'s
+`AssistantMessageEventStream` stamps `durationMs` on the final message of a response it saw
+start (a forwarded or deferred message stays untimed), the agent measures `Execute` with a
 monotonic clock and carries it on the tool result message and the `tool_execution_end` event,
-and both message shapes carry the field with its wire name. Still missing: the tool render
-context does not carry the duration yet and the shell `Took` label still measures wall clock
-between the tool events, so a replayed result shows no `Took` at all and a live one includes
-the steps in between. That is the remaining half of the bug the upstream fix closed.
+both message shapes carry the field with its wire name, and the shell `Took` label renders the
+recorded value: `ToolRenderContext.DurationMs` reaches it from the live event and from the
+session replay, so a replayed result shows the same `Took` it did live instead of measuring
+nothing, and a live one no longer counts the steps between the events. The port's JSON event
+surface does not carry `durationMs` on `tool_execution_end`; that surface belongs to the
+print/json modes, which are out of scope.
 
 Ported as well: OSC 7501 program status (`tui/programstatus.go` for the encoding, the
 query and the reply match, the terminal's support detection with `PI_PROGRAM_STATUS=1|0`

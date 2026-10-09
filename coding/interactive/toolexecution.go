@@ -33,11 +33,15 @@ type ToolRenderContext struct {
 	State            any
 	Cwd              string
 	ExecutionStarted bool
-	ArgsComplete     bool
-	IsPartial        bool
-	Expanded         bool
-	ShowImages       bool
-	IsError          bool
+	// DurationMs is the tool's own execution time, recorded on the final result. Renderers
+	// prefer it over wall-clock time between the events, so a replayed result shows the same
+	// value instead of measuring nothing (upstream #10549).
+	DurationMs   *int64
+	ArgsComplete bool
+	IsPartial    bool
+	Expanded     bool
+	ShowImages   bool
+	IsError      bool
 }
 
 // ToolRenderResultOptions configure a result renderer.
@@ -88,10 +92,13 @@ type ToolExecutionComponent struct {
 	cwd  string
 
 	executionStarted bool
-	argsComplete     bool
-	result           *SortToolResultContent
-	hideComponent    bool
-	frames           *toolFrames
+	// durationMs is the recorded execution time of the finished call, when the tool reported
+	// one.
+	durationMs    *int64
+	argsComplete  bool
+	result        *SortToolResultContent
+	hideComponent bool
+	frames        *toolFrames
 }
 
 // NewToolExecutionComponent creates the component.
@@ -176,6 +183,7 @@ func (c *ToolExecutionComponent) renderContext(lastComponent tui.Component) *Too
 		State:            c.rendererState,
 		Cwd:              c.cwd,
 		ExecutionStarted: c.executionStarted,
+		DurationMs:       c.durationMs,
 		ArgsComplete:     c.argsComplete,
 		IsPartial:        c.isPartial,
 		Expanded:         c.expanded,
@@ -230,6 +238,11 @@ func (c *ToolExecutionComponent) UpdateArgs(args any) {
 }
 
 // MarkExecutionStarted records that execution began.
+// SetResultDuration records the tool's own execution time, reported with the final result.
+func (c *ToolExecutionComponent) SetResultDuration(durationMs *int64) {
+	c.durationMs = durationMs
+}
+
 func (c *ToolExecutionComponent) MarkExecutionStarted() {
 	c.executionStarted = true
 	c.updateDisplay()

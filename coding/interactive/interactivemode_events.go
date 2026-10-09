@@ -517,6 +517,8 @@ func (d *EventDispatcher) handleToolExecutionEnd(event *coding.SessionEvent) {
 	}
 	result := sortToolResultFromAgent(agentEvent.Result)
 	result.IsError = agentEvent.IsError
+	// The recorded execution time comes from the agent event (upstream #10549).
+	component.SetResultDuration(agentEvent.DurationMs)
 	component.UpdateResult(result, false)
 	delete(d.pendingTools, agentEvent.ToolCallID)
 	d.requestRender()
