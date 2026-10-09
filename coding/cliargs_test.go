@@ -624,3 +624,14 @@ func TestParseArgsModeValidation(t *testing.T) {
 		t.Fatalf("repeated --mode = %+v", result)
 	}
 }
+
+// --no-mcp turns the built-in MCP support off for one run (upstream noMcp), and it is the only
+// spelling: there is no short alias.
+func TestParseArgsNoMCP(t *testing.T) {
+	if args := ParseArgs([]string{"--no-mcp"}); !args.NoMCP {
+		t.Fatal("--no-mcp was not parsed")
+	}
+	if args := ParseArgs(nil); args.NoMCP {
+		t.Fatal("MCP was disabled without the flag")
+	}
+}

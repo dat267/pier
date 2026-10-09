@@ -47,21 +47,23 @@ type Args struct {
 	NoBuiltinTools     bool
 	Extensions         []string
 	NoExtensions       bool
-	Print              bool
-	Export             *string
-	NoSkills           bool
-	Skills             []string
-	PromptTemplates    []string
-	NoPromptTemplates  bool
-	Themes             []string
-	UseTheme           *string
-	NoThemes           bool
-	NoContextFiles     bool
-	ListModels         *string
-	ListModelsAll      bool
-	Offline            bool
-	TuiMode            *string
-	Verbose            bool
+	// NoMCP disables the built-in MCP support for one run (upstream noMcp).
+	NoMCP             bool
+	Print             bool
+	Export            *string
+	NoSkills          bool
+	Skills            []string
+	PromptTemplates   []string
+	NoPromptTemplates bool
+	Themes            []string
+	UseTheme          *string
+	NoThemes          bool
+	NoContextFiles    bool
+	ListModels        *string
+	ListModelsAll     bool
+	Offline           bool
+	TuiMode           *string
+	Verbose           bool
 	// ProjectTrustOverride is nil when unset (upstream's optional boolean).
 	ProjectTrustOverride *bool
 	Messages             []string
@@ -234,6 +236,8 @@ func ParseArgs(args []string) *Args {
 			} else {
 				result.Diagnostics = append(result.Diagnostics, CLIDiagnostic{Type: "error", Message: "--extension requires a value"})
 			}
+		case arg == "--no-mcp":
+			result.NoMCP = true
 		case arg == "--no-extensions" || arg == "-ne":
 			// Accepted and ignored: it asks for fewer extensions, and this build
 			// loads none. The flag stays known so it is never mistaken for a
@@ -407,6 +411,7 @@ func helpOptionLines() []string {
 		"                                 Supports globs (anthropic/*, *sonnet*) and fuzzy matching",
 		"  --no-tools, -nt                Disable all tools by default",
 		"  --no-builtin-tools, -nbt       Disable built-in tools by default but keep custom tools enabled",
+		"  --no-mcp                       Disable built-in MCP support: no servers connect and no MCP tools",
 		"  --tools, -t <tools>            Comma-separated allowlist of tool names to enable",
 		"                                 Applies to built-in and custom tools",
 		"  --exclude-tools, -xt <tools>   Comma-separated denylist of tool names to disable",

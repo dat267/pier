@@ -366,7 +366,7 @@ func run(appName string, args *coding.Args) error {
 	// for them (upstream's extension connects asynchronously), so the TUI comes
 	// up immediately. The first turn waits for the direct-tool servers instead
 	// (bounded, McpStartupWaitMs), and late tools attach to the live session.
-	mcpManager, mcpErrors := startMCPServers(ctx, runtime, agentDir, runtimeCwd, trusted)
+	mcpManager, mcpErrors := startMCPServers(ctx, runtime, agentDir, runtimeCwd, trusted, args.NoMCP)
 	if mcpManager != nil {
 		defer func() { _ = mcpManager.Close(context.Background()) }()
 	}
@@ -971,7 +971,14 @@ func startMCPServers(
 	agentDir string,
 	cwd string,
 	trusted bool,
+	noMCP bool,
 ) (*coding.McpManager, []string) {
+	// --no-mcp turns the built-in support off for this run: nothing is loaded, so no server
+	// connects and no MCP tool is registered, and a config problem is not this run's problem
+	// (upstream noMcp).
+	if noMCP {
+		return nil, nil
+	}
 	config := coding.LoadMcpConfig(coding.McpConfigLoadOptions{AgentDir: agentDir, Cwd: cwd, ProjectTrusted: trusted})
 	enabledNames := []string{}
 	for _, server := range config.Servers {
