@@ -202,11 +202,18 @@ func TestTranscriptScrollsWithoutStalling(t *testing.T) {
 		t.Skip("no transcript scroll view in this renderer")
 	}
 
+	// Wait for the loop to apply the events first. That is a state signal, where waiting on the
+	// layout height alone raced the suite's load: applying sixty messages is the expensive part,
+	// and the height check then failed inside its budget while the work was still being done.
+	waitForConditionWithin(t, func() bool {
+		return postValue(app, func() int { return len(app.chat.Children) }) >= 60
+	}, 60*time.Second)
+
 	// The loop lays the transcript out on its next beat; the scroll range only
 	// exists once the viewport has a height.
 	waitForConditionWithin(t, func() bool {
 		return postValue(app, scroll.ViewportHeight) > 0
-	}, 10*time.Second)
+	}, 30*time.Second)
 
 	// Scrolling to the top on the loop must leave the end. The callback only
 	// runs when the loop is draining, which is the "no stall" half of the old
