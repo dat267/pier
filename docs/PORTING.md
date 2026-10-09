@@ -83,8 +83,22 @@ that kept those keys for the editor and moved the fullscreen transcript to
 `Ctrl+Home`/`Ctrl+End` has nothing to conflict with here; the keys simply do nothing.
 
 Checked against v1.1.0 and still absent — reading the Termux clipboard (upstream
-`592fb57b7`) stays out of scope under **D120**. The rest of the delta is unreviewed: those counts say how
-much there is, not which commits.
+`592fb57b7`) stays out of scope under **D120**. The `durable` delta is also audited
+against v1.1.0 (`abe508e1`); `origin/main` at `f1b2e77` has no later durable source
+changes. Ported the initial system-message ordering fix (upstream #10542,
+`92216ada1`; D212). Remaining gaps: context reads rescan and re-derive the full
+range instead of reusing per-invocation and retained conversation ranges
+(`68ccef176`, `da866ada1`); the four storage scan queries lack `order` and
+order-aware cursors (upstream #10546, `4dd2af42c`); task records lack
+`startedAt`/`endedAt` (upstream #10549, `36a686ee8`); `ToolExecutionApi` and
+`HookApi` lack `models` (upstream #10395, `b0114ef5f`); public conversation
+context cannot read as of an entry (upstream #10512, `76f6b06da`); progress
+commit intervals are fixed rather than configurable (upstream #10357,
+`674d64f09`); and the environment API lacks bounded binary/directory readers,
+filesystem watching, argv execution, and windowed shell output, with no
+PowerShell tool (`4748c627a`, `a84510819`, `cdf79797b`, `68c22123b`). The current read tool therefore loads entire files.
+D188 already documents combined stdout/stderr delivery. Other package deltas
+remain unreviewed: the commit counts say how much there is, not which commits.
 
 The v0.99.1→v1.0.0 delta (62 commits) is ported: it released the experimental
 `durable` packages and landed MCP and codemode work (codemode stays out of
@@ -561,7 +575,7 @@ Update the pin whenever upstream source is re-read for a port.
 | `chord/delta` | `packages/chord/src/delta` — op vocabulary + wire compression, diff engine, applier (mutable/immutable), validation, and the tracker lifecycle (`tracker.ts`: beginChange/prepare/adopt/PrepareReplace, staleness, abort and no-op rules, `ApplyImmutableBatches`; D11 for the explicit-mutation draft); JSON value contract (`chord` root) | ported |
 | `chord/context` | `src/context/index.ts` — typed context keys/values, WithCancel, WithoutAbortSignal, AwaitWithContext | ported |
 | `telemetry` | `packages/telemetry` — span/context contracts, noop + in-memory recorder (settlement, explicit-vs-automatic status, atomic recording), schema definition data, typed span starter, and the adapter conformance suite | ported |
-| `durable` | `packages/durable` — the record types and the Storage contract; the memory, SQLite and JSONL backends (sequences, id ownership, cursors, fork-aware history, task/submission indexes, document incarnations with base/delta reconstruction); `documents.ts`, `entries.ts`, `errors.ts`, `tasks.ts`, `truncate.ts`; the session kernel and transaction (`session/session.ts`, `transaction.ts`), the committed-state bridge (`observation.ts`) and fork copies (`forks.ts`); the whole `harness/` tree (agent, live, inbox, context, prompt, submissions, events, registry, view, usage, output, task-graph, define, util, json, the scheduler and its runtime, the three built-in tasks, and the harness composition) with all 23 `storage-conformance.ts` cases replayed; and `tools/` (read, write, edit, bash, image, path-utils, file-mutation-queue) plus `env/` (filesystem and shell). Not ported: the `testing/` runner/assertions/benchmark scaffolding, which Go's native `testing` replaces (their reusable benchmark dataset and descriptors are ported as Go benchmarks) | ported |
+| `durable` | `packages/durable` — the record types and the Storage contract; the memory, SQLite and JSONL backends (sequences, id ownership, cursors, fork-aware history, task/submission indexes, document incarnations with base/delta reconstruction); `documents.ts`, `entries.ts`, `errors.ts`, `tasks.ts`, `truncate.ts`; the session kernel and transaction (`session/session.ts`, `transaction.ts`), the committed-state bridge (`observation.ts`) and fork copies (`forks.ts`); the whole `harness/` tree (agent, live, inbox, context, prompt, submissions, events, registry, view, usage, output, task-graph, define, util, json, the scheduler and its runtime, the three built-in tasks, and the harness composition) with all 23 `storage-conformance.ts` cases replayed; and `tools/` (read, write, edit, bash, image, path-utils, file-mutation-queue) plus `env/` (filesystem and shell). Not ported: the `testing/` runner/assertions/benchmark scaffolding, which Go's native `testing` replaces (their reusable benchmark dataset and descriptors are ported as Go benchmarks). The v1.1.0 gaps are listed above | ported through v1.0.2; v1.1.0 gaps audited |
 | `server` | `packages/server` core — connection state machine (handshake timeout/version checks, hello_error failures, inbound pump ordering), request dispatch (service-call parsing, session vs server-scope routing, subscribe snapshot encoding with update flush ordering, unsubscribe, cancel), SessionRouter (per-client serialization, attachment leases, session open dedup, terminate invalidation), bounded error mapping, drain/close | ported |
 | `server` (unix) | `transports/unix/*` — socket path derivation, listener with stale-socket probing (live-listener refusal, rename-and-verify removal), atomic bind path + hard link (falling back to `renameat2(RENAME_NOREPLACE)` where the platform denies linking, D152) + mode, owned-socket cleanup by device/inode identity, per-connection byte accounting, graceful final-chunk close with force-close timer, `createUnixServer` preset | ported |
 | `server/testing` | `testing/*` — `Deferred`, scriptable `TestHarness` (gated close/service calls, release counting), `TestServerHost` (seeded metadata, ambiguity, gated opens), `pi.session-management` test services, `ProtocolTestClient` with fragmented sends and attachment tracking, `connectUnixTestClient`, `createTestServer` | ported |

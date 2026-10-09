@@ -6,7 +6,7 @@ behaviour with no direct Go equivalent, or because a reference defect is fixed
 here; others are choices of this project's own. D-row numbers live in code
 comments at the point of divergence; this file is the log, and it is
 representative: the rows below carry a written-up rationale, while the rest live
-only as the code comment that introduced them. The range is **D1–D211**.
+only as the code comment that introduced them. The range is **D1–D212**.
 - D188 — the durable execution environment (`env/index.ts`, `env/node.ts`)
   returns failures as Go errors (`*FileError`, `*ExecutionError`, the upstream
   codes preserved) where the reference returns a `Result` value; the `Result`
@@ -1572,3 +1572,18 @@ that change only one.
 `TestRebuildProvidersPublishesTheWholeSet` runs rebuilds in a loop while another
 goroutine reads the provider set and fails if any provider disappears; it fails on
 the reference's shape at iteration ~1650 of 2000.
+
+## D212. Lead context with initial system message
+
+Reference: `packages/durable/src/harness/context.ts` at v1.0.2 leaves the first
+system message after initial user input. Generation commits that input before it
+prepares and appends the baseline system entry. Providers treat only a leading
+system message as the initial prompt and tool set, so the pinned ordering can
+change prompt behavior and invalidate prompt caching.
+
+Follow v1.1.0 (`leadWithSystem`): after tool-result ordering, move the first
+non-user message to the front only when it is a system message. Keep later system
+messages and persisted entries in place; `ContextView.Contributions` also retains
+committed order. `TestDeriveContextLeadsWithInitialSystemMessage` covers initial
+user messages, a later assistant and system message, and unchanged contribution
+order.

@@ -32,6 +32,61 @@ func contextEntry(id, conversationID Id, head *Id, model []ai.Message, edits []C
 	}}
 }
 
+func TestDeriveContextLeadsWithInitialSystemMessage(t *testing.T) {
+	storage := NewMemoryStorage()
+	ctx := context.Background()
+	root := RootConversationID
+	mustCommit(t, storage, conversationWrite(root))
+	first := userMessage("first", 1)
+	steered := userMessage("steered", 2)
+	initialSystem := &ai.SystemMessage{Content: ai.StringOrBlocks{Text: "preamble"}, Timestamp: 3}
+	assistant := &ai.AssistantMessage{StopReason: ai.StopStop, Timestamp: 4}
+	next := userMessage("next", 5)
+	laterSystem := &ai.SystemMessage{Content: ai.StringOrBlocks{Text: "cwd"}, Timestamp: 6}
+	mustCommit(t, storage,
+		contextEntry(10, root, nil, []ai.Message{first}, nil),
+		contextEntry(11, root, nil, []ai.Message{steered}, nil),
+		contextEntry(12, root, nil, []ai.Message{initialSystem}, nil),
+		contextEntry(13, root, nil, []ai.Message{assistant}, nil),
+		contextEntry(14, root, nil, []ai.Message{next}, nil),
+		contextEntry(15, root, nil, []ai.Message{laterSystem}, nil),
+	)
+	bounds, err := CaptureContextBounds(ctx, storage, root, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	view, err := DeriveContext(ctx, storage, root, bounds)
+	if err != nil {
+		t.Fatal(err)
+	}
+	describe := func(message ai.Message) string {
+		switch typed := message.(type) {
+		case *ai.SystemMessage:
+			return "system:" + typed.Content.Text
+		case *ai.UserMessage:
+			return "user:" + typed.Content.Text
+		case *ai.AssistantMessage:
+			return "assistant"
+		default:
+			return "unexpected message"
+		}
+	}
+	want := []string{"system:preamble", "user:first", "user:steered", "assistant", "user:next", "system:cwd"}
+	if len(view.Messages) != len(want) {
+		t.Fatalf("messages = %+v", view.Messages)
+	}
+	for index, message := range view.Messages {
+		if got := describe(message); got != want[index] {
+			t.Fatalf("messages[%d] = %q, want %q", index, got, want[index])
+		}
+	}
+	if describe(view.Contributions[0][0]) != "user:first" ||
+		describe(view.Contributions[2][0]) != "system:preamble" ||
+		describe(view.Contributions[5][0]) != "system:cwd" {
+		t.Fatalf("contributions changed order: %+v", view.Contributions)
+	}
+}
+
 func TestCaptureAndDeriveContext(t *testing.T) {
 	storage := NewMemoryStorage()
 	ctx := context.Background()

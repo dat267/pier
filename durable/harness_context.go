@@ -131,7 +131,7 @@ func DeriveContext(ctx chord.Context, storage Storage, conversationID Id, bounds
 	}
 	return ContextView{
 		Head: bounds.Head, Entries: entries, Contributions: contributions,
-		Messages: OrderToolResults(flattenMessages(contributions)),
+		Messages: leadWithSystem(OrderToolResults(flattenMessages(contributions))),
 	}, nil
 }
 
@@ -250,6 +250,32 @@ func MissingToolResult(call ai.ToolCall, timestamp int64) *ai.ToolResultMessage 
 		Details:    []byte(`{"reason":"missing_result"}`),
 		Timestamp:  timestamp,
 	}
+}
+
+// D212: upstream v1.0.2 leaves a baseline system message after the initial
+// user input because generation commits input before preparing the prompt.
+// Follow v1.1.0: providers treat only a leading system message as the initial
+// prompt and tool set, so move the first non-user message to the front only
+// when it is a system message. Later system messages retain their positions.
+func leadWithSystem(messages []ai.Message) []ai.Message {
+	index := 0
+	for index < len(messages) {
+		if _, isUser := messages[index].(*ai.UserMessage); !isUser {
+			break
+		}
+		index++
+	}
+	if index == 0 || index == len(messages) {
+		return messages
+	}
+	if _, isSystem := messages[index].(*ai.SystemMessage); !isSystem {
+		return messages
+	}
+	ordered := make([]ai.Message, 0, len(messages))
+	ordered = append(ordered, messages[index])
+	ordered = append(ordered, messages[:index]...)
+	ordered = append(ordered, messages[index+1:]...)
+	return ordered
 }
 
 func flattenMessages(contributions [][]ai.Message) []ai.Message {
