@@ -209,7 +209,7 @@ type AgentSession struct {
 	// Reload needs (upstream _usesDefaultTools and _excludedToolNames,
 	// db6cc71dc).
 	usesDefaultTools  bool
-	excludedToolNames map[string]bool
+	excludedToolNames []string
 
 	// beforeFirstTurn runs once before the first agent turn (upstream
 	// before_agent_start; the MCP first-prompt wait installs here).

@@ -426,7 +426,7 @@ func (s *AgentSession) AttachExtraTools(tools []agent.AgentTool) []string {
 	filtered := make([]string, 0, len(names))
 	seen := map[string]bool{}
 	for _, name := range names {
-		if seen[name] || s.excludedToolNames[name] {
+		if seen[name] || matchesAnyToolPattern(s.excludedToolNames, name) {
 			continue
 		}
 		seen[name] = true

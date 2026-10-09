@@ -304,11 +304,36 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 			toolByName[ToolName(extra.Name)] = extra
 		}
 	}
+	// An allowlist entry is a tool name or a pattern with `*` (upstream's `--tools` patterns), so
+	// a pattern enables every tool it matches.
 	activeTools := make([]agent.AgentTool, 0, len(initialActiveToolNames))
 	for _, name := range initialActiveToolNames {
 		if tool, ok := toolByName[name]; ok {
 			activeTools = append(activeTools, tool)
+			continue
 		}
+		if !strings.Contains(string(name), "*") {
+			continue
+		}
+		for candidate, tool := range toolByName {
+			if ToolNameMatchesPattern(string(name), string(candidate)) {
+				activeTools = append(activeTools, tool)
+			}
+		}
+	}
+	// An exclusion is a name or a pattern too, and it applies to what the selection resolved to.
+	if len(options.ExcludeTools) > 0 {
+		entries := make([]string, 0, len(options.ExcludeTools))
+		for _, name := range options.ExcludeTools {
+			entries = append(entries, string(name))
+		}
+		filtered := activeTools[:0]
+		for _, tool := range activeTools {
+			if !matchesAnyToolPattern(entries, tool.Name) {
+				filtered = append(filtered, tool)
+			}
+		}
+		activeTools = filtered
 	}
 
 	// The transcript filter drops images when block-images is enabled

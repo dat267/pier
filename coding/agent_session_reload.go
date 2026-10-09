@@ -47,7 +47,7 @@ func (s *AgentSession) Reload() {
 		filtered := make([]string, 0, len(names))
 		seen := map[string]bool{}
 		for _, name := range names {
-			if seen[name] || s.excludedToolNames[name] {
+			if seen[name] || matchesAnyToolPattern(s.excludedToolNames, name) {
 				continue
 			}
 			seen[name] = true
@@ -76,15 +76,14 @@ func resolvedDefaultToolSelection(settings *SettingsManager) []string {
 }
 
 // excludedToolNameSet builds the reload exclusion lookup.
-func excludedToolNameSet(names []string) map[string]bool {
+// excludedToolNameSet keeps the exclusion entries as they were given, because an entry is a
+// tool name or a pattern with `*` (upstream's `--exclude-tools` patterns), so the lookup has to
+// match rather than compare.
+func excludedToolNameSet(names []string) []string {
 	if len(names) == 0 {
 		return nil
 	}
-	set := make(map[string]bool, len(names))
-	for _, name := range names {
-		set[name] = true
-	}
-	return set
+	return append([]string{}, names...)
 }
 
 // reloadResources re-reads the context files, skills, and system/append prompt
