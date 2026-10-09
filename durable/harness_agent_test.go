@@ -83,6 +83,12 @@ func TestResolveSettings(t *testing.T) {
 	if defaults.Compaction != DefaultCompactionPolicy {
 		t.Fatalf("compaction = %+v", defaults.Compaction)
 	}
+	if defaults.Progress != (ProgressPolicy{PartialIntervalMs: 100, OutputIntervalMs: 100}) {
+		t.Fatalf("progress = %+v", defaults.Progress)
+	}
+	if defaults.ContextRetentionMs != 600_000 {
+		t.Fatalf("contextRetentionMs = %d", defaults.ContextRetentionMs)
+	}
 	if defaults.ToolExecution != ToolExecutionParallel || defaults.SteeringMode != QueueOneAtATime ||
 		defaults.FollowUpMode != QueueOneAtATime {
 		t.Fatalf("settings = %+v", defaults)
@@ -92,17 +98,25 @@ func TestResolveSettings(t *testing.T) {
 	}
 	// A partial policy overrides only the fields it names.
 	partial := ResolveSettings(&HarnessSettings{
-		Retry:         &RetryPolicyChange{Enabled: boolPtr(false), MaxRetries: intPtr(9)},
-		Compaction:    &CompactionPolicyChange{BackgroundTokens: intPtr(0)},
-		ToolExecution: stringPointer(ToolExecutionSequential),
-		SteeringMode:  stringPointer(QueueAll),
-		Extensions:    []Extension{{Name: "a"}},
+		Retry:              &RetryPolicyChange{Enabled: boolPtr(false), MaxRetries: intPtr(9)},
+		Compaction:         &CompactionPolicyChange{BackgroundTokens: intPtr(0)},
+		Progress:           &ProgressPolicyChange{OutputIntervalMs: intPtr(500)},
+		ContextRetentionMs: intPtr(0),
+		ToolExecution:      stringPointer(ToolExecutionSequential),
+		SteeringMode:       stringPointer(QueueAll),
+		Extensions:         []Extension{{Name: "a"}},
 	})
 	if partial.Retry.Enabled || partial.Retry.MaxRetries != 9 || partial.Retry.BaseDelayMs != 2000 {
 		t.Fatalf("retry = %+v", partial.Retry)
 	}
 	if partial.Compaction != (CompactionPolicy{Enabled: true, ReserveTokens: 16384, KeepRecentTokens: 20000, BackgroundTokens: 0}) {
 		t.Fatalf("compaction = %+v", partial.Compaction)
+	}
+	if partial.Progress != (ProgressPolicy{PartialIntervalMs: 100, OutputIntervalMs: 500}) {
+		t.Fatalf("progress = %+v", partial.Progress)
+	}
+	if partial.ContextRetentionMs != 0 {
+		t.Fatalf("contextRetentionMs = %d", partial.ContextRetentionMs)
 	}
 	if partial.ToolExecution != ToolExecutionSequential || partial.SteeringMode != QueueAll ||
 		partial.FollowUpMode != QueueOneAtATime {

@@ -87,16 +87,16 @@ Checked against v1.1.0 and still absent — reading the Termux clipboard (upstre
 against v1.1.0 (`abe508e1`); `origin/main` at `f1b2e77` has no later durable source
 changes. Ported the initial system-message ordering fix (upstream #10542,
 `92216ada1`; D212) and order-aware table scans/cursors (upstream #10546,
-`4dd2af42c`; D213 fixes SQLite's maximum-safe-ID boundary). Context reads now
-reuse scanned ranges within one task invocation
-(`68ccef176`), but still re-derive the full view and do not retain ranges across
-invocations (`da866ada1`). Public conversation context now supports an `at`
+`4dd2af42c`; D213 fixes SQLite's maximum-safe-ID boundary). Context ranges
+incrementally extend scanned and derived views within invocations and persist
+per conversation across tasks with configurable idle retention (`68ccef176`,
+`da866ada1`). Public conversation context supports an `at`
 entry cutoff (upstream #10512, `76f6c06da`). Task records stamp wall-clock
-`startedAt` at first run and `endedAt` at terminal transition, with injectable clock defaulting
-to current time (upstream #10549, `36a686ee8`); durable tool and hook APIs expose
-`models` (upstream #10395, `b0114ef5f`). Remaining gaps: progress commit
-intervals are fixed rather than configurable (upstream #10357,
-`674d64f09`); and the environment API still lacks bounded directory readers,
+`startedAt` at first run and `endedAt` at terminal transition, with injectable
+clock defaulting to current time (upstream #10549, `36a686ee8`); durable tool and
+hook APIs expose `models` (upstream #10395, `b0114ef5f`). Progress commits now
+use configurable partial and output intervals (upstream #10357, `674d64f09`).
+Remaining gaps: the environment API still lacks bounded directory readers,
 filesystem watching, argv execution, and windowed shell output, with no
 PowerShell tool (`4748c627a`, `a84510819`, `cdf79797b`, `68c22123b`). The read
 tool now uses a positional binary reader and fixed-size line scans, so it no

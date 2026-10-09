@@ -19,6 +19,13 @@ var DefaultCompactionPolicy = CompactionPolicy{
 	Enabled: true, ReserveTokens: 16384, KeepRecentTokens: 20000, BackgroundTokens: 32768,
 }
 
+// DefaultProgressPolicy is the built-in minimum interval between progress commits.
+var DefaultProgressPolicy = ProgressPolicy{
+	PartialIntervalMs: defaultProgressMinIntervalMs, OutputIntervalMs: defaultProgressMinIntervalMs,
+}
+
+const defaultContextRetentionMs = 600_000
+
 // InstructionsKey is the reserved section key of the agent's instructions.
 const InstructionsKey = "instructions"
 
@@ -36,8 +43,8 @@ var AgentDoc = mustDefineDoc(DocDefinition{
 func ResolveSettings(settings *HarnessSettings) Settings {
 	resolved := Settings{
 		Stream: ConversationStreamOptions{}, Retry: DefaultRetryPolicy,
-		Compaction: DefaultCompactionPolicy, ToolExecution: ToolExecutionParallel,
-		SteeringMode: QueueOneAtATime, FollowUpMode: QueueOneAtATime,
+		Compaction: DefaultCompactionPolicy, Progress: DefaultProgressPolicy, ContextRetentionMs: defaultContextRetentionMs,
+		ToolExecution: ToolExecutionParallel, SteeringMode: QueueOneAtATime, FollowUpMode: QueueOneAtATime,
 	}
 	if settings == nil {
 		return resolved
@@ -58,6 +65,17 @@ func ResolveSettings(settings *HarnessSettings) Settings {
 		}
 		if settings.Retry.MaxAgentDelayMs != nil {
 			resolved.Retry.MaxAgentDelayMs = settings.Retry.MaxAgentDelayMs
+		}
+	}
+	if settings.ContextRetentionMs != nil {
+		resolved.ContextRetentionMs = *settings.ContextRetentionMs
+	}
+	if settings.Progress != nil {
+		if settings.Progress.PartialIntervalMs != nil {
+			resolved.Progress.PartialIntervalMs = *settings.Progress.PartialIntervalMs
+		}
+		if settings.Progress.OutputIntervalMs != nil {
+			resolved.Progress.OutputIntervalMs = *settings.Progress.OutputIntervalMs
 		}
 	}
 	if settings.Compaction != nil {

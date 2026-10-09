@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/chord"
 )
 
 // Port of harness/context.ts.
@@ -102,6 +104,40 @@ func (s *contextScanStorage) ScanEntries(ctx context.Context, query EntryQuery, 
 	return s.Storage.ScanEntries(ctx, query, cursor, limit)
 }
 
+// Port of cached view isolation from packages/durable/src/harness/context.ts at pi v1.1.0 commit da866ada1.
+func TestCachedContextViewsCannotMutateKeptRange(t *testing.T) {
+	storage := &contextScanStorage{Storage: NewMemoryStorage()}
+	session := NewSession(storage)
+	ctx := context.Background()
+	root := RootConversationID
+	mustCommit(t, storage,
+		conversationWrite(root),
+		contextEntry(10, root, nil, []ai.Message{userMessage("first", 1)}, nil),
+	)
+	scheduler := NewTaskScheduler(TaskSchedulerOptions{Session: session, Storage: storage})
+	defer scheduler.Seal()
+	invocation := NewInvocation(100, root, "run", ctx)
+	defer invocation.End()
+	runtime := TaskRuntime(&schedulerRuntime{scheduler: scheduler, invocation: invocation, phase: &runtimePhase{}})
+	first, err := runtime.Context(root, ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first.Messages[0].(*ai.UserMessage).Content.Text = "changed messages"
+	first.Contributions[0][0].(*ai.UserMessage).Content.Text = "changed contribution"
+	first.Entries[0].Model[0].(*ai.UserMessage).Content.Text = "changed entry"
+
+	second, err := runtime.Context(root, ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, message := range []ai.Message{second.Messages[0], second.Contributions[0][0], second.Entries[0].Model[0]} {
+		if text := message.(*ai.UserMessage).Content.Text; text != "first" {
+			t.Fatalf("cached context was mutated: %q", text)
+		}
+	}
+}
+
 // Port of packages/durable/src/harness/context.ts at pi v1.1.0 commit 68ccef176.
 func TestInvocationContextScansOnlyEntriesAfterCachedTail(t *testing.T) {
 	base := NewMemoryStorage()
@@ -113,7 +149,8 @@ func TestInvocationContextScansOnlyEntriesAfterCachedTail(t *testing.T) {
 		conversationWrite(root),
 		contextEntry(10, root, nil, []ai.Message{userMessage("first", 1)}, nil),
 	)
-	scheduler := &TaskScheduler{session: session, storage: storage}
+	scheduler := NewTaskScheduler(TaskSchedulerOptions{Session: session, Storage: storage})
+	defer scheduler.Seal()
 	invocation := NewInvocation(100, root, "run", ctx)
 	defer invocation.End()
 	runtime := TaskRuntime(&schedulerRuntime{
@@ -188,36 +225,247 @@ func TestInvocationContextScansOnlyEntriesAfterCachedTail(t *testing.T) {
 	}
 }
 
-func TestInvocationSleepDropsCachedContextRange(t *testing.T) {
+// Port of incremental tool-result ordering from packages/durable/src/harness/context.ts at pi v1.1.0 commit da866ada1.
+func TestContextExtensionsReorderNewToolResultsAndPreserveEarlierPairs(t *testing.T) {
 	storage := &contextScanStorage{Storage: NewMemoryStorage()}
 	session := NewSession(storage)
 	ctx := context.Background()
 	root := RootConversationID
 	mustCommit(t, storage,
 		conversationWrite(root),
-		contextEntry(10, root, nil, []ai.Message{userMessage("first", 1)}, nil),
+		contextEntry(10, root, nil, []ai.Message{assistantWithCall("c1", "echo", 1)}, nil),
 	)
-	scheduler := &TaskScheduler{session: session, storage: storage, now: func() int64 { return 0 }}
+	scheduler := NewTaskScheduler(TaskSchedulerOptions{Session: session, Storage: storage})
+	defer scheduler.Seal()
 	invocation := NewInvocation(100, root, "run", ctx)
 	defer invocation.End()
-	runtime := TaskRuntime(&schedulerRuntime{
-		scheduler: scheduler, invocation: invocation, phase: &runtimePhase{},
+	runtime := TaskRuntime(&schedulerRuntime{scheduler: scheduler, invocation: invocation, phase: &runtimePhase{}})
+	read := func() ContextView {
+		t.Helper()
+		view, err := runtime.Context(root, ctx, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return view
+	}
+	first := read()
+	if len(first.Messages) != 2 || first.Messages[1].(*ai.ToolResultMessage).ToolCallID != "c1" ||
+		!first.Messages[1].(*ai.ToolResultMessage).IsError {
+		t.Fatalf("missing result context = %+v", first.Messages)
+	}
+	mustCommit(t, storage, contextEntry(12, root, nil, []ai.Message{toolResult("c1", "echo", "one", 2)}, nil))
+	paired := read()
+	if len(paired.Messages) != 2 || paired.Messages[1].(*ai.ToolResultMessage).Content[0].(ai.TextContent).Text != "one" {
+		t.Fatalf("first result extension = %+v", paired.Messages)
+	}
+	mustCommit(t, storage, contextEntry(14, root, nil, []ai.Message{assistantWithCall("c2", "echo", 3)}, nil))
+	secondCall := read()
+	if len(secondCall.Messages) != 4 || secondCall.Messages[0].(*ai.AssistantMessage).Content[0].(ai.ToolCall).ID != "c1" ||
+		secondCall.Messages[1].(*ai.ToolResultMessage).Content[0].(ai.TextContent).Text != "one" ||
+		secondCall.Messages[2].(*ai.AssistantMessage).Content[0].(ai.ToolCall).ID != "c2" ||
+		secondCall.Messages[3].(*ai.ToolResultMessage).ToolCallID != "c2" {
+		t.Fatalf("second assistant extension = %+v", secondCall.Messages)
+	}
+	mustCommit(t, storage, contextEntry(16, root, nil, []ai.Message{toolResult("c2", "echo", "two", 4)}, nil))
+	secondPaired := read()
+	if len(secondPaired.Messages) != 4 || secondPaired.Messages[3].(*ai.ToolResultMessage).Content[0].(ai.TextContent).Text != "two" {
+		t.Fatalf("second result extension = %+v", secondPaired.Messages)
+	}
+}
+
+// Port of per-conversation range reuse from packages/durable/src/harness/scheduler.ts at pi v1.1.0 commit da866ada1.
+func TestContextRangeIsReusedAcrossTaskInvocations(t *testing.T) {
+	base := NewMemoryStorage()
+	storage := &contextScanStorage{Storage: base}
+	session := NewSessionWithClock(storage, func() int64 { return 1_000 })
+	ctx := context.Background()
+	if err := session.Commit(ctx, func(tx *Transaction) error {
+		_, err := tx.CreateRootConversation()
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for id := Id(10); id < 30; id++ {
+		mustCommit(t, storage, contextEntry(id, RootConversationID, nil, []ai.Message{userMessage("entry", int64(id))}, nil))
+	}
+	reads := []int{}
+	slept := false
+	retentionMs := 0
+	definition := TaskDefinition{
+		Name: "test.shared-context-range", Version: 1,
+		Initial: func(json.RawMessage) (json.RawMessage, error) { return json.RawMessage(`{"phase":"run"}`), nil },
+		Phases: map[string]PhaseHandler{
+			"run": func(_ RunningTask, runtime TaskRuntime, taskContext chord.Context) error {
+				before := len(storage.calls)
+				if _, err := runtime.Context(RootConversationID, taskContext, nil); err != nil {
+					return err
+				}
+				reads = append(reads, len(storage.calls)-before)
+				if !slept {
+					slept = true
+					if err := runtime.Sleep(runtime.Now(), taskContext); err != nil {
+						return err
+					}
+					before = len(storage.calls)
+					if _, err := runtime.Context(RootConversationID, taskContext, nil); err != nil {
+						return err
+					}
+					reads = append(reads, len(storage.calls)-before)
+				}
+				return runtime.Commit(func(tx *Transaction, _ RunningTask) (*NextTaskState, error) {
+					return &NextTaskState{Status: TaskTerminal, Outcome: &TaskOutcome{Status: OutcomeCompleted}}, nil
+				}, taskContext)
+			},
+		},
+		Abort: func(_ RunningTask, runtime TaskRuntime, taskContext chord.Context) error {
+			return runtime.Commit(func(tx *Transaction, _ RunningTask) (*NextTaskState, error) {
+				return &NextTaskState{Status: TaskTerminal, Outcome: &TaskOutcome{Status: OutcomeAborted}}, nil
+			}, taskContext)
+		},
+	}
+	registry := NewRegistry()
+	if err := registry.Install(Extension{Name: "context-range", Tasks: []Task{{Definition: definition}}}); err != nil {
+		t.Fatal(err)
+	}
+	scheduler := NewTaskScheduler(TaskSchedulerOptions{
+		Session: session, Storage: storage, Registry: registry, Settings: func() Settings {
+			settings := ResolveSettings(nil)
+			settings.ContextRetentionMs = retentionMs
+			return settings
+		},
+		Now: func() int64 { return 1_000 }, Context: ctx,
 	})
-	if _, err := runtime.Context(root, ctx, nil); err != nil {
+	if err := scheduler.Open(ctx); err != nil {
 		t.Fatal(err)
 	}
-	callStart := len(storage.calls)
-	if err := runtime.Sleep(0, ctx); err != nil {
+	scheduler.Resume()
+	create := func() Id {
+		t.Helper()
+		var id Id
+		if err := session.Commit(ctx, func(tx *Transaction) error {
+			var err error
+			id, err = tx.CreateTask(definition, json.RawMessage(`{}`), TaskOptions{
+				Ownership: TaskOwnership{Kind: TaskOwnedByConversation}, ConversationID: idPointerOf(RootConversationID),
+			})
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return id
+	}
+	for index := 0; index < 3; index++ {
+		if index == 1 {
+			retentionMs = defaultContextRetentionMs
+		}
+		id := create()
+		scheduler.Kick()
+		settled, err := scheduler.WaitForTask(ctx, id)
+		if err != nil || settled.State.Outcome == nil || settled.State.Outcome.Status != OutcomeCompleted {
+			t.Fatalf("task %d settled = %+v, %v", index, settled, err)
+		}
+		if err := scheduler.WaitForIdle(idPointerOf(RootConversationID), ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(reads) != 4 || reads[0] != 2 || reads[1] != 1 || reads[2] != 2 || reads[3] != 1 {
+		t.Fatalf("range scans across sleep and retention modes = %v, want [2 1 2 1]", reads)
+	}
+	scheduler.Seal()
+	if err := session.Close(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := runtime.Context(root, ctx, nil); err != nil {
+}
+
+// Port of idle range expiration from packages/durable/src/harness/scheduler.ts at pi v1.1.0 commit da866ada1.
+func TestIdleContextRangeExpiresWithoutFurtherTaskChanges(t *testing.T) {
+	storage := &contextScanStorage{Storage: NewMemoryStorage()}
+	session := NewSession(storage)
+	ctx := context.Background()
+	if err := session.Commit(ctx, func(tx *Transaction) error {
+		_, err := tx.CreateRootConversation()
+		return err
+	}); err != nil {
 		t.Fatal(err)
 	}
-	if got := len(storage.calls) - callStart; got != 2 {
-		t.Fatalf("storage scans after sleep = %d, want tail lookup and fresh range scan", got)
+	mustCommit(t, storage, contextEntry(10, RootConversationID, nil, []ai.Message{userMessage("first", 1)}, nil))
+	definition := TaskDefinition{
+		Name: "test.expiring-context", Version: 1,
+		Initial: func(json.RawMessage) (json.RawMessage, error) { return json.RawMessage(`{"phase":"run"}`), nil },
+		Phases: map[string]PhaseHandler{
+			"run": func(_ RunningTask, runtime TaskRuntime, taskContext chord.Context) error {
+				if _, err := runtime.Context(RootConversationID, taskContext, nil); err != nil {
+					return err
+				}
+				return runtime.Commit(func(tx *Transaction, _ RunningTask) (*NextTaskState, error) {
+					return &NextTaskState{Status: TaskTerminal, Outcome: &TaskOutcome{Status: OutcomeCompleted}}, nil
+				}, taskContext)
+			},
+		},
+		Abort: func(_ RunningTask, runtime TaskRuntime, taskContext chord.Context) error {
+			return runtime.Commit(func(tx *Transaction, _ RunningTask) (*NextTaskState, error) {
+				return &NextTaskState{Status: TaskTerminal, Outcome: &TaskOutcome{Status: OutcomeAborted}}, nil
+			}, taskContext)
+		},
 	}
-	if storage.calls[callStart+1].query.MinEntryID != nil {
-		t.Fatalf("post-sleep context reused prior range: %+v", storage.calls[callStart+1])
+	registry := NewRegistry()
+	if err := registry.Install(Extension{Name: "expiring-context", Tasks: []Task{{Definition: definition}}}); err != nil {
+		t.Fatal(err)
+	}
+	settings := ResolveSettings(&HarnessSettings{ContextRetentionMs: intPointer(25)})
+	scheduler := NewTaskScheduler(TaskSchedulerOptions{
+		Session: session, Storage: storage, Registry: registry, Settings: func() Settings { return settings },
+		Now: wallClockMillis, Context: ctx,
+	})
+	if err := scheduler.Open(ctx); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		scheduler.Seal()
+		if err := session.Close(ctx); err != nil {
+			t.Error(err)
+		}
+	})
+	scheduler.Resume()
+	var taskID Id
+	if err := session.Commit(ctx, func(tx *Transaction) error {
+		var err error
+		taskID, err = tx.CreateTask(definition, json.RawMessage(`{}`), TaskOptions{
+			Ownership: TaskOwnership{Kind: TaskOwnedByConversation}, ConversationID: idPointerOf(RootConversationID),
+		})
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	scheduler.Kick()
+	if _, err := scheduler.WaitForTask(ctx, taskID); err != nil {
+		t.Fatal(err)
+	}
+	if err := scheduler.WaitForIdle(idPointerOf(RootConversationID), ctx); err != nil {
+		t.Fatal(err)
+	}
+	scheduler.mu.Lock()
+	_, kept := scheduler.contexts[RootConversationID]
+	scheduler.mu.Unlock()
+	if !kept {
+		t.Fatal("idle conversation did not retain its context range")
+	}
+	ticker := time.NewTicker(time.Millisecond)
+	defer ticker.Stop()
+	timeout := time.NewTimer(time.Second)
+	defer timeout.Stop()
+	for {
+		scheduler.mu.Lock()
+		_, kept = scheduler.contexts[RootConversationID]
+		scheduler.mu.Unlock()
+		if !kept {
+			return
+		}
+		select {
+		case <-ticker.C:
+		case <-timeout.C:
+			t.Fatal("idle context range did not expire")
+			return
+		}
 	}
 }
 

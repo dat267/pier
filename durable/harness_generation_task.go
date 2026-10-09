@@ -907,6 +907,7 @@ func streamGenerationResponse(runtime TaskRuntime, model *ai.Model, messages []a
 		return nil, fmt.Errorf("no models are configured")
 	}
 	stream := runtime.Models().StreamSimple(model, ai.Context{Messages: messages}, &ai.ModelsSimpleStreamOptions{SimpleStreamOptions: options})
+	interval := time.Duration(runtime.Settings().Progress.PartialIntervalMs) * time.Millisecond
 	var lastFlush time.Time
 	for {
 		event, ok := stream.Next(ctx)
@@ -920,7 +921,7 @@ func streamGenerationResponse(runtime TaskRuntime, model *ai.Model, messages []a
 			continue
 		}
 		partial := event.Partial
-		if !lastFlush.IsZero() && time.Since(lastFlush) < 100*time.Millisecond {
+		if !lastFlush.IsZero() && time.Since(lastFlush) < interval {
 			continue
 		}
 		raw, err := ai.MarshalMessage(partial)

@@ -31,11 +31,15 @@ type ContextBounds struct {
 	Tail Id
 }
 
-// contextRange holds one invocation's scanned history for reuse by its next read.
+// contextRange holds one conversation's reusable scanned history and derived context.
 type contextRange struct {
 	conversationID Id
 	bounds         *ContextBounds
 	entries        []EntryRecord
+	view           ContextView
+	edited         map[Id]struct{}
+	settled        []ai.Message
+	open           []ai.Message
 }
 
 // ContextView is the raw active transcript and the derived model context.
@@ -103,21 +107,24 @@ func readContextFrom(ctx chord.Context, session *Session, storage Storage, conve
 		return ContextView{Entries: []EntryRecord{}, Contributions: [][]ai.Message{}, Messages: []ai.Message{}}, nil, nil
 	}
 
-	var rangeEntries []EntryRecord
+	var current *contextRange
 	switch {
 	case previous == nil || previous.conversationID != conversationID || !sameContextHead(previous.bounds, bounds):
-		var err error
-		rangeEntries, err = scanContextRange(ctx, storage, conversationID, bounds)
+		entries, err := scanContextRange(ctx, storage, conversationID, bounds)
 		if err != nil {
 			return ContextView{}, nil, err
 		}
-	case bounds.Tail <= previous.bounds.Tail:
-		rangeEntries = make([]EntryRecord, 0, len(previous.entries))
+		current = deriveContextRange(conversationID, bounds, entries)
+	case bounds.Tail == previous.bounds.Tail:
+		current = previous
+	case bounds.Tail < previous.bounds.Tail:
+		entries := make([]EntryRecord, 0, len(previous.entries))
 		for _, entry := range previous.entries {
 			if entry.ID <= bounds.Tail {
-				rangeEntries = append(rangeEntries, entry)
+				entries = append(entries, entry)
 			}
 		}
+		current = deriveContextRange(conversationID, bounds, entries)
 	default:
 		minEntryID := previous.bounds.Tail + 1
 		added, err := scanContextEntries(ctx, storage, EntryQuery{
@@ -126,13 +133,20 @@ func readContextFrom(ctx chord.Context, session *Session, storage Storage, conve
 		if err != nil {
 			return ContextView{}, nil, err
 		}
-		rangeEntries = make([]EntryRecord, 0, len(previous.entries)+len(added))
-		rangeEntries = append(rangeEntries, previous.entries...)
-		rangeEntries = append(rangeEntries, added...)
+		if contextRangeNeedsDerivation(previous, added) {
+			entries := make([]EntryRecord, 0, len(previous.entries)+len(added))
+			entries = append(entries, previous.entries...)
+			entries = append(entries, added...)
+			current = deriveContextRange(conversationID, bounds, entries)
+		} else {
+			current = extendContextRange(previous, bounds, added)
+		}
 	}
-	view := deriveContextView(bounds, rangeEntries)
-	view.Entries = append([]EntryRecord(nil), view.Entries...)
-	return view, &contextRange{conversationID: conversationID, bounds: bounds, entries: rangeEntries}, nil
+	view, err := cloneContextView(current.view)
+	if err != nil {
+		return ContextView{}, nil, err
+	}
+	return view, current, nil
 }
 
 func sameContextHead(left, right *ContextBounds) bool {
@@ -152,44 +166,165 @@ func DeriveContext(ctx chord.Context, storage Storage, conversationID Id, bounds
 	if err != nil {
 		return ContextView{}, err
 	}
-	return deriveContextView(bounds, rangeEntries), nil
+	return deriveContextRange(conversationID, bounds, rangeEntries).view, nil
 }
 
-func deriveContextView(bounds *ContextBounds, rangeEntries []EntryRecord) ContextView {
+func deriveContextRange(conversationID Id, bounds *ContextBounds, rangeEntries []EntryRecord) *contextRange {
 	edits := map[Id]ContextEdit{}
+	edited := map[Id]struct{}{}
 	// Edits of every entry in the range count, including older head markers.
 	for _, entry := range rangeEntries {
 		for _, edit := range entry.Edits {
 			edits[edit.Target] = edit
+			edited[edit.Target] = struct{}{}
 		}
 	}
 	entries := selectActive(bounds.Head, rangeEntries)
 	contributions := make([][]ai.Message, 0, len(entries))
 	for _, entry := range entries {
-		edit, edited := edits[entry.ID]
-		if edited && edit.Action == EditOmit {
-			contributions = append(contributions, []ai.Message{})
-			continue
-		}
-		contributed := entry.Model
-		if edited && edit.Action == EditReplace {
-			contributed = edit.Messages
-		}
-		filtered := make([]ai.Message, 0, len(contributed))
-		for _, message := range contributed {
-			if assistant, ok := message.(*ai.AssistantMessage); ok {
-				if _, excluded := excludedStopReasons[assistant.StopReason]; excluded {
-					continue
-				}
-			}
-			filtered = append(filtered, message)
-		}
-		contributions = append(contributions, filtered)
+		contributions = append(contributions, contributeContext(entry, edits[entry.ID]))
 	}
-	return ContextView{
+	settled, open := settleContextMessages(nil, flattenMessages(contributions))
+	messages := make([]ai.Message, 0, len(settled)+len(open))
+	messages = append(messages, settled...)
+	messages = append(messages, OrderToolResults(open)...)
+	view := ContextView{
 		Head: bounds.Head, Entries: entries, Contributions: contributions,
-		Messages: leadWithSystem(OrderToolResults(flattenMessages(contributions))),
+		Messages: leadWithSystem(messages),
 	}
+	return &contextRange{
+		conversationID: conversationID, bounds: bounds, entries: rangeEntries, view: view,
+		edited: edited, settled: settled, open: open,
+	}
+}
+
+func contextRangeNeedsDerivation(previous *contextRange, added []EntryRecord) bool {
+	for _, entry := range added {
+		if entry.Head != nil || len(entry.Edits) > 0 {
+			return true
+		}
+		if _, edited := previous.edited[entry.ID]; edited {
+			return true
+		}
+	}
+	return false
+}
+
+func extendContextRange(previous *contextRange, bounds *ContextBounds, added []EntryRecord) *contextRange {
+	entries := make([]EntryRecord, 0, len(previous.entries)+len(added))
+	entries = append(entries, previous.entries...)
+	entries = append(entries, added...)
+	newContributions := make([][]ai.Message, 0, len(added))
+	newMessages := make([]ai.Message, 0)
+	for _, entry := range added {
+		contribution := contributeContext(entry, ContextEdit{})
+		newContributions = append(newContributions, contribution)
+		newMessages = append(newMessages, contribution...)
+	}
+	open := make([]ai.Message, 0, len(previous.open)+len(newMessages))
+	open = append(open, previous.open...)
+	open = append(open, newMessages...)
+	settled, open := settleContextMessages(previous.settled, open)
+	active := make([]EntryRecord, 0, len(previous.view.Entries)+len(added))
+	active = append(active, previous.view.Entries...)
+	active = append(active, added...)
+	contributions := make([][]ai.Message, 0, len(previous.view.Contributions)+len(newContributions))
+	contributions = append(contributions, previous.view.Contributions...)
+	contributions = append(contributions, newContributions...)
+	messages := make([]ai.Message, 0, len(settled)+len(open))
+	messages = append(messages, settled...)
+	messages = append(messages, OrderToolResults(open)...)
+	view := ContextView{
+		Head: bounds.Head, Entries: active, Contributions: contributions,
+		Messages: leadWithSystem(messages),
+	}
+	return &contextRange{
+		conversationID: previous.conversationID, bounds: bounds, entries: entries, view: view,
+		edited: previous.edited, settled: settled, open: open,
+	}
+}
+
+func contributeContext(entry EntryRecord, edit ContextEdit) []ai.Message {
+	if edit.Action == EditOmit {
+		return []ai.Message{}
+	}
+	contributed := entry.Model
+	if edit.Action == EditReplace {
+		contributed = edit.Messages
+	}
+	filtered := make([]ai.Message, 0, len(contributed))
+	for _, message := range contributed {
+		if assistant, ok := message.(*ai.AssistantMessage); ok {
+			if _, excluded := excludedStopReasons[assistant.StopReason]; excluded {
+				continue
+			}
+		}
+		filtered = append(filtered, message)
+	}
+	return filtered
+}
+
+func settleContextMessages(settled, open []ai.Message) ([]ai.Message, []ai.Message) {
+	lastAssistant := -1
+	for index, message := range open {
+		if _, ok := message.(*ai.AssistantMessage); ok {
+			lastAssistant = index
+		}
+	}
+	if lastAssistant <= 0 {
+		return settled, open
+	}
+	ready := OrderToolResults(open[:lastAssistant])
+	combined := make([]ai.Message, 0, len(settled)+len(ready))
+	combined = append(combined, settled...)
+	combined = append(combined, ready...)
+	return combined, append([]ai.Message(nil), open[lastAssistant:]...)
+}
+
+func cloneContextView(view ContextView) (ContextView, error) {
+	copyMessage := func(message ai.Message) (ai.Message, error) {
+		encoded, err := ai.MarshalMessage(message)
+		if err != nil {
+			return nil, err
+		}
+		return ai.UnmarshalMessage(encoded)
+	}
+	cloneMessages := func(messages []ai.Message) ([]ai.Message, error) {
+		result := make([]ai.Message, 0, len(messages))
+		for _, message := range messages {
+			clone, err := copyMessage(message)
+			if err != nil {
+				return nil, err
+			}
+			result = append(result, clone)
+		}
+		return result, nil
+	}
+	result := ContextView{
+		Entries:       make([]EntryRecord, 0, len(view.Entries)),
+		Contributions: make([][]ai.Message, 0, len(view.Contributions)),
+		Messages:      make([]ai.Message, 0, len(view.Messages)),
+	}
+	if view.Head != nil {
+		result.Head = cloneEntry(view.Head)
+	}
+	for index := range view.Entries {
+		entry := cloneEntry(&view.Entries[index])
+		result.Entries = append(result.Entries, *entry)
+	}
+	for _, messages := range view.Contributions {
+		cloned, err := cloneMessages(messages)
+		if err != nil {
+			return ContextView{}, err
+		}
+		result.Contributions = append(result.Contributions, cloned)
+	}
+	messages, err := cloneMessages(view.Messages)
+	if err != nil {
+		return ContextView{}, err
+	}
+	result.Messages = append(result.Messages, messages...)
+	return result, nil
 }
 
 // ActiveEntries returns the raw active entries within captured bounds.

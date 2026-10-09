@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/dat267/pier/chord"
 )
@@ -40,6 +41,11 @@ type TaskSchedulerOptions struct {
 	Context        chord.Context
 }
 
+type retainedContext struct {
+	rangeState *contextRange
+	idleSince  *int64
+}
+
 // TaskScheduler is the durable task scheduler of one harness.
 type TaskScheduler struct {
 	session      *Session
@@ -63,6 +69,11 @@ type TaskScheduler struct {
 	// interleave with the drain's and both stage a terminal record.
 	reserveMu          sync.Mutex
 	mirror             *SchedulerMirror
+	contexts           map[Id]retainedContext
+	contextExpiry      *time.Timer
+	contextExpiryAt    int64
+	hasContextExpiry   bool
+	contextExpiryEpoch uint64
 	invocations        map[Id]*Invocation
 	taskWaiters        *Waiters[Id, SettledTask]
 	idleWaiters        *Waiters[idleKey, struct{}]
@@ -89,6 +100,7 @@ func NewTaskScheduler(options TaskSchedulerOptions) *TaskScheduler {
 		now:          options.Now, report: options.Report, settle: options.SettleOutcome,
 		withdraw: options.WithdrawInputs, context: options.Context,
 		mirror:      NewSchedulerMirror(),
+		contexts:    map[Id]retainedContext{},
 		invocations: map[Id]*Invocation{},
 		taskWaiters: &Waiters[Id, SettledTask]{},
 		idleWaiters: &Waiters[idleKey, struct{}]{},
@@ -102,6 +114,184 @@ func (s *TaskScheduler) Context() chord.Context {
 		return context.Background()
 	}
 	return s.context
+}
+
+func (s *TaskScheduler) resolvedSettings() Settings {
+	if s.settings == nil {
+		return ResolveSettings(nil)
+	}
+	return s.settings()
+}
+
+func (s *TaskScheduler) clockNow() int64 {
+	if s.now == nil {
+		return wallClockMillis()
+	}
+	return s.now()
+}
+
+func (s *TaskScheduler) contextRange(conversationID Id) *contextRange {
+	retention := s.resolvedSettings().ContextRetentionMs
+	now := s.clockNow()
+	s.mu.Lock()
+	kept, present := s.contexts[conversationID]
+	expired := present && kept.idleSince != nil &&
+		(retention <= 0 || now-*kept.idleSince >= int64(retention))
+	if expired {
+		delete(s.contexts, conversationID)
+	}
+	rangeState := kept.rangeState
+	s.mu.Unlock()
+	if expired {
+		s.scheduleContextExpiry()
+	}
+	return rangeState
+}
+
+func (s *TaskScheduler) keepContextRange(conversationID Id, current *contextRange) {
+	if current == nil || s.Closing() {
+		return
+	}
+	retention := s.resolvedSettings().ContextRetentionMs
+	idle := s.isIdle(idleKey{Conversation: &conversationID})
+	now := s.clockNow()
+	s.mu.Lock()
+	if s.closing {
+		s.mu.Unlock()
+		return
+	}
+	if s.contexts == nil {
+		s.contexts = map[Id]retainedContext{}
+	}
+	kept := s.contexts[conversationID]
+	if kept.rangeState != nil && kept.rangeState.bounds.Tail > current.bounds.Tail {
+		s.mu.Unlock()
+		return
+	}
+	if idle && retention <= 0 {
+		delete(s.contexts, conversationID)
+	} else {
+		var idleSince *int64
+		if idle {
+			if kept.idleSince != nil {
+				timestamp := *kept.idleSince
+				idleSince = &timestamp
+			} else {
+				timestamp := now
+				idleSince = &timestamp
+			}
+		}
+		s.contexts[conversationID] = retainedContext{rangeState: current, idleSince: idleSince}
+	}
+	s.mu.Unlock()
+	s.scheduleContextExpiry()
+}
+
+func (s *TaskScheduler) refreshContextRetention() {
+	retention := s.resolvedSettings().ContextRetentionMs
+	now := s.clockNow()
+	s.mu.Lock()
+	if s.closing {
+		s.mu.Unlock()
+		return
+	}
+	ids := make([]Id, 0, len(s.contexts))
+	for id := range s.contexts {
+		ids = append(ids, id)
+	}
+	s.mu.Unlock()
+	for _, id := range ids {
+		idle := s.isIdle(idleKey{Conversation: &id})
+		s.mu.Lock()
+		kept, present := s.contexts[id]
+		if present {
+			switch {
+			case kept.idleSince != nil && (retention <= 0 || now-*kept.idleSince >= int64(retention)):
+				delete(s.contexts, id)
+			case !idle:
+				kept.idleSince = nil
+				s.contexts[id] = kept
+			case retention <= 0:
+				delete(s.contexts, id)
+			case kept.idleSince == nil:
+				timestamp := now
+				kept.idleSince = &timestamp
+				s.contexts[id] = kept
+			}
+		}
+		s.mu.Unlock()
+	}
+	s.scheduleContextExpiry()
+}
+
+func (s *TaskScheduler) scheduleContextExpiry() {
+	retention := s.resolvedSettings().ContextRetentionMs
+	now := s.clockNow()
+	s.mu.Lock()
+	if s.closing {
+		if s.contextExpiry != nil {
+			s.contextExpiry.Stop()
+			s.contextExpiry = nil
+		}
+		s.hasContextExpiry = false
+		s.contextExpiryEpoch++
+		s.mu.Unlock()
+		return
+	}
+	var earliest int64
+	found := false
+	if retention > 0 {
+		for _, kept := range s.contexts {
+			if kept.idleSince == nil {
+				continue
+			}
+			at := *kept.idleSince + int64(retention)
+			if !found || at < earliest {
+				earliest, found = at, true
+			}
+		}
+	}
+	if !found {
+		if s.contextExpiry != nil {
+			s.contextExpiry.Stop()
+			s.contextExpiry = nil
+		}
+		s.hasContextExpiry = false
+		s.contextExpiryEpoch++
+		s.mu.Unlock()
+		return
+	}
+	if s.hasContextExpiry && s.contextExpiryAt == earliest {
+		s.mu.Unlock()
+		return
+	}
+	if s.contextExpiry != nil {
+		s.contextExpiry.Stop()
+	}
+	s.contextExpiryEpoch++
+	epoch := s.contextExpiryEpoch
+	s.contextExpiryAt = earliest
+	s.hasContextExpiry = true
+	delayMs := earliest - now
+	if delayMs < 0 {
+		delayMs = 0
+	}
+	const maxDelayMs = int64((1<<63 - 1) / int64(time.Millisecond))
+	if delayMs > maxDelayMs {
+		delayMs = maxDelayMs
+	}
+	s.contextExpiry = time.AfterFunc(time.Duration(delayMs)*time.Millisecond, func() {
+		s.mu.Lock()
+		if s.contextExpiryEpoch != epoch {
+			s.mu.Unlock()
+			return
+		}
+		s.contextExpiry = nil
+		s.hasContextExpiry = false
+		s.mu.Unlock()
+		s.refreshContextRetention()
+	})
+	s.mu.Unlock()
 }
 
 // Mirror is the scheduler's live mirror.
@@ -244,6 +434,9 @@ func (s *TaskScheduler) Observe(publication CommitPublication) {
 	if effects.ScheduleReconcile {
 		s.scheduleReconcile()
 	}
+	if len(effects.Updated) > 0 || len(effects.Terminal) > 0 {
+		s.refreshContextRetention()
+	}
 }
 
 // Seal begins closing: reject the waiters and end every invocation.
@@ -254,6 +447,13 @@ func (s *TaskScheduler) Seal() {
 		return
 	}
 	s.closing = true
+	s.contexts = map[Id]retainedContext{}
+	if s.contextExpiry != nil {
+		s.contextExpiry.Stop()
+		s.contextExpiry = nil
+	}
+	s.hasContextExpiry = false
+	s.contextExpiryEpoch++
 	s.mu.Unlock()
 	if s.unsubscribeRegistry != nil {
 		s.unsubscribeRegistry()

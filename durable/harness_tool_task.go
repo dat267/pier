@@ -511,7 +511,7 @@ func publishToolProgress(runtime TaskRuntime, reported *reportedTool, ctx chord.
 		if runtime.Signal().Err() == nil {
 			runtime.Report(err)
 		}
-	})
+	}, runtime.Settings().Progress.OutputIntervalMs)
 }
 
 // finalToolResult is the settled result: retained output and last details as

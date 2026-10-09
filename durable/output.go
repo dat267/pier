@@ -380,11 +380,15 @@ func (w *ProgressWaiter) Resolve() { w.done <- nil }
 // Reject settles the waiter with an error (the final commit's caller).
 func (w *ProgressWaiter) Reject(err error) { w.done <- err }
 
-// NewProgress builds a progress committer over one write operation.
-func NewProgress(write func() (int, error), onError func(error)) *Progress {
+// NewProgress builds a progress committer; optional minIntervalMs overrides the 100 ms default.
+func NewProgress(write func() (int, error), onError func(error), minIntervalMs ...int) *Progress {
+	interval := defaultProgressMinIntervalMs
+	if len(minIntervalMs) > 0 {
+		interval = minIntervalMs[0]
+	}
 	return &Progress{
 		write: write, onError: onError,
-		minIntervalMs: defaultProgressMinIntervalMs, bytesPerSecond: defaultProgressBytesPerSecond,
+		minIntervalMs: interval, bytesPerSecond: defaultProgressBytesPerSecond,
 	}
 }
 

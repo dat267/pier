@@ -111,6 +111,7 @@ func (s *TaskScheduler) resolveIdleWaiters() {
 			s.idleWaiters.Resolve(key, struct{}{})
 		}
 	}
+	s.refreshContextRetention()
 }
 
 func (s *TaskScheduler) isIdle(key idleKey) bool {

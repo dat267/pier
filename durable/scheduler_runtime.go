@@ -43,7 +43,7 @@ func (r *schedulerRuntime) Models() *ai.Models { return r.scheduler.models }
 
 func (r *schedulerRuntime) Settings() Settings {
 	if r.scheduler.settings == nil {
-		return Settings{}
+		return ResolveSettings(nil)
 	}
 	return r.scheduler.settings()
 }
@@ -218,10 +218,7 @@ func (r *schedulerRuntime) Context(conversationID Id, ctx chord.Context, at *Id)
 	if err := r.invocation.AssertLive(); err != nil {
 		return ContextView{}, err
 	}
-	r.invocation.contextMu.Lock()
-	previous := r.invocation.contextRange
-	generation := r.invocation.contextGeneration
-	r.invocation.contextMu.Unlock()
+	previous := r.scheduler.contextRange(conversationID)
 	if err := r.invocation.AssertLive(); err != nil {
 		return ContextView{}, err
 	}
@@ -231,12 +228,7 @@ func (r *schedulerRuntime) Context(conversationID Id, ctx chord.Context, at *Id)
 		return ContextView{}, err
 	}
 	if !r.invocation.Ended() {
-		r.invocation.contextMu.Lock()
-		if r.invocation.contextGeneration == generation && r.invocation.contextRange == previous {
-			r.invocation.contextRange = cached
-			r.invocation.contextGeneration++
-		}
-		r.invocation.contextMu.Unlock()
+		r.scheduler.keepContextRange(conversationID, cached)
 	}
 	return view, nil
 }
@@ -264,7 +256,6 @@ func (r *schedulerRuntime) Sleep(until int64, ctx chord.Context) error {
 	if err := r.invocation.AssertLive(); err != nil {
 		return err
 	}
-	r.invocation.clearContextRange()
 	signals := []context.Context{r.invocation.Context()}
 	if ctx != nil && ctx.Done() != nil {
 		signals = append(signals, ctx)

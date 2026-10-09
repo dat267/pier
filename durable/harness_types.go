@@ -101,6 +101,20 @@ type CompactionPolicyChange struct {
 	BackgroundTokens *int  `json:"backgroundTokens,omitempty"`
 }
 
+// ProgressPolicy configures how often generation partials and tool output are committed.
+type ProgressPolicy struct {
+	// PartialIntervalMs is the minimum pause between generated partial commits.
+	PartialIntervalMs int `json:"partialIntervalMs"`
+	// OutputIntervalMs is the minimum pause between running tool output commits.
+	OutputIntervalMs int `json:"outputIntervalMs"`
+}
+
+// ProgressPolicyChange is the host's partial progress policy.
+type ProgressPolicyChange struct {
+	PartialIntervalMs *int `json:"partialIntervalMs,omitempty"`
+	OutputIntervalMs  *int `json:"outputIntervalMs,omitempty"`
+}
+
 // ConversationStreamOptions is the curated pi-ai request option set.
 type ConversationStreamOptions struct {
 	Transport       *string           `json:"transport,omitempty"`
@@ -117,24 +131,29 @@ type ConversationStreamOptions struct {
 type HarnessSettings struct {
 	// Extensions is the default extension selection; absent means every
 	// installed extension, in install order.
-	Extensions    []Extension
-	Stream        *ConversationStreamOptions
-	Retry         *RetryPolicyChange
-	Compaction    *CompactionPolicyChange
-	ToolExecution *string
-	SteeringMode  *string
-	FollowUpMode  *string
+	Extensions []Extension
+	Stream     *ConversationStreamOptions
+	Retry      *RetryPolicyChange
+	Compaction *CompactionPolicyChange
+	Progress   *ProgressPolicyChange
+	// ContextRetentionMs keeps idle conversation context ranges in memory for this long.
+	ContextRetentionMs *int
+	ToolExecution      *string
+	SteeringMode       *string
+	FollowUpMode       *string
 }
 
 // Settings is the resolved settings: every field over its built-in default.
 type Settings struct {
-	Extensions    []Extension
-	Stream        ConversationStreamOptions
-	Retry         ConversationRetryPolicy
-	Compaction    CompactionPolicy
-	ToolExecution string
-	SteeringMode  string
-	FollowUpMode  string
+	Extensions         []Extension
+	Stream             ConversationStreamOptions
+	Retry              ConversationRetryPolicy
+	Compaction         CompactionPolicy
+	Progress           ProgressPolicy
+	ContextRetentionMs int
+	ToolExecution      string
+	SteeringMode       string
+	FollowUpMode       string
 }
 
 // ExtensionsSelection is the stored extension choice: an exact list, or an

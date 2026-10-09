@@ -108,7 +108,7 @@ func TestProgressCommitsAndStops(t *testing.T) {
 	progress := NewProgress(func() (int, error) {
 		atomic.AddInt32(&writes, 1)
 		return 4, nil
-	}, func(error) { t.Error("unexpected error") })
+	}, func(error) { t.Error("unexpected error") }, defaultProgressMinIntervalMs)
 	progress.minIntervalMs, progress.bytesPerSecond = 50, 1_000_000_000
 	// The first change after idle commits at once.
 	if err := progress.MarkAndWait().Wait(); err != nil {
@@ -139,6 +139,32 @@ func TestProgressCommitsAndStops(t *testing.T) {
 	if err := pending.Wait(); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// Port of configurable minimum progress pacing from
+// packages/durable/src/harness/output.ts at pi v1.1.0 commit 674d64f09.
+func TestProgressUsesConfiguredMinimumInterval(t *testing.T) {
+	var writes int32
+	progress := NewProgress(func() (int, error) {
+		atomic.AddInt32(&writes, 1)
+		return 0, nil
+	}, func(error) { t.Error("unexpected error") }, 0)
+	if err := progress.MarkAndWait().Wait(); err != nil {
+		t.Fatal(err)
+	}
+	waiter := progress.MarkAndWait()
+	select {
+	case err := <-waiter.done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(50 * time.Millisecond):
+		t.Fatal("zero minimum interval still delayed progress")
+	}
+	if got := atomic.LoadInt32(&writes); got != 2 {
+		t.Fatalf("writes = %d, want 2", got)
+	}
+	progress.Stop()
 }
 
 func TestProgressReportsError(t *testing.T) {
