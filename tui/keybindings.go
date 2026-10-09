@@ -16,16 +16,17 @@ type KeybindingDefinition struct {
 
 // TUIKeybindings are the built-in TUI keybindings.
 var TUIKeybindings = map[Keybinding]KeybindingDefinition{
-	"tui.editor.cursorUp":           {DefaultKeys: []string{"up"}, Description: "Move cursor up"},
-	"tui.editor.cursorDown":         {DefaultKeys: []string{"down"}, Description: "Move cursor down"},
-	"tui.editor.historyPrevious":    {DefaultKeys: nil, Description: "Select previous prompt history entry"},
-	"tui.editor.historyNext":        {DefaultKeys: nil, Description: "Select next prompt history entry"},
-	"tui.editor.cursorLeft":         {DefaultKeys: []string{"left", "ctrl+b"}, Description: "Move cursor left"},
-	"tui.editor.cursorRight":        {DefaultKeys: []string{"right", "ctrl+f"}, Description: "Move cursor right"},
-	"tui.editor.cursorWordLeft":     {DefaultKeys: []string{"alt+left", "ctrl+left", "alt+b"}, Description: "Move cursor word left"},
-	"tui.editor.cursorWordRight":    {DefaultKeys: []string{"alt+right", "ctrl+right", "alt+f"}, Description: "Move cursor word right"},
-	"tui.editor.cursorLineStart":    {DefaultKeys: []string{"home", "ctrl+home", "ctrl+a"}, Description: "Move to line start"},
-	"tui.editor.cursorLineEnd":      {DefaultKeys: []string{"end", "ctrl+end", "ctrl+e"}, Description: "Move to line end"},
+	"tui.editor.cursorUp":        {DefaultKeys: []string{"up"}, Description: "Move cursor up"},
+	"tui.editor.cursorDown":      {DefaultKeys: []string{"down"}, Description: "Move cursor down"},
+	"tui.editor.historyPrevious": {DefaultKeys: nil, Description: "Select previous prompt history entry"},
+	"tui.editor.historyNext":     {DefaultKeys: nil, Description: "Select next prompt history entry"},
+	"tui.editor.cursorLeft":      {DefaultKeys: []string{"left", "ctrl+b"}, Description: "Move cursor left"},
+	"tui.editor.cursorRight":     {DefaultKeys: []string{"right", "ctrl+f"}, Description: "Move cursor right"},
+	"tui.editor.cursorWordLeft":  {DefaultKeys: []string{"alt+left", "ctrl+left", "alt+b"}, Description: "Move cursor word left"},
+	"tui.editor.cursorWordRight": {DefaultKeys: []string{"alt+right", "ctrl+right", "alt+f"}, Description: "Move cursor word right"},
+	// D216: follow upstream v1.1.0 (#10314, 6100fe5a8) rather than the pinned v1.0.2 mapping.
+	"tui.editor.cursorLineStart":    {DefaultKeys: []string{"home", "ctrl+a"}, Description: "Move to line start"},
+	"tui.editor.cursorLineEnd":      {DefaultKeys: []string{"end", "ctrl+e"}, Description: "Move to line end"},
 	"tui.editor.jumpForward":        {DefaultKeys: []string{"ctrl+]"}, Description: "Jump forward to character"},
 	"tui.editor.jumpBackward":       {DefaultKeys: []string{"ctrl+alt+]"}, Description: "Jump backward to character"},
 	"tui.editor.pageUp":             {DefaultKeys: []string{"pageUp", "ctrl+pageUp"}, Description: "Page up"},
@@ -62,8 +63,8 @@ var TUIKeybindings = map[Keybinding]KeybindingDefinition{
 	"tui.altScreen.searchNext":     {DefaultKeys: []string{"enter", "ctrl+g"}, Description: "Select the next search match"},
 	"tui.altScreen.searchPrevious": {DefaultKeys: []string{"shift+enter", "ctrl+shift+g"}, Description: "Select the previous search match"},
 	"tui.altScreen.searchClose":    {DefaultKeys: []string{"escape"}, Description: "Close transcript search"},
-	"tui.altScreen.top":            {DefaultKeys: []string{"home"}, Description: "Scroll viewport to top"},
-	"tui.altScreen.bottom":         {DefaultKeys: []string{"end"}, Description: "Scroll viewport to bottom"},
+	"tui.altScreen.top":            {DefaultKeys: []string{"ctrl+home"}, Description: "Scroll viewport to top"},
+	"tui.altScreen.bottom":         {DefaultKeys: []string{"ctrl+end"}, Description: "Scroll viewport to bottom"},
 }
 
 // tuiKeybindingOrder is the declaration order of the built-in keybindings

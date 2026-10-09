@@ -69,18 +69,11 @@ Also ported from the delta: the MCP session `DELETE` reuses the token of the las
 instead of asking the auth provider, whose `Token()` call can refresh over the network before
 a close that is happening anyway (`mcp/transport_http.go`, upstream #10565).
 
-Known divergence held back by the pin: `Home`/`End` and `Ctrl+Home`/`Ctrl+End`. Upstream 1.0.3
-(#10314) kept `Home`/`End` for the editor cursor and moved the fullscreen transcript's top and
-bottom onto `Ctrl+Home`/`Ctrl+End`; the port still has the earlier arrangement, where `Home` and
-`End` answer to both and `Ctrl+Home`/`Ctrl+End` are editor line-start/end aliases. The fix is
-written and tested, and it reverted cleanly: two goldens
-(`TestComponentsAgainstUpstreamGolden`, `TestInteractiveTuiStyleExpressionsAgainstUpstreamGolden`)
-list the keybinding table as generated from the *pinned* reference, so the behaviour cannot change
-without regenerating them. It lands with the pin bump, not before.
-
-Superseded note: the port binds no `Home`/`End` key at all, so the upstream 1.0.3 change
-that kept those keys for the editor and moved the fullscreen transcript to
-`Ctrl+Home`/`Ctrl+End` has nothing to conflict with here; the keys simply do nothing.
+Ported ahead of the reference pin: Home/End remain editor line-start/end keys, while
+Ctrl+Home/Ctrl+End move the fullscreen transcript, matching upstream v1.1.0
+(`#10314`, `6100fe5a8`). The component and fullscreen-renderer goldens now record
+that mapping. D216 documents this deliberate difference from the pinned v1.0.2
+keybinding table; retire the row when the reference pin advances.
 
 Checked against v1.1.0 and still absent — reading the Termux clipboard (upstream
 `592fb57b7`) stays out of scope under **D120**. The `durable` delta is also audited

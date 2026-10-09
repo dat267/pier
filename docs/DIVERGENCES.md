@@ -6,7 +6,11 @@ behaviour with no direct Go equivalent, or because a reference defect is fixed
 here; others are choices of this project's own. D-row numbers live in code
 comments at the point of divergence; this file is the log, and it is
 representative: the rows below carry a written-up rationale, while the rest live
-only as the code comment that introduced them. The range is **D1–D215**.
+only as the code comment that introduced them. The range is **D1–D216**.
+- D216 — fullscreen keybindings follow upstream v1.1.0 (`packages/tui/src/keybindings.ts`,
+  commit `6100fe5a8`) while the port remains pinned to v1.0.2: `Home`/`End` move
+  the editor cursor, and `Ctrl+Home`/`Ctrl+End` move the transcript. This row is
+  temporary and should be retired when the reference pin advances.
 - D188 — the durable execution environment (`env/index.ts`, `env/node.ts`)
   returns failures as Go errors (`*FileError`, `*ExecutionError`, the upstream
   codes preserved) where the reference returns a `Result` value; the `Result`

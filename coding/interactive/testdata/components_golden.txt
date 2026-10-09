@@ -1,6 +1,6 @@
 c keytext tui.select.cancel => ["escape/ctrl+c","Escape/Ctrl+C","\u001b[38;2;102;102;102mescape/ctrl+c\u001b[39m\u001b[38;2;128;128;128m description\u001b[39m"]
 c keytext tui.input.submit => ["enter","Enter","\u001b[38;2;102;102;102menter\u001b[39m\u001b[38;2;128;128;128m description\u001b[39m"]
-c keytext tui.altScreen.bottom => ["end","End","\u001b[38;2;102;102;102mend\u001b[39m\u001b[38;2;128;128;128m description\u001b[39m"]
+c keytext tui.altScreen.bottom => ["ctrl+end","Ctrl+End","\u001b[38;2;102;102;102mctrl+end\u001b[39m\u001b[38;2;128;128;128m description\u001b[39m"]
 c keytext tui.editor.cursorWordLeft => ["alt+left/ctrl+left/alt+b","Alt+Left/Ctrl+Left/Alt+B","\u001b[38;2;102;102;102malt+left/ctrl+left/alt+b\u001b[39m\u001b[38;2;128;128;128m description\u001b[39m"]
 c keytext tui.editor.historyPrevious => ["","","\u001b[38;2;102;102;102m\u001b[39m\u001b[38;2;128;128;128m description\u001b[39m"]
 c rawkey alt+left => ["alt+left","Alt+Left","\u001b[38;2;102;102;102malt+left\u001b[39m\u001b[38;2;128;128;128m hint\u001b[39m"]
