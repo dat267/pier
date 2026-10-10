@@ -181,6 +181,22 @@ func TestRunStartupHeader(t *testing.T) {
 	}
 }
 
+// TestRunStartupHeaderVersionLabel pins the logo's version prefix. The build
+// stamps the git tag (`v0.0.21`), which already carries the `v` that upstream's
+// package version does not, so the header must not render `vv0.0.21`.
+func TestRunStartupHeaderVersionLabel(t *testing.T) {
+	wiring, _ := newRunTestWiring(t)
+	wiring.Version = "v0.0.21"
+	header := wiring.BuildStartupHeader(nil).(*ExpandableText)
+	lines := coding.StripAnsi(strings.Join(header.Render(200), "\n"))
+	if !strings.Contains(lines, "pi v0.0.21") {
+		t.Fatalf("tagged version header = %q", lines)
+	}
+	if strings.Contains(lines, "vv0.0.21") {
+		t.Fatalf("header doubled the version prefix = %q", lines)
+	}
+}
+
 // TestRunInit covers the init orchestration order.
 func TestRunInit(t *testing.T) {
 	wiring, _ := newRunTestWiring(t)
