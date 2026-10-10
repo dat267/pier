@@ -14,7 +14,6 @@ deliberate feature of this implementation. The development conventions live in
 |---|---|
 | Repository | https://github.com/earendil-works/pi (cloned at `./pi`, gitignored) |
 | Pin | `cd32f772` (Release v1.0.2); the applicable runtime and catalog changes from v1.0.1 are included. Upstream has since released v1.0.3, v1.0.4 and v1.1.0 (104 commits); applicable changes are selectively ported, with remaining deltas and out-of-scope areas tracked in `docs/PORTING.md` |
-| Stale reference test | `packages/ai/test/faux-provider.test.ts` "estimates prompt and output tokens" still expects pre-`9e05370b2` faux serialization; this implementation follows the current source |
 
 ## Status
 
