@@ -116,8 +116,11 @@ PowerShell tool is ported (`68c22123b`). `FileSystem.watch` uses polling on all
 platforms (D215; upstream `a84510819`). The read tool uses a positional
 binary reader and fixed-size line scans, so it no longer materializes entire
 files before truncating output. D188 documents Go cross-stream multiplex
-ordering. The 17-commit v1.1.0 `packages/env` delta adds a separate optional
-`@earendil-works/pi-env` package: a Rust daemon and SSH deployment/client for
+ordering. The 21-commit protocol/client/server range was audited: only changelogs
+and package manifests changed (including a dev-only `shx` downgrade); no source
+or tests changed, so no behavioral gap was found. The 17-commit v1.1.0
+`packages/env` delta adds a separate optional `@earendil-works/pi-env` package:
+a Rust daemon and SSH deployment/client for
 `RemoteExecutionEnv` on Durable. No v1.1.0 coding-agent runtime consumes it.
 Pier's `durable.ExecutionEnv` and injectable `coding.BashOperations` are seams,
 not SSH support. Classify remote execution as an unported optional feature, not a
