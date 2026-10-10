@@ -59,6 +59,8 @@ type CreateModelRuntimeOptions struct {
 type ModelRuntimeAuthOverrides struct {
 	APIKey string
 	Env    map[string]string
+	// Ctx cancels auth resolution for this request.
+	Ctx context.Context
 	// MinOAuthValidityMS requires this much remaining OAuth validity; defaults
 	// to five minutes.
 	MinOAuthValidityMS *int64
@@ -670,7 +672,7 @@ func authOverrides(overrides *ModelRuntimeAuthOverrides) *ai.AuthResolutionOverr
 	if overrides == nil {
 		return nil
 	}
-	resolved := &ai.AuthResolutionOverrides{APIKey: overrides.APIKey, Env: overrides.Env}
+	resolved := &ai.AuthResolutionOverrides{APIKey: overrides.APIKey, Env: overrides.Env, Ctx: overrides.Ctx}
 	if overrides.MinOAuthValidityMS != nil {
 		resolved.MinOAuthValidityMS = *overrides.MinOAuthValidityMS
 	}
@@ -935,7 +937,9 @@ func (r *ModelRuntime) prepareStreamRequest(model *ai.Model, options *ai.ModelsS
 	if provider == nil {
 		return nil, ai.NewModelsError(ai.ErrCodeProvider, fmt.Sprintf("Unknown provider: %s", model.Provider), nil)
 	}
-	resolution, err := r.GetAuthForModel(model, &ModelRuntimeAuthOverrides{APIKey: requestOptions.APIKey, Env: requestOptions.Env})
+	resolution, err := r.GetAuthForModel(model, &ModelRuntimeAuthOverrides{
+		APIKey: requestOptions.APIKey, Env: requestOptions.Env, Ctx: requestOptions.Ctx,
+	})
 	if err != nil {
 		return nil, err
 	}

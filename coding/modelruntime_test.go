@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/ai"
 )
@@ -331,6 +332,67 @@ func TestModelRuntimeCredentialSyncFailure(t *testing.T) {
 	}
 	if runtime.GetError() == "" || !strings.Contains(runtime.GetError(), `Provider "alpha"`) {
 		t.Fatalf("error = %q", runtime.GetError())
+	}
+}
+
+func TestModelRuntimeStreamCancellationReachesOAuthAuthResolution(t *testing.T) {
+	store := newMemoryCredentialStore()
+	store.entries["alpha"] = &ai.Credential{Type: ai.CredentialOAuth, OAuth: &ai.OAuthCredential{
+		OAuthCredentials: ai.OAuthCredentials{Access: "old", Refresh: "old-refresh", Expires: 0},
+	}}
+	ctx, cancel := ctxpkg.WithCancel(ctxpkg.Background())
+	defer cancel()
+	streamCalled := false
+	oauth := &ai.OAuthAuth{
+		Name: "test OAuth",
+		Refresh: func(credential *ai.OAuthCredential, _ ctxpkg.Context) (*ai.OAuthCredential, error) {
+			cancel()
+			return &ai.OAuthCredential{OAuthCredentials: ai.OAuthCredentials{
+				Access: "new", Refresh: "new-refresh", Expires: time.Now().Add(time.Hour).UnixMilli(),
+			}}, nil
+		},
+		ToAuth: func(credential *ai.OAuthCredential) (*ai.ModelAuth, error) {
+			return &ai.ModelAuth{APIKey: credential.Access}, nil
+		},
+	}
+	provider := ai.CreateProvider(ai.CreateProviderOptions{
+		ID: "alpha", Name: "alpha", Auth: ai.ProviderAuth{OAuth: oauth},
+		Models: []*ai.Model{{ID: "alpha-model", API: ai.APIOpenAICompletions, Provider: "alpha"}},
+		Single: funcStreams{stream: func(_ *ai.Model, _ ai.TranscriptContext, _ *ai.StreamOptions) *ai.AssistantMessageEventStream {
+			streamCalled = true
+			stream := ai.NewAssistantMessageEventStream()
+			message := &ai.AssistantMessage{StopReason: ai.StopStop}
+			stream.End(&message)
+			return stream
+		}},
+	})
+	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
+		DisableModelsJSON: true, RefreshOnCreate: boolPtr(false),
+		Credentials: store, ModelsStore: NewInMemoryCodingAgentModelsStore(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	runtime.defaults = map[string]*ai.Provider{"alpha": provider}
+	runtime.builtins = map[string]*ai.Provider{"alpha": provider}
+	runtime.rebuildProviders()
+
+	model := runtime.GetModel("alpha", "alpha-model")
+	if model == nil {
+		t.Fatal("model missing")
+	}
+	message, _ := runtime.Stream(model, ai.Context{}, &ai.ModelsStreamOptions{
+		StreamOptions: ai.StreamOptions{Ctx: ctx},
+	}).Result(ctxpkg.Background())
+	if message.StopReason != ai.StopError || message.ErrorMessage == nil || !strings.Contains(*message.ErrorMessage, "context canceled") {
+		t.Fatalf("message = %+v; want auth cancellation", message)
+	}
+	if streamCalled {
+		t.Fatal("provider stream ran after request context was cancelled during auth")
+	}
+	stored, err := store.Read("alpha", ctxpkg.Background())
+	if err != nil || stored == nil || stored.OAuth.Refresh != "new-refresh" {
+		t.Fatalf("rotated credential = %+v, err = %v", stored, err)
 	}
 }
 
