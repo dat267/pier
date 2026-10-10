@@ -267,7 +267,4 @@ func TestPrefixAutocompleteDescription(t *testing.T) {
 	if got := PrefixAutocompleteDescription("", &project); got != "project" {
 		t.Fatalf("empty desc = %q", got)
 	}
-	if got := trimSlash("/model"); got != "model" {
-		t.Fatalf("trimSlash = %q", got)
-	}
 }

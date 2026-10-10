@@ -3,7 +3,6 @@ package interactive
 import (
 	"context"
 	"os/exec"
-	"strings"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
@@ -393,9 +392,6 @@ func PrefixAutocompleteDescription(description string, sourceInfo *coding.Source
 	}
 	return "[" + source + "] " + description
 }
-
-// trimSlash strips a leading slash.
-func trimSlash(value string) string { return strings.TrimPrefix(value, "/") }
 
 // newTrustCrashWiring assembles the TrustCrashWiring (port of the corresponding InteractiveMode wiring).
 func newTrustCrashWiring(app *App) *TrustCrashWiring {
