@@ -125,6 +125,8 @@ type McpServerConnection struct {
 
 	client          *mcp.Client
 	opening         chan struct{}
+	openingCancel   context.CancelFunc
+	openingClient   *mcp.Client
 	openingErr      error
 	closed          bool
 	stderrTail      string
@@ -288,15 +290,24 @@ func (c *McpServerConnection) GetClient(ctx context.Context) (*mcp.Client, error
 		return nil, err
 	}
 	done := make(chan struct{})
+	connectCtx, cancel := context.WithCancel(ctx)
 	c.opening = done
+	c.openingCancel = cancel
 	c.mu.Unlock()
 
-	client, err := c.open(ctx)
+	client, err := c.open(connectCtx)
 
 	c.mu.Lock()
+	if c.closed && err == nil {
+		client = nil
+		err = fmt.Errorf("MCP server %q is shut down", c.Entry.Name)
+	}
 	c.opening = nil
+	c.openingCancel = nil
+	c.openingClient = nil
 	c.openingErr = err
 	c.mu.Unlock()
+	cancel()
 	close(done)
 	return client, err
 }
@@ -451,12 +462,23 @@ func (c *McpServerConnection) connectOnce(ctx context.Context) (*mcp.Client, err
 		RequestTimeoutMs: c.TimeoutMs(),
 		Roots:            roots,
 	})
+	c.mu.Lock()
+	if c.closed {
+		c.mu.Unlock()
+		return nil, errors.New("shut down while connecting")
+	}
+	c.openingClient = client
+	c.mu.Unlock()
 	if c.createTransport == nil {
 		return nil, errors.New("no transport factory")
 	}
 	transport, err := c.createTransport(c.Entry, c.cwd, c.mcpAuthProvider())
 	if err != nil {
 		return nil, err
+	}
+	if c.isClosed() || ctx.Err() != nil {
+		_ = transport.Close(context.Background())
+		return nil, errors.New("shut down while connecting")
 	}
 	if _, err := client.Connect(ctx, transport); err != nil {
 		_ = client.Close(ctx)
@@ -632,11 +654,23 @@ func (c *McpServerConnection) Close(ctx context.Context) error {
 	c.closed = true
 	c.State = McpServerClosed
 	client := c.client
+	openingClient := c.openingClient
+	opening := c.opening
+	cancelOpening := c.openingCancel
 	c.client = nil
 	c.mu.Unlock()
 	c.changed()
+	if cancelOpening != nil {
+		cancelOpening()
+	}
 	if client != nil {
 		_ = client.Close(ctx)
+	}
+	if openingClient != nil && openingClient != client {
+		_ = openingClient.Close(ctx)
+	}
+	if opening != nil {
+		<-opening
 	}
 	return nil
 }

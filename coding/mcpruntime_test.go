@@ -110,6 +110,17 @@ type failingTransport struct {
 	err    error
 }
 
+type closeTrackingTransport struct {
+	mcp.Transport
+	closed chan struct{}
+	once   sync.Once
+}
+
+func (t *closeTrackingTransport) Close(ctx context.Context) error {
+	t.once.Do(func() { close(t.closed) })
+	return t.Transport.Close(ctx)
+}
+
 func (t *failingTransport) Send(ctx context.Context, message mcp.Message) error {
 	request, ok := message.(*protocol.JsonRpcRequest)
 	if !ok {
@@ -155,6 +166,51 @@ func mcpTestConnection(t *testing.T, config McpServerConfig, transports []func()
 		mu.Lock()
 		defer mu.Unlock()
 		return opened
+	}
+}
+
+func TestMcpConnectionCloseWaitsForInFlightConnect(t *testing.T) {
+	clientTransport, serverTransport := mcp.CreateInMemoryTransportPair()
+	initializeReceived := make(chan struct{})
+	var initializeOnce sync.Once
+	serverTransport.OnMessage(func(message mcp.Message) {
+		request, ok := message.(*protocol.JsonRpcRequest)
+		if ok && request.Method == "initialize" {
+			initializeOnce.Do(func() { close(initializeReceived) })
+		}
+	})
+	if err := serverTransport.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	transport := &closeTrackingTransport{Transport: clientTransport, closed: make(chan struct{})}
+	connection := NewMcpServerConnection(McpServerConnectionOptions{
+		Entry: McpServerEntry{Name: "slow", Config: &McpServerConfig{Command: "unused"}},
+		CreateTransport: func(McpServerEntry, string, mcp.AuthProvider) (mcp.Transport, error) {
+			return transport, nil
+		},
+		Credentials: NewMemoryMcpOAuthCredentialStore(),
+	})
+	getDone := make(chan error, 1)
+	go func() { _, err := connection.GetClient(context.Background()); getDone <- err }()
+	select {
+	case <-initializeReceived:
+	case <-time.After(2 * time.Second):
+		t.Fatal("connect never reached initialize")
+	}
+	t.Cleanup(func() { _ = transport.Close(context.Background()) })
+
+	if err := connection.Close(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-transport.closed:
+	default:
+		t.Fatal("Close returned before closing in-flight transport")
+	}
+	select {
+	case <-getDone:
+	case <-time.After(time.Second):
+		t.Fatal("Close returned before in-flight connect settled")
 	}
 }
 

@@ -82,7 +82,9 @@ dynamic registration derives `application_type` from redirect URIs, preserving a
 (`147b50281`, MCP SEP-837). Bedrock Converse maps OpenAI GPT reasoning to nested
 `reasoning.effort` and gpt-oss to clamped `reasoning_effort` (`2989eb581`). OpenAI OAuth
 login accepts `AuthInteraction.AgentName` for ChatGPT's `agent_name_hint` and Codex's
-`originator`, defaulting to the existing names (`9ad083102`).
+`originator`, defaulting to the existing names (`9ad083102`). MCP connection shutdown cancels
+and awaits an in-flight connect (`8c911797c`). The extension manager's background UI actions and
+in-place enable/disable attempt fencing from `2db5e359b` remain out of scope with `/mcp` UI (D185).
 
 Ported ahead of the reference pin: Home/End remain editor line-start/end keys, while
 Ctrl+Home/Ctrl+End move the fullscreen transcript, matching upstream v1.1.0
