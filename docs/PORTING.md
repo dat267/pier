@@ -116,8 +116,15 @@ PowerShell tool is ported (`68c22123b`). `FileSystem.watch` uses polling on all
 platforms (D215; upstream `a84510819`). The read tool uses a positional
 binary reader and fixed-size line scans, so it no longer materializes entire
 files before truncating output. D188 documents Go cross-stream multiplex
-ordering. Other package deltas remain unreviewed: the commit counts say how much
-there is, not which commits.
+ordering. The 17-commit v1.1.0 `packages/env` delta adds a separate optional
+`@earendil-works/pi-env` package: a Rust daemon and SSH deployment/client for
+`RemoteExecutionEnv` on Durable. No v1.1.0 coding-agent runtime consumes it.
+Pier's `durable.ExecutionEnv` and injectable `coding.BashOperations` are seams,
+not SSH support. Classify remote execution as an unported optional feature, not a
+behavior mismatch in existing local execution; port it only as a separately
+scoped feature. Shared durable changes such as `cd60a5b99` are covered by the
+durable audit above. Other package deltas remain unreviewed: commit counts say
+how much exists, not which commits.
 
 The v0.99.1→v1.0.0 delta (62 commits) is ported: it released the experimental
 `durable` packages and landed MCP and codemode work (codemode stays out of
