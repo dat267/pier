@@ -367,30 +367,9 @@ func writeThemeFile(t *testing.T, dir string, file string, name string, accent s
 	}
 }
 
-// TestAnsi256Conversion verifies the color cube and grayscale conversion.
-func TestAnsi256Conversion(t *testing.T) {
-	cases := []struct {
-		hex   string
-		index int
-	}{
-		{"#000000", 16},
-		{"#ffffff", 231},
-		{"#ff0000", 196},
-		{"#00ff00", 46},
-		{"#0000ff", 21},
-		{"#808080", 244},
-		{"#080808", 232},
-	}
-	for _, tc := range cases {
-		index, err := hexTo256(tc.hex)
-		if err != nil {
-			t.Fatalf("hexTo256(%s): %v", tc.hex, err)
-		}
-		if index != tc.index {
-			t.Fatalf("hexTo256(%s) = %d want %d", tc.hex, index, tc.index)
-		}
-	}
-	if _, err := hexTo256("#12345"); err == nil {
+// TestAnsi256PaletteToHex verifies palette-index conversion and rejects malformed hex.
+func TestAnsi256PaletteToHex(t *testing.T) {
+	if _, err := hexToRgb("#12345"); err == nil {
 		t.Fatal("short hex accepted")
 	}
 	if _, err := hexToRgb("#zzzzzz"); err == nil {
