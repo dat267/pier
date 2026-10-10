@@ -118,8 +118,13 @@ binary reader and fixed-size line scans, so it no longer materializes entire
 files before truncating output. D188 documents Go cross-stream multiplex
 ordering. The 21-commit protocol/client/server range was audited: only changelogs
 and package manifests changed (including a dev-only `shx` downgrade); no source
-or tests changed, so no behavioral gap was found. The 17-commit v1.1.0
-`packages/env` delta adds a separate optional `@earendil-works/pi-env` package:
+or tests changed, so no behavioral gap was found. Audited AI commits `ce8972a0e`
+and `6b5854454`: they add the OpenAI Decisions classifier, classifier image
+inputs, and a TypeScript-only empty-catalog type fix. Pier has no classifier
+execution API and intentionally drops classifier-role catalog entries, so this
+is an unported optional classifier feature, not a chat API behavior gap. The
+17-commit v1.1.0 `packages/env` delta adds a separate optional `@earendil-works/pi-env`
+package:
 a Rust daemon and SSH deployment/client for
 `RemoteExecutionEnv` on Durable. No v1.1.0 coding-agent runtime consumes it.
 Pier's `durable.ExecutionEnv` and injectable `coding.BashOperations` are seams,
