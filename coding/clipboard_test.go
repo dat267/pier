@@ -52,13 +52,3 @@ func TestClipboardUnavailableMessage(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 }
-
-// TestOSC52Encoding pins the OSC 52 payload shape and the size cap.
-func TestOSC52Encoding(t *testing.T) {
-	if !emitOSC52("hello") {
-		t.Fatal("emit failed")
-	}
-	if emitOSC52(strings.Repeat("x", MaxOSC52EncodedLength+1)) {
-		t.Fatal("oversized payload was emitted")
-	}
-}

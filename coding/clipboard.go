@@ -66,15 +66,6 @@ func isRemoteSession() bool {
 	return false
 }
 
-func emitOSC52(text string) bool {
-	encoded := base64.StdEncoding.EncodeToString([]byte(text))
-	if len(encoded) > MaxOSC52EncodedLength {
-		return false
-	}
-	_, err := os.Stdout.WriteString("\x1b]52;c;" + encoded + "\x07")
-	return err == nil
-}
-
 func copyCommands() [][]string {
 	switch runtime.GOOS {
 	case "darwin":
