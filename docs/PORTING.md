@@ -79,7 +79,8 @@ Also ported from v1.1.0: bash output keeps incomplete trailing CSI/OSC sequences
 chunks (bounded to 256 bytes) before ANSI stripping (`27c7b6ff4`), and the interactive
 lifecycle treats `ENOTTY` as a dead-terminal error for revoked ttys (`4c6b724e`). MCP OAuth
 dynamic registration derives `application_type` from redirect URIs, preserving an explicit value
-(`147b50281`, MCP SEP-837).
+(`147b50281`, MCP SEP-837). Bedrock Converse maps OpenAI GPT reasoning to nested
+`reasoning.effort` and gpt-oss to clamped `reasoning_effort` (`2989eb581`).
 
 Ported ahead of the reference pin: Home/End remain editor line-start/end keys, while
 Ctrl+Home/Ctrl+End move the fullscreen transcript, matching upstream v1.1.0

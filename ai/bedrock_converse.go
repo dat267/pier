@@ -547,11 +547,43 @@ func ConvertBedrockToolConfig(tools []Tool, toolChoice string, toolChoiceName st
 	return config
 }
 
+var bedrockOpenAIGPTEffort = map[ThinkingLevel]string{
+	ThinkMinimal: "low", ThinkLow: "low", ThinkMedium: "medium",
+	ThinkHigh: "high", ThinkXHigh: "xhigh", ThinkMax: "max",
+}
+
+var bedrockOpenAIGPTOSSEffort = map[ThinkingLevel]string{
+	ThinkMinimal: "low", ThinkLow: "low", ThinkMedium: "medium",
+	ThinkHigh: "high", ThinkXHigh: "high", ThinkMax: "high",
+}
+
+func buildBedrockOpenAIReasoningFields(model *Model, level ThinkingLevel) map[string]any {
+	candidates := GetModelMatchCandidates(model.ID, model.Name)
+	for _, candidate := range candidates {
+		if strings.Contains(candidate, "gpt-oss") {
+			return map[string]any{"reasoning_effort": bedrockOpenAIGPTOSSEffort[level]}
+		}
+	}
+	for _, candidate := range candidates {
+		if strings.Contains(candidate, "gpt-") {
+			effort := bedrockOpenAIGPTEffort[level]
+			if mapped, ok := model.ThinkingLevelMap[level]; ok && mapped != nil {
+				effort = *mapped
+			}
+			return map[string]any{"reasoning": map[string]any{"effort": effort}}
+		}
+	}
+	return nil
+}
+
 // BuildBedrockAdditionalModelRequestFields renders the thinking fields
 // (upstream buildAdditionalModelRequestFields).
 func BuildBedrockAdditionalModelRequestFields(model *Model, options *BedrockOptions) map[string]any {
 	if options == nil || options.Reasoning == "" || !model.Reasoning {
 		return nil
+	}
+	if fields := buildBedrockOpenAIReasoningFields(model, options.Reasoning); fields != nil {
+		return fields
 	}
 	if !IsAnthropicClaudeModel(model) {
 		return nil

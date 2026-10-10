@@ -148,12 +148,75 @@ func TestBedrockThinkingFields(t *testing.T) {
 		t.Fatalf("GovCloud must skip block binding: %#v", fields)
 	}
 
-	// Non-Claude models and missing reasoning produce no fields.
+	// Unsupported non-Claude models and missing reasoning produce no fields.
 	if fields := BuildBedrockAdditionalModelRequestFields(&Model{ID: "amazon.nova-pro-v1:0", Reasoning: true}, &BedrockOptions{Reasoning: ThinkHigh}); fields != nil {
 		t.Fatalf("fields = %#v", fields)
 	}
 	if fields := BuildBedrockAdditionalModelRequestFields(model, &BedrockOptions{}); fields != nil {
 		t.Fatalf("fields = %#v", fields)
+	}
+}
+
+func TestBedrockOpenAIReasoningFields(t *testing.T) {
+	openAILevels := []struct {
+		level ThinkingLevel
+		want  string
+	}{
+		{ThinkMinimal, "low"},
+		{ThinkLow, "low"},
+		{ThinkMedium, "medium"},
+		{ThinkHigh, "high"},
+		{ThinkXHigh, "xhigh"},
+		{ThinkMax, "max"},
+	}
+	for _, id := range []string{"global.openai.gpt-6-sol", "global.openai.gpt-5.6-sol"} {
+		model := &Model{ID: id, Reasoning: true}
+		for _, testCase := range openAILevels {
+			fields := BuildBedrockAdditionalModelRequestFields(model, &BedrockOptions{Reasoning: testCase.level})
+			reasoning, _ := fields["reasoning"].(map[string]any)
+			if len(fields) != 1 || reasoning["effort"] != testCase.want {
+				t.Errorf("%s at %s: fields = %#v; want reasoning.effort %q", id, testCase.level, fields, testCase.want)
+			}
+		}
+	}
+
+	profile := &Model{
+		ID:   "arn:aws:bedrock:us-east-1:123456789012:application-inference-profile/my-profile",
+		Name: "GPT-6 Sol", Reasoning: true,
+	}
+	fields := BuildBedrockAdditionalModelRequestFields(profile, &BedrockOptions{Reasoning: ThinkMedium})
+	reasoning, _ := fields["reasoning"].(map[string]any)
+	if reasoning["effort"] != "medium" {
+		t.Fatalf("name-matched fields = %#v; want reasoning.effort=medium", fields)
+	}
+
+	oss := &Model{ID: "openai.gpt-oss-120b-1:0", Reasoning: true}
+	ossLevels := []struct {
+		level ThinkingLevel
+		want  string
+	}{
+		{ThinkMinimal, "low"}, {ThinkLow, "low"}, {ThinkMedium, "medium"},
+		{ThinkHigh, "high"}, {ThinkXHigh, "high"}, {ThinkMax, "high"},
+	}
+	for _, testCase := range ossLevels {
+		fields := BuildBedrockAdditionalModelRequestFields(oss, &BedrockOptions{Reasoning: testCase.level})
+		if len(fields) != 1 || fields["reasoning_effort"] != testCase.want {
+			t.Errorf("gpt-oss at %s: fields = %#v; want reasoning_effort %q", testCase.level, fields, testCase.want)
+		}
+	}
+
+	customEffort := "custom"
+	mapped := &Model{
+		ID: "openai.gpt-5.6-sol", Reasoning: true,
+		ThinkingLevelMap: ThinkingLevelMap{ThinkHigh: &customEffort},
+	}
+	fields = BuildBedrockAdditionalModelRequestFields(mapped, &BedrockOptions{Reasoning: ThinkHigh})
+	reasoning, _ = fields["reasoning"].(map[string]any)
+	if reasoning["effort"] != customEffort {
+		t.Fatalf("model-mapped fields = %#v; want custom reasoning effort", fields)
+	}
+	if fields := BuildBedrockAdditionalModelRequestFields(&Model{ID: "openai.gpt-6-sol", Reasoning: true}, &BedrockOptions{}); fields != nil {
+		t.Fatalf("reasoning-off fields = %#v; want nil", fields)
 	}
 }
 
