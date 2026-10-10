@@ -372,6 +372,33 @@ func TestExecuteBashWithOperations(t *testing.T) {
 	}
 }
 
+func TestExecuteBashStripsANSISequencesSplitAcrossChunks(t *testing.T) {
+	code := 0
+	ops := &scriptedOps{chunks: []string{"before\x1b[3", "1mred\x1b[0", "m after"}, exitCode: &code}
+	var streamed []string
+	result, err := ExecuteBashWithOperations(ctxpkg.Background(), "cmd", "/tmp", ops, &BashExecutorOptions{
+		OnChunk: func(chunk string) { streamed = append(streamed, chunk) },
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Output != "beforered after" {
+		t.Fatalf("output = %q; want ANSI-stripped text", result.Output)
+	}
+	if got := strings.Join(streamed, ""); got != "beforered after" {
+		t.Fatalf("streamed = %q; want ANSI-stripped text", got)
+	}
+
+	ops = &scriptedOps{chunks: []string{"before\x1b]8;;https://example.test", "\x07linked\x1b]8;;\x07after"}, exitCode: &code}
+	result, err = ExecuteBashWithOperations(ctxpkg.Background(), "cmd", "/tmp", ops, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Output != "beforelinkedafter" {
+		t.Fatalf("OSC output = %q; want hyperlinks stripped across chunks", result.Output)
+	}
+}
+
 func TestExecuteBashTruncationAndTempFile(t *testing.T) {
 	code := 0
 	// One oversized line exceeding the 50KB limit forces tail truncation and a

@@ -110,7 +110,7 @@ type CompactionCostNotice struct {
 }
 
 // Dead terminal error codes.
-var deadTerminalErrorCodes = map[string]bool{"EIO": true, "EPIPE": true, "ENOTCONN": true}
+var deadTerminalErrorCodes = map[string]bool{"EIO": true, "EPIPE": true, "ENOTCONN": true, "ENOTTY": true}
 
 // IsDeadTerminalError reports whether an error is a dead-terminal error.
 func IsDeadTerminalError(code string) bool { return deadTerminalErrorCodes[code] }

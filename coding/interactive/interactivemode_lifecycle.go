@@ -562,7 +562,7 @@ func (l *Lifecycle) SignalHandlerCount() int {
 }
 
 func isDeadTerminalErrorText(message string) bool {
-	for _, code := range []string{"EIO", "EPIPE", "ENOTCONN"} {
+	for _, code := range []string{"EIO", "EPIPE", "ENOTCONN", "ENOTTY"} {
 		if strings.Contains(message, code) {
 			return true
 		}

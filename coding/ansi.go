@@ -16,6 +16,10 @@ import (
 //
 // ansiStripPattern is the upstream pattern, kept as the reference: the scanner
 // below must produce byte-identical output (TestStripAnsiMatchesPattern).
+var incompleteCSIPrefixPattern = regexp.MustCompile(`^(?:\x1b|\x{9b})[\[\]()#;?]*(?:\d{1,4}(?:[;:]\d{0,4})*)?$`)
+
+const maxPendingAnsiBytes = 256
+
 var ansiStripPattern = regexp.MustCompile(
 	// OSC: ESC ] ... ST (non-greedy up to the first ST)
 	"(?:\\x1b\\][\\s\\S]*?(?:\\x07|\\x1b\\\\|\\x9c))" +
@@ -24,6 +28,46 @@ var ansiStripPattern = regexp.MustCompile(
 		// (supports ; and :) then a final byte
 		"[\\x1b\\x{9b}][\\[\\]()#;?]*(?:\\d{1,4}(?:[;:]\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]",
 )
+
+// splitIncompleteAnsiSuffix separates text safe to strip now from a trailing
+// incomplete ANSI sequence that may continue in the next output chunk.
+func splitIncompleteAnsiSuffix(value string) (complete, pending string) {
+	windowStart := max(0, len(value)-maxPendingAnsiBytes)
+	for i := windowStart; i < len(value); i++ {
+		if value[i] == '\x1b' && i+1 < len(value) && value[i+1] == ']' {
+			if end := ansiStringTerminatorEnd(value, i+2); end == 0 {
+				return value[:i], value[i:]
+			} else {
+				i = end - 1
+			}
+			continue
+		}
+		if value[i] != '\x1b' && !(value[i] == 0xc2 && i+1 < len(value) && value[i+1] == 0x9b) {
+			continue
+		}
+		if incompleteCSIPrefixPattern.MatchString(value[i:]) {
+			return value[:i], value[i:]
+		}
+		if length := matchAnsiAt(value, i); length > 0 {
+			i += length - 1
+		}
+	}
+	return value, ""
+}
+
+func ansiStringTerminatorEnd(value string, start int) int {
+	for i := start; i < len(value); i++ {
+		switch {
+		case value[i] == '\x07':
+			return i + 1
+		case value[i] == '\x1b' && i+1 < len(value) && value[i+1] == '\\':
+			return i + 2
+		case value[i] == 0xc2 && i+1 < len(value) && value[i+1] == 0x9c:
+			return i + 2
+		}
+	}
+	return 0
+}
 
 // StripAnsi removes ANSI escape sequences from a string.
 //

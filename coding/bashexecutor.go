@@ -79,6 +79,7 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 	var tempFilePath string
 	var tempFile *os.File
 	var tempErr error
+	pendingAnsi := ""
 	// pendingChunks holds the buffered chunks that still need to be flushed to
 	// the temp file once it is created.
 	flushedChunks := 0
@@ -102,11 +103,12 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 		return nil
 	}
 
-	onData := func(data []byte) {
-		mu.Lock()
-		defer mu.Unlock()
+	appendOutput := func(rawText string) {
 		// Sanitize: strip ANSI, replace binary garbage, normalize newlines.
-		text := strings.ReplaceAll(SanitizeBinaryOutput(StripAnsi(string(data))), "\r", "")
+		text := strings.ReplaceAll(SanitizeBinaryOutput(StripAnsi(rawText)), "\r", "")
+		if text == "" {
+			return
+		}
 
 		outputChunks = append(outputChunks, text)
 		outputBytes += len(text)
@@ -139,6 +141,23 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 		// Stream to the callback.
 		if options.OnChunk != nil {
 			options.OnChunk(text)
+		}
+	}
+
+	onData := func(data []byte) {
+		mu.Lock()
+		defer mu.Unlock()
+		complete, pending := splitIncompleteAnsiSuffix(pendingAnsi + string(data))
+		pendingAnsi = pending
+		appendOutput(complete)
+	}
+
+	flushPendingAnsi := func() {
+		mu.Lock()
+		defer mu.Unlock()
+		if pendingAnsi != "" {
+			appendOutput(pendingAnsi)
+			pendingAnsi = ""
 		}
 	}
 
@@ -185,12 +204,13 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 	execOptions := BashExecOptions{OnData: onData, Signal: options.Signal}
 	code, err := operations.Exec(ctx, command, cwd, execOptions)
 	cancelled := signalClosed(options.Signal)
-	if err != nil {
-		if cancelled {
-			return finish(true, nil), nil
-		}
+	if err != nil && !cancelled {
 		finishTempFile()
 		return BashResult{}, err
+	}
+	flushPendingAnsi()
+	if err != nil {
+		return finish(true, nil), nil
 	}
 	return finish(cancelled, code), nil
 }

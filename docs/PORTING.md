@@ -75,6 +75,10 @@ the wait for the credential lock; once a refresh starts it completes under the 1
 is persisted, and the request-auth and model-list-refresh paths share it. The caller still
 observes the abort, matching upstream's `raceWithAbortSignal`.
 
+Also ported from v1.1.0: bash output keeps incomplete trailing CSI/OSC sequences across
+chunks (bounded to 256 bytes) before ANSI stripping (`27c7b6ff4`), and the interactive
+lifecycle treats `ENOTTY` as a dead-terminal error for revoked ttys (`4c6b724e`).
+
 Ported ahead of the reference pin: Home/End remain editor line-start/end keys, while
 Ctrl+Home/Ctrl+End move the fullscreen transcript, matching upstream v1.1.0
 (`#10314`, `6100fe5a8`). The component and fullscreen-renderer goldens now record

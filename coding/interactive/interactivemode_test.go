@@ -44,7 +44,7 @@ func TestInteractiveModeHelpers(t *testing.T) {
 	if IsUnknownModel(&ai.Model{Provider: "unknown", ID: "unknown"}) || IsUnknownModel(nil) {
 		t.Fatal("unknown model misdetected")
 	}
-	if !IsDeadTerminalError("EIO") || !IsDeadTerminalError("EPIPE") || !IsDeadTerminalError("ENOTCONN") {
+	if !IsDeadTerminalError("EIO") || !IsDeadTerminalError("EPIPE") || !IsDeadTerminalError("ENOTCONN") || !IsDeadTerminalError("ENOTTY") {
 		t.Fatal("dead terminal codes")
 	}
 	if IsDeadTerminalError("ECONNREFUSED") || IsDeadTerminalError("") {

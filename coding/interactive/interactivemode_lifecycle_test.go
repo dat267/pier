@@ -280,7 +280,7 @@ func TestLifecycleSignalHandlers(t *testing.T) {
 	// A dead-terminal error exits 129.
 	func() {
 		defer func() { _ = recover() }()
-		terminalErrors[0](&lifecycleTestError{message: "EIO"})
+		terminalErrors[0](&lifecycleTestError{message: "ENOTTY"})
 	}()
 	if len(*exits) != 1 || (*exits)[0] != 129 {
 		t.Fatalf("exits = %v", *exits)
