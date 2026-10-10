@@ -52,6 +52,20 @@ func TestOpenAIChatGPTAuthorizationFlowURL(t *testing.T) {
 	}
 }
 
+func TestOpenAIChatGPTAuthorizationFlowUsesCustomAgentName(t *testing.T) {
+	flow, err := CreateOpenAIChatGPTAuthorizationFlow("0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b", "ExampleApp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	parsed, err := url.Parse(flow.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := parsed.Query().Get("agent_name_hint"); got != "ExampleApp" {
+		t.Fatalf("agent_name_hint = %q; want ExampleApp", got)
+	}
+}
+
 // TestLoginOpenAIChatGPTRequiresDeviceID pins that a missing device id fails
 // before the browser opens.
 func TestLoginOpenAIChatGPTRequiresDeviceID(t *testing.T) {

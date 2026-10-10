@@ -87,6 +87,31 @@ func TestOpenAICodexAuthorizationFlow(t *testing.T) {
 	}
 }
 
+func TestLoginOpenAICodexUsesInteractionAgentName(t *testing.T) {
+	var authURL string
+	_, err := LoginOpenAICodex(&AuthInteraction{
+		AgentName: "ExampleApp",
+		Prompt: func(AuthPrompt) (string, error) {
+			return "", fmt.Errorf("cancel login")
+		},
+		Notify: func(event AuthEvent) {
+			if event.Type == AuthEventAuthURL {
+				authURL = event.URL
+			}
+		},
+	})
+	if err == nil || err.Error() != "cancel login" {
+		t.Fatalf("login error = %v; want prompt cancellation", err)
+	}
+	parsed, err := url.Parse(authURL)
+	if err != nil {
+		t.Fatalf("authorization URL %q: %v", authURL, err)
+	}
+	if got := parsed.Query().Get("originator"); got != "ExampleApp" {
+		t.Fatalf("originator = %q; want ExampleApp", got)
+	}
+}
+
 func TestOpenAICodexTokenExchangeAndRefresh(t *testing.T) {
 	var forms []url.Values
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {

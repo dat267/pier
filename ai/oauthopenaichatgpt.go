@@ -85,7 +85,7 @@ type OpenAIChatGPTAuthorizationFlow struct {
 
 // CreateOpenAIChatGPTAuthorizationFlow builds the authorization URL for a
 // device id.
-func CreateOpenAIChatGPTAuthorizationFlow(deviceID string) (*OpenAIChatGPTAuthorizationFlow, error) {
+func CreateOpenAIChatGPTAuthorizationFlow(deviceID string, agentName ...string) (*OpenAIChatGPTAuthorizationFlow, error) {
 	hostID, err := openAIChatGPTAgentHostID(deviceID)
 	if err != nil {
 		return nil, err
@@ -106,9 +106,13 @@ func CreateOpenAIChatGPTAuthorizationFlow(deviceID string) (*OpenAIChatGPTAuthor
 	if err != nil {
 		return nil, err
 	}
+	agentNameHint := OpenAIChatGPTAgentNameHint
+	if len(agentName) > 0 && agentName[0] != "" {
+		agentNameHint = agentName[0]
+	}
 	query := parsed.Query()
 	query.Set("client_id", OpenAIChatGPTDynamicClientID)
-	query.Set("agent_name_hint", OpenAIChatGPTAgentNameHint)
+	query.Set("agent_name_hint", agentNameHint)
 	query.Set("ext_agent_host_id", hostID)
 	query.Set("response_type", "code")
 	query.Set("redirect_uri", OpenAIChatGPTRedirectURI())
@@ -437,7 +441,7 @@ func LoginOpenAIChatGPT(interaction *AuthInteraction) (*OAuthCredential, error) 
 	if interaction.GetDeviceID != nil {
 		deviceID = interaction.GetDeviceID()
 	}
-	flow, err := CreateOpenAIChatGPTAuthorizationFlow(deviceID)
+	flow, err := CreateOpenAIChatGPTAuthorizationFlow(deviceID, interaction.AgentName)
 	if err != nil {
 		return nil, err
 	}

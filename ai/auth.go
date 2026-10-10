@@ -361,6 +361,9 @@ type AuthInteraction struct {
 	// GetDeviceID is the installation's stable UUID, when a flow needs an
 	// agent host id (Sign in with ChatGPT).
 	GetDeviceID func() string
+	// AgentName is the app name used by OAuth providers that accept one.
+	// Empty selects each provider's default name.
+	AgentName string
 }
 
 // ApiKeyAuth is api-key auth: stored key/provider env plus ambient sources

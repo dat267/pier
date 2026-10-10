@@ -94,6 +94,28 @@ func TestResolveProviderAuthStoredCredentialOwnsProvider(t *testing.T) {
 	}
 }
 
+func TestModelsLoginForwardsApplicationName(t *testing.T) {
+	var received string
+	models := CreateModels(nil)
+	models.SetProvider(&Provider{
+		ID: "p", Name: "provider",
+		Auth: ProviderAuth{OAuth: &OAuthAuth{
+			Login: func(interaction *AuthInteraction) (*OAuthCredential, error) {
+				received = interaction.AgentName
+				return &OAuthCredential{}, nil
+			},
+		}},
+	})
+
+	interaction := &AuthInteraction{AgentName: "ExampleApp"}
+	if _, err := models.Login("p", AuthTypeOAuth, interaction); err != nil {
+		t.Fatal(err)
+	}
+	if received != "ExampleApp" {
+		t.Fatalf("OAuth login received AgentName %q; want ExampleApp", received)
+	}
+}
+
 func TestResolveStoredOAuthRefreshesUnderLock(t *testing.T) {
 	// Upstream: double-checked locking — tokens with less than five minutes
 	// remaining lock, re-check, refresh once, persist before release.

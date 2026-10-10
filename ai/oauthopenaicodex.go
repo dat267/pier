@@ -522,7 +522,7 @@ func LoginOpenAICodex(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if interaction == nil {
 		return nil, fmt.Errorf("auth interaction is required")
 	}
-	flow, err := CreateOpenAICodexAuthorizationFlow("pi")
+	flow, err := CreateOpenAICodexAuthorizationFlow(interaction.AgentName)
 	if err != nil {
 		return nil, err
 	}
