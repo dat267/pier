@@ -67,7 +67,9 @@ not linger.
 
 Also ported from the delta: the MCP session `DELETE` reuses the token of the last request
 instead of asking the auth provider, whose `Token()` call can refresh over the network before
-a close that is happening anyway (`mcp/transport_http.go`, upstream #10565).
+a close that is happening anyway (`mcp/transport_http.go`, upstream #10565). A canceled OAuth
+token refresh now returns cancellation rather than falling through to a new authorization redirect
+(`f10993bc7`); OAuth UI cancellation and its login timeout remain outside D185.
 
 Ported as well: rotated OAuth tokens persist when a refresh is cancelled (`bde882c74`).
 `refreshStoredOAuthCredential` (`ai/authresolve.go`) lets the caller's cancellation stop only

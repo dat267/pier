@@ -237,6 +237,58 @@ func TestOAuthDynamicRegistrationDerivesApplicationType(t *testing.T) {
 	}
 }
 
+func TestOAuthRefreshCancellationDoesNotStartAuthorization(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	refreshStarted := make(chan struct{})
+	var refreshOnce sync.Once
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/token" {
+			refreshOnce.Do(func() { close(refreshStarted) })
+			<-ctx.Done()
+		}
+	}))
+	defer func() {
+		cancel()
+		server.Close()
+	}()
+	provider := newTestProvider("http://127.0.0.1/callback")
+	provider.client = &oauth.OAuthClientInformationFull{OAuthClientInformation: oauth.OAuthClientInformation{ClientID: "client"}}
+	provider.tokenSet = &oauth.OAuthTokens{AccessToken: "old", RefreshToken: strPtr("refresh"), TokenType: "Bearer"}
+	provider.discovery = &oauth.OAuthDiscoveryState{
+		AuthorizationServerURL: server.URL,
+		AuthorizationServerMetadata: &oauth.AuthorizationServerMetadata{
+			Issuer: server.URL, AuthorizationEndpoint: server.URL + "/authorize",
+			TokenEndpoint: server.URL + "/token", ResponseTypesSupported: []string{"code"},
+		},
+	}
+	type outcome struct {
+		result oauth.FlowResult
+		err    error
+	}
+	finished := make(chan outcome, 1)
+	go func() {
+		result, err := oauth.AuthorizeMcp(ctx, provider, oauth.FlowOptions{ServerURL: server.URL + "/mcp"})
+		finished <- outcome{result: result, err: err}
+	}()
+	select {
+	case <-refreshStarted:
+	case <-time.After(2 * time.Second):
+		t.Fatal("refresh request never started")
+	}
+	cancel()
+	select {
+	case result := <-finished:
+		if !errors.Is(result.err, context.Canceled) {
+			t.Fatalf("authorize = %s, %v; want cancellation", result.result, result.err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("authorization did not settle after cancellation")
+	}
+	if provider.authorizationURL != "" {
+		t.Fatalf("authorization URL = %q after canceled refresh", provider.authorizationURL)
+	}
+}
+
 func TestOAuthFullFlow(t *testing.T) {
 	var expectedChallenge string
 	refreshes := 0
