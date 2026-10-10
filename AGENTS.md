@@ -25,9 +25,11 @@ reference packages closely, file for file.
   `docs/PORTING.md` record it). `just reference` fails when the checkout sits at
   another tag, and `just reference-fetch` refreshes its tags without moving it,
   so a newer release is diffable while the checkout stays on the pin. Say which
-  tag a review read: upstream has already moved past the pin (v1.0.3, v1.0.4,
-  v1.1.0; 104 commits, none ported), and a checkout at another tag makes an
-  "against upstream" review answer a question about that tag instead. The
+  tag a review read: upstream has moved past the pin (v1.0.3, v1.0.4, v1.1.0;
+  104 commits). Applicable changes have been selectively ported, but the full
+  delta is not exhaustively audited; see `docs/PORTING.md` for current findings.
+  A checkout at another tag makes an "against upstream" review answer a question
+  about that tag instead. The
   released tags are the reference: an installed bundle drifts and can sit on a
   divergent upstream line. Diff checks go through the `./pi` sources (`node
   --experimental-strip-types`, `FORCE_COLOR=1` for chalk parity).

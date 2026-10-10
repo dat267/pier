@@ -14,8 +14,9 @@ models.dev) through `scripts/gen_catalog.py`.
 **Known drift.** Upstream has released v1.0.3, v1.0.4 and v1.1.0 since the pin.
 `git -C pi log --oneline v1.0.2..v1.1.0` counts 104 commits over 340 files,
 concentrated in `coding-agent` (44), `durable` (33), `ai` (29), `env` (17),
-`tui` (12), `mcp` (9), `codemode` (9) and `agent` (8). The not-ported list below
-still stops at v1.0.2; the delta is being ported item by item.
+`tui` (12), `mcp` (9), `codemode` (9) and `agent` (8). The full delta is not
+exhaustively audited; reviewed ports, deliberate omissions and remaining
+unaudited areas are recorded below.
 
 Ported from it so far: the built-in catalog, regenerated from the tag's own generator
 (`claude-haiku-5-5`, the prompt-length pricing tiers for 154 models, and the model churn
