@@ -197,6 +197,46 @@ func waitCallbackErrorAfterRequest(t *testing.T, callback *oauth.OAuthCallbackSe
 	return nil, nil
 }
 
+func TestOAuthDynamicRegistrationDerivesApplicationType(t *testing.T) {
+	applicationTypes := make(chan any, 6)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		metadata := readJSONBody(r)
+		applicationTypes <- metadata["application_type"]
+		metadata["client_id"] = "test-client"
+		writeJSON(w, http.StatusCreated, metadata)
+	}))
+	defer server.Close()
+
+	cases := []struct {
+		redirectURI     string
+		applicationType *string
+		want            string
+	}{
+		{"http://127.0.0.1:1234/callback", nil, "native"},
+		{"http://[::1]/callback", nil, "native"},
+		{"com.example.app:/callback", nil, "native"},
+		{"https://app.example/callback", nil, "web"},
+		{"http://remote.example/callback", nil, "web"},
+		{"http://localhost/callback", strPtr("web"), "web"},
+	}
+	for _, testCase := range cases {
+		registered, err := oauth.RegisterClient(context.Background(), server.URL, oauth.RegisterClientOptions{
+			ClientMetadata: oauth.OAuthClientMetadata{
+				RedirectURIs: []string{testCase.redirectURI}, ApplicationType: testCase.applicationType,
+			},
+		})
+		if err != nil {
+			t.Fatalf("register redirect %q: %v", testCase.redirectURI, err)
+		}
+		if registered.ApplicationType == nil || *registered.ApplicationType != testCase.want {
+			t.Errorf("registered application_type for %q = %v; want %q", testCase.redirectURI, registered.ApplicationType, testCase.want)
+		}
+		if got := <-applicationTypes; got != testCase.want {
+			t.Errorf("request application_type for %q = %v; want %q", testCase.redirectURI, got, testCase.want)
+		}
+	}
+}
+
 func TestOAuthFullFlow(t *testing.T) {
 	var expectedChallenge string
 	refreshes := 0

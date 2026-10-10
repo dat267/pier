@@ -103,6 +103,22 @@ func loopback(hostname string) bool {
 	return hostname == "localhost" || hostname == "127.0.0.1" || hostname == "::1"
 }
 
+// deriveApplicationType applies MCP SEP-837 to OAuth redirect URIs: custom
+// schemes and loopback HTTP(S) URLs identify native clients; other URLs are web.
+func deriveApplicationType(redirectURIs []string) string {
+	for _, redirectURI := range redirectURIs {
+		parsed, err := url.Parse(redirectURI)
+		if err != nil || parsed.Scheme == "" {
+			continue
+		}
+		scheme := strings.ToLower(parsed.Scheme)
+		if (scheme != "http" && scheme != "https") || loopback(strings.ToLower(parsed.Hostname())) {
+			return "native"
+		}
+	}
+	return "web"
+}
+
 // secureEndpoint refuses to send credentials over plain HTTP (upstream
 // secureEndpoint).
 func secureEndpoint(value string) (*url.URL, error) {
@@ -348,6 +364,9 @@ func RegisterClient(ctx context.Context, authorizationServerURL string, options 
 		return nil, err
 	} else if err := unmarshalJSON(enc, &payload); err != nil {
 		return nil, err
+	}
+	if options.ClientMetadata.ApplicationType == nil {
+		payload["application_type"] = deriveApplicationType(options.ClientMetadata.RedirectURIs)
 	}
 	if options.Scope != nil {
 		payload["scope"] = *options.Scope
