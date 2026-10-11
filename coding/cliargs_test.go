@@ -541,10 +541,27 @@ func TestToJSONEventPassesThroughOtherEvents(t *testing.T) {
 	}
 }
 
+// TestParseArgsRejectsInvalidToolModifiers follows packages/coding-agent/src/cli/args.ts
+// (ddaa0a034): modifier lists cannot mix plain names or patterns.
+func TestParseArgsRejectsInvalidToolModifiers(t *testing.T) {
+	for _, tc := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"--tools", "read,+grep"}, "tool names cannot be mixed"},
+		{[]string{"--tools", "+gr*"}, "take exact tool names, not patterns"},
+	} {
+		result := ParseArgs(tc.args)
+		if !HasErrorDiagnostics(result.Diagnostics) || len(result.Tools) != 0 ||
+			!strings.Contains(result.Diagnostics[0].Message, tc.want) {
+			t.Errorf("ParseArgs(%v) = %+v, want error containing %q", tc.args, result, tc.want)
+		}
+	}
+}
+
 // ToolSelection projects the CLI tool flags onto the session's tool options.
-// The binary passed none of them, so every tool flag in --help was silently
-// ignored; upstream main.ts sets noTools from --no-tools/--no-builtin-tools
-// and passes the allow and deny lists straight through.
+// The binary passes the no-tools mode and the allow and deny lists through to
+// CreateAgentSession, where selection semantics are applied.
 func TestArgsToolSelection(t *testing.T) {
 	cases := []struct {
 		name string
@@ -556,6 +573,11 @@ func TestArgsToolSelection(t *testing.T) {
 			"allowlist",
 			[]string{"--tools", "read,grep"},
 			ToolSelection{Tools: []ToolName{"read", "grep"}},
+		},
+		{
+			"default modifiers",
+			[]string{"--tools", "+grep"},
+			ToolSelection{Tools: []ToolName{"+grep"}},
 		},
 		{
 			"denylist",

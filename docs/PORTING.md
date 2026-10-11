@@ -37,6 +37,10 @@ exposes the single-tool execution path with the same validation and tool hooks, 
 also fail the tool call, matching upstream's awaited update events. `ShouldStopAfterTurn` remains as
 a deprecated compatibility callback; new code should use `FinishTurn`.
 
+The v1.1.0 coding-agent `--tools` modifier lists (`+name`/`-name`) are ported:
+they modify the configured default selection, survive settings reloads, and reject
+mixed allowlist entries and patterns (`ddaa0a034`, `cli/args.ts`, `core/sdk.ts`).
+
 Also ported: the retryable `server_busy`, `servers are currently busy`
 and `pending stream has been canceled` provider patterns (#10543, #10379), the
 Mistral `finish_reason: "error"` retry (#10487), model and caller headers

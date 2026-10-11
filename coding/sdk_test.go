@@ -191,6 +191,34 @@ func writeReloadSettings(t *testing.T, path string, content string) {
 	}
 }
 
+// TestToolModifiersRemainAppliedAfterSettingsReload ports reload behavior from
+// packages/coding-agent/src/core/agent-session.ts (ddaa0a034).
+func TestToolModifiersRemainAppliedAfterSettingsReload(t *testing.T) {
+	tempAgentDir(t)
+	runtime := newToolSelectionRuntime(t)
+	settings, settingsPath := newReloadSettings(t)
+	writeReloadSettings(t, settingsPath, `{"defaultTools":["read"]}`)
+	settings.Reload()
+	extra := agent.AgentTool{Name: "inactive_tool", Label: "inactive", Description: "inactive tool"}
+	session, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
+		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,
+		ExtraTools: []agent.AgentTool{extra}, Tools: []ToolName{"-bash", "+grep"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(session.Session.GetActiveToolNames(), ","); got != "read,grep" {
+		t.Fatalf("initial tools = %q, want read and grep", got)
+	}
+	writeReloadSettings(t, settingsPath, `{"defaultTools":["read","bash","inactive_tool"]}`)
+	session.Session.Reload()
+	got := append([]string{}, session.Session.ActiveToolNames()...)
+	sort.Strings(got)
+	if strings.Join(got, ",") != "grep,inactive_tool,read" {
+		t.Fatalf("tools after reload = %v, want updated defaults with bash still removed", got)
+	}
+}
+
 // TestReloadActivatesToolsNewlyAddedToDefaultTools ports default-tools-setting.test.ts
 // "reload" (db6cc71dc, #10245): /reload enables tools newly added to
 // defaultTools; removals stay active, session-disabled tools stay off, and
@@ -265,6 +293,70 @@ func TestReloadActivatesToolsNewlyAddedToDefaultTools(t *testing.T) {
 	excluded.Session.Reload()
 	if got := active(excluded.Session); got != "bash,edit,read,write" {
 		t.Fatalf("excluded after reload = %q", got)
+	}
+}
+
+// TestCreateAgentSessionToolsModifierAddsToDefaults ports modifier-only
+// `--tools` selections from packages/coding-agent/src/core/sdk.ts (ddaa0a034).
+func TestCreateAgentSessionToolsModifierAddsToDefaults(t *testing.T) {
+	tempAgentDir(t)
+	runtime := newToolSelectionRuntime(t)
+	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
+	session, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
+		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,
+		Tools: []ToolName{"+grep"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := strings.Join(session.Session.GetActiveToolNames(), ",")
+	if got != "read,bash,edit,write,grep" {
+		t.Fatalf("tools = %q, want defaults with grep added", got)
+	}
+
+	withoutDefaults, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
+		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,
+		NoTools: NoToolsAll, Tools: []ToolName{"+grep"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(withoutDefaults.Session.GetActiveToolNames(), ","); got != "grep" {
+		t.Fatalf("tools with --no-tools and +grep = %q, want only grep", got)
+	}
+}
+
+// TestCreateAgentSessionToolsModifierRemovesFromDefaults follows the same
+// upstream modifier contract in packages/coding-agent/src/core/sdk.ts.
+func TestCreateAgentSessionToolsModifierRemovesFromDefaults(t *testing.T) {
+	tempAgentDir(t)
+	runtime := newToolSelectionRuntime(t)
+	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
+	session, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
+		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,
+		Tools: []ToolName{"-write"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := strings.Join(session.Session.GetActiveToolNames(), ",")
+	if got != "read,bash,edit" {
+		t.Fatalf("tools = %q, want write removed from defaults", got)
+	}
+}
+
+// TestCreateAgentSessionRejectsMixedToolModifiers follows validation in
+// packages/coding-agent/src/core/sdk.ts (ddaa0a034).
+func TestCreateAgentSessionRejectsMixedToolModifiers(t *testing.T) {
+	tempAgentDir(t)
+	runtime := newToolSelectionRuntime(t)
+	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
+	_, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
+		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,
+		Tools: []ToolName{"read", "+grep"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "tool names cannot be mixed") {
+		t.Fatalf("err = %v, want mixed modifier validation error", err)
 	}
 }
 

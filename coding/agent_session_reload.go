@@ -23,7 +23,7 @@ func (s *AgentSession) Reload() {
 	// reload activates only names the setting newly adds (db6cc71dc).
 	previousDefaultTools := map[string]bool{}
 	if s.usesDefaultTools && s.control.Settings != nil {
-		for _, name := range resolvedDefaultToolSelection(s.control.Settings) {
+		for _, name := range s.selectedDefaultToolNames() {
 			previousDefaultTools[name] = true
 		}
 	}
@@ -39,7 +39,7 @@ func (s *AgentSession) Reload() {
 		// newly adds them; explicit --tools/--no-tools sessions never take this
 		// path (upstream _buildRuntime + _refreshToolRegistry).
 		names := append([]string{}, s.ActiveToolNames()...)
-		for _, name := range resolvedDefaultToolSelection(s.control.Settings) {
+		for _, name := range s.selectedDefaultToolNames() {
 			if !previousDefaultTools[name] {
 				names = append(names, name)
 			}
@@ -62,6 +62,10 @@ func (s *AgentSession) Reload() {
 	if !s.defaultSyncSuspended() {
 		s.recordDefaultSync(s.SyncSessionModelToDefault(context.Background(), "reload"))
 	}
+}
+
+func (s *AgentSession) selectedDefaultToolNames() []string {
+	return applyToolModifiers(resolvedDefaultToolSelection(s.control.Settings), s.defaultToolModifiers)
 }
 
 // resolvedDefaultToolSelection is the effective defaultTools selection: the

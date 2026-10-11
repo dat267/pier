@@ -766,6 +766,44 @@ func overridesOnlyToolModifiers(entries []string) bool {
 	return true
 }
 
+func toolListError(entries []string) string {
+	modifiers := 0
+	for _, entry := range entries {
+		if isToolModifier(entry) {
+			modifiers++
+		}
+	}
+	if modifiers == 0 {
+		return ""
+	}
+	if modifiers < len(entries) {
+		return "tool names cannot be mixed with +name or -name entries"
+	}
+	for _, entry := range entries {
+		if strings.Contains(entry, "*") {
+			return fmt.Sprintf("+name and -name entries take exact tool names, not patterns: %s", entry)
+		}
+	}
+	return ""
+}
+
+func applyToolModifiers(base, entries []string) []string {
+	tools := append([]string{}, base...)
+	for _, entry := range entries {
+		if !isToolModifier(entry) {
+			continue
+		}
+		name := entry[1:]
+		index := indexOf(tools, name)
+		if strings.HasPrefix(entry, "+") && index == -1 && name != "" {
+			tools = append(tools, name)
+		} else if strings.HasPrefix(entry, "-") && index != -1 {
+			tools = append(tools[:index], tools[index+1:]...)
+		}
+	}
+	return tools
+}
+
 // mergeDefaultTools merges two defaultTools layers: a list of only +name/-name
 // entries appends to the inherited list, anything else replaces it. nil means
 // the layer does not set defaultTools (upstream mergeDefaultTools).
@@ -789,25 +827,11 @@ func resolveDefaultTools(entries []string) []string {
 			plain = append(plain, entry)
 		}
 	}
-	var tools []string
-	if len(plain) > 0 || len(entries) == 0 {
-		tools = plain
-	} else {
-		tools = append([]string{}, DefaultToolNames...)
+	base := plain
+	if len(plain) == 0 && len(entries) > 0 {
+		base = DefaultToolNames
 	}
-	for _, entry := range entries {
-		if !isToolModifier(entry) {
-			continue
-		}
-		name := entry[1:]
-		index := indexOf(tools, name)
-		if strings.HasPrefix(entry, "+") && index == -1 && name != "" {
-			tools = append(tools, name)
-		} else if strings.HasPrefix(entry, "-") && index != -1 {
-			tools = append(tools[:index], tools[index+1:]...)
-		}
-	}
-	return tools
+	return applyToolModifiers(base, entries)
 }
 
 // DeepMergeSettings deep-merges overrides onto base; nested objects merge

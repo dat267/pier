@@ -195,7 +195,12 @@ func ParseArgs(args []string) *Args {
 			result.NoBuiltinTools = true
 		case arg == "--tools" || arg == "-t":
 			if value, ok := next(); ok {
-				result.Tools = splitNonEmpty(value)
+				tools := splitNonEmpty(value)
+				if message := toolListError(tools); message != "" {
+					result.Diagnostics = append(result.Diagnostics, CLIDiagnostic{Type: "error", Message: arg + ": " + message})
+				} else {
+					result.Tools = tools
+				}
 			}
 		case arg == "--exclude-tools" || arg == "-xt":
 			if value, ok := next(); ok {
@@ -412,13 +417,10 @@ func helpOptionLines() []string {
 		"  --no-tools, -nt                Disable all tools by default",
 		"  --no-builtin-tools, -nbt       Disable built-in tools by default but keep custom tools enabled",
 		"  --no-mcp                       Disable built-in MCP support: no servers connect and no MCP tools",
-		"  --tools, -t <tools>            Comma-separated allowlist; an entry is a name or a pattern",
-		"                                 where `*` matches any characters (for example mcp__radius__*)",
+		"  --tools, -t <tools>            Comma-separated names or patterns; `*` matches any characters",
+		"                                 Only +name/-name lists modify the defaults, using exact names",
+		"                                 Tool modifiers cannot be mixed with plain names or patterns",
 		"  --exclude-tools, -xt <tools>   Comma-separated denylist of names or patterns",
-		"  --tools, -t <tools>            Comma-separated allowlist of tool names to enable",
-		"                                 Applies to built-in and custom tools",
-		"  --exclude-tools, -xt <tools>   Comma-separated denylist of tool names to disable",
-		"                                 Applies to built-in and custom tools",
 		"  --thinking <level>             Set thinking level: " + strings.Join(validThinkingLevelStrings(), ", "),
 		"  --skill <path>                 Load a skill file or directory (can be used multiple times)",
 		"  --no-skills, -ns               Disable skills discovery and loading",

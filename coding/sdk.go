@@ -38,7 +38,8 @@ type CreateAgentSessionOptions struct {
 	Model *ai.Model
 	// ThinkingLevel pins the thinking level.
 	ThinkingLevel ai.ThinkingLevel
-	// Tools names the allowed tools; nil means the configured defaults.
+	// Tools names the allowed tools. A modifier-only list applies to the configured
+	// defaults; nil means the configured defaults.
 	Tools []ToolName
 	// ExcludeTools removes tools from the selection.
 	ExcludeTools []ToolName
@@ -247,10 +248,30 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		thinkingLevel = ai.ClampThinkingLevel(model, thinkingLevel)
 	}
 
+	toolModifiers := options.Tools != nil && len(options.Tools) > 0 && overridesOnlyToolModifiers(options.Tools)
+	var defaultToolModifiers []string
+	if toolModifiers {
+		defaultToolModifiers = append(defaultToolModifiers, options.Tools...)
+	}
+	if message := toolListError(options.Tools); message != "" {
+		return nil, fmt.Errorf("Invalid tools option: %s", message)
+	}
 	// Tool selection: the allowed names, then noTools, then the configured
-	// defaults, then the built-in defaults; exclusions apply last.
+	// defaults, then the built-in defaults; exclusions apply last. A modifier
+	// list changes the defaults in place (upstream ddaa0a034).
 	var initialActiveToolNames []ToolName
-	if options.Tools != nil {
+	if toolModifiers {
+		var base []string
+		if options.NoTools == "" {
+			base = settingsManager.GetDefaultTools()
+			if base == nil {
+				base = DefaultToolNames
+			}
+		}
+		for _, name := range applyToolModifiers(base, options.Tools) {
+			initialActiveToolNames = append(initialActiveToolNames, ToolName(name))
+		}
+	} else if options.Tools != nil {
 		initialActiveToolNames = append([]ToolName{}, options.Tools...)
 	} else if options.NoTools != "" {
 		initialActiveToolNames = []ToolName{}
@@ -498,16 +519,17 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		},
 		ConvertToLlm: convertToLlmWithBlockImages,
 		SessionID:    sessionID,
-		// Reload activates tools newly added to defaultTools only when the
-		// initial selection came from the setting (db6cc71dc).
-		UsesDefaultTools:  options.Tools == nil && options.NoTools == "",
-		ExcludedToolNames: options.ExcludeTools,
-		SteeringMode:      settingsManager.GetSteeringMode(),
-		FollowUpMode:      settingsManager.GetFollowUpMode(),
-		Transport:         ai.Transport(settingsManager.GetTransport()),
-		ThinkingBudgets:   thinkingBudgetsOf(settingsManager.GetThinkingBudgets()),
-		BeforeFirstTurn:   options.BeforeFirstTurn,
-		MaxRetryDelayMS:   &maxRetryDelay,
+		// Reload treats modifier-only --tools lists as settings-derived defaults
+		// and reapplies their changes as the settings change (upstream ddaa0a034).
+		UsesDefaultTools:     (options.Tools == nil || toolModifiers) && options.NoTools == "",
+		DefaultToolModifiers: defaultToolModifiers,
+		ExcludedToolNames:    options.ExcludeTools,
+		SteeringMode:         settingsManager.GetSteeringMode(),
+		FollowUpMode:         settingsManager.GetFollowUpMode(),
+		Transport:            ai.Transport(settingsManager.GetTransport()),
+		ThinkingBudgets:      thinkingBudgetsOf(settingsManager.GetThinkingBudgets()),
+		BeforeFirstTurn:      options.BeforeFirstTurn,
+		MaxRetryDelayMS:      &maxRetryDelay,
 	})
 	sessionForTools = session
 	if err != nil {

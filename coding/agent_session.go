@@ -208,8 +208,9 @@ type AgentSession struct {
 	// usesDefaultTools and excludedToolNames carry the tool-selection inputs
 	// Reload needs (upstream _usesDefaultTools and _excludedToolNames,
 	// db6cc71dc).
-	usesDefaultTools  bool
-	excludedToolNames []string
+	usesDefaultTools     bool
+	defaultToolModifiers []string
+	excludedToolNames    []string
 
 	// beforeFirstTurn runs once before the first agent turn (upstream
 	// before_agent_start; the MCP first-prompt wait installs here).
@@ -266,6 +267,9 @@ type SessionConfig struct {
 	// options: on Reload, tools newly added to the setting are activated
 	// (upstream AgentSessionConfig.usesDefaultTools, db6cc71dc).
 	UsesDefaultTools bool
+	// DefaultToolModifiers are modifier-only `--tools` entries applied to
+	// settings-derived defaults on creation and reload (upstream ddaa0a034).
+	DefaultToolModifiers []string
 	// ExcludedToolNames are the CLI exclusions applied at creation and again on
 	// Reload when the setting adds tools (upstream _excludedToolNames).
 	ExcludedToolNames []string
@@ -371,11 +375,12 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 			PromptSourcePaths: append([]string{}, config.PromptSourcePaths...),
 			SelectedTools:     agentToolNames(config.Tools),
 		},
-		skillDiagnostics:  config.SkillDiagnostics,
-		agentDir:          config.AgentDir,
-		usesDefaultTools:  config.UsesDefaultTools,
-		excludedToolNames: excludedToolNameSet(config.ExcludedToolNames),
-		beforeFirstTurn:   config.BeforeFirstTurn,
+		skillDiagnostics:     config.SkillDiagnostics,
+		agentDir:             config.AgentDir,
+		usesDefaultTools:     config.UsesDefaultTools,
+		defaultToolModifiers: append([]string{}, config.DefaultToolModifiers...),
+		excludedToolNames:    excludedToolNameSet(config.ExcludedToolNames),
+		beforeFirstTurn:      config.BeforeFirstTurn,
 	}
 	if config.PromptSources != nil {
 		s.promptSources = *config.PromptSources
