@@ -165,7 +165,7 @@ func TestRadiusProviderRefresh(t *testing.T) {
 	if provider.ID != "radius" || provider.Name != "Radius" {
 		t.Fatalf("provider = %s/%s", provider.ID, provider.Name)
 	}
-	// Radius has no static catalog models, so the initial list is empty.
+	// A custom gateway ships no static catalog, so the initial list is empty.
 	if len(provider.GetModels()) != 0 {
 		t.Fatalf("models = %+v", provider.GetModels())
 	}
@@ -214,6 +214,70 @@ func TestRadiusProviderRefresh(t *testing.T) {
 	}
 	if models := emptyProvider.GetModels(); len(models) != 0 {
 		t.Fatalf("models = %+v", models)
+	}
+}
+
+// Upstream's radiusProvider ships the generated RADIUS_MODELS as the default
+// gateway's cold-start catalog and drops it for custom gateways
+// (packages/ai/src/providers/radius.ts, v1.1.0). A stored or fetched catalog
+// replaces the baseline, including an empty one.
+func TestRadiusProviderDefaultGatewayBaseline(t *testing.T) {
+	provider := RadiusProvider(RadiusProviderOptions{})
+	models := provider.GetModels()
+	if len(models) == 0 {
+		t.Fatal("default gateway must ship the generated baseline catalog")
+	}
+	byID := map[string]*Model{}
+	for _, model := range models {
+		byID[model.ID] = model
+	}
+	balanced := byID["balanced"]
+	if balanced == nil {
+		t.Fatalf("baseline models = %d, missing balanced", len(models))
+	}
+	if balanced.Provider != "radius" || balanced.API != APIPiMessages {
+		t.Fatalf("balanced = %+v", balanced)
+	}
+
+	// A custom provider id rewrites the baseline's provider field.
+	renamed := RadiusProvider(RadiusProviderOptions{ID: "radius-dev"})
+	for _, model := range renamed.GetModels() {
+		if model.Provider != "radius-dev" {
+			t.Fatalf("model %s provider = %s", model.ID, model.Provider)
+		}
+	}
+
+	// A custom gateway has no baseline.
+	custom := RadiusProvider(RadiusProviderOptions{Gateway: "http://localhost:8788"})
+	if got := custom.GetModels(); len(got) != 0 {
+		t.Fatalf("custom gateway models = %+v", got)
+	}
+
+	// A stored catalog replaces the baseline, including an empty one.
+	stored := RadiusProvider(RadiusProviderOptions{})
+	err := stored.RefreshModels(&RefreshModelsContext{
+		Stored: &ModelsStoreEntry{Models: []*Model{{
+			ID: "organization-only", Provider: "radius", API: APIPiMessages,
+		}}},
+		Publish: func(publication ModelsPublication) bool { publication.Update(); return true },
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	restored := stored.GetModels()
+	if len(restored) != 1 || restored[0].ID != "organization-only" {
+		t.Fatalf("restored = %+v", restored)
+	}
+
+	empty := RadiusProvider(RadiusProviderOptions{})
+	if err := empty.RefreshModels(&RefreshModelsContext{
+		Stored:  &ModelsStoreEntry{Models: nil},
+		Publish: func(publication ModelsPublication) bool { publication.Update(); return true },
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if got := empty.GetModels(); len(got) != 0 {
+		t.Fatalf("empty stored catalog must clear the baseline, got %+v", got)
 	}
 }
 

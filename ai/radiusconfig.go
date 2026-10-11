@@ -244,7 +244,17 @@ func RadiusProvider(options RadiusProviderOptions) *Provider {
 	// Radius is a dynamic provider: its catalogue is persisted and refreshed
 	// rather than read from the generated catalog, so the provider is built
 	// directly (upstream returns an object literal with getModels/refreshModels
-	// closures over the gateway's cache).
+	// closures over the gateway's cache). The default gateway still ships the
+	// generated catalog as a cold-start baseline; a fetched or cached catalogue
+	// replaces it (upstream baselineModels).
+	var baselineModels []*Model
+	if gateway == NormalizeRadiusGatewayURL(DefaultRadiusGateway) {
+		for _, model := range GetBuiltinModels("radius") {
+			cloned := *model
+			cloned.Provider = id
+			baselineModels = append(baselineModels, &cloned)
+		}
+	}
 	cache := &radiusModelCache{}
 	return &Provider{
 		ID:   id,
@@ -253,7 +263,7 @@ func RadiusProvider(options RadiusProviderOptions) *Provider {
 			APIKey: EnvApiKeyAuth("Radius API key", []string{"RADIUS_API_KEY"}),
 			OAuth:  CreateRadiusOAuth(RadiusOAuthOptions{Name: name, Gateway: gateway}),
 		},
-		getModels: cache.get,
+		getModels: func() []*Model { return cache.get(baselineModels) },
 		RefreshModels: func(refresh *RefreshModelsContext) error {
 			return refreshRadiusModels(id, gateway, cache, refresh)
 		},
@@ -262,21 +272,28 @@ func RadiusProvider(options RadiusProviderOptions) *Provider {
 }
 
 // radiusModelCache holds one provider's refreshed catalogue (upstream closes
-// over a local `models` binding).
+// over a local `models` binding). hasData distinguishes a refreshed empty
+// catalogue (an organization that disabled every model) from "not refreshed
+// yet", where the default gateway falls back to the shipped baseline.
 type radiusModelCache struct {
-	mu     sync.Mutex
-	models []*Model
+	mu      sync.Mutex
+	models  []*Model
+	hasData bool
 }
 
-func (c *radiusModelCache) get() []*Model {
+func (c *radiusModelCache) get(baseline []*Model) []*Model {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.models
+	if c.hasData {
+		return c.models
+	}
+	return baseline
 }
 
 func (c *radiusModelCache) set(models []*Model) {
 	c.mu.Lock()
 	c.models = models
+	c.hasData = true
 	c.mu.Unlock()
 }
 
