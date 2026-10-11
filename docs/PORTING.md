@@ -14,9 +14,11 @@ models.dev) through `scripts/gen_catalog.py`.
 **Known drift.** Upstream has released v1.0.3, v1.0.4 and v1.1.0 since the pin.
 `git -C pi log --oneline v1.0.2..v1.1.0` counts 104 commits over 340 files,
 concentrated in `coding-agent` (44), `durable` (33), `ai` (29), `env` (17),
-`tui` (12), `mcp` (9), `codemode` (9) and `agent` (8). The full delta is not
-exhaustively audited; reviewed ports, deliberate omissions and remaining
-unaudited areas are recorded below.
+`tui` (12), `mcp` (9), `codemode` (9) and `agent` (8). The delta has been
+reviewed commit by commit for the in-scope packages; the ports, deliberate
+omissions and out-of-scope subsystems (codemode, the `env` SSH package, the
+package manager, extension mechanics, print/json/export modes and rpc) are
+recorded below.
 
 Ported from it so far: the built-in catalog, regenerated from the tag's own generator
 (`claude-haiku-5-5`, the prompt-length pricing tiers for 154 models, and the model churn
@@ -27,7 +29,9 @@ API: Foundry Chat Completions deployments now stream through the endpoint and de
 resolution the provider shares with the Responses API (`ai/providers/azure.go`).
 `ai/image_catalog.json` is *not* regenerated: its upstream input
 (`image-models.generated.ts`) is produced by a script that is not present at the tag, so a
-re-run needs that tool first.
+re-run needs that tool first. The catalog's `radius` snapshot also supplies the Radius
+provider's default-gateway cold-start baseline, which `43d376399` keeps as the fallback
+under a fetched or cached catalogue rather than merging into it (`ai/radiusconfig.go`).
 
 The agent loop now follows latest released `packages/agent` contract (v1.1.0): `PrepareRequest`
 runs before every provider request, `FinishTurn` runs before `turn_end` and can end or explicitly
@@ -66,7 +70,9 @@ the `tool_execution_end` event and `RunToolCall` outcome. Both message shapes ca
 its wire name, and the shell `Took` label renders the
 recorded value: `ToolRenderContext.DurationMs` reaches it from the live event and from the
 session replay, so a replayed result shows the same `Took` it did live instead of measuring
-nothing, and a live one no longer counts the steps between the events. The port's JSON event
+nothing, and a live one no longer counts the steps between the events. A lazy setup failure
+stamps its message with the request start time rather than the failure time
+(`ai/models_runtime.go`). The port's JSON event
 surface does not carry `durationMs` on `tool_execution_end`; that surface belongs to the
 print/json modes, which are out of scope.
 
@@ -97,7 +103,9 @@ dynamic registration derives `application_type` from redirect URIs, preserving a
 `reasoning.effort` and gpt-oss to clamped `reasoning_effort` (`2989eb581`). OpenAI OAuth
 login accepts `AuthInteraction.AgentName` for ChatGPT's `agent_name_hint` and Codex's
 `originator`, defaulting to the existing names (`9ad083102`). MCP connection shutdown cancels
-and awaits an in-flight connect (`8c911797c`). The extension manager's background UI actions and
+and awaits an in-flight connect (`8c911797c`). The faux provider's prompt-cache estimate
+compares equal messages whole and characters only from the first differing message, with
+unchanged usage numbers (`fe11328b0`). The extension manager's background UI actions and
 in-place enable/disable attempt fencing from `2db5e359b` remain out of scope with `/mcp` UI (D185).
 
 Ported ahead of the reference pin: Home/End remain editor line-start/end keys, while
@@ -585,7 +593,7 @@ Update the pin whenever upstream source is re-read for a port.
 | `ai` (oauth, github copilot) | `auth/oauth/github-copilot.ts` — the Copilot flow: enterprise-domain prompt/normalization, the GitHub device flow (client id, `read:user`, https-only verification URIs), the Copilot token exchange with the `proxy-ep` -> `api.` base-URL derivation and five-minute expiry margin, the account model catalogue (picker flags, policy states, tool-call support, the Individual-account policy fallback limited to real catalog ids), best-effort policy enabling with a 429-aware retry budget, available-model merging into the credential, and `toAuth` returning the credential-specific proxy base URL | ported |
 | `ai` (retry) | `utils/retry.ts` + `utils/provider-retry.ts` — the agent retry policy (`baseDelayMs`/`maxAgentDelayMs` with the 60s default, `retryDelayMs` with its jitter), the `RetryCallbacks` surface and `retryAssistantCall` (attempt budget, abort normalisation to an aborted `AssistantMessage`, exhaustion), the retryable and non-retryable error classifiers, and the provider-request retry (`retryProviderRequest`, server `retry-after` validation, the max-delay override) | ported (D171: the retryable-error list also matches OS-level socket aborts — "software caused connection abort", "connection reset by peer", "broken pipe", "unexpected EOF" — which upstream's list omits) |
 | `ai` (oauth, openai codex) | `auth/oauth/openai-codex.ts` — the ChatGPT OAuth flow: the authorize URL (extra `id_token_add_organizations`/`codex_cli_simplified_flow`/`originator` params), PKCE + random hex state, the fixed-port loopback server whose listen failure hands over to manual paste, the WHATWG-tolerant JWT decoding used to require a `chatgpt_account_id` claim into the credential, token exchange/refresh with the upstream operation-labelled messages, and the device-code path (string-or-number interval, 403/404 and `deviceauth_authorization_pending`/`slow_down` polling, nested `error.code`) with the device redirect URI | ported |
-| `ai` (radius) | `providers/{radius-config,radius}.ts` + `auth/oauth/radius.ts` — gateway URL normalization, the strict catalogue validator (model shape filtering, thinking-level maps), the `/v1/config` loader with body truncation, the dynamic provider (per-provider catalogue cache, stored-entry restore, legacy credential import, network refresh with persisted check timestamps), and the OAuth flow (discovery endpoint, browser sign-in with PKCE/state/`handoff=url` on the fixed loopback port, device-code sign-in with the coded error mapping, refresh, api-key derivation) | ported with the pi-messages API adapter wired; missing the default-gateway `RADIUS_MODELS` cold-start fallback (upstream `radius.ts`, `43d376399`). Its input `providers/data/radius.json` is ignored and absent from the v1.1.0 tag, so the exact released snapshot still needs a pinned source |
+| `ai` (radius) | `providers/{radius-config,radius}.ts` + `auth/oauth/radius.ts` — gateway URL normalization, the strict catalogue validator (model shape filtering, thinking-level maps), the `/v1/config` loader with body truncation, the dynamic provider (default-gateway baseline, per-provider catalogue cache, stored-entry restore, legacy credential import, network refresh with persisted check timestamps), and the OAuth flow (discovery endpoint, browser sign-in with PKCE/state/`handoff=url` on the fixed loopback port, device-code sign-in with the coded error mapping, refresh, api-key derivation) | ported with the pi-messages API adapter wired |
 | `ai` (pi-messages) | `api/pi-messages.ts` — pi's own message protocol: the `{model, context, options}` POST to `<baseUrl>/messages` (context rendered through the canonical message marshaller), optional `debug=1`, bearer + SSE headers, header overrides, the SSE reader (CRLF folding, `data:` lines, `[DONE]`), the event converter assembling text/thinking/tool-call blocks with streaming argument parsing and terminal done/error payloads (usage, response id, provider thinking level), rewrite-impact diagnostics, the coded response error with structured diagnostic details (provider, model, url, status, error object or truncated body), the legacy `PI_CACHE_RETENTION` mapping, and the missing-terminal-event error | ported |
 | `ai` (images) | `images-models.ts`, `api/openrouter-images.ts`, `providers/openrouter-images.ts` + the generated image catalogue — the image-generation counterpart of the model runtime (provider auth/model listing/refresh with shared in-flight fetches, generation that resolves auth and merges explicit options per field, error results instead of rejections), the OpenRouter images API (chat completions with `modalities`, data-URL extraction with remote URLs skipped, cache-write/read usage accounting and per-million cost), and `builtinImagesProviders`/`builtinImagesModels` | ported (the catalogue comes from upstream's generated data evaluated with Node's type stripping) |
 | `ai` (bedrock plumbing) | AWS SigV4 request signing (canonical request, derived signing key, session tokens, verified against the AWS documentation vector), credential/region/endpoint resolution (explicit env credentials, `~/.aws/credentials`/`config` profile parsing, bearer tokens with `AWS_BEDROCK_SKIP_AUTH`, ARN-embedded regions, standard-endpoint detection and the explicit-endpoint rule, GovCloud detection), Bedrock error formatting with the stable exception prefixes and data-retention hint, failure diagnostics, reserved-header rules, stop-reason mapping, and the AWS event-stream binary decoder (prelude/message CRC validation, typed headers, varints) | ported with the Converse adapter wired |
