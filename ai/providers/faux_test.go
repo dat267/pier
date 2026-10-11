@@ -373,6 +373,61 @@ func TestFauxPromptCachingPerSession(t *testing.T) {
 	}
 }
 
+// Upstream's "counts cached characters up to the first difference in the joined
+// prompt" (fe11328b0): the usage numbers are unchanged by the message-by-message
+// comparison.
+func TestFauxPromptCacheCountsToFirstDifference(t *testing.T) {
+	core := NewFauxCore(FauxOptions{})
+	core.SetResponses([]FauxResponseStep{
+		{Message: FauxAssistantMessage("a", FauxMessageOptions{})},
+		{Message: FauxAssistantMessage("b", FauxMessageOptions{})},
+		{Message: FauxAssistantMessage("c", FauxMessageOptions{})},
+	})
+	model := core.GetModel("")
+	options := func() *ai.SimpleStreamOptions {
+		return &ai.SimpleStreamOptions{StreamOptions: ai.StreamOptions{SessionID: "session-1", CacheRetention: ai.CacheRetentionShort}}
+	}
+
+	fauxComplete(t, core, model, ai.Context{Messages: []ai.Message{fauxUserMsg("hello world", 1)}}, options())
+	extended := fauxComplete(t, core, model, ai.Context{Messages: []ai.Message{
+		fauxUserMsg("hello world", 1), fauxUserMsg("next", 1),
+	}}, options())
+	if extended.Usage.Input != 3 || extended.Usage.CacheRead != 4 || extended.Usage.CacheWrite != 3 {
+		t.Fatalf("extended usage = %+v; want input 3, cacheRead 4, cacheWrite 3", extended.Usage)
+	}
+	edited := fauxComplete(t, core, model, ai.Context{Messages: []ai.Message{
+		fauxUserMsg("hello wide", 1), fauxUserMsg("next", 1),
+	}}, options())
+	if edited.Usage.Input != 4 || edited.Usage.CacheRead != 3 || edited.Usage.CacheWrite != 4 {
+		t.Fatalf("edited usage = %+v; want input 4, cacheRead 3, cacheWrite 4", edited.Usage)
+	}
+}
+
+// The message-by-message comparison returns the same length as comparing the
+// joined prompts character by character (upstream fe11328b0).
+func TestFauxCommonPromptPrefixLengthMatchesJoinedPrefix(t *testing.T) {
+	cases := []struct {
+		previous []string
+		current  []string
+	}{
+		{[]string{"a"}, []string{"a"}},
+		{[]string{"user:hello world"}, []string{"user:hello world", "user:next"}},
+		{[]string{"user:hello world", "user:next"}, []string{"user:hello wide", "user:next"}},
+		{[]string{"a", "b"}, []string{"a", "bc"}},
+		{[]string{"ab", "c"}, []string{"a", "bc"}},
+		{[]string{"a", "b\n\nc"}, []string{"a\n\nb", "c"}},
+		{nil, []string{"x"}},
+		{[]string{"x"}, nil},
+		{nil, nil},
+	}
+	for _, testCase := range cases {
+		want := fauxPrefixLength(joinWithDoubleNewline(testCase.previous), joinWithDoubleNewline(testCase.current))
+		if got := fauxCommonPromptPrefixLength(testCase.previous, testCase.current); got != want {
+			t.Errorf("fauxCommonPromptPrefixLength(%q, %q) = %d, want %d", testCase.previous, testCase.current, got, want)
+		}
+	}
+}
+
 func TestFauxNoCachingWhenRetentionNone(t *testing.T) {
 	core := NewFauxCore(FauxOptions{})
 	core.SetResponses([]FauxResponseStep{

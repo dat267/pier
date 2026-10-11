@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"strings"
 	"sync"
 	"time"
 	"unicode/utf16"
@@ -97,7 +98,7 @@ type FauxCore struct {
 	tps          float64
 	responses    []FauxResponseStep
 	state        FauxProviderState
-	promptCache  map[string]string
+	promptCache  map[string][]string
 	cacheMu      sync.Mutex
 	deferral     struct {
 		pendingFetches int
@@ -184,7 +185,7 @@ func NewFauxCore(options FauxOptions) *FauxCore {
 		minTokenSize:      minToken,
 		maxTokenSize:      maxToken,
 		tps:               options.TokensPerSecond,
-		promptCache:       map[string]string{},
+		promptCache:       map[string][]string{},
 		models:            models,
 		deferredResponses: map[string]*fauxDeferredEntry{},
 	}
@@ -437,12 +438,14 @@ func fauxMessageToText(message ai.Message) string {
 	}
 }
 
-func fauxSerializeContext(context ai.TranscriptContext) string {
-	var parts []string
+// fauxPromptParts returns one text per message; the whole prompt joins them with
+// blank lines (upstream serializeContext).
+func fauxPromptParts(context ai.TranscriptContext) []string {
+	parts := make([]string, 0, len(context.Messages))
 	for _, message := range context.Messages {
 		parts = append(parts, fmt.Sprintf("%s:%s", ai.RoleOf(message), fauxMessageToText(message)))
 	}
-	return joinWithDoubleNewline(parts)
+	return parts
 }
 
 func joinWithDoubleNewline(parts []string) string {
@@ -454,6 +457,40 @@ func joinWithDoubleNewline(parts []string) string {
 		out += p
 	}
 	return out
+}
+
+// fauxJoinedLength is the UTF-16 length of the prompt that joins the first count
+// parts with blank lines.
+func fauxJoinedLength(parts []string, count int) int {
+	length := 0
+	if count > 0 {
+		length = (count - 1) * 2
+	}
+	for index := 0; index < count; index++ {
+		length += ai.JSLength(parts[index])
+	}
+	return length
+}
+
+// fauxCommonPromptPrefixLength is the length of the common prefix of the two
+// joined prompts. Equal messages are compared whole; characters are compared
+// only from the first message that differs (upstream commonPromptPrefixLength).
+func fauxCommonPromptPrefixLength(previous, current []string) int {
+	index := 0
+	for index < len(previous) && index < len(current) && previous[index] == current[index] {
+		index++
+	}
+	rest := func(messages []string) string {
+		if index == len(messages) {
+			return ""
+		}
+		prefix := ""
+		if index > 0 {
+			prefix = "\n\n"
+		}
+		return prefix + strings.Join(messages[index:], "\n\n")
+	}
+	return fauxJoinedLength(previous, index) + fauxPrefixLength(rest(previous), rest(current))
 }
 
 func fauxPrefixLength(a, b string) int {
@@ -471,11 +508,12 @@ func fauxWithUsageEstimate(
 	message *ai.AssistantMessage,
 	context ai.TranscriptContext,
 	options *ai.StreamOptions,
-	promptCache map[string]string,
+	promptCache map[string][]string,
 	cacheMu *sync.Mutex,
 ) *ai.AssistantMessage {
-	promptText := fauxSerializeContext(context)
-	promptTokens := fauxEstimateTokens(promptText)
+	promptParts := fauxPromptParts(context)
+	promptLength := fauxJoinedLength(promptParts, len(promptParts))
+	promptTokens := (promptLength + 3) / 4
 	outputTokens := fauxEstimateTokens(fauxAssistantContentToText(message.Content))
 	input := promptTokens
 	var cacheRead, cacheWrite int64
@@ -483,14 +521,14 @@ func fauxWithUsageEstimate(
 		cacheMu.Lock()
 		previousPrompt, ok := promptCache[options.SessionID]
 		if ok {
-			cachedChars := fauxPrefixLength(previousPrompt, promptText)
-			cacheRead = int64(fauxEstimateTokens(ai.JSSlice(previousPrompt, 0, cachedChars)))
-			cacheWrite = int64(fauxEstimateTokens(ai.JSSlice(promptText, cachedChars, ai.JSLength(promptText))))
+			cachedChars := fauxCommonPromptPrefixLength(previousPrompt, promptParts)
+			cacheRead = int64((cachedChars + 3) / 4)
+			cacheWrite = int64((promptLength - cachedChars + 3) / 4)
 			input = max(0, promptTokens-int(cacheRead))
 		} else {
 			cacheWrite = int64(promptTokens)
 		}
-		promptCache[options.SessionID] = promptText
+		promptCache[options.SessionID] = promptParts
 		cacheMu.Unlock()
 	}
 
