@@ -672,14 +672,22 @@ only as the code comment that introduced them. The range is **D1–D216**.
   where `ReadConsole` returns as soon as any byte is available, so a busy loop can
   leave the two pieces more than 10 ms apart. Upstream requires the ESC
   (`/^\x1b\[<.../`), so its tail is typed the same way. The port remembers what a
-  flush released while it could still be a report head — a lone ESC, or a
-  truncated `\x1b[<...` — and re-joins the next chunk when that chunk completes a
-  report, so the wheel still scrolls and nothing reaches the prompt; any other
-  chunk clears the memory instead of holding a user's typing back. The alt screen
-  additionally accepts a report without its ESC and consumes a truncated
-  fragment of one. Residual: a report split again mid-tail still arrives as text,
-  and the Escape key it was split from has already been dispatched. Tests:
+  flush released while it could still be a report head: a lone ESC, `\x1b[`, or
+  a truncated `\x1b[<...`. It re-joins valid incomplete or complete continuations
+  and parses the combined read normally, including bursts with more reports or
+  typed keys after the tail. This also covers tails split over several reads.
+  Unrelated input clears the remembered head instead of being held back. The alt
+  screen additionally accepts a report without its ESC and consumes a truncated
+  fragment of one. On Android, expanding tools in the `books` session and then
+  scrolling reproduced numeric tails such as `64;11;24M` in the editor: the
+  previous recovery only matched a whole `[<...M` tail in a single read. A PTY
+  replay against the old binary reproduced that text; the fixed binary consumed
+  the wheel burst and stayed in the alternate screen. Residual: a lone Escape
+  already dispatched before the tail arrived cannot be taken back. Tests:
   `TestSplitMouseReportAcrossTheDeadline`,
+  `TestExpiredMouseHeadRejoinsWheelBurst`,
+  `TestExpiredMouseTailReassemblesAcrossReads`,
+  `TestExpiredMouseReportRejoinsAtEveryBoundary`,
   `TestOrphanedMouseReportIsStillDispatched`,
   `TestTruncatedMouseReportIsConsumed`.
 

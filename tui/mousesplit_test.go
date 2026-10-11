@@ -53,6 +53,58 @@ func TestSplitMouseReportAcrossTheDeadline(t *testing.T) {
 	}
 }
 
+// Regression against pi v1.0.2 src/stdin-buffer.ts (D169): after a timeout,
+// numeric mouse tails must not become editor text, including coalesced wheel bursts.
+func TestExpiredMouseHeadRejoinsWheelBurst(t *testing.T) {
+	buffer := NewStdinBuffer(StdinBufferOptions{})
+	var got []string
+	buffer.OnData = func(sequence string) { got = append(got, sequence) }
+	buffer.ProcessString("\x1b[<")
+	deadline, ok := buffer.PendingTimeout()
+	if !ok {
+		t.Fatal("missing incomplete mouse deadline")
+	}
+	buffer.FlushExpired(deadline)
+	buffer.ProcessString("64;11;24M\x1b[<65;11;24M")
+	if len(got) != 2 || got[0] != "\x1b[<64;11;24M" || got[1] != "\x1b[<65;11;24M" {
+		t.Fatalf("wheel burst became editor input: %q", got)
+	}
+}
+
+// D169 also covers a tail that itself arrives in multiple reads after the
+// expired head, rather than assuming one read contains the entire remainder.
+func TestExpiredMouseTailReassemblesAcrossReads(t *testing.T) {
+	buffer := NewStdinBuffer(StdinBufferOptions{})
+	var got []string
+	buffer.OnData = func(sequence string) { got = append(got, sequence) }
+	buffer.ProcessString("\x1b[<64;")
+	deadline, _ := buffer.PendingTimeout()
+	buffer.FlushExpired(deadline)
+	buffer.ProcessString("11;")
+	buffer.ProcessString("24M")
+	if len(got) != 1 || got[0] != "\x1b[<64;11;24M" {
+		t.Fatalf("fragmented mouse tail became editor input: %q", got)
+	}
+}
+
+// A slow render can let the deadline expire at any byte boundary in the
+// report from src/stdin-buffer.ts. Reassembly must not depend on the split point.
+func TestExpiredMouseReportRejoinsAtEveryBoundary(t *testing.T) {
+	const report = "\x1b[<64;11;24M"
+	for split := 1; split < len(report); split++ {
+		buffer := NewStdinBuffer(StdinBufferOptions{})
+		var got []string
+		buffer.OnData = func(sequence string) { got = append(got, sequence) }
+		buffer.ProcessString(report[:split])
+		deadline, _ := buffer.PendingTimeout()
+		buffer.FlushExpired(deadline)
+		buffer.ProcessString(report[split:] + "x")
+		if len(got) != 2 || got[0] != report || got[1] != "x" {
+			t.Fatalf("split %d became editor input: %q", split, got)
+		}
+	}
+}
+
 // TestOrphanedMouseReportIsStillDispatched is the fix: the tail is dispatched as
 // the mouse event it is, so the wheel still scrolls instead of being typed.
 func TestOrphanedMouseReportIsStillDispatched(t *testing.T) {

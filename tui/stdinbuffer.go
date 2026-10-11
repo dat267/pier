@@ -134,13 +134,10 @@ func isCompleteApcSequence(data string) seqStatus {
 var (
 	sgrMouseRegex       = regexp.MustCompile(`^<\d+;\d+;\d+[Mm]$`)
 	kittyPrintableRegex = regexp.MustCompile(`^\x1b\[(\d+)(?::\d*)?(?::\d+)?u$`)
-	// mouseReportHeadRegex matches what a force-flush can release while it is
-	// still the head of an SGR mouse report: a lone ESC (whose tail arrives as
-	// plain characters) or a truncated report.
-	mouseReportHeadRegex = regexp.MustCompile(`^\x1b(\[<[\d;]*)?$`)
-	// mouseReportTailRegex matches the tail of ESC[<B;X;YM, which is what the
-	// terminal sends once the head has already been flushed.
-	mouseReportTailRegex = regexp.MustCompile(`^\[<\d+;\d+;\d+[Mm]$`)
+	// mouseReportHeadRegex includes ESC[ and each valid incomplete SGR field.
+	mouseReportHeadRegex = regexp.MustCompile(`^\x1b(\[(<(\d+(;\d*){0,2})?)?)?$`)
+	// mouseReportPrefixRegex allows other reports or keys after the completed tail.
+	mouseReportPrefixRegex = regexp.MustCompile(`^\x1b\[<\d+;\d+;\d+[Mm]`)
 )
 
 // extractCompleteSequences splits the accumulated buffer into complete
@@ -238,9 +235,8 @@ type StdinBuffer struct {
 	pasteMode       bool
 	pasteBuffer     string
 	// flushedHead holds what a deadline flush just released when it could still
-	// be the head of an SGR mouse report. The report's tail then arrives as a
-	// plain chunk, which would be shredded into characters and typed into the
-	// prompt; the next chunk re-joins it when it completes a report (D169).
+	// be an SGR mouse head. Late tails may arrive in several reads or share a
+	// read with more reports; reassemble them before dispatch (D169).
 	flushedHead         string
 	pendingCodepoint    int
 	hasPendingCodepoint bool
@@ -281,15 +277,14 @@ func (b *StdinBuffer) ProcessString(data string) {
 }
 
 func (b *StdinBuffer) process(str string) {
-	// A report whose head was force-flushed is completed by this chunk: re-join
-	// the two so the mouse event is dispatched and the tail is not typed (D169).
-	// Any other chunk clears the head, so nothing a user typed is held back.
+	// D169: rejoin a timed-out head with its numeric tail, even when the
+	// same read contains more wheel reports or keys. Parse the whole read normally.
 	if b.flushedHead != "" {
 		head := b.flushedHead
 		b.flushedHead = ""
-		if str != "" && mouseReportTailRegex.MatchString(str) {
-			b.emitDataSequence(head + str)
-			return
+		joined := head + str
+		if str != "" && (mouseReportPrefixRegex.MatchString(joined) || mouseReportHeadRegex.MatchString(joined)) {
+			str = joined
 		}
 	}
 

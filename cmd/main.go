@@ -155,6 +155,9 @@ func run(appName string, args *coding.Args) error {
 	if err != nil {
 		return err
 	}
+	// main.ts uses Node's physical process.cwd(); os.Getwd can preserve a
+	// symlink in PWD, which would select a different per-project session directory.
+	cwd = coding.CanonicalizePath(cwd)
 	agentDir := coding.GetAgentDir()
 
 	// Bootstrap settings: global settings only, because whether the project's may
