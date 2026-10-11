@@ -3,7 +3,9 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
+	"time"
 )
 
 // Port of the auth-resolution and models-runtime subset of
@@ -28,6 +30,33 @@ func (f *fakeAuthContext) FileExists(path string) bool {
 		}
 	}
 	return false
+}
+
+// A lazy setup failure stamps the message with the request start time, not the
+// time the setup finally failed (upstream #10549, api/lazy.ts lazyStream).
+func TestLazyStreamSetupErrorUsesRequestStartTime(t *testing.T) {
+	model := &Model{API: APIOpenAICompletions, Provider: "test", ID: "test"}
+	start := time.Now().UnixMilli()
+	release := make(chan struct{})
+	stream := LazyStream(model, func() (eventSource, error) {
+		<-release
+		return nil, errors.New("auth failed")
+	})
+	// Let the wall clock advance well past the request start before the setup
+	// fails, so a timestamp taken at failure time cannot fall inside the
+	// tolerance below.
+	time.Sleep(50 * time.Millisecond)
+	close(release)
+	result, err := stream.Result(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.StopReason != StopError || result.ErrorMessage == nil || *result.ErrorMessage != "auth failed" {
+		t.Fatalf("result = %+v", result)
+	}
+	if result.Timestamp < start || result.Timestamp > start+10 {
+		t.Fatalf("timestamp = %d; want the request start near %d", result.Timestamp, start)
+	}
 }
 
 func TestEnvApiKeyAuthPrefersStoredKeyAndFallsThroughEnvVarsInOrder(t *testing.T) {

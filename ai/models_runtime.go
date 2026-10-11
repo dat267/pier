@@ -323,11 +323,15 @@ func (s streamSource) forwardInto(target *AssistantMessageEventStream) {
 // resolution, lazy module loading) behind it. Setup failures terminate the
 // stream with an error event (port of api/lazy.ts lazyStream).
 func LazyStream(model *Model, setup func() (eventSource, error)) *AssistantMessageEventStream {
+	// Setup can take a while (auth resolution, lazy module loading), so the
+	// failure message keeps the request start time, not the failure time
+	// (upstream #10549).
+	startedAt := timeNowMS()
 	outer := NewAssistantMessageEventStream()
 	go func() {
 		inner, err := setup()
 		if err != nil {
-			message := createSetupErrorMessage(model, err)
+			message := createSetupErrorMessage(model, err, startedAt)
 			outer.Push(AssistantMessageEvent{Type: EventError, Reason: StopError, Error: message})
 			outer.End(&message)
 			return
@@ -361,7 +365,7 @@ func ErrorStreamForModel(model *Model, code string, message string) *AssistantMe
 	})
 }
 
-func createSetupErrorMessage(model *Model, err error) *AssistantMessage {
+func createSetupErrorMessage(model *Model, err error, timestamp int64) *AssistantMessage {
 	msg := err.Error()
 	return &AssistantMessage{
 		API:          model.API,
@@ -370,7 +374,7 @@ func createSetupErrorMessage(model *Model, err error) *AssistantMessage {
 		Usage:        Usage{Cost: UsageCost{}},
 		StopReason:   StopError,
 		ErrorMessage: &msg,
-		Timestamp:    timeNowMS(),
+		Timestamp:    timestamp,
 	}
 }
 
