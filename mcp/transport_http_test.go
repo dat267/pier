@@ -766,6 +766,11 @@ func TestStreamableHTTPCloseReusesTheLastToken(t *testing.T) {
 		t.Fatal("the transport never asked for a token, so the test proves nothing")
 	}
 
+	// Connect launches the server-to-client GET asynchronously. Wait for its
+	// token lookup to finish before measuring Close, otherwise the GET can
+	// increment the counter inside the close assertion's observation window.
+	// This fixture answers GET with 405, so it cannot trigger a reconnect.
+	waitForMethod(t, fixture, http.MethodGet)
 	before := provider.count()
 	if err := client.Close(context.Background()); err != nil {
 		t.Fatal(err)
