@@ -151,8 +151,9 @@ Pier's `durable.ExecutionEnv` and injectable `coding.BashOperations` are seams,
 not SSH support. Classify remote execution as an unported optional feature, not a
 behavior mismatch in existing local execution; port it only as a separately
 scoped feature. Shared durable changes such as `cd60a5b99` are covered by the
-durable audit above. Other package deltas remain unreviewed: commit counts say
-how much exists, not which commits.
+durable audit above. The remaining package deltas (chord, client, protocol,
+server, telemetry, evals) changed only changelogs, package manifests and the
+evals install script.
 
 The v0.99.1→v1.0.0 delta (62 commits) is ported: it released the experimental
 `durable` packages and landed MCP and codemode work (codemode stays out of
