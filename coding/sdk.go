@@ -309,6 +309,8 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 	// tool-build time (a non-nil ReadToolOptions otherwise selects its zero value,
 	// which would disable resizing).
 	var sessionForTools *AgentSession
+	// The upstream tool registry is an insertion-ordered object; keep that order
+	// explicitly because Go map iteration would make wildcard selections unstable.
 	toolByName := CreateAllTools(cwd, &ToolsOptions{
 		Read: &ReadToolOptions{
 			AutoResizeImages: settingsManager.GetImageAutoResize(),
@@ -320,27 +322,39 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 			},
 		},
 	})
+	toolOrder := append([]ToolName{}, AllToolNames...)
 	for _, extra := range options.ExtraTools {
-		if extra.Name != "" {
-			toolByName[ToolName(extra.Name)] = extra
+		if extra.Name == "" {
+			continue
 		}
+		name := ToolName(extra.Name)
+		if _, exists := toolByName[name]; !exists {
+			toolOrder = append(toolOrder, name)
+		}
+		toolByName[name] = extra
 	}
-	// An allowlist entry is a tool name or a pattern with `*` (upstream's `--tools` patterns), so
-	// a pattern enables every tool it matches.
+	// An allowlist entry can be a tool name or a pattern. Exact names retain
+	// their input order; patterns expand in registry order, matching upstream's
+	// ordered Map walk. Overlapping entries add each tool only once.
 	activeTools := make([]agent.AgentTool, 0, len(initialActiveToolNames))
+	seenTools := make(map[ToolName]bool, len(initialActiveToolNames))
+	patterns := make([]string, 0, len(initialActiveToolNames))
 	for _, name := range initialActiveToolNames {
 		if tool, ok := toolByName[name]; ok {
-			activeTools = append(activeTools, tool)
-			continue
-		}
-		if !strings.Contains(string(name), "*") {
-			continue
-		}
-		for candidate, tool := range toolByName {
-			if ToolNameMatchesPattern(string(name), string(candidate)) {
+			if !seenTools[name] {
 				activeTools = append(activeTools, tool)
+				seenTools[name] = true
 			}
+		} else if strings.Contains(string(name), "*") {
+			patterns = append(patterns, string(name))
 		}
+	}
+	for _, name := range toolOrder {
+		if seenTools[name] || !matchesAnyToolPattern(patterns, string(name)) {
+			continue
+		}
+		activeTools = append(activeTools, toolByName[name])
+		seenTools[name] = true
 	}
 	// An exclusion is a name or a pattern too, and it applies to what the selection resolved to.
 	if len(options.ExcludeTools) > 0 {

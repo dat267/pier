@@ -542,6 +542,46 @@ func TestCreateAgentSessionToolSelection(t *testing.T) {
 	}
 }
 
+// TestCreateAgentSessionPatternSelectionPreservesRegistryOrder follows the
+// insertion-ordered registry in core/tools/index.ts and core/agent-session.ts.
+func TestCreateAgentSessionPatternSelectionPreservesRegistryOrder(t *testing.T) {
+	tempAgentDir(t)
+	runtime := newToolSelectionRuntime(t)
+	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
+	want := "read,bash,powershell,edit,write,grep,find,ls"
+	for attempt := 0; attempt < 8; attempt++ {
+		session, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
+			Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,
+			Tools: []ToolName{"*"},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := strings.Join(session.Session.GetActiveToolNames(), ","); got != want {
+			t.Fatalf("attempt %d: tools = %q, want registry order %q", attempt, got, want)
+		}
+	}
+}
+
+// TestCreateAgentSessionPatternSelectionDeduplicatesOverlaps follows the
+// loadout's insertion-ordered, set-based selection in core/agent-session.ts.
+func TestCreateAgentSessionPatternSelectionDeduplicatesOverlaps(t *testing.T) {
+	tempAgentDir(t)
+	runtime := newToolSelectionRuntime(t)
+	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
+	session, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
+		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,
+		Tools: []ToolName{"read", "r*", "grep"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := strings.Join(session.Session.GetActiveToolNames(), ",")
+	if got != "read,grep" {
+		t.Fatalf("tools = %q, want read and grep once each", got)
+	}
+}
+
 func TestCreateAgentSessionBlockImages(t *testing.T) {
 	tempAgentDir(t)
 	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
