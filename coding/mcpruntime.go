@@ -128,6 +128,7 @@ type McpServerConnection struct {
 	openingCancel   context.CancelFunc
 	openingClient   *mcp.Client
 	openingErr      error
+	toolsReady      bool
 	closed          bool
 	stderrTail      string
 	cwd             string
@@ -293,6 +294,7 @@ func (c *McpServerConnection) GetClient(ctx context.Context) (*mcp.Client, error
 	connectCtx, cancel := context.WithCancel(ctx)
 	c.opening = done
 	c.openingCancel = cancel
+	c.toolsReady = false
 	c.mu.Unlock()
 
 	client, err := c.open(connectCtx)
@@ -550,6 +552,13 @@ func (c *McpServerConnection) connectOnce(ctx context.Context) (*mcp.Client, err
 	if c.onTools != nil {
 		c.onTools(c)
 	}
+	// The connection is ready for MCP tool use only after the manager has
+	// published this tool snapshot (upstream's ready promise includes onTools).
+	c.mu.Lock()
+	if c.client == client && !c.closed {
+		c.toolsReady = true
+	}
+	c.mu.Unlock()
 	c.changed()
 	return client, nil
 }

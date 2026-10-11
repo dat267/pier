@@ -1132,7 +1132,12 @@ func (a *App) showWarning(message string) {
 // with the fresh manager.
 func (a *App) wireMcpManager(manager *coding.McpManager) {
 	manager.SetOnToolsChange(func() {
-		a.ui.Post(func() { _ = a.session.AttachExtraTools(manager.DirectTools()) })
+		a.ui.Post(func() {
+			if a.mcpManager != manager {
+				return
+			}
+			_ = a.session.AttachExtraTools(manager.DirectTools())
+		})
 	})
 	manager.AttachSession(a.session.AgentSession)
 	// The first-turn hook is once-per-session: only the manager the first turn

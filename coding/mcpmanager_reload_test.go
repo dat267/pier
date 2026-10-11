@@ -39,6 +39,80 @@ func testAgentSessionForReload(t *testing.T) *AgentSession {
 	return session
 }
 
+// TestReloadMCPRefreshesSameNamedTool follows core/agent-session.ts's registry
+// refresh: replacing a registered tool updates it, and withdrawn tools disappear.
+func TestReloadMCPRefreshesSameNamedTool(t *testing.T) {
+	session := testAgentSessionForReload(t)
+	direct := McpExposureDirect
+	config := LoadedMcpConfig{Servers: []McpServerEntry{
+		{Name: "docs", Scope: McpScopeGlobal, Config: &McpServerConfig{Command: "unused", Exposure: &direct}},
+	}}
+	description := "before reload"
+	includeTool := true
+	transport := func(entry McpServerEntry, _ string, _ mcp.AuthProvider) (mcp.Transport, error) {
+		var tools []protocol.Tool
+		if includeTool {
+			toolDescription := description
+			tools = []protocol.Tool{{Name: "echo", Description: &toolDescription}}
+		}
+		_, client := newMCPFakeServerTools(t, entry.Name, tools)
+		return client, nil
+	}
+	manager := NewMcpManagerAsync(context.Background(), McpManagerOptions{
+		Config: config, CreateTransport: transport,
+	})
+	defer func() { _ = manager.Close(context.Background()) }()
+	if !manager.WaitForDirectTools(context.Background(), 5e9) {
+		t.Fatal("initial connect timed out")
+	}
+	manager.AttachSession(session)
+
+	description = "after reload"
+	reloaded := ReloadMCPExchange(context.Background(), manager, nil, config, nil)
+	if reloaded == nil {
+		t.Fatal("no rebuilt manager")
+	}
+	defer func() { _ = reloaded.Close(context.Background()) }()
+	reloaded.AttachSession(session)
+	if !reloaded.WaitForDirectTools(context.Background(), 5e9) {
+		t.Fatal("reload connect timed out")
+	}
+
+	found := false
+	for _, tool := range session.State().Tools {
+		if tool.Name == "mcp__docs__echo" {
+			found = true
+			if tool.Description != description {
+				t.Fatalf("active MCP tool description = %q, want %q", tool.Description, description)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("reloaded MCP tool is not active")
+	}
+
+	// The next snapshot no longer offers the tool. It must disappear from both
+	// the model's active set and the session registry.
+	includeTool = false
+	withoutTool := ReloadMCPExchange(context.Background(), reloaded, nil, config, nil)
+	if withoutTool == nil {
+		t.Fatal("no manager after tool removal")
+	}
+	defer func() { _ = withoutTool.Close(context.Background()) }()
+	withoutTool.AttachSession(session)
+	if !withoutTool.WaitForDirectTools(context.Background(), 5e9) {
+		t.Fatal("tool-removal connect timed out")
+	}
+	for _, tool := range session.State().Tools {
+		if tool.Name == "mcp__docs__echo" {
+			t.Fatal("removed MCP tool remains active")
+		}
+	}
+	if session.GetToolDefinition("mcp__docs__echo") != nil {
+		t.Fatal("removed MCP tool remains registered")
+	}
+}
+
 // TestReloadMCPCloseAndRebuild covers the manager swap: ReloadMCPClose closes
 // every connection of the old manager and ReloadMCPRebuild starts a fresh set
 // through the factory; tools arriving after the swap attach to the session.

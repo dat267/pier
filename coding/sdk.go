@@ -260,6 +260,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 	// defaults, then the built-in defaults; exclusions apply last. A modifier
 	// list changes the defaults in place (upstream ddaa0a034).
 	var initialActiveToolNames []ToolName
+	var allowedToolNames []string
 	if toolModifiers {
 		var base []string
 		if options.NoTools == "" {
@@ -271,10 +272,26 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		for _, name := range applyToolModifiers(base, options.Tools) {
 			initialActiveToolNames = append(initialActiveToolNames, ToolName(name))
 		}
+		if options.NoTools == NoToolsAll {
+			allowedToolNames = make([]string, 0, len(initialActiveToolNames))
+			for _, name := range initialActiveToolNames {
+				allowedToolNames = append(allowedToolNames, string(name))
+			}
+		}
 	} else if options.Tools != nil {
 		initialActiveToolNames = append([]ToolName{}, options.Tools...)
+		allowedToolNames = make([]string, 0, len(options.Tools))
+		for _, name := range options.Tools {
+			allowedToolNames = append(allowedToolNames, string(name))
+		}
+	} else if options.NoTools == NoToolsAll {
+		initialActiveToolNames = []ToolName{}
+		allowedToolNames = []string{}
 	} else if options.NoTools != "" {
 		initialActiveToolNames = []ToolName{}
+		if options.NoTools != NoToolsBuiltin {
+			allowedToolNames = []string{}
+		}
 	} else if configured := settingsManager.GetDefaultTools(); configured != nil {
 		// An explicitly empty defaultTools is a value, not an absent one:
 		// upstream reads it with nullish coalescing, so `[]` selects no tools
@@ -537,6 +554,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		// and reapplies their changes as the settings change (upstream ddaa0a034).
 		UsesDefaultTools:     (options.Tools == nil || toolModifiers) && options.NoTools == "",
 		DefaultToolModifiers: defaultToolModifiers,
+		AllowedToolNames:     allowedToolNames,
 		ExcludedToolNames:    options.ExcludeTools,
 		SteeringMode:         settingsManager.GetSteeringMode(),
 		FollowUpMode:         settingsManager.GetFollowUpMode(),

@@ -2,6 +2,7 @@ package coding
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -74,6 +75,54 @@ func TestNewMcpManagerAsyncConnectsInTheBackground(t *testing.T) {
 	}
 }
 
+// TestWaitForDirectToolsIncludesRegistryCallback follows upstream's ready
+// promise, which includes MCP tool registration callbacks.
+func TestWaitForDirectToolsIncludesRegistryCallback(t *testing.T) {
+	direct := McpExposureDirect
+	config := LoadedMcpConfig{Servers: []McpServerEntry{
+		{Name: "docs", Scope: McpScopeGlobal, Config: &McpServerConfig{Command: "unused", Exposure: &direct}},
+	}}
+	transportStarted := make(chan struct{})
+	releaseTransport := make(chan struct{})
+	callbackStarted := make(chan struct{})
+	releaseCallback := make(chan struct{})
+	var callbackCount atomic.Int32
+	manager := NewMcpManagerAsync(context.Background(), McpManagerOptions{
+		Config: config,
+		CreateTransport: func(entry McpServerEntry, _ string, _ mcp.AuthProvider) (mcp.Transport, error) {
+			close(transportStarted)
+			<-releaseTransport
+			_, client := newMCPFakeServerTools(t, entry.Name, []protocol.Tool{{Name: "echo"}})
+			return client, nil
+		},
+		OnToolsChange: func() {
+			if callbackCount.Add(1) == 2 {
+				close(callbackStarted)
+				<-releaseCallback
+			}
+		},
+	})
+	defer func() { _ = manager.Close(context.Background()) }()
+	<-transportStarted
+	close(releaseTransport)
+	select {
+	case <-callbackStarted:
+	case <-time.After(5 * time.Second):
+		t.Fatal("tool registry callback did not start")
+	}
+
+	if manager.WaitForDirectTools(context.Background(), time.Millisecond) {
+		t.Fatal("direct tools reported ready before their registry callback finished")
+	}
+	close(releaseCallback)
+	if !manager.WaitForDirectTools(context.Background(), 5*time.Second) {
+		t.Fatal("direct tools did not become ready after their registry callback finished")
+	}
+	if len(manager.DirectTools()) == 0 {
+		t.Fatal("no direct tools after registry publication")
+	}
+}
+
 // TestWaitForDirectToolsTimesOut: a hanging direct server is given up on after
 // the timeout (upstream DEFAULT_STARTUP_WAIT_MS), and the wait is false.
 func TestWaitForDirectToolsTimesOut(t *testing.T) {
@@ -116,8 +165,8 @@ func TestWaitForDirectToolsSkipsCodemode(t *testing.T) {
 	}
 }
 
-// TestAttachExtraTools: late MCP tools register into the live session, become
-// active unless excluded, and a repeat attach is a no-op.
+// TestAttachExtraTools: late MCP tools register into the live session and
+// become active unless excluded; repeated snapshots report no newly added names.
 func TestAttachExtraTools(t *testing.T) {
 	dir := t.TempDir()
 	sessions := NewSessionManager(dir, &SessionManagerOptions{SessionDir: dir})

@@ -205,11 +205,12 @@ type AgentSession struct {
 	agentDir      string
 	promptSources PromptFileSources
 
-	// usesDefaultTools and excludedToolNames carry the tool-selection inputs
-	// Reload needs (upstream _usesDefaultTools and _excludedToolNames,
-	// db6cc71dc).
+	// usesDefaultTools, allowedToolNames and excludedToolNames carry the
+	// tool-selection inputs Reload and late tool registration need (upstream
+	// _usesDefaultTools, _allowedTools and _excludedTools).
 	usesDefaultTools     bool
 	defaultToolModifiers []string
+	allowedToolNames     []string
 	excludedToolNames    []string
 
 	// beforeFirstTurn runs once before the first agent turn (upstream
@@ -273,6 +274,9 @@ type SessionConfig struct {
 	// ExcludedToolNames are the CLI exclusions applied at creation and again on
 	// Reload when the setting adds tools (upstream _excludedToolNames).
 	ExcludedToolNames []string
+	// AllowedToolNames is a non-nil explicit tool allowlist. A non-nil empty
+	// list disables late-registered tools, as with --no-tools.
+	AllowedToolNames []string
 	// Agent-level request wiring from settings.
 	SteeringMode    QueueMode
 	FollowUpMode    QueueMode
@@ -362,6 +366,10 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 		}
 	}
 
+	var copiedAllowedToolNames []string
+	if config.AllowedToolNames != nil {
+		copiedAllowedToolNames = append([]string{}, config.AllowedToolNames...)
+	}
 	s := &AgentSession{
 		Agent:    a,
 		Sessions: sessionManager,
@@ -379,6 +387,7 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 		agentDir:             config.AgentDir,
 		usesDefaultTools:     config.UsesDefaultTools,
 		defaultToolModifiers: append([]string{}, config.DefaultToolModifiers...),
+		allowedToolNames:     copiedAllowedToolNames,
 		excludedToolNames:    excludedToolNameSet(config.ExcludedToolNames),
 		beforeFirstTurn:      config.BeforeFirstTurn,
 	}

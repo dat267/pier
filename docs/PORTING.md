@@ -40,6 +40,13 @@ a deprecated compatibility callback; new code should use `FinishTurn`.
 The v1.1.0 coding-agent `--tools` modifier lists (`+name`/`-name`) are ported:
 they modify the configured default selection, survive settings reloads, and reject
 mixed allowlist entries and patterns (`ddaa0a034`, `cli/args.ts`, `core/sdk.ts`).
+Explicit allowlists and exclusions also apply to asynchronously registered MCP tools,
+including wildcard matches, and `--no-tools` keeps those tools inactive. Direct-tool
+startup readiness waits for registry publication. MCP reloads replace changed same-name
+tool definitions and remove withdrawn tools from the session registry; interactive
+manager callbacks post those mutations to the owner loop and discard stale-manager updates
+(`04b97ef00`, `core/agent-session.ts`, and `2db5e359b`). Codemode/deferred MCP execution
+and the `/mcp` manager UI remain out of scope (D185).
 
 Also ported: the retryable `server_busy`, `servers are currently busy`
 and `pending stream has been canceled` provider patterns (#10543, #10379), the

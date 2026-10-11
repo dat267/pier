@@ -136,21 +136,27 @@ func (m *McpManager) DirectTools() []agent.AgentTool {
 // (upstream DEFAULT_STARTUP_WAIT_MS = 10_000).
 const McpStartupWaitMs = 10_000
 
-// SetOnToolsChange installs (or clears) the tool-set-change callback.
+// SetOnToolsChange installs (or clears) the tool-set-change callback. When
+// installed before AttachSession, it owns updates so interactive callers can
+// marshal session mutations to the UI loop; otherwise AttachSession installs
+// direct session attachment.
 func (m *McpManager) SetOnToolsChange(onToolsChange func()) {
 	m.mu.Lock()
 	m.onToolsChange = onToolsChange
 	m.mu.Unlock()
 }
 
-// AttachSession binds the session the manager serves: every tool-set build
-// then activates into the session live (upstream the extension's registry
-// refresh, which reaches the connected session without a new turn). The
-// manager is CLI-owned, so the session holds no reference back.
+// AttachSession binds the session the manager serves. If no callback was
+// supplied, every tool-set build activates into the live session directly
+// (upstream the extension's registry refresh). A callback installed first
+// owns that update, allowing interactive callers to post it to the UI loop.
+// The manager is CLI-owned, so the session holds no reference back.
 func (m *McpManager) AttachSession(session *AgentSession) {
 	m.mu.Lock()
 	m.session = session
-	m.onToolsChange = func() { _ = session.AttachExtraTools(m.DirectTools()) }
+	if m.onToolsChange == nil {
+		m.onToolsChange = func() { _ = session.AttachExtraTools(m.DirectTools()) }
+	}
 	m.mu.Unlock()
 	_ = session.AttachExtraTools(m.DirectTools())
 }
@@ -300,10 +306,15 @@ func (m *McpManager) WaitForDirectTools(ctx context.Context, timeout time.Durati
 			}
 			connection.mu.Lock()
 			state := connection.State
+			toolsReady := connection.toolsReady
 			connection.mu.Unlock()
 			switch state {
 			case McpServerConnecting, McpServerDisconnected:
 				pending = true
+			case McpServerConnected:
+				if !toolsReady {
+					pending = true
+				}
 			}
 		}
 		if !pending {

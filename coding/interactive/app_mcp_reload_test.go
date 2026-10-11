@@ -18,6 +18,91 @@ import (
 // land in the session registry (upstream session_start reason "reload" +
 // _pendingToolNames).
 
+// TestMCPToolChangesApplyOnUIOwner pins the Go port's single-writer UI rule for
+// the upstream asynchronous MCP registry callbacks.
+func TestMCPToolChangesApplyOnUIOwner(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+
+	writeMCPReloadConfig(t, app.mcpAgentDir, `{"mcpServers":{"delayed":{"command":"unused","exposure":"direct"}}}`)
+	config := coding.LoadMcpConfig(coding.McpConfigLoadOptions{
+		AgentDir: app.mcpAgentDir, Cwd: app.sessionMgr.GetCwd(), ProjectTrusted: true,
+	})
+	started := make(chan struct{})
+	release := make(chan struct{})
+	manager := coding.NewMcpManagerAsync(context.Background(), coding.McpManagerOptions{
+		Config: config,
+		CreateTransport: func(entry coding.McpServerEntry, _ string, _ mcp.AuthProvider) (mcp.Transport, error) {
+			close(started)
+			<-release
+			return newMCPReloadFakeServer(t, entry.Name, []protocol.Tool{{Name: "echo"}}), nil
+		},
+	})
+	defer func() { _ = manager.Close(context.Background()) }()
+	app.mcpManager = manager
+	app.wireMcpManager(manager)
+
+	select {
+	case <-started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("MCP transport did not start")
+	}
+	close(release)
+	if !manager.WaitForDirectTools(context.Background(), 5*time.Second) {
+		t.Fatal("MCP connection did not settle")
+	}
+	if app.session.GetToolDefinition("mcp__delayed__echo") != nil {
+		t.Fatal("MCP tools changed session state before the UI loop drained posted work")
+	}
+	app.ui.RenderNow(true)
+	if app.session.GetToolDefinition("mcp__delayed__echo") == nil {
+		t.Fatal("MCP tool update was not applied by the UI loop")
+	}
+}
+
+// TestMCPToolChangesFromReplacedManagerAreDropped follows the session-attempt
+// fencing in extensions/mcp/index.ts (upstream 2db5e359b).
+func TestMCPToolChangesFromReplacedManagerAreDropped(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+
+	writeMCPReloadConfig(t, app.mcpAgentDir, `{"mcpServers":{"stale":{"command":"unused","exposure":"direct"}}}`)
+	config := coding.LoadMcpConfig(coding.McpConfigLoadOptions{
+		AgentDir: app.mcpAgentDir, Cwd: app.sessionMgr.GetCwd(), ProjectTrusted: true,
+	})
+	started := make(chan struct{})
+	release := make(chan struct{})
+	oldManager := coding.NewMcpManagerAsync(context.Background(), coding.McpManagerOptions{
+		Config: config,
+		CreateTransport: func(entry coding.McpServerEntry, _ string, _ mcp.AuthProvider) (mcp.Transport, error) {
+			close(started)
+			<-release
+			return newMCPReloadFakeServer(t, entry.Name, []protocol.Tool{{Name: "echo"}}), nil
+		},
+	})
+	defer func() { _ = oldManager.Close(context.Background()) }()
+	app.mcpManager = oldManager
+	app.wireMcpManager(oldManager)
+	select {
+	case <-started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("old MCP transport did not start")
+	}
+	close(release)
+	if !oldManager.WaitForDirectTools(context.Background(), 5*time.Second) {
+		t.Fatal("old MCP connection did not settle")
+	}
+
+	newManager := coding.NewMcpManagerAsync(context.Background(), coding.McpManagerOptions{})
+	defer func() { _ = newManager.Close(context.Background()) }()
+	app.mcpManager = newManager
+	app.wireMcpManager(newManager)
+	app.ui.RenderNow(true)
+	if app.session.GetToolDefinition("mcp__stale__echo") != nil {
+		t.Fatal("posted update from a replaced MCP manager restored its stale tool")
+	}
+}
+
 func TestAppReloadMCPExchangesManager(t *testing.T) {
 	app, cleanup := newTestApp(t)
 	defer cleanup()

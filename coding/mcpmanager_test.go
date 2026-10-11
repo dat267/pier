@@ -115,7 +115,11 @@ func newMCPFakeServerTools(t *testing.T, name string, tools []protocol.Tool) (*m
 			case "tools/list":
 				entries := make([]any, 0, len(tools))
 				for _, tool := range tools {
-					entries = append(entries, map[string]any{"name": tool.Name, "inputSchema": map[string]any{"type": "object"}})
+					entry := map[string]any{"name": tool.Name, "inputSchema": map[string]any{"type": "object"}}
+					if tool.Description != nil {
+						entry["description"] = *tool.Description
+					}
+					entries = append(entries, entry)
 				}
 				result = map[string]any{"tools": entries}
 			case "tools/call":

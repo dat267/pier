@@ -542,6 +542,113 @@ func TestCreateAgentSessionToolSelection(t *testing.T) {
 	}
 }
 
+// TestSetActiveToolsHonorsExplicitAllowlist follows core/agent-session.ts's
+// _isAllowedTool filter when a loadout is applied.
+func TestSetActiveToolsHonorsExplicitAllowlist(t *testing.T) {
+	tempAgentDir(t)
+	runtime := newToolSelectionRuntime(t)
+	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
+	tool := agent.AgentTool{Name: "mcp__docs__search", Label: "docs/search", Description: "Docs search"}
+	session, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
+		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,
+		Tools: []ToolName{"read"}, ExtraTools: []agent.AgentTool{tool},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	session.Session.SetActiveToolsByName([]string{"read", "mcp__docs__search"})
+	if got := strings.Join(session.Session.GetActiveToolNames(), ","); got != "read" {
+		t.Fatalf("active tools after explicit set = %q, want allowlist read", got)
+	}
+}
+
+// TestLateMCPToolsRespectToolsAllowlist follows core/agent-session.ts's
+// _isAllowedTool and _refreshToolRegistry handling of tools registered after session start.
+func TestLateMCPToolsRespectToolsAllowlist(t *testing.T) {
+	tempAgentDir(t)
+	runtime := newToolSelectionRuntime(t)
+	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
+	session, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
+		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,
+		Tools: []ToolName{"read"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tool := agent.AgentTool{Name: "mcp__docs__search", Label: "docs/search", Description: "Docs search"}
+	session.Session.AttachExtraTools([]agent.AgentTool{tool})
+	if got := strings.Join(session.Session.GetActiveToolNames(), ","); got != "read" {
+		t.Fatalf("active tools after MCP registration = %q, want explicit allowlist read", got)
+	}
+	if session.Session.GetToolDefinition(tool.Name) == nil {
+		t.Fatal("MCP tool was not registered")
+	}
+}
+
+// TestLateMCPToolsMatchToolsAllowlist follows the wildcard matcher applied
+// during core/agent-session.ts's registry refresh.
+func TestLateMCPToolsMatchToolsAllowlist(t *testing.T) {
+	tempAgentDir(t)
+	runtime := newToolSelectionRuntime(t)
+	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
+	session, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
+		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,
+		Tools: []ToolName{"read", "mcp__docs__s*"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tool := agent.AgentTool{Name: "mcp__docs__search", Label: "docs/search", Description: "Docs search"}
+	session.Session.AttachExtraTools([]agent.AgentTool{tool})
+	if got := strings.Join(session.Session.GetActiveToolNames(), ","); got != "read,mcp__docs__search" {
+		t.Fatalf("active tools after MCP registration = %q, want the matching tool enabled", got)
+	}
+}
+
+// TestLateMCPToolsRespectNoToolsAll follows core/agent-session.ts's empty
+// allowlist behavior for --no-tools.
+func TestLateMCPToolsRespectNoToolsAll(t *testing.T) {
+	tempAgentDir(t)
+	runtime := newToolSelectionRuntime(t)
+	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
+	session, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
+		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,
+		NoTools: NoToolsAll,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tool := agent.AgentTool{Name: "mcp__docs__search", Label: "docs/search", Description: "Docs search"}
+	session.Session.AttachExtraTools([]agent.AgentTool{tool})
+	if got := session.Session.GetActiveToolNames(); len(got) != 0 {
+		t.Fatalf("active tools after --no-tools = %v, want none", got)
+	}
+}
+
+// TestLateMCPToolsRespectTruthyNoToolsValue follows core/sdk.ts's truthy
+// noTools handling for values other than the built-in-only mode.
+func TestLateMCPToolsRespectTruthyNoToolsValue(t *testing.T) {
+	tempAgentDir(t)
+	runtime := newToolSelectionRuntime(t)
+	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
+	session, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
+		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,
+		NoTools: "other",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tool := agent.AgentTool{Name: "mcp__docs__search", Label: "docs/search", Description: "Docs search"}
+	session.Session.AttachExtraTools([]agent.AgentTool{tool})
+	if got := session.Session.GetActiveToolNames(); len(got) != 0 {
+		t.Fatalf("active tools after truthy noTools = %v, want none", got)
+	}
+}
+
 // TestCreateAgentSessionPatternSelectionPreservesRegistryOrder follows the
 // insertion-ordered registry in core/tools/index.ts and core/agent-session.ts.
 func TestCreateAgentSessionPatternSelectionPreservesRegistryOrder(t *testing.T) {

@@ -399,26 +399,48 @@ func (s *AgentSession) GetToolDefinition(name string) *agent.AgentTool {
 	return &entry.Tool
 }
 
-// AttachExtraTools registers caller-supplied tools (the MCP manager's direct
-// set) into the live session and activates the new names (upstream registers
-// the extension's tools as they connect, so a session started before a server
-// answered still gets the tools). Names already registered or excluded are
-// skipped; the returned list is what was newly added.
+// AttachExtraTools reconciles caller-supplied tools (the MCP manager's current
+// direct-tool snapshot) with the live session. MCP tools replace same-named
+// definitions and tools absent from the snapshot are removed. New tools become
+// active unless the session's allowlist or exclusions reject them; the returned
+// list contains only names newly added to the registry.
 func (s *AgentSession) AttachExtraTools(tools []agent.AgentTool) []string {
+	incomingMcp := make(map[string]agent.AgentTool, len(tools))
+	for _, tool := range tools {
+		if tool.Name != "" && strings.HasPrefix(tool.Name, "mcp__") {
+			incomingMcp[tool.Name] = tool
+		}
+	}
+
 	s.control.stateMu.Lock()
+	changed := false
+	for name := range s.control.Tools {
+		if !strings.HasPrefix(name, "mcp__") {
+			continue
+		}
+		if _, ok := incomingMcp[name]; !ok {
+			delete(s.control.Tools, name)
+			changed = true
+		}
+	}
 	added := make([]string, 0, len(tools))
 	for _, tool := range tools {
 		if tool.Name == "" {
 			continue
 		}
 		if _, ok := s.control.Tools[tool.Name]; ok {
+			if strings.HasPrefix(tool.Name, "mcp__") {
+				s.control.Tools[tool.Name] = AgentToolDefinition{Tool: tool}
+				changed = true
+			}
 			continue
 		}
 		s.control.Tools[tool.Name] = AgentToolDefinition{Tool: tool}
 		added = append(added, tool.Name)
+		changed = true
 	}
 	s.control.stateMu.Unlock()
-	if len(added) == 0 {
+	if !changed {
 		return nil
 	}
 	names := append([]string{}, s.ActiveToolNames()...)
@@ -426,23 +448,32 @@ func (s *AgentSession) AttachExtraTools(tools []agent.AgentTool) []string {
 	filtered := make([]string, 0, len(names))
 	seen := map[string]bool{}
 	for _, name := range names {
-		if seen[name] || matchesAnyToolPattern(s.excludedToolNames, name) {
+		if seen[name] ||
+			(s.allowedToolNames != nil && !matchesAnyToolPattern(s.allowedToolNames, name)) ||
+			matchesAnyToolPattern(s.excludedToolNames, name) {
 			continue
 		}
 		seen[name] = true
 		filtered = append(filtered, name)
 	}
 	s.SetActiveToolsByName(filtered)
+	if len(added) == 0 {
+		return nil
+	}
 	return added
 }
 
-// SetActiveToolsByName enables the named registry tools (unknown names are
-// ignored) and rebuilds the system prompt.
+// SetActiveToolsByName enables named registry tools allowed by this session's
+// allowlist and exclusions, then rebuilds the system prompt.
 func (s *AgentSession) SetActiveToolsByName(names []string) {
 	s.control.stateMu.Lock()
 	tools := make([]agent.AgentTool, 0, len(names))
 	validNames := make([]string, 0, len(names))
 	for _, name := range names {
+		if (s.allowedToolNames != nil && !matchesAnyToolPattern(s.allowedToolNames, name)) ||
+			matchesAnyToolPattern(s.excludedToolNames, name) {
+			continue
+		}
 		entry, ok := s.control.Tools[name]
 		if !ok {
 			continue
