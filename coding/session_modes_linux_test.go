@@ -16,7 +16,8 @@ import (
 func TestSessionManagerPersistsFilesWithNodeDefaultMode(t *testing.T) {
 	oldMask := syscall.Umask(0)
 	defer syscall.Umask(oldMask)
-	manager := NewSessionManager(t.TempDir(), nil)
+	root := t.TempDir()
+	manager := NewSessionManager(root, &SessionManagerOptions{SessionDir: filepath.Join(root, "sessions")})
 	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "persist"}})
 	if err := manager.FlushWrites(); err != nil {
 		t.Fatal(err)
