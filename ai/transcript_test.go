@@ -161,3 +161,21 @@ func TestGetCurrentSystemPromptAndSections(t *testing.T) {
 		t.Fatalf("prompt =\n%q\nwant\n%q", prompt, want)
 	}
 }
+
+// A section deleted and then re-added moves to the end, like a JS Map.
+func TestGetCurrentSystemMessageReaddsDeletedSectionAtEnd(t *testing.T) {
+	head := &SystemMessage{Content: StringOrBlocks{Text: "base"}, Timestamp: 0}
+	head.SetSection("a", strptr("1"))
+	head.SetSection("b", strptr("2"))
+	drop := &SystemMessage{Timestamp: 1}
+	drop.SetSection("a", nil)
+	readd := &SystemMessage{Timestamp: 2}
+	readd.SetSection("a", strptr("3"))
+	message := GetCurrentSystemMessage([]Message{head, drop, readd})
+	if message == nil {
+		t.Fatal("no message")
+	}
+	if got := GetSystemMessageText(message); got != "base\n\n2\n\n3" {
+		t.Fatalf("prompt = %q; want %q", got, "base\n\n2\n\n3")
+	}
+}

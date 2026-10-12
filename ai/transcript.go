@@ -134,14 +134,22 @@ func GetCurrentSystemMessage(messages []Message) *SystemMessage {
 			if !ok {
 				continue
 			}
+			if value == nil {
+				// Deleting removes the name's position, so a later re-add moves it
+				// to the end like a JS Map.
+				delete(sections, name)
+				for i, n := range sectionOrder {
+					if n == name {
+						sectionOrder = append(sectionOrder[:i], sectionOrder[i+1:]...)
+						break
+					}
+				}
+				continue
+			}
 			if _, seen := sections[name]; !seen {
 				sectionOrder = append(sectionOrder, name)
 			}
-			if value == nil {
-				delete(sections, name)
-			} else {
-				sections[name] = value
-			}
+			sections[name] = value
 		}
 	}
 	tools := GetCurrentTools(messages)
