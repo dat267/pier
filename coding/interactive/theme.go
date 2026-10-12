@@ -5,7 +5,6 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
-	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -1022,25 +1021,6 @@ func getColorFgBgBackgroundIndex(colorfgbg string) (int, bool) {
 	return bg, true
 }
 
-func getRgbColorLuminance(rgb rgbColor) float64 {
-	toLinear := func(channel int) float64 {
-		value := float64(channel) / 255
-		if value <= 0.03928 {
-			return value / 12.92
-		}
-		return math.Pow((value+0.055)/1.055, 2.4)
-	}
-	return 0.2126*toLinear(rgb.R) + 0.7152*toLinear(rgb.G) + 0.0722*toLinear(rgb.B)
-}
-
-func getAnsiColorLuminance(index int) float64 {
-	rgb, err := hexToRgb(ansi256ToHex(index))
-	if err != nil {
-		return 0
-	}
-	return getRgbColorLuminance(rgb)
-}
-
 // GetThemeForRgbColor classifies a background color the way upstream
 // terminalAppearance does without a reported foreground: dark when white text
 // contrasts better on it than black text.
@@ -1058,8 +1038,10 @@ func DetectTerminalBackgroundFromEnv(env func(string) string) TerminalThemeDetec
 		colorfgbg = env("COLORFGBG")
 	}
 	if bg, ok := getColorFgBgBackgroundIndex(colorfgbg); ok {
+		// Upstream classifies the index like Vim: 0-6 and 8 are dark, 7 and
+		// 9-15 are light.
 		theme := TerminalThemeDark
-		if getAnsiColorLuminance(bg) >= 0.5 {
+		if bg > 6 && bg != 8 {
 			theme = TerminalThemeLight
 		}
 		return TerminalThemeDetection{

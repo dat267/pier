@@ -546,3 +546,25 @@ func TestThemeExportConvertsOkhslToHex(t *testing.T) {
 		t.Fatalf("pageBg = %q; want a hex color", pageBg)
 	}
 }
+
+// Upstream detectColorFgBgTheme classifies the COLORFGBG index like Vim: 0-6
+// and 8 are dark, 7 and 9-15 are light.
+func TestColorFgBgThemeClassifiesByIndex(t *testing.T) {
+	envWith := func(value string) func(string) string {
+		return func(key string) string {
+			if key == "COLORFGBG" {
+				return value
+			}
+			return ""
+		}
+	}
+	if got := DetectTerminalBackgroundFromEnv(envWith("0;9")).Theme; got != TerminalThemeLight {
+		t.Fatalf("index 9 = %s; want light", got)
+	}
+	if got := DetectTerminalBackgroundFromEnv(envWith("0;12")).Theme; got != TerminalThemeLight {
+		t.Fatalf("index 12 = %s; want light", got)
+	}
+	if got := DetectTerminalBackgroundFromEnv(envWith("0;8")).Theme; got != TerminalThemeDark {
+		t.Fatalf("index 8 = %s; want dark", got)
+	}
+}
