@@ -464,11 +464,16 @@ func streamAssistantResponse(
 	options.Ctx = ctx
 	response := streamFunction(config.Model, llmContext, &options)
 
+	// The run context cancels provider work, not delivery of its terminal
+	// message. Upstream's iterator and response.result() await abort cleanup;
+	// abandoning them would leave this assistant open and start a second
+	// failure message through handleRunFailure.
+	settlementContext := contextOrBackground(nil)
 	var partialMessage *ai.AssistantMessage
 	addedPartial := false
 
 	for {
-		event, ok := response.Next(ctx)
+		event, ok := response.Next(settlementContext)
 		if !ok {
 			break
 		}
@@ -477,7 +482,10 @@ func streamAssistantResponse(
 			partialMessage = event.Partial
 			context.Messages = append(context.Messages, partialMessage)
 			addedPartial = true
-			mustEmit(emit, AgentEvent{Type: MessageStart, Message: partialMessage})
+			// Upstream emits {...partialMessage}: snapshot message fields so
+			// later provider cleanup cannot mutate a queued lifecycle event.
+			snapshot := *partialMessage
+			mustEmit(emit, AgentEvent{Type: MessageStart, Message: &snapshot})
 		case ai.EventTextStart, ai.EventTextDelta, ai.EventTextEnd,
 			ai.EventThinkingStart, ai.EventThinkingDelta, ai.EventThinkingEnd,
 			ai.EventToolcallStart, ai.EventToolcallDelta, ai.EventToolcallEnd:
@@ -485,12 +493,13 @@ func streamAssistantResponse(
 				partialMessage = event.Partial
 				context.Messages[len(context.Messages)-1] = partialMessage
 				inner := event
+				snapshot := *partialMessage
 				mustEmit(emit, AgentEvent{
-					Type: MessageUpdate, AssistantMessageEvent: &inner, Message: partialMessage,
+					Type: MessageUpdate, AssistantMessageEvent: &inner, Message: &snapshot,
 				})
 			}
 		case ai.EventDone, ai.EventError:
-			finalMessage, resultErr := response.Result(ctx)
+			finalMessage, resultErr := response.Result(settlementContext)
 			if resultErr != nil {
 				failStreamAssistant(resultErr)
 			}
@@ -507,7 +516,7 @@ func streamAssistantResponse(
 		}
 	}
 
-	finalMessage, resultErr := response.Result(ctx)
+	finalMessage, resultErr := response.Result(settlementContext)
 	if resultErr != nil {
 		failStreamAssistant(resultErr)
 	}

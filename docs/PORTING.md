@@ -41,6 +41,16 @@ exposes the single-tool execution path with the same validation and tool hooks, 
 also fail the tool call, matching upstream's awaited update events. `ShouldStopAfterTurn` remains as
 a deprecated compatibility callback; new code should use `FinishTurn`.
 
+The response lifecycle also follows v1.1.0 `agent-loop.ts`: cancellation reaches
+provider work through its request context, while the loop keeps consuming events
+and awaits the provider's terminal result. Abandoning those waits on cancellation
+left an assistant component open and synthesized a second aborted message, producing
+two visible `Operation aborted` notices for one committed abort. Start/update events
+now carry shallow message-field snapshots, matching upstream's object spreads, so
+later provider cleanup cannot change their queued stop reason. Regression tests
+cover delayed abort cleanup, preserved partial content, and one cancellation notice
+when the UI drains its queue after cleanup.
+
 The v1.1.0 coding-agent `--tools` modifier lists (`+name`/`-name`) are ported:
 they modify the configured default selection, survive settings reloads, and reject
 mixed allowlist entries and patterns (`ddaa0a034`, `cli/args.ts`, `core/sdk.ts`).
