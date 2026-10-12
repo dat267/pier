@@ -98,7 +98,8 @@ func diffJoin(tokens []string) string {
 			builder.WriteString(token)
 			continue
 		}
-		builder.WriteString(strings.TrimLeft(token, " \t\n\r\v\f\u00a0"))
+		// Upstream strips the JS `\s` class (Unicode whitespace).
+		builder.WriteString(strings.TrimLeftFunc(token, isSpaceRune))
 	}
 	return builder.String()
 }

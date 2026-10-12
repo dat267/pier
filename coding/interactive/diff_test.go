@@ -145,3 +145,11 @@ func TestWordTokenizeUnicodeWhitespace(t *testing.T) {
 		t.Fatalf("tokens = %q; want %q", got, want)
 	}
 }
+
+// jsdiff WordDiff.join strips the JS `\s` class (Unicode whitespace) from
+// every token after the first.
+func TestDiffJoinStripsUnicodeWhitespace(t *testing.T) {
+	if got := diffJoin([]string{"a", "\u3000b"}); got != "ab" {
+		t.Fatalf("diffJoin = %q; want %q", got, "ab")
+	}
+}
