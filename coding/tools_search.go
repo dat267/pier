@@ -139,7 +139,7 @@ func CreateFindTool(cwd string) agent.AgentTool {
 			if ctxErrOf(ctx) != nil {
 				return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
 			}
-			output := strings.TrimRight(stdout.String(), "\n")
+			output := strings.TrimRight(DecodeUTF8WithReplacement([]byte(stdout.String())), "\n")
 			if runErr != nil {
 				errorMsg := strings.TrimSpace(stderr.String())
 				if errorMsg == "" {
@@ -230,7 +230,7 @@ type rgMatchEvent struct {
 		} `json:"path"`
 		LineNumber *int64 `json:"line_number"`
 		Lines      struct {
-			Text string `json:"text"`
+			Text *string `json:"text"`
 		} `json:"lines"`
 	} `json:"data"`
 }
@@ -431,9 +431,9 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 			}
 
 			for _, match := range matches {
-				if contextValue == 0 {
+				if contextValue == 0 && match.Data.Lines.Text != nil {
 					relativePath := formatPath(match.Data.Path.Text)
-					sanitized := strings.ReplaceAll(match.Data.Lines.Text, "\r\n", "\n")
+					sanitized := strings.ReplaceAll(*match.Data.Lines.Text, "\r\n", "\n")
 					sanitized = strings.ReplaceAll(sanitized, "\r", "")
 					sanitized = strings.TrimRight(sanitized, "\n")
 					truncated := TruncateLine(sanitized, GrepMaxLineLength)

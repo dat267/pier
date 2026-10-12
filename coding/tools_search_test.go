@@ -59,6 +59,24 @@ func TestFindToolPreservesWhitespaceInFileNames(t *testing.T) {
 	}
 }
 
+// find.ts consumes fd output through readline's UTF-8 string decoding.
+func TestFindToolReplacesMalformedUTF8Paths(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix permits invalid UTF-8 file names")
+	}
+	requireBinary(t, "fd")
+	dir := t.TempDir()
+	name := string([]byte{0xff, 'x'})
+	if err := os.WriteFile(filepath.Join(dir, name), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	result := execTool(t, CreateFindTool(dir), `{"pattern":"*"}`)
+	got := result.Content[0].(ai.TextContent).Text
+	if !strings.Contains(got, "\uFFFDx") || strings.Contains(got, name) {
+		t.Fatalf("find output path = %q; want replacement-decoded name", got)
+	}
+}
+
 func TestFindToolGlob(t *testing.T) {
 	requireBinary(t, "fd")
 	dir := t.TempDir()
@@ -229,6 +247,20 @@ func TestGrepToolContextReplacesMalformedUTF8(t *testing.T) {
 	got := result.Content[0].(ai.TextContent).Text
 	if !strings.Contains(got, "invalid.txt-1- \uFFFD") {
 		t.Fatalf("grep context = %q; want replacement rune for invalid byte", got)
+	}
+}
+
+// grep.ts falls back to the UTF-8 context reader when rg supplies `lines.bytes`.
+func TestGrepToolReplacesMalformedUTF8MatchLine(t *testing.T) {
+	requireBinary(t, "rg")
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "invalid.txt"), []byte{0xff, 'n', 'e', 'e', 'd', 'l', 'e', '\n'}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	result := execTool(t, CreateGrepTool(dir), `{"pattern":"needle"}`)
+	got := result.Content[0].(ai.TextContent).Text
+	if !strings.Contains(got, "invalid.txt:1: \uFFFDneedle") {
+		t.Fatalf("grep invalid UTF-8 line = %q; want replacement-decoded match", got)
 	}
 }
 

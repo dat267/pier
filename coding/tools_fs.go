@@ -398,7 +398,7 @@ func CreateLsTool(cwd string) agent.AgentTool {
 			// Sort alphabetically, case-insensitively.
 			names := make([]string, 0, len(entries))
 			for _, entry := range entries {
-				names = append(names, entry.Name())
+				names = append(names, DecodeUTF8WithReplacement([]byte(entry.Name())))
 			}
 			sortCaseInsensitive(names)
 

@@ -140,6 +140,23 @@ func TestReadToolTextAndTruncation(t *testing.T) {
 func itoa(n int) string { b, _ := json.Marshal(n); return string(b) }
 
 // Upstream ls.ts sorts lowercased names with localeCompare.
+// Upstream ls.ts receives filesystem names as UTF-8 strings from readdir.
+func TestLsToolReplacesMalformedUTF8Names(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix permits invalid UTF-8 file names")
+	}
+	dir := t.TempDir()
+	name := string([]byte{0xff, 'x'})
+	if err := os.WriteFile(filepath.Join(dir, name), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	result := execTool(t, CreateLsTool(dir), `{}`)
+	got := result.Content[0].(ai.TextContent).Text
+	if got != "(empty directory)" {
+		t.Fatalf("ls invalid UTF-8 path = %q; want entry skipped after UTF-8 decoding", got)
+	}
+}
+
 func TestLsToolUsesLocaleAlphabeticalOrder(t *testing.T) {
 	dir := t.TempDir()
 	for _, name := range []string{"z", "2", "10", ".a", "-a", "_a", "á", "a", "ä", "a_", "a-", "a."} {
