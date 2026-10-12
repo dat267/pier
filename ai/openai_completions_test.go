@@ -100,6 +100,18 @@ func TestBuildOpenAICompletionsParamsOmitsZeroMaxTokens(t *testing.T) {
 	}
 }
 
+// openai-prompt-cache.ts keeps an omitted sessionId as an omitted cache key.
+func TestBuildOpenAICompletionsParamsOmitsEmptyPromptCacheKey(t *testing.T) {
+	params, err := BuildOpenAICompletionsParams(testOpenAIModel(), NormalizeContext(Context{}),
+		&OpenAICompletionsOptions{}, nil, "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if params.PromptCacheKey != nil {
+		t.Fatalf("prompt cache key = %q; want omitted", *params.PromptCacheKey)
+	}
+}
+
 func TestBuildOpenAICompletionsParamsShape(t *testing.T) {
 	model := testOpenAIModel()
 	tool := Tool{Name: "read_file", Description: "Reads", Parameters: json.RawMessage(`{"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}`)}

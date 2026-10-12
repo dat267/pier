@@ -537,9 +537,6 @@ func BuildOpenAICompletionsParams(model *Model, context TranscriptContext, optio
 		if options.SessionID != "" {
 			clamped := ClampOpenAIPromptCacheKey(options.SessionID)
 			params.PromptCacheKey = &clamped
-		} else {
-			empty := ""
-			params.PromptCacheKey = &empty
 		}
 	}
 	if cacheRetention == CacheRetentionLong && compat.SupportsLongCacheRetention {
