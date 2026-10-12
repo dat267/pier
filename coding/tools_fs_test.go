@@ -114,7 +114,7 @@ func TestReadToolTextAndTruncation(t *testing.T) {
 		t.Fatalf("details = %s", result.Details)
 	}
 
-	// Negative limits inherit JavaScript Array.slice's negative end index.
+	// Upstream read.ts passes numeric limits to Array.slice, including negative and fractional values.
 	os.WriteFile(file, []byte("a\nb\nc"), 0o644)
 	result = execTool(t, tool, `{"path":"sample.txt","limit":-1}`)
 	if got := result.Content[0].(ai.TextContent).Text; got != "a\nb" {
@@ -139,6 +139,7 @@ func TestReadToolTextAndTruncation(t *testing.T) {
 
 func itoa(n int) string { b, _ := json.Marshal(n); return string(b) }
 
+// Upstream ls.ts sorts lowercased names with localeCompare.
 func TestLsToolUsesLocaleAlphabeticalOrder(t *testing.T) {
 	dir := t.TempDir()
 	for _, name := range []string{"z", "2", "10", ".a", "-a", "_a", "á", "a", "ä", "a_", "a-", "a."} {
@@ -215,7 +216,7 @@ func TestLsToolSortingAndLimits(t *testing.T) {
 		t.Fatalf("limit notice missing: %q", text)
 	}
 
-	// Fractional limits follow the numeric comparison in upstream's loop.
+	// Upstream ls.ts compares results.length directly with the numeric limit.
 	result = execTool(t, tool, `{"limit":1.5}`)
 	text = result.Content[0].(ai.TextContent).Text
 	if !strings.HasPrefix(text, ".dot\nAlpha.txt\n") || !strings.Contains(text, "1.5 entries limit reached. Use limit=3 for more") {

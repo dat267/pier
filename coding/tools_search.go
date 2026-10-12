@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"path"
@@ -249,7 +250,7 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 				Glob       string   `json:"glob"`
 				IgnoreCase *bool    `json:"ignoreCase"`
 				Literal    *bool    `json:"literal"`
-				Context    *int     `json:"context"`
+				Context    *float64 `json:"context"`
 				Limit      *float64 `json:"limit"`
 			}
 			if len(params) > 0 {
@@ -269,7 +270,7 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 			}
 			isDirectory := info.IsDir()
 
-			contextValue := 0
+			contextValue := 0.0
 			if input.Context != nil && *input.Context > 0 {
 				contextValue = *input.Context
 			}
@@ -374,26 +375,27 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 					return []string{fmt.Sprintf("%s:%d: (unable to read file)", relativePath, lineNumber)}
 				}
 				var block []string
-				start := lineNumber
-				end := lineNumber
+				start := float64(lineNumber)
+				end := float64(lineNumber)
 				if contextValue > 0 {
-					start = max(1, lineNumber-int64(contextValue))
-					end = min(int64(len(lines)), lineNumber+int64(contextValue))
+					start = math.Max(1, float64(lineNumber)-contextValue)
+					end = math.Min(float64(len(lines)), float64(lineNumber)+contextValue)
 				}
 				for current := start; current <= end; current++ {
 					lineText := ""
-					if current-1 < int64(len(lines)) {
-						lineText = lines[current-1]
+					lineIndex := current - 1
+					if lineIndex >= 0 && lineIndex < float64(len(lines)) && lineIndex == math.Trunc(lineIndex) {
+						lineText = lines[int(lineIndex)]
 					}
 					sanitized := strings.ReplaceAll(lineText, "\r", "")
 					truncated := TruncateLine(sanitized, GrepMaxLineLength)
 					if truncated.WasTruncated {
 						linesTruncated = true
 					}
-					if current == lineNumber {
-						block = append(block, fmt.Sprintf("%s:%d: %s", relativePath, current, truncated.Text))
+					if current == float64(lineNumber) {
+						block = append(block, fmt.Sprintf("%s:%s: %s", relativePath, formatToolNumber(current), truncated.Text))
 					} else {
-						block = append(block, fmt.Sprintf("%s-%d- %s", relativePath, current, truncated.Text))
+						block = append(block, fmt.Sprintf("%s-%s- %s", relativePath, formatToolNumber(current), truncated.Text))
 					}
 				}
 				return block

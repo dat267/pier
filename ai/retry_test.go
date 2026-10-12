@@ -10,6 +10,7 @@ import (
 // through to the exponential backoff instead of returning an unusable delay
 // (Go's ParseFloat accepts "NaN" and "Infinity" without error, and converting
 // those to int64 is not a defined value).
+// provider-retry.ts validates the finite JavaScript number before applying its delay cap.
 func TestRetryDelayRejectsFiniteHeaderBeyondInt64(t *testing.T) {
 	providerErr := &ProviderError{Message: "boom", Headers: http.Header{"Retry-After-Ms": []string{"1e100"}}}
 	maxDelay := 60_000
@@ -18,6 +19,7 @@ func TestRetryDelayRejectsFiniteHeaderBeyondInt64(t *testing.T) {
 	}
 }
 
+// provider-retry.ts uses Number.parseFloat, which accepts a numeric prefix.
 func TestRetryDelayParsesNumericPrefixes(t *testing.T) {
 	for _, testCase := range []struct {
 		header string

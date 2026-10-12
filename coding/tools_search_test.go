@@ -152,6 +152,13 @@ func TestGrepToolMatches(t *testing.T) {
 		t.Fatalf("context grep = %q", text)
 	}
 
+	// Upstream grep.ts carries fractional context through its line-number loop.
+	result = execTool(t, tool, `{"pattern":"beta two","context":0.5}`)
+	text = result.Content[0].(ai.TextContent).Text
+	if text != "a.txt-1.5- \na.txt-2.5- " {
+		t.Fatalf("fractional context grep = %q", text)
+	}
+
 	// Long-line truncation.
 	os.WriteFile(filepath.Join(dir, "long.txt"), []byte(strings.Repeat("x", 600)+"NEEDLE\n"), 0o644)
 	result = execTool(t, tool, `{"pattern":"NEEDLE"}`)
