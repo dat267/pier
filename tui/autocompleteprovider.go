@@ -85,13 +85,8 @@ func findLastDelimiter(text string) int {
 	lastDelimiter := -1
 	runes := []rune(text)
 	byteIndex := 0
-	for index, character := range runes {
-		next := rune(0)
-		hasNext := index+1 < len(runes)
-		if hasNext {
-			next = runes[index+1]
-		}
-		if pathDelimiters[character] || isAutocompleteSeparator(character, next, hasNext) {
+	for _, character := range runes {
+		if pathDelimiters[character] || isAutocompleteSeparator(character) {
 			lastDelimiter = byteIndex
 		}
 		byteIndex += len(string(character))
@@ -147,20 +142,9 @@ func tokenStartMatches(text string) bool {
 		return true
 	}
 	runes := []rune(text)
-	last := runes[len(runes)-1]
-	// A trailing separator (whitespace or CJK punctuation) is a boundary.
-	if isAutocompleteSeparator(last, 0, false) {
-		return true
-	}
-	// A punctuation character followed by a CJK character forms a boundary at
-	// the punctuation: check whether the text ends with punctuation + CJK.
-	if len(runes) >= 2 {
-		previous := runes[len(runes)-2]
-		if isAutocompleteSeparator(previous, last, true) {
-			return true
-		}
-	}
-	return false
+	// Upstream's tokenStartRegex is `(?:^|\s|cjkPunctuation)$`: the text before
+	// the cursor is a token start when it ends with a separator.
+	return isAutocompleteSeparator(runes[len(runes)-1])
 }
 
 func extractQuotedPrefix(text string) (string, bool) {
@@ -220,14 +204,8 @@ func buildCompletionValue(path string, isDirectory bool, isAtPrefix bool, isQuot
 // autocompleteSeparatorCharIn reports whether the path contains a separator
 // character (whitespace or CJK punctuation).
 func autocompleteSeparatorCharIn(text string) bool {
-	runes := []rune(text)
-	for index, character := range runes {
-		next := rune(0)
-		hasNext := index+1 < len(runes)
-		if hasNext {
-			next = runes[index+1]
-		}
-		if isAutocompleteSeparator(character, next, hasNext) {
+	for _, character := range []rune(text) {
+		if isAutocompleteSeparator(character) {
 			return true
 		}
 	}

@@ -206,13 +206,7 @@ func editorTriggerMatch(text string, triggerCharacters []string, includeAtUnquot
 	// end of the text.
 	start := len(runes)
 	for start > 0 {
-		previous := runes[start-1]
-		next := rune(0)
-		hasNext := start < len(runes)
-		if hasNext {
-			next = runes[start]
-		}
-		if isAutocompleteSeparator(previous, next, hasNext) {
+		if isAutocompleteSeparator(runes[start-1]) {
 			break
 		}
 		start--

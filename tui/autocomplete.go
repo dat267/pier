@@ -64,18 +64,38 @@ var editorCJKPunctuation = map[rune]bool{
 }
 
 // isAutocompleteSeparator reports whether the character separates a completion
-// token from the preceding text (upstream's autocompleteSeparatorRegex, which
-// uses a lookahead RE2 cannot express: a punctuation character directly
-// followed by a CJK character).
-func isAutocompleteSeparator(character rune, next rune, hasNext bool) bool {
+// token from the preceding text (upstream's autocompleteSeparatorRegex).
+// Upstream's cjkPunctuationRegex is `(?:(?=\p{Punctuation})cjkBreakRegex|
+// [explicit list])`: the lookahead and cjkBreakRegex both apply to the same
+// character, so a punctuation character that is itself a CJK-script character
+// separates, and the next character is irrelevant.
+func isAutocompleteSeparator(character rune) bool {
 	if isWhitespaceRune(character) {
 		return true
 	}
 	if editorCJKPunctuation[character] {
 		return true
 	}
-	if unicodePunctuation(character) && hasNext && cjkBreakRegex.MatchString(string(next)) {
-		return true
+	return unicodePunctuation(character) && isCJKPunctuation(character)
+}
+
+// cjkPunctuationRanges are the punctuation code points whose Unicode
+// Script_Extensions include a CJK script (Han, Hiragana, Katakana, Hangul or
+// Bopomofo), excluding the explicit list in editorCJKPunctuation. Upstream
+// expresses this as `(?=\p{Punctuation})[\p{Script_Extensions=...}]`, which Go
+// regexp cannot match because it has no Script_Extensions class; the ranges
+// were enumerated from the reference regex.
+var cjkPunctuationRanges = [][2]rune{
+	{0x00B7, 0x00B7}, {0x3001, 0x3003}, {0x3008, 0x301D}, {0x3014, 0x301F},
+	{0x3030, 0x3030}, {0x303D, 0x303D}, {0x30A0, 0x30A0}, {0x30FB, 0x30FB},
+	{0xFE45, 0xFE46}, {0xFF61, 0xFF65}, {0x16FE2, 0x16FE2},
+}
+
+func isCJKPunctuation(character rune) bool {
+	for _, tableRange := range cjkPunctuationRanges {
+		if character >= tableRange[0] && character <= tableRange[1] {
+			return true
+		}
 	}
 	return false
 }
