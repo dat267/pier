@@ -50,7 +50,7 @@ func (a *App) importFromJSONL(_ context.Context, inputPath string, cwdOverride s
 		// manager would have resolved at creation.
 		sessionDir = coding.DefaultSessionDir(a.sessionMgr.GetCwd(), "")
 	}
-	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
+	if err := os.MkdirAll(sessionDir, 0o777); err != nil {
 		return nil, err
 	}
 	destination := filepath.Join(sessionDir, filepath.Base(resolved))
@@ -87,11 +87,19 @@ func copyFileExclusive(src string, dst string) error {
 		return err
 	}
 	defer source.Close()
-	destination, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	sourceInfo, err := source.Stat()
+	if err != nil {
+		return err
+	}
+	destination, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return err
 	}
 	if _, err := io.Copy(destination, source); err != nil {
+		destination.Close()
+		return err
+	}
+	if err := destination.Chmod(sourceInfo.Mode().Perm()); err != nil {
 		destination.Close()
 		return err
 	}
