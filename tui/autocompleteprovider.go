@@ -114,25 +114,43 @@ func findUnclosedQuoteStart(text string) (int, bool) {
 	return -1, false
 }
 
-func isTokenStart(text string, index int) bool {
-	if index <= 0 {
-		return true
-	}
-	runes := []rune(text)
-	// The character before the index.
-	var before rune
-	byteIndex := 0
-	for _, character := range runes {
-		if byteIndex >= index {
+// pathWrappers maps opening wrappers that may precede a path in prose to their
+// closing counterpart (upstream PATH_WRAPPERS).
+var pathWrappers = map[byte]byte{'(': ')', '[': ']', '{': '}', '<': '>', '`': '`'}
+
+// stripLeadingWrappers removes opening wrappers before a path, keeping a
+// wrapper whose closer appears later in the token (upstream
+// stripLeadingWrappers).
+func stripLeadingWrappers(token string) string {
+	result := token
+	for result != "" {
+		closer, ok := pathWrappers[result[0]]
+		if !ok || strings.Contains(result[1:], string(closer)) {
 			break
 		}
-		before = character
-		byteIndex += len(string(character))
+		result = result[1:]
 	}
-	if pathDelimiters[before] {
+	return result
+}
+
+func isTokenStart(text string, index int) bool {
+	// Opening wrappers before the path do not change the token start
+	// (upstream strips PATH_WRAPPERS before checking the boundary).
+	start := index
+	for start > 0 {
+		if _, ok := pathWrappers[text[start-1]]; !ok {
+			break
+		}
+		start--
+	}
+	if start == 0 {
 		return true
 	}
-	return tokenStartMatches(text[:index])
+	beforeRunes := []rune(text[:start])
+	if pathDelimiters[beforeRunes[len(beforeRunes)-1]] {
+		return true
+	}
+	return tokenStartMatches(text[:start])
 }
 
 // tokenStartMatches mirrors the tokenStartRegex (`boundary$`) applied to the
@@ -471,8 +489,9 @@ func (p *CombinedAutocompleteProvider) extractAtPrefix(text string) (string, boo
 	if lastDelimiterIndex != -1 {
 		tokenStart = lastDelimiterIndex + 1
 	}
-	if tokenStart < len(text) && text[tokenStart] == '@' {
-		return text[tokenStart:], true
+	token := stripLeadingWrappers(text[tokenStart:])
+	if strings.HasPrefix(token, "@") {
+		return token, true
 	}
 	return "", false
 }
@@ -486,6 +505,7 @@ func (p *CombinedAutocompleteProvider) extractPathPrefix(text string, forceExtra
 	if lastDelimiterIndex != -1 {
 		pathPrefix = text[lastDelimiterIndex+1:]
 	}
+	pathPrefix = stripLeadingWrappers(pathPrefix)
 	if forceExtract {
 		return pathPrefix, true
 	}
