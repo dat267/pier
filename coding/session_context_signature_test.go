@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"encoding/json"
 	"runtime"
 	"strings"
 	"testing"
@@ -46,7 +47,7 @@ func TestContextSignatureMatchesTheProjectedContext(t *testing.T) {
 		},
 		"custom message": func(m *SessionManager) {
 			m.AppendMessage(createUserMessage("one"))
-			m.AppendCustomMessageEntry("note", "hello", true, nil)
+			m.AppendCustomMessageEntry("note", json.RawMessage(`"hello"`), true, nil)
 			m.AppendMessage(createAssistantMessageT("two"))
 		},
 		"thinking level only": func(m *SessionManager) {

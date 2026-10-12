@@ -259,15 +259,40 @@ func EstimateAgentMessageTokens(message ai.Message) int {
 		chars = JSLength(customMessageText(m, m.Content))
 		return ceilDiv(chars, 4)
 	case *ai.SystemMessage:
-		return ceilDiv(JSLength(GetSystemMessageTextOf(m)), 4)
+		// Upstream sums the content chars, each section's length, and
+		// JSON.stringify(toolsAdded).length; it does not use the rendered prompt
+		// text (which would count the "\n\n" separators and omit toolsAdded).
+		chars := estimateTextAndImageContentChars(m.Content)
+		for _, section := range m.Sections {
+			if section != nil {
+				chars += JSLength(*section)
+			}
+		}
+		if m.ToolsAdded != nil {
+			chars += JSLength(string(mustMarshalJSON(m.ToolsAdded)))
+		}
+		return ceilDiv(chars, 4)
 	default:
 		return 0
 	}
 }
 
-// GetSystemMessageTextOf renders a system message (re-export shape).
-func GetSystemMessageTextOf(m *ai.SystemMessage) string {
-	return ai.GetSystemMessageText(m)
+// estimateTextAndImageContentChars matches upstream's helper: a string content
+// is its length, block content sums text and a fixed image estimate.
+func estimateTextAndImageContentChars(content ai.StringOrBlocks) int {
+	if content.Blocks == nil {
+		return JSLength(content.Text)
+	}
+	chars := 0
+	for _, block := range content.Blocks {
+		switch b := block.(type) {
+		case ai.TextContent:
+			chars += JSLength(b.Text)
+		case ai.ImageContent:
+			chars += estimatedImageChars
+		}
+	}
+	return chars
 }
 
 // CompactionContextUsageEstimate is the estimate outcome.

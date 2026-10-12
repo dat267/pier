@@ -750,13 +750,17 @@ const (
 )
 
 // CreateCustomMessage builds a custom-role AgentMessage.
-func CreateCustomMessage(customType string, content string, display bool, timestamp int64) *ai.CustomMessage {
+func CreateCustomMessage(customType string, content json.RawMessage, display bool, details json.RawMessage, timestamp int64) *ai.CustomMessage {
 	if timestamp == 0 {
 		timestamp = time.Now().UnixMilli()
 	}
-	raw, _ := ai.MarshalJSON(map[string]any{
+	fields := map[string]any{
 		"role": "custom", "customType": customType, "content": content, "display": display, "timestamp": timestamp,
-	})
+	}
+	if len(details) > 0 {
+		fields["details"] = details
+	}
+	raw, _ := ai.MarshalJSON(fields)
 	return &ai.CustomMessage{Role: "custom", Content: raw, Timestamp: timestamp}
 }
 
@@ -793,7 +797,7 @@ func SessionEntryToContextMessages(entry *SessionEntry) []ai.Message {
 		}
 		return []ai.Message{message}
 	case "custom_message":
-		return []ai.Message{CreateCustomMessage(entry.CustomType, string(entry.Content), entry.Display != nil && *entry.Display, entryTimestampMS(entry))}
+		return []ai.Message{CreateCustomMessage(entry.CustomType, entry.Content, entry.Display != nil && *entry.Display, entry.Details, entryTimestampMS(entry))}
 	case "branch_summary":
 		if entry.Summary != "" {
 			return []ai.Message{CreateBranchSummaryMessage(entry.Summary, entry.FromID, entryTimestampMS(entry))}

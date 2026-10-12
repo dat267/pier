@@ -158,7 +158,7 @@ func TestExportHiddenMessageToggle(t *testing.T) {
 	dir := t.TempDir()
 	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: boolPtr(true)})
 	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hi"}})
-	manager.AppendCustomMessageEntry("preset-state", "hidden payload", false, nil)
+	manager.AppendCustomMessageEntry("preset-state", json.RawMessage(`"hidden payload"`), false, nil)
 
 	agentSession, err := coding.NewAgentSession(&coding.SessionConfig{
 		Cwd:   dir,

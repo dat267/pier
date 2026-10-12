@@ -498,7 +498,7 @@ func (s *AgentSession) handleAgentEvent(event *agent.AgentEvent) {
 			if msg.Role == RoleCustom {
 				var fields customMessageFields
 				_ = json.Unmarshal(msg.Content, &fields)
-				s.Sessions.AppendCustomMessageEntry(fields.CustomType, string(fields.Content), fields.Display, fields.Details)
+				s.Sessions.AppendCustomMessageEntry(fields.CustomType, fields.Content, fields.Display, fields.Details)
 			}
 			// bashExecution/compactionSummary/branchSummary persist elsewhere.
 		}

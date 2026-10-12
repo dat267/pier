@@ -3,6 +3,7 @@ package coding
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -401,7 +402,12 @@ func (s *AgentSession) SendMessage(ctx context.Context, message *ai.CustomMessag
 func (s *AgentSession) AppendCustomMessage(message *ai.CustomMessage) {
 	messages := append(s.Agent.State().Messages, ai.Message(message))
 	s.Agent.SetMessages(messages)
-	s.Sessions.AppendCustomMessageEntry(message.Role, string(message.Content), false, nil)
+	var fields customMessageFields
+	if err := json.Unmarshal(message.Content, &fields); err == nil && fields.CustomType != "" {
+		s.Sessions.AppendCustomMessageEntry(fields.CustomType, fields.Content, fields.Display, fields.Details)
+		return
+	}
+	s.Sessions.AppendCustomMessageEntry(message.Role, message.Content, false, nil)
 }
 
 // FlushPendingCustomMessages appends custom messages queued during a run.

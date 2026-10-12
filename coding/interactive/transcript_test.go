@@ -121,11 +121,11 @@ func TestTranscriptSpecialMessages(t *testing.T) {
 
 	// Custom messages only render when display is true.
 	before := len(renderer.Chat.Children)
-	renderer.AddMessageToChat(coding.CreateCustomMessage("note", "hidden", false, 4), false)
+	renderer.AddMessageToChat(coding.CreateCustomMessage("note", json.RawMessage(`"hidden"`), false, nil, 4), false)
 	if len(renderer.Chat.Children) != before {
 		t.Fatal("hidden custom message rendered")
 	}
-	renderer.AddMessageToChat(coding.CreateCustomMessage("note", "shown", true, 5), false)
+	renderer.AddMessageToChat(coding.CreateCustomMessage("note", json.RawMessage(`"shown"`), true, nil, 5), false)
 	if len(renderer.Chat.Children) != before+1 {
 		t.Fatalf("custom children = %d", len(renderer.Chat.Children))
 	}

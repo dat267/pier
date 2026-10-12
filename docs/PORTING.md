@@ -68,6 +68,14 @@ without a notice, `bash` without truncation) omit it instead of writing `{}`.
 That also stops a non-truncated `read` from duplicating the file text in
 `details.truncation.content`.
 
+Custom-message persistence stores the entry's `content` and `details` as their
+actual JSON values, like upstream `appendCustomMessageEntry`; the port marshalled
+raw JSON text as a string, and the projection (`CreateCustomMessage`) added
+another escaping layer, so content compounded quotes on every save/load.
+`CreateCustomMessage` now carries `details` too. The system-message token
+estimate sums the content chars, each section, and `toolsAdded` like upstream
+`estimateTokens`, instead of the rendered prompt text.
+
 The v1.1.0 coding-agent `--tools` modifier lists (`+name`/`-name`) are ported:
 they modify the configured default selection, survive settings reloads, and reject
 mixed allowlist entries and patterns (`ddaa0a034`, `cli/args.ts`, `core/sdk.ts`).

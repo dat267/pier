@@ -610,12 +610,12 @@ func (m *SessionManager) GetSessionName() string {
 }
 
 // AppendCustomMessageEntry appends an LLM-context custom message entry.
-func (m *SessionManager) AppendCustomMessageEntry(customType string, content string, display bool, details json.RawMessage) string {
+func (m *SessionManager) AppendCustomMessageEntry(customType string, content json.RawMessage, display bool, details json.RawMessage) string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	entry := m.nextEntry("custom_message")
 	entry.CustomType = customType
-	entry.Content = mustMarshalJSON(content)
+	entry.Content = content
 	entry.Display = &display
 	entry.Details = details
 	return m.appendEntry(&entry)
