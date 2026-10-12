@@ -1042,10 +1042,11 @@ func FindMostRecentSession(sessionDir string, cwd string) *string {
 	}
 	var files []candidate
 	for _, dirEntry := range entries {
-		if !strings.HasSuffix(dirEntry.Name(), ".jsonl") {
+		name := DecodeUTF8WithReplacement([]byte(dirEntry.Name()))
+		if !strings.HasSuffix(name, ".jsonl") {
 			continue
 		}
-		full := filepath.Join(sessionDir, dirEntry.Name())
+		full := filepath.Join(sessionDir, name)
 		header := readSessionHeaderForDiscovery(full)
 		if header == nil {
 			continue

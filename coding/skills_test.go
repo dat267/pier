@@ -3,6 +3,7 @@ package coding
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -52,6 +53,25 @@ func TestLoadSkillReplacesMalformedUTF8(t *testing.T) {
 			got = skill.Description
 		}
 		t.Fatalf("skill description = %q; want replacement-decoded text", got)
+	}
+}
+
+// skills.ts receives UTF-8-decoded directory entry names from readdir.
+func TestLoadSkillsSkipsInvalidUTF8DirectoryNames(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows does not allow invalid UTF-8 file names")
+	}
+	root := t.TempDir()
+	invalidDir := filepath.Join(root, string([]byte{0xff})+"skill")
+	if err := os.MkdirAll(invalidDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(invalidDir, "SKILL.md"), []byte("---\nname: bad\ndescription: skill\n---\nbody"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	result := LoadSkillsFromDir(root)
+	if len(result.Skills) != 0 {
+		t.Fatalf("skills from invalid UTF-8 path = %+v; want skipped", result.Skills)
 	}
 }
 

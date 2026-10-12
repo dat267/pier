@@ -224,10 +224,11 @@ func loadSkillsFromDir(dir string, source string) LoadSkillsResult {
 
 	// A root SKILL.md short-circuits (one skill per directory root).
 	for _, entry := range entries {
-		if entry.Name() != "SKILL.md" {
+		name := DecodeUTF8WithReplacement([]byte(entry.Name()))
+		if name != "SKILL.md" {
 			continue
 		}
-		fullPath := filepath.Join(dir, entry.Name())
+		fullPath := filepath.Join(dir, name)
 		if entry.IsDir() {
 			continue
 		}
@@ -240,17 +241,18 @@ func loadSkillsFromDir(dir string, source string) LoadSkillsResult {
 	}
 
 	for _, entry := range entries {
-		if strings.HasPrefix(entry.Name(), ".") || entry.Name() == "node_modules" {
+		name := DecodeUTF8WithReplacement([]byte(entry.Name()))
+		if strings.HasPrefix(name, ".") || name == "node_modules" {
 			continue
 		}
-		fullPath := filepath.Join(dir, entry.Name())
+		fullPath := filepath.Join(dir, name)
 		if entry.IsDir() {
 			sub := loadSkillsFromDir(fullPath, source)
 			skills = append(skills, sub.Skills...)
 			diagnostics = append(diagnostics, sub.Diagnostics...)
 			continue
 		}
-		if !strings.HasSuffix(entry.Name(), ".md") {
+		if !strings.HasSuffix(name, ".md") {
 			continue
 		}
 		skill, diag := loadSkillFromFile(fullPath, source)

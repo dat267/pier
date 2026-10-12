@@ -984,10 +984,11 @@ func ListSessions(cwd string, sessionDir string) []SessionInfo {
 		return sessions
 	}
 	for _, dirEntry := range dirEntries {
-		if !strings.HasSuffix(dirEntry.Name(), ".jsonl") {
+		name := DecodeUTF8WithReplacement([]byte(dirEntry.Name()))
+		if !strings.HasSuffix(name, ".jsonl") {
 			continue
 		}
-		full := filepath.Join(dir, dirEntry.Name())
+		full := filepath.Join(dir, name)
 		if info := buildSessionInfo(full); info != nil {
 			if filterCwd && ResolvePath(info.Cwd, "", PathInputOptions{}) != resolvedCwd {
 				continue
@@ -1244,7 +1245,8 @@ func ListAllSessions(sessionDir string) []SessionInfo {
 		if !entry.IsDir() && entry.Type()&fs.ModeSymlink == 0 {
 			continue
 		}
-		sessions = append(sessions, listSessionsFromDir(filepath.Join(sessionsDir, entry.Name()))...)
+		name := DecodeUTF8WithReplacement([]byte(entry.Name()))
+		sessions = append(sessions, listSessionsFromDir(filepath.Join(sessionsDir, name))...)
 	}
 	sort.Slice(sessions, func(i, j int) bool {
 		return sessions[i].Modified.After(sessions[j].Modified)
@@ -1261,10 +1263,11 @@ func listSessionsFromDir(dir string) []SessionInfo {
 		return sessions
 	}
 	for _, dirEntry := range dirEntries {
-		if !strings.HasSuffix(dirEntry.Name(), ".jsonl") {
+		name := DecodeUTF8WithReplacement([]byte(dirEntry.Name()))
+		if !strings.HasSuffix(name, ".jsonl") {
 			continue
 		}
-		full := filepath.Join(dir, dirEntry.Name())
+		full := filepath.Join(dir, name)
 		if info := buildSessionInfo(full); info != nil {
 			sessions = append(sessions, *info)
 		}

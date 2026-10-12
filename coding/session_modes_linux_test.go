@@ -31,6 +31,45 @@ func TestSessionManagerPersistsFilesWithNodeDefaultMode(t *testing.T) {
 	}
 }
 
+// session-manager.ts receives UTF-8-decoded directory entry names from readdir.
+func TestListSessionsSkipsInvalidUTF8Filename(t *testing.T) {
+	dir := t.TempDir()
+	manager := NewSessionManager(dir, &SessionManagerOptions{SessionDir: filepath.Join(dir, "sessions")})
+	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "persist"}})
+	if err := manager.FlushWrites(); err != nil {
+		t.Fatal(err)
+	}
+	invalidPath := filepath.Join(manager.SessionDir(), string([]byte{0xff})+".jsonl")
+	if err := os.Rename(manager.GetSessionFile(), invalidPath); err != nil {
+		t.Fatal(err)
+	}
+	if got := ListSessions(manager.GetCwd(), manager.SessionDir()); len(got) != 0 {
+		t.Fatalf("invalid UTF-8 session names = %+v; want no readable entries", got)
+	}
+}
+
+// session-manager.ts listAll receives UTF-8-decoded names from readdir.
+func TestListAllSessionsSkipsInvalidUTF8DirectoryNames(t *testing.T) {
+	agentDir := t.TempDir()
+	t.Setenv("PI_CODING_AGENT_DIR", agentDir)
+	sessionsDir := filepath.Join(agentDir, "sessions")
+	invalidDir := filepath.Join(sessionsDir, string([]byte{0xff})+"project")
+	if err := os.MkdirAll(invalidDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	header := SessionHeader{ID: "session", Timestamp: "2026-01-01T00:00:00.000Z", Cwd: "/project"}
+	line, err := MarshalFileEntry(FileEntry{Header: &header})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(invalidDir, "session.jsonl"), []byte(line), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := ListAllSessions(""); len(got) != 0 {
+		t.Fatalf("sessions in invalid UTF-8 path = %+v; want none", got)
+	}
+}
+
 func TestSessionFileUsesNodeDefaultMode(t *testing.T) {
 	oldMask := syscall.Umask(0)
 	defer syscall.Umask(oldMask)

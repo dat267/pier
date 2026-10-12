@@ -53,7 +53,7 @@ func findExecutableOnPath(executable string) string {
 		if err != nil {
 			return ""
 		}
-		for _, line := range strings.Split(strings.ReplaceAll(string(output), "\r\n", "\n"), "\n") {
+		for _, line := range strings.Split(strings.ReplaceAll(DecodeUTF8WithReplacement(output), "\r\n", "\n"), "\n") {
 			trimmed := strings.TrimSpace(line)
 			if trimmed == "" {
 				continue
@@ -68,7 +68,7 @@ func findExecutableOnPath(executable string) string {
 	if err != nil {
 		return ""
 	}
-	trimmed := strings.TrimSpace(string(output))
+	trimmed := strings.TrimSpace(DecodeUTF8WithReplacement(output))
 	if trimmed == "" {
 		return ""
 	}

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -316,6 +317,23 @@ func TestLoadTemplateReplacesMalformedUTF8(t *testing.T) {
 	}
 	if template.Content != "\uFFFDx" {
 		t.Fatalf("template content = %q; want replacement-decoded body", template.Content)
+	}
+}
+
+// prompt-templates.ts receives UTF-8-decoded directory entry names from readdir.
+func TestLoadTemplatesSkipsInvalidUTF8FileNames(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows does not allow invalid UTF-8 file names")
+	}
+	dir := t.TempDir()
+	name := string([]byte{0xff}) + ".md"
+	if err := os.WriteFile(filepath.Join(dir, name), []byte("template"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := LoadTemplatesFromDir(dir, func(path string) SourceInfo {
+		return CreateSyntheticSourceInfo(path, "local", "", "", dir)
+	}); len(got) != 0 {
+		t.Fatalf("templates from invalid UTF-8 path = %+v; want skipped", got)
 	}
 }
 

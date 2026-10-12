@@ -15,6 +15,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
 )
 
@@ -798,8 +799,9 @@ func customThemeInfos() []ThemeInfo {
 			return
 		}
 		for _, entry := range entries {
-			if strings.HasSuffix(entry.Name(), ".json") {
-				add(filepath.Join(dir, entry.Name()))
+			name := coding.DecodeUTF8WithReplacement([]byte(entry.Name()))
+			if strings.HasSuffix(name, ".json") {
+				add(filepath.Join(dir, name))
 			}
 		}
 	}

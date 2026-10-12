@@ -232,7 +232,8 @@ func LoadTemplatesFromDir(dir string, getSourceInfo func(filePath string) Source
 		return templates
 	}
 	for _, entry := range entries {
-		fullPath := filepath.Join(dir, entry.Name())
+		name := DecodeUTF8WithReplacement([]byte(entry.Name()))
+		fullPath := filepath.Join(dir, name)
 		isFile := entry.Type().IsRegular()
 		if entry.Type()&os.ModeSymlink != 0 {
 			info, err := os.Stat(fullPath)
@@ -241,7 +242,7 @@ func LoadTemplatesFromDir(dir string, getSourceInfo func(filePath string) Source
 			}
 			isFile = info.Mode().IsRegular()
 		}
-		if !isFile || !strings.HasSuffix(entry.Name(), ".md") {
+		if !isFile || !strings.HasSuffix(name, ".md") {
 			continue
 		}
 		if template := LoadTemplateFromFile(fullPath, getSourceInfo(fullPath)); template != nil {
