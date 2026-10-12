@@ -714,8 +714,6 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 			var resultDetails json.RawMessage
 			if details != nil {
 				resultDetails, _ = ai.MarshalJSON(*details)
-			} else {
-				resultDetails = json.RawMessage(`{}`)
 			}
 			return agent.AgentToolResult{
 				Content: []ai.Content{ai.TextContent{Text: outputText}},

@@ -61,6 +61,13 @@ line count match; `GenerateDiffString` sizes its line-number column from the
 same raw split; and the `edit` prepareArguments shim accepts an empty `oldText`
 in the stringified single-edit form, like `isSingleEditInput`.
 
+Tool-result `details` also match upstream: `TruncationResult` serializes camelCase
+with `truncatedBy: null` when no limit fired, and the tools upstream leaves
+`details` undefined for (`read` when not truncated, `write`, `ls`/`find`/`grep`
+without a notice, `bash` without truncation) omit it instead of writing `{}`.
+That also stops a non-truncated `read` from duplicating the file text in
+`details.truncation.content`.
+
 The v1.1.0 coding-agent `--tools` modifier lists (`+name`/`-name`) are ported:
 they modify the configured default selection, survive settings reloads, and reject
 mixed allowlist entries and patterns (`ddaa0a034`, `cli/args.ts`, `core/sdk.ts`).

@@ -148,7 +148,6 @@ func CreateFindTool(cwd string) agent.AgentTool {
 			if output == "" {
 				return agent.AgentToolResult{
 					Content: []ai.Content{ai.TextContent{Text: "No files found matching pattern"}},
-					Details: json.RawMessage(`{}`),
 				}, nil
 			}
 
@@ -178,7 +177,10 @@ func CreateFindTool(cwd string) agent.AgentTool {
 			if len(notices) > 0 {
 				resultOutput += "\n\n[" + strings.Join(notices, ". ") + "]"
 			}
-			detailsJSON, _ := ai.MarshalJSON(details)
+			var detailsJSON json.RawMessage
+			if len(notices) > 0 {
+				detailsJSON, _ = ai.MarshalJSON(details)
+			}
 			return agent.AgentToolResult{
 				Content: []ai.Content{ai.TextContent{Text: resultOutput}},
 				Details: detailsJSON,
@@ -341,7 +343,6 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 			if matchCount == 0 {
 				return agent.AgentToolResult{
 					Content: []ai.Content{ai.TextContent{Text: "No matches found"}},
-					Details: json.RawMessage(`{}`),
 				}, nil
 			}
 
@@ -433,7 +434,10 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 			if len(notices) > 0 {
 				output += "\n\n[" + strings.Join(notices, ". ") + "]"
 			}
-			detailsJSON, _ := ai.MarshalJSON(details)
+			var detailsJSON json.RawMessage
+			if len(notices) > 0 {
+				detailsJSON, _ = ai.MarshalJSON(details)
+			}
 			return agent.AgentToolResult{
 				Content: []ai.Content{ai.TextContent{Text: output}},
 				Details: detailsJSON,

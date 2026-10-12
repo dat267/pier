@@ -7,6 +7,7 @@
 package coding
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"strings"
@@ -64,6 +65,27 @@ type TruncationResult struct {
 	// MaxLines/MaxBytes are the applied limits.
 	MaxLines int
 	MaxBytes int
+}
+
+// MarshalJSON encodes the upstream truncate.ts shape: camelCase keys and
+// `truncatedBy: null` when no limit fired.
+func (r TruncationResult) MarshalJSON() ([]byte, error) {
+	content, err := ai.MarshalJSON(r.Content)
+	if err != nil {
+		return nil, err
+	}
+	truncatedBy := []byte("null")
+	if r.TruncatedBy != "" {
+		truncatedBy, err = ai.MarshalJSON(r.TruncatedBy)
+		if err != nil {
+			return nil, err
+		}
+	}
+	var buf bytes.Buffer
+	fmt.Fprintf(&buf, `{"content":%s,"truncated":%t,"truncatedBy":%s,"totalLines":%d,"totalBytes":%d,"outputLines":%d,"outputBytes":%d,"lastLinePartial":%t,"firstLineExceedsLimit":%t,"maxLines":%d,"maxBytes":%d}`,
+		content, r.Truncated, truncatedBy, r.TotalLines, r.TotalBytes, r.OutputLines, r.OutputBytes,
+		r.LastLinePartial, r.FirstLineExceedsLimit, r.MaxLines, r.MaxBytes)
+	return buf.Bytes(), nil
 }
 
 // TruncationOptions carry the limits (zero → defaults).

@@ -142,7 +142,10 @@ func CreateReadTool(cwd string, options *ReadToolOptions) agent.AgentTool {
 			} else {
 				outputText = truncation.Content
 			}
-			details, _ := ai.MarshalJSON(ReadToolDetails{Truncation: &truncation})
+			var details json.RawMessage
+			if truncation.Truncated || truncation.FirstLineExceedsLimit {
+				details, _ = ai.MarshalJSON(ReadToolDetails{Truncation: &truncation})
+			}
 			return agent.AgentToolResult{
 				Content: []ai.Content{ai.TextContent{Text: outputText}},
 				Details: details,
@@ -221,7 +224,6 @@ func readImageFile(absolutePath, mimeType, originalPath string, autoResize bool,
 		}
 		return agent.AgentToolResult{
 			Content: []ai.Content{ai.TextContent{Text: text}},
-			Details: json.RawMessage(`{}`),
 		}, nil
 	}
 	text := fmt.Sprintf("Read image file [%s]", processed.MimeType)
@@ -236,7 +238,6 @@ func readImageFile(absolutePath, mimeType, originalPath string, autoResize bool,
 			ai.TextContent{Text: text},
 			ai.ImageContent{Data: processed.Data, MimeType: processed.MimeType},
 		},
-		Details: json.RawMessage(`{}`),
 	}, nil
 }
 
@@ -320,7 +321,6 @@ func CreateWriteTool(cwd string) agent.AgentTool {
 			}
 			return agent.AgentToolResult{
 				Content: []ai.Content{ai.TextContent{Text: "Successfully wrote to " + input.Path}},
-				Details: json.RawMessage(`{}`),
 			}, nil
 		},
 	}
@@ -414,7 +414,6 @@ func CreateLsTool(cwd string) agent.AgentTool {
 			if len(results) == 0 {
 				return agent.AgentToolResult{
 					Content: []ai.Content{ai.TextContent{Text: "(empty directory)"}},
-					Details: json.RawMessage(`{}`),
 				}, nil
 			}
 
@@ -434,7 +433,10 @@ func CreateLsTool(cwd string) agent.AgentTool {
 			if len(notices) > 0 {
 				output += "\n\n[" + strings.Join(notices, ". ") + "]"
 			}
-			detailsJSON, _ := ai.MarshalJSON(details)
+			var detailsJSON json.RawMessage
+			if len(notices) > 0 {
+				detailsJSON, _ = ai.MarshalJSON(details)
+			}
 			return agent.AgentToolResult{
 				Content: []ai.Content{ai.TextContent{Text: output}},
 				Details: detailsJSON,
