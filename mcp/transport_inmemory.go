@@ -2,7 +2,6 @@ package mcp
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/dat267/pier/mcp/protocol"
 )
@@ -108,7 +107,7 @@ func (t *InMemoryTransport) deliver(message Message) {
 // cloneMessage round-trips a message through JSON: every MCP message is a
 // JSON value, and this reproduces structuredClone's isolation.
 func cloneMessage(message Message) (Message, error) {
-	data, err := json.Marshal(message)
+	data, err := protocol.MarshalJSON(message)
 	if err != nil {
 		return nil, err
 	}

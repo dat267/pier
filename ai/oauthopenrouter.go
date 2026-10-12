@@ -98,7 +98,7 @@ func ExchangeOpenRouterAuthorizationCode(ctx context.Context, code, verifier str
 		defer stop()
 	}
 
-	body, err := json.Marshal(map[string]string{
+	body, err := MarshalJSON(map[string]string{
 		"code":                  code,
 		"code_verifier":         verifier,
 		"code_challenge_method": "S256",

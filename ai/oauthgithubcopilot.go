@@ -684,7 +684,7 @@ func copilotEnterpriseDomain(credential *OAuthCredential) string {
 }
 
 func jsonRawString(value string) json.RawMessage {
-	encoded, err := json.Marshal(value)
+	encoded, err := MarshalJSON(value)
 	if err != nil {
 		return json.RawMessage(`""`)
 	}
@@ -692,7 +692,7 @@ func jsonRawString(value string) json.RawMessage {
 }
 
 func jsonRawStringSlice(values []string) json.RawMessage {
-	encoded, err := json.Marshal(values)
+	encoded, err := MarshalJSON(values)
 	if err != nil {
 		return json.RawMessage(`[]`)
 	}

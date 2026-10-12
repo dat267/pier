@@ -130,7 +130,7 @@ func metaStartDeviceAuthorization(ctx context.Context) (*metaDeviceAuthorization
 		verificationURI = metaTrustedHTTPURL(body["verification_uri"])
 	}
 	if deviceCode == "" || userCode == "" || verificationURI == "" {
-		encoded, _ := json.Marshal(body)
+		encoded, _ := MarshalJSON(body)
 		return nil, fmt.Errorf("Invalid Meta device authorization response: %s", encoded)
 	}
 	device := &metaDeviceAuthorization{DeviceCode: deviceCode, UserCode: userCode, VerificationURI: verificationURI}

@@ -88,7 +88,7 @@ func (r ResourceContents) MarshalJSON() ([]byte, error) {
 		blob := r.Blob
 		a.Blob = &blob
 	}
-	return json.Marshal(a)
+	return MarshalJSON(a)
 }
 
 // Content block type discriminators.

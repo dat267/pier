@@ -262,7 +262,7 @@ func (c *Client) notifyInternal(ctx context.Context, method string, params any, 
 	}
 	message := protocol.JsonRpcNotification{JSONRPC: protocol.JSONRPCVersion, Method: method}
 	if params != nil {
-		enc, err := json.Marshal(params)
+		enc, err := protocol.MarshalJSON(params)
 		if err != nil {
 			return err
 		}
@@ -500,7 +500,7 @@ func (c *Client) request(ctx context.Context, method string, params any, options
 	if entry.progressToken != nil {
 		message.Params = withProgressToken(params, id)
 	} else if params != nil {
-		enc, marshalErr := json.Marshal(params)
+		enc, marshalErr := protocol.MarshalJSON(params)
 		if marshalErr != nil {
 			c.cancelPending(id, marshalErr, false, "")
 			return nil, marshalErr
@@ -537,13 +537,13 @@ func withProgressToken(params any, token int64) json.RawMessage {
 		}
 	} else if params != nil {
 		var decoded map[string]any
-		if enc, err := json.Marshal(params); err == nil && json.Unmarshal(enc, &decoded) == nil && decoded != nil {
+		if enc, err := protocol.MarshalJSON(params); err == nil && json.Unmarshal(enc, &decoded) == nil && decoded != nil {
 			merged = decoded
 		}
 	}
 	meta := map[string]any{"progressToken": token}
 	if merged == nil {
-		enc, _ := json.Marshal(map[string]any{"_meta": meta})
+		enc, _ := protocol.MarshalJSON(map[string]any{"_meta": meta})
 		return enc
 	}
 	if existing, ok := merged["_meta"].(map[string]any); ok && existing != nil {
@@ -552,7 +552,7 @@ func withProgressToken(params any, token int64) json.RawMessage {
 		}
 	}
 	merged["_meta"] = meta
-	enc, _ := json.Marshal(merged)
+	enc, _ := protocol.MarshalJSON(merged)
 	return enc
 }
 
@@ -636,7 +636,7 @@ func (c *Client) handleRequest(message *protocol.JsonRpcRequest) {
 		if result == nil {
 			result = map[string]any{}
 		}
-		enc, marshalErr := json.Marshal(result)
+		enc, marshalErr := protocol.MarshalJSON(result)
 		if marshalErr == nil {
 			err = transport.Send(context.Background(), protocol.JsonRpcResponse{
 				JSONRPC: protocol.JSONRPCVersion, ID: message.ID, Result: enc,
@@ -826,7 +826,7 @@ func (c *Client) cancelPending(id int64, err error, notifyServer bool, reason st
 			if reason != "" {
 				params["reason"] = reason
 			}
-			enc, _ := json.Marshal(params)
+			enc, _ := protocol.MarshalJSON(params)
 			notification := protocol.JsonRpcNotification{
 				JSONRPC: protocol.JSONRPCVersion,
 				Method:  "notifications/cancelled",
@@ -915,7 +915,7 @@ func (c *Client) emitError(err error) {
 func decodeItems[T any](items []map[string]any) ([]T, error) {
 	out := make([]T, 0, len(items))
 	for _, item := range items {
-		enc, err := json.Marshal(item)
+		enc, err := protocol.MarshalJSON(item)
 		if err != nil {
 			return nil, err
 		}

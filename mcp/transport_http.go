@@ -307,7 +307,7 @@ func (t *StreamableHttpTransport) Send(ctx context.Context, message Message) err
 	if !started || closed {
 		return &protocol.McpConnectionClosedError{}
 	}
-	body, err := json.Marshal(message)
+	body, err := protocol.MarshalJSON(message)
 	if err != nil {
 		return err
 	}

@@ -788,3 +788,40 @@ func TestStreamableHTTPCloseReusesTheLastToken(t *testing.T) {
 		t.Fatalf("DELETE authorization = %q, want the token of the last request", got)
 	}
 }
+
+// MCP sends messages with JSON.stringify, which does not HTML-escape <, > and &.
+func TestStreamableHTTPDoesNotHTMLEscapePayloads(t *testing.T) {
+	var fixture *httpFixture
+	fixture = newHTTPFixture(func(w http.ResponseWriter, r *http.Request) { fixture.protocolHandler(w, r, nil) })
+	defer fixture.close(t)
+	transport := NewStreamableHttpTransport(StreamableHttpTransportOptions{URL: fixture.url})
+	client := NewClient(ClientOptions{Name: "http-test", Version: "1.0.0"})
+	if _, err := client.Connect(context.Background(), transport); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := client.CallTool(context.Background(), "echo", map[string]any{"text": "a < b & c > d"}, RequestOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	fixture.mu.Lock()
+	var body string
+	for _, request := range fixture.requests {
+		var message struct {
+			Method string `json:"method"`
+		}
+		_ = json.Unmarshal(request.message, &message)
+		if message.Method == "tools/call" {
+			body = string(request.message)
+		}
+	}
+	fixture.mu.Unlock()
+	if body == "" {
+		t.Fatal("no tools/call request recorded")
+	}
+	if strings.Contains(body, `\u003c`) || strings.Contains(body, `\u0026`) || strings.Contains(body, `\u003e`) {
+		t.Fatalf("payload HTML-escaped: %s", body)
+	}
+	if !strings.Contains(body, "a < b & c > d") {
+		t.Fatalf("payload = %s", body)
+	}
+	_ = client.Close(context.Background())
+}

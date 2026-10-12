@@ -418,7 +418,7 @@ func StartKimiDeviceAuthorization(ctx context.Context, oauthHost string) (*KimiD
 	trustedVerification, verificationOK := trustedHTTPURL(verificationURI)
 	if deviceCode == "" || userCode == "" || verificationURI == "" || completeRaw == "" ||
 		!completeOK || !verificationOK {
-		encoded, _ := json.Marshal(body)
+		encoded, _ := MarshalJSON(body)
 		return nil, fmt.Errorf("Invalid Kimi Code device authorization response: %s", encoded)
 	}
 	intervalSeconds := KimiCodingDefaultPollInterval
@@ -447,7 +447,7 @@ func parseKimiTokenResponse(body map[string]any, operation string) (*kimiTokenRe
 	refresh, _ := body["refresh_token"].(string)
 	expiresIn, hasExpires := body["expires_in"].(float64)
 	if access == "" || refresh == "" || !hasExpires || expiresIn <= 0 {
-		encoded, _ := json.Marshal(body)
+		encoded, _ := MarshalJSON(body)
 		return nil, fmt.Errorf("Kimi Code token %s response missing fields: %s", operation, encoded)
 	}
 	return &kimiTokenResponse{
@@ -569,7 +569,7 @@ func RefreshKimiToken(ctx context.Context, oauthHost, refreshToken string) (*kim
 			lastErr = fmt.Errorf("Kimi Code token refresh failed with status %d", response.Status)
 			continue
 		}
-		encoded, _ := json.Marshal(response.Body)
+		encoded, _ := MarshalJSON(response.Body)
 		return nil, fmt.Errorf("Kimi Code token refresh failed with status %d: %s", response.Status, encoded)
 	}
 	if lastErr != nil {

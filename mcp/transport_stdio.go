@@ -3,7 +3,6 @@ package mcp
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -290,7 +289,7 @@ func (t *StdioTransport) Send(ctx context.Context, message Message) error {
 	if !started || closed || stdin == nil {
 		return &protocol.McpConnectionClosedError{}
 	}
-	payload, err := json.Marshal(message)
+	payload, err := protocol.MarshalJSON(message)
 	if err != nil {
 		return err
 	}

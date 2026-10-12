@@ -119,7 +119,7 @@ func ReadOpenAICodexTokenResponse(response *http.Response, operation string) (*O
 		payload.RefreshToken == "" || payload.ExpiresIn == nil {
 		var generic any
 		_ = json.Unmarshal(raw, &generic)
-		encoded, _ := json.Marshal(generic)
+		encoded, _ := MarshalJSON(generic)
 		return nil, fmt.Errorf("OpenAI Codex token %s response missing fields: %s", operation, encoded)
 	}
 	return &OpenAICodexTokenResponse{
@@ -221,7 +221,7 @@ func StartOpenAICodexDeviceAuth(ctx context.Context) (*OpenAICodexDeviceAuthInfo
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		var generic any
 		_ = json.Unmarshal(raw, &generic)
-		encoded, _ := json.Marshal(generic)
+		encoded, _ := MarshalJSON(generic)
 		return nil, fmt.Errorf("Invalid OpenAI Codex device code response: %s", encoded)
 	}
 	deviceAuthID, _ := payload["device_auth_id"].(string)
@@ -238,7 +238,7 @@ func StartOpenAICodexDeviceAuth(ctx context.Context) (*OpenAICodexDeviceAuthInfo
 		}
 	}
 	if deviceAuthID == "" || userCode == "" || !hasInterval || intervalSeconds < 0 {
-		encoded, _ := json.Marshal(payload)
+		encoded, _ := MarshalJSON(payload)
 		return nil, fmt.Errorf("Invalid OpenAI Codex device code response: %s", encoded)
 	}
 	return &OpenAICodexDeviceAuthInfo{
@@ -261,7 +261,7 @@ func PollOpenAICodexDeviceAuth(ctx context.Context, device *OpenAICodexDeviceAut
 		ExpiresInSeconds: &expiresIn,
 		Ctx:              ctx,
 		Poll: func() (OAuthDeviceCodePollResult[*OpenAICodexDeviceTokenSuccess], error) {
-			requestBody, _ := json.Marshal(map[string]string{
+			requestBody, _ := MarshalJSON(map[string]string{
 				"device_auth_id": device.DeviceAuthID,
 				"user_code":      device.UserCode,
 			})
@@ -290,7 +290,7 @@ func PollOpenAICodexDeviceAuth(ctx context.Context, device *OpenAICodexDeviceAut
 				if err := json.Unmarshal(raw, &payload); err != nil || payload.AuthorizationCode == "" || payload.CodeVerifier == "" {
 					var generic any
 					_ = json.Unmarshal(raw, &generic)
-					encoded, _ := json.Marshal(generic)
+					encoded, _ := MarshalJSON(generic)
 					return OAuthDeviceCodePollResult[*OpenAICodexDeviceTokenSuccess]{
 						Status:  "failed",
 						Message: fmt.Sprintf("Invalid OpenAI Codex device auth token response: %s", encoded),

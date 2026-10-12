@@ -221,7 +221,7 @@ func (s *OAuthCallbackServer) Close() {
 // postOAuthJSON posts a JSON body and returns the response text (upstream
 // postJson).
 func postOAuthJSON(ctx context.Context, requestURL string, body map[string]any) (string, error) {
-	encoded, err := json.Marshal(body)
+	encoded, err := MarshalJSON(body)
 	if err != nil {
 		return "", err
 	}
