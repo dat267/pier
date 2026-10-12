@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
-	"strconv"
 	"strings"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
 )
@@ -150,7 +150,9 @@ func appendTruncatedLines(text string, output string, maxLines int, theme *Theme
 }
 
 func formatToolLimit(value float64) string {
-	return strconv.FormatFloat(value, 'f', -1, 64)
+	// Upstream interpolates the number into a template literal, i.e.
+	// String(number).
+	return ai.JSNumberToString(value)
 }
 
 func toolTruncationWarnings(details any) (matchLimit string, truncated bool, maxBytes int, extra []string) {
