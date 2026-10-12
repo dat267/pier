@@ -1,9 +1,11 @@
 package coding
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"os/exec"
@@ -299,17 +301,66 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 			args = append(args, "--", input.Pattern, searchPath)
 
 			cmd := exec.CommandContext(ctx, rgPath, args...)
-			outputBytes, runErr := cmd.Output()
+			stdout, err := cmd.StdoutPipe()
+			if err != nil {
+				return agent.AgentToolResult{}, fmt.Errorf("Failed to run ripgrep: %s", err.Error())
+			}
+			var stderr strings.Builder
+			cmd.Stderr = &stderr
+			if err := cmd.Start(); err != nil {
+				return agent.AgentToolResult{}, fmt.Errorf("Failed to run ripgrep: %s", err.Error())
+			}
+
+			// Collect matches as they arrive. Upstream kills rg immediately when
+			// the requested match limit is reached instead of buffering all output.
+			var matches []rgMatchEvent
+			matchCount := 0
+			matchLimitReached := false
+			reader := bufio.NewReader(stdout)
+			var readErr error
+			for {
+				line, lineErr := reader.ReadBytes('\n')
+				if len(line) > 0 {
+					trimmed := strings.TrimSpace(string(line))
+					if trimmed != "" && float64(matchCount) < effectiveLimit {
+						var event rgMatchEvent
+						if jsonUnmarshalStrictTool(json.RawMessage(trimmed), &event) == nil && event.Type == "match" {
+							matchCount++
+							if event.Data.Path.Text != "" && event.Data.LineNumber != nil {
+								matches = append(matches, event)
+							}
+							if float64(matchCount) >= effectiveLimit {
+								matchLimitReached = true
+								_ = cmd.Process.Kill()
+								break
+							}
+						}
+					}
+				}
+				if lineErr == io.EOF {
+					break
+				}
+				if lineErr != nil {
+					readErr = lineErr
+					_ = cmd.Process.Kill()
+					break
+				}
+			}
+			_ = stdout.Close()
+			runErr := cmd.Wait()
 			if ctxErrOf(ctx) != nil {
 				return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
 			}
-			// Upstream rejects on any exit code other than 0/1 (rg uses 2 for
-			// usage errors like bad regexes).
-			if runErr != nil {
+			if readErr != nil {
+				return agent.AgentToolResult{}, fmt.Errorf("Failed to read ripgrep output: %s", readErr.Error())
+			}
+			// Upstream rejects on any exit code other than 0/1 unless it killed
+			// ripgrep itself to enforce the match limit.
+			if runErr != nil && !matchLimitReached {
 				if exitErr, ok := runErr.(*exec.ExitError); ok {
 					code := exitErr.ExitCode()
 					if code != 0 && code != 1 {
-						errorMsg := strings.TrimSpace(string(exitErr.Stderr))
+						errorMsg := strings.TrimSpace(stderr.String())
 						if errorMsg == "" {
 							errorMsg = fmt.Sprintf("ripgrep exited with code %d", code)
 						}
@@ -317,28 +368,6 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 					}
 				} else {
 					return agent.AgentToolResult{}, fmt.Errorf("Failed to run ripgrep: %s", runErr.Error())
-				}
-			}
-
-			// Collect matches, then format (upstream formats after rg exits).
-			var matches []rgMatchEvent
-			matchCount := 0
-			matchLimitReached := false
-
-			for _, line := range strings.Split(string(outputBytes), "\n") {
-				if strings.TrimSpace(line) == "" || float64(matchCount) >= effectiveLimit {
-					continue
-				}
-				var event rgMatchEvent
-				if jsonUnmarshalStrictTool(json.RawMessage(line), &event) != nil || event.Type != "match" {
-					continue
-				}
-				matchCount++
-				if event.Data.Path.Text != "" && event.Data.LineNumber != nil {
-					matches = append(matches, event)
-				}
-				if float64(matchCount) >= effectiveLimit {
-					matchLimitReached = true
 				}
 			}
 			if matchCount == 0 {

@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/ai"
 )
@@ -114,6 +115,32 @@ func TestFindRelativizePosix(t *testing.T) {
 	}
 	if got := RelativizeFindResultPath("already/relative.txt", "/base"); got != "already/relative.txt" {
 		t.Fatalf("relative = %q", got)
+	}
+}
+
+// Upstream grep.ts kills ripgrep as soon as the configured match limit is reached.
+func TestGrepToolStopsRipgrepAtMatchLimit(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("uses a POSIX rg test stub")
+	}
+	stubDir := t.TempDir()
+	stub := filepath.Join(stubDir, "rg")
+	script := "#!/bin/sh\nprintf '%s\\n' '{\"type\":\"match\",\"data\":{\"path\":{\"text\":\"" + filepath.Join(stubDir, "match.txt") + "\"},\"line_number\":1,\"lines\":{\"text\":\"needle\\n\"}}}'\nexec sleep 30\n"
+	if err := os.WriteFile(stub, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(stubDir, "match.txt"), []byte("needle\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", stubDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	result, err := CreateGrepTool(stubDir).Execute("c", json.RawMessage(`{"pattern":"needle","limit":1}`), ctx, nil)
+	if err != nil {
+		t.Fatalf("grep did not finish after reaching limit: %v", err)
+	}
+	if text := result.Content[0].(ai.TextContent).Text; !strings.Contains(text, "match.txt:1: needle") {
+		t.Fatalf("grep output = %q", text)
 	}
 }
 
