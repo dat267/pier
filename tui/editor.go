@@ -1019,7 +1019,8 @@ func (e *Editor) handlePasteLocked(pastedText string) {
 	}
 
 	pastedLines := strings.Split(filteredText, "\n")
-	totalChars := utf8.RuneCountInString(filteredText)
+	// Upstream measures the paste with String.length (UTF-16 code units).
+	totalChars := jsLength(filteredText)
 	if len(pastedLines) > 10 || totalChars > 1000 {
 		e.pasteCounter++
 		pasteID := e.pasteCounter

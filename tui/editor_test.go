@@ -183,6 +183,17 @@ func normalizeSlice(lines []string) []string {
 	return lines
 }
 
+// Upstream measures a large paste in UTF-16 code units (String.length), so
+// astral characters count as two.
+func TestEditorPasteThresholdCountsUTF16Units(t *testing.T) {
+	editor := NewEditor(&editorHost{rows: 10}, editorTestTheme(), EditorOptions{})
+	// 600 astral runes are 1200 UTF-16 units (> 1000) but only 600 runes.
+	editor.handlePasteLocked(strings.Repeat("\U0001F600", 600))
+	if got := editor.GetText(); !strings.Contains(got, "chars]") {
+		t.Fatalf("paste was not collapsed to a marker: %q", got)
+	}
+}
+
 // TestEditorSubmitReentrancy guards D136: the submit handler runs outside the
 // editor lock, so it may call back into the editor without deadlocking.
 func TestEditorSubmitReentrancy(t *testing.T) {
