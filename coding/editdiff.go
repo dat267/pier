@@ -538,7 +538,10 @@ func GenerateDiffString(oldContent, newContent string, contextLines int) (diff s
 	newLines := splitLinesForCounting(newContent)
 	ops := diffLinesOps(oldLines, newLines)
 
-	maxLineNum := max(len(oldLines), len(newLines))
+	// Upstream sizes the line-number column from `oldContent.split("\n")`, which
+	// keeps the empty element after a trailing newline; the diff itself uses the
+	// jsdiff line model (no trailing empty), matching splitLinesForCounting.
+	maxLineNum := max(len(strings.Split(oldContent, "\n")), len(strings.Split(newContent, "\n")))
 	lineNumWidth := len(fmt.Sprintf("%d", maxLineNum))
 	pad := func(n int) string {
 		s := fmt.Sprintf("%d", n)

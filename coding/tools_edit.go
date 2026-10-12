@@ -81,10 +81,10 @@ func PrepareEditArguments(input json.RawMessage) json.RawMessage {
 			var parsed []json.RawMessage
 			if err := jsonUnmarshalStrictTool(json.RawMessage(asString), &parsed); err != nil {
 				var single struct {
-					OldText string `json:"oldText"`
-					NewText string `json:"newText"`
+					OldText *string `json:"oldText"`
+					NewText *string `json:"newText"`
 				}
-				if jsonUnmarshalStrictTool(json.RawMessage(asString), &single) == nil && single.OldText != "" || (single.NewText != "" && single.OldText != "") {
+				if jsonUnmarshalStrictTool(json.RawMessage(asString), &single) == nil && single.OldText != nil && single.NewText != nil {
 					args["edits"] = mustMarshalJSON([]json.RawMessage{json.RawMessage(asString)})
 				}
 			} else {

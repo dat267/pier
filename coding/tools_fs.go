@@ -98,7 +98,7 @@ func CreateReadTool(cwd string, options *ReadToolOptions) agent.AgentTool {
 				return agent.AgentToolResult{}, err
 			}
 			textContent := string(data)
-			allLines := splitLinesKeepCount(textContent)
+			allLines := strings.Split(textContent, "\n")
 			totalFileLines := len(allLines)
 			startLine := 0
 			if input.Offset != nil {
@@ -149,19 +149,6 @@ func CreateReadTool(cwd string, options *ReadToolOptions) agent.AgentTool {
 			}, nil
 		},
 	}
-}
-
-// splitLinesKeepCount mirrors JS split("\n") with the trailing empty removed
-// when the content ends with a newline.
-func splitLinesKeepCount(content string) []string {
-	if len(content) == 0 {
-		return nil
-	}
-	lines := strings.Split(content, "\n")
-	if strings.HasSuffix(content, "\n") {
-		lines = lines[:len(lines)-1]
-	}
-	return lines
 }
 
 // nonVisionImageNote is upstream getNonVisionImageNote: a note appended when the

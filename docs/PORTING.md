@@ -54,6 +54,13 @@ requested Pi thinking level, matching upstream's `Object.assign(result, { thinki
 config.reasoning ?? "off" })` (`agent-loop.ts:409`), so a port-produced assistant
 message carries the same `thinkingLevel` key as upstream.
 
+Tool output was aligned with the pin's `read.ts`/`edit-diff.ts` line handling:
+the `read` tool splits on `\n` the way `read.ts:136` does, keeping the empty
+element after a trailing newline, so the final newline and the reported total
+line count match; `GenerateDiffString` sizes its line-number column from the
+same raw split; and the `edit` prepareArguments shim accepts an empty `oldText`
+in the stringified single-edit form, like `isSingleEditInput`.
+
 The v1.1.0 coding-agent `--tools` modifier lists (`+name`/`-name`) are ported:
 they modify the configured default selection, survive settings reloads, and reject
 mixed allowlist entries and patterns (`ddaa0a034`, `cli/args.ts`, `core/sdk.ts`).

@@ -96,7 +96,7 @@ func TestReadToolTextAndTruncation(t *testing.T) {
 	// Offset/limit with continuation notice.
 	result = execTool(t, tool, `{"path":"sample.txt","offset":10,"limit":5}`)
 	text = result.Content[0].(ai.TextContent).Text
-	if !strings.HasPrefix(text, "line 10\n") || !strings.Contains(text, "[86 more lines in file. Use offset=15 to continue.]") {
+	if !strings.HasPrefix(text, "line 10\n") || !strings.Contains(text, "[87 more lines in file. Use offset=15 to continue.]") {
 		t.Fatalf("text tail = %q", text[len(text)-80:])
 	}
 
@@ -104,7 +104,7 @@ func TestReadToolTextAndTruncation(t *testing.T) {
 	os.WriteFile(file, []byte(strings.Repeat("line\n", 3000)), 0o644)
 	result = execTool(t, tool, `{"path":"sample.txt"}`)
 	text = result.Content[0].(ai.TextContent).Text
-	if !strings.Contains(text, "[Showing lines 1-2000 of 3000. Use offset=2001 to continue.]") {
+	if !strings.Contains(text, "[Showing lines 1-2000 of 3001. Use offset=2001 to continue.]") {
 		t.Fatalf("truncation notice missing: %q", text[len(text)-120:])
 	}
 	var details ReadToolDetails
