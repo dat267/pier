@@ -239,6 +239,13 @@ func TestWrapTextWithAnsi(t *testing.T) {
 	if strings.Join(lines, "|") != "日本|語日|本語" {
 		t.Fatalf("lines = %q", lines)
 	}
+
+	// A token carrying an ANSI code is not whitespace even when it ends in a
+	// space (upstream tests `token.trim() === ""` on the raw token).
+	lines = WrapTextWithAnsi("ab\x1b[31m cd", 2)
+	if strings.Join(lines, "|") != "ab|\x1b[31m|\x1b[31mcd" {
+		t.Fatalf("ansi-space wrap = %q", lines)
+	}
 }
 
 func TestApplyBackgroundToLine(t *testing.T) {

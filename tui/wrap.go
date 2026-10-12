@@ -178,9 +178,9 @@ func wrapSingleLine(line string, width int) []string {
 
 	for _, token := range tokens {
 		tokenVisibleLength := VisibleWidth(token)
-		tokenRunes := []rune(StripTerminalSequences(token))
-		isWhitespace := len(tokenRunes) > 0 && isSpaceRune(tokenRunes[0]) &&
-			strings.TrimSpace(StripTerminalSequences(token)) == ""
+		// Upstream tests `token.trim() === ""` on the raw token, so a token
+		// carrying an ANSI code is not whitespace even when it ends in a space.
+		isWhitespace := IsWhitespaceChar(token)
 
 		// A token longer than the width breaks character by character.
 		if tokenVisibleLength > width && !isWhitespace {
