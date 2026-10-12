@@ -544,13 +544,22 @@ func TestBedrockStreamFold(t *testing.T) {
 	server := bedrockTestServer(t, frames, &captured, &payload)
 
 	model := bedrockTestModel(server.URL)
+	var providerEventCount int
 	stream := StreamBedrockConverse(model, TranscriptContext{Messages: []Message{
 		&SystemMessage{Content: StringOrBlocks{Text: "be helpful"}},
 		&UserMessage{Content: StringOrBlocks{Text: "hello"}, Timestamp: 1},
 	}}, &BedrockOptions{
-		StreamOptions: StreamOptions{APIKey: "bearer-token", Env: ProviderEnv{
-			"AWS_ACCESS_KEY_ID": "AKID", "AWS_SECRET_ACCESS_KEY": "SECRET",
-		}},
+		StreamOptions: StreamOptions{
+			APIKey: "bearer-token", Env: ProviderEnv{
+				"AWS_ACCESS_KEY_ID": "AKID", "AWS_SECRET_ACCESS_KEY": "SECRET",
+			},
+			OnProviderStreamEvent: func(data json.RawMessage, eventModel *Model) {
+				if eventModel != model || !json.Valid(data) {
+					t.Errorf("provider callback data/model = %s/%p", data, eventModel)
+				}
+				providerEventCount++
+			},
+		},
 		BearerToken: "bearer-token",
 		Reasoning:   ThinkHigh,
 	})
@@ -560,6 +569,9 @@ func TestBedrockStreamFold(t *testing.T) {
 	}
 	if message.StopReason != StopToolUse || message.RawStopReason == nil || *message.RawStopReason != "tool_use" {
 		t.Fatalf("message = %+v", message)
+	}
+	if providerEventCount != len(frames) {
+		t.Fatalf("provider callback count = %d; want %d", providerEventCount, len(frames))
 	}
 	if len(message.Content) != 3 {
 		t.Fatalf("content = %+v", message.Content)

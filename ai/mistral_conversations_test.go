@@ -188,8 +188,17 @@ func TestMistralStreamEndToEnd(t *testing.T) {
 	defer server.Close()
 
 	model := mistralModel(server.URL)
+	var providerEventCount int
 	stream := StreamMistralConversations(model, mistralUserContext(), &MistralOptions{
-		StreamOptions: StreamOptions{APIKey: "test-key", SessionID: "session-1"},
+		StreamOptions: StreamOptions{
+			APIKey: "test-key", SessionID: "session-1",
+			OnProviderStreamEvent: func(data json.RawMessage, eventModel *Model) {
+				if eventModel != model || !json.Valid(data) {
+					t.Errorf("provider callback data/model = %s/%p", data, eventModel)
+				}
+				providerEventCount++
+			},
+		},
 	})
 	message, err := stream.Result(ctxpkg.Background())
 	if err != nil {
@@ -197,6 +206,9 @@ func TestMistralStreamEndToEnd(t *testing.T) {
 	}
 	if message.StopReason != StopToolUse {
 		t.Fatalf("stopReason = %s", message.StopReason)
+	}
+	if providerEventCount != 6 {
+		t.Fatalf("provider callback count = %d; want 6", providerEventCount)
 	}
 	if message.ResponseID == nil || *message.ResponseID != "chunk-1" {
 		t.Fatalf("responseId = %v", message.ResponseID)

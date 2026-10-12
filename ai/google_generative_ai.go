@@ -204,7 +204,8 @@ var googleToolCallCounter atomic.Int64
 
 // googleChunk is one streamed GenerateContentResponse.
 type googleChunk struct {
-	ResponseID string `json:"responseId"`
+	ResponseID string          `json:"responseId"`
+	Raw        json.RawMessage `json:"-"`
 	Candidates []struct {
 		Content *struct {
 			Roles string       `json:"role"`
@@ -332,6 +333,9 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 		blockIndex := func() int { return len(output.Content) - 1 }
 
 		iterErr := iterateGoogleChunks(ctx, resp.Body, func(chunk *googleChunk) {
+			if options.OnProviderStreamEvent != nil {
+				options.OnProviderStreamEvent(chunk.Raw, model)
+			}
 			if chunk.ResponseID != "" && output.ResponseID == nil {
 				id := chunk.ResponseID
 				output.ResponseID = &id
@@ -551,6 +555,7 @@ func iterateGoogleChunks(ctx context.Context, body io.Reader, emit func(chunk *g
 		}
 		var chunk googleChunk
 		if jsonUnmarshalStrict(json.RawMessage(data), &chunk) == nil {
+			chunk.Raw = json.RawMessage(data)
 			emit(&chunk)
 		}
 	}

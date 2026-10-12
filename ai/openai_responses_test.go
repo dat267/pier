@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -216,9 +217,24 @@ func TestProcessResponsesStreamTextAndReasoning(t *testing.T) {
 
 	model := testResponsesModel()
 	model.BaseURL = server.URL
+	var providerEventTypes []string
+	var providerEventModel *Model
 	stream := StreamOpenAIResponses(model, NormalizeContext(Context{
 		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-	}), &OpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+	}), &OpenAIResponsesOptions{StreamOptions: StreamOptions{
+		APIKey: "k",
+		OnProviderStreamEvent: func(data json.RawMessage, eventModel *Model) {
+			var event struct {
+				Type string `json:"type"`
+			}
+			if err := json.Unmarshal(data, &event); err != nil {
+				t.Errorf("decode provider event: %v", err)
+				return
+			}
+			providerEventTypes = append(providerEventTypes, event.Type)
+			providerEventModel = eventModel
+		},
+	}})
 
 	var types []string
 	var text, thinking string
@@ -246,6 +262,17 @@ func TestProcessResponsesStreamTextAndReasoning(t *testing.T) {
 		if types[i] != want[i] {
 			t.Fatalf("events = %v; want %v", types, want)
 		}
+	}
+	wantProviderEvents := []string{
+		"response.created", "response.output_item.added", "response.reasoning_summary_text.delta",
+		"response.output_item.done", "response.output_item.added", "response.output_text.delta",
+		"response.output_text.delta", "response.output_item.done", "response.completed",
+	}
+	if !reflect.DeepEqual(providerEventTypes, wantProviderEvents) {
+		t.Fatalf("provider event types = %v; want %v", providerEventTypes, wantProviderEvents)
+	}
+	if providerEventModel != model {
+		t.Fatalf("provider event model = %p; want %p", providerEventModel, model)
 	}
 	msg, err := stream.Result(context.Background())
 	if err != nil {

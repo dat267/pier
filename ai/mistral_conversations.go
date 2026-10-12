@@ -111,7 +111,8 @@ type mistralStreamContentChunk struct {
 }
 
 type mistralCompletionEvent struct {
-	ID string `json:"id"`
+	ID  string          `json:"id"`
+	Raw json.RawMessage `json:"-"`
 	// Usage stays raw so the cached-token field can be read in any of the
 	// shapes providers send.
 	Usage   json.RawMessage `json:"usage"`
@@ -211,7 +212,7 @@ func StreamMistralConversations(model *Model, context TranscriptContext, options
 		}
 		stream.Push(AssistantMessageEvent{Type: EventStart, Partial: output})
 
-		if err := consumeMistralChatStream(ctx, model, output, stream, resp.Body); err != nil {
+		if err := consumeMistralChatStream(ctx, model, output, stream, resp.Body, options.OnProviderStreamEvent); err != nil {
 			fail(err)
 			return
 		}
@@ -518,6 +519,7 @@ func parseMistralEvent(raw string) (*mistralCompletionEvent, bool, error) {
 	if err := json.Unmarshal([]byte(data), &event); err != nil {
 		return nil, false, err
 	}
+	event.Raw = json.RawMessage(data)
 	if event.Choices == nil {
 		return nil, false, fmt.Errorf("Invalid Mistral streaming event")
 	}
@@ -528,7 +530,10 @@ var mistralEventBoundary = regexp.MustCompile(`\r\n\r\n|\r\n\r|\r\n\n|\r\r\n|\n\
 
 // consumeMistralChatStream assembles the streamed deltas into the message
 // (upstream consumeChatStream).
-func consumeMistralChatStream(ctx ctxpkg.Context, model *Model, output *AssistantMessage, stream *AssistantMessageEventStream, body io.Reader) error {
+func consumeMistralChatStream(
+	ctx ctxpkg.Context, model *Model, output *AssistantMessage, stream *AssistantMessageEventStream,
+	body io.Reader, onProviderStreamEvent func(json.RawMessage, *Model),
+) error {
 	reader := bufio.NewReader(body)
 	buffer := ""
 	state := &mistralStreamState{toolBlocks: map[string]int{}, partialArgs: map[int]string{}}
@@ -543,6 +548,9 @@ func consumeMistralChatStream(ctx ctxpkg.Context, model *Model, output *Assistan
 		}
 		if event == nil {
 			return false, nil
+		}
+		if onProviderStreamEvent != nil {
+			onProviderStreamEvent(event.Raw, model)
 		}
 		applyMistralEvent(model, output, stream, state, event)
 		return false, nil

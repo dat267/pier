@@ -609,6 +609,9 @@ func ProcessResponsesStream(
 	}
 
 	iterErr := iterateResponsesEvents(ctx, body, func(event *responsesStreamEvent) {
+		if options != nil && options.OnProviderStreamEvent != nil {
+			options.OnProviderStreamEvent(event.Raw, model)
+		}
 		switch event.Type {
 		case "response.created":
 			var response responsesTerminalResponse

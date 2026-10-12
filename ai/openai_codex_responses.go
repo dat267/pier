@@ -411,7 +411,10 @@ func boolPtrFalse() *bool { value := false; return &value }
 // mapCodexSSEEvents translates the Codex event stream into Responses events
 // (upstream mapCodexEvents). Events are patched as raw JSON so fields the typed
 // subset does not model survive for the shared processor.
-func mapCodexSSEEvents(body io.Reader, output *AssistantMessage) ([]byte, error) {
+func mapCodexSSEEvents(
+	body io.Reader, output *AssistantMessage, model *Model,
+	onProviderStreamEvent func(json.RawMessage, *Model),
+) ([]byte, error) {
 	var buffer bytes.Buffer
 	writeEvent := func(value map[string]any) {
 		encoded, err := MarshalJSON(value)
@@ -423,6 +426,9 @@ func mapCodexSSEEvents(body io.Reader, output *AssistantMessage) ([]byte, error)
 		buffer.WriteString("\n\n")
 	}
 	err := iterateResponsesEvents(ctxpkg.Background(), body, func(event *responsesStreamEvent) {
+		if onProviderStreamEvent != nil {
+			onProviderStreamEvent(event.Raw, model)
+		}
 		decoded := map[string]any{}
 		if len(event.Raw) > 0 {
 			_ = json.Unmarshal(event.Raw, &decoded)
@@ -703,13 +709,15 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 		defer response.Body.Close()
 
 		stream.Push(AssistantMessageEvent{Type: EventStart, Partial: output})
-		normalized, err := mapCodexSSEEvents(response.Body, output)
+		normalized, err := mapCodexSSEEvents(response.Body, output, model, options.OnProviderStreamEvent)
 		if err != nil {
 			fail(err)
 			return
 		}
+		processingStreamOptions := options.StreamOptions
+		processingStreamOptions.OnProviderStreamEvent = nil
 		processingOptions := &OpenAIResponsesOptions{
-			StreamOptions: options.StreamOptions,
+			StreamOptions: processingStreamOptions,
 			ServiceTier:   options.ServiceTier,
 			ResolveServiceTier: func(responseTier *string, requestTier string) string {
 				return ResolveCodexServiceTier(responseTier, requestTier)

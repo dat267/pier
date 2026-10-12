@@ -40,6 +40,7 @@ type PiMessagesRewriteImpact struct {
 // PiMessagesEvent is one serialized event from a pi-messages backend.
 type PiMessagesEvent struct {
 	Type          string                   `json:"type"`
+	Raw           json.RawMessage          `json:"-"`
 	ContentIndex  int                      `json:"contentIndex"`
 	Delta         string                   `json:"delta"`
 	Content       string                   `json:"content"`
@@ -297,6 +298,7 @@ func parsePiMessagesEvent(raw string) (*PiMessagesEvent, error) {
 	if err := json.Unmarshal([]byte(data), &event); err != nil {
 		return nil, err
 	}
+	event.Raw = json.RawMessage(data)
 	return &event, nil
 }
 
@@ -425,6 +427,9 @@ func StreamPiMessages(model *Model, context TranscriptContext, options *PiMessag
 		converter := newPiMessagesConverter(model)
 		terminal := false
 		iterErr := readPiMessagesEvents(ctx, response.Body, func(event *PiMessagesEvent) bool {
+			if options.OnProviderStreamEvent != nil {
+				options.OnProviderStreamEvent(event.Raw, model)
+			}
 			converted, isTerminal := converter.convert(event)
 			stream.Push(converted)
 			if isTerminal {

@@ -868,7 +868,7 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 		}
 
 		stream.Push(AssistantMessageEvent{Type: EventStart, Partial: output})
-		iterErr := readBedrockConverseStream(response.Body, model, output, stream, &blocks)
+		iterErr := readBedrockConverseStream(response.Body, model, output, stream, &blocks, options.OnProviderStreamEvent)
 		if iterErr != nil {
 			fail(iterErr, requestID, response.StatusCode, response.Header)
 			return
@@ -917,7 +917,10 @@ func withBedrockStatus(err error, status int, headers http.Header) error {
 }
 
 // readBedrockConverseStream decodes and folds the event stream.
-func readBedrockConverseStream(body io.Reader, model *Model, output *AssistantMessage, stream *AssistantMessageEventStream, blocks *[]*bedrockBlock) error {
+func readBedrockConverseStream(
+	body io.Reader, model *Model, output *AssistantMessage, stream *AssistantMessageEventStream,
+	blocks *[]*bedrockBlock, onProviderStreamEvent func(json.RawMessage, *Model),
+) error {
 	for {
 		message, err := ReadAWSEventStreamMessage(body)
 		if err == io.EOF {
@@ -929,6 +932,13 @@ func readBedrockConverseStream(body io.Reader, model *Model, output *AssistantMe
 		messageType := awsHeaderValueString(message.Headers[":message-type"])
 		eventType := awsHeaderValueString(message.Headers[":event-type"])
 		exceptionType := awsHeaderValueString(message.Headers[":exception-type"])
+		if onProviderStreamEvent != nil && eventType != "" {
+			data, err := MarshalJSON(map[string]json.RawMessage{eventType: message.Payload})
+			if err != nil {
+				return err
+			}
+			onProviderStreamEvent(data, model)
+		}
 		switch messageType {
 		case "exception", "error":
 			var payload struct {

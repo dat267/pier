@@ -95,11 +95,21 @@ func TestStreamPiMessagesAssemblesEvents(t *testing.T) {
 	}))
 	defer server.Close()
 
-	stream := StreamPiMessages(piMessagesModel(server.URL), piMessagesContext(), &PiMessagesOptions{
-		StreamOptions: StreamOptions{APIKey: "radius-token", SessionID: "session-1"},
-		Reasoning:     ThinkHigh,
-		ToolChoice:    json.RawMessage(`"auto"`),
-		Debug:         true,
+	model := piMessagesModel(server.URL)
+	var providerEventCount int
+	stream := StreamPiMessages(model, piMessagesContext(), &PiMessagesOptions{
+		StreamOptions: StreamOptions{
+			APIKey: "radius-token", SessionID: "session-1",
+			OnProviderStreamEvent: func(data json.RawMessage, eventModel *Model) {
+				if eventModel != model || !json.Valid(data) {
+					t.Errorf("provider callback data/model = %s/%p", data, eventModel)
+				}
+				providerEventCount++
+			},
+		},
+		Reasoning:  ThinkHigh,
+		ToolChoice: json.RawMessage(`"auto"`),
+		Debug:      true,
 	})
 	message, err := stream.Result(context.Background())
 	if err != nil {
@@ -107,6 +117,9 @@ func TestStreamPiMessagesAssemblesEvents(t *testing.T) {
 	}
 	if message.StopReason != StopToolUse || message.API != APIPiMessages {
 		t.Fatalf("message = %+v", message)
+	}
+	if providerEventCount != 13 {
+		t.Fatalf("provider callback count = %d; want 13", providerEventCount)
 	}
 	if len(message.Content) != 3 {
 		t.Fatalf("content = %+v", message.Content)

@@ -466,6 +466,9 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 			if err := jsonUnmarshalStrict(raw, &chunk); err != nil {
 				return // upstream skips non-object chunks
 			}
+			if options.OnProviderStreamEvent != nil {
+				options.OnProviderStreamEvent(raw, model)
+			}
 			if chunk.ID != "" && output.ResponseID == nil {
 				id := chunk.ID
 				output.ResponseID = &id

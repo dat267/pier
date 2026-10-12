@@ -315,12 +315,25 @@ func TestStreamCodexResponsesSSE(t *testing.T) {
 	defer server.Close()
 
 	model := codexModel(server.URL)
+	var providerEventTypes []string
 	stream := StreamOpenAICodexResponses(model, TranscriptContext{Messages: []Message{
 		&UserMessage{Content: StringOrBlocks{Text: "hello"}, Timestamp: 1},
 	}}, &OpenAICodexResponsesOptions{
-		StreamOptions: StreamOptions{APIKey: codexToken(t, "acct-1"), SessionID: "session-1"},
-		Transport:     "sse",
-		ServiceTier:   "flex",
+		StreamOptions: StreamOptions{
+			APIKey: codexToken(t, "acct-1"), SessionID: "session-1",
+			OnProviderStreamEvent: func(data json.RawMessage, eventModel *Model) {
+				var event struct {
+					Type string `json:"type"`
+				}
+				if eventModel != model || json.Unmarshal(data, &event) != nil {
+					t.Errorf("invalid provider callback data/model = %s/%p", data, eventModel)
+					return
+				}
+				providerEventTypes = append(providerEventTypes, event.Type)
+			},
+		},
+		Transport:   "sse",
+		ServiceTier: "flex",
 	})
 	message, err := stream.Result(ctxpkg.Background())
 	if err != nil {
@@ -328,6 +341,9 @@ func TestStreamCodexResponsesSSE(t *testing.T) {
 	}
 	if message.StopReason != StopStop {
 		t.Fatalf("message = %+v", message)
+	}
+	if got, want := strings.Join(providerEventTypes, ","), "response.created,response.output_item.added,response.output_text.delta,response.output_text.delta,response.output_item.done,response.done"; got != want {
+		t.Fatalf("provider event types = %s; want %s", got, want)
 	}
 	if len(message.Content) != 1 {
 		t.Fatalf("content = %+v", message.Content)

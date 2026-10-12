@@ -55,14 +55,15 @@ type AgentOptions struct {
 	ConvertToLlm     func(messages []ai.Message) []ai.Message
 	TransformContext func(messages []ai.Message, ctx context.Context) []ai.Message
 	// StreamFn is required.
-	StreamFn       StreamFn
-	GetAPIKey      func(provider string, ctx context.Context) (string, error)
-	OnPayload      func(payload json.RawMessage, model *ai.Model) json.RawMessage
-	OnResponse     func(response ai.ProviderResponse, model *ai.Model)
-	BeforeToolCall func(context *BeforeToolCallContext, ctx context.Context) (*BeforeToolCallResult, error)
-	AfterToolCall  func(context *AfterToolCallContext, ctx context.Context) (*AfterToolCallResult, error)
-	PrepareRequest func(request *PrepareRequestContext, ctx context.Context) (*AgentRequestUpdate, error)
-	FinishTurn     func(turn *AgentTurnContext, ctx context.Context) (*AgentTurnDecision, error)
+	StreamFn              StreamFn
+	GetAPIKey             func(provider string, ctx context.Context) (string, error)
+	OnPayload             func(payload json.RawMessage, model *ai.Model) json.RawMessage
+	OnResponse            func(response ai.ProviderResponse, model *ai.Model)
+	OnProviderStreamEvent func(data json.RawMessage, model *ai.Model)
+	BeforeToolCall        func(context *BeforeToolCallContext, ctx context.Context) (*BeforeToolCallResult, error)
+	AfterToolCall         func(context *AfterToolCallContext, ctx context.Context) (*AfterToolCallResult, error)
+	PrepareRequest        func(request *PrepareRequestContext, ctx context.Context) (*AgentRequestUpdate, error)
+	FinishTurn            func(turn *AgentTurnContext, ctx context.Context) (*AgentTurnDecision, error)
 	// Deprecated: use FinishTurn.
 	ShouldStopAfterTurn        func(turn *AgentTurnContext, ctx context.Context) bool
 	PrepareNextTurn            func(ctx context.Context) (*AgentLoopTurnUpdate, error)
@@ -157,16 +158,17 @@ type Agent struct {
 	followUpQueue *pendingMessageQueue
 
 	// Options surface (upstream public fields).
-	ConvertToLlm     func(messages []ai.Message) []ai.Message
-	TransformContext func(messages []ai.Message, ctx context.Context) []ai.Message
-	StreamFunction   StreamFn
-	GetAPIKey        func(provider string, ctx context.Context) (string, error)
-	OnPayload        func(payload json.RawMessage, model *ai.Model) json.RawMessage
-	OnResponse       func(response ai.ProviderResponse, model *ai.Model)
-	BeforeToolCall   func(context *BeforeToolCallContext, ctx context.Context) (*BeforeToolCallResult, error)
-	AfterToolCall    func(context *AfterToolCallContext, ctx context.Context) (*AfterToolCallResult, error)
-	PrepareRequest   func(request *PrepareRequestContext, ctx context.Context) (*AgentRequestUpdate, error)
-	FinishTurn       func(turn *AgentTurnContext, ctx context.Context) (*AgentTurnDecision, error)
+	ConvertToLlm          func(messages []ai.Message) []ai.Message
+	TransformContext      func(messages []ai.Message, ctx context.Context) []ai.Message
+	StreamFunction        StreamFn
+	GetAPIKey             func(provider string, ctx context.Context) (string, error)
+	OnPayload             func(payload json.RawMessage, model *ai.Model) json.RawMessage
+	OnResponse            func(response ai.ProviderResponse, model *ai.Model)
+	OnProviderStreamEvent func(data json.RawMessage, model *ai.Model)
+	BeforeToolCall        func(context *BeforeToolCallContext, ctx context.Context) (*BeforeToolCallResult, error)
+	AfterToolCall         func(context *AfterToolCallContext, ctx context.Context) (*AfterToolCallResult, error)
+	PrepareRequest        func(request *PrepareRequestContext, ctx context.Context) (*AgentRequestUpdate, error)
+	FinishTurn            func(turn *AgentTurnContext, ctx context.Context) (*AgentTurnDecision, error)
 	// Deprecated: use FinishTurn.
 	ShouldStopAfterTurn        func(turn *AgentTurnContext, ctx context.Context) bool
 	PrepareNextTurn            func(ctx context.Context) (*AgentLoopTurnUpdate, error)
@@ -263,6 +265,7 @@ func NewAgent(options *AgentOptions) (*Agent, error) {
 		GetAPIKey:                  options.GetAPIKey,
 		OnPayload:                  options.OnPayload,
 		OnResponse:                 options.OnResponse,
+		OnProviderStreamEvent:      options.OnProviderStreamEvent,
 		BeforeToolCall:             options.BeforeToolCall,
 		AfterToolCall:              options.AfterToolCall,
 		PrepareRequest:             options.PrepareRequest,
@@ -536,11 +539,12 @@ func (a *Agent) createLoopConfig(skipInitialSteeringPoll bool) *AgentLoopConfig 
 	config := &AgentLoopConfig{
 		SimpleStreamOptions: ai.SimpleStreamOptions{
 			StreamOptions: ai.StreamOptions{
-				SessionID:       a.SessionID,
-				Transport:       a.Transport,
-				MaxRetryDelayMs: a.MaxRetryDelayMS,
-				OnPayload:       a.OnPayload,
-				OnResponse:      a.OnResponse,
+				SessionID:             a.SessionID,
+				Transport:             a.Transport,
+				MaxRetryDelayMs:       a.MaxRetryDelayMS,
+				OnPayload:             a.OnPayload,
+				OnResponse:            a.OnResponse,
+				OnProviderStreamEvent: a.OnProviderStreamEvent,
 			},
 			Reasoning: reasoning,
 		},

@@ -608,6 +608,7 @@ Update the pin whenever upstream source is re-read for a port.
 | Go package | Upstream | Status |
 |---|---|---|
 | `ai` | `packages/ai` core (`types.ts`, `utils/event-stream.ts`, `utils/text.ts`, `utils/transcript.ts`, `utils/diagnostics.ts`) | ported |
+| `ai`, `agent` (provider stream observer) | `StreamOptions.onProviderStreamEvent` and `AgentOptions.onProviderStreamEvent` (`types.ts`, `agent.ts`, upstream #9901): parsed raw provider events are delivered with their model before normalization across Anthropic, Bedrock, Google/Vertex, Mistral, OpenAI Completions/Responses/Azure/Codex, and pi-messages | ported (extension event dispatch stays out of scope, D41) |
 | `ai` (assistant message frames) | `utils/assistant-message-frame.ts` — the compact replayable stream codec: `AssistantMessageFrame` (the `content` start/end union), `AssistantMessageFrameEncoder` (per-block UTF-16 offsets, the tool-call checkpoint/catch-up and JSON-prefix logic), and `ReduceAssistantMessageFrames` | ported |
 | `ai` | `packages/ai` models/compat (`models.ts` surface, compat interfaces) | ported (types) |
 | `ai/providers` (faux) | `packages/ai/src/providers/faux.ts` | ported |

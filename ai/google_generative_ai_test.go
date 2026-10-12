@@ -278,9 +278,18 @@ func TestStreamGoogleGenerativeAI(t *testing.T) {
 
 	model := testGoogleModel()
 	model.BaseURL = server.URL
+	var providerEventCount int
 	stream := StreamGoogleGenerativeAI(model, NormalizeContext(Context{
 		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-	}), &GoogleOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+	}), &GoogleOptions{StreamOptions: StreamOptions{
+		APIKey: "k",
+		OnProviderStreamEvent: func(data json.RawMessage, eventModel *Model) {
+			if eventModel != model || !json.Valid(data) {
+				t.Errorf("provider callback data/model = %s/%p", data, eventModel)
+			}
+			providerEventCount++
+		},
+	}})
 
 	var types []string
 	var thinking, text string
@@ -310,6 +319,9 @@ func TestStreamGoogleGenerativeAI(t *testing.T) {
 	// Tool call upgrades STOP → toolUse.
 	if msg.StopReason != StopToolUse {
 		t.Fatalf("stopReason = %s", msg.StopReason)
+	}
+	if providerEventCount != 4 {
+		t.Fatalf("provider callback count = %d; want 4", providerEventCount)
 	}
 	// Usage: input excludes cached tokens; output includes thoughts.
 	if msg.Usage.Input != 60 || msg.Usage.Output != 15 || msg.Usage.CacheRead != 40 || msg.Usage.TotalTokens != 115 {

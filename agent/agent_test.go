@@ -360,6 +360,32 @@ func TestAgentDoublePromptErrors(t *testing.T) {
 	}
 }
 
+func TestAgentForwardsProviderStreamEvent(t *testing.T) {
+	called := false
+	streamFn := func(model *ai.Model, context ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		options.OnProviderStreamEvent(json.RawMessage(`{"type":"response.created"}`), model)
+		stream := ai.NewAssistantMessageEventStream()
+		stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop,
+			Message: createAssistantMessage(ai.ContentList{ai.TextContent{Text: "ok"}}, ai.StopStop)})
+		return stream
+	}
+	agent, err := NewAgent(&AgentOptions{
+		StreamFn: streamFn,
+		OnProviderStreamEvent: func(data json.RawMessage, model *ai.Model) {
+			called = string(data) == `{"type":"response.created"}` && model != nil
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := agent.PromptText(context.Background(), "hi"); err != nil {
+		t.Fatal(err)
+	}
+	if !called {
+		t.Fatal("Agent did not forward OnProviderStreamEvent")
+	}
+}
+
 func TestAgentForwardsSessionID(t *testing.T) {
 	var captured *ai.SimpleStreamOptions
 	streamFn := func(model *ai.Model, context ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {

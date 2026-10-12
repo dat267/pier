@@ -165,6 +165,9 @@ type StreamOptions struct {
 	OnPayload func(payload json.RawMessage, model *Model) json.RawMessage
 	// OnResponse is invoked after an HTTP response is received.
 	OnResponse func(response ProviderResponse, model *Model)
+	// OnProviderStreamEvent observes each parsed provider event before
+	// normalization. Treat data as read-only. Unsupported adapters ignore it.
+	OnProviderStreamEvent func(data json.RawMessage, model *Model)
 	// Deferred asks a capable provider to return a durable handle and
 	// continue the request asynchronously.
 	Deferred *DeferredRequest

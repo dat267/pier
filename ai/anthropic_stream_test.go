@@ -55,10 +55,19 @@ func TestStreamAnthropicTextFlow(t *testing.T) {
 	model.BaseURL = server.URL
 	defer server.Close()
 
+	var providerEventCount int
 	stream := StreamAnthropic(model, NormalizeContext(Context{
 		SystemPrompt: strPtr("sys"),
 		Messages:     []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-	}), &AnthropicOptions{StreamOptions: StreamOptions{APIKey: "test-key"}})
+	}), &AnthropicOptions{StreamOptions: StreamOptions{
+		APIKey: "test-key",
+		OnProviderStreamEvent: func(data json.RawMessage, eventModel *Model) {
+			if eventModel != model || !json.Valid(data) {
+				t.Errorf("provider callback data/model = %s/%p", data, eventModel)
+			}
+			providerEventCount++
+		},
+	}})
 
 	var types []string
 	var text string
@@ -91,6 +100,9 @@ func TestStreamAnthropicTextFlow(t *testing.T) {
 	}
 	if msg.StopReason != StopStop || msg.ResponseID == nil || *msg.ResponseID != "msg_1" {
 		t.Fatalf("message = %+v", msg)
+	}
+	if providerEventCount != 7 {
+		t.Fatalf("provider callback count = %d; want 7", providerEventCount)
 	}
 	if msg.Usage.Input != 10 || msg.Usage.Output != 5 || msg.Usage.TotalTokens != 15 {
 		t.Fatalf("usage = %+v", msg.Usage)

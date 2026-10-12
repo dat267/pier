@@ -258,9 +258,18 @@ func TestStreamOpenAICompletionsTextAndToolFlow(t *testing.T) {
 
 	model := testOpenAIModel()
 	model.BaseURL = server.URL
+	var providerEventCount int
 	stream := StreamOpenAICompletions(model, NormalizeContext(Context{
 		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-	}), &OpenAICompletionsOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+	}), &OpenAICompletionsOptions{StreamOptions: StreamOptions{
+		APIKey: "k",
+		OnProviderStreamEvent: func(data json.RawMessage, eventModel *Model) {
+			if eventModel != model || !json.Valid(data) {
+				t.Errorf("provider callback data/model = %s/%p", data, eventModel)
+			}
+			providerEventCount++
+		},
+	}})
 
 	var types []string
 	var text string
@@ -293,6 +302,9 @@ func TestStreamOpenAICompletionsTextAndToolFlow(t *testing.T) {
 	}
 	if msg.Usage.Input != 10 || msg.Usage.Output != 5 || msg.Usage.TotalTokens != 15 {
 		t.Fatalf("usage = %+v", msg.Usage)
+	}
+	if providerEventCount != 6 {
+		t.Fatalf("provider callback count = %d; want 6", providerEventCount)
 	}
 	// Ends with text_end and toolcall_end finishing blocks.
 	if types[len(types)-1] != EventDone {

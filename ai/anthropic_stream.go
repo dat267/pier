@@ -83,7 +83,8 @@ var anthropicMessageEvents = map[string]bool{
 
 // anthropicStreamEvent is one parsed wire event (subset of fields pi uses).
 type anthropicStreamEvent struct {
-	Type string `json:"type"`
+	Type string          `json:"type"`
+	Raw  json.RawMessage `json:"-"`
 
 	// message_start
 	Message *anthropicStreamMessageStart `json:"message,omitempty"`
@@ -212,6 +213,7 @@ func IterateAnthropicEvents(ctx context.Context, body io.Reader, emit func(anthr
 			return fmt.Errorf("Could not parse Anthropic SSE event %s: %s; data=%s; raw=%s",
 				decoder.event, err.Error(), raw, strings.Join(rawLines, "\\n"))
 		}
+		event.Raw = json.RawMessage(raw)
 		switch event.Type {
 		case "message_start":
 			sawMessageStart = true
@@ -554,6 +556,9 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 		}
 
 		iterErr := IterateAnthropicEvents(ctx, resp.Body, func(event anthropicStreamEvent) {
+			if options.OnProviderStreamEvent != nil {
+				options.OnProviderStreamEvent(event.Raw, model)
+			}
 			switch event.Type {
 			case "message_start":
 				output.ResponseID = &event.Message.ID
