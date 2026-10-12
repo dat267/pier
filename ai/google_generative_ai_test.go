@@ -162,6 +162,25 @@ func TestConvertGoogleMessages(t *testing.T) {
 	}
 }
 
+// Upstream google-shared.ts sanitizes IDs with a non-Unicode regex over UTF-16 code units.
+func TestConvertGoogleMessagesNormalizesAstralToolCallIDLikeJavaScript(t *testing.T) {
+	model := testGoogleModel()
+	model.ID = "gemini-3-pro"
+	messages := []Message{&AssistantMessage{
+		Content: ContentList{ToolCall{ID: "call|item😀", Name: "read", Arguments: json.RawMessage(`{}`)}},
+		API:     APIGoogleGenerativeAI, Provider: model.Provider, Model: "gemini-2.5-flash",
+		StopReason: StopToolUse,
+	}}
+	contents, err := ConvertGoogleMessages(model, TranscriptContext{Messages: messages})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := contents[0].Parts[0].FunctionCall.ID
+	if got != "call_item__" {
+		t.Fatalf("normalized id = %q; want JS UTF-16 replacement result %q", got, "call_item__")
+	}
+}
+
 func TestConvertGoogleMessagesCrossModelThinking(t *testing.T) {
 	model := testGoogleModel()
 	// Thinking from a DIFFERENT model converts to plain text (no thought flag,

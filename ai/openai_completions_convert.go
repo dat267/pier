@@ -3,6 +3,7 @@ package ai
 import (
 	"encoding/json"
 	"strings"
+	"unicode/utf16"
 )
 
 // Port of api/openai-completions.ts conversion half: convertMessages,
@@ -344,14 +345,18 @@ func ConvertOpenAICompletionsMessages(
 	return params
 }
 
+// sanitizeID mirrors a JavaScript non-Unicode regex: an astral character's
+// two UTF-16 code units each become an underscore.
 func sanitizeID(id string) string {
-	re := func(r rune) rune {
-		if r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '_' || r == '-' {
-			return r
+	var sanitized strings.Builder
+	for _, unit := range utf16.Encode([]rune(id)) {
+		if unit >= 'a' && unit <= 'z' || unit >= 'A' && unit <= 'Z' || unit >= '0' && unit <= '9' || unit == '_' || unit == '-' {
+			sanitized.WriteByte(byte(unit))
+		} else {
+			sanitized.WriteByte('_')
 		}
-		return '_'
 	}
-	return strings.Map(re, id)
+	return sanitized.String()
 }
 
 func isOpenAICompletionsReasoningField(field string) bool {
