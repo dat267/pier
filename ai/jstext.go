@@ -1,6 +1,8 @@
 package ai
 
 import (
+	"math"
+	"strconv"
 	"strings"
 	"unicode/utf16"
 )
@@ -81,6 +83,45 @@ func JSLength(s string) int {
 		}
 	}
 	return n
+}
+
+// JSNumberToString formats a number the way JavaScript's String(number) does:
+// fixed notation for magnitudes in [1e-6, 1e21), exponential otherwise, with an
+// unpadded exponent (Go's %g pads it to two digits and uses different
+// thresholds).
+func JSNumberToString(f float64) string {
+	if f == 0 {
+		return "0"
+	}
+	switch {
+	case math.IsNaN(f):
+		return "NaN"
+	case math.IsInf(f, 1):
+		return "Infinity"
+	case math.IsInf(f, -1):
+		return "-Infinity"
+	}
+	abs := math.Abs(f)
+	if abs >= 1e-6 && abs < 1e21 {
+		return strconv.FormatFloat(f, 'f', -1, 64)
+	}
+	formatted := strconv.FormatFloat(f, 'e', -1, 64)
+	index := strings.IndexByte(formatted, 'e')
+	if index < 0 {
+		return formatted
+	}
+	mantissa := formatted[:index]
+	exponent := formatted[index+1:]
+	sign := ""
+	if len(exponent) > 0 && (exponent[0] == '+' || exponent[0] == '-') {
+		sign = string(exponent[0])
+		exponent = exponent[1:]
+	}
+	exponent = strings.TrimLeft(exponent, "0")
+	if exponent == "" {
+		exponent = "0"
+	}
+	return mantissa + "e" + sign + exponent
 }
 
 // JSSlice slices by UTF-16 code units, matching JavaScript's String.slice.

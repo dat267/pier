@@ -442,16 +442,8 @@ func coercePrimitiveByType(value *schemaValue, typ string) *schemaValue {
 	}
 }
 
-// trimFloat formats a number like JS String(number) for common values.
-func trimFloat(f float64) string {
-	if f == math.Trunc(f) && math.Abs(f) < 1e15 {
-		return formatInt(int64(f))
-	}
-	return formatFloat(f)
-}
-
-func formatInt(n int64) string     { return fmt.Sprintf("%d", n) }
-func formatFloat(f float64) string { return fmt.Sprintf("%g", f) }
+// trimFloat formats a number like JS String(number).
+func trimFloat(f float64) string { return JSNumberToString(f) }
 
 func coerceWithJSONSchema(value *schemaValue, schema *jsonSchema) *schemaValue {
 	next := value

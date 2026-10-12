@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/dat267/pier/agent"
@@ -457,7 +456,9 @@ func CreateLsTool(cwd string) agent.AgentTool {
 }
 
 func formatToolNumber(value float64) string {
-	return strconv.FormatFloat(value, 'f', -1, 64)
+	// Upstream interpolates the number into a template literal, i.e.
+	// String(number).
+	return ai.JSNumberToString(value)
 }
 
 func jsArraySliceIndex(index float64, length int) int {
