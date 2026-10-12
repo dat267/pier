@@ -12,6 +12,18 @@ import (
 	"github.com/dat267/pier/tui"
 )
 
+func TestToolTruncationWarningsFormatFractionalLimits(t *testing.T) {
+	match := 1.5
+	result := 2.5
+	entries := 3.5
+	gotMatch, _, _, _ := toolTruncationWarnings(&coding.GrepToolDetails{MatchLimitReached: &match})
+	gotResult, _, _, _ := toolTruncationWarnings(&coding.FindToolDetails{ResultLimitReached: &result})
+	gotEntries, _, _, _ := toolTruncationWarnings(&coding.LsToolDetails{EntryLimitReached: &entries})
+	if gotMatch != "1.5 matches limit" || gotResult != "2.5 results limit" || gotEntries != "3.5 entries limit" {
+		t.Fatalf("fractional warnings = %q, %q, %q", gotMatch, gotResult, gotEntries)
+	}
+}
+
 func homeDir(t *testing.T) string {
 	t.Helper()
 	home, err := os.UserHomeDir()

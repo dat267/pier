@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/dat267/pier/coding"
@@ -148,11 +149,15 @@ func appendTruncatedLines(text string, output string, maxLines int, theme *Theme
 	return text
 }
 
+func formatToolLimit(value float64) string {
+	return strconv.FormatFloat(value, 'f', -1, 64)
+}
+
 func toolTruncationWarnings(details any) (matchLimit string, truncated bool, maxBytes int, extra []string) {
 	switch typed := details.(type) {
 	case *coding.GrepToolDetails:
 		if typed.MatchLimitReached != nil {
-			matchLimit = fmt.Sprintf("%d matches limit", *typed.MatchLimitReached)
+			matchLimit = fmt.Sprintf("%s matches limit", formatToolLimit(*typed.MatchLimitReached))
 		}
 		if typed.Truncation != nil && typed.Truncation.Truncated {
 			truncated = true
@@ -163,7 +168,7 @@ func toolTruncationWarnings(details any) (matchLimit string, truncated bool, max
 		}
 	case *coding.FindToolDetails:
 		if typed.ResultLimitReached != nil {
-			matchLimit = fmt.Sprintf("%d results limit", *typed.ResultLimitReached)
+			matchLimit = fmt.Sprintf("%s results limit", formatToolLimit(*typed.ResultLimitReached))
 		}
 		if typed.Truncation != nil && typed.Truncation.Truncated {
 			truncated = true
@@ -171,7 +176,7 @@ func toolTruncationWarnings(details any) (matchLimit string, truncated bool, max
 		}
 	case *coding.LsToolDetails:
 		if typed.EntryLimitReached != nil {
-			matchLimit = fmt.Sprintf("%d entries limit", *typed.EntryLimitReached)
+			matchLimit = fmt.Sprintf("%s entries limit", formatToolLimit(*typed.EntryLimitReached))
 		}
 		if typed.Truncation != nil && typed.Truncation.Truncated {
 			truncated = true
