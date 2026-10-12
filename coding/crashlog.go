@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Port of core/crash-log.ts: best-effort crash persistence feeding the bug
@@ -74,7 +76,8 @@ func writeCrashLog(records []CrashRecord, path string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o777); err != nil {
 		return err
 	}
-	encoded, err := json.MarshalIndent(records, "", "  ")
+	// JSON.stringify(records, null, 2) plus a trailing newline.
+	encoded, err := ai.MarshalIndentJSON(records)
 	if err != nil {
 		return err
 	}

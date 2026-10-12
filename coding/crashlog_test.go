@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -62,6 +63,23 @@ func TestRecordAndReadCrashLog(t *testing.T) {
 // trailingNewline reports a trailing newline.
 func trailingNewline(raw []byte) bool {
 	return len(raw) > 0 && raw[len(raw)-1] == '\n'
+}
+
+// crash-log.ts writes with JSON.stringify(records, null, 2), which does not
+// HTML-escape.
+func TestCrashLogDoesNotHTMLEscape(t *testing.T) {
+	path := GetCrashLogPath(t.TempDir())
+	RecordCrash(CrashInput{Kind: CrashKindFatalError, Error: errors.New("a < b & c > d"), Cwd: "/"}, path)
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), `\u003c`) || strings.Contains(string(raw), `\u0026`) || strings.Contains(string(raw), `\u003e`) {
+		t.Fatalf("crash log HTML-escaped: %s", raw)
+	}
+	if !strings.Contains(string(raw), "a < b & c > d") {
+		t.Fatalf("crash log = %s", raw)
+	}
 }
 
 func TestRecordCrashBestEffort(t *testing.T) {

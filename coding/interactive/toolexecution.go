@@ -1,10 +1,10 @@
 package interactive
 
 import (
-	"encoding/json"
 	"strings"
 	"time"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/tui"
 )
 
@@ -509,7 +509,7 @@ func (c *ToolExecutionComponent) formatToolExecution() string {
 	theme := ActiveTheme()
 	text := theme.Fg("toolTitle", theme.Bold(c.toolName))
 	if c.args != nil {
-		if encoded, err := json.MarshalIndent(c.args, "", "  "); err == nil && len(encoded) > 0 {
+		if encoded, err := ai.MarshalIndentJSON(c.args); err == nil && len(encoded) > 0 {
 			text += "\n\n" + string(encoded)
 		}
 	}

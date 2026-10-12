@@ -2108,7 +2108,8 @@ func (e *Editor) updateAutocompleteLocked() {
 func (e *Editor) setAutocompleteTriggerCharactersLocked(triggerCharacters []string) {
 	next := append([]string(nil), defaultAutocompleteTriggerCharacters...)
 	for _, character := range triggerCharacters {
-		if utf8.RuneCountInString(character) != 1 || character == "/" || IsWhitespaceChar(character) ||
+		// Upstream accepts a trigger only when String.length === 1 (UTF-16).
+		if jsLength(character) != 1 || character == "/" || IsWhitespaceChar(character) ||
 			containsString(next, character) {
 			continue
 		}

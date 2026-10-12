@@ -22,3 +22,20 @@ func MarshalJSON(v any) ([]byte, error) {
 	}
 	return out, nil
 }
+
+// MarshalIndentJSON encodes v the way JavaScript's JSON.stringify(v, null, 2)
+// does: two-space indentation and no HTML escaping.
+func MarshalIndentJSON(v any) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(v); err != nil {
+		return nil, err
+	}
+	out := buf.Bytes()
+	if len(out) > 0 && out[len(out)-1] == '\n' {
+		out = out[:len(out)-1]
+	}
+	return out, nil
+}
