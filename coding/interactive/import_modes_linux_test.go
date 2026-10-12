@@ -14,9 +14,6 @@ import (
 
 // Upstream node:fs copyFileSync preserves the imported session's permissions.
 func TestImportSessionDirectoryUsesNodeDefaultMode(t *testing.T) {
-	oldMask := syscall.Umask(0)
-	defer syscall.Umask(oldMask)
-
 	app, cleanup := newTestApp(t)
 	defer cleanup()
 	root := t.TempDir()
@@ -26,6 +23,8 @@ func TestImportSessionDirectoryUsesNodeDefaultMode(t *testing.T) {
 		SessionDir: sessionDir, Persist: &persist,
 	})
 	source := writeImportableSession(t, t.TempDir())
+	oldMask := syscall.Umask(0)
+	defer syscall.Umask(oldMask)
 	newCommandWiring(app).HandleImportCommand(context.Background(), "/import "+source)
 	answerConfirm(t, app, 0)
 
@@ -39,9 +38,6 @@ func TestImportSessionDirectoryUsesNodeDefaultMode(t *testing.T) {
 }
 
 func TestImportSessionPreservesSourceMode(t *testing.T) {
-	oldMask := syscall.Umask(0o022)
-	defer syscall.Umask(oldMask)
-
 	app, cleanup := newTestApp(t)
 	defer cleanup()
 	sessionDir := withSessionDir(t, app)
@@ -50,7 +46,8 @@ func TestImportSessionPreservesSourceMode(t *testing.T) {
 		t.Fatal(err)
 	}
 	// copyFileSync preserves the source mode rather than applying the current umask.
-	syscall.Umask(0o077)
+	oldMask := syscall.Umask(0o077)
+	defer syscall.Umask(oldMask)
 	newCommandWiring(app).HandleImportCommand(context.Background(), "/import "+source)
 	answerConfirm(t, app, 0)
 
