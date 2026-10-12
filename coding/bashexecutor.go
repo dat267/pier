@@ -91,7 +91,7 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 		}
 		id := tempFileID()
 		tempFilePath = filepath.Join(os.TempDir(), fmt.Sprintf("pi-bash-%s.log", id))
-		file, err := os.Create(tempFilePath)
+		file, err := os.OpenFile(tempFilePath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 		if err != nil {
 			tempFilePath = ""
 			return err
