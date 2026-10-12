@@ -297,7 +297,8 @@ func (decoder *utf8TextDecoder) reset() {
 	decoder.lowerBound, decoder.upperBound = 0, 0
 }
 
-// DecodeUTF8WithReplacement decodes UTF-8 using TextDecoder replacement semantics.
+// DecodeUTF8WithReplacement matches Buffer.toString("utf8"): malformed sequences
+// become replacement runes and a leading BOM is preserved.
 func DecodeUTF8WithReplacement(data []byte) string {
 	var decoder utf8TextDecoder
 	return decoder.decode(data, true)
