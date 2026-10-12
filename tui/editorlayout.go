@@ -155,8 +155,8 @@ func WordWrapLine(line string, maxWidth int, preSegmented []editorSegment) []Tex
 			wrapOppIndex = next.Index
 			wrapOppWidth = currentWidth
 		} else if !isWS && next != nil && !IsWhitespaceChar(next.Segment) {
-			isCJK := !isPasteMarker(grapheme) && cjkBreakRegex.MatchString(grapheme)
-			nextIsCJK := !isPasteMarker(next.Segment) && cjkBreakRegex.MatchString(next.Segment)
+			isCJK := !isPasteMarker(grapheme) && containsCJKBreak(grapheme)
+			nextIsCJK := !isPasteMarker(next.Segment) && containsCJKBreak(next.Segment)
 			if isCJK || nextIsCJK {
 				wrapOppIndex = next.Index
 				wrapOppWidth = currentWidth

@@ -958,7 +958,7 @@ func isAutocompleteWordChar(char string) bool {
 			r == '.' || r == '-' || r == '_' {
 			return true
 		}
-		return cjkBreakRegex.MatchString(char)
+		return containsCJKBreak(char)
 	}
 	return false
 }

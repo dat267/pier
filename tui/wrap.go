@@ -6,35 +6,6 @@ import (
 
 // Port of the wrapping half of src/utils.ts: ANSI-aware word wrapping.
 
-// cjkBreakRegex is satisfied by CJK ideographs and kana/hangul, which may
-// break anywhere.
-func cjkBreak(r rune) bool {
-	switch {
-	case r >= 0x2E80 && r <= 0x303F, // CJK radicals through CJK symbols
-		r >= 0x3040 && r <= 0x30FF,   // hiragana, katakana
-		r >= 0x3105 && r <= 0x312F,   // bopomofo
-		r >= 0x3130 && r <= 0x318F,   // compatibility hangul
-		r >= 0x3400 && r <= 0x4DBF,   // CJK ext A
-		r >= 0x4E00 && r <= 0x9FFF,   // CJK unified
-		r >= 0xAC00 && r <= 0xD7AF,   // hangul syllables
-		r >= 0xF900 && r <= 0xFAFF,   // CJK compatibility
-		r >= 0x20000 && r <= 0x2FA1F: // ext B through compat supplement
-		return true
-	}
-	return false
-}
-
-// cjkPunctuation breaks prose from completions.
-func cjkPunctuation(r rune) bool {
-	switch r {
-	case 0xFF0C, 0xFF0E, 0xFF1A, 0xFF1B, 0xFF01, 0xFF1F, 0xFF08, 0xFF09,
-		0xFF3B, 0xFF3D, 0xFF5B, 0xFF5D, 0x201C, 0x201D, 0x2018, 0x2019,
-		0x2026, 0x2014:
-		return true
-	}
-	return false
-}
-
 // isSpaceRune reports a plain space (the wrap tokenizer only splits on the
 // space character).
 func isSpaceRune(r rune) bool { return r == ' ' }
@@ -73,7 +44,7 @@ func splitIntoTokensWithAnsi(text string) []string {
 		for _, segment := range segmentGraphemes(text[index:end]) {
 			runes := []rune(segment)
 			segmentIsSpace := isSpaceRune(runes[0]) && len(runes) == 1
-			if !segmentIsSpace && (cjkBreak(runes[0]) || cjkPunctuation(runes[0])) {
+			if !segmentIsSpace && isCJKBreakRune(runes[0]) {
 				flushCurrent()
 				tokens = append(tokens, pendingAnsi+segment)
 				pendingAnsi = ""

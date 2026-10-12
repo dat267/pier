@@ -54,8 +54,6 @@ type FileCompletionTrigger interface {
 
 // ---- Text classification from src/utils.ts ----
 
-var cjkBreakRegex = regexp.MustCompile(`[\p{Han}\p{Hiragana}\p{Katakana}\p{Hangul}\p{Bopomofo}]`)
-
 // cjkPunctuation is the explicit CJK punctuation set from utils.ts.
 var editorCJKPunctuation = map[rune]bool{
 	'，': true, '．': true, '：': true, '；': true, '！': true, '？': true,
