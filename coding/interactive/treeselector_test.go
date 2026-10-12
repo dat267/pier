@@ -276,6 +276,18 @@ func TestTreeSelectorEmptyAutoCancel(t *testing.T) {
 	}
 }
 
+// tree-selector.ts extracts content with String.slice (UTF-16 code units).
+func TestTreeExtractContentTruncatesByUTF16Units(t *testing.T) {
+	text := strings.Repeat("中", 250)
+	content, err := json.Marshal([]map[string]any{{"type": "text", "text": text}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := (&TreeList{}).extractContent(content); got != strings.Repeat("中", 200) {
+		t.Fatalf("extractContent = %q", got)
+	}
+}
+
 // The tree tool label truncates like upstream's String.slice: UTF-16 code
 // units, so a multi-byte command keeps 50 characters, not 50 bytes.
 func TestTreeToolLabelTruncatesBashCommandByUTF16Units(t *testing.T) {

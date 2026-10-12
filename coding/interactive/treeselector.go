@@ -858,10 +858,7 @@ func (t *TreeList) getEntryDisplayText(node *coding.SessionTreeNode, isSelected 
 			case message.StopReason == "aborted":
 				result = theme.Fg("success", "assistant: ") + theme.Fg("muted", "(aborted)")
 			case message.ErrorMessage != "":
-				errMsg := normalize(message.ErrorMessage)
-				if len(errMsg) > 80 {
-					errMsg = errMsg[:80]
-				}
+				errMsg := ai.JSSlice(normalize(message.ErrorMessage), 0, 80)
 				result = theme.Fg("success", "assistant: ") + theme.Fg("error", errMsg)
 			default:
 				result = theme.Fg("success", "assistant: ") + theme.Fg("muted", "(no content)")
@@ -949,11 +946,8 @@ func pad2(value int) string {
 }
 
 func (t *TreeList) extractContent(content json.RawMessage) string {
-	full := t.extractFullContent(content)
-	if len(full) > 200 {
-		return full[:200]
-	}
-	return full
+	// Upstream slices by UTF-16 code units (String.slice).
+	return ai.JSSlice(t.extractFullContent(content), 0, 200)
 }
 
 func (t *TreeList) extractFullContent(content json.RawMessage) string {

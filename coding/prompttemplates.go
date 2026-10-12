@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Port of core/prompt-templates.ts and core/source-info.ts.
@@ -202,9 +204,10 @@ func LoadTemplateFromFile(filePath string, sourceInfo SourceInfo) *PromptTemplat
 			if strings.TrimSpace(line) == "" {
 				continue
 			}
-			description = line
-			if len(line) > 60 {
-				description = line[:60] + "..."
+			// Upstream slices by UTF-16 code units (String.slice).
+			description = ai.JSSlice(line, 0, 60)
+			if ai.JSLength(line) > 60 {
+				description += "..."
 			}
 			break
 		}

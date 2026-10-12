@@ -535,3 +535,17 @@ func TestSessionSelectorApplyStaysOnTheLoop(t *testing.T) {
 		t.Fatal("a loader apply ran off-loop; it can race the owner's Render")
 	}
 }
+
+// Upstream slices the joined trash error parts by UTF-16 units, and the
+// "trash: " prefix is added after the cut.
+func TestFormatTrashErrorHintTruncatesJoinedParts(t *testing.T) {
+	joined := strings.Repeat("中", 199)
+	if got := formatTrashErrorHint(nil, joined); got != "trash: "+joined {
+		t.Fatalf("hint = %q", got)
+	}
+	long := strings.Repeat("中", 250)
+	want := "trash: " + strings.Repeat("中", 200)
+	if got := formatTrashErrorHint(nil, long); got != want {
+		t.Fatalf("hint = %q; want %q", got, want)
+	}
+}

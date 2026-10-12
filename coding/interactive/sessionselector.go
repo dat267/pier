@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
 )
@@ -55,25 +56,6 @@ func DeleteSessionFile(sessionPath string) SessionDeleteResult {
 	if strings.HasPrefix(sessionPath, "-") {
 		trashArgs = []string{"--", sessionPath}
 	}
-	trashErrorHint := func(err error, stderr string) string {
-		var parts []string
-		if err != nil {
-			parts = append(parts, err.Error())
-		}
-		if trimmed := strings.TrimSpace(stderr); trimmed != "" {
-			first := strings.Split(trimmed, "\n")[0]
-			parts = append(parts, first)
-		}
-		if len(parts) == 0 {
-			return ""
-		}
-		hint := "trash: " + strings.Join(parts, " · ")
-		if len(hint) > 200 {
-			hint = hint[:200]
-		}
-		return hint
-	}
-
 	command := exec.Command("trash", trashArgs...)
 	output, err := command.CombinedOutput()
 	_, statErr := os.Stat(sessionPath)
@@ -84,12 +66,29 @@ func DeleteSessionFile(sessionPath string) SessionDeleteResult {
 
 	if removeErr := os.Remove(sessionPath); removeErr != nil {
 		message := removeErr.Error()
-		if hint := trashErrorHint(err, stderr); hint != "" {
+		if hint := formatTrashErrorHint(err, stderr); hint != "" {
 			message = message + " (" + hint + ")"
 		}
 		return SessionDeleteResult{OK: false, Method: "unlink", Error: message}
 	}
 	return SessionDeleteResult{OK: true, Method: "unlink"}
+}
+
+// formatTrashErrorHint renders the `trash` failure hint (upstream
+// getTrashErrorHint). Upstream slices the joined parts, not the prefix, by
+// UTF-16 code units.
+func formatTrashErrorHint(err error, stderr string) string {
+	var parts []string
+	if err != nil {
+		parts = append(parts, err.Error())
+	}
+	if trimmed := strings.TrimSpace(stderr); trimmed != "" {
+		parts = append(parts, strings.Split(trimmed, "\n")[0])
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return "trash: " + ai.JSSlice(strings.Join(parts, " · "), 0, 200)
 }
 
 func shortenSessionPath(path string) string {

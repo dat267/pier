@@ -320,6 +320,24 @@ func TestLoadTemplateReplacesMalformedUTF8(t *testing.T) {
 	}
 }
 
+// prompt-templates.ts truncates the first-line description with String.slice
+// (UTF-16 code units), not bytes.
+func TestLoadTemplateDescriptionTruncatesByUTF16Units(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "long.md")
+	line := strings.Repeat("中", 70)
+	if err := os.WriteFile(path, []byte(line), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	template := LoadTemplateFromFile(path, CreateSyntheticSourceInfo(path, "local", "", "", filepath.Dir(path)))
+	if template == nil {
+		t.Fatal("template did not load")
+	}
+	want := strings.Repeat("中", 60) + "..."
+	if template.Description != want {
+		t.Fatalf("description = %q; want %q", template.Description, want)
+	}
+}
+
 // prompt-templates.ts receives UTF-8-decoded directory entry names from readdir.
 func TestLoadTemplatesSkipsInvalidUTF8FileNames(t *testing.T) {
 	if runtime.GOOS == "windows" {
