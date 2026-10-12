@@ -91,10 +91,17 @@ func (m *SessionManager) FlushWrites() error {
 // A failed write requires the next save to rewrite its entire accepted prefix.
 type sessionWriteState struct {
 	initialized bool
+	claimed     bool
 }
 
 func (s *sessionWriteState) rewrite(path string, entries []FileEntry) error {
-	err := writeSessionEntries(path, entries)
+	if s.initialized || s.claimed {
+		err := writeSessionEntries(path, entries)
+		s.initialized = err == nil
+		return err
+	}
+	claimed, err := writeSessionEntriesExclusive(path, entries)
+	s.claimed = claimed
 	s.initialized = err == nil
 	return err
 }
@@ -112,15 +119,37 @@ func (s *sessionWriteState) append(path, line string, marshalErr error, entries 
 }
 
 func writeSessionEntries(path string, entries []FileEntry) error {
+	data, err := marshalSessionEntries(entries)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0o666)
+}
+
+func writeSessionEntriesExclusive(path string, entries []FileEntry) (bool, error) {
+	data, err := marshalSessionEntries(entries)
+	if err != nil {
+		return false, err
+	}
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o666)
+	if err != nil {
+		return false, err
+	}
+	_, writeErr := file.Write(data)
+	closeErr := file.Close()
+	return true, errors.Join(writeErr, closeErr)
+}
+
+func marshalSessionEntries(entries []FileEntry) ([]byte, error) {
 	var buffer strings.Builder
 	for _, entry := range entries {
 		line, err := MarshalFileEntry(entry)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		buffer.WriteString(line)
 	}
-	return os.WriteFile(path, []byte(buffer.String()), 0o666)
+	return []byte(buffer.String()), nil
 }
 
 // writeSessionLine appends one pre-marshaled line, including close failures.

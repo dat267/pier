@@ -209,7 +209,7 @@ func OpenSession(path string, sessionDir string, cwdOverride string) (*SessionMa
 	resolvedPath := ResolvePath(path, "", PathInputOptions{})
 	m := &SessionManager{
 		persist:         true,
-		writeState:      &sessionWriteState{initialized: true},
+		writeState:      &sessionWriteState{initialized: true, claimed: true},
 		byID:            map[string]*SessionEntry{},
 		labelsByID:      map[string]string{},
 		labelTimestamps: map[string]string{},

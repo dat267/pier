@@ -19,6 +19,27 @@ func newTestSession(t *testing.T) (*SessionManager, string) {
 	return m, dir
 }
 
+// Upstream session-manager.ts creates the first persisted file with openSync(..., "wx").
+func TestSessionManagerDoesNotClobberExistingNewSessionPath(t *testing.T) {
+	manager, _ := newTestSession(t)
+	path := manager.GetSessionFile()
+	sentinel := []byte("existing session file")
+	if err := os.WriteFile(path, sentinel, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "new message"}})
+	if err := manager.FlushWrites(); err == nil {
+		t.Fatal("persisting a new session over an existing path should fail")
+	}
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != string(sentinel) {
+		t.Fatalf("existing session was overwritten: %q", got)
+	}
+}
+
 func TestSessionManagerNewSessionHeader(t *testing.T) {
 	m, dir := newTestSession(t)
 
