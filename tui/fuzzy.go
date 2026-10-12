@@ -129,12 +129,14 @@ func swappedAlphaNumericQuery(query string) string {
 
 // isFuzzyBoundaryUnit reports the upstream `/[\s\-_./:]/` word-boundary set.
 func isFuzzyBoundaryUnit(unit uint16) bool {
-	switch unit {
-	case ' ', '\t', '\n', '\v', '\f', '\r', '-', '_', '.', '/', ':',
-		0x00A0, 0x1680, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF:
+	if isWhitespaceRune(rune(unit)) {
 		return true
 	}
-	return unit >= 0x2000 && unit <= 0x200A
+	switch unit {
+	case '-', '_', '.', '/', ':':
+		return true
+	}
+	return false
 }
 
 // indexUnitFrom returns the index of needle at or after start.

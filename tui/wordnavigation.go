@@ -172,20 +172,23 @@ func isWordChar(r rune) bool {
 }
 
 // FindWordBackward returns the cursor position after moving one word backward.
+// FindWordBackward returns the cursor position after moving one word backward.
+// Cursors and results are UTF-16 code-unit offsets (upstream JS string
+// offsets), so the caller converts from its own byte offsets.
 func FindWordBackward(text string, cursor int) int {
 	if cursor <= 0 {
 		return 0
 	}
-	runes := []rune(text)
-	if cursor > len(runes) {
-		cursor = len(runes)
+	if limit := jsLength(text); cursor > limit {
+		cursor = limit
 	}
-	segments := WordSegments(string(runes[:cursor]))
+	byteCursor := byteOffsetForUTF16Index(text, cursor)
+	segments := WordSegments(text[:byteCursor])
 
 	newCursor := cursor
 	// Skip trailing whitespace.
 	for len(segments) > 0 && isWhitespaceString(segments[len(segments)-1].Segment) {
-		newCursor -= len([]rune(segments[len(segments)-1].Segment))
+		newCursor -= jsLength(segments[len(segments)-1].Segment)
 		segments = segments[:len(segments)-1]
 	}
 	if len(segments) == 0 {
@@ -196,17 +199,18 @@ func FindWordBackward(text string, cursor int) int {
 	if last.IsWordLike {
 		// Skip inside one word-like segment, preserving ASCII punctuation
 		// boundaries.
-		segment := []rune(last.Segment)
 		lastPunctuationEnd := -1
-		for index, r := range segment {
+		units := 0
+		for _, r := range last.Segment {
 			if punctuationChars[r] {
-				lastPunctuationEnd = index
+				lastPunctuationEnd = units
 			}
+			units += jsLength(string(r))
 		}
 		if lastPunctuationEnd < 0 {
-			newCursor -= len(segment)
+			newCursor -= jsLength(last.Segment)
 		} else {
-			newCursor -= len(segment) - (lastPunctuationEnd + 1)
+			newCursor -= jsLength(last.Segment) - (lastPunctuationEnd + 1)
 		}
 		return newCursor
 	}
@@ -217,25 +221,29 @@ func FindWordBackward(text string, cursor int) int {
 		if last.IsWordLike || isWhitespaceString(last.Segment) {
 			break
 		}
-		newCursor -= len([]rune(last.Segment))
+		newCursor -= jsLength(last.Segment)
 		segments = segments[:len(segments)-1]
 	}
 	return newCursor
 }
 
 // FindWordForward returns the cursor position after moving one word forward.
+// FindWordForward returns the cursor position after moving one word forward.
+// Cursors and results are UTF-16 code-unit offsets (upstream JS string
+// offsets), so the caller converts from its own byte offsets.
 func FindWordForward(text string, cursor int) int {
-	runes := []rune(text)
-	if cursor >= len(runes) {
-		return len(runes)
+	limit := jsLength(text)
+	if cursor >= limit {
+		return limit
 	}
-	segments := WordSegments(string(runes[cursor:]))
+	byteCursor := byteOffsetForUTF16Index(text, cursor)
+	segments := WordSegments(text[byteCursor:])
 
 	newCursor := cursor
 	index := 0
 	// Skip leading whitespace.
 	for index < len(segments) && isWhitespaceString(segments[index].Segment) {
-		newCursor += len([]rune(segments[index].Segment))
+		newCursor += jsLength(segments[index].Segment)
 		index++
 	}
 	if index >= len(segments) {
@@ -245,13 +253,14 @@ func FindWordForward(text string, cursor int) int {
 	next := segments[index]
 	if next.IsWordLike {
 		// Stop at the first ASCII punctuation inside the word-like segment.
-		segment := []rune(next.Segment)
-		stop := len(segment)
-		for i, r := range segment {
+		stop := jsLength(next.Segment)
+		units := 0
+		for _, r := range next.Segment {
 			if punctuationChars[r] {
-				stop = i
+				stop = units
 				break
 			}
+			units += jsLength(string(r))
 		}
 		newCursor += stop
 		return newCursor
@@ -263,7 +272,7 @@ func FindWordForward(text string, cursor int) int {
 		if current.IsWordLike || isWhitespaceString(current.Segment) {
 			break
 		}
-		newCursor += len([]rune(current.Segment))
+		newCursor += jsLength(current.Segment)
 		index++
 	}
 	return newCursor

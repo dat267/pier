@@ -400,3 +400,30 @@ func TestWordNavigationAgainstUpstreamGolden(t *testing.T) {
 		}
 	}
 }
+
+// The input uses byte offsets (D61), so word movement must too.
+func TestInputWordMovementUsesByteOffsets(t *testing.T) {
+	input := NewInput(InputOptions{})
+	input.SetValue("héllo wörld")
+	input.cursor = len(input.value)
+	input.moveWordBackwards()
+	if want := len("héllo "); input.cursor != want {
+		t.Fatalf("backward cursor = %d; want %d", input.cursor, want)
+	}
+	input.moveWordForwards()
+	if want := len("héllo wörld"); input.cursor != want {
+		t.Fatalf("forward cursor = %d; want %d", input.cursor, want)
+	}
+}
+
+// FindWordBackward/Forward use UTF-16 offsets, so an astral character counts
+// as two.
+func TestFindWordBackwardUTF16Offsets(t *testing.T) {
+	text := "\U0001F600 word"
+	if got := FindWordBackward(text, jsLength(text)); got != 3 {
+		t.Fatalf("backward = %d; want 3", got)
+	}
+	if got := FindWordForward(text, 0); got != 2 {
+		t.Fatalf("forward = %d; want 2", got)
+	}
+}

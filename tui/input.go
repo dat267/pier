@@ -376,7 +376,10 @@ func (in *Input) moveWordBackwards() {
 		return
 	}
 	in.lastAction = ""
-	in.cursor = FindWordBackward(in.value, in.cursor)
+	// FindWordBackward works in UTF-16 offsets; the input's cursor is a byte
+	// offset (D61).
+	utf16Cursor := utf16IndexForByteOffset(in.value, in.cursor)
+	in.cursor = byteOffsetForUTF16Index(in.value, FindWordBackward(in.value, utf16Cursor))
 }
 
 func (in *Input) moveWordForwards() {
@@ -384,7 +387,8 @@ func (in *Input) moveWordForwards() {
 		return
 	}
 	in.lastAction = ""
-	in.cursor = FindWordForward(in.value, in.cursor)
+	utf16Cursor := utf16IndexForByteOffset(in.value, in.cursor)
+	in.cursor = byteOffsetForUTF16Index(in.value, FindWordForward(in.value, utf16Cursor))
 }
 
 func (in *Input) handlePaste(pastedText string) {
