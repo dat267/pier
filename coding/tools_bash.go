@@ -282,7 +282,7 @@ func (o *OutputAccumulator) ensureTempFileLocked() error {
 		return err
 	}
 	path := filepath.Join(os.TempDir(), fmt.Sprintf("%s-%s.log", o.tempFilePrefix, hex.EncodeToString(id)))
-	file, err := os.Create(path)
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 	if err != nil {
 		return err
 	}
