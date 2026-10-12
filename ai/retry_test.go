@@ -10,6 +10,23 @@ import (
 // through to the exponential backoff instead of returning an unusable delay
 // (Go's ParseFloat accepts "NaN" and "Infinity" without error, and converting
 // those to int64 is not a defined value).
+func TestRetryDelayParsesNumericPrefixes(t *testing.T) {
+	for _, testCase := range []struct {
+		header string
+		value  string
+		want   int64
+	}{
+		{"Retry-After-Ms", "1250ms", 1250},
+		{"Retry-After", "2.5 seconds", 2500},
+	} {
+		providerErr := &ProviderError{Message: "boom", Headers: http.Header{testCase.header: []string{testCase.value}}}
+		got, err := GetRetryDelayMS(providerErr, 0, nil)
+		if err != nil || got != testCase.want {
+			t.Errorf("GetRetryDelayMS(%q) = %d, %v; want %d, nil", testCase.value, got, err, testCase.want)
+		}
+	}
+}
+
 func TestRetryDelayFallsBackToExponentialOnUnparseableHeaders(t *testing.T) {
 	cases := []struct {
 		name   string

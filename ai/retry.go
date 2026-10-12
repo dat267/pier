@@ -33,6 +33,17 @@ func (e *ProviderError) Error() string { return e.Message }
 
 const defaultMaxRetryDelayMS = 60_000
 
+var jsParseFloatPrefix = regexp.MustCompile(`^[\t\n\v\f\r ]*[+-]?(?:Infinity|(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?)`)
+
+func parseJSFloatPrefix(value string) (float64, bool) {
+	prefix := jsParseFloatPrefix.FindString(value)
+	if prefix == "" {
+		return 0, false
+	}
+	parsed, err := strconv.ParseFloat(strings.TrimSpace(prefix), 64)
+	return parsed, err == nil
+}
+
 // isRetryableProviderError mirrors the pinned OpenAI/Anthropic SDK retry
 // policy; review when either SDK is upgraded.
 func isRetryableProviderError(err error) bool {
@@ -77,12 +88,12 @@ func GetRetryDelayMS(err *ProviderError, retryIndex int, maxRetryDelayMS *int) (
 		// and converting them to a delay would be garbage; the unparseable
 		// value falls through to the exponential backoff (2bbfcca43).
 		if v := err.Headers.Get("retry-after-ms"); v != "" {
-			if f, parseErr := strconv.ParseFloat(v, 64); parseErr == nil && !math.IsNaN(f) && !math.IsInf(f, 0) {
+			if f, ok := parseJSFloatPrefix(v); ok && !math.IsNaN(f) && !math.IsInf(f, 0) {
 				return validateServerRetryDelayMS(int64(f), maxRetryDelayMS, err.Message)
 			}
 		}
 		if v := err.Headers.Get("retry-after"); v != "" {
-			if seconds, parseErr := strconv.ParseFloat(v, 64); parseErr == nil && !math.IsNaN(seconds) && !math.IsInf(seconds, 0) {
+			if seconds, ok := parseJSFloatPrefix(v); ok && !math.IsNaN(seconds) && !math.IsInf(seconds, 0) {
 				return validateServerRetryDelayMS(int64(seconds*1000), maxRetryDelayMS, err.Message)
 			}
 			if at, parseErr := http.ParseTime(v); parseErr == nil {
