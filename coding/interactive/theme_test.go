@@ -499,3 +499,19 @@ func TestColorFgBgIndexMatchesUpstream(t *testing.T) {
 		t.Fatalf("0;8 = %d, %v; want 8, true", index, ok)
 	}
 }
+
+// Upstream's ColorValueSchema requires an integer color index in [0, 255].
+func TestThemeValidationRejectsOutOfRangeColorIndex(t *testing.T) {
+	colors := map[string]any{}
+	for _, key := range requiredThemeColors {
+		colors[key] = "#000000"
+	}
+	colors["accent"] = 300
+	data, err := json.Marshal(map[string]any{"name": "bad", "colors": colors})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ValidateThemeJSON("bad", data); err == nil {
+		t.Fatal("out-of-range color index must be rejected")
+	}
+}

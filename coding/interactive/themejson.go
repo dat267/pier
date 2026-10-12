@@ -127,6 +127,42 @@ func ValidateThemeJSON(label string, raw json.RawMessage) (*ThemeJSON, error) {
 		builder.WriteString("\nSee the built-in themes (dark.json, light.json) for reference values.")
 		return nil, fmt.Errorf("%s", builder.String())
 	}
+	// Upstream's ColorValueSchema requires an integer color index in [0, 255]
+	// and an appearance of "dark" or "light".
+	var otherErrors []string
+	checkColor := func(path string, color ColorValue) {
+		if color.IsIndex && (color.Index < 0 || color.Index > 255) {
+			otherErrors = append(otherErrors, fmt.Sprintf("  - %s: color index must be between 0 and 255", path))
+		}
+	}
+	for name, color := range theme.Colors {
+		checkColor("/colors/"+name, color)
+	}
+	for name, color := range theme.Vars {
+		checkColor("/vars/"+name, color)
+	}
+	if theme.Export != nil {
+		if theme.Export.PageBg != nil {
+			checkColor("/export/pageBg", *theme.Export.PageBg)
+		}
+		if theme.Export.CardBg != nil {
+			checkColor("/export/cardBg", *theme.Export.CardBg)
+		}
+		if theme.Export.InfoBg != nil {
+			checkColor("/export/infoBg", *theme.Export.InfoBg)
+		}
+	}
+	if theme.Appearance != "" && theme.Appearance != "dark" && theme.Appearance != "light" {
+		otherErrors = append(otherErrors, "  - /appearance: must be \"dark\" or \"light\"")
+	}
+	if len(otherErrors) > 0 {
+		sort.Strings(otherErrors)
+		var builder strings.Builder
+		fmt.Fprintf(&builder, "Invalid theme %q:\n", label)
+		builder.WriteString("\nOther errors:\n")
+		builder.WriteString(strings.Join(otherErrors, "\n"))
+		return nil, fmt.Errorf("%s", builder.String())
+	}
 	if strings.Contains(theme.Name, "/") {
 		return nil, fmt.Errorf("Invalid theme name %q: theme names cannot contain \"/\" because it is reserved for automatic light/dark theme settings.", theme.Name)
 	}
