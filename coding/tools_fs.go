@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
+	"golang.org/x/text/collate"
+	"golang.org/x/text/language"
 )
 
 // Port of core/tools/{read,write,ls}.ts (minus the extension wrapper and UI
@@ -460,12 +463,10 @@ func orDefault(v, d string) string {
 }
 
 func sortCaseInsensitive(names []string) {
-	// Simple insertion-based sort by lowercased key (stable for equal keys).
-	for i := 1; i < len(names); i++ {
-		for j := i; j > 0 && strings.ToLower(names[j]) < strings.ToLower(names[j-1]); j-- {
-			names[j], names[j-1] = names[j-1], names[j]
-		}
-	}
+	collator := collate.New(language.Und)
+	sort.SliceStable(names, func(i, j int) bool {
+		return collator.CompareString(strings.ToLower(names[i]), strings.ToLower(names[j])) < 0
+	})
 }
 
 func jsonUnmarshalStrictTool(data json.RawMessage, v any) error {

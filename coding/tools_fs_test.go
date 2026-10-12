@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"sync"
@@ -127,6 +128,21 @@ func TestReadToolTextAndTruncation(t *testing.T) {
 }
 
 func itoa(n int) string { b, _ := json.Marshal(n); return string(b) }
+
+func TestLsToolUsesLocaleAlphabeticalOrder(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"z", "2", "10", ".a", "-a", "_a", "á", "a", "ä", "a_", "a-", "a."} {
+		if err := os.WriteFile(filepath.Join(dir, name), nil, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	result := execTool(t, CreateLsTool(dir), `{}`)
+	got := strings.Split(result.Content[0].(ai.TextContent).Text, "\n")
+	want := []string{"_a", "-a", ".a", "10", "2", "a", "á", "ä", "a_", "a-", "a.", "z"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("ls order = %q; want %q", got, want)
+	}
+}
 
 func TestReadToolImageDetection(t *testing.T) {
 	dir := t.TempDir()
