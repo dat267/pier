@@ -75,6 +75,18 @@ func TestDetectOpenAICompletionsCompat(t *testing.T) {
 	}
 }
 
+// Upstream openai-completions.ts buildParams accepts omitted options.
+func TestBuildOpenAICompletionsParamsAcceptsNilOptions(t *testing.T) {
+	model := testOpenAIModel()
+	params, err := BuildOpenAICompletionsParams(model, NormalizeContext(Context{}), nil, nil, "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if params == nil || params.Model != model.ID || !params.Stream {
+		t.Fatalf("params = %+v", params)
+	}
+}
+
 func TestBuildOpenAICompletionsParamsShape(t *testing.T) {
 	model := testOpenAIModel()
 	tool := Tool{Name: "read_file", Description: "Reads", Parameters: json.RawMessage(`{"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}`)}

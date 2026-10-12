@@ -507,6 +507,9 @@ func ResolveThinkingTokenBudgetField(compat ResolvedOpenAICompletionsCompat) Thi
 // BuildOpenAICompletionsParams builds the streaming request body
 // (port of buildParams).
 func BuildOpenAICompletionsParams(model *Model, context TranscriptContext, options *OpenAICompletionsOptions, compat *ResolvedOpenAICompletionsCompat, cacheRetention CacheRetention, grammarToolInputProperties map[string]string) (*OpenAICompletionsParams, error) {
+	if options == nil {
+		options = &OpenAICompletionsOptions{}
+	}
 	if compat == nil {
 		resolved := GetOpenAICompletionsCompat(model)
 		compat = &resolved
