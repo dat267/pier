@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -483,6 +484,43 @@ func truncateForSummary(text string, maxChars int) string {
 	return JSSlice(text, 0, maxChars) + fmt.Sprintf("\n\n[... %d more characters truncated]", truncatedChars)
 }
 
+// marshalOrderedJSON re-serializes raw JSON preserving object key order like
+// JSON.stringify; Go's encoding/json sorts map keys.
+func marshalOrderedJSON(raw json.RawMessage) string {
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) == 0 {
+		return string(raw)
+	}
+	switch trimmed[0] {
+	case '{':
+		keys, values, err := readJSONObjectOrdered(trimmed)
+		if err != nil {
+			return string(raw)
+		}
+		parts := make([]string, 0, len(keys))
+		for _, key := range keys {
+			parts = append(parts, string(mustMarshalJSON(key))+":"+marshalOrderedJSON(values[key]))
+		}
+		return "{" + strings.Join(parts, ",") + "}"
+	case '[':
+		var elements []json.RawMessage
+		if json.Unmarshal(trimmed, &elements) != nil {
+			return string(raw)
+		}
+		parts := make([]string, 0, len(elements))
+		for _, element := range elements {
+			parts = append(parts, marshalOrderedJSON(element))
+		}
+		return "[" + strings.Join(parts, ",") + "]"
+	default:
+		var value any
+		if json.Unmarshal(trimmed, &value) == nil {
+			return string(mustMarshalJSON(value))
+		}
+		return string(raw)
+	}
+}
+
 // SerializeConversation renders LLM messages as text so the model summarizes
 // rather than continues (port of serializeConversation).
 func SerializeConversation(messages []ai.Message) string {
@@ -502,13 +540,15 @@ func SerializeConversation(messages []ai.Message) string {
 				case ai.ThinkingContent:
 					thinkingParts = append(thinkingParts, b.Thinking)
 				case ai.ToolCall:
-					var args map[string]any
-					json.Unmarshal(b.Arguments, &args)
+					// Upstream serializes Object.entries(args), preserving the
+					// model's key order at every level.
+					keys, values, err := readJSONObjectOrdered(b.Arguments)
 					var argPairs []string
-					for k, v := range args {
-						argPairs = append(argPairs, fmt.Sprintf("%s=%s", k, mustMarshalJSON(v)))
+					if err == nil {
+						for _, k := range keys {
+							argPairs = append(argPairs, fmt.Sprintf("%s=%s", k, marshalOrderedJSON(values[k])))
+						}
 					}
-					sortStrings(argPairs)
 					toolCalls = append(toolCalls, fmt.Sprintf("%s(%s)", b.Name, strings.Join(argPairs, ", ")))
 				case ai.TextContent:
 					hasText = true

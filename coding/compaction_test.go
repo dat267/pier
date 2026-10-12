@@ -363,3 +363,31 @@ func TestTurnPrefixPromptUsesMarkdownBoundaries(t *testing.T) {
 		t.Fatalf("missing the continuation instructions:\n%s", captured)
 	}
 }
+
+// Upstream serializes tool-call arguments with Object.entries, preserving the
+// model's key order; the port sorted them.
+func TestSerializeConversationPreservesToolArgOrder(t *testing.T) {
+	assistant := &ai.AssistantMessage{
+		Content: ai.ContentList{
+			ai.ToolCall{ID: "c1", Name: "edit", Arguments: json.RawMessage(`{"b":2,"a":1}`)},
+		},
+		API: "openai-responses", Provider: "openai", Model: "mock",
+		StopReason: ai.StopToolUse, Timestamp: 2,
+	}
+	serialized := SerializeConversation(ConvertToLlm([]ai.Message{assistant}))
+	if !strings.Contains(serialized, `edit(b=2, a=1)`) {
+		t.Fatalf("tool calls = %q; want insertion order", serialized)
+	}
+	// Nested object keys keep their order too.
+	nested := &ai.AssistantMessage{
+		Content: ai.ContentList{
+			ai.ToolCall{ID: "c2", Name: "edit", Arguments: json.RawMessage(`{"path":"x","edits":[{"oldText":"a","newText":"b"}]}`)},
+		},
+		API: "openai-responses", Provider: "openai", Model: "mock",
+		StopReason: ai.StopToolUse, Timestamp: 2,
+	}
+	serialized = SerializeConversation(ConvertToLlm([]ai.Message{nested}))
+	if !strings.Contains(serialized, `edit(path="x", edits=[{"oldText":"a","newText":"b"}])`) {
+		t.Fatalf("nested tool calls = %q; want nested insertion order", serialized)
+	}
+}
