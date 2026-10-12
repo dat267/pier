@@ -552,7 +552,7 @@ func BuildOpenAICompletionsParams(model *Model, context TranscriptContext, optio
 	if compat.SupportsStore {
 		params.Store = boolPtr(false)
 	}
-	if options.MaxTokens != nil {
+	if options.MaxTokens != nil && *options.MaxTokens != 0 {
 		if compat.MaxTokensField == "max_tokens" {
 			params.MaxTokens = int64Ptr(int64(*options.MaxTokens))
 		} else {

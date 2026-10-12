@@ -61,6 +61,19 @@ func TestResponsesCompatAndCacheFields(t *testing.T) {
 	}
 }
 
+// Upstream openai-responses.ts omits maxTokens when its JavaScript value is falsy.
+func TestBuildResponsesParamsOmitsZeroMaxTokens(t *testing.T) {
+	zero := 0
+	params, err := BuildOpenAIResponsesParams(testResponsesModel(), NormalizeContext(Context{}),
+		&OpenAIResponsesOptions{StreamOptions: StreamOptions{MaxTokens: &zero}}, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if params.MaxOutputTokens != nil {
+		t.Fatalf("zero maxTokens emitted: %+v", params.MaxOutputTokens)
+	}
+}
+
 func TestBuildResponsesParams(t *testing.T) {
 	model := testResponsesModel()
 	tool := Tool{Name: "read_file", Description: "Reads", Parameters: json.RawMessage(`{"type":"object","properties":{}}`)}

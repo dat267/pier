@@ -87,6 +87,19 @@ func TestBuildOpenAICompletionsParamsAcceptsNilOptions(t *testing.T) {
 	}
 }
 
+// Upstream buildParams omits maxTokens when its JavaScript value is falsy.
+func TestBuildOpenAICompletionsParamsOmitsZeroMaxTokens(t *testing.T) {
+	zero := 0
+	params, err := BuildOpenAICompletionsParams(testOpenAIModel(), NormalizeContext(Context{}),
+		&OpenAICompletionsOptions{StreamOptions: StreamOptions{MaxTokens: &zero}}, nil, "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if params.MaxTokens != nil || params.MaxCompletionTokens != nil {
+		t.Fatalf("zero maxTokens emitted: %+v", params)
+	}
+}
+
 func TestBuildOpenAICompletionsParamsShape(t *testing.T) {
 	model := testOpenAIModel()
 	tool := Tool{Name: "read_file", Description: "Reads", Parameters: json.RawMessage(`{"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}`)}

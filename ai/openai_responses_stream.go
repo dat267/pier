@@ -83,7 +83,7 @@ func BuildOpenAIResponsesParamsWithProviders(
 		params.PromptCacheOptions = GetPromptCacheOptions(*compat, cacheRetention)
 	}
 
-	if options.MaxTokens != nil && compat.SupportsMaxOutputTokens && !omitUnsupportedFields {
+	if options.MaxTokens != nil && *options.MaxTokens != 0 && compat.SupportsMaxOutputTokens && !omitUnsupportedFields {
 		tokens := int64(max(*options.MaxTokens, openAIResponsesMinOutputTokens))
 		params.MaxOutputTokens = &tokens
 	}
