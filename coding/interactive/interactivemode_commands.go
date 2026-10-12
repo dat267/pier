@@ -779,10 +779,10 @@ func (w *CommandWiring) Stop(fullscreenExitOutput string, disposeSelector func()
 // WriteDebugLogFile writes the debug log to the standard path.
 func WriteDebugLogFile(content string) error {
 	debugLogPath := coding.GetDebugLogPath()
-	if err := os.MkdirAll(filepath.Dir(debugLogPath), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(debugLogPath), 0o777); err != nil {
 		return err
 	}
-	return os.WriteFile(debugLogPath, []byte(content), 0o644)
+	return os.WriteFile(debugLogPath, []byte(content), 0o666)
 }
 
 // newCommandWiring assembles the CommandWiring (port of the corresponding InteractiveMode wiring).
