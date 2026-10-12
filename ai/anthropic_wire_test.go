@@ -260,6 +260,10 @@ func TestConvertAnthropicMessagesThinkingReplay(t *testing.T) {
 }
 
 func TestNormalizeAnthropicToolCallID(t *testing.T) {
+	// Upstream anthropic-messages.ts uses a non-Unicode regex over UTF-16 code units.
+	if got := NormalizeAnthropicToolCallID("id😀"); got != "id__" {
+		t.Fatalf("astral id = %q; want id__", got)
+	}
 	// OpenAI Responses ids are 450+ chars with special characters.
 	long := "resp|" + string(make([]byte, 0)) + "abc$def"
 	for i := 0; i < 100; i++ {

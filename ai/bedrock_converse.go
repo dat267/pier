@@ -243,11 +243,9 @@ func BuildBedrockSystemPrompt(systemPrompt string, model *Model, cacheRetention 
 	return blocks
 }
 
-var bedrockToolCallIDPattern = regexp.MustCompile(`[^a-zA-Z0-9_-]`)
-
 // NormalizeBedrockToolCallID sanitizes and truncates a tool-call id.
 func NormalizeBedrockToolCallID(id string) string {
-	sanitized := bedrockToolCallIDPattern.ReplaceAllString(id, "_")
+	sanitized := sanitizeID(id)
 	if len(sanitized) > 64 {
 		sanitized = sanitized[:64]
 	}

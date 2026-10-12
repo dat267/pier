@@ -516,6 +516,13 @@ func bedrockEventFrame(eventType string, payload any) []byte {
 	}, encoded)
 }
 
+// Upstream bedrock-converse-stream.ts replaces invalid ID characters per UTF-16 code unit.
+func TestNormalizeBedrockToolCallIDAstral(t *testing.T) {
+	if got := NormalizeBedrockToolCallID("id😀"); got != "id__" {
+		t.Fatalf("astral id = %q; want id__", got)
+	}
+}
+
 func TestBedrockStreamFold(t *testing.T) {
 	frames := [][]byte{
 		bedrockEventFrame("messageStart", map[string]any{"role": "assistant"}),
