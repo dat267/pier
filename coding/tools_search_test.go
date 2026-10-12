@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -19,6 +20,23 @@ func requireBinary(t *testing.T, name string) {
 	t.Helper()
 	if _, err := exec.LookPath(name); err != nil {
 		t.Skipf("%s not installed", name)
+	}
+}
+
+func TestFindToolForwardsFractionalLimitToFD(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("uses a POSIX fd test stub")
+	}
+	stubDir := t.TempDir()
+	stub := filepath.Join(stubDir, "fd")
+	if err := os.WriteFile(stub, []byte("#!/bin/sh\nfor arg do\n  if [ \"$arg\" = \"1.5\" ]; then echo 'invalid max-results: 1.5' >&2; exit 2; fi\ndone\nexit 0\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", stubDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	tool := CreateFindTool(t.TempDir())
+	_, err := tool.Execute("c", json.RawMessage(`{"pattern":"*.txt","limit":1.5}`), context.Background(), nil)
+	if err == nil || err.Error() != "invalid max-results: 1.5" {
+		t.Fatalf("fractional find limit error = %v", err)
 	}
 }
 
@@ -97,6 +115,7 @@ func TestGrepToolMatches(t *testing.T) {
 		t.Fatalf("non-matching file in output: %q", text)
 	}
 
+	// Upstream grep.ts clamps the number with Math.max but preserves fractions.
 	result = execTool(t, tool, `{"pattern":"alpha","limit":1.5}`)
 	text = result.Content[0].(ai.TextContent).Text
 	if !strings.Contains(text, "a.txt:1: alpha one") || !strings.Contains(text, "a.txt:3: alpha three") ||

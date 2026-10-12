@@ -26,7 +26,7 @@ const FindToolDescription = "Search for files by glob pattern. Returns matching 
 // FindToolDetails carries find truncation info.
 type FindToolDetails struct {
 	Truncation         *TruncationResult `json:"truncation,omitempty"`
-	ResultLimitReached *int              `json:"resultLimitReached,omitempty"`
+	ResultLimitReached *float64          `json:"resultLimitReached,omitempty"`
 }
 
 var findSchemaJSON = mustSchemaJSON(map[string]any{
@@ -68,9 +68,9 @@ func CreateFindTool(cwd string) agent.AgentTool {
 				return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
 			}
 			var input struct {
-				Pattern string `json:"pattern"`
-				Path    string `json:"path"`
-				Limit   *int   `json:"limit"`
+				Pattern string   `json:"pattern"`
+				Path    string   `json:"path"`
+				Limit   *float64 `json:"limit"`
 			}
 			if len(params) > 0 {
 				if err := jsonUnmarshalStrictTool(params, &input); err != nil {
@@ -78,7 +78,7 @@ func CreateFindTool(cwd string) agent.AgentTool {
 				}
 			}
 			searchPath := ResolveToCwd(orDefault(input.Path, "."), cwd)
-			effectiveLimit := findDefaultLimit
+			effectiveLimit := float64(findDefaultLimit)
 			if input.Limit != nil {
 				effectiveLimit = *input.Limit
 			}
@@ -114,7 +114,7 @@ func CreateFindTool(cwd string) agent.AgentTool {
 			if !insideGitRepo {
 				args = append(args, "--no-require-git")
 			}
-			args = append(args, "--max-results", fmt.Sprintf("%d", effectiveLimit))
+			args = append(args, "--max-results", formatToolNumber(effectiveLimit))
 
 			// fd --glob matches basenames unless --full-path; a path-
 			// containing pattern needs a leading **/ to match anything.
@@ -160,14 +160,15 @@ func CreateFindTool(cwd string) agent.AgentTool {
 				}
 				relativized = append(relativized, RelativizeFindResultPath(line, searchPath))
 			}
-			resultLimitReached := len(relativized) >= effectiveLimit
+			resultLimitReached := float64(len(relativized)) >= effectiveLimit
 			rawOutput2 := strings.Join(relativized, "\n")
 			truncation := TruncateHead(rawOutput2, TruncationOptions{MaxLines: uncappedLines})
 			resultOutput := truncation.Content
 			details := FindToolDetails{}
 			var notices []string
 			if resultLimitReached {
-				notices = append(notices, fmt.Sprintf("%d results limit reached. Use limit=%d for more, or refine pattern", effectiveLimit, effectiveLimit*2))
+				notices = append(notices, fmt.Sprintf("%s results limit reached. Use limit=%s for more, or refine pattern",
+					formatToolNumber(effectiveLimit), formatToolNumber(effectiveLimit*2)))
 				details.ResultLimitReached = &effectiveLimit
 			}
 			if truncation.Truncated {
