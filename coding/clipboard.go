@@ -199,7 +199,8 @@ func ReadClipboardTextContext(ctx context.Context) (string, error) {
 	}
 	for _, command := range pasteCommands() {
 		if bytes := runClipboardCommand(ctx, command[0], command[1:], clipboardCommandOptions{timeoutMS: 5000}); bytes != nil {
-			return string(bytes), nil
+			// Upstream decodes the command output with Buffer.toString("utf8").
+			return DecodeUTF8WithReplacement(bytes), nil
 		}
 		if err := ctx.Err(); err != nil {
 			return "", err
