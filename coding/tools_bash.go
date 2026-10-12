@@ -6,9 +6,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -378,18 +380,18 @@ var bashSchemaJSON = mustSchemaJSON(map[string]any{
 
 const (
 	maxTimeoutMS      = 2_147_483_647
-	maxTimeoutSeconds = maxTimeoutMS / 1000
+	maxTimeoutSeconds = float64(maxTimeoutMS) / 1000
 )
 
 // ResolveTimeoutSeconds validates a timeout in seconds (port of
 // resolveTimeoutMs).
 func ResolveTimeoutSeconds(timeout float64) (time.Duration, error) {
-	if timeout <= 0 {
+	if math.IsNaN(timeout) || math.IsInf(timeout, 0) || timeout <= 0 {
 		return 0, fmt.Errorf("Invalid timeout: must be a finite number of seconds")
 	}
 	timeoutMS := timeout * 1000
 	if timeoutMS > maxTimeoutMS {
-		return 0, fmt.Errorf("Invalid timeout: maximum is %d seconds", maxTimeoutSeconds)
+		return 0, fmt.Errorf("Invalid timeout: maximum is %s seconds", strconv.FormatFloat(maxTimeoutSeconds, 'f', -1, 64))
 	}
 	return time.Duration(timeoutMS * float64(time.Millisecond)), nil
 }

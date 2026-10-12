@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -137,6 +138,21 @@ func TestBashTruncationKeepsTail(t *testing.T) {
 	}
 	if !strings.Contains(string(full), "\n1\n") && !strings.HasPrefix(string(full), "1\n") {
 		t.Fatalf("full output missing head: %q", string(full)[:20])
+	}
+}
+
+func TestResolveTimeoutSecondsRejectsNonFiniteValues(t *testing.T) {
+	for _, timeout := range []float64{math.NaN(), math.Inf(1), math.Inf(-1)} {
+		if _, err := ResolveTimeoutSeconds(timeout); err == nil || err.Error() != "Invalid timeout: must be a finite number of seconds" {
+			t.Errorf("ResolveTimeoutSeconds(%v) error = %v", timeout, err)
+		}
+	}
+}
+
+func TestResolveTimeoutSecondsReportsFractionalMaximum(t *testing.T) {
+	_, err := ResolveTimeoutSeconds(2147483.648)
+	if err == nil || err.Error() != "Invalid timeout: maximum is 2147483.647 seconds" {
+		t.Fatalf("error = %v", err)
 	}
 }
 
