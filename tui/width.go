@@ -260,10 +260,9 @@ func graphemeWidth(segment string) int {
 		}
 	}
 
-	first, firstSize := utf8.DecodeRuneInString(segment)
-
-	// Marks that terminals allocate cells for when attached to a base.
-	if firstSize > 0 && isTerminalSpacingMark(first) && !isBaseCharacter(first) {
+	// Marks that terminals allocate cells for even without a base character
+	// (upstream terminalSpacingMarkRegex tests the whole segment).
+	if isTerminalSpacingMarkSegment(segment) {
 		return utf8.RuneCountInString(segment)
 	}
 
@@ -327,11 +326,6 @@ func eastAsianWidth(r rune) int {
 		return 2
 	}
 	return 1
-}
-
-// isBaseCharacter excludes marks/controls from the terminal-spacing-mark test.
-func isBaseCharacter(r rune) bool {
-	return isCombiningMark(r) || isNonPrintingCodePoint(r)
 }
 
 // isZeroWidthCodePoint covers the upstream zero-width classes: default
@@ -463,6 +457,21 @@ func isKnownEmojiCodePoint(r rune) bool {
 // isTerminalSpacingMark covers the spacing marks terminals allocate cells for:
 // Unicode spacing marks minus the known non-spacing exceptions, plus the
 // legacy wcwidth non-spacing exceptions that occupy cells.
+// isTerminalSpacingMarkSegment reports whether every code point in the segment
+// is a spacing mark the terminal allocates cells for (upstream
+// terminalSpacingMarkRegex, `^(?:...)+$`).
+func isTerminalSpacingMarkSegment(segment string) bool {
+	if segment == "" {
+		return false
+	}
+	for _, r := range segment {
+		if !isTerminalSpacingMark(r) {
+			return false
+		}
+	}
+	return true
+}
+
 func isTerminalSpacingMark(r rune) bool {
 	// Exceptions that do NOT occupy cells despite being spacing marks.
 	if r == 0x1734 || r == 0x302E || r == 0x302F {

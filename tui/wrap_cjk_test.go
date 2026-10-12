@@ -53,3 +53,24 @@ func TestCombiningMarkCoversUnicodeMarks(t *testing.T) {
 		}
 	}
 }
+
+// A lone spacing mark occupies one cell upstream (terminalSpacingMarkRegex);
+// non-spacing marks and the exceptions occupy none.
+func TestLoneSpacingMarkWidth(t *testing.T) {
+	cases := []struct {
+		text string
+		want int
+	}{
+		{"\u093E", 1},
+		{"\u065F", 1},
+		{"\u102B", 1},
+		{"\u1734", 0},
+		{"\u302E", 0},
+		{"\u0300", 0},
+	}
+	for _, testCase := range cases {
+		if got := VisibleWidth(testCase.text); got != testCase.want {
+			t.Errorf("VisibleWidth(%q) = %d; want %d", testCase.text, got, testCase.want)
+		}
+	}
+}
