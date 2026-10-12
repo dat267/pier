@@ -766,7 +766,8 @@ func runMcpConfigCommand(command string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(output), nil
+	// execSync({ encoding: "utf-8" }) decodes stdout with replacement.
+	return DecodeUTF8WithReplacement(output), nil
 }
 
 // McpConfigValueEnv is the environment lookup (a test seam).

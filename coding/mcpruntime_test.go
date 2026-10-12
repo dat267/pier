@@ -483,6 +483,9 @@ func TestMcpConfigValueAndHomeExpansion(t *testing.T) {
 	if output != "hello" {
 		t.Fatalf("command = %q", output)
 	}
+	if output, err := ResolveMcpConfigValue(`!printf '\377'`); err != nil || output != "\uFFFD" {
+		t.Fatalf("malformed UTF-8 command output = %q, %v", output, err)
+	}
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	if got := expandMcpHome("~/work"); got != home+"/work" {
