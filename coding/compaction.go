@@ -558,7 +558,7 @@ func SerializeConversation(messages []ai.Message) string {
 				parts = append(parts, "[Assistant thinking]: "+strings.Join(thinkingParts, "\n"))
 			}
 			if hasText {
-				parts = append(parts, "[Assistant]: "+contentTextJoined(ai.StringOrBlocks{Blocks: m.Content}))
+				parts = append(parts, "[Assistant]: "+contentTextJoinedNewline(ai.StringOrBlocks{Blocks: m.Content}))
 			}
 			if len(toolCalls) > 0 {
 				parts = append(parts, "[Assistant tool calls]: "+strings.Join(toolCalls, "; "))
@@ -583,6 +583,15 @@ func StringOrBlocksOf(content ai.UserContentList) ai.StringOrBlocks {
 }
 
 func contentTextJoinedNoSep(content ai.StringOrBlocks) string {
+	return contentTextWithSeparator(content, "")
+}
+
+// contentTextJoinedNewline is upstream contentText's default separator.
+func contentTextJoinedNewline(content ai.StringOrBlocks) string {
+	return contentTextWithSeparator(content, "\n")
+}
+
+func contentTextWithSeparator(content ai.StringOrBlocks, separator string) string {
 	if content.Blocks == nil {
 		return content.Text
 	}
@@ -592,7 +601,7 @@ func contentTextJoinedNoSep(content ai.StringOrBlocks) string {
 			texts = append(texts, tc.Text)
 		}
 	}
-	return strings.Join(texts, "")
+	return strings.Join(texts, separator)
 }
 
 // ============================================================================

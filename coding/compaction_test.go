@@ -391,3 +391,19 @@ func TestSerializeConversationPreservesToolArgOrder(t *testing.T) {
 		t.Fatalf("nested tool calls = %q; want nested insertion order", serialized)
 	}
 }
+
+// Upstream contentText joins assistant text blocks with newlines.
+func TestSerializeConversationJoinsAssistantTextWithNewlines(t *testing.T) {
+	assistant := &ai.AssistantMessage{
+		Content: ai.ContentList{
+			ai.TextContent{Text: "line1"},
+			ai.TextContent{Text: "line2"},
+		},
+		API: "openai-responses", Provider: "openai", Model: "mock",
+		StopReason: ai.StopStop, Timestamp: 2,
+	}
+	serialized := SerializeConversation(ConvertToLlm([]ai.Message{assistant}))
+	if !strings.Contains(serialized, "[Assistant]: line1\nline2") {
+		t.Fatalf("assistant text = %q; want newline join", serialized)
+	}
+}
