@@ -40,6 +40,24 @@ func TestFindToolForwardsFractionalLimitToFD(t *testing.T) {
 	}
 }
 
+// Upstream find.ts keeps each readline result verbatim before relativizing it.
+func TestFindToolPreservesWhitespaceInFileNames(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows does not allow leading/trailing spaces in file names")
+	}
+	requireBinary(t, "fd")
+	dir := t.TempDir()
+	name := " spaced "
+	if err := os.WriteFile(filepath.Join(dir, name), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	result := execTool(t, CreateFindTool(dir), `{"pattern":"*"}`)
+	got := result.Content[0].(ai.TextContent).Text
+	if got != name {
+		t.Fatalf("find path = %q; want %q", got, name)
+	}
+}
+
 func TestFindToolGlob(t *testing.T) {
 	requireBinary(t, "fd")
 	dir := t.TempDir()

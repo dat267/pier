@@ -155,7 +155,6 @@ func CreateFindTool(cwd string) agent.AgentTool {
 			var relativized []string
 			for _, rawLine := range strings.Split(output, "\n") {
 				line := strings.TrimRight(rawLine, "\r")
-				line = strings.TrimSpace(line)
 				if line == "" {
 					continue
 				}
