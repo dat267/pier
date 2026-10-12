@@ -1657,7 +1657,7 @@ func findWordBackwardSegments(text string, cursor int, segments []editorSegment)
 	if isPasteMarker(last.Segment) {
 		return newCursor - len(last.Segment)
 	}
-	if isWordLikeSegment(last.Segment) {
+	if last.IsWordLike {
 		runes := []rune(last.Segment)
 		lastPunctuation := -1
 		for index, r := range runes {
@@ -1677,7 +1677,7 @@ func findWordBackwardSegments(text string, cursor int, segments []editorSegment)
 
 	for len(segments) > 0 {
 		last := segments[len(segments)-1]
-		if isPasteMarker(last.Segment) || isWordLikeSegment(last.Segment) || IsWhitespaceChar(last.Segment) {
+		if isPasteMarker(last.Segment) || last.IsWordLike || IsWhitespaceChar(last.Segment) {
 			break
 		}
 		newCursor -= len(last.Segment)
@@ -1706,12 +1706,8 @@ func findWordForwardSegments(text string, cursor int, segments []editorSegment) 
 	if isPasteMarker(next.Segment) {
 		return newCursor + len(next.Segment)
 	}
-	if isWordLikeSegment(next.Segment) {
-		for _, r := range next.Segment {
-			if punctuationChars[r] {
-				return newCursor + utf8.RuneLen(r) - utf8.RuneLen(r) // stop before the punctuation
-			}
-		}
+	if next.IsWordLike {
+		// Stop at the first ASCII punctuation inside the word-like segment.
 		stopped := false
 		for offset, r := range next.Segment {
 			if punctuationChars[r] {
@@ -1727,22 +1723,13 @@ func findWordForwardSegments(text string, cursor int, segments []editorSegment) 
 	}
 	for index < len(segments) {
 		current := segments[index]
-		if isPasteMarker(current.Segment) || isWordLikeSegment(current.Segment) || IsWhitespaceChar(current.Segment) {
+		if isPasteMarker(current.Segment) || current.IsWordLike || IsWhitespaceChar(current.Segment) {
 			break
 		}
 		newCursor += len(current.Segment)
 		index++
 	}
 	return newCursor
-}
-
-func isWordLikeSegment(segment string) bool {
-	for _, r := range segment {
-		if !(isLetterRune(r) || isDigitRune(r) || isMarkRune(r) || r == '_') {
-			return false
-		}
-	}
-	return len(segment) > 0
 }
 
 func (e *Editor) yankLocked() {

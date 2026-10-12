@@ -16,10 +16,13 @@ func isPasteMarker(segment string) bool {
 	return len(segment) >= 10 && pasteMarkerSingleRegex.MatchString(segment)
 }
 
-// editorSegment is a segment with its byte index.
+// editorSegment is a segment with its byte index. IsWordLike carries the word
+// segmenter's classification (a mid-word dot merges into a word-like segment,
+// which recomputing from the characters would miss).
 type editorSegment struct {
-	Segment string
-	Index   int
+	Segment    string
+	Index      int
+	IsWordLike bool
 }
 
 // segmentWithMarkers merges graphemes inside paste markers with valid ids into
@@ -28,7 +31,7 @@ func segmentWithMarkers(text string, mode string, validIDs map[int]bool) []edito
 	var base []editorSegment
 	if mode == "word" {
 		for _, segment := range WordSegments(text) {
-			base = append(base, editorSegment{Segment: segment.Segment, Index: segment.Index})
+			base = append(base, editorSegment{Segment: segment.Segment, Index: segment.Index, IsWordLike: segment.IsWordLike})
 		}
 	} else {
 		offset := 0

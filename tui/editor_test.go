@@ -226,3 +226,20 @@ func TestEditorSubmitReentrancy(t *testing.T) {
 		t.Fatalf("editor = %q", editor.GetText())
 	}
 }
+
+// The segmenter marks "e.g" word-like (its mid-word dot merges); the editor's
+// word movement must use that flag, not recompute from the characters.
+func TestEditorWordBackwardOverDottedWord(t *testing.T) {
+	editor := NewEditor(&editorHost{rows: 10}, editorTestTheme(), EditorOptions{})
+	editor.SetText("e.g.")
+	editor.state.cursorCol = len("e.g.")
+	editor.moveWordBackwardsLocked()
+	if editor.state.cursorCol != 3 {
+		t.Fatalf("cursorCol = %d; want 3", editor.state.cursorCol)
+	}
+	editor.state.cursorCol = 0
+	editor.moveWordForwardsLocked()
+	if editor.state.cursorCol != 1 {
+		t.Fatalf("forward cursorCol = %d; want 1", editor.state.cursorCol)
+	}
+}
