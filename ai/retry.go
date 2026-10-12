@@ -33,14 +33,23 @@ func (e *ProviderError) Error() string { return e.Message }
 
 const defaultMaxRetryDelayMS = 60_000
 
-var jsParseFloatPrefix = regexp.MustCompile(`^[\t\n\v\f\r ]*[+-]?(?:Infinity|(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?)`)
+var jsParseFloatPrefix = regexp.MustCompile(`^[+-]?(?:Infinity|(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?)`)
+
+func isJSParseFloatWhitespace(r rune) bool {
+	switch r {
+	case '\t', '\n', '\v', '\f', '\r', ' ', 0x00A0, 0x1680, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF:
+		return true
+	}
+	return r >= 0x2000 && r <= 0x200A
+}
 
 func parseJSFloatPrefix(value string) (float64, bool) {
+	value = strings.TrimLeftFunc(value, isJSParseFloatWhitespace)
 	prefix := jsParseFloatPrefix.FindString(value)
 	if prefix == "" {
 		return 0, false
 	}
-	parsed, err := strconv.ParseFloat(strings.TrimSpace(prefix), 64)
+	parsed, err := strconv.ParseFloat(prefix, 64)
 	return parsed, err == nil
 }
 

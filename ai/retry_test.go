@@ -27,6 +27,7 @@ func TestRetryDelayParsesNumericPrefixes(t *testing.T) {
 		want   int64
 	}{
 		{"Retry-After-Ms", "1250ms", 1250},
+		{"Retry-After-Ms", "\u00a01250ms", 1250},
 		{"Retry-After", "2.5 seconds", 2500},
 	} {
 		providerErr := &ProviderError{Message: "boom", Headers: http.Header{testCase.header: []string{testCase.value}}}
