@@ -196,14 +196,17 @@ func createScrollBorder(direction string, hiddenLineCount int, width int) string
 // editorTriggerMatch reports whether text before the cursor ends with an
 // autocomplete trigger token at a boundary, mirroring the editor's
 // buildTriggerPattern regex (see D70 for the lookaround replacement).
-func editorTriggerMatch(text string, triggerCharacters []string, includeAtUnquoted bool) bool {
-	runes := []rune(text)
-	if len(runes) == 0 {
+func editorTriggerMatch(text string, triggerCharacters []string) bool {
+	if text == "" {
 		return false
+	}
+	if editorQuotedAttachmentMatch(text) {
+		return true
 	}
 
 	// Find the token start: the run of non-separator characters ending at the
 	// end of the text.
+	runes := []rune(text)
 	start := len(runes)
 	for start > 0 {
 		if isAutocompleteSeparator(runes[start-1]) {
@@ -211,18 +214,12 @@ func editorTriggerMatch(text string, triggerCharacters []string, includeAtUnquot
 		}
 		start--
 	}
-	token := string(runes[start:])
+	// Upstream's autocompleteTokenStartSource allows opening brackets, quotes
+	// and backticks between the boundary and the trigger.
+	token := strings.TrimLeft(string(runes[start:]), "([{<`")
 	if token == "" {
 		return false
 	}
-
-	// The quoted attachment form: @"..." (with no closing quote yet). The
-	// unquoted form is covered by the trigger character "@" below.
-	if strings.HasPrefix(token, `@"`) {
-		return !strings.Contains(token[1:], `"`)
-	}
-	_ = includeAtUnquoted
-
 	for _, trigger := range triggerCharacters {
 		if trigger == "" {
 			continue
@@ -232,6 +229,25 @@ func editorTriggerMatch(text string, triggerCharacters []string, includeAtUnquot
 		}
 	}
 	return false
+}
+
+// editorQuotedAttachmentMatch reports whether the text ends inside a quoted
+// attachment token (`@"...` with no closing quote yet). Upstream's
+// `@"[^\"]*` alternative lets the quoted path contain separators, so the token
+// runs back to the `@"` rather than to the last separator.
+func editorQuotedAttachmentMatch(text string) bool {
+	index := strings.LastIndex(text, `@"`)
+	if index < 0 || strings.Contains(text[index+2:], `"`) {
+		return false
+	}
+	// The prefix before `@"` must end with a boundary plus optional opening
+	// brackets, matching `(?:^|\s|cjkPunctuation)[([{<`]*`.
+	prefix := strings.TrimRight(text[:index], "([{<`")
+	if prefix == "" {
+		return true
+	}
+	runes := []rune(prefix)
+	return isAutocompleteSeparator(runes[len(runes)-1])
 }
 
 // @ followed by a quoted or unquoted suffix.

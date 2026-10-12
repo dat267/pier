@@ -936,14 +936,14 @@ func (e *Editor) insertCharacterLocked(char string, skipUndoCoalescing bool) {
 			e.tryTriggerAutocompleteLocked(false)
 		} else if containsString(e.autocompleteTriggers, char) {
 			textBeforeCursor := e.textBeforeCursor()
-			if editorTriggerMatch(textBeforeCursor, e.autocompleteTriggers, false) {
+			if editorTriggerMatch(textBeforeCursor, e.autocompleteTriggers) {
 				e.tryTriggerAutocompleteLocked(false)
 			}
 		} else if isAutocompleteWordChar(char) {
 			textBeforeCursor := e.textBeforeCursor()
 			if e.isInSlashCommandContext(textBeforeCursor) {
 				e.tryTriggerAutocompleteLocked(false)
-			} else if editorTriggerMatch(textBeforeCursor, e.autocompleteTriggers, false) {
+			} else if editorTriggerMatch(textBeforeCursor, e.autocompleteTriggers) {
 				e.tryTriggerAutocompleteLocked(false)
 			}
 		}
@@ -1180,7 +1180,7 @@ func (e *Editor) handleBackspaceLocked() {
 		textBeforeCursor := e.textBeforeCursor()
 		if e.isInSlashCommandContext(textBeforeCursor) {
 			e.tryTriggerAutocompleteLocked(false)
-		} else if editorTriggerMatch(textBeforeCursor, e.autocompleteTriggers, false) {
+		} else if editorTriggerMatch(textBeforeCursor, e.autocompleteTriggers) {
 			e.tryTriggerAutocompleteLocked(false)
 		}
 	}
@@ -1468,7 +1468,7 @@ func (e *Editor) handleForwardDeleteLocked() {
 		textBeforeCursor := e.textBeforeCursor()
 		if e.isInSlashCommandContext(textBeforeCursor) {
 			e.tryTriggerAutocompleteLocked(false)
-		} else if editorTriggerMatch(textBeforeCursor, e.autocompleteTriggers, false) {
+		} else if editorTriggerMatch(textBeforeCursor, e.autocompleteTriggers) {
 			e.tryTriggerAutocompleteLocked(false)
 		}
 	}

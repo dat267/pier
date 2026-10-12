@@ -42,3 +42,37 @@ func TestAutocompleteTokenBoundaryCJKPunctuation(t *testing.T) {
 		t.Error("tokenStartMatches(\"a中\") = true; want false")
 	}
 }
+
+// Upstream's buildTriggerPattern allows an opening bracket/quote/backtick
+// between the boundary and the trigger character.
+func TestEditorTriggerMatchAllowsBracketPrefix(t *testing.T) {
+	triggers := []string{"@", "#"}
+	cases := []struct {
+		text string
+		want bool
+	}{
+		{"@", true},
+		{"(@", true},
+		{"[@", true},
+		{"`@", true},
+		{"{@", true},
+		{"<@", true},
+		{"(@src/foo", true},
+		{`@"`, true},
+		{`(@"`, true},
+		{`@"foo`, true},
+		{`@"foo bar`, true},
+		{`(@"foo bar`, true},
+		{`@"foo"`, true},
+		{`@"foo bar"`, false},
+		{`(@"foo`, true},
+		{"x@", false},
+		{"a(@", false},
+		{"@src/foo bar", false},
+	}
+	for _, testCase := range cases {
+		if got := editorTriggerMatch(testCase.text, triggers); got != testCase.want {
+			t.Errorf("editorTriggerMatch(%q) = %v; want %v", testCase.text, got, testCase.want)
+		}
+	}
+}
