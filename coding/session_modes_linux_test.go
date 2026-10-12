@@ -7,10 +7,29 @@ import (
 	"path/filepath"
 	"syscall"
 	"testing"
+
+	"github.com/dat267/pier/ai"
 )
 
 // session-manager.ts uses Node's default modes: 0777 for directories and 0666
 // for session files, each filtered by the process umask.
+func TestSessionManagerPersistsFilesWithNodeDefaultMode(t *testing.T) {
+	oldMask := syscall.Umask(0)
+	defer syscall.Umask(oldMask)
+	manager := NewSessionManager(t.TempDir(), nil)
+	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "persist"}})
+	if err := manager.FlushWrites(); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(manager.GetSessionFile())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := info.Mode().Perm(); got != 0o666 {
+		t.Fatalf("manager session file mode = %#o; want Node default %#o", got, 0o666)
+	}
+}
+
 func TestSessionFileUsesNodeDefaultMode(t *testing.T) {
 	oldMask := syscall.Umask(0)
 	defer syscall.Umask(oldMask)
