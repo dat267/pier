@@ -441,3 +441,30 @@ func TestFormatReadResultUsesTruncationMaxBytes(t *testing.T) {
 		t.Fatalf("first-line truncation = %q; want %s", got, coding.FormatSize(1234))
 	}
 }
+
+// Upstream guards the limit warnings with truthiness (`if (resultLimit)`), so a
+// zero limit is not reported.
+func TestTruncationWarningsSkipZeroLimits(t *testing.T) {
+	installPierThemeForTest(t)
+	InitTheme("dark", false)
+	theme := ActiveTheme()
+	zero := 0.0
+
+	findResult := &SortToolResultContent{Content: []ToolResultContent{{Type: "text", Text: "a"}},
+		Details: &coding.FindToolDetails{ResultLimitReached: &zero}}
+	if got := formatSearchResult(findResult, ToolRenderResultOptions{}, theme, false, 20); strings.Contains(got, "results limit") {
+		t.Fatalf("find zero limit = %q", got)
+	}
+
+	lsResult := &SortToolResultContent{Content: []ToolResultContent{{Type: "text", Text: "a"}},
+		Details: &coding.LsToolDetails{EntryLimitReached: &zero}}
+	if got := truncationSuffix(lsResult.Details, theme); strings.Contains(got, "entries limit") {
+		t.Fatalf("ls zero limit = %q", got)
+	}
+
+	grepResult := &SortToolResultContent{Content: []ToolResultContent{{Type: "text", Text: "a"}},
+		Details: &coding.GrepToolDetails{MatchLimitReached: &zero}}
+	if got := formatSearchResult(grepResult, ToolRenderResultOptions{}, theme, false, 15); strings.Contains(got, "matches limit") {
+		t.Fatalf("grep zero limit = %q", got)
+	}
+}

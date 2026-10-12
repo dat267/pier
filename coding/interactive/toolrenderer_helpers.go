@@ -167,7 +167,9 @@ func formatToolLimit(value float64) string {
 func toolTruncationWarnings(details any) (matchLimit string, truncated bool, maxBytes int, extra []string) {
 	switch typed := details.(type) {
 	case *coding.GrepToolDetails:
-		if typed.MatchLimitReached != nil {
+		// Upstream guards each limit with truthiness (`if (matchLimit)`), so a
+		// zero limit is not reported.
+		if typed.MatchLimitReached != nil && *typed.MatchLimitReached != 0 {
 			matchLimit = fmt.Sprintf("%s matches limit", formatToolLimit(*typed.MatchLimitReached))
 		}
 		if typed.Truncation != nil && typed.Truncation.Truncated {
@@ -178,7 +180,7 @@ func toolTruncationWarnings(details any) (matchLimit string, truncated bool, max
 			extra = append(extra, "some lines truncated")
 		}
 	case *coding.FindToolDetails:
-		if typed.ResultLimitReached != nil {
+		if typed.ResultLimitReached != nil && *typed.ResultLimitReached != 0 {
 			matchLimit = fmt.Sprintf("%s results limit", formatToolLimit(*typed.ResultLimitReached))
 		}
 		if typed.Truncation != nil && typed.Truncation.Truncated {
@@ -186,7 +188,7 @@ func toolTruncationWarnings(details any) (matchLimit string, truncated bool, max
 			maxBytes = typed.Truncation.MaxBytes
 		}
 	case *coding.LsToolDetails:
-		if typed.EntryLimitReached != nil {
+		if typed.EntryLimitReached != nil && *typed.EntryLimitReached != 0 {
 			matchLimit = fmt.Sprintf("%s entries limit", formatToolLimit(*typed.EntryLimitReached))
 		}
 		if typed.Truncation != nil && typed.Truncation.Truncated {
