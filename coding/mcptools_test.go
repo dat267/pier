@@ -1,8 +1,12 @@
 package coding
 
 import (
+	"bytes"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -38,6 +42,25 @@ func TestCreateMcpToolName(t *testing.T) {
 	second := CreateMcpToolName("s", "a-b", func(name string) bool { return name == taken })
 	if !regexp.MustCompile(`^mcp__s__a_b_[0-9a-f]{8}$`).MatchString(second) {
 		t.Fatalf("second = %q", second)
+	}
+}
+
+// output-files.ts uses the wx flag so a random-name collision never overwrites an existing file.
+func TestSaveMcpToTempFileDoesNotOverwriteCollision(t *testing.T) {
+	oldRandomReader := rand.Reader
+	rand.Reader = bytes.NewReader(make([]byte, 8))
+	t.Cleanup(func() { rand.Reader = oldRandomReader })
+	dir := t.TempDir()
+	t.Setenv("TMPDIR", dir)
+	path := filepath.Join(dir, "pi-mcp-0000000000000000.txt")
+	if err := os.WriteFile(path, []byte("keep"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SaveMcpToTempFile([]byte("replace"), ".txt"); err == nil {
+		t.Fatal("expected exclusive create to reject the existing path")
+	}
+	if got, err := os.ReadFile(path); err != nil || string(got) != "keep" {
+		t.Fatalf("existing file = %q, err = %v; want keep", got, err)
 	}
 }
 

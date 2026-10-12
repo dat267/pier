@@ -44,7 +44,15 @@ func SaveMcpToTempFile(data []byte, extension string) (string, error) {
 	}
 	path := filepath.Join(os.TempDir(), "pi-mcp-"+hex.EncodeToString(random)+extension)
 	// Results can carry private data, so only the user may read the file.
-	if err := os.WriteFile(path, data, 0o600); err != nil {
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return "", err
+	}
+	if _, err := file.Write(data); err != nil {
+		_ = file.Close()
+		return "", err
+	}
+	if err := file.Close(); err != nil {
 		return "", err
 	}
 	return path, nil
