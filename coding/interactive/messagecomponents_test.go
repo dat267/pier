@@ -359,3 +359,18 @@ func TestUserMessageKeepsOneCopyOfEachLine(t *testing.T) {
 		t.Fatalf("render diverged:\n got  %q\n want %q", got, want)
 	}
 }
+
+// Upstream decides visibility with `text.trim()`, i.e. the JS whitespace set
+// (which trims U+202F/U+205F/U+3000 but not U+0085).
+func TestTrimmedNonEmptyMatchesJSTrim(t *testing.T) {
+	for _, r := range []rune{0x202F, 0x205F, 0x3000, 0x00A0, 0xFEFF} {
+		if trimmedNonEmpty(string(r)) {
+			t.Errorf("U+%04X should count as blank", r)
+		}
+	}
+	for _, r := range []rune{0x0085, 0x200B} {
+		if !trimmedNonEmpty(string(r)) {
+			t.Errorf("U+%04X should count as visible", r)
+		}
+	}
+}

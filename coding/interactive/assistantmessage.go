@@ -1,8 +1,6 @@
 package interactive
 
 import (
-	"strings"
-
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/tui"
 )
@@ -232,7 +230,7 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 			markdown.Options = tui.MarkdownOptions{
 				Transform: CreateMarkdownTransform("assistant", c.isStreaming, c.transformers),
 			}
-			markdown.SetTextIfChanged(strings.TrimSpace(content.Text))
+			markdown.SetTextIfChanged(ai.JSTrim(content.Text))
 			c.blockComponents[key] = markdown
 			c.contentContainer.AddChild(markdown)
 		case ai.ThinkingContent:
@@ -240,7 +238,7 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 			for ; i < len(blocks); i++ {
 				if thinking, ok := blocks[i].(ai.ThinkingContent); ok {
 					if trimmedNonEmpty(thinking.Thinking) {
-						thinkingBlocks = append(thinkingBlocks, strings.TrimSpace(thinking.Thinking))
+						thinkingBlocks = append(thinkingBlocks, ai.JSTrim(thinking.Thinking))
 					}
 					continue
 				}
@@ -349,7 +347,9 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 	c.SetMarkdownPreparation(c.markdownPreparation)
 }
 
-func trimmedNonEmpty(value string) bool { return strings.TrimSpace(value) != "" }
+// trimmedNonEmpty mirrors upstream's `text.trim()` truthiness, i.e. the JS
+// whitespace set (ai.JSTrim), not Go's unicode.IsSpace.
+func trimmedNonEmpty(value string) bool { return ai.JSTrim(value) != "" }
 
 func joinThinkingBlocks(blocks []string) string {
 	result := ""
