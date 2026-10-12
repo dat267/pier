@@ -112,9 +112,11 @@ func isVirama(r rune) bool {
 }
 
 func isCombiningMark(r rune) bool {
-	// Mn/Me are combining; Mc spacing marks occupy cells but still extend the
-	// cluster for segmentation purposes.
-	return isInTable(r, combiningMarkRanges)
+	// Upstream's markCharRegex is `\p{Mark}`, so every Mn/Mc/Me code point is a
+	// mark; the table adds the combining code points the reference width tables
+	// treat as marks even though they are not `\p{Mark}` (ZWNJ/ZWJ, halfwidth
+	// voiced sound marks, and a few Vedic/sign characters).
+	return unicode.IsMark(r) || isInTable(r, combiningMarkRanges)
 }
 
 func isSkinToneModifier(r rune) bool {

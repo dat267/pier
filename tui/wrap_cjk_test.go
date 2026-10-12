@@ -43,3 +43,13 @@ func TestCJKBreakRangesMatchReference(t *testing.T) {
 		t.Error("containsCJKBreak did not match the reference")
 	}
 }
+
+// Upstream's markCharRegex is `\p{Mark}`; the custom combining table alone
+// missed many Unicode marks.
+func TestCombiningMarkCoversUnicodeMarks(t *testing.T) {
+	for _, r := range []rune{0x07FD, 0x0897, 0x09FE, 0x0AFA, 0x1E6F5, 0x0300} {
+		if !isCombiningMark(r) {
+			t.Errorf("isCombiningMark(%U) = false; want true (\\p{Mark})", r)
+		}
+	}
+}
