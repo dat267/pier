@@ -1001,15 +1001,25 @@ type TerminalThemeDetection struct {
 	Confidence string // "high" | "low"
 }
 
+// getColorFgBgBackgroundIndex reads the COLORFGBG background index the way
+// upstream detectColorFgBgTheme does: only the last segment, 1-2 digits, at
+// most 15.
 func getColorFgBgBackgroundIndex(colorfgbg string) (int, bool) {
 	parts := strings.Split(colorfgbg, ";")
-	for index := len(parts) - 1; index >= 0; index-- {
-		bg, err := strconv.Atoi(strings.TrimSpace(parts[index]))
-		if err == nil && bg >= 0 && bg <= 255 {
-			return bg, true
+	last := strings.TrimSpace(parts[len(parts)-1])
+	if len(last) < 1 || len(last) > 2 {
+		return 0, false
+	}
+	for index := 0; index < len(last); index++ {
+		if last[index] < '0' || last[index] > '9' {
+			return 0, false
 		}
 	}
-	return 0, false
+	bg, err := strconv.Atoi(last)
+	if err != nil || bg > 15 {
+		return 0, false
+	}
+	return bg, true
 }
 
 func getRgbColorLuminance(rgb rgbColor) float64 {

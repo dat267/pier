@@ -485,3 +485,17 @@ func TestGetThemeForRgbColorMatchesTerminalAppearance(t *testing.T) {
 		}
 	}
 }
+
+// Upstream detectColorFgBgTheme reads only the last COLORFGBG segment, requires
+// 1-2 digits, and rejects indices above 15.
+func TestColorFgBgIndexMatchesUpstream(t *testing.T) {
+	if _, ok := getColorFgBgBackgroundIndex("0;300"); ok {
+		t.Fatal("a 3-digit background index must be rejected")
+	}
+	if _, ok := getColorFgBgBackgroundIndex("0;20"); ok {
+		t.Fatal("an index above 15 must be rejected")
+	}
+	if index, ok := getColorFgBgBackgroundIndex("0;8"); !ok || index != 8 {
+		t.Fatalf("0;8 = %d, %v; want 8, true", index, ok)
+	}
+}
