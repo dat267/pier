@@ -53,7 +53,7 @@ func EditInExternalEditor(options ExternalEditorOptions) ExternalEditorResult {
 		_ = os.RemoveAll(directory)
 	}()
 
-	if err := os.WriteFile(filePath, []byte(options.Content), 0o644); err != nil {
+	if err := os.WriteFile(filePath, []byte(options.Content), 0o666); err != nil {
 		return ExternalEditorResult{Status: "failed"}
 	}
 	_, _ = os.Stdout.WriteString("Launching external editor: " + options.Command +
