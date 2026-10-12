@@ -2,12 +2,12 @@ package interactive
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
 )
@@ -420,7 +420,7 @@ func (w *CommandWiring) HandleNameCommand(text string) {
 }
 
 func jsonQuote(value string) string {
-	encoded, _ := json.Marshal(value)
+	encoded, _ := ai.MarshalJSON(value)
 	return string(encoded)
 }
 
@@ -671,13 +671,13 @@ func (w *CommandWiring) HandleDebugCommand(now string) {
 		"=== All rendered lines with visible widths ===",
 	}
 	for index, line := range allLines {
-		encoded, _ := json.Marshal(line)
+		encoded, _ := ai.MarshalJSON(line)
 		lines = append(lines, "["+itoa(index)+"] (w="+itoa(tui.VisibleWidth(line))+") "+string(encoded))
 	}
 	lines = append(lines, "", "=== Agent messages (JSONL) ===")
 	if w.SessionInfo != nil {
 		for _, entry := range w.SessionInfo.GetEntries() {
-			encoded, _ := json.Marshal(entry)
+			encoded, _ := ai.MarshalJSON(entry)
 			lines = append(lines, string(encoded))
 		}
 	}

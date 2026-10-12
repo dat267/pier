@@ -151,7 +151,7 @@ func readTrustFile(path string) (trustFile, error) {
 		case nil:
 			data[key] = nil
 		default:
-			name, _ := json.Marshal(key)
+			name, _ := ai.MarshalJSON(key)
 			return nil, fmt.Errorf("Invalid trust store %s: value for %s must be true, false, or null", path, string(name))
 		}
 	}

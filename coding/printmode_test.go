@@ -236,3 +236,22 @@ func TestMarshalJSONSessionEventStripsPartialAndNamesToolCalls(t *testing.T) {
 		t.Fatal("usage must stay (constant size)")
 	}
 }
+
+// The JSON event stream goes out as JSON.stringify, without HTML escaping.
+func TestMarshalJSONSessionEventDoesNotHTMLEscape(t *testing.T) {
+	assistant := createAssistantMessageT("a < b & c > d")
+	event := &SessionEvent{
+		Type:  SessionMessageEnd,
+		Agent: &agent.AgentEvent{Type: agent.MessageEnd, Message: assistant},
+	}
+	encoded, err := MarshalJSONSessionEvent(event)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encoded), `\u003c`) || strings.Contains(string(encoded), `\u0026`) || strings.Contains(string(encoded), `\u003e`) {
+		t.Fatalf("HTML-escaped event: %s", encoded)
+	}
+	if !strings.Contains(string(encoded), "a < b & c > d") {
+		t.Fatalf("event = %s", encoded)
+	}
+}

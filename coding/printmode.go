@@ -230,7 +230,7 @@ func MarshalJSONSessionEvent(event *SessionEvent) ([]byte, error) {
 	}
 	wire.ErrorMessage = event.ErrorMessage
 	if event.Agent == nil {
-		return json.Marshal(wire)
+		return ai.MarshalJSON(wire)
 	}
 	a := event.Agent
 	wire.ToolCallID = a.ToolCallID
@@ -243,7 +243,7 @@ func MarshalJSONSessionEvent(event *SessionEvent) ([]byte, error) {
 			return nil, err
 		}
 		if assistant, ok := a.Message.(*ai.AssistantMessage); ok {
-			if wire.Usage, err = json.Marshal(assistant.Usage); err != nil {
+			if wire.Usage, err = ai.MarshalJSON(assistant.Usage); err != nil {
 				return nil, err
 			}
 		}
@@ -259,12 +259,12 @@ func MarshalJSONSessionEvent(event *SessionEvent) ([]byte, error) {
 		}
 	}
 	if len(a.PartialResult.Content) > 0 || len(a.PartialResult.Details) > 0 {
-		if wire.PartialResult, err = json.Marshal(a.PartialResult); err != nil {
+		if wire.PartialResult, err = ai.MarshalJSON(a.PartialResult); err != nil {
 			return nil, err
 		}
 	}
 	if len(a.Result.Content) > 0 || len(a.Result.Details) > 0 {
-		if wire.Result, err = json.Marshal(a.Result); err != nil {
+		if wire.Result, err = ai.MarshalJSON(a.Result); err != nil {
 			return nil, err
 		}
 	}
@@ -273,7 +273,7 @@ func MarshalJSONSessionEvent(event *SessionEvent) ([]byte, error) {
 			return nil, err
 		}
 	}
-	return json.Marshal(wire)
+	return ai.MarshalJSON(wire)
 }
 
 // jsonAssistantMessageEvent is AssistantMessageEvent plus the toolcall_start
@@ -295,7 +295,7 @@ func marshalJSONAssistantMessageEvent(event *ai.AssistantMessageEvent) ([]byte, 
 		shaped.ID = toolCall.ID
 		shaped.ToolName = toolCall.Name
 	}
-	return json.Marshal(shaped)
+	return ai.MarshalJSON(shaped)
 }
 
 // partialToolCall resolves the tool call a toolcall_start event points at via

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
 )
@@ -1130,11 +1131,10 @@ func (t *TreeList) formatToolCall(name string, args map[string]any) string {
 	case "bash":
 		rawCmd := argString("command")
 		cmd := strings.TrimSpace(strings.NewReplacer("\n", " ", "\t", " ").Replace(rawCmd))
-		if len(cmd) > 50 {
-			cmd = cmd[:50]
-		}
+		// Upstream slices by UTF-16 code units (String.slice), not bytes.
+		cmd = ai.JSSlice(cmd, 0, 50)
 		suffix := ""
-		if len(rawCmd) > 50 {
+		if ai.JSLength(rawCmd) > 50 {
 			suffix = "..."
 		}
 		return "[bash: " + cmd + suffix + "]"
@@ -1157,11 +1157,11 @@ func (t *TreeList) formatToolCall(name string, args map[string]any) string {
 		}
 		return "[ls: " + treeShortenPath(path) + "]"
 	default:
-		encoded, _ := json.Marshal(args)
+		encoded, _ := ai.MarshalJSON(args)
 		argsStr := string(encoded)
 		suffix := ""
-		if len(argsStr) > 40 {
-			argsStr = argsStr[:40]
+		if ai.JSLength(argsStr) > 40 {
+			argsStr = ai.JSSlice(argsStr, 0, 40)
 			suffix = "..."
 		}
 		return "[" + name + ": " + argsStr + suffix + "]"

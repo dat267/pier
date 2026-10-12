@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -272,5 +273,16 @@ func TestTreeSelectorEmptyAutoCancel(t *testing.T) {
 	fired[0]()
 	if !canceled {
 		t.Fatal("cancel not fired")
+	}
+}
+
+// The tree tool label truncates like upstream's String.slice: UTF-16 code
+// units, so a multi-byte command keeps 50 characters, not 50 bytes.
+func TestTreeToolLabelTruncatesBashCommandByUTF16Units(t *testing.T) {
+	command := strings.Repeat("中", 60)
+	got := (&TreeList{}).formatToolCall("bash", map[string]any{"command": command})
+	want := "[bash: " + strings.Repeat("中", 50) + "...]"
+	if got != want {
+		t.Fatalf("label = %q; want %q", got, want)
 	}
 }

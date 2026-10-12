@@ -2,7 +2,6 @@ package coding
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -549,7 +548,7 @@ func RunAuthCommandNamed(appName string, args []string, stdout, stderr io.Writer
 			AuthType    string `json:"authType,omitempty"`
 			Credentials string `json:"credentials,omitempty"`
 		}{result.Status, result.Provider, result.Reason, result.AuthType, credential}
-		encoded, marshalErr := json.Marshal(output)
+		encoded, marshalErr := ai.MarshalJSON(output)
 		if marshalErr != nil {
 			fmt.Fprintf(stderr, "Error: %s\n", marshalErr.Error())
 			return true, 2
