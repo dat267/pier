@@ -413,13 +413,16 @@ type AssistantMessage struct {
 	ResponseID *string `json:"responseId,omitempty"`
 	// ProviderThinkingLevel is the exact provider-native effort level used
 	// for this response. Absent for legacy or unmanaged responses.
-	ProviderThinkingLevel *string                      `json:"providerThinkingLevel,omitempty"`
-	Diagnostics           []AssistantMessageDiagnostic `json:"diagnostics,omitempty"`
-	Usage                 Usage                        `json:"usage"`
-	StopReason            StopReason                   `json:"stopReason"`
-	Deferred              *DeferredHandle              `json:"deferred,omitempty"`
-	ErrorMessage          *string                      `json:"errorMessage,omitempty"`
-	RawStopReason         *string                      `json:"rawStopReason,omitempty"`
+	ProviderThinkingLevel *string `json:"providerThinkingLevel,omitempty"`
+	// ThinkingLevel is the Pi thinking level the agent loop requested for this
+	// response. Absent outside the agent loop and for legacy responses.
+	ThinkingLevel *ModelThinkingLevel          `json:"thinkingLevel,omitempty"`
+	Diagnostics   []AssistantMessageDiagnostic `json:"diagnostics,omitempty"`
+	Usage         Usage                        `json:"usage"`
+	StopReason    StopReason                   `json:"stopReason"`
+	Deferred      *DeferredHandle              `json:"deferred,omitempty"`
+	ErrorMessage  *string                      `json:"errorMessage,omitempty"`
+	RawStopReason *string                      `json:"rawStopReason,omitempty"`
 	// EndTurn is the provider indication of whether the model explicitly
 	// ended its turn. Preserved for debugging and does not currently affect
 	// agent control flow.

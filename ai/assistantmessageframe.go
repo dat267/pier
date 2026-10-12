@@ -451,6 +451,7 @@ func cloneStartMessage(message *AssistantMessage) *AssistantMessage {
 		ResponseModel:         message.ResponseModel,
 		ResponseID:            message.ResponseID,
 		ProviderThinkingLevel: message.ProviderThinkingLevel,
+		ThinkingLevel:         message.ThinkingLevel,
 		Diagnostics:           append([]AssistantMessageDiagnostic(nil), message.Diagnostics...),
 		Usage:                 cloneFrameUsage(message.Usage),
 		StopReason:            StopPending,

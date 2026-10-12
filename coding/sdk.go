@@ -109,17 +109,20 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 	if options == nil {
 		options = &CreateAgentSessionOptions{}
 	}
+	// Upstream resolves cwd with `resolvePath(options.cwd ??
+	// sessionManager?.getCwd() ?? process.cwd())`: the base is Node's physical
+	// process.cwd(), and an empty input resolves to it. The previous fallback
+	// shadowed cwd, leaving it "" and resolving the session to ".".
+	base, baseErr := os.Getwd()
+	if baseErr != nil {
+		return nil, baseErr
+	}
+	base = CanonicalizePath(base)
 	cwd := options.Cwd
 	if cwd == "" && options.SessionManager != nil {
 		cwd = options.SessionManager.GetCwd()
 	}
-	if cwd == "" {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return nil, err
-		}
-		_ = cwd
-	}
+	cwd = ResolvePath(cwd, base, PathInputOptions{})
 	agentDir := options.AgentDir
 	if agentDir == "" {
 		agentDir = GetAgentDir()

@@ -469,6 +469,21 @@ func streamAssistantResponse(
 	// abandoning them would leave this assistant open and start a second
 	// failure message through handleRunFailure.
 	settlementContext := contextOrBackground(nil)
+	// Upstream wraps the stream result as
+	// `Object.assign(await response.result(), { thinkingLevel: config.reasoning ?? "off" })`,
+	// so the final message records the requested Pi thinking level.
+	result := func() *ai.AssistantMessage {
+		finalMessage, resultErr := response.Result(settlementContext)
+		if resultErr != nil {
+			failStreamAssistant(resultErr)
+		}
+		level := config.Reasoning
+		if level == "" {
+			level = ai.ThinkOff
+		}
+		finalMessage.ThinkingLevel = &level
+		return finalMessage
+	}
 	var partialMessage *ai.AssistantMessage
 	addedPartial := false
 
@@ -499,10 +514,7 @@ func streamAssistantResponse(
 				})
 			}
 		case ai.EventDone, ai.EventError:
-			finalMessage, resultErr := response.Result(settlementContext)
-			if resultErr != nil {
-				failStreamAssistant(resultErr)
-			}
+			finalMessage := result()
 			if addedPartial {
 				context.Messages[len(context.Messages)-1] = finalMessage
 			} else {
@@ -516,10 +528,7 @@ func streamAssistantResponse(
 		}
 	}
 
-	finalMessage, resultErr := response.Result(settlementContext)
-	if resultErr != nil {
-		failStreamAssistant(resultErr)
-	}
+	finalMessage := result()
 	if addedPartial {
 		context.Messages[len(context.Messages)-1] = finalMessage
 	} else {

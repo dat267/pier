@@ -225,7 +225,9 @@ func OpenSession(path string, sessionDir string, cwdOverride string) (*SessionMa
 			cwd = entries[0].Header.Cwd
 		}
 		if cwd == "" {
-			cwd, _ = os.Getwd()
+			if current, err := os.Getwd(); err == nil {
+				cwd = CanonicalizePath(current)
+			}
 		}
 	}
 	m.cwd = ResolvePath(cwd, "", PathInputOptions{})
