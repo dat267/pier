@@ -95,6 +95,9 @@ func TestToolRenderersCallHeaders(t *testing.T) {
 	if got := renderCall("read", args(`{"file_path":"/tmp/proj/main.go","offset":1.5,"limit":1.5}`), theme); !strings.Contains(got, ":1.5-2") {
 		t.Fatalf("fractional read call range = %q", got)
 	}
+	if got := renderCall("read", args(`{"file_path":"/tmp/proj/main.go","limit":0}`), theme); !strings.Contains(got, ":1 ") || strings.Contains(got, ":1-0") {
+		t.Fatalf("zero read limit range = %q", got)
+	}
 	if got := renderCall("bash", args(`{"command":"ls -la"}`), theme); !strings.Contains(got, "$ ls -la") {
 		t.Fatalf("bash call = %q", got)
 	}
