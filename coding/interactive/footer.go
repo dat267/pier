@@ -96,6 +96,27 @@ func FormatCwdForFooter(cwd string, home string) string {
 	return "~" + string(filepath.Separator) + relativeToHome
 }
 
+// sanitizeStatusText makes an extension status safe for the single-line
+// footer: carriage returns, newlines and tabs become spaces, space runs
+// collapse, and the ends are trimmed (upstream sanitizeStatusText).
+func sanitizeStatusText(text string) string {
+	var builder strings.Builder
+	pendingSpace := false
+	for _, r := range text {
+		switch r {
+		case '\r', '\n', '\t', ' ':
+			pendingSpace = true
+			continue
+		}
+		if pendingSpace && builder.Len() > 0 {
+			builder.WriteByte(' ')
+		}
+		pendingSpace = false
+		builder.WriteRune(r)
+	}
+	return strings.TrimFunc(builder.String(), isSpaceRune)
+}
+
 // FooterTruncate truncates by display width (CJK-safe); plain text only, no
 // ANSI (format.ts truncate).
 func FooterTruncate(text string, maxWidth int) string {
@@ -235,7 +256,7 @@ func (f *FooterComponent) Render(width int) []string {
 		}
 		sort.Strings(keys)
 		for _, key := range keys {
-			statuses = append(statuses, extensionStatuses[key])
+			statuses = append(statuses, sanitizeStatusText(extensionStatuses[key]))
 		}
 	}
 

@@ -259,3 +259,14 @@ func TestAgentSessionSatisfiesFooterSession(t *testing.T) {
 }
 
 func floatPtr(v float64) *float64 { return &v }
+
+// Upstream sanitizeStatusText replaces newlines, tabs and carriage returns
+// with spaces, collapses space runs, and trims the ends.
+func TestFooterSanitizesExtensionStatuses(t *testing.T) {
+	if got := sanitizeStatusText("line1\n\tline2   x"); got != "line1 line2 x" {
+		t.Fatalf("sanitize = %q; want %q", got, "line1 line2 x")
+	}
+	if got := sanitizeStatusText("\r\n  padded  \t"); got != "padded" {
+		t.Fatalf("sanitize = %q; want %q", got, "padded")
+	}
+}
