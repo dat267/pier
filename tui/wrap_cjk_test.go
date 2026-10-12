@@ -64,6 +64,7 @@ func TestLoneSpacingMarkWidth(t *testing.T) {
 		{"\u093E", 1},
 		{"\u065F", 1},
 		{"\u102B", 1},
+		{"\U0001D165", 1},
 		{"\u1734", 0},
 		{"\u302E", 0},
 		{"\u0300", 0},
@@ -109,7 +110,23 @@ func TestRGIEmojiWidth(t *testing.T) {
 	if got := VisibleWidth("a\uFE0F"); got != 1 {
 		t.Errorf("VisibleWidth(a+VS16) = %d; want 1", got)
 	}
-	for _, text := range []string{"#\uFE0F\u20E3", "1\u20E3", "\U0001F1FA\U0001F1F8"} {
+	for _, text := range []string{"#\uFE0F\u20E3", "1\uFE0F\u20E3", "\U0001F1FA\U0001F1F8"} {
+		if got := VisibleWidth(text); got != 2 {
+			t.Errorf("VisibleWidth(%q) = %d; want 2", text, got)
+		}
+	}
+	// A keycap without the emoji presentation selector is not an RGI sequence.
+	for _, text := range []string{"1\u20E3", "#\u20E3"} {
+		if got := VisibleWidth(text); got != 1 {
+			t.Errorf("VisibleWidth(%q) = %d; want 1", text, got)
+		}
+	}
+	// ZWJ and tag sequences are two cells.
+	for _, text := range []string{
+		"\U0001F468\u200D\U0001F469\u200D\U0001F467",
+		"\U0001F3F4\U000E0067\U000E0062\U000E0073\U000E0063\U000E0074\U000E007F",
+		"\U0001F441\uFE0F\u200D\U0001F5E8\uFE0F",
+	} {
 		if got := VisibleWidth(text); got != 2 {
 			t.Errorf("VisibleWidth(%q) = %d; want 2", text, got)
 		}
