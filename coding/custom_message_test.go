@@ -2,6 +2,7 @@ package coding
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/dat267/pier/ai"
@@ -69,5 +70,29 @@ func TestSystemMessageTokenEstimateMatchesUpstream(t *testing.T) {
 	want := ceilDiv(3+len(section)+JSLength(string(toolsJSON)), 4)
 	if got := EstimateAgentMessageTokens(system); got != want {
 		t.Fatalf("estimate = %d, want %d (content 3 + section %d + tools %d)", got, want, len(section), JSLength(string(toolsJSON)))
+	}
+}
+
+// Upstream estimateTokens counts a custom message's content field, not its
+// whole serialized body.
+func TestCustomMessageTokenEstimateMatchesUpstream(t *testing.T) {
+	message := CreateCustomMessage("t", json.RawMessage(`"hello"`), true, nil, 0)
+	if got := EstimateAgentMessageTokens(message); got != 2 {
+		t.Fatalf("estimate = %d; want 2", got)
+	}
+	// Block content counts its text.
+	message = CreateCustomMessage("t", json.RawMessage(`[{"type":"text","text":"hello"}]`), true, nil, 0)
+	if got := EstimateAgentMessageTokens(message); got != 2 {
+		t.Fatalf("block estimate = %d; want 2", got)
+	}
+	// bashExecution counts command + output.
+	bash := CreateBashExecutionMessage(strings.Repeat("c", 4), strings.Repeat("o", 4), 0, false, false, "", false, 0)
+	if got := EstimateAgentMessageTokens(bash); got != 2 {
+		t.Fatalf("bash estimate = %d; want 2", got)
+	}
+	// Summaries count the summary text.
+	summary := CreateCompactionSummaryMessage(strings.Repeat("s", 8), 0, 0)
+	if got := EstimateAgentMessageTokens(summary); got != 2 {
+		t.Fatalf("summary estimate = %d; want 2", got)
 	}
 }

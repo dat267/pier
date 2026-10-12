@@ -186,32 +186,33 @@ func getAssistantUsage(msg ai.Message) *ai.Usage {
 	return nil
 }
 
-// customMessageText renders a custom message's summary/content for
-// estimation.
-func customMessageText(msg *ai.CustomMessage, content json.RawMessage) string {
-	// Custom roles carry their text payload in role-specific shapes; the
-	// summary-bearing roles use `summary`, bashExecution command+output,
-	// custom its content.
-	switch msg.Role {
+// customMessageChars counts a custom message's text for estimation: the
+// content field for a custom message, command+output for bashExecution, and the
+// summary for the summary roles (upstream estimateTokens).
+func customMessageChars(message *ai.CustomMessage) int {
+	switch message.Role {
 	case RoleBashExecution:
 		var fields bashExecutionFields
-		if json.Unmarshal(content, &fields) == nil {
-			return fields.Command + fields.Output
+		if json.Unmarshal(message.Content, &fields) == nil {
+			return JSLength(fields.Command) + JSLength(fields.Output)
 		}
 	case RoleBranchSummary, RoleCompactionSummary:
 		var fields struct {
 			Summary string `json:"summary"`
 		}
-		if json.Unmarshal(content, &fields) == nil {
-			return fields.Summary
+		if json.Unmarshal(message.Content, &fields) == nil {
+			return JSLength(fields.Summary)
 		}
 	default:
-		var text string
-		if json.Unmarshal(content, &text) == nil {
-			return text
+		var fields customMessageFields
+		if json.Unmarshal(message.Content, &fields) == nil {
+			var content ai.StringOrBlocks
+			if json.Unmarshal(fields.Content, &content) == nil {
+				return estimateTextAndImageContentChars(content)
+			}
 		}
 	}
-	return string(content)
+	return 0
 }
 
 // EstimateAgentMessageTokens estimates tokens with the chars/4 heuristic
@@ -256,8 +257,7 @@ func EstimateAgentMessageTokens(message ai.Message) int {
 		}
 		return ceilDiv(chars, 4)
 	case *ai.CustomMessage:
-		chars = JSLength(customMessageText(m, m.Content))
-		return ceilDiv(chars, 4)
+		return ceilDiv(customMessageChars(m), 4)
 	case *ai.SystemMessage:
 		// Upstream sums the content chars, each section's length, and
 		// JSON.stringify(toolsAdded).length; it does not use the rendered prompt
