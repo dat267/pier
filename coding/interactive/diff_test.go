@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -132,5 +133,15 @@ func TestDiffHelpers(t *testing.T) {
 	}
 	if got := replaceTabs("a\tb"); got != "a   b" {
 		t.Fatalf("replaceTabs = %q", got)
+	}
+}
+
+// jsdiff's tokenizeIncludingWhitespace uses the JS `\s` class, so a run of
+// Unicode whitespace is one token.
+func TestWordTokenizeUnicodeWhitespace(t *testing.T) {
+	got := wordTokenizeRegex.FindAllString("a\u00a0\u00a0b", -1)
+	want := []string{"a", "\u00a0\u00a0", "b"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("tokens = %q; want %q", got, want)
 	}
 }

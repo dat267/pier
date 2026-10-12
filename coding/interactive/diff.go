@@ -20,8 +20,11 @@ import (
 
 const extendedWordChars = `a-zA-Z0-9_\x{00AD}\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02C6}\x{02C8}-\x{02D7}\x{02DE}-\x{02FF}\x{1E00}-\x{1EFF}`
 
-var wordTokenizeRegex = regexp.MustCompile(`[` + extendedWordChars + `]+|\s+|[^` + extendedWordChars + `]`)
-var whitespaceRegex = regexp.MustCompile(`\s`)
+// jsdiff uses the JS `\s` class (Unicode whitespace); Go's `\s` is ASCII-only.
+const jsWhitespaceChars = `\t\n\v\f\r \x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}`
+
+var wordTokenizeRegex = regexp.MustCompile(`[` + extendedWordChars + `]+|[` + jsWhitespaceChars + `]+|[^` + extendedWordChars + `]`)
+var whitespaceRegex = regexp.MustCompile(`[` + jsWhitespaceChars + `]`)
 
 // DiffChange is a diff change object.
 type DiffChange struct {
