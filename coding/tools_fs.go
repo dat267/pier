@@ -312,13 +312,13 @@ func CreateWriteTool(cwd string) agent.AgentTool {
 				if ctxErrOf(ctx) != nil {
 					return fmt.Errorf("Operation aborted")
 				}
-				if err := os.MkdirAll(dir, 0o755); err != nil {
+				if err := os.MkdirAll(dir, 0o777); err != nil {
 					return err
 				}
 				if ctxErrOf(ctx) != nil {
 					return fmt.Errorf("Operation aborted")
 				}
-				if err := os.WriteFile(absolutePath, []byte(input.Content), 0o644); err != nil {
+				if err := os.WriteFile(absolutePath, []byte(input.Content), 0o666); err != nil {
 					return err
 				}
 				if ctxErrOf(ctx) != nil {
