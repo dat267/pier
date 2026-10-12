@@ -243,3 +243,11 @@ func TestEditorWordBackwardOverDottedWord(t *testing.T) {
 		t.Fatalf("forward cursorCol = %d; want 1", editor.state.cursorCol)
 	}
 }
+
+// isInSlashCommandContext trims the full JS whitespace set.
+func TestEditorSlashCommandContextUnicodeWhitespace(t *testing.T) {
+	editor := NewEditor(&editorHost{rows: 10}, editorTestTheme(), EditorOptions{})
+	if !editor.isInSlashCommandContext("\u3000/cmd") {
+		t.Fatal("ideographic space before slash should be a slash-command context")
+	}
+}

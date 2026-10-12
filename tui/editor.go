@@ -1939,12 +1939,13 @@ func (e *Editor) isAtStartOfMessage() bool {
 		return false
 	}
 	beforeCursor := e.textBeforeCursor()
-	trimmed := strings.TrimSpace(beforeCursor)
+	// Upstream uses String.prototype.trim (the full JS whitespace set).
+	trimmed := strings.TrimFunc(beforeCursor, isWhitespaceRune)
 	return trimmed == "" || trimmed == "/"
 }
 
 func (e *Editor) isInSlashCommandContext(textBeforeCursor string) bool {
-	return e.isSlashMenuAllowed() && strings.HasPrefix(strings.TrimLeft(textBeforeCursor, " \t\n\r\v\f\u00a0"), "/")
+	return e.isSlashMenuAllowed() && strings.HasPrefix(strings.TrimLeftFunc(textBeforeCursor, isWhitespaceRune), "/")
 }
 
 func (e *Editor) getBestAutocompleteMatchIndex(items []AutocompleteItem, prefix string) int {
@@ -2007,7 +2008,7 @@ func (e *Editor) handleTabCompletionLocked() {
 		return
 	}
 	beforeCursor := e.textBeforeCursor()
-	if e.isInSlashCommandContext(beforeCursor) && !strings.Contains(strings.TrimLeft(beforeCursor, " \t"), " ") {
+	if e.isInSlashCommandContext(beforeCursor) && !strings.Contains(strings.TrimLeftFunc(beforeCursor, isWhitespaceRune), " ") {
 		e.requestAutocompleteLocked(false, true)
 		return
 	}
