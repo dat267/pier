@@ -468,3 +468,19 @@ func TestTruncationWarningsSkipZeroLimits(t *testing.T) {
 		t.Fatalf("grep zero limit = %q", got)
 	}
 }
+
+// Upstream's edit error text maps every text block (`c.text || ""`) and joins
+// them, so an empty text block still contributes its separator newline.
+func TestFormatEditResultKeepsEmptyTextBlocks(t *testing.T) {
+	installPierThemeForTest(t)
+	InitTheme("dark", false)
+	theme := ActiveTheme()
+	result := &SortToolResultContent{Content: []ToolResultContent{
+		{Type: "text", Text: ""},
+		{Type: "text", Text: "boom"},
+	}, IsError: true}
+	got := coding.StripAnsi(formatEditResult(&editRenderArgs{Path: "x.txt"}, nil, result, theme, true))
+	if got != "\nboom" {
+		t.Fatalf("edit error = %q; want %q", got, "\nboom")
+	}
+}

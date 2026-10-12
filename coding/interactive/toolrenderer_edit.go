@@ -259,9 +259,11 @@ func formatEditResult(args *editRenderArgs, callComponent *editCallComponent, re
 		}
 	}
 	if isError {
+		// Upstream maps every text block (`c.text || ""`) and joins them, so
+		// an empty block still contributes its separator newline.
 		var blocks []string
 		for _, block := range result.Content {
-			if block.Type == "text" && block.Text != "" {
+			if block.Type == "text" {
 				blocks = append(blocks, block.Text)
 			}
 		}
