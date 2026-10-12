@@ -52,11 +52,24 @@ type MatchResult struct {
 	Score   float64
 }
 
-// whitespaceRunRegex collapses runs of whitespace, for fuzzy matching.
-var whitespaceRunRegex = regexp.MustCompile(`\s+`)
-
+// normalizeWhitespaceLower lowercases and collapses runs of JS whitespace for
+// fuzzy matching (upstream `text.toLowerCase().replace(/\s+/g, " ").trim()`;
+// Go's `\s` class is ASCII-only).
 func normalizeWhitespaceLower(text string) string {
-	return strings.TrimSpace(whitespaceRunRegex.ReplaceAllString(strings.ToLower(text), " "))
+	var builder strings.Builder
+	pendingSpace := false
+	for _, r := range strings.ToLower(text) {
+		if isSpaceRune(r) {
+			pendingSpace = true
+			continue
+		}
+		if pendingSpace && builder.Len() > 0 {
+			builder.WriteByte(' ')
+		}
+		pendingSpace = false
+		builder.WriteRune(r)
+	}
+	return builder.String()
 }
 
 func getSessionSearchText(session coding.SessionInfo) string {

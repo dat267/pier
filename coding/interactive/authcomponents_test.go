@@ -346,3 +346,14 @@ func TestBrowserOpenerHook(t *testing.T) {
 		t.Fatalf("render = %q", lines)
 	}
 }
+
+// session-selector-search.ts normalizes with the JS `\s` class, which includes
+// Unicode whitespace.
+func TestNormalizeWhitespaceLowerUnicode(t *testing.T) {
+	if got := normalizeWhitespaceLower("a\u00a0\u00a0b"); got != "a b" {
+		t.Fatalf("nbsp normalize = %q; want %q", got, "a b")
+	}
+	if got := normalizeWhitespaceLower("\u3000a\u3000"); got != "a" {
+		t.Fatalf("ideographic normalize = %q; want %q", got, "a")
+	}
+}
