@@ -25,15 +25,18 @@ func formatReadLineRange(args map[string]any, theme *Theme) string {
 	if !hasOffset && !hasLimit {
 		return ""
 	}
-	startLine := 1
+	startLine := 1.0
 	if hasOffset {
-		startLine = int(offset)
+		startLine = offset
 	}
+	rangeText := ":" + formatToolLimit(startLine)
 	if hasLimit {
-		endLine := startLine + int(limit) - 1
-		return theme.Fg("warning", fmt.Sprintf(":%d-%d", startLine, endLine))
+		endLine := startLine + limit - 1
+		if endLine != 0 {
+			rangeText += "-" + formatToolLimit(endLine)
+		}
 	}
-	return theme.Fg("warning", fmt.Sprintf(":%d", startLine))
+	return theme.Fg("warning", rangeText)
 }
 
 func formatReadCall(args map[string]any, theme *Theme, cwd string) string {

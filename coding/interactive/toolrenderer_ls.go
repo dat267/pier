@@ -1,7 +1,6 @@
 package interactive
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/dat267/pier/tui"
@@ -13,7 +12,7 @@ func formatLsCall(args map[string]any, theme *Theme, cwd string) string {
 	pathDisplay := RenderToolPath(&rawPath, theme, cwd, ".")
 	text := theme.Fg("toolTitle", theme.Bold("ls")) + " " + pathDisplay
 	if hasLimit {
-		text += theme.Fg("toolOutput", fmt.Sprintf(" (limit %d)", int(limit)))
+		text += theme.Fg("toolOutput", " (limit "+formatToolLimit(limit)+")")
 	}
 	return text
 }

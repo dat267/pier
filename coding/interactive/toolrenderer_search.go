@@ -1,7 +1,6 @@
 package interactive
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/dat267/pier/coding"
@@ -62,7 +61,7 @@ func formatGrepCall(args map[string]any, theme *Theme) string {
 		text += theme.Fg("toolOutput", " ("+glob+")")
 	}
 	if hasLimit {
-		text += theme.Fg("toolOutput", fmt.Sprintf(" limit %d", int(limit)))
+		text += theme.Fg("toolOutput", " limit "+formatToolLimit(limit))
 	}
 	return text
 }
@@ -101,7 +100,7 @@ func formatFindCall(args map[string]any, theme *Theme) string {
 		text += theme.Fg("toolOutput", " in "+shown)
 	}
 	if hasLimit {
-		text += theme.Fg("toolOutput", fmt.Sprintf(" (limit %d)", int(limit)))
+		text += theme.Fg("toolOutput", " (limit "+formatToolLimit(limit)+")")
 	}
 	return text
 }

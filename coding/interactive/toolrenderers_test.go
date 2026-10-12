@@ -92,17 +92,29 @@ func TestToolRenderersCallHeaders(t *testing.T) {
 	if got := renderCall("read", args(`{"file_path":"/tmp/proj/main.go","offset":10,"limit":5}`), theme); !strings.Contains(got, ":10-14") {
 		t.Fatalf("read call range = %q", got)
 	}
+	if got := renderCall("read", args(`{"file_path":"/tmp/proj/main.go","offset":1.5,"limit":1.5}`), theme); !strings.Contains(got, ":1.5-2") {
+		t.Fatalf("fractional read call range = %q", got)
+	}
 	if got := renderCall("bash", args(`{"command":"ls -la"}`), theme); !strings.Contains(got, "$ ls -la") {
 		t.Fatalf("bash call = %q", got)
 	}
 	if got := renderCall("grep", args(`{"pattern":"TODO","path":"/tmp/proj/src"}`), theme); !strings.Contains(got, "grep /TODO/ in /tmp/proj/src") {
 		t.Fatalf("grep call = %q", got)
 	}
+	if got := renderCall("grep", args(`{"pattern":"TODO","limit":1.5}`), theme); !strings.Contains(got, "limit 1.5") {
+		t.Fatalf("fractional grep call = %q", got)
+	}
 	if got := renderCall("find", args(`{"pattern":"*.go"}`), theme); !strings.Contains(got, "find *.go in .") {
 		t.Fatalf("find call = %q", got)
 	}
+	if got := renderCall("find", args(`{"pattern":"*.go","limit":1.5}`), theme); !strings.Contains(got, "limit 1.5") {
+		t.Fatalf("fractional find call = %q", got)
+	}
 	if got := renderCall("ls", args(`{}`), theme); !strings.Contains(got, "ls .") {
 		t.Fatalf("ls call = %q", got)
+	}
+	if got := renderCall("ls", args(`{"limit":1.5}`), theme); !strings.Contains(got, "limit 1.5") {
+		t.Fatalf("fractional ls call = %q", got)
 	}
 	if got := renderCall("write", args(`{"file_path":"/tmp/proj/a.go","content":"package main"}`), theme); !strings.Contains(got, "write /tmp/proj/a.go") {
 		t.Fatalf("write call = %q", got)
