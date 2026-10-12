@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -513,5 +514,35 @@ func TestThemeValidationRejectsOutOfRangeColorIndex(t *testing.T) {
 	}
 	if _, err := ValidateThemeJSON("bad", data); err == nil {
 		t.Fatal("out-of-range color index must be rejected")
+	}
+}
+
+// Upstream getThemeExportColors converts an okhsl() export value to hex
+// because CSS does not understand okhsl().
+func TestThemeExportConvertsOkhslToHex(t *testing.T) {
+	dir := t.TempDir()
+	SetCustomThemesDir(dir)
+	t.Cleanup(func() { SetCustomThemesDir("") })
+	colors := map[string]any{}
+	for _, key := range requiredThemeColors {
+		colors[key] = "#000000"
+	}
+	data, err := json.Marshal(map[string]any{
+		"name":   "okhsl-export",
+		"colors": colors,
+		"export": map[string]any{"pageBg": "okhsl(200 50% 40%)"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "okhsl-export.json"), data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	pageBg, _, _, err := GetThemeExportColors("okhsl-export")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(pageBg, "#") || strings.Contains(pageBg, "okhsl") {
+		t.Fatalf("pageBg = %q; want a hex color", pageBg)
 	}
 }

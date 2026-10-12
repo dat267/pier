@@ -168,6 +168,12 @@ func GetThemeExportColors(themeName string) (pageBg string, cardBg string, infoB
 		if resolved.Value == "" {
 			return ""
 		}
+		// CSS understands hex and oklch() but not okhsl(); convert it.
+		if strings.HasPrefix(strings.ToLower(resolved.Value), "okhsl(") {
+			if color, err := tui.ParseColor(resolved.Value); err == nil {
+				return tui.ColorToHex(color)
+			}
+		}
 		return resolved.Value
 	}
 	return colorValue(themeJSON.Export.PageBg), colorValue(themeJSON.Export.CardBg), colorValue(themeJSON.Export.InfoBg), nil
