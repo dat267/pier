@@ -67,13 +67,13 @@ func ExtractDiagnosticError(err error) DiagnosticErrorInfo {
 	if coder, ok := err.(interface{ ErrorCode() any }); ok {
 		switch code := coder.ErrorCode().(type) {
 		case string:
-			info.Code, _ = json.Marshal(code)
+			info.Code, _ = MarshalJSON(code)
 		case int:
-			info.Code, _ = json.Marshal(code)
+			info.Code, _ = MarshalJSON(code)
 		case int64:
-			info.Code, _ = json.Marshal(code)
+			info.Code, _ = MarshalJSON(code)
 		case float64:
-			info.Code, _ = json.Marshal(code)
+			info.Code, _ = MarshalJSON(code)
 		}
 	}
 	return info

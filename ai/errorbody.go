@@ -93,11 +93,7 @@ func ShortHash(str string) string {
 		h2Seed = uint32(0x41c6ce57)
 	)
 	h1, h2 := h1Seed, h2Seed
-	for _, ch := range []rune(str) {
-		// JS charCodeAt is UTF-16; use code units.
-		_ = ch
-		break
-	}
+	// JS charCodeAt is UTF-16; hash code units.
 	units := utf16Units(str)
 	for _, ch := range units {
 		h1 = imul(h1^uint32(ch), 2654435761)
