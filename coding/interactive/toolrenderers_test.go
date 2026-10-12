@@ -361,3 +361,18 @@ func TestShellElapsedUsesTheRecordedDuration(t *testing.T) {
 		t.Fatalf("live label = %q, want the recorded 1.5s rather than five seconds of wall clock", rendered)
 	}
 }
+
+// Upstream formatShellCall uses a truthy timeout and interpolates the number
+// verbatim, so a zero timeout is omitted and a fractional one keeps its value.
+func TestFormatShellCallTimeoutSuffix(t *testing.T) {
+	installPierThemeForTest(t)
+	InitTheme("dark", false)
+	theme := ActiveTheme()
+	if got := formatShellCall(map[string]any{"command": "ls", "timeout": 0.0}, "bash", theme); strings.Contains(got, "timeout") {
+		t.Fatalf("zero timeout = %q; want no suffix", got)
+	}
+	got := formatShellCall(map[string]any{"command": "ls", "timeout": 2.5}, "bash", theme)
+	if !strings.Contains(got, "(timeout 2.5s)") {
+		t.Fatalf("fractional timeout = %q; want 2.5s", got)
+	}
+}

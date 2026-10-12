@@ -16,8 +16,9 @@ func formatShellCall(args map[string]any, prompt string, theme *Theme) string {
 	command, commandOK := argString(args, "command")
 	timeout, hasTimeout := argNumber(args, "timeout")
 	timeoutSuffix := ""
-	if hasTimeout {
-		timeoutSuffix = theme.Fg("muted", fmt.Sprintf(" (timeout %ds)", int(timeout)))
+	// Upstream uses a truthy timeout and interpolates the number verbatim.
+	if hasTimeout && timeout != 0 {
+		timeoutSuffix = theme.Fg("muted", " (timeout "+formatToolLimit(timeout)+"s)")
 	}
 	commandDisplay := ""
 	if !commandOK {
