@@ -170,6 +170,18 @@ func TestToolRenderersResults(t *testing.T) {
 }
 
 // TestEditRendererPreview covers the edit preview diff.
+func TestEditRendererPreviewReplacesMalformedUTF8(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "invalid.txt")
+	if err := os.WriteFile(file, []byte{0xff, '\n', 't', 'a', 'r', 'g', 'e', 't', '\n'}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	preview := computeEditsPreview(file, []coding.Edit{{OldText: "target", NewText: "changed"}}, dir)
+	if preview == nil || preview.Error != "" || !strings.Contains(preview.Diff, "\uFFFD") {
+		t.Fatalf("edit preview = %+v; want replacement-decoded context", preview)
+	}
+}
+
 func TestEditRendererPreview(t *testing.T) {
 	newRendererTestTheme(t)
 	dir := t.TempDir()

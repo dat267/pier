@@ -4,12 +4,46 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
 
 // Round 117 tests: git metadata discovery, branch resolution, and deprecation
 // warnings.
+
+// footer-data-provider.ts reads HEAD as UTF-8 text before parsing the branch.
+func TestFooterDataProviderReplacesMalformedUTF8InHEAD(t *testing.T) {
+	repo := t.TempDir()
+	gitDir := filepath.Join(repo, ".git")
+	if err := os.MkdirAll(gitDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), append([]byte("ref: refs/heads/feature-"), 0xff, '\n'), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	provider := NewFooterDataProvider(repo, FooterDataProviderOptions{DisableWatch: true})
+	branch, ok := provider.GetGitBranch()
+	if !ok || branch != "feature-\uFFFD" {
+		t.Fatalf("branch = %q, %v; want replacement-decoded branch", branch, ok)
+	}
+}
+
+// footer-data-provider.ts requests UTF-8 decoding for git's branch output.
+func TestResolveGitBranchReplacesMalformedUTF8(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("uses a POSIX git test stub")
+	}
+	stubDir := t.TempDir()
+	stub := filepath.Join(stubDir, "git")
+	if err := os.WriteFile(stub, []byte("#!/bin/sh\nprintf 'feature-\\377\\n'\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", stubDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	if got := ResolveGitBranch(t.TempDir()); got != "feature-\uFFFD" {
+		t.Fatalf("branch = %q; want replacement-decoded name", got)
+	}
+}
 
 func TestResolveGitBranch(t *testing.T) {
 	if _, err := execLookPath("git"); err != nil {

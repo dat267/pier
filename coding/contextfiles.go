@@ -29,7 +29,7 @@ func FindGitPaths(cwd string) *GitPaths {
 				if err != nil {
 					return nil
 				}
-				trimmed := strings.TrimSpace(string(content))
+				trimmed := strings.TrimSpace(DecodeUTF8WithReplacement(content))
 				if strings.HasPrefix(trimmed, "gitdir: ") {
 					gitDir := resolveFrom(dir, strings.TrimSpace(strings.TrimPrefix(trimmed, "gitdir: ")))
 					headPath := filepath.Join(gitDir, "HEAD")
@@ -39,7 +39,7 @@ func FindGitPaths(cwd string) *GitPaths {
 					commonGitDir := gitDir
 					commonDirPath := filepath.Join(gitDir, "commondir")
 					if content, err := os.ReadFile(commonDirPath); err == nil {
-						commonGitDir = resolveFrom(gitDir, strings.TrimSpace(string(content)))
+						commonGitDir = resolveFrom(gitDir, strings.TrimSpace(DecodeUTF8WithReplacement(content)))
 					}
 					return &GitPaths{RepoDir: dir, CommonGitDir: commonGitDir, HeadPath: headPath}
 				}
@@ -87,7 +87,7 @@ func LoadContextFileFromDir(dir string) *ContextFile {
 		if err != nil {
 			continue
 		}
-		return &ContextFile{Path: filePath, Content: StripBom(string(content))}
+		return &ContextFile{Path: filePath, Content: StripBom(DecodeUTF8WithReplacement(content))}
 	}
 	return nil
 }

@@ -218,6 +218,20 @@ func TestGrepToolMatches(t *testing.T) {
 	}
 }
 
+// grep.ts's default context-file reader uses fs.readFile(..., "utf-8").
+func TestGrepToolContextReplacesMalformedUTF8(t *testing.T) {
+	requireBinary(t, "rg")
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "invalid.txt"), []byte{0xff, '\n', 'n', 'e', 'e', 'd', 'l', 'e', '\n'}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	result := execTool(t, CreateGrepTool(dir), `{"pattern":"needle","context":1}`)
+	got := result.Content[0].(ai.TextContent).Text
+	if !strings.Contains(got, "invalid.txt-1- \uFFFD") {
+		t.Fatalf("grep context = %q; want replacement rune for invalid byte", got)
+	}
+}
+
 func TestGrepToolErrors(t *testing.T) {
 	requireBinary(t, "rg")
 	dir := t.TempDir()

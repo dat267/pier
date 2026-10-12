@@ -127,6 +127,9 @@ func TestResolveConfigValueCommand(t *testing.T) {
 	if !ok || value != "sk-from-command" {
 		t.Fatalf("value = %q ok = %v", value, ok)
 	}
+	if value, ok := ResolveConfigValueUncached(`!printf '\377'`, nil); !ok || value != "\uFFFD" {
+		t.Fatalf("invalid UTF-8 command output = %q, %v; want replacement rune", value, ok)
+	}
 	// The result is cached; a failing command caches its absence too.
 	if value, _ := ResolveConfigValue("!printf 'sk-from-command'", nil); value != "sk-from-command" {
 		t.Fatalf("cached value = %q", value)

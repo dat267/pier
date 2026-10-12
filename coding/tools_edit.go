@@ -172,7 +172,7 @@ func CreateEditTool(cwd string) agent.AgentTool {
 					resultErr = err
 					return err
 				}
-				rawContent := string(data)
+				rawContent := DecodeUTF8WithReplacement(data)
 				// Strip the BOM before matching: the model will not include an
 				// invisible BOM in oldText.
 				bom, content := SplitBom(rawContent)

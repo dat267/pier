@@ -18,6 +18,26 @@ func writeTestFile(t *testing.T, dir, name, content string) string {
 	return path
 }
 
+// edit.ts decodes file bytes with Buffer.toString("utf-8") before applying replacements.
+func TestEditReplacesMalformedUTF8WhenRewritingFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "f.txt")
+	if err := os.WriteFile(path, []byte{0xff, '\n', 't', 'a', 'r', 'g', 'e', 't', '\n'}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	tool := CreateEditTool(dir)
+	if _, err := tool.Execute("c", json.RawMessage(`{"path":"f.txt","edits":[{"oldText":"target","newText":"changed"}]}`), nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != "\uFFFD\nchanged\n" {
+		t.Fatalf("rewritten file = %q; want replacement-decoded content", got)
+	}
+}
+
 func TestEditSingleReplacement(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "f.txt", "alpha\nbeta\ngamma\n")

@@ -303,6 +303,22 @@ func TestLoadPromptTemplatesAndFiles(t *testing.T) {
 	}
 }
 
+// prompt-templates.ts reads template files as UTF-8 with replacement semantics.
+func TestLoadTemplateReplacesMalformedUTF8(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "invalid.md")
+	content := append([]byte("---\ndescription: test\n---\n"), 0xff, 'x')
+	if err := os.WriteFile(path, content, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	template := LoadTemplateFromFile(path, CreateSyntheticSourceInfo(path, "local", "", "", filepath.Dir(path)))
+	if template == nil {
+		t.Fatal("template did not load")
+	}
+	if template.Content != "\uFFFDx" {
+		t.Fatalf("template content = %q; want replacement-decoded body", template.Content)
+	}
+}
+
 func TestLoadTemplateFrontmatterArgumentHint(t *testing.T) {
 	root := t.TempDir()
 

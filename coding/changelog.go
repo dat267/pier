@@ -188,7 +188,7 @@ func ParseChangelog(changelogPath string) []ChangelogEntry {
 	if err != nil {
 		return nil
 	}
-	lines := strings.Split(string(content), "\n")
+	lines := strings.Split(DecodeUTF8WithReplacement(content), "\n")
 	var entries []ChangelogEntry
 	var currentLines []string
 	var current *ChangelogEntry

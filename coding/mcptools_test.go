@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"regexp"
 	"strconv"
@@ -37,6 +38,26 @@ func TestCreateMcpToolName(t *testing.T) {
 	second := CreateMcpToolName("s", "a-b", func(name string) bool { return name == taken })
 	if !regexp.MustCompile(`^mcp__s__a_b_[0-9a-f]{8}$`).MatchString(second) {
 		t.Fatalf("second = %q", second)
+	}
+}
+
+// mcp/tools.ts converts text resource blobs with Buffer.toString("utf8").
+func TestMcpTextResourceReplacesMalformedUTF8(t *testing.T) {
+	blob := base64.StdEncoding.EncodeToString([]byte{0xff, 'x'})
+	mimeType := "text/plain"
+	content, err := ToModelContent("docs", []protocol.ContentBlock{{
+		Type:     protocol.ContentTypeResource,
+		Resource: &protocol.ResourceContents{URI: "docs://invalid", MimeType: &mimeType, Blob: blob},
+	}}, ConvertMcpResultOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(content) != 1 {
+		t.Fatalf("content = %+v", content)
+	}
+	text, ok := content[0].(ai.TextContent)
+	if !ok || text.Text != "\uFFFDx" {
+		t.Fatalf("resource text = %+v; want replacement-decoded text", content[0])
 	}
 }
 

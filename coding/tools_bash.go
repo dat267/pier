@@ -33,12 +33,7 @@ type OutputAccumulator struct {
 	maxBytes        int
 	maxRollingBytes int
 	tempFilePrefix  string
-	utf8BytesNeeded int
-	utf8BytesSeen   int
-	utf8CodePoint   rune
-	utf8AtStart     bool
-	utf8LowerBound  byte
-	utf8UpperBound  byte
+	decoder         utf8TextDecoder
 
 	mu                       sync.Mutex
 	tailText                 string
@@ -106,7 +101,7 @@ func NewOutputAccumulator(maxLines, maxBytes int, tempFilePrefix string) *Output
 		maxLines: maxLines, maxBytes: maxBytes,
 		maxRollingBytes: max(maxBytes*2, 1),
 		tempFilePrefix:  tempFilePrefix,
-		utf8AtStart:     true,
+		decoder:         utf8TextDecoder{atStart: true, stripBOM: true},
 		// Upstream seeds the boundary flag true (a fresh accumulator starts
 		// at a line boundary).
 		tailStartsAtLineBoundary: true,
@@ -121,7 +116,7 @@ func (o *OutputAccumulator) Append(data []byte) error {
 		return fmt.Errorf("Cannot append to a finished output accumulator")
 	}
 	o.totalRawBytes += len(data)
-	o.appendDecodedText(o.decodeUTF8Locked(data, false))
+	o.appendDecodedText(o.decoder.decode(data, false))
 
 	if o.tempFile != nil || o.shouldUseTempFile() {
 		if err := o.ensureTempFileLocked(); err != nil {
@@ -144,7 +139,7 @@ func (o *OutputAccumulator) Finish() {
 		return
 	}
 	o.finished = true
-	o.appendDecodedText(o.decodeUTF8Locked(nil, true))
+	o.appendDecodedText(o.decoder.decode(nil, true))
 	if o.shouldUseTempFile() {
 		_ = o.ensureTempFileLocked()
 	}
@@ -208,88 +203,104 @@ func (o *OutputAccumulator) GetLastLineBytes() int {
 	return o.currentLineBytes
 }
 
-func (o *OutputAccumulator) decodeUTF8Locked(data []byte, final bool) string {
+type utf8TextDecoder struct {
+	bytesNeeded int
+	bytesSeen   int
+	codePoint   rune
+	atStart     bool
+	stripBOM    bool
+	lowerBound  byte
+	upperBound  byte
+}
+
+func (decoder *utf8TextDecoder) decode(data []byte, final bool) string {
 	var decoded strings.Builder
 	for i := 0; i < len(data); {
 		value := data[i]
-		if o.utf8BytesNeeded == 0 && value < 0x80 {
+		if decoder.bytesNeeded == 0 && value < 0x80 {
 			start := i
 			for i < len(data) && data[i] < 0x80 {
 				i++
 			}
 			if start < i {
-				o.utf8AtStart = false
+				decoder.atStart = false
 				decoded.Write(data[start:i])
 			}
 			continue
 		}
-		if o.utf8BytesNeeded == 0 {
+		if decoder.bytesNeeded == 0 {
 			switch {
 			case value >= 0xc2 && value <= 0xdf:
-				o.utf8BytesNeeded, o.utf8CodePoint = 1, rune(value&0x1f)
-				o.utf8LowerBound, o.utf8UpperBound = 0x80, 0xbf
+				decoder.bytesNeeded, decoder.codePoint = 1, rune(value&0x1f)
+				decoder.lowerBound, decoder.upperBound = 0x80, 0xbf
 				i++
 			case value >= 0xe0 && value <= 0xef:
-				o.utf8BytesNeeded, o.utf8CodePoint = 2, rune(value&0x0f)
-				o.utf8LowerBound, o.utf8UpperBound = 0x80, 0xbf
+				decoder.bytesNeeded, decoder.codePoint = 2, rune(value&0x0f)
+				decoder.lowerBound, decoder.upperBound = 0x80, 0xbf
 				if value == 0xe0 {
-					o.utf8LowerBound = 0xa0
+					decoder.lowerBound = 0xa0
 				} else if value == 0xed {
-					o.utf8UpperBound = 0x9f
+					decoder.upperBound = 0x9f
 				}
 				i++
 			case value >= 0xf0 && value <= 0xf4:
-				o.utf8BytesNeeded, o.utf8CodePoint = 3, rune(value&0x07)
-				o.utf8LowerBound, o.utf8UpperBound = 0x80, 0xbf
+				decoder.bytesNeeded, decoder.codePoint = 3, rune(value&0x07)
+				decoder.lowerBound, decoder.upperBound = 0x80, 0xbf
 				if value == 0xf0 {
-					o.utf8LowerBound = 0x90
+					decoder.lowerBound = 0x90
 				} else if value == 0xf4 {
-					o.utf8UpperBound = 0x8f
+					decoder.upperBound = 0x8f
 				}
 				i++
 			default:
-				o.writeDecodedRune(&decoded, utf8.RuneError)
+				decoder.writeRune(&decoded, utf8.RuneError)
 				i++
 			}
 			continue
 		}
 
-		if value < o.utf8LowerBound || value > o.utf8UpperBound {
-			o.writeDecodedRune(&decoded, utf8.RuneError)
-			o.resetUTF8Decoder()
+		if value < decoder.lowerBound || value > decoder.upperBound {
+			decoder.writeRune(&decoded, utf8.RuneError)
+			decoder.reset()
 			continue // Reconsume the byte that did not continue the pending sequence.
 		}
-		o.utf8CodePoint = o.utf8CodePoint<<6 | rune(value&0x3f)
-		o.utf8BytesSeen++
-		o.utf8LowerBound, o.utf8UpperBound = 0x80, 0xbf
+		decoder.codePoint = decoder.codePoint<<6 | rune(value&0x3f)
+		decoder.bytesSeen++
+		decoder.lowerBound, decoder.upperBound = 0x80, 0xbf
 		i++
-		if o.utf8BytesSeen == o.utf8BytesNeeded {
-			o.writeDecodedRune(&decoded, o.utf8CodePoint)
-			o.resetUTF8Decoder()
+		if decoder.bytesSeen == decoder.bytesNeeded {
+			decoder.writeRune(&decoded, decoder.codePoint)
+			decoder.reset()
 		}
 	}
-	if final && o.utf8BytesNeeded > 0 {
-		o.writeDecodedRune(&decoded, utf8.RuneError)
-		o.resetUTF8Decoder()
+	if final && decoder.bytesNeeded > 0 {
+		decoder.writeRune(&decoded, utf8.RuneError)
+		decoder.reset()
 	}
 	return decoded.String()
 }
 
-func (o *OutputAccumulator) writeDecodedRune(decoded *strings.Builder, value rune) {
-	if o.utf8AtStart {
-		o.utf8AtStart = false
-		if value == '\uFEFF' {
+func (decoder *utf8TextDecoder) writeRune(decoded *strings.Builder, value rune) {
+	if decoder.atStart {
+		decoder.atStart = false
+		if decoder.stripBOM && value == '\uFEFF' {
 			return
 		}
 	}
 	decoded.WriteRune(value)
 }
 
-func (o *OutputAccumulator) resetUTF8Decoder() {
-	o.utf8BytesNeeded = 0
-	o.utf8BytesSeen = 0
-	o.utf8CodePoint = 0
-	o.utf8LowerBound, o.utf8UpperBound = 0, 0
+func (decoder *utf8TextDecoder) reset() {
+	decoder.bytesNeeded = 0
+	decoder.bytesSeen = 0
+	decoder.codePoint = 0
+	decoder.lowerBound, decoder.upperBound = 0, 0
+}
+
+// DecodeUTF8WithReplacement decodes UTF-8 using TextDecoder replacement semantics.
+func DecodeUTF8WithReplacement(data []byte) string {
+	var decoder utf8TextDecoder
+	return decoder.decode(data, true)
 }
 
 func (o *OutputAccumulator) appendDecodedText(text string) {

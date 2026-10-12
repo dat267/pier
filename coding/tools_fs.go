@@ -102,7 +102,7 @@ func CreateReadTool(cwd string, options *ReadToolOptions) agent.AgentTool {
 			if err != nil {
 				return agent.AgentToolResult{}, err
 			}
-			textContent := string(data)
+			textContent := DecodeUTF8WithReplacement(data)
 			allLines := strings.Split(textContent, "\n")
 			totalFileLines := len(allLines)
 			startLine := 0.0

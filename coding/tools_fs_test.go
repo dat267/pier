@@ -155,6 +155,19 @@ func TestLsToolUsesLocaleAlphabeticalOrder(t *testing.T) {
 	}
 }
 
+// read.ts decodes file bytes with Buffer.toString("utf-8"), replacing malformed UTF-8.
+func TestReadToolReplacesMalformedUTF8(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "invalid.txt")
+	if err := os.WriteFile(file, []byte{0xff, 0xff, 'a'}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	result := execTool(t, CreateReadTool(dir, nil), `{"path":"invalid.txt"}`)
+	if got := result.Content[0].(ai.TextContent).Text; got != "\uFFFD\uFFFDa" {
+		t.Fatalf("read invalid UTF-8 = %q; want two replacement runes then a", got)
+	}
+}
+
 func TestReadToolImageDetection(t *testing.T) {
 	dir := t.TempDir()
 	// A real PNG: the pipeline decodes and re-encodes now, so a bare magic header

@@ -389,7 +389,7 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 				content, err := os.ReadFile(filePath)
 				lines := []string{}
 				if err == nil {
-					text := strings.ReplaceAll(string(content), "\r\n", "\n")
+					text := strings.ReplaceAll(DecodeUTF8WithReplacement(content), "\r\n", "\n")
 					text = strings.ReplaceAll(text, "\r", "\n")
 					lines = strings.Split(text, "\n")
 				}

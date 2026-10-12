@@ -34,6 +34,27 @@ func setHomeDir(t *testing.T, dir string) {
 // dedupe: the default agent-dir skills dir and a settings skill path pointing
 // at the same directory (e.g. ~/.pi/agent/skills) must load each skill once,
 // with no diagnostic. The port appended both, so every skill appeared twice.
+// skills.ts reads skill files as UTF-8 and replaces malformed sequences.
+func TestLoadSkillReplacesMalformedUTF8(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "demo", "SKILL.md")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	content := append([]byte("---\nname: demo\ndescription: test"), 0xff)
+	content = append(content, []byte("\n---\nbody")...)
+	if err := os.WriteFile(path, content, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	skill, _ := loadSkillFromFile(path, "user")
+	if skill == nil || skill.Description != "test\uFFFD" {
+		var got string
+		if skill != nil {
+			got = skill.Description
+		}
+		t.Fatalf("skill description = %q; want replacement-decoded text", got)
+	}
+}
+
 func TestLoadSkillsDedupesDefaultsAndPaths(t *testing.T) {
 	home := t.TempDir()
 	setHomeDir(t, home)

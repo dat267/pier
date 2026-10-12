@@ -57,6 +57,18 @@ func splitGoldenLine(line string) (string, string, bool) {
 	return "", "", false
 }
 
+// changelog.ts reads source files as UTF-8 with replacement semantics.
+func TestParseChangelogReplacesMalformedUTF8(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "CHANGELOG.md")
+	if err := os.WriteFile(path, []byte{'#', '#', ' ', '[', '1', '.', '0', '.', '0', ']', '\n', 'x', 0xff, '\n'}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	entries := ParseChangelog(path)
+	if len(entries) != 1 || entries[0].Content != "## [1.0.0]\nx\uFFFD" {
+		t.Fatalf("changelog entry content = %q; want replacement-decoded body", entries[0].Content)
+	}
+}
+
 func checkCoreGolden(t *testing.T, golden map[string]string, label string, got any) {
 	t.Helper()
 	want, ok := golden[label]

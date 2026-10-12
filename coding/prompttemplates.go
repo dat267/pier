@@ -192,7 +192,7 @@ func LoadTemplateFromFile(filePath string, sourceInfo SourceInfo) *PromptTemplat
 	if err != nil {
 		return nil
 	}
-	parsed := ParseFrontmatter(string(raw))
+	parsed := ParseFrontmatter(DecodeUTF8WithReplacement(raw))
 
 	name := strings.TrimSuffix(filepath.Base(filePath), ".md")
 

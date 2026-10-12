@@ -227,7 +227,7 @@ func mcpBlockToContent(server string, block protocol.ContentBlock, options Conve
 			return []ai.Content{ai.TextContent{Text: "[binary resource " + resource.URI + " (invalid base64) omitted]"}}, nil
 		}
 		if isTextMimeType(mcpStringValue(resource.MimeType)) {
-			return []ai.Content{ai.TextContent{Text: string(data)}}, nil
+			return []ai.Content{ai.TextContent{Text: DecodeUTF8WithReplacement(data)}}, nil
 		}
 		kind := mcpStringValue(resource.MimeType)
 		if kind == "" {

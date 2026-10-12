@@ -251,7 +251,7 @@ func (f *FooterDataProvider) readHeadContent() string {
 	if err != nil {
 		return ""
 	}
-	return string(content)
+	return DecodeUTF8WithReplacement(content)
 }
 
 // resolveGitBranch resolves the branch from HEAD (caller holds the lock).
@@ -263,7 +263,7 @@ func (f *FooterDataProvider) resolveGitBranch() (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	trimmed := strings.TrimSpace(string(content))
+	trimmed := strings.TrimSpace(DecodeUTF8WithReplacement(content))
 	if strings.HasPrefix(trimmed, "ref: refs/heads/") {
 		branch := trimmed[len("ref: refs/heads/"):]
 		if branch == ".invalid" {

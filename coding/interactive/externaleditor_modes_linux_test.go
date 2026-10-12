@@ -10,6 +10,20 @@ import (
 )
 
 // Upstream external-editor.ts uses writeFileSync's default mode in a 0700 temp directory.
+// external-editor.ts reads edited text with UTF-8 replacement semantics.
+func TestExternalEditorReplacesMalformedUTF8(t *testing.T) {
+	t.Setenv("TMPDIR", t.TempDir())
+	previous := externalEditorRunner
+	defer func() { externalEditorRunner = previous }()
+	externalEditorRunner = func(command *exec.Cmd) error {
+		return os.WriteFile(command.Args[len(command.Args)-1], []byte{0xff, 'x'}, 0o600)
+	}
+	result := EditInExternalEditor(ExternalEditorOptions{Command: "editor", Content: "prompt"})
+	if result.Status != "complete" || result.Content != "\uFFFDx" {
+		t.Fatalf("editor result = %+v; want replacement-decoded content", result)
+	}
+}
+
 func TestExternalEditorTempFileUsesNodeDefaultMode(t *testing.T) {
 	oldMask := syscall.Umask(0)
 	defer syscall.Umask(oldMask)

@@ -323,7 +323,7 @@ func executeWithConfiguredShell(command string, env map[string]string) (value st
 		// The shell could not be spawned (upstream ENOENT).
 		return "", false
 	}
-	return strings.TrimSpace(string(output)), true
+	return strings.TrimSpace(DecodeUTF8WithReplacement(output)), true
 }
 
 // executeWithDefaultShell runs the command through the platform default shell
@@ -345,7 +345,7 @@ func executeWithDefaultShell(command string, env map[string]string) (string, boo
 	if err != nil {
 		return "", false
 	}
-	value := strings.TrimSpace(string(output))
+	value := strings.TrimSpace(DecodeUTF8WithReplacement(output))
 	return value, value != ""
 }
 

@@ -426,7 +426,7 @@ func ProcessFileArguments(fileArgs []string, options *ProcessFileOptions) (Proce
 		if err != nil {
 			return ProcessedFiles{}, fmt.Errorf("Error: Could not read file %s: %v", absolutePath, err)
 		}
-		text.WriteString(fmt.Sprintf("<file name=\"%s\">\n%s\n</file>\n", absolutePath, StripBom(string(content))))
+		text.WriteString(fmt.Sprintf("<file name=\"%s\">\n%s\n</file>\n", absolutePath, StripBom(DecodeUTF8WithReplacement(content))))
 	}
 
 	return ProcessedFiles{Text: text.String(), Images: images}, nil

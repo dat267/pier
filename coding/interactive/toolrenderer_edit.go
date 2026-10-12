@@ -289,7 +289,7 @@ func computeEditsPreview(path string, edits []coding.Edit, cwd string) *editPrev
 	if err != nil {
 		return &editPreview{Error: fmt.Sprintf("Could not edit file: %s. %v.", path, err)}
 	}
-	_, content := coding.SplitBom(string(rawContent))
+	_, content := coding.SplitBom(coding.DecodeUTF8WithReplacement(rawContent))
 	normalizedContent := coding.NormalizeToLF(content)
 	result, err := coding.ApplyEditsToNormalizedContent(normalizedContent, edits, path)
 	if err != nil {

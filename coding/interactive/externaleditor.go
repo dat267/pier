@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/dat267/pier/coding"
 )
 
 // Port of src/modes/interactive/external-editor.ts: edit the prompt in an
@@ -85,7 +87,7 @@ func EditInExternalEditor(options ExternalEditorOptions) ExternalEditorResult {
 	if err != nil {
 		return ExternalEditorResult{Status: "failed"}
 	}
-	content := strings.TrimSuffix(stripBOMString(string(data)), "\n")
+	content := strings.TrimSuffix(stripBOMString(coding.DecodeUTF8WithReplacement(data)), "\n")
 	return ExternalEditorResult{Status: "complete", Content: content}
 }
 

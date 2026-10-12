@@ -180,6 +180,23 @@ func TestProcessImagePassesThroughSmallImages(t *testing.T) {
 	}
 }
 
+// file-processor.ts reads text files with UTF-8 replacement semantics.
+func TestProcessFileArgumentsReplacesMalformedUTF8(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "invalid.txt")
+	if err := os.WriteFile(path, []byte{0xff, 'x'}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	processed, err := ProcessFileArguments([]string{path}, &ProcessFileOptions{Cwd: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "<file name=\"" + path + "\">\n\uFFFDx\n</file>\n"
+	if processed.Text != want {
+		t.Fatalf("processed text = %q; want %q", processed.Text, want)
+	}
+}
+
 func TestProcessFileArgumentsTextAndImages(t *testing.T) {
 	dir := t.TempDir()
 	textPath := filepath.Join(dir, "notes.txt")

@@ -20,7 +20,7 @@ func ResolveGitBranch(repoDir string) string {
 	if err != nil {
 		return ""
 	}
-	branch := strings.TrimSpace(string(output))
+	branch := strings.TrimSpace(DecodeUTF8WithReplacement(output))
 	return branch
 }
 

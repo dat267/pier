@@ -31,7 +31,7 @@ func ResolvePromptInput(input string) string {
 	if err != nil {
 		return input
 	}
-	_, content := SplitBom(string(raw))
+	_, content := SplitBom(DecodeUTF8WithReplacement(raw))
 	return content
 }
 

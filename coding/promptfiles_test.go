@@ -41,6 +41,17 @@ func TestResolvePromptInputReadsExistingPaths(t *testing.T) {
 	}
 }
 
+// prompt-templates.ts reads prompt-file paths as UTF-8 with replacement semantics.
+func TestResolvePromptInputReplacesMalformedUTF8(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "invalid.md")
+	if err := os.WriteFile(path, []byte{0xff, 'x'}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := ResolvePromptInput(path); got != "\uFFFDx" {
+		t.Fatalf("prompt input = %q; want replacement-decoded text", got)
+	}
+}
+
 // TestPromptFileDiscoveryPrefersTheTrustedProject covers upstream's
 // discoverSystemPromptFile / discoverAppendSystemPromptFile: the project's
 // .pi file wins while the project is trusted, the agent-dir file is the

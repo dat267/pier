@@ -526,7 +526,7 @@ func (s *AgentSession) expandSkillCommand(text string) string {
 	if err != nil {
 		return text
 	}
-	body := strings.TrimSpace(StripFrontmatter(string(content)))
+	body := strings.TrimSpace(StripFrontmatter(DecodeUTF8WithReplacement(content)))
 	block := fmt.Sprintf("<skill name=\"%s\" location=\"%s\">\nReferences are relative to %s.\n\n%s\n</skill>",
 		skill.Name, skill.FilePath, skill.BaseDir, body)
 	if args != "" {

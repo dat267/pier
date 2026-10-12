@@ -72,6 +72,26 @@ func TestPromptSendsUserMessage(t *testing.T) {
 	}
 }
 
+// agent-session.ts reads skill invocation files as UTF-8 before expanding them.
+func TestPromptExpandsSkillWithMalformedUTF8(t *testing.T) {
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000}
+	var prompts atomic.Int64
+	session := newPromptSession(t, model, recordingStreamFn(t, &prompts))
+	path := filepath.Join(t.TempDir(), "SKILL.md")
+	content := append([]byte("---\nname: demo\n---\n"), 0xff, 'x')
+	if err := os.WriteFile(path, content, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	session.SystemPromptOptions.Skills = []Skill{{Name: "demo", FilePath: path, BaseDir: filepath.Dir(path)}}
+	if err := session.Prompt(ctxpkg.Background(), "/skill:demo", nil); err != nil {
+		t.Fatal(err)
+	}
+	user := firstUserMessage(session.Messages())
+	if user == nil || !strings.Contains(contentTextJoinedNoSep(user.Content), "\uFFFDx") {
+		t.Fatalf("skill invocation = %+v; want replacement-decoded body", user)
+	}
+}
+
 func TestPromptExpandsSkillAndTemplate(t *testing.T) {
 	var prompts atomic.Int64
 	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000}

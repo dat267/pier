@@ -163,7 +163,7 @@ func loadSkillFromFile(filePath string, source string) (*Skill, []ResourceDiagno
 		return nil, diagnostics
 	}
 
-	parsed := ParseFrontmatter(string(rawContent))
+	parsed := ParseFrontmatter(DecodeUTF8WithReplacement(rawContent))
 	description := parsed.Frontmatter["description"]
 	hasDescription := strings.TrimSpace(description) != ""
 	if !isDeclaredSkill && !hasDescription {

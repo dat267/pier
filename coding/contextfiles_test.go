@@ -53,6 +53,19 @@ func TestLoadContextFileFromDirPreference(t *testing.T) {
 	}
 }
 
+// resource-loader.ts reads context files as UTF-8, replacing malformed byte sequences.
+func TestLoadContextFileFromDirReplacesMalformedUTF8(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "AGENTS.md")
+	if err := os.WriteFile(path, []byte{0xff, ' ', 'x'}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	file := LoadContextFileFromDir(dir)
+	if file == nil || file.Content != "\uFFFD x" {
+		t.Fatalf("context content = %+v; want replacement-decoded text", file)
+	}
+}
+
 func TestLoadContextFileFromDirSkipsDirectories(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, "AGENTS.override.md"), 0o755); err != nil {
