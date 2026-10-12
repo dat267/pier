@@ -657,3 +657,13 @@ func TestParseArgsNoMCP(t *testing.T) {
 		t.Fatal("MCP was disabled without the flag")
 	}
 }
+
+// normalizeSessionName uses JS String.trim: U+FEFF is trimmed, U+0085 is not.
+func TestNormalizeSessionNameUsesJSTrim(t *testing.T) {
+	if name := NormalizeSessionName("\uFEFF"); name != nil {
+		t.Fatalf("U+FEFF should normalize to nil, got %v", name)
+	}
+	if name := NormalizeSessionName("\u0085"); name == nil || *name != "\u0085" {
+		t.Fatalf("U+0085 should survive, got %v", name)
+	}
+}

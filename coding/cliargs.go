@@ -81,7 +81,7 @@ type CLIDiagnostic struct {
 
 // NormalizeSessionName trims a display name, returning nil for blank input.
 func NormalizeSessionName(value string) *string {
-	name := strings.TrimSpace(value)
+	name := ai.JSTrim(value)
 	if name == "" {
 		return nil
 	}
