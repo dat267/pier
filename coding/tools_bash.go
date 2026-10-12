@@ -212,11 +212,19 @@ func (o *OutputAccumulator) decodeUTF8Locked(data []byte, final bool) string {
 	var decoded strings.Builder
 	for i := 0; i < len(data); {
 		value := data[i]
+		if o.utf8BytesNeeded == 0 && value < 0x80 {
+			start := i
+			for i < len(data) && data[i] < 0x80 {
+				i++
+			}
+			if start < i {
+				o.utf8AtStart = false
+				decoded.Write(data[start:i])
+			}
+			continue
+		}
 		if o.utf8BytesNeeded == 0 {
 			switch {
-			case value <= 0x7f:
-				o.writeDecodedRune(&decoded, rune(value))
-				i++
 			case value >= 0xc2 && value <= 0xdf:
 				o.utf8BytesNeeded, o.utf8CodePoint = 1, rune(value&0x1f)
 				o.utf8LowerBound, o.utf8UpperBound = 0x80, 0xbf

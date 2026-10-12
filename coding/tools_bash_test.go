@@ -61,6 +61,36 @@ func TestOutputAccumulatorPreservesNonInitialUTF8BOM(t *testing.T) {
 	}
 }
 
+// output-accumulator.ts uses WHATWG TextDecoder replacement semantics for invalid byte subsequences.
+func TestOutputAccumulatorMatchesTextDecoderMalformedUTF8(t *testing.T) {
+	cases := []struct {
+		name string
+		data []byte
+		want string
+	}{
+		{"invalid byte", []byte{0xff}, "\uFFFD"},
+		{"invalid lead pair", []byte{0xc0, 0xaf}, "\uFFFD\uFFFD"},
+		{"bad continuation", []byte{0xe2, 0x28, 0xa1}, "\uFFFD(\uFFFD"},
+		{"bad continuation after prefix", []byte{0xf0, 0x9f, 0x41, 0x80}, "\uFFFDA\uFFFD"},
+		{"overlong sequence", []byte{0xe0, 0x80, 0x80}, "\uFFFD\uFFFD\uFFFD"},
+	}
+	for _, testCase := range cases {
+		for split := 0; split <= len(testCase.data); split++ {
+			accumulator := NewOutputAccumulator(100, 100, "")
+			if err := accumulator.Append(testCase.data[:split]); err != nil {
+				t.Fatal(err)
+			}
+			if err := accumulator.Append(testCase.data[split:]); err != nil {
+				t.Fatal(err)
+			}
+			accumulator.Finish()
+			if got := accumulator.Snapshot(false).Content; got != testCase.want {
+				t.Errorf("%s split %d: got %q; want %q", testCase.name, split, got, testCase.want)
+			}
+		}
+	}
+}
+
 func TestOutputAccumulatorDecodesSplitUTF8Sequence(t *testing.T) {
 	accumulator := NewOutputAccumulator(100, 100, "")
 	if err := accumulator.Append([]byte{0xe2}); err != nil {
