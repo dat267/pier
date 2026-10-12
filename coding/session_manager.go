@@ -143,7 +143,7 @@ func NewSessionManager(cwd string, options *SessionManagerOptions) *SessionManag
 	}
 	var directoryErr error
 	if persist && m.sessionDir != "" {
-		directoryErr = os.MkdirAll(m.sessionDir, 0o755)
+		directoryErr = os.MkdirAll(m.sessionDir, 0o777)
 	}
 	m.NewSession(nil)
 	if directoryErr != nil {

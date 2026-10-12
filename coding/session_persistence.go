@@ -120,12 +120,12 @@ func writeSessionEntries(path string, entries []FileEntry) error {
 		}
 		buffer.WriteString(line)
 	}
-	return os.WriteFile(path, []byte(buffer.String()), 0o644)
+	return os.WriteFile(path, []byte(buffer.String()), 0o666)
 }
 
 // writeSessionLine appends one pre-marshaled line, including close failures.
 func writeSessionLine(path string, line string) error {
-	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o666)
 	if err != nil {
 		return err
 	}

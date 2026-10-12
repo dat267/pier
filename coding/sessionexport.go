@@ -64,11 +64,11 @@ func ExportSessionToJsonl(sessionManager *SessionManager, outputPath string, cre
 	}
 	dir := filepath.Dir(filePath)
 	if !PathExists(dir) {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o777); err != nil {
 			return "", err
 		}
 	}
-	if err := os.WriteFile(filePath, []byte(SerializeSessionBranch(sessionManager, createTrailingEntries)), 0o644); err != nil {
+	if err := os.WriteFile(filePath, []byte(SerializeSessionBranch(sessionManager, createTrailingEntries)), 0o666); err != nil {
 		return "", err
 	}
 	return filePath, nil

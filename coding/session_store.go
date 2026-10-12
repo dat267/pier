@@ -985,7 +985,7 @@ func DefaultSessionDir(cwd string, agentDir string) string {
 	}, safe)
 	dir := filepath.Join(agentDir, "sessions", safe)
 	if _, err := os.Stat(dir); err != nil {
-		_ = os.MkdirAll(dir, 0o755)
+		_ = os.MkdirAll(dir, 0o777)
 	}
 	return dir
 }
