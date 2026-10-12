@@ -120,6 +120,16 @@ func TestReadToolTextAndTruncation(t *testing.T) {
 	if got := result.Content[0].(ai.TextContent).Text; got != "a\nb" {
 		t.Fatalf("negative-limit content = %q; want %q", got, "a\nb")
 	}
+	result = execTool(t, tool, `{"path":"sample.txt","limit":1.5}`)
+	if got, want := result.Content[0].(ai.TextContent).Text,
+		"a\n\n[1.5 more lines in file. Use offset=2.5 to continue.]"; got != want {
+		t.Fatalf("fractional limit content = %q; want %q", got, want)
+	}
+	result = execTool(t, tool, `{"path":"sample.txt","offset":1.5,"limit":1.5}`)
+	if got, want := result.Content[0].(ai.TextContent).Text,
+		"a\nb\n\n[1 more lines in file. Use offset=3 to continue.]"; got != want {
+		t.Fatalf("fractional offset/limit content = %q; want %q", got, want)
+	}
 
 	// Offset beyond end.
 	if _, err := tool.Execute("c", json.RawMessage(`{"path":"sample.txt","offset":99999}`), context.Background(), nil); err == nil {
@@ -203,6 +213,13 @@ func TestLsToolSortingAndLimits(t *testing.T) {
 	text = result.Content[0].(ai.TextContent).Text
 	if !strings.Contains(text, "2 entries limit reached. Use limit=4 for more") {
 		t.Fatalf("limit notice missing: %q", text)
+	}
+
+	// Fractional limits follow the numeric comparison in upstream's loop.
+	result = execTool(t, tool, `{"limit":1.5}`)
+	text = result.Content[0].(ai.TextContent).Text
+	if !strings.HasPrefix(text, ".dot\nAlpha.txt\n") || !strings.Contains(text, "1.5 entries limit reached. Use limit=3 for more") {
+		t.Fatalf("fractional limit output = %q", text)
 	}
 
 	// File (not directory).

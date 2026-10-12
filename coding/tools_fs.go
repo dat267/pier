@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/dat267/pier/agent"
@@ -80,9 +82,9 @@ func CreateReadTool(cwd string, options *ReadToolOptions) agent.AgentTool {
 				return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
 			}
 			var input struct {
-				Path   string `json:"path"`
-				Offset *int   `json:"offset"`
-				Limit  *int   `json:"limit"`
+				Path   string   `json:"path"`
+				Offset *float64 `json:"offset"`
+				Limit  *float64 `json:"limit"`
 			}
 			if err := jsonUnmarshalStrictTool(params, &input); err != nil {
 				return agent.AgentToolResult{}, err
@@ -103,52 +105,50 @@ func CreateReadTool(cwd string, options *ReadToolOptions) agent.AgentTool {
 			textContent := string(data)
 			allLines := strings.Split(textContent, "\n")
 			totalFileLines := len(allLines)
-			startLine := 0
+			startLine := 0.0
 			if input.Offset != nil {
-				startLine = max(0, *input.Offset-1)
+				startLine = math.Max(0, *input.Offset-1)
 			}
 			startLineDisplay := startLine + 1
-			if startLine >= len(allLines) {
-				return agent.AgentToolResult{}, fmt.Errorf("Offset %d is beyond end of file (%d lines total)", *input.Offset, len(allLines))
+			if startLine >= float64(len(allLines)) {
+				return agent.AgentToolResult{}, fmt.Errorf("Offset %s is beyond end of file (%d lines total)", formatToolNumber(*input.Offset), len(allLines))
 			}
+			sliceStart := jsArraySliceIndex(startLine, len(allLines))
 			var selectedContent string
-			userLimitedLines := -1
+			userLimitedLines := -1.0
 			if input.Limit != nil {
-				endLine := min(startLine+*input.Limit, len(allLines))
-				sliceEnd := endLine
-				if sliceEnd < 0 {
-					sliceEnd = max(0, len(allLines)+sliceEnd)
+				endLine := math.Min(startLine+*input.Limit, float64(len(allLines)))
+				sliceEnd := jsArraySliceIndex(endLine, len(allLines))
+				if sliceEnd < sliceStart {
+					sliceEnd = sliceStart
 				}
-				if sliceEnd < startLine {
-					sliceEnd = startLine
-				}
-				selectedContent = strings.Join(allLines[startLine:sliceEnd], "\n")
+				selectedContent = strings.Join(allLines[sliceStart:sliceEnd], "\n")
 				userLimitedLines = endLine - startLine
 			} else {
-				selectedContent = strings.Join(allLines[startLine:], "\n")
+				selectedContent = strings.Join(allLines[sliceStart:], "\n")
 			}
 			truncation := TruncateHead(selectedContent, TruncationOptions{})
 			var outputText string
 			if truncation.FirstLineExceedsLimit {
-				firstLineSize := FormatSize(int64(len(allLines[startLine])))
-				outputText = fmt.Sprintf("[Line %d is %s, exceeds %s limit. Use bash: sed -n '%dp' %s | head -c %d]",
-					startLineDisplay, firstLineSize, FormatSize(DefaultMaxBytes), startLineDisplay, input.Path, DefaultMaxBytes)
+				firstLineSize := FormatSize(int64(len(allLines[sliceStart])))
+				outputText = fmt.Sprintf("[Line %s is %s, exceeds %s limit. Use bash: sed -n '%sp' %s | head -c %d]",
+					formatToolNumber(startLineDisplay), firstLineSize, FormatSize(DefaultMaxBytes), formatToolNumber(startLineDisplay), input.Path, DefaultMaxBytes)
 			} else if truncation.Truncated {
-				endLineDisplay := startLineDisplay + truncation.OutputLines - 1
+				endLineDisplay := startLineDisplay + float64(truncation.OutputLines) - 1
 				nextOffset := endLineDisplay + 1
 				outputText = truncation.Content
 				if truncation.TruncatedBy == TruncatedByLines {
-					outputText += fmt.Sprintf("\n\n[Showing lines %d-%d of %d. Use offset=%d to continue.]",
-						startLineDisplay, endLineDisplay, totalFileLines, nextOffset)
+					outputText += fmt.Sprintf("\n\n[Showing lines %s-%s of %d. Use offset=%s to continue.]",
+						formatToolNumber(startLineDisplay), formatToolNumber(endLineDisplay), totalFileLines, formatToolNumber(nextOffset))
 				} else {
-					outputText += fmt.Sprintf("\n\n[Showing lines %d-%d of %d (%s limit). Use offset=%d to continue.]",
-						startLineDisplay, endLineDisplay, totalFileLines, FormatSize(DefaultMaxBytes), nextOffset)
+					outputText += fmt.Sprintf("\n\n[Showing lines %s-%s of %d (%s limit). Use offset=%s to continue.]",
+						formatToolNumber(startLineDisplay), formatToolNumber(endLineDisplay), totalFileLines, FormatSize(DefaultMaxBytes), formatToolNumber(nextOffset))
 				}
-			} else if userLimitedLines >= 0 && startLine+userLimitedLines < len(allLines) {
-				remaining := len(allLines) - (startLine + userLimitedLines)
+			} else if userLimitedLines >= 0 && startLine+userLimitedLines < float64(len(allLines)) {
+				remaining := float64(len(allLines)) - (startLine + userLimitedLines)
 				nextOffset := startLine + userLimitedLines + 1
-				outputText = fmt.Sprintf("%s\n\n[%d more lines in file. Use offset=%d to continue.]",
-					truncation.Content, remaining, nextOffset)
+				outputText = fmt.Sprintf("%s\n\n[%s more lines in file. Use offset=%s to continue.]",
+					truncation.Content, formatToolNumber(remaining), formatToolNumber(nextOffset))
 			} else {
 				outputText = truncation.Content
 			}
@@ -341,7 +341,7 @@ func CreateWriteTool(cwd string) agent.AgentTool {
 // LsToolDetails carries ls truncation info.
 type LsToolDetails struct {
 	Truncation        *TruncationResult `json:"truncation,omitempty"`
-	EntryLimitReached *int              `json:"entryLimitReached,omitempty"`
+	EntryLimitReached *float64          `json:"entryLimitReached,omitempty"`
 }
 
 // LsToolDescription is upstream's ls description.
@@ -369,8 +369,8 @@ func CreateLsTool(cwd string) agent.AgentTool {
 				return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
 			}
 			var input struct {
-				Path  string `json:"path"`
-				Limit *int   `json:"limit"`
+				Path  string   `json:"path"`
+				Limit *float64 `json:"limit"`
 			}
 			if len(params) > 0 {
 				if err := jsonUnmarshalStrictTool(params, &input); err != nil {
@@ -378,7 +378,7 @@ func CreateLsTool(cwd string) agent.AgentTool {
 				}
 			}
 			dirPath := ResolveToCwd(orDefault(input.Path, "."), cwd)
-			effectiveLimit := lsDefaultLimit
+			effectiveLimit := float64(lsDefaultLimit)
 			if input.Limit != nil {
 				effectiveLimit = *input.Limit
 			}
@@ -405,7 +405,7 @@ func CreateLsTool(cwd string) agent.AgentTool {
 			var results []string
 			entryLimitReached := false
 			for _, entry := range names {
-				if len(results) >= effectiveLimit {
+				if float64(len(results)) >= effectiveLimit {
 					entryLimitReached = true
 					break
 				}
@@ -433,7 +433,8 @@ func CreateLsTool(cwd string) agent.AgentTool {
 			var notices []string
 			details := LsToolDetails{}
 			if entryLimitReached {
-				notices = append(notices, fmt.Sprintf("%d entries limit reached. Use limit=%d for more", effectiveLimit, effectiveLimit*2))
+				notices = append(notices, fmt.Sprintf("%s entries limit reached. Use limit=%s for more",
+					formatToolNumber(effectiveLimit), formatToolNumber(effectiveLimit*2)))
 				details.EntryLimitReached = &effectiveLimit
 			}
 			if truncation.Truncated {
@@ -453,6 +454,20 @@ func CreateLsTool(cwd string) agent.AgentTool {
 			}, nil
 		},
 	}
+}
+
+func formatToolNumber(value float64) string {
+	return strconv.FormatFloat(value, 'f', -1, 64)
+}
+
+func jsArraySliceIndex(index float64, length int) int {
+	index = math.Trunc(index)
+	if index < 0 {
+		index = math.Max(0, float64(length)+index)
+	} else if index > float64(length) {
+		index = float64(length)
+	}
+	return int(index)
 }
 
 func orDefault(v, d string) string {
