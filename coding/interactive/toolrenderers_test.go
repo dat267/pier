@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -374,5 +375,22 @@ func TestFormatShellCallTimeoutSuffix(t *testing.T) {
 	got := formatShellCall(map[string]any{"command": "ls", "timeout": 2.5}, "bash", theme)
 	if !strings.Contains(got, "(timeout 2.5s)") {
 		t.Fatalf("fractional timeout = %q; want 2.5s", got)
+	}
+}
+
+// Upstream search/ls result renderers show every line when expanded
+// (`maxLines = options.expanded ? lines.length : N`).
+func TestFormatSearchResultExpandedShowsAllLines(t *testing.T) {
+	installPierThemeForTest(t)
+	InitTheme("dark", false)
+	theme := ActiveTheme()
+	var lines []string
+	for i := 0; i < 25; i++ {
+		lines = append(lines, fmt.Sprintf("line %d", i))
+	}
+	result := &SortToolResultContent{Content: []ToolResultContent{{Type: "text", Text: strings.Join(lines, "\n")}}}
+	got := formatSearchResult(result, ToolRenderResultOptions{Expanded: true}, theme, false, 15)
+	if strings.Contains(got, "more lines") {
+		t.Fatalf("expanded result still truncated: %q", got)
 	}
 }

@@ -127,6 +127,15 @@ func formatPathRelativeToCwdOrAbsolute(filePath string, cwd string) string {
 	return filepath.ToSlash(filePath)
 }
 
+// expandedMaxLines is upstream's `options.expanded ? lines.length : N`: an
+// expanded result shows every line.
+func expandedMaxLines(options ToolRenderResultOptions, output string, collapsed int) int {
+	if !options.Expanded || output == "" {
+		return collapsed
+	}
+	return len(strings.Split(output, "\n"))
+}
+
 func appendTruncatedLines(text string, output string, maxLines int, theme *Theme) string {
 	if output == "" {
 		return text

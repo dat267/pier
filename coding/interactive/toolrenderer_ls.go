@@ -26,7 +26,7 @@ var lsRenderers = ToolRenderers{
 	RenderResult: func(result *SortToolResultContent, options ToolRenderResultOptions, theme *Theme, context *ToolRenderContext) tui.Component {
 		text := toolTextComponent(context)
 		output := strings.TrimSpace(GetTextOutput(result, context.ShowImages))
-		rendered := appendTruncatedLines("", output, 20, theme)
+		rendered := appendTruncatedLines("", output, expandedMaxLines(options, output, 20), theme)
 		text.SetText(rendered + truncationSuffix(result.Details, theme))
 		return text
 	},
