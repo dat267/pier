@@ -89,3 +89,29 @@ func TestZeroWidthAndHalfwidthMarks(t *testing.T) {
 		}
 	}
 }
+
+// Upstream's rgiEmojiRegex distinguishes default-presentation emoji (two
+// cells) from text-presentation emoji (one cell without VS16).
+func TestRGIEmojiWidth(t *testing.T) {
+	for _, cp := range []rune{0x2764, 0x2763, 0x1F321, 0x2600, 0x2708} {
+		if got := VisibleWidth(string(cp)); got != 1 {
+			t.Errorf("VisibleWidth(U+%X) = %d; want 1", cp, got)
+		}
+		if got := VisibleWidth(string(cp) + "\uFE0F"); got != 2 {
+			t.Errorf("VisibleWidth(U+%X + VS16) = %d; want 2", cp, got)
+		}
+	}
+	for _, cp := range []rune{0x1F600, 0x1F525, 0x2614, 0x1F32D} {
+		if got := VisibleWidth(string(cp)); got != 2 {
+			t.Errorf("VisibleWidth(U+%X) = %d; want 2", cp, got)
+		}
+	}
+	if got := VisibleWidth("a\uFE0F"); got != 1 {
+		t.Errorf("VisibleWidth(a+VS16) = %d; want 1", got)
+	}
+	for _, text := range []string{"#\uFE0F\u20E3", "1\u20E3", "\U0001F1FA\U0001F1F8"} {
+		if got := VisibleWidth(text); got != 2 {
+			t.Errorf("VisibleWidth(%q) = %d; want 2", text, got)
+		}
+	}
+}

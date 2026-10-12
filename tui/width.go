@@ -203,7 +203,7 @@ func graphemeWidth(segment string) int {
 	}
 
 	// Emoji (with the pre-filter) render double width.
-	if couldBeEmoji(segment) && isEmojiPresentation(segment) {
+	if couldBeEmoji(segment) && isRGIEmoji(segment) {
 		return 2
 	}
 
@@ -291,85 +291,6 @@ func stripLeadingNonPrinting(segment string) string {
 		}
 	}
 	return ""
-}
-
-// isEmojiPresentation reports emoji presentation: covered by the RGI set in
-// upstream; the port checks the presentation selector and the emoji block.
-func isEmojiPresentation(segment string) bool {
-	// An explicit emoji presentation selector guarantees emoji presentation.
-	for _, r := range segment {
-		if r == 0xFE0F {
-			return true
-		}
-	}
-	// Keycap, regional flags, and ZWJ sequences render as emoji.
-	if utf8.RuneCountInString(segment) > 1 {
-		for _, r := range segment {
-			if r == 0x20E3 || isRegionalIndicator(r) || r == 0x200D {
-				return true
-			}
-		}
-	}
-	// Main emoji presentation ranges.
-	first, firstSize := utf8.DecodeRuneInString(segment)
-	switch {
-	case first >= 0x1F300 && first <= 0x1F5FF: // misc symbols and pictographs
-		return true
-	case first >= 0x1F600 && first <= 0x1F64F: // emoticons
-		return true
-	case first >= 0x1F680 && first <= 0x1F6FF: // transport and map
-		return true
-	case first >= 0x1F900 && first <= 0x1F9FF: // supplemental symbols
-		return true
-	case first >= 0x1FA70 && first <= 0x1FAFF: // symbols and pictographs extended-A
-		return true
-	case first >= 0x1F000 && first <= 0x1F0FF: // mahjong/domino
-		return true
-	case first == 0x231A || first == 0x231B: // watch/hourglass
-		return true
-	case first == 0x23E9 || first == 0x23EA || first == 0x23EB || first == 0x23EC:
-		return true
-	case first == 0x23F0 || first == 0x23F3:
-		return true
-	case first == 0x25FD || first == 0x25FE:
-		return true
-	case first == 0x2614 || first == 0x2615:
-		return true
-	case first == 0x2648 || first == 0x267E || first == 0x267F:
-		return true
-	case first == 0x26AA || first == 0x26AB:
-		return true
-	case first >= 0x2690 && first <= 0x26C4 && isKnownEmojiCodePoint(first):
-		return true
-	case first == 0x2733 || first == 0x2734 || first == 0x2744 || first == 0x2747:
-		return true
-	case first == 0x2753 || first == 0x2754 || first == 0x2755 || first == 0x2757:
-		return true
-	case first == 0x2763 || first == 0x2764:
-		return true
-	case first == 0x2B50 || first == 0x2B55:
-		return true
-	case first == 0x00A9 || first == 0x00AE: // © ® (with VS16 only upstream)
-		if firstSize == 0 || firstSize >= len(segment) {
-			return false
-		}
-		next, _ := utf8.DecodeRuneInString(segment[firstSize:])
-		return next == 0xFE0F
-	case first == 0x3030 || first == 0x303D || first == 0x3297 || first == 0x3299:
-		return true
-	}
-	return false
-}
-
-// isKnownEmojiCodePoint narrows the 2690-26C4 range to the RGI members.
-func isKnownEmojiCodePoint(r rune) bool {
-	switch r {
-	case 0x2692, 0x2693, 0x2694, 0x2695, 0x2696, 0x2697, 0x2699, 0x269B, 0x269C,
-		0x26A0, 0x26A1, 0x26A7, 0x26B0, 0x26B1, 0x26BD, 0x26BE, 0x26C4, 0x26C5,
-		0x26AA:
-		return true
-	}
-	return false
 }
 
 // isTerminalSpacingMark covers the spacing marks terminals allocate cells for:
