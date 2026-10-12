@@ -1031,9 +1031,11 @@ func getAnsiColorLuminance(index int) float64 {
 	return getRgbColorLuminance(rgb)
 }
 
-// GetThemeForRgbColor classifies a background color.
+// GetThemeForRgbColor classifies a background color the way upstream
+// terminalAppearance does without a reported foreground: dark when white text
+// contrasts better on it than black text.
 func GetThemeForRgbColor(rgb RgbColor) TerminalTheme {
-	if getRgbColorLuminance(rgbColor{R: rgb.R, G: rgb.G, B: rgb.B}) >= 0.5 {
+	if TerminalAppearance(tui.RgbColor{R: rgb.R, G: rgb.G, B: rgb.B}, nil) == "light" {
 		return TerminalThemeLight
 	}
 	return TerminalThemeDark

@@ -473,3 +473,15 @@ func TestThemeColorsAcceptOklchAndOkhsl(t *testing.T) {
 		}
 	}
 }
+
+// GetThemeForRgbColor must match upstream terminalAppearance with no
+// foreground: a medium-gray background is light because black text contrasts
+// better, not dark at a 0.5 luminance threshold.
+func TestGetThemeForRgbColorMatchesTerminalAppearance(t *testing.T) {
+	for _, gray := range []int{100, 150, 180} {
+		want := TerminalAppearance(tui.RgbColor{R: gray, G: gray, B: gray}, nil)
+		if got := string(GetThemeForRgbColor(RgbColor{R: gray, G: gray, B: gray})); got != want {
+			t.Errorf("GetThemeForRgbColor(%d) = %s; want %s", gray, got, want)
+		}
+	}
+}
