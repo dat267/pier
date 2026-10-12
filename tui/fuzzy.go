@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"unicode/utf16"
 )
 
 // Port of src/fuzzy.ts: subsequence fuzzy matching with a quality score
@@ -23,29 +24,29 @@ func MatchFuzzy(query string, text string) FuzzyMatch {
 	textLower := strings.ToLower(text)
 
 	matchQuery := func(normalizedQuery string) FuzzyMatch {
-		if len(normalizedQuery) == 0 {
+		// Upstream indexes the lowercased strings by UTF-16 code units
+		// (String.indexOf and text[i-1]), so the score uses code-unit offsets.
+		queryUnits := utf16.Encode([]rune(normalizedQuery))
+		textUnits := utf16.Encode([]rune(textLower))
+		if len(queryUnits) == 0 {
 			return FuzzyMatch{Matches: true, Score: 0}
 		}
-		if len([]rune(normalizedQuery)) > len([]rune(textLower)) {
+		if len(queryUnits) > len(textUnits) {
 			return FuzzyMatch{Matches: false, Score: 0}
 		}
-
-		// The scan runs over runes so multi-byte queries match consistently.
-		queryRunes := []rune(normalizedQuery)
-		textRunes := []rune(textLower)
 
 		queryIndex := 0
 		score := 0.0
 		lastMatchIndex := -1
 		consecutiveMatches := 0
 
-		for queryIndex < len(queryRunes) {
-			i := indexRuneFrom(textRunes, queryRunes[queryIndex], lastMatchIndex+1)
+		for queryIndex < len(queryUnits) {
+			i := indexUnitFrom(textUnits, queryUnits[queryIndex], lastMatchIndex+1)
 			if i == -1 {
 				break
 			}
 
-			isWordBoundary := i == 0 || isFuzzyBoundary(textRunes[i-1])
+			isWordBoundary := i == 0 || isFuzzyBoundaryUnit(textUnits[i-1])
 
 			// Reward consecutive matches.
 			if lastMatchIndex == i-1 {
@@ -71,7 +72,7 @@ func MatchFuzzy(query string, text string) FuzzyMatch {
 			queryIndex++
 		}
 
-		if queryIndex < len(queryRunes) {
+		if queryIndex < len(queryUnits) {
 			return FuzzyMatch{Matches: false, Score: 0}
 		}
 		if normalizedQuery == textLower {
@@ -126,16 +127,18 @@ func swappedAlphaNumericQuery(query string) string {
 	return ""
 }
 
-func isFuzzyBoundary(r rune) bool {
-	switch r {
-	case ' ', '\t', '\n', '\r', '-', '_', '.', '/', ':':
+// isFuzzyBoundaryUnit reports the upstream `/[\s\-_./:]/` word-boundary set.
+func isFuzzyBoundaryUnit(unit uint16) bool {
+	switch unit {
+	case ' ', '\t', '\n', '\v', '\f', '\r', '-', '_', '.', '/', ':',
+		0x00A0, 0x1680, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF:
 		return true
 	}
-	return false
+	return unit >= 0x2000 && unit <= 0x200A
 }
 
-// indexRuneFrom returns the index of needle at or after start.
-func indexRuneFrom(haystack []rune, needle rune, start int) int {
+// indexUnitFrom returns the index of needle at or after start.
+func indexUnitFrom(haystack []uint16, needle uint16, start int) int {
 	if start < 0 {
 		start = 0
 	}
