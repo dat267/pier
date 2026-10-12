@@ -312,6 +312,19 @@ func (o *scriptedOps) Exec(ctx ctxpkg.Context, command, cwd string, options Bash
 	return o.exitCode, o.err
 }
 
+// Upstream bash.ts routes streamed chunks through OutputAccumulator's TextDecoder.
+func TestExecuteBashWithOperationsDecodesStreamingUTF8(t *testing.T) {
+	code := 0
+	ops := &scriptedOps{chunks: []string{string([]byte{0xe2}), string([]byte{0x82, 0xac})}, exitCode: &code}
+	result, err := ExecuteBashWithOperations(ctxpkg.Background(), "cmd", "/tmp", ops, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Output != "€" {
+		t.Fatalf("split UTF-8 output = %q; want euro sign", result.Output)
+	}
+}
+
 func TestExecuteBashWithOperations(t *testing.T) {
 	code := 0
 	ops := &scriptedOps{chunks: []string{"\x1b[31mhello\x1b[0m", " world\r\n"}, exitCode: &code}

@@ -80,6 +80,7 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 	var tempFile *os.File
 	var tempErr error
 	pendingAnsi := ""
+	decoder := utf8TextDecoder{atStart: true, stripBOM: true}
 	// pendingChunks holds the buffered chunks that still need to be flushed to
 	// the temp file once it is created.
 	flushedChunks := 0
@@ -149,16 +150,17 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 		defer mu.Unlock()
 		complete, pending := splitIncompleteAnsiSuffix(pendingAnsi + string(data))
 		pendingAnsi = pending
-		appendOutput(complete)
+		appendOutput(decoder.decode([]byte(complete), false))
 	}
 
 	flushPendingAnsi := func() {
 		mu.Lock()
 		defer mu.Unlock()
 		if pendingAnsi != "" {
-			appendOutput(pendingAnsi)
+			appendOutput(decoder.decode([]byte(pendingAnsi), false))
 			pendingAnsi = ""
 		}
+		appendOutput(decoder.decode(nil, true))
 	}
 
 	finishTempFile := func() {
