@@ -412,3 +412,32 @@ func TestFormatReadResultUsesTruncationMaxLines(t *testing.T) {
 		t.Fatalf("read truncation = %q; want 5 line limit", got)
 	}
 }
+
+// Upstream uses truncation.maxBytes (falling back to DEFAULT_MAX_BYTES) in the
+// read byte-limit notices.
+func TestFormatReadResultUsesTruncationMaxBytes(t *testing.T) {
+	installPierThemeForTest(t)
+	InitTheme("dark", false)
+	theme := ActiveTheme()
+	options := ToolRenderResultOptions{Expanded: true}
+
+	byteLimited := &SortToolResultContent{
+		Content: []ToolResultContent{{Type: "text", Text: "a\nb\nc"}},
+		Details: &coding.ReadToolDetails{Truncation: &coding.TruncationResult{
+			Truncated: true, TruncatedBy: "bytes", OutputLines: 3, TotalLines: 100, MaxBytes: 1234,
+		}},
+	}
+	if got := formatReadResult(map[string]any{"path": "x.txt"}, byteLimited, options, theme, false, false); !strings.Contains(got, coding.FormatSize(1234)+" limit") {
+		t.Fatalf("byte truncation = %q; want %s limit", got, coding.FormatSize(1234))
+	}
+
+	firstLine := &SortToolResultContent{
+		Content: []ToolResultContent{{Type: "text", Text: "a"}},
+		Details: &coding.ReadToolDetails{Truncation: &coding.TruncationResult{
+			Truncated: true, FirstLineExceedsLimit: true, MaxBytes: 1234,
+		}},
+	}
+	if got := formatReadResult(map[string]any{"path": "x.txt"}, firstLine, options, theme, false, false); !strings.Contains(got, "First line exceeds "+coding.FormatSize(1234)) {
+		t.Fatalf("first-line truncation = %q; want %s", got, coding.FormatSize(1234))
+	}
+}

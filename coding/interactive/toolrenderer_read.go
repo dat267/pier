@@ -146,9 +146,13 @@ func formatReadResult(args map[string]any, result *SortToolResultContent, option
 	if details, ok := result.Details.(*coding.ReadToolDetails); ok && details.Truncation != nil {
 		truncation := details.Truncation
 		if truncation.Truncated {
+			maxBytes := truncation.MaxBytes
+			if maxBytes <= 0 {
+				maxBytes = coding.DefaultMaxBytes
+			}
 			if truncation.FirstLineExceedsLimit {
 				text += "\n" + theme.Fg("warning",
-					fmt.Sprintf("[First line exceeds %s limit]", coding.FormatSize(int64(coding.DefaultMaxBytes))))
+					fmt.Sprintf("[First line exceeds %s limit]", coding.FormatSize(int64(maxBytes))))
 			} else if truncation.TruncatedBy == "lines" {
 				maxLines := truncation.MaxLines
 				if maxLines <= 0 {
@@ -160,7 +164,7 @@ func formatReadResult(args map[string]any, result *SortToolResultContent, option
 			} else {
 				text += "\n" + theme.Fg("warning", fmt.Sprintf(
 					"[Truncated: %d lines shown (%s limit)]", truncation.OutputLines,
-					coding.FormatSize(int64(coding.DefaultMaxBytes))))
+					coding.FormatSize(int64(maxBytes))))
 			}
 		}
 	}
