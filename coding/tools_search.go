@@ -199,7 +199,7 @@ const GrepToolDescription = "Search file contents for a pattern. Returns matchin
 // GrepToolDetails carries grep truncation info.
 type GrepToolDetails struct {
 	Truncation        *TruncationResult `json:"truncation,omitempty"`
-	MatchLimitReached *int              `json:"matchLimitReached,omitempty"`
+	MatchLimitReached *float64          `json:"matchLimitReached,omitempty"`
 	LinesTruncated    *bool             `json:"linesTruncated,omitempty"`
 }
 
@@ -243,13 +243,13 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 				return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
 			}
 			var input struct {
-				Pattern    string `json:"pattern"`
-				Path       string `json:"path"`
-				Glob       string `json:"glob"`
-				IgnoreCase *bool  `json:"ignoreCase"`
-				Literal    *bool  `json:"literal"`
-				Context    *int   `json:"context"`
-				Limit      *int   `json:"limit"`
+				Pattern    string   `json:"pattern"`
+				Path       string   `json:"path"`
+				Glob       string   `json:"glob"`
+				IgnoreCase *bool    `json:"ignoreCase"`
+				Literal    *bool    `json:"literal"`
+				Context    *int     `json:"context"`
+				Limit      *float64 `json:"limit"`
 			}
 			if len(params) > 0 {
 				if err := jsonUnmarshalStrictTool(params, &input); err != nil {
@@ -272,9 +272,9 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 			if input.Context != nil && *input.Context > 0 {
 				contextValue = *input.Context
 			}
-			effectiveLimit := grepDefaultLimit
+			effectiveLimit := float64(grepDefaultLimit)
 			if input.Limit != nil {
-				effectiveLimit = max(1, *input.Limit)
+				effectiveLimit = max(1.0, *input.Limit)
 			}
 			formatPath := func(filePath string) string {
 				if isDirectory {
@@ -325,7 +325,7 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 			matchLimitReached := false
 
 			for _, line := range strings.Split(string(outputBytes), "\n") {
-				if strings.TrimSpace(line) == "" || matchCount >= effectiveLimit {
+				if strings.TrimSpace(line) == "" || float64(matchCount) >= effectiveLimit {
 					continue
 				}
 				var event rgMatchEvent
@@ -336,7 +336,7 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 				if event.Data.Path.Text != "" && event.Data.LineNumber != nil {
 					matches = append(matches, event)
 				}
-				if matchCount >= effectiveLimit {
+				if float64(matchCount) >= effectiveLimit {
 					matchLimitReached = true
 				}
 			}
@@ -420,7 +420,8 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 			details := GrepToolDetails{}
 			var notices []string
 			if matchLimitReached {
-				notices = append(notices, fmt.Sprintf("%d matches limit reached. Use limit=%d for more, or refine pattern", effectiveLimit, effectiveLimit*2))
+				notices = append(notices, fmt.Sprintf("%s matches limit reached. Use limit=%s for more, or refine pattern",
+					formatToolNumber(effectiveLimit), formatToolNumber(effectiveLimit*2)))
 				details.MatchLimitReached = &effectiveLimit
 			}
 			if truncation.Truncated {

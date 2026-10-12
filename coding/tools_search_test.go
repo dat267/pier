@@ -97,6 +97,13 @@ func TestGrepToolMatches(t *testing.T) {
 		t.Fatalf("non-matching file in output: %q", text)
 	}
 
+	result = execTool(t, tool, `{"pattern":"alpha","limit":1.5}`)
+	text = result.Content[0].(ai.TextContent).Text
+	if !strings.Contains(text, "a.txt:1: alpha one") || !strings.Contains(text, "a.txt:3: alpha three") ||
+		!strings.Contains(text, "1.5 matches limit reached. Use limit=3 for more") {
+		t.Fatalf("fractional grep limit = %q", text)
+	}
+
 	// Literal (non-regex) search: pattern with regex metachars.
 	os.WriteFile(filepath.Join(dir, "c.txt"), []byte("a.b\naxb\n"), 0o644)
 	result = execTool(t, tool, `{"pattern":"a.b","literal":true}`)
