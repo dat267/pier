@@ -394,3 +394,21 @@ func TestFormatSearchResultExpandedShowsAllLines(t *testing.T) {
 		t.Fatalf("expanded result still truncated: %q", got)
 	}
 }
+
+// Upstream uses truncation.maxLines (falling back to DEFAULT_MAX_LINES) in the
+// read line-limit notice.
+func TestFormatReadResultUsesTruncationMaxLines(t *testing.T) {
+	installPierThemeForTest(t)
+	InitTheme("dark", false)
+	theme := ActiveTheme()
+	result := &SortToolResultContent{
+		Content: []ToolResultContent{{Type: "text", Text: "a\nb\nc"}},
+		Details: &coding.ReadToolDetails{Truncation: &coding.TruncationResult{
+			Truncated: true, TruncatedBy: "lines", OutputLines: 5, TotalLines: 100, MaxLines: 5,
+		}},
+	}
+	got := formatReadResult(map[string]any{"path": "x.txt"}, result, ToolRenderResultOptions{Expanded: true}, theme, false, false)
+	if !strings.Contains(got, "(5 line limit)") {
+		t.Fatalf("read truncation = %q; want 5 line limit", got)
+	}
+}
