@@ -1197,7 +1197,7 @@ func ModelsAreEqual(a, b *Model) bool {
 	if a == nil || b == nil {
 		return false
 	}
-	return a.ID == b.ID && a.Provider == b.Provider
+	return GetModelType(a) == GetModelType(b) && a.ID == b.ID && a.Provider == b.Provider
 }
 
 // ApplyProviderModelFilter applies a provider's credential-specific model policy

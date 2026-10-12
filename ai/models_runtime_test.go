@@ -377,6 +377,12 @@ func TestModelsAreEqual(t *testing.T) {
 	if ModelsAreEqual(a, &Model{ID: "m", Provider: "q"}) {
 		t.Fatal("different provider")
 	}
+	if ModelsAreEqual(a, &Model{ID: "m", Provider: "p", Type: "classifier"}) {
+		t.Fatal("different model type")
+	}
+	if !ModelsAreEqual(&Model{ID: "m", Provider: "p"}, &Model{ID: "m", Provider: "p", Type: "chat"}) {
+		t.Fatal("an explicit chat type equals the default")
+	}
 	if ModelsAreEqual(nil, a) || ModelsAreEqual(a, nil) {
 		t.Fatal("nil is never equal")
 	}
