@@ -71,14 +71,14 @@ func ReadCrashLog(path string) []CrashRecord {
 
 // writeCrashLog persists the log with a trailing newline.
 func writeCrashLog(records []CrashRecord, path string) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o777); err != nil {
 		return err
 	}
 	encoded, err := json.MarshalIndent(records, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, append(encoded, '\n'), 0o644)
+	return os.WriteFile(path, append(encoded, '\n'), 0o666)
 }
 
 // CrashInput describes a crash to persist.

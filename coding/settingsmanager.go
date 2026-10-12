@@ -375,7 +375,7 @@ func (s *FileSettingsStorage) WithLock(scope SettingsScope, fn func(current *str
 		return nil
 	}
 	if !fileExists(dir) {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o777); err != nil {
 			return err
 		}
 	}
@@ -386,7 +386,7 @@ func (s *FileSettingsStorage) WithLock(scope SettingsScope, fn func(current *str
 		}
 		defer release()
 	}
-	return os.WriteFile(path, []byte(*next), 0o644)
+	return os.WriteFile(path, []byte(*next), 0o666)
 }
 
 // acquireLockWithRetry mirrors proper-lockfile's lockSync plus upstream's
