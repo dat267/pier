@@ -80,6 +80,22 @@ func validateServerRetryDelayMS(delayMS int64, maxRetryDelayMS *int, providerErr
 	return delayMS, nil
 }
 
+func validateServerRetryDelayFloat(delayMS float64, maxRetryDelayMS *int, providerErrorMessage string) (int64, error) {
+	maxDelay := int64(defaultMaxRetryDelayMS)
+	if maxRetryDelayMS != nil {
+		maxDelay = int64(*maxRetryDelayMS)
+	}
+	if maxDelay > 0 && delayMS > float64(maxDelay) {
+		requested := strconv.FormatFloat(math.Ceil(delayMS/1000), 'g', -1, 64)
+		maxSeconds := int64(math.Ceil(float64(maxDelay) / 1000))
+		return 0, fmt.Errorf("Server requested %ss retry delay (max: %ds). %s", requested, maxSeconds, providerErrorMessage)
+	}
+	if delayMS >= float64(math.MaxInt64) || delayMS < float64(math.MinInt64) || math.IsInf(delayMS, 0) {
+		return 0, fmt.Errorf("Server requested an unrepresentable retry delay. %s", providerErrorMessage)
+	}
+	return validateServerRetryDelayMS(int64(delayMS), maxRetryDelayMS, providerErrorMessage)
+}
+
 // GetRetryDelayMS resolves the delay before the next retry attempt
 // (port of getRetryDelayMs).
 func GetRetryDelayMS(err *ProviderError, retryIndex int, maxRetryDelayMS *int) (int64, error) {
@@ -89,12 +105,12 @@ func GetRetryDelayMS(err *ProviderError, retryIndex int, maxRetryDelayMS *int) (
 		// value falls through to the exponential backoff (2bbfcca43).
 		if v := err.Headers.Get("retry-after-ms"); v != "" {
 			if f, ok := parseJSFloatPrefix(v); ok && !math.IsNaN(f) && !math.IsInf(f, 0) {
-				return validateServerRetryDelayMS(int64(f), maxRetryDelayMS, err.Message)
+				return validateServerRetryDelayFloat(f, maxRetryDelayMS, err.Message)
 			}
 		}
 		if v := err.Headers.Get("retry-after"); v != "" {
 			if seconds, ok := parseJSFloatPrefix(v); ok && !math.IsNaN(seconds) && !math.IsInf(seconds, 0) {
-				return validateServerRetryDelayMS(int64(seconds*1000), maxRetryDelayMS, err.Message)
+				return validateServerRetryDelayFloat(seconds*1000, maxRetryDelayMS, err.Message)
 			}
 			if at, parseErr := http.ParseTime(v); parseErr == nil {
 				delay := at.Sub(time.Now()).Milliseconds()
