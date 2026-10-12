@@ -133,3 +133,14 @@ func mustParseJSON(t *testing.T, text string) any {
 	}
 	return parsed
 }
+
+// Upstream normalizes search queries with the JS `\s` class, which includes
+// Unicode whitespace.
+func TestNormalizeSearchQueryUnicodeWhitespace(t *testing.T) {
+	if got := normalizeSearchQuery("a\u00a0\u00a0b"); got != "a b" {
+		t.Fatalf("nbsp normalize = %q; want %q", got, "a b")
+	}
+	if got := normalizeSearchQuery("\u3000a\u3000"); got != "a" {
+		t.Fatalf("ideographic normalize = %q; want %q", got, "a")
+	}
+}

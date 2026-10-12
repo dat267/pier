@@ -126,11 +126,24 @@ func buildSearchCorpus(lines []string) searchCorpus {
 	return searchCorpus{text: strings.Join(chunks, ""), spans: spans}
 }
 
-// searchQueryWhitespaceRegex collapses runs of whitespace in a search query.
-var searchQueryWhitespaceRegex = regexp.MustCompile(`\s+`)
-
+// normalizeSearchQuery collapses runs of JS whitespace in a search query and
+// trims the ends (upstream `query.replace(/\s+/gu, " ").trim()`; Go's `\s`
+// class is ASCII-only).
 func normalizeSearchQuery(query string) string {
-	return strings.TrimSpace(searchQueryWhitespaceRegex.ReplaceAllString(query, " "))
+	var builder strings.Builder
+	pendingSpace := false
+	for _, r := range query {
+		if isWhitespaceRune(r) {
+			pendingSpace = true
+			continue
+		}
+		if pendingSpace && builder.Len() > 0 {
+			builder.WriteByte(' ')
+		}
+		pendingSpace = false
+		builder.WriteRune(r)
+	}
+	return builder.String()
 }
 
 func findSearchCorpusMatches(corpus searchCorpus, normalizedQuery string) []AltScreenSearchMatch {
