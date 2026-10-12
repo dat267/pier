@@ -9,7 +9,6 @@ import (
 	"math"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -45,9 +44,11 @@ var findSchemaJSON = mustSchemaJSON(map[string]any{
 // RelativizeFindResultPath relativizes a find result against the search
 // root and normalizes to posix separators.
 func RelativizeFindResultPath(resultPath string, searchPath string) string {
-	hadTrailingSeparator := strings.HasSuffix(resultPath, "/")
+	separator := string(os.PathSeparator)
+	hadTrailingSeparator := strings.HasSuffix(resultPath, separator) ||
+		(separator == "\\" && strings.HasSuffix(resultPath, "/"))
 	relativePath := resultPath
-	if path.IsAbs(resultPath) {
+	if filepath.IsAbs(resultPath) {
 		if rel, err := filepath.Rel(searchPath, resultPath); err == nil {
 			relativePath = rel
 		}
