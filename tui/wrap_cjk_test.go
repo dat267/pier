@@ -74,3 +74,18 @@ func TestLoneSpacingMarkWidth(t *testing.T) {
 		}
 	}
 }
+
+// Default_Ignorable code points are zero-width, and halfwidth voiced sound
+// marks are visible after a base (upstream zeroWidthRegex/nonPrintingCharRegex).
+func TestZeroWidthAndHalfwidthMarks(t *testing.T) {
+	for _, text := range []string{"\u061C", "\u180E", "\u3164", "\uFFA0", "\U000E0001"} {
+		if got := VisibleWidth(text); got != 0 {
+			t.Errorf("VisibleWidth(%q) = %d; want 0", text, got)
+		}
+	}
+	for _, text := range []string{"a\uFF9E", "a\uFF9F"} {
+		if got := VisibleWidth(text); got != 2 {
+			t.Errorf("VisibleWidth(%q) = %d; want 2", text, got)
+		}
+	}
+}
