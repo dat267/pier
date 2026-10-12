@@ -72,7 +72,7 @@ func cloneValue[T any](value T) T {
 	case nil, string, bool, int, int64, float64:
 		return value
 	default:
-		encoded, err := json.Marshal(value)
+		encoded, err := marshalJSON(value)
 		if err != nil {
 			return value
 		}

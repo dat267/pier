@@ -301,7 +301,7 @@ func SettleSchedulerOutcome(tx *Transaction, record TaskRecord, outcome Schedule
 			reason := OutcomeFaulted
 			settlement.Reason = &reason
 			if outcome.Error != nil {
-				detail, _ := json.Marshal(outcome.Error.Message)
+				detail, _ := marshalJSON(outcome.Error.Message)
 				settlement.Detail = detail
 			}
 		} else {

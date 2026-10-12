@@ -335,19 +335,19 @@ func encodeJsonlCommit(prepared *PreparedCommit) (string, map[string]string, err
 	for _, write := range prepared.Writes {
 		switch write.Type {
 		case "conversation", "submission":
-			value, err := json.Marshal(writeValue(write))
+			value, err := marshalJSON(writeValue(write))
 			if err != nil {
 				return "", nil, err
 			}
 			mainWrites = append(mainWrites, jsonlMainOperation{Type: write.Type, Value: value})
 		case "entry":
-			value, err := json.Marshal(write.Entry)
+			value, err := marshalJSON(write.Entry)
 			if err != nil {
 				return "", nil, err
 			}
 			mainWrites = append(mainWrites, jsonlMainOperation{Type: "entry", Value: value})
 		case "task":
-			value, err := json.Marshal(write.Task)
+			value, err := marshalJSON(write.Task)
 			if err != nil {
 				return "", nil, err
 			}
@@ -374,7 +374,7 @@ func encodeJsonlCommit(prepared *PreparedCommit) (string, map[string]string, err
 				}
 				id = *write.DocumentID
 			}
-			content, err := json.Marshal(*write.DocumentContent)
+			content, err := marshalJSON(*write.DocumentContent)
 			if err != nil {
 				return "", nil, err
 			}
@@ -383,7 +383,7 @@ func encodeJsonlCommit(prepared *PreparedCommit) (string, map[string]string, err
 			})
 			operation := jsonlMainOperation{Type: write.Type, ID: &id, Ordinal: &ordinal}
 			if write.Type == "document.create" {
-				record, err := json.Marshal(*write.DocumentCreate)
+				record, err := marshalJSON(*write.DocumentCreate)
 				if err != nil {
 					return "", nil, err
 				}
@@ -405,7 +405,7 @@ func encodeJsonlCommit(prepared *PreparedCommit) (string, map[string]string, err
 	for file, fileRecords := range records {
 		var builder strings.Builder
 		for _, record := range fileRecords {
-			encoded, err := json.Marshal(record)
+			encoded, err := marshalJSON(record)
 			if err != nil {
 				return "", nil, err
 			}
@@ -414,7 +414,7 @@ func encodeJsonlCommit(prepared *PreparedCommit) (string, map[string]string, err
 		}
 		sidecars[file] = builder.String()
 	}
-	encodedMarker, err := json.Marshal(jsonlMainMarker{
+	encodedMarker, err := marshalJSON(jsonlMainMarker{
 		Format: jsonlFormatVersion, Type: "commit", Seq: prepared.Seq, Writes: mainWrites,
 	})
 	if err != nil {
@@ -481,7 +481,7 @@ func sidecarIDSuffix(name string) *Id {
 
 // jsonlSidecarKey identifies one sidecar record (upstream sidecarKey).
 func jsonlSidecarKey(file string, seq Id, ordinal int) string {
-	encoded, _ := json.Marshal([]any{file, seq, ordinal})
+	encoded, _ := marshalJSON([]any{file, seq, ordinal})
 	return string(encoded)
 }
 
@@ -893,7 +893,7 @@ func (s *JsonlStorage) recover() error {
 					if isBeforeLatestBase(*id, line.value.Seq, line.value.Ordinal) {
 						continue
 					}
-					encoded, err := json.Marshal(line.value)
+					encoded, err := marshalJSON(line.value)
 					if err != nil {
 						return err
 					}

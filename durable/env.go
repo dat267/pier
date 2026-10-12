@@ -2,7 +2,6 @@ package durable
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 )
@@ -31,7 +30,7 @@ func ToError(value any) error {
 	case string:
 		return errors.New(typed)
 	}
-	encoded, err := json.Marshal(value)
+	encoded, err := marshalJSON(value)
 	if err != nil {
 		return fmt.Errorf("%v", value)
 	}

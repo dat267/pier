@@ -195,7 +195,7 @@ func insertSqliteRevision(ctx context.Context, tx *sql.Tx, id Id, seq Seq, conte
 		}
 		encoded = DocumentContent{Version: content.Version, Kind: ContentBase, Value: value}
 	}
-	contentJSON, err := json.Marshal(encoded)
+	contentJSON, err := marshalJSON(encoded)
 	if err != nil {
 		return err
 	}
@@ -365,7 +365,7 @@ func sqliteMaterializeDocumentTx(ctx context.Context, tx *sql.Tx, id Id, at Docu
 			return nil, err
 		}
 	}
-	encoded, err := json.Marshal(materialized)
+	encoded, err := marshalJSON(materialized)
 	if err != nil {
 		return nil, err
 	}

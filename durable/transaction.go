@@ -1336,7 +1336,7 @@ func planRecordScope(plan *documentPlan) *DocumentScope {
 
 // jsonValueBytes re-encodes a JSON value for the storage record.
 func jsonValueBytes(value chord.JsonValue) json.RawMessage {
-	encoded, err := json.Marshal(value)
+	encoded, err := marshalJSON(value)
 	if err != nil {
 		return nil
 	}

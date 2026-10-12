@@ -916,10 +916,6 @@ func boolInt(value bool) int {
 // marshalJSONValue encodes a record; entries carry ai.Message payloads, so
 // the ai encoder (which preserves wire key order) is used.
 func marshalJSONValue(value any) (string, error) {
-	if _, ok := value.(EntryRecord); ok {
-		enc, err := ai.MarshalJSON(value)
-		return string(enc), err
-	}
 	enc, err := marshalJSON(value)
 	return string(enc), err
 }
@@ -969,8 +965,10 @@ func checkImmutableIDs(writes []StorageWrite, recordType func(StorageWrite) stri
 }
 
 // marshalJSON encodes a value (small helper over encoding/json).
+// marshalJSON encodes a durable value the way JSON.stringify does: no HTML
+// escaping of <, > and &.
 func marshalJSON(value any) ([]byte, error) {
-	return json.Marshal(value)
+	return ai.MarshalJSON(value)
 }
 
 // unmarshalJSONString decodes a record string.

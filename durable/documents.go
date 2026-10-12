@@ -58,7 +58,7 @@ func documentScopeKey(scope DocumentScope) string {
 			parts = append(parts, nil)
 		}
 	}
-	encoded, _ := json.Marshal(parts)
+	encoded, _ := marshalJSON(parts)
 	return string(encoded)
 }
 
@@ -68,7 +68,7 @@ func documentAddressKey(address DocumentAddress) string {
 	if address.Key != nil {
 		key = []any{"family", *address.Key}
 	}
-	encoded, _ := json.Marshal([]any{address.Kind, documentScopeKey(address.Scope), key})
+	encoded, _ := marshalJSON([]any{address.Kind, documentScopeKey(address.Scope), key})
 	return string(encoded)
 }
 
@@ -148,7 +148,7 @@ func materializeDocument(state *memoryState, id Id, at DocumentPoint) (*StoredDo
 	if len(base.Value) == 0 {
 		value = map[string]any{}
 	}
-	decoded, err := json.Marshal(value)
+	decoded, err := marshalJSON(value)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func materializeDocument(state *memoryState, id Id, at DocumentPoint) (*StoredDo
 			return nil, err
 		}
 	}
-	encoded, err := json.Marshal(materialized)
+	encoded, err := marshalJSON(materialized)
 	if err != nil {
 		return nil, err
 	}

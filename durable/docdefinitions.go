@@ -169,7 +169,7 @@ func AddressID(address DocumentAddress) string {
 	if address.Key != nil {
 		key = *address.Key
 	}
-	encoded, _ := json.Marshal([]any{address.Kind, address.Scope.Kind, owner, key})
+	encoded, _ := marshalJSON([]any{address.Kind, address.Scope.Kind, owner, key})
 	return string(encoded)
 }
 

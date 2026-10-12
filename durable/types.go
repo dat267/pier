@@ -549,7 +549,7 @@ type Cursor = map[string]json.RawMessage
 
 // CursorAfter builds a legacy cursor positioned after an id. Scans continue it in their default order.
 func CursorAfter(id Id) Cursor {
-	encoded, _ := json.Marshal(id)
+	encoded, _ := marshalJSON(id)
 	return Cursor{"after": encoded}
 }
 

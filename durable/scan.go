@@ -68,8 +68,8 @@ func scanSQL(start scanPosition) (clause string, after Id, direction string) {
 }
 
 func cursorAfterOrder(id Id, order ScanOrder) Cursor {
-	after, _ := json.Marshal(id)
-	encodedOrder, _ := json.Marshal(order)
+	after, _ := marshalJSON(id)
+	encodedOrder, _ := marshalJSON(order)
 	return Cursor{"after": after, "order": encodedOrder}
 }
 
