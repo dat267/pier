@@ -22,6 +22,77 @@ import (
 // with full-output temp file, exit codes, signal terminations (128+N),
 // timeouts, and aborts.
 
+// output-accumulator.ts flushes incomplete UTF-8 through TextDecoder at finish.
+func TestOutputAccumulatorReplacesIncompleteFinalUTF8(t *testing.T) {
+	accumulator := NewOutputAccumulator(100, 100, "")
+	if err := accumulator.Append([]byte{0xe2, 0x82}); err != nil {
+		t.Fatal(err)
+	}
+	accumulator.Finish()
+	got := accumulator.Snapshot(false)
+	if got.Content != "\uFFFD" || got.Truncation.TotalBytes != 3 {
+		t.Fatalf("final incomplete UTF-8 = %q, %d bytes; want replacement rune, 3 bytes", got.Content, got.Truncation.TotalBytes)
+	}
+}
+
+// output-accumulator.ts uses TextDecoder's default BOM handling across streamed chunks.
+func TestOutputAccumulatorStripsInitialUTF8BOM(t *testing.T) {
+	accumulator := NewOutputAccumulator(100, 100, "")
+	if err := accumulator.Append([]byte{0xef}); err != nil {
+		t.Fatal(err)
+	}
+	if err := accumulator.Append([]byte{0xbb, 0xbf, 'A'}); err != nil {
+		t.Fatal(err)
+	}
+	accumulator.Finish()
+	if got := accumulator.Snapshot(false).Content; got != "A" {
+		t.Fatalf("initial BOM output = %q; want A", got)
+	}
+}
+
+func TestOutputAccumulatorPreservesNonInitialUTF8BOM(t *testing.T) {
+	accumulator := NewOutputAccumulator(100, 100, "")
+	if err := accumulator.Append([]byte{'A', 0xef, 0xbb, 0xbf}); err != nil {
+		t.Fatal(err)
+	}
+	accumulator.Finish()
+	if got := accumulator.Snapshot(false).Content; got != "A\uFEFF" {
+		t.Fatalf("non-initial BOM output = %q; want A followed by BOM", got)
+	}
+}
+
+func TestOutputAccumulatorDecodesSplitUTF8Sequence(t *testing.T) {
+	accumulator := NewOutputAccumulator(100, 100, "")
+	if err := accumulator.Append([]byte{0xe2}); err != nil {
+		t.Fatal(err)
+	}
+	if got := accumulator.Snapshot(false).Content; got != "" {
+		t.Fatalf("incomplete prefix exposed before continuation: %q", got)
+	}
+	if err := accumulator.Append([]byte{0x82, 0xac}); err != nil {
+		t.Fatal(err)
+	}
+	accumulator.Finish()
+	got := accumulator.Snapshot(false)
+	if got.Content != "€" || got.Truncation.TotalBytes != 3 {
+		t.Fatalf("split UTF-8 = %q, %d bytes; want euro sign, 3 bytes", got.Content, got.Truncation.TotalBytes)
+	}
+}
+
+func TestOutputAccumulatorReplacesIncompleteUTF8BeforeInvalidContinuation(t *testing.T) {
+	accumulator := NewOutputAccumulator(100, 100, "")
+	if err := accumulator.Append([]byte{0xe2, 0x82}); err != nil {
+		t.Fatal(err)
+	}
+	if err := accumulator.Append([]byte{'A'}); err != nil {
+		t.Fatal(err)
+	}
+	accumulator.Finish()
+	if got := accumulator.Snapshot(false).Content; got != "\uFFFDA" {
+		t.Fatalf("malformed UTF-8 = %q; want replacement rune then A", got)
+	}
+}
+
 func TestBashSimpleOutput(t *testing.T) {
 	dir := t.TempDir()
 	tool := CreateBashTool(dir, nil)
