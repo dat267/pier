@@ -113,6 +113,13 @@ func TestReadToolTextAndTruncation(t *testing.T) {
 		t.Fatalf("details = %s", result.Details)
 	}
 
+	// Negative limits inherit JavaScript Array.slice's negative end index.
+	os.WriteFile(file, []byte("a\nb\nc"), 0o644)
+	result = execTool(t, tool, `{"path":"sample.txt","limit":-1}`)
+	if got := result.Content[0].(ai.TextContent).Text; got != "a\nb" {
+		t.Fatalf("negative-limit content = %q; want %q", got, "a\nb")
+	}
+
 	// Offset beyond end.
 	if _, err := tool.Execute("c", json.RawMessage(`{"path":"sample.txt","offset":99999}`), context.Background(), nil); err == nil {
 		t.Fatal("expected out-of-bounds error")

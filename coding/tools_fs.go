@@ -112,7 +112,14 @@ func CreateReadTool(cwd string, options *ReadToolOptions) agent.AgentTool {
 			userLimitedLines := -1
 			if input.Limit != nil {
 				endLine := min(startLine+*input.Limit, len(allLines))
-				selectedContent = strings.Join(allLines[startLine:endLine], "\n")
+				sliceEnd := endLine
+				if sliceEnd < 0 {
+					sliceEnd = max(0, len(allLines)+sliceEnd)
+				}
+				if sliceEnd < startLine {
+					sliceEnd = startLine
+				}
+				selectedContent = strings.Join(allLines[startLine:sliceEnd], "\n")
 				userLimitedLines = endLine - startLine
 			} else {
 				selectedContent = strings.Join(allLines[startLine:], "\n")
