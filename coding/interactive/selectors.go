@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
 )
@@ -327,7 +328,7 @@ func (l *UserMessageList) Render(width int) []string {
 	for i := startIndex; i < endIndex; i++ {
 		message := l.messages[i]
 		isSelected := i == l.selectedIndex
-		normalized := strings.TrimSpace(strings.ReplaceAll(message.Text, "\n", " "))
+		normalized := ai.JSTrim(strings.ReplaceAll(message.Text, "\n", " "))
 		cursor := "  "
 		if isSelected {
 			cursor = theme.Fg("accent", "› ")

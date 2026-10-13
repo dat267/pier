@@ -14,6 +14,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
 )
@@ -967,8 +968,8 @@ func ParseAutoThemeSetting(themeSetting *string) (lightTheme string, darkTheme s
 	if slashIndex == -1 || strings.Contains(value[slashIndex+1:], "/") {
 		return "", "", false
 	}
-	lightTheme = strings.TrimSpace(value[:slashIndex])
-	darkTheme = strings.TrimSpace(value[slashIndex+1:])
+	lightTheme = ai.JSTrim(value[:slashIndex])
+	darkTheme = ai.JSTrim(value[slashIndex+1:])
 	if lightTheme == "" || darkTheme == "" {
 		return "", "", false
 	}

@@ -82,7 +82,7 @@ func formatTrashErrorHint(err error, stderr string) string {
 	if err != nil {
 		parts = append(parts, err.Error())
 	}
-	if trimmed := strings.TrimSpace(stderr); trimmed != "" {
+	if trimmed := ai.JSTrim(stderr); trimmed != "" {
 		parts = append(parts, strings.Split(trimmed, "\n")[0])
 	}
 	if len(parts) == 0 {
@@ -582,7 +582,7 @@ func (l *SessionList) SetSessions(sessions []coding.SessionInfo, showCwd bool) {
 
 // FilterSessions applies the search and sort to the sessions.
 func (l *SessionList) FilterSessions(query string) {
-	trimmed := strings.TrimSpace(query)
+	trimmed := ai.JSTrim(query)
 	nameFiltered := l.allSessions
 	if l.nameFilter != NameFilterAll {
 		nameFiltered = nil
@@ -704,7 +704,7 @@ func (l *SessionList) Render(width int) []string {
 		if !hasName {
 			displayText = session.FirstMessage
 		}
-		normalizedMessage := strings.TrimSpace(stripControlCharacters(displayText))
+		normalizedMessage := ai.JSTrim(stripControlCharacters(displayText))
 
 		age := formatSessionDate(session.Modified, now)
 		msgCount := itoa(session.MessageCount)
@@ -1173,7 +1173,7 @@ func (c *SessionSelectorComponent) exitRenameMode() {
 }
 
 func (c *SessionSelectorComponent) confirmRename(value string) {
-	next := strings.TrimSpace(value)
+	next := ai.JSTrim(value)
 	if next == "" {
 		return
 	}

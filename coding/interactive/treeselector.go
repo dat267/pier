@@ -841,7 +841,7 @@ func (t *TreeList) getEntryDisplayText(node *coding.SessionTreeNode, isSelected 
 	normalize := func(value string) string {
 		value = strings.ReplaceAll(value, "\n", " ")
 		value = strings.ReplaceAll(value, "\t", " ")
-		return strings.TrimSpace(value)
+		return ai.JSTrim(value)
 	}
 
 	switch entry.Type {
@@ -995,7 +995,7 @@ func (t *TreeList) getEntryCopyText(node *coding.SessionTreeNode) (string, bool)
 	case "branch_summary":
 		text = entry.Summary
 	}
-	if strings.TrimSpace(text) == "" {
+	if ai.JSTrim(text) == "" {
 		return text, false
 	}
 	return text, true
@@ -1007,7 +1007,7 @@ func hasTextContent(content json.RawMessage) bool {
 	}
 	var text string
 	if err := json.Unmarshal(content, &text); err == nil {
-		return strings.TrimSpace(text) != ""
+		return ai.JSTrim(text) != ""
 	}
 	var blocks []struct {
 		Type string `json:"type"`
@@ -1017,7 +1017,7 @@ func hasTextContent(content json.RawMessage) bool {
 		return false
 	}
 	for _, block := range blocks {
-		if block.Type == "text" && strings.TrimSpace(block.Text) != "" {
+		if block.Type == "text" && ai.JSTrim(block.Text) != "" {
 			return true
 		}
 	}
@@ -1124,7 +1124,7 @@ func (t *TreeList) formatToolCall(name string, args map[string]any) string {
 		return "[edit: " + treeShortenPath(pathArg()) + "]"
 	case "bash":
 		rawCmd := argString("command")
-		cmd := strings.TrimSpace(strings.NewReplacer("\n", " ", "\t", " ").Replace(rawCmd))
+		cmd := ai.JSTrim(strings.NewReplacer("\n", " ", "\t", " ").Replace(rawCmd))
 		// Upstream slices by UTF-16 code units (String.slice), not bytes.
 		cmd = ai.JSSlice(cmd, 0, 50)
 		suffix := ""
@@ -1587,7 +1587,7 @@ func (l *LabelInput) HandleInput(keyData string) {
 	kb := tui.GetKeybindings()
 	switch {
 	case kb.Matches(keyData, "tui.select.confirm"):
-		value := strings.TrimSpace(l.input.Value())
+		value := ai.JSTrim(l.input.Value())
 		if l.OnSubmit != nil {
 			if value == "" {
 				l.OnSubmit(l.entryID, nil)
