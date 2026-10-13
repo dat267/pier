@@ -2,7 +2,6 @@ package ai
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -433,5 +432,3 @@ func withXaiURLs(t *testing.T, base string, run func()) {
 	}()
 	run()
 }
-
-var _ = json.Marshal

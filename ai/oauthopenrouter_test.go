@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"strings"
 	"testing"
-	"time"
 )
 
 // Tests for auth/oauth/openrouter.ts.
@@ -342,5 +341,3 @@ func withOpenRouterTokenURL(t *testing.T, url string, run func()) {
 	defer func() { openRouterTokenURLValue = original }()
 	run()
 }
-
-var _ = time.Second

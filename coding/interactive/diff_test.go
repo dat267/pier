@@ -37,19 +37,6 @@ func loadDiffGolden(t *testing.T) map[string]string {
 	return values
 }
 
-func checkDiffGolden(t *testing.T, golden map[string]string, label string, got any) {
-	t.Helper()
-	want, ok := golden[label]
-	if !ok {
-		t.Fatalf("missing golden %q", label)
-	}
-	gotStable := stableMDValue(mustParseJSON(t, mustJSON(got)))
-	wantStable := stableMDValue(mustParseJSON(t, want))
-	if gotStable != wantStable {
-		t.Fatalf("%s:\n got %s\nwant %s", label, gotStable, wantStable)
-	}
-}
-
 // TestDiffAgainstUpstreamGolden compares DiffWords and RenderDiff with jsdiff.
 func TestDiffAgainstUpstreamGolden(t *testing.T) {
 	SetCustomThemesDir(t.TempDir())
@@ -85,7 +72,7 @@ func TestDiffAgainstUpstreamGolden(t *testing.T) {
 				"value": change.Value, "added": change.Added, "removed": change.Removed,
 			})
 		}
-		checkDiffGolden(t, golden, "words "+label, projected)
+		checkGolden(t, golden, "words "+label, projected)
 	}
 
 	renderLabels := make([]string, 0, len(corpus.Renders))
@@ -95,7 +82,7 @@ func TestDiffAgainstUpstreamGolden(t *testing.T) {
 	sortStrings(renderLabels)
 	for _, label := range renderLabels {
 		got := RenderDiff(corpus.Renders[label], RenderDiffOptions{})
-		checkDiffGolden(t, golden, "render "+label, got)
+		checkGolden(t, golden, "render "+label, got)
 	}
 }
 

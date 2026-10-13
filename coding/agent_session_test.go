@@ -6,7 +6,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
@@ -201,8 +200,6 @@ func TestThinkingLevelDefaults(t *testing.T) {
 		t.Fatal("thinking level options")
 	}
 }
-
-var _ = time.Now
 
 func makeTool(name string) agent.AgentTool {
 	return agent.AgentTool{

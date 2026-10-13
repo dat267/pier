@@ -3,7 +3,6 @@ package durable
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"reflect"
 	"strconv"
 	"strings"
@@ -578,8 +577,6 @@ func documentCreateWrite(id Id, kind string, key *string, scope DocumentScope, v
 		DocumentContent: &DocumentContent{Version: 1, Kind: ContentBase, Value: value},
 	}
 }
-
-var _ = errors.New
 
 // TestConformanceReservesRootID covers upstream's "reserves ID 1 for the
 // immutable root conversation".

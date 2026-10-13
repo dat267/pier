@@ -64,19 +64,6 @@ func loadComponentsGolden(t *testing.T) map[string]string {
 	return values
 }
 
-func checkComponentsGolden(t *testing.T, golden map[string]string, label string, got any) {
-	t.Helper()
-	want, ok := golden[label]
-	if !ok {
-		t.Fatalf("missing golden %q", label)
-	}
-	gotStable := stableMDValue(mustParseJSON(t, mustJSON(got)))
-	wantStable := stableMDValue(mustParseJSON(t, want))
-	if gotStable != wantStable {
-		t.Fatalf("%s:\n got %s\nwant %s", label, gotStable, wantStable)
-	}
-}
-
 // TestComponentsAgainstUpstreamGolden replays the upstream component corpus.
 func TestComponentsAgainstUpstreamGolden(t *testing.T) {
 	SetCustomThemesDir(t.TempDir())
@@ -98,12 +85,12 @@ func TestComponentsAgainstUpstreamGolden(t *testing.T) {
 	}
 
 	for _, keybinding := range corpus.Keybindings {
-		checkComponentsGolden(t, golden, "keytext "+keybinding, []string{
+		checkGolden(t, golden, "keytext "+keybinding, []string{
 			KeyText(keybinding), KeyDisplayText(keybinding), KeyHint(keybinding, "description"),
 		})
 	}
 	for _, raw := range corpus.RawKeys {
-		checkComponentsGolden(t, golden, "rawkey "+raw, []string{
+		checkGolden(t, golden, "rawkey "+raw, []string{
 			FormatKeyText(raw, KeyTextFormatOptions{}),
 			FormatKeyText(raw, KeyTextFormatOptions{Capitalize: true}),
 			RawKeyHint(raw, "hint"),
@@ -111,8 +98,8 @@ func TestComponentsAgainstUpstreamGolden(t *testing.T) {
 	}
 
 	for _, width := range corpus.BorderWidths {
-		checkComponentsGolden(t, golden, "border@"+itoa(width), NewDynamicBorder(nil).Render(width))
-		checkComponentsGolden(t, golden, "border-red@"+itoa(width), NewDynamicBorder(func(s string) string {
+		checkGolden(t, golden, "border@"+itoa(width), NewDynamicBorder(nil).Render(width))
+		checkGolden(t, golden, "border-red@"+itoa(width), NewDynamicBorder(func(s string) string {
 			return "<" + s + ">"
 		}).Render(width))
 	}
@@ -127,7 +114,7 @@ func TestComponentsAgainstUpstreamGolden(t *testing.T) {
 		if lines == nil {
 			lines = []string{}
 		}
-		checkComponentsGolden(t, golden, "truncate"+itoa(index), []any{lines, result.SkippedCount})
+		checkGolden(t, golden, "truncate"+itoa(index), []any{lines, result.SkippedCount})
 	}
 
 	for index, spec := range corpus.UserMessages {
@@ -136,7 +123,7 @@ func TestComponentsAgainstUpstreamGolden(t *testing.T) {
 			padding = *spec.Pad
 		}
 		component := NewUserMessageComponent(spec.Text, nil, padding, nil)
-		checkComponentsGolden(t, golden, "user"+itoa(index)+"@"+itoa(spec.Width),
+		checkGolden(t, golden, "user"+itoa(index)+"@"+itoa(spec.Width),
 			normalizeRender(component.Render(spec.Width)))
 	}
 
@@ -149,30 +136,30 @@ func TestComponentsAgainstUpstreamGolden(t *testing.T) {
 	}
 	for index, spec := range corpus.CustomEntries {
 		component := NewCustomEntryComponent(CustomEntry{CustomType: spec.Type}, renderer)
-		checkComponentsGolden(t, golden, "custom"+itoa(index)+"-collapsed@"+itoa(spec.Width),
+		checkGolden(t, golden, "custom"+itoa(index)+"-collapsed@"+itoa(spec.Width),
 			normalizeRender(component.Render(spec.Width)))
-		checkComponentsGolden(t, golden, "custom"+itoa(index)+"-hasContent", component.HasContent())
+		checkGolden(t, golden, "custom"+itoa(index)+"-hasContent", component.HasContent())
 		component.SetExpanded(true)
-		checkComponentsGolden(t, golden, "custom"+itoa(index)+"-expanded@"+itoa(spec.Width),
+		checkGolden(t, golden, "custom"+itoa(index)+"-expanded@"+itoa(spec.Width),
 			normalizeRender(component.Render(spec.Width)))
 	}
 
 	failing := NewCustomEntryComponent(CustomEntry{CustomType: "broken"}, func(entry CustomEntry, options EntryRenderOptions, theme *Theme) tui.Component {
 		panic("boom")
 	})
-	checkComponentsGolden(t, golden, "custom-failed", normalizeRender(failing.Render(30)))
+	checkGolden(t, golden, "custom-failed", normalizeRender(failing.Render(30)))
 	empty := NewCustomEntryComponent(CustomEntry{CustomType: "empty"}, func(entry CustomEntry, options EntryRenderOptions, theme *Theme) tui.Component {
 		return nil
 	})
-	checkComponentsGolden(t, golden, "custom-empty", []any{empty.HasContent(), normalizeRender(empty.Render(20))})
+	checkGolden(t, golden, "custom-empty", []any{empty.HasContent(), normalizeRender(empty.Render(20))})
 
 	loader := NewBorderedLoader(nil, ActiveTheme(), "Working...", nil)
 	loader.Dispose()
-	checkComponentsGolden(t, golden, "loader@30", normalizeRender(loader.Render(30)))
+	checkGolden(t, golden, "loader@30", normalizeRender(loader.Render(30)))
 	plain := false
 	plainLoader := NewBorderedLoader(nil, ActiveTheme(), "Plain", &plain)
 	plainLoader.Dispose()
-	checkComponentsGolden(t, golden, "loader-plain@30", normalizeRender(plainLoader.Render(30)))
+	checkGolden(t, golden, "loader-plain@30", normalizeRender(plainLoader.Render(30)))
 }
 
 func normalizeRender(lines []string) []string {

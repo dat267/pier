@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"sync"
 	"testing"
 	"time"
 
@@ -348,5 +347,3 @@ func TestClientServiceTransport(t *testing.T) {
 		t.Fatal("unavailable target must fail")
 	}
 }
-
-var _ = sync.Mutex{}

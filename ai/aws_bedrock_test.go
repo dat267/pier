@@ -3,7 +3,6 @@ package ai
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"hash/crc32"
 	"io"
 	"net/http"
@@ -470,5 +469,3 @@ func TestAWSEventStreamDecoding(t *testing.T) {
 		t.Fatal("truncated frames must error")
 	}
 }
-
-var _ = fmt.Sprintf

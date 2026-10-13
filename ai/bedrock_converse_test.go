@@ -2,9 +2,7 @@ package ai
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -809,6 +807,3 @@ func (c staticAuthContext) Env(name string) (string, bool) {
 }
 
 func (c staticAuthContext) FileExists(string) bool { return false }
-
-var _ = sha256.Sum256
-var _ = hex.EncodeToString

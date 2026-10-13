@@ -3,7 +3,6 @@ package durable
 import (
 	"context"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -311,5 +310,3 @@ func TestWriteTool(t *testing.T) {
 		t.Fatalf("content = %q, %v", content, err)
 	}
 }
-
-var _ = json.Marshal

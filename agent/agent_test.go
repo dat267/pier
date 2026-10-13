@@ -3,7 +3,6 @@ package agent
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -403,8 +402,6 @@ func TestAgentForwardsSessionID(t *testing.T) {
 		t.Fatalf("sessionId = %+v", captured)
 	}
 }
-
-var _ = fmt.Sprintf
 
 // The Agent stores the tool-call hooks in its options; they must reach the loop
 // config, or every call is silently ungated (regression: they were dropped,
