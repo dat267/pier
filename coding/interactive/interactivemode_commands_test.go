@@ -413,3 +413,14 @@ func TestSessionCommandRunsTheScansOffTheUILoop(t *testing.T) {
 	close(session.statsBlock)
 	waitForCondition(t, panelOnScreen)
 }
+
+// Upstream strips `/name` followed by JS whitespace
+// (`replace(/^\/name\s*/, "").trim()`), so a U+FEFF separator is dropped.
+func TestCommandNameTrimsJSWhitespace(t *testing.T) {
+	wiring, session, _ := newCommandTestWiring(t)
+	wiring.ShowWarning = func(string) {}
+	wiring.HandleNameCommand("/name\uFEFFmy session")
+	if session.name != "my session" {
+		t.Fatalf("name = %q", session.name)
+	}
+}

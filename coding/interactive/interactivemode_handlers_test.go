@@ -444,3 +444,15 @@ func TestToolsExpandToggleRoundTrips(t *testing.T) {
 		t.Errorf("the second press did not toggle back: %v", app.display.ToolOutputExpanded)
 	}
 }
+
+// Upstream trims the submission with String.trim, which keeps U+0085 (unlike
+// strings.TrimSpace).
+func TestSubmitKeepsJSWhitespace(t *testing.T) {
+	_, submit, _, _ := newHandlerTestWiring(t)
+	var received []string
+	submit.OnInput = func(text string) { received = append(received, text) }
+	submit.HandleSubmit(context.Background(), "\u0085message")
+	if len(received) != 1 || received[0] != "\u0085message" {
+		t.Fatalf("received = %v", received)
+	}
+}

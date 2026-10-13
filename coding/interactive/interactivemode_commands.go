@@ -390,7 +390,7 @@ func (w *CommandWiring) HandleCopyCommand(flashConfirmation bool, preferSelectio
 
 // HandleNameCommand sets or prints the session name.
 func (w *CommandWiring) HandleNameCommand(text string) {
-	name := strings.TrimSpace(strings.TrimPrefix(text, "/name"))
+	name := ai.JSTrim(strings.TrimPrefix(text, "/name"))
 	if name == "" {
 		currentName := w.SessionInfo.GetSessionName()
 		if currentName != "" {

@@ -119,7 +119,7 @@ func (w *KeyWiring) HandleEscape(nowMS func() int64) {
 			w.Editor.SetText("")
 		}
 		w.Queue.SetBashMode(false)
-	case w.Editor != nil && strings.TrimSpace(w.Editor.GetText()) == "":
+	case w.Editor != nil && ai.JSTrim(w.Editor.GetText()) == "":
 		if w.Settings == nil {
 			return
 		}
@@ -219,7 +219,7 @@ func (w *SubmitWiring) HandleStartupSubmit(text string) {
 
 // HandleSubmit processes one editor submission.
 func (w *SubmitWiring) HandleSubmit(ctx context.Context, text string) {
-	text = strings.TrimSpace(text)
+	text = ai.JSTrim(text)
 	if text == "" {
 		return
 	}
@@ -360,7 +360,7 @@ func (w *SubmitWiring) HandleSubmit(ctx context.Context, text string) {
 	case text == "/compact" || strings.HasPrefix(text, "/compact "):
 		customInstructions := ""
 		if strings.HasPrefix(text, "/compact ") {
-			customInstructions = strings.TrimSpace(text[len("/compact "):])
+			customInstructions = ai.JSTrim(text[len("/compact "):])
 		}
 		clearEditor()
 		if w.Handlers.HandleCompactCommand != nil {
