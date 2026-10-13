@@ -533,12 +533,10 @@ func SerializeConversation(messages []ai.Message) string {
 				parts = append(parts, "[User]: "+content)
 			}
 		case *ai.AssistantMessage:
-			var thinkingParts, toolCalls []string
+			var toolCalls []string
 			hasText := false
 			for _, block := range m.Content {
 				switch b := block.(type) {
-				case ai.ThinkingContent:
-					thinkingParts = append(thinkingParts, b.Thinking)
 				case ai.ToolCall:
 					// Upstream serializes Object.entries(args), preserving the
 					// model's key order at every level.
@@ -553,9 +551,6 @@ func SerializeConversation(messages []ai.Message) string {
 				case ai.TextContent:
 					hasText = true
 				}
-			}
-			if len(thinkingParts) > 0 {
-				parts = append(parts, "[Assistant thinking]: "+strings.Join(thinkingParts, "\n"))
 			}
 			if hasText {
 				parts = append(parts, "[Assistant]: "+contentTextJoinedNewline(ai.StringOrBlocks{Blocks: m.Content}))

@@ -192,8 +192,8 @@ func TestSerializeConversation(t *testing.T) {
 	if !strings.Contains(serialized, "[User]: do the thing") {
 		t.Fatalf("user missing: %q", serialized)
 	}
-	if !strings.Contains(serialized, "[Assistant thinking]: pondering") {
-		t.Fatalf("thinking missing: %q", serialized)
+	if strings.Contains(serialized, "pondering") || strings.Contains(serialized, "[Assistant thinking]") {
+		t.Fatalf("thinking should not be serialized for compaction: %q", serialized)
 	}
 	if !strings.Contains(serialized, `[Assistant tool calls]: read(path="a.txt")`) {
 		t.Fatalf("tool calls: %q", serialized)
