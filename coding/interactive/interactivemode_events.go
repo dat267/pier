@@ -345,6 +345,9 @@ func (d *EventDispatcher) handleMessageStart(event *coding.SessionEvent) {
 	case *ai.UserMessage:
 		if d.Transcript != nil {
 			d.Transcript.AddMessageToChat(message, false)
+			if d.UpdatePendingMessagesDisplay != nil {
+				d.UpdatePendingMessagesDisplay()
+			}
 			d.requestRender()
 		}
 	case *ai.AssistantMessage:

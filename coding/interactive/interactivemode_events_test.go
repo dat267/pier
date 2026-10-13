@@ -485,3 +485,19 @@ func TestSortToolResultKeepsImages(t *testing.T) {
 		t.Fatalf("image block = %+v", result.Content[1])
 	}
 }
+
+// TestEventDispatcherUserMessageStartRefreshesPendingMessages covers the
+// pending-message refresh on a user message_start (upstream addMessageToChat
+// followed by updatePendingMessagesDisplay).
+func TestEventDispatcherUserMessageStartRefreshesPendingMessages(t *testing.T) {
+	dispatcher, _, _, _ := newEventTestDispatcher(t)
+	calls := 0
+	dispatcher.UpdatePendingMessagesDisplay = func() { calls++ }
+	dispatcher.HandleEvent(&coding.SessionEvent{
+		Type:  coding.SessionMessageStart,
+		Agent: agentEvent("message_start", &ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}}),
+	})
+	if calls != 1 {
+		t.Fatalf("pending message updates = %d", calls)
+	}
+}
