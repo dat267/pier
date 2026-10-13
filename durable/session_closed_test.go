@@ -35,6 +35,65 @@ func TestSessionClosedSettlesClosed(t *testing.T) {
 	}
 }
 
+type failingCloseStorage struct {
+	Storage
+	closeErr error
+}
+
+func (s *failingCloseStorage) Close(context.Context) error { return s.closeErr }
+
+// A Storage that cannot close is a failed one; `closed` still settles.
+func TestSessionCloseFailureSettlesFailed(t *testing.T) {
+	closeErr := errors.New("backend close failed")
+	storage := &failingCloseStorage{Storage: NewMemoryStorage(), closeErr: closeErr}
+	session := NewSession(storage)
+	if _, err := storeRoot(t, session); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Close(context.Background()); !errors.Is(err, closeErr) {
+		t.Fatalf("close = %v", err)
+	}
+	end, ok := session.End()
+	if !ok || end.Reason != SessionReasonFailed || !errors.Is(end.Err, closeErr) {
+		t.Fatalf("end = %+v, ok = %v", end, ok)
+	}
+}
+
+type failingReadAndCloseStorage struct {
+	Storage
+	readErr  error
+	closeErr error
+}
+
+func (s *failingReadAndCloseStorage) FindDocument(context.Context, DocumentAddress, DocumentPoint) (*DocumentRecord, error) {
+	return nil, s.readErr
+}
+
+func (s *failingReadAndCloseStorage) Close(context.Context) error { return s.closeErr }
+
+// An earlier failure stays the cause when closing also fails.
+func TestSessionClosedKeepsTheFirstFailure(t *testing.T) {
+	readErr := errors.New("read failed")
+	closeErr := errors.New("close failed")
+	storage := &failingReadAndCloseStorage{Storage: NewMemoryStorage(), readErr: readErr, closeErr: closeErr}
+	session := NewSession(storage)
+	if _, err := storeRoot(t, session); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := session.Snapshot(context.Background(), InboxDoc.Definition, RootConversationID); !errors.Is(err, readErr) {
+		t.Fatalf("snapshot = %v", err)
+	}
+	select {
+	case <-session.Closed():
+	case <-time.After(time.Second):
+		t.Fatal("closed did not settle")
+	}
+	end, ok := session.End()
+	if !ok || end.Reason != SessionReasonFailed || !errors.Is(end.Err, readErr) {
+		t.Fatalf("end = %+v, ok = %v", end, ok)
+	}
+}
+
 func TestSessionClosedSettlesFailedAfterStorageError(t *testing.T) {
 	readErr := errors.New("document disk failure")
 	storage := &failingDocumentReadStorage{Storage: NewMemoryStorage(), readErr: readErr, closed: make(chan struct{})}
