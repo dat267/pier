@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -69,6 +70,108 @@ func TestAdmitIdleInputStartsRun(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("entries = %+v", page.Items)
+	}
+}
+
+func TestAdmitInputCanUseAnApplicationEntry(t *testing.T) {
+	session, storage := newRootSession(t)
+	ctx := context.Background()
+	inputEntry := &EntryDraft{Kind: "chat.mention", Data: json.RawMessage(`{"author":"ann"}`)}
+	var id Id
+	if err := session.Commit(ctx, func(tx *Transaction) error {
+		var err error
+		id, err = AdmitSubmission(tx, RootConversationID, SubmissionDraft{
+			Type: SubmissionTypeInput, Content: "ann: hello", Entry: inputEntry,
+		}, 100, defaultQueueModes())
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	record, err := storage.Submission(ctx, id)
+	if err != nil || record == nil || record.Entry == nil {
+		t.Fatalf("input submission = %+v, err=%v", record, err)
+	}
+	commit, err := storage.Entry(ctx, *record.Entry)
+	if err != nil || commit == nil || commit.Entry.Kind != inputEntry.Kind || string(commit.Entry.Data) != string(inputEntry.Data) {
+		t.Fatalf("placed input entry = %+v, err=%v", commit, err)
+	}
+	message, ok := commit.Entry.Model[0].(*ai.UserMessage)
+	if !ok || message.Content.Text != "ann: hello" {
+		t.Fatalf("input message = %+v", commit.Entry.Model)
+	}
+}
+
+func TestInputRejectsSystemKindsAsApplicationEntries(t *testing.T) {
+	for _, kind := range []string{"", "pi.user", "pi.compaction"} {
+		t.Run(kind, func(t *testing.T) {
+			session, _ := newRootSession(t)
+			err := session.Commit(context.Background(), func(tx *Transaction) error {
+				_, err := AdmitSubmission(tx, RootConversationID, SubmissionDraft{
+					Type: SubmissionTypeInput, Content: "hello", Entry: &EntryDraft{Kind: kind},
+				}, 100, defaultQueueModes())
+				return err
+			})
+			if err == nil || !strings.Contains(err.Error(), "input entry's kind") {
+				t.Fatalf("invalid input kind %q error = %v", kind, err)
+			}
+		})
+	}
+}
+
+func TestBusyInputQueuesItsApplicationEntry(t *testing.T) {
+	session, storage := newRootSession(t)
+	ctx := context.Background()
+	if err := session.Commit(ctx, func(tx *Transaction) error {
+		stageLive(t, tx, RootConversationID, "run", map[string]any{"taskId": 99.0, "inputs": []any{}})
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	entry := &EntryDraft{Kind: "chat.mention", Data: json.RawMessage(`{"author":"ann"}`)}
+	var submissionID Id
+	if err := session.Commit(ctx, func(tx *Transaction) error {
+		var err error
+		submissionID, err = AdmitSubmission(tx, RootConversationID, SubmissionDraft{
+			Type: SubmissionTypeInput, Content: "ann: hello", Entry: entry,
+		}, 100, defaultQueueModes())
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	items := readInbox(t, session, RootConversationID).Items
+	if len(items) != 1 || items[0].Mode != InboxFollowUp {
+		t.Fatalf("inbox = %+v", items)
+	}
+	queuedEntry, err := decodeInboxEntry(items[0])
+	if err != nil || queuedEntry.Kind != entry.Kind || string(queuedEntry.Data) != string(entry.Data) {
+		t.Fatalf("queued input entry = %+v, err=%v", queuedEntry, err)
+	}
+	if err := session.Commit(ctx, func(tx *Transaction) error {
+		live, err := tx.Doc(LiveDoc.Definition, RootConversationID)
+		if err != nil {
+			return err
+		}
+		AssignJSON(live.(map[string]any), "run", nil)
+		boundary, err := PrepareBoundary(tx, RootConversationID, defaultQueueModes())
+		if err != nil {
+			return err
+		}
+		_, err = ApplyBoundary(tx, boundary, "final", 101)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	record, err := storage.Submission(ctx, submissionID)
+	if err != nil || record == nil || record.Entry == nil {
+		t.Fatalf("placed input submission = %+v, err=%v", record, err)
+	}
+	placed, err := storage.Entry(ctx, *record.Entry)
+	if err != nil || placed == nil || placed.Entry.Kind != entry.Kind || string(placed.Entry.Data) != string(entry.Data) {
+		t.Fatalf("placed application entry = %+v, err=%v", placed, err)
+	}
+	message, ok := placed.Entry.Model[0].(*ai.UserMessage)
+	if !ok || message.Content.Text != "ann: hello" {
+		t.Fatalf("placed user content = %+v", placed.Entry.Model)
 	}
 }
 

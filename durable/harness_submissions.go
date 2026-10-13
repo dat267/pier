@@ -3,6 +3,7 @@ package durable
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync/atomic"
 
 	"github.com/dat267/pier/ai"
@@ -22,7 +23,7 @@ type SubmissionDraft struct {
 	Content UserInput
 	// WhenBusy is the input's busy policy: steer, followUp or reject.
 	WhenBusy *string
-	// Entry is the write of a "write" draft.
+	// Entry is the write draft, or the kind/data override of an "input" draft.
 	Entry *EntryDraft
 }
 
@@ -214,6 +215,10 @@ func isSettledSubmission(record *SubmissionRecord) bool {
 
 // AdmitSubmission admits a submission inside a commit (spec §6).
 func AdmitSubmission(tx *Transaction, conversationID Id, draft SubmissionDraft, now int64, queueModes QueueModes) (Id, error) {
+	if draft.Type == SubmissionTypeInput && draft.Entry != nil &&
+		(draft.Entry.Kind == "" || strings.HasPrefix(draft.Entry.Kind, "pi.")) {
+		return 0, fmt.Errorf("An input entry's kind must be a non-empty string not starting with \"pi.\", got %s", draft.Entry.Kind)
+	}
 	if draft.RequestID != nil {
 		existing, err := tx.SubmissionByRequest(conversationID, *draft.RequestID)
 		if err != nil {
@@ -298,6 +303,14 @@ func AdmitSubmission(tx *Transaction, conversationID Id, draft SubmissionDraft, 
 				item.Mode = InboxSteer
 			}
 			item.Content = draft.Content
+			if draft.Entry != nil {
+				inputEntry := EntryDraft{Kind: draft.Entry.Kind, Data: append(json.RawMessage(nil), draft.Entry.Data...)}
+				encoded, err := marshalJSONValue(inputEntry)
+				if err != nil {
+					return 0, err
+				}
+				item.Entry = json.RawMessage(encoded)
+			}
 		}
 		if err := AppendInboxItem(inbox, item); err != nil {
 			return 0, err
@@ -341,11 +354,7 @@ func AdmitSubmission(tx *Transaction, conversationID Id, draft SubmissionDraft, 
 		}
 		return created.ID, nil
 	}
-	message, err := userMessageFromContent(draft.Content, now)
-	if err != nil {
-		return 0, err
-	}
-	entry, err := tx.AppendEntry(conversationID, EntryDraft{Kind: UserEntry.Kind, Model: []ai.Message{message}})
+	entry, err := appendInput(tx, conversationID, draft.Content, draft.Entry, now)
 	if err != nil {
 		return 0, err
 	}
@@ -360,6 +369,19 @@ func AdmitSubmission(tx *Transaction, conversationID Id, draft SubmissionDraft, 
 		return 0, err
 	}
 	return created.ID, nil
+}
+
+func appendInput(tx *Transaction, conversationID Id, content chord.JsonValue, override *EntryDraft, now int64) (*EntryRecord, error) {
+	message, err := userMessageFromContent(content, now)
+	if err != nil {
+		return nil, err
+	}
+	draft := EntryDraft{Kind: UserEntry.Kind, Model: []ai.Message{message}}
+	if override != nil {
+		draft.Kind = override.Kind
+		draft.Data = append(json.RawMessage(nil), override.Data...)
+	}
+	return tx.AppendEntry(conversationID, draft)
 }
 
 func liveRunPresent(live chord.JsonValue) bool {

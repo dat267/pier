@@ -34,8 +34,8 @@ const (
 	InboxWrite    = "write"
 )
 
-// InboxItem is a queued submission: user input for a run (steer/followUp with
-// content) or a passive entry write (with an EntryDraft).
+// InboxItem is a queued user input (with an optional application entry) or an
+// entry write; Mode distinguishes how the Entry field is decoded.
 type InboxItem struct {
 	ID      Id              `json:"id"`
 	Mode    string          `json:"mode"`
@@ -186,11 +186,15 @@ func ApplyBoundary(tx *Transaction, boundary *Boundary, at string, now int64) (B
 	placed := []Id{}
 	for _, index := range users {
 		item := items[index]
-		message, err := userMessageFromContent(item.Content, now)
-		if err != nil {
-			return BoundaryResult{}, err
+		var inputEntry *EntryDraft
+		if len(item.Entry) > 0 {
+			decoded, err := decodeInboxEntry(item)
+			if err != nil {
+				return BoundaryResult{}, err
+			}
+			inputEntry = &decoded
 		}
-		entry, err := tx.AppendEntry(boundary.ConversationID, EntryDraft{Kind: UserEntry.Kind, Model: []ai.Message{message}})
+		entry, err := appendInput(tx, boundary.ConversationID, item.Content, inputEntry, now)
 		if err != nil {
 			return BoundaryResult{}, err
 		}

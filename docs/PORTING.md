@@ -38,8 +38,9 @@ arrays, scalars, and `null` (`67996ab75`), and canceled HTTP tool calls are not
 retried after authorization recovery (`da0eadf04`). MCP startup now records
 resource capability without listing every resource or template (`#10526`,
 `f4cca2dc2`). Durable display-only writes append immediately even while busy,
-except when a queued reset must precede them (`#10407`, `e6b9a6af5`). Text print
-mode warns on a truncated final response and exits with status 1 (`#10799`,
+except when a queued reset must precede them; input submissions can also be
+placed as application entries (`#10407`, `e6b9a6af5`). Text print mode warns on
+a truncated final response and exits with status 1 (`#10799`,
 `441f5767c`). Anthropic retries preferred strict tools once
 without strict constraints for documented schema-size/tool-limit rejections
 (`#10409`, `d4d53612b`). Focused regression tests cover these fixes.
@@ -47,9 +48,9 @@ without strict constraints for documented schema-size/tool-limit rejections
 **v1.2.0 audit still open.** The new published configuration schemas still
 need a source-level parity review; they are configuration-editor support, not a
 runtime request path. Windows auth-lock acquisition also still lacks the
-bounded retry for transient `EPERM` (`#10801`, `e6fb2581d`). Durable input-entry
-semantics and other v1.2.0 additions, plus out-of-scope codemode work, are not
-fully audited. Do not treat the fix list above as a complete v1.2.0 port.
+bounded retry for transient `EPERM` (`#10801`, `e6fb2581d`). Remaining Durable
+v1.2.0 changes and out-of-scope codemode work are not fully audited. Do not
+treat the fix list above as a complete v1.2.0 port.
 
 Ported from it so far: the built-in catalog, regenerated from the tag's own generator
 (`claude-haiku-5-5`, the prompt-length pricing tiers for 154 models, and the model churn
