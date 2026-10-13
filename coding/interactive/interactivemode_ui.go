@@ -336,17 +336,17 @@ func (s *InteractiveUIState) ClearExtensionWidgets() {
 // WidgetKeysAbove returns the above-editor widget keys in insertion order
 // (sorted for determinism; upstream preserves Map insertion order).
 func (s *InteractiveUIState) WidgetKeysAbove() []string {
-	return sortedWidgetKeys(s.extensionWidgetsAbove)
+	return sortedMapKeys(s.extensionWidgetsAbove)
 }
 
 // WidgetKeysBelow returns the below-editor widget keys.
 func (s *InteractiveUIState) WidgetKeysBelow() []string {
-	return sortedWidgetKeys(s.extensionWidgetsBelow)
+	return sortedMapKeys(s.extensionWidgetsBelow)
 }
 
-func sortedWidgetKeys(widgets map[string]tui.Component) []string {
-	keys := make([]string, 0, len(widgets))
-	for key := range widgets {
+func sortedMapKeys[V any](values map[string]V) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
@@ -375,7 +375,7 @@ func (s *InteractiveUIState) RenderWidgetContainer(container *tui.Container, wid
 	if leadingSpacer {
 		container.AddChild(tui.NewSpacer(1))
 	}
-	for _, key := range sortedWidgetKeys(widgets) {
+	for _, key := range sortedMapKeys(widgets) {
 		container.AddChild(widgets[key])
 	}
 }

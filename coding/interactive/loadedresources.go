@@ -1,7 +1,6 @@
 package interactive
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -25,14 +24,7 @@ var gitPackagePathPattern = regexp.MustCompile(`git/[^/]+/[^/]+/(.*)`)
 // formatDisplayPath replaces the home directory with "~" (upstream
 // formatDisplayPath).
 func formatDisplayPath(p string) string {
-	home, err := os.UserHomeDir()
-	if err != nil || home == "" {
-		return p
-	}
-	if strings.HasPrefix(p, home) {
-		return "~" + p[len(home):]
-	}
-	return p
+	return ShortenPath(p)
 }
 
 // isPackageSource reports whether the resource came from an npm/git package.

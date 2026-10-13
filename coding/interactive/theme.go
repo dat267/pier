@@ -106,7 +106,7 @@ func NewTheme(fgColors map[string]ColorValue, bgColors map[string]ColorValue, mo
 	}
 
 	colors := withThemeColorFallbacks(fgColors)
-	for _, key := range sortedColorKeys(colors) {
+	for _, key := range sortedMapKeys(colors) {
 		ansi, concrete, isDefault, err := colorValueAnsi(colors[key], mode, false)
 		if err != nil {
 			panic(err.Error())
@@ -119,7 +119,7 @@ func NewTheme(fgColors map[string]ColorValue, bgColors map[string]ColorValue, mo
 		}
 	}
 	backgrounds := withBackgroundFallbacks(bgColors)
-	for _, key := range sortedColorKeys(backgrounds) {
+	for _, key := range sortedMapKeys(backgrounds) {
 		ansi, concrete, isDefault, err := colorValueAnsi(backgrounds[key], mode, true)
 		if err != nil {
 			panic(err.Error())
@@ -132,15 +132,6 @@ func NewTheme(fgColors map[string]ColorValue, bgColors map[string]ColorValue, mo
 		}
 	}
 	return theme
-}
-
-func sortedColorKeys(colors map[string]ColorValue) []string {
-	keys := make([]string, 0, len(colors))
-	for key := range colors {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	return keys
 }
 
 func tuiColorMode(mode ColorMode) tui.TerminalColorMode {
