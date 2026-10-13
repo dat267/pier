@@ -97,6 +97,23 @@ func TestLifecycleSwitchTuiMode(t *testing.T) {
 	if _, ok := lifecycle.options.UI.(*tui.MainScreen); !ok {
 		t.Fatalf("renderer = %T", lifecycle.options.UI)
 	}
+
+	// The theme is rebound only when the new renderer is started (upstream
+	// switchTuiMode returns before rebindTui when startRenderer is false).
+	switched := 0
+	lifecycle.options.OnTuiModeSwitched = func() { switched++ }
+	if !lifecycle.SwitchTuiMode("fullscreen", false, false) {
+		t.Fatal("unstarted switch failed")
+	}
+	if switched != 0 {
+		t.Fatalf("OnTuiModeSwitched ran %d times with startRenderer=false", switched)
+	}
+	if !lifecycle.SwitchTuiMode("regular", true, true) {
+		t.Fatal("started switch failed")
+	}
+	if switched != 1 {
+		t.Fatalf("OnTuiModeSwitched ran %d times with startRenderer=true", switched)
+	}
 }
 
 // TestLifecycleStopInteractiveTui covers the fullscreen transcript replay.

@@ -235,9 +235,8 @@ func (l *Lifecycle) SwitchTuiMode(mode string, restoreProgress bool, startRender
 	nextUI.Invalidate()
 	nextUI.SetFocus(focus)
 	if !startRenderer {
-		if l.options.OnTuiModeSwitched != nil {
-			l.options.OnTuiModeSwitched()
-		}
+		// Upstream returns before rebindTui: the theme rebind belongs to a
+		// renderer that is actually started (the exit replay does not rebind).
 		return true
 	}
 	nextUI.Start()
