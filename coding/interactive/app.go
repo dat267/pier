@@ -1290,6 +1290,14 @@ func (a *App) applyReloadedSettings() {
 
 func (a *App) updateThinkingBlockVisibility(hidden bool) {
 	a.display.HideThinkingBlock = hidden
+	// Upstream re-renders the existing assistant messages without rebuilding
+	// live tool components.
+	for _, child := range chatChildren(a.chat) {
+		if component, ok := child.(*AssistantMessageComponent); ok {
+			component.SetHideThinkingBlock(hidden)
+		}
+	}
+	a.ui.RequestRender(false)
 }
 
 func (a *App) markdownTheme() *tui.MarkdownTheme {

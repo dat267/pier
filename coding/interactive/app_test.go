@@ -433,3 +433,18 @@ func TestAppShowsStartupChangelogNotice(t *testing.T) {
 		t.Fatalf("chat = %q", lines)
 	}
 }
+
+// Toggling thinking-block visibility re-renders the existing assistant messages
+// (upstream updateThinkingBlockVisibility).
+func TestUpdateThinkingBlockVisibilityUpdatesComponents(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	markdownTheme := GetMarkdownTheme()
+	message := &ai.AssistantMessage{Content: ai.ContentList{ai.ThinkingContent{Thinking: "hmm"}}}
+	component := NewAssistantMessageComponent(message, false, &markdownTheme, "", 0, nil)
+	app.chat.AddChild(component)
+	app.updateThinkingBlockVisibility(true)
+	if !component.hideThinkingBlock {
+		t.Fatal("the rendered assistant message did not hide its thinking block")
+	}
+}
