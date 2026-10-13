@@ -297,6 +297,47 @@ func TestDecodePrintableKeyModifiers(t *testing.T) {
 	}
 }
 
+func TestShiftedSymbolsMatchTheirProducedCharacters(t *testing.T) {
+	SetKittyProtocolActive(true)
+	t.Cleanup(func() { SetKittyProtocolActive(false) })
+
+	kittyPlus := "\x1b[61:43;2u"
+	if !MatchesKey(kittyPlus, "+") || !MatchesKey(kittyPlus, "shift+=") {
+		t.Fatal("Kitty shifted-plus should match both logical and physical bindings")
+	}
+	if key, ok := ParseKey(kittyPlus); !ok || key != "+" {
+		t.Fatalf("ParseKey(shifted plus) = %q,%v", key, ok)
+	}
+
+	kittyCtrlPlus := "\x1b[61:43;6u"
+	if !MatchesKey(kittyCtrlPlus, "ctrl++") {
+		t.Fatal("Kitty Ctrl+Shift+= should match ctrl++")
+	}
+	if key, ok := ParseKey(kittyCtrlPlus); !ok || key != "ctrl++" {
+		t.Fatalf("ParseKey(Ctrl+Shift+=) = %q,%v", key, ok)
+	}
+
+	SetKittyProtocolActive(false)
+	xtermPlus := "\x1b[27;2;43~"
+	if !MatchesKey(xtermPlus, "+") {
+		t.Fatal("modifyOtherKeys shifted-plus should match its produced character")
+	}
+	if key, ok := ParseKey(xtermPlus); !ok || key != "+" {
+		t.Fatalf("ParseKey(modifyOtherKeys plus) = %q,%v", key, ok)
+	}
+	xtermCtrlPlus := "\x1b[27;6;43~"
+	if !MatchesKey(xtermCtrlPlus, "ctrl++") {
+		t.Fatal("modifyOtherKeys Ctrl+Shift+= should match ctrl++")
+	}
+	if key, ok := ParseKey(xtermCtrlPlus); !ok || key != "ctrl++" {
+		t.Fatalf("ParseKey(modifyOtherKeys Ctrl+Shift+=) = %q,%v", key, ok)
+	}
+
+	if key, ok := ParseKey("+"); !ok || key != "+" || !MatchesKey("+", "+") {
+		t.Fatalf("literal plus = %q,%v; MatchesKey = %v", key, ok, MatchesKey("+", "+"))
+	}
+}
+
 // TestParseKeyKittyPrintablePassthrough verifies plain CSI-u printable input.
 func TestParseKeyKittyPrintablePassthrough(t *testing.T) {
 	SetKittyProtocolActive(true)
