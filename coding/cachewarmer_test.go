@@ -302,6 +302,10 @@ func TestFormatCacheWarmingStatus(t *testing.T) {
 		!strings.Contains(got, "expected savings -$0.000") || !strings.Contains(got, "< $0.050") {
 		t.Fatalf("got = %q", got)
 	}
+	// A non-override decision names the action it took.
+	if !strings.Contains(got, " -> stop") {
+		t.Fatalf("got = %q; want an action suffix", got)
+	}
 	// Stopped and warming variants.
 	if got := FormatCacheWarmingStatus(CacheWarmingStatus{State: "inactive", Decision: decision}, now); !strings.HasPrefix(got, "Stopped (") {
 		t.Fatalf("got = %q", got)
@@ -310,7 +314,7 @@ func TestFormatCacheWarmingStatus(t *testing.T) {
 		t.Fatalf("got = %q", got)
 	}
 	// An extension override is called out.
-	if got := FormatCacheWarmingStatus(CacheWarmingStatus{State: "inactive", Decision: decision, ExtensionOverride: true}, now); !strings.Contains(got, "extension override") {
+	if got := FormatCacheWarmingStatus(CacheWarmingStatus{State: "inactive", Decision: decision, ExtensionOverride: true}, now); !strings.Contains(got, "extension override") || strings.Contains(got, " -> stop") {
 		t.Fatalf("got = %q", got)
 	}
 	// Decision now for an immediate refresh.

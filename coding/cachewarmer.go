@@ -550,6 +550,8 @@ func FormatCacheWarmingStatus(status CacheWarmingStatus, now int64) string {
 	details := formatCacheWarmingEconomics(*decision)
 	if status.ExtensionOverride {
 		details = "extension override, " + details
+	} else {
+		details += " -> " + decision.Action
 	}
 	if status.State == "inactive" {
 		return fmt.Sprintf("Stopped (%s)", details)
