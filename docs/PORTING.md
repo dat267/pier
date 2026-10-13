@@ -382,7 +382,10 @@ scope; MCP and `durable` are ported). The v1.0.1 (`a7229ddc`) → v1.0.2
   `handleChangelogCommand`), which was missing: it renders every changelog
   entry (newest first, links normalized) between dynamic borders, and
   `changelog` is in `BuiltinSlashCommands` for autocomplete. (`/share` and
-  `/bug` remain out of scope with the upload transport.)
+  `/bug` remain out of scope with the upload transport, so the
+  `maybeSuggestBugReport` hint stays out of scope too; its
+  `maybeShowInstallChangeWarning` companion is inert for a compiled binary that
+  embeds its code, as upstream documents for the Bun binary.)
 - `coding`: the `terminal.trueColor`/`terminal.hyperlinks` capability overrides
   were ignored. `SettingsManager.GetTerminalCapabilityOverrides` (upstream
   `getTerminalCapabilityOverrides`) resolves them, `cmd` forces truecolor before
