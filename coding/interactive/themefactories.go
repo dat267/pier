@@ -111,7 +111,20 @@ func GetResolvedThemeColors(themeName string) (map[string]string, error) {
 		name = CurrentThemeName()
 	}
 	if name == "" {
-		name = GetDefaultTheme()
+		// Upstream: `themeName ?? currentThemeName ?? SYSTEM_THEME_NAME`.
+		name = SystemThemeName
+	}
+	if name == SystemThemeName {
+		theme, err := loadTheme(SystemThemeName, "")
+		if err != nil {
+			return nil, err
+		}
+		colors := theme.Colors()
+		cssColors := make(map[string]string, len(colors))
+		for key, value := range colors {
+			cssColors[key] = tui.ColorToHex(value)
+		}
+		return cssColors, nil
 	}
 	isLight := name == "light"
 	themeJSON, err := loadThemeJSON(name)
@@ -149,7 +162,11 @@ func GetThemeExportColors(themeName string) (pageBg string, cardBg string, infoB
 		name = CurrentThemeName()
 	}
 	if name == "" {
-		name = GetDefaultTheme()
+		name = SystemThemeName
+	}
+	if name == SystemThemeName {
+		// Upstream returns {} for the system theme (it has no export section).
+		return "", "", "", nil
 	}
 	themeJSON, themeErr := loadThemeJSON(name)
 	if themeErr != nil {

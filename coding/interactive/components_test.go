@@ -255,3 +255,19 @@ func TestGetLanguageFromPathUsesSplitPop(t *testing.T) {
 		t.Fatal("dir/Makefile should not match (upstream looks up the whole path)")
 	}
 }
+
+// getResolvedThemeColors(undefined) loads the system theme (upstream's
+// `themeName ?? currentThemeName ?? SYSTEM_THEME_NAME`), which the export path
+// reaches when no theme name is given.
+func TestGetResolvedThemeColorsHandlesSystemTheme(t *testing.T) {
+	colors, err := GetResolvedThemeColors(SystemThemeName)
+	if err != nil {
+		t.Fatalf("system theme colors: %v", err)
+	}
+	if len(colors) == 0 {
+		t.Fatal("system theme colors empty")
+	}
+	if _, ok := colors["text"]; !ok {
+		t.Fatalf("system theme missing text: %v", colors)
+	}
+}
