@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math"
 	"math/rand"
 	"strings"
 	"sync"
@@ -940,8 +939,6 @@ func (c *FauxCore) CancelDeferred(requestModel *ai.Model, handle *ai.DeferredHan
 	}
 	return nil
 }
-
-var _ = math.Ceil // retained for parity notes
 
 // FauxProviderHandle is the faux provider registration surface (upstream
 // FauxProviderHandle minus the global-registry unregister, which arrives

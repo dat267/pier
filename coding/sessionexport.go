@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/dat267/pier/ai"
 )
 
 // Port of core/session-export.ts: serializing the current branch as JSONL.
@@ -78,5 +76,3 @@ func ExportSessionToJsonl(sessionManager *SessionManager, outputPath string, cre
 func (s *AgentSession) ExportToJsonl(outputPath string) (string, error) {
 	return ExportSessionToJsonl(s.Sessions, outputPath, nil)
 }
-
-var _ = ai.RoleUser

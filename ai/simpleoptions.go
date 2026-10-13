@@ -1,7 +1,5 @@
 package ai
 
-import "fmt"
-
 // Port of api/simple-options.ts.
 
 const (
@@ -143,5 +141,3 @@ func AdjustMaxTokensForThinking(baseMaxTokens *int, modelMaxTokens int, reasonin
 	}
 	return maxTokens, thinkingBudget
 }
-
-var _ = fmt.Sprintf

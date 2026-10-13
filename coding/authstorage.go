@@ -571,8 +571,6 @@ var (
 	sharedAuthStorageRev  *string
 )
 
-var _ = sharedAuthStorageRev
-
 // NewAuthStorage opens the auth.json at authPath (or the default under the
 // agent dir).
 func NewAuthStorage(authPath string) *AuthStorage {

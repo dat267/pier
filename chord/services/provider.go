@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -1037,5 +1036,3 @@ func ValidateRemoteServiceImplementation(serviceID string, members Members) erro
 	_, err := classifyMembers(serviceID, members)
 	return err
 }
-
-var _ = context.Background

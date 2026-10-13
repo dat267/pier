@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strings"
 	"sync"
 
 	"github.com/dat267/pier/chord"
@@ -1159,5 +1158,3 @@ func removeString(values []string, target string) []string {
 	}
 	return kept
 }
-
-var _ = strings.Compare

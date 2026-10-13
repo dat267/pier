@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 )
 
@@ -329,5 +328,3 @@ func CreateGrammarToolInputProperties(tools []Tool, supportsOpenAIGrammarTools b
 	}
 	return properties
 }
-
-var _ = sort.Strings

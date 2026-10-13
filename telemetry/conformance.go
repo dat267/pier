@@ -3,7 +3,6 @@ package telemetry
 import (
 	"errors"
 	"fmt"
-	"strings"
 )
 
 // Port of src/testing/conformance.ts: the runner-independent conformance
@@ -407,5 +406,3 @@ func RunAdapterConformance(reporter interface {
 		}
 	}
 }
-
-var _ = strings.TrimSpace

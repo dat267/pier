@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -488,5 +487,3 @@ func newAttachmentID() string {
 	}
 	return id
 }
-
-var _ = errors.Is

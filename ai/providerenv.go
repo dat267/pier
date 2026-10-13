@@ -1,7 +1,6 @@
 package ai
 
 import (
-	"context"
 	"os"
 )
 
@@ -28,5 +27,3 @@ func GetProviderEnvValueOr(name string, env ProviderEnv) string {
 	v, _ := GetProviderEnvValue(name, env)
 	return v
 }
-
-var _ = context.Background

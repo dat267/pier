@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/dat267/pier/ai"
@@ -1091,8 +1090,6 @@ func readSessionHeaderForDiscovery(filePath string) *SessionHeader {
 	}
 	return nil
 }
-
-var _ = sync.Mutex{}
 
 // AppendUsage records model-attributed usage that does not participate in LLM
 // context (upstream appendUsage; kind is a category such as "cache_warm").

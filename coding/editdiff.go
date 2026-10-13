@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dat267/pier/ai"
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -666,5 +665,3 @@ func GenerateDiffString(oldContent, newContent string, contextLines int) (diff s
 
 	return strings.Join(output, "\n"), firstChanged, true
 }
-
-var _ = ai.TextContent{}

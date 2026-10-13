@@ -1,7 +1,6 @@
 package ai
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
@@ -448,5 +447,3 @@ func bedrockARNRegion(modelID string) string {
 	}
 	return parts[3]
 }
-
-var _ = json.Marshal

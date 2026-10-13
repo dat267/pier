@@ -1,7 +1,6 @@
 package durable
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -600,4 +599,3 @@ func sameContent(left, right []ai.UserContent) bool {
 }
 
 var _ ToolExecutionApi = (*toolExecutionApi)(nil)
-var _ = context.Background

@@ -21,7 +21,6 @@ import (
 	"path/filepath"
 	goruntime "runtime"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/dat267/pier/ai"
@@ -920,7 +919,6 @@ func resumeSession(args *coding.Args, cwd string, agentDir string, settings *cod
 }
 
 // ensure syscall is used on platforms where the signal set is empty.
-var _ = syscall.SIGTERM
 
 // providerTokenForMCP resolves the token of a `/login` provider for an MCP
 // server with `auth: { provider }` (upstream's providerToken callback). It

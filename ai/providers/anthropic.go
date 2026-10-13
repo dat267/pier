@@ -2,7 +2,6 @@ package providers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -143,5 +142,3 @@ func AnthropicProvider(streams ai.ProviderStreams) *ai.Provider {
 		}(),
 	})
 }
-
-var _ = json.Marshal

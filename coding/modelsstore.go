@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -388,5 +387,3 @@ func cloneModelsStoreEntry(entry *ai.ModelsStoreEntry) *ai.ModelsStoreEntry {
 	}
 	return &cloned
 }
-
-var _ = os.ErrNotExist
