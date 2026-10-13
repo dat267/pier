@@ -176,6 +176,10 @@ func TestCompositeTuiLine(t *testing.T) {
 		{"wide", "日本語日本語", "XX", 2, 2, 10, "日" + segmentReset + "XX" + segmentReset + "語日本"},
 		{"overflow clipped", "abcdef", "WXYZ", 2, 4, 6, "ab" + segmentReset + "WXYZ" + segmentReset},
 		{"image passthrough", "\x1b_Gimg", "XY", 0, 2, 10, "\x1b_Gimg"},
+		// v1.2.0: an overlay ending directly left of the cursor keeps the
+		// zero-width CursorMarker at the boundary, so the cursor is not lost.
+		{"keeps cursor marker at overlay edge", "abc" + CursorMarker + "def", "XXX", 0, 3, 20,
+			segmentReset + "XXX" + segmentReset + CursorMarker + "def" + strings.Repeat(" ", 14)},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

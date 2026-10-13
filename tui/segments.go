@@ -71,9 +71,10 @@ func ExtractSegments(line string, beforeEnd int, afterStart int, afterLen int, s
 			// Include ANSI codes in their respective segments.
 			if currentCol < beforeEnd {
 				pendingAnsiBefore += code
-			} else if currentCol >= afterStart && currentCol < afterEnd && afterStarted {
-				// Only include after we've started "after" (styling already
-				// prepended).
+			} else if currentCol >= afterStart && currentCol < afterEnd && (afterStarted || strings.HasPrefix(code, "\x1b_")) {
+				// SGR codes are only included once "after" started (styling is
+				// already prepended). Zero-width APC markers such as CursorMarker
+				// are not tracked styling, so keep them at the boundary too.
 				after += code
 			}
 			i += length
