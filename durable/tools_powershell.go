@@ -122,7 +122,15 @@ func CreatePowerShellTool(options *PowerShellToolOptions) ToolRegistration {
 				return ToolExecutionResult{}, execErr
 			}
 			if result.ExitCode != 0 {
-				return ToolExecutionResult{}, fmt.Errorf("Command exited with code %d", result.ExitCode)
+				isError := true
+				code := "exit_code"
+				return ToolExecutionResult{
+					IsError: &isError,
+					Diagnostics: []ToolDiagnostic{{
+						Severity: DiagnosticError, Code: &code,
+						Message: fmt.Sprintf("Command exited with code %d", result.ExitCode),
+					}},
+				}, nil
 			}
 			return ToolExecutionResult{}, nil
 		},

@@ -46,7 +46,9 @@ non-cyclic wait on an owner (`#10411`, `eb2fce43d`). Anthropic retries
 preferred strict tools once without strict constraints for documented schema-size/tool-limit
 rejections (`#10409`, `d4d53612b`). A failed blocking threshold compaction now ends its
 waiting generation with `model_error` instead of sending an oversized request
-(`89e5c2c07`). `auth.json` lock acquisition retries transient Windows `EPERM`
+(`89e5c2c07`). Bash and PowerShell nonzero exits now return error tool results
+with an `exit_code` diagnostic rather than throwing (`eba849739`). `auth.json`
+lock acquisition retries transient Windows `EPERM`
 within a bounded count while non-Windows failures remain immediate (`#10801`,
 `e6fb2581d`). Focused regression tests cover these fixes.
 

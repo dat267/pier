@@ -99,9 +99,14 @@ func TestBashTool(t *testing.T) {
 	if _, err := CreateBashTool(nil).Execute(JsonObject{"command": "echo", "timeout": float64(0)}, api, ctx); err == nil {
 		t.Fatal("a zero timeout must fail")
 	}
-	// A nonzero exit is an error.
-	if _, err := CreateBashTool(nil).Execute(JsonObject{"command": "exit 3"}, api, ctx); err == nil ||
-		!strings.Contains(err.Error(), "Command exited with code 3") {
-		t.Fatalf("err = %v", err)
+	// A nonzero exit is an error result with an exit-code diagnostic, not a thrown tool error.
+	result, err := CreateBashTool(nil).Execute(JsonObject{"command": "exit 3"}, api, ctx)
+	if err != nil {
+		t.Fatalf("execute error = %v", err)
+	}
+	if result.IsError == nil || !*result.IsError || len(result.Diagnostics) != 1 ||
+		result.Diagnostics[0].Code == nil || *result.Diagnostics[0].Code != "exit_code" ||
+		result.Diagnostics[0].Severity != DiagnosticError || result.Diagnostics[0].Message != "Command exited with code 3" {
+		t.Fatalf("tool result = %+v", result)
 	}
 }

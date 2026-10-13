@@ -16,8 +16,14 @@ func TestPowerShellToolReportsSpawnAndExitFailures(t *testing.T) {
 
 	nonzero := &argvCaptureEnv{testToolEnv: base, installed: map[string]bool{"pwsh": true}, exitCode: 3}
 	api := &fakeToolApi{env: nonzero}
-	if _, err := CreatePowerShellTool(nil).Execute(JsonObject{"command": "exit 3"}, api, context.Background()); err == nil || err.Error() != "Command exited with code 3" {
-		t.Fatalf("PowerShell exit error = %v", err)
+	result, err := CreatePowerShellTool(nil).Execute(JsonObject{"command": "exit 3"}, api, context.Background())
+	if err != nil {
+		t.Fatalf("PowerShell execute error = %v", err)
+	}
+	if result.IsError == nil || !*result.IsError || len(result.Diagnostics) != 1 ||
+		result.Diagnostics[0].Code == nil || *result.Diagnostics[0].Code != "exit_code" ||
+		result.Diagnostics[0].Message != "Command exited with code 3" {
+		t.Fatalf("PowerShell result = %+v", result)
 	}
 	if api.output.String() != "héllo\n" {
 		t.Fatalf("output before failure = %q", api.output.String())
