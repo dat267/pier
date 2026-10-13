@@ -21,11 +21,12 @@ import (
 // mcpFakeServer answers initialize, tools/list and tools/call (upstream's
 // in-memory server).
 type mcpFakeServer struct {
-	mu      sync.Mutex
-	methods []string
-	noTools bool
-	calls   int
-	onCall  func()
+	mu           sync.Mutex
+	methods      []string
+	noTools      bool
+	hasResources bool
+	calls        int
+	onCall       func()
 }
 
 func newMCPFakeServer(t *testing.T, noTools bool) (*mcpFakeServer, *mcp.InMemoryTransport) {
@@ -48,6 +49,9 @@ func newMCPFakeServer(t *testing.T, noTools bool) (*mcpFakeServer, *mcp.InMemory
 				capabilities := map[string]any{"tools": map[string]any{}}
 				if fake.noTools {
 					capabilities = map[string]any{"prompts": map[string]any{}}
+				}
+				if fake.hasResources {
+					capabilities["resources"] = map[string]any{}
 				}
 				result = map[string]any{
 					"protocolVersion": protocol.LatestProtocolVersion,
@@ -242,6 +246,23 @@ func TestMcpConnectionRetriesExpiredSession(t *testing.T) {
 	}
 	if opened() != 2 {
 		t.Fatalf("opened = %d", opened())
+	}
+}
+
+func TestMcpConnectionDoesNotListResourcesAtConnect(t *testing.T) {
+	fake, client := newMCPFakeServer(t, false)
+	fake.hasResources = true
+	connection, _ := mcpTestConnection(t, McpServerConfig{Command: "unused"}, []func() mcp.Transport{
+		func() mcp.Transport { return client },
+	})
+	if _, err := connection.GetClient(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if !connection.HasResources {
+		t.Fatal("server resource capability was not retained")
+	}
+	if got := strings.Join(fake.recordedMethods(), ","); got != "initialize,tools/list" {
+		t.Fatalf("connect methods = %q, want initialize,tools/list", got)
 	}
 }
 

@@ -113,9 +113,6 @@ type McpServerConnection struct {
 	Error        string
 	Tools        []protocol.Tool
 	HasResources bool
-	Resources    []protocol.Resource
-	// ResourceTemplates are the server's resource templates.
-	ResourceTemplates []protocol.ResourceTemplate
 	// Instructions is the server's initialize instructions.
 	Instructions *string
 	// Challenge is the last OAuth challenge, for sign-in.
@@ -448,8 +445,7 @@ func (c *McpServerConnection) open(ctx context.Context) (*mcp.Client, error) {
 	}
 }
 
-// connectOnce builds the client, connects and lists the server's tools and
-// resources (upstream connectOnce).
+// connectOnce builds the client, connects and lists the server's tools (upstream connectOnce).
 func (c *McpServerConnection) connectOnce(ctx context.Context) (*mcp.Client, error) {
 	roots := []protocol.Root{}
 	if c.cwd != "" {
@@ -492,9 +488,6 @@ func (c *McpServerConnection) connectOnce(ctx context.Context) (*mcp.Client, err
 	client.OnNotification("notifications/tools/list_changed", func(json.RawMessage) {
 		c.refreshTools(ctx, client)
 	})
-	client.OnNotification("notifications/resources/list_changed", func(json.RawMessage) {
-		c.refreshResources(ctx, client)
-	})
 	client.OnClose(func() {
 		c.handleClientClose(client, transport)
 	})
@@ -509,10 +502,6 @@ func (c *McpServerConnection) connectOnce(ctx context.Context) (*mcp.Client, err
 			return nil, err
 		}
 		tools = listed
-	}
-	resources, templates := []protocol.Resource{}, []protocol.ResourceTemplate{}
-	if hasResources {
-		resources, templates = fetchMcpResources(ctx, client)
 	}
 	if c.isClosed() {
 		_ = client.Close(ctx)
@@ -532,8 +521,6 @@ func (c *McpServerConnection) connectOnce(ctx context.Context) (*mcp.Client, err
 	c.client = client
 	c.Tools = tools
 	c.HasResources = hasResources
-	c.Resources = resources
-	c.ResourceTemplates = templates
 	instructions := client.Instructions()
 	if instructions != nil {
 		trimmed := strings.TrimSpace(*instructions)
@@ -559,20 +546,6 @@ func (c *McpServerConnection) connectOnce(ctx context.Context) (*mcp.Client, err
 	c.mu.Unlock()
 	c.changed()
 	return client, nil
-}
-
-// fetchMcpResources lists resources and templates, tolerating servers that do
-// not implement them (upstream fetchResources).
-func fetchMcpResources(ctx context.Context, client *mcp.Client) ([]protocol.Resource, []protocol.ResourceTemplate) {
-	resources := []protocol.Resource{}
-	if listed, err := client.ListResources(ctx, mcp.RequestOptions{}); err == nil {
-		resources = listed
-	}
-	templates := []protocol.ResourceTemplate{}
-	if listed, err := client.ListResourceTemplates(ctx, mcp.RequestOptions{}); err == nil {
-		templates = listed
-	}
-	return resources, templates
 }
 
 // connectFailed records the failure and returns the user-facing error
@@ -633,23 +606,6 @@ func (c *McpServerConnection) refreshTools(ctx context.Context, client *mcp.Clie
 	}
 	c.mu.Unlock()
 	if err == nil && c.onTools != nil {
-		c.onTools(c)
-	}
-	c.changed()
-}
-
-// refreshResources re-lists the resources after a list_changed notification.
-func (c *McpServerConnection) refreshResources(ctx context.Context, client *mcp.Client) {
-	resources, templates := fetchMcpResources(ctx, client)
-	c.mu.Lock()
-	if c.client != client || c.closed {
-		c.mu.Unlock()
-		return
-	}
-	c.Resources = resources
-	c.ResourceTemplates = templates
-	c.mu.Unlock()
-	if c.onTools != nil {
 		c.onTools(c)
 	}
 	c.changed()
