@@ -150,9 +150,21 @@ func extractCompleteSequences(buffer string) (sequences []string, remainder stri
 		remaining := buffer[pos:]
 
 		if startsWith(remaining, stdinEscape) {
+			terminalReply := terminalReplyHeaderRegex.MatchString(remaining)
 			// Find the end of this escape sequence.
 			seqEnd := 1
 			for seqEnd <= len(remaining) {
+				if terminalReply && seqEnd > 2 {
+					char := remaining[seqEnd-1]
+					if char == '\x18' || char == '\x1a' {
+						pos += seqEnd
+						break
+					}
+					if char == stdinEscape[0] && seqEnd < len(remaining) && remaining[seqEnd] != 0x5c {
+						pos += seqEnd - 1
+						break
+					}
+				}
 				candidate := remaining[:seqEnd]
 				status := isCompleteSequence(candidate)
 

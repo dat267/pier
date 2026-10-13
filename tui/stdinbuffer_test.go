@@ -71,6 +71,24 @@ func TestStdinBufferKeepsDelayedTerminalRepliesBuffered(t *testing.T) {
 	}
 }
 
+func TestStdinBufferDiscardsCanceledTerminalReply(t *testing.T) {
+	buffer, emitted, _ := collectBuffer(StdinBufferOptions{Timeout: 10})
+	buffer.ProcessString("\x1b]11;rgb:0000\x18x")
+	if got := emitted(); strings.Join(got, "|") != "x" {
+		t.Fatalf("sequences after canceled reply = %q, want only following key", got)
+	}
+}
+
+func TestStdinBufferRecoversWhenNewEscapeAbortsTerminalReply(t *testing.T) {
+	buffer, emitted, _ := collectBuffer(StdinBufferOptions{Timeout: 10})
+	buffer.ProcessString("\x1b]11;rgb:0000")
+	buffer.ProcessString("\x1b[Ahello")
+	want := []string{"\x1b[A", "h", "e", "l", "l", "o"}
+	if got := emitted(); strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("sequences after unterminated reply = %q, want %q", got, want)
+	}
+}
+
 func TestStdinBufferCompleteSequences(t *testing.T) {
 	buffer, emitted, resetEmitted := collectBuffer(StdinBufferOptions{Timeout: 10})
 
