@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// Port of src/modes/interactive/theme/theme-json.ts: the theme document shape
+// Port of src/modes/interactive/theme/theme-schema.ts: the theme document shape
 // and its structural validation.
 //
 // Upstream validates with typebox (kept out of the palette path to avoid the

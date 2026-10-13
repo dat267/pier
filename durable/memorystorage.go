@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-// Port of src/memory-storage.ts: the detached in-memory reference Storage.
+// Port of src/storage/memory.ts: the detached in-memory reference Storage.
 //
 // Reads and retained writes are cloned intentionally to match the ownership
 // boundary of serialization-backed stores. This is backend conformance, not

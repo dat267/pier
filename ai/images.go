@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// Port of images-models.ts: the image-generation counterpart of Models.
+// Port of image-models.ts: the image-generation counterpart of Models.
 
 //go:embed image_catalog.json
 var imageCatalogJSON []byte
