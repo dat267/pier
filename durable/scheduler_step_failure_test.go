@@ -13,10 +13,13 @@ func TestStepCommitFailureFailsSession(t *testing.T) {
 	session, storage := newRootSession(t)
 	scheduler := newTestScheduler(t, session, storage)
 	taskID := Id(42)
+	// Open schedules reconciliation, so fixture writes need the scheduler lock.
+	scheduler.mu.Lock()
 	scheduler.mirror.Live[taskID] = TaskRecord{
 		ID: taskID, ConversationID: RootConversationID, Kind: "test.step-failure",
 		State: TaskState{Status: TaskRunning},
 	}
+	scheduler.mu.Unlock()
 	invocation := NewInvocation(taskID, RootConversationID, "run", context.Background())
 	_, _, err := scheduler.step(invocation, func(tx *Transaction, current TaskRecord) (PhaseDecision, error) {
 		return PhaseDecision{}, errors.New("step commit failed")
