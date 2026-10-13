@@ -141,6 +141,33 @@ func TestPrintModeTextReportsAnErroredResponse(t *testing.T) {
 	}
 }
 
+func TestPrintModeWarnsAndReturnsFailureForTruncatedResponse(t *testing.T) {
+	truncated := createAssistantMessageT("partial response")
+	truncated.StopReason = ai.StopLength
+	session, sessions := newPrintSession(t, truncated)
+	var exitCode int
+	var output string
+	diagnostics := captureStdout(t, func() {
+		stderr := os.Stderr
+		os.Stderr = os.Stdout
+		defer func() { os.Stderr = stderr }()
+		output = captureStdout(t, func() {
+			exitCode = RunPrintMode(session, sessions, PrintModeOptions{
+				Mode: CLIModeText, InitialMessage: "finish this",
+			})
+		})
+	})
+	if exitCode != 1 {
+		t.Fatalf("exit code = %d, want 1", exitCode)
+	}
+	if strings.TrimSpace(output) != "partial response" {
+		t.Fatalf("stdout = %q", output)
+	}
+	if warning := "Response was truncated: the model reached its output token limit."; !strings.Contains(diagnostics, warning) {
+		t.Fatalf("stderr = %q, want warning %q", diagnostics, warning)
+	}
+}
+
 func TestPrintModeJSONStreamsHeaderAndEvents(t *testing.T) {
 	session, sessions := newPrintSession(t, createAssistantMessageT("reply"))
 	var exitCode int

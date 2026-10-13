@@ -30,8 +30,9 @@ Unhandled mouse-wheel input scrolls the transcript behind a focused overlay
 version, and Kitty graphics replies remain buffered until their terminator
 (`edb2eb966`). MCP tool `structuredContent` accepts every JSON value, including
 arrays, scalars, and `null` (`67996ab75`), and canceled HTTP tool calls are not
-retried after authorization recovery (`da0eadf04`). Focused regression tests
-cover these fixes.
+retried after authorization recovery (`da0eadf04`). Text print mode warns on a
+truncated final response and exits with status 1 (`#10799`, `441f5767c`).
+Focused regression tests cover these fixes.
 
 Ported from it so far: the built-in catalog, regenerated from the tag's own generator
 (`claude-haiku-5-5`, the prompt-length pricing tiers for 154 models, and the model churn

@@ -157,12 +157,16 @@ func RunPrintMode(session *AgentSession, sessions *SessionManager, options Print
 						out.writeLine(text.Text)
 					}
 				}
+				if assistant.StopReason == ai.StopLength {
+					fmt.Fprintln(os.Stderr, "Response was truncated: the model reached its output token limit.")
+					exitCode = 1
+				}
 			}
 		}
 	}
 
 	out.flush()
-	return 0
+	return exitCode
 }
 
 // jsonSessionEvent is the JSON stdout wire shape for one session event. It is
