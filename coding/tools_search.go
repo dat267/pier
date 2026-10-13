@@ -31,7 +31,7 @@ type FindToolDetails struct {
 	ResultLimitReached *float64          `json:"resultLimitReached,omitempty"`
 }
 
-var findSchemaJSON = mustSchemaJSON(map[string]any{
+var findSchemaJSON = mustMarshalJSON(map[string]any{
 	"type": "object",
 	"properties": map[string]any{
 		"pattern": map[string]any{"type": "string", "description": "Glob pattern to match files, e.g. '*.ts', '**/*.json', or 'src/**/*.spec.ts'"},
@@ -207,7 +207,7 @@ type GrepToolDetails struct {
 	LinesTruncated    *bool             `json:"linesTruncated,omitempty"`
 }
 
-var grepSchemaJSON = mustSchemaJSON(map[string]any{
+var grepSchemaJSON = mustMarshalJSON(map[string]any{
 	"type": "object",
 	"properties": map[string]any{
 		"pattern":    map[string]any{"type": "string", "description": "Search pattern (regex or literal string)"},

@@ -347,7 +347,7 @@ func (s *FileModelsStore) Delete(providerID string, ctx context.Context) error {
 		current, order := parseStoredModels(content)
 		delete(current, providerID)
 		latest = current
-		latestOrder = removeModelsOrder(order, providerID)
+		latestOrder = removeProviderOrder(order, providerID)
 		encoded, err := marshalStoredModels(current, latestOrder)
 		if err != nil {
 			return LockResult{}, err
@@ -371,16 +371,6 @@ func appendModelsOrder(order []string, providerID string) []string {
 		}
 	}
 	return append(append([]string{}, order...), providerID)
-}
-
-func removeModelsOrder(order []string, providerID string) []string {
-	out := make([]string, 0, len(order))
-	for _, key := range order {
-		if key != providerID {
-			out = append(out, key)
-		}
-	}
-	return out
 }
 
 // cloneModelsStoreEntry deep-copies a catalog entry (structuredClone).

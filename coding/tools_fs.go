@@ -43,7 +43,7 @@ type ReadToolDetails struct {
 }
 
 // readSchemaJSON mirrors the TypeBox schema.
-var readSchemaJSON = mustSchemaJSON(map[string]any{
+var readSchemaJSON = mustMarshalJSON(map[string]any{
 	"type": "object",
 	"properties": map[string]any{
 		"path":   map[string]any{"type": "string", "description": "Path to the file to read (relative or absolute)"},
@@ -52,14 +52,6 @@ var readSchemaJSON = mustSchemaJSON(map[string]any{
 	},
 	"required": []string{"path"},
 })
-
-func mustSchemaJSON(v any) json.RawMessage {
-	enc, err := ai.MarshalJSON(v)
-	if err != nil {
-		panic(err)
-	}
-	return enc
-}
 
 // ReadToolDescription is upstream's read description.
 const ReadToolDescription = "Read the contents of a file. Supports text files and images (jpg, png, gif, webp, bmp). Images are sent as attachments. For text files, output is truncated to 2000 lines or 50KB (whichever is hit first). Use offset/limit for large files. When you need the full file, continue with offset until complete."
@@ -281,7 +273,7 @@ func DetectImageMimeTypeFromFile(path string) string {
 // WriteToolDescription is upstream's write description.
 const WriteToolDescription = "Write content to a file. Creates the file if it doesn't exist, overwrites if it does. Automatically creates parent directories."
 
-var writeSchemaJSON = mustSchemaJSON(map[string]any{
+var writeSchemaJSON = mustMarshalJSON(map[string]any{
 	"type": "object",
 	"properties": map[string]any{
 		"path":    map[string]any{"type": "string", "description": "Path to the file to write (relative or absolute)"},
@@ -346,7 +338,7 @@ type LsToolDetails struct {
 // LsToolDescription is upstream's ls description.
 const LsToolDescription = "List directory contents. Returns entries sorted alphabetically, with '/' suffix for directories. Includes dotfiles. Output is truncated to 500 entries or 50KB (whichever is hit first)."
 
-var lsSchemaJSON = mustSchemaJSON(map[string]any{
+var lsSchemaJSON = mustMarshalJSON(map[string]any{
 	"type": "object",
 	"properties": map[string]any{
 		"path":  map[string]any{"type": "string", "description": "Directory to list (default: current directory)"},

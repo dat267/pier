@@ -474,7 +474,7 @@ func BashToolDescription(shellName string) string {
 		shellName, DefaultMaxLines, DefaultMaxBytes/1024)
 }
 
-var bashSchemaJSON = mustSchemaJSON(map[string]any{
+var bashSchemaJSON = mustMarshalJSON(map[string]any{
 	"type": "object",
 	"properties": map[string]any{
 		"command": map[string]any{"type": "string", "description": "Shell command to execute"},
