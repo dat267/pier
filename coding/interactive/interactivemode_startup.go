@@ -172,7 +172,10 @@ func (w *StartupWiring) RebuildChatFromMessages() {
 		return
 	}
 	w.Chat.Clear()
-	w.Transcript.RenderSessionEntries(w.SessionInfo.BuildContextEntriesForLeaf(), false, false)
+	// Upstream rebuildChatFromMessages uses the renderSessionEntries defaults:
+	// the footer is invalidated, the editor border refreshed, and the editor
+	// history repopulated.
+	w.Transcript.RenderSessionEntries(w.SessionInfo.BuildContextEntriesForLeaf(), true, true)
 }
 
 // ClearChatAndRenderInitialMessages resets the transcript after a branch

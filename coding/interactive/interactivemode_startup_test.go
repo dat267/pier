@@ -310,3 +310,22 @@ func TestClearChatAndRenderInitialMessages(t *testing.T) {
 		t.Errorf("the session context was not re-rendered:\n%s", lines)
 	}
 }
+
+// TestStartupRebuildUpdatesFooter covers the updateFooter path on the chat
+// rebuild (upstream rebuildChatFromMessages -> renderSessionItems invalidates
+// the footer and refreshes the editor border).
+func TestStartupRebuildUpdatesFooter(t *testing.T) {
+	wiring, _ := newStartupTestWiring(t)
+	manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: boolPtr(false)})
+	manager.AppendMessage(ai.Message(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}}))
+	wiring.SessionInfo = manager
+	transcript := NewTranscriptRenderer(wiring.Chat, nil, wiring.Settings, nil, manager)
+	wiring.Transcript = transcript
+	borderUpdates := 0
+	transcript.UpdateEditorBorderColor = func() { borderUpdates++ }
+
+	wiring.RebuildChatFromMessages()
+	if borderUpdates != 1 {
+		t.Fatalf("editor border updates = %d", borderUpdates)
+	}
+}
