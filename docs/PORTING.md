@@ -59,8 +59,8 @@ tests cover these fixes.
 **v1.2.0 audit still open.** The new published configuration schemas still
 need a source-level parity review; they are configuration-editor support, not a
 runtime request path. Remaining Durable v1.2.0 gaps include `listFiles`,
-structured tool outputs, and nested/deferred tool execution; codemode
-implementation remains out of scope. Do not treat the fix list above as a complete v1.2.0 port.
+structured tool outputs, visible compaction-failure state, and nested/deferred
+tool execution; codemode implementation remains out of scope. Do not treat the fix list above as a complete v1.2.0 port.
 
 Ported from it so far: the built-in catalog, regenerated from the tag's own generator
 (`claude-haiku-5-5`, the prompt-length pricing tiers for 154 models, and the model churn
