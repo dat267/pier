@@ -168,6 +168,10 @@ func TestRunStartupHeader(t *testing.T) {
 		!strings.Contains(lines, "ctrl+c/ctrl+d clear/exit") {
 		t.Fatalf("compact header = %q", lines)
 	}
+	// Both header variants end with the onboarding line.
+	if !strings.Contains(lines, "Pi can explain its own features") {
+		t.Fatalf("compact header missing the onboarding line: %q", lines)
+	}
 	// quietStartup: "header" hides the startup details (upstream
 	// shouldShowStartupDetails).
 	wiring.QuietStartup = coding.QuietStartupSetting{Header: true}
@@ -186,6 +190,9 @@ func TestRunStartupHeader(t *testing.T) {
 	}
 	if !strings.Contains(lines, "to paste files on macOS, images, or text") {
 		t.Fatalf("expanded header missing the paste hint: %q", lines)
+	}
+	if !strings.Contains(lines, "Pi can explain its own features") {
+		t.Fatalf("expanded header missing the onboarding line: %q", lines)
 	}
 	if !wiring.GetStartupExpansionState() {
 		t.Fatal("expansion state")
