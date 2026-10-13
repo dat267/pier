@@ -116,7 +116,14 @@ func (r *schedulerRuntime) Commit(change func(tx *Transaction, current RunningTa
 		if next == nil {
 			return nil
 		}
-		return CommitTaskState(tx, r.scheduler.LiveRecords(), found, *next, nil)
+		liveRecords := r.scheduler.LiveRecords()
+		overlay := OverlayOf(tx)
+		graph := SchedulerGraph{Live: RecordsByID(liveRecords), Overlay: &overlay}
+		allLive := LiveRecordsWithOverlay(liveRecords, overlay)
+		validateWait := func(on []Id, policy string) error {
+			return ValidateWaitCycle(r.invocation.Mode, found, on, policy, allLive, graph, tx.Task)
+		}
+		return CommitTaskState(tx, liveRecords, found, *next, validateWait)
 	})
 }
 

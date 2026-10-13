@@ -3,6 +3,7 @@ package durable
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -164,6 +165,23 @@ func TestValidateWait(t *testing.T) {
 	}
 	if err := ValidateWait("run", current, []Id{2}, JoinAllSettled, nil, member); err != nil {
 		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestValidateWaitCycleDetectsMutualWaits(t *testing.T) {
+	a := TaskRecord{ID: 2, ConversationID: RootConversationID, State: TaskState{Status: TaskWaiting, On: []Id{3}}}
+	b := TaskRecord{ID: 3, ConversationID: RootConversationID, State: TaskState{Status: TaskRunning}}
+	live := []TaskRecord{a, b}
+	graph := SchedulerGraph{Live: RecordsByID(live), Edges: map[Id]*Id{RootConversationID: nil}}
+	err := ValidateWaitCycle("run", b, []Id{a.ID}, JoinAllSettled, live, graph, func(id Id) (*TaskRecord, error) {
+		records := map[Id]TaskRecord{a.ID: a, b.ID: b}
+		if record, ok := records[id]; ok {
+			return &record, nil
+		}
+		return nil, nil
+	})
+	if err == nil || !strings.Contains(err.Error(), "wait cycle") {
+		t.Fatalf("cycle validation error = %v", err)
 	}
 }
 

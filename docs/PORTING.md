@@ -41,9 +41,10 @@ resource capability without listing every resource or template (`#10526`,
 except when a queued reset must precede them; input submissions can also be
 placed as application entries (`#10407`, `e6b9a6af5`). Text print mode warns on
 a truncated final response and exits with status 1 (`#10799`,
-`441f5767c`). Anthropic retries preferred strict tools once
-without strict constraints for documented schema-size/tool-limit rejections
-(`#10409`, `d4d53612b`). Focused regression tests cover these fixes.
+`441f5767c`). Durable rejects waits that close a live wait-for cycle while
+allowing non-cyclic waits on an owner (`#10411`, `eb2fce43d`). Anthropic retries
+preferred strict tools once without strict constraints for documented schema-size/tool-limit
+rejections (`#10409`, `d4d53612b`). Focused regression tests cover these fixes.
 
 **v1.2.0 audit still open.** The new published configuration schemas still
 need a source-level parity review; they are configuration-editor support, not a

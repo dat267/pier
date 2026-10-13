@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -1367,9 +1368,8 @@ func decodeJSONValue(raw json.RawMessage) chord.JsonValue {
 	return value
 }
 
-// ValidateWait checks that a wait names existing tasks other than the waiter
-// and its owners; failFast only tasks the waiter owns. An abort handler cannot
-// wait.
+// ValidateWait checks that a wait names existing tasks; failFast only tasks
+// the waiter owns. An abort handler cannot wait.
 func ValidateWait(mode string, current TaskRecord, on []Id, policy string, owners map[Id]bool, member func(id Id) (*TaskRecord, error)) error {
 	if mode == "abort" {
 		return fmt.Errorf("Abort handler of task %d cannot wait", current.ID)
@@ -1390,6 +1390,74 @@ func ValidateWait(mode string, current TaskRecord, on []Id, policy string, owner
 		}
 	}
 	return nil
+}
+
+// ValidateWaitCycle rejects a wait that closes a cycle in the live wait-for
+// graph. Ordinary live owned work holds its owners; waiting tasks also depend on
+// their live wait targets. Ended tasks add no edges.
+func ValidateWaitCycle(
+	mode string,
+	current TaskRecord,
+	on []Id,
+	policy string,
+	records []TaskRecord,
+	graph SchedulerGraph,
+	member func(id Id) (*TaskRecord, error),
+) error {
+	if err := ValidateWait(mode, current, on, policy, nil, member); err != nil {
+		return err
+	}
+	live := RecordsByID(records)
+	owned := OwnedLive(records, graph)
+	edges := make(map[Id][]Id, len(records))
+	for _, record := range records {
+		edges[record.ID] = append(edges[record.ID], WaitingOn(record, owned, live)...)
+		if !record.AbortRequested {
+			edges[record.ID] = append(edges[record.ID], owned[record.ID]...)
+		}
+	}
+	for _, target := range on {
+		path, ok := findWaitPath(target, current.ID, edges)
+		if !ok {
+			continue
+		}
+		cycle := make([]string, 0, len(path)+1)
+		cycle = append(cycle, itoaID(current.ID))
+		for _, id := range path {
+			cycle = append(cycle, itoaID(id))
+		}
+		return fmt.Errorf("Task %d cannot wait on %d: %s is a wait cycle", current.ID, target, strings.Join(cycle, " -> "))
+	}
+	return nil
+}
+
+func findWaitPath(start, target Id, edges map[Id][]Id) ([]Id, bool) {
+	queue := []Id{start}
+	previous := map[Id]Id{}
+	seen := map[Id]bool{start: true}
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+		if current == target {
+			path := []Id{target}
+			for at := target; at != start; {
+				at = previous[at]
+				path = append(path, at)
+			}
+			for left, right := 0, len(path)-1; left < right; left, right = left+1, right-1 {
+				path[left], path[right] = path[right], path[left]
+			}
+			return path, true
+		}
+		for _, next := range edges[current] {
+			if !seen[next] {
+				seen[next] = true
+				previous[next] = current
+				queue = append(queue, next)
+			}
+		}
+	}
+	return nil, false
 }
 
 // Idle reports whether a scope has no live non-background task; a task whose
