@@ -23,22 +23,12 @@ func referenceBashExpanded(output string, width int, theme *Theme) []string {
 	return wrapped
 }
 
-func testBashExpandedTheme(t *testing.T) *Theme {
-	t.Helper()
-	SetCustomThemesDir(t.TempDir())
-	SetRegisteredThemes(nil)
-	SetTrueColorSupport(true)
-	SetStyleColorsEnabled(true)
-	InitTheme("dark", false)
-	return ActiveTheme()
-}
-
 // TestBashExpandedComponentMatchesReference feeds the expanded renderer the
 // output one step at a time (as streaming does) and requires it to render
 // exactly like the full-output computation at every prefix, including width
 // changes and a rewritten (non-append) output.
 func TestBashExpandedComponentMatchesReference(t *testing.T) {
-	theme := testBashExpandedTheme(t)
+	theme := newRendererTestTheme(t)
 	widths := []int{40, 73, 40} // a width change forces the full path
 
 	corpus := &strings.Builder{}
@@ -73,7 +63,7 @@ func TestBashExpandedComponentMatchesReference(t *testing.T) {
 // streamed in 100-line chunks used to spend ~468 ms per chunk re-wrapping the
 // whole output. The incremental cache must make the whole stream cheap.
 func TestBashExpandedStreamingIsLinear(t *testing.T) {
-	theme := testBashExpandedTheme(t)
+	theme := newRendererTestTheme(t)
 	state := &bashResultState{}
 	component := &bashExpandedComponent{state: state, theme: theme}
 

@@ -42,18 +42,6 @@ func loadEditorGolden(t *testing.T) *editorGolden {
 	return &editorGolden{values: values}
 }
 
-func (g *editorGolden) check(t *testing.T, label string, got any) {
-	t.Helper()
-	want, ok := g.values[label]
-	if !ok {
-		t.Fatalf("missing golden %q", label)
-	}
-	rendered := renderGoldenValue(got)
-	if rendered != want {
-		t.Fatalf("%s:\n got %s\nwant %s", label, rendered, want)
-	}
-}
-
 type editorSpec struct {
 	Text     *string  `json:"text"`
 	Inputs   []string `json:"inputs"`
@@ -148,7 +136,7 @@ func TestEditorAgainstUpstreamGolden(t *testing.T) {
 		if width == 0 {
 			width = 30
 		}
-		golden.check(t, label+" text", mustJSON(editor.GetText()))
+		checkGolden(t, golden.values, label+" text", mustJSON(editor.GetText()))
 		// Upstream cursors are UTF-16 code-unit offsets; the Go port uses byte
 		// offsets (divergence D61), so the golden cursor is translated.
 		wantCursor, ok := golden.values[label+" cursor"]
@@ -167,9 +155,9 @@ func TestEditorAgainstUpstreamGolden(t *testing.T) {
 		if line != wantLine || col != wantCol {
 			t.Fatalf("%s cursor: got %d,%d want %d,%d", label, line, col, wantLine, wantCol)
 		}
-		golden.check(t, label+" render@"+strconv.Itoa(width), normalizeSlice(editor.Render(width)))
+		checkGolden(t, golden.values, label+" render@"+strconv.Itoa(width), normalizeSlice(editor.Render(width)))
 		if spec.Expanded {
-			golden.check(t, label+" expanded", mustJSON(editor.GetExpandedText()))
+			checkGolden(t, golden.values, label+" expanded", mustJSON(editor.GetExpandedText()))
 		}
 	}
 }

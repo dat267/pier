@@ -157,20 +157,6 @@ func TestCreateAgentSessionModelResolveAndPersist(t *testing.T) {
 	}
 }
 
-func newToolSelectionRuntime(t *testing.T) *ModelRuntime {
-	t.Helper()
-	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
-		AuthPath:        filepath.Join(GetAgentDir(), "auth.json"),
-		ModelsPath:      filepath.Join(GetAgentDir(), "models.json"),
-		Credentials:     newMemoryCredentialStore(),
-		RefreshOnCreate: boolPtr(false),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	return runtime
-}
-
 // newReloadSettings builds a settings manager over a writable settings file
 // and returns the file's path for later rewrites.
 func newReloadSettings(t *testing.T) (*SettingsManager, string) {
@@ -195,7 +181,7 @@ func writeReloadSettings(t *testing.T, path string, content string) {
 // packages/coding-agent/src/core/agent-session.ts (ddaa0a034).
 func TestToolModifiersRemainAppliedAfterSettingsReload(t *testing.T) {
 	tempAgentDir(t)
-	runtime := newToolSelectionRuntime(t)
+	runtime := testSessionRuntime(t)
 	settings, settingsPath := newReloadSettings(t)
 	writeReloadSettings(t, settingsPath, `{"defaultTools":["read"]}`)
 	settings.Reload()
@@ -225,7 +211,7 @@ func TestToolModifiersRemainAppliedAfterSettingsReload(t *testing.T) {
 // explicit --tools/--no-tools/--exclude keep overriding.
 func TestReloadActivatesToolsNewlyAddedToDefaultTools(t *testing.T) {
 	tempAgentDir(t)
-	runtime := newToolSelectionRuntime(t)
+	runtime := testSessionRuntime(t)
 	settings, settingsPath := newReloadSettings(t)
 	session, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
 		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,
@@ -300,7 +286,7 @@ func TestReloadActivatesToolsNewlyAddedToDefaultTools(t *testing.T) {
 // `--tools` selections from packages/coding-agent/src/core/sdk.ts (ddaa0a034).
 func TestCreateAgentSessionToolsModifierAddsToDefaults(t *testing.T) {
 	tempAgentDir(t)
-	runtime := newToolSelectionRuntime(t)
+	runtime := testSessionRuntime(t)
 	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
 	session, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
 		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,
@@ -330,7 +316,7 @@ func TestCreateAgentSessionToolsModifierAddsToDefaults(t *testing.T) {
 // upstream modifier contract in packages/coding-agent/src/core/sdk.ts.
 func TestCreateAgentSessionToolsModifierRemovesFromDefaults(t *testing.T) {
 	tempAgentDir(t)
-	runtime := newToolSelectionRuntime(t)
+	runtime := testSessionRuntime(t)
 	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
 	session, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
 		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,
@@ -349,7 +335,7 @@ func TestCreateAgentSessionToolsModifierRemovesFromDefaults(t *testing.T) {
 // packages/coding-agent/src/core/sdk.ts (ddaa0a034).
 func TestCreateAgentSessionRejectsMixedToolModifiers(t *testing.T) {
 	tempAgentDir(t)
-	runtime := newToolSelectionRuntime(t)
+	runtime := testSessionRuntime(t)
 	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
 	_, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
 		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,
@@ -546,7 +532,7 @@ func TestCreateAgentSessionToolSelection(t *testing.T) {
 // _isAllowedTool filter when a loadout is applied.
 func TestSetActiveToolsHonorsExplicitAllowlist(t *testing.T) {
 	tempAgentDir(t)
-	runtime := newToolSelectionRuntime(t)
+	runtime := testSessionRuntime(t)
 	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
 	tool := agent.AgentTool{Name: "mcp__docs__search", Label: "docs/search", Description: "Docs search"}
 	session, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
@@ -566,7 +552,7 @@ func TestSetActiveToolsHonorsExplicitAllowlist(t *testing.T) {
 // _isAllowedTool and _refreshToolRegistry handling of tools registered after session start.
 func TestLateMCPToolsRespectToolsAllowlist(t *testing.T) {
 	tempAgentDir(t)
-	runtime := newToolSelectionRuntime(t)
+	runtime := testSessionRuntime(t)
 	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
 	session, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
 		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,
@@ -590,7 +576,7 @@ func TestLateMCPToolsRespectToolsAllowlist(t *testing.T) {
 // during core/agent-session.ts's registry refresh.
 func TestLateMCPToolsMatchToolsAllowlist(t *testing.T) {
 	tempAgentDir(t)
-	runtime := newToolSelectionRuntime(t)
+	runtime := testSessionRuntime(t)
 	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
 	session, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
 		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,
@@ -611,7 +597,7 @@ func TestLateMCPToolsMatchToolsAllowlist(t *testing.T) {
 // allowlist behavior for --no-tools.
 func TestLateMCPToolsRespectNoToolsAll(t *testing.T) {
 	tempAgentDir(t)
-	runtime := newToolSelectionRuntime(t)
+	runtime := testSessionRuntime(t)
 	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
 	session, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
 		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,
@@ -632,7 +618,7 @@ func TestLateMCPToolsRespectNoToolsAll(t *testing.T) {
 // noTools handling for values other than the built-in-only mode.
 func TestLateMCPToolsRespectTruthyNoToolsValue(t *testing.T) {
 	tempAgentDir(t)
-	runtime := newToolSelectionRuntime(t)
+	runtime := testSessionRuntime(t)
 	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
 	session, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
 		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,
@@ -653,7 +639,7 @@ func TestLateMCPToolsRespectTruthyNoToolsValue(t *testing.T) {
 // insertion-ordered registry in core/tools/index.ts and core/agent-session.ts.
 func TestCreateAgentSessionPatternSelectionPreservesRegistryOrder(t *testing.T) {
 	tempAgentDir(t)
-	runtime := newToolSelectionRuntime(t)
+	runtime := testSessionRuntime(t)
 	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
 	want := "read,bash,powershell,edit,write,grep,find,ls"
 	for attempt := 0; attempt < 8; attempt++ {
@@ -674,7 +660,7 @@ func TestCreateAgentSessionPatternSelectionPreservesRegistryOrder(t *testing.T) 
 // loadout's insertion-ordered, set-based selection in core/agent-session.ts.
 func TestCreateAgentSessionPatternSelectionDeduplicatesOverlaps(t *testing.T) {
 	tempAgentDir(t)
-	runtime := newToolSelectionRuntime(t)
+	runtime := testSessionRuntime(t)
 	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
 	session, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
 		Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,

@@ -955,7 +955,6 @@ func mapThinkingLevelToEffort(model *Model, level ThinkingLevel) AnthropicEffort
 	}
 }
 
-
 // federationCaches caches exchanged tokens per federation config, so a
 // sequence of requests reuses one exchange (the SDK reuses one client for the
 // same reason).

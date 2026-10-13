@@ -1176,7 +1176,7 @@ func longTailAt(t *testing.T, storage Storage, id Id, point DocumentPoint) longT
 // TestConformanceLongDocumentTails covers upstream's "streams long document
 // tails across root replacement deltas".
 func TestConformanceLongDocumentTails(t *testing.T) {
-	documentBackends(t, func(t *testing.T, storage Storage) {
+	conformance(t, func(t *testing.T, storage Storage) {
 		mustCommit(t, storage, conversationWrite(RootConversationID))
 		root := RootConversationID
 		id := mustMintID(t, storage)
@@ -1257,7 +1257,7 @@ func TestConformanceLongDocumentTails(t *testing.T) {
 // TestConformanceDocumentVersionTransitions covers upstream's "uses bases for
 // version transitions and rejects historical reads of current-only documents".
 func TestConformanceDocumentVersionTransitions(t *testing.T) {
-	documentBackends(t, func(t *testing.T, storage Storage) {
+	conformance(t, func(t *testing.T, storage Storage) {
 		ctx := context.Background()
 		mustCommit(t, storage, conversationWrite(RootConversationID))
 		id := mustMintID(t, storage)
@@ -1305,7 +1305,7 @@ func TestConformanceDocumentVersionTransitions(t *testing.T) {
 // TestConformanceDocumentLifecycleAtomic covers upstream's "keeps document
 // lifecycle failures atomic and gives create-plus-retire an empty lifetime".
 func TestConformanceDocumentLifecycleAtomic(t *testing.T) {
-	documentBackends(t, func(t *testing.T, storage Storage) {
+	conformance(t, func(t *testing.T, storage Storage) {
 		ctx := context.Background()
 		mustCommit(t, storage, conversationWrite(RootConversationID))
 		firstID := mustMintID(t, storage)

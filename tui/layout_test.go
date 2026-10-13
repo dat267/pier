@@ -64,9 +64,9 @@ func loadLayoutFrameGolden(t *testing.T) *layoutFrameGolden {
 	return &layoutFrameGolden{values: values}
 }
 
-func (g *layoutFrameGolden) check(t *testing.T, label string, got any) {
+func checkGolden(t *testing.T, values map[string]string, label string, got any) {
 	t.Helper()
-	want, ok := g.values[label]
+	want, ok := values[label]
 	if !ok {
 		t.Fatalf("missing golden %q", label)
 	}
@@ -106,12 +106,12 @@ func TestLayoutFrameAgainstUpstreamGolden(t *testing.T) {
 
 	frame := func(label string, root Component, width int, height int) LayoutFrame {
 		frame := RenderLayoutFrame(root, width, height, func() {})
-		golden.check(t, "frame "+label, frame.Lines)
+		checkGolden(t, golden.values, "frame "+label, frame.Lines)
 		rects := make([]goldenRect, 0, len(frame.Root.Children))
 		for _, child := range frame.Root.Children {
 			rects = append(rects, goldenRect{X: child.Rect.X, Y: child.Rect.Y, W: child.Rect.Width, H: child.Rect.Height})
 		}
-		golden.check(t, "boxes "+label, rects)
+		checkGolden(t, golden.values, "boxes "+label, rects)
 		return frame
 	}
 
@@ -135,65 +135,65 @@ func TestLayoutFrameAgainstUpstreamGolden(t *testing.T) {
 	tall := probe("L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8")
 	scrollFollow := NewScrollView(tall, ScrollViewOptions{Follow: "end", Primary: true})
 	followFrame := frame("scroll-follow-end", scrollFollow, 6, 3)
-	golden.check(t, "scrollTop scroll-follow-end",
+	checkGolden(t, golden.values, "scrollTop scroll-follow-end",
 		fmt.Sprintf("%d following=%v viewport=%d", scrollFollow.ScrollTop(), scrollFollow.IsFollowingEnd(), scrollFollow.ViewportHeight()))
-	golden.check(t, "primary scroll-follow-end", followFrame.PrimaryScrollView == scrollFollow)
+	checkGolden(t, golden.values, "primary scroll-follow-end", followFrame.PrimaryScrollView == scrollFollow)
 
 	scrollAlways := NewScrollView(tall, ScrollViewOptions{Scrollbar: ScrollbarAlways})
 	frame("scroll-always", scrollAlways, 6, 3)
-	golden.check(t, "scrollTop scroll-always", fmt.Sprintf("%d", scrollAlways.ScrollTop()))
+	checkGolden(t, golden.values, "scrollTop scroll-always", fmt.Sprintf("%d", scrollAlways.ScrollTop()))
 	scrollAlways.ScrollTo(3)
 	alwaysScrolled := RenderLayoutFrame(scrollAlways, 6, 3, func() {})
-	golden.check(t, "frame scroll-always-scrolled", alwaysScrolled.Lines)
+	checkGolden(t, golden.values, "frame scroll-always-scrolled", alwaysScrolled.Lines)
 	geometry, ok := GetScrollbarGeometry(alwaysScrolled.Root, false)
-	golden.check(t, "geometry scroll-always", goldenGeometry(geometry, ok))
+	checkGolden(t, golden.values, "geometry scroll-always", goldenGeometry(geometry, ok))
 	hiddenGeometry, hiddenOK := GetScrollbarGeometry(alwaysScrolled.Root, true)
-	golden.check(t, "geometry-hidden scroll-always", goldenGeometry(hiddenGeometry, hiddenOK))
+	checkGolden(t, golden.values, "geometry-hidden scroll-always", goldenGeometry(hiddenGeometry, hiddenOK))
 
 	scrollAuto := NewScrollView(tall, ScrollViewOptions{Scrollbar: ScrollbarAuto})
 	RenderLayoutFrame(scrollAuto, 6, 3, func() {})
 	scrollAuto.SetScrollbarActive(true)
 	autoActive := RenderLayoutFrame(scrollAuto, 6, 3, func() {})
-	golden.check(t, "frame scroll-auto-active", autoActive.Lines)
-	golden.check(t, "auto visible", fmt.Sprintf("visible=%v active=%v", scrollAuto.IsScrollbarVisible(), scrollAuto.IsScrollbarActive()))
+	checkGolden(t, golden.values, "frame scroll-auto-active", autoActive.Lines)
+	checkGolden(t, golden.values, "auto visible", fmt.Sprintf("visible=%v active=%v", scrollAuto.IsScrollbarVisible(), scrollAuto.IsScrollbarActive()))
 
 	scrollAuto.ScrollBy(2)
 	consumed := scrollAuto.ScrollBy(100)
-	golden.check(t, "scrollBy2", fmt.Sprintf("%d consumed=%d scrollTopAfter=%d", 2, consumed, scrollAuto.ScrollTop()))
+	checkGolden(t, golden.values, "scrollBy2", fmt.Sprintf("%d consumed=%d scrollTopAfter=%d", 2, consumed, scrollAuto.ScrollTop()))
 
 	// Nested: a VStack with a scroll view and a footer.
 	scrollNested := NewScrollView(probe("A", "B", "C", "D", "E", "F"), ScrollViewOptions{})
 	nested := NewVStack([]Component{scrollNested, probe("footer")}, StackOptions{})
 	nestedFrame := frame("nested", nested, 8, 5)
-	golden.check(t, "primary nested", nestedFrame.PrimaryScrollView == scrollNested)
+	checkGolden(t, golden.values, "primary nested", nestedFrame.PrimaryScrollView == scrollNested)
 
 	// Hit testing.
 	hitFrame := RenderLayoutFrame(NewVStack([]Component{probe("top"), probe("mid"), probe("bot")}, StackOptions{}), 4, 3, func() {})
-	golden.check(t, "boxesAt 0,0", hitYs(GetLayoutBoxesAt(hitFrame, 0, 0)))
-	golden.check(t, "boxesAt 0,2", hitYs(GetLayoutBoxesAt(hitFrame, 0, 2)))
-	golden.check(t, "boxesAt 0,9", len(GetLayoutBoxesAt(hitFrame, 0, 9)))
+	checkGolden(t, golden.values, "boxesAt 0,0", hitYs(GetLayoutBoxesAt(hitFrame, 0, 0)))
+	checkGolden(t, golden.values, "boxesAt 0,2", hitYs(GetLayoutBoxesAt(hitFrame, 0, 2)))
+	checkGolden(t, golden.values, "boxesAt 0,9", len(GetLayoutBoxesAt(hitFrame, 0, 9)))
 	scrollFrame := RenderLayoutFrame(NewVStack([]Component{
 		NewScrollView(probe("1", "2", "3", "4"), ScrollViewOptions{}), probe("f"),
 	}, StackOptions{}), 4, 4, func() {})
-	golden.check(t, "scrollViewsAt 0,0", len(GetScrollViewsAt(scrollFrame, 0, 0)))
+	checkGolden(t, golden.values, "scrollViewsAt 0,0", len(GetScrollViewsAt(scrollFrame, 0, 0)))
 	_, found := GetScrollViewBox(scrollFrame, scrollFrame.Root.Children[0].ScrollView)
-	golden.check(t, "scrollViewBox", found)
+	checkGolden(t, golden.values, "scrollViewBox", found)
 
 	// Scroll position behaviour.
 	behaviour := NewScrollView(probe("1", "2", "3", "4", "5"), ScrollViewOptions{Follow: "end"})
 	RenderLayoutFrame(behaviour, 4, 2, func() {})
-	golden.check(t, "follow scrollTop", fmt.Sprintf("%d following=%v", behaviour.ScrollTop(), behaviour.IsFollowingEnd()))
+	checkGolden(t, golden.values, "follow scrollTop", fmt.Sprintf("%d following=%v", behaviour.ScrollTop(), behaviour.IsFollowingEnd()))
 	behaviour.ScrollToStart()
-	golden.check(t, "after start", fmt.Sprintf("%d following=%v", behaviour.ScrollTop(), behaviour.IsFollowingEnd()))
+	checkGolden(t, golden.values, "after start", fmt.Sprintf("%d following=%v", behaviour.ScrollTop(), behaviour.IsFollowingEnd()))
 	behaviour.ScrollTo(1)
-	golden.check(t, "after to1", fmt.Sprintf("%d following=%v", behaviour.ScrollTop(), behaviour.IsFollowingEnd()))
+	checkGolden(t, golden.values, "after to1", fmt.Sprintf("%d following=%v", behaviour.ScrollTop(), behaviour.IsFollowingEnd()))
 	behaviour.ScrollToEnd()
-	golden.check(t, "after end", fmt.Sprintf("%d following=%v", behaviour.ScrollTop(), behaviour.IsFollowingEnd()))
+	checkGolden(t, golden.values, "after end", fmt.Sprintf("%d following=%v", behaviour.ScrollTop(), behaviour.IsFollowingEnd()))
 	behaviour.ScrollTo(3, ScrollToRequest{DisableFollow: true})
-	golden.check(t, "after disableFollow", fmt.Sprintf("%d following=%v", behaviour.ScrollTop(), behaviour.IsFollowingEnd()))
+	checkGolden(t, golden.values, "after disableFollow", fmt.Sprintf("%d following=%v", behaviour.ScrollTop(), behaviour.IsFollowingEnd()))
 	behaviour.ScrollBy(-2)
 	consumed2 := behaviour.ScrollBy(-100)
-	golden.check(t, "after by-2", fmt.Sprintf("%d following=%v consumed=%d top=%d",
+	checkGolden(t, golden.values, "after by-2", fmt.Sprintf("%d following=%v consumed=%d top=%d",
 		1, false, consumed2, behaviour.ScrollTop()))
 }
 

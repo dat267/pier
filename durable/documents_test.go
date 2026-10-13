@@ -13,14 +13,6 @@ import (
 // packages/durable/src/testing/storage-conformance.ts, run against every
 // backend (memory, sqlite, jsonl).
 
-// documentBackends runs one test against all backends.
-func documentBackends(t *testing.T, run func(t *testing.T, storage Storage)) {
-	t.Helper()
-	t.Run("memory", func(t *testing.T) { run(t, NewMemoryStorage()) })
-	t.Run("sqlite", func(t *testing.T) { run(t, newSqliteStorageConformance(t)) })
-	t.Run("jsonl", func(t *testing.T) { run(t, newJsonlStorageConformance(t)) })
-}
-
 func mustMintID(t *testing.T, storage Storage) Id {
 	t.Helper()
 	id, err := storage.MintID(context.Background())
@@ -45,7 +37,7 @@ func documentValue(t *testing.T, stored *StoredDocument) map[string]any {
 // TestDocumentLifecycleReconstructsRewindable covers upstream's
 // "reconstructs rewindable documents and preserves half-open incarnations".
 func TestDocumentLifecycleReconstructsRewindable(t *testing.T) {
-	documentBackends(t, func(t *testing.T, storage Storage) {
+	conformance(t, func(t *testing.T, storage Storage) {
 		ctx := context.Background()
 		rootID := RootConversationID
 		mustCommit(t, storage, conversationWrite(rootID))
@@ -170,7 +162,7 @@ func TestDocumentLifecycleReconstructsRewindable(t *testing.T) {
 // materializes the source's stored base at the requested point, and ambiguous
 // or mismatching sources are rejected.
 func TestDocumentCopyCoversUpstreamSource(t *testing.T) {
-	documentBackends(t, func(t *testing.T, storage Storage) {
+	conformance(t, func(t *testing.T, storage Storage) {
 		ctx := context.Background()
 		rootID := RootConversationID
 		mustCommit(t, storage, conversationWrite(rootID))
@@ -243,7 +235,7 @@ func TestDocumentCopyCoversUpstreamSource(t *testing.T) {
 // TestDocumentErrorsAndLatestHistory covers the validation paths and the
 // history semantics of "latest" documents.
 func TestDocumentErrorsAndLatestHistory(t *testing.T) {
-	documentBackends(t, func(t *testing.T, storage Storage) {
+	conformance(t, func(t *testing.T, storage Storage) {
 		ctx := context.Background()
 		rootID := RootConversationID
 		mustCommit(t, storage, conversationWrite(rootID))

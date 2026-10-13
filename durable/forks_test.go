@@ -28,7 +28,7 @@ func createForkDocument(t *testing.T, storage Storage, id Id, kind string, key *
 }
 
 func TestPrepareForkDocumentCopies(t *testing.T) {
-	documentBackends(t, func(t *testing.T, storage Storage) {
+	conformance(t, func(t *testing.T, storage Storage) {
 		ctx := context.Background()
 		root, child := RootConversationID, Id(50)
 		mustCommit(t, storage, conversationWrite(root), conversationWrite(child))
@@ -87,7 +87,7 @@ func TestPrepareForkDocumentCopies(t *testing.T) {
 }
 
 func TestPrepareForkDocumentCopiesRejectsDuplicateAddress(t *testing.T) {
-	documentBackends(t, func(t *testing.T, storage Storage) {
+	conformance(t, func(t *testing.T, storage Storage) {
 		ctx := context.Background()
 		root, child := RootConversationID, Id(50)
 		mustCommit(t, storage, conversationWrite(root), conversationWrite(child))
