@@ -571,9 +571,17 @@ func (c *invocationConversation) Submit(draft InputSubmissionDraft, ctx chord.Co
 	if err := c.invocation.AssertLive(); err != nil {
 		return nil, err
 	}
-	return c.submissions.Submit(c.id, SubmissionDraft{
+	submission := SubmissionDraft{
 		RequestID: draft.RequestID, Type: SubmissionTypeInput, Content: draft.Content, WhenBusy: draft.WhenBusy,
-	}, c.bind(ctx))
+	}
+	if draft.Entry != nil {
+		entry := &EntryDraft{Kind: draft.Entry.Kind}
+		if draft.Entry.Data != nil {
+			entry.Data = dataJSON(draft.Entry.Data)
+		}
+		submission.Entry = entry
+	}
+	return c.submissions.Submit(c.id, submission, c.bind(ctx))
 }
 
 func (c *invocationConversation) Abort(ctx chord.Context, options *ConversationAbortOptions) error {

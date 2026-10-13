@@ -437,11 +437,20 @@ type ConversationHandle interface {
 	WaitForIdle(ctx chord.Context) error
 }
 
+// InputEntry places an input as an entry of this kind carrying this data
+// instead of `pi.user`; the kind must not start with `pi.`.
+type InputEntry struct {
+	Kind string
+	Data chord.JsonValue
+}
+
 // InputSubmissionDraft is user input admitted to a conversation.
 type InputSubmissionDraft struct {
 	RequestID *string
 	Content   UserInput
 	WhenBusy  *string
+	// Entry places the input as this entry; nil uses `pi.user`.
+	Entry *InputEntry
 }
 
 // Submission is the awaitable host object for one admitted submission.
