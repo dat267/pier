@@ -6,7 +6,7 @@ behaviour with no direct Go equivalent, or because a reference defect is fixed
 here; others are choices of this project's own. D-row numbers live in code
 comments at the point of divergence; this file is the log, and it is
 representative: the rows below carry a written-up rationale, while the rest live
-only as the code comment that introduced them. The range is **D1–D216**.
+only as the code comment that introduced them. The range is **D1–D217**.
 - D216 — fullscreen keybindings follow upstream v1.1.0 (`packages/tui/src/keybindings.ts`,
   commit `6100fe5a8`) while the port remains pinned to v1.0.2: `Home`/`End` move
   the editor cursor, and `Ctrl+Home`/`Ctrl+End` move the transcript. This row is
@@ -189,10 +189,9 @@ only as the code comment that introduced them. The range is **D1–D216**.
   which already owns its input routing, so no focus switch was needed; and
   `OnPromptShown` is not dead but an explicitly-labelled test seam (nil simply
   means no hook), like the `Now`/`ScheduleTimer`/`DeleteSession` overrides. **Deliberately off** (out of
-  scope): the HTTP dispatcher, the package manager, highlight languages (D74, and
-  the user chose to keep the flat fallback), tmux, the process-level seams and
-  extension mechanics (D41) — with them `ShowExtensionSelector`, the extension
-  resource selector, which has no port counterpart.
+  scope): the HTTP dispatcher, the package manager, tmux, the process-level seams
+  and extension mechanics (D41) — with them `ShowExtensionSelector`, the
+  extension resource selector, which has no port counterpart.
   **Not dead, despite looking like the rest** — check whether the nil branch
   skips the work or falls back before treating an unassigned seam as a bug:
   `SessionSelectorOptions.DeleteSession` and `CopyActiveSelection` are overrides
@@ -1621,13 +1620,26 @@ union. The Go `Shell` keeps `Exec(string, ...)` for shell scripts and adds
 with `any`. `TestOSShellExecArgvDoesNotParseArguments` verifies arguments reach
 program without shell parsing.
 
-## D215. OS filesystem watches use polling on every platform
+## D215. File watching uses native notifications with snapshot polling fallback
 
 Reference: `packages/durable/src/env/node-watch.ts` prefers native file-system
-watchers and polls only on unreliable file systems. Go's standard library has no
-portable watcher, so `OSFileSystem.Watch` polls snapshots every 2 seconds on all
-platforms and reports mode `polling`. Persistent changes are reported, but a
-change undone between scans may be missed. Directory growth beyond watch budget
-ends watcher with an error. `TestOSFileSystemWatchReportsRecursiveChanges` and
-`TestOSFileSystemWatchStopsWhenTreeExceedsDirectoryBudget` cover coverage and
-resource limits (upstream `a84510819`).
+watchers and polls on Windows and unreliable file systems. Pier uses
+`github.com/sgtdi/fswatcher` to trigger snapshot diffs on supported systems, with
+a 2-second polling safety scan to recover events the library filters or misses.
+Windows and Android remain polling-only. Snapshot comparison preserves recursive
+change reporting, exclusions, coalescing and the directory budget. A transient
+change that is undone before either a native notification or a fallback scan can
+still be missed. `TestOSFileSystemWatchReportsRecursiveChanges` checks native
+mode on supported systems and polling mode on Windows/Android;
+`TestOSFileSystemWatchStopsWhenTreeExceedsDirectoryBudget` covers the limit.
+
+## D217. Chroma replaces highlight.js for terminal syntax coloring
+
+Reference: `packages/coding-agent/src/modes/interactive/theme/theme.ts`
+`highlightCode` uses `cli-highlight` with a theme assembled from syntax tokens.
+Pier uses Chroma v3.0.0-alpha.5 because it provides Go-native lexers that cover
+markdown code blocks and the read/write tool previews. Chroma token categories
+map to pier's `syntax*` theme tokens; unknown languages and lexer failures keep
+the plain `mdCodeBlock` styling. The lexer set and token boundaries differ from
+`highlight.js`, so ANSI output is not byte-identical. `TestHighlightCodeAppliesTokenColorsForKnownLanguage`
+asserts distinct token colors and preserved source text.

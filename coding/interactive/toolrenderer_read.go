@@ -104,19 +104,14 @@ func formatReadResult(args map[string]any, result *SortToolResultContent, option
 	}
 	rawPath, _ := argString(args, "file_path", "path")
 	output := GetTextOutput(result, showImages)
+	lang := ""
 	hasLang := false
 	if !isError && rawPath != "" {
-		_, hasLang = GetLanguageFromPath(rawPath)
+		lang, hasLang = GetLanguageFromPath(rawPath)
 	}
 	var lines []string
 	if hasLang {
-		// D205: the captured theme, not the global forwarding theme, belongs
-		// to a detached result preparation snapshot. Highlighting is D74's
-		// unsupported-language fallback in this port.
-		lines = strings.Split(replaceTabs(output), "\n")
-		for i, line := range lines {
-			lines[i] = theme.Fg("mdCodeBlock", line)
-		}
+		lines = highlightCodeWithChroma(replaceTabs(output), lang, theme)
 	} else {
 		lines = strings.Split(output, "\n")
 	}

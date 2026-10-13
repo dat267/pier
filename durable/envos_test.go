@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -218,8 +219,12 @@ func TestOSFileSystemWatchReportsRecursiveChanges(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if watcher.Mode() != WatchModePolling {
-		t.Fatalf("watch mode = %q, want polling", watcher.Mode())
+	wantMode := WatchModeNative
+	if runtime.GOOS == "windows" || runtime.GOOS == "android" {
+		wantMode = WatchModePolling
+	}
+	if watcher.Mode() != wantMode {
+		t.Fatalf("watch mode = %q, want %q", watcher.Mode(), wantMode)
 	}
 	if err := fsys.CreateDir(filepath.Join(dir, "watched", "sub"), &CreateDirOptions{Recursive: true}, ctx); err != nil {
 		t.Fatal(err)
@@ -244,6 +249,47 @@ func TestOSFileSystemWatchReportsRecursiveChanges(t *testing.T) {
 		case <-deadline.C:
 			_ = watcher.Close(ctx)
 			t.Fatal("watch did not report nested file creation")
+		}
+	}
+}
+
+func TestOSFileSystemWatchNativeEventsBeatPollingInterval(t *testing.T) {
+	if runtime.GOOS == "windows" || runtime.GOOS == "android" {
+		t.Skip("native fswatcher is disabled on this platform")
+	}
+	fsys, dir := newTestFileSystem(t)
+	ctx := context.Background()
+	root := filepath.Join(dir, "watched")
+	if err := fsys.CreateDir(root, nil, ctx); err != nil {
+		t.Fatal(err)
+	}
+	changes := make(chan WatchChange, 4)
+	watcher, err := fsys.Watch([]WatchTarget{{Path: root}}, func(change WatchChange) {
+		changes <- change
+	}, ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer watcher.Close(ctx)
+	if watcher.Mode() != WatchModeNative {
+		t.Fatalf("watch mode = %q, want native", watcher.Mode())
+	}
+	file := filepath.Join(root, "fast.txt")
+	if err := fsys.WriteFile(file, []byte("change"), ctx); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.NewTimer(time.Second)
+	defer deadline.Stop()
+	for {
+		select {
+		case change := <-changes:
+			for _, path := range change.Paths {
+				if path == file {
+					return
+				}
+			}
+		case <-deadline.C:
+			t.Fatal("native watch did not report change before the 2-second fallback scan")
 		}
 	}
 }

@@ -128,10 +128,14 @@ type WatchChange struct {
 	Error *FileError
 }
 
-// WatchMode is how a filesystem watcher observes changes.
+// WatchMode reports the primary notification mechanism. Native mode retains a
+// periodic snapshot scan as a safety fallback.
 type WatchMode string
 
-const WatchModePolling WatchMode = "polling"
+const (
+	WatchModePolling WatchMode = "polling"
+	WatchModeNative  WatchMode = "native"
+)
 
 // FileWatcher is one filesystem watch registration.
 type FileWatcher interface {

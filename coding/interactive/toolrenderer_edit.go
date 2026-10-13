@@ -12,9 +12,11 @@ import (
 )
 
 type editRenderArgs struct {
-	Path    string
-	HasPath bool
-	Edits   []coding.Edit
+	Path        string
+	HasPath     bool
+	FilePath    string
+	HasFilePath bool
+	Edits       []coding.Edit
 }
 
 // getRenderablePreviewInput extracts the path/edits pair that can be previewed.
@@ -31,7 +33,12 @@ func getRenderablePreviewInput(args any) *editRenderArgs {
 	if len(edits) == 0 {
 		return nil
 	}
-	return &editRenderArgs{Path: path, HasPath: hasPath, Edits: edits}
+	filePath, hasFilePath := "", false
+	if rawFilePath, present := decoded["file_path"]; present && rawFilePath != nil {
+		filePath, _ = argString(decoded, "file_path")
+		hasFilePath = true
+	}
+	return &editRenderArgs{Path: path, HasPath: hasPath, FilePath: filePath, HasFilePath: hasFilePath, Edits: edits}
 }
 
 func parseEditArgs(decoded map[string]any) []coding.Edit {
@@ -63,6 +70,9 @@ func formatEditCall(args *editRenderArgs, theme *Theme, cwd string) string {
 	path := ""
 	if args != nil {
 		path = args.Path
+		if args.HasFilePath {
+			path = args.FilePath
+		}
 	}
 	pathDisplay := RenderToolPath(&path, theme, cwd, "")
 	return theme.Fg("toolTitle", theme.Bold("edit")) + " " + pathDisplay

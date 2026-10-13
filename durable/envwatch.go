@@ -13,6 +13,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/sgtdi/fswatcher"
 )
 
 const (
@@ -39,15 +41,27 @@ type watchedEntry struct {
 }
 
 type osFileWatcher struct {
+	modeMu     sync.RWMutex
 	mode       WatchMode
 	cancel     context.CancelFunc
 	done       chan struct{}
+	native     *nativeWatch
 	mu         sync.Mutex
 	closed     bool
 	inCallback bool
 }
 
-func (w *osFileWatcher) Mode() WatchMode { return w.mode }
+func (w *osFileWatcher) Mode() WatchMode {
+	w.modeMu.RLock()
+	defer w.modeMu.RUnlock()
+	return w.mode
+}
+
+func (w *osFileWatcher) setMode(mode WatchMode) {
+	w.modeMu.Lock()
+	w.mode = mode
+	w.modeMu.Unlock()
+}
 
 func (w *osFileWatcher) Close(_ context.Context) error {
 	w.mu.Lock()
@@ -57,13 +71,21 @@ func (w *osFileWatcher) Close(_ context.Context) error {
 	}
 	inCallback := w.inCallback
 	w.mu.Unlock()
+	if w.native != nil {
+		w.native.cancel()
+		w.native.watcher.Close()
+	}
 	if !inCallback {
+		if w.native != nil {
+			<-w.native.done
+		}
 		<-w.done
 	}
 	return nil
 }
 
-// D215: the standard-library port polls snapshots on every platform instead of selecting native fs watchers.
+// D215: fswatcher supplies native notifications where supported; snapshots are
+// still polled as a safety fallback, while Windows and Android use polling.
 func (e *OSFileSystem) Watch(targets []WatchTarget, onChange func(WatchChange), ctx context.Context) (FileWatcher, error) {
 	if onChange == nil {
 		return nil, &FileError{Code: FileErrorInvalid, Message: "watch requires an onChange callback"}
@@ -103,8 +125,20 @@ func (e *OSFileSystem) Watch(targets []WatchTarget, onChange func(WatchChange), 
 		return nil, err
 	}
 	watchContext, cancel := context.WithCancel(ctx)
-	watcher := &osFileWatcher{mode: WatchModePolling, cancel: cancel, done: make(chan struct{})}
-	go pollWatch(watchContext, watcher, resolved, budget, interval, snapshot, onChange)
+	native, _ := startNativeWatch(watchContext, resolved)
+	if err := ctx.Err(); err != nil {
+		cancel()
+		if native != nil {
+			native.close()
+		}
+		return nil, toFileError(err, "")
+	}
+	mode := WatchModePolling
+	if native != nil {
+		mode = WatchModeNative
+	}
+	watcher := &osFileWatcher{mode: mode, cancel: cancel, done: make(chan struct{}), native: native}
+	go pollWatch(watchContext, watcher, resolved, budget, interval, snapshot, onChange, native)
 	return watcher, nil
 }
 
@@ -116,15 +150,49 @@ func pollWatch(
 	interval time.Duration,
 	previous map[string]watchedEntry,
 	onChange func(WatchChange),
+	native *nativeWatch,
 ) {
 	defer close(watcher.done)
+	defer func() {
+		if native != nil {
+			native.cancel()
+			native.watcher.Close()
+		}
+	}()
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
+	previousSnapshot := previous
+	var events <-chan fswatcher.WatchEvent
+	var dropped <-chan fswatcher.WatchEvent
+	var nativeDone <-chan struct{}
+	if native != nil {
+		events, dropped, nativeDone = native.events, native.dropped, native.done
+	}
 	for {
+		nativeOverflow := false
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+		case _, ok := <-events:
+			if !ok {
+				events = nil
+			}
+		case _, ok := <-dropped:
+			if !ok {
+				dropped = nil
+			} else {
+				nativeOverflow = true
+			}
+		case <-nativeDone:
+			if ctx.Err() != nil {
+				return
+			}
+			nativeDone = nil
+			events = nil
+			dropped = nil
+			nativeOverflow = true
+			watcher.setMode(WatchModePolling)
 		}
 		if ctx.Err() != nil {
 			return
@@ -136,10 +204,10 @@ func pollWatch(
 			}
 			return
 		}
-		paths := diffWatchSnapshots(previous, next)
-		previous = next
-		if len(paths) > 0 {
-			deliverWatchChange(ctx, watcher, onChange, WatchChange{Paths: paths})
+		paths := diffWatchSnapshots(previousSnapshot, next)
+		previousSnapshot = next
+		if len(paths) > 0 || nativeOverflow {
+			deliverWatchChange(ctx, watcher, onChange, WatchChange{Paths: paths, Overflow: nativeOverflow})
 		}
 	}
 }

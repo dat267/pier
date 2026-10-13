@@ -10,11 +10,8 @@ import (
 // Port of the theme-derived factories from
 // src/modes/interactive/theme/theme.ts (getMarkdownTheme, getSelectListTheme,
 // getEditorTheme, getSettingsListTheme, getResolvedThemeColors,
-// isLightTheme, getLanguageFromPath, highlightCode).
-//
-// The syntax highlighter (highlight.js) is out of scope (D74): HighlightCode
-// always uses the per-line mdCodeBlock fallback, which is upstream's behaviour
-// for unsupported languages.
+// isLightTheme, getLanguageFromPath, highlightCode). Chroma supplies syntax
+// tokens; D217 records the styling and upstream-parity boundary.
 
 // activeTheme is the stable theme handle ActiveTheme returns. It mirrors
 // upstream's `theme` Proxy: its methods resolve the current concrete theme on
@@ -53,9 +50,6 @@ func GetMarkdownTheme() tui.MarkdownTheme {
 		Underline:       theme.Underline,
 		Strikethrough:   theme.Strikethrough,
 		HighlightCode: func(code string, lang string) []string {
-			// Validate the language before highlighting; without a valid
-			// language the code block is styled per line (upstream's
-			// fallback, and the Go port's only path: D74).
 			return HighlightCode(code, lang)
 		},
 	}
@@ -175,17 +169,10 @@ func GetThemeExportColors(themeName string) (pageBg string, cardBg string, infoB
 	return colorValue(themeJSON.Export.PageBg), colorValue(themeJSON.Export.CardBg), colorValue(themeJSON.Export.InfoBg), nil
 }
 
-// HighlightCode styles a code block. Syntax highlighting is out of scope
-// (D74), so every line is styled with the mdCodeBlock color, matching
-// upstream's unsupported-language fallback.
+// HighlightCode applies Chroma token colors for recognized languages and uses
+// the themed code-block fallback for unknown languages or lexer errors.
 func HighlightCode(code string, lang string) []string {
-	theme := ActiveTheme()
-	lines := strings.Split(code, "\n")
-	out := make([]string, 0, len(lines))
-	for _, line := range lines {
-		out = append(out, theme.Fg("mdCodeBlock", line))
-	}
-	return out
+	return highlightCodeWithChroma(code, lang, ActiveTheme())
 }
 
 // GetLanguageFromPath maps a file extension to a language identifier.

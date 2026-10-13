@@ -23,10 +23,9 @@ import (
 // type and its styling helpers, theme loading (built-in + custom), the
 // terminal light/dark detection helpers, and the global theme registry.
 //
-// Divergences: chalk's style helpers become the equivalent ANSI sequences
-// (verified against chalk output); the syntax highlighter (highlight.js) is
-// out of scope, so HighlightCode stays unset and the markdown renderer uses
-// its per-line fallback (D74); the file watcher polls instead of using
+// Divergences: chalk's style helpers become equivalent ANSI sequences
+// (verified against chalk output); Chroma replaces highlight.js with the
+// category mapping recorded in D217; the file watcher polls instead of using
 // fs.watch (D75).
 
 //go:embed themes/*.json

@@ -398,6 +398,20 @@ func TestFormatSearchResultExpandedShowsAllLines(t *testing.T) {
 	}
 }
 
+func TestFormatReadResultUsesChromaForKnownLanguage(t *testing.T) {
+	installPierThemeForTest(t)
+	SetTrueColorSupport(true)
+	InitTheme("dark", false)
+	theme := ActiveTheme()
+	result := &SortToolResultContent{Content: []ToolResultContent{{Type: "text", Text: "func answer() int { return 42 }"}}}
+
+	got := formatReadResult(map[string]any{"path": "answer.go"}, result,
+		ToolRenderResultOptions{Expanded: true}, theme, false, false)
+	if strings.Count(got, "\x1b[38;2;") < 3 {
+		t.Fatalf("read result has fewer than three token colors: %q", got)
+	}
+}
+
 // Upstream uses truncation.maxLines (falling back to DEFAULT_MAX_LINES) in the
 // read line-limit notice.
 func TestFormatReadResultUsesTruncationMaxLines(t *testing.T) {

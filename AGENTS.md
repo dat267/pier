@@ -15,8 +15,9 @@ sibling of the TypeScript monorepo, not a fork: the Go code follows the
 reference packages closely, file for file.
 
 - Module: `github.com/dat267/pier`, Go `1.27`.
-- Dependencies are offline-cached only. Direct dependencies: `golang.org/x/text`,
-  `x/term`, `x/sys`, `x/tools`
+- Dependencies are offline-cached only. Direct dependencies: `github.com/alecthomas/chroma/v3`
+  (syntax coloring), `github.com/sgtdi/fswatcher` (native file-watch events),
+  `golang.org/x/text`, `x/term`, `x/sys`, `x/tools`
   (`internal/uiblock`'s SSA analysis), and `modernc.org/sqlite` (the durable
   SQLite backend). `go.mod` is authoritative for versions and indirect
   dependencies.
