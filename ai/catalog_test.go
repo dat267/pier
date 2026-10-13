@@ -40,6 +40,18 @@ func TestCatalogLoadsEveryModel(t *testing.T) {
 	}
 }
 
+func TestOpenRouterPlaceholderPricesAreZero(t *testing.T) {
+	for _, modelID := range []string{"openrouter/auto", "openrouter/auto-beta", "typesafe/jev-router"} {
+		model := GetBuiltinModel("openrouter", modelID)
+		if model == nil {
+			t.Fatalf("openrouter/%s missing", modelID)
+		}
+		if model.Cost.Input != 0 || model.Cost.Output != 0 {
+			t.Errorf("%s placeholder cost = %+v, want zero rates", modelID, model.Cost)
+		}
+	}
+}
+
 func TestCatalogAnthropicOpusSpotCheck(t *testing.T) {
 	m := GetBuiltinModel("anthropic", "claude-opus-4-5")
 	if m == nil {

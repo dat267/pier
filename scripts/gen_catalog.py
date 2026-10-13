@@ -24,6 +24,21 @@ import sys
 from pathlib import Path
 
 
+def normalize_openrouter_costs(by_api: dict) -> None:
+    """Replace OpenRouter's negative router placeholders with their zero-cost fallback."""
+    for models in by_api.values():
+        for model in models.values():
+            cost = model.get("cost")
+            if not isinstance(cost, dict):
+                continue
+            rates = (cost, *cost.get("tiers", []))
+            for rate in rates:
+                for field in ("input", "output", "cacheRead", "cacheWrite"):
+                    value = rate.get(field)
+                    if isinstance(value, (int, float)) and value < 0:
+                        rate[field] = 0
+
+
 def main() -> None:
     if len(sys.argv) != 2:
         print(__doc__, file=sys.stderr)
@@ -71,6 +86,8 @@ def main() -> None:
                     model["id"] = dashed
                     renamed[dashed] = model
                 by_api["anthropic-messages"] = renamed
+        if file.stem == "openrouter":
+            normalize_openrouter_costs(by_api)
         if by_api:
             providers[file.stem] = by_api
 

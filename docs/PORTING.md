@@ -16,7 +16,10 @@ checkout. The v1.2.0 delta from v1.1.0 is under audit; confirmed gaps,
 porting progress, and out-of-scope areas are recorded below. Earlier release
 notes retain upstream versions and commit IDs as historical context.
 
-**v1.2.0 parity fixes so far.** Mistral's request timeout now applies only while
+**v1.2.0 parity fixes so far.** The built-in catalog is regenerated from the
+pinned v1.2.0 generator and current upstream catalog APIs; OpenRouter's negative
+router placeholder prices normalize to zero (`#10672`, `ee409a85f`). Mistral's
+request timeout now applies only while
 waiting for response headers, not during an active response stream (#10609,
 `6b07b4e57`). Retry classification includes the gateway error wording
 "The upstream provider returned an error" (#10842, `7bd01fb92`). Compaction
