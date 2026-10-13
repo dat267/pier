@@ -64,6 +64,14 @@ func TestBusyAndCanceledStreamErrorsAreRetryable(t *testing.T) {
 
 // Sign in with ChatGPT reports temporary usage/user-data unavailability
 // mid-stream; upstream retries it (retry.ts RETRYABLE_PROVIDER_ERROR_PATTERN).
+func TestUpstreamProviderReturnedAnErrorIsRetryable(t *testing.T) {
+	message := "The upstream provider returned an error"
+	response := &AssistantMessage{StopReason: StopError, ErrorMessage: &message}
+	if !IsRetryableAssistantError(response) {
+		t.Error("an upstream provider error was not retried")
+	}
+}
+
 func TestChatGPTSubscriptionUnavailableIsRetryable(t *testing.T) {
 	for _, message := range []string{
 		"subscription_sharing_usage_unavailable",
