@@ -3,6 +3,7 @@ package interactive
 import (
 	"context"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -206,6 +207,8 @@ type App struct {
 	loopInputsClosed chan struct{}
 	loopInputsOnce   sync.Once
 	initialized      bool
+	// startupNoticesShown dedupes the new-changelog startup notice.
+	startupNoticesShown bool
 
 	// prerenderQueue warms deferred transcript components off the UI loop.
 	// Registered as optional work (D199). A canceled warm may finish private
@@ -752,6 +755,45 @@ func (a *App) Init(ctx context.Context) {
 		})
 	}
 	a.autocomplete.SetupAutocompleteProvider()
+	a.showStartupNoticesIfNeeded()
+}
+
+var changelogLatestVersionPattern = regexp.MustCompile(`##\s+\[?(\d+)\.(\d+)\.(\d+)\]?`)
+
+// showStartupNoticesIfNeeded shows the new-changelog notice once at startup
+// (upstream showStartupNoticesIfNeeded).
+func (a *App) showStartupNoticesIfNeeded() {
+	if a.startupNoticesShown {
+		return
+	}
+	a.startupNoticesShown = true
+	if a.startup == nil || a.chat == nil {
+		return
+	}
+	changelogMarkdown := a.startup.GetChangelogForDisplay()
+	if changelogMarkdown == "" {
+		return
+	}
+	theme := ActiveTheme()
+	if len(a.chat.Children) > 0 {
+		a.chat.AddChild(tui.NewSpacer(1))
+	}
+	a.chat.AddChild(NewDynamicBorder(nil))
+	if a.settings.GetCollapseChangelog() {
+		latestVersion := a.options.Version
+		if match := changelogLatestVersionPattern.FindStringSubmatch(changelogMarkdown); match != nil {
+			latestVersion = match[1] + "." + match[2] + "." + match[3]
+		}
+		condensed := "Updated to v" + latestVersion + ". Use " + theme.Bold("/changelog") + " to view full changelog."
+		a.chat.AddChild(tui.NewText(condensed, 1, 0, nil))
+	} else {
+		a.chat.AddChild(tui.NewText(theme.Bold(theme.Fg("accent", "What's New")), 1, 0, nil))
+		a.chat.AddChild(tui.NewSpacer(1))
+		a.chat.AddChild(tui.NewMarkdown(ai.JSTrim(changelogMarkdown), 1, 0, *a.markdownTheme(), nil, tui.MarkdownOptions{}))
+		a.chat.AddChild(tui.NewSpacer(1))
+	}
+	a.chat.AddChild(NewDynamicBorder(nil))
+	a.ui.RequestRender(false)
 }
 
 // applySettingsDependentUI re-applies the settings-derived state (upstream

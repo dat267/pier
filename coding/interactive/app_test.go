@@ -410,3 +410,26 @@ func TestAppInitSetsTerminalTitle(t *testing.T) {
 		t.Fatal("init did not set the terminal title")
 	}
 }
+
+// Upstream shows the new-changelog notice at startup (showStartupNoticesIfNeeded).
+func TestAppShowsStartupChangelogNotice(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	app.settings.SetLastChangelogVersion("0.0.1")
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "CHANGELOG.md"), []byte("## [9.9.9]\n\n- a new thing\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	coding.SetPackageDir(dir)
+	t.Cleanup(func() { coding.SetPackageDir("") })
+
+	// The changelog notice only shows for a session with no messages.
+	app.session.Agent.SetMessages(nil)
+	app.chat.Clear()
+	app.startupNoticesShown = false
+	app.showStartupNoticesIfNeeded()
+	lines := coding.StripAnsi(strings.Join(app.chat.Render(120), "\n"))
+	if !strings.Contains(lines, "What's New") || !strings.Contains(lines, "a new thing") {
+		t.Fatalf("chat = %q", lines)
+	}
+}
