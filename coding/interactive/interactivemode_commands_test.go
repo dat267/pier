@@ -109,6 +109,9 @@ func TestCommandPathArgument(t *testing.T) {
 		{`/export "unclosed`, "/export", "", false},
 		{"/import in.jsonl", "/import", "in.jsonl", true},
 		{"/exportx", "/export", "", false},
+		// trimStart and /\s/ are the JS whitespace set.
+		{"/export \uFEFFout.html", "/export", "out.html", true},
+		{"/export a\u00A0b.html", "/export", "a", true},
 	}
 	for _, testCase := range cases {
 		got, ok := GetPathCommandArgument(testCase.text, testCase.command)

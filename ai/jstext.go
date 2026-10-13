@@ -72,6 +72,9 @@ func JSTrim(s string) string { return strings.TrimFunc(s, jsSpace) }
 // JSTrimLeft implements String.prototype.trimStart.
 func JSTrimLeft(s string) string { return strings.TrimLeftFunc(s, jsSpace) }
 
+// IsJSSpace reports whether r is in the JS `\s` class.
+func IsJSSpace(r rune) bool { return jsSpace(r) }
+
 // JSSplitWhitespace splits on runs of the JS `\s` class (String.split(/\s+/)
 // with the empty parts dropped), unlike strings.Fields which uses
 // unicode.IsSpace.

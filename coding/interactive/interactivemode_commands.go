@@ -143,7 +143,7 @@ func GetPathCommandArgument(text string, command string) (string, bool) {
 	if !strings.HasPrefix(text, command+" ") {
 		return "", false
 	}
-	args := strings.TrimLeft(text[len(command)+1:], " \t")
+	args := ai.JSTrimLeft(text[len(command)+1:])
 	if args == "" {
 		return "", false
 	}
@@ -155,7 +155,7 @@ func GetPathCommandArgument(text string, command string) (string, bool) {
 		}
 		return args[1 : 1+closing], true
 	}
-	if index := strings.IndexAny(args, " \t\n\r\f\v"); index >= 0 {
+	if index := strings.IndexFunc(args, ai.IsJSSpace); index >= 0 {
 		return args[:index], true
 	}
 	return args, true
