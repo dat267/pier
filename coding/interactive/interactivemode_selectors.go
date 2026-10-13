@@ -217,13 +217,13 @@ func (w *SelectorWiring) ShowThinkingSelector() {
 // HandleThinkingCommand handles `/thinking [level]`.
 func (w *SelectorWiring) HandleThinkingCommand(searchTerm string) {
 	availableLevels := w.Session.GetAvailableThinkingLevels()
-	if strings.TrimSpace(searchTerm) == "" {
+	if searchTerm == "" {
 		w.ShowThinkingSelector()
 		return
 	}
-	normalized := strings.ToLower(strings.TrimSpace(searchTerm))
+	normalized := ai.JSLower(ai.JSTrim(searchTerm))
 	for _, level := range availableLevels {
-		if strings.ToLower(string(level)) == normalized {
+		if ai.JSLower(string(level)) == normalized {
 			w.SelectThinkingLevel(level, false)
 			return
 		}

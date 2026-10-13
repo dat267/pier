@@ -101,15 +101,15 @@ func IsAlias(id string) bool {
 // FindExactModelReferenceMatch finds a model by bare id or canonical
 // provider/model reference; ambiguous bare ids are rejected.
 func FindExactModelReferenceMatch(modelReference string, availableModels []*ai.Model) *ai.Model {
-	trimmed := strings.TrimSpace(modelReference)
+	trimmed := ai.JSTrim(modelReference)
 	if trimmed == "" {
 		return nil
 	}
-	normalized := strings.ToLower(trimmed)
+	normalized := ai.JSLower(trimmed)
 
 	var canonicalMatches []*ai.Model
 	for _, model := range availableModels {
-		if strings.ToLower(model.Provider+"/"+model.ID) == normalized {
+		if ai.JSLower(model.Provider+"/"+model.ID) == normalized {
 			canonicalMatches = append(canonicalMatches, model)
 		}
 	}
@@ -121,12 +121,12 @@ func FindExactModelReferenceMatch(modelReference string, availableModels []*ai.M
 	}
 
 	if slashIndex := strings.Index(trimmed, "/"); slashIndex != -1 {
-		provider := strings.TrimSpace(trimmed[:slashIndex])
-		modelID := strings.TrimSpace(trimmed[slashIndex+1:])
+		provider := ai.JSTrim(trimmed[:slashIndex])
+		modelID := ai.JSTrim(trimmed[slashIndex+1:])
 		if provider != "" && modelID != "" {
 			var providerMatches []*ai.Model
 			for _, model := range availableModels {
-				if strings.EqualFold(model.Provider, provider) && strings.EqualFold(model.ID, modelID) {
+				if ai.JSLower(model.Provider) == ai.JSLower(provider) && ai.JSLower(model.ID) == ai.JSLower(modelID) {
 					providerMatches = append(providerMatches, model)
 				}
 			}
@@ -141,7 +141,7 @@ func FindExactModelReferenceMatch(modelReference string, availableModels []*ai.M
 
 	var idMatches []*ai.Model
 	for _, model := range availableModels {
-		if strings.ToLower(model.ID) == normalized {
+		if ai.JSLower(model.ID) == normalized {
 			idMatches = append(idMatches, model)
 		}
 	}
@@ -156,11 +156,11 @@ func tryMatchModel(modelPattern string, availableModels []*ai.Model) *ai.Model {
 	if exact := FindExactModelReferenceMatch(modelPattern, availableModels); exact != nil {
 		return exact
 	}
-	lowered := strings.ToLower(modelPattern)
+	lowered := ai.JSLower(modelPattern)
 	var matches []*ai.Model
 	for _, model := range availableModels {
-		if strings.Contains(strings.ToLower(model.ID), lowered) ||
-			(model.Name != "" && strings.Contains(strings.ToLower(model.Name), lowered)) {
+		if strings.Contains(ai.JSLower(model.ID), lowered) ||
+			(model.Name != "" && strings.Contains(ai.JSLower(model.Name), lowered)) {
 			matches = append(matches, model)
 		}
 	}
@@ -374,12 +374,12 @@ func ResolveCliModel(options ResolveCliModelOptions) ResolveCliModelResult {
 
 	providerMap := map[string]string{}
 	for _, model := range availableModels {
-		providerMap[strings.ToLower(model.Provider)] = model.Provider
+		providerMap[ai.JSLower(model.Provider)] = model.Provider
 	}
 
 	provider := ""
 	if cliProvider != "" {
-		provider = providerMap[strings.ToLower(cliProvider)]
+		provider = providerMap[ai.JSLower(cliProvider)]
 		if provider == "" {
 			return ResolveCliModelResult{Error: fmt.Sprintf("Unknown provider %q. Use --list-models to see available providers/models.", cliProvider)}
 		}
@@ -390,7 +390,7 @@ func ResolveCliModel(options ResolveCliModelOptions) ResolveCliModelResult {
 	if provider == "" {
 		if slashIndex := strings.Index(cliModel, "/"); slashIndex != -1 {
 			maybeProvider := cliModel[:slashIndex]
-			if canonical, ok := providerMap[strings.ToLower(maybeProvider)]; ok {
+			if canonical, ok := providerMap[ai.JSLower(maybeProvider)]; ok {
 				provider = canonical
 				pattern = cliModel[slashIndex+1:]
 				inferredProvider = true
@@ -399,10 +399,10 @@ func ResolveCliModel(options ResolveCliModelOptions) ResolveCliModelResult {
 	}
 
 	if provider == "" {
-		lower := strings.ToLower(cliModel)
+		lower := ai.JSLower(cliModel)
 		var exactMatches []*ai.Model
 		for _, model := range availableModels {
-			if strings.ToLower(model.ID) == lower || strings.ToLower(model.Provider+"/"+model.ID) == lower {
+			if ai.JSLower(model.ID) == lower || ai.JSLower(model.Provider+"/"+model.ID) == lower {
 				exactMatches = append(exactMatches, model)
 			}
 		}
@@ -436,7 +436,7 @@ func ResolveCliModel(options ResolveCliModelOptions) ResolveCliModelResult {
 
 	if cliProvider != "" && provider != "" {
 		prefix := provider + "/"
-		if strings.HasPrefix(strings.ToLower(cliModel), strings.ToLower(prefix)) {
+		if strings.HasPrefix(ai.JSLower(cliModel), ai.JSLower(prefix)) {
 			pattern = cliModel[len(prefix):]
 		}
 	}
@@ -460,7 +460,7 @@ func ResolveCliModel(options ResolveCliModelOptions) ResolveCliModelResult {
 		if inferredProvider {
 			var rawExactMatches []*ai.Model
 			for _, model := range availableModels {
-				if strings.ToLower(model.ID) == strings.ToLower(cliModel) && !ai.ModelsAreEqual(model, parsed.Model) {
+				if ai.JSLower(model.ID) == ai.JSLower(cliModel) && !ai.ModelsAreEqual(model, parsed.Model) {
 					rawExactMatches = append(rawExactMatches, model)
 				}
 			}
@@ -482,9 +482,9 @@ func ResolveCliModel(options ResolveCliModelOptions) ResolveCliModelResult {
 	}
 
 	if inferredProvider {
-		lower := strings.ToLower(cliModel)
+		lower := ai.JSLower(cliModel)
 		for _, model := range availableModels {
-			if strings.ToLower(model.ID) == lower || strings.ToLower(model.Provider+"/"+model.ID) == lower {
+			if ai.JSLower(model.ID) == lower || ai.JSLower(model.Provider+"/"+model.ID) == lower {
 				return ResolveCliModelResult{Model: model}
 			}
 		}

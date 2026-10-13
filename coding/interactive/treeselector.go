@@ -368,7 +368,7 @@ func (t *TreeList) ApplyFilter() {
 		}
 	}
 
-	searchTokens := strings.Fields(strings.ToLower(t.searchQuery))
+	searchTokens := ai.JSSplitWhitespace(ai.JSLower(t.searchQuery))
 
 	t.filteredNodes = nil
 	for _, flatNode := range t.flatNodes {
@@ -410,7 +410,7 @@ func (t *TreeList) ApplyFilter() {
 		}
 
 		if len(searchTokens) > 0 {
-			nodeText := strings.ToLower(t.getSearchableText(flatNode.Node))
+			nodeText := ai.JSLower(t.getSearchableText(flatNode.Node))
 			allMatch := true
 			for _, token := range searchTokens {
 				if !strings.Contains(nodeText, token) {

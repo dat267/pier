@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
 )
@@ -251,7 +252,7 @@ func (w *SubmitWiring) HandleSubmit(ctx context.Context, text string) {
 	case text == "/model" || strings.HasPrefix(text, "/model "):
 		searchTerm := ""
 		if strings.HasPrefix(text, "/model ") {
-			searchTerm = strings.TrimSpace(text[len("/model "):])
+			searchTerm = ai.JSTrim(text[len("/model "):])
 		}
 		clearEditor()
 		if w.Handlers.HandleModelCommand != nil {
@@ -261,7 +262,7 @@ func (w *SubmitWiring) HandleSubmit(ctx context.Context, text string) {
 	case text == "/thinking" || strings.HasPrefix(text, "/thinking "):
 		searchTerm := ""
 		if strings.HasPrefix(text, "/thinking ") {
-			searchTerm = strings.TrimSpace(text[len("/thinking "):])
+			searchTerm = ai.JSTrim(text[len("/thinking "):])
 		}
 		clearEditor()
 		if w.Handlers.HandleThinkingCommand != nil {
@@ -337,7 +338,7 @@ func (w *SubmitWiring) HandleSubmit(ctx context.Context, text string) {
 	case text == "/login" || strings.HasPrefix(text, "/login "):
 		providerRef := ""
 		if strings.HasPrefix(text, "/login ") {
-			providerRef = strings.TrimSpace(text[len("/login "):])
+			providerRef = ai.JSTrim(text[len("/login "):])
 		}
 		clearEditor()
 		if w.Handlers.HandleLoginCommand != nil {

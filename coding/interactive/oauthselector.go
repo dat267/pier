@@ -58,7 +58,7 @@ type MatchResult struct {
 func normalizeWhitespaceLower(text string) string {
 	var builder strings.Builder
 	pendingSpace := false
-	for _, r := range strings.ToLower(text) {
+	for _, r := range ai.JSLower(text) {
 		if isSpaceRune(r) {
 			pendingSpace = true
 			continue

@@ -5,6 +5,9 @@ import (
 	"strconv"
 	"strings"
 	"unicode/utf16"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // Port of utils/sanitize-unicode.ts.
@@ -64,6 +67,21 @@ var jsSpace = func(r rune) bool {
 }
 
 func JSTrim(s string) string { return strings.TrimFunc(s, jsSpace) }
+
+// JSSplitWhitespace splits on runs of the JS `\s` class (String.split(/\s+/)
+// with the empty parts dropped), unlike strings.Fields which uses
+// unicode.IsSpace.
+func JSSplitWhitespace(s string) []string {
+	return strings.FieldsFunc(s, jsSpace)
+}
+
+// JSLower lowercases like String.prototype.toLowerCase: full Unicode case
+// mapping with the Greek final-sigma and U+0130 special cases that Go's
+// strings.ToLower (simple mapping) omits. The Caser is created per call
+// because it is documented as not shareable between goroutines.
+func JSLower(s string) string {
+	return cases.Lower(language.Und).String(s)
+}
 
 // JSTrimLength reports the UTF-16 length of the JS-trimmed string, the form
 // upstream compares against zero (`text.trim().length === 0`).

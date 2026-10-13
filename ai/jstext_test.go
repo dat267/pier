@@ -24,3 +24,20 @@ func TestJSTrimMatchesJSWhitespace(t *testing.T) {
 		}
 	}
 }
+
+// JSLower must match String.prototype.toLowerCase, including the Greek
+// final-sigma context rule and the U+0130 expansion.
+func TestJSLowerMatchesJS(t *testing.T) {
+	cases := map[string]string{
+		"ΟΣ":  "ος", // final sigma
+		"ΣΣ":  "σς",
+		"İ":   "i\u0307",
+		"ẞ":   "ß",
+		"ABC": "abc",
+	}
+	for input, want := range cases {
+		if got := JSLower(input); got != want {
+			t.Errorf("JSLower(%q) = %q; want %q", input, got, want)
+		}
+	}
+}

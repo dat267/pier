@@ -168,13 +168,13 @@ func (w *AuthWiring) GetLogoutProviderOptions(ctx context.Context) ([]AuthSelect
 
 // FindLoginProviderOptions finds the providers matching a reference.
 func (w *AuthWiring) FindLoginProviderOptions(providerRef string) []AuthSelectorProvider {
-	normalized := strings.ToLower(strings.TrimSpace(providerRef))
+	normalized := ai.JSLower(ai.JSTrim(providerRef))
 	if normalized == "" {
 		return nil
 	}
 	var matches []AuthSelectorProvider
 	for _, provider := range w.GetLoginProviderOptions("") {
-		if strings.ToLower(provider.ID) == normalized || strings.ToLower(provider.Name) == normalized {
+		if ai.JSLower(provider.ID) == normalized || ai.JSLower(provider.Name) == normalized {
 			matches = append(matches, provider)
 		}
 	}

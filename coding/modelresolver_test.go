@@ -616,3 +616,12 @@ func TestIsAliasAndThinkingLevels(t *testing.T) {
 		t.Fatalf("default thinking level = %s", DefaultThinkingLevel)
 	}
 }
+
+// Model references are compared with String.prototype.toLowerCase, whose Greek
+// final-sigma rule makes "ΟΣ" equal to "ος" (Go's strings.ToLower yields "οσ").
+func TestFindExactModelReferenceMatchUsesJSLower(t *testing.T) {
+	model := testModel("\u03bf\u03c2", "Final Sigma", "anthropic", false) // ος
+	if got := FindExactModelReferenceMatch("\u039f\u03a3", []*ai.Model{model}); got == nil {
+		t.Fatal("JS toLowerCase should match ΟΣ to ος")
+	}
+}

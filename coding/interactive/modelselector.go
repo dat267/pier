@@ -354,7 +354,7 @@ func (c *ModelSelectorComponent) isDefaultModel(model *ai.Model) bool {
 }
 
 func (c *ModelSelectorComponent) isDefaultSearch(query string) bool {
-	normalized := strings.ToLower(strings.TrimSpace(query))
+	normalized := ai.JSLower(ai.JSTrim(query))
 	return normalized != "" && strings.HasPrefix("default", normalized)
 }
 
