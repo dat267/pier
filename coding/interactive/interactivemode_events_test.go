@@ -273,6 +273,32 @@ func TestEventDispatcherEntryAppended(t *testing.T) {
 	if len(transcript.Chat.Children) != 2 { // spacer + text
 		t.Fatalf("children = %d", len(transcript.Chat.Children))
 	}
+
+	// A custom_message entry with display renders a message.
+	display := true
+	dispatcher.HandleEvent(&coding.SessionEvent{
+		Type: coding.SessionEntryAppended,
+		Entry: &coding.SessionEntry{
+			Type: "custom_message", CustomType: "note", Display: &display,
+			Content: json.RawMessage(`"hello"`), Timestamp: "2026-01-01T00:00:00.000Z",
+		},
+	})
+	if len(transcript.Chat.Children) != 3 {
+		t.Fatalf("custom_message not rendered: children = %d", len(transcript.Chat.Children))
+	}
+
+	// A custom_message entry without display is skipped.
+	hidden := false
+	dispatcher.HandleEvent(&coding.SessionEvent{
+		Type: coding.SessionEntryAppended,
+		Entry: &coding.SessionEntry{
+			Type: "custom_message", CustomType: "note", Display: &hidden,
+			Content: json.RawMessage(`"secret"`), Timestamp: "2026-01-01T00:00:00.000Z",
+		},
+	})
+	if len(transcript.Chat.Children) != 3 {
+		t.Fatalf("hidden custom_message rendered: children = %d", len(transcript.Chat.Children))
+	}
 }
 
 // TestEventDispatcherRetries covers the retry and summarization events.

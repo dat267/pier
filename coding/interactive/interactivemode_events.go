@@ -181,6 +181,11 @@ func (d *EventDispatcher) HandleEvent(event *coding.SessionEvent) {
 		} else if event.Entry.Type == "usage" && event.Entry.Kind == "cache_warm" && d.Transcript != nil {
 			d.Transcript.AddCacheWarmingUsage(event.Entry)
 			d.requestRender()
+		} else if event.Entry.Type == "custom_message" && event.Entry.Display != nil && *event.Entry.Display && d.Transcript != nil {
+			for _, message := range coding.SessionEntryToContextMessages(event.Entry) {
+				d.Transcript.AddMessageToChat(message, true)
+			}
+			d.requestRender()
 		}
 
 	case coding.SessionInfoChanged:
