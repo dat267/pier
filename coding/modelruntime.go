@@ -17,10 +17,9 @@ import (
 // Port of core/model-runtime.ts: the configured pi-ai Models collection used by
 // the coding agent and SDK consumers.
 //
-// D37: upstream wraps every static built-in provider with the pi.dev remote
-// catalog overlay (core/remote-catalog-provider.ts). The runtime now layers the
-// remote and per-key catalog for OpenRouter; other providers still use their
-// built-in catalogs. D35 also applies: extension provider registration is
+// Built-in catalogs are layered with pi.dev's refreshable catalog in the same
+// provider setup as upstream; OpenRouter additionally personalizes the refreshed
+// list to the active key. D35 still applies: extension provider registration is
 // extension mechanics and omitted.
 
 // ModelRuntimeSnapshot is the cached provider/model/auth view.
@@ -169,11 +168,16 @@ func CreateModelRuntime(options CreateModelRuntimeOptions) (*ModelRuntime, error
 		localGeneratedAt = generatedAt.UnixMilli()
 	}
 	for _, provider := range providers.BuiltinProviders() {
-		if provider.ID == "openrouter" {
+		switch provider.ID {
+		case "radius":
+			// Radius owns a live, credential-specific catalog already.
+		case "openrouter":
 			provider = WithPersonalizedCatalog(
 				provider, ai.PersonalizeOpenRouterCatalog, options.CatalogBaseURL,
 				localGeneratedAt, generatedAt != nil, nil,
 			)
+		default:
+			provider = WithRemoteCatalog(provider, options.CatalogBaseURL, localGeneratedAt, generatedAt != nil, nil)
 		}
 		runtime.defaults[provider.ID] = provider
 	}

@@ -74,7 +74,7 @@ func TestOpenRouterRefreshUsesTheKeySpecificModelCatalog(t *testing.T) {
 		case "/api/v1/models/user":
 			userRequests++
 			userAuthorization = request.Header.Get("Authorization")
-			_, _ = writer.Write([]byte(`{"data":[{"id":"openrouter/auto","context_length":8192,"top_provider":{"context_length":4096,"max_completion_tokens":2048},"pricing":{"prompt":"0.00001","completion":"0.00002","overrides":[{"min_prompt_tokens":10000,"prompt":"0.00003","completion":"0.00004"}]}}]}`))
+			_, _ = writer.Write([]byte(`{"data":[{"id":"openrouter/auto","context_length":8192,"top_provider":{"context_length":4096,"max_completion_tokens":2048},"pricing":{"prompt":"0.00001","completion":"0.00002","overrides":[{"min_prompt_tokens":10000,"prompt":"0.00003","completion":"0.00004"},{"min_prompt_tokens":20000,"utc_days":[],"prompt":"0.00005"}]}}]}`))
 		default:
 			http.NotFound(writer, request)
 		}
@@ -299,6 +299,43 @@ func TestRemoteCatalog404AndError(t *testing.T) {
 	}
 	if *kept.CheckedAt == *stored.CheckedAt {
 		t.Fatal("checkedAt must move on failures")
+	}
+}
+
+func TestModelRuntimeRefreshesBuiltinRemoteCatalogs(t *testing.T) {
+	var requests int
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		requests++
+		if request.URL.Path != "/api/models/providers/anthropic" {
+			http.NotFound(writer, request)
+			return
+		}
+		writer.Header().Set("Last-Modified", "Sat, 01 Jan 2033 00:00:00 GMT")
+		_, _ = writer.Write([]byte(`[{"id":"remote-claude","name":"Remote Claude","api":"anthropic-messages","baseUrl":"https://api.anthropic.com","input":["text"],"contextWindow":8192,"maxTokens":2048,"cost":{"input":1,"output":2,"cacheRead":0,"cacheWrite":0}}]`))
+	}))
+	defer server.Close()
+	credentials := newMemoryCredentialStore()
+	credentials.entries["anthropic"] = &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "anthropic-key"}}
+	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
+		DisableModelsJSON: true, Credentials: credentials,
+		ModelsStore: NewInMemoryCodingAgentModelsStore(), CatalogBaseURL: server.URL,
+		AllowModelNetwork: true, RefreshOnCreate: boolPtr(false),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	allowNetwork, force := true, true
+	result, err := runtime.Refresh(ctxpkg.Background(), &ModelsRefreshCallOptions{
+		Providers: []string{"anthropic"}, AllowNetwork: &allowNetwork, Force: &force,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if refreshErr := result.Errors["anthropic"]; refreshErr != nil {
+		t.Fatalf("refresh error: %v", refreshErr)
+	}
+	if model := runtime.GetModel("anthropic", "remote-claude"); model == nil || model.ContextWindow != 8192 {
+		t.Fatalf("remote model = %+v, want remote catalog overlay; requests=%d; err=%s", model, requests, runtime.GetError())
 	}
 }
 

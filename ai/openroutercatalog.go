@@ -129,9 +129,9 @@ type openRouterPricing struct {
 
 type openRouterPricingOverride struct {
 	MinPromptTokens *int64          `json:"min_prompt_tokens"`
-	UTCStart        *int            `json:"utc_start"`
-	UTCEnd          *int            `json:"utc_end"`
-	UTCDays         []string        `json:"utc_days"`
+	UTCStart        json.RawMessage `json:"utc_start"`
+	UTCEnd          json.RawMessage `json:"utc_end"`
+	UTCDays         json.RawMessage `json:"utc_days"`
 	Prompt          json.RawMessage `json:"prompt"`
 	Completion      json.RawMessage `json:"completion"`
 	InputCacheRead  json.RawMessage `json:"input_cache_read"`
@@ -147,7 +147,7 @@ func openRouterModelCost(pricing openRouterPricing) ModelCost {
 	}
 	cost := ModelCost{ModelCostRates: base}
 	for _, override := range pricing.Overrides {
-		if override.MinPromptTokens == nil || override.UTCStart != nil || override.UTCEnd != nil || len(override.UTCDays) > 0 {
+		if override.MinPromptTokens == nil || len(override.UTCStart) > 0 || len(override.UTCEnd) > 0 || len(override.UTCDays) > 0 {
 			continue
 		}
 		cost.Tiers = append(cost.Tiers, ModelCostTier{
