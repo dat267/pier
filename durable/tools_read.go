@@ -12,13 +12,13 @@ import (
 // Port of packages/durable/src/tools/read.ts at pi v1.1.0.
 const readChunkSize = 64 * 1024
 
-func executeReadTool(reader BinaryReader, input ReadToolInput, ctx chord.Context) (ToolExecutionResult, error) {
+func executeReadTool(reader BinaryReader, input ReadToolInput, api ToolExecutionApi, ctx chord.Context) (ToolExecutionResult, error) {
 	for attempt := 0; ; attempt++ {
 		before, err := reader.Info(ctx)
 		if err != nil {
 			return ToolExecutionResult{}, err
 		}
-		result, err := readToolSnapshot(reader, before, input, ctx)
+		result, err := readToolSnapshot(reader, before, input, api, ctx)
 		if err != nil {
 			return ToolExecutionResult{}, err
 		}
@@ -35,14 +35,17 @@ func executeReadTool(reader BinaryReader, input ReadToolInput, ctx chord.Context
 	}
 }
 
-func readToolSnapshot(reader BinaryReader, info *FileInfo, input ReadToolInput, ctx chord.Context) (ToolExecutionResult, error) {
+func readToolSnapshot(reader BinaryReader, info *FileInfo, input ReadToolInput, api ToolExecutionApi, ctx chord.Context) (ToolExecutionResult, error) {
 	mimeType, err := detectSupportedImageMimeTypeFromReader(reader, info.Size, ctx)
 	if err != nil {
 		return ToolExecutionResult{}, err
 	}
 	if mimeType != "" {
-		return readResultError("unsupported_image",
-			fmt.Sprintf("%s is an image (%s); reading images is not supported", input.Path, mimeType)), nil
+		model, err := imageModelFor(api, ctx)
+		if err != nil {
+			return ToolExecutionResult{}, err
+		}
+		return readImageResult(reader, info, input.Path, mimeType, model, ctx)
 	}
 
 	startLine := 0

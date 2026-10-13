@@ -53,13 +53,13 @@ func readResultError(code, message string) ToolExecutionResult {
 	}
 }
 
-// CreateReadTool builds the read tool: it reads text files and reports how the
-// shown text was cut; image files are rejected.
+// CreateReadTool builds the read tool: it reads text files and images and
+// reports how the shown text was cut.
 func CreateReadTool() ToolRegistration {
 	return ToolRegistration{
 		Tool: ai.Tool{
 			Name:        "read",
-			Description: fmt.Sprintf("Read the contents of a text file. Output is truncated to %d lines or %dKB (whichever is hit first). Use offset/limit for large files. When you need the full file, continue with offset until complete.", DefaultMaxLines, DefaultMaxBytes/1024),
+			Description: fmt.Sprintf("Read the contents of a file. Supports text files and images (jpg, png, gif, webp). Images are sent as attachments. For text files, output is truncated to %d lines or %dKB (whichever is hit first). Use offset/limit for large files. When you need the full file, continue with offset until complete.", DefaultMaxLines, DefaultMaxBytes/1024),
 			Parameters:  json.RawMessage(`{"type":"object","properties":{"path":{"type":"string","description":"Path to the file to read (relative or absolute)"},"offset":{"type":"number","description":"Line number to start reading from (1-indexed)"},"limit":{"type":"number","description":"Maximum number of lines to read"}},"required":["path"]}`),
 		},
 		Execute: func(args chord.JsonValue, api ToolExecutionApi, ctx chord.Context) (ToolExecutionResult, error) {
@@ -80,7 +80,7 @@ func CreateReadTool() ToolRegistration {
 				return ToolExecutionResult{}, err
 			}
 			defer reader.Close(ctx)
-			return executeReadTool(reader, input, ctx)
+			return executeReadTool(reader, input, api, ctx)
 		},
 	}
 }

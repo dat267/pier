@@ -27,6 +27,8 @@ type fakeToolApi struct {
 	outputBuffer *OutputBuffer
 	output       strings.Builder
 	diagnostics  []ToolDiagnostic
+	models       *ai.Models
+	agent        Agent
 }
 
 func (a *fakeToolApi) Env() ExecutionEnv                { return a.env }

@@ -57,7 +57,11 @@ return the first failure as `SessionFailed`, and watches end with
 listener is reported through `onReport` instead of failing the operation that
 ran it, the Session's own listeners fail the Session, a throwing watch listener
 is reported as well as ending the watch with `listener_error`, and a throwing
-clock is reported once and falls back to the wall clock (`eba849739`). `auth.json` lock
+clock is reported once and falls back to the wall clock (`eba849739`). The
+Durable `read` tool returns a supported image within the model's limits as one
+image block instead of an `unsupported_image` error, with the header-only
+dimension check and the model's `inputLimits.images.resize` overrides
+(`eba849739`). `auth.json` lock
 acquisition retries transient Windows `EPERM` within a bounded count while
 non-Windows failures remain immediate (`#10801`, `e6fb2581d`). Focused regression
 tests cover these fixes.
