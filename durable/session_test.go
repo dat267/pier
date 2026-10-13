@@ -200,13 +200,17 @@ func (s *failingDocumentReadStorage) Close(ctx context.Context) error {
 
 type failingConversationReadStorage struct {
 	Storage
-	readErr error
-	closed  chan struct{}
-	once    sync.Once
+	readErr         error
+	conversationErr error
+	closed          chan struct{}
+	once            sync.Once
 }
 
-func (s *failingConversationReadStorage) Conversation(context.Context, Id) (*ConversationRecord, error) {
-	return nil, s.readErr
+func (s *failingConversationReadStorage) Conversation(ctx context.Context, id Id) (*ConversationRecord, error) {
+	if s.conversationErr != nil {
+		return nil, s.conversationErr
+	}
+	return s.Storage.Conversation(ctx, id)
 }
 
 func (s *failingConversationReadStorage) Close(ctx context.Context) error {
@@ -216,7 +220,7 @@ func (s *failingConversationReadStorage) Close(ctx context.Context) error {
 
 func TestSessionFailsAndClosesAfterTransactionStorageReadError(t *testing.T) {
 	readErr := errors.New("conversation read failed")
-	storage := &failingConversationReadStorage{Storage: NewMemoryStorage(), readErr: readErr, closed: make(chan struct{})}
+	storage := &failingConversationReadStorage{Storage: NewMemoryStorage(), conversationErr: readErr, closed: make(chan struct{})}
 	session := NewSession(storage)
 	if _, err := storeRoot(t, session); err != nil {
 		t.Fatal(err)
@@ -230,10 +234,46 @@ func TestSessionFailsAndClosesAfterTransactionStorageReadError(t *testing.T) {
 	if err := session.Commit(context.Background(), func(*Transaction) error { return nil }); err == nil || !strings.Contains(err.Error(), "Session failed") {
 		t.Fatalf("commit after storage read failure = %v", err)
 	}
+	var failed *SessionFailedError
+	if _, err := session.Storage().Conversation(context.Background(), RootConversationID); !errors.As(err, &failed) {
+		t.Fatalf("direct storage read after Session failure = %v, want SessionFailed", err)
+	}
 	select {
 	case <-storage.closed:
 	case <-time.After(time.Second):
 		t.Fatal("storage was not closed after a read failure")
+	}
+}
+
+func TestSessionDoesNotCommitAfterIgnoredStorageReadError(t *testing.T) {
+	readErr := errors.New("conversation read failed")
+	storage := &failingConversationReadStorage{Storage: NewMemoryStorage(), conversationErr: readErr, closed: make(chan struct{})}
+	session := NewSession(storage)
+	if _, err := storeRoot(t, session); err != nil {
+		t.Fatal(err)
+	}
+	err := session.Commit(context.Background(), func(tx *Transaction) error {
+		_, _ = tx.Conversation(RootConversationID)
+		return nil
+	})
+	if err == nil || !errors.Is(err, readErr) {
+		t.Fatalf("commit after ignored storage read error = %v", err)
+	}
+}
+
+func TestReadOnLineDoesNotSwallowStorageFailure(t *testing.T) {
+	readErr := errors.New("read failed")
+	storage := &failingConversationReadStorage{Storage: NewMemoryStorage(), conversationErr: readErr, closed: make(chan struct{})}
+	session := NewSession(storage)
+	if _, err := storeRoot(t, session); err != nil {
+		t.Fatal(err)
+	}
+	err := session.ReadOnLine(func() error {
+		_, _ = session.Storage().Conversation(context.Background(), RootConversationID)
+		return nil
+	})
+	if err == nil || !errors.Is(err, readErr) {
+		t.Fatalf("ReadOnLine after ignored storage error = %v", err)
 	}
 }
 

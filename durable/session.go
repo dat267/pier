@@ -86,7 +86,7 @@ func NewSessionWithClock(storage Storage, now func() int64) *Session {
 
 // Storage exposes the session's storage.
 func (s *Session) Storage() Storage {
-	return sessionStorageGuard{Storage: s.storage, fail: s.storageFailed, failCommit: s.storageCommitFailed}
+	return sessionStorageGuard{Storage: s.storage, check: s.assertUsable, fail: s.storageFailed, failCommit: s.storageCommitFailed}
 }
 
 // Failure reports the cause that failed the Session, if any.
@@ -125,7 +125,13 @@ func (s *Session) ReadOnLine(job func() error) error {
 		return errors.New("Session is closed")
 	}
 	s.mu.Unlock()
-	return job()
+	if err := job(); err != nil {
+		return err
+	}
+	s.mu.Lock()
+	err := s.assertHealthyLocked()
+	s.mu.Unlock()
+	return err
 }
 
 // Snapshot returns the current value of a document, materialized for the
@@ -426,6 +432,13 @@ func (s *Session) runCommit(ctx chord.Context, change func(tx *Transaction) erro
 	if err := change(tx); err != nil {
 		tx.SettleFailure()
 		return err
+	}
+	s.mu.Lock()
+	failure := s.assertHealthyLocked()
+	s.mu.Unlock()
+	if failure != nil {
+		tx.SettleFailure()
+		return failure
 	}
 	writes, err := tx.SettleSuccess()
 	if err != nil {

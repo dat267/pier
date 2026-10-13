@@ -7,6 +7,7 @@ import "context"
 // no durable effect and remains local to that call.
 type sessionStorageGuard struct {
 	Storage
+	check      func() error
 	fail       func(error)
 	failCommit func(error)
 }
@@ -18,7 +19,23 @@ func (s sessionStorageGuard) record(err error) error {
 	return err
 }
 
+func guardedStorageCall[T any](s sessionStorageGuard, call func() (T, error)) (T, error) {
+	var zero T
+	if s.check != nil {
+		if err := s.check(); err != nil {
+			return zero, err
+		}
+	}
+	value, err := call()
+	return value, s.record(err)
+}
+
 func (s sessionStorageGuard) Commit(ctx context.Context, writes []StorageWrite) (Seq, error) {
+	if s.check != nil {
+		if err := s.check(); err != nil {
+			return 0, err
+		}
+	}
 	seq, err := s.Storage.Commit(ctx, writes)
 	if err != nil && s.failCommit != nil {
 		s.failCommit(err)
@@ -27,71 +44,73 @@ func (s sessionStorageGuard) Commit(ctx context.Context, writes []StorageWrite) 
 }
 
 func (s sessionStorageGuard) MintID(ctx context.Context) (Id, error) {
-	id, err := s.Storage.MintID(ctx)
-	return id, s.record(err)
+	return guardedStorageCall(s, func() (Id, error) { return s.Storage.MintID(ctx) })
 }
 
 func (s sessionStorageGuard) Conversation(ctx context.Context, id Id) (*ConversationRecord, error) {
-	record, err := s.Storage.Conversation(ctx, id)
-	return record, s.record(err)
+	return guardedStorageCall(s, func() (*ConversationRecord, error) { return s.Storage.Conversation(ctx, id) })
 }
 
 func (s sessionStorageGuard) ScanConversations(ctx context.Context, query ConversationQuery, cursor Cursor, limit int) (Page[ConversationRecord], error) {
-	page, err := s.Storage.ScanConversations(ctx, query, cursor, limit)
-	return page, s.record(err)
+	return guardedStorageCall(s, func() (Page[ConversationRecord], error) {
+		return s.Storage.ScanConversations(ctx, query, cursor, limit)
+	})
 }
 
 func (s sessionStorageGuard) Entry(ctx context.Context, id Id) (*EntryCommit, error) {
-	entry, err := s.Storage.Entry(ctx, id)
-	return entry, s.record(err)
+	return guardedStorageCall(s, func() (*EntryCommit, error) { return s.Storage.Entry(ctx, id) })
 }
 
 func (s sessionStorageGuard) FindLatestHeadMarker(ctx context.Context, conversationID Id, atOrBeforeEntryID *Id) (*EntryRecord, error) {
-	entry, err := s.Storage.FindLatestHeadMarker(ctx, conversationID, atOrBeforeEntryID)
-	return entry, s.record(err)
+	return guardedStorageCall(s, func() (*EntryRecord, error) {
+		return s.Storage.FindLatestHeadMarker(ctx, conversationID, atOrBeforeEntryID)
+	})
 }
 
 func (s sessionStorageGuard) ScanEntries(ctx context.Context, query EntryQuery, cursor Cursor, limit int) (Page[EntryRecord], error) {
-	page, err := s.Storage.ScanEntries(ctx, query, cursor, limit)
-	return page, s.record(err)
+	return guardedStorageCall(s, func() (Page[EntryRecord], error) {
+		return s.Storage.ScanEntries(ctx, query, cursor, limit)
+	})
 }
 
 func (s sessionStorageGuard) Task(ctx context.Context, id Id) (*TaskRecord, error) {
-	task, err := s.Storage.Task(ctx, id)
-	return task, s.record(err)
+	return guardedStorageCall(s, func() (*TaskRecord, error) { return s.Storage.Task(ctx, id) })
 }
 
 func (s sessionStorageGuard) ScanTasks(ctx context.Context, query TaskQuery, cursor Cursor, limit int) (Page[TaskRecord], error) {
-	page, err := s.Storage.ScanTasks(ctx, query, cursor, limit)
-	return page, s.record(err)
+	return guardedStorageCall(s, func() (Page[TaskRecord], error) {
+		return s.Storage.ScanTasks(ctx, query, cursor, limit)
+	})
 }
 
 func (s sessionStorageGuard) Submission(ctx context.Context, id Id) (*SubmissionRecord, error) {
-	submission, err := s.Storage.Submission(ctx, id)
-	return submission, s.record(err)
+	return guardedStorageCall(s, func() (*SubmissionRecord, error) { return s.Storage.Submission(ctx, id) })
 }
 
 func (s sessionStorageGuard) ScanSubmissions(ctx context.Context, query SubmissionQuery, cursor Cursor, limit int) (Page[SubmissionRecord], error) {
-	page, err := s.Storage.ScanSubmissions(ctx, query, cursor, limit)
-	return page, s.record(err)
+	return guardedStorageCall(s, func() (Page[SubmissionRecord], error) {
+		return s.Storage.ScanSubmissions(ctx, query, cursor, limit)
+	})
 }
 
 func (s sessionStorageGuard) SubmissionByRequest(ctx context.Context, conversationID Id, requestID string) (*SubmissionRecord, error) {
-	submission, err := s.Storage.SubmissionByRequest(ctx, conversationID, requestID)
-	return submission, s.record(err)
+	return guardedStorageCall(s, func() (*SubmissionRecord, error) {
+		return s.Storage.SubmissionByRequest(ctx, conversationID, requestID)
+	})
 }
 
 func (s sessionStorageGuard) FindDocument(ctx context.Context, address DocumentAddress, at DocumentPoint) (*DocumentRecord, error) {
-	document, err := s.Storage.FindDocument(ctx, address, at)
-	return document, s.record(err)
+	return guardedStorageCall(s, func() (*DocumentRecord, error) {
+		return s.Storage.FindDocument(ctx, address, at)
+	})
 }
 
 func (s sessionStorageGuard) Document(ctx context.Context, id Id, at DocumentPoint) (*StoredDocument, error) {
-	document, err := s.Storage.Document(ctx, id, at)
-	return document, s.record(err)
+	return guardedStorageCall(s, func() (*StoredDocument, error) { return s.Storage.Document(ctx, id, at) })
 }
 
 func (s sessionStorageGuard) ScanDocuments(ctx context.Context, query DocumentQuery, cursor Cursor, limit int) (Page[DocumentRecord], error) {
-	page, err := s.Storage.ScanDocuments(ctx, query, cursor, limit)
-	return page, s.record(err)
+	return guardedStorageCall(s, func() (Page[DocumentRecord], error) {
+		return s.Storage.ScanDocuments(ctx, query, cursor, limit)
+	})
 }
