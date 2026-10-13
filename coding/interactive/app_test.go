@@ -398,3 +398,15 @@ func TestAppInstallsTheTranscriptSelectionReset(t *testing.T) {
 	// panic or an assertion failure.
 	app.transcript.ResetTextSelection()
 }
+
+// Upstream sets the terminal title at init (and after a session switch).
+func TestAppInitSetsTerminalTitle(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	terminal := &titleTerminal{fakeRendererTerminal: fakeRendererTerminal{width: 80, height: 24}}
+	app.lifecycle.options.Terminal = terminal
+	app.events.Init()
+	if len(terminal.titles) == 0 {
+		t.Fatal("init did not set the terminal title")
+	}
+}

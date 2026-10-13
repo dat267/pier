@@ -508,7 +508,10 @@ func NewApp(options AppOptions) *App {
 		app.queue.FlushCompactionQueue(context.Background(), willRetry)
 	}
 	app.events.CheckShutdownRequested = app.lifecycleCheckShutdown
-	app.events.Init = func() { app.transcript.RenderInitialMessages() }
+	app.events.Init = func() {
+		app.transcript.RenderInitialMessages()
+		app.lifecycle.UpdateTerminalTitle()
+	}
 	// The compaction-queue flush can start a turn; run it off-loop so events
 	// keep draining while it runs.
 	app.events.StartWork = func(fn func(context.Context) error) {

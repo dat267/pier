@@ -173,6 +173,7 @@ func (a *App) applySessionReplacement(sessionManager *coding.SessionManager) (*S
 		})
 	}
 	a.footer.Invalidate()
+	a.lifecycle.UpdateTerminalTitle()
 	// upstream rebindCurrentSession({renderBeforeBind: true}) → the session's own
 	// reset, which is the initial render and not the reload's rebuild.
 	a.startup.RenderCurrentSessionState()
