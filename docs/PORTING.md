@@ -38,6 +38,14 @@ resource capability without listing every resource or template (`#10526`,
 `f4cca2dc2`). Text print mode warns on a truncated final response and exits with
 status 1 (`#10799`, `441f5767c`). Focused regression tests cover these fixes.
 
+**v1.2.0 audit still open.** No implementation has been started for OpenRouter's
+per-key model catalog (`GET /models/user`), Anthropic's fallback from preferred
+strict tool schemas after the provider's documented size/limit errors, or the
+new published configuration schemas. These need separate source-level parity
+reviews; the schemas are configuration-editor support, not a runtime request
+path. Durable v1.2.0 additions and out-of-scope codemode work are also not yet
+fully audited. Do not treat the fix list above as a complete v1.2.0 port.
+
 Ported from it so far: the built-in catalog, regenerated from the tag's own generator
 (`claude-haiku-5-5`, the prompt-length pricing tiers for 154 models, and the model churn
 that comes with live models.dev data: 89 added, 58 removed). The regeneration also carries
