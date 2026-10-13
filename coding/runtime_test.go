@@ -372,9 +372,10 @@ func TestRuntimeCredentials(t *testing.T) {
 }
 
 func TestTimings(t *testing.T) {
-	// Disabled by default: nothing is recorded.
-	SetTimingsEnabled(nil)
-	t.Setenv("PI_TIMING", "")
+	// The explicit override works regardless of PI_TIMING at process startup.
+	disabled := false
+	SetTimingsEnabled(&disabled)
+	t.Cleanup(func() { SetTimingsEnabled(nil) })
 	ResetTimings(TimingMain)
 	Time("startup", TimingMain)
 	var buffer bytes.Buffer

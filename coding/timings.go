@@ -9,8 +9,8 @@ import (
 )
 
 // Port of core/timings.ts: central startup timing instrumentation, enabled with
-// PI_TIMING=1. Upstream reads the flag once at module load; the Go port reads it
-// per call so tests can toggle it (D30). `cmd` marks the boot phases with Time
+// PI_TIMING=1, captured once at initialization like upstream (D30 closed).
+// SetTimingsEnabled remains a test override. `cmd` marks boot phases with Time
 // and prints the table before entering the run loop, as upstream's main.ts does.
 
 // TimingNamespace groups timings ("main" and "extensions" upstream).
@@ -35,11 +35,12 @@ type timingState struct {
 }
 
 var (
-	timingsMu         sync.Mutex
-	timingNamespaces            = map[TimingNamespace]*timingState{}
-	timingOut         io.Writer = os.Stderr
-	timingNow                   = time.Now
-	timingsEnabledVar           = ""
+	timingsMu               sync.Mutex
+	timingNamespaces                  = map[TimingNamespace]*timingState{}
+	timingOut               io.Writer = os.Stderr
+	timingNow                         = time.Now
+	timingsEnabledVar                 = ""
+	timingsEnabledAtStartup           = os.Getenv("PI_TIMING") == "1"
 )
 
 // SetTimingsOutput overrides the timings writer (defaults to stderr).
@@ -49,8 +50,8 @@ func SetTimingsOutput(writer io.Writer) {
 	timingsMu.Unlock()
 }
 
-// SetTimingsEnabled overrides the PI_TIMING flag; enabled nil restores the
-// environment read.
+// SetTimingsEnabled overrides the startup PI_TIMING flag; nil restores the
+// value captured at package initialization.
 func SetTimingsEnabled(enabled *bool) {
 	timingsMu.Lock()
 	if enabled == nil {
@@ -70,7 +71,7 @@ func timingsEnabled() bool {
 	if override != "" {
 		return override == "1"
 	}
-	return os.Getenv("PI_TIMING") == "1"
+	return timingsEnabledAtStartup
 }
 
 // ResetTimings starts a fresh timing namespace.
