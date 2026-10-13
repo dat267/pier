@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
@@ -10,10 +11,10 @@ import (
 // word-wrapped layout, cursor navigation across visual lines, paste markers,
 // history, the kill ring, undo, and autocomplete integration.
 //
-// Divergences: upstream's async autocomplete (AbortController + debounce
-// timers) becomes a synchronous provider call under the editor lock (D71);
-// the state snapshot on undo copies the lines slice explicitly instead of
-// structuredClone (D59).
+// Divergences: the state snapshot on undo copies the lines slice explicitly
+// instead of structuredClone (D59). Autocomplete follows upstream's debounce,
+// abort and off-loop provider call; a host without the Post seam (test doubles,
+// a nil host) keeps the synchronous provider call.
 
 // EditorTheme styles the editor.
 type EditorTheme struct {
@@ -33,6 +34,24 @@ type EditorHost interface {
 	Rows() int
 	RequestRender(force bool)
 }
+
+// EditorPoster is the optional owner-loop handoff: a host that implements it can
+// run a callback on the UI side (the renderer's Post). When present, autocomplete
+// requests run off the owner loop with upstream's debounce and abort; a host
+// without it (test doubles, a nil host) keeps the synchronous provider call.
+type EditorPoster interface {
+	Post(fn func())
+}
+
+// autocompleteTimer is the debounce timer handle (time.Timer).
+type autocompleteTimer interface{ Stop() bool }
+
+var (
+	// autocompleteDebounceDelay is upstream's ATTACHMENT_AUTOCOMPLETE_DEBOUNCE_MS.
+	autocompleteDebounceDelay = 20 * time.Millisecond
+	// autocompleteAfter is the timer seam (time.AfterFunc), injectable for tests.
+	autocompleteAfter = func(d time.Duration, fn func()) autocompleteTimer { return time.AfterFunc(d, fn) }
+)
 
 var (
 	defaultAutocompleteTriggerCharacters = []string{"@", "#"}
@@ -81,6 +100,14 @@ type Editor struct {
 	autocompleteState      string // "" | "regular" | "force"
 	autocompletePrefix     string
 	autocompleteMaxVisible int
+
+	// Autocomplete request state (owner loop only; D71): startToken invalidates
+	// scheduled requests, requestID drops stale results, cancel aborts the
+	// in-flight provider call, debounce holds the pending timer.
+	autocompleteStartToken int
+	autocompleteRequestID  int
+	autocompleteCancel     context.CancelFunc
+	autocompleteDebounce   autocompleteTimer
 
 	pastes       map[int]string
 	pasteCounter int
@@ -2027,11 +2054,80 @@ func (e *Editor) requestAutocompleteLocked(force bool, explicitTab bool) {
 		}
 	}
 
-	// The Go port requests synchronously under the editor lock (D71): upstream
-	// debounces, aborts in-flight requests, and applies the result
-	// asynchronously.
-	suggestions := e.autocompleteProvider.GetSuggestions(
-		context.Background(), e.state.lines, e.state.cursorLine, e.state.cursorCol, force)
+	poster, canPost := e.host.(EditorPoster)
+	e.cancelAutocompleteRequestLocked()
+
+	if !canPost {
+		// No owner-loop handoff (test doubles or a nil host): keep the
+		// synchronous provider call so editor state stays on one goroutine.
+		suggestions := e.autocompleteProvider.GetSuggestions(
+			context.Background(), e.state.lines, e.state.cursorLine, e.state.cursorCol, force)
+		e.applyAutocompleteResultLocked(suggestions, force, explicitTab)
+		return
+	}
+
+	startToken := e.autocompleteStartToken
+	if delay := e.getAutocompleteDebounceDelayLocked(force, explicitTab); delay > 0 {
+		e.autocompleteDebounce = autocompleteAfter(delay, func() {
+			poster.Post(func() { e.startAutocompleteRequestLocked(startToken, force, explicitTab) })
+		})
+		return
+	}
+	e.startAutocompleteRequestLocked(startToken, force, explicitTab)
+}
+
+// getAutocompleteDebounceDelayLocked ports editor.ts getAutocompleteDebounceMs:
+// forced and explicit-Tab requests run immediately; a trigger token waits for the
+// attachment debounce.
+func (e *Editor) getAutocompleteDebounceDelayLocked(force bool, explicitTab bool) time.Duration {
+	if explicitTab || force {
+		return 0
+	}
+	if editorTriggerMatch(e.textBeforeCursor(), e.autocompleteTriggers) {
+		return autocompleteDebounceDelay
+	}
+	return 0
+}
+
+// startAutocompleteRequestLocked runs one provider call off the owner loop and
+// posts the result back (editor.ts startAutocompleteRequest/runAutocompleteRequest).
+func (e *Editor) startAutocompleteRequestLocked(startToken int, force bool, explicitTab bool) {
+	if e.autocompleteProvider == nil || startToken != e.autocompleteStartToken {
+		return
+	}
+	poster, ok := e.host.(EditorPoster)
+	if !ok {
+		return
+	}
+
+	snapshotLines := append([]string(nil), e.state.lines...)
+	snapshotLine, snapshotCol := e.state.cursorLine, e.state.cursorCol
+	snapshotText := e.getTextLocked()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	e.autocompleteCancel = cancel
+	e.autocompleteRequestID++
+	requestID := e.autocompleteRequestID
+	provider := e.autocompleteProvider
+	go func() {
+		suggestions := provider.GetSuggestions(ctx, snapshotLines, snapshotLine, snapshotCol, force)
+		poster.Post(func() {
+			if ctx.Err() != nil || requestID != e.autocompleteRequestID {
+				return
+			}
+			if e.getTextLocked() != snapshotText || e.state.cursorLine != snapshotLine || e.state.cursorCol != snapshotCol {
+				return
+			}
+			e.autocompleteCancel = nil
+			e.applyAutocompleteResultLocked(suggestions, force, explicitTab)
+		})
+	}()
+}
+
+// applyAutocompleteResultLocked ports runAutocompleteRequest's tail: empty
+// results clear the popup, a forced single Tab completion applies directly, and
+// anything else becomes the suggestion list.
+func (e *Editor) applyAutocompleteResultLocked(suggestions *AutocompleteSuggestions, force bool, explicitTab bool) {
 	if suggestions == nil || len(suggestions.Items) == 0 {
 		e.cancelAutocompleteLocked()
 		e.requestRender()
@@ -2071,6 +2167,18 @@ func (e *Editor) applyAutocompleteSuggestionsLocked(suggestions *AutocompleteSug
 	e.autocompleteState = state
 }
 
+func (e *Editor) cancelAutocompleteRequestLocked() {
+	e.autocompleteStartToken++
+	if e.autocompleteDebounce != nil {
+		e.autocompleteDebounce.Stop()
+		e.autocompleteDebounce = nil
+	}
+	if e.autocompleteCancel != nil {
+		e.autocompleteCancel()
+		e.autocompleteCancel = nil
+	}
+}
+
 func (e *Editor) clearAutocompleteUILocked() {
 	e.autocompleteState = ""
 	e.autocompleteList = nil
@@ -2078,6 +2186,7 @@ func (e *Editor) clearAutocompleteUILocked() {
 }
 
 func (e *Editor) cancelAutocompleteLocked() {
+	e.cancelAutocompleteRequestLocked()
 	e.clearAutocompleteUILocked()
 }
 

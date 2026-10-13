@@ -69,7 +69,28 @@ by code pointer.
 
 ## D71
 
-The editor requests autocomplete synchronously; upstream debounces.
+**Closed: autocomplete debounces, aborts and runs off the editor.**
+
+`tui.Editor` follows v1.2.0 `components/editor.ts`:
+
+- Non-forced requests for a trigger token wait
+  `ATTACHMENT_AUTOCOMPLETE_DEBOUNCE_MS` (20 ms, `getAutocompleteDebounceMs`);
+  forced and explicit-Tab requests run immediately.
+- The provider call runs on its own goroutine with a cancelable context
+  (upstream's `AbortController`); the result is posted back through the editor
+  host's `Post`, which the `editorHostAdapter` forwards to the renderer, and is
+  applied on the owner loop.
+- Superseded requests abort their context and their late results are dropped by
+  the request-generation and text/cursor snapshot check
+  (`isAutocompleteRequestCurrent`).
+
+A host without the `EditorPoster` seam (test doubles, a nil host) keeps the
+synchronous provider call, so editor state stays on one goroutine there.
+
+Tests: `TestEditorAutocompleteRunsOffLoop`,
+`TestEditorAutocompleteDebouncesTriggerTyping`,
+`TestEditorAutocompleteDebounceDecision`,
+`TestEditorAutocompleteDropsStaleResults`.
 
 ## D83
 

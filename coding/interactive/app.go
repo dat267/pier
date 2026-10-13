@@ -1424,3 +1424,4 @@ type editorHostAdapter struct{ ui tui.TUI }
 
 func (h editorHostAdapter) Rows() int                { return h.ui.GetTerminal().Rows() }
 func (h editorHostAdapter) RequestRender(force bool) { h.ui.RequestRender(force) }
+func (h editorHostAdapter) Post(fn func())           { h.ui.Post(fn) }
