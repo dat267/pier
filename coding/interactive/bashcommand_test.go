@@ -261,3 +261,18 @@ func TestNewCommandStartsASession(t *testing.T) {
 		t.Errorf("no confirmation in the transcript: %q", transcriptTexts(app))
 	}
 }
+
+// Upstream trims the bash command with String.trim, so a leading U+FEFF is
+// dropped before the command runs.
+func TestBashCommandTrimsJSUrFEFF(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+
+	wiring := newSubmitWiring(app)
+	wiring.HandleSubmit(context.Background(), "!\uFEFFecho js-ws")
+
+	pumpUntilBashOutput(t, app, "js-ws")
+	if command, _, _ := pumpUntilRecorded(t, app, "echo js-ws"); command != "echo js-ws" {
+		t.Errorf("recorded command = %q", command)
+	}
+}

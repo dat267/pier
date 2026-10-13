@@ -408,9 +408,9 @@ func (w *SubmitWiring) HandleSubmit(ctx context.Context, text string) {
 	// Bash commands.
 	if strings.HasPrefix(text, "!") {
 		isExcluded := strings.HasPrefix(text, "!!")
-		command := strings.TrimSpace(text[1:])
+		command := ai.JSTrim(text[1:])
 		if isExcluded {
-			command = strings.TrimSpace(text[2:])
+			command = ai.JSTrim(text[2:])
 		}
 		if command != "" {
 			if w.Session != nil && w.Session.IsBashRunning() {
