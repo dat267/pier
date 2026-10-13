@@ -28,6 +28,8 @@ type PrintModeOptions struct {
 	Mode CLIMode
 	// InitialMessage is the first prompt (with @file content already expanded).
 	InitialMessage string
+	// InitialImages attach only to InitialMessage, like upstream print-mode.ts.
+	InitialImages []ai.ImageContent
 	// Messages are additional prompts sent after the initial one.
 	Messages []string
 }
@@ -111,20 +113,20 @@ func RunPrintMode(session *AgentSession, sessions *SessionManager, options Print
 		defer unsubscribe()
 	}
 
-	prompt := func(text string) error {
-		if err := session.PromptText(context.Background(), text); err != nil {
+	prompt := func(text string, images []ai.ImageContent) error {
+		if err := session.Prompt(context.Background(), text, &PromptOptions{Images: images}); err != nil {
 			return err
 		}
 		return session.WaitForIdle(context.Background())
 	}
 	runErr := func() error {
 		if options.InitialMessage != "" {
-			if err := prompt(options.InitialMessage); err != nil {
+			if err := prompt(options.InitialMessage, options.InitialImages); err != nil {
 				return err
 			}
 		}
 		for _, message := range options.Messages {
-			if err := prompt(message); err != nil {
+			if err := prompt(message, nil); err != nil {
 				return err
 			}
 		}

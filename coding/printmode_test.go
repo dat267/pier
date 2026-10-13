@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"os"
 	"strings"
@@ -93,6 +94,49 @@ func TestPrintModeReportsPersistenceFailure(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+// TestPrintModeInitialImagesOnlyAttachToFirstPrompt follows
+// packages/coding-agent/src/modes/print-mode.ts at v1.2.0.
+func TestPrintModeInitialImagesOnlyAttachToFirstPrompt(t *testing.T) {
+	for _, mode := range []CLIMode{CLIModeText, CLIModeJSON} {
+		t.Run(string(mode), func(t *testing.T) {
+			session, sessions := newPrintSession(t, createAssistantMessageT("first"), createAssistantMessageT("second"))
+			image := ai.ImageContent{Data: base64.StdEncoding.EncodeToString(solidPNG(t, 1, 1)), MimeType: "image/png"}
+			// Decode options so this regression also runs against the old API,
+			// which silently discarded InitialImages before sending the prompt.
+			encoded, err := ai.MarshalJSON(map[string]any{
+				"Mode": mode, "InitialMessage": "describe", "InitialImages": []ai.ImageContent{image}, "Messages": []string{"continue"},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			var options PrintModeOptions
+			if err := json.Unmarshal(encoded, &options); err != nil {
+				t.Fatal(err)
+			}
+			var code int
+			captureStdout(t, func() { code = RunPrintMode(session, sessions, options) })
+			if code != 0 {
+				t.Fatalf("print exit = %d", code)
+			}
+			var prompts []*ai.UserMessage
+			for _, message := range session.Agent.State().Messages {
+				if user, ok := message.(*ai.UserMessage); ok {
+					prompts = append(prompts, user)
+				}
+			}
+			if len(prompts) != 2 {
+				t.Fatalf("user prompts = %d, want 2", len(prompts))
+			}
+			if len(prompts[0].Content.Blocks) != 2 || prompts[0].Content.Blocks[1] != image {
+				t.Errorf("first prompt content = %#v, want text and initial image", prompts[0].Content)
+			}
+			if len(prompts[1].Content.Blocks) != 1 {
+				t.Errorf("later prompt content = %#v, want text only", prompts[1].Content)
+			}
+		})
 	}
 }
 

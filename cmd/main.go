@@ -1,8 +1,8 @@
 // Package cmd boots the port of pi's interactive coding-agent CLI: it wires
 // the settings, auth, model runtime and agent session from the command-line
 // flags and runs the ported interactive mode (coding/interactive). The upstream
-// print/json/rpc modes, package manager, extensions and migrations are out of
-// scope (see README).
+// rpc mode, package manager, extensions and migrations are out of scope
+// (see README). Print and JSON modes follow upstream's extension-free core.
 //
 // The module root's main.go is a thin wrapper over Execute, so the module is
 // installable from a release asset (`pier update`) rather than
@@ -29,6 +29,7 @@ import (
 	"github.com/dat267/pier/coding/interactive"
 	"github.com/dat267/pier/internal/offloop"
 	"github.com/dat267/pier/tui"
+	"golang.org/x/term"
 )
 
 // executableName returns the invoked binary name (without the .exe suffix),
@@ -135,13 +136,19 @@ func applyOfflineMode(args *coding.Args) {
 	_ = os.Setenv("PI_SKIP_VERSION_CHECK", "1")
 }
 
+func resolvePrintMode(args *coding.Args, stdinIsTTY, stdoutIsTTY bool) bool {
+	if args.Mode == coding.CLIModeRPC {
+		return false // Execute rejects RPC before run; it never becomes print mode.
+	}
+	return args.Print || args.Mode == coding.CLIModeJSON || !stdinIsTTY || !stdoutIsTTY
+}
+
 func run(appName string, args *coding.Args) error {
 	ctx := context.Background()
 	applyOfflineMode(args)
-	// Print mode (single-shot): -p or --mode json. D162: upstream also
-	// auto-enters print mode when stdin or stdout is not a TTY; the port requires
-	// an explicit flag so the interactive mode is never chosen silently.
-	printMode := args.Print || args.Mode == coding.CLIModeJSON
+	// v1.2.0 main.ts resolveAppMode selects headless mode for either non-TTY
+	// stream, as well as explicit -p/--mode json (D162 closed).
+	printMode := resolvePrintMode(args, term.IsTerminal(int(os.Stdin.Fd())), term.IsTerminal(int(os.Stdout.Fd())))
 	// Bounds the create-time catalog refresh (upstream leaves it unbounded; the
 	// Go refresh is synchronous, so it needs a ceiling).
 	modelRefreshTimeoutMS := int64(15000)
@@ -351,17 +358,6 @@ func run(appName string, args *coding.Args) error {
 		return err
 	}
 	coding.Time("prepareInitialMessage", coding.TimingMain)
-	if printMode && len(initialPrompt.Images) > 0 {
-		// Interactive mode attaches @file images to the initial message the way
-		// upstream does. Print mode's prompt path is text-only, so an image there
-		// is still reported rather than silently absent from the request.
-		fmt.Fprintln(os.Stderr, coding.FormatCLIDiagnostic(coding.CLIDiagnostic{
-			Type: "warning",
-			Message: fmt.Sprintf(
-				"%d image(s) from @file arguments were ignored: print mode cannot send image content",
-				len(initialPrompt.Images)),
-		}))
-	}
 
 	// MCP servers: the agent directory's mcp.json plus, for a trusted project,
 	// its .pi/mcp.json (upstream loads them during extension setup). The
@@ -469,6 +465,7 @@ func run(appName string, args *coding.Args) error {
 		exitCode := coding.RunPrintMode(created.Session, sessions, coding.PrintModeOptions{
 			Mode:           mode,
 			InitialMessage: initialPrompt.Message,
+			InitialImages:  initialPrompt.Images,
 			Messages:       initialPrompt.Rest,
 		})
 		// Session writes and settings persists run on the off-loop queues; drain
