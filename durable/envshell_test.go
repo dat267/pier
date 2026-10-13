@@ -14,6 +14,23 @@ import (
 
 // Port of the shell half of env/node.ts.
 
+// Port of env/decode.ts's StreamDecoder: only a byte-order mark at the very
+// start of the stream is dropped, never a U+FEFF later in it.
+func TestUTF8ChunkReaderDropsOnlyLeadingBOM(t *testing.T) {
+	reader := &utf8ChunkReader{}
+	// A BOM split across chunks is still the stream's start.
+	if got := reader.decode([]byte{0xef}); got != "" {
+		t.Fatalf("first chunk = %q", got)
+	}
+	if got := reader.decode([]byte{0xbb, 0xbf, 'a'}); got != "a" {
+		t.Fatalf("second chunk = %q", got)
+	}
+	// A U+FEFF after the stream started is text.
+	if got := reader.decode([]byte{0xef, 0xbb, 0xbf, 'c'}); got != "\ufeffc" {
+		t.Fatalf("later chunk = %q", got)
+	}
+}
+
 func newTestShell(t *testing.T) (*OSShell, string) {
 	t.Helper()
 	t.Setenv("TMPDIR", t.TempDir())

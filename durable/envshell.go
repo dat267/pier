@@ -527,6 +527,10 @@ func prefixAll(values []string) []string {
 // incomplete trailing rune for the next chunk (upstream's streaming decoder).
 type utf8ChunkReader struct {
 	remainder []byte
+	// started marks that the stream's first decoded text has been returned, so
+	// only a byte-order mark at the very start is dropped (upstream
+	// StreamDecoder in env/decode.ts).
+	started bool
 }
 
 func (r *utf8ChunkReader) decode(chunk []byte) string {
@@ -542,7 +546,14 @@ func (r *utf8ChunkReader) decode(chunk []byte) string {
 		r.remainder = append([]byte{}, data[start:]...)
 		data = data[:start]
 	}
-	return string(data)
+	text := string(data)
+	if r.started || text == "" {
+		return text
+	}
+	r.started = true
+	// U+FEFF encodes only as EF BB BF, so a leading U+FEFF is exactly a
+	// byte-order mark at the stream's start.
+	return strings.TrimPrefix(text, "\ufeff")
 }
 
 // partialRuneStart returns the index of an incomplete trailing UTF-8 rune, or
