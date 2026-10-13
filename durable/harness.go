@@ -114,6 +114,7 @@ func NewHarness(storage Storage, options HarnessOptions, ctx chord.Context) *Har
 		report: report,
 	}
 	session.report = report
+	session.documentRetention = func() int { return ResolveSettings(options.Settings).DocumentRetentionMs }
 	settings := func() Settings { return ResolveSettings(options.Settings) }
 	harness.tasks = NewTaskScheduler(TaskSchedulerOptions{
 		Session: session, Storage: storage, Registry: options.Registry, Models: options.Models,

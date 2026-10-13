@@ -62,6 +62,13 @@ type Session struct {
 	storage   Storage
 	now       func() int64
 	documents map[string]*LoadedDocument
+	// documentRetention returns how long an unobserved loaded document stays in
+	// memory after its last use; nil keeps the default.
+	documentRetention func() int
+	// attached counts observers per document incarnation (record ID).
+	attached map[Id]int
+	// idle maps an unobserved cached document's address to its last-use time.
+	idle map[string]int64
 
 	commitListeners map[int]CommitListener
 	// internalListeners are the Session's own observers (scheduler, views,
@@ -105,6 +112,8 @@ func NewSessionWithClock(storage Storage, now func() int64) *Session {
 		storage:           storage,
 		now:               now,
 		documents:         map[string]*LoadedDocument{},
+		attached:          map[Id]int{},
+		idle:              map[string]int64{},
 		commitListeners:   map[int]CommitListener{},
 		internalListeners: map[int]CommitListener{},
 		closeListeners:    map[int]func(){},
@@ -170,6 +179,7 @@ func (s *Session) ReadOnLine(job func() error) error {
 	if err := job(); err != nil {
 		return err
 	}
+	s.evictIdleDocuments()
 	s.mu.Lock()
 	err := s.assertHealthyLocked()
 	s.mu.Unlock()
@@ -367,6 +377,8 @@ func (s *Session) Close(ctx chord.Context) error {
 	s.commitListeners = map[int]CommitListener{}
 	s.internalListeners = map[int]CommitListener{}
 	s.documents = map[string]*LoadedDocument{}
+	s.attached = map[Id]int{}
+	s.idle = map[string]int64{}
 	s.mu.Unlock()
 	err := s.storage.Close(ctx)
 	// A Storage that cannot close is a failed one; an earlier failure stays the
@@ -464,7 +476,11 @@ func (h sessionHost) Now() int64 { return h.session.now() }
 func (h sessionHost) Cached(addressID string) *LoadedDocument {
 	h.session.mu.Lock()
 	defer h.session.mu.Unlock()
-	return h.session.documents[addressID]
+	document := h.session.documents[addressID]
+	if document != nil {
+		h.session.touchDocumentLocked(addressID, document.Record.ID)
+	}
+	return document
 }
 
 func (h sessionHost) Load(ctx chord.Context, definition DocDefinition, addressID string, address DocumentAddress) (*LoadedDocument, error) {
@@ -477,6 +493,7 @@ func (h sessionHost) Install(document LoadedDocument) {
 	defer h.session.mu.Unlock()
 	copied := document
 	h.session.documents[document.AddressID] = &copied
+	h.session.touchDocumentLocked(document.AddressID, document.Record.ID)
 }
 
 func (h sessionHost) Evict(addressID string, recordID Id) {
@@ -484,6 +501,8 @@ func (h sessionHost) Evict(addressID string, recordID Id) {
 	defer h.session.mu.Unlock()
 	if document := h.session.documents[addressID]; document != nil && document.Record.ID == recordID {
 		delete(h.session.documents, addressID)
+		delete(h.session.idle, addressID)
+		delete(h.session.attached, recordID)
 	}
 }
 
@@ -529,6 +548,7 @@ func (s *Session) runCommit(ctx chord.Context, change func(tx *Transaction) erro
 	}
 	if len(writes) == 0 {
 		tx.Discard()
+		s.evictIdleDocuments()
 		return nil
 	}
 	seq, err := s.storage.Commit(ctx, writes)
@@ -539,6 +559,7 @@ func (s *Session) runCommit(ctx chord.Context, change func(tx *Transaction) erro
 	}
 	documents := tx.Adopt(seq)
 	s.publish(seq, writes, documents, ctx)
+	s.evictIdleDocuments()
 	return nil
 }
 
@@ -644,6 +665,12 @@ func (s *Session) attachDocumentLocked(
 		s.mu.Lock()
 		delete(s.commitListeners, commitID)
 		delete(s.closeListeners, closeID)
+		if s.attached[recordID] > 0 {
+			s.attached[recordID]--
+		}
+		if s.attached[recordID] == 0 {
+			s.idle[loaded.AddressID] = s.now()
+		}
 		s.mu.Unlock()
 	}
 
@@ -692,6 +719,8 @@ func (s *Session) attachDocumentLocked(
 			}
 		}
 	}
+	s.attached[recordID]++
+	delete(s.idle, loaded.AddressID)
 	s.mu.Unlock()
 	if kind == committedObserverState {
 		state := observer.(*CommittedStateSource[chord.JsonValue])
@@ -718,6 +747,55 @@ func observedOperations(observed *observedVersion, change DocumentCommitChange) 
 	return []delta.Op{{Verb: delta.VerbReplace, Value: change.Value}}
 }
 
+// evictIdleDocuments drops expired unobserved cached documents, taking the
+// state lock itself.
+func (s *Session) evictIdleDocuments() {
+	s.mu.Lock()
+	s.evictIdleDocumentsLocked()
+	s.mu.Unlock()
+}
+
+// retentionMs resolves the configured document retention.
+func (s *Session) retentionMs() int {
+	if s.documentRetention == nil {
+		return DefaultDocumentRetentionMs
+	}
+	return s.documentRetention()
+}
+
+// touchDocumentLocked notes a use of a cached document: an unobserved one
+// becomes idle from now, an observed one is never idle. The caller holds s.mu.
+func (s *Session) touchDocumentLocked(addressID string, recordID Id) {
+	if s.attached[recordID] > 0 {
+		delete(s.idle, addressID)
+		return
+	}
+	s.idle[addressID] = s.now()
+}
+
+// evictIdleDocumentsLocked drops the unobserved cached documents whose
+// retention passed. The caller holds s.mu.
+func (s *Session) evictIdleDocumentsLocked() {
+	retention := int64(s.retentionMs())
+	now := s.now()
+	for addressID, since := range s.idle {
+		document := s.documents[addressID]
+		if document == nil {
+			delete(s.idle, addressID)
+			continue
+		}
+		if s.attached[document.Record.ID] > 0 {
+			delete(s.idle, addressID)
+			continue
+		}
+		if retention > 0 && now-since < retention {
+			continue
+		}
+		delete(s.documents, addressID)
+		delete(s.idle, addressID)
+	}
+}
+
 // loadDocumentLocked returns the cached incarnation or cold-loads and migrates
 // it for the definition's version.
 func (s *Session) loadDocumentLocked(definition DocDefinition, addressID string, address DocumentAddress, ctx chord.Context) (*LoadedDocument, error) {
@@ -725,9 +803,12 @@ func (s *Session) loadDocumentLocked(definition DocDefinition, addressID string,
 	defer s.mu.Unlock()
 	if cached := s.documents[addressID]; cached != nil {
 		if cached.ValueVersion == definition.Version {
+			s.touchDocumentLocked(addressID, cached.Record.ID)
 			return cached, nil
 		}
 		delete(s.documents, addressID)
+		delete(s.idle, addressID)
+		delete(s.attached, cached.Record.ID)
 	}
 	record, err := s.storage.FindDocument(ctx, address, CurrentDocumentPoint())
 	if err != nil {
@@ -758,6 +839,7 @@ func (s *Session) loadDocumentLocked(definition DocDefinition, addressID string,
 		Tracker:         delta.Track(value),
 	}
 	s.documents[addressID] = loaded
+	s.touchDocumentLocked(addressID, loaded.Record.ID)
 	return loaded, nil
 }
 

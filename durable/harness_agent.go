@@ -26,6 +26,19 @@ var DefaultProgressPolicy = ProgressPolicy{
 
 const defaultContextRetentionMs = 600_000
 
+// DefaultDocumentRetentionMs keeps an unobserved loaded document in memory for
+// ten minutes after its last use.
+const DefaultDocumentRetentionMs = 600_000
+
+// documentRetention resolves a configured retention; a negative value keeps the
+// default.
+func documentRetention(ms *int) int {
+	if ms == nil || *ms < 0 {
+		return DefaultDocumentRetentionMs
+	}
+	return *ms
+}
+
 // InstructionsKey is the reserved section key of the agent's instructions.
 const InstructionsKey = "instructions"
 
@@ -44,7 +57,8 @@ func ResolveSettings(settings *HarnessSettings) Settings {
 	resolved := Settings{
 		Stream: ConversationStreamOptions{}, Retry: DefaultRetryPolicy,
 		Compaction: DefaultCompactionPolicy, Progress: DefaultProgressPolicy, ContextRetentionMs: defaultContextRetentionMs,
-		ToolExecution: ToolExecutionParallel, SteeringMode: QueueOneAtATime, FollowUpMode: QueueOneAtATime,
+		DocumentRetentionMs: DefaultDocumentRetentionMs,
+		ToolExecution:       ToolExecutionParallel, SteeringMode: QueueOneAtATime, FollowUpMode: QueueOneAtATime,
 	}
 	if settings == nil {
 		return resolved
@@ -70,6 +84,7 @@ func ResolveSettings(settings *HarnessSettings) Settings {
 	if settings.ContextRetentionMs != nil {
 		resolved.ContextRetentionMs = *settings.ContextRetentionMs
 	}
+	resolved.DocumentRetentionMs = documentRetention(settings.DocumentRetentionMs)
 	if settings.Progress != nil {
 		if settings.Progress.PartialIntervalMs != nil {
 			resolved.Progress.PartialIntervalMs = *settings.Progress.PartialIntervalMs

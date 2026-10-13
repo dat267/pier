@@ -138,22 +138,27 @@ type HarnessSettings struct {
 	Progress   *ProgressPolicyChange
 	// ContextRetentionMs keeps idle conversation context ranges in memory for this long.
 	ContextRetentionMs *int
-	ToolExecution      *string
-	SteeringMode       *string
-	FollowUpMode       *string
+	// DocumentRetentionMs keeps a loaded document with no observer in memory
+	// for this long after its last use; 0 drops it right after use, a negative
+	// or absent value keeps the default.
+	DocumentRetentionMs *int
+	ToolExecution       *string
+	SteeringMode        *string
+	FollowUpMode        *string
 }
 
 // Settings is the resolved settings: every field over its built-in default.
 type Settings struct {
-	Extensions         []Extension
-	Stream             ConversationStreamOptions
-	Retry              ConversationRetryPolicy
-	Compaction         CompactionPolicy
-	Progress           ProgressPolicy
-	ContextRetentionMs int
-	ToolExecution      string
-	SteeringMode       string
-	FollowUpMode       string
+	Extensions          []Extension
+	Stream              ConversationStreamOptions
+	Retry               ConversationRetryPolicy
+	Compaction          CompactionPolicy
+	Progress            ProgressPolicy
+	ContextRetentionMs  int
+	DocumentRetentionMs int
+	ToolExecution       string
+	SteeringMode        string
+	FollowUpMode        string
 }
 
 // ExtensionsSelection is the stored extension choice: an exact list, or an

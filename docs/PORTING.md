@@ -54,7 +54,11 @@ with an `exit_code` diagnostic rather than throwing (`eba849739`). Durable
 Storage failures, including reads, now fail and close the Session; later calls
 return the first failure as `SessionFailed`, watches end with
 `session_failed` and that cause, and `Closed`/`End` settle with `closed` or
-`failed` (carrying the cause) once Storage has closed (`eba849739`). A throwing host commit/close
+`failed` (carrying the cause) once Storage has closed (`eba849739`). The
+Session's document cache is bounded by use: an unobserved loaded document
+leaves memory once it was not read or written for `documentRetentionMs`
+(default ten minutes; `0` drops it right after use) and loads from Storage
+again, while a watched or state-observed document stays (`eba849739`). A throwing host commit/close
 listener is reported through `onReport` instead of failing the operation that
 ran it, the Session's own listeners fail the Session, a throwing watch listener
 is reported as well as ending the watch with `listener_error`, and a throwing
