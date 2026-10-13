@@ -177,13 +177,18 @@ so `/tui` and exit-replay renderer swaps reach every holder.
 
 ## D142
 
-**The user's compaction extension is built in, with stock fallback.**
+**Closed: compaction uses the stock summarizer only.**
 
-The summarizer follows `~/.pi/agent/extensions/compaction`: a 32k no-reasoning
-call with pi-better-compact structured prompts, previous-summary file lists
-stripped before reuse, regenerated lists capped to the most recent 40 per list,
-`PI_COMPACT_MODEL`, and opencode routing headers. Any failure or unusable summary
-falls back to the stock summarizer.
+The user's compaction extension (`~/.pi/agent/extensions/compaction`) is no
+longer built in. `coding.Compact` follows v1.2.0
+`core/compaction/compaction.ts compact`: the stock prompts, the retry-wrapped
+summarizer, the caller's auth headers, and the stock ~13k text budget. The
+extension-only pieces (32k no-reasoning call, pi-better-compact prompts,
+file-list stripping/regeneration, `PI_COMPACT_MODEL`, opencode routing headers)
+were removed, matching upstream with extension mechanics out of scope (D41).
+
+Tests: `TestCompactUsesStockSummarizer` (stock prompt, no `HARD BUDGET`, and
+auth headers reaching the request).
 
 ## D143
 

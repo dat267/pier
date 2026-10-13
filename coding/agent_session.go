@@ -700,7 +700,6 @@ func (s *AgentSession) runManualCompaction(ctx context.Context, customInstructio
 		}
 	}
 
-	s.applyCompactModelOverride(&options)
 	result, err := Compact(preparation, options)
 	if err != nil {
 		return nil, err
