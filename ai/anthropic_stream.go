@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -457,20 +458,24 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 		}
 		isOAuth := IsOAuthAnthropicToken(options.APIKey)
 
+		applyPayload := func(params *AnthropicMessageCreateParams) *AnthropicMessageCreateParams {
+			if options.OnPayload != nil {
+				if next := options.OnPayload(mustMarshalJSON(params), model); next != nil {
+					var replaced AnthropicMessageCreateParams
+					if perr := jsonUnmarshalStrict(next, &replaced); perr == nil {
+						replaced.Stream = true
+						params = &replaced
+					}
+				}
+			}
+			return params
+		}
 		params, err := BuildAnthropicParams(model, normalizedContext, isOAuth, options)
 		if err != nil {
 			fail(err)
 			return
 		}
-		if options.OnPayload != nil {
-			if next := options.OnPayload(mustMarshalJSON(params), model); next != nil {
-				var replaced AnthropicMessageCreateParams
-				if perr := jsonUnmarshalStrict(next, &replaced); perr == nil {
-					replaced.Stream = true
-					params = &replaced
-				}
-			}
-		}
+		params = applyPayload(params)
 
 		clientOpts := anthropicClientOptions{
 			APIKey:           options.APIKey,
@@ -482,11 +487,9 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 			clientOpts.SessionID = ""
 		}
 
-		// Retry loop with per-attempt fresh requests.
-		var resp *http.Response
-		requestErr := func() error {
-			var attemptErr error
-			resp, attemptErr = RetryProviderRequest(ctx, func() (*http.Response, error) {
+		// Each request gets a fresh body so a strict-tool fallback can retry once.
+		sendRequest := func(params *AnthropicMessageCreateParams) (*http.Response, error) {
+			return RetryProviderRequest(ctx, func() (*http.Response, error) {
 				req, berr := BuildAnthropicRequest(ctx, model, params, clientOpts)
 				if berr != nil {
 					return nil, berr
@@ -506,8 +509,25 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 				}
 				return hresp, nil
 			}, &ProviderRetryOptions{MaxRetries: options.MaxRetries, MaxRetryDelayMS: options.MaxRetryDelayMs})
-			return attemptErr
-		}()
+		}
+		resp, requestErr := sendRequest(params)
+		if requestErr != nil && ctxErr(ctx) == nil && hasPreferredStrictAnthropicTools(model, normalizedContext) {
+			fallbackContext, changed := downgradePreferredStrictAnthropicTools(normalizedContext)
+			if changed && isAnthropicStrictToolLimitError(requestErr) {
+				fallbackParams, buildErr := BuildAnthropicParams(model, fallbackContext, isOAuth, options)
+				if buildErr != nil {
+					fail(buildErr)
+					return
+				}
+				fallbackParams = applyPayload(fallbackParams)
+				output.Diagnostics = append(output.Diagnostics, AssistantMessageDiagnostic{
+					Type: "anthropic_strict_tools_fallback", Timestamp: time.Now().UnixMilli(),
+					Error:   &DiagnosticErrorInfo{Message: requestErr.Error()},
+					Details: json.RawMessage(`{"reason":"strict_tool_limits_exceeded"}`),
+				})
+				resp, requestErr = sendRequest(fallbackParams)
+			}
+		}
 		if requestErr != nil {
 			fail(requestErr)
 			return
@@ -781,6 +801,79 @@ func ParseStreamingJSONText(text string) json.RawMessage {
 
 // StreamAnthropicSimple maps simple reasoning levels onto the anthropic
 // options (port of streamSimple).
+func hasPreferredStrictAnthropicTools(model *Model, context TranscriptContext) bool {
+	if !GetAnthropicCompat(model).SupportsStrictTools {
+		return false
+	}
+	isPreferredStrict := func(tool Tool) bool {
+		config := tool.ConstrainedSampling.Config
+		if !tool.ConstrainedSampling.Set || config == nil || config.Type != "json_schema" || config.Strict != "prefer" {
+			return false
+		}
+		strict, unset, err := ResolveJSONSchemaStrictSampling(tool, true, AnthropicStrictUnsupportedKeyword)
+		return err == nil && strict && !unset
+	}
+	for _, tool := range GetCurrentTools(context.Messages) {
+		if isPreferredStrict(tool) {
+			return true
+		}
+	}
+	for _, message := range context.Messages {
+		if system, ok := message.(*SystemMessage); ok {
+			for _, tool := range system.ToolsAdded {
+				if isPreferredStrict(tool) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func downgradePreferredStrictAnthropicTools(context TranscriptContext) (TranscriptContext, bool) {
+	fallback := context
+	fallback.Messages = append([]Message(nil), context.Messages...)
+	changed := false
+	for index, message := range fallback.Messages {
+		system, ok := message.(*SystemMessage)
+		if !ok {
+			continue
+		}
+		copyMessage := *system
+		copyMessage.ToolsAdded = append([]Tool(nil), system.ToolsAdded...)
+		for toolIndex := range copyMessage.ToolsAdded {
+			tool := &copyMessage.ToolsAdded[toolIndex]
+			config := tool.ConstrainedSampling.Config
+			if tool.ConstrainedSampling.Set && config != nil && config.Type == "json_schema" && config.Strict == "prefer" {
+				tool.ConstrainedSampling = FalseValue
+				changed = true
+			}
+		}
+		fallback.Messages[index] = &copyMessage
+	}
+	return fallback, changed
+}
+
+func isAnthropicStrictToolLimitError(err error) bool {
+	var providerErr *ProviderError
+	if !errors.As(err, &providerErr) || providerErr.Status != http.StatusBadRequest {
+		return false
+	}
+	var envelope struct {
+		Error struct {
+			Type    string `json:"type"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if json.Unmarshal([]byte(providerErr.Body), &envelope) != nil || envelope.Error.Type != "invalid_request_error" {
+		return false
+	}
+	message := envelope.Error.Message
+	return strings.Contains(message, "The compiled grammar is too large") ||
+		strings.Contains(message, "Too many strict tools (") ||
+		strings.Contains(message, "Schemas contains too many parameters with union types (")
+}
+
 func StreamAnthropicSimple(model *Model, context TranscriptContext, options *SimpleStreamOptions) *AssistantMessageEventStream {
 	if options == nil {
 		options = &SimpleStreamOptions{}

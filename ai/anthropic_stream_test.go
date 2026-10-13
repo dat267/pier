@@ -318,6 +318,77 @@ func TestStreamAnthropicErrorPaths(t *testing.T) {
 	})
 }
 
+// #10409, packages/ai/src/api/anthropic-messages.ts retries only documented strict-tool limits.
+func TestStreamAnthropicRetriesPreferredToolsWithoutStrictAfterGrammarRejection(t *testing.T) {
+	model := testAnthropicModel()
+	tool := Tool{
+		Name: "lookup", Description: "Look up a value",
+		Parameters:          json.RawMessage(`{"type":"object","properties":{"value":{"type":"string"},"optional":{"type":"number"}},"required":["value"]}`),
+		ConstrainedSampling: ConstrainedSamplingValue{Set: true, Config: &ConstrainedSamplingConfig{Type: "json_schema", Strict: "prefer"}},
+	}
+	requiredTool := tool
+	requiredTool.Name = "required"
+	requiredTool.ConstrainedSampling = ConstrainedSamplingValue{Set: true, Config: &ConstrainedSamplingConfig{Type: "json_schema", Strict: "require"}}
+	transcript := NormalizeContext(Context{
+		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hello"}, Timestamp: 1}},
+		Tools:    []Tool{tool, requiredTool},
+	})
+	type requestTool struct {
+		Strict      *bool           `json:"strict"`
+		InputSchema json.RawMessage `json:"input_schema"`
+	}
+	var attempts int
+	var payloads [][]requestTool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attempts++
+		var payload struct {
+			Tools []requestTool `json:"tools"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Errorf("decode request: %v", err)
+		}
+		payloads = append(payloads, payload.Tools)
+		if attempts == 1 {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"type":"error","error":{"type":"invalid_request_error","message":"The compiled grammar is too large"}}`))
+			return
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte("event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"id\":\"m\",\"model\":\"claude-opus-4-5\",\"usage\":{\"input_tokens\":1,\"output_tokens\":0}}}\n\n" +
+			"event: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\"},\"usage\":{\"output_tokens\":1}}\n\n" +
+			"event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n"))
+	}))
+	model.BaseURL = server.URL
+	defer server.Close()
+
+	message, err := StreamAnthropic(model, transcript, &AnthropicOptions{StreamOptions: StreamOptions{APIKey: "test-key"}}).Result(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if message.StopReason != StopStop || attempts != 2 {
+		t.Fatalf("message stop=%s attempts=%d error=%v", message.StopReason, attempts, message.ErrorMessage)
+	}
+	if len(payloads) != 2 || len(payloads[0]) != 2 || len(payloads[1]) != 2 {
+		t.Fatalf("payload tools = %+v", payloads)
+	}
+	if payloads[0][0].Strict == nil || !*payloads[0][0].Strict || payloads[1][0].Strict != nil {
+		t.Fatalf("preferred strict flags = %v then %v", payloads[0][0].Strict, payloads[1][0].Strict)
+	}
+	if payloads[1][1].Strict == nil || !*payloads[1][1].Strict {
+		t.Fatalf("required strict tool was downgraded: %+v", payloads[1][1])
+	}
+	var fallbackSchema struct {
+		Required []string `json:"required"`
+	}
+	if err := json.Unmarshal(payloads[1][0].InputSchema, &fallbackSchema); err != nil || len(fallbackSchema.Required) != 1 || fallbackSchema.Required[0] != "value" {
+		t.Fatalf("fallback schema = %s, err = %v", payloads[1][0].InputSchema, err)
+	}
+	if len(message.Diagnostics) != 1 || message.Diagnostics[0].Type != "anthropic_strict_tools_fallback" {
+		t.Fatalf("diagnostics = %+v", message.Diagnostics)
+	}
+}
+
 func TestStreamAnthropicHTTPRetry(t *testing.T) {
 	model := testAnthropicModel()
 	attempts := 0
