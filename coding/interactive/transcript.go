@@ -60,6 +60,9 @@ type TranscriptRenderer struct {
 
 	Footer *FooterComponent
 	Editor *CustomEditor
+	// UpdateEditorBorderColor refreshes the editor border when a transcript
+	// rebuild updates the footer (upstream renderSessionItems).
+	UpdateEditorBorderColor func()
 
 	Display *DisplayOptions
 
@@ -545,8 +548,13 @@ func (r *TranscriptRenderer) renderSessionItems(items []RenderSessionItem, updat
 		}
 	}
 
-	if updateFooter && r.Footer != nil {
-		r.Footer.Invalidate()
+	if updateFooter {
+		if r.Footer != nil {
+			r.Footer.Invalidate()
+		}
+		if r.UpdateEditorBorderColor != nil {
+			r.UpdateEditorBorderColor()
+		}
 	}
 
 	for index := range items {

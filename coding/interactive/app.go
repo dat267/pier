@@ -430,6 +430,7 @@ func NewApp(options AppOptions) *App {
 	app.uiState.WorkingMessage = app.uiState.DefaultWorkingMessage
 
 	app.transcript = NewTranscriptRenderer(app.chat, app.ui, app.settings, app.session, app.sessionMgr)
+	app.transcript.UpdateEditorBorderColor = func() { app.updateEditorBorderColor() }
 	// Replacing the transcript drops the fullscreen selection, whose coordinates point into
 	// the transcript that is going away (#9311). The renderer is resolved when a rebuild
 	// happens rather than now, because the mode can change in between.

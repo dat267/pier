@@ -413,3 +413,19 @@ func TestTranscriptToolCalls(t *testing.T) {
 		t.Fatalf("error notice = %q", lines)
 	}
 }
+
+// A footer-updating transcript rebuild also refreshes the editor border
+// (upstream renderSessionItems).
+func TestRenderSessionItemsUpdatesEditorBorder(t *testing.T) {
+	renderer := &TranscriptRenderer{Chat: &tui.Container{}, Display: &DisplayOptions{}}
+	called := 0
+	renderer.UpdateEditorBorderColor = func() { called++ }
+	renderer.RenderSessionItems(nil, true, false)
+	if called != 1 {
+		t.Fatalf("border updates = %d; want 1", called)
+	}
+	renderer.RenderSessionItems(nil, false, false)
+	if called != 1 {
+		t.Fatalf("border updates = %d; want still 1", called)
+	}
+}
