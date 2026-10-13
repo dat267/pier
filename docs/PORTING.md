@@ -20,7 +20,8 @@ notes retain upstream versions and commit IDs as historical context.
 pinned v1.2.0 generator and current upstream catalog APIs. OpenRouter model
 refresh now filters by the credential's `GET /models/user` list, applies its
 limits/prices and retains the personalized cache offline (`#10672`, `ee409a85f`);
-negative router placeholder prices normalize to zero. Mistral's
+negative router placeholder prices normalize to zero. The runtime also refreshes
+persisted pi.dev catalogs for built-in providers, except Radius. Mistral's
 request timeout now applies only while
 waiting for response headers, not during an active response stream (#10609,
 `6b07b4e57`). Retry classification includes the gateway error wording
