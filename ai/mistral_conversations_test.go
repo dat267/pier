@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 )
 
 // Tests for api/mistral-conversations.ts.
@@ -248,6 +249,33 @@ func TestMistralStreamEndToEnd(t *testing.T) {
 	}
 	if body["prompt_cache_key"] != "session-1" {
 		t.Fatalf("prompt_cache_key = %#v", body["prompt_cache_key"])
+	}
+}
+
+func TestMistralActiveStreamCanExceedRequestTimeout(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "text/event-stream")
+		flusher := writer.(http.Flusher)
+		_, _ = writer.Write([]byte(`data: {"choices":[{"delta":{"content":"thinking"}}]}` + "\n\n"))
+		flusher.Flush()
+		time.Sleep(40 * time.Millisecond)
+		_, _ = writer.Write([]byte(`data: {"choices":[{"finish_reason":"stop","delta":{}}]}` + "\n\n"))
+		_, _ = writer.Write([]byte("data: [DONE]\n\n"))
+	}))
+	defer server.Close()
+
+	stream := StreamMistralConversations(mistralModel(server.URL), mistralUserContext(), &MistralOptions{
+		StreamOptions: StreamOptions{APIKey: "test", TimeoutMs: intPtrT(10)},
+	})
+	message, err := stream.Result(ctxpkg.Background())
+	if err != nil {
+		t.Fatalf("err = %v", err)
+	}
+	if message.StopReason != StopStop || len(message.Content) != 1 {
+		t.Fatalf("message = %+v", message)
+	}
+	if text, ok := message.Content[0].(TextContent); !ok || text.Text != "thinking" {
+		t.Fatalf("content = %+v", message.Content)
 	}
 }
 

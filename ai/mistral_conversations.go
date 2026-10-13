@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -322,8 +323,18 @@ func requestMistralStream(ctx ctxpkg.Context, model *Model, body []byte, options
 	if options.TimeoutMs != nil && *options.TimeoutMs > 0 {
 		timeout = time.Duration(*options.TimeoutMs) * time.Millisecond
 	}
-	requestCtx, cancel := ctxpkg.WithTimeout(ctx, timeout)
-	defer cancel()
+	// Upstream timeoutMs bounds response headers only; an active Mistral stream
+	// must stay alive for as long as its body continues producing data.
+	requestCtx, cancel := ctxpkg.WithCancel(ctx)
+	var headerMu sync.Mutex
+	headersReceived := false
+	headerTimer := time.AfterFunc(timeout, func() {
+		headerMu.Lock()
+		defer headerMu.Unlock()
+		if !headersReceived {
+			cancel()
+		}
+	})
 
 	var resp *http.Response
 	resp, err = RetryProviderRequest(requestCtx, func() (*http.Response, error) {
@@ -360,10 +371,27 @@ func requestMistralStream(ctx ctxpkg.Context, model *Model, body []byte, options
 		}
 		return hresp, nil
 	}, &ProviderRetryOptions{MaxRetries: options.MaxRetries, MaxRetryDelayMS: options.MaxRetryDelayMs})
+	headerMu.Lock()
+	headersReceived = true
+	headerTimer.Stop()
+	headerMu.Unlock()
 	if err != nil {
+		cancel()
 		return nil, err
 	}
+	resp.Body = &cancelOnCloseBody{ReadCloser: resp.Body, cancel: cancel}
 	return resp, nil
+}
+
+type cancelOnCloseBody struct {
+	io.ReadCloser
+	cancel ctxpkg.CancelFunc
+}
+
+func (b *cancelOnCloseBody) Close() error {
+	err := b.ReadCloser.Close()
+	b.cancel()
+	return err
 }
 
 func applyMistralHeaderOverrides(req *http.Request, overrides ProviderHeaders) {
