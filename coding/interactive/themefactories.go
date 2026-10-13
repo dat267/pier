@@ -3,6 +3,7 @@ package interactive
 import (
 	"strings"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/tui"
 )
 
@@ -194,11 +195,17 @@ func HighlightCode(code string, lang string) []string {
 
 // GetLanguageFromPath maps a file extension to a language identifier.
 func GetLanguageFromPath(filePath string) (string, bool) {
-	index := strings.LastIndex(filePath, ".")
-	if index < 0 || index == len(filePath)-1 {
+	// Upstream is `filePath.split(".").pop()?.toLowerCase()`: with no dot the
+	// whole (lowercased) path is the lookup key, which is how bare "Makefile"
+	// and "Dockerfile" resolve.
+	ext := filePath
+	if index := strings.LastIndex(filePath, "."); index >= 0 {
+		ext = filePath[index+1:]
+	}
+	if ext == "" {
 		return "", false
 	}
-	language, ok := extensionToLanguage[strings.ToLower(filePath[index+1:])]
+	language, ok := extensionToLanguage[ai.JSLower(ext)]
 	return language, ok
 }
 

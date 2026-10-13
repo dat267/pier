@@ -241,3 +241,17 @@ func TestThemeFactories(t *testing.T) {
 		t.Fatal("trailing dot matched")
 	}
 }
+
+// Upstream resolves the language from `filePath.split(".").pop()`, so a bare
+// "Makefile" (no dot) is looked up as the whole lowercased name.
+func TestGetLanguageFromPathUsesSplitPop(t *testing.T) {
+	if language, ok := GetLanguageFromPath("Makefile"); !ok || language != "makefile" {
+		t.Fatalf("Makefile = %q, %v", language, ok)
+	}
+	if language, ok := GetLanguageFromPath("Dockerfile"); !ok || language != "dockerfile" {
+		t.Fatalf("Dockerfile = %q, %v", language, ok)
+	}
+	if _, ok := GetLanguageFromPath("dir/Makefile"); ok {
+		t.Fatal("dir/Makefile should not match (upstream looks up the whole path)")
+	}
+}
