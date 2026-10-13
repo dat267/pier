@@ -694,6 +694,9 @@ func TestThemeControllerUsesSystemThemeWhenUnset(t *testing.T) {
 	if controller.GetTerminalTheme() != TerminalThemeLight {
 		t.Fatalf("terminal theme = %q", controller.GetTerminalTheme())
 	}
+	if controller.ActiveThemeName() != SystemThemeName {
+		t.Fatalf("initial active theme = %q, want %q", controller.ActiveThemeName(), SystemThemeName)
+	}
 
 	controller.ApplyFromSettings()
 	if controller.ActiveThemeName() != SystemThemeName {

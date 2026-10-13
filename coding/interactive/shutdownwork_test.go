@@ -237,9 +237,12 @@ func TestCanceledThemeLoadDoesNotApply(t *testing.T) {
 	q := g.OptionalQueue()
 	defer func() { unblock(); g.StopAll(); q.Flush() }()
 	posted := 0
+	initialTheme := "dark"
 	controller := NewInteractiveThemeController(ThemeControllerOptions{
-		ThemeQueue: q, Marshal: func(func()) { posted++ },
-		Env: func(string) string { return "" },
+		ThemeQueue:          q,
+		Marshal:             func(func()) { posted++ },
+		Env:                 func(string) string { return "" },
+		InitialThemeSetting: &initialTheme,
 	})
 	controller.loadTheme = func(string, ColorMode) (*Theme, error) { close(started); <-release; return light, nil }
 	controller.SetThemeSetting("light")

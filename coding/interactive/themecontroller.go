@@ -110,6 +110,8 @@ func NewInteractiveThemeController(options ThemeControllerOptions) *InteractiveT
 	}
 	if name, ok := ResolveThemeSetting(setting, controller.terminalTheme); ok {
 		controller.activeThemeName = name
+	} else {
+		controller.activeThemeName = SystemThemeName
 	}
 	InitTheme(controller.activeThemeName, true)
 	controller.bindTerminalColorSchemeListener()
