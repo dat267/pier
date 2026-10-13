@@ -26,7 +26,8 @@ package interactive
 //   - **The accent is amber, not teal.** Upstream's accent (#8abeb7, with blue
 //     borders) is replaced throughout, so the palette is recognisably this port
 //     at a glance — the header wordmark, borders, selection and list bullets all
-//     carry it.
+//     carry it. D219 applies the same hue to the adaptive system theme while
+//     keeping its terminal-derived contrast and light/dark behavior.
 //
 // The keyword for everything else is minimal: primary text is the terminal's
 // own foreground, and colour is spent on structure (borders, diffs) and

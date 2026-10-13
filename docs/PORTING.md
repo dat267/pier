@@ -469,7 +469,9 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   available for callers and tests. The combined OSC 10/11/4 query applies the
   background to automatic theme selection, while the input router also delivers
   OSC 11 to background listeners during the query, so delayed background-only
-  replies still update the auto theme (D179).
+  replies still update the auto theme (D179). The default `system` theme's
+  accent family uses Pier amber while retaining terminal-derived lightness,
+  contrast and appearance (D219).
 - `coding`: `defaultTools` accepts `+name`/`-name` entries (`30a1d1849`). A
   modifier-only list layers on the inherited selection (`mergeDefaultTools`), so
   a project `["-codemode","+tool_search"]` applies to the global

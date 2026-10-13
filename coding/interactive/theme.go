@@ -724,6 +724,7 @@ func buildSystemTheme(mode ColorMode) *Theme {
 		input.Palette = colors.Palette
 	}
 	generated := GenerateSystemThemeColors(input)
+	applyPierSystemAccent(generated.Colors, generated.Appearance)
 	fgColors := map[string]ColorValue{}
 	bgColors := map[string]ColorValue{}
 	for token, value := range generated.Colors {
@@ -746,6 +747,78 @@ func buildSystemTheme(mode ColorMode) *Theme {
 		}
 	}
 	return NewTheme(fgColors, bgColors, colorMode, SystemThemeName, "", generated.Dim...)
+}
+
+func applyPierSystemAccent(colors map[string]any, appearance string) {
+	// D219: shift only the system theme's accent family toward Pier amber.
+	// Preserve generated contrast, and use the terminal's yellow palette slot
+	// when no RGB background is available.
+	surfaces := []tui.RgbColor{}
+	for _, token := range []string{"background", "selectedBg", "toolPendingBg", "toolSuccessBg", "toolErrorBg"} {
+		value, ok := colors[token].(string)
+		if !ok {
+			continue
+		}
+		color, err := tui.ParseColor(value)
+		if err == nil {
+			surfaces = append(surfaces, tui.ColorToRgb(color))
+		}
+	}
+	for _, token := range []string{"accent", "borderAccent", "customMessageLabel", "mdCode", "mdListBullet"} {
+		switch value := colors[token].(type) {
+		case int:
+			colors[token] = 3
+		case string:
+			color, err := tui.ParseColor(value)
+			if err != nil {
+				continue
+			}
+			channels := tui.ColorToOklch(color)
+			accent := pierAccentWithContrast(channels, appearance, surfaces)
+			colors[token] = hexFromRgb(accent.R, accent.G, accent.B)
+		}
+	}
+}
+
+func pierAccentWithContrast(channels tui.OklchChannels, appearance string, surfaces []tui.RgbColor) tui.RgbColor {
+	lightness := channels.L
+	candidate := func(offset float64) tui.RgbColor {
+		direction := 1.0
+		if appearance == "light" {
+			direction = -1
+		}
+		color, _ := tui.NewOklchColor(lightness+direction*offset, channels.C, 68)
+		return tui.ColorToRgb(color)
+	}
+	readable := func(color tui.RgbColor) bool {
+		for _, surface := range surfaces {
+			if WcagContrast(color, surface) < systemTextMinimumContrast {
+				return false
+			}
+		}
+		return true
+	}
+	base := candidate(0)
+	if readable(base) {
+		return base
+	}
+	maxOffset := 1 - lightness
+	if appearance == "light" {
+		maxOffset = lightness
+	}
+	if !readable(candidate(maxOffset)) {
+		return candidate(maxOffset)
+	}
+	low, high := 0.0, maxOffset
+	for index := 0; index < 24; index++ {
+		middle := (low + high) / 2
+		if readable(candidate(middle)) {
+			high = middle
+		} else {
+			low = middle
+		}
+	}
+	return candidate(high)
 }
 
 func generatedColorValue(value any) ColorValue {

@@ -5,7 +5,7 @@ pi, including language-runtime constraints, corrected upstream defects, and
 project choices. D-row numbers also appear in code comments; not every number has
 a full entry here. Entries are ordered numerically and use a consistent section
 format. Closed or withdrawn rows remain in place so code comments and historical
-notes keep their numbering. The range is **D1–D218**.
+notes keep their numbering. The range is **D1–D219**.
 
 ## D11
 
@@ -1898,3 +1898,20 @@ first frame: ~53 ms median (was ~155 ms).
 (`coding/interactive/interactive_test.go`) pins the non-blocking contract, and
 `TestRendererBeginTerminalColorsWaitsOffLoop` (`tui/terminalcolors_test.go`) pins
 the split write/wait.
+
+## D219
+
+**System theme uses a Pier amber accent while preserving terminal adaptation.**
+
+Upstream `packages/coding-agent/src/modes/interactive/theme/system-theme.ts`
+generates the system palette from reported terminal background and palette
+colors. Pier keeps that generation and its light/dark decision, then shifts the
+system accent family (`accent`, `borderAccent`, `customMessageLabel`, `mdCode`,
+and `mdListBullet`) to amber in OKLCH while preserving generated chroma and
+adjusting lightness only as needed to retain contrast. When no RGB background is
+available, the accent uses ANSI palette index 3, so the terminal's own palette
+still supplies the color. Named
+`pier` themes already use amber; this makes the default adaptive `system` theme
+identifiable too. `TestSystemThemeAccentFollowsTerminalAppearance` checks the
+accent and contrast on dark and light terminal backgrounds and the indexed
+fallback.
