@@ -682,25 +682,25 @@ the Unix socket **publish is portable** (`server/unix.go`,
 
 ## D165
 
-**the terminal background probe is listener-driven, not a blocking
-  query**. Upstream detects the terminal's light/dark preference by querying it
-  synchronously at theme-apply time (`queryTerminalBackgroundColor` waits on a
-  channel, `setInterval`-free). The port cannot: the UI loop is the only
-  dispatcher of terminal replies (`Renderer.HandleTerminalInput`), so a query
-  called on the loop can never receive its own reply and always times out, and a
-  query written before the pty is in raw mode is echoed back into the input
-  stream (this is what froze the TUI over SSH when the feature was first
-  attempted). The port instead writes a single OSC 11 query
-  (`Renderer.RequestTerminalBackgroundColor`, `ESC ] 11 ; ? BEL`) after the
-  terminal is started and returns immediately; the reply is consumed in
-  `HandleTerminalInput`, classified by luminance (`GetThemeForRgbColor`), and
-  applied by a `OnTerminalBackgroundColorChange` listener on the loop. The
-  `CSI ? 2031` color-scheme notification toggle is likewise deferred: a request
-  before `Start` only flips the flag and `Start` replays it, so the mode sequence
-  is never echoed. `app.theme.ProbeTerminalBackground` is invoked from
-  `RunWiring.OnStarted` (after `UI.Start`, i.e. raw mode + live reader) and
-  re-armed on a renderer swap (`RebindTUI`). A terminal that does not answer
-  leaves the `COLORFGBG`/fallback theme in place; nothing blocks on the reply.
+**The port's OSC 11 background probe is listener-driven and starts only after
+  raw mode.** Upstream v1.2.0 `theme-controller.ts` queries terminal colors as a
+  combined OSC 10/11/4 request and applies the returned background to theme
+  selection; it also repeats that query after appearance reports. The Go UI loop
+  owns terminal input dispatch, so a blocking query on the loop could never see
+  its own reply. A query sent before raw mode is active is echoed into the input
+  stream, which froze the TUI over SSH when an early implementation tried it.
+  Pier therefore also has a nonblocking OSC 11 request
+  (`Renderer.RequestTerminalBackgroundColor`, `ESC ] 11 ; ? BEL`) for the
+  background listener. `HandleTerminalInput` routes its reply to the listener
+  unless the combined color query already owns it; in that case
+  `ProbeSystemColors` applies the background from the combined result (D179).
+  `TestSystemColorQueryDoesNotHideStartupBackgroundReply` covers the late-reply
+  path. The `CSI ? 2031` notification toggle is deferred: a request before
+  `Start` only flips the flag and `Start` replays it, so the mode sequence is
+  never echoed. `app.theme.ProbeTerminalBackground` starts from
+  `RunWiring.OnStarted` after `UI.Start` and is re-armed on a renderer swap
+  (`RebindTUI`). A terminal that reports no colors leaves the environment or
+  system-theme fallback in place; nothing blocks the UI loop.
 
 ## D166
 
