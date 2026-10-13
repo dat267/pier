@@ -449,9 +449,9 @@ type shellCallState struct {
 	preview bashResultState
 }
 
-// shellElapsedTick is how often the running elapsed label is repainted. D194: a
-// 100ms tick makes the label step by 0.1s, where upstream arms a 1000ms redraw.
-const shellElapsedTick = 100 * time.Millisecond
+// shellElapsedTick matches v1.2.0 core/tools/render-utils.ts's 1000ms redraw
+// while preserving the tenths display resolution (D194 closed).
+const shellElapsedTick = time.Second
 
 // shellElapsedComponent renders the running/final duration. The value is
 // computed at render time (so a frame shows the current elapsed time), and

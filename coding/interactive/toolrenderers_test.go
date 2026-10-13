@@ -283,8 +283,9 @@ func TestShellElapsedDuration(t *testing.T) {
 	for _, child := range container.Children {
 		if animator, ok := child.(tui.Animator); ok {
 			want, delay := animator.AnimationFrame(time.Now())
-			if !want || delay != 100*time.Millisecond {
-				t.Fatalf("running animator = want %v delay %v, want a 100ms tick", want, delay)
+			// v1.2.0 core/tools/render-utils.ts redraws elapsed labels every 1000ms.
+			if !want || delay != time.Second {
+				t.Fatalf("running animator = want %v delay %v, want a 1000ms tick", want, delay)
 			}
 			animated = true
 		}
@@ -312,7 +313,7 @@ func TestShellElapsedDuration(t *testing.T) {
 }
 
 // TestFormatDurationTenths pins the 0.1s display resolution of the shell
-// elapsed label (D194; it ticks every 0.1s).
+// elapsed label (upstream render-utils.ts displays tenths but redraws every second).
 func TestFormatDurationTenths(t *testing.T) {
 	for _, tc := range []struct {
 		ms   float64

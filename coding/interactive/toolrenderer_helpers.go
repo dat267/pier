@@ -224,8 +224,7 @@ func truncationSuffix(details any, theme *Theme) string {
 func formatDuration(ms float64) string {
 	seconds := ms / 1000
 	if seconds < 60 {
-		// Tenths, like upstream's toFixed(1); the running label advances one
-		// tenth per shellElapsedTick (D194).
+		// Tenths, like upstream's toFixed(1), independent of refresh frequency.
 		return ai.JSNumberToFixed(seconds, 1) + "s"
 	}
 	totalSeconds := int(seconds)
