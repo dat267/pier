@@ -869,9 +869,6 @@ func (s *AltScreen) handleViewportInput(data string) TuiInputListenerResult {
 			}
 			return TuiInputListenerResult{Consume: true}
 		}
-		if s.shouldDeferViewportInputToOverlayLocked() {
-			return TuiInputListenerResult{}
-		}
 		s.routeWheelLocked(wheel, delta)
 		return TuiInputListenerResult{Consume: true}
 	}

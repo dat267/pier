@@ -24,7 +24,8 @@ summaries omit assistant thinking so replayed reasoning does not inflate the
 prompt (`15e7bdc14`). Shifted-symbol keybindings match the produced character
 under Kitty and modifyOtherKeys (`7f9e1198f`). `PI_CLIPBOARD_OSC52=1` also
 sends an OSC 52 copy after a successful local clipboard write (`3e477eab5`).
-Focused regression tests cover these fixes.
+Unhandled mouse-wheel input scrolls the transcript behind a focused overlay
+(`#10769`, `11f991145`). Focused regression tests cover these fixes.
 
 Ported from it so far: the built-in catalog, regenerated from the tag's own generator
 (`claude-haiku-5-5`, the prompt-length pricing tiers for 154 models, and the model churn
