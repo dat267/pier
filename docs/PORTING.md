@@ -106,8 +106,11 @@ optional features: `listFiles` belongs to the `packages/env` daemon (already
 classified as a separately scoped remote-execution feature above), and
 structured tool outputs and nested/deferred tool execution belong to the nested
 call host whose triggers (codemode and extension tools) are out of scope.
-Codemode implementation remains out of scope. Do not treat the fix list above as
-a complete v1.2.0 port.
+Codemode implementation remains out of scope. Document retention is
+eviction-on-commit/line in the port (upstream also evicts on a timer), so an
+idle Session holds a loaded document past its retention until the next commit;
+the timer is not ported because the port's Session is synchronous. Do not treat
+the fix list above as a complete v1.2.0 port.
 
 Ported from it so far: the built-in catalog, regenerated from the tag's own generator
 (`claude-haiku-5-5`, the prompt-length pricing tiers for 154 models, and the model churn
