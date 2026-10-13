@@ -124,11 +124,16 @@ func (w *ModelWiring) HandleModelCommand(ctx context.Context, searchTerm string)
 		cancel()
 		switch {
 		case err != nil:
-			w.showWarning("Could not refresh model catalogs; searching cached models.")
+			w.showWarning("Could not refresh model catalogs: " + err.Error())
 		case result.Aborted:
 			w.showWarning("Model refresh timed out; searching cached models.")
 		case len(result.Errors) > 0:
-			w.showWarning("Could not refresh model catalogs; searching cached models.")
+			providers := make([]string, 0, len(result.Errors))
+			for provider := range result.Errors {
+				providers = append(providers, provider)
+			}
+			sortStringsAscending(providers)
+			w.showWarning("Could not refresh " + strings.Join(providers, ", ") + "; searching cached models.")
 		}
 		match = coding.FindExactModelReferenceMatch(searchTerm, w.Session.ModelRuntime().GetAvailableSnapshot())
 	}
