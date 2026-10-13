@@ -186,7 +186,8 @@ func TestAutocompleteAssembly(t *testing.T) {
 		runtime: runtime,
 		levels:  []ai.ThinkingLevel{"off", "medium", "high"},
 		templates: []coding.PromptTemplate{
-			{Name: "review", Description: "Review the diff", ArgumentHint: "<path>"},
+			{Name: "review", Description: "Review the diff", ArgumentHint: "<path>",
+				SourceInfo: coding.SourceInfo{Source: "local", Scope: coding.SourceScopeUser}},
 		},
 	}
 	editor := NewCustomEditor(editorTestHost{}, tui.EditorTheme{}, appKeybindings, CustomEditorOptions{})
@@ -200,7 +201,8 @@ func TestAutocompleteAssembly(t *testing.T) {
 			return []AuthSelectorProvider{{ID: "anthropic", Name: "Anthropic", AuthType: "api_key"}}
 		},
 		Skills: func() []SkillCommand {
-			return []SkillCommand{{Name: "debug", Description: "Debug things", FilePath: "/skills/debug"}}
+			return []SkillCommand{{Name: "debug", Description: "Debug things", FilePath: "/skills/debug",
+				SourceInfo: coding.SourceInfo{Source: "npm:pkg", Scope: coding.SourceScopeProject}}}
 		},
 	}
 	settings.SetEnableSkillCommands(true)
@@ -225,6 +227,19 @@ func TestAutocompleteAssembly(t *testing.T) {
 		if !names[expected] {
 			t.Errorf("missing command %q in %v", expected, names)
 		}
+	}
+	// Descriptions carry the source tag.
+	descriptions := map[string]string{}
+	if suggestions != nil {
+		for _, item := range suggestions.Items {
+			descriptions[item.Value] = item.Description
+		}
+	}
+	if descriptions["review"] != "<path> — [u] Review the diff" {
+		t.Errorf("review description = %q", descriptions["review"])
+	}
+	if descriptions["skill:debug"] != "[p:npm:pkg] Debug things" {
+		t.Errorf("skill description = %q", descriptions["skill:debug"])
 	}
 	// The skill command map is recorded.
 	commands := wiring.SkillCommands()

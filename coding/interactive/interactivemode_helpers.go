@@ -198,6 +198,7 @@ type SkillCommand struct {
 	Name        string
 	Description string
 	FilePath    string
+	SourceInfo  coding.SourceInfo
 }
 
 // AutocompleteSession is the session surface the autocomplete needs.
@@ -285,8 +286,11 @@ func (w *AutocompleteWiring) CreateBaseAutocompleteProvider() tui.AutocompletePr
 
 	// Prompt templates.
 	for _, template := range w.Session.PromptTemplates() {
+		sourceInfo := template.SourceInfo
 		commands = append(commands, tui.CommandEntry{
-			Name: template.Name, Description: template.Description, ArgumentHint: template.ArgumentHint,
+			Name:         template.Name,
+			Description:  PrefixAutocompleteDescription(template.Description, &sourceInfo),
+			ArgumentHint: template.ArgumentHint,
 		})
 	}
 
@@ -296,7 +300,11 @@ func (w *AutocompleteWiring) CreateBaseAutocompleteProvider() tui.AutocompletePr
 		for _, skill := range w.Skills() {
 			name := "skill:" + skill.Name
 			w.skillCommands[name] = skill.FilePath
-			commands = append(commands, tui.CommandEntry{Name: name, Description: skill.Description})
+			sourceInfo := skill.SourceInfo
+			commands = append(commands, tui.CommandEntry{
+				Name:        name,
+				Description: PrefixAutocompleteDescription(skill.Description, &sourceInfo),
+			})
 		}
 	}
 

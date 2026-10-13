@@ -695,6 +695,7 @@ func (a *App) skillCommands() []SkillCommand {
 	for _, skill := range skills {
 		commands = append(commands, SkillCommand{
 			Name: skill.Name, Description: skill.Description, FilePath: skill.FilePath,
+			SourceInfo: skill.SourceInfo,
 		})
 	}
 	return commands
