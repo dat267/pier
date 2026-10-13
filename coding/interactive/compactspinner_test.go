@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -57,5 +58,27 @@ func TestCompactionIndicatorDrivesAnimation(t *testing.T) {
 	want, _ = app.ui.NextAnimation()
 	if want {
 		t.Fatal("no animation wanted after the indicator is cleared")
+	}
+}
+
+// TestCompactionStatusLabels covers the compaction status labels (upstream
+// CompactionStatusIndicator): manual vs auto vs overflow.
+func TestCompactionStatusLabels(t *testing.T) {
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	SetRegisteredThemes(nil)
+	InitTheme("dark", false)
+	cases := []struct{ reason, want string }{
+		{"manual", "Compacting context..."},
+		{"threshold", "Auto-compacting..."},
+		{"overflow", "Context overflow detected, Auto-compacting..."},
+	}
+	for _, tc := range cases {
+		indicator := NewCompactionStatusIndicator(nil, tc.reason)
+		indicator.Dispose()
+		text := strings.Join(indicator.Render(80), "\n")
+		if !strings.Contains(text, tc.want) {
+			t.Fatalf("%s: render = %q, want %q", tc.reason, text, tc.want)
+		}
 	}
 }

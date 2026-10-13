@@ -123,10 +123,19 @@ func (r *RetryStatusIndicator) Dispose() {
 // cancel. The reason is still taken so the constructor keeps upstream's shape
 // (status-indicator.ts CompactionStatusIndicator).
 func NewCompactionStatusIndicator(host tui.RenderRequester, reason string) *StatusIndicator {
+	// Upstream labels the manual, threshold and overflow reasons differently.
+	cancelHint := "(" + KeyText("app.interrupt") + " to cancel)"
+	label := "Auto-compacting... " + cancelHint
+	switch reason {
+	case "manual":
+		label = "Compacting context... " + cancelHint
+	case "overflow":
+		label = "Context overflow detected, Auto-compacting... " + cancelHint
+	}
 	return NewStatusIndicator(StatusCompaction, host,
 		func(spinner string) string { return ActiveTheme().Fg("accent", spinner) },
 		func(text string) string { return ActiveTheme().Fg("muted", text) },
-		"Compacting...", nil)
+		label, nil)
 }
 
 // NewBranchSummaryStatusIndicator creates the branch summary indicator.
