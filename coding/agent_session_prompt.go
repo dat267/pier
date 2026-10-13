@@ -507,7 +507,7 @@ func (s *AgentSession) expandSkillCommand(text string) string {
 	args := ""
 	if spaceIndex != -1 {
 		skillName = text[len("/skill:"):spaceIndex]
-		args = strings.TrimSpace(text[spaceIndex+1:])
+		args = ai.JSTrim(text[spaceIndex+1:])
 	}
 
 	var skill *Skill
@@ -526,7 +526,7 @@ func (s *AgentSession) expandSkillCommand(text string) string {
 	if err != nil {
 		return text
 	}
-	body := strings.TrimSpace(StripFrontmatter(DecodeUTF8WithReplacement(content)))
+	body := ai.JSTrim(StripFrontmatter(DecodeUTF8WithReplacement(content)))
 	block := fmt.Sprintf("<skill name=\"%s\" location=\"%s\">\nReferences are relative to %s.\n\n%s\n</skill>",
 		skill.Name, skill.FilePath, skill.BaseDir, body)
 	if args != "" {

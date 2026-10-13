@@ -1006,7 +1006,7 @@ type TerminalThemeDetection struct {
 // most 15.
 func getColorFgBgBackgroundIndex(colorfgbg string) (int, bool) {
 	parts := strings.Split(colorfgbg, ";")
-	last := strings.TrimSpace(parts[len(parts)-1])
+	last := ai.JSTrim(parts[len(parts)-1])
 	if len(last) < 1 || len(last) > 2 {
 		return 0, false
 	}

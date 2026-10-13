@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Port of core/system-prompt.ts: system prompt construction and project
@@ -103,7 +105,7 @@ func buildRules(selectedTools []string, toolGuidelines map[string][]string, prom
 	var rules []string
 	seen := map[string]bool{}
 	addRule := func(rule string) {
-		normalized := strings.TrimSpace(rule)
+		normalized := ai.JSTrim(rule)
 		if normalized == "" || seen[normalized] {
 			return
 		}
@@ -220,7 +222,7 @@ func BuildSystemPromptSections(input BuildSystemPromptOptions) (SystemPromptSect
 		}
 	}
 	if skillFileReadTool != "" && len(skills) > 0 {
-		skillsPrompt := strings.TrimSpace(FormatSkillsForPrompt(skills, skillFileReadTool))
+		skillsPrompt := ai.JSTrim(FormatSkillsForPrompt(skills, skillFileReadTool))
 		if skillsPrompt != "" {
 			promptSections["skills"] = skillsPrompt
 		}
