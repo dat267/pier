@@ -41,7 +41,9 @@ resource capability without listing every resource or template (`#10526`,
 `f4cca2dc2`). Durable display-only writes append immediately even while busy,
 except when a queued reset must precede them; input submissions can also be
 placed as application entries (`#10407`, `e6b9a6af5`), and the host-facing
-`InputSubmissionDraft` carries the `InputEntry` as well. Text print mode warns on
+`InputSubmissionDraft` carries the `InputEntry` as well. A durable
+`pi.tool-result` for an executed call carries its `durationMs` (a recovery
+rerun measures only itself; interrupted and aborted calls have none). Text print mode warns on
 a truncated final response and exits with status 1 (`#10799`,
 `441f5767c`). Durable rejects waits that close a live wait-for cycle and permits a
 non-cyclic wait on an owner (`#10411`, `eb2fce43d`). Anthropic retries

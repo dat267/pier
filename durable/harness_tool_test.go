@@ -78,7 +78,7 @@ func TestAppendToolResult(t *testing.T) {
 	var entry *EntryRecord
 	if err := session.Commit(ctx, func(tx *Transaction) error {
 		var err error
-		entry, err = AppendToolResult(tx, RootConversationID, call, result, 42)
+		entry, err = AppendToolResult(tx, RootConversationID, call, result, 42, nil)
 		return err
 	}); err != nil {
 		t.Fatal(err)

@@ -120,6 +120,10 @@ func TestToolTaskExecutesAndAppendsResult(t *testing.T) {
 			message.Content[0].(ai.TextContent).Text != "done" {
 			t.Fatalf("message = %+v", entry.Model[0])
 		}
+		// v1.1.0: an executed tool result carries its execution duration.
+		if message.DurationMs == nil {
+			t.Fatal("tool result has no durationMs")
+		}
 	}
 	if !found {
 		t.Fatal("no tool result entry")

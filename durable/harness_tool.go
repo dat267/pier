@@ -193,7 +193,7 @@ func BoundContent(content []ai.UserContent, limits OutputLimits) (boundedContent
 // rendered diagnostics, so the stored message is exactly what the model sees;
 // data keeps the structured list. A result's usage is added to `pi.usage` in
 // the same commit.
-func AppendToolResult(tx *Transaction, conversationID Id, call ai.ToolCall, result ToolExecutionResult, timestamp int64) (*EntryRecord, error) {
+func AppendToolResult(tx *Transaction, conversationID Id, call ai.ToolCall, result ToolExecutionResult, timestamp int64, durationMs *int64) (*EntryRecord, error) {
 	diagnostics := append([]ToolDiagnostic{}, result.Diagnostics...)
 	content := append([]ai.UserContent{}, result.Content...)
 	if len(diagnostics) > 0 {
@@ -202,6 +202,7 @@ func AppendToolResult(tx *Transaction, conversationID Id, call ai.ToolCall, resu
 	message := &ai.ToolResultMessage{
 		ToolCallID: call.ID, ToolName: call.Name, Content: ai.UserContentList(content),
 		Usage: result.Usage, IsError: result.IsError != nil && *result.IsError, Timestamp: timestamp,
+		DurationMs: durationMs,
 	}
 	if result.Details != nil {
 		encoded, err := marshalJSONValue(result.Details)

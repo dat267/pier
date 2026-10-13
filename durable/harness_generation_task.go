@@ -454,7 +454,7 @@ func generationAbort(task RunningTask, runtime TaskRuntime, ctx chord.Context) e
 			return nil, err
 		}
 		for _, call := range unstarted {
-			if _, err := AppendToolResult(tx, conversationID, call, HarnessError("aborted", "Tool "+call.Name+" was aborted"), runtime.Now()); err != nil {
+			if _, err := AppendToolResult(tx, conversationID, call, HarnessError("aborted", "Tool "+call.Name+" was aborted"), runtime.Now(), nil); err != nil {
 				return nil, err
 			}
 		}
@@ -742,7 +742,7 @@ func startToolRound(runtime TaskRuntime, request generationRequestInfo, message 
 		for _, call := range calls {
 			if !offered[call.Name] {
 				unavailable := HarnessError("tool_unavailable", "Tool "+call.Name+" is not available")
-				result, err := AppendToolResult(tx, conversationID, call, unavailable, runtime.Now())
+				result, err := AppendToolResult(tx, conversationID, call, unavailable, runtime.Now(), nil)
 				if err != nil {
 					return nil, err
 				}

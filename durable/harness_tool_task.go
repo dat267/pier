@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/chord"
@@ -88,18 +89,18 @@ func toolCallPhase(task RunningTask, runtime TaskRuntime, ctx chord.Context) err
 	if tool == nil {
 		return settleTool(runtime, call, toolCompleted, func(map[string]any) ToolExecutionResult {
 			return HarnessError("tool_unavailable", "Tool "+call.Name+" is not available")
-		}, ctx)
+		}, nil, ctx)
 	}
 	args, errText := PrepareArguments(*tool, toolArgsOf(call.Arguments))
 	if errText != nil {
 		return settleTool(runtime, call, toolCompleted, func(map[string]any) ToolExecutionResult {
 			return InvalidArguments(*errText)
-		}, ctx)
+		}, nil, ctx)
 	}
 	if args, errText = ValidateArguments(*tool, call, args); errText != nil {
 		return settleTool(runtime, call, toolCompleted, func(map[string]any) ToolExecutionResult {
 			return InvalidArguments(*errText)
-		}, ctx)
+		}, nil, ctx)
 	}
 	var block *string
 	if err := runtime.Hooks().Each("beforeTool", func(handler any) error {
@@ -134,13 +135,13 @@ func toolCallPhase(task RunningTask, runtime TaskRuntime, ctx chord.Context) err
 		text := *block
 		return settleTool(runtime, call, toolCompleted, func(map[string]any) ToolExecutionResult {
 			return HarnessError("blocked", "Tool call blocked: "+text)
-		}, ctx)
+		}, nil, ctx)
 	}
 	final := args
 	if final, errText = ValidateArguments(*tool, call, args); errText != nil {
 		return settleTool(runtime, call, toolCompleted, func(map[string]any) ToolExecutionResult {
 			return InvalidArguments(*errText)
-		}, ctx)
+		}, nil, ctx)
 	}
 	if err := runtime.Commit(func(tx *Transaction, current RunningTask) (*NextTaskState, error) {
 		live, err := tx.Doc(LiveDoc.Definition, runtime.ConversationID())
@@ -198,7 +199,7 @@ func toolExecutePhase(task RunningTask, runtime TaskRuntime, ctx chord.Context) 
 	message := fmt.Sprintf("Tool %s was interrupted and may have partially run", call.Name)
 	return settleTool(runtime, call, toolEnding{Status: OutcomeFailed, Message: message}, func(slot map[string]any) ToolExecutionResult {
 		return FromSlot(slot, "interrupted", message)
-	}, ctx)
+	}, nil, ctx)
 }
 
 func toolAbortHandler(task RunningTask, runtime TaskRuntime, ctx chord.Context) error {
@@ -209,12 +210,12 @@ func toolAbortHandler(task RunningTask, runtime TaskRuntime, ctx chord.Context) 
 	message := fmt.Sprintf("Tool %s was aborted", call.Name)
 	return settleTool(runtime, call, toolEnding{Status: OutcomeAborted}, func(slot map[string]any) ToolExecutionResult {
 		return FromSlot(slot, "aborted", message)
-	}, ctx)
+	}, nil, ctx)
 }
 
 // settleTool commits the tool's terminal state: append its result entry, mark
 // its slot done, and complete or end aborted/failed with the entry id.
-func settleTool(runtime TaskRuntime, call ai.ToolCall, ending toolEnding, build func(slot map[string]any) ToolExecutionResult, ctx chord.Context) error {
+func settleTool(runtime TaskRuntime, call ai.ToolCall, ending toolEnding, build func(slot map[string]any) ToolExecutionResult, durationMs *int64, ctx chord.Context) error {
 	return runtime.Commit(func(tx *Transaction, current RunningTask) (*NextTaskState, error) {
 		live, err := tx.Doc(LiveDoc.Definition, runtime.ConversationID())
 		if err != nil {
@@ -222,7 +223,7 @@ func settleTool(runtime TaskRuntime, call ai.ToolCall, ending toolEnding, build 
 		}
 		slot := ToolSlotOf(live, runtime.TaskID())
 		result := build(slot)
-		entry, err := AppendToolResult(tx, runtime.ConversationID(), call, result, runtime.Now())
+		entry, err := AppendToolResult(tx, runtime.ConversationID(), call, result, runtime.Now(), durationMs)
 		if err != nil {
 			return nil, err
 		}
@@ -408,6 +409,8 @@ func runTool(runtime TaskRuntime, call ai.ToolCall, tool ToolRegistration, args 
 	}
 	var result ToolExecutionResult
 	ending := toolCompleted
+	// Execution time of this attempt; a recovery rerun measures only itself.
+	var durationMs *int64
 	env, envErr := runtime.Env(ctx)
 	if envErr != nil {
 		isError := true
@@ -420,7 +423,10 @@ func runTool(runtime TaskRuntime, call ai.ToolCall, tool ToolRegistration, args 
 	} else {
 		api.env = env
 		var err error
+		startedAt := time.Now()
 		result, err = tool.Execute(args, api, ctx)
+		duration := time.Since(startedAt).Milliseconds()
+		durationMs = &duration
 		if err != nil {
 			if runtime.Signal().Err() != nil {
 				api.ended = true
@@ -444,7 +450,7 @@ func runTool(runtime TaskRuntime, call ai.ToolCall, tool ToolRegistration, args 
 		}
 		return err
 	}
-	if err := settleTool(runtime, call, ending, func(map[string]any) ToolExecutionResult { return final }, ctx); err != nil {
+	if err := settleTool(runtime, call, ending, func(map[string]any) ToolExecutionResult { return final }, durationMs, ctx); err != nil {
 		for _, waiter := range pending {
 			waiter.Reject(err)
 		}
