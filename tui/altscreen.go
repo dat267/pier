@@ -686,7 +686,9 @@ func (s *AltScreen) refreshSearchLocked(layout LayoutFrame) bool {
 	if hasBox {
 		lines = box.ScrollContentLines
 	}
-	if len(lines) == 0 || strings.TrimSpace(search.Query) == "" {
+	// The JS whitespace normalization decides emptiness, not strings.TrimSpace
+	// (which would treat U+0085 as blank and U+FEFF as content).
+	if len(lines) == 0 || normalizeSearchQuery(search.Query) == "" {
 		search.Matches = nil
 		search.SelectedIndex = -1
 		search.SelectedKey = ""
