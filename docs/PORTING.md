@@ -78,7 +78,9 @@ very start of the stream, keeping a later U+FEFF as text, and flushes an
 incomplete trailing character as the replacement character at the end (the
 v1.0.4 `StreamDecoder` behavior). `OpenBinaryReader` takes the v1.0.3
 `noFollow` option, refusing a symbolic link as the final path component while
-still resolving earlier components. A throwing host commit/close
+still resolving earlier components. A read whose caller already cancelled
+fails only that call, not the Session, and `SnapshotAsOf` errors reach the same
+failure guard as other reads. A throwing host commit/close
 listener is reported through `onReport` instead of failing the operation that
 ran it, the Session's own listeners fail the Session, a throwing watch listener
 is reported as well as ending the watch with `listener_error`, and a throwing

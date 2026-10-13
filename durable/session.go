@@ -255,7 +255,7 @@ func (s *Session) SnapshotAsOf(ctx chord.Context, definition DocDefinition, conv
 	if resolved.Address.Scope.Kind != ScopeConversation {
 		return nil, false, errors.New("Session.SnapshotAsOf() requires a conversation document")
 	}
-	entry, err := visibleEntry(ctx, s.storage, conversationID, at)
+	entry, err := visibleEntry(ctx, s.Storage(), conversationID, at)
 	if err != nil {
 		return nil, false, err
 	}
@@ -267,6 +267,7 @@ func (s *Session) SnapshotAsOf(ctx chord.Context, definition DocDefinition, conv
 	address.Scope = scope
 	record, err := s.storage.FindDocument(ctx, address, DocumentPointAt(entry.CommitSeq))
 	if err != nil {
+		s.markReadFailureLocked(ctx, err)
 		return nil, false, err
 	}
 	if record == nil {
@@ -274,6 +275,7 @@ func (s *Session) SnapshotAsOf(ctx chord.Context, definition DocDefinition, conv
 	}
 	stored, err := s.storage.Document(ctx, record.ID, DocumentPointAt(entry.CommitSeq))
 	if err != nil {
+		s.markReadFailureLocked(ctx, err)
 		return nil, false, err
 	}
 	if stored == nil {
@@ -812,7 +814,7 @@ func (s *Session) loadDocumentLocked(definition DocDefinition, addressID string,
 	}
 	record, err := s.storage.FindDocument(ctx, address, CurrentDocumentPoint())
 	if err != nil {
-		s.markStorageFailureLocked(err)
+		s.markReadFailureLocked(ctx, err)
 		return nil, err
 	}
 	if record == nil {
@@ -820,7 +822,7 @@ func (s *Session) loadDocumentLocked(definition DocDefinition, addressID string,
 	}
 	stored, err := s.storage.Document(ctx, record.ID, CurrentDocumentPoint())
 	if err != nil {
-		s.markStorageFailureLocked(err)
+		s.markReadFailureLocked(ctx, err)
 		return nil, err
 	}
 	if stored == nil {
@@ -878,6 +880,15 @@ func (s *Session) storageCommitFailed(err error) {
 // markStorageFailureLocked fails the Session on its first non-rejection Storage
 // error. The caller holds s.mu. Close waits for the current mutation line to
 // finish, then releases the backend and rejects close subscribers.
+// markReadFailureLocked fails the Session on a read's error unless the read's
+// caller already cancelled, which fails only that call.
+func (s *Session) markReadFailureLocked(ctx chord.Context, err error) {
+	if ctx != nil && ctx.Err() != nil {
+		return
+	}
+	s.markStorageFailureLocked(err)
+}
+
 func (s *Session) markStorageFailureLocked(err error) {
 	if err == nil || isStorageRejected(err) || s.poison != nil {
 		return
