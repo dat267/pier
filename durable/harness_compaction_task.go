@@ -213,7 +213,7 @@ func compactionSummarize(task RunningTask, runtime TaskRuntime, ctx chord.Contex
 			}
 			return &NextTaskState{Status: TaskRunning, Checkpoint: json.RawMessage(encoded)}, nil
 		}
-		RemoveCompactionStatus(live, runtime.TaskID())
+		FailCompactionStatus(live, runtime.TaskID(), SummaryFailure(message))
 		detail := dataJSON(map[string]any{"reason": "model_error"})
 		return &NextTaskState{Status: TaskTerminal, Outcome: &TaskOutcome{
 			Status: OutcomeFailed, Error: &StoredError{Message: SummaryFailure(message), Detail: detail},
@@ -287,7 +287,7 @@ func compactionFailNoModel(runtime TaskRuntime, ref *ModelRef, ctx chord.Context
 		if err != nil {
 			return nil, err
 		}
-		RemoveCompactionStatus(live, runtime.TaskID())
+		FailCompactionStatus(live, runtime.TaskID(), message)
 		return &NextTaskState{Status: TaskTerminal, Outcome: &TaskOutcome{
 			Status: OutcomeFailed,
 			Error:  &StoredError{Message: message, Detail: dataJSON(map[string]any{"reason": "no_model"})},
@@ -309,6 +309,9 @@ func placeCompaction(runtime TaskRuntime, firstKept Id, summary string, ctx chor
 // placeSummary places the summary entry and completes (spec §8.7).
 func placeSummary(tx *Transaction, runtime TaskRuntime, current RunningTask, live chord.JsonValue, firstKept Id, summary string) (*NextTaskState, error) {
 	RemoveCompactionStatus(live, runtime.TaskID())
+	if object, ok := live.(map[string]any); ok {
+		delete(object, "compactionFailure")
+	}
 	text := SummaryPrefix + summary + SummarySuffix
 	input := compactionInputOf(current.Input)
 	entry := EntryDraft{

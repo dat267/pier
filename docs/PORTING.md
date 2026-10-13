@@ -47,7 +47,9 @@ non-cyclic wait on an owner (`#10411`, `eb2fce43d`). Anthropic retries
 preferred strict tools once without strict constraints for documented schema-size/tool-limit
 rejections (`#10409`, `d4d53612b`). A failed blocking threshold compaction now ends its
 waiting generation with `model_error` instead of sending an oversized request
-(`89e5c2c07`). Bash and PowerShell nonzero exits now return error tool results
+(`89e5c2c07`). The newest compaction failure stays in `pi.live.compactionFailure`
+until a summary succeeds, and failed `compaction_end` events carry the error
+(`eba849739`). Bash and PowerShell nonzero exits now return error tool results
 with an `exit_code` diagnostic rather than throwing (`eba849739`). Durable
 Storage failures, including reads, now fail and close the Session; later calls
 return the first failure as `SessionFailed`, and watches end with
@@ -58,9 +60,8 @@ tests cover these fixes.
 
 **v1.2.0 audit still open.** The new published configuration schemas still
 need a source-level parity review; they are configuration-editor support, not a
-runtime request path. Remaining Durable v1.2.0 gaps include `listFiles`,
-structured tool outputs, visible compaction-failure state, and nested/deferred
-tool execution; codemode implementation remains out of scope. Do not treat the fix list above as a complete v1.2.0 port.
+runtime request path. Remaining Durable v1.2.0 gaps include `listFiles`, structured tool outputs,
+and nested/deferred tool execution; codemode implementation remains out of scope. Do not treat the fix list above as a complete v1.2.0 port.
 
 Ported from it so far: the built-in catalog, regenerated from the tag's own generator
 (`claude-haiku-5-5`, the prompt-length pricing tiers for 154 models, and the model churn

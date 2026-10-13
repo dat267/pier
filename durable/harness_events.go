@@ -74,14 +74,15 @@ type AgentEvent struct {
 	Type string
 
 	// snapshot
-	Entries     []EntryRecord
-	Run         *RunInputs
-	Generation  *SnapshotGeneration
-	Tools       []ToolSlot
-	Compactions []CompactionStatus
-	Inbox       []QueuedItem
-	Agent       *AgentState
-	Usage       *UsageState
+	Entries           []EntryRecord
+	Run               *RunInputs
+	Generation        *SnapshotGeneration
+	Tools             []ToolSlot
+	Compactions       []CompactionStatus
+	CompactionFailure *LiveCompactionFailure
+	Inbox             []QueuedItem
+	Agent             *AgentState
+	Usage             *UsageState
 
 	// run_start / run_end
 	Inputs []Id
@@ -198,7 +199,8 @@ func snapshotOf(view ConversationView) AgentEvent {
 	parts := eventParts(view)
 	event := AgentEvent{
 		Type: EventSnapshot, Entries: view.Entries, Tools: parts.live.Tools,
-		Compactions: parts.live.Compactions, Inbox: queuedItems(parts.inbox),
+		Compactions: parts.live.Compactions, CompactionFailure: parts.live.CompactionFailure,
+		Inbox: queuedItems(parts.inbox),
 	}
 	agent := agentOrEmpty(parts.agent)
 	event.Agent = &agent
@@ -503,7 +505,11 @@ func Translate(
 	compactions := now.live.Compactions
 	for _, status := range compactionsBefore {
 		if !hasCompaction(compactions, status.TaskID) {
-			events = append(events, AgentEvent{Type: EventCompactionEnd, TaskID: status.TaskID, Reason: status.Reason})
+			event := AgentEvent{Type: EventCompactionEnd, TaskID: status.TaskID, Reason: status.Reason}
+			if failure := now.live.CompactionFailure; failure != nil && failure.TaskID == status.TaskID {
+				event.ErrorMessage = failure.Error
+			}
+			events = append(events, event)
 		}
 	}
 	turnEnded := false

@@ -83,6 +83,19 @@ func TestTranslateToolEnd(t *testing.T) {
 	}
 }
 
+func TestTranslateCompactionEndIncludesFailure(t *testing.T) {
+	before := liveView(map[string]any{
+		"compactions": []any{map[string]any{"taskId": 7.0, "reason": CompactionManual, "attempt": 1}},
+	})
+	after := liveView(map[string]any{
+		"compactionFailure": map[string]any{"taskId": 7.0, "reason": CompactionManual, "error": "summary failed"},
+	})
+	events := Translate(RootConversationID, before, after, []delta.Op{{Verb: delta.VerbReplace, Value: map[string]any{}}}, CommitPublication{}, map[Id]bool{})
+	if len(events) != 1 || events[0].Type != EventCompactionEnd || events[0].ErrorMessage != "summary failed" {
+		t.Fatalf("compaction events = %+v", events)
+	}
+}
+
 func TestTranslateRunAndTurn(t *testing.T) {
 	before := liveView(map[string]any{})
 	input := Id(5)

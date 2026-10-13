@@ -67,6 +67,13 @@ type CompactionStatus struct {
 	Retry    *LiveRetry       `json:"retry,omitempty"`
 }
 
+// LiveCompactionFailure retains the newest failed compaction for the agent view.
+type LiveCompactionFailure struct {
+	TaskID Id               `json:"taskId"`
+	Reason CompactionReason `json:"reason"`
+	Error  string           `json:"error"`
+}
+
 // LiveRun is the run control of the current generation.
 type LiveRun struct {
 	TaskID Id   `json:"taskId"`
@@ -76,10 +83,11 @@ type LiveRun struct {
 // LiveState is the built-in live conversation state: run control and
 // presentation of the current generation and tool round.
 type LiveState struct {
-	Run         *LiveRun           `json:"run,omitempty"`
-	Generation  *LiveGeneration    `json:"generation,omitempty"`
-	Tools       []ToolSlot         `json:"tools,omitempty"`
-	Compactions []CompactionStatus `json:"compactions,omitempty"`
+	Run               *LiveRun               `json:"run,omitempty"`
+	Generation        *LiveGeneration        `json:"generation,omitempty"`
+	Tools             []ToolSlot             `json:"tools,omitempty"`
+	Compactions       []CompactionStatus     `json:"compactions,omitempty"`
+	CompactionFailure *LiveCompactionFailure `json:"compactionFailure,omitempty"`
 }
 
 // LiveDoc is the conversation-scoped live document (latest history, initial
@@ -173,6 +181,23 @@ func CompactionStatusOf(live chord.JsonValue, taskID Id) map[string]any {
 		}
 	}
 	return nil
+}
+
+// FailCompactionStatus removes one in-progress status and records its failure for the agent view.
+func FailCompactionStatus(live chord.JsonValue, taskID Id, message string) {
+	status := CompactionStatusOf(live, taskID)
+	if status == nil {
+		return
+	}
+	id, validID := jsonID(status["taskId"])
+	reason, validReason := status["reason"].(string)
+	if !validID || !validReason {
+		return
+	}
+	if object, ok := live.(map[string]any); ok {
+		object["compactionFailure"] = map[string]any{"taskId": id, "reason": reason, "error": message}
+	}
+	RemoveCompactionStatus(live, taskID)
 }
 
 // RemoveCompactionStatus removes the status of compaction task taskID, and the
@@ -278,7 +303,13 @@ func SettleSchedulerOutcome(tx *Transaction, record TaskRecord, outcome Schedule
 		if err != nil {
 			return err
 		}
-		RemoveCompactionStatus(live, record.ID)
+		message := "Compaction failed"
+		if outcome.Status == OutcomeFaulted && outcome.Error != nil {
+			message = outcome.Error.Message
+		} else if outcome.Reason != nil && *outcome.Reason != "" {
+			message = *outcome.Reason
+		}
+		FailCompactionStatus(live, record.ID, message)
 		return nil
 	case RunTaskKind:
 		live, err := tx.Doc(LiveDoc.Definition, record.ConversationID)

@@ -36,6 +36,14 @@ func TestCompactionSelectWithoutModelFails(t *testing.T) {
 	if err := json.Unmarshal(settled.State.Outcome.Error.Detail, &detail); err != nil || detail["reason"] != "no_model" {
 		t.Fatalf("detail = %s", settled.State.Outcome.Error.Detail)
 	}
+	live, _, err := session.Snapshot(ctx, LiveDoc.Definition, RootConversationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	failure, ok := live.(map[string]any)["compactionFailure"].(map[string]any)
+	if !ok || !jsonIDEquals(failure["taskId"], taskID) || failure["reason"] != CompactionManual || failure["error"] != "No model is configured" {
+		t.Fatalf("compactionFailure = %+v", failure)
+	}
 }
 
 func TestCompactionAbortSettlesAborted(t *testing.T) {
