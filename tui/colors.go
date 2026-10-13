@@ -3,6 +3,8 @@ package tui
 import (
 	"fmt"
 	"math"
+	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 )
@@ -113,11 +115,21 @@ func NewOkhslColor(h, s, l float64) (Color, error) {
 	return NewRgbColor(float64(rgb.R), float64(rgb.G), float64(rgb.B))
 }
 
-// ParseColor parses a theme color value: #rgb/#rrggbb, oklch(...) or
-// okhsl(...). Unlike upstream's parseColor it takes only a string; palette
-// indices arrive as a separate value in the theme document.
-func ParseColor(value string) (Color, error) {
-	if match := themeHexColorPattern.FindStringSubmatch(value); match != nil {
+// ParseColor parses a theme color value: an ANSI palette index, #rgb/#rrggbb,
+// oklch(...) or okhsl(...) (upstream parseColor).
+func ParseColor(value any) (Color, error) {
+	text, ok := value.(string)
+	if !ok {
+		number, numeric := numericColorValue(value)
+		if !numeric {
+			return Color{}, fmt.Errorf("Invalid color value: %v", value)
+		}
+		if math.IsNaN(number) || math.IsInf(number, 0) || math.Trunc(number) != number || number < 0 || number > 255 {
+			return Color{}, fmt.Errorf("ANSI color index must be an integer from 0 to 255: %v", number)
+		}
+		return IndexedColor(int(number))
+	}
+	if match := themeHexColorPattern.FindStringSubmatch(text); match != nil {
 		digits := match[1]
 		if len(digits) == 3 {
 			digits = string([]byte{digits[0], digits[0], digits[1], digits[1], digits[2], digits[2]})
@@ -127,14 +139,14 @@ func ParseColor(value string) (Color, error) {
 		b, _ := strconv.ParseInt(digits[4:6], 16, 32)
 		return NewRgbColor(float64(r), float64(g), float64(b))
 	}
-	if match := oklchColorPattern.FindStringSubmatch(value); match != nil {
+	if match := oklchColorPattern.FindStringSubmatch(text); match != nil {
 		lightness := colorParseFloat(match[1])
 		if match[2] != "" {
 			lightness /= 100
 		}
 		return NewOklchColor(lightness, colorParseFloat(match[3]), colorParseFloat(match[4]))
 	}
-	if match := okhslColorPattern.FindStringSubmatch(value); match != nil {
+	if match := okhslColorPattern.FindStringSubmatch(text); match != nil {
 		saturation := colorParseFloat(match[2])
 		if match[3] != "" {
 			saturation /= 100
@@ -145,7 +157,24 @@ func ParseColor(value string) (Color, error) {
 		}
 		return NewOkhslColor(colorParseFloat(match[1]), saturation, lightness)
 	}
-	return Color{}, fmt.Errorf("Invalid color value: %s", value)
+	return Color{}, fmt.Errorf("Invalid color value: %s", text)
+}
+
+func numericColorValue(value any) (float64, bool) {
+	if value == nil {
+		return 0, false
+	}
+	number := reflect.ValueOf(value)
+	switch number.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return float64(number.Int()), true
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return float64(number.Uint()), true
+	case reflect.Float32, reflect.Float64:
+		return number.Float(), true
+	default:
+		return 0, false
+	}
 }
 
 var basicIndexedColors = [16]RgbColor{
@@ -336,19 +365,58 @@ type TextStyle struct {
 	Bg *Color
 }
 
-// TerminalDetectsTrueColor reports the terminal's truecolor hint from the
-// environment: COLORTERM "truecolor"/"24bit", or a TERM ending in "-direct"
-// (upstream detectCapabilitiesFromEnvironment). The host injects the capability
-// flag in the port (D69); this mirrors the environment rule.
+// TerminalDetectsTrueColor ports the truecolor branch of upstream's
+// detectCapabilitiesFromEnvironment. Explicit terminal families win unless a
+// multiplexer/proxy is detected first; otherwise COLORTERM and TERM provide the
+// truecolor hint. The caller applies explicit environment and settings overrides.
 func TerminalDetectsTrueColor(env func(string) string) bool {
+	return terminalDetectsTrueColor(env, runtime.GOOS == "windows")
+}
+
+func terminalDetectsTrueColor(env func(string) string, windowsConsole bool) bool {
 	if env == nil {
 		return false
 	}
-	switch strings.ToLower(env("COLORTERM")) {
-	case "truecolor", "24bit":
+	termProgram := strings.ToLower(env("TERM_PROGRAM"))
+	terminalEmulator := strings.ToLower(env("TERMINAL_EMULATOR"))
+	term := strings.ToLower(env("TERM"))
+	colorTerm := strings.ToLower(env("COLORTERM"))
+	hint := colorTerm == "truecolor" || colorTerm == "24bit" || strings.HasSuffix(term, "-direct")
+
+	if env("TMUX") != "" || strings.HasPrefix(term, "tmux") || strings.HasPrefix(term, "screen") {
+		return hint
+	}
+	if termProgram == "herdr" {
+		return hint
+	}
+	if env("KITTY_WINDOW_ID") != "" || termProgram == "kitty" {
 		return true
 	}
-	return strings.HasSuffix(strings.ToLower(env("TERM")), "-direct")
+	if termProgram == "ghostty" || strings.Contains(term, "ghostty") || env("GHOSTTY_RESOURCES_DIR") != "" {
+		return true
+	}
+	if env("WEZTERM_PANE") != "" || termProgram == "wezterm" {
+		return true
+	}
+	if termProgram == "warpterminal" || env("WARP_SESSION_ID") != "" || env("WARP_TERMINAL_SESSION_UUID") != "" {
+		return true
+	}
+	if env("ITERM_SESSION_ID") != "" || termProgram == "iterm.app" {
+		return true
+	}
+	if env("WT_SESSION") != "" {
+		return true
+	}
+	if termProgram == "alacritty" || termProgram == "vscode" || termProgram == "zed" {
+		return true
+	}
+	if terminalEmulator == "jetbrains-jediterm" {
+		return hint
+	}
+	if windowsConsole {
+		return true
+	}
+	return hint
 }
 
 // StyleText styles text with concrete colors and attributes.

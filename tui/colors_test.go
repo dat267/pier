@@ -2,6 +2,7 @@ package tui
 
 import (
 	"math"
+	"reflect"
 	"regexp"
 	"testing"
 )
@@ -31,6 +32,41 @@ func mustParseColor(t *testing.T, value string) Color {
 		t.Fatalf("ParseColor(%q): %v", value, err)
 	}
 	return color
+}
+
+// TestParseColorAcceptsNumericPaletteIndex ports parseColor's numeric arm
+// from packages/tui/test/colors.test.ts (upstream 567469096).
+func TestParseColorAcceptsNumericPaletteIndex(t *testing.T) {
+	parseColor := reflect.ValueOf(ParseColor)
+	if parseColor.Type().NumIn() != 1 || parseColor.Type().In(0).Kind() != reflect.Interface {
+		t.Fatalf("ParseColor input type = %v, want a string-or-number input", parseColor.Type().In(0))
+	}
+	parse := func(value any) (Color, error) {
+		results := parseColor.Call([]reflect.Value{reflect.ValueOf(value)})
+		color := results[0].Interface().(Color)
+		if results[1].IsNil() {
+			return color, nil
+		}
+		return color, results[1].Interface().(error)
+	}
+	for _, tc := range []struct {
+		input any
+		index int
+	}{{9, 9}, {float64(12), 12}} {
+		got, err := parse(tc.input)
+		if err != nil {
+			t.Fatalf("ParseColor(%v): %v", tc.input, err)
+		}
+		want := Color{Kind: ColorKindIndexed, Index: tc.index}
+		if got != want {
+			t.Errorf("ParseColor(%v) = %+v, want %+v", tc.input, got, want)
+		}
+	}
+	for _, invalid := range []any{float64(1.5), 256} {
+		if _, err := parse(invalid); err == nil {
+			t.Errorf("ParseColor(%v) did not reject an invalid palette index", invalid)
+		}
+	}
 }
 
 func TestParseColorHexAndOklch(t *testing.T) {
@@ -107,14 +143,23 @@ func TestTerminalDetectsTrueColor(t *testing.T) {
 		{"COLORTERM truecolor", map[string]string{"COLORTERM": "truecolor"}, true},
 		{"COLORTERM 24bit", map[string]string{"COLORTERM": "24BIT"}, true},
 		{"TERM -direct", map[string]string{"TERM": "xterm-direct"}, true},
+		{"Kitty", map[string]string{"TERM_PROGRAM": "kitty"}, true},
+		{"Kitty inside tmux", map[string]string{"TERM_PROGRAM": "kitty", "TMUX": "1"}, false},
+		{"Ghostty TERM", map[string]string{"TERM": "xterm-ghostty"}, true},
+		{"WezTerm pane", map[string]string{"WEZTERM_PANE": "1"}, true},
+		{"Warp session", map[string]string{"WARP_SESSION_ID": "1"}, true},
+		{"Windows Terminal", map[string]string{"WT_SESSION": "1"}, true},
 		{"TERM 256color", map[string]string{"TERM": "xterm-256color"}, false},
 		{"nothing", map[string]string{}, false},
 	}
 	for _, tc := range cases {
-		got := TerminalDetectsTrueColor(func(key string) string { return tc.env[key] })
+		got := terminalDetectsTrueColor(func(key string) string { return tc.env[key] }, false)
 		if got != tc.want {
 			t.Errorf("%s: got %v, want %v", tc.name, got, tc.want)
 		}
+	}
+	if !terminalDetectsTrueColor(func(string) string { return "" }, true) {
+		t.Fatal("Windows console should enable truecolor")
 	}
 }
 

@@ -102,11 +102,63 @@ func containsTheme(names []string, want string) bool {
 	return false
 }
 
+// TestThemeBootDetectsTrueColorFromEnvironment ports the truecolor branch of
+// packages/tui/src/terminal-image.ts detectCapabilitiesFromEnvironment: an
+// ordinary indexed-color TERM stays 256-color, while environment hints and
+// recognized terminal families advertise truecolor.
+func TestThemeBootDetectsTrueColorFromEnvironment(t *testing.T) {
+	previous := terminalCapabilitiesTrueColor()
+	t.Cleanup(func() { SetTrueColorSupport(previous) })
+	t.Setenv("COLORTERM", "")
+	t.Setenv("TERM", "xterm-256color")
+	t.Setenv("PI_TRUE_COLOR", "")
+	NewThemeBoot().EnableCapabilities()
+	if terminalCapabilitiesTrueColor() {
+		t.Fatal("xterm-256color without a color hint must not enable truecolor")
+	}
+
+	t.Setenv("COLORTERM", "24bit")
+	NewThemeBoot().EnableCapabilities()
+	if !terminalCapabilitiesTrueColor() {
+		t.Fatal("COLORTERM=24bit must enable truecolor")
+	}
+
+	t.Setenv("COLORTERM", "")
+	t.Setenv("TERM", "xterm-direct")
+	NewThemeBoot().EnableCapabilities()
+	if !terminalCapabilitiesTrueColor() {
+		t.Fatal("TERM=xterm-direct must enable truecolor")
+	}
+}
+
+// TestThemeBootPITrueColorOverride ports the explicit PI_TRUE_COLOR override
+// in packages/tui/src/terminal-image.ts detectCapabilities.
+func TestThemeBootPITrueColorOverride(t *testing.T) {
+	previous := terminalCapabilitiesTrueColor()
+	t.Cleanup(func() { SetTrueColorSupport(previous) })
+	t.Setenv("COLORTERM", "")
+	t.Setenv("TERM", "xterm-256color")
+	t.Setenv("PI_TRUE_COLOR", "1")
+	NewThemeBoot().EnableCapabilities()
+	if !terminalCapabilitiesTrueColor() {
+		t.Fatal("PI_TRUE_COLOR=1 must enable truecolor")
+	}
+
+	t.Setenv("PI_TRUE_COLOR", "0")
+	NewThemeBoot().EnableCapabilities()
+	if terminalCapabilitiesTrueColor() {
+		t.Fatal("PI_TRUE_COLOR=0 must disable truecolor")
+	}
+}
+
 // TestThemeBootTrueColorOverride pins that terminal.trueColor forces the
 // capability before the palette bakes its escapes.
 func TestThemeBootTrueColorOverride(t *testing.T) {
 	previous := terminalCapabilitiesTrueColor()
 	t.Cleanup(func() { SetTrueColorSupport(previous) })
+	t.Setenv("COLORTERM", "")
+	t.Setenv("TERM", "xterm-256color")
+	t.Setenv("PI_TRUE_COLOR", "1")
 
 	off := false
 	NewThemeBoot().EnableCapabilities()
@@ -116,6 +168,7 @@ func TestThemeBootTrueColorOverride(t *testing.T) {
 	if terminalCapabilitiesTrueColor() {
 		t.Fatal("terminal.trueColor=false must disable truecolor")
 	}
+	t.Setenv("PI_TRUE_COLOR", "0")
 	on := true
 	boot = NewThemeBoot()
 	boot.SetTrueColorOverride(&on)

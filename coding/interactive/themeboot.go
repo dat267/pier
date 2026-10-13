@@ -1,9 +1,11 @@
 package interactive
 
 import (
+	"os"
 	"path/filepath"
 
 	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/tui"
 )
 
 // This file owns the theme boot sequence: what the theme subsystem has to be
@@ -57,18 +59,25 @@ type ThemeBoot struct {
 }
 
 // SetTrueColorOverride forces the truecolor capability before the capability
-// stage (terminal.trueColor). Nil keeps the default (on).
+// stage (terminal.trueColor). Nil uses environment detection.
 func (b *ThemeBoot) SetTrueColorOverride(value *bool) { b.trueColorOverride = value }
 
 // NewThemeBoot creates a boot that has performed no stage yet.
 func NewThemeBoot() *ThemeBoot { return &ThemeBoot{} }
 
-// EnableCapabilities performs the capability stage: colour depth, the style
-// helpers, and the port's palette. The order matters — the palette bakes its
-// escapes on creation, so the capability switch has to precede the install
-// (D154). It is idempotent, and it must precede ApplySources.
+// EnableCapabilities performs the capability stage: detects color depth from
+// the terminal environment, then applies PI_TRUE_COLOR and the settings
+// override before the style helpers and port palette are installed. The order
+// matters — the palette bakes its escapes on creation, so the capability switch
+// has to precede the install (D154). It is idempotent, and it must precede ApplySources.
 func (b *ThemeBoot) EnableCapabilities() {
-	trueColor := true
+	trueColor := tui.TerminalDetectsTrueColor(os.Getenv)
+	switch os.Getenv("PI_TRUE_COLOR") {
+	case "1":
+		trueColor = true
+	case "0":
+		trueColor = false
+	}
 	if b.trueColorOverride != nil {
 		trueColor = *b.trueColorOverride
 	}

@@ -915,29 +915,33 @@ the Unix socket **publish is portable** (`server/unix.go`,
 
 ## D179
 
-**`tui.ParseColor` takes only a string, and capabilities stay
-  injected.** Upstream's `parseColor(string | number)` returns a tagged `Color`,
-  and `detectCapabilitiesFromEnvironment()` derives truecolor from `COLORTERM`
-  and a `TERM` suffix of `-direct` (567469096). The port keeps palette indices in
-  the theme document's `ColorValue` (`IsIndex`/`Index`) and parses only the string
-  forms, and it keeps capabilities injectable (D69), so
-  `themeboot.EnableCapabilities` sets truecolor unconditionally.
-  `tui.TerminalDetectsTrueColor` mirrors the upstream environment rule (including
-  `-direct`) for a caller that wants it, but it is not yet wired to the boot.
-  The theme controller enables appearance notifications for the `system` theme
-  and light/dark pairs, like upstream. The system theme uses the reported
-  background first, then a terminal appearance report, then `COLORFGBG`, matching
-  upstream `detectTerminalTheme`. At startup the combined OSC 10/11/4 query
-  consumes OSC 11 before the standalone background listener sees it, so
-  `ProbeSystemColors` applies its reported background to system and pair
-  selection. Theme-setting changes after startup and later appearance
-  notifications start another combined query, as upstream `applyFromSettings`
-  and `applyTerminalColorSchemeChange` do. Tests
-  `TestSystemColorQueryDoesNotHideStartupBackgroundReply`,
-  `TestAutoThemeSettingQueriesCurrentTerminalColors`,
-  `TestSystemThemeRefreshesTerminalColorsOnAppearanceChange`, and
-  `TestBackgroundProbeRoundTripThroughRenderer` cover the combined and listener
-  paths.
+**Closed: `tui.ParseColor` and truecolor boot detection follow v1.2.0.**
+
+Upstream's `parseColor(string | number)` returns a tagged `Color`. Go's
+`tui.ParseColor(any)` now accepts color strings and numeric ANSI palette indices;
+theme documents still keep indexes in `ColorValue` (`IsIndex`/`Index`) to
+preserve their JSON shape. `ThemeBoot.EnableCapabilities` uses the full
+`detectCapabilitiesFromEnvironment` truecolor decision, honors `PI_TRUE_COLOR`,
+and then applies the `terminal.trueColor` setting override. This retains the
+injectable capability seam (D69) without forcing truecolor. Tests
+`TestParseColorAcceptsNumericPaletteIndex`, `TestTerminalDetectsTrueColor`,
+`TestThemeBootDetectsTrueColorFromEnvironment`,
+`TestThemeBootPITrueColorOverride`, and `TestThemeBootTrueColorOverride` pin it.
+
+The theme controller enables appearance notifications for the `system` theme
+and light/dark pairs, like upstream. The system theme uses the reported
+background first, then a terminal appearance report, then `COLORFGBG`, matching
+upstream `detectTerminalTheme`. At startup the combined OSC 10/11/4 query
+consumes OSC 11 before the standalone background listener sees it, so
+`ProbeSystemColors` applies its reported background to system and pair
+selection. Theme-setting changes after startup and later appearance
+notifications start another combined query, as upstream `applyFromSettings`
+and `applyTerminalColorSchemeChange` do. Tests
+`TestSystemColorQueryDoesNotHideStartupBackgroundReply`,
+`TestAutoThemeSettingQueriesCurrentTerminalColors`,
+`TestSystemThemeRefreshesTerminalColorsOnAppearanceChange`, and
+`TestBackgroundProbeRoundTripThroughRenderer` cover the combined and listener
+paths.
 
 ## D180
 
