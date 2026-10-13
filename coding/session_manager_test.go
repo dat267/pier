@@ -325,3 +325,25 @@ func messageRoles(messages []ai.Message) []string {
 	}
 	return out
 }
+
+// getSessionName returns at the newest session_info entry even when it has no
+// name (upstream `entry.name?.trim() || undefined`), rather than falling back
+// to an older named entry.
+func TestGetSessionNameStopsAtNewestSessionInfo(t *testing.T) {
+	content := strings.Join([]string{
+		`{"type":"session","id":"s","timestamp":"2026-01-01T00:00:00.000Z","cwd":"/tmp"}`,
+		`{"type":"session_info","id":"e1","timestamp":"2026-01-01T00:00:01.000Z","name":"old"}`,
+		`{"type":"session_info","id":"e2","timestamp":"2026-01-01T00:00:02.000Z"}`,
+	}, "\n")
+	file := filepath.Join(t.TempDir(), "s.jsonl")
+	if err := os.WriteFile(file, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m, err := OpenSession(file, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if name := m.GetSessionName(); name != "" {
+		t.Fatalf("name = %q; want empty", name)
+	}
+}

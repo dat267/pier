@@ -598,7 +598,12 @@ func (m *SessionManager) GetSessionName() string {
 	defer m.mu.Unlock()
 	entries := m.getEntriesLocked()
 	for i := len(entries) - 1; i >= 0; i-- {
-		if entries[i].Type == "session_info" && entries[i].Name != nil {
+		// Upstream returns at the newest session_info entry even when its name
+		// is missing (`entry.name?.trim() || undefined`).
+		if entries[i].Type == "session_info" {
+			if entries[i].Name == nil {
+				return ""
+			}
 			name := ai.JSTrim(*entries[i].Name)
 			if name != "" {
 				return name
