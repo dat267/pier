@@ -22,11 +22,12 @@ are structs rather than heterogeneous tuples.
 
 ## D30
 
-**Timing flags are read per call.**
+**Closed: timing flags are captured at startup.**
 
-Upstream reads `PI_TIMING` once when importing the timing module. Pier reads it
-per call so tests can toggle output without restarting; `SetTimingsEnabled`
-provides the explicit test override.
+`coding/timings.go` captures `PI_TIMING` at package initialization, like v1.2.0
+`core/timings.ts`. `SetTimingsEnabled` remains a test override; nil restores the
+captured value. `TestTimingsStartupFlag` checks enabled and disabled starts after
+changing the environment.
 
 ## D41
 
@@ -98,12 +99,21 @@ D146–D149 and [locks.md](locks.md) for current ownership and retained locks.
 
 ## D132
 
-Branch summarization is tracked as compaction and is abortable.
+**Closed: branch summarization matches v1.2.0.**
+
+Upstream `core/agent-session.ts.isCompacting` includes branch summarization and
+`abortBranchSummary` cancels it. Pier already matches both;
+`TestNavigateTreeAbortBranchSummary` covers cancellation. This row was stale.
 
 ## D133
 
-Tool renderers resolve to built-ins, not extension definitions (D41).
-`computeEditsPreview` is synchronous.
+**Narrowed: edit preview matches the pin; extension renderer definitions stay out.**
+
+Tool renderers still resolve to built-ins, not extension definitions (D41). The
+synchronous-preview gap is closed: `computeEditsPreview` runs on a worker and
+applies through the owner post, matching the asynchronous preview in v1.2.0
+`core/tools/renderers/edit.ts`. `TestEditPreviewAppliesThroughOwnerPost` covers
+that handoff.
 
 ## D136
 
@@ -227,17 +237,28 @@ refactor. The watcher reads git state and calls `Refresh`. See
 
 ## D150
 
-**Loaded-resource display omits Themes and Extensions.**
+**Closed: resource diagnostics, source labels and listings match v1.2.0.**
 
-Upstream `showLoadedResources`' Skills, Context, Prompts, skill
-warnings/collisions (`[Skill conflicts]`), and ctrl+o expansion are ported.
-`SetToolsExpanded` drives the header and section expandables. Themes lack
-custom-theme `SourceInfo`; Extensions are out of scope (D41/D140).
+Skills, Context, Prompts, ctrl+o expansion, and skill/prompt/theme diagnostics
+follow v1.2.0 `interactive-mode.ts.showLoadedResources`. Warnings remain visible
+when startup listings are quiet. Prompt/theme names deduplicate first-wins and
+report collision paths; prompt reads and theme discovery retain warnings.
+Creation/reload propagate prompt diagnostics. Theme diagnostics are published
+per source generation and read without owner-loop file I/O. Discovered themes
+carry user/project/temporary `SourceInfo`, with trusted project discovery before
+explicit paths and after user defaults, matching `core/resource-loader.ts`. The
+port previously rendered a `[Themes]` listing; v1.2.0 has none, so it was removed
+(`addLoadedSection` covers only Context, Skills, Prompts and out-of-scope
+Extensions). Diagnostic paths use upstream's source labels (`user`, `project`,
+`path (temp)`, package source) through `getShortPath`, with parent lookup like
+`findSourceInfoForPath`. `coding.LoadSkills` already resolves paths and
+deduplicates real paths/names. Extensions and package-source discovery remain
+out of scope (D41/D140).
 
-`coding.LoadSkills` resolves `~`/relative paths with `ResolvePath`, deduplicates
-canonical real paths, and keeps the first name collision with a `collision`
-diagnostic. This fixes duplicates when settings point at the default skills
-directory.
+Tests: `TestPromptTemplateCollisionsReachSession`, `TestUnreadablePromptDiagnostic`,
+`TestLoadedPromptConflictsFollowsQuietStartup`, `TestLoadedThemeWarnings`,
+`TestThemeCollisionsKeepFirstSource`, `TestDiscoveredThemeScopes`, and
+`TestLoadedResourcesHasNoThemesSection`.
 
 ## D151
 
@@ -280,7 +301,7 @@ Android); elsewhere it returns `errors.ErrUnsupported` before plain rename.
 
 ## D153
 
-**Previously unwired CLI flags now reach startup and reload.**
+**Closed: supported CLI flags and initial images reach startup and reload.**
 
 Implementation: `cmd/main.go`, `coding/clidiagnostics.go`, `cliinitial.go`,
 `listmodels.go`, `paths.go`, and `sessionresourceload.go`. Fifteen flags plus two
@@ -293,9 +314,10 @@ explicit omissions below:
   `--name` are errors.
 - `@file` text precedes the first positional prompt; remaining prompts queue
   behind it (`buildInitialMessage`). Images travel only with that first prompt:
-  `ProcessFileArguments`, `InitialPrompt.Images`, `RunOptions.InitialImages`,
-  then `PromptOptions.Images`. Print mode remains text-only and warns/drops
-  these images (D162).
+  `ProcessFileArguments`, `InitialPrompt.Images`, then interactive
+  `RunOptions.InitialImages` or headless `PrintModeOptions.InitialImages`, and
+  `PromptOptions.Images`. `TestPrintModeInitialImagesOnlyAttachToFirstPrompt`
+  covers text and JSON modes against v1.2.0 `modes/print-mode.ts`.
 - `--skill`, `--prompt-template`, and `--theme` paths resolve against process
   cwd (`ResolveCLIPaths`/`IsLocalPath`, upstream `resolveCliPaths`). Explicit
   paths survive their corresponding `--no-*`; discovery refusal does not
@@ -509,19 +531,18 @@ touched. The model still receives "[Output truncated. Full output: <path>]".
 
 ## D162
 
-**Print mode requires an explicit flag.**
+**Closed: non-TTY stdin or stdout selects print mode.**
 
-Upstream `main.ts` auto-enters print mode for non-TTY stdin/stdout (`echo hi | pi`).
-Pier requires `-p` or `--mode json`; otherwise it runs interactive mode or fails
-to open a terminal, never silently performing a single-shot run.
+`cmd.resolvePrintMode` follows v1.2.0 `main.ts.resolveAppMode`: either non-TTY
+stream selects text print mode, while `-p` and `--mode json` remain explicit
+options. RPC stays rejected, never converted to print mode.
+`TestResolvePrintMode` checks precedence and both streams;
+`TestNonTTYStartsPrintMode` runs piped startup without a renderer.
 
-Other `print-mode.ts` behavior is retained: text prints the final assistant
-text; JSON emits the session header and event lines, stripping cumulative
-`partial` from `message_update`. The header uses `MarshalFileEntry` with
-`"type":"session"`, matching `JSON.stringify(sessionManager.getHeader())`.
-Prompt failure or error/aborted stop reasons write stderr and exit 1. `@file`
-images are warned/dropped (D153); extension/runtime-rebind machinery is out of
-scope (D41).
+Text prints the final assistant text; JSON emits the tagged session header and
+events, stripping cumulative `partial` from `message_update`. Failures report
+on stderr with exit 1. Initial images now attach in both modes (D153).
+Extensions/runtime rebind remain out of scope (D41).
 
 ## D163
 
@@ -641,12 +662,12 @@ Tests: `TestSplitMouseReportAcrossTheDeadline`,
 
 ## D170
 
-**The header omits upstream's self-documentation hint.**
+**Closed: both header variants already include the upstream hint.**
 
-Both compact and expanded headers omit
+`BuildStartupHeader` includes
 `Pi can explain its own features and look up its docs. Ask it how to use or extend Pi.`
-(`interactive-mode.ts:997`), by request: it advertises pi, not Pier.
-Keybinding lists and the ctrl+o pointer are unchanged.
+like v1.2.0 `interactive-mode.ts`. `TestRunStartupHeader` checks compact and
+expanded variants. The omission recorded here was stale.
 
 ## D171
 
@@ -661,15 +682,13 @@ first, so a usage-limit error mentioning a reset is not retried.
 
 ## D173
 
-**Compaction uses one plain label.**
+**Closed: compaction labels already match v1.2.0.**
 
-Upstream `components/status-indicator.ts:84` shows
-`Compacting context... ${cancelHint}` manually, or
-`${reason === "overflow" ? "Context overflow detected, " : ""}Auto-compacting... ${cancelHint}`
-automatically; `cancelHint` uses bound `app.interrupt`. Pier always shows
-`Compacting...` without the hint. The constructor still carries `reason`.
-The `m status compaction` row in `coding/interactive/testdata/message_golden.txt`
-pins the frame.
+`NewCompactionStatusIndicator` shows `Compacting context...` for manual work,
+`Auto-compacting...` for threshold work, and
+`Context overflow detected, Auto-compacting...` for overflow, each with the
+bound `app.interrupt` cancel hint. `TestCompactionStatusLabels` checks these
+against `components/status-indicator.ts`. The plain-label description was stale.
 
 ## D174
 
@@ -877,7 +896,7 @@ from the first changed line. `bashPreviewComponent.Invalidate` also retains
 incremental line counts.
 
 For a 2000-line result, tick cost fell from 2.15 ms to 0.07 ms; bash preview
-from 139 µs to 0.0009 ms. D194 changes shell tick frequency; D207/D208 refine
+from 139 µs to 0.0009 ms. D194 now matches upstream tick frequency; D207/D208 refine
 pending-frame clocks. References: `packages/coding-agent/src/modes/interactive/components/tool-execution.ts`
 and `packages/coding-agent/src/core/tools/renderers/bash.ts`.
 
@@ -934,15 +953,14 @@ Reference: `packages/coding-agent/src/modes/interactive/theme/system-theme.ts`.
 
 ## D194
 
-**Shell elapsed labels tick every 0.1s.**
+**Closed: shell elapsed labels refresh every 1000 ms.**
 
-Upstream displays `toFixed(1)` but invalidates once per 1000 ms. Pier keeps
-`formatDuration`'s `%.1fs` below a minute and sets `shellElapsedTick` to 100ms
-for `bash`/`powershell` (`isShellTool`). Other tools retain 1s frames.
-`ToolExecutionComponent.AnimationFrame` must own this interval: the walk reaches
-tools as direct chat children, and the nested `shellElapsedComponent` frame alone
-could paint without advancing the line. D190's narrow revision bump limits tool
-work, but a running shell still paints the whole screen at 10fps.
+`bash`/`powershell` use a 1s `shellElapsedTick`, matching v1.2.0
+`core/tools/render-utils.ts.toolTimerText`. Tenths display resolution and
+recorded final durations remain unchanged. Tool-level animation still drives
+silent calls through cached parents, and D190's efficient revision bump remains.
+`TestShellElapsedDuration` checks the interval; elapsed-label regressions cover
+live clocks and final `Took` values.
 
 ## D195
 

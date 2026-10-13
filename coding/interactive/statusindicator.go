@@ -117,12 +117,8 @@ func (r *RetryStatusIndicator) Dispose() {
 // NewCompactionStatusIndicator creates the compaction indicator. colorFn, when
 // set, colors the spinner and message (the editor border color when embedded).
 //
-// D173: the port shows one plain label for every reason. Upstream branches on
-// the reason — `Compacting context... ${cancelHint}` for a manual compaction,
-// and `${overflow ? "Context overflow detected, " : ""}Auto-compacting...
-// ${cancelHint}` for an automatic one — and always appends the key hint to
-// cancel. The reason is still taken so the constructor keeps upstream's shape
-// (status-indicator.ts CompactionStatusIndicator).
+// D173 is closed: labels and cancel hints already match v1.2.0
+// status-indicator.ts CompactionStatusIndicator.
 func NewCompactionStatusIndicator(host tui.RenderRequester, reason string, colorFn func(string) string) *StatusIndicator {
 	// Upstream labels the manual, threshold and overflow reasons differently.
 	cancelHint := "(" + KeyText("app.interrupt") + " to cancel)"
