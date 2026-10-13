@@ -367,3 +367,21 @@ func TestSessionCacheWarmingWiring(t *testing.T) {
 	}
 	_ = runs
 }
+
+// Upstream uses toFixed(3), which rounds half away from zero.
+func TestFormatDollarsUsesJSFixed(t *testing.T) {
+	if got := formatDollars(0.0625); got != "$0.063" {
+		t.Fatalf("formatDollars = %q; want $0.063", got)
+	}
+	if got := formatDollars(-0.0625); got != "-$0.063" {
+		t.Fatalf("formatDollars(-) = %q; want -$0.063", got)
+	}
+}
+
+// Upstream uses toFixed(6), which rounds half away from zero.
+func TestFormatCacheWarmingUsageUsesJSFixed(t *testing.T) {
+	entry := &SessionEntry{Usage: &ai.Usage{Cost: ai.UsageCost{Total: 0.0078125}}}
+	if got := FormatCacheWarmingUsage(entry); got != "Cache warmed: $0.007813" {
+		t.Fatalf("text = %q; want $0.007813", got)
+	}
+}

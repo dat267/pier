@@ -573,15 +573,15 @@ func formatCacheWarmingEconomics(decision CacheWarmingDecision) string {
 	if decision.Action == CacheWarmingActionWarm {
 		comparison = ">="
 	}
-	return fmt.Sprintf("%s, expected savings %s %s $%.3f", probabilityText,
-		formatDollars(decision.ExpectedSavings), comparison, cacheWarmingMinimumExpectedSavings)
+	return fmt.Sprintf("%s, expected savings %s %s $%s", probabilityText,
+		formatDollars(decision.ExpectedSavings), comparison, ai.JSNumberToFixed(cacheWarmingMinimumExpectedSavings, 3))
 }
 
 func formatDollars(value float64) string {
 	if value < 0 {
-		return fmt.Sprintf("-$%.3f", -value)
+		return "-$" + ai.JSNumberToFixed(-value, 3)
 	}
-	return fmt.Sprintf("$%.3f", value)
+	return "$" + ai.JSNumberToFixed(value, 3)
 }
 
 func formatCacheWarmingDecisionTime(nextWarmAt int64, now int64) string {
@@ -616,7 +616,7 @@ func FormatCacheWarmingUsage(entry *SessionEntry) string {
 	if entry.Usage == nil {
 		return fmt.Sprintf("Cache warmed%s: $0", note)
 	}
-	cost := fmt.Sprintf("%.6f", entry.Usage.Cost.Total)
+	cost := ai.JSNumberToFixed(entry.Usage.Cost.Total, 6)
 	// Trim trailing zeroes in the tail while keeping at least three decimals.
 	if dot := strings.Index(cost, "."); dot != -1 {
 		tail := strings.TrimRight(cost[dot+1:], "0")
