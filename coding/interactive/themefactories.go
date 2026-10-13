@@ -114,38 +114,16 @@ func GetResolvedThemeColors(themeName string) (map[string]string, error) {
 		// Upstream: `themeName ?? currentThemeName ?? SYSTEM_THEME_NAME`.
 		name = SystemThemeName
 	}
-	if name == SystemThemeName {
-		theme, err := loadTheme(SystemThemeName, "")
-		if err != nil {
-			return nil, err
-		}
-		colors := theme.Colors()
-		cssColors := make(map[string]string, len(colors))
-		for key, value := range colors {
-			cssColors[key] = tui.ColorToHex(value)
-		}
-		return cssColors, nil
-	}
-	isLight := name == "light"
-	themeJSON, err := loadThemeJSON(name)
+	// Upstream maps loadTheme(name).colors through colorToHex, so an oklch() or
+	// indexed color is exported as its resolved hex, not as written.
+	theme, err := loadTheme(name, "")
 	if err != nil {
 		return nil, err
 	}
-	resolved := ResolveThemeColors(withThemeColorFallbacks(themeJSON.Colors), themeJSON.Vars)
-	defaultText := "#e5e5e7"
-	if isLight {
-		defaultText = "#000000"
-	}
-	cssColors := map[string]string{}
-	for key, value := range resolved {
-		switch {
-		case value.IsIndex:
-			cssColors[key] = ansi256ToHex(value.Index)
-		case value.Value == "":
-			cssColors[key] = defaultText
-		default:
-			cssColors[key] = value.Value
-		}
+	colors := theme.Colors()
+	cssColors := make(map[string]string, len(colors))
+	for key, value := range colors {
+		cssColors[key] = tui.ColorToHex(value)
 	}
 	return cssColors, nil
 }

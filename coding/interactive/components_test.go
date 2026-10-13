@@ -271,3 +271,32 @@ func TestGetResolvedThemeColorsHandlesSystemTheme(t *testing.T) {
 		t.Fatalf("system theme missing text: %v", colors)
 	}
 }
+
+// getResolvedThemeColors maps every token through colorToHex, so an oklch()
+// theme color is exported as hex (upstream loadTheme(...).colors).
+func TestGetResolvedThemeColorsConvertsOklch(t *testing.T) {
+	installPierThemeForTest(t)
+	InitTheme("dark", false)
+	base := getBuiltinThemes()["dark"]
+	clone := *base
+	clone.Name = "oklchtheme"
+	clone.Colors = map[string]ColorValue{}
+	for key, value := range base.Colors {
+		clone.Colors[key] = value
+	}
+	clone.Colors["accent"] = ColorValue{Value: "oklch(70% 0.1 200)"}
+	SetRegisteredThemes([]*Theme{CreateTheme(&clone, "", "")})
+	t.Cleanup(func() { SetRegisteredThemes(nil) })
+
+	colors, err := GetResolvedThemeColors("oklchtheme")
+	if err != nil {
+		t.Fatal(err)
+	}
+	color, err := tui.ParseColor("oklch(70% 0.1 200)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if colors["accent"] != tui.ColorToHex(color) {
+		t.Fatalf("accent = %q; want %q", colors["accent"], tui.ColorToHex(color))
+	}
+}
