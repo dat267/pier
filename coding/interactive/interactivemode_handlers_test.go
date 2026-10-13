@@ -456,3 +456,15 @@ func TestSubmitKeepsJSWhitespace(t *testing.T) {
 		t.Fatalf("received = %v", received)
 	}
 }
+
+// Upstream detects bash mode with text.trimStart(), so a U+FEFF prefix is
+// ignored.
+func TestBashModeTrimsLeadingJSSpace(t *testing.T) {
+	keys, _, _, editor := newHandlerTestWiring(t)
+	keys.SetupKeyHandlers(nil)
+	editor.SetText("\uFEFF!ls")
+	editor.HandleInput("x")
+	if !keys.Queue.IsBashMode() {
+		t.Fatal("bash mode not detected through a U+FEFF prefix")
+	}
+}

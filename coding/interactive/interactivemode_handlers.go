@@ -99,7 +99,7 @@ func (w *KeyWiring) SetupKeyHandlers(nowMS func() int64) {
 	}
 	w.Editor.OnChange = func(text string) {
 		if w.Queue != nil {
-			w.Queue.SetBashMode(strings.HasPrefix(strings.TrimLeft(text, " \t"), "!"))
+			w.Queue.SetBashMode(strings.HasPrefix(ai.JSTrimLeft(text), "!"))
 		}
 	}
 }

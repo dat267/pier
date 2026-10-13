@@ -153,7 +153,7 @@ func (c *QueueController) ClearAllQueues() (steering []string, followUp []string
 // when it is idle, and queue the message for after the compaction while one
 // runs (port of handleFollowUp).
 func (c *QueueController) HandleFollowUp(ctx context.Context) {
-	text := strings.TrimSpace(c.Editor.GetExpandedText())
+	text := ai.JSTrim(c.Editor.GetExpandedText())
 	if text == "" {
 		return
 	}
@@ -231,10 +231,10 @@ func (c *QueueController) RestoreQueuedMessagesToEditor(abort bool, currentText 
 		editorText = currentText
 	}
 	parts := []string{}
-	if strings.TrimSpace(queuedText) != "" {
+	if ai.JSTrim(queuedText) != "" {
 		parts = append(parts, queuedText)
 	}
-	if strings.TrimSpace(editorText) != "" {
+	if ai.JSTrim(editorText) != "" {
 		parts = append(parts, editorText)
 	}
 	c.Editor.SetText(strings.Join(parts, "\n\n"))
