@@ -146,7 +146,7 @@ func DiscoverProtectedResourceMetadata(ctx context.Context, serverURL string, op
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		status := response.StatusCode
 		discard(response)
-		return nil, &statusError{status: status, message: fmt.Sprintf("HTTP %d loading OAuth protected resource metadata", status)}
+		return nil, &statusError{message: fmt.Sprintf("HTTP %d loading OAuth protected resource metadata", status)}
 	}
 	body, err := io.ReadAll(response.Body)
 	_ = response.Body.Close()
@@ -225,7 +225,7 @@ func DiscoverAuthorizationServerMetadata(ctx context.Context, authorizationServe
 			if isDiscoveryMiss(status) {
 				continue
 			}
-			return nil, &statusError{status: status, message: fmt.Sprintf("HTTP %d loading authorization server metadata from %s", status, candidate.URL)}
+			return nil, &statusError{message: fmt.Sprintf("HTTP %d loading authorization server metadata from %s", status, candidate.URL)}
 		}
 		body, err := io.ReadAll(response.Body)
 		_ = response.Body.Close()
@@ -286,7 +286,7 @@ func DiscoverOAuthServerInfo(ctx context.Context, serverURL string, options Disc
 		if response.StatusCode < 200 || response.StatusCode >= 300 {
 			status := response.StatusCode
 			discard(response)
-			return nil, &statusError{status: status, message: fmt.Sprintf("HTTP %d loading authorization server metadata from %s", status, parsed)}
+			return nil, &statusError{message: fmt.Sprintf("HTTP %d loading authorization server metadata from %s", status, parsed)}
 		}
 		body, err := io.ReadAll(response.Body)
 		_ = response.Body.Close()
@@ -351,7 +351,6 @@ func ResourceURLFromServerURL(value string) string {
 // statusError is a typed HTTP-status failure; discovery reserves network
 // errors (upstream TypeError) but swallows these.
 type statusError struct {
-	status  int
 	message string
 }
 

@@ -29,7 +29,6 @@ type ServiceSubscription struct {
 // activeServiceListener tracks one subscription's decode/delivery state.
 type activeServiceListener struct {
 	mu       sync.Mutex
-	target   protocol.RpcTarget
 	listener func(update *services.ServiceProviderUpdate)
 	decoder  services.ServiceStateDecoder
 
@@ -80,7 +79,7 @@ func (c *Client) SubscribeService(
 	c.serviceSequence++
 	subscriptionID := fmt.Sprintf("service-%d", c.serviceSequence)
 	active := &activeServiceListener{
-		target: target, listener: listener, decoder: services.NewServiceStateDecoder(),
+		listener: listener, decoder: services.NewServiceStateDecoder(),
 	}
 	c.serviceListeners[subscriptionID] = active
 	c.mu.Unlock()

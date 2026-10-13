@@ -40,7 +40,6 @@ type Directory[E EntryKey] struct {
 }
 
 type directoryObserver struct {
-	id      int
 	handler func(service any, ctx context.Context) error
 	tasks   map[string]context.CancelFunc
 	closed  bool
@@ -184,7 +183,7 @@ func (d *Directory[E]) Observe(handler func(service any, ctx context.Context) er
 	d.mu.Lock()
 	id := d.nextID
 	d.nextID++
-	observer := &directoryObserver{id: id, handler: handler, tasks: map[string]context.CancelFunc{}}
+	observer := &directoryObserver{handler: handler, tasks: map[string]context.CancelFunc{}}
 	d.observers[id] = observer
 	ready := d.ready
 	entries := d.entriesSnapshotLocked()
