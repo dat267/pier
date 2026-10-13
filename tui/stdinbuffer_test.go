@@ -49,6 +49,28 @@ func TestStdinBufferRegularCharacters(t *testing.T) {
 	}
 }
 
+func TestStdinBufferKeepsDelayedTerminalRepliesBuffered(t *testing.T) {
+	buffer, emitted, _ := collectBuffer(StdinBufferOptions{Timeout: 10})
+	reply := "\x1b]4;1;rgb:eaea/6c6c/6d6d\x07"
+	buffer.ProcessString(reply[:len("\x1b]4;1;")+5])
+	deadline, pending := buffer.PendingTimeout()
+	if pending {
+		t.Fatalf("incomplete terminal reply has a flush deadline: %v", deadline)
+	}
+	if got := buffer.FlushExpired(time.Now().Add(time.Hour)); len(got) != 0 {
+		t.Fatalf("expired reply flush = %q, want no keyboard input", got)
+	}
+	if got := emitted(); len(got) != 0 {
+		t.Fatalf("emitted before reply terminator = %q", got)
+	}
+
+	buffer.ProcessString(reply[len("\x1b]4;1;")+5:] + "x")
+	want := []string{reply, "x"}
+	if got := emitted(); strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("sequences = %q, want %q", got, want)
+	}
+}
+
 func TestStdinBufferCompleteSequences(t *testing.T) {
 	buffer, emitted, resetEmitted := collectBuffer(StdinBufferOptions{Timeout: 10})
 

@@ -132,8 +132,9 @@ func isCompleteApcSequence(data string) seqStatus {
 }
 
 var (
-	sgrMouseRegex       = regexp.MustCompile(`^<\d+;\d+;\d+[Mm]$`)
-	kittyPrintableRegex = regexp.MustCompile(`^\x1b\[(\d+)(?::\d*)?(?::\d+)?u$`)
+	sgrMouseRegex            = regexp.MustCompile(`^<\d+;\d+;\d+[Mm]$`)
+	terminalReplyHeaderRegex = regexp.MustCompile(`^\x1b(?:\](?:1[01];|4;\d{1,3};|7501;\?)|P>\||_G(?:[a-z]=\d+,)*[a-z]=\d+;)`)
+	kittyPrintableRegex      = regexp.MustCompile(`^\x1b\[(\d+)(?::\d*)?(?::\d+)?u$`)
 	// mouseReportHeadRegex includes ESC[ and each valid incomplete SGR field.
 	mouseReportHeadRegex = regexp.MustCompile(`^\x1b(\[(<(\d+(;\d*){0,2})?)?)?$`)
 	// mouseReportPrefixRegex allows other reports or keys after the completed tail.
@@ -369,6 +370,9 @@ func (b *StdinBuffer) process(str string) {
 	// FlushExpired once PendingTimeout passes.
 	b.pendingDeadline = time.Time{}
 	if b.buffer != "" {
+		if terminalReplyHeaderRegex.MatchString(b.buffer) {
+			return
+		}
 		timeoutMS := b.timeoutMS
 		if b.buffer == stdinEscape {
 			timeoutMS = b.escapeTimeoutMS
@@ -420,6 +424,9 @@ func (b *StdinBuffer) PendingTimeout() (time.Time, bool) {
 // FlushExpired flushes the buffered sequence once its deadline has passed
 // (now >= deadline) and returns it; otherwise it returns nil.
 func (b *StdinBuffer) FlushExpired(now time.Time) []string {
+	if terminalReplyHeaderRegex.MatchString(b.buffer) {
+		return nil
+	}
 	if b.pendingDeadline.IsZero() || now.Before(b.pendingDeadline) {
 		return nil
 	}
