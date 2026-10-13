@@ -445,7 +445,7 @@ func MissingToolResult(call ai.ToolCall, timestamp int64) *ai.ToolResultMessage 
 	}
 }
 
-// D212 (closed): this matches pinned v1.1.0 behavior. After tool-result
+// D212 (closed): this matches pinned v1.2.0 behavior. After tool-result
 // ordering, move the first non-user message to the front only when it is a
 // system message; later system messages retain their positions.
 func leadWithSystem(messages []ai.Message) []ai.Message {

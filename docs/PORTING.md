@@ -4,18 +4,17 @@ How much of upstream pi this port covers, package by package, plus the upstream
 pin's change log. The user-facing summary lives in `README.md`; this file is the
 authoritative per-area status.
 
-Reference pin: `abe508e1` (Release v1.1.0), read from the `./pi` checkout.
+Reference pin: `06a46693` (Release v1.2.0), read from the `./pi` checkout.
 `just reference` checks that the checkout really is at that tag, and
 `just reference-fetch` refreshes its tags without moving the checkout.
 `ai/models_catalog.json` is regenerated from the pin's own generator
 (`packages/ai/scripts/generate-models.ts --strict --data-only`, which fetches
 models.dev) through `scripts/gen_catalog.py`.
 
-**Upstream status.** v1.1.0 is the latest released tag in the reference
-checkout. The v1.0.3, v1.0.4, and v1.1.0 deltas have been reviewed for
-in-scope packages; applicable changes are ported, while remaining gaps and
-out-of-scope areas are recorded below. The commit-level port notes below retain
-upstream versions and commit IDs as historical context.
+**Upstream status.** v1.2.0 is the latest released tag in the reference
+checkout. The v1.2.0 delta from v1.1.0 is under audit; confirmed gaps,
+porting progress, and out-of-scope areas are recorded below. Earlier release
+notes retain upstream versions and commit IDs as historical context.
 
 Ported from it so far: the built-in catalog, regenerated from the tag's own generator
 (`claude-haiku-5-5`, the prompt-length pricing tiers for 154 models, and the model churn
@@ -30,7 +29,7 @@ re-run needs that tool first. The catalog's `radius` snapshot also supplies the 
 provider's default-gateway cold-start baseline, which `43d376399` keeps as the fallback
 under a fetched or cached catalogue rather than merging into it (`ai/radiusconfig.go`).
 
-The agent loop now follows latest released `packages/agent` contract (v1.1.0): `PrepareRequest`
+The agent loop follows the `packages/agent` contract introduced in v1.1.0 and unchanged in v1.2.0: `PrepareRequest`
 runs before every provider request, `FinishTurn` runs before `turn_end` and can end or explicitly
 continue the run, and loop-level callback errors enter the run-failure lifecycle. `RunToolCall`
 exposes the single-tool execution path with the same validation and tool hooks, including returned
@@ -38,7 +37,7 @@ exposes the single-tool execution path with the same validation and tool hooks, 
 also fail the tool call, matching upstream's awaited update events. `ShouldStopAfterTurn` remains as
 a deprecated compatibility callback; new code should use `FinishTurn`.
 
-The response lifecycle also follows v1.1.0 `agent-loop.ts`: cancellation reaches
+The response lifecycle follows the v1.1.0 `agent-loop.ts` contract, unchanged in v1.2.0: cancellation reaches
 provider work through its request context, while the loop keeps consuming events
 and awaits the provider's terminal result. Abandoning those waits on cancellation
 left an assistant component open and synthesized a second aborted message, producing
@@ -143,7 +142,7 @@ in-place enable/disable attempt fencing from `2db5e359b` remain out of scope wit
 The Home/End mapping matches the v1.1.0 reference (`#10314`, `6100fe5a8`):
 Home/End move the editor cursor, while Ctrl+Home/Ctrl+End move the fullscreen
 transcript. The component and fullscreen-renderer goldens record that mapping.
-D216 is closed now that v1.1.0 is the reference pin.
+D216 remains closed: the v1.2.0 keybinding table retains this mapping.
 
 Checked against v1.1.0 and still absent — reading the Termux clipboard (upstream
 `592fb57b7`) stays out of scope under **D120**. The `durable` delta is also audited

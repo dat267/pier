@@ -24,7 +24,7 @@ var TUIKeybindings = map[Keybinding]KeybindingDefinition{
 	"tui.editor.cursorRight":     {DefaultKeys: []string{"right", "ctrl+f"}, Description: "Move cursor right"},
 	"tui.editor.cursorWordLeft":  {DefaultKeys: []string{"alt+left", "ctrl+left", "alt+b"}, Description: "Move cursor word left"},
 	"tui.editor.cursorWordRight": {DefaultKeys: []string{"alt+right", "ctrl+right", "alt+f"}, Description: "Move cursor word right"},
-	// D216 (closed): follow pinned upstream v1.1.0 (#10314, 6100fe5a8).
+	// D216 (closed): follow pinned upstream v1.2.0 (#10314, 6100fe5a8).
 	"tui.editor.cursorLineStart":    {DefaultKeys: []string{"home", "ctrl+a"}, Description: "Move to line start"},
 	"tui.editor.cursorLineEnd":      {DefaultKeys: []string{"end", "ctrl+e"}, Description: "Move to line end"},
 	"tui.editor.jumpForward":        {DefaultKeys: []string{"ctrl+]"}, Description: "Jump forward to character"},

@@ -1792,8 +1792,8 @@ the reference's shape at iteration ~1650 of 2000.
 
 v1.0.2 left the first system message after initial user input, which could
 change prompt behavior and invalidate prompt caching. v1.1.0 added
-`leadWithSystem`; the Go port implements that behavior. This row is retained for
-its historical code reference. `TestDeriveContextLeadsWithInitialSystemMessage`
+`leadWithSystem`; the Go port implements that behavior, which remains in the
+v1.2.0 reference. This row is retained for its historical code reference. `TestDeriveContextLeadsWithInitialSystemMessage`
 covers initial user messages, a later assistant and system message, and
 unchanged contribution order.
 
@@ -1840,9 +1840,10 @@ mode on supported systems and polling mode on Windows/Android;
 
 **Closed: fullscreen keybindings now match the reference pin.**
 
-The port follows v1.1.0 (`packages/tui/src/keybindings.ts`, commit
-`6100fe5a8`): `Home`/`End` move the editor cursor, and `Ctrl+Home`/`Ctrl+End`
-move the transcript. This row is retained for its historical code reference.
+The port follows the v1.1.0 mapping (`packages/tui/src/keybindings.ts`, commit
+`6100fe5a8`), retained in v1.2.0: `Home`/`End` move the editor cursor, and
+`Ctrl+Home`/`Ctrl+End` move the transcript. This row is retained for its
+historical code reference.
 
 ## D217
 
