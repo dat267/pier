@@ -314,3 +314,24 @@ func TestExportFromFileDefaultOutputName(t *testing.T) {
 		t.Errorf("output = %q, want %q", got, want)
 	}
 }
+
+// Upstream's live export always carries systemPrompt and tools (JSON.stringify
+// keeps "" and []), while the standalone file export leaves them undefined.
+func TestExportSessionDataShape(t *testing.T) {
+	emptyPrompt := ""
+	emptyTools := []exportTool{}
+	live, err := ai.MarshalJSON(&exportSessionData{SystemPrompt: &emptyPrompt, Tools: &emptyTools})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(live), `"systemPrompt":""`) || !strings.Contains(string(live), `"tools":[]`) {
+		t.Fatalf("live = %s", live)
+	}
+	standalone, err := ai.MarshalJSON(&exportSessionData{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(standalone), "systemPrompt") || strings.Contains(string(standalone), "tools") {
+		t.Fatalf("standalone = %s", standalone)
+	}
+}

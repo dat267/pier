@@ -366,11 +366,14 @@ type exportTool struct {
 type exportSessionData struct {
 	// Header marshals with the leading "type":"session" discriminator, like
 	// upstream's header entry object.
-	Header        json.RawMessage              `json:"header"`
-	Entries       []coding.SessionEntry        `json:"entries"`
-	LeafID        *string                      `json:"leafId"`
-	SystemPrompt  string                       `json:"systemPrompt,omitempty"`
-	Tools         []exportTool                 `json:"tools,omitempty"`
+	Header  json.RawMessage       `json:"header"`
+	Entries []coding.SessionEntry `json:"entries"`
+	LeafID  *string               `json:"leafId"`
+	// SystemPrompt and Tools are pointers so the live export can carry an empty
+	// value (upstream JSON.stringify keeps "" and []) while the standalone file
+	// export omits them (undefined).
+	SystemPrompt  *string                      `json:"systemPrompt,omitempty"`
+	Tools         *[]exportTool                `json:"tools,omitempty"`
 	RenderedTools map[string]*renderedToolHTML `json:"renderedTools,omitempty"`
 }
 
@@ -491,8 +494,8 @@ func (s *AppSession) ExportSessionToHTML(outputPath string, themeName string) (s
 	data := &exportSessionData{
 		Entries:      entries,
 		LeafID:       sessionManager.GetLeafID(),
-		SystemPrompt: state.SystemPrompt,
-		Tools:        tools,
+		SystemPrompt: &state.SystemPrompt,
+		Tools:        &tools,
 	}
 	if header := sessionManager.GetHeader(); header != nil {
 		data.Header = exportHeaderJSON(header)
