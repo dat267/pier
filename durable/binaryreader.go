@@ -37,14 +37,21 @@ type osBinaryReader struct {
 	closed bool
 }
 
-// OpenBinaryReader opens a regular file for bounded positional reads.
-func (e *OSFileSystem) OpenBinaryReader(path string, ctx context.Context) (BinaryReader, error) {
+// OpenBinaryReader opens a regular file for bounded positional reads. With
+// options.NoFollow, a symbolic link as the final path component fails with
+// invalid instead of being followed.
+func (e *OSFileSystem) OpenBinaryReader(path string, options *BinaryReaderOptions, ctx context.Context) (BinaryReader, error) {
 	if err := checkFileContext(ctx); err != nil {
 		return nil, err
 	}
 	resolved, err := e.resolvePath(path)
 	if err != nil {
 		return nil, err
+	}
+	if options != nil && options.NoFollow {
+		if info, err := os.Lstat(resolved); err == nil && info.Mode()&os.ModeSymlink != 0 {
+			return nil, &FileError{Code: FileErrorInvalid, Message: "Path is a symbolic link", Path: resolved}
+		}
 	}
 	file, err := os.Open(resolved)
 	if err != nil {

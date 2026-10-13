@@ -179,6 +179,13 @@ type ReadTextLinesOptions struct {
 	MaxLines int
 }
 
+// BinaryReaderOptions configures an opened binary reader.
+type BinaryReaderOptions struct {
+	// NoFollow refuses a symbolic link as the final path component instead of
+	// following it; earlier components are still resolved.
+	NoFollow bool
+}
+
 // CreateDirOptions controls directory creation.
 type CreateDirOptions struct {
 	Recursive bool
@@ -206,7 +213,7 @@ type FileSystem interface {
 	AbsolutePath(path string, ctx context.Context) (string, error)
 	JoinPath(parts []string, ctx context.Context) (string, error)
 	ReadTextFile(path string, ctx context.Context) (string, error)
-	OpenBinaryReader(path string, ctx context.Context) (BinaryReader, error)
+	OpenBinaryReader(path string, options *BinaryReaderOptions, ctx context.Context) (BinaryReader, error)
 	OpenTextLineReader(path string, ctx context.Context) (TextLineReader, error)
 	ReadTextLines(path string, options *ReadTextLinesOptions, ctx context.Context) ([]string, error)
 	ReadBinaryFile(path string, ctx context.Context) ([]byte, error)

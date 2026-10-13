@@ -75,7 +75,7 @@ func CreateReadTool() ToolRegistration {
 			if err != nil {
 				return ToolExecutionResult{}, err
 			}
-			reader, err := env.OpenBinaryReader(absolutePath, ctx)
+			reader, err := env.OpenBinaryReader(absolutePath, nil, ctx)
 			if err != nil {
 				return ToolExecutionResult{}, err
 			}

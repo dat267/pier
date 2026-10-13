@@ -76,7 +76,9 @@ comparison uses the directory's real path, not the resolved file path
 read as a binding. The shell's byte decoder drops only a byte-order mark at the
 very start of the stream, keeping a later U+FEFF as text, and flushes an
 incomplete trailing character as the replacement character at the end (the
-v1.0.4 `StreamDecoder` behavior). A throwing host commit/close
+v1.0.4 `StreamDecoder` behavior). `OpenBinaryReader` takes the v1.0.3
+`noFollow` option, refusing a symbolic link as the final path component while
+still resolving earlier components. A throwing host commit/close
 listener is reported through `onReport` instead of failing the operation that
 ran it, the Session's own listeners fail the Session, a throwing watch listener
 is reported as well as ending the watch with `listener_error`, and a throwing

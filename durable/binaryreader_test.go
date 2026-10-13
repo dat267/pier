@@ -2,6 +2,7 @@ package durable
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -25,6 +26,54 @@ func TestRangeUTF8DecoderCarriesSplitRune(t *testing.T) {
 	}
 }
 
+// v1.0.3: openBinaryReader's noFollow refuses a final-component symlink while
+// still resolving earlier components (upstream env conformance).
+func TestOSBinaryReaderNoFollowRefusesFinalSymlink(t *testing.T) {
+	t.Setenv("TMPDIR", t.TempDir())
+	cwd := t.TempDir()
+	fsys, err := NewOSFileSystem(cwd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(cwd, "target.txt"), []byte("target"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(cwd, "sub"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(cwd, "sub", "inner.txt"), []byte("inner"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("target.txt", filepath.Join(cwd, "link.txt")); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	if err := os.Symlink("sub", filepath.Join(cwd, "dirlink")); err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+
+	// Without noFollow the final symlink is followed.
+	followed, err := fsys.OpenBinaryReader(filepath.Join(cwd, "link.txt"), nil, ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer followed.Close(ctx)
+
+	// With noFollow it is refused with invalid.
+	_, err = fsys.OpenBinaryReader(filepath.Join(cwd, "link.txt"), &BinaryReaderOptions{NoFollow: true}, ctx)
+	var fileErr *FileError
+	if !errors.As(err, &fileErr) || fileErr.Code != FileErrorInvalid {
+		t.Fatalf("noFollow error = %v, want invalid", err)
+	}
+
+	// Only the final component: an earlier symlinked directory still resolves.
+	inner, err := fsys.OpenBinaryReader(filepath.Join(cwd, "dirlink", "inner.txt"), &BinaryReaderOptions{NoFollow: true}, ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer inner.Close(ctx)
+}
+
 func TestOSBinaryReaderReadsAndScansSelectedLines(t *testing.T) {
 	t.Setenv("TMPDIR", t.TempDir())
 	cwd := t.TempDir()
@@ -39,7 +88,7 @@ func TestOSBinaryReaderReadsAndScansSelectedLines(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	reader, err := fsys.OpenBinaryReader(path, ctx)
+	reader, err := fsys.OpenBinaryReader(path, nil, ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
