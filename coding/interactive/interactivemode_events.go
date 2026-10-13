@@ -302,7 +302,7 @@ func (d *EventDispatcher) HandleEvent(event *coding.SessionEvent) {
 			if event.Source == "branchSummary" {
 				d.UIState.ShowStatusIndicator(NewBranchSummaryStatusIndicator(d.UIState.UI))
 			} else {
-				d.UIState.ShowStatusIndicator(NewCompactionStatusIndicator(d.UIState.UI, event.Reason))
+				d.UIState.ShowStatusIndicator(NewCompactionStatusIndicator(d.UIState.UI, event.Reason, d.UIState.EmbeddedStatusColorFn(d.thinkingLevel())))
 			}
 		}
 		d.requestRender()
@@ -561,7 +561,7 @@ func (d *EventDispatcher) handleCompactionStart(event *coding.SessionEvent) {
 		}
 	}
 	if d.UIState != nil {
-		d.UIState.ShowStatusIndicator(NewCompactionStatusIndicator(d.UIState.UI, event.Reason))
+		d.UIState.ShowStatusIndicator(NewCompactionStatusIndicator(d.UIState.UI, event.Reason, d.UIState.EmbeddedStatusColorFn(d.thinkingLevel())))
 	}
 	d.requestRender()
 }

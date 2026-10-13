@@ -114,7 +114,8 @@ func (r *RetryStatusIndicator) Dispose() {
 	r.StatusIndicator.Dispose()
 }
 
-// NewCompactionStatusIndicator creates the compaction indicator.
+// NewCompactionStatusIndicator creates the compaction indicator. colorFn, when
+// set, colors the spinner and message (the editor border color when embedded).
 //
 // D173: the port shows one plain label for every reason. Upstream branches on
 // the reason — `Compacting context... ${cancelHint}` for a manual compaction,
@@ -122,7 +123,7 @@ func (r *RetryStatusIndicator) Dispose() {
 // ${cancelHint}` for an automatic one — and always appends the key hint to
 // cancel. The reason is still taken so the constructor keeps upstream's shape
 // (status-indicator.ts CompactionStatusIndicator).
-func NewCompactionStatusIndicator(host tui.RenderRequester, reason string) *StatusIndicator {
+func NewCompactionStatusIndicator(host tui.RenderRequester, reason string, colorFn func(string) string) *StatusIndicator {
 	// Upstream labels the manual, threshold and overflow reasons differently.
 	cancelHint := "(" + KeyText("app.interrupt") + " to cancel)"
 	label := "Auto-compacting... " + cancelHint
@@ -132,10 +133,15 @@ func NewCompactionStatusIndicator(host tui.RenderRequester, reason string) *Stat
 	case "overflow":
 		label = "Context overflow detected, Auto-compacting... " + cancelHint
 	}
-	return NewStatusIndicator(StatusCompaction, host,
-		func(spinner string) string { return ActiveTheme().Fg("accent", spinner) },
-		func(text string) string { return ActiveTheme().Fg("muted", text) },
-		label, nil)
+	spinnerColor := colorFn
+	messageColor := colorFn
+	if spinnerColor == nil {
+		spinnerColor = func(spinner string) string { return ActiveTheme().Fg("accent", spinner) }
+	}
+	if messageColor == nil {
+		messageColor = func(text string) string { return ActiveTheme().Fg("muted", text) }
+	}
+	return NewStatusIndicator(StatusCompaction, host, spinnerColor, messageColor, label, nil)
 }
 
 // NewBranchSummaryStatusIndicator creates the branch summary indicator.

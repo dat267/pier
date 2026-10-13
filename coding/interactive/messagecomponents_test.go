@@ -168,7 +168,7 @@ func TestMessagesAgainstUpstreamGolden(t *testing.T) {
 	retry := NewRetryStatusIndicator(nil, 2, 5, 3000)
 	retry.Dispose()
 	checkMessageGolden(t, golden, "status retry", retry.Render(60))
-	compactionStatus := NewCompactionStatusIndicator(nil, "threshold")
+	compactionStatus := NewCompactionStatusIndicator(nil, "threshold", nil)
 	compactionStatus.Dispose()
 	checkMessageGolden(t, golden, "status compaction", compactionStatus.Render(60))
 	branchStatus := NewBranchSummaryStatusIndicator(nil)

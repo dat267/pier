@@ -455,7 +455,7 @@ func TestUpdateThinkingBlockVisibilityUpdatesComponents(t *testing.T) {
 func TestKeyWiringSessionNewClearsStatus(t *testing.T) {
 	app, cleanup := newTestApp(t)
 	defer cleanup()
-	app.uiState.ShowStatusIndicator(NewCompactionStatusIndicator(app.ui, "manual"))
+	app.uiState.ShowStatusIndicator(NewCompactionStatusIndicator(app.ui, "manual", nil))
 	if app.uiState.ActiveStatusIndicator == nil {
 		t.Fatal("setup: no active indicator")
 	}

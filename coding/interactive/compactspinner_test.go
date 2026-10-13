@@ -21,7 +21,7 @@ func TestCustomEditorEmbeddedStatusAnimates(t *testing.T) {
 	SetRegisteredThemes(nil)
 	InitTheme("dark", false)
 	editor := NewCustomEditor(nil, tui.EditorTheme{}, nil, CustomEditorOptions{EmbedWorkingStatus: true})
-	indicator := NewCompactionStatusIndicator(nil, "manual")
+	indicator := NewCompactionStatusIndicator(nil, "manual", nil)
 	editor.SetWorkingStatusIndicator(indicator)
 
 	animator, ok := any(editor).(tui.Animator)
@@ -49,7 +49,7 @@ func TestCompactionIndicatorDrivesAnimation(t *testing.T) {
 	defer cleanup()
 	app.Init(context.Background())
 
-	app.uiState.ShowStatusIndicator(NewCompactionStatusIndicator(app.ui, "manual"))
+	app.uiState.ShowStatusIndicator(NewCompactionStatusIndicator(app.ui, "manual", nil))
 	want, _ := app.ui.NextAnimation()
 	if !want {
 		t.Fatal("renderer animation walk must see the editor-embedded compaction indicator")
@@ -74,7 +74,7 @@ func TestCompactionStatusLabels(t *testing.T) {
 		{"overflow", "Context overflow detected, Auto-compacting..."},
 	}
 	for _, tc := range cases {
-		indicator := NewCompactionStatusIndicator(nil, tc.reason)
+		indicator := NewCompactionStatusIndicator(nil, tc.reason, nil)
 		indicator.Dispose()
 		text := strings.Join(indicator.Render(80), "\n")
 		if !strings.Contains(text, tc.want) {

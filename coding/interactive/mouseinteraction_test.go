@@ -73,7 +73,7 @@ func TestAnimationScanCacheIsDroppedByAPaint(t *testing.T) {
 		t.Fatal("idle arm armed an animation timer")
 	}
 
-	app.uiState.ShowStatusIndicator(NewCompactionStatusIndicator(app.ui, "manual"))
+	app.uiState.ShowStatusIndicator(NewCompactionStatusIndicator(app.ui, "manual", nil))
 	schedule.paintNow() // the paint that shows the indicator
 
 	if ch := schedule.arm(); ch == nil {

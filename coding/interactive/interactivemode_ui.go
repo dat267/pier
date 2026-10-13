@@ -152,22 +152,30 @@ func (s *InteractiveUIState) ClearStatusIndicator(kind StatusIndicatorKind, hasK
 	}
 }
 
+// EmbeddedStatusColorFn is the color an embedded status indicator uses: the
+// editor's border color, else the thinking-level border color. It is nil when
+// the editor does not embed the status, so the indicator keeps its defaults.
+func (s *InteractiveUIState) EmbeddedStatusColorFn(thinkingLevel string) func(string) string {
+	editor, ok := IsWorkingStatusEditor(s.Editor)
+	if !ok {
+		return nil
+	}
+	// Resolve the editor's border colour per render, the way upstream does
+	// (text => (this.editor.borderColor ?? …)(text)). UpdateEditorBorderColor
+	// swaps that colour whenever the thinking level, the model or bash mode
+	// changes, so a captured function leaves the spinner and its message in
+	// the previous colour while the border lines they sit between move on.
+	return func(text string) string {
+		if borderColor := editor.WorkingBorderColor(); borderColor != nil {
+			return borderColor(text)
+		}
+		return ActiveTheme().GetThinkingBorderColor(thinkingLevel)(text)
+	}
+}
+
 // ShowWorkingStatusIndicator shows the working spinner.
 func (s *InteractiveUIState) ShowWorkingStatusIndicator(thinkingLevel string) {
-	var colorFn func(string) string
-	if editor, ok := IsWorkingStatusEditor(s.Editor); ok {
-		// Resolve the editor's border colour per render, the way upstream does
-		// (text => (this.editor.borderColor ?? …)(text)). UpdateEditorBorderColor
-		// swaps that colour whenever the thinking level, the model or bash mode
-		// changes, so a captured function leaves the spinner and its message in
-		// the previous colour while the border lines they sit between move on.
-		colorFn = func(text string) string {
-			if borderColor := editor.WorkingBorderColor(); borderColor != nil {
-				return borderColor(text)
-			}
-			return ActiveTheme().GetThinkingBorderColor(thinkingLevel)(text)
-		}
-	}
+	colorFn := s.EmbeddedStatusColorFn(thinkingLevel)
 	message := s.WorkingMessage
 	if message == "" {
 		message = s.DefaultWorkingMessage
