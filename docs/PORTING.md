@@ -79,7 +79,10 @@ acquisition retries transient Windows `EPERM` within a bounded count while
 non-Windows failures remain immediate (`#10801`, `e6fb2581d`). Focused regression
 tests cover these fixes.
 
-**v1.2.0 audit still open.** The new published configuration schemas still
+**v1.2.0 audit still open.** The largest unported change is chord's v1.2.0
+typed-host runtime, which replaced the facet/service runtime the port mirrors
+and removed the `client`, `protocol` and `server` packages the port keeps; that
+rewrite is not attempted here. The new published configuration schemas still
 need a source-level parity review; they are configuration-editor support, not a
 runtime request path. The remaining Durable v1.2.0 items are the unported
 optional features: `listFiles` belongs to the `packages/env` daemon (already
