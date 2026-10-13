@@ -43,8 +43,10 @@ per-key model catalog (`GET /models/user`), Anthropic's fallback from preferred
 strict tool schemas after the provider's documented size/limit errors, or the
 new published configuration schemas. These need separate source-level parity
 reviews; the schemas are configuration-editor support, not a runtime request
-path. Durable v1.2.0 additions and out-of-scope codemode work are also not yet
-fully audited. Do not treat the fix list above as a complete v1.2.0 port.
+path. Windows auth-lock acquisition also still lacks the bounded retry for
+transient `EPERM` (`#10801`, `e6fb2581d`). Durable v1.2.0 additions and
+out-of-scope codemode work are not fully audited. Do not treat the fix list
+above as a complete v1.2.0 port.
 
 Ported from it so far: the built-in catalog, regenerated from the tag's own generator
 (`claude-haiku-5-5`, the prompt-length pricing tiers for 154 models, and the model churn
