@@ -3,14 +3,64 @@ package coding
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
+	"syscall"
 
 	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
 )
 
 // Port of core/tools/edit.ts.
+
+// nodeErrorCode maps a filesystem error to Node's `error.code` string, the form
+// upstream reports (`Error code: ${error.code}`).
+func nodeErrorCode(err error) string {
+	if err == nil {
+		return ""
+	}
+	var errno syscall.Errno
+	if errors.As(err, &errno) {
+		switch errno {
+		case syscall.EPERM:
+			return "EPERM"
+		case syscall.EISDIR:
+			return "EISDIR"
+		case syscall.ENOTDIR:
+			return "ENOTDIR"
+		case syscall.ELOOP:
+			return "ELOOP"
+		case syscall.ENAMETOOLONG:
+			return "ENAMETOOLONG"
+		case syscall.EROFS:
+			return "EROFS"
+		case syscall.ENOSPC:
+			return "ENOSPC"
+		case syscall.EMFILE:
+			return "EMFILE"
+		case syscall.ENFILE:
+			return "ENFILE"
+		}
+	}
+	if os.IsNotExist(err) {
+		return "ENOENT"
+	}
+	if os.IsPermission(err) {
+		return "EACCES"
+	}
+	return ""
+}
+
+// EditFileErrorMessage is upstream's `Could not edit file: ${path}.
+// ${errorMessage}.`, where errorMessage is `Error code: ${error.code}` when the
+// error carries a code and String(error) otherwise.
+func EditFileErrorMessage(path string, err error) string {
+	if code := nodeErrorCode(err); code != "" {
+		return fmt.Sprintf("Could not edit file: %s. Error code: %s.", path, code)
+	}
+	return fmt.Sprintf("Could not edit file: %s. %v.", path, err)
+}
 
 // EditToolDetails carries the edit's diff and patch.
 type EditToolDetails struct {
@@ -159,7 +209,7 @@ func CreateEditTool(cwd string) agent.AgentTool {
 
 				// Check the file exists (access check).
 				if _, err := os.Stat(absolutePath); err != nil {
-					resultErr = fmt.Errorf("Could not edit file: %s. Error code: ENOENT.", input.Path)
+					resultErr = fmt.Errorf("%s", EditFileErrorMessage(input.Path, err))
 					return resultErr
 				}
 				if ctxErrOf(ctx) != nil {

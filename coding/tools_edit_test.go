@@ -222,3 +222,14 @@ func TestPrepareEditArgumentsShims(t *testing.T) {
 		t.Fatalf("legacy = %s", got)
 	}
 }
+
+// The access check reports the Node error code (upstream
+// `Error code: ${error.code}`), not a hardcoded ENOENT.
+func TestEditMissingFileReportsNodeErrorCode(t *testing.T) {
+	dir := t.TempDir()
+	tool := CreateEditTool(dir)
+	_, err := tool.Execute("c", json.RawMessage(`{"path":"gone.txt","edits":[{"oldText":"a","newText":"b"}]}`), nil, nil)
+	if err == nil || !strings.Contains(err.Error(), "Could not edit file: gone.txt. Error code: ENOENT.") {
+		t.Fatalf("err = %v", err)
+	}
+}

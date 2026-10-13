@@ -484,3 +484,12 @@ func TestFormatEditResultKeepsEmptyTextBlocks(t *testing.T) {
 		t.Fatalf("edit error = %q; want %q", got, "\nboom")
 	}
 }
+
+// Upstream's edit preview reports the Node error code, not the Go error text.
+func TestComputeEditsPreviewReportsNodeErrorCode(t *testing.T) {
+	dir := t.TempDir()
+	preview := computeEditsPreview(filepath.Join(dir, "gone.txt"), []coding.Edit{{OldText: "a", NewText: "b"}}, dir)
+	if preview == nil || !strings.Contains(preview.Error, "Error code: ENOENT.") {
+		t.Fatalf("missing preview = %+v", preview)
+	}
+}

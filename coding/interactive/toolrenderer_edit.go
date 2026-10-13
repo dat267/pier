@@ -2,7 +2,6 @@ package interactive
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"strings"
 	"sync/atomic"
@@ -289,7 +288,7 @@ func computeEditsPreview(path string, edits []coding.Edit, cwd string) *editPrev
 	absolutePath := coding.ResolveToCwd(path, cwd)
 	rawContent, err := os.ReadFile(absolutePath)
 	if err != nil {
-		return &editPreview{Error: fmt.Sprintf("Could not edit file: %s. %v.", path, err)}
+		return &editPreview{Error: coding.EditFileErrorMessage(path, err)}
 	}
 	_, content := coding.SplitBom(coding.DecodeUTF8WithReplacement(rawContent))
 	normalizedContent := coding.NormalizeToLF(content)
