@@ -68,8 +68,7 @@ type Provider struct {
 	// streamsFor dispatches on model.api (single implementation or per-API map).
 	streamsFor func(model *Model) ProviderStreams
 	// hasDeferred mirrors createProvider's conditional deferred exposure.
-	hasDeferredFetch  bool
-	hasDeferredCancel bool
+	hasDeferredFetch bool
 }
 
 // GetModels returns the current known models, sync.
@@ -257,7 +256,6 @@ func CreateProvider(input CreateProviderOptions) *Provider {
 	for _, s := range streamsList {
 		if _, ok := s.(DeferredStreamer); ok {
 			p.hasDeferredFetch = true
-			p.hasDeferredCancel = true
 		}
 	}
 	return p

@@ -47,11 +47,6 @@ type SessionManager struct {
 	writeErrorsReady chan struct{}
 
 	fileEntries []FileEntry
-	// loadedData is the file buffer OpenSession loaded from. Raw message and
-	// line subslices of lazily loaded entries alias it, so it is retained for
-	// the manager's lifetime; it costs one copy of the file instead of the
-	// per-entry copies the eager decode made.
-	loadedData []byte
 
 	// cacheScan seeding: the loaded prefix is consumed by a background
 	// goroutine (it parses every message's JSON, ~250ms on a 55MB session),
@@ -214,11 +209,10 @@ func OpenSession(path string, sessionDir string, cwdOverride string) (*SessionMa
 		labelsByID:      map[string]string{},
 		labelTimestamps: map[string]string{},
 	}
-	entries, data, _, err := LoadEntriesFromFileBuffered(resolvedPath)
+	entries, _, _, err := LoadEntriesFromFileBuffered(resolvedPath)
 	if err != nil {
 		return nil, err
 	}
-	m.loadedData = data
 	cwd := cwdOverride
 	if cwd == "" {
 		if len(entries) > 0 && entries[0].Header != nil {

@@ -148,7 +148,6 @@ type Renderer struct {
 	stopped            atomic.Bool
 	started            atomic.Bool
 
-	renderRequested bool
 	fullRedrawCount int
 
 	// terminal color queries: the OSC 11 probe, the color-scheme reports and the
@@ -470,7 +469,6 @@ func (t *Renderer) RenderNow(force bool) {
 	if force {
 		t.resetRenderState()
 	}
-	t.renderRequested = false
 	t.doRender()
 }
 

@@ -138,9 +138,8 @@ type OpenAIChatGPTAuthorizationResult struct {
 // reach whatever else holds it (another pending login or the Codex CLI) and be
 // rejected as a state mismatch.
 type OpenAIChatGPTCallbackServer struct {
-	server      *http.Server
-	listener    net.Listener
-	expectedURL *url.URL
+	server   *http.Server
+	listener net.Listener
 
 	mu      sync.Mutex
 	settled bool
@@ -153,12 +152,10 @@ type OpenAIChatGPTCallbackServer struct {
 // StartOpenAIChatGPTCallbackServer serves the ChatGPT callback on the fixed
 // port.
 func StartOpenAIChatGPTCallbackServer(expectedState string) (*OpenAIChatGPTCallbackServer, error) {
-	expected, _ := url.Parse(OpenAIChatGPTRedirectURI())
 	callback := &OpenAIChatGPTCallbackServer{
-		expectedURL: expected,
-		result:      make(chan OpenAIChatGPTAuthorizationResult, 1),
-		failure:     make(chan error, 1),
-		done:        make(chan struct{}),
+		result:  make(chan OpenAIChatGPTAuthorizationResult, 1),
+		failure: make(chan error, 1),
+		done:    make(chan struct{}),
 	}
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", oauthCallbackHost(), OpenAIChatGPTCallbackPort))
 	if err != nil {
