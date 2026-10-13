@@ -8,6 +8,8 @@ import (
 	"runtime"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Port of utils/shell.ts (shell resolution and binary-output sanitizing).
@@ -47,19 +49,28 @@ func bashShellConfig(shell string) ShellConfig {
 
 // findExecutableOnPath resolves an executable the way upstream does: `where`
 // on Windows (verifying the file exists) and `which` elsewhere.
+// firstOutputLine is upstream's `stdout.trim().split(/\r?\n/)[0]`.
+func firstOutputLine(output []byte) string {
+	trimmed := ai.JSTrim(DecodeUTF8WithReplacement(output))
+	if trimmed == "" {
+		return ""
+	}
+	trimmed = strings.ReplaceAll(trimmed, "\r\n", "\n")
+	return strings.Split(trimmed, "\n")[0]
+}
+
 func findExecutableOnPath(executable string) string {
 	if runtime.GOOS == "windows" {
 		output, err := exec.Command("where", executable).Output()
 		if err != nil {
 			return ""
 		}
-		for _, line := range strings.Split(strings.ReplaceAll(DecodeUTF8WithReplacement(output), "\r\n", "\n"), "\n") {
-			trimmed := strings.TrimSpace(line)
-			if trimmed == "" {
-				continue
-			}
-			if _, err := os.Stat(trimmed); err == nil {
-				return trimmed
+		// Upstream checks only the first `where` match and rejects it when the
+		// file does not exist.
+		first := firstOutputLine(output)
+		if first != "" {
+			if _, err := os.Stat(first); err == nil {
+				return first
 			}
 		}
 		return ""
@@ -68,11 +79,7 @@ func findExecutableOnPath(executable string) string {
 	if err != nil {
 		return ""
 	}
-	trimmed := strings.TrimSpace(DecodeUTF8WithReplacement(output))
-	if trimmed == "" {
-		return ""
-	}
-	return trimmed
+	return firstOutputLine(output)
 }
 
 // GetShellConfig resolves the bash shell configuration (upstream

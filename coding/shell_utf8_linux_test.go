@@ -20,3 +20,17 @@ func TestFindExecutableOnPathReplacesMalformedUTF8(t *testing.T) {
 		t.Fatalf("which output = %q; want replacement-decoded path", got)
 	}
 }
+
+// utils/shell.ts takes the first line of the trimmed which output
+// (`stdout.trim().split(/\r?\n/)[0]`).
+func TestFindExecutableOnPathUsesFirstLine(t *testing.T) {
+	stubDir := t.TempDir()
+	stub := filepath.Join(stubDir, "which")
+	if err := os.WriteFile(stub, []byte("#!/bin/sh\nprintf '/first\\r\\n/second\\r\\n'\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", stubDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	if got := findExecutableOnPath("tool"); got != "/first" {
+		t.Fatalf("which output = %q; want /first", got)
+	}
+}

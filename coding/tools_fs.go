@@ -481,7 +481,7 @@ func orDefault(v, d string) string {
 func sortCaseInsensitive(names []string) {
 	collator := collate.New(language.Und)
 	sort.SliceStable(names, func(i, j int) bool {
-		return collator.CompareString(strings.ToLower(names[i]), strings.ToLower(names[j])) < 0
+		return collator.CompareString(ai.JSLower(names[i]), ai.JSLower(names[j])) < 0
 	})
 }
 

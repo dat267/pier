@@ -584,7 +584,7 @@ func (m *SessionManager) AppendCustomEntry(customType string, data json.RawMessa
 func (m *SessionManager) AppendSessionInfo(name string) string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	sanitizedName := strings.TrimSpace(newlinePattern.ReplaceAllString(name, " "))
+	sanitizedName := ai.JSTrim(newlinePattern.ReplaceAllString(name, " "))
 	entry := m.nextEntry("session_info")
 	entry.Name = &sanitizedName
 	return m.appendEntry(&entry)
@@ -599,7 +599,7 @@ func (m *SessionManager) GetSessionName() string {
 	entries := m.getEntriesLocked()
 	for i := len(entries) - 1; i >= 0; i-- {
 		if entries[i].Type == "session_info" && entries[i].Name != nil {
-			name := strings.TrimSpace(*entries[i].Name)
+			name := ai.JSTrim(*entries[i].Name)
 			if name != "" {
 				return name
 			}
