@@ -64,7 +64,9 @@ invocation and fails the Session, so the task is not reserved and run again in
 the same process (`eba849739`). The compaction status indicator embedded in a
 custom editor now uses the editor border color (or the thinking-level color),
 like the working indicator, instead of the default muted colors (`#10809`,
-`#10810`). A throwing host commit/close
+`#10810`). MCP OAuth sign-in now rejects an authorization response's `iss` when
+no authorization server metadata was discovered, where it previously skipped
+the check and dereferenced the missing metadata. A throwing host commit/close
 listener is reported through `onReport` instead of failing the operation that
 ran it, the Session's own listeners fail the Session, a throwing watch listener
 is reported as well as ending the watch with `listener_error`, and a throwing

@@ -606,18 +606,20 @@ func runFlow(ctx context.Context, provider OAuthClientProvider, options FlowOpti
 	}
 	if options.AuthorizationCode != "" {
 		// RFC 9207: never send a code from another authorization server to
-		// this one.
-		// The metadata flag is a boolean upstream (truthiness), not
-		// presence of the field.
-		issPromised := metadata.AuthorizationResponseIssParameterSupported != nil && *metadata.AuthorizationResponseIssParameterSupported
-		if metadata != nil && (options.Iss != nil || issPromised) {
-			var received *string
-			if options.Iss != nil && *options.Iss != "" {
-				received = options.Iss
+		// this one. Without metadata there is no issuer to compare with, so any
+		// `iss` is rejected. The metadata flag is a boolean upstream
+		// (truthiness), not presence of the field.
+		issPromised := metadata != nil && metadata.AuthorizationResponseIssParameterSupported != nil && *metadata.AuthorizationResponseIssParameterSupported
+		if options.Iss != nil || issPromised {
+			if metadata == nil {
+				return "", &OAuthIssuerMismatchError{Received: options.Iss}
 			}
-			expected := metadata.Issuer
-			if received == nil || *received != expected {
-				return "", &OAuthIssuerMismatchError{Expected: expected, Received: received}
+			received := ""
+			if options.Iss != nil {
+				received = *options.Iss
+			}
+			if options.Iss == nil || received != metadata.Issuer {
+				return "", &OAuthIssuerMismatchError{Expected: metadata.Issuer, Received: options.Iss}
 			}
 		}
 		verifier, err := provider.CodeVerifier(ctx)

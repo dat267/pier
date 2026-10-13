@@ -753,6 +753,12 @@ func TestOAuthIssParameter(t *testing.T) {
 	defer server.Close()
 	origin := server.URL
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// Discovery probes are GETs; without a metadata document they 404, as
+		// upstream's test server does, so the flow runs with no metadata.
+		if r.Method != http.MethodPost {
+			http.NotFound(w, r)
+			return
+		}
 		body, _ := io.ReadAll(r.Body)
 		params, _ := url.ParseQuery(string(body))
 		codesMu.Lock()
@@ -760,39 +766,52 @@ func TestOAuthIssParameter(t *testing.T) {
 		codesMu.Unlock()
 		writeJSON(w, 0, map[string]any{"access_token": "token", "token_type": "Bearer"})
 	})
-	exchange := func(code string, iss *string, issParameterSupported bool) (string, error) {
+	exchange := func(code string, iss *string, issParameterSupported bool, metadata bool) (string, error) {
 		provider := newTestProvider("http://127.0.0.1/callback")
 		provider.client = &oauth.OAuthClientInformationFull{OAuthClientInformation: oauth.OAuthClientInformation{ClientID: "client"}}
 		provider.verifier = "verifier"
-		provider.discovery = &oauth.OAuthDiscoveryState{
-			AuthorizationServerURL: origin,
-			AuthorizationServerMetadata: &oauth.AuthorizationServerMetadata{
+		provider.discovery = &oauth.OAuthDiscoveryState{AuthorizationServerURL: origin}
+		if metadata {
+			provider.discovery.AuthorizationServerMetadata = &oauth.AuthorizationServerMetadata{
 				Issuer: origin, AuthorizationEndpoint: origin + "/authorize", TokenEndpoint: origin + "/token",
 				ResponseTypesSupported:                     []string{"code"},
 				AuthorizationResponseIssParameterSupported: boolPtr(issParameterSupported),
-			},
+			}
 		}
 		return oauth.AuthorizeMcp(context.Background(), provider, oauth.FlowOptions{
 			ServerURL: origin + "/mcp", AuthorizationCode: code, Iss: iss,
 		})
 	}
 	attacker := "https://attacker.example"
-	if _, err := exchange("other", &attacker, false); err == nil {
+	if _, err := exchange("other", &attacker, false, true); err == nil {
 		t.Fatal("foreign iss accepted")
 	}
-	if _, err := exchange("missing", nil, true); err == nil {
+	if _, err := exchange("missing", nil, true, true); err == nil {
 		t.Fatal("missing iss accepted when the server promises the parameter")
 	}
-	if result, err := exchange("matching", &origin, true); err != nil || result != oauth.ResultAuthorized {
+	if result, err := exchange("matching", &origin, true, true); err != nil || result != oauth.ResultAuthorized {
 		t.Fatalf("matching = %s, %v", result, err)
 	}
 	// Servers that do not promise the parameter may omit it.
-	if result, err := exchange("omitted", nil, false); err != nil || result != oauth.ResultAuthorized {
+	if result, err := exchange("omitted", nil, false, true); err != nil || result != oauth.ResultAuthorized {
 		t.Fatalf("omitted = %s, %v", result, err)
+	}
+	// Without metadata there is no issuer to compare with, so a server cannot
+	// skip the check by hiding it.
+	if _, err := exchange("unverifiable", &attacker, false, false); err == nil {
+		t.Fatal("iss accepted without metadata")
+	} else {
+		var mismatchErr *oauth.OAuthIssuerMismatchError
+		if !errorsAs(err, &mismatchErr) {
+			t.Fatalf("err = %v (%T), want an issuer mismatch", err, err)
+		}
+	}
+	if result, err := exchange("no-metadata", nil, false, false); err != nil || result != oauth.ResultAuthorized {
+		t.Fatalf("no-metadata = %s, %v", result, err)
 	}
 	codesMu.Lock()
 	defer codesMu.Unlock()
-	if len(codes) != 2 || codes[0] != "matching" || codes[1] != "omitted" {
+	if len(codes) != 3 || codes[0] != "matching" || codes[1] != "omitted" || codes[2] != "no-metadata" {
 		t.Fatalf("codes = %v", codes)
 	}
 }
