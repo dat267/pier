@@ -90,7 +90,8 @@ func TestBackgroundProbeRoundTripThroughRenderer(t *testing.T) {
 // TestSystemColorQueryDoesNotHideStartupBackgroundReply covers the actual
 // startup ordering: the OSC 11 auto-theme probe is followed by the bundled
 // OSC 10/11/4 system-theme query. Upstream always applies the background reply
-// to light/dark selection, including when the combined query is outstanding.
+// to light/dark selection, including when the combined query is outstanding
+// (`pi/packages/coding-agent/src/modes/interactive/theme/theme-controller.ts`).
 func TestSystemColorQueryDoesNotHideStartupBackgroundReply(t *testing.T) {
 	t.Cleanup(func() { SetSystemTerminalColors(tui.TerminalColors{}) })
 	SetCustomThemesDir(t.TempDir())

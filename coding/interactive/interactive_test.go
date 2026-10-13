@@ -669,8 +669,9 @@ func TestThemeControllerLifecycle(t *testing.T) {
 	controller.Dispose()
 }
 
-// TestThemeControllerUsesSystemThemeWhenUnset ports the v1.2.0 default:
-// without a theme setting, applyFromSettings selects system and does not persist
+// TestThemeControllerUsesSystemThemeWhenUnset ports v1.2.0
+// interactive-mode.ts/theme-controller.ts: without a theme setting,
+// applyFromSettings selects system and does not persist
 // an environment-derived light/dark theme.
 func TestThemeControllerUsesSystemThemeWhenUnset(t *testing.T) {
 	SetCustomThemesDir(t.TempDir())
@@ -717,9 +718,11 @@ func TestThemeControllerUsesSystemThemeWhenUnset(t *testing.T) {
 	}
 }
 
-// TestSystemThemeRefreshesTerminalColorsOnAppearanceChange ports upstream's
-// applyTerminalColorSchemeChange, which re-queries colors after each report.
+// TestSystemThemeRefreshesTerminalColorsOnAppearanceChange ports v1.2.0
+// theme-controller.ts applyTerminalColorSchemeChange, which re-queries colors
+// after each report.
 func TestSystemThemeRefreshesTerminalColorsOnAppearanceChange(t *testing.T) {
+	t.Cleanup(func() { SetSystemTerminalColors(tui.TerminalColors{}) })
 	SetCustomThemesDir(t.TempDir())
 	SetRegisteredThemes(nil)
 	background := tui.RgbColor{R: 255, G: 255, B: 255}
@@ -766,10 +769,11 @@ func TestSystemThemeRefreshesTerminalColorsOnAppearanceChange(t *testing.T) {
 	}
 }
 
-// TestAutoThemeSettingQueriesCurrentTerminalColors verifies changing to a pair
-// after startup chooses its current half without waiting for the next appearance
-// notification, as upstream applyFromSettings does.
+// TestAutoThemeSettingQueriesCurrentColors ports v1.2.0
+// theme-controller.ts applyFromSettings: changing to a pair after startup
+// chooses its current half without waiting for the next appearance notification.
 func TestAutoThemeSettingQueriesCurrentTerminalColors(t *testing.T) {
+	t.Cleanup(func() { SetSystemTerminalColors(tui.TerminalColors{}) })
 	SetCustomThemesDir(t.TempDir())
 	SetRegisteredThemes(nil)
 	background := tui.RgbColor{R: 255, G: 255, B: 255}
