@@ -27,6 +27,7 @@ type commandTestSession struct {
 	cacheStatus *coding.CacheWarmingStatus
 	runtime     *coding.ModelRuntime
 	model       *ai.Model
+	messages    []ai.Message
 }
 
 func (s *commandTestSession) GetSessionStats() *coding.SessionStats {
@@ -50,6 +51,7 @@ func (s *commandTestSession) CompactSession(_ context.Context, instructions stri
 }
 func (s *commandTestSession) GetCacheWarmingStatus() *coding.CacheWarmingStatus { return s.cacheStatus }
 func (s *commandTestSession) Model() *ai.Model                                  { return s.model }
+func (s *commandTestSession) Messages() []ai.Message                            { return s.messages }
 func (s *commandTestSession) ModelRuntime() *coding.ModelRuntime                { return s.runtime }
 func (s *commandTestSession) IsStreaming() bool                                 { return s.streaming }
 func (s *commandTestSession) IsCompacting() bool                                { return s.compacting }
@@ -455,5 +457,27 @@ func TestCommandSessionInfoShowsDifferentModelBreakdown(t *testing.T) {
 	lines2 := coding.StripAnsi(strings.Join(wiring2.Chat.Render(120), "\n"))
 	if strings.Contains(lines2, "anthropic/sonnet-4:") {
 		t.Fatalf("the selected model's breakdown should be omitted:\n%s", lines2)
+	}
+}
+
+// Upstream writes the agent's context messages (session.messages), not the raw
+// session entries.
+func TestDebugLogWritesAgentMessages(t *testing.T) {
+	wiring, session, _ := newCommandTestWiring(t)
+	screen := tui.NewMainScreen(&fakeRendererTerminal{width: 40, height: 10}, false, "")
+	screen.DisableAutoRender()
+	wiring.UI = screen
+	written := ""
+	wiring.WriteDebugLog = func(content string) error { written = content; return nil }
+	session.messages = []ai.Message{&ai.AssistantMessage{
+		Provider: "p", Model: "m", Content: ai.ContentList{ai.TextContent{Text: "hello"}},
+	}}
+	wiring.SessionInfo.AppendUsage("note", "p", "m", ai.Usage{}, "")
+	wiring.HandleDebugCommand("2026-01-01T00:00:00Z")
+	if !strings.Contains(written, "hello") {
+		t.Fatalf("debug log missing the agent message:\n%s", written)
+	}
+	if strings.Contains(written, `"type":"usage"`) {
+		t.Fatalf("debug log wrote session entries:\n%s", written)
 	}
 }

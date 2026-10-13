@@ -30,6 +30,7 @@ type CommandSession interface {
 	CompactSession(ctx context.Context, customInstructions string) error
 	GetCacheWarmingStatus() *coding.CacheWarmingStatus
 	Model() *ai.Model
+	Messages() []ai.Message
 	ModelRuntime() *coding.ModelRuntime
 	IsStreaming() bool
 	IsCompacting() bool
@@ -682,9 +683,11 @@ func (w *CommandWiring) HandleDebugCommand(now string) {
 		lines = append(lines, "["+itoa(index)+"] (w="+itoa(tui.VisibleWidth(line))+") "+string(encoded))
 	}
 	lines = append(lines, "", "=== Agent messages (JSONL) ===")
-	if w.SessionInfo != nil {
-		for _, entry := range w.SessionInfo.GetEntries() {
-			encoded, _ := ai.MarshalJSON(entry)
+	// Upstream writes the agent's context messages (session.messages), not the
+	// raw session entries.
+	if w.Session != nil {
+		for _, message := range w.Session.Messages() {
+			encoded, _ := ai.MarshalJSON(message)
 			lines = append(lines, string(encoded))
 		}
 	}
