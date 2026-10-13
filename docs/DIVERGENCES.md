@@ -924,12 +924,18 @@ the Unix socket **publish is portable** (`server/unix.go`,
   `themeboot.EnableCapabilities` sets truecolor unconditionally.
   `tui.TerminalDetectsTrueColor` mirrors the upstream environment rule (including
   `-direct`) for a caller that wants it, but it is not yet wired to the boot.
-  The theme controller likewise does not re-query the terminal's default colors
-  when the light/dark scheme changes (upstream `queryTerminalDefaultColors`):
-  the port's combined OSC 10/11/4 burst shares the OSC 11 reply with the
-  renderer's background probe, and re-running it from the scheme listener
-  swallows the reply that the probe routes
-  (`TestBackgroundProbeRoundTripThroughRenderer`).
+  The theme controller enables appearance notifications for the `system` theme
+  and light/dark pairs, like upstream. At startup the combined OSC 10/11/4 query
+  consumes OSC 11 before the standalone background listener sees it, so
+  `ProbeSystemColors` applies its reported background to system and pair
+  selection. Theme-setting changes after startup and later appearance
+  notifications start another combined query, as upstream `applyFromSettings`
+  and `applyTerminalColorSchemeChange` do. Tests
+  `TestSystemColorQueryDoesNotHideStartupBackgroundReply`,
+  `TestAutoThemeSettingQueriesCurrentTerminalColors`,
+  `TestSystemThemeRefreshesTerminalColorsOnAppearanceChange`, and
+  `TestBackgroundProbeRoundTripThroughRenderer` cover the combined and listener
+  paths.
 
 ## D180
 

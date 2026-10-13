@@ -669,8 +669,10 @@ func TestThemeControllerLifecycle(t *testing.T) {
 	controller.Dispose()
 }
 
-// TestThemeControllerAutoFromEnvironment verifies COLORFGBG-driven defaults.
-func TestThemeControllerAutoFromEnvironment(t *testing.T) {
+// TestThemeControllerUsesSystemThemeWhenUnset ports the v1.2.0 default:
+// without a theme setting, applyFromSettings selects system and does not persist
+// an environment-derived light/dark theme.
+func TestThemeControllerUsesSystemThemeWhenUnset(t *testing.T) {
 	SetCustomThemesDir(t.TempDir())
 	SetRegisteredThemes(nil)
 	ui := &fakeThemeUI{}
@@ -687,14 +689,125 @@ func TestThemeControllerAutoFromEnvironment(t *testing.T) {
 		t.Fatalf("terminal theme = %q", controller.GetTerminalTheme())
 	}
 
-	// Applying from settings without a stored setting persists a high-confidence
-	// detection.
 	controller.ApplyFromSettings()
-	if len(settings.setCalls) != 1 || settings.setCalls[0] != "light" {
-		t.Fatalf("set calls = %v", settings.setCalls)
+	if controller.ActiveThemeName() != SystemThemeName {
+		t.Fatalf("active theme = %q, want %q", controller.ActiveThemeName(), SystemThemeName)
 	}
-	if settings.flushes == 0 {
-		t.Fatal("settings not flushed")
+	if len(settings.setCalls) != 0 || settings.flushes != 0 {
+		t.Fatalf("unset theme was persisted: set calls=%v flushes=%d", settings.setCalls, settings.flushes)
+	}
+	ui.mu.Lock()
+	notifications := ui.notifications
+	ui.mu.Unlock()
+	if !notifications {
+		t.Fatal("system theme did not enable terminal appearance notifications")
+	}
+	ui.mu.Lock()
+	listener := ui.listener
+	ui.mu.Unlock()
+	if listener == nil {
+		t.Fatal("system theme did not register a terminal appearance listener")
+	}
+	listener(TerminalThemeDark)
+	if controller.GetTerminalTheme() != TerminalThemeDark {
+		t.Fatalf("terminal theme after appearance report = %q, want dark", controller.GetTerminalTheme())
+	}
+	if controller.ActiveThemeName() != SystemThemeName {
+		t.Fatalf("active theme after appearance report = %q, want %q", controller.ActiveThemeName(), SystemThemeName)
+	}
+}
+
+// TestSystemThemeRefreshesTerminalColorsOnAppearanceChange ports upstream's
+// applyTerminalColorSchemeChange, which re-queries colors after each report.
+func TestSystemThemeRefreshesTerminalColorsOnAppearanceChange(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	background := tui.RgbColor{R: 255, G: 255, B: 255}
+	ui := &fakeThemeUI{terminalColors: tui.TerminalColors{Background: &background}}
+	setting := SystemThemeName
+	applied := make(chan struct{}, 2)
+	controller := NewInteractiveThemeController(ThemeControllerOptions{
+		UI:                  ui,
+		InitialThemeSetting: &setting,
+		Env:                 func(string) string { return "" },
+		Marshal: func(fn func()) {
+			fn()
+			applied <- struct{}{}
+		},
+	})
+	defer controller.Dispose()
+
+	controller.ApplyFromSettings()
+	controller.ProbeSystemColors()
+	select {
+	case <-applied:
+	case <-time.After(2 * time.Second):
+		t.Fatal("initial system-color query did not apply")
+	}
+	ui.mu.Lock()
+	listener := ui.listener
+	initialQueries := ui.systemProbes
+	ui.mu.Unlock()
+	if listener == nil {
+		t.Fatal("system theme did not register a terminal appearance listener")
+	}
+
+	listener(TerminalThemeDark)
+	select {
+	case <-applied:
+	case <-time.After(2 * time.Second):
+		t.Fatal("terminal appearance report did not refresh system colors")
+	}
+	ui.mu.Lock()
+	queries := ui.systemProbes
+	ui.mu.Unlock()
+	if queries != initialQueries+1 {
+		t.Fatalf("system-color queries after appearance change = %d, want %d", queries, initialQueries+1)
+	}
+}
+
+// TestAutoThemeSettingQueriesCurrentTerminalColors verifies changing to a pair
+// after startup chooses its current half without waiting for the next appearance
+// notification, as upstream applyFromSettings does.
+func TestAutoThemeSettingQueriesCurrentTerminalColors(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	background := tui.RgbColor{R: 255, G: 255, B: 255}
+	ui := &fakeThemeUI{terminalColors: tui.TerminalColors{Background: &background}}
+	setting := "dark"
+	applied := make(chan struct{}, 2)
+	controller := NewInteractiveThemeController(ThemeControllerOptions{
+		UI:                  ui,
+		InitialThemeSetting: &setting,
+		Env:                 func(string) string { return "" },
+		Marshal: func(fn func()) {
+			fn()
+			applied <- struct{}{}
+		},
+	})
+	defer controller.Dispose()
+	controller.ApplyFromSettings()
+	controller.ProbeSystemColors()
+	select {
+	case <-applied:
+	case <-time.After(2 * time.Second):
+		t.Fatal("initial system-color query did not apply")
+	}
+
+	controller.SetThemeSetting("light/dark")
+	ui.mu.Lock()
+	queries := ui.systemProbes
+	ui.mu.Unlock()
+	if queries != 2 {
+		t.Fatalf("system-color queries after selecting auto theme = %d, want 2", queries)
+	}
+	select {
+	case <-applied:
+	case <-time.After(2 * time.Second):
+		t.Fatal("auto-theme selection did not apply current terminal colors")
+	}
+	if controller.ActiveThemeName() != "light" {
+		t.Fatalf("active auto theme = %q, want light", controller.ActiveThemeName())
 	}
 }
 

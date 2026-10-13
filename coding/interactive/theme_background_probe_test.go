@@ -4,6 +4,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/tui"
 )
@@ -84,4 +85,53 @@ func TestBackgroundProbeRoundTripThroughRenderer(t *testing.T) {
 		t.Fatalf("active after dark reply = %q", controller.ActiveThemeName())
 	}
 	screen.Stop(tui.TuiStopOptions{})
+}
+
+// TestSystemColorQueryDoesNotHideStartupBackgroundReply covers the actual
+// startup ordering: the OSC 11 auto-theme probe is followed by the bundled
+// OSC 10/11/4 system-theme query. Upstream always applies the background reply
+// to light/dark selection, including when the combined query is outstanding.
+func TestSystemColorQueryDoesNotHideStartupBackgroundReply(t *testing.T) {
+	t.Cleanup(func() { SetSystemTerminalColors(tui.TerminalColors{}) })
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+
+	terminal := &recordingTerminal{fakeRendererTerminal: &fakeRendererTerminal{width: 80, height: 24}}
+	screen := tui.NewMainScreen(terminal, false, "")
+	setting := "light/dark"
+	marshaled := make(chan func(), 1)
+	controller := NewInteractiveThemeController(ThemeControllerOptions{
+		UI:                  themeUIAdapter{ui: screen},
+		InitialThemeSetting: &setting,
+		TimeoutMS:           1,
+		Env:                 func(string) string { return "" },
+		Marshal:             func(fn func()) { marshaled <- fn },
+	})
+	defer controller.Dispose()
+	defer screen.Stop(tui.TuiStopOptions{})
+
+	controller.ApplyFromSettings()
+	screen.Start()
+	controller.ProbeTerminalBackground()
+	controller.ProbeSystemColors()
+	if controller.ActiveThemeName() != "dark" {
+		t.Fatalf("initial fallback theme = %q, want dark", controller.ActiveThemeName())
+	}
+
+	// Let the short query timeout apply its fallback before delivering a slow
+	// SSH-like response.
+	select {
+	case apply := <-marshaled:
+		apply()
+	case <-time.After(2 * time.Second):
+		t.Fatal("system-color query did not apply its timeout fallback")
+	}
+	screen.HandleTerminalInput("\x1b]11;#ffffff\x07")
+	// The DA1 sentinel settles the late bundled query. Its result must update
+	// the light/dark pair even though the bundled query consumed OSC 11 before
+	// the standalone background listener could see it.
+	screen.HandleTerminalInput("\x1b[?62;22c")
+	if controller.ActiveThemeName() != "light" {
+		t.Fatalf("theme after late terminal background reply = %q, want light", controller.ActiveThemeName())
+	}
 }

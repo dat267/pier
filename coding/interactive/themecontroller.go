@@ -169,8 +169,32 @@ func (c *InteractiveThemeController) ProbeSystemColors() {
 		return
 	}
 	c.systemProbed = true
+	c.querySystemColors()
+}
+
+// querySystemColors refreshes the terminal palette. Unlike ProbeSystemColors,
+// the appearance-change path may call it repeatedly after startup.
+func (c *InteractiveThemeController) querySystemColors() {
+	if c.ui == nil {
+		return
+	}
 	apply := func(colors tui.TerminalColors) {
 		SetSystemTerminalColors(colors)
+		// The combined color query consumes its OSC 11 reply before the separate
+		// background listener can see it. As upstream applyTerminalColors does,
+		// apply that background to system and light/dark theme selection here.
+		if colors.Background != nil {
+			terminalTheme := GetThemeForRgbColor(RgbColor{
+				R: colors.Background.R,
+				G: colors.Background.G,
+				B: colors.Background.B,
+			})
+			if c.activeThemeName == SystemThemeName {
+				c.terminalTheme = terminalTheme
+			} else {
+				c.applyTerminalTheme(terminalTheme)
+			}
+		}
 		if c.activeThemeName == SystemThemeName {
 			c.applyThemeName(SystemThemeName, false)
 		}
@@ -195,6 +219,9 @@ func (c *InteractiveThemeController) ProbeSystemColors() {
 
 // ApplyFromSettings applies the theme from the current settings.
 func (c *InteractiveThemeController) ApplyFromSettings() {
+	if c.systemProbed {
+		defer c.querySystemColors()
+	}
 	themeSetting := c.currentThemeSetting
 	if themeSetting == nil && c.getSettings != nil {
 		themeSetting = c.getSettings().GetThemeSetting()
@@ -211,22 +238,14 @@ func (c *InteractiveThemeController) ApplyFromSettings() {
 		return
 	}
 
-	c.setAutoSync(false)
-	if themeSetting != nil {
-		c.applyThemeName(*themeSetting, true)
+	if themeSetting == nil || *themeSetting == SystemThemeName {
+		c.setAutoSync(true)
+		c.applyThemeName(SystemThemeName, false)
 		return
 	}
 
-	detection := DetectTerminalBackgroundTheme(c.detector, c.timeoutMS, c.env)
-	c.terminalTheme = detection.Theme
-	if !c.applyThemeName(string(detection.Theme), false).Success {
-		return
-	}
-	if detection.Confidence == "high" && c.getSettings != nil {
-		settings := c.getSettings()
-		settings.SetTheme(string(detection.Theme))
-		settings.Flush()
-	}
+	c.setAutoSync(false)
+	c.applyThemeName(*themeSetting, true)
 }
 
 // GetThemeSelection returns the active theme selection.
@@ -244,7 +263,7 @@ func (c *InteractiveThemeController) GetThemeSelection() string {
 
 // SetThemeName applies a theme name.
 func (c *InteractiveThemeController) SetThemeName(themeName string, showError bool) ThemeResult {
-	c.setAutoSync(false)
+	c.setAutoSync(themeName == SystemThemeName)
 	result := c.applyThemeName(themeName, showError)
 	if result.Success {
 		c.currentThemeSetting = &themeName
@@ -262,7 +281,11 @@ func (c *InteractiveThemeController) SetThemeSetting(themeSetting string) {
 		c.ApplyFromSettings()
 		return
 	}
+	c.setAutoSync(themeSetting == SystemThemeName)
 	c.applyThemeNameAsync(themeSetting)
+	if c.systemProbed {
+		c.querySystemColors()
+	}
 }
 
 // applyThemeNameAsync is applyThemeName off the loop: setThemeContext loads the theme
@@ -424,7 +447,11 @@ func (c *InteractiveThemeController) bindTerminalColorSchemeListener() {
 		return
 	}
 	c.unsubscribe = c.ui.OnTerminalColorSchemeChange(func(terminalTheme TerminalTheme) {
+		if !c.autoSyncEnabled {
+			return
+		}
 		c.applyTerminalTheme(terminalTheme)
+		c.querySystemColors()
 	})
 }
 
@@ -440,13 +467,19 @@ func (c *InteractiveThemeController) bindTerminalBackgroundListener() {
 }
 
 func (c *InteractiveThemeController) applyTerminalTheme(terminalTheme TerminalTheme) {
+	c.terminalTheme = terminalTheme
 	if !c.autoSyncEnabled {
 		return
 	}
-	c.terminalTheme = terminalTheme
 	setting := c.currentThemeSetting
 	if setting == nil && c.getSettings != nil {
 		setting = c.getSettings().GetThemeSetting()
+	}
+	if setting == nil || *setting == SystemThemeName {
+		if c.activeThemeName == SystemThemeName {
+			c.applyThemeName(SystemThemeName, false)
+		}
+		return
 	}
 	light, dark, ok := ParseAutoThemeSetting(setting)
 	if !ok {
