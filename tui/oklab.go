@@ -261,11 +261,12 @@ func RgbToOklch(color RgbColor) OklchChannels {
 }
 
 const colorNumberPattern = `[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?`
+const jsWhitespaceClass = `[	\n\v\f\r \x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}]`
 
 var (
 	themeHexColorPattern = regexp.MustCompile(`(?i)^#([0-9a-f]{3}|[0-9a-f]{6})$`)
-	oklchColorPattern    = regexp.MustCompile(`(?i)^oklch\(\s*(` + colorNumberPattern + `)(%)?\s+(` + colorNumberPattern + `)\s+(` + colorNumberPattern + `)(?:deg)?\s*\)$`)
-	okhslColorPattern    = regexp.MustCompile(`(?i)^okhsl\(\s*(` + colorNumberPattern + `)(?:deg)?\s+(` + colorNumberPattern + `)(%)?\s+(` + colorNumberPattern + `)(%)?\s*\)$`)
+	oklchColorPattern    = regexp.MustCompile(`(?i)^oklch\(` + jsWhitespaceClass + `*(` + colorNumberPattern + `)(%)?` + jsWhitespaceClass + `+(` + colorNumberPattern + `)` + jsWhitespaceClass + `+(` + colorNumberPattern + `)(?:deg)?` + jsWhitespaceClass + `*\)$`)
+	okhslColorPattern    = regexp.MustCompile(`(?i)^okhsl\(` + jsWhitespaceClass + `*(` + colorNumberPattern + `)(?:deg)?` + jsWhitespaceClass + `+(` + colorNumberPattern + `)(%)?` + jsWhitespaceClass + `+(` + colorNumberPattern + `)(%)?` + jsWhitespaceClass + `*\)$`)
 )
 
 func colorClamp01(value float64) float64 { return math.Min(1, math.Max(0, value)) }
