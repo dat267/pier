@@ -649,7 +649,7 @@ func (s *Server) sendServiceUpdate(ctx context.Context, state *ConnectionState, 
 	return nil
 }
 
-// sendMu serializes frame writes per connection.
+// sendLocks serializes frame writes per connection, one mutex per connection.
 var sendLocks sync.Map // *ConnectionState → *sync.Mutex
 
 func (s *Server) sendMessage(ctx context.Context, state *ConnectionState, message *protocol.ServerMessage) bool {

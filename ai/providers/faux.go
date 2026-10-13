@@ -275,8 +275,7 @@ func FauxToolCall(name string, args json.RawMessage, id string) ai.ToolCall {
 	return ai.ToolCall{ID: id, Name: name, Arguments: args}
 }
 
-// FauxAssistantMessage builds an assistant message attributed to the default
-// faux api/provider/model.
+// FauxMessageOptions overrides fields on a faux assistant message.
 type FauxMessageOptions struct {
 	StopReason   ai.StopReason
 	Deferred     *ai.DeferredHandle
@@ -285,6 +284,8 @@ type FauxMessageOptions struct {
 	Timestamp    int64 // 0 → time.Now().UnixMilli()
 }
 
+// FauxAssistantMessage builds an assistant message attributed to the default
+// faux api/provider/model.
 func FauxAssistantMessage(content any, options FauxMessageOptions) *ai.AssistantMessage {
 	blocks := normalizeFauxAssistantContent(content)
 	msg := &ai.AssistantMessage{

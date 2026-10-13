@@ -32,7 +32,7 @@ func ToolNameMatchesPattern(entry string, name string) bool {
 	return len(name)-position >= len(last) && strings.HasSuffix(name, last)
 }
 
-// matсhesAnyToolPattern reports whether a name matches any selection entry.
+// matchesAnyToolPattern reports whether a name matches any selection entry.
 func matchesAnyToolPattern(entries []string, name string) bool {
 	for _, entry := range entries {
 		if ToolNameMatchesPattern(entry, name) {

@@ -799,8 +799,6 @@ func ParseStreamingJSONText(text string) json.RawMessage {
 	return enc
 }
 
-// StreamAnthropicSimple maps simple reasoning levels onto the anthropic
-// options (port of streamSimple).
 func hasPreferredStrictAnthropicTools(model *Model, context TranscriptContext) bool {
 	if !GetAnthropicCompat(model).SupportsStrictTools {
 		return false
@@ -874,6 +872,8 @@ func isAnthropicStrictToolLimitError(err error) bool {
 		strings.Contains(message, "Schemas contains too many parameters with union types (")
 }
 
+// StreamAnthropicSimple maps simple reasoning levels onto the anthropic
+// options (port of streamSimple).
 func StreamAnthropicSimple(model *Model, context TranscriptContext, options *SimpleStreamOptions) *AssistantMessageEventStream {
 	if options == nil {
 		options = &SimpleStreamOptions{}

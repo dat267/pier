@@ -210,7 +210,6 @@ func CreateFuzzyAutocompleteItems[T any](items []T, prefix string, getSearchText
 	return result
 }
 
-// GetLoginProviderCompletionOptions deduplicates the provider options and
 // configContains reports whether a string list holds a value.
 func configContains(values []string, value string) bool {
 	for _, entry := range values {
@@ -221,6 +220,7 @@ func configContains(values []string, value string) bool {
 	return false
 }
 
+// GetLoginProviderCompletionOptions deduplicates the provider options and
 // merges their auth types.
 func GetLoginProviderCompletionOptions(providerOptions []AuthSelectorProvider) []LoginProviderCompletionOption {
 	byID := map[string]*LoginProviderCompletionOption{}

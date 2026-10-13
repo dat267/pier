@@ -79,8 +79,8 @@ func (k *KillRing) Rotate() {
 // Len returns the ring size.
 func (k *KillRing) Len() int { return len(k.ring) }
 
-// PunctuationRegex matches the ASCII punctuation set used for word
-// boundaries (upstream PUNCTUATION_REGEX).
+// punctuationChars is the ASCII punctuation set used for word boundaries
+// (upstream PUNCTUATION_REGEX).
 var punctuationChars = map[rune]bool{
 	'(': true, ')': true, '{': true, '}': true, '[': true, ']': true, '<': true, '>': true,
 	'.': true, ',': true, ';': true, ':': true, '\'': true, '"': true, '!': true, '?': true,
@@ -172,7 +172,6 @@ func isWordChar(r rune) bool {
 }
 
 // FindWordBackward returns the cursor position after moving one word backward.
-// FindWordBackward returns the cursor position after moving one word backward.
 // Cursors and results are UTF-16 code-unit offsets (upstream JS string
 // offsets), so the caller converts from its own byte offsets.
 func FindWordBackward(text string, cursor int) int {
@@ -227,7 +226,6 @@ func FindWordBackward(text string, cursor int) int {
 	return newCursor
 }
 
-// FindWordForward returns the cursor position after moving one word forward.
 // FindWordForward returns the cursor position after moving one word forward.
 // Cursors and results are UTF-16 code-unit offsets (upstream JS string
 // offsets), so the caller converts from its own byte offsets.

@@ -279,8 +279,7 @@ func matchesJSONType(value *schemaValue, typ string) bool {
 	}
 }
 
-// schemaValidator checks a value against a parsed schema (TypeBox Check
-// subset).
+// schemaCheck checks a value against a parsed schema (TypeBox Check subset).
 func schemaCheck(value *schemaValue, schema *jsonSchema) bool {
 	if schema == nil {
 		return true

@@ -193,7 +193,7 @@ func (s *AgentSession) takeLastAssistantMessage() *ai.AssistantMessage {
 	return message
 }
 
-// SetAutoRetryEnabled toggles the persisted retry setting.
+// SetRetryEnabled toggles the persisted retry setting.
 func (s *AgentSession) SetRetryEnabled(enabled bool) {
 	if s.control.Settings != nil {
 		s.control.Settings.SetRetryEnabled(enabled)

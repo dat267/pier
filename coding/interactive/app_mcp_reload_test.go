@@ -171,10 +171,6 @@ func (a *App) mcpOptionsForTest(config coding.LoadedMcpConfig, transportFactory 
 	return coding.McpManagerOptions{Config: config, Cwd: a.sessionMgr.GetCwd(), CreateTransport: transportFactory}
 }
 
-func loadMCPReloadCfg(t *testing.T, agentDir string) coding.LoadedMcpConfig {
-	return coding.LoadMcpConfig(coding.McpConfigLoadOptions{AgentDir: agentDir, Cwd: agentDir, ProjectTrusted: true})
-}
-
 func writeMCPReloadConfig(t *testing.T, agentDir string, content string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(agentDir, "mcp.json"), []byte(content), 0o644); err != nil {

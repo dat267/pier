@@ -213,14 +213,6 @@ func startPierConfigured(t *testing.T, setup func(agentDir string), args ...stri
 	return session
 }
 
-// send writes keystrokes to the pty.
-func (s *ptySession) send(data string) {
-	s.t.Helper()
-	if _, err := unix.Write(s.master, []byte(data)); err != nil {
-		s.t.Fatalf("pty write: %v", err)
-	}
-}
-
 // output returns everything the app has written so far.
 func (s *ptySession) output() string {
 	s.mu.Lock()
@@ -277,21 +269,6 @@ func (s *ptySession) waitForWrappedOutput(substr string, timeout time.Duration) 
 		time.Sleep(50 * time.Millisecond)
 	}
 	return strings.Contains(unwrapped(s.output()), want)
-}
-
-// typeAndSubmit types text and presses Enter twice: the first Enter accepts
-// the autocomplete completion when it is open, the second submits.
-func (s *ptySession) typeAndSubmit(text string) {
-	s.send(text)
-	time.Sleep(250 * time.Millisecond)
-	s.send("\r")
-	time.Sleep(200 * time.Millisecond)
-	s.send("\r")
-}
-
-// stripAnsiForLog removes escape sequences so failures show readable state.
-func stripAnsiForLog(s string) string {
-	return ansiSequenceRe.ReplaceAllString(s, "")
 }
 
 // openPty allocates a pseudo-terminal pair through /dev/ptmx (the x/sys/unix

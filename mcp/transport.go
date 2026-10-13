@@ -35,7 +35,7 @@ type Transport interface {
 	SetProtocolVersion(version string)
 }
 
-// messageEntry is one registered listener; removal marks it and emission
+// listenerEntry is one registered listener; removal marks it and emission
 // compacts.
 type listenerEntry[T any] struct {
 	fn      T

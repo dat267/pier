@@ -65,7 +65,7 @@ func (s *StatusIndicator) RenderSpinnerInBorder(width int) string {
 // Dispose stops the loader.
 func (s *StatusIndicator) Dispose() { s.Loader.Stop() }
 
-// WorkingStatusIndicator shows the working spinner.
+// NewWorkingStatusIndicator builds the "working" spinner indicator.
 func NewWorkingStatusIndicator(host tui.RenderRequester, message string, indicator *tui.LoaderIndicatorOptions, colorFn func(string) string) *StatusIndicator {
 	spinnerColor := colorFn
 	messageColor := colorFn

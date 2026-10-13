@@ -453,9 +453,9 @@ func (m *SessionManager) hasConversation() bool {
 	return false
 }
 
-// persist writes the entry, honoring the flush-on-first-conversation contract:
-// the file is only created once a user or assistant message exists (upstream
-// _persist).
+// persistEntry writes the entry, honoring the flush-on-first-conversation
+// contract: the file is only created once a user or assistant message exists
+// (upstream _persist).
 func (m *SessionManager) persistEntry(entry *SessionEntry) {
 	if !m.persist || m.sessionFile == "" {
 		return

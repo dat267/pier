@@ -822,9 +822,6 @@ func (a *App) applySettingsDependentUI() bool {
 	return rebuilt
 }
 
-// runContext is the active run's context (producers select on it).
-var _ = 0
-
 // runDone returns the run context's Done channel (closed when Run's context is
 // cancelled); a background context when no run is active.
 func (a *App) runDone() <-chan struct{} {

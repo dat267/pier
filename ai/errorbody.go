@@ -134,10 +134,11 @@ func jsUintToString(v uint32, radix int) string {
 	return string(out)
 }
 
-// ClampOpenAIPromptCacheKey clamps a prompt cache key to OpenAI's 64-char
-// limit by code points (port of openai-prompt-cache.ts).
+// OpenAIPromptCacheKeyMaxLength is the 64-char limit OpenAI enforces on prompt
+// cache keys, counted by code points (port of openai-prompt-cache.ts).
 const OpenAIPromptCacheKeyMaxLength = 64
 
+// ClampOpenAIPromptCacheKey clamps a prompt cache key to OpenAI's limit.
 func ClampOpenAIPromptCacheKey(key string) string {
 	runes := []rune(key)
 	if len(runes) <= OpenAIPromptCacheKeyMaxLength {

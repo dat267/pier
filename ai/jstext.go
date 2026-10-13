@@ -56,7 +56,7 @@ func SanitizeSurrogates(text string) string {
 	return string(utf16.Decode(out))
 }
 
-// jsTrim implements String.prototype.trim semantics (ECMA-402 Whitespace,
+// jsSpace is the String.prototype.trim whitespace class (ECMA-402 Whitespace,
 // which includes Unicode space separators like U+00A0, U+2028, U+2029, and
 // U+FEFF that Go's strings.TrimSpace does not all cover).
 var jsSpace = func(r rune) bool {
@@ -128,8 +128,8 @@ func JSLower(s string) string {
 	return cases.Lower(language.Und).String(s)
 }
 
-// JSTrimLength reports the UTF-16 length of the JS-trimmed string, the form
-// upstream compares against zero (`text.trim().length === 0`).
+// JSTrimIsEmpty reports whether the JS-trimmed string is empty (the form
+// upstream compares against zero, `text.trim().length === 0`).
 func JSTrimIsEmpty(s string) bool {
 	return JSTrim(s) == ""
 }

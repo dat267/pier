@@ -19,11 +19,9 @@ var PowerShellToolSystemPromptContribution = struct {
 	Guidelines: []string{"You can inspect PI_* environment variables for current model and session details."},
 }
 
-// PowerSShellToolConfig is the PowerShell variant of the shell tool.
-//
-// PowerShellOptions is the Go analogue of upstream's
-// createLocalPowerShellOperations: the resolved shell config plus the UTF-8
-// command prefix.
+// PowerShellShellToolConfig is the PowerShell variant of the shell tool, the
+// Go analogue of upstream's createLocalPowerShellOperations: the resolved shell
+// config plus the UTF-8 command prefix.
 var PowerShellShellToolConfig = ShellToolConfig{
 	Name:             "powershell",
 	Label:            "powershell",

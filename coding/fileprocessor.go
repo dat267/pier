@@ -71,7 +71,8 @@ type ProcessImageResult struct {
 	Message  string
 }
 
-// ConvertImageBytesToPNG converts an unsupported image format to PNG.
+// imageBytesConverter converts an unsupported image format to PNG, reporting
+// whether the conversion succeeded.
 //
 // D26: upstream converts through Photon (Rust/WASM), which also handles formats
 // the Go standard library cannot decode (notably BMP). The Go port decodes what

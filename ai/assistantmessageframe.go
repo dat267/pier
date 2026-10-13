@@ -42,7 +42,7 @@ func methodJSON(value any) json.RawMessage {
 	return encoded
 }
 
-// frameASCIIToolArguments is JSON.stringify(parseStreamingJson("")): an empty
+// frameEmptyToolArguments is JSON.stringify(parseStreamingJson("")): an empty
 // parsed object.
 const frameEmptyToolArguments = "{}"
 
