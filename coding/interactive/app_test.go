@@ -3,6 +3,7 @@ package interactive
 import (
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -461,5 +462,36 @@ func TestKeyWiringSessionNewClearsStatus(t *testing.T) {
 	app.key.OnSessionNew()
 	if app.uiState.ActiveStatusIndicator != nil {
 		t.Fatal("OnSessionNew did not clear the status indicator")
+	}
+}
+
+// The external editor receives the expanded prompt, not the paste marker
+// (upstream `editor.getExpandedText?.() ?? editor.getText()`).
+func TestExternalEditorUsesExpandedText(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	pasted := strings.Repeat("x", 1200)
+	app.defaultEditor.HandleInput("\x1b[200~" + pasted + "\x1b[201~")
+	if got := app.defaultEditor.GetText(); got == pasted {
+		t.Fatal("setup: the paste was not collapsed to a marker")
+	}
+	expanded := app.defaultEditor.GetExpandedText()
+	captured := ""
+	previous := externalEditorRunner
+	externalEditorRunner = func(command *exec.Cmd) error {
+		if len(command.Args) == 0 {
+			return nil
+		}
+		data, err := os.ReadFile(command.Args[len(command.Args)-1])
+		if err != nil {
+			return err
+		}
+		captured = string(data)
+		return nil
+	}
+	t.Cleanup(func() { externalEditorRunner = previous })
+	app.key.OnExternalEditor()
+	if captured != expanded {
+		t.Fatalf("external editor content = %q; want the expanded %q", captured, expanded)
 	}
 }

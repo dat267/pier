@@ -524,7 +524,9 @@ func newKeyWiring(app *App) *KeyWiring {
 		// while it runs, so the TUI is stopped and restarted around it
 		// (upstream handleOpenExternalEditor).
 		OnExternalEditor: func() {
-			content := app.defaultEditor.GetText()
+			// Upstream `editor.getExpandedText?.() ?? editor.getText()`: the
+			// editor receives the expanded paste, not its marker.
+			content := app.defaultEditor.GetExpandedText()
 			app.ui.Stop(tui.TuiStopOptions{})
 			result := EditInExternalEditor(ExternalEditorOptions{
 				Command: app.settings.GetExternalEditorCommand(),
