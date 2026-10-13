@@ -88,3 +88,26 @@ func TestSummaryBlocksFollowOutputPad(t *testing.T) {
 		t.Fatalf("compaction summary indented lines: %d at pad 0, %d at pad 1", unpaddedCompaction, paddedCompaction)
 	}
 }
+
+// The collapsed bash preview passes outputPad to the visual-line truncation
+// (upstream `truncateToVisualLines(styledInput, PREVIEW_LINES, width, this.outputPad)`).
+func TestBashExecutionPreviewFollowsOutputPad(t *testing.T) {
+	outputPadTheme(t)
+
+	render := func(padding int) string {
+		component := NewBashExecutionComponent("ls", nil, false, padding)
+		component.AppendOutput("line one\nline two\n")
+		exit := 0
+		component.SetComplete(&exit, false, nil, "")
+		return coding.StripAnsi(strings.Join(component.Render(40), "\n"))
+	}
+
+	padded, ok := indentedLine(render(1), "line one")
+	if !ok || !strings.HasPrefix(padded, " ") {
+		t.Fatalf("padded preview = %q", padded)
+	}
+	unpadded, ok := indentedLine(render(0), "line one")
+	if !ok || strings.HasPrefix(unpadded, " ") {
+		t.Fatalf("unpadded preview = %q", unpadded)
+	}
+}

@@ -265,7 +265,7 @@ func (c *BashExecutionComponent) updateDisplay() {
 				styled = append(styled, theme.Fg("muted", line))
 			}
 			styledInput := "\n" + strings.Join(styled, "\n")
-			c.contentContainer.AddChild(&previewComponent{input: styledInput, maxLines: previewLines})
+			c.contentContainer.AddChild(&previewComponent{input: styledInput, maxLines: previewLines, paddingX: c.outputPad})
 		}
 	}
 
@@ -309,6 +309,7 @@ func (c *BashExecutionComponent) updateDisplay() {
 type previewComponent struct {
 	input    string
 	maxLines int
+	paddingX int
 
 	cachedWidth int
 	hasWidth    bool
@@ -317,7 +318,7 @@ type previewComponent struct {
 
 func (p *previewComponent) Render(width int) []string {
 	if p.cachedLines == nil || !p.hasWidth || p.cachedWidth != width {
-		result := TruncateToVisualLines(p.input, p.maxLines, width, 1)
+		result := TruncateToVisualLines(p.input, p.maxLines, width, p.paddingX)
 		p.cachedLines = result.VisualLines
 		p.cachedWidth = width
 		p.hasWidth = true
