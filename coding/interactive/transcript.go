@@ -852,11 +852,11 @@ func sortToolResultFromMessage(message *ai.ToolResultMessage) *SortToolResultCon
 	if message.Details != nil {
 		result.Details = message.Details
 	}
+	blocks := make([]ai.Content, 0, len(message.Content))
 	for _, block := range message.Content {
-		if text, ok := block.(ai.TextContent); ok {
-			result.Content = append(result.Content, ToolResultContent{Type: "text", Text: text.Text})
-		}
+		blocks = append(blocks, block)
 	}
+	result.Content = toolResultContentFromBlocks(blocks)
 	return result
 }
 

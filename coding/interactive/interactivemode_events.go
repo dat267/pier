@@ -630,14 +630,24 @@ func eventMessage(event *coding.SessionEvent) ai.Message {
 	return event.Agent.Message
 }
 
-// sortToolResultFromAgent converts an agent tool result into the render payload.
-func sortToolResultFromAgent(result agent.AgentToolResult) *SortToolResultContent {
-	converted := &SortToolResultContent{}
-	for _, block := range result.Content {
-		if text, ok := block.(ai.TextContent); ok {
-			converted.Content = append(converted.Content, ToolResultContent{Type: "text", Text: text.Text})
+// toolResultContentFromBlocks converts agent tool-result blocks into the render
+// payload, keeping text and image blocks (upstream getTextOutput reads both).
+func toolResultContentFromBlocks(blocks []ai.Content) []ToolResultContent {
+	var content []ToolResultContent
+	for _, block := range blocks {
+		switch b := block.(type) {
+		case ai.TextContent:
+			content = append(content, ToolResultContent{Type: "text", Text: b.Text})
+		case ai.ImageContent:
+			content = append(content, ToolResultContent{Type: "image", Data: b.Data, MimeType: b.MimeType})
 		}
 	}
+	return content
+}
+
+// sortToolResultFromAgent converts an agent tool result into the render payload.
+func sortToolResultFromAgent(result agent.AgentToolResult) *SortToolResultContent {
+	converted := &SortToolResultContent{Content: toolResultContentFromBlocks(result.Content)}
 	if result.Details != nil {
 		converted.Details = result.Details
 	}

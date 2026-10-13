@@ -444,3 +444,18 @@ func TestEventDispatcherTitleAndBorder(t *testing.T) {
 		t.Fatalf("titles=%d borders=%d; want 1 and 1", titles, borders)
 	}
 }
+
+// Tool results can carry images; the render payload keeps them (upstream
+// getTextOutput reads text and image blocks).
+func TestSortToolResultKeepsImages(t *testing.T) {
+	result := sortToolResultFromAgent(agent.AgentToolResult{Content: []ai.Content{
+		ai.TextContent{Text: "see"},
+		ai.ImageContent{Data: "abc", MimeType: "image/png"},
+	}})
+	if len(result.Content) != 2 {
+		t.Fatalf("content = %+v", result.Content)
+	}
+	if result.Content[1].Type != "image" || result.Content[1].MimeType != "image/png" || result.Content[1].Data != "abc" {
+		t.Fatalf("image block = %+v", result.Content[1])
+	}
+}
