@@ -319,6 +319,11 @@ func (s *AgentSession) ContextFiles() []ContextFile {
 	return append([]ContextFile{}, options.ContextFiles...)
 }
 
+// PromptDiagnostics returns prompt loader warnings and name collisions.
+func (s *AgentSession) PromptDiagnostics() []ResourceDiagnostic {
+	return append([]ResourceDiagnostic{}, s.promptDiagnostics...)
+}
+
 // SkillDiagnostics returns the skill loader's warnings/collisions.
 func (s *AgentSession) SkillDiagnostics() []ResourceDiagnostic {
 	return append([]ResourceDiagnostic{}, s.skillDiagnostics...)

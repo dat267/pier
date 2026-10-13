@@ -96,13 +96,14 @@ func (b *ThemeBoot) ApplySources(in ThemeSources) {
 		panic("interactive: ThemeBoot.ApplySources before EnableCapabilities " +
 			"(D154: a theme bakes its colour escapes when it is created)")
 	}
-	paths := append([]string{}, in.ThemePaths...)
-	if in.Trusted && !in.NoThemes {
-		paths = append(paths, filepath.Join(in.Cwd, coding.ConfigDirName, "themes"))
+	projectDir := ""
+	if in.Trusted {
+		projectDir = filepath.Join(in.Cwd, coding.ConfigDirName, "themes")
 	}
 	SetCustomThemeSources(CustomThemeSources{
 		Dir:         filepath.Join(in.AgentDir, "themes"),
-		Paths:       paths,
+		ProjectDir:  projectDir,
+		Paths:       in.ThemePaths,
 		NoDiscovery: in.NoThemes,
 	})
 	// The watcher stays off: the interactive theme controller owns watching, and

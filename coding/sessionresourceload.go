@@ -44,13 +44,28 @@ func (o resourceOptions) skills(cwd string, agentDir string, settings *SettingsM
 }
 
 // promptTemplates returns the file-based prompt templates.
-func (o resourceOptions) promptTemplates(cwd string, agentDir string, settings *SettingsManager) []PromptTemplate {
+func (o resourceOptions) promptTemplates(cwd string, agentDir string, settings *SettingsManager) LoadPromptTemplatesResult {
 	promptPaths := append([]string{}, o.PromptTemplatePaths...)
 	if !o.NoPromptTemplates && settings != nil {
 		promptPaths = append(settings.GetPromptTemplatePaths(), promptPaths...)
 	}
-	return LoadPromptTemplates(LoadPromptTemplatesOptions{
+	loaded := LoadPromptTemplatesWithDiagnostics(LoadPromptTemplatesOptions{
 		Cwd: cwd, AgentDir: agentDir, PromptPaths: promptPaths,
 		IncludeDefaults: !o.NoPromptTemplates,
 	})
+	// v1.2.0 resource-loader.ts dedupePrompts keeps the first discovered name.
+	result := LoadPromptTemplatesResult{Diagnostics: loaded.Diagnostics}
+	seen := map[string]PromptTemplate{}
+	for _, template := range loaded.Templates {
+		if winner, ok := seen[template.Name]; ok {
+			result.Diagnostics = append(result.Diagnostics, ResourceDiagnostic{
+				Type: "collision", Message: `name "/` + template.Name + `" collision`, Path: template.FilePath,
+				Collision: &ResourceCollision{ResourceType: "prompt", Name: template.Name, WinnerPath: winner.FilePath, LoserPath: template.FilePath},
+			})
+		} else {
+			seen[template.Name] = template
+			result.Templates = append(result.Templates, template)
+		}
+	}
+	return result
 }

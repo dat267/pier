@@ -541,6 +541,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		Skills:             skillsResult.Skills,
 		ContextFiles:       contextFiles,
 		SkillDiagnostics:   skillsResult.Diagnostics,
+		PromptDiagnostics:  promptTemplates.Diagnostics,
 		SystemPrompt:       promptOverrides.SystemPrompt,
 		AppendSystemPrompt: promptOverrides.AppendSystemPrompt,
 		PromptSourcePaths:  promptOverrides.SourcePaths,
@@ -549,7 +550,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		Control: &AgentSessionControl{
 			ModelRuntime: modelRuntime, Settings: settingsManager,
 			Tools: map[string]AgentToolDefinition{}, autoCompaction: true, autoRetry: true,
-			PromptTemplates: promptTemplates,
+			PromptTemplates: promptTemplates.Templates,
 		},
 		ConvertToLlm: convertToLlmWithBlockImages,
 		SessionID:    sessionID,

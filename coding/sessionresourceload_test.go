@@ -67,6 +67,64 @@ func TestCreateAgentSessionPromptTemplates(t *testing.T) {
 	}
 }
 
+// TestPromptTemplateCollisionsReachSession follows v1.2.0 resource-loader.ts
+// dedupePrompts: first name wins and the loser is reported, including reload.
+func TestPromptTemplateCollisionsReachSession(t *testing.T) {
+	tempAgentDir(t)
+	first, second := t.TempDir(), t.TempDir()
+	winner, loser := filepath.Join(first, "greet.md"), filepath.Join(second, "greet.md")
+	writeSettingsFile(t, winner, "winner")
+	writeSettingsFile(t, loser, "loser")
+	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
+	session := sessionWithResources(t, settings, &CreateAgentSessionOptions{
+		PromptTemplatePaths: []string{first, second}, NoPromptTemplates: true,
+	})
+	check := func() {
+		t.Helper()
+		templates := session.PromptTemplates()
+		if len(templates) != 1 || templates[0].FilePath != winner {
+			t.Fatalf("templates = %#v, want only first /greet", templates)
+		}
+		loader, ok := any(session).(interface{ PromptDiagnostics() []ResourceDiagnostic })
+		if !ok {
+			t.Fatal("session does not expose prompt diagnostics")
+		}
+		diagnostics := loader.PromptDiagnostics()
+		if len(diagnostics) != 1 || diagnostics[0].Type != "collision" || diagnostics[0].Message != `name "/greet" collision` {
+			t.Fatalf("diagnostics = %#v", diagnostics)
+		}
+		collision := diagnostics[0].Collision
+		if collision == nil || collision.ResourceType != "prompt" || collision.WinnerPath != winner || collision.LoserPath != loser {
+			t.Fatalf("collision = %#v", collision)
+		}
+	}
+	check()
+	session.Reload()
+	check()
+}
+
+// TestUnreadablePromptDiagnostic follows prompt-templates.ts read warnings.
+func TestUnreadablePromptDiagnostic(t *testing.T) {
+	tempAgentDir(t)
+	path := filepath.Join(t.TempDir(), "denied.md")
+	writeSettingsFile(t, path, "unreadable")
+	if err := os.Chmod(path, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(path, 0o600) })
+	if _, err := os.ReadFile(path); err == nil {
+		t.Skip("filesystem does not enforce file read permissions")
+	}
+	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
+	session := sessionWithResources(t, settings, &CreateAgentSessionOptions{
+		PromptTemplatePaths: []string{path}, NoPromptTemplates: true,
+	})
+	diagnostics := session.PromptDiagnostics()
+	if len(diagnostics) != 1 || diagnostics[0].Type != "warning" || diagnostics[0].Path != path || diagnostics[0].Message == "" {
+		t.Fatalf("unreadable prompt diagnostics = %#v", diagnostics)
+	}
+}
+
 // Reload is a re-read, not a reset: the CLI switches have to survive it, or
 // --no-skills would come back the first time a user reloaded and an explicit
 // --skill path would vanish.

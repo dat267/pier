@@ -190,9 +190,14 @@ func SubstituteArgs(content string, args []string) string {
 
 // LoadTemplateFromFile loads one template, or nil on read/parse failure.
 func LoadTemplateFromFile(filePath string, sourceInfo SourceInfo) *PromptTemplate {
+	template, _ := loadTemplateWithDiagnostics(filePath, sourceInfo)
+	return template
+}
+
+func loadTemplateWithDiagnostics(filePath string, sourceInfo SourceInfo) (*PromptTemplate, *ResourceDiagnostic) {
 	raw, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil
+		return nil, &ResourceDiagnostic{Type: "warning", Message: err.Error(), Path: filePath}
 	}
 	parsed := ParseFrontmatter(DecodeUTF8WithReplacement(raw))
 
@@ -224,15 +229,19 @@ func LoadTemplateFromFile(filePath string, sourceInfo SourceInfo) *PromptTemplat
 		template.ArgumentHint = hint
 		template.HasArgumentHint = true
 	}
-	return template
+	return template, nil
 }
 
 // LoadTemplatesFromDir scans one directory (non-recursive) for .md templates.
 func LoadTemplatesFromDir(dir string, getSourceInfo func(filePath string) SourceInfo) []PromptTemplate {
-	var templates []PromptTemplate
+	return loadTemplatesWithDiagnostics(dir, getSourceInfo).Templates
+}
+
+func loadTemplatesWithDiagnostics(dir string, getSourceInfo func(filePath string) SourceInfo) LoadPromptTemplatesResult {
+	result := LoadPromptTemplatesResult{}
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return templates
+		return result
 	}
 	for _, entry := range entries {
 		name := DecodeUTF8WithReplacement([]byte(entry.Name()))
@@ -248,11 +257,15 @@ func LoadTemplatesFromDir(dir string, getSourceInfo func(filePath string) Source
 		if !isFile || !strings.HasSuffix(name, ".md") {
 			continue
 		}
-		if template := LoadTemplateFromFile(fullPath, getSourceInfo(fullPath)); template != nil {
-			templates = append(templates, *template)
+		template, diagnostic := loadTemplateWithDiagnostics(fullPath, getSourceInfo(fullPath))
+		if template != nil {
+			result.Templates = append(result.Templates, *template)
+		}
+		if diagnostic != nil {
+			result.Diagnostics = append(result.Diagnostics, *diagnostic)
 		}
 	}
-	return templates
+	return result
 }
 
 // LoadPromptTemplatesOptions configure LoadPromptTemplates.
@@ -263,12 +276,27 @@ type LoadPromptTemplatesOptions struct {
 	IncludeDefaults bool
 }
 
+// LoadPromptTemplatesResult carries loaded templates and resource diagnostics.
+type LoadPromptTemplatesResult struct {
+	Templates   []PromptTemplate
+	Diagnostics []ResourceDiagnostic
+}
+
 // LoadPromptTemplates loads global, project, and explicit prompt templates.
 func LoadPromptTemplates(options LoadPromptTemplatesOptions) []PromptTemplate {
+	return LoadPromptTemplatesWithDiagnostics(options).Templates
+}
+
+// LoadPromptTemplatesWithDiagnostics retains read warnings like upstream's loader.
+func LoadPromptTemplatesWithDiagnostics(options LoadPromptTemplatesOptions) LoadPromptTemplatesResult {
 	resolvedCwd := ResolvePath(options.Cwd, ".", PathInputOptions{})
 	resolvedAgentDir := ResolvePath(options.AgentDir, ".", PathInputOptions{})
 
-	var templates []PromptTemplate
+	result := LoadPromptTemplatesResult{}
+	addResult := func(loaded LoadPromptTemplatesResult) {
+		result.Templates = append(result.Templates, loaded.Templates...)
+		result.Diagnostics = append(result.Diagnostics, loaded.Diagnostics...)
+	}
 	globalPromptsDir := filepath.Join(resolvedAgentDir, "prompts")
 	projectPromptsDir := filepath.Join(resolvedCwd, ConfigDirName, "prompts")
 
@@ -296,26 +324,33 @@ func LoadPromptTemplates(options LoadPromptTemplatesOptions) []PromptTemplate {
 	}
 
 	if options.IncludeDefaults {
-		templates = append(templates, LoadTemplatesFromDir(globalPromptsDir, getSourceInfo)...)
-		templates = append(templates, LoadTemplatesFromDir(projectPromptsDir, getSourceInfo)...)
+		addResult(loadTemplatesWithDiagnostics(globalPromptsDir, getSourceInfo))
+		addResult(loadTemplatesWithDiagnostics(projectPromptsDir, getSourceInfo))
 	}
 
 	for _, rawPath := range options.PromptPaths {
 		resolvedPath := ResolvePath(rawPath, resolvedCwd, PathInputOptions{Trim: true})
 		info, err := os.Stat(resolvedPath)
 		if err != nil {
+			if !os.IsNotExist(err) {
+				result.Diagnostics = append(result.Diagnostics, ResourceDiagnostic{Type: "warning", Message: err.Error(), Path: resolvedPath})
+			}
 			continue
 		}
 		switch {
 		case info.IsDir():
-			templates = append(templates, LoadTemplatesFromDir(resolvedPath, getSourceInfo)...)
+			addResult(loadTemplatesWithDiagnostics(resolvedPath, getSourceInfo))
 		case info.Mode().IsRegular() && strings.HasSuffix(resolvedPath, ".md"):
-			if template := LoadTemplateFromFile(resolvedPath, getSourceInfo(resolvedPath)); template != nil {
-				templates = append(templates, *template)
+			template, diagnostic := loadTemplateWithDiagnostics(resolvedPath, getSourceInfo(resolvedPath))
+			if template != nil {
+				result.Templates = append(result.Templates, *template)
+			}
+			if diagnostic != nil {
+				result.Diagnostics = append(result.Diagnostics, *diagnostic)
 			}
 		}
 	}
-	return templates
+	return result
 }
 
 // jsWhitespaceClass is the JS `\s` class for RE2 (Go's `\s` is ASCII-only).

@@ -15,9 +15,8 @@ import (
 // The tool registry itself is unchanged: the built-in tools capture no
 // settings-dependent state (the bash tool reads the shell settings per call).
 // The active selection can still change when the session's initial tools came
-// from defaultTools (db6cc71dc). Prompt templates and theme files are not
-// loaded by the port at boot, so they are not
-// re-read here either.
+// from defaultTools (db6cc71dc). Prompt templates and diagnostics are re-read
+// below; interactive settings application reloads theme sources and diagnostics.
 func (s *AgentSession) Reload() {
 	// Previous resolved defaultTools, captured before the settings re-read:
 	// reload activates only names the setting newly adds (db6cc71dc).
@@ -118,7 +117,8 @@ func (s *AgentSession) reloadResources() {
 	}
 	s.promptOptionsMu.Unlock()
 	s.skillDiagnostics = skills.Diagnostics
-	s.control.PromptTemplates = promptTemplates
+	s.control.PromptTemplates = promptTemplates.Templates
+	s.promptDiagnostics = promptTemplates.Diagnostics
 }
 
 // ActiveToolNames returns the active tools' names in order (upstream

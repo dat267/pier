@@ -193,7 +193,8 @@ type AgentSession struct {
 	promptOptionsMu     sync.Mutex
 
 	// skillDiagnostics are the skill loader's warnings/collisions.
-	skillDiagnostics []ResourceDiagnostic
+	skillDiagnostics  []ResourceDiagnostic
+	promptDiagnostics []ResourceDiagnostic
 
 	// resources are the CLI-derived resource switches (--skill and friends),
 	// kept so a reload re-reads with the same options instead of resetting them.
@@ -256,8 +257,9 @@ type SessionConfig struct {
 	ContextFiles  []ContextFile
 	// SkillDiagnostics are the skill loader's warnings/collisions, surfaced in
 	// the interactive loaded-resources area.
-	SkillDiagnostics []ResourceDiagnostic
-	InitialMessages  []ai.Message
+	SkillDiagnostics  []ResourceDiagnostic
+	PromptDiagnostics []ResourceDiagnostic
+	InitialMessages   []ai.Message
 	// ConvertToLlm transforms messages before provider calls (the block-images
 	// filter).
 	ConvertToLlm func(messages []ai.Message) []ai.Message
@@ -384,6 +386,7 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 			SelectedTools:     agentToolNames(config.Tools),
 		},
 		skillDiagnostics:     config.SkillDiagnostics,
+		promptDiagnostics:    config.PromptDiagnostics,
 		agentDir:             config.AgentDir,
 		usesDefaultTools:     config.UsesDefaultTools,
 		defaultToolModifiers: append([]string{}, config.DefaultToolModifiers...),

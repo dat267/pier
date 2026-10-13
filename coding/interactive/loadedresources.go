@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -14,9 +15,8 @@ import (
 // Port of the startup "loaded resources" area of interactive-mode.ts
 // (showLoadedResources and the source-scope display helpers).
 //
-// Context, Skills, Prompts and Themes are ported. Extensions are not: extension
-// mechanics stay out of scope (D41/D140), so the loader exposes no extensions to
-// list.
+// Context, Skills, Prompts and resource diagnostics are ported. Themes supply
+// diagnostic metadata, not a listing. Extensions remain out of scope (D41/D140).
 
 var npmPackagePathPattern = regexp.MustCompile(`node_modules/(@?[^/]+(?:/[^/]+)?)/(.*)`)
 
@@ -186,6 +186,32 @@ func formatContextPath(p string, cwd string) string {
 // formatSkillDiagnostics renders the skill warnings and name collisions
 // (upstream formatDiagnostics, paths shown via formatDisplayPath).
 func formatSkillDiagnostics(diagnostics []coding.ResourceDiagnostic) string {
+	return formatResourceDiagnostics(diagnostics, nil)
+}
+
+func formatPathWithSource(path string, sourceInfos map[string]coding.SourceInfo) string {
+	for current := path; current != ""; current = filepath.Dir(current) {
+		if info, ok := sourceInfos[current]; ok {
+			label := getScopeGroup(info)
+			if info.Source != "" && info.Source != "local" && info.Source != "cli" {
+				label = info.Source
+				if info.Scope == coding.SourceScopeUser || info.Scope == coding.SourceScopeProject {
+					label += " (" + info.Scope + ")"
+				}
+			}
+			if info.Scope == coding.SourceScopeTemporary {
+				label += " (temp)"
+			}
+			return label + " " + getShortPath(path, info)
+		}
+		if parent := filepath.Dir(current); parent == current || parent == "." {
+			break
+		}
+	}
+	return formatDisplayPath(path)
+}
+
+func formatResourceDiagnostics(diagnostics []coding.ResourceDiagnostic, sourceInfos map[string]coding.SourceInfo) string {
 	theme := ActiveTheme()
 	var lines []string
 
@@ -217,10 +243,10 @@ func formatSkillDiagnostics(diagnostics []coding.ResourceDiagnostic) string {
 		group := groups[name]
 		lines = append(lines, theme.Fg("warning", "  \""+name+"\" collision:"))
 		if group.hasWinner {
-			lines = append(lines, theme.Fg("dim", "    "+theme.Fg("success", "✓")+" "+formatDisplayPath(group.winner)))
+			lines = append(lines, theme.Fg("dim", "    "+theme.Fg("success", "✓")+" "+formatPathWithSource(group.winner, sourceInfos)))
 		}
 		for _, loser := range group.losers {
-			lines = append(lines, theme.Fg("dim", "    "+theme.Fg("warning", "✗")+" "+formatDisplayPath(loser)+" (skipped)"))
+			lines = append(lines, theme.Fg("dim", "    "+theme.Fg("warning", "✗")+" "+formatPathWithSource(loser, sourceInfos)+" (skipped)"))
 		}
 	}
 	for _, diagnostic := range others {
@@ -229,7 +255,7 @@ func formatSkillDiagnostics(diagnostics []coding.ResourceDiagnostic) string {
 			color = "error"
 		}
 		if diagnostic.Path != "" {
-			lines = append(lines, theme.Fg(color, "  "+formatDisplayPath(diagnostic.Path)))
+			lines = append(lines, theme.Fg(color, "  "+formatPathWithSource(diagnostic.Path, sourceInfos)))
 			lines = append(lines, theme.Fg(color, "    "+diagnostic.Message))
 			continue
 		}
@@ -247,10 +273,6 @@ func (a *App) showLoadedResources(force bool) {
 	a.loadedResourcesContainer.Clear()
 
 	showListing := force || a.options.Verbose || (!a.options.QuietStartup.Enabled && !a.options.QuietStartup.Header)
-	if !showListing {
-		return
-	}
-
 	theme := ActiveTheme()
 	sectionHeader := func(name string) string { return theme.Fg("mdHeading", "["+name+"]") }
 	expanded := a.options.Verbose || a.display.ToolOutputExpanded
@@ -263,104 +285,93 @@ func (a *App) showLoadedResources(force bool) {
 		a.loadedResourcesContainer.AddChild(tui.NewSpacer(1))
 	}
 
-	// The Context section lists the loaded prompt files first, then the
-	// context files (upstream spreads getSystemPromptSource and
-	// getAppendSystemPromptSources ahead of the agents files).
-	contextFiles := a.session.ContextFiles()
-	promptSources := a.session.PromptSourcePaths()
-	if len(contextFiles) > 0 || len(promptSources) > 0 {
-		cwd := a.options.Cwd
-		paths := make([]string, 0, len(promptSources)+len(contextFiles))
-		for _, source := range promptSources {
-			paths = append(paths, formatContextPath(source, cwd))
-		}
-		for _, file := range contextFiles {
-			paths = append(paths, formatContextPath(file.Path, cwd))
-		}
-		expandedPaths := make([]string, 0, len(paths))
-		for _, path := range paths {
-			expandedPaths = append(expandedPaths, theme.Fg("dim", "  "+path))
-		}
-		// Context is the first section and keeps discovery order (upstream
-		// {sort:false} and its leading spacer).
-		a.loadedResourcesContainer.AddChild(tui.NewSpacer(1))
-		addLoadedSection("Context", formatCompactListSorted(paths, false), strings.Join(expandedPaths, "\n"))
-	}
-
-	skills := a.session.Skills()
-	if len(skills) > 0 {
-		items := make([]scopeGroupItem, 0, len(skills))
-		names := make([]string, 0, len(skills))
-		for _, skill := range skills {
-			items = append(items, scopeGroupItem{path: skill.FilePath, sourceInfo: skill.SourceInfo})
-			names = append(names, skill.Name)
-		}
-		groups := buildScopeGroups(items)
-		expandedBody := formatScopeGroups(groups,
-			func(item scopeGroupItem) string { return formatDisplayPath(item.path) },
-			func(item scopeGroupItem, source string) string { return getShortPath(item.path, item.sourceInfo) })
-		addLoadedSection("Skills", formatCompactList(names), expandedBody)
-	}
-
-	templates := a.session.PromptTemplates()
-	if len(templates) > 0 {
-		byPath := map[string]coding.PromptTemplate{}
-		items := make([]scopeGroupItem, 0, len(templates))
-		labels := make([]string, 0, len(templates))
-		for _, template := range templates {
-			byPath[template.FilePath] = template
-			items = append(items, scopeGroupItem{path: template.FilePath, sourceInfo: template.SourceInfo})
-			labels = append(labels, "/"+template.Name)
-		}
-		formatTemplate := func(item scopeGroupItem) string {
-			if template, ok := byPath[item.path]; ok {
-				return "/" + template.Name
+	if showListing {
+		// The Context section lists the loaded prompt files first, then the
+		// context files (upstream spreads getSystemPromptSource and
+		// getAppendSystemPromptSources ahead of the agents files).
+		contextFiles := a.session.ContextFiles()
+		promptSources := a.session.PromptSourcePaths()
+		if len(contextFiles) > 0 || len(promptSources) > 0 {
+			cwd := a.options.Cwd
+			paths := make([]string, 0, len(promptSources)+len(contextFiles))
+			for _, source := range promptSources {
+				paths = append(paths, formatContextPath(source, cwd))
 			}
-			return formatDisplayPath(item.path)
+			for _, file := range contextFiles {
+				paths = append(paths, formatContextPath(file.Path, cwd))
+			}
+			expandedPaths := make([]string, 0, len(paths))
+			for _, path := range paths {
+				expandedPaths = append(expandedPaths, theme.Fg("dim", "  "+path))
+			}
+			// Context is the first section and keeps discovery order (upstream
+			// {sort:false} and its leading spacer).
+			a.loadedResourcesContainer.AddChild(tui.NewSpacer(1))
+			addLoadedSection("Context", formatCompactListSorted(paths, false), strings.Join(expandedPaths, "\n"))
 		}
-		groups := buildScopeGroups(items)
-		expandedBody := formatScopeGroups(groups,
-			func(item scopeGroupItem) string { return formatTemplate(item) },
-			func(item scopeGroupItem, source string) string { return formatTemplate(item) })
-		addLoadedSection("Prompts", formatCompactList(labels), expandedBody)
-	}
 
-	// Custom themes only: a built-in theme has no source path (upstream filters
-	// the loaded themes the same way).
-	if names, expandedBody := loadedThemes(AvailableThemesWithPaths()); len(names) > 0 {
-		addLoadedSection("Themes", formatCompactList(names), expandedBody)
-	}
-
-	diagnostics := a.session.SkillDiagnostics()
-	if len(diagnostics) > 0 {
-		a.loadedResourcesContainer.AddChild(tui.NewText(
-			theme.Fg("warning", "[Skill conflicts]")+"\n"+formatSkillDiagnostics(diagnostics), 0, 0, nil))
-		a.loadedResourcesContainer.AddChild(tui.NewSpacer(1))
-	}
-}
-
-// loadedThemes turns the registered themes into the Themes section's input: the
-// names for the compact list and the scope-grouped paths for the expanded body.
-// Built-in themes have no source path and are not listed (upstream filters on
-// sourcePath the same way).
-//
-// The port's theme registry carries only a name and a path, not the resource
-// loader's SourceInfo, so every custom theme groups under the local/project scope
-// where upstream groups by source.
-func loadedThemes(infos []ThemeInfo) (names []string, expandedBody string) {
-	items := make([]scopeGroupItem, 0, len(infos))
-	for _, info := range infos {
-		if info.Path == "" {
-			continue
+		skills := a.session.Skills()
+		if len(skills) > 0 {
+			items := make([]scopeGroupItem, 0, len(skills))
+			names := make([]string, 0, len(skills))
+			for _, skill := range skills {
+				items = append(items, scopeGroupItem{path: skill.FilePath, sourceInfo: skill.SourceInfo})
+				names = append(names, skill.Name)
+			}
+			groups := buildScopeGroups(items)
+			expandedBody := formatScopeGroups(groups,
+				func(item scopeGroupItem) string { return formatDisplayPath(item.path) },
+				func(item scopeGroupItem, source string) string { return getShortPath(item.path, item.sourceInfo) })
+			addLoadedSection("Skills", formatCompactList(names), expandedBody)
 		}
-		items = append(items, scopeGroupItem{path: info.Path})
-		names = append(names, info.Name)
+
+		templates := a.session.PromptTemplates()
+		if len(templates) > 0 {
+			byPath := map[string]coding.PromptTemplate{}
+			items := make([]scopeGroupItem, 0, len(templates))
+			labels := make([]string, 0, len(templates))
+			for _, template := range templates {
+				byPath[template.FilePath] = template
+				items = append(items, scopeGroupItem{path: template.FilePath, sourceInfo: template.SourceInfo})
+				labels = append(labels, "/"+template.Name)
+			}
+			formatTemplate := func(item scopeGroupItem) string {
+				if template, ok := byPath[item.path]; ok {
+					return "/" + template.Name
+				}
+				return formatDisplayPath(item.path)
+			}
+			groups := buildScopeGroups(items)
+			expandedBody := formatScopeGroups(groups,
+				func(item scopeGroupItem) string { return formatTemplate(item) },
+				func(item scopeGroupItem, source string) string { return formatTemplate(item) })
+			addLoadedSection("Prompts", formatCompactList(labels), expandedBody)
+		}
+
 	}
-	if len(items) == 0 {
-		return nil, ""
+	sourceInfos := map[string]coding.SourceInfo{}
+	for _, skill := range a.session.Skills() {
+		sourceInfos[skill.FilePath] = skill.SourceInfo
 	}
-	groups := buildScopeGroups(items)
-	return names, formatScopeGroups(groups,
-		func(item scopeGroupItem) string { return formatDisplayPath(item.path) },
-		func(item scopeGroupItem, source string) string { return getShortPath(item.path, item.sourceInfo) })
+	for _, prompt := range a.session.PromptTemplates() {
+		sourceInfos[prompt.FilePath] = prompt.SourceInfo
+	}
+	for _, info := range themeResourceInfos() {
+		sourceInfos[info.Path] = info.SourceInfo
+	}
+	// v1.2.0 shows resource diagnostics even when the startup listing is quiet.
+	for _, section := range []struct {
+		label       string
+		diagnostics []coding.ResourceDiagnostic
+	}{
+		{"Skill conflicts", a.session.SkillDiagnostics()},
+		{"Prompt conflicts", a.session.PromptDiagnostics()},
+		{"Theme conflicts", ThemeDiagnostics()},
+	} {
+		if len(section.diagnostics) > 0 {
+			a.loadedResourcesContainer.AddChild(tui.NewText(
+				theme.Fg("warning", "["+section.label+"]")+"\n"+formatResourceDiagnostics(section.diagnostics, sourceInfos), 0, 0, nil))
+			a.loadedResourcesContainer.AddChild(tui.NewSpacer(1))
+		}
+	}
 }

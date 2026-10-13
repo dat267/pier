@@ -654,8 +654,9 @@ func getBuiltinThemes() map[string]*ThemeJSON {
 
 // ThemeInfo pairs a theme name with its file path.
 type ThemeInfo struct {
-	Name string
-	Path string
+	Name       string
+	Path       string
+	SourceInfo coding.SourceInfo
 }
 
 // SystemThemeName is the terminal-derived theme (upstream SYSTEM_THEME_NAME).
@@ -892,40 +893,96 @@ func localeCompareTheme(a string, b string) int {
 }
 
 func customThemeInfos() []ThemeInfo {
+	snapshot := customThemeSourcesState.sources.Load()
 	sources := customThemeSources()
+	if snapshot != nil {
+		sources = snapshot.CustomThemeSources
+	}
 	var result []ThemeInfo
+	seen := map[string]ThemeInfo{}
+	var diagnostics []coding.ResourceDiagnostic
+	warn := func(path, message string) {
+		diagnostics = append(diagnostics, coding.ResourceDiagnostic{Type: "warning", Message: message, Path: path})
+	}
 	add := func(themePath string) {
 		theme, err := LoadThemeFromPath(themePath, "")
-		if err == nil && theme.Name != "" {
-			result = append(result, ThemeInfo{Name: theme.Name, Path: themePath})
+		if err != nil {
+			warn(themePath, err.Error())
+		} else if theme.Name != "" {
+			scope, baseDir := coding.SourceScopeTemporary, filepath.Dir(themePath)
+			for _, root := range []struct{ dir, scope string }{
+				{sources.Dir, coding.SourceScopeUser}, {sources.ProjectDir, coding.SourceScopeProject},
+			} {
+				if root.dir != "" {
+					relative, err := filepath.Rel(root.dir, themePath)
+					if err == nil && relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator)) && !filepath.IsAbs(relative) {
+						scope, baseDir = root.scope, root.dir
+						break
+					}
+				}
+			}
+			info := ThemeInfo{Name: theme.Name, Path: themePath,
+				SourceInfo: coding.CreateSyntheticSourceInfo(themePath, "local", scope, "", baseDir)}
+			if winner, ok := seen[theme.Name]; ok {
+				diagnostics = append(diagnostics, coding.ResourceDiagnostic{
+					Type: "collision", Message: `name "` + theme.Name + `" collision`, Path: themePath,
+					Collision: &coding.ResourceCollision{ResourceType: "theme", Name: theme.Name, WinnerPath: winner.Path, LoserPath: themePath},
+				})
+			} else {
+				seen[theme.Name] = info
+				result = append(result, info)
+			}
 		}
 	}
 	scanDir := func(dir string) {
 		entries, err := os.ReadDir(dir)
 		if err != nil {
+			if !os.IsNotExist(err) {
+				warn(dir, err.Error())
+			}
 			return
 		}
 		for _, entry := range entries {
 			name := coding.DecodeUTF8WithReplacement([]byte(entry.Name()))
-			if strings.HasSuffix(name, ".json") {
-				add(filepath.Join(dir, name))
+			path := filepath.Join(dir, name)
+			isFile := entry.Type().IsRegular()
+			if entry.Type()&os.ModeSymlink != 0 {
+				info, err := os.Stat(path)
+				if err != nil {
+					continue
+				}
+				isFile = info.Mode().IsRegular()
 			}
+			if isFile && strings.HasSuffix(name, ".json") {
+				add(path)
+			}
+		}
+	}
+	if !sources.NoDiscovery {
+		scanDir(sources.Dir)
+		if sources.ProjectDir != "" {
+			scanDir(sources.ProjectDir)
 		}
 	}
 	// Explicit paths are listed whether or not discovery is on: --no-themes
 	// refuses discovered themes, not ones the user named (upstream's noThemes
 	// keeps additionalThemePaths while dropping the discovered set).
 	for _, path := range sources.Paths {
-		if info, err := os.Stat(path); err == nil && info.IsDir() {
+		info, err := os.Stat(path)
+		if os.IsNotExist(err) {
+			warn(path, "theme path does not exist")
+		} else if err != nil {
+			warn(path, err.Error())
+		} else if info.IsDir() {
 			scanDir(path)
-			continue
-		}
-		if strings.HasSuffix(path, ".json") {
+		} else if info.Mode().IsRegular() && strings.HasSuffix(path, ".json") {
 			add(path)
+		} else {
+			warn(path, "theme path is not a json file")
 		}
 	}
-	if !sources.NoDiscovery {
-		scanDir(sources.Dir)
+	if snapshot != nil {
+		snapshot.result.Store(&themeDiscoveryResult{infos: result, diagnostics: diagnostics})
 	}
 	return result
 }
@@ -1442,6 +1499,8 @@ func terminalCapabilitiesTrueColor() bool {
 type CustomThemeSources struct {
 	// Dir is the user's themes directory (upstream reads the agent directory).
 	Dir string
+	// ProjectDir is the trusted project's default themes directory.
+	ProjectDir string
 	// Paths are explicit theme files or directories: the --theme paths and the
 	// settings' theme paths.
 	Paths []string
@@ -1450,15 +1509,54 @@ type CustomThemeSources struct {
 	NoDiscovery bool
 }
 
+type themeDiscoveryResult struct {
+	infos       []ThemeInfo
+	diagnostics []coding.ResourceDiagnostic
+}
+
+type themeDiscoverySources struct {
+	CustomThemeSources
+	result atomic.Pointer[themeDiscoveryResult]
+}
+
 var customThemeSourcesState struct {
-	sources atomic.Pointer[CustomThemeSources]
+	sources atomic.Pointer[themeDiscoverySources]
+}
+
+// ThemeDiagnostics returns the latest source generation's discovery warnings.
+// It performs no file I/O on the owner loop.
+func ThemeDiagnostics() []coding.ResourceDiagnostic {
+	sources := customThemeSourcesState.sources.Load()
+	if sources == nil {
+		return nil
+	}
+	result := sources.result.Load()
+	if result == nil {
+		return nil
+	}
+	return append([]coding.ResourceDiagnostic{}, result.diagnostics...)
+}
+
+func themeResourceInfos() []ThemeInfo {
+	sources := customThemeSourcesState.sources.Load()
+	if sources == nil {
+		return nil
+	}
+	result := sources.result.Load()
+	if result == nil {
+		return nil
+	}
+	return append([]ThemeInfo{}, result.infos...)
 }
 
 // SetCustomThemeSources installs the theme discovery sources.
 func SetCustomThemeSources(sources CustomThemeSources) {
 	copied := sources
 	copied.Paths = append([]string{}, sources.Paths...)
-	customThemeSourcesState.sources.Store(&copied)
+	customThemeSourcesState.sources.Store(&themeDiscoverySources{CustomThemeSources: copied})
+	// Source installation already runs at boot or on the theme worker. Capture
+	// diagnostics here, including when quiet startup skips the theme listing.
+	customThemeInfos()
 }
 
 func customThemeSources() CustomThemeSources {
@@ -1466,7 +1564,7 @@ func customThemeSources() CustomThemeSources {
 	if sources == nil {
 		return CustomThemeSources{}
 	}
-	return *sources
+	return sources.CustomThemeSources
 }
 
 // SetCustomThemesDir installs just the user's themes directory, which is what
