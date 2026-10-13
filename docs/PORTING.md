@@ -46,13 +46,14 @@ non-cyclic wait on an owner (`#10411`, `eb2fce43d`). Anthropic retries
 preferred strict tools once without strict constraints for documented schema-size/tool-limit
 rejections (`#10409`, `d4d53612b`). A failed blocking threshold compaction now ends its
 waiting generation with `model_error` instead of sending an oversized request
-(`89e5c2c07`). Focused regression tests cover these fixes.
+(`89e5c2c07`). `auth.json` lock acquisition retries transient Windows `EPERM`
+within a bounded count while non-Windows failures remain immediate (`#10801`,
+`e6fb2581d`). Focused regression tests cover these fixes.
 
 **v1.2.0 audit still open.** The new published configuration schemas still
 need a source-level parity review; they are configuration-editor support, not a
-runtime request path. Windows auth-lock acquisition also still lacks the
-bounded retry for transient `EPERM` (`#10801`, `e6fb2581d`). Remaining Durable
-v1.2.0 changes and out-of-scope codemode work are not fully audited. Do not
+runtime request path. Remaining Durable v1.2.0 changes and out-of-scope
+codemode work are not fully audited. Do not
 treat the fix list above as a complete v1.2.0 port.
 
 Ported from it so far: the built-in catalog, regenerated from the tag's own generator

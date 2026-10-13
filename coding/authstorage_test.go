@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -355,6 +356,73 @@ func TestAuthStorageLockingAndCancellation(t *testing.T) {
 	<-done
 	if read, err := storage.Read("late", ctxpkg.Background()); err != nil || read.APIKey.Key != "sk-late" {
 		t.Fatalf("read = %+v err = %v", read, err)
+	}
+}
+
+func TestAuthStorageRetriesTransientWindowsEPERMOnSyncLock(t *testing.T) {
+	previousPlatform, previousMkdir := authLockPlatform, authLockMkdir
+	t.Cleanup(func() { authLockPlatform, authLockMkdir = previousPlatform, previousMkdir })
+	authLockPlatform = "windows"
+	calls := 0
+	authLockMkdir = func(path string, mode os.FileMode) error {
+		calls++
+		if calls == 1 {
+			return &os.PathError{Op: "mkdir", Path: path, Err: syscall.EPERM}
+		}
+		return os.Mkdir(path, mode)
+	}
+	backend := NewFileAuthStorageBackend(filepath.Join(t.TempDir(), "auth.json"))
+	if _, err := backend.WithLock(func(*string) (LockResult, error) { return LockResult{}, nil }); err != nil {
+		t.Fatalf("WithLock error: %v", err)
+	}
+	if calls != 2 {
+		t.Fatalf("lock attempts = %d, want retry after transient EPERM", calls)
+	}
+}
+
+func TestAuthStorageRetriesTransientWindowsEPERMOnAsyncLock(t *testing.T) {
+	previousPlatform, previousMkdir := authLockPlatform, authLockMkdir
+	t.Cleanup(func() { authLockPlatform, authLockMkdir = previousPlatform, previousMkdir })
+	authLockPlatform = "windows"
+	calls := 0
+	authLockMkdir = func(path string, mode os.FileMode) error {
+		calls++
+		if calls == 1 {
+			return &os.PathError{Op: "mkdir", Path: path, Err: syscall.EPERM}
+		}
+		return os.Mkdir(path, mode)
+	}
+	backend := NewFileAuthStorageBackend(filepath.Join(t.TempDir(), "auth.json"))
+	if _, err := backend.WithLockAsync(ctxpkg.Background(), func(*string) (LockResult, error) {
+		return LockResult{}, nil
+	}); err != nil {
+		t.Fatalf("WithLockAsync error: %v", err)
+	}
+	if calls != 2 {
+		t.Fatalf("lock attempts = %d, want retry after transient EPERM", calls)
+	}
+}
+
+func TestAuthStorageBoundsWindowsEPERMRetriesAndRejectsItElsewhere(t *testing.T) {
+	previousPlatform, previousMkdir := authLockPlatform, authLockMkdir
+	t.Cleanup(func() { authLockPlatform, authLockMkdir = previousPlatform, previousMkdir })
+	path := filepath.Join(t.TempDir(), "auth.json")
+	eperm := &os.PathError{Op: "mkdir", Path: path + ".lock", Err: syscall.EPERM}
+	backend := NewFileAuthStorageBackend(path)
+
+	authLockPlatform = "windows"
+	calls := 0
+	authLockMkdir = func(string, os.FileMode) error { calls++; return eperm }
+	_, err := backend.WithLockAsync(ctxpkg.Background(), func(*string) (LockResult, error) { return LockResult{}, nil })
+	if !errors.Is(err, syscall.EPERM) || calls != authLockEpermRetries+1 {
+		t.Fatalf("persistent Windows EPERM err=%v calls=%d", err, calls)
+	}
+
+	authLockPlatform = "linux"
+	calls = 0
+	_, err = backend.WithLockAsync(ctxpkg.Background(), func(*string) (LockResult, error) { return LockResult{}, nil })
+	if !errors.Is(err, syscall.EPERM) || calls != 1 {
+		t.Fatalf("Linux EPERM err=%v calls=%d", err, calls)
 	}
 }
 

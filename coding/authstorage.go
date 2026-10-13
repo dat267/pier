@@ -10,9 +10,11 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/dat267/pier/ai"
@@ -45,6 +47,11 @@ type AuthStorageBackend interface {
 // authFileWriteMode applies only on creation so administrator-managed modes and
 // ACLs remain intact.
 const authFileWriteMode = 0o600
+
+var (
+	authLockPlatform = runtime.GOOS
+	authLockMkdir    = os.Mkdir
+)
 
 // authStorageData is the auth.json content: provider id to credential.
 type authStorageData map[string]ai.Credential
@@ -89,7 +96,7 @@ func (b *FileAuthStorageBackend) acquireAuthLockSync() (func(), error) {
 			return release, nil
 		}
 		lastErr = err
-		if !errors.Is(err, errAuthLocked) || attempt == maxAttempts {
+		if authLockRetryKind(err) == "" || attempt == maxAttempts {
 			return nil, err
 		}
 		time.Sleep(delayMs * time.Millisecond)
@@ -98,6 +105,16 @@ func (b *FileAuthStorageBackend) acquireAuthLockSync() (func(), error) {
 }
 
 var errAuthLocked = errors.New("auth storage is locked")
+
+func authLockRetryKind(err error) string {
+	if errors.Is(err, errAuthLocked) {
+		return "locked"
+	}
+	if authLockPlatform == "windows" && errors.Is(err, syscall.EPERM) {
+		return "eperm"
+	}
+	return ""
+}
 
 // acquireAuthLockDir creates the lock directory, treating a stale directory as
 // free.
@@ -114,7 +131,7 @@ func acquireAuthLockDir(path string) (func(), error) {
 			return nil, fmt.Errorf("%w: %s", errAuthLocked, lockPath)
 		}
 	}
-	if err := os.Mkdir(lockPath, 0o700); err != nil {
+	if err := authLockMkdir(lockPath, 0o700); err != nil {
 		if os.IsExist(err) {
 			return nil, fmt.Errorf("%w: %s", errAuthLocked, lockPath)
 		}
@@ -150,7 +167,10 @@ func acquireAuthLockDir(path string) (func(), error) {
 	}, nil
 }
 
-const authLockStaleMs = 30_000
+const (
+	authLockStaleMs      = 30_000
+	authLockEpermRetries = 5
+)
 
 // WithLock runs fn under the file lock.
 func (b *FileAuthStorageBackend) WithLock(fn func(current *string) (LockResult, error)) (any, error) {
@@ -244,6 +264,7 @@ func (b *FileAuthStorageBackend) acquireAuthLockAsync(ctx context.Context) (func
 	const maxDelayMs = 2_000
 	deadline := time.Now().Add(authLockStaleMs * time.Millisecond)
 	retry := 0
+	epermRetries := 0
 	for {
 		if err := ctx.Err(); err != nil {
 			return nil, err
@@ -256,8 +277,15 @@ func (b *FileAuthStorageBackend) acquireAuthLockAsync(ctx context.Context) (func
 			return nil, err
 		}
 		remaining := time.Until(deadline)
-		if !errors.Is(err, errAuthLocked) || remaining <= 0 {
+		retryKind := authLockRetryKind(err)
+		if retryKind == "" || remaining <= 0 {
 			return nil, err
+		}
+		if retryKind == "eperm" && epermRetries >= authLockEpermRetries {
+			return nil, err
+		}
+		if retryKind == "eperm" {
+			epermRetries++
 		}
 		baseDelayMs := min(math.Pow(2, float64(retry))*10, float64(maxDelayMs)/2)
 		retry++
