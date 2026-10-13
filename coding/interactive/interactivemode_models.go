@@ -347,6 +347,9 @@ type SessionWiring struct {
 	ShowStatus func(message string)
 	// ShowError reports an error.
 	ShowError func(message string)
+	// HandleFatalRuntimeError reports a fatal runtime error and shuts down
+	// (upstream handleFatalRuntimeError).
+	HandleFatalRuntimeError func(ctx context.Context, prefix string, err error)
 	// Shutdown stops the mode.
 	Shutdown func()
 	// RequestRender requests a render.
@@ -472,6 +475,10 @@ func (w *SessionWiring) HandleResumeSession(ctx context.Context, sessionPath str
 			})
 			return
 		}
+		if w.HandleFatalRuntimeError != nil {
+			w.HandleFatalRuntimeError(ctx, "Failed to resume session", err)
+			return
+		}
 		w.showError("Failed to resume session: " + err.Error())
 	}
 	resumeWith("")
@@ -500,13 +507,16 @@ func newSessionWiring(app *App) *SessionWiring {
 		PromptForMissingCwd: func(ctx context.Context, issue coding.SessionCwdIssue, onCwd func(cwd string, ok bool)) {
 			app.askMissingSessionCwd(issue, onCwd)
 		},
-		Slot:                 app.slot,
-		Settings:             app.settings,
-		SessionInfo:          app.sessionMgr,
-		UI:                   app.ui,
-		Keybindings:          app.keybindings.KeybindingsManager,
-		ShowStatus:           func(message string) { app.transcript.ShowStatus(message) },
-		ShowError:            func(message string) { app.showError(message) },
+		Slot:        app.slot,
+		Settings:    app.settings,
+		SessionInfo: app.sessionMgr,
+		UI:          app.ui,
+		Keybindings: app.keybindings.KeybindingsManager,
+		ShowStatus:  func(message string) { app.transcript.ShowStatus(message) },
+		ShowError:   func(message string) { app.showError(message) },
+		HandleFatalRuntimeError: func(ctx context.Context, prefix string, err error) {
+			app.trust.HandleFatalRuntimeError(ctx, prefix, err)
+		},
 		Shutdown:             func() { app.lifecycle.Shutdown(false) },
 		RequestRender:        func() { app.ui.RequestRender(false) },
 		ClearStatusIndicator: func() { app.uiState.ClearStatusIndicator("", false) },

@@ -57,6 +57,9 @@ type CommandWiring struct {
 
 	// ExportToHTML exports the session (the HTML exporter is out of scope).
 	ExportToHTML func(outputPath string) (string, error)
+	// HandleFatalRuntimeError reports a fatal runtime error and shuts down
+	// (upstream handleFatalRuntimeError).
+	HandleFatalRuntimeError func(ctx context.Context, prefix string, err error)
 	// NewSession starts a new session.
 	NewSession func(ctx context.Context) (bool, error)
 	// ImportFromJSONL imports a session ("" cwd = the session's cwd).
@@ -223,6 +226,10 @@ func (w *CommandWiring) HandleImportCommand(ctx context.Context, text string) {
 				}
 				importWith(selectedCwd)
 			})
+			return
+		}
+		if w.HandleFatalRuntimeError != nil {
+			w.HandleFatalRuntimeError(ctx, "Failed to import session", err)
 			return
 		}
 		w.showError("Failed to import session: " + err.Error())
@@ -646,6 +653,10 @@ func (w *CommandWiring) HandleClearCommand(ctx context.Context) {
 	}
 	cancelled, err := w.NewSession(ctx)
 	if err != nil {
+		if w.HandleFatalRuntimeError != nil {
+			w.HandleFatalRuntimeError(ctx, "Failed to create session", err)
+			return
+		}
 		w.showError("Failed to create session: " + err.Error())
 		return
 	}
@@ -869,6 +880,9 @@ func newCommandWiring(app *App) *CommandWiring {
 				return false, err
 			}
 			return result.Cancelled, nil
+		},
+		HandleFatalRuntimeError: func(ctx context.Context, prefix string, err error) {
+			app.trust.HandleFatalRuntimeError(ctx, prefix, err)
 		},
 		RunDetached: func(fn func()) bool {
 			return app.runDetached(func(ctx context.Context) error { fn(); return nil })

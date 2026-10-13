@@ -484,3 +484,18 @@ func TestDebugLogWritesAgentMessages(t *testing.T) {
 		t.Fatalf("debug log wrote session entries:\n%s", written)
 	}
 }
+
+// A session-creation failure is fatal (upstream handleFatalRuntimeError), not a
+// recoverable status message.
+func TestClearCommandFatalError(t *testing.T) {
+	wiring, _, _ := newCommandTestWiring(t)
+	fatal := []string{}
+	wiring.HandleFatalRuntimeError = func(ctx context.Context, prefix string, err error) {
+		fatal = append(fatal, prefix)
+	}
+	wiring.NewSession = func(context.Context) (bool, error) { return false, errors.New("boom") }
+	wiring.HandleClearCommand(context.Background())
+	if len(fatal) != 1 || fatal[0] != "Failed to create session" {
+		t.Fatalf("fatal = %v", fatal)
+	}
+}

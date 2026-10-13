@@ -281,6 +281,16 @@ func TestSessionSelectorWiring(t *testing.T) {
 	if statuses[len(statuses)-1] != "Resume cancelled" {
 		t.Fatalf("statuses = %v", statuses)
 	}
+	// Any other switch error is fatal (upstream handleFatalRuntimeError).
+	fatal := []string{}
+	wiring.HandleFatalRuntimeError = func(_ context.Context, prefix string, err error) { fatal = append(fatal, prefix) }
+	wiring.SwitchSession = func(context.Context, string, string) (*SessionSwitchResult, error) {
+		return nil, errors.New("boom")
+	}
+	wiring.HandleResumeSession(context.Background(), "session-e")
+	if len(fatal) != 1 || fatal[0] != "Failed to resume session" {
+		t.Fatalf("fatal = %v", fatal)
+	}
 }
 
 // waitForCondition polls until the condition holds or the timeout elapses.
