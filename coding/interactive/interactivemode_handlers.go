@@ -538,6 +538,9 @@ func newKeyWiring(app *App) *KeyWiring {
 			}
 			app.ui.RequestRender(true)
 		},
+		// app.message.copy: copy the selection or the last assistant message
+		// (upstream handleCopyCommand({flashConfirmation: true, preferSelection: true})).
+		OnCopy: func() { app.commands.HandleCopyCommand(true, true) },
 		OnThinkingToggle: func() {
 			// Pass the live display flag, not a copy: it is what the next toggle
 			// reads, so a copy left it stale and the second press re-derived the

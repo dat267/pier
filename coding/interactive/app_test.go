@@ -495,3 +495,12 @@ func TestExternalEditorUsesExpandedText(t *testing.T) {
 		t.Fatalf("external editor content = %q; want the expanded %q", captured, expanded)
 	}
 }
+
+// app.message.copy is bound (upstream onAction("app.message.copy", handleCopyCommand)).
+func TestKeyWiringCopyBound(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	if app.key.OnCopy == nil {
+		t.Fatal("app.message.copy has no handler")
+	}
+}
