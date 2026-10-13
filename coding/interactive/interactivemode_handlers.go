@@ -547,11 +547,9 @@ func newKeyWiring(app *App) *KeyWiring {
 		OnSessionTree:   func() { app.selectors.ShowTreeSelector(context.Background(), "", false) },
 		OnSessionFork:   func() { app.selectors.ShowUserMessageSelector(context.Background()) },
 		OnSessionResume: app.sessions.ShowSessionSelector,
-		OnSessionNew: func() {
-			if _, err := app.sessionNew(context.Background()); err != nil {
-				app.showWarning(err.Error())
-			}
-		},
+		// Upstream binds app.session.new to handleClearCommand: the status
+		// indicator is cleared and a failure is fatal, not a warning.
+		OnSessionNew:            func() { app.commands.HandleClearCommand(context.Background()) },
 		ShowTreeSelector:        func() { app.selectors.ShowTreeSelector(context.Background(), "", false) },
 		ShowUserMessageSelector: func() { app.selectors.ShowUserMessageSelector(context.Background()) },
 	}

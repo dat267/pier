@@ -448,3 +448,18 @@ func TestUpdateThinkingBlockVisibilityUpdatesComponents(t *testing.T) {
 		t.Fatal("the rendered assistant message did not hide its thinking block")
 	}
 }
+
+// ctrl+n (app.session.new) goes through handleClearCommand, which clears the
+// status indicator first (upstream onAction("app.session.new", handleClearCommand)).
+func TestKeyWiringSessionNewClearsStatus(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	app.uiState.ShowStatusIndicator(NewCompactionStatusIndicator(app.ui, "manual"))
+	if app.uiState.ActiveStatusIndicator == nil {
+		t.Fatal("setup: no active indicator")
+	}
+	app.key.OnSessionNew()
+	if app.uiState.ActiveStatusIndicator != nil {
+		t.Fatal("OnSessionNew did not clear the status indicator")
+	}
+}
