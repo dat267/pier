@@ -398,3 +398,13 @@ func TestAutocompleteCompletesArgumentsAfterLeadingWhitespace(t *testing.T) {
 		t.Fatalf("applied = %q", applied.Lines[0])
 	}
 }
+
+// Upstream trims textBeforeCursor with JS String.trim before the slash-command
+// check, so a U+FEFF prefix still reads as a slash command.
+func TestShouldTriggerFileCompletionUsesJSTrim(t *testing.T) {
+	line := "\uFEFF/foo"
+	p := &CombinedAutocompleteProvider{}
+	if p.ShouldTriggerFileCompletion([]string{line}, 0, len(line)) {
+		t.Fatal("U+FEFF-prefixed slash command should not trigger file completion")
+	}
+}

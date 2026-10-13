@@ -264,7 +264,7 @@ func walkDirectoryWithFd(ctx context.Context, baseDir string, fdPath string, que
 	}
 
 	var results []fileEntry
-	for _, line := range strings.Split(strings.TrimSpace(stdout.String()), "\n") {
+	for _, line := range strings.Split(jsTrim(stdout.String()), "\n") {
 		if line == "" {
 			continue
 		}
@@ -433,7 +433,7 @@ func (p *CombinedAutocompleteProvider) ApplyCompletion(lines []string, cursorLin
 		adjustedAfterCursor = afterCursor[1:]
 	}
 
-	isSlashCommand := strings.HasPrefix(prefix, "/") && strings.TrimSpace(beforePrefix) == "" &&
+	isSlashCommand := strings.HasPrefix(prefix, "/") && jsTrim(beforePrefix) == "" &&
 		!strings.Contains(prefix[1:], "/")
 	if isSlashCommand {
 		newLines := append([]string(nil), lines...)
@@ -655,7 +655,7 @@ func (p *CombinedAutocompleteProvider) getFileSuggestions(prefix string) []Autoc
 	var suggestions []AutocompleteItem
 	for _, entry := range entries {
 		name := entry.Name()
-		if !strings.HasPrefix(strings.ToLower(name), strings.ToLower(searchPrefix)) {
+		if !strings.HasPrefix(jsLower(name), jsLower(searchPrefix)) {
 			continue
 		}
 
@@ -737,8 +737,8 @@ func (p *CombinedAutocompleteProvider) getFileSuggestions(prefix string) []Autoc
 // scoreEntry scores a path against a query (higher is better).
 func (p *CombinedAutocompleteProvider) scoreEntry(filePath string, query string, isDirectory bool) int {
 	fileName := filepath.Base(filePath)
-	lowerFileName := strings.ToLower(fileName)
-	lowerQuery := strings.ToLower(query)
+	lowerFileName := jsLower(fileName)
+	lowerQuery := jsLower(query)
 
 	score := 0
 	switch {
@@ -748,7 +748,7 @@ func (p *CombinedAutocompleteProvider) scoreEntry(filePath string, query string,
 		score = 80
 	case strings.Contains(lowerFileName, lowerQuery):
 		score = 50
-	case strings.Contains(strings.ToLower(filePath), lowerQuery):
+	case strings.Contains(jsLower(filePath), lowerQuery):
 		score = 30
 	}
 	if isDirectory && score > 0 {
@@ -903,7 +903,7 @@ func (p *CombinedAutocompleteProvider) ShouldTriggerFileCompletion(lines []strin
 		cursorCol = 0
 	}
 	textBeforeCursor := currentLine[:cursorCol]
-	trimmed := strings.TrimSpace(textBeforeCursor)
+	trimmed := jsTrim(textBeforeCursor)
 	if strings.HasPrefix(trimmed, "/") && !strings.Contains(trimmed, " ") {
 		return false
 	}
