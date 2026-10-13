@@ -54,6 +54,9 @@ type RunWiring struct {
 	Display *DisplayOptions
 	// Verbose forces the expanded header and the startup notices.
 	Verbose bool
+	// QuietStartup is the resolved quiet-startup setting (upstream
+	// shouldShowStartupDetails reads it).
+	QuietStartup coding.QuietStartupSetting
 	// AppName is the product name.
 	AppName string
 	// Version is the running version.
@@ -289,7 +292,7 @@ func (w *RunWiring) BuildStartupHeader(scopedModels []coding.ScopedModel) tui.Co
 		RawKeyHint("!!", "to run bash (no context)"),
 		hint("app.message.followUp", "to queue follow-up"),
 		hint("app.message.dequeue", "to edit all queued messages"),
-		hint("app.clipboard.pasteImage", "to paste image (with text fallback)"),
+		hint("app.clipboard.pasteImage", "to paste files on macOS, images, or text"),
 		RawKeyHint("drop files", "to attach"),
 	}, "\n")
 	compactInstructions := strings.Join([]string{
@@ -299,8 +302,14 @@ func (w *RunWiring) BuildStartupHeader(scopedModels []coding.ScopedModel) tui.Co
 		RawKeyHint("!", "bash"),
 		hint("app.tools.expand", "more"),
 	}, theme.Fg("muted", " · "))
-	compactOnboarding := theme.Fg("dim",
-		"Press "+KeyText("app.tools.expand")+" to show full startup help and loaded resources.")
+	// Startup details (model scope, loaded resources) are hidden by
+	// quietStartup: true or "header" (upstream shouldShowStartupDetails).
+	showDetails := w.Verbose || (!w.QuietStartup.Enabled && !w.QuietStartup.Header)
+	compactOnboarding := "Press " + KeyText("app.tools.expand") + " to show full startup help"
+	if showDetails {
+		compactOnboarding += " and loaded resources"
+	}
+	compactOnboarding = theme.Fg("dim", compactOnboarding+".")
 	expanded := w.GetStartupExpansionState()
 	header := NewExpandableText(
 		func() string {
@@ -332,6 +341,7 @@ func (w *RunWiring) Init(ctx context.Context, scopedModels []coding.ScopedModel,
 	}
 	w.initialized = true
 
+	w.QuietStartup = quietStartup
 	// Header (unless silenced).
 	if w.HeaderContainer != nil {
 		if w.Verbose || !quietStartup.Enabled {

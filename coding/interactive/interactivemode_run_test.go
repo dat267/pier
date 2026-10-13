@@ -168,6 +168,14 @@ func TestRunStartupHeader(t *testing.T) {
 		!strings.Contains(lines, "ctrl+c/ctrl+d clear/exit") {
 		t.Fatalf("compact header = %q", lines)
 	}
+	// quietStartup: "header" hides the startup details (upstream
+	// shouldShowStartupDetails).
+	wiring.QuietStartup = coding.QuietStartupSetting{Header: true}
+	header := wiring.BuildStartupHeader(nil).(*ExpandableText)
+	lines = coding.StripAnsi(strings.Join(header.Render(200), "\n"))
+	if strings.Contains(lines, "and loaded resources") {
+		t.Fatalf("header claimed loaded resources with quietStartup header: %q", lines)
+	}
 
 	// Verbose expands the header.
 	wiring.Verbose = true
@@ -175,6 +183,9 @@ func TestRunStartupHeader(t *testing.T) {
 	lines = coding.StripAnsi(strings.Join(expanded.Render(200), "\n"))
 	if !strings.Contains(lines, "to interrupt") || !strings.Contains(lines, "drop files") {
 		t.Fatalf("expanded header = %q", lines)
+	}
+	if !strings.Contains(lines, "to paste files on macOS, images, or text") {
+		t.Fatalf("expanded header missing the paste hint: %q", lines)
 	}
 	if !wiring.GetStartupExpansionState() {
 		t.Fatal("expansion state")
