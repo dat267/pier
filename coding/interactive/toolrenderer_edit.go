@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"encoding/json"
+	"io"
 	"os"
 	"strings"
 	"sync/atomic"
@@ -286,9 +287,16 @@ func formatEditResult(args *editRenderArgs, callComponent *editCallComponent, re
 // to the normalized content, and diff (Go is synchronous).
 func computeEditsPreview(path string, edits []coding.Edit, cwd string) *editPreview {
 	absolutePath := coding.ResolveToCwd(path, cwd)
-	rawContent, err := os.ReadFile(absolutePath)
+	// Upstream checks read access first (wrapping its failure) and lets the
+	// read itself propagate raw.
+	file, err := os.Open(absolutePath)
 	if err != nil {
 		return &editPreview{Error: coding.EditFileErrorMessage(path, err)}
+	}
+	rawContent, err := io.ReadAll(file)
+	file.Close()
+	if err != nil {
+		return &editPreview{Error: err.Error()}
 	}
 	_, content := coding.SplitBom(coding.DecodeUTF8WithReplacement(rawContent))
 	normalizedContent := coding.NormalizeToLF(content)

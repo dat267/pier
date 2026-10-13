@@ -493,3 +493,16 @@ func TestComputeEditsPreviewReportsNodeErrorCode(t *testing.T) {
 		t.Fatalf("missing preview = %+v", preview)
 	}
 }
+
+// Upstream checks access first (wrapping its failure) and lets the read error
+// propagate raw, so a directory reports the read error rather than the wrapper.
+func TestComputeEditsPreviewDirectoryReportsRawError(t *testing.T) {
+	dir := t.TempDir()
+	preview := computeEditsPreview(dir, []coding.Edit{{OldText: "a", NewText: "b"}}, filepath.Dir(dir))
+	if preview == nil || preview.Error == "" {
+		t.Fatalf("directory preview = %+v", preview)
+	}
+	if strings.Contains(preview.Error, "Could not edit file") {
+		t.Fatalf("directory preview wrapped the read error: %q", preview.Error)
+	}
+}
