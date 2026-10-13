@@ -145,7 +145,7 @@ func TestBuildParamsToolsWithCacheControlOnLast(t *testing.T) {
 		Role    string          `json:"role"`
 		Content json.RawMessage `json:"content"`
 	}
-	if err := json.Unmarshal(mustMarshalJSON2(params.Messages), &msgs); err != nil {
+	if err := json.Unmarshal(mustMarshalJSON(params.Messages), &msgs); err != nil {
 		t.Fatal(err)
 	}
 	last := msgs[len(msgs)-1]
@@ -157,14 +157,6 @@ func TestBuildParamsToolsWithCacheControlOnLast(t *testing.T) {
 	if blocks[len(blocks)-1].CacheControl == nil {
 		t.Fatal("history cache breakpoint missing on last user block")
 	}
-}
-
-func mustMarshalJSON2(v any) json.RawMessage {
-	enc, err := MarshalJSON(v)
-	if err != nil {
-		panic(err)
-	}
-	return enc
 }
 
 func TestBuildParamsToolResultPairingAndSyntheticResults(t *testing.T) {
