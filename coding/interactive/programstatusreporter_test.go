@@ -149,3 +149,17 @@ func TestProgramStatusReporterReset(t *testing.T) {
 		t.Fatalf("reset status = %+v", got)
 	}
 }
+
+// Upstream's firstLine is `text.split(/\r?\n/, 1)[0]?.trim() || "Error"`, so a
+// lone CR is kept in the line and U+FEFF is trimmed.
+func TestProgramStatusFirstLine(t *testing.T) {
+	if got := firstLine("a\rb\nc"); got != "a\rb" {
+		t.Fatalf("lone CR = %q; want a\\rb", got)
+	}
+	if got := firstLine("a\r\nb"); got != "a" {
+		t.Fatalf("CRLF = %q; want a", got)
+	}
+	if got := firstLine("\uFEFF"); got != "Error" {
+		t.Fatalf("U+FEFF-only = %q; want Error", got)
+	}
+}

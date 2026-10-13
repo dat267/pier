@@ -410,7 +410,7 @@ func (w *SessionWiring) ShowSessionSelector() {
 			SessionSelectorOptions{
 				Post: w.Slot.UI.Post,
 				RenameSession: func(sessionPath string, currentName string) error {
-					next := strings.TrimSpace(currentName)
+					next := ai.JSTrim(currentName)
 					if next == "" {
 						return nil
 					}

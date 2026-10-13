@@ -15,10 +15,11 @@ type BlockedStatus struct {
 }
 
 func firstLine(text string) string {
-	if index := strings.IndexAny(text, "\r\n"); index >= 0 {
-		text = text[:index]
+	// Upstream splits on /\r?\n/ (a lone CR is not a line break).
+	if index := strings.IndexByte(text, '\n'); index >= 0 {
+		text = strings.TrimSuffix(text[:index], "\r")
 	}
-	if trimmed := strings.TrimSpace(text); trimmed != "" {
+	if trimmed := ai.JSTrim(text); trimmed != "" {
 		return trimmed
 	}
 	return "Error"

@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
 )
@@ -162,7 +163,7 @@ func formatCompactList(labels []string) string {
 func formatCompactListSorted(labels []string, sorted bool) string {
 	trimmed := make([]string, 0, len(labels))
 	for _, label := range labels {
-		if value := strings.TrimSpace(label); value != "" {
+		if value := ai.JSTrim(label); value != "" {
 			trimmed = append(trimmed, value)
 		}
 	}
