@@ -25,29 +25,39 @@ const RemoteCatalogAttemptTimeoutMS int64 = 4_000
 // RemoteCatalogRefreshIntervalMS is how long a stored catalog stays fresh.
 const RemoteCatalogRefreshIntervalMS int64 = 4 * 60 * 60 * 1000
 
-// mergeCatalogModels merges dynamic models over a baseline by model id. The
-// lookup is one map pass: upstream mergeModels ran a findIndex per remote
+const personalizedRemoteCatalogModelTypes = "chat,image,classifier"
+
+// mergeCatalogModels merges dynamic models over a baseline by model type and id.
+// The lookup is one map pass: upstream mergeModels ran a findIndex per remote
 // model, quadratic in catalog size (c34f2d6ad). Insertion order is preserved,
 // so a replacement lands at its first position and new ids append, matching the
-// upstream Map's values() order. The upstream key is `type\0id`; this catalog
-// is chat-only, so the type component is constant and id keying is equivalent.
+// upstream Map's values() order.
 func mergeCatalogModels(baseline, dynamic []*ai.Model) []*ai.Model {
+	key := func(model *ai.Model) string {
+		modelType := model.Type
+		if modelType == "" {
+			modelType = "chat"
+		}
+		return modelType + "\x00" + model.ID
+	}
 	index := make(map[string]int, len(baseline)+len(dynamic))
 	merged := make([]*ai.Model, 0, len(baseline)+len(dynamic))
 	for _, model := range baseline {
-		if at, ok := index[model.ID]; ok {
+		modelKey := key(model)
+		if at, ok := index[modelKey]; ok {
 			merged[at] = model
 			continue
 		}
-		index[model.ID] = len(merged)
+		index[modelKey] = len(merged)
 		merged = append(merged, model)
 	}
 	for _, model := range dynamic {
-		if at, ok := index[model.ID]; ok {
+		modelKey := key(model)
+		if at, ok := index[modelKey]; ok {
 			merged[at] = model
 			continue
 		}
-		index[model.ID] = len(merged)
+		index[modelKey] = len(merged)
 		merged = append(merged, model)
 	}
 	return merged
@@ -254,6 +264,133 @@ func WithRemoteCatalog(provider *ai.Provider, catalogBaseURL string, localGenera
 		refresh.Publish(ai.ModelsPublication{
 			Persist: entry,
 			Update:  func() { dynamicModels = publishedModels },
+		})
+		return nil
+	}
+	return wrapped
+}
+
+// CatalogPersonalizer applies credential-specific availability and metadata to a catalog.
+type CatalogPersonalizer func(catalog []*ai.Model, refresh *ai.RefreshModelsContext) ([]*ai.Model, error)
+
+// WithPersonalizedCatalog replaces a provider catalog with a credential-specific list. The stored
+// list is the personalized catalog, so it remains available offline. The optional pi.dev overlay
+// is merged before personalization; unlike WithRemoteCatalog, this wrapper does not reuse its ETag
+// or refresh interval because the user model list may change with the key.
+func WithPersonalizedCatalog(
+	provider *ai.Provider,
+	personalize CatalogPersonalizer,
+	catalogBaseURL string,
+	localGeneratedAt int64,
+	hasLocalGeneratedAt bool,
+	fetch RemoteCatalogFetcher,
+) *ai.Provider {
+	if catalogBaseURL == "" {
+		catalogBaseURL = DefaultCatalogBaseURL
+	}
+	if fetch == nil {
+		attemptTimeout := RemoteCatalogAttemptTimeoutMS
+		fetch = func(ctx context.Context, request *http.Request) (*http.Response, error) {
+			return FetchWithRetry(ctx, request, http.DefaultClient, FetchRetryOptions{AttemptTimeoutMS: &attemptTimeout})
+		}
+	}
+	personalModels := []*ai.Model{}
+	getModels := func() []*ai.Model {
+		if len(personalModels) == 0 {
+			return provider.GetModels()
+		}
+		return personalModels
+	}
+	streams := funcStreams{
+		stream: func(model *ai.Model, transcript ai.TranscriptContext, options *ai.StreamOptions) *ai.AssistantMessageEventStream {
+			return provider.Stream(model, transcript, options)
+		},
+		streamSimple: func(model *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+			return provider.StreamSimple(model, transcript, options)
+		},
+	}
+	var implementation ai.ProviderStreams = streams
+	if provider.HasDeferred() {
+		implementation = funcStreamsWithDeferred{funcStreams: streams, base: provider}
+	}
+	wrapped := ai.CreateProvider(ai.CreateProviderOptions{
+		ID: provider.ID, Name: provider.Name, BaseURL: provider.BaseURL, Headers: provider.Headers,
+		Auth: provider.Auth, ModelsGetter: getModels, Single: implementation,
+	})
+	wrapped.FilterModels = provider.FilterModels
+	wrapped.RefreshModels = func(refresh *ai.RefreshModelsContext) error {
+		var stored []*ai.Model
+		if refresh.Stored != nil {
+			for _, model := range refresh.Stored.Models {
+				if model.Provider == provider.ID {
+					stored = append(stored, model)
+				}
+			}
+		}
+		if !refresh.Publish(ai.ModelsPublication{Update: func() { personalModels = stored }}) {
+			return nil
+		}
+		ctx := refresh.Ctx
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		if !refresh.AllowNetwork || ctx.Err() != nil {
+			return nil
+		}
+		endpoint := strings.TrimSuffix(catalogBaseURL, "/") + "/api/models/providers/" + url.PathEscape(provider.ID)
+		request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+		if err != nil {
+			return err
+		}
+		request.Header.Set("accept", "application/json")
+		request.Header.Set("User-Agent", PiUserAgent(Version))
+		query := request.URL.Query()
+		query.Set("types", personalizedRemoteCatalogModelTypes)
+		request.URL.RawQuery = query.Encode()
+		response, err := fetch(ctx, request)
+		if err != nil {
+			return err
+		}
+		defer response.Body.Close()
+		var remote []*ai.Model
+		if response.StatusCode != http.StatusNotFound && response.StatusCode != http.StatusNotImplemented {
+			if response.StatusCode < 200 || response.StatusCode >= 300 {
+				return fmt.Errorf("Model catalog request failed for %s: %d", provider.ID, response.StatusCode)
+			}
+			raw, err := io.ReadAll(io.LimitReader(response.Body, 16<<20))
+			if err != nil {
+				return err
+			}
+			var payload any
+			if err := json.Unmarshal(raw, &payload); err != nil {
+				return err
+			}
+			parsed, err := ParseRemoteCatalog(provider.ID, payload)
+			if err != nil {
+				return err
+			}
+			lastModified := int64(0)
+			if parsedTime, parseErr := http.ParseTime(response.Header.Get("last-modified")); parseErr == nil {
+				lastModified = parsedTime.UnixMilli()
+			}
+			if !hasLocalGeneratedAt || lastModified > localGeneratedAt {
+				remote = parsed
+			}
+		}
+		catalog := mergeCatalogModels(provider.GetModels(), remote)
+		personalized, err := personalize(catalog, refresh)
+		if err != nil {
+			return err
+		}
+		if refresh.Ctx.Err() != nil {
+			return nil
+		}
+		entry := &ai.ModelsStoreEntry{Models: personalized}
+		checkedAt := time.Now().UnixMilli()
+		entry.CheckedAt = &checkedAt
+		refresh.Publish(ai.ModelsPublication{
+			Persist: entry,
+			Update:  func() { personalModels = personalized },
 		})
 		return nil
 	}

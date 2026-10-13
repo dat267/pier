@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -58,6 +60,77 @@ func TestParseRemoteCatalog(t *testing.T) {
 	if _, err := ParseRemoteCatalog("p", "nope"); err == nil ||
 		err.Error() != `Invalid model catalog for provider "p"` {
 		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestOpenRouterRefreshUsesTheKeySpecificModelCatalog(t *testing.T) {
+	var userRequests int
+	var userAuthorization string
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		switch request.URL.Path {
+		case "/api/models/providers/openrouter":
+			writer.Header().Set("Last-Modified", "Sat, 01 Jan 2033 00:00:00 GMT")
+			_, _ = writer.Write([]byte(`[{"id":"openrouter/auto","name":"Auto","api":"openai-completions","input":["text"],"contextWindow":200000,"maxTokens":4096,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0}}]`))
+		case "/api/v1/models/user":
+			userRequests++
+			userAuthorization = request.Header.Get("Authorization")
+			_, _ = writer.Write([]byte(`{"data":[{"id":"openrouter/auto","context_length":8192,"top_provider":{"context_length":4096,"max_completion_tokens":2048},"pricing":{"prompt":"0.00001","completion":"0.00002","overrides":[{"min_prompt_tokens":10000,"prompt":"0.00003","completion":"0.00004"}]}}]}`))
+		default:
+			http.NotFound(writer, request)
+		}
+	}))
+	defer server.Close()
+
+	dir := t.TempDir()
+	modelsPath := filepath.Join(dir, "models.json")
+	if err := os.WriteFile(modelsPath, []byte(`{"providers":{"openrouter":{"baseUrl":"`+server.URL+`/api/v1"}}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	credentials := newMemoryCredentialStore()
+	credentials.entries["openrouter"] = &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "user-key"}}
+	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
+		Credentials: credentials, ModelsPath: modelsPath, ModelsStore: NewInMemoryCodingAgentModelsStore(),
+		CatalogBaseURL: server.URL, AllowModelNetwork: true, RefreshOnCreate: boolPtr(false),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	allowNetwork, force := true, true
+	if _, err := runtime.Refresh(ctxpkg.Background(), &ModelsRefreshCallOptions{
+		Providers: []string{"openrouter"}, AllowNetwork: &allowNetwork, Force: &force,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	models := runtime.GetModels("openrouter")
+	if len(models) != 1 || models[0].ID != "openrouter/auto" {
+		t.Fatalf("OpenRouter models = %d entries, want only the allowed router model", len(models))
+	}
+	model := models[0]
+	if model.ContextWindow != 4096 || model.MaxTokens != 2048 || model.Cost.Input != 10 || model.Cost.Output != 20 ||
+		len(model.Cost.Tiers) != 1 || model.Cost.Tiers[0].InputTokensAbove != 10000 ||
+		model.Cost.Tiers[0].Input != 30 || model.Cost.Tiers[0].Output != 40 {
+		t.Fatalf("personalized model limits/prices = %+v", model)
+	}
+	if userRequests != 1 || userAuthorization != "Bearer user-key" {
+		t.Fatalf("user-model requests = %d authorization = %q", userRequests, userAuthorization)
+	}
+	allowNetwork = false
+	if _, err := runtime.Refresh(ctxpkg.Background(), &ModelsRefreshCallOptions{
+		Providers: []string{"openrouter"}, AllowNetwork: &allowNetwork,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if offlineModels := runtime.GetModels("openrouter"); len(offlineModels) != 1 || offlineModels[0].ID != "openrouter/auto" || userRequests != 1 {
+		t.Fatalf("offline personalized models = %+v, user-list requests = %d", offlineModels, userRequests)
+	}
+}
+
+func TestMergeCatalogModelsKeepsSameIdAcrossModelTypes(t *testing.T) {
+	chat := &ai.Model{ID: "shared", Type: "chat", Provider: "openrouter"}
+	image := &ai.Model{ID: "shared", Type: "image", Provider: "openrouter"}
+	got := mergeCatalogModels([]*ai.Model{chat}, []*ai.Model{image})
+	if len(got) != 2 || got[0] != chat || got[1] != image {
+		t.Fatalf("merged model types = %+v, want chat and image entries with the shared id", got)
 	}
 }
 

@@ -17,8 +17,10 @@ porting progress, and out-of-scope areas are recorded below. Earlier release
 notes retain upstream versions and commit IDs as historical context.
 
 **v1.2.0 parity fixes so far.** The built-in catalog is regenerated from the
-pinned v1.2.0 generator and current upstream catalog APIs; OpenRouter's negative
-router placeholder prices normalize to zero (`#10672`, `ee409a85f`). Mistral's
+pinned v1.2.0 generator and current upstream catalog APIs. OpenRouter model
+refresh now filters by the credential's `GET /models/user` list, applies its
+limits/prices and retains the personalized cache offline (`#10672`, `ee409a85f`);
+negative router placeholder prices normalize to zero. Mistral's
 request timeout now applies only while
 waiting for response headers, not during an active response stream (#10609,
 `6b07b4e57`). Retry classification includes the gateway error wording
@@ -40,10 +42,9 @@ status 1 (`#10799`, `441f5767c`). Anthropic retries preferred strict tools once
 without strict constraints for documented schema-size/tool-limit rejections
 (`#10409`, `d4d53612b`). Focused regression tests cover these fixes.
 
-**v1.2.0 audit still open.** No implementation has been started for OpenRouter's
-per-key model catalog (`GET /models/user`) or the new published configuration
-schemas. These need separate source-level parity reviews; the schemas are
-configuration-editor support, not a runtime request path. Windows auth-lock
+**v1.2.0 audit still open.** The new published configuration schemas still
+need a source-level parity review; they are configuration-editor support, not a
+runtime request path. Windows auth-lock
 acquisition also still lacks the bounded retry for transient `EPERM` (`#10801`,
 `e6fb2581d`). Durable v1.2.0 additions and out-of-scope codemode work are not
 fully audited. Do not treat the fix list above as a complete v1.2.0 port.

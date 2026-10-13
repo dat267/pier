@@ -26,8 +26,10 @@ type DeferredStreamer interface {
 
 // RefreshModelsContext is the argument to a dynamic provider's refresh.
 type RefreshModelsContext struct {
-	Credential   *Credential
-	Stored       *ModelsStoreEntry
+	Credential *Credential
+	Stored     *ModelsStoreEntry
+	// BaseURL is the provider's effective base URL after configuration overrides.
+	BaseURL      string
 	Publish      func(publication ModelsPublication) bool
 	AllowNetwork bool
 	// Force is only defined when AllowNetwork is set (upstream passes
@@ -730,6 +732,7 @@ func (m *Models) runProviderRefreshPhase(provider *Provider, credential *Credent
 	return provider.RefreshModels(&RefreshModelsContext{
 		Credential: credential,
 		Stored:     stored,
+		BaseURL:    provider.BaseURL,
 		Publish: func(publication ModelsPublication) bool {
 			return m.publishProviderModels(provider.ID, generation, signal, publication)
 		},

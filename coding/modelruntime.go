@@ -18,9 +18,10 @@ import (
 // the coding agent and SDK consumers.
 //
 // D37: upstream wraps every static built-in provider with the pi.dev remote
-// catalog overlay (core/remote-catalog-provider.ts). That overlay is unported,
-// so the runtime uses the built-in provider factories as-is. D35 also applies:
-// extension provider registration is extension mechanics and omitted.
+// catalog overlay (core/remote-catalog-provider.ts). The runtime now layers the
+// remote and per-key catalog for OpenRouter; other providers still use their
+// built-in catalogs. D35 also applies: extension provider registration is
+// extension mechanics and omitted.
 
 // ModelRuntimeSnapshot is the cached provider/model/auth view.
 type ModelRuntimeSnapshot struct {
@@ -162,7 +163,18 @@ func CreateModelRuntime(options CreateModelRuntimeOptions) (*ModelRuntime, error
 			Auth:                map[string]*ai.AuthCheck{},
 		},
 	}
+	generatedAt := ai.GetBuiltinModelDataGeneratedAt()
+	var localGeneratedAt int64
+	if generatedAt != nil {
+		localGeneratedAt = generatedAt.UnixMilli()
+	}
 	for _, provider := range providers.BuiltinProviders() {
+		if provider.ID == "openrouter" {
+			provider = WithPersonalizedCatalog(
+				provider, ai.PersonalizeOpenRouterCatalog, options.CatalogBaseURL,
+				localGeneratedAt, generatedAt != nil, nil,
+			)
+		}
 		runtime.defaults[provider.ID] = provider
 	}
 	// The user's provider extensions register alongside the built-ins so the
