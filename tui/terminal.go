@@ -14,7 +14,8 @@ import (
 	"golang.org/x/term"
 )
 
-// compileRegex caches the small set of patterns used during input handling.
+// regexCache caches the small set of input-handling patterns compiled by
+// compileRegex.
 var regexCache sync.Map
 
 func compileRegex(pattern string) *regexp.Regexp {

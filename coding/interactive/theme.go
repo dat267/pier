@@ -203,7 +203,7 @@ func (t *Theme) Bg(color ThemeBg, text string) string {
 	return ansi + text + "\x1b[49m"
 }
 
-// styleColorsEnabled mirrors chalk's color-support detection: when disabled
+// styleColorsState mirrors chalk's color-support detection: when disabled
 // the style helpers return plain text (divergence D86: a package switch
 // instead of chalk's NO_COLOR/FORCE_COLOR environment handling).
 var styleColorsState struct {
@@ -978,7 +978,7 @@ func customThemeInfos() []ThemeInfo {
 	return result
 }
 
-// customThemePathsByName maps a theme's declared name to its file, so a theme can
+// customThemePathByName maps a theme's declared name to its file, so a theme can
 // be resolved by the name its setting references rather than by its file name.
 func customThemePathByName(name string) string {
 	for _, info := range customThemeInfos() {
@@ -1467,8 +1467,8 @@ func StopThemeWatcher() {
 
 func stopThemeWatcher() { StopThemeWatcher() }
 
-// terminalCapabilitiesTrueColor reports the terminal's truecolor support; the
-// host installs the capability flag (D69: injectable capabilities).
+// trueColorState reports the terminal's truecolor support; the host installs
+// the capability flag (D69: injectable capabilities).
 var trueColorState struct {
 	enabled atomic.Bool
 	known   atomic.Bool

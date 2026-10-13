@@ -635,12 +635,13 @@ func (w *RunWiring) phase(name string) func() {
 // the next record.
 const stallLogMaxBytes = 4 << 20
 
+// stallWriteMu serializes the UI goroutine's final record against the watchdog
+// timer's mid-flight one.
+var stallWriteMu sync.Mutex
+
 // writeStallRecord appends the slow phase and every goroutine stack, so a stall
 // names where the loop was instead of only how long it took. note (possibly
-// empty) distinguishes a mid-flight capture from the after-phase one. The mutex
-// serializes the UI goroutine's final record against the watchdog timer's
-// mid-flight one.
-var stallWriteMu sync.Mutex
+// empty) distinguishes a mid-flight capture from the after-phase one.
 
 func (w *RunWiring) writeStallRecord(name string, elapsed time.Duration, note string) {
 	stallWriteMu.Lock()
