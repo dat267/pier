@@ -105,9 +105,8 @@ func PersonalizeOpenRouterCatalog(catalog []*Model, refresh *RefreshModelsContex
 		if item.TopProvider.MaxCompletionTokens > 0 {
 			copyModel.MaxTokens = item.TopProvider.MaxCompletionTokens
 		}
-		if len(item.Pricing.Prompt) > 0 || len(item.Pricing.Completion) > 0 ||
-			len(item.Pricing.InputCacheRead) > 0 || len(item.Pricing.InputCacheWrite) > 0 {
-			copyModel.Cost = openRouterModelCost(item.Pricing)
+		if item.Pricing != nil {
+			copyModel.Cost = openRouterModelCost(*item.Pricing)
 		}
 		personalized = append(personalized, &copyModel)
 	}
@@ -121,7 +120,7 @@ type openRouterUserModel struct {
 		ContextLength       int64 `json:"context_length"`
 		MaxCompletionTokens int64 `json:"max_completion_tokens"`
 	} `json:"top_provider"`
-	Pricing openRouterPricing `json:"pricing"`
+	Pricing *openRouterPricing `json:"pricing"`
 }
 
 type openRouterPricing struct {

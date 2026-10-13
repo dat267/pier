@@ -21,6 +21,24 @@ func TestPersonalizeOpenRouterCatalogRejectsMalformedResponse(t *testing.T) {
 	}
 }
 
+func TestPersonalizeOpenRouterCatalogUsesEmptyPricingObject(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"data":[{"id":"m","pricing":{}}]}`))
+	}))
+	defer server.Close()
+	model := &Model{ID: "m", Provider: "openrouter", Cost: ModelCost{ModelCostRates: ModelCostRates{Input: 3, Output: 4}}}
+	result, err := PersonalizeOpenRouterCatalog([]*Model{model}, &RefreshModelsContext{
+		Credential: &Credential{Type: CredentialAPIKey, APIKey: &ApiKeyCredential{Key: "key"}},
+		BaseURL:    server.URL, Ctx: context.Background(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result) != 1 || result[0].Cost.Input != 0 || result[0].Cost.Output != 0 {
+		t.Fatalf("personalized empty pricing = %+v", result)
+	}
+}
+
 func TestPersonalizeOpenRouterCatalogKeepsNonChatAndFallsBackOnAuthErrors(t *testing.T) {
 	chat := &Model{ID: "openrouter/auto", Provider: "openrouter", ContextWindow: 1000}
 	image := &Model{ID: "openrouter/image", Provider: "openrouter", Type: "image"}
