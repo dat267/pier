@@ -46,6 +46,11 @@ type EventDispatcher struct {
 	// banner. Runs on queue_update so consumed messages clear the banner
 	// (upstream parity: updatePendingMessagesDisplay).
 	UpdatePendingMessagesDisplay func()
+	// UpdateTerminalTitle refreshes the terminal title on session_info_changed.
+	UpdateTerminalTitle func()
+	// UpdateEditorBorderColor refreshes the editor border on
+	// thinking_level_changed.
+	UpdateEditorBorderColor func()
 	// FlushCompactionQueue drains the queued compaction messages.
 	FlushCompactionQueue func(willRetry bool)
 	// StartWork runs blocking work off the UI loop. The flush can start a
@@ -179,12 +184,18 @@ func (d *EventDispatcher) HandleEvent(event *coding.SessionEvent) {
 		}
 
 	case coding.SessionInfoChanged:
+		if d.UpdateTerminalTitle != nil {
+			d.UpdateTerminalTitle()
+		}
 		if d.Footer != nil {
 			d.Footer.Invalidate()
 		}
 		d.requestRender()
 
 	case coding.SessionThinkingLevelChanged:
+		if d.UpdateEditorBorderColor != nil {
+			d.UpdateEditorBorderColor()
+		}
 		if d.Footer != nil {
 			d.Footer.Invalidate()
 		}

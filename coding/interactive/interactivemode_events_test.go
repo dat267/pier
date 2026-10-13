@@ -430,3 +430,17 @@ func TestThinkingLevelReadsTheSessionState(t *testing.T) {
 		t.Fatalf("missing session thinking level = %q; want off", got)
 	}
 }
+
+// Upstream refreshes the terminal title on session_info_changed and the editor
+// border color on thinking_level_changed.
+func TestEventDispatcherTitleAndBorder(t *testing.T) {
+	dispatcher := NewEventDispatcher(nil, nil, nil, nil, nil, nil, nil)
+	titles, borders := 0, 0
+	dispatcher.UpdateTerminalTitle = func() { titles++ }
+	dispatcher.UpdateEditorBorderColor = func() { borders++ }
+	dispatcher.HandleEvent(&coding.SessionEvent{Type: coding.SessionInfoChanged})
+	dispatcher.HandleEvent(&coding.SessionEvent{Type: coding.SessionThinkingLevelChanged})
+	if titles != 1 || borders != 1 {
+		t.Fatalf("titles=%d borders=%d; want 1 and 1", titles, borders)
+	}
+}

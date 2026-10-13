@@ -499,6 +499,8 @@ func NewApp(options AppOptions) *App {
 	app.events.MarkdownPreparation = markdownPreparation
 	app.events.ShowError = func(message string) { app.showError(message) }
 	app.events.UpdatePendingMessagesDisplay = app.queue.UpdatePendingMessagesDisplay
+	app.events.UpdateTerminalTitle = func() { app.lifecycle.UpdateTerminalTitle() }
+	app.events.UpdateEditorBorderColor = func() { app.updateEditorBorderColor() }
 	app.events.Display = app.display
 	app.events.MarkdownTheme = app.markdownTheme()
 	app.events.TerminalProgress = func(active bool) { terminal.SetProgress(active) }
