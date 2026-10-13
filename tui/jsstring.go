@@ -27,6 +27,9 @@ func jsLength(s string) int {
 // strings.TrimSpace).
 func jsTrim(s string) string { return strings.TrimFunc(s, isWhitespaceRune) }
 
+// jsTrimLeft implements String.prototype.trimStart.
+func jsTrimLeft(s string) string { return strings.TrimLeftFunc(s, isWhitespaceRune) }
+
 // jsLower lowercases like String.prototype.toLowerCase: full Unicode case
 // mapping with the Greek final-sigma and U+0130 special cases that Go's
 // strings.ToLower (simple mapping) omits.

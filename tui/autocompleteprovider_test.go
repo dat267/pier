@@ -408,3 +408,14 @@ func TestShouldTriggerFileCompletionUsesJSTrim(t *testing.T) {
 		t.Fatal("U+FEFF-prefixed slash command should not trigger file completion")
 	}
 }
+
+// Upstream uses trimStart (the JS whitespace set), so a U+FEFF prefix still
+// reads as a slash command.
+func TestAutocompleteTrimsLeadingJSSpace(t *testing.T) {
+	provider := NewCombinedAutocompleteProvider([]CommandEntry{{Name: "model"}}, ".", "")
+	line := "\uFEFF/mod"
+	result := provider.GetSuggestions(context.Background(), []string{line}, 0, len(line), false)
+	if result == nil || len(result.Items) != 1 || result.Items[0].Value != "model" {
+		t.Fatalf("U+FEFF-prefixed command not completed: %+v", result)
+	}
+}
