@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
@@ -447,5 +448,27 @@ func TestCycleModelStatusText(t *testing.T) {
 	}
 	if len(statuses) != 1 || statuses[0] != "Only one model in scope" {
 		t.Fatalf("statuses = %v", statuses)
+	}
+}
+
+// CycleModel runs the subscription-auth warning check for the new model
+// (upstream cycleModel's maybeWarnAboutAnthropicSubscriptionAuth(result.model)).
+func TestCycleModelWarnsAnthropic(t *testing.T) {
+	controller, session, _ := newQueueTestController(t)
+	warned := make(chan string, 1)
+	controller.WarnAnthropic = func(ctx context.Context, model *ai.Model) { warned <- model.ID }
+	session.cycleResult = &coding.ModelCycleResult{
+		Model: &ai.Model{Provider: "anthropic", ID: "claude"}, ThinkingLevel: "off",
+	}
+	if _, err := controller.CycleModel(context.Background(), "forward"); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case id := <-warned:
+		if id != "claude" {
+			t.Fatalf("warned = %q", id)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("the model switch did not run the Anthropic warning")
 	}
 }

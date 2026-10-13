@@ -487,6 +487,9 @@ func NewApp(options AppOptions) *App {
 	app.queue.ShowStatus = func(message string) { app.transcript.ShowStatus(message) }
 	app.queue.ShowError = func(message string) { app.showError(message) }
 	app.queue.ShowWarning = func(message string) { app.showWarning(message) }
+	app.queue.WarnAnthropic = func(ctx context.Context, model *ai.Model) {
+		app.startup.MaybeWarnAboutAnthropicSubscriptionAuth(ctx, model)
+	}
 
 	app.events = NewEventDispatcher(app.transcript, app.uiState, app.footer, app.settings, app.session, app.sessionMgr, app.defaultEditor)
 	app.programStatus = NewProgramStatusReporter(

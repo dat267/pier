@@ -51,6 +51,9 @@ type QueueController struct {
 	ShowStatus func(message string)
 	// ShowError reports an error.
 	ShowError func(message string)
+	// WarnAnthropic runs the subscription-auth warning check for a switched
+	// model (upstream cycleModel).
+	WarnAnthropic func(ctx context.Context, model *ai.Model)
 	// ShowWarning reports a warning.
 	ShowWarning func(message string)
 	// RequestRender requests a render.
@@ -421,6 +424,9 @@ func (c *QueueController) CycleModel(ctx context.Context, direction string) (*co
 		}
 	}
 	c.showStatus("Switched to " + name + thinking)
+	if c.WarnAnthropic != nil && result.Model != nil {
+		go c.WarnAnthropic(ctx, result.Model)
+	}
 	return result, nil
 }
 

@@ -495,8 +495,13 @@ func newModelWiring(app *App) *ModelWiring {
 		UpdateEditorBorderColor:      func() { app.updateEditorBorderColor() },
 		ShowStatus:                   func(message string) { app.transcript.ShowStatus(message) },
 		ShowError:                    func(message string) { app.showError(message) },
-		OnModelSelected:              func(model *ai.Model) {},
-		RequestRender:                func() { app.ui.RequestRender(false) },
+		OnModelSelected: func(model *ai.Model) {
+			// Upstream maybeWarnAboutAnthropicSubscriptionAuth(model) on selection.
+			if app.startup != nil {
+				go app.startup.MaybeWarnAboutAnthropicSubscriptionAuth(context.Background(), model)
+			}
+		},
+		RequestRender: func() { app.ui.RequestRender(false) },
 	}
 }
 
