@@ -246,3 +246,16 @@ func TestTrimPartialClosingFences(t *testing.T) {
 		t.Fatalf("quote = %+v", quote)
 	}
 }
+
+// Upstream's empty-markdown check is `text.trim() === ""`, i.e. the JS
+// whitespace set (U+FEFF is blank, U+0085 is not).
+func TestMarkdownEmptyCheckUsesJSTrim(t *testing.T) {
+	blank := NewMarkdown("\uFEFF", 0, 0, MarkdownTheme{}, nil, MarkdownOptions{})
+	if lines := blank.Render(80); len(lines) != 0 {
+		t.Fatalf("U+FEFF-only markdown = %q; want empty", lines)
+	}
+	content := NewMarkdown("\u0085", 0, 0, MarkdownTheme{}, nil, MarkdownOptions{})
+	if lines := content.Render(80); len(lines) == 0 {
+		t.Fatal("U+0085 markdown should render")
+	}
+}

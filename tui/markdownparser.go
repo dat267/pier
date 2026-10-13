@@ -451,13 +451,13 @@ func (l *mdLexer) tryLexTable(source string) (*MdToken, string, bool) {
 }
 
 func parseTableAlignments(line string) ([]string, bool) {
-	trimmed := strings.TrimSpace(line)
+	trimmed := jsTrim(line)
 	trimmed = strings.TrimPrefix(trimmed, "|")
 	trimmed = strings.TrimSuffix(trimmed, "|")
 	parts := strings.Split(trimmed, "|")
 	alignments := make([]string, 0, len(parts))
 	for _, part := range parts {
-		cell := strings.TrimSpace(part)
+		cell := jsTrim(part)
 		if cell == "" || !strings.Contains(cell, "-") {
 			return nil, false
 		}
@@ -478,13 +478,13 @@ func parseTableAlignments(line string) ([]string, bool) {
 }
 
 func splitTableRow(line string) []string {
-	trimmed := strings.TrimSpace(line)
+	trimmed := jsTrim(line)
 	trimmed = strings.TrimPrefix(trimmed, "|")
 	trimmed = strings.TrimSuffix(trimmed, "|")
 	parts := strings.Split(trimmed, "|")
 	cells := make([]string, 0, len(parts))
 	for _, part := range parts {
-		cells = append(cells, strings.TrimSpace(part))
+		cells = append(cells, jsTrim(part))
 	}
 	return cells
 }
@@ -776,10 +776,10 @@ func (l *mdLexer) lexListItem(content string, raw string) (*MdToken, bool) {
 // lexBlockLatex is the LaTeX block tokenizer extension.
 func lexBlockLatex(source string) *MdToken {
 	if match := mdLatexDollarBlockRegex.FindStringSubmatch(source); match != nil && match[1] != "" {
-		return &MdToken{Type: "latexBlock", Raw: match[0], Text: strings.TrimSpace(match[1])}
+		return &MdToken{Type: "latexBlock", Raw: match[0], Text: jsTrim(match[1])}
 	}
 	if match := mdLatexBracketBlockRegex.FindStringSubmatch(source); match != nil && match[1] != "" {
-		return &MdToken{Type: "latexBlock", Raw: match[0], Text: strings.TrimSpace(match[1])}
+		return &MdToken{Type: "latexBlock", Raw: match[0], Text: jsTrim(match[1])}
 	}
 	if match := mdPendingBracketRegex.FindStringSubmatch(source); match != nil {
 		return &MdToken{Type: "latexBlock", Raw: match[0], Text: match[1], Pending: true}

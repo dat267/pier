@@ -270,7 +270,7 @@ func (m *Markdown) Render(width int) []string {
 		text = m.Options.Transform(text, contentWidth)
 	}
 
-	if text == "" || strings.TrimSpace(text) == "" {
+	if text == "" || jsTrim(text) == "" {
 		m.cachedText = m.Text
 		m.hasCachedText = true
 		m.cachedWidth = width
@@ -600,10 +600,10 @@ func (m *Markdown) renderToken(token *MdToken, width int, nextTokenType string, 
 			if latex, ok := RenderLatex(token.Text, RenderLatexOptions{Display: true}); ok {
 				rendered = latex
 			} else {
-				rendered = strings.TrimSpace(token.Raw)
+				rendered = jsTrim(token.Raw)
 			}
 		} else {
-			rendered = strings.TrimSpace(token.Raw)
+			rendered = jsTrim(token.Raw)
 		}
 		for _, line := range strings.Split(rendered, "\n") {
 			lines = append(lines, m.applyDefaultStyle(line))
@@ -688,7 +688,7 @@ func (m *Markdown) renderToken(token *MdToken, width int, nextTokenType string, 
 		}
 
 	case "html":
-		lines = append(lines, m.applyDefaultStyle(strings.TrimSpace(token.Raw)))
+		lines = append(lines, m.applyDefaultStyle(jsTrim(token.Raw)))
 
 	case "space":
 		lines = append(lines, "")
