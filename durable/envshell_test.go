@@ -31,6 +31,18 @@ func TestUTF8ChunkReaderDropsOnlyLeadingBOM(t *testing.T) {
 	}
 }
 
+// An incomplete trailing character is flushed as the replacement character at
+// the end of the stream (upstream StreamDecoder via TextDecoder.decode()).
+func TestUTF8ChunkReaderFlushesIncompleteRuneAtEnd(t *testing.T) {
+	reader := &utf8ChunkReader{}
+	if got := reader.decode([]byte{0xe2}); got != "" {
+		t.Fatalf("incomplete chunk = %q", got)
+	}
+	if got := reader.decode(nil); got != "\ufffd" {
+		t.Fatalf("end flush = %q, want the replacement character", got)
+	}
+}
+
 func newTestShell(t *testing.T) (*OSShell, string) {
 	t.Helper()
 	t.Setenv("TMPDIR", t.TempDir())

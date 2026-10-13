@@ -534,6 +534,16 @@ type utf8ChunkReader struct {
 }
 
 func (r *utf8ChunkReader) decode(chunk []byte) string {
+	if chunk == nil {
+		// The stream ended: an incomplete trailing character becomes the
+		// replacement character, matching TextDecoder.decode().
+		text := ""
+		if len(r.remainder) > 0 {
+			text = "\ufffd"
+			r.remainder = nil
+		}
+		return r.markStarted(text)
+	}
 	data := chunk
 	if len(r.remainder) > 0 {
 		data = append(append([]byte{}, r.remainder...), chunk...)
@@ -546,13 +556,17 @@ func (r *utf8ChunkReader) decode(chunk []byte) string {
 		r.remainder = append([]byte{}, data[start:]...)
 		data = data[:start]
 	}
-	text := string(data)
+	return r.markStarted(string(data))
+}
+
+// markStarted drops a byte-order mark from the stream's first decoded text;
+// U+FEFF encodes only as EF BB BF, so a leading U+FEFF is exactly a mark at the
+// stream's start.
+func (r *utf8ChunkReader) markStarted(text string) string {
 	if r.started || text == "" {
 		return text
 	}
 	r.started = true
-	// U+FEFF encodes only as EF BB BF, so a leading U+FEFF is exactly a
-	// byte-order mark at the stream's start.
 	return strings.TrimPrefix(text, "\ufeff")
 }
 
