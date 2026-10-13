@@ -235,6 +235,30 @@ func waitForWritesAfter(t *testing.T, terminal *fakeTerminal, before int) {
 	t.Fatal("no new terminal write")
 }
 
+// TestRendererBeginTerminalColorsWaitsOffLoop pins the split API behind the
+// startup fix: BeginTerminalColors writes the query synchronously and returns
+// without waiting, and its wait function (run off the owner loop) resolves when
+// the loop dispatches a reply.
+func TestRendererBeginTerminalColorsWaitsOffLoop(t *testing.T) {
+	terminal := &fakeTerminal{width: 80, height: 24}
+	renderer := NewRenderer(terminal)
+	wait, ok := renderer.BeginTerminalColors()
+	if !ok {
+		t.Fatal("BeginTerminalColors returned false")
+	}
+	if joined := terminal.joinedWrites(); !strings.HasSuffix(joined, "\x1b[c") {
+		t.Fatalf("query not written synchronously: %q", joined)
+	}
+	results := make(chan TerminalColors, 1)
+	go func() { results <- wait(2000, nil) }()
+	renderer.HandleTerminalInput("\x1b[?62;22c")
+	select {
+	case <-results:
+	case <-time.After(2 * time.Second):
+		t.Fatal("wait did not resolve on the DA1 reply")
+	}
+}
+
 // TestRendererQueryTerminalColorsResolvesOnAllReplies ports the first
 // queryTerminalColors case: one write, all replies, no DA1 needed.
 func TestRendererQueryTerminalColorsResolvesOnAllReplies(t *testing.T) {

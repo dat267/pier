@@ -166,13 +166,19 @@ func (q *terminalQueries) QueryBackground(writer terminalQueryWriter, timeoutMS 
 	}
 }
 
-// QueryTerminalColors queries the terminal's default foreground and background
-// and its 16-color palette in one write. It resolves when the DA1 reply or every
-// color reply arrives, or after timeoutMS; replies that arrive later go to
-// onLateReply (upstream queryTerminalColors).
-func (q *terminalQueries) QueryTerminalColors(writer terminalQueryWriter, timeoutMS int, onLateReply func(TerminalColors)) TerminalColors {
+// TerminalColorWait blocks until a color query started by BeginTerminalColors
+// resolves or times out, and returns the reported colors (empty or partial on
+// timeout). Run it off the owner loop: the terminal's reply is dispatched on the
+// loop, so a wait on the loop can never observe it.
+type TerminalColorWait func(timeoutMS int, onLateReply func(TerminalColors)) TerminalColors
+
+// BeginTerminalColors registers and writes the palette query. It must run on the
+// owner loop: the write is a terminal write and the reply is dispatched on the
+// same loop. It returns a wait function to run off the loop (see
+// TerminalColorWait), and false when the terminal is stopped.
+func (q *terminalQueries) BeginTerminalColors(writer terminalQueryWriter) (TerminalColorWait, bool) {
 	if q.stopped {
-		return TerminalColors{}
+		return nil, false
 	}
 	query := &pendingTerminalColorQuery{palette: [terminalPaletteSize]*RgbColor{}, replied: map[string]bool{}}
 	result := make(chan TerminalColors, 1)
@@ -188,18 +194,34 @@ func (q *terminalQueries) QueryTerminalColors(writer terminalQueryWriter, timeou
 	if writer != nil {
 		writer.Write(terminalColorQuery)
 	}
-	timer := time.NewTimer(time.Duration(timeoutMS) * time.Millisecond)
-	defer timer.Stop()
-	select {
-	case colors := <-result:
-		return colors
-	case <-timer.C:
-		q.colorMu.Lock()
-		query.deliver = onLateReply
-		colors := terminalColorQueryResult(query)
-		q.colorMu.Unlock()
-		return colors
+	return func(timeoutMS int, onLateReply func(TerminalColors)) TerminalColors {
+		timer := time.NewTimer(time.Duration(timeoutMS) * time.Millisecond)
+		defer timer.Stop()
+		select {
+		case colors := <-result:
+			return colors
+		case <-timer.C:
+			q.colorMu.Lock()
+			query.deliver = onLateReply
+			colors := terminalColorQueryResult(query)
+			q.colorMu.Unlock()
+			return colors
+		}
+	}, true
+}
+
+// QueryTerminalColors queries the terminal's default foreground and background
+// and its 16-color palette in one write. It resolves when the DA1 reply or every
+// color reply arrives, or after timeoutMS; replies that arrive later go to
+// onLateReply (upstream queryTerminalColors). The wait blocks the caller, so on
+// the owner loop it can never dispatch its own reply and always times out; use
+// BeginTerminalColors to wait off the loop.
+func (q *terminalQueries) QueryTerminalColors(writer terminalQueryWriter, timeoutMS int, onLateReply func(TerminalColors)) TerminalColors {
+	wait, ok := q.BeginTerminalColors(writer)
+	if !ok {
+		return TerminalColors{}
 	}
+	return wait(timeoutMS, onLateReply)
 }
 
 // consumeTerminalColorResponse routes a color reply or DA1 to the oldest pending

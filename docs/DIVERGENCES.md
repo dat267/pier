@@ -5,7 +5,7 @@ pi, including language-runtime constraints, corrected upstream defects, and
 project choices. D-row numbers also appear in code comments; not every number has
 a full entry here. Entries are ordered numerically and use a consistent section
 format. Closed or withdrawn rows remain in place so code comments and historical
-notes keep their numbering. The range is **D1–D217**.
+notes keep their numbering. The range is **D1–D218**.
 
 ## D11
 
@@ -1857,3 +1857,29 @@ map to pier's `syntax*` theme tokens; unknown languages and lexer failures keep
 the plain `mdCodeBlock` styling. The lexer set and token boundaries differ from
 `highlight.js`, so ANSI output is not byte-identical. `TestHighlightCodeAppliesTokenColorsForKnownLanguage`
 asserts distinct token colors and preserved source text.
+
+## D218
+
+**The system-color probe waits off the owner loop (startup latency).**
+
+Reference: `packages/coding-agent/src/modes/interactive/theme/theme-controller.ts`
+`queryTerminalColors` and `interactive-mode.ts` `await this.themeController.waitForTerminalColors()`
+in front of the startup header. Upstream's `await` yields its event loop, so the
+terminal's DA1/color reply is dispatched during the wait and the query resolves as
+soon as the terminal answers; the header is then built once with the reported
+colors. Pier's owner loop is one goroutine: a blocking
+`QueryTerminalColors` on that loop cannot dispatch the reply that would resolve
+it, so `ProbeSystemColors` always waited out the full 100 ms
+`TERMINAL_QUERY_TIMEOUT_MS` before the first frame (measured ~150 ms to first
+frame, independent of the terminal). The probe now uses
+`BeginTerminalColors`/`TerminalColorWait` (`tui/terminalqueries.go`,
+`tui/render.go`): the query is registered and written on the owner loop, the
+wait runs on a goroutine, and the settled colors return to the loop through
+`Marshal`; late replies still arrive on the loop through `onLateReply`. The first
+frame therefore paints before the colors are known and re-renders when they
+arrive (a brief system-theme fallback), where upstream paints once. Measured
+first frame: ~53 ms median (was ~155 ms).
+`TestProbeSystemColorsDoesNotBlockTheCaller`
+(`coding/interactive/interactive_test.go`) pins the non-blocking contract, and
+`TestRendererBeginTerminalColorsWaitsOffLoop` (`tui/terminalcolors_test.go`) pins
+the split write/wait.

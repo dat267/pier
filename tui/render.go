@@ -592,6 +592,13 @@ func (t *Renderer) QueryTerminalColors(timeoutMS int, onLateReply func(TerminalC
 	return t.queries.QueryTerminalColors(t.Terminal, timeoutMS, onLateReply)
 }
 
+// BeginTerminalColors writes the color query without blocking and returns a wait
+// function to run off the owner loop, so the loop can dispatch the reply. See
+// terminalQueries.BeginTerminalColors.
+func (t *Renderer) BeginTerminalColors() (TerminalColorWait, bool) {
+	return t.queries.BeginTerminalColors(t.Terminal)
+}
+
 // QueryTerminalColorScheme queries the terminal's color-scheme preference with
 // DSR (`CSI ? 996 n`).
 func (t *Renderer) QueryTerminalColorScheme(timeoutMS int) (TerminalColorScheme, bool) {

@@ -388,6 +388,53 @@ func TestThemeControllerProbesSystemColors(t *testing.T) {
 	}
 }
 
+// TestProbeSystemColorsDoesNotBlockTheCaller pins the fix for the startup stall:
+// the color query must run off the owner loop, because the terminal's reply is
+// dispatched on that loop. A blocking query can never observe the reply and so
+// always waits out the full timeout, delaying the first frame.
+func TestProbeSystemColorsDoesNotBlockTheCaller(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+
+	gate := make(chan struct{})
+	started := make(chan struct{})
+	applied := make(chan struct{}, 1)
+	ui := &fakeThemeUI{queryGate: gate, queryStarted: started}
+	background := tui.RgbColor{R: 0x28, G: 0x2a, B: 0x36}
+	ui.terminalColors = tui.TerminalColors{Background: &background}
+	controller := NewInteractiveThemeController(ThemeControllerOptions{
+		UI:  ui,
+		Env: func(key string) string { return "" },
+		Marshal: func(fn func()) {
+			fn()
+			select {
+			case applied <- struct{}{}:
+			default:
+			}
+		},
+	})
+
+	done := make(chan struct{})
+	go func() {
+		controller.ProbeSystemColors()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		close(gate)
+		t.Fatal("ProbeSystemColors blocked the caller")
+	}
+
+	<-started
+	close(gate)
+	select {
+	case <-applied:
+	case <-time.After(2 * time.Second):
+		t.Fatal("settled terminal colors were not applied")
+	}
+}
+
 type fakeThemeUI struct {
 	mu             sync.Mutex
 	invalidates    int
@@ -398,6 +445,10 @@ type fakeThemeUI struct {
 	bgProbes       int
 	systemProbes   int
 	terminalColors tui.TerminalColors
+	// queryGate, when non-nil, holds QueryTerminalColors until it is closed;
+	// queryStarted is closed as soon as the query begins.
+	queryGate    chan struct{}
+	queryStarted chan struct{}
 }
 
 func (f *fakeThemeUI) Invalidate() {
@@ -440,9 +491,36 @@ func (f *fakeThemeUI) RequestTerminalBackgroundColor() {
 
 func (f *fakeThemeUI) QueryTerminalColors(timeoutMS int, onLateReply func(tui.TerminalColors)) tui.TerminalColors {
 	f.mu.Lock()
-	defer f.mu.Unlock()
 	f.systemProbes++
-	return f.terminalColors
+	gate := f.queryGate
+	started := f.queryStarted
+	colors := f.terminalColors
+	f.mu.Unlock()
+	if started != nil {
+		close(started)
+	}
+	if gate != nil {
+		<-gate
+	}
+	return colors
+}
+
+func (f *fakeThemeUI) BeginTerminalColors() (tui.TerminalColorWait, bool) {
+	f.mu.Lock()
+	f.systemProbes++
+	gate := f.queryGate
+	started := f.queryStarted
+	colors := f.terminalColors
+	f.mu.Unlock()
+	if started != nil {
+		close(started)
+	}
+	return func(timeoutMS int, onLateReply func(tui.TerminalColors)) tui.TerminalColors {
+		if gate != nil {
+			<-gate
+		}
+		return colors
+	}, true
 }
 
 func (f *fakeThemeUI) emitBackground(color tui.RgbColor) {

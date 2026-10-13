@@ -201,6 +201,17 @@ func (r *TuiReference) QueryTerminalColors(timeoutMS int, onLateReply func(Termi
 	return TerminalColors{}
 }
 
+// BeginTerminalColors forwards the non-blocking color query to the active
+// renderer and returns its wait function.
+func (r *TuiReference) BeginTerminalColors() (TerminalColorWait, bool) {
+	if q, ok := r.get().(interface {
+		BeginTerminalColors() (TerminalColorWait, bool)
+	}); ok {
+		return q.BeginTerminalColors()
+	}
+	return nil, false
+}
+
 // SetFocus sets the focused component.
 func (r *TuiReference) SetFocus(component Component) { r.get().SetFocus(component) }
 

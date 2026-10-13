@@ -19,6 +19,9 @@ type ThemeControllerUI interface {
 	OnTerminalBackgroundColorChange(listener func(color tui.RgbColor)) (unsubscribe func())
 	RequestTerminalBackgroundColor()
 	QueryTerminalColors(timeoutMs int, onLateReply func(tui.TerminalColors)) tui.TerminalColors
+	// BeginTerminalColors writes the palette query without blocking and returns a
+	// wait function to run off the owner loop (see tui.TerminalColorWait).
+	BeginTerminalColors() (tui.TerminalColorWait, bool)
 }
 
 // ThemeSettings is the settings surface the controller needs.
@@ -154,6 +157,13 @@ func (c *InteractiveThemeController) ProbeTerminalBackground() {
 // the system theme (upstream setTerminalColors). Callers must invoke it after
 // the terminal is in raw mode, like ProbeTerminalBackground; late replies
 // refresh the stored colors.
+//
+// The query runs off the owner loop: the terminal's reply is dispatched on that
+// loop, so a blocking query can never observe the reply and always waits out the
+// full timeout (delaying the first frame by the whole TERMINAL_QUERY_TIMEOUT_MS).
+// The settled result returns to the loop through Marshal; late replies arrive on
+// the loop through onLateReply. A nil Marshal (tests, headless) keeps the
+// synchronous behavior. D218.
 func (c *InteractiveThemeController) ProbeSystemColors() {
 	if c.ui == nil || c.systemProbed {
 		return
@@ -165,8 +175,22 @@ func (c *InteractiveThemeController) ProbeSystemColors() {
 			c.applyThemeName(SystemThemeName, false)
 		}
 	}
-	colors := c.ui.QueryTerminalColors(c.timeoutMS, apply)
-	apply(colors)
+	if c.marshal == nil {
+		colors := c.ui.QueryTerminalColors(c.timeoutMS, apply)
+		apply(colors)
+		return
+	}
+	// Register and write the query on the owner loop, then wait off it: the
+	// terminal's reply is dispatched on the loop, so a wait on the loop can never
+	// observe it.
+	wait, ok := c.ui.BeginTerminalColors()
+	if !ok {
+		return
+	}
+	go func() {
+		colors := wait(c.timeoutMS, apply)
+		c.marshal(func() { apply(colors) })
+	}()
 }
 
 // ApplyFromSettings applies the theme from the current settings.
