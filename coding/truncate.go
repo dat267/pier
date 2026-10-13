@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/dat267/pier/ai"
 	"strconv"
@@ -138,7 +139,7 @@ func TruncateMiddle(content string, maxBytes int) MiddleTruncationResult {
 	}
 	head := content[:headEnd]
 	tail := content[tailStart:]
-	removedChars := len([]rune(content[headEnd:tailStart]))
+	removedChars := utf8.RuneCountInString(content[headEnd:tailStart])
 	return MiddleTruncationResult{
 		Content:      head + "…" + strconv.Itoa(removedChars) + " chars truncated…" + tail,
 		Truncated:    true,

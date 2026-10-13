@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/tui"
@@ -130,7 +131,7 @@ func yesNo(value bool) string {
 }
 
 func runeWidth(value string) int {
-	return len([]rune(value))
+	return utf8.RuneCountInString(value)
 }
 
 // padEnd pads to a rune count, matching JavaScript's String.prototype.padEnd
