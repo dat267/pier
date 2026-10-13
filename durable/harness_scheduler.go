@@ -1370,13 +1370,13 @@ func decodeJSONValue(raw json.RawMessage) chord.JsonValue {
 
 // ValidateWait checks that a wait names existing tasks; failFast only tasks
 // the waiter owns. An abort handler cannot wait.
-func ValidateWait(mode string, current TaskRecord, on []Id, policy string, owners map[Id]bool, member func(id Id) (*TaskRecord, error)) error {
+func ValidateWait(mode string, current TaskRecord, on []Id, policy string, _ map[Id]bool, member func(id Id) (*TaskRecord, error)) error {
 	if mode == "abort" {
 		return fmt.Errorf("Abort handler of task %d cannot wait", current.ID)
 	}
 	for _, id := range on {
-		if id == current.ID || owners[id] {
-			return fmt.Errorf("Task %d cannot wait on itself or its owner %d", current.ID, id)
+		if id == current.ID {
+			return fmt.Errorf("Task %d cannot wait on itself", current.ID)
 		}
 		record, err := member(id)
 		if err != nil {

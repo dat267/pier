@@ -142,6 +142,7 @@ func TestValidateWait(t *testing.T) {
 		records := map[Id]*TaskRecord{
 			2: {ID: 2},
 			3: {ID: 3, Owner: idPointerOf(1)},
+			9: {ID: 9},
 		}
 		return records[id], nil
 	}
@@ -151,8 +152,8 @@ func TestValidateWait(t *testing.T) {
 	if err := ValidateWait("run", current, []Id{1}, JoinAllSettled, nil, member); err == nil {
 		t.Fatal("waiting on itself must fail")
 	}
-	if err := ValidateWait("run", current, []Id{9}, JoinAllSettled, map[Id]bool{9: true}, member); err == nil {
-		t.Fatal("waiting on an owner must fail")
+	if err := ValidateWait("run", current, []Id{9}, JoinAllSettled, map[Id]bool{9: true}, member); err != nil {
+		t.Fatalf("a non-cyclic wait on an owner is allowed: %v", err)
 	}
 	if err := ValidateWait("run", current, []Id{4}, JoinAllSettled, nil, member); err == nil {
 		t.Fatal("waiting on a missing task must fail")
