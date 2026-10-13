@@ -46,6 +46,9 @@ type SettingsWiring struct {
 
 	// Chat is the transcript container (for the image/thinking updates).
 	Chat *tui.Container
+	// PendingMessages is the queued-messages container; the output-padding
+	// change reaches its children too (upstream onOutputPadChange).
+	PendingMessages *tui.Container
 	// StreamingComponent is the in-progress assistant component.
 	StreamingComponent *AssistantMessageComponent
 	// DefaultEditor is the built-in editor (padding/autocomplete updates).
@@ -401,6 +404,7 @@ func newSettingsWiring(app *App) *SettingsWiring {
 		ThemeController:                 themeSettingsControllerAdapter{app.theme},
 		UI:                              app.ui,
 		Chat:                            app.chat,
+		PendingMessages:                 app.pendingMessages,
 		DefaultEditor:                   app.defaultEditor,
 		Editor:                          app.defaultEditor,
 		Renderer:                        app.ui,
@@ -493,23 +497,27 @@ func (w *SettingsWiring) applyOutputPad(padding int) bool {
 	}
 	streaming := w.StreamingComponent != nil || (w.Session != nil && w.Session.IsStreaming())
 	if streaming {
-		for _, child := range chatChildren(w.Chat) {
-			switch component := child.(type) {
-			case *AssistantMessageComponent:
-				component.SetOutputPad(padding)
-			case *CustomMessageComponent:
-				component.SetOutputPad(padding)
-			case *UserMessageComponent:
-				component.SetOutputPad(padding)
-			case *ToolExecutionComponent:
-				// Tool output is padded like the rest of the transcript (upstream #10557).
-				component.SetOutputPad(padding)
-			case *BashExecutionComponent:
-				component.SetOutputPad(padding)
-			case *BranchSummaryMessageComponent:
-				component.SetOutputPad(padding)
-			case *CompactionSummaryMessageComponent:
-				component.SetOutputPad(padding)
+		// Upstream iterates both the transcript and the pending-messages
+		// container, so a queued bash block follows the padding too.
+		for _, container := range []*tui.Container{w.Chat, w.PendingMessages} {
+			for _, child := range chatChildren(container) {
+				switch component := child.(type) {
+				case *AssistantMessageComponent:
+					component.SetOutputPad(padding)
+				case *CustomMessageComponent:
+					component.SetOutputPad(padding)
+				case *UserMessageComponent:
+					component.SetOutputPad(padding)
+				case *ToolExecutionComponent:
+					// Tool output is padded like the rest of the transcript (upstream #10557).
+					component.SetOutputPad(padding)
+				case *BashExecutionComponent:
+					component.SetOutputPad(padding)
+				case *BranchSummaryMessageComponent:
+					component.SetOutputPad(padding)
+				case *CompactionSummaryMessageComponent:
+					component.SetOutputPad(padding)
+				}
 			}
 		}
 		if w.StreamingComponent != nil {

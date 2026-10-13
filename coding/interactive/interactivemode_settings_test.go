@@ -372,3 +372,28 @@ func TestOutputPadChangeUpdatesTheDisplayOptions(t *testing.T) {
 		t.Fatalf("setting = %d, want %d", app.settings.GetOutputPad(), want)
 	}
 }
+
+// The output-padding change reaches the pending-messages container too
+// (upstream onOutputPadChange iterates chatContainer and pendingMessagesContainer).
+func TestApplyOutputPadUpdatesPendingMessages(t *testing.T) {
+	installPierThemeForTest(t)
+	InitTheme("dark", false)
+	settings := coding.NewInMemorySettingsManager(nil, coding.SettingsManagerCreateOptions{})
+	chat := &tui.Container{}
+	pending := &tui.Container{}
+	bash := NewBashExecutionComponent("ls", nil, false, 0)
+	pending.AddChild(bash)
+	markdownTheme := GetMarkdownTheme()
+	streaming := NewAssistantMessageComponent(nil, false, &markdownTheme, "", 0, nil)
+	wiring := &SettingsWiring{
+		Settings:           settings,
+		Chat:               chat,
+		PendingMessages:    pending,
+		StreamingComponent: streaming,
+		RequestRender:      func() {},
+	}
+	wiring.applyOutputPad(3)
+	if bash.outputPad != 3 {
+		t.Fatalf("pending bash outputPad = %d; want 3", bash.outputPad)
+	}
+}
