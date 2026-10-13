@@ -6,9 +6,16 @@ import (
 	"testing"
 )
 
+// largeMarkdownFixture is just over the 64 KiB detached-preparation threshold
+// (largeMarkdownBytes). Keep it near the threshold: these tests assert threshold
+// behavior, and a production-scale fixture only inflates the race-detector run.
+func largeMarkdownFixture() string {
+	return strings.Repeat("# Heading\n\nparagraph\n\n", 3000) // 66_000 bytes
+}
+
 // D204: requesting an already-cached width supersedes in-flight work too.
 func TestMarkdownPreparationRejectsSupersededCachedWidth(t *testing.T) {
-	text := strings.Repeat("# Heading\n\nparagraph\n\n", 4000)
+	text := largeMarkdownFixture()
 	markdown := NewMarkdown(text, 0, 0, MarkdownTheme{}, nil, MarkdownOptions{})
 	old := markdown.Render(80)
 	var work func() func()
@@ -24,7 +31,7 @@ func TestMarkdownPreparationRejectsSupersededCachedWidth(t *testing.T) {
 }
 
 func TestDetachedMarkdownPrepareRemainsSynchronous(t *testing.T) {
-	text := strings.Repeat("# Heading\n\nparagraph\n\n", 4000)
+	text := largeMarkdownFixture()
 	markdown := NewMarkdown(text, 0, 0, MarkdownTheme{}, nil, MarkdownOptions{})
 	markdown.SetPreparation(&MarkdownPreparation{Submit: func(func() func()) bool { t.Error("detached Prepare recursively submitted another task"); return false }, RequestRender: func() {}})
 	markdown.Prepare(80)
@@ -38,7 +45,7 @@ func TestDetachedMarkdownPrepareRemainsSynchronous(t *testing.T) {
 func TestMarkdownPreparationRejectsStaleContentAndTheme(t *testing.T) {
 	for _, change := range []string{"content", "theme"} {
 		t.Run(change, func(t *testing.T) {
-			text := strings.Repeat("# Heading\n\nparagraph\n\n", 4000)
+			text := largeMarkdownFixture()
 			markdown := NewMarkdown(text, 0, 0, MarkdownTheme{}, nil, MarkdownOptions{})
 			var work []func() func()
 			markdown.SetPreparation(&MarkdownPreparation{Submit: func(run func() func()) bool { work = append(work, run); return true }, RequestRender: func() {}})
@@ -67,7 +74,7 @@ func TestMarkdownPreparationKeepsLatestEmptyFrame(t *testing.T) {
 	markdown.SetText("")
 	markdown.Render(80)
 	markdown.SetPreparation(&MarkdownPreparation{Submit: func(func() func()) bool { return true }, RequestRender: func() {}})
-	markdown.SetText(strings.Repeat("paragraph\n\n", 7000))
+	markdown.SetText(strings.Repeat("paragraph\n\n", 6000)) // 66_000 bytes
 	if lines := markdown.Render(80); len(lines) != 0 {
 		t.Fatal("preparation resurrected content from before an empty frame")
 	}
@@ -76,7 +83,7 @@ func TestMarkdownPreparationKeepsLatestEmptyFrame(t *testing.T) {
 // D204: a cold large Markdown must submit a detached immutable render, not
 // execute parsing/transforms on the owner. Its completed frame is byte-identical.
 func TestLargeMarkdownPreparationLeavesOwnerRenderingCheap(t *testing.T) {
-	text := strings.Repeat("# Heading\n\nparagraph\n\n", 4000)
+	text := largeMarkdownFixture()
 	transformed := 0
 	options := MarkdownOptions{Transform: func(text string, width int) string { transformed++; return text }}
 	markdown := NewMarkdown(text, 0, 0, MarkdownTheme{}, nil, options)

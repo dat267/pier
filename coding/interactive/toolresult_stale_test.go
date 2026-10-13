@@ -41,7 +41,7 @@ func TestToolPreparationRejectsStaleSnapshots(t *testing.T) {
 	InitTheme("dark", false)
 	for _, change := range []string{"content", "width", "cached width", "theme", "collapse", "empty"} {
 		t.Run(change, func(t *testing.T) {
-			c := NewToolExecutionComponent("read", "call", map[string]any{"path": "output.go"}, ToolExecutionOptions{}, WithBuiltInRenderers("read", nil), nil, "/tmp")
+			c := NewToolExecutionComponent("read", "call", map[string]any{"path": "output.txt"}, ToolExecutionOptions{}, WithBuiltInRenderers("read", nil), nil, "/tmp")
 			var jobs []func() func()
 			c.SetResultPreparation(&tui.MarkdownPreparation{Submit: func(run func() func()) bool { jobs = append(jobs, run); return true }})
 			c.SetExpanded(true)

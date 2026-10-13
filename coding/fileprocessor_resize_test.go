@@ -96,16 +96,20 @@ func TestResizeInlineImagePassesThroughWithinLimits(t *testing.T) {
 // strategy: when the scaled first candidate is still too large, the loop reduces
 // the dimensions until something fits.
 func TestResizeInlineImageShrinksToFitTheByteBudget(t *testing.T) {
+	// The property is scale-invariant: a noisy image whose first candidate
+	// exceeds the budget must be shrunk until one fits. Keep the pixel count
+	// (and so the encode cost) to the smallest size that still forces several
+	// iterations instead of a production-scale image.
 	options := DefaultImageResizeOptions
-	options.MaxBytes = 20_000
-	resized := resizeInlineImage(noisyPNG(t, 800, 600), "image/png", options)
+	options.MaxBytes = 5_000
+	resized := resizeInlineImage(noisyPNG(t, 400, 300), "image/png", options)
 	if resized == nil {
-		t.Fatal("a noisy 800x600 image could not be fitted into 20kB")
+		t.Fatal("a noisy 400x300 image could not be fitted into 5kB")
 	}
 	if int64(len(resized.Data)) >= options.MaxBytes {
 		t.Fatalf("result is %d bytes, not below the %d budget", len(resized.Data), options.MaxBytes)
 	}
-	if resized.Width > 800 || resized.Width == 800 && resized.Height == 600 {
+	if resized.Width > 400 || resized.Width == 400 && resized.Height == 300 {
 		t.Errorf("dimensions %dx%d did not shrink", resized.Width, resized.Height)
 	}
 }
