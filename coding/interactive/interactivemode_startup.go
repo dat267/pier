@@ -83,8 +83,6 @@ type StartupWiring struct {
 	ctx atomic.Pointer[context.Context]
 	// anthropicSubscriptionWarningShown dedupes the warning.
 	anthropicSubscriptionWarningShown bool
-	// MainScreenRenderState is the captured main-screen state.
-	mainScreenRenderState *tui.MainScreenRenderState
 }
 
 func (w *StartupWiring) showWarning(message string) {

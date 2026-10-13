@@ -82,10 +82,9 @@ type serverHarness struct {
 	transport *pipeTransport
 	decoder   *protocol.ClientMessageDecoder
 
-	mu             sync.Mutex
-	receivedHellos []*protocol.ClientMessage
-	received       []*protocol.ClientMessage
-	helloMessages  chan *protocol.ClientMessage
+	mu            sync.Mutex
+	received      []*protocol.ClientMessage
+	helloMessages chan *protocol.ClientMessage
 }
 
 func newServerHarness(t *testing.T, transport *pipeTransport) *serverHarness {

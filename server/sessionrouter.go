@@ -31,8 +31,6 @@ type clientAttachment struct {
 	session *hostedSession
 	// operations tracks in-flight service calls for release ordering.
 	operations sync.WaitGroup
-	opMu       sync.Mutex
-	acquiring  bool
 	releasing  bool
 	released   bool
 	lease      RoutedSessionAttachment

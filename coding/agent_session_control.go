@@ -70,12 +70,7 @@ type AgentSessionControl struct {
 	scopedModels        []ScopedModel
 	autoCompaction      bool
 	autoRetry           bool
-	retryAborted        bool
 	branchSummaryCancel context.CancelFunc
-	bashActive          bool
-	pendingBash         int
-	bashAborted         bool
-	lastAssistant       *ai.AssistantMessage
 	disposed            bool
 
 	// defaultSync is the last defaultsync outcome (D151), and

@@ -112,7 +112,6 @@ type editCallComponent struct {
 	preview        atomic.Pointer[editPreviewState]
 	previewPending atomic.Bool
 	settledError   bool
-	builtArgsKey   string
 }
 
 // setPreviewResult stores the async diff preview (worker side).

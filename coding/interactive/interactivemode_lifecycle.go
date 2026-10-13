@@ -119,7 +119,6 @@ type Lifecycle struct {
 	// emergency path may unregister from the terminal goroutine).
 	signalCleanups  atomic.Pointer[[]func()]
 	mainScreenState *tui.MainScreenRenderState
-	startupSubmit   bool
 	// LayoutRoot is the fullscreen layout root set by the mode.
 	LayoutRoot tui.Component
 

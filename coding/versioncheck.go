@@ -70,7 +70,6 @@ func IsNewerPackageVersion(candidateVersion, currentVersion string) bool {
 type semver struct {
 	major, minor, patch int
 	prerelease          []string
-	build               string
 }
 
 // parseSemver parses a semver string (the npm `semver.valid` subset: strict

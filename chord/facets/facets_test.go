@@ -31,7 +31,6 @@ type counterFacet struct {
 	state       *services.MutableState
 	calls       *int
 	activations *int
-	teardowns   *int
 	mu          *sync.Mutex
 }
 

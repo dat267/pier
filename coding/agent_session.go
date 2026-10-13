@@ -160,10 +160,6 @@ type AgentSession struct {
 	// streamFn is the session's model stream function (compaction, summaries).
 	streamFn agent.StreamFn
 
-	// summarizationRetrySource is the source label for the in-flight
-	// summarization retry callbacks ("" when idle).
-	summarizationRetrySource string
-
 	listenerMu sync.Mutex
 	listeners  []*sessionListenerKey
 

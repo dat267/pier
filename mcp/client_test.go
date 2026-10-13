@@ -17,12 +17,11 @@ import (
 // server, capturing every message and answering from per-method handlers.
 
 type testServer struct {
-	t          *testing.T
-	transport  *InMemoryTransport
-	mu         sync.Mutex
-	messages   []Message
-	handlers   map[string]func(*protocol.JsonRpcRequest) (any, error)
-	connecting bool
+	t         *testing.T
+	transport *InMemoryTransport
+	mu        sync.Mutex
+	messages  []Message
+	handlers  map[string]func(*protocol.JsonRpcRequest) (any, error)
 }
 
 func newTestServer() (*testServer, *InMemoryTransport) {

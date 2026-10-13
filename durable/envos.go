@@ -555,11 +555,10 @@ func (r *osDirReader) Close(_ context.Context) error {
 
 // osTextLineReader streams one open file.
 type osTextLineReader struct {
-	path       string
-	file       *os.File
-	reader     *bufio.Reader
-	terminated bool
-	closed     bool
+	path   string
+	file   *os.File
+	reader *bufio.Reader
+	closed bool
 }
 
 func (r *osTextLineReader) ReadLine(ctx context.Context) (*TextLine, error) {
