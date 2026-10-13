@@ -153,11 +153,20 @@ func TestCatalogGeneratedAt(t *testing.T) {
 	}
 }
 
-// The embedded catalog is 924 KB; decoding it costs ~13 ms and ~24k allocations.
-// It must stay out of package init, because that cost lands on every process
-// start — including `--version`, which never reads the catalog. A package-level
-// var that called GetBuiltinModels (builtinCopilotModelIDs) put it back in init
-// once and cost every start 49 ms.
+func BenchmarkDecodeBuiltinCatalog(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		if _, _, err := decodeCatalog(catalogData); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// The embedded catalog is 1.4 MB; decoding it costs about 12 ms and 1.7 MB of
+// allocations on the reference development machine. It must stay out of package
+// init, because that cost lands on every process start — including `--version`,
+// which never reads the catalog. A package-level var that called GetBuiltinModels
+// (builtinCopilotModelIDs) put it back in init once and cost every start 49 ms.
 //
 // The probe needs an untouched process: every other test in this package decodes
 // the catalog, and tests share one process. It re-executes the test binary with

@@ -1,7 +1,7 @@
 package ai
 
 import (
-	"embed"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"sync"
@@ -17,22 +17,23 @@ import (
 //	python3 scripts/gen_catalog.py <upstream> > ai/models_catalog.json
 //
 //go:embed models_catalog.json
-var catalogFS embed.FS
+var catalogData []byte
 
 // catalogShape mirrors the embedded file's structure:
-// {provider: {api: {modelId: model}}}.
-//
-// The model ids are captured as raw JSON in the same single decode that walks
-// the provider and api keys. Keeping the api subtree as one json.RawMessage
-// would parse those keys twice (once into the RawMessage, once into a map to
-// iterate them), which on the 924 KB catalog is a second full key pass.
+// {provider: {api: {modelId: model}}}. Model fields decode directly, while the
+// compat payload stays raw until the enclosing API key selects its exact type.
 type catalogShape struct {
 	Meta struct {
 		SchemaVersion          int    `json:"schemaVersion"`
 		GeneratedAt            string `json:"generatedAt"`
 		UpstreamManifestSHA256 string `json:"upstreamManifestSHA256"`
 	} `json:"_meta"`
-	Providers map[string]map[string]map[string]json.RawMessage `json:"providers"`
+	Providers map[string]map[string]map[string]*catalogModelEntry `json:"providers"`
+}
+
+type catalogModelEntry struct {
+	Model
+	Compat json.RawMessage `json:"compat"`
 }
 
 var (
@@ -42,82 +43,35 @@ var (
 	catalogErr    error
 )
 
+func decodeCatalog(data []byte) (catalogShape, map[string]map[string]*Model, error) {
+	var decoded catalogShape
+	if err := jsonUnmarshalStrict(data, &decoded); err != nil {
+		return catalogShape{}, nil, fmt.Errorf("ai: decoding builtin catalog: %w", err)
+	}
+	modelsByProvider := make(map[string]map[string]*Model, len(decoded.Providers))
+	for providerID, apis := range decoded.Providers {
+		models := make(map[string]*Model)
+		for api, byID := range apis {
+			for modelID, entry := range byID {
+				compat, err := DecodeModelCompat(Api(api), entry.Compat)
+				if err != nil {
+					return catalogShape{}, nil, fmt.Errorf("ai: decoding catalog model %s/%s: %w", providerID, modelID, err)
+				}
+				entry.Model.API = Api(api)
+				entry.Model.Compat = compat
+				entry.Compat = nil
+				models[modelID] = &entry.Model
+			}
+		}
+		modelsByProvider[providerID] = models
+	}
+	return decoded, modelsByProvider, nil
+}
+
 func loadCatalog() {
 	catalogOnce.Do(func() {
-		data, err := catalogFS.ReadFile("models_catalog.json")
-		if err != nil {
-			catalogErr = err
-			return
-		}
-		if err := jsonUnmarshalStrict(data, &catalog); err != nil {
-			catalogErr = fmt.Errorf("ai: decoding builtin catalog: %w", err)
-			return
-		}
-		catalogModels = map[string]map[string]*Model{}
-		for providerID, apis := range catalog.Providers {
-			models := map[string]*Model{}
-			for api, byID := range apis {
-				for modelID, raw := range byID {
-					model, err := decodeCatalogModel(api, raw)
-					if err != nil {
-						catalogErr = fmt.Errorf("ai: decoding catalog model %s/%s: %w", providerID, modelID, err)
-						return
-					}
-					models[modelID] = model
-				}
-			}
-			catalogModels[providerID] = models
-		}
+		catalog, catalogModels, catalogErr = decodeCatalog(catalogData)
 	})
-}
-
-// decodeCatalogModel decodes one generated model entry in a single pass, taking
-// its compat arm at the same time: the api is known here, so the object decodes
-// straight into that arm's type instead of being read out raw and parsed again
-// by DecodeModelCompat. Letting Model.Compat's own decoder run would also guess
-// the arm from the key names first, a result the authoritative arm overwrote.
-//
-// Worth 0.8 ms of a whole-catalog decode (p50 13.71 ms -> 12.73 ms, 15 runs of
-// each on one machine), and one fewer parse per model — every real run decodes
-// the catalog, because CreateModelRuntime builds all 39 providers.
-func decodeCatalogModel(api Api, data []byte) (*Model, error) {
-	switch api {
-	case APIAnthropicMessages:
-		return decodeCatalogEntry[AnthropicMessagesCompat](api, data, func(c *ModelCompat, arm *AnthropicMessagesCompat) { c.AnthropicMessages = arm })
-	case APIOpenAICompletions:
-		return decodeCatalogEntry[OpenAICompletionsCompat](api, data, func(c *ModelCompat, arm *OpenAICompletionsCompat) { c.OpenAICompletions = arm })
-	case APIOpenAIResponses, APIAzureOpenAIResponses, APIOpenAICodexResponses:
-		return decodeCatalogEntry[OpenAIResponsesCompat](api, data, func(c *ModelCompat, arm *OpenAIResponsesCompat) { c.OpenAIResponses = arm })
-	case APIMistralConversations:
-		return decodeCatalogEntry[MistralConversationsCompat](api, data, func(c *ModelCompat, arm *MistralConversationsCompat) { c.MistralConversations = arm })
-	case APIBedrockConverse:
-		return decodeCatalogEntry[BedrockCompat](api, data, func(c *ModelCompat, arm *BedrockCompat) { c.Bedrock = arm })
-	}
-	// No arm exists for this api, and DecodeModelCompat drops compat for it too,
-	// so decode the entry alone. json.RawMessage absorbs whatever the compat
-	// value is without error, which keeps the unknown-api case identical.
-	return decodeCatalogEntry[json.RawMessage](api, data, func(*ModelCompat, *json.RawMessage) {})
-}
-
-// decodeCatalogEntry decodes one model, pulling compat into set in the same pass.
-// The outer Compat field shadows Model.Compat (depth 0 over depth 1), so
-// ModelCompat.UnmarshalJSON never runs.
-func decodeCatalogEntry[C any](api Api, data []byte, set func(*ModelCompat, *C)) (*Model, error) {
-	var payload struct {
-		Model
-		Compat *C `json:"compat"`
-	}
-	if err := jsonUnmarshalStrict(data, &payload); err != nil {
-		return nil, err
-	}
-	model := payload.Model
-	model.API = api
-	if payload.Compat != nil {
-		compat := &ModelCompat{}
-		set(compat, payload.Compat)
-		model.Compat = compat
-	}
-	return &model, nil
 }
 
 // GetBuiltinModel returns one generated builtin model.
