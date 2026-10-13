@@ -507,10 +507,35 @@ func (c *Client) request(ctx context.Context, method string, params any, options
 		}
 		message.Params = enc
 	}
-	if sendErr := transport.Send(ctx, &message); sendErr != nil {
-		c.cancelPending(id, sendErr, false, "")
-		<-entry.ch
-		return nil, sendErr
+	sendCtx, cancelSend := context.WithCancel(ctx)
+	defer cancelSend()
+	sendDone := make(chan error, 1)
+	go func() { sendDone <- transport.Send(sendCtx, &message) }()
+	select {
+	case sendErr := <-sendDone:
+		if sendErr != nil {
+			if ctx.Err() != nil {
+				reason := "Aborted"
+				if cause := context.Cause(ctx); cause != nil {
+					reason = cause.Error()
+				}
+				c.cancelPending(id, &protocol.McpAbortError{}, entry.cancellable, reason)
+				return nil, &protocol.McpAbortError{}
+			}
+			c.cancelPending(id, sendErr, false, "")
+			<-entry.ch
+			return nil, sendErr
+		}
+	case r := <-entry.ch:
+		return r.result, r.err
+	case <-ctx.Done():
+		reason := "Aborted"
+		if cause := context.Cause(ctx); cause != nil {
+			reason = cause.Error()
+		}
+		c.cancelPending(id, &protocol.McpAbortError{}, entry.cancellable, reason)
+		r := <-entry.ch
+		return r.result, r.err
 	}
 	select {
 	case r := <-entry.ch:

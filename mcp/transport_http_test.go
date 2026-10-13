@@ -622,6 +622,79 @@ func TestStreamableHTTPHands401And403ToAuthProvider(t *testing.T) {
 	}
 }
 
+func TestStreamableHTTPDoesNotRetryCanceledRequestAfterAuthRecovery(t *testing.T) {
+	refreshStarted := make(chan struct{})
+	releaseRefresh := make(chan struct{})
+	retried := make(chan struct{}, 1)
+	var fixture *httpFixture
+	fixture = newHTTPFixture(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var message struct {
+			Method string `json:"method"`
+		}
+		_ = json.Unmarshal(body, &message)
+		if message.Method == "tools/call" && r.Header.Get("Authorization") == "Bearer old" {
+			w.Header().Set("www-authenticate", "Bearer")
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		if message.Method == "tools/call" {
+			retried <- struct{}{}
+		}
+		fixture.protocolHandler(w, r, body)
+	})
+	defer fixture.close(t)
+
+	token := "old"
+	auth := &replayAuthProvider{
+		token: func() string { return token },
+		onUnauthorized: func(status int) {
+			if status != http.StatusUnauthorized {
+				return
+			}
+			close(refreshStarted)
+			<-releaseRefresh
+			token = "new"
+		},
+	}
+	client := NewClient(ClientOptions{Name: "http-test", Version: "1.0.0"})
+	openGetStream := false
+	if _, err := client.Connect(context.Background(), NewStreamableHttpTransport(StreamableHttpTransportOptions{
+		URL: fixture.url, OpenGetStream: &openGetStream, AuthProvider: auth,
+	})); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	callDone := make(chan error, 1)
+	go func() {
+		_, err := client.CallTool(ctx, "echo", nil, RequestOptions{})
+		callDone <- err
+	}()
+	select {
+	case <-refreshStarted:
+	case <-time.After(time.Second):
+		t.Fatal("authorization recovery did not start")
+	}
+	cancel()
+	select {
+	case err := <-callDone:
+		if err == nil {
+			t.Fatal("canceled tool call succeeded")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("canceled tool call did not return")
+	}
+	close(releaseRefresh)
+	select {
+	case <-retried:
+		t.Fatal("canceled tool call was sent after authorization recovered")
+	case <-time.After(50 * time.Millisecond):
+	}
+	if err := client.Close(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}
+
 type replayAuthProvider struct {
 	token          func() string
 	onUnauthorized func(status int)

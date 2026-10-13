@@ -426,7 +426,7 @@ func (t *StreamableHttpTransport) authorizedFetch(ctx context.Context, method st
 		if err != nil {
 			return nil, err
 		}
-		request, err := http.NewRequestWithContext(t.stopCtx, method, t.parsedURL.String(), nil)
+		request, err := http.NewRequestWithContext(ctx, method, t.parsedURL.String(), nil)
 		if err != nil {
 			return nil, err
 		}
@@ -436,15 +436,23 @@ func (t *StreamableHttpTransport) authorizedFetch(ctx context.Context, method st
 		if body != nil {
 			request.Body = io.NopCloser(bytes.NewReader(body))
 		}
-		response, err := t.doFetch(t.stopCtx, request)
+		response, err := t.doFetch(ctx, request)
 		if err != nil {
 			return nil, err
+		}
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			discardBody(response)
+			return nil, ctxErr
 		}
 		if attempt > 0 || t.options.AuthProvider == nil || !needsAuthorization(response) {
 			return response, nil
 		}
 		info := UnauthorizedInfo{Response: response, ServerURL: t.parsedURL.String(), Fetch: t.doFetch, Token: token}
 		err = t.options.AuthProvider.OnUnauthorized(t.stopCtx, info)
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			discardBody(response)
+			return nil, ctxErr
+		}
 		if err == nil {
 			continue
 		}
