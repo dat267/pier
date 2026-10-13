@@ -318,7 +318,11 @@ func LoadPromptTemplates(options LoadPromptTemplatesOptions) []PromptTemplate {
 	return templates
 }
 
-var promptCommandPattern = regexp.MustCompile(`^/([^\s]+)(?:\s+([\s\S]*))?$`)
+// jsWhitespaceClass is the JS `\s` class for RE2 (Go's `\s` is ASCII-only).
+const jsWhitespaceClass = `\t\n\v\f\r \x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}`
+
+var promptCommandPattern = regexp.MustCompile(
+	`^/([^` + jsWhitespaceClass + `]+)(?:[` + jsWhitespaceClass + `]+([\s\S]*))?$`)
 
 // ExpandPromptTemplate expands a "/name args" command when it matches a
 // template, returning the original text otherwise (upstream

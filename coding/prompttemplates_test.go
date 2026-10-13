@@ -240,6 +240,10 @@ func TestExpandPromptTemplate(t *testing.T) {
 	if got := ExpandPromptTemplate("/multi\nfirst", templates); got != "args: first" {
 		t.Fatalf("newline command = %q", got)
 	}
+	// The name/separator classes are the JS `\s`, so U+FEFF separates too.
+	if got := ExpandPromptTemplate("/multi\uFEFFfirst", templates); got != "args: first" {
+		t.Fatalf("U+FEFF separator = %q", got)
+	}
 }
 
 func TestLoadPromptTemplatesAndFiles(t *testing.T) {
