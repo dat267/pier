@@ -229,11 +229,11 @@ func ParseProtectedResourceMetadata(value any) (*OAuthProtectedResourceMetadata,
 			result.AuthorizationServers = append(result.AuthorizationServers, safe)
 		}
 	}
-	if scopes, err := optionalStrings(input, "scopes_supported", "scopes_supported"); err != nil {
+	scopes, err := optionalStrings(input, "scopes_supported", "scopes_supported")
+	if err != nil {
 		return nil, err
-	} else {
-		result.ScopesSupported = scopes
 	}
+	result.ScopesSupported = scopes
 	return result, nil
 }
 
@@ -269,31 +269,31 @@ func ParseAuthorizationServerMetadata(value any) (*AuthorizationServerMetadata, 
 		TokenEndpoint:          tokenEndpoint,
 		ResponseTypesSupported: responseTypes,
 	}
-	if registration, err := optionalUrl(input, "registration_endpoint", "registration endpoint"); err != nil {
+	registration, err := optionalUrl(input, "registration_endpoint", "registration endpoint")
+	if err != nil {
 		return nil, err
-	} else {
-		result.RegistrationEndpoint = registration
 	}
-	if scopes, err := optionalStrings(input, "scopes_supported", "scopes_supported"); err != nil {
+	result.RegistrationEndpoint = registration
+	scopes, err := optionalStrings(input, "scopes_supported", "scopes_supported")
+	if err != nil {
 		return nil, err
-	} else {
-		result.ScopesSupported = scopes
 	}
-	if grants, err := optionalStrings(input, "grant_types_supported", "grant_types_supported"); err != nil {
+	result.ScopesSupported = scopes
+	grants, err := optionalStrings(input, "grant_types_supported", "grant_types_supported")
+	if err != nil {
 		return nil, err
-	} else {
-		result.GrantTypesSupported = grants
 	}
-	if methods, err := optionalStrings(input, "token_endpoint_auth_methods_supported", "token_endpoint_auth_methods_supported"); err != nil {
+	result.GrantTypesSupported = grants
+	methods, err := optionalStrings(input, "token_endpoint_auth_methods_supported", "token_endpoint_auth_methods_supported")
+	if err != nil {
 		return nil, err
-	} else {
-		result.TokenEndpointAuthMethodsSupported = methods
 	}
-	if challenges, err := optionalStrings(input, "code_challenge_methods_supported", "code_challenge_methods_supported"); err != nil {
+	result.TokenEndpointAuthMethodsSupported = methods
+	challenges, err := optionalStrings(input, "code_challenge_methods_supported", "code_challenge_methods_supported")
+	if err != nil {
 		return nil, err
-	} else {
-		result.CodeChallengeMethodsSupported = challenges
 	}
+	result.CodeChallengeMethodsSupported = challenges
 	if flag, ok := input["client_id_metadata_document_supported"].(bool); ok {
 		result.ClientIDMetadataDocumentSupported = &flag
 	}
@@ -327,21 +327,21 @@ func ParseOAuthTokens(value any) (*OAuthTokens, error) {
 		}
 		result.ExpiresIn = &number
 	}
-	if scope, err := optionalString(input, "scope", "scope"); err != nil {
+	scope, err := optionalString(input, "scope", "scope")
+	if err != nil {
 		return nil, err
-	} else {
-		result.Scope = scope
 	}
-	if refresh, err := optionalString(input, "refresh_token", "refresh_token"); err != nil {
+	result.Scope = scope
+	refresh, err := optionalString(input, "refresh_token", "refresh_token")
+	if err != nil {
 		return nil, err
-	} else {
-		result.RefreshToken = refresh
 	}
-	if idToken, err := optionalString(input, "id_token", "id_token"); err != nil {
+	result.RefreshToken = refresh
+	idToken, err := optionalString(input, "id_token", "id_token")
+	if err != nil {
 		return nil, err
-	} else {
-		result.IDToken = idToken
 	}
+	result.IDToken = idToken
 	return result, nil
 }
 
@@ -357,11 +357,11 @@ func ParseClientInformation(value any) (*OAuthClientInformationFull, error) {
 	}
 	result := &OAuthClientInformationFull{}
 	result.ClientID = clientID
-	if secret, err := optionalString(input, "client_secret", "client_secret"); err != nil {
+	secret, err := optionalString(input, "client_secret", "client_secret")
+	if err != nil {
 		return nil, err
-	} else {
-		result.ClientSecret = secret
 	}
+	result.ClientSecret = secret
 	if issued, ok := toFloat(input["client_id_issued_at"]); ok && !absent(input["client_id_issued_at"]) {
 		result.ClientIDIssuedAt = &issued
 	}

@@ -109,15 +109,15 @@ func RepairJSON(jsonText string) string {
 // ParseJSONWithRepair parses JSON, retrying once with RepairJSON when the
 // repair changes the input (port of parseJsonWithRepair).
 func ParseJSONWithRepair(jsonText string, v any) error {
-	if err := json.Unmarshal([]byte(jsonText), v); err == nil {
+	err := json.Unmarshal([]byte(jsonText), v)
+	if err == nil {
 		return nil
-	} else {
-		repaired := RepairJSON(jsonText)
-		if repaired != jsonText {
-			return json.Unmarshal([]byte(repaired), v)
-		}
-		return err
 	}
+	repaired := RepairJSON(jsonText)
+	if repaired != jsonText {
+		return json.Unmarshal([]byte(repaired), v)
+	}
+	return err
 }
 
 // parseStreamingJSONInto attempts to parse potentially incomplete JSON

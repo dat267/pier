@@ -60,11 +60,8 @@ func runClipboardCommand(ctx context.Context, command string, args []string, opt
 }
 
 func isRemoteSession() bool {
-	if os.Getenv("SSH_CONNECTION") != "" || os.Getenv("SSH_CLIENT") != "" || os.Getenv("MOSH_CONNECTION") != "" ||
-		os.Getenv("PI_CLIPBOARD_OSC52") == "1" {
-		return true
-	}
-	return false
+	return os.Getenv("SSH_CONNECTION") != "" || os.Getenv("SSH_CLIENT") != "" || os.Getenv("MOSH_CONNECTION") != "" ||
+		os.Getenv("PI_CLIPBOARD_OSC52") == "1"
 }
 
 func copyCommands() [][]string {

@@ -35,11 +35,11 @@ func splitIncompleteAnsiSuffix(value string) (complete, pending string) {
 	windowStart := max(0, len(value)-maxPendingAnsiBytes)
 	for i := windowStart; i < len(value); i++ {
 		if value[i] == '\x1b' && i+1 < len(value) && value[i+1] == ']' {
-			if end := ansiStringTerminatorEnd(value, i+2); end == 0 {
+			end := ansiStringTerminatorEnd(value, i+2)
+			if end == 0 {
 				return value[:i], value[i:]
-			} else {
-				i = end - 1
 			}
+			i = end - 1
 			continue
 		}
 		if value[i] != '\x1b' && !(value[i] == 0xc2 && i+1 < len(value) && value[i+1] == 0x9b) {
