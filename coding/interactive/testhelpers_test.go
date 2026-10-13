@@ -94,3 +94,19 @@ func mustParseJSON(t *testing.T, text string) any {
 	}
 	return parsed
 }
+
+func checkGolden(t *testing.T, golden map[string]string, label string, got any) {
+	t.Helper()
+	if lines, ok := got.([]string); ok && lines == nil {
+		got = []string{}
+	}
+	want, ok := golden[label]
+	if !ok {
+		t.Fatalf("missing golden %q", label)
+	}
+	gotStable := stableMDValue(mustParseJSON(t, mustJSON(got)))
+	wantStable := stableMDValue(mustParseJSON(t, want))
+	if gotStable != wantStable {
+		t.Fatalf("%s:\n got %s\nwant %s", label, gotStable, wantStable)
+	}
+}

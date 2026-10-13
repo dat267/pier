@@ -145,4 +145,3 @@ func AnthropicProvider(streams ai.ProviderStreams) *ai.Provider {
 }
 
 var _ = json.Marshal
-var _ = fmt.Sprintf

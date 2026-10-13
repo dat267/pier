@@ -77,7 +77,7 @@ func TestCustomEditorAgainstUpstreamGolden(t *testing.T) {
 				*spec.Indicator, nil))
 		}
 		editor.SetText(spec.Text)
-		checkEasterGolden(t, golden, "render "+label+"@"+itoa(spec.Width)+"/"+itoa(spec.Hidden),
+		checkGolden(t, golden, "render "+label+"@"+itoa(spec.Width)+"/"+itoa(spec.Hidden),
 			editor.renderTopBorder(spec.Width, spec.Hidden))
 	}
 
@@ -115,6 +115,6 @@ func TestCustomEditorAgainstUpstreamGolden(t *testing.T) {
 		if events == nil {
 			events = []string{}
 		}
-		checkEasterGolden(t, golden, "input "+label, []any{events, editor.GetText()})
+		checkGolden(t, golden, "input "+label, []any{events, editor.GetText()})
 	}
 }

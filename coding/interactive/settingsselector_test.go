@@ -292,11 +292,11 @@ func TestSettingsSelectorAgainstUpstreamGolden(t *testing.T) {
 		for _, input := range spec.Inputs {
 			list.HandleInput(input)
 		}
-		checkEasterGolden(t, golden, label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		if events == nil {
 			events = []string{}
 		}
-		checkEasterGolden(t, golden, label+"-events", events)
+		checkGolden(t, golden, label+"-events", events)
 	}
 }
 

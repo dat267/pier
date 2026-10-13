@@ -58,22 +58,6 @@ func loadMessageGolden(t *testing.T) map[string]string {
 	return values
 }
 
-func checkMessageGolden(t *testing.T, golden map[string]string, label string, got any) {
-	t.Helper()
-	if lines, ok := got.([]string); ok && lines == nil {
-		got = []string{}
-	}
-	want, ok := golden[label]
-	if !ok {
-		t.Fatalf("missing golden %q", label)
-	}
-	gotStable := stableMDValue(mustParseJSON(t, mustJSON(got)))
-	wantStable := stableMDValue(mustParseJSON(t, want))
-	if gotStable != wantStable {
-		t.Fatalf("%s:\n got %s\nwant %s", label, gotStable, wantStable)
-	}
-}
-
 func assistantMessageFromSpec(spec assistantSpec) *ai.AssistantMessage {
 	message := &ai.AssistantMessage{
 		API: "openai", Provider: "openai", Model: "gpt",
@@ -126,10 +110,10 @@ func TestMessagesAgainstUpstreamGolden(t *testing.T) {
 	for _, label := range assistantLabels {
 		spec := corpus.Assistant[label]
 		component := NewAssistantMessageComponent(assistantMessageFromSpec(spec), spec.HideThinking, nil, "", 1, nil)
-		checkMessageGolden(t, golden, "assistant "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "assistant "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		if spec.ExpandThinking != nil {
 			component.SetHideThinkingBlock(*spec.ExpandThinking)
-			checkMessageGolden(t, golden, "assistant "+label+"-toggled@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+			checkGolden(t, golden, "assistant "+label+"-toggled@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		}
 	}
 
@@ -141,9 +125,9 @@ func TestMessagesAgainstUpstreamGolden(t *testing.T) {
 	for _, label := range branchLabels {
 		spec := corpus.Branch[label]
 		component := NewBranchSummaryMessageComponent(spec.Summary, nil, 1)
-		checkMessageGolden(t, golden, "branch "+label+"@"+itoa(spec.Width), component.Render(spec.Width))
+		checkGolden(t, golden, "branch "+label+"@"+itoa(spec.Width), component.Render(spec.Width))
 		component.SetExpanded(true)
-		checkMessageGolden(t, golden, "branch "+label+"-expanded@"+itoa(spec.Width), component.Render(spec.Width))
+		checkGolden(t, golden, "branch "+label+"-expanded@"+itoa(spec.Width), component.Render(spec.Width))
 	}
 
 	compactionLabels := make([]string, 0, len(corpus.Compaction))
@@ -154,27 +138,27 @@ func TestMessagesAgainstUpstreamGolden(t *testing.T) {
 	for _, label := range compactionLabels {
 		spec := corpus.Compaction[label]
 		component := NewCompactionSummaryMessageComponent(spec.Summary, 1234, nil, 1)
-		checkMessageGolden(t, golden, "compaction "+label+"@"+itoa(spec.Width), component.Render(spec.Width))
+		checkGolden(t, golden, "compaction "+label+"@"+itoa(spec.Width), component.Render(spec.Width))
 		component.SetExpanded(true)
-		checkMessageGolden(t, golden, "compaction "+label+"-expanded@"+itoa(spec.Width), component.Render(spec.Width))
+		checkGolden(t, golden, "compaction "+label+"-expanded@"+itoa(spec.Width), component.Render(spec.Width))
 	}
 
 	// Status indicators.
 	working := NewWorkingStatusIndicator(nil, "Working...", nil, nil)
 	working.Dispose()
-	checkMessageGolden(t, golden, "status working", []any{
+	checkGolden(t, golden, "status working", []any{
 		working.Render(30), working.RenderInBorder(20), working.RenderSpinnerInBorder(5),
 	})
 	retry := NewRetryStatusIndicator(nil, 2, 5, 3000)
 	retry.Dispose()
-	checkMessageGolden(t, golden, "status retry", retry.Render(60))
+	checkGolden(t, golden, "status retry", retry.Render(60))
 	compactionStatus := NewCompactionStatusIndicator(nil, "threshold", nil)
 	compactionStatus.Dispose()
-	checkMessageGolden(t, golden, "status compaction", compactionStatus.Render(60))
+	checkGolden(t, golden, "status compaction", compactionStatus.Render(60))
 	branchStatus := NewBranchSummaryStatusIndicator(nil)
 	branchStatus.Dispose()
-	checkMessageGolden(t, golden, "status branch", branchStatus.Render(60))
-	checkMessageGolden(t, golden, "status idle", IdleStatus{}.Render(8))
+	checkGolden(t, golden, "status branch", branchStatus.Render(60))
+	checkGolden(t, golden, "status idle", IdleStatus{}.Render(8))
 }
 
 // TestAppKeybindings covers the keybinding table, the platform variants, the

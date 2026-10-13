@@ -87,22 +87,6 @@ func loadSelectorGolden(t *testing.T) map[string]string {
 	return values
 }
 
-func checkSelectorGolden(t *testing.T, golden map[string]string, label string, got any) {
-	t.Helper()
-	if lines, ok := got.([]string); ok && lines == nil {
-		got = []string{}
-	}
-	want, ok := golden[label]
-	if !ok {
-		t.Fatalf("missing golden %q", label)
-	}
-	gotStable := stableMDValue(mustParseJSON(t, mustJSON(got)))
-	wantStable := stableMDValue(mustParseJSON(t, want))
-	if gotStable != wantStable {
-		t.Fatalf("%s:\n got %s\nwant %s", label, gotStable, wantStable)
-	}
-}
-
 // TestSelectorsAgainstUpstreamGolden replays the upstream selector corpus.
 func TestSelectorsAgainstUpstreamGolden(t *testing.T) {
 	// The corpus drives Unix paths (/tmp/project) and the golden bakes in how
@@ -130,15 +114,15 @@ func TestSelectorsAgainstUpstreamGolden(t *testing.T) {
 	for _, label := range sortedKeys(corpus.Theme) {
 		spec := corpus.Theme[label]
 		component := NewThemeSelectorComponent(spec.Current, nil, nil, nil)
-		checkSelectorGolden(t, golden, "theme "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "theme "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		selected, _ := component.GetSelectList().GetSelectedItem()
-		checkSelectorGolden(t, golden, "theme "+label+"-selected", selected)
+		checkGolden(t, golden, "theme "+label+"-selected", selected)
 	}
 
 	for _, label := range sortedKeys(corpus.Images) {
 		spec := corpus.Images[label]
 		component := NewShowImagesSelectorComponent(spec.Current, nil, nil)
-		checkSelectorGolden(t, golden, "images "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "images "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 	}
 
 	levels := []string{"off", "minimal", "low", "medium", "high", "xhigh", "max"}
@@ -149,9 +133,9 @@ func TestSelectorsAgainstUpstreamGolden(t *testing.T) {
 		for _, input := range spec.Inputs {
 			component.HandleInput(input)
 		}
-		checkSelectorGolden(t, golden, "thinking "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "thinking "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		selected, _ := component.GetSelectList().GetSelectedItem()
-		checkSelectorGolden(t, golden, "thinking "+label+"-selected", selected)
+		checkGolden(t, golden, "thinking "+label+"-selected", selected)
 	}
 
 	for _, label := range sortedKeys(corpus.UserMessages) {
@@ -164,7 +148,7 @@ func TestSelectorsAgainstUpstreamGolden(t *testing.T) {
 		for _, input := range spec.Inputs {
 			component.GetMessageList().HandleInput(input)
 		}
-		checkSelectorGolden(t, golden, "umsg "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "umsg "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 	}
 
 	for _, label := range sortedKeys(corpus.Trust) {
@@ -175,7 +159,7 @@ func TestSelectorsAgainstUpstreamGolden(t *testing.T) {
 		for _, input := range spec.Inputs {
 			component.HandleInput(input)
 		}
-		checkSelectorGolden(t, golden, "trust "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "trust "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 	}
 
 	for _, label := range sortedKeys(corpus.Custom) {
@@ -210,8 +194,8 @@ func TestSelectorsAgainstUpstreamGolden(t *testing.T) {
 			}
 		}
 		component := NewCustomMessageComponent(payload, renderer, nil, 1)
-		checkSelectorGolden(t, golden, "custom "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "custom "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		component.SetExpanded(true)
-		checkSelectorGolden(t, golden, "custom "+label+"-expanded@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "custom "+label+"-expanded@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 	}
 }

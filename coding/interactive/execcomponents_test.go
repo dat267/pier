@@ -82,22 +82,6 @@ func loadExecGolden(t *testing.T) map[string]string {
 	return values
 }
 
-func checkExecGolden(t *testing.T, golden map[string]string, label string, got any) {
-	t.Helper()
-	if lines, ok := got.([]string); ok && lines == nil {
-		got = []string{}
-	}
-	want, ok := golden[label]
-	if !ok {
-		t.Fatalf("missing golden %q", label)
-	}
-	gotStable := stableMDValue(mustParseJSON(t, mustJSON(got)))
-	wantStable := stableMDValue(mustParseJSON(t, want))
-	if gotStable != wantStable {
-		t.Fatalf("%s:\n got %s\nwant %s", label, gotStable, wantStable)
-	}
-}
-
 // TestExecComponentsAgainstUpstreamGolden replays the bash/tool components.
 func TestExecComponentsAgainstUpstreamGolden(t *testing.T) {
 	SetCustomThemesDir(t.TempDir())
@@ -131,10 +115,10 @@ func TestExecComponentsAgainstUpstreamGolden(t *testing.T) {
 			component.SetExpanded(true)
 		}
 		if spec.Running {
-			checkExecGolden(t, golden, "bash "+label+"-running@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+			checkGolden(t, golden, "bash "+label+"-running@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		}
-		checkExecGolden(t, golden, "bash "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
-		checkExecGolden(t, golden, "bash "+label+"-output", component.GetOutput())
+		checkGolden(t, golden, "bash "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "bash "+label+"-output", component.GetOutput())
 	}
 
 	for _, label := range sortedKeys(corpus.Tool) {
@@ -204,10 +188,10 @@ func TestExecComponentsAgainstUpstreamGolden(t *testing.T) {
 		if spec.Expanded {
 			component.SetExpanded(true)
 		}
-		checkExecGolden(t, golden, "tool "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "tool "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		if spec.ExpandAfter {
 			component.SetExpanded(true)
-			checkExecGolden(t, golden, "tool "+label+"-expanded@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+			checkGolden(t, golden, "tool "+label+"-expanded@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		}
 	}
 }

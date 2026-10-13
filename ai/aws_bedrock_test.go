@@ -472,4 +472,3 @@ func TestAWSEventStreamDecoding(t *testing.T) {
 }
 
 var _ = fmt.Sprintf
-var _ = time.Now

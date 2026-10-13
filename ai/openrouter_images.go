@@ -2,7 +2,6 @@ package ai
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -279,5 +278,3 @@ func BuiltinImagesModels(models *ImagesModels) *ImagesModels {
 	}
 	return models
 }
-
-var _ = context.Background

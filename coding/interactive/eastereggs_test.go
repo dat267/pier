@@ -61,22 +61,6 @@ func loadGoldenFile(t *testing.T, path string) map[string]string {
 	return values
 }
 
-func checkEasterGolden(t *testing.T, golden map[string]string, label string, got any) {
-	t.Helper()
-	if lines, ok := got.([]string); ok && lines == nil {
-		got = []string{}
-	}
-	want, ok := golden[label]
-	if !ok {
-		t.Fatalf("missing golden %q", label)
-	}
-	gotStable := stableMDValue(mustParseJSON(t, mustJSON(got)))
-	wantStable := stableMDValue(mustParseJSON(t, want))
-	if gotStable != wantStable {
-		t.Fatalf("%s:\n got %s\nwant %s", label, gotStable, wantStable)
-	}
-}
-
 // TestEasterComponentsAgainstUpstreamGolden replays the skill/setup/
 // announcement renders.
 func TestEasterComponentsAgainstUpstreamGolden(t *testing.T) {
@@ -99,9 +83,9 @@ func TestEasterComponentsAgainstUpstreamGolden(t *testing.T) {
 	for _, label := range sortedKeys(corpus.Skill) {
 		spec := corpus.Skill[label]
 		component := NewSkillInvocationMessageComponent(spec.Name, spec.Content, nil)
-		checkEasterGolden(t, golden, "skill "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "skill "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		component.SetExpanded(true)
-		checkEasterGolden(t, golden, "skill "+label+"-expanded@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "skill "+label+"-expanded@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 	}
 
 	for _, label := range sortedKeys(corpus.Setup) {
@@ -114,15 +98,15 @@ func TestEasterComponentsAgainstUpstreamGolden(t *testing.T) {
 		for _, input := range spec.Inputs {
 			component.HandleInput(input)
 		}
-		checkEasterGolden(t, golden, "setup "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "setup "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		previewProjection := previews
 		if previewProjection == nil {
 			previewProjection = []string{}
 		}
-		checkEasterGolden(t, golden, "setup "+label+"-previews", previewProjection)
+		checkGolden(t, golden, "setup "+label+"-previews", previewProjection)
 	}
 
-	checkEasterGolden(t, golden, "announcement@60", normalizeRender(NewEarendilAnnouncementComponent().Render(60)))
+	checkGolden(t, golden, "announcement@60", normalizeRender(NewEarendilAnnouncementComponent().Render(60)))
 }
 
 // TestEasterDeterministicParts covers the daxnuts/armin image data.

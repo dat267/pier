@@ -677,7 +677,6 @@ func compactionSettingsOf(settingsManager *SettingsManager, model *ai.Model) Com
 	}
 }
 
-var _ = strings.TrimSpace
 
 // contentListHasImages reports whether any block is an image.
 func contentListHasImages(blocks ai.ContentList) bool {

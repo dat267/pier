@@ -1046,4 +1046,3 @@ func cloneCredential(credential *ai.Credential) *ai.Credential {
 	return &copied
 }
 
-var _ = strings.TrimSpace

@@ -100,7 +100,7 @@ func TestTreeSelectorAgainstUpstreamGolden(t *testing.T) {
 			t.Fatalf("open session: %v", err)
 		}
 		tree := manager.GetTree()
-		checkEasterGolden(t, golden, label+"-tree", projectTree(tree))
+		checkGolden(t, golden, label+"-tree", projectTree(tree))
 
 		terminalHeight := spec.TerminalHeight
 		if terminalHeight == 0 {
@@ -114,11 +114,11 @@ func TestTreeSelectorAgainstUpstreamGolden(t *testing.T) {
 				InitialFilterMode: spec.InitialFilterMode,
 			})
 
-		checkEasterGolden(t, golden, label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		for index, input := range spec.Inputs {
 			component.HandleInput(input)
 			encoded, _ := json.Marshal(input)
-			checkEasterGolden(t, golden, label+"+"+itoa(index)+"+"+string(encoded)+"@"+itoa(spec.Width),
+			checkGolden(t, golden, label+"+"+itoa(index)+"+"+string(encoded)+"@"+itoa(spec.Width),
 				normalizeRender(component.Render(spec.Width)))
 		}
 	}

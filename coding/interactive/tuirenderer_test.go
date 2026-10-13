@@ -37,10 +37,10 @@ func TestInteractiveTuiStyleExpressionsAgainstUpstreamGolden(t *testing.T) {
 	styleSearchMatch := func(text string) string {
 		return theme.Bg("searchMatchBg", theme.Fg("searchMatchText", text))
 	}
-	checkEasterGolden(t, golden, "searchMatchStyle", theme.Underline(styleSearchMatch(corpus.Text)))
-	checkEasterGolden(t, golden, "searchCurrentMatchStyle",
+	checkGolden(t, golden, "searchMatchStyle", theme.Underline(styleSearchMatch(corpus.Text)))
+	checkGolden(t, golden, "searchCurrentMatchStyle",
 		theme.Bold(theme.Inverse(styleSearchMatch(corpus.Text))))
-	checkEasterGolden(t, golden, "searchNavigationButtonStyle",
+	checkGolden(t, golden, "searchNavigationButtonStyle",
 		[]string{theme.Underline(corpus.Text), corpus.Text})
 
 	shortcut := KeyDisplayText("tui.altScreen.bottom")
@@ -49,8 +49,8 @@ func TestInteractiveTuiStyleExpressionsAgainstUpstreamGolden(t *testing.T) {
 		label += " · " + shortcut
 	}
 	label += " "
-	checkEasterGolden(t, golden, "scrollToEndIndicator", theme.Bg("selectedBg", theme.Fg("text", label)))
-	checkEasterGolden(t, golden, "shortcut", shortcut)
+	checkGolden(t, golden, "scrollToEndIndicator", theme.Bg("selectedBg", theme.Fg("text", label)))
+	checkGolden(t, golden, "shortcut", shortcut)
 }
 
 // TestCreateInteractiveTuiModes checks the renderer selection.

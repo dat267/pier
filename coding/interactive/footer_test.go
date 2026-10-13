@@ -92,11 +92,11 @@ func TestFooterHelpersAgainstUpstreamGolden(t *testing.T) {
 	}
 
 	for _, label := range sortedKeys(corpus.Tokens) {
-		checkEasterGolden(t, golden, "tokens "+label, FormatTokens(corpus.Tokens[label].Count))
+		checkGolden(t, golden, "tokens "+label, FormatTokens(corpus.Tokens[label].Count))
 	}
 	for _, label := range sortedKeys(corpus.Cwd) {
 		spec := corpus.Cwd[label]
-		checkEasterGolden(t, golden, "cwd "+label, FormatCwdForFooter(spec.Cwd, spec.Home))
+		checkGolden(t, golden, "cwd "+label, FormatCwdForFooter(spec.Cwd, spec.Home))
 	}
 }
 

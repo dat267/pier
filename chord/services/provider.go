@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -1039,5 +1038,4 @@ func ValidateRemoteServiceImplementation(serviceID string, members Members) erro
 	return err
 }
 
-var _ = errors.Join
 var _ = context.Background

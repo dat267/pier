@@ -158,13 +158,13 @@ func TestSessionSelectorAgainstUpstreamGolden(t *testing.T) {
 		component.WaitForPendingLoads()
 		queue.drain()
 
-		checkEasterGolden(t, golden, label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		for index, input := range spec.Inputs {
 			component.HandleInput(input)
 			component.WaitForPendingLoads()
 			queue.drain()
 			encoded, _ := json.Marshal(input)
-			checkEasterGolden(t, golden, label+"+"+itoa(index)+"+"+string(encoded)+"@"+itoa(spec.Width),
+			checkGolden(t, golden, label+"+"+itoa(index)+"+"+string(encoded)+"@"+itoa(spec.Width),
 				normalizeRender(component.Render(spec.Width)))
 		}
 		if events == nil {
@@ -173,8 +173,8 @@ func TestSessionSelectorAgainstUpstreamGolden(t *testing.T) {
 		if renames == nil {
 			renames = []string{}
 		}
-		checkEasterGolden(t, golden, label+"-events", events)
-		checkEasterGolden(t, golden, label+"-renames", renames)
+		checkGolden(t, golden, label+"-events", events)
+		checkGolden(t, golden, label+"-renames", renames)
 	}
 }
 

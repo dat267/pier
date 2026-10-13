@@ -89,22 +89,6 @@ func loadModelSelGolden(t *testing.T) map[string]string {
 	return values
 }
 
-func checkModelSelGolden(t *testing.T, golden map[string]string, label string, got any) {
-	t.Helper()
-	if lines, ok := got.([]string); ok && lines == nil {
-		got = []string{}
-	}
-	want, ok := golden[label]
-	if !ok {
-		t.Fatalf("missing golden %q", label)
-	}
-	gotStable := stableMDValue(mustParseJSON(t, mustJSON(got)))
-	wantStable := stableMDValue(mustParseJSON(t, want))
-	if gotStable != wantStable {
-		t.Fatalf("%s:\n got %s\nwant %s", label, gotStable, wantStable)
-	}
-}
-
 func testModels() []*ai.Model {
 	return []*ai.Model{
 		{Provider: "openai", ID: "gpt-5", Name: "GPT-5", API: "openai", Reasoning: true},
@@ -156,7 +140,7 @@ func TestModelSelectorsAgainstUpstreamGolden(t *testing.T) {
 		for _, input := range spec.Inputs {
 			component.HandleInput(input)
 		}
-		checkModelSelGolden(t, golden, "modelsel "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "modelsel "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 		component.Dispose()
 	}
 
@@ -176,7 +160,7 @@ func TestModelSelectorsAgainstUpstreamGolden(t *testing.T) {
 		for _, input := range spec.Inputs {
 			component.HandleInput(input)
 		}
-		checkModelSelGolden(t, golden, "scoped "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkGolden(t, golden, "scoped "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
 	}
 }
 
