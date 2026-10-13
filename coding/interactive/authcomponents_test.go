@@ -357,3 +357,18 @@ func TestNormalizeWhitespaceLowerUnicode(t *testing.T) {
 		t.Fatalf("ideographic normalize = %q; want %q", got, "a")
 	}
 }
+
+// Session search uses JS String.trim and the JS `\s` class (U+FEFF is
+// whitespace; U+0085 is not).
+func TestSessionSearchUsesJSWhitespace(t *testing.T) {
+	if HasSessionName(coding.SessionInfo{Name: "\uFEFF"}) {
+		t.Fatal("U+FEFF name should count as unnamed")
+	}
+	if !HasSessionName(coding.SessionInfo{Name: "\u0085"}) {
+		t.Fatal("U+0085 name should count as named")
+	}
+	parsed := ParseSearchQuery("\"foo\uFEFFbar")
+	if len(parsed.Tokens) != 2 {
+		t.Fatalf("tokens = %+v; want 2 after U+FEFF split", parsed.Tokens)
+	}
+}

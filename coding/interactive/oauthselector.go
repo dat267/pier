@@ -78,7 +78,7 @@ func getSessionSearchText(session coding.SessionInfo) string {
 
 // HasSessionName reports whether the session has a non-empty name.
 func HasSessionName(session coding.SessionInfo) bool {
-	return strings.TrimSpace(session.Name) != ""
+	return ai.JSTrim(session.Name) != ""
 }
 
 func matchesNameFilter(session coding.SessionInfo, filter NameFilter) bool {
@@ -90,13 +90,13 @@ func matchesNameFilter(session coding.SessionInfo, filter NameFilter) bool {
 
 // ParseSearchQuery parses a session search query.
 func ParseSearchQuery(query string) ParsedSearchQuery {
-	trimmed := strings.TrimSpace(query)
+	trimmed := ai.JSTrim(query)
 	if trimmed == "" {
 		return ParsedSearchQuery{Mode: "tokens"}
 	}
 
 	if strings.HasPrefix(trimmed, "re:") {
-		pattern := strings.TrimSpace(trimmed[3:])
+		pattern := ai.JSTrim(trimmed[3:])
 		if pattern == "" {
 			return ParsedSearchQuery{Mode: "regex", Error: "Empty regex"}
 		}
@@ -113,7 +113,7 @@ func ParseSearchQuery(query string) ParsedSearchQuery {
 	hadUnclosedQuote := false
 
 	flush := func(kind string) {
-		value := strings.TrimSpace(builder.String())
+		value := ai.JSTrim(builder.String())
 		builder.Reset()
 		if value == "" {
 			return
@@ -143,8 +143,8 @@ func ParseSearchQuery(query string) ParsedSearchQuery {
 
 	if hadUnclosedQuote {
 		var fallback []SearchToken
-		for _, token := range strings.Fields(trimmed) {
-			value := strings.TrimSpace(token)
+		for _, token := range ai.JSSplitWhitespace(trimmed) {
+			value := ai.JSTrim(token)
 			if value != "" {
 				fallback = append(fallback, SearchToken{Kind: "fuzzy", Value: value})
 			}
@@ -216,7 +216,7 @@ func FilterAndSortSessions(sessions []coding.SessionInfo, query string, sortMode
 			}
 		}
 	}
-	if strings.TrimSpace(query) == "" {
+	if ai.JSTrim(query) == "" {
 		return filtered
 	}
 
