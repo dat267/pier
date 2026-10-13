@@ -226,6 +226,30 @@ func AdmitSubmission(tx *Transaction, conversationID Id, draft SubmissionDraft, 
 			return existing.ID, nil
 		}
 	}
+	if draft.Type == SubmissionTypeWrite && isDisplayOnlyEntry(draft.Entry) {
+		inbox, err := tx.Doc(InboxDoc.Definition, conversationID)
+		if err != nil {
+			return 0, err
+		}
+		state, err := decodeInboxState(inbox)
+		if err != nil {
+			return 0, err
+		}
+		if !hasQueuedReset(state.Items) {
+			entry, err := tx.AppendEntry(conversationID, *draft.Entry)
+			if err != nil {
+				return 0, err
+			}
+			created, err := tx.CreateSubmission(SubmissionCreate{
+				ConversationID: conversationID, RequestID: draft.RequestID, Type: SubmissionTypeWrite,
+				Status: SubmissionDone, Entry: &entry.ID,
+			})
+			if err != nil {
+				return 0, err
+			}
+			return created.ID, nil
+		}
+	}
 	live, err := tx.Doc(LiveDoc.Definition, conversationID)
 	if err != nil {
 		return 0, err
@@ -344,6 +368,23 @@ func liveRunPresent(live chord.JsonValue) bool {
 		return false
 	}
 	return object["run"] != nil
+}
+
+func isDisplayOnlyEntry(entry *EntryDraft) bool {
+	return entry != nil && entry.Model == nil && entry.Head == nil && !entry.HeadSelf && entry.Edits == nil
+}
+
+func hasQueuedReset(items []InboxItem) bool {
+	for _, item := range items {
+		if item.Mode != InboxWrite {
+			continue
+		}
+		entry, err := decodeInboxEntry(item)
+		if err == nil && entry.HeadSelf {
+			return true
+		}
+	}
+	return false
 }
 
 func boundaryItemCount(boundary *Boundary) int {

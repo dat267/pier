@@ -2,6 +2,7 @@ package durable
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -147,6 +148,82 @@ func TestAdmitRequestIDDeduplicates(t *testing.T) {
 	}
 }
 
+func TestDisplayOnlyWriteSettlesImmediatelyWhileOtherInputsAreQueued(t *testing.T) {
+	session, storage := newRootSession(t)
+	ctx := context.Background()
+	if err := session.Commit(ctx, func(tx *Transaction) error {
+		stageLive(t, tx, RootConversationID, "run", map[string]any{"taskId": 99.0, "inputs": []any{}})
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	queuedID, err := func() (Id, error) {
+		var id Id
+		err := session.Commit(ctx, func(tx *Transaction) error {
+			var admitErr error
+			id, admitErr = AdmitSubmission(tx, RootConversationID, SubmissionDraft{Type: SubmissionTypeInput, Content: "queued input"}, 100, defaultQueueModes())
+			return admitErr
+		})
+		return id, err
+	}()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	entryDraft := EntryDraft{Kind: "notice", Data: json.RawMessage(`{"text":"visible"}`)}
+	var writeID Id
+	if err := session.Commit(ctx, func(tx *Transaction) error {
+		var admitErr error
+		writeID, admitErr = AdmitSubmission(tx, RootConversationID, SubmissionDraft{Type: SubmissionTypeWrite, Entry: &entryDraft}, 101, defaultQueueModes())
+		return admitErr
+	}); err != nil {
+		t.Fatal(err)
+	}
+	write, err := storage.Submission(ctx, writeID)
+	if err != nil || write == nil || write.Status != SubmissionDone || write.Entry == nil {
+		t.Fatalf("display-only write submission = %+v, err=%v", write, err)
+	}
+	storedEntry, err := storage.Entry(ctx, *write.Entry)
+	if err != nil || storedEntry == nil || storedEntry.Entry.Kind != "notice" || string(storedEntry.Entry.Data) != string(entryDraft.Data) {
+		t.Fatalf("display-only entry = %+v, err=%v", storedEntry, err)
+	}
+	inbox := readInbox(t, session, RootConversationID)
+	if len(inbox.Items) != 1 || inbox.Items[0].ID != queuedID {
+		t.Fatalf("display-only write entered the inbox: %+v", inbox.Items)
+	}
+}
+
+func TestDisplayOnlyWriteWaitsBehindQueuedReset(t *testing.T) {
+	session, storage := newRootSession(t)
+	ctx := context.Background()
+	if err := session.Commit(ctx, func(tx *Transaction) error {
+		stageLive(t, tx, RootConversationID, "run", map[string]any{"taskId": 99.0, "inputs": []any{}})
+		_, err := AdmitSubmission(tx, RootConversationID, SubmissionDraft{
+			Type: SubmissionTypeWrite, Entry: &EntryDraft{Kind: "pi.reset", HeadSelf: true},
+		}, 100, defaultQueueModes())
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	entry := EntryDraft{Kind: "notice", Data: json.RawMessage(`{"text":"after reset"}`)}
+	var id Id
+	if err := session.Commit(ctx, func(tx *Transaction) error {
+		var err error
+		id, err = AdmitSubmission(tx, RootConversationID, SubmissionDraft{Type: SubmissionTypeWrite, Entry: &entry}, 101, defaultQueueModes())
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	record, err := storage.Submission(ctx, id)
+	if err != nil || record == nil || record.Status != SubmissionQueued {
+		t.Fatalf("display-only write after reset = %+v, err=%v; want queued", record, err)
+	}
+	items := readInbox(t, session, RootConversationID).Items
+	if len(items) != 2 || items[1].ID != id || items[1].Mode != InboxWrite {
+		t.Fatalf("inbox = %+v, want reset followed by display-only write", items)
+	}
+}
+
 func TestAdmitIdleWrite(t *testing.T) {
 	session, storage := newRootSession(t)
 	ctx := context.Background()
@@ -164,9 +241,11 @@ func TestAdmitIdleWrite(t *testing.T) {
 	if record.Status != SubmissionDone || record.Type != SubmissionTypeWrite || record.Entry == nil {
 		t.Fatalf("record = %+v", record)
 	}
-	live, _, _ := session.Snapshot(ctx, LiveDoc.Definition, RootConversationID)
-	if _, present := live.(map[string]any)["run"]; present {
-		t.Fatalf("a write must not start a run: %+v", live)
+	live, exists, _ := session.Snapshot(ctx, LiveDoc.Definition, RootConversationID)
+	if exists {
+		if _, present := live.(map[string]any)["run"]; present {
+			t.Fatalf("a write must not start a run: %+v", live)
+		}
 	}
 }
 
