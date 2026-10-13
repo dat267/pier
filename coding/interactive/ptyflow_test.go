@@ -128,7 +128,9 @@ func TestQuitCommandShutsDown(t *testing.T) {
 	stop := runTestAppLoop(t, app)
 	defer stop()
 
-	app.submit.HandleSubmit(context.Background(), "/quit")
+	// The submit path mutates loop-owned editor state (ClearStatusIndicator),
+	// so drive it on the UI loop like the editor's OnSubmit callback does.
+	app.ui.Post(func() { app.submit.HandleSubmit(context.Background(), "/quit") })
 	waitForConditionWithin(t, app.lifecycle.IsShuttingDown, 10*time.Second)
 }
 
