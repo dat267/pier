@@ -71,7 +71,9 @@ zero-width cursor marker at the boundary when an overlay ends directly left of
 the cursor, instead of dropping the hardware cursor position. A worktree
 context file that symlinks to its main repo's file loads again: the shadow
 comparison uses the directory's real path, not the resolved file path
-(`#10681`). A throwing host commit/close
+(`#10681`). Theme `$schema` references use the published
+`https://pi.dev/schemas/theme.schema.json`, and a keybindings `$schema` is not
+read as a binding. A throwing host commit/close
 listener is reported through `onReport` instead of failing the operation that
 ran it, the Session's own listeners fail the Session, a throwing watch listener
 is reported as well as ending the watch with `listener_error`, and a throwing
@@ -87,9 +89,12 @@ tests cover these fixes.
 **v1.2.0 audit still open.** The largest unported change is chord's v1.2.0
 typed-host runtime, which replaced the facet/service runtime the port mirrors
 and removed the `client`, `protocol` and `server` packages the port keeps; that
-rewrite is not attempted here. The new published configuration schemas still
-need a source-level parity review; they are configuration-editor support, not a
-runtime request path. The remaining Durable v1.2.0 items are the unported
+rewrite is not attempted here. The new published configuration schemas
+received a source-level review: the theme schema URL and the keybindings
+`$schema` skip are fixed, but the four generated schema artifacts and their
+typebox validation are not ported (the port keeps its hand-written theme
+validator and has no settings/models/keybindings schema validation); they are
+configuration-editor support, not a runtime request path. The remaining Durable v1.2.0 items are the unported
 optional features: `listFiles` belongs to the `packages/env` daemon (already
 classified as a separately scoped remote-execution feature above), and
 structured tool outputs and nested/deferred tool execution belong to the nested

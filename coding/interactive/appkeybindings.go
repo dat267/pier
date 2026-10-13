@@ -271,6 +271,9 @@ func OrderKeybindingsConfig(config map[string]json.RawMessage) map[string]json.R
 func ToKeybindingsConfig(value map[string]json.RawMessage) map[string][]string {
 	config := map[string][]string{}
 	for key, raw := range value {
+		if key == "$schema" {
+			continue
+		}
 		trimmed := strings.TrimSpace(string(raw))
 		if strings.HasPrefix(trimmed, `"`) {
 			var single string

@@ -247,6 +247,14 @@ func TestAppKeybindings(t *testing.T) {
 	if _, ok := config["nope"]; ok {
 		t.Fatal("unexpected key")
 	}
+	// A $schema reference is not a binding (v1.2.0 skips it).
+	withSchema := map[string]json.RawMessage{
+		"$schema":       json.RawMessage(`"https://pi.dev/schemas/keybindings.schema.json"`),
+		"app.interrupt": json.RawMessage(`"escape"`),
+	}
+	if config := ToKeybindingsConfig(withSchema); config["$schema"] != nil {
+		t.Fatalf("$schema became a binding: %v", config)
+	}
 
 	// Manager overlays user bindings.
 	manager := NewAppKeybindingsManager(map[string][]string{"app.interrupt": {"ctrl+q"}}, "")
