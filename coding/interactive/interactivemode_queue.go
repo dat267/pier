@@ -34,6 +34,7 @@ type QueueSession interface {
 	CycleModel(ctx context.Context, direction string, options coding.ModelMutationOptions) (*coding.ModelCycleResult, error)
 	SupportsThinking() bool
 	ThinkingLevel() ai.ThinkingLevel
+	ScopedModels() []coding.ScopedModel
 }
 
 // QueueController manages the queued-message display and the editor actions.
@@ -400,7 +401,11 @@ func (c *QueueController) CycleModel(ctx context.Context, direction string) (*co
 		return nil, err
 	}
 	if result == nil {
-		c.showStatus("Only one model available")
+		message := "Only one model available"
+		if len(c.Session.ScopedModels()) > 0 {
+			message = "Only one model in scope"
+		}
+		c.showStatus(message)
 		return nil, nil
 	}
 	c.UpdateEditorBorderColor()
@@ -410,7 +415,10 @@ func (c *QueueController) CycleModel(ctx context.Context, direction string) (*co
 	}
 	name := ""
 	if result.Model != nil {
-		name = result.Model.ID
+		name = result.Model.Name
+		if name == "" {
+			name = result.Model.ID
+		}
 	}
 	c.showStatus("Switched to " + name + thinking)
 	return result, nil

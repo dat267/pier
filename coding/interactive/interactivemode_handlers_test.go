@@ -52,8 +52,9 @@ func (s *handlerTestSession) CycleThinkingLevel(coding.ModelMutationOptions) (ai
 func (s *handlerTestSession) CycleModel(context.Context, string, coding.ModelMutationOptions) (*coding.ModelCycleResult, error) {
 	return nil, nil
 }
-func (s *handlerTestSession) SupportsThinking() bool          { return true }
-func (s *handlerTestSession) ThinkingLevel() ai.ThinkingLevel { return s.thinking }
+func (s *handlerTestSession) ScopedModels() []coding.ScopedModel { return nil }
+func (s *handlerTestSession) SupportsThinking() bool             { return true }
+func (s *handlerTestSession) ThinkingLevel() ai.ThinkingLevel    { return s.thinking }
 
 func (s *handlerTestSession) IsStreaming() bool   { return s.streaming }
 func (s *handlerTestSession) IsBashRunning() bool { return s.bashRunning }

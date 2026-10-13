@@ -26,7 +26,11 @@ type queueTestSession struct {
 	streaming     bool
 	compacting    bool
 	promptOptions []*coding.PromptOptions
+	cycleResult   *coding.ModelCycleResult
+	scoped        []coding.ScopedModel
 }
+
+func (s *queueTestSession) ScopedModels() []coding.ScopedModel { return s.scoped }
 
 func (s *queueTestSession) IsStreaming() bool  { return s.streaming }
 func (s *queueTestSession) IsCompacting() bool { return s.compacting }
@@ -60,7 +64,7 @@ func (s *queueTestSession) CycleThinkingLevel(coding.ModelMutationOptions) (ai.T
 	return s.thinking, s.thinking != ""
 }
 func (s *queueTestSession) CycleModel(context.Context, string, coding.ModelMutationOptions) (*coding.ModelCycleResult, error) {
-	return nil, nil
+	return s.cycleResult, nil
 }
 func (s *queueTestSession) SupportsThinking() bool          { return true }
 func (s *queueTestSession) ThinkingLevel() ai.ThinkingLevel { return s.thinking }
@@ -401,6 +405,47 @@ func TestHandleDequeueWithoutQueuedMessages(t *testing.T) {
 	controller.HandleDequeue()
 
 	if len(statuses) != 1 || statuses[0] != "No queued messages to restore" {
+		t.Fatalf("statuses = %v", statuses)
+	}
+}
+
+// CycleModel reports the model's display name when it has one, and says
+// "in scope" when the model came from the scoped list (upstream cycleModel).
+func TestCycleModelStatusText(t *testing.T) {
+	controller, session, _ := newQueueTestController(t)
+	statuses := []string{}
+	controller.ShowStatus = func(m string) { statuses = append(statuses, m) }
+
+	session.cycleResult = &coding.ModelCycleResult{
+		Model: &ai.Model{Provider: "p", ID: "id", Name: "Pretty"}, ThinkingLevel: "off",
+	}
+	if _, err := controller.CycleModel(context.Background(), "forward"); err != nil {
+		t.Fatal(err)
+	}
+	if len(statuses) != 1 || statuses[0] != "Switched to Pretty" {
+		t.Fatalf("statuses = %v", statuses)
+	}
+
+	// A model without a name falls back to its id.
+	statuses = nil
+	session.cycleResult = &coding.ModelCycleResult{
+		Model: &ai.Model{Provider: "p", ID: "plain-id"}, ThinkingLevel: "off",
+	}
+	if _, err := controller.CycleModel(context.Background(), "forward"); err != nil {
+		t.Fatal(err)
+	}
+	if len(statuses) != 1 || statuses[0] != "Switched to plain-id" {
+		t.Fatalf("statuses = %v", statuses)
+	}
+
+	// No next model with a scope says "in scope".
+	statuses = nil
+	session.cycleResult = nil
+	session.scoped = []coding.ScopedModel{{Model: &ai.Model{Provider: "p", ID: "one"}}}
+	if _, err := controller.CycleModel(context.Background(), "forward"); err != nil {
+		t.Fatal(err)
+	}
+	if len(statuses) != 1 || statuses[0] != "Only one model in scope" {
 		t.Fatalf("statuses = %v", statuses)
 	}
 }
