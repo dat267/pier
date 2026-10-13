@@ -55,8 +55,8 @@ func GetAgentDir() string {
 func ParseHTTPIdleTimeoutMS(value any) (int64, bool) {
 	switch typed := value.(type) {
 	case string:
-		trimmed := strings.TrimSpace(typed)
-		if strings.EqualFold(trimmed, "disabled") {
+		trimmed := ai.JSTrim(typed)
+		if ai.JSLower(trimmed) == "disabled" {
 			return 0, true
 		}
 		if trimmed == "" {
@@ -1869,7 +1869,7 @@ func (m *SettingsManager) GetExternalEditorCommand() string {
 	m.mu.Lock()
 	configured := m.settings.ExternalEditor
 	m.mu.Unlock()
-	if configured != nil && strings.TrimSpace(*configured) != "" {
+	if configured != nil && ai.JSTrim(*configured) != "" {
 		return *configured
 	}
 	if env := os.Getenv("VISUAL"); env != "" {

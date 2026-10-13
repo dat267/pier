@@ -175,6 +175,9 @@ func TestHTTPDispatcherHelpers(t *testing.T) {
 	}{
 		{"disabled", 0, true},
 		{"  DISABLED ", 0, true},
+		// String.trim removes U+FEFF but not U+0085.
+		{"\uFEFFdisabled", 0, true},
+		{"\u0085disabled", 0, false},
 		{"", 0, false},
 		{"30000", 30000, true},
 		{"1500.9", 1500, true},

@@ -6,6 +6,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Port of utils/version-check.ts, including the semver `valid`/`compare`
@@ -44,11 +46,11 @@ type LatestRelease struct {
 // ComparePackageVersions compares two semver strings; ok is false when either
 // side is not valid semver.
 func ComparePackageVersions(leftVersion, rightVersion string) (int, bool) {
-	left, ok := parseSemver(strings.TrimSpace(leftVersion))
+	left, ok := parseSemver(ai.JSTrim(leftVersion))
 	if !ok {
 		return 0, false
 	}
-	right, ok := parseSemver(strings.TrimSpace(rightVersion))
+	right, ok := parseSemver(ai.JSTrim(rightVersion))
 	if !ok {
 		return 0, false
 	}
@@ -61,7 +63,7 @@ func IsNewerPackageVersion(candidateVersion, currentVersion string) bool {
 	if comparison, ok := ComparePackageVersions(candidateVersion, currentVersion); ok {
 		return comparison > 0
 	}
-	return strings.TrimSpace(candidateVersion) != strings.TrimSpace(currentVersion)
+	return ai.JSTrim(candidateVersion) != ai.JSTrim(currentVersion)
 }
 
 // semver is a parsed semantic version.
@@ -312,7 +314,7 @@ func checkForLatestPortReleaseFrom(ctx context.Context, url, currentVersion stri
 // inequality would read as "newer" forever), and the unstamped default, which
 // means "no version stamped" and sorts below every real release.
 func isComparableVersion(version string) bool {
-	trimmed := strings.TrimSpace(version)
+	trimmed := ai.JSTrim(version)
 	if trimmed == "" || trimmed == "0.0.0" {
 		return false
 	}
