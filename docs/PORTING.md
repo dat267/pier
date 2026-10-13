@@ -44,7 +44,9 @@ a truncated final response and exits with status 1 (`#10799`,
 `441f5767c`). Durable rejects waits that close a live wait-for cycle while
 allowing non-cyclic waits on an owner (`#10411`, `eb2fce43d`). Anthropic retries
 preferred strict tools once without strict constraints for documented schema-size/tool-limit
-rejections (`#10409`, `d4d53612b`). Focused regression tests cover these fixes.
+rejections (`#10409`, `d4d53612b`). A failed blocking threshold compaction now ends its
+waiting generation with `model_error` instead of sending an oversized request
+(`89e5c2c07`). Focused regression tests cover these fixes.
 
 **v1.2.0 audit still open.** The new published configuration schemas still
 need a source-level parity review; they are configuration-editor support, not a

@@ -119,6 +119,25 @@ func toolDeclarations(tools []ToolRegistration) []ai.Tool {
 	return declarations
 }
 
+func blockingCompactionFailure(outcome TaskOutcome) string {
+	switch outcome.Status {
+	case OutcomeFailed, OutcomeFaulted:
+		if outcome.Error != nil && outcome.Error.Message != "" {
+			return "Compaction failed: " + outcome.Error.Message
+		}
+		return "Compaction failed: unknown error"
+	case OutcomeOrphaned:
+		if outcome.Reason != nil && *outcome.Reason != "" {
+			return "Compaction failed: " + *outcome.Reason
+		}
+		return "Compaction failed: task was orphaned"
+	case OutcomeAborted:
+		return "Compaction was aborted"
+	default:
+		return "Compaction failed: unknown error"
+	}
+}
+
 func generationModel(runtime TaskRuntime, ref *ModelRef) *ai.Model {
 	if ref == nil || runtime.Models() == nil {
 		return nil
@@ -155,6 +174,15 @@ func generationPrepare(task RunningTask, runtime TaskRuntime, ctx chord.Context)
 			return failGenerationModelError(runtime, *checkpoint.Overflow, ctx)
 		}
 	}
+	if checkpoint.Compacted != nil && checkpoint.Threshold {
+		outcomes, err := runtime.Outcomes([]Id{*checkpoint.Compacted}, ctx)
+		if err != nil {
+			return err
+		}
+		if len(outcomes) > 0 && outcomes[0].Status != OutcomeCompleted {
+			return failGenerationModelError(runtime, blockingCompactionFailure(outcomes[0]), ctx)
+		}
+	}
 	view, err := runtime.Context(conversationID, ctx)
 	if err != nil {
 		return err
@@ -185,7 +213,7 @@ func generationPrepare(task RunningTask, runtime TaskRuntime, ctx chord.Context)
 				return nil, err
 			}
 			encoded, err := marshalJSONValue(map[string]any{
-				"phase": GenerationPhasePrepare, "attempt": checkpoint.Attempt, "compacted": child,
+				"phase": GenerationPhasePrepare, "attempt": checkpoint.Attempt, "compacted": child, "threshold": true,
 			})
 			if err != nil {
 				return nil, err

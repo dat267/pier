@@ -24,8 +24,10 @@ type GenerationCheckpoint struct {
 	Phase string `json:"phase"`
 	// Attempt counts the request attempts.
 	Attempt int `json:"attempt,omitempty"`
-	// Compacted is the blocking compaction this generation waited for.
+	// Compacted is the compaction this generation waited for.
 	Compacted *Id `json:"compacted,omitempty"`
+	// Threshold marks a blocking threshold compaction whose failure must stop the request.
+	Threshold bool `json:"threshold,omitempty"`
 	// Overflow is the overflow text checked once when prepare resumes.
 	Overflow *string `json:"overflow,omitempty"`
 	// Request phase.
