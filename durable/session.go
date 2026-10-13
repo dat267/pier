@@ -85,7 +85,19 @@ func NewSessionWithClock(storage Storage, now func() int64) *Session {
 }
 
 // Storage exposes the session's storage.
-func (s *Session) Storage() Storage { return s.storage }
+func (s *Session) Storage() Storage {
+	return sessionStorageGuard{Storage: s.storage, fail: s.storageFailed, failCommit: s.storageCommitFailed}
+}
+
+// Failure reports the cause that failed the Session, if any.
+func (s *Session) Failure() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.poison == nil {
+		return nil
+	}
+	return &SessionFailedError{Cause: s.poison}
+}
 
 // Commit runs one commit callback on the mutation line.
 func (s *Session) Commit(ctx chord.Context, change func(tx *Transaction) error) error {
@@ -104,13 +116,13 @@ func (s *Session) ReadOnLine(job func() error) error {
 	s.line.Lock()
 	defer s.line.Unlock()
 	s.mu.Lock()
-	if s.closing {
-		s.mu.Unlock()
-		return errors.New("Session is closed")
-	}
 	if err := s.assertHealthyLocked(); err != nil {
 		s.mu.Unlock()
 		return err
+	}
+	if s.closing {
+		s.mu.Unlock()
+		return errors.New("Session is closed")
 	}
 	s.mu.Unlock()
 	return job()
@@ -356,7 +368,7 @@ type sessionHost struct{ session *Session }
 
 func wallClockMillis() int64 { return time.Now().UnixMilli() }
 
-func (h sessionHost) Storage() Storage { return h.session.storage }
+func (h sessionHost) Storage() Storage { return h.session.Storage() }
 
 func (h sessionHost) Now() int64 { return h.session.now() }
 
@@ -401,13 +413,13 @@ func (s *Session) runCommit(ctx chord.Context, change func(tx *Transaction) erro
 	s.line.Lock()
 	defer s.line.Unlock()
 	s.mu.Lock()
-	if s.closing {
-		s.mu.Unlock()
-		return errors.New("Session is closed")
-	}
 	if err := s.assertHealthyLocked(); err != nil {
 		s.mu.Unlock()
 		return err
+	}
+	if s.closing {
+		s.mu.Unlock()
+		return errors.New("Session is closed")
 	}
 	s.mu.Unlock()
 	tx := NewTransaction(sessionHost{s}, ctx, scope)
@@ -426,9 +438,7 @@ func (s *Session) runCommit(ctx chord.Context, change func(tx *Transaction) erro
 	seq, err := s.storage.Commit(ctx, writes)
 	if err != nil {
 		tx.Discard()
-		if !isStorageRejected(err) {
-			s.poison = err
-		}
+		s.storageCommitFailed(err)
 		return err
 	}
 	documents := tx.Adopt(seq)
@@ -528,11 +538,16 @@ func (s *Session) attachDocumentLocked(
 	closeID = s.nextListenerID
 	s.nextListenerID++
 	s.closeListeners[closeID] = func() {
+		failure := s.Failure()
 		switch typed := observer.(type) {
 		case *CommittedStateSource[chord.JsonValue]:
 			typed.CloseSession()
 		case *CommittedWatch[chord.JsonValue]:
-			typed.CloseSession()
+			if failure != nil {
+				typed.FailSession(failure)
+			} else {
+				typed.CloseSession()
+			}
 		}
 	}
 	s.mu.Unlock()
@@ -574,6 +589,7 @@ func (s *Session) loadDocumentLocked(definition DocDefinition, addressID string,
 	}
 	record, err := s.storage.FindDocument(ctx, address, CurrentDocumentPoint())
 	if err != nil {
+		s.markStorageFailureLocked(err)
 		return nil, err
 	}
 	if record == nil {
@@ -581,6 +597,7 @@ func (s *Session) loadDocumentLocked(definition DocDefinition, addressID string,
 	}
 	stored, err := s.storage.Document(ctx, record.ID, CurrentDocumentPoint())
 	if err != nil {
+		s.markStorageFailureLocked(err)
 		return nil, err
 	}
 	if stored == nil {
@@ -606,17 +623,51 @@ func (s *Session) loadDocumentLocked(definition DocDefinition, addressID string,
 func (s *Session) assertUsable() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if err := s.assertHealthyLocked(); err != nil {
+		return err
+	}
 	if s.closing {
 		return errors.New("Session is closed")
 	}
-	return s.assertHealthyLocked()
+	return nil
 }
 
 func (s *Session) assertHealthyLocked() error {
 	if s.poison != nil {
-		return fmt.Errorf("Session is poisoned by a failed commit after storage admission; reopen it (cause: %v)", s.poison)
+		return &SessionFailedError{Cause: s.poison}
 	}
 	return nil
+}
+
+func (s *Session) storageFailed(err error) {
+	s.mu.Lock()
+	s.markStorageFailureLocked(err)
+	s.mu.Unlock()
+}
+
+func (s *Session) storageCommitFailed(err error) {
+	s.mu.Lock()
+	s.markStorageCommitFailureLocked(err)
+	s.mu.Unlock()
+}
+
+// markStorageFailureLocked fails the Session on its first non-rejection Storage
+// error. The caller holds s.mu. Close waits for the current mutation line to
+// finish, then releases the backend and rejects close subscribers.
+func (s *Session) markStorageFailureLocked(err error) {
+	if err == nil || isStorageRejected(err) || s.poison != nil {
+		return
+	}
+	s.poison = err
+	go func() { _ = s.Close(chord.BackgroundContext) }()
+}
+
+func (s *Session) markStorageCommitFailureLocked(err error) {
+	if err == nil || s.poison != nil {
+		return
+	}
+	s.poison = err
+	go func() { _ = s.Close(chord.BackgroundContext) }()
 }
 
 func isStorageRejected(err error) bool {

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/chord"
 )
@@ -181,6 +182,127 @@ func TestSessionSnapshotAsOf(t *testing.T) {
 	}
 }
 
+type failingDocumentReadStorage struct {
+	Storage
+	readErr error
+	closed  chan struct{}
+	once    sync.Once
+}
+
+func (s *failingDocumentReadStorage) FindDocument(context.Context, DocumentAddress, DocumentPoint) (*DocumentRecord, error) {
+	return nil, s.readErr
+}
+
+func (s *failingDocumentReadStorage) Close(ctx context.Context) error {
+	s.once.Do(func() { close(s.closed) })
+	return s.Storage.Close(ctx)
+}
+
+type failingConversationReadStorage struct {
+	Storage
+	readErr error
+	closed  chan struct{}
+	once    sync.Once
+}
+
+func (s *failingConversationReadStorage) Conversation(context.Context, Id) (*ConversationRecord, error) {
+	return nil, s.readErr
+}
+
+func (s *failingConversationReadStorage) Close(ctx context.Context) error {
+	s.once.Do(func() { close(s.closed) })
+	return s.Storage.Close(ctx)
+}
+
+func TestSessionFailsAndClosesAfterTransactionStorageReadError(t *testing.T) {
+	readErr := errors.New("conversation read failed")
+	storage := &failingConversationReadStorage{Storage: NewMemoryStorage(), readErr: readErr, closed: make(chan struct{})}
+	session := NewSession(storage)
+	if _, err := storeRoot(t, session); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Commit(context.Background(), func(tx *Transaction) error {
+		_, err := tx.Conversation(RootConversationID)
+		return err
+	}); !errors.Is(err, readErr) {
+		t.Fatalf("transaction read error = %v", err)
+	}
+	if err := session.Commit(context.Background(), func(*Transaction) error { return nil }); err == nil || !strings.Contains(err.Error(), "Session failed") {
+		t.Fatalf("commit after storage read failure = %v", err)
+	}
+	select {
+	case <-storage.closed:
+	case <-time.After(time.Second):
+		t.Fatal("storage was not closed after a read failure")
+	}
+}
+
+func TestSessionFailsAndClosesAfterStorageReadError(t *testing.T) {
+	readErr := errors.New("document disk failure")
+	storage := &failingDocumentReadStorage{Storage: NewMemoryStorage(), readErr: readErr, closed: make(chan struct{})}
+	session := NewSession(storage)
+	if _, err := storeRoot(t, session); err != nil {
+		t.Fatal(err)
+	}
+	closedListener := make(chan struct{}, 1)
+	session.SubscribeClose(func() { closedListener <- struct{}{} })
+	if _, _, err := session.Snapshot(context.Background(), InboxDoc.Definition, RootConversationID); !errors.Is(err, readErr) {
+		t.Fatalf("snapshot error = %v", err)
+	}
+	if err := session.Commit(context.Background(), func(*Transaction) error { return nil }); err == nil || !strings.Contains(err.Error(), "Session failed") {
+		t.Fatalf("commit after storage read failure = %v", err)
+	}
+	select {
+	case <-closedListener:
+	case <-time.After(time.Second):
+		t.Fatal("storage read failure did not close the Session")
+	}
+	select {
+	case <-storage.closed:
+	case <-time.After(time.Second):
+		t.Fatal("storage was not closed after a read failure")
+	}
+}
+
+func TestSessionWatchEndsWithFailureCauseWhenStorageFails(t *testing.T) {
+	readErr := errors.New("disk commit failed")
+	storage := &failingStorage{Storage: NewMemoryStorage()}
+	session := NewSession(storage)
+	if _, err := storeRoot(t, session); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Commit(context.Background(), func(tx *Transaction) error {
+		_, err := tx.Doc(InboxDoc.Definition, RootConversationID)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	watch, ok, err := session.WatchDoc(context.Background(), InboxDoc.Definition, RootConversationID)
+	if err != nil || !ok {
+		t.Fatalf("watch = %v, %v", ok, err)
+	}
+	storage.fail = readErr
+	if err := session.Commit(context.Background(), func(tx *Transaction) error {
+		doc, err := tx.Doc(InboxDoc.Definition, RootConversationID)
+		if err != nil {
+			return err
+		}
+		AssignJSON(doc.(map[string]any), "items", []any{map[string]any{"id": 1.0}})
+		return nil
+	}); !errors.Is(err, readErr) {
+		t.Fatalf("commit error = %v", err)
+	}
+	select {
+	case <-watch.Closed():
+	case <-time.After(time.Second):
+		t.Fatal("watch did not close with failed Session")
+	}
+	end, ok := watch.End()
+	if !ok || end.Reason != "session_failed" || !errors.Is(end.Err, readErr) {
+		t.Fatalf("watch end = %+v, ok=%v", end, ok)
+	}
+}
+
 func TestSessionCloseSealsAndClosesStorage(t *testing.T) {
 	storage := NewMemoryStorage()
 	session := NewSession(storage)
@@ -221,6 +343,25 @@ func (f *failingStorage) Commit(ctx context.Context, writes []StorageWrite) (Seq
 	return f.Storage.Commit(ctx, writes)
 }
 
+func TestSessionPoisonsAfterRejectedCommitError(t *testing.T) {
+	inner := NewMemoryStorage()
+	storage := &failingStorage{Storage: inner}
+	session := NewSession(storage)
+	if _, err := storeRoot(t, session); err != nil {
+		t.Fatal(err)
+	}
+	storage.fail = &StorageRejectedError{Message: "invalid commit request"}
+	if err := session.Commit(context.Background(), func(tx *Transaction) error {
+		_, err := tx.AppendEntry(RootConversationID, EntryDraft{Kind: "message"})
+		return err
+	}); err == nil {
+		t.Fatal("commit rejection must fail the Session")
+	}
+	if err := session.Commit(context.Background(), func(*Transaction) error { return nil }); err == nil || !strings.Contains(err.Error(), "Session failed") {
+		t.Fatalf("commit after storage rejection = %v", err)
+	}
+}
+
 func TestSessionPoisonsAfterAdmissionFailure(t *testing.T) {
 	inner := NewMemoryStorage()
 	storage := &failingStorage{Storage: inner}
@@ -237,7 +378,7 @@ func TestSessionPoisonsAfterAdmissionFailure(t *testing.T) {
 		t.Fatalf("commit = %v", err)
 	}
 	if err := session.Commit(context.Background(), func(tx *Transaction) error { return nil }); err == nil ||
-		!strings.Contains(err.Error(), "poisoned") {
+		!strings.Contains(err.Error(), "Session failed") {
 		t.Fatalf("commit after poison = %v", err)
 	}
 }

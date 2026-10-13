@@ -51,7 +51,11 @@ func NewSubmissions(session *Session, storage Storage, now func() int64, queueMo
 	})
 	session.SubscribeClose(func() {
 		submissions.closed.Store(true)
-		submissions.waiters.RejectAll(ClosedError())
+		failure := session.Failure()
+		if failure == nil {
+			failure = ClosedError()
+		}
+		submissions.waiters.RejectAll(failure)
 	})
 	return submissions
 }

@@ -20,6 +20,7 @@ const (
 	WatchReasonStopped       = "stopped"
 	WatchReasonCancelled     = "cancelled"
 	WatchReasonSessionClosed = "session_closed"
+	WatchReasonSessionFailed = "session_failed"
 	WatchReasonRetired       = "retired"
 	WatchReasonListenerError = "listener_error"
 )
@@ -364,6 +365,11 @@ func (w *CommittedWatch[T]) Cancel() { w.terminate(WatchEnd{Reason: WatchReasonC
 // closeSession).
 func (w *CommittedWatch[T]) CloseSession() {
 	w.terminate(WatchEnd{Reason: WatchReasonSessionClosed})
+}
+
+// FailSession ends the watch with the cause that failed its Session.
+func (w *CommittedWatch[T]) FailSession(err error) {
+	w.terminate(WatchEnd{Reason: WatchReasonSessionFailed, Err: err})
 }
 
 // Advance queues one exact frame; a nil value retires the watch (upstream
