@@ -2,6 +2,7 @@ package ai
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -59,5 +60,15 @@ func TestRetryDelayFallsBackToExponentialOnUnparseableHeaders(t *testing.T) {
 		if delay < 375 || delay > 500 {
 			t.Fatalf("%s: delay = %d ms, want the 375-500 ms exponential band", testCase.name, delay)
 		}
+	}
+}
+
+// Upstream interpolates Math.ceil(delayMs/1000) with String(number), so a large
+// delay is not rendered in exponential notation.
+func TestServerRetryDelayMessageUsesJSNumber(t *testing.T) {
+	max := 1000
+	_, err := validateServerRetryDelayFloat(1e9, &max, "boom")
+	if err == nil || !strings.Contains(err.Error(), "Server requested 1000000s retry delay") {
+		t.Fatalf("err = %v", err)
 	}
 }

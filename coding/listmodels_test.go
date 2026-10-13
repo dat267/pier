@@ -25,6 +25,9 @@ func TestFormatTokenCount(t *testing.T) {
 		{1000000, "1M"},
 		{1500000, "1.5M"},
 		{2000000, "2M"},
+		// toFixed(1) rounds half away from zero.
+		{1250, "1.3K"},
+		{1250000, "1.3M"},
 	}
 	for _, testCase := range cases {
 		if got := FormatTokenCount(testCase.count); got != testCase.want {

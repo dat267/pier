@@ -6,6 +6,7 @@ import (
 	"image"
 	"image/png"
 	"math/rand"
+	"strings"
 	"testing"
 )
 
@@ -112,5 +113,15 @@ func TestResizeInlineImageShrinksToFitTheByteBudget(t *testing.T) {
 func TestResizeInlineImageRejectsUndecodableBytes(t *testing.T) {
 	if resized := resizeInlineImage([]byte("not an image"), "image/png", DefaultImageResizeOptions); resized != nil {
 		t.Fatalf("undecodable bytes produced %#v", resized)
+	}
+}
+
+// Upstream uses scale.toFixed(2), which rounds half away from zero.
+func TestFormatDimensionNoteUsesJSFixed(t *testing.T) {
+	note := FormatDimensionNote(&ResizedImage{
+		OriginalWidth: 9, OriginalHeight: 9, Width: 8, Height: 8, WasResized: true,
+	})
+	if !strings.Contains(note, "Multiply coordinates by 1.13") {
+		t.Fatalf("note = %q", note)
 	}
 }

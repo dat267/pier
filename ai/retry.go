@@ -95,7 +95,7 @@ func validateServerRetryDelayFloat(delayMS float64, maxRetryDelayMS *int, provid
 		maxDelay = int64(*maxRetryDelayMS)
 	}
 	if maxDelay > 0 && delayMS > float64(maxDelay) {
-		requested := strconv.FormatFloat(math.Ceil(delayMS/1000), 'g', -1, 64)
+		requested := JSNumberToString(math.Ceil(delayMS / 1000))
 		maxSeconds := int64(math.Ceil(float64(maxDelay) / 1000))
 		return 0, fmt.Errorf("Server requested %ss retry delay (max: %ds). %s", requested, maxSeconds, providerErrorMessage)
 	}

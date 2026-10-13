@@ -30,7 +30,7 @@ func formatTokenUnit(value float64, suffix string) string {
 	if value == math.Trunc(value) {
 		return strconv.FormatInt(int64(value), 10) + suffix
 	}
-	return strconv.FormatFloat(value, 'f', 1, 64) + suffix
+	return ai.JSNumberToFixed(value, 1) + suffix
 }
 
 // modelListRow is one line of the table.

@@ -51,8 +51,8 @@ func FormatDimensionNote(result *ResizedImage) string {
 		return ""
 	}
 	scale := float64(result.OriginalWidth) / float64(result.Width)
-	return fmt.Sprintf("[Image: original %dx%d, displayed at %dx%d. Multiply coordinates by %.2f to map to original image.]",
-		result.OriginalWidth, result.OriginalHeight, result.Width, result.Height, scale)
+	return fmt.Sprintf("[Image: original %dx%d, displayed at %dx%d. Multiply coordinates by %s to map to original image.]",
+		result.OriginalWidth, result.OriginalHeight, result.Width, result.Height, ai.JSNumberToFixed(scale, 2))
 }
 
 // ProcessImageOptions configure ProcessImage.
