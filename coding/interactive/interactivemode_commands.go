@@ -29,6 +29,7 @@ type CommandSession interface {
 	ExportToJsonl(outputPath string) (string, error)
 	CompactSession(ctx context.Context, customInstructions string) error
 	GetCacheWarmingStatus() *coding.CacheWarmingStatus
+	Model() *ai.Model
 	ModelRuntime() *coding.ModelRuntime
 	IsStreaming() bool
 	IsCompacting() bool
@@ -520,7 +521,13 @@ func (w *CommandWiring) SessionInfoPanel(now int64) string {
 	if stats.Cost > 0 || cacheWaste.MissedTokens > 0 {
 		info.WriteString("\n" + theme.Bold("Cost") + "\n")
 		info.WriteString(theme.Fg("dim", "Total:") + " $" + formatFixed(stats.Cost, 3))
-		if len(usageBreakdown) > 1 {
+		// Upstream shows the per-model breakdown unless the only entry names the
+		// selected model (a single entry repeats the total).
+		selectedModelKey := "undefined/undefined"
+		if model := w.Session.Model(); model != nil {
+			selectedModelKey = string(model.Provider) + "/" + model.ID
+		}
+		if len(usageBreakdown) != 1 || usageBreakdown[0].Key != selectedModelKey {
 			for _, entry := range usageBreakdown {
 				info.WriteString("\n  " + theme.Fg("dim", entry.Key+":") + " $" + formatFixed(entry.Cost, 3) +
 					" " + theme.Fg("dim", "("+FormatTokens(entry.Tokens)+" tokens)"))

@@ -26,6 +26,7 @@ type commandTestSession struct {
 	compacted   []string
 	cacheStatus *coding.CacheWarmingStatus
 	runtime     *coding.ModelRuntime
+	model       *ai.Model
 }
 
 func (s *commandTestSession) GetSessionStats() *coding.SessionStats {
@@ -48,6 +49,7 @@ func (s *commandTestSession) CompactSession(_ context.Context, instructions stri
 	return nil
 }
 func (s *commandTestSession) GetCacheWarmingStatus() *coding.CacheWarmingStatus { return s.cacheStatus }
+func (s *commandTestSession) Model() *ai.Model                                  { return s.model }
 func (s *commandTestSession) ModelRuntime() *coding.ModelRuntime                { return s.runtime }
 func (s *commandTestSession) IsStreaming() bool                                 { return s.streaming }
 func (s *commandTestSession) IsCompacting() bool                                { return s.compacting }
@@ -422,5 +424,35 @@ func TestCommandNameTrimsJSWhitespace(t *testing.T) {
 	wiring.HandleNameCommand("/name\uFEFFmy session")
 	if session.name != "my session" {
 		t.Fatalf("name = %q", session.name)
+	}
+}
+
+// Upstream shows the per-model cost breakdown when the single usage entry names
+// a model other than the selected one (a single entry repeats the total).
+func TestCommandSessionInfoShowsDifferentModelBreakdown(t *testing.T) {
+	wiring, session, settings := newCommandTestWiring(t)
+	settings.SetCacheWarmingMode("streaming")
+	session.stats.Cost = 0.5
+	session.model = &ai.Model{Provider: "openai", ID: "gpt"}
+	wiring.SessionInfo.AppendUsage("cache_warm", "anthropic", "sonnet-4",
+		ai.Usage{Cost: ai.UsageCost{Total: 0.25}}, "")
+
+	wiring.HandleSessionCommand(1000)
+	lines := coding.StripAnsi(strings.Join(wiring.Chat.Render(120), "\n"))
+	if !strings.Contains(lines, "anthropic/sonnet-4:") {
+		t.Fatalf("missing the different-model breakdown:\n%s", lines)
+	}
+
+	// The same entry under the selected model repeats the total and is omitted.
+	wiring2, session2, settings2 := newCommandTestWiring(t)
+	settings2.SetCacheWarmingMode("streaming")
+	session2.stats.Cost = 0.5
+	session2.model = &ai.Model{Provider: "anthropic", ID: "sonnet-4"}
+	wiring2.SessionInfo.AppendUsage("cache_warm", "anthropic", "sonnet-4",
+		ai.Usage{Cost: ai.UsageCost{Total: 0.25}}, "")
+	wiring2.HandleSessionCommand(1000)
+	lines2 := coding.StripAnsi(strings.Join(wiring2.Chat.Render(120), "\n"))
+	if strings.Contains(lines2, "anthropic/sonnet-4:") {
+		t.Fatalf("the selected model's breakdown should be omitted:\n%s", lines2)
 	}
 }
