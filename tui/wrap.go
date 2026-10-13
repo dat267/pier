@@ -151,13 +151,24 @@ func WrapTextWithAnsi(text string, width int) []string {
 	return result
 }
 
-// splitLines splits on \r\n, \r, and \n.
+// splitLines splits on \r\n, \r, and \n (upstream's /\r\n|\r|\n/).
 func splitLines(text string) []string {
-	lines := strings.Split(text, "\n")
-	for index, line := range lines {
-		lines[index] = strings.TrimSuffix(line, "\r")
+	var lines []string
+	start := 0
+	for index := 0; index < len(text); index++ {
+		switch text[index] {
+		case '\r':
+			lines = append(lines, text[start:index])
+			if index+1 < len(text) && text[index+1] == '\n' {
+				index++
+			}
+			start = index + 1
+		case '\n':
+			lines = append(lines, text[start:index])
+			start = index + 1
+		}
 	}
-	return lines
+	return append(lines, text[start:])
 }
 
 func wrapSingleLine(line string, width int) []string {

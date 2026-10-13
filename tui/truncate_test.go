@@ -262,3 +262,11 @@ func TestApplyBackgroundToLine(t *testing.T) {
 		t.Fatalf("line = %q", line)
 	}
 }
+
+// Upstream splits wrap input on /\r\n|\r|\n/, so a lone CR is a line break.
+func TestWrapTextSplitsLoneCR(t *testing.T) {
+	lines := WrapTextWithAnsi("a\rb", 80)
+	if len(lines) != 2 || lines[0] != "a" || lines[1] != "b" {
+		t.Fatalf("lines = %q; want [a b]", lines)
+	}
+}
