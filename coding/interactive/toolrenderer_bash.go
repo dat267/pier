@@ -429,7 +429,7 @@ func CreateShellRenderers(prompt string) ToolRenderers {
 				container.AddChild(child)
 			}
 			if state.startedAtMS != 0 || state.recordedMS != nil {
-				container.AddChild(&shellElapsedComponent{state: state, theme: theme})
+				container.AddChild(&shellElapsedComponent{state: state, theme: theme, partial: options.IsPartial})
 			}
 			return container
 		},
@@ -458,19 +458,22 @@ const shellElapsedTick = 100 * time.Millisecond
 // AnimationFrame keeps the owner re-rendering every shellElapsedTick while the
 // call runs. Upstream arms a 1s redraw with setInterval(context.invalidate).
 type shellElapsedComponent struct {
-	state *shellCallState
-	theme *Theme
+	state   *shellCallState
+	theme   *Theme
+	partial bool
 }
 
 func (c *shellElapsedComponent) Render(width int) []string {
-	if c.state.recordedMS != nil {
+	// Upstream's recorded-duration branch requires !isPartial; a partial result
+	// with a duration still falls through to the running label.
+	if !c.partial && c.state.recordedMS != nil {
 		return []string{"", c.theme.Fg("muted", fmt.Sprintf("Took %s", formatDuration(float64(*c.state.recordedMS))))}
 	}
 	if c.state.startedAtMS == 0 {
 		return nil
 	}
 	label := "Took"
-	if c.state.endedAtMS == 0 {
+	if c.partial {
 		label = "Elapsed"
 	}
 	end := c.state.endedAtMS

@@ -111,7 +111,7 @@ func (c *ToolExecutionComponent) captureBuiltinResult(theme *Theme, context *Too
 			if state.endedAtMS == 0 && (!options.IsPartial || result.IsError) {
 				state.endedAtMS = shellNow().UnixMilli()
 			}
-			input.tail = &shellElapsedComponent{state: state, theme: theme}
+			input.tail = &shellElapsedComponent{state: state, theme: theme, partial: options.IsPartial}
 		}
 	}
 	if c.isPartial {

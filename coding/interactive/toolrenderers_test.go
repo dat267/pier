@@ -525,3 +525,18 @@ func TestFormatWriteResultKeepsEmptyTextBlocks(t *testing.T) {
 		t.Fatalf("write error = %q; want \\n\\nboom", got)
 	}
 }
+
+// Upstream's recorded-duration branch requires !isPartial, so a partial result
+// that carries a duration still shows "Elapsed".
+func TestShellElapsedPartialWithDurationStaysElapsed(t *testing.T) {
+	theme := newRendererTestTheme(t)
+	ctx := &ToolRenderContext{Cwd: "/tmp/proj", Args: map[string]any{"command": "sleep 5"}, ExecutionStarted: true}
+	bashRenderers.RenderCall(ctx.Args, theme, ctx)
+	duration := int64(5000)
+	ctx.DurationMs = &duration
+	component := bashRenderers.RenderResult(textResult("partial output"), ToolRenderResultOptions{IsPartial: true}, theme, ctx)
+	rendered := coding.StripAnsi(strings.Join(component.Render(120), "\n"))
+	if !strings.Contains(rendered, "Elapsed ") || strings.Contains(rendered, "Took ") {
+		t.Fatalf("partial with duration = %q; want Elapsed", rendered)
+	}
+}

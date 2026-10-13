@@ -24,7 +24,7 @@ func TestElapsedLabelUpdatesAcrossPaints(t *testing.T) {
 	InitTheme("dark", false)
 
 	state := &shellCallState{startedAtMS: time.Now().UnixMilli()}
-	elapsed := &shellElapsedComponent{state: state, theme: ActiveTheme()}
+	elapsed := &shellElapsedComponent{state: state, theme: ActiveTheme(), partial: true}
 
 	// The tool's shape: the label sits inside containers, as it does under the
 	// tool's content box.
