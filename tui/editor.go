@@ -214,7 +214,7 @@ func (e *Editor) requestRender() {
 
 // AddToHistory records a submitted prompt for up/down navigation.
 func (e *Editor) AddToHistory(text string) {
-	trimmed := strings.TrimSpace(text)
+	trimmed := jsTrim(text)
 	if trimmed == "" {
 		return
 	}
@@ -1089,7 +1089,7 @@ func (e *Editor) shouldSubmitOnBackslashEnter(data string, kb *KeybindingsManage
 
 func (e *Editor) submitValueLocked() {
 	e.cancelAutocompleteLocked()
-	result := strings.TrimSpace(e.expandPasteMarkersLocked(e.getTextLocked()))
+	result := jsTrim(e.expandPasteMarkersLocked(e.getTextLocked()))
 
 	e.state = editorState{lines: []string{""}}
 	e.pastes = map[int]string{}

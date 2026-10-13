@@ -251,3 +251,25 @@ func TestEditorSlashCommandContextUnicodeWhitespace(t *testing.T) {
 		t.Fatal("ideographic space before slash should be a slash-command context")
 	}
 }
+
+// History and submit trim with JS String.trim (U+FEFF is whitespace, U+0085 is
+// not), not strings.TrimSpace.
+func TestEditorUsesJSTrim(t *testing.T) {
+	editor := NewEditor(&editorHost{rows: 10}, editorTestTheme(), EditorOptions{})
+	editor.AddToHistory("\uFEFF")
+	if len(editor.history) != 0 {
+		t.Fatalf("U+FEFF should not be recorded: %q", editor.history)
+	}
+	editor.AddToHistory("\u0085")
+	if len(editor.history) != 1 || editor.history[0] != "\u0085" {
+		t.Fatalf("U+0085 should be recorded: %q", editor.history)
+	}
+
+	submitted := "unset"
+	editor.OnSubmit = func(text string) { submitted = text }
+	editor.SetText("\uFEFF")
+	editor.HandleInput("\r")
+	if submitted != "" {
+		t.Fatalf("submit of U+FEFF = %q; want empty", submitted)
+	}
+}
