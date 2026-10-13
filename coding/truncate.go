@@ -153,9 +153,18 @@ func FormatSize(bytes int64) string {
 	if bytes < 1024 {
 		return fmt.Sprintf("%dB", bytes)
 	} else if bytes < 1024*1024 {
-		return fmt.Sprintf("%.1fKB", float64(bytes)/1024)
+		return formatToFixed1(bytes, 1024) + "KB"
 	}
-	return fmt.Sprintf("%.1fMB", float64(bytes)/(1024*1024))
+	return formatToFixed1(bytes, 1024*1024) + "MB"
+}
+
+// formatToFixed1 renders bytes/divisor with one decimal like JS
+// Number.toFixed(1) (round half up on the exact value), unlike Go's %.1f
+// (round half to even) and a floating-point multiply-then-round.
+func formatToFixed1(bytes, divisor int64) string {
+	// floor(bytes*10/divisor + 1/2) == (20*bytes + divisor) / (2*divisor)
+	n := (20*bytes + divisor) / (2 * divisor)
+	return fmt.Sprintf("%d.%d", n/10, n%10)
 }
 
 // TruncateHead keeps the first N lines/bytes (file reads). Never returns

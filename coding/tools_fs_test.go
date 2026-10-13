@@ -70,7 +70,11 @@ func TestTruncateTailPartialLastLine(t *testing.T) {
 }
 
 func TestFormatSize(t *testing.T) {
-	cases := map[int64]string{512: "512B", 2048: "2.0KB", 3 * 1024 * 1024: "3.0MB"}
+	cases := map[int64]string{
+		512: "512B", 2048: "2.0KB", 3 * 1024 * 1024: "3.0MB",
+		// JS Number.toFixed(1) rounds half up, unlike Go's %.1f (half to even).
+		1280: "1.3KB", 1280 * 1024: "1.3MB",
+	}
 	for bytes, want := range cases {
 		if got := FormatSize(bytes); got != want {
 			t.Fatalf("FormatSize(%d) = %q; want %q", bytes, got, want)

@@ -226,7 +226,7 @@ func formatDuration(ms float64) string {
 	if seconds < 60 {
 		// Tenths, like upstream's toFixed(1); the running label advances one
 		// tenth per shellElapsedTick (D194).
-		return fmt.Sprintf("%.1fs", seconds)
+		return ai.JSNumberToFixed(seconds, 1) + "s"
 	}
 	totalSeconds := int(seconds)
 	minutes := totalSeconds / 60

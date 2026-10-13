@@ -41,3 +41,27 @@ func TestJSLowerMatchesJS(t *testing.T) {
 		}
 	}
 }
+
+// JSNumberToFixed must match Number.prototype.toFixed: round half away from
+// zero on the exact double value (not Go's %.nf round-half-to-even).
+func TestJSNumberToFixedMatchesJS(t *testing.T) {
+	cases := []struct {
+		value  float64
+		digits int
+		want   string
+	}{
+		{1.25, 1, "1.3"},
+		{1.15, 1, "1.1"}, // 1.15 is 1.14999... as a double
+		{-1.25, 1, "-1.3"},
+		{-0.001, 1, "-0.0"},
+		{0, 1, "0.0"},
+		{2.675, 2, "2.67"}, // 2.675 is 2.67499... as a double
+		{1.005, 2, "1.00"},
+		{3450, 0, "3450"},
+	}
+	for _, tc := range cases {
+		if got := JSNumberToFixed(tc.value, tc.digits); got != tc.want {
+			t.Errorf("JSNumberToFixed(%v, %d) = %q; want %q", tc.value, tc.digits, got, tc.want)
+		}
+	}
+}

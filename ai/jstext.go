@@ -2,6 +2,7 @@ package ai
 
 import (
 	"math"
+	"math/big"
 	"strconv"
 	"strings"
 	"unicode/utf16"
@@ -76,6 +77,44 @@ func JSTrimLeft(s string) string { return strings.TrimLeftFunc(s, jsSpace) }
 // unicode.IsSpace.
 func JSSplitWhitespace(s string) []string {
 	return strings.FieldsFunc(s, jsSpace)
+}
+
+// JSNumberToFixed formats a number like Number.prototype.toFixed(digits),
+// which rounds half away from zero on the exact value of the double (V8), not
+// Go's %.nf round-half-to-even. Callers only use small digit counts.
+func JSNumberToFixed(value float64, digits int) string {
+	switch {
+	case math.IsNaN(value):
+		return "NaN"
+	case math.IsInf(value, 1):
+		return "Infinity"
+	case math.IsInf(value, -1):
+		return "-Infinity"
+	}
+	if digits < 0 || digits > 100 {
+		digits = 0
+	}
+	sign := ""
+	if value < 0 {
+		sign = "-"
+		value = -value
+	}
+	scale := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(digits)), nil)
+	ratio := new(big.Rat).SetFloat64(value)
+	ratio.Mul(ratio, new(big.Rat).SetInt(scale))
+	ratio.Add(ratio, big.NewRat(1, 2))
+	rounded := new(big.Int).Quo(ratio.Num(), ratio.Denom())
+	integerPart := new(big.Int)
+	fraction := new(big.Int)
+	integerPart.QuoRem(rounded, scale, fraction)
+	if digits == 0 {
+		return sign + integerPart.String()
+	}
+	fractionText := fraction.String()
+	for len(fractionText) < digits {
+		fractionText = "0" + fractionText
+	}
+	return sign + integerPart.String() + "." + fractionText
 }
 
 // JSLower lowercases like String.prototype.toLowerCase: full Unicode case

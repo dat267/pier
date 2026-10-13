@@ -320,6 +320,9 @@ func TestFormatDurationTenths(t *testing.T) {
 	}{
 		{ms: 3450, want: "3.5s"},
 		{ms: 10, want: "0.0s"},
+		// JS toFixed(1) rounds half away from zero on the double value.
+		{ms: 1250, want: "1.3s"},
+		{ms: 1150, want: "1.1s"},
 		{ms: 60_000, want: "1m 0s"},
 		{ms: 3_600_000, want: "1h 0m 0s"},
 	} {

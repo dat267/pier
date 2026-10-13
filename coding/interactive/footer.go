@@ -66,10 +66,9 @@ func FormatTokensSimple(count int64) string {
 	}
 }
 
-// formatFixed mirrors JS Number.toFixed (round-half-away-from-zero is not
-// exactly IEEE round-half-even, but matches for the token magnitudes here).
+// formatFixed mirrors JS Number.toFixed.
 func formatFixed(value float64, digits int) string {
-	return strconv.FormatFloat(value, 'f', digits, 64)
+	return ai.JSNumberToFixed(value, digits)
 }
 
 // FormatCwdForFooter shortens a working directory with a home prefix.
