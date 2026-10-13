@@ -33,7 +33,8 @@ func isLegacyWslBashPath(path string) bool {
 	if !strings.HasSuffix(normalized, "\\bash.exe") {
 		return false
 	}
-	if len(trimmed) < 2 || trimmed[1] != ':' {
+	// Upstream's regex starts `^[a-z]:`, so the drive letter must be a letter.
+	if len(trimmed) < 2 || trimmed[0] < 'a' || trimmed[0] > 'z' || trimmed[1] != ':' {
 		return false
 	}
 	rest := trimmed[2:]

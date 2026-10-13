@@ -225,3 +225,10 @@ func TestToolRegistry(t *testing.T) {
 		}
 	}
 }
+
+// Upstream's regex requires a letter drive (`^[a-z]:...`).
+func TestIsLegacyWslBashPathRequiresDriveLetter(t *testing.T) {
+	if isLegacyWslBashPath(`1:\windows\system32\bash.exe`) {
+		t.Fatal("a non-letter drive should not match")
+	}
+}

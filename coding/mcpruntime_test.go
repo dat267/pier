@@ -498,3 +498,17 @@ func TestMcpConfigValueAndHomeExpansion(t *testing.T) {
 		t.Fatalf("tilde = %q", got)
 	}
 }
+
+// Upstream parseConfigValueTemplate handles "$$"/"$!" escapes and only treats a
+// value starting with "!" (no trimming) as a command.
+func TestResolveMcpConfigValueEscapes(t *testing.T) {
+	if got, _ := ResolveMcpConfigValue("pa$$word"); got != "pa$word" {
+		t.Fatalf("$$ = %q; want pa$word", got)
+	}
+	if got, _ := ResolveMcpConfigValue("$!bang"); got != "!bang" {
+		t.Fatalf("$! = %q; want !bang", got)
+	}
+	if got, _ := ResolveMcpConfigValue(" !printf hi"); got != " !printf hi" {
+		t.Fatalf("leading space should not run a command: %q", got)
+	}
+}

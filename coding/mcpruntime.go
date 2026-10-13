@@ -7,9 +7,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -744,98 +742,36 @@ func resolveMcpConfigValue(value string, what string) string {
 }
 
 // ResolveMcpConfigValue expands `${NAME}` (environment) and `!command`
-// (command substitution) values, like a shell (upstream
-// resolveConfigValueOrThrow).
+// (command substitution) values, like a shell (upstream resolveConfigValue).
+// A missing environment variable yields an empty value rather than an error.
 func ResolveMcpConfigValue(value string) (string, error) {
-	return resolveConfigValueOrThrow(value)
+	resolved, _ := ResolveConfigValueUncached(value, nil)
+	return resolved, nil
 }
 
-// runMcpConfigCommand runs a `!command` config value through the platform
-// shell (upstream execSync(cmd, { shell: true })).
-func runMcpConfigCommand(command string) (string, error) {
-	if command == "" {
-		return "", nil
-	}
-	var cmd *exec.Cmd
-	if runtime.GOOS == "windows" {
-		cmd = exec.Command("cmd", "/c", command)
-	} else {
-		cmd = exec.Command("sh", "-c", command)
-	}
-	output, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
-	// execSync({ encoding: "utf-8" }) decodes stdout with replacement.
-	return DecodeUTF8WithReplacement(output), nil
-}
-
-// McpConfigValueEnv is the environment lookup (a test seam).
-var McpConfigValueEnv = os.Getenv
-
-// resolveConfigValueOrThrow expands one config value.
-func resolveConfigValueOrThrow(value string) (string, error) {
-	trimmed := strings.TrimSpace(value)
-	if strings.HasPrefix(trimmed, "!") {
-		output, err := runMcpConfigCommand(strings.TrimSpace(trimmed[1:]))
-		if err != nil {
-			return "", err
-		}
-		return strings.TrimRight(output, "\r\n"), nil
-	}
-	return expandMcpEnv(trimmed)
-}
-
-// expandMcpEnv substitutes `${NAME}` with the environment value.
-func expandMcpEnv(value string) (string, error) {
-	var builder strings.Builder
-	for index := 0; index < len(value); {
-		if value[index] == '$' && index+1 < len(value) && value[index+1] == '{' {
-			end := strings.IndexByte(value[index+2:], '}')
-			if end < 0 {
-				builder.WriteByte(value[index])
-				index++
-				continue
-			}
-			name := value[index+2 : index+2+end]
-			builder.WriteString(McpConfigValueEnv(name))
-			index += 2 + end + 1
-			continue
-		}
-		builder.WriteByte(value[index])
-		index++
-	}
-	return builder.String(), nil
-}
-
-// resolveHeadersOrThrow expands every header value (upstream
-// resolveHeadersOrThrow), dropping a header whose expansion fails.
-func resolveHeadersOrThrow(headers map[string]string, what string) map[string]string {
-	resolved := make(map[string]string, len(headers))
-	for name, value := range headers {
-		expanded, err := resolveConfigValueOrThrow(value)
-		if err != nil {
-			continue
-		}
-		resolved[name] = expanded
-	}
-	_ = what
-	return resolved
+// resolveHeadersOrThrow expands every header value, failing on the first
+// unresolvable one (upstream resolveHeadersOrThrow).
+func resolveHeadersOrThrow(headers map[string]string, what string) (map[string]string, error) {
+	return ResolveHeadersOrThrow(headers, what, nil)
 }
 
 // McpDefaultTransport builds the transport of one entry (upstream
 // createDefaultTransport).
 func McpDefaultTransport(entry McpServerEntry, cwd string, authProvider mcp.AuthProvider) (mcp.Transport, error) {
 	if entry.Config.IsHTTP() {
+		headers, err := resolveHeadersOrThrow(entry.Config.Headers, "MCP server \""+entry.Name+"\"")
+		if err != nil {
+			return nil, err
+		}
 		return mcp.NewStreamableHttpTransport(mcp.StreamableHttpTransportOptions{
 			URL:          entry.Config.URL,
-			Headers:      resolveHeadersOrThrow(entry.Config.Headers, "MCP server \""+entry.Name+"\""),
+			Headers:      headers,
 			AuthProvider: authProvider,
 		}), nil
 	}
 	env := map[string]string{}
 	for key, value := range entry.Config.Env {
-		expanded, err := resolveConfigValueOrThrow(value)
+		expanded, err := ResolveConfigValueOrThrow(value, fmt.Sprintf("MCP server %q env %q", entry.Name, key), nil)
 		if err != nil {
 			return nil, err
 		}
