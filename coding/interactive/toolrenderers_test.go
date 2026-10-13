@@ -506,3 +506,19 @@ func TestComputeEditsPreviewDirectoryReportsRawError(t *testing.T) {
 		t.Fatalf("directory preview wrapped the read error: %q", preview.Error)
 	}
 }
+
+// Upstream's write error text maps every text block (`c.text || ""`) and joins
+// them, so an empty text block still contributes its separator newline.
+func TestFormatWriteResultKeepsEmptyTextBlocks(t *testing.T) {
+	installPierThemeForTest(t)
+	InitTheme("dark", false)
+	theme := ActiveTheme()
+	result := &SortToolResultContent{Content: []ToolResultContent{
+		{Type: "text", Text: ""},
+		{Type: "text", Text: "boom"},
+	}}
+	got := coding.StripAnsi(formatWriteResult(result, true, theme))
+	if got != "\n\nboom" {
+		t.Fatalf("write error = %q; want \\n\\nboom", got)
+	}
+}

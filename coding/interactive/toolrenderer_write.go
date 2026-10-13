@@ -173,18 +173,7 @@ var writeRenderers = ToolRenderers{
 		return component
 	},
 	RenderResult: func(result *SortToolResultContent, options ToolRenderResultOptions, theme *Theme, context *ToolRenderContext) tui.Component {
-		output := ""
-		if context.IsError {
-			var blocks []string
-			for _, block := range result.Content {
-				if block.Type == "text" && block.Text != "" {
-					blocks = append(blocks, block.Text)
-				}
-			}
-			if len(blocks) > 0 {
-				output = "\n" + theme.Fg("error", strings.Join(blocks, "\n"))
-			}
-		}
+		output := formatWriteResult(result, context.IsError, theme)
 		if output == "" {
 			component := toolContainerComponent(context)
 			component.Clear()
@@ -194,6 +183,27 @@ var writeRenderers = ToolRenderers{
 		text.SetText(output)
 		return text
 	},
+}
+
+// formatWriteResult renders a write error; a successful write renders nothing
+// (upstream formatWriteResult).
+func formatWriteResult(result *SortToolResultContent, isError bool, theme *Theme) string {
+	if !isError {
+		return ""
+	}
+	// Upstream maps every text block (`c.text || ""`) and joins them, so an
+	// empty block still contributes its separator newline.
+	var blocks []string
+	for _, block := range result.Content {
+		if block.Type == "text" {
+			blocks = append(blocks, block.Text)
+		}
+	}
+	output := strings.Join(blocks, "\n")
+	if output == "" {
+		return ""
+	}
+	return "\n" + theme.Fg("error", output)
 }
 
 // --- edit -------------------------------------------------------------------
