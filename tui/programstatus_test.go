@@ -54,6 +54,12 @@ func TestFormatProgramStatus(t *testing.T) {
 			status: ProgramStatus{State: ProgramStatusIdle, Message: "   "},
 			want:   "\x1b]7501;state=idle\x1b\\",
 		},
+		{
+			// Upstream trims with String.trim, so U+FEFF is blank.
+			name:   "a U+FEFF message is trimmed away",
+			status: ProgramStatus{State: ProgramStatusIdle, Message: "\uFEFF"},
+			want:   "\x1b]7501;state=idle\x1b\\",
+		},
 	}
 	for _, testCase := range cases {
 		testCase := testCase

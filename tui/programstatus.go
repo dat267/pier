@@ -90,7 +90,7 @@ func FormatProgramStatus(status ProgramStatus) string {
 	if status.State == ProgramStatusBlocked && status.Kind != "" {
 		pairs = append(pairs, "kind="+status.Kind)
 	}
-	message := truncateUTF8Bytes(strings.TrimSpace(
+	message := truncateUTF8Bytes(jsTrim(
 		programStatusControlCharacters.ReplaceAllString(status.Message, " ")), programStatusMaxMessageBytes)
 	if message != "" {
 		pairs = append(pairs, "msg="+base64.StdEncoding.EncodeToString([]byte(message)))
