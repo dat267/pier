@@ -293,6 +293,10 @@ func (l *Lifecycle) HandleCtrlC(clearEditor func()) {
 // HandleCtrlD shuts down (only called with an empty editor).
 func (l *Lifecycle) HandleCtrlD() { l.Shutdown(false) }
 
+// suspendProcessFn is the suspend syscall (a test seam: the real one stops the
+// process, which a test must not do).
+var suspendProcessFn = suspendProcess
+
 // HandleCtrlZ suspends the process (unsupported on Windows).
 func (l *Lifecycle) HandleCtrlZ(showStatus func(string), suspend func()) {
 	if l.options.Platform == "win32" {
@@ -306,7 +310,9 @@ func (l *Lifecycle) HandleCtrlZ(showStatus func(string), suspend func()) {
 	}
 	if suspend != nil {
 		suspend()
+		return
 	}
+	suspendProcessFn(l.options.UI)
 }
 
 // Shutdown gracefully stops the mode.

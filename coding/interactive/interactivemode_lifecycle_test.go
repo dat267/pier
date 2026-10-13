@@ -431,3 +431,30 @@ func TestLifecycleSwitchCarriesRawChildren(t *testing.T) {
 		t.Fatalf("regular screen lost the chat content: %q", rendered)
 	}
 }
+
+// ctrl+z stops the UI and suspends the process (upstream handleCtrlZ).
+func TestHandleCtrlZSuspendsProcess(t *testing.T) {
+	lifecycle, _, _, _ := newLifecycleTest(t)
+	previous := suspendProcessFn
+	t.Cleanup(func() { suspendProcessFn = previous })
+	called := 0
+	suspendProcessFn = func(ui tui.TUI) { called++ }
+	lifecycle.HandleCtrlZ(nil, nil)
+	if called != 1 {
+		t.Fatalf("suspend calls = %d; want 1", called)
+	}
+	// An explicit suspend seam wins.
+	called = 0
+	lifecycle.HandleCtrlZ(nil, func() { called++ })
+	if called != 1 {
+		t.Fatalf("seam calls = %d; want 1", called)
+	}
+	// Windows reports and does not suspend.
+	lifecycle.options.Platform = "win32"
+	called = 0
+	statuses := []string{}
+	lifecycle.HandleCtrlZ(func(m string) { statuses = append(statuses, m) }, nil)
+	if called != 0 || len(statuses) != 1 {
+		t.Fatalf("windows: suspend=%d statuses=%v", called, statuses)
+	}
+}
