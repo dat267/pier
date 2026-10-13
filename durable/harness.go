@@ -63,20 +63,57 @@ type conversationHost struct {
 	now         func() int64
 }
 
+// safeReport wraps onReport so its own panic is dropped: it is the last place
+// an error goes. A nil handler drops errors.
+func safeReport(onReport func(error)) func(error) {
+	return func(err error) {
+		if onReport == nil {
+			return
+		}
+		contained(func() { onReport(err) }, func(error) {})
+	}
+}
+
+// safeNow wraps the host clock: a panic is reported once and the wall clock is
+// used, so a broken clock never stops commits.
+func safeNow(now func() int64, report func(error)) func() int64 {
+	if now == nil {
+		return wallClockMillis
+	}
+	reported := false
+	return func() int64 {
+		value, err := callClock(now)
+		if err == nil {
+			return value
+		}
+		if !reported {
+			reported = true
+			report(err)
+		}
+		return wallClockMillis()
+	}
+}
+
+// callClock reads the host clock, converting a panic into an error.
+func callClock(now func() int64) (value int64, err error) {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			err = panicError(recovered)
+		}
+	}()
+	return now(), nil
+}
+
 // NewHarness builds a harness over storage; Open must be called before use.
 func NewHarness(storage Storage, options HarnessOptions, ctx chord.Context) *Harness {
-	now := options.Now
-	if now == nil {
-		now = wallClockMillis
-	}
+	report := safeReport(options.OnReport)
+	now := safeNow(options.Now, report)
 	session := NewSessionWithClock(storage, now)
 	harness := &Harness{
 		Session: session, storage: storage, options: options,
-		report: func(error) {},
+		report: report,
 	}
-	if options.OnReport != nil {
-		harness.report = options.OnReport
-	}
+	session.report = report
 	settings := func() Settings { return ResolveSettings(options.Settings) }
 	harness.tasks = NewTaskScheduler(TaskSchedulerOptions{
 		Session: session, Storage: storage, Registry: options.Registry, Models: options.Models,

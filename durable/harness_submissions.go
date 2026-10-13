@@ -46,7 +46,7 @@ func NewSubmissions(session *Session, storage Storage, now func() int64, queueMo
 		session: session, storage: storage, now: now, queueModes: queueModes, resume: resume,
 		waiters: &Waiters[Id, SubmissionRecord]{},
 	}
-	session.SubscribeCommits(func(publication CommitPublication, ctx chord.Context) {
+	session.ObserveCommits(func(publication CommitPublication, ctx chord.Context) {
 		submissions.observe(publication)
 	})
 	session.SubscribeClose(func() {

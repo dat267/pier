@@ -50,8 +50,16 @@ type Session struct {
 	documents map[string]*LoadedDocument
 
 	commitListeners map[int]CommitListener
-	closeListeners  map[int]func()
-	nextListenerID  int
+	// internalListeners are the Session's own observers (scheduler, views,
+	// task graph, submissions); a throw in one fails the Session, unlike a host
+	// listener's, which is reported.
+	internalListeners map[int]CommitListener
+	closeListeners    map[int]func()
+	nextListenerID    int
+
+	// report receives failures that do not fail the caller, such as a throwing
+	// host listener. A plain Session drops them; the Harness overrides it.
+	report func(error)
 
 	closing bool
 	poison  error
@@ -76,11 +84,13 @@ func NewSessionWithClock(storage Storage, now func() int64) *Session {
 		now = wallClockMillis
 	}
 	return &Session{
-		storage:         storage,
-		now:             now,
-		documents:       map[string]*LoadedDocument{},
-		commitListeners: map[int]CommitListener{},
-		closeListeners:  map[int]func(){},
+		storage:           storage,
+		now:               now,
+		documents:         map[string]*LoadedDocument{},
+		commitListeners:   map[int]CommitListener{},
+		internalListeners: map[int]CommitListener{},
+		closeListeners:    map[int]func(){},
+		report:            func(error) {},
 	}
 }
 
@@ -313,32 +323,50 @@ func (s *Session) Close(ctx chord.Context) error {
 	}
 	s.closeListeners = map[int]func(){}
 	s.mu.Unlock()
+	// One failing listener is reported and the rest still run.
 	for _, listener := range listeners {
-		listener()
+		listener := listener
+		contained(listener, s.report)
 	}
 	if beforeClose != nil {
 		_ = beforeClose()
 	}
 	s.mu.Lock()
 	s.commitListeners = map[int]CommitListener{}
+	s.internalListeners = map[int]CommitListener{}
 	s.documents = map[string]*LoadedDocument{}
 	s.mu.Unlock()
 	return s.storage.Close(ctx)
 }
 
-// SubscribeCommits registers a post-adoption listener.
+// SubscribeCommits registers a post-adoption host listener. It must not call
+// back into the Session; a panic is reported instead of failing the commit.
 func (s *Session) SubscribeCommits(listener CommitListener) func() {
+	return s.addCommitListener(&s.commitListeners, listener)
+}
+
+// ObserveCommits registers one of the Session's own post-adoption listeners.
+// It must not call back into the Session; a panic fails the Session, because
+// such a listener keeps in-memory state in step with storage.
+func (s *Session) ObserveCommits(listener CommitListener) func() {
+	return s.addCommitListener(&s.internalListeners, listener)
+}
+
+func (s *Session) addCommitListener(set *map[int]CommitListener, listener CommitListener) func() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.closing {
 		panic("Session is closed")
 	}
+	if *set == nil {
+		*set = map[int]CommitListener{}
+	}
 	id := s.nextListenerID
 	s.nextListenerID++
-	s.commitListeners[id] = listener
+	(*set)[id] = listener
 	return func() {
 		s.mu.Lock()
-		delete(s.commitListeners, id)
+		delete(*set, id)
 		s.mu.Unlock()
 	}
 }
@@ -461,7 +489,7 @@ func (s *Session) runCommit(ctx chord.Context, change func(tx *Transaction) erro
 
 func (s *Session) publish(seq Seq, writes []StorageWrite, documents []DocumentCommitChange, ctx chord.Context) {
 	s.mu.Lock()
-	if len(s.commitListeners) == 0 {
+	if len(s.commitListeners) == 0 && len(s.internalListeners) == 0 {
 		s.mu.Unlock()
 		return
 	}
@@ -478,15 +506,60 @@ func (s *Session) publish(seq Seq, writes []StorageWrite, documents []DocumentCo
 		changes = append(changes, CommitChange{Document: &document})
 	}
 	publication := CommitPublication{Seq: seq, Changes: changes}
+	internal := make([]CommitListener, 0, len(s.internalListeners))
+	for _, listener := range s.internalListeners {
+		internal = append(internal, listener)
+	}
 	listeners := make([]CommitListener, 0, len(s.commitListeners))
 	for _, listener := range s.commitListeners {
 		listeners = append(listeners, listener)
 	}
 	s.mu.Unlock()
 	// Deliver outside the state lock; listeners must not re-enter the session.
-	for _, listener := range listeners {
-		listener(publication, ctx)
+	// The commit is durable, so a failing listener neither fails the commit nor
+	// skips the others; an internal listener's throw fails the Session instead.
+	for _, listener := range internal {
+		listener := listener
+		contained(func() { listener(publication, ctx) }, s.fail)
 	}
+	for _, listener := range listeners {
+		listener := listener
+		contained(func() { listener(publication, ctx) }, s.report)
+	}
+}
+
+// fail fails the Session with the first error and reports it once; admission
+// ends and close listeners run. Storage guard failures and a throw in one of
+// the Session's own listeners call it.
+func (s *Session) fail(err error) {
+	s.mu.Lock()
+	if s.poison != nil {
+		s.mu.Unlock()
+		return
+	}
+	s.poison = err
+	s.mu.Unlock()
+	go func() { _ = s.Close(chord.BackgroundContext) }()
+	s.report(err)
+}
+
+// contained runs a host callback that must not fail its caller: a panic goes
+// to onError, which itself must not panic (safeReport wraps onReport).
+func contained(callback func(), onError func(error)) {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			onError(panicError(recovered))
+		}
+	}()
+	callback()
+}
+
+// panicError converts a recovered value into an error.
+func panicError(recovered any) error {
+	if err, ok := recovered.(error); ok {
+		return err
+	}
+	return fmt.Errorf("%v", recovered)
 }
 
 type committedObserverKind int
@@ -525,6 +598,7 @@ func (s *Session) attachDocumentLocked(
 		observer = source
 	} else {
 		watch := NewCommittedWatch[chord.JsonValue](loaded.Tracker.Value(), detach, nil)
+		watch.SetReport(s.report)
 		observer = watch
 	}
 

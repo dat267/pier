@@ -89,7 +89,7 @@ var conversationViewsRegistry sync.Map
 func NewConversationViews(session *Session, storage Storage) *ConversationViews {
 	views := &ConversationViews{session: session, storage: storage, mounts: map[Id]*viewMount{}}
 	conversationViewsRegistry.Store(session, views)
-	session.SubscribeCommits(func(publication CommitPublication, ctx chord.Context) {
+	session.ObserveCommits(func(publication CommitPublication, ctx chord.Context) {
 		views.advanceAll(publication, ctx)
 	})
 	session.SubscribeClose(func() {
@@ -139,6 +139,7 @@ func (v *ConversationViews) Watch(id Id, ctx chord.Context) (WatchHandle[Convers
 	var watch *CommittedWatch[ConversationView]
 	_, _, err := v.Attach(id, func(value ConversationView, release func(), _ Storage) (ViewObserver, error) {
 		watch = NewCommittedWatch(value, release, nil)
+		watch.SetReport(v.session.report)
 		return watch, nil
 	}, ctx)
 	if err != nil {

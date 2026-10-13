@@ -148,6 +148,23 @@ func TestCommittedWatchListenerError(t *testing.T) {
 	}
 }
 
+// A watch listener's error is reported as well as ending the watch with
+// listener_error (v1.2.0).
+func TestCommittedWatchListenerErrorIsReported(t *testing.T) {
+	type stateValue map[string]any
+	watch := NewCommittedWatch[stateValue](stateValue{}, nil, nil)
+	var reported []error
+	watch.SetReport(func(err error) { reported = append(reported, err) })
+	watch.Start(func(_ stateValue, _ []delta.Op, _ chord.Context) error {
+		return errors.New("listener failed")
+	})
+	watch.Advance(stateValue{"value": float64(1)}, nil, context.Background())
+	<-watch.Closed()
+	if len(reported) != 1 || reported[0].Error() != "listener failed" {
+		t.Fatalf("reported = %+v, want the listener error", reported)
+	}
+}
+
 // TestCommittedWatchOverflowCollapses covers the bounded pending window: an
 // unavailable listener keeps the newest replacement only, and later frames
 // append after it.

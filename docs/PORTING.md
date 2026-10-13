@@ -53,15 +53,24 @@ until a summary succeeds, and failed `compaction_end` events carry the error
 with an `exit_code` diagnostic rather than throwing (`eba849739`). Durable
 Storage failures, including reads, now fail and close the Session; later calls
 return the first failure as `SessionFailed`, and watches end with
-`session_failed` and that cause (`eba849739`). `auth.json` lock
+`session_failed` and that cause (`eba849739`). A throwing host commit/close
+listener is reported through `onReport` instead of failing the operation that
+ran it, the Session's own listeners fail the Session, a throwing watch listener
+is reported as well as ending the watch with `listener_error`, and a throwing
+clock is reported once and falls back to the wall clock (`eba849739`). `auth.json` lock
 acquisition retries transient Windows `EPERM` within a bounded count while
 non-Windows failures remain immediate (`#10801`, `e6fb2581d`). Focused regression
 tests cover these fixes.
 
 **v1.2.0 audit still open.** The new published configuration schemas still
 need a source-level parity review; they are configuration-editor support, not a
-runtime request path. Remaining Durable v1.2.0 gaps include `listFiles`, structured tool outputs,
-and nested/deferred tool execution; codemode implementation remains out of scope. Do not treat the fix list above as a complete v1.2.0 port.
+runtime request path. The remaining Durable v1.2.0 items are the unported
+optional features: `listFiles` belongs to the `packages/env` daemon (already
+classified as a separately scoped remote-execution feature above), and
+structured tool outputs and nested/deferred tool execution belong to the nested
+call host whose triggers (codemode and extension tools) are out of scope.
+Codemode implementation remains out of scope. Do not treat the fix list above as
+a complete v1.2.0 port.
 
 Ported from it so far: the built-in catalog, regenerated from the tag's own generator
 (`claude-haiku-5-5`, the prompt-length pricing tiers for 154 models, and the model churn

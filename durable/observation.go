@@ -255,6 +255,9 @@ type CommittedWatch[T any] struct {
 	end      *WatchEnd
 	pending  []watchFrame[T]
 	listener WatchListener[T]
+	// report receives a listener's error before the watch ends with
+	// listener_error; nil drops it.
+	report   func(error)
 	started  bool
 	running  bool
 	retired  bool
@@ -277,6 +280,14 @@ type watchFrame[T any] struct {
 // constructor).
 func NewCommittedWatch[T any](value T, detach func(), replace func() T) *CommittedWatch[T] {
 	return &CommittedWatch[T]{value: value, detach: detach, replace: replace, closed: make(chan struct{})}
+}
+
+// SetReport installs the callback that receives a listener's error, which also
+// ends the watch with listener_error.
+func (w *CommittedWatch[T]) SetReport(report func(error)) {
+	w.mu.Lock()
+	w.report = report
+	w.mu.Unlock()
 }
 
 // Value is the acquisition revision before start and the latest delivered
@@ -427,6 +438,7 @@ func (w *CommittedWatch[T]) drain() {
 			ctx = context.Background()
 		}
 		if err := listener(frame.value, frame.ops, context.WithoutCancel(ctx)); err != nil {
+			w.reportError(err)
 			w.terminate(WatchEnd{Reason: WatchReasonListenerError, Err: err})
 			return
 		}
@@ -434,6 +446,17 @@ func (w *CommittedWatch[T]) drain() {
 			w.terminate(WatchEnd{Reason: WatchReasonRetired})
 			return
 		}
+	}
+}
+
+// reportError delivers a listener's error to the installed report callback
+// outside the watch mutex, so a callback may inspect the watch.
+func (w *CommittedWatch[T]) reportError(err error) {
+	w.mu.Lock()
+	report := w.report
+	w.mu.Unlock()
+	if report != nil {
+		report(err)
 	}
 }
 

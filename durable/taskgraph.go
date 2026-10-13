@@ -75,7 +75,7 @@ type taskGraphMount struct {
 // NewTaskGraphView builds the view and subscribes it to the session.
 func NewTaskGraphView(session *Session, storage Storage) *TaskGraphView {
 	view := &TaskGraphView{session: session, storage: storage}
-	session.SubscribeCommits(func(publication CommitPublication, ctx chord.Context) {
+	session.ObserveCommits(func(publication CommitPublication, ctx chord.Context) {
 		view.mu.Lock()
 		mount := view.mount
 		view.mu.Unlock()
@@ -185,6 +185,7 @@ func (v *TaskGraphView) attachWatch(mount *taskGraphMount) (*CommittedWatch[Task
 		v.mu.Unlock()
 	}
 	watch = NewCommittedWatch[TaskGraph](mount.value, detach, nil)
+	watch.SetReport(v.session.report)
 	mount.observers[watch] = struct{}{}
 	return watch, detach
 }

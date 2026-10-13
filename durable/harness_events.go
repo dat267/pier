@@ -282,6 +282,7 @@ func WatchEvents(session *Session, conversationID Id, ctx chord.Context) (*Agent
 		watch = NewCommittedWatch[[]AgentEvent]([]AgentEvent{}, release, func() []AgentEvent {
 			return []AgentEvent{snapshotOf(current)}
 		})
+		watch.SetReport(session.report)
 		return &eventStreamObserver{
 			publication: func(before, after ConversationView, ops []delta.Op, publication CommitPublication, commitContext chord.Context) {
 				current = after

@@ -300,7 +300,7 @@ func (s *TaskScheduler) Mirror() *SchedulerMirror { return s.mirror }
 // Open loads the live tasks and subscribes to the session's publications and
 // close.
 func (s *TaskScheduler) Open(ctx chord.Context) error {
-	s.session.SubscribeCommits(func(publication CommitPublication, _ chord.Context) {
+	s.session.ObserveCommits(func(publication CommitPublication, _ chord.Context) {
 		s.Observe(publication)
 	})
 	s.session.SubscribeClose(func() { s.Seal() })
