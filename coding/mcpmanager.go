@@ -42,7 +42,6 @@ type McpManager struct {
 	connections []*McpServerConnection
 	tools       []agent.AgentTool
 	options     McpManagerOptions
-	session     *AgentSession
 	// onToolsChange fires after every tool-set rebuild: the CLI wiring attaches
 	// late tools to the live session; the session-attached manager re-attaches
 	// after every rebuild, `/reload` included (upstream _pendingToolNames).
@@ -153,7 +152,6 @@ func (m *McpManager) SetOnToolsChange(onToolsChange func()) {
 // The manager is CLI-owned, so the session holds no reference back.
 func (m *McpManager) AttachSession(session *AgentSession) {
 	m.mu.Lock()
-	m.session = session
 	if m.onToolsChange == nil {
 		m.onToolsChange = func() { _ = session.AttachExtraTools(m.DirectTools()) }
 	}

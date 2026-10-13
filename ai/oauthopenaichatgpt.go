@@ -138,8 +138,7 @@ type OpenAIChatGPTAuthorizationResult struct {
 // reach whatever else holds it (another pending login or the Codex CLI) and be
 // rejected as a state mismatch.
 type OpenAIChatGPTCallbackServer struct {
-	server   *http.Server
-	listener net.Listener
+	server *http.Server
 
 	mu      sync.Mutex
 	settled bool
@@ -164,7 +163,6 @@ func StartOpenAIChatGPTCallbackServer(expectedState string) (*OpenAIChatGPTCallb
 		}
 		return nil, err
 	}
-	callback.listener = listener
 	mux := http.NewServeMux()
 	mux.HandleFunc(OpenAIChatGPTCallbackPath, func(writer http.ResponseWriter, request *http.Request) {
 		writeHTML := func(status int, body string) {

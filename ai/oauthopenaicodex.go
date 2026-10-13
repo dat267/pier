@@ -375,7 +375,6 @@ func CreateOpenAICodexAuthorizationFlow(originator string) (*OpenAICodexAuthoriz
 // takes over (upstream's listen-error handling).
 type OpenAICodexCallbackServer struct {
 	server      *http.Server
-	listener    net.Listener
 	unavailable bool
 
 	mu      sync.Mutex
@@ -396,7 +395,6 @@ func StartOpenAICodexCallbackServer(expectedState string) *OpenAICodexCallbackSe
 		close(callback.done)
 		return callback
 	}
-	callback.listener = listener
 	mux := http.NewServeMux()
 	mux.HandleFunc("/auth/callback", func(writer http.ResponseWriter, request *http.Request) {
 		writeHTML := func(status int, body string) {

@@ -103,7 +103,6 @@ type loopSchedule struct {
 	work runnerWorkState
 
 	animationTimer *time.Timer
-	animationCh    <-chan time.Time
 	deadline       time.Time
 	scanValid      bool
 	scanNeeds      bool
@@ -128,7 +127,6 @@ func newLoopSchedule(host loopHost, paint, markInputRead func()) *loopSchedule {
 	schedule.animationTimer.Stop()
 	schedule.paintTimer = time.NewTimer(time.Hour)
 	schedule.paintTimer.Stop()
-	schedule.animationCh = nil
 	return schedule
 }
 
@@ -136,7 +134,6 @@ func newLoopSchedule(host loopHost, paint, markInputRead func()) *loopSchedule {
 func (s *loopSchedule) close() {
 	s.animationTimer.Stop()
 	s.paintTimer.Stop()
-	s.animationCh = nil
 	s.paintCh = nil
 }
 

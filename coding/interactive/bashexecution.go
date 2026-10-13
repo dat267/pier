@@ -136,7 +136,6 @@ type BashExecutionComponent struct {
 	// outputPad is the transcript's horizontal padding; the header, output and status lines all
 	// use it (upstream #10557).
 	outputPad int
-	colorKey  string
 }
 
 // NewBashExecutionComponent creates the component.
@@ -153,7 +152,6 @@ func NewBashExecutionComponent(command string, host tui.RenderRequester, exclude
 		command:          command,
 		status:           "running",
 		contentContainer: &tui.Container{},
-		colorKey:         colorKey,
 		outputPad:        outputPad,
 	}
 

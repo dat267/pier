@@ -328,7 +328,6 @@ const (
 type parsedKittySequence struct {
 	codepoint     int
 	shiftedKey    int
-	hasShiftedKey bool
 	baseLayoutKey int
 	hasBaseLayout bool
 	modifier      int
@@ -428,7 +427,6 @@ func parseKittySequence(data string) (parsedKittySequence, bool) {
 		parsed := parsedKittySequence{codepoint: atoiSafe(match[1])}
 		if match[2] != "" {
 			parsed.shiftedKey = atoiSafe(match[2])
-			parsed.hasShiftedKey = true
 		}
 		if match[3] != "" {
 			parsed.baseLayoutKey = atoiSafe(match[3])

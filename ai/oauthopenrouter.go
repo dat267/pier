@@ -160,9 +160,8 @@ func ExchangeOpenRouterAuthorizationCode(ctx context.Context, code, verifier str
 type OpenRouterCallbackServer struct {
 	CallbackURL string
 
-	listener net.Listener
-	server   *http.Server
-	timeout  *time.Timer
+	server  *http.Server
+	timeout *time.Timer
 
 	mu         sync.Mutex
 	claimed    bool
@@ -185,7 +184,6 @@ func StartOpenRouterCallbackServer(callbackPath, verifier string, ctx context.Co
 	port := listener.Addr().(*net.TCPAddr).Port
 	callback := &OpenRouterCallbackServer{
 		CallbackURL: fmt.Sprintf("http://%s:%d%s", host, port, callbackPath),
-		listener:    listener,
 		done:        make(chan struct{}),
 	}
 

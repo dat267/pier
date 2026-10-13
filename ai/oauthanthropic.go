@@ -101,7 +101,6 @@ func FormatOAuthErrorDetails(err error) string {
 // OAuthCallbackServer is the loopback callback server (upstream
 // startCallbackServer).
 type OAuthCallbackServer struct {
-	listener    net.Listener
 	server      *http.Server
 	RedirectURI string
 
@@ -125,7 +124,6 @@ func StartOAuthCallbackServer(expectedState string, port int) (*OAuthCallbackSer
 		boundPort = address.Port
 	}
 	callback := &OAuthCallbackServer{
-		listener: listener,
 		// The advertised host stays "localhost" even when the bound host is 127.0.0.1
 		// (upstream redirectHost).
 		RedirectURI: fmt.Sprintf("http://localhost:%d%s", boundPort, anthropicCallbackPath),

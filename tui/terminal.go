@@ -759,8 +759,7 @@ func (t *ProcessTerminal) disableModifyOtherKeysLocked() {
 
 // terminalWrite is one queued write, or a whole coalescable frame.
 type terminalWrite struct {
-	data  string
-	frame bool
+	data string
 	// inputReadAt/inputPaintAt tag a frame whose bytes came from a keystroke
 	// (MarkInputRead). They flow through to the writer so it can report the
 	// end-to-end latency without a per-keystroke goroutine.
@@ -883,7 +882,7 @@ func (t *ProcessTerminal) EndFrame() {
 			paintAt = time.Now()
 		}
 	}
-	t.enqueueLocked(terminalWrite{data: data, frame: true, inputReadAt: readAt, inputPaintAt: paintAt})
+	t.enqueueLocked(terminalWrite{data: data, inputReadAt: readAt, inputPaintAt: paintAt})
 	t.flushDeferredHintsLocked()
 	t.writesCond.Broadcast()
 	t.writesMu.Unlock()

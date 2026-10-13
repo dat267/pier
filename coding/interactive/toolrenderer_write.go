@@ -12,7 +12,6 @@ const writePartialFullHighlightLines = 50
 
 type writeHighlightCache struct {
 	rawPath          string
-	hasRawPath       bool
 	lang             string
 	rawContent       string
 	normalizedLines  []string
@@ -37,7 +36,7 @@ func rebuildWriteHighlightCacheFull(rawPath string, hasRawPath bool, fileContent
 	}
 	normalized := replaceTabs(normalizeDisplayText(fileContent))
 	return &writeHighlightCache{
-		rawPath: rawPath, hasRawPath: true, lang: lang, rawContent: fileContent,
+		rawPath: rawPath, lang: lang, rawContent: fileContent,
 		normalizedLines:  strings.Split(normalized, "\n"),
 		highlightedLines: HighlightCode(normalized, lang),
 	}
