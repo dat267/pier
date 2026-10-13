@@ -592,7 +592,9 @@ func (d *EventDispatcher) handleCompactionEnd(event *coding.SessionEvent) {
 			entries := d.SessionInfo.BuildContextEntriesForLeaf()
 			if len(entries) > 0 && entries[0].Type == "compaction" {
 				d.Transcript.Chat.Clear()
-				d.Transcript.RenderSessionEntries(entries[1:], false, false)
+				// Upstream renderSessionEntries defaults: invalidate the footer,
+				// refresh the editor border, repopulate the editor history.
+				d.Transcript.RenderSessionEntries(entries[1:], true, true)
 				d.Transcript.AddMessageToChat(coding.CreateCompactionSummaryMessage(
 					event.Result.Summary, event.Result.TokensBefore, 0), false)
 				if event.Result.Usage != nil {

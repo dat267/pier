@@ -404,6 +404,8 @@ func TestEventDispatcherCompaction(t *testing.T) {
 	dispatcher.Transcript.SessionInfo = manager
 	flushed := []bool{}
 	dispatcher.FlushCompactionQueue = func(willRetry bool) { flushed = append(flushed, willRetry) }
+	borderUpdates := 0
+	dispatcher.Transcript.UpdateEditorBorderColor = func() { borderUpdates++ }
 
 	dispatcher.Settings.SetShowCacheMissNotices(true)
 	usage := ai.Usage{Input: 100, Cost: ai.UsageCost{Total: 0.5}}
@@ -413,6 +415,9 @@ func TestEventDispatcherCompaction(t *testing.T) {
 	})
 	if len(flushed) != 1 || flushed[0] {
 		t.Fatalf("flushed = %v", flushed)
+	}
+	if borderUpdates != 1 {
+		t.Fatalf("compaction rebuild must refresh the editor border, got %d updates", borderUpdates)
 	}
 	lines = strings.Join(renderChat(t, transcript.Chat), "\n")
 	if !strings.Contains(lines, "[compaction]") || !strings.Contains(lines, "Compaction: ") {
