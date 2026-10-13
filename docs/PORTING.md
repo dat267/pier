@@ -4,21 +4,18 @@ How much of upstream pi this port covers, package by package, plus the upstream
 pin's change log. The user-facing summary lives in `README.md`; this file is the
 authoritative per-area status.
 
-Reference pin: `cd32f772` (Release v1.0.2), read from the `./pi` checkout.
+Reference pin: `abe508e1` (Release v1.1.0), read from the `./pi` checkout.
 `just reference` checks that the checkout really is at that tag, and
 `just reference-fetch` refreshes its tags without moving the checkout.
 `ai/models_catalog.json` is regenerated from the pin's own generator
 (`packages/ai/scripts/generate-models.ts --strict --data-only`, which fetches
 models.dev) through `scripts/gen_catalog.py`.
 
-**Known drift.** Upstream has released v1.0.3, v1.0.4 and v1.1.0 since the pin.
-`git -C pi log --oneline v1.0.2..v1.1.0` counts 104 commits over 340 files,
-concentrated in `coding-agent` (44), `durable` (33), `ai` (29), `env` (17),
-`tui` (12), `mcp` (9), `codemode` (9) and `agent` (8). The delta has been
-reviewed commit by commit for the in-scope packages; the ports, deliberate
-omissions and out-of-scope subsystems (codemode, the `env` SSH package, the
-package manager, extension mechanics, print/json/export modes and rpc) are
-recorded below.
+**Upstream status.** v1.1.0 is the latest released tag in the reference
+checkout. The v1.0.3, v1.0.4, and v1.1.0 deltas have been reviewed for
+in-scope packages; applicable changes are ported, while remaining gaps and
+out-of-scope areas are recorded below. The commit-level port notes below retain
+upstream versions and commit IDs as historical context.
 
 Ported from it so far: the built-in catalog, regenerated from the tag's own generator
 (`claude-haiku-5-5`, the prompt-length pricing tiers for 154 models, and the model churn
@@ -143,11 +140,10 @@ compares equal messages whole and characters only from the first differing messa
 unchanged usage numbers (`fe11328b0`). The extension manager's background UI actions and
 in-place enable/disable attempt fencing from `2db5e359b` remain out of scope with `/mcp` UI (D185).
 
-Ported ahead of the reference pin: Home/End remain editor line-start/end keys, while
-Ctrl+Home/Ctrl+End move the fullscreen transcript, matching upstream v1.1.0
-(`#10314`, `6100fe5a8`). The component and fullscreen-renderer goldens now record
-that mapping. D216 documents this deliberate difference from the pinned v1.0.2
-keybinding table; retire the row when the reference pin advances.
+The Home/End mapping matches the v1.1.0 reference (`#10314`, `6100fe5a8`):
+Home/End move the editor cursor, while Ctrl+Home/Ctrl+End move the fullscreen
+transcript. The component and fullscreen-renderer goldens record that mapping.
+D216 is closed now that v1.1.0 is the reference pin.
 
 Checked against v1.1.0 and still absent — reading the Termux clipboard (upstream
 `592fb57b7`) stays out of scope under **D120**. The `durable` delta is also audited
@@ -668,7 +664,7 @@ Update the pin whenever upstream source is re-read for a port.
 | `chord/delta` | `packages/chord/src/delta` — op vocabulary + wire compression, diff engine, applier (mutable/immutable), validation, and the tracker lifecycle (`tracker.ts`: beginChange/prepare/adopt/PrepareReplace, staleness, abort and no-op rules, `ApplyImmutableBatches`; D11 for the explicit-mutation draft); JSON value contract (`chord` root) | ported |
 | `chord/context` | `src/context/index.ts` — typed context keys/values, WithCancel, WithoutAbortSignal, AwaitWithContext | ported |
 | `telemetry` | `packages/telemetry` — span/context contracts, noop + in-memory recorder (settlement, explicit-vs-automatic status, atomic recording), schema definition data, typed span starter, and the adapter conformance suite | ported |
-| `durable` | `packages/durable` — the record types and the Storage contract; the memory, SQLite and JSONL backends (sequences, id ownership, cursors, fork-aware history, task/submission indexes, document incarnations with base/delta reconstruction); `documents.ts`, `entries.ts`, `errors.ts`, `tasks.ts`, `truncate.ts`; the session kernel and transaction (`session/session.ts`, `transaction.ts`), the committed-state bridge (`observation.ts`) and fork copies (`forks.ts`); the whole `harness/` tree (agent, live, inbox, context, prompt, submissions, events, registry, view, usage, output, task-graph, define, util, json, the scheduler and its runtime, the three built-in tasks, and the harness composition) with all 23 `storage-conformance.ts` cases replayed; and `tools/` (read, write, edit, bash, image, path-utils, file-mutation-queue) plus `env/` (filesystem and shell). Not ported: the `testing/` runner/assertions/benchmark scaffolding, which Go's native `testing` replaces (their reusable benchmark dataset and descriptors are ported as Go benchmarks). The v1.1.0 gaps are listed above | ported through v1.0.2; v1.1.0 gaps audited |
+| `durable` | `packages/durable` — the record types and the Storage contract; the memory, SQLite and JSONL backends (sequences, id ownership, cursors, fork-aware history, task/submission indexes, document incarnations with base/delta reconstruction); `documents.ts`, `entries.ts`, `errors.ts`, `tasks.ts`, `truncate.ts`; the session kernel and transaction (`session/session.ts`, `transaction.ts`), the committed-state bridge (`observation.ts`) and fork copies (`forks.ts`); the whole `harness/` tree (agent, live, inbox, context, prompt, submissions, events, registry, view, usage, output, task-graph, define, util, json, the scheduler and its runtime, the three built-in tasks, and the harness composition) with all 23 `storage-conformance.ts` cases replayed; and `tools/` (read, write, edit, bash, image, path-utils, file-mutation-queue) plus `env/` (filesystem and shell). Not ported: the `testing/` runner/assertions/benchmark scaffolding, which Go's native `testing` replaces (their reusable benchmark dataset and descriptors are ported as Go benchmarks). No further v1.1.0 gaps are known | ported through v1.1.0 |
 | `server` | `packages/server` core — connection state machine (handshake timeout/version checks, hello_error failures, inbound pump ordering), request dispatch (service-call parsing, session vs server-scope routing, subscribe snapshot encoding with update flush ordering, unsubscribe, cancel), SessionRouter (per-client serialization, attachment leases, session open dedup, terminate invalidation), bounded error mapping, drain/close | ported |
 | `server` (unix) | `transports/unix/*` — socket path derivation, listener with stale-socket probing (live-listener refusal, rename-and-verify removal), atomic bind path + hard link (falling back to `renameat2(RENAME_NOREPLACE)` where the platform denies linking, D152) + mode, owned-socket cleanup by device/inode identity, per-connection byte accounting, graceful final-chunk close with force-close timer, `createUnixServer` preset | ported |
 | `server/testing` | `testing/*` — `Deferred`, scriptable `TestHarness` (gated close/service calls, release counting), `TestServerHost` (seeded metadata, ambiguity, gated opens), `pi.session-management` test services, `ProtocolTestClient` with fragmented sends and attachment tracking, `connectUnixTestClient`, `createTestServer` | ported |

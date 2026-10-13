@@ -118,11 +118,11 @@ reference:
 	if [[ ! -d pi/.git ]]; then
 		echo "reference: no ./pi checkout; clone it at the pin:" >&2
 		echo "      git clone https://github.com/earendil-works/pi pi" >&2
-		echo "      git -C pi checkout --detach v1.0.2   # the pin, see docs/PORTING.md" >&2
+		echo "      git -C pi checkout --detach v1.1.0   # the pin, see docs/PORTING.md" >&2
 		exit 1
 	fi
 
-	# "Reference pin: `cd32f772` (Release v1.0.2), read from the `./pi` checkout."
+	# "Reference pin: `abe508e1` (Release v1.1.0), read from the `./pi` checkout."
 	pin_commit="$(sed -n 's/^Reference pin: `\([0-9a-f]*\)`.*/\1/p' docs/PORTING.md | head -1)"
 	pin_tag="$(sed -n 's/^Reference pin: `[0-9a-f]*` (Release \([^)]*\)).*/\1/p' docs/PORTING.md | head -1)"
 	if [[ -z "$pin_commit" || -z "$pin_tag" ]]; then

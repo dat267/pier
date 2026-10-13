@@ -445,11 +445,9 @@ func MissingToolResult(call ai.ToolCall, timestamp int64) *ai.ToolResultMessage 
 	}
 }
 
-// D212: upstream v1.0.2 leaves a baseline system message after the initial
-// user input because generation commits input before preparing the prompt.
-// Follow v1.1.0: providers treat only a leading system message as the initial
-// prompt and tool set, so move the first non-user message to the front only
-// when it is a system message. Later system messages retain their positions.
+// D212 (closed): this matches pinned v1.1.0 behavior. After tool-result
+// ordering, move the first non-user message to the front only when it is a
+// system message; later system messages retain their positions.
 func leadWithSystem(messages []ai.Message) []ai.Message {
 	index := 0
 	for index < len(messages) {

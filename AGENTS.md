@@ -22,18 +22,17 @@ reference packages closely, file for file.
   SQLite backend). `go.mod` is authoritative for versions and indirect
   dependencies.
 - Upstream checkout lives in the workspace at `./pi` (gitignored), checked out at
-  the pinned tag `v1.0.2` (`cd32f772`; the README's pin table and
+  the pinned tag `v1.1.0` (`abe508e1`; the README's pin table and
   `docs/PORTING.md` record it). `just reference` fails when the checkout sits at
   another tag, and `just reference-fetch` refreshes its tags without moving it,
   so a newer release is diffable while the checkout stays on the pin. Say which
-  tag a review read: upstream has moved past the pin (v1.0.3, v1.0.4, v1.1.0;
-  104 commits). Applicable changes have been selectively ported, but the full
-  delta is not exhaustively audited; see `docs/PORTING.md` for current findings.
-  A checkout at another tag makes an "against upstream" review answer a question
-  about that tag instead. The
-  released tags are the reference: an installed bundle drifts and can sit on a
-  divergent upstream line. Diff checks go through the `./pi` sources (`node
-  --experimental-strip-types`, `FORCE_COLOR=1` for chalk parity).
+  tag a review read: v1.1.0 is the latest released tag at this pin. Applicable
+  changes are selectively ported, but the full delta is not exhaustively
+  audited; see `docs/PORTING.md` for current findings. A checkout at another
+  tag makes an "against upstream" review answer a question about that tag
+  instead. The released tags are the reference: an installed bundle drifts and
+  can sit on a divergent upstream line. Diff checks go through the `./pi`
+  sources (`node --experimental-strip-types`, `FORCE_COLOR=1` for chalk parity).
 - License: MIT (see `LICENSE`).
 
 ## Reference rules

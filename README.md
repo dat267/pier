@@ -13,7 +13,7 @@ deliberate feature of this implementation. The development conventions live in
 | What | Value |
 |---|---|
 | Repository | https://github.com/earendil-works/pi (cloned at `./pi`, gitignored) |
-| Pin | `cd32f772` (Release v1.0.2); the applicable runtime and catalog changes from v1.0.1 are included. Upstream has since released v1.0.3, v1.0.4 and v1.1.0 (104 commits); applicable changes are selectively ported, with remaining deltas and out-of-scope areas tracked in `docs/PORTING.md` |
+| Pin | `abe508e1` (Release v1.1.0), the latest released tag. Remaining gaps and out-of-scope areas are tracked in `docs/PORTING.md` |
 
 ## Status
 
