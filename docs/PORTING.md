@@ -22,7 +22,8 @@ waiting for response headers, not during an active response stream (#10609,
 "The upstream provider returned an error" (#10842, `7bd01fb92`). Compaction
 summaries omit assistant thinking so replayed reasoning does not inflate the
 prompt (`15e7bdc14`). Shifted-symbol keybindings match the produced character
-under Kitty and modifyOtherKeys (`7f9e1198f`). `PI_CLIPBOARD_OSC52=1` also
+under Kitty and modifyOtherKeys (`7f9e1198f`), and `showHardwareCursor` no
+longer draws a second software cursor (`1cedd3272`). `PI_CLIPBOARD_OSC52=1` also
 sends an OSC 52 copy after a successful local clipboard write (`3e477eab5`).
 Unhandled mouse-wheel input scrolls the transcript behind a focused overlay
 (`#10769`, `11f991145`). Recognized delayed terminal color, program-status,

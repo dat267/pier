@@ -100,6 +100,25 @@ func (c *scriptedComponent) Render(width int) []string {
 
 func (c *scriptedComponent) Invalidate() {}
 
+func TestMainScreenUsesHardwareCursorWithoutReverseVideo(t *testing.T) {
+	terminal := &recordingTerminal{width: 20, height: 5}
+	screen := NewMainScreen(terminal, false, t.TempDir())
+	input := NewInput(InputOptions{Prompt: "> "})
+	input.SetValue("abc")
+	screen.AddChild(input)
+	screen.SetFocus(input)
+	screen.RenderNow(true)
+	if first := terminal.takeWrites(); !strings.Contains(first, "\x1b[7m") {
+		t.Fatalf("software cursor not rendered: %q", first)
+	}
+
+	screen.SetShowHardwareCursor(true)
+	screen.RenderNow(true)
+	if rendered := terminal.takeWrites(); strings.Contains(rendered, "\x1b[7m") || strings.Contains(rendered, CursorMarker) {
+		t.Fatalf("hardware cursor mode still rendered a fake cursor: %q", rendered)
+	}
+}
+
 // TestMainScreenAgainstUpstreamGolden replays the upstream write streams.
 func TestMainScreenAgainstUpstreamGolden(t *testing.T) {
 	// The renderer suppresses the full repaint on a height change under Termux

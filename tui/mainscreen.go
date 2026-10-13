@@ -353,7 +353,7 @@ func (s *MainScreen) doRender() {
 	// frames, and this screen owns its buffer: ExtractCursorPosition and
 	// ApplyLineResets both write into the lines they are given, so the
 	// rendered lines are copied before any of them runs.
-	newLines := append([]string(nil), s.renderLocked(width)...)
+	newLines := append([]string(nil), s.resolveFakeCursors(s.renderLocked(width))...)
 
 	if s.hasOverlayEntriesLocked() {
 		newLines = s.CompositeOverlays(newLines, width, height)

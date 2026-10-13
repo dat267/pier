@@ -404,9 +404,9 @@ func (e *Editor) Render(width int) []string {
 					firstGrapheme = segments[0].Segment
 				}
 				restAfter := after[len(firstGrapheme):]
-				displayText = before + marker + "\x1b[7m" + firstGrapheme + "\x1b[0m" + restAfter
+				displayText = before + marker + RenderFakeCursor(firstGrapheme) + restAfter
 			} else {
-				displayText = before + marker + "\x1b[7m \x1b[0m"
+				displayText = before + marker + RenderFakeCursor(" ")
 				lineVisibleWidth++
 				if lineVisibleWidth > contentWidth && paddingX > 0 {
 					cursorInPadding = true

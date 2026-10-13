@@ -127,6 +127,18 @@ type Focusable interface {
 // SetFocused/IsFocused: divergence D43.)
 const CursorMarker = "\x1b_pi:c\x07"
 
+// FakeCursorStart and FakeCursorEnd mark the text drawn in place of the cursor.
+// The renderer replaces them with reverse video or removes them in hardware-cursor mode.
+const (
+	FakeCursorStart = "\x1b_pi:fc\x07"
+	FakeCursorEnd   = "\x1b_pi:/fc\x07"
+)
+
+// RenderFakeCursor wraps text that represents the software cursor.
+func RenderFakeCursor(text string) string {
+	return FakeCursorStart + text + FakeCursorEnd
+}
+
 // DispatchMouseEvent dispatches an event to a component and retains the exact
 // target and coordinate transform. Containers use this when forwarding events
 // to nested children.

@@ -2,6 +2,7 @@ package tui
 
 import (
 	"reflect"
+	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -838,6 +839,24 @@ func (t *Renderer) ResolveMouseFocusTarget(component Component) Component {
 	return component
 }
 
+var focusedFakeCursorPattern = regexp.MustCompile(`(?s)(\x1b_pi:c\x07)\x1b_pi:fc\x07(.*?)(?:\x1b_pi:/fc\x07|$)`)
+
+func (t *Renderer) resolveFakeCursors(lines []string) []string {
+	resolved := make([]string, len(lines))
+	for i, line := range lines {
+		if !strings.Contains(line, FakeCursorStart) {
+			resolved[i] = line
+			continue
+		}
+		if t.ShowHardwareCursor {
+			line = focusedFakeCursorPattern.ReplaceAllString(line, "$1$2")
+		}
+		line = strings.ReplaceAll(line, FakeCursorStart, "\x1b[7m")
+		resolved[i] = strings.ReplaceAll(line, FakeCursorEnd, "\x1b[27m")
+	}
+	return resolved
+}
+
 // CompositeOverlays composites all overlays into content lines (sorted by
 // focusOrder, higher = on top).
 func (t *Renderer) CompositeOverlays(lines []string, termWidth int, termHeight int) []string {
@@ -877,7 +896,7 @@ func (t *Renderer) CompositeOverlays(lines []string, termWidth int, termHeight i
 		layout := resolveOverlayLayout(options, 0, termWidth, termHeight)
 		width := layout.Width
 
-		overlayLines := component.Render(width)
+		overlayLines := t.resolveFakeCursors(component.Render(width))
 		if layout.HasMax && len(overlayLines) > layout.MaxHeight {
 			overlayLines = overlayLines[:layout.MaxHeight]
 		}

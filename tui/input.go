@@ -425,7 +425,7 @@ func (in *Input) Render(width int) []string {
 		if in.focused {
 			marker = CursorMarker
 		}
-		cursorChar := "\x1b[7m" + in.placeholderStyle(atCursor) + "\x1b[27m"
+		cursorChar := RenderFakeCursor(in.placeholderStyle(atCursor))
 		textWithCursor := marker + cursorChar + in.placeholderStyle(afterCursor)
 		padding := repeatSpaces(max(0, availableWidth-VisibleWidth(textWithCursor)))
 		return []string{in.prompt + textWithCursor + padding}
@@ -484,7 +484,7 @@ func (in *Input) Render(width int) []string {
 		marker = CursorMarker
 	}
 
-	cursorChar := "\x1b[7m" + atCursor + "\x1b[27m"
+	cursorChar := RenderFakeCursor(atCursor)
 	textWithCursor := beforeCursor + marker + cursorChar + afterCursor
 
 	padding := repeatSpaces(max(0, availableWidth-VisibleWidth(textWithCursor)))

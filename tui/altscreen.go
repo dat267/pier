@@ -457,7 +457,7 @@ func (s *AltScreen) afterTerminalStop(options TuiStopOptions) {
 		return
 	}
 	width := max(1, s.Terminal.Columns())
-	documentLines := s.Render(width)
+	documentLines := s.resolveFakeCursors(s.Render(width))
 	trimmed := make([]string, 0, len(documentLines))
 	for _, line := range documentLines {
 		trimmed = append(trimmed, stripZonePrefix(line))
@@ -2156,6 +2156,7 @@ func (s *AltScreen) doRender() {
 	for _, line := range nextLayout.Lines {
 		screen = append(screen, stripZonePrefix(line))
 	}
+	screen = s.resolveFakeCursors(screen)
 	screen = s.applySearchHighlights(screen, nextLayout)
 	screen = s.compositeScrollToEndIndicator(screen, nextLayout, width)
 	screen = s.CompositeOverlays(screen, width, height)
