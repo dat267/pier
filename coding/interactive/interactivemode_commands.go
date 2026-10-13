@@ -627,9 +627,11 @@ func (w *CommandWiring) HandleChangelogCommand() {
 	entries := coding.ParseChangelog(coding.GetChangelogPath())
 	markdown := "No changelog entries found."
 	if len(entries) > 0 {
+		// parseChangelog returns the file order (newest first); upstream maps
+		// it straight through.
 		parts := make([]string, 0, len(entries))
-		for i := len(entries) - 1; i >= 0; i-- {
-			parts = append(parts, coding.NormalizeChangelogLinks(entries[i].Content, changelogEntryVersion(entries[i])))
+		for _, entry := range entries {
+			parts = append(parts, coding.NormalizeChangelogLinks(entry.Content, changelogEntryVersion(entry)))
 		}
 		markdown = strings.Join(parts, "\n\n")
 	}

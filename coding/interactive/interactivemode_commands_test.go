@@ -3,6 +3,8 @@ package interactive
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -497,5 +499,25 @@ func TestClearCommandFatalError(t *testing.T) {
 	wiring.HandleClearCommand(context.Background())
 	if len(fatal) != 1 || fatal[0] != "Failed to create session" {
 		t.Fatalf("fatal = %v", fatal)
+	}
+}
+
+// TestCommandChangelogKeepsNewestFirst covers the /changelog ordering:
+// upstream maps parseChangelog's file order (newest first) straight through.
+func TestCommandChangelogKeepsNewestFirst(t *testing.T) {
+	wiring, _, _ := newCommandTestWiring(t)
+	dir := t.TempDir()
+	coding.SetPackageDir(dir)
+	defer coding.SetPackageDir("")
+	changelog := "## [1.2.3] - 2026-01-01\n\n- New thing\n\n## [1.2.2] - 2025-12-01\n\n- Old thing\n"
+	if err := os.WriteFile(filepath.Join(dir, "CHANGELOG.md"), []byte(changelog), 0o644); err != nil {
+		t.Fatalf("write changelog: %v", err)
+	}
+	wiring.HandleChangelogCommand()
+	lines := coding.StripAnsi(strings.Join(wiring.Chat.Render(120), "\n"))
+	newIndex := strings.Index(lines, "New thing")
+	oldIndex := strings.Index(lines, "Old thing")
+	if newIndex < 0 || oldIndex < 0 || newIndex > oldIndex {
+		t.Fatalf("changelog order: new=%d old=%d\n%s", newIndex, oldIndex, lines)
 	}
 }
