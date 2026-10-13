@@ -39,6 +39,20 @@ type CommitPublication struct {
 // the session.
 type CommitListener func(publication CommitPublication, ctx chord.Context)
 
+// SessionEnd reasons (upstream SessionEnd).
+const (
+	SessionReasonClosed = "closed"
+	SessionReasonFailed = "failed"
+)
+
+// SessionEnd is how a Session settled: closed normally, or failed with the
+// storage error that failed it.
+type SessionEnd struct {
+	Reason string
+	// Err is the cause for SessionReasonFailed.
+	Err error
+}
+
 // Session is the session kernel over one storage backend.
 type Session struct {
 	// line serializes commits and read-on-line jobs (the mutation line).
@@ -63,6 +77,10 @@ type Session struct {
 
 	closing bool
 	poison  error
+	// closed settles once the Session has closed, Storage included; end holds
+	// its result once closed is closed.
+	closed chan struct{}
+	end    *SessionEnd
 
 	// ConversationCreatedHook stages the writes every new or forked
 	// conversation needs; nil stages nothing.
@@ -91,12 +109,26 @@ func NewSessionWithClock(storage Storage, now func() int64) *Session {
 		internalListeners: map[int]CommitListener{},
 		closeListeners:    map[int]func(){},
 		report:            func(error) {},
+		closed:            make(chan struct{}),
 	}
 }
 
 // Storage exposes the session's storage.
 func (s *Session) Storage() Storage {
 	return sessionStorageGuard{Storage: s.storage, check: s.assertUsable, fail: s.storageFailed, failCommit: s.storageCommitFailed}
+}
+
+// Closed settles once the Session has closed, Storage included.
+func (s *Session) Closed() <-chan struct{} { return s.closed }
+
+// End is the terminal result, available once Closed has settled.
+func (s *Session) End() (SessionEnd, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.end == nil {
+		return SessionEnd{}, false
+	}
+	return *s.end, true
 }
 
 // Failure reports the cause that failed the Session, if any.
@@ -336,7 +368,30 @@ func (s *Session) Close(ctx chord.Context) error {
 	s.internalListeners = map[int]CommitListener{}
 	s.documents = map[string]*LoadedDocument{}
 	s.mu.Unlock()
-	return s.storage.Close(ctx)
+	err := s.storage.Close(ctx)
+	// A Storage that cannot close is a failed one; an earlier failure stays the
+	// cause. `closed` settles either way.
+	if err != nil {
+		s.mu.Lock()
+		if s.poison == nil {
+			s.poison = err
+			s.mu.Unlock()
+			s.report(err)
+			s.mu.Lock()
+		}
+		s.mu.Unlock()
+	}
+	s.mu.Lock()
+	if s.end == nil {
+		end := SessionEnd{Reason: SessionReasonClosed}
+		if s.poison != nil {
+			end = SessionEnd{Reason: SessionReasonFailed, Err: s.poison}
+		}
+		s.end = &end
+		close(s.closed)
+	}
+	s.mu.Unlock()
+	return err
 }
 
 // SubscribeCommits registers a post-adoption host listener. It must not call
