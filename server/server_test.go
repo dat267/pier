@@ -27,8 +27,6 @@ type memoryConnection struct {
 	decoder *protocol.ServerMessageDecoder
 	// onSend observes sent frames.
 	onSend func(frame []byte)
-	// finalChunk records the close payload.
-	finalChunk []byte
 }
 
 func newMemoryConnection() *memoryConnection {
@@ -64,7 +62,6 @@ func (c *memoryConnection) Close(finalChunk []byte) error {
 		return nil
 	}
 	c.closed = true
-	c.finalChunk = finalChunk
 	// A closing connection sends its final chunk before closing (upstream
 	// ByteConnection.close semantics).
 	if len(finalChunk) > 0 {

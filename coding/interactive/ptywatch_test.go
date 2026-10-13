@@ -33,9 +33,7 @@ import (
 
 // ptySession is one pier process attached to a pseudo-terminal.
 type ptySession struct {
-	t      *testing.T
-	cmd    *exec.Cmd
-	master int
+	cmd *exec.Cmd
 
 	mu   sync.Mutex
 	buf  bytes.Buffer
@@ -152,7 +150,7 @@ func startPierConfigured(t *testing.T, setup func(agentDir string), args ...stri
 	// and unblock the reader goroutine deterministically (a raw close does not
 	// interrupt an in-flight read on Linux).
 	masterFile := os.NewFile(uintptr(master), "pty-master")
-	session := &ptySession{t: t, master: master, done: make(chan struct{})}
+	session := &ptySession{done: make(chan struct{})}
 
 	// Teardown: kill the child, close the last slave fd, unblock the reader via
 	// a past master read deadline, wait for it, then close the master. Order

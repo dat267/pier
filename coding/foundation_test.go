@@ -291,7 +291,6 @@ type scriptedOps struct {
 	chunks   []string
 	exitCode *int
 	err      error
-	seen     BashExecOptions
 	command  string
 	cwd      string
 	onRun    func(options BashExecOptions)
@@ -300,7 +299,6 @@ type scriptedOps struct {
 func (o *scriptedOps) Exec(ctx ctxpkg.Context, command, cwd string, options BashExecOptions) (*int, error) {
 	o.command = command
 	o.cwd = cwd
-	o.seen = options
 	if o.onRun != nil {
 		o.onRun(options)
 	}

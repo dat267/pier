@@ -30,11 +30,10 @@ func loopEditorText(t *testing.T, app *App) string {
 
 // keystrokeSample is one measured keystroke plus what the loop did meanwhile.
 type keystrokeSample struct {
-	char      rune
-	latency   time.Duration
-	renders   int64
-	beats     uint64
-	editorLen int
+	char    rune
+	latency time.Duration
+	renders int64
+	beats   uint64
 }
 
 // typeProbe types probe one character at a time, waiting for each character to
@@ -59,7 +58,6 @@ func typeProbe(t *testing.T, app *App, probe string) []keystrokeSample {
 		samples = append(samples, keystrokeSample{
 			char: char, latency: time.Since(start),
 			renders: app.ui.RenderCount() - renders, beats: app.loopBeats() - beats,
-			editorLen: len(expected),
 		})
 		time.Sleep(15 * time.Millisecond)
 	}

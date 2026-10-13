@@ -29,7 +29,6 @@ func withVersion(t *testing.T, version string) {
 // is built.
 type updateServer struct {
 	*httptest.Server
-	payload []byte
 
 	mu     sync.Mutex
 	assets map[string][]byte
@@ -45,7 +44,7 @@ func newUpdateServer(t *testing.T, tag string, payload []byte) *updateServer {
 // asset name differs (Windows appends .exe) can be exercised.
 func newUpdateServerFor(t *testing.T, tag string, payload []byte, asset string) *updateServer {
 	t.Helper()
-	server := &updateServer{payload: payload, assets: map[string][]byte{}, hits: map[string]int{}}
+	server := &updateServer{assets: map[string][]byte{}, hits: map[string]int{}}
 	sum := sha256.Sum256(payload)
 	server.assets[asset] = payload
 	server.assets[asset+".sha256"] = []byte(hex.EncodeToString(sum[:]) + "  " + asset + "\n")

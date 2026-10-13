@@ -17,7 +17,6 @@ import (
 // server, capturing every message and answering from per-method handlers.
 
 type testServer struct {
-	t         *testing.T
 	transport *InMemoryTransport
 	mu        sync.Mutex
 	messages  []Message
@@ -26,7 +25,7 @@ type testServer struct {
 
 func newTestServer() (*testServer, *InMemoryTransport) {
 	clientTransport, serverTransport := CreateInMemoryTransportPair()
-	server := &testServer{t: &testing.T{}, transport: serverTransport, handlers: map[string]func(*protocol.JsonRpcRequest) (any, error){}}
+	server := &testServer{transport: serverTransport, handlers: map[string]func(*protocol.JsonRpcRequest) (any, error){}}
 	serverTransport.OnMessage(func(message Message) {
 		server.mu.Lock()
 		server.messages = append(server.messages, message)
