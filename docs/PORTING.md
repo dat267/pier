@@ -68,7 +68,10 @@ like the working indicator, instead of the default muted colors (`#10809`,
 no authorization server metadata was discovered, where it previously skipped
 the check and dereferenced the missing metadata. Overlay compositing keeps the
 zero-width cursor marker at the boundary when an overlay ends directly left of
-the cursor, instead of dropping the hardware cursor position. A throwing host commit/close
+the cursor, instead of dropping the hardware cursor position. A worktree
+context file that symlinks to its main repo's file loads again: the shadow
+comparison uses the directory's real path, not the resolved file path
+(`#10681`). A throwing host commit/close
 listener is reported through `onReport` instead of failing the operation that
 ran it, the Session's own listeners fail the Session, a throwing watch listener
 is reported as well as ending the watch with `listener_error`, and a throwing

@@ -204,6 +204,22 @@ func TestNestedWorktreeSkipsDuplicateContext(t *testing.T) {
 	}
 }
 
+// v1.2.0 #10681: a worktree AGENTS.md that symlinks to the main repo's file
+// must still load. Comparing the file's canonical path resolved the symlink to
+// the shadowed path itself, so both copies were skipped and no context loaded.
+func TestNestedWorktreeSymlinkedContextLoads(t *testing.T) {
+	agentDir := t.TempDir()
+	main, worktree, worktreeSrc := setupNestedWorktree(t)
+	writeContextFile(t, filepath.Join(main, "AGENTS.md"), "main repo instructions")
+	if err := os.Symlink(filepath.Join(main, "AGENTS.md"), filepath.Join(worktree, "AGENTS.md")); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	files := LoadProjectContextFiles(worktreeSrc, agentDir)
+	if got := contextContents(files); len(got) != 1 || got[0] != "main repo instructions" {
+		t.Fatalf("contents = %#v", got)
+	}
+}
+
 func TestNestedWorktreeBareLayoutKeepsContainerContext(t *testing.T) {
 	agentDir := t.TempDir()
 	proj := filepath.Join(t.TempDir(), "proj")
