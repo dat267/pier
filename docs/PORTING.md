@@ -16,6 +16,16 @@ checkout. The v1.2.0 delta from v1.1.0 is under audit; confirmed gaps,
 porting progress, and out-of-scope areas are recorded below. Earlier release
 notes retain upstream versions and commit IDs as historical context.
 
+**v1.2.0 parity fixes so far.** Mistral's request timeout now applies only while
+waiting for response headers, not during an active response stream (#10609,
+`6b07b4e57`). Retry classification includes the gateway error wording
+"The upstream provider returned an error" (#10842, `7bd01fb92`). Compaction
+summaries omit assistant thinking so replayed reasoning does not inflate the
+prompt (`15e7bdc14`). Shifted-symbol keybindings match the produced character
+under Kitty and modifyOtherKeys (`7f9e1198f`). `PI_CLIPBOARD_OSC52=1` also
+sends an OSC 52 copy after a successful local clipboard write (`3e477eab5`).
+Focused regression tests cover these fixes.
+
 Ported from it so far: the built-in catalog, regenerated from the tag's own generator
 (`claude-haiku-5-5`, the prompt-length pricing tiers for 154 models, and the model churn
 that comes with live models.dev data: 89 added, 58 removed). The regeneration also carries

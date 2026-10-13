@@ -60,7 +60,8 @@ func runClipboardCommand(ctx context.Context, command string, args []string, opt
 }
 
 func isRemoteSession() bool {
-	if os.Getenv("SSH_CONNECTION") != "" || os.Getenv("SSH_CLIENT") != "" || os.Getenv("MOSH_CONNECTION") != "" {
+	if os.Getenv("SSH_CONNECTION") != "" || os.Getenv("SSH_CLIENT") != "" || os.Getenv("MOSH_CONNECTION") != "" ||
+		os.Getenv("PI_CLIPBOARD_OSC52") == "1" {
 		return true
 	}
 	return false
@@ -157,9 +158,12 @@ func CopyTextToClipboardWithOSC52(ctx context.Context, text string, write func(c
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	if !copied && isRemoteSession() {
+	if isRemoteSession() {
 		encoded := base64.StdEncoding.EncodeToString([]byte(text))
 		if len(encoded) > MaxOSC52EncodedLength || write == nil {
+			if copied {
+				return nil
+			}
 			return clipboardUnavailableError()
 		}
 		return write(ctx, "\x1b]52;c;"+encoded+"\x07")
