@@ -691,11 +691,12 @@ the Unix socket **publish is portable** (`server/unix.go`,
   stream, which froze the TUI over SSH when an early implementation tried it.
   Pier therefore also has a nonblocking OSC 11 request
   (`Renderer.RequestTerminalBackgroundColor`, `ESC ] 11 ; ? BEL`) for the
-  background listener. `HandleTerminalInput` routes its reply to the listener
-  unless the combined color query already owns it; in that case
-  `ProbeSystemColors` applies the background from the combined result (D179).
-  `TestSystemColorQueryDoesNotHideStartupBackgroundReply` covers the late-reply
-  path. The `CSI ? 2031` notification toggle is deferred: a request before
+  background listener. `HandleTerminalInput` routes a matching OSC 11 response
+  to that listener even while the combined color query records the same reply;
+  `ProbeSystemColors` also applies it from the combined result (D179).
+  `TestBackgroundListenerSeesLateReplyDuringColorQuery` and
+  `TestSystemColorQueryDoesNotHideStartupBackgroundReply` cover the late-reply
+  paths. The `CSI ? 2031` notification toggle is deferred: a request before
   `Start` only flips the flag and `Start` replays it, so the mode sequence is
   never echoed. `app.theme.ProbeTerminalBackground` starts from
   `RunWiring.OnStarted` after `UI.Start` and is re-armed on a renderer swap
@@ -932,12 +933,14 @@ The theme controller enables appearance notifications for the `system` theme
 and light/dark pairs, like upstream. The system theme uses the reported
 background first, then a terminal appearance report, then `COLORFGBG`, matching
 upstream `detectTerminalTheme`. At startup the combined OSC 10/11/4 query
-consumes OSC 11 before the standalone background listener sees it, so
-`ProbeSystemColors` applies its reported background to system and pair
-selection. Theme-setting changes after startup and later appearance
+records OSC 11 and the input router also delivers that response to the standalone
+background listener. This lets a delayed OSC 11 update an auto pair even if the
+combined query never receives its final DA1 sentinel; `ProbeSystemColors` also
+applies the reported background when its query completes. Theme-setting changes after startup and later appearance
 notifications start another combined query, as upstream `applyFromSettings`
 and `applyTerminalColorSchemeChange` do. Tests
 `TestSystemColorQueryDoesNotHideStartupBackgroundReply`,
+`TestBackgroundListenerSeesLateReplyDuringColorQuery`,
 `TestAutoThemeSettingQueriesCurrentTerminalColors`,
 `TestSystemThemeRefreshesTerminalColorsOnAppearanceChange`, and
 `TestBackgroundProbeRoundTripThroughRenderer` cover the combined and listener

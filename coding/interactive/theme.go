@@ -676,6 +676,20 @@ func SetSystemTerminalColors(colors tui.TerminalColors) {
 	systemThemeState.mu.Unlock()
 }
 
+// SetSystemTerminalBackgroundColor updates only the OSC 11 background, keeping
+// foreground and palette colors learned from the combined query.
+func SetSystemTerminalBackgroundColor(color tui.RgbColor) {
+	systemThemeState.mu.Lock()
+	colors := tui.TerminalColors{}
+	if systemThemeState.colors != nil {
+		colors = *systemThemeState.colors
+	}
+	background := color
+	colors.Background = &background
+	systemThemeState.colors = &colors
+	systemThemeState.mu.Unlock()
+}
+
 // SetSystemTerminalColorScheme records the terminal's reported light/dark
 // appearance. A reported background takes precedence when the system theme is
 // generated; the scheme is its fallback when the terminal reports no colors.

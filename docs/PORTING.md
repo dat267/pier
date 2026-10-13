@@ -466,10 +466,10 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   boot uses upstream's truecolor environment detection (`COLORTERM`, `-direct`,
   and recognized terminal families), then `PI_TRUE_COLOR`, then the configured
   `terminal.trueColor` override. The injectable capability setter (D69) remains
-  available for callers and tests. The controller's combined OSC 10/11/4 query
-  applies the background to automatic theme selection, refreshes after settings
-  changes and appearance reports, and uses the reported scheme when no
-  background is available (D179).
+  available for callers and tests. The combined OSC 10/11/4 query applies the
+  background to automatic theme selection, while the input router also delivers
+  OSC 11 to background listeners during the query, so delayed background-only
+  replies still update the auto theme (D179).
 - `coding`: `defaultTools` accepts `+name`/`-name` entries (`30a1d1849`). A
   modifier-only list layers on the inherited selection (`mergeDefaultTools`), so
   a project `["-codemode","+tool_search"]` applies to the global

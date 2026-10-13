@@ -465,6 +465,7 @@ func (c *InteractiveThemeController) bindTerminalBackgroundListener() {
 		return
 	}
 	c.unsubscribeBg = c.ui.OnTerminalBackgroundColorChange(func(color tui.RgbColor) {
+		SetSystemTerminalBackgroundColor(color)
 		c.applyTerminalTheme(GetThemeForRgbColor(RgbColor{R: color.R, G: color.G, B: color.B}))
 	})
 }

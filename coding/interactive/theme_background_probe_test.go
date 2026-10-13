@@ -87,6 +87,47 @@ func TestBackgroundProbeRoundTripThroughRenderer(t *testing.T) {
 	screen.Stop(tui.TuiStopOptions{})
 }
 
+// TestBackgroundListenerSeesLateReplyDuringColorQuery verifies that the
+// combined color query and the standalone OSC 11 listener both receive the
+// background response, even when the slow query timed out before it arrived.
+func TestBackgroundListenerSeesLateReplyDuringColorQuery(t *testing.T) {
+	t.Cleanup(func() { SetSystemTerminalColors(tui.TerminalColors{}) })
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+
+	terminal := &recordingTerminal{fakeRendererTerminal: &fakeRendererTerminal{width: 80, height: 24}}
+	screen := tui.NewMainScreen(terminal, false, "")
+	setting := "light/dark"
+	marshaled := make(chan func(), 1)
+	controller := NewInteractiveThemeController(ThemeControllerOptions{
+		UI:                  themeUIAdapter{ui: screen},
+		InitialThemeSetting: &setting,
+		TimeoutMS:           1,
+		Env:                 func(string) string { return "" },
+		Marshal:             func(fn func()) { marshaled <- fn },
+	})
+	defer controller.Dispose()
+	defer screen.Stop(tui.TuiStopOptions{})
+
+	controller.ApplyFromSettings()
+	screen.Start()
+	controller.ProbeTerminalBackground()
+	controller.ProbeSystemColors()
+	select {
+	case apply := <-marshaled:
+		apply()
+	case <-time.After(2 * time.Second):
+		t.Fatal("system-color query did not apply its timeout fallback")
+	}
+
+	// The late OSC 11 response alone must update the auto theme. No palette
+	// replies or DA1 sentinel are available on this deliberately slow path.
+	screen.HandleTerminalInput("\x1b]11;#ffffff\x07")
+	if controller.ActiveThemeName() != "light" {
+		t.Fatalf("theme after late OSC 11 reply = %q, want light", controller.ActiveThemeName())
+	}
+}
+
 // TestSystemColorQueryDoesNotHideStartupBackgroundReply covers the actual
 // startup ordering: the OSC 11 auto-theme probe is followed by the bundled
 // OSC 10/11/4 system-theme query. Upstream always applies the background reply

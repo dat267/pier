@@ -372,6 +372,11 @@ func (q *terminalQueries) NotifyOnStop(writer terminalQueryWriter) {
 // reply would leak into the editor.
 func (q *terminalQueries) ConsumeInput(data string) bool {
 	if q.consumeTerminalColorResponse(data) {
+		// The combined color query records OSC 11, but the background probe is
+		// an independent consumer and must still receive that same late reply.
+		if IsOsc11BackgroundColorResponse(data) {
+			q.resolveBackgroundResponse(data)
+		}
 		return true
 	}
 	if IsOsc11BackgroundColorResponse(data) {
