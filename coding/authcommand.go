@@ -89,11 +89,13 @@ func PrintAuthCommandHelp(appName string) string {
 Auth commands require at least one of --provider or --model. Checks refresh expired OAuth credentials by default; --no-refresh prevents this. --credentials emits the credential, or includes it in JSON output.`, appName)
 }
 
-var authMinExpiryPattern = regexp.MustCompile(`^(\d+)(ms|s|m|h)$`)
+// Upstream tests the raw arg with /^(\d+)(ms|s|m|h)$/iu: the unit is
+// case-insensitive, but surrounding whitespace is rejected.
+var authMinExpiryPattern = regexp.MustCompile(`(?i)^(\d+)(ms|s|m|h)$`)
 
 // parseAuthMinExpiry parses a duration such as 30m or 1h into milliseconds.
 func parseAuthMinExpiry(value string) (int64, bool) {
-	match := authMinExpiryPattern.FindStringSubmatch(strings.ToLower(strings.TrimSpace(value)))
+	match := authMinExpiryPattern.FindStringSubmatch(value)
 	if match == nil {
 		return 0, false
 	}

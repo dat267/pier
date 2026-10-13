@@ -130,3 +130,16 @@ func TestRunAuthCommandUnknownOptionUsesTheInvokedName(t *testing.T) {
 		t.Errorf("the unknown-option hint does not name the invoked binary:\n%s", stderr.String())
 	}
 }
+
+// Upstream matches the raw arg with /^(\d+)(ms|s|m|h)$/iu, so surrounding
+// whitespace is rejected while the unit stays case-insensitive.
+func TestParseAuthMinExpiryRejectsWhitespace(t *testing.T) {
+	if _, ok := parseAuthMinExpiry(" 30m "); ok {
+		t.Fatal("whitespace-padded duration should be rejected")
+	}
+	// The unit comparison is case-sensitive even though the regex is not, so
+	// "30M" falls through to the hours branch (upstream quirk).
+	if ms, ok := parseAuthMinExpiry("30M"); !ok || ms != 108000000 {
+		t.Fatalf("30M = %d, %v; want 108000000, true", ms, ok)
+	}
+}
