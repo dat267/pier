@@ -29,7 +29,7 @@ func normalizeToSingleLine(text string) string {
 		previousWasNewline = false
 		builder.WriteRune(r)
 	}
-	return strings.TrimSpace(builder.String())
+	return jsTrim(builder.String())
 }
 
 func clampInt(value int, min int, max int) int {
@@ -127,10 +127,10 @@ func withDefaultSelectListTheme(theme SelectListTheme) SelectListTheme {
 
 // SetFilter filters the items by value prefix and resets the selection.
 func (s *SelectList) SetFilter(filter string) {
-	lower := strings.ToLower(filter)
+	lower := jsLower(filter)
 	filtered := make([]SelectItem, 0, len(s.items))
 	for _, item := range s.items {
-		if strings.HasPrefix(strings.ToLower(item.Value), lower) {
+		if strings.HasPrefix(jsLower(item.Value), lower) {
 			filtered = append(filtered, item)
 		}
 	}

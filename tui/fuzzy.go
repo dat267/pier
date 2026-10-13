@@ -20,8 +20,8 @@ type FuzzyMatch struct {
 // both the type and the function fuzzyMatch/FuzzyMatch; Go cannot, so the
 // function is MatchFuzzy (divergence D66).
 func MatchFuzzy(query string, text string) FuzzyMatch {
-	queryLower := strings.ToLower(query)
-	textLower := strings.ToLower(text)
+	queryLower := jsLower(query)
+	textLower := jsLower(text)
 
 	matchQuery := func(normalizedQuery string) FuzzyMatch {
 		// Upstream indexes the lowercased strings by UTF-16 code units
@@ -155,11 +155,11 @@ func indexUnitFrom(haystack []uint16, needle uint16, start int) int {
 // FuzzyFilter filters and sorts items by fuzzy match quality (best first).
 // Whitespace- and slash-separated tokens must all match.
 func FuzzyFilter[T any](items []T, query string, getText func(item T) string) []T {
-	if strings.TrimSpace(query) == "" {
+	if jsTrim(query) == "" {
 		return items
 	}
 
-	tokens := splitFuzzyTokens(strings.TrimSpace(query))
+	tokens := splitFuzzyTokens(jsTrim(query))
 	if len(tokens) == 0 {
 		return items
 	}
