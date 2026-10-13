@@ -450,6 +450,7 @@ func (c *InteractiveThemeController) bindTerminalColorSchemeListener() {
 		if !c.autoSyncEnabled {
 			return
 		}
+		SetSystemTerminalColorScheme(&terminalTheme)
 		c.applyTerminalTheme(terminalTheme)
 		c.querySystemColors()
 	})

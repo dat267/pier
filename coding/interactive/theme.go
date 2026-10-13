@@ -477,11 +477,17 @@ func systemThemeTerminalColors() *tui.TerminalColors {
 
 // getTerminalTheme is the terminal's own light/dark classification, the
 // fallback for a theme that declares and detects nothing (upstream
-// getTerminalTheme).
+// getTerminalTheme): background colors, reported appearance, COLORFGBG, dark.
 func getTerminalTheme() string {
 	colors := systemThemeTerminalColors()
 	if colors != nil && colors.Background != nil {
 		return TerminalAppearance(*colors.Background, colors.Foreground)
+	}
+	systemThemeState.mu.Lock()
+	scheme := systemThemeState.scheme
+	systemThemeState.mu.Unlock()
+	if scheme != nil {
+		return string(*scheme)
 	}
 	if detection := DetectTerminalBackgroundFromEnv(os.Getenv); detection.Source == "COLORFGBG" {
 		return string(detection.Theme)
@@ -658,6 +664,7 @@ const SystemThemeName = "system"
 var systemThemeState struct {
 	mu     sync.Mutex
 	colors *tui.TerminalColors
+	scheme *TerminalTheme
 }
 
 // SetSystemTerminalColors records the terminal's reported colors; the system
@@ -666,6 +673,20 @@ func SetSystemTerminalColors(colors tui.TerminalColors) {
 	systemThemeState.mu.Lock()
 	stored := colors
 	systemThemeState.colors = &stored
+	systemThemeState.mu.Unlock()
+}
+
+// SetSystemTerminalColorScheme records the terminal's reported light/dark
+// appearance. A reported background takes precedence when the system theme is
+// generated; the scheme is its fallback when the terminal reports no colors.
+func SetSystemTerminalColorScheme(scheme *TerminalTheme) {
+	systemThemeState.mu.Lock()
+	if scheme == nil {
+		systemThemeState.scheme = nil
+	} else {
+		stored := *scheme
+		systemThemeState.scheme = &stored
+	}
 	systemThemeState.mu.Unlock()
 }
 

@@ -925,7 +925,9 @@ the Unix socket **publish is portable** (`server/unix.go`,
   `tui.TerminalDetectsTrueColor` mirrors the upstream environment rule (including
   `-direct`) for a caller that wants it, but it is not yet wired to the boot.
   The theme controller enables appearance notifications for the `system` theme
-  and light/dark pairs, like upstream. At startup the combined OSC 10/11/4 query
+  and light/dark pairs, like upstream. The system theme uses the reported
+  background first, then a terminal appearance report, then `COLORFGBG`, matching
+  upstream `detectTerminalTheme`. At startup the combined OSC 10/11/4 query
   consumes OSC 11 before the standalone background listener sees it, so
   `ProbeSystemColors` applies its reported background to system and pair
   selection. Theme-setting changes after startup and later appearance

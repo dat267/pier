@@ -674,6 +674,11 @@ func TestThemeControllerLifecycle(t *testing.T) {
 // applyFromSettings selects system and does not persist
 // an environment-derived light/dark theme.
 func TestThemeControllerUsesSystemThemeWhenUnset(t *testing.T) {
+	t.Setenv("COLORFGBG", "")
+	t.Cleanup(func() {
+		SetSystemTerminalColors(tui.TerminalColors{})
+		SetSystemTerminalColorScheme(nil)
+	})
 	SetCustomThemesDir(t.TempDir())
 	SetRegisteredThemes(nil)
 	ui := &fakeThemeUI{}
@@ -709,9 +714,17 @@ func TestThemeControllerUsesSystemThemeWhenUnset(t *testing.T) {
 	if listener == nil {
 		t.Fatal("system theme did not register a terminal appearance listener")
 	}
-	listener(TerminalThemeDark)
-	if controller.GetTerminalTheme() != TerminalThemeDark {
-		t.Fatalf("terminal theme after appearance report = %q, want dark", controller.GetTerminalTheme())
+	listener(TerminalThemeLight)
+	if controller.GetTerminalTheme() != TerminalThemeLight {
+		t.Fatalf("terminal theme after appearance report = %q, want light", controller.GetTerminalTheme())
+	}
+	if got := CurrentTheme().Appearance(); got != string(TerminalThemeLight) {
+		t.Fatalf("system theme appearance after report = %q, want light", got)
+	}
+	darkBackground := tui.RgbColor{R: 0, G: 0, B: 0}
+	SetSystemTerminalColors(tui.TerminalColors{Background: &darkBackground})
+	if got := CurrentTheme().Appearance(); got != string(TerminalThemeDark) {
+		t.Fatalf("reported background did not override the scheme: appearance = %q", got)
 	}
 	if controller.ActiveThemeName() != SystemThemeName {
 		t.Fatalf("active theme after appearance report = %q, want %q", controller.ActiveThemeName(), SystemThemeName)
@@ -722,7 +735,10 @@ func TestThemeControllerUsesSystemThemeWhenUnset(t *testing.T) {
 // theme-controller.ts applyTerminalColorSchemeChange, which re-queries colors
 // after each report.
 func TestSystemThemeRefreshesTerminalColorsOnAppearanceChange(t *testing.T) {
-	t.Cleanup(func() { SetSystemTerminalColors(tui.TerminalColors{}) })
+	t.Cleanup(func() {
+		SetSystemTerminalColors(tui.TerminalColors{})
+		SetSystemTerminalColorScheme(nil)
+	})
 	SetCustomThemesDir(t.TempDir())
 	SetRegisteredThemes(nil)
 	background := tui.RgbColor{R: 255, G: 255, B: 255}
