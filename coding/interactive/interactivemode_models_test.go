@@ -305,3 +305,41 @@ func waitForCondition(t *testing.T, condition func() bool) {
 	}
 	t.Fatal("condition not met before timeout")
 }
+
+// HandleModelCommand selects an exact match directly and opens the selector
+// otherwise (upstream handleModelCommand + findExactModelMatch).
+func TestHandleModelCommandSelectsExactMatch(t *testing.T) {
+	runtime := &modelTestRuntime{
+		models:  []*ai.Model{{ID: "a", Provider: "p"}, {ID: "b", Provider: "p"}},
+		refresh: func() (ai.ModelsRefreshResult, error) { return ai.ModelsRefreshResult{}, nil },
+	}
+	wiring, session, _ := newModelTestWiring(t, runtime)
+	statuses := []string{}
+	wiring.ShowStatus = func(m string) { statuses = append(statuses, m) }
+	selected := []string{}
+	wiring.OnModelSelected = func(model *ai.Model) { selected = append(selected, model.ID) }
+
+	if err := wiring.HandleModelCommand(context.Background(), "p/b"); err != nil {
+		t.Fatal(err)
+	}
+	if len(session.setModels) != 1 || session.setModels[0].ID != "b" {
+		t.Fatalf("setModels = %v", session.setModels)
+	}
+	if wiring.Slot.HasActiveSelector() {
+		t.Fatal("an exact match must not open the selector")
+	}
+	if len(statuses) == 0 || statuses[len(statuses)-1] != "Model: b" {
+		t.Fatalf("statuses = %v", statuses)
+	}
+	if len(selected) != 1 || selected[0] != "b" {
+		t.Fatalf("selected = %v", selected)
+	}
+
+	// A non-match opens the selector with the search term.
+	if err := wiring.HandleModelCommand(context.Background(), "zzz"); err != nil {
+		t.Fatal(err)
+	}
+	if !wiring.Slot.HasActiveSelector() {
+		t.Fatal("a non-match should open the selector")
+	}
+}

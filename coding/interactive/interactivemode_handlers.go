@@ -577,8 +577,7 @@ func newSubmitWiring(app *App) *SubmitWiring {
 			ShowSettingsSelector: app.settingsW.ShowSettingsSelector,
 			ShowModelsSelector:   func() error { app.models.ShowModelsSelector(context.Background()); return nil },
 			HandleModelCommand: func(searchTerm string) error {
-				app.models.ShowModelSelector(context.Background(), searchTerm)
-				return nil
+				return app.models.HandleModelCommand(context.Background(), searchTerm)
 			},
 			HandleThinkingCommand: app.selectors.HandleThinkingCommand,
 			HandleExportCommand:   func(text string) error { app.commands.HandleExportCommand(context.Background(), text); return nil },

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
@@ -41,6 +42,8 @@ type ModelWiring struct {
 	ShowStatus func(message string)
 	// ShowError reports an error.
 	ShowError func(message string)
+	// ShowWarning reports a warning.
+	ShowWarning func(message string)
 	// OnModelSelected runs the post-selection hooks (subscription warning,
 	// easter eggs).
 	OnModelSelected func(model *ai.Model)
@@ -62,6 +65,12 @@ func (w *ModelWiring) showError(message string) {
 	}
 }
 
+func (w *ModelWiring) showWarning(message string) {
+	if w.ShowWarning != nil {
+		w.ShowWarning(message)
+	}
+}
+
 func (w *ModelWiring) requestRender() {
 	if w.RequestRender != nil {
 		w.RequestRender()
@@ -70,30 +79,80 @@ func (w *ModelWiring) requestRender() {
 	}
 }
 
+// selectModel applies a chosen model and reports it (upstream selectModel).
+func (w *ModelWiring) selectModel(ctx context.Context, model *ai.Model, persist bool) error {
+	if err := w.Session.SetModel(ctx, model, coding.ModelMutationOptions{Persist: persist}); err != nil {
+		return err
+	}
+	if w.UpdateAvailableProviderCount != nil {
+		w.UpdateAvailableProviderCount()
+	}
+	if w.UpdateEditorBorderColor != nil {
+		w.UpdateEditorBorderColor()
+	}
+	if persist {
+		w.showStatus("Default model: " + model.Provider + "/" + model.ID)
+	} else {
+		w.showStatus("Model: " + model.ID)
+	}
+	if w.OnModelSelected != nil {
+		w.OnModelSelected(model)
+	}
+	return nil
+}
+
+// HandleModelCommand selects an exact model match, or opens the selector with
+// the search term (upstream handleModelCommand + findExactModelMatch).
+func (w *ModelWiring) HandleModelCommand(ctx context.Context, searchTerm string) error {
+	if searchTerm == "" {
+		w.ShowModelSelector(ctx, "")
+		return nil
+	}
+	scoped := w.Session.ScopedModels()
+	cachedModels := w.Session.ModelRuntime().GetAvailableSnapshot()
+	if len(scoped) > 0 {
+		cachedModels = make([]*ai.Model, 0, len(scoped))
+		for _, item := range scoped {
+			cachedModels = append(cachedModels, item.Model)
+		}
+	}
+	match := coding.FindExactModelReferenceMatch(searchTerm, cachedModels)
+	if match == nil && len(scoped) == 0 {
+		w.showStatus("Refreshing model catalogs…")
+		refreshCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+		result, err := RefreshModelCatalogs(refreshCtx, w.Session.ModelRuntime())
+		cancel()
+		switch {
+		case err != nil:
+			w.showWarning("Could not refresh model catalogs; searching cached models.")
+		case result.Aborted:
+			w.showWarning("Model refresh timed out; searching cached models.")
+		case len(result.Errors) > 0:
+			w.showWarning("Could not refresh model catalogs; searching cached models.")
+		}
+		match = coding.FindExactModelReferenceMatch(searchTerm, w.Session.ModelRuntime().GetAvailableSnapshot())
+	}
+	if match == nil {
+		w.ShowModelSelector(ctx, searchTerm)
+		return nil
+	}
+	if err := w.selectModel(ctx, match, false); err != nil {
+		w.showError(err.Error())
+		return err
+	}
+	return nil
+}
+
 // ShowModelSelector opens the single-model selector.
 func (w *ModelWiring) ShowModelSelector(ctx context.Context, initialSearchInput string) {
 	w.Slot.Show(func(done func()) CreatedSelector {
 		selectModel := func(model *ai.Model, persist bool) {
-			if err := w.Session.SetModel(ctx, model, coding.ModelMutationOptions{Persist: persist}); err != nil {
+			if err := w.selectModel(ctx, model, persist); err != nil {
 				done()
 				w.showError(err.Error())
 				return
 			}
-			if w.UpdateAvailableProviderCount != nil {
-				w.UpdateAvailableProviderCount()
-			}
-			if w.UpdateEditorBorderColor != nil {
-				w.UpdateEditorBorderColor()
-			}
 			done()
-			if persist {
-				w.showStatus("Default model: " + model.Provider + "/" + model.ID)
-			} else {
-				w.showStatus("Model: " + model.ID)
-			}
-			if w.OnModelSelected != nil {
-				w.OnModelSelected(model)
-			}
 		}
 		var defaultModel *DefaultModelReference
 		if w.Settings != nil {
@@ -495,6 +554,7 @@ func newModelWiring(app *App) *ModelWiring {
 		UpdateEditorBorderColor:      func() { app.updateEditorBorderColor() },
 		ShowStatus:                   func(message string) { app.transcript.ShowStatus(message) },
 		ShowError:                    func(message string) { app.showError(message) },
+		ShowWarning:                  func(message string) { app.showWarning(message) },
 		OnModelSelected: func(model *ai.Model) {
 			// Upstream maybeWarnAboutAnthropicSubscriptionAuth(model) on selection.
 			if app.startup != nil {
