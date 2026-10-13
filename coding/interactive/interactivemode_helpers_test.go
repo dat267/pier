@@ -97,7 +97,7 @@ func TestFatalRuntimeError(t *testing.T) {
 		t.Fatalf("watcher = %d, stop = %q, exit = %d", stoppedWatcher, stopped, exitCode)
 	}
 	lines := coding.StripAnsi(strings.Join(wiring.Chat.Render(100), "\n"))
-	if !strings.Contains(lines, "Start pi to begin a new session.") {
+	if !strings.Contains(lines, "To report this crash: start pi and run /bug.") {
 		t.Fatalf("chat = %q", lines)
 	}
 }
