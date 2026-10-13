@@ -598,7 +598,7 @@ func (w *CommandWiring) HandleHotkeysCommand() {
 	hotkeys.WriteString(row(KeyDisplayText("app.message.copy"), "Copy selection or last assistant message"))
 	hotkeys.WriteString(row(KeyDisplayText("app.message.followUp"), "Queue follow-up message"))
 	hotkeys.WriteString(row(KeyDisplayText("app.message.dequeue"), "Restore queued messages"))
-	hotkeys.WriteString(row(KeyDisplayText("app.clipboard.pasteImage"), "Paste image or text from clipboard"))
+	hotkeys.WriteString(row(KeyDisplayText("app.clipboard.pasteImage"), "Paste files on macOS, images, or text from clipboard"))
 	hotkeys.WriteString(row("/", "Slash commands"))
 	hotkeys.WriteString(row("!", "Run bash command"))
 	hotkeys.WriteString(row("!!", "Run bash command (excluded from context)"))

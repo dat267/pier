@@ -269,7 +269,8 @@ func TestCommandHotkeys(t *testing.T) {
 	wiring.HandleHotkeysCommand()
 	lines := coding.StripAnsi(strings.Join(wiring.Chat.Render(120), "\n"))
 	for _, expected := range []string{"Keyboard Shortcuts", "Navigation", "Editing", "Other",
-		"Move cursor / browse history", "Send message", "Slash commands"} {
+		"Move cursor / browse history", "Send message", "Slash commands",
+		"Paste files on macOS, images, or text from clipboard"} {
 		if !strings.Contains(lines, expected) {
 			t.Errorf("missing %q in:\n%s", expected, lines)
 		}
