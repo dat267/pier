@@ -7,6 +7,20 @@ import (
 	"testing"
 )
 
+func TestPersonalizeOpenRouterCatalogRejectsMalformedResponse(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer server.Close()
+	_, err := PersonalizeOpenRouterCatalog([]*Model{{ID: "m"}}, &RefreshModelsContext{
+		Credential: &Credential{Type: CredentialAPIKey, APIKey: &ApiKeyCredential{Key: "key"}},
+		BaseURL:    server.URL, Ctx: context.Background(),
+	})
+	if err == nil || err.Error() != "Invalid OpenRouter model list response" {
+		t.Fatalf("error = %v, want invalid model-list response", err)
+	}
+}
+
 func TestPersonalizeOpenRouterCatalogKeepsNonChatAndFallsBackOnAuthErrors(t *testing.T) {
 	chat := &Model{ID: "openrouter/auto", Provider: "openrouter", ContextWindow: 1000}
 	image := &Model{ID: "openrouter/image", Provider: "openrouter", Type: "image"}

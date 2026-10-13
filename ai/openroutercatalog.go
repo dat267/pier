@@ -64,14 +64,19 @@ func PersonalizeOpenRouterCatalog(catalog []*Model, refresh *RefreshModelsContex
 		return nil, fmt.Errorf("OpenRouter model list request failed: %d", response.StatusCode)
 	}
 	var body struct {
-		Data []openRouterUserModel `json:"data"`
+		Data json.RawMessage `json:"data"`
 	}
-	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
-		return nil, fmt.Errorf("Invalid OpenRouter model list response: %w", err)
+	if err := json.NewDecoder(response.Body).Decode(&body); err != nil || len(body.Data) == 0 || body.Data[0] != '[' {
+		return nil, fmt.Errorf("Invalid OpenRouter model list response")
 	}
-	allowed := make(map[string]openRouterUserModel, len(body.Data))
-	for _, item := range body.Data {
-		if item.ID != "" {
+	var rows []json.RawMessage
+	if err := json.Unmarshal(body.Data, &rows); err != nil {
+		return nil, fmt.Errorf("Invalid OpenRouter model list response")
+	}
+	allowed := make(map[string]openRouterUserModel, len(rows))
+	for _, row := range rows {
+		var item openRouterUserModel
+		if json.Unmarshal(row, &item) == nil && item.ID != "" {
 			allowed[item.ID] = item
 		}
 	}
