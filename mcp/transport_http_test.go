@@ -646,15 +646,22 @@ func TestStreamableHTTPDoesNotRetryCanceledRequestAfterAuthRecovery(t *testing.T
 	defer fixture.close(t)
 
 	token := "old"
+	var tokenMu sync.Mutex
 	auth := &replayAuthProvider{
-		token: func() string { return token },
+		token: func() string {
+			tokenMu.Lock()
+			defer tokenMu.Unlock()
+			return token
+		},
 		onUnauthorized: func(status int) {
 			if status != http.StatusUnauthorized {
 				return
 			}
 			close(refreshStarted)
 			<-releaseRefresh
+			tokenMu.Lock()
 			token = "new"
+			tokenMu.Unlock()
 		},
 	}
 	client := NewClient(ClientOptions{Name: "http-test", Version: "1.0.0"})
