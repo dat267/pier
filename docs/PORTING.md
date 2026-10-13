@@ -58,7 +58,10 @@ return the first failure as `SessionFailed`, watches end with
 Session's document cache is bounded by use: an unobserved loaded document
 leaves memory once it was not read or written for `documentRetentionMs`
 (default ten minutes; `0` drops it right after use) and loads from Storage
-again, while a watched or state-observed document stays (`eba849739`). A throwing host commit/close
+again, while a watched or state-observed document stays (`eba849739`). A
+throw in the scheduler's own commit, such as a failed fault write, ends the
+invocation and fails the Session, so the task is not reserved and run again in
+the same process (`eba849739`). A throwing host commit/close
 listener is reported through `onReport` instead of failing the operation that
 ran it, the Session's own listeners fail the Session, a throwing watch listener
 is reported as well as ending the watch with `listener_error`, and a throwing

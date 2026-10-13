@@ -688,8 +688,10 @@ func (s *TaskScheduler) step(invocation *Invocation, decide func(tx *Transaction
 	})
 	if err != nil {
 		invocation.End()
-		if !s.Closing() && s.report != nil {
-			s.report(err)
+		// A throw in the scheduler's own commit, such as a failed fault write,
+		// would otherwise leave the task running to be reserved and run again.
+		if !s.Closing() {
+			s.session.fail(err)
 		}
 		return TaskRecord{}, false, err
 	}
