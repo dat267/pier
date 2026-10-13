@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-// Tests for images-models.ts and api/openrouter-images.ts.
+// Tests for image-models.ts and api/openrouter-images.ts.
 
 func TestImageCatalog(t *testing.T) {
 	if err := ImageCatalogError(); err != nil {

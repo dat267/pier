@@ -365,7 +365,7 @@ into narrow, injectable wirings (all in `coding/interactive`):
 - `interactivemode_selectors.go`, `_settings.go`, `_models.go`, `_auth.go`,
   `_commands.go`, `_queue.go`, `_events.go`, `_ui.go` — the named surfaces.
 - `transcript.go`, `footer.go`, `customeditor.go`, `tuirenderer.go`,
-  `extensionsselector.go`, `sessionshare.go`, `interactivemode_helpers.go`.
+  `extensionsselector.go`, `sessionswitch.go`, `interactivemode_helpers.go`.
 - `main.go` (thin) and `cmd/main.go` — the `cmd` package boots
   settings/auth/model-runtime/agent-session and runs the `App` (port of
   `main.ts`'s boot); the root file only calls `cmd.Execute`.
