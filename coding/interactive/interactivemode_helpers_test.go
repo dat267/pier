@@ -254,17 +254,25 @@ func TestAutocompleteAssembly(t *testing.T) {
 	}
 }
 
-// TestPrefixAutocompleteDescription covers the source prefix.
+// TestPrefixAutocompleteDescription covers the source tag (upstream
+// getAutocompleteSourceTag + prefixAutocompleteDescription).
 func TestPrefixAutocompleteDescription(t *testing.T) {
 	if got := PrefixAutocompleteDescription("desc", nil); got != "desc" {
 		t.Fatalf("nil source = %q", got)
 	}
-	user := coding.SourceInfo{Scope: coding.SourceScopeUser}
-	if got := PrefixAutocompleteDescription("desc", &user); got != "[user] desc" {
+	// Built-in sources are untagged.
+	builtin := coding.SourceInfo{Source: "builtin", Scope: coding.SourceScopeUser}
+	if got := PrefixAutocompleteDescription("desc", &builtin); got != "desc" {
+		t.Fatalf("builtin = %q", got)
+	}
+	// A local user source tags with the scope prefix.
+	user := coding.SourceInfo{Source: "local", Scope: coding.SourceScopeUser}
+	if got := PrefixAutocompleteDescription("desc", &user); got != "[u] desc" {
 		t.Fatalf("user = %q", got)
 	}
-	project := coding.SourceInfo{Scope: coding.SourceScopeProject}
-	if got := PrefixAutocompleteDescription("", &project); got != "project" {
+	// An empty description keeps the tag.
+	project := coding.SourceInfo{Source: "npm:pkg", Scope: coding.SourceScopeProject}
+	if got := PrefixAutocompleteDescription("", &project); got != "[p:npm:pkg]" {
 		t.Fatalf("empty desc = %q", got)
 	}
 }

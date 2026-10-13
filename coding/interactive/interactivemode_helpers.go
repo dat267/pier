@@ -3,6 +3,7 @@ package interactive
 import (
 	"context"
 	"os/exec"
+	"strings"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
@@ -374,23 +375,41 @@ func (w *AutocompleteWiring) SetupAutocompleteProvider() {
 func (w *AutocompleteWiring) Provider() tui.AutocompleteProvider { return w.provider }
 
 // PrefixAutocompleteDescription prefixes a description with its source.
-func PrefixAutocompleteDescription(description string, sourceInfo *coding.SourceInfo) string {
-	if sourceInfo == nil {
-		return description
+// autocompleteSourceTag is upstream's getAutocompleteSourceTag: built-in
+// sources are untagged, local/cli/auto sources tag with the scope prefix, and
+// npm packages include their source. A git source would tag
+// `${scope}:git:...`; the package manager and its git URL parser are out of
+// scope, so it falls back to the scope prefix.
+func autocompleteSourceTag(sourceInfo *coding.SourceInfo) (string, bool) {
+	if sourceInfo == nil || sourceInfo.Source == "builtin" {
+		return "", false
 	}
-	source := ""
+	scopePrefix := "t"
 	switch sourceInfo.Scope {
 	case coding.SourceScopeUser:
-		source = "user"
+		scopePrefix = "u"
 	case coding.SourceScopeProject:
-		source = "project"
-	default:
-		source = "temporary"
+		scopePrefix = "p"
+	}
+	source := strings.TrimSpace(sourceInfo.Source)
+	if source == "auto" || source == "local" || source == "cli" {
+		return scopePrefix, true
+	}
+	if strings.HasPrefix(source, "npm:") {
+		return scopePrefix + ":" + source, true
+	}
+	return scopePrefix, true
+}
+
+func PrefixAutocompleteDescription(description string, sourceInfo *coding.SourceInfo) string {
+	sourceTag, ok := autocompleteSourceTag(sourceInfo)
+	if !ok {
+		return description
 	}
 	if description == "" {
-		return source
+		return "[" + sourceTag + "]"
 	}
-	return "[" + source + "] " + description
+	return "[" + sourceTag + "] " + description
 }
 
 // newTrustCrashWiring assembles the TrustCrashWiring (port of the corresponding InteractiveMode wiring).
