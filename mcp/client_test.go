@@ -318,6 +318,37 @@ func TestClientReturnsStructuredToolContentAndSurfacesErrors(t *testing.T) {
 	}
 }
 
+func TestClientAcceptsAnyJSONStructuredToolContent(t *testing.T) {
+	client, server := connectTestClient(t)
+	values := map[string]json.RawMessage{
+		"array":   json.RawMessage(`[1,"two"]`),
+		"null":    json.RawMessage(`null`),
+		"string":  json.RawMessage(`"value"`),
+		"number":  json.RawMessage(`42`),
+		"boolean": json.RawMessage(`true`),
+	}
+	server.setHandler("tools/call", func(request *protocol.JsonRpcRequest) (any, error) {
+		var params struct {
+			Name string `json:"name"`
+		}
+		_ = json.Unmarshal(request.Params, &params)
+		return map[string]any{"content": []any{}, "structuredContent": values[params.Name]}, nil
+	})
+	for name, want := range values {
+		result, err := client.CallTool(context.Background(), name, nil, RequestOptions{})
+		if err != nil {
+			t.Errorf("CallTool(%q): %v", name, err)
+			continue
+		}
+		if string(result.StructuredContent) != string(want) {
+			t.Errorf("structuredContent for %q = %s, want %s", name, result.StructuredContent, want)
+		}
+	}
+	if err := client.Close(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestClientRenewsTimeoutOnProgress(t *testing.T) {
 	client, server := connectTestClient(t)
 	const (

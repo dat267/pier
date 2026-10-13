@@ -167,12 +167,6 @@ func validateCallToolResult(raw json.RawMessage) (*protocol.CallToolResult, erro
 			return nil, invalid("Invalid MCP tools/call result")
 		}
 	}
-	if structured, has := probe["structuredContent"]; has {
-		object, ok := structured.(map[string]any)
-		if !ok || object == nil {
-			return nil, invalid("Invalid MCP tools/call structured content")
-		}
-	}
 	var result protocol.CallToolResult
 	if err := json.Unmarshal(raw, &result); err != nil {
 		return nil, invalid("Invalid MCP tools/call result")

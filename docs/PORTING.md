@@ -28,7 +28,9 @@ sends an OSC 52 copy after a successful local clipboard write (`3e477eab5`).
 Unhandled mouse-wheel input scrolls the transcript behind a focused overlay
 (`#10769`, `11f991145`). Recognized delayed terminal color, program-status,
 version, and Kitty graphics replies remain buffered until their terminator
-(`#edb2eb966`). Focused regression tests cover these fixes.
+(`edb2eb966`). MCP tool `structuredContent` accepts every JSON value, including
+arrays, scalars, and `null` (`67996ab75`). Focused regression tests cover these
+fixes.
 
 Ported from it so far: the built-in catalog, regenerated from the tag's own generator
 (`claude-haiku-5-5`, the prompt-length pricing tiers for 154 models, and the model churn
