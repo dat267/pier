@@ -69,8 +69,8 @@ func appendAssistant(tx *Transaction, conversationID Id, message *ai.AssistantMe
 	return tx.AppendEntry(conversationID, EntryDraft{Kind: AssistantEntry.Kind, Model: []ai.Message{message}})
 }
 
-// failModelError settles the run's inputs unanswered with model_error and
-// fails with text.
+// failGenerationModelError settles the run's inputs unanswered with model_error
+// and fails with text.
 func failGenerationModelError(runtime TaskRuntime, text string, ctx chord.Context) error {
 	return runtime.Commit(func(tx *Transaction, current RunningTask) (*NextTaskState, error) {
 		live, err := tx.Doc(LiveDoc.Definition, runtime.ConversationID())

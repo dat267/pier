@@ -340,7 +340,7 @@ type parsedModifyOtherKeysSequence struct {
 	modifier  int
 }
 
-// lastEventType stores the last parsed event type (upstream keeps this
+// lastEventTypeState stores the last parsed event type (upstream keeps this
 // module-level state; nothing reads it, but it is ported for fidelity).
 var lastEventTypeState struct {
 	eventType atomic.Pointer[KeyEventType]

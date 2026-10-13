@@ -194,7 +194,7 @@ func (s *MemoryStorage) tableContaining(id Id) string {
 	return ""
 }
 
-// page paginates values, cloning the returned items.
+// pageOf paginates values, cloning the returned items.
 func pageOf[T any](values []T, limit int, idOf func(T) Id) Page[T] {
 	count := min(limit, len(values))
 	items := make([]T, 0, count)

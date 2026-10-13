@@ -44,7 +44,7 @@ func OpenSqliteStorage(path string) (*SqliteStorage, error) {
 	return storage, nil
 }
 
-// sqliteMigrations mirrors upstream migrations.ts: one migration, contiguous
+// sqliteInitialSchema mirrors upstream migrations.ts: one migration, contiguous
 // version 1. `submissions.request_id`/`status` carry the submission lifecycle
 // (the record's own JSON carries its type); upstream's task-status CHECK
 // matches the port's states.
