@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 
@@ -147,14 +148,7 @@ func buildRules(selectedTools []string, toolGuidelines map[string][]string, prom
 	return strings.Join(lines, "\n")
 }
 
-func contains(list []string, want string) bool {
-	for _, v := range list {
-		if v == want {
-			return true
-		}
-	}
-	return false
-}
+func contains(list []string, want string) bool { return slices.Contains(list, want) }
 
 // BuildSystemPromptSections builds the ordered prompt sections
 // (port of buildSystemPromptSections).

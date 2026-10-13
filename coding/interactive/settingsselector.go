@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -275,14 +276,7 @@ func defaultAutomaticThemes(currentThemeSetting string, availableThemes []string
 	return themeName, themeName
 }
 
-func contains(values []string, value string) bool {
-	for _, entry := range values {
-		if entry == value {
-			return true
-		}
-	}
-	return false
-}
+func contains(values []string, value string) bool { return slices.Contains(values, value) }
 
 // ThemeSubmenu selects a fixed theme or the automatic light/dark pair.
 type ThemeSubmenu struct {

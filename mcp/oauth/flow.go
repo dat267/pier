@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 )
 
@@ -164,14 +165,7 @@ func selectClientAuthMethod(information *OAuthClientInformationFull, supported [
 	return ClientAuthNone
 }
 
-func contains(list []string, value string) bool {
-	for _, item := range list {
-		if item == value {
-			return true
-		}
-	}
-	return false
-}
+func contains(list []string, value string) bool { return slices.Contains(list, value) }
 
 // applyClientAuthentication writes the auth into headers/params (upstream
 // applyClientAuthentication).

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 
@@ -520,14 +521,7 @@ func (s *AgentSession) handleAgentEvent(event *agent.AgentEvent) {
 	}
 }
 
-func indexOf(list []string, want string) int {
-	for i, v := range list {
-		if v == want {
-			return i
-		}
-	}
-	return -1
-}
+func indexOf(list []string, want string) int { return slices.Index(list, want) }
 
 func (s *AgentSession) emitQueueUpdate() {
 	s.emit(&SessionEvent{
