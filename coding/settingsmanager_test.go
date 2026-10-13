@@ -76,15 +76,18 @@ func TestSettingsPreservesExternallyAddedSettings(t *testing.T) {
 		t.Fatalf("enabledModels = %#v", saved["enabledModels"])
 	}
 
-	// Unrelated custom settings survive a theme write too.
+	// Unrelated custom settings survive a theme write too, including the
+	// v1.2.0 `$schema` reference for editor validation.
 	raw = readSettingsFile(t, settingsPath)
 	raw["shellPath"] = "/bin/zsh"
 	raw["extensions"] = []any{"/path/to/extension.ts"}
+	raw["$schema"] = "https://pi.dev/schemas/settings.schema.json"
 	encoded, _ = json.Marshal(raw)
 	writeSettingsFile(t, settingsPath, string(encoded))
 	manager.SetTheme("light")
 	saved = readSettingsFile(t, settingsPath)
-	if saved["theme"] != "light" || saved["shellPath"] != "/bin/zsh" {
+	if saved["theme"] != "light" || saved["shellPath"] != "/bin/zsh" ||
+		saved["$schema"] != "https://pi.dev/schemas/settings.schema.json" {
 		t.Fatalf("saved = %#v", saved)
 	}
 	extensions, _ := saved["extensions"].([]any)
