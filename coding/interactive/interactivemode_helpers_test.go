@@ -59,11 +59,11 @@ func TestCrashHelpers(t *testing.T) {
 	wiring, _, _ := newHelpersTestWiring(t)
 	wiring.SessionFile = func() string { return "" }
 
-	if instructions := wiring.CrashReportInstructions(); !strings.Contains(instructions, "Start") {
+	if instructions := wiring.CrashReportInstructions(); instructions != "To report this crash: start pi and run /bug. The crash details are attached automatically." {
 		t.Fatalf("instructions = %q", instructions)
 	}
 	wiring.SessionFile = func() string { return "/tmp/sess.jsonl" }
-	if instructions := wiring.CrashReportInstructions(); !strings.Contains(instructions, "pi -r` to resume") {
+	if instructions := wiring.CrashReportInstructions(); instructions != "To report this crash: run `pi -r` to resume the session, then run /bug. The crash details are attached automatically." {
 		t.Fatalf("instructions = %q", instructions)
 	}
 

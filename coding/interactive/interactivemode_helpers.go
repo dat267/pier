@@ -132,12 +132,14 @@ func (w *TrustCrashWiring) RecordCrash(kind string, err error) bool {
 	}, coding.GetCrashLogPath(w.AgentDir)) != nil
 }
 
-// CrashReportInstructions returns the post-crash resume hint.
+// CrashReportInstructions returns the post-crash bug-report hint (upstream
+// crashReportInstructions).
 func (w *TrustCrashWiring) CrashReportInstructions() string {
+	resume := "start pi and"
 	if w.SessionFile != nil && w.SessionFile() != "" {
-		return "Run `" + w.AppName + " -r` to resume the session."
+		resume = "run `" + w.AppName + " -r` to resume the session, then"
 	}
-	return "Start " + w.AppName + " to begin a new session."
+	return "To report this crash: " + resume + " run /bug. The crash details are attached automatically."
 }
 
 // MaybeSaveImplicitProjectTrustAfterReload saves the implicit trust decision.
