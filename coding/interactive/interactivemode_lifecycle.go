@@ -431,6 +431,12 @@ func (l *Lifecycle) EmergencyTerminalExit() {
 
 // UncaughtCrash restores the terminal and exits after an uncaught exception.
 func (l *Lifecycle) UncaughtCrash(err error) {
+	// A dead terminal is not a crash: do not try to restore it or record it
+	// (upstream uncaughtCrash).
+	if isDeadTerminalErrorText(err.Error()) {
+		l.EmergencyTerminalExit()
+		return
+	}
 	if l.shuttingDown.Load() {
 		l.options.Exit(1)
 		return

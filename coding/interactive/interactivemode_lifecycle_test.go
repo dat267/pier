@@ -262,6 +262,16 @@ func TestLifecycleCrashPaths(t *testing.T) {
 	if len(*exits3) != 1 || (*exits3)[0] != 1 {
 		t.Fatalf("exits = %v", *exits3)
 	}
+
+	// A dead-terminal error is not a crash: it takes the emergency exit path
+	// without recording (upstream uncaughtCrash).
+	dead, _, exits4, _ := newLifecycleTest(t)
+	recorded := 0
+	dead.options.RecordCrash = func(string, error) bool { recorded++; return true }
+	dead.UncaughtCrash(errorsNew("write |1: EIO"))
+	if len(*exits4) != 1 || (*exits4)[0] != 129 || recorded != 0 {
+		t.Fatalf("dead-terminal: exits = %v, recorded = %d", *exits4, recorded)
+	}
 }
 
 // TestLifecycleSignalHandlers covers the handler registry.
