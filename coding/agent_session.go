@@ -391,6 +391,13 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 		excludedToolNames:    excludedToolNameSet(config.ExcludedToolNames),
 		beforeFirstTurn:      config.BeforeFirstTurn,
 	}
+	// A default-tools session restores the loadout its transcript records, once
+	// the registry holds it, with modifier-only --tools entries applied
+	// (upstream 6f2f164ab: the constructor restored only when the caller passed
+	// no initial tools, which the SDK never does).
+	if s.usesDefaultTools {
+		s.RestoreToolsFromTranscript(s.defaultToolModifiers...)
+	}
 	if config.PromptSources != nil {
 		s.promptSources = *config.PromptSources
 	}

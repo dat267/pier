@@ -353,6 +353,13 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		}
 		toolByName[name] = extra
 	}
+	// The full registry is handed to the session at construction so a resumed
+	// default-tools session can restore its recorded loadout against it
+	// (upstream 6f2f164ab).
+	controlTools := make(map[string]AgentToolDefinition, len(toolByName))
+	for name, tool := range toolByName {
+		controlTools[name] = AgentToolDefinition{Tool: tool}
+	}
 	// An allowlist entry can be a tool name or a pattern. Exact names retain
 	// their input order; patterns expand in registry order, matching upstream's
 	// ordered Map walk. Overlapping entries add each tool only once.
@@ -549,7 +556,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		PromptSources:      &promptSources,
 		Control: &AgentSessionControl{
 			ModelRuntime: modelRuntime, Settings: settingsManager,
-			Tools: map[string]AgentToolDefinition{}, autoCompaction: true, autoRetry: true,
+			Tools: controlTools, autoCompaction: true, autoRetry: true,
 			PromptTemplates: promptTemplates.Templates,
 		},
 		ConvertToLlm: convertToLlmWithBlockImages,
@@ -588,9 +595,6 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 
 	session.streamFn = streamFn
 	session.resources = resources
-	for name, tool := range toolByName {
-		session.control.Tools[name] = AgentToolDefinition{Tool: tool}
-	}
 	session.SetScopedModels(options.ScopedModels)
 	// defaultsync (D151): a restored session would otherwise keep the model it
 	// chose in an earlier run, leaving the settings default unreachable for it.

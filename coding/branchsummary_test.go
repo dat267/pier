@@ -465,6 +465,62 @@ func TestRestoreToolsFromTranscript(t *testing.T) {
 	}
 }
 
+func TestNewSessionRestoresToolLoadoutFromTranscript(t *testing.T) {
+	// Upstream 6f2f164ab: a default-tools session restores the tool loadout its
+	// transcript records once the registry is built, with modifier-only --tools
+	// entries applied. Before the fix the constructor only restored when the
+	// caller passed no initial tools, which the SDK never does.
+	transcript := func(t *testing.T) *SessionManager {
+		t.Helper()
+		manager := newTestSessionManager(t)
+		manager.AppendMessage(&ai.SystemMessage{
+			Content:    ai.StringOrBlocks{Text: "system"},
+			ToolsAdded: []ai.Tool{{Name: "read", Parameters: json.RawMessage(`{}`)}, {Name: "grep", Parameters: json.RawMessage(`{}`)}},
+		})
+		return manager
+	}
+	registry := func() *AgentSessionControl {
+		return &AgentSessionControl{Tools: map[string]AgentToolDefinition{
+			"read": {Tool: testTool("read")},
+			"bash": {Tool: testTool("bash")},
+			"grep": {Tool: testTool("grep")},
+		}}
+	}
+	newSession := func(t *testing.T, usesDefault bool, modifiers []string) *AgentSession {
+		t.Helper()
+		session, err := NewAgentSession(&SessionConfig{
+			Cwd: t.TempDir(), Sessions: transcript(t),
+			Model:                &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic"},
+			StreamFn:             stubStreamFn,
+			Tools:                []agent.AgentTool{testTool("read"), testTool("bash")},
+			UsesDefaultTools:     usesDefault,
+			DefaultToolModifiers: modifiers,
+			Control:              registry(),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return session
+	}
+
+	// A default-tools session keeps the transcript loadout.
+	session := newSession(t, true, nil)
+	if names := session.GetActiveToolNames(); strings.Join(names, ",") != "read,grep" {
+		t.Fatalf("active = %v; want read,grep", names)
+	}
+	// Modifier-only --tools entries apply to the restored loadout; an unknown
+	// +name is dropped by the registry check.
+	session = newSession(t, true, []string{"-grep", "+edit"})
+	if names := session.GetActiveToolNames(); strings.Join(names, ",") != "read" {
+		t.Fatalf("active = %v; want read", names)
+	}
+	// An explicit tool list does not restore the transcript loadout.
+	session = newSession(t, false, nil)
+	if names := session.GetActiveToolNames(); strings.Join(names, ",") != "read,bash" {
+		t.Fatalf("active = %v; want read,bash", names)
+	}
+}
+
 // tempAgentDir points the agent dir at a temp directory for the test, so
 // persisted session files never land in the repository or home.
 func tempAgentDir(t *testing.T) {

@@ -96,6 +96,15 @@ acquisition retries transient Windows `EPERM` within a bounded count while
 non-Windows failures remain immediate (`#10801`, `e6fb2581d`). Focused regression
 tests cover these fixes.
 
+**Post-pin fixes incorporated.** Two upstream fixes that landed after the
+v1.2.0 tag are folded in ahead of the next release: error tool results replace
+an image with a text note before the Anthropic request, because Anthropic
+rejects non-text error results (`34a8bb38b`,
+`api/anthropic-messages.ts`), and a resumed default-tools session restores the
+tool loadout its transcript records, with modifier-only `--tools` entries
+applied (`6f2f164ab`, `core/agent-session.ts`). The invalid `\u` escape repair
+(`4b994d5e5`) was already the port's behavior.
+
 **v1.2.0 audit still open.** The largest unported change is chord's v1.2.0
 typed-host runtime, which replaced the facet/service runtime the port mirrors
 and removed the `client`, `protocol` and `server` packages the port keeps; that

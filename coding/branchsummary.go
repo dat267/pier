@@ -544,25 +544,16 @@ func (s *AgentSession) compactionStreamFn() StreamFnFn {
 }
 
 // RestoreToolsFromTranscript re-declares the tool set the branch last used,
-// taken from the transcript's current system message (port of
-// _restoreToolsFromTranscript).
-func (s *AgentSession) RestoreToolsFromTranscript() {
+// taken from the transcript's current system message, with modifier-only
+// `+name`/`-name` entries applied (port of _restoreToolsFromTranscript).
+func (s *AgentSession) RestoreToolsFromTranscript(modifiers ...string) {
 	current := s.Sessions.CurrentSystemMessage()
 	if current == nil {
 		return
 	}
-	s.control.stateMu.Lock()
-	var toolNames []string
-	var tools []agentTool
+	names := make([]string, 0, len(current.ToolsAdded))
 	for _, tool := range current.ToolsAdded {
-		entry, ok := s.control.Tools[tool.Name]
-		if !ok {
-			continue
-		}
-		toolNames = append(toolNames, tool.Name)
-		tools = append(tools, entry.Tool)
+		names = append(names, tool.Name)
 	}
-	s.control.stateMu.Unlock()
-	s.Agent.SetTools(tools)
-	s.RebuildSystemPrompt(toolNames)
+	s.SetActiveToolsByName(applyToolModifiers(names, modifiers))
 }
