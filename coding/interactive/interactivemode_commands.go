@@ -55,7 +55,7 @@ type CommandWiring struct {
 	// ClearStatusIndicator clears the active indicator.
 	ClearStatusIndicator func()
 
-	// ExportToHTML exports the session (the HTML exporter is out of scope).
+	// ExportToHTML exports the session as an HTML file.
 	ExportToHTML func(outputPath string) (string, error)
 	// HandleFatalRuntimeError reports a fatal runtime error and shuts down
 	// (upstream handleFatalRuntimeError).

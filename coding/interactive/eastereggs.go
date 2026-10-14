@@ -4,6 +4,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/dat267/pier/tui"
 )
@@ -250,6 +251,9 @@ func NewEarendilAnnouncementComponent() *EarendilAnnouncementComponent {
 const (
 	daxnutsWidth  = 32
 	daxnutsHeight = 32
+
+	// daxnutsTickInterval is the scanline reveal frame interval.
+	daxnutsTickInterval = 50 * time.Millisecond
 )
 
 // DaxnutsComponent renders the daxnuts easter egg with a scanline reveal.
@@ -350,6 +354,23 @@ func (c *DaxnutsComponent) Advance() {
 // Invalidate drops the cache.
 func (c *DaxnutsComponent) Invalidate() { c.cachedWidth = 0 }
 
+// AnimationFrame implements tui.Animator: the scanline reveal asks for one
+// frame per interval until the tick reaches maxTicks.
+func (c *DaxnutsComponent) AnimationFrame(now time.Time) (bool, time.Duration) {
+	if c.tick >= c.maxTicks {
+		return false, 0
+	}
+	return true, daxnutsTickInterval
+}
+
+// AnimationTick advances the reveal one frame (owner loop).
+func (c *DaxnutsComponent) AnimationTick() {
+	if c.tick >= c.maxTicks {
+		return
+	}
+	c.Advance()
+}
+
 // Render renders the scanline reveal.
 func (c *DaxnutsComponent) Render(width int) []string {
 	if width == c.cachedWidth && c.cachedTick == c.tick {
@@ -411,6 +432,11 @@ const (
 	arminWidth    = 31
 	arminHeight   = 36
 	arminRowBytes = 4 // ceil(31/8)
+
+	// arminFramesPerSecond is the effect frame rate (armint.ts 30 fps, 60 for
+	// the glitch effect).
+	arminFramesPerSecond       = 30
+	arminGlitchFramesPerSecond = 60
 )
 
 // ArminEffects are the animation effect names.
@@ -454,8 +480,10 @@ func ArminFinalGrid() [][]string {
 	return grid
 }
 
-// ArminComponent renders the easter egg. The animation effects use an
-// injectable random source (D95).
+// ArminComponent renders the easter egg. The animation effects run on the
+// owner loop through the tui.Animator seam (upstream arms a setInterval; the
+// port keeps no component timer, stage 4) and use an injectable random source
+// (D95).
 type ArminComponent struct {
 	host      tui.RenderRequester
 	Effect    string
@@ -464,6 +492,7 @@ type ArminComponent struct {
 	rng       *rand.Rand
 
 	effectState map[string]any
+	done        bool
 
 	cachedLines []string
 	cachedWidth int
@@ -551,6 +580,224 @@ func shuffledPositions(rng *rand.Rand, rows int, columns int) [][2]int {
 	return positions
 }
 
+// AnimationFrame implements tui.Animator: the easter egg asks for one frame
+// per effect interval until the effect finishes. Upstream runs the effect at
+// 30 fps (60 for glitch); the port lets the owner loop schedule the frame.
+func (c *ArminComponent) AnimationFrame(now time.Time) (bool, time.Duration) {
+	if c.done {
+		return false, 0
+	}
+	fps := arminFramesPerSecond
+	if c.Effect == "glitch" {
+		fps = arminGlitchFramesPerSecond
+	}
+	return true, time.Second / time.Duration(fps)
+}
+
+// AnimationTick advances the effect one frame. It runs on the owner loop, so
+// it may mutate the grid directly (tui.AnimationTicker).
+func (c *ArminComponent) AnimationTick() {
+	if c.done {
+		return
+	}
+	c.done = c.tickEffect()
+	c.cachedWidth = 0
+	if c.host != nil {
+		c.host.RequestRender(false)
+	}
+}
+
+// tickEffect advances the current effect; reports whether it is finished
+// (port of arminsayshi's tickEffect).
+func (c *ArminComponent) tickEffect() bool {
+	switch c.Effect {
+	case "typewriter":
+		return c.tickTypewriter()
+	case "scanline":
+		return c.tickScanline()
+	case "rain":
+		return c.tickRain()
+	case "fade":
+		return c.tickFade()
+	case "crt":
+		return c.tickCrt()
+	case "glitch":
+		return c.tickGlitch()
+	case "dissolve":
+		return c.tickDissolve()
+	default:
+		return true
+	}
+}
+
+func (c *ArminComponent) tickTypewriter() bool {
+	state := c.effectState
+	pos := state["pos"].(int)
+	const pixelsPerFrame = 3
+	for i := 0; i < pixelsPerFrame; i++ {
+		row := pos / arminWidth
+		x := pos % arminWidth
+		if row >= len(c.grid) {
+			state["pos"] = pos
+			return true
+		}
+		c.grid[row][x] = c.finalGrid[row][x]
+		pos++
+	}
+	state["pos"] = pos
+	return false
+}
+
+func (c *ArminComponent) tickScanline() bool {
+	state := c.effectState
+	row := state["row"].(int)
+	if row >= len(c.grid) {
+		return true
+	}
+	copy(c.grid[row], c.finalGrid[row])
+	state["row"] = row + 1
+	return false
+}
+
+func (c *ArminComponent) tickRain() bool {
+	state := c.effectState
+	drops := state["drops"].([]map[string]int)
+	displayHeight := len(c.grid)
+	allSettled := true
+	c.grid = c.emptyGrid()
+	for x := 0; x < arminWidth; x++ {
+		drop := drops[x]
+		// Draw the settled pixels for this column.
+		for row := displayHeight - 1; row >= displayHeight-drop["settled"]; row-- {
+			if row >= 0 {
+				c.grid[row][x] = c.finalGrid[row][x]
+			}
+		}
+		if drop["settled"] >= displayHeight {
+			continue
+		}
+		// The lowest non-space pixel is the column's target row.
+		targetRow := -1
+		for row := displayHeight - 1 - drop["settled"]; row >= 0; row-- {
+			if c.finalGrid[row][x] != " " {
+				targetRow = row
+				break
+			}
+		}
+		if targetRow < 0 {
+			// Nothing is left above the settled region, so the column is
+			// visually complete. Upstream leaves the interval running here; the
+			// port treats the column as settled so the owner loop stops arming
+			// animation frames.
+			continue
+		}
+		allSettled = false
+		drop["y"]++
+		if drop["y"] >= 0 && drop["y"] < displayHeight {
+			if targetRow >= 0 && drop["y"] >= targetRow {
+				drop["settled"] = displayHeight - targetRow
+				drop["y"] = -c.rng.Intn(5) - 1
+			} else {
+				c.grid[drop["y"]][x] = "▓"
+			}
+		}
+	}
+	return allSettled
+}
+
+func (c *ArminComponent) tickFade() bool {
+	state := c.effectState
+	positions := state["positions"].([][2]int)
+	idx := state["idx"].(int)
+	const pixelsPerFrame = 15
+	for i := 0; i < pixelsPerFrame; i++ {
+		if idx >= len(positions) {
+			state["idx"] = idx
+			return true
+		}
+		pos := positions[idx]
+		c.grid[pos[0]][pos[1]] = c.finalGrid[pos[0]][pos[1]]
+		idx++
+	}
+	state["idx"] = idx
+	return false
+}
+
+func (c *ArminComponent) tickCrt() bool {
+	state := c.effectState
+	expansion := state["expansion"].(int)
+	displayHeight := len(c.grid)
+	midRow := displayHeight / 2
+	c.grid = c.emptyGrid()
+	top := midRow - expansion
+	bottom := midRow + expansion
+	for row := max(0, top); row <= min(displayHeight-1, bottom); row++ {
+		copy(c.grid[row], c.finalGrid[row])
+	}
+	state["expansion"] = expansion + 1
+	return expansion+1 > displayHeight
+}
+
+func (c *ArminComponent) tickGlitch() bool {
+	state := c.effectState
+	phase := state["phase"].(int)
+	glitchFrames := state["glitchFrames"].(int)
+	displayHeight := len(c.grid)
+	if phase < glitchFrames {
+		next := make([][]string, len(c.grid))
+		for row := range c.finalGrid {
+			offset := c.rng.Intn(7) - 3
+			glitchRow := append([]string{}, c.finalGrid[row]...)
+			if c.rng.Float64() < 0.3 {
+				// Random horizontal offset (JS slice semantics for a negative
+				// start).
+				start := offset
+				if start < 0 {
+					start += len(glitchRow)
+				}
+				end := offset
+				if end < 0 {
+					end += len(glitchRow)
+				}
+				shifted := append(append([]string{}, glitchRow[start:]...), glitchRow[:end]...)
+				next[row] = shifted[:min(len(shifted), arminWidth)]
+				continue
+			}
+			if c.rng.Float64() < 0.2 {
+				next[row] = append([]string{}, c.finalGrid[c.rng.Intn(displayHeight)]...)
+				continue
+			}
+			next[row] = glitchRow
+		}
+		c.grid = next
+		state["phase"] = phase + 1
+		return false
+	}
+	c.grid = make([][]string, len(c.finalGrid))
+	for row := range c.finalGrid {
+		c.grid[row] = append([]string{}, c.finalGrid[row]...)
+	}
+	return true
+}
+
+func (c *ArminComponent) tickDissolve() bool {
+	state := c.effectState
+	positions := state["positions"].([][2]int)
+	idx := state["idx"].(int)
+	const pixelsPerFrame = 20
+	for i := 0; i < pixelsPerFrame; i++ {
+		if idx >= len(positions) {
+			state["idx"] = idx
+			return true
+		}
+		pos := positions[idx]
+		c.grid[pos[0]][pos[1]] = c.finalGrid[pos[0]][pos[1]]
+		idx++
+	}
+	state["idx"] = idx
+	return false
+}
+
 // Render renders the animation grid with the accent color.
 func (c *ArminComponent) Render(width int) []string {
 	if width == c.cachedWidth && c.cachedLines != nil {
@@ -584,4 +831,12 @@ func (c *ArminComponent) Render(width int) []string {
 // Invalidate drops the render cache.
 func (c *ArminComponent) Invalidate() { c.cachedWidth = 0 }
 
-var _ tui.Component = (*ArminComponent)(nil)
+var (
+	_ tui.Component       = (*DaxnutsComponent)(nil)
+	_ tui.Animator        = (*DaxnutsComponent)(nil)
+	_ tui.AnimationTicker = (*DaxnutsComponent)(nil)
+
+	_ tui.Component       = (*ArminComponent)(nil)
+	_ tui.Animator        = (*ArminComponent)(nil)
+	_ tui.AnimationTicker = (*ArminComponent)(nil)
+)

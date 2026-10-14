@@ -2,10 +2,12 @@ package interactive
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/tui"
 )
@@ -171,6 +173,86 @@ func TestEasterDeterministicParts(t *testing.T) {
 	}
 	if _, ok := findNonSpace(grid); !ok {
 		t.Fatal("armin grid is empty")
+	}
+}
+
+// TestArminAnimationCompletes drives every effect through the tui.Animator
+// seam and requires the final grid to be the deterministic image. Upstream
+// arms a setInterval per effect; the port ticks on the owner loop instead, so
+// every effect must report done (otherwise the loop would keep a frame timer
+// armed forever).
+func TestArminAnimationCompletes(t *testing.T) {
+	for _, effect := range ArminEffects {
+		t.Run(effect, func(t *testing.T) {
+			component := NewArminComponent(nil, effect, 7)
+			for frames := 0; ; frames++ {
+				if frames > 100000 {
+					t.Fatalf("%s: effect never finished", effect)
+				}
+				needs, delay := component.AnimationFrame(time.Now())
+				if !needs {
+					break
+				}
+				if delay <= 0 {
+					t.Fatalf("%s: non-positive frame delay", effect)
+				}
+				component.AnimationTick()
+			}
+			if got, want := component.Grid(), ArminFinalGrid(); !equalGrid(got, want) {
+				t.Fatalf("%s: final grid differs from the deterministic image", effect)
+			}
+		})
+	}
+}
+
+func equalGrid(a, b [][]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if len(a[i]) != len(b[i]) {
+			return false
+		}
+		for j := range a[i] {
+			if a[i][j] != b[i][j] {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// TestArminDrivesRendererAnimation checks the renderer's animation walk finds
+// the mounted armin easter egg, so the owner loop keeps painting its frames.
+func TestArminDrivesRendererAnimation(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	app.Init(context.Background())
+	app.commands.HandleArminSaysHi(app.ui, 3)
+	if want, _ := app.ui.NextAnimation(); !want {
+		t.Fatal("renderer animation walk must see the armin easter egg")
+	}
+}
+
+// TestDaxnutsAnimationCompletes drives the daxnuts scanline reveal to its final
+// tick through the tui.Animator seam.
+func TestDaxnutsAnimationCompletes(t *testing.T) {
+	component := NewDaxnutsComponent(nil)
+	for frames := 0; ; frames++ {
+		if frames > 1000 {
+			t.Fatal("daxnuts: reveal never finished")
+		}
+		needs, delay := component.AnimationFrame(time.Now())
+		if !needs {
+			break
+		}
+		if delay <= 0 {
+			t.Fatal("daxnuts: non-positive frame delay")
+		}
+		component.AnimationTick()
+	}
+	if component.Tick() != component.maxTicks {
+		t.Fatalf("daxnuts tick = %d, want %d", component.Tick(), component.maxTicks)
 	}
 }
 
