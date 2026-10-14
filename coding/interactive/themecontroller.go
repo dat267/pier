@@ -51,9 +51,6 @@ type ThemeControllerOptions struct {
 	Detector  TerminalAutoThemeDetector
 	TimeoutMS int
 	Env       func(string) string
-	// AgentDir, when set, persists the last terminal colors for the next boot
-	// (D221). Empty disables the cache (tests, headless).
-	AgentDir string
 }
 
 // ThemeResult is a theme application outcome.
@@ -83,7 +80,6 @@ type InteractiveThemeController struct {
 	systemProbed        bool
 	marshal             func(func())
 	themeQueue          *offloop.Queue
-	agentDir            string
 	// Immutable per-controller load seam, also used by cancellation tests.
 	loadTheme func(string, ColorMode) (*Theme, error)
 }
@@ -101,7 +97,6 @@ func NewInteractiveThemeController(options ThemeControllerOptions) *InteractiveT
 		currentThemeSetting: options.InitialThemeSetting,
 		marshal:             options.Marshal,
 		themeQueue:          options.ThemeQueue,
-		agentDir:            options.AgentDir,
 		loadTheme:           loadTheme,
 	}
 	if controller.timeoutMS == 0 {
@@ -213,15 +208,13 @@ func (c *InteractiveThemeController) querySystemColors() {
 	}
 	// Register and write the query on the owner loop, then wait off it: the
 	// terminal's reply is dispatched on the loop, so a wait on the loop can never
-	// observe it. The persist runs on this same off-loop goroutine, never on the
-	// owner loop (D221).
+	// observe it.
 	wait, ok := c.ui.BeginTerminalColors()
 	if !ok {
 		return
 	}
 	go func() {
 		colors := wait(c.timeoutMS, apply)
-		saveTerminalColorsCache(c.agentDir, colors)
 		c.marshal(func() { apply(colors) })
 	}()
 }
