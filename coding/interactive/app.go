@@ -342,6 +342,9 @@ func NewApp(options AppOptions) *App {
 		// (upstream detectTerminalBackgroundFromEnv). The live probe is the
 		// deferred OSC 11 request from RunWiring.OnStarted (D165).
 		Env: os.Getenv,
+		// Persist the last terminal colors so the next boot's first system-theme
+		// paint already matches this terminal (D221).
+		AgentDir: options.AgentDir,
 		// Theme loads read files from disk; the selector paths that reach the
 		// controller run on the UI loop, so they load off it.
 		Marshal:    func(fn func()) { app.ui.Post(fn) },

@@ -2,7 +2,7 @@
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
-in code comments; not every ID has a full entry here. The range is **D1–D220**.
+in code comments; not every ID has a full entry here. The range is **D1–D221**.
 Entries are ordered numerically. Closed, retired, and withdrawn rows keep their
 IDs for historical references; overlapping rows refer to the owning explanation.
 
@@ -1553,3 +1553,25 @@ still updates a moment later through the same runtime.
 Tests: `TestCatalogRefreshAllowedAtCreate` (`cmd/catalogrefresh_test.go`) and
 `TestCreateModelRuntimeOfflineCreateLoadsTheStoreWithoutNetwork`
 (`coding/remotecatalog_test.go`).
+
+## D221
+
+**The last terminal colors are cached, so the first system-theme paint does not
+flash.**
+
+D218 keeps startup fast by painting before the OSC color query settles and
+repainting when the terminal's reply arrives. With `theme: system` the first
+frame is generated from no reported colors, so a light terminal flashes the dark
+fallback (or the reverse) until the reply. Pier now writes the settled
+`TerminalColors` to `<agentDir>/terminal-colors.json` off the owner loop (the
+off-loop query wait goroutine) and seeds the system theme from it at boot
+(`cmd`, before the first `InitTheme`), so the first frame matches the previous
+session's terminal; the live query still revalidates and overwrites the cache.
+Upstream (`theme-controller.ts`) instead awaits `waitForTerminalColors()` before
+building the header, which the port's single loop cannot do without delaying the
+first frame (D218). A terminal that changed appearance between sessions still
+recolors on the reply.
+
+Tests: `TestTerminalColorsCacheRoundTrip` and
+`TestThemeControllerPersistsTerminalColors`
+(`coding/interactive/terminalcolorscache_test.go`).

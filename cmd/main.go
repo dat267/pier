@@ -179,6 +179,10 @@ func run(appName string, args *coding.Args) error {
 	// symlink in PWD, which would select a different per-project session directory.
 	cwd = coding.CanonicalizePath(cwd)
 	agentDir := coding.GetAgentDir()
+	// Seed the system theme from the last known terminal colors before the first
+	// theme is built, so the first frame matches this terminal instead of
+	// flashing the fallback until the OSC query replies (D221).
+	interactive.LoadSystemTerminalColorsCache(agentDir)
 
 	// Bootstrap settings: global settings only, because whether the project's may
 	// be read is exactly what is not decided yet (upstream's
