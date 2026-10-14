@@ -339,6 +339,49 @@ func TestModelRuntimeRefreshesBuiltinRemoteCatalogs(t *testing.T) {
 	}
 }
 
+// TestCreateModelRuntimeOfflineCreateLoadsTheStoreWithoutNetwork pins the
+// mechanism D220 relies on: an interactive create runs the refresh with the
+// network disabled, so it restores the persisted overlay without any request.
+func TestCreateModelRuntimeOfflineCreateLoadsTheStoreWithoutNetwork(t *testing.T) {
+	var requests int
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		requests++
+		_, _ = writer.Write([]byte(`[{"id":"remote-model"}]`))
+	}))
+	defer server.Close()
+
+	ctx := ctxpkg.Background()
+	store := NewInMemoryCodingAgentModelsStore()
+	lastModified := int64(9_999_999_999_999) // newer than the embedded generated-at
+	entry := &ai.ModelsStoreEntry{
+		Models: []*ai.Model{{
+			ID: "cached-model", Name: "Cached", API: ai.APIAnthropicMessages, Provider: "anthropic",
+			Input: []string{"text"}, ContextWindow: 4096, MaxTokens: 1024,
+		}},
+		LastModified: &lastModified,
+	}
+	if err := store.Write("anthropic", entry, ctx); err != nil {
+		t.Fatal(err)
+	}
+	credentials := newMemoryCredentialStore()
+	credentials.entries["anthropic"] = &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "anthropic-key"}}
+
+	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
+		DisableModelsJSON: true, Credentials: credentials,
+		ModelsStore: store, CatalogBaseURL: server.URL,
+		AllowModelNetwork: false, RefreshOnCreate: boolPtr(true),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if requests != 0 {
+		t.Fatalf("offline create must not fetch: requests=%d", requests)
+	}
+	if model := runtime.GetModel("anthropic", "cached-model"); model == nil || model.ContextWindow != 4096 {
+		t.Fatalf("stored overlay not restored: %+v", model)
+	}
+}
+
 func TestRemoteCatalogStaleOverlayIgnored(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		_, _ = writer.Write([]byte(`[{"id":"remote"}]`))

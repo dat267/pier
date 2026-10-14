@@ -2,7 +2,7 @@
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
-in code comments; not every ID has a full entry here. The range is **D1–D219**.
+in code comments; not every ID has a full entry here. The range is **D1–D220**.
 Entries are ordered numerically. Closed, retired, and withdrawn rows keep their
 IDs for historical references; overlapping rows refer to the owning explanation.
 
@@ -1529,3 +1529,27 @@ index 3, supplied by the terminal palette. D154's dark/light overrides already
 use amber; this extends identity to default `system`.
 `TestSystemThemeAccentFollowsTerminalAppearance` checks hue, contrast on light/dark
 backgrounds, and indexed fallback.
+
+## D220
+
+**The interactive create-time model catalog refresh is offline; the background
+pass performs it.**
+
+Upstream `packages/coding-agent/src/core/sdk.ts` refreshes the model catalogs at
+create (`refreshOnCreate` defaults to true). When the persisted
+`models-store.json` is older than four hours
+(`RemoteCatalogRefreshIntervalMS`), that makes the first launch after a break
+wait on one HTTP request per provider, bounded by the 15 s
+`ModelRefreshTimeoutMS`. Pier keeps the create-time refresh for print mode and
+`--list-models`, which resolve a model before any background pass, but the
+interactive mode runs create with `AllowModelNetwork: false`: it restores the
+persisted overlay and availability snapshot from `models-store.json` without a
+request, and the `RefreshModelCatalogs` pass that `interactive.Run` already
+schedules after startup performs the network refresh. Startup for an
+interactive session after the freshness window drops from the request time to
+the store-load time (measured ~260-310 ms to ~25 ms here), and the catalog
+still updates a moment later through the same runtime.
+
+Tests: `TestCatalogRefreshAllowedAtCreate` (`cmd/catalogrefresh_test.go`) and
+`TestCreateModelRuntimeOfflineCreateLoadsTheStoreWithoutNetwork`
+(`coding/remotecatalog_test.go`).

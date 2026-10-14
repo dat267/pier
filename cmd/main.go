@@ -142,6 +142,20 @@ func resolvePrintMode(args *coding.Args, stdinIsTTY, stdoutIsTTY bool) bool {
 	return args.Print || args.Mode == coding.CLIModeJSON || !stdinIsTTY || !stdoutIsTTY
 }
 
+// catalogRefreshAllowedAtCreate reports whether the create-time model catalog
+// refresh may use the network. Upstream refreshes at create (refreshOnCreate
+// defaults to true). The interactive mode instead passes AllowModelNetwork:false
+// so create only restores the persisted overlay (no request), and the background
+// pass it already runs after startup (interactive.Run's RefreshModelCatalogs)
+// performs the network refresh (D220). Print mode and --list-models resolve a
+// model before any background pass, so they keep the create-time refresh.
+func catalogRefreshAllowedAtCreate(offline, printMode, listingModels bool) bool {
+	if offline {
+		return false
+	}
+	return printMode || listingModels
+}
+
 func run(appName string, args *coding.Args) error {
 	ctx := context.Background()
 	applyOfflineMode(args)
@@ -254,11 +268,12 @@ func run(appName string, args *coding.Args) error {
 	// Model runtime backed by auth.json. Upstream refreshes the catalogs at
 	// create (refreshOnCreate defaults to true), which is what populates the
 	// availability snapshot and the configured-provider set used to resolve the
-	// default model; skipping it left every provider unconfigured.
-	allowNetwork := !args.Offline
+	// default model; skipping it left every provider unconfigured. The
+	// interactive mode keeps the store-load half but defers the network half to
+	// its background refresh (D220).
 	runtime, err := coding.CreateModelRuntime(coding.CreateModelRuntimeOptions{
 		AuthPath:              agentDir + "/auth.json",
-		AllowModelNetwork:     allowNetwork,
+		AllowModelNetwork:     catalogRefreshAllowedAtCreate(args.Offline, printMode, listingModels),
 		ModelRefreshTimeoutMS: &modelRefreshTimeoutMS,
 		Signal:                ctx,
 	})
