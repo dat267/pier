@@ -378,10 +378,25 @@ func NormalizeAnthropicToolCallID(id string) string {
 
 func convertToolResult(msg *ToolResultMessage) AnthropicContentBlock {
 	isError := msg.IsError
+	content := userToContentList(msg.Content)
+	if msg.IsError {
+		// Anthropic rejects error tool results whose content is not all text, so
+		// an image is replaced with a note (upstream #10794,
+		// api/anthropic-messages.ts convertToolResult).
+		replaced := make(ContentList, 0, len(content))
+		for _, block := range content {
+			if _, ok := block.(ImageContent); ok {
+				replaced = append(replaced, TextContent{Text: "[image omitted: error tool results cannot contain images]"})
+				continue
+			}
+			replaced = append(replaced, block)
+		}
+		content = replaced
+	}
 	return AnthropicContentBlock{
 		Type:      "tool_result",
 		ToolUseID: msg.ToolCallID,
-		Content:   ConvertAnthropicContentBlocks(StringOrBlocks{Blocks: userToContentList(msg.Content)}),
+		Content:   ConvertAnthropicContentBlocks(StringOrBlocks{Blocks: content}),
 		IsError:   &isError,
 	}
 }

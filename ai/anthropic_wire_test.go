@@ -2,6 +2,7 @@ package ai
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -192,6 +193,84 @@ func TestBuildParamsToolResultPairingAndSyntheticResults(t *testing.T) {
 	}
 	if trBlocks[0].IsError == nil || !*trBlocks[0].IsError {
 		t.Fatal("synthetic result should be an error")
+	}
+}
+
+func TestBuildParamsErrorToolResultDropsImages(t *testing.T) {
+	// Upstream #10794 (api/anthropic-messages.ts convertToolResult): Anthropic
+	// rejects error tool results whose content is not all text, so an image in
+	// an error result is replaced with a note. Successful results keep images.
+	model := testAnthropicModel()
+	messages := []Message{
+		&UserMessage{Content: StringOrBlocks{Text: "read it"}, Timestamp: 1},
+		&AssistantMessage{
+			Content: ContentList{ToolCall{ID: "call-1", Name: "read", Arguments: json.RawMessage(`{"path":"a.png"}`)}},
+			API:     APIAnthropicMessages, Provider: "anthropic", Model: "claude-opus-4-5",
+			StopReason: StopToolUse, Timestamp: 2,
+		},
+		&ToolResultMessage{
+			ToolCallID: "call-1", ToolName: "read", IsError: true, Timestamp: 3,
+			Content: UserContentList{
+				TextContent{Text: "failed"},
+				ImageContent{Data: "AAAA", MimeType: "image/png"},
+			},
+		},
+		&AssistantMessage{
+			Content: ContentList{ToolCall{ID: "call-2", Name: "read", Arguments: json.RawMessage(`{"path":"b.png"}`)}},
+			API:     APIAnthropicMessages, Provider: "anthropic", Model: "claude-opus-4-5",
+			StopReason: StopToolUse, Timestamp: 4,
+		},
+		&ToolResultMessage{
+			ToolCallID: "call-2", ToolName: "read", IsError: false, Timestamp: 5,
+			Content: UserContentList{
+				TextContent{Text: "ok"},
+				ImageContent{Data: "BBBB", MimeType: "image/png"},
+			},
+		},
+	}
+	params := build(t, model, messages, nil)
+	results := map[string]AnthropicContentBlock{}
+	for _, m := range params.Messages {
+		var blocks []AnthropicContentBlock
+		if err := json.Unmarshal(m.Content, &blocks); err != nil {
+			continue
+		}
+		for _, b := range blocks {
+			if b.Type == "tool_result" {
+				results[b.ToolUseID] = b
+			}
+		}
+	}
+
+	errResult, ok := results["call-1"]
+	if !ok {
+		t.Fatal("error tool_result missing")
+	}
+	var errContent string
+	if err := json.Unmarshal(errResult.Content, &errContent); err != nil {
+		t.Fatalf("error tool result content is not a text string: %s", errResult.Content)
+	}
+	if !strings.Contains(errContent, "failed") ||
+		!strings.Contains(errContent, "[image omitted: error tool results cannot contain images]") {
+		t.Fatalf("error tool result content = %q", errContent)
+	}
+
+	okResult, ok := results["call-2"]
+	if !ok {
+		t.Fatal("successful tool_result missing")
+	}
+	var okBlocks []AnthropicContentBlock
+	if err := json.Unmarshal(okResult.Content, &okBlocks); err != nil {
+		t.Fatalf("successful tool result content is not blocks: %s", okResult.Content)
+	}
+	hasImage := false
+	for _, b := range okBlocks {
+		if b.Type == "image" {
+			hasImage = true
+		}
+	}
+	if !hasImage {
+		t.Fatalf("successful tool result lost its image: %+v", okBlocks)
 	}
 }
 
