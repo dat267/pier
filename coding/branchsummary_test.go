@@ -521,6 +521,42 @@ func TestNewSessionRestoresToolLoadoutFromTranscript(t *testing.T) {
 	}
 }
 
+func TestResumeRestoreKeepsMCPToolsAttachable(t *testing.T) {
+	// A transcript loadout can name MCP tools, but the registry does not hold
+	// them at construction (the MCP manager attaches them later). The restore
+	// drops them for now; AttachExtraTools re-adds them on top of the restored
+	// built-ins, so a resumed session still gets its MCP tools.
+	manager := newTestSessionManager(t)
+	manager.AppendMessage(&ai.SystemMessage{
+		Content: ai.StringOrBlocks{Text: "system"},
+		ToolsAdded: []ai.Tool{
+			{Name: "read", Parameters: json.RawMessage(`{}`)},
+			{Name: "mcp__docs__echo", Parameters: json.RawMessage(`{}`)},
+		},
+	})
+	session, err := NewAgentSession(&SessionConfig{
+		Cwd: t.TempDir(), Sessions: manager,
+		Model:            &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic"},
+		StreamFn:         stubStreamFn,
+		Tools:            []agent.AgentTool{testTool("read"), testTool("bash")},
+		UsesDefaultTools: true,
+		Control: &AgentSessionControl{Tools: map[string]AgentToolDefinition{
+			"read": {Tool: testTool("read")},
+			"bash": {Tool: testTool("bash")},
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if names := session.GetActiveToolNames(); strings.Join(names, ",") != "read" {
+		t.Fatalf("active before MCP attach = %v; want read", names)
+	}
+	session.AttachExtraTools([]agent.AgentTool{testTool("mcp__docs__echo")})
+	if names := session.GetActiveToolNames(); strings.Join(names, ",") != "read,mcp__docs__echo" {
+		t.Fatalf("active after MCP attach = %v; want read,mcp__docs__echo", names)
+	}
+}
+
 // tempAgentDir points the agent dir at a temp directory for the test, so
 // persisted session files never land in the repository or home.
 func tempAgentDir(t *testing.T) {
