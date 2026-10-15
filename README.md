@@ -13,7 +13,7 @@ deliberate feature of this implementation. The development conventions live in
 | What | Value |
 |---|---|
 | Repository | https://github.com/earendil-works/pi (cloned at `./pi`, gitignored) |
-| Pin | `06a46693` (Release v1.2.0), the latest released tag. Remaining gaps and out-of-scope areas are tracked in `docs/PORTING.md` |
+| Pin | `71023aec` (Release v1.3.0), the latest released tag. Remaining gaps and out-of-scope areas are tracked in `docs/PORTING.md` |
 
 ## Status
 

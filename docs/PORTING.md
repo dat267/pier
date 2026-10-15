@@ -4,7 +4,7 @@ How much of upstream pi this port covers, package by package, plus the upstream
 pin's change log. The user-facing summary lives in `README.md`; this file is the
 authoritative per-area status.
 
-Reference pin: `06a46693` (Release v1.2.0), read from the `./pi` checkout.
+Reference pin: `71023aec` (Release v1.3.0), read from the `./pi` checkout.
 `just reference` checks that the checkout really is at that tag, and
 `just reference-fetch` refreshes its tags without moving the checkout.
 `ai/models_catalog.json` is regenerated from the pin's own generator
@@ -12,11 +12,11 @@ Reference pin: `06a46693` (Release v1.2.0), read from the `./pi` checkout.
 models.dev) through `scripts/gen_catalog.py`.
 
 **Upstream status.** v1.3.0 (`71023aec`) is the latest released tag in the
-reference checkout; the port is still pinned to v1.2.0 while the v1.3.0 delta is
-ported (see the v1.3.0 delta audit below). The v1.2.0 delta from v1.1.0 was
-audited; confirmed gaps, porting progress, and out-of-scope areas are recorded
-below. Earlier release notes retain upstream versions and commit IDs as
-historical context.
+reference checkout and the port's pin. The v1.3.0 delta from v1.2.0 is ported
+(see the v1.3.0 audit below); the v1.2.0 delta from v1.1.0 was audited.
+Confirmed gaps, porting progress, and out-of-scope areas are recorded below.
+Earlier release notes retain upstream versions and commit IDs as historical
+context.
 
 **v1.2.0 parity fixes so far.** The built-in catalog is regenerated from the
 pinned v1.2.0 generator and current upstream catalog APIs. OpenRouter model
@@ -98,16 +98,16 @@ acquisition retries transient Windows `EPERM` within a bounded count while
 non-Windows failures remain immediate (`#10801`, `e6fb2581d`). Focused regression
 tests cover these fixes.
 
-**Post-pin fixes incorporated.** A resumed default-tools session restores the
+**Fixes folded into the pin.** A resumed default-tools session restores the
 tool loadout its transcript records, with modifier-only `--tools` entries
 applied (`6f2f164ab`, `core/agent-session.ts`). The invalid `\u` escape repair
-(`4b994d5e5`) was already the port's behavior. The v1.3.0 delta replaces the
-earlier text-note form of the error-tool-result image fix (`34a8bb38b`) with
+(`4b994d5e5`) was already the port's behavior. The error-tool-result image fix
+landed as `34a8bb38b` (a text note) and was replaced within the release by
 `5ab7fe74c`: the images now follow the tool results of the turn.
 
-**v1.3.0 delta audit.** The reference checkout now also holds `v1.3.0`
-(`71023aec`, Release v1.3.0), 63 commits past the pin (207 files). The port is
-being moved to it; this mapping is authoritative for the in-scope work.
+**v1.3.0 delta audit (the pin).** The reference checkout holds `v1.3.0`
+(`71023aec`, Release v1.3.0), 63 commits past v1.2.0 (207 files), and is the
+port's pin. This mapping is authoritative for the in-scope work.
 `packages/tui/src`, `packages/agent/src` and `packages/mcp/src` are unchanged
 in the delta, so only `ai`, `coding-agent` and `durable` carry work. Out of
 scope (documented, not ported): chord's typed-host rewrite and protocol
