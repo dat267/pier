@@ -183,6 +183,37 @@ func TestEditorPasteThresholdCountsUTF16Units(t *testing.T) {
 	}
 }
 
+// Mirrors first-occurrence start-marker removal in
+// packages/tui/src/components/editor.ts, including an embedded marker that
+// leaves its preceding bytes in the paste buffer.
+func TestEditorBracketedPasteWithEmbeddedStartMarkerPreservesPrefix(t *testing.T) {
+	editor := NewEditor(&editorHost{rows: 10}, editorTestTheme(), EditorOptions{})
+	editor.HandleInput("prefix\x1b[200~payload\x1b[201~")
+	if got, want := editor.GetText(), "prefixpayload"; got != want {
+		t.Fatalf("pasted text = %q, want %q", got, want)
+	}
+}
+
+func TestEditorBracketedLargePasteAvoidsCopyingInput(t *testing.T) {
+	editor := NewEditor(&editorHost{rows: 10}, editorTestTheme(), EditorOptions{})
+	pasted := strings.Repeat("plain text ", 24*1024)
+	input := "\x1b[200~" + pasted + "\x1b[201~"
+
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	editor.HandleInput(input)
+	runtime.ReadMemStats(&after)
+
+	if got := editor.GetExpandedText(); got != pasted {
+		t.Fatalf("expanded paste length = %d, want %d", len(got), len(pasted))
+	}
+	allocated := after.TotalAlloc - before.TotalAlloc
+	t.Logf("bracketed %d-byte input allocated %d bytes", len(input), allocated)
+	if allocated > uint64(len(input))/4 {
+		t.Fatalf("bracketed paste of %d bytes allocated %d bytes, want less than %d", len(input), allocated, len(input)/4)
+	}
+}
+
 func TestEditorPasteFiltersControlBytesAndDecodesCSIu(t *testing.T) {
 	// Port of packages/tui/src/components/editor.ts handlePaste.
 	editor := NewEditor(&editorHost{rows: 10}, editorTestTheme(), EditorOptions{})

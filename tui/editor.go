@@ -579,10 +579,15 @@ func (e *Editor) handleInputLocked(data string) {
 		e.jumpMode = ""
 	}
 
-	if strings.Contains(data, "\x1b[200~") {
+	const bracketedPasteStart = "\x1b[200~"
+	if strings.Contains(data, bracketedPasteStart) {
 		e.isInPaste = true
 		e.pasteBuffer = ""
-		data = strings.Replace(data, "\x1b[200~", "", 1)
+		if strings.HasPrefix(data, bracketedPasteStart) {
+			data = data[len(bracketedPasteStart):]
+		} else {
+			data = strings.Replace(data, bracketedPasteStart, "", 1)
+		}
 	}
 
 	if e.isInPaste {

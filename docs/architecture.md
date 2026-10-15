@@ -654,7 +654,11 @@ filtered controls still take the existing replacement/filter path. The existing
 2.40 MB / 46 allocations per operation (Linux/amd64, Intel N150, five runs);
 `TestEditorCleanLargePasteDoesNotCopyFilteredText` pins the allocation budget,
 and `TestEditorPasteFiltersControlBytesAndDecodesCSIu` guards the exceptional
-path.
+path. Bracketed pastes also slice off the common leading start marker instead of
+replacing it in the full input; the fallback still removes an embedded first
+occurrence. `TestEditorBracketedLargePasteAvoidsCopyingInput` measures 6.8 KB
+allocated for a 270 KB paste, down from 294 KB, and the 1 MB benchmark improves
+from 3.54 ms / 2.40 MB to 2.95 ms / 1.35 MB in five-iteration runs on the same machine.
 
 ## Proxy stream delta assembly
 
