@@ -387,3 +387,69 @@ func TestNewAgentSessionReplaysGoalAndExposesTools(t *testing.T) {
 		t.Fatal("get_goal not registered")
 	}
 }
+
+// TestGoalContinuationReachesTheModel proves the settle-boundary continuation:
+// a creating run admits its round and the hidden goal round is delivered to
+// the next model request as a user message.
+func TestGoalContinuationReachesTheModel(t *testing.T) {
+	manager, dir := newTestSession(t)
+	controller := NewGoalController(goal.NewGoalMachine(), &SessionGoalSink{})
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 8192}
+
+	var calls int
+	var secondContext []ai.Message
+	streamFn := func(requestModel *ai.Model, context ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		calls++
+		if calls == 2 {
+			secondContext = append([]ai.Message{}, context.Messages...)
+			// Complete the goal so the unbudgeted round loop ends here.
+			if snapshot := controller.Snapshot().Goal; snapshot != nil {
+				controller.Machine().Dispatch(goal.GoalUpdateEvent{GoalID: snapshot.ID, Revision: snapshot.Revision, Action: "complete"})
+			}
+		}
+		stream := ai.NewAssistantMessageEventStream()
+		go func() {
+			message := &ai.AssistantMessage{
+				API: ai.APIAnthropicMessages, Provider: requestModel.Provider, Model: requestModel.ID,
+				Content: ai.ContentList{ai.TextContent{Text: "ack"}}, StopReason: ai.StopStop,
+			}
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: message})
+		}()
+		return stream
+	}
+
+	session, err := NewAgentSession(&SessionConfig{
+		Cwd: dir, Sessions: manager, Model: model, StreamFn: streamFn,
+		Tools:        []agent.AgentTool{testTool("read")},
+		ConvertToLlm: ConvertToLlm,
+		Control: &AgentSessionControl{
+			autoCompaction: true, autoRetry: true,
+			Goal: controller,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	create := session.control.Tools["create_goal"].Tool
+	if _, err := create.Execute("id", json.RawMessage(`{"objective":"do it"}`), context.Background(), func(agent.AgentToolResult) {}); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Prompt(context.Background(), "start", &PromptOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if calls < 2 {
+		t.Fatalf("stream calls = %d, want the continuation round", calls)
+	}
+	found := false
+	for _, message := range secondContext {
+		if user, ok := message.(*ai.UserMessage); ok && strings.Contains(contentTextJoinedNoSep(user.Content), "<goal_round>") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("round prompt missing from the continuation context: %d messages", len(secondContext))
+	}
+	if phase := controller.Snapshot().Goal.Phase; phase != goal.PhaseComplete {
+		t.Fatalf("goal phase = %s", phase)
+	}
+}
