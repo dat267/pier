@@ -168,6 +168,9 @@ Ported so far:
   (`durable/src/storage/sqlite/schema.ts`, #10937). The port rewrites the base
   names at the database boundary instead of rendering them into every query;
   the conformance suite additionally runs over a `pi_` prefix.
+- The unused assistant-message frame API (`AssistantMessageFrameEncoder`,
+  `ReduceAssistantMessageFrames`) was removed to match the pin; the port had no
+  runtime user (`ai/src/utils/assistant-message-frame.ts`, `b39979799`).
 
 All in-scope v1.3.0 items are ported.
 
