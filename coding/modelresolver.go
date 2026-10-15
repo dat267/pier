@@ -98,149 +98,367 @@ func IsAlias(id string) bool {
 	return true
 }
 
-// FindExactModelReferenceMatch finds a model by bare id or canonical
-// provider/model reference; ambiguous bare ids are rejected.
-func FindExactModelReferenceMatch(modelReference string, availableModels []*ai.Model) *ai.Model {
-	trimmed := ai.JSTrim(modelReference)
-	if trimmed == "" {
-		return nil
-	}
-	normalized := ai.JSLower(trimmed)
-
-	var canonicalMatches []*ai.Model
-	for _, model := range availableModels {
-		if ai.JSLower(model.Provider+"/"+model.ID) == normalized {
-			canonicalMatches = append(canonicalMatches, model)
-		}
-	}
-	if len(canonicalMatches) == 1 {
-		return canonicalMatches[0]
-	}
-	if len(canonicalMatches) > 1 {
-		return nil
-	}
-
-	if slashIndex := strings.Index(trimmed, "/"); slashIndex != -1 {
-		provider := ai.JSTrim(trimmed[:slashIndex])
-		modelID := ai.JSTrim(trimmed[slashIndex+1:])
-		if provider != "" && modelID != "" {
-			var providerMatches []*ai.Model
-			for _, model := range availableModels {
-				if ai.JSLower(model.Provider) == ai.JSLower(provider) && ai.JSLower(model.ID) == ai.JSLower(modelID) {
-					providerMatches = append(providerMatches, model)
-				}
-			}
-			if len(providerMatches) == 1 {
-				return providerMatches[0]
-			}
-			if len(providerMatches) > 1 {
-				return nil
-			}
-		}
-	}
-
-	var idMatches []*ai.Model
-	for _, model := range availableModels {
-		if ai.JSLower(model.ID) == normalized {
-			idMatches = append(idMatches, model)
-		}
-	}
-	if len(idMatches) == 1 {
-		return idMatches[0]
-	}
-	return nil
+// ModelReferenceRequest is one model reference to resolve
+// (upstream ModelReferenceRequest).
+type ModelReferenceRequest struct {
+	// Text is a bare model id or `provider/id`, optionally `:<thinking>`.
+	Text string
+	// Provider restricts the pool to one provider.
+	Provider string
+	// ThinkingSuffix is "none", "strict" or "lenient".
+	ThinkingSuffix string
+	// Fuzzy matches id and name substrings when no exact match exists.
+	Fuzzy bool
 }
 
-// tryMatchModel matches a pattern exactly, then by partial id/name match.
-func tryMatchModel(modelPattern string, availableModels []*ai.Model) *ai.Model {
-	if exact := FindExactModelReferenceMatch(modelPattern, availableModels); exact != nil {
-		return exact
-	}
-	lowered := ai.JSLower(modelPattern)
-	var matches []*ai.Model
-	for _, model := range availableModels {
-		if strings.Contains(ai.JSLower(model.ID), lowered) ||
-			(model.Name != "" && strings.Contains(ai.JSLower(model.Name), lowered)) {
-			matches = append(matches, model)
-		}
-	}
-	if len(matches) == 0 {
-		return nil
-	}
-	var aliases, dated []*ai.Model
-	for _, model := range matches {
-		if IsAlias(model.ID) {
-			aliases = append(aliases, model)
-		} else {
-			dated = append(dated, model)
-		}
-	}
-	sortByIDDesc := func(models []*ai.Model) {
-		sort.SliceStable(models, func(i, j int) bool { return models[i].ID > models[j].ID })
-	}
-	if len(aliases) > 0 {
-		sortByIDDesc(aliases)
-		return aliases[0]
-	}
-	sortByIDDesc(dated)
-	return dated[0]
+// ModelReferenceTarget is set on a not-found result when a provider is known,
+// for building a custom model id.
+type ModelReferenceTarget struct {
+	Provider       string
+	ProviderModels []*ai.Model
+	// ModelText is the text after the provider prefix, including any suffix.
+	ModelText string
+	// ModelID is ModelText without a valid thinking suffix.
+	ModelID       string
+	ThinkingLevel ai.ThinkingLevel
+	HasThinking   bool
 }
 
-// ParsedModelResult is one parsed model pattern (upstream ParsedModelResult).
-type ParsedModelResult struct {
+// ModelReferenceResult is a resolution result (upstream ModelReferenceResult).
+type ModelReferenceResult struct {
+	Status        string // "resolved" | "ambiguous" | "not-found"
 	Model         *ai.Model
 	ThinkingLevel ai.ThinkingLevel
 	HasThinking   bool
 	Warning       string
+	Candidates    []*ai.Model
+	UsableCount   int
+	Target        *ModelReferenceTarget
 }
 
-// ParseModelPatternOptions configure ParseModelPattern.
-type ParseModelPatternOptions struct {
-	// AllowInvalidThinkingLevelFallback is nil for the upstream default (true).
-	AllowInvalidThinkingLevelFallback *bool
+const (
+	thinkingSuffixNone    = "none"
+	thinkingSuffixStrict  = "strict"
+	thinkingSuffixLenient = "lenient"
+)
+
+func splitThinkingSuffix(text string) (string, ai.ThinkingLevel, bool) {
+	colonIndex := strings.LastIndex(text, ":")
+	if colonIndex == -1 {
+		return "", "", false
+	}
+	suffix := text[colonIndex+1:]
+	if !IsValidThinkingLevel(suffix) {
+		return "", "", false
+	}
+	return text[:colonIndex], ai.ThinkingLevel(suffix), true
 }
 
-// ParseModelPattern extracts a model and an optional thinking level from a
-// pattern, handling model ids that contain colons.
-func ParseModelPattern(pattern string, availableModels []*ai.Model, options *ParseModelPatternOptions) ParsedModelResult {
-	if exact := tryMatchModel(pattern, availableModels); exact != nil {
-		return ParsedModelResult{Model: exact}
+func splitProviderPrefix(text string, models []*ai.Model) (string, string, bool) {
+	slashIndex := strings.Index(text, "/")
+	if slashIndex == -1 {
+		return "", "", false
 	}
-
-	lastColonIndex := strings.LastIndex(pattern, ":")
-	if lastColonIndex == -1 {
-		return ParsedModelResult{}
+	prefix := ai.JSLower(ai.JSTrim(text[:slashIndex]))
+	modelText := ai.JSTrim(text[slashIndex+1:])
+	if prefix == "" || modelText == "" {
+		return "", "", false
 	}
-	prefix := pattern[:lastColonIndex]
-	suffix := pattern[lastColonIndex+1:]
-
-	if IsValidThinkingLevel(suffix) {
-		result := ParseModelPattern(prefix, availableModels, options)
-		if result.Model != nil {
-			level := ai.ThinkingLevel(suffix)
-			if result.Warning != "" {
-				return ParsedModelResult{Model: result.Model, Warning: result.Warning}
-			}
-			return ParsedModelResult{Model: result.Model, ThinkingLevel: level, HasThinking: true}
+	for _, model := range models {
+		if ai.JSLower(model.Provider) == prefix {
+			return model.Provider, modelText, true
 		}
+	}
+	return "", "", false
+}
+
+// ResolveModelReference resolves one reference. usable only breaks ties between
+// providers, so a unique match resolves even without credentials (`--api-key`
+// first-time setup).
+func ResolveModelReference(request ModelReferenceRequest, models []*ai.Model, usable func(string) bool) ModelReferenceResult {
+	text := ai.JSTrim(request.Text)
+	if text == "" {
+		return ModelReferenceResult{Status: "not-found"}
+	}
+	constraint := ai.JSLower(request.Provider)
+	pool := models
+	if constraint != "" {
+		pool = nil
+		for _, model := range models {
+			if ai.JSLower(model.Provider) == constraint {
+				pool = append(pool, model)
+			}
+		}
+	}
+	result := resolveReferenceText(text, request, pool, usable)
+	if result.Status != "not-found" {
 		return result
 	}
 
-	allowFallback := true
-	if options != nil && options.AllowInvalidThinkingLevelFallback != nil {
-		allowFallback = *options.AllowInvalidThinkingLevelFallback
-	}
-	if !allowFallback {
-		return ParsedModelResult{}
-	}
-	result := ParseModelPattern(prefix, availableModels, options)
-	if result.Model != nil {
-		return ParsedModelResult{
-			Model:   result.Model,
-			Warning: fmt.Sprintf("Invalid thinking level %q in pattern %q. Using default instead.", suffix, pattern),
+	provider, modelText, splitOK := splitProviderPrefix(text, pool)
+	var anchor *ai.Model
+	if constraint != "" {
+		if len(pool) > 0 {
+			anchor = pool[0]
+		}
+	} else if splitOK {
+		for _, model := range pool {
+			if model.Provider == provider {
+				anchor = model
+				break
+			}
 		}
 	}
-	return result
+	if anchor == nil {
+		return result
+	}
+	if !splitOK {
+		modelText = text
+	}
+	target := &ModelReferenceTarget{Provider: anchor.Provider, ModelText: modelText, ModelID: modelText}
+	for _, model := range pool {
+		if model.Provider == anchor.Provider {
+			target.ProviderModels = append(target.ProviderModels, model)
+		}
+	}
+	if request.ThinkingSuffix != thinkingSuffixNone {
+		if base, level, ok := splitThinkingSuffix(modelText); ok {
+			target.ModelID = base
+			target.ThinkingLevel = level
+			target.HasThinking = true
+		}
+	}
+	return ModelReferenceResult{Status: "not-found", Target: target}
+}
+
+// FindExactModelReferenceMatch finds a model by bare id or canonical
+// provider/model reference; ambiguous bare ids are rejected and no thinking
+// suffix is parsed.
+func FindExactModelReferenceMatch(modelReference string, models []*ai.Model) *ai.Model {
+	result := ResolveModelReference(ModelReferenceRequest{Text: modelReference, ThinkingSuffix: thinkingSuffixNone}, models, func(string) bool { return true })
+	if result.Status == "resolved" {
+		return result.Model
+	}
+	return nil
+}
+
+func resolveReferenceText(text string, request ModelReferenceRequest, pool []*ai.Model, usable func(string) bool) ModelReferenceResult {
+	if reference, ok := selectReference(text, pool, request.Fuzzy, usable); ok {
+		return reference
+	}
+	if request.Fuzzy {
+		if fuzzy, ok := selectFuzzy(fuzzyMatches(text, pool), usable); ok {
+			return fuzzy
+		}
+	}
+	if request.ThinkingSuffix == thinkingSuffixNone {
+		return ModelReferenceResult{Status: "not-found"}
+	}
+	if base, level, ok := splitThinkingSuffix(text); ok {
+		inner := resolveReferenceText(base, request, pool, usable)
+		if inner.Status == "not-found" {
+			return inner
+		}
+		if inner.Warning != "" {
+			inner.ThinkingLevel, inner.HasThinking = "", false
+		} else {
+			inner.ThinkingLevel, inner.HasThinking = level, true
+		}
+		return inner
+	}
+	// Keep an invalid suffix as part of the id and fail, rather than resolve a
+	// different model.
+	if request.ThinkingSuffix == thinkingSuffixStrict {
+		return ModelReferenceResult{Status: "not-found"}
+	}
+	colonIndex := strings.LastIndex(text, ":")
+	if colonIndex == -1 {
+		return ModelReferenceResult{Status: "not-found"}
+	}
+	suffix := text[colonIndex+1:]
+	inner := resolveReferenceText(text[:colonIndex], request, pool, usable)
+	if inner.Status == "not-found" {
+		return inner
+	}
+	inner.ThinkingLevel, inner.HasThinking = "", false
+	inner.Warning = fmt.Sprintf("Invalid thinking level %q in pattern %q. Using default instead.", suffix, text)
+	return inner
+}
+
+// selectReference: `provider/rest` is only a hint. The named provider wins when
+// usable, since that is what the syntax usually means; otherwise a sole usable
+// raw match wins. An unusable named match is still preferred over unusable raw
+// matches, so `--api-key` can set up the named provider.
+func selectReference(text string, pool []*ai.Model, fuzzy bool, usable func(string) bool) (ModelReferenceResult, bool) {
+	lowerText := ai.JSLower(text)
+	var raw []*ai.Model
+	for _, model := range pool {
+		if ai.JSLower(model.ID) == lowerText {
+			raw = append(raw, model)
+		}
+	}
+	namedProvider, modelText, splitOK := splitProviderPrefix(text, pool)
+	var named *ai.Model
+	if splitOK {
+		var providerModels []*ai.Model
+		for _, model := range pool {
+			if model.Provider == namedProvider {
+				providerModels = append(providerModels, model)
+			}
+		}
+		lowerModelText := ai.JSLower(modelText)
+		for _, model := range providerModels {
+			if ai.JSLower(model.ID) == lowerModelText {
+				named = model
+				break
+			}
+		}
+		if named == nil {
+			for _, model := range raw {
+				if model.Provider == namedProvider {
+					named = model
+					break
+				}
+			}
+		}
+		if named == nil && fuzzy {
+			named = bestFuzzyMatch(fuzzyMatches(modelText, providerModels))
+		}
+	}
+
+	var others []*ai.Model
+	for _, model := range raw {
+		if model != named {
+			others = append(others, model)
+		}
+	}
+	candidates := others
+	if named != nil {
+		candidates = append([]*ai.Model{named}, others...)
+	}
+	if len(candidates) == 0 {
+		return ModelReferenceResult{}, false
+	}
+	if providerSetSize(candidates) == 1 {
+		return resolvesTo(candidates[0]), true
+	}
+	if named != nil && usable(named.Provider) {
+		return resolvesTo(named), true
+	}
+	var usableOthers []*ai.Model
+	for _, model := range others {
+		if usable(model.Provider) {
+			usableOthers = append(usableOthers, model)
+		}
+	}
+	if len(usableOthers) == 1 {
+		return resolvesTo(usableOthers[0]), true
+	}
+	if len(usableOthers) == 0 && named != nil {
+		return resolvesTo(named), true
+	}
+	return ModelReferenceResult{Status: "ambiguous", Candidates: candidates, UsableCount: len(usableOthers)}, true
+}
+
+func fuzzyMatches(text string, models []*ai.Model) []*ai.Model {
+	lowerText := ai.JSLower(text)
+	var matches []*ai.Model
+	for _, model := range models {
+		if strings.Contains(ai.JSLower(model.ID), lowerText) ||
+			(model.Name != "" && strings.Contains(ai.JSLower(model.Name), lowerText)) {
+			matches = append(matches, model)
+		}
+	}
+	return matches
+}
+
+func selectFuzzy(matches []*ai.Model, usable func(string) bool) (ModelReferenceResult, bool) {
+	if len(matches) == 0 {
+		return ModelReferenceResult{}, false
+	}
+	multipleProviders := providerSetSize(matches) > 1
+	var usableMatches []*ai.Model
+	if multipleProviders {
+		for _, model := range matches {
+			if usable(model.Provider) {
+				usableMatches = append(usableMatches, model)
+			}
+		}
+	}
+	pool := matches
+	if len(usableMatches) > 0 {
+		pool = usableMatches
+	}
+	best := bestFuzzyMatch(pool)
+	if best == nil {
+		return ModelReferenceResult{}, false
+	}
+	var tied []*ai.Model
+	for _, model := range pool {
+		if model.ID == best.ID {
+			tied = append(tied, model)
+		}
+	}
+	if providerSetSize(tied) == 1 {
+		return resolvesTo(best), true
+	}
+	usableCount := 0
+	if len(usableMatches) > 0 {
+		usableCount = len(tied)
+	}
+	return ModelReferenceResult{Status: "ambiguous", Candidates: tied, UsableCount: usableCount}, true
+}
+
+// bestFuzzyMatch prefers aliases over dated versions, then the latest.
+func bestFuzzyMatch(matches []*ai.Model) *ai.Model {
+	if len(matches) == 0 {
+		return nil
+	}
+	var aliases []*ai.Model
+	for _, model := range matches {
+		if IsAlias(model.ID) {
+			aliases = append(aliases, model)
+		}
+	}
+	pool := matches
+	if len(aliases) > 0 {
+		pool = aliases
+	}
+	sorted := append([]*ai.Model{}, pool...)
+	sort.SliceStable(sorted, func(i, j int) bool { return sorted[i].ID > sorted[j].ID })
+	return sorted[0]
+}
+
+func providerSetSize(models []*ai.Model) int {
+	set := map[string]struct{}{}
+	for _, model := range models {
+		set[model.Provider] = struct{}{}
+	}
+	return len(set)
+}
+
+func resolvesTo(model *ai.Model) ModelReferenceResult {
+	return ModelReferenceResult{Status: "resolved", Model: model}
+}
+
+// buildFallbackModel clones a provider's default model under a custom id.
+func buildFallbackModel(providerModels []*ai.Model, modelID string) *ai.Model {
+	if len(providerModels) == 0 {
+		return nil
+	}
+	baseModel := providerModels[0]
+	if defaultID := DefaultModelPerProvider[ai.ProviderId(baseModel.Provider)]; defaultID != "" {
+		for _, model := range providerModels {
+			if model.ID == defaultID {
+				baseModel = model
+				break
+			}
+		}
+	}
+	cloned := *baseModel
+	cloned.ID = modelID
+	cloned.Name = modelID
+	return &cloned
 }
 
 // ModelScopeDiagnostic is one scope warning.
@@ -259,80 +477,94 @@ type ResolveModelScopeResult struct {
 
 // ResolveModelScopeFromModels resolves model patterns over a model list.
 func ResolveModelScopeFromModels(patterns []string, models []*ai.Model) ResolveModelScopeResult {
-	availableModels := append([]*ai.Model{}, models...)
 	var scopedModels []ScopedModel
 	var diagnostics []ModelScopeDiagnostic
-
-	has := func(model *ai.Model) bool {
+	add := func(model *ai.Model, thinking ai.ThinkingLevel, hasThinking bool) {
 		for _, scoped := range scopedModels {
 			if ai.ModelsAreEqual(scoped.Model, model) {
-				return true
+				return
 			}
 		}
-		return false
+		scopedModels = append(scopedModels, ScopedModel{Model: model, ThinkingLevel: thinking, HasThinking: hasThinking})
+	}
+	noMatch := func(pattern string) {
+		diagnostics = append(diagnostics, ModelScopeDiagnostic{
+			Type: "warning", Code: "no-match", Message: fmt.Sprintf("No models match pattern %q", pattern), Pattern: pattern,
+		})
+	}
+	ambiguous := func(pattern string, candidates []*ai.Model) {
+		set := map[string]struct{}{}
+		for _, model := range candidates {
+			set[model.Provider] = struct{}{}
+		}
+		var providers []string
+		for provider := range set {
+			providers = append(providers, provider)
+		}
+		sort.Strings(providers)
+		diagnostics = append(diagnostics, ModelScopeDiagnostic{
+			Type: "warning", Code: "ambiguous", Pattern: pattern,
+			Message: fmt.Sprintf("Pattern %q matches several providers: %s. Use provider/id to choose one.", pattern, strings.Join(providers, ", ")),
+		})
 	}
 
 	for _, pattern := range patterns {
+		// Check if pattern contains glob characters.
 		if strings.ContainsAny(pattern, "*?[") {
-			colonIndex := strings.LastIndex(pattern, ":")
+			// Extract an optional thinking level suffix (e.g. "provider/*:high").
 			globPattern := pattern
 			var thinkingLevel ai.ThinkingLevel
 			hasThinking := false
-			if colonIndex != -1 {
-				suffix := pattern[colonIndex+1:]
-				if IsValidThinkingLevel(suffix) {
-					thinkingLevel = ai.ThinkingLevel(suffix)
-					hasThinking = true
-					globPattern = pattern[:colonIndex]
-				}
+			if base, level, ok := splitThinkingSuffix(pattern); ok {
+				globPattern = base
+				thinkingLevel = level
+				hasThinking = true
 			}
 
-			if exact := FindExactModelReferenceMatch(globPattern, availableModels); exact != nil {
-				if !has(exact) {
-					scopedModels = append(scopedModels, ScopedModel{Model: exact, ThinkingLevel: thinkingLevel, HasThinking: hasThinking})
+			// Ids such as `bracketed-model[1m]` are not globs.
+			exact := ResolveModelReference(ModelReferenceRequest{Text: globPattern, ThinkingSuffix: thinkingSuffixNone}, models, func(string) bool { return true })
+			var matches []*ai.Model
+			switch exact.Status {
+			case "resolved":
+				matches = []*ai.Model{exact.Model}
+			case "ambiguous":
+				matches = exact.Candidates
+				ambiguous(pattern, matches)
+			default:
+				// Match against "provider/modelId" format OR just model ID.
+				for _, model := range models {
+					if MatchGlob(globPattern, model.Provider+"/"+model.ID, true) || MatchGlob(globPattern, model.ID, true) {
+						matches = append(matches, model)
+					}
 				}
-				continue
 			}
-
-			var matchingModels []*ai.Model
-			for _, model := range availableModels {
-				fullID := model.Provider + "/" + model.ID
-				if MatchGlob(globPattern, fullID, true) || MatchGlob(globPattern, model.ID, true) {
-					matchingModels = append(matchingModels, model)
-				}
+			if len(matches) == 0 {
+				noMatch(pattern)
 			}
-			if len(matchingModels) == 0 {
-				diagnostics = append(diagnostics, ModelScopeDiagnostic{
-					Type: "warning", Code: "no-match",
-					Message: fmt.Sprintf("No models match pattern %q", pattern), Pattern: pattern,
-				})
-				continue
-			}
-			for _, model := range matchingModels {
-				if !has(model) {
-					scopedModels = append(scopedModels, ScopedModel{Model: model, ThinkingLevel: thinkingLevel, HasThinking: hasThinking})
-				}
+			for _, model := range matches {
+				add(model, thinkingLevel, hasThinking)
 			}
 			continue
 		}
 
-		parsed := ParseModelPattern(pattern, availableModels, nil)
-		if parsed.Warning != "" {
-			diagnostics = append(diagnostics, ModelScopeDiagnostic{
-				Type: "warning", Code: "invalid-thinking-level", Message: parsed.Warning, Pattern: pattern,
-			})
-		}
-		if parsed.Model == nil {
-			diagnostics = append(diagnostics, ModelScopeDiagnostic{
-				Type: "warning", Code: "no-match",
-				Message: fmt.Sprintf("No models match pattern %q", pattern), Pattern: pattern,
-			})
+		result := ResolveModelReference(ModelReferenceRequest{Text: pattern, ThinkingSuffix: thinkingSuffixLenient, Fuzzy: true}, models, func(string) bool { return true })
+		if result.Status == "not-found" {
+			noMatch(pattern)
 			continue
 		}
-		if !has(parsed.Model) {
-			scopedModels = append(scopedModels, ScopedModel{
-				Model: parsed.Model, ThinkingLevel: parsed.ThinkingLevel, HasThinking: parsed.HasThinking,
+		if result.Warning != "" {
+			diagnostics = append(diagnostics, ModelScopeDiagnostic{
+				Type: "warning", Code: "invalid-thinking-level", Message: result.Warning, Pattern: pattern,
 			})
+		}
+		matches := result.Candidates
+		if result.Status == "resolved" {
+			matches = []*ai.Model{result.Model}
+		} else {
+			ambiguous(pattern, result.Candidates)
+		}
+		for _, model := range matches {
+			add(model, result.ThinkingLevel, result.HasThinking)
 		}
 	}
 	return ResolveModelScopeResult{ScopedModels: scopedModels, Diagnostics: diagnostics}
@@ -354,7 +586,10 @@ type ResolveCliModelOptions struct {
 	CLIModel       string
 	CLIThinking    ai.ThinkingLevel
 	HasCLIThinking bool
-	ModelRuntime   ModelRuntimeSource
+	// InlineAPIKey is set when --api-key was supplied for the selected provider;
+	// stored credentials must not choose the provider then.
+	InlineAPIKey bool
+	ModelRuntime ModelRuntimeSource
 }
 
 // ResolveCliModel resolves a single model from CLI flags.
@@ -367,206 +602,91 @@ func ResolveCliModel(options ResolveCliModelOptions) ResolveCliModelResult {
 		return ResolveCliModelResult{}
 	}
 
-	availableModels := modelRuntime.GetModels("")
-	if len(availableModels) == 0 {
+	// Important: use *all* models here, not just models with pre-configured auth.
+	// This allows "--api-key" to be used for first-time setup.
+	models := modelRuntime.GetModels("")
+	if len(models) == 0 {
 		return ResolveCliModelResult{Error: "No models available. Check your installation or add models to models.json."}
-	}
-
-	providerMap := map[string]string{}
-	for _, model := range availableModels {
-		providerMap[ai.JSLower(model.Provider)] = model.Provider
 	}
 
 	provider := ""
 	if cliProvider != "" {
-		provider = providerMap[ai.JSLower(cliProvider)]
+		for _, model := range models {
+			if ai.JSLower(model.Provider) == ai.JSLower(cliProvider) {
+				provider = model.Provider
+				break
+			}
+		}
 		if provider == "" {
 			return ResolveCliModelResult{Error: fmt.Sprintf("Unknown provider %q. Use --list-models to see available providers/models.", cliProvider)}
 		}
 	}
 
-	pattern := cliModel
-	inferredProvider := false
-	if provider == "" {
-		if slashIndex := strings.Index(cliModel, "/"); slashIndex != -1 {
-			maybeProvider := cliModel[:slashIndex]
-			if canonical, ok := providerMap[ai.JSLower(maybeProvider)]; ok {
-				provider = canonical
-				pattern = cliModel[slashIndex+1:]
-				inferredProvider = true
-			}
-		}
+	usable := func(providerID string) bool { return modelRuntime.HasConfiguredAuth(providerID) }
+	if options.InlineAPIKey {
+		// An inline key goes to whichever provider is selected, so stored
+		// credentials must not choose it.
+		usable = func(string) bool { return false }
 	}
-
-	if provider == "" {
-		lower := ai.JSLower(cliModel)
-		var exactMatches []*ai.Model
-		for _, model := range availableModels {
-			if ai.JSLower(model.ID) == lower || ai.JSLower(model.Provider+"/"+model.ID) == lower {
-				exactMatches = append(exactMatches, model)
-			}
-		}
-		if len(exactMatches) == 1 {
-			return ResolveCliModelResult{Model: exactMatches[0]}
-		}
-		if len(exactMatches) > 1 {
-			var authenticated []*ai.Model
-			for _, model := range exactMatches {
-				if modelRuntime.HasConfiguredAuth(model.Provider) {
-					authenticated = append(authenticated, model)
-				}
-			}
-			if len(authenticated) == 1 {
-				return ResolveCliModelResult{Model: authenticated[0]}
-			}
-			var described []string
-			for _, model := range exactMatches {
-				described = append(described, model.Provider+"/"+model.ID)
-			}
-			sort.Strings(described)
-			authHint := "No matching provider is authenticated."
-			if len(authenticated) > 0 {
-				authHint = "More than one matching provider is authenticated."
-			}
-			return ResolveCliModelResult{Error: fmt.Sprintf(
-				"Model %q is ambiguous across providers: %s. %s Use --provider or provider/model.",
-				cliModel, strings.Join(described, ", "), authHint)}
-		}
-	}
-
-	if cliProvider != "" && provider != "" {
-		prefix := provider + "/"
-		if strings.HasPrefix(ai.JSLower(cliModel), ai.JSLower(prefix)) {
-			pattern = cliModel[len(prefix):]
-		}
-	}
-
-	var candidates []*ai.Model
-	if provider != "" {
-		for _, model := range availableModels {
-			if model.Provider == provider {
-				candidates = append(candidates, model)
-			}
-		}
-	} else {
-		candidates = availableModels
-	}
-	strict := false
-	parsed := ParseModelPattern(pattern, candidates, &ParseModelPatternOptions{
-		AllowInvalidThinkingLevelFallback: &strict,
-	})
-
-	if parsed.Model != nil {
-		if inferredProvider {
-			var rawExactMatches []*ai.Model
-			for _, model := range availableModels {
-				if ai.JSLower(model.ID) == ai.JSLower(cliModel) && !ai.ModelsAreEqual(model, parsed.Model) {
-					rawExactMatches = append(rawExactMatches, model)
-				}
-			}
-			if len(rawExactMatches) > 0 && !modelRuntime.HasConfiguredAuth(parsed.Model.Provider) {
-				var authenticatedRaw []*ai.Model
-				for _, model := range rawExactMatches {
-					if modelRuntime.HasConfiguredAuth(model.Provider) {
-						authenticatedRaw = append(authenticatedRaw, model)
-					}
-				}
-				if len(authenticatedRaw) == 1 {
-					return ResolveCliModelResult{Model: authenticatedRaw[0]}
-				}
-			}
-		}
+	result := ResolveModelReference(ModelReferenceRequest{
+		Text: cliModel, Provider: provider, ThinkingSuffix: thinkingSuffixStrict, Fuzzy: true,
+	}, models, usable)
+	if result.Status == "resolved" {
 		return ResolveCliModelResult{
-			Model: parsed.Model, ThinkingLevel: parsed.ThinkingLevel, HasThinking: parsed.HasThinking, Warning: parsed.Warning,
+			Model: result.Model, ThinkingLevel: result.ThinkingLevel, HasThinking: result.HasThinking, Warning: result.Warning,
 		}
 	}
-
-	if inferredProvider {
-		lower := ai.JSLower(cliModel)
-		for _, model := range availableModels {
-			if ai.JSLower(model.ID) == lower || ai.JSLower(model.Provider+"/"+model.ID) == lower {
-				return ResolveCliModelResult{Model: model}
-			}
+	if result.Status == "ambiguous" {
+		var described []string
+		for _, model := range result.Candidates {
+			described = append(described, model.Provider+"/"+model.ID)
 		}
-		fallback := ParseModelPattern(cliModel, availableModels, &ParseModelPatternOptions{
-			AllowInvalidThinkingLevelFallback: &strict,
-		})
-		if fallback.Model != nil {
-			return ResolveCliModelResult{
-				Model: fallback.Model, ThinkingLevel: fallback.ThinkingLevel, HasThinking: fallback.HasThinking, Warning: fallback.Warning,
-			}
+		sort.Strings(described)
+		authHint := ""
+		switch {
+		case options.InlineAPIKey:
+			authHint = "--api-key does not choose a provider."
+		case result.UsableCount == 0:
+			authHint = "No matching provider is authenticated."
+		default:
+			authHint = "More than one matching provider is authenticated."
 		}
+		return ResolveCliModelResult{Error: fmt.Sprintf(
+			"Model %q is ambiguous across providers: %s. %s Use --provider or provider/model.",
+			cliModel, strings.Join(described, ", "), authHint)}
 	}
 
-	if provider != "" {
-		fallbackPattern := pattern
-		var fallbackThinking ai.ThinkingLevel
-		hasFallbackThinking := false
-		if !options.HasCLIThinking {
-			if lastColon := strings.LastIndex(pattern, ":"); lastColon != -1 {
-				suffix := pattern[lastColon+1:]
-				if IsValidThinkingLevel(suffix) {
-					fallbackPattern = pattern[:lastColon]
-					fallbackThinking = ai.ThinkingLevel(suffix)
-					hasFallbackThinking = true
-				}
-			}
-		}
-		fallbackModel := buildFallbackModel(provider, fallbackPattern, availableModels)
-		if fallbackModel != nil {
-			requestedThinking := options.CLIThinking
-			if !options.HasCLIThinking {
-				requestedThinking = fallbackThinking
-			}
-			model := fallbackModel
-			if requestedThinking != "" && requestedThinking != ai.ThinkOff {
-				cloned := *fallbackModel
-				cloned.Reasoning = true
-				model = &cloned
-			}
-			warning := fmt.Sprintf("Model %q not found for provider %q. Using custom model id.", fallbackPattern, provider)
-			if parsed.Warning != "" {
-				warning = parsed.Warning + " " + warning
-			}
-			return ResolveCliModelResult{
-				Model: model, ThinkingLevel: fallbackThinking, HasThinking: hasFallbackThinking, Warning: warning,
-			}
-		}
+	target := result.Target
+	if target == nil {
+		return ResolveCliModelResult{Error: fmt.Sprintf("Model %q not found. Use --list-models to see available models.", cliModel)}
 	}
 
-	display := cliModel
-	if provider != "" {
-		display = provider + "/" + pattern
+	// Use the thinking level suffix only when --thinking is not explicitly
+	// provided; otherwise it stays part of the custom model id.
+	modelID := target.ModelText
+	fallbackThinking := target.ThinkingLevel
+	hasFallbackThinking := target.HasThinking
+	if !options.HasCLIThinking {
+		modelID = target.ModelID
+	} else {
+		fallbackThinking = ""
+		hasFallbackThinking = false
+	}
+	fallbackModel := buildFallbackModel(target.ProviderModels, modelID)
+	requestedThinking := options.CLIThinking
+	if !options.HasCLIThinking {
+		requestedThinking = fallbackThinking
+	}
+	model := fallbackModel
+	if requestedThinking != "" && requestedThinking != ai.ThinkOff {
+		cloned := *fallbackModel
+		cloned.Reasoning = true
+		model = &cloned
 	}
 	return ResolveCliModelResult{
-		Warning: parsed.Warning,
-		Error:   fmt.Sprintf("Model %q not found. Use --list-models to see available models.", display),
+		Model: model, ThinkingLevel: fallbackThinking, HasThinking: hasFallbackThinking,
+		Warning: fmt.Sprintf("Model %q not found for provider %q. Using custom model id.", modelID, target.Provider),
 	}
-}
-
-func buildFallbackModel(provider, modelID string, availableModels []*ai.Model) *ai.Model {
-	var providerModels []*ai.Model
-	for _, model := range availableModels {
-		if model.Provider == provider {
-			providerModels = append(providerModels, model)
-		}
-	}
-	if len(providerModels) == 0 {
-		return nil
-	}
-	base := providerModels[0]
-	if defaultID, ok := DefaultModelPerProvider[ai.ProviderId(provider)]; ok {
-		for _, model := range providerModels {
-			if model.ID == defaultID {
-				base = model
-				break
-			}
-		}
-	}
-	cloned := *base
-	cloned.ID = modelID
-	cloned.Name = modelID
-	return &cloned
 }
 
 // InitialModelResult is the initial model selection.

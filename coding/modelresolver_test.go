@@ -94,106 +94,90 @@ func (r *fakeRuntime) HasConfiguredAuth(providerID string) bool {
 	return r.configuredProviders[providerID]
 }
 
-func TestParseModelPattern(t *testing.T) {
+func TestResolveModelReference(t *testing.T) {
 	models := allMockModels()
+	resolve := func(text string) ModelReferenceResult {
+		return ResolveModelReference(ModelReferenceRequest{Text: text, ThinkingSuffix: thinkingSuffixLenient, Fuzzy: true}, models, func(string) bool { return true })
+	}
 
 	// Exact match.
-	result := ParseModelPattern("claude-sonnet-4-5", models, nil)
-	if result.Model == nil || result.Model.ID != "claude-sonnet-4-5" || result.HasThinking || result.Warning != "" {
+	result := resolve("claude-sonnet-4-5")
+	if result.Status != "resolved" || result.Model.ID != "claude-sonnet-4-5" || result.HasThinking || result.Warning != "" {
 		t.Fatalf("exact match = %+v", result)
 	}
 	// Partial match.
-	result = ParseModelPattern("sonnet", models, nil)
-	if result.Model == nil || result.Model.ID != "claude-sonnet-4-5" || result.HasThinking || result.Warning != "" {
+	result = resolve("sonnet")
+	if result.Status != "resolved" || result.Model.ID != "claude-sonnet-4-5" {
 		t.Fatalf("partial match = %+v", result)
 	}
 	// No match.
-	result = ParseModelPattern("nonexistent", models, nil)
-	if result.Model != nil || result.HasThinking || result.Warning != "" {
+	if result = resolve("nonexistent"); result.Status != "not-found" {
 		t.Fatalf("no match = %+v", result)
 	}
 
 	// Valid thinking levels.
-	result = ParseModelPattern("sonnet:high", models, nil)
-	if result.Model == nil || result.Model.ID != "claude-sonnet-4-5" ||
-		!result.HasThinking || result.ThinkingLevel != ai.ThinkHigh || result.Warning != "" {
-		t.Fatalf("sonnet:high = %+v", result)
-	}
-	result = ParseModelPattern("gpt-4o:medium", models, nil)
-	if result.Model == nil || result.Model.ID != "gpt-4o" || result.ThinkingLevel != ai.ThinkMedium || result.Warning != "" {
-		t.Fatalf("gpt-4o:medium = %+v", result)
-	}
 	for _, level := range []string{"off", "minimal", "low", "medium", "high", "xhigh", "max"} {
-		result = ParseModelPattern("sonnet:"+level, models, nil)
-		if result.Model == nil || result.Model.ID != "claude-sonnet-4-5" ||
+		result = resolve("sonnet:" + level)
+		if result.Status != "resolved" || result.Model.ID != "claude-sonnet-4-5" ||
 			!result.HasThinking || string(result.ThinkingLevel) != level || result.Warning != "" {
 			t.Fatalf("sonnet:%s = %+v", level, result)
 		}
 	}
 
 	// Invalid thinking levels warn and keep the model.
-	result = ParseModelPattern("sonnet:random", models, nil)
-	if result.Model == nil || result.Model.ID != "claude-sonnet-4-5" || result.HasThinking {
+	result = resolve("sonnet:random")
+	if result.Status != "resolved" || result.Model.ID != "claude-sonnet-4-5" || result.HasThinking {
 		t.Fatalf("sonnet:random = %+v", result)
 	}
 	if !strings.Contains(result.Warning, "Invalid thinking level") || !strings.Contains(result.Warning, "random") {
 		t.Fatalf("warning = %q", result.Warning)
 	}
-	result = ParseModelPattern("gpt-4o:invalid", models, nil)
-	if result.Model == nil || result.Model.ID != "gpt-4o" || !strings.Contains(result.Warning, "Invalid thinking level") {
-		t.Fatalf("gpt-4o:invalid = %+v", result)
-	}
 
 	// Colons inside model ids.
-	result = ParseModelPattern("qwen/qwen3-coder:exacto", models, nil)
-	if result.Model == nil || result.Model.ID != "qwen/qwen3-coder:exacto" || result.HasThinking || result.Warning != "" {
+	result = resolve("qwen/qwen3-coder:exacto")
+	if result.Status != "resolved" || result.Model.ID != "qwen/qwen3-coder:exacto" || result.HasThinking || result.Warning != "" {
 		t.Fatalf("qwen exacto = %+v", result)
 	}
-	result = ParseModelPattern("openrouter/qwen/qwen3-coder:exacto", models, nil)
-	if result.Model == nil || result.Model.ID != "qwen/qwen3-coder:exacto" || result.Model.Provider != "openrouter" {
+	result = resolve("openrouter/qwen/qwen3-coder:exacto")
+	if result.Status != "resolved" || result.Model.ID != "qwen/qwen3-coder:exacto" || result.Model.Provider != "openrouter" {
 		t.Fatalf("provider-prefixed exacto = %+v", result)
 	}
-	result = ParseModelPattern("qwen/qwen3-coder:exacto:high", models, nil)
-	if result.Model == nil || result.Model.ID != "qwen/qwen3-coder:exacto" || result.ThinkingLevel != ai.ThinkHigh {
+	result = resolve("qwen/qwen3-coder:exacto:high")
+	if result.Status != "resolved" || result.Model.ID != "qwen/qwen3-coder:exacto" || result.ThinkingLevel != ai.ThinkHigh {
 		t.Fatalf("exacto:high = %+v", result)
 	}
-	result = ParseModelPattern("openrouter/qwen/qwen3-coder:exacto:high", models, nil)
-	if result.Model == nil || result.Model.Provider != "openrouter" || result.ThinkingLevel != ai.ThinkHigh {
+	result = resolve("openrouter/qwen/qwen3-coder:exacto:high")
+	if result.Status != "resolved" || result.Model.Provider != "openrouter" || result.ThinkingLevel != ai.ThinkHigh {
 		t.Fatalf("provider exacto:high = %+v", result)
 	}
-	result = ParseModelPattern("openai/gpt-4o:extended", models, nil)
-	if result.Model == nil || result.Model.ID != "openai/gpt-4o:extended" || result.HasThinking || result.Warning != "" {
+	result = resolve("openai/gpt-4o:extended")
+	if result.Status != "resolved" || result.Model.ID != "openai/gpt-4o:extended" || result.HasThinking || result.Warning != "" {
 		t.Fatalf("extended = %+v", result)
 	}
 
 	// Invalid suffixes after colons in model ids.
-	result = ParseModelPattern("qwen/qwen3-coder:exacto:random", models, nil)
-	if result.Model == nil || result.Model.ID != "qwen/qwen3-coder:exacto" || result.HasThinking ||
+	result = resolve("qwen/qwen3-coder:exacto:random")
+	if result.Status != "resolved" || result.Model.ID != "qwen/qwen3-coder:exacto" || result.HasThinking ||
 		!strings.Contains(result.Warning, "Invalid thinking level") || !strings.Contains(result.Warning, "random") {
 		t.Fatalf("exacto:random = %+v", result)
 	}
-	result = ParseModelPattern("qwen/qwen3-coder:exacto:high:random", models, nil)
-	if result.Model == nil || result.Model.ID != "qwen/qwen3-coder:exacto" || result.HasThinking ||
-		!strings.Contains(result.Warning, "random") {
-		t.Fatalf("exacto:high:random = %+v", result)
-	}
 
-	// Edge cases: an empty pattern matches through partial matching, and an
-	// empty suffix is an invalid thinking level.
-	result = ParseModelPattern("", models, nil)
-	if result.Model == nil || result.HasThinking {
-		t.Fatalf("empty pattern = %+v", result)
-	}
-	result = ParseModelPattern("sonnet:", models, nil)
-	if result.Model == nil || result.Model.ID != "claude-sonnet-4-5" || !strings.Contains(result.Warning, "Invalid thinking level") {
+	// An empty suffix is an invalid thinking level.
+	result = resolve("sonnet:")
+	if result.Status != "resolved" || result.Model.ID != "claude-sonnet-4-5" || !strings.Contains(result.Warning, "Invalid thinking level") {
 		t.Fatalf("sonnet: = %+v", result)
 	}
 
 	// strict mode (CLI --model) rejects an invalid suffix instead of stripping it.
-	strict := false
-	result = ParseModelPattern("gpt-4o:invalid", models, &ParseModelPatternOptions{AllowInvalidThinkingLevelFallback: &strict})
-	if result.Model != nil || result.Warning != "" {
-		t.Fatalf("strict invalid suffix = %+v", result)
+	strict := ResolveModelReference(ModelReferenceRequest{Text: "gpt-4o:invalid", ThinkingSuffix: thinkingSuffixStrict, Fuzzy: true}, models, func(string) bool { return true })
+	if strict.Status != "not-found" || strict.Warning != "" {
+		t.Fatalf("strict invalid suffix = %+v", strict)
+	}
+
+	// "none" keeps a colon suffix part of the id.
+	none := ResolveModelReference(ModelReferenceRequest{Text: "qwen/qwen3-coder:exacto", ThinkingSuffix: thinkingSuffixNone, Fuzzy: false}, models, func(string) bool { return true })
+	if none.Status != "resolved" || none.HasThinking || none.Model.ID != "qwen/qwen3-coder:exacto" {
+		t.Fatalf("none = %+v", none)
 	}
 }
 

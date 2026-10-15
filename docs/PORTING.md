@@ -157,12 +157,14 @@ Ported so far:
   #10930/#10853). Sign in with ChatGPT keeps the request-level effort. The
   Anthropic side (`supportsMidConvoEffort` on `anthropic-messages`) already
   existed.
+- `--model` and scope resolution collect candidates before choosing a provider,
+  report ambiguity across providers instead of using catalog order, prefer an
+  authenticated provider only to break a tie, and warn when a scope pattern
+  matches several providers (`coding-agent/core/model-resolver.ts`,
+  #10160/#10913). `--api-key` keeps the provider the key is for.
 
 Still to port:
 
-- `--model` provider selection resolves candidates before choosing a provider
-  and reports ambiguity instead of using catalog order
-  (`coding-agent/core/model-resolver.ts`, #10160/#10913).
 - `durable` namespaced SQLite storage (#10937).
 
 The `durable` base64 `btoa` fix (#10923) is a V8 concatenation-tree memory fix;

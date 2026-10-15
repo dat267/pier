@@ -648,7 +648,7 @@ func resolveCliModelFlags(args *coding.Args, runtime coding.ModelRuntimeSource) 
 		modelID = *args.Model
 	}
 	resolved := coding.ResolveCliModel(coding.ResolveCliModelOptions{
-		CLIProvider: provider, CLIModel: modelID, ModelRuntime: runtime,
+		CLIProvider: provider, CLIModel: modelID, InlineAPIKey: args.APIKey != nil, ModelRuntime: runtime,
 	})
 	if resolved.Error != "" {
 		return nil, "", fmt.Errorf("%s", resolved.Error)
