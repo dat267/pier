@@ -23,7 +23,7 @@ type sqliteDocumentRow struct {
 // commitSqliteDocuments applies the batch's merged document actions inside the
 // commit transaction (upstream's storage applies one revision per document per
 // commit; the memories of the same batch are merged first).
-func commitSqliteDocuments(ctx context.Context, tx *sql.Tx, writes []StorageWrite, seq Seq) error {
+func commitSqliteDocuments(ctx context.Context, tx *sqliteTx, writes []StorageWrite, seq Seq) error {
 	actions, err := mergeDocumentActions(writes)
 	if err != nil {
 		return err
@@ -185,7 +185,7 @@ func sortIds(ids []Id) {
 }
 
 // insertSqliteRevision appends one base or delta.
-func insertSqliteRevision(ctx context.Context, tx *sql.Tx, id Id, seq Seq, content DocumentContent) error {
+func insertSqliteRevision(ctx context.Context, tx *sqliteTx, id Id, seq Seq, content DocumentContent) error {
 	encoded := content
 	if content.Kind == ContentBase {
 		// Keep the base value as raw JSON in the content column.
@@ -206,7 +206,7 @@ func insertSqliteRevision(ctx context.Context, tx *sql.Tx, id Id, seq Seq, conte
 }
 
 // sqliteDocumentTx reads one document row inside a transaction.
-func sqliteDocumentTx(ctx context.Context, tx *sql.Tx, id Id) (*sqliteDocumentRow, error) {
+func sqliteDocumentTx(ctx context.Context, tx *sqliteTx, id Id) (*sqliteDocumentRow, error) {
 	var recordJSON string
 	var createdAt int64
 	var retiredAt sql.NullInt64
@@ -236,7 +236,7 @@ func sqliteDocumentTx(ctx context.Context, tx *sql.Tx, id Id) (*sqliteDocumentRo
 
 // sqliteFindDocumentTx resolves an exact address at a point inside a
 // transaction.
-func sqliteFindDocumentTx(ctx context.Context, tx *sql.Tx, address DocumentAddress, at DocumentPoint) (*DocumentRecord, error) {
+func sqliteFindDocumentTx(ctx context.Context, tx *sqliteTx, address DocumentAddress, at DocumentPoint) (*DocumentRecord, error) {
 	rows, err := tx.QueryContext(ctx,
 		`SELECT record, created_at, retired_at FROM documents
 		 WHERE kind = ? AND scope_kind = ? AND owner_id = ? AND family = ? AND key_value = ?
@@ -283,7 +283,7 @@ func sqliteFindDocumentTx(ctx context.Context, tx *sql.Tx, address DocumentAddre
 }
 
 // sqliteLastRevisionTx returns the newest stored revision of a document.
-func sqliteLastRevisionTx(ctx context.Context, tx *sql.Tx, id Id) (*DocumentContent, error) {
+func sqliteLastRevisionTx(ctx context.Context, tx *sqliteTx, id Id) (*DocumentContent, error) {
 	var contentJSON string
 	err := tx.QueryRowContext(ctx,
 		"SELECT content FROM document_revisions WHERE document_id = ? ORDER BY seq DESC LIMIT 1", id).Scan(&contentJSON)
@@ -302,7 +302,7 @@ func sqliteLastRevisionTx(ctx context.Context, tx *sql.Tx, id Id) (*DocumentCont
 
 // sqliteMaterializeDocumentTx materializes one incarnation at a point inside a
 // transaction.
-func sqliteMaterializeDocumentTx(ctx context.Context, tx *sql.Tx, id Id, at DocumentPoint) (*StoredDocument, error) {
+func sqliteMaterializeDocumentTx(ctx context.Context, tx *sqliteTx, id Id, at DocumentPoint) (*StoredDocument, error) {
 	row, err := sqliteDocumentTx(ctx, tx, id)
 	if err != nil || row == nil {
 		return nil, err

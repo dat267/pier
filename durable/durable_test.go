@@ -51,6 +51,18 @@ func newSqliteStorageConformance(t *testing.T) *SqliteStorage {
 	return storage
 }
 
+// newPrefixedSqliteStorageConformance runs the same conformance suite over a
+// prefixed schema (#10937), so every query exercises the prefix rewriter.
+func newPrefixedSqliteStorageConformance(t *testing.T) *SqliteStorage {
+	t.Helper()
+	storage, err := OpenSqliteStorageWithOptions(t.TempDir()+"/durable.db", SqliteStorageOptions{Prefix: "pi_"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = storage.Close(context.Background()) })
+	return storage
+}
+
 func conversationWrite(id Id) StorageWrite {
 	return StorageWrite{Type: "conversation", Conversation: &ConversationRecord{ID: id}}
 }
@@ -426,6 +438,7 @@ func TestRootConversationID(t *testing.T) {
 	t.Run("memory", func(t *testing.T) { testRootConversationID(t, NewMemoryStorage()) })
 	t.Run("jsonl", func(t *testing.T) { testRootConversationID(t, newJsonlStorageConformance(t)) })
 	t.Run("sqlite", func(t *testing.T) { testRootConversationID(t, newSqliteStorageConformance(t)) })
+	t.Run("sqlite-prefix", func(t *testing.T) { testRootConversationID(t, newPrefixedSqliteStorageConformance(t)) })
 }
 
 func testRootConversationID(t *testing.T, storage Storage) {
@@ -440,54 +453,63 @@ func TestCommitSequencesAndMintedIDs(t *testing.T) {
 	t.Run("memory", func(t *testing.T) { testCommitSequencesAndMintedIDs(t, NewMemoryStorage()) })
 	t.Run("jsonl", func(t *testing.T) { testCommitSequencesAndMintedIDs(t, newJsonlStorageConformance(t)) })
 	t.Run("sqlite", func(t *testing.T) { testCommitSequencesAndMintedIDs(t, newSqliteStorageConformance(t)) })
+	t.Run("sqlite-prefix", func(t *testing.T) { testCommitSequencesAndMintedIDs(t, newPrefixedSqliteStorageConformance(t)) })
 }
 
 func TestImmutableIDOwnership(t *testing.T) {
 	t.Run("memory", func(t *testing.T) { testImmutableIDOwnership(t, NewMemoryStorage()) })
 	t.Run("jsonl", func(t *testing.T) { testImmutableIDOwnership(t, newJsonlStorageConformance(t)) })
 	t.Run("sqlite", func(t *testing.T) { testImmutableIDOwnership(t, newSqliteStorageConformance(t)) })
+	t.Run("sqlite-prefix", func(t *testing.T) { testImmutableIDOwnership(t, newPrefixedSqliteStorageConformance(t)) })
 }
 
 func TestScanConversationsPagination(t *testing.T) {
 	t.Run("memory", func(t *testing.T) { testScanConversationsPagination(t, NewMemoryStorage()) })
 	t.Run("jsonl", func(t *testing.T) { testScanConversationsPagination(t, newJsonlStorageConformance(t)) })
 	t.Run("sqlite", func(t *testing.T) { testScanConversationsPagination(t, newSqliteStorageConformance(t)) })
+	t.Run("sqlite-prefix", func(t *testing.T) { testScanConversationsPagination(t, newPrefixedSqliteStorageConformance(t)) })
 }
 
 func TestScanEntriesAndHeadMarkers(t *testing.T) {
 	t.Run("memory", func(t *testing.T) { testScanEntriesAndHeadMarkers(t, NewMemoryStorage()) })
 	t.Run("jsonl", func(t *testing.T) { testScanEntriesAndHeadMarkers(t, newJsonlStorageConformance(t)) })
 	t.Run("sqlite", func(t *testing.T) { testScanEntriesAndHeadMarkers(t, newSqliteStorageConformance(t)) })
+	t.Run("sqlite-prefix", func(t *testing.T) { testScanEntriesAndHeadMarkers(t, newPrefixedSqliteStorageConformance(t)) })
 }
 
 func TestForkAwareHistoryScans(t *testing.T) {
 	t.Run("memory", func(t *testing.T) { testForkAwareHistoryScans(t, NewMemoryStorage()) })
 	t.Run("jsonl", func(t *testing.T) { testForkAwareHistoryScans(t, newJsonlStorageConformance(t)) })
 	t.Run("sqlite", func(t *testing.T) { testForkAwareHistoryScans(t, newSqliteStorageConformance(t)) })
+	t.Run("sqlite-prefix", func(t *testing.T) { testForkAwareHistoryScans(t, newPrefixedSqliteStorageConformance(t)) })
 }
 
 func TestTaskScanningAndStatusIndex(t *testing.T) {
 	t.Run("memory", func(t *testing.T) { testTaskScanningAndStatusIndex(t, NewMemoryStorage()) })
 	t.Run("jsonl", func(t *testing.T) { testTaskScanningAndStatusIndex(t, newJsonlStorageConformance(t)) })
 	t.Run("sqlite", func(t *testing.T) { testTaskScanningAndStatusIndex(t, newSqliteStorageConformance(t)) })
+	t.Run("sqlite-prefix", func(t *testing.T) { testTaskScanningAndStatusIndex(t, newPrefixedSqliteStorageConformance(t)) })
 }
 
 func TestInputLifecycleAndDeduplication(t *testing.T) {
 	t.Run("memory", func(t *testing.T) { testSubmissionLifecycleAndDeduplication(t, NewMemoryStorage()) })
 	t.Run("jsonl", func(t *testing.T) { testSubmissionLifecycleAndDeduplication(t, newJsonlStorageConformance(t)) })
 	t.Run("sqlite", func(t *testing.T) { testSubmissionLifecycleAndDeduplication(t, newSqliteStorageConformance(t)) })
+	t.Run("sqlite-prefix", func(t *testing.T) { testSubmissionLifecycleAndDeduplication(t, newPrefixedSqliteStorageConformance(t)) })
 }
 
 func TestDetachedValues(t *testing.T) {
 	t.Run("memory", func(t *testing.T) { testDetachedValues(t, NewMemoryStorage()) })
 	t.Run("jsonl", func(t *testing.T) { testDetachedValues(t, newJsonlStorageConformance(t)) })
 	t.Run("sqlite", func(t *testing.T) { testDetachedValues(t, newSqliteStorageConformance(t)) })
+	t.Run("sqlite-prefix", func(t *testing.T) { testDetachedValues(t, newPrefixedSqliteStorageConformance(t)) })
 }
 
 func TestCloseRejectsEveryOperation(t *testing.T) {
 	t.Run("memory", func(t *testing.T) { testCloseRejectsEveryOperation(t, NewMemoryStorage()) })
 	t.Run("jsonl", func(t *testing.T) { testCloseRejectsEveryOperation(t, newJsonlStorageConformance(t)) })
 	t.Run("sqlite", func(t *testing.T) { testCloseRejectsEveryOperation(t, newSqliteStorageConformance(t)) })
+	t.Run("sqlite-prefix", func(t *testing.T) { testCloseRejectsEveryOperation(t, newPrefixedSqliteStorageConformance(t)) })
 }
 
 // TestSubmissionJSONShape pins the persisted submission shape to upstream

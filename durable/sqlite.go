@@ -19,12 +19,31 @@ import (
 // storage/sqlite). One connection serializes every operation, mirroring the
 // upstream adapters' queued execution.
 type SqliteStorage struct {
-	db *sql.DB
+	db *sqliteDB
+}
+
+// SqliteStorageOptions configure a SQLite storage (upstream
+// SqliteStorageOptions).
+type SqliteStorageOptions struct {
+	// Prefix namespaces every table and index in the durable schema. It must be
+	// a SQLite identifier and must not begin with "sqlite_". Changing it does
+	// not migrate existing data.
+	Prefix string
 }
 
 // OpenSqliteStorage opens (creating if needed) the database at path and
 // applies pending migrations.
 func OpenSqliteStorage(path string) (*SqliteStorage, error) {
+	return OpenSqliteStorageWithOptions(path, SqliteStorageOptions{})
+}
+
+// OpenSqliteStorageWithOptions opens a SQLite storage with an optional schema
+// prefix, for a database shared with host tables (#10937).
+func OpenSqliteStorageWithOptions(path string, options SqliteStorageOptions) (*SqliteStorage, error) {
+	schema, err := createSQLiteSchema(options.Prefix)
+	if err != nil {
+		return nil, err
+	}
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
 		return nil, err
@@ -36,7 +55,7 @@ func OpenSqliteStorage(path string) (*SqliteStorage, error) {
 		_ = db.Close()
 		return nil, err
 	}
-	storage := &SqliteStorage{db: db}
+	storage := &SqliteStorage{db: &sqliteDB{db: db, schema: schema}}
 	if err := storage.applyMigrations(); err != nil {
 		_ = db.Close()
 		return nil, err
@@ -314,7 +333,7 @@ func recordTypeOf(write StorageWrite) string {
 
 // claimRecordID inserts the ownership row unless the id already exists as
 // the same record type.
-func claimRecordID(ctx context.Context, tx *sql.Tx, id Id, recordType string) error {
+func claimRecordID(ctx context.Context, tx *sqliteTx, id Id, recordType string) error {
 	var existing string
 	err := tx.QueryRowContext(ctx, "SELECT record_type FROM record_ids WHERE id = ?", id).Scan(&existing)
 	if err == sql.ErrNoRows {

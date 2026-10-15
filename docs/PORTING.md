@@ -162,10 +162,14 @@ Ported so far:
   authenticated provider only to break a tie, and warn when a scope pattern
   matches several providers (`coding-agent/core/model-resolver.ts`,
   #10160/#10913). `--api-key` keeps the provider the key is for.
+- `durable` SQLite storage namespaces its tables and indexes with an optional
+  `Prefix` (`SqliteStorageOptions` / `OpenSqliteStorageWithOptions`) and
+  validates it, for a database shared with host tables
+  (`durable/src/storage/sqlite/schema.ts`, #10937). The port rewrites the base
+  names at the database boundary instead of rendering them into every query;
+  the conformance suite additionally runs over a `pi_` prefix.
 
-Still to port:
-
-- `durable` namespaced SQLite storage (#10937).
+All in-scope v1.3.0 items are ported.
 
 The `durable` base64 `btoa` fix (#10923) is a V8 concatenation-tree memory fix;
 the port already encodes with Go's `encoding/base64`, so it does not apply.
