@@ -72,6 +72,23 @@ func TestUpstreamProviderReturnedAnErrorIsRetryable(t *testing.T) {
 	}
 }
 
+// Upstream v1.3.0 extends the retryable wording (utils/retry.ts): the gateway's
+// "The service is temporarily unavailable" (#10965) and a failed upstream
+// response stream, "Unable to forward upstream stream" (#10920), are transient.
+func TestTemporaryServiceAndForwardedStreamErrorsAreRetryable(t *testing.T) {
+	messages := []string{
+		"The service is temporarily unavailable",
+		"Unable to forward upstream stream",
+	}
+	for _, message := range messages {
+		message := message
+		response := &AssistantMessage{StopReason: StopError, ErrorMessage: &message}
+		if !IsRetryableAssistantError(response) {
+			t.Errorf("a transient provider error was not retried: %q", message)
+		}
+	}
+}
+
 func TestChatGPTSubscriptionUnavailableIsRetryable(t *testing.T) {
 	for _, message := range []string{
 		"subscription_sharing_usage_unavailable",

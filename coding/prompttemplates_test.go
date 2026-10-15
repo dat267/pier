@@ -195,7 +195,9 @@ func TestParseCommandArgsQuoting(t *testing.T) {
 		{"", nil},
 		{"  extra   spaces  ", []string{"extra", "spaces"}},
 		{"tab\tseparated", []string{"tab", "separated"}},
-		{`"" " "`, []string{" "}},
+		{`"" " "`, []string{"", " "}},
+		{`a '' c`, []string{"a", "", "c"}},
+		{`a ""`, []string{"a", ""}},
 		{`a@b.com #tag $var`, []string{"a@b.com", "#tag", "$var"}},
 		{"日本語 🎉 café", []string{"日本語", "🎉", "café"}},
 		{"\"line1\nline2\" third", []string{"line1\nline2", "third"}},
@@ -212,6 +214,19 @@ func TestParseCommandArgsQuoting(t *testing.T) {
 		}
 		if !reflect.DeepEqual(got, testCase.want) {
 			t.Errorf("ParseCommandArgs(%q) = %#v, want %#v", testCase.input, got, testCase.want)
+		}
+	}
+}
+
+// An empty quoted argument keeps its position, so a positional default for it
+// does not shift the arguments after it (#10867).
+func TestExpandPromptTemplateEmptyQuotedArg(t *testing.T) {
+	templates := []PromptTemplate{
+		{Name: "review", Content: "Review $2. Focus: ${1:-correctness}."},
+	}
+	for _, input := range []string{`/review "" src/index.ts`, "/review '' src/index.ts"} {
+		if got := ExpandPromptTemplate(input, templates); got != "Review src/index.ts. Focus: correctness." {
+			t.Errorf("ExpandPromptTemplate(%q) = %q", input, got)
 		}
 	}
 }

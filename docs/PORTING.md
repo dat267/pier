@@ -11,10 +11,12 @@ Reference pin: `06a46693` (Release v1.2.0), read from the `./pi` checkout.
 (`packages/ai/scripts/generate-models.ts --strict --data-only`, which fetches
 models.dev) through `scripts/gen_catalog.py`.
 
-**Upstream status.** v1.2.0 is the latest released tag in the reference
-checkout. The v1.2.0 delta from v1.1.0 is under audit; confirmed gaps,
-porting progress, and out-of-scope areas are recorded below. Earlier release
-notes retain upstream versions and commit IDs as historical context.
+**Upstream status.** v1.3.0 (`71023aec`) is the latest released tag in the
+reference checkout; the port is still pinned to v1.2.0 while the v1.3.0 delta is
+ported (see the v1.3.0 delta audit below). The v1.2.0 delta from v1.1.0 was
+audited; confirmed gaps, porting progress, and out-of-scope areas are recorded
+below. Earlier release notes retain upstream versions and commit IDs as
+historical context.
 
 **v1.2.0 parity fixes so far.** The built-in catalog is regenerated from the
 pinned v1.2.0 generator and current upstream catalog APIs. OpenRouter model
@@ -104,6 +106,60 @@ rejects non-text error results (`34a8bb38b`,
 tool loadout its transcript records, with modifier-only `--tools` entries
 applied (`6f2f164ab`, `core/agent-session.ts`). The invalid `\u` escape repair
 (`4b994d5e5`) was already the port's behavior.
+
+**v1.3.0 delta audit.** The reference checkout now also holds `v1.3.0`
+(`71023aec`, Release v1.3.0), 63 commits past the pin (207 files). The port is
+being moved to it; this mapping is authoritative for the in-scope work.
+`packages/tui/src`, `packages/agent/src` and `packages/mcp/src` are unchanged
+in the delta, so only `ai`, `coding-agent` and `durable` carry work. Out of
+scope (documented, not ported): chord's typed-host rewrite and protocol
+versions, the `chord/output` relocation, codemode worker admission and
+cancellation, the Nix packaging changes, and the extension `ctx.ui.custom`
+overlay fix.
+
+Ported so far:
+
+- Retry wording: "The service is temporarily unavailable" and "Unable to
+  forward upstream stream" (`ai/utils/retry.ts`, #10965/#10920).
+- Gemini 4+ models use the discrete thinking level (`ai/api/google-shared.ts`,
+  #10890).
+- Reasoning deltas are materialized before the text block when a completions
+  chunk carries both (`ai/api/openai-completions.ts`, #10926).
+- Prompt templates keep empty quoted arguments
+  (`coding-agent/core/prompt-templates.ts`, #10867).
+- `read` line-range labels accept numeric strings and omit malformed ranges, in
+  the TUI renderer, the session tree and the HTML export
+  (`coding-agent/core/tools/render-utils.ts`, #10938).
+
+Still to port:
+
+- Error tool-result images for Anthropic and Bedrock: the images follow all
+  tool results of the turn instead of being dropped
+  (`ai/api/transform-messages.ts`, `anthropic-messages.ts`,
+  `bedrock-converse-stream.ts`, #10794). This replaces the text-note form of
+  `34a8bb38b` already in the port.
+- Drop thinking from earlier assistant messages produced by a different model
+  instead of sending it as text (`ai/api/transform-messages.ts`, #11000).
+- Malformed final tool-call arguments fail validation and report the raw text
+  (`ai/utils/json-parse.ts`, `validation.ts`, the four wire APIs, #10944).
+- Kimi Code over Chat Completions at `https://api.kimi.com/coding/v1`
+  (`ai/providers/kimi-coding.ts`, #10720).
+- OpenCode Go/Zen inference endpoints and Google Generative AI for OpenCode Go
+  (`ai/providers/opencode-go.ts`).
+- `off` thinking level for Claude Haiku 5.5 and Opus 5 (`ai`, #10753), Xiaomi
+  MiMo thinking on/off only (`ai`, #10818), and the Codex GPT-6.1 Sol 500K
+  context window (`ai`, #10840).
+- Cache-preserving thinking-level changes on OpenAI GPT-6:
+  `configuration_update` items and `supportsMidConvoEffort`
+  (`ai/api/openai-responses*.ts`, `anthropic-messages.ts`,
+  `providers/compat-schema.ts`, #10930/#10853).
+- `--model` provider selection resolves candidates before choosing a provider
+  and reports ambiguity instead of using catalog order
+  (`coding-agent/core/model-resolver.ts`, #10160/#10913).
+- `sessionShareDestination` setting, the `/share` destination, the settings
+  selector row and the slash-command text (`coding-agent`, #10870).
+- `durable` namespaced SQLite storage (#10937), the post-compaction system
+  baseline ordering, and base64 `btoa` encoding.
 
 **v1.2.0 audit still open.** The largest unported change is chord's v1.2.0
 typed-host runtime, which replaced the facet/service runtime the port mirrors

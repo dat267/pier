@@ -67,6 +67,9 @@ func ParseCommandArgs(argsString string) []string {
 	current := strings.Builder{}
 	var inQuote rune
 	hasQuote := false
+	// Tracks whether a token has started, so quoted empty strings ("" or '')
+	// are kept as arguments (#10867).
+	hasToken := false
 
 	for _, char := range argsString {
 		switch {
@@ -79,16 +82,19 @@ func ParseCommandArgs(argsString string) []string {
 		case char == '"' || char == '\'':
 			inQuote = char
 			hasQuote = true
+			hasToken = true
 		case isJSWhitespace(char):
-			if current.Len() > 0 {
+			if hasToken {
 				args = append(args, current.String())
 				current.Reset()
+				hasToken = false
 			}
 		default:
 			current.WriteRune(char)
+			hasToken = true
 		}
 	}
-	if current.Len() > 0 {
+	if hasToken {
 		args = append(args, current.String())
 	}
 	return args

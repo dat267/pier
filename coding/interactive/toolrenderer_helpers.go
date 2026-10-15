@@ -3,7 +3,9 @@ package interactive
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -162,6 +164,63 @@ func formatToolLimit(value float64) string {
 	// Upstream interpolates the number into a template literal, i.e.
 	// String(number).
 	return ai.JSNumberToString(value)
+}
+
+// parseLineNumber mirrors render-utils.ts parseLineNumber: a non-empty numeric
+// string is converted, a finite number is kept, and everything else (including
+// null/undefined) is invalid.
+func parseLineNumber(value any) (float64, bool) {
+	switch typed := value.(type) {
+	case string:
+		trimmed := strings.TrimSpace(typed)
+		if trimmed == "" {
+			return 0, false
+		}
+		number, err := strconv.ParseFloat(trimmed, 64)
+		if err != nil || math.IsInf(number, 0) || math.IsNaN(number) {
+			return 0, false
+		}
+		return number, true
+	case float64:
+		if math.IsInf(typed, 0) || math.IsNaN(typed) {
+			return 0, false
+		}
+		return typed, true
+	case int:
+		return float64(typed), true
+	}
+	return 0, false
+}
+
+// formatReadLineRange mirrors render-utils.ts formatReadLineRange (#10938): a
+// finite number or numeric string becomes `:start` or `:start-end`, and a
+// malformed range is omitted. Strict schemas represent omitted optionals as
+// null, which `nil` covers here.
+func formatReadLineRange(offset, limit any) string {
+	if offset == nil && limit == nil {
+		return ""
+	}
+	start := 1.0
+	if offset != nil {
+		number, ok := parseLineNumber(offset)
+		if !ok {
+			return ""
+		}
+		start = number
+	}
+	if limit == nil {
+		return ":" + formatToolLimit(start)
+	}
+	count, ok := parseLineNumber(limit)
+	if !ok {
+		return ""
+	}
+	end := start + count - 1
+	rangeText := ":" + formatToolLimit(start)
+	if end != 0 {
+		rangeText += "-" + formatToolLimit(end)
+	}
+	return rangeText
 }
 
 func toolTruncationWarnings(details any) (matchLimit string, truncated bool, maxBytes int, extra []string) {

@@ -19,22 +19,10 @@ var compactResourceFileNames = map[string]bool{
 	"CLAUDE.md": true, "CLAUDE.MD": true,
 }
 
-func formatReadLineRange(args map[string]any, theme *Theme) string {
-	offset, hasOffset := argNumber(args, "offset")
-	limit, hasLimit := argNumber(args, "limit")
-	if !hasOffset && !hasLimit {
+func styledReadLineRange(args map[string]any, theme *Theme) string {
+	rangeText := formatReadLineRange(args["offset"], args["limit"])
+	if rangeText == "" {
 		return ""
-	}
-	startLine := 1.0
-	if hasOffset {
-		startLine = offset
-	}
-	rangeText := ":" + formatToolLimit(startLine)
-	if hasLimit {
-		endLine := startLine + limit - 1
-		if endLine != 0 {
-			rangeText += "-" + formatToolLimit(endLine)
-		}
 	}
 	return theme.Fg("warning", rangeText)
 }
@@ -42,7 +30,7 @@ func formatReadLineRange(args map[string]any, theme *Theme) string {
 func formatReadCall(args map[string]any, theme *Theme, cwd string) string {
 	rawPath, _ := argString(args, "file_path", "path")
 	pathDisplay := RenderToolPath(&rawPath, theme, cwd, "")
-	return theme.Fg("toolTitle", theme.Bold("read")) + " " + pathDisplay + formatReadLineRange(args, theme)
+	return theme.Fg("toolTitle", theme.Bold("read")) + " " + pathDisplay + styledReadLineRange(args, theme)
 }
 
 func getPiDocsClassification(absolutePath string) *compactReadClassification {
@@ -90,11 +78,11 @@ func formatCompactReadCall(classification compactReadClassification, args map[st
 	if classification.kind == "skill" {
 		return theme.Fg("customMessageLabel", "\x1b[1m[skill]\x1b[22m ") +
 			theme.Fg("customMessageText", classification.label) +
-			formatReadLineRange(args, theme) + expandHint
+			styledReadLineRange(args, theme) + expandHint
 	}
 	return theme.Fg("toolTitle", theme.Bold("read "+classification.kind)) +
 		" " + theme.Fg("accent", classification.label) +
-		formatReadLineRange(args, theme) + expandHint
+		styledReadLineRange(args, theme) + expandHint
 }
 
 func formatReadResult(args map[string]any, result *SortToolResultContent, options ToolRenderResultOptions,

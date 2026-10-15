@@ -29,6 +29,7 @@ func TestGoogleThinkingLevelHelpers(t *testing.T) {
 		t.Fatal("gemini-3-pro should use thinking levels")
 	}
 	if !UsesGoogleThinkingLevel(&Model{ID: "gemini-3.8-flash"}) ||
+		!UsesGoogleThinkingLevel(&Model{ID: "gemini-4-argon"}) ||
 		!UsesGoogleThinkingLevel(&Model{ID: "gemini-flash-latest"}) ||
 		!UsesGoogleThinkingLevel(&Model{ID: "gemma-4-31b-it"}) {
 		t.Fatal("pattern coverage")

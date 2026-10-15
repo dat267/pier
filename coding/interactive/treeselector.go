@@ -1086,38 +1086,11 @@ func (t *TreeList) formatToolCall(name string, args map[string]any) string {
 		}
 		return argString("file_path")
 	}
-	intArg := func(key string) (int, bool) {
-		value, ok := args[key]
-		if !ok {
-			return 0, false
-		}
-		switch typed := value.(type) {
-		case float64:
-			return int(typed), true
-		case int:
-			return typed, true
-		}
-		return 0, false
-	}
 
 	switch name {
 	case "read":
 		path := treeShortenPath(pathArg())
-		offset, hasOffset := intArg("offset")
-		limit, hasLimit := intArg("limit")
-		display := path
-		if hasOffset || hasLimit {
-			start := offset
-			if !hasOffset {
-				start = 1
-			}
-			end := ""
-			if hasLimit {
-				end = "-" + itoa(start+limit-1)
-			}
-			display += ":" + itoa(start) + end
-		}
-		return "[read: " + display + "]"
+		return "[read: " + path + formatReadLineRange(args["offset"], args["limit"]) + "]"
 	case "write":
 		return "[write: " + treeShortenPath(pathArg()) + "]"
 	case "edit":

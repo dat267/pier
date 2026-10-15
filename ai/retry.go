@@ -319,8 +319,9 @@ var nonRetryableProviderLimitErrorPattern = regexp.MustCompile(`(?i)` + strings.
 var retryableProviderErrorPattern = regexp.MustCompile(`(?i)` + strings.Join([]string{
 	`overloaded`, `server_busy`, `servers are currently busy`, `currently experiencing high demand`, `model is at capacity`, `rate.?limit`, `too many requests`,
 	`429`, `500`, `502`, `503`, `504`, `520`, `524`,
-	`service.?unavailable`, `server.?error`, `internal.?error`,
+	`service.?(?:is.?)?(?:temporarily.?)?unavailable`, `server.?error`, `internal.?error`,
 	`provider.?returned.?(?:an.?)?error`, `exceeded request buffer limit while retrying upstream`,
+	`unable to forward upstream`,
 	`network.?error`, `connection.?error`, `connection.?refused`, `connection.?lost`,
 	`other side closed`, `fetch failed`, `getaddrinfo`, `ENOTFOUND`, `EAI_AGAIN`,
 	`upstream.?connect`, `reset before headers`, `socket hang up`, `socket connection was closed`,

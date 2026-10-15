@@ -43,7 +43,7 @@ func ResolveGoogleThinkingLevel(model *Model, level ThinkingLevel) (ResolvedGoog
 }
 
 var (
-	googleThinkingLevelPattern = regexp.MustCompile(`gemini-3(?:\.\d+)?-(?:pro|flash)`)
+	googleThinkingLevelPattern = regexp.MustCompile(`gemini-(?:3(?:\.\d+)?-(?:pro|flash)|(?:[4-9]|[1-9]\d))`)
 	gemmaThinkingPattern       = regexp.MustCompile(`gemma-?4`)
 	geminiMajorVersionPattern  = regexp.MustCompile(`^gemini(?:-live)?-(\d+)`)
 )

@@ -391,6 +391,41 @@ func TestStreamOpenAICompletionsReasoningFieldsAndDetails(t *testing.T) {
 	}
 }
 
+// A proxy such as LiteLLM can aggregate reasoning and the answer into one
+// chunk; the thinking block must still precede the text block (#10926).
+func TestStreamOpenAICompletionsReasoningPrecedesTextInOneChunk(t *testing.T) {
+	chunks := []string{
+		"data: {\"id\":\"c\",\"model\":\"m\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"think\",\"content\":\"answer\"},\"finish_reason\":null}]}",
+		"data: {\"id\":\"c\",\"model\":\"m\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}",
+		"data: [DONE]",
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		for _, c := range chunks {
+			_, _ = w.Write([]byte(c + "\n\n"))
+		}
+	}))
+	defer server.Close()
+
+	model := testOpenAIModel()
+	model.BaseURL = server.URL
+	stream := StreamOpenAICompletions(model, NormalizeContext(Context{
+		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
+	}), &OpenAICompletionsOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+	msg, err := stream.Result(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(msg.Content) != 2 {
+		t.Fatalf("content = %+v", msg.Content)
+	}
+	if thinking, ok := msg.Content[0].(ThinkingContent); !ok || thinking.Thinking != "think" {
+		t.Fatalf("content[0] = %#v", msg.Content[0])
+	}
+	if text, ok := msg.Content[1].(TextContent); !ok || text.Text != "answer" {
+		t.Fatalf("content[1] = %#v", msg.Content[1])
+	}
+}
+
 func TestStreamOpenAICompletionsErrorsAndFinishFallback(t *testing.T) {
 	t.Run("missing key", func(t *testing.T) {
 		model := testOpenAIModel()

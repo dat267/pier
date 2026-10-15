@@ -505,15 +505,9 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 			}
 
 			delta := choice.Delta
-			if delta.Content != nil && len(*delta.Content) > 0 {
-				index := ensureTextBlock()
-				if tc, ok := output.Content[index].(TextContent); ok {
-					tc.Text += *delta.Content
-					output.Content[index] = tc
-				}
-				stream.Push(AssistantMessageEvent{Type: EventTextDelta, ContentIndex: index, Delta: *delta.Content, Partial: output})
-			}
-
+			// Handle reasoning before content: some proxies (e.g. LiteLLM)
+			// aggregate reasoning and the answer into one delta, and the
+			// thinking block must precede the text block (#10926).
 			// Some endpoints return reasoning in reasoning_content
 			// (llama.cpp), reasoning (other OpenAI-compatible endpoints), or
 			// reasoning_text. Use the first non-empty field to avoid
@@ -541,6 +535,25 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 					output.Content[index] = tc
 				}
 				stream.Push(AssistantMessageEvent{Type: EventThinkingDelta, ContentIndex: index, Delta: reasoningDelta, Partial: output})
+			}
+
+			if len(delta.ReasoningDetails) > 0 {
+				for _, detail := range delta.ReasoningDetails {
+					if !isOpenAIReasoningDetail(detail) {
+						continue
+					}
+					ensureThinkingBlock("")
+					streamedReasoningDetails = appendOpenAIReasoningDetail(streamedReasoningDetails, detail)
+				}
+			}
+
+			if delta.Content != nil && len(*delta.Content) > 0 {
+				index := ensureTextBlock()
+				if tc, ok := output.Content[index].(TextContent); ok {
+					tc.Text += *delta.Content
+					output.Content[index] = tc
+				}
+				stream.Push(AssistantMessageEvent{Type: EventTextDelta, ContentIndex: index, Delta: *delta.Content, Partial: output})
 			}
 
 			for _, toolCall := range delta.ToolCalls {
@@ -582,15 +595,6 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 				stream.Push(AssistantMessageEvent{Type: EventToolcallDelta, ContentIndex: outputIdx, Delta: toolCallDeltaText(toolCall), Partial: output})
 			}
 
-			if len(delta.ReasoningDetails) > 0 {
-				for _, detail := range delta.ReasoningDetails {
-					if !isOpenAIReasoningDetail(detail) {
-						continue
-					}
-					ensureThinkingBlock("")
-					streamedReasoningDetails = appendOpenAIReasoningDetail(streamedReasoningDetails, detail)
-				}
-			}
 		})
 		if iterErr != nil {
 			fail(iterErr)
