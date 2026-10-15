@@ -340,10 +340,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 						stream.Push(AssistantMessageEvent{Type: EventToolcallDelta, ContentIndex: index, Delta: delta, Partial: output})
 					}
 				} else if streaming != nil {
-					var parsed map[string]any
-					parseStreamingJSONInto(streaming.partialArgs, &parsed)
-					enc, _ := MarshalJSON(parsed)
-					block.Arguments = enc
+					block.Arguments, block.ArgumentsError = ParseToolCallArguments(streaming.partialArgs)
 				}
 				if streaming != nil {
 					streaming.partialArgs = ""

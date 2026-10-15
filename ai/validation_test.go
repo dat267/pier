@@ -2,8 +2,25 @@ package ai
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
+
+// A finished call whose complete arguments text was not a JSON object fails
+// validation with the raw text the model sent (#10944).
+func TestValidateToolArgumentsReportsMalformedArguments(t *testing.T) {
+	tool := Tool{Name: "t", Parameters: json.RawMessage(`{"type":"object","properties":{}}`)}
+	args, errText := ParseToolCallArguments(`{"a":}`)
+	call := ToolCall{ID: "c", Name: "t", Arguments: args, ArgumentsError: errText}
+	_, err := ValidateToolArguments(tool, call)
+	if err == nil {
+		t.Fatal("malformed arguments were validated")
+	}
+	if !strings.Contains(err.Error(), `Invalid arguments for tool "t":`) ||
+		!strings.Contains(err.Error(), "Received arguments:\n"+`{"a":}`) {
+		t.Fatalf("error = %v", err)
+	}
+}
 
 // Upstream coerces a number to a string with String(value), so small
 // magnitudes keep JS's exponent form (no zero-padded exponent).

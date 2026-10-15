@@ -1137,7 +1137,7 @@ func applyBedrockConverseEvent(eventType string, payload []byte, model *Model, o
 				Type: EventThinkingEnd, ContentIndex: index, Content: block.thinking, Partial: output,
 			})
 		case "toolCall":
-			block.toolCall.Arguments = parseStreamingArgs(json.RawMessage(block.partialJSON))
+			block.toolCall.Arguments, block.toolCall.ArgumentsError = ParseToolCallArguments(block.partialJSON)
 			block.partialJSON = ""
 			syncBedrockContent(output, *blocks)
 			call := block.toolCall

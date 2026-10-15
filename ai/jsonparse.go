@@ -120,6 +120,36 @@ func ParseJSONWithRepair(jsonText string, v any) error {
 	return err
 }
 
+// ParseToolCallArguments parses the model's complete arguments text of a
+// finished tool call (port of parseToolCallArguments). Unlike
+// parseStreamingJSONInto, it never keeps a partially parsed prefix: once the
+// call is finished, text that is not a valid JSON object means the model sent
+// malformed arguments. The returned arguments are then `{}` and the second
+// result describes the problem, including the text the model sent, so tool
+// validation can report it back to the model.
+//
+// D221: the JS `JSON.parse`/repair error text is not reproduced; the Go
+// decoder's message is used instead. The shape (message, blank line, "Received
+// arguments:", raw text) and the `{}` fallback match upstream.
+func ParseToolCallArguments(jsonText string) (json.RawMessage, string) {
+	if JSTrim(jsonText) == "" {
+		return json.RawMessage(`{}`), ""
+	}
+	var parsed any
+	if err := ParseJSONWithRepair(jsonText, &parsed); err != nil {
+		return json.RawMessage(`{}`), fmt.Sprintf("%s\n\nReceived arguments:\n%s", err.Error(), jsonText)
+	}
+	object, ok := parsed.(map[string]any)
+	if !ok {
+		return json.RawMessage(`{}`), "Tool arguments must be a JSON object\n\nReceived arguments:\n" + jsonText
+	}
+	encoded, err := MarshalJSON(object)
+	if err != nil {
+		return json.RawMessage(`{}`), fmt.Sprintf("%s\n\nReceived arguments:\n%s", err.Error(), jsonText)
+	}
+	return encoded, ""
+}
+
 // parseStreamingJSONInto attempts to parse potentially incomplete JSON
 // during streaming. Always produces a usable value (empty map when parsing
 // fails entirely); port of parseStreamingJson.

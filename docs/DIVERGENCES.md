@@ -2,7 +2,7 @@
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
-in code comments; not every ID has a full entry here. The range is **D1–D220**.
+in code comments; not every ID has a full entry here. The range is **D1–D221**.
 Entries are ordered numerically. Closed, retired, and withdrawn rows keep their
 IDs for historical references; overlapping rows refer to the owning explanation.
 
@@ -1553,3 +1553,22 @@ still updates a moment later through the same runtime.
 Tests: `TestCatalogRefreshAllowedAtCreate` (`cmd/catalogrefresh_test.go`) and
 `TestCreateModelRuntimeOfflineCreateLoadsTheStoreWithoutNetwork`
 (`coding/remotecatalog_test.go`).
+
+## D221
+
+**A malformed finished tool call's `argumentsError` carries the Go decoder
+message, not V8's.**
+
+Upstream v1.3.0 (`parseToolCallArguments`, `ai/utils/json-parse.ts`) sets
+`argumentsError` from the `JSON.parse` (or repair) `SyntaxError` message when a
+finished tool call's complete arguments text is not a JSON object. The port
+produces the same shape (`<message>`, a blank line, `Received arguments:`, the
+raw text), the empty `{}` arguments and the `Invalid arguments for tool "x":`
+validation failure, but the leading message is `encoding/json`'s, which differs
+from V8's wording (`invalid character ...` vs `Unexpected token ...`). The
+model-facing content (the raw text that failed) is preserved.
+
+Tests: `TestParseToolCallArguments`, `TestValidateToolArgumentsReportsMalformedArguments`
+(`ai/jsonparse_test.go`, `ai/validation_test.go`) and
+`TestStreamOpenAICompletionsMalformedFinalArguments`
+(`ai/openai_completions_test.go`).

@@ -693,10 +693,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 				case ThinkingContent:
 					stream.Push(AssistantMessageEvent{Type: EventThinkingEnd, ContentIndex: idx, Content: b.Thinking, Partial: output})
 				case ToolCall:
-					var parsed map[string]any
-					parseStreamingJSONInto(string(blocks[idx].partial), &parsed)
-					enc, _ := MarshalJSON(parsed)
-					b.Arguments = enc
+					b.Arguments, b.ArgumentsError = ParseToolCallArguments(string(blocks[idx].partial))
 					blocks[idx].block = b
 					output.Content[idx] = b
 					stream.Push(AssistantMessageEvent{Type: EventToolcallEnd, ContentIndex: idx, ToolCall: &b, Partial: output})

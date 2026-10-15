@@ -666,9 +666,7 @@ func ProcessResponsesStream(
 			}
 			previous := *slot.toolCall.partialJSON
 			*slot.toolCall.partialJSON = event.Arguments
-			var parsed map[string]any
-			parseStreamingJSONInto(event.Arguments, &parsed)
-			slot.toolCall.call.Arguments = mustMarshalJSON(parsed)
+			slot.toolCall.call.Arguments, slot.toolCall.call.ArgumentsError = ParseToolCallArguments(event.Arguments)
 			updateContent(slot)
 			if strings.HasPrefix(event.Arguments, previous) {
 				delta := event.Arguments[len(previous):]
@@ -737,9 +735,7 @@ func ProcessResponsesStream(
 				if arguments == "" {
 					arguments = "{}"
 				}
-				var parsed map[string]any
-				parseStreamingJSONInto(arguments, &parsed)
-				slot.toolCall.call.Arguments = mustMarshalJSON(parsed)
+				slot.toolCall.call.Arguments, slot.toolCall.call.ArgumentsError = ParseToolCallArguments(arguments)
 				if item.Namespace != nil {
 					slot.toolCall.call.Namespace = item.Namespace
 				}

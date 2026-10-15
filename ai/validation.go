@@ -602,6 +602,12 @@ func getValidator(schema json.RawMessage) *jsonSchema {
 // the tool's schema (port of validateToolArguments). Returns the validated
 // arguments or an error with the formatted validation message.
 func ValidateToolArguments(tool Tool, toolCall ToolCall) (json.RawMessage, error) {
+	// A finished call whose complete arguments text was not a JSON object fails
+	// with the text the model sent, rather than validating the empty object
+	// (#10944).
+	if toolCall.ArgumentsError != "" {
+		return nil, fmt.Errorf("Invalid arguments for tool %q: %s", toolCall.Name, toolCall.ArgumentsError)
+	}
 	schema := getValidator(tool.Parameters)
 	args := decodeSchemaValue(toolCall.Arguments)
 	normalizeOptionalNulls(args, schema)

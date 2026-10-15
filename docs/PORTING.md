@@ -134,11 +134,13 @@ Ported so far:
 - Thinking from earlier assistant messages produced by a different model is
   dropped instead of being sent as text (`ai/api/transform-messages.ts`,
   #11000).
+- A finished tool call whose complete arguments text is not a JSON object keeps
+  no parsed prefix, is reported with the raw text, and fails validation
+  (`ai/utils/json-parse.ts`, `ai/utils/validation.ts`, the wire APIs, #10944;
+  D221 for the message wording).
 
 Still to port:
 
-- Malformed final tool-call arguments fail validation and report the raw text
-  (`ai/utils/json-parse.ts`, `validation.ts`, the four wire APIs, #10944).
 - Kimi Code over Chat Completions at `https://api.kimi.com/coding/v1`
   (`ai/providers/kimi-coding.ts`, #10720).
 - OpenCode Go/Zen inference endpoints and Google Generative AI for OpenCode Go

@@ -426,6 +426,45 @@ func TestStreamOpenAICompletionsReasoningPrecedesTextInOneChunk(t *testing.T) {
 	}
 }
 
+// A finished call whose complete arguments text is malformed keeps no parsed
+// prefix; validation reports the raw text (#10944).
+func TestStreamOpenAICompletionsMalformedFinalArguments(t *testing.T) {
+	chunks := []string{
+		`data: {"id":"c","model":"m","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"call_1","function":{"name":"bash","arguments":"{\"cmd\":"}}]},"finish_reason":null}]}`,
+		`data: {"id":"c","model":"m","choices":[{"index":0,"delta":{},"finish_reason":"tool_calls"}]}`,
+		`data: [DONE]`,
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		for _, c := range chunks {
+			_, _ = w.Write([]byte(c + "\n\n"))
+		}
+	}))
+	defer server.Close()
+
+	model := testOpenAIModel()
+	model.BaseURL = server.URL
+	stream := StreamOpenAICompletions(model, NormalizeContext(Context{
+		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
+	}), &OpenAICompletionsOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+	msg, err := stream.Result(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(msg.Content) != 1 {
+		t.Fatalf("content = %+v", msg.Content)
+	}
+	call, ok := msg.Content[0].(ToolCall)
+	if !ok {
+		t.Fatalf("content[0] = %#v", msg.Content[0])
+	}
+	if string(call.Arguments) != `{}` {
+		t.Fatalf("arguments = %s; want {}", call.Arguments)
+	}
+	if !strings.Contains(call.ArgumentsError, "Received arguments:") {
+		t.Fatalf("argumentsError = %q", call.ArgumentsError)
+	}
+}
+
 func TestStreamOpenAICompletionsErrorsAndFinishFallback(t *testing.T) {
 	t.Run("missing key", func(t *testing.T) {
 		model := testOpenAIModel()
