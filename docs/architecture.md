@@ -644,6 +644,16 @@ and an allocation-budget regression test cover the change. A temporary
 before/after comparison of 1,768 streaming prefixes (the golden corpus plus a
 large mixed-markup document) produced identical token trees and rendered lines.
 
+## Proxy stream delta assembly
+
+`agent/proxy.go` rebuilds cumulative assistant text and thinking blocks from
+proxy deltas. Repeated string concatenation copied every previous prefix. A
+64 KiB fixture made of 512 128-byte deltas allocated about 18.1 MB for either
+content type; per-block `strings.Builder` buffers reduce the direct text-path
+benchmark to 356 KB and 144 µs on Linux/amd64 (Intel N150, five iterations).
+The byte-budget tests cap both paths at 512 KiB and verify the assembled value.
+The tool-call JSON parser and event payloads are unchanged.
+
 ## Session history (high level)
 
 The repository was built as a long port: the `ai`/`agent`/`coding` cores first,

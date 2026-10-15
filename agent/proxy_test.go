@@ -6,11 +6,80 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/dat267/pier/ai"
 )
+
+func TestProxyTextDeltaAssemblyStaysLinearInAllocatedBytes(t *testing.T) {
+	const chunks = 512
+	const chunkSize = 128
+	delta := strings.Repeat("x", chunkSize)
+	got, allocated := measureProxyDeltaAssembly(t, "text_start", "text_delta", ai.TextContent{}, delta, chunks)
+	assertProxyDeltaAssembly(t, got, allocated, delta, chunks)
+}
+
+func TestProxyThinkingDeltaAssemblyStaysLinearInAllocatedBytes(t *testing.T) {
+	const chunks = 512
+	const chunkSize = 128
+	delta := strings.Repeat("x", chunkSize)
+	got, allocated := measureProxyDeltaAssembly(t, "thinking_start", "thinking_delta", ai.ThinkingContent{}, delta, chunks)
+	assertProxyDeltaAssembly(t, got, allocated, delta, chunks)
+}
+
+func measureProxyDeltaAssembly(t *testing.T, startType, deltaType string, initial ai.Content, delta string, chunks int) (string, uint64) {
+	t.Helper()
+	partial := &ai.AssistantMessage{Content: ai.ContentList{initial}}
+	scratch := newProxyEventScratch()
+	processProxyEvent(&proxyWireEvent{Type: startType}, partial, scratch)
+
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	for range chunks {
+		processProxyEvent(&proxyWireEvent{Type: deltaType, Delta: delta}, partial, scratch)
+	}
+	runtime.ReadMemStats(&after)
+
+	switch content := partial.Content[0].(type) {
+	case ai.TextContent:
+		return content.Text, after.TotalAlloc - before.TotalAlloc
+	case ai.ThinkingContent:
+		return content.Thinking, after.TotalAlloc - before.TotalAlloc
+	default:
+		t.Fatalf("content = %T, want text or thinking", content)
+		return "", 0
+	}
+}
+
+func assertProxyDeltaAssembly(t *testing.T, got string, allocated uint64, delta string, chunks int) {
+	t.Helper()
+	if want := strings.Repeat(delta, chunks); got != want {
+		t.Fatalf("assembled content length = %d, want %d", len(got), len(want))
+	}
+	outputBytes := uint64(chunks * len(delta))
+	if allocated > outputBytes*8 {
+		t.Fatalf("assembling %d bytes allocated %d bytes, want at most %d", outputBytes, allocated, outputBytes*8)
+	}
+}
+
+func BenchmarkProxyTextDeltaAssembly(b *testing.B) {
+	const chunks = 512
+	delta := strings.Repeat("x", 128)
+	b.ReportAllocs()
+	for b.Loop() {
+		partial := &ai.AssistantMessage{Content: ai.ContentList{ai.TextContent{}}}
+		scratch := newProxyEventScratch()
+		processProxyEvent(&proxyWireEvent{Type: "text_start"}, partial, scratch)
+		for range chunks {
+			processProxyEvent(&proxyWireEvent{Type: "text_delta", Delta: delta}, partial, scratch)
+		}
+		if got := partial.Content[0].(ai.TextContent).Text; len(got) != chunks*len(delta) {
+			b.Fatalf("assembled content length = %d, want %d", len(got), chunks*len(delta))
+		}
+	}
+}
 
 func proxyContext() ai.TranscriptContext {
 	return ai.TranscriptContext{Messages: []ai.Message{

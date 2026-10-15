@@ -129,8 +129,8 @@ func StreamProxy(model *ai.Model, context ai.TranscriptContext, options ProxyStr
 		if ctx == nil {
 			ctx = contextpkg.Background()
 		}
-		// parseScratch accumulates toolcall_delta fragments per content index.
-		parseScratch := map[int][]byte{}
+		// eventScratch accumulates text, thinking, and tool-call deltas per content index.
+		eventScratch := newProxyEventScratch()
 		fail := func(reason ai.StopReason, message string) {
 			partial.StopReason = reason
 			partial.ErrorMessage = &message
@@ -188,7 +188,7 @@ func StreamProxy(model *ai.Model, context ai.TranscriptContext, options ProxyStr
 			if err := json.Unmarshal([]byte(data), &wire); err != nil {
 				return
 			}
-			event := processProxyEvent(&wire, partial, parseScratch)
+			event := processProxyEvent(&wire, partial, eventScratch)
 			if event == nil {
 				return
 			}
@@ -231,9 +231,40 @@ func StreamProxy(model *ai.Model, context ai.TranscriptContext, options ProxyStr
 	return stream
 }
 
+// proxyEventScratch accumulates each content block without copying its full
+// prefix on every text or thinking delta. Tool-call bytes feed the incremental
+// JSON parser.
+type proxyEventScratch struct {
+	text     map[int]*strings.Builder
+	thinking map[int]*strings.Builder
+	toolCall map[int][]byte
+}
+
+func newProxyEventScratch() *proxyEventScratch {
+	return &proxyEventScratch{toolCall: make(map[int][]byte)}
+}
+
+func (s *proxyEventScratch) textBuilder(index int) *strings.Builder {
+	if s.text == nil {
+		s.text = make(map[int]*strings.Builder)
+	}
+	builder := &strings.Builder{}
+	s.text[index] = builder
+	return builder
+}
+
+func (s *proxyEventScratch) thinkingBuilder(index int) *strings.Builder {
+	if s.thinking == nil {
+		s.thinking = make(map[int]*strings.Builder)
+	}
+	builder := &strings.Builder{}
+	s.thinking[index] = builder
+	return builder
+}
+
 // processProxyEvent applies one server event to the partial message and returns
 // the client event to push (upstream processProxyEvent).
-func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scratch map[int][]byte) *ai.AssistantMessageEvent {
+func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scratch *proxyEventScratch) *ai.AssistantMessageEvent {
 	grow := func() {
 		for len(partial.Content) <= wire.ContentIndex {
 			partial.Content = append(partial.Content, nil)
@@ -250,14 +281,17 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 	case "text_start":
 		grow()
 		partial.Content[wire.ContentIndex] = ai.TextContent{}
+		scratch.textBuilder(wire.ContentIndex)
 		return &ai.AssistantMessageEvent{Type: ai.EventTextStart, ContentIndex: wire.ContentIndex, Partial: partial}
 
 	case "text_delta":
 		content, ok := contentAt().(ai.TextContent)
-		if !ok {
+		builder := scratch.text[wire.ContentIndex]
+		if !ok || builder == nil {
 			return nil
 		}
-		content.Text += wire.Delta
+		_, _ = builder.WriteString(wire.Delta)
+		content.Text = builder.String()
 		partial.Content[wire.ContentIndex] = content
 		return &ai.AssistantMessageEvent{Type: ai.EventTextDelta, ContentIndex: wire.ContentIndex, Delta: wire.Delta, Partial: partial}
 
@@ -275,14 +309,17 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 	case "thinking_start":
 		grow()
 		partial.Content[wire.ContentIndex] = ai.ThinkingContent{}
+		scratch.thinkingBuilder(wire.ContentIndex)
 		return &ai.AssistantMessageEvent{Type: ai.EventThinkingStart, ContentIndex: wire.ContentIndex, Partial: partial}
 
 	case "thinking_delta":
 		content, ok := contentAt().(ai.ThinkingContent)
-		if !ok {
+		builder := scratch.thinking[wire.ContentIndex]
+		if !ok || builder == nil {
 			return nil
 		}
-		content.Thinking += wire.Delta
+		_, _ = builder.WriteString(wire.Delta)
+		content.Thinking = builder.String()
 		partial.Content[wire.ContentIndex] = content
 		return &ai.AssistantMessageEvent{Type: ai.EventThinkingDelta, ContentIndex: wire.ContentIndex, Delta: wire.Delta, Partial: partial}
 
@@ -300,7 +337,7 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 	case "toolcall_start":
 		grow()
 		partial.Content[wire.ContentIndex] = ai.ToolCall{ID: wire.ID, Name: wire.ToolName, Arguments: json.RawMessage("{}")}
-		scratch[wire.ContentIndex] = nil
+		scratch.toolCall[wire.ContentIndex] = nil
 		return &ai.AssistantMessageEvent{Type: ai.EventToolcallStart, ContentIndex: wire.ContentIndex, Partial: partial}
 
 	case "toolcall_delta":
@@ -308,8 +345,8 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 		if !ok {
 			return nil
 		}
-		scratch[wire.ContentIndex] = append(scratch[wire.ContentIndex], wire.Delta...)
-		content.Arguments = ai.ParseStreamingJSONText(string(scratch[wire.ContentIndex]))
+		scratch.toolCall[wire.ContentIndex] = append(scratch.toolCall[wire.ContentIndex], wire.Delta...)
+		content.Arguments = ai.ParseStreamingJSONText(string(scratch.toolCall[wire.ContentIndex]))
 		partial.Content[wire.ContentIndex] = content
 		return &ai.AssistantMessageEvent{Type: ai.EventToolcallDelta, ContentIndex: wire.ContentIndex, Delta: wire.Delta, Partial: partial}
 
@@ -321,7 +358,7 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 			return nil
 		}
 		partial.Content[wire.ContentIndex] = *wire.ToolCall
-		delete(scratch, wire.ContentIndex)
+		delete(scratch.toolCall, wire.ContentIndex)
 		return &ai.AssistantMessageEvent{Type: ai.EventToolcallEnd, ContentIndex: wire.ContentIndex, ToolCall: wire.ToolCall, Partial: partial}
 
 	case "done":
