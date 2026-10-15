@@ -2,6 +2,7 @@ package tui
 
 import (
 	"regexp"
+	"strings"
 	"time"
 	"unicode/utf8"
 )
@@ -246,7 +247,10 @@ type StdinBuffer struct {
 	timeoutMS       int
 	escapeTimeoutMS int
 	pasteMode       bool
-	pasteBuffer     string
+	pasteBuffer     *strings.Builder
+	// pasteSearchFrom is the earliest byte not ruled out as a terminator start,
+	// preserving a split marker across input chunks.
+	pasteSearchFrom int
 	// flushedHead holds what a deadline flush just released when it could still
 	// be an SGR mouse head. Late tails may arrive in several reads or share a
 	// read with more reports; reassemble them before dispatch (D169).
@@ -315,24 +319,9 @@ func (b *StdinBuffer) process(str string) {
 	b.buffer += str
 
 	if b.pasteMode {
-		b.pasteBuffer += b.buffer
+		b.pasteBuffer.WriteString(b.buffer)
 		b.buffer = ""
-
-		if endIndex := indexOf(b.pasteBuffer, bracketedPasteEnd); endIndex != -1 {
-			pastedContent := b.pasteBuffer[:endIndex]
-			remaining := b.pasteBuffer[endIndex+len(bracketedPasteEnd):]
-
-			b.pasteMode = false
-			b.pasteBuffer = ""
-			b.pendingCodepoint = 0
-			b.hasPendingCodepoint = false
-
-			b.emitPaste(pastedContent)
-
-			if remaining != "" {
-				b.process(remaining)
-			}
-		}
+		b.finishPasteIfAvailable()
 		return
 	}
 
@@ -349,24 +338,11 @@ func (b *StdinBuffer) process(str string) {
 		b.hasPendingCodepoint = false
 		b.buffer = b.buffer[startIndex+len(bracketedPasteStart):]
 		b.pasteMode = true
-		b.pasteBuffer = b.buffer
+		b.pasteBuffer = &strings.Builder{}
+		b.pasteSearchFrom = 0
+		b.pasteBuffer.WriteString(b.buffer)
 		b.buffer = ""
-
-		if endIndex := indexOf(b.pasteBuffer, bracketedPasteEnd); endIndex != -1 {
-			pastedContent := b.pasteBuffer[:endIndex]
-			remaining := b.pasteBuffer[endIndex+len(bracketedPasteEnd):]
-
-			b.pasteMode = false
-			b.pasteBuffer = ""
-			b.pendingCodepoint = 0
-			b.hasPendingCodepoint = false
-
-			b.emitPaste(pastedContent)
-
-			if remaining != "" {
-				b.process(remaining)
-			}
-		}
+		b.finishPasteIfAvailable()
 		return
 	}
 
@@ -390,6 +366,36 @@ func (b *StdinBuffer) process(str string) {
 			timeoutMS = b.escapeTimeoutMS
 		}
 		b.pendingDeadline = time.Now().Add(time.Duration(timeoutMS) * time.Millisecond)
+	}
+}
+
+// finishPasteIfAvailable scans only the untested suffix, retaining enough
+// overlap to find a terminator split across input chunks.
+func (b *StdinBuffer) finishPasteIfAvailable() {
+	content := b.pasteBuffer.String()
+	searchFrom := b.pasteSearchFrom
+	// All earlier positions were checked, except the suffix that could still
+	// become the terminator after another chunk arrives.
+	endOffset := indexOf(content[searchFrom:], bracketedPasteEnd)
+	if endOffset == -1 {
+		b.pasteSearchFrom = len(content) - len(bracketedPasteEnd) + 1
+		if b.pasteSearchFrom < 0 {
+			b.pasteSearchFrom = 0
+		}
+		return
+	}
+
+	endIndex := searchFrom + endOffset
+	pastedContent := content[:endIndex]
+	remaining := content[endIndex+len(bracketedPasteEnd):]
+	b.pasteMode = false
+	b.pasteBuffer = nil
+	b.pasteSearchFrom = 0
+	b.pendingCodepoint = 0
+	b.hasPendingCodepoint = false
+	b.emitPaste(pastedContent)
+	if remaining != "" {
+		b.process(remaining)
 	}
 }
 
@@ -482,7 +488,8 @@ func (b *StdinBuffer) Clear() {
 	b.buffer = ""
 	b.flushedHead = ""
 	b.pasteMode = false
-	b.pasteBuffer = ""
+	b.pasteBuffer = nil
+	b.pasteSearchFrom = 0
 	b.pendingCodepoint = 0
 	b.hasPendingCodepoint = false
 }

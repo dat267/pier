@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -390,6 +391,53 @@ func TestStdinBufferBracketedPaste(t *testing.T) {
 	}
 	if joinedSequences != "" {
 		t.Fatalf("sequences = %q", joinedSequences)
+	}
+}
+
+func TestStdinBufferChunkedPasteAllocationIsLinear(t *testing.T) {
+	const chunkSize = 128
+	// The terminator starts four bytes before a 128-byte chunk boundary.
+	payload := strings.Repeat("x", 64*1024+118)
+	input := bracketedPasteStart + payload + bracketedPasteEnd
+	buffer := NewStdinBuffer(StdinBufferOptions{})
+	var got string
+	buffer.OnPaste = func(content string) { got = content }
+
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	for offset := 0; offset < len(input); offset += chunkSize {
+		end := min(offset+chunkSize, len(input))
+		buffer.ProcessString(input[offset:end])
+	}
+	runtime.ReadMemStats(&after)
+
+	if got != payload {
+		t.Fatalf("pasted content length = %d, want %d", len(got), len(payload))
+	}
+	allocated := after.TotalAlloc - before.TotalAlloc
+	t.Logf("chunked %d-byte paste allocated %d bytes", len(payload), allocated)
+	if allocated > uint64(len(payload))*8 {
+		t.Fatalf("chunked %d-byte paste allocated %d bytes, want less than %d", len(payload), allocated, len(payload)*8)
+	}
+}
+
+func BenchmarkStdinBufferChunkedPaste(b *testing.B) {
+	const chunkSize = 128
+	payload := strings.Repeat("x", 64*1024+118)
+	input := bracketedPasteStart + payload + bracketedPasteEnd
+	b.SetBytes(int64(len(payload)))
+	b.ReportAllocs()
+	for b.Loop() {
+		var got string
+		buffer := NewStdinBuffer(StdinBufferOptions{})
+		buffer.OnPaste = func(content string) { got = content }
+		for offset := 0; offset < len(input); offset += chunkSize {
+			end := min(offset+chunkSize, len(input))
+			buffer.ProcessString(input[offset:end])
+		}
+		if len(got) != len(payload) {
+			b.Fatalf("pasted content length = %d, want %d", len(got), len(payload))
+		}
 	}
 }
 

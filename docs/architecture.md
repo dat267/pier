@@ -644,6 +644,16 @@ and an allocation-budget regression test cover the change. A temporary
 before/after comparison of 1,768 streaming prefixes (the golden corpus plus a
 large mixed-markup document) produced identical token trees and rendered lines.
 
+## Stdin paste buffering
+
+`StdinBuffer` used to concatenate and rescan the entire paste prefix for every
+stdin chunk. A 65,654-byte paste arriving in 128-byte reads allocated 18.2 MB;
+`strings.Builder` now grows the accumulator amortized, and terminator search
+resumes from the suffix that can straddle the next read. The same fixture
+allocates 285 KB in 81 µs on Linux/amd64 (Intel N150, five iterations).
+`TestStdinBufferChunkedPasteAllocationIsLinear` checks the content, the
+terminator split across a read boundary, and an 8x-output allocation ceiling.
+
 ## Editor paste fast path
 
 `Editor.handlePasteLocked` normally sees valid, printable text. It now bypasses
