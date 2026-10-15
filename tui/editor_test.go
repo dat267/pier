@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -179,6 +180,34 @@ func TestEditorPasteThresholdCountsUTF16Units(t *testing.T) {
 	editor.handlePasteLocked(strings.Repeat("\U0001F600", 600))
 	if got := editor.GetText(); !strings.Contains(got, "chars]") {
 		t.Fatalf("paste was not collapsed to a marker: %q", got)
+	}
+}
+
+func TestEditorPasteFiltersControlBytesAndDecodesCSIu(t *testing.T) {
+	// Port of packages/tui/src/components/editor.ts handlePaste.
+	editor := NewEditor(&editorHost{rows: 10}, editorTestTheme(), EditorOptions{})
+	editor.handlePasteLocked("a\x00b\r\nc\x1b[106;5uX\x1f")
+	if got, want := editor.GetText(), "ab\nc\nX"; got != want {
+		t.Fatalf("pasted text = %q, want %q", got, want)
+	}
+}
+
+func TestEditorCleanLargePasteDoesNotCopyFilteredText(t *testing.T) {
+	editor := NewEditor(&editorHost{rows: 10}, editorTestTheme(), EditorOptions{})
+	pasted := strings.Repeat("plain text ", 24*1024)
+
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	editor.handlePasteLocked(pasted)
+	runtime.ReadMemStats(&after)
+
+	if got := editor.GetExpandedText(); got != pasted {
+		t.Fatalf("expanded paste length = %d, want %d", len(got), len(pasted))
+	}
+	allocated := after.TotalAlloc - before.TotalAlloc
+	t.Logf("clean %d-byte paste allocated %d bytes", len(pasted), allocated)
+	if allocated > uint64(len(pasted))/4 {
+		t.Fatalf("clean %d-byte paste allocated %d bytes, want less than %d", len(pasted), allocated, len(pasted)/4)
 	}
 }
 

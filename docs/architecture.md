@@ -644,6 +644,18 @@ and an allocation-budget regression test cover the change. A temporary
 before/after comparison of 1,768 streaming prefixes (the golden corpus plus a
 large mixed-markup document) produced identical token trees and rendered lines.
 
+## Editor paste fast path
+
+`Editor.handlePasteLocked` normally sees valid, printable text. It now bypasses
+CSI-u replacement when there is no matching sequence and returns clean UTF-8
+without rebuilding it in the control-character filter. Inputs with CSI-u or
+filtered controls still take the existing replacement/filter path. The existing
+1 MB paste benchmark falls from 12.60 ms / 9.74 MB / 82 allocations to 3.54 ms /
+2.40 MB / 46 allocations per operation (Linux/amd64, Intel N150, five runs);
+`TestEditorCleanLargePasteDoesNotCopyFilteredText` pins the allocation budget,
+and `TestEditorPasteFiltersControlBytesAndDecodesCSIu` guards the exceptional
+path.
+
 ## Proxy stream delta assembly
 
 `agent/proxy.go` rebuilds cumulative assistant text and thinking blocks from

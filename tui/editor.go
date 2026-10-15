@@ -1011,26 +1011,23 @@ func (e *Editor) handlePasteLocked(pastedText string) {
 	e.pushUndoSnapshot()
 
 	// Terminals may re-encode control bytes inside pastes as CSI-u sequences.
-	decodedText := csiCtrlPasteRegex.ReplaceAllStringFunc(pastedText, func(match string) string {
-		parts := csiCtrlPasteRegex.FindStringSubmatch(match)
-		cp := atoiSafe(parts[1])
-		if cp >= 97 && cp <= 122 {
-			return string(rune(cp - 96))
-		}
-		if cp >= 65 && cp <= 90 {
-			return string(rune(cp - 64))
-		}
-		return match
-	})
+	decodedText := pastedText
+	if csiCtrlPasteRegex.MatchString(pastedText) {
+		decodedText = csiCtrlPasteRegex.ReplaceAllStringFunc(pastedText, func(match string) string {
+			parts := csiCtrlPasteRegex.FindStringSubmatch(match)
+			cp := atoiSafe(parts[1])
+			if cp >= 97 && cp <= 122 {
+				return string(rune(cp - 96))
+			}
+			if cp >= 65 && cp <= 90 {
+				return string(rune(cp - 64))
+			}
+			return match
+		})
+	}
 
 	cleanText := e.normalizeText(decodedText)
-	var builder strings.Builder
-	for _, r := range cleanText {
-		if r == '\n' || r >= 32 {
-			builder.WriteRune(r)
-		}
-	}
-	filteredText := builder.String()
+	filteredText := filterPastedText(cleanText)
 
 	if len(filteredText) > 0 && (filteredText[0] == '/' || filteredText[0] == '~' || filteredText[0] == '.') {
 		charBeforeCursor := ""
@@ -1063,6 +1060,39 @@ func (e *Editor) handlePasteLocked(pastedText string) {
 	}
 
 	e.insertTextAtCursorInternal(filteredText)
+}
+
+func filterPastedText(text string) string {
+	needsFiltering := false
+	for index := 0; index < len(text); {
+		byteValue := text[index]
+		if byteValue < utf8.RuneSelf {
+			if byteValue < 32 && byteValue != '\n' {
+				needsFiltering = true
+				break
+			}
+			index++
+			continue
+		}
+		r, size := utf8.DecodeRuneInString(text[index:])
+		if r == utf8.RuneError && size == 1 {
+			needsFiltering = true
+			break
+		}
+		index += size
+	}
+	if !needsFiltering {
+		return text
+	}
+
+	var builder strings.Builder
+	builder.Grow(len(text))
+	for _, r := range text {
+		if r == '\n' || r >= 32 {
+			builder.WriteRune(r)
+		}
+	}
+	return builder.String()
 }
 
 var csiCtrlPasteRegex = mustCompileRegex(`\x1b\[(\d+);5u`)
