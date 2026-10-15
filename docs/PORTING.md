@@ -127,7 +127,8 @@ Ported so far:
   (`coding-agent/core/prompt-templates.ts`, #10867).
 - `read` line-range labels accept numeric strings and omit malformed ranges, in
   the TUI renderer, the session tree and the HTML export
-  (`coding-agent/core/tools/render-utils.ts`, #10938).
+  (`coding-agent/core/tools/render-utils.ts`, #10938); the port mirrors the
+  upstream `read-line-range-display.test.ts` cases.
 - Error tool-result images for Anthropic and Claude on Bedrock follow all tool
   results of the turn instead of being dropped (`ai/api/transform-messages.ts`,
   `anthropic-messages.ts`, `bedrock-converse-stream.ts`, #10794).
@@ -171,6 +172,10 @@ Ported so far:
 - The unused assistant-message frame API (`AssistantMessageFrameEncoder`,
   `ReduceAssistantMessageFrames`) was removed to match the pin; the port had no
   runtime user (`ai/src/utils/assistant-message-frame.ts`, `b39979799`).
+- Invalid `\u` escapes in tool-call arguments stay literal text instead of
+  failing the parse and dropping the field (`ai/utils/json-parse.ts`, #10868);
+  the port already behaved this way and now mirrors the upstream
+  `json-parse.test.ts` cases.
 
 All in-scope v1.3.0 items are ported.
 
