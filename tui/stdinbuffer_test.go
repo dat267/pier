@@ -421,6 +421,28 @@ func TestStdinBufferChunkedPasteAllocationIsLinear(t *testing.T) {
 	}
 }
 
+func TestStdinBufferSingleChunkPasteDoesNotCopyInput(t *testing.T) {
+	payload := strings.Repeat("x", 64*1024)
+	input := bracketedPasteStart + payload + bracketedPasteEnd
+	buffer := NewStdinBuffer(StdinBufferOptions{})
+	var got string
+	buffer.OnPaste = func(content string) { got = content }
+
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	buffer.ProcessString(input)
+	runtime.ReadMemStats(&after)
+
+	if got != payload {
+		t.Fatalf("pasted content length = %d, want %d", len(got), len(payload))
+	}
+	allocated := after.TotalAlloc - before.TotalAlloc
+	t.Logf("single-chunk %d-byte paste allocated %d bytes", len(payload), allocated)
+	if allocated > uint64(len(payload))/4 {
+		t.Fatalf("single-chunk %d-byte paste allocated %d bytes, want less than %d", len(payload), allocated, len(payload)/4)
+	}
+}
+
 func BenchmarkStdinBufferChunkedPaste(b *testing.B) {
 	const chunkSize = 128
 	payload := strings.Repeat("x", 64*1024+118)

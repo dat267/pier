@@ -650,9 +650,12 @@ large mixed-markup document) produced identical token trees and rendered lines.
 stdin chunk. A 65,654-byte paste arriving in 128-byte reads allocated 18.2 MB;
 `strings.Builder` now grows the accumulator amortized, and terminator search
 resumes from the suffix that can straddle the next read. The same fixture
-allocates 285 KB in 81 µs on Linux/amd64 (Intel N150, five iterations).
+allocates 285 KB in 85 µs on Linux/amd64 (Intel N150, 100 iterations).
 `TestStdinBufferChunkedPasteAllocationIsLinear` checks the content, the
 terminator split across a read boundary, and an 8x-output allocation ceiling.
+A complete paste already present in one input string bypasses the builder and
+stays a substring of that input; `TestStdinBufferSingleChunkPasteDoesNotCopyInput`
+measures 0 bytes allocated within `ProcessString` for a 65,536-byte payload.
 
 ## Editor paste fast path
 

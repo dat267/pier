@@ -336,13 +336,17 @@ func (b *StdinBuffer) process(str string) {
 
 		b.pendingCodepoint = 0
 		b.hasPendingCodepoint = false
-		b.buffer = b.buffer[startIndex+len(bracketedPasteStart):]
+		content := b.buffer[startIndex+len(bracketedPasteStart):]
+		b.buffer = ""
+		if endIndex := indexOf(content, bracketedPasteEnd); endIndex != -1 {
+			b.finishPaste(content[:endIndex], content[endIndex+len(bracketedPasteEnd):])
+			return
+		}
+
 		b.pasteMode = true
 		b.pasteBuffer = &strings.Builder{}
-		b.pasteSearchFrom = 0
-		b.pasteBuffer.WriteString(b.buffer)
-		b.buffer = ""
-		b.finishPasteIfAvailable()
+		b.pasteBuffer.WriteString(content)
+		b.pasteSearchFrom = nextPasteSearchStart(len(content))
 		return
 	}
 
@@ -369,6 +373,12 @@ func (b *StdinBuffer) process(str string) {
 	}
 }
 
+// nextPasteSearchStart returns the earliest position not ruled out as the
+// start of a terminator that may finish with future input.
+func nextPasteSearchStart(contentLength int) int {
+	return max(0, contentLength-len(bracketedPasteEnd)+1)
+}
+
 // finishPasteIfAvailable scans only the untested suffix, retaining enough
 // overlap to find a terminator split across input chunks.
 func (b *StdinBuffer) finishPasteIfAvailable() {
@@ -378,16 +388,15 @@ func (b *StdinBuffer) finishPasteIfAvailable() {
 	// become the terminator after another chunk arrives.
 	endOffset := indexOf(content[searchFrom:], bracketedPasteEnd)
 	if endOffset == -1 {
-		b.pasteSearchFrom = len(content) - len(bracketedPasteEnd) + 1
-		if b.pasteSearchFrom < 0 {
-			b.pasteSearchFrom = 0
-		}
+		b.pasteSearchFrom = nextPasteSearchStart(len(content))
 		return
 	}
 
 	endIndex := searchFrom + endOffset
-	pastedContent := content[:endIndex]
-	remaining := content[endIndex+len(bracketedPasteEnd):]
+	b.finishPaste(content[:endIndex], content[endIndex+len(bracketedPasteEnd):])
+}
+
+func (b *StdinBuffer) finishPaste(pastedContent string, remaining string) {
 	b.pasteMode = false
 	b.pasteBuffer = nil
 	b.pasteSearchFrom = 0
