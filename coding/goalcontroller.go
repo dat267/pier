@@ -107,10 +107,12 @@ func (c *GoalController) SyncTools() {
 		seen["create_goal"] = true
 	}
 	// get_goal/update_goal only mean something while a goal is being pursued.
+	c.mu.Lock()
 	pursuing := false
 	if snapshot := c.machine.Snapshot(); snapshot.Goal != nil {
 		pursuing = snapshot.Goal.Phase == goal.PhaseActive
 	}
+	c.mu.Unlock()
 	for _, name := range []string{"get_goal", "update_goal"} {
 		if pursuing {
 			if !seen[name] {
@@ -170,10 +172,11 @@ func (c *GoalController) AgentEnd(event *SessionEvent) {
 	aborted := goalAborted(event)
 	c.mu.Lock()
 	admission := c.machine.Dispatch(goal.AgentEndEvent{Usage: goalUsageFromAgentEnd(event), Aborted: aborted})
+	c.mu.Unlock()
 	c.Apply(admission.Effects)
-	outcome := goalOutcome(event, aborted)
 	pending := c.sink.GoalHasPendingMessages()
-	settle := c.machine.Dispatch(goal.AgentBeforeSettleEvent{Outcome: outcome, HasPendingMessages: pending})
+	c.mu.Lock()
+	settle := c.machine.Dispatch(goal.AgentBeforeSettleEvent{Outcome: goalOutcome(event, aborted), HasPendingMessages: pending})
 	c.mu.Unlock()
 	c.Apply(settle.Effects)
 	if !settle.Continue {
