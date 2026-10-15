@@ -675,12 +675,13 @@ from 3.54 ms / 2.40 MB to 2.95 ms / 1.35 MB in five-iteration runs on the same m
 
 ## Editor backward word movement
 
-When Ctrl+Left crosses the final ASCII punctuation in a word-like segment,
-`findWordBackwardSegments` used a `[]rune` copy to locate it and count the UTF-8
-suffix bytes. A 65,541-byte segment allocated 270 KB; recording the punctuation's
-byte offset in the existing rune walk reduces the test to 640 bytes. The
-regression test also checks that a multibyte suffix still yields the correct
-byte cursor position.
+Ctrl+Left over a long word-like segment used to materialize a `[]rune` and
+byte-offset table in `WordSegments`, then another rune slice to find the last
+ASCII punctuation. `WordSegments` now decodes the source in place and returns
+valid segments as source substrings; backward movement records punctuation byte
+positions directly. The 65,541-byte editor path fell from 876,608 allocated
+bytes to 64. Allocation tests also check the byte cursor after a multibyte
+suffix.
 
 ## Proxy stream delta assembly
 

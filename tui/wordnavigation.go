@@ -1,5 +1,7 @@
 package tui
 
+import "unicode/utf8"
+
 // Port of src/undo-stack.ts, src/kill-ring.ts, and src/word-navigation.ts.
 
 // UndoStack stores state snapshots. Upstream clones on push with
@@ -104,54 +106,74 @@ type WordSegment struct {
 // between digits; whitespace runs and individual punctuation cells are
 // non-word segments.
 func WordSegments(text string) []WordSegment {
-	runes := []rune(text)
-	byteOffsets := make([]int, len(runes)+1)
-	offset := 0
-	for i, r := range runes {
-		byteOffsets[i] = offset
-		offset += len(string(r))
-	}
-	byteOffsets[len(runes)] = offset
-
+	// Walk the source directly so segments can reference its bytes instead of
+	// allocating rune and byte-offset tables.
 	var segments []WordSegment
-	index := 0
-
-	for index < len(runes) {
-		r := runes[index]
+	byteOffset := 0
+	// Keep indices compatible with encoding each decoded rune to a Go string;
+	// invalid UTF-8 therefore advances by the RuneError encoding width.
+	logicalOffset := 0
+	for byteOffset < len(text) {
+		startByte := byteOffset
+		startIndex := logicalOffset
+		r, size := utf8.DecodeRuneInString(text[byteOffset:])
 
 		if isWhitespaceRune(r) {
-			start := index
-			for index < len(runes) && isWhitespaceRune(runes[index]) {
-				index++
+			byteOffset += size
+			logicalOffset += utf8.RuneLen(r)
+			for byteOffset < len(text) {
+				next, nextSize := utf8.DecodeRuneInString(text[byteOffset:])
+				if !isWhitespaceRune(next) {
+					break
+				}
+				byteOffset += nextSize
+				logicalOffset += utf8.RuneLen(next)
 			}
-			segments = append(segments, WordSegment{Segment: string(runes[start:index]), Index: byteOffsets[start], IsWordLike: false})
+			segments = append(segments, WordSegment{
+				Segment: text[startByte:byteOffset], Index: startIndex,
+			})
 			continue
 		}
 
 		if !isWordChar(r) {
-			segments = append(segments, WordSegment{Segment: string(r), Index: byteOffsets[index], IsWordLike: false})
-			index++
+			segment := text[byteOffset : byteOffset+size]
+			if r == utf8.RuneError && size == 1 {
+				segment = string(r)
+			}
+			segments = append(segments, WordSegment{Segment: segment, Index: startIndex})
+			byteOffset += size
+			logicalOffset += utf8.RuneLen(r)
 			continue
 		}
 
-		start := index
-		index++
-		for index < len(runes) {
-			if isWordChar(runes[index]) {
-				index++
+		previous := r
+		byteOffset += size
+		logicalOffset += utf8.RuneLen(r)
+		for byteOffset < len(text) {
+			current, currentSize := utf8.DecodeRuneInString(text[byteOffset:])
+			if isWordChar(current) {
+				byteOffset += currentSize
+				logicalOffset += utf8.RuneLen(current)
+				previous = current
 				continue
 			}
-			// A single mid-word character merges between word characters.
-			if index+1 < len(runes) && isWordChar(runes[index+1]) &&
-				isMidWordChar(runes[index], runes[index-1], runes[index+1]) {
-				index += 2
-				continue
+
+			afterOffset := byteOffset + currentSize
+			if afterOffset < len(text) {
+				after, afterSize := utf8.DecodeRuneInString(text[afterOffset:])
+				if isWordChar(after) && isMidWordChar(current, previous, after) {
+					byteOffset = afterOffset + afterSize
+					logicalOffset += utf8.RuneLen(current) + utf8.RuneLen(after)
+					previous = after
+					continue
+				}
 			}
 			break
 		}
-		segments = append(segments, WordSegment{Segment: string(runes[start:index]), Index: byteOffsets[start], IsWordLike: true})
+		segments = append(segments, WordSegment{
+			Segment: text[startByte:byteOffset], Index: startIndex, IsWordLike: true,
+		})
 	}
-
 	return segments
 }
 

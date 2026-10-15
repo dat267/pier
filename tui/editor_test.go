@@ -275,6 +275,30 @@ func TestEditorSubmitReentrancy(t *testing.T) {
 	}
 }
 
+// Mirrors packages/tui/src/word-navigation.ts findWordBackward: a word-like
+// segment with punctuation leaves the cursor after its last punctuation rune.
+func TestEditorWordNavigationDoesNotCopyRuneTables(t *testing.T) {
+	text := "word." + strings.Repeat("x", 64*1024)
+	editor := NewEditor(&editorHost{rows: 10}, editorTestTheme(), EditorOptions{})
+	editor.SetText(text)
+	editor.state.cursorCol = len(text)
+
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	editor.moveWordBackwardsLocked()
+	runtime.ReadMemStats(&after)
+
+	if editor.state.cursorCol != len("word.") {
+		t.Fatalf("cursor = %d, want %d", editor.state.cursorCol, len("word."))
+	}
+	allocated := after.TotalAlloc - before.TotalAlloc
+	t.Logf("word navigation over %d bytes allocated %d bytes", len(text), allocated)
+	if allocated > uint64(len(text))*2 {
+		t.Fatalf("word navigation over %d bytes allocated %d bytes, want less than %d", len(text), allocated, len(text)*2)
+	}
+}
+
+// The punctuation offset is a byte index, while the suffix may be UTF-8.
 func TestFindWordBackwardAfterPunctuationAvoidsRuneSlice(t *testing.T) {
 	text := "word." + strings.Repeat("x", 64*1024)
 	segments := []editorSegment{{Segment: text, IsWordLike: true}}
