@@ -275,6 +275,31 @@ func TestEditorSubmitReentrancy(t *testing.T) {
 	}
 }
 
+// Mirrors packages/tui/src/word-navigation.ts: backward movement skips a
+// contiguous punctuation run when the cursor is at its end.
+func TestFindWordBackwardPunctuationRunDoesNotCopySegments(t *testing.T) {
+	const segmentCount = 8192
+	text := strings.Repeat("!", segmentCount)
+	segments := make([]editorSegment, segmentCount)
+	for index := range segments {
+		segments[index] = editorSegment{Segment: "!", Index: index}
+	}
+
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	got := findWordBackwardSegments(text, len(text), segments)
+	runtime.ReadMemStats(&after)
+
+	if got != 0 {
+		t.Fatalf("cursor = %d, want 0", got)
+	}
+	allocated := after.TotalAlloc - before.TotalAlloc
+	t.Logf("backward navigation across %d segments allocated %d bytes", segmentCount, allocated)
+	if allocated > uint64(segmentCount*4) {
+		t.Fatalf("backward navigation across %d segments allocated %d bytes, want less than %d", segmentCount, allocated, segmentCount*4)
+	}
+}
+
 // Mirrors packages/tui/src/word-navigation.ts findWordBackward: a word-like
 // segment with punctuation leaves the cursor after its last punctuation rune.
 func TestEditorWordNavigationDoesNotCopyRuneTables(t *testing.T) {

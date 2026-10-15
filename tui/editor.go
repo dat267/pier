@@ -1693,14 +1693,14 @@ func findWordBackwardSegments(text string, cursor int, segments []editorSegment)
 	if cursor <= 0 {
 		return 0
 	}
-	filtered := make([]editorSegment, 0, len(segments))
+	segmentCount := 0
 	for _, segment := range segments {
 		if segment.Index >= cursor {
 			break
 		}
-		filtered = append(filtered, segment)
+		segmentCount++
 	}
-	segments = filtered
+	segments = segments[:segmentCount]
 	newCursor := cursor
 
 	for len(segments) > 0 {

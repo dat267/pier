@@ -679,9 +679,10 @@ Ctrl+Left over a long word-like segment used to materialize a `[]rune` and
 byte-offset table in `WordSegments`, then another rune slice to find the last
 ASCII punctuation. `WordSegments` now decodes the source in place and returns
 valid segments as source substrings; backward movement records punctuation byte
-positions directly. The 65,541-byte editor path fell from 876,608 allocated
-bytes to 64. Allocation tests also check the byte cursor after a multibyte
-suffix.
+positions directly and counts the in-range segment prefix without copying it.
+The 65,541-byte editor path fell from 876,608 allocated bytes to 64; skipping
+8192 punctuation segments no longer allocates the 262 KB prefix copy. Allocation
+tests also check the byte cursor after a multibyte suffix.
 
 ## Proxy stream delta assembly
 
