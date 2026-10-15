@@ -162,7 +162,10 @@ Ported so far:
   report ambiguity across providers instead of using catalog order, prefer an
   authenticated provider only to break a tie, and warn when a scope pattern
   matches several providers (`coding-agent/core/model-resolver.ts`,
-  #10160/#10913). `--api-key` keeps the provider the key is for.
+  #10160/#10913). `--api-key` keeps the provider the key is for. `pi auth`
+  credential printing resolves `--model` through the same resolver, so an
+  uncatalogued id on another configured provider is not a match
+  (`cli/credential-print.ts`).
 - `durable` SQLite storage namespaces its tables and indexes with an optional
   `Prefix` (`SqliteStorageOptions` / `OpenSqliteStorageWithOptions`) and
   validates it, for a database shared with host tables

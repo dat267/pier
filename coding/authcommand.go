@@ -348,12 +348,20 @@ func ResolveCredentialForPrint(args *Args, runtime *ModelRuntime, kind AuthComma
 			providers = append(providers, printTarget{id: provider.ID})
 		}
 	} else {
+		// Upstream v1.3.0 #10913: the shared resolver restricts matches to
+		// catalog models of configured providers, so an uncatalogued model id
+		// on another configured provider does not count as a match.
+		models := runtime.GetModels("")
 		for _, provider := range runtime.GetProviders() {
 			if _, ok := credentialTypes[provider.ID]; !ok {
 				continue
 			}
-			resolved := ResolveCliModel(ResolveCliModelOptions{CLIProvider: provider.ID, CLIModel: cliModel, ModelRuntime: runtime})
-			if resolved.Model != nil && resolved.Error == "" && !strings.Contains(resolved.Warning, "Using custom model id") {
+			resolved := ResolveModelReference(
+				ModelReferenceRequest{Text: cliModel, Provider: provider.ID, ThinkingSuffix: thinkingSuffixStrict, Fuzzy: true},
+				models,
+				func(string) bool { return true },
+			)
+			if resolved.Status == "resolved" {
 				providers = append(providers, printTarget{id: provider.ID, model: resolved.Model})
 			}
 		}
