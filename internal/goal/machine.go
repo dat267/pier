@@ -581,13 +581,7 @@ func (m *GoalMachine) goalReplace(objective string, budget *GoalBudget) Dispatch
 }
 
 func (m *GoalMachine) sessionStart(entries []CustomEntry, reason string) DispatchResult {
-	filtered := make([]CustomEntry, 0, len(entries))
-	for _, entry := range entries {
-		if entry.CustomType == GoalCustomType || entry.CustomType == GoalTurnType {
-			filtered = append(filtered, entry)
-		}
-	}
-	folded, err := FoldGoal(filtered)
+	folded, err := FoldGoal(entries)
 	if err != nil {
 		// Surface corruption: never silently drop the goal.
 		m.view = nil

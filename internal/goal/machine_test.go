@@ -79,6 +79,26 @@ func findContinue(result DispatchResult) *ContinueRoundEffect {
 	return nil
 }
 
+func TestSessionStartIgnoresUnrelatedEntriesWithoutAllocating(t *testing.T) {
+	// Port of goal/machine.ts session_start: unrelated custom entries do not
+	// participate in replay, so a large branch containing only other extensions
+	// must not allocate a filtered copy before the fold.
+	entries := make([]CustomEntry, 1024)
+	for index := range entries {
+		entries[index] = CustomEntry{CustomType: "other-extension"}
+	}
+	machine := NewGoalMachine()
+	allocations := testing.AllocsPerRun(10, func() {
+		machine.Dispatch(SessionStartEvent{Entries: entries, Reason: "startup"})
+		if machine.Snapshot().Goal != nil {
+			t.Fatal("session start created a goal")
+		}
+	})
+	if allocations != 0 {
+		t.Fatalf("unrelated entries allocated %.0f objects per replay, want 0", allocations)
+	}
+}
+
 func TestSessionStartNoEntries(t *testing.T) {
 	m, _ := testMachine()
 	m.Dispatch(SessionStartEvent{Entries: nil})
