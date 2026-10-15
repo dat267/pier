@@ -401,6 +401,18 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 	if config.PromptSources != nil {
 		s.promptSources = *config.PromptSources
 	}
+	// The builtin goal controller: register its tools and replay the durable
+	// goal state from the current branch. Upstream always has the extension
+	// host available.
+	if control.Goal != nil {
+		control.Goal.AttachSession(s)
+		for _, tool := range control.Goal.GoalTools() {
+			if _, ok := control.Tools[tool.Name]; !ok {
+				control.Tools[tool.Name] = AgentToolDefinition{Tool: tool, PromptGuidelines: goalToolGuidelines[tool.Name]}
+			}
+		}
+		control.Goal.SyncTools()
+	}
 	// Always subscribed: session persistence, queue tracking, compaction,
 	// retry logic.
 	a.Subscribe(func(event agent.AgentEvent, ctx context.Context) error {
@@ -458,6 +470,14 @@ func (s *AgentSession) Subscribe(listener SessionEventListener) func() {
 }
 
 func (s *AgentSession) emit(event *SessionEvent) {
+	// The builtin goal controller owns the agent_end (turn admission) and
+	// agent_before_settle (continuation/budget/abort) hooks.
+	if s.control != nil && s.control.Goal != nil {
+		switch event.Type {
+		case SessionAgentEnd:
+			s.control.Goal.AgentEnd(event)
+		}
+	}
 	s.listenerMu.Lock()
 	listeners := append([]*sessionListenerKey{}, s.listeners...)
 	s.listenerMu.Unlock()

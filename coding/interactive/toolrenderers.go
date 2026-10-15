@@ -14,14 +14,17 @@ import (
 
 // builtinToolRenderers are the renderers for every built-in tool, keyed by name.
 var builtinToolRenderers = map[string]ToolRenderers{
-	"read":       readRenderers,
-	"bash":       bashRenderers,
-	"powershell": powershellRenderers,
-	"edit":       editRenderers,
-	"write":      writeRenderers,
-	"grep":       grepRenderers,
-	"find":       findRenderers,
-	"ls":         lsRenderers,
+	"read":        readRenderers,
+	"bash":        bashRenderers,
+	"powershell":  powershellRenderers,
+	"edit":        editRenderers,
+	"write":       writeRenderers,
+	"grep":        grepRenderers,
+	"find":        findRenderers,
+	"ls":          lsRenderers,
+	"get_goal":    goalGetRenderers,
+	"create_goal": goalCreateRenderers,
+	"update_goal": goalUpdateRenderers,
 }
 
 // BuiltinToolRendererNames lists the tools with built-in renderers.

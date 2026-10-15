@@ -65,6 +65,9 @@ type AgentSessionControl struct {
 	Tools map[string]AgentToolDefinition
 	// PromptTemplates are the file-based prompt templates (resource loader).
 	PromptTemplates []PromptTemplate
+	// Goal is the builtin session-goal controller (port of the goal
+	// extension). Nil disables the feature.
+	Goal *GoalController
 
 	stateMu             sync.Mutex
 	scopedModels        []ScopedModel

@@ -466,6 +466,29 @@ func NewApp(options AppOptions) *App {
 	app.transcript.Editor = app.defaultEditor
 	app.transcript.Display = app.display
 	app.transcript.MarkdownTheme = app.markdownTheme()
+	// The builtin goal controller: durable lifecycle and round entries render
+	// as goal cards in the transcript, and the controller's notifications and
+	// "replace goal" confirmation route through the mode. Its effects fire from
+	// the agent worker (agent_end), so every callback that touches the UI is
+	// posted (D143: producers only enqueue).
+	app.transcript.EntryRenderer = GoalEntryRenderer
+	if controller := app.session.Goal(); controller != nil {
+		if sink := controller.SessionSink(); sink != nil {
+			sink.Notify = func(message string, level string) {
+				app.ui.Post(func() {
+					if level == "warning" {
+						app.showWarning(message)
+						return
+					}
+					app.transcript.ShowStatus(message)
+				})
+			}
+			sink.Confirm = func(title string, message string, onAnswer func(confirmed bool)) {
+				app.ui.Post(func() { app.askConfirm(title, message, onAnswer) })
+			}
+		}
+		controller.SessionStartFromSession("startup", app.sessionMgr)
+	}
 	// The MCP wiring: the first turn waits for the direct-tool servers (bounded,
 	// upstream DEFAULT_STARTUP_WAIT_MS), attaches whatever connected, reports
 	// the connection failures, and every later tool-set change attaches live.
