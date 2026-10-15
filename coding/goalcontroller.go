@@ -1,9 +1,9 @@
 package coding
 
-// Port of the goal extension's index.ts host glue: the GoalController applies
-// the GoalMachine's effects against the session (durable custom entries,
-// continuation messages and notifications), exposes the three tools, and owns
-// the lifecycle hooks.
+// The goal controller is a session feature: it owns the goal machine and
+// applies its effects against the session it belongs to. It is built in
+// NewAgentSession like the cache warmer, not passed in as an object graph from
+// the SDK.
 
 import (
 	"context"
@@ -17,40 +17,147 @@ import (
 	"github.com/dat267/pier/internal/goal"
 )
 
-// GoalSink is the host surface the goal controller needs. The interactive mode
-// (and the tests) implement it.
-type GoalSink interface {
+// goalSink is the session surface the goal controller needs. The production
+// implementation wraps an AgentSession; tests use a fake.
+type goalSink interface {
 	// AppendGoalEntry persists a durable custom entry.
 	AppendGoalEntry(entryType string, data json.RawMessage)
 	// SendGoalMessage adds a continuation or wrap-up message to the model
 	// context, optionally starting a turn.
 	SendGoalMessage(customType string, content string, display bool, details json.RawMessage, triggerTurn bool)
-	// NotifyGoal surfaces a notification to the human.
-	NotifyGoal(message string, level string)
 	// GoalActiveTools lists the active tool names.
 	GoalActiveTools() []string
 	// SetGoalActiveTools replaces the active tool names.
 	SetGoalActiveTools(names []string)
 	// GoalHasPendingMessages reports queued user input awaiting delivery.
 	GoalHasPendingMessages() bool
-	// ConfirmGoalReplace asks the human before replacing a live goal and invokes
-	// onAnswer with their decision (asynchronously, like the host dialog).
-	ConfirmGoalReplace(title string, message string, onAnswer func(confirmed bool))
+	// GoalBranchEntries returns the current branch's custom entries for replay.
+	GoalBranchEntries() []goal.CustomEntry
 }
 
-// GoalController owns the goal machine and its host wiring.
+// sessionGoalSink adapts an AgentSession to goalSink.
+type sessionGoalSink struct{ session *AgentSession }
+
+func newSessionGoalSink(session *AgentSession) *sessionGoalSink {
+	return &sessionGoalSink{session: session}
+}
+
+func (s *sessionGoalSink) AppendGoalEntry(entryType string, data json.RawMessage) {
+	if s.session != nil && s.session.Sessions != nil {
+		s.session.Sessions.AppendCustomEntry(entryType, data)
+	}
+}
+
+func (s *sessionGoalSink) SendGoalMessage(customType string, content string, display bool, details json.RawMessage, triggerTurn bool) {
+	if s.session == nil {
+		return
+	}
+	if triggerTurn {
+		// Upstream `sendMessage(..., { triggerTurn: true, deliverAs: "followUp" })`:
+		// the round prompt enters the context as a display:false custom message
+		// (invisible in the transcript) and the queued follow-up starts the turn.
+		s.session.FollowUp(goalEventMessage(customType, content, display, details))
+		return
+	}
+	s.session.AppendCustomMessage(goalEventMessage(customType, content, display, details))
+}
+
+func (s *sessionGoalSink) GoalActiveTools() []string {
+	if s.session == nil {
+		return nil
+	}
+	return s.session.ActiveToolNames()
+}
+
+func (s *sessionGoalSink) SetGoalActiveTools(names []string) {
+	if s.session != nil {
+		s.session.SetActiveToolsByName(names)
+	}
+}
+
+func (s *sessionGoalSink) GoalHasPendingMessages() bool {
+	return s.session != nil && s.session.PendingMessageCount() > 0
+}
+
+func (s *sessionGoalSink) GoalBranchEntries() []goal.CustomEntry {
+	if s.session == nil || s.session.Sessions == nil {
+		return nil
+	}
+	var entries []goal.CustomEntry
+	for _, entry := range s.session.Sessions.GetBranch("") {
+		if entry.Type != "custom" {
+			continue
+		}
+		entries = append(entries, goal.CustomEntry{CustomType: entry.CustomType, Data: entry.Data})
+	}
+	return entries
+}
+
+// goalNotice is a notification buffered until the UI hooks are installed.
+type goalNotice struct {
+	message string
+	level   string
+}
+
+// GoalController owns the goal machine and its session wiring.
 type GoalController struct {
 	mu      sync.Mutex
 	machine *goal.GoalMachine
-	sink    GoalSink
+	sink    goalSink
+	notify  func(message string, level string)
+	confirm func(title string, message string, onAnswer func(confirmed bool))
+	pending []goalNotice
 }
 
-// NewGoalController creates a controller.
-func NewGoalController(machine *goal.GoalMachine, sink GoalSink) *GoalController {
+// newGoalController creates a controller bound to a sink.
+func newGoalController(machine *goal.GoalMachine, sink goalSink) *GoalController {
 	if machine == nil {
 		machine = goal.NewGoalMachine()
 	}
 	return &GoalController{machine: machine, sink: sink}
+}
+
+// SetUIHooks installs the human-facing callbacks and delivers any notices that
+// were produced before the UI existed (session-start restore, reload pauses).
+// A nil notify drops notices; a nil confirm denies goal replacement.
+func (c *GoalController) SetUIHooks(notify func(message string, level string), confirm func(title string, message string, onAnswer func(confirmed bool))) {
+	c.mu.Lock()
+	c.notify = notify
+	c.confirm = confirm
+	notices := c.pending
+	c.pending = nil
+	c.mu.Unlock()
+	if notify == nil {
+		return
+	}
+	for _, notice := range notices {
+		notify(notice.message, notice.level)
+	}
+}
+
+// notice surfaces a notification, buffering it until hooks are installed.
+func (c *GoalController) notice(message string, level string) {
+	c.mu.Lock()
+	if c.notify == nil {
+		c.pending = append(c.pending, goalNotice{message: message, level: level})
+		c.mu.Unlock()
+		return
+	}
+	notify := c.notify
+	c.mu.Unlock()
+	notify(message, level)
+}
+
+// confirmReplace asks the human before replacing a live goal.
+func (c *GoalController) confirmReplace(title string, message string, onAnswer func(confirmed bool)) {
+	c.mu.Lock()
+	confirm := c.confirm
+	c.mu.Unlock()
+	if confirm == nil {
+		onAnswer(false)
+		return
+	}
+	confirm(title, message, onAnswer)
 }
 
 // Snapshot exposes the machine state.
@@ -60,10 +167,7 @@ func (c *GoalController) Snapshot() goal.MachineSnapshot {
 	return c.machine.Snapshot()
 }
 
-// Machine exposes the underlying state machine.
-func (c *GoalController) Machine() *goal.GoalMachine { return c.machine }
-
-// Apply executes the machine's effects against the host.
+// Apply executes the machine's effects against the session.
 func (c *GoalController) Apply(effects []goal.Effect) {
 	mutated := false
 	for _, effect := range effects {
@@ -79,7 +183,7 @@ func (c *GoalController) Apply(effects []goal.Effect) {
 			details, _ := json.Marshal(typed.Details)
 			c.sink.SendGoalMessage(typed.CustomType, typed.Content, typed.Display, details, typed.TriggerTurn)
 		case goal.NotifyEffect:
-			c.sink.NotifyGoal(typed.Message, typed.Level)
+			c.notice(typed.Message, typed.Level)
 		case goal.ContinueRoundEffect:
 			// Handled by AgentEnd, which queues the hidden follow-up round.
 		}
@@ -93,45 +197,13 @@ func (c *GoalController) Apply(effects []goal.Effect) {
 // SyncTools mirrors the goal phase onto the active tool set.
 func (c *GoalController) SyncTools() {
 	current := c.sink.GoalActiveTools()
-	seen := map[string]bool{}
-	next := make([]string, 0, len(current)+3)
-	for _, name := range current {
-		if !seen[name] {
-			next = append(next, name)
-			seen[name] = true
-		}
-	}
-	// create_goal stays available: the model may be asked to set a goal.
-	if !seen["create_goal"] {
-		next = append(next, "create_goal")
-		seen["create_goal"] = true
-	}
-	// get_goal/update_goal only mean something while a goal is being pursued.
 	c.mu.Lock()
 	pursuing := false
 	if snapshot := c.machine.Snapshot(); snapshot.Goal != nil {
 		pursuing = snapshot.Goal.Phase == goal.PhaseActive
 	}
 	c.mu.Unlock()
-	for _, name := range []string{"get_goal", "update_goal"} {
-		if pursuing {
-			if !seen[name] {
-				next = append(next, name)
-				seen[name] = true
-			}
-			continue
-		}
-		delete(seen, name)
-	}
-	if !pursuing {
-		filtered := next[:0]
-		for _, name := range next {
-			if name != "get_goal" && name != "update_goal" {
-				filtered = append(filtered, name)
-			}
-		}
-		next = filtered
-	}
+	next := goal.DesiredToolNames(current, pursuing)
 	if !sameToolSet(next, current) {
 		c.sink.SetGoalActiveTools(next)
 	}
@@ -153,25 +225,26 @@ func sameToolSet(a, b []string) bool {
 	return true
 }
 
-// SessionStart replays durable entries and applies the reload pause.
-func (c *GoalController) SessionStart(reason string, entries []goal.CustomEntry) {
+// Start replays the branch's durable goal entries. "reload" additionally
+// durably pauses a live goal.
+func (c *GoalController) Start(reason string) {
 	c.mu.Lock()
-	result := c.machine.Dispatch(goal.SessionStartEvent{Entries: entries, Reason: reason})
+	result := c.machine.Dispatch(goal.SessionStartEvent{Entries: c.sink.GoalBranchEntries(), Reason: reason})
 	c.mu.Unlock()
 	c.Apply(result.Effects)
 	c.SyncTools()
-	snapshot := c.machine.Snapshot()
+	snapshot := c.Snapshot()
 	if snapshot.Goal != nil && snapshot.Goal.Phase == goal.PhaseActive && reason != "reload" {
-		c.sink.NotifyGoal("Goal restored (disarmed): "+goal.TruncateObjective(snapshot.Goal.Objective, 60)+"\nUse /goal resume to continue.", "info")
+		c.notice("Goal restored (disarmed): "+goal.TruncateObjective(snapshot.Goal.Objective, 60)+"\nUse /goal resume to continue.", "info")
 	}
 }
 
-// AgentEnd admits the creating run or the reserved round, then decides whether
-// the next round continues (agent_end + agent_before_settle).
-func (c *GoalController) AgentEnd(event *SessionEvent) {
-	aborted := goalAborted(event)
+// AgentEnd admits the creating run or the reserved round and decides whether
+// the next round continues (the agent_end + agent_before_settle hooks).
+func (c *GoalController) AgentEnd(event *agent.AgentEvent) {
+	aborted := goalAgentAborted(event)
 	c.mu.Lock()
-	admission := c.machine.Dispatch(goal.AgentEndEvent{Usage: goalUsageFromAgentEnd(event), Aborted: aborted})
+	admission := c.machine.Dispatch(goal.AgentEndEvent{Usage: goalUsageFromAgentEvent(event), Aborted: aborted})
 	c.mu.Unlock()
 	c.Apply(admission.Effects)
 	pending := c.sink.GoalHasPendingMessages()
@@ -191,13 +264,13 @@ func (c *GoalController) AgentEnd(event *SessionEvent) {
 	}
 }
 
-// goalUsageFromAgentEnd sums the run's assistant usage.
-func goalUsageFromAgentEnd(event *SessionEvent) *goal.GoalUsage {
-	if event == nil || event.Agent == nil {
+// goalUsageFromAgentEvent sums the run's assistant usage.
+func goalUsageFromAgentEvent(event *agent.AgentEvent) *goal.GoalUsage {
+	if event == nil {
 		return nil
 	}
 	usage := goal.GoalUsage{}
-	for _, message := range event.Agent.Messages {
+	for _, message := range event.Messages {
 		if assistant, ok := message.(*ai.AssistantMessage); ok {
 			if assistant.Usage.TotalTokens > 0 {
 				usage.Tokens += assistant.Usage.TotalTokens
@@ -210,13 +283,13 @@ func goalUsageFromAgentEnd(event *SessionEvent) *goal.GoalUsage {
 	return &usage
 }
 
-// goalAborted reports whether the run that ended was cancelled.
-func goalAborted(event *SessionEvent) bool {
-	if event == nil || event.Agent == nil {
+// goalAgentAborted reports whether the run that ended was cancelled.
+func goalAgentAborted(event *agent.AgentEvent) bool {
+	if event == nil {
 		return false
 	}
-	for index := len(event.Agent.Messages) - 1; index >= 0; index-- {
-		if assistant, ok := event.Agent.Messages[index].(*ai.AssistantMessage); ok {
+	for index := len(event.Messages) - 1; index >= 0; index-- {
+		if assistant, ok := event.Messages[index].(*ai.AssistantMessage); ok {
 			return assistant.StopReason == ai.StopAborted
 		}
 	}
@@ -224,13 +297,13 @@ func goalAborted(event *SessionEvent) bool {
 }
 
 // goalOutcome classifies the settle: aborted, error, or completed.
-func goalOutcome(event *SessionEvent, aborted bool) string {
+func goalOutcome(event *agent.AgentEvent, aborted bool) string {
 	if aborted {
 		return "aborted"
 	}
-	if event != nil && event.Agent != nil {
-		for index := len(event.Agent.Messages) - 1; index >= 0; index-- {
-			if assistant, ok := event.Agent.Messages[index].(*ai.AssistantMessage); ok {
+	if event != nil {
+		for index := len(event.Messages) - 1; index >= 0; index-- {
+			if assistant, ok := event.Messages[index].(*ai.AssistantMessage); ok {
 				if assistant.StopReason == ai.StopError {
 					return "error"
 				}
@@ -243,9 +316,7 @@ func goalOutcome(event *SessionEvent, aborted bool) string {
 
 // HandleCommand runs the /goal command.
 func (c *GoalController) HandleCommand(args string) {
-	c.mu.Lock()
-	snapshot := c.machine.Snapshot()
-	c.mu.Unlock()
+	snapshot := c.Snapshot()
 	run := func(event goal.GoalEvent, fallback func() string) {
 		c.mu.Lock()
 		result := c.machine.Dispatch(event)
@@ -256,22 +327,22 @@ func (c *GoalController) HandleCommand(args string) {
 			if result.IsError {
 				level = "warning"
 			}
-			c.sink.NotifyGoal(*result.Reply, level)
+			c.notice(*result.Reply, level)
 			return
 		}
 		if !result.IsError && fallback != nil {
 			if text := fallback(); text != "" {
-				c.sink.NotifyGoal(text, "info")
+				c.notice(text, "info")
 			}
 		}
 	}
 
 	switch command := goal.ParseGoalCommand(args); command.Kind {
 	case goal.CmdShowStatus:
-		c.sink.NotifyGoal(goal.GoalStatusMessage(snapshot.Goal, time.Now()), "info")
+		c.notice(goal.GoalStatusMessage(snapshot.Goal, time.Now()), "info")
 	case goal.CmdClear:
 		if snapshot.Goal == nil {
-			c.sink.NotifyGoal("No goal is set.", "info")
+			c.notice("No goal is set.", "info")
 			return
 		}
 		run(goal.GoalClearEvent{ID: snapshot.Goal.ID, Revision: snapshot.Goal.Revision}, func() string { return "Goal cleared." })
@@ -285,7 +356,7 @@ func (c *GoalController) HandleCommand(args string) {
 		if snapshot.Goal != nil && snapshot.Goal.Phase != goal.PhaseComplete {
 			title := "Replace goal?"
 			message := "Current: " + goal.TruncateObjective(snapshot.Goal.Objective, 120) + "\n\nNew: " + goal.TruncateObjective(command.Objective, 120)
-			c.sink.ConfirmGoalReplace(title, message, func(confirmed bool) {
+			c.confirmReplace(title, message, func(confirmed bool) {
 				if !confirmed {
 					return
 				}
@@ -295,7 +366,7 @@ func (c *GoalController) HandleCommand(args string) {
 		}
 		run(goal.GoalSetEvent{Objective: command.Objective}, func() string { return "Goal set." })
 	case goal.CmdError:
-		c.sink.NotifyGoal(command.Message, "warning")
+		c.notice(command.Message, "warning")
 	}
 }
 
@@ -314,8 +385,8 @@ var goalToolGuidelines = map[string][]string{
 	},
 }
 
-// GoalTools returns the three goal tools.
-func (c *GoalController) GoalTools() []agent.AgentTool {
+// Tools returns the three goal tools.
+func (c *GoalController) Tools() []agent.AgentTool {
 	return []agent.AgentTool{c.getGoalTool(), c.createGoalTool(), c.updateGoalTool()}
 }
 
@@ -417,37 +488,6 @@ func goalErrorResult(message string) (agent.AgentToolResult, error) {
 	}, nil
 }
 
-// SessionGoalSink adapts an AgentSession to GoalSink. The interactive mode sets
-// Notify and Confirm; the rest is session-backed.
-type SessionGoalSink struct {
-	session *AgentSession
-	Notify  func(message string, level string)
-	Confirm func(title string, message string, onAnswer func(confirmed bool))
-}
-
-// AppendGoalEntry persists a durable custom entry.
-func (s *SessionGoalSink) AppendGoalEntry(entryType string, data json.RawMessage) {
-	if s.session != nil && s.session.Sessions != nil {
-		s.session.Sessions.AppendCustomEntry(entryType, data)
-	}
-}
-
-// SendGoalMessage adds the continuation or wrap-up to the model context and,
-// for a round, queues the follow-up turn.
-func (s *SessionGoalSink) SendGoalMessage(customType string, content string, display bool, details json.RawMessage, triggerTurn bool) {
-	if s.session == nil {
-		return
-	}
-	if triggerTurn {
-		// Upstream `sendMessage(..., { triggerTurn: true, deliverAs: "followUp" })`:
-		// the round prompt enters the context as a display:false custom message
-		// (invisible in the transcript) and the queued follow-up starts the turn.
-		s.session.FollowUp(goalEventMessage(customType, content, display, details))
-		return
-	}
-	s.session.AppendCustomMessage(goalEventMessage(customType, content, display, details))
-}
-
 // goalEventMessage encodes a goal round/wrap-up as the extension's custom
 // message: role "custom" with the {customType, content, display, details}
 // envelope, so ConvertToLlm reaches the model and a display:false message stays
@@ -471,83 +511,3 @@ func goalEventMessage(customType string, content string, display bool, details j
 	}
 	return &ai.CustomMessage{Role: RoleCustom, Content: fields}
 }
-
-// NotifyGoal surfaces a notification (no-op without a sink).
-func (s *SessionGoalSink) NotifyGoal(message string, level string) {
-	if s.Notify != nil {
-		s.Notify(message, level)
-	}
-}
-
-// GoalActiveTools lists the session's active tool names.
-func (s *SessionGoalSink) GoalActiveTools() []string {
-	if s.session == nil {
-		return nil
-	}
-	return s.session.ActiveToolNames()
-}
-
-// SetGoalActiveTools replaces the session's active tool names.
-func (s *SessionGoalSink) SetGoalActiveTools(names []string) {
-	if s.session != nil {
-		s.session.SetActiveToolsByName(names)
-	}
-}
-
-// GoalHasPendingMessages reports queued user input.
-func (s *SessionGoalSink) GoalHasPendingMessages() bool {
-	if s.session == nil {
-		return false
-	}
-	return s.session.PendingMessageCount() > 0
-}
-
-// ConfirmGoalReplace asks the human (denies without a sink).
-func (s *SessionGoalSink) ConfirmGoalReplace(title string, message string, onAnswer func(confirmed bool)) {
-	if s.Confirm == nil {
-		onAnswer(false)
-		return
-	}
-	s.Confirm(title, message, onAnswer)
-}
-
-// AttachSession binds the controller to its session so its effects reach it.
-func (c *GoalController) AttachSession(session *AgentSession) {
-	if sink, ok := c.sink.(*SessionGoalSink); ok {
-		sink.session = session
-	}
-}
-
-// Goal returns the session's goal controller (nil when disabled).
-func (s *AgentSession) Goal() *GoalController {
-	if s.control == nil {
-		return nil
-	}
-	return s.control.Goal
-}
-
-// SessionSink returns the session-backed sink when the controller uses one.
-func (c *GoalController) SessionSink() *SessionGoalSink {
-	if sink, ok := c.sink.(*SessionGoalSink); ok {
-		return sink
-	}
-	return nil
-}
-
-// SessionStartFromSession replays the durable goal entries from a session
-// manager's current branch, mirroring the extension's session_start hook.
-func (c *GoalController) SessionStartFromSession(reason string, manager *SessionManager) {
-	var entries []goal.CustomEntry
-	if manager != nil {
-		for _, entry := range manager.GetBranch("") {
-			if entry.Type != "custom" {
-				continue
-			}
-			entries = append(entries, goal.CustomEntry{CustomType: entry.CustomType, Data: entry.Data})
-		}
-	}
-	c.SessionStart(reason, entries)
-}
-
-// GoalToolNames are the goal tool names in registration order.
-var GoalToolNames = []string{"get_goal", "create_goal", "update_goal"}

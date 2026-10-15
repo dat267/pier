@@ -65,9 +65,6 @@ type AgentSessionControl struct {
 	Tools map[string]AgentToolDefinition
 	// PromptTemplates are the file-based prompt templates (resource loader).
 	PromptTemplates []PromptTemplate
-	// Goal is the builtin session-goal controller (port of the goal
-	// extension). Nil disables the feature.
-	Goal *GoalController
 
 	stateMu             sync.Mutex
 	scopedModels        []ScopedModel
@@ -464,6 +461,20 @@ func (s *AgentSession) AttachExtraTools(tools []agent.AgentTool) []string {
 		return nil
 	}
 	return added
+}
+
+// registerGoalTools adds the goal tools to the session's registry with their
+// prompt guidelines. They are registered once; exposure is gated by the goal
+// controller's SyncTools.
+func (s *AgentSession) registerGoalTools() {
+	if s.Goal == nil || s.control == nil {
+		return
+	}
+	for _, tool := range s.Goal.Tools() {
+		if _, ok := s.control.Tools[tool.Name]; !ok {
+			s.control.Tools[tool.Name] = AgentToolDefinition{Tool: tool, PromptGuidelines: goalToolGuidelines[tool.Name]}
+		}
+	}
 }
 
 // SetActiveToolsByName enables named registry tools allowed by this session's

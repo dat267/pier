@@ -158,6 +158,9 @@ type AgentSession struct {
 	// CacheWarmer keeps the prompt cache entry of session requests warm.
 	CacheWarmer *CacheWarmer
 
+	// Goal is the builtin session-goal controller (nil when disabled).
+	Goal *GoalController
+
 	// streamFn is the session's model stream function (compaction, summaries).
 	streamFn agent.StreamFn
 
@@ -287,6 +290,9 @@ type SessionConfig struct {
 	// servers, bounded). The caller owns the wait; long work here delays the
 	// first request by design.
 	BeforeFirstTurn func(ctx context.Context)
+	// Goal enables the builtin session-goal controller. The SDK sets it unless
+	// tools are disabled; upstream always has the extension host available.
+	Goal bool
 }
 
 // SetBeforeFirstTurn installs the once-per-session pre-turn hook (the
@@ -401,18 +407,13 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 	if config.PromptSources != nil {
 		s.promptSources = *config.PromptSources
 	}
-	// The builtin goal controller: register its tools and replay the durable
-	// goal state from the current branch. Upstream always has the extension
-	// host available.
-	if control.Goal != nil {
-		control.Goal.AttachSession(s)
-		for _, tool := range control.Goal.GoalTools() {
-			if _, ok := control.Tools[tool.Name]; !ok {
-				control.Tools[tool.Name] = AgentToolDefinition{Tool: tool, PromptGuidelines: goalToolGuidelines[tool.Name]}
-			}
-		}
-		control.Goal.SessionStartFromSession("startup", sessionManager)
-		control.Goal.SyncTools()
+	// The builtin goal controller is a session feature: register its tools and
+	// replay the durable goal state from the current branch. The controller is
+	// bound to this session, so its effects reach it directly.
+	if config.Goal {
+		s.Goal = newGoalController(nil, newSessionGoalSink(s))
+		s.registerGoalTools()
+		s.Goal.Start("startup")
 	}
 	// Always subscribed: session persistence, queue tracking, compaction,
 	// retry logic.
@@ -471,14 +472,6 @@ func (s *AgentSession) Subscribe(listener SessionEventListener) func() {
 }
 
 func (s *AgentSession) emit(event *SessionEvent) {
-	// The builtin goal controller owns the agent_end (turn admission) and
-	// agent_before_settle (continuation/budget/abort) hooks.
-	if s.control != nil && s.control.Goal != nil {
-		switch event.Type {
-		case SessionAgentEnd:
-			s.control.Goal.AgentEnd(event)
-		}
-	}
 	s.listenerMu.Lock()
 	listeners := append([]*sessionListenerKey{}, s.listeners...)
 	s.listenerMu.Unlock()
@@ -512,6 +505,12 @@ func (s *AgentSession) handleAgentEvent(event *agent.AgentEvent) {
 	// Notify listeners (agent_end carries willRetry).
 	if event.Type == agent.AgentEnd {
 		s.willRetry = s.willRetryAfterAgentEnd(event)
+		// The goal controller's agent_end (admission) and agent_before_settle
+		// (continuation/budget/abort) hooks run before listeners see the event,
+		// so a queued round is already in place for the settle.
+		if s.Goal != nil {
+			s.Goal.AgentEnd(event)
+		}
 		s.emit(&SessionEvent{Type: SessionAgentEnd, Agent: event, WillRetry: s.willRetry})
 	} else {
 		s.emit(&SessionEvent{Type: event.Type, Agent: event})

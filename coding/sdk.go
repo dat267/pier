@@ -9,7 +9,6 @@ import (
 
 	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
-	"github.com/dat267/pier/internal/goal"
 )
 
 // Port of the extension-free core of core/sdk.ts createAgentSession: the
@@ -538,20 +537,17 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 	}
 	promptOverrides := LoadPromptOverrides(promptSources)
 
-	// The goal controller is a builtin: --no-tools and --no-builtin-tools
-	// disable it (upstream always has the extension host available).
-	var goalController *GoalController
-	if options.NoTools == "" && len(activeTools) > 0 {
-		goalController = NewGoalController(goal.NewGoalMachine(), &SessionGoalSink{})
-	}
 	session, err := NewAgentSession(&SessionConfig{
-		Cwd:                cwd,
-		Model:              model,
-		StreamFn:           streamFn,
-		Tools:              activeTools,
-		Sessions:           sessionManager,
-		Settings:           SessionSettings{Retry: retryPolicy, Compaction: compactionSettingsOf(settingsManager, model)},
-		ThinkingLevel:      thinkingLevel,
+		Cwd:           cwd,
+		Model:         model,
+		StreamFn:      streamFn,
+		Tools:         activeTools,
+		Sessions:      sessionManager,
+		Settings:      SessionSettings{Retry: retryPolicy, Compaction: compactionSettingsOf(settingsManager, model)},
+		ThinkingLevel: thinkingLevel,
+		// The builtin goal features are disabled by --no-tools and
+		// --no-builtin-tools (upstream always has the extension host available).
+		Goal:               options.NoTools == "" && len(activeTools) > 0,
 		Skills:             skillsResult.Skills,
 		ContextFiles:       contextFiles,
 		SkillDiagnostics:   skillsResult.Diagnostics,
@@ -565,7 +561,6 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 			ModelRuntime: modelRuntime, Settings: settingsManager,
 			Tools: controlTools, autoCompaction: true, autoRetry: true,
 			PromptTemplates: promptTemplates.Templates,
-			Goal:            goalController,
 		},
 		ConvertToLlm: convertToLlmWithBlockImages,
 		SessionID:    sessionID,

@@ -35,6 +35,7 @@ type fakeGoalSink struct {
 	confirms      int
 	confirmResult bool
 	pending       bool
+	branchEntries []goal.CustomEntry
 }
 
 func (f *fakeGoalSink) AppendGoalEntry(entryType string, data json.RawMessage) {
@@ -47,30 +48,35 @@ func (f *fakeGoalSink) SendGoalMessage(customType string, content string, displa
 	f.messages = append(f.messages, recordedGoalMessage{customType: customType, content: content, display: display, triggerTurn: triggerTurn})
 }
 
-func (f *fakeGoalSink) NotifyGoal(message string, level string) {
-	f.notifies = append(f.notifies, message)
-}
-
 func (f *fakeGoalSink) GoalActiveTools() []string { return append([]string{}, f.active...) }
 
 func (f *fakeGoalSink) SetGoalActiveTools(names []string) { f.active = append([]string{}, names...) }
 
 func (f *fakeGoalSink) GoalHasPendingMessages() bool { return f.pending }
 
-func (f *fakeGoalSink) ConfirmGoalReplace(title string, message string, onAnswer func(confirmed bool)) {
-	f.confirms++
-	onAnswer(f.confirmResult)
+func (f *fakeGoalSink) GoalBranchEntries() []goal.CustomEntry { return f.branchEntries }
+
+func goalControllerForSink(sink *fakeGoalSink) *GoalController {
+	controller := newGoalController(nil, sink)
+	controller.SetUIHooks(
+		func(message string, level string) { sink.notifies = append(sink.notifies, message) },
+		func(title string, message string, onAnswer func(confirmed bool)) {
+			sink.confirms++
+			onAnswer(sink.confirmResult)
+		},
+	)
+	return controller
 }
 
 func newGoalControllerTest(t *testing.T) (*GoalController, *fakeGoalSink) {
 	t.Helper()
 	sink := &fakeGoalSink{}
-	return NewGoalController(goal.NewGoalMachine(), sink), sink
+	return goalControllerForSink(sink), sink
 }
 
 func findGoalTool(t *testing.T, controller *GoalController, name string) agent.AgentTool {
 	t.Helper()
-	for _, tool := range controller.GoalTools() {
+	for _, tool := range controller.Tools() {
 		if tool.Name == name {
 			return tool
 		}
@@ -92,8 +98,8 @@ func goalToolText(t *testing.T, controller *GoalController, name string, params 
 	return ""
 }
 
-func goalAgentEndEvent(assistant *ai.AssistantMessage) *SessionEvent {
-	return &SessionEvent{Type: SessionAgentEnd, Agent: &agent.AgentEvent{Type: agent.AgentEnd, Messages: []ai.Message{assistant}}}
+func goalAgentEndEvent(assistant *ai.AssistantMessage) *agent.AgentEvent {
+	return &agent.AgentEvent{Type: agent.AgentEnd, Messages: []ai.Message{assistant}}
 }
 
 func completedAssistant() *ai.AssistantMessage {
@@ -103,7 +109,7 @@ func completedAssistant() *ai.AssistantMessage {
 func TestGoalControllerRegistersThreeTools(t *testing.T) {
 	controller, _ := newGoalControllerTest(t)
 	names := []string{}
-	for _, tool := range controller.GoalTools() {
+	for _, tool := range controller.Tools() {
 		names = append(names, tool.Name)
 	}
 	if strings.Join(names, ",") != "get_goal,create_goal,update_goal" {
@@ -120,7 +126,8 @@ func TestGoalControllerSessionStartReplaysAndExposesGoal(t *testing.T) {
 		Timestamp: 1,
 	}
 	data, _ := json.Marshal(entry)
-	controller.SessionStart("startup", []goal.CustomEntry{{CustomType: goal.GoalCustomType, Data: data}})
+	sink.branchEntries = []goal.CustomEntry{{CustomType: goal.GoalCustomType, Data: data}}
+	controller.Start("startup")
 
 	parsed := struct {
 		Goal struct {
@@ -261,7 +268,7 @@ func goalPausedWithReason(entries []recordedGoalEntry, code string) bool {
 
 func TestGoalControllerToolExposure(t *testing.T) {
 	controller, sink := newGoalControllerTest(t)
-	controller.SessionStart("startup", nil)
+	controller.Start("startup")
 	if strings.Join(sink.active, ",") != "create_goal" {
 		t.Fatalf("active = %v", sink.active)
 	}
@@ -285,7 +292,7 @@ func TestGoalControllerToolExposure(t *testing.T) {
 
 func TestGoalControllerCommandReplaceConfirm(t *testing.T) {
 	sink := &fakeGoalSink{confirmResult: true}
-	controller := NewGoalController(goal.NewGoalMachine(), sink)
+	controller := goalControllerForSink(sink)
 	goalToolText(t, controller, "create_goal", `{"objective":"first"}`)
 	sink.entries = nil
 	controller.HandleCommand("set second")
@@ -304,7 +311,7 @@ func TestGoalControllerCommandReplaceConfirm(t *testing.T) {
 
 	// Declining leaves the goal untouched.
 	sink = &fakeGoalSink{confirmResult: false}
-	controller = NewGoalController(goal.NewGoalMachine(), sink)
+	controller = goalControllerForSink(sink)
 	goalToolText(t, controller, "create_goal", `{"objective":"first"}`)
 	sink.entries = nil
 	controller.HandleCommand("set second")
@@ -367,10 +374,10 @@ func TestNewAgentSessionReplaysGoalAndExposesTools(t *testing.T) {
 	})
 	manager.AppendCustomEntry(goal.GoalCustomType, entry)
 
-	controller := NewGoalController(goal.NewGoalMachine(), &SessionGoalSink{})
 	session, err := NewAgentSession(&SessionConfig{
 		Cwd: dir, Sessions: manager, StreamFn: stubStreamFn,
-		Control: &AgentSessionControl{Goal: controller},
+		Goal:    true,
+		Control: &AgentSessionControl{},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -379,7 +386,7 @@ func TestNewAgentSessionReplaysGoalAndExposesTools(t *testing.T) {
 	if names != "create_goal,get_goal,update_goal" {
 		t.Fatalf("active tools = %q", names)
 	}
-	snapshot := session.Goal().Snapshot()
+	snapshot := session.Goal.Snapshot()
 	if snapshot.Goal == nil || snapshot.Goal.Objective != "obj" || snapshot.Armed {
 		t.Fatalf("goal = %+v", snapshot.Goal)
 	}
@@ -393,18 +400,21 @@ func TestNewAgentSessionReplaysGoalAndExposesTools(t *testing.T) {
 // the next model request as a user message.
 func TestGoalContinuationReachesTheModel(t *testing.T) {
 	manager, dir := newTestSession(t)
-	controller := NewGoalController(goal.NewGoalMachine(), &SessionGoalSink{})
 	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 8192}
 
+	var session *AgentSession
 	var calls int
 	var secondContext []ai.Message
-	streamFn := func(requestModel *ai.Model, context ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+	streamFn := func(requestModel *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 		calls++
 		if calls == 2 {
-			secondContext = append([]ai.Message{}, context.Messages...)
-			// Complete the goal so the unbudgeted round loop ends here.
-			if snapshot := controller.Snapshot().Goal; snapshot != nil {
-				controller.Machine().Dispatch(goal.GoalUpdateEvent{GoalID: snapshot.ID, Revision: snapshot.Revision, Action: "complete"})
+			secondContext = append([]ai.Message{}, transcript.Messages...)
+			// Complete the goal through its real tool path so the unbudgeted
+			// round loop ends here.
+			if snapshot := session.Goal.Snapshot().Goal; snapshot != nil {
+				params, _ := json.Marshal(map[string]any{"goal_id": snapshot.ID, "revision": snapshot.Revision, "action": "complete"})
+				tool := session.control.Tools["update_goal"].Tool
+				_, _ = tool.Execute("complete", params, context.Background(), func(agent.AgentToolResult) {})
 			}
 		}
 		stream := ai.NewAssistantMessageEventStream()
@@ -422,9 +432,9 @@ func TestGoalContinuationReachesTheModel(t *testing.T) {
 		Cwd: dir, Sessions: manager, Model: model, StreamFn: streamFn,
 		Tools:        []agent.AgentTool{testTool("read")},
 		ConvertToLlm: ConvertToLlm,
+		Goal:         true,
 		Control: &AgentSessionControl{
 			autoCompaction: true, autoRetry: true,
-			Goal: controller,
 		},
 	})
 	if err != nil {
@@ -449,7 +459,7 @@ func TestGoalContinuationReachesTheModel(t *testing.T) {
 	if !found {
 		t.Fatalf("round prompt missing from the continuation context: %d messages", len(secondContext))
 	}
-	if phase := controller.Snapshot().Goal.Phase; phase != goal.PhaseComplete {
+	if phase := session.Goal.Snapshot().Goal.Phase; phase != goal.PhaseComplete {
 		t.Fatalf("goal phase = %s", phase)
 	}
 }

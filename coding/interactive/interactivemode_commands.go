@@ -828,8 +828,8 @@ func newCommandWiring(app *App) *CommandWiring {
 		ShowError:   func(message string) { app.showError(message) },
 		ShowWarning: func(message string) { app.showWarning(message) },
 		ReloadGoal: func() {
-			if controller := app.session.Goal(); controller != nil {
-				controller.SessionStartFromSession("reload", app.sessionMgr)
+			if controller := app.session.Goal; controller != nil {
+				controller.Start("reload")
 			}
 		},
 		RequestRender:        func() { app.ui.RequestRender(false) },

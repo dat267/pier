@@ -646,7 +646,7 @@ func newSubmitWiring(app *App) *SubmitWiring {
 			HandleSessionCommand:   func() { app.commands.HandleSessionCommand(time.Now().UnixMilli()) },
 			HandleChangelogCommand: app.commands.HandleChangelogCommand,
 			HandleGoalCommand: func(args string) {
-				if controller := app.session.Goal(); controller != nil {
+				if controller := app.session.Goal; controller != nil {
 					controller.HandleCommand(args)
 				}
 			},

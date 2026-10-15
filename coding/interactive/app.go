@@ -472,9 +472,9 @@ func NewApp(options AppOptions) *App {
 	// the agent worker (agent_end), so every callback that touches the UI is
 	// posted (D143: producers only enqueue).
 	app.transcript.EntryRenderer = GoalEntryRenderer
-	if controller := app.session.Goal(); controller != nil {
-		if sink := controller.SessionSink(); sink != nil {
-			sink.Notify = func(message string, level string) {
+	if controller := app.session.Goal; controller != nil {
+		controller.SetUIHooks(
+			func(message string, level string) {
 				app.ui.Post(func() {
 					if level == "warning" {
 						app.showWarning(message)
@@ -482,12 +482,11 @@ func NewApp(options AppOptions) *App {
 					}
 					app.transcript.ShowStatus(message)
 				})
-			}
-			sink.Confirm = func(title string, message string, onAnswer func(confirmed bool)) {
+			},
+			func(title string, message string, onAnswer func(confirmed bool)) {
 				app.ui.Post(func() { app.askConfirm(title, message, onAnswer) })
-			}
-		}
-		controller.SessionStartFromSession("startup", app.sessionMgr)
+			},
+		)
 	}
 	// The MCP wiring: the first turn waits for the direct-tool servers (bounded,
 	// upstream DEFAULT_STARTUP_WAIT_MS), attaches whatever connected, reports
