@@ -138,3 +138,29 @@ func TestAppAutocompleteCompletesAtMentions(t *testing.T) {
 		t.Errorf("@ suggestions = %v, want the hidden directory (fd runs with --hidden)", labels)
 	}
 }
+
+// The built-in /goal command completes its subcommands (upstream extension's
+// getArgumentCompletions).
+func TestGoalCommandArgumentCompletions(t *testing.T) {
+	wiring := &AutocompleteWiring{Session: &autocompleteTestSession{}}
+	provider := wiring.CreateBaseAutocompleteProvider()
+
+	suggestions := provider.GetSuggestions(context.Background(), []string{"/goal "}, 0, 6, false)
+	if suggestions == nil {
+		t.Fatal("/goal offered no argument completions")
+	}
+	values := map[string]bool{}
+	for _, item := range suggestions.Items {
+		values[item.Value] = true
+	}
+	for _, want := range []string{"status", "set", "pause", "resume", "clear"} {
+		if !values[want] {
+			t.Errorf("missing /goal subcommand %q in %v", want, values)
+		}
+	}
+
+	narrowed := provider.GetSuggestions(context.Background(), []string{"/goal p"}, 0, 7, false)
+	if narrowed == nil || len(narrowed.Items) != 1 || narrowed.Items[0].Value != "pause" {
+		t.Fatalf("/goal p = %+v, want just pause", narrowed)
+	}
+}

@@ -7,6 +7,7 @@ import (
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/internal/goal"
 	"github.com/dat267/pier/tui"
 )
 
@@ -283,6 +284,22 @@ func (w *AutocompleteWiring) CreateBaseAutocompleteProvider() tui.AutocompletePr
 						Description: FormatLoginProviderCompletionDescription(provider),
 					}
 				}), true
+		}
+	}
+
+	// /goal argument completions (upstream extension's getArgumentCompletions).
+	for index := range commands {
+		if commands[index].Name != "goal" {
+			continue
+		}
+		commands[index].GetArgumentCompletions = func(prefix string) ([]tui.AutocompleteItem, bool) {
+			items := make([]tui.AutocompleteItem, 0, len(goal.GoalCommandCompletions))
+			for _, value := range goal.GoalCommandCompletions {
+				if strings.HasPrefix(value, prefix) {
+					items = append(items, tui.AutocompleteItem{Value: value, Label: value})
+				}
+			}
+			return items, true
 		}
 	}
 
