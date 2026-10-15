@@ -673,6 +673,15 @@ occurrence. `TestEditorBracketedLargePasteAvoidsCopyingInput` measures 6.8 KB
 allocated for a 270 KB paste, down from 294 KB, and the 1 MB benchmark improves
 from 3.54 ms / 2.40 MB to 2.95 ms / 1.35 MB in five-iteration runs on the same machine.
 
+## Editor backward word movement
+
+When Ctrl+Left crosses the final ASCII punctuation in a word-like segment,
+`findWordBackwardSegments` used a `[]rune` copy to locate it and count the UTF-8
+suffix bytes. A 65,541-byte segment allocated 270 KB; recording the punctuation's
+byte offset in the existing rune walk reduces the test to 640 bytes. The
+regression test also checks that a multibyte suffix still yields the correct
+byte cursor position.
+
 ## Proxy stream delta assembly
 
 `agent/proxy.go` rebuilds cumulative assistant text and thinking blocks from

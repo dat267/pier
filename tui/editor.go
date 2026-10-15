@@ -1720,21 +1720,18 @@ func findWordBackwardSegments(text string, cursor int, segments []editorSegment)
 		return newCursor - len(last.Segment)
 	}
 	if last.IsWordLike {
-		runes := []rune(last.Segment)
-		lastPunctuation := -1
-		for index, r := range runes {
+		lastPunctuationByte := -1
+		for byteIndex, r := range last.Segment {
 			if punctuationChars[r] {
-				lastPunctuation = index
+				lastPunctuationByte = byteIndex
 			}
 		}
-		if lastPunctuation < 0 {
+		if lastPunctuationByte < 0 {
 			return newCursor - len(last.Segment)
 		}
-		trailing := 0
-		for _, r := range runes[lastPunctuation+1:] {
-			trailing += len(string(r))
-		}
-		return newCursor - trailing
+		// The punctuation set is ASCII, so its rune occupies one byte.
+		trailingBytes := len(last.Segment) - lastPunctuationByte - 1
+		return newCursor - trailingBytes
 	}
 
 	for len(segments) > 0 {

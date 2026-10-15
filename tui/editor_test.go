@@ -275,6 +275,30 @@ func TestEditorSubmitReentrancy(t *testing.T) {
 	}
 }
 
+func TestFindWordBackwardAfterPunctuationAvoidsRuneSlice(t *testing.T) {
+	text := "word." + strings.Repeat("x", 64*1024)
+	segments := []editorSegment{{Segment: text, IsWordLike: true}}
+
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	got := findWordBackwardSegments(text, len(text), segments)
+	runtime.ReadMemStats(&after)
+
+	if got != len("word.") {
+		t.Fatalf("cursor = %d, want %d", got, len("word."))
+	}
+	unicodeText := "word.漢字"
+	unicodeSegments := []editorSegment{{Segment: unicodeText, IsWordLike: true}}
+	if got, want := findWordBackwardSegments(unicodeText, len(unicodeText), unicodeSegments), len("word."); got != want {
+		t.Fatalf("Unicode cursor = %d, want %d", got, want)
+	}
+	allocated := after.TotalAlloc - before.TotalAlloc
+	t.Logf("word movement over %d bytes allocated %d bytes", len(text), allocated)
+	if allocated > uint64(len(text))/8 {
+		t.Fatalf("word movement over %d bytes allocated %d bytes, want less than %d", len(text), allocated, len(text)/8)
+	}
+}
+
 // The segmenter marks "e.g" word-like (its mid-word dot merges); the editor's
 // word movement must use that flag, not recompute from the characters.
 func TestEditorWordBackwardOverDottedWord(t *testing.T) {
