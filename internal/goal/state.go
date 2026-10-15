@@ -75,13 +75,15 @@ type GoalSnapshot struct {
 	UpdatedAt     int64          `json:"updatedAt"`
 }
 
-// GoalView adds the in-memory-only fields the machine tracks.
+// GoalView adds the in-memory-only fields the machine tracks. It is never
+// persisted directly: ToSnapshot strips these before a lifecycle entry is
+// written.
 type GoalView struct {
 	GoalSnapshot
-	Armed        bool    `json:"-"`
-	TurnsStarted int     `json:"-"`
-	UsedTokens   int64   `json:"-"`
-	UsedCostUsd  float64 `json:"-"`
+	Armed        bool    `json:"armed"`
+	TurnsStarted int     `json:"turnsStarted"`
+	UsedTokens   int64   `json:"usedTokens"`
+	UsedCostUsd  float64 `json:"usedCostUsd"`
 }
 
 // FoldedGoal is a replay result.

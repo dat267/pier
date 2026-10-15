@@ -411,6 +411,7 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 				control.Tools[tool.Name] = AgentToolDefinition{Tool: tool, PromptGuidelines: goalToolGuidelines[tool.Name]}
 			}
 		}
+		control.Goal.SessionStartFromSession("startup", sessionManager)
 		control.Goal.SyncTools()
 	}
 	// Always subscribed: session persistence, queue tracking, compaction,

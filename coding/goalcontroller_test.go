@@ -356,3 +356,34 @@ func TestGoalEventMessageIsInvisibleButReachesTheModel(t *testing.T) {
 		t.Fatalf("block = %#v", user.Content.Blocks[0])
 	}
 }
+
+func TestNewAgentSessionReplaysGoalAndExposesTools(t *testing.T) {
+	manager, dir := newTestSession(t)
+	version := 1
+	entry, _ := json.Marshal(goal.GoalChangeEntry{
+		Operation: goal.OpCreate,
+		Goal:      &goal.GoalSnapshot{Version: &version, ID: "g1", Revision: 1, Objective: "obj", Phase: goal.PhaseActive, CreatedAt: 1, UpdatedAt: 1},
+		Timestamp: 1,
+	})
+	manager.AppendCustomEntry(goal.GoalCustomType, entry)
+
+	controller := NewGoalController(goal.NewGoalMachine(), &SessionGoalSink{})
+	session, err := NewAgentSession(&SessionConfig{
+		Cwd: dir, Sessions: manager, StreamFn: stubStreamFn,
+		Control: &AgentSessionControl{Goal: controller},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	names := strings.Join(session.ActiveToolNames(), ",")
+	if names != "create_goal,get_goal,update_goal" {
+		t.Fatalf("active tools = %q", names)
+	}
+	snapshot := session.Goal().Snapshot()
+	if snapshot.Goal == nil || snapshot.Goal.Objective != "obj" || snapshot.Armed {
+		t.Fatalf("goal = %+v", snapshot.Goal)
+	}
+	if session.GetToolDefinition("get_goal") == nil {
+		t.Fatal("get_goal not registered")
+	}
+}

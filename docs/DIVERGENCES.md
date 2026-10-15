@@ -2,7 +2,7 @@
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
-in code comments; not every ID has a full entry here. The range is **D1–D222**.
+in code comments; not every ID has a full entry here. The range is **D1–D223**.
 Entries are ordered numerically. Closed, retired, and withdrawn rows keep their
 IDs for historical references; overlapping rows refer to the owning explanation.
 
@@ -938,7 +938,8 @@ Historically `SessionGoalSink.SendGoalMessage` encoded an invisible
 `ai.CustomMessage` (`role: "custom"`, `{customType, content, display: false, details}`)
 and queued `AgentSession.FollowUp` to start on settlement. `ConvertToLlm` made
 it model-visible user content; transcript `decodeCustomMessage` skipped it.
-Existing `pi-goal` entries still replay as generic cards; goal renderers are gone.
+Existing `pi-goal` entries still replay as generic cards; goal renderers were
+gone until D223 re-ported the feature.
 
 ## D192
 
@@ -1600,3 +1601,34 @@ Tests: `TestValidateSQLiteSchemaPrefix`, `TestSqliteStorageNamespaceCoexists`,
 `TestSqliteStorageNamespaceRenamesTables`, `TestSqliteStorageRejectsInvalidPrefix`
 (`durable/sqlitenamespace_test.go`) plus the `sqlite-prefix` conformance rows
 in `durable/durable_test.go`.
+
+## D223
+
+**The user goal extension is re-ported as a builtin internal package.**
+
+`~/.pi/agent/extensions/goal` is an installed user extension, not stock pi, and
+the port has no extension host (D41). D191 removed the earlier builtin; this
+row records the deliberate decision to reintroduce the feature as tree code on
+the user's request: `internal/goal` holds the state, machine, command parser and
+renderers, `coding.GoalController` is the host glue, and `coding/interactive`
+renders the transcript and tool cards.
+
+The port follows the current extension sources, which are newer than the
+removed builtin: `agent_before_settle` (continuation inside the run with a
+hidden round message) replaces `agent_settled`/`retry_due`, `goal_replace` and
+the `version` field exist, and each admitted round folds its token/cost usage.
+The extension's `session_start`/`agent_end`/`agent_before_settle` hooks map to
+`GoalController.SessionStartFromSession` (called at construction and on
+`/reload`) and to `AgentSession.emit`'s `SessionAgentEnd`, where the turn is
+admitted and a hidden `display:false` follow-up queues the next round. The
+three tools are registered in the session tool registry and join the default
+active set; unlike the extension, an explicit `--tools` allowlist still filters
+them out, because `SetActiveToolsByName` owns pier's allowlist semantics. The
+`registerMessageRenderer` for hidden `pi-goal-event` messages is not ported
+(those messages are `display:false`, so the transcript never draws them); the
+`pi-goal` and `pi-goal-turn` entry renderers cover the visible cards.
+
+Tests: `internal/goal`'s state/machine/command/render suites,
+`coding/goalcontroller_test.go` (effect application, replay, tool exposure,
+continuation/error/abort outcomes) and
+`coding/interactive/goalrender_test.go` plus `toolrenderer_goal_test.go`.

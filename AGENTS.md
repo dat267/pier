@@ -64,7 +64,7 @@ Packages mirror upstream `packages/`:
 | `tui` | `packages/pi-tui` | terminal abstraction, renderer, components |
 | `main.go`, `cmd` | `main.ts` | the CLI entrypoint (a thin root main over the `cmd` package) |
 | `chord`, `client`, `protocol`, `server`, `telemetry`, `durable` | same | supporting packages |
-| `internal/offloop`, `internal/uiblock` | — | port-local helpers: the off-loop work queues and the UI-blocking analyzer |
+| `internal/offloop`, `internal/uiblock`, `internal/goal` | — | port-local helpers: the off-loop work queues, the UI-blocking analyzer, and the builtin session-goal extension (state/machine/command/render; the host glue lives in `coding` and `coding/interactive`, D223) |
 | `scripts` | — | catalog generators |
 | `docs` | — | port status (`PORTING.md`), the divergence log (`DIVERGENCES.md`), architecture notes (`architecture.md`) and the lock inventory (`locks.md`) |
 
