@@ -141,20 +141,24 @@ Ported so far:
 - `durable` context derivation leads with the baseline system message even past
   kept assistant messages, so a post-compaction run still has its initial prompt
   and tool set (`durable/src/harness/context.ts`, #10904).
+- Kimi Code moved to OpenAI Chat Completions at
+  `https://api.kimi.com/coding/v1` (`ai/providers/kimi-coding.ts`, #10720), and
+  OpenCode Go gained Google Generative AI (`ai/providers/opencode-go.ts`).
+  These came with the catalog regeneration below.
 
 Still to port:
 
-- Kimi Code over Chat Completions at `https://api.kimi.com/coding/v1`
-  (`ai/providers/kimi-coding.ts`, #10720).
-- OpenCode Go/Zen inference endpoints and Google Generative AI for OpenCode Go
-  (`ai/providers/opencode-go.ts`).
 - `off` thinking level for Claude Haiku 5.5 and Opus 5 (`ai`, #10753), Xiaomi
   MiMo thinking on/off only (`ai`, #10818), and the Codex GPT-6.1 Sol 500K
-  context window (`ai`, #10840).
+  context window (`ai`, #10840). The v1.3.0 catalog now carries the
+  `thinkingLevelMap` entries and context window; the remaining code paths to
+  verify are the `off` handling and the OpenAI Responses
+  `configuration_update` effort mechanism.
 - Cache-preserving thinking-level changes on OpenAI GPT-6:
-  `configuration_update` items and `supportsMidConvoEffort`
-  (`ai/api/openai-responses*.ts`, `anthropic-messages.ts`,
-  `providers/compat-schema.ts`, #10930/#10853).
+  `configuration_update` items and the OpenAI Responses `supportsMidConvoEffort`
+  (`ai/api/openai-responses*.ts`, `providers/compat-schema.ts`, #10930/#10853).
+  The Anthropic side (`supportsMidConvoEffort` on `anthropic-messages`) is
+  already in the port.
 - `--model` provider selection resolves candidates before choosing a provider
   and reports ambiguity instead of using catalog order
   (`coding-agent/core/model-resolver.ts`, #10160/#10913).
@@ -162,6 +166,14 @@ Still to port:
 
 The `durable` base64 `btoa` fix (#10923) is a V8 concatenation-tree memory fix;
 the port already encodes with Go's `encoding/base64`, so it does not apply.
+
+**Catalog regenerated for v1.3.0.** `ai/models_catalog.json` is rebuilt from the
+v1.3.0 generator output shipped in the installed package
+(`pi-ai/dist/providers/data`, schema 6, manifest
+`f5b811296040611e9314534f2fb2464a007a47efe8b11b1e07dde80651a70bd4`, generated
+2026-10-15) through `scripts/gen_catalog.py`: 41 providers, 1614 chat models
+(1605 before). The generator itself is unchanged, so the data files can come
+from either the tag's generator or the published package.
 
 Out of scope in the v1.3.0 delta (in addition to the chord, codemode, Nix and
 extension items above): `sessionShareDestination` and the `/share` destination,

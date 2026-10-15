@@ -82,7 +82,7 @@ func TestBuiltinProviderSpecs(t *testing.T) {
 		"zai-coding-cn":     {"Z.AI Coding CN", "https://open.bigmodel.cn/api/coding/paas/v4"},
 		"openrouter":        {"OpenRouter", "https://openrouter.ai/api/v1"},
 		"vercel-ai-gateway": {"Vercel AI Gateway", "https://ai-gateway.vercel.sh"},
-		"kimi-coding":       {"Kimi For Coding", "https://api.kimi.com/coding"},
+		"kimi-coding":       {"Kimi For Coding", "https://api.kimi.com/coding/v1"},
 		"fireworks":         {"Fireworks", "https://api.fireworks.ai/inference"},
 		"huggingface":       {"Hugging Face", "https://router.huggingface.co/v1"},
 		"github-copilot":    {"GitHub Copilot", "https://api.individual.githubcopilot.com"},
