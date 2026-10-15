@@ -1438,8 +1438,14 @@ on the old shape around iteration 1650 of 2000.
 **Closed: initial system-message ordering matches the pin.**
 
 v1.0.2 placed initial system context after user input, affecting prompts/cache.
-v1.1.0's `leadWithSystem` is implemented and retained in v1.2.0.
-`TestDeriveContextLeadsWithInitialSystemMessage` checks initial users, later
+v1.1.0's `leadWithSystem` is implemented and retained in v1.2.0. v1.3.0
+(#10904) made it baseline-aware: the first `pi.system` entry after the head
+marker, or of the transcript when no earlier entry carries a system message,
+leads even past kept assistant messages, so a post-compaction baseline still
+becomes the initial prompt/tool set; a non-baseline system message stays in
+place. `TestDeriveContextLeadsWithInitialSystemMessage`,
+`TestDeriveContextLeadsWithBaselineAfterAssistantMessages` and
+`TestDeriveContextKeepsNonBaselineSystemsInPlace` check initial users, later
 assistant/system messages, and unchanged contribution order. ID retained for
 historical references.
 

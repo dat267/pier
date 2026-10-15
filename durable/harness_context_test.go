@@ -90,6 +90,96 @@ func TestDeriveContextLeadsWithInitialSystemMessage(t *testing.T) {
 	}
 }
 
+// contextEntryKind is contextEntry with an explicit entry kind.
+func contextEntryKind(id, conversationID Id, kind string, head *Id, model []ai.Message) StorageWrite {
+	return StorageWrite{Type: "entry", Entry: &EntryRecord{
+		ID: id, ConversationID: conversationID, Kind: kind, Model: model, Head: head,
+	}}
+}
+
+// describeContextMessage labels a message by role and text for order checks.
+func describeContextMessage(message ai.Message) string {
+	switch typed := message.(type) {
+	case *ai.SystemMessage:
+		return "system:" + typed.Content.Text
+	case *ai.UserMessage:
+		return "user:" + typed.Content.Text
+	case *ai.AssistantMessage:
+		return "assistant"
+	default:
+		return "unexpected message"
+	}
+}
+
+// #10904: the baseline pi.system entry written after the first answers leads
+// even though an assistant message precedes it.
+func TestDeriveContextLeadsWithBaselineAfterAssistantMessages(t *testing.T) {
+	storage := NewMemoryStorage()
+	ctx := context.Background()
+	root := RootConversationID
+	mustCommit(t, storage, conversationWrite(root))
+	baseline := &ai.SystemMessage{Content: ai.StringOrBlocks{Text: "plan"}, Timestamp: 4}
+	assistant := &ai.AssistantMessage{StopReason: ai.StopStop, Timestamp: 2}
+	mustCommit(t, storage,
+		contextEntryKind(10, root, "message", nil, []ai.Message{userMessage("first", 1)}),
+		contextEntryKind(11, root, "message", nil, []ai.Message{assistant}),
+		contextEntryKind(12, root, "message", nil, []ai.Message{userMessage("next", 3)}),
+		contextEntryKind(13, root, SystemEntry.Kind, nil, []ai.Message{baseline}),
+	)
+	bounds, err := CaptureContextBounds(ctx, storage, root, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	view, err := DeriveContext(ctx, storage, root, bounds)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"system:plan", "user:first", "assistant", "user:next"}
+	if len(view.Messages) != len(want) {
+		t.Fatalf("messages = %+v", view.Messages)
+	}
+	for index, message := range view.Messages {
+		if got := describeContextMessage(message); got != want[index] {
+			t.Fatalf("messages[%d] = %q, want %q", index, got, want[index])
+		}
+	}
+}
+
+// #10904: a system message from another kind before the baseline is positional,
+// and the baseline after it does not move ahead of it.
+func TestDeriveContextKeepsNonBaselineSystemsInPlace(t *testing.T) {
+	storage := NewMemoryStorage()
+	ctx := context.Background()
+	root := RootConversationID
+	mustCommit(t, storage, conversationWrite(root))
+	note := &ai.SystemMessage{Content: ai.StringOrBlocks{Text: "note"}, Timestamp: 3}
+	baseline := &ai.SystemMessage{Content: ai.StringOrBlocks{Text: "preamble"}, Timestamp: 4}
+	assistant := &ai.AssistantMessage{StopReason: ai.StopStop, Timestamp: 2}
+	mustCommit(t, storage,
+		contextEntryKind(10, root, "message", nil, []ai.Message{userMessage("first", 1)}),
+		contextEntryKind(11, root, "message", nil, []ai.Message{assistant}),
+		contextEntryKind(12, root, "host.note", nil, []ai.Message{note}),
+		contextEntryKind(13, root, SystemEntry.Kind, nil, []ai.Message{baseline}),
+	)
+	bounds, err := CaptureContextBounds(ctx, storage, root, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	view, err := DeriveContext(ctx, storage, root, bounds)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"user:first", "assistant", "system:note", "system:preamble"}
+	if len(view.Messages) != len(want) {
+		t.Fatalf("messages = %+v", view.Messages)
+	}
+	for index, message := range view.Messages {
+		if got := describeContextMessage(message); got != want[index] {
+			t.Fatalf("messages[%d] = %q, want %q", index, got, want[index])
+		}
+	}
+}
+
 type contextScanCall struct {
 	query EntryQuery
 	limit int

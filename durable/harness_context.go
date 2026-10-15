@@ -40,6 +40,7 @@ type contextRange struct {
 	edited         map[Id]struct{}
 	settled        []ai.Message
 	open           []ai.Message
+	baseline       baselineState
 }
 
 // ContextView is the raw active transcript and the derived model context.
@@ -188,13 +189,14 @@ func deriveContextRange(conversationID Id, bounds *ContextBounds, rangeEntries [
 	messages := make([]ai.Message, 0, len(settled)+len(open))
 	messages = append(messages, settled...)
 	messages = append(messages, OrderToolResults(open)...)
+	baseline := findBaseline(bounds.Head, entries)
 	view := ContextView{
 		Head: bounds.Head, Entries: entries, Contributions: contributions,
-		Messages: leadWithSystem(messages),
+		Messages: leadWithSystem(messages, baseline),
 	}
 	return &contextRange{
 		conversationID: conversationID, bounds: bounds, entries: rangeEntries, view: view,
-		edited: edited, settled: settled, open: open,
+		edited: edited, settled: settled, open: open, baseline: baseline,
 	}
 }
 
@@ -234,13 +236,17 @@ func extendContextRange(previous *contextRange, bounds *ContextBounds, added []E
 	messages := make([]ai.Message, 0, len(settled)+len(open))
 	messages = append(messages, settled...)
 	messages = append(messages, OrderToolResults(open)...)
+	baseline := previous.baseline
+	if !baseline.settled {
+		baseline = findBaseline(bounds.Head, added)
+	}
 	view := ContextView{
 		Head: bounds.Head, Entries: active, Contributions: contributions,
-		Messages: leadWithSystem(messages),
+		Messages: leadWithSystem(messages, baseline),
 	}
 	return &contextRange{
 		conversationID: previous.conversationID, bounds: bounds, entries: entries, view: view,
-		edited: previous.edited, settled: settled, open: open,
+		edited: previous.edited, settled: settled, open: open, baseline: baseline,
 	}
 }
 
@@ -445,25 +451,99 @@ func MissingToolResult(call ai.ToolCall, timestamp int64) *ai.ToolResultMessage 
 	}
 }
 
-// D212 (closed): this matches pinned v1.2.0 behavior. After tool-result
-// ordering, move the first non-user message to the front only when it is a
-// system message; later system messages retain their positions.
-func leadWithSystem(messages []ai.Message) []ai.Message {
-	index := 0
-	for index < len(messages) {
-		if _, isUser := messages[index].(*ai.UserMessage); !isUser {
+// baselineState is a context range's baseline system message (upstream
+// Baseline): settled=false is `undefined` (a later entry may still be one),
+// settled=true with a nil message is `null` (the range cannot have one), and a
+// non-nil message is the baseline itself.
+type baselineState struct {
+	settled bool
+	message ai.Message
+}
+
+// findBaseline identifies the harness baseline among entries, oldest first:
+// the system message of the first pi.system entry after the head marker, or of
+// the transcript without one, when generation wrote it with every section and
+// tool in effect (upstream findBaseline). After a head marker it always does,
+// and omits the retained pi.system entries. Without one it does when it saw no
+// system message before, which holds unless an earlier entry carries one, even
+// if an edit omits it later. An edit that targets the baseline contributes
+// other messages, or none, so none leads; a later entry does not take its
+// place.
+func findBaseline(head *EntryRecord, entries []EntryRecord) baselineState {
+	for _, entry := range entries {
+		if head != nil && entry.ID <= head.ID {
+			continue
+		}
+		if entry.Kind == SystemEntry.Kind {
+			for _, message := range entry.Model {
+				if system, ok := message.(*ai.SystemMessage); ok {
+					return baselineState{settled: true, message: system}
+				}
+			}
+			return baselineState{settled: true}
+		}
+		if head == nil && carriesSystemMessage(entry) {
+			return baselineState{settled: true}
+		}
+	}
+	return baselineState{}
+}
+
+// carriesSystemMessage reports whether an entry's own messages, or the
+// replacement messages of its edits, include a system message.
+func carriesSystemMessage(entry EntryRecord) bool {
+	for _, message := range entry.Model {
+		if _, ok := message.(*ai.SystemMessage); ok {
+			return true
+		}
+	}
+	for _, edit := range entry.Edits {
+		if edit.Action != EditReplace {
+			continue
+		}
+		for _, message := range edit.Messages {
+			if _, ok := message.(*ai.SystemMessage); ok {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// leadWithSystem moves the first system message to the front when only user
+// messages precede it, or when it is the baseline's (D212, revised for the
+// v1.3.0 #10904 fix). A run's input is committed before generation renders the
+// system prompt, so a transcript starts with the input followed by the
+// baseline, and the range after a compaction with the kept history, assistant
+// messages included. Providers treat only a leading system message as the
+// initial prompt and tool set; without it, a later tool change rewrites the
+// request's tool list and invalidates the whole prompt cache. Only the first
+// system message moves, so replaying system messages in order gives the same
+// sections and tools. Any other system message, before an assistant message,
+// stays where it was committed: moving it would change what it means to the
+// model.
+func leadWithSystem(messages []ai.Message, baseline baselineState) []ai.Message {
+	index := -1
+	for i, message := range messages {
+		if _, ok := message.(*ai.SystemMessage); ok {
+			index = i
 			break
 		}
-		index++
 	}
-	if index == 0 || index == len(messages) {
+	if index <= 0 {
 		return messages
 	}
-	if _, isSystem := messages[index].(*ai.SystemMessage); !isSystem {
-		return messages
+	system := messages[index]
+	isBaseline := baseline.settled && baseline.message == system
+	if !isBaseline {
+		for _, message := range messages[:index] {
+			if _, isUser := message.(*ai.UserMessage); !isUser {
+				return messages
+			}
+		}
 	}
 	ordered := make([]ai.Message, 0, len(messages))
-	ordered = append(ordered, messages[index])
+	ordered = append(ordered, system)
 	ordered = append(ordered, messages[:index]...)
 	ordered = append(ordered, messages[index+1:]...)
 	return ordered

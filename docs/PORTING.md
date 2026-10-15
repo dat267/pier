@@ -138,6 +138,9 @@ Ported so far:
   no parsed prefix, is reported with the raw text, and fails validation
   (`ai/utils/json-parse.ts`, `ai/utils/validation.ts`, the wire APIs, #10944;
   D221 for the message wording).
+- `durable` context derivation leads with the baseline system message even past
+  kept assistant messages, so a post-compaction run still has its initial prompt
+  and tool set (`durable/src/harness/context.ts`, #10904).
 
 Still to port:
 
@@ -155,10 +158,16 @@ Still to port:
 - `--model` provider selection resolves candidates before choosing a provider
   and reports ambiguity instead of using catalog order
   (`coding-agent/core/model-resolver.ts`, #10160/#10913).
-- `sessionShareDestination` setting, the `/share` destination, the settings
-  selector row and the slash-command text (`coding-agent`, #10870).
-- `durable` namespaced SQLite storage (#10937), the post-compaction system
-  baseline ordering, and base64 `btoa` encoding.
+- `durable` namespaced SQLite storage (#10937).
+
+The `durable` base64 `btoa` fix (#10923) is a V8 concatenation-tree memory fix;
+the port already encodes with Go's `encoding/base64`, so it does not apply.
+
+Out of scope in the v1.3.0 delta (in addition to the chord, codemode, Nix and
+extension items above): `sessionShareDestination` and the `/share` destination,
+because the port already excludes `/share` and its gist/Radius upload transport
+(see the interactive row below); the unknown settings key is ignored, so a
+settings file carrying it still parses.
 
 **v1.2.0 audit still open.** The largest unported change is chord's v1.2.0
 typed-host runtime, which replaced the facet/service runtime the port mirrors
