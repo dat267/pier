@@ -463,3 +463,23 @@ func TestGoalContinuationReachesTheModel(t *testing.T) {
 		t.Fatalf("goal phase = %s", phase)
 	}
 }
+
+func TestGoalControllerBuffersNoticesUntilUIHooks(t *testing.T) {
+	version := 1
+	data, _ := json.Marshal(goal.GoalChangeEntry{
+		Operation: goal.OpCreate,
+		Goal:      &goal.GoalSnapshot{Version: &version, ID: "g1", Revision: 1, Objective: "obj", Phase: goal.PhaseActive, CreatedAt: 1, UpdatedAt: 1},
+		Timestamp: 1,
+	})
+	sink := &fakeGoalSink{branchEntries: []goal.CustomEntry{{CustomType: goal.GoalCustomType, Data: data}}}
+	controller := newGoalController(nil, sink)
+
+	controller.Start("startup")
+	if len(sink.notifies) != 0 {
+		t.Fatalf("notice delivered before hooks: %v", sink.notifies)
+	}
+	controller.SetUIHooks(func(message string, level string) { sink.notifies = append(sink.notifies, message) }, nil)
+	if len(sink.notifies) != 1 || !strings.Contains(sink.notifies[0], "Goal restored") {
+		t.Fatalf("buffered notice = %v", sink.notifies)
+	}
+}

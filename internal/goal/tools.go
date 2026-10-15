@@ -3,9 +3,6 @@
 // the state machine that drives them.
 package goal
 
-// GoalToolNames are the goal tool names in registration order.
-var GoalToolNames = []string{"get_goal", "create_goal", "update_goal"}
-
 // DesiredToolNames returns the active tool names the goal feature exposes,
 // given the current list and whether a goal is being pursued. create_goal stays
 // available so the model can be asked to set one; get_goal/update_goal only
