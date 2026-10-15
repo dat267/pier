@@ -72,6 +72,7 @@ type OpenAIResponsesCompat struct {
 	SupportsAdditionalTools         *bool                  `json:"supportsAdditionalTools,omitempty"`
 	SupportsToolSearch              *bool                  `json:"supportsToolSearch,omitempty"`
 	SupportsExplicitPromptCacheMode *bool                  `json:"supportsExplicitPromptCacheMode,omitempty"`
+	SupportsMidConvoEffort          *bool                  `json:"supportsMidConvoEffort,omitempty"`
 	SupportsMaxOutputTokens         *bool                  `json:"supportsMaxOutputTokens,omitempty"`
 }
 

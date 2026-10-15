@@ -196,6 +196,46 @@ func TestBuildParamsToolResultPairingAndSyntheticResults(t *testing.T) {
 	}
 }
 
+// Upstream v1.3.0 #10753: a managed-effort model that cannot turn thinking off
+// (thinkingLevelMap.off === null) keeps adaptive thinking instead of sending
+// disabled, while one that can sends disabled and no effort markers.
+func TestAnthropicManagedEffortRespectsOffSupport(t *testing.T) {
+	newModel := func(off *string, hasOff bool) *Model {
+		model := &Model{
+			ID: "claude-opus-5", API: APIAnthropicMessages, Provider: "anthropic",
+			Reasoning: true, ThinkingLevelMap: map[ThinkingLevel]*string{},
+			Compat: &ModelCompat{AnthropicMessages: &AnthropicMessagesCompat{SupportsMidConvoEffort: boolPtrT(true)}},
+		}
+		if hasOff {
+			model.ThinkingLevelMap[ThinkOff] = off
+		}
+		return model
+	}
+	ctx := NormalizeContext(Context{Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}}})
+	disabled := false
+
+	// off unsupported (explicit null): adaptive thinking, not disabled.
+	unsupported := newModel(nil, true)
+	params, err := BuildAnthropicParams(unsupported, ctx, false, &AnthropicOptions{ThinkingEnabled: &disabled})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if params.Thinking == nil || params.Thinking.Type != "adaptive" {
+		t.Fatalf("unsupported off thinking = %+v", params.Thinking)
+	}
+
+	// off supported (a non-nil mapping): disabled, and no effort markers.
+	off := "none"
+	supported := newModel(&off, true)
+	params, err = BuildAnthropicParams(supported, ctx, false, &AnthropicOptions{ThinkingEnabled: &disabled})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if params.Thinking == nil || params.Thinking.Type != "disabled" {
+		t.Fatalf("supported off thinking = %+v", params.Thinking)
+	}
+}
+
 func TestBuildParamsErrorToolResultImagesFollowToolResults(t *testing.T) {
 	// Upstream v1.3.0 #10794 (api/anthropic-messages.ts convertMessages):
 	// Anthropic rejects error tool results whose content is not all text, so the

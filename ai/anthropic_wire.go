@@ -871,9 +871,16 @@ func BuildAnthropicParams(model *Model, context TranscriptContext, isOAuthToken 
 	nativeToolChanges := compat.SupportsMidConvoSystemMessages && compat.SupportsMidConvoToolChanges &&
 		len(initialTools) > 0
 
+	// Effort cannot change between messages while thinking is disabled, so
+	// "off" sends no effort markers (upstream v1.3.0 thinkingDisabled).
+	offVal, hasOff := model.ThinkingLevelMap[ThinkOff]
+	thinkingDisabled := model.Reasoning && options.ThinkingEnabled != nil && !*options.ThinkingEnabled &&
+		(!hasOff || offVal != nil)
+	supportsMidConvoEffort := model.Compat != nil && model.Compat.AnthropicMessages != nil &&
+		model.Compat.AnthropicMessages.SupportsMidConvoEffort != nil && *model.Compat.AnthropicMessages.SupportsMidConvoEffort
+	effortMessages := supportsMidConvoEffort && !thinkingDisabled
 	managedProvider := ""
-	if model.Compat != nil && model.Compat.AnthropicMessages != nil &&
-		model.Compat.AnthropicMessages.SupportsMidConvoEffort != nil && *model.Compat.AnthropicMessages.SupportsMidConvoEffort {
+	if effortMessages {
 		managedProvider = model.Provider
 	}
 	var convertToolDefinitions func([]Tool) ([]AnthropicTool, error)
@@ -965,11 +972,15 @@ func BuildAnthropicParams(model *Model, context TranscriptContext, isOAuthToken 
 		}
 	}
 
-	// Managed effort models always use adaptive thinking so prefix
-	// mismatches can be dropped instead of surfacing as persistent 400s.
 	forcedAdaptive := model.Compat != nil && model.Compat.AnthropicMessages != nil &&
 		model.Compat.AnthropicMessages.ForceAdaptiveThinking != nil && *model.Compat.AnthropicMessages.ForceAdaptiveThinking
-	if managedProvider != "" {
+	if thinkingDisabled {
+		// No effort is sent, so the model default applies. Anthropic rejects
+		// block_binding with disabled thinking.
+		params.Thinking = &AnthropicThinking{Type: "disabled"}
+	} else if managedProvider != "" {
+		// Managed effort models use adaptive thinking so prefix mismatches can
+		// be dropped instead of surfacing as persistent 400 responses.
 		display := options.ThinkingDisplay
 		if display == "" {
 			display = ThinkingDisplaySummarized
@@ -980,31 +991,22 @@ func BuildAnthropicParams(model *Model, context TranscriptContext, isOAuthToken 
 			BlockBinding: &AnthropicThinkingBlockBinding{PrefixMismatchBehavior: "drop_block"},
 		}
 		params.OutputConfig = &AnthropicOutputConfig{Effort: AnthropicEffortHigh}
-	} else if model.Reasoning {
-		if options.ThinkingEnabled != nil && *options.ThinkingEnabled {
-			display := options.ThinkingDisplay
-			if display == "" {
-				display = ThinkingDisplaySummarized
+	} else if model.Reasoning && options.ThinkingEnabled != nil && *options.ThinkingEnabled {
+		display := options.ThinkingDisplay
+		if display == "" {
+			display = ThinkingDisplaySummarized
+		}
+		if forcedAdaptive {
+			params.Thinking = &AnthropicThinking{Type: "adaptive", Display: &display}
+			if options.Effort != "" {
+				params.OutputConfig = &AnthropicOutputConfig{Effort: options.Effort}
 			}
-			if forcedAdaptive {
-				params.Thinking = &AnthropicThinking{Type: "adaptive", Display: &display}
-				if options.Effort != "" {
-					params.OutputConfig = &AnthropicOutputConfig{Effort: options.Effort}
-				}
-			} else {
-				budget := 1024
-				if options.ThinkingBudgetTokens != nil && *options.ThinkingBudgetTokens != 0 {
-					budget = *options.ThinkingBudgetTokens
-				}
-				params.Thinking = &AnthropicThinking{Type: "enabled", BudgetTokens: &budget, Display: &display}
+		} else {
+			budget := 1024
+			if options.ThinkingBudgetTokens != nil && *options.ThinkingBudgetTokens != 0 {
+				budget = *options.ThinkingBudgetTokens
 			}
-		} else if options.ThinkingEnabled != nil && !*options.ThinkingEnabled &&
-			!(model.ThinkingLevelMap[ThinkOff] != nil && *model.ThinkingLevelMap[ThinkOff] == "") {
-			// thinkingLevelMap.off !== null (nil means absent → still send disabled)
-			offVal, has := model.ThinkingLevelMap[ThinkOff]
-			if !has || offVal != nil {
-				params.Thinking = &AnthropicThinking{Type: "disabled"}
-			}
+			params.Thinking = &AnthropicThinking{Type: "enabled", BudgetTokens: &budget, Display: &display}
 		}
 	}
 

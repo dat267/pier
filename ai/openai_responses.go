@@ -45,6 +45,7 @@ type ResolvedOpenAIResponsesCompat struct {
 	SupportsAdditionalTools         bool
 	SupportsToolSearch              bool
 	SupportsExplicitPromptCacheMode bool
+	SupportsMidConvoEffort          bool
 	SupportsMaxOutputTokens         bool
 }
 
@@ -93,6 +94,9 @@ func GetOpenAIResponsesCompat(model *Model) ResolvedOpenAIResponsesCompat {
 		}
 		if c.SupportsExplicitPromptCacheMode != nil {
 			compat.SupportsExplicitPromptCacheMode = *c.SupportsExplicitPromptCacheMode
+		}
+		if c.SupportsMidConvoEffort != nil {
+			compat.SupportsMidConvoEffort = *c.SupportsMidConvoEffort
 		}
 		if c.SupportsMaxOutputTokens != nil {
 			compat.SupportsMaxOutputTokens = *c.SupportsMaxOutputTokens
@@ -268,6 +272,38 @@ type ConvertResponsesMessagesOptions struct {
 	SupportsAdditionalTools        bool
 	SupportsToolSearch             bool
 	ToolOptions                    *ConvertResponsesToolsOptions
+	// ConfigurationUpdateEffort, when set, sends the thinking level as
+	// configuration_update items instead of a changing reasoning.effort: one
+	// before every earlier reply with the level recorded on it
+	// (providerThinkingLevel), and one at the end with this effort. Earlier
+	// input therefore never changes, keeping the prompt cache.
+	ConfigurationUpdateEffort string
+}
+
+// configurationUpdateRequestEffort is the fixed reasoning.effort while
+// configuration_update items carry the thinking level.
+const configurationUpdateRequestEffort = "medium"
+
+// isChatGPTSignInResponses: Sign in with ChatGPT rejects configuration_update
+// items (upstream isChatGPTSignIn).
+func isChatGPTSignInResponses(model *Model, apiKey string) bool {
+	return model.Provider == "openai" && model.BaseURL == OpenAIChatGPTResource &&
+		apiKey != "" && !strings.HasPrefix(apiKey, "sk-")
+}
+
+// getConfigurationUpdateEffort returns the effort to send in
+// configuration_update items, or "" to send it as reasoning.effort.
+func getConfigurationUpdateEffort(model *Model, options *OpenAIResponsesOptions, compat ResolvedOpenAIResponsesCompat) string {
+	if !compat.SupportsMidConvoEffort || options == nil || options.ReasoningEffort == "" {
+		return ""
+	}
+	if isChatGPTSignInResponses(model, options.APIKey) {
+		return ""
+	}
+	if mapped, ok := model.ThinkingLevelMap[options.ReasoningEffort]; ok && mapped != nil {
+		return *mapped
+	}
+	return options.ReasoningEffort
 }
 
 // normalizeResponsesIDPart sanitizes/truncates an id part (≤64 chars).
@@ -372,6 +408,13 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 		instructionRole = "developer"
 	}
 
+	pushConfigurationUpdate := func(effort string) {
+		messages = append(messages, mustMarshalJSON(orderKeys(map[string]any{
+			"type":      "configuration_update",
+			"reasoning": map[string]any{"effort": effort},
+		}, "type", "reasoning")))
+	}
+
 	msgIndex := 0
 	sourceIndex := 0
 	for _, msg := range transformedMessages {
@@ -432,6 +475,10 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 			if len(items) == 0 {
 				continue
 			}
+			if options.ConfigurationUpdateEffort != "" && m.Provider == model.Provider && m.API == model.API &&
+				m.Model == model.ID && m.ProviderThinkingLevel != nil {
+				pushConfigurationUpdate(*m.ProviderThinkingLevel)
+			}
 			messages = append(messages, items...)
 		case *ToolResultMessage:
 			callID := strings.SplitN(m.ToolCallID, "|", 2)[0]
@@ -447,6 +494,9 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 		if !isLeadingSystemMessage {
 			msgIndex++
 		}
+	}
+	if options.ConfigurationUpdateEffort != "" {
+		pushConfigurationUpdate(options.ConfigurationUpdateEffort)
 	}
 
 	enc, err := MarshalJSON(messages)

@@ -370,8 +370,11 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 		if options != nil && options.Ctx != nil {
 			ctx = options.Ctx
 		}
+		offVal, hasOff := model.ThinkingLevelMap[ThinkOff]
+		thinkingDisabled := options != nil && model.Reasoning && options.ThinkingEnabled != nil && !*options.ThinkingEnabled &&
+			(!hasOff || offVal != nil)
 		providerThinkingLevel := ""
-		if model.Compat != nil && model.Compat.AnthropicMessages != nil &&
+		if !thinkingDisabled && options != nil && model.Compat != nil && model.Compat.AnthropicMessages != nil &&
 			model.Compat.AnthropicMessages.SupportsMidConvoEffort != nil && *model.Compat.AnthropicMessages.SupportsMidConvoEffort {
 			providerThinkingLevel = options.Effort
 			if providerThinkingLevel == "" {

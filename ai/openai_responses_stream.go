@@ -56,6 +56,7 @@ func BuildOpenAIResponsesParamsWithProviders(
 		SupportsAdditionalTools:        compat.SupportsAdditionalTools,
 		SupportsToolSearch:             compat.SupportsToolSearch,
 		ToolOptions:                    toolOptions,
+		ConfigurationUpdateEffort:      getConfigurationUpdateEffort(model, options, *compat),
 	})
 	if err != nil {
 		return nil, err
@@ -111,15 +112,19 @@ func BuildOpenAIResponsesParamsWithProviders(
 	}
 	if model.Reasoning {
 		if reasoningEffort != "" {
-			effort := "medium"
+			requestedEffort := "medium"
 			if options.ReasoningEffort != "" {
 				if mapped, ok := model.ThinkingLevelMap[options.ReasoningEffort]; ok && mapped != nil {
-					effort = *mapped
+					requestedEffort = *mapped
 				} else {
-					effort = options.ReasoningEffort
+					requestedEffort = options.ReasoningEffort
 				}
 			} else {
-				effort = reasoningEffort
+				requestedEffort = reasoningEffort
+			}
+			effort := requestedEffort
+			if getConfigurationUpdateEffort(model, options, *compat) != "" {
+				effort = configurationUpdateRequestEffort
 			}
 			summary := options.ReasoningSummary
 			if summary == "" {
@@ -1023,6 +1028,9 @@ func streamOpenAIResponses(model *Model, context TranscriptContext, options *Ope
 			API: model.API, Provider: model.Provider, Model: model.ID,
 			Usage: Usage{Cost: UsageCost{}}, StopReason: StopPending,
 			Timestamp: time.Now().UnixMilli(),
+		}
+		if effort := getConfigurationUpdateEffort(model, options, compat); effort != "" {
+			output.ProviderThinkingLevel = &effort
 		}
 		fail := func(err error) {
 			for i, block := range output.Content {

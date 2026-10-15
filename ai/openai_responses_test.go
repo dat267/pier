@@ -23,6 +23,88 @@ func testResponsesModel() *Model {
 	}
 }
 
+// Upstream v1.3.0 #10930/#10853: with supportsMidConvoEffort, changing the
+// thinking level is sent as configuration_update items at a fixed
+// reasoning.effort of "medium", so earlier input (and the prompt cache) does
+// not change. The reply records the level so the next request replays it.
+func TestConfigurationUpdateEffortKeepsThePromptCache(t *testing.T) {
+	model := testResponsesModel()
+	model.Compat = &ModelCompat{OpenAIResponses: &OpenAIResponsesCompat{
+		SupportsMidConvoEffort: boolPtrT(true),
+	}}
+	model.ThinkingLevelMap = map[ThinkingLevel]*string{ThinkHigh: strPtrT("high")}
+	ctx := NormalizeContext(Context{
+		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
+	})
+	params, err := BuildOpenAIResponsesParams(model, ctx, &OpenAIResponsesOptions{
+		StreamOptions:   StreamOptions{APIKey: "sk-test"},
+		ReasoningEffort: ThinkHigh,
+	}, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if params.Reasoning == nil || params.Reasoning.Effort != "medium" {
+		t.Fatalf("reasoning = %+v; want the fixed medium effort", params.Reasoning)
+	}
+	var items []map[string]any
+	if err := json.Unmarshal(params.Input, &items); err != nil {
+		t.Fatal(err)
+	}
+	last := items[len(items)-1]
+	if last["type"] != "configuration_update" {
+		t.Fatalf("last item = %+v", last)
+	}
+	reasoning, _ := last["reasoning"].(map[string]any)
+	if reasoning["effort"] != "high" {
+		t.Fatalf("configuration_update = %+v", last)
+	}
+
+	// Sign in with ChatGPT rejects configuration_update items.
+	oauth := testResponsesModel()
+	oauth.BaseURL = OpenAIChatGPTResource
+	oauth.Compat = model.Compat
+	oauth.ThinkingLevelMap = model.ThinkingLevelMap
+	effort := getConfigurationUpdateEffort(oauth, &OpenAIResponsesOptions{
+		StreamOptions:   StreamOptions{APIKey: "oauth-token"},
+		ReasoningEffort: ThinkHigh,
+	}, GetOpenAIResponsesCompat(oauth))
+	if effort != "" {
+		t.Fatalf("ChatGPT sign-in effort = %q; want none", effort)
+	}
+
+	// A later request replays the level recorded on an earlier reply, before it.
+	previous := &AssistantMessage{
+		Content: ContentList{TextContent{Text: "answer"}},
+		API:     model.API, Provider: model.Provider, Model: model.ID,
+		StopReason: StopStop, Timestamp: 2,
+	}
+	level := "low"
+	previous.ProviderThinkingLevel = &level
+	input, err := ConvertResponsesMessages(model, NormalizeContext(Context{Messages: []Message{
+		&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
+		previous,
+	}}), &ConvertResponsesMessagesOptions{ConfigurationUpdateEffort: "high"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var replay []map[string]any
+	if err := json.Unmarshal(input, &replay); err != nil {
+		t.Fatal(err)
+	}
+	var levels []string
+	for _, item := range replay {
+		if item["type"] != "configuration_update" {
+			continue
+		}
+		reasoning, _ := item["reasoning"].(map[string]any)
+		effort, _ := reasoning["effort"].(string)
+		levels = append(levels, effort)
+	}
+	if len(levels) != 2 || levels[0] != "low" || levels[1] != "high" {
+		t.Fatalf("configuration_update levels = %v", levels)
+	}
+}
+
 func TestResponsesCompatAndCacheFields(t *testing.T) {
 	compat := GetOpenAIResponsesCompat(testResponsesModel())
 	if !compat.SupportsDeveloperRole || !compat.SupportsLongCacheRetention || !compat.SupportsMaxOutputTokens {

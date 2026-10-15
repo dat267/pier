@@ -145,20 +145,21 @@ Ported so far:
   `https://api.kimi.com/coding/v1` (`ai/providers/kimi-coding.ts`, #10720), and
   OpenCode Go gained Google Generative AI (`ai/providers/opencode-go.ts`).
   These came with the catalog regeneration below.
+- `off` thinking level handling for Claude Haiku 5.5 and Opus 5 (#10753), the
+  Xiaomi MiMo thinking on/off map (#10818) and the Codex GPT-6.1 Sol 500K
+  context window (#10840) come from the regenerated catalog; the Anthropic
+  `thinkingDisabled`/managed-effort restructure that reads a nil `off` mapping
+  is ported (`ai/api/anthropic-messages.ts`).
+- Cache-preserving thinking-level changes on OpenAI GPT-6: the thinking level
+  is sent as `configuration_update` items at a fixed `reasoning.effort` of
+  `medium`, and the reply records it for replay
+  (`ai/api/openai-responses*.ts`, `providers/compat-schema.ts`,
+  #10930/#10853). Sign in with ChatGPT keeps the request-level effort. The
+  Anthropic side (`supportsMidConvoEffort` on `anthropic-messages`) already
+  existed.
 
 Still to port:
 
-- `off` thinking level for Claude Haiku 5.5 and Opus 5 (`ai`, #10753), Xiaomi
-  MiMo thinking on/off only (`ai`, #10818), and the Codex GPT-6.1 Sol 500K
-  context window (`ai`, #10840). The v1.3.0 catalog now carries the
-  `thinkingLevelMap` entries and context window; the remaining code paths to
-  verify are the `off` handling and the OpenAI Responses
-  `configuration_update` effort mechanism.
-- Cache-preserving thinking-level changes on OpenAI GPT-6:
-  `configuration_update` items and the OpenAI Responses `supportsMidConvoEffort`
-  (`ai/api/openai-responses*.ts`, `providers/compat-schema.ts`, #10930/#10853).
-  The Anthropic side (`supportsMidConvoEffort` on `anthropic-messages`) is
-  already in the port.
 - `--model` provider selection resolves candidates before choosing a provider
   and reports ambiguity instead of using catalog order
   (`coding-agent/core/model-resolver.ts`, #10160/#10913).
