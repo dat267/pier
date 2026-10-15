@@ -1,13 +1,63 @@
 package ai
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 // Port of api/transform-messages.ts.
 
 const (
 	nonVisionUserImagePlaceholder = "(image omitted: model does not support images)"
 	nonVisionToolImagePlaceholder = "(tool image omitted: model does not support images)"
+	errorToolImagePlaceholder     = "(image attached after the tool results)"
 )
+
+// SplitErrorToolResult is an error tool result split into a text-only result
+// and the images to send after the tool results (upstream SplitErrorToolResult).
+type SplitErrorToolResult struct {
+	// Content is the result content with each run of images replaced by a note.
+	Content ContentList
+	// Caption names the tool call, to send before Images.
+	Caption string
+	Images  []ImageContent
+}
+
+// SplitErrorToolResultImages splits the images out of an error tool result, for
+// APIs that reject images in error results (Anthropic, and Claude on Bedrock).
+// The caller sends Content as the tool result and Caption plus Images after all
+// tool results of the turn, in the same user message. It returns nil for
+// results that need no split (#10794).
+func SplitErrorToolResultImages(msg *ToolResultMessage) *SplitErrorToolResult {
+	if !msg.IsError {
+		return nil
+	}
+	content := userToContentList(msg.Content)
+	var images []ImageContent
+	for _, block := range content {
+		if image, ok := block.(ImageContent); ok {
+			images = append(images, image)
+		}
+	}
+	if len(images) == 0 {
+		return nil
+	}
+	return &SplitErrorToolResult{
+		Content: replaceImagesWithPlaceholder(content, errorToolImagePlaceholder),
+		Caption: fmt.Sprintf("Images from the error result of tool call %s (%s):", msg.ToolCallID, msg.ToolName),
+		Images:  images,
+	}
+}
+
+func contentListToUserContent(content ContentList) UserContentList {
+	out := make(UserContentList, 0, len(content))
+	for _, block := range content {
+		if user, ok := block.(UserContent); ok {
+			out = append(out, user)
+		}
+	}
+	return out
+}
 
 // replaceImagesWithPlaceholder collapses image blocks to text placeholders,
 // deduplicating consecutive placeholders (upstream semantics: a placeholder
@@ -99,24 +149,23 @@ func TransformMessages(messages []Message, model *Model, normalizeToolCallID Too
 			for _, block := range m.Content {
 				switch b := block.(type) {
 				case ThinkingContent:
-					if b.Redacted {
-						if isSameModel {
-							transformedContent = append(transformedContent, b)
-						}
+					// Thinking from another model is dropped. Signatures and encrypted
+					// reasoning are only valid for the model that produced them, and
+					// sending readable thinking as plain text makes the new model treat
+					// it as part of the visible reply (upstream #11000).
+					if !isSameModel {
 						continue
 					}
-					if isSameModel && b.ThinkingSignature != nil {
+					// Keep redacted and signed blocks even if the thinking text is empty
+					// (OpenAI encrypted reasoning); they are needed for replay.
+					if b.Redacted || b.ThinkingSignature != nil {
 						transformedContent = append(transformedContent, b)
 						continue
 					}
 					if b.Thinking == "" || JSTrimIsEmpty(b.Thinking) {
 						continue
 					}
-					if isSameModel {
-						transformedContent = append(transformedContent, b)
-					} else {
-						transformedContent = append(transformedContent, TextContent{Text: b.Thinking})
-					}
+					transformedContent = append(transformedContent, b)
 				case TextContent:
 					if isSameModel {
 						transformedContent = append(transformedContent, b)

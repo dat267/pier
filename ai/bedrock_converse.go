@@ -427,19 +427,37 @@ func ConvertBedrockMessages(context TranscriptContext, model *Model, cacheRetent
 			}
 			result = append(result, map[string]any{"role": "assistant", "content": contentBlocks})
 		case *ToolResultMessage:
-			toolResults := []any{bedrockToolResultBlock(typed)}
-			// Bedrock requires consecutive tool results in one user message.
-			next := index + 1
+			// Claude rejects error tool results that contain anything but text,
+			// so for Claude their images follow all tool results of the turn
+			// (#10794). Other models keep them in place. Bedrock requires
+			// consecutive tool results in one user message.
+			var toolResults []any
+			var errorImages []any
+			next := index
 			for next < len(messages) {
 				following, ok := messages[next].(*ToolResultMessage)
 				if !ok {
 					break
 				}
-				toolResults = append(toolResults, bedrockToolResultBlock(following))
+				content := following.Content
+				if IsAnthropicClaudeModel(model) {
+					if split := SplitErrorToolResultImages(following); split != nil {
+						content = contentListToUserContent(split.Content)
+						errorImages = append(errorImages, map[string]any{"text": split.Caption})
+						for _, image := range split.Images {
+							imageBlock, err := createBedrockImageBlock(image.MimeType, image.Data)
+							if err != nil {
+								return nil, err
+							}
+							errorImages = append(errorImages, map[string]any{"image": imageBlock})
+						}
+					}
+				}
+				toolResults = append(toolResults, bedrockToolResultBlock(following, content))
 				next++
 			}
 			index = next - 1
-			result = append(result, map[string]any{"role": "user", "content": toolResults})
+			result = append(result, map[string]any{"role": "user", "content": append(toolResults, errorImages...)})
 		}
 	}
 
@@ -460,10 +478,10 @@ func ConvertBedrockMessages(context TranscriptContext, model *Model, cacheRetent
 }
 
 // bedrockToolResultBlock renders one tool result.
-func bedrockToolResultBlock(message *ToolResultMessage) map[string]any {
-	content, err := ConvertBedrockToolResultContent(message.Content)
+func bedrockToolResultBlock(message *ToolResultMessage, content UserContentList) map[string]any {
+	blocks, err := ConvertBedrockToolResultContent(content)
 	if err != nil {
-		content = []any{map[string]any{"text": bedrockEmptyTextPlaceholder}}
+		blocks = []any{map[string]any{"text": bedrockEmptyTextPlaceholder}}
 	}
 	status := "success"
 	if message.IsError {
@@ -472,7 +490,7 @@ func bedrockToolResultBlock(message *ToolResultMessage) map[string]any {
 	return map[string]any{
 		"toolResult": map[string]any{
 			"toolUseId": message.ToolCallID,
-			"content":   content,
+			"content":   blocks,
 			"status":    status,
 		},
 	}

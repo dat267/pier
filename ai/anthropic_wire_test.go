@@ -196,10 +196,11 @@ func TestBuildParamsToolResultPairingAndSyntheticResults(t *testing.T) {
 	}
 }
 
-func TestBuildParamsErrorToolResultDropsImages(t *testing.T) {
-	// Upstream #10794 (api/anthropic-messages.ts convertToolResult): Anthropic
-	// rejects error tool results whose content is not all text, so an image in
-	// an error result is replaced with a note. Successful results keep images.
+func TestBuildParamsErrorToolResultImagesFollowToolResults(t *testing.T) {
+	// Upstream v1.3.0 #10794 (api/anthropic-messages.ts convertMessages):
+	// Anthropic rejects error tool results whose content is not all text, so the
+	// images follow all tool results of the turn in the same user message, and
+	// the result itself carries a note. Successful results keep images in place.
 	model := testAnthropicModel()
 	messages := []Message{
 		&UserMessage{Content: StringOrBlocks{Text: "read it"}, Timestamp: 1},
@@ -230,6 +231,7 @@ func TestBuildParamsErrorToolResultDropsImages(t *testing.T) {
 	}
 	params := build(t, model, messages, nil)
 	results := map[string]AnthropicContentBlock{}
+	var userBlocks []AnthropicContentBlock
 	for _, m := range params.Messages {
 		var blocks []AnthropicContentBlock
 		if err := json.Unmarshal(m.Content, &blocks); err != nil {
@@ -238,6 +240,9 @@ func TestBuildParamsErrorToolResultDropsImages(t *testing.T) {
 		for _, b := range blocks {
 			if b.Type == "tool_result" {
 				results[b.ToolUseID] = b
+				if b.ToolUseID == "call-1" && m.Role == "user" {
+					userBlocks = blocks
+				}
 			}
 		}
 	}
@@ -251,8 +256,35 @@ func TestBuildParamsErrorToolResultDropsImages(t *testing.T) {
 		t.Fatalf("error tool result content is not a text string: %s", errResult.Content)
 	}
 	if !strings.Contains(errContent, "failed") ||
-		!strings.Contains(errContent, "[image omitted: error tool results cannot contain images]") {
+		!strings.Contains(errContent, "(image attached after the tool results)") {
 		t.Fatalf("error tool result content = %q", errContent)
+	}
+
+	// The error image follows the last tool result of the turn, under a caption
+	// that names the call.
+	lastToolResultIndex := -1
+	for index, b := range userBlocks {
+		if b.Type == "tool_result" {
+			lastToolResultIndex = index
+		}
+	}
+	var caption string
+	imageAfterResults := false
+	for index := lastToolResultIndex + 1; index < len(userBlocks); index++ {
+		switch userBlocks[index].Type {
+		case "text":
+			caption = userBlocks[index].Text
+		case "image":
+			if userBlocks[index].Source != nil && userBlocks[index].Source.Data == "AAAA" {
+				imageAfterResults = true
+			}
+		}
+	}
+	if caption != "Images from the error result of tool call call-1 (read):" {
+		t.Fatalf("caption = %q", caption)
+	}
+	if !imageAfterResults {
+		t.Fatalf("error image did not follow the tool results: %+v", userBlocks)
 	}
 
 	okResult, ok := results["call-2"]

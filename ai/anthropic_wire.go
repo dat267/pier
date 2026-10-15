@@ -376,23 +376,15 @@ func NormalizeAnthropicToolCallID(id string) string {
 	return normalized
 }
 
-func convertToolResult(msg *ToolResultMessage) AnthropicContentBlock {
-	isError := msg.IsError
-	content := userToContentList(msg.Content)
-	if msg.IsError {
-		// Anthropic rejects error tool results whose content is not all text, so
-		// an image is replaced with a note (upstream #10794,
-		// api/anthropic-messages.ts convertToolResult).
-		replaced := make(ContentList, 0, len(content))
-		for _, block := range content {
-			if _, ok := block.(ImageContent); ok {
-				replaced = append(replaced, TextContent{Text: "[image omitted: error tool results cannot contain images]"})
-				continue
-			}
-			replaced = append(replaced, block)
-		}
-		content = replaced
+func convertAnthropicImageBlock(image ImageContent) AnthropicContentBlock {
+	return AnthropicContentBlock{
+		Type:   "image",
+		Source: &AnthropicImageSource{Type: "base64", MimeType: image.MimeType, Data: image.Data},
 	}
+}
+
+func convertToolResult(msg *ToolResultMessage, content ContentList) AnthropicContentBlock {
+	isError := msg.IsError
 	return AnthropicContentBlock{
 		Type:      "tool_result",
 		ToolUseID: msg.ToolCallID,
@@ -577,19 +569,31 @@ func ConvertAnthropicMessages(
 			}
 		case *ToolResultMessage:
 			// Collect consecutive toolResult messages into one user message
-			// (needed for z.ai's Anthropic endpoint).
+			// (needed for z.ai's Anthropic endpoint). Anthropic rejects error tool
+			// results that contain anything but text, so their images follow all
+			// tool results of the turn, which must come first in the user message
+			// (upstream #10794).
 			var toolResults []AnthropicContentBlock
+			var errorImages []AnthropicContentBlock
 			j := i
 			for j < len(transformedMessages) {
 				tr, ok := transformedMessages[j].(*ToolResultMessage)
 				if !ok {
 					break
 				}
-				toolResults = append(toolResults, convertToolResult(tr))
+				resultContent := userToContentList(tr.Content)
+				if split := SplitErrorToolResultImages(tr); split != nil {
+					resultContent = split.Content
+					errorImages = append(errorImages, AnthropicContentBlock{Type: "text", Text: split.Caption})
+					for _, image := range split.Images {
+						errorImages = append(errorImages, convertAnthropicImageBlock(image))
+					}
+				}
+				toolResults = append(toolResults, convertToolResult(tr, resultContent))
 				j++
 			}
 			i = j - 1
-			params = append(params, AnthropicMessage{Role: "user", Content: mustMarshalJSON(toolResults)})
+			params = append(params, AnthropicMessage{Role: "user", Content: mustMarshalJSON(append(toolResults, errorImages...))})
 		}
 	}
 

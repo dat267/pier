@@ -184,8 +184,8 @@ func TestConvertGoogleMessagesNormalizesAstralToolCallIDLikeJavaScript(t *testin
 
 func TestConvertGoogleMessagesCrossModelThinking(t *testing.T) {
 	model := testGoogleModel()
-	// Thinking from a DIFFERENT model converts to plain text (no thought flag,
-	// no signature).
+	// Thinking from a DIFFERENT model is dropped entirely (v1.3.0 #11000), so an
+	// assistant message that contains only thinking has no content left.
 	messages := []Message{
 		&AssistantMessage{
 			Content: ContentList{
@@ -199,12 +199,8 @@ func TestConvertGoogleMessagesCrossModelThinking(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(contents) != 1 || len(contents[0].Parts) != 1 {
-		t.Fatalf("contents = %+v", contents)
-	}
-	part := contents[0].Parts[0]
-	if part.Thought != nil || part.ThoughtSignature != nil || part.Text != "other model reasoning" {
-		t.Fatalf("cross-model part = %+v", part)
+	if len(contents) != 0 {
+		t.Fatalf("cross-model thinking was not dropped: %+v", contents)
 	}
 }
 

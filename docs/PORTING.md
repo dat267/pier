@@ -98,14 +98,12 @@ acquisition retries transient Windows `EPERM` within a bounded count while
 non-Windows failures remain immediate (`#10801`, `e6fb2581d`). Focused regression
 tests cover these fixes.
 
-**Post-pin fixes incorporated.** Two upstream fixes that landed after the
-v1.2.0 tag are folded in ahead of the next release: error tool results replace
-an image with a text note before the Anthropic request, because Anthropic
-rejects non-text error results (`34a8bb38b`,
-`api/anthropic-messages.ts`), and a resumed default-tools session restores the
+**Post-pin fixes incorporated.** A resumed default-tools session restores the
 tool loadout its transcript records, with modifier-only `--tools` entries
 applied (`6f2f164ab`, `core/agent-session.ts`). The invalid `\u` escape repair
-(`4b994d5e5`) was already the port's behavior.
+(`4b994d5e5`) was already the port's behavior. The v1.3.0 delta replaces the
+earlier text-note form of the error-tool-result image fix (`34a8bb38b`) with
+`5ab7fe74c`: the images now follow the tool results of the turn.
 
 **v1.3.0 delta audit.** The reference checkout now also holds `v1.3.0`
 (`71023aec`, Release v1.3.0), 63 commits past the pin (207 files). The port is
@@ -130,16 +128,15 @@ Ported so far:
 - `read` line-range labels accept numeric strings and omit malformed ranges, in
   the TUI renderer, the session tree and the HTML export
   (`coding-agent/core/tools/render-utils.ts`, #10938).
+- Error tool-result images for Anthropic and Claude on Bedrock follow all tool
+  results of the turn instead of being dropped (`ai/api/transform-messages.ts`,
+  `anthropic-messages.ts`, `bedrock-converse-stream.ts`, #10794).
+- Thinking from earlier assistant messages produced by a different model is
+  dropped instead of being sent as text (`ai/api/transform-messages.ts`,
+  #11000).
 
 Still to port:
 
-- Error tool-result images for Anthropic and Bedrock: the images follow all
-  tool results of the turn instead of being dropped
-  (`ai/api/transform-messages.ts`, `anthropic-messages.ts`,
-  `bedrock-converse-stream.ts`, #10794). This replaces the text-note form of
-  `34a8bb38b` already in the port.
-- Drop thinking from earlier assistant messages produced by a different model
-  instead of sending it as text (`ai/api/transform-messages.ts`, #11000).
 - Malformed final tool-call arguments fail validation and report the raw text
   (`ai/utils/json-parse.ts`, `validation.ts`, the four wire APIs, #10944).
 - Kimi Code over Chat Completions at `https://api.kimi.com/coding/v1`

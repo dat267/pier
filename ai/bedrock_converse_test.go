@@ -311,9 +311,9 @@ func TestBedrockMessageConversion(t *testing.T) {
 		t.Fatalf("toolUse = %#v", toolUse)
 	}
 
-	// An assistant message from a different model has its thinking lowered to
-	// text and its redacted blocks dropped (the shared transcript transform),
-	// and an orphaned tool call gains a synthetic error result.
+	// An assistant message from a different model has its thinking (signed and
+	// redacted) dropped (the shared transcript transform, v1.3.0), and an
+	// orphaned tool call gains a synthetic error result.
 	foreign := &AssistantMessage{
 		Provider: "anthropic", API: APIAnthropicMessages, Model: "claude-other",
 		Content: ContentList{
@@ -331,11 +331,11 @@ func TestBedrockMessageConversion(t *testing.T) {
 	}
 	assistant, _ = messages[0].(map[string]any)
 	blocks, _ = assistant["content"].([]any)
-	if len(blocks) != 2 {
+	if len(blocks) != 1 {
 		t.Fatalf("blocks = %#v", blocks)
 	}
-	if block, _ := blocks[0].(map[string]any); block["text"] != "foreign reasoning" {
-		t.Fatalf("blocks = %#v", blocks)
+	if block, _ := blocks[0].(map[string]any); block["toolUse"] == nil {
+		t.Fatalf("cross-model thinking was not dropped: %#v", blocks)
 	}
 	synthetic, _ := messages[1].(map[string]any)
 	toolResults, _ := synthetic["content"].([]any)
@@ -347,7 +347,10 @@ func TestBedrockMessageConversion(t *testing.T) {
 	// A non-Claude model omits the signature.
 	nova := &Model{ID: "amazon.nova-pro-v1:0", Name: "Nova Pro"}
 	messages, err = ConvertBedrockMessages(TranscriptContext{Messages: []Message{
-		&AssistantMessage{Content: ContentList{ThinkingContent{Thinking: "reasoning", ThinkingSignature: &signature}}},
+		&AssistantMessage{
+			Provider: nova.Provider, API: nova.API, Model: nova.ID,
+			Content: ContentList{ThinkingContent{Thinking: "reasoning", ThinkingSignature: &signature}},
+		},
 	}}, nova, CacheRetentionNone, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -361,9 +364,12 @@ func TestBedrockMessageConversion(t *testing.T) {
 		t.Fatalf("non-Claude models must omit the signature: %#v", reasoningText)
 	}
 
-	// A missing signature falls back to a plain text block for Claude.
+	// A missing signature falls back to a plain text block for Claude (same model).
 	messages, err = ConvertBedrockMessages(TranscriptContext{Messages: []Message{
-		&AssistantMessage{Content: ContentList{ThinkingContent{Thinking: "reasoning"}}},
+		&AssistantMessage{
+			Provider: model.Provider, API: model.API, Model: model.ID,
+			Content: ContentList{ThinkingContent{Thinking: "reasoning"}},
+		},
 	}}, model, CacheRetentionNone, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -518,6 +524,47 @@ func bedrockEventFrame(eventType string, payload any) []byte {
 func TestNormalizeBedrockToolCallIDAstral(t *testing.T) {
 	if got := NormalizeBedrockToolCallID("id😀"); got != "id__" {
 		t.Fatalf("astral id = %q; want id__", got)
+	}
+}
+
+// Claude on Bedrock rejects error tool results that contain anything but text,
+// so their images follow all tool results of the turn (#10794).
+func TestBedrockErrorToolResultImagesFollowToolResults(t *testing.T) {
+	claude := &Model{ID: "anthropic.claude-sonnet-4-5-v1:0", Name: "Claude", Input: []string{"text", "image"}}
+	messages, err := ConvertBedrockMessages(TranscriptContext{Messages: []Message{
+		&ToolResultMessage{
+			ToolCallID: "call-1", ToolName: "read", IsError: true,
+			Content: UserContentList{
+				TextContent{Text: "failed"},
+				ImageContent{Data: "AAAA", MimeType: "image/png"},
+			},
+		},
+	}}, claude, CacheRetentionNone, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(messages) != 1 {
+		t.Fatalf("messages = %#v", messages)
+	}
+	user, _ := messages[0].(map[string]any)
+	blocks, _ := user["content"].([]any)
+	// The text-only tool result, then the caption and the image.
+	if len(blocks) != 3 {
+		t.Fatalf("blocks = %#v", blocks)
+	}
+	result, _ := blocks[0].(map[string]any)["toolResult"].(map[string]any)
+	content, _ := result["content"].([]any)
+	if len(content) != 2 {
+		t.Fatalf("tool result content = %#v", content)
+	}
+	if note, _ := content[1].(map[string]any); note["text"] != "(image attached after the tool results)" {
+		t.Fatalf("tool result note = %#v", content[1])
+	}
+	if caption, _ := blocks[1].(map[string]any); caption["text"] != "Images from the error result of tool call call-1 (read):" {
+		t.Fatalf("caption = %#v", blocks[1])
+	}
+	if image, _ := blocks[2].(map[string]any); image["image"] == nil {
+		t.Fatalf("image = %#v", blocks[2])
 	}
 }
 
