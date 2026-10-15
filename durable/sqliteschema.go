@@ -8,9 +8,14 @@ import (
 	"strings"
 )
 
-// Port of storage/sqlite/schema.ts and storage.ts's schema threading. Upstream
-// renders the prefixed names into every query; the port instead rewrites the
-// base names at the database boundary, which keeps the query strings unchanged.
+// Port of storage/sqlite/schema.ts and storage.ts's schema threading.
+//
+// D222: upstream renders the prefixed table and index names into every query
+// (createSqliteSchema + template strings). The port instead keeps the base
+// names in the queries and rewrites them at the database boundary through
+// sqliteDB/sqliteTx, so linting and test fixtures see the same SQL either way.
+// The statements issued and the resulting schema are identical; only the
+// rendering point differs. See docs/DIVERGENCES.md.
 
 // sqliteTableNames are the base table names (upstream TABLE_NAMES). Never
 // change an existing value; adding one is fine.

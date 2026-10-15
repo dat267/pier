@@ -2,7 +2,7 @@
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
-in code comments; not every ID has a full entry here. The range is **D1–D221**.
+in code comments; not every ID has a full entry here. The range is **D1–D222**.
 Entries are ordered numerically. Closed, retired, and withdrawn rows keep their
 IDs for historical references; overlapping rows refer to the owning explanation.
 
@@ -1578,3 +1578,25 @@ Tests: `TestParseToolCallArguments`, `TestValidateToolArgumentsReportsMalformedA
 (`ai/jsonparse_test.go`, `ai/validation_test.go`) and
 `TestStreamOpenAICompletionsMalformedFinalArguments`
 (`ai/openai_completions_test.go`).
+
+## D222
+
+**The durable SQLite schema prefix is applied at the database boundary, not
+rendered into each query.**
+
+Upstream v1.3.0 (`storage/sqlite/schema.ts`, `createSqliteSchema`) builds the
+prefixed table and index identifiers and interpolates them into every
+migration statement and runtime query
+(`storage/sqlite/migrations.ts`, `storage/sqlite/storage.ts`, #10937). The port
+keeps the base names in `durable/sqlite.go` and `durable/sqlitedocuments.go`
+and prefixes them in `sqliteSchema.apply`, called by the `sqliteDB`/`sqliteTx`
+wrappers around every `Begin`/`Exec`/`QueryContext`/`QueryRowContext`. The
+resulting statements and schema are identical; only the rendering point
+differs. `ValidateSQLiteSchemaPrefix` and `OpenSqliteStorageWithOptions`
+(`SqliteStorageOptions.Prefix`) match upstream, and the durable conformance
+suite also runs over a `pi_` prefix.
+
+Tests: `TestValidateSQLiteSchemaPrefix`, `TestSqliteStorageNamespaceCoexists`,
+`TestSqliteStorageNamespaceRenamesTables`, `TestSqliteStorageRejectsInvalidPrefix`
+(`durable/sqlitenamespace_test.go`) plus the `sqlite-prefix` conformance rows
+in `durable/durable_test.go`.
