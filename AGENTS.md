@@ -15,12 +15,11 @@ sibling of the TypeScript monorepo, not a fork: the Go code follows the
 reference packages closely, file for file.
 
 - Module: `github.com/dat267/pier`, Go `1.27`.
-- Dependencies are offline-cached only. Direct dependencies: `github.com/alecthomas/chroma/v3`
-  (syntax coloring), `github.com/sgtdi/fswatcher` (native file-watch events),
-  `golang.org/x/text`, `x/term`, `x/sys`, `x/tools`
-  (`internal/uiblock`'s SSA analysis), and `modernc.org/sqlite` (the durable
-  SQLite backend). `go.mod` is authoritative for versions and indirect
-  dependencies.
+- Dependencies are offline-cached only. Direct dependencies:
+  `github.com/sgtdi/fswatcher` (native file-watch events), `golang.org/x/text`,
+  `x/term`, `x/sys`, `x/tools` (`internal/uiblock`'s SSA analysis), and
+  `modernc.org/sqlite` (the durable SQLite backend). `go.mod` is authoritative
+  for versions and indirect dependencies.
 - Upstream checkout lives in the workspace at `./pi` (gitignored), checked out at
   the pinned tag `v1.3.0` (`71023aec`; the README's pin table and
   `docs/PORTING.md` record it). `just reference` fails when the checkout sits at

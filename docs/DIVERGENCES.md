@@ -1497,9 +1497,10 @@ Upstream `theme.ts.highlightCode` uses `cli-highlight` with syntax theme tokens.
 Pier uses Go-native Chroma v3.0.0-alpha.5 for Markdown code blocks and read/write
 previews, mapping categories to `syntax*`. Unknown languages/lexer failures use
 plain `mdCodeBlock` styling. Lexer/token boundaries differ, so ANSI is not
-byte-identical. `TestHighlightCodeAppliesTokenColorsForKnownLanguage` checks
-colors and preserved source. Reference:
+byte-identical. Reference:
 `packages/coding-agent/src/modes/interactive/theme/theme.ts`.
+
+Superseded by D227: Chroma is removed, so no language applies token colors.
 
 ## D218
 
@@ -1717,3 +1718,35 @@ goal extension to interleave.
 Any custom role is held, not just the goal event; the ordering rule is about
 the tool pair, and the roles are out-of-band notes rather than turns.
 
+## D227
+
+**Syntax highlighting is not built in.**
+
+Upstream renders Markdown code blocks and read/write previews with highlight.js
+(D217 recorded the Chroma substitution). Chroma v3 compiles every lexer rule
+with `dlclark/regexp2`, a pure-Go interpreted backtracking engine, and tries the
+rules one at a time: the Go lexer's `root` has 28 rules and its own tracing
+shows ~14.5 regex attempts per token (153,560 attempts for 10,597 tokens on
+`tui/markdown.go`). It measured ~0.5 MB/s, against ~7-11 MB/s for highlight.js
+on the same files (V8's JIT-compiled irregexp, one combined regex per step),
+about 14-19x slower.
+
+That cost sat inside `Markdown.Render` on the UI loop, so every re-render of a
+fence re-tokenised it: 90 fences on one whole-UI invalidate frame, and the whole
+growing fence on every streaming partial (a 600-partial fenced thinking block
+measured 31 s). A user session's `pier-stall.log` shows idle 190-235 ms `render`
+phases stuck in `highlightCodeWithChroma`.
+
+The port now renders every language with upstream's own no-valid-language
+fallback: each line of a fence gets one `mdCodeBlock` color, no token colors
+(`coding/interactive/codehighlight.go`). `HighlightCode(code, lang)` keeps the
+markdown theme hook signature and language detection still drives the tool
+renderers, but the language no longer changes the output. Code fences remain
+visually distinct from body text; only the per-token coloring is gone.
+
+Two consequences: ANSI output for code blocks is now identical across languages
+and does not match upstream's highlighted output; and diff/tool previews lose
+their syntax colors. Removing the dependency drops `github.com/alecthomas/chroma/v3`
+and its `dlclark/regexp2` indirect dependency and the lexer registry init at
+startup: the binary fell from 31.1 MB to 27.1 MB (-3.9 MB), and `pier --version`
+went from 12.3 ms to 5.3 ms median (-7 ms) on the same machine.

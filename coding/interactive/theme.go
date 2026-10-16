@@ -24,9 +24,9 @@ import (
 // terminal light/dark detection helpers, and the global theme registry.
 //
 // Divergences: chalk's style helpers become equivalent ANSI sequences
-// (verified against chalk output); Chroma replaces highlight.js with the
-// category mapping recorded in D217; the file watcher polls instead of using
-// fs.watch (D75).
+// (verified against chalk output); syntax highlighting is not built in and
+// every language renders as one themed code-block color (D217, D227); the file
+// watcher polls instead of using fs.watch (D75).
 
 //go:embed themes/*.json
 var builtinThemeFS embed.FS

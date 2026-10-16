@@ -99,7 +99,7 @@ func formatReadResult(args map[string]any, result *SortToolResultContent, option
 	}
 	var lines []string
 	if hasLang {
-		lines = highlightCodeWithChroma(replaceTabs(output), lang, theme)
+		lines = highlightCode(replaceTabs(output), lang, theme)
 	} else {
 		lines = strings.Split(output, "\n")
 	}

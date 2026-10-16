@@ -615,6 +615,20 @@ fell from ~1.27 s to ~0.88 s over 20 s on the 97 MB session
 (`TestRendererCachesTheAnimatorWalk` and
 `TestBoxReusesPrefixForAnInPlaceContainerChange` pin the changes).
 
+## Syntax highlighting
+
+Syntax highlighting is not built in (D217, D227). Upstream renders code blocks
+with highlight.js; this port uses upstream's own no-valid-language fallback for
+every language, one `mdCodeBlock` color per line. The Go-native option was
+chroma, which measured ~0.5 MB/s (highlight.js is ~7-11 MB/s on the same
+files, ~14-19x faster), and re-rendering the same fences on theme applies,
+visibility toggles and every streaming partial stalled the UI loop: a 600-partial
+fenced thinking block measured 31 s, and the live `pier-stall.log` showed idle
+190-235 ms `render` phases in `highlightCodeWithChroma`. Removing it deletes
+chroma and its `dlclark/regexp2` dependency, shrinks the binary 31.1 MB to
+27.1 MB (-3.9 MB), and saves the lexer registry init at startup (`pier --version`
+12.3 ms to 5.3 ms median).
+
 ## Full-lexer allocation overhead
 
 `Markdown.Render` still lexes the complete changed source, following

@@ -10,8 +10,8 @@ import (
 // Port of the theme-derived factories from
 // src/modes/interactive/theme/theme.ts (getMarkdownTheme, getSelectListTheme,
 // getEditorTheme, getSettingsListTheme, getResolvedThemeColors,
-// isLightTheme, getLanguageFromPath, highlightCode). Chroma supplies syntax
-// tokens; D217 records the styling and upstream-parity boundary.
+// isLightTheme, getLanguageFromPath, highlightCode). Syntax highlighting is
+// not built in; D217 and D227 record the styling and upstream-parity boundary.
 
 // activeTheme is the stable theme handle ActiveTheme returns. It mirrors
 // upstream's `theme` Proxy: its methods resolve the current concrete theme on
@@ -167,12 +167,6 @@ func GetThemeExportColors(themeName string) (pageBg string, cardBg string, infoB
 		return resolved.Value
 	}
 	return colorValue(themeJSON.Export.PageBg), colorValue(themeJSON.Export.CardBg), colorValue(themeJSON.Export.InfoBg), nil
-}
-
-// HighlightCode applies Chroma token colors for recognized languages and uses
-// the themed code-block fallback for unknown languages or lexer errors.
-func HighlightCode(code string, lang string) []string {
-	return highlightCodeWithChroma(code, lang, ActiveTheme())
 }
 
 // GetLanguageFromPath maps a file extension to a language identifier.

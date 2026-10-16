@@ -399,7 +399,9 @@ func TestFormatSearchResultExpandedShowsAllLines(t *testing.T) {
 	}
 }
 
-func TestFormatReadResultUsesChromaForKnownLanguage(t *testing.T) {
+// Syntax highlighting is not built in (D227): a known language in a read
+// preview renders with one code-block color, source preserved.
+func TestFormatReadResultRendersKnownLanguagePlainly(t *testing.T) {
 	installPierThemeForTest(t)
 	SetTrueColorSupport(true)
 	InitTheme("dark", false)
@@ -408,8 +410,11 @@ func TestFormatReadResultUsesChromaForKnownLanguage(t *testing.T) {
 
 	got := formatReadResult(map[string]any{"path": "answer.go"}, result,
 		ToolRenderResultOptions{Expanded: true}, theme, false, false)
-	if strings.Count(got, "\x1b[38;2;") < 3 {
-		t.Fatalf("read result has fewer than three token colors: %q", got)
+	if !strings.Contains(coding.StripAnsi(got), "func answer() int { return 42 }") {
+		t.Fatalf("read result lost source text: %q", got)
+	}
+	if strings.Count(got, "\x1b[38;2;") != 1 {
+		t.Fatalf("read result applied token colors: %q", got)
 	}
 }
 

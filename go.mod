@@ -3,7 +3,6 @@ module github.com/dat267/pier
 go 1.27
 
 require (
-	github.com/alecthomas/chroma/v3 v3.0.0-alpha.5
 	github.com/sgtdi/fswatcher v1.3.0
 	golang.org/x/sys v0.49.0
 	golang.org/x/term v0.47.0
@@ -13,7 +12,6 @@ require (
 )
 
 require (
-	github.com/dlclark/regexp2/v2 v2.2.2 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
