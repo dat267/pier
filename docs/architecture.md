@@ -688,7 +688,11 @@ UTF-16 implementation.
 The `/model` argument provider now reads scoped models once per completion.
 `AgentSession.ScopedModels` returns a defensive slice copy, and the previous
 path called it three times per keystroke for the non-empty scope check, capacity,
-and iteration. `TestModelArgumentCompletionReadsScopedModelsOnce` pins one call.
+and iteration. It also copied the snapshot into an intermediate `[]*ai.Model`
+slice before building completion items. For 4,096 scoped models, the provider's
+allocation fell from 504,704 to 471,936 bytes. The tests
+`TestModelArgumentCompletionReadsScopedModelsOnce` and
+`TestModelArgumentCompletionAvoidsIntermediateModelSlice` pin the work.
 
 ## Editor backward word movement
 

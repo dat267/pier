@@ -236,15 +236,9 @@ func (w *AutocompleteWiring) CreateBaseAutocompleteProvider() tui.AutocompletePr
 			continue
 		}
 		commands[index].GetArgumentCompletions = func(prefix string) ([]tui.AutocompleteItem, bool) {
-			models := w.availableModels()
-			if len(models) == 0 {
+			items := w.availableModelCompletionItems()
+			if len(items) == 0 {
 				return nil, false
-			}
-			items := make([]modelCompletionItem, 0, len(models))
-			for _, model := range models {
-				items = append(items, modelCompletionItem{
-					ID: model.ID, Provider: model.Provider, Name: model.Name, Label: model.Provider + "/" + model.ID,
-				})
 			}
 			return CreateFuzzyAutocompleteItems(items, prefix,
 				func(item modelCompletionItem) string { return GetModelSearchText(item.searchItem()) },
@@ -334,17 +328,29 @@ func (w *AutocompleteWiring) CreateBaseAutocompleteProvider() tui.AutocompletePr
 	return tui.NewCombinedAutocompleteProvider(commands, basePath, w.FdPath)
 }
 
-func (w *AutocompleteWiring) availableModels() []*ai.Model {
+func (w *AutocompleteWiring) availableModelCompletionItems() []modelCompletionItem {
 	// AgentSession.ScopedModels returns a defensive slice copy; reuse one snapshot.
 	scopedModels := w.Session.ScopedModels()
 	if len(scopedModels) > 0 {
-		models := make([]*ai.Model, 0, len(scopedModels))
+		items := make([]modelCompletionItem, 0, len(scopedModels))
 		for _, scoped := range scopedModels {
-			models = append(models, scoped.Model)
+			items = append(items, modelCompletionItemFor(scoped.Model))
 		}
-		return models
+		return items
 	}
-	return w.Session.ModelRuntime().GetAvailableSnapshot()
+
+	models := w.Session.ModelRuntime().GetAvailableSnapshot()
+	items := make([]modelCompletionItem, 0, len(models))
+	for _, model := range models {
+		items = append(items, modelCompletionItemFor(model))
+	}
+	return items
+}
+
+func modelCompletionItemFor(model *ai.Model) modelCompletionItem {
+	return modelCompletionItem{
+		ID: model.ID, Provider: model.Provider, Name: model.Name, Label: model.Provider + "/" + model.ID,
+	}
 }
 
 type modelCompletionItem struct {

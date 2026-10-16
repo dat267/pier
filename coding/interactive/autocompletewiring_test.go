@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/dat267/pier/ai"
@@ -93,6 +94,37 @@ func TestBaseAutocompleteProviderUsesTheResolvedFdPath(t *testing.T) {
 	// Hidden entries are not filtered: fd runs with --hidden.
 	if !labels[".pi/"] {
 		t.Errorf("@ suggestions = %v, want the hidden directory too (fd runs with --hidden)", labels)
+	}
+}
+
+func TestModelArgumentCompletionAvoidsIntermediateModelSlice(t *testing.T) {
+	const modelCount = 4096
+	model := &ai.Model{Provider: "p", ID: "m"}
+	models := make([]coding.ScopedModel, modelCount)
+	for index := range models {
+		models[index] = coding.ScopedModel{Model: model}
+	}
+	session := &scopedModelsCountingSession{
+		AutocompleteSession: &autocompleteTestSession{},
+		models:              models,
+	}
+	provider := (&AutocompleteWiring{Session: session}).CreateBaseAutocompleteProvider()
+
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	suggestions := provider.GetSuggestions(context.Background(), []string{"/model "}, 0, len("/model "), false)
+	runtime.ReadMemStats(&after)
+
+	if suggestions == nil {
+		t.Fatal("model argument suggestions are nil")
+	}
+	if len(suggestions.Items) != modelCount {
+		t.Fatalf("model argument suggestions = %d, want %d", len(suggestions.Items), modelCount)
+	}
+	allocated := after.TotalAlloc - before.TotalAlloc
+	t.Logf("completing %d scoped models allocated %d bytes", modelCount, allocated)
+	if allocated > uint64(modelCount*120) {
+		t.Fatalf("completing %d scoped models allocated %d bytes, want less than %d", modelCount, allocated, modelCount*120)
 	}
 }
 
