@@ -104,9 +104,14 @@ type LifecycleOptions struct {
 	OnUncaughtException func(handler func(error)) func()
 }
 
+type lifecycleUISnapshot struct {
+	renderer tui.TUI
+}
+
 // Lifecycle holds the interactive-mode lifecycle state.
 type Lifecycle struct {
-	options LifecycleOptions
+	options   LifecycleOptions
+	currentUI atomic.Pointer[lifecycleUISnapshot]
 
 	// Cross-goroutine flags are atomics (stage 4): the emergency terminal-error
 	// path must stay reachable from the terminal goroutine without a lock and
@@ -149,7 +154,9 @@ func NewLifecycle(options LifecycleOptions) *Lifecycle {
 			})
 		}
 	}
-	return &Lifecycle{options: options, now: options.Now}
+	lifecycle := &Lifecycle{options: options, now: options.Now}
+	lifecycle.currentUI.Store(&lifecycleUISnapshot{renderer: options.UI})
+	return lifecycle
 }
 
 // Now is the clock seam.
@@ -226,6 +233,7 @@ func (l *Lifecycle) SwitchTuiMode(mode string, restoreProgress bool, startRender
 		mainScreen.RestoreRenderState(*l.mainScreenState)
 	}
 	l.options.UI = nextUI
+	l.currentUI.Store(&lifecycleUISnapshot{renderer: nextUI})
 	l.options.TuiMode = mode
 	if l.options.Terminal == nil {
 		l.options.Terminal = terminal
@@ -251,7 +259,12 @@ func (l *Lifecycle) SwitchTuiMode(mode string, restoreProgress bool, startRender
 
 // CurrentUI returns the active renderer (the mode swaps it on /tui switches
 // and on the exit replay).
-func (l *Lifecycle) CurrentUI() tui.TUI { return l.options.UI }
+func (l *Lifecycle) CurrentUI() tui.TUI {
+	if snapshot := l.currentUI.Load(); snapshot != nil {
+		return snapshot.renderer
+	}
+	return nil
+}
 
 // layoutRoot is set by the mode after building the chat viewport.
 func (l *Lifecycle) layoutRoot() tui.Component { return l.LayoutRoot }

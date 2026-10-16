@@ -3,6 +3,7 @@ package interactive
 import (
 	"context"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -114,6 +115,45 @@ func TestLifecycleSwitchTuiMode(t *testing.T) {
 	if switched != 1 {
 		t.Fatalf("OnTuiModeSwitched ran %d times with startRenderer=true", switched)
 	}
+}
+
+// CurrentUI is resolved off-loop by posted callbacks while mode switches stay
+// on the owner loop, so concurrent reads and swaps must be race-free.
+func TestLifecycleCurrentUIConcurrentWithModeSwitch(t *testing.T) {
+	lifecycle, _, _, _ := newLifecycleTest(t)
+	start := make(chan struct{})
+	stop := make(chan struct{})
+	readerDone := make(chan struct{})
+	go func() {
+		defer close(readerDone)
+		<-start
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+				_ = lifecycle.CurrentUI()
+				runtime.Gosched()
+			}
+		}
+	}()
+	close(start)
+	mode := "fullscreen"
+	for range 100 {
+		if !lifecycle.SwitchTuiMode(mode, false, false) {
+			close(stop)
+			<-readerDone
+			t.Fatal("mode switch was blocked")
+		}
+		if mode == "fullscreen" {
+			mode = "regular"
+		} else {
+			mode = "fullscreen"
+		}
+		runtime.Gosched()
+	}
+	close(stop)
+	<-readerDone
 }
 
 // TestLifecycleStopInteractiveTui covers the fullscreen transcript replay.
