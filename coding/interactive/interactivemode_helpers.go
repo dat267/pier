@@ -351,14 +351,8 @@ func (w *AutocompleteWiring) scopedModelsSnapshot(versionSource scopedModelsVers
 	if !versioned {
 		return w.Session.ScopedModels(), 0, false
 	}
-	for {
-		before := versionSource.ScopedModelsRevision()
-		models := w.Session.ScopedModels()
-		after := versionSource.ScopedModelsRevision()
-		if before == after {
-			return models, after, true
-		}
-	}
+	models, revision := versionSource.ScopedModelsWithRevision()
+	return models, revision, true
 }
 
 func (w *AutocompleteWiring) runtimeModelArgumentCompletions(prefix string, cache *modelCompletionCache, scopeVersion uint64, hasScopeVersion bool) ([]tui.AutocompleteItem, bool) {
@@ -399,6 +393,7 @@ func scopedModelAutocompleteItem(scoped coding.ScopedModel) tui.AutocompleteItem
 
 type scopedModelsVersionSource interface {
 	ScopedModelsRevision() uint64
+	ScopedModelsWithRevision() ([]coding.ScopedModel, uint64)
 }
 
 type modelCompletionCache struct {

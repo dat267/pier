@@ -42,11 +42,16 @@ type scopedModelsCountingSession struct {
 func (s *scopedModelsCountingSession) ScopedModelsRevision() uint64 { return s.revision }
 
 func (s *scopedModelsCountingSession) ScopedModels() []coding.ScopedModel {
+	models, _ := s.ScopedModelsWithRevision()
+	return models
+}
+
+func (s *scopedModelsCountingSession) ScopedModelsWithRevision() ([]coding.ScopedModel, uint64) {
 	s.calls++
 	if s.copyModels {
-		return append([]coding.ScopedModel(nil), s.models...)
+		return append([]coding.ScopedModel(nil), s.models...), s.revision
 	}
-	return s.models
+	return s.models, s.revision
 }
 
 func TestModelArgumentCompletionReadsScopedModelsOnce(t *testing.T) {

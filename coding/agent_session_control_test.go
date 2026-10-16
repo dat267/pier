@@ -370,12 +370,14 @@ func TestScopedModelsRevisionTracksReplacements(t *testing.T) {
 	initial := session.ScopedModelsRevision()
 
 	session.SetScopedModels([]ScopedModel{{Model: &ai.Model{ID: "first", Provider: "test"}}})
-	if got := session.ScopedModelsRevision(); got != initial+1 {
-		t.Fatalf("revision after scope set = %d, want %d", got, initial+1)
+	models, revision := session.ScopedModelsWithRevision()
+	if len(models) != 1 || revision != initial+1 {
+		t.Fatalf("scope snapshot = %+v at revision %d, want one model at revision %d", models, revision, initial+1)
 	}
 	session.SetScopedModels(nil)
-	if got := session.ScopedModelsRevision(); got != initial+2 {
-		t.Fatalf("revision after scope clear = %d, want %d", got, initial+2)
+	models, revision = session.ScopedModelsWithRevision()
+	if len(models) != 0 || revision != initial+2 {
+		t.Fatalf("scope snapshot after clear = %+v at revision %d, want empty at revision %d", models, revision, initial+2)
 	}
 }
 

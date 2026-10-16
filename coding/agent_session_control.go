@@ -263,13 +263,21 @@ func (s *AgentSession) SetSessionName(name string) {
 
 // ScopedModels returns the model cycle scope.
 func (s *AgentSession) ScopedModels() []ScopedModel {
+	models, _ := s.ScopedModelsWithRevision()
+	return models
+}
+
+// ScopedModelsWithRevision returns a defensive scope copy and its revision from
+// the same locked snapshot.
+func (s *AgentSession) ScopedModelsWithRevision() ([]ScopedModel, uint64) {
 	s.control.stateMu.Lock()
 	models := append([]ScopedModel{}, s.control.scopedModels...)
+	revision := s.control.scopedModelsRevision
 	s.control.stateMu.Unlock()
 	if len(models) == 0 {
-		return nil
+		return nil, revision
 	}
-	return models
+	return models, revision
 }
 
 // ScopedModelsRevision changes whenever SetScopedModels replaces the scope.
