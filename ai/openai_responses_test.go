@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -283,6 +284,46 @@ func TestConvertResponsesToolResultWithImages(t *testing.T) {
 	}
 	if got := convertResponsesToolResultOutput(model, UserContentList{}); got != "(no tool output)" {
 		t.Fatalf("empty output = %v", got)
+	}
+}
+
+// Mirrors the text-delta assembly in packages/ai/src/api/openai-responses-shared.ts.
+func TestProcessResponsesStreamTextDeltasAvoidPrefixCopies(t *testing.T) {
+	const chunks = 512
+	delta := strings.Repeat("x", 128)
+	text := strings.Repeat(delta, chunks)
+	var body strings.Builder
+	body.WriteString("data: {\"type\":\"response.output_item.added\",\"output_index\":0,\"item\":{\"type\":\"message\",\"id\":\"msg\",\"role\":\"assistant\"}}\n\n")
+	for range chunks {
+		body.WriteString("data: {\"type\":\"response.output_text.delta\",\"output_index\":0,\"delta\":\"")
+		body.WriteString(delta)
+		body.WriteString("\"}\n\n")
+	}
+	body.WriteString("data: {\"type\":\"response.output_item.done\",\"output_index\":0,\"item\":{\"type\":\"message\",\"id\":\"msg\",\"role\":\"assistant\",\"content\":[{\"type\":\"output_text\",\"text\":\"")
+	body.WriteString(text)
+	body.WriteString("\"}]}}\n\n")
+	body.WriteString("data: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp\",\"status\":\"completed\"}}\n\n")
+
+	output := &AssistantMessage{}
+	stream := NewAssistantMessageEventStream()
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	err := ProcessResponsesStream(context.Background(), strings.NewReader(body.String()), output,
+		stream, testResponsesModel(), &OpenAIResponsesOptions{}, nil)
+	runtime.ReadMemStats(&after)
+	if err != nil {
+		t.Fatalf("process Responses stream: %v", err)
+	}
+	if len(output.Content) != 1 {
+		t.Fatalf("content = %+v, want one block", output.Content)
+	}
+	if got, ok := output.Content[0].(TextContent); !ok || got.Text != text {
+		t.Fatalf("assembled text = %T length %d, want %d bytes", output.Content[0], len(got.Text), len(text))
+	}
+	allocated := after.TotalAlloc - before.TotalAlloc
+	t.Logf("assembling %d bytes of Responses text deltas allocated %d bytes", len(text), allocated)
+	if allocated > uint64(len(text))*64 {
+		t.Fatalf("assembling %d bytes allocated %d bytes, want less than %d", len(text), allocated, len(text)*64)
 	}
 }
 

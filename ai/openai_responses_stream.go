@@ -341,11 +341,13 @@ type responsesTerminalResponse struct {
 
 // responsesOutputSlot tracks one in-flight output block.
 type responsesOutputSlot struct {
-	kind         string // "thinking" | "text" | "toolCall"
-	contentIndex int
-	thinking     *ThinkingContent
-	text         *TextContent
-	toolCall     *responsesStreamingToolCall
+	kind           string // "thinking" | "text" | "toolCall"
+	contentIndex   int
+	thinking       *ThinkingContent
+	text           *TextContent
+	thinkingBuffer *strings.Builder
+	textBuffer     *strings.Builder
+	toolCall       *responsesStreamingToolCall
 }
 
 // responsesStreamingToolCall is the live tool-call accumulator.
@@ -391,7 +393,10 @@ func ProcessResponsesStream(
 		case "reasoning":
 			block := ThinkingContent{Thinking: ""}
 			output.Content = append(output.Content, block)
-			slot := &responsesOutputSlot{kind: "thinking", thinking: &block, contentIndex: len(output.Content) - 1}
+			slot := &responsesOutputSlot{
+				kind: "thinking", thinking: &block, thinkingBuffer: &strings.Builder{},
+				contentIndex: len(output.Content) - 1,
+			}
 			outputSlots[outputIndex] = slot
 			stream.Push(AssistantMessageEvent{Type: EventThinkingStart, ContentIndex: slot.contentIndex, Partial: output})
 			return slot
@@ -399,7 +404,10 @@ func ProcessResponsesStream(
 			applyMessagePhaseStopReason(item)
 			block := TextContent{Text: ""}
 			output.Content = append(output.Content, block)
-			slot := &responsesOutputSlot{kind: "text", text: &block, contentIndex: len(output.Content) - 1}
+			slot := &responsesOutputSlot{
+				kind: "text", text: &block, textBuffer: &strings.Builder{},
+				contentIndex: len(output.Content) - 1,
+			}
 			outputSlots[outputIndex] = slot
 			stream.Push(AssistantMessageEvent{Type: EventTextStart, ContentIndex: slot.contentIndex, Partial: output})
 			return slot
@@ -634,7 +642,8 @@ func ProcessResponsesStream(
 			if slot == nil {
 				return
 			}
-			slot.thinking.Thinking += event.Delta
+			slot.thinkingBuffer.WriteString(event.Delta)
+			slot.thinking.Thinking = slot.thinkingBuffer.String()
 			updateContent(slot)
 			stream.Push(AssistantMessageEvent{Type: EventThinkingDelta, ContentIndex: slot.contentIndex, Delta: event.Delta, Partial: output})
 		case "response.reasoning_summary_part.done":
@@ -642,7 +651,8 @@ func ProcessResponsesStream(
 			if slot == nil {
 				return
 			}
-			slot.thinking.Thinking += "\n\n"
+			slot.thinkingBuffer.WriteString("\n\n")
+			slot.thinking.Thinking = slot.thinkingBuffer.String()
 			updateContent(slot)
 			stream.Push(AssistantMessageEvent{Type: EventThinkingDelta, ContentIndex: slot.contentIndex, Delta: "\n\n", Partial: output})
 		case "response.output_text.delta", "response.refusal.delta":
@@ -650,7 +660,8 @@ func ProcessResponsesStream(
 			if slot == nil {
 				return
 			}
-			slot.text.Text += event.Delta
+			slot.textBuffer.WriteString(event.Delta)
+			slot.text.Text = slot.textBuffer.String()
 			updateContent(slot)
 			stream.Push(AssistantMessageEvent{Type: EventTextDelta, ContentIndex: slot.contentIndex, Delta: event.Delta, Partial: output})
 		case "response.function_call_arguments.delta":
