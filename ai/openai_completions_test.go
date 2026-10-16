@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -346,6 +347,48 @@ func TestStreamOpenAICompletionsTextAndToolFlow(t *testing.T) {
 	// Ends with text_end and toolcall_end finishing blocks.
 	if types[len(types)-1] != EventDone {
 		t.Fatalf("last = %s", types[len(types)-1])
+	}
+}
+
+// Mirrors streamed content accumulation in
+// packages/ai/src/api/openai-completions.ts.
+func TestStreamOpenAICompletionsTextDeltasAllocateLinearly(t *testing.T) {
+	const chunksCount = 512
+	delta := strings.Repeat("x", 128)
+	chunks := make([]string, 0, chunksCount+2)
+	for range chunksCount {
+		chunks = append(chunks, "data: {\"choices\":[{\"delta\":{\"content\":\""+delta+"\"},\"finish_reason\":null}]}\n\n")
+	}
+	chunks = append(chunks, "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n", "data: [DONE]\n\n")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		for _, chunk := range chunks {
+			_, _ = w.Write([]byte(chunk))
+		}
+	}))
+	defer server.Close()
+
+	model := testOpenAIModel()
+	model.BaseURL = server.URL
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	message, err := StreamOpenAICompletions(model, NormalizeContext(Context{}), &OpenAICompletionsOptions{
+		StreamOptions: StreamOptions{APIKey: "k"},
+	}).Result(context.Background())
+	runtime.ReadMemStats(&after)
+	if err != nil {
+		t.Fatalf("stream result: %v", err)
+	}
+	want := strings.Repeat(delta, chunksCount)
+	if len(message.Content) != 1 {
+		t.Fatalf("content = %+v, want one block", message.Content)
+	}
+	if text, ok := message.Content[0].(TextContent); !ok || text.Text != want {
+		t.Fatalf("text = %T length %d, want %d bytes", message.Content[0], len(text.Text), len(want))
+	}
+	allocated := after.TotalAlloc - before.TotalAlloc
+	t.Logf("streaming %d bytes of OpenAI Completions text allocated %d bytes", len(want), allocated)
+	if allocated > uint64(len(want))*64 {
+		t.Fatalf("streaming %d bytes allocated %d bytes, want less than %d", len(want), allocated, len(want)*64)
 	}
 }
 

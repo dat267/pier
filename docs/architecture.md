@@ -761,6 +761,12 @@ The Google generative AI stream now uses a per-block builder for text and
 thinking deltas rather than copying each accumulated prefix. A 65,536-byte text
 block made of 512 128-byte events fell from 19.11 MB to 1.30 MB allocated.
 
+## OpenAI Completions stream delta assembly
+
+The OpenAI Completions stream now appends text and reasoning deltas through
+per-block builders. A 65,536-byte text block made of 512 events fell from
+18.98 MB to 1.19 MB allocated.
+
 ## Session history (high level)
 
 The repository was built as a long port: the `ai`/`agent`/`coding` cores first,

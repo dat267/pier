@@ -313,6 +313,8 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 
 		var textBlock *int     // content index when non-nil
 		var thinkingBlock *int // content index when non-nil
+		var textBuffer *strings.Builder
+		var thinkingBuffer *strings.Builder
 		hasFinishReason := false
 		toolCallBlocksByIndex := map[int]*openaiStreamingToolCall{}
 		toolCallBlocksByID := map[string]*openaiStreamingToolCall{}
@@ -528,7 +530,12 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 				}
 				index := ensureThinkingBlock(signature)
 				if tc, ok := output.Content[index].(ThinkingContent); ok {
-					tc.Thinking += reasoningDelta
+					if thinkingBuffer == nil {
+						thinkingBuffer = &strings.Builder{}
+						_, _ = thinkingBuffer.WriteString(tc.Thinking)
+					}
+					_, _ = thinkingBuffer.WriteString(reasoningDelta)
+					tc.Thinking = thinkingBuffer.String()
 					output.Content[index] = tc
 				}
 				stream.Push(AssistantMessageEvent{Type: EventThinkingDelta, ContentIndex: index, Delta: reasoningDelta, Partial: output})
@@ -547,7 +554,12 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 			if delta.Content != nil && len(*delta.Content) > 0 {
 				index := ensureTextBlock()
 				if tc, ok := output.Content[index].(TextContent); ok {
-					tc.Text += *delta.Content
+					if textBuffer == nil {
+						textBuffer = &strings.Builder{}
+						_, _ = textBuffer.WriteString(tc.Text)
+					}
+					_, _ = textBuffer.WriteString(*delta.Content)
+					tc.Text = textBuffer.String()
 					output.Content[index] = tc
 				}
 				stream.Push(AssistantMessageEvent{Type: EventTextDelta, ContentIndex: index, Delta: *delta.Content, Partial: output})
