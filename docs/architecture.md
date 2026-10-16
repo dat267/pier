@@ -736,6 +736,14 @@ the Mistral reader. A 65,536-byte event arriving in 128-byte reads allocated
 and searches from the possible split delimiter suffix. The fixture allocates
 209 KB, and a regression test verifies CRLF event boundaries split across reads.
 
+## Responses stream delta assembly
+
+`ProcessResponsesStream` used to concatenate every text and reasoning delta onto
+the full block prefix. A 65,536-byte text block made from 512 128-byte deltas
+allocated 19.4 MB. Per-output-slot builders now append deltas amortized; the same
+fixture allocates 1.60 MB while preserving the cumulative message and upstream
+score/event goldens.
+
 ## Session history (high level)
 
 The repository was built as a long port: the `ai`/`agent`/`coding` cores first,
