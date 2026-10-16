@@ -683,6 +683,13 @@ from 9 to 0. The swapped query is matched through a virtual byte rotation, and
 the upstream fuzzy score goldens still pass. Non-ASCII inputs retain the
 UTF-16 implementation.
 
+## Model autocomplete snapshots
+
+The `/model` argument provider now reads scoped models once per completion.
+`AgentSession.ScopedModels` returns a defensive slice copy, and the previous
+path called it three times per keystroke for the non-empty scope check, capacity,
+and iteration. `TestModelArgumentCompletionReadsScopedModelsOnce` pins one call.
+
 ## Editor backward word movement
 
 Ctrl+Left over a long word-like segment used to materialize a `[]rune` and

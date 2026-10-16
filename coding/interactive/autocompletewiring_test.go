@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 )
 
@@ -26,6 +27,32 @@ func TestNewAutocompleteWiringResolvesFdPath(t *testing.T) {
 	}
 	if _, err := os.Stat(want); err != nil {
 		t.Errorf("resolved fd path %q is not usable: %v", want, err)
+	}
+}
+
+type scopedModelsCountingSession struct {
+	AutocompleteSession
+	models []coding.ScopedModel
+	calls  int
+}
+
+func (s *scopedModelsCountingSession) ScopedModels() []coding.ScopedModel {
+	s.calls++
+	return s.models
+}
+
+func TestModelArgumentCompletionReadsScopedModelsOnce(t *testing.T) {
+	session := &scopedModelsCountingSession{
+		AutocompleteSession: &autocompleteTestSession{},
+		models:              []coding.ScopedModel{{Model: &ai.Model{Provider: "test", ID: "test-model"}}},
+	}
+	provider := (&AutocompleteWiring{Session: session}).CreateBaseAutocompleteProvider()
+	suggestions := provider.GetSuggestions(context.Background(), []string{"/model "}, 0, len("/model "), false)
+	if suggestions == nil || len(suggestions.Items) != 1 {
+		t.Fatalf("model argument suggestions = %+v", suggestions)
+	}
+	if session.calls != 1 {
+		t.Fatalf("ScopedModels calls = %d, want 1", session.calls)
 	}
 }
 

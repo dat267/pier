@@ -335,9 +335,11 @@ func (w *AutocompleteWiring) CreateBaseAutocompleteProvider() tui.AutocompletePr
 }
 
 func (w *AutocompleteWiring) availableModels() []*ai.Model {
-	if len(w.Session.ScopedModels()) > 0 {
-		models := make([]*ai.Model, 0, len(w.Session.ScopedModels()))
-		for _, scoped := range w.Session.ScopedModels() {
+	// AgentSession.ScopedModels returns a defensive slice copy; reuse one snapshot.
+	scopedModels := w.Session.ScopedModels()
+	if len(scopedModels) > 0 {
+		models := make([]*ai.Model, 0, len(scopedModels))
+		for _, scoped := range scopedModels {
 			models = append(models, scoped.Model)
 		}
 		return models
