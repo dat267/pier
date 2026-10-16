@@ -365,6 +365,20 @@ func TestSessionModelSwitchAuth(t *testing.T) {
 	}
 }
 
+func TestScopedModelsRevisionTracksReplacements(t *testing.T) {
+	session := newControlSession(t, &ai.Model{ID: "m", Provider: "test"}, nil)
+	initial := session.ScopedModelsRevision()
+
+	session.SetScopedModels([]ScopedModel{{Model: &ai.Model{ID: "first", Provider: "test"}}})
+	if got := session.ScopedModelsRevision(); got != initial+1 {
+		t.Fatalf("revision after scope set = %d, want %d", got, initial+1)
+	}
+	session.SetScopedModels(nil)
+	if got := session.ScopedModelsRevision(); got != initial+2 {
+		t.Fatalf("revision after scope clear = %d, want %d", got, initial+2)
+	}
+}
+
 func TestSessionAutoTogglesAndBash(t *testing.T) {
 	session := newControlSession(t, &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic"}, nil)
 	if !session.AutoCompactionEnabled() || !session.AutoRetryEnabled() {

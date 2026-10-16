@@ -36,7 +36,10 @@ type scopedModelsCountingSession struct {
 	models     []coding.ScopedModel
 	calls      int
 	copyModels bool
+	revision   uint64
 }
+
+func (s *scopedModelsCountingSession) ScopedModelsRevision() uint64 { return s.revision }
 
 func (s *scopedModelsCountingSession) ScopedModels() []coding.ScopedModel {
 	s.calls++
@@ -185,10 +188,13 @@ func TestModelArgumentCompletionReusesSearchItemsBetweenKeystrokes(t *testing.T)
 	if result == nil || len(result.Items) != 1 || result.Items[0].Value != "test/model" {
 		t.Fatalf("cached model suggestions = %+v, want the matching model", result)
 	}
+	if session.calls != 1 {
+		t.Fatalf("ScopedModels calls = %d after cached completion, want 1", session.calls)
+	}
 	allocated := after.TotalAlloc - before.TotalAlloc
 	t.Logf("cached completion over %d models allocated %d bytes", modelCount, allocated)
-	if allocated > uint64(modelCount*40) {
-		t.Fatalf("cached completion over %d models allocated %d bytes, want less than %d", modelCount, allocated, modelCount*40)
+	if allocated > 16*1024 {
+		t.Fatalf("cached completion over %d models allocated %d bytes, want less than %d", modelCount, allocated, 16*1024)
 	}
 }
 
@@ -207,6 +213,7 @@ func TestModelArgumentCompletionRefreshesChangedScopedModels(t *testing.T) {
 	}
 
 	session.models = []coding.ScopedModel{{Model: second}}
+	session.revision++
 	secondResult := provider.GetSuggestions(context.Background(), query, 0, len(query[0]), false)
 	if secondResult == nil || len(secondResult.Items) != 1 || secondResult.Items[0].Value != "test/second" {
 		t.Fatalf("updated suggestions = %+v, want second model", secondResult)

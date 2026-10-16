@@ -685,16 +685,13 @@ UTF-16 implementation.
 
 ## Model autocomplete snapshots
 
-The `/model` argument provider reads scoped models once per completion.
-`AgentSession.ScopedModels` returns a defensive slice copy, and the previous
-path called it three times per keystroke for the non-empty scope check, capacity,
-and iteration. Empty-prefix requests now map the source snapshot directly; the
-test fixture's 4,096-model allocation fell from 471,936 to 209,792 bytes. For
-non-empty prefixes, the provider caches immutable search items and checks them
-against current model fields before reuse. A 4,096-model cache hit allocates
-131,400 bytes versus 262,408 without caching, including the defensive scoped
-model copy. Cache refresh on model changes and the once-per-call scope snapshot
-are covered by tests.
+The `/model` argument provider used to read scoped models three times per
+completion. It now takes one snapshot to build an immutable search-item cache;
+`AgentSession.ScopedModelsRevision` lets subsequent non-empty keystrokes reuse it
+without copying the scoped slice. Empty-prefix requests still map the source
+snapshot directly; the test fixture's 4,096-model allocation fell from 471,936
+to 209,792 bytes. A 4,096-model cache hit allocates 328 bytes, down from 262,408
+without caching. Cache refresh on model changes is covered by tests.
 
 ## Editor backward word movement
 

@@ -66,12 +66,13 @@ type AgentSessionControl struct {
 	// PromptTemplates are the file-based prompt templates (resource loader).
 	PromptTemplates []PromptTemplate
 
-	stateMu             sync.Mutex
-	scopedModels        []ScopedModel
-	autoCompaction      bool
-	autoRetry           bool
-	branchSummaryCancel context.CancelFunc
-	disposed            bool
+	stateMu              sync.Mutex
+	scopedModels         []ScopedModel
+	scopedModelsRevision uint64
+	autoCompaction       bool
+	autoRetry            bool
+	branchSummaryCancel  context.CancelFunc
+	disposed             bool
 
 	// defaultSync is the last defaultsync outcome (D151), and
 	// defaultSyncSuspended records an explicit model override that the sync
@@ -271,10 +272,19 @@ func (s *AgentSession) ScopedModels() []ScopedModel {
 	return models
 }
 
+// ScopedModelsRevision changes whenever SetScopedModels replaces the scope.
+func (s *AgentSession) ScopedModelsRevision() uint64 {
+	s.control.stateMu.Lock()
+	revision := s.control.scopedModelsRevision
+	s.control.stateMu.Unlock()
+	return revision
+}
+
 // SetScopedModels replaces the model cycle scope.
 func (s *AgentSession) SetScopedModels(models []ScopedModel) {
 	s.control.stateMu.Lock()
 	s.control.scopedModels = append([]ScopedModel{}, models...)
+	s.control.scopedModelsRevision++
 	s.control.stateMu.Unlock()
 }
 

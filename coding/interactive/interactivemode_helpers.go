@@ -323,16 +323,45 @@ func (w *AutocompleteWiring) CreateBaseAutocompleteProvider() tui.AutocompletePr
 }
 
 func (w *AutocompleteWiring) modelArgumentCompletions(prefix string, cache *modelCompletionCache) ([]tui.AutocompleteItem, bool) {
-	scopedModels := w.Session.ScopedModels()
+	emptyPrefix := strings.TrimSpace(prefix) == ""
+	versionSource, versioned := w.Session.(scopedModelsVersionSource)
+	if versioned && !emptyPrefix {
+		version := versionSource.ScopedModelsRevision()
+		if items, scoped, ok := cache.scopedSnapshot(version); ok && versionSource.ScopedModelsRevision() == version {
+			if scoped {
+				return CreateFuzzyAutocompleteItems(items, prefix, modelCompletionSearchText, modelCompletionToAutocompleteItem), true
+			}
+			return w.runtimeModelArgumentCompletions(prefix, cache, version, true)
+		}
+	}
+
+	scopedModels, scopeVersion, hasScopeVersion := w.scopedModelsSnapshot(versionSource, versioned)
 	if len(scopedModels) > 0 {
-		if strings.TrimSpace(prefix) == "" {
+		if emptyPrefix {
 			return CreateFuzzyAutocompleteItems(scopedModels, prefix,
 				scopedModelSearchText, scopedModelAutocompleteItem), true
 		}
-		items := cache.fromScopedModels(scopedModels)
+		items := cache.fromScopedModels(scopedModels, scopeVersion, hasScopeVersion)
 		return CreateFuzzyAutocompleteItems(items, prefix, modelCompletionSearchText, modelCompletionToAutocompleteItem), true
 	}
+	return w.runtimeModelArgumentCompletions(prefix, cache, scopeVersion, hasScopeVersion)
+}
 
+func (w *AutocompleteWiring) scopedModelsSnapshot(versionSource scopedModelsVersionSource, versioned bool) ([]coding.ScopedModel, uint64, bool) {
+	if !versioned {
+		return w.Session.ScopedModels(), 0, false
+	}
+	for {
+		before := versionSource.ScopedModelsRevision()
+		models := w.Session.ScopedModels()
+		after := versionSource.ScopedModelsRevision()
+		if before == after {
+			return models, after, true
+		}
+	}
+}
+
+func (w *AutocompleteWiring) runtimeModelArgumentCompletions(prefix string, cache *modelCompletionCache, scopeVersion uint64, hasScopeVersion bool) ([]tui.AutocompleteItem, bool) {
 	modelRuntime := w.Session.ModelRuntime()
 	if modelRuntime == nil {
 		cache.clear()
@@ -346,7 +375,7 @@ func (w *AutocompleteWiring) modelArgumentCompletions(prefix string, cache *mode
 	if strings.TrimSpace(prefix) == "" {
 		return CreateFuzzyAutocompleteItems(models, prefix, modelSearchText, modelAutocompleteItem), true
 	}
-	items := cache.fromModels(models)
+	items := cache.fromModels(models, scopeVersion, hasScopeVersion)
 	return CreateFuzzyAutocompleteItems(items, prefix, modelCompletionSearchText, modelCompletionToAutocompleteItem), true
 }
 
@@ -368,11 +397,27 @@ func scopedModelAutocompleteItem(scoped coding.ScopedModel) tui.AutocompleteItem
 	return modelAutocompleteItem(scoped.Model)
 }
 
+type scopedModelsVersionSource interface {
+	ScopedModelsRevision() uint64
+}
+
 type modelCompletionCache struct {
-	mu sync.Mutex
-	// items are immutable after publication, so readers can use old snapshots
-	// after a concurrent refresh replaces this slice.
-	items []modelCompletionItem
+	mu              sync.Mutex
+	items           []modelCompletionItem
+	scopeVersion    uint64
+	hasScopeVersion bool
+	hasScopedModels bool
+}
+
+// scopedSnapshot returns a cached slice only while the session's scope revision
+// remains unchanged. Published item slices are immutable.
+func (c *modelCompletionCache) scopedSnapshot(version uint64) ([]modelCompletionItem, bool, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if !c.hasScopeVersion || c.scopeVersion != version {
+		return nil, false, false
+	}
+	return c.items, c.hasScopedModels, true
 }
 
 type modelCompletionItem struct {
@@ -383,7 +428,7 @@ type modelCompletionItem struct {
 	searchText string
 }
 
-func (c *modelCompletionCache) fromScopedModels(models []coding.ScopedModel) []modelCompletionItem {
+func (c *modelCompletionCache) fromScopedModels(models []coding.ScopedModel, version uint64, versioned bool) []modelCompletionItem {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if len(c.items) == len(models) {
@@ -395,6 +440,9 @@ func (c *modelCompletionCache) fromScopedModels(models []coding.ScopedModel) []m
 			}
 		}
 		if matches {
+			c.scopeVersion = version
+			c.hasScopeVersion = versioned
+			c.hasScopedModels = true
 			return c.items
 		}
 	}
@@ -403,10 +451,13 @@ func (c *modelCompletionCache) fromScopedModels(models []coding.ScopedModel) []m
 		items = append(items, modelCompletionItemFor(scoped.Model))
 	}
 	c.items = items
+	c.scopeVersion = version
+	c.hasScopeVersion = versioned
+	c.hasScopedModels = true
 	return items
 }
 
-func (c *modelCompletionCache) fromModels(models []*ai.Model) []modelCompletionItem {
+func (c *modelCompletionCache) fromModels(models []*ai.Model, version uint64, versioned bool) []modelCompletionItem {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if len(c.items) == len(models) {
@@ -418,6 +469,9 @@ func (c *modelCompletionCache) fromModels(models []*ai.Model) []modelCompletionI
 			}
 		}
 		if matches {
+			c.scopeVersion = version
+			c.hasScopeVersion = versioned
+			c.hasScopedModels = false
 			return c.items
 		}
 	}
@@ -426,12 +480,18 @@ func (c *modelCompletionCache) fromModels(models []*ai.Model) []modelCompletionI
 		items = append(items, modelCompletionItemFor(model))
 	}
 	c.items = items
+	c.scopeVersion = version
+	c.hasScopeVersion = versioned
+	c.hasScopedModels = false
 	return items
 }
 
 func (c *modelCompletionCache) clear() {
 	c.mu.Lock()
 	c.items = nil
+	c.scopeVersion = 0
+	c.hasScopeVersion = false
+	c.hasScopedModels = false
 	c.mu.Unlock()
 }
 
