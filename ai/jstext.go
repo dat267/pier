@@ -13,48 +13,18 @@ import (
 
 // Port of utils/sanitize-unicode.ts.
 //
-// In JavaScript, strings are UTF-16 code-unit sequences and unpaired
-// surrogates can appear in strings (e.g. from mangled binary data). Go
-// strings are UTF-8, where lone surrogates appear as utf8.RuneError (U+FFFD)
-// after decoding — the original code units are unrecoverable. Sanitizing
-// therefore operates on the UTF-16 re-encoding of the Go string: any unpaired
-// surrogate produced there is dropped. For strings decoded from valid UTF-8
-// this is a no-op, matching upstream behavior for well-formed input.
+// JavaScript strings can contain unpaired UTF-16 surrogate units. Go strings
+// can contain arbitrary bytes, but decoding invalid UTF-8 yields RuneError;
+// encoding runes back to UTF-16 therefore produces only valid scalar values
+// and surrogate pairs. Sanitizing is a no-op for every Go string.
 //
 // D-row D2: JS strings are UTF-16; Go strings are UTF-8. Unpaired surrogates
 // cannot survive a Go string round-trip, so the sanitized output can only
 // differ from upstream's on inputs that were already corrupt in JS.
 
-// SanitizeSurrogates removes unpaired Unicode surrogate code units from the
-// UTF-16 view of the text (upstream sanitizeSurrogates).
-func SanitizeSurrogates(text string) string {
-	units := utf16.Encode([]rune(text))
-	drop := make([]bool, len(units))
-	dirty := false
-	for i, u := range units {
-		if u >= 0xD800 && u <= 0xDBFF { // high surrogate
-			if i+1 >= len(units) || units[i+1] < 0xDC00 || units[i+1] > 0xDFFF {
-				drop[i] = true
-				dirty = true
-			}
-		} else if u >= 0xDC00 && u <= 0xDFFF { // low surrogate
-			if i == 0 || units[i-1] < 0xD800 || units[i-1] > 0xDBFF {
-				drop[i] = true
-				dirty = true
-			}
-		}
-	}
-	if !dirty {
-		return text
-	}
-	out := make([]uint16, 0, len(units))
-	for i, u := range units {
-		if !drop[i] {
-			out = append(out, u)
-		}
-	}
-	return string(utf16.Decode(out))
-}
+// SanitizeSurrogates mirrors upstream sanitizeSurrogates. A Go string cannot
+// retain unpaired UTF-16 units, so there is nothing to remove.
+func SanitizeSurrogates(text string) string { return text }
 
 // jsSpace is the String.prototype.trim whitespace class (ECMA-402 Whitespace,
 // which includes Unicode space separators like U+00A0, U+2028, U+2029, and

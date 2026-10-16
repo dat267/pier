@@ -683,7 +683,7 @@ func applyMistralEvent(model *Model, output *AssistantMessage, stream *Assistant
 		// A string delta.
 		var text string
 		if err := json.Unmarshal(choice.Delta.Content, &text); err == nil {
-			appendMistralText(output, stream, text)
+			appendMistralText(output, stream, state, text)
 		} else {
 			var chunks []mistralStreamContentChunk
 			if err := json.Unmarshal(choice.Delta.Content, &chunks); err == nil {
@@ -696,9 +696,9 @@ func applyMistralEvent(model *Model, output *AssistantMessage, stream *Assistant
 								parts = append(parts, part.Text)
 							}
 						}
-						appendMistralThinking(output, stream, strings.Join(parts, ""))
+						appendMistralThinking(output, stream, state, strings.Join(parts, ""))
 					case "text":
-						appendMistralText(output, stream, chunk.Text)
+						appendMistralText(output, stream, state, chunk.Text)
 					}
 				}
 			}
@@ -716,10 +716,23 @@ type mistralStreamState struct {
 	toolBlocks map[string]int
 	// partialArgs holds the raw accumulated argument text per block index
 	// (upstream's streaming scratch buffer, which is never persisted).
-	partialArgs map[int]string
+	partialArgs    map[int]string
+	contentBuffers map[int]*strings.Builder
 }
 
-func appendMistralText(output *AssistantMessage, stream *AssistantMessageEventStream, text string) {
+func (s *mistralStreamState) contentBuffer(index int) *strings.Builder {
+	if s.contentBuffers == nil {
+		s.contentBuffers = make(map[int]*strings.Builder)
+	}
+	buffer := s.contentBuffers[index]
+	if buffer == nil {
+		buffer = &strings.Builder{}
+		s.contentBuffers[index] = buffer
+	}
+	return buffer
+}
+
+func appendMistralText(output *AssistantMessage, stream *AssistantMessageEventStream, state *mistralStreamState, text string) {
 	delta := SanitizeSurrogates(text)
 	if delta == "" {
 		return
@@ -732,12 +745,14 @@ func appendMistralText(output *AssistantMessage, stream *AssistantMessageEventSt
 	}
 	index := len(output.Content) - 1
 	text0, _ := output.Content[index].(TextContent)
-	text0.Text += delta
+	textBuffer := state.contentBuffer(index)
+	_, _ = textBuffer.WriteString(delta)
+	text0.Text = textBuffer.String()
 	output.Content[index] = text0
 	stream.Push(AssistantMessageEvent{Type: EventTextDelta, ContentIndex: index, Delta: delta, Partial: output})
 }
 
-func appendMistralThinking(output *AssistantMessage, stream *AssistantMessageEventStream, text string) {
+func appendMistralThinking(output *AssistantMessage, stream *AssistantMessageEventStream, state *mistralStreamState, text string) {
 	delta := SanitizeSurrogates(text)
 	if delta == "" {
 		return
@@ -750,7 +765,9 @@ func appendMistralThinking(output *AssistantMessage, stream *AssistantMessageEve
 	}
 	index := len(output.Content) - 1
 	thinking, _ := output.Content[index].(ThinkingContent)
-	thinking.Thinking += delta
+	textBuffer := state.contentBuffer(index)
+	_, _ = textBuffer.WriteString(delta)
+	thinking.Thinking = textBuffer.String()
 	output.Content[index] = thinking
 	stream.Push(AssistantMessageEvent{Type: EventThinkingDelta, ContentIndex: index, Delta: delta, Partial: output})
 }

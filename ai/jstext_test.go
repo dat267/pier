@@ -2,6 +2,18 @@ package ai
 
 import "testing"
 
+func TestSanitizeSurrogatesReturnsGoStringWithoutAllocating(t *testing.T) {
+	text := "plain text 😀"
+	allocations := testing.AllocsPerRun(10, func() {
+		if got := SanitizeSurrogates(text); got != text {
+			t.Fatalf("sanitized = %q, want unchanged text", got)
+		}
+	})
+	if allocations != 0 {
+		t.Fatalf("sanitizing a Go string allocated %.0f objects, want 0", allocations)
+	}
+}
+
 // JSTrim must match String.prototype.trim(): the ECMAScript WhiteSpace and
 // LineTerminator sets. U+0085 is not in that set, while the Zs separators
 // U+202F, U+205F and U+3000 are.

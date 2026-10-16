@@ -198,6 +198,36 @@ func (i aiImageContent) TextContent() ImageContent {
 	return ImageContent{Data: i.data, MimeType: i.mimeType}
 }
 
+// Mirrors streamed text assembly in packages/ai/src/api/mistral-conversations.ts.
+func TestMistralTextDeltasAvoidPrefixCopies(t *testing.T) {
+	const chunks = 512
+	delta := strings.Repeat("x", 128)
+	output := &AssistantMessage{}
+	stream := NewAssistantMessageEventStream()
+	state := &mistralStreamState{}
+
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	for range chunks {
+		appendMistralText(output, stream, state, delta)
+	}
+	runtime.ReadMemStats(&after)
+
+	want := strings.Repeat(delta, chunks)
+	if len(output.Content) != 1 {
+		t.Fatalf("content = %+v, want one text block", output.Content)
+	}
+	text, ok := output.Content[0].(TextContent)
+	if !ok || text.Text != want {
+		t.Fatalf("assembled text = %T length %d, want %d bytes", output.Content[0], len(text.Text), len(want))
+	}
+	allocated := after.TotalAlloc - before.TotalAlloc
+	t.Logf("assembling %d bytes of Mistral text deltas allocated %d bytes", len(want), allocated)
+	if allocated > uint64(len(want))*16 {
+		t.Fatalf("assembling %d bytes allocated %d bytes, want less than %d", len(want), allocated, len(want)*16)
+	}
+}
+
 func TestMistralToolCallIDNormalization(t *testing.T) {
 	normalize := newMistralToolCallIDNormalizer()
 	// A 9-character alphanumeric id is preserved.

@@ -723,7 +723,10 @@ rescan the full prefix for a delimiter. A 65,536-byte unterminated event read in
 128-byte chunks allocated 22.38 MB. It now reuses the read buffer, accumulates
 with `bytes.Buffer`, and searches only the suffix that can contain a split event
 boundary. The same fixture allocates 253 KB. Tests cover the allocation bound
-and a delimiter split across reads.
+and a delimiter split across reads. Mistral text and thinking deltas also use
+per-block builders. The Go string sanitizer is a no-op because Go strings cannot
+retain unpaired UTF-16 surrogates (D2). The 64 KiB/512-delta fixture fell from
+18.66 MB to 428 KB.
 
 ## Pi-messages SSE buffering
 
