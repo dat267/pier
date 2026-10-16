@@ -25,7 +25,14 @@ scenario and the rationale.
 
 Every runtime package in the pi reference has a counterpart here: `ai` (all ten wire APIs, all provider factories, the nine OAuth flows, image generation, the api/images registries, overflow detection, virtual models, Anthropic workload identity federation), `agent` (the loop), `coding-agent` (the complete core: session, tools, compaction, branch summarization, retry, cache warming, model runtime/registry/composer, stores, exports, bug report, crash log, trust, utilities, and the createAgentSession assembly), `protocol`, `client`, `chord` (+delta/services/facets), `server` (+unix/testing), `telemetry`, and `durable` (the complete package: the session kernel and transaction, the three storage backends, the whole `harness/` tree with its scheduler and built-in tasks, the coding tools, and every upstream storage-conformance case replayed).
 
-The pi `goal` extension is not carried (D191): it ships upstream as an installed user extension (`~/.pi/agent/extensions/goal`), and the port has no extension host (D41), so the port behaves like a stock pi install without it. The `pi-tui` library and the interactive coding-agent mode are implemented (`tui/*` and `coding/interactive/*`), including the theme, every component, and the interactive-mode method groups; the root `main.go` and the `cmd` package compose them into a runnable CLI. The remaining items are the documented out-of-scope set below.
+The goal workflow is re-ported as a built-in feature (D223), despite shipping
+upstream as a user extension. It lives in `internal/goal` and the session
+controller because pier has no extension host (D41); this does not add general
+extension support. The `pi-tui` library and interactive coding-agent mode are
+implemented (`tui/*` and `coding/interactive/*`), including the theme, every
+component, and the interactive-mode method groups. The root `main.go` and `cmd`
+package compose them into a runnable CLI. The remaining items are the
+documented out-of-scope set below.
 
 Like stock pi, pier has no built-in filesystem sandbox (D177). Shell commands,
 write, and edit run with the OS user's permissions, including access outside the
@@ -59,45 +66,27 @@ CI-only, and it is the only one that cannot be reproduced locally.
 
 ## Install the CLI
 
-Download the release binary — Linux x64/arm64, or Termux on Android:
+For Linux x64, replace the asset with `pier-linux-arm64` on ARM64 or
+`pier-android-arm64` in Termux:
 
 ```sh
-base=https://github.com/dat267/pier/releases/latest/download
-asset=pier-linux-amd64   # pier-linux-arm64, or pier-android-arm64 in Termux
-curl -fsSL -o "$asset"        "$base/$asset"
-curl -fsSL -o "$asset.sha256" "$base/$asset.sha256"
-sha256sum -c "$asset.sha256"
-mkdir -p ~/.local/bin
-install -m 755 "$asset" ~/.local/bin/pier   # any directory on PATH
+asset=pier-linux-amd64; base=https://github.com/dat267/pier/releases/latest/download; curl -fsSLo "$asset" "$base/$asset" && curl -fsSLo "$asset.sha256" "$base/$asset.sha256" && sha256sum -c "$asset.sha256" && mkdir -p "$HOME/.local/bin" && install -m 755 "$asset" "$HOME/.local/bin/pier"
 ```
 
-Windows (PowerShell):
+Add `$HOME/.local/bin` to `PATH` if needed. Windows PowerShell, use
+`pier-windows-arm64.exe` on ARM64:
 
 ```powershell
-$base  = "https://github.com/dat267/pier/releases/latest/download"
-$asset = "pier-windows-amd64.exe"   # or pier-windows-arm64.exe
-$dest  = "$env:USERPROFILE\bin"     # any directory on PATH
-
-Invoke-WebRequest "$base/$asset"        -OutFile $asset -UseBasicParsing
-Invoke-WebRequest "$base/$asset.sha256" -OutFile "$asset.sha256" -UseBasicParsing
-$want = (Get-Content "$asset.sha256").Split()[0].ToLower()
-$got  = (Get-FileHash $asset -Algorithm SHA256).Hash.ToLower()
-if ($got -ne $want) { throw "checksum mismatch for $asset" }
-New-Item -ItemType Directory -Force -Path $dest | Out-Null
-Move-Item -Force $asset (Join-Path $dest "pier.exe")
+$ErrorActionPreference='Stop'; $base='https://github.com/dat267/pier/releases/latest/download'; $asset='pier-windows-amd64.exe'; $dest=Join-Path $HOME 'bin'; Invoke-WebRequest "$base/$asset" -OutFile $asset -UseBasicParsing; Invoke-WebRequest "$base/$asset.sha256" -OutFile "$asset.sha256" -UseBasicParsing; $want=(Get-Content "$asset.sha256").Split()[0].ToLower(); $got=(Get-FileHash $asset -Algorithm SHA256).Hash.ToLower(); if ($got -ne $want) { throw "checksum mismatch for $asset" }; New-Item -ItemType Directory -Force -Path $dest | Out-Null; Move-Item -Force $asset (Join-Path $dest 'pier.exe')
 ```
 
+Set `$dest` to a directory on `PATH` if `$HOME\bin` is not already there.
 There are no macOS assets; build from source on macOS. Afterwards `pier
 update` replaces the binary in place with the newest release, verifying the same
 checksum; on Windows it moves the running `pier.exe` aside to `pier.exe.old`
 (the image is locked) and clears that on the next update.
 
-Or build from source:
-
-```bash
-just install                 # into $(go env GOBIN), or $(go env GOPATH)/bin
-just VERSION=1.2.3 install   # stamps --version and the changelog comparison
-```
+Build from source with `just install`, or use `just VERSION=1.2.3 install` to stamp `--version` and the changelog comparison.
 
 `just install` prints where it landed and warns if that directory is not on
 `PATH`. It is a thin wrapper over `go install .`, which you can run
