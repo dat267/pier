@@ -688,12 +688,13 @@ UTF-16 implementation.
 The `/model` argument provider reads scoped models once per completion.
 `AgentSession.ScopedModels` returns a defensive slice copy, and the previous
 path called it three times per keystroke for the non-empty scope check, capacity,
-and iteration. The provider now filters directly over the scoped or runtime
-model slice and maps only matching candidates, instead of building an
-intermediate model-item slice and labels for every candidate. For 4,096 scoped
-models, an empty-prefix completion fell from 471,936 to 209,792 allocated bytes;
-a query with one match fell from 459,064 to 131,336 bytes. The two model
-allocation tests pin both paths.
+and iteration. Empty-prefix requests now map the source snapshot directly; the
+test fixture's 4,096-model allocation fell from 471,936 to 209,792 bytes. For
+non-empty prefixes, the provider caches immutable search items and checks them
+against current model fields before reuse. A 4,096-model cache hit allocates
+131,400 bytes versus 262,408 without caching, including the defensive scoped
+model copy. Cache refresh on model changes and the once-per-call scope snapshot
+are covered by tests.
 
 ## Editor backward word movement
 

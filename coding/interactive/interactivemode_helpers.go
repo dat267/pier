@@ -4,6 +4,7 @@ import (
 	"context"
 	"os/exec"
 	"strings"
+	"sync"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
@@ -235,7 +236,10 @@ func (w *AutocompleteWiring) CreateBaseAutocompleteProvider() tui.AutocompletePr
 		if commands[index].Name != "model" {
 			continue
 		}
-		commands[index].GetArgumentCompletions = w.modelArgumentCompletions
+		modelCache := &modelCompletionCache{}
+		commands[index].GetArgumentCompletions = func(prefix string) ([]tui.AutocompleteItem, bool) {
+			return w.modelArgumentCompletions(prefix, modelCache)
+		}
 	}
 	// /thinking argument completions.
 	for index := range commands {
@@ -318,17 +322,27 @@ func (w *AutocompleteWiring) CreateBaseAutocompleteProvider() tui.AutocompletePr
 	return tui.NewCombinedAutocompleteProvider(commands, basePath, w.FdPath)
 }
 
-func (w *AutocompleteWiring) modelArgumentCompletions(prefix string) ([]tui.AutocompleteItem, bool) {
+func (w *AutocompleteWiring) modelArgumentCompletions(prefix string, cache *modelCompletionCache) ([]tui.AutocompleteItem, bool) {
 	scopedModels := w.Session.ScopedModels()
 	if len(scopedModels) > 0 {
-		return CreateFuzzyAutocompleteItems(scopedModels, prefix,
-			scopedModelSearchText, scopedModelAutocompleteItem), true
+		if strings.TrimSpace(prefix) == "" {
+			return CreateFuzzyAutocompleteItems(scopedModels, prefix,
+				scopedModelSearchText, scopedModelAutocompleteItem), true
+		}
+		items := cache.fromScopedModels(scopedModels)
+		return CreateFuzzyAutocompleteItems(items, prefix, modelCompletionSearchText, modelCompletionToAutocompleteItem), true
 	}
+
 	models := w.Session.ModelRuntime().GetAvailableSnapshot()
 	if len(models) == 0 {
+		cache.clear()
 		return nil, false
 	}
-	return CreateFuzzyAutocompleteItems(models, prefix, modelSearchText, modelAutocompleteItem), true
+	if strings.TrimSpace(prefix) == "" {
+		return CreateFuzzyAutocompleteItems(models, prefix, modelSearchText, modelAutocompleteItem), true
+	}
+	items := cache.fromModels(models)
+	return CreateFuzzyAutocompleteItems(items, prefix, modelCompletionSearchText, modelCompletionToAutocompleteItem), true
 }
 
 func modelSearchText(model *ai.Model) string {
@@ -347,6 +361,91 @@ func scopedModelSearchText(scoped coding.ScopedModel) string {
 
 func scopedModelAutocompleteItem(scoped coding.ScopedModel) tui.AutocompleteItem {
 	return modelAutocompleteItem(scoped.Model)
+}
+
+type modelCompletionCache struct {
+	mu sync.Mutex
+	// items are immutable after publication, so readers can use old snapshots
+	// after a concurrent refresh replaces this slice.
+	items []modelCompletionItem
+}
+
+type modelCompletionItem struct {
+	id         string
+	provider   string
+	name       string
+	label      string
+	searchText string
+}
+
+func (c *modelCompletionCache) fromScopedModels(models []coding.ScopedModel) []modelCompletionItem {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if len(c.items) == len(models) {
+		matches := true
+		for index, scoped := range models {
+			if !c.items[index].matches(scoped.Model) {
+				matches = false
+				break
+			}
+		}
+		if matches {
+			return c.items
+		}
+	}
+	items := make([]modelCompletionItem, 0, len(models))
+	for _, scoped := range models {
+		items = append(items, modelCompletionItemFor(scoped.Model))
+	}
+	c.items = items
+	return items
+}
+
+func (c *modelCompletionCache) fromModels(models []*ai.Model) []modelCompletionItem {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if len(c.items) == len(models) {
+		matches := true
+		for index, model := range models {
+			if !c.items[index].matches(model) {
+				matches = false
+				break
+			}
+		}
+		if matches {
+			return c.items
+		}
+	}
+	items := make([]modelCompletionItem, 0, len(models))
+	for _, model := range models {
+		items = append(items, modelCompletionItemFor(model))
+	}
+	c.items = items
+	return items
+}
+
+func (c *modelCompletionCache) clear() {
+	c.mu.Lock()
+	c.items = nil
+	c.mu.Unlock()
+}
+
+func modelCompletionItemFor(model *ai.Model) modelCompletionItem {
+	searchItem := ModelSearchItem{ID: model.ID, Provider: model.Provider, Name: model.Name, HasName: model.Name != ""}
+	return modelCompletionItem{
+		id: model.ID, provider: model.Provider, name: model.Name,
+		label: model.Provider + "/" + model.ID, searchText: GetModelSearchText(searchItem),
+	}
+}
+
+func (item modelCompletionItem) matches(model *ai.Model) bool {
+	return item.id == model.ID && item.provider == model.Provider && item.name == model.Name
+}
+
+func modelCompletionSearchText(item modelCompletionItem) string { return item.searchText }
+
+func modelCompletionToAutocompleteItem(item modelCompletionItem) tui.AutocompleteItem {
+	return tui.AutocompleteItem{Value: item.label, Label: item.id, Description: item.provider}
 }
 
 // SetAutocompleteWrappers installs the provider wrappers.

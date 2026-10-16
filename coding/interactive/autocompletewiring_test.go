@@ -33,12 +33,16 @@ func TestNewAutocompleteWiringResolvesFdPath(t *testing.T) {
 
 type scopedModelsCountingSession struct {
 	AutocompleteSession
-	models []coding.ScopedModel
-	calls  int
+	models     []coding.ScopedModel
+	calls      int
+	copyModels bool
 }
 
 func (s *scopedModelsCountingSession) ScopedModels() []coding.ScopedModel {
 	s.calls++
+	if s.copyModels {
+		return append([]coding.ScopedModel(nil), s.models...)
+	}
 	return s.models
 }
 
@@ -128,7 +132,7 @@ func TestModelArgumentCompletionAllocationBudget(t *testing.T) {
 	}
 }
 
-func TestModelArgumentCompletionFiltersBeforeMapping(t *testing.T) {
+func TestModelArgumentCompletionReturnsOnlyMatchingModel(t *testing.T) {
 	const modelCount = 4096
 	common := &ai.Model{Provider: "test", ID: "model"}
 	models := make([]coding.ScopedModel, modelCount)
@@ -141,19 +145,63 @@ func TestModelArgumentCompletionFiltersBeforeMapping(t *testing.T) {
 		models:              models,
 	}
 	provider := (&AutocompleteWiring{Session: session}).CreateBaseAutocompleteProvider()
-
-	var before, after runtime.MemStats
-	runtime.ReadMemStats(&before)
 	suggestions := provider.GetSuggestions(context.Background(), []string{"/model needle"}, 0, len("/model needle"), false)
-	runtime.ReadMemStats(&after)
-
 	if suggestions == nil || len(suggestions.Items) != 1 || suggestions.Items[0].Value != "test/model" {
 		t.Fatalf("model argument suggestions = %+v, want the matching model", suggestions)
 	}
+}
+
+func TestModelArgumentCompletionReusesSearchItemsBetweenKeystrokes(t *testing.T) {
+	const modelCount = 4096
+	common := &ai.Model{Provider: "test", ID: "model"}
+	models := make([]coding.ScopedModel, modelCount)
+	for index := range models {
+		models[index] = coding.ScopedModel{Model: common}
+	}
+	models[modelCount/2] = coding.ScopedModel{Model: &ai.Model{Provider: "test", ID: "model", Name: "needle"}}
+	session := &scopedModelsCountingSession{
+		AutocompleteSession: &autocompleteTestSession{},
+		models:              models,
+		copyModels:          true,
+	}
+	provider := (&AutocompleteWiring{Session: session}).CreateBaseAutocompleteProvider()
+	if result := provider.GetSuggestions(context.Background(), []string{"/model needle"}, 0, len("/model needle"), false); result == nil || len(result.Items) != 1 {
+		t.Fatalf("initial model suggestions = %+v, want one match", result)
+	}
+
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	result := provider.GetSuggestions(context.Background(), []string{"/model needle"}, 0, len("/model needle"), false)
+	runtime.ReadMemStats(&after)
+
+	if result == nil || len(result.Items) != 1 || result.Items[0].Value != "test/model" {
+		t.Fatalf("cached model suggestions = %+v, want the matching model", result)
+	}
 	allocated := after.TotalAlloc - before.TotalAlloc
-	t.Logf("filtering %d models to one completion allocated %d bytes", modelCount, allocated)
-	if allocated > uint64(modelCount*60) {
-		t.Fatalf("filtering %d models allocated %d bytes, want less than %d", modelCount, allocated, modelCount*60)
+	t.Logf("cached completion over %d models allocated %d bytes", modelCount, allocated)
+	if allocated > uint64(modelCount*40) {
+		t.Fatalf("cached completion over %d models allocated %d bytes, want less than %d", modelCount, allocated, modelCount*40)
+	}
+}
+
+func TestModelArgumentCompletionRefreshesChangedScopedModels(t *testing.T) {
+	first := &ai.Model{Provider: "test", ID: "first", Name: "needle"}
+	second := &ai.Model{Provider: "test", ID: "second", Name: "needle"}
+	session := &scopedModelsCountingSession{
+		AutocompleteSession: &autocompleteTestSession{},
+		models:              []coding.ScopedModel{{Model: first}},
+	}
+	provider := (&AutocompleteWiring{Session: session}).CreateBaseAutocompleteProvider()
+	query := []string{"/model needle"}
+	firstResult := provider.GetSuggestions(context.Background(), query, 0, len(query[0]), false)
+	if firstResult == nil || len(firstResult.Items) != 1 || firstResult.Items[0].Value != "test/first" {
+		t.Fatalf("initial suggestions = %+v, want first model", firstResult)
+	}
+
+	session.models = []coding.ScopedModel{{Model: second}}
+	secondResult := provider.GetSuggestions(context.Background(), query, 0, len(query[0]), false)
+	if secondResult == nil || len(secondResult.Items) != 1 || secondResult.Items[0].Value != "test/second" {
+		t.Fatalf("updated suggestions = %+v, want second model", secondResult)
 	}
 }
 
