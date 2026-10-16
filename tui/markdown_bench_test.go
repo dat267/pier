@@ -3,6 +3,8 @@ package tui
 import (
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/markdown"
 )
 
 // The two shapes that dominate a transcript: prose (thinking blocks) and a reply
@@ -17,14 +19,14 @@ var (
 func BenchmarkLexMarkdownProse(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = LexMarkdown(benchProse)
+		_ = markdown.Lex(benchProse)
 	}
 }
 
 func BenchmarkLexMarkdownMixed(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = LexMarkdown(benchMixed)
+		_ = markdown.Lex(benchMixed)
 	}
 }
 

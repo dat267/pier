@@ -629,9 +629,14 @@ chroma and its `dlclark/regexp2` dependency, shrinks the binary 31.1 MB to
 27.1 MB (-3.9 MB), and saves the lexer registry init at startup (`pier --version`
 12.3 ms to 5.3 ms median).
 
-## Full-lexer allocation overhead
+## Full-lexer allocation overhead (historical)
 
-`Markdown.Render` still lexes the complete changed source, following
+This section describes the retired tui lexer (`MdToken`) before the `markdown`
+package replaced it; the numbers and the batched text-token design are kept for
+the record, and the tests that guarded them moved to the new package or were
+deleted with the model.
+
+`Markdown.Render` lexed the complete changed source, following
 `packages/tui/src/components/markdown.ts`; no append-only parser or new token
 cache is introduced. The Go lexer reduces allocation overhead by batching
 plain-text nodes into parse-owned, nonmoving chunks for documents of at least
@@ -660,10 +665,22 @@ large mixed-markup document) produced identical token trees and rendered lines.
 
 ## The markdown package
 
-`github.com/dat267/pier/markdown` is a second, from-scratch renderer kept
-additive for now: `tui/markdown.go` and the upstream goldens are untouched, and
-wiring it in is a separate follow-up. It is a four-stage pipeline, each stage
-independently testable: a hand-written block lexer (no regexp), an inline
+`github.com/dat267/pier/markdown` is the markdown engine the TUI now uses.
+`tui/markdown.go` is only the component wrapper (transform, the per-width
+incremental line cache, off-loop preparation and the padding/background fill);
+`LexMarkdown`, the `MdToken` model, and the old hand-written lexer and renderer
+that lived in `tui/markdownparser.go`/`markdowninline.go` are gone. The parity
+renderer is `markdown/render.go`: it walks the `Block`/`Inline` model and emits
+the same styled lines the old renderer did, so `tui/testdata/md_render_golden.txt`
+(upstream's `Markdown` component output) and `tui/testdata/md_golden.txt` (the
+Marked token projection) still pass unchanged. Terminal primitives (word wrap,
+visible width, background fill, image-line detection, OSC 8) stay in `tui` and
+are injected through `markdown.Terminal`, so neither package depends on the
+other's renderer internals. `markdown/layout.go` remains a standalone,
+`Style`-driven layout renderer (the from-scratch exercise); the TUI uses the
+parity renderer because rendered output is upstream-pinned.
+
+Each stage is independently testable: a hand-written block lexer (no regexp), an inline
 parser, a width-aware layout that understands ANSI SGR runs and East Asian
 rune widths, and a styled line renderer behind a narrow `Style` interface
 (`NopStyle` for measurement). `Document.Update` adds incremental mode: it keeps
@@ -690,6 +707,12 @@ to 3 allocations per 3.96 KB. Incremental streaming of 500 growing paragraphs
 is 2.27 ms / 3.8 MB versus 196 ms / 312 MB re-lexing each prefix, and is
 value-identical to `Lex` at every prefix (byte-by-byte, random-chunk,
 retroactive-construct and fuzz tests).
+
+Wired into the component (`tui/markdown.go`), the tui fixtures render faster
+end to end than the old lexer/renderer: `benchProse` (4 KB) 384 to 307 us and
+`benchMixed` (1.1 KB) 226 to 143 us, with allocations 236 KB/2328 to 216 KB/2312
+and 132 KB/1597 to 110 KB/1386 (Intel N150, width 80, `Invalidate` each round).
+The remaining cost is the same styling and wrapping pass, not lexing.
 
 The two options it replaces are slower on every fixture. glamour v1.0.0
 (`NewTermRenderer`, word wrap 80) runs 0.21-4.45 MB/s with its default style

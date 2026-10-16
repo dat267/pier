@@ -328,7 +328,7 @@ func (l *blockLexer) lexLatex(start int) (*Block, int) {
 	if next := nextLine(src, end); isBlankLine(next.text) && next.next > end {
 		end = next.next
 	}
-	return &Block{Kind: BlockLatex, Start: start, End: end, Raw: src[start:end], Text: strings.TrimSpace(body)}, end
+	return &Block{Kind: BlockLatex, Start: start, End: end, Raw: src[start:end], Text: strings.TrimSpace(body), Pending: !closed}, end
 }
 
 func isThematicBreak(line string) bool {

@@ -199,6 +199,8 @@ func (l *blockLexer) lexList(start int) (*Block, int, bool) {
 			break
 		}
 		markerEnd := markerEndIndex(ln.text)
+		markerStart, _ := skipIndent(ln.text, 4)
+		marker := strings.TrimRight(ln.text[markerStart:markerEnd], " \t")
 		itemStart := at
 		var sb strings.Builder
 		sb.WriteString(ln.text[markerEnd:])
@@ -242,7 +244,7 @@ func (l *blockLexer) lexList(start int) (*Block, int, bool) {
 		if sawBlank && content != "" && !strings.Contains(content, "\n\n") {
 			content += "\n"
 		}
-		item := &Block{Kind: BlockListItem, Start: itemStart, End: at, Text: content}
+		item := &Block{Kind: BlockListItem, Start: itemStart, End: at, Text: content, Marker: marker}
 		if _, checked, rest, ok := stripTaskMarker(content); ok {
 			item.Task = true
 			item.Checked = checked
@@ -393,6 +395,7 @@ func (l *blockLexer) tryTable(start int) (*Block, bool) {
 		at = ln.next
 	}
 	table.End = at
+	table.Raw = src[start:at]
 	return table, true
 }
 

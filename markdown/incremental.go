@@ -53,6 +53,41 @@ func blockMidLine(b *Block, src string) bool {
 	return b.End > 0 && b.End <= len(src) && src[b.End-1] != '\n'
 }
 
+// TrimPartialClosingFences mirrors markdown.ts's trimPartialClosingFences: it
+// removes a streamed, still-incomplete closing fence line from the last code
+// block so a partial message does not render a marker the user has not finished
+// typing.
+func TrimPartialClosingFences(blocks []*Block) {
+	if len(blocks) == 0 {
+		return
+	}
+	b := blocks[len(blocks)-1]
+	switch b.Kind {
+	case BlockList:
+		if len(b.Blocks) > 0 {
+			TrimPartialClosingFences(b.Blocks[len(b.Blocks)-1].Blocks)
+		}
+		return
+	case BlockQuote:
+		TrimPartialClosingFences(b.Blocks)
+		return
+	case BlockCode:
+	default:
+		return
+	}
+
+	marker, _, ok := fenceStart(b.Raw)
+	if !ok {
+		return
+	}
+	lines := strings.Split(b.Raw, "\n")
+	lastLine := lines[len(lines)-1]
+	if lastLine == "" || len(lastLine) >= len(marker) || lastLine != strings.Repeat(string(marker[0]), len(lastLine)) {
+		return
+	}
+	b.Body = strings.TrimSuffix(b.Body[:len(b.Body)-len(lastLine)], "\n")
+}
+
 // blockExtendable reports whether appending text after b can change b or merge
 // it with the appended block.
 func blockExtendable(b *Block, src string) bool {

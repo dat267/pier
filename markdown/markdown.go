@@ -76,6 +76,13 @@ type Block struct {
 	// Task marks a task-list item's checkbox state and Checked its state.
 	Task    bool
 	Checked bool
+
+	// Marker is a list item's source marker (`-`, `1.`, `1)`), used when
+	// PreserveOrderedListMarkers is on.
+	Marker string
+	// Pending marks an unterminated construct (a streamed `$$`/`\[` block) whose
+	// source is rendered verbatim instead of through the LaTeX renderer.
+	Pending bool
 }
 
 // Align is a table column alignment.
@@ -134,4 +141,6 @@ type Inline struct {
 	// Dest and Title are a link's or image's destination and title.
 	Dest  string
 	Title string
+	// Pending marks an unterminated inline construct.
+	Pending bool
 }

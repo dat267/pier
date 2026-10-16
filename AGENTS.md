@@ -64,7 +64,7 @@ Packages mirror upstream `packages/`:
 | `main.go`, `cmd` | `main.ts` | the CLI entrypoint (a thin root main over the `cmd` package) |
 | `chord`, `client`, `protocol`, `server`, `telemetry`, `durable` | same | supporting packages |
 | `internal/offloop`, `internal/uiblock`, `internal/goal` | — | port-local helpers: the off-loop work queues, the UI-blocking analyzer, and the builtin session-goal extension (state/machine/command/render; the host glue lives in `coding` and `coding/interactive`, D223) |
-| `markdown` | — | port-local, additive from-scratch markdown pipeline (block lexer, inline parser, width-aware layout, styled lines, incremental `Document.Update`) with Marked token parity; `tui/markdown.go` is still the wired renderer |
+| `markdown` | — | port-local markdown engine, wired into the TUI: block lexer, inline parser, the upstream-parity renderer (`render.go`), a standalone `Style`-driven layout (`layout.go`) and incremental `Document.Update`; Marked token parity and the upstream render goldens both pass |
 | `scripts` | — | catalog generators |
 | `docs` | — | port status (`PORTING.md`), the divergence log (`DIVERGENCES.md`), architecture notes (`architecture.md`) and the lock inventory (`locks.md`) |
 
