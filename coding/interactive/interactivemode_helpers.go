@@ -325,7 +325,7 @@ func (w *AutocompleteWiring) CreateBaseAutocompleteProvider() tui.AutocompletePr
 func (w *AutocompleteWiring) modelArgumentCompletions(prefix string, cache *modelCompletionCache) ([]tui.AutocompleteItem, bool) {
 	emptyPrefix := strings.TrimSpace(prefix) == ""
 	versionSource, versioned := w.Session.(scopedModelsVersionSource)
-	if versioned && !emptyPrefix {
+	if versioned {
 		version := versionSource.ScopedModelsRevision()
 		if items, scoped, ok := cache.scopedSnapshot(version); ok && versionSource.ScopedModelsRevision() == version {
 			if scoped {

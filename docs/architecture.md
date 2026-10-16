@@ -687,11 +687,12 @@ UTF-16 implementation.
 
 The `/model` argument provider used to read scoped models three times per
 completion. It now takes one snapshot to build an immutable search-item cache;
-`AgentSession.ScopedModelsRevision` lets subsequent non-empty keystrokes reuse it
-without copying the scoped slice. Empty-prefix requests still map the source
-snapshot directly; the test fixture's 4,096-model allocation fell from 471,936
-to 209,792 bytes. A 4,096-model cache hit allocates 328 bytes, down from 262,408
-without caching. Cache refresh on model changes is covered by tests.
+`AgentSession.ScopedModelsRevision` lets later keystrokes reuse it without
+copying the scoped slice. A cold empty-prefix request maps the source directly;
+the test fixture's 4,096-model allocation fell from 471,936 to 209,792 bytes. A
+warm empty-prefix request reuses the cache and falls from 393,280 to 196,672
+bytes. A non-empty cache hit allocates 328 bytes, down from 262,408 without
+caching. Tests cover the allocation budgets and cache refresh on model changes.
 
 ## Editor backward word movement
 

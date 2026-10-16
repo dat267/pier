@@ -198,6 +198,41 @@ func TestModelArgumentCompletionReusesSearchItemsBetweenKeystrokes(t *testing.T)
 	}
 }
 
+func TestModelArgumentCompletionEmptyPrefixReusesCachedScopeItems(t *testing.T) {
+	const modelCount = 4096
+	model := &ai.Model{Provider: "test", ID: "model"}
+	models := make([]coding.ScopedModel, modelCount)
+	for index := range models {
+		models[index] = coding.ScopedModel{Model: model}
+	}
+	session := &scopedModelsCountingSession{
+		AutocompleteSession: &autocompleteTestSession{},
+		models:              models,
+		copyModels:          true,
+	}
+	provider := (&AutocompleteWiring{Session: session}).CreateBaseAutocompleteProvider()
+	if result := provider.GetSuggestions(context.Background(), []string{"/model m"}, 0, len("/model m"), false); result == nil || len(result.Items) != modelCount {
+		t.Fatalf("initial model suggestions = %+v, want %d items", result, modelCount)
+	}
+
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	result := provider.GetSuggestions(context.Background(), []string{"/model "}, 0, len("/model "), false)
+	runtime.ReadMemStats(&after)
+
+	if result == nil || len(result.Items) != modelCount {
+		t.Fatalf("empty-prefix model suggestions = %+v, want %d items", result, modelCount)
+	}
+	allocated := after.TotalAlloc - before.TotalAlloc
+	t.Logf("empty-prefix completion over %d cached models allocated %d bytes", modelCount, allocated)
+	if allocated > uint64(modelCount*55) {
+		t.Fatalf("empty-prefix completion allocated %d bytes, want less than %d", allocated, modelCount*55)
+	}
+	if session.calls != 1 {
+		t.Fatalf("ScopedModels calls = %d for a cached empty-prefix completion, want 1", session.calls)
+	}
+}
+
 func TestModelArgumentCompletionRefreshesChangedScopedModels(t *testing.T) {
 	first := &ai.Model{Provider: "test", ID: "first", Name: "needle"}
 	second := &ai.Model{Provider: "test", ID: "second", Name: "needle"}
