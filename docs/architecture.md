@@ -673,6 +673,15 @@ occurrence. `TestEditorBracketedLargePasteAvoidsCopyingInput` measures 6.8 KB
 allocated for a 270 KB paste, down from 294 KB, and the 1 MB benchmark improves
 from 3.54 ms / 2.40 MB to 2.95 ms / 1.35 MB in five-iteration runs on the same machine.
 
+## ASCII fuzzy matching
+
+Autocomplete calls `MatchFuzzy` for each candidate. The common ASCII path now
+compares lowercased bytes on demand instead of lowercasing and allocating rune
+and UTF-16 slices per query/text pair. The matching test measured 4 allocations
+before and 0 after; the non-matching ASCII path drops from 5 to 0. The upstream
+fuzzy score goldens still pass. Non-ASCII inputs and alpha-numeric swap queries
+retain the UTF-16 implementation.
+
 ## Editor backward word movement
 
 Ctrl+Left over a long word-like segment used to materialize a `[]rune` and

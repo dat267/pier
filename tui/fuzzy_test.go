@@ -2,6 +2,30 @@ package tui
 
 import "testing"
 
+func TestMatchFuzzyASCIIPathDoesNotAllocate(t *testing.T) {
+	allocations := testing.AllocsPerRun(10, func() {
+		match := MatchFuzzy("alpha", "src/alphabeta.txt")
+		if !match.Matches {
+			t.Fatal("ASCII query did not match")
+		}
+	})
+	if allocations != 0 {
+		t.Fatalf("ASCII fuzzy match allocated %.0f objects, want 0", allocations)
+	}
+}
+
+func TestMatchFuzzyASCIINoMatchPathDoesNotAllocate(t *testing.T) {
+	allocations := testing.AllocsPerRun(10, func() {
+		match := MatchFuzzy("NoMatch", "src/file.txt")
+		if match.Matches {
+			t.Fatal("unexpected match")
+		}
+	})
+	if allocations != 0 {
+		t.Fatalf("ASCII non-match allocated %.0f objects, want 0", allocations)
+	}
+}
+
 // Upstream fuzzyMatch indexes by UTF-16 code units and treats every JS
 // whitespace character as a word boundary.
 func TestFuzzyMatchUsesUTF16IndicesAndWhitespace(t *testing.T) {

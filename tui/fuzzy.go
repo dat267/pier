@@ -20,6 +20,15 @@ type FuzzyMatch struct {
 // both the type and the function fuzzyMatch/FuzzyMatch; Go cannot, so the
 // function is MatchFuzzy (divergence D66).
 func MatchFuzzy(query string, text string) FuzzyMatch {
+	if isASCII(query) && isASCII(text) {
+		// ASCII byte offsets equal UTF-16 code-unit offsets, so lowercase bytes
+		// on demand and avoid building normalized strings and unit slices.
+		primaryMatch := matchFuzzyASCII(query, text)
+		if primaryMatch.Matches || !asciiAlphaNumericSwapCandidate(query) {
+			return primaryMatch
+		}
+	}
+
 	queryLower := jsLower(query)
 	textLower := jsLower(text)
 
@@ -134,6 +143,115 @@ func isFuzzyBoundaryUnit(unit uint16) bool {
 	}
 	switch unit {
 	case '-', '_', '.', '/', ':':
+		return true
+	}
+	return false
+}
+
+func lowerASCIIByte(value byte) byte {
+	if value >= 'A' && value <= 'Z' {
+		return value + ('a' - 'A')
+	}
+	return value
+}
+
+func indexASCIILowerFrom(text string, needle byte, start int) int {
+	for index := max(0, start); index < len(text); index++ {
+		if lowerASCIIByte(text[index]) == needle {
+			return index
+		}
+	}
+	return -1
+}
+
+func matchFuzzyASCII(query string, text string) FuzzyMatch {
+	if len(query) == 0 {
+		return FuzzyMatch{Matches: true, Score: 0}
+	}
+	if len(query) > len(text) {
+		return FuzzyMatch{Matches: false, Score: 0}
+	}
+
+	queryIndex := 0
+	score := 0.0
+	lastMatchIndex := -1
+	consecutiveMatches := 0
+	for queryIndex < len(query) {
+		i := indexASCIILowerFrom(text, lowerASCIIByte(query[queryIndex]), lastMatchIndex+1)
+		if i == -1 {
+			break
+		}
+
+		isWordBoundary := i == 0 || isFuzzyBoundaryUnit(uint16(lowerASCIIByte(text[i-1])))
+		if lastMatchIndex == i-1 {
+			consecutiveMatches++
+			score -= float64(consecutiveMatches) * 5
+		} else {
+			consecutiveMatches = 0
+			if lastMatchIndex >= 0 {
+				score += float64(i-lastMatchIndex-1) * 2
+			}
+		}
+		if isWordBoundary {
+			score -= 10
+		}
+		score += unfusedProduct(float64(i), 0.1)
+		lastMatchIndex = i
+		queryIndex++
+	}
+
+	if queryIndex < len(query) {
+		return FuzzyMatch{Matches: false, Score: 0}
+	}
+	if asciiEqualFold(query, text) {
+		score -= 100
+	}
+	return FuzzyMatch{Matches: true, Score: score}
+}
+
+func asciiEqualFold(left, right string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if lowerASCIIByte(left[index]) != lowerASCIIByte(right[index]) {
+			return false
+		}
+	}
+	return true
+}
+
+// asciiAlphaNumericSwapCandidate mirrors the two upstream swap patterns
+// without allocating. It is called only for ASCII queries.
+func asciiAlphaNumericSwapCandidate(query string) bool {
+	lettersEnd := 0
+	for lettersEnd < len(query) {
+		value := lowerASCIIByte(query[lettersEnd])
+		if value < 'a' || value > 'z' {
+			break
+		}
+		lettersEnd++
+	}
+	if lettersEnd > 0 && lettersEnd < len(query) {
+		for index := lettersEnd; index < len(query); index++ {
+			if query[index] < '0' || query[index] > '9' {
+				return false
+			}
+		}
+		return true
+	}
+
+	digitsEnd := 0
+	for digitsEnd < len(query) && query[digitsEnd] >= '0' && query[digitsEnd] <= '9' {
+		digitsEnd++
+	}
+	if digitsEnd > 0 && digitsEnd < len(query) {
+		for index := digitsEnd; index < len(query); index++ {
+			value := lowerASCIIByte(query[index])
+			if value < 'a' || value > 'z' {
+				return false
+			}
+		}
 		return true
 	}
 	return false
