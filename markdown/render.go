@@ -15,28 +15,6 @@ import (
 // through Terminal, so this package has no terminal dependency and the two
 // packages cannot drift.
 
-// Theme styles markdown elements. Nil functions are identity.
-type Theme struct {
-	Heading         func(text string) string
-	Link            func(text string) string
-	LinkURL         func(text string) string
-	Code            func(text string) string
-	CodeBlock       func(text string) string
-	CodeBlockBorder func(text string) string
-	Quote           func(text string) string
-	QuoteBorder     func(text string) string
-	Hr              func(text string) string
-	ListBullet      func(text string) string
-	Bold            func(text string) string
-	Italic          func(text string) string
-	Strikethrough   func(text string) string
-	Underline       func(text string) string
-	// HighlightCode, when set, replaces the per-line code styling.
-	HighlightCode func(code string, lang string) []string
-	// CodeBlockIndent prefixes code block lines (default "  ").
-	CodeBlockIndent string
-}
-
 // DefaultStyle is the base styling applied to markdown text.
 type DefaultStyle struct {
 	Color         func(text string) string
@@ -58,79 +36,46 @@ type Terminal interface {
 	Hyperlink(text string, url string) string
 }
 
-// Options configure the parity renderer.
+// Options configure the renderer.
 type Options struct {
-	Theme                      Theme
-	Default                    *DefaultStyle
+	// Style paints each markdown element; nil means NopStyle.
+	Style Style
+	// Default is the base text style applied under the element styles.
+	Default *DefaultStyle
+	// Terminal supplies the terminal primitives; nil means PlainTerminal.
 	Terminal                   Terminal
 	Hyperlinks                 bool
 	PreserveOrderedListMarkers bool
 	PreserveBackslashEscapes   bool
 	LatexEnabled               bool
 	Latex                      func(source string, display bool) (string, bool)
+	// HighlightCode, when set, replaces the per-line code styling.
+	HighlightCode func(code string, lang string) []string
+	// CodeBlockIndent prefixes code block lines (default "  ").
+	CodeBlockIndent string
 }
 
-func identityStyle(text string) string { return text }
-
-func withDefaultTheme(theme Theme) Theme {
-	if theme.Heading == nil {
-		theme.Heading = identityStyle
-	}
-	if theme.Link == nil {
-		theme.Link = identityStyle
-	}
-	if theme.LinkURL == nil {
-		theme.LinkURL = identityStyle
-	}
-	if theme.Code == nil {
-		theme.Code = identityStyle
-	}
-	if theme.CodeBlock == nil {
-		theme.CodeBlock = identityStyle
-	}
-	if theme.CodeBlockBorder == nil {
-		theme.CodeBlockBorder = identityStyle
-	}
-	if theme.Quote == nil {
-		theme.Quote = identityStyle
-	}
-	if theme.QuoteBorder == nil {
-		theme.QuoteBorder = identityStyle
-	}
-	if theme.Hr == nil {
-		theme.Hr = identityStyle
-	}
-	if theme.ListBullet == nil {
-		theme.ListBullet = identityStyle
-	}
-	if theme.Bold == nil {
-		theme.Bold = identityStyle
-	}
-	if theme.Italic == nil {
-		theme.Italic = identityStyle
-	}
-	if theme.Strikethrough == nil {
-		theme.Strikethrough = identityStyle
-	}
-	if theme.Underline == nil {
-		theme.Underline = identityStyle
-	}
-	return theme
-}
-
-// Renderer renders blocks with a fixed theme and terminal. Create one per
+// Renderer renders blocks with a fixed style and terminal. Create one per
 // render pass so the default-style prefix is computed once.
 type Renderer struct {
-	theme            Theme
+	style            Style
 	opts             Options
 	term             Terminal
 	defaultPrefix    string
 	hasDefaultPrefix bool
 }
 
-// NewRenderer resolves the theme defaults and returns a renderer.
+// NewRenderer resolves the style and terminal defaults and returns a renderer.
 func NewRenderer(opts Options) *Renderer {
-	return &Renderer{theme: withDefaultTheme(opts.Theme), opts: opts, term: opts.Terminal}
+	style := opts.Style
+	if style == nil {
+		style = NopStyle{}
+	}
+	term := opts.Terminal
+	if term == nil {
+		term = PlainTerminal{}
+	}
+	return &Renderer{style: style, opts: opts, term: term}
 }
 
 // RenderBlock renders one block to unwrapped content lines. next is the
@@ -151,11 +96,11 @@ func (r *Renderer) block(b *Block, width int, next *Block, styleContext *inlineS
 		var headingStyleFn func(string) string
 		if level == 1 {
 			headingStyleFn = func(text string) string {
-				return r.theme.Heading(r.theme.Bold(r.theme.Underline(text)))
+				return r.style.Heading(level, r.style.Bold(r.style.Underline(text)))
 			}
 		} else {
 			headingStyleFn = func(text string) string {
-				return r.theme.Heading(r.theme.Bold(text))
+				return r.style.Heading(level, r.style.Bold(text))
 			}
 		}
 		headingStyleContext := inlineStyleContext{
@@ -179,21 +124,21 @@ func (r *Renderer) block(b *Block, width int, next *Block, styleContext *inlineS
 		}
 
 	case BlockCode:
-		indent := r.theme.CodeBlockIndent
+		indent := r.opts.CodeBlockIndent
 		if indent == "" {
 			indent = "  "
 		}
-		lines = append(lines, r.theme.CodeBlockBorder("```"+b.Info))
-		if r.theme.HighlightCode != nil {
-			for _, hlLine := range r.theme.HighlightCode(b.Body, b.Info) {
+		lines = append(lines, r.style.CodeBlockBorder("```"+b.Info))
+		if r.opts.HighlightCode != nil {
+			for _, hlLine := range r.opts.HighlightCode(b.Body, b.Info) {
 				lines = append(lines, indent+hlLine)
 			}
 		} else {
 			for _, codeLine := range strings.Split(b.Body, "\n") {
-				lines = append(lines, indent+r.theme.CodeBlock(codeLine))
+				lines = append(lines, indent+r.style.CodeBlock(codeLine))
 			}
 		}
-		lines = append(lines, r.theme.CodeBlockBorder("```"))
+		lines = append(lines, r.style.CodeBlockBorder("```"))
 		if next != nil && next.Kind != BlockSpace {
 			lines = append(lines, "")
 		}
@@ -223,7 +168,7 @@ func (r *Renderer) block(b *Block, width int, next *Block, styleContext *inlineS
 		lines = append(lines, r.renderTable(b, width, next, styleContext)...)
 
 	case BlockQuote:
-		quoteStyle := func(text string) string { return r.theme.Quote(r.theme.Italic(text)) }
+		quoteStyle := func(text string) string { return r.style.Quote(r.style.Italic(text)) }
 		quoteStylePrefix := r.stylePrefixOf(quoteStyle)
 		applyQuoteStyle := func(line string) string {
 			if quoteStylePrefix == "" {
@@ -257,7 +202,7 @@ func (r *Renderer) block(b *Block, width int, next *Block, styleContext *inlineS
 		for _, quoteLine := range renderedQuoteLines {
 			styledLine := applyQuoteStyle(quoteLine)
 			for _, wrappedLine := range r.term.Wrap(styledLine, quoteContentWidth) {
-				lines = append(lines, r.theme.QuoteBorder("│ ")+wrappedLine)
+				lines = append(lines, r.style.QuoteBorder("│ ")+wrappedLine)
 			}
 		}
 		if next != nil && next.Kind != BlockSpace {
@@ -266,7 +211,7 @@ func (r *Renderer) block(b *Block, width int, next *Block, styleContext *inlineS
 
 	case BlockThematicBreak:
 		hrWidth := min(width, 80)
-		lines = append(lines, r.theme.Hr(strings.Repeat("─", max(0, hrWidth))))
+		lines = append(lines, r.style.ThematicBreak(strings.Repeat("─", max(0, hrWidth))))
 		if next != nil && next.Kind != BlockSpace {
 			lines = append(lines, "")
 		}
@@ -329,16 +274,16 @@ func (r *Renderer) applyDefaultStyle(text string) string {
 		styled = r.opts.Default.Color(styled)
 	}
 	if r.opts.Default.Bold {
-		styled = r.theme.Bold(styled)
+		styled = r.style.Bold(styled)
 	}
 	if r.opts.Default.Italic {
-		styled = r.theme.Italic(styled)
+		styled = r.style.Italic(styled)
 	}
 	if r.opts.Default.Strikethrough {
-		styled = r.theme.Strikethrough(styled)
+		styled = r.style.Strikethrough(styled)
 	}
 	if r.opts.Default.Underline {
-		styled = r.theme.Underline(styled)
+		styled = r.style.Underline(styled)
 	}
 	return styled
 }
@@ -357,16 +302,16 @@ func (r *Renderer) defaultStylePrefixValue() string {
 		styled = r.opts.Default.Color(styled)
 	}
 	if r.opts.Default.Bold {
-		styled = r.theme.Bold(styled)
+		styled = r.style.Bold(styled)
 	}
 	if r.opts.Default.Italic {
-		styled = r.theme.Italic(styled)
+		styled = r.style.Italic(styled)
 	}
 	if r.opts.Default.Strikethrough {
-		styled = r.theme.Strikethrough(styled)
+		styled = r.style.Strikethrough(styled)
 	}
 	if r.opts.Default.Underline {
-		styled = r.theme.Underline(styled)
+		styled = r.style.Underline(styled)
 	}
 
 	sentinelIndex := strings.Index(styled, sentinel)
@@ -440,22 +385,22 @@ func (r *Renderer) renderInlineTokens(inlines []Inline, styleContext *inlineStyl
 
 		case InlineStrong:
 			boldContent := r.renderInlineTokens(in.Children, resolved)
-			builder.WriteString(r.theme.Bold(boldContent) + stylePrefix)
+			builder.WriteString(r.style.Bold(boldContent) + stylePrefix)
 
 		case InlineEmphasis:
 			italicContent := r.renderInlineTokens(in.Children, resolved)
-			builder.WriteString(r.theme.Italic(italicContent) + stylePrefix)
+			builder.WriteString(r.style.Italic(italicContent) + stylePrefix)
 
 		case InlineStrikethrough:
 			delContent := r.renderInlineTokens(in.Children, resolved)
-			builder.WriteString(r.theme.Strikethrough(delContent) + stylePrefix)
+			builder.WriteString(r.style.Strikethrough(delContent) + stylePrefix)
 
 		case InlineCode:
-			builder.WriteString(r.theme.Code(in.Text) + stylePrefix)
+			builder.WriteString(r.style.Code(in.Text) + stylePrefix)
 
 		case InlineLink:
 			linkText := r.renderInlineTokens(in.Children, resolved)
-			styledLink := r.theme.Link(r.theme.Underline(linkText))
+			styledLink := r.style.Link(r.style.Underline(linkText))
 			if r.opts.Hyperlinks {
 				builder.WriteString(r.term.Hyperlink(styledLink, in.Dest) + stylePrefix)
 			} else {
@@ -466,7 +411,7 @@ func (r *Renderer) renderInlineTokens(inlines []Inline, styleContext *inlineStyl
 				if in.Text == in.Dest || in.Text == hrefForComparison {
 					builder.WriteString(styledLink + stylePrefix)
 				} else {
-					builder.WriteString(styledLink + r.theme.LinkURL(" ("+in.Dest+")") + stylePrefix)
+					builder.WriteString(styledLink + r.style.LinkURL(" ("+in.Dest+")") + stylePrefix)
 				}
 			}
 
@@ -545,7 +490,7 @@ func (r *Renderer) renderList(list *Block, depth int, width int, styleContext *i
 			}
 		}
 		marker := bullet + taskMarker
-		firstPrefix := indent + r.theme.ListBullet(marker)
+		firstPrefix := indent + r.style.Bullet(marker)
 		continuationPrefix := indent + repeatSpacesM(r.term.VisibleWidth(marker))
 		itemWidth := max(1, width-r.term.VisibleWidth(firstPrefix))
 		renderedAnyLine := false
@@ -748,7 +693,7 @@ func (r *Renderer) renderTable(table *Block, availableWidth int, next *Block, st
 				text = headerCellLines[colIdx][lineIdx]
 			}
 			padded := text + repeatSpacesM(max(0, columnWidths[colIdx]-r.term.VisibleWidth(text)))
-			rowParts[colIdx] = r.theme.Bold(padded)
+			rowParts[colIdx] = r.style.Bold(padded)
 		}
 		lines = append(lines, "│ "+strings.Join(rowParts, " │ ")+" │")
 	}

@@ -34,7 +34,7 @@ func TestLayoutHeading(t *testing.T) {
 
 func TestLayoutCodeBlock(t *testing.T) {
 	got := render(t, "```go\nfmt.Println(\"hi\")\n```\n", 40)
-	want := []string{"```go", "fmt.Println(\"hi\")", "```"}
+	want := []string{"```go", "  fmt.Println(\"hi\")", "```"}
 	if strings.Join(got, "|") != strings.Join(want, "|") {
 		t.Fatalf("got %q, want %q", got, want)
 	}
@@ -73,7 +73,7 @@ func TestLayoutTaskList(t *testing.T) {
 
 func TestLayoutNestedListIndents(t *testing.T) {
 	got := render(t, "- a\n  - b\n", 20)
-	want := []string{"- a", "  - b"}
+	want := []string{"- a", "    - b"}
 	if strings.Join(got, "|") != strings.Join(want, "|") {
 		t.Fatalf("got %q, want %q", got, want)
 	}
@@ -81,7 +81,7 @@ func TestLayoutNestedListIndents(t *testing.T) {
 
 func TestLayoutBlockquotePrefixes(t *testing.T) {
 	got := render(t, "> quoted\n> more\n", 20)
-	want := []string{"> quoted", "> more"}
+	want := []string{"│ quoted", "│ more"}
 	if strings.Join(got, "|") != strings.Join(want, "|") {
 		t.Fatalf("got %q, want %q", got, want)
 	}
@@ -90,9 +90,11 @@ func TestLayoutBlockquotePrefixes(t *testing.T) {
 func TestLayoutTableColumns(t *testing.T) {
 	got := render(t, "| a | b |\n|---|---|\n| 1 | 22 |\n", 40)
 	want := []string{
-		"| a | b  |",
-		"| ─ | ── |",
-		"| 1 | 22 |",
+		"┌───┬────┐",
+		"│ a │ b  │",
+		"├───┼────┤",
+		"│ 1 │ 22 │",
+		"└───┴────┘",
 	}
 	if strings.Join(got, "|") != strings.Join(want, "|") {
 		t.Fatalf("got %q\nwant %q", got, want)
@@ -115,11 +117,11 @@ func TestLayoutBlankLineBecomesSpace(t *testing.T) {
 	}
 }
 
-// ansiStyle wraps runs in markers so wrapping can be checked against escapes.
+// ansiStyle wraps bold runs in markers so wrapping can be checked against
+// escapes.
 type ansiStyle struct{ NopStyle }
 
-func (ansiStyle) Plain(text string) string { return "\x1b[0m" + text + "\x1b[0m" }
-func (ansiStyle) Bold(text string) string  { return "\x1b[1m" + text + "\x1b[0m" }
+func (ansiStyle) Bold(text string) string { return "\x1b[1m" + text + "\x1b[0m" }
 
 func TestLayoutWrappingKeepsEscapesBalanced(t *testing.T) {
 	got := RenderSource("alpha **beta gamma** delta\n", 12, ansiStyle{})

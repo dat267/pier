@@ -665,26 +665,27 @@ large mixed-markup document) produced identical token trees and rendered lines.
 
 ## The markdown package
 
-`github.com/dat267/pier/markdown` is the markdown engine the TUI now uses.
-`tui/markdown.go` is only the component wrapper (transform, the per-width
-incremental line cache, off-loop preparation and the padding/background fill);
-`LexMarkdown`, the `MdToken` model, and the old hand-written lexer and renderer
-that lived in `tui/markdownparser.go`/`markdowninline.go` are gone. The parity
-renderer is `markdown/render.go`: it walks the `Block`/`Inline` model and emits
-the same styled lines the old renderer did, so `tui/testdata/md_render_golden.txt`
-(upstream's `Markdown` component output) and `tui/testdata/md_golden.txt` (the
-Marked token projection) still pass unchanged. Terminal primitives (word wrap,
-visible width, background fill, image-line detection, OSC 8) stay in `tui` and
-are injected through `markdown.Terminal`, so neither package depends on the
-other's renderer internals. `markdown/layout.go` remains a standalone,
-`Style`-driven layout renderer (the from-scratch exercise); the TUI uses the
-parity renderer because rendered output is upstream-pinned.
+`github.com/dat267/pier/markdown` is the markdown engine the TUI uses, and it
+holds **one** renderer. `tui/markdown.go` is only the component wrapper
+(transform, the per-width incremental line cache, off-loop preparation and the
+padding/background fill); `LexMarkdown`, the `MdToken` model, and the old
+hand-written lexer and renderer that lived in
+`tui/markdownparser.go`/`markdowninline.go` are gone. `markdown/render.go` walks
+the `Block`/`Inline` model and emits upstream's styled lines exactly, so
+`tui/testdata/md_render_golden.txt` (upstream's `Markdown` component output) and
+`tui/testdata/md_golden.txt` (the Marked token projection) pass unchanged. It is
+driven by the narrow `Style` interface (`NopStyle` for tests and measurement)
+plus a `Terminal` of injected primitives (word wrap, visible width, background
+fill, image-line detection, OSC 8), which `tui` implements with its own
+functions, so neither package depends on the other's renderer internals.
+`markdown/layout.go` is the layout layer: the standalone `RenderSource`/`Render`
+entry points, the default `PlainTerminal`, and the ANSI-SGR/East-Asian-width
+wrap primitives. The earlier plan of a second, `Style`-driven layout tree was
+dropped when the two converged; there is one traversal, not two.
 
-Each stage is independently testable: a hand-written block lexer (no regexp), an inline
-parser, a width-aware layout that understands ANSI SGR runs and East Asian
-rune widths, and a styled line renderer behind a narrow `Style` interface
-(`NopStyle` for measurement). `Document.Update` adds incremental mode: it keeps
-the stable block prefix and re-lexes only the trailing run an append can affect.
+Stages: a hand-written block lexer (no regexp), an inline parser, and the
+styled line renderer. `Document.Update` adds incremental mode: it keeps the
+stable block prefix and re-lexes only the trailing run an append can affect.
 
 On the `tui/testdata/md_corpus.json` corpus the package matches Marked 18.0.11
 token for token, 79/79 cases, through a differential harness. On an Intel N150
@@ -692,11 +693,19 @@ token for token, 79/79 cases, through a differential harness. On an Intel N150
 
 | fixture | lexer vs `marked.lexer` | full render vs `marked.parse` |
 |---|---|---|
-| prose 3.96 KB | 348 MB/s vs 40.8 | 58.2 MB/s vs 36.7 (1.6x) |
-| prose 49.5 KB | 399 MB/s vs 41.2 | 71.5 MB/s vs 41.7 (1.7x) |
-| mixed 1.14 KB | 19.3 MB/s | 30.9 MB/s vs 5.04 (6.1x) |
-| doc 64 KB | 48.4 MB/s vs 9.15 | 27.2 MB/s vs 8.44 (3.2x) |
-| doc 1 MB | 44.9 MB/s vs 8.11 | 28.0 MB/s vs 7.30 (3.8x) |
+| prose 3.96 KB | 390 MB/s vs 40.8 | 52.2 MB/s vs 36.7 (1.4x) |
+| prose 49.5 KB | 419 MB/s vs 41.2 | 66.8 MB/s vs 41.7 (1.6x) |
+| mixed 1.14 KB | 33.3 MB/s | 16.3 MB/s vs 5.04 (3.2x) |
+| doc 64 KB | 35.7 MB/s vs 9.15 | 16.0 MB/s vs 8.44 (1.9x) |
+| doc 1 MB | 41.4 MB/s vs 8.11 | 18.8 MB/s vs 7.30 (2.6x) |
+
+The full-render column is the single renderer through `RenderSource` (the
+standalone `PlainTerminal`, no TUI padding); the component adds the TUI's own
+wrap and padding and measures 340 us for the 4 KB prose fixture and 154 us for
+the 1.1 KB mixed one. It is slower than the earlier standalone layout renderer
+(58/71/31/27/28 MB/s) because it now does the full parity work: next-block
+spacing, box tables, style-prefix tracking and the code-block indent.
+
 
 Marked's applicable optimizations were ported rather than its code: a
 markup-free inline source returns one text run sharing the source (its inline
@@ -733,7 +742,7 @@ The two options it replaces are slower on every fixture. glamour v1.0.0
 (15-135x slower) and 1.27-4.45 MB/s with syntax highlighting off (`notty`,
 15-16x slower); it is also 15-40x heavier in allocations and pulls in 27
 modules. chroma v2 (`quick.Highlight`, terminal256/monokai) tokenizes at
-0.41-0.43 MB/s, while the layout renderer draws the same fenced code at
+0.41-0.43 MB/s, while the renderer draws the same fenced code at
 138-262 MB/s. Measured in a throwaway module under `/tmp`; pier's `go.mod` is
 unchanged.
 

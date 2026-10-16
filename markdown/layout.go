@@ -1,15 +1,20 @@
 package markdown
 
 import (
-	"strconv"
 	"strings"
 	"unicode/utf8"
 )
 
-// RenderSource lexes src and renders it to styled lines at the given width.
+// This file is the layout layer: the standalone RenderSource/Render entry
+// points, the default PlainTerminal, and the width/wrap primitives. The block
+// and inline painting lives in render.go, over the Style interface; there is
+// one renderer, not a separate layout tree.
+
+// RenderSource lexes src and renders it to styled lines at the given width,
+// without padding: each line is wrapped but not padded to the full width. The
+// component wrapper applies margins and padding.
 func RenderSource(src string, width int, style Style) []string {
-	blocks := Lex(src)
-	return Render(blocks, width, style)
+	return Render(Lex(src), width, style)
 }
 
 // Render lays out blocks as styled lines no wider than width.
@@ -17,218 +22,37 @@ func Render(blocks []*Block, width int, style Style) []string {
 	if width < 1 {
 		width = 1
 	}
-	r := &renderer{width: width, style: style, lines: make([]string, 0, 64)}
-	r.renderBlocks(blocks, "")
-	return r.lines
-}
-
-type renderer struct {
-	width int
-	style Style
-	lines []string
-}
-
-func (r *renderer) emit(line string) { r.lines = append(r.lines, line) }
-
-func (r *renderer) renderBlocks(blocks []*Block, prefix string) {
-	for _, b := range blocks {
-		r.renderBlock(b, prefix)
-	}
-}
-
-// renderBlock renders one block with the given line prefix (a quote's `> ` or a
-// list's hanging indent).
-func (r *renderer) renderBlock(b *Block, prefix string) {
-	width := r.width - visibleWidth(prefix)
-	if width < 1 {
-		width = 1
-	}
-	switch b.Kind {
-	case BlockParagraph:
-		r.emitWrapped(renderInline(b.Inlines, r.style), width, prefix)
-	case BlockHeading:
-		r.emitWrapped(r.style.Heading(b.Level, renderInline(b.Inlines, r.style)), width, prefix)
-	case BlockCode:
-		r.emit(prefix + r.style.CodeBlockBorder("```"+b.Info))
-		for _, line := range strings.Split(b.Body, "\n") {
-			r.emit(prefix + r.style.CodeBlock(line))
+	renderer := NewRenderer(Options{Style: style, Terminal: PlainTerminal{}, LatexEnabled: true})
+	var lines []string
+	for i, b := range blocks {
+		var next *Block
+		if i+1 < len(blocks) {
+			next = blocks[i+1]
 		}
-		r.emit(prefix + r.style.CodeBlockBorder("```"))
-	case BlockThematicBreak:
-		r.emit(prefix + r.style.ThematicBreak(strings.Repeat("─", max(1, width))))
-	case BlockQuote:
-		r.renderBlocks(b.Blocks, prefix+r.style.QuoteBorder("> "))
-	case BlockList:
-		r.renderList(b, prefix)
-	case BlockTable:
-		r.renderTable(b, prefix)
-	case BlockHTML:
-		r.emitRawLines(b.Raw, prefix, r.style.HTML)
-	case BlockLatex:
-		r.emitRawLines(b.Raw, prefix, r.style.Plain)
-	case BlockSpace:
-		r.emit("")
-	}
-}
-
-func (r *renderer) emitRawLines(raw, prefix string, style func(string) string) {
-	for _, line := range strings.Split(strings.TrimRight(raw, "\n"), "\n") {
-		r.emit(prefix + style(line))
-	}
-}
-
-func (r *renderer) renderList(list *Block, prefix string) {
-	number := list.StartNumber
-	if number == 0 {
-		number = 1
-	}
-	for i, item := range list.Blocks {
-		marker := "- "
-		if list.Ordered {
-			marker = strconv.Itoa(number+i) + ". "
-		}
-		if item.Task {
-			if item.Checked {
-				marker += "[x] "
-			} else {
-				marker += "[ ] "
-			}
-		}
-		bullet := prefix + r.style.Bullet(marker)
-		indent := prefix + strings.Repeat(" ", visibleWidth(marker))
-		first := true
-		for _, child := range item.Blocks {
-			if child.Kind == BlockSpace {
-				r.emit("")
-				continue
-			}
-			childPrefix := indent
-			if first {
-				childPrefix = bullet
-			}
-			r.renderBlock(child, childPrefix)
-			first = false
+		for _, line := range renderer.RenderBlock(b, width, next) {
+			lines = append(lines, renderer.term.Wrap(line, width)...)
 		}
 	}
+	return lines
 }
 
-func (r *renderer) renderTable(table *Block, prefix string) {
-	cols := len(table.Align)
-	if len(table.Header) > cols {
-		cols = len(table.Header)
-	}
-	if cols == 0 {
-		return
-	}
-	widths := make([]int, cols)
-	header := make([][]Inline, cols)
-	for i := 0; i < cols; i++ {
-		header[i] = inlineSliceAt(table.headerInlines, i)
-		widths[i] = visibleWidth(renderInline(header[i], r.style))
-	}
-	rows := make([][][]Inline, len(table.Rows))
-	for ri := range table.Rows {
-		rows[ri] = make([][]Inline, cols)
-		for ci := 0; ci < cols; ci++ {
-			rows[ri][ci] = inlineSliceAt(table.rowInlines[ri], ci)
-			if w := visibleWidth(renderInline(rows[ri][ci], r.style)); w > widths[ci] {
-				widths[ci] = w
-			}
-		}
-	}
-	line := func(cells [][]Inline) string {
-		var b strings.Builder
-		b.WriteString(prefix)
-		b.WriteString("|")
-		for ci := 0; ci < cols; ci++ {
-			text := renderInline(cells[ci], r.style)
-			b.WriteString(" ")
-			b.WriteString(padCell(text, widths[ci], alignAt(table.Align, ci)))
-			b.WriteString(" |")
-		}
-		return b.String()
-	}
-	r.emit(line(header))
-	separator := make([][]Inline, cols)
-	for ci := 0; ci < cols; ci++ {
-		separator[ci] = []Inline{{Kind: InlineText, Text: strings.Repeat("─", max(1, widths[ci]))}}
-	}
-	r.emit(line(separator))
-	for _, row := range rows {
-		r.emit(line(row))
-	}
+// PlainTerminal is the default Terminal: the package's own wrap, width,
+// background and OSC 8 helpers, so the standalone renderer needs no terminal
+// library. The TUI injects its own terminal primitives instead.
+type PlainTerminal struct{}
+
+func (PlainTerminal) Wrap(text string, width int) []string { return wrapStyled(text, width) }
+
+func (PlainTerminal) VisibleWidth(text string) int { return visibleWidth(text) }
+
+func (PlainTerminal) ApplyBackground(line string, width int, bg func(text string) string) string {
+	return bg(line + repeatSpacesM(max(0, width-visibleWidth(line))))
 }
 
-func inlineSliceAt(grid [][]Inline, i int) []Inline {
-	if i < len(grid) {
-		return grid[i]
-	}
-	return nil
-}
+func (PlainTerminal) IsImageLine(string) bool { return false }
 
-func alignAt(aligns []Align, i int) Align {
-	if i < len(aligns) {
-		return aligns[i]
-	}
-	return AlignNone
-}
-
-func padCell(text string, width int, align Align) string {
-	gap := width - visibleWidth(text)
-	if gap < 0 {
-		gap = 0
-	}
-	switch align {
-	case AlignRight:
-		return strings.Repeat(" ", gap) + text
-	case AlignCenter:
-		left := gap / 2
-		return strings.Repeat(" ", left) + text + strings.Repeat(" ", gap-left)
-	default:
-		return text + strings.Repeat(" ", gap)
-	}
-}
-
-func (r *renderer) emitWrapped(styled string, width int, prefix string) {
-	for _, line := range wrapStyled(styled, width) {
-		r.emit(prefix + line)
-	}
-}
-
-// renderInline flattens inlines to a styled string.
-func renderInline(inlines []Inline, style Style) string {
-	var b strings.Builder
-	renderInlineInto(&b, inlines, style)
-	return b.String()
-}
-
-func renderInlineInto(b *strings.Builder, inlines []Inline, style Style) {
-	for _, in := range inlines {
-		switch in.Kind {
-		case InlineText:
-			b.WriteString(style.Plain(in.Text))
-		case InlineCode:
-			b.WriteString(style.Code(in.Text))
-		case InlineStrong:
-			b.WriteString(style.Bold(renderInline(in.Children, style)))
-		case InlineEmphasis:
-			b.WriteString(style.Italic(renderInline(in.Children, style)))
-		case InlineStrikethrough:
-			b.WriteString(style.Strikethrough(renderInline(in.Children, style)))
-		case InlineLink:
-			b.WriteString(style.Link(renderInline(in.Children, style)))
-		case InlineImage:
-			b.WriteString(style.Link(in.Text))
-		case InlineHardBreak:
-			b.WriteByte('\n')
-		case InlineEscape, InlineLatex:
-			b.WriteString(style.Plain(in.Text))
-		case InlineHTML:
-			b.WriteString(style.HTML(in.Text))
-		case InlineCheckbox:
-			// Rendered by the list marker.
-		}
-	}
+func (PlainTerminal) Hyperlink(text string, url string) string {
+	return "\x1b]8;;" + url + "\x1b\\" + text + "\x1b]8;;\x1b\\"
 }
 
 // wrapStyled wraps a styled string to width. Each word is a self-contained
@@ -266,7 +90,10 @@ func tokenizeStyled(line string) []styledToken {
 		}
 		body := cur.String()
 		text := wordPrefix + body
-		if wordPrefix != "" {
+		// Close the run only when it is still open. A style that the source
+		// already reset inside the word would otherwise get a second, redundant
+		// reset and make the escape count odd.
+		if active != "" {
 			text += "\x1b[0m"
 		}
 		tokens = append(tokens, styledToken{s: text, w: visibleWidth(body)})

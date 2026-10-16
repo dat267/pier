@@ -226,24 +226,7 @@ func (m *Markdown) Prepare(width int) {
 // renderOptions captures the component's styling for one render pass.
 func (m *Markdown) renderOptions() markdown.Options {
 	return markdown.Options{
-		Theme: markdown.Theme{
-			Heading:         m.Theme.Heading,
-			Link:            m.Theme.Link,
-			LinkURL:         m.Theme.LinkURL,
-			Code:            m.Theme.Code,
-			CodeBlock:       m.Theme.CodeBlock,
-			CodeBlockBorder: m.Theme.CodeBlockBorder,
-			Quote:           m.Theme.Quote,
-			QuoteBorder:     m.Theme.QuoteBorder,
-			Hr:              m.Theme.Hr,
-			ListBullet:      m.Theme.ListBullet,
-			Bold:            m.Theme.Bold,
-			Italic:          m.Theme.Italic,
-			Strikethrough:   m.Theme.Strikethrough,
-			Underline:       m.Theme.Underline,
-			HighlightCode:   m.Theme.HighlightCode,
-			CodeBlockIndent: m.Theme.CodeBlockIndent,
-		},
+		Style:                      markdownStyle{theme: m.Theme},
 		Default:                    markdownDefaultStyle(m.DefaultTextStyle),
 		Terminal:                   markdownTerminal{},
 		Hyperlinks:                 GetTerminalCapabilities().Hyperlinks,
@@ -253,7 +236,113 @@ func (m *Markdown) renderOptions() markdown.Options {
 		Latex: func(source string, display bool) (string, bool) {
 			return RenderLatex(source, RenderLatexOptions{Display: display})
 		},
+		HighlightCode:   m.Theme.HighlightCode,
+		CodeBlockIndent: m.Theme.CodeBlockIndent,
 	}
+}
+
+// markdownStyle adapts the component's MarkdownTheme to the renderer's Style
+// surface. Nil functions are identity (the fields are optional). The heading
+// level composition (bold, and underline for H1) is done by the renderer, so
+// the heading func is applied as-is.
+type markdownStyle struct{ theme MarkdownTheme }
+
+func (s markdownStyle) Bold(text string) string {
+	if s.theme.Bold == nil {
+		return text
+	}
+	return s.theme.Bold(text)
+}
+
+func (s markdownStyle) Italic(text string) string {
+	if s.theme.Italic == nil {
+		return text
+	}
+	return s.theme.Italic(text)
+}
+
+func (s markdownStyle) Strikethrough(text string) string {
+	if s.theme.Strikethrough == nil {
+		return text
+	}
+	return s.theme.Strikethrough(text)
+}
+
+func (s markdownStyle) Underline(text string) string {
+	if s.theme.Underline == nil {
+		return text
+	}
+	return s.theme.Underline(text)
+}
+
+func (s markdownStyle) Code(text string) string {
+	if s.theme.Code == nil {
+		return text
+	}
+	return s.theme.Code(text)
+}
+
+func (s markdownStyle) CodeBlock(text string) string {
+	if s.theme.CodeBlock == nil {
+		return text
+	}
+	return s.theme.CodeBlock(text)
+}
+
+func (s markdownStyle) CodeBlockBorder(text string) string {
+	if s.theme.CodeBlockBorder == nil {
+		return text
+	}
+	return s.theme.CodeBlockBorder(text)
+}
+
+func (s markdownStyle) Link(text string) string {
+	if s.theme.Link == nil {
+		return text
+	}
+	return s.theme.Link(text)
+}
+
+func (s markdownStyle) LinkURL(text string) string {
+	if s.theme.LinkURL == nil {
+		return text
+	}
+	return s.theme.LinkURL(text)
+}
+
+func (s markdownStyle) Heading(level int, text string) string {
+	if s.theme.Heading == nil {
+		return text
+	}
+	return s.theme.Heading(text)
+}
+
+func (s markdownStyle) Quote(text string) string {
+	if s.theme.Quote == nil {
+		return text
+	}
+	return s.theme.Quote(text)
+}
+
+func (s markdownStyle) QuoteBorder(text string) string {
+	if s.theme.QuoteBorder == nil {
+		return text
+	}
+	return s.theme.QuoteBorder(text)
+}
+
+func (s markdownStyle) Bullet(text string) string {
+	if s.theme.ListBullet == nil {
+		return text
+	}
+	return s.theme.ListBullet(text)
+}
+
+func (s markdownStyle) ThematicBreak(text string) string {
+	if s.theme.Hr == nil {
+		return text
+	}
+	return s.theme.Hr(text)
 }
 
 func markdownDefaultStyle(style *DefaultTextStyle) *markdown.DefaultStyle {
