@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	jsonv2 "encoding/json/v2"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -482,7 +481,9 @@ func LoadEntriesFromFileBuffered(filePath string) ([]FileEntry, []byte, bool, er
 
 	workers := 1
 	if len(data) >= parallelSessionScanBytes {
-		workers = runtime.GOMAXPROCS(0)
+		// One worker per MiB keeps chunk coordination below the scan cost; the
+		// cap keeps a just-over-threshold file from spawning a worker per core.
+		workers = min(runtime.GOMAXPROCS(0), max(1, len(data)/(1<<20)))
 	}
 	var entries []FileEntry
 	if workers <= 1 {
@@ -1113,10 +1114,6 @@ const (
 	maxSessionHeaderScanBytes   = 1024 * 1024
 )
 
-// errSessionHeaderScanLimit reports a header that lies beyond the discovery
-// scan limit (upstream SessionHeaderScanLimitError); discovery swallows it.
-var errSessionHeaderScanLimit = errors.New("session header exceeds the discovery scan limit")
-
 // FindMostRecentSession returns the newest session file, optionally filtered
 // by cwd (port of findMostRecentSession). Candidates are ordered by mtime
 // first (upstream stats and sorts before reading any header), so an older file
@@ -1151,7 +1148,7 @@ func FindMostRecentSession(sessionDir string, cwd string) *string {
 		return files[i].modTime.After(files[j].modTime)
 	})
 	for _, file := range files {
-		header := readSessionHeaderForDiscovery(file.path)
+		header := readSessionHeader(file.path)
 		if header == nil {
 			continue
 		}
@@ -1166,12 +1163,14 @@ func FindMostRecentSession(sessionDir string, cwd string) *string {
 
 // readSessionHeader returns the file's first parsable entry when it is a
 // session header. Blank and malformed lines are skipped; the first parsable
-// entry decides, so a non-session entry yields (nil, nil). A header that lies
-// beyond maxSessionHeaderScanBytes yields errSessionHeaderScanLimit.
-func readSessionHeader(filePath string) (*SessionHeader, error) {
+// entry decides, so a non-session entry yields nil. Unreadable files and
+// headers beyond maxSessionHeaderScanBytes also yield nil: upstream's
+// readSessionHeader throws SessionHeaderScanLimitError there, but only its
+// open() fallback distinguishes that case, and the port has no such caller.
+func readSessionHeader(filePath string) *SessionHeader {
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, err
+		return nil
 	}
 	defer file.Close()
 	buffer := make([]byte, sessionHeaderReadBufferSize)
@@ -1191,7 +1190,7 @@ func readSessionHeader(filePath string) (*SessionHeader, error) {
 				}
 				line = append(line, chunk[:newline]...)
 				if header, decided := parseSessionHeaderCandidate(line); decided {
-					return header, nil
+					return header
 				}
 				line = line[:0]
 				chunk = chunk[newline+1:]
@@ -1200,12 +1199,12 @@ func readSessionHeader(filePath string) (*SessionHeader, error) {
 		if readErr == io.EOF {
 			header, decided := parseSessionHeaderCandidate(line)
 			if decided {
-				return header, nil
+				return header
 			}
-			return nil, nil
+			return nil
 		}
 		if readErr != nil {
-			return nil, readErr
+			return nil
 		}
 	}
 	// The limit is reached. A final header ending exactly at the limit is still
@@ -1213,16 +1212,15 @@ func readSessionHeader(filePath string) (*SessionHeader, error) {
 	probe := make([]byte, 1)
 	read, err := file.Read(probe)
 	if err != nil && err != io.EOF {
-		return nil, err
+		return nil
 	}
 	if read == 0 {
 		header, decided := parseSessionHeaderCandidate(line)
 		if decided {
-			return header, nil
+			return header
 		}
-		return nil, nil
 	}
-	return nil, errSessionHeaderScanLimit
+	return nil
 }
 
 // parseSessionHeaderCandidate inspects one scanned line. decided is true when
@@ -1239,14 +1237,6 @@ func parseSessionHeaderCandidate(line []byte) (*SessionHeader, bool) {
 		return entry.Header, true
 	}
 	return nil, true
-}
-
-// readSessionHeaderForDiscovery is the bounded, best-effort scan discovery
-// uses: unreadable or oversized files are not sessions (upstream
-// readSessionHeaderForDiscovery).
-func readSessionHeaderForDiscovery(filePath string) *SessionHeader {
-	header, _ := readSessionHeader(filePath)
-	return header
 }
 
 // AppendUsage records model-attributed usage that does not participate in LLM
