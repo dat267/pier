@@ -736,6 +736,11 @@ the Mistral reader. A 65,536-byte event arriving in 128-byte reads allocated
 and searches from the possible split delimiter suffix. The fixture allocates
 209 KB, and a regression test verifies CRLF event boundaries split across reads.
 
+`piMessagesConverter` also used `+=` on cumulative text and thinking blocks. It
+now keeps a builder per content index and drops it at the block's end; a 64 KiB
+text-delta fixture fell from 18.07 MB to 298 KB, and the thinking fixture uses
+302 KB.
+
 ## Responses stream delta assembly
 
 `ProcessResponsesStream` used to concatenate every text and reasoning delta onto

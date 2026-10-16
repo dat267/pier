@@ -93,6 +93,57 @@ func TestParsePiMessagesEvent(t *testing.T) {
 	}
 }
 
+// Mirrors text_delta assembly in packages/ai/src/api/pi-messages.ts.
+func TestPiMessagesTextDeltasAvoidPrefixCopies(t *testing.T) {
+	const chunks = 512
+	delta := strings.Repeat("x", 128)
+	converter := newPiMessagesConverter(&Model{API: APIPiMessages})
+	converter.convert(&PiMessagesEvent{Type: "text_start", ContentIndex: 0})
+
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	for range chunks {
+		converter.convert(&PiMessagesEvent{Type: "text_delta", ContentIndex: 0, Delta: delta})
+	}
+	runtime.ReadMemStats(&after)
+
+	want := strings.Repeat(delta, chunks)
+	text, ok := converter.partial.Content[0].(TextContent)
+	if !ok || text.Text != want {
+		t.Fatalf("assembled text = %T length %d, want %d bytes", converter.partial.Content[0], len(text.Text), len(want))
+	}
+	allocated := after.TotalAlloc - before.TotalAlloc
+	t.Logf("assembling %d bytes of pi-messages text deltas allocated %d bytes", len(want), allocated)
+	if allocated > uint64(len(want))*8 {
+		t.Fatalf("assembling %d bytes allocated %d bytes, want less than %d", len(want), allocated, len(want)*8)
+	}
+}
+
+func TestPiMessagesThinkingDeltasAvoidPrefixCopies(t *testing.T) {
+	const chunks = 512
+	delta := strings.Repeat("x", 128)
+	converter := newPiMessagesConverter(&Model{API: APIPiMessages})
+	converter.convert(&PiMessagesEvent{Type: "thinking_start", ContentIndex: 0})
+
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	for range chunks {
+		converter.convert(&PiMessagesEvent{Type: "thinking_delta", ContentIndex: 0, Delta: delta})
+	}
+	runtime.ReadMemStats(&after)
+
+	want := strings.Repeat(delta, chunks)
+	thinking, ok := converter.partial.Content[0].(ThinkingContent)
+	if !ok || thinking.Thinking != want {
+		t.Fatalf("assembled thinking = %T length %d, want %d bytes", converter.partial.Content[0], len(thinking.Thinking), len(want))
+	}
+	allocated := after.TotalAlloc - before.TotalAlloc
+	t.Logf("assembling %d bytes of pi-messages thinking deltas allocated %d bytes", len(want), allocated)
+	if allocated > uint64(len(want))*8 {
+		t.Fatalf("assembling %d bytes allocated %d bytes, want less than %d", len(want), allocated, len(want)*8)
+	}
+}
+
 func TestPiMessagesErrorBodyParsing(t *testing.T) {
 	body := `{"error":{"message":"nope","code":"rate_limited","details":{"retry":1}}}`
 	parsed := parsePiMessagesErrorBody(body)

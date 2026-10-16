@@ -135,8 +135,9 @@ func createPiMessagesResponseError(model *Model, requestURL *url.URL, response *
 // piMessagesConverter folds streamed events into one assistant message
 // (upstream createEventConverter).
 type piMessagesConverter struct {
-	partial  *AssistantMessage
-	toolJSON map[int]string
+	partial        *AssistantMessage
+	toolJSON       map[int]string
+	contentBuffers map[int]*strings.Builder
 }
 
 func newPiMessagesConverter(model *Model) *piMessagesConverter {
@@ -146,8 +147,19 @@ func newPiMessagesConverter(model *Model) *piMessagesConverter {
 			Usage: emptyPiMessagesUsage(), StopReason: StopPending,
 			Timestamp: time.Now().UnixMilli(),
 		},
-		toolJSON: map[int]string{},
+		toolJSON:       map[int]string{},
+		contentBuffers: map[int]*strings.Builder{},
 	}
+}
+
+func (c *piMessagesConverter) contentBuffer(index int, initial string) *strings.Builder {
+	buffer := c.contentBuffers[index]
+	if buffer == nil {
+		buffer = &strings.Builder{}
+		buffer.WriteString(initial)
+		c.contentBuffers[index] = buffer
+	}
+	return buffer
 }
 
 func emptyPiMessagesUsage() Usage {
@@ -185,10 +197,13 @@ func (c *piMessagesConverter) convert(event *PiMessagesEvent) (AssistantMessageE
 		return AssistantMessageEvent{Type: EventStart, Partial: partial}, false
 	case "text_start":
 		setPiContent(partial, event.ContentIndex, TextContent{Text: ""})
+		c.contentBuffers[event.ContentIndex] = &strings.Builder{}
 		return AssistantMessageEvent{Type: EventTextStart, ContentIndex: event.ContentIndex, Partial: partial}, false
 	case "text_delta":
 		if text, ok := getPiContent(partial, event.ContentIndex).(TextContent); ok {
-			text.Text += event.Delta
+			buffer := c.contentBuffer(event.ContentIndex, text.Text)
+			_, _ = buffer.WriteString(event.Delta)
+			text.Text = buffer.String()
 			setPiContent(partial, event.ContentIndex, text)
 		}
 		return AssistantMessageEvent{Type: EventTextDelta, ContentIndex: event.ContentIndex, Delta: event.Delta, Partial: partial}, false
@@ -197,14 +212,18 @@ func (c *piMessagesConverter) convert(event *PiMessagesEvent) (AssistantMessageE
 			text.Text = event.Content
 			text.TextSignature = event.Signature
 			setPiContent(partial, event.ContentIndex, text)
+			delete(c.contentBuffers, event.ContentIndex)
 		}
 		return AssistantMessageEvent{Type: EventTextEnd, ContentIndex: event.ContentIndex, Content: event.Content, Partial: partial}, false
 	case "thinking_start":
 		setPiContent(partial, event.ContentIndex, ThinkingContent{Thinking: ""})
+		c.contentBuffers[event.ContentIndex] = &strings.Builder{}
 		return AssistantMessageEvent{Type: EventThinkingStart, ContentIndex: event.ContentIndex, Partial: partial}, false
 	case "thinking_delta":
 		if thinking, ok := getPiContent(partial, event.ContentIndex).(ThinkingContent); ok {
-			thinking.Thinking += event.Delta
+			buffer := c.contentBuffer(event.ContentIndex, thinking.Thinking)
+			_, _ = buffer.WriteString(event.Delta)
+			thinking.Thinking = buffer.String()
 			setPiContent(partial, event.ContentIndex, thinking)
 		}
 		return AssistantMessageEvent{Type: EventThinkingDelta, ContentIndex: event.ContentIndex, Delta: event.Delta, Partial: partial}, false
@@ -216,6 +235,7 @@ func (c *piMessagesConverter) convert(event *PiMessagesEvent) (AssistantMessageE
 				thinking.Redacted = *event.Redacted
 			}
 			setPiContent(partial, event.ContentIndex, thinking)
+			delete(c.contentBuffers, event.ContentIndex)
 		}
 		return AssistantMessageEvent{Type: EventThinkingEnd, ContentIndex: event.ContentIndex, Content: event.Content, Partial: partial}, false
 	case "toolcall_start":
