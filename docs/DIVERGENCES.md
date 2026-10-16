@@ -1750,3 +1750,25 @@ their syntax colors. Removing the dependency drops `github.com/alecthomas/chroma
 and its `dlclark/regexp2` indirect dependency and the lexer registry init at
 startup: the binary fell from 31.1 MB to 27.1 MB (-3.9 MB), and `pier --version`
 went from 12.3 ms to 5.3 ms median (-7 ms) on the same machine.
+
+## D228
+
+**Mid-line `$$`/`\[` are literal text, not a paragraph split.**
+
+Upstream's block LaTeX extension implements `start(source)` as
+`/(?:^|\n) {0,3}(?:\$\$|\\\[)/`, and Marked reads a returned index as "the
+preceding paragraph ends here". So `a $$x^2$$ b` parses as a paragraph `a`
+followed by a pending `latexBlock` whose raw is `" $$x^2$$ b"`, and renders as
+three lines with the raw display math; `a \[x^2\] b` splits the same way. The
+same hook makes the whole parse quadratic: `start` scans the remaining source
+once per block. Plain `marked.lexer` is linear (25.6 to 25.2 MB/s from 32 KB to
+256 KB on paragraphs-only); adding only that `start` hook drops it to 5.7 to
+0.9 MB/s, and pi's component render measures 2.36 ms at 16 KB against 302 ms at
+256 KB.
+
+pier treats `$$`/`\[` as block LaTeX only at a line start (after at most three
+spaces) and as literal text otherwise, so `a $$x^2$$ b` stays one paragraph.
+Only this mid-line case differs; line-start block math, inline `$…$` (including
+upstream's closed-span validity checks in `markdown/inline.go`), pending spans
+and `\(…\)` all match upstream. Reproducing pi here would import the quadratic
+`start` seam for an artifact no user asks for.

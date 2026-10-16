@@ -187,15 +187,16 @@ func ParseInline(src string) []Inline {
 				if !isWhitespaceRune(next) {
 					if close := findInlineDollar(src, i+1); close >= 0 {
 						inner := src[i+1 : close]
-						flush()
-						out = append(out, Inline{Kind: InlineLatex, Raw: src[i : close+1], Text: inner})
-						i = close + 1
-						continue
-					}
-					// A `$…` with no closing `$` yet is a streamed math span when
-					// the tail looks like math; upstream marks it pending and
-					// renders its raw source (markdown.ts tokenizeInlineLatex).
-					if looksLikePendingDollarMath(src[i+1:]) {
+						if !rejectInlineDollar(inner, src[close+1:]) {
+							flush()
+							out = append(out, Inline{Kind: InlineLatex, Raw: src[i : close+1], Text: inner})
+							i = close + 1
+							continue
+						}
+					} else if looksLikePendingDollarMath(src[i+1:]) {
+						// A `$…` with no closing `$` yet is a streamed math span when
+						// the tail looks like math; upstream marks it pending and
+						// renders its raw source (markdown.ts tokenizeInlineLatex).
 						flush()
 						out = append(out, Inline{Kind: InlineLatex, Raw: src[i:], Text: src[i+1:], Pending: true})
 						i = len(src)
@@ -248,6 +249,57 @@ func findInlineDollar(src string, from int) int {
 		}
 	}
 	return -1
+}
+
+// rejectInlineDollar mirrors upstream's closed-`$` validity checks
+// (packages/tui/src/components/markdown.ts tokenizeInlineLatex): a `$…$` span
+// is not math when its inner text ends with whitespace, the character after the
+// closing `$` is a digit, the inner text is an identifier followed by a word
+// (the currency/constant heuristic), or the inner text contains a backtick. It
+// keeps ordinary prose with prices from being detected as math.
+func rejectInlineDollar(inner, after string) bool {
+	if inner == "" {
+		return true
+	}
+	if last, _ := utf8.DecodeLastRuneInString(inner); isWhitespaceRune(last) {
+		return true
+	}
+	if strings.IndexByte(inner, '`') >= 0 {
+		return true
+	}
+	if after != "" && after[0] >= '0' && after[0] <= '9' {
+		return true
+	}
+	return looksLikeDollarIdentifier(inner) && startsWithWord(after)
+}
+
+// looksLikeDollarIdentifier matches upstream's identifier/currency heuristic,
+// an uppercase constant such as `X`, `FOO_BAR` or `X+`.
+func looksLikeDollarIdentifier(s string) bool {
+	if s == "" || !(s[0] == '_' || (s[0] >= 'A' && s[0] <= 'Z')) {
+		return false
+	}
+	i := 0
+	for i < len(s) && (s[i] == '_' || (s[i] >= 'A' && s[i] <= 'Z') || (s[i] >= '0' && s[i] <= '9')) {
+		i++
+	}
+	if i == len(s) {
+		return true
+	}
+	// At most one trailing character that is not alphanumeric, `_` or whitespace.
+	if i != len(s)-1 {
+		return false
+	}
+	c := s[i]
+	return !isAlnum(c) && c != '_' && !isWhitespaceRune(rune(c))
+}
+
+// startsWithWord matches upstream's /^[A-Za-z_]/.
+func startsWithWord(s string) bool {
+	if s == "" {
+		return false
+	}
+	return s[0] == '_' || isASCIILetter(s[0])
 }
 
 // looksLikePendingDollarMath reports whether an unterminated `$…` tail looks

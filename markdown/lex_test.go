@@ -287,3 +287,35 @@ func TestInlinePendingDollarMath(t *testing.T) {
 		t.Fatal("$ followed by whitespace must not open math")
 	}
 }
+
+// TestInlineDollarHeuristics pins upstream's closed-`$` validity checks
+// (tokenizeInlineLatex): ordinary prose with prices and identifier-like spans
+// stays text, real math still detects.
+func TestInlineDollarHeuristics(t *testing.T) {
+	cases := []struct {
+		src   string
+		latex bool
+	}{
+		{"a $x^2$ b", true},
+		{"$5$", true},
+		{"a $\\alpha$ b", true},
+		{"a \\(x\\) b", true},
+		{"a $x$2 b", false},
+		{"a $x $ b", false},
+		{"a $a`b$ c", false},
+		{"cost $5 and $6 today", false},
+		{"$X$y", false},
+		{"a $ x$ b", false},
+	}
+	for _, tc := range cases {
+		found := false
+		for _, in := range ParseInline(tc.src) {
+			if in.Kind == InlineLatex && !in.Pending {
+				found = true
+			}
+		}
+		if found != tc.latex {
+			t.Errorf("%q: latex=%v, want %v (%+v)", tc.src, found, tc.latex, ParseInline(tc.src))
+		}
+	}
+}

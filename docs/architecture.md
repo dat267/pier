@@ -713,9 +713,12 @@ text tokenizer consumes to the next special character and merges runs), a
 paragraph is a source slice instead of a builder copy, and block and line
 slices are preallocated. These took prose lexing from 112 to 348 MB/s and 23
 to 3 allocations per 3.96 KB. The inline LaTeX tokenizer follows upstream's
-`tokenizeInlineLatex` including its pending span: an unterminated `$…` whose
-tail looks like math, or an unterminated `\(`, becomes a pending LaTeX token
-that renders its raw source instead of going through the LaTeX renderer.
+`tokenizeInlineLatex`: its closed-span validity checks (a span whose text ends
+with whitespace, is followed by a digit, is an identifier followed by a word, or
+contains a backtick stays literal text) and its pending span, an unterminated
+`$…` whose tail looks like math, or an unterminated `\(`, that renders its raw
+source instead of going through the LaTeX renderer. Mid-line `$$`/`\[` stay
+literal text rather than splitting the paragraph (D228).
 Incremental streaming of 500 growing paragraphs
 is 2.27 ms / 3.8 MB versus 196 ms / 312 MB re-lexing each prefix, and is
 value-identical to `Lex` at every prefix (byte-by-byte, random-chunk,
