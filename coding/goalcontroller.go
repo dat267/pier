@@ -167,6 +167,44 @@ func (c *GoalController) Snapshot() goal.MachineSnapshot {
 	return c.machine.Snapshot()
 }
 
+func goalRoundDetails(goalID string, turn int) map[string]any {
+	return map[string]any{"kind": "round", "turn": turn, "goalId": goalID}
+}
+
+// roundPromptIfMissing restores the reserved round's hidden prompt when
+// compaction removed it from the live context. D224: upstream queues this
+// prompt once at agent_before_settle, so a mid-round compaction can otherwise
+// remove it before the current round settles.
+func (c *GoalController) roundPromptIfMissing(messages []ai.Message) *ai.CustomMessage {
+	snapshot := c.Snapshot()
+	if snapshot.Goal == nil || snapshot.Goal.Phase != goal.PhaseActive || !snapshot.Goal.Armed || snapshot.PendingTurn == nil {
+		return nil
+	}
+	turn := *snapshot.PendingTurn
+	for _, message := range messages {
+		custom, ok := message.(*ai.CustomMessage)
+		if !ok || custom.Role != RoleCustom {
+			continue
+		}
+		var fields customMessageFields
+		if json.Unmarshal(custom.Content, &fields) != nil || fields.CustomType != goal.GoalEventType {
+			continue
+		}
+		var details struct {
+			Kind   string `json:"kind"`
+			Turn   int    `json:"turn"`
+			GoalID string `json:"goalId"`
+		}
+		if json.Unmarshal(fields.Details, &details) == nil && details.Kind == "round" &&
+			details.Turn == turn && details.GoalID == snapshot.Goal.ID {
+			return nil
+		}
+	}
+	content := goal.GoalRoundPrompt(*snapshot.Goal, turn, time.Now())
+	details, _ := json.Marshal(goalRoundDetails(snapshot.Goal.ID, turn))
+	return goalEventMessage(goal.GoalEventType, content, false, details)
+}
+
 // Apply executes the machine's effects against the session.
 func (c *GoalController) Apply(effects []goal.Effect) {
 	mutated := false
@@ -180,7 +218,15 @@ func (c *GoalController) Apply(effects []goal.Effect) {
 			c.sink.AppendGoalEntry(typed.EntryType, data)
 			mutated = true
 		case goal.SendMessageEffect:
-			details, _ := json.Marshal(typed.Details)
+			detailValues := typed.Details
+			if typed.TriggerTurn && typed.CustomType == goal.GoalEventType && typed.Details["kind"] == "round" {
+				if turn, ok := typed.Details["turn"].(int); ok {
+					if snapshot := c.Snapshot().Goal; snapshot != nil {
+						detailValues = goalRoundDetails(snapshot.ID, turn)
+					}
+				}
+			}
+			details, _ := json.Marshal(detailValues)
 			c.sink.SendGoalMessage(typed.CustomType, typed.Content, typed.Display, details, typed.TriggerTurn)
 		case goal.NotifyEffect:
 			c.notice(typed.Message, typed.Level)
@@ -257,7 +303,11 @@ func (c *GoalController) AgentEnd(event *agent.AgentEvent) {
 	}
 	for _, effect := range settle.Effects {
 		if round, ok := effect.(goal.ContinueRoundEffect); ok {
-			details, _ := json.Marshal(map[string]any{"kind": "round", "turn": round.Turn})
+			detailsValues := map[string]any{"kind": "round", "turn": round.Turn}
+			if snapshot := c.Snapshot().Goal; snapshot != nil {
+				detailsValues = goalRoundDetails(snapshot.ID, round.Turn)
+			}
+			details, _ := json.Marshal(detailsValues)
 			c.sink.SendGoalMessage(goal.GoalEventType, round.Content, false, details, true)
 			return
 		}

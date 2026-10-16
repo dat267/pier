@@ -330,6 +330,40 @@ func TestGoalControllerCommandStatus(t *testing.T) {
 	}
 }
 
+func TestGoalRoundReminderDoesNotReusePreviousGoalsTurn(t *testing.T) {
+	controller, _ := newGoalControllerTest(t)
+	controller.mu.Lock()
+	result := controller.machine.Dispatch(goal.GoalSetEvent{Objective: "current objective"})
+	controller.mu.Unlock()
+	if result.IsError {
+		t.Fatalf("set goal: %v", result.Reply)
+	}
+	previous := goalEventMessage(
+		goal.GoalEventType,
+		"<goal_round><untrusted_objective>previous objective</untrusted_objective> Round 1.</goal_round>",
+		false,
+		json.RawMessage(`{"kind":"round","turn":1,"goalId":"previous-goal"}`),
+	)
+	reminder := controller.roundPromptIfMissing([]ai.Message{previous})
+	if reminder == nil {
+		t.Fatal("previous goal's turn 1 prompt suppressed the current goal's reminder")
+	}
+	var fields customMessageFields
+	if err := json.Unmarshal(reminder.Content, &fields); err != nil {
+		t.Fatal(err)
+	}
+	var content string
+	if err := json.Unmarshal(fields.Content, &content); err != nil || !strings.Contains(content, "current objective") {
+		t.Fatalf("reconciled prompt = %q err = %v", content, err)
+	}
+	var details struct {
+		GoalID string `json:"goalId"`
+	}
+	if err := json.Unmarshal(fields.Details, &details); err != nil || details.GoalID != controller.Snapshot().Goal.ID {
+		t.Fatalf("reconciled goal id = %q err = %v", details.GoalID, err)
+	}
+}
+
 // TestGoalEventMessageIsInvisibleButReachesTheModel pins that the goal round is
 // a display:false custom message (so it stays out of the transcript) whose
 // content still converts to a model-visible user message.

@@ -439,6 +439,11 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 			prepared = []ai.Message{update}
 		}
 		state := s.Agent.State()
+		if s.Goal != nil {
+			if reminder := s.Goal.roundPromptIfMissing(state.Messages); reminder != nil {
+				prepared = append(prepared, reminder)
+			}
+		}
 		updated := turn.Context
 		updated.Messages = state.Messages
 		updated.Tools = append([]agent.AgentTool{}, state.Tools...)

@@ -1642,3 +1642,29 @@ Tests: `internal/goal`'s state/machine/command/render suites,
 `coding/goalcontroller_test.go` (effect application, replay, tool exposure,
 continuation/error/abort outcomes) and
 `coding/interactive/goalrender_test.go` plus `toolrenderer_goal_test.go`.
+
+## D224
+
+**Reconcile a pending goal round's hidden prompt after compaction.**
+
+The upstream goal extension queues one `pi-goal-event` round message at
+`agent_before_settle` (`~/.pi/agent/extensions/goal/index.ts`). A compaction
+between tool calls can summarize or remove that message while the round is
+still active. The machine retains its pending turn, but the next model request
+may no longer have the round instructions. `GoalController.roundPromptIfMissing`
+checks the post-compaction agent messages before each next assistant request
+and restores the hidden round message only when no `pi-goal-event` round
+matches the active goal id and turn. Round-event details carry the current
+`goalId`, so a prior goal's round 1 cannot suppress a different goal's round 1.
+Paused, completed, and unarmed goals do not inject a reminder. Matching the
+custom event type, goal id, and turn avoids duplicates.
+
+This Go-port-local repair borrows the per-request reminder reconciliation
+pattern in OpenCode's Plan plugin (`packages/core/src/plugin/plan.ts`, commit
+`37e3912d8ea5814593b8591bdc85f91cb69949e2`); the upstream goal extension does
+not reconcile round prompts this way.
+
+Tests: `TestGoalRoundPromptSurvivesCompactionWithinRound`
+(`coding/goal_compaction_test.go`) and
+`TestGoalRoundReminderDoesNotReusePreviousGoalsTurn`
+(`coding/goalcontroller_test.go`).
