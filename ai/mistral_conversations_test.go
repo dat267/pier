@@ -7,12 +7,66 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
 )
 
 // Tests for api/mistral-conversations.ts.
+
+type chunkedMistralReader struct {
+	data      []byte
+	chunkSize int
+}
+
+func (r *chunkedMistralReader) Read(dst []byte) (int, error) {
+	if len(r.data) == 0 {
+		return 0, io.EOF
+	}
+	n := min(len(dst), len(r.data), r.chunkSize)
+	copy(dst, r.data[:n])
+	r.data = r.data[n:]
+	return n, nil
+}
+
+func TestMistralChunkedUnterminatedEventAllocationIsLinear(t *testing.T) {
+	payload := []byte(strings.Repeat("x", 64*1024))
+	reader := &chunkedMistralReader{data: payload, chunkSize: 128}
+	output := &AssistantMessage{}
+	stream := NewAssistantMessageEventStream()
+
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	err := consumeMistralChatStream(ctxpkg.Background(), &Model{}, output, stream, reader, nil)
+	runtime.ReadMemStats(&after)
+	if err != nil {
+		t.Fatalf("consume stream: %v", err)
+	}
+	allocated := after.TotalAlloc - before.TotalAlloc
+	t.Logf("assembling a %d-byte unterminated event allocated %d bytes", len(payload), allocated)
+	if allocated > uint64(len(payload))*8 {
+		t.Fatalf("assembling a %d-byte event allocated %d bytes, want less than %d", len(payload), allocated, len(payload)*8)
+	}
+}
+
+func TestMistralStreamBoundarySplitAcrossReads(t *testing.T) {
+	body := []byte("data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}\n\ndata: [DONE]\n\n")
+	output := &AssistantMessage{}
+	err := consumeMistralChatStream(
+		ctxpkg.Background(), &Model{}, output, NewAssistantMessageEventStream(),
+		&chunkedMistralReader{data: body, chunkSize: 7}, nil,
+	)
+	if err != nil {
+		t.Fatalf("consume stream: %v", err)
+	}
+	if len(output.Content) != 1 {
+		t.Fatalf("content = %+v, want one block", output.Content)
+	}
+	if text, ok := output.Content[0].(TextContent); !ok || text.Text != "ok" {
+		t.Fatalf("text = %+v, want %q", output.Content[0], "ok")
+	}
+}
 
 func mistralModel(baseURL string) *Model {
 	return &Model{

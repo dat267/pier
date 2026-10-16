@@ -556,6 +556,14 @@ func parseMistralEvent(raw string) (*mistralCompletionEvent, bool, error) {
 
 var mistralEventBoundary = regexp.MustCompile(`\r\n\r\n|\r\n\r|\r\n\n|\r\r\n|\n\r\n|\r\r|\n\r|\n\n`)
 
+// The longest delimiter is four bytes, so retain its possible three-byte prefix.
+const mistralEventBoundaryOverlap = 3
+
+// nextMistralEventSearchStart returns the earliest untested boundary position.
+func nextMistralEventSearchStart(length int) int {
+	return max(0, length-mistralEventBoundaryOverlap)
+}
+
 // consumeMistralChatStream assembles the streamed deltas into the message
 // (upstream consumeChatStream).
 func consumeMistralChatStream(
@@ -563,7 +571,9 @@ func consumeMistralChatStream(
 	body io.Reader, onProviderStreamEvent func(json.RawMessage, *Model),
 ) error {
 	reader := bufio.NewReader(body)
-	buffer := ""
+	var buffer bytes.Buffer
+	searchFrom := 0
+	chunk := make([]byte, 8192)
 	state := &mistralStreamState{toolBlocks: map[string]int{}, partialArgs: map[int]string{}}
 
 	handle := func(raw string) (done bool, err error) {
@@ -588,17 +598,21 @@ func consumeMistralChatStream(
 		if ctxErr(ctx) != nil {
 			return ctxErr(ctx)
 		}
-		chunk := make([]byte, 8192)
 		read, err := reader.Read(chunk)
 		if read > 0 {
-			buffer += string(chunk[:read])
+			_, _ = buffer.Write(chunk[:read])
 			for {
-				location := mistralEventBoundary.FindStringIndex(buffer)
+				pending := buffer.Bytes()
+				location := mistralEventBoundary.FindIndex(pending[searchFrom:])
 				if location == nil {
+					searchFrom = nextMistralEventSearchStart(len(pending))
 					break
 				}
-				raw := buffer[:location[0]]
-				buffer = buffer[location[1]:]
+				start := searchFrom + location[0]
+				end := searchFrom + location[1]
+				raw := string(pending[:start])
+				buffer.Next(end)
+				searchFrom = 0
 				done, herr := handle(raw)
 				if herr != nil {
 					return herr
@@ -617,8 +631,9 @@ func consumeMistralChatStream(
 			break
 		}
 	}
-	if strings.TrimSpace(buffer) != "" {
-		done, err := handle(buffer)
+	remainder := buffer.String()
+	if strings.TrimSpace(remainder) != "" {
+		done, err := handle(remainder)
 		if err != nil {
 			return err
 		}

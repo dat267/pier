@@ -716,6 +716,15 @@ benchmark to 356 KB and 144 µs on Linux/amd64 (Intel N150, five iterations).
 The byte-budget tests cap both paths at 512 KiB and verify the assembled value.
 The tool-call JSON parser and event payloads are unchanged.
 
+## Mistral SSE buffering
+
+`consumeMistralChatStream` used to append every read chunk to an event string and
+rescan the full prefix for a delimiter. A 65,536-byte unterminated event read in
+128-byte chunks allocated 22.38 MB. It now reuses the read buffer, accumulates
+with `bytes.Buffer`, and searches only the suffix that can contain a split event
+boundary. The same fixture allocates 253 KB. Tests cover the allocation bound
+and a delimiter split across reads.
+
 ## Session history (high level)
 
 The repository was built as a long port: the `ai`/`agent`/`coding` cores first,
