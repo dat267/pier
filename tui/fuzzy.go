@@ -23,10 +23,17 @@ func MatchFuzzy(query string, text string) FuzzyMatch {
 	if isASCII(query) && isASCII(text) {
 		// ASCII byte offsets equal UTF-16 code-unit offsets, so lowercase bytes
 		// on demand and avoid building normalized strings and unit slices.
-		primaryMatch := matchFuzzyASCII(query, text)
-		if primaryMatch.Matches || !asciiAlphaNumericSwapCandidate(query) {
+		primaryMatch := matchFuzzyASCII(query, text, 0)
+		if primaryMatch.Matches {
 			return primaryMatch
 		}
+		if split := asciiAlphaNumericSwapSplit(query); split > 0 {
+			swappedMatch := matchFuzzyASCII(query, text, split)
+			if swappedMatch.Matches {
+				return FuzzyMatch{Matches: true, Score: swappedMatch.Score + 5}
+			}
+		}
+		return primaryMatch
 	}
 
 	queryLower := jsLower(query)
@@ -164,7 +171,16 @@ func indexASCIILowerFrom(text string, needle byte, start int) int {
 	return -1
 }
 
-func matchFuzzyASCII(query string, text string) FuzzyMatch {
+// asciiQueryByte reads the query after rotating the suffix before the prefix.
+func asciiQueryByte(query string, split int, index int) byte {
+	firstRunLength := len(query) - split
+	if index < firstRunLength {
+		return query[split+index]
+	}
+	return query[index-firstRunLength]
+}
+
+func matchFuzzyASCII(query string, text string, split int) FuzzyMatch {
 	if len(query) == 0 {
 		return FuzzyMatch{Matches: true, Score: 0}
 	}
@@ -177,7 +193,7 @@ func matchFuzzyASCII(query string, text string) FuzzyMatch {
 	lastMatchIndex := -1
 	consecutiveMatches := 0
 	for queryIndex < len(query) {
-		i := indexASCIILowerFrom(text, lowerASCIIByte(query[queryIndex]), lastMatchIndex+1)
+		i := indexASCIILowerFrom(text, lowerASCIIByte(asciiQueryByte(query, split, queryIndex)), lastMatchIndex+1)
 		if i == -1 {
 			break
 		}
@@ -203,27 +219,27 @@ func matchFuzzyASCII(query string, text string) FuzzyMatch {
 	if queryIndex < len(query) {
 		return FuzzyMatch{Matches: false, Score: 0}
 	}
-	if asciiEqualFold(query, text) {
+	if asciiEqualFold(query, text, split) {
 		score -= 100
 	}
 	return FuzzyMatch{Matches: true, Score: score}
 }
 
-func asciiEqualFold(left, right string) bool {
-	if len(left) != len(right) {
+func asciiEqualFold(query string, text string, split int) bool {
+	if len(query) != len(text) {
 		return false
 	}
-	for index := range left {
-		if lowerASCIIByte(left[index]) != lowerASCIIByte(right[index]) {
+	for index := range query {
+		if lowerASCIIByte(asciiQueryByte(query, split, index)) != lowerASCIIByte(text[index]) {
 			return false
 		}
 	}
 	return true
 }
 
-// asciiAlphaNumericSwapCandidate mirrors the two upstream swap patterns
-// without allocating. It is called only for ASCII queries.
-func asciiAlphaNumericSwapCandidate(query string) bool {
+// asciiAlphaNumericSwapSplit returns the byte offset used by the upstream
+// alphaNumericMatch and numericAlphaMatch query swaps.
+func asciiAlphaNumericSwapSplit(query string) int {
 	lettersEnd := 0
 	for lettersEnd < len(query) {
 		value := lowerASCIIByte(query[lettersEnd])
@@ -232,29 +248,32 @@ func asciiAlphaNumericSwapCandidate(query string) bool {
 		}
 		lettersEnd++
 	}
-	if lettersEnd > 0 && lettersEnd < len(query) {
+	if lettersEnd > 0 {
+		if lettersEnd == len(query) {
+			return 0
+		}
 		for index := lettersEnd; index < len(query); index++ {
 			if query[index] < '0' || query[index] > '9' {
-				return false
+				return 0
 			}
 		}
-		return true
+		return lettersEnd
 	}
 
 	digitsEnd := 0
 	for digitsEnd < len(query) && query[digitsEnd] >= '0' && query[digitsEnd] <= '9' {
 		digitsEnd++
 	}
-	if digitsEnd > 0 && digitsEnd < len(query) {
-		for index := digitsEnd; index < len(query); index++ {
-			value := lowerASCIIByte(query[index])
-			if value < 'a' || value > 'z' {
-				return false
-			}
-		}
-		return true
+	if digitsEnd == 0 || digitsEnd == len(query) {
+		return 0
 	}
-	return false
+	for index := digitsEnd; index < len(query); index++ {
+		value := lowerASCIIByte(query[index])
+		if value < 'a' || value > 'z' {
+			return 0
+		}
+	}
+	return digitsEnd
 }
 
 // indexUnitFrom returns the index of needle at or after start.

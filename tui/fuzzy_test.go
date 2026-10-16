@@ -26,6 +26,18 @@ func TestMatchFuzzyASCIINoMatchPathDoesNotAllocate(t *testing.T) {
 	}
 }
 
+func TestMatchFuzzyASCIISwapFallbackDoesNotAllocate(t *testing.T) {
+	allocations := testing.AllocsPerRun(10, func() {
+		match := MatchFuzzy("a2", "2ab")
+		if !match.Matches || match.Score != -19.9 {
+			t.Fatalf("match = %+v, want a match with score -19.9", match)
+		}
+	})
+	if allocations != 0 {
+		t.Fatalf("ASCII alpha-numeric swap allocated %.0f objects, want 0", allocations)
+	}
+}
+
 // Upstream fuzzyMatch indexes by UTF-16 code units and treats every JS
 // whitespace character as a word boundary.
 func TestFuzzyMatchUsesUTF16IndicesAndWhitespace(t *testing.T) {
