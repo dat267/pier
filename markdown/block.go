@@ -91,7 +91,14 @@ func (l *blockLexer) lexBlocks(from, to int) []*Block {
 		ln := nextLine(src, at)
 		raw := ln.text
 		if isBlankLine(raw) {
-			at = ln.next
+			for at < to {
+				bl := nextLine(src, at)
+				if !isBlankLine(bl.text) {
+					break
+				}
+				at = bl.next
+			}
+			blocks = append(blocks, &Block{Kind: BlockSpace, Start: lineStart, End: at})
 			continue
 		}
 		if b, next, ok := l.lexBlock(lineStart, raw, ln); ok {
@@ -110,6 +117,11 @@ func (l *blockLexer) lexBlocks(from, to int) []*Block {
 // lexBlock tries the single-line block starts in Marked's order. It returns the
 // block and the offset after it, or ok=false to fall through to a paragraph.
 func (l *blockLexer) lexBlock(start int, raw string, ln line) (*Block, int, bool) {
+	// LaTeX block (the upstream extension runs before the built-ins).
+	if isLatexBlockStart(raw) {
+		b, next := l.lexLatex(start)
+		return b, next, true
+	}
 	// ATX heading.
 	if level, text, ok := atxHeading(raw); ok {
 		end := ln.next
@@ -231,31 +243,92 @@ func (l *blockLexer) lexFence(start int, marker, info string) (*Block, int, bool
 	src := l.src
 	at := nextLine(src, start).next
 	bodyStart := at
+	bodyEnd := len(src)
 	closed := false
 	for at < len(src) {
 		ln := nextLine(src, at)
 		if isFenceEnd(ln.text, marker) {
+			bodyEnd = at
 			closed = true
-			at = ln.next
 			break
 		}
 		at = ln.next
 	}
-	body := src[bodyStart:at]
+	body := strings.TrimSuffix(src[bodyStart:bodyEnd], "\n")
+	end := len(src)
 	if closed {
-		// Drop the closing fence line and its newline from the body.
-		trimmed := strings.TrimRight(body, "\n")
-		nl := strings.LastIndexByte(trimmed, '\n')
-		_ = nl
-		// Recompute: the closing line is the last line of body.
-		lastLineStart := strings.LastIndexByte(trimmed, '\n')
-		if lastLineStart >= 0 {
-			body = trimmed[:lastLineStart+1]
+		closeLine := nextLine(src, bodyEnd)
+		end = closeLine.next
+		// A following blank line owns the closing newline (Marked).
+		if end < len(src) && src[end] == '\n' {
+			end--
+		}
+	} else if body != "" && !strings.HasSuffix(src[bodyStart:bodyEnd], "\n") {
+		// A partial (newline-less) final line is not part of the text.
+		if i := strings.LastIndexByte(body, '\n'); i >= 0 {
+			body = body[:i]
 		} else {
 			body = ""
 		}
 	}
-	return &Block{Kind: BlockCode, Start: start, End: at, Info: info, Body: body}, at, true
+	return &Block{Kind: BlockCode, Start: start, End: end, Info: info, Body: body, Raw: src[start:end]}, end, true
+}
+
+// isLatexBlockStart reports a `$$` or `\[` block opener.
+func isLatexBlockStart(line string) bool {
+	i, width := skipIndent(line, 4)
+	if width >= 4 || i >= len(line) {
+		return false
+	}
+	rest := line[i:]
+	return strings.HasPrefix(rest, "$$") || strings.HasPrefix(rest, `\[`)
+}
+
+// lexLatex lexes a `$$…$$` or `\[…\]` block, folding a following blank line
+// into its raw like Marked's extension token.
+func (l *blockLexer) lexLatex(start int) (*Block, int) {
+	src := l.src
+	first := nextLine(src, start)
+	trimmed := strings.TrimSpace(first.text)
+	var closer string
+	var openerLen int
+	if strings.HasPrefix(trimmed, "$$") {
+		closer, openerLen = "$$", 2
+	} else {
+		closer, openerLen = `\]`, 2
+	}
+	body := strings.TrimSpace(trimmed[openerLen:])
+	at := first.next
+	closed := false
+	if body != "" && strings.HasSuffix(body, closer) {
+		body = strings.TrimSpace(body[:len(body)-len(closer)])
+		closed = true
+	}
+	if !closed {
+		for at < len(src) {
+			ln := nextLine(src, at)
+			if idx := strings.Index(ln.text, closer); idx >= 0 {
+				if body != "" {
+					body += "\n"
+				}
+				body += ln.text[:idx]
+				at = ln.next
+				closed = true
+				break
+			}
+			if body != "" {
+				body += "\n"
+			}
+			body += ln.text
+			at = ln.next
+		}
+	}
+	end := at
+	// A single following blank line is absorbed into the raw.
+	if next := nextLine(src, end); isBlankLine(next.text) && next.next > end {
+		end = next.next
+	}
+	return &Block{Kind: BlockLatex, Start: start, End: end, Raw: src[start:end], Text: strings.TrimSpace(body)}, end
 }
 
 func isThematicBreak(line string) bool {

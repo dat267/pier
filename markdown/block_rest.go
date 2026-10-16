@@ -23,6 +23,9 @@ func interruptsParagraph(line string) bool {
 	if isHTMLBlockStart(line) {
 		return true
 	}
+	if isLatexBlockStart(line) {
+		return true
+	}
 	return false
 }
 
@@ -30,35 +33,48 @@ func (l *blockLexer) lexParagraph(start, to int) (*Block, int) {
 	src := l.src
 	at := start
 	var sb strings.Builder
-	first := true
+	count := 0
 	for at < to {
 		ln := nextLine(src, at)
 		if isBlankLine(ln.text) {
 			break
 		}
-		if !first && interruptsParagraph(ln.text) {
-			break
-		}
-		// Setext heading: the following line is ===/---.
-		if nxt := nextLine(src, ln.next); at+nxt.next <= to || ln.next < to {
-			_ = nxt
-		}
-		if first && ln.next < to {
-			nextText := nextLine(src, ln.next).text
-			if level, ok := setextLevel(nextText); ok {
-				// Consume the underline as part of the heading.
-				headingEnd := nextLine(src, ln.next).next
-				return &Block{Kind: BlockHeading, Start: start, End: headingEnd, Level: level, Text: ln.text}, headingEnd
+		if count > 0 {
+			// A setext underline turns the whole paragraph into a heading.
+			if level, ok := setextLevel(ln.text); ok {
+				headingEnd := ln.next
+				return &Block{Kind: BlockHeading, Start: start, End: headingEnd, Level: level, Text: sb.String()}, headingEnd
+			}
+			// A table header row interrupts the paragraph.
+			if l.looksLikeTableStart(at) {
+				break
+			}
+			if interruptsParagraph(ln.text) {
+				break
 			}
 		}
-		if !first {
+		if count > 0 {
 			sb.WriteByte('\n')
 		}
 		sb.WriteString(ln.text)
-		first = false
+		count++
 		at = ln.next
 	}
 	return &Block{Kind: BlockParagraph, Start: start, End: at, Text: sb.String()}, at
+}
+
+// looksLikeTableStart reports a header row followed by a delimiter row.
+func (l *blockLexer) looksLikeTableStart(at int) bool {
+	header := nextLine(l.src, at)
+	if !strings.Contains(header.text, "|") {
+		return false
+	}
+	delim := nextLine(l.src, header.next)
+	if delim.next <= header.next {
+		return false
+	}
+	_, ok := parseDelimiterRow(delim.text)
+	return ok
 }
 
 func setextLevel(line string) (int, bool) {
@@ -105,23 +121,24 @@ func (l *blockLexer) lexQuote(start int) (*Block, int) {
 		at = ln.next
 	}
 	inner := sb.String()
-	return &Block{Kind: BlockQuote, Start: start, End: at, Blocks: lexBlocksIn(inner)}, at
+	quoteEnd := at
+	if strings.HasSuffix(inner, "\n") {
+		inner = inner[:len(inner)-1]
+	}
+	return &Block{Kind: BlockQuote, Start: start, End: quoteEnd, Text: inner, Blocks: lexBlocksIn(inner)}, at
 }
 
 func (l *blockLexer) lexHTML(start int) (*Block, int) {
 	src := l.src
 	at := start
-	var sb strings.Builder
 	for at < len(src) {
 		ln := nextLine(src, at)
-		if isBlankLine(ln.text) && sb.Len() > 0 {
+		if isBlankLine(ln.text) && at > start {
 			break
 		}
-		sb.WriteString(ln.text)
-		sb.WriteByte('\n')
 		at = ln.next
 	}
-	return &Block{Kind: BlockHTML, Start: start, End: at, Body: sb.String()}, at
+	return &Block{Kind: BlockHTML, Start: start, End: at, Raw: src[start:at]}, at
 }
 
 func (l *blockLexer) lexIndentedCode(start int) (*Block, int) {
@@ -143,7 +160,10 @@ func (l *blockLexer) lexIndentedCode(start int) (*Block, int) {
 		at = ln.next
 	}
 	body := strings.TrimRight(sb.String(), "\n")
-	return &Block{Kind: BlockCode, Start: start, End: at, Body: body}, at
+	if body != "" && strings.HasSuffix(src[start:at], "\n") {
+		body += "\n"
+	}
+	return &Block{Kind: BlockCode, Start: start, End: at, Body: body, Raw: src[start:at]}, at
 }
 
 func stripIndent(line string, width int) string {
@@ -189,16 +209,25 @@ func (l *blockLexer) lexList(start int) (*Block, int, bool) {
 		for at < len(src) {
 			next := nextLine(src, at)
 			if isBlankLine(next.text) {
-				// A blank line followed by more content keeps the item open;
-				// otherwise the blank ends the list.
 				follow := nextLine(src, next.next)
-				if isBlankLine(follow.text) || follow.next >= len(src) {
+				if isBlankLine(follow.text) {
 					break
 				}
-				sawBlank = true
-				sb.WriteByte('\n')
-				at = next.next
-				continue
+				// Another item of this list: the blank is a loose separator; end
+				// the item and let the outer loop start the next one.
+				if _, followOrdered, isItem := listItemStart(follow.text); isItem && followOrdered == ordered {
+					sawBlank = true
+					at = next.next
+					break
+				}
+				// An indented continuation keeps the item open.
+				if indentWidth(follow.text) >= contentIndent {
+					sawBlank = true
+					sb.WriteByte('\n')
+					at = next.next
+					continue
+				}
+				break
 			}
 			if indentWidth(next.text) >= contentIndent {
 				sb.WriteString(stripIndent(next.text, contentIndent))
@@ -210,15 +239,51 @@ func (l *blockLexer) lexList(start int) (*Block, int, bool) {
 			// handled by the outer loop; anything else starts a new block.
 			break
 		}
-		item := &Block{Kind: BlockListItem, Start: itemStart, End: at, Blocks: lexBlocksIn(sb.String())}
+		content := strings.TrimRight(sb.String(), "\n")
+		if sawBlank && content != "" && !strings.Contains(content, "\n\n") {
+			content += "\n"
+		}
+		item := &Block{Kind: BlockListItem, Start: itemStart, End: at, Text: content}
+		if _, checked, rest, ok := stripTaskMarker(content); ok {
+			item.Task = true
+			item.Checked = checked
+			item.Text = rest
+		}
+		item.Blocks = lexBlocksIn(item.Text)
 		if sawBlank {
 			tight = false
 		}
 		list.Blocks = append(list.Blocks, item)
 	}
 	list.Tight = tight
+	for _, item := range list.Blocks {
+		item.Tight = tight
+	}
 	list.End = at
 	return list, at, true
+}
+
+// stripTaskMarker removes a leading `[ ] ` / `[x] ` task checkbox.
+func stripTaskMarker(content string) (task bool, checked bool, rest string, ok bool) {
+	i := 0
+	for i < len(content) && (content[i] == ' ' || content[i] == '\t') {
+		i++
+	}
+	if i+3 > len(content) || content[i] != '[' || content[i+2] != ']' {
+		return false, false, content, false
+	}
+	mark := content[i+1]
+	if mark != ' ' && mark != 'x' && mark != 'X' {
+		return false, false, content, false
+	}
+	after := i + 3
+	if after < len(content) && content[after] != ' ' && content[after] != '\t' && content[after] != '\n' {
+		return false, false, content, false
+	}
+	for after < len(content) && (content[after] == ' ' || content[after] == '\t') {
+		after++
+	}
+	return true, mark != ' ', content[after:], true
 }
 
 // markerEndIndex returns the index just past a list marker and its following
@@ -266,7 +331,9 @@ func lexBlocksIn(src string) []*Block {
 	return (&blockLexer{src: src}).lexBlocks(0, len(src))
 }
 
-// isHTMLBlockStart reports a line starting with an HTML tag or comment.
+// isHTMLBlockStart reports a line starting with an HTML tag or comment. An
+// autolink (`<http://x>`, `<a@b.com>`) has no valid tag name and is not an HTML
+// block.
 func isHTMLBlockStart(line string) bool {
 	i, width := skipIndent(line, 4)
 	if width >= 4 || i >= len(line) || line[i] != '<' {
@@ -276,10 +343,27 @@ func isHTMLBlockStart(line string) bool {
 		return false
 	}
 	c := line[i+1]
-	if c == '/' || c == '!' || c == '?' {
+	if c == '!' || c == '?' {
 		return true
 	}
-	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+	j := i + 1
+	if c == '/' {
+		j++
+	}
+	if j >= len(line) || !isASCIILetter(line[j]) {
+		return false
+	}
+	for j < len(line) && (isAlnum(line[j]) || line[j] == '-') {
+		j++
+	}
+	if j >= len(line) {
+		return true
+	}
+	switch line[j] {
+	case ' ', '\t', '>', '/':
+		return true
+	}
+	return false
 }
 
 // tryTable detects a GFM table: a header row with a `|` followed by a

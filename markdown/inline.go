@@ -13,6 +13,10 @@ func parseBlockInlines(b *Block) {
 	switch b.Kind {
 	case BlockHeading, BlockParagraph:
 		b.Inlines = ParseInline(b.Text)
+	case BlockListItem:
+		for _, child := range b.Blocks {
+			parseBlockInlines(child)
+		}
 	case BlockTable:
 		b.headerInlines = make([][]Inline, len(b.Header))
 		for i, cell := range b.Header {
@@ -56,13 +60,39 @@ func ParseInline(src string) []Inline {
 					i += 2
 					continue
 				}
+				if src[i+1] == '(' {
+					if close := strings.Index(src[i+2:], `\)`); close >= 0 {
+						inner := src[i+2 : i+2+close]
+						flush()
+						out = append(out, Inline{Kind: InlineLatex, Raw: src[i : i+2+close+2], Text: inner})
+						i = i + 2 + close + 2
+						continue
+					}
+				}
 				if isASCIIPunct(src[i+1]) {
-					text.WriteByte(src[i+1])
+					flush()
+					out = append(out, Inline{Kind: InlineEscape, Raw: src[i : i+2], Text: src[i+1 : i+2]})
 					i += 2
 					continue
 				}
 			}
 			text.WriteByte(c)
+			i++
+		case '\n':
+			hard := false
+			content := text.String()
+			trimmed := strings.TrimRight(content, " ")
+			if len(content)-len(trimmed) >= 2 {
+				hard = true
+				text.Reset()
+				text.WriteString(trimmed)
+			}
+			if hard {
+				flush()
+				out = append(out, Inline{Kind: InlineHardBreak})
+			} else {
+				text.WriteByte('\n')
+			}
 			i++
 		case '`':
 			j := i
@@ -72,9 +102,8 @@ func ParseInline(src string) []Inline {
 			run := j - i
 			close := findRun(src, j, '`', run)
 			if close >= 0 {
-				content := src[j:close]
 				flush()
-				out = append(out, Inline{Kind: InlineCode, Text: normalizeCodeSpan(content)})
+				out = append(out, Inline{Kind: InlineCode, Text: normalizeCodeSpan(src[j:close])})
 				i = close + run
 				continue
 			}
@@ -95,7 +124,7 @@ func ParseInline(src string) []Inline {
 				if close := strings.Index(src[i+2:], "~~"); close >= 0 {
 					inner := src[i+2 : i+2+close]
 					flush()
-					out = append(out, Inline{Kind: InlineStrikethrough, Children: ParseInline(inner)})
+					out = append(out, Inline{Kind: InlineStrikethrough, Text: inner, Children: ParseInline(inner)})
 					i = i + 2 + close + 2
 					continue
 				}
@@ -129,24 +158,25 @@ func ParseInline(src string) []Inline {
 				i = consumed
 				continue
 			}
+			if tag, consumed, ok := parseInlineHTML(src, i); ok {
+				flush()
+				out = append(out, Inline{Kind: InlineHTML, Text: tag})
+				i = consumed
+				continue
+			}
 			text.WriteByte(c)
 			i++
-		case '\n':
-			// Two trailing spaces (or more) make a hard break.
-			hard := false
-			content := text.String()
-			trimmed := strings.TrimRight(content, " ")
-			if len(content)-len(trimmed) >= 2 {
-				hard = true
-				text.Reset()
-				text.WriteString(trimmed)
+		case '$':
+			if i+1 < len(src) && src[i+1] != '$' {
+				if close := findInlineDollar(src, i+1); close >= 0 {
+					inner := src[i+1 : close]
+					flush()
+					out = append(out, Inline{Kind: InlineLatex, Raw: src[i : close+1], Text: inner})
+					i = close + 1
+					continue
+				}
 			}
-			flush()
-			if hard {
-				out = append(out, Inline{Kind: InlineHardBreak})
-			} else {
-				out = append(out, Inline{Kind: InlineSoftBreak})
-			}
+			text.WriteByte(c)
 			i++
 		default:
 			text.WriteByte(c)
@@ -155,6 +185,25 @@ func ParseInline(src string) []Inline {
 	}
 	flush()
 	return out
+}
+
+// findInlineDollar finds the closing `$` of an inline latex span on the same
+// line as the opener.
+func findInlineDollar(src string, from int) int {
+	for i := from; i < len(src); i++ {
+		switch src[i] {
+		case '\n':
+			return -1
+		case '\\':
+			i++
+		case '$':
+			if i+1 < len(src) && src[i+1] == '$' {
+				return -1
+			}
+			return i
+		}
+	}
+	return -1
 }
 
 func normalizeCodeSpan(s string) string {
@@ -184,54 +233,64 @@ func findRun(src string, from int, ch byte, want int) int {
 	return -1
 }
 
-// parseDelimited parses *emphasis* / **strong** / _emphasis_ starting at i.
+// parseDelimited parses *emphasis* / **strong** / ***both*** / _…_ starting at i.
 func parseDelimited(src string, i int, ch byte) (int, Inline, bool) {
 	j := i
 	for j < len(src) && src[j] == ch {
 		j++
 	}
 	run := j - i
-	if run > 2 {
-		run = 2
+	if run > 3 {
+		run = 3
 	}
-	// The opening run must be left-flanking: the next byte is not whitespace.
+	// An underscore may not open intraword emphasis.
+	if ch == '_' && i > 0 && isAlnum(src[i-1]) {
+		return 0, Inline{}, false
+	}
 	if j >= len(src) || src[j] == ' ' || src[j] == '\t' || src[j] == '\n' {
 		return 0, Inline{}, false
 	}
-	for closeLen := run; closeLen >= 1; closeLen-- {
-		mark := strings.Repeat(string(ch), closeLen)
-		closeIdx := findClosing(src, j, mark)
-		if closeIdx <= j {
-			continue
-		}
-		inner := src[j:closeIdx]
-		if strings.TrimSpace(inner) == "" {
-			continue
-		}
-		kind := InlineEmphasis
-		if closeLen == 2 {
-			kind = InlineStrong
-		}
-		return closeIdx + closeLen, Inline{Kind: kind, Children: ParseInline(inner)}, true
+	closeIdx, closeLen := findClosingRun(src, j, ch, run)
+	if closeIdx < 0 {
+		return 0, Inline{}, false
 	}
-	return 0, Inline{}, false
+	inner := src[j:closeIdx]
+	if strings.TrimSpace(inner) == "" {
+		return 0, Inline{}, false
+	}
+	consumed := closeIdx + closeLen
+	children := ParseInline(inner)
+	switch run {
+	case 2:
+		return consumed, Inline{Kind: InlineStrong, Text: inner, Children: children}, true
+	case 3:
+		// ***both*** nests strong inside em; the em's text keeps the strong
+		// markers (Marked's inner source).
+		strong := Inline{Kind: InlineStrong, Text: inner, Children: children}
+		return consumed, Inline{Kind: InlineEmphasis, Text: "**" + inner + "**", Children: []Inline{strong}}, true
+	default:
+		return consumed, Inline{Kind: InlineEmphasis, Text: inner, Children: children}, true
+	}
 }
 
-// findClosing finds the next run of mark that is right-flanking (preceded by a
-// non-space byte), searching from `from`.
-func findClosing(src string, from int, mark string) int {
-	for i := from; i+len(mark) <= len(src); {
-		idx := strings.Index(src[i:], mark)
-		if idx < 0 {
-			return -1
+// findClosingRun finds the next run of at least want copies of ch that is
+// right-flanking (preceded by a non-space byte).
+func findClosingRun(src string, from int, ch byte, want int) (int, int) {
+	for i := from; i < len(src); {
+		if src[i] != ch {
+			i++
+			continue
 		}
-		at := i + idx
-		if at > 0 && src[at-1] != ' ' && src[at-1] != '\t' && src[at-1] != '\n' {
-			return at
+		j := i
+		for j < len(src) && src[j] == ch {
+			j++
 		}
-		i = at + len(mark)
+		if j-i >= want && i > 0 && src[i-1] != ' ' && src[i-1] != '\t' && src[i-1] != '\n' {
+			return i, j - i
+		}
+		i = j
 	}
-	return -1
+	return -1, 0
 }
 
 // parseLink parses `[text](dest "title")` (or the image form when image is
@@ -248,6 +307,8 @@ func parseLink(src string, i int, image bool) (Inline, int, bool) {
 	end := -1
 	for j := open; j < len(src); j++ {
 		switch src[j] {
+		case '\\':
+			j++
 		case '[':
 			depth++
 		case ']':
@@ -271,11 +332,10 @@ func parseLink(src string, i int, image bool) (Inline, int, bool) {
 	dest, title := splitLinkTarget(target)
 	label := src[open+1 : end]
 	kind := InlineLink
-	children := ParseInline(label)
 	if image {
 		kind = InlineImage
 	}
-	return Inline{Kind: kind, Children: children, Dest: dest, Title: title}, end + 2 + close + 1, true
+	return Inline{Kind: kind, Text: label, Children: ParseInline(label), Dest: dest, Title: title}, end + 2 + close + 1, true
 }
 
 func splitLinkTarget(target string) (dest, title string) {
@@ -289,7 +349,6 @@ func splitLinkTarget(target string) (dest, title string) {
 			return dest, strings.Trim(rest, `"'`)
 		}
 	}
-	// dest then optional quoted title.
 	for i := 0; i < len(target); i++ {
 		if target[i] == ' ' || target[i] == '\t' {
 			return target[:i], strings.Trim(strings.TrimSpace(target[i:]), `"'`)
@@ -298,8 +357,7 @@ func splitLinkTarget(target string) (dest, title string) {
 	return target, ""
 }
 
-// parseAngle parses an autolink `<scheme:...>` or `<user@host>`. Raw HTML is
-// left to the literal text path.
+// parseAngle parses an autolink `<scheme:...>` or `<user@host>`.
 func parseAngle(src string, i int) (Inline, int, bool) {
 	end := strings.IndexByte(src[i:], '>')
 	if end < 0 {
@@ -309,27 +367,50 @@ func parseAngle(src string, i int) (Inline, int, bool) {
 	if body == "" {
 		return Inline{}, 0, false
 	}
-	if strings.IndexByte(body, '@') > 0 && strings.IndexByte(body, ' ') < 0 {
+	if strings.IndexByte(body, '@') > 0 && strings.IndexByte(body, ' ') < 0 && strings.IndexByte(body, '<') < 0 {
 		dest := "mailto:" + body
-		return Inline{Kind: InlineLink, Children: []Inline{{Kind: InlineText, Text: body}}, Dest: dest, Title: ""}, i + end + 1, true
+		return Inline{Kind: InlineLink, Text: body, Children: []Inline{{Kind: InlineText, Text: body}}, Dest: dest}, i + end + 1, true
 	}
 	if colon := strings.IndexByte(body, ':'); colon > 0 {
 		scheme := body[:colon]
 		if isASCIIAlpha(scheme) {
-			return Inline{Kind: InlineLink, Children: []Inline{{Kind: InlineText, Text: body}}, Dest: body}, i + end + 1, true
+			return Inline{Kind: InlineLink, Text: body, Children: []Inline{{Kind: InlineText, Text: body}}, Dest: body}, i + end + 1, true
 		}
 	}
 	return Inline{}, 0, false
 }
 
+// parseInlineHTML parses an inline HTML tag or comment.
+func parseInlineHTML(src string, i int) (string, int, bool) {
+	if i+1 >= len(src) {
+		return "", 0, false
+	}
+	c := src[i+1]
+	if c != '/' && c != '!' && c != '?' && !isASCIILetter(c) {
+		return "", 0, false
+	}
+	end := strings.IndexByte(src[i:], '>')
+	if end < 0 {
+		return "", 0, false
+	}
+	return src[i : i+end+1], i + end + 1, true
+}
+
 func isASCIIAlpha(s string) bool {
 	for i := 0; i < len(s); i++ {
-		c := s[i]
-		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+		if !isASCIILetter(s[i]) {
 			return false
 		}
 	}
 	return len(s) > 0
+}
+
+func isASCIILetter(c byte) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+}
+
+func isAlnum(c byte) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
 }
 
 func isASCIIPunct(c byte) bool {

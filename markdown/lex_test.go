@@ -6,9 +6,12 @@ import (
 )
 
 func kinds(blocks []*Block) []BlockKind {
-	out := make([]BlockKind, len(blocks))
-	for i, b := range blocks {
-		out[i] = b.Kind
+	out := make([]BlockKind, 0, len(blocks))
+	for _, b := range blocks {
+		if b.Kind == BlockSpace {
+			continue
+		}
+		out = append(out, b.Kind)
 	}
 	return out
 }
@@ -80,7 +83,7 @@ func TestLexParagraphJoinsLines(t *testing.T) {
 
 func TestLexParagraphStopsAtBlank(t *testing.T) {
 	blocks := Lex("one\ntwo\n\nthree\n")
-	if len(blocks) != 2 || blocks[0].Text != "one\ntwo" || blocks[1].Text != "three" {
+	if len(blocks) != 3 || blocks[0].Text != "one\ntwo" || blocks[1].Kind != BlockSpace || blocks[2].Text != "three" {
 		t.Fatalf("blocks = %#v", blocks)
 	}
 }
@@ -90,14 +93,14 @@ func TestLexFenceBodyAndLanguage(t *testing.T) {
 	if b.Info != "go" {
 		t.Fatalf("info = %q", b.Info)
 	}
-	if b.Body != "line one\nline two\n" {
+	if b.Body != "line one\nline two" {
 		t.Fatalf("body = %q", b.Body)
 	}
 }
 
 func TestLexUnclosedFenceRunsToEnd(t *testing.T) {
 	b := firstBlock(t, "```\nstill code\n", BlockCode)
-	if b.Body != "still code\n" {
+	if b.Body != "still code" {
 		t.Fatalf("body = %q", b.Body)
 	}
 }
@@ -183,8 +186,22 @@ func TestParseInlineCodeSpan(t *testing.T) {
 
 func TestParseInlineEscape(t *testing.T) {
 	inlines := ParseInline(`a \*b\* c`)
-	if len(inlines) != 1 || inlines[0].Text != "a *b* c" {
-		t.Fatalf("inlines = %#v", inlines)
+	var got strings.Builder
+	for _, in := range inlines {
+		switch in.Kind {
+		case InlineText:
+			got.WriteString(in.Text)
+		case InlineEscape:
+			if in.Raw == "" {
+				t.Fatalf("escape has no raw: %#v", in)
+			}
+			got.WriteString(in.Text)
+		default:
+			t.Fatalf("unexpected inline %#v", in)
+		}
+	}
+	if got.String() != "a *b* c" {
+		t.Fatalf("text = %q", got.String())
 	}
 }
 
@@ -221,7 +238,7 @@ func TestLexFixtureStructure(t *testing.T) {
 	blocks := Lex(benchDoc(4096))
 	for _, b := range blocks {
 		switch b.Kind {
-		case BlockHeading, BlockParagraph, BlockCode, BlockList:
+		case BlockHeading, BlockParagraph, BlockCode, BlockList, BlockSpace:
 		default:
 			t.Fatalf("unexpected block kind %d", b.Kind)
 		}
