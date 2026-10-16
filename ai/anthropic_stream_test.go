@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -133,6 +134,50 @@ func TestStreamAnthropicTextFlow(t *testing.T) {
 	}
 	if string(bodyMap["stream"]) != "true" {
 		t.Fatalf("stream = %s", bodyMap["stream"])
+	}
+}
+
+// Mirrors streaming text_block_delta assembly in
+// packages/ai/src/api/anthropic-messages.ts.
+func TestStreamAnthropicTextDeltasAllocateLinearly(t *testing.T) {
+	const chunks = 512
+	delta := strings.Repeat("x", 128)
+	events := []string{
+		"event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"id\":\"msg\",\"model\":\"claude-opus-4-5\",\"usage\":{\"input_tokens\":1,\"output_tokens\":0}}}\n\n",
+		"event: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}\n\n",
+	}
+	deltaEvent := "event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"" + delta + "\"}}\n\n"
+	for range chunks {
+		events = append(events, deltaEvent)
+	}
+	events = append(events,
+		"event: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":0}\n\n",
+		"event: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\"},\"usage\":{\"output_tokens\":1}}\n\n",
+		"event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n")
+
+	model := testAnthropicModel()
+	server := sseServer(t, events, nil)
+	model.BaseURL = server.URL
+	defer server.Close()
+	transcript := NormalizeContext(Context{Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}}})
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	message, err := StreamAnthropic(model, transcript, &AnthropicOptions{StreamOptions: StreamOptions{APIKey: "test-key"}}).Result(context.Background())
+	runtime.ReadMemStats(&after)
+	if err != nil {
+		t.Fatalf("stream result: %v", err)
+	}
+	want := strings.Repeat(delta, chunks)
+	if len(message.Content) != 1 {
+		t.Fatalf("content = %+v, want one text block", message.Content)
+	}
+	if text, ok := message.Content[0].(TextContent); !ok || text.Text != want {
+		t.Fatalf("text = %T length %d, want %d bytes", message.Content[0], len(text.Text), len(want))
+	}
+	allocated := after.TotalAlloc - before.TotalAlloc
+	t.Logf("streaming %d bytes of Anthropic text allocated %d bytes", len(want), allocated)
+	if allocated > uint64(len(want))*64 {
+		t.Fatalf("streaming %d bytes allocated %d bytes, want less than %d", len(want), allocated, len(want)*64)
 	}
 }
 

@@ -749,6 +749,12 @@ allocated 19.4 MB. Per-output-slot builders now append deltas amortized; the sam
 fixture allocates 1.60 MB while preserving the cumulative message and upstream
 score/event goldens.
 
+## Anthropic stream delta assembly
+
+Anthropic text and thinking blocks now append through per-block builders instead
+of copying the accumulated prefix for each SSE delta. The 65,536-byte text
+fixture with 512 chunks fell from 19.21 MB to 1.42 MB allocated.
+
 ## Session history (high level)
 
 The repository was built as a long port: the `ai`/`agent`/`coding` cores first,

@@ -353,9 +353,22 @@ func BuildAnthropicRequest(ctx context.Context, model *Model, params *AnthropicM
 // anthropicStreamBlock is the live per-block accumulator (upstream's Block
 // with the partialJson scratch buffer).
 type anthropicStreamBlock struct {
-	block   Content
-	index   int
-	partial []byte
+	block         Content
+	index         int
+	partial       []byte
+	contentBuffer *strings.Builder
+}
+
+func (b *anthropicStreamBlock) appendContent(current, delta string) string {
+	if b.contentBuffer == nil {
+		if delta == "" {
+			return current
+		}
+		b.contentBuffer = &strings.Builder{}
+		_, _ = b.contentBuffer.WriteString(current)
+	}
+	_, _ = b.contentBuffer.WriteString(delta)
+	return b.contentBuffer.String()
 }
 
 // StreamAnthropic implements the anthropic-messages stream function
@@ -650,14 +663,14 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 				switch event.Delta.Type {
 				case "text_delta":
 					if tc, ok := blocks[idx].block.(TextContent); ok {
-						tc.Text += event.Delta.Text
+						tc.Text = blocks[idx].appendContent(tc.Text, event.Delta.Text)
 						blocks[idx].block = tc
 						output.Content[idx] = tc
 						stream.Push(AssistantMessageEvent{Type: EventTextDelta, ContentIndex: idx, Delta: event.Delta.Text, Partial: output})
 					}
 				case "thinking_delta":
 					if tc, ok := blocks[idx].block.(ThinkingContent); ok {
-						tc.Thinking += event.Delta.Thinking
+						tc.Thinking = blocks[idx].appendContent(tc.Thinking, event.Delta.Thinking)
 						blocks[idx].block = tc
 						output.Content[idx] = tc
 						stream.Push(AssistantMessageEvent{Type: EventThinkingDelta, ContentIndex: idx, Delta: event.Delta.Thinking, Partial: output})
