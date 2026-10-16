@@ -1692,3 +1692,28 @@ the shapes both accept.
 
 Measured on a 100 MiB session (30,314 messages): `buildSessionInfo` 1.7s to
 0.3s, and a 105 MiB session directory lists in 0.3s instead of 2.0s.
+
+## D226
+
+**A custom message that lands between a tool call and its result is deferred.**
+
+The goal controller appends its lifecycle note (`pi-goal-event`, `display:false`)
+while the `update_goal` tool executes, so the session order is assistant tool
+call, goal `custom` entry, goal `custom_message`, tool result. `ConvertToLlm`
+turned that note into a user message, and the OpenAI-compatible transform treats
+a user message as interrupting the tool flow: it synthetically answered the call
+and left the real result behind a user message, so opencode-go rejected the
+request with `Messages with role 'tool' must be a response to a preceding
+message with 'tool_calls'` (request reproduced from the 100 MiB session: one
+orphan tool result).
+
+`ConvertToLlm` now holds converted custom messages while an assistant message's
+tool calls are unanswered and emits them after the results, mirroring the
+transform's existing transparency for system messages. Genuine user messages
+are untouched (they still interrupt tool flow through the transform). The note
+stays in context, only after the result. This is Go-port-only: upstream has no
+goal extension to interleave.
+
+Any custom role is held, not just the goal event; the ordering rule is about
+the tool pair, and the roles are out-of-band notes rather than turns.
+

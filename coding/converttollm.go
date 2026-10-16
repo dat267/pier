@@ -91,62 +91,102 @@ type compactionSummaryFields struct {
 // (port of messages.ts convertToLlm).
 func ConvertToLlm(messages []ai.Message) []ai.Message {
 	var out []ai.Message
+	// A custom message appended while a tool call is unanswered (a goal
+	// lifecycle event fired during tool execution) lands between the assistant
+	// tool call and its result. Providers require the result to follow the call
+	// directly, so hold the converted note back until the pending calls are
+	// answered, then emit it after them.
+	pendingToolCalls := map[string]bool{}
+	var heldCustom []ai.Message
+	flushHeld := func() {
+		if len(pendingToolCalls) == 0 && len(heldCustom) > 0 {
+			out = append(out, heldCustom...)
+			heldCustom = heldCustom[:0]
+		}
+	}
 	for _, m := range messages {
 		switch msg := m.(type) {
-		case *ai.SystemMessage, *ai.UserMessage, *ai.AssistantMessage, *ai.ToolResultMessage:
+		case *ai.SystemMessage, *ai.UserMessage:
 			out = append(out, m)
+		case *ai.AssistantMessage:
+			pendingToolCalls = map[string]bool{}
+			for _, block := range msg.Content {
+				if call, ok := block.(ai.ToolCall); ok {
+					pendingToolCalls[call.ID] = true
+				}
+			}
+			out = append(out, m)
+		case *ai.ToolResultMessage:
+			delete(pendingToolCalls, msg.ToolCallID)
+			out = append(out, m)
+			flushHeld()
 		case *ai.CustomMessage:
-			switch msg.Role {
-			case RoleBashExecution:
-				var fields bashExecutionFields
-				if json.Unmarshal(msg.Content, &fields) != nil {
-					continue
-				}
-				if fields.ExcludeFromContext {
-					continue // !! prefix: excluded from context
-				}
-				out = append(out, &ai.UserMessage{
-					Content:   ai.StringOrBlocks{Blocks: ai.ContentList{ai.TextContent{Text: BashExecutionToText(&fields)}}},
-					Timestamp: msg.Timestamp,
-				})
-			case RoleCustom:
-				var fields customMessageFields
-				if json.Unmarshal(msg.Content, &fields) != nil {
-					continue
-				}
-				out = append(out, &ai.UserMessage{
-					Content:   customContentToBlocks(fields.Content),
-					Timestamp: msg.Timestamp,
-				})
-			case RoleBranchSummary:
-				var fields branchSummaryFields
-				if json.Unmarshal(msg.Content, &fields) != nil {
-					continue
-				}
-				out = append(out, &ai.UserMessage{
-					Content:   ai.StringOrBlocks{Blocks: ai.ContentList{ai.TextContent{Text: BranchSummaryPrefix + fields.Summary + BranchSummarySuffix}}},
-					Timestamp: msg.Timestamp,
-				})
-			case RoleCompactionSummary:
-				var fields compactionSummaryFields
-				if json.Unmarshal(msg.Content, &fields) != nil {
-					continue
-				}
-				out = append(out, &ai.UserMessage{
-					Content: ai.StringOrBlocks{Blocks: ai.ContentList{ai.TextContent{
-						Text: CompactionSummaryPrefix + fields.Summary + CompactionSummarySuffix,
-					}}},
-					Timestamp: msg.Timestamp,
-				})
-			default:
-				// Unknown custom role: unconvertible, filtered out.
+			converted := convertCustomMessage(msg)
+			if converted == nil {
 				continue
 			}
+			if len(pendingToolCalls) > 0 {
+				heldCustom = append(heldCustom, converted)
+				continue
+			}
+			out = append(out, converted)
 		default:
 			continue
 		}
 	}
+	out = append(out, heldCustom...)
 	return out
+}
+
+// convertCustomMessage projects a custom AgentMessage onto an LLM message, or
+// nil when the role is excluded or unknown.
+func convertCustomMessage(msg *ai.CustomMessage) ai.Message {
+	switch msg.Role {
+	case RoleBashExecution:
+		var fields bashExecutionFields
+		if json.Unmarshal(msg.Content, &fields) != nil {
+			return nil
+		}
+		if fields.ExcludeFromContext {
+			return nil // !! prefix: excluded from context
+		}
+		return &ai.UserMessage{
+			Content:   ai.StringOrBlocks{Blocks: ai.ContentList{ai.TextContent{Text: BashExecutionToText(&fields)}}},
+			Timestamp: msg.Timestamp,
+		}
+	case RoleCustom:
+		var fields customMessageFields
+		if json.Unmarshal(msg.Content, &fields) != nil {
+			return nil
+		}
+		return &ai.UserMessage{
+			Content:   customContentToBlocks(fields.Content),
+			Timestamp: msg.Timestamp,
+		}
+	case RoleBranchSummary:
+		var fields branchSummaryFields
+		if json.Unmarshal(msg.Content, &fields) != nil {
+			return nil
+		}
+		return &ai.UserMessage{
+			Content:   ai.StringOrBlocks{Blocks: ai.ContentList{ai.TextContent{Text: BranchSummaryPrefix + fields.Summary + BranchSummarySuffix}}},
+			Timestamp: msg.Timestamp,
+		}
+	case RoleCompactionSummary:
+		var fields compactionSummaryFields
+		if json.Unmarshal(msg.Content, &fields) != nil {
+			return nil
+		}
+		return &ai.UserMessage{
+			Content: ai.StringOrBlocks{Blocks: ai.ContentList{ai.TextContent{
+				Text: CompactionSummaryPrefix + fields.Summary + CompactionSummarySuffix,
+			}}},
+			Timestamp: msg.Timestamp,
+		}
+	default:
+		// Unknown custom role: unconvertible, filtered out.
+		return nil
+	}
 }
 
 // customContentToBlocks normalizes string|blocks content to blocks.
