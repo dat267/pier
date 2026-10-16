@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -262,6 +263,138 @@ func TestFindMostRecentSession(t *testing.T) {
 	}
 	if got := FindMostRecentSession(sessions, "/nothing"); got != nil {
 		t.Fatalf("no-match filter = %v", got)
+	}
+}
+
+// Upstream bounds its discovery header scan (MAX_SESSION_HEADER_SCAN_BYTES,
+// 1 MiB), so a session whose header lies beyond the limit is not a discovery
+// candidate even though SessionManager.open can still open it.
+func TestFindMostRecentSessionSkipsHeaderBeyondScanLimit(t *testing.T) {
+	dir := t.TempDir()
+	sessions := filepath.Join(dir, "sessions")
+	os.MkdirAll(sessions, 0o755)
+
+	beyondHeader, _ := ai.MarshalJSON(map[string]any{
+		"type": "session", "version": 3, "id": "beyond",
+		"timestamp": "2026-09-19T00:00:00.000Z", "cwd": "/project",
+	})
+	beyond := filepath.Join(sessions, "beyond.jsonl")
+	prefix := strings.Repeat("x", 1024*1024+1) + "\n"
+	if err := os.WriteFile(beyond, append([]byte(prefix), beyondHeader...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	validHeader, _ := ai.MarshalJSON(map[string]any{
+		"type": "session", "version": 3, "id": "valid",
+		"timestamp": "2026-09-19T00:00:00.000Z", "cwd": "/project",
+	})
+	valid := filepath.Join(sessions, "valid.jsonl")
+	if err := os.WriteFile(valid, append(validHeader, '\n'), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Now()
+	os.Chtimes(valid, now.Add(-time.Hour), now.Add(-time.Hour))
+	os.Chtimes(beyond, now, now)
+
+	if got := FindMostRecentSession(sessions, ""); got == nil || !strings.HasSuffix(*got, "valid.jsonl") {
+		t.Fatalf("most recent = %v", got)
+	}
+}
+
+// Discovery skips blank and malformed lines before the header (upstream
+// readSessionHeader), so a file with a corrupt prefix is still a candidate.
+func TestFindMostRecentSessionScansPastMalformedLines(t *testing.T) {
+	dir := t.TempDir()
+	sessions := filepath.Join(dir, "sessions")
+	os.MkdirAll(sessions, 0o755)
+
+	header, _ := ai.MarshalJSON(map[string]any{
+		"type": "session", "version": 3, "id": "padded",
+		"timestamp": "2026-09-19T00:00:00.000Z", "cwd": "/project",
+	})
+	path := filepath.Join(sessions, "padded.jsonl")
+	content := "\n  \nnot json\n{broken json\n" + string(header) + "\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := FindMostRecentSession(sessions, ""); got == nil || *got != path {
+		t.Fatalf("most recent = %v", got)
+	}
+}
+
+// Discovery stats and sorts candidates by mtime first (upstream
+// findMostRecentSession), so an older file is never opened once the newest one
+// matches. Reading it used to show up as whole-file allocation volume.
+func TestFindMostRecentSessionStopsAtTheNewestCandidate(t *testing.T) {
+	dir := t.TempDir()
+	sessions := filepath.Join(dir, "sessions")
+	os.MkdirAll(sessions, 0o755)
+
+	header, _ := ai.MarshalJSON(map[string]any{
+		"type": "session", "version": 3, "id": "new",
+		"timestamp": "2026-09-19T00:00:00.000Z", "cwd": "/project",
+	})
+	newest := filepath.Join(sessions, "new.jsonl")
+	if err := os.WriteFile(newest, append(header, '\n'), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	older := filepath.Join(sessions, "old.jsonl")
+	file, err := os.Create(older)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := file.Truncate(4 << 20); err != nil {
+		t.Fatal(err)
+	}
+	file.Close()
+
+	now := time.Now()
+	os.Chtimes(older, now.Add(-time.Hour), now.Add(-time.Hour))
+	os.Chtimes(newest, now, now)
+
+	allocated := allocatedBytesPerRun(t, 1, func() {
+		if got := FindMostRecentSession(sessions, "/project"); got == nil || *got != newest {
+			t.Fatalf("most recent = %v", got)
+		}
+	})
+	if allocated > 1<<20 {
+		t.Fatalf("FindMostRecentSession allocated %d bytes; the older 4 MiB file must not be read", allocated)
+	}
+}
+
+// buildSessionInfo streams files upstream (createReadStream + readline); the
+// port read the whole file and split it, allocating two extra full copies. The
+// streaming path keeps allocation volume near the per-line cost.
+func TestBuildSessionInfoDoesNotCopyTheWholeFile(t *testing.T) {
+	var buf strings.Builder
+	buf.WriteString(`{"type":"session","version":3,"id":"s1","timestamp":"t0","cwd":"/tmp"}` + "\n")
+	for i := 0; i < 20000; i++ {
+		fmt.Fprintf(&buf, `{"type":"message","id":"m%06d","parentId":null,"timestamp":"t","message":{"role":"user","content":"hello %d"}}`+"\n", i, i)
+	}
+	dir := t.TempDir()
+	path := filepath.Join(dir, "session.jsonl")
+	if err := os.WriteFile(path, []byte(buf.String()), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	allocated := allocatedBytesPerRun(t, 1, func() {
+		built := buildSessionInfo(path)
+		if built == nil || built.ID != "s1" {
+			t.Fatalf("buildSessionInfo = %+v", built)
+		}
+	})
+	// The whole-file read this replaced measured above 8x the file size; the
+	// bound leaves headroom for the decoder's per-line allocations while still
+	// failing if the file is buffered and copied whole again.
+	if allocated > int64(info.Size())*5 {
+		t.Fatalf("buildSessionInfo allocated %d bytes for a %d-byte file; it must stream", allocated, info.Size())
 	}
 }
 

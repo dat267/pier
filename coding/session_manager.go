@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -1003,16 +1004,22 @@ func ListSessions(cwd string, sessionDir string) []SessionInfo {
 	return sessions
 }
 
-// buildSessionInfo extracts listing metadata (port of buildSessionInfo).
+// buildSessionInfo extracts listing metadata (port of buildSessionInfo). The
+// file is streamed line by line like upstream's createReadStream + readline
+// loop; reading it whole and splitting it doubled the memory of listing a
+// large session directory.
 func buildSessionInfo(filePath string) *SessionInfo {
 	stats, err := os.Stat(filePath)
 	if err != nil {
 		return nil
 	}
-	data, err := os.ReadFile(filePath)
+	file, err := os.Open(filePath)
 	if err != nil {
 		return nil
 	}
+	defer file.Close()
+	reader := bufio.NewReaderSize(file, 64*1024)
+
 	var header *SessionHeader
 	messageCount := 0
 	firstMessage := ""
@@ -1020,55 +1027,76 @@ func buildSessionInfo(filePath string) *SessionInfo {
 	name := ""
 	var lastActivityTime int64
 
-	for _, line := range strings.Split(string(data), "\n") {
-		entry, err := UnmarshalFileEntry(line)
-		if err != nil || (entry.Header == nil && entry.Entry == nil) {
-			continue
+	recordMessage := func(message ai.Message) {
+		// Activity time from the message timestamp (upstream
+		// getMessageActivityTime).
+		if timestamp := sessionMessageTimestamp(message); timestamp > 0 && timestamp > lastActivityTime {
+			lastActivityTime = timestamp
 		}
-		if header == nil {
-			if entry.Header == nil {
-				return nil
-			}
-			header = entry.Header
-			continue
-		}
-		e := entry.Entry
-		if e == nil {
-			continue
-		}
-		if e.Type == "session_info" && e.Name != nil {
-			name = strings.TrimSpace(*e.Name)
-		}
-		if e.Type != "message" {
-			continue
-		}
-		messageCount++
-		message, mErr := ai.UnmarshalMessage(e.Message)
-		if mErr != nil {
-			continue
-		}
-
-		// Activity time from the message timestamp.
-		var msg struct {
-			Timestamp *int64 `json:"timestamp"`
-		}
-		if json.Unmarshal(e.Message, &msg) == nil && msg.Timestamp != nil && *msg.Timestamp > 0 {
-			if *msg.Timestamp > lastActivityTime {
-				lastActivityTime = *msg.Timestamp
-			}
-		}
-
 		role := ai.RoleOf(message)
 		if role != ai.RoleUser && role != ai.RoleAssistant {
-			continue
+			return
 		}
 		textContent := extractTextContent(message)
 		if textContent == "" {
-			continue
+			return
 		}
 		allMessages = append(allMessages, textContent)
 		if firstMessage == "" && role == ai.RoleUser {
 			firstMessage = textContent
+		}
+	}
+
+	// process consumes one JSONL line. It reports true when the line is a
+	// parsable entry that is not a session header: the file is then not a
+	// session (upstream returns null from the same check).
+	process := func(line []byte) bool {
+		if header == nil {
+			entry, err := UnmarshalFileEntry(string(line))
+			if err != nil {
+				return false
+			}
+			if entry.Header == nil {
+				return true
+			}
+			header = entry.Header
+			return false
+		}
+		// Message entries dominate a session's bytes; the escape-free scanner
+		// the lazy loader uses avoids a full structural decode per line.
+		// Anything it does not fully understand falls back to the decoder.
+		if meta, ok := scanSessionLine(line); ok && meta.typ == "message" && meta.id != "" {
+			messageCount++
+			if message, mErr := ai.UnmarshalMessage(json.RawMessage(meta.message)); mErr == nil {
+				recordMessage(message)
+			}
+			return false
+		}
+		entry, err := UnmarshalFileEntry(string(line))
+		if err != nil || entry.Entry == nil {
+			return false
+		}
+		e := entry.Entry
+		if e.Type == "session_info" && e.Name != nil {
+			name = strings.TrimSpace(*e.Name)
+		}
+		if e.Type == "message" {
+			messageCount++
+			if message, mErr := ai.UnmarshalMessage(e.Message); mErr == nil {
+				recordMessage(message)
+			}
+		}
+		return false
+	}
+
+	for {
+		line, readErr := reader.ReadBytes('\n')
+		line = bytes.TrimRight(line, "\r\n")
+		if len(bytes.TrimSpace(line)) != 0 && process(line) {
+			return nil
+		}
+		if readErr != nil {
+			break
 		}
 	}
 	if header == nil {
@@ -1103,6 +1131,24 @@ func buildSessionInfo(filePath string) *SessionInfo {
 		FirstMessage:    first,
 		AllMessagesText: strings.Join(allMessages, " "),
 	}
+}
+
+// sessionMessageTimestamp is the numeric timestamp carried by a message
+// (upstream getMessageActivityTime's message branch).
+func sessionMessageTimestamp(message ai.Message) int64 {
+	switch m := message.(type) {
+	case *ai.SystemMessage:
+		return m.Timestamp
+	case *ai.UserMessage:
+		return m.Timestamp
+	case *ai.AssistantMessage:
+		return m.Timestamp
+	case *ai.ToolResultMessage:
+		return m.Timestamp
+	case *ai.CustomMessage:
+		return m.Timestamp
+	}
+	return 0
 }
 
 func derefOrEmpty(s *string) string {
