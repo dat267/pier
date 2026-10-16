@@ -260,3 +260,30 @@ func TestLexDoesNotSwallowDocument(t *testing.T) {
 		t.Fatalf("list end %d overruns the fence at %d", blocks[0].End, strings.Index(src, "```"))
 	}
 }
+
+// TestInlinePendingDollarMath: a streamed `$…` with no closing `$` becomes a
+// pending LaTeX span only when the tail looks like math (upstream
+// tokenizeInlineLatex); otherwise the `$` is literal text.
+func TestInlinePendingDollarMath(t *testing.T) {
+	inlines := ParseInline("a $x^2")
+	if len(inlines) != 2 {
+		t.Fatalf("inlines = %+v, want text plus pending latex", inlines)
+	}
+	last := inlines[len(inlines)-1]
+	if last.Kind != InlineLatex || !last.Pending {
+		t.Fatalf("last inline = %+v, want a pending latex", last)
+	}
+	if last.Raw != "$x^2" || last.Text != "x^2" {
+		t.Fatalf("pending latex = raw %q text %q, want $x^2 / x^2", last.Raw, last.Text)
+	}
+
+	plain := ParseInline("costs $5 today")
+	for _, in := range plain {
+		if in.Kind == InlineLatex {
+			t.Fatalf("plain currency parsed as latex: %+v", in)
+		}
+	}
+	if got := ParseInline("a $ x"); len(got) == 1 && got[0].Kind == InlineLatex {
+		t.Fatal("$ followed by whitespace must not open math")
+	}
+}

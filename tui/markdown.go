@@ -128,9 +128,24 @@ type Markdown struct {
 	// changed, so the prefix reuse does not depend on GC timing; the strings it
 	// references are substrings of the cached source text, which is retained
 	// anyway.
+	//
+	// D180: upstream 54c19a252 also flattens its cached lines (flattenLines): V8
+	// keeps string concatenations as ropes, and an unflattened cache retains a
+	// tree of the concatenated parts. Go strings are immutable flat buffers, so
+	// there is no equivalent representation to flatten.
 	cacheTokenKeys  []mdBlockKey
 	cacheTokenLines [][]string
 	cacheWidth      int
+
+	// Where a later render may start re-lexing. cacheWindowOffset is the byte
+	// offset into cacheSource from which the last render lexed, and
+	// cacheWindowBase the block index at that offset; every block before it is
+	// stable while the source only grows, so its keys and final lines carry over.
+	// cacheSource is the normalized source the window was computed from and the
+	// prefix check that keeps the offsets honest.
+	cacheWindowOffset int
+	cacheWindowBase   int
+	cacheSource       string
 
 	// renderedTokens counts block renders (test seam).
 	renderedTokens int
@@ -191,6 +206,9 @@ func (m *Markdown) Invalidate() {
 	m.cacheTokenKeys = nil
 	m.cacheTokenLines = nil
 	m.cacheWidth = 0
+	m.cacheWindowOffset = 0
+	m.cacheWindowBase = 0
+	m.cacheSource = ""
 }
 
 // Prepare warms the render cache for width without returning the lines, so an
@@ -283,42 +301,104 @@ func (m *Markdown) Render(width int) []string {
 		m.cacheTokenKeys = nil
 		m.cacheTokenLines = nil
 		m.cacheWidth = width
+		m.cacheWindowOffset = 0
+		m.cacheWindowBase = 0
+		m.cacheSource = ""
 		return m.cachedLines
 	}
 
 	normalizedText := strings.ReplaceAll(text, "\t", "   ")
 
-	blocks := markdown.Lex(normalizedText)
+	// Incremental lex. When the source only grew since the last render, the
+	// blocks before the trailing open run are unchanged, so re-lex only the tail
+	// (markdown.LexFrom) and carry their keys and final lines forward; otherwise
+	// lex from the start. No block tree is retained between renders: the keys
+	// hold the deciding fields and reference the cached source, exactly like the
+	// line cache.
+	windowBase, windowOffset := 0, 0
+	if m.canReuseLex(normalizedText, width) {
+		windowBase, windowOffset = m.cacheWindowBase, m.cacheWindowOffset
+	}
+	blocks := markdown.LexFrom(normalizedText, windowOffset)
 	markdown.TrimPartialClosingFences(blocks)
-	renderer := markdown.NewRenderer(m.renderOptions())
+	total := windowBase + len(blocks)
 
-	// Reuse the final lines of every block that did not change since the last
-	// render; only the changed tail is re-parsed and re-styled.
-	reuse := m.reusableBlocks(blocks, m.cacheTokenKeys, width)
+	// Reuse every block before the re-lex window (whose source is byte-identical)
+	// and extend the reuse through the re-lexed tail by key comparison. A block's
+	// lines were rendered with the following block as context, so the last
+	// matching block is only reused when its successor also matches.
+	matched := matchBlockKeys(blocks, windowBase, total, m.cacheTokenKeys)
+	if windowBase > 0 && matched == windowBase {
+		// The stable-prefix invariant did not hold; redo the whole source.
+		windowBase, windowOffset = 0, 0
+		blocks = markdown.LexFrom(normalizedText, 0)
+		markdown.TrimPartialClosingFences(blocks)
+		total = len(blocks)
+		matched = matchBlockKeys(blocks, 0, total, m.cacheTokenKeys)
+	}
+	reuse := matched - 1
+	if reuse < windowBase {
+		reuse = windowBase
+	}
+	if reuse > total-1 {
+		reuse = total - 1
+	}
+	if reuse < 0 {
+		reuse = 0
+	}
+
+	renderer := markdown.NewRenderer(m.renderOptions())
+	finals := make([][]string, total)
+	for index := 0; index < reuse; index++ {
+		finals[index] = m.cacheTokenLines[index]
+	}
+	for index := reuse; index < total; index++ {
+		var next *markdown.Block
+		if index+1 < total {
+			next = blocks[index+1-windowBase]
+		}
+		m.renderedTokens++
+		rendered := renderer.RenderBlock(blocks[index-windowBase], contentWidth, next)
+		finals[index] = renderer.Finalize(rendered, width, contentWidth, m.PaddingX)
+	}
 
 	var contentLines []string
-	tokenLines := make([][]string, 0, max(0, len(blocks)-1))
-	for index, block := range blocks {
-		var final []string
-		if index < reuse {
-			final = m.cacheTokenLines[index]
-		} else {
-			var next *markdown.Block
-			if index+1 < len(blocks) {
-				next = blocks[index+1]
-			}
-			m.renderedTokens++
-			rendered := renderer.RenderBlock(block, contentWidth, next)
-			final = renderer.Finalize(rendered, width, contentWidth, m.PaddingX)
-		}
+	for _, final := range finals {
 		contentLines = append(contentLines, final...)
-		if index < len(blocks)-1 {
-			tokenLines = append(tokenLines, final)
+	}
+	if len(finals) > 0 {
+		m.cacheTokenLines = finals[:len(finals)-1]
+	} else {
+		m.cacheTokenLines = nil
+	}
+
+	fullKeys := make([]mdBlockKey, total)
+	copy(fullKeys, m.cacheTokenKeys[:min(windowBase, len(m.cacheTokenKeys))])
+	copy(fullKeys[windowBase:], markdownBlockKeys(blocks))
+	m.cacheTokenKeys = fullKeys
+	m.cacheWidth = width
+	m.cacheSource = normalizedText
+
+	// Record where the next render can begin re-lexing: the block just before
+	// the first one an append can still change. Only the tail is in hand, so the
+	// window never moves behind the current base.
+	nextBase := 0
+	if len(blocks) > 0 {
+		nextBase = windowBase + markdown.FirstUnstable(blocks, normalizedText) - 1
+		if nextBase < windowBase {
+			nextBase = windowBase
+		}
+		if nextBase > total-1 {
+			nextBase = total - 1
 		}
 	}
-	m.cacheTokenKeys = markdownBlockKeys(blocks)
-	m.cacheTokenLines = tokenLines
-	m.cacheWidth = width
+	m.cacheWindowBase = nextBase
+	if nextBase <= 0 {
+		m.cacheWindowBase = 0
+		m.cacheWindowOffset = 0
+	} else {
+		m.cacheWindowOffset = fullKeys[nextBase].Start
+	}
 
 	var bgFn func(text string) string
 	if m.DefaultTextStyle != nil {
@@ -353,41 +433,35 @@ func (m *Markdown) Render(width int) []string {
 	return []string{""}
 }
 
-// reusableBlocks returns how many leading blocks of the current render can
-// reuse the cached final lines. A block's lines were rendered with the next
-// block's kind as context, so the last matching block is only reused when its
-// successor also matches.
-// D180: upstream 54c19a252 also flattens its cached lines (flattenLines): V8
-// keeps string concatenations as ropes, and an unflattened cache retains a tree
-// of the concatenated parts. Go strings are immutable flat buffers, so there is
-// no equivalent representation to flatten.
-func (m *Markdown) reusableBlocks(blocks []*markdown.Block, previous []mdBlockKey, width int) int {
-	if m.cacheWidth != width || len(m.cacheTokenLines) == 0 {
-		return 0
+// canReuseLex reports whether the previous render's lex can seed this one: the
+// source only grew (so the cached offsets and keys stay valid) and the width is
+// unchanged (so the cached lines can be reused). A transform can rewrite the
+// source non-monotonically, so it always re-lexes from the start.
+func (m *Markdown) canReuseLex(normalizedText string, width int) bool {
+	if m.cacheWindowOffset <= 0 || m.cacheWindowBase <= 0 {
+		return false
 	}
-	limit := len(blocks)
+	if m.Options.Transform != nil || m.cacheWidth != width || m.cacheSource == "" {
+		return false
+	}
+	if m.cacheWindowOffset > len(normalizedText) || m.cacheWindowBase > len(m.cacheTokenKeys) {
+		return false
+	}
+	return strings.HasPrefix(normalizedText, m.cacheSource)
+}
+
+// matchBlockKeys returns how many leading blocks of the re-lexed tail agree with
+// the cached keys, starting at the reused prefix's base.
+func matchBlockKeys(blocks []*markdown.Block, base int, total int, previous []mdBlockKey) int {
+	limit := total
 	if len(previous) < limit {
 		limit = len(previous)
 	}
-	matched := 0
-	for matched < limit && sameMdBlockKey(blocks[matched], previous[matched]) {
+	matched := base
+	for matched < limit && sameMdBlockKey(blocks[matched-base], previous[matched]) {
 		matched++
 	}
-	reuse := matched - 1
-	maxReuse := len(m.cacheTokenLines)
-	if len(blocks)-1 < maxReuse {
-		maxReuse = len(blocks) - 1
-	}
-	if maxReuse < 0 {
-		maxReuse = 0
-	}
-	if reuse > maxReuse {
-		reuse = maxReuse
-	}
-	if reuse < 0 {
-		reuse = 0
-	}
-	return reuse
+	return matched
 }
 
 // mdBlockKey is the set of top-level fields that decide whether a block changed

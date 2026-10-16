@@ -123,6 +123,9 @@ func projectBlock(b *Block) any {
 	case BlockLatex:
 		m["raw"] = b.Raw
 		m["text"] = b.Text
+		if b.Pending {
+			m["pending"] = true
+		}
 	case BlockSpace:
 		delete(m, "type")
 		m["type"] = "space"
@@ -218,6 +221,9 @@ func projectInline(in Inline) any {
 	case InlineLatex:
 		m["raw"] = in.Raw
 		m["text"] = in.Text
+		if in.Pending {
+			m["pending"] = true
+		}
 	case InlineCheckbox:
 		// type only
 	}

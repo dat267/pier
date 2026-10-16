@@ -33,10 +33,7 @@ func (d *Document) Update(src string) []*Block {
 	if src == d.src {
 		return d.blocks
 	}
-	start := len(d.blocks) - 1
-	for start > 0 && (blockExtendable(d.blocks[start-1], d.src) || blockMidLine(d.blocks[start], d.src)) {
-		start--
-	}
+	start := FirstUnstable(d.blocks, d.src)
 	offset := d.blocks[start].Start
 	reused := append([]*Block(nil), d.blocks[:start]...)
 	tail := (&blockLexer{src: src}).lexBlocks(offset, len(src))
@@ -45,6 +42,38 @@ func (d *Document) Update(src string) []*Block {
 	d.blocks = append(reused, tail...)
 	d.parsed = len(d.blocks)
 	return d.blocks
+}
+
+// FirstUnstable returns the index of the first block an append to src can still
+// change. Blocks before it are stable: as long as the source only grows they
+// keep their kind, content and byte offsets, and the block just before them has
+// a stable successor. src is the source the blocks were lexed from.
+//
+// It is the incremental contract shared by Document.Update and callers that
+// re-lex only a tail (see LexFrom).
+func FirstUnstable(blocks []*Block, src string) int {
+	start := len(blocks) - 1
+	for start > 0 && (blockExtendable(blocks[start-1], src) || blockMidLine(blocks[start], src)) {
+		start--
+	}
+	if start < 0 {
+		return 0
+	}
+	return start
+}
+
+// LexFrom lexes src from byte offset from to its end, reporting absolute block
+// offsets, and resolves the new tail's inline content. Blocks wholly before
+// from are assumed unchanged, so a caller that knows from is stable (see
+// FirstUnstable) can re-lex only the tail and keep the earlier blocks' keys and
+// rendered lines. from at or below zero is a full Lex.
+func LexFrom(src string, from int) []*Block {
+	if from <= 0 {
+		return Lex(src)
+	}
+	tail := (&blockLexer{src: src}).lexBlocks(from, len(src))
+	ParseInlines(tail)
+	return tail
 }
 
 // blockMidLine reports a block whose raw ends without a newline: the next

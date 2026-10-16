@@ -1,6 +1,9 @@
 package markdown
 
-import "strings"
+import (
+	"strings"
+	"unicode/utf8"
+)
 
 // ParseInlines resolves the inline content of every block in the tree.
 func ParseInlines(blocks []*Block) {
@@ -74,6 +77,12 @@ func ParseInline(src string) []Inline {
 						i = i + 2 + close + 2
 						continue
 					}
+					// A `\(` with no `\)` yet is a streamed, still-open math span:
+					// upstream marks it pending and renders its raw source.
+					flush()
+					out = append(out, Inline{Kind: InlineLatex, Raw: src[i:], Text: src[i+2:], Pending: true})
+					i = len(src)
+					continue
 				}
 				if isASCIIPunct(src[i+1]) {
 					flush()
@@ -174,12 +183,24 @@ func ParseInline(src string) []Inline {
 			i++
 		case '$':
 			if i+1 < len(src) && src[i+1] != '$' {
-				if close := findInlineDollar(src, i+1); close >= 0 {
-					inner := src[i+1 : close]
-					flush()
-					out = append(out, Inline{Kind: InlineLatex, Raw: src[i : close+1], Text: inner})
-					i = close + 1
-					continue
+				next, _ := utf8.DecodeRuneInString(src[i+1:])
+				if !isWhitespaceRune(next) {
+					if close := findInlineDollar(src, i+1); close >= 0 {
+						inner := src[i+1 : close]
+						flush()
+						out = append(out, Inline{Kind: InlineLatex, Raw: src[i : close+1], Text: inner})
+						i = close + 1
+						continue
+					}
+					// A `$…` with no closing `$` yet is a streamed math span when
+					// the tail looks like math; upstream marks it pending and
+					// renders its raw source (markdown.ts tokenizeInlineLatex).
+					if looksLikePendingDollarMath(src[i+1:]) {
+						flush()
+						out = append(out, Inline{Kind: InlineLatex, Raw: src[i:], Text: src[i+1:], Pending: true})
+						i = len(src)
+						continue
+					}
 				}
 			}
 			text.WriteByte(c)
@@ -227,6 +248,35 @@ func findInlineDollar(src string, from int) int {
 		}
 	}
 	return -1
+}
+
+// looksLikePendingDollarMath reports whether an unterminated `$…` tail looks
+// like math (upstream's looksLikePendingDollarMath in
+// packages/tui/src/components/markdown.ts): a backslash command or one of the
+// operator symbols. It decides whether a streamed `$` becomes a pending LaTeX
+// span instead of literal text.
+func looksLikePendingDollarMath(s string) bool {
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case '\\':
+			if i+1 < len(s) && isASCIILetter(s[i+1]) {
+				return true
+			}
+		case '_', '^', '=', '+', '*', '/', '<', '>', '(', ')', '[', ']', '|', '-':
+			return true
+		default:
+			if s[i] < utf8.RuneSelf {
+				continue
+			}
+			r, size := utf8.DecodeRuneInString(s[i:])
+			i += size - 1
+			switch r {
+			case '±', '≤', '≥', '≠', '≈', '∈', '→', '⇒', '∞', '∫', '∑', '√':
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func normalizeCodeSpan(s string) string {

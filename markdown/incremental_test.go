@@ -176,3 +176,42 @@ func BenchmarkFullRender500(b *testing.B) {
 		}
 	}
 }
+
+// TestLexFromMatchesLex requires the tail entry point to produce exactly the
+// blocks a full lex produces, offsets included, for every stable boundary of a
+// mixed document.
+func TestLexFromMatchesLex(t *testing.T) {
+	full := Lex(incrementalSample)
+	src := incrementalSample
+	for start := 1; start < len(full); start++ {
+		from := full[start].Start
+		tail := LexFrom(src, from)
+		want := full[start:]
+		if !reflect.DeepEqual(tail, want) {
+			t.Fatalf("LexFrom(%d) mismatch: got %v want %v", from, blockKinds(tail), blockKinds(want))
+		}
+	}
+}
+
+func TestFirstUnstableMarksOnlyExtendableBlocks(t *testing.T) {
+	src := "# Title\n\none\n\ntwo\n\nthree\n"
+	blocks := Lex(src)
+	first := FirstUnstable(blocks, src)
+	// The trailing blank line is a space block, which an append can always
+	// extend, so the boundary is at most the last two blocks.
+	if first < len(blocks)-2 || first > len(blocks)-1 {
+		t.Fatalf("FirstUnstable = %d, want %d..%d", first, len(blocks)-2, len(blocks)-1)
+	}
+	for i := 0; i < first; i++ {
+		if got := LexFrom(src, blocks[i].Start); len(got) == 0 {
+			t.Fatalf("stable block %d re-lexes empty", i)
+		}
+	}
+
+	// An unclosed fence keeps both it and any preceding blank line unstable.
+	open := "text\n\n```go\nx\n"
+	openBlocks := Lex(open)
+	if got := FirstUnstable(openBlocks, open); got != 1 {
+		t.Fatalf("FirstUnstable of an open fence = %d, want 1", got)
+	}
+}

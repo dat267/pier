@@ -86,3 +86,40 @@ func benchmarkMarkdownRenderANSI(b *testing.B, text string) {
 func BenchmarkMarkdownRenderProseANSI(b *testing.B) { benchmarkMarkdownRenderANSI(b, benchProse) }
 
 func BenchmarkMarkdownRenderMixedANSI(b *testing.B) { benchmarkMarkdownRenderANSI(b, benchMixed) }
+
+// Streaming a message one paragraph at a time: the component carries the
+// stable prefix forward (incremental lex plus the line cache), while the cold
+// variant rebuilds the component every append and re-lexes the whole message.
+func benchmarkMarkdownStream(b *testing.B, reuse bool) {
+	b.Helper()
+	theme := mdTestTheme()
+	var prefix strings.Builder
+	var prefixes []string
+	for i := 0; i < 200; i++ {
+		prefix.WriteString("Paragraph with **bold** and `code` and a [link](https://example.com).\n\n")
+		prefixes = append(prefixes, prefix.String())
+	}
+	if reuse {
+		message := NewMarkdown("", 1, 0, theme, nil, MarkdownOptions{})
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			for _, text := range prefixes {
+				message.SetText(text)
+				_ = message.Render(80)
+			}
+		}
+		return
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for _, text := range prefixes {
+			message := NewMarkdown(text, 1, 0, theme, nil, MarkdownOptions{})
+			_ = message.Render(80)
+		}
+	}
+}
+
+func BenchmarkMarkdownStreamAppend(b *testing.B)     { benchmarkMarkdownStream(b, true) }
+func BenchmarkMarkdownStreamAppendCold(b *testing.B) { benchmarkMarkdownStream(b, false) }

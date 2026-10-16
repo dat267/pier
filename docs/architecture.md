@@ -703,7 +703,11 @@ markup-free inline source returns one text run sharing the source (its inline
 text tokenizer consumes to the next special character and merges runs), a
 paragraph is a source slice instead of a builder copy, and block and line
 slices are preallocated. These took prose lexing from 112 to 348 MB/s and 23
-to 3 allocations per 3.96 KB. Incremental streaming of 500 growing paragraphs
+to 3 allocations per 3.96 KB. The inline LaTeX tokenizer follows upstream's
+`tokenizeInlineLatex` including its pending span: an unterminated `$…` whose
+tail looks like math, or an unterminated `\(`, becomes a pending LaTeX token
+that renders its raw source instead of going through the LaTeX renderer.
+Incremental streaming of 500 growing paragraphs
 is 2.27 ms / 3.8 MB versus 196 ms / 312 MB re-lexing each prefix, and is
 value-identical to `Lex` at every prefix (byte-by-byte, random-chunk,
 retroactive-construct and fuzz tests).
@@ -713,6 +717,16 @@ end to end than the old lexer/renderer: `benchProse` (4 KB) 384 to 307 us and
 `benchMixed` (1.1 KB) 226 to 143 us, with allocations 236 KB/2328 to 216 KB/2312
 and 132 KB/1597 to 110 KB/1386 (Intel N150, width 80, `Invalidate` each round).
 The remaining cost is the same styling and wrapping pass, not lexing.
+
+The component lexes incrementally too: `tui/markdown.go` keeps the block keys
+and final lines before the trailing open run and calls `markdown.LexFrom` for
+the tail, with `markdown.FirstUnstable` the boundary rule `Document.Update`
+shares. Only keys, lines and two offsets are retained between renders, never a
+block tree. Streaming 200 growing paragraphs costs 8.3 ms / 13.7 MB / 23k
+allocations, against 244.5 ms / 166 MB / 1.73M rebuilding the component on every
+append; the full re-lexes alone were 35.7 ms. `LexFrom` is byte-identical to
+`Lex` from every stable boundary, and chunked streaming output is checked
+against a fresh render of the final source.
 
 The two options it replaces are slower on every fixture. glamour v1.0.0
 (`NewTermRenderer`, word wrap 80) runs 0.21-4.45 MB/s with its default style
