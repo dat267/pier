@@ -658,6 +658,48 @@ and an allocation-budget regression test cover the change. A temporary
 before/after comparison of 1,768 streaming prefixes (the golden corpus plus a
 large mixed-markup document) produced identical token trees and rendered lines.
 
+## The markdown package
+
+`github.com/dat267/pier/markdown` is a second, from-scratch renderer kept
+additive for now: `tui/markdown.go` and the upstream goldens are untouched, and
+wiring it in is a separate follow-up. It is a four-stage pipeline, each stage
+independently testable: a hand-written block lexer (no regexp), an inline
+parser, a width-aware layout that understands ANSI SGR runs and East Asian
+rune widths, and a styled line renderer behind a narrow `Style` interface
+(`NopStyle` for measurement). `Document.Update` adds incremental mode: it keeps
+the stable block prefix and re-lexes only the trailing run an append can affect.
+
+On the `tui/testdata/md_corpus.json` corpus the package matches Marked 18.0.11
+token for token, 79/79 cases, through a differential harness. On an Intel N150
+(Go 1.27.1, width 80), against Marked 18.0.11 in node:
+
+| fixture | lexer vs `marked.lexer` | full render vs `marked.parse` |
+|---|---|---|
+| prose 3.96 KB | 348 MB/s vs 40.8 | 58.2 MB/s vs 36.7 (1.6x) |
+| prose 49.5 KB | 399 MB/s vs 41.2 | 71.5 MB/s vs 41.7 (1.7x) |
+| mixed 1.14 KB | 19.3 MB/s | 30.9 MB/s vs 5.04 (6.1x) |
+| doc 64 KB | 48.4 MB/s vs 9.15 | 27.2 MB/s vs 8.44 (3.2x) |
+| doc 1 MB | 44.9 MB/s vs 8.11 | 28.0 MB/s vs 7.30 (3.8x) |
+
+Marked's applicable optimizations were ported rather than its code: a
+markup-free inline source returns one text run sharing the source (its inline
+text tokenizer consumes to the next special character and merges runs), a
+paragraph is a source slice instead of a builder copy, and block and line
+slices are preallocated. These took prose lexing from 112 to 348 MB/s and 23
+to 3 allocations per 3.96 KB. Incremental streaming of 500 growing paragraphs
+is 2.27 ms / 3.8 MB versus 196 ms / 312 MB re-lexing each prefix, and is
+value-identical to `Lex` at every prefix (byte-by-byte, random-chunk,
+retroactive-construct and fuzz tests).
+
+The two options it replaces are slower on every fixture. glamour v1.0.0
+(`NewTermRenderer`, word wrap 80) runs 0.21-4.45 MB/s with its default style
+(15-135x slower) and 1.27-4.45 MB/s with syntax highlighting off (`notty`,
+15-16x slower); it is also 15-40x heavier in allocations and pulls in 27
+modules. chroma v2 (`quick.Highlight`, terminal256/monokai) tokenizes at
+0.41-0.43 MB/s, while the layout renderer draws the same fenced code at
+138-262 MB/s. Measured in a throwaway module under `/tmp`; pier's `go.mod` is
+unchanged.
+
 ## Stdin paste buffering
 
 `StdinBuffer` used to concatenate and rescan the entire paste prefix for every
