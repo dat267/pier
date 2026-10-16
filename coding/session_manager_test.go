@@ -390,9 +390,11 @@ func TestBuildSessionInfoDoesNotCopyTheWholeFile(t *testing.T) {
 			t.Fatalf("buildSessionInfo = %+v", built)
 		}
 	})
-	// The whole-file read this replaced measured above 8x the file size; the
-	// bound leaves headroom for the decoder's per-line allocations while still
-	// failing if the file is buffered and copied whole again.
+	// The whole-file read this replaced measured above 8x the file size, and
+	// above 30x under -race, whose instrumentation inflates the JSON decode
+	// path; the streaming path stays near 2.5x even with the detector, so the
+	// bound leaves headroom while still failing if the file is buffered and
+	// copied whole again.
 	if allocated > int64(info.Size())*5 {
 		t.Fatalf("buildSessionInfo allocated %d bytes for a %d-byte file; it must stream", allocated, info.Size())
 	}
