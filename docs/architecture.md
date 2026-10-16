@@ -725,6 +725,14 @@ with `bytes.Buffer`, and searches only the suffix that can contain a split event
 boundary. The same fixture allocates 253 KB. Tests cover the allocation bound
 and a delimiter split across reads.
 
+## Pi-messages SSE buffering
+
+`readPiMessagesEvents` had the same full-prefix string concatenation and scan as
+the Mistral reader. A 65,536-byte event arriving in 128-byte reads allocated
+22.34 MB. It now reuses a read buffer, normalizes CRLF across chunk boundaries,
+and searches from the possible split delimiter suffix. The fixture allocates
+209 KB, and a regression test verifies CRLF event boundaries split across reads.
+
 ## Session history (high level)
 
 The repository was built as a long port: the `ai`/`agent`/`coding` cores first,

@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -23,6 +24,54 @@ func piMessagesContext() TranscriptContext {
 	return TranscriptContext{Messages: []Message{
 		&UserMessage{Content: StringOrBlocks{Text: "hello"}, Timestamp: 1},
 	}}
+}
+
+type chunkedPiMessagesReader struct {
+	data      []byte
+	chunkSize int
+}
+
+func (r *chunkedPiMessagesReader) Read(dst []byte) (int, error) {
+	if len(r.data) == 0 {
+		return 0, io.EOF
+	}
+	n := min(len(dst), len(r.data), r.chunkSize)
+	copy(dst, r.data[:n])
+	r.data = r.data[n:]
+	return n, nil
+}
+
+func TestReadPiMessagesCRLFBoundarySplitAcrossReads(t *testing.T) {
+	body := []byte("data: {\"type\":\"text_delta\",\"delta\":\"one\"}\r\n\r\ndata: {\"type\":\"text_delta\",\"delta\":\"two\"}\r\n\r\n")
+	var deltas []string
+	err := readPiMessagesEvents(context.Background(), &chunkedPiMessagesReader{data: body, chunkSize: 1}, func(event *PiMessagesEvent) bool {
+		deltas = append(deltas, event.Delta)
+		return true
+	})
+	if err != nil {
+		t.Fatalf("read events: %v", err)
+	}
+	if strings.Join(deltas, ",") != "one,two" {
+		t.Fatalf("deltas = %v, want [one two]", deltas)
+	}
+}
+
+func TestReadPiMessagesChunkedEventAllocationIsLinear(t *testing.T) {
+	payload := []byte(strings.Repeat("x", 64*1024))
+	reader := &chunkedPiMessagesReader{data: payload, chunkSize: 128}
+
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	err := readPiMessagesEvents(context.Background(), reader, func(*PiMessagesEvent) bool { return true })
+	runtime.ReadMemStats(&after)
+	if err != nil {
+		t.Fatalf("read events: %v", err)
+	}
+	allocated := after.TotalAlloc - before.TotalAlloc
+	t.Logf("assembling a %d-byte unterminated event allocated %d bytes", len(payload), allocated)
+	if allocated > uint64(len(payload))*8 {
+		t.Fatalf("assembling a %d-byte event allocated %d bytes, want less than %d", len(payload), allocated, len(payload)*8)
+	}
 }
 
 func TestParsePiMessagesEvent(t *testing.T) {

@@ -497,10 +497,50 @@ func piMessagesOptionsPayload(options *PiMessagesOptions) map[string]any {
 	return payload
 }
 
+var piMessagesEventBoundary = []byte("\n\n")
+
+// appendNormalizedPiMessagesChunk joins CRLF sequences even when their bytes
+// arrive in separate reads, matching the upstream stream decoder.
+func appendNormalizedPiMessagesChunk(buffer *bytes.Buffer, chunk []byte, pendingCR *bool) {
+	if *pendingCR {
+		if len(chunk) > 0 && chunk[0] == '\n' {
+			buffer.WriteByte('\n')
+			chunk = chunk[1:]
+		} else {
+			buffer.WriteByte('\r')
+		}
+		*pendingCR = false
+	}
+
+	start := 0
+	for index := 0; index < len(chunk); index++ {
+		if chunk[index] != '\r' {
+			continue
+		}
+		_, _ = buffer.Write(chunk[start:index])
+		if index+1 == len(chunk) {
+			*pendingCR = true
+			start = index + 1
+			continue
+		}
+		if chunk[index+1] == '\n' {
+			buffer.WriteByte('\n')
+			index++
+		} else {
+			buffer.WriteByte('\r')
+		}
+		start = index + 1
+	}
+	_, _ = buffer.Write(chunk[start:])
+}
+
 // readPiMessagesEvents decodes the SSE body, returning false from emit to stop.
 func readPiMessagesEvents(ctx context.Context, body io.Reader, emit func(event *PiMessagesEvent) bool) error {
 	reader := bufio.NewReader(body)
-	buffer := ""
+	var buffer bytes.Buffer
+	searchFrom := 0
+	pendingCR := false
+	chunk := make([]byte, 8192)
 	handleBlock := func(block string) (bool, error) {
 		if strings.TrimSpace(block) == "" {
 			return true, nil
@@ -518,17 +558,21 @@ func readPiMessagesEvents(ctx context.Context, body io.Reader, emit func(event *
 		if ctx != nil && ctx.Err() != nil {
 			return ctx.Err()
 		}
-		chunk := make([]byte, 8192)
 		read, err := reader.Read(chunk)
 		if read > 0 {
-			buffer += strings.ReplaceAll(string(chunk[:read]), "\r\n", "\n")
+			appendNormalizedPiMessagesChunk(&buffer, chunk[:read], &pendingCR)
 			for {
-				split := strings.Index(buffer, "\n\n")
+				pending := buffer.Bytes()
+				split := bytes.Index(pending[searchFrom:], piMessagesEventBoundary)
 				if split == -1 {
+					searchFrom = max(0, len(pending)-1)
 					break
 				}
-				keepGoing, herr := handleBlock(buffer[:split])
-				buffer = buffer[split+2:]
+				split += searchFrom
+				block := string(pending[:split])
+				buffer.Next(split + len(piMessagesEventBoundary))
+				searchFrom = 0
+				keepGoing, herr := handleBlock(block)
 				if herr != nil {
 					return herr
 				}
@@ -544,8 +588,12 @@ func readPiMessagesEvents(ctx context.Context, body io.Reader, emit func(event *
 			return err
 		}
 	}
-	if strings.TrimSpace(buffer) != "" {
-		if _, err := handleBlock(buffer); err != nil {
+	if pendingCR {
+		buffer.WriteByte('\r')
+	}
+	remainder := buffer.String()
+	if strings.TrimSpace(remainder) != "" {
+		if _, err := handleBlock(remainder); err != nil {
 			return err
 		}
 	}
