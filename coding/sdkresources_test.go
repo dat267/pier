@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -94,4 +95,77 @@ func testSessionRuntime(t *testing.T) *ModelRuntime {
 		t.Fatal(err)
 	}
 	return runtime
+}
+
+// TestCreateAgentSessionLoadsAllResourcePasses pins the assembled session
+// across the four concurrent discovery passes: skills, context files, prompt
+// templates and the system prompt files must arrive with the same content and
+// order as when the passes ran sequentially. Context files keep the global
+// agent-dir file ahead of the workspace ancestors.
+func TestCreateAgentSessionLoadsAllResourcePasses(t *testing.T) {
+	tempAgentDir(t)
+	agentDir := GetAgentDir()
+	runtime := testSessionRuntime(t)
+	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
+	cwd := t.TempDir()
+
+	if err := os.WriteFile(filepath.Join(agentDir, "AGENTS.md"), []byte("global rules\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(cwd, "AGENTS.md"), []byte("project rules\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(agentDir, "SYSTEM.md"), []byte("base system prompt\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(agentDir, "APPEND_SYSTEM.md"), []byte("appended prompt\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	writeSkill(t, filepath.Join(agentDir, "skills"), "alpha", "alpha skill")
+	promptsDir := filepath.Join(agentDir, "prompts")
+	if err := os.MkdirAll(promptsDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	template := "---\ndescription: greet the user\n---\nHello $1\n"
+	if err := os.WriteFile(filepath.Join(promptsDir, "greet.md"), []byte(template), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	created, err := CreateAgentSession(context.Background(), &CreateAgentSessionOptions{
+		Cwd: cwd, ModelRuntime: runtime, SettingsManager: settings,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	session := created.Session
+
+	if got, want := strings.Join(skillNames(LoadSkillsResult{Skills: session.Skills()}), ","), "alpha"; got != want {
+		t.Fatalf("skills = %q, want %q", got, want)
+	}
+
+	var contextPaths []string
+	for _, file := range session.ContextFiles() {
+		contextPaths = append(contextPaths, file.Path)
+	}
+	if len(contextPaths) != 2 ||
+		contextPaths[0] != filepath.Join(agentDir, "AGENTS.md") ||
+		contextPaths[1] != filepath.Join(cwd, "AGENTS.md") {
+		t.Fatalf("context files = %v", contextPaths)
+	}
+
+	var templateNames []string
+	for _, promptTemplate := range session.PromptTemplates() {
+		templateNames = append(templateNames, promptTemplate.Name)
+	}
+	if strings.Join(templateNames, ",") != "greet" {
+		t.Fatalf("prompt templates = %v", templateNames)
+	}
+
+	systemPrompt := session.SystemPrompt()
+	if !strings.Contains(systemPrompt, "base system prompt") {
+		t.Fatalf("system prompt does not carry SYSTEM.md: %q", systemPrompt)
+	}
+	if !strings.Contains(systemPrompt, "appended prompt") {
+		t.Fatalf("system prompt does not carry APPEND_SYSTEM.md: %q", systemPrompt)
+	}
 }

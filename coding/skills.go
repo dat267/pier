@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 // Port of utils/frontmatter.ts (the YAML subset skill files use) and
@@ -209,37 +210,97 @@ func LoadSkillsFromDir(dir string) LoadSkillsResult {
 	return loadSkillsFromDir(dir, "")
 }
 
+// skillScanConcurrency bounds the directory reads one skills-tree walk keeps
+// in flight. A skills tree is one of four concurrent boot passes (see
+// CreateAgentSession's resource discovery), so this also keeps a deep tree
+// from flooding the process with filesystem work.
+const skillScanConcurrency = 4
+
+// skillScanDir is one directory's scan: either a root SKILL.md short-circuit
+// (terminal), or its entries in ReadDir order.
+type skillScanDir struct {
+	terminal bool
+	root     *Skill
+	rootDiag []ResourceDiagnostic
+	items    []skillScanItem
+}
+
+// skillScanItem is one entry in ReadDir order: a subdirectory (scanned later)
+// or a parsed skill file.
+type skillScanItem struct {
+	subdir string
+	skill  *Skill
+	diag   []ResourceDiagnostic
+}
+
 // loadSkillsFromDir is LoadSkillsFromDir with the loader source identifier.
 func loadSkillsFromDir(dir string, source string) LoadSkillsResult {
+	scans := scanSkillTree(dir, source)
+	if scans[dir] == nil {
+		return LoadSkillsResult{}
+	}
 	var skills []Skill
 	var diagnostics []ResourceDiagnostic
-	if _, err := os.Stat(dir); err != nil {
-		return LoadSkillsResult{}
-	}
+	assembleSkillDir(dir, scans, &skills, &diagnostics)
+	return LoadSkillsResult{Skills: skills, Diagnostics: diagnostics}
+}
 
+// scanSkillTree reads every directory under rootDir on a bounded pool. The
+// listings are independent, so on a high-latency filesystem the walk costs the
+// slowest branch rather than the sum of every branch. The scan map is local to
+// the call, so concurrent walks (and the concurrent boot passes that call this)
+// share no state.
+func scanSkillTree(rootDir string, source string) map[string]*skillScanDir {
+	scans := map[string]*skillScanDir{}
+	var mu sync.Mutex
+	var wait sync.WaitGroup
+	sem := make(chan struct{}, skillScanConcurrency)
+	var walk func(dir string)
+	walk = func(dir string) {
+		// Add happens while the parent's count is still held, so it cannot race
+		// the Wait() below (the standard WaitGroup reuse rule).
+		wait.Add(1)
+		go func() {
+			defer wait.Done()
+			sem <- struct{}{}
+			scan := readSkillDir(dir, source)
+			<-sem
+			mu.Lock()
+			scans[dir] = scan
+			mu.Unlock()
+			// Children are queued after the slot is released and before this
+			// goroutine returns, so a blocked child cannot deadlock the pool.
+			for _, item := range scan.items {
+				if item.subdir != "" {
+					walk(item.subdir)
+				}
+			}
+		}()
+	}
+	walk(rootDir)
+	wait.Wait()
+	return scans
+}
+
+// readSkillDir reads one directory and parses the skill files directly inside
+// it. A subdirectory becomes an item; its scan is filled in by a later worker.
+func readSkillDir(dir string, source string) *skillScanDir {
+	// ReadDir reports a missing or unreadable directory by itself; a separate
+	// os.Stat would double the walk's directory operations.
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return LoadSkillsResult{}
+		return &skillScanDir{}
 	}
-
 	// A root SKILL.md short-circuits (one skill per directory root).
 	for _, entry := range entries {
 		name := DecodeUTF8WithReplacement([]byte(entry.Name()))
-		if name != "SKILL.md" {
+		if name != "SKILL.md" || entry.IsDir() {
 			continue
 		}
-		fullPath := filepath.Join(dir, name)
-		if entry.IsDir() {
-			continue
-		}
-		skill, diag := loadSkillFromFile(fullPath, source)
-		if skill != nil {
-			skills = append(skills, *skill)
-		}
-		diagnostics = append(diagnostics, diag...)
-		return LoadSkillsResult{Skills: skills, Diagnostics: diagnostics}
+		skill, diag := loadSkillFromFile(filepath.Join(dir, name), source)
+		return &skillScanDir{terminal: true, root: skill, rootDiag: diag}
 	}
-
+	scan := &skillScanDir{}
 	for _, entry := range entries {
 		name := DecodeUTF8WithReplacement([]byte(entry.Name()))
 		if strings.HasPrefix(name, ".") || name == "node_modules" {
@@ -247,21 +308,42 @@ func loadSkillsFromDir(dir string, source string) LoadSkillsResult {
 		}
 		fullPath := filepath.Join(dir, name)
 		if entry.IsDir() {
-			sub := loadSkillsFromDir(fullPath, source)
-			skills = append(skills, sub.Skills...)
-			diagnostics = append(diagnostics, sub.Diagnostics...)
+			scan.items = append(scan.items, skillScanItem{subdir: fullPath})
 			continue
 		}
 		if !strings.HasSuffix(name, ".md") {
 			continue
 		}
 		skill, diag := loadSkillFromFile(fullPath, source)
-		if skill != nil {
-			skills = append(skills, *skill)
-		}
-		diagnostics = append(diagnostics, diag...)
+		scan.items = append(scan.items, skillScanItem{skill: skill, diag: diag})
 	}
-	return LoadSkillsResult{Skills: skills, Diagnostics: diagnostics}
+	return scan
+}
+
+// assembleSkillDir replays one directory's scan depth-first in ReadDir order,
+// which reproduces the sequential walk's skills and diagnostics order exactly.
+func assembleSkillDir(dir string, scans map[string]*skillScanDir, skills *[]Skill, diagnostics *[]ResourceDiagnostic) {
+	scan := scans[dir]
+	if scan == nil {
+		return
+	}
+	if scan.terminal {
+		if scan.root != nil {
+			*skills = append(*skills, *scan.root)
+		}
+		*diagnostics = append(*diagnostics, scan.rootDiag...)
+		return
+	}
+	for _, item := range scan.items {
+		if item.subdir != "" {
+			assembleSkillDir(item.subdir, scans, skills, diagnostics)
+			continue
+		}
+		if item.skill != nil {
+			*skills = append(*skills, *item.skill)
+		}
+		*diagnostics = append(*diagnostics, item.diag...)
+	}
 }
 
 // LoadSkillsOptions are LoadSkills inputs.

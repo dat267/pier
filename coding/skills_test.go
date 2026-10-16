@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
+	"sync"
 	"testing"
 )
 
@@ -19,6 +21,19 @@ func writeSkill(t *testing.T, dir string, name string, description string) strin
 		t.Fatal(err)
 	}
 	return path
+}
+
+// writeMarkdownSkill writes one non-SKILL.md skill file whose declared name
+// comes from the frontmatter.
+func writeMarkdownSkill(t *testing.T, dir string, fileName string, name string, description string) {
+	t.Helper()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	content := "---\nname: " + name + "\ndescription: " + description + "\n---\nBody\n"
+	if err := os.WriteFile(filepath.Join(dir, fileName), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // setHomeDir pins the home directory for both of os.UserHomeDir's inputs:
@@ -172,5 +187,86 @@ func TestLoadSkillsSkipsUntrustedProject(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("a trusted project's skill was not loaded: %+v", trusted.Skills)
+	}
+}
+
+// skillNames lists the names in order.
+func skillNames(result LoadSkillsResult) []string {
+	names := make([]string, 0, len(result.Skills))
+	for _, skill := range result.Skills {
+		names = append(names, skill.Name)
+	}
+	return names
+}
+
+// TestLoadSkillsFromDirScansInReadDirOrder pins the depth-first order the
+// bounded walk must preserve: the sequential walk appended each skill as it
+// read it, so the parallel scan may not reorder them. Entries are visited in
+// ReadDir order, root SKILL.md files short-circuit their directory, and
+// dotfiles, node_modules and non-markdown files stay skipped.
+func TestLoadSkillsFromDirScansInReadDirOrder(t *testing.T) {
+	root := t.TempDir()
+	writeSkill(t, root, "a", "skill a") // a/SKILL.md: root short-circuit
+	writeMarkdownSkill(t, filepath.Join(root, "b"), "a.md", "x", "skill x")
+	writeSkill(t, filepath.Join(root, "b"), "z", "sub") // b/z/SKILL.md
+	writeMarkdownSkill(t, root, "c.md", "c", "skill c")
+	writeSkill(t, filepath.Join(root, ".hidden"), "hidden", "skill hidden")
+	writeSkill(t, filepath.Join(root, "node_modules"), "nm", "skill nm")
+	if err := os.WriteFile(filepath.Join(root, "notes.txt"), []byte("not a skill"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	result := LoadSkillsFromDir(root)
+	if got, want := strings.Join(skillNames(result), ","), "a,x,z,c"; got != want {
+		t.Fatalf("skills = %q, want %q", got, want)
+	}
+	if len(result.Diagnostics) != 0 {
+		t.Fatalf("diagnostics = %v", result.Diagnostics)
+	}
+}
+
+// TestLoadSkillsFromDirRootSkillShortCircuits pins the one-skill-per-root rule:
+// a root SKILL.md returns just that skill and the walk does not descend.
+func TestLoadSkillsFromDirRootSkillShortCircuits(t *testing.T) {
+	root := t.TempDir()
+	content := "---\nname: top\ndescription: top skill\n---\nBody\n"
+	if err := os.WriteFile(filepath.Join(root, "SKILL.md"), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	writeSkill(t, root, "child", "child skill")
+
+	result := LoadSkillsFromDir(root)
+	if got := strings.Join(skillNames(result), ","); got != "top" {
+		t.Fatalf("skills = %q, want top only", got)
+	}
+}
+
+// TestLoadSkillsFromDirConcurrentWalksAgree runs the bounded walk from several
+// goroutines: it must be race-free and deterministic (the CI race detector
+// guards the first half, this test the second).
+func TestLoadSkillsFromDirConcurrentWalksAgree(t *testing.T) {
+	root := t.TempDir()
+	writeSkill(t, root, "a", "skill a")
+	writeMarkdownSkill(t, filepath.Join(root, "b"), "a.md", "x", "skill x")
+	writeSkill(t, filepath.Join(root, "b"), "z", "sub")
+	writeMarkdownSkill(t, root, "c.md", "c", "skill c")
+
+	const walks = 8
+	results := make([]LoadSkillsResult, walks)
+	var wait sync.WaitGroup
+	for index := range results {
+		wait.Add(1)
+		go func(index int) {
+			defer wait.Done()
+			results[index] = LoadSkillsFromDir(root)
+		}(index)
+	}
+	wait.Wait()
+
+	want := strings.Join(skillNames(results[0]), ",")
+	for index, result := range results {
+		if got := strings.Join(skillNames(result), ","); got != want {
+			t.Fatalf("walk %d = %q, want %q", index, got, want)
+		}
 	}
 }

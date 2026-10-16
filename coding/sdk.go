@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
@@ -511,12 +512,6 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		return innerStreamFn(requestModel, requestContext, merged)
 	}
 
-	// Context files and skills feed the system prompt (upstream
-	// agent-session._buildRuntime reads them from the resource loader):
-	// the global agent-dir context file plus every workspace ancestor's,
-	// and skills from the settings paths plus a trusted project's
-	// .pi/skills. The switches behind them are kept on the session because
-	// /reload re-reads with the same options.
 	projectTrusted := settingsManager.IsProjectTrusted()
 	resources := resourceOptions{
 		SkillPaths:          options.SkillPaths,
@@ -525,9 +520,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		PromptTemplatePaths: options.PromptTemplatePaths,
 		NoPromptTemplates:   options.NoPromptTemplates,
 	}
-	contextFiles := resources.contextFiles(cwd, agentDir)
-	skillsResult := resources.skills(cwd, agentDir, settingsManager, projectTrusted)
-	promptTemplates := resources.promptTemplates(cwd, agentDir, settingsManager)
+
 	// The base/append system prompt follows the same rule as upstream's
 	// resource loader: an explicit --system-prompt / --append-system-prompt
 	// source wins, otherwise the project's (trusted) or agent-dir file.
@@ -535,7 +528,40 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		Cwd: cwd, AgentDir: agentDir, ProjectTrusted: projectTrusted,
 		SystemPrompt: options.SystemPrompt, AppendSystemPrompt: options.AppendSystemPrompt,
 	}
-	promptOverrides := LoadPromptOverrides(promptSources)
+
+	// Context files and skills feed the system prompt (upstream
+	// agent-session._buildRuntime reads them from the resource loader):
+	// the global agent-dir context file plus every workspace ancestor's, and
+	// skills from the settings paths plus a trusted project's .pi/skills. The
+	// switches behind them are kept on the session because /reload re-reads
+	// with the same options. These four discovery passes read disjoint file
+	// sets and do not depend on each other, so they run concurrently: startup
+	// pays for all of them on the critical path (PI_TIMING's
+	// createAgentSession), and on a high-latency filesystem the cost is the
+	// slowest walk rather than their sum. Each pass keeps its own order and the
+	// results are consumed below in the same order as when the passes ran
+	// sequentially, so the assembled session is unchanged; only the reads
+	// overlap. The settings getters they call take the manager's lock and
+	// return copies, so sharing the manager is safe.
+	var (
+		contextFiles    []ContextFile
+		skillsResult    LoadSkillsResult
+		promptTemplates LoadPromptTemplatesResult
+		promptOverrides PromptOverrides
+	)
+	var resourceWait sync.WaitGroup
+	resourceWait.Add(4)
+	go func() { defer resourceWait.Done(); contextFiles = resources.contextFiles(cwd, agentDir) }()
+	go func() {
+		defer resourceWait.Done()
+		skillsResult = resources.skills(cwd, agentDir, settingsManager, projectTrusted)
+	}()
+	go func() {
+		defer resourceWait.Done()
+		promptTemplates = resources.promptTemplates(cwd, agentDir, settingsManager)
+	}()
+	go func() { defer resourceWait.Done(); promptOverrides = LoadPromptOverrides(promptSources) }()
+	resourceWait.Wait()
 
 	session, err := NewAgentSession(&SessionConfig{
 		Cwd:           cwd,

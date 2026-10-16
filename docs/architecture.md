@@ -790,3 +790,47 @@ blocking-work invariant statically. Real-binary PTY tests still cover other
 flows, and `TestMutexBlockedDetectorHasTeeth` retains the deliberate deadlock
 helper. For a current hang, stall logs and an optional `SIGQUIT` dump are
 useful diagnostics, but the cause need not be a retired UI-state mutex.
+
+## Startup cost on a cold filesystem
+
+Startup was profiled on the 100 MiB session resume (`-c`) and on a fresh
+interactive session, warm and with the page cache evicted (`sync` then
+`posix_fadvise(POSIX_FADV_DONTNEED)`), and from a remote Cloud Shell whose home
+directory is a network-backed filesystem. Cold `-c` went from 516 ms to ~390 ms
+end to end (session load 312 ms, most of it the single 100 MiB read), and plain
+`pier` is 35 ms warm, 60 ms with a cold binary and config on a local disk.
+A reported Cloud Shell run (`PI_TIMING=1`) showed the same session-independent
+shape: `TOTAL` 449 ms cold with `initTheme` 151 ms and `createAgentSession`
+201 ms, then 33 ms on the immediate second run. The cost there is per-file
+latency on the remote filesystem, not any one large file.
+
+- **Resume discovery** reads a bounded head instead of each candidate file:
+  `FindMostRecentSession` stats and orders candidates by mtime, then reads a
+  4 KiB-buffered, 1 MiB-bounded header (`readSessionHeader`), stopping at the
+  first cwd match. The 100 MiB directory went 323 ms cold / 62 ms warm to ~1 ms.
+- **Session listing** extracts metadata without decoding payloads:
+  `scanListingMessage` reads only role, timestamp and the user/assistant text
+  blocks and skips thinking, tool-call and tool-result bodies, falling back to
+  `ai.UnmarshalMessage` for shapes it does not fully understand (D225). Listing
+  the 105 MiB directory went 2.0 s to 0.30 s.
+- **Entry load** uses `bytes.IndexByte` to find string ends in `skipJSONString`
+  (counting a preceding backslash run only when the quote may be escaped) and
+  scans files of 4 MiB or more on one worker per MiB, capped at `GOMAXPROCS`,
+  appending in file order. Loading the 100 MiB session went 130 ms to ~50 ms
+  warm.
+- **Resource discovery** is concurrent. `CreateAgentSession` ran the four
+  independent discovery passes in sequence (context files, skills, prompt
+  templates, system-prompt files); they now run in parallel because each is a
+  chain of small reads whose wall time on a high-latency filesystem is the sum
+  of the chains. `loadSkillsFromDir` scans its tree on a bounded pool
+  (`skillScanConcurrency`) and replays ReadDir order depth-first, so skills and
+  diagnostics order are unchanged, and the separate `os.Stat` before each
+  `os.ReadDir` is gone. `TestLoadSkillsFromDirScansInReadDirOrder`,
+  `TestLoadSkillsFromDirRootSkillShortCircuits`,
+  `TestLoadSkillsFromDirConcurrentWalksAgree` and
+  `TestCreateAgentSessionLoadsAllResourcePasses` pin the behavior.
+
+What remains on a cold start is the one large session read on resume (a
+persisted index would remove it, at the cost of invalidation) and, on a remote
+filesystem, `initTheme`'s settings and theme reads, which the resource
+concurrency does not overlap. The port prints these phases with `PI_TIMING=1`.
