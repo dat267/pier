@@ -101,6 +101,14 @@ func TestBaseAutocompleteProviderUsesTheResolvedFdPath(t *testing.T) {
 	}
 }
 
+// ModelRuntime is optional for an AgentSession with no catalog.
+func TestModelArgumentCompletionWithoutRuntimeReturnsNoSuggestions(t *testing.T) {
+	provider := (&AutocompleteWiring{Session: &autocompleteTestSession{}}).CreateBaseAutocompleteProvider()
+	if suggestions := provider.GetSuggestions(context.Background(), []string{"/model "}, 0, len("/model "), false); suggestions != nil {
+		t.Fatalf("model suggestions without a runtime = %+v, want none", suggestions)
+	}
+}
+
 func TestModelArgumentCompletionAllocationBudget(t *testing.T) {
 	const modelCount = 4096
 	model := &ai.Model{Provider: "p", ID: "m"}

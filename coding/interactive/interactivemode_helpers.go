@@ -333,7 +333,12 @@ func (w *AutocompleteWiring) modelArgumentCompletions(prefix string, cache *mode
 		return CreateFuzzyAutocompleteItems(items, prefix, modelCompletionSearchText, modelCompletionToAutocompleteItem), true
 	}
 
-	models := w.Session.ModelRuntime().GetAvailableSnapshot()
+	modelRuntime := w.Session.ModelRuntime()
+	if modelRuntime == nil {
+		cache.clear()
+		return nil, false
+	}
+	models := modelRuntime.GetAvailableSnapshot()
 	if len(models) == 0 {
 		cache.clear()
 		return nil, false
