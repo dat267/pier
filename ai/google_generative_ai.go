@@ -330,6 +330,7 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 		stream.Push(AssistantMessageEvent{Type: EventStart, Partial: output})
 
 		var currentBlock Content
+		var currentBlockBuffer *strings.Builder
 		blockIndex := func() int { return len(output.Content) - 1 }
 
 		iterErr := iterateGoogleChunks(ctx, resp.Body, func(chunk *googleChunk) {
@@ -359,16 +360,19 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 								}
 								if isThinking {
 									currentBlock = ThinkingContent{}
+									currentBlockBuffer = &strings.Builder{}
 									output.Content = append(output.Content, currentBlock)
 									stream.Push(AssistantMessageEvent{Type: EventThinkingStart, ContentIndex: blockIndex(), Partial: output})
 								} else {
 									currentBlock = TextContent{}
+									currentBlockBuffer = &strings.Builder{}
 									output.Content = append(output.Content, currentBlock)
 									stream.Push(AssistantMessageEvent{Type: EventTextStart, ContentIndex: blockIndex(), Partial: output})
 								}
 							}
 							if thinking, ok := currentBlock.(ThinkingContent); ok {
-								thinking.Thinking += part.Text
+								_, _ = currentBlockBuffer.WriteString(part.Text)
+								thinking.Thinking = currentBlockBuffer.String()
 								if signature := RetainThoughtSignature(deref(thinking.ThinkingSignature), part.ThoughtSignature); signature != "" {
 									thinking.ThinkingSignature = &signature
 								}
@@ -376,7 +380,8 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 								output.Content[blockIndex()] = thinking
 								stream.Push(AssistantMessageEvent{Type: EventThinkingDelta, ContentIndex: blockIndex(), Delta: part.Text, Partial: output})
 							} else if text, ok := currentBlock.(TextContent); ok {
-								text.Text += part.Text
+								_, _ = currentBlockBuffer.WriteString(part.Text)
+								text.Text = currentBlockBuffer.String()
 								if signature := RetainThoughtSignature(deref(text.TextSignature), part.ThoughtSignature); signature != "" {
 									text.TextSignature = &signature
 								}
@@ -394,6 +399,7 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 									stream.Push(AssistantMessageEvent{Type: EventThinkingEnd, ContentIndex: blockIndex(), Content: thinking.Thinking, Partial: output})
 								}
 								currentBlock = nil
+								currentBlockBuffer = nil
 							}
 
 							// Generate a unique id when absent or duplicated.

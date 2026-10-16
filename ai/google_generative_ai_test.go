@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -267,6 +268,52 @@ func TestMapGoogleStopReasonAndToolChoice(t *testing.T) {
 	}
 	if mode := ResolveGoogleFunctionCallingMode([]Tool{strictTool}, "none", true); mode != "NONE" {
 		t.Fatalf("none mode = %q", mode)
+	}
+}
+
+// Mirrors streamed text-block accumulation in
+// packages/ai/src/api/google-generative-ai.ts.
+func TestStreamGoogleTextDeltasAvoidPrefixCopies(t *testing.T) {
+	const chunks = 512
+	delta := strings.Repeat("x", 128)
+	var body strings.Builder
+	for index := 0; index < chunks; index++ {
+		finish := ""
+		if index == chunks-1 {
+			finish = `,"finishReason":"STOP"`
+		}
+		body.WriteString(`data: {"candidates":[{"content":{"role":"model","parts":[{"text":"`)
+		body.WriteString(delta)
+		body.WriteString(`"}]}` + finish + `}]}` + "\n\n")
+	}
+	bodyText := body.String()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(bodyText))
+	}))
+	defer server.Close()
+
+	model := testGoogleModel()
+	model.BaseURL = server.URL
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	message, err := StreamGoogleGenerativeAI(model, NormalizeContext(Context{}), &GoogleOptions{
+		StreamOptions: StreamOptions{APIKey: "k"},
+	}).Result(context.Background())
+	runtime.ReadMemStats(&after)
+	if err != nil {
+		t.Fatalf("stream result: %v", err)
+	}
+	want := strings.Repeat(delta, chunks)
+	if len(message.Content) != 1 {
+		t.Fatalf("content = %+v, want one block", message.Content)
+	}
+	if text, ok := message.Content[0].(TextContent); !ok || text.Text != want {
+		t.Fatalf("text = %T length %d, want %d bytes", message.Content[0], len(text.Text), len(want))
+	}
+	allocated := after.TotalAlloc - before.TotalAlloc
+	t.Logf("streaming %d bytes of Google text allocated %d bytes", len(want), allocated)
+	if allocated > uint64(len(want))*64 {
+		t.Fatalf("streaming %d bytes allocated %d bytes, want less than %d", len(want), allocated, len(want)*64)
 	}
 }
 
