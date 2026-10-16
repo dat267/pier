@@ -32,7 +32,6 @@ func interruptsParagraph(line string) bool {
 func (l *blockLexer) lexParagraph(start, to int) (*Block, int) {
 	src := l.src
 	at := start
-	var sb strings.Builder
 	count := 0
 	for at < to {
 		ln := nextLine(src, at)
@@ -43,7 +42,8 @@ func (l *blockLexer) lexParagraph(start, to int) (*Block, int) {
 			// A setext underline turns the whole paragraph into a heading.
 			if level, ok := setextLevel(ln.text); ok {
 				headingEnd := ln.next
-				return &Block{Kind: BlockHeading, Start: start, End: headingEnd, Level: level, Text: sb.String()}, headingEnd
+				text := strings.TrimSuffix(src[start:at], "\n")
+				return &Block{Kind: BlockHeading, Start: start, End: headingEnd, Level: level, Text: text}, headingEnd
 			}
 			// A table header row interrupts the paragraph.
 			if l.looksLikeTableStart(at) {
@@ -53,14 +53,13 @@ func (l *blockLexer) lexParagraph(start, to int) (*Block, int) {
 				break
 			}
 		}
-		if count > 0 {
-			sb.WriteByte('\n')
-		}
-		sb.WriteString(ln.text)
 		count++
 		at = ln.next
 	}
-	return &Block{Kind: BlockParagraph, Start: start, End: at, Text: sb.String()}, at
+	// The paragraph text is the source slice (the source already carries the
+	// line separators), so it allocates nothing.
+	text := strings.TrimSuffix(src[start:at], "\n")
+	return &Block{Kind: BlockParagraph, Start: start, End: at, Text: text}, at
 }
 
 // looksLikeTableStart reports a header row followed by a delimiter row.

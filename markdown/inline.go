@@ -39,6 +39,12 @@ func ParseInline(src string) []Inline {
 	if src == "" {
 		return nil
 	}
+	// Fast path: plain text with no inline markup is a single text run that can
+	// share the source. This is the dominant shape (prose) and skips the text
+	// builder entirely.
+	if !hasInlineMarkup(src) {
+		return []Inline{{Kind: InlineText, Text: src}}
+	}
 	var out []Inline
 	var text strings.Builder
 	flush := func() {
@@ -185,6 +191,23 @@ func ParseInline(src string) []Inline {
 	}
 	flush()
 	return out
+}
+
+// hasInlineMarkup reports whether src contains any byte the inline parser
+// treats specially (the fast-path test). A newline is only special when it is a
+// hard break (preceded by a space or a backslash); a soft break stays literal.
+func hasInlineMarkup(src string) bool {
+	for i := 0; i < len(src); i++ {
+		switch src[i] {
+		case '\\', '`', '*', '_', '~', '!', '[', '<', '$':
+			return true
+		case '\n':
+			if i > 0 && (src[i-1] == ' ' || src[i-1] == '\\') {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // findInlineDollar finds the closing `$` of an inline latex span on the same

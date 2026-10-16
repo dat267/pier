@@ -84,7 +84,7 @@ type blockLexer struct {
 // lexBlocks lexes src[from:to] into blocks.
 func (l *blockLexer) lexBlocks(from, to int) []*Block {
 	src := l.src
-	var blocks []*Block
+	blocks := make([]*Block, 0, 16)
 	at := from
 	for at < to {
 		lineStart := at
