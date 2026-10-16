@@ -12,8 +12,10 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dat267/pier/ai"
@@ -292,18 +294,26 @@ func scanPlainStringBytes(s []byte) (content []byte, consumed int, ok bool) {
 }
 
 // skipJSONString consumes one JSON string with proper escape handling and
-// copies nothing: the bytes are being skipped, not kept.
+// copies nothing: the bytes are being skipped, not kept. The next quote is
+// found with IndexByte and only a quote preceded by an odd run of backslashes
+// is escaped, so the common case scans at memchr speed.
 func skipJSONString(s []byte) (consumed int, ok bool) {
 	if len(s) < 2 || s[0] != '"' {
 		return 0, false
 	}
-	for i := 1; i < len(s); i++ {
-		switch s[i] {
-		case '\\':
-			i++
-		case '"':
-			return i + 1, true
+	for i := 1; i < len(s); {
+		quote := bytes.IndexByte(s[i:], '"')
+		if quote < 0 {
+			return 0, false
 		}
+		backslashes := 0
+		for back := i + quote - 1; back >= i && s[back] == '\\'; back-- {
+			backslashes++
+		}
+		if backslashes%2 == 0 {
+			return i + quote + 1, true
+		}
+		i += quote + 1
 	}
 	return 0, false
 }
@@ -365,6 +375,83 @@ func skipJSONValue(s []byte) (consumed int, ok bool) {
 	return 0, false
 }
 
+// parallelSessionScanBytes is the session size above which the metadata scan
+// is split across workers; below it the coordination costs more than the scan.
+const parallelSessionScanBytes = 4 << 20
+
+// scanSessionRange scans one line-aligned slice of a session buffer and is the
+// body of the buffered loader, extracted so disjoint slices can run in
+// parallel. The returned entries reference chunk's bytes.
+func scanSessionRange(chunk []byte, fast bool) []FileEntry {
+	var entries []FileEntry
+	for len(chunk) > 0 {
+		end := bytes.IndexByte(chunk, '\n')
+		var line []byte
+		if end == -1 {
+			line = chunk
+			chunk = nil
+		} else {
+			line = chunk[:end]
+			chunk = chunk[end+1:]
+		}
+		if len(bytes.TrimSpace(line)) == 0 {
+			continue
+		}
+		if fast {
+			if meta, ok := scanSessionLine(line); ok && meta.typ == "message" && meta.id != "" {
+				entry := &SessionEntry{
+					Type: meta.typ,
+					SessionEntryBase: SessionEntryBase{
+						ID:        meta.id,
+						ParentID:  meta.parentID,
+						Timestamp: meta.timestamp,
+					},
+					Message: json.RawMessage(meta.message),
+				}
+				entry.raw = json.RawMessage(line)
+				entries = append(entries, FileEntry{Entry: entry})
+				continue
+			}
+		}
+		entry, err := UnmarshalFileEntry(string(line))
+		if err == nil {
+			entries = append(entries, *entry)
+		}
+	}
+	return entries
+}
+
+// scanSessionRanges splits a session buffer into workers contiguous ranges,
+// each starting and ending at a line boundary (or the buffer's end), so the
+// ranges can be scanned independently and appended in file order. Ranges may
+// be empty when a long line pulls a boundary past the next one.
+func scanSessionRanges(data []byte, workers int) [][2]int {
+	if workers < 1 {
+		workers = 1
+	}
+	ranges := make([][2]int, workers)
+	start := 0
+	for worker := 1; worker <= workers; worker++ {
+		end := len(data) * worker / workers
+		if end < start {
+			end = start
+		}
+		if worker < workers && end > 0 && end < len(data) && data[end-1] != '\n' {
+			if newline := bytes.IndexByte(data[end:], '\n'); newline >= 0 {
+				end += newline + 1
+			} else {
+				end = len(data)
+			}
+		}
+		if worker == workers {
+			end = len(data)
+		}
+		ranges[worker-1] = [2]int{start, end}
+		start = end
+	}
+	return ranges
+}
+
 // LoadEntriesFromFileBuffered loads a session file the lazy way: one scan
 // extracts per-line metadata and the raw message member without a structural
 // decode, and message entries become complete shells referencing the buffer.
@@ -393,40 +480,30 @@ func LoadEntriesFromFileBuffered(filePath string) ([]FileEntry, []byte, bool, er
 		}
 	}
 
+	workers := 1
+	if len(data) >= parallelSessionScanBytes {
+		workers = runtime.GOMAXPROCS(0)
+	}
 	var entries []FileEntry
-	start := 0
-	for start < len(data) {
-		end := bytes.IndexByte(data[start:], '\n')
-		var line []byte
-		if end == -1 {
-			line = data[start:]
-			start = len(data)
-		} else {
-			line = data[start : start+end]
-			start += end + 1
-		}
-		if len(bytes.TrimSpace(line)) == 0 {
-			continue
-		}
-		if fast {
-			if meta, ok := scanSessionLine(line); ok && meta.typ == "message" && meta.id != "" {
-				entry := &SessionEntry{
-					Type: meta.typ,
-					SessionEntryBase: SessionEntryBase{
-						ID:        meta.id,
-						ParentID:  meta.parentID,
-						Timestamp: meta.timestamp,
-					},
-					Message: json.RawMessage(meta.message),
-				}
-				entry.raw = json.RawMessage(line)
-				entries = append(entries, FileEntry{Entry: entry})
+	if workers <= 1 {
+		entries = scanSessionRange(data, fast)
+	} else {
+		ranges := scanSessionRanges(data, workers)
+		results := make([][]FileEntry, len(ranges))
+		var wait sync.WaitGroup
+		for index, lineRange := range ranges {
+			if lineRange[0] == lineRange[1] {
 				continue
 			}
+			wait.Add(1)
+			go func(index, start, end int) {
+				defer wait.Done()
+				results[index] = scanSessionRange(data[start:end], fast)
+			}(index, lineRange[0], lineRange[1])
 		}
-		entry, err := UnmarshalFileEntry(string(line))
-		if err == nil {
-			entries = append(entries, *entry)
+		wait.Wait()
+		for _, result := range results {
+			entries = append(entries, result...)
 		}
 	}
 	// Header validation before repair, as in the eager loader.

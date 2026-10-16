@@ -1,7 +1,10 @@
 package coding
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -90,7 +93,154 @@ func TestScanSessionIndexEquivalence(t *testing.T) {
 	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	assertBufferedMatchesEager(t, path)
+}
 
+// The loader scans files above a size threshold in parallel, split at line
+// boundaries. A file whose multi-megabyte line crosses every chunk boundary
+// must still load exactly like the eager path.
+func TestLoadEntriesBufferedParallelMatchesEager(t *testing.T) {
+	var b strings.Builder
+	b.WriteString(`{"type":"session","version":3,"id":"s1","timestamp":"t0","cwd":"/tmp"}` + "\n")
+	b.WriteString(`{"type":"message","id":"long","parentId":null,"timestamp":"t","message":{"role":"user","content":"`)
+	b.WriteString(strings.Repeat("L", parallelSessionScanBytes+1))
+	b.WriteString(`"}}` + "\n")
+	for i := 0; i < 2000; i++ {
+		fmt.Fprintf(&b, `{"type":"message","id":"m%04d","parentId":null,"timestamp":"t","message":{"role":"assistant","content":"reply %d"}}`+"\n", i, i)
+	}
+	dir := t.TempDir()
+	path := filepath.Join(dir, "session.jsonl")
+	if err := os.WriteFile(path, []byte(b.String()), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	assertBufferedMatchesEager(t, path)
+}
+
+// scanSessionRanges must cover the buffer contiguously, split only at line
+// boundaries, and preserve every line for any worker count.
+func TestScanSessionRangesCoverEveryLineOnce(t *testing.T) {
+	inputs := []string{
+		"",
+		"\n",
+		"a",
+		"a\n",
+		"a\nb",
+		"a\nb\n",
+		strings.Repeat("x", 4096) + "\ny\n",
+		strings.Repeat("header\n", 100) + "tail-no-newline",
+	}
+	scanLines := func(data []byte) []string {
+		var lines []string
+		for len(data) > 0 {
+			index := bytes.IndexByte(data, '\n')
+			if index < 0 {
+				lines = append(lines, string(data))
+				break
+			}
+			lines = append(lines, string(data[:index]))
+			data = data[index+1:]
+		}
+		return lines
+	}
+	for _, input := range inputs {
+		data := []byte(input)
+		for workers := 1; workers <= 5; workers++ {
+			ranges := scanSessionRanges(data, workers)
+			if len(ranges) != workers {
+				t.Fatalf("input %q workers=%d: ranges=%d", input, workers, len(ranges))
+			}
+			for i, lineRange := range ranges {
+				start, end := lineRange[0], lineRange[1]
+				if start > end || start < 0 || end > len(data) {
+					t.Fatalf("input %q workers=%d: bad range %v", input, workers, lineRange)
+				}
+				if i > 0 && ranges[i-1][1] != start {
+					t.Fatalf("input %q workers=%d: ranges are not contiguous", input, workers)
+				}
+				if start != 0 && data[start-1] != '\n' {
+					t.Fatalf("input %q workers=%d: range starts mid-line", input, workers)
+				}
+				if end != 0 && end != len(data) && data[end-1] != '\n' {
+					t.Fatalf("input %q workers=%d: range ends mid-line", input, workers)
+				}
+			}
+			if len(data) > 0 && (ranges[0][0] != 0 || ranges[len(ranges)-1][1] != len(data)) {
+				t.Fatalf("input %q workers=%d: ranges do not cover the buffer", input, workers)
+			}
+			var fromRanges []string
+			for _, lineRange := range ranges {
+				fromRanges = append(fromRanges, scanLines(data[lineRange[0]:lineRange[1]])...)
+			}
+			whole := scanLines(data)
+			if len(fromRanges) != len(whole) {
+				t.Fatalf("input %q workers=%d: %d lines from ranges, %d whole", input, workers, len(fromRanges), len(whole))
+			}
+			for i := range whole {
+				if fromRanges[i] != whole[i] {
+					t.Fatalf("input %q workers=%d: line %d = %q, want %q", input, workers, i, fromRanges[i], whole[i])
+				}
+			}
+		}
+	}
+}
+
+// The skip must end at the first quote not escaped by an odd run of
+// backslashes.
+func TestSkipJSONStringEscapeHandling(t *testing.T) {
+	cases := []struct {
+		input string
+		want  int
+		ok    bool
+	}{
+		{`"abc"`, 5, true},
+		{`""`, 2, true},
+		{`"a\"b"`, 6, true},
+		{`"a\\"`, 5, true},
+		{`"a\\\"b"`, 8, true},
+		{`"\""`, 4, true},
+		{`"abc" tail`, 5, true},
+		{`"abc`, 0, false},
+		{`"`, 0, false},
+		{`abc"`, 0, false},
+		{` "abc"`, 0, false},
+	}
+	for _, tc := range cases {
+		got, ok := skipJSONString([]byte(tc.input))
+		if ok != tc.ok || got != tc.want {
+			t.Errorf("skipJSONString(%q) = (%d,%v), want (%d,%v)", tc.input, got, ok, tc.want, tc.ok)
+		}
+	}
+}
+
+// Differential against encoding/json: every string it can encode must be
+// skipped exactly, quoting included, and a suffix must not move the end.
+func TestSkipJSONStringMatchesEncodingJSON(t *testing.T) {
+	rng := rand.New(rand.NewSource(1))
+	alphabet := []rune{'a', '"', '\\', '\n', '\t', '\u0000', 'é', '中', '\u2028', '\uFFFD'}
+	for i := 0; i < 2000; i++ {
+		var sb strings.Builder
+		for j := 0; j < rng.Intn(40); j++ {
+			sb.WriteRune(alphabet[rng.Intn(len(alphabet))])
+		}
+		encoded, err := json.Marshal(sb.String())
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, ok := skipJSONString(encoded)
+		if !ok || got != len(encoded) {
+			t.Fatalf("skipJSONString(%q) = (%d,%v), want (%d,true)", encoded, got, ok, len(encoded))
+		}
+		withTail := append(append([]byte{}, encoded...), ' ', ',', 'x')
+		if got, ok := skipJSONString(withTail); !ok || got != len(encoded) {
+			t.Fatalf("with tail: skipJSONString(%q) = (%d,%v), want (%d,true)", withTail, got, ok, len(encoded))
+		}
+	}
+}
+
+// assertBufferedMatchesEager loads path both ways and requires the buffered
+// scanner (serial or parallel) to agree with the eager full decode.
+func assertBufferedMatchesEager(t *testing.T, path string) {
+	t.Helper()
 	eager, err := LoadEntriesFromFile(path)
 	if err != nil {
 		t.Fatal(err)
