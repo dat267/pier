@@ -685,14 +685,15 @@ UTF-16 implementation.
 
 ## Model autocomplete snapshots
 
-The `/model` argument provider now reads scoped models once per completion.
+The `/model` argument provider reads scoped models once per completion.
 `AgentSession.ScopedModels` returns a defensive slice copy, and the previous
 path called it three times per keystroke for the non-empty scope check, capacity,
-and iteration. It also copied the snapshot into an intermediate `[]*ai.Model`
-slice before building completion items. For 4,096 scoped models, the provider's
-allocation fell from 504,704 to 471,936 bytes. The tests
-`TestModelArgumentCompletionReadsScopedModelsOnce` and
-`TestModelArgumentCompletionAvoidsIntermediateModelSlice` pin the work.
+and iteration. The provider now filters directly over the scoped or runtime
+model slice and maps only matching candidates, instead of building an
+intermediate model-item slice and labels for every candidate. For 4,096 scoped
+models, an empty-prefix completion fell from 471,936 to 209,792 allocated bytes;
+a query with one match fell from 459,064 to 131,336 bytes. The two model
+allocation tests pin both paths.
 
 ## Editor backward word movement
 

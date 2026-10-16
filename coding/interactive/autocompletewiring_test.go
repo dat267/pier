@@ -97,7 +97,7 @@ func TestBaseAutocompleteProviderUsesTheResolvedFdPath(t *testing.T) {
 	}
 }
 
-func TestModelArgumentCompletionAvoidsIntermediateModelSlice(t *testing.T) {
+func TestModelArgumentCompletionAllocationBudget(t *testing.T) {
 	const modelCount = 4096
 	model := &ai.Model{Provider: "p", ID: "m"}
 	models := make([]coding.ScopedModel, modelCount)
@@ -125,6 +125,35 @@ func TestModelArgumentCompletionAvoidsIntermediateModelSlice(t *testing.T) {
 	t.Logf("completing %d scoped models allocated %d bytes", modelCount, allocated)
 	if allocated > uint64(modelCount*120) {
 		t.Fatalf("completing %d scoped models allocated %d bytes, want less than %d", modelCount, allocated, modelCount*120)
+	}
+}
+
+func TestModelArgumentCompletionFiltersBeforeMapping(t *testing.T) {
+	const modelCount = 4096
+	common := &ai.Model{Provider: "test", ID: "model"}
+	models := make([]coding.ScopedModel, modelCount)
+	for index := range models {
+		models[index] = coding.ScopedModel{Model: common}
+	}
+	models[modelCount/2] = coding.ScopedModel{Model: &ai.Model{Provider: "test", ID: "model", Name: "needle"}}
+	session := &scopedModelsCountingSession{
+		AutocompleteSession: &autocompleteTestSession{},
+		models:              models,
+	}
+	provider := (&AutocompleteWiring{Session: session}).CreateBaseAutocompleteProvider()
+
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	suggestions := provider.GetSuggestions(context.Background(), []string{"/model needle"}, 0, len("/model needle"), false)
+	runtime.ReadMemStats(&after)
+
+	if suggestions == nil || len(suggestions.Items) != 1 || suggestions.Items[0].Value != "test/model" {
+		t.Fatalf("model argument suggestions = %+v, want the matching model", suggestions)
+	}
+	allocated := after.TotalAlloc - before.TotalAlloc
+	t.Logf("filtering %d models to one completion allocated %d bytes", modelCount, allocated)
+	if allocated > uint64(modelCount*60) {
+		t.Fatalf("filtering %d models allocated %d bytes, want less than %d", modelCount, allocated, modelCount*60)
 	}
 }
 

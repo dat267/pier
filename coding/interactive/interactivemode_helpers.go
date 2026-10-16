@@ -235,17 +235,7 @@ func (w *AutocompleteWiring) CreateBaseAutocompleteProvider() tui.AutocompletePr
 		if commands[index].Name != "model" {
 			continue
 		}
-		commands[index].GetArgumentCompletions = func(prefix string) ([]tui.AutocompleteItem, bool) {
-			items := w.availableModelCompletionItems()
-			if len(items) == 0 {
-				return nil, false
-			}
-			return CreateFuzzyAutocompleteItems(items, prefix,
-				func(item modelCompletionItem) string { return GetModelSearchText(item.searchItem()) },
-				func(item modelCompletionItem) tui.AutocompleteItem {
-					return tui.AutocompleteItem{Value: item.Label, Label: item.ID, Description: item.Provider}
-				}), true
-		}
+		commands[index].GetArgumentCompletions = w.modelArgumentCompletions
 	}
 	// /thinking argument completions.
 	for index := range commands {
@@ -328,40 +318,35 @@ func (w *AutocompleteWiring) CreateBaseAutocompleteProvider() tui.AutocompletePr
 	return tui.NewCombinedAutocompleteProvider(commands, basePath, w.FdPath)
 }
 
-func (w *AutocompleteWiring) availableModelCompletionItems() []modelCompletionItem {
-	// AgentSession.ScopedModels returns a defensive slice copy; reuse one snapshot.
+func (w *AutocompleteWiring) modelArgumentCompletions(prefix string) ([]tui.AutocompleteItem, bool) {
 	scopedModels := w.Session.ScopedModels()
 	if len(scopedModels) > 0 {
-		items := make([]modelCompletionItem, 0, len(scopedModels))
-		for _, scoped := range scopedModels {
-			items = append(items, modelCompletionItemFor(scoped.Model))
-		}
-		return items
+		return CreateFuzzyAutocompleteItems(scopedModels, prefix,
+			scopedModelSearchText, scopedModelAutocompleteItem), true
 	}
-
 	models := w.Session.ModelRuntime().GetAvailableSnapshot()
-	items := make([]modelCompletionItem, 0, len(models))
-	for _, model := range models {
-		items = append(items, modelCompletionItemFor(model))
+	if len(models) == 0 {
+		return nil, false
 	}
-	return items
+	return CreateFuzzyAutocompleteItems(models, prefix, modelSearchText, modelAutocompleteItem), true
 }
 
-func modelCompletionItemFor(model *ai.Model) modelCompletionItem {
-	return modelCompletionItem{
-		ID: model.ID, Provider: model.Provider, Name: model.Name, Label: model.Provider + "/" + model.ID,
-	}
+func modelSearchText(model *ai.Model) string {
+	return GetModelSearchText(ModelSearchItem{
+		ID: model.ID, Provider: model.Provider, Name: model.Name, HasName: model.Name != "",
+	})
 }
 
-type modelCompletionItem struct {
-	ID       string
-	Provider string
-	Name     string
-	Label    string
+func modelAutocompleteItem(model *ai.Model) tui.AutocompleteItem {
+	return tui.AutocompleteItem{Value: model.Provider + "/" + model.ID, Label: model.ID, Description: model.Provider}
 }
 
-func (m modelCompletionItem) searchItem() ModelSearchItem {
-	return ModelSearchItem{ID: m.ID, Provider: m.Provider, Name: m.Name, HasName: m.Name != ""}
+func scopedModelSearchText(scoped coding.ScopedModel) string {
+	return modelSearchText(scoped.Model)
+}
+
+func scopedModelAutocompleteItem(scoped coding.ScopedModel) tui.AutocompleteItem {
+	return modelAutocompleteItem(scoped.Model)
 }
 
 // SetAutocompleteWrappers installs the provider wrappers.
