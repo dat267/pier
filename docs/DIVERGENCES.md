@@ -1668,3 +1668,27 @@ Tests: `TestGoalRoundPromptSurvivesCompactionWithinRound`
 (`coding/goal_compaction_test.go`) and
 `TestGoalRoundReminderDoesNotReusePreviousGoalsTurn`
 (`coding/goalcontroller_test.go`).
+
+## D225
+
+**Session listing scans message metadata instead of decoding every message.**
+
+`buildSessionInfo` (the session picker's per-session summary) walks each stored
+message for its role, timestamp and user/assistant text. The typed decoder
+materializes every block, including thinking, tool-call arguments and
+tool-result bodies that the listing never reads; on a 100 MiB session that was
+almost the whole cost. The Go port scans the raw message instead, taking the
+fields it needs and skipping the rest in place, with the typed decoder as the
+fallback for any shape the scanner does not fully understand
+(`coding/session_manager.go`'s `scanListingMessage`, the same contract as the
+lazy loader's `scanSessionLine`).
+
+The scanner validates structure only where it reads values, so for a session
+whose message JSON the typed decoder would reject (a malformed block field, an
+invalid number), the listing may still report that message's metadata where
+upstream's `parseSessionEntryLine` would drop the entry. Valid sessions list
+identically; `TestScanListingMessageMatchesTypedDecode` pins the agreement for
+the shapes both accept.
+
+Measured on a 100 MiB session (30,314 messages): `buildSessionInfo` 1.7s to
+0.3s, and a 105 MiB session directory lists in 0.3s instead of 2.0s.

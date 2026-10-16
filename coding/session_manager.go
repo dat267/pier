@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -1027,24 +1028,27 @@ func buildSessionInfo(filePath string) *SessionInfo {
 	name := ""
 	var lastActivityTime int64
 
-	recordMessage := func(message ai.Message) {
+	recordListing := func(role string, timestamp int64, text string) {
 		// Activity time from the message timestamp (upstream
 		// getMessageActivityTime).
-		if timestamp := sessionMessageTimestamp(message); timestamp > 0 && timestamp > lastActivityTime {
+		if timestamp > 0 && timestamp > lastActivityTime {
 			lastActivityTime = timestamp
 		}
-		role := ai.RoleOf(message)
-		if role != ai.RoleUser && role != ai.RoleAssistant {
+		if (role != "user" && role != "assistant") || text == "" {
 			return
 		}
-		textContent := extractTextContent(message)
-		if textContent == "" {
-			return
+		allMessages = append(allMessages, text)
+		if firstMessage == "" && role == "user" {
+			firstMessage = text
 		}
-		allMessages = append(allMessages, textContent)
-		if firstMessage == "" && role == ai.RoleUser {
-			firstMessage = textContent
+	}
+	recordMessage := func(message ai.Message) {
+		role := string(ai.RoleOf(message))
+		text := ""
+		if role == "user" || role == "assistant" {
+			text = extractTextContent(message)
 		}
+		recordListing(role, sessionMessageTimestamp(message), text)
 	}
 
 	// process consumes one JSONL line. It reports true when the line is a
@@ -1067,7 +1071,9 @@ func buildSessionInfo(filePath string) *SessionInfo {
 		// Anything it does not fully understand falls back to the decoder.
 		if meta, ok := scanSessionLine(line); ok && meta.typ == "message" && meta.id != "" {
 			messageCount++
-			if message, mErr := ai.UnmarshalMessage(json.RawMessage(meta.message)); mErr == nil {
+			if listing := scanListingMessage(meta.message); listing.ok {
+				recordListing(listing.role, listing.timestamp, listing.text)
+			} else if message, mErr := ai.UnmarshalMessage(json.RawMessage(meta.message)); mErr == nil {
 				recordMessage(message)
 			}
 			return false
@@ -1321,4 +1327,327 @@ func listSessionsFromDir(dir string) []SessionInfo {
 		return sessions[i].Modified.After(sessions[j].Modified)
 	})
 	return sessions
+}
+
+// messageListing is the listing view of one message: the role, the message
+// timestamp and the text the message contributes. Listing never reads tool
+// arguments, thinking or tool-result bodies, so the scanner skips them instead
+// of decoding them.
+type messageListing struct {
+	role      string
+	timestamp int64
+	text      string
+	ok        bool
+}
+
+// scanListingMessage extracts the listing view of a raw message object without
+// materializing the blocks listing never reads. Text values are unescaped as
+// they are read; everything else is skipped in place. Like scanSessionLine, the
+// scanner only accepts shapes it fully understands — an unknown block type, a
+// non-string field it needs, duplicate keys, trailing data — and reports
+// ok=false so the caller full-decodes the message instead. The two paths can
+// therefore differ only for sessions the full decoder rejects (D225).
+func scanListingMessage(data []byte) messageListing {
+	i := skipListingSpace(data, 0)
+	if i >= len(data) || data[i] != '{' {
+		return messageListing{}
+	}
+	i++
+	var (
+		listing                  messageListing
+		sawRole, sawTimestamp    bool
+		sawContent               bool
+		contentStart, contentEnd int
+		deferredContent          bool
+	)
+	first := true
+	for {
+		i = skipListingSpace(data, i)
+		if i >= len(data) {
+			return messageListing{}
+		}
+		if data[i] == '}' {
+			i++
+			break
+		}
+		if !first {
+			if data[i] != ',' {
+				return messageListing{}
+			}
+			i++
+			i = skipListingSpace(data, i)
+			if i < len(data) && data[i] == '}' {
+				return messageListing{}
+			}
+		}
+		key, n, ok := scanPlainStringBytes(data[i:])
+		if !ok {
+			return messageListing{}
+		}
+		i += n
+		i = skipListingSpace(data, i)
+		if i >= len(data) || data[i] != ':' {
+			return messageListing{}
+		}
+		i++
+		i = skipListingSpace(data, i)
+		switch string(key) {
+		case "role":
+			if sawRole {
+				return messageListing{}
+			}
+			sawRole = true
+			value, n, ok := scanPlainStringBytes(data[i:])
+			if !ok {
+				return messageListing{}
+			}
+			listing.role = string(value)
+			i += n
+		case "timestamp":
+			if sawTimestamp {
+				return messageListing{}
+			}
+			sawTimestamp = true
+			number, n, ok := scanListingInteger(data[i:])
+			if !ok {
+				return messageListing{}
+			}
+			listing.timestamp = number
+			i += n
+		case "content":
+			if sawContent {
+				return messageListing{}
+			}
+			sawContent = true
+			if sawRole && (listing.role == "user" || listing.role == "assistant") {
+				text, n, ok := scanListingContent(data[i:], listing.role)
+				if !ok {
+					return messageListing{}
+				}
+				listing.text = text
+				i += n
+				break
+			}
+			// Both key orders exist in stored messages, so content that
+			// arrives before the role is remembered by range and decoded once
+			// role says whether it is needed.
+			n, ok := skipJSONValue(data[i:])
+			if !ok {
+				return messageListing{}
+			}
+			contentStart, contentEnd = i, i+n
+			deferredContent = true
+			i += n
+		default:
+			n, ok := skipJSONValue(data[i:])
+			if !ok {
+				return messageListing{}
+			}
+			i += n
+		}
+		first = false
+	}
+	i = skipListingSpace(data, i)
+	if i != len(data) {
+		return messageListing{}
+	}
+	if deferredContent && (listing.role == "user" || listing.role == "assistant") {
+		text, n, ok := scanListingContent(data[contentStart:contentEnd], listing.role)
+		if !ok || contentStart+n != contentEnd {
+			return messageListing{}
+		}
+		listing.text = text
+	}
+	listing.ok = true
+	return listing
+}
+
+// skipListingSpace advances past JSON whitespace at i.
+func skipListingSpace(data []byte, i int) int {
+	for i < len(data) {
+		switch data[i] {
+		case ' ', '\t', '\r', '\n':
+			i++
+		default:
+			return i
+		}
+	}
+	return i
+}
+
+// scanListingInteger consumes a message timestamp. null reads as absent, as
+// the typed decoder leaves the zero value; any number it might still accept
+// (exponents, fractions, out-of-range values) reports not-ok and falls back.
+func scanListingInteger(data []byte) (int64, int, bool) {
+	if bytes.HasPrefix(data, []byte("null")) {
+		return 0, 4, true
+	}
+	n, ok := skipJSONValue(data)
+	if !ok || n == 0 {
+		return 0, 0, false
+	}
+	number, err := strconv.ParseInt(string(data[:n]), 10, 64)
+	if err != nil {
+		return 0, 0, false
+	}
+	return number, n, true
+}
+
+// scanListingString consumes one JSON string, unescaping it only when needed.
+func scanListingString(data []byte) (string, int, bool) {
+	if inner, n, ok := scanPlainStringBytes(data); ok {
+		return string(inner), n, true
+	}
+	n, ok := skipJSONString(data)
+	if !ok {
+		return "", 0, false
+	}
+	var text string
+	if err := json.Unmarshal(data[:n], &text); err != nil {
+		return "", 0, false
+	}
+	return text, n, true
+}
+
+// scanListingContent consumes a user or assistant content value, returning the
+// text extractTextContent would join.
+func scanListingContent(data []byte, role string) (string, int, bool) {
+	i := skipListingSpace(data, 0)
+	if i >= len(data) {
+		return "", 0, false
+	}
+	switch data[i] {
+	case 'n':
+		if bytes.HasPrefix(data[i:], []byte("null")) {
+			return "", i + 4, true
+		}
+		return "", 0, false
+	case '"':
+		if role != "user" {
+			return "", 0, false
+		}
+		text, n, ok := scanListingString(data[i:])
+		if !ok {
+			return "", 0, false
+		}
+		return text, i + n, true
+	case '[':
+		i++
+		var texts []string
+		first := true
+		for {
+			i = skipListingSpace(data, i)
+			if i >= len(data) {
+				return "", 0, false
+			}
+			if data[i] == ']' {
+				i++
+				break
+			}
+			if !first {
+				if data[i] != ',' {
+					return "", 0, false
+				}
+				i++
+				i = skipListingSpace(data, i)
+				if i < len(data) && data[i] == ']' {
+					return "", 0, false
+				}
+			}
+			text, isText, n, ok := scanListingBlock(data[i:])
+			if !ok {
+				return "", 0, false
+			}
+			if isText {
+				texts = append(texts, text)
+			}
+			i += n
+			first = false
+		}
+		return strings.Join(texts, " "), i, true
+	}
+	return "", 0, false
+}
+
+// scanListingBlock consumes one content block, returning its text when it is a
+// text block. Thinking, image and tool-call blocks are skipped; any other type
+// is not understood.
+func scanListingBlock(data []byte) (string, bool, int, bool) {
+	i := skipListingSpace(data, 0)
+	if i >= len(data) || data[i] != '{' {
+		return "", false, 0, false
+	}
+	i++
+	var blockType, blockText string
+	var sawType, sawText bool
+	first := true
+	for {
+		i = skipListingSpace(data, i)
+		if i >= len(data) {
+			return "", false, 0, false
+		}
+		if data[i] == '}' {
+			i++
+			break
+		}
+		if !first {
+			if data[i] != ',' {
+				return "", false, 0, false
+			}
+			i++
+			i = skipListingSpace(data, i)
+			if i < len(data) && data[i] == '}' {
+				return "", false, 0, false
+			}
+		}
+		key, n, ok := scanPlainStringBytes(data[i:])
+		if !ok {
+			return "", false, 0, false
+		}
+		i += n
+		i = skipListingSpace(data, i)
+		if i >= len(data) || data[i] != ':' {
+			return "", false, 0, false
+		}
+		i++
+		i = skipListingSpace(data, i)
+		switch string(key) {
+		case "type":
+			if sawType {
+				return "", false, 0, false
+			}
+			sawType = true
+			value, n, ok := scanPlainStringBytes(data[i:])
+			if !ok {
+				return "", false, 0, false
+			}
+			blockType = string(value)
+			i += n
+		case "text":
+			if sawText {
+				return "", false, 0, false
+			}
+			sawText = true
+			value, n, ok := scanListingString(data[i:])
+			if !ok {
+				return "", false, 0, false
+			}
+			blockText = value
+			i += n
+		default:
+			n, ok := skipJSONValue(data[i:])
+			if !ok {
+				return "", false, 0, false
+			}
+			i += n
+		}
+		first = false
+	}
+	switch blockType {
+	case "text":
+		return blockText, true, i, true
+	case "thinking", "image", "toolCall":
+		return "", false, i, true
+	}
+	return "", false, 0, false
 }
