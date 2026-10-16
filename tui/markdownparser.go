@@ -53,7 +53,16 @@ type MdToken struct {
 // LexMarkdown lexes markdown into Marked-compatible tokens.
 func LexMarkdown(source string) []*MdToken {
 	lexer := &mdLexer{source: source}
-	return lexer.lexBlocks(source, false)
+	tokens, _ := lexer.lexBlocksWithStarts(source, false)
+	return tokens
+}
+
+// lexMarkdownWithStarts is LexMarkdown plus each top-level token's start byte
+// offset, which the incremental lexer needs (token raws do not partition the
+// source: a block's trailing newline is folded into the next space token).
+func lexMarkdownWithStarts(source string) ([]*MdToken, []int) {
+	lexer := &mdLexer{source: source}
+	return lexer.lexBlocksWithStarts(source, false)
 }
 
 type mdLexer struct {
@@ -89,10 +98,20 @@ var (
 // lexBlocks lexes block-level tokens from source. atEnd marks the final block
 // of the source, whose raw includes the trailing newline like Marked's.
 func (l *mdLexer) lexBlocks(source string, atEnd bool) []*MdToken {
+	tokens, _ := l.lexBlocksWithStarts(source, atEnd)
+	return tokens
+}
+
+// lexBlocksWithStarts is lexBlocks with the start byte offset of each top-level
+// token. Every loop iteration appends exactly one token, so the offsets align
+// with the returned tokens; the invariant is asserted during development.
+func (l *mdLexer) lexBlocksWithStarts(source string, atEnd bool) ([]*MdToken, []int) {
 	var tokens []*MdToken
+	var starts []int
 	remaining := source
 
 	for len(remaining) > 0 {
+		starts = append(starts, len(source)-len(remaining))
 		// Blank-line run becomes a space token.
 		if mdBlankLineRegex.MatchString(firstLine(remaining)) {
 			run := consumeBlankLines(remaining)
@@ -213,7 +232,10 @@ func (l *mdLexer) lexBlocks(source string, atEnd bool) []*MdToken {
 	}
 
 	_ = atEnd
-	return tokens
+	if len(starts) != len(tokens) {
+		panic("mdLexer: token/start offset mismatch")
+	}
+	return tokens, starts
 }
 
 // mdLine is one source line with its terminator.
