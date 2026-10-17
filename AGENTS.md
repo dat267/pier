@@ -326,8 +326,10 @@ Prefer a D-row over silently approximating the reference.
 
 ## Out of scope (documented)
 
-Native clipboard, kitty/iterm image transport internals beyond the
-line-detection helpers, extension mechanics, and the package manager. Stdio RPC
-has a bounded first milestone; supported commands and remaining gaps are in
-`docs/rpc.md` (D235). Mermaid rendering needs `grok-mermaid` and is inert.
+The native (Bun FFI) clipboard; text copy/read and clipboard image read use
+platform commands (D106). Photon's Lanczos3 resampling and WebP/BMP decoding
+(the port has a bilinear resizer and stdlib png/jpeg/gif, D26). Extension
+mechanics and the package manager. Stdio RPC has a bounded first milestone;
+supported commands and remaining gaps are in `docs/rpc.md` (D235). Mermaid
+rendering needs `grok-mermaid` and is inert.
 

@@ -58,6 +58,28 @@ var clipboardReader ClipboardReadFn // nil selects the context-aware default
 // SetClipboardReader installs the clipboard reader (D106 test seam).
 func SetClipboardReader(reader ClipboardReadFn) { clipboardReader = reader }
 
+// ClipboardImageReadFn reads an image from the system clipboard; nil image
+// means the clipboard has no image.
+type ClipboardImageReadFn func(ctx context.Context) (*coding.ClipboardImage, error)
+
+var clipboardImageReader ClipboardImageReadFn // nil selects the platform-command default
+
+// SetClipboardImageReader installs the clipboard image reader (test seam).
+func SetClipboardImageReader(reader ClipboardImageReadFn) { clipboardImageReader = reader }
+
+// readClipboardImageContext runs the configured image reader or the platform
+// command default. A legacy injected text reader disables the image path so a
+// test that stubs the text clipboard never shells out to the real one.
+func readClipboardImageContext(ctx context.Context) (*coding.ClipboardImage, error) {
+	if clipboardImageReader != nil {
+		return clipboardImageReader(ctx)
+	}
+	if clipboardReader != nil {
+		return nil, nil
+	}
+	return coding.ReadClipboardImageContext(ctx)
+}
+
 // readClipboardTextContext runs the configured reader; legacy injected readers
 // may ignore cancellation, so callers still gate their results.
 func readClipboardTextContext(ctx context.Context) (string, error) {

@@ -62,3 +62,36 @@ func TestHandleRightClickPasteInsertsClipboard(t *testing.T) {
 		t.Fatalf("editor text = %q, want it to contain the pasted clipboard", got)
 	}
 }
+
+// TestHandleRightClickPasteInsertsClipboardImage covers the image half of the
+// paste hook (upstream handleClipboardPaste): an image on the clipboard is
+// written to a temp file and the path is pasted, so the @file attachment path
+// picks it up.
+func TestHandleRightClickPasteInsertsClipboardImage(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	app.Init(context.Background())
+	tempDir := t.TempDir()
+	t.Setenv("TMPDIR", tempDir)
+
+	SetClipboardImageReader(func(context.Context) (*coding.ClipboardImage, error) {
+		return &coding.ClipboardImage{Bytes: []byte("PNGBYTES"), MimeType: "image/png"}, nil
+	})
+	t.Cleanup(func() { SetClipboardImageReader(nil) })
+
+	app.handleRightClickPaste()
+	app.pasteQueue.Flush()
+	app.ui.RenderNow(false)
+
+	text := app.defaultEditor.GetText()
+	if !strings.Contains(text, coding.AppName+"-clipboard-") || !strings.HasSuffix(strings.TrimSpace(text), ".png") {
+		t.Fatalf("editor text = %q", text)
+	}
+	pastedPath := strings.TrimSpace(text)
+	if !filepath.IsAbs(pastedPath) {
+		t.Fatalf("path = %q", pastedPath)
+	}
+	if data, err := os.ReadFile(pastedPath); err != nil || string(data) != "PNGBYTES" {
+		t.Fatalf("temp file = %q, %v", data, err)
+	}
+}

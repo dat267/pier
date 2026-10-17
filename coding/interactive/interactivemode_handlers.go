@@ -487,14 +487,22 @@ func newKeyWiring(app *App) *KeyWiring {
 		Editor:  app.defaultEditor,
 		OnPasteImage: func() {
 			// Upstream handleClipboardPaste pastes a clipboard image first and
-			// falls back to text; image transports are out of scope (D41
-			// scope note in AGENTS.md), so the text path is ported.
-			// The clipboard read runs a subprocess with up to a 5s timeout per
-			// paste command, so it happens off the loop and the insert marshals
-			// back; the in-flight flag drops overlapping pastes instead of
-			// interleaving their inserts.
+			// falls back to text. The clipboard read runs a subprocess with up to
+			// a 5s timeout per paste command, so it happens off the loop and the
+			// insert marshals back; the in-flight flag drops overlapping pastes
+			// instead of interleaving their inserts.
 			app.pasteQueue.GoCoalescedContext("paste", func(ctx context.Context) {
 				if ctx.Err() != nil {
+					return
+				}
+				if imagePath, ok := app.readClipboardImagePath(ctx); ok {
+					app.ui.Post(func() {
+						if ctx.Err() != nil {
+							return
+						}
+						app.defaultEditor.InsertTextAtCursor(imagePath)
+						app.ui.RequestRender(false)
+					})
 					return
 				}
 				text, err := readClipboardTextContext(ctx)

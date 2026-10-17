@@ -1024,6 +1024,23 @@ func (a *App) handleRightClickPaste() {
 		if ctx.Err() != nil {
 			return
 		}
+		// An image on the clipboard is written to a temp file and pasted as a
+		// path, so the @file image attachment path handles it (upstream
+		// handleClipboardPaste).
+		if imagePath, ok := a.readClipboardImagePath(ctx); ok {
+			a.ui.Post(func() {
+				if a.ui.GetFocusedComponent() != target {
+					return
+				}
+				handler, ok := target.(tui.InputHandler)
+				if !ok {
+					return
+				}
+				handler.HandleInput("\x1b[200~" + imagePath + "\x1b[201~")
+				a.ui.RequestRender(false)
+			})
+			return
+		}
 		text, err := readClipboardTextContext(ctx)
 		if err != nil || text == "" || ctx.Err() != nil {
 			return
@@ -1040,6 +1057,21 @@ func (a *App) handleRightClickPaste() {
 			a.ui.RequestRender(false)
 		})
 	})
+}
+
+// readClipboardImagePath reads an image from the clipboard and writes it to a
+// temp file, returning the path. It reports false when there is no image or the
+// write failed, so the caller falls back to text.
+func (a *App) readClipboardImagePath(ctx context.Context) (string, bool) {
+	image, err := readClipboardImageContext(ctx)
+	if err != nil || image == nil || len(image.Bytes) == 0 || ctx.Err() != nil {
+		return "", false
+	}
+	path, err := coding.WriteClipboardImageTempFile(image)
+	if err != nil {
+		return "", false
+	}
+	return path, true
 }
 
 func (a *App) runDetached(fn func(ctx context.Context) error) bool {
