@@ -134,3 +134,25 @@ func TestContainerWarmFrameKeepsTheMouseLayout(t *testing.T) {
 		t.Fatalf("warm layout = %+v, want heights [1 2]", layout)
 	}
 }
+
+// TestEmptyContainerWarmFrameKeepsItsRevision pins the empty-cache case: an
+// empty container must cache a non-nil (empty) line slice, or firstChangedChild
+// treats the nil cache as "not built yet" and bumps the revision on every
+// paint. An empty header/resources container did exactly that, and the transcript
+// document above it then re-flattened the whole transcript on every frame.
+func TestEmptyContainerWarmFrameKeepsItsRevision(t *testing.T) {
+	c := &Container{}
+	c.Render(40)
+	first, ok := c.RenderVersion()
+	if !ok {
+		t.Fatal("a Container must expose its revision")
+	}
+	c.Render(40)
+	c.Render(40)
+	if again, _ := c.RenderVersion(); again != first {
+		t.Fatalf("an empty container bumped its revision on warm frames: %d -> %d", first, again)
+	}
+	if walks := c.RenderWalks(); walks != 3 {
+		t.Fatalf("empty warm frames walked the child list: RenderWalks = %d, want 3", walks)
+	}
+}

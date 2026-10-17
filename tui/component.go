@@ -519,6 +519,13 @@ func (c *Container) Render(width int) []string {
 		c.cacheLines = grown
 	}
 	lines := c.cacheLines[:total]
+	if lines == nil {
+		// An empty frame must cache a non-nil slice: firstChangedChild treats a
+		// nil cacheLines as "no cache yet" and reports a change every frame,
+		// which made an empty header/resources container bump its revision on
+		// every paint, and every ancestor then re-flattened the transcript.
+		lines = []string{}
+	}
 	position := 0
 	if firstChanged > 0 {
 		position = c.cacheOffsets[firstChanged]
