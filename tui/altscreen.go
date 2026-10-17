@@ -183,6 +183,18 @@ type AltScreen struct {
 	scrollbarDrag             *altScrollbarDrag
 	scrollbarHover            *ScrollView
 	scrollToEndRect           *scrollToEndIndicatorRect
+	// scrollToEndCache memoises the truncated indicator and its column: the
+	// label is composited on every scroll-up frame, and re-truncating the styled
+	// label was a per-frame allocation. The key includes the raw label, so a
+	// theme change (which rebuilds the string) invalidates it.
+	scrollToEndCacheLabel     string
+	scrollToEndCacheText      string
+	scrollToEndCacheColumn    int
+	scrollToEndCacheTextWidth int
+	scrollToEndCacheWidth     int
+	scrollToEndCacheX         int
+	scrollToEndCacheRight     int
+	scrollToEndCacheValid     bool
 	activeSearch              *altActiveSearch
 	pressedURL                string
 	hasPressedURL             bool
@@ -2097,23 +2109,37 @@ func (s *AltScreen) compositeScrollToEndIndicator(screen []string, layout Layout
 	// then clamped so it never overlaps the scrollbar column. The pre-0.87
 	// version centered the label in the space left of the scrollbar instead,
 	// which shifted it left by one cell for an even remainder.
-	label := TruncateToWidth(s.scrollToEndIndicator(), clip.Width, "", false)
-	labelWidth := VisibleWidth(label)
-	column := clip.X + (clip.Width-labelWidth)/2
+	indicator := s.scrollToEndIndicator()
 	rightEdge := clip.X + clip.Width
 	if geometry, ok := GetScrollbarGeometry(box, false); ok {
 		rightEdge = geometry.Column
 	}
-	availableWidth := max(0, rightEdge-column)
-	text := TruncateToWidth(label, availableWidth, "", false)
-	textWidth := VisibleWidth(text)
+	text := s.scrollToEndCacheText
+	textWidth := s.scrollToEndCacheTextWidth
+	column := s.scrollToEndCacheColumn
+	if !s.scrollToEndCacheValid || s.scrollToEndCacheLabel != indicator ||
+		s.scrollToEndCacheWidth != clip.Width || s.scrollToEndCacheX != clip.X || s.scrollToEndCacheRight != rightEdge {
+		label := TruncateToWidth(indicator, clip.Width, "", false)
+		labelWidth := VisibleWidth(label)
+		column = clip.X + (clip.Width-labelWidth)/2
+		availableWidth := max(0, rightEdge-column)
+		text = TruncateToWidth(label, availableWidth, "", false)
+		textWidth = VisibleWidth(text)
+		s.scrollToEndCacheLabel = indicator
+		s.scrollToEndCacheText = text
+		s.scrollToEndCacheColumn = column
+		s.scrollToEndCacheTextWidth = textWidth
+		s.scrollToEndCacheWidth = clip.Width
+		s.scrollToEndCacheX = clip.X
+		s.scrollToEndCacheRight = rightEdge
+		s.scrollToEndCacheValid = true
+	}
 	if textWidth == 0 {
 		return screen
 	}
-	result := append([]string(nil), screen...)
-	result[row] = CompositeTuiLine(result[row], text, column, textWidth, width)
+	screen[row] = CompositeTuiLine(screen[row], text, column, textWidth, width)
 	s.scrollToEndRect = &scrollToEndIndicatorRect{Row: row, Column: column, Width: textWidth}
-	return result
+	return screen
 }
 
 func (s *AltScreen) compositeFlashes(screen []string, width int, height int) []string {

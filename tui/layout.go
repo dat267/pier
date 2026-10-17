@@ -1,5 +1,7 @@
 package tui
 
+import "strings"
+
 // Port of src/layout.ts: the box-tree layout engine, the screen painter, and
 // the hit-testing helpers.
 
@@ -284,28 +286,110 @@ func replaceScrollbarCell(
 		start = cellRange.Start
 		end = cellRange.End
 	}
-	before := SliceByColumn(line, 0, start, true)
-	target := SliceByColumn(line, start, end-start, true)
-	after := SliceByColumn(line, end, max(0, totalWidth-end), true)
 
-	targetPrefix := ""
-	targetIndex := 0
-	for targetIndex < len(target) {
-		code, length := ExtractANSICode(target, targetIndex)
-		if length == 0 {
-			break
+	// Single pass. The reference output is
+	//   before + pad(start-beforeWidth) + reset(+bg) + pad(column-start) +
+	//   replacement + pad(end-column-1) + after
+	// where `after` re-emits every ANSI code seen before `end`. Walking the line
+	// once keeps the scrollbar repaint off the heap: it runs for every visible
+	// row on a wheel frame, and the three SliceWithWidth builders were a large
+	// part of the frame's allocation.
+	var b strings.Builder
+	b.Grow(len(line) + len(segmentReset) + len(replacement) + 32)
+
+	currentCol := 0
+	writtenCol := 0
+	pendingAnsi := ""   // before-target codes not yet written
+	preStartCodes := "" // every code before the target start
+	targetCodes := ""   // codes exactly at the target start
+	allPreEnd := ""     // every code before the target end (the after prefix)
+	wroteTarget := false
+	wroteAfterPrefix := false
+
+	writeTarget := func() {
+		if wroteTarget {
+			return
 		}
-		targetPrefix += code
-		targetIndex += length
+		wroteTarget = true
+		for writtenCol < start {
+			b.WriteByte(' ')
+			writtenCol++
+		}
+		b.WriteString(segmentReset)
+		if preserveTargetBackground {
+			if prefix := preStartCodes + targetCodes; prefix != "" {
+				b.WriteString(GetActiveBackgroundAnsi(prefix))
+			}
+		}
+		for i := 0; i < column-start; i++ {
+			b.WriteByte(' ')
+		}
+		b.WriteString(replacement)
+		for i := 0; i < end-column-1; i++ {
+			b.WriteByte(' ')
+		}
 	}
-	beforePadding := repeatSpaces(max(0, start-VisibleWidth(before)))
-	cellPaddingBefore := repeatSpaces(max(0, column-start))
-	cellPaddingAfter := repeatSpaces(max(0, end-column-1))
-	targetStyle := segmentReset
-	if preserveTargetBackground {
-		targetStyle += GetActiveBackgroundAnsi(targetPrefix)
+	writeAfterPrefix := func() {
+		if wroteAfterPrefix {
+			return
+		}
+		wroteAfterPrefix = true
+		b.WriteString(allPreEnd)
 	}
-	return before + beforePadding + targetStyle + cellPaddingBefore + replacement + cellPaddingAfter + after
+
+	// The after segment covers [end, totalWidth); the reference's SliceWithWidth
+	// stops there, so anything past totalWidth is dropped.
+	i := 0
+	for i < len(line) && currentCol < totalWidth {
+		if code, length := ExtractANSICode(line, i); code != "" {
+			switch {
+			case currentCol < start:
+				pendingAnsi += code
+				preStartCodes += code
+				allPreEnd += code
+			case currentCol < end:
+				allPreEnd += code
+				if currentCol == start {
+					targetCodes += code
+				}
+			default:
+				writeAfterPrefix()
+				b.WriteString(code)
+			}
+			i += length
+			continue
+		}
+		textEnd := i
+		for textEnd < len(line) {
+			if _, length := ExtractANSICode(line, textEnd); length > 0 {
+				break
+			}
+			textEnd++
+		}
+		scanGraphemes(line[i:textEnd], func(seg string) bool {
+			w := graphemeWidth(seg)
+			switch {
+			case currentCol < start:
+				if pendingAnsi != "" {
+					b.WriteString(pendingAnsi)
+					pendingAnsi = ""
+				}
+				b.WriteString(seg)
+				writtenCol += w
+			case currentCol < end:
+				writeTarget()
+			default:
+				writeTarget()
+				writeAfterPrefix()
+				b.WriteString(seg)
+			}
+			currentCol += w
+			return currentCol < totalWidth
+		})
+		i = textEnd
+	}
+	writeTarget()
+	return b.String()
 }
 
 func repeatSpaces(count int) string {

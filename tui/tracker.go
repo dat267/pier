@@ -70,43 +70,72 @@ func (t *ansiCodeTracker) process(ansiCode string) {
 	if !strings.HasSuffix(ansiCode, "m") {
 		return
 	}
-	// Extract the parameters between ESC [ and m.
+	// Extract the parameters between ESC [ and m. Parse the ';'-separated
+	// parameters in place: strings.Split allocated a []string for every code,
+	// and the tracker runs over every visible line of every frame.
 	inner := strings.TrimPrefix(ansiCode, "\x1b[")
 	inner = strings.TrimSuffix(inner, "m")
 	if inner == "" || inner == "0" {
 		t.reset()
 		return
 	}
-	parts := strings.Split(inner, ";")
-	index := 0
-	for index < len(parts) {
-		code, ok := parseSGRNumber(parts[index])
+	pos := 0
+	next := func() (string, bool) {
+		if pos > len(inner) {
+			return "", false
+		}
+		if j := strings.IndexByte(inner[pos:], ';'); j >= 0 {
+			part := inner[pos : pos+j]
+			pos += j + 1
+			return part, true
+		}
+		part := inner[pos:]
+		pos = len(inner) + 1
+		return part, true
+	}
+	peek := func() (string, bool) {
+		saved := pos
+		part, ok := next()
+		pos = saved
+		return part, ok
+	}
+	for {
+		part, ok := next()
 		if !ok {
-			index++
+			break
+		}
+		code, ok := parseSGRNumber(part)
+		if !ok {
 			continue
 		}
 		// 256-color (38;5;N / 48;5;N) and RGB (38;2;R;G;B / 48;2;R;G;B)
 		// sequences consume multiple parameters.
 		if code == 38 || code == 48 {
-			if index+2 < len(parts) && parts[index+1] == "5" {
-				colorCode := parts[index] + ";" + parts[index+1] + ";" + parts[index+2]
-				if code == 38 {
-					t.fgColor = colorCode
-				} else {
-					t.bgColor = colorCode
+			if p1, ok1 := peek(); ok1 && p1 == "5" {
+				next()
+				if p2, ok2 := next(); ok2 {
+					colorCode := part + ";5;" + p2
+					if code == 38 {
+						t.fgColor = colorCode
+					} else {
+						t.bgColor = colorCode
+					}
 				}
-				index += 3
 				continue
 			}
-			if index+4 < len(parts) && parts[index+1] == "2" {
-				colorCode := parts[index] + ";" + parts[index+1] + ";" + parts[index+2] +
-					";" + parts[index+3] + ";" + parts[index+4]
-				if code == 38 {
-					t.fgColor = colorCode
-				} else {
-					t.bgColor = colorCode
+			if p1, ok1 := peek(); ok1 && p1 == "2" {
+				next()
+				p2, ok2 := next()
+				p3, ok3 := next()
+				p4, ok4 := next()
+				if ok2 && ok3 && ok4 {
+					colorCode := part + ";2;" + p2 + ";" + p3 + ";" + p4
+					if code == 38 {
+						t.fgColor = colorCode
+					} else {
+						t.bgColor = colorCode
+					}
 				}
-				index += 5
 				continue
 			}
 		}
@@ -152,12 +181,11 @@ func (t *ansiCodeTracker) process(ansiCode string) {
 			t.bgColor = ""
 		default:
 			if (code >= 30 && code <= 37) || (code >= 90 && code <= 97) {
-				t.fgColor = parts[index]
+				t.fgColor = part
 			} else if (code >= 40 && code <= 47) || (code >= 100 && code <= 107) {
-				t.bgColor = parts[index]
+				t.bgColor = part
 			}
 		}
-		index++
 	}
 }
 
