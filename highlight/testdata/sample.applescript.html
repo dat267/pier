@@ -1,0 +1,9 @@
+<span class="hljs-keyword">tell</span> <span class="hljs-built_in">application</span> <span class="hljs-string">&quot;Finder&quot;</span>
+    <span class="hljs-keyword">set</span> theFolder <span class="hljs-keyword">to</span> <span class="hljs-built_in">choose folder</span>
+    <span class="hljs-keyword">set</span> fileList <span class="hljs-keyword">to</span> <span class="hljs-keyword">every</span> <span class="hljs-built_in">file</span> <span class="hljs-keyword">of</span> theFolder
+    <span class="hljs-keyword">repeat</span> <span class="hljs-keyword">with</span> f <span class="hljs-keyword">in</span> fileList
+        <span class="hljs-keyword">if</span> <span class="hljs-built_in">name</span> <span class="hljs-keyword">of</span> f <span class="hljs-keyword">is</span> <span class="hljs-keyword">greater than</span> <span class="hljs-string">&quot;m&quot;</span> <span class="hljs-keyword">then</span>
+            <span class="hljs-built_in">display dialog</span> <span class="hljs-string">&quot;Found: &quot;</span> &amp; <span class="hljs-built_in">name</span> <span class="hljs-keyword">of</span> f
+        <span class="hljs-keyword">end</span> <span class="hljs-keyword">if</span>
+    <span class="hljs-keyword">end</span> <span class="hljs-keyword">repeat</span>
+<span class="hljs-keyword">end</span> <span class="hljs-keyword">tell</span>

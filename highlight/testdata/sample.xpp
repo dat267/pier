@@ -1,0 +1,19 @@
+class MyClass extends Object
+{
+    str name;
+    int count;
+
+    public void new(str _name)
+    {
+        name = _name;
+        count = 0;
+    }
+
+    public void run()
+    {
+        while (count < 10)
+        {
+            count++;
+        }
+    }
+}

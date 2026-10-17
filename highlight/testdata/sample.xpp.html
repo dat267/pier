@@ -1,0 +1,19 @@
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">MyClass</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Object</span>
+</span>{
+    <span class="hljs-built_in">str</span> name;
+    <span class="hljs-built_in">int</span> <span class="hljs-keyword">count</span>;
+
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-keyword">new</span>(<span class="hljs-built_in">str</span> _name)
+    {
+        name = _name;
+        <span class="hljs-keyword">count</span> = <span class="hljs-number">0</span>;
+    }
+
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> run()
+    {
+        <span class="hljs-keyword">while</span> (<span class="hljs-keyword">count</span> &lt; <span class="hljs-number">10</span>)
+        {
+            <span class="hljs-keyword">count</span>++;
+        }
+    }
+}

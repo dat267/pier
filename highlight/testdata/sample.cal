@@ -1,0 +1,9 @@
+OBJECT Codeunit 50000 My Codeunit
+{
+    OnRun()
+    BEGIN
+        MESSAGE('Hello');
+        IF COUNT > 0 THEN
+            EXIT;
+    END;
+}

@@ -1,0 +1,16 @@
+<span class="hljs-comment"># Apache config sample</span>
+<span class="hljs-attribute"><span class="hljs-nomarkup">Listen</span></span> <span class="hljs-number">80</span>
+<span class="hljs-attribute"><span class="hljs-nomarkup">ServerName</span></span> example.com
+
+<span class="hljs-section">&lt;VirtualHost *<span class="hljs-number">:80</span>&gt;</span>
+    <span class="hljs-attribute"><span class="hljs-nomarkup">DocumentRoot</span></span> <span class="hljs-string">&quot;/var/www/html&quot;</span>
+    <span class="hljs-section">&lt;Directory <span class="hljs-string">&quot;/var/www/html&quot;</span>&gt;</span>
+        <span class="hljs-attribute"><span class="hljs-nomarkup">Options</span></span> Indexes FollowSymLinks
+        <span class="hljs-attribute">AllowOverride</span> <span class="hljs-literal">All</span>
+        <span class="hljs-attribute">Require</span> <span class="hljs-literal">all</span> granted
+    <span class="hljs-section">&lt;/Directory&gt;</span>
+    <span class="hljs-attribute"><span class="hljs-nomarkup">ErrorDocument</span></span> <span class="hljs-number">404</span> /<span class="hljs-number">404</span>.html
+    <span class="hljs-attribute"><span class="hljs-nomarkup">RewriteEngine</span></span> <span class="hljs-literal">on</span>
+    <span class="hljs-attribute"><span class="hljs-nomarkup">RewriteCond</span></span> <span class="hljs-variable">%{HTTP_HOST}</span> ^www\.(.+)$<span class="hljs-meta"> [NC]</span>
+    <span class="hljs-attribute"><span class="hljs-nomarkup">RewriteRule</span></span> ^ http://%<span class="hljs-number">1</span><span class="hljs-variable">%{REQUEST_URI}</span><span class="hljs-meta"> [L,R=301]</span>
+<span class="hljs-section">&lt;/VirtualHost&gt;</span>

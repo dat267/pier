@@ -1,0 +1,15 @@
+<span class="hljs-meta">.include</span> <span class="hljs-string">&quot;m328pdef.inc&quot;</span>
+
+<span class="hljs-meta">.org</span> <span class="hljs-number">0x0000</span>
+    <span class="hljs-keyword">rjmp</span> main
+
+<span class="hljs-symbol">main:</span>
+    <span class="hljs-keyword">ldi</span> <span class="hljs-built_in">r16</span>, <span class="hljs-number">0xFF</span>
+    <span class="hljs-keyword">out</span> <span class="hljs-built_in">DDRB</span>, <span class="hljs-built_in">r16</span>
+<span class="hljs-symbol">loop:</span>
+    <span class="hljs-keyword">sbi</span> <span class="hljs-built_in">PORTB</span>, <span class="hljs-number">5</span>
+    <span class="hljs-keyword">ldi</span> <span class="hljs-built_in">r17</span>, <span class="hljs-number">0x0F</span>
+    <span class="hljs-keyword">add</span> <span class="hljs-built_in">r16</span>, <span class="hljs-built_in">r17</span>
+    <span class="hljs-keyword">cpi</span> <span class="hljs-built_in">r16</span>, <span class="hljs-number">0x80</span>
+    <span class="hljs-keyword">brne</span> loop
+    <span class="hljs-keyword">rjmp</span> main

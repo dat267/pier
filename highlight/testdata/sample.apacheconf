@@ -1,0 +1,16 @@
+# Apache config sample
+Listen 80
+ServerName example.com
+
+<VirtualHost *:80>
+    DocumentRoot "/var/www/html"
+    <Directory "/var/www/html">
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+    ErrorDocument 404 /404.html
+    RewriteEngine on
+    RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+    RewriteRule ^ http://%1%{REQUEST_URI} [L,R=301]
+</VirtualHost>

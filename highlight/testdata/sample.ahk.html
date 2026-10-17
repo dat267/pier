@@ -1,0 +1,13 @@
+<span class="hljs-comment">; AutoHotkey sample</span>
+<span class="hljs-meta">#NoEnv</span>
+<span class="hljs-built_in">SetWorkingDir %</span><span class="hljs-built_in">A_ScriptDir</span>%
+SendMode Input
+
+<span class="hljs-title">F1::</span>
+<span class="hljs-built_in">    MsgBox,</span> You pressed F1
+    <span class="hljs-keyword">return</span>
+<span class="hljs-title">F2::</span>Run, notepad.exe
+
+<span class="hljs-title">^!s::</span>
+    <span class="hljs-built_in">Clipboard</span> = <span class="hljs-variable">%ClipboardAll%</span>
+    <span class="hljs-keyword">return</span>

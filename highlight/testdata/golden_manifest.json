@@ -278,5 +278,29 @@
   {
     "file": "sample.n1ql",
     "language": "n1ql"
+  },
+  {
+    "file": "sample.apacheconf",
+    "language": "apache"
+  },
+  {
+    "file": "sample.applescript",
+    "language": "applescript"
+  },
+  {
+    "file": "sample.ahk",
+    "language": "autohotkey"
+  },
+  {
+    "file": "sample.asm",
+    "language": "avrasm"
+  },
+  {
+    "file": "sample.xpp",
+    "language": "axapta"
+  },
+  {
+    "file": "sample.cal",
+    "language": "cal"
   }
 ]
