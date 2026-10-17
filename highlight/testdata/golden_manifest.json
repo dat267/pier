@@ -674,5 +674,9 @@
   {
     "file": "sample.lasso",
     "language": "lasso"
+  },
+  {
+    "file": "sample.sas",
+    "language": "sas"
   }
 ]

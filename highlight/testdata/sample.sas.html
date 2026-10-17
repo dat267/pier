@@ -1,0 +1,16 @@
+<span class="hljs-comment">/* a block comment */</span>
+<span class="hljs-comment">* a macro comment ;</span>
+<span class="hljs-keyword">
+data </span>work.sample;
+    <span class="hljs-meta">set</span> sashelp.class;
+    <span class="hljs-meta">where</span> age &gt; 12;
+    bmi = weight / (height <span class="hljs-comment">* height);</span>
+    <span class="hljs-meta">label</span> bmi = <span class="hljs-string">&#x27;Body Mass Index&#x27;</span>;
+<span class="hljs-keyword">run;</span>
+<span class="hljs-keyword">
+proc print </span>data=work.sample;
+    var name age bmi;
+<span class="hljs-keyword">run;</span>
+
+<span class="hljs-built_in">%let</span> name = world;
+<span class="hljs-built_in">%put</span> Hello, <span class="hljs-variable">&amp;name</span>;
