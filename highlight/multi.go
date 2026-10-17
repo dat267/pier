@@ -30,22 +30,26 @@ type matchData struct {
 }
 
 // match is one rule match. index is the byte index into the whole source.
-// group returns the text of capture group i, or "" when it did not participate.
+// group returns the matched rule's capture group i, or "" when it did not
+// participate. The rule's groups follow its wrapper group in the joined
+// alternation, so the index is offset by groupBase.
 func (m *match) group(i int) string {
-	if 2*i+1 >= len(m.groups) || m.groups[2*i] < 0 || m.groups[2*i+1] < 0 {
+	index := m.groupBase + i
+	if 2*index+1 >= len(m.groups) || m.groups[2*index] < 0 || m.groups[2*index+1] < 0 {
 		return ""
 	}
-	return m.input[m.groups[2*i]:m.groups[2*i+1]]
+	return m.input[m.groups[2*index]:m.groups[2*index+1]]
 }
 
 type match struct {
-	index    int
-	lexeme   string
-	typ      ruleType
-	rule     *compiledMode
-	groups   []int
-	input    string
-	position int
+	index     int
+	lexeme    string
+	typ       ruleType
+	rule      *compiledMode
+	groups    []int
+	input     string
+	position  int
+	groupBase int
 }
 
 type multiRegex struct {
@@ -182,13 +186,14 @@ func (m *multiRegex) buildMatch(s string, base int, loc []int) *match {
 		}
 	}
 	return &match{
-		index:    start,
-		lexeme:   s[start:end],
-		typ:      data.typ,
-		rule:     data.rule,
-		groups:   groups,
-		input:    s,
-		position: data.position,
+		index:     start,
+		lexeme:    s[start:end],
+		typ:       data.typ,
+		rule:      data.rule,
+		groups:    groups,
+		input:     s,
+		position:  data.position,
+		groupBase: group,
 	}
 }
 

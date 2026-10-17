@@ -115,13 +115,6 @@ func highlightWith(lang *compiledLanguage, code string) *Result {
 	h.processContinuations()
 	h.top.regexIndex = 0
 
-	defer func() {
-		// Recover from panics in callbacks by falling back to plain text.
-		if r := recover(); r != nil {
-			_ = r
-		}
-	}()
-
 	for {
 		h.iterations++
 		if h.resumeScanAtSame {
@@ -137,6 +130,11 @@ func highlightWith(lang *compiledLanguage, code string) *Result {
 		before := code[h.index:m.index]
 		processed := h.processLexeme(before, m)
 		h.index = m.index + processed
+		if h.index > len(code) {
+			// A zero-width match at the end advances one past it; JavaScript's
+			// substr clamps, Go slicing does not.
+			h.index = len(code)
+		}
 		if h.iterations > 1000000 {
 			break
 		}

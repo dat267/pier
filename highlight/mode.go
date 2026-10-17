@@ -61,9 +61,21 @@ type Language struct {
 var Self = &Mode{}
 
 // Variant returns a copy of base with override applied, for mode.variants.
+// When base itself has variants each one is copied with the same override, so
+// inherit(STRINGS, {className: 'meta-string'}) keeps the string rules and only
+// changes their class.
 func Variant(base *Mode, override func(*Mode)) *Mode {
 	c := cloneMode(base)
 	override(c)
+	if len(base.Variants) > 0 {
+		variants := make([]*Mode, len(base.Variants))
+		for i, v := range base.Variants {
+			nv := cloneMode(v)
+			override(nv)
+			variants[i] = nv
+		}
+		c.Variants = variants
+	}
 	return c
 }
 
@@ -417,7 +429,9 @@ func cloneMode(m *Mode) *Mode {
 	if m.Contains != nil {
 		c.Contains = append([]*Mode(nil), m.Contains...)
 	}
-	c.Variants = nil
+	if m.Variants != nil {
+		c.Variants = append([]*Mode(nil), m.Variants...)
+	}
 	return &c
 }
 

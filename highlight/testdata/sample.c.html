@@ -1,0 +1,23 @@
+<span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;stdio.h&gt;</span></span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> MAX 42</span>
+<span class="hljs-comment">// a comment</span>
+<span class="hljs-comment">/* block
+   comment */</span>
+
+<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *<span class="hljs-title">greet</span><span class="hljs-params">(<span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *name)</span> </span>{
+	<span class="hljs-keyword">int</span> n = <span class="hljs-number">0x1f</span>;
+	<span class="hljs-keyword">double</span> ratio = <span class="hljs-number">1.5e-3</span>;
+	<span class="hljs-keyword">char</span> c = <span class="hljs-string">&#x27;x&#x27;</span>;
+	<span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *s = <span class="hljs-string">&quot;hello, %s!&quot;</span>;
+	<span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *raw = <span class="hljs-string">R&quot;delim(raw &quot;string&quot; here)delim&quot;</span>;
+	<span class="hljs-built_in">printf</span>(s, name, n, ratio, c);
+	<span class="hljs-keyword">return</span> name;
+}
+
+<span class="hljs-class"><span class="hljs-keyword">enum</span> <span class="hljs-keyword">class</span> <span class="hljs-title">Color</span> {</span> Red, Green, Blue };
+
+<span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">main</span><span class="hljs-params">(<span class="hljs-keyword">void</span>)</span> </span>{
+	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">Point</span> {</span> <span class="hljs-keyword">int</span> x, y; };
+	Point p = { <span class="hljs-number">1</span>, <span class="hljs-number">2</span> };
+	<span class="hljs-keyword">return</span> greet(<span class="hljs-string">&quot;world&quot;</span>) == <span class="hljs-number">0</span> ? p.x : MAX;
+}
