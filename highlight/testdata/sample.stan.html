@@ -1,0 +1,22 @@
+<span class="hljs-comment">// a comment</span>
+<span class="hljs-title">functions</span> {
+  <span class="hljs-keyword">real</span> <span class="hljs-built_in">square</span>(<span class="hljs-keyword">real</span> x) {
+    <span class="hljs-keyword">return</span> x * x;
+  }
+}
+
+<span class="hljs-title">data</span> {
+  <span class="hljs-keyword">int</span>&lt;<span class="hljs-keyword">lower</span>=<span class="hljs-number">0</span>&gt; N;
+  <span class="hljs-keyword">vector</span>[N] y;
+}
+
+<span class="hljs-title">parameters</span> {
+  <span class="hljs-keyword">real</span> mu;
+  <span class="hljs-keyword">real</span>&lt;<span class="hljs-keyword">lower</span>=<span class="hljs-number">0</span>&gt; sigma;
+}
+
+<span class="hljs-title">model</span> {
+  <span class="hljs-keyword">target +=</span> <span class="hljs-built_in">normal_lpdf</span>(y | mu, sigma);
+  mu ~ <span class="hljs-keyword">normal</span>(<span class="hljs-number">0</span>, <span class="hljs-number">10</span>);
+  <span class="hljs-comment"># <span class="hljs-meta-keyword">include</span> a comment</span>
+}

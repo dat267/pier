@@ -690,5 +690,9 @@
   {
     "file": "sample.do",
     "language": "stata"
+  },
+  {
+    "file": "sample.stan",
+    "language": "stan"
   }
 ]
