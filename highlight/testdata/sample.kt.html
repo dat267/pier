@@ -1,0 +1,25 @@
+<span class="hljs-keyword">package</span> com.example
+
+<span class="hljs-keyword">import</span> kotlin.collections.List
+
+<span class="hljs-comment">/**
+ * A demo class.
+ * <span class="hljs-doctag">@author</span> pier
+ */</span>
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Demo</span></span>(<span class="hljs-keyword">val</span> name: String, <span class="hljs-keyword">private</span> <span class="hljs-keyword">var</span> count: <span class="hljs-built_in">Int</span> = <span class="hljs-number">42</span>) : Runnable {
+    <span class="hljs-keyword">override</span> <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">run</span><span class="hljs-params">()</span></span> {
+        <span class="hljs-keyword">val</span> ratio = <span class="hljs-number">1.5e-3</span>
+        <span class="hljs-keyword">val</span> raw = <span class="hljs-string">&quot;&quot;&quot;
+            raw
+            string
+        &quot;&quot;&quot;</span>
+        <span class="hljs-keyword">val</span> items: List&lt;String&gt; = listOf(<span class="hljs-string">&quot;a&quot;</span>, <span class="hljs-string">&quot;b&quot;</span>)
+        <span class="hljs-keyword">val</span> n = <span class="hljs-number">0x1f</span> + <span class="hljs-number">0b1010</span> + 0o17
+        <span class="hljs-keyword">if</span> (count &gt; <span class="hljs-number">0</span> &amp;&amp; items.isNotEmpty()) {
+            println(<span class="hljs-string">&quot;hello, <span class="hljs-subst">${name}</span> <span class="hljs-variable">$count</span> <span class="hljs-variable">$ratio</span> <span class="hljs-variable">$n</span>&quot;</span>)
+        }
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span><span class="hljs-symbol">@Demo</span>
+    }
+}
+
+<span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">Greet</span> </span>{ <span class="hljs-function"><span class="hljs-keyword">fun</span> <span class="hljs-title">greet</span><span class="hljs-params">()</span></span>: <span class="hljs-built_in">Unit</span> }
