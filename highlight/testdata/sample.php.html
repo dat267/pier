@@ -1,0 +1,28 @@
+<span class="hljs-meta">&lt;?php</span>
+<span class="hljs-keyword">namespace</span> <span class="hljs-title">Demo</span>;
+
+<span class="hljs-keyword">use</span> <span class="hljs-title">App</span>\<span class="hljs-title">Box</span>;
+
+<span class="hljs-comment">/**
+ * A demo class.
+ * <span class="hljs-doctag">@author</span> pier
+ */</span>
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Demo</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Runnable</span>
+</span>{
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">const</span> MAX = <span class="hljs-number">42</span>;
+
+    <span class="hljs-keyword">public</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">run</span>(<span class="hljs-params"><span class="hljs-keyword">string</span> <span class="hljs-variable">$name</span>, <span class="hljs-keyword">int</span> <span class="hljs-variable">$count</span> = <span class="hljs-number">0</span></span>): <span class="hljs-title">void</span>
+    </span>{
+        <span class="hljs-variable">$verbatim</span> = <span class="hljs-string">&quot;raw <span class="hljs-subst">$name</span> string&quot;</span>;
+        <span class="hljs-variable">$single</span> = <span class="hljs-string">&#x27;single quoted&#x27;</span>;
+        <span class="hljs-variable">$heredoc</span> = <span class="hljs-string">&lt;&lt;&lt;EOT
+        heredoc <span class="hljs-subst">$name</span> text
+        EOT</span>;
+        <span class="hljs-variable">$numbers</span> = <span class="hljs-number">0x1f</span> + <span class="hljs-number">0b1010</span> + <span class="hljs-number">0o17</span> + <span class="hljs-number">1.5e-3</span>;
+        <span class="hljs-variable">$items</span> = <span class="hljs-keyword">array</span>(<span class="hljs-string">&#x27;a&#x27;</span>, <span class="hljs-string">&#x27;b&#x27;</span>);
+        <span class="hljs-keyword">if</span> (<span class="hljs-variable">$count</span> &gt; <span class="hljs-number">0</span> &amp;&amp; !<span class="hljs-keyword">empty</span>(<span class="hljs-variable">$items</span>)) {
+            <span class="hljs-keyword">echo</span> <span class="hljs-string">&quot;hello, <span class="hljs-subst">{$name}</span> <span class="hljs-subst">$count</span>&quot;</span>;
+        }
+    }
+}
+<span class="hljs-meta">?&gt;</span>
