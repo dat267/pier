@@ -1,0 +1,17 @@
+<span class="hljs-keyword">module</span> Main <span class="hljs-keyword">exposing</span> (main, add)
+
+<span class="hljs-keyword">import</span> Html <span class="hljs-keyword">exposing</span> (text)
+
+<span class="hljs-keyword">type</span> <span class="hljs-type">Maybe</span> a
+    = <span class="hljs-type">Just</span> a
+    | <span class="hljs-type">Nothing</span>
+
+<span class="hljs-title">add</span> : <span class="hljs-type">Int</span> -&gt; <span class="hljs-type">Int</span> -&gt; <span class="hljs-type">Int</span>
+<span class="hljs-title">add</span> a b =
+    a + b
+
+<span class="hljs-title">record</span> =
+    { name = <span class="hljs-string">&quot;Elm&quot;</span>, count = <span class="hljs-number">1</span> }
+
+<span class="hljs-title">main</span> =
+    text <span class="hljs-string">&quot;Hello&quot;</span>

@@ -1,0 +1,10 @@
+<span class="hljs-keyword">structure</span> <span class="hljs-type">Main</span> = <span class="hljs-keyword">struct</span>
+  <span class="hljs-keyword">datatype</span> shape = <span class="hljs-type">Circle</span> <span class="hljs-keyword">of</span> <span class="hljs-built_in">real</span> | <span class="hljs-type">Square</span> <span class="hljs-keyword">of</span> <span class="hljs-built_in">real</span>
+
+  <span class="hljs-keyword">fun</span> area (<span class="hljs-type">Circle</span> r) = <span class="hljs-number">3.14159</span> * r * r
+    | area (<span class="hljs-type">Square</span> s) = s * s
+
+  <span class="hljs-keyword">val</span> x = <span class="hljs-number">42</span>
+  <span class="hljs-keyword">val</span> name = <span class="hljs-string">&quot;SML&quot;</span>
+  <span class="hljs-keyword">val</span> eq = <span class="hljs-number">1</span> = <span class="hljs-number">1</span>
+<span class="hljs-keyword">end</span>

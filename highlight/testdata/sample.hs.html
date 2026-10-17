@@ -1,0 +1,14 @@
+<span class="hljs-keyword">module</span> Main (<span class="hljs-title">main</span>) <span class="hljs-keyword">where</span>
+
+<span class="hljs-keyword">import</span> Data.List (<span class="hljs-title">sort</span>)
+
+<span class="hljs-class"><span class="hljs-keyword">data</span> <span class="hljs-type">Shape</span></span>
+  = <span class="hljs-type">Circle</span> <span class="hljs-type">Double</span>
+  | <span class="hljs-type">Square</span> <span class="hljs-type">Double</span>
+
+<span class="hljs-title">area</span> :: <span class="hljs-type">Shape</span> -&gt; <span class="hljs-type">Double</span>
+<span class="hljs-title">area</span> (<span class="hljs-type">Circle</span> r) = pi * r * r
+<span class="hljs-title">area</span> (<span class="hljs-type">Square</span> s) = s * s
+
+<span class="hljs-title">main</span> :: <span class="hljs-type">IO</span> ()
+<span class="hljs-title">main</span> = print (sort [<span class="hljs-number">3</span>, <span class="hljs-number">1</span>, <span class="hljs-number">2</span>])

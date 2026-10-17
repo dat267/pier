@@ -1,0 +1,10 @@
+<span class="hljs-keyword">let</span> <span class="hljs-keyword">rec</span> fact n =
+  <span class="hljs-keyword">if</span> n &lt;= <span class="hljs-number">1</span> <span class="hljs-keyword">then</span> <span class="hljs-number">1</span> <span class="hljs-keyword">else</span> n * fact (n - <span class="hljs-number">1</span>)
+
+<span class="hljs-keyword">type</span> shape = <span class="hljs-type">Circle</span> <span class="hljs-keyword">of</span> <span class="hljs-built_in">float</span> | <span class="hljs-type">Square</span> <span class="hljs-keyword">of</span> <span class="hljs-built_in">float</span>
+
+<span class="hljs-keyword">let</span> area = <span class="hljs-keyword">function</span>
+  | <span class="hljs-type">Circle</span> r -&gt; <span class="hljs-number">3.14</span> *. r *. r
+  | <span class="hljs-type">Square</span> s -&gt; s *. s
+
+<span class="hljs-keyword">let</span> <span class="hljs-literal">()</span> = print_int (fact <span class="hljs-number">5</span>)

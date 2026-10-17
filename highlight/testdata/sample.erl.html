@@ -1,0 +1,11 @@
+<span class="hljs-keyword">-module</span><span class="hljs-params">(main)</span>.
+<span class="hljs-keyword">-export</span><span class="hljs-params">([main/<span class="hljs-number">0</span>, add/<span class="hljs-number">2</span>])</span>.
+
+<span class="hljs-function"><span class="hljs-title">main</span><span class="hljs-params">()</span> -&gt;</span>
+    io:format(<span class="hljs-string">&quot;Hello, ~s~n&quot;</span>, [<span class="hljs-string">&quot;world&quot;</span>]),
+    add(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>).
+
+<span class="hljs-function"><span class="hljs-title">add</span><span class="hljs-params">(A, B)</span> -&gt;</span>
+    A + B.
+
+<span class="hljs-keyword">-record</span><span class="hljs-params">(person, {name, age})</span>.

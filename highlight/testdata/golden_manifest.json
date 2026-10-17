@@ -442,5 +442,25 @@
   {
     "file": "sample.m",
     "language": "matlab"
+  },
+  {
+    "file": "sample.elm",
+    "language": "elm"
+  },
+  {
+    "file": "sample.sml",
+    "language": "sml"
+  },
+  {
+    "file": "sample.hs",
+    "language": "haskell"
+  },
+  {
+    "file": "sample.ml",
+    "language": "ocaml"
+  },
+  {
+    "file": "sample.erl",
+    "language": "erlang"
   }
 ]
