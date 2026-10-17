@@ -13,6 +13,13 @@ func isSpaceRune(r rune) bool { return r == ' ' }
 // splitIntoTokensWithAnsi splits into word/space tokens, keeping ANSI codes
 // attached to the following visible content. CJK characters break anywhere.
 func splitIntoTokensWithAnsi(text string) []string {
+	// A line that is entirely printable ASCII (plain prose, no escapes) needs no
+	// tokenizer state at all: every word/space run is a substring of text, so the
+	// common case allocates only the result slice.
+	if isPrintableASCII(text) {
+		return splitAsciiRuns(text)
+	}
+
 	var tokens []string
 	var current strings.Builder
 	pendingAnsi := ""
@@ -34,14 +41,48 @@ func splitIntoTokensWithAnsi(text string) []string {
 			continue
 		}
 
-		// Jump to the next escape rather than testing every byte: an ANSI code
-		// can only start at ESC (ExtractANSICode returns "" otherwise).
+		// The visible run ends at the next ESC that begins a valid ANSI code.
+		// Searching from index+1 and skipping escapes ExtractANSICode rejects
+		// keeps a malformed ESC (a lone escape in the text) as visible content
+		// and guarantees progress; upstream skips them the same way.
 		end := len(text)
-		if escape := strings.IndexByte(text[index:], '\x1b'); escape >= 0 {
-			end = index + escape
+		if start := nextAnsiStart(text, index); start >= 0 {
+			end = start
 		}
 
-		for _, segment := range segmentGraphemes(text[index:end]) {
+		chunk := text[index:end]
+		// Printable ASCII is the dominant case (plain prose). Every byte is its
+		// own grapheme and can never be a CJK break, so split word/space runs by
+		// slicing instead of running the grapheme segmenter, converting each
+		// segment to runes and binary-searching the CJK ranges for every byte.
+		// This is upstream's isPrintableAscii fast path.
+		if isPrintableASCII(chunk) {
+			for runStart := 0; runStart < len(chunk); {
+				isSpace := chunk[runStart] == ' '
+				runEnd := runStart + 1
+				for runEnd < len(chunk) && (chunk[runEnd] == ' ') == isSpace {
+					runEnd++
+				}
+				kind := "word"
+				if isSpace {
+					kind = "space"
+				}
+				if current.Len() > 0 && currentKind != kind {
+					flushCurrent()
+				}
+				if pendingAnsi != "" {
+					current.WriteString(pendingAnsi)
+					pendingAnsi = ""
+				}
+				currentKind = kind
+				current.WriteString(chunk[runStart:runEnd])
+				runStart = runEnd
+			}
+			index = end
+			continue
+		}
+
+		for _, segment := range segmentGraphemes(chunk) {
 			runes := []rune(segment)
 			segmentIsSpace := isSpaceRune(runes[0]) && len(runes) == 1
 			if !segmentIsSpace && isCJKBreakRune(runes[0]) {
@@ -84,6 +125,42 @@ func splitIntoTokensWithAnsi(text string) []string {
 	return tokens
 }
 
+// nextAnsiStart returns the byte index of the next ESC in text at or after
+// from+1 that begins a valid ANSI code, or -1. Searching past from and skipping
+// escapes ExtractANSICode rejects keeps a malformed ESC as visible content and
+// guarantees the caller advances; upstream's wrap helpers skip them the same
+// way.
+func nextAnsiStart(text string, from int) int {
+	for search := from + 1; search <= len(text); {
+		escape := strings.IndexByte(text[search:], '\x1b')
+		if escape < 0 {
+			return -1
+		}
+		candidate := search + escape
+		if code, _ := ExtractANSICode(text, candidate); code != "" {
+			return candidate
+		}
+		search = candidate + 1
+	}
+	return -1
+}
+
+// splitAsciiRuns splits printable ASCII into maximal word/space runs, each a
+// substring of text.
+func splitAsciiRuns(text string) []string {
+	var tokens []string
+	for start := 0; start < len(text); {
+		isSpace := text[start] == ' '
+		end := start + 1
+		for end < len(text) && (text[end] == ' ') == isSpace {
+			end++
+		}
+		tokens = append(tokens, text[start:end])
+		start = end
+	}
+	return tokens
+}
+
 // breakLongWord breaks an over-long token, re-establishing styles per piece.
 func breakLongWord(word string, maxWidth int, tracker *ansiCodeTracker) []string {
 	var pieces []string
@@ -98,8 +175,8 @@ func breakLongWord(word string, maxWidth int, tracker *ansiCodeTracker) []string
 			continue
 		}
 		end := len(word)
-		if escape := strings.IndexByte(word[index:], '\x1b'); escape >= 0 {
-			end = index + escape
+		if start := nextAnsiStart(word, index); start >= 0 {
+			end = start
 		}
 		for _, segment := range segmentGraphemes(word[index:end]) {
 			w := graphemeWidth(segment)

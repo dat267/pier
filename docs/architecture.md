@@ -749,6 +749,26 @@ modules. chroma v2 (`quick.Highlight`, terminal256/monokai) tokenizes at
 138-262 MB/s. Measured in a throwaway module under `/tmp`; pier's `go.mod` is
 unchanged.
 
+## Prose rendering and the word wrapper
+
+Prose rendering is bounded by the word wrapper, not the markdown package. A CPU
+profile of a 49.5 KB prose render put `tui.WrapTextWithAnsi` at 79.8% cum and
+`markdown.Lex` at 2.8%; the lexer is already ~9x upstream's (419 MB/s against
+`marked.lexer`'s 45). The wrapper port had dropped upstream's printable-ASCII
+fast path (`isPrintableAscii(chunk)` then iterate the string and skip the CJK
+break test), so every ASCII byte went through `segmentGraphemes` (a `[]string`
+with one entry per byte), a `[]rune` conversion and an `isCJKBreakRune`
+`sort.Search` over the CJK ranges. It now slices word/space runs directly: for a
+wholly printable-ASCII line without touching the tokenizer state, and for each
+printable-ASCII run between escapes.
+
+Wrapping the same 98-byte prose line falls from 7.85 us / 56 allocations to
+3.47 us / 18, and a 49.5 KB prose render from 4.53 ms to 2.37 ms (2,654 KB /
+28,545 allocations to 1,586 KB / 9,545), against pi's 3.66 ms on the same
+fixture. The same chunk search and `breakLongWord` also spun forever on a line
+containing a malformed ESC (a lone `\x1b` in the text); both now skip escapes
+`ExtractANSICode` rejects, which is what upstream does.
+
 ## Stdin paste buffering
 
 `StdinBuffer` used to concatenate and rescan the entire paste prefix for every
