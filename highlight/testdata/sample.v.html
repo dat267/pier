@@ -1,0 +1,12 @@
+<span class="hljs-keyword">module</span> counter (
+    <span class="hljs-keyword">input</span>  <span class="hljs-keyword">wire</span> clk,
+    <span class="hljs-keyword">input</span>  <span class="hljs-keyword">wire</span> rst,
+    <span class="hljs-keyword">output</span> <span class="hljs-keyword">reg</span> [<span class="hljs-number">7</span>:<span class="hljs-number">0</span>] q
+);
+    <span class="hljs-keyword">always</span> @(<span class="hljs-keyword">posedge</span> clk) <span class="hljs-keyword">begin</span>
+        <span class="hljs-keyword">if</span> (rst)
+            q &lt;= <span class="hljs-number">8&#x27;h00</span>;
+        <span class="hljs-keyword">else</span>
+            q &lt;= q + <span class="hljs-number">8&#x27;d1</span>;
+    <span class="hljs-keyword">end</span>
+<span class="hljs-keyword">endmodule</span>

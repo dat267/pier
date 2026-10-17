@@ -1,0 +1,25 @@
+<span class="hljs-attribute">user</span>  nginx;
+<span class="hljs-attribute">worker_processes</span>  auto;
+
+<span class="hljs-section">events</span> {
+    <span class="hljs-attribute">worker_connections</span>  <span class="hljs-number">1024</span>;
+}
+
+<span class="hljs-section">http</span> {
+    <span class="hljs-attribute">include</span>       mime.types;
+    <span class="hljs-attribute">default_type</span>  application/octet-stream;
+
+    <span class="hljs-section">server</span> {
+        <span class="hljs-attribute">listen</span>       <span class="hljs-number">80</span>;
+        <span class="hljs-attribute">server_name</span>  example.com;
+
+        <span class="hljs-attribute">location</span> / {
+            <span class="hljs-attribute">root</span>   /usr/share/nginx/html;
+            <span class="hljs-attribute">index</span>  index.html index.htm;
+        }
+
+        <span class="hljs-attribute">location</span> <span class="hljs-regexp">~* \.(gif|jpg|png)$</span> {
+            <span class="hljs-attribute">expires</span> <span class="hljs-number">30d</span>;
+        }
+    }
+}

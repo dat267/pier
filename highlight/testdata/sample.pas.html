@@ -1,0 +1,20 @@
+<span class="hljs-keyword">program</span> Hello;
+
+<span class="hljs-meta">{$APPTYPE CONSOLE}</span>
+
+<span class="hljs-keyword">uses</span> SysUtils;
+
+<span class="hljs-keyword">type</span>
+  <span class="hljs-title">TShape</span> = <span class="hljs-keyword">class</span>(TObject)
+  <span class="hljs-keyword">private</span>
+    FName: <span class="hljs-keyword">string</span>;
+  <span class="hljs-keyword">public</span>
+    <span class="hljs-function"><span class="hljs-keyword">constructor</span> <span class="hljs-title">Create</span><span class="hljs-params">(<span class="hljs-keyword">const</span> AName: <span class="hljs-keyword">string</span>)</span>;</span>
+    <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Area</span>:</span> Double; <span class="hljs-keyword">virtual</span>;
+  <span class="hljs-keyword">end</span>;
+
+<span class="hljs-function"><span class="hljs-keyword">constructor</span> <span class="hljs-title">TShape</span>.<span class="hljs-title">Create</span><span class="hljs-params">(<span class="hljs-keyword">const</span> AName: <span class="hljs-keyword">string</span>)</span>;</span>
+<span class="hljs-keyword">begin</span>
+  FName := AName;
+  WriteLn(<span class="hljs-string">&#x27;Created &#x27;</span>, FName);
+<span class="hljs-keyword">end</span>;

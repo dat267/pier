@@ -1,0 +1,11 @@
+import "io"
+
+to say_hello name ->
+    print "Hello, " + name
+
+x -> x * 2
+
+if x > 0 then
+    print "positive"
+else
+    print "other"

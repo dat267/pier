@@ -398,5 +398,25 @@
   {
     "file": "sample.gcode",
     "language": "gcode"
+  },
+  {
+    "file": "sample.pas",
+    "language": "delphi"
+  },
+  {
+    "file": "sample.tcl",
+    "language": "tcl"
+  },
+  {
+    "file": "sample.xl",
+    "language": "xl"
+  },
+  {
+    "file": "sample.v",
+    "language": "verilog"
+  },
+  {
+    "file": "sample.nginx",
+    "language": "nginx"
   }
 ]
