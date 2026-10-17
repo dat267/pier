@@ -101,6 +101,11 @@ func (c *compiler) compileLanguageFor(language *Language) (*compiledMode, error)
 	return c.compileMode(root, nil)
 }
 
+// SupportsLanguage reports whether name is a registered language or alias.
+func SupportsLanguage(name string) bool {
+	return supportsLanguage(name)
+}
+
 // Highlight highlights code with the named language and returns the scope tree.
 // An illegal lexeme aborts the highlight and returns the input as plain text,
 // matching the reference's default (ignoreIllegals false).

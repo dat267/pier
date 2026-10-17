@@ -637,17 +637,25 @@ fell from ~1.27 s to ~0.88 s over 20 s on the 97 MB session
 
 ## Syntax highlighting
 
-Syntax highlighting is not built in (D217, D227). Upstream renders code blocks
-with highlight.js; this port uses upstream's own no-valid-language fallback for
-every language, one `mdCodeBlock` color per line. The Go-native option was
-chroma, which measured ~0.5 MB/s (highlight.js is ~7-11 MB/s on the same
-files, ~14-19x faster), and re-rendering the same fences on theme applies,
-visibility toggles and every streaming partial stalled the UI loop: a 600-partial
-fenced thinking block measured 31 s, and the live `pier-stall.log` showed idle
-190-235 ms `render` phases in `highlightCodeWithChroma`. Removing it deletes
-chroma and its `dlclark/regexp2` dependency, shrinks the binary 31.1 MB to
-27.1 MB (-3.9 MB), and saves the lexer registry init at startup (`pier --version`
-12.3 ms to 5.3 ms median).
+Syntax highlighting is built in (D231, superseding D217 and D227). Upstream
+renders Markdown code blocks and read/write previews with highlight.js and maps
+the `hljs-*` scopes to `syntax*` theme tokens (`renderHighlightedHtml` plus
+`buildCliHighlightTheme`). `highlight` is a from-scratch port of highlight.js
+10.7.3, and `coding/interactive/codehighlight.go` ports the scope mapping and
+the scope walk: a registered language gets per-token colors, an unregistered
+one keeps upstream's no-valid-language fallback (one `mdCodeBlock` color per
+line).
+
+The reference builds highlight.js's HTML and then re-parses it to find the
+scopes. The port's `highlight` package already returns the same scope tree, so
+the TUI walks the tree directly and skips the HTML round-trip; the two are
+equivalent because the HTML walk was exactly escape-then-unescape. On the
+10.9 KB `highlight/testdata/sample_big.go`, `highlightCode` measures 1.86 ms
+(5.86 MB/s) against the reference's 3.20 ms (3.42 MB/s) in the same session, and
+against the retired Chroma measurement (~0.5 MB/s, D227). The scope sequence and
+the scope-to-token mapping match upstream; only the theme palette differs
+(D154). The per-fragment formatter lookup is a switch, so the wire-in adds no
+lock and no off-loop path.
 
 ## Full-lexer allocation overhead (historical)
 

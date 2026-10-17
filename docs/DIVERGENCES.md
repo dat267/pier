@@ -1751,6 +1751,9 @@ and its `dlclark/regexp2` indirect dependency and the lexer registry init at
 startup: the binary fell from 31.1 MB to 27.1 MB (-3.9 MB), and `pier --version`
 went from 12.3 ms to 5.3 ms median (-7 ms) on the same machine.
 
+Superseded by D231: the `highlight` port is wired back in, so a registered
+language colors its tokens again.
+
 ## D228
 
 **Mid-line `$$`/`\[` are literal text, not a paragraph split.**
@@ -1819,3 +1822,49 @@ calls); `segmentGraphemes` was 59.6% of a scroll frame's allocated bytes.
 unchanged (a golden table pins wide glyphs, tabs, ANSI and OSC 8), and
 `replaceScrollbarCell` fell from 13,156 to 857 bytes/call. This measures one
 cell replacement, not the whole frame.
+
+## D231
+
+**Syntax highlighting is built in again (supersedes D217 and D227).**
+
+D227 removed syntax highlighting because Chroma v3 ran at ~0.5 MB/s on the UI
+loop and made code fences a render stall. The `highlight` package is now a
+from-scratch port of highlight.js 10.7.3 (the v1.3.0 reference engine), all 191
+`lib/index.js` languages are registered, and `TestGoldenHighlight` matches the
+reference HTML byte-for-byte on every fixture.
+
+`coding/interactive/codehighlight.go` ports the reference's
+`renderHighlightedHtml` and `buildCliHighlightTheme`: it walks the port's scope
+tree, tracks the open scopes, resolves a scope by exact name then
+`.`-prefix then `-`-prefix, colors each line with the innermost scope that has a
+formatter (an empty line stays empty), and decodes the entities highlight.js
+emits. A registered language gets per-token colors; any other language keeps
+upstream's no-valid-language fallback, one `mdCodeBlock` color per line. The
+scope-to-token map is upstream's (`keyword`->`syntaxKeyword`,
+`built_in`->`syntaxType`, `literal`/`number`->`syntaxNumber`,
+`regexp`/`string`->`syntaxString`, `subst`->`text`,
+`comment`/`doctag`->`syntaxComment`, `meta`->`muted`,
+`function`/`title`->`syntaxFunction`, `class`/`type`->`syntaxType`,
+`tag`->`syntaxPunctuation`, `name`->`syntaxKeyword`,
+`attr`/`variable`/`params`->`syntaxVariable`, `operator`->`syntaxOperator`,
+`punctuation`->`syntaxPunctuation`, `emphasis`/`strong`/`link`->
+italic/bold/underline, `addition`/`deletion`->
+`toolDiffAdded`/`toolDiffRemoved`), so the ANSI differs from upstream only by the
+theme palette (D154).
+
+The reference builds highlight.js's HTML and then re-parses it; the port's
+`highlight` package already returns the same scope tree, so `renderHighlightedNodes`
+walks the tree directly and skips the HTML round-trip (equivalent, since the
+HTML walk was exactly escape-then-unescape). On the 10.9 KB
+`highlight/testdata/sample_big.go`, the wired path measures 1.86 ms (5.86 MB/s)
+against the reference's JS wired path at 3.20 ms (3.42 MB/s) in the same
+session, so the D227 stall does not return, and the port has no third-party
+dependency:
+`github.com/alecthomas/chroma/v3` and its `dlclark/regexp2` indirect dependency
+stay removed, keeping the binary and startup gains D227 recorded.
+
+One divergence remains from the reference loader: pi registers 21 languages
+eagerly and imports the rest lazily, so an uncommon language can render plain
+until `loadAllHighlightLanguages` resolves. Pier registers all 191 at startup,
+so an uncommon language is always colored. The token output is identical once
+loaded.

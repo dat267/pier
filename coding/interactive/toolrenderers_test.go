@@ -399,9 +399,9 @@ func TestFormatSearchResultExpandedShowsAllLines(t *testing.T) {
 	}
 }
 
-// Syntax highlighting is not built in (D227): a known language in a read
-// preview renders with one code-block color, source preserved.
-func TestFormatReadResultRendersKnownLanguagePlainly(t *testing.T) {
+// A known language in a read preview is syntax highlighted (D227 superseded),
+// with the source preserved after the ANSI is stripped.
+func TestFormatReadResultHighlightsKnownLanguage(t *testing.T) {
 	installPierThemeForTest(t)
 	SetTrueColorSupport(true)
 	InitTheme("dark", false)
@@ -413,8 +413,11 @@ func TestFormatReadResultRendersKnownLanguagePlainly(t *testing.T) {
 	if !strings.Contains(coding.StripAnsi(got), "func answer() int { return 42 }") {
 		t.Fatalf("read result lost source text: %q", got)
 	}
-	if strings.Count(got, "\x1b[38;2;") != 1 {
-		t.Fatalf("read result applied token colors: %q", got)
+	if want := theme.Fg("syntaxKeyword", "func"); !strings.Contains(got, want) {
+		t.Fatalf("read result missing keyword color: %q", got)
+	}
+	if want := theme.Fg("syntaxNumber", "42"); !strings.Contains(got, want) {
+		t.Fatalf("read result missing number color: %q", got)
 	}
 }
 

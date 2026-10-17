@@ -19,7 +19,7 @@ type writeHighlightCache struct {
 }
 
 func highlightSingleLine(line string, lang string) string {
-	highlighted := HighlightCode(line, lang)
+	highlighted := highlightCode(line, lang, ActiveTheme())
 	if len(highlighted) > 0 {
 		return highlighted[0]
 	}
@@ -38,7 +38,7 @@ func rebuildWriteHighlightCacheFull(rawPath string, hasRawPath bool, fileContent
 	return &writeHighlightCache{
 		rawPath: rawPath, lang: lang, rawContent: fileContent,
 		normalizedLines:  strings.Split(normalized, "\n"),
-		highlightedLines: HighlightCode(normalized, lang),
+		highlightedLines: highlightCode(normalized, lang, ActiveTheme()),
 	}
 }
 
@@ -83,7 +83,7 @@ func updateWriteHighlightCacheIncremental(cache *writeHighlightCache, rawPath st
 	}
 	if prefixCount > 0 {
 		prefixSource := strings.Join(cache.normalizedLines[:prefixCount], "\n")
-		prefixHighlighted := HighlightCode(prefixSource, cache.lang)
+		prefixHighlighted := highlightCode(prefixSource, cache.lang, ActiveTheme())
 		for i := 0; i < prefixCount; i++ {
 			if i < len(prefixHighlighted) {
 				cache.highlightedLines[i] = prefixHighlighted[i]
@@ -109,7 +109,7 @@ func formatWriteCall(args map[string]any, options ToolRenderResultOptions, theme
 		if hasLang && cache != nil {
 			renderedLines = cache.highlightedLines
 		} else if hasLang {
-			renderedLines = HighlightCode(replaceTabs(normalizeDisplayText(fileContent)), lang)
+			renderedLines = highlightCode(replaceTabs(normalizeDisplayText(fileContent)), lang, ActiveTheme())
 		} else {
 			renderedLines = strings.Split(normalizeDisplayText(fileContent), "\n")
 		}

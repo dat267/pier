@@ -11,7 +11,8 @@ import (
 // src/modes/interactive/theme/theme.ts (getMarkdownTheme, getSelectListTheme,
 // getEditorTheme, getSettingsListTheme, getResolvedThemeColors,
 // isLightTheme, getLanguageFromPath, highlightCode). Syntax highlighting is
-// not built in; D217 and D227 record the styling and upstream-parity boundary.
+// built in through the `highlight` port; D231 records the wire-in and
+// supersedes D217 and D227.
 
 // activeTheme is the stable theme handle ActiveTheme returns. It mirrors
 // upstream's `theme` Proxy: its methods resolve the current concrete theme on
