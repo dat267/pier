@@ -495,6 +495,16 @@ func newKeyWiring(app *App) *KeyWiring {
 				if ctx.Err() != nil {
 					return
 				}
+				if paths, ok := app.readClipboardFilePaths(ctx); ok {
+					app.ui.Post(func() {
+						if ctx.Err() != nil {
+							return
+						}
+						app.defaultEditor.InsertTextAtCursor(strings.Join(paths, "\n"))
+						app.ui.RequestRender(false)
+					})
+					return
+				}
 				if imagePath, ok := app.readClipboardImagePath(ctx); ok {
 					app.ui.Post(func() {
 						if ctx.Err() != nil {

@@ -80,6 +80,26 @@ func readClipboardImageContext(ctx context.Context) (*coding.ClipboardImage, err
 	return coding.ReadClipboardImageContext(ctx)
 }
 
+// ClipboardFilePathsReadFn reads file paths copied to the clipboard.
+type ClipboardFilePathsReadFn func(ctx context.Context) ([]string, error)
+
+var clipboardFilePathsReader ClipboardFilePathsReadFn // nil selects the platform-command default
+
+// SetClipboardFilePathsReader installs the clipboard file-path reader (test seam).
+func SetClipboardFilePathsReader(reader ClipboardFilePathsReadFn) { clipboardFilePathsReader = reader }
+
+// readClipboardFilePathsContext runs the configured reader or the platform
+// command default. Any injected clipboard seam suppresses the real commands.
+func readClipboardFilePathsContext(ctx context.Context) ([]string, error) {
+	if clipboardFilePathsReader != nil {
+		return clipboardFilePathsReader(ctx)
+	}
+	if clipboardReader != nil || clipboardImageReader != nil {
+		return nil, nil
+	}
+	return coding.ReadClipboardFilePathsContext(ctx)
+}
+
 // readClipboardTextContext runs the configured reader; legacy injected readers
 // may ignore cancellation, so callers still gate their results.
 func readClipboardTextContext(ctx context.Context) (string, error) {

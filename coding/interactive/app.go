@@ -1024,6 +1024,22 @@ func (a *App) handleRightClickPaste() {
 		if ctx.Err() != nil {
 			return
 		}
+		// Copied files win over an image and text (upstream handleClipboardPaste):
+		// the paths are inserted directly.
+		if paths, ok := a.readClipboardFilePaths(ctx); ok {
+			a.ui.Post(func() {
+				if a.ui.GetFocusedComponent() != target {
+					return
+				}
+				handler, ok := target.(tui.InputHandler)
+				if !ok {
+					return
+				}
+				handler.HandleInput("\x1b[200~" + strings.Join(paths, "\n") + "\x1b[201~")
+				a.ui.RequestRender(false)
+			})
+			return
+		}
 		// An image on the clipboard is written to a temp file and pasted as a
 		// path, so the @file image attachment path handles it (upstream
 		// handleClipboardPaste).
@@ -1057,6 +1073,17 @@ func (a *App) handleRightClickPaste() {
 			a.ui.RequestRender(false)
 		})
 	})
+}
+
+// readClipboardFilePaths reads file paths copied to the clipboard, reporting
+// false when there are none or the read failed, so the caller falls back to
+// the image and text paths.
+func (a *App) readClipboardFilePaths(ctx context.Context) ([]string, bool) {
+	paths, err := readClipboardFilePathsContext(ctx)
+	if err != nil || len(paths) == 0 || ctx.Err() != nil {
+		return nil, false
+	}
+	return paths, true
 }
 
 // readClipboardImagePath reads an image from the clipboard and writes it to a

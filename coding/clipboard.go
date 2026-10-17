@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -59,9 +60,12 @@ func runClipboardCommand(ctx context.Context, command string, args []string, opt
 	return []byte{}
 }
 
-func isRemoteSession() bool {
-	return os.Getenv("SSH_CONNECTION") != "" || os.Getenv("SSH_CLIENT") != "" || os.Getenv("MOSH_CONNECTION") != "" ||
-		os.Getenv("PI_CLIPBOARD_OSC52") == "1"
+// isRemoteSession reports whether the copy must also emit OSC 52.
+func isRemoteSession() bool { return isRemoteSessionFor(os.Getenv) }
+
+func isRemoteSessionFor(getenv func(string) string) bool {
+	return getenv("SSH_CONNECTION") != "" || getenv("SSH_CLIENT") != "" || getenv("MOSH_CONNECTION") != "" ||
+		getenv("PI_CLIPBOARD_OSC52") == "1"
 }
 
 func copyCommands() [][]string { return copyCommandsFor(runtime.GOOS, os.Getenv) }
@@ -147,16 +151,26 @@ func CopyTextToClipboardContext(ctx context.Context, text string) error {
 	})
 }
 
+// clipboardCommandRunner runs one helper; nil means the command failed.
+type clipboardCommandRunner func(context.Context, string, []string, clipboardCommandOptions) []byte
+
 // CopyTextToClipboardWithOSC52 retains platform command order, but sends the
 // complete OSC 52 fallback packet through the caller's output sink. D202: the
 // interactive sink shares terminal ordering and optional-output admission.
 func CopyTextToClipboardWithOSC52(ctx context.Context, text string, write func(context.Context, string) error) error {
+	return copyTextToClipboardWith(ctx, runtime.GOOS, os.Getenv, runClipboardCommand, os.ReadFile, write, text)
+}
+
+// copyTextToClipboardWith ports upstream copyToClipboard: platform command
+// writers, the WSL Windows fallback, then OSC 52 for remote and headless
+// sessions. The native (Bun FFI) writer has no Go counterpart (D106).
+func copyTextToClipboardWith(ctx context.Context, goos string, getenv func(string) string, run clipboardCommandRunner, readFile func(string) ([]byte, error), write func(context.Context, string) error, text string) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 	copied := false
-	for _, command := range copyCommands() {
-		if runClipboardCommand(ctx, command[0], command[1:], clipboardCommandOptions{input: text, timeoutMS: 5000}) != nil {
+	for _, command := range copyCommandsFor(goos, getenv) {
+		if run(ctx, command[0], command[1:], clipboardCommandOptions{input: text, timeoutMS: 5000}) != nil {
 			copied = true
 			break
 		}
@@ -167,20 +181,77 @@ func CopyTextToClipboardWithOSC52(ctx context.Context, text string, write func(c
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	if isRemoteSession() {
+
+	emit := func() (bool, error) {
 		encoded := base64.StdEncoding.EncodeToString([]byte(text))
 		if len(encoded) > MaxOSC52EncodedLength || write == nil {
-			if copied {
-				return nil
-			}
-			return clipboardUnavailableError()
+			return false, nil
 		}
-		return write(ctx, "\x1b]52;c;"+encoded+"\x07")
+		if err := write(ctx, "\x1b]52;c;"+encoded+"\x07"); err != nil {
+			return false, err
+		}
+		return true, nil
 	}
-	if !copied {
-		return clipboardUnavailableError()
+
+	osc52Emitted := false
+	if !copied && goos == "linux" && IsWSL(getenv, readFile) {
+		// WSL without WSLg writes through the Windows clipboard; Windows
+		// Terminal prefers OSC 52 over the slower PowerShell round trip.
+		if getenv("WT_SESSION") != "" {
+			emitted, err := emit()
+			if err != nil {
+				return err
+			}
+			osc52Emitted = emitted
+		}
+		if osc52Emitted {
+			copied = true
+		} else {
+			copied = copyViaWindowsClipboard(ctx, run, text)
+		}
 	}
-	return nil
+
+	headless := goos == "linux" && getenv("DISPLAY") == "" && getenv("WAYLAND_DISPLAY") == "" && getenv("TERMUX_VERSION") == ""
+	oversized := false
+	if !osc52Emitted && (isRemoteSessionFor(getenv) || (!copied && headless)) {
+		emitted, err := emit()
+		if err != nil {
+			return err
+		}
+		if emitted {
+			copied = true
+		} else {
+			oversized = true
+		}
+	}
+	if copied {
+		return nil
+	}
+	if oversized {
+		return fmt.Errorf("Clipboard unavailable: text exceeds the OSC 52 size limit")
+	}
+	return clipboardUnavailableErrorFor(goos, getenv)
+}
+
+// copyViaWindowsClipboard writes text through PowerShell, reading it from a
+// UTF-8 file so the console code page cannot mangle non-ASCII text (upstream
+// copyViaWindowsClipboard).
+func copyViaWindowsClipboard(ctx context.Context, run clipboardCommandRunner, text string) bool {
+	tempFile := filepath.Join(os.TempDir(), AppName+"-wsl-clip-"+UUIDv7()+".txt")
+	defer func() { _ = os.Remove(tempFile) }()
+	if err := os.WriteFile(tempFile, []byte(text), 0o600); err != nil {
+		return false
+	}
+	output := run(ctx, "wslpath", []string{"-w", tempFile}, clipboardCommandOptions{timeoutMS: 1000})
+	if output == nil {
+		return false
+	}
+	winPath := strings.TrimSpace(string(output))
+	if winPath == "" {
+		return false
+	}
+	script := "Set-Clipboard -Value ([System.IO.File]::ReadAllText('" + strings.ReplaceAll(winPath, "'", "''") + "', [System.Text.Encoding]::UTF8))"
+	return run(ctx, "powershell.exe", []string{"-NoProfile", "-Command", script}, clipboardCommandOptions{timeoutMS: 5000}) != nil
 }
 
 // clipboardQueue serializes clipboard copies off the calling goroutine (the

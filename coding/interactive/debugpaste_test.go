@@ -95,3 +95,25 @@ func TestHandleRightClickPasteInsertsClipboardImage(t *testing.T) {
 		t.Fatalf("temp file = %q, %v", data, err)
 	}
 }
+
+// Copied files are pasted as their paths, ahead of the image and text paths
+// (upstream handleClipboardPaste).
+func TestHandleRightClickPasteInsertsClipboardFilePaths(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	app.Init(context.Background())
+
+	SetClipboardFilePathsReader(func(context.Context) ([]string, error) {
+		return []string{"/tmp/a.png", "/tmp/b.txt"}, nil
+	})
+	t.Cleanup(func() { SetClipboardFilePathsReader(nil) })
+
+	app.handleRightClickPaste()
+	app.pasteQueue.Flush()
+	app.ui.RenderNow(false)
+
+	text := app.defaultEditor.GetText()
+	if !strings.Contains(text, "/tmp/a.png") || !strings.Contains(text, "/tmp/b.txt") {
+		t.Fatalf("editor text = %q", text)
+	}
+}

@@ -107,12 +107,14 @@ Narrow runtime interfaces provide test seams across the wirings.
 
 The ES `Proxy` renderer reference becomes an explicit forwarder. Clipboard
 copy/read operations are injected; the native (Bun FFI) clipboard has no Go
-counterpart. Text copy/read and clipboard image read use the platform commands
-(`clipboard.ts`, `clipboard-image.ts`): wl-paste/xclip under Wayland/X11, a
-PowerShell `Get-Clipboard` fallback under WSL, plus port-local Windows
-PowerShell and macOS `pngpaste` substitutes for the native backend. Clipboard
-image paste writes the bytes to a temp file and inserts the path, so the
-`@file` image attachment path handles it. App-owned clipboard lifetime and
+counterpart. Text copy/read, clipboard file-path read and clipboard image read
+use the platform commands (`clipboard.ts`, `clipboard-image.ts`):
+wl-paste/xclip under Wayland/X11, the WSL `Set-Clipboard` PowerShell fallback
+and the Windows Terminal headless OSC 52 path for copy, PowerShell
+`Get-Clipboard` for Windows, and `pngpaste` on macOS. Clipboard file paths and
+images are pasted as text, so the `@file` attachment path handles them.
+Upstream reads file paths only from the native clipboard; the URI-list and
+PowerShell forms are port-local substitutes. App-owned clipboard lifetime and
 admission are covered by D200/D201.
 
 ## D121/D123/D135

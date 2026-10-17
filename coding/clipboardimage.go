@@ -11,6 +11,7 @@ package coding
 import (
 	"context"
 	"encoding/base64"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -274,4 +275,93 @@ func WriteClipboardImageTempFile(image *ClipboardImage) (string, error) {
 		return "", err
 	}
 	return path, nil
+}
+
+// ReadClipboardFilePathsContext reads file paths copied to the clipboard, or
+// nil when there are none. Upstream readClipboardFilePaths is native-only; the
+// port reads the platform URI-list targets instead (text/uri-list under
+// Wayland/X11, the Windows FileDropList through PowerShell). macOS has no
+// command substitute and reports none.
+func ReadClipboardFilePathsContext(ctx context.Context) ([]string, error) {
+	runner := func(ctx context.Context, command string, args []string, timeoutMS int) []byte {
+		return runClipboardCommand(ctx, command, args, clipboardCommandOptions{timeoutMS: timeoutMS})
+	}
+	return readClipboardFilePathsWith(ctx, runtime.GOOS, os.Getenv, runner)
+}
+
+func readClipboardFilePathsWith(ctx context.Context, goos string, getenv func(string) string, run clipboardImageRunner) ([]string, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	switch goos {
+	case "linux":
+		if IsWaylandSession(getenv) {
+			types := run(ctx, "wl-paste", []string{"--list-types"}, clipboardImageListTimeoutMS)
+			if containsURIList(types) {
+				data := run(ctx, "wl-paste", []string{"--type", "text/uri-list", "--no-newline"}, 0)
+				if paths := parseURIList(data); len(paths) > 0 {
+					return paths, nil
+				}
+			}
+		}
+		if getenv("DISPLAY") != "" {
+			targets := run(ctx, "xclip", []string{"-selection", "clipboard", "-t", "TARGETS", "-o"}, clipboardImageListTimeoutMS)
+			if containsURIList(targets) {
+				data := run(ctx, "xclip", []string{"-selection", "clipboard", "-t", "text/uri-list", "-o"}, 0)
+				if paths := parseURIList(data); len(paths) > 0 {
+					return paths, nil
+				}
+			}
+		}
+	case "windows":
+		output := run(ctx, "powershell.exe", []string{
+			"-NoProfile", "-Command",
+			"Get-Clipboard -Format FileDropList | ForEach-Object { $_.FullName }",
+		}, clipboardImagePowerShellTimeoutMS)
+		if paths := parsePathLines(output); len(paths) > 0 {
+			return paths, nil
+		}
+	}
+	return nil, nil
+}
+
+func containsURIList(data []byte) bool {
+	for _, line := range strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n") {
+		if strings.TrimSpace(line) == "text/uri-list" {
+			return true
+		}
+	}
+	return false
+}
+
+func parsePathLines(data []byte) []string {
+	var paths []string
+	for _, line := range strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n") {
+		if trimmed := strings.TrimSpace(line); trimmed != "" {
+			paths = append(paths, trimmed)
+		}
+	}
+	return paths
+}
+
+// parseURIList reads an RFC 2483 text/uri-list payload: comment lines start
+// with '#', and file URLs become local paths. Plain lines pass through.
+func parseURIList(data []byte) []string {
+	var paths []string
+	for _, line := range strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		if !strings.HasPrefix(trimmed, "file://") {
+			paths = append(paths, trimmed)
+			continue
+		}
+		parsed, err := url.Parse(trimmed)
+		if err != nil || parsed.Path == "" {
+			continue
+		}
+		paths = append(paths, parsed.Path)
+	}
+	return paths
 }

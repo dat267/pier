@@ -169,3 +169,54 @@ func TestWriteClipboardImageTempFile(t *testing.T) {
 		t.Fatalf("data = %q err = %v", data, err)
 	}
 }
+
+func TestReadClipboardFilePathsWayland(t *testing.T) {
+	stub := &clipboardImageRunnerStub{output: map[string][]byte{
+		"wl-paste --list-types":                      []byte("text/plain\ntext/uri-list\n"),
+		"wl-paste --type text/uri-list --no-newline": []byte("# comment\r\nfile:///home/u/a.png\r\nfile:///home/u/b%20c.txt\r\n"),
+	}}
+	env := func(key string) string {
+		if key == "WAYLAND_DISPLAY" {
+			return "wayland-0"
+		}
+		return ""
+	}
+	paths, err := readClipboardFilePathsWith(context.Background(), "linux", env, stub.run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"/home/u/a.png", "/home/u/b c.txt"}
+	if !reflect.DeepEqual(paths, want) {
+		t.Fatalf("paths = %v want %v", paths, want)
+	}
+}
+
+func TestReadClipboardFilePathsXclip(t *testing.T) {
+	stub := &clipboardImageRunnerStub{output: map[string][]byte{
+		"xclip -selection clipboard -t TARGETS -o":       []byte("TIMESTAMP\ntext/uri-list\n"),
+		"xclip -selection clipboard -t text/uri-list -o": []byte("file:///tmp/one.txt"),
+	}}
+	env := func(key string) string {
+		if key == "DISPLAY" {
+			return ":0"
+		}
+		return ""
+	}
+	paths, err := readClipboardFilePathsWith(context.Background(), "linux", env, stub.run)
+	if err != nil || !reflect.DeepEqual(paths, []string{"/tmp/one.txt"}) {
+		t.Fatalf("paths = %v err = %v", paths, err)
+	}
+}
+
+func TestReadClipboardFilePathsNone(t *testing.T) {
+	stub := &clipboardImageRunnerStub{output: map[string][]byte{
+		"wl-paste --list-types": []byte("text/plain\n"),
+	}}
+	env := func(string) string { return "" }
+	if paths, err := readClipboardFilePathsWith(context.Background(), "linux", env, stub.run); err != nil || paths != nil {
+		t.Fatalf("paths = %v err = %v", paths, err)
+	}
+	if paths, err := readClipboardFilePathsWith(context.Background(), "darwin", env, stub.run); err != nil || paths != nil {
+		t.Fatalf("darwin paths = %v err = %v", paths, err)
+	}
+}

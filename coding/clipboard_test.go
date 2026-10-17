@@ -72,24 +72,23 @@ func TestClipboardCommandsShape(t *testing.T) {
 // environment with no display (forced by clearing the env gates via the
 // message table rather than mutating the process environment).
 func TestClipboardUnavailableMessage(t *testing.T) {
-	// The premise is an environment with no clipboard backend. Windows and macOS
-	// ship one (copyCommands returns clip.exe / pbcopy), so only Linux can have a
-	// backendless clipboard.
-	if runtime.GOOS != "linux" {
-		t.Skip("the platform ships a clipboard command (clip.exe / pbcopy)")
+	// The message table is asserted directly: a headless Linux session now has
+	// the OSC 52 fallback, so the entry point no longer fails there.
+	empty := func(string) string { return "" }
+	if err := clipboardUnavailableErrorFor("linux", empty); !strings.Contains(err.Error(), "no Wayland or X11 display") {
+		t.Fatalf("headless message = %v", err)
 	}
-	if os.Getenv("WAYLAND_DISPLAY") != "" || os.Getenv("DISPLAY") != "" || os.Getenv("TERMUX_VERSION") != "" {
-		t.Skip("clipboard helpers present")
+	display := func(key string) string {
+		if key == "DISPLAY" {
+			return ":0"
+		}
+		return ""
 	}
-	if isRemoteSession() {
-		t.Skip("remote session: OSC 52 fallback copies without a local backend")
+	if err := clipboardUnavailableErrorFor("linux", display); !strings.Contains(err.Error(), "install `xclip` or `xsel`") {
+		t.Fatalf("x11 message = %v", err)
 	}
-	err := CopyTextToClipboard("probe")
-	if err == nil {
-		t.Fatal("copy succeeded without any clipboard backend")
-	}
-	if !strings.Contains(err.Error(), "Clipboard unavailable") {
-		t.Fatalf("err = %v", err)
+	if err := clipboardUnavailableErrorFor("windows", empty); err.Error() != "Clipboard unavailable" {
+		t.Fatalf("windows message = %v", err)
 	}
 }
 
@@ -140,5 +139,97 @@ func TestClipboardTermuxCopyOnAndroid(t *testing.T) {
 	commands := copyCommandsFor("android", env)
 	if len(commands) != 1 || commands[0][0] != "termux-clipboard-set" {
 		t.Fatalf("android copy commands = %v", commands)
+	}
+}
+
+func plainLinuxFile(string) ([]byte, error) { return []byte("Linux version"), nil }
+
+// pi v1.3.0 copyToClipboard: WSL prefers OSC 52 under Windows Terminal over
+// the PowerShell round trip.
+func TestCopyTextWSLPrefersOSC52UnderWindowsTerminal(t *testing.T) {
+	env := map[string]string{"WSL_DISTRO_NAME": "Ubuntu", "WT_SESSION": "session"}
+	run := func(context.Context, string, []string, clipboardCommandOptions) []byte {
+		t.Fatal("no clipboard command expected when OSC 52 is available")
+		return nil
+	}
+	var packets []string
+	err := copyTextToClipboardWith(context.Background(), "linux", func(key string) string { return env[key] },
+		run, plainLinuxFile, func(_ context.Context, packet string) error {
+			packets = append(packets, packet)
+			return nil
+		}, "hello")
+	if err != nil {
+		t.Fatalf("err = %v", err)
+	}
+	if len(packets) != 1 || !strings.Contains(packets[0], "aGVsbG8=") {
+		t.Fatalf("packets = %q", packets)
+	}
+}
+
+// WSL without WT_SESSION writes through PowerShell (wslpath + Set-Clipboard).
+func TestCopyTextWSLUsesPowerShellFallback(t *testing.T) {
+	env := map[string]string{"WSL_DISTRO_NAME": "Ubuntu"}
+	var commands []string
+	run := func(_ context.Context, command string, args []string, _ clipboardCommandOptions) []byte {
+		commands = append(commands, command)
+		switch command {
+		case "wslpath":
+			return []byte(`C:\Temp\clip.txt`)
+		case "powershell.exe":
+			if strings.Contains(strings.Join(args, " "), "Set-Clipboard") {
+				return []byte{}
+			}
+		}
+		return nil
+	}
+	packets := 0
+	err := copyTextToClipboardWith(context.Background(), "linux", func(key string) string { return env[key] },
+		run, plainLinuxFile, func(context.Context, string) error { packets++; return nil }, "hello")
+	if err != nil {
+		t.Fatalf("err = %v", err)
+	}
+	if len(commands) != 2 || commands[0] != "wslpath" || commands[1] != "powershell.exe" {
+		t.Fatalf("commands = %v", commands)
+	}
+	if packets != 0 {
+		t.Fatalf("OSC 52 emitted after a successful PowerShell copy: %d", packets)
+	}
+}
+
+// A headless Linux session without a display still falls back to OSC 52.
+func TestCopyTextHeadlessUsesOSC52(t *testing.T) {
+	run := func(context.Context, string, []string, clipboardCommandOptions) []byte { return nil }
+	var packets []string
+	err := copyTextToClipboardWith(context.Background(), "linux", func(string) string { return "" },
+		run, plainLinuxFile, func(_ context.Context, packet string) error {
+			packets = append(packets, packet)
+			return nil
+		}, "hello")
+	if err != nil {
+		t.Fatalf("err = %v", err)
+	}
+	if len(packets) != 1 {
+		t.Fatalf("packets = %q", packets)
+	}
+}
+
+func TestCopyTextHeadlessOversizedOSC52Fails(t *testing.T) {
+	run := func(context.Context, string, []string, clipboardCommandOptions) []byte { return nil }
+	err := copyTextToClipboardWith(context.Background(), "linux", func(string) string { return "" },
+		run, plainLinuxFile, func(context.Context, string) error { t.Fatal("packet written"); return nil },
+		strings.Repeat("a", 100_001))
+	if err == nil || !strings.Contains(err.Error(), "exceeds the OSC 52 size limit") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+// A non-headless Linux session with no writer reports the X11 hint.
+func TestCopyTextUnavailableOnDesktop(t *testing.T) {
+	env := map[string]string{"DISPLAY": ":0"}
+	run := func(context.Context, string, []string, clipboardCommandOptions) []byte { return nil }
+	err := copyTextToClipboardWith(context.Background(), "linux", func(key string) string { return env[key] },
+		run, plainLinuxFile, func(context.Context, string) error { return nil }, "hello")
+	if err == nil || !strings.Contains(err.Error(), "install `xclip` or `xsel`") {
+		t.Fatalf("err = %v", err)
 	}
 }
