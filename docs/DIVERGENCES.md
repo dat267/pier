@@ -1519,6 +1519,14 @@ before colors settle, then repaints, unlike upstream's single initial paint.
 First-frame median improved from ~155 ms to ~53 ms. D165 covers raw-mode timing
 and OSC 11 listener fan-out.
 
+Because the wait moved off the loop, a timed-out query's snapshot and a late OSC
+11 reply can apply in either order. `querySystemColors` folds every report into
+the stored colors (upstream `applyTerminalColors` merges field by field), so an
+empty timeout result cannot clobber a background that arrived after the timeout.
+Before the merge, a timeout applied after the standalone listener's reply zeroed
+the background and the system theme lost the terminal's real appearance.
+Tests: `TestStaleSystemColorSnapshotDoesNotClobberLateBackground`.
+
 Tests: `TestProbeSystemColorsDoesNotBlockTheCaller`
 (`coding/interactive/interactive_test.go`) and
 `TestRendererBeginTerminalColorsWaitsOffLoop` (`tui/terminalcolors_test.go`).

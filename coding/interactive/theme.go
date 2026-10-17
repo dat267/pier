@@ -682,6 +682,27 @@ func SetSystemTerminalBackgroundColor(color tui.RgbColor) {
 	systemThemeState.mu.Unlock()
 }
 
+// mergeTerminalColors folds a partial report into the previously stored colors,
+// matching upstream applyTerminalColors: a field the terminal did not report
+// keeps its previous value. A timed-out report is empty, so it changes nothing
+// and cannot clobber a background that arrived after the timeout.
+func mergeTerminalColors(reported tui.TerminalColors, previous *tui.TerminalColors) tui.TerminalColors {
+	merged := tui.TerminalColors{}
+	if previous != nil {
+		merged = *previous
+	}
+	if reported.Foreground != nil {
+		merged.Foreground = reported.Foreground
+	}
+	if reported.Background != nil {
+		merged.Background = reported.Background
+	}
+	if reported.Palette != nil {
+		merged.Palette = reported.Palette
+	}
+	return merged
+}
+
 // SetSystemTerminalColorScheme records the terminal's reported light/dark
 // appearance. A reported background takes precedence when the system theme is
 // generated; the scheme is its fallback when the terminal reports no colors.

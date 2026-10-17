@@ -181,15 +181,22 @@ func (c *InteractiveThemeController) querySystemColors() {
 		return
 	}
 	apply := func(colors tui.TerminalColors) {
-		SetSystemTerminalColors(colors)
+		// Merge the report into the stored colors and skip a no-op (upstream
+		// applyTerminalColors). A timed-out query reports nothing, so it must not
+		// replace a background that arrived late: the combined query and the
+		// standalone OSC 11 listener race, and the timeout apply can land after
+		// the listener's reply.
+		previous := systemThemeTerminalColors()
+		merged := mergeTerminalColors(colors, previous)
+		SetSystemTerminalColors(merged)
 		// The combined color query consumes its OSC 11 reply before the separate
 		// background listener can see it. As upstream applyTerminalColors does,
 		// apply that background to system and light/dark theme selection here.
-		if colors.Background != nil {
+		if merged.Background != nil {
 			terminalTheme := GetThemeForRgbColor(RgbColor{
-				R: colors.Background.R,
-				G: colors.Background.G,
-				B: colors.Background.B,
+				R: merged.Background.R,
+				G: merged.Background.G,
+				B: merged.Background.B,
 			})
 			if c.activeThemeName == SystemThemeName {
 				c.terminalTheme = terminalTheme

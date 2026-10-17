@@ -393,6 +393,7 @@ func TestThemeControllerProbesSystemColors(t *testing.T) {
 // dispatched on that loop. A blocking query can never observe the reply and so
 // always waits out the full timeout, delaying the first frame.
 func TestProbeSystemColorsDoesNotBlockTheCaller(t *testing.T) {
+	t.Cleanup(func() { SetSystemTerminalColors(tui.TerminalColors{}) })
 	SetCustomThemesDir(t.TempDir())
 	SetRegisteredThemes(nil)
 
@@ -557,6 +558,7 @@ func (f *fakeThemeSettings) Flush() { f.flushes++ }
 
 // TestThemeControllerLifecycle verifies the controller's settings-driven flow.
 func TestThemeControllerLifecycle(t *testing.T) {
+	t.Cleanup(func() { SetSystemTerminalColors(tui.TerminalColors{}) })
 	dir := t.TempDir()
 	SetCustomThemesDir(dir)
 	SetRegisteredThemes(nil)

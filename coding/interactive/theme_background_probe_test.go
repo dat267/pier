@@ -177,3 +177,58 @@ func TestSystemColorQueryDoesNotHideStartupBackgroundReply(t *testing.T) {
 		t.Fatalf("theme after late terminal background reply = %q, want light", controller.ActiveThemeName())
 	}
 }
+
+// TestStaleSystemColorSnapshotDoesNotClobberLateBackground covers the ordering
+// where the combined color query times out first and a late OSC 11 background
+// reply arrives before the loop drains the timeout apply. The timeout snapshot
+// is empty (or partial); applying it after the late reply must not overwrite the
+// terminal's real background, which the system theme is generated from.
+func TestStaleSystemColorSnapshotDoesNotClobberLateBackground(t *testing.T) {
+	t.Cleanup(func() { SetSystemTerminalColors(tui.TerminalColors{}) })
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+
+	terminal := &recordingTerminal{fakeRendererTerminal: &fakeRendererTerminal{width: 80, height: 24}}
+	screen := tui.NewMainScreen(terminal, false, "")
+	setting := SystemThemeName
+	marshaled := make(chan func(), 4)
+	controller := NewInteractiveThemeController(ThemeControllerOptions{
+		UI:                  themeUIAdapter{ui: screen},
+		InitialThemeSetting: &setting,
+		TimeoutMS:           1,
+		Env:                 func(string) string { return "" },
+		Marshal:             func(fn func()) { marshaled <- fn },
+	})
+	defer controller.Dispose()
+	defer screen.Stop(tui.TuiStopOptions{})
+
+	controller.ApplyFromSettings()
+	screen.Start()
+	controller.ProbeTerminalBackground()
+	controller.ProbeSystemColors()
+
+	// The combined query times out and posts its stale snapshot.
+	var stale func()
+	select {
+	case stale = <-marshaled:
+	case <-time.After(2 * time.Second):
+		t.Fatal("system-color query did not post its timeout fallback")
+	}
+
+	// The terminal answers late with a light background. Only the background
+	// listener sees it; the combined query is still pending.
+	screen.HandleTerminalInput("\x1b]11;#ffffff\x07")
+	if colors := systemThemeTerminalColors(); colors == nil || colors.Background == nil {
+		t.Fatal("late background reply was not recorded")
+	}
+
+	// The loop drains the stale timeout apply after the input reply.
+	stale()
+	colors := systemThemeTerminalColors()
+	if colors == nil || colors.Background == nil {
+		t.Fatalf("stale timeout snapshot clobbered the late background: %+v", colors)
+	}
+	if got := getTerminalTheme(); got != "light" {
+		t.Fatalf("system theme detected %q after the late background, want light", got)
+	}
+}
