@@ -32,6 +32,10 @@ func (d *resizeDocument) Render(width int) []string {
 			d.next++
 		}
 		if d.next < len(d.children) {
+			// The warm spans frames, so invalidate the cached-frame fast path: an
+			// ancestor SkipUnchangedChildren container must keep calling back in
+			// until every child is warmed at the new width.
+			tui.BumpContentRevision()
 			if d.requestRender != nil {
 				d.requestRender()
 			}

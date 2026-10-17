@@ -96,6 +96,7 @@ func (b *Box) childComponents() []Component { return b.Children }
 // Invalidate drops the cache and invalidates the children.
 func (b *Box) Invalidate() {
 	b.cache = nil
+	bumpContentRevision()
 	for _, child := range b.Children {
 		child.Invalidate()
 	}

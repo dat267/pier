@@ -205,6 +205,28 @@ func AnimationTreeRevision() uint64 { return animationTreeRevision.Load() }
 
 func bumpAnimationTreeRevision() { animationTreeRevision.Add(1) }
 
+// contentRevision counts rendered-content mutations anywhere in the tree. Every
+// (D229: a SkipUnchangedChildren container serves its cached frame from this
+// counter instead of reading every child's revision on each paint.)
+// component whose rendered output may have changed bumps it: Container
+// cache drops and revision bumps, and the leaf Text/Spacer/Markdown/Box/Editor
+// invalidations. A SkipUnchangedChildren container serves its cached frame
+// while this counter is unchanged, instead of reading every child's revision —
+// a child's own revision only moves when it re-renders, so it cannot signal a
+// descendant change without the O(children) walk.
+var contentRevision atomic.Uint64
+
+// ContentRevision is the current content revision.
+func ContentRevision() uint64 { return contentRevision.Load() }
+
+// BumpContentRevision invalidates the cached-frame fast path for every
+// SkipUnchangedChildren container. A component whose render output will change
+// over several frames without a normal mutation (the transcript's cooperative
+// resize warm) calls it so ancestors keep re-rendering it.
+func BumpContentRevision() { bumpContentRevision() }
+
+func bumpContentRevision() { contentRevision.Add(1) }
+
 // Container is a component that contains other components.
 type Container struct {
 	Children []Component
@@ -241,6 +263,11 @@ type Container struct {
 	// rewriting cacheLines, or -1 when nothing changed. A Box uses it to reuse
 	// the backgrounded prefix after an in-place suffix rebuild.
 	lastChangedFrom int
+	// contentRevision is ContentRevision() as of the cached frame, and
+	// contentRevisionValid says the cache may be served while it still matches.
+	// Only a SkipUnchangedChildren container uses it (warmFrameValid).
+	contentRevision      uint64
+	contentRevisionValid bool
 
 	// SkipUnchangedChildren makes Render skip a child's Render call when the
 	// child reports an unchanged render revision. It is opt-in: it is only
@@ -347,6 +374,7 @@ func (c *Container) dropRenderCache() {
 	// versioned children (SkipUnchangedChildren) re-renders this container after
 	// a structural change or an explicit Invalidate, before Render has run.
 	c.version++
+	bumpContentRevision()
 }
 
 // MarkDirty bumps the container's revision and drops its own cache without
@@ -359,7 +387,10 @@ func (c *Container) MarkDirty() { c.dropRenderCache() }
 // the change signal for a component whose content may be unchanged (a
 // clock-driven animation tick): Render then reuses the cached lines unless a
 // descendant reports a change, instead of re-flattening the whole container.
-func (c *Container) BumpRevision() { c.version++ }
+func (c *Container) BumpRevision() {
+	c.version++
+	bumpContentRevision()
+}
 
 // Invalidate invalidates every child.
 func (c *Container) Invalidate() {
@@ -408,12 +439,25 @@ func (c *Container) HandleMouse(event TuiMouseEvent) *TuiMouseDispatchResult {
 
 // Render renders every child and records the mouse layout.
 func (c *Container) Render(width int) []string {
+	// The revision as of the frame's start. Caching this (not the value after
+	// the render) is what lets a child that bumps while rendering — the resize
+	// warm does — keep invalidating the next frame until it settles.
+	startRevision := ContentRevision()
+	// Fastest path: while no content mutation has happened anywhere in the tree,
+	// no child can have changed, so serve the cached frame without reading a
+	// single child revision. This keeps a scroll-only frame off the O(children)
+	// walk on a long transcript.
+	if c.warmFrameValid(width) {
+		c.lastChangedFrom = -1
+		return c.cacheLines
+	}
 	// Fast path: when every child can serve its cached lines, the cached frame
 	// and mouse layout still describe the container. Reading each child's
 	// revision once and returning avoids snapshotting the child list, rebuilding
 	// the mouse layout, and re-flattening the frame on every warm paint. The
 	// revisions read here are reused by the walk below.
 	if c.allChildrenReusable(width) {
+		c.noteContentRevision(startRevision)
 		c.lastChangedFrom = -1
 		return c.cacheLines
 	}
@@ -499,7 +543,31 @@ func (c *Container) Render(width int) []string {
 	}
 	c.cacheWidth = width
 	c.recomputeCacheOffsets()
+	c.noteContentRevision(startRevision)
 	return c.cacheLines
+}
+
+// warmFrameValid (D229) reports whether the cached frame is still current
+// without reading any child revision. It is only defined for a SkipUnchangedChildren
+// container, and only while no content mutation has happened anywhere since the
+// frame was cached (an unrelated mutation costs one extra walk, never a stale
+// frame).
+func (c *Container) warmFrameValid(width int) bool {
+	if !c.SkipUnchangedChildren || !c.contentRevisionValid || c.cacheLines == nil {
+		return false
+	}
+	if c.cacheWidth != width || c.contentRevision != ContentRevision() {
+		return false
+	}
+	count := len(c.Children)
+	return count == len(c.cacheChildren) && count == len(c.cacheChildVersions) && count == len(c.cacheChildComponents)
+}
+
+// noteContentRevision records the content revision the cached frame was built
+// at, arming the warmFrameValid fast path.
+func (c *Container) noteContentRevision(revision uint64) {
+	c.contentRevision = revision
+	c.contentRevisionValid = true
 }
 
 // renderVersioner is implemented by components whose Render can return the same

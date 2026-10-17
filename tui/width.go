@@ -57,6 +57,43 @@ func segmentGraphemes(text string) []string {
 	return append(segments, text[clusterStart:])
 }
 
+// scanGraphemes visits each grapheme cluster without building the []string
+// segmentGraphemes allocates (D230: the paint path measures and slices the same
+// line several times per frame; the per-cluster slice was ~60% of a scroll
+// frame's allocated bytes). Callers that only measure or slice a line use it.
+// fn returns false to stop early.
+func scanGraphemes(text string, fn func(segment string) bool) {
+	if text == "" {
+		return
+	}
+	if isASCII(text) {
+		for index := 0; index < len(text); index++ {
+			if !fn(text[index : index+1]) {
+				return
+			}
+		}
+		return
+	}
+	clusterStart := 0
+	previous := rune(0)
+	for index, current := range text {
+		if index == clusterStart {
+			previous = current
+			continue
+		}
+		if extendsCluster(previous, current) {
+			previous = current
+			continue
+		}
+		if !fn(text[clusterStart:index]) {
+			return
+		}
+		clusterStart = index
+		previous = current
+	}
+	fn(text[clusterStart:])
+}
+
 // isASCII reports whether every byte is plain ASCII.
 func isASCII(text string) bool {
 	for index := 0; index < len(text); index++ {

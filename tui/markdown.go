@@ -180,6 +180,7 @@ func (m *Markdown) SetText(text string) {
 	m.hasCachedLines = false
 	m.hasCachedText = false
 	m.hasCachedWidth = false
+	bumpContentRevision()
 }
 
 // SetTextIfChanged is SetText that keeps everything when the text has not moved.
@@ -209,6 +210,7 @@ func (m *Markdown) Invalidate() {
 	m.cacheWindowOffset = 0
 	m.cacheWindowBase = 0
 	m.cacheSource = ""
+	bumpContentRevision()
 }
 
 // Prepare warms the render cache for width without returning the lines, so an

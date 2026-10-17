@@ -14,12 +14,12 @@ func (c *versionCountingChild) RenderVersion() (uint64, bool) {
 	return c.Container.RenderVersion()
 }
 
-// TestContainerReadsEachChildVersionOncePerWarmFrame pins the warm-frame scan
-// cost: the change-detection walk asks a versioned child for its revision
-// exactly once, reusing that read for both the reuse decision and the
-// first-changed comparison. A second interface dispatch per child per frame is
-// what the walk used to pay.
-func TestContainerReadsEachChildVersionOncePerWarmFrame(t *testing.T) {
+// TestContainerReadsEachChildVersionOncePerWalkFrame pins the warm-frame scan
+// cost. An unchanged frame is served from the content revision without reading a
+// single child revision; when an unrelated mutation invalidates that revision,
+// the walk asks each versioned child for its revision exactly once (the read is
+// reused for the reuse decision and the first-changed comparison).
+func TestContainerReadsEachChildVersionOncePerWalkFrame(t *testing.T) {
 	chat := &Container{SkipUnchangedChildren: true}
 	child := &versionCountingChild{Container: &Container{}}
 	child.Container.AddChild(NewText("hello", 0, 0, nil))
@@ -28,12 +28,32 @@ func TestContainerReadsEachChildVersionOncePerWarmFrame(t *testing.T) {
 
 	child.versionCalls = 0
 	chat.Render(40)
-	if child.versionCalls != 1 {
-		t.Fatalf("a warm frame read the child version %d times, want 1", child.versionCalls)
-	}
 	chat.Render(40)
-	if child.versionCalls != 2 {
-		t.Fatalf("two warm frames read the child version %d times, want 1 per frame", child.versionCalls)
+	if child.versionCalls != 0 {
+		t.Fatalf("an unchanged warm frame read %d child versions, want 0", child.versionCalls)
+	}
+
+	// A mutation elsewhere invalidates the content revision and forces one walk.
+	NewSpacer(1).SetLines(2)
+	chat.Render(40)
+	if child.versionCalls != 1 {
+		t.Fatalf("a walk frame read the child version %d times, want 1", child.versionCalls)
+	}
+}
+
+// TestContainerWarmFrameSeesADescendantMutation guards the content revision's
+// invalidation: a mutation under a child must take the walk and reach the frame.
+func TestContainerWarmFrameSeesADescendantMutation(t *testing.T) {
+	chat := &Container{SkipUnchangedChildren: true}
+	inner := &Container{}
+	inner.AddChild(NewText("hello", 0, 0, nil))
+	chat.AddChild(inner)
+	chat.Render(40)
+
+	inner.AddChild(NewText("world", 0, 0, nil))
+	inner.MarkDirty()
+	if lines := chat.Render(40); !hasLine(lines, "world") {
+		t.Fatalf("a descendant mutation was not rendered: %q", lines)
 	}
 }
 

@@ -262,6 +262,26 @@ with historical measurements retained to explain the design.
   before, 0.0265 ms/zero bytes/zero allocations after (Linux/amd64, 20 runs).
   This isolates flattening, not end-to-end latency. Changed-suffix copy work,
   invalidation, growth, large headers, busy clock copies and global GC remain.
+- **D229 a skip container serves its cached frame from an aggregate content
+  revision.** A package-level `contentRevision` counter is bumped by every
+  content mutation; a `SkipUnchangedChildren` container caches the revision as
+  of the frame's start and returns its cached lines while it still matches,
+  reading no child revision. This removes the per-wheel-frame O(mounted
+  children) walk the fullscreen transcript paid. Caching the start revision lets
+  a child that bumps while rendering keep invalidating until it settles, and the
+  cooperative resize warm (D203) calls `tui.BumpContentRevision` to keep its
+  ancestors re-rendering across frames. For expanded thinking with the transient
+  scrollbar, 500 pairs 304 µs/173 KB/865 allocs and 1500 pairs 478 µs fell to
+  238 µs and ~260 µs (Linux/amd64), so the frame is now flat in transcript size.
+  This measures the render, not the terminal write; an unrelated mutation costs
+  one extra walk, and global GC remains.
+- **D230 the scrollbar repaints a cell without re-segmenting the line.**
+  `scanGraphemes` visits clusters without building the `[]string`
+  `segmentGraphemes` allocated, and `GetGraphemeCellRange`, `SliceWithWidth` and
+  `GetOsc8LinkAtColumn` use it. The scrollbar cell bytes are unchanged (a golden
+  table pins wide glyphs, tabs, ANSI and OSC 8); `replaceScrollbarCell` fell
+  from 13,156 to 857 bytes/call (Linux/amd64). This is one cell replacement, not
+  a whole-frame claim.
 - `Renderer.RenderCount()` counts paints (test seam).
 - **D144**: the interactive renderer is caller-driven (the loop owns the frame
   schedule) where upstream schedules its own throttled frames. The loop keeps

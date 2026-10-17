@@ -29,12 +29,20 @@ func GetGraphemeCellRange(line string, column int) (GraphemeCellRange, bool) {
 			}
 			textEnd++
 		}
-		for _, segment := range segmentGraphemes(line[i:textEnd]) {
+		found := GraphemeCellRange{}
+		has := false
+		scanGraphemes(line[i:textEnd], func(segment string) bool {
 			width := graphemeWidth(segment)
 			if width > 0 && column >= currentCol && column < currentCol+width {
-				return GraphemeCellRange{Start: currentCol, End: currentCol + width}, true
+				found = GraphemeCellRange{Start: currentCol, End: currentCol + width}
+				has = true
+				return false
 			}
 			currentCol += width
+			return true
+		})
+		if has {
+			return found, true
 		}
 		i = textEnd
 	}
@@ -64,18 +72,26 @@ func GetOsc8LinkAtColumn(line string, column int) (string, bool) {
 			}
 			textEnd++
 		}
-		for _, segment := range segmentGraphemes(line[i:textEnd]) {
+		hit := ""
+		hitFound := false
+		scanGraphemes(line[i:textEnd], func(segment string) bool {
 			width := graphemeWidth(segment)
 			if segment == "\t" {
 				width = 3
 			}
 			if column >= currentCol && column < currentCol+width {
-				if activeURL != "" {
-					return activeURL, true
-				}
-				return "", false
+				hit = activeURL
+				hitFound = true
+				return false
 			}
 			currentCol += width
+			return true
+		})
+		if hitFound {
+			if hit != "" {
+				return hit, true
+			}
+			return "", false
 		}
 		i = textEnd
 	}

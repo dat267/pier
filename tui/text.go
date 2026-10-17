@@ -27,12 +27,14 @@ func (s *Spacer) SetLines(lines int) {
 	s.Lines = lines
 	s.cached = nil
 	s.version++
+	bumpContentRevision()
 }
 
 // Invalidate drops cached state (none).
 func (s *Spacer) Invalidate() {
 	s.cached = nil
 	s.version++
+	bumpContentRevision()
 }
 
 // RenderVersion reports the revision of the spacer's rendered lines.
@@ -97,6 +99,7 @@ func (t *Text) invalidateCache() {
 	t.hasCachedLines = false
 	t.hasCachedText = false
 	t.hasCachedWidth = false
+	bumpContentRevision()
 }
 
 // Invalidate drops the render cache.

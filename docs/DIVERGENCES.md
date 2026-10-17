@@ -1772,3 +1772,50 @@ Only this mid-line case differs; line-start block math, inline `$…$` (includin
 upstream's closed-span validity checks in `markdown/inline.go`), pending spans
 and `\(…\)` all match upstream. Reproducing pi here would import the quadratic
 `start` seam for an artifact no user asks for.
+
+## D229
+
+**A skip container serves its cached frame from an aggregate content revision.**
+
+Upstream `packages/tui/src/tui.ts` re-renders the composed document every frame;
+the fullscreen transcript's scroll child is the whole chat container, so a wheel
+frame walked every mounted message (an interface assertion plus a `RenderVersion`
+read per child) to decide reuse. On a long session that walk was the frame's
+scaling term (47% of a 3000-pair expanded-thinking frame with the scrollbar
+hidden, and it grew linearly with the mounted children).
+
+Pier keeps a package-level `contentRevision` counter. Every content mutation
+bumps it (`Container.dropRenderCache`/`BumpRevision`, the `Text`/`Spacer`/
+`Markdown`/`Box` invalidations, `resizeDocument`'s multi-frame warm). A
+`SkipUnchangedChildren` container caches the revision at the **start** of the
+frame and returns its cached lines while that revision still matches, reading no
+child revision at all. Caching the start revision (not the post-render one) is
+what makes a child that bumps while rendering keep invalidating until it settles.
+The invariant extends the existing `SkipUnchangedChildren` contract — every
+child already had to bump on a change — to a global counter, so an unrelated
+mutation costs one extra walk and never a stale frame. The cooperative resize
+warm (`resizeDocument`, D203) calls the exported `tui.BumpContentRevision` so an
+ancestor keeps re-rendering it across frames.
+
+Linux/amd64, expanded thinking, wheel-style frame with the transient scrollbar:
+500 pairs 304 µs/173 KB/865 allocs and 1500 pairs 478 µs fell to 238 µs and
+~260 µs, so the frame is now flat in transcript size instead of growing with it.
+This measures the render, not the terminal write. Tests pin the zero-revision-read
+warm frame, descendant-mutation invalidation, the resize warm continuation and
+the existing per-child walk-once behavior.
+
+## D230
+
+**The scrollbar repaints a cell without re-segmenting the line.**
+
+Upstream `packages/tui/src/layout.ts` replaces a cell by slicing the line three
+times and rebuilding the string. Pier's `SegmentGraphemes` built a `[]string`
+with one header per character for ASCII, so a visible scrollbar row allocated
+four such slices per frame (`GetGraphemeCellRange` plus three `SliceByColumn`
+calls); `segmentGraphemes` was 59.6% of a scroll frame's allocated bytes.
+
+`scanGraphemes` visits clusters without allocating, and `GetGraphemeCellRange`,
+`SliceWithWidth` and `GetOsc8LinkAtColumn` use it. The scrollbar cell bytes are
+unchanged (a golden table pins wide glyphs, tabs, ANSI and OSC 8), and
+`replaceScrollbarCell` fell from 13,156 to 857 bytes/call. This measures one
+cell replacement, not the whole frame.

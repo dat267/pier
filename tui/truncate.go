@@ -327,7 +327,7 @@ func SliceWithWidth(line string, startCol int, length int, strict bool) SlicedLi
 			textEnd++
 		}
 
-		for _, segment := range segmentGraphemes(line[i:textEnd]) {
+		scanGraphemes(line[i:textEnd], func(segment string) bool {
 			w := graphemeWidth(segment)
 			inRange := currentCol >= startCol && currentCol < endCol
 			fits := !strict || currentCol+w <= endCol
@@ -340,10 +340,8 @@ func SliceWithWidth(line string, startCol int, length int, strict bool) SlicedLi
 				resultWidth += w
 			}
 			currentCol += w
-			if currentCol >= endCol {
-				break
-			}
-		}
+			return currentCol < endCol
+		})
 		i = textEnd
 		if currentCol >= endCol {
 			break
