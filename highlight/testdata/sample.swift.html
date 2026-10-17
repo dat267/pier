@@ -1,0 +1,47 @@
+<span class="hljs-keyword">import</span> Foundation
+
+<span class="hljs-keyword">precedencegroup</span> <span class="hljs-title">PowerPrecedence</span> {
+  <span class="hljs-keyword">higherThan</span>: <span class="hljs-type">MultiplicationPrecedence</span>
+}
+
+<span class="hljs-keyword">infix</span> <span class="hljs-keyword">operator</span> <span class="hljs-title">**</span>: <span class="hljs-type">PowerPrecedence</span>
+
+<span class="hljs-keyword">@available</span>(<span class="hljs-keyword">iOS</span> <span class="hljs-number">13.0</span>, <span class="hljs-operator">*</span>)
+<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">Box</span>&lt;<span class="hljs-title">T</span>&gt; </span>{
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">var</span> value: <span class="hljs-type">T</span>
+  <span class="hljs-keyword">let</span> count: <span class="hljs-type">Int</span> <span class="hljs-operator">=</span> <span class="hljs-number">42</span>
+  <span class="hljs-keyword">var</span> ratio: <span class="hljs-type">Double</span> <span class="hljs-operator">=</span> <span class="hljs-number">1.5e-3</span>
+
+  <span class="hljs-keyword">public</span> <span class="hljs-function"><span class="hljs-keyword">init</span>(<span class="hljs-params">value</span>: <span class="hljs-type">T</span>)</span> {
+    <span class="hljs-keyword">self</span>.value <span class="hljs-operator">=</span> value
+  }
+
+  <span class="hljs-keyword">public</span> <span class="hljs-function"><span class="hljs-keyword">subscript</span>(<span class="hljs-params">index</span>: <span class="hljs-type">Int</span>)</span> -&gt; <span class="hljs-type">T</span>? {
+    <span class="hljs-keyword">return</span> index <span class="hljs-operator">==</span> <span class="hljs-number">0</span> <span class="hljs-operator">?</span> value : <span class="hljs-literal">nil</span>
+  }
+
+  <span class="hljs-keyword">public</span> <span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">describe</span>(<span class="hljs-params">name</span> <span class="hljs-params">label</span>: <span class="hljs-type">String</span>, <span class="hljs-keyword">_</span> <span class="hljs-params">extra</span>: <span class="hljs-type">Int</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>)</span> -&gt; <span class="hljs-type">String</span> {
+    <span class="hljs-keyword">let</span> raw <span class="hljs-operator">=</span> <span class="hljs-string">#&quot;raw \n string&quot;#</span>
+    <span class="hljs-keyword">let</span> multi <span class="hljs-operator">=</span> <span class="hljs-string">&quot;&quot;&quot;
+      line one
+      line two
+      &quot;&quot;&quot;</span>
+    <span class="hljs-keyword">let</span> label2 <span class="hljs-operator">=</span> <span class="hljs-string">&quot;name=<span class="hljs-subst">\(label)</span> count=<span class="hljs-subst">\(count)</span>&quot;</span>
+    <span class="hljs-keyword">let</span> tuple <span class="hljs-operator">=</span> (x: <span class="hljs-number">1</span>, y: <span class="hljs-number">2</span>)
+    <span class="hljs-keyword">let</span> hex <span class="hljs-operator">=</span> <span class="hljs-number">0x1f</span>, bin <span class="hljs-operator">=</span> <span class="hljs-number">0b1010</span>
+    <span class="hljs-keyword">if</span> count <span class="hljs-operator">&gt;</span> <span class="hljs-number">0</span> <span class="hljs-operator">&amp;&amp;</span> <span class="hljs-operator">!</span>label.isEmpty {
+      <span class="hljs-built_in">print</span>(raw, multi, label2, tuple.x, hex, bin)
+    }
+    <span class="hljs-keyword">return</span> label2
+  }
+}
+
+<span class="hljs-class"><span class="hljs-keyword">extension</span> <span class="hljs-title">Box</span>: <span class="hljs-title">Equatable</span> <span class="hljs-title">where</span> <span class="hljs-title">T</span>: <span class="hljs-title">Equatable</span> </span>{
+  <span class="hljs-keyword">static</span> <span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">==</span> (<span class="hljs-params">lhs</span>: <span class="hljs-type">Box</span>, <span class="hljs-params">rhs</span>: <span class="hljs-type">Box</span>)</span> -&gt; <span class="hljs-type">Bool</span> {
+    <span class="hljs-keyword">return</span> lhs.value <span class="hljs-operator">==</span> rhs.value
+  }
+}
+
+<span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">operator</span> </span><span class="hljs-operator">**</span> (base: <span class="hljs-type">Double</span>, power: <span class="hljs-type">Double</span>) -&gt; <span class="hljs-type">Double</span> {
+  <span class="hljs-keyword">return</span> pow(base, power)
+}
