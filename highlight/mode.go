@@ -37,6 +37,13 @@ type Mode struct {
 	OnBegin func(m *match, resp *Response)
 	OnEnd   func(m *match, resp *Response)
 
+	// BeginNotFollowedBy and BeginFollowedBy lift a trailing `(?!...)` or
+	// `(?=...)` lookahead (which RE2 cannot express) into a guard on the text
+	// after the begin. The reference's `begin: 'x(?=y)'` becomes
+	// `Begin: "x", BeginFollowedBy: "y"`.
+	BeginNotFollowedBy string
+	BeginFollowedBy    string
+
 	// ManualBegin replaces the compiled begin regex with a Go matcher for rules
 	// RE2 cannot express (backreferences). It returns the end offset, starting at
 	// pos. ManualFirst is the byte such a match must start with.
@@ -168,6 +175,33 @@ func (c *compiler) compileMode(mode *Mode, parent *compiledMode) (*compiledMode,
 	// array modes). Memoising the in-progress compile keeps that graph finite.
 	if existing, ok := c.compiled[mode]; ok {
 		return existing, nil
+	}
+	if mode.BeginFollowedBy != "" || mode.BeginNotFollowedBy != "" {
+		followedRe, followedErr := c.langRe(mode.BeginFollowedBy)
+		notFollowedRe, notFollowedErr := c.langRe(mode.BeginNotFollowedBy)
+		if followedErr != nil {
+			return nil, followedErr
+		}
+		if notFollowedErr != nil {
+			return nil, notFollowedErr
+		}
+		previous := mode.beforeBegin
+		mode.beforeBegin = func(m *match, resp *Response) {
+			if previous != nil {
+				previous(m, resp)
+				if resp.isMatchIgnored {
+					return
+				}
+			}
+			rest := m.input[m.index+len(m.lexeme):]
+			if mode.BeginFollowedBy != "" && !startsWith(followedRe, rest) {
+				resp.IgnoreMatch()
+				return
+			}
+			if mode.BeginNotFollowedBy != "" && startsWith(notFollowedRe, rest) {
+				resp.IgnoreMatch()
+			}
+		}
 	}
 	cmode := &compiledMode{
 		className:      mode.ClassName,
