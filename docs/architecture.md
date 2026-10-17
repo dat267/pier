@@ -650,7 +650,7 @@ The reference builds highlight.js's HTML and then re-parses it to find the
 scopes. The port's `highlight` package already returns the same scope tree, so
 the TUI walks the tree directly and skips the HTML round-trip; the two are
 equivalent because the HTML walk was exactly escape-then-unescape. On the
-10.9 KB `highlight/testdata/sample_big.go`, `highlightCode` measures 1.86 ms
+10.9 KB `internal/highlight/testdata/sample_big.go`, `highlightCode` measures 1.86 ms
 (5.86 MB/s) against the reference's 3.20 ms (3.42 MB/s) in the same session, and
 against the retired Chroma measurement (~0.5 MB/s, D227). The scope sequence and
 the scope-to-token mapping match upstream; only the theme palette differs
@@ -693,12 +693,12 @@ large mixed-markup document) produced identical token trees and rendered lines.
 
 ## The markdown package
 
-`github.com/dat267/pier/markdown` is the markdown engine the TUI uses, and it
+`github.com/dat267/pier/internal/markdown` is the markdown engine the TUI uses, and it
 holds **one** renderer. `tui/markdown.go` is only the component wrapper
 (transform, the per-width incremental line cache, off-loop preparation and the
 padding/background fill); `LexMarkdown`, the `MdToken` model, and the old
 hand-written lexer and renderer that lived in
-`tui/markdownparser.go`/`markdowninline.go` are gone. `markdown/render.go` walks
+`tui/markdownparser.go`/`markdowninline.go` are gone. `internal/markdown/render.go` walks
 the `Block`/`Inline` model and emits upstream's styled lines exactly, so
 `tui/testdata/md_render_golden.txt` (upstream's `Markdown` component output) and
 `tui/testdata/md_golden.txt` (the Marked token projection) pass unchanged. It is
@@ -706,7 +706,7 @@ driven by the narrow `Style` interface (`NopStyle` for tests and measurement)
 plus a `Terminal` of injected primitives (word wrap, visible width, background
 fill, image-line detection, OSC 8), which `tui` implements with its own
 functions, so neither package depends on the other's renderer internals.
-`markdown/layout.go` is the layout layer: the standalone `RenderSource`/`Render`
+`internal/markdown/layout.go` is the layout layer: the standalone `RenderSource`/`Render`
 entry points, the default `PlainTerminal`, and the ANSI-SGR/East-Asian-width
 wrap primitives. The earlier plan of a second, `Style`-driven layout tree was
 dropped when the two converged; there is one traversal, not two.

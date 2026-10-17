@@ -3,7 +3,7 @@ package interactive
 import (
 	"strings"
 
-	"github.com/dat267/pier/highlight"
+	"github.com/dat267/pier/internal/highlight"
 )
 
 // This file is the port of the reference's

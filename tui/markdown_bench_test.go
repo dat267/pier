@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dat267/pier/markdown"
+	"github.com/dat267/pier/internal/markdown"
 )
 
 // The two shapes that dominate a transcript: prose (thinking blocks) and a reply

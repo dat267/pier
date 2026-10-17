@@ -64,7 +64,8 @@ Packages mirror upstream `packages/`:
 | `main.go`, `cmd` | `main.ts` | the CLI entrypoint (a thin root main over the `cmd` package) |
 | `chord`, `client`, `protocol`, `server`, `telemetry`, `durable` | same | supporting packages |
 | `internal/offloop`, `internal/uiblock`, `internal/goal` | — | port-local helpers: the off-loop work queues, the UI-blocking analyzer, and the builtin session-goal extension (state/machine/command/render; the host glue lives in `coding` and `coding/interactive`, D223) |
-| `markdown` | — | port-local markdown engine, wired into the TUI: hand-written block lexer and inline parser, the single upstream-parity renderer (`render.go`) driven by the `Style` interface plus an injected `Terminal`, the layout layer (`layout.go`: standalone `RenderSource`/`Render`, default `PlainTerminal`, ANSI/East-Asian wrap), and incremental `Document.Update`/`LexFrom`; Marked token parity and the upstream render goldens both pass |
+| `internal/markdown` | — | port-local markdown engine, wired into the TUI: hand-written block lexer and inline parser, the single upstream-parity renderer (`render.go`) driven by the `Style` interface plus an injected `Terminal`, the layout layer (`layout.go`: standalone `RenderSource`/`Render`, default `PlainTerminal`, ANSI/East-Asian wrap), and incremental `Document.Update`/`LexFrom`; Marked token parity and the upstream render goldens both pass |
+| `internal/highlight` | — | port-local highlight.js 10.7.3 engine: the mode/keyword compilers, the resumable multi-regex scanner, the token tree and HTML renderer, and all 191 registered languages (fixtures and Node-generated goldens in `internal/highlight/testdata`); wired into the TUI through `coding/interactive/codehighlight.go` |
 | `scripts` | — | catalog generators |
 | `docs` | — | port status (`PORTING.md`), the divergence log (`DIVERGENCES.md`), architecture notes (`architecture.md`) and the lock inventory (`locks.md`) |
 

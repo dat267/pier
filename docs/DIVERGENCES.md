@@ -1790,7 +1790,7 @@ once per block. Plain `marked.lexer` is linear (25.6 to 25.2 MB/s from 32 KB to
 pier treats `$$`/`\[` as block LaTeX only at a line start (after at most three
 spaces) and as literal text otherwise, so `a $$x^2$$ b` stays one paragraph.
 Only this mid-line case differs; line-start block math, inline `$…$` (including
-upstream's closed-span validity checks in `markdown/inline.go`), pending spans
+upstream's closed-span validity checks in `internal/markdown/inline.go`), pending spans
 and `\(…\)` all match upstream. Reproducing pi here would import the quadratic
 `start` seam for an artifact no user asks for.
 
@@ -1874,7 +1874,7 @@ The reference builds highlight.js's HTML and then re-parses it; the port's
 `highlight` package already returns the same scope tree, so `renderHighlightedNodes`
 walks the tree directly and skips the HTML round-trip (equivalent, since the
 HTML walk was exactly escape-then-unescape). On the 10.9 KB
-`highlight/testdata/sample_big.go`, the wired path measures 1.86 ms (5.86 MB/s)
+`internal/highlight/testdata/sample_big.go`, the wired path measures 1.86 ms (5.86 MB/s)
 against the reference's JS wired path at 3.20 ms (3.42 MB/s) in the same
 session, so the D227 stall does not return, and the port has no third-party
 dependency:

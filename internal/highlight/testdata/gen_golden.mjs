@@ -1,6 +1,6 @@
 // Regenerates the highlight.js goldens from the checked-in fixtures.
 //
-// Usage: node highlight/testdata/gen_golden.mjs [fixture ...]
+// Usage: node internal/highlight/testdata/gen_golden.mjs [fixture ...]
 //
 // With no arguments every entry in golden_manifest.json is regenerated; with
 // fixture names only those entries are. The reference is the pinned pi

@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/dat267/pier/coding"
-	"github.com/dat267/pier/highlight"
+	"github.com/dat267/pier/internal/highlight"
 	"github.com/dat267/pier/tui"
 )
 

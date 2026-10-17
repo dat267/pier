@@ -3,7 +3,7 @@ package tui
 import (
 	"strings"
 
-	"github.com/dat267/pier/markdown"
+	"github.com/dat267/pier/internal/markdown"
 )
 
 // TerminalCapabilities holds the terminal feature flags the markdown renderer

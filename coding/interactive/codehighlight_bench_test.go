@@ -9,7 +9,7 @@ import (
 // source file. It is the guard that the highlight.js port, not Chroma (D227),
 // backs the per-fence work.
 func BenchmarkHighlightCodeGo(b *testing.B) {
-	code, err := os.ReadFile("../../highlight/testdata/sample_big.go")
+	code, err := os.ReadFile("../../internal/highlight/testdata/sample_big.go")
 	if err != nil {
 		b.Skip(err)
 	}

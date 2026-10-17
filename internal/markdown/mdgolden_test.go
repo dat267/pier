@@ -17,7 +17,7 @@ import (
 
 func loadGoldenCorpus(t *testing.T) map[string]string {
 	t.Helper()
-	data, err := os.ReadFile("../tui/testdata/md_corpus.json")
+	data, err := os.ReadFile("../../tui/testdata/md_corpus.json")
 	if err != nil {
 		t.Fatalf("read corpus: %v", err)
 	}
@@ -30,7 +30,7 @@ func loadGoldenCorpus(t *testing.T) map[string]string {
 
 func loadGolden(t *testing.T) map[string]string {
 	t.Helper()
-	file, err := os.Open("../tui/testdata/md_golden.txt")
+	file, err := os.Open("../../tui/testdata/md_golden.txt")
 	if err != nil {
 		t.Fatalf("open golden: %v", err)
 	}
