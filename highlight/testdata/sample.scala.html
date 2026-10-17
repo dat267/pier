@@ -1,0 +1,24 @@
+<span class="hljs-keyword">package</span> com.example
+
+<span class="hljs-keyword">import</span> scala.collection.mutable
+
+<span class="hljs-comment">/** A demo. */</span>
+<span class="hljs-class"><span class="hljs-keyword">object</span> <span class="hljs-title">Demo</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">App</span> </span>{
+  <span class="hljs-keyword">val</span> name: <span class="hljs-type">String</span> = <span class="hljs-string">&quot;pier&quot;</span>
+  <span class="hljs-keyword">val</span> count: <span class="hljs-type">Int</span> = <span class="hljs-number">42</span>
+  <span class="hljs-keyword">val</span> ratio: <span class="hljs-type">Double</span> = <span class="hljs-number">1.5e-3</span>
+  <span class="hljs-keyword">val</span> sym: <span class="hljs-type">Symbol</span> = <span class="hljs-symbol">&#x27;hello</span>
+  <span class="hljs-keyword">val</span> raw = <span class="hljs-string">s&quot;name=<span class="hljs-subst">$name</span> count=<span class="hljs-subst">$count</span>&quot;</span>
+  <span class="hljs-keyword">val</span> multi = <span class="hljs-string">&quot;&quot;&quot;line1
+line2&quot;&quot;&quot;</span>
+
+  <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">greet</span></span>(who: <span class="hljs-type">String</span>): <span class="hljs-type">Unit</span> = {
+    println(<span class="hljs-string">s&quot;hello, <span class="hljs-subst">$who</span>&quot;</span>)
+  }
+
+  <span class="hljs-keyword">case</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Point</span>(<span class="hljs-params">x: <span class="hljs-type">Int</span>, y: <span class="hljs-type">Int</span></span>)</span>
+
+  <span class="hljs-class"><span class="hljs-keyword">trait</span> <span class="hljs-title">Greet</span> </span>{ <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">greet</span></span>(): <span class="hljs-type">Unit</span> }
+
+  <span class="hljs-keyword">if</span> (count &gt; <span class="hljs-number">0</span> &amp;&amp; name.nonEmpty) greet(name)
+}

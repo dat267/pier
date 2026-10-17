@@ -1,0 +1,24 @@
+<span class="hljs-keyword">package</span> com.example;
+
+<span class="hljs-keyword">import</span> java.util.List;
+
+<span class="hljs-comment">/**
+ * A demo class.
+ * <span class="hljs-doctag">@author</span> pier
+ */</span>
+<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Demo</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Runnable</span> </span>{
+	<span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> String NAME = <span class="hljs-string">&quot;pier&quot;</span>;
+	<span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> count = <span class="hljs-number">42</span>;
+	<span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">double</span> ratio = <span class="hljs-number">1.5e-3</span>;
+	<span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">char</span> c = <span class="hljs-string">&#x27;x&#x27;</span>;
+
+	<span class="hljs-meta">@Override</span>
+	<span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>{
+		List&lt;String&gt; items = List.of(NAME, <span class="hljs-string">&quot;a&quot;</span>, <span class="hljs-string">&quot;b&quot;</span>);
+		<span class="hljs-keyword">for</span> (String item : items) {
+			System.out.println(item + count + ratio + c);
+		}
+	}
+
+	<span class="hljs-class"><span class="hljs-keyword">record</span> <span class="hljs-title">Point</span><span class="hljs-params">(<span class="hljs-keyword">int</span> x, <span class="hljs-keyword">int</span> y)</span> </span>{}
+}

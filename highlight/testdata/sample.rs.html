@@ -1,0 +1,26 @@
+<span class="hljs-comment">//! Crate docs</span>
+<span class="hljs-keyword">use</span> std::collections::HashMap;
+
+<span class="hljs-comment">/// A demo struct.</span>
+<span class="hljs-meta">#[derive(Debug, Clone)]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">Demo</span></span>&lt;<span class="hljs-symbol">&#x27;a</span>&gt; {
+    name: &amp;<span class="hljs-symbol">&#x27;a</span> <span class="hljs-built_in">str</span>,
+    count: <span class="hljs-built_in">i32</span>,
+    ratio: <span class="hljs-built_in">f64</span>,
+}
+
+<span class="hljs-keyword">impl</span>&lt;<span class="hljs-symbol">&#x27;a</span>&gt; Demo&lt;<span class="hljs-symbol">&#x27;a</span>&gt; {
+    <span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">new</span></span>(name: &amp;<span class="hljs-symbol">&#x27;a</span> <span class="hljs-built_in">str</span>) -&gt; <span class="hljs-keyword">Self</span> {
+        <span class="hljs-keyword">let</span> s = <span class="hljs-string">&quot;plain&quot;</span>;
+        <span class="hljs-keyword">let</span> raw = <span class="hljs-string">r#&quot;raw &quot;string&quot;&quot;#</span>;
+        <span class="hljs-keyword">let</span> byte = <span class="hljs-string">b&#x27;x&#x27;</span>;
+        <span class="hljs-keyword">let</span> n: <span class="hljs-built_in">u32</span> = <span class="hljs-number">0x1f_u32</span>;
+        <span class="hljs-keyword">let</span> f = <span class="hljs-number">1.5e-3f64</span>;
+        <span class="hljs-keyword">if</span> n &gt; <span class="hljs-number">0</span> &amp;&amp; !s.is_empty() {
+            <span class="hljs-built_in">println!</span>(<span class="hljs-string">&quot;{} {} {}&quot;</span>, name, n, f);
+        }
+        <span class="hljs-keyword">Self</span> { name, count: n <span class="hljs-keyword">as</span> <span class="hljs-built_in">i32</span>, ratio: f }
+    }
+}
+
+<span class="hljs-class"><span class="hljs-keyword">trait</span> <span class="hljs-title">Greet</span></span> { <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">greet</span></span>(&amp;<span class="hljs-keyword">self</span>); }
