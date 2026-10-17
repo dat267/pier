@@ -98,7 +98,9 @@ func NewScrollView(component Component, options ScrollViewOptions) *ScrollView {
 }
 
 // AnimationFrame implements Animator: wake when the transient scrollbar's
-// hide deadline passes.
+// hide deadline passes. The scrollbar itself is painted by the layout from this
+// view's state, so a tick only requests a repaint (AnimationTick) and never
+// invalidates the scrolled document.
 func (s *ScrollView) AnimationFrame(now time.Time) (bool, time.Duration) {
 	if s.scrollbarHideDeadline.IsZero() {
 		return false, 0
@@ -109,6 +111,17 @@ func (s *ScrollView) AnimationFrame(now time.Time) (bool, time.Duration) {
 	// Expired: hide and ask for one more frame to repaint without it.
 	s.hideTransientScrollbar()
 	return true, time.Millisecond
+}
+
+// AnimationTick implements AnimationTicker. The transient scrollbar lives in
+// this view's state and is composited by the layout painter, so the tick only
+// asks for a repaint. The default Animator tick (Invalidate) would drop the
+// scrolled document's render caches and re-render every child, which on a large
+// transcript re-runs every tool's display build once per animation frame.
+func (s *ScrollView) AnimationTick() {
+	if s.requestRenderCallback != nil {
+		s.requestRenderCallback()
+	}
 }
 
 // ScrollTop returns the current scroll offset.
