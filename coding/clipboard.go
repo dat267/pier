@@ -64,52 +64,64 @@ func isRemoteSession() bool {
 		os.Getenv("PI_CLIPBOARD_OSC52") == "1"
 }
 
-func copyCommands() [][]string {
-	switch runtime.GOOS {
+func copyCommands() [][]string { return copyCommandsFor(runtime.GOOS, os.Getenv) }
+
+func copyCommandsFor(goos string, getenv func(string) string) [][]string {
+	switch goos {
 	case "darwin":
 		return [][]string{{"pbcopy"}}
 	case "windows":
 		return [][]string{{"clip"}}
 	}
 	commands := [][]string{}
-	if os.Getenv("TERMUX_VERSION") != "" {
+	if getenv("TERMUX_VERSION") != "" {
 		commands = append(commands, []string{"termux-clipboard-set"})
 	}
-	if os.Getenv("WAYLAND_DISPLAY") != "" {
+	if getenv("WAYLAND_DISPLAY") != "" {
 		commands = append(commands, []string{"wl-copy"})
 	}
-	if os.Getenv("DISPLAY") != "" {
+	if getenv("DISPLAY") != "" {
 		commands = append(commands, []string{"xclip", "-selection", "clipboard"}, []string{"xsel", "--clipboard", "--input"})
 	}
 	return commands
 }
 
-func pasteCommands() [][]string {
-	if runtime.GOOS != "linux" {
-		return nil
-	}
+func pasteCommands() [][]string { return pasteCommandsFor(runtime.GOOS, os.Getenv) }
+
+func pasteCommandsFor(goos string, getenv func(string) string) [][]string {
+	// Termux reports GOOS "android", not "linux", so the Termux reader is
+	// selected before the platform gate; the X11/Wayland readers stay
+	// linux-only (upstream readClipboardText, #10391).
 	commands := [][]string{}
-	if os.Getenv("TERMUX_VERSION") != "" {
+	if getenv("TERMUX_VERSION") != "" {
 		commands = append(commands, []string{"termux-clipboard-get"})
 	}
-	if os.Getenv("WAYLAND_DISPLAY") != "" {
+	if goos != "linux" {
+		return commands
+	}
+	if getenv("WAYLAND_DISPLAY") != "" {
 		commands = append(commands, []string{"wl-paste", "--no-newline", "--type", "text"})
 	}
-	if os.Getenv("DISPLAY") != "" {
+	if getenv("DISPLAY") != "" {
 		commands = append(commands, []string{"xclip", "-selection", "clipboard", "-out"}, []string{"xsel", "--clipboard", "--output"})
 	}
 	return commands
 }
 
-func clipboardUnavailableError() error {
-	if runtime.GOOS == "linux" {
-		if os.Getenv("TERMUX_VERSION") != "" {
-			return fmt.Errorf("Clipboard unavailable: install the Termux:API app and `termux-api` package")
-		}
-		if os.Getenv("WAYLAND_DISPLAY") != "" {
+func clipboardUnavailableError() error { return clipboardUnavailableErrorFor(runtime.GOOS, os.Getenv) }
+
+func clipboardUnavailableErrorFor(goos string, getenv func(string) string) error {
+	// The Termux hint precedes the platform checks: a failed Termux copy on
+	// Android must name the Termux:API package, not fall through to the generic
+	// message (upstream copyToClipboard, #10391).
+	if getenv("TERMUX_VERSION") != "" {
+		return fmt.Errorf("Clipboard unavailable: install the Termux:API app and `termux-api` package")
+	}
+	if goos == "linux" {
+		if getenv("WAYLAND_DISPLAY") != "" {
 			return fmt.Errorf("Clipboard unavailable: install `wl-clipboard` (`wl-copy`) or check Wayland access")
 		}
-		if os.Getenv("DISPLAY") != "" {
+		if getenv("DISPLAY") != "" {
 			return fmt.Errorf("Clipboard unavailable: install `xclip` or `xsel`, or check X11 access")
 		}
 		return fmt.Errorf("Clipboard unavailable: no Wayland or X11 display detected")

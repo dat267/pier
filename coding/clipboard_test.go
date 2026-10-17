@@ -92,3 +92,53 @@ func TestClipboardUnavailableMessage(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 }
+
+// TestClipboardTermuxPasteOnAndroid pins upstream #10391: Termux reports
+// platform "android", not "linux", so the read path must select
+// termux-clipboard-get regardless of platform and the failure hint must name
+// Termux. copyCommands already had no platform gate, so only read was broken.
+func TestClipboardTermuxPasteOnAndroid(t *testing.T) {
+	env := func(key string) string {
+		if key == "TERMUX_VERSION" {
+			return "0.118.0"
+		}
+		return ""
+	}
+	commands := pasteCommandsFor("android", env)
+	if len(commands) != 1 || commands[0][0] != "termux-clipboard-get" {
+		t.Fatalf("android paste commands = %v, want termux-clipboard-get", commands)
+	}
+	err := clipboardUnavailableErrorFor("android", env)
+	if err == nil || !strings.Contains(err.Error(), "Termux:API") {
+		t.Fatalf("android clipboard error = %v, want the Termux hint", err)
+	}
+}
+
+// Linux keeps the X11/Wayland readers in upstream order.
+func TestClipboardLinuxPasteCommands(t *testing.T) {
+	env := func(key string) string {
+		if key == "DISPLAY" {
+			return ":0"
+		}
+		return ""
+	}
+	commands := pasteCommandsFor("linux", env)
+	if len(commands) != 2 || commands[0][0] != "xclip" || commands[1][0] != "xsel" {
+		t.Fatalf("linux paste commands = %v", commands)
+	}
+}
+
+// A Termux copy on android takes the env-based branch (copyCommands has no
+// platform gate), which the pre-fix code already did.
+func TestClipboardTermuxCopyOnAndroid(t *testing.T) {
+	env := func(key string) string {
+		if key == "TERMUX_VERSION" {
+			return "0.118.0"
+		}
+		return ""
+	}
+	commands := copyCommandsFor("android", env)
+	if len(commands) != 1 || commands[0][0] != "termux-clipboard-set" {
+		t.Fatalf("android copy commands = %v", commands)
+	}
+}
