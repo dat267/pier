@@ -1,0 +1,26 @@
+<span class="hljs-keyword">namespace</span> Demo;
+
+<span class="hljs-keyword">interface</span>
+
+<span class="hljs-keyword">type</span>
+  MyClass = <span class="hljs-keyword">class</span>
+  <span class="hljs-keyword">private</span>
+    FName: String;
+  <span class="hljs-keyword">public</span>
+    <span class="hljs-function"><span class="hljs-keyword">constructor</span> <span class="hljs-title">Create</span><span class="hljs-params">(aName: String)</span>;</span>
+    <span class="hljs-function"><span class="hljs-keyword">method</span> <span class="hljs-title">Greet</span>;</span>
+  <span class="hljs-keyword">end</span>;
+
+<span class="hljs-keyword">implementation</span>
+
+<span class="hljs-function"><span class="hljs-keyword">constructor</span> <span class="hljs-title">MyClass</span>.<span class="hljs-title">Create</span><span class="hljs-params">(aName: String)</span>;</span>
+<span class="hljs-keyword">begin</span>
+  FName := aName;
+<span class="hljs-keyword">end</span>;
+
+<span class="hljs-function"><span class="hljs-keyword">method</span> <span class="hljs-title">MyClass</span>.<span class="hljs-title">Greet</span>;</span>
+<span class="hljs-keyword">begin</span>
+  Console.WriteLine(FName);
+<span class="hljs-keyword">end</span>;
+
+<span class="hljs-keyword">end</span>.

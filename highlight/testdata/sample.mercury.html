@@ -1,0 +1,11 @@
+:- <span class="hljs-keyword">module</span> hello.
+:- <span class="hljs-keyword">interface</span>.
+
+:- <span class="hljs-keyword">import_module</span> io.
+
+:- <span class="hljs-keyword">pred</span> main(io::di, io::uo) <span class="hljs-keyword">is</span> <span class="hljs-keyword">det</span>.
+
+:- <span class="hljs-keyword">implementation</span>.
+
+main(!IO) :-
+    io.write_string(<span class="hljs-string">&quot;Hello, Mercury!\n&quot;</span>, !IO).
