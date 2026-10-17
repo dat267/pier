@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// BlockedAfterTurns is the number of consecutive rounds before update_goal may
+// BlockedAfterTurns is the number of consecutive rounds before set_goal may
 // block.
 const BlockedAfterTurns = 3
 
@@ -31,7 +31,8 @@ type SessionStartEvent struct {
 	Reason  string
 }
 
-// GoalCreateEvent is the create_goal tool.
+// GoalCreateEvent creates a goal without queueing a round (the agent set_goal
+// objective path when no live goal exists).
 type GoalCreateEvent struct {
 	Objective string
 	Budget    *GoalBudget
@@ -55,7 +56,7 @@ type AgentBeforeSettleEvent struct {
 	HasNow             bool
 }
 
-// GoalUpdateEvent is the update_goal tool.
+// GoalUpdateEvent ends the goal (set_goal status: complete/blocked/clear).
 type GoalUpdateEvent struct {
 	GoalID        string
 	Revision      any // number | string | undefined
@@ -78,6 +79,15 @@ type GoalSetEvent struct {
 	Budget    *GoalBudget
 }
 
+// GoalAgentSetEvent is the set_goal tool's objective path: create or replace the
+// goal without queueing a round. The agent is already inside a run, and
+// agent_before_settle reserves the next round, so queueing here would deliver
+// the round twice.
+type GoalAgentSetEvent struct {
+	Objective string
+	Budget    *GoalBudget
+}
+
 // GoalReplaceEvent is /goal set over a live goal (human-confirmed).
 type GoalReplaceEvent struct {
 	Objective string
@@ -93,6 +103,7 @@ func (GoalUpdateEvent) isGoalEvent()        {}
 func (GoalPauseEvent) isGoalEvent()         {}
 func (GoalClearEvent) isGoalEvent()         {}
 func (GoalSetEvent) isGoalEvent()           {}
+func (GoalAgentSetEvent) isGoalEvent()      {}
 func (GoalReplaceEvent) isGoalEvent()       {}
 
 // Effect is one machine output. The caller performs the I/O.
@@ -208,6 +219,8 @@ func (m *GoalMachine) Dispatch(event GoalEvent) DispatchResult {
 		return m.goalClear(typed.ID, typed.Revision)
 	case GoalSetEvent:
 		return m.goalSet(typed.Objective, typed.Budget)
+	case GoalAgentSetEvent:
+		return m.goalAgentSet(typed.Objective, typed.Budget)
 	case GoalReplaceEvent:
 		return m.goalReplace(typed.Objective, typed.Budget)
 	}
@@ -557,6 +570,29 @@ func (m *GoalMachine) goalClear(id string, revision int) DispatchResult {
 	return DispatchResult{Effects: effects}
 }
 
+// goalAgentSet creates or replaces the goal without queueing a round: the agent
+// is already inside a run, and agent_before_settle reserves the next round. A
+// live goal is tombstoned first so replay still validates every step.
+func (m *GoalMachine) goalAgentSet(objective string, budget *GoalBudget) DispatchResult {
+	if m.view == nil || m.view.Phase == PhaseComplete {
+		return m.goalCreate(objective, budget)
+	}
+	cleared, err := m.commit(OpClear, nil, &ClearedRef{ID: m.view.ID, Revision: m.view.Revision})
+	if err != nil {
+		return DispatchResult{Reply: stringPtr(err.Error()), IsError: true}
+	}
+	next := CreateGoalState(objective, m.now(), budget)
+	m.armed = true
+	m.createdThisRun = true
+	m.pendingTurn = nil
+	created, err := m.commit(OpCreate, &next, nil)
+	if err != nil {
+		return DispatchResult{Reply: stringPtr(err.Error()), IsError: true}
+	}
+	return DispatchResult{Effects: append(cleared, created...), Reply: stringPtr(fmt.Sprintf("Goal replaced (id %s, revision %d).", next.ID, next.Revision))}
+}
+
+// goalSet creates the goal and queues its first round (the idle /goal set).
 func (m *GoalMachine) goalSet(objective string, budget *GoalBudget) DispatchResult {
 	if m.view != nil && m.view.Phase != PhaseComplete {
 		return DispatchResult{Reply: stringPtr("An unfinished goal exists. /goal clear first (or /goal edit once implemented)."), IsError: true}

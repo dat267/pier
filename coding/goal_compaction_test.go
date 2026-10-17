@@ -39,7 +39,7 @@ func TestGoalRoundPromptSurvivesCompactionWithinRound(t *testing.T) {
 		var message *ai.AssistantMessage
 		switch calls {
 		case 1:
-			create := session.control.Tools["create_goal"].Tool
+			create := session.control.Tools["set_goal"].Tool
 			_, err := create.Execute("create", json.RawMessage(`{"objective":"continue work"}`), context.Background(), func(agent.AgentToolResult) {})
 			if err != nil {
 				t.Errorf("create goal tool: %v", err)
@@ -72,8 +72,7 @@ func TestGoalRoundPromptSurvivesCompactionWithinRound(t *testing.T) {
 			if snapshot == nil {
 				t.Error("goal disappeared during compaction")
 			} else {
-				params, _ := json.Marshal(map[string]any{"goal_id": snapshot.ID, "revision": snapshot.Revision, "action": "complete"})
-				_, _ = session.control.Tools["update_goal"].Tool.Execute("complete", params, context.Background(), func(agent.AgentToolResult) {})
+				_, _ = session.control.Tools["set_goal"].Tool.Execute("complete", json.RawMessage(`{"status":"complete"}`), context.Background(), func(agent.AgentToolResult) {})
 			}
 			fallthrough
 		default:

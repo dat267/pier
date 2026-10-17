@@ -1631,8 +1631,8 @@ produced during construction (the restored-goal notice) are buffered and
 delivered by `SetUIHooks`, so the interactive mode sets its callbacks once and
 `/reload` calls `Start("reload")` without re-reading the branch by hand.
 
-The three tools are registered in the session tool registry and join the
-default active set; unlike the extension, an explicit `--tools` allowlist still
+The two tools (`get_goal`/`set_goal`, D234) are registered in the session
+tool registry and join the default active set; unlike the extension, an explicit `--tools` allowlist still
 filters them out, because `SetActiveToolsByName` owns pier's allowlist
 semantics. The `registerMessageRenderer` for hidden `pi-goal-event` messages is
 not ported (those messages are `display:false`, so the transcript never draws
@@ -1699,7 +1699,7 @@ Measured on a 100 MiB session (30,314 messages): `buildSessionInfo` 1.7s to
 **A custom message that lands between a tool call and its result is deferred.**
 
 The goal controller appends its lifecycle note (`pi-goal-event`, `display:false`)
-while the `update_goal` tool executes, so the session order is assistant tool
+while the `set_goal` tool executes, so the session order is assistant tool
 call, goal `custom` entry, goal `custom_message`, tool result. `ConvertToLlm`
 turned that note into a user message, and the OpenAI-compatible transform treats
 a user message as interrupting the tool flow: it synthetically answered the call
@@ -1873,18 +1873,19 @@ loaded.
 
 **The agent may clear its own goal.**
 
-The reference goal extension keeps `clear` human-only: `update_goal` accepts only
-`complete` and `blocked`, and `/goal clear` is the only way to tombstone a goal.
-A model that judges the current goal irrelevant or superseded can only complete
-it (claiming an outcome it did not reach) or block it (after three rounds), and
-`create_goal` refuses while an unfinished goal exists ("A goal already exists.
-Clear it first."), so it cannot start the corrected goal in the same turn.
+The reference goal extension keeps `clear` human-only: its `update_goal` accepts
+only `complete` and `blocked`, and `/goal clear` is the only way to tombstone a
+goal. A model that judges the current goal irrelevant or superseded can only
+complete it (claiming an outcome it did not reach) or block it (after three
+rounds), and `create_goal` refuses while an unfinished goal exists ("A goal
+already exists. Clear it first."), so it cannot start the corrected goal in the
+same turn.
 
-Pier adds `clear` to `update_goal`'s action enum. It takes the same exact
-`goal_id` and `revision` from `get_goal`, tombstones the goal through the same
-`OpClear` path as the human command, and stops goal work; the reply says so.
-Because the goal is gone, `create_goal` succeeds immediately after, so the agent
-can replace a stale goal with the right one in one turn.
+Pier exposes `clear` to the agent through its `set_goal` tool (D234), which
+tombstones the goal through the same `OpClear` path as the human command and
+stops goal work; the reply says so. Because the goal is gone, `set_goal` with a
+new objective succeeds immediately after, so the agent can replace a stale goal
+with the right one in one turn.
 
 `goalClear` now also disarms and clears `pendingTurn`. The goal loop already
 stopped because the view is nil, so the only change is a consistent snapshot
@@ -1903,3 +1904,26 @@ replay are unchanged.
 
 The confirmation hook that existed only for this prompt is removed;
 `GoalController.SetUIHooks` now installs the notify callback alone.
+
+## D234
+
+**The goal tools are `get_goal` and `set_goal`.**
+
+The reference exposes three tools: `get_goal` (read), `create_goal` (create;
+refuses a live goal), and `update_goal` (complete/blocked/clear, each guarded by
+the exact `goal_id` and `revision` from `get_goal`). A model that wants to change
+direction must clear first (D232), and every completion copies a ref back from
+`get_goal`.
+
+Pier collapses the write path into one tool. `set_goal` takes `objective` to
+start the goal or replace a live one, and `status` (`complete`/`blocked`/`clear`;
+`blocked_reason` for blocked) to end it. The exact id/revision guard is gone: the
+tool acts on the current goal, so the model never has to copy a ref back, and a
+replaced goal is tombstoned through the same `goal_replace` path so replay still
+validates every step. The agent's objective path uses a create-or-replace
+`goal_agent_set` machine event that does not queue a round (the run is active, so
+`agent_before_settle` reserves the next one), unlike the human `/goal set`, which
+queues the first round.
+
+`get_goal` is the only other tool. `DesiredToolNames` keeps `set_goal` always
+active and `get_goal` only while a goal is pursued.

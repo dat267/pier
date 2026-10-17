@@ -147,27 +147,27 @@ func TestToolRenderers(t *testing.T) {
 	if RenderGetGoalRenderResult(&g, stubTheme{}) == nil {
 		t.Fatal("get_goal result")
 	}
-	if RenderCreateGoalRenderCall("test", stubTheme{}, false) == nil {
-		t.Fatal("create_goal call")
+	if RenderSetGoalRenderCall("test", stubTheme{}, false) == nil {
+		t.Fatal("set_goal objective call")
 	}
-	if RenderUpdateGoalRenderCall("complete", "", stubTheme{}, false) == nil {
-		t.Fatal("update_goal call")
+	if RenderSetGoalStatusRenderCall("complete", "", stubTheme{}, false) == nil {
+		t.Fatal("set_goal status call")
 	}
-	if RenderUpdateGoalRenderResult(UpdateGoalResult{Text: "ok"}, stubTheme{}) == nil {
-		t.Fatal("update_goal result")
+	if RenderSetGoalRenderResult(SetGoalResult{Text: "ok"}, stubTheme{}) == nil {
+		t.Fatal("set_goal result")
 	}
-	if RenderUpdateGoalRenderResult(UpdateGoalResult{IsError: true, Text: "fail"}, stubTheme{}) == nil {
-		t.Fatal("update_goal error result")
+	if RenderSetGoalRenderResult(SetGoalResult{IsError: true, Text: "fail"}, stubTheme{}) == nil {
+		t.Fatal("set_goal error result")
 	}
 }
 
 func TestCreateGoalCallFrameExpands(t *testing.T) {
 	objective := "Create a long goal with every acceptance criterion, constraint, expected output, and verification step included."
-	collapsed := renderLines(RenderCreateGoalRenderCall(objective, stubTheme{}, false), 200)
+	collapsed := renderLines(RenderSetGoalRenderCall(objective, stubTheme{}, false), 200)
 	if !strings.Contains(collapsed, "click or expand") || strings.Contains(collapsed, objective) {
 		t.Fatalf("collapsed frame: %q", collapsed)
 	}
-	expanded := renderLines(RenderCreateGoalRenderCall(objective, stubTheme{}, true), 200)
+	expanded := renderLines(RenderSetGoalRenderCall(objective, stubTheme{}, true), 200)
 	if !strings.Contains(expanded, objective) {
 		t.Fatalf("expanded frame missing objective: %q", expanded)
 	}
@@ -175,11 +175,11 @@ func TestCreateGoalCallFrameExpands(t *testing.T) {
 
 func TestUpdateGoalCallFrameExpands(t *testing.T) {
 	reason := "The external dependency is unavailable, and the task cannot proceed until the service is restored."
-	collapsed := renderLines(RenderUpdateGoalRenderCall("blocked", reason, stubTheme{}, false), 200)
+	collapsed := renderLines(RenderSetGoalStatusRenderCall("blocked", reason, stubTheme{}, false), 200)
 	if !strings.Contains(collapsed, "click or expand") || strings.Contains(collapsed, reason) {
 		t.Fatalf("collapsed frame: %q", collapsed)
 	}
-	expanded := renderLines(RenderUpdateGoalRenderCall("blocked", reason, stubTheme{}, true), 200)
+	expanded := renderLines(RenderSetGoalStatusRenderCall("blocked", reason, stubTheme{}, true), 200)
 	if !strings.Contains(expanded, reason) {
 		t.Fatalf("expanded frame missing reason: %q", expanded)
 	}

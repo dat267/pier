@@ -8,6 +8,7 @@ package coding
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -466,37 +467,34 @@ func (c *GoalController) HandleCommand(args string) {
 // goalToolSnippets are the goal tools' one-line prompt entries (upstream
 // promptSnippet). They list the tools in the system prompt's tools section.
 var goalToolSnippets = map[string]string{
-	"get_goal":    "Read the current goal objective and state",
-	"create_goal": "Create a goal for long-running objectives",
-	"update_goal": "Complete, block, or clear the current goal",
+	"get_goal": "Read the current goal objective and state",
+	"set_goal": "Set, replace, or end the session goal",
 }
 
 // goalToolGuidelines supplies the goal tools' prompt bullets.
 var goalToolGuidelines = map[string][]string{
-	"get_goal": {"Call get_goal before update_goal to copy the exact id and revision."},
-	"create_goal": {
-		"Use create_goal when the user's request is a multi-step objective that should continue across rounds.",
-		"Do not create goals for trivial single-turn work.",
-		"Before creating, turn the request into a concrete objective with outcome, verification, constraints, and boundaries.",
-	},
-	"update_goal": {
-		"Call get_goal first to get the exact id and revision, unless this turn already gave you both.",
+	"get_goal": {"Read get_goal before set_goal when you need the current state."},
+	"set_goal": {
+		"Use set_goal with an objective when the user's request is a multi-step objective that should continue across rounds.",
+		"Do not set goals for trivial single-turn work.",
+		"Before setting, turn the request into a concrete objective with outcome, verification, constraints, and boundaries.",
+		"Setting an objective replaces a live goal.",
 		"Mark complete only when the objective is actually achieved, with evidence.",
 		"Mark blocked only after the same condition persisted for at least 3 consecutive goal rounds.",
 		"Clear only when the goal is no longer relevant or has been superseded; clearing stops goal work, so prefer complete or blocked when they apply.",
 	},
 }
 
-// Tools returns the three goal tools.
+// Tools returns the two goal tools: get_goal reads and set_goal writes.
 func (c *GoalController) Tools() []agent.AgentTool {
-	return []agent.AgentTool{c.getGoalTool(), c.createGoalTool(), c.updateGoalTool()}
+	return []agent.AgentTool{c.getGoalTool(), c.setGoalTool()}
 }
 
 func (c *GoalController) getGoalTool() agent.AgentTool {
 	return agent.AgentTool{
 		Name:        "get_goal",
 		Label:       "Get Goal",
-		Description: "Read the current session goal. Call before update_goal for the exact id and revision.",
+		Description: "Read the current session goal.",
 		Parameters:  json.RawMessage(`{"type":"object","properties":{},"additionalProperties":false}`),
 		Execute: func(_ string, _ json.RawMessage, _ context.Context, _ func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
 			view := c.Snapshot().Goal
@@ -513,71 +511,79 @@ func (c *GoalController) getGoalTool() agent.AgentTool {
 	}
 }
 
-func (c *GoalController) createGoalTool() agent.AgentTool {
+// setGoalTool is the one write tool: an objective starts or replaces the goal, a
+// status ends it. The exact id/revision guard is gone, so the model never has to
+// copy a ref back (D234).
+func (c *GoalController) setGoalTool() agent.AgentTool {
 	return agent.AgentTool{
-		Name:        "create_goal",
-		Label:       "Create Goal",
-		Description: "Create a persisted session goal that continues through Pi's default unbudgeted round loop. Not for trivial single-turn work.",
-		Parameters:  json.RawMessage(`{"type":"object","properties":{"objective":{"type":"string","description":"Concrete completion objective."}},"required":["objective"],"additionalProperties":false}`),
+		Name:        "set_goal",
+		Label:       "Set Goal",
+		Description: "Set, replace, or end the session goal. objective: start the goal, or replace a live one. status: end it - complete (objective achieved, with evidence), blocked (blocked_reason required; only after 3 consecutive goal rounds), or clear (no longer relevant or superseded). Provide exactly one of objective or status.",
+		Parameters:  json.RawMessage(`{"type":"object","properties":{"objective":{"type":"string","description":"Concrete completion objective. Starts or replaces the goal."},"status":{"type":"string","enum":["complete","blocked","clear"],"description":"Ends the current goal."},"blocked_reason":{"type":"string","description":"Blocking condition (blocked only)."}},"additionalProperties":false}`),
 		Execute: func(_ string, params json.RawMessage, _ context.Context, _ func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
 			var input struct {
-				Objective string `json:"objective"`
-			}
-			if err := json.Unmarshal(params, &input); err != nil {
-				return goalErrorResult("objective is required.")
-			}
-			objective := strings.TrimSpace(input.Objective)
-			if objective == "" {
-				return goalErrorResult("objective is required.")
-			}
-			c.mu.Lock()
-			result := c.machine.Dispatch(goal.GoalCreateEvent{Objective: objective})
-			c.mu.Unlock()
-			c.Apply(result.Effects)
-			return c.toolResult(result, "Goal created.")
-		},
-	}
-}
-
-func (c *GoalController) updateGoalTool() agent.AgentTool {
-	return agent.AgentTool{
-		Name:        "update_goal",
-		Label:       "Update Goal",
-		Description: "Complete, block, or clear the session goal. Needs the exact id and revision from get_goal. complete: objective achieved with evidence. blocked: needs blocked_reason; rejected before 3 consecutive rounds. clear: abandon the goal (it is no longer relevant or was superseded); goal work stops and a new goal can be created. pause/resume: human-only (/goal).",
-		Parameters:  json.RawMessage(`{"type":"object","properties":{"goal_id":{"type":"string","description":"Exact id from get_goal."},"revision":{"type":"number","description":"Exact revision from get_goal."},"action":{"type":"string","enum":["complete","blocked","clear"],"description":"Action to perform."},"blocked_reason":{"type":"string","description":"Blocking condition (blocked only)."}},"required":["goal_id","revision","action"],"additionalProperties":false}`),
-		Execute: func(_ string, params json.RawMessage, _ context.Context, _ func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
-			var input struct {
-				GoalID        string          `json:"goal_id"`
-				Revision      json.RawMessage `json:"revision"`
-				Action        string          `json:"action"`
-				BlockedReason string          `json:"blocked_reason"`
+				Objective     string `json:"objective"`
+				Status        string `json:"status"`
+				BlockedReason string `json:"blocked_reason"`
 			}
 			if err := json.Unmarshal(params, &input); err != nil {
 				return goalErrorResult(err.Error())
 			}
-			var revision any
-			if len(input.Revision) > 0 {
-				_ = json.Unmarshal(input.Revision, &revision)
+			objective := strings.TrimSpace(input.Objective)
+			status := strings.TrimSpace(input.Status)
+			switch {
+			case objective != "" && status != "":
+				return goalErrorResult("Provide either objective to set the goal or status to end it, not both.")
+			case objective == "" && status == "":
+				return goalErrorResult("Provide an objective to set the goal or a status to end it.")
+			case objective != "":
+				c.mu.Lock()
+				result := c.machine.Dispatch(goal.GoalAgentSetEvent{Objective: objective})
+				c.mu.Unlock()
+				c.Apply(result.Effects)
+				return c.toolResult(result, "Goal set.")
+			}
+
+			switch status {
+			case "complete", "blocked", "clear":
+			default:
+				return goalErrorResult(fmt.Sprintf(`Unknown status %q. Use "complete", "blocked", or "clear".`, status))
+			}
+			current := c.Snapshot().Goal
+			if current == nil {
+				return goalErrorResult("No goal is set.")
 			}
 			c.mu.Lock()
-			result := c.machine.Dispatch(goal.GoalUpdateEvent{
-				GoalID: input.GoalID, Revision: revision, Action: input.Action, BlockedReason: input.BlockedReason,
-			})
+			var (
+				result   goal.DispatchResult
+				fallback string
+			)
+			switch status {
+			case "complete":
+				result = c.machine.Dispatch(goal.GoalUpdateEvent{GoalID: current.ID, Revision: current.Revision, Action: "complete"})
+				fallback = "Goal complete."
+			case "blocked":
+				result = c.machine.Dispatch(goal.GoalUpdateEvent{GoalID: current.ID, Revision: current.Revision, Action: "blocked", BlockedReason: input.BlockedReason})
+				fallback = "Goal blocked."
+			case "clear":
+				result = c.machine.Dispatch(goal.GoalClearEvent{ID: current.ID, Revision: current.Revision})
+				fallback = "Goal cleared."
+			}
 			c.mu.Unlock()
 			c.Apply(result.Effects)
-			return c.updateGoalToolResult(result, input.Action)
+			return c.setGoalToolResult(result, status, fallback)
 		},
 	}
 }
 
-// updateGoalToolResult carries the action so the result card can distinguish a
-// clear (D232) from a completion.
-func (c *GoalController) updateGoalToolResult(result goal.DispatchResult, action string) (agent.AgentToolResult, error) {
-	reply := ""
+// setGoalToolResult carries the status so the result card can distinguish a
+// clear from a completion.
+func (c *GoalController) setGoalToolResult(result goal.DispatchResult, status string, fallback string) (agent.AgentToolResult, error) {
+	reply := fallback
 	if result.Reply != nil {
 		reply = *result.Reply
 	}
-	details, _ := json.Marshal(map[string]any{"goal": c.Snapshot().Goal, "action": action})
+	details, _ := json.Marshal(map[string]any{"goal": c.Snapshot().Goal, "action": status})
 	return agent.AgentToolResult{
 		Content: []ai.Content{ai.TextContent{Text: reply}},
 		Details: details,

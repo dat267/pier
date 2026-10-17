@@ -213,24 +213,25 @@ func RenderGetGoalRenderResult(goal *GoalView, theme Theme) *tui.Text {
 	return tui.NewText(theme.Fg("toolTitle", fmt.Sprintf("%s · rev %d · %d rounds", goal.Phase, goal.Revision, goal.TurnsStarted)), 0, 0, nil)
 }
 
-// RenderCreateGoalRenderCall is the create_goal call card.
-func RenderCreateGoalRenderCall(objective string, theme Theme, expanded bool) *tui.Text {
+// RenderSetGoalRenderCall is the set_goal call card when an objective is set.
+func RenderSetGoalRenderCall(objective string, theme Theme, expanded bool) *tui.Text {
 	normalized := strings.TrimSpace(goalWhitespace.ReplaceAllString(objective, " "))
 	truncated := !expanded && len([]rune(normalized)) > 60
 	shown := objective
 	if !expanded {
 		shown = TruncateObjective(objective, 60)
 	}
-	text := theme.Fg("toolTitle", "Create goal: "+shown)
+	text := theme.Fg("toolTitle", "Set goal: "+shown)
 	if truncated {
 		text += theme.Fg("muted", " (click or expand for full objective)")
 	}
 	return tui.NewText(text, 0, 0, nil)
 }
 
-// RenderUpdateGoalRenderCall is the update_goal call card.
-func RenderUpdateGoalRenderCall(action, blockedReason string, theme Theme, expanded bool) *tui.Text {
-	text := theme.Fg("toolTitle", "Update goal → ")
+// RenderSetGoalStatusRenderCall is the set_goal call card when a status ends
+// the goal.
+func RenderSetGoalStatusRenderCall(action, blockedReason string, theme Theme, expanded bool) *tui.Text {
+	text := theme.Fg("toolTitle", "Set goal → ")
 	if action == "" {
 		text += theme.Fg("toolTitle", "?")
 	} else {
@@ -251,19 +252,19 @@ func RenderUpdateGoalRenderCall(action, blockedReason string, theme Theme, expan
 	return tui.NewText(text, 0, 0, nil)
 }
 
-// UpdateGoalResult is the update_goal result card input.
-type UpdateGoalResult struct {
+// SetGoalResult is the set_goal status result card input.
+type SetGoalResult struct {
 	IsError  bool
 	Phase    GoalPhase
 	HasPhase bool
-	// Action is the requested update_goal action, so a clear (D232) renders
+	// Action is the requested set_goal status, so a clear (D232) renders
 	// differently from a completion.
 	Action string
 	Text   string
 }
 
-// RenderUpdateGoalRenderResult is the update_goal result card.
-func RenderUpdateGoalRenderResult(result UpdateGoalResult, theme Theme) *tui.Text {
+// RenderSetGoalRenderResult is the set_goal status result card.
+func RenderSetGoalRenderResult(result SetGoalResult, theme Theme) *tui.Text {
 	if result.IsError {
 		return tui.NewText(theme.Fg("error", result.Text), 0, 0, nil)
 	}

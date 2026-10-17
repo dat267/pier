@@ -1,8 +1,8 @@
 package interactive
 
-// Port of the goal extension's tool renderers: the get_goal, create_goal and
-// update_goal call/result cards, registered alongside the built-in tool
-// renderers so a goal tool call gets a message frame.
+// Port of the goal extension's tool renderers: the get_goal and set_goal
+// call/result cards, registered alongside the built-in tool renderers so a goal
+// tool call gets a message frame.
 
 import (
 	"encoding/json"
@@ -12,7 +12,7 @@ import (
 )
 
 // goalDetailsFromResult decodes the goal payload the tools attach to Details
-// ({goal: <GoalView-ish>} for get_goal; {goal: {phase}} for update_goal).
+// ({goal: <GoalView-ish>} for get_goal; {goal: {phase}} for set_goal).
 func goalDetailsFromResult(result *SortToolResultContent) (json.RawMessage, bool) {
 	if result == nil || result.Details == nil {
 		return nil, false
@@ -43,7 +43,7 @@ func goalViewFromDetails(details json.RawMessage) *goal.GoalView {
 	return envelope.Goal
 }
 
-// goalPhaseFromDetails decodes an update_goal result's {goal: {phase}} payload.
+// goalPhaseFromDetails decodes a set_goal result's {goal: {phase}} payload.
 func goalPhaseFromDetails(details json.RawMessage) (goal.GoalPhase, bool) {
 	var envelope struct {
 		Goal *struct {
@@ -56,7 +56,7 @@ func goalPhaseFromDetails(details json.RawMessage) (goal.GoalPhase, bool) {
 	return envelope.Goal.Phase, true
 }
 
-// goalActionFromDetails decodes an update_goal result's action (D232).
+// goalActionFromDetails decodes a set_goal result's status (D232).
 func goalActionFromDetails(details json.RawMessage) string {
 	var envelope struct {
 		Action string `json:"action"`
@@ -81,35 +81,38 @@ var goalGetRenderers = ToolRenderers{
 	},
 }
 
-// goalCreateRenderers renders the create_goal tool (no result card upstream;
-// the generic result body stands in).
-var goalCreateRenderers = ToolRenderers{
-	RenderCall: func(args any, theme *Theme, context *ToolRenderContext) tui.Component {
-		objective, _ := argString(toolArgs(args), "objective")
-		return goal.RenderCreateGoalRenderCall(objective, theme, context.Expanded)
-	},
-}
-
-// goalUpdateRenderers renders the update_goal tool.
-var goalUpdateRenderers = ToolRenderers{
+// goalSetRenderers renders the set_goal tool: an objective call sets/replaces
+// the goal, a status call ends it. A status or error result draws a phase card;
+// a successful objective set has no result card (upstream create_goal).
+var goalSetRenderers = ToolRenderers{
 	RenderCall: func(args any, theme *Theme, context *ToolRenderContext) tui.Component {
 		argsMap := toolArgs(args)
-		action, _ := argString(argsMap, "action")
+		objective, _ := argString(argsMap, "objective")
+		status, _ := argString(argsMap, "status")
 		blockedReason, _ := argString(argsMap, "blocked_reason")
-		return goal.RenderUpdateGoalRenderCall(action, blockedReason, theme, context.Expanded)
+		if status != "" {
+			return goal.RenderSetGoalStatusRenderCall(status, blockedReason, theme, context.Expanded)
+		}
+		return goal.RenderSetGoalRenderCall(objective, theme, context.Expanded)
 	},
 	RenderResult: func(result *SortToolResultContent, options ToolRenderResultOptions, theme *Theme, context *ToolRenderContext) tui.Component {
-		out := goal.UpdateGoalResult{IsError: result.IsError}
+		out := goal.SetGoalResult{IsError: result.IsError}
 		if text := GetTextOutput(result, context.ShowImages); text != "" {
 			out.Text = text
 		}
+		action := ""
 		if details, ok := goalDetailsFromResult(result); ok {
-			out.Action = goalActionFromDetails(details)
+			action = goalActionFromDetails(details)
+			out.Action = action
 			if phase, has := goalPhaseFromDetails(details); has {
 				out.Phase = phase
 				out.HasPhase = true
 			}
 		}
-		return goal.RenderUpdateGoalRenderResult(out, theme)
+		if !result.IsError && action != "complete" && action != "blocked" && action != "clear" {
+			// An objective set has no result card; the generic body shows the reply.
+			return nil
+		}
+		return goal.RenderSetGoalRenderResult(out, theme)
 	},
 }

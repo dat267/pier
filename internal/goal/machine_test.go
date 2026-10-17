@@ -412,6 +412,47 @@ func TestGoalUpdateClearStaleRefFails(t *testing.T) {
 	}
 }
 
+// The agent's set_goal objective path replaces a live goal without queueing a
+// round (the run is active; agent_before_settle reserves the next round).
+func TestGoalAgentSetReplacesWithoutQueueingARound(t *testing.T) {
+	m := armedMachine(t)
+	previous := m.Snapshot().Goal
+	result := m.Dispatch(GoalAgentSetEvent{Objective: "second"})
+	if result.IsError {
+		t.Fatalf("unexpected error: %+v", result)
+	}
+	if findSendMessage(result) != nil {
+		t.Fatal("agent set must not queue a round")
+	}
+	ops := []GoalOperation{}
+	for _, effect := range result.Effects {
+		if entry, ok := effect.(AppendEntryEffect); ok {
+			ops = append(ops, entry.Data.(GoalChangeEntry).Operation)
+		}
+	}
+	if len(ops) != 2 || ops[0] != OpClear || ops[1] != OpCreate {
+		t.Fatalf("ops = %v", ops)
+	}
+	goal := m.Snapshot().Goal
+	if goal == nil || goal.Objective != "second" || goal.ID == previous.ID || !m.Snapshot().Armed {
+		t.Fatalf("goal = %+v", goal)
+	}
+}
+
+// With no live goal, the agent's set_goal is a plain create with no round.
+func TestGoalAgentSetCreatesWithoutQueueingARound(t *testing.T) {
+	m, _ := testMachine()
+	m.Dispatch(SessionStartEvent{})
+	result := m.Dispatch(GoalAgentSetEvent{Objective: "ship it"})
+	entry := findAppend(result, GoalCustomType)
+	if entry == nil || entry.Data.(GoalChangeEntry).Operation != OpCreate {
+		t.Fatalf("expected create entry: %+v", result.Effects)
+	}
+	if findSendMessage(result) != nil {
+		t.Fatal("agent set must not queue a round")
+	}
+}
+
 func TestGoalUpdateStaleRefFails(t *testing.T) {
 	m := armedMachine(t)
 	real := m.Snapshot().Goal

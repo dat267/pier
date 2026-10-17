@@ -3,7 +3,6 @@ package coding
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -30,9 +29,9 @@ func TestGoalResumeFromIdleStartsARun(t *testing.T) {
 			}
 		}
 		// Stop the round loop: complete the goal from this round, then answer.
-		if view := session.Goal.Snapshot().Goal; view != nil {
-			_, _ = session.control.Tools["update_goal"].Tool.Execute("complete",
-				json.RawMessage(fmt.Sprintf(`{"goal_id":%q,"revision":%d,"action":"complete"}`, view.ID, view.Revision)),
+		if session.Goal.Snapshot().Goal != nil {
+			_, _ = session.control.Tools["set_goal"].Tool.Execute("complete",
+				json.RawMessage(`{"status":"complete"}`),
 				context.Background(), func(agent.AgentToolResult) {})
 		}
 		stream := ai.NewAssistantMessageEventStream()
@@ -52,7 +51,7 @@ func TestGoalResumeFromIdleStartsARun(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := session.control.Tools["create_goal"].Tool.Execute("create",
+	if _, err := session.control.Tools["set_goal"].Tool.Execute("create",
 		json.RawMessage(`{"objective":"finish it"}`), context.Background(), func(agent.AgentToolResult) {}); err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +72,7 @@ func TestGoalResumeFromIdleStartsARun(t *testing.T) {
 	}
 }
 
-// The agent clears its own goal through update_goal: the goal disappears and
+// The agent clears its own goal through set_goal: the goal disappears and
 // the round loop stops after the clearing round (D232).
 func TestGoalAgentClearStopsTheRoundLoop(t *testing.T) {
 	manager, dir := newTestSession(t)
@@ -83,12 +82,11 @@ func TestGoalAgentClearStopsTheRoundLoop(t *testing.T) {
 	streamFn := func(requestModel *ai.Model, transcript ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 		switch prompts.Add(1) {
 		case 1:
-			_, _ = session.control.Tools["create_goal"].Tool.Execute("create",
+			_, _ = session.control.Tools["set_goal"].Tool.Execute("create",
 				json.RawMessage(`{"objective":"finish it"}`), context.Background(), func(agent.AgentToolResult) {})
 		case 2:
-			view := session.Goal.Snapshot().Goal
-			_, _ = session.control.Tools["update_goal"].Tool.Execute("clear",
-				json.RawMessage(fmt.Sprintf(`{"goal_id":%q,"revision":%d,"action":"clear"}`, view.ID, view.Revision)),
+			_, _ = session.control.Tools["set_goal"].Tool.Execute("clear",
+				json.RawMessage(`{"status":"clear"}`),
 				context.Background(), func(agent.AgentToolResult) {})
 		}
 		stream := ai.NewAssistantMessageEventStream()
@@ -131,12 +129,11 @@ func TestGoalRoundTransitionAdmitsEachRoundOnce(t *testing.T) {
 	streamFn := func(requestModel *ai.Model, transcript ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 		switch prompts.Add(1) {
 		case 1:
-			_, _ = session.control.Tools["create_goal"].Tool.Execute("create",
+			_, _ = session.control.Tools["set_goal"].Tool.Execute("create",
 				json.RawMessage(`{"objective":"finish it"}`), context.Background(), func(agent.AgentToolResult) {})
 		case 3:
-			view := session.Goal.Snapshot().Goal
-			_, _ = session.control.Tools["update_goal"].Tool.Execute("complete",
-				json.RawMessage(fmt.Sprintf(`{"goal_id":%q,"revision":%d,"action":"complete"}`, view.ID, view.Revision)),
+			_, _ = session.control.Tools["set_goal"].Tool.Execute("complete",
+				json.RawMessage(`{"status":"complete"}`),
 				context.Background(), func(agent.AgentToolResult) {})
 		}
 		stream := ai.NewAssistantMessageEventStream()

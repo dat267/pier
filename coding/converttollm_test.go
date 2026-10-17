@@ -16,12 +16,12 @@ import (
 func TestConvertToLlmDefersCustomMessageBetweenToolCallAndResult(t *testing.T) {
 	user := &ai.UserMessage{Content: ai.StringOrBlocks{Text: "please update the goal"}}
 	assistant := &ai.AssistantMessage{
-		Content:    ai.ContentList{ai.ToolCall{ID: "c1", Name: "update_goal", Arguments: json.RawMessage(`{}`)}},
+		Content:    ai.ContentList{ai.ToolCall{ID: "c1", Name: "set_goal", Arguments: json.RawMessage(`{}`)}},
 		StopReason: ai.StopToolUse,
 	}
 	goalEvent := goalEventMessage(goal.GoalEventType, "<goal_complete>done", false, nil)
 	result := &ai.ToolResultMessage{
-		ToolCallID: "c1", ToolName: "update_goal",
+		ToolCallID: "c1", ToolName: "set_goal",
 		Content: ai.UserContentList{ai.TextContent{Text: "goal updated"}},
 	}
 

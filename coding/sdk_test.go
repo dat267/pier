@@ -51,7 +51,7 @@ func TestCreateAgentSessionDefaults(t *testing.T) {
 		t.Fatalf("thinking level = %q", session.ThinkingLevel())
 	}
 	// The default tool set is read/bash/edit/write.
-	if names := strings.Join(session.GetActiveToolNames(), ","); names != "read,bash,edit,write,create_goal" {
+	if names := strings.Join(session.GetActiveToolNames(), ","); names != "read,bash,edit,write,set_goal" {
 		t.Fatalf("tools = %q", names)
 	}
 	// The initial state is persisted for resume.
@@ -193,14 +193,14 @@ func TestToolModifiersRemainAppliedAfterSettingsReload(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := strings.Join(session.Session.GetActiveToolNames(), ","); got != "read,grep,create_goal" {
+	if got := strings.Join(session.Session.GetActiveToolNames(), ","); got != "read,grep,set_goal" {
 		t.Fatalf("initial tools = %q, want read and grep", got)
 	}
 	writeReloadSettings(t, settingsPath, `{"defaultTools":["read","bash","inactive_tool"]}`)
 	session.Session.Reload()
 	got := append([]string{}, session.Session.ActiveToolNames()...)
 	sort.Strings(got)
-	if strings.Join(got, ",") != "create_goal,grep,inactive_tool,read" {
+	if strings.Join(got, ",") != "grep,inactive_tool,read,set_goal" {
 		t.Fatalf("tools after reload = %v, want updated defaults with bash still removed", got)
 	}
 }
@@ -224,7 +224,7 @@ func TestReloadActivatesToolsNewlyAddedToDefaultTools(t *testing.T) {
 		sort.Strings(names)
 		return strings.Join(names, ",")
 	}
-	if got := active(session.Session); got != "bash,create_goal,edit,read,write" {
+	if got := active(session.Session); got != "bash,edit,read,set_goal,write" {
 		t.Fatalf("initial tools = %q", got)
 	}
 	// bash disabled during the session stays off unless the setting newly adds it.
@@ -277,7 +277,7 @@ func TestReloadActivatesToolsNewlyAddedToDefaultTools(t *testing.T) {
 	}
 	writeReloadSettings(t, settingsPath, `{"defaultTools":["+grep"]}`)
 	excluded.Session.Reload()
-	if got := active(excluded.Session); got != "bash,create_goal,edit,read,write" {
+	if got := active(excluded.Session); got != "bash,edit,read,set_goal,write" {
 		t.Fatalf("excluded after reload = %q", got)
 	}
 }
@@ -296,7 +296,7 @@ func TestCreateAgentSessionToolsModifierAddsToDefaults(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := strings.Join(session.Session.GetActiveToolNames(), ",")
-	if got != "read,bash,edit,write,grep,create_goal" {
+	if got != "read,bash,edit,write,grep,set_goal" {
 		t.Fatalf("tools = %q, want defaults with grep added", got)
 	}
 
@@ -326,7 +326,7 @@ func TestCreateAgentSessionToolsModifierRemovesFromDefaults(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := strings.Join(session.Session.GetActiveToolNames(), ",")
-	if got != "read,bash,edit,create_goal" {
+	if got != "read,bash,edit,set_goal" {
 		t.Fatalf("tools = %q, want write removed from defaults", got)
 	}
 }
@@ -413,7 +413,7 @@ func TestCreateAgentSessionToolSelection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "read,edit,create_goal" {
+	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "read,edit,set_goal" {
 		t.Fatalf("tools = %q", names)
 	}
 
@@ -434,7 +434,7 @@ func TestCreateAgentSessionToolSelection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "read,grep,create_goal" {
+	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "read,grep,set_goal" {
 		t.Fatalf("tools = %q", names)
 	}
 
@@ -455,7 +455,7 @@ func TestCreateAgentSessionToolSelection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "read,bash,edit,grep,create_goal" {
+	if names := strings.Join(session.Session.GetActiveToolNames(), ","); names != "read,bash,edit,grep,set_goal" {
 		t.Fatalf("tools = %q", names)
 	}
 
@@ -641,7 +641,7 @@ func TestCreateAgentSessionPatternSelectionPreservesRegistryOrder(t *testing.T) 
 	tempAgentDir(t)
 	runtime := testSessionRuntime(t)
 	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
-	want := "read,bash,powershell,edit,write,grep,find,ls,create_goal"
+	want := "read,bash,powershell,edit,write,grep,find,ls,set_goal"
 	for attempt := 0; attempt < 8; attempt++ {
 		session, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
 			Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,

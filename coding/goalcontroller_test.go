@@ -7,7 +7,6 @@ package coding
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strings"
 	"testing"
 
@@ -109,13 +108,13 @@ func completedAssistant() *ai.AssistantMessage {
 	return &ai.AssistantMessage{StopReason: ai.StopStop}
 }
 
-func TestGoalControllerRegistersThreeTools(t *testing.T) {
+func TestGoalControllerRegistersTwoTools(t *testing.T) {
 	controller, _ := newGoalControllerTest(t)
 	names := []string{}
 	for _, tool := range controller.Tools() {
 		names = append(names, tool.Name)
 	}
-	if strings.Join(names, ",") != "get_goal,create_goal,update_goal" {
+	if strings.Join(names, ",") != "get_goal,set_goal" {
 		t.Fatalf("tools = %v", names)
 	}
 }
@@ -152,7 +151,7 @@ func TestGoalControllerSessionStartReplaysAndExposesGoal(t *testing.T) {
 
 func TestGoalControllerCreateGoalEffect(t *testing.T) {
 	controller, sink := newGoalControllerTest(t)
-	text := goalToolText(t, controller, "create_goal", `{"objective":"do it"}`)
+	text := goalToolText(t, controller, "set_goal", `{"objective":"do it"}`)
 	if text == "" {
 		t.Fatal("create reply empty")
 	}
@@ -166,7 +165,7 @@ func TestGoalControllerCreateGoalEffect(t *testing.T) {
 
 func TestGoalControllerCreateGoalRejectsEmptyObjective(t *testing.T) {
 	controller, sink := newGoalControllerTest(t)
-	tool := findGoalTool(t, controller, "create_goal")
+	tool := findGoalTool(t, controller, "set_goal")
 	result, err := tool.Execute("id", json.RawMessage(`{"objective":"  "}`), context.Background(), func(agent.AgentToolResult) {})
 	if err != nil || !result.IsError {
 		t.Fatalf("result=%+v err=%v", result, err)
@@ -178,7 +177,7 @@ func TestGoalControllerCreateGoalRejectsEmptyObjective(t *testing.T) {
 
 func TestGoalControllerLegacyBudgetArgumentsAreIgnored(t *testing.T) {
 	controller, sink := newGoalControllerTest(t)
-	goalToolText(t, controller, "create_goal", `{"objective":"do it","time_limit_hours":8,"token_limit":500000,"cost_limit_usd":12.5}`)
+	goalToolText(t, controller, "set_goal", `{"objective":"do it","time_limit_hours":8,"token_limit":500000,"cost_limit_usd":12.5}`)
 	if len(sink.entries) != 1 {
 		t.Fatalf("entries = %+v", sink.entries)
 	}
@@ -197,7 +196,7 @@ func TestGoalControllerAgentEndWithNoGoalProducesNoEffects(t *testing.T) {
 
 func TestGoalControllerAgentEndAdmitsTurnAndContinues(t *testing.T) {
 	controller, sink := newGoalControllerTest(t)
-	goalToolText(t, controller, "create_goal", `{"objective":"do it"}`)
+	goalToolText(t, controller, "set_goal", `{"objective":"do it"}`)
 	sink.entries = nil
 	assistant := completedAssistant()
 	assistant.Usage = ai.Usage{TotalTokens: 321, Cost: ai.UsageCost{Total: 0.42}}
@@ -228,7 +227,7 @@ func TestGoalControllerIdleRoundStartsARun(t *testing.T) {
 		}
 	})
 
-	goalToolText(t, controller, "create_goal", `{"objective":"do it"}`)
+	goalToolText(t, controller, "set_goal", `{"objective":"do it"}`)
 	controller.HandleCommand("pause")
 	sink.messages = nil
 	sink.runs = 0
@@ -250,7 +249,7 @@ func TestGoalControllerRoundWhileStreamingFollowsUp(t *testing.T) {
 	started := 0
 	controller.SetStartWork(func(fn func(context.Context) error) { started++ })
 
-	goalToolText(t, controller, "create_goal", `{"objective":"do it"}`)
+	goalToolText(t, controller, "set_goal", `{"objective":"do it"}`)
 	sink.messages = nil
 	sink.entries = nil
 	controller.AgentEnd(goalAgentEndEvent(completedAssistant()))
@@ -265,7 +264,7 @@ func TestGoalControllerRoundWhileStreamingFollowsUp(t *testing.T) {
 
 func TestGoalControllerAgentEndErrorPausesWithoutContinuation(t *testing.T) {
 	controller, sink := newGoalControllerTest(t)
-	goalToolText(t, controller, "create_goal", `{"objective":"do it"}`)
+	goalToolText(t, controller, "set_goal", `{"objective":"do it"}`)
 	sink.entries = nil
 	assistant := completedAssistant()
 	assistant.StopReason = ai.StopError
@@ -280,7 +279,7 @@ func TestGoalControllerAgentEndErrorPausesWithoutContinuation(t *testing.T) {
 
 func TestGoalControllerAgentEndAbortPauses(t *testing.T) {
 	controller, sink := newGoalControllerTest(t)
-	goalToolText(t, controller, "create_goal", `{"objective":"do it"}`)
+	goalToolText(t, controller, "set_goal", `{"objective":"do it"}`)
 	sink.entries = nil
 	assistant := completedAssistant()
 	assistant.StopReason = ai.StopAborted
@@ -295,7 +294,7 @@ func TestGoalControllerAgentEndAbortPauses(t *testing.T) {
 
 func TestGoalControllerPendingMessagesSuppressContinuation(t *testing.T) {
 	controller, sink := newGoalControllerTest(t)
-	goalToolText(t, controller, "create_goal", `{"objective":"do it"}`)
+	goalToolText(t, controller, "set_goal", `{"objective":"do it"}`)
 	sink.entries = nil
 	sink.pending = true
 	controller.AgentEnd(goalAgentEndEvent(completedAssistant()))
@@ -321,23 +320,15 @@ func goalPausedWithReason(entries []recordedGoalEntry, code string) bool {
 func TestGoalControllerToolExposure(t *testing.T) {
 	controller, sink := newGoalControllerTest(t)
 	controller.Start("startup")
-	if strings.Join(sink.active, ",") != "create_goal" {
+	if strings.Join(sink.active, ",") != "set_goal" {
 		t.Fatalf("active = %v", sink.active)
 	}
-	goalToolText(t, controller, "create_goal", `{"objective":"do it"}`)
-	if strings.Join(sink.active, ",") != "create_goal,get_goal,update_goal" {
+	goalToolText(t, controller, "set_goal", `{"objective":"do it"}`)
+	if strings.Join(sink.active, ",") != "set_goal,get_goal" {
 		t.Fatalf("active = %v", sink.active)
 	}
-	parsed := struct {
-		Goal struct {
-			ID       string `json:"id"`
-			Revision int    `json:"revision"`
-		} `json:"goal"`
-	}{}
-	_ = json.Unmarshal([]byte(goalToolText(t, controller, "get_goal", "{}")), &parsed)
-	revision, _ := json.Marshal(parsed.Goal.Revision)
-	goalToolText(t, controller, "update_goal", `{"goal_id":"`+parsed.Goal.ID+`","revision":`+string(revision)+`,"action":"complete"}`)
-	if strings.Join(sink.active, ",") != "create_goal" {
+	goalToolText(t, controller, "set_goal", `{"status":"complete"}`)
+	if strings.Join(sink.active, ",") != "set_goal" {
 		t.Fatalf("active = %v", sink.active)
 	}
 }
@@ -346,7 +337,7 @@ func TestGoalControllerToolExposure(t *testing.T) {
 // tombstoned, the new one is created and armed, and no confirmation is asked.
 func TestGoalControllerSetOverwritesLiveGoal(t *testing.T) {
 	controller, sink := newGoalControllerTest(t)
-	goalToolText(t, controller, "create_goal", `{"objective":"first"}`)
+	goalToolText(t, controller, "set_goal", `{"objective":"first"}`)
 	sink.entries = nil
 	controller.HandleCommand("set second")
 
@@ -386,7 +377,7 @@ func TestGoalControllerSetFreshGoal(t *testing.T) {
 
 func TestGoalControllerCommandStatus(t *testing.T) {
 	controller, sink := newGoalControllerTest(t)
-	goalToolText(t, controller, "create_goal", `{"objective":"show me"}`)
+	goalToolText(t, controller, "set_goal", `{"objective":"show me"}`)
 	sink.notifies = nil
 	controller.HandleCommand("status")
 	if len(sink.notifies) != 1 || !strings.Contains(sink.notifies[0], "show me") {
@@ -394,17 +385,15 @@ func TestGoalControllerCommandStatus(t *testing.T) {
 	}
 }
 
-// The agent may clear its own goal through update_goal (port-local, D232); the
-// tool schema advertises the action and clearing removes the goal.
-func TestGoalControllerUpdateGoalClear(t *testing.T) {
+// The agent may clear its own goal through set_goal (port-local, D232); the
+// tool schema advertises the status and clearing removes the goal.
+func TestGoalControllerSetGoalClear(t *testing.T) {
 	controller, _ := newGoalControllerTest(t)
-	if params := string(findGoalTool(t, controller, "update_goal").Parameters); !strings.Contains(params, `"clear"`) {
-		t.Fatalf("update_goal schema has no clear action: %s", params)
+	if params := string(findGoalTool(t, controller, "set_goal").Parameters); !strings.Contains(params, `"clear"`) {
+		t.Fatalf("set_goal schema has no clear status: %s", params)
 	}
-	goalToolText(t, controller, "create_goal", `{"objective":"do it"}`)
-	view := controller.Snapshot().Goal
-	reply := goalToolText(t, controller, "update_goal",
-		fmt.Sprintf(`{"goal_id":%q,"revision":%d,"action":"clear"}`, view.ID, view.Revision))
+	goalToolText(t, controller, "set_goal", `{"objective":"do it"}`)
+	reply := goalToolText(t, controller, "set_goal", `{"status":"clear"}`)
 	if controller.Snapshot().Goal != nil {
 		t.Fatalf("goal still present: %+v", controller.Snapshot().Goal)
 	}
@@ -500,7 +489,7 @@ func TestNewAgentSessionReplaysGoalAndExposesTools(t *testing.T) {
 		t.Fatal(err)
 	}
 	names := strings.Join(session.ActiveToolNames(), ",")
-	if names != "create_goal,get_goal,update_goal" {
+	if names != "set_goal,get_goal" {
 		t.Fatalf("active tools = %q", names)
 	}
 	snapshot := session.Goal.Snapshot()
@@ -529,8 +518,9 @@ func TestGoalContinuationReachesTheModel(t *testing.T) {
 			// Complete the goal through its real tool path so the unbudgeted
 			// round loop ends here.
 			if snapshot := session.Goal.Snapshot().Goal; snapshot != nil {
-				params, _ := json.Marshal(map[string]any{"goal_id": snapshot.ID, "revision": snapshot.Revision, "action": "complete"})
-				tool := session.control.Tools["update_goal"].Tool
+				_ = snapshot
+				params := json.RawMessage(`{"status":"complete"}`)
+				tool := session.control.Tools["set_goal"].Tool
 				_, _ = tool.Execute("complete", params, context.Background(), func(agent.AgentToolResult) {})
 			}
 		}
@@ -557,7 +547,7 @@ func TestGoalContinuationReachesTheModel(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	create := session.control.Tools["create_goal"].Tool
+	create := session.control.Tools["set_goal"].Tool
 	if _, err := create.Execute("id", json.RawMessage(`{"objective":"do it"}`), context.Background(), func(agent.AgentToolResult) {}); err != nil {
 		t.Fatal(err)
 	}
