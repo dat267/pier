@@ -87,7 +87,10 @@ type multiRegex struct {
 	// prefixed with a single-char wildcard) decides whether a boundary match
 	// also matches with the real preceding byte.
 	verifyStart bool
-	verifyRe    *regexp.Regexp
+	// prefixedRe is the anchored form that consumes the real preceding byte
+	// before the rules, so a match at the search position is checked with the
+	// correct \b/^ context without a bit-state verify pass.
+	prefixedRe *regexp.Regexp
 }
 
 func newMultiRegex() *multiRegex {
@@ -145,9 +148,8 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 		if parsed := parsePattern(parsedExpr); parsed != nil {
 			if leadingContextSensitive(parsed) {
 				m.verifyStart = true
-				verifyRe, err := compilePattern("(?s).(?:"+joined+")", flags)
-				if err == nil {
-					m.verifyRe = verifyRe
+				if prefixed, err := compilePattern(`(?s)\A.`+`(?:`+joined+`)`, flags); err == nil {
+					m.prefixedRe = prefixed
 				}
 			}
 			m.firstBytes, _ = firstByteSet(parsedExpr, parsed)
@@ -216,22 +218,25 @@ func (m *multiRegex) subMatcher(b byte) *multiRegex {
 	if len(sub.regexes) == 0 {
 		return nil
 	}
-	var pattern strings.Builder
-	pattern.WriteString(`\A(?:`)
+	var body strings.Builder
+	body.WriteString(`(?:`)
 	for i, source := range sub.regexes {
 		if i > 0 {
-			pattern.WriteByte('|')
+			body.WriteByte('|')
 		}
-		pattern.WriteByte('(')
-		pattern.WriteString(source)
-		pattern.WriteByte(')')
+		body.WriteByte('(')
+		body.WriteString(source)
+		body.WriteByte(')')
 	}
-	pattern.WriteByte(')')
-	re, err := compilePattern(pattern.String(), m.flags)
+	body.WriteByte(')')
+	re, err := compilePattern(`\A`+body.String(), m.flags)
 	if err != nil {
 		return nil
 	}
 	sub.matcherRe = re
+	if prefixed, err := compilePattern(`(?s)\A.`+body.String(), m.flags); err == nil {
+		sub.prefixedRe = prefixed
+	}
 	m.subs[b] = sub
 	return sub
 }
@@ -262,16 +267,16 @@ func (m *multiRegex) execDispatch(s string, lastIndex int) *match {
 
 		var regexMatch, manualMatch *match
 		if sub := m.subMatcher(b); sub != nil {
-			if loc := sub.matcherRe.FindStringSubmatchIndex(s[search:]); loc != nil {
-				if !m.verifyStart || search == 0 {
-					regexMatch = sub.buildMatch(s, search, loc)
-				} else if m.verifyRe != nil {
-					if vloc := m.verifyRe.FindStringIndex(s[search-1:]); vloc != nil && vloc[0] == 0 {
-						if full := m.matcherRe.FindStringSubmatchIndex(s[search:]); full != nil && full[0] == 0 {
-							regexMatch = m.buildMatch(s, search, full)
-						}
-					}
+			if search == 0 {
+				if loc := sub.matcherRe.FindStringSubmatchIndex(s[0:]); loc != nil {
+					regexMatch = sub.buildMatch(s, 0, loc)
 				}
+			} else if sub.prefixedRe != nil {
+				if loc := sub.prefixedRe.FindStringSubmatchIndex(s[search-1:]); loc != nil {
+					regexMatch = sub.buildMatch(s, search-1, loc)
+				}
+			} else if loc := sub.matcherRe.FindStringSubmatchIndex(s[search:]); loc != nil {
+				regexMatch = sub.buildMatch(s, search, loc)
 			}
 		}
 		for i := range m.manualByByte[b] {
@@ -356,17 +361,16 @@ func (m *multiRegex) execScan(s string, lastIndex int) *match {
 			}
 		}
 		if regexAbs >= 0 {
-			if !m.verifyStart || regexAbs == search && search == 0 {
+			if !m.verifyStart || regexAbs == 0 || regexAbs != search {
 				return m.buildMatch(s, search, regexLoc)
 			}
-			if m.verifyRe != nil && regexAbs > 0 {
-				if vloc := m.verifyRe.FindStringIndex(s[regexAbs-1:]); vloc != nil && vloc[0] == 0 {
+			if m.prefixedRe != nil {
+				if vloc := m.prefixedRe.FindStringSubmatchIndex(s[regexAbs-1:]); vloc != nil && vloc[0] == 0 {
 					return m.buildMatch(s, search, regexLoc)
 				}
-				search = regexAbs + 1
-				continue
 			}
-			return m.buildMatch(s, search, regexLoc)
+			search = regexAbs + 1
+			continue
 		}
 		return nil
 	}
@@ -385,8 +389,8 @@ func (m *multiRegex) buildMatch(s string, base int, loc []int) *match {
 	if !ok {
 		return nil
 	}
-	start := base + loc[0]
-	end := base + loc[1]
+	start := base + loc[2*group]
+	end := base + loc[2*group+1]
 	var groups []int
 	if data.keepGroups {
 		groups = make([]int, len(loc))

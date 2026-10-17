@@ -111,16 +111,19 @@ type compiledMode struct {
 
 	keywords         map[string]keywordData
 	keywordPatternRe *regexp.Regexp
-	beginRe          *regexp.Regexp
-	beginSource      string
-	endRe            *regexp.Regexp
-	illegalRe        *regexp.Regexp
-	illegalSource    string
-	terminatorEnd    string
-	contains         []*compiledMode
-	starts           *compiledMode
-	matcher          *resumableMultiRegex
-	subLanguage      []string
+	// keywordWord is set when the keyword pattern is the default `\w+`, which
+	// can be scanned without the regexp engine (and its per-call allocation).
+	keywordWord   bool
+	beginRe       *regexp.Regexp
+	beginSource   string
+	endRe         *regexp.Regexp
+	illegalRe     *regexp.Regexp
+	illegalSource string
+	terminatorEnd string
+	contains      []*compiledMode
+	starts        *compiledMode
+	matcher       *resumableMultiRegex
+	subLanguage   []string
 
 	beforeBegin func(m *match, resp *Response)
 	onBegin     func(m *match, resp *Response)
@@ -253,6 +256,7 @@ func (c *compiler) compileMode(mode *Mode, parent *compiledMode) (*compiledMode,
 		return nil, err
 	}
 	cmode.keywordPatternRe = re
+	cmode.keywordWord = keywordPattern == `\w+`
 
 	if mode.ManualBegin != nil {
 		cmode.manual = true

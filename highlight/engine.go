@@ -183,6 +183,10 @@ func (h *highlighter) processKeywords() {
 		h.emitter.addText(h.modeBuffer)
 		return
 	}
+	if top.mode.keywordWord {
+		h.processKeywordWords()
+		return
+	}
 	matches := top.mode.keywordPatternRe.FindAllStringIndex(h.modeBuffer, -1)
 	var buf strings.Builder
 	last := 0
@@ -213,6 +217,48 @@ func (h *highlighter) processKeywords() {
 	}
 	buf.WriteString(h.modeBuffer[last:])
 	h.emitter.addText(buf.String())
+}
+
+// processKeywordWords scans `\w+` keyword runs directly, avoiding the
+// regexp engine and its result slice for the common default pattern.
+func (h *highlighter) processKeywordWords() {
+	top := h.top
+	buf := h.modeBuffer
+	var text strings.Builder
+	i := 0
+	for i < len(buf) {
+		if !isWordByte(buf[i]) {
+			text.WriteByte(buf[i])
+			i++
+			continue
+		}
+		start := i
+		for i < len(buf) && isWordByte(buf[i]) {
+			i++
+		}
+		word := buf[start:i]
+		key := word
+		if h.lang.caseInsensitive {
+			key = strings.ToLower(key)
+		}
+		if data, ok := top.mode.keywords[key]; ok {
+			h.emitter.addText(text.String())
+			text.Reset()
+			h.relevance += data.relevance
+			if strings.HasPrefix(data.className, "_") {
+				text.WriteString(word)
+			} else {
+				className := data.className
+				if alias, ok := h.lang.classNameAliases[className]; ok {
+					className = alias
+				}
+				h.emitter.addKeyword(word, className)
+			}
+		} else {
+			text.WriteString(word)
+		}
+	}
+	h.emitter.addText(text.String())
 }
 
 func (h *highlighter) processSubLanguage() {
