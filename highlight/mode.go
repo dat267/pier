@@ -36,6 +36,12 @@ type Mode struct {
 	OnBegin func(m *match, resp *Response)
 	OnEnd   func(m *match, resp *Response)
 
+	// ManualBegin replaces the compiled begin regex with a Go matcher for rules
+	// RE2 cannot express (backreferences). It returns the end offset, starting at
+	// pos. ManualFirst is the byte such a match must start with.
+	ManualBegin func(s string, pos int) (end int, ok bool)
+	ManualFirst byte
+
 	beforeBegin func(m *match, resp *Response)
 
 	cachedVariants []*Mode
@@ -119,6 +125,10 @@ type compiledMode struct {
 	beforeBegin func(m *match, resp *Response)
 	onBegin     func(m *match, resp *Response)
 	onEnd       func(m *match, resp *Response)
+
+	manualBegin func(s string, pos int) (end int, ok bool)
+	manualFirst byte
+	manual      bool
 
 	// keepGroups is set when a callback may read the match's capture groups, so
 	// the inner groups must survive into the compiled matcher. Most rules only
@@ -244,16 +254,23 @@ func (c *compiler) compileMode(mode *Mode, parent *compiledMode) (*compiledMode,
 	}
 	cmode.keywordPatternRe = re
 
+	if mode.ManualBegin != nil {
+		cmode.manual = true
+		cmode.manualBegin = mode.ManualBegin
+		cmode.manualFirst = mode.ManualFirst
+	}
 	if parent != nil {
-		if mode.Begin == "" {
+		if mode.Begin == "" && !cmode.manual {
 			mode.Begin = `\B|\b`
 		}
-		beginRe, err := c.langRe(mode.Begin)
-		if err != nil {
-			return nil, err
+		if !cmode.manual {
+			beginRe, err := c.langRe(mode.Begin)
+			if err != nil {
+				return nil, err
+			}
+			cmode.beginRe = beginRe
+			cmode.beginSource = mode.Begin
 		}
-		cmode.beginRe = beginRe
-		cmode.beginSource = mode.Begin
 		if mode.EndSameAsBegin {
 			mode.End = mode.Begin
 		}
@@ -316,7 +333,11 @@ func (c *compiler) compileMode(mode *Mode, parent *compiledMode) (*compiledMode,
 func (c *compiler) buildModeRegex(mode *compiledMode) *resumableMultiRegex {
 	mm := &resumableMultiRegex{caseIgnore: c.language.CaseInsensitive}
 	for _, term := range mode.contains {
-		mm.addRule(term.beginSource, term.keepGroups, matchData{rule: term, typ: ruleBegin})
+		if term.manual {
+			mm.addManual(term.manualBegin, term.manualFirst, matchData{rule: term, typ: ruleBegin})
+		} else {
+			mm.addRule(term.beginSource, term.keepGroups, matchData{rule: term, typ: ruleBegin})
+		}
 	}
 	if mode.terminatorEnd != "" {
 		mm.addRule(mode.terminatorEnd, true, matchData{typ: ruleEnd})
