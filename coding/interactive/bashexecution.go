@@ -77,9 +77,13 @@ func GetTextOutput(result *SortToolResultContent, showImages bool) string {
 			if mimeType == "" {
 				mimeType = "image/unknown"
 			}
-			// Image dimensions need the image transport (out of scope: D26),
-			// so the fallback is rendered without them.
-			indicators = append(indicators, imageFallbackText(mimeType))
+			var dimensions *tui.ImageDimensions
+			if block.Data != "" && block.MimeType != "" {
+				if parsed, ok := tui.GetImageDimensions(block.Data, block.MimeType); ok {
+					dimensions = &parsed
+				}
+			}
+			indicators = append(indicators, tui.ImageFallback(mimeType, dimensions, ""))
 		}
 		joined := strings.Join(indicators, "\n")
 		if output != "" {
@@ -89,12 +93,6 @@ func GetTextOutput(result *SortToolResultContent, showImages bool) string {
 		}
 	}
 	return output
-}
-
-func imageFallbackText(mimeType string) string {
-	// Port of terminal-image's imageFallback without dimensions (the image
-	// transport is out of scope: D26).
-	return "[Image: " + mimeType + "]"
 }
 
 // InvalidArgText renders the invalid-argument marker.

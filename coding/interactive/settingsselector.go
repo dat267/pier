@@ -842,7 +842,27 @@ func NewSettingsSelectorComponent(config SettingsConfig, callbacks SettingsCallb
 		}
 	}
 
-	insertAfter("autocompact", tui.SettingItem{
+	autoResizeAnchor := "autocompact"
+	// The show/image-width rows only exist when the terminal can render inline
+	// images (upstream getCapabilities().images).
+	if tui.GetTerminalCapabilities().Images != "" {
+		insertAfter("autocompact", tui.SettingItem{
+			ID:           "show-images",
+			Label:        "Show images",
+			Description:  "Render images inline in terminal",
+			CurrentValue: boolStr(config.ShowImages),
+			Values:       []string{"true", "false"},
+		})
+		insertAfter("show-images", tui.SettingItem{
+			ID:           "image-width-cells",
+			Label:        "Image width",
+			Description:  "Preferred inline image width in terminal cells",
+			CurrentValue: itoa(config.ImageWidthCells),
+			Values:       []string{"60", "80", "120"},
+		})
+		autoResizeAnchor = "image-width-cells"
+	}
+	insertAfter(autoResizeAnchor, tui.SettingItem{
 		ID:           "auto-resize-images",
 		Label:        "Auto-resize images",
 		Description:  "Resize large images to 2000x2000 max for better model compatibility",

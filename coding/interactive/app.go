@@ -90,9 +90,6 @@ type AppOptions struct {
 	Offline bool
 	// Hyperlinks enables OSC 8 links in the update cards.
 	Hyperlinks bool
-	// Images is the inline-image protocol the terminal supports ("" | "kitty" |
-	// "iterm2"), gating the image settings rows and inline rendering.
-	Images string
 	// StdoutIsTTY gates the resume hint (upstream's process.stdout.isTTY).
 	// Nil detects os.Stdout at shutdown.
 	StdoutIsTTY *bool

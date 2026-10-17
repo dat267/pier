@@ -461,3 +461,35 @@ func TestWarningSettingsSubmenuToggles(t *testing.T) {
 		t.Fatal("render missing label")
 	}
 }
+
+// The show-images and image-width rows exist only when the terminal supports
+// inline images (upstream getCapabilities().images).
+func TestSettingsSelectorImageRows(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	InitTheme("dark", false)
+	previous := tui.GetTerminalCapabilities()
+	t.Cleanup(func() { tui.SetTerminalCapabilities(previous) })
+
+	events := []string{}
+	tui.SetTerminalCapabilities(tui.TerminalCapabilities{Images: tui.ImageProtocolKitty})
+	component := NewSettingsSelectorComponent(baseSettingsConfig(t), recordingCallbacks(&events))
+	rendered := strings.Join(component.Render(120), "\n")
+	for _, label := range []string{"Show images", "Image width", "Auto-resize images", "Block images"} {
+		if !strings.Contains(rendered, label) {
+			t.Fatalf("missing %q in:\n%s", label, rendered)
+		}
+	}
+	if strings.Index(rendered, "Show images") > strings.Index(rendered, "Auto-resize images") {
+		t.Fatalf("show-images rendered after auto-resize-images:\n%s", rendered)
+	}
+
+	tui.SetTerminalCapabilities(tui.TerminalCapabilities{})
+	component = NewSettingsSelectorComponent(baseSettingsConfig(t), recordingCallbacks(&events))
+	rendered = strings.Join(component.Render(120), "\n")
+	if strings.Contains(rendered, "Show images") || strings.Contains(rendered, "Image width") {
+		t.Fatalf("image rows rendered without image support:\n%s", rendered)
+	}
+}

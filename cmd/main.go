@@ -562,11 +562,13 @@ func run(appName string, args *coding.Args) error {
 		}
 	}
 	tui.SetTerminalCapabilities(capabilities)
+	// The kitty protocol only accepts PNG, so non-PNG images need the port's
+	// stdlib transcoder (upstream setImageTranscoder).
+	tui.SetImageTranscoder(coding.EncodeImageAsPNG)
 
 	app := interactive.NewApp(interactive.AppOptions{
 		Cwd:          runtimeCwd,
 		Hyperlinks:   capabilities.Hyperlinks,
-		Images:       capabilities.Images,
 		AgentDir:     agentDir,
 		TuiMode:      tuiMode,
 		Version:      coding.Version,

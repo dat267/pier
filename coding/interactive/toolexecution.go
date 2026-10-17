@@ -467,6 +467,23 @@ func (c *ToolExecutionComponent) updateDisplay() {
 				}
 			}
 		}
+		// Inline image blocks come after the text result, one spacer each
+		// (upstream tool-execution.ts). They need a terminal image protocol and
+		// the show-images setting; otherwise GetTextOutput already rendered the
+		// text fallback.
+		if c.result != nil && c.showImages && tui.GetTerminalCapabilities().Images != "" {
+			for _, block := range c.result.Content {
+				if block.Type != "image" || block.Data == "" || block.MimeType == "" {
+					continue
+				}
+				addChild(tui.NewSpacer(1))
+				maxWidth := c.imageWidthCells
+				addChild(tui.NewImageComponent(block.Data, block.MimeType,
+					tui.ImageTheme{FallbackColor: func(text string) string { return theme.Fg("toolOutput", text) }},
+					tui.ImageOptions{MaxWidthCells: &maxWidth}, nil))
+				hasContent = true
+			}
+		}
 	} else {
 		c.contentText.SetCustomBgFn(bgFn)
 		c.contentText.SetText(c.formatToolExecution())

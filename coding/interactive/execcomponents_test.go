@@ -236,8 +236,26 @@ func TestExecHelpers(t *testing.T) {
 	if !strings.Contains(output, "red text") || strings.Contains(output, "\x1b") {
 		t.Fatalf("output = %q", output)
 	}
-	if !strings.Contains(output, "[Image: image/png]") {
+	if !strings.Contains(output, "[Image: [image/png]]") {
 		t.Fatalf("image fallback missing: %q", output)
+	}
+}
+
+// The fallback carries the parsed pixel dimensions, and the inline component is
+// used instead of it when the terminal supports images and show-images is on.
+func TestGetTextOutputImageFallbackDimensions(t *testing.T) {
+	// A minimal PNG header for a 40x10 image.
+	pngData := "iVBORw0KGgoAAAANSUhEUgAAACgAAAAK"
+	result := &SortToolResultContent{Content: []ToolResultContent{{Type: "image", Data: pngData, MimeType: "image/png"}}}
+	previous := tui.GetTerminalCapabilities()
+	t.Cleanup(func() { tui.SetTerminalCapabilities(previous) })
+	tui.SetTerminalCapabilities(tui.TerminalCapabilities{})
+	if output := GetTextOutput(result, true); !strings.Contains(output, "[Image: [image/png] 40x10]") {
+		t.Fatalf("fallback = %q", output)
+	}
+	tui.SetTerminalCapabilities(tui.TerminalCapabilities{Images: tui.ImageProtocolKitty})
+	if output := GetTextOutput(result, true); strings.Contains(output, "[Image:") {
+		t.Fatalf("supported terminal should not render the fallback: %q", output)
 	}
 }
 
