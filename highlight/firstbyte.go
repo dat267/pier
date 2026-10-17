@@ -41,6 +41,25 @@ func firstByteSet(expr string, parsed *syntax.Regexp) (string, bool) {
 	return chars, true
 }
 
+// ruleFirstByteSet returns the bytes that can begin a non-empty match of one
+// rule. usable is false when the rule can match empty, in which case per-byte
+// dispatch cannot be used.
+func ruleFirstByteSet(expr string) (string, bool) {
+	parsed := parsePattern(expr)
+	if parsed == nil || minMatchLen(parsed) == 0 {
+		return "", false
+	}
+	var set [256]bool
+	addFirstBytes(&set, parsed)
+	var b strings.Builder
+	for i := 0; i < 256; i++ {
+		if set[i] {
+			b.WriteByte(byte(i))
+		}
+	}
+	return b.String(), true
+}
+
 func parsePattern(expr string) *syntax.Regexp {
 	parsed, err := syntax.Parse(expr, syntax.Perl)
 	if err != nil {

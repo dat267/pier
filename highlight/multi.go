@@ -55,9 +55,21 @@ type match struct {
 type multiRegex struct {
 	matchIndexes map[int]matchData
 	regexes      []string
+	datas        []matchData
 	matchAt      int
 	position     int
 	matcherRe    *regexp.Regexp
+	flags        string
+	// dispatch selects the rules that can begin at the current byte and matches
+	// only those, anchored, instead of running the whole alternation's NFA.
+	dispatch  bool
+	ruleFirst []string
+	subs      [256]*multiRegex
+	subsMu    sync.Mutex
+	// single is set when the matcher has exactly one rule whose callbacks do
+	// not read capture groups, so a match can be recovered with
+	// FindStringIndex instead of submatch extraction.
+	single bool
 	// firstBytes is the set of bytes that can begin a match (an IndexAny
 	// argument); empty when the skip is not selective or not safe.
 	firstBytes string
@@ -74,10 +86,15 @@ func newMultiRegex() *multiRegex {
 }
 
 func (m *multiRegex) addRule(source string, data matchData) {
-	data.position = m.position
+	m.addRuleAt(source, m.position, data)
 	m.position++
+}
+
+func (m *multiRegex) addRuleAt(source string, position int, data matchData) {
+	data.position = position
 	m.matchIndexes[m.matchAt] = data
 	m.regexes = append(m.regexes, source)
+	m.datas = append(m.datas, data)
 	m.matchAt += countCapturingGroups(source) + 1
 }
 
@@ -101,31 +118,137 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 	if caseInsensitive {
 		flags += "i"
 	}
+	m.flags = flags
 	expr := "(?" + flags + ")" + b.String()
 	re, err := compilePattern(b.String(), flags)
 	if err != nil {
 		return err
 	}
 	m.matcherRe = re
-	if parsed := parsePattern(expr); parsed != nil && leadingContextSensitive(parsed) {
-		m.verifyStart = true
-		m.firstBytes, _ = firstByteSet(expr, parsed)
-		verifyRe, err := compilePattern("(?s).(?:"+b.String()+")", flags)
-		if err == nil {
-			m.verifyRe = verifyRe
+	if parsed := parsePattern(expr); parsed != nil {
+		if leadingContextSensitive(parsed) {
+			m.verifyStart = true
+			m.firstBytes, _ = firstByteSet(expr, parsed)
+			verifyRe, err := compilePattern("(?s).(?:"+b.String()+")", flags)
+			if err == nil {
+				m.verifyRe = verifyRe
+			}
+		}
+		if m.firstBytes == "" {
+			m.firstBytes, _ = firstByteSet(expr, parsed)
 		}
 	}
-	if m.verifyRe == nil && m.firstBytes == "" {
-		if parsed := parsePattern(expr); parsed != nil {
-			m.firstBytes, _ = firstByteSet(expr, parsed)
+	// Per-byte dispatch is usable when every rule always consumes at least one
+	// byte and its first-byte set is known.
+	m.dispatch = len(m.regexes) > 1
+	m.ruleFirst = make([]string, len(m.regexes))
+	var union [256]bool
+	for i, source := range m.regexes {
+		set, usable := ruleFirstByteSet(source)
+		if !usable {
+			m.dispatch = false
+			break
+		}
+		m.ruleFirst[i] = set
+		for j := 0; j < len(set); j++ {
+			union[set[j]] = true
+		}
+	}
+	if m.dispatch {
+		var ub strings.Builder
+		for i := 0; i < 256; i++ {
+			if union[i] {
+				ub.WriteByte(byte(i))
+			}
+		}
+		m.firstBytes = ub.String()
+		if len(m.firstBytes) > 240 {
+			m.dispatch = false
 		}
 	}
 	return nil
 }
 
+// subMatcher returns a matcher containing only the rules that can begin with
+// byte b, anchored at the search position, or nil when none can.
+func (m *multiRegex) subMatcher(b byte) *multiRegex {
+	m.subsMu.Lock()
+	defer m.subsMu.Unlock()
+	if m.subs[b] != nil {
+		return m.subs[b]
+	}
+	sub := newMultiRegex()
+	sub.flags = m.flags
+	for i, source := range m.regexes {
+		if strings.IndexByte(m.ruleFirst[i], b) < 0 {
+			continue
+		}
+		sub.addRuleAt(source, m.datas[i].position, m.datas[i])
+	}
+	if len(sub.regexes) == 0 {
+		return nil
+	}
+	var pattern strings.Builder
+	pattern.WriteString(`\A(?:`)
+	for i, source := range sub.regexes {
+		if i > 0 {
+			pattern.WriteByte('|')
+		}
+		pattern.WriteByte('(')
+		pattern.WriteString(source)
+		pattern.WriteByte(')')
+	}
+	pattern.WriteByte(')')
+	re, err := compilePattern(pattern.String(), m.flags)
+	if err != nil {
+		return nil
+	}
+	sub.matcherRe = re
+	sub.single = len(sub.regexes) == 1 && !sub.datas[0].keepGroups
+	m.subs[b] = sub
+	return sub
+}
+
 // exec finds the leftmost match at or after lastIndex.
 func (m *multiRegex) exec(s string, lastIndex int) *match {
 	if m.matcherRe == nil || lastIndex > len(s) {
+		return nil
+	}
+	if m.dispatch {
+		search := lastIndex
+		for search <= len(s) {
+			candidate := strings.IndexAny(s[search:], m.firstBytes)
+			if candidate < 0 {
+				return nil
+			}
+			search += candidate
+			sub := m.subMatcher(s[search])
+			if sub == nil {
+				search++
+				continue
+			}
+			var loc []int
+			if sub.single {
+				loc = sub.matcherRe.FindStringIndex(s[search:])
+			} else {
+				loc = sub.matcherRe.FindStringSubmatchIndex(s[search:])
+			}
+			if loc == nil {
+				search++
+				continue
+			}
+			if !m.verifyStart || search == 0 {
+				return sub.buildMatch(s, search, loc)
+			}
+			if m.verifyRe != nil {
+				if vloc := m.verifyRe.FindStringIndex(s[search-1:]); vloc != nil && vloc[0] == 0 {
+					if full := m.matcherRe.FindStringSubmatchIndex(s[search:]); full != nil && full[0] == 0 {
+						return m.buildMatch(s, search, full)
+					}
+				}
+			}
+			search++
+		}
 		return nil
 	}
 	search := lastIndex
