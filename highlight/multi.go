@@ -30,6 +30,14 @@ type matchData struct {
 }
 
 // match is one rule match. index is the byte index into the whole source.
+// group returns the text of capture group i, or "" when it did not participate.
+func (m *match) group(i int) string {
+	if 2*i+1 >= len(m.groups) || m.groups[2*i] < 0 || m.groups[2*i+1] < 0 {
+		return ""
+	}
+	return m.input[m.groups[2*i]:m.groups[2*i+1]]
+}
+
 type match struct {
 	index    int
 	lexeme   string

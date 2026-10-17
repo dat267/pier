@@ -80,5 +80,41 @@ var TitleMode = Zero(Mode{ClassName: "title", Begin: IdentRe})
 // UnderscoreTitleMode matches a function/class title that may start with `_`.
 var UnderscoreTitleMode = Zero(Mode{ClassName: "title", Begin: UnderscoreIdentRe})
 
+// EndSameAsBegin adds the reference's END_SAME_AS_BEGIN mechanics: the mode's
+// first capture group at `begin` must equal the first group at `end`.
+func EndSameAsBegin(mode *Mode) *Mode {
+	mode.OnBegin = func(m *match, resp *Response) {
+		resp.data["_beginMatch"] = m.group(1)
+	}
+	mode.OnEnd = func(m *match, resp *Response) {
+		if resp.data["_beginMatch"] != m.group(1) {
+			resp.IgnoreMatch()
+		}
+	}
+	return mode
+}
+
+// Shebang builds the reference's SHEBANG mode. binary, when set, narrows the
+// match to a known interpreter and boosts relevance.
+func Shebang(binary string, relevance int) *Mode {
+	begin := `^#![ ]*/`
+	if binary != "" {
+		begin = begin + `.*` + binary + `.*`
+	}
+	mode := &Mode{
+		ClassName:    "meta",
+		Begin:        begin,
+		End:          `$`,
+		HasRelevance: true,
+		Relevance:    relevance,
+	}
+	mode.OnBegin = func(m *match, resp *Response) {
+		if m.index != 0 {
+			resp.IgnoreMatch()
+		}
+	}
+	return mode
+}
+
 // MethodGuard excludes method names from keyword processing.
 var MethodGuard = Zero(Mode{Begin: `\.\s*` + UnderscoreIdentRe})

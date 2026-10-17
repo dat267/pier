@@ -16,6 +16,7 @@ func TestGoldenHighlight(t *testing.T) {
 		{"sample_big.go", "go"},
 		{"sample.nix", "nix"},
 		{"sample.lua", "lua"},
+		{"sample.bash", "bash"},
 	}
 	for _, tc := range cases {
 		code, err := os.ReadFile("testdata/" + tc.file)

@@ -1,0 +1,22 @@
+<span class="hljs-meta">#!/usr/bin/env bash</span>
+<span class="hljs-comment"># a comment</span>
+<span class="hljs-built_in">set</span> -euo pipefail
+
+NAME=<span class="hljs-string">&quot;pier&quot;</span>
+COUNT=42
+RATIO=1.5e-3
+
+<span class="hljs-function"><span class="hljs-title">greet</span></span>() {
+  <span class="hljs-built_in">local</span> name=<span class="hljs-string">&quot;<span class="hljs-variable">$1</span>&quot;</span>
+  <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;hello, <span class="hljs-variable">${name}</span>!&quot;</span> <span class="hljs-string">&quot;<span class="hljs-variable">$HOME</span>&quot;</span>
+  <span class="hljs-built_in">printf</span> <span class="hljs-string">&#x27;%s\n&#x27;</span> <span class="hljs-string">&quot;<span class="hljs-variable">${name:-world}</span>&quot;</span>
+}
+
+cat &lt;&lt;<span class="hljs-string">HEREDOC
+heredoc ${NAME} $COUNT
+HEREDOC</span>
+
+value=$((COUNT + <span class="hljs-number">1</span>))
+<span class="hljs-keyword">if</span> [ -n <span class="hljs-string">&quot;<span class="hljs-variable">$NAME</span>&quot;</span> ]; <span class="hljs-keyword">then</span>
+  greet <span class="hljs-string">&quot;<span class="hljs-variable">$NAME</span>&quot;</span>
+<span class="hljs-keyword">fi</span>
