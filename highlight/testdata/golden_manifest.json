@@ -610,5 +610,9 @@
   {
     "file": "sample.pgsql",
     "language": "pgsql"
+  },
+  {
+    "file": "sample.d",
+    "language": "d"
   }
 ]

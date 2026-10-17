@@ -1,0 +1,17 @@
+<span class="hljs-keyword">import</span> std.stdio;
+
+<span class="hljs-comment">/+ a <span class="hljs-comment">/+ nested +/</span> comment +/</span>
+<span class="hljs-keyword">int</span> add(<span class="hljs-keyword">int</span> a, <span class="hljs-keyword">int</span> b) {
+    <span class="hljs-keyword">return</span> a + b;
+}
+
+<span class="hljs-keyword">void</span> main() {
+    <span class="hljs-keyword">auto</span> name = <span class="hljs-string">&quot;world&quot;</span>;
+    writeln(<span class="hljs-string">&quot;Hello, &quot;</span>, name);
+    <span class="hljs-keyword">int</span> x = <span class="hljs-number">0</span>xFF;
+    <span class="hljs-built_in">double</span> y = <span class="hljs-number">3.14f</span>;
+    <span class="hljs-built_in">char</span> c = <span class="hljs-string">&#x27;a&#x27;</span>;
+    <span class="hljs-keyword">auto</span> w = <span class="hljs-string">`raw string`</span>;
+    <span class="hljs-keyword">auto</span> h = <span class="hljs-string">x&quot;00FF&quot;</span>;
+    writeln(add(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>));
+}
