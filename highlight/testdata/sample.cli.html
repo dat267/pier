@@ -1,0 +1,7 @@
+<span class="hljs-comment"># JBoss CLI sample</span>
+<span class="hljs-keyword">connect</span>
+<span class="hljs-function">:read-attribute</span><span class="hljs-params">(<span class="hljs-attr">name</span>=server-state)</span>
+<span class="hljs-keyword">deploy</span> <span class="hljs-params">--force</span> <span class="hljs-string">/tmp/app.war</span>
+<span class="hljs-string">/subsystem=datasources</span><span class="hljs-function">:read-resource</span>
+<span class="hljs-keyword">jms-queue</span> <span class="hljs-params">--name=myQueue</span>
+<span class="hljs-keyword">version</span>

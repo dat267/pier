@@ -1,0 +1,7 @@
+#extend("base")
+#export("body") {
+  <h1>#(title)</h1>
+}
+#for(user in users) {
+  #(user.name)
+}

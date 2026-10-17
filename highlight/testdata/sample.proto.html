@@ -1,0 +1,21 @@
+syntax = <span class="hljs-string">&quot;proto3&quot;</span>;
+
+<span class="hljs-keyword">package</span> demo.v1;
+
+<span class="hljs-keyword">option</span> go_package = <span class="hljs-string">&quot;example.com/demo/v1&quot;</span>;
+
+<span class="hljs-class"><span class="hljs-keyword">message</span> <span class="hljs-title">User</span> </span>{
+  <span class="hljs-built_in">string</span> name = <span class="hljs-number">1</span>;
+  <span class="hljs-built_in">int32</span> age = <span class="hljs-number">2</span>;
+  <span class="hljs-keyword">repeated</span> <span class="hljs-built_in">string</span> tags = <span class="hljs-number">3</span>;
+  <span class="hljs-class"><span class="hljs-keyword">enum</span> <span class="hljs-title">Role</span> </span>{
+    ROLE_UNSPECIFIED = <span class="hljs-number">0</span>;
+    ROLE_ADMIN = <span class="hljs-number">1</span>;
+  }
+  Role role = <span class="hljs-number">4</span>;
+}
+
+<span class="hljs-class"><span class="hljs-keyword">service</span> <span class="hljs-title">UserService</span> </span>{
+  <span class="hljs-function"><span class="hljs-keyword">rpc</span> GetUser(UserRequest) <span class="hljs-keyword">returns</span> (User)</span>;
+  <span class="hljs-function"><span class="hljs-keyword">rpc</span> ListUsers(UserRequest) <span class="hljs-keyword">returns</span> (stream User)</span>;
+}

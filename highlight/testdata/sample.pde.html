@@ -1,0 +1,14 @@
+<span class="hljs-built_in">int</span> radius = <span class="hljs-number">40</span>;
+<span class="hljs-built_in">float</span> x, y;
+
+<span class="hljs-keyword">void</span> <span class="hljs-title">setup</span>() {
+  <span class="hljs-built_in">size</span>(<span class="hljs-number">640</span>, <span class="hljs-number">360</span>);
+  x = <span class="hljs-built_in">width</span> / <span class="hljs-number">2.0</span>;
+  y = <span class="hljs-built_in">height</span> / <span class="hljs-number">2.0</span>;
+}
+
+<span class="hljs-keyword">void</span> <span class="hljs-title">draw</span>() {
+  <span class="hljs-built_in">background</span>(<span class="hljs-number">0</span>);
+  <span class="hljs-built_in">ellipse</span>(x, y, radius, radius);
+  <span class="hljs-built_in">println</span>(<span class="hljs-built_in">frameCount</span>);
+}

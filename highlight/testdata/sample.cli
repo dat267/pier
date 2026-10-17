@@ -1,0 +1,7 @@
+# JBoss CLI sample
+connect
+:read-attribute(name=server-state)
+deploy --force /tmp/app.war
+/subsystem=datasources:read-resource
+jms-queue --name=myQueue
+version

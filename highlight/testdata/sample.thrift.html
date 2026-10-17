@@ -1,0 +1,19 @@
+<span class="hljs-keyword">namespace</span> go demo
+
+<span class="hljs-keyword">typedef</span> <span class="hljs-built_in">i64</span> UserId
+
+<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">User</span> </span>{
+  <span class="hljs-number">1</span>: <span class="hljs-keyword">required</span> <span class="hljs-built_in">string</span> name
+  <span class="hljs-number">2</span>: <span class="hljs-keyword">optional</span> <span class="hljs-built_in">i32</span> age
+  <span class="hljs-number">3</span>: list&lt;<span class="hljs-keyword">string</span>&gt; tags
+}
+
+<span class="hljs-class"><span class="hljs-keyword">service</span> <span class="hljs-title">UserService</span> </span>{
+  User getUser(<span class="hljs-number">1</span>: UserId id)
+  <span class="hljs-keyword">void</span> deleteUser(<span class="hljs-number">1</span>: UserId id)
+}
+
+<span class="hljs-class"><span class="hljs-keyword">enum</span> <span class="hljs-title">Role</span> </span>{
+  ADMIN = <span class="hljs-number">1</span>,
+  GUEST = <span class="hljs-number">2</span>
+}

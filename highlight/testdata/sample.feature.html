@@ -1,0 +1,17 @@
+<span class="hljs-meta">@smoke</span>
+<span class="hljs-keyword">Feature</span>: User login
+  <span class="hljs-keyword">Background</span>:
+    <span class="hljs-keyword">Given</span> a registered user
+
+  <span class="hljs-keyword">Scenario</span>: Successful login
+    <span class="hljs-keyword">Given</span> the user exists
+    <span class="hljs-keyword">When</span> the user logs in
+    <span class="hljs-keyword">Then</span> the dashboard is shown
+
+  <span class="hljs-keyword">Scenario</span> <span class="hljs-keyword">Outline</span>: Invalid password
+    <span class="hljs-keyword">When</span> the user logs in with <span class="hljs-string">&quot;&lt;password&gt;&quot;</span>
+    <span class="hljs-keyword">Then</span> an error is shown
+    <span class="hljs-keyword">Examples</span>:
+      |<span class="hljs-string"> password </span>|
+      |<span class="hljs-string"> wrong    </span>|
+      |<span class="hljs-string"> &quot;&quot;       </span>|

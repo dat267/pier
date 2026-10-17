@@ -1,0 +1,10 @@
+<span class="hljs-keyword">using</span> <span class="hljs-built_in">GLib</span>;
+
+<span class="hljs-class"><span class="hljs-keyword">namespace</span> <span class="hljs-title">Demo</span> </span>{
+    <span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Greeter</span> : <span class="hljs-title">Object</span> </span>{
+        <span class="hljs-keyword">public</span> <span class="hljs-keyword">string</span> name { <span class="hljs-keyword">get</span>; <span class="hljs-keyword">set</span>; }
+        <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> greet() {
+            <span class="hljs-keyword">stdout</span>.printf(<span class="hljs-string">&quot;Hello, %s\n&quot;</span>, name);
+        }
+    }
+}

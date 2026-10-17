@@ -1,0 +1,4 @@
+$set(_albumartist,$_artist)
+$noop($if($eq(%_album%,),,))
+%_albumartist%
+\$escaped

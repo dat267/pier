@@ -1,0 +1,6 @@
+# comment
+@BASE
+@USE[foo]
+^rem{ a online comment { nested } }
+$variable
+^if(true){...}

@@ -194,5 +194,53 @@
   {
     "file": "sample.gradle",
     "language": "gradle"
+  },
+  {
+    "file": "sample.proto",
+    "language": "protobuf"
+  },
+  {
+    "file": "sample.feature",
+    "language": "gherkin"
+  },
+  {
+    "file": "sample.leaf",
+    "language": "leaf"
+  },
+  {
+    "file": "sample.rsl",
+    "language": "rsl"
+  },
+  {
+    "file": "sample.thrift",
+    "language": "thrift"
+  },
+  {
+    "file": "sample.tagger",
+    "language": "taggerscript"
+  },
+  {
+    "file": "sample.parser3",
+    "language": "parser3"
+  },
+  {
+    "file": "sample.pf.conf",
+    "language": "pf"
+  },
+  {
+    "file": "sample.vala",
+    "language": "vala"
+  },
+  {
+    "file": "sample.cli",
+    "language": "jboss-cli"
+  },
+  {
+    "file": "sample.st",
+    "language": "smalltalk"
+  },
+  {
+    "file": "sample.pde",
+    "language": "processing"
   }
 ]

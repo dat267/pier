@@ -148,7 +148,10 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 		if parsed := parsePattern(parsedExpr); parsed != nil {
 			if leadingContextSensitive(parsed) {
 				m.verifyStart = true
-				if prefixed, err := compilePattern(`(?s)\A.`+`(?:`+joined+`)`, flags); err == nil {
+				// The DOTALL flag is scoped to the leading wildcard: applying it to the
+				// whole pattern would make every rule's `.` cross newlines, unlike the
+				// reference, whose rules are compiled without `s`.
+				if prefixed, err := compilePattern(`\A(?s:.)`+`(?:`+joined+`)`, flags); err == nil {
 					m.prefixedRe = prefixed
 				}
 			}
@@ -234,7 +237,7 @@ func (m *multiRegex) subMatcher(b byte) *multiRegex {
 		return nil
 	}
 	sub.matcherRe = re
-	if prefixed, err := compilePattern(`(?s)\A.`+body.String(), m.flags); err == nil {
+	if prefixed, err := compilePattern(`\A(?s:.)`+body.String(), m.flags); err == nil {
 		sub.prefixedRe = prefixed
 	}
 	m.subs[b] = sub

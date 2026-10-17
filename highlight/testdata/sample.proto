@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package demo.v1;
+
+option go_package = "example.com/demo/v1";
+
+message User {
+  string name = 1;
+  int32 age = 2;
+  repeated string tags = 3;
+  enum Role {
+    ROLE_UNSPECIFIED = 0;
+    ROLE_ADMIN = 1;
+  }
+  Role role = 4;
+}
+
+service UserService {
+  rpc GetUser(UserRequest) returns (User);
+  rpc ListUsers(UserRequest) returns (stream User);
+}

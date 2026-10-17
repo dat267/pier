@@ -1,0 +1,7 @@
+/* a block comment */
+surface myShader(float kd = 0.5)
+{
+  normal N = normalize(N);
+  float d = diffuse(N);
+  #pragma something
+}

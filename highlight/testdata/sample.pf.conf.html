@@ -1,0 +1,9 @@
+<span class="hljs-comment"># pf.conf sample</span>
+ext_if=<span class="hljs-string">&quot;em0&quot;</span>
+web_ports = <span class="hljs-string">&quot;{ 80, 443 }&quot;</span>
+<span class="hljs-built_in">set</span> <span class="hljs-keyword">skip</span> <span class="hljs-keyword">on</span> lo0
+<span class="hljs-built_in">block</span> <span class="hljs-keyword">in</span> <span class="hljs-literal">all</span>
+<span class="hljs-built_in">pass</span> <span class="hljs-keyword">out</span> <span class="hljs-keyword">quick</span> <span class="hljs-keyword">on</span> <span class="hljs-variable">$ext_if</span> <span class="hljs-keyword">proto</span> tcp <span class="hljs-keyword">from</span> <span class="hljs-literal">any</span> <span class="hljs-keyword">to</span> <span class="hljs-literal">any</span> <span class="hljs-keyword">port</span> { <span class="hljs-number">80</span>, <span class="hljs-number">443</span> }
+<span class="hljs-built_in">antispoof</span> <span class="hljs-keyword">for</span> <span class="hljs-variable">$ext_if</span>
+<span class="hljs-built_in">table</span> <span class="hljs-variable">&lt;badhosts&gt;</span> <span class="hljs-keyword">persist</span>
+<span class="hljs-built_in">block</span> <span class="hljs-keyword">drop</span> <span class="hljs-keyword">in</span> <span class="hljs-keyword">quick</span> <span class="hljs-keyword">from</span> <span class="hljs-variable">&lt;badhosts&gt;</span> <span class="hljs-keyword">to</span> <span class="hljs-literal">any</span>
