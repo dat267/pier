@@ -662,5 +662,9 @@
   {
     "file": "sample.xq",
     "language": "xquery"
+  },
+  {
+    "file": "sample.adb",
+    "language": "ada"
   }
 ]

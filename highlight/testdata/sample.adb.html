@@ -1,0 +1,12 @@
+<span class="hljs-comment">-- a comment</span>
+<span class="hljs-keyword">with</span> Ada.Text_IO; <span class="hljs-keyword">use</span> Ada.Text_IO;
+
+<span class="hljs-keyword">procedure</span> <span class="hljs-title">Hello</span> <span class="hljs-keyword">is</span>
+   Count : <span class="hljs-type">Integer</span> := <span class="hljs-number">0</span>;
+   Name : <span class="hljs-type">String</span> := <span class="hljs-string">&quot;world&quot;</span>;
+<span class="hljs-keyword">begin</span>
+   <span class="hljs-keyword">for</span> I <span class="hljs-keyword">in</span> <span class="hljs-number">1</span> .. <span class="hljs-number">3</span> <span class="hljs-keyword">loop</span>
+      Count := Count + I;
+   <span class="hljs-keyword">end</span> <span class="hljs-keyword">loop</span>;
+   Put_Line(<span class="hljs-string">&quot;Hello, &quot;</span> &amp; Name);
+<span class="hljs-keyword">end</span> Hello;
