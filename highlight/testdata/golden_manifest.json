@@ -694,5 +694,9 @@
   {
     "file": "sample.stan",
     "language": "stan"
+  },
+  {
+    "file": "sample.vim",
+    "language": "vim"
   }
 ]

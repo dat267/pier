@@ -1,0 +1,13 @@
+<span class="hljs-comment">&quot; a comment</span>
+<span class="hljs-keyword">set</span> <span class="hljs-keyword">number</span>
+<span class="hljs-keyword">let</span> <span class="hljs-variable">g:name</span> = <span class="hljs-string">&quot;world&quot;</span>
+
+<span class="hljs-function"><span class="hljs-keyword">function</span>! <span class="hljs-title">Greet</span><span class="hljs-params">(name)</span></span>
+    <span class="hljs-keyword">echo</span> <span class="hljs-string">&quot;Hello, &quot;</span> . <span class="hljs-variable">a:name</span>
+<span class="hljs-keyword">endfunction</span>
+
+<span class="hljs-keyword">if</span> <span class="hljs-built_in">exists</span>(<span class="hljs-string">&#x27;g:name&#x27;</span>)
+    <span class="hljs-keyword">echo</span> <span class="hljs-variable">g:name</span>
+<span class="hljs-keyword">endif</span>
+
+<span class="hljs-keyword">let</span> <span class="hljs-variable">s:count</span> = <span class="hljs-number">42</span>
