@@ -60,3 +60,26 @@ func TestResolveCLIPaths(t *testing.T) {
 		}
 	}
 }
+
+// Port of utils/paths.ts normalizeWindowsShellPath: MSYS/Git-Bash/WSL mount
+// paths become native drive paths.
+func TestNormalizeWindowsShellPath(t *testing.T) {
+	for input, want := range map[string]string{
+		"/mnt/c/Users/me/file.txt": "C:\\Users\\me\\file.txt",
+		"/cygdrive/d/tmp":          "D:\\tmp",
+		"/c/Users/Me":              "C:\\Users\\Me",
+		"/C/Users":                 "C:\\Users",
+		"/c":                       "C:\\",
+		"/c/":                      "C:\\",
+		"//server/share":           "//server/share",
+		"/c/Users\\me":             "/c/Users\\me",
+		`C:\Users`:                 `C:\Users`,
+		"relative/path":            "relative/path",
+		"/notadrive/x":             "/notadrive/x",
+		"/mnt/cc/x":                "/mnt/cc/x",
+	} {
+		if got := NormalizeWindowsShellPath(input); got != want {
+			t.Errorf("%q: got %q want %q", input, got, want)
+		}
+	}
+}

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"golang.org/x/text/unicode/norm"
@@ -70,8 +71,8 @@ func homeDir() string {
 }
 
 // NormalizePath normalizes path input: trim, unicode-space folding, @-prefix
-// stripping, ~ expansion, and file:// URLs (port of normalizePath). The
-// Windows shell-path rewrite is Windows-only and unported (D-row D7).
+// stripping, the Windows shell-path rewrite, ~ expansion, and file:// URLs
+// (port of normalizePath).
 func NormalizePath(input string, options PathInputOptions) string {
 	normalized := input
 	if options.Trim {
@@ -82,6 +83,9 @@ func NormalizePath(input string, options PathInputOptions) string {
 	}
 	if options.StripAtPrefix && strings.HasPrefix(normalized, "@") {
 		normalized = normalized[1:]
+	}
+	if runtime.GOOS == "windows" {
+		normalized = NormalizeWindowsShellPath(normalized)
 	}
 	expandTilde := true
 	if options.ExpandTilde != nil {
@@ -95,7 +99,7 @@ func NormalizePath(input string, options PathInputOptions) string {
 		if normalized == "~" {
 			return home
 		}
-		if strings.HasPrefix(normalized, "~/") {
+		if strings.HasPrefix(normalized, "~/") || (runtime.GOOS == "windows" && strings.HasPrefix(normalized, "~\\")) {
 			return filepath.Join(home, normalized[2:])
 		}
 	}
@@ -105,6 +109,27 @@ func NormalizePath(input string, options PathInputOptions) string {
 		}
 	}
 	return normalized
+}
+
+var windowsShellPathPattern = regexp.MustCompile(`(?i)^/(?:mnt/|cygdrive/)?([a-z])(?:/(.*))?$`)
+
+// NormalizeWindowsShellPath rewrites an MSYS/Git-Bash/WSL mount path such as
+// /c/Users/me, /mnt/c/Users/me or /cygdrive/c/Users/me to C:\Users\me
+// (upstream normalizeWindowsShellPath). A UNC path, a path with a backslash,
+// or anything else is returned unchanged.
+func NormalizeWindowsShellPath(filePath string) string {
+	if !strings.HasPrefix(filePath, "/") || strings.HasPrefix(filePath, "//") || strings.Contains(filePath, "\\") {
+		return filePath
+	}
+	match := windowsShellPathPattern.FindStringSubmatch(filePath)
+	if match == nil {
+		return filePath
+	}
+	suffix := ""
+	if match[2] != "" {
+		suffix = strings.ReplaceAll(match[2], "/", "\\")
+	}
+	return strings.ToUpper(match[1]) + ":\\" + suffix
 }
 
 // filePathFromURL converts a file:// URL to a path (fileURLToPath).
