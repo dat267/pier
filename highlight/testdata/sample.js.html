@@ -1,0 +1,42 @@
+<span class="hljs-meta">#!/usr/bin/env node</span>
+<span class="hljs-meta">&#x27;use strict&#x27;</span>;
+
+<span class="hljs-comment">/**
+ * A demo class.
+ * <span class="hljs-doctag">@param <span class="hljs-type">{string}</span> </span>name the name
+ * <span class="hljs-doctag">@returns <span class="hljs-type">{Demo}</span></span>
+ */</span>
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Demo</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Base</span> </span>{
+  #count = <span class="hljs-number">42</span>;
+  <span class="hljs-function"><span class="hljs-title">constructor</span>(<span class="hljs-params">name</span>)</span> {
+    <span class="hljs-built_in">super</span>();
+    <span class="hljs-built_in">this</span>.name = name;
+  }
+
+  <span class="hljs-keyword">get</span> <span class="hljs-title">label</span>() { <span class="hljs-keyword">return</span> <span class="hljs-string">`demo <span class="hljs-subst">${<span class="hljs-built_in">this</span>.name}</span>`</span>; }
+  <span class="hljs-keyword">set</span> <span class="hljs-title">label</span>(<span class="hljs-params">value</span>) { <span class="hljs-built_in">this</span>.name = value; }
+
+  <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-title">run</span>(<span class="hljs-params">items</span>)</span> {
+    <span class="hljs-comment">// a line comment</span>
+    <span class="hljs-comment">/* a block comment */</span>
+    <span class="hljs-keyword">const</span> ratio = <span class="hljs-number">1.5e-3</span>;
+    <span class="hljs-keyword">const</span> hex = <span class="hljs-number">0x1f</span>, bin = <span class="hljs-number">0b1010</span>, big = <span class="hljs-number">123n</span>;
+    <span class="hljs-keyword">const</span> re = <span class="hljs-regexp">/[a-z]+\/[0-9]{2}/gi</span>;
+    <span class="hljs-keyword">const</span> arrow = <span class="hljs-function">(<span class="hljs-params">a, b</span>) =&gt;</span> a + b;
+    <span class="hljs-keyword">const</span> obj = { <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;pier&#x27;</span>, <span class="hljs-attr">count</span>: hex, <span class="hljs-attr">nested</span>: { <span class="hljs-attr">ok</span>: <span class="hljs-literal">true</span> } };
+    <span class="hljs-keyword">const</span> [first, ...rest] = items;
+    <span class="hljs-keyword">const</span> html = html`<span class="xml"><span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">&quot;box&quot;</span>&gt;</span></span><span class="hljs-subst">${<span class="hljs-built_in">this</span>.name}</span><span class="xml"><span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>`</span>;
+    <span class="hljs-keyword">const</span> css = css`<span class="css"><span class="hljs-selector-class">.box</span> { <span class="hljs-attribute">color</span>: <span class="hljs-number">#fff</span>; }`</span>;
+    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">this</span>.#count &gt; <span class="hljs-number">0</span> &amp;&amp; rest.length) {
+      <span class="hljs-built_in">console</span>.log(html, css, ratio, bin, big, re, arrow(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>), obj, first);
+    }
+    <span class="hljs-keyword">return</span> <span class="xml"><span class="hljs-tag">&lt;<span class="hljs-name">Box</span> <span class="hljs-attr">name</span>=<span class="hljs-string">{this.name}</span> <span class="hljs-attr">count</span>=<span class="hljs-string">{this.#count}</span> /&gt;</span></span>;
+  }
+}
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">helper</span>(<span class="hljs-params">a, b</span>) </span>{
+  <span class="hljs-keyword">return</span> a * b;
+}
+
+<span class="hljs-keyword">const</span> fn = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">named</span>(<span class="hljs-params">x</span>) </span>{ <span class="hljs-keyword">return</span> x; };
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> Demo;

@@ -102,12 +102,19 @@ func (c *compiler) compileLanguageFor(language *Language) (*compiledMode, error)
 }
 
 // Highlight highlights code with the named language and returns the scope tree.
+// An illegal lexeme aborts the highlight and returns the input as plain text,
+// matching the reference's default (ignoreIllegals false).
 func Highlight(code, language string) (*Result, error) {
+	return HighlightWith(code, language, false)
+}
+
+// HighlightWith is Highlight with the reference's ignoreIllegals option.
+func HighlightWith(code, language string, ignoreIllegals bool) (*Result, error) {
 	lang, err := getCompiledLanguage(language)
 	if err != nil {
 		return nil, err
 	}
-	return highlightWith(lang, code), nil
+	return highlightWith(lang, code, ignoreIllegals), nil
 }
 
 // Languages returns the sorted names of every registered language.

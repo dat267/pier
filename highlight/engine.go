@@ -100,16 +100,19 @@ type highlighter struct {
 	resumeScanAtSame bool
 	lastMatch        *match
 	continuations    map[string]*compiledMode
+	ignoreIllegals   bool
+	illegal          bool
 }
 
 const noMatch = -1
 
-func highlightWith(lang *compiledLanguage, code string) *Result {
+func highlightWith(lang *compiledLanguage, code string, ignoreIllegals bool) *Result {
 	h := &highlighter{
-		lang:          lang,
-		rootMode:      lang.root,
-		emitter:       newEmitter(),
-		continuations: map[string]*compiledMode{},
+		lang:           lang,
+		rootMode:       lang.root,
+		emitter:        newEmitter(),
+		continuations:  map[string]*compiledMode{},
+		ignoreIllegals: ignoreIllegals,
 	}
 	h.top = &modeInstance{mode: lang.root, data: map[string]string{}}
 	h.processContinuations()
@@ -129,6 +132,9 @@ func highlightWith(lang *compiledLanguage, code string) *Result {
 		}
 		before := code[h.index:m.index]
 		processed := h.processLexeme(before, m)
+		if h.illegal {
+			break
+		}
 		h.index = m.index + processed
 		if h.index > len(code) {
 			// A zero-width match at the end advances one past it; JavaScript's
@@ -137,6 +143,16 @@ func highlightWith(lang *compiledLanguage, code string) *Result {
 		}
 		if h.iterations > 1000000 {
 			break
+		}
+	}
+	if h.illegal {
+		// The reference aborts the whole highlight and returns the input as
+		// plain text when an illegal lexeme is found and illegal matches are not
+		// being ignored.
+		return &Result{
+			Language: lang.name,
+			Illegal:  true,
+			Nodes:    []*Node{{Text: code}},
 		}
 	}
 	h.processLexeme(code[h.index:], nil)
@@ -212,7 +228,7 @@ func (h *highlighter) processSubLanguage() {
 			h.emitter.addText(h.modeBuffer)
 			return
 		}
-		result = highlightWith(sub, h.modeBuffer)
+		result = highlightWith(sub, h.modeBuffer, true)
 	} else {
 		result, name = highlightAuto(h.modeBuffer, h.top.mode.subLanguage)
 		if result == nil {
@@ -399,6 +415,10 @@ func (h *highlighter) processLexeme(textBefore string, m *match) int {
 	case ruleBegin:
 		return h.doBeginMatch(m)
 	case ruleIllegal:
+		if !h.ignoreIllegals {
+			h.illegal = true
+			return 0
+		}
 		if lexeme == "" {
 			return 1
 		}
@@ -427,7 +447,7 @@ func highlightAuto(code string, subset []string) (*Result, string) {
 		if err != nil || lang.disableAutodetect {
 			continue
 		}
-		result := highlightWith(lang, code)
+		result := highlightWith(lang, code, true)
 		if best == nil || result.Relevance > best.Relevance {
 			best = result
 			bestName = lang.name
