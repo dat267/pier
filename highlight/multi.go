@@ -54,11 +54,12 @@ func (m *match) group(i int) string {
 	return m.input[m.groups[2*index]:m.groups[2*index+1]]
 }
 
-// manualRule is a begin rule with a Go matcher instead of a regex.
+// manualRule is a begin rule with a Go matcher instead of a regex. firsts is
+// the set of bytes a match can start with, for the per-byte dispatch.
 type manualRule struct {
-	begin func(s string, pos int) (end int, ok bool)
-	first byte
-	data  matchData
+	begin  func(s string, pos int) (end int, ok bool)
+	firsts string
+	data   matchData
 }
 
 type multiRegex struct {
@@ -106,10 +107,10 @@ func (m *multiRegex) addRuleAt(source string, position int, data matchData) {
 	m.matchAt += countCapturingGroups(source) + 1
 }
 
-func (m *multiRegex) addManual(begin func(string, int) (int, bool), first byte, data matchData) {
+func (m *multiRegex) addManual(begin func(string, int) (int, bool), firsts string, data matchData) {
 	data.position = m.position
 	m.position++
-	m.manuals = append(m.manuals, manualRule{begin: begin, first: first, data: data})
+	m.manuals = append(m.manuals, manualRule{begin: begin, firsts: firsts, data: data})
 }
 
 // compile builds the joined alternation. It is the port of join(), without the
@@ -170,12 +171,17 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 		}
 	}
 	for _, mr := range m.manuals {
-		union[mr.first] = true
+		for i := 0; i < len(mr.firsts); i++ {
+			union[mr.firsts[i]] = true
+		}
 	}
 	m.dispatch = usable && (len(m.regexes) > 1 || len(m.manuals) > 0)
 	if m.dispatch {
 		for _, mr := range m.manuals {
-			m.manualByByte[mr.first] = append(m.manualByByte[mr.first], mr)
+			for i := 0; i < len(mr.firsts); i++ {
+				b := mr.firsts[i]
+				m.manualByByte[b] = append(m.manualByByte[b], mr)
+			}
 		}
 		var ub strings.Builder
 		for i := 0; i < 256; i++ {
@@ -327,7 +333,7 @@ func (m *multiRegex) execScan(s string, lastIndex int) *match {
 			}
 			for i := range m.manuals {
 				mr := &m.manuals[i]
-				if mr.first != s[p] {
+				if strings.IndexByte(mr.firsts, s[p]) < 0 {
 					continue
 				}
 				if end, ok := mr.begin(s, p); ok {
@@ -408,7 +414,7 @@ type subRule struct {
 	src    string
 	keep   bool
 	manual func(string, int) (int, bool)
-	first  byte
+	firsts string
 	data   matchData
 }
 
@@ -434,8 +440,8 @@ func (r *resumableMultiRegex) addRule(source string, keepGroups bool, data match
 	}
 }
 
-func (r *resumableMultiRegex) addManual(begin func(string, int) (int, bool), first byte, data matchData) {
-	r.rules = append(r.rules, subRule{manual: begin, first: first, data: data})
+func (r *resumableMultiRegex) addManual(begin func(string, int) (int, bool), firsts string, data matchData) {
+	r.rules = append(r.rules, subRule{manual: begin, firsts: firsts, data: data})
 	if data.typ == ruleBegin {
 		r.count++
 	}
@@ -456,7 +462,7 @@ func (r *resumableMultiRegex) getMatcher(index int) *multiRegex {
 	for i := index; i < len(r.rules); i++ {
 		rule := r.rules[i]
 		if rule.manual != nil {
-			matcher.addManual(rule.manual, rule.first, rule.data)
+			matcher.addManual(rule.manual, rule.firsts, rule.data)
 		} else {
 			matcher.addRule(rule.src, rule.data)
 		}

@@ -40,7 +40,7 @@ type Mode struct {
 	// RE2 cannot express (backreferences). It returns the end offset, starting at
 	// pos. ManualFirst is the byte such a match must start with.
 	ManualBegin func(s string, pos int) (end int, ok bool)
-	ManualFirst byte
+	ManualFirst string
 
 	beforeBegin func(m *match, resp *Response)
 
@@ -127,7 +127,7 @@ type compiledMode struct {
 	onEnd       func(m *match, resp *Response)
 
 	manualBegin func(s string, pos int) (end int, ok bool)
-	manualFirst byte
+	manualFirst string
 	manual      bool
 
 	// keepGroups is set when a callback may read the match's capture groups, so

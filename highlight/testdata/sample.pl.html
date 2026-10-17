@@ -1,0 +1,30 @@
+<span class="hljs-comment">#!/usr/bin/env perl</span>
+<span class="hljs-keyword">use</span> strict;
+<span class="hljs-keyword">use</span> warnings;
+<span class="hljs-keyword">use</span> feature <span class="hljs-string">&#x27;say&#x27;</span>;
+
+<span class="hljs-comment"># a comment</span>
+<span class="hljs-keyword">my</span> $name = <span class="hljs-string">&quot;pier&quot;</span>;
+<span class="hljs-keyword">my</span> @items = (<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>);
+<span class="hljs-keyword">my</span> %map = (<span class="hljs-string">name =&gt;</span> <span class="hljs-string">&#x27;pier&#x27;</span>, <span class="hljs-string">count =&gt;</span> <span class="hljs-number">42</span>);
+<span class="hljs-keyword">my</span> $ref = { <span class="hljs-string">key =&gt;</span> <span class="hljs-string">&#x27;value&#x27;</span> };
+
+<span class="hljs-comment">=pod
+A block comment.
+=cut</span>
+
+<span class="hljs-function"><span class="hljs-keyword">sub</span> <span class="hljs-title">describe</span> </span>{
+    <span class="hljs-keyword">my</span> ($label, $count) = @_;
+    <span class="hljs-keyword">my</span> $interp = <span class="hljs-string">&quot;name=$name count=$count&quot;</span>;
+    <span class="hljs-keyword">my</span> $raw = <span class="hljs-string">&#x27;single quoted&#x27;</span>;
+    <span class="hljs-keyword">my</span> $qq = <span class="hljs-string">qq{interpolated $name}</span>;
+    <span class="hljs-keyword">my</span> $re = <span class="hljs-regexp">qr/[a-z]+\/[0-9]{2}/i</span>;
+    <span class="hljs-keyword">my</span> $match = $label =~ <span class="hljs-regexp">m/(\w+)/</span>;
+    (<span class="hljs-keyword">my</span> $sub = $label) =~ <span class="hljs-regexp">s/\s+/_/g</span>;
+    (<span class="hljs-keyword">my</span> $tr = $label) =~ <span class="hljs-regexp">tr/a-z/A-Z/</span>;
+    <span class="hljs-keyword">my</span> $num = <span class="hljs-number">0x1f</span> + 0b101<span class="hljs-number">0</span> + <span class="hljs-number">1.5</span>e-<span class="hljs-number">3</span>;
+    <span class="hljs-keyword">say</span> $interp, $raw, $qq, $re, $match, $sub, $tr, $num;
+    <span class="hljs-keyword">return</span> $label;
+}
+
+describe($name, <span class="hljs-number">42</span>);

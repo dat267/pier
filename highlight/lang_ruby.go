@@ -86,7 +86,7 @@ func Ruby() *Language {
 		ClassName:   "string",
 		ReturnBegin: true,
 		ManualBegin: rubyHeredocBegin,
-		ManualFirst: '<',
+		ManualFirst: "<",
 		Contains: []*Mode{
 			{Begin: `<<[-~]?'?`},
 			EndSameAsBegin(&Mode{Begin: `(\w+)`, End: `(\w+)`, Contains: []*Mode{BackslashEscape, subst}}),
