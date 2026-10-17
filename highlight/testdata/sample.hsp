@@ -1,0 +1,11 @@
+#const TITLE "HSP Sample"
+
+*main
+    title TITLE
+    mes "Hello, HSP!"
+    repeat 3
+        mes "loop"
+    loop
+    stop
+
+; a comment

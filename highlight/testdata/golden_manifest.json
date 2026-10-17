@@ -478,5 +478,25 @@
   {
     "file": "sample.mercury",
     "language": "mercury"
+  },
+  {
+    "file": "sample.lisp",
+    "language": "lisp"
+  },
+  {
+    "file": "sample.zep",
+    "language": "zephir"
+  },
+  {
+    "file": "sample.hsp",
+    "language": "hsp"
+  },
+  {
+    "file": "sample.moon",
+    "language": "moonscript"
+  },
+  {
+    "file": "sample.vbs",
+    "language": "vbscript"
   }
 ]

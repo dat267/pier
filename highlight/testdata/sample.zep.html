@@ -1,0 +1,12 @@
+<span class="hljs-keyword">namespace</span> <span class="hljs-title">Demo</span>;
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Greeter</span> </span>{
+    <span class="hljs-keyword">public</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">greet</span><span class="hljs-params">(<span class="hljs-keyword">string</span> name)</span> -&gt; <span class="hljs-title">string</span> </span>{
+        <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;Hello, &quot;</span> . name;
+    }
+
+    <span class="hljs-keyword">public</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>{
+        <span class="hljs-keyword">let</span> g = <span class="hljs-keyword">new</span> Greeter();
+        g-&gt;greet(<span class="hljs-string">&quot;world&quot;</span>);
+    }
+}
