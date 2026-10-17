@@ -339,6 +339,11 @@ func (h *highlighter) endOfMode(mode *modeInstance, m *match, remainder string) 
 }
 
 func (h *highlighter) doIgnore(lexeme string) int {
+	// An ignored begin did not enter its mode, so it must not count as the last
+	// begin for the zero-width begin/end collision guard in processLexeme; that
+	// guard would otherwise let an ignored lookahead-guard rule suppress the
+	// real end match at the same index.
+	h.lastMatch = nil
 	if h.top.regexIndex == 0 {
 		if lexeme != "" {
 			h.modeBuffer += lexeme[:1]

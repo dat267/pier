@@ -123,8 +123,12 @@ func Markdown() *Language {
 		ClassName: "section",
 		Begin:     `^`,
 		Contains: []*Mode{
-			{Begin: `^[=-]*$`},
-			{Begin: `^`, End: `\n`, Contains: containable},
+			{Begin: `^[=-]+$`},
+			// `[^\n]+` rather than the reference's zero-width `^`: at end of input
+			// a sliced search makes a bare `^` match at the slice boundary, and that
+			// zero-width rule then beats the section's own end and the section never
+			// closes.
+			{Begin: `[^\n]+`, End: `\n`, Contains: containable},
 		},
 	}
 	setext.beforeBegin = func(m *match, resp *Response) {
