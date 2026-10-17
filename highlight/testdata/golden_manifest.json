@@ -638,5 +638,9 @@
   {
     "file": "sample.juliarepl",
     "language": "julia-repl"
+  },
+  {
+    "file": "sample.yaml",
+    "language": "yaml"
   }
 ]

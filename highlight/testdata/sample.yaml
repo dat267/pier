@@ -1,0 +1,23 @@
+# a comment
+---
+name: demo
+version: 1.0
+enabled: true
+count: 42
+time: 2024-01-01T12:00:00Z
+"quoted key": value
+nested:
+  child: "yes"
+list:
+  - one
+  - two
+inline: [1, 2, 3]
+obj: {a: 1, b: 2}
+script: |
+  line one
+  line two
+folded: >
+  folded text
+tagged: !!str 42
+ref: &anchor value
+templated: "hello {{ name }}"
