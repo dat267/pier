@@ -1,0 +1,20 @@
+// a comment
+@base: #333;
+@radius: 4px;
+
+.rounded(@r: 4px) {
+  border-radius: @r;
+}
+
+.card {
+  color: @base;
+  padding: 10px;
+
+  &:hover {
+    color: lighten(@base, 10%);
+  }
+
+  .title {
+    font-weight: bold;
+  }
+}

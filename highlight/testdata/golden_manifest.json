@@ -742,5 +742,9 @@
   {
     "file": "sample.tex",
     "language": "latex"
+  },
+  {
+    "file": "sample.less",
+    "language": "less"
   }
 ]
