@@ -1,0 +1,21 @@
+<span class="hljs-keyword">import</span> QtQuick <span class="hljs-number">2.15</span>
+
+<span class="hljs-title">Rectangle</span> {
+    <span class="hljs-attribute">id:</span><span class="hljs-string"> root</span>
+    <span class="hljs-attribute">width</span>: <span class="hljs-number">640</span>
+    <span class="hljs-attribute">height</span>: <span class="hljs-number">480</span>
+    <span class="hljs-attribute">color</span>: <span class="hljs-string">&quot;steelblue&quot;</span>
+
+    <span class="hljs-keyword">property</span><span class="hljs-string"> int count</span>: <span class="hljs-number">0</span>
+    <span class="hljs-keyword">signal</span><span class="hljs-string"> clicked</span>()
+
+    <span class="hljs-title">Text</span> {
+        <span class="hljs-attribute">anchors.centerIn</span>: <span class="hljs-built_in">parent</span>
+        <span class="hljs-attribute">text</span>: <span class="hljs-string">&quot;Hello, QML&quot;</span>
+    }
+
+    <span class="hljs-title">MouseArea</span> {
+        <span class="hljs-attribute">anchors.fill</span>: <span class="hljs-built_in">parent</span>
+        <span class="hljs-attribute">onClicked</span>: root.clicked()
+    }
+}

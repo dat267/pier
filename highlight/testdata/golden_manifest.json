@@ -582,5 +582,9 @@
   {
     "file": "sample.ex",
     "language": "elixir"
+  },
+  {
+    "file": "sample.qml",
+    "language": "qml"
   }
 ]
