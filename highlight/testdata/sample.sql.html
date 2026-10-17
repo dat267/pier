@@ -1,0 +1,17 @@
+<span class="hljs-comment">-- a comment</span>
+<span class="hljs-keyword">SELECT</span> u.id, u.name, <span class="hljs-built_in">COUNT</span>(o.id) <span class="hljs-keyword">AS</span> orders
+<span class="hljs-keyword">FROM</span> users u
+<span class="hljs-keyword">LEFT</span> <span class="hljs-keyword">JOIN</span> orders o <span class="hljs-keyword">ON</span> o.user_id <span class="hljs-operator">=</span> u.id
+<span class="hljs-keyword">WHERE</span> u.active <span class="hljs-operator">=</span> <span class="hljs-literal">true</span> <span class="hljs-keyword">AND</span> u.created_at <span class="hljs-operator">&gt;</span> <span class="hljs-type">DATE</span> <span class="hljs-string">&#x27;2024-01-01&#x27;</span>
+<span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span> u.id, u.name
+<span class="hljs-keyword">HAVING</span> <span class="hljs-built_in">COUNT</span>(o.id) <span class="hljs-operator">&gt;</span> <span class="hljs-number">2</span>
+<span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span> orders <span class="hljs-keyword">DESC</span>
+LIMIT <span class="hljs-number">10</span>;
+
+<span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">TABLE</span> users (
+    id <span class="hljs-type">INTEGER</span> <span class="hljs-keyword">PRIMARY</span> KEY,
+    name <span class="hljs-type">VARCHAR</span>(<span class="hljs-number">255</span>) <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">NULL</span>,
+    active <span class="hljs-type">BOOLEAN</span> <span class="hljs-keyword">DEFAULT</span> <span class="hljs-literal">true</span>
+);
+
+<span class="hljs-keyword">SELECT</span> <span class="hljs-built_in">CAST</span>(x <span class="hljs-keyword">AS</span> <span class="hljs-type">DOUBLE PRECISION</span>), <span class="hljs-built_in">SUBSTRING</span>(name <span class="hljs-keyword">FROM</span> <span class="hljs-number">1</span> <span class="hljs-keyword">FOR</span> <span class="hljs-number">3</span>) <span class="hljs-keyword">FROM</span> t <span class="hljs-keyword">WHERE</span> x <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">NULL</span>;
