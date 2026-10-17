@@ -706,5 +706,9 @@
   {
     "file": "sample.lc",
     "language": "livecodeserver"
+  },
+  {
+    "file": "sample.mac",
+    "language": "maxima"
   }
 ]
