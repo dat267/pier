@@ -1,0 +1,238 @@
+package highlight
+
+func init() { RegisterLanguage("stylus", Stylus()) }
+
+// stylusSelector builds a stylus selector rule whose reference begin ends with
+// `(?=[.\s\n[:,(])`: the name must be followed by one of those bytes. That
+// lookahead becomes a beforeBegin guard.
+func stylusSelector(className, begin string) *Mode {
+	m := &Mode{ClassName: className, Begin: begin}
+	m.beforeBegin = func(x *match, resp *Response) {
+		if end := x.index + len(x.lexeme); end < len(x.input) && !stylusSelectorEnd(x.input[end]) {
+			resp.IgnoreMatch()
+		}
+	}
+	return m
+}
+
+func stylusSelectorEnd(b byte) bool {
+	switch b {
+	case '.', '[', ':', ',', '(':
+		return true
+	}
+	return isWhitespaceByte(b)
+}
+
+// Stylus returns the Stylus language definition (a port of languages/stylus.js).
+func Stylus() *Language {
+	return &Language{
+		Name:            "Stylus",
+		Aliases:         []string{"styl"},
+		CaseInsensitive: false,
+		Mode: Mode{
+			Keywords: Keywords{"keyword": "if else for in"},
+			Illegal:  "(\\?|(\\bReturn\\b)|(\\bEnd\\b)|(\\bend\\b)|(\\bdef\\b)|;|#\\s|\\*\\s|===\\s|\\||%)",
+			Contains: []*Mode{
+				&Mode{
+					ClassName: "string",
+					Begin:     "\"",
+					End:       "\"",
+					Illegal:   "\\n",
+					Contains: []*Mode{&Mode{
+						Begin:        "\\\\[\\s\\S]",
+						HasRelevance: true, Relevance: 0,
+					}},
+				},
+				&Mode{
+					ClassName: "string",
+					Begin:     "'",
+					End:       "'",
+					Illegal:   "\\n",
+					Contains: []*Mode{&Mode{
+						Begin:        "\\\\[\\s\\S]",
+						HasRelevance: true, Relevance: 0,
+					}},
+				},
+				&Mode{
+					ClassName: "comment",
+					Begin:     "//",
+					End:       "$",
+					Contains: []*Mode{&Mode{
+						Begin: "\\b(a|an|the|are|I'm|isn't|don't|doesn't|won't|but|just|should|pretty|simply|enough|gonna|going|wtf|so|such|will|you|your|they|like|more)\\b",
+					}, &Mode{
+						ClassName:    "doctag",
+						Begin:        "(?:TODO|FIXME|NOTE|BUG|OPTIMIZE|HACK|XXX):",
+						HasRelevance: true, Relevance: 0,
+					}},
+				},
+				&Mode{
+					ClassName: "comment",
+					Begin:     "/\\*",
+					End:       "\\*/",
+					Contains: []*Mode{&Mode{
+						Begin: "\\b(a|an|the|are|I'm|isn't|don't|doesn't|won't|but|just|should|pretty|simply|enough|gonna|going|wtf|so|such|will|you|your|they|like|more)\\b",
+					}, &Mode{
+						ClassName:    "doctag",
+						Begin:        "(?:TODO|FIXME|NOTE|BUG|OPTIMIZE|HACK|XXX):",
+						HasRelevance: true, Relevance: 0,
+					}},
+				},
+				&Mode{
+					ClassName: "number",
+					Begin:     "#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})",
+				},
+				stylusSelector("selector-class", "\\.[a-zA-Z][a-zA-Z0-9_-]*"),
+				stylusSelector("selector-id", "#[a-zA-Z][a-zA-Z0-9_-]*"),
+				stylusSelector("selector-tag", "\\b(a|abbr|address|article|aside|audio|b|blockquote|body|button|canvas|caption|cite|code|dd|del|details|dfn|div|dl|dt|em|fieldset|figcaption|figure|footer|form|h1|h2|h3|h4|h5|h6|header|hgroup|html|i|iframe|img|input|ins|kbd|label|legend|li|main|mark|menu|nav|object|ol|p|q|quote|samp|section|span|strong|summary|sup|table|tbody|td|textarea|tfoot|th|thead|time|tr|ul|var|video)"),
+				stylusSelector("selector-pseudo", "&?:(active|any-link|blank|checked|current|default|defined|dir|disabled|drop|empty|enabled|first|first-child|first-of-type|fullscreen|future|focus|focus-visible|focus-within|has|host|host-context|hover|indeterminate|in-range|invalid|is|lang|last-child|last-of-type|left|link|local-link|not|nth-child|nth-col|nth-last-child|nth-last-col|nth-last-of-type|nth-of-type|only-child|only-of-type|optional|out-of-range|past|placeholder-shown|read-only|read-write|required|right|root|scope|target|target-within|user-invalid|valid|visited|where)"),
+				stylusSelector("selector-pseudo", "&?::(after|backdrop|before|cue|cue-region|first-letter|first-line|grammar-error|marker|part|placeholder|selection|slotted|spelling-error)"),
+				&Mode{
+					ClassName: "selector-attr",
+					Begin:     "\\[",
+					End:       "\\]",
+					Illegal:   "$",
+					Contains: []*Mode{&Mode{
+						ClassName: "string",
+						Begin:     "'",
+						End:       "'",
+						Illegal:   "\\n",
+						Contains: []*Mode{&Mode{
+							Begin:        "\\\\[\\s\\S]",
+							HasRelevance: true, Relevance: 0,
+						}},
+					}, &Mode{
+						ClassName: "string",
+						Begin:     "\"",
+						End:       "\"",
+						Illegal:   "\\n",
+						Contains: []*Mode{&Mode{
+							Begin:        "\\\\[\\s\\S]",
+							HasRelevance: true, Relevance: 0,
+						}},
+					}},
+				},
+				&Mode{
+					ClassName: "keyword",
+					Begin:     "@media",
+					Starts: &Mode{
+						End:      "[{;}]",
+						Keywords: Keywords{"$pattern": "[a-z-]+", "keyword": "and or not only", "attribute": "any-hover any-pointer aspect-ratio color color-gamut color-index device-aspect-ratio device-height device-width display-mode forced-colors grid height hover inverted-colors monochrome orientation overflow-block overflow-inline pointer prefers-color-scheme prefers-contrast prefers-reduced-motion prefers-reduced-transparency resolution scan scripting update width min-width max-width min-height max-height"},
+						Contains: []*Mode{&Mode{
+							ClassName:    "number",
+							Begin:        "\\b\\d+(\\.\\d+)?(%|em|ex|ch|rem|vw|vh|vmin|vmax|cm|mm|in|pt|pc|px|deg|grad|rad|turn|s|ms|Hz|kHz|dpi|dpcm|dppx)?",
+							HasRelevance: true, Relevance: 0,
+						}},
+					},
+				},
+				&Mode{
+					ClassName: "keyword",
+					Begin:     "@((-(o|moz|ms|webkit)-)?(charset|css|debug|extend|font-face|for|import|include|keyframes|media|mixin|page|warn|while))\\b",
+				},
+				&Mode{
+					ClassName: "variable",
+					Begin:     "\\$[a-zA-Z]\\w*",
+				},
+				&Mode{
+					ClassName:    "number",
+					Begin:        "\\b\\d+(\\.\\d+)?(%|em|ex|ch|rem|vw|vh|vmin|vmax|cm|mm|in|pt|pc|px|deg|grad|rad|turn|s|ms|Hz|kHz|dpi|dpcm|dppx)?",
+					HasRelevance: true, Relevance: 0,
+				},
+				&Mode{
+					ClassName:   "function",
+					Begin:       "^[a-zA-Z][a-zA-Z0-9_-]*\\(.*\\)",
+					Illegal:     "[\\n]",
+					ReturnBegin: true,
+					Contains: []*Mode{&Mode{
+						ClassName: "title",
+						Begin:     "\\b[a-zA-Z][a-zA-Z0-9_-]*",
+					}, &Mode{
+						ClassName: "params",
+						Begin:     "\\(",
+						End:       "\\)",
+						Contains: []*Mode{&Mode{
+							ClassName: "number",
+							Begin:     "#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})",
+						}, &Mode{
+							ClassName: "variable",
+							Begin:     "\\$[a-zA-Z]\\w*",
+						}, &Mode{
+							ClassName: "string",
+							Begin:     "'",
+							End:       "'",
+							Illegal:   "\\n",
+							Contains: []*Mode{&Mode{
+								Begin:        "\\\\[\\s\\S]",
+								HasRelevance: true, Relevance: 0,
+							}},
+						}, &Mode{
+							ClassName:    "number",
+							Begin:        "\\b\\d+(\\.\\d+)?(%|em|ex|ch|rem|vw|vh|vmin|vmax|cm|mm|in|pt|pc|px|deg|grad|rad|turn|s|ms|Hz|kHz|dpi|dpcm|dppx)?",
+							HasRelevance: true, Relevance: 0,
+						}, &Mode{
+							ClassName: "string",
+							Begin:     "\"",
+							End:       "\"",
+							Illegal:   "\\n",
+							Contains: []*Mode{&Mode{
+								Begin:        "\\\\[\\s\\S]",
+								HasRelevance: true, Relevance: 0,
+							}},
+						}},
+					}},
+				},
+				&Mode{
+					ClassName: "attribute",
+					Begin:     "\\b(z-index|word-wrap|word-spacing|word-break|width|widows|white-space|visibility|vertical-align|unicode-bidi|transition-timing-function|transition-property|transition-duration|transition-delay|transition|transform-style|transform-origin|transform|top|text-underline-position|text-transform|text-shadow|text-rendering|text-overflow|text-indent|text-decoration-style|text-decoration-line|text-decoration-color|text-decoration|text-align-last|text-align|table-layout|tab-size|src|right|resize|quotes|position|pointer-events|perspective-origin|perspective|page-break-inside|page-break-before|page-break-after|padding-top|padding-right|padding-left|padding-bottom|padding|overflow-y|overflow-x|overflow-wrap|overflow|outline-width|outline-style|outline-offset|outline-color|outline|orphans|order|opacity|object-position|object-fit|normal|none|nav-up|nav-right|nav-left|nav-index|nav-down|min-width|min-height|max-width|max-height|mask|marks|margin-top|margin-right|margin-left|margin-bottom|margin|list-style-type|list-style-position|list-style-image|list-style|line-height|letter-spacing|left|justify-content|initial|inherit|ime-mode|image-resolution|image-rendering|image-orientation|icon|hyphens|height|font-weight|font-variation-settings|font-variant-ligatures|font-variant|font-style|font-stretch|font-smoothing|font-size-adjust|font-size|font-language-override|font-kerning|font-feature-settings|font-family|font-display|font|float|flex-wrap|flex-shrink|flex-grow|flex-flow|flex-direction|flex-basis|flex|filter|empty-cells|display|direction|cursor|counter-reset|counter-increment|content|columns|column-width|column-span|column-rule-width|column-rule-style|column-rule-color|column-rule|column-gap|column-fill|column-count|color|clip-path|clip|clear|caption-side|break-inside|break-before|break-after|box-sizing|box-shadow|box-decoration-break|bottom|border-width|border-top-width|border-top-style|border-top-right-radius|border-top-left-radius|border-top-color|border-top|border-style|border-spacing|border-right-width|border-right-style|border-right-color|border-right|border-radius|border-left-width|border-left-style|border-left-color|border-left|border-image-width|border-image-source|border-image-slice|border-image-repeat|border-image-outset|border-image|border-color|border-collapse|border-bottom-width|border-bottom-style|border-bottom-right-radius|border-bottom-left-radius|border-bottom-color|border-bottom|border|background-size|background-repeat|background-position|background-origin|background-image|background-color|background-clip|background-attachment|background|backface-visibility|auto|animation-timing-function|animation-play-state|animation-name|animation-iteration-count|animation-fill-mode|animation-duration|animation-direction|animation-delay|animation|align-self|align-items|align-content)\\b",
+					Starts: &Mode{
+						End:          ";|$",
+						Illegal:      "\\.",
+						HasRelevance: true, Relevance: 0,
+						Contains: []*Mode{&Mode{
+							ClassName: "number",
+							Begin:     "#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})",
+						}, &Mode{
+							ClassName: "variable",
+							Begin:     "\\$[a-zA-Z]\\w*",
+						}, &Mode{
+							ClassName: "string",
+							Begin:     "'",
+							End:       "'",
+							Illegal:   "\\n",
+							Contains: []*Mode{&Mode{
+								Begin:        "\\\\[\\s\\S]",
+								HasRelevance: true, Relevance: 0,
+							}},
+						}, &Mode{
+							ClassName: "string",
+							Begin:     "\"",
+							End:       "\"",
+							Illegal:   "\\n",
+							Contains: []*Mode{&Mode{
+								Begin:        "\\\\[\\s\\S]",
+								HasRelevance: true, Relevance: 0,
+							}},
+						}, &Mode{
+							ClassName:    "number",
+							Begin:        "\\b\\d+(\\.\\d+)?(%|em|ex|ch|rem|vw|vh|vmin|vmax|cm|mm|in|pt|pc|px|deg|grad|rad|turn|s|ms|Hz|kHz|dpi|dpcm|dppx)?",
+							HasRelevance: true, Relevance: 0,
+						}, &Mode{
+							ClassName: "comment",
+							Begin:     "/\\*",
+							End:       "\\*/",
+							Contains: []*Mode{&Mode{
+								Begin: "\\b(a|an|the|are|I'm|isn't|don't|doesn't|won't|but|just|should|pretty|simply|enough|gonna|going|wtf|so|such|will|you|your|they|like|more)\\b",
+							}, &Mode{
+								ClassName:    "doctag",
+								Begin:        "(?:TODO|FIXME|NOTE|BUG|OPTIMIZE|HACK|XXX):",
+								HasRelevance: true, Relevance: 0,
+							}},
+						}, &Mode{
+							ClassName: "meta",
+							Begin:     "!important",
+						}},
+					},
+				},
+			},
+		},
+	}
+}

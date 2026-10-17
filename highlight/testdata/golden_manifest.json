@@ -734,5 +734,9 @@
   {
     "file": "sample.scss",
     "language": "scss"
+  },
+  {
+    "file": "sample.styl",
+    "language": "stylus"
   }
 ]
