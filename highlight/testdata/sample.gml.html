@@ -1,0 +1,18 @@
+<span class="hljs-comment">// a comment</span>
+<span class="hljs-keyword">var</span> name = <span class="hljs-string">&quot;world&quot;</span>;
+<span class="hljs-keyword">var</span> count = <span class="hljs-number">42</span>;
+
+<span class="hljs-keyword">function</span> greet(who) {
+    <span class="hljs-built_in">show_debug_message</span>(<span class="hljs-string">&quot;Hello, &quot;</span> + who);
+    <span class="hljs-keyword">return</span> who;
+}
+
+<span class="hljs-keyword">if</span> (count &gt; <span class="hljs-number">10</span>) {
+    greet(name);
+} <span class="hljs-keyword">else</span> {
+    <span class="hljs-built_in">show_debug_message</span>(<span class="hljs-string">&quot;small&quot;</span>);
+}
+
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; <span class="hljs-number">10</span>; i += <span class="hljs-number">1</span>) {
+    <span class="hljs-built_in">show_debug_message</span>(<span class="hljs-built_in">string</span>(i));
+}

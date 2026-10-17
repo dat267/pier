@@ -718,5 +718,9 @@
   {
     "file": "sample.nasm",
     "language": "x86asm"
+  },
+  {
+    "file": "sample.gml",
+    "language": "gml"
   }
 ]
