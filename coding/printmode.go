@@ -1,32 +1,27 @@
 package coding
 
-// Print mode (single-shot): send prompts, output the result, exit — port of
-// src/modes/print-mode.ts with json-event.ts's wire shaping. Upstream uses it
-// for `pi -p "prompt"` (text) and `pi --mode json "prompt"` (JSON event
-// stream). Extensions are out of scope (D41), so the extension binding and
-// session-rebind plumbing upstream carries does not apply here.
+// Print mode (single-shot), port of v1.3.0 modes/print-mode.ts. Extensions and
+// runtime rebind remain out of scope (D41). JSON shaping lives in jsonevent.go.
 
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"sync"
 	"syscall"
 
-	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
 )
 
 // PrintModeOptions configures RunPrintMode.
 type PrintModeOptions struct {
-	// Mode is the output mode: CLIModeText for the final response only,
-	// CLIModeJSON for the JSON event stream.
+	// Mode is CLIModeText (final response only) or CLIModeJSON (event stream).
 	Mode CLIMode
-	// InitialMessage is the first prompt (with @file content already expanded).
+	// InitialMessage is the first prompt, with @file content already expanded.
 	InitialMessage string
 	// InitialImages attach only to InitialMessage, like upstream print-mode.ts.
 	InitialImages []ai.ImageContent
@@ -34,10 +29,8 @@ type PrintModeOptions struct {
 	Messages []string
 }
 
-// printStdout serializes stdout writes: session events fan out from the agent
-// goroutine while prompts run on the caller's, so the JSON stream needs one
-// writer. Lines flush immediately: the stream is line-delimited and consumers
-// read it live.
+// printStdout serializes writes from the agent and caller. Each JSONL record
+// flushes immediately; a slow consumer backpressures the producer.
 type printStdout struct {
 	mu sync.Mutex
 	w  *bufio.Writer
@@ -57,13 +50,44 @@ func (p *printStdout) flush() {
 	_ = p.w.Flush()
 }
 
-// RunPrintMode runs print mode and returns the process exit code: 0 on
-// success, 1 when a prompt fails or the final assistant message ended in
-// error/abort, or accepted session writes could not be persisted.
+// RunPrintMode returns 0 on success, 1 on prompt/persistence failure,
+// or 129/143 on SIGHUP/SIGTERM. The caller exits only after its queues drain.
 func RunPrintMode(session *AgentSession, sessions *SessionManager, options PrintModeOptions) (exitCode int) {
-	// D210: a completed queue is not proof of a saved session. Flush on every
-	// ordinary return, including provider errors, and keep JSON stdout clean.
+	ctx, cancel := context.WithCancel(context.Background())
+	out := &printStdout{w: bufio.NewWriter(os.Stdout)}
+	signals := make(chan os.Signal, 1)
+	if runtime.GOOS == "windows" {
+		signal.Notify(signals, syscall.SIGTERM)
+	} else {
+		signal.Notify(signals, syscall.SIGTERM, syscall.SIGHUP)
+	}
+	signalDone := make(chan struct{})
+	signalCode := 0 // Read only after signalDone, including ordinary returns.
+	go func() {
+		defer close(signalDone)
+		select {
+		case sig := <-signals:
+			signalCode = 143
+			if sig == syscall.SIGHUP {
+				signalCode = 129
+			}
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+	var unsubscribe func()
 	defer func() {
+		signal.Stop(signals)
+		cancel()
+		<-signalDone
+		// Do not exit from a signal goroutine: cancellation must reap tool children
+		// and finish event producers before accepted saves and output are drained.
+		session.Abort(context.Background())
+		if unsubscribe != nil {
+			unsubscribe()
+		}
+		session.Dispose()
+		// D210: queue completion alone does not prove that the transcript was saved.
 		writeErr := sessions.FlushWrites()
 		for _, failure := range sessions.DrainWriteErrors() {
 			fmt.Fprintln(os.Stderr, failure.String())
@@ -71,38 +95,19 @@ func RunPrintMode(session *AgentSession, sessions *SessionManager, options Print
 		if writeErr != nil {
 			exitCode = 1
 		}
-	}()
-	mode := options.Mode
-	out := &printStdout{w: bufio.NewWriter(os.Stdout)}
-
-	// SIGTERM (143) and SIGHUP (129) mirror upstream's signal exits. The
-	// process dies with the agent goroutine; upstream's killTrackedDetached-
-	// Children has no Go counterpart because the bash tool runs children in
-	// their own process groups and reaps them itself.
-	sigChannel := make(chan os.Signal, 1)
-	signal.Notify(sigChannel, syscall.SIGTERM, syscall.SIGHUP)
-	go func() {
-		sig, ok := <-sigChannel
-		if !ok {
-			return
-		}
 		out.flush()
-		if sig == syscall.SIGHUP {
-			os.Exit(129)
+		if signalCode != 0 {
+			exitCode = signalCode
 		}
-		os.Exit(143)
 	}()
 
-	if mode == CLIModeJSON {
+	if options.Mode == CLIModeJSON {
 		if header := sessions.GetHeader(); header != nil {
-			// Marshal the header the way the session file does so the wire
-			// shape carries its "type":"session" discriminator (upstream's
-			// getHeader() serializes the tagged object directly).
 			if encoded, err := MarshalFileEntry(FileEntry{Header: header}); err == nil {
 				out.writeLine(strings.TrimSuffix(encoded, "\n"))
 			}
 		}
-		unsubscribe := session.Subscribe(func(event *SessionEvent) {
+		unsubscribe = session.Subscribe(func(event *SessionEvent) {
 			encoded, err := MarshalJSONSessionEvent(event)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "json event error: "+err.Error())
@@ -110,14 +115,15 @@ func RunPrintMode(session *AgentSession, sessions *SessionManager, options Print
 			}
 			out.writeLine(string(encoded))
 		})
-		defer unsubscribe()
 	}
-
 	prompt := func(text string, images []ai.ImageContent) error {
-		if err := session.Prompt(context.Background(), text, &PromptOptions{Images: images}); err != nil {
+		if err := ctx.Err(); err != nil {
 			return err
 		}
-		return session.WaitForIdle(context.Background())
+		if err := session.Prompt(ctx, text, &PromptOptions{Images: images}); err != nil {
+			return err
+		}
+		return session.WaitForIdle(ctx)
 	}
 	runErr := func() error {
 		if options.InitialMessage != "" {
@@ -134,11 +140,10 @@ func RunPrintMode(session *AgentSession, sessions *SessionManager, options Print
 	}()
 	if runErr != nil {
 		fmt.Fprintln(os.Stderr, runErr)
-		out.flush()
 		return 1
 	}
 
-	if mode == CLIModeText {
+	if options.Mode == CLIModeText {
 		messages := session.Agent.State().Messages
 		if len(messages) > 0 {
 			if assistant, ok := messages[len(messages)-1].(*ai.AssistantMessage); ok {
@@ -151,7 +156,6 @@ func RunPrintMode(session *AgentSession, sessions *SessionManager, options Print
 						message = "Request " + string(assistant.StopReason)
 					}
 					fmt.Fprintln(os.Stderr, message)
-					out.flush()
 					return 1
 				}
 				for _, block := range assistant.Content {
@@ -166,154 +170,5 @@ func RunPrintMode(session *AgentSession, sessions *SessionManager, options Print
 			}
 		}
 	}
-
-	out.flush()
 	return exitCode
-}
-
-// jsonSessionEvent is the JSON stdout wire shape for one session event. It is
-// the Go counterpart of upstream's AgentSessionEvent with camelCase field
-// names; the passthrough agent payload is flattened rather than nested under
-// an "agent" key, matching upstream's flat event objects.
-type jsonSessionEvent struct {
-	Type string `json:"type"`
-
-	// message lifecycle (message_start/update/end, turn_end)
-	Message               json.RawMessage   `json:"message,omitempty"`
-	Usage                 json.RawMessage   `json:"usage,omitempty"`
-	AssistantMessageEvent json.RawMessage   `json:"assistantMessageEvent,omitempty"`
-	Messages              []json.RawMessage `json:"messages,omitempty"`
-	ToolResults           []json.RawMessage `json:"toolResults,omitempty"`
-
-	// tool execution lifecycle
-	ToolCallID    string          `json:"toolCallId,omitempty"`
-	ToolName      string          `json:"toolName,omitempty"`
-	Args          json.RawMessage `json:"args,omitempty"`
-	PartialResult json.RawMessage `json:"partialResult,omitempty"`
-	Result        json.RawMessage `json:"result,omitempty"`
-	IsError       bool            `json:"isError,omitempty"`
-
-	// session-level payloads
-	WillRetry    bool     `json:"willRetry,omitempty"`
-	Steering     []string `json:"steering,omitempty"`
-	FollowUp     []string `json:"followUp,omitempty"`
-	Reason       string   `json:"reason,omitempty"`
-	ErrorMessage string   `json:"errorMessage,omitempty"`
-	Aborted      bool     `json:"aborted,omitempty"`
-	Level        string   `json:"level,omitempty"`
-	Attempt      int      `json:"attempt,omitempty"`
-	MaxAttempts  int      `json:"maxAttempts,omitempty"`
-	DelayMS      int64    `json:"delayMs,omitempty"`
-	Success      bool     `json:"success,omitempty"`
-	ID           string   `json:"id,omitempty"`
-	Delta        string   `json:"delta,omitempty"`
-	Source       string   `json:"source,omitempty"`
-}
-
-// MarshalJSONSessionEvent shapes one SessionEvent for the JSON stdout stream
-// (upstream toJsonEvent): cumulative assistant snapshots are stripped from
-// message_update — message_start provides the initial message, deltas build
-// it, and message_end carries the final authoritative message — while usage,
-// tool-call ids and tool names stay because their size is constant.
-func MarshalJSONSessionEvent(event *SessionEvent) ([]byte, error) {
-	wire := jsonSessionEvent{
-		Type:        event.Type,
-		WillRetry:   event.WillRetry,
-		Steering:    event.Steering,
-		FollowUp:    event.FollowUp,
-		Aborted:     event.Aborted,
-		Level:       string(event.Level),
-		Attempt:     event.Attempt,
-		MaxAttempts: event.MaxAttempts,
-		DelayMS:     event.DelayMS,
-		Success:     event.Success,
-		ID:          event.ID,
-		Delta:       event.Delta,
-		Source:      event.Source,
-	}
-	if event.Reason != "" {
-		wire.Reason = string(event.Reason)
-	}
-	wire.ErrorMessage = event.ErrorMessage
-	if event.Agent == nil {
-		return ai.MarshalJSON(wire)
-	}
-	a := event.Agent
-	wire.ToolCallID = a.ToolCallID
-	wire.ToolName = a.ToolName
-	wire.Args = a.Args
-	wire.IsError = a.IsError
-	var err error
-	if a.Message != nil {
-		if wire.Message, err = ai.MarshalMessage(a.Message); err != nil {
-			return nil, err
-		}
-		if assistant, ok := a.Message.(*ai.AssistantMessage); ok {
-			if wire.Usage, err = ai.MarshalJSON(assistant.Usage); err != nil {
-				return nil, err
-			}
-		}
-	}
-	if len(a.Messages) > 0 {
-		if wire.Messages, err = ai.MarshalMessages(a.Messages); err != nil {
-			return nil, err
-		}
-	}
-	if len(a.ToolResults) > 0 {
-		if wire.ToolResults, err = ai.MarshalMessages(a.ToolResults); err != nil {
-			return nil, err
-		}
-	}
-	if len(a.PartialResult.Content) > 0 || len(a.PartialResult.Details) > 0 {
-		if wire.PartialResult, err = ai.MarshalJSON(a.PartialResult); err != nil {
-			return nil, err
-		}
-	}
-	if len(a.Result.Content) > 0 || len(a.Result.Details) > 0 {
-		if wire.Result, err = ai.MarshalJSON(a.Result); err != nil {
-			return nil, err
-		}
-	}
-	if a.Type == agent.MessageUpdate && a.AssistantMessageEvent != nil {
-		if wire.AssistantMessageEvent, err = marshalJSONAssistantMessageEvent(a.AssistantMessageEvent); err != nil {
-			return nil, err
-		}
-	}
-	return ai.MarshalJSON(wire)
-}
-
-// jsonAssistantMessageEvent is AssistantMessageEvent plus the toolcall_start
-// identity fields upstream adds; Partial is dropped before marshaling.
-type jsonAssistantMessageEvent struct {
-	ai.AssistantMessageEvent
-	ID       string `json:"id,omitempty"`
-	ToolName string `json:"toolName,omitempty"`
-}
-
-func marshalJSONAssistantMessageEvent(event *ai.AssistantMessageEvent) ([]byte, error) {
-	shaped := jsonAssistantMessageEvent{AssistantMessageEvent: *event}
-	shaped.Partial = nil
-	if event.Type == ai.EventToolcallStart {
-		toolCall, err := partialToolCall(event)
-		if err != nil {
-			return nil, err
-		}
-		shaped.ID = toolCall.ID
-		shaped.ToolName = toolCall.Name
-	}
-	return ai.MarshalJSON(shaped)
-}
-
-// partialToolCall resolves the tool call a toolcall_start event points at via
-// its content index into the cumulative partial message (upstream reads the
-// same shape and throws when the block is not a tool call).
-func partialToolCall(event *ai.AssistantMessageEvent) (*ai.ToolCall, error) {
-	if event.Partial == nil || event.ContentIndex >= len(event.Partial.Content) {
-		return nil, fmt.Errorf("toolcall_start content at index %d is missing from the partial message", event.ContentIndex)
-	}
-	block, ok := event.Partial.Content[event.ContentIndex].(ai.ToolCall)
-	if !ok {
-		return nil, fmt.Errorf("toolcall_start content at index %d is not a tool call", event.ContentIndex)
-	}
-	return &block, nil
 }

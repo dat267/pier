@@ -211,7 +211,7 @@ func (s *AgentSession) RunAutoCompaction(ctx context.Context, reason CompactionR
 	sessionContext := s.Sessions.Projection()
 	s.Agent.SetMessages(sessionContext.Messages)
 
-	s.emit(&SessionEvent{Type: SessionCompactionEnd, Reason: reason, Result: result})
+	s.emit(&SessionEvent{Type: SessionCompactionEnd, Reason: reason, Result: result, WillRetry: willRetry})
 	// An overflow recovery that consumed the failed message retries the turn.
 	return willRetry, nil
 }

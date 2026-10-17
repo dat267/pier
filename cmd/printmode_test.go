@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/exec"
 	"strings"
@@ -32,6 +33,36 @@ func TestResolvePrintMode(t *testing.T) {
 				t.Errorf("headless = %v, want %v", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestPrintFailureReturnsThroughCommandCleanup(t *testing.T) {
+	// v1.3.0 print-mode.ts disposes its host before exiting. run must return
+	// the reported status so its MCP/settings/queue defers can execute too.
+	if os.Getenv("PIER_PRINT_FAILURE_CHILD") == "1" {
+		t.Setenv("OPENAI_API_KEY", "")
+		args := coding.ParseArgs([]string{"--offline", "--no-mcp", "--no-session", "--no-tools", "--approve", "--model", "openai/gpt-4o", "-p", "fail without credentials"})
+		err := run("pier", args)
+		var status interface{ ExitCode() int }
+		if !errors.Is(err, errAlreadyReported) || !errors.As(err, &status) || status.ExitCode() != 1 {
+			t.Fatalf("print failure = %v, want already-reported exit 1", err)
+		}
+		return
+	}
+	isolatedAgentDir(t)
+	t.Setenv("TMPDIR", t.TempDir())
+	t.Setenv("PIER_PRINT_FAILURE_CHILD", "1")
+	binary, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, binary, "-test.run=^TestPrintFailureReturnsThroughCommandCleanup$")
+	command.Dir = t.TempDir()
+	output, err := command.CombinedOutput()
+	if err != nil {
+		t.Fatalf("print failure exited before returning through cleanup: %v\n%s", err, output)
 	}
 }
 

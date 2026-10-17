@@ -1,5 +1,8 @@
 package coding
 
+// Port of v1.3.0 modes/json-event.ts. Both public entry points use the same
+// event-shaped objects; wire objects retain JavaScript insertion order.
+
 import (
 	"bytes"
 	"encoding/json"
@@ -9,44 +12,219 @@ import (
 	"github.com/dat267/pier/ai"
 )
 
-// Port of modes/json-event.ts.
+type jsonEventField struct {
+	name  string
+	value any
+}
 
-// ToJSONEvent maps one session event to the JSON shape the JSON and RPC stdout
-// protocols emit (upstream toJsonEvent).
-//
-// Streaming `message_update` events drop their cumulative `partial` snapshot:
-// message_start carries the initial message, deltas build it, and message_end
-// carries the final authoritative message. Cumulative usage, tool-call ids, and
-// tool names stay available because their size is constant.
+type jsonEventObject []jsonEventField
+
+func (o jsonEventObject) MarshalJSON() ([]byte, error) {
+	var buffer bytes.Buffer
+	buffer.WriteByte('{')
+	for i, field := range o {
+		if i > 0 {
+			buffer.WriteByte(',')
+		}
+		key, err := ai.MarshalJSON(field.name)
+		if err != nil {
+			return nil, err
+		}
+		value, err := ai.MarshalJSON(field.value)
+		if err != nil {
+			return nil, err
+		}
+		buffer.Write(key)
+		buffer.WriteByte(':')
+		buffer.Write(value)
+	}
+	buffer.WriteByte('}')
+	return buffer.Bytes(), nil
+}
+
+func (o *jsonEventObject) add(name string, value any) {
+	*o = append(*o, jsonEventField{name, value})
+}
+
+// ToJSONEvent returns the JSON/RPC event shape as ordinary Go values. Prefer
+// MarshalJSONSessionEvent for wire output, where object key order matters.
 func ToJSONEvent(event *SessionEvent) (map[string]any, error) {
-	if event == nil {
-		return nil, fmt.Errorf("session event is required")
-	}
-	if event.Type != SessionMessageUpdate {
-		return sessionEventValue(event), nil
-	}
-	if event.Agent == nil {
-		return nil, fmt.Errorf("message_update event has no agent payload")
-	}
-	message := event.Agent.Message
-	assistant, ok := message.(*ai.AssistantMessage)
-	if !ok {
-		return nil, fmt.Errorf("message_update message is not an assistant message")
-	}
-	assistantEvent, err := toJSONAssistantMessageEvent(event.Agent.AssistantMessageEvent)
+	value, err := jsonEventValue(event)
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{
-		"type":                  "message_update",
-		"usage":                 usageValue(assistant.Usage),
-		"assistantMessageEvent": assistantEvent,
-	}, nil
+	plain, err := plainJSONEventValue(value)
+	if err != nil {
+		return nil, err
+	}
+	return plain.(map[string]any), nil
 }
 
-func toJSONAssistantMessageEvent(event *ai.AssistantMessageEvent) (map[string]any, error) {
+// MarshalJSONSessionEvent removes cumulative message/partial snapshots from
+// message_update and preserves event-specific required fields and key order.
+func MarshalJSONSessionEvent(event *SessionEvent) ([]byte, error) {
+	value, err := jsonEventValue(event)
+	if err != nil {
+		return nil, err
+	}
+	return ai.MarshalJSON(value)
+}
+
+func jsonEventValue(event *SessionEvent) (jsonEventObject, error) {
+	if event == nil {
+		return nil, fmt.Errorf("session event is required")
+	}
+	value := jsonEventObject{{"type", event.Type}}
+	a := event.Agent
+	switch event.Type {
+	case SessionMessageUpdate:
+		if a == nil {
+			return nil, fmt.Errorf("message_update event has no agent payload")
+		}
+		assistant, ok := a.Message.(*ai.AssistantMessage)
+		if !ok || assistant == nil {
+			return nil, fmt.Errorf("message_update message is not an assistant message")
+		}
+		delta, err := jsonAssistantEventValue(a.AssistantMessageEvent)
+		if err != nil {
+			return nil, err
+		}
+		value.add("usage", assistant.Usage)
+		value.add("assistantMessageEvent", delta)
+	case SessionAgentEnd:
+		if a != nil {
+			value.add("messages", jsonMessageValues(a.Messages))
+		}
+		value.add("willRetry", event.WillRetry)
+	case SessionAgentSettled:
+		value.add("aborted", event.Aborted)
+	case SessionTurnEnd:
+		if a != nil {
+			if a.Message != nil {
+				value.add("message", jsonMessageValue(a.Message))
+			}
+			value.add("toolResults", jsonMessageValues(a.ToolResults))
+		}
+	case SessionMessageStart, SessionMessageEnd:
+		if a != nil && a.Message != nil {
+			value.add("message", jsonMessageValue(a.Message))
+		}
+	case SessionToolExecutionStart, SessionToolExecutionUpdate, SessionToolExecutionEnd:
+		if a != nil {
+			value.add("toolCallId", a.ToolCallID)
+			value.add("toolName", a.ToolName)
+			switch event.Type {
+			case SessionToolExecutionStart:
+				value.add("args", a.Args)
+			case SessionToolExecutionUpdate:
+				value.add("args", a.Args)
+				value.add("partialResult", jsonToolResultValue(a.PartialResult))
+			case SessionToolExecutionEnd:
+				value.add("result", jsonToolResultValue(a.Result))
+				value.add("isError", a.IsError)
+				if a.DurationMs != nil {
+					value.add("durationMs", *a.DurationMs)
+				}
+			}
+		}
+	case SessionQueueUpdate:
+		steering, followUp := event.Steering, event.FollowUp
+		if steering == nil {
+			steering = []string{}
+		}
+		if followUp == nil {
+			followUp = []string{}
+		}
+		value.add("steering", steering)
+		value.add("followUp", followUp)
+	case SessionCompactionStart:
+		value.add("reason", event.Reason)
+	case SessionCompactionEnd:
+		value.add("reason", event.Reason)
+		if event.Result != nil {
+			result := event.Result
+			payload := jsonEventObject{{"summary", result.Summary}, {"firstKeptEntryId", result.FirstKeptEntryID}, {"tokensBefore", result.TokensBefore}}
+			if result.EstimatedTokensAfter != 0 {
+				payload.add("estimatedTokensAfter", result.EstimatedTokensAfter)
+			}
+			if result.Usage != nil {
+				payload.add("usage", *result.Usage)
+			}
+			if len(result.Details) > 0 {
+				payload.add("details", result.Details)
+			}
+			value.add("result", payload)
+		}
+		value.add("aborted", event.Aborted)
+		value.add("willRetry", event.WillRetry)
+		if event.ErrorMessage != "" {
+			value.add("errorMessage", event.ErrorMessage)
+		}
+	case SessionInfoChanged:
+		if event.Name != nil {
+			value.add("name", *event.Name)
+		}
+	case SessionThinkingLevelChanged:
+		value.add("level", event.Level)
+	case SessionAutoRetryStart, SessionSummarizationRetryScheduled:
+		value.add("attempt", event.Attempt)
+		value.add("maxAttempts", event.MaxAttempts)
+		value.add("delayMs", event.DelayMS)
+		value.add("errorMessage", event.ErrorMessage)
+	case SessionAutoRetryEnd:
+		value.add("success", event.Success)
+		value.add("attempt", event.Attempt)
+		if event.ErrorMessage != "" {
+			value.add("finalError", event.ErrorMessage)
+		}
+	case SessionEntryAppended:
+		if event.Entry != nil {
+			if len(event.Entry.Raw()) > 0 {
+				value.add("entry", event.Entry.Raw())
+			} else {
+				value.add("entry", event.Entry)
+			}
+		}
+	case SessionSummarizationRetryAttemptStart:
+		value.add("source", event.Source)
+		if event.Source == "compaction" {
+			value.add("reason", event.Reason)
+		}
+	case SessionBashExecutionUpdate:
+		if event.ID != "" {
+			value.add("id", event.ID)
+		}
+		value.add("delta", event.Delta)
+	}
+	return value, nil
+}
+
+func jsonAssistantEventValue(event *ai.AssistantMessageEvent) (jsonEventObject, error) {
 	if event == nil {
 		return nil, fmt.Errorf("message_update event has no assistant message event")
+	}
+	value := jsonEventObject{{"type", event.Type}}
+	switch event.Type {
+	case ai.EventTextStart, ai.EventTextDelta, ai.EventTextEnd,
+		ai.EventThinkingStart, ai.EventThinkingDelta, ai.EventThinkingEnd,
+		ai.EventToolcallStart, ai.EventToolcallDelta, ai.EventToolcallEnd:
+		value.add("contentIndex", event.ContentIndex)
+	}
+	switch event.Type {
+	case ai.EventTextDelta, ai.EventThinkingDelta, ai.EventToolcallDelta:
+		value.add("delta", event.Delta)
+	case ai.EventTextEnd, ai.EventThinkingEnd:
+		value.add("content", event.Content)
+	case ai.EventToolcallEnd:
+		if event.ToolCall != nil {
+			value.add("toolCall", jsonContentBlock{*event.ToolCall})
+		}
+	case ai.EventDone:
+		value.add("reason", event.Reason)
+		value.add("message", jsonMessageValue(event.Message))
+	case ai.EventError:
+		value.add("reason", event.Reason)
+		value.add("error", jsonMessageValue(event.Error))
 	}
 	if event.Type == ai.EventToolcallStart {
 		if event.Partial == nil {
@@ -55,325 +233,153 @@ func toJSONAssistantMessageEvent(event *ai.AssistantMessageEvent) (map[string]an
 		if event.ContentIndex < 0 || event.ContentIndex >= len(event.Partial.Content) {
 			return nil, fmt.Errorf("toolcall_start content at index %d is not a tool call", event.ContentIndex)
 		}
-		toolCall, ok := event.Partial.Content[event.ContentIndex].(ai.ToolCall)
+		call, ok := event.Partial.Content[event.ContentIndex].(ai.ToolCall)
 		if !ok {
 			return nil, fmt.Errorf("toolcall_start content at index %d is not a tool call", event.ContentIndex)
 		}
-		delta := assistantEventValue(event)
-		delta["id"] = toolCall.ID
-		delta["toolName"] = toolCall.Name
-		return delta, nil
+		value.add("id", call.ID)
+		value.add("toolName", call.Name)
 	}
-	return assistantEventValue(event), nil
+	return value, nil
 }
 
-// assistantEventValue renders an assistant streaming event without its
-// cumulative partial snapshot (upstream strips `partial` from the delta event).
-func assistantEventValue(event *ai.AssistantMessageEvent) map[string]any {
-	value := map[string]any{"type": event.Type}
-	if event.ContentIndex != 0 {
-		value["contentIndex"] = event.ContentIndex
+// ContentList's codec supplies the block discriminator and preserves all
+// optional provider fields, including signatures and tool argument errors.
+type jsonContentBlock struct{ ai.Content }
+
+func (block jsonContentBlock) MarshalJSON() ([]byte, error) {
+	data, err := ai.MarshalJSON(ai.ContentList{block.Content})
+	if err != nil {
+		return nil, err
 	}
-	if event.Delta != "" {
-		value["delta"] = event.Delta
-	}
-	if event.Content != "" {
-		value["content"] = event.Content
-	}
-	if event.ToolCall != nil {
-		value["toolCall"] = toolCallValue(event.ToolCall)
-	}
-	if event.Message != nil {
-		value["message"] = assistantMessageValue(event.Message)
-	}
-	if event.Reason != "" {
-		value["reason"] = event.Reason
-	}
-	if event.Error != nil {
-		value["error"] = assistantMessageValue(event.Error)
-	}
-	return value
+	return data[1 : len(data)-1], nil
 }
 
-func toolCallValue(call *ai.ToolCall) map[string]any {
-	value := map[string]any{
-		"type":      "toolCall",
-		"id":        call.ID,
-		"name":      call.Name,
-		"arguments": rawJSONValue(call.Arguments),
-	}
-	if call.ThoughtSignature != nil {
-		value["thoughtSignature"] = *call.ThoughtSignature
-	}
-	if call.Namespace != nil {
-		value["namespace"] = *call.Namespace
-	}
-	return value
-}
-
-func assistantMessageValue(message *ai.AssistantMessage) map[string]any {
-	if message == nil {
-		return nil
-	}
-	value := map[string]any{
-		"role":       "assistant",
-		"content":    contentValues(message.Content),
-		"api":        message.API,
-		"provider":   message.Provider,
-		"model":      message.Model,
-		"usage":      usageValue(message.Usage),
-		"stopReason": message.StopReason,
-		"timestamp":  message.Timestamp,
-	}
-	if message.ErrorMessage != nil {
-		value["errorMessage"] = *message.ErrorMessage
-	}
-	return value
-}
-
-func contentValues(content ai.ContentList) []any {
-	out := make([]any, 0, len(content))
-	for _, entry := range content {
-		switch typed := entry.(type) {
-		case ai.TextContent:
-			value := map[string]any{"type": "text", "text": typed.Text}
-			if typed.TextSignature != nil {
-				value["textSignature"] = *typed.TextSignature
-			}
-			out = append(out, value)
-		case ai.ThinkingContent:
-			value := map[string]any{"type": "thinking", "thinking": typed.Thinking}
-			if typed.ThinkingSignature != nil {
-				value["thinkingSignature"] = *typed.ThinkingSignature
-			}
-			if typed.Redacted {
-				value["redacted"] = true
-			}
-			out = append(out, value)
-		case ai.ToolCall:
-			call := typed
-			out = append(out, toolCallValue(&call))
-		default:
-			out = append(out, map[string]any{"type": fmt.Sprintf("%T", entry)})
-		}
-	}
-	return out
-}
-
-// userContentValues renders user/tool-result content blocks (text and images).
-func userContentValues(content ai.UserContentList) []any {
-	out := make([]any, 0, len(content))
-	for _, entry := range content {
-		switch typed := entry.(type) {
-		case ai.TextContent:
-			out = append(out, map[string]any{"type": "text", "text": typed.Text})
-		case ai.ImageContent:
-			out = append(out, map[string]any{"type": "image", "data": typed.Data, "mimeType": typed.MimeType})
-		default:
-			out = append(out, map[string]any{"type": fmt.Sprintf("%T", entry)})
-		}
-	}
-	return out
-}
-
-func usageValue(usage ai.Usage) map[string]any {
-	return map[string]any{
-		"input":       usage.Input,
-		"output":      usage.Output,
-		"cacheRead":   usage.CacheRead,
-		"cacheWrite":  usage.CacheWrite,
-		"totalTokens": usage.TotalTokens,
-		"cost": map[string]any{
-			"input":      usage.Cost.Input,
-			"output":     usage.Cost.Output,
-			"cacheRead":  usage.Cost.CacheRead,
-			"cacheWrite": usage.Cost.CacheWrite,
-			"total":      usage.Cost.Total,
-		},
-	}
-}
-
-// sessionEventValue renders a non-streaming session event as its JSON payload,
-// mirroring the event objects upstream serializes directly.
-func sessionEventValue(event *SessionEvent) map[string]any {
-	value := map[string]any{"type": event.Type}
-	agentEvent := event.Agent
-	switch event.Type {
-	case SessionAgentEnd:
-		if agentEvent != nil {
-			value["messages"] = messageValues(agentEvent.Messages)
-		}
-	case SessionTurnEnd:
-		if agentEvent != nil {
-			if agentEvent.Message != nil {
-				value["message"] = messageValue(agentEvent.Message)
-			}
-			value["toolResults"] = messageValues(agentEvent.ToolResults)
-		}
-	case SessionMessageStart, SessionMessageEnd:
-		if agentEvent != nil && agentEvent.Message != nil {
-			value["message"] = messageValue(agentEvent.Message)
-		}
-	case SessionToolExecutionStart:
-		if agentEvent != nil {
-			value["toolCallId"] = agentEvent.ToolCallID
-			value["toolName"] = agentEvent.ToolName
-			value["args"] = rawJSONValue(agentEvent.Args)
-		}
-	case SessionToolExecutionUpdate:
-		if agentEvent != nil {
-			value["toolCallId"] = agentEvent.ToolCallID
-			value["toolName"] = agentEvent.ToolName
-			value["partialResult"] = toolResultValue(agentEvent.PartialResult)
-		}
-	case SessionToolExecutionEnd:
-		if agentEvent != nil {
-			value["toolCallId"] = agentEvent.ToolCallID
-			value["toolName"] = agentEvent.ToolName
-			value["result"] = toolResultValue(agentEvent.Result)
-			value["isError"] = agentEvent.IsError
-		}
-	case SessionQueueUpdate:
-		value["steering"] = stringSliceValue(event.Steering)
-		value["followUp"] = stringSliceValue(event.FollowUp)
-	case SessionCompactionStart:
-		value["reason"] = event.Reason
-	case SessionCompactionEnd:
-		value["reason"] = event.Reason
-		value["aborted"] = event.Aborted
-		if event.ErrorMessage != "" {
-			value["errorMessage"] = event.ErrorMessage
-		}
-	case SessionThinkingLevelChanged:
-		value["level"] = event.Level
-	case SessionAutoRetryStart:
-		value["attempt"] = event.Attempt
-		value["maxAttempts"] = event.MaxAttempts
-		value["delayMs"] = event.DelayMS
-		if event.ErrorMessage != "" {
-			value["errorMessage"] = event.ErrorMessage
-		}
-	case SessionAutoRetryEnd:
-		value["success"] = event.Success
-		value["attempt"] = event.Attempt
-	case SessionAgentStart:
-		// No payload beyond the type.
-	}
-	if event.Type == SessionAgentEnd && event.WillRetry {
-		value["willRetry"] = true
-	}
-	return value
-}
-
-func messageValues(messages []ai.Message) []any {
+func jsonMessageValues(messages []ai.Message) []any {
 	out := make([]any, 0, len(messages))
 	for _, message := range messages {
-		out = append(out, messageValue(message))
+		out = append(out, jsonMessageValue(message))
 	}
 	return out
 }
 
-func messageValue(message ai.Message) any {
-	switch typed := message.(type) {
+func jsonMessageValue(message ai.Message) any {
+	// Prefix role without round-tripping through a map, which sorts message keys.
+	switch m := message.(type) {
 	case *ai.AssistantMessage:
-		return assistantMessageValue(typed)
+		return struct {
+			Role string `json:"role"`
+			*ai.AssistantMessage
+		}{"assistant", m}
 	case *ai.UserMessage:
-		return map[string]any{
-			"role":      "user",
-			"content":   userMessageContent(typed.Content),
-			"timestamp": typed.Timestamp,
-		}
+		return struct {
+			Role string `json:"role"`
+			*ai.UserMessage
+		}{"user", m}
 	case *ai.ToolResultMessage:
-		value := map[string]any{
-			"role":       "toolResult",
-			"toolCallId": typed.ToolCallID,
-			"toolName":   typed.ToolName,
-			"content":    userContentValues(typed.Content),
-			"isError":    typed.IsError,
-			"timestamp":  typed.Timestamp,
-		}
-		if len(typed.Details) > 0 {
-			value["details"] = rawJSONValue(typed.Details)
-		}
-		return value
+		return struct {
+			Role string `json:"role"`
+			*ai.ToolResultMessage
+		}{"toolResult", m}
 	case *ai.SystemMessage:
-		return systemMessageValue(typed)
-	default:
-		return map[string]any{"role": fmt.Sprintf("%T", message)}
-	}
-}
-
-// userMessageContent renders StringOrBlocks user content the way JSON.stringify
-// serializes upstream's `string | Content[]`.
-func userMessageContent(content ai.StringOrBlocks) any {
-	if content.String() {
-		return content.Text
-	}
-	blocks := make(ai.UserContentList, 0, len(content.Blocks))
-	for _, block := range content.Blocks {
-		if userBlock, ok := block.(ai.UserContent); ok {
-			blocks = append(blocks, userBlock)
+		// SystemMessage has a custom codec (ordered sections and tool changes).
+		return jsonRoleMessage{Role: "system", Message: m}
+	case *ai.CustomMessage:
+		if len(m.Extra) > 0 {
+			return m.Extra
 		}
+		return m
+	default:
+		return message
 	}
-	return userContentValues(blocks)
 }
 
-func systemMessageValue(message *ai.SystemMessage) map[string]any {
-	value := map[string]any{"role": "system", "content": message.Content}
-	if message.Timestamp != 0 {
-		value["timestamp"] = message.Timestamp
-	}
-	return value
+type jsonRoleMessage struct {
+	Role    string
+	Message ai.Message
 }
 
-func toolResultValue(result agent.AgentToolResult) map[string]any {
-	value := map[string]any{"content": contentValues(ai.ContentList(result.Content))}
+func (m jsonRoleMessage) MarshalJSON() ([]byte, error) {
+	body, err := ai.MarshalJSON(m.Message)
+	if err != nil {
+		return nil, err
+	}
+	role, err := ai.MarshalJSON(m.Role)
+	if err != nil {
+		return nil, err
+	}
+	out := append([]byte(`{"role":`), role...)
+	if len(body) > 2 {
+		out = append(out, ',')
+		out = append(out, body[1:]...)
+	} else {
+		out = append(out, '}')
+	}
+	return out, nil
+}
+
+func jsonToolResultValue(result agent.AgentToolResult) jsonEventObject {
+	value := jsonEventObject{{"content", ai.ContentList(result.Content)}}
 	if len(result.Details) > 0 {
-		value["details"] = rawJSONValue(result.Details)
+		value.add("details", result.Details)
+	}
+	if result.Usage != nil {
+		value.add("usage", *result.Usage)
+	}
+	if result.IsError {
+		value.add("isError", true)
+	}
+	if result.Terminate {
+		value.add("terminate", true)
 	}
 	return value
 }
 
-func stringSliceValue(values []string) []any {
-	out := make([]any, 0, len(values))
-	for _, value := range values {
-		out = append(out, value)
-	}
-	return out
-}
-
-func rawJSONValue(raw any) any {
-	switch typed := raw.(type) {
-	case nil:
-		return nil
-	case json.RawMessage:
-		if len(typed) == 0 {
-			return nil
+func plainJSONEventValue(value any) (any, error) {
+	switch v := value.(type) {
+	case jsonEventObject:
+		out := make(map[string]any, len(v))
+		for _, field := range v {
+			plain, err := plainJSONEventValue(field.value)
+			if err != nil {
+				return nil, err
+			}
+			out[field.name] = plain
 		}
-		var parsed any
-		decoder := json.NewDecoder(bytes.NewReader(typed))
-		decoder.UseNumber()
-		if err := decoder.Decode(&parsed); err != nil {
-			return string(typed)
+		return out, nil
+	case ai.Usage:
+		out := map[string]any{
+			"input": v.Input, "output": v.Output, "cacheRead": v.CacheRead, "cacheWrite": v.CacheWrite, "totalTokens": v.TotalTokens,
+			"cost": map[string]any{"input": v.Cost.Input, "output": v.Cost.Output, "cacheRead": v.Cost.CacheRead, "cacheWrite": v.Cost.CacheWrite, "total": v.Cost.Total},
 		}
-		return parsed
-	case []byte:
-		if len(typed) == 0 {
-			return nil
+		if v.CacheWrite1h != nil {
+			out["cacheWrite1h"] = *v.CacheWrite1h
 		}
-		var parsed any
-		decoder := json.NewDecoder(bytes.NewReader(typed))
-		decoder.UseNumber()
-		if err := decoder.Decode(&parsed); err != nil {
-			return string(typed)
+		if v.Reasoning != nil {
+			out["reasoning"] = *v.Reasoning
 		}
-		return parsed
-	case string:
-		if typed == "" {
-			return nil
+		return out, nil
+	case []any:
+		out := make([]any, 0, len(v))
+		for _, item := range v {
+			plain, err := plainJSONEventValue(item)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, plain)
 		}
-		return typed
+		return out, nil
+	case string, bool, int, int64, float64, nil:
+		return v, nil
 	default:
-		return typed
+		data, err := ai.MarshalJSON(v)
+		if err != nil {
+			return nil, err
+		}
+		decoder := json.NewDecoder(bytes.NewReader(data))
+		decoder.UseNumber()
+		var out any
+		err = decoder.Decode(&out)
+		return out, err
 	}
 }

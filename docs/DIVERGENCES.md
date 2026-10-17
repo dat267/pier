@@ -566,9 +566,17 @@ options. RPC stays rejected, never converted to print mode.
 `TestNonTTYStartsPrintMode` runs piped startup without a renderer.
 
 Text prints the final assistant text; JSON emits the tagged session header and
-events, stripping cumulative `partial` from `message_update`. Failures report
-on stderr with exit 1. Initial images now attach in both modes (D153).
-Extensions/runtime rebind remain out of scope (D41).
+events. The shared event shaper omits both the outer cumulative `message` and
+inner `partial` from `message_update`, retains block index zero and required
+empty deltas, and forwards event-specific tool/session payloads. The
+`coding/testdata/gen_json_events.mjs` goldens follow v1.3.0 `modes/json-event.ts`.
+Failures report on stderr with exit 1. Initial images attach in both modes
+(D153). SIGTERM/SIGHUP cancel the operation and return 143/129 after runtime
+disposal, accepted session saves and stdout have drained; normal returns also
+remove the signal registration and join its waiter. Nonzero print statuses
+return through `cmd.run` so deferred host cleanup runs before `Execute` exits.
+Extensions/runtime rebind remain out of scope (D41). RPC is still explicitly
+rejected; JSON print mode is not a bidirectional RPC implementation.
 
 ## D163
 
@@ -1410,8 +1418,9 @@ write state, preventing old worker generations from publishing into replacements
 
 The UI selects on wakeups and reports chat errors. Teardown drains saves then
 routes unresolved diagnostics through D200's output grace, never direct stdout.
-Print mode flushes on every ordinary return and exits nonzero on failure;
-stderr preserves JSON stdout. Formats remain unchanged. Tests cover sync/queued
+Print mode flushes on ordinary and signal returns; persistence failures report
+on stderr and cause exit 1 on ordinary returns, while signal returns retain
+129/143. This preserves JSON stdout. Formats remain unchanged. Tests cover sync/queued
 initial and append failures, prefix/truncation recovery, per-task duplicate
 prevention, coalesced wakeups, idle reporting, teardown, and print exit codes.
 

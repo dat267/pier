@@ -3,6 +3,7 @@ package coding
 import (
 	ctxpkg "context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -250,6 +251,31 @@ func TestCheckCompactionGuards(t *testing.T) {
 	}
 	if runs.Load() != 1 {
 		t.Fatalf("runs = %d", runs.Load())
+	}
+}
+
+func TestAutoCompactionEndReportsContinuation(t *testing.T) {
+	// v1.3.0 agent-session.ts _runAutoCompaction emits its willRetry argument.
+	for _, retry := range []bool{false, true} {
+		t.Run(fmt.Sprint(retry), func(t *testing.T) {
+			var runs atomic.Int64
+			model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 1000, MaxTokens: 100}
+			session := compactionTestSession(t, model, summarizingStreamFn(t, &runs, "summary text that is long enough to pass the usability check"), smallCompactionSettings())
+			seedBranch(t, session)
+			var end *SessionEvent
+			session.Subscribe(func(event *SessionEvent) {
+				if event.Type == SessionCompactionEnd {
+					end = event
+				}
+			})
+			continued, err := session.RunAutoCompaction(ctxpkg.Background(), CompactionOverflow, retry)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if continued != retry || end == nil || end.Result == nil || end.WillRetry != retry {
+				t.Fatalf("continued=%v end=%+v, want willRetry=%v", continued, end, retry)
+			}
+		})
 	}
 }
 

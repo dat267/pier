@@ -262,7 +262,11 @@ func (s *AgentSession) SessionName() string { return s.Sessions.GetSessionName()
 // SetSessionName records a display name for the session.
 func (s *AgentSession) SetSessionName(name string) {
 	s.Sessions.AppendSessionInfo(name)
-	s.emit(&SessionEvent{Type: SessionInfoChanged})
+	var currentName *string
+	if name := s.Sessions.GetSessionName(); name != "" {
+		currentName = &name
+	}
+	s.emit(&SessionEvent{Type: SessionInfoChanged, Name: currentName})
 }
 
 // ScopedModels returns the model cycle scope.

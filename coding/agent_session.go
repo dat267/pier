@@ -97,7 +97,7 @@ type SessionEvent struct {
 	Type SessionEventType
 	// Agent carries the underlying event for passthrough types.
 	Agent *agent.AgentEvent
-	// agent_end
+	// agent_end / compaction_end
 	WillRetry bool
 	// queue_update
 	Steering []string
@@ -107,6 +107,8 @@ type SessionEvent struct {
 	Result       *CompactionResult
 	Aborted      bool
 	ErrorMessage string
+	// session_info_changed (nil represents upstream undefined, including clears)
+	Name *string
 	// thinking_level_changed
 	Level ai.ThinkingLevel
 	// auto_retry_*

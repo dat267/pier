@@ -45,6 +45,14 @@ func executableName() string {
 // a diagnostic, so main only has to set the exit status.
 var errAlreadyReported = errors.New("already reported")
 
+// reportedExitCode lets run unwind its resource/queue defers before Execute
+// exits, without printing a second diagnostic or losing a signal exit status.
+type reportedExitCode int
+
+func (code reportedExitCode) Error() string { return errAlreadyReported.Error() }
+func (code reportedExitCode) Unwrap() error { return errAlreadyReported }
+func (code reportedExitCode) ExitCode() int { return int(code) }
+
 // Execute runs the CLI, exiting the process on a fatal error.
 func Execute() {
 	// Before anything can reach the network: android has no /etc/resolv.conf, so
@@ -115,6 +123,10 @@ func Execute() {
 		os.Exit(1)
 	}
 	if err := run(appName, args); err != nil {
+		var status interface{ ExitCode() int }
+		if errors.As(err, &status) {
+			os.Exit(status.ExitCode())
+		}
 		if !errors.Is(err, errAlreadyReported) {
 			fmt.Fprintln(os.Stderr, appName+": "+err.Error())
 		}
@@ -488,7 +500,7 @@ func run(appName string, args *coding.Args) error {
 		offloopGroup.FlushAll()
 		coding.PrintTimings()
 		if exitCode != 0 {
-			os.Exit(exitCode)
+			return reportedExitCode(exitCode)
 		}
 		return nil
 	}
