@@ -754,5 +754,9 @@
   {
     "file": "sample.coffee",
     "language": "coffeescript"
+  },
+  {
+    "file": "sample.adoc",
+    "language": "asciidoc"
   }
 ]

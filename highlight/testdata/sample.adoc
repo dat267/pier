@@ -1,0 +1,18 @@
+= Document Title
+Author Name
+
+== Section
+
+This is *bold* and _italic_ text.
+
+**This is
+a multi-line bold span**
+
+* item one
+* item two
+
+NOTE: this is an admonition.
+
+''''
+Some paragraph.
+''''
