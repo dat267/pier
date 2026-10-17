@@ -1,0 +1,25 @@
+<span class="hljs-meta">#!/usr/bin/env groovy</span>
+<span class="hljs-keyword">package</span> com.example
+
+<span class="hljs-comment">/** A demo. @author pier */</span>
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Demo</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Runnable</span> {</span>
+    <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> String NAME = <span class="hljs-string">&quot;pier&quot;</span>
+    <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> COUNT = <span class="hljs-number">42</span>
+    <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">double</span> RATIO = <span class="hljs-number">1.5e-3</span>
+    <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> String RAW = <span class="hljs-string">&#x27;&#x27;&#x27;raw
+string&#x27;&#x27;&#x27;</span>
+    <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> String SLASHY = <span class="hljs-string">$/slashy $NAME string/$</span>
+
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-keyword">void</span> run() {
+        <span class="hljs-keyword">def</span> map = [<span class="hljs-attr">name:</span> NAME, <span class="hljs-attr">count:</span> COUNT]
+        <span class="hljs-keyword">def</span> ratio = <span class="hljs-regexp">~/[0-9]+\.[0-9]+/</span>
+        <span class="hljs-keyword">def</span> items = [<span class="hljs-string">&#x27;a&#x27;</span>, <span class="hljs-string">&#x27;b&#x27;</span>]
+        <span class="hljs-keyword">if</span> (COUNT &gt; <span class="hljs-number">0</span> &amp;&amp; !items.isEmpty()) {
+            println(<span class="hljs-string">&quot;hello, ${NAME} ${COUNT}&quot;</span>)
+        }
+        <span class="hljs-keyword">assert</span> map.size() == <span class="hljs-number">2</span>
+    }
+}
+
+<span class="hljs-class"><span class="hljs-keyword">trait</span> <span class="hljs-title">Greet</span> {</span> <span class="hljs-keyword">void</span> greet() }
