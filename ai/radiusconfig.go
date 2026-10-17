@@ -220,8 +220,8 @@ type RadiusProviderOptions struct {
 	ID      string
 	Name    string
 	Gateway string
-	// Streams overrides the pi-messages API implementation (unported, so the
-	// default provider dispatches to a missing-implementation error).
+	// Streams supplies the pi-messages API implementation; nil leaves the
+	// provider without streams, so the caller must supply one.
 	Streams ProviderStreams
 }
 

@@ -299,9 +299,8 @@ func OpenAICodexProvider() *ai.Provider { return ai.OpenAICodexProvider() }
 func AmazonBedrockProvider() *ai.Provider { return ai.AmazonBedrockProvider() }
 
 // RadiusProvider builds the dynamic Radius gateway provider (upstream
-// radiusProvider). Its pi-messages API adapter is not ported, so the provider
-// advertises auth and the refreshed catalogue while dispatching to a
-// missing-implementation error.
+// radiusProvider). Its pi-messages adapter is the ported
+// `api/pi-messages.ts` implementation.
 func RadiusProvider(gateway string) *ai.Provider {
 	return ai.RadiusProvider(ai.RadiusProviderOptions{Gateway: gateway, Streams: piMessagesStreams{}})
 }

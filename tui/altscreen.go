@@ -13,12 +13,12 @@ import (
 // application-owned viewport (scroll keys, mouse wheel/drag, text selection
 // with copy, transcript search, flashes, and the scroll-to-end indicator).
 //
-// Divergences: the kitty image caching/eviction is not ported (the transport
-// is out of scope: D57/D81) — image lines pass through and the image protocol
-// only drives the clear/delete escapes; selection auto-scroll uses a
-// time.AfterFunc loop guarded by a mutex (D82); clipboard writes go through the
-// injected CopySelection hook or an OSC 52 escape (native clipboard is out of
-// scope).
+// Divergences: the kitty image upload cache/eviction is not ported, so image
+// data is re-transmitted on a redraw instead of reusing an uploaded
+// placement (the encoders and metadata live in terminalimage.go); selection
+// auto-scroll uses a time.AfterFunc loop guarded by a mutex (D82); clipboard
+// writes go through the injected CopySelection hook or an OSC 52 escape
+// (native clipboard is out of scope).
 
 const (
 	enterAltScreen           = "\x1b[?1049h"

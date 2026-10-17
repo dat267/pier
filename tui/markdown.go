@@ -13,7 +13,8 @@ type TerminalCapabilities struct {
 	Hyperlinks bool
 	TrueColor  bool
 	// Images is the inline-image protocol ("" | "kitty" | "iterm2"); the
-	// transport itself is out of scope (D57/D81).
+	// encoders and the Image component live in terminalimage.go and
+	// imagecomponent.go.
 	Images string
 }
 
