@@ -5,7 +5,10 @@ import (
 	"strings"
 )
 
-func init() { RegisterLanguage("javascript", JavaScript()) }
+func init() {
+	RegisterLanguage("javascript", JavaScript())
+	RegisterLanguage("typescript", TypeScript())
+}
 
 var (
 	jsObjectAttrGuard = regexp.MustCompile(`(?m)\A(?:((//.*$)|(/\*(\*[^/]|[^*])*\*/))\s*)*` + jsIdentRe + `\s*:`)
@@ -67,7 +70,14 @@ func jsJSDoc() *Mode {
 
 // JavaScript returns the JavaScript language definition (a port of
 // languages/javascript.js).
-func JavaScript() *Language {
+func JavaScript() *Language { return buildJS(false) }
+
+// TypeScript returns the TypeScript definition, which is JavaScript plus the
+// TypeScript keyword sets, decorators, namespace/interface modes and a
+// simplified shebang/use-strict rule.
+func TypeScript() *Language { return buildJS(true) }
+
+func buildJS(typescript bool) *Language {
 	keywords := "as in of if for while finally var new function do return void else break catch " +
 		"instanceof with throw case default try switch continue typeof delete let yield const class " +
 		"debugger async await static import from export extends"
@@ -78,6 +88,10 @@ func JavaScript() *Language {
 	builtInVariables := "arguments this super console window document localStorage module global"
 	builtIns := builtInGlobals + " " + builtInVariables + " " + types + " " + errorTypes
 
+	if typescript {
+		keywords += " type namespace typedef interface public private protected implements declare abstract readonly"
+		builtIns += " any void number boolean string object never enum"
+	}
 	kw := Keywords{"$pattern": jsIdentRe, "keyword": keywords, "literal": literals, "built_in": builtIns}
 
 	fragment := &Mode{Begin: `<>`, End: `</>`}
@@ -140,6 +154,7 @@ func JavaScript() *Language {
 		Contains:  []*Mode{BackslashEscape, subst},
 	}
 
+	decorator := Zero(Mode{ClassName: "meta", Begin: `@` + jsIdentRe})
 	comment := jsComment()
 
 	substInternals := []*Mode{
@@ -160,6 +175,10 @@ func JavaScript() *Language {
 	paramsParen := &Mode{Begin: `\(`, End: `\)`, Keywords: kw}
 	paramsParen.Contains = append([]*Mode{Self}, paramsContains...)
 	paramsContains = append(paramsContains, paramsParen)
+	if typescript {
+		// The reference pushes DECORATOR onto the exported PARAMS_CONTAINS.
+		paramsContains = append(paramsContains, decorator)
+	}
 
 	params := &Mode{
 		ClassName:    "params",
@@ -248,6 +267,10 @@ func JavaScript() *Language {
 			params,
 		},
 	}
+	if typescript {
+		functionMode.Relevance = 0
+		functionMode.HasRelevance = true
+	}
 	functionExpr := &Mode{
 		ClassName:   "function",
 		Begin:       UnderscoreIdentRe + `\([^()]*(\([^()]*(\([^()]*\)[^()]*)*\)[^()]*)*\)\s*\{`,
@@ -290,11 +313,15 @@ func JavaScript() *Language {
 		}
 	}
 
+	useStrictBegin := `^\s*['"]use (strict|asm)['"]`
+	if typescript {
+		useStrictBegin = `^\s*['"]use strict['"]`
+	}
 	useStrict := &Mode{
 		ClassName:    "meta",
 		HasRelevance: true,
 		Relevance:    10,
-		Begin:        `^\s*['"]use (strict|asm)['"]`,
+		Begin:        useStrictBegin,
 	}
 	keywordGuard := &Mode{
 		Variants: []*Mode{
@@ -305,33 +332,52 @@ func JavaScript() *Language {
 		Relevance:    0,
 	}
 
+	shebang := Shebang("node", 5)
+	if typescript {
+		// TypeScript gets the plain shebang rule.
+		shebang = Shebang("", 0)
+	}
+	contains := []*Mode{
+		shebang,
+		useStrict,
+		AposStringMode,
+		QuoteStringMode,
+		htmlTemplate,
+		cssTemplate,
+		templateString,
+		comment,
+		number,
+		objectAttr,
+		valueContainer,
+		functionMode,
+		{BeginKeywords: "while if switch catch for"},
+		functionExpr,
+		keywordGuard,
+		classMode,
+		constructorMode,
+		getSet,
+		{Begin: `\$[(.]`},
+	}
+	if typescript {
+		contains = append(contains,
+			decorator,
+			&Mode{BeginKeywords: "namespace", End: `\{`, ExcludeEnd: true},
+			&Mode{ClassName: "interface", BeginKeywords: "interface", End: `\{`, ExcludeEnd: true, Keywords: Keywords{"keyword": "interface extends"}},
+		)
+	}
+	name := "Javascript"
+	aliases := []string{"js", "jsx", "mjs", "cjs"}
+	if typescript {
+		name = "TypeScript"
+		aliases = []string{"ts", "tsx"}
+	}
 	return &Language{
-		Name:    "Javascript",
-		Aliases: []string{"js", "jsx", "mjs", "cjs"},
+		Name:    name,
+		Aliases: aliases,
 		Mode: Mode{
 			Keywords: kw,
 			Illegal:  `#[^$_A-Za-z]`,
-			Contains: []*Mode{
-				Shebang("node", 5),
-				useStrict,
-				AposStringMode,
-				QuoteStringMode,
-				htmlTemplate,
-				cssTemplate,
-				templateString,
-				comment,
-				number,
-				objectAttr,
-				valueContainer,
-				functionMode,
-				{BeginKeywords: "while if switch catch for"},
-				functionExpr,
-				keywordGuard,
-				classMode,
-				constructorMode,
-				getSet,
-				{Begin: `\$[(.]`},
-			},
+			Contains: contains,
 		},
 	}
 }
