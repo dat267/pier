@@ -101,7 +101,7 @@ func EndSameAsBegin(mode *Mode) *Mode {
 func Shebang(binary string, relevance int) *Mode {
 	begin := `^#![ ]*/`
 	if binary != "" {
-		begin = begin + `.*` + binary + `.*`
+		begin = begin + `.*\b` + binary + `\b.*`
 	}
 	mode := &Mode{
 		ClassName:    "meta",

@@ -165,22 +165,38 @@ func Swift() *Language {
 		},
 	})
 
-	escapedCharacter := Zero(Mode{
-		ClassName: "subst",
-		Variants: []*Mode{
-			{ClassName: "subst", Match: `\\[0\\tnr"']`},
-			{ClassName: "subst", Match: `\\u\{[0-9a-fA-F]{1,8}\}`},
-		},
-	})
-	escapedNewline := Zero(Mode{ClassName: "subst", Match: `\\[\t ]*(?:\r\n|\r|\n)`})
-	interpolation := &Mode{ClassName: "subst", Begin: `\\\(`, End: `\)`}
-
+	escapedCharacter := func(rd string) *Mode {
+		return Zero(Mode{
+			ClassName: "subst",
+			Variants: []*Mode{
+				{ClassName: "subst", Match: `\\` + rd + `[0\\tnr"']`},
+				{ClassName: "subst", Match: `\\` + rd + `u\{[0-9a-fA-F]{1,8}\}`},
+			},
+		})
+	}
+	escapedNewline := func(rd string) *Mode {
+		return Zero(Mode{ClassName: "subst", Match: `\\` + rd + `[\t ]*(?:\r\n|\r|\n)`})
+	}
+	// The interpolation mode is built per raw delimiter; its contains are filled
+	// in after the submode list exists (the reference's post-processing loop).
+	interpolationFor := func(rd string) *Mode {
+		return &Mode{ClassName: "subst", Begin: `\\` + rd + `\(`, End: `\)`}
+	}
+	rawDelimiters := []string{"", "#", "##", "###"}
+	escapedByRD := map[string]*Mode{}
+	newlineByRD := map[string]*Mode{}
+	interpolationByRD := map[string]*Mode{}
+	for _, rd := range rawDelimiters {
+		escapedByRD[rd] = escapedCharacter(rd)
+		newlineByRD[rd] = escapedNewline(rd)
+		interpolationByRD[rd] = interpolationFor(rd)
+	}
 	multilineString := func(rd string) *Mode {
 		return &Mode{
 			ClassName: "string",
 			Begin:     rd + `"""`,
 			End:       `"""` + rd,
-			Contains:  []*Mode{escapedCharacter, escapedNewline, interpolation},
+			Contains:  []*Mode{escapedByRD[rd], newlineByRD[rd], interpolationByRD[rd]},
 		}
 	}
 	singleLineString := func(rd string) *Mode {
@@ -188,7 +204,7 @@ func Swift() *Language {
 			ClassName: "string",
 			Begin:     rd + `"`,
 			End:       `"` + rd,
-			Contains:  []*Mode{escapedCharacter, interpolation},
+			Contains:  []*Mode{escapedByRD[rd], interpolationByRD[rd]},
 		}
 	}
 	stringMode := &Mode{
@@ -212,10 +228,13 @@ func Swift() *Language {
 	interpolationSubmodes = append(interpolationSubmodes, number)
 	interpolationSubmodes = append(interpolationSubmodes, stringMode)
 	interpolationSubmodes = append(interpolationSubmodes, identifiers...)
-	interpolation.Keywords = keywords
-	interpolationParen := &Mode{Begin: `\(`, End: `\)`}
-	interpolationParen.Contains = append([]*Mode{Self}, interpolationSubmodes...)
-	interpolation.Contains = append(append([]*Mode{}, interpolationSubmodes...), interpolationParen)
+	for _, rd := range rawDelimiters {
+		m := interpolationByRD[rd]
+		m.Keywords = keywords
+		interpolationParen := &Mode{Begin: `\(`, End: `\)`}
+		interpolationParen.Contains = append([]*Mode{Self}, interpolationSubmodes...)
+		m.Contains = append(append([]*Mode{}, interpolationSubmodes...), interpolationParen)
+	}
 
 	availableAttribute := &Mode{
 		ClassName: "keyword",
@@ -235,7 +254,15 @@ func Swift() *Language {
 	userDefinedAttribute := &Mode{ClassName: "meta", Match: `@` + swiftIdentifier}
 	attributes := []*Mode{availableAttribute, keywordAttribute, userDefinedAttribute}
 
-	typeMode := &Mode{Begin: `\b[A-Z]`, ReturnBegin: true}
+	// The reference's TYPE begins with the zero-width lookahead `\b[A-Z]`. A
+	// sliced input makes Go evaluate `\b` at the slice start as a boundary, so
+	// check the real preceding byte here instead.
+	typeMode := &Mode{Begin: `[A-Z]`, ReturnBegin: true}
+	typeMode.beforeBegin = func(m *match, resp *Response) {
+		if m.index > 0 && isWordByte(m.input[m.index-1]) {
+			resp.IgnoreMatch()
+		}
+	}
 	typeMode.HasRelevance = true
 	typeMode.Relevance = 0
 	typeMode.Contains = []*Mode{

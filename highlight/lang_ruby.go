@@ -150,9 +150,10 @@ func Ruby() *Language {
 		},
 	}
 	functionMode := Zero(Mode{
-		Begin:    `def\s+`,
-		Keywords: Keywords{"keyword": "def"},
-		End:      `$|;`,
+		ClassName: "function",
+		Begin:     `def\s+`,
+		Keywords:  Keywords{"keyword": "def"},
+		End:       `$|;`,
 		Contains: []*Mode{
 			Variant(TitleMode, func(m *Mode) { m.Begin = rubyMethodRe }),
 			params,
@@ -196,23 +197,22 @@ func Ruby() *Language {
 		}
 	}
 	pipeParams := &Mode{ClassName: "params", Begin: `\|`, End: `\|`, HasRelevance: true, Relevance: 0, Keywords: rubyKeywords}
+	regexpBase := &Mode{
+		ClassName: "regexp",
+		Illegal:   `\n`,
+		Contains:  []*Mode{BackslashEscape, subst},
+	}
+	regexpBase.Variants = []*Mode{
+		Variant(regexpBase, func(m *Mode) { m.Begin = `/`; m.End = `/[a-z]*` }),
+		Variant(regexpBase, func(m *Mode) { m.Begin = `%r\{`; m.End = `\}[a-z]*` }),
+		Variant(regexpBase, func(m *Mode) { m.Begin = `%r\(`; m.End = `\)[a-z]*` }),
+		Variant(regexpBase, func(m *Mode) { m.Begin = `%r!`; m.End = `![a-z]*` }),
+		Variant(regexpBase, func(m *Mode) { m.Begin = `%r\[`; m.End = `\][a-z]*` }),
+	}
 	regexpContainer := Zero(Mode{
 		Begin:    `(` + reStartersRe + `|unless)\s*`,
 		Keywords: Keywords{"keyword": "unless"},
-		Contains: []*Mode{
-			{
-				ClassName: "regexp",
-				Illegal:   `\n`,
-				Contains:  []*Mode{BackslashEscape, subst},
-				Variants: []*Mode{
-					{ClassName: "regexp", Begin: `/`, End: `/[a-z]*`},
-					{ClassName: "regexp", Begin: `%r\{`, End: `\}[a-z]*`},
-					{ClassName: "regexp", Begin: `%r\(`, End: `\)[a-z]*`},
-					{ClassName: "regexp", Begin: `%r!`, End: `![a-z]*`},
-					{ClassName: "regexp", Begin: `%r\[`, End: `\][a-z]*`},
-				},
-			},
-		},
+		Contains: []*Mode{regexpBase},
 	})
 
 	defaultContains := []*Mode{

@@ -230,16 +230,24 @@ func buildJS(typescript bool) *Language {
 		Contains:    []*Mode{arrowParams},
 	}
 
-	jsx := &Mode{
-		Variants: []*Mode{
-			{Begin: fragment.Begin, End: fragment.End},
-			{Begin: xmlTag.Begin, OnBegin: xmlTag.OnBegin, End: xmlTag.End},
-		},
+	// The reference puts subLanguage/contains on the outer JSX mode and only
+	// begin/end on each variant; Variant clones the base so the variants
+	// inherit them (a partial Variants slice would drop the xml sub-language).
+	jsxBase := &Mode{
 		SubLanguage: []string{"xml"},
 		Contains: []*Mode{
 			{Begin: xmlTag.Begin, End: xmlTag.End, Skip: true, Contains: []*Mode{Self}},
 		},
 	}
+	jsxBase.Variants = []*Mode{
+		Variant(jsxBase, func(m *Mode) { m.Begin = fragment.Begin; m.End = fragment.End }),
+		Variant(jsxBase, func(m *Mode) {
+			m.Begin = xmlTag.Begin
+			m.OnBegin = xmlTag.OnBegin
+			m.End = xmlTag.End
+		}),
+	}
+	jsx := jsxBase
 
 	valueContainer := Zero(Mode{
 		Begin:    `(` + reStartersRe + `|\b(case|return|throw)\b)\s*`,
@@ -362,7 +370,7 @@ func buildJS(typescript bool) *Language {
 		contains = append(contains,
 			decorator,
 			&Mode{BeginKeywords: "namespace", End: `\{`, ExcludeEnd: true},
-			&Mode{ClassName: "interface", BeginKeywords: "interface", End: `\{`, ExcludeEnd: true, Keywords: Keywords{"keyword": "interface extends"}},
+			&Mode{BeginKeywords: "interface", End: `\{`, ExcludeEnd: true, Keywords: Keywords{"keyword": "interface extends"}},
 		)
 	}
 	name := "Javascript"
@@ -382,5 +390,7 @@ func buildJS(typescript bool) *Language {
 	}
 }
 
-// reStartersRe mirrors core.js RE_STARTERS_RE.
-const reStartersRe = `!|!=|!==|%|%=|&|&&|&=|\*|\*=|\\+|\\+=|,|-|-=|/=|/|:|;|<<|<<=|<=|<|===|==|=|>>>=|>>=|>=|>>>|>>|>|\?|\\[|\\{|\\(|\\^|\\^=|\\||\\|=|\\|\\||~`
+// reStartersRe mirrors core.js RE_STARTERS_RE. The reference stores it as a JS
+// string literal, where `\\+` is the two characters `\+`; a Go raw string needs
+// the regex source directly (`\+`), not the JS escaping.
+const reStartersRe = `!|!=|!==|%|%=|&|&&|&=|\*|\*=|\+|\+=|,|-|-=|/=|/|:|;|<<|<<=|<=|<|===|==|=|>>>=|>>=|>=|>>>|>>|>|\?|\[|\{|\(|\^|\^=|\||\|=|\|\||~`

@@ -3,6 +3,7 @@ package highlight
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -372,10 +373,36 @@ func compileKeywords(raw Keywords, caseInsensitive bool) map[string]keywordData 
 			out[word] = keywordData{className: className, relevance: scoreForKeyword(strings.SplitN(keyword, "|", 2)...)}
 		}
 	}
-	for className, words := range raw {
-		compileList(className, words)
+	for _, className := range orderedKeywordClasses(raw) {
+		compileList(className, raw[className])
 	}
 	return out
+}
+
+// keywordClassOrder is the order classes are applied when a word appears in
+// more than one. The reference iterates the keyword object in insertion order
+// and the last class wins; a Go map has no order, so list the common classes
+// first (with built_in last, which is what TypeScript's KEYWORDS relies on for
+// `void`) and sort the rest for determinism.
+var keywordClassOrder = []string{"keyword", "literal", "built_in", "type", "title", "symbol", "meta"}
+
+func orderedKeywordClasses(raw Keywords) []string {
+	seen := make(map[string]bool, len(raw))
+	out := make([]string, 0, len(raw))
+	for _, name := range keywordClassOrder {
+		if _, ok := raw[name]; ok && !seen[name] {
+			out = append(out, name)
+			seen[name] = true
+		}
+	}
+	rest := make([]string, 0, len(raw))
+	for name := range raw {
+		if !seen[name] {
+			rest = append(rest, name)
+		}
+	}
+	sort.Strings(rest)
+	return append(out, rest...)
 }
 
 func scoreForKeyword(parts ...string) int {

@@ -4,6 +4,17 @@ import "strings"
 
 func init() { RegisterLanguage("css", CSS()) }
 
+// cssAttributesAlternation is ATTRIBUTES.reverse().join("|") from css.js. The
+// reverse makes longer property names win the leftmost-first alternation, so
+// `background-color` is not shortened to `background`.
+var cssAttributesAlternation = func() string {
+	reversed := make([]string, len(cssAttributes))
+	for i, attr := range cssAttributes {
+		reversed[len(cssAttributes)-1-i] = attr
+	}
+	return strings.Join(reversed, "|")
+}()
+
 // CSS returns the CSS language definition (a port of languages/css.js).
 func CSS() *Language {
 	identRe := `[a-zA-Z-][a-zA-Z0-9_-]*`
@@ -118,7 +129,7 @@ func CSS() *Language {
 						{ClassName: "selector-pseudo", Begin: `::(` + strings.Join(cssPseudoElements, "|") + `)`},
 					},
 				},
-				{ClassName: "attribute", Begin: `\b(` + strings.Join(cssAttributes, "|") + `)\b`},
+				{ClassName: "attribute", Begin: `\b(` + cssAttributesAlternation + `)\b`},
 				attributeValue,
 				atRule,
 				{ClassName: "selector-tag", Begin: `\b(` + strings.Join(cssTags, "|") + `)\b`},

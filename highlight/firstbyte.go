@@ -43,9 +43,10 @@ func firstByteSet(expr string, parsed *syntax.Regexp) (string, bool) {
 
 // ruleFirstByteSet returns the bytes that can begin a non-empty match of one
 // rule. usable is false when the rule can match empty, in which case per-byte
-// dispatch cannot be used.
-func ruleFirstByteSet(expr string) (string, bool) {
-	parsed := parsePattern(expr)
+// dispatch cannot be used. caseInsensitive must match the language so a class
+// like [A-Z_] includes its lowercase bytes.
+func ruleFirstByteSet(expr string, caseInsensitive bool) (string, bool) {
+	parsed := parsePatternFlags(expr, caseInsensitive)
 	if parsed == nil || minMatchLen(parsed) == 0 {
 		return "", false
 	}
@@ -61,7 +62,15 @@ func ruleFirstByteSet(expr string) (string, bool) {
 }
 
 func parsePattern(expr string) *syntax.Regexp {
-	parsed, err := syntax.Parse(expr, syntax.Perl)
+	return parsePatternFlags(expr, false)
+}
+
+func parsePatternFlags(expr string, caseInsensitive bool) *syntax.Regexp {
+	flags := syntax.Perl
+	if caseInsensitive {
+		flags |= syntax.FoldCase
+	}
+	parsed, err := syntax.Parse(expr, flags)
 	if err != nil {
 		return nil
 	}

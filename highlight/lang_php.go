@@ -8,7 +8,7 @@ func PHP() *Language {
 	// lookaheads become a post-match guard.
 	variable := &Mode{
 		ClassName: "variable",
-		Begin:     "$+[a-zA-Z_\\x7f-\\xff][a-zA-Z0-9_\\x7f-\\xff]*",
+		Begin:     "\\$+[a-zA-Z_\\x7f-\\xff][a-zA-Z0-9_\\x7f-\\xff]*",
 	}
 	variable.beforeBegin = func(m *match, resp *Response) {
 		next := m.index + len(m.lexeme)
@@ -41,9 +41,10 @@ func PHP() *Language {
 		m.Contains = []*Mode{BackslashEscape, subst}
 	})
 	heredoc := EndSameAsBegin(&Mode{
-		Begin:    `<<<[ \t]*(\w+)\n`,
-		End:      `[ \t]*(\w+)\b`,
-		Contains: []*Mode{BackslashEscape, subst},
+		ClassName: "string",
+		Begin:     `<<<[ \t]*(\w+)\n`,
+		End:       `[ \t]*(\w+)\b`,
+		Contains:  []*Mode{BackslashEscape, subst},
 	})
 	stringMode := &Mode{
 		ClassName: "string",
@@ -120,11 +121,8 @@ func PHP() *Language {
 			},
 		},
 	})
-	classMode := Zero(Mode{
-		Variants: []*Mode{
-			{ClassName: "class", BeginKeywords: "enum", Illegal: `[($"]`},
-			{ClassName: "class", BeginKeywords: "class interface trait", Illegal: `[:($"]`},
-		},
+	classBase := Zero(Mode{
+		ClassName:  "class",
 		End:        `\{`,
 		ExcludeEnd: true,
 		Contains: []*Mode{
@@ -132,6 +130,17 @@ func PHP() *Language {
 			UnderscoreTitleMode,
 		},
 	})
+	// The reference puts className/end/contains on the outer mode and only
+	// beginKeywords/illegal on each variant, so the variants must inherit the
+	// outer fields (Variant clones the base rather than reusing it).
+	classBase.Variants = []*Mode{
+		Variant(classBase, func(m *Mode) { m.BeginKeywords = "enum"; m.Illegal = `[($"]` }),
+		Variant(classBase, func(m *Mode) {
+			m.BeginKeywords = "class interface trait"
+			m.Illegal = `[:($"]`
+		}),
+	}
+	classMode := classBase
 	namespaceMode := Zero(Mode{
 		BeginKeywords: "namespace",
 		End:           `;`,

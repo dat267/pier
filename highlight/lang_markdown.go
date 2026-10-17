@@ -1,5 +1,7 @@
 package highlight
 
+import "regexp"
+
 func init() { RegisterLanguage("markdown", Markdown()) }
 
 // Markdown returns the Markdown language definition (a port of
@@ -54,14 +56,9 @@ func Markdown() *Language {
 		},
 	}
 	const urlScheme = `[A-Za-z][A-Za-z0-9+.-]*`
-	link := &Mode{
-		Variants: []*Mode{
-			Zero(Mode{Begin: `\[.+?\]\[.*?\]`}),
-			{Begin: `\[.+?\]\(((data|javascript|mailto):|(?:http|ftp)s?:\/\/).*?\)`, HasRelevance: true, Relevance: 2},
-			{Begin: `\[.+?\]\(` + urlScheme + `:\/\/.*?\)`, HasRelevance: true, Relevance: 2},
-			{Begin: `\[.+?\]\([./?&#].*?\)`, HasRelevance: true, Relevance: 1},
-			Zero(Mode{Begin: `\[.+?\]\(.*?\)`}),
-		},
+	// The reference puts returnBegin/contains on the outer mode and only begin
+	// on each variant; Variant clones the base so the variants inherit them.
+	linkBase := &Mode{
 		ReturnBegin: true,
 		Contains: []*Mode{
 			{ClassName: "string", Begin: `\[`, End: `\]`, ExcludeBegin: true, ReturnEnd: true},
@@ -69,6 +66,26 @@ func Markdown() *Language {
 			{ClassName: "symbol", Begin: `\]\[`, End: `\]`, ExcludeBegin: true, ExcludeEnd: true},
 		},
 	}
+	linkBase.Variants = []*Mode{
+		Variant(linkBase, func(m *Mode) { m.Begin = `\[.+?\]\[.*?\]`; m.HasRelevance = true; m.Relevance = 0 }),
+		Variant(linkBase, func(m *Mode) {
+			m.Begin = `\[.+?\]\(((data|javascript|mailto):|(?:http|ftp)s?:\/\/).*?\)`
+			m.HasRelevance = true
+			m.Relevance = 2
+		}),
+		Variant(linkBase, func(m *Mode) {
+			m.Begin = `\[.+?\]\(` + urlScheme + `:\/\/.*?\)`
+			m.HasRelevance = true
+			m.Relevance = 2
+		}),
+		Variant(linkBase, func(m *Mode) {
+			m.Begin = `\[.+?\]\([./?&#].*?\)`
+			m.HasRelevance = true
+			m.Relevance = 1
+		}),
+		Variant(linkBase, func(m *Mode) { m.Begin = `\[.+?\]\(.*?\)`; m.HasRelevance = true; m.Relevance = 0 }),
+	}
+	link := linkBase
 	bold := &Mode{
 		ClassName: "strong",
 		Variants: []*Mode{
@@ -97,19 +114,29 @@ func Markdown() *Language {
 	italic.Contains = append([]*Mode{bold}, containable...)
 	containable = append(containable, bold, italic)
 
+	// The reference's setext variant begins with the zero-width lookahead
+	// `(?=^.+?\n[=-]{2,}$)`; RE2 has none, so match `^` and guard on the two
+	// lines. A consuming begin with returnBegin instead would close the section
+	// before the underline.
+	setextGuard := regexp.MustCompile(`(?m)\A.+?\n[=-]{2,}$`)
+	setext := &Mode{
+		ClassName: "section",
+		Begin:     `^`,
+		Contains: []*Mode{
+			{Begin: `^[=-]*$`},
+			{Begin: `^`, End: `\n`, Contains: containable},
+		},
+	}
+	setext.beforeBegin = func(m *match, resp *Response) {
+		if !setextGuard.MatchString(m.input[m.index:]) {
+			resp.IgnoreMatch()
+		}
+	}
 	header := &Mode{
 		ClassName: "section",
 		Variants: []*Mode{
 			{ClassName: "section", Begin: `^#{1,6}`, End: `$`, Contains: containable},
-			{
-				ClassName:   "section",
-				Begin:       `^.+?\n[=-]{2,}$`,
-				ReturnBegin: true,
-				Contains: []*Mode{
-					{Begin: `^[=-]*$`},
-					{Begin: `^`, End: `\n`, Contains: containable},
-				},
-			},
+			setext,
 		},
 	}
 	blockquote := &Mode{ClassName: "quote", Begin: `^>\s+`, Contains: containable, End: `$`}

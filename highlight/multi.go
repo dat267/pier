@@ -162,7 +162,7 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 	usable := true
 	var union [256]bool
 	for i, source := range m.regexes {
-		set, ok := ruleFirstByteSet(source)
+		set, ok := ruleFirstByteSet(source, caseInsensitive)
 		if !ok {
 			usable = false
 			break
@@ -361,7 +361,7 @@ func (m *multiRegex) execScan(s string, lastIndex int) *match {
 			}
 		}
 		if regexAbs >= 0 {
-			if !m.verifyStart || regexAbs == 0 || regexAbs != search {
+			if !m.verifyStart || regexAbs == 0 {
 				return m.buildMatch(s, search, regexLoc)
 			}
 			if m.prefixedRe != nil {
@@ -458,7 +458,13 @@ func (r *resumableMultiRegex) getMatcher(index int) *multiRegex {
 		return r.multiRegexes[index]
 	}
 	if index >= len(r.multiRegexes) {
-		grown := make([]*multiRegex, len(r.rules))
+		// The reference stores matchers in a sparse JS array, so an index at (or
+		// past) rules.length is valid: rules.slice(index) is empty and the empty
+		// matcher matches nothing. regexIndex can reach rules.length when the last
+		// rule's position advances past count, so size to index+1, not rules
+		// length alone.
+		size := max(index+1, len(r.rules))
+		grown := make([]*multiRegex, size)
 		copy(grown, r.multiRegexes)
 		r.multiRegexes = grown
 	}
@@ -483,15 +489,21 @@ func (r *resumableMultiRegex) getMatcher(index int) *multiRegex {
 func (r *resumableMultiRegex) exec(s string, lastIndex, regexIndex int) (*match, int) {
 	matcher := r.getMatcher(regexIndex)
 	result := matcher.exec(s, lastIndex)
+	base := regexIndex
 	if regexIndex != 0 {
 		if result == nil || result.index != lastIndex {
 			full := r.getMatcher(0)
 			result = full.exec(s, lastIndex+1)
+			// The fallback result comes from the full matcher, so its rule position
+			// is already absolute. Adding the partial index to it (what the
+			// reference does, relying on its shared rule objects) overshoots and
+			// skips the rules between, so base from zero.
+			base = 0
 		}
 	}
 	next := regexIndex
 	if result != nil {
-		next = regexIndex + result.position + 1
+		next = base + result.position + 1
 		if next == r.count {
 			next = 0
 		}
