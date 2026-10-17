@@ -1,0 +1,15 @@
+<span class="hljs-comment">// a comment</span>
+<span class="hljs-comment">@ a comment @</span>
+<span class="hljs-keyword">new</span>;
+x = { <span class="hljs-number">1</span> <span class="hljs-number">2</span> <span class="hljs-number">3</span>, <span class="hljs-number">4</span> <span class="hljs-number">5</span> <span class="hljs-number">6</span> };
+y = x * x;
+<span class="hljs-keyword">print</span> y;
+
+<span class="hljs-function"><span class="hljs-keyword">proc</span> (<span class="hljs-params"><span class="hljs-number">1</span></span>) = <span class="hljs-title">square</span>(<span class="hljs-params">x</span>)</span>;
+    <span class="hljs-keyword">local</span> y;
+    y = x * x;
+    <span class="hljs-keyword">retp</span>(y);
+<span class="hljs-keyword">endp</span>;
+
+<span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">cube</span>(<span class="hljs-params">x</span>) </span>= x * x * x;
+z = <span class="hljs-built_in">cube</span>(<span class="hljs-number">3</span>);

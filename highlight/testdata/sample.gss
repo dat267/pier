@@ -1,0 +1,15 @@
+// a comment
+@ a comment @
+new;
+x = { 1 2 3, 4 5 6 };
+y = x * x;
+print y;
+
+proc (1) = square(x);
+    local y;
+    y = x * x;
+    retp(y);
+endp;
+
+fn cube(x) = x * x * x;
+z = cube(3);

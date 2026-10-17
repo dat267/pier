@@ -678,5 +678,9 @@
   {
     "file": "sample.sas",
     "language": "sas"
+  },
+  {
+    "file": "sample.gss",
+    "language": "gauss"
   }
 ]
