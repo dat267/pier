@@ -1,0 +1,17 @@
+#include <iostream>
+
+class Greeter {
+public:
+    explicit Greeter(std::string name) : name_(std::move(name)) {}
+    void greet() const {
+        std::cout << "Hello, " << name_ << "\n";
+    }
+private:
+    std::string name_;
+};
+
+int main() {
+    Greeter g("world");
+    g.greet();
+    return 0;
+}

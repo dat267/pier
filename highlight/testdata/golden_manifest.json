@@ -586,5 +586,13 @@
   {
     "file": "sample.qml",
     "language": "qml"
+  },
+  {
+    "file": "sample.clike",
+    "language": "c-like"
+  },
+  {
+    "file": "sample.ino",
+    "language": "arduino"
   }
 ]

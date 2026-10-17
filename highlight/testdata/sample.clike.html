@@ -1,0 +1,17 @@
+<span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;iostream&gt;</span></span>
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Greeter</span> {</span>
+<span class="hljs-keyword">public</span>:
+    <span class="hljs-function"><span class="hljs-keyword">explicit</span> <span class="hljs-title">Greeter</span><span class="hljs-params">(std::string name)</span> : name_(std::move(name)) {</span>}
+    <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">greet</span><span class="hljs-params">()</span> <span class="hljs-keyword">const</span> </span>{
+        std::cout &lt;&lt; <span class="hljs-string">&quot;Hello, &quot;</span> &lt;&lt; name_ &lt;&lt; <span class="hljs-string">&quot;\n&quot;</span>;
+    }
+<span class="hljs-keyword">private</span>:
+    std::string name_;
+};
+
+<span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">main</span><span class="hljs-params">()</span> </span>{
+    <span class="hljs-function">Greeter <span class="hljs-title">g</span><span class="hljs-params">(<span class="hljs-string">&quot;world&quot;</span>)</span></span>;
+    g.<span class="hljs-built_in">greet</span>();
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}
