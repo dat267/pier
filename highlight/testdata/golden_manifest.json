@@ -710,5 +710,9 @@
   {
     "file": "sample.mac",
     "language": "maxima"
+  },
+  {
+    "file": "sample.sqf",
+    "language": "sqf"
   }
 ]
