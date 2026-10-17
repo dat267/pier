@@ -1,0 +1,15 @@
+<span class="hljs-keyword">package</span> demo;
+
+<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">aspect</span> <span class="hljs-title">Logging</span> </span>{
+    <span class="hljs-keyword">pointcut</span> <span class="hljs-title">methodCall</span>(): <span class="hljs-keyword">execution</span>(* *(..));
+
+    <span class="hljs-keyword">before</span>(): methodCall() {
+        System.out.println(<span class="hljs-string">&quot;called&quot;</span>);
+    }
+}
+
+<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Main</span> </span>{
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">main</span><span class="hljs-params">(String[] args)</span> </span>{
+        System.out.println(<span class="hljs-string">&quot;hi&quot;</span>);
+    }
+}

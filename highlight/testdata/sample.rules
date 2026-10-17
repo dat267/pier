@@ -1,0 +1,5 @@
+# a hash comment
+IF ACCOUNTFACTOR > 100 THEN
+  CALC = INTDADDATTRIBUTE(1, 2);
+  # some literal
+END

@@ -1,0 +1,8 @@
+<span class="hljs-keyword">Require</span> <span class="hljs-keyword">Import</span> Coq.Init.Nat.
+
+<span class="hljs-keyword">Theorem</span> plus_0_l : <span class="hljs-keyword">forall</span> n : nat, <span class="hljs-number">0</span> + n = n.
+<span class="hljs-keyword">Proof</span>.
+  <span class="hljs-built_in">intros</span> n. <span class="hljs-built_in">simpl</span>. <span class="hljs-built_in">reflexivity</span>.
+<span class="hljs-keyword">Qed</span>.
+
+<span class="hljs-keyword">Definition</span> <span class="hljs-built_in">double</span> (n : nat) : nat := n + n.

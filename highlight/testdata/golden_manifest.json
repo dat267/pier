@@ -514,5 +514,21 @@
   {
     "file": "sample.arcade",
     "language": "arcade"
+  },
+  {
+    "file": "sample.hy",
+    "language": "hy"
+  },
+  {
+    "file": "sample.rules",
+    "language": "ruleslanguage"
+  },
+  {
+    "file": "sample.coq",
+    "language": "coq"
+  },
+  {
+    "file": "sample.aj",
+    "language": "aspectj"
   }
 ]
