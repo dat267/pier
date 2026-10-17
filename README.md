@@ -39,8 +39,8 @@ and `durable` were ported but unreachable from the CLI, so they were removed
 (D236) and preserved on the `unwired-packages` branch.
 
 There is no built-in filesystem sandbox (D177): shell, write and edit run with
-the OS user's permissions, including outside the workspace. There is no
-`/permissions` command or footer indicator. Use external confinement.
+the OS user's permissions, including outside the workspace. Use external
+confinement.
 
 ## Architecture
 
@@ -116,5 +116,4 @@ platform browser. Stdio RPC (`--mode rpc`) supports prompting, steering, abort,
 queues, state and messages, model and thinking selection, session
 introspection, compaction, retry, bash control, session replacement and event
 streaming, with a typed subprocess client in `coding/rpcclient`; see
-[docs/rpc.md](docs/rpc.md). The package manager, extensions and migrations are
-not wired.
+[docs/rpc.md](docs/rpc.md).
