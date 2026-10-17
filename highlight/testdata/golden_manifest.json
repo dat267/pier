@@ -666,5 +666,9 @@
   {
     "file": "sample.adb",
     "language": "ada"
+  },
+  {
+    "file": "sample.scm",
+    "language": "scheme"
   }
 ]
