@@ -622,5 +622,9 @@
   {
     "file": "sample.re",
     "language": "reasonml"
+  },
+  {
+    "file": "sample.pp",
+    "language": "puppet"
   }
 ]
