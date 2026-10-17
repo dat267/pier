@@ -550,5 +550,21 @@
   {
     "file": "sample.irp",
     "language": "irpf90"
+  },
+  {
+    "file": "sample.django",
+    "language": "django"
+  },
+  {
+    "file": "sample.twig",
+    "language": "twig"
+  },
+  {
+    "file": "sample.haml",
+    "language": "haml"
+  },
+  {
+    "file": "sample.htvbs",
+    "language": "vbscript-html"
   }
 ]

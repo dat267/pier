@@ -1,0 +1,7 @@
+<html>
+  <body>
+    <% Dim name %>
+    <% name = "world" %>
+    <p><%= name %></p>
+  </body>
+</html>

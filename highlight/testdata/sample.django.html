@@ -1,0 +1,15 @@
+<span class="hljs-template-tag">{% <span class="hljs-name"><span class="hljs-name">load</span></span> static %}</span><span class="xml">
+<span class="hljs-meta">&lt;!DOCTYPE <span class="hljs-meta-keyword">html</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">html</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">body</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">h1</span>&gt;</span></span><span class="hljs-template-variable">{{ title|<span class="hljs-name">title</span> }}</span><span class="xml"><span class="hljs-tag">&lt;/<span class="hljs-name">h1</span>&gt;</span>
+    </span><span class="hljs-template-tag">{% <span class="hljs-name"><span class="hljs-name">if</span></span> user.is_authenticated %}</span><span class="xml">
+      <span class="hljs-tag">&lt;<span class="hljs-name">p</span>&gt;</span>Hello, </span><span class="hljs-template-variable">{{ user.name|<span class="hljs-name">upper</span> }}</span><span class="xml"><span class="hljs-tag">&lt;/<span class="hljs-name">p</span>&gt;</span>
+    </span><span class="hljs-template-tag">{% <span class="hljs-name"><span class="hljs-name">else</span></span> %}</span><span class="xml">
+      <span class="hljs-tag">&lt;<span class="hljs-name">p</span>&gt;</span>Please log in.<span class="hljs-tag">&lt;/<span class="hljs-name">p</span>&gt;</span>
+    </span><span class="hljs-template-tag">{% <span class="hljs-name"><span class="hljs-name">endif</span></span> %}</span><span class="xml">
+    </span><span class="hljs-comment">{% comment %}a comment{% endcomment %}</span><span class="xml">
+    </span><span class="hljs-comment">{# another comment #}</span><span class="xml">
+  <span class="hljs-tag">&lt;/<span class="hljs-name">body</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">html</span>&gt;</span>
+</span>

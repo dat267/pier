@@ -1,0 +1,14 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+  <body>
+    <h1>{{ title|title }}</h1>
+    {% if user.is_authenticated %}
+      <p>Hello, {{ user.name|upper }}</p>
+    {% else %}
+      <p>Please log in.</p>
+    {% endif %}
+    {% comment %}a comment{% endcomment %}
+    {# another comment #}
+  </body>
+</html>
