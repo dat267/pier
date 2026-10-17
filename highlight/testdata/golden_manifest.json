@@ -418,5 +418,29 @@
   {
     "file": "sample.nginx",
     "language": "nginx"
+  },
+  {
+    "file": "sample.monkey",
+    "language": "monkey"
+  },
+  {
+    "file": "sample.smali",
+    "language": "smali"
+  },
+  {
+    "file": "sample.tp",
+    "language": "tp"
+  },
+  {
+    "file": "sample.as",
+    "language": "actionscript"
+  },
+  {
+    "file": "sample.ini",
+    "language": "ini"
+  },
+  {
+    "file": "sample.m",
+    "language": "matlab"
   }
 ]

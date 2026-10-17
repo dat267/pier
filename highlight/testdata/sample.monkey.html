@@ -1,0 +1,21 @@
+<span class="hljs-meta">Strict</span>
+
+<span class="hljs-keyword">Import</span> mojo
+
+<span class="hljs-class"><span class="hljs-keyword">Class</span> <span class="hljs-title">Game</span> <span class="hljs-keyword">Extends</span> <span class="hljs-title">App</span></span>
+    <span class="hljs-keyword">Field</span> score:Int = <span class="hljs-number">0</span>
+
+    <span class="hljs-function"><span class="hljs-keyword">Method</span> <span class="hljs-title">OnCreate</span>:</span>Int()
+        <span class="hljs-built_in">Print</span> <span class="hljs-string">&quot;Hello, Monkey!&quot;</span>
+        <span class="hljs-keyword">Return</span> <span class="hljs-number">0</span>
+    <span class="hljs-keyword">End</span>
+
+    <span class="hljs-function"><span class="hljs-keyword">Function</span> <span class="hljs-title">Add</span>:</span>Int(a:Int, b:Int)
+        <span class="hljs-keyword">Return</span> a + b
+    <span class="hljs-keyword">End</span>
+<span class="hljs-keyword">End</span>
+
+<span class="hljs-function"><span class="hljs-keyword">Function</span> <span class="hljs-title">Main</span>:</span>Int()
+    <span class="hljs-keyword">New</span> Game
+    <span class="hljs-keyword">Return</span> <span class="hljs-number">0</span>
+<span class="hljs-keyword">End</span>

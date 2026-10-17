@@ -1,0 +1,16 @@
+/PROG  TEST
+/ATTR
+OWNER = MNEDITOR;
+COMMENT = "Hello";
+/MN
+   1:  R[1]= 10 ;
+   2:  IF R[1]>0,JMP LBL[1] ;
+   3:  CALL PROG1 ;
+   4:  LBL[1] ;
+   5:  END ;
+/POS
+P[1]{
+   X = 100.0 mm,
+   Y = 200.0 mm
+};
+/END

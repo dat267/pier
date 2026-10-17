@@ -1,0 +1,16 @@
+<span class="hljs-keyword">/PROG</span>  TEST
+<span class="hljs-keyword">/ATTR</span>
+OWNER = MNEDITOR;
+COMMENT = <span class="hljs-string">&quot;Hello&quot;</span>;
+<span class="hljs-keyword">/MN</span>
+   <span class="hljs-number">1</span>:  <span class="hljs-built_in">R[<span class="hljs-number">1</span>]</span>= <span class="hljs-number">10</span> ;
+   <span class="hljs-number">2</span>:  <span class="hljs-keyword">IF</span> <span class="hljs-built_in">R[<span class="hljs-number">1</span>]</span>&gt;<span class="hljs-number">0</span>,<span class="hljs-keyword">JMP</span> <span class="hljs-built_in">LBL[<span class="hljs-number">1</span>]</span> ;
+   <span class="hljs-number">3</span>:  <span class="hljs-keyword">CALL</span> <span class="hljs-keyword">PROG</span><span class="hljs-number">1</span> ;
+   <span class="hljs-number">4</span>:  <span class="hljs-built_in">LBL[<span class="hljs-number">1</span>]</span> ;
+   <span class="hljs-number">5</span>:  <span class="hljs-keyword">END</span> ;
+<span class="hljs-keyword">/POS</span>
+<span class="hljs-built_in">P[<span class="hljs-number">1</span>]</span>{
+   <span class="hljs-keyword">X</span> = <span class="hljs-number">100</span><span class="hljs-number">.0</span> mm,
+   <span class="hljs-keyword">Y</span> = <span class="hljs-number">200</span><span class="hljs-number">.0</span> mm
+};
+<span class="hljs-keyword">/END</span>
