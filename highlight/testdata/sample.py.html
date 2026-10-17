@@ -1,0 +1,30 @@
+<span class="hljs-comment">#!/usr/bin/env python3</span>
+<span class="hljs-string">&quot;&quot;&quot;Module docstring.&quot;&quot;&quot;</span>
+<span class="hljs-keyword">import</span> os
+<span class="hljs-keyword">from</span> typing <span class="hljs-keyword">import</span> <span class="hljs-type">List</span>, <span class="hljs-type">Optional</span>
+
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Demo</span>:</span>
+    <span class="hljs-string">&quot;&quot;&quot;A demo class.&quot;&quot;&quot;</span>
+
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">__init__</span>(<span class="hljs-params">self, name: <span class="hljs-built_in">str</span>, count: <span class="hljs-built_in">int</span> = <span class="hljs-number">42</span></span>) -&gt; <span class="hljs-literal">None</span>:</span>
+        self.name = name
+        self.count = count
+
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">greet</span>(<span class="hljs-params">self</span>) -&gt; <span class="hljs-built_in">str</span>:</span>
+        <span class="hljs-comment"># a comment</span>
+        ratio = <span class="hljs-number">1.5e-3</span>
+        raw = <span class="hljs-string">r&quot;raw\nstring&quot;</span>
+        fstring = <span class="hljs-string">f&quot;name=<span class="hljs-subst">{self.name}</span> count=<span class="hljs-subst">{self.count}</span>&quot;</span>
+        items: <span class="hljs-type">List</span>[<span class="hljs-built_in">str</span>] = [<span class="hljs-string">&quot;a&quot;</span>, <span class="hljs-string">&quot;b&quot;</span>]
+        n = <span class="hljs-number">0x1f</span> + <span class="hljs-number">0b1010</span> + <span class="hljs-number">0o17</span>
+        <span class="hljs-keyword">if</span> self.count &gt; <span class="hljs-number">0</span> <span class="hljs-keyword">and</span> <span class="hljs-keyword">not</span> items:
+            <span class="hljs-keyword">return</span> fstring
+        <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;hello, %s&quot;</span> % self.name
+
+
+<span class="hljs-meta">&gt;&gt;&gt; </span>x = <span class="hljs-number">1</span>
+<span class="hljs-meta">... </span>y = <span class="hljs-number">2</span>
+
+<span class="hljs-comment"># type: <span class="hljs-built_in">int</span></span>
+z = <span class="hljs-number">3</span>
