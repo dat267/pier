@@ -1,0 +1,13 @@
+<span class="hljs-keyword">var</span> scores = [<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>];
+<span class="hljs-keyword">var</span> total = <span class="hljs-number">0</span>;
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> s in scores) {
+    total += s;
+}
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Average</span>(<span class="hljs-params">values</span>) </span>{
+    <span class="hljs-keyword">var</span> sum = <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> v in values) {
+        sum += v;
+    }
+    <span class="hljs-keyword">return</span> sum / <span class="hljs-built_in">Count</span>(values);
+}
+<span class="hljs-built_in">Console</span>(sum);

@@ -498,5 +498,21 @@
   {
     "file": "sample.vbs",
     "language": "vbscript"
+  },
+  {
+    "file": "sample.crm",
+    "language": "crmsh"
+  },
+  {
+    "file": "sample.s",
+    "language": "armasm"
+  },
+  {
+    "file": "sample.pb",
+    "language": "purebasic"
+  },
+  {
+    "file": "sample.arcade",
+    "language": "arcade"
   }
 ]

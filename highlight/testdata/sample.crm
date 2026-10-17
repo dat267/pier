@@ -1,0 +1,6 @@
+node server1
+primitive apache apache \
+    params \
+        configfile="httpd.conf"
+group webservers apache
+property stonith-enabled=false

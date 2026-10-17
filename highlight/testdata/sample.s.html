@@ -1,0 +1,10 @@
+    <span class="hljs-meta">.text</span>
+    <span class="hljs-meta">.global</span> main
+<span class="hljs-symbol">main:</span>
+    <span class="hljs-keyword">mov</span> <span class="hljs-built_in">r0</span>, <span class="hljs-number">#1</span>
+    <span class="hljs-keyword">add</span> <span class="hljs-built_in">r0</span>, <span class="hljs-built_in">r0</span>, <span class="hljs-number">#2</span>
+    <span class="hljs-keyword">cmp</span> <span class="hljs-built_in">r0</span>, <span class="hljs-number">#3</span>
+    <span class="hljs-keyword">beq</span> done
+    <span class="hljs-keyword">b</span> main
+<span class="hljs-symbol">done:</span>
+    <span class="hljs-keyword">bx</span> <span class="hljs-built_in">lr</span>

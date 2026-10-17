@@ -21,6 +21,27 @@ func TestPrefixedDispatchKeepsDotInsideOneLine(t *testing.T) {
 	}
 }
 
+// TestMidLineBeginLineDoesNotMatch guards the non-dispatch scan path's context
+// verification: a `^` rule must not match mid-line just because the scan slice
+// starts there. armasm's `^[ \t]*(?=#)` comment rule only matches a line-leading
+// `#`, so `mov r0, #1` keeps `#1` as a number.
+func TestMidLineBeginLineDoesNotMatch(t *testing.T) {
+	result, err := Highlight("mov r0, #1\n", "armasm")
+	if err != nil {
+		t.Fatalf("highlight: %v", err)
+	}
+	if html := RenderHTML(result.Nodes); strings.Contains(html, `class="hljs-comment"`) {
+		t.Fatalf("a mid-line `#` was read as a line-leading comment:\n%s", html)
+	}
+	result, err = Highlight("#include <foo.h>\n", "armasm")
+	if err != nil {
+		t.Fatalf("highlight: %v", err)
+	}
+	if html := RenderHTML(result.Nodes); !strings.Contains(html, `class="hljs-comment"`) {
+		t.Fatalf("a line-leading `#` must still be a comment:\n%s", html)
+	}
+}
+
 // TestBeginKeywordsPrefersTheLongestMatch guards the beginKeywords compiler:
 // JavaScript's `(?=\b|\s)` lookahead backtracks to a longer alternative when
 // the boundary after a shorter prefix fails, so `defn` must not be read as

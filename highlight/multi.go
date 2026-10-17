@@ -368,8 +368,13 @@ func (m *multiRegex) execScan(s string, lastIndex int) *match {
 				return m.buildMatch(s, search, regexLoc)
 			}
 			if m.prefixedRe != nil {
+				// Rebuild the match from the prefixed result: the leading wildcard
+				// consumes the real preceding byte, so `^`/`\b` are evaluated in
+				// context and the correct rule wins. Returning the slice match
+				// instead would keep a rule that only matched because the slice
+				// boundary looked like a line start.
 				if vloc := m.prefixedRe.FindStringSubmatchIndex(s[regexAbs-1:]); vloc != nil && vloc[0] == 0 {
-					return m.buildMatch(s, search, regexLoc)
+					return m.buildMatch(s, regexAbs-1, vloc)
 				}
 			}
 			search = regexAbs + 1

@@ -1,0 +1,13 @@
+var scores = [1, 2, 3];
+var total = 0;
+for (var s in scores) {
+    total += s;
+}
+function Average(values) {
+    var sum = 0;
+    for (var v in values) {
+        sum += v;
+    }
+    return sum / Count(values);
+}
+Console(sum);
