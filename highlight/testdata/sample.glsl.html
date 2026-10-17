@@ -1,0 +1,12 @@
+<span class="hljs-comment">// a comment</span>
+<span class="hljs-meta">#version 330 core</span>
+
+<span class="hljs-keyword">layout</span>(<span class="hljs-keyword">location</span> = <span class="hljs-number">0</span>) <span class="hljs-keyword">in</span> <span class="hljs-type">vec3</span> position;
+<span class="hljs-keyword">uniform</span> <span class="hljs-type">mat4</span> modelViewProjection;
+
+<span class="hljs-keyword">out</span> <span class="hljs-type">vec4</span> fragColor;
+
+<span class="hljs-type">void</span> main() {
+    <span class="hljs-built_in">gl_Position</span> = modelViewProjection * <span class="hljs-type">vec4</span>(position, <span class="hljs-number">1.0</span>);
+    fragColor = <span class="hljs-type">vec4</span>(<span class="hljs-number">1.0</span>, <span class="hljs-number">0.5</span>, <span class="hljs-number">0.2</span>, <span class="hljs-number">1.0</span>);
+}

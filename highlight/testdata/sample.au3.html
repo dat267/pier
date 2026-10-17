@@ -1,0 +1,18 @@
+<span class="hljs-comment">; a comment</span>
+<span class="hljs-comment">#cs
+multi-line comment
+#ce</span>
+
+<span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;Array.au3&gt;</span></span>
+
+<span class="hljs-keyword">Global</span> $name = <span class="hljs-string">&quot;world&quot;</span>
+<span class="hljs-keyword">Local</span> $count = <span class="hljs-number">42</span>
+
+<span class="hljs-function"><span class="hljs-keyword">Func</span> <span class="hljs-title">Greet</span><span class="hljs-params">($who)</span></span>
+    <span class="hljs-built_in">ConsoleWrite</span>(<span class="hljs-string">&quot;Hello, &quot;</span> &amp; $who &amp; <span class="hljs-symbol">@CRLF</span>)
+    <span class="hljs-keyword">Return</span> <span class="hljs-symbol">@ScriptName</span>
+<span class="hljs-keyword">EndFunc</span>
+
+<span class="hljs-keyword">For</span> $i = <span class="hljs-number">0</span> <span class="hljs-keyword">To</span> <span class="hljs-number">3</span>
+    <span class="hljs-built_in">ConsoleWrite</span>($i &amp; <span class="hljs-symbol">@CRLF</span>)
+<span class="hljs-keyword">Next</span>

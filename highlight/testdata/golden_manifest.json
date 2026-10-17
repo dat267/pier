@@ -650,5 +650,13 @@
   {
     "file": "sample.ps1",
     "language": "powershell"
+  },
+  {
+    "file": "sample.glsl",
+    "language": "glsl"
+  },
+  {
+    "file": "sample.au3",
+    "language": "autoit"
   }
 ]
