@@ -1,0 +1,18 @@
+<span class="hljs-comment">; NSIS sample</span>
+<span class="hljs-keyword">!include</span> <span class="hljs-string">&quot;MUI2.nsh&quot;</span>
+
+<span class="hljs-keyword">Name</span> <span class="hljs-string">&quot;Demo&quot;</span>
+<span class="hljs-keyword">OutFile</span> <span class="hljs-string">&quot;demo.exe&quot;</span>
+<span class="hljs-keyword">InstallDir</span> <span class="hljs-variable">$PROGRAMFILES</span>\Demo
+
+<span class="hljs-keyword">!define</span> VERSION <span class="hljs-string">&quot;1.0&quot;</span>
+
+<span class="hljs-function"><span class="hljs-keyword">Function</span> .onInit</span>
+  <span class="hljs-keyword">MessageBox</span> <span class="hljs-params">MB_OK</span> <span class="hljs-string">&quot;Starting&quot;</span>
+FunctionEnd
+
+<span class="hljs-function"><span class="hljs-keyword">Section</span> &quot;Main&quot;</span>
+  <span class="hljs-keyword">SetOutPath</span> <span class="hljs-variable">$INSTDIR</span>
+  <span class="hljs-keyword">File</span> <span class="hljs-string">&quot;app.exe&quot;</span>
+  <span class="hljs-keyword">WriteRegStr</span> <span class="hljs-params">HKLM</span> <span class="hljs-string">&quot;Software\Demo&quot;</span> <span class="hljs-string">&quot;Version&quot;</span> <span class="hljs-string">&quot;<span class="hljs-variable">${VERSION}</span>&quot;</span>
+SectionEnd

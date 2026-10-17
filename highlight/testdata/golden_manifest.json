@@ -538,5 +538,9 @@
   {
     "file": "sample.gms",
     "language": "gams"
+  },
+  {
+    "file": "sample.nsi",
+    "language": "nsis"
   }
 ]
