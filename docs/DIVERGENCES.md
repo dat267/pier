@@ -1868,3 +1868,24 @@ eagerly and imports the rest lazily, so an uncommon language can render plain
 until `loadAllHighlightLanguages` resolves. Pier registers all 191 at startup,
 so an uncommon language is always colored. The token output is identical once
 loaded.
+
+## D232
+
+**The agent may clear its own goal.**
+
+The reference goal extension keeps `clear` human-only: `update_goal` accepts only
+`complete` and `blocked`, and `/goal clear` is the only way to tombstone a goal.
+A model that judges the current goal irrelevant or superseded can only complete
+it (claiming an outcome it did not reach) or block it (after three rounds), and
+`create_goal` refuses while an unfinished goal exists ("A goal already exists.
+Clear it first."), so it cannot start the corrected goal in the same turn.
+
+Pier adds `clear` to `update_goal`'s action enum. It takes the same exact
+`goal_id` and `revision` from `get_goal`, tombstones the goal through the same
+`OpClear` path as the human command, and stops goal work; the reply says so.
+Because the goal is gone, `create_goal` succeeds immediately after, so the agent
+can replace a stale goal with the right one in one turn.
+
+`goalClear` now also disarms and clears `pendingTurn`. The goal loop already
+stopped because the view is nil, so the only change is a consistent snapshot
+(the reference leaves `armed` set after a clear).

@@ -243,8 +243,8 @@ func (m *GoalMachine) wrapup(kind, objective, blockedReason string) Effect {
 }
 
 func (m *GoalMachine) goalUpdate(goalID string, rawRevision any, rawAction, blockedReason string) DispatchResult {
-	if rawAction != "complete" && rawAction != "blocked" {
-		return DispatchResult{Reply: stringPtr(fmt.Sprintf(`Unknown action %s. Use "complete" or "blocked".`, jsonQuote(rawAction))), IsError: true}
+	if rawAction != "complete" && rawAction != "blocked" && rawAction != "clear" {
+		return DispatchResult{Reply: stringPtr(fmt.Sprintf(`Unknown action %s. Use "complete", "blocked", or "clear".`, jsonQuote(rawAction))), IsError: true}
 	}
 	revision, ok := coerceRevision(rawRevision)
 	if !ok {
@@ -263,6 +263,16 @@ func (m *GoalMachine) goalUpdate(goalID string, rawRevision any, rawAction, bloc
 	}
 	if revision != m.view.Revision {
 		return DispatchResult{Reply: stringPtr(fmt.Sprintf("Stale ref: you sent revision %d, current is %d (id %s). Retry with these values.", revision, m.view.Revision, m.view.ID)), IsError: true}
+	}
+
+	// D232: the agent may clear its own goal (upstream keeps clear human-only).
+	// Clearing tombstones the goal so a new one can be created in the same turn.
+	if rawAction == "clear" {
+		result := m.goalClear(goalID, revision)
+		if !result.IsError {
+			result.Reply = stringPtr("Goal cleared. Goal work has stopped.")
+		}
+		return result
 	}
 
 	if rawAction == "complete" {
@@ -542,6 +552,8 @@ func (m *GoalMachine) goalClear(id string, revision int) DispatchResult {
 	if err != nil {
 		return DispatchResult{Reply: stringPtr(err.Error()), IsError: true}
 	}
+	m.armed = false
+	m.pendingTurn = nil
 	return DispatchResult{Effects: effects}
 }
 

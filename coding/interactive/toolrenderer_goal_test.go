@@ -62,6 +62,16 @@ func TestGoalToolRenderers(t *testing.T) {
 	if got := renderResult("update_goal", result2, false, theme); !strings.Contains(got, "Goal complete") {
 		t.Fatalf("update_goal result = %q", got)
 	}
+	// update_goal result, action clear (D232): the goal is gone, so the card
+	// must not fall back to "Goal complete".
+	detailsClear, err := json.Marshal(map[string]any{"goal": nil, "action": "clear"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resultClear := &SortToolResultContent{IsError: false, Details: detailsClear}
+	if got := renderResult("update_goal", resultClear, false, theme); !strings.Contains(got, "Goal cleared") {
+		t.Fatalf("update_goal clear result = %q", got)
+	}
 	// update_goal error result.
 	result3 := &SortToolResultContent{
 		IsError: true,

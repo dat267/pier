@@ -379,6 +379,39 @@ func TestGoalUpdateCompleteAppendsAndWrapsUp(t *testing.T) {
 	}
 }
 
+// The agent may clear its own goal (port-local, D232): clearing tombstones it
+// so a new goal can be created, and it stops the round loop.
+func TestGoalUpdateClearTombstonesTheGoal(t *testing.T) {
+	m := armedMachine(t)
+	ref := m.Snapshot().Goal
+	result := m.Dispatch(GoalUpdateEvent{GoalID: ref.ID, Revision: ref.Revision, Action: "clear"})
+	if result.IsError {
+		t.Fatalf("unexpected error: %+v", result)
+	}
+	entry := findAppend(result, GoalCustomType)
+	if entry == nil || entry.Data.(GoalChangeEntry).Operation != OpClear {
+		t.Fatalf("expected clear entry: %+v", result.Effects)
+	}
+	if m.Snapshot().Goal != nil {
+		t.Fatalf("goal still present: %+v", m.Snapshot().Goal)
+	}
+	if m.Snapshot().Armed {
+		t.Fatal("cleared goal must be disarmed")
+	}
+	if findSendMessage(result) != nil {
+		t.Fatal("clear must not queue a round or wrap-up")
+	}
+}
+
+func TestGoalUpdateClearStaleRefFails(t *testing.T) {
+	m := armedMachine(t)
+	ref := m.Snapshot().Goal
+	result := m.Dispatch(GoalUpdateEvent{GoalID: ref.ID, Revision: 999, Action: "clear"})
+	if !result.IsError || m.Snapshot().Goal == nil {
+		t.Fatalf("stale clear must not clear: %+v", result)
+	}
+}
+
 func TestGoalUpdateStaleRefFails(t *testing.T) {
 	m := armedMachine(t)
 	real := m.Snapshot().Goal

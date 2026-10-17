@@ -73,6 +73,52 @@ func TestGoalResumeFromIdleStartsARun(t *testing.T) {
 	}
 }
 
+// The agent clears its own goal through update_goal: the goal disappears and
+// the round loop stops after the clearing round (D232).
+func TestGoalAgentClearStopsTheRoundLoop(t *testing.T) {
+	manager, dir := newTestSession(t)
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 128}
+	var session *AgentSession
+	var prompts atomic.Int64
+	streamFn := func(requestModel *ai.Model, transcript ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		switch prompts.Add(1) {
+		case 1:
+			_, _ = session.control.Tools["create_goal"].Tool.Execute("create",
+				json.RawMessage(`{"objective":"finish it"}`), context.Background(), func(agent.AgentToolResult) {})
+		case 2:
+			view := session.Goal.Snapshot().Goal
+			_, _ = session.control.Tools["update_goal"].Tool.Execute("clear",
+				json.RawMessage(fmt.Sprintf(`{"goal_id":%q,"revision":%d,"action":"clear"}`, view.ID, view.Revision)),
+				context.Background(), func(agent.AgentToolResult) {})
+		}
+		stream := ai.NewAssistantMessageEventStream()
+		go func() {
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
+				API: ai.APIAnthropicMessages, Provider: requestModel.Provider, Model: requestModel.ID,
+				Content: ai.ContentList{ai.TextContent{Text: "working"}}, StopReason: ai.StopStop,
+			}})
+		}()
+		return stream
+	}
+	session, err := NewAgentSession(&SessionConfig{
+		Cwd: dir, Sessions: manager, Model: model, StreamFn: streamFn,
+		Tools: []agent.AgentTool{testTool("read")}, ConvertToLlm: ConvertToLlm, Goal: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := session.Prompt(context.Background(), "start", nil); err != nil {
+		t.Fatal(err)
+	}
+	if calls := prompts.Load(); calls != 2 {
+		t.Fatalf("model calls = %d, want 2 (clearing must stop the loop)", calls)
+	}
+	if session.Goal.Snapshot().Goal != nil {
+		t.Fatalf("goal still present: %+v", session.Goal.Snapshot().Goal)
+	}
+}
+
 // A goal crosses two round boundaries from one prompt and the run loop
 // continues through both. The run that completes the goal is not admitted
 // (upstream: "a finishing run is not work done 'for' the goal"), so the two

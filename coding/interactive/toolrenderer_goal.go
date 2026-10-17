@@ -56,6 +56,17 @@ func goalPhaseFromDetails(details json.RawMessage) (goal.GoalPhase, bool) {
 	return envelope.Goal.Phase, true
 }
 
+// goalActionFromDetails decodes an update_goal result's action (D232).
+func goalActionFromDetails(details json.RawMessage) string {
+	var envelope struct {
+		Action string `json:"action"`
+	}
+	if err := json.Unmarshal(details, &envelope); err != nil {
+		return ""
+	}
+	return envelope.Action
+}
+
 // goalGetRenderers renders the get_goal tool.
 var goalGetRenderers = ToolRenderers{
 	RenderCall: func(args any, theme *Theme, context *ToolRenderContext) tui.Component {
@@ -93,6 +104,7 @@ var goalUpdateRenderers = ToolRenderers{
 			out.Text = text
 		}
 		if details, ok := goalDetailsFromResult(result); ok {
+			out.Action = goalActionFromDetails(details)
 			if phase, has := goalPhaseFromDetails(details); has {
 				out.Phase = phase
 				out.HasPhase = true

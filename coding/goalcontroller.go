@@ -493,6 +493,7 @@ var goalToolGuidelines = map[string][]string{
 		"Call get_goal first to get the exact id and revision, unless this turn already gave you both.",
 		"Mark complete only when the objective is actually achieved, with evidence.",
 		"Mark blocked only after the same condition persisted for at least 3 consecutive goal rounds.",
+		"Clear only when the goal is no longer relevant or has been superseded; clearing stops goal work, so prefer complete or blocked when they apply.",
 	},
 }
 
@@ -552,8 +553,8 @@ func (c *GoalController) updateGoalTool() agent.AgentTool {
 	return agent.AgentTool{
 		Name:        "update_goal",
 		Label:       "Update Goal",
-		Description: "Complete or block the session goal. Needs the exact id and revision from get_goal. complete: objective achieved with evidence. blocked: needs blocked_reason; rejected before 3 consecutive rounds. edit/pause/resume: human-only (/goal).",
-		Parameters:  json.RawMessage(`{"type":"object","properties":{"goal_id":{"type":"string","description":"Exact id from get_goal."},"revision":{"type":"number","description":"Exact revision from get_goal."},"action":{"type":"string","enum":["complete","blocked"],"description":"Action to perform."},"blocked_reason":{"type":"string","description":"Blocking condition (blocked only)."}},"required":["goal_id","revision","action"],"additionalProperties":false}`),
+		Description: "Complete, block, or clear the session goal. Needs the exact id and revision from get_goal. complete: objective achieved with evidence. blocked: needs blocked_reason; rejected before 3 consecutive rounds. clear: abandon the goal (it is no longer relevant or was superseded); goal work stops and a new goal can be created. pause/resume: human-only (/goal).",
+		Parameters:  json.RawMessage(`{"type":"object","properties":{"goal_id":{"type":"string","description":"Exact id from get_goal."},"revision":{"type":"number","description":"Exact revision from get_goal."},"action":{"type":"string","enum":["complete","blocked","clear"],"description":"Action to perform."},"blocked_reason":{"type":"string","description":"Blocking condition (blocked only)."}},"required":["goal_id","revision","action"],"additionalProperties":false}`),
 		Execute: func(_ string, params json.RawMessage, _ context.Context, _ func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
 			var input struct {
 				GoalID        string          `json:"goal_id"`
@@ -574,9 +575,24 @@ func (c *GoalController) updateGoalTool() agent.AgentTool {
 			})
 			c.mu.Unlock()
 			c.Apply(result.Effects)
-			return c.toolResult(result, "")
+			return c.updateGoalToolResult(result, input.Action)
 		},
 	}
+}
+
+// updateGoalToolResult carries the action so the result card can distinguish a
+// clear (D232) from a completion.
+func (c *GoalController) updateGoalToolResult(result goal.DispatchResult, action string) (agent.AgentToolResult, error) {
+	reply := ""
+	if result.Reply != nil {
+		reply = *result.Reply
+	}
+	details, _ := json.Marshal(map[string]any{"goal": c.Snapshot().Goal, "action": action})
+	return agent.AgentToolResult{
+		Content: []ai.Content{ai.TextContent{Text: reply}},
+		Details: details,
+		IsError: result.IsError,
+	}, nil
 }
 
 func (c *GoalController) toolResult(result goal.DispatchResult, fallback string) (agent.AgentToolResult, error) {

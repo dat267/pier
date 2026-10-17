@@ -256,7 +256,10 @@ type UpdateGoalResult struct {
 	IsError  bool
 	Phase    GoalPhase
 	HasPhase bool
-	Text     string
+	// Action is the requested update_goal action, so a clear (D232) renders
+	// differently from a completion.
+	Action string
+	Text   string
 }
 
 // RenderUpdateGoalRenderResult is the update_goal result card.
@@ -271,7 +274,10 @@ func RenderUpdateGoalRenderResult(result UpdateGoalResult, theme Theme) *tui.Tex
 		phase = PhaseComplete
 	}
 	short := "Goal complete ✓"
-	if phase == PhaseBlocked {
+	switch {
+	case result.Action == "clear":
+		short = "Goal cleared ✓"
+	case phase == PhaseBlocked:
 		short = "Goal blocked ✓"
 	}
 	return tui.NewText(theme.Fg(PhaseColor[phase], short), 0, 0, nil)

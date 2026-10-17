@@ -7,6 +7,7 @@ package coding
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -386,6 +387,25 @@ func TestGoalControllerCommandStatus(t *testing.T) {
 	controller.HandleCommand("status")
 	if len(sink.notifies) != 1 || !strings.Contains(sink.notifies[0], "show me") {
 		t.Fatalf("notifies = %v", sink.notifies)
+	}
+}
+
+// The agent may clear its own goal through update_goal (port-local, D232); the
+// tool schema advertises the action and clearing removes the goal.
+func TestGoalControllerUpdateGoalClear(t *testing.T) {
+	controller, _ := newGoalControllerTest(t)
+	if params := string(findGoalTool(t, controller, "update_goal").Parameters); !strings.Contains(params, `"clear"`) {
+		t.Fatalf("update_goal schema has no clear action: %s", params)
+	}
+	goalToolText(t, controller, "create_goal", `{"objective":"do it"}`)
+	view := controller.Snapshot().Goal
+	reply := goalToolText(t, controller, "update_goal",
+		fmt.Sprintf(`{"goal_id":%q,"revision":%d,"action":"clear"}`, view.ID, view.Revision))
+	if controller.Snapshot().Goal != nil {
+		t.Fatalf("goal still present: %+v", controller.Snapshot().Goal)
+	}
+	if !strings.Contains(reply, "cleared") {
+		t.Fatalf("reply = %q", reply)
 	}
 }
 
