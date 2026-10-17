@@ -630,3 +630,67 @@ func TestNavigateTreeAbortBranchSummary(t *testing.T) {
 		t.Fatal("still compacting after navigation finished")
 	}
 }
+
+// TestFreshSessionPersistsItsInitialToolDeclaration covers the resume half of a
+// fresh default-tools session: the agent seeds the initial tool declaration
+// into state but never emits it, so the transcript only held the later deltas
+// (goal/MCP tools). A resume restores the loadout from the transcript
+// (upstream 6f2f164ab), so it resolved no built-in tools. The constructor now
+// persists the initial declaration for a fresh session.
+func TestFreshSessionPersistsItsInitialToolDeclaration(t *testing.T) {
+	manager := newTestSessionManager(t)
+	tools := []agent.AgentTool{
+		{Name: "read", Description: "read", Parameters: []byte(`{"type":"object"}`)},
+		{Name: "bash", Description: "bash", Parameters: []byte(`{"type":"object"}`)},
+	}
+	registry := func() *AgentSessionControl {
+		return &AgentSessionControl{Tools: map[string]AgentToolDefinition{
+			"read": {Tool: tools[0]},
+			"bash": {Tool: tools[1]},
+		}}
+	}
+	newSession := func() *AgentSession {
+		session, err := NewAgentSession(&SessionConfig{
+			Cwd: t.TempDir(), Sessions: manager,
+			Model:            &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 8192},
+			StreamFn:         stubStreamFn,
+			Tools:            tools,
+			UsesDefaultTools: true,
+			Control:          registry(),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return session
+	}
+
+	first := newSession()
+	// The declaration is persisted at construction, before the turn runs.
+	entries := manager.GetEntries()
+	if len(entries) == 0 || entries[0].Type != "message" {
+		t.Fatalf("first entry = %+v; want the initial declaration message", entries)
+	}
+	var declaration struct {
+		Role       string `json:"role"`
+		ToolsAdded []struct {
+			Name string `json:"name"`
+		} `json:"toolsAdded"`
+	}
+	if err := json.Unmarshal(entries[0].Message, &declaration); err != nil {
+		t.Fatal(err)
+	}
+	if declaration.Role != "system" || len(declaration.ToolsAdded) != 2 {
+		t.Fatalf("first entry = role %q tools %v; want a system message declaring read,bash", declaration.Role, declaration.ToolsAdded)
+	}
+	if err := first.PromptText(ctxpkg.Background(), "hi"); err != nil {
+		t.Fatal(err)
+	}
+	if names := first.GetActiveToolNames(); strings.Join(names, ",") != "read,bash" {
+		t.Fatalf("active after the run = %v; want read,bash", names)
+	}
+
+	resumed := newSession()
+	if names := resumed.GetActiveToolNames(); strings.Join(names, ",") != "read,bash" {
+		t.Fatalf("resumed active = %v; want read,bash", names)
+	}
+}

@@ -2064,3 +2064,32 @@ those packages are historical, not a description of the current tree.
 
 Reintroducing any of them is a feature decision, not a port fix: wire it into a
 runtime path first, then move it back from the branch.
+
+## D237
+
+**A fresh session persists its initial tool declaration, so a resumed transcript
+resolves its loadout.**
+
+Reference: pi v1.3.0 `core/agent-session.ts` `_restoreToolsFromTranscript`
+(6f2f164ab) and `agent/agent.ts` `createMutableAgentState`. The agent seeds the
+initial system message (prompt plus the active tools in `toolsAdded`) into
+state, but the loop only emits that message when `declareToolChanges` finds a
+change. On the first turn the seeded declaration already matches the executable
+set, so nothing is emitted and the transcript holds only the later deltas (the
+goal and MCP tools). `_restoreToolsFromTranscript` then replays the transcript's
+declarations against an empty base, and because `_usesDefaultTools` restores
+even when the caller passes tools, a default-tools session resumes with no
+built-in tools, or with only the later additions.
+
+Reproduced in the port before the fix: construct a session on a fresh
+`SessionManager`, run one prompt, then construct a second session from the same
+store. The second session's active tools were `[]` without the goal controller
+and `[set_goal]` with it; the reference's transcript can omit the declaration
+for the same reason.
+
+The port appends the seeded initial declaration to the store once, when the
+session has no prior entries and no caller-supplied initial messages, so the
+transcript is self-contained and the restore resolves the recorded loadout. A
+session already in the broken state (its transcript never declared the
+built-ins) stays broken; resuming it with an explicit `--tools` list takes the
+non-default-tools path, skips the restore, and recovers it.

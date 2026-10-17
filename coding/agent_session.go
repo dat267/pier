@@ -406,6 +406,21 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 	if s.usesDefaultTools {
 		s.RestoreToolsFromTranscript(s.defaultToolModifiers...)
 	}
+	// A fresh session must carry its initial tool declaration in the transcript.
+	// The agent seeds the declaration into state but never emits it, so the
+	// persisted transcript would otherwise hold only the deltas (goal/MCP tools)
+	// recorded later. A resume restores the loadout from the transcript, so
+	// without this first entry a default-tools session resolves no tools (or
+	// only the later additions) — the reference has the same defect (D237).
+	// Append it once, only for a session with no prior entries and no
+	// caller-supplied initial messages.
+	if len(config.InitialMessages) == 0 && len(sessionManager.GetEntries()) == 0 {
+		if messages := s.Agent.State().Messages; len(messages) > 0 {
+			if first, ok := messages[0].(*ai.SystemMessage); ok && len(first.ToolsAdded) > 0 {
+				sessionManager.AppendMessage(first)
+			}
+		}
+	}
 	if config.PromptSources != nil {
 		s.promptSources = *config.PromptSources
 	}
