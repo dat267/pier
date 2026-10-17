@@ -762,5 +762,9 @@
   {
     "file": "sample.r",
     "language": "r"
+  },
+  {
+    "file": "sample.mma",
+    "language": "mathematica"
   }
 ]

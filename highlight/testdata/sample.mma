@@ -1,0 +1,15 @@
+(* A comment *)
+square[x_] := x^2
+
+double[x_] := x * 2
+
+result = double[21]
+values = {1, 2, 3}
+total = Total[values]
+value::usage = "value is a symbol"
+
+message = "hello"
+flag = True
+ratio = 1.5*^3
+
+Plot[Sin[x], {x, 0, 2 Pi}]
