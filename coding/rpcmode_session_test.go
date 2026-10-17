@@ -365,15 +365,13 @@ func TestRPCAbortBashCancelsRunningCommand(t *testing.T) {
 		return record["type"] == "bash_execution_update" && record["id"] == "run"
 	})
 	client.send(t, `{"id":"stop","type":"abort_bash"}`)
-	stop := client.until(t, func(record map[string]any) bool {
-		return record["type"] == "response" && record["id"] == "stop"
-	})
-	if stop["success"] != true {
+	// The abort response and the cancelled command's response can arrive in
+	// either order; collect both without dropping one.
+	responses := client.untilResponses(t, "stop", "run")
+	if stop := responses["stop"]; stop["success"] != true {
 		t.Fatalf("abort_bash response = %+v", stop)
 	}
-	response := client.until(t, func(record map[string]any) bool {
-		return record["type"] == "response" && record["id"] == "run"
-	})
+	response := responses["run"]
 	data, ok := response["data"].(map[string]any)
 	if !ok || response["success"] != true || data["cancelled"] != true {
 		t.Fatalf("cancelled bash response = %+v", response)

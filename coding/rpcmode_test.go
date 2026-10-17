@@ -116,6 +116,35 @@ func (client *rpcTestClient) until(t *testing.T, match func(map[string]any) bool
 	}
 }
 
+// untilResponses waits for a response to every id without discarding the ones
+// that arrive first. Two commands can respond in either order (abort_bash and
+// the bash command it cancels both write asynchronously), so awaiting them one
+// at a time through until would drop a response that arrived early.
+func (client *rpcTestClient) untilResponses(t *testing.T, ids ...string) map[string]map[string]any {
+	t.Helper()
+	wanted := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		wanted[id] = true
+	}
+	found := make(map[string]map[string]any, len(ids))
+	deadline := time.NewTimer(3 * time.Second)
+	defer deadline.Stop()
+	for len(found) < len(wanted) {
+		select {
+		case record := <-client.output:
+			id, ok := record["id"].(string)
+			if !ok || record["type"] != "response" || !wanted[id] {
+				continue
+			}
+			found[id] = record
+		case <-deadline.C:
+			t.Fatalf("timed out waiting for responses %v (got %v)", ids, found)
+			return nil
+		}
+	}
+	return found
+}
+
 // pi v1.3.0 rpc-mode.ts acknowledges accepted prompts independently of the
 // eventual run; events continue streaming while commands remain readable.
 func blockingRPCSession(t *testing.T) *AgentSession {
