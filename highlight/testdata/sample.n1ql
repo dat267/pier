@@ -1,0 +1,8 @@
+SELECT name, age
+FROM `users` AS u
+WHERE u.type = "person" AND u.age > 21
+ORDER BY u.name ASC;
+
+CREATE INDEX idx_age ON `users`(age);
+UPDATE `users` SET active = true WHERE age > 18;
+DELETE FROM `users` WHERE age < 0;

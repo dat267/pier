@@ -242,5 +242,41 @@
   {
     "file": "sample.pde",
     "language": "processing"
+  },
+  {
+    "file": "sample.capnp",
+    "language": "capnproto"
+  },
+  {
+    "file": "sample.bas",
+    "language": "basic"
+  },
+  {
+    "file": "sample.dsconfig",
+    "language": "dsconfig"
+  },
+  {
+    "file": "sample.step",
+    "language": "step21"
+  },
+  {
+    "file": "sample.i7",
+    "language": "inform7"
+  },
+  {
+    "file": "sample.vhdl",
+    "language": "vhdl"
+  },
+  {
+    "file": "sample.awk",
+    "language": "awk"
+  },
+  {
+    "file": "sample.sci",
+    "language": "scilab"
+  },
+  {
+    "file": "sample.n1ql",
+    "language": "n1ql"
   }
 ]

@@ -1,0 +1,9 @@
+"Hello [the player]"
+
+Volume 1 - A Room
+
+The Lab is a room.
+The player is in the Lab.
+
+Instead of taking the lamp:
+    say "It's nailed down."

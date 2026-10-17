@@ -1,0 +1,17 @@
+<span class="hljs-meta">@0xbf5147cbbecf40c1;</span>
+
+<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">Person</span> </span>{
+  name <span class="hljs-symbol">@0</span> :<span class="hljs-built_in">Text</span>;
+  email <span class="hljs-symbol">@1</span> :<span class="hljs-built_in">Text</span>;
+  phones <span class="hljs-symbol">@2</span> :<span class="hljs-built_in">List</span>(PhoneNumber);
+
+  <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">PhoneNumber</span> </span>{
+    number <span class="hljs-symbol">@0</span> :<span class="hljs-built_in">Text</span>;
+    type <span class="hljs-symbol">@1</span> :Type;
+  }
+}
+
+<span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">Directory</span> </span>{
+  list <span class="hljs-symbol">@0</span> () -&gt; (list :<span class="hljs-built_in">List</span>(Person));
+  lookup <span class="hljs-symbol">@1</span> (name :<span class="hljs-built_in">Text</span>) -&gt; (person :Person);
+}

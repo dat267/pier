@@ -1,0 +1,9 @@
+10 REM Hello World program
+20 LET A$ = "Hello"
+30 FOR I = 1 TO 10
+40   PRINT A$; I
+50 NEXT I
+60 DEFINT I-J
+70 GOSUB 100
+80 END
+100 RETURN

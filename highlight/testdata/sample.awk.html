@@ -1,0 +1,12 @@
+<span class="hljs-comment">#!/usr/bin/awk -f</span>
+<span class="hljs-keyword">BEGIN</span> { FS = <span class="hljs-string">&quot;,&quot;</span> ; total = <span class="hljs-number">0</span> }
+{
+    name = <span class="hljs-variable">$1</span>
+    amount = <span class="hljs-variable">$2</span>
+    total += amount
+    printf <span class="hljs-string">&quot;%s: %.2f\n&quot;</span>, name, amount
+}
+<span class="hljs-keyword">END</span> {
+    print <span class="hljs-string">&quot;Total:&quot;</span>, total
+    <span class="hljs-keyword">if</span> (total &gt; <span class="hljs-number">100</span>) <span class="hljs-keyword">exit</span> <span class="hljs-number">1</span>
+}

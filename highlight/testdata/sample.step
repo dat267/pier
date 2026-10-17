@@ -1,0 +1,11 @@
+ISO-10303-21;
+HEADER;
+FILE_DESCRIPTION(('example'),'2;1');
+FILE_NAME('demo.stp','2024-01-01T00:00:00',('author'),('org'),'','','');
+ENDSEC;
+DATA;
+#1=CARTESIAN_POINT('origin',(0.,0.,0.));
+#2=DIRECTION('z',(0.,0.,1.));
+/* a comment */
+ENDSEC;
+END-ISO-10303-21;

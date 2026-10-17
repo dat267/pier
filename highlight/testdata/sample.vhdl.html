@@ -1,0 +1,22 @@
+<span class="hljs-keyword">library</span> ieee;
+<span class="hljs-keyword">use</span> ieee.std_logic_1164.<span class="hljs-keyword">all</span>;
+
+<span class="hljs-keyword">entity</span> counter <span class="hljs-keyword">is</span>
+  <span class="hljs-keyword">port</span> (
+    clk : <span class="hljs-keyword">in</span> <span class="hljs-built_in">std_logic</span>;
+    rst : <span class="hljs-keyword">in</span> <span class="hljs-built_in">std_logic</span>;
+    q   : <span class="hljs-keyword">out</span> <span class="hljs-built_in">std_logic_vector</span>(<span class="hljs-number">7</span> <span class="hljs-keyword">downto</span> <span class="hljs-number">0</span>)
+  );
+<span class="hljs-keyword">end</span> <span class="hljs-keyword">entity</span>;
+
+<span class="hljs-keyword">architecture</span> rtl <span class="hljs-keyword">of</span> counter <span class="hljs-keyword">is</span>
+  <span class="hljs-keyword">signal</span> count : <span class="hljs-built_in">integer</span> := <span class="hljs-number">0</span>;
+<span class="hljs-keyword">begin</span>
+  <span class="hljs-keyword">process</span> (clk, rst) <span class="hljs-keyword">begin</span>
+    <span class="hljs-keyword">if</span> rst = <span class="hljs-string">&#x27;1&#x27;</span> <span class="hljs-keyword">then</span>
+      count &lt;= <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">elsif</span> rising_edge(clk) <span class="hljs-keyword">then</span>
+      count &lt;= count + <span class="hljs-number">1</span>;
+    <span class="hljs-keyword">end</span> <span class="hljs-keyword">if</span>;
+  <span class="hljs-keyword">end</span> <span class="hljs-keyword">process</span>;
+<span class="hljs-keyword">end</span> <span class="hljs-keyword">architecture</span>;

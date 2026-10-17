@@ -1,0 +1,5 @@
+dsconfig create-backend --backend-name userRoot --type je --set enabled:true
+list-backends
+get-backend-prop --backend-name userRoot --property enabled
+set-backend-prop --backend-name userRoot --set enabled:false
+delete-backend --backend-name userRoot
