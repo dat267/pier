@@ -488,6 +488,9 @@ func (h *highlighter) processLexeme(textBefore string, m *match) int {
 // relevance, approximating the reference's highlightAuto for sub-language
 // detection.
 func highlightAuto(code string, subset []string) (*Result, string) {
+	// The reference's `_processSubLanguage` passes `undefined` when the subset is
+	// empty, so `subLanguage: []` (e.g. HTTP's body) auto-detects against every
+	// language rather than disabling highlighting.
 	if len(subset) == 0 {
 		subset = Languages()
 	}

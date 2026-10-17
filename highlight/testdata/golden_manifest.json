@@ -318,5 +318,49 @@
   {
     "file": "sample.ll",
     "language": "llvm"
+  },
+  {
+    "file": "sample.session",
+    "language": "shell"
+  },
+  {
+    "file": "sample.pycon",
+    "language": "python-repl"
+  },
+  {
+    "file": "sample.noderepl",
+    "language": "node-repl"
+  },
+  {
+    "file": "sample.ep",
+    "language": "mojolicious"
+  },
+  {
+    "file": "sample.erlrepl",
+    "language": "erlang-repl"
+  },
+  {
+    "file": "sample.clj",
+    "language": "clojure"
+  },
+  {
+    "file": "sample.cljrepl",
+    "language": "clojure-repl"
+  },
+  {
+    "file": "sample.flix",
+    "language": "flix"
+  },
+  {
+    "file": "sample.ceylon",
+    "language": "ceylon"
+  },
+  {
+    "file": "sample.pro",
+    "language": "prolog"
+  },
+  {
+    "file": "sample.http",
+    "language": "http"
   }
 ]

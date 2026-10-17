@@ -1,0 +1,6 @@
+> const x = 1 + 2
+undefined
+> x
+3
+> console.log("hi")
+hi

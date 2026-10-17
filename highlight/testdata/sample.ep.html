@@ -1,0 +1,10 @@
+<span class="perl">% <span class="hljs-keyword">my</span> $title = <span class="hljs-string">&#x27;Hello&#x27;</span>;</span><span class="xml">
+<span class="hljs-tag">&lt;<span class="hljs-name">html</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">head</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">title</span>&gt;</span>&lt;%=</span><span class="perl"> $title </span><span class="xml">%&gt;<span class="hljs-tag">&lt;/<span class="hljs-name">title</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">head</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">body</span>&gt;</span>
+</span><span class="perl">    % <span class="hljs-keyword">for</span> <span class="hljs-keyword">my</span> $i (<span class="hljs-number">1</span>..<span class="hljs-number">3</span>) {</span><span class="xml">
+      <span class="hljs-tag">&lt;<span class="hljs-name">p</span>&gt;</span>&lt;%=</span><span class="perl"> $i </span><span class="xml">%&gt;<span class="hljs-tag">&lt;/<span class="hljs-name">p</span>&gt;</span>
+</span><span class="perl">    % }</span><span class="xml">
+  <span class="hljs-tag">&lt;/<span class="hljs-name">body</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">html</span>&gt;</span>
+</span>

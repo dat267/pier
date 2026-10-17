@@ -197,6 +197,11 @@ func (c *compiler) compileMode(mode *Mode, parent *compiledMode) (*compiledMode,
 	// beginKeywords syntactic sugar.
 	if parent != nil && mode.BeginKeywords != "" {
 		words := strings.Split(mode.BeginKeywords, " ")
+		// JavaScript's `(?=\b|\s)` lookahead backtracks to a longer alternative
+		// when the boundary after a shorter prefix fails (clojure's `def` vs
+		// `defn`, gams' `set` vs `sets`); RE2's leftmost-first alternation does
+		// not, so try the longest word first.
+		sort.SliceStable(words, func(i, j int) bool { return len(words[i]) > len(words[j]) })
 		mode.Begin = `\b(` + strings.Join(words, "|") + `)`
 		preceding := mode.beforeBegin
 		mode.beforeBegin = func(m *match, resp *Response) {

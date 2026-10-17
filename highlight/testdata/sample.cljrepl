@@ -1,0 +1,4 @@
+user=> (def x 1)
+#'user/x
+user=> (+ x 2)
+3

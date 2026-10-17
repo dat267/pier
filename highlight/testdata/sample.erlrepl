@@ -1,0 +1,7 @@
+1> c(main).
+{ok,main}
+2> main:hello().
+Hello, world!
+ok
+3> X = 1 + 2.
+3

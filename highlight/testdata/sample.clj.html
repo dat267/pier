@@ -1,0 +1,11 @@
+(<span class="hljs-name"><span class="hljs-builtin-name">ns</span></span> demo.core
+  (<span class="hljs-symbol">:require</span> [clojure.string <span class="hljs-symbol">:as</span> str]))
+
+(<span class="hljs-keyword">def</span> <span class="hljs-title">greeting</span> <span class="hljs-string">&quot;Hello&quot;</span>)
+
+(<span class="hljs-keyword">defn</span> <span class="hljs-title">greet</span> [name]
+  (<span class="hljs-name"><span class="hljs-builtin-name">let</span></span> [msg (<span class="hljs-name"><span class="hljs-builtin-name">str</span></span> greeting <span class="hljs-string">&quot;, &quot;</span> name)]
+    (<span class="hljs-name">println</span> msg)
+    {<span class="hljs-symbol">:name</span> name <span class="hljs-symbol">:length</span> (<span class="hljs-name"><span class="hljs-builtin-name">count</span></span> msg)}))
+
+(<span class="hljs-name">greet</span> <span class="hljs-string">&quot;world&quot;</span>)

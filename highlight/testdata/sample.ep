@@ -1,0 +1,9 @@
+% my $title = 'Hello';
+<html>
+  <head><title><%= $title %></title></head>
+  <body>
+    % for my $i (1..3) {
+      <p><%= $i %></p>
+    % }
+  </body>
+</html>
