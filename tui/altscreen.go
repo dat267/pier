@@ -13,12 +13,11 @@ import (
 // application-owned viewport (scroll keys, mouse wheel/drag, text selection
 // with copy, transcript search, flashes, and the scroll-to-end indicator).
 //
-// Divergences: the kitty image upload cache/eviction is not ported, so image
-// data is re-transmitted on a redraw instead of reusing an uploaded
-// placement (the encoders and metadata live in terminalimage.go); selection
-// auto-scroll uses a time.AfterFunc loop guarded by a mutex (D82); clipboard
-// writes go through the injected CopySelection hook or an OSC 52 escape
-// (native clipboard is out of scope).
+// Divergences: selection auto-scroll uses a time.AfterFunc loop guarded by a
+// mutex (D82); clipboard writes go through the injected CopySelection hook or
+// an OSC 52 escape (native clipboard is out of scope). The kitty upload
+// cache/eviction and the WezTerm draw-images-last ordering are ported
+// (upstream prepareKittyScreen / drawKittyImagesLast).
 
 const (
 	enterAltScreen           = "\x1b[?1049h"
@@ -161,13 +160,19 @@ type AltScreen struct {
 	// layoutRoot is atomic: mountedRoots is called while the renderer lock is
 	// held, so it must not take the alt-screen lock (lock order: screen ->
 	// renderer).
-	layoutRoot                   atomic.Pointer[Component]
-	currentLayout                *LayoutFrame
-	implicitDocument             Component
-	implicitScrollView           *ScrollView
-	flashes                      *AltScreenFlashContainer
-	altScreenActive              bool
-	imageProtocol                string
+	layoutRoot         atomic.Pointer[Component]
+	currentLayout      *LayoutFrame
+	implicitDocument   Component
+	implicitScrollView *ScrollView
+	flashes            *AltScreenFlashContainer
+	altScreenActive    bool
+	imageProtocol      string
+	// uploadedKittyImages caches uploaded kitty transmissions so a redraw reuses
+	// their placements instead of re-transmitting the data (upstream
+	// uploadedKittyImages). kittyImageOrder preserves insertion order for
+	// oldest-first eviction.
+	uploadedKittyImages          map[int]cachedKittyImage
+	kittyImageOrder              []int
 	selectionAnchor              *altSelectionPoint
 	selectionFocus               *altSelectionPoint
 	selectionGranularity         string
@@ -412,6 +417,8 @@ func (s *AltScreen) beforeTerminalStart() {
 	s.flashes.Dispose()
 	s.altScreenActive = true
 	s.imageProtocol = GetTerminalCapabilities().Images
+	s.uploadedKittyImages = nil
+	s.kittyImageOrder = nil
 	// The iterm2 capability swap upstream performs only affects image
 	// rendering, which is out of scope (D81).
 	s.lastDocument = nil
@@ -464,6 +471,8 @@ func (s *AltScreen) afterTerminalStop(options TuiStopOptions) {
 		return
 	}
 	s.altScreenActive = false
+	s.uploadedKittyImages = nil
+	s.kittyImageOrder = nil
 	if options.PreserveScreen {
 		s.Terminal.Write(beginSynchronizedOutput + exitAltScreen + "\x1b[?25h" + endSynchronizedOutput)
 		return
@@ -512,6 +521,106 @@ func (s *AltScreen) deleteKittyImagesLocked() string {
 		return deleteAllKittyImages()
 	}
 	return ""
+}
+
+// Kitty upload cache limits (upstream MAX_CACHED_OFFSCREEN_*). Offscreen images
+// stay uploaded until they exceed these bounds, then their data is freed.
+const (
+	maxCachedOffscreenKittyImages            = 16
+	maxCachedOffscreenKittyTransmissionBytes = 32 * 1024 * 1024
+	maxCachedOffscreenKittyDecodedBytes      = 64 * 1024 * 1024
+)
+
+// cachedKittyImage records one uploaded image's transmission.
+type cachedKittyImage struct {
+	TransmissionGeneration int
+	TransmissionBytes      int
+	EstimatedDecodedBytes  int
+}
+
+func (s *AltScreen) setUploadedKittyImage(imageID int, image cachedKittyImage) {
+	if s.uploadedKittyImages == nil {
+		s.uploadedKittyImages = map[int]cachedKittyImage{}
+	}
+	if _, exists := s.uploadedKittyImages[imageID]; exists {
+		filtered := s.kittyImageOrder[:0]
+		for _, id := range s.kittyImageOrder {
+			if id != imageID {
+				filtered = append(filtered, id)
+			}
+		}
+		s.kittyImageOrder = filtered
+	}
+	s.uploadedKittyImages[imageID] = image
+	s.kittyImageOrder = append(s.kittyImageOrder, imageID)
+}
+
+func (s *AltScreen) removeUploadedKittyImage(imageID int) {
+	delete(s.uploadedKittyImages, imageID)
+	filtered := s.kittyImageOrder[:0]
+	for _, id := range s.kittyImageOrder {
+		if id != imageID {
+			filtered = append(filtered, id)
+		}
+	}
+	s.kittyImageOrder = filtered
+}
+
+// prepareKittyScreen replaces an image line whose transmission is already
+// uploaded with its placement-only command, and returns the deletion escapes
+// for offscreen images evicted past the cache limits (upstream
+// prepareKittyScreen).
+func (s *AltScreen) prepareKittyScreen(screen []string) ([]string, string) {
+	visible := map[int]bool{}
+	lines := make([]string, len(screen))
+	for index, line := range screen {
+		placement, ok := GetKittyImagePlacement(line)
+		if !ok {
+			lines[index] = line
+			continue
+		}
+		visible[placement.ImageID] = true
+		cached, exists := s.uploadedKittyImages[placement.ImageID]
+		s.setUploadedKittyImage(placement.ImageID, cachedKittyImage{
+			TransmissionGeneration: placement.TransmissionGeneration,
+			TransmissionBytes:      placement.TransmissionBytes,
+			EstimatedDecodedBytes:  placement.EstimatedDecodedBytes,
+		})
+		if exists && cached.TransmissionGeneration == placement.TransmissionGeneration {
+			lines[index] = placement.ReplacementLine
+		} else {
+			lines[index] = line
+		}
+	}
+
+	offscreenCount, offscreenTransmission, offscreenDecoded := 0, 0, 0
+	for imageID, cached := range s.uploadedKittyImages {
+		if visible[imageID] {
+			continue
+		}
+		offscreenCount++
+		offscreenTransmission += cached.TransmissionBytes
+		offscreenDecoded += cached.EstimatedDecodedBytes
+	}
+
+	var evicted strings.Builder
+	for _, imageID := range append([]int(nil), s.kittyImageOrder...) {
+		if offscreenCount <= maxCachedOffscreenKittyImages &&
+			offscreenTransmission <= maxCachedOffscreenKittyTransmissionBytes &&
+			offscreenDecoded <= maxCachedOffscreenKittyDecodedBytes {
+			break
+		}
+		if visible[imageID] {
+			continue
+		}
+		cached := s.uploadedKittyImages[imageID]
+		evicted.WriteString(DeleteKittyImage(imageID))
+		s.removeUploadedKittyImage(imageID)
+		offscreenCount--
+		offscreenTransmission -= cached.TransmissionBytes
+		offscreenDecoded -= cached.EstimatedDecodedBytes
+	}
+	return lines, evicted.String()
 }
 
 // DeleteAllKittyImages deletes every placed kitty image.
@@ -2220,17 +2329,51 @@ func (s *AltScreen) doRender() {
 	screen = s.ApplyLineResets(screen)
 
 	fullRedraw := len(s.previousScreen) == 0 || s.previousScreenWidth != width || s.previousScreenHeight != height
-	imagesNeedRedraw := false
+	changedRows := make([]bool, len(screen))
+	imageAnchorsNeedRedraw := false
 	for index, line := range screen {
 		previous := ""
 		if index < len(s.previousScreen) {
 			previous = s.previousScreen[index]
 		}
-		if line != previous && (IsImageLine(line) || IsImageLine(previous)) {
-			imagesNeedRedraw = true
-			break
+		changed := line != previous
+		changedRows[index] = changed
+		if changed && (IsImageLine(line) || IsImageLine(previous)) {
+			imageAnchorsNeedRedraw = true
 		}
 	}
+	isWezTerm := os.Getenv("WEZTERM_PANE") != "" || strings.ToLower(os.Getenv("TERM_PROGRAM")) == "wezterm"
+	// WezTerm erases an intersecting kitty image cell when a later row write
+	// touches a row the placement covers, even when the image line itself did
+	// not change (upstream imageCellsNeedRedraw).
+	imageCellsNeedRedraw := false
+	if !imageAnchorsNeedRedraw && isWezTerm && s.imageProtocol == ImageProtocolKitty {
+		anyChanged := false
+		for _, changed := range changedRows {
+			if changed {
+				anyChanged = true
+				break
+			}
+		}
+		if anyChanged {
+			for index, line := range screen {
+				rows, ok := GetKittyImagePlacementRows(line)
+				if !ok {
+					continue
+				}
+				for covered := index; covered < index+rows && covered < len(changedRows); covered++ {
+					if changedRows[covered] {
+						imageCellsNeedRedraw = true
+						break
+					}
+				}
+				if imageCellsNeedRedraw {
+					break
+				}
+			}
+		}
+	}
+	imagesNeedRedraw := imageAnchorsNeedRedraw || imageCellsNeedRedraw
 	redrawImages := fullRedraw || imagesNeedRedraw
 
 	if LowBandwidth() && !fullRedraw && !imagesNeedRedraw && s.rowsAndCursorUnchanged(screen, row, col, hasCursor) {
@@ -2240,11 +2383,24 @@ func (s *AltScreen) doRender() {
 		return
 	}
 
+	// Reuse uploaded kitty transmissions as placement-only lines and collect
+	// the eviction escapes for offscreen images (upstream prepareKittyScreen).
+	hadUploadedKittyImages := len(s.uploadedKittyImages) > 0
+	preparedScreen := screen
+	evictedImageDeletion := ""
+	if redrawImages && s.imageProtocol == ImageProtocolKitty {
+		preparedScreen, evictedImageDeletion = s.prepareKittyScreen(screen)
+	}
+
 	var builder strings.Builder
 	builder.WriteString(beginSynchronizedOutput)
 	if fullRedraw {
 		s.fullRedrawCount++
-		builder.WriteString(s.deleteKittyImagesLocked())
+		if s.imageProtocol == ImageProtocolKitty && hadUploadedKittyImages {
+			builder.WriteString(DeleteAllKittyPlacements())
+		} else {
+			builder.WriteString(s.deleteKittyImagesLocked())
+		}
 		builder.WriteString("\x1b[2J")
 	} else if imagesNeedRedraw {
 		if s.imageProtocol == "iterm2" {
@@ -2253,9 +2409,9 @@ func (s *AltScreen) doRender() {
 			builder.WriteString(deleteAllKittyPlacements())
 		}
 	}
+	builder.WriteString(evictedImageDeletion)
 
-	clearRowsBeforeKittyImages := redrawImages && s.imageProtocol == "kitty" && containsImageLine(screen) &&
-		(os.Getenv("WEZTERM_PANE") != "" || strings.ToLower(os.Getenv("TERM_PROGRAM")) == "wezterm")
+	clearRowsBeforeKittyImages := redrawImages && s.imageProtocol == "kitty" && containsImageLine(screen) && isWezTerm
 	if clearRowsBeforeKittyImages {
 		for row := 0; row < height; row++ {
 			previous := ""
@@ -2267,29 +2423,50 @@ func (s *AltScreen) doRender() {
 			}
 			builder.WriteString("\x1b[" + itoa(row+1) + ";1H\x1b[2K")
 		}
-	}
-
-	for row := 0; row < height; row++ {
-		previous := ""
-		if row < len(s.previousScreen) {
-			previous = s.previousScreen[row]
+		// WezTerm erases intersecting kitty image cells when a later row write
+		// touches a covered row, so draw every non-image line first and the
+		// image placements last (upstream drawKittyImagesLast).
+		for pass := 0; pass < 2; pass++ {
+			for row := 0; row < height; row++ {
+				previous := ""
+				if row < len(s.previousScreen) {
+					previous = s.previousScreen[row]
+				}
+				if !fullRedraw && !imagesNeedRedraw && screen[row] == previous {
+					continue
+				}
+				line := ""
+				if row < len(preparedScreen) {
+					line = preparedScreen[row]
+				}
+				if IsImageLine(line) != (pass == 1) {
+					continue
+				}
+				builder.WriteString("\x1b[" + itoa(row+1) + ";1H" + line)
+			}
 		}
-		if !fullRedraw && !imagesNeedRedraw && screen[row] == previous {
-			continue
+	} else {
+		for row := 0; row < height; row++ {
+			previous := ""
+			if row < len(s.previousScreen) {
+				previous = s.previousScreen[row]
+			}
+			if !fullRedraw && !imagesNeedRedraw && screen[row] == previous {
+				continue
+			}
+			line := ""
+			if row < len(preparedScreen) {
+				line = preparedScreen[row]
+			}
+			// A full repaint already erased the screen, and a low-bandwidth frame
+			// whose new line is at least as wide as the old one overwrites every old
+			// cell: neither needs the per-row clear.
+			clear := "\x1b[2K"
+			if LowBandwidth() && (fullRedraw || VisibleWidth(line) >= VisibleWidth(previous)) {
+				clear = ""
+			}
+			builder.WriteString("\x1b[" + itoa(row+1) + ";1H" + clear + line)
 		}
-		line := ""
-		if row < len(screen) {
-			line = screen[row]
-		}
-		// A full repaint already erased the screen, and a low-bandwidth frame
-		// whose new line is at least as wide as the old one overwrites every old
-		// cell: neither needs the per-row clear.
-		clear := "\x1b[2K"
-		if clearRowsBeforeKittyImages ||
-			(LowBandwidth() && (fullRedraw || VisibleWidth(line) >= VisibleWidth(previous))) {
-			clear = ""
-		}
-		builder.WriteString("\x1b[" + itoa(row+1) + ";1H" + clear + line)
 	}
 
 	if hasCursor {
