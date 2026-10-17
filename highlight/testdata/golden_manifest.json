@@ -682,5 +682,9 @@
   {
     "file": "sample.gss",
     "language": "gauss"
+  },
+  {
+    "file": "sample.mel",
+    "language": "mel"
   }
 ]

@@ -1,0 +1,11 @@
+// a comment
+global proc string hello(string $name) {
+    string $msg = "Hello, " + $name;
+    print $msg;
+    return $msg;
+}
+
+$count = 3;
+for ($i = 0; $i < $count; $i++) {
+    print(`frame ` + $i);
+}

@@ -1,0 +1,11 @@
+<span class="hljs-comment">// a comment</span>
+<span class="hljs-keyword">global</span> <span class="hljs-keyword">proc</span> <span class="hljs-keyword">string</span> hello(<span class="hljs-keyword">string</span> $name) {
+    <span class="hljs-keyword">string</span> $msg = <span class="hljs-string">&quot;Hello, &quot;</span> + $name;
+    <span class="hljs-keyword">print</span> $msg;
+    <span class="hljs-keyword">return</span> $msg;
+}
+
+$count = <span class="hljs-number">3</span>;
+<span class="hljs-keyword">for</span> ($i = <span class="hljs-number">0</span>; $i &lt; $count; $i++) {
+    <span class="hljs-keyword">print</span>(<span class="hljs-string">`frame `</span> + $i);
+}
