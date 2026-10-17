@@ -21,6 +21,21 @@ func TestPrefixedDispatchKeepsDotInsideOneLine(t *testing.T) {
 	}
 }
 
+// TestIgnoredZeroWidthEndAdvances guards the scan loop's handling of an ignored
+// zero-width end. julia-repl ends its sub-language at `^(?![ ]{6})`, ported as a
+// zero-width `^` end with an onEnd guard; returning 0 would re-find the same end
+// and burn the iteration cap while swallowing the rest of the input.
+func TestIgnoredZeroWidthEndAdvances(t *testing.T) {
+	result, err := Highlight("julia> foo\n      bar\nbaz\n", "julia-repl")
+	if err != nil {
+		t.Fatalf("highlight: %v", err)
+	}
+	html := RenderHTML(result.Nodes)
+	if !strings.Contains(html, "</span>baz") {
+		t.Fatalf("the unindented line was swallowed by the REPL block:\n%s", html)
+	}
+}
+
 // TestMidLineBeginLineDoesNotMatch guards the non-dispatch scan path's context
 // verification: a `^` rule must not match mid-line just because the scan slice
 // starts there. armasm's `^[ \t]*(?=#)` comment rule only matches a line-leading

@@ -1,0 +1,7 @@
+julia> function foo(x)
+      x + 1
+      end
+foo (generic function with 1 method)
+
+julia> foo(2)
+3

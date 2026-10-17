@@ -479,6 +479,17 @@ func (h *highlighter) processLexeme(textBefore string, m *match) int {
 		if processed := h.doEndMatch(m); processed != noMatch {
 			return processed
 		}
+		if lexeme == "" {
+			// The end matched but its callback ignored it (for example a zero-width
+			// `^` end guarded by a condition). Returning 0 would re-find the same
+			// zero-width end forever; consume one byte instead, which is what an end
+			// that simply did not match there would do.
+			if m.index < len(m.input) {
+				h.modeBuffer += m.input[m.index : m.index+1]
+				return 1
+			}
+			return 0
+		}
 	}
 	h.modeBuffer += lexeme
 	return len(lexeme)

@@ -1,0 +1,22 @@
+<span class="hljs-comment"># a comment</span>
+<span class="hljs-keyword">function</span> add(a::<span class="hljs-built_in">Int</span>, b::<span class="hljs-built_in">Int</span>)
+    <span class="hljs-keyword">return</span> a + b
+<span class="hljs-keyword">end</span>
+
+<span class="hljs-keyword">struct</span> Point
+    x::<span class="hljs-built_in">Float64</span>
+    y::<span class="hljs-built_in">Float64</span>
+<span class="hljs-keyword">end</span>
+
+<span class="hljs-keyword">mutable struct</span> Counter
+    n::<span class="hljs-built_in">Int</span>
+<span class="hljs-keyword">end</span>
+
+name = <span class="hljs-string">&quot;world&quot;</span>
+println(<span class="hljs-string">&quot;Hello, <span class="hljs-variable">$name</span>&quot;</span>)
+s = <span class="hljs-string">&quot;value: <span class="hljs-subst">$(<span class="hljs-number">1</span> + <span class="hljs-number">2</span>)</span>&quot;</span>
+arr = [<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>]
+d = <span class="hljs-built_in">Dict</span>(:a =&gt; <span class="hljs-number">1</span>)
+c = <span class="hljs-string">&#x27;x&#x27;</span>
+cmd = <span class="hljs-string">`ls -la`</span>
+<span class="hljs-meta">@time</span> add(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>)

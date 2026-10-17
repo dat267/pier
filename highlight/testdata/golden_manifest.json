@@ -630,5 +630,13 @@
   {
     "file": "sample.vb",
     "language": "vbnet"
+  },
+  {
+    "file": "sample.jl",
+    "language": "julia"
+  },
+  {
+    "file": "sample.juliarepl",
+    "language": "julia-repl"
   }
 ]
