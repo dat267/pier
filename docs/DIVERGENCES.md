@@ -1889,3 +1889,17 @@ can replace a stale goal with the right one in one turn.
 `goalClear` now also disarms and clears `pendingTurn`. The goal loop already
 stopped because the view is nil, so the only change is a consistent snapshot
 (the reference leaves `armed` set after a clear).
+
+## D233
+
+**`/goal set` overwrites a live goal without confirmation.**
+
+The reference `/goal set` over an unfinished goal asks the human to confirm
+("Replace goal?") before it tombstones the old goal and creates the new one; a
+declined confirmation leaves the goal untouched. Pier overwrites directly: the
+same `goal_replace` path runs (tombstone, create, queue the first round) with no
+prompt, and the command replies "Goal replaced." The goal state machine and its
+replay are unchanged.
+
+The confirmation hook that existed only for this prompt is removed;
+`GoalController.SetUIHooks` now installs the notify callback alone.

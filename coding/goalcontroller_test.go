@@ -33,8 +33,6 @@ type fakeGoalSink struct {
 	messages      []recordedGoalMessage
 	notifies      []string
 	active        []string
-	confirms      int
-	confirmResult bool
 	pending       bool
 	streaming     bool
 	runs          int
@@ -69,13 +67,7 @@ func (f *fakeGoalSink) GoalBranchEntries() []goal.CustomEntry { return f.branchE
 
 func goalControllerForSink(sink *fakeGoalSink) *GoalController {
 	controller := newGoalController(nil, sink)
-	controller.SetUIHooks(
-		func(message string, level string) { sink.notifies = append(sink.notifies, message) },
-		func(title string, message string, onAnswer func(confirmed bool)) {
-			sink.confirms++
-			onAnswer(sink.confirmResult)
-		},
-	)
+	controller.SetUIHooks(func(message string, level string) { sink.notifies = append(sink.notifies, message) })
 	return controller
 }
 
@@ -350,15 +342,14 @@ func TestGoalControllerToolExposure(t *testing.T) {
 	}
 }
 
-func TestGoalControllerCommandReplaceConfirm(t *testing.T) {
-	sink := &fakeGoalSink{confirmResult: true}
-	controller := goalControllerForSink(sink)
+// /goal set over a live goal overwrites it directly (D233): the old goal is
+// tombstoned, the new one is created and armed, and no confirmation is asked.
+func TestGoalControllerSetOverwritesLiveGoal(t *testing.T) {
+	controller, sink := newGoalControllerTest(t)
 	goalToolText(t, controller, "create_goal", `{"objective":"first"}`)
 	sink.entries = nil
 	controller.HandleCommand("set second")
-	if sink.confirms != 1 {
-		t.Fatalf("confirms = %d", sink.confirms)
-	}
+
 	ops := []string{}
 	for _, entry := range sink.entries {
 		if op, ok := entry.data["operation"].(string); ok {
@@ -368,15 +359,28 @@ func TestGoalControllerCommandReplaceConfirm(t *testing.T) {
 	if strings.Join(ops, ",") != "clear,create" {
 		t.Fatalf("ops = %v", ops)
 	}
+	snapshot := controller.Snapshot()
+	if snapshot.Goal == nil || snapshot.Goal.Objective != "second" {
+		t.Fatalf("goal = %+v", snapshot.Goal)
+	}
+	if !snapshot.Armed {
+		t.Fatal("replaced goal must be armed")
+	}
+}
 
-	// Declining leaves the goal untouched.
-	sink = &fakeGoalSink{confirmResult: false}
-	controller = goalControllerForSink(sink)
-	goalToolText(t, controller, "create_goal", `{"objective":"first"}`)
-	sink.entries = nil
-	controller.HandleCommand("set second")
-	if len(sink.entries) != 0 {
-		t.Fatalf("declined replace wrote %+v", sink.entries)
+// A fresh /goal set creates and arms the goal and queues its first round.
+func TestGoalControllerSetFreshGoal(t *testing.T) {
+	controller, sink := newGoalControllerTest(t)
+	controller.HandleCommand("set first")
+	snapshot := controller.Snapshot()
+	if snapshot.Goal == nil || snapshot.Goal.Objective != "first" || !snapshot.Armed {
+		t.Fatalf("snapshot = %+v", snapshot)
+	}
+	if len(sink.messages) != 1 || !sink.messages[0].triggerTurn {
+		t.Fatalf("round = %+v", sink.messages)
+	}
+	if len(sink.entries) != 1 || sink.entries[0].data["operation"] != "create" {
+		t.Fatalf("entries = %+v", sink.entries)
 	}
 }
 
@@ -591,7 +595,7 @@ func TestGoalControllerBuffersNoticesUntilUIHooks(t *testing.T) {
 	if len(sink.notifies) != 0 {
 		t.Fatalf("notice delivered before hooks: %v", sink.notifies)
 	}
-	controller.SetUIHooks(func(message string, level string) { sink.notifies = append(sink.notifies, message) }, nil)
+	controller.SetUIHooks(func(message string, level string) { sink.notifies = append(sink.notifies, message) })
 	if len(sink.notifies) != 1 || !strings.Contains(sink.notifies[0], "Goal restored") {
 		t.Fatalf("buffered notice = %v", sink.notifies)
 	}

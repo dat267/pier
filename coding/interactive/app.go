@@ -473,20 +473,15 @@ func NewApp(options AppOptions) *App {
 	// posted (D143: producers only enqueue).
 	app.transcript.EntryRenderer = GoalEntryRenderer
 	if controller := app.session.Goal; controller != nil {
-		controller.SetUIHooks(
-			func(message string, level string) {
-				app.ui.Post(func() {
-					if level == "warning" {
-						app.showWarning(message)
-						return
-					}
-					app.transcript.ShowStatus(message)
-				})
-			},
-			func(title string, message string, onAnswer func(confirmed bool)) {
-				app.ui.Post(func() { app.askConfirm(title, message, onAnswer) })
-			},
-		)
+		controller.SetUIHooks(func(message string, level string) {
+			app.ui.Post(func() {
+				if level == "warning" {
+					app.showWarning(message)
+					return
+				}
+				app.transcript.ShowStatus(message)
+			})
+		})
 	}
 	// The MCP wiring: the first turn waits for the direct-tool servers (bounded,
 	// upstream DEFAULT_STARTUP_WAIT_MS), attaches whatever connected, reports

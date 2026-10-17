@@ -124,7 +124,6 @@ type GoalController struct {
 	machine *goal.GoalMachine
 	sink    goalSink
 	notify  func(message string, level string)
-	confirm func(title string, message string, onAnswer func(confirmed bool))
 	// startWork schedules a run on the host's work slot when the session is
 	// idle. A nil scheduler runs the delivery inline (SDK and print mode).
 	startWork func(fn func(context.Context) error)
@@ -139,13 +138,12 @@ func newGoalController(machine *goal.GoalMachine, sink goalSink) *GoalController
 	return &GoalController{machine: machine, sink: sink}
 }
 
-// SetUIHooks installs the human-facing callbacks and delivers any notices that
+// SetUIHooks installs the human-facing callback and delivers any notices that
 // were produced before the UI existed (session-start restore, reload pauses).
-// A nil notify drops notices; a nil confirm denies goal replacement.
-func (c *GoalController) SetUIHooks(notify func(message string, level string), confirm func(title string, message string, onAnswer func(confirmed bool))) {
+// A nil notify drops notices.
+func (c *GoalController) SetUIHooks(notify func(message string, level string)) {
 	c.mu.Lock()
 	c.notify = notify
-	c.confirm = confirm
 	notices := c.pending
 	c.pending = nil
 	c.mu.Unlock()
@@ -211,18 +209,6 @@ func (c *GoalController) deliverGoalMessage(customType string, content string, d
 		return
 	}
 	_ = deliver(context.Background())
-}
-
-// confirmReplace asks the human before replacing a live goal.
-func (c *GoalController) confirmReplace(title string, message string, onAnswer func(confirmed bool)) {
-	c.mu.Lock()
-	confirm := c.confirm
-	c.mu.Unlock()
-	if confirm == nil {
-		onAnswer(false)
-		return
-	}
-	confirm(title, message, onAnswer)
 }
 
 // Snapshot exposes the machine state.
@@ -462,20 +448,16 @@ func (c *GoalController) HandleCommand(args string) {
 	case goal.CmdResume:
 		run(goal.GoalResumeEvent{}, func() string { return "Goal resumed." })
 	case goal.CmdSet:
-		// Replacing a live goal is a destructive edit: confirm, then tombstone
-		// the old one so replay still validates every step.
-		if snapshot.Goal != nil && snapshot.Goal.Phase != goal.PhaseComplete {
-			title := "Replace goal?"
-			message := "Current: " + goal.TruncateObjective(snapshot.Goal.Objective, 120) + "\n\nNew: " + goal.TruncateObjective(command.Objective, 120)
-			c.confirmReplace(title, message, func(confirmed bool) {
-				if !confirmed {
-					return
-				}
-				run(goal.GoalReplaceEvent{Objective: command.Objective}, func() string { return "Goal replaced." })
-			})
-			return
-		}
-		run(goal.GoalSetEvent{Objective: command.Objective}, func() string { return "Goal set." })
+		// /goal set overwrites a live goal directly (D233): the old goal is
+		// tombstoned so replay still validates every step, the new one is created,
+		// and its first round is queued. No confirmation prompt.
+		replacing := snapshot.Goal != nil && snapshot.Goal.Phase != goal.PhaseComplete
+		run(goal.GoalReplaceEvent{Objective: command.Objective}, func() string {
+			if replacing {
+				return "Goal replaced."
+			}
+			return "Goal set."
+		})
 	case goal.CmdError:
 		c.notice(command.Message, "warning")
 	}
