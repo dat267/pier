@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE note SYSTEM "note.dtd">
+<!-- a comment -->
+<note id="1" lang='en'>
+  <to name="pier">You</to>
+  <from>Other</from>
+  <body>Don&apos;t forget &amp; remember &#169;</body>
+  <data><![CDATA[ raw <tag> data ]]></data>
+  <style>
+    .box { color: red; }
+  </style>
+  <script>
+    var x = 1;
+  </script>
+</note>

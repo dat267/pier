@@ -8,12 +8,13 @@ import (
 
 // compiledLanguage is a language compiled for highlighting and cached.
 type compiledLanguage struct {
-	name             string
-	aliases          []string
-	caseInsensitive  bool
-	flags            string
-	classNameAliases map[string]string
-	root             *compiledMode
+	name              string
+	aliases           []string
+	caseInsensitive   bool
+	flags             string
+	classNameAliases  map[string]string
+	disableAutodetect bool
+	root              *compiledMode
 }
 
 var (
@@ -72,12 +73,13 @@ func getCompiledLanguage(name string) (*compiledLanguage, error) {
 		flags += "i"
 	}
 	lang := &compiledLanguage{
-		name:             language.Name,
-		aliases:          language.Aliases,
-		caseInsensitive:  language.CaseInsensitive,
-		flags:            flags,
-		classNameAliases: language.ClassNameAliases,
-		root:             root,
+		name:              language.Name,
+		aliases:           language.Aliases,
+		caseInsensitive:   language.CaseInsensitive,
+		flags:             flags,
+		classNameAliases:  language.ClassNameAliases,
+		disableAutodetect: language.DisableAutodetect,
+		root:              root,
 	}
 	compiledLanguages[name] = lang
 	if language.Name != name {

@@ -203,18 +203,23 @@ func (h *highlighter) processSubLanguage() {
 	if h.modeBuffer == "" {
 		return
 	}
-	if len(h.top.mode.subLanguage) != 1 {
-		// Auto-detection over a subset is not ported; emit the content plainly.
-		h.emitter.addText(h.modeBuffer)
-		return
+	var result *Result
+	name := ""
+	if len(h.top.mode.subLanguage) == 1 {
+		name = h.top.mode.subLanguage[0]
+		sub, err := getCompiledLanguage(name)
+		if err != nil {
+			h.emitter.addText(h.modeBuffer)
+			return
+		}
+		result = highlightWith(sub, h.modeBuffer)
+	} else {
+		result, name = highlightAuto(h.modeBuffer, h.top.mode.subLanguage)
+		if result == nil {
+			h.emitter.addText(h.modeBuffer)
+			return
+		}
 	}
-	name := h.top.mode.subLanguage[0]
-	sub := compiledLanguages[name]
-	if sub == nil {
-		h.emitter.addText(h.modeBuffer)
-		return
-	}
-	result := highlightWith(sub, h.modeBuffer)
 	if h.top.mode.relevance > 0 {
 		h.relevance += result.Relevance
 	}
@@ -406,6 +411,29 @@ func (h *highlighter) processLexeme(textBefore string, m *match) int {
 	}
 	h.modeBuffer += lexeme
 	return len(lexeme)
+}
+
+// highlightAuto picks the registered language in subset with the highest
+// relevance, approximating the reference's highlightAuto for sub-language
+// detection.
+func highlightAuto(code string, subset []string) (*Result, string) {
+	if len(subset) == 0 {
+		subset = Languages()
+	}
+	var best *Result
+	bestName := ""
+	for _, name := range subset {
+		lang, err := getCompiledLanguage(name)
+		if err != nil || lang.disableAutodetect {
+			continue
+		}
+		result := highlightWith(lang, code)
+		if best == nil || result.Relevance > best.Relevance {
+			best = result
+			bestName = lang.name
+		}
+	}
+	return best, bestName
 }
 
 func nodesEmitter(nodes []*Node) *emitter {
