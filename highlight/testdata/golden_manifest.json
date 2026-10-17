@@ -542,5 +542,13 @@
   {
     "file": "sample.nsi",
     "language": "nsis"
+  },
+  {
+    "file": "sample.f90",
+    "language": "fortran"
+  },
+  {
+    "file": "sample.irp",
+    "language": "irpf90"
   }
 ]

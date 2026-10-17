@@ -1,0 +1,12 @@
+<span class="hljs-function"><span class="hljs-keyword">program</span></span> hello
+  <span class="hljs-keyword">implicit</span> <span class="hljs-keyword">none</span>
+  <span class="hljs-keyword">integer</span> :: i
+  <span class="hljs-keyword">real</span> :: x
+  <span class="hljs-keyword">character</span>(len=<span class="hljs-number">20</span>) :: <span class="hljs-keyword">name</span>
+  x = <span class="hljs-number">3.14</span>
+  <span class="hljs-keyword">name</span> = <span class="hljs-string">&quot;Fortran&quot;</span>
+  <span class="hljs-keyword">do</span> i = <span class="hljs-number">1</span>, <span class="hljs-number">10</span>
+    <span class="hljs-built_in">print</span> *, <span class="hljs-string">&quot;Hello &quot;</span>, <span class="hljs-keyword">name</span>, i
+  <span class="hljs-keyword">end</span> <span class="hljs-keyword">do</span>
+  <span class="hljs-comment">! a comment</span>
+<span class="hljs-keyword">end</span> <span class="hljs-function"><span class="hljs-keyword">program</span></span> hello

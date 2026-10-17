@@ -1,0 +1,11 @@
+program test
+  implicit none
+  integer :: i
+  begin_doc
+  ! Documentation
+  end_doc
+  do i = 1, 5
+    call foo(i)
+  end do
+  irp_here
+end program test
