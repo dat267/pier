@@ -626,5 +626,9 @@
   {
     "file": "sample.pp",
     "language": "puppet"
+  },
+  {
+    "file": "sample.vb",
+    "language": "vbnet"
   }
 ]
