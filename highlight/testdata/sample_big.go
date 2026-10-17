@@ -1,0 +1,434 @@
+package highlight
+
+import (
+	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
+)
+
+// Mode is a highlight.js mode definition. Language files build these; the
+// compiler turns them into compiledMode.
+type Mode struct {
+	ClassName      string
+	Begin          string
+	End            string
+	BeginKeywords  string
+	EndSameAsBegin bool
+	EndsParent     bool
+	EndsWithParent bool
+	ExcludeBegin   bool
+	ExcludeEnd     bool
+	ReturnBegin    bool
+	ReturnEnd      bool
+	Skip           bool
+	Illegal        string
+	Match          string
+	Keywords       Keywords
+	Lexemes        string
+	Contains       []*Mode
+	Variants       []*Mode
+	Starts         *Mode
+	SubLanguage    []string
+	Relevance      int
+	HasRelevance   bool
+
+	OnBegin func(m *match, resp *Response)
+	OnEnd   func(m *match, resp *Response)
+
+	beforeBegin func(m *match, resp *Response)
+
+	cachedVariants []*Mode
+	frozen         bool
+}
+
+// Keywords maps a className to a space-separated word list whose entries may
+// carry a `|relevance` suffix. The special key "$pattern" is the keyword
+// scanner pattern.
+type Keywords map[string]string
+
+// Language is a mode plus registration metadata.
+type Language struct {
+	Name              string
+	Aliases           []string
+	CaseInsensitive   bool
+	DisableAutodetect bool
+	ClassNameAliases  map[string]string
+	Mode
+}
+
+// Self is the `contains: ['self']` sentinel.
+var Self = &Mode{}
+
+// Variant returns a copy of base with override applied, for mode.variants.
+func Variant(base *Mode, override func(*Mode)) *Mode {
+	c := cloneMode(base)
+	override(c)
+	return c
+}
+
+// Zero returns a mode with an explicit relevance of 0.
+func Zero(m Mode) *Mode {
+	m.Relevance = 0
+	m.HasRelevance = true
+	return &m
+}
+
+type keywordData struct {
+	className string
+	relevance int
+}
+
+type compiledMode struct {
+	className      string
+	relevance      int
+	skip           bool
+	excludeBegin   bool
+	excludeEnd     bool
+	returnBegin    bool
+	returnEnd      bool
+	endSameAsBegin bool
+	endsParent     bool
+	endsWithParent bool
+
+	keywords         map[string]keywordData
+	keywordPatternRe *regexp.Regexp
+	beginRe          *regexp.Regexp
+	endRe            *regexp.Regexp
+	illegalRe        *regexp.Regexp
+	terminatorEnd    string
+	contains         []*compiledMode
+	starts           *compiledMode
+	matcher          *resumableMultiRegex
+	subLanguage      []string
+
+	beforeBegin func(m *match, resp *Response)
+	onBegin     func(m *match, resp *Response)
+	onEnd       func(m *match, resp *Response)
+}
+
+// Response is highlight.js's Response: callbacks can ignore the match.
+type Response struct {
+	data           map[string]string
+	isMatchIgnored bool
+}
+
+// IgnoreMatch tells the engine not to apply the current rule.
+func (r *Response) IgnoreMatch() { r.isMatchIgnored = true }
+
+type compiler struct {
+	language *Language
+	compiled map[*Mode]*compiledMode
+}
+
+func compileLanguage(language *Language) (*compiledMode, error) {
+	c := &compiler{language: language}
+	for _, m := range language.Contains {
+		if m == Self {
+			return nil, fmt.Errorf("highlight: contains `self` is not supported at the top level of %q", language.Name)
+		}
+	}
+	// Compile a deep clone: the reference mutates mode objects during compile,
+	// and shared helper modes (C_LINE_COMMENT_MODE, ...) are reused across
+	// languages. Cloning keeps each language's compilation independent and lets
+	// concurrent highlights share the result.
+	root := cloneTree(&language.Mode, map[*Mode]*Mode{})
+	return c.compileMode(root, nil)
+}
+
+func (c *compiler) langRe(src string) (*regexp.Regexp, error) {
+	flags := "m"
+	if c.language.CaseInsensitive {
+		flags += "i"
+	}
+	return compilePattern(src, flags)
+}
+
+func (c *compiler) compileMode(mode *Mode, parent *compiledMode) (*compiledMode, error) {
+	// The reference sets isCompiled before compiling `contains`, so a language
+	// may reference itself (JSON's value container holds its own object and
+	// array modes). Memoising the in-progress compile keeps that graph finite.
+	if existing, ok := c.compiled[mode]; ok {
+		return existing, nil
+	}
+	cmode := &compiledMode{
+		className:      mode.ClassName,
+		skip:           mode.Skip,
+		excludeBegin:   mode.ExcludeBegin,
+		excludeEnd:     mode.ExcludeEnd,
+		returnBegin:    mode.ReturnBegin,
+		returnEnd:      mode.ReturnEnd,
+		endSameAsBegin: mode.EndSameAsBegin,
+		endsParent:     mode.EndsParent,
+		endsWithParent: mode.EndsWithParent,
+		beforeBegin:    mode.beforeBegin,
+		onBegin:        mode.OnBegin,
+		onEnd:          mode.OnEnd,
+		subLanguage:    mode.SubLanguage,
+	}
+	c.compiled[mode] = cmode
+
+	if mode.Match != "" {
+		if mode.Begin != "" || mode.End != "" {
+			return nil, fmt.Errorf("highlight: begin & end are not supported with match")
+		}
+		mode.Begin = mode.Match
+	}
+
+	// beginKeywords syntactic sugar.
+	if parent != nil && mode.BeginKeywords != "" {
+		words := strings.Split(mode.BeginKeywords, " ")
+		mode.Begin = `\b(` + strings.Join(words, "|") + `)`
+		preceding := mode.beforeBegin
+		mode.beforeBegin = func(m *match, resp *Response) {
+			if preceding != nil {
+				preceding(m, resp)
+				if resp.isMatchIgnored {
+					return
+				}
+			}
+			if m.index > 0 && m.input[m.index-1] == '.' {
+				resp.IgnoreMatch()
+				return
+			}
+			// The reference's `(?!\.)(?=\b|\s)` suffix: after the match the next
+			// character must be absent or a non-word character other than `.`.
+			next := m.index + len(m.lexeme)
+			if next < len(m.input) {
+				b := m.input[next]
+				if b == '.' || isWordByte(b) {
+					resp.IgnoreMatch()
+				}
+			}
+		}
+		cmode.beforeBegin = mode.beforeBegin
+		if mode.Keywords == nil {
+			mode.Keywords = Keywords{"keyword": mode.BeginKeywords}
+		}
+		if !mode.HasRelevance {
+			mode.Relevance = 0
+			mode.HasRelevance = true
+		}
+		mode.BeginKeywords = ""
+	}
+
+	if mode.HasRelevance {
+		cmode.relevance = mode.Relevance
+	} else {
+		cmode.relevance = 1
+	}
+
+	keywordPattern := ""
+	if mode.Keywords != nil {
+		keywordPattern = mode.Keywords["$pattern"]
+		delete(mode.Keywords, "$pattern")
+		cmode.keywords = compileKeywords(mode.Keywords, c.language.CaseInsensitive)
+	}
+	if mode.Lexemes != "" && keywordPattern != "" {
+		return nil, fmt.Errorf("highlight: prefer keywords.$pattern to mode.lexemes")
+	}
+	if keywordPattern == "" {
+		keywordPattern = mode.Lexemes
+	}
+	if keywordPattern == "" {
+		keywordPattern = `\w+`
+	}
+	re, err := c.langRe(keywordPattern)
+	if err != nil {
+		return nil, err
+	}
+	cmode.keywordPatternRe = re
+
+	if parent != nil {
+		if mode.Begin == "" {
+			mode.Begin = `\B|\b`
+		}
+		beginRe, err := c.langRe(mode.Begin)
+		if err != nil {
+			return nil, err
+		}
+		cmode.beginRe = beginRe
+		if mode.EndSameAsBegin {
+			mode.End = mode.Begin
+		}
+		if mode.End == "" && !mode.EndsWithParent {
+			mode.End = `\B|\b`
+		}
+		if mode.End != "" {
+			endRe, err := c.langRe(mode.End)
+			if err != nil {
+				return nil, err
+			}
+			cmode.endRe = endRe
+		}
+		cmode.terminatorEnd = mode.End
+		if mode.EndsWithParent && parent.terminatorEnd != "" {
+			if mode.End != "" {
+				cmode.terminatorEnd += "|"
+			}
+			cmode.terminatorEnd += parent.terminatorEnd
+		}
+	}
+	if mode.Illegal != "" {
+		illegalRe, err := c.langRe(mode.Illegal)
+		if err != nil {
+			return nil, err
+		}
+		cmode.illegalRe = illegalRe
+	}
+
+	contains := mode.Contains
+	if contains == nil {
+		contains = nil
+	}
+	expanded := make([]*Mode, 0, len(contains))
+	for _, child := range contains {
+		if child == Self {
+			child = mode
+		}
+		expanded = append(expanded, expandOrCloneMode(child)...)
+	}
+	for _, child := range expanded {
+		compiledChild, err := c.compileMode(child, cmode)
+		if err != nil {
+			return nil, err
+		}
+		cmode.contains = append(cmode.contains, compiledChild)
+	}
+	if mode.Starts != nil {
+		compiledStarts, err := c.compileMode(mode.Starts, parent)
+		if err != nil {
+			return nil, err
+		}
+		cmode.starts = compiledStarts
+	}
+	cmode.matcher = c.buildModeRegex(cmode)
+	return cmode, nil
+}
+
+func (c *compiler) buildModeRegex(mode *compiledMode) *resumableMultiRegex {
+	mm := &resumableMultiRegex{caseIgnore: c.language.CaseInsensitive}
+	for _, term := range mode.contains {
+		mm.addRule(term.beginRe, matchData{rule: term, typ: ruleBegin})
+	}
+	if mode.terminatorEnd != "" {
+		re, err := c.langRe(mode.terminatorEnd)
+		if err == nil {
+			mm.addRule(re, matchData{typ: ruleEnd})
+		}
+	}
+	if mode.illegalRe != nil {
+		mm.addRule(mode.illegalRe, matchData{typ: ruleIllegal})
+	}
+	return mm
+}
+
+func compileKeywords(raw Keywords, caseInsensitive bool) map[string]keywordData {
+	out := map[string]keywordData{}
+	var compileList func(className, words string)
+	compileList = func(className, words string) {
+		for _, keyword := range strings.Split(words, " ") {
+			if keyword == "" {
+				continue
+			}
+			key := keyword
+			if caseInsensitive {
+				key = strings.ToLower(key)
+			}
+			pair := strings.SplitN(keyword, "|", 2)
+			word := pair[0]
+			if caseInsensitive {
+				word = strings.ToLower(word)
+			}
+			out[word] = keywordData{className: className, relevance: scoreForKeyword(strings.SplitN(keyword, "|", 2)...)}
+		}
+	}
+	for className, words := range raw {
+		compileList(className, words)
+	}
+	return out
+}
+
+func scoreForKeyword(parts ...string) int {
+	keyword := parts[0]
+	if len(parts) > 1 && parts[1] != "" {
+		n, err := strconv.Atoi(parts[1])
+		if err == nil {
+			return n
+		}
+	}
+	if commonKeyword(keyword) {
+		return 0
+	}
+	return 1
+}
+
+var commonKeywords = map[string]bool{
+	"of": true, "and": true, "for": true, "in": true, "not": true,
+	"or": true, "if": true, "then": true, "parent": true, "list": true, "value": true,
+}
+
+func commonKeyword(keyword string) bool { return commonKeywords[strings.ToLower(keyword)] }
+
+func dependencyOnParent(mode *Mode) bool {
+	if mode == nil {
+		return false
+	}
+	return mode.EndsWithParent || dependencyOnParent(mode.Starts)
+}
+
+func expandOrCloneMode(mode *Mode) []*Mode {
+	if len(mode.Variants) > 0 {
+		if mode.cachedVariants == nil {
+			mode.cachedVariants = mode.Variants
+		}
+		return mode.cachedVariants
+	}
+	if dependencyOnParent(mode) {
+		clone := cloneMode(mode)
+		if mode.Starts != nil {
+			clone.Starts = cloneMode(mode.Starts)
+		}
+		return []*Mode{clone}
+	}
+	return []*Mode{mode}
+}
+
+// cloneTree deep-clones a mode tree for one language's compilation.
+func cloneTree(m *Mode, seen map[*Mode]*Mode) *Mode {
+	if m == nil || m == Self {
+		return m
+	}
+	if clone, ok := seen[m]; ok {
+		return clone
+	}
+	clone := cloneMode(m)
+	seen[m] = clone
+	clone.Contains = nil
+	for _, child := range m.Contains {
+		clone.Contains = append(clone.Contains, cloneTree(child, seen))
+	}
+	if len(m.Variants) > 0 {
+		clone.Variants = clone.Variants[:0]
+		for _, v := range m.Variants {
+			clone.Variants = append(clone.Variants, cloneTree(v, seen))
+		}
+	}
+	if m.Starts != nil {
+		clone.Starts = cloneTree(m.Starts, seen)
+	}
+	return clone
+}
+
+func cloneMode(m *Mode) *Mode {
+	c := *m
+	if m.Contains != nil {
+		c.Contains = append([]*Mode(nil), m.Contains...)
+	}
+	c.Variants = nil
+	return &c
+}
+
+func isWordByte(b byte) bool {
+	return b == '_' || (b >= '0' && b <= '9') || (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z')
+}

@@ -1,0 +1,434 @@
+<span class="hljs-keyword">package</span> highlight
+
+<span class="hljs-keyword">import</span> (
+	<span class="hljs-string">&quot;fmt&quot;</span>
+	<span class="hljs-string">&quot;regexp&quot;</span>
+	<span class="hljs-string">&quot;strconv&quot;</span>
+	<span class="hljs-string">&quot;strings&quot;</span>
+)
+
+<span class="hljs-comment">// Mode is a highlight.js mode definition. Language files build these; the</span>
+<span class="hljs-comment">// compiler turns them into compiledMode.</span>
+<span class="hljs-keyword">type</span> Mode <span class="hljs-keyword">struct</span> {
+	ClassName      <span class="hljs-keyword">string</span>
+	Begin          <span class="hljs-keyword">string</span>
+	End            <span class="hljs-keyword">string</span>
+	BeginKeywords  <span class="hljs-keyword">string</span>
+	EndSameAsBegin <span class="hljs-keyword">bool</span>
+	EndsParent     <span class="hljs-keyword">bool</span>
+	EndsWithParent <span class="hljs-keyword">bool</span>
+	ExcludeBegin   <span class="hljs-keyword">bool</span>
+	ExcludeEnd     <span class="hljs-keyword">bool</span>
+	ReturnBegin    <span class="hljs-keyword">bool</span>
+	ReturnEnd      <span class="hljs-keyword">bool</span>
+	Skip           <span class="hljs-keyword">bool</span>
+	Illegal        <span class="hljs-keyword">string</span>
+	Match          <span class="hljs-keyword">string</span>
+	Keywords       Keywords
+	Lexemes        <span class="hljs-keyword">string</span>
+	Contains       []*Mode
+	Variants       []*Mode
+	Starts         *Mode
+	SubLanguage    []<span class="hljs-keyword">string</span>
+	Relevance      <span class="hljs-keyword">int</span>
+	HasRelevance   <span class="hljs-keyword">bool</span>
+
+	OnBegin <span class="hljs-function"><span class="hljs-keyword">func</span><span class="hljs-params">(m *match, resp *Response)</span></span>
+	OnEnd   <span class="hljs-function"><span class="hljs-keyword">func</span><span class="hljs-params">(m *match, resp *Response)</span></span>
+
+	beforeBegin <span class="hljs-function"><span class="hljs-keyword">func</span><span class="hljs-params">(m *match, resp *Response)</span></span>
+
+	cachedVariants []*Mode
+	frozen         <span class="hljs-keyword">bool</span>
+}
+
+<span class="hljs-comment">// Keywords maps a className to a space-separated word list whose entries may</span>
+<span class="hljs-comment">// carry a `|relevance` suffix. The special key &quot;$pattern&quot; is the keyword</span>
+<span class="hljs-comment">// scanner pattern.</span>
+<span class="hljs-keyword">type</span> Keywords <span class="hljs-keyword">map</span>[<span class="hljs-keyword">string</span>]<span class="hljs-keyword">string</span>
+
+<span class="hljs-comment">// Language is a mode plus registration metadata.</span>
+<span class="hljs-keyword">type</span> Language <span class="hljs-keyword">struct</span> {
+	Name              <span class="hljs-keyword">string</span>
+	Aliases           []<span class="hljs-keyword">string</span>
+	CaseInsensitive   <span class="hljs-keyword">bool</span>
+	DisableAutodetect <span class="hljs-keyword">bool</span>
+	ClassNameAliases  <span class="hljs-keyword">map</span>[<span class="hljs-keyword">string</span>]<span class="hljs-keyword">string</span>
+	Mode
+}
+
+<span class="hljs-comment">// Self is the `contains: [&#x27;self&#x27;]` sentinel.</span>
+<span class="hljs-keyword">var</span> Self = &amp;Mode{}
+
+<span class="hljs-comment">// Variant returns a copy of base with override applied, for mode.variants.</span>
+<span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">Variant</span><span class="hljs-params">(base *Mode, override <span class="hljs-keyword">func</span>(*Mode)</span>) *<span class="hljs-title">Mode</span></span> {
+	c := cloneMode(base)
+	override(c)
+	<span class="hljs-keyword">return</span> c
+}
+
+<span class="hljs-comment">// Zero returns a mode with an explicit relevance of 0.</span>
+<span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">Zero</span><span class="hljs-params">(m Mode)</span> *<span class="hljs-title">Mode</span></span> {
+	m.Relevance = <span class="hljs-number">0</span>
+	m.HasRelevance = <span class="hljs-literal">true</span>
+	<span class="hljs-keyword">return</span> &amp;m
+}
+
+<span class="hljs-keyword">type</span> keywordData <span class="hljs-keyword">struct</span> {
+	className <span class="hljs-keyword">string</span>
+	relevance <span class="hljs-keyword">int</span>
+}
+
+<span class="hljs-keyword">type</span> compiledMode <span class="hljs-keyword">struct</span> {
+	className      <span class="hljs-keyword">string</span>
+	relevance      <span class="hljs-keyword">int</span>
+	skip           <span class="hljs-keyword">bool</span>
+	excludeBegin   <span class="hljs-keyword">bool</span>
+	excludeEnd     <span class="hljs-keyword">bool</span>
+	returnBegin    <span class="hljs-keyword">bool</span>
+	returnEnd      <span class="hljs-keyword">bool</span>
+	endSameAsBegin <span class="hljs-keyword">bool</span>
+	endsParent     <span class="hljs-keyword">bool</span>
+	endsWithParent <span class="hljs-keyword">bool</span>
+
+	keywords         <span class="hljs-keyword">map</span>[<span class="hljs-keyword">string</span>]keywordData
+	keywordPatternRe *regexp.Regexp
+	beginRe          *regexp.Regexp
+	endRe            *regexp.Regexp
+	illegalRe        *regexp.Regexp
+	terminatorEnd    <span class="hljs-keyword">string</span>
+	contains         []*compiledMode
+	starts           *compiledMode
+	matcher          *resumableMultiRegex
+	subLanguage      []<span class="hljs-keyword">string</span>
+
+	beforeBegin <span class="hljs-function"><span class="hljs-keyword">func</span><span class="hljs-params">(m *match, resp *Response)</span></span>
+	onBegin     <span class="hljs-function"><span class="hljs-keyword">func</span><span class="hljs-params">(m *match, resp *Response)</span></span>
+	onEnd       <span class="hljs-function"><span class="hljs-keyword">func</span><span class="hljs-params">(m *match, resp *Response)</span></span>
+}
+
+<span class="hljs-comment">// Response is highlight.js&#x27;s Response: callbacks can ignore the match.</span>
+<span class="hljs-keyword">type</span> Response <span class="hljs-keyword">struct</span> {
+	data           <span class="hljs-keyword">map</span>[<span class="hljs-keyword">string</span>]<span class="hljs-keyword">string</span>
+	isMatchIgnored <span class="hljs-keyword">bool</span>
+}
+
+<span class="hljs-comment">// IgnoreMatch tells the engine not to apply the current rule.</span>
+<span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(r *Response)</span> <span class="hljs-title">IgnoreMatch</span><span class="hljs-params">()</span></span> { r.isMatchIgnored = <span class="hljs-literal">true</span> }
+
+<span class="hljs-keyword">type</span> compiler <span class="hljs-keyword">struct</span> {
+	language *Language
+	compiled <span class="hljs-keyword">map</span>[*Mode]*compiledMode
+}
+
+<span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">compileLanguage</span><span class="hljs-params">(language *Language)</span> <span class="hljs-params">(*compiledMode, error)</span></span> {
+	c := &amp;compiler{language: language}
+	<span class="hljs-keyword">for</span> _, m := <span class="hljs-keyword">range</span> language.Contains {
+		<span class="hljs-keyword">if</span> m == Self {
+			<span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, fmt.Errorf(<span class="hljs-string">&quot;highlight: contains `self` is not supported at the top level of %q&quot;</span>, language.Name)
+		}
+	}
+	<span class="hljs-comment">// Compile a deep clone: the reference mutates mode objects during compile,</span>
+	<span class="hljs-comment">// and shared helper modes (C_LINE_COMMENT_MODE, ...) are reused across</span>
+	<span class="hljs-comment">// languages. Cloning keeps each language&#x27;s compilation independent and lets</span>
+	<span class="hljs-comment">// concurrent highlights share the result.</span>
+	root := cloneTree(&amp;language.Mode, <span class="hljs-keyword">map</span>[*Mode]*Mode{})
+	<span class="hljs-keyword">return</span> c.compileMode(root, <span class="hljs-literal">nil</span>)
+}
+
+<span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(c *compiler)</span> <span class="hljs-title">langRe</span><span class="hljs-params">(src <span class="hljs-keyword">string</span>)</span> <span class="hljs-params">(*regexp.Regexp, error)</span></span> {
+	flags := <span class="hljs-string">&quot;m&quot;</span>
+	<span class="hljs-keyword">if</span> c.language.CaseInsensitive {
+		flags += <span class="hljs-string">&quot;i&quot;</span>
+	}
+	<span class="hljs-keyword">return</span> compilePattern(src, flags)
+}
+
+<span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(c *compiler)</span> <span class="hljs-title">compileMode</span><span class="hljs-params">(mode *Mode, parent *compiledMode)</span> <span class="hljs-params">(*compiledMode, error)</span></span> {
+	<span class="hljs-comment">// The reference sets isCompiled before compiling `contains`, so a language</span>
+	<span class="hljs-comment">// may reference itself (JSON&#x27;s value container holds its own object and</span>
+	<span class="hljs-comment">// array modes). Memoising the in-progress compile keeps that graph finite.</span>
+	<span class="hljs-keyword">if</span> existing, ok := c.compiled[mode]; ok {
+		<span class="hljs-keyword">return</span> existing, <span class="hljs-literal">nil</span>
+	}
+	cmode := &amp;compiledMode{
+		className:      mode.ClassName,
+		skip:           mode.Skip,
+		excludeBegin:   mode.ExcludeBegin,
+		excludeEnd:     mode.ExcludeEnd,
+		returnBegin:    mode.ReturnBegin,
+		returnEnd:      mode.ReturnEnd,
+		endSameAsBegin: mode.EndSameAsBegin,
+		endsParent:     mode.EndsParent,
+		endsWithParent: mode.EndsWithParent,
+		beforeBegin:    mode.beforeBegin,
+		onBegin:        mode.OnBegin,
+		onEnd:          mode.OnEnd,
+		subLanguage:    mode.SubLanguage,
+	}
+	c.compiled[mode] = cmode
+
+	<span class="hljs-keyword">if</span> mode.Match != <span class="hljs-string">&quot;&quot;</span> {
+		<span class="hljs-keyword">if</span> mode.Begin != <span class="hljs-string">&quot;&quot;</span> || mode.End != <span class="hljs-string">&quot;&quot;</span> {
+			<span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, fmt.Errorf(<span class="hljs-string">&quot;highlight: begin &amp; end are not supported with match&quot;</span>)
+		}
+		mode.Begin = mode.Match
+	}
+
+	<span class="hljs-comment">// beginKeywords syntactic sugar.</span>
+	<span class="hljs-keyword">if</span> parent != <span class="hljs-literal">nil</span> &amp;&amp; mode.BeginKeywords != <span class="hljs-string">&quot;&quot;</span> {
+		words := strings.Split(mode.BeginKeywords, <span class="hljs-string">&quot; &quot;</span>)
+		mode.Begin = <span class="hljs-string">`\b(`</span> + strings.Join(words, <span class="hljs-string">&quot;|&quot;</span>) + <span class="hljs-string">`)`</span>
+		preceding := mode.beforeBegin
+		mode.beforeBegin = <span class="hljs-function"><span class="hljs-keyword">func</span><span class="hljs-params">(m *match, resp *Response)</span></span> {
+			<span class="hljs-keyword">if</span> preceding != <span class="hljs-literal">nil</span> {
+				preceding(m, resp)
+				<span class="hljs-keyword">if</span> resp.isMatchIgnored {
+					<span class="hljs-keyword">return</span>
+				}
+			}
+			<span class="hljs-keyword">if</span> m.index &gt; <span class="hljs-number">0</span> &amp;&amp; m.input[m.index<span class="hljs-number">-1</span>] == <span class="hljs-string">&#x27;.&#x27;</span> {
+				resp.IgnoreMatch()
+				<span class="hljs-keyword">return</span>
+			}
+			<span class="hljs-comment">// The reference&#x27;s `(?!\.)(?=\b|\s)` suffix: after the match the next</span>
+			<span class="hljs-comment">// character must be absent or a non-word character other than `.`.</span>
+			next := m.index + <span class="hljs-built_in">len</span>(m.lexeme)
+			<span class="hljs-keyword">if</span> next &lt; <span class="hljs-built_in">len</span>(m.input) {
+				b := m.input[next]
+				<span class="hljs-keyword">if</span> b == <span class="hljs-string">&#x27;.&#x27;</span> || isWordByte(b) {
+					resp.IgnoreMatch()
+				}
+			}
+		}
+		cmode.beforeBegin = mode.beforeBegin
+		<span class="hljs-keyword">if</span> mode.Keywords == <span class="hljs-literal">nil</span> {
+			mode.Keywords = Keywords{<span class="hljs-string">&quot;keyword&quot;</span>: mode.BeginKeywords}
+		}
+		<span class="hljs-keyword">if</span> !mode.HasRelevance {
+			mode.Relevance = <span class="hljs-number">0</span>
+			mode.HasRelevance = <span class="hljs-literal">true</span>
+		}
+		mode.BeginKeywords = <span class="hljs-string">&quot;&quot;</span>
+	}
+
+	<span class="hljs-keyword">if</span> mode.HasRelevance {
+		cmode.relevance = mode.Relevance
+	} <span class="hljs-keyword">else</span> {
+		cmode.relevance = <span class="hljs-number">1</span>
+	}
+
+	keywordPattern := <span class="hljs-string">&quot;&quot;</span>
+	<span class="hljs-keyword">if</span> mode.Keywords != <span class="hljs-literal">nil</span> {
+		keywordPattern = mode.Keywords[<span class="hljs-string">&quot;$pattern&quot;</span>]
+		<span class="hljs-built_in">delete</span>(mode.Keywords, <span class="hljs-string">&quot;$pattern&quot;</span>)
+		cmode.keywords = compileKeywords(mode.Keywords, c.language.CaseInsensitive)
+	}
+	<span class="hljs-keyword">if</span> mode.Lexemes != <span class="hljs-string">&quot;&quot;</span> &amp;&amp; keywordPattern != <span class="hljs-string">&quot;&quot;</span> {
+		<span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, fmt.Errorf(<span class="hljs-string">&quot;highlight: prefer keywords.$pattern to mode.lexemes&quot;</span>)
+	}
+	<span class="hljs-keyword">if</span> keywordPattern == <span class="hljs-string">&quot;&quot;</span> {
+		keywordPattern = mode.Lexemes
+	}
+	<span class="hljs-keyword">if</span> keywordPattern == <span class="hljs-string">&quot;&quot;</span> {
+		keywordPattern = <span class="hljs-string">`\w+`</span>
+	}
+	re, err := c.langRe(keywordPattern)
+	<span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+		<span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, err
+	}
+	cmode.keywordPatternRe = re
+
+	<span class="hljs-keyword">if</span> parent != <span class="hljs-literal">nil</span> {
+		<span class="hljs-keyword">if</span> mode.Begin == <span class="hljs-string">&quot;&quot;</span> {
+			mode.Begin = <span class="hljs-string">`\B|\b`</span>
+		}
+		beginRe, err := c.langRe(mode.Begin)
+		<span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+			<span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, err
+		}
+		cmode.beginRe = beginRe
+		<span class="hljs-keyword">if</span> mode.EndSameAsBegin {
+			mode.End = mode.Begin
+		}
+		<span class="hljs-keyword">if</span> mode.End == <span class="hljs-string">&quot;&quot;</span> &amp;&amp; !mode.EndsWithParent {
+			mode.End = <span class="hljs-string">`\B|\b`</span>
+		}
+		<span class="hljs-keyword">if</span> mode.End != <span class="hljs-string">&quot;&quot;</span> {
+			endRe, err := c.langRe(mode.End)
+			<span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+				<span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, err
+			}
+			cmode.endRe = endRe
+		}
+		cmode.terminatorEnd = mode.End
+		<span class="hljs-keyword">if</span> mode.EndsWithParent &amp;&amp; parent.terminatorEnd != <span class="hljs-string">&quot;&quot;</span> {
+			<span class="hljs-keyword">if</span> mode.End != <span class="hljs-string">&quot;&quot;</span> {
+				cmode.terminatorEnd += <span class="hljs-string">&quot;|&quot;</span>
+			}
+			cmode.terminatorEnd += parent.terminatorEnd
+		}
+	}
+	<span class="hljs-keyword">if</span> mode.Illegal != <span class="hljs-string">&quot;&quot;</span> {
+		illegalRe, err := c.langRe(mode.Illegal)
+		<span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+			<span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, err
+		}
+		cmode.illegalRe = illegalRe
+	}
+
+	contains := mode.Contains
+	<span class="hljs-keyword">if</span> contains == <span class="hljs-literal">nil</span> {
+		contains = <span class="hljs-literal">nil</span>
+	}
+	expanded := <span class="hljs-built_in">make</span>([]*Mode, <span class="hljs-number">0</span>, <span class="hljs-built_in">len</span>(contains))
+	<span class="hljs-keyword">for</span> _, child := <span class="hljs-keyword">range</span> contains {
+		<span class="hljs-keyword">if</span> child == Self {
+			child = mode
+		}
+		expanded = <span class="hljs-built_in">append</span>(expanded, expandOrCloneMode(child)...)
+	}
+	<span class="hljs-keyword">for</span> _, child := <span class="hljs-keyword">range</span> expanded {
+		compiledChild, err := c.compileMode(child, cmode)
+		<span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+			<span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, err
+		}
+		cmode.contains = <span class="hljs-built_in">append</span>(cmode.contains, compiledChild)
+	}
+	<span class="hljs-keyword">if</span> mode.Starts != <span class="hljs-literal">nil</span> {
+		compiledStarts, err := c.compileMode(mode.Starts, parent)
+		<span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+			<span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, err
+		}
+		cmode.starts = compiledStarts
+	}
+	cmode.matcher = c.buildModeRegex(cmode)
+	<span class="hljs-keyword">return</span> cmode, <span class="hljs-literal">nil</span>
+}
+
+<span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(c *compiler)</span> <span class="hljs-title">buildModeRegex</span><span class="hljs-params">(mode *compiledMode)</span> *<span class="hljs-title">resumableMultiRegex</span></span> {
+	mm := &amp;resumableMultiRegex{caseIgnore: c.language.CaseInsensitive}
+	<span class="hljs-keyword">for</span> _, term := <span class="hljs-keyword">range</span> mode.contains {
+		mm.addRule(term.beginRe, matchData{rule: term, typ: ruleBegin})
+	}
+	<span class="hljs-keyword">if</span> mode.terminatorEnd != <span class="hljs-string">&quot;&quot;</span> {
+		re, err := c.langRe(mode.terminatorEnd)
+		<span class="hljs-keyword">if</span> err == <span class="hljs-literal">nil</span> {
+			mm.addRule(re, matchData{typ: ruleEnd})
+		}
+	}
+	<span class="hljs-keyword">if</span> mode.illegalRe != <span class="hljs-literal">nil</span> {
+		mm.addRule(mode.illegalRe, matchData{typ: ruleIllegal})
+	}
+	<span class="hljs-keyword">return</span> mm
+}
+
+<span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">compileKeywords</span><span class="hljs-params">(raw Keywords, caseInsensitive <span class="hljs-keyword">bool</span>)</span> <span class="hljs-title">map</span>[<span class="hljs-title">string</span>]<span class="hljs-title">keywordData</span></span> {
+	out := <span class="hljs-keyword">map</span>[<span class="hljs-keyword">string</span>]keywordData{}
+	<span class="hljs-keyword">var</span> compileList <span class="hljs-function"><span class="hljs-keyword">func</span><span class="hljs-params">(className, words <span class="hljs-keyword">string</span>)</span></span>
+	compileList = <span class="hljs-function"><span class="hljs-keyword">func</span><span class="hljs-params">(className, words <span class="hljs-keyword">string</span>)</span></span> {
+		<span class="hljs-keyword">for</span> _, keyword := <span class="hljs-keyword">range</span> strings.Split(words, <span class="hljs-string">&quot; &quot;</span>) {
+			<span class="hljs-keyword">if</span> keyword == <span class="hljs-string">&quot;&quot;</span> {
+				<span class="hljs-keyword">continue</span>
+			}
+			key := keyword
+			<span class="hljs-keyword">if</span> caseInsensitive {
+				key = strings.ToLower(key)
+			}
+			pair := strings.SplitN(keyword, <span class="hljs-string">&quot;|&quot;</span>, <span class="hljs-number">2</span>)
+			word := pair[<span class="hljs-number">0</span>]
+			<span class="hljs-keyword">if</span> caseInsensitive {
+				word = strings.ToLower(word)
+			}
+			out[word] = keywordData{className: className, relevance: scoreForKeyword(strings.SplitN(keyword, <span class="hljs-string">&quot;|&quot;</span>, <span class="hljs-number">2</span>)...)}
+		}
+	}
+	<span class="hljs-keyword">for</span> className, words := <span class="hljs-keyword">range</span> raw {
+		compileList(className, words)
+	}
+	<span class="hljs-keyword">return</span> out
+}
+
+<span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">scoreForKeyword</span><span class="hljs-params">(parts ...<span class="hljs-keyword">string</span>)</span> <span class="hljs-title">int</span></span> {
+	keyword := parts[<span class="hljs-number">0</span>]
+	<span class="hljs-keyword">if</span> <span class="hljs-built_in">len</span>(parts) &gt; <span class="hljs-number">1</span> &amp;&amp; parts[<span class="hljs-number">1</span>] != <span class="hljs-string">&quot;&quot;</span> {
+		n, err := strconv.Atoi(parts[<span class="hljs-number">1</span>])
+		<span class="hljs-keyword">if</span> err == <span class="hljs-literal">nil</span> {
+			<span class="hljs-keyword">return</span> n
+		}
+	}
+	<span class="hljs-keyword">if</span> commonKeyword(keyword) {
+		<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>
+	}
+	<span class="hljs-keyword">return</span> <span class="hljs-number">1</span>
+}
+
+<span class="hljs-keyword">var</span> commonKeywords = <span class="hljs-keyword">map</span>[<span class="hljs-keyword">string</span>]<span class="hljs-keyword">bool</span>{
+	<span class="hljs-string">&quot;of&quot;</span>: <span class="hljs-literal">true</span>, <span class="hljs-string">&quot;and&quot;</span>: <span class="hljs-literal">true</span>, <span class="hljs-string">&quot;for&quot;</span>: <span class="hljs-literal">true</span>, <span class="hljs-string">&quot;in&quot;</span>: <span class="hljs-literal">true</span>, <span class="hljs-string">&quot;not&quot;</span>: <span class="hljs-literal">true</span>,
+	<span class="hljs-string">&quot;or&quot;</span>: <span class="hljs-literal">true</span>, <span class="hljs-string">&quot;if&quot;</span>: <span class="hljs-literal">true</span>, <span class="hljs-string">&quot;then&quot;</span>: <span class="hljs-literal">true</span>, <span class="hljs-string">&quot;parent&quot;</span>: <span class="hljs-literal">true</span>, <span class="hljs-string">&quot;list&quot;</span>: <span class="hljs-literal">true</span>, <span class="hljs-string">&quot;value&quot;</span>: <span class="hljs-literal">true</span>,
+}
+
+<span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">commonKeyword</span><span class="hljs-params">(keyword <span class="hljs-keyword">string</span>)</span> <span class="hljs-title">bool</span></span> { <span class="hljs-keyword">return</span> commonKeywords[strings.ToLower(keyword)] }
+
+<span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">dependencyOnParent</span><span class="hljs-params">(mode *Mode)</span> <span class="hljs-title">bool</span></span> {
+	<span class="hljs-keyword">if</span> mode == <span class="hljs-literal">nil</span> {
+		<span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>
+	}
+	<span class="hljs-keyword">return</span> mode.EndsWithParent || dependencyOnParent(mode.Starts)
+}
+
+<span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">expandOrCloneMode</span><span class="hljs-params">(mode *Mode)</span> []*<span class="hljs-title">Mode</span></span> {
+	<span class="hljs-keyword">if</span> <span class="hljs-built_in">len</span>(mode.Variants) &gt; <span class="hljs-number">0</span> {
+		<span class="hljs-keyword">if</span> mode.cachedVariants == <span class="hljs-literal">nil</span> {
+			mode.cachedVariants = mode.Variants
+		}
+		<span class="hljs-keyword">return</span> mode.cachedVariants
+	}
+	<span class="hljs-keyword">if</span> dependencyOnParent(mode) {
+		clone := cloneMode(mode)
+		<span class="hljs-keyword">if</span> mode.Starts != <span class="hljs-literal">nil</span> {
+			clone.Starts = cloneMode(mode.Starts)
+		}
+		<span class="hljs-keyword">return</span> []*Mode{clone}
+	}
+	<span class="hljs-keyword">return</span> []*Mode{mode}
+}
+
+<span class="hljs-comment">// cloneTree deep-clones a mode tree for one language&#x27;s compilation.</span>
+<span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">cloneTree</span><span class="hljs-params">(m *Mode, seen <span class="hljs-keyword">map</span>[*Mode]*Mode)</span> *<span class="hljs-title">Mode</span></span> {
+	<span class="hljs-keyword">if</span> m == <span class="hljs-literal">nil</span> || m == Self {
+		<span class="hljs-keyword">return</span> m
+	}
+	<span class="hljs-keyword">if</span> clone, ok := seen[m]; ok {
+		<span class="hljs-keyword">return</span> clone
+	}
+	clone := cloneMode(m)
+	seen[m] = clone
+	clone.Contains = <span class="hljs-literal">nil</span>
+	<span class="hljs-keyword">for</span> _, child := <span class="hljs-keyword">range</span> m.Contains {
+		clone.Contains = <span class="hljs-built_in">append</span>(clone.Contains, cloneTree(child, seen))
+	}
+	<span class="hljs-keyword">if</span> <span class="hljs-built_in">len</span>(m.Variants) &gt; <span class="hljs-number">0</span> {
+		clone.Variants = clone.Variants[:<span class="hljs-number">0</span>]
+		<span class="hljs-keyword">for</span> _, v := <span class="hljs-keyword">range</span> m.Variants {
+			clone.Variants = <span class="hljs-built_in">append</span>(clone.Variants, cloneTree(v, seen))
+		}
+	}
+	<span class="hljs-keyword">if</span> m.Starts != <span class="hljs-literal">nil</span> {
+		clone.Starts = cloneTree(m.Starts, seen)
+	}
+	<span class="hljs-keyword">return</span> clone
+}
+
+<span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">cloneMode</span><span class="hljs-params">(m *Mode)</span> *<span class="hljs-title">Mode</span></span> {
+	c := *m
+	<span class="hljs-keyword">if</span> m.Contains != <span class="hljs-literal">nil</span> {
+		c.Contains = <span class="hljs-built_in">append</span>([]*Mode(<span class="hljs-literal">nil</span>), m.Contains...)
+	}
+	c.Variants = <span class="hljs-literal">nil</span>
+	<span class="hljs-keyword">return</span> &amp;c
+}
+
+<span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">isWordByte</span><span class="hljs-params">(b <span class="hljs-keyword">byte</span>)</span> <span class="hljs-title">bool</span></span> {
+	<span class="hljs-keyword">return</span> b == <span class="hljs-string">&#x27;_&#x27;</span> || (b &gt;= <span class="hljs-string">&#x27;0&#x27;</span> &amp;&amp; b &lt;= <span class="hljs-string">&#x27;9&#x27;</span>) || (b &gt;= <span class="hljs-string">&#x27;a&#x27;</span> &amp;&amp; b &lt;= <span class="hljs-string">&#x27;z&#x27;</span>) || (b &gt;= <span class="hljs-string">&#x27;A&#x27;</span> &amp;&amp; b &lt;= <span class="hljs-string">&#x27;Z&#x27;</span>)
+}
