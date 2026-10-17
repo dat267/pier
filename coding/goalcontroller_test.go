@@ -35,6 +35,8 @@ type fakeGoalSink struct {
 	confirms      int
 	confirmResult bool
 	pending       bool
+	streaming     bool
+	runs          int
 	branchEntries []goal.CustomEntry
 }
 
@@ -47,6 +49,14 @@ func (f *fakeGoalSink) AppendGoalEntry(entryType string, data json.RawMessage) {
 func (f *fakeGoalSink) SendGoalMessage(customType string, content string, display bool, details json.RawMessage, triggerTurn bool) {
 	f.messages = append(f.messages, recordedGoalMessage{customType: customType, content: content, display: display, triggerTurn: triggerTurn})
 }
+
+func (f *fakeGoalSink) RunGoalTurn(ctx context.Context, customType string, content string, display bool, details json.RawMessage) error {
+	f.runs++
+	f.messages = append(f.messages, recordedGoalMessage{customType: customType, content: content, display: display, triggerTurn: true})
+	return nil
+}
+
+func (f *fakeGoalSink) GoalIsStreaming() bool { return f.streaming }
 
 func (f *fakeGoalSink) GoalActiveTools() []string { return append([]string{}, f.active...) }
 
@@ -207,6 +217,55 @@ func TestGoalControllerAgentEndAdmitsTurnAndContinues(t *testing.T) {
 		t.Fatalf("usage = %+v", usage)
 	}
 	if len(sink.messages) != 1 || !sink.messages[0].triggerTurn || !strings.Contains(sink.messages[0].content, "<goal_round>") {
+		t.Fatalf("messages = %+v", sink.messages)
+	}
+}
+
+// A round queued while the session is idle starts a run (upstream
+// sendCustomMessage's not-streaming branch); it is not just queued behind a run
+// that will never come.
+func TestGoalControllerIdleRoundStartsARun(t *testing.T) {
+	sink := &fakeGoalSink{}
+	controller := goalControllerForSink(sink)
+	started := 0
+	controller.SetStartWork(func(fn func(context.Context) error) {
+		started++
+		if err := fn(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	goalToolText(t, controller, "create_goal", `{"objective":"do it"}`)
+	controller.HandleCommand("pause")
+	sink.messages = nil
+	sink.runs = 0
+	controller.HandleCommand("resume")
+
+	if started != 1 || sink.runs != 1 {
+		t.Fatalf("started=%d runs=%d", started, sink.runs)
+	}
+	if len(sink.messages) != 1 || !sink.messages[0].triggerTurn || !strings.Contains(sink.messages[0].content, "<goal_round>") {
+		t.Fatalf("messages = %+v", sink.messages)
+	}
+}
+
+// A round queued while a run is active follows up instead of starting a nested
+// run, and the agent_before_settle transition shares the same delivery path.
+func TestGoalControllerRoundWhileStreamingFollowsUp(t *testing.T) {
+	sink := &fakeGoalSink{streaming: true}
+	controller := goalControllerForSink(sink)
+	started := 0
+	controller.SetStartWork(func(fn func(context.Context) error) { started++ })
+
+	goalToolText(t, controller, "create_goal", `{"objective":"do it"}`)
+	sink.messages = nil
+	sink.entries = nil
+	controller.AgentEnd(goalAgentEndEvent(completedAssistant()))
+
+	if started != 0 || sink.runs != 0 {
+		t.Fatalf("streaming round started a run: started=%d runs=%d", started, sink.runs)
+	}
+	if len(sink.messages) != 1 || !sink.messages[0].triggerTurn {
 		t.Fatalf("messages = %+v", sink.messages)
 	}
 }

@@ -550,6 +550,11 @@ func NewApp(options AppOptions) *App {
 		}
 		fn(context.Background())
 	}
+	// A /goal resume (or set/replace) on an idle session starts a run through
+	// the same work slot as a submitted prompt, so the loop keeps draining.
+	if controller := app.session.Goal; controller != nil {
+		controller.SetStartWork(app.events.StartWork)
+	}
 
 	app.slot = NewSelectorSlot(app.ui, app.editorContainer, app.defaultEditor)
 

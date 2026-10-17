@@ -23,8 +23,13 @@ type goalSink interface {
 	// AppendGoalEntry persists a durable custom entry.
 	AppendGoalEntry(entryType string, data json.RawMessage)
 	// SendGoalMessage adds a continuation or wrap-up message to the model
-	// context, optionally starting a turn.
+	// context without starting a run; the caller checked that one is active.
 	SendGoalMessage(customType string, content string, display bool, details json.RawMessage, triggerTurn bool)
+	// RunGoalTurn delivers a trigger-turn goal message and starts a run when no
+	// run is active (upstream sendCustomMessage's not-streaming branch).
+	RunGoalTurn(ctx context.Context, customType string, content string, display bool, details json.RawMessage) error
+	// GoalIsStreaming reports whether an agent run is active.
+	GoalIsStreaming() bool
 	// GoalActiveTools lists the active tool names.
 	GoalActiveTools() []string
 	// SetGoalActiveTools replaces the active tool names.
@@ -60,6 +65,20 @@ func (s *sessionGoalSink) SendGoalMessage(customType string, content string, dis
 		return
 	}
 	s.session.AppendCustomMessage(goalEventMessage(customType, content, display, details))
+}
+
+func (s *sessionGoalSink) GoalIsStreaming() bool {
+	return s.session != nil && s.session.IsStreaming()
+}
+
+// RunGoalTurn is upstream sendCustomMessage's not-streaming + triggerTurn
+// branch: it starts a run with the custom message (deliverAs only matters while
+// streaming).
+func (s *sessionGoalSink) RunGoalTurn(ctx context.Context, customType string, content string, display bool, details json.RawMessage) error {
+	if s.session == nil {
+		return nil
+	}
+	return s.session.SendMessage(ctx, goalEventMessage(customType, content, display, details), &SendMessageOptions{DeliverAs: "followUp"})
 }
 
 func (s *sessionGoalSink) GoalActiveTools() []string {
@@ -106,7 +125,10 @@ type GoalController struct {
 	sink    goalSink
 	notify  func(message string, level string)
 	confirm func(title string, message string, onAnswer func(confirmed bool))
-	pending []goalNotice
+	// startWork schedules a run on the host's work slot when the session is
+	// idle. A nil scheduler runs the delivery inline (SDK and print mode).
+	startWork func(fn func(context.Context) error)
+	pending   []goalNotice
 }
 
 // newGoalController creates a controller bound to a sink.
@@ -146,6 +168,41 @@ func (c *GoalController) notice(message string, level string) {
 	notify := c.notify
 	c.mu.Unlock()
 	notify(message, level)
+}
+
+// SetStartWork installs the host's off-loop work scheduler. When an idle goal
+// round is ready, the controller uses it so a resumed goal starts a run without
+// blocking the caller (the interactive loop's single work slot).
+func (c *GoalController) SetStartWork(fn func(fn func(context.Context) error)) {
+	c.mu.Lock()
+	c.startWork = fn
+	c.mu.Unlock()
+}
+
+// deliverGoalMessage ports sendCustomMessage's triggerTurn routing: while a run
+// is active the message queues behind it; otherwise a run starts. The two
+// trigger-turn round sources (a /goal command and agent_before_settle) share
+// this path so a round transition is the same either way.
+func (c *GoalController) deliverGoalMessage(customType string, content string, display bool, details json.RawMessage, triggerTurn bool) {
+	if !triggerTurn {
+		c.sink.SendGoalMessage(customType, content, display, details, false)
+		return
+	}
+	if c.sink.GoalIsStreaming() {
+		c.sink.SendGoalMessage(customType, content, display, details, true)
+		return
+	}
+	deliver := func(ctx context.Context) error {
+		return c.sink.RunGoalTurn(ctx, customType, content, display, details)
+	}
+	c.mu.Lock()
+	startWork := c.startWork
+	c.mu.Unlock()
+	if startWork != nil {
+		startWork(deliver)
+		return
+	}
+	_ = deliver(context.Background())
 }
 
 // confirmReplace asks the human before replacing a live goal.
@@ -227,11 +284,19 @@ func (c *GoalController) Apply(effects []goal.Effect) {
 				}
 			}
 			details, _ := json.Marshal(detailValues)
-			c.sink.SendGoalMessage(typed.CustomType, typed.Content, typed.Display, details, typed.TriggerTurn)
+			c.deliverGoalMessage(typed.CustomType, typed.Content, typed.Display, details, typed.TriggerTurn)
 		case goal.NotifyEffect:
 			c.notice(typed.Message, typed.Level)
 		case goal.ContinueRoundEffect:
-			// Handled by AgentEnd, which queues the hidden follow-up round.
+			// The agent_before_settle round. Delivering it through the same path
+			// as a /goal round keeps the transition identical: it follows up behind
+			// the active run (agent_end runs while the run is still active).
+			detailValues := map[string]any{"kind": "round", "turn": typed.Turn}
+			if snapshot := c.Snapshot().Goal; snapshot != nil {
+				detailValues = goalRoundDetails(snapshot.ID, typed.Turn)
+			}
+			details, _ := json.Marshal(detailValues)
+			c.deliverGoalMessage(goal.GoalEventType, typed.Content, false, details, true)
 		}
 	}
 	// Tool exposure mirrors the goal phase, and only a state mutation moves it.
@@ -286,7 +351,9 @@ func (c *GoalController) Start(reason string) {
 }
 
 // AgentEnd admits the creating run or the reserved round and decides whether
-// the next round continues (the agent_end + agent_before_settle hooks).
+// the next round continues (the agent_end + agent_before_settle hooks). Both
+// effect sets go through Apply, so the continuation round is delivered the same
+// way as any other goal round.
 func (c *GoalController) AgentEnd(event *agent.AgentEvent) {
 	aborted := goalAgentAborted(event)
 	c.mu.Lock()
@@ -298,20 +365,6 @@ func (c *GoalController) AgentEnd(event *agent.AgentEvent) {
 	settle := c.machine.Dispatch(goal.AgentBeforeSettleEvent{Outcome: goalOutcome(event, aborted), HasPendingMessages: pending})
 	c.mu.Unlock()
 	c.Apply(settle.Effects)
-	if !settle.Continue {
-		return
-	}
-	for _, effect := range settle.Effects {
-		if round, ok := effect.(goal.ContinueRoundEffect); ok {
-			detailsValues := map[string]any{"kind": "round", "turn": round.Turn}
-			if snapshot := c.Snapshot().Goal; snapshot != nil {
-				detailsValues = goalRoundDetails(snapshot.ID, round.Turn)
-			}
-			details, _ := json.Marshal(detailsValues)
-			c.sink.SendGoalMessage(goal.GoalEventType, round.Content, false, details, true)
-			return
-		}
-	}
 }
 
 // goalUsageFromAgentEvent sums the run's assistant usage.
