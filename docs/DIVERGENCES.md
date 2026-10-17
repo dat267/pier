@@ -2027,3 +2027,27 @@ stdout cleanliness, signal unwinding, and an end-to-end `new_session` through
 the real binary. `TestSessionAbortBashReachesExecution`
 reproduces and guards the shell cancellation fix. See `docs/rpc.md` for usage
 and the complete supported subset.
+
+## D236
+
+**The unreachable reference packages are removed from the tree.**
+
+Reference: pi v1.3.0 `packages/{chord,client,protocol,server,telemetry,durable}`.
+The Go port had a counterpart for each, but none is reachable from the built
+CLI: `go list -deps github.com/dat267/pier` never pulls in `chord`,
+`chord/{delta,services,facets}`, `client`, `protocol`, `server`,
+`server/testing`, `telemetry` or `durable`. The CLI's only consumers are the
+interactive, print and RPC modes over `ai`/`agent`/`coding`/`tui`/`mcp`; the
+chord transport belongs to the durable remote-execution host, and upstream's
+v1.3.0 typed-host rewrite already replaced those packages (`docs/PORTING.md`
+records that). `telemetry` is ported but imported by nothing: upstream `ai`
+only carries an optional `telemetryContext`, which the port does not set.
+
+The packages and their tests are removed from `main` and preserved on the
+`unwired-packages` branch, which points at the pre-removal commit. `go mod
+tidy` drops the dependencies they alone used (`github.com/sgtdi/fswatcher`,
+`modernc.org/sqlite`). Later D-rows and `docs/PORTING.md` text that describe
+those packages are historical, not a description of the current tree.
+
+Reintroducing any of them is a feature decision, not a port fix: wire it into a
+runtime path first, then move it back from the branch.

@@ -23,7 +23,7 @@ change log. `docs/DIVERGENCES.md` records this implementation's own decisions:
 every numbered place it deliberately departs from the pi reference, with the
 scenario and the rationale.
 
-Every runtime package in the pi reference has a counterpart here: `ai` (all ten wire APIs, all provider factories, the nine OAuth flows, image generation, the api/images registries, overflow detection, virtual models, Anthropic workload identity federation), `agent` (the loop), `coding-agent` (the complete core: session, tools, compaction, branch summarization, retry, cache warming, model runtime/registry/composer, stores, exports, bug report, crash log, trust, utilities, and the createAgentSession assembly), `protocol`, `client`, `chord` (+delta/services/facets), `server` (+unix/testing), `telemetry`, and `durable` (the complete package: the session kernel and transaction, the three storage backends, the whole `harness/` tree with its scheduler and built-in tasks, the coding tools, and every upstream storage-conformance case replayed).
+Every runtime package in the pi reference that the CLI actually reaches has a counterpart here: `ai` (all ten wire APIs, all provider factories, the nine OAuth flows, image generation, the api/images registries, overflow detection, virtual models, Anthropic workload identity federation), `agent` (the loop), and `coding-agent` (the complete core: session, tools, compaction, branch summarization, retry, cache warming, model runtime/registry/composer, stores, exports, bug report, crash log, trust, utilities, and the createAgentSession assembly).
 
 The goal workflow is re-ported as a built-in feature (D223), despite shipping
 upstream as a user extension. It lives in `internal/goal` and the session
@@ -40,7 +40,7 @@ workspace. There is no `/permissions` command, sandbox prompt section, or
 RO/WW/FA footer indicator. Use external confinement when needed; restrictions
 inherited from the launching process still apply.
 
-Deliberately left out of scope, each with its decision recorded in code: the extension mechanics (resource loader, sdk extension surface, agent-session services/runtime, package and tools managers), the native clipboard, the kitty/iterm image transport internals, the node-specific chord bundler, the bug-report upload transport, and the optional `session-backends` sqlite driver (a host-provided storage backend imported by no runtime package) plus the `evals` Docker harness (a development tool).
+Deliberately left out of scope, each with its decision recorded in code: the extension mechanics (resource loader, sdk extension surface, agent-session services/runtime, package and tools managers), the native clipboard, the kitty/iterm image transport internals, the node-specific chord bundler, the bug-report upload transport, and the optional `session-backends` sqlite driver (a host-provided storage backend imported by no runtime package) plus the `evals` Docker harness (a development tool). The `chord` library, its framed-CBOR `client`/`protocol`/`server` transport, `telemetry`, and `durable` were ported but are unreachable from the CLI, so they were removed and are preserved on the `unwired-packages` branch (D236).
 
 ## Build & test
 

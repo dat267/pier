@@ -16,10 +16,8 @@ reference packages closely, file for file.
 
 - Module: `github.com/dat267/pier`, Go `1.27`.
 - Dependencies are offline-cached only. Direct dependencies:
-  `github.com/sgtdi/fswatcher` (native file-watch events), `golang.org/x/text`,
-  `x/term`, `x/sys`, `x/tools` (`internal/uiblock`'s SSA analysis), and
-  `modernc.org/sqlite` (the durable SQLite backend). `go.mod` is authoritative
-  for versions and indirect dependencies.
+  `golang.org/x/text`, `x/term`, `x/sys`, `x/tools` (`internal/uiblock`'s SSA
+  analysis). `go.mod` is authoritative for versions and indirect dependencies.
 - Upstream checkout lives in the workspace at `./pi` (gitignored), checked out at
   the pinned tag `v1.3.0` (`71023aec`; the README's pin table and
   `docs/PORTING.md` record it). `just reference` fails when the checkout sits at
@@ -62,7 +60,6 @@ Packages mirror upstream `packages/`:
 | `coding/interactive` | `packages/coding-agent` interactive mode | components, theme, the mode wirings |
 | `tui` | `packages/pi-tui` | terminal abstraction, renderer, components |
 | `main.go`, `cmd` | `main.ts` | the CLI entrypoint (a thin root main over the `cmd` package) |
-| `chord`, `client`, `protocol`, `server`, `telemetry`, `durable` | same | supporting packages |
 | `internal/offloop`, `internal/uiblock`, `internal/goal` | — | port-local helpers: the off-loop work queues, the UI-blocking analyzer, and the builtin session-goal extension (state/machine/command/render; the host glue lives in `coding` and `coding/interactive`, D223) |
 | `internal/markdown` | — | port-local markdown engine, wired into the TUI: hand-written block lexer and inline parser, the single upstream-parity renderer (`render.go`) driven by the `Style` interface plus an injected `Terminal`, the layout layer (`layout.go`: standalone `RenderSource`/`Render`, default `PlainTerminal`, ANSI/East-Asian wrap), and incremental `Document.Update`/`LexFrom`; Marked token parity and the upstream render goldens both pass |
 | `internal/highlight` | — | port-local highlight.js 10.7.3 engine: the mode/keyword compilers, the resumable multi-regex scanner, the token tree and HTML renderer, and all 191 registered languages (fixtures and Node-generated goldens in `internal/highlight/testdata`); wired into the TUI through `coding/interactive/codehighlight.go` |

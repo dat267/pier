@@ -3,8 +3,8 @@
 `pier --mode rpc` runs the coding agent as a local subprocess controlled by
 JSONL on stdin. Responses and session events share stdout; diagnostics use
 stderr. The command and event shapes follow **pi v1.3.0** for the supported
-subset below. This is not the framed-CBOR protocol in `protocol`, `server`, and
-`client`, and it is not an MCP server.
+subset below. This is not the framed-CBOR chord transport (removed from the
+tree; D236), and it is not an MCP server.
 
 RPC runs the enabled agent tools with the same permissions as the CLI. It is
 not an authenticated network service. Do not expose it directly to untrusted
@@ -161,7 +161,6 @@ still be blocked.
 - HTML export (`export_html`).
 - Extensions, extension UI requests/responses, and extension commands.
 - A typed subprocess RPC client library.
-- Wiring the separate framed-CBOR server into the app.
 
 The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
