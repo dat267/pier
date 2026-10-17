@@ -1,0 +1,7 @@
+<span class="hljs-keyword">actor</span> <span class="hljs-type">Main</span>
+  <span class="hljs-keyword">new</span> create(env: <span class="hljs-type">Env</span>) =&gt;
+    <span class="hljs-keyword">let</span> name: <span class="hljs-type">String</span> = <span class="hljs-string">&quot;world&quot;</span>
+    env.out.print(<span class="hljs-string">&quot;Hello, &quot;</span> + name)
+
+<span class="hljs-keyword">class</span> <span class="hljs-type">Foo</span>[<span class="hljs-type">A</span>]
+  <span class="hljs-keyword">fun</span> apply(x: <span class="hljs-type">A</span>): <span class="hljs-type">A</span> =&gt; x

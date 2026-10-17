@@ -1,0 +1,12 @@
+# Roboconf graph
+facet VM {
+  type: VM;
+  installer: target;
+}
+instance of VM {
+  name: vm1;
+  count: 2;
+}
+VM {
+  ip: 192.168.1.1 (optional);
+}

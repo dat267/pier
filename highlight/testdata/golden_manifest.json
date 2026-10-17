@@ -362,5 +362,41 @@
   {
     "file": "sample.http",
     "language": "http"
+  },
+  {
+    "file": "sample.erb",
+    "language": "erb"
+  },
+  {
+    "file": "sample.dust",
+    "language": "dust"
+  },
+  {
+    "file": "sample.ptpl",
+    "language": "php-template"
+  },
+  {
+    "file": "sample.graph",
+    "language": "roboconf"
+  },
+  {
+    "file": "sample.pony",
+    "language": "pony"
+  },
+  {
+    "file": "sample.fs",
+    "language": "fsharp"
+  },
+  {
+    "file": "sample.scad",
+    "language": "openscad"
+  },
+  {
+    "file": "sample.nim",
+    "language": "nim"
+  },
+  {
+    "file": "sample.gcode",
+    "language": "gcode"
   }
 ]

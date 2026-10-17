@@ -1,0 +1,14 @@
+<span class="hljs-comment">&lt;%# a comment %&gt;</span><span class="xml">
+<span class="hljs-tag">&lt;<span class="hljs-name">html</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">body</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">p</span>&gt;</span>&lt;%=</span><span class="ruby"> <span class="hljs-variable">@user</span>.name </span><span class="xml">%&gt;<span class="hljs-tag">&lt;/<span class="hljs-name">p</span>&gt;</span>
+    &lt;%</span><span class="ruby"> <span class="hljs-keyword">if</span> <span class="hljs-variable">@items</span>.any? </span><span class="xml">%&gt;
+      <span class="hljs-tag">&lt;<span class="hljs-name">ul</span>&gt;</span>
+      &lt;%</span><span class="ruby"> <span class="hljs-variable">@items</span>.each <span class="hljs-keyword">do</span> <span class="hljs-params">|item|</span> </span><span class="xml">%&gt;
+        <span class="hljs-tag">&lt;<span class="hljs-name">li</span>&gt;</span>&lt;%=</span><span class="ruby"> item.title </span><span class="xml">%&gt;<span class="hljs-tag">&lt;/<span class="hljs-name">li</span>&gt;</span>
+      &lt;%</span><span class="ruby"> <span class="hljs-keyword">end</span> </span><span class="xml">%&gt;
+      <span class="hljs-tag">&lt;/<span class="hljs-name">ul</span>&gt;</span>
+    &lt;%</span><span class="ruby"> <span class="hljs-keyword">end</span> </span><span class="xml">%&gt;
+  <span class="hljs-tag">&lt;/<span class="hljs-name">body</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">html</span>&gt;</span>
+</span>

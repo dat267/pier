@@ -1,0 +1,11 @@
+{@user}
+  <h1>{name}</h1>
+  {#items}
+    <li>{.}</li>
+  {/items}
+  {?admin}
+    <p>Admin</p>
+  {:else}
+    <p>Guest</p>
+  {/admin}
+{/user}

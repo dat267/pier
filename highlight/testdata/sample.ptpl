@@ -1,0 +1,12 @@
+<?php $title = 'Hello'; ?>
+<html>
+  <body>
+    <h1><?= htmlspecialchars($title) ?></h1>
+    <?php
+      // a comment
+      foreach ($items as $item) {
+          echo "<li>" . $item . "</li>";
+      }
+    ?>
+  </body>
+</html>

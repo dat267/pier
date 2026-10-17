@@ -1,0 +1,12 @@
+<span class="hljs-keyword">import</span> std/strformat
+
+<span class="hljs-keyword">type</span>
+  <span class="hljs-type">Point</span> = <span class="hljs-keyword">object</span>
+    x, y: <span class="hljs-built_in">float</span>
+
+<span class="hljs-keyword">proc</span> `+`(a, b: <span class="hljs-type">Point</span>): <span class="hljs-type">Point</span> =
+  <span class="hljs-type">Point</span>(x: a.x + b.x, y: a.y + b.y)
+
+<span class="hljs-keyword">let</span> p = <span class="hljs-type">Point</span>(x: <span class="hljs-number">1</span>.<span class="hljs-number">0</span>, y: <span class="hljs-number">2</span>.<span class="hljs-number">0</span>)
+echo &amp;<span class="hljs-string">&quot;{p.x}, {p.y}&quot;</span>
+<span class="hljs-keyword">let</span> n = <span class="hljs-number">0x1F&#x27;u8</span>

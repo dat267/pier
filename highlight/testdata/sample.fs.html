@@ -1,0 +1,13 @@
+<span class="hljs-keyword">module</span> Demo
+
+<span class="hljs-class"><span class="hljs-keyword">type</span> <span class="hljs-title">Shape</span> </span>=
+    | Circle <span class="hljs-keyword">of</span> float
+    | Rectangle <span class="hljs-keyword">of</span> float * float
+
+<span class="hljs-keyword">let</span> area shape =
+    <span class="hljs-keyword">match</span> shape <span class="hljs-keyword">with</span>
+    | Circle r -&gt; System.Math.PI * r * r
+    | Rectangle (w, h) -&gt; w * h
+
+<span class="hljs-keyword">let</span> f x =
+    <span class="hljs-keyword">return!</span> [ <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> <span class="hljs-number">1</span> .. x -&gt; i * i ]

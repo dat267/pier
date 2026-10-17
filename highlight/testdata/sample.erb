@@ -1,0 +1,13 @@
+<%# a comment %>
+<html>
+  <body>
+    <p><%= @user.name %></p>
+    <% if @items.any? %>
+      <ul>
+      <% @items.each do |item| %>
+        <li><%= item.title %></li>
+      <% end %>
+      </ul>
+    <% end %>
+  </body>
+</html>

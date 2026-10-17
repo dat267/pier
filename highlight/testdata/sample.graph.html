@@ -1,0 +1,12 @@
+<span class="hljs-comment"># Roboconf graph</span>
+<span class="hljs-keyword">facet</span> VM {
+  <span class="hljs-attribute">type</span>: VM;
+  <span class="hljs-attribute">installer</span>: target;
+}
+<span class="hljs-keyword">instance</span> <span class="hljs-keyword">of</span> VM {
+  <span class="hljs-attribute">name</span>: vm1;
+  <span class="hljs-attribute">count</span>: 2;
+}
+VM {
+  <span class="hljs-attribute">ip</span>: 192.168.1.1 <span class="hljs-keyword">(optional)</span>;
+}
