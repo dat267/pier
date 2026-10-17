@@ -698,5 +698,9 @@
   {
     "file": "sample.vim",
     "language": "vim"
+  },
+  {
+    "file": "sample.lsl",
+    "language": "lsl"
   }
 ]

@@ -1,0 +1,23 @@
+<span class="hljs-comment">// a comment</span>
+<span class="hljs-comment">/* block comment */</span>
+<span class="hljs-section">default</span>
+{
+    <span class="hljs-section">state_entry</span>()
+    {
+        <span class="hljs-type">integer</span> count = <span class="hljs-number">3</span>;
+        <span class="hljs-type">float</span> x = <span class="hljs-number">1.5</span>;
+        <span class="hljs-type">string</span> name = <span class="hljs-string">&quot;world&quot;</span>;
+        <span class="hljs-type">vector</span> pos = &lt;<span class="hljs-number">1.0</span>, <span class="hljs-number">2.0</span>, <span class="hljs-number">3.0</span>&gt;;
+        <span class="hljs-type">rotation</span> rot = <span class="hljs-literal">ZERO_ROTATION</span>;
+        <span class="hljs-built_in">llSay</span>(<span class="hljs-number">0</span>, <span class="hljs-string">&quot;Hello, &quot;</span> + name);
+        if (count &gt; <span class="hljs-number">0</span>)
+        {
+            <span class="hljs-built_in">llOwnerSay</span>(<span class="hljs-string">&quot;count is &quot;</span> + (<span class="hljs-type">string</span>)count);
+        }
+    }
+
+    <span class="hljs-section">touch_start</span>(<span class="hljs-type">integer</span> total)
+    {
+        <span class="hljs-built_in">llResetScript</span>();
+    }
+}
