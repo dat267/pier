@@ -1,0 +1,7 @@
+; ABNF sample
+rule = element *element
+element = ALPHA / DIGIT
+CRLF = %x0D.0A
+name = %s"abc" / %i"ABC"
+bin = %b0101-0110
+dec = %d13-15

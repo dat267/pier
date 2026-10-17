@@ -1,0 +1,5 @@
+(* EBNF sample *)
+syntax = syntax rule ;
+digit = "0" | "1" | "2" ;
+letter = 'a' | 'b' | 'c' ;
+special = ? any character ? ;

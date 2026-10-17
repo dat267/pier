@@ -1,0 +1,13 @@
+<span class="hljs-comment"># syntax=docker/dockerfile:1.7</span>
+<span class="hljs-keyword">FROM</span> golang:<span class="hljs-number">1.23</span>-alpine AS build
+<span class="hljs-keyword">ARG</span> VERSION=<span class="hljs-number">1.0</span>.<span class="hljs-number">0</span>
+<span class="hljs-keyword">ENV</span> CGO_ENABLED=<span class="hljs-number">0</span> GOFLAGS=<span class="hljs-string">&quot;-trimpath&quot;</span>
+<span class="hljs-keyword">RUN</span><span class="bash"> go build -ldflags=<span class="hljs-string">&quot;-s -w&quot;</span> -o /out/app ./cmd/app \
+    &amp;&amp; chmod +x /out/app</span>
+<span class="hljs-keyword">COPY</span><span class="bash"> go.mod go.sum /src/</span>
+<span class="hljs-keyword">WORKDIR</span><span class="bash"> /src</span>
+<span class="hljs-keyword">LABEL</span><span class="bash"> org.opencontainers.image.version=<span class="hljs-string">&quot;1.0.0&quot;</span> org.opencontainers.image.title=app</span>
+<span class="hljs-keyword">EXPOSE</span> <span class="hljs-number">8080</span>
+<span class="hljs-keyword">VOLUME</span><span class="bash"> [<span class="hljs-string">&quot;/data&quot;</span>]</span>
+<span class="hljs-keyword">ENTRYPOINT</span><span class="bash"> [<span class="hljs-string">&quot;/out/app&quot;</span>]</span>
+<span class="hljs-keyword">CMD</span><span class="bash"> /out/app --serve</span>

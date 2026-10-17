@@ -1,0 +1,11 @@
+@<span class="hljs-built_in">echo</span> off
+<span class="hljs-comment">rem This is a comment</span>
+<span class="hljs-built_in">set</span> NAME=World
+<span class="hljs-keyword">if</span> &quot;<span class="hljs-variable">%NAME%</span>&quot;==&quot;World&quot; <span class="hljs-built_in">echo</span> Hello
+<span class="hljs-keyword">call</span> :sub
+<span class="hljs-keyword">goto</span> :eof
+
+:sub
+<span class="hljs-built_in">echo</span> <span class="hljs-keyword">In</span> subroutine
+<span class="hljs-function">goto:<span class="hljs-title">eof</span>
+</span>

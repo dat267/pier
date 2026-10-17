@@ -1,0 +1,18 @@
+environ
+vocabularies XBOOLE_0;
+notations TARSKI;
+constructors TARSKI;
+theorems TARSKI;
+begin
+
+definition
+  let a be set;
+  func foo -> set equals a;
+end;
+
+theorem
+  for x being set holds x = x
+  proof
+    let x be set;
+    thus x = x;
+  end;

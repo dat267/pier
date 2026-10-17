@@ -1,0 +1,11 @@
+test: test_name
+success: test_name
+failure: test_name
+progress: pop
+tags: foo bar
+time: 2024-01-01 12:00:00.123Z
+details: [
+multipart
+]
++42
+-7

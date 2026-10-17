@@ -1,0 +1,18 @@
+<span class="hljs-comment"># Makefile sample</span>
+CC := gcc
+CFLAGS = -Wall -O2
+SRC = <span class="hljs-variable">$(<span class="hljs-built_in">wildcard</span> src/*.c)</span>
+OBJ = <span class="hljs-variable">$(<span class="hljs-built_in">patsubst</span> src/%.c,obj/%.o,<span class="hljs-variable">$(SRC)</span>)</span>
+
+<span class="hljs-section">all: <span class="hljs-variable">$(OBJ)</span></span>
+	<span class="hljs-variable">$(CC)</span> <span class="hljs-variable">$(CFLAGS)</span> -o app <span class="hljs-variable">$(OBJ)</span>
+
+<span class="hljs-section">obj/%.o: src/%.c</span>
+	@mkdir -p $(@D)
+	<span class="hljs-variable">$(CC)</span> <span class="hljs-variable">$(CFLAGS)</span> -c <span class="hljs-variable">$&lt;</span> -o <span class="hljs-variable">$@</span>
+
+<span class="hljs-meta"><span class="hljs-meta-keyword">.PHONY</span>: all clean</span>
+<span class="hljs-section">clean:</span>
+	rm -f app <span class="hljs-variable">$(OBJ)</span>
+
+<span class="hljs-keyword">include</span> config.mk

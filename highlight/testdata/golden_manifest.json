@@ -1,0 +1,198 @@
+[
+  {
+    "file": "sample.json",
+    "language": "json"
+  },
+  {
+    "file": "sample.go",
+    "language": "go"
+  },
+  {
+    "file": "sample_big.go",
+    "language": "go"
+  },
+  {
+    "file": "sample.nix",
+    "language": "nix"
+  },
+  {
+    "file": "sample.lua",
+    "language": "lua"
+  },
+  {
+    "file": "sample.bash",
+    "language": "bash"
+  },
+  {
+    "file": "sample.c",
+    "language": "c"
+  },
+  {
+    "file": "sample.cpp",
+    "language": "cpp"
+  },
+  {
+    "file": "sample.cs",
+    "language": "csharp"
+  },
+  {
+    "file": "sample.css",
+    "language": "css"
+  },
+  {
+    "file": "sample.dart",
+    "language": "dart"
+  },
+  {
+    "file": "sample.groovy",
+    "language": "groovy"
+  },
+  {
+    "file": "sample.java",
+    "language": "java"
+  },
+  {
+    "file": "sample.js",
+    "language": "javascript"
+  },
+  {
+    "file": "sample.kt",
+    "language": "kotlin"
+  },
+  {
+    "file": "sample.md",
+    "language": "markdown"
+  },
+  {
+    "file": "sample.php",
+    "language": "php"
+  },
+  {
+    "file": "sample.pl",
+    "language": "perl"
+  },
+  {
+    "file": "sample.py",
+    "language": "python"
+  },
+  {
+    "file": "sample.rb",
+    "language": "ruby"
+  },
+  {
+    "file": "sample.rs",
+    "language": "rust"
+  },
+  {
+    "file": "sample.scala",
+    "language": "scala"
+  },
+  {
+    "file": "sample.swift",
+    "language": "swift"
+  },
+  {
+    "file": "sample.ts",
+    "language": "typescript"
+  },
+  {
+    "file": "sample.xml",
+    "language": "xml"
+  },
+  {
+    "file": "sample.txt",
+    "language": "plaintext"
+  },
+  {
+    "file": "sample.dockerfile",
+    "language": "dockerfile"
+  },
+  {
+    "file": "sample.diff",
+    "language": "diff"
+  },
+  {
+    "file": "sample.brainfuck",
+    "language": "brainfuck"
+  },
+  {
+    "file": "sample.dns",
+    "language": "dns"
+  },
+  {
+    "file": "sample.properties",
+    "language": "properties"
+  },
+  {
+    "file": "sample.mk",
+    "language": "makefile"
+  },
+  {
+    "file": "sample.bnf",
+    "language": "bnf"
+  },
+  {
+    "file": "sample.ebnf",
+    "language": "ebnf"
+  },
+  {
+    "file": "sample.abnf",
+    "language": "abnf"
+  },
+  {
+    "file": "sample.ldif",
+    "language": "ldif"
+  },
+  {
+    "file": "sample.bat",
+    "language": "dos"
+  },
+  {
+    "file": "sample.subunit",
+    "language": "subunit"
+  },
+  {
+    "file": "sample.fix",
+    "language": "fix"
+  },
+  {
+    "file": "sample.xlsx",
+    "language": "excel"
+  },
+  {
+    "file": "sample.accesslog",
+    "language": "accesslog"
+  },
+  {
+    "file": "sample.mizar",
+    "language": "mizar"
+  },
+  {
+    "file": "sample.golo",
+    "language": "golo"
+  },
+  {
+    "file": "sample.csp",
+    "language": "csp"
+  },
+  {
+    "file": "sample.q",
+    "language": "q"
+  },
+  {
+    "file": "sample.rib",
+    "language": "rib"
+  },
+  {
+    "file": "sample.clean",
+    "language": "clean"
+  },
+  {
+    "file": "sample.profile",
+    "language": "profile"
+  },
+  {
+    "file": "sample.gradle",
+    "language": "gradle"
+  }
+]

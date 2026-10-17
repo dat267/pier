@@ -1,0 +1,14 @@
+<span class="hljs-meta">$ORIGIN</span> example.com.
+<span class="hljs-meta">$TTL</span> <span class="hljs-number">3600</span>
+@	<span class="hljs-keyword">IN</span>	<span class="hljs-keyword">SOA</span>	ns1.example.com. admin.example.com. (
+		<span class="hljs-number">2024010101</span> <span class="hljs-comment">; serial</span>
+		<span class="hljs-number">7200</span>       <span class="hljs-comment">; refresh</span>
+		<span class="hljs-number">3600</span>       <span class="hljs-comment">; retry</span>
+		<span class="hljs-number">1209600</span>    <span class="hljs-comment">; expire</span>
+		<span class="hljs-number">3600</span> )     <span class="hljs-comment">; minimum</span>
+	<span class="hljs-keyword">IN</span>	<span class="hljs-keyword">NS</span>	ns1.example.com.
+	<span class="hljs-keyword">IN</span>	<span class="hljs-keyword">NS</span>	ns2.example.com.
+www	<span class="hljs-keyword">IN</span>	<span class="hljs-keyword">A</span>	<span class="hljs-number">192.0.2.1</span>
+mail	<span class="hljs-keyword">IN</span>	<span class="hljs-keyword">A</span>	<span class="hljs-number">192.0.2.2</span>
+ipv6	<span class="hljs-keyword">IN</span>	<span class="hljs-keyword">AAAA</span>	<span class="hljs-number">2001:db8::1</span>
+txt	<span class="hljs-keyword">IN</span>	<span class="hljs-keyword">TXT</span>	&quot;v=spf1 -all&quot;

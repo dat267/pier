@@ -1,0 +1,13 @@
+<span class="hljs-keyword">module</span> hello
+
+<span class="hljs-keyword">function</span> main = |args| {
+  <span class="hljs-keyword">println</span>(<span class="hljs-string">&quot;Hello, &quot;</span> + args: get(<span class="hljs-number">0</span>))
+  <span class="hljs-keyword">let</span> x = <span class="hljs-number">42</span>
+  <span class="hljs-keyword">foreach</span> a <span class="hljs-keyword">in</span> [<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>] {
+    <span class="hljs-keyword">when</span> a &gt; <span class="hljs-number">1</span> {
+      <span class="hljs-keyword">print</span>(a)
+    } <span class="hljs-keyword">otherwise</span> {
+      <span class="hljs-keyword">print</span>(<span class="hljs-string">&quot;small&quot;</span>)
+    }
+  }
+}

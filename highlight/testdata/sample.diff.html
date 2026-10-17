@@ -1,0 +1,23 @@
+<span class="hljs-comment">diff --git a/src/main.go b/src/main.go</span>
+<span class="hljs-comment">index 3f2a1c9..8b1d4e2 100644</span>
+<span class="hljs-comment">--- a/src/main.go</span>
+<span class="hljs-comment">+++ b/src/main.go</span>
+<span class="hljs-meta">@@ -1,7 +1,8 @@</span> package main
+ import &quot;fmt&quot;
+ 
+ func main() {
+<span class="hljs-deletion">-	fmt.Println(&quot;old&quot;)</span>
+<span class="hljs-addition">+	fmt.Println(&quot;new&quot;)</span>
+<span class="hljs-addition">+	fmt.Println(&quot;added&quot;)</span>
+ }
+<span class="hljs-comment">Index: docs/readme.md</span>
+<span class="hljs-comment">===================================================================</span>
+<span class="hljs-comment">--- docs/readme.md	(revision 12)</span>
+<span class="hljs-comment">+++ docs/readme.md	(working copy)</span>
+<span class="hljs-meta">@@ -3,4 +3,4 @@</span>
+ context
+<span class="hljs-deletion">-old line</span>
+<span class="hljs-addition">+new line</span>
+<span class="hljs-meta">*** 1,2 ****</span>
+<span class="hljs-addition">! changed here</span>
+<span class="hljs-meta">--- 1,2 ----</span>

@@ -1,0 +1,6 @@
+dn: uid=alice,dc=example,dc=com
+objectClass: person
+cn: Alice Example
+sn: Example
+# a comment
+-this is literal

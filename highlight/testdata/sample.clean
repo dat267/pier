@@ -1,0 +1,11 @@
+module hello
+
+import StdEnv
+
+Start :: Int
+Start = foo 42
+
+foo x = x + 1
+
+add :: Int Int -> Int
+add a b = a + b

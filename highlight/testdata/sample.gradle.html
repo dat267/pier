@@ -1,0 +1,16 @@
+plugins {
+    id <span class="hljs-string">&#x27;java&#x27;</span>
+}
+
+<span class="hljs-keyword">repositories</span> {
+    mavenCentral()
+}
+
+<span class="hljs-keyword">dependencies</span> {
+    implementation <span class="hljs-string">&#x27;com.google.guava:guava:32.0.0-jre&#x27;</span>
+    testImplementation <span class="hljs-string">&quot;junit:junit:4.13.2&quot;</span>
+}
+
+<span class="hljs-keyword">task</span> clean(type: <span class="hljs-keyword">Delete</span>) {
+    <span class="hljs-keyword">delete</span> rootProject.buildDir
+}

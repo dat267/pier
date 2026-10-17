@@ -1,0 +1,23 @@
+diff --git a/src/main.go b/src/main.go
+index 3f2a1c9..8b1d4e2 100644
+--- a/src/main.go
++++ b/src/main.go
+@@ -1,7 +1,8 @@ package main
+ import "fmt"
+ 
+ func main() {
+-	fmt.Println("old")
++	fmt.Println("new")
++	fmt.Println("added")
+ }
+Index: docs/readme.md
+===================================================================
+--- docs/readme.md	(revision 12)
++++ docs/readme.md	(working copy)
+@@ -3,4 +3,4 @@
+ context
+-old line
++new line
+*** 1,2 ****
+! changed here
+--- 1,2 ----

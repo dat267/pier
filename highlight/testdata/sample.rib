@@ -1,0 +1,10 @@
+# A RIB comment
+TransformBegin
+  Translate 1 2 3
+  Rotate 45 0 1 0
+  Color [1 0 0]
+  Sphere 1 -1 1 360
+TransformEnd
+WorldBegin
+  Surface "plastic"
+WorldEnd

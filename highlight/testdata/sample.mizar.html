@@ -1,0 +1,18 @@
+<span class="hljs-keyword">environ</span>
+<span class="hljs-keyword">vocabularies</span> XBOOLE_0;
+<span class="hljs-keyword">notations</span> TARSKI;
+<span class="hljs-keyword">constructors</span> TARSKI;
+<span class="hljs-keyword">theorems</span> TARSKI;
+<span class="hljs-keyword">begin</span>
+
+<span class="hljs-keyword">definition</span>
+  <span class="hljs-keyword">let</span> a <span class="hljs-keyword">be</span> <span class="hljs-keyword">set</span>;
+  <span class="hljs-keyword">func</span> foo -&gt; <span class="hljs-keyword">set</span> <span class="hljs-keyword">equals</span> a;
+<span class="hljs-keyword">end</span>;
+
+<span class="hljs-keyword">theorem</span>
+  <span class="hljs-keyword">for</span> x <span class="hljs-keyword">being</span> <span class="hljs-keyword">set</span> <span class="hljs-keyword">holds</span> x = x
+  <span class="hljs-keyword">proof</span>
+    <span class="hljs-keyword">let</span> x <span class="hljs-keyword">be</span> <span class="hljs-keyword">set</span>;
+    <span class="hljs-keyword">thus</span> x = x;
+  <span class="hljs-keyword">end</span>;

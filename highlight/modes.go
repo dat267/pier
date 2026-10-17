@@ -58,6 +58,11 @@ func commentMode(begin, end string) *Mode {
 	}
 }
 
+// CommentMode is the reference's COMMENT(begin, end) with no extra options:
+// a comment mode carrying the phrasal-word and doctag contains. Languages that
+// pass options (relevance, returnEnd, ...) set them on the returned mode.
+func CommentMode(begin, end string) *Mode { return commentMode(begin, end) }
+
 // CLineCommentMode matches `// ...` comments.
 var CLineCommentMode = commentMode(`//`, `$`)
 
