@@ -758,5 +758,9 @@
   {
     "file": "sample.adoc",
     "language": "asciidoc"
+  },
+  {
+    "file": "sample.r",
+    "language": "r"
   }
 ]
