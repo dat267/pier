@@ -646,5 +646,9 @@
   {
     "file": "sample.tap",
     "language": "tap"
+  },
+  {
+    "file": "sample.ps1",
+    "language": "powershell"
   }
 ]

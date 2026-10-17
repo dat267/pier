@@ -1,0 +1,24 @@
+<span class="hljs-comment"># a comment</span>
+<span class="hljs-comment">&lt;# multi-line
+   comment #&gt;</span>
+
+<span class="hljs-keyword">param</span>(
+    [<span class="hljs-built_in">string</span>]<span class="hljs-variable">$Name</span> = <span class="hljs-string">&quot;world&quot;</span>
+)
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Get-Greeting</span></span> {
+    <span class="hljs-keyword">param</span>([<span class="hljs-built_in">string</span>]<span class="hljs-variable">$Who</span>)
+    <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;Hello, <span class="hljs-variable">$Who</span>&quot;</span>
+}
+
+<span class="hljs-variable">$msg</span> = <span class="hljs-built_in">Get-Greeting</span> <span class="hljs-literal">-Who</span> <span class="hljs-variable">$Name</span>
+<span class="hljs-built_in">Write-Output</span> <span class="hljs-variable">$msg</span>
+
+<span class="hljs-keyword">if</span> (<span class="hljs-variable">$msg</span> <span class="hljs-operator">-like</span> <span class="hljs-string">&quot;Hello*&quot;</span>) {
+    <span class="hljs-built_in">Write-Host</span> <span class="hljs-string">&quot;matched&quot;</span> <span class="hljs-literal">-ForegroundColor</span> Green
+}
+
+<span class="hljs-variable">$list</span> = <span class="hljs-selector-tag">@</span>(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>)
+<span class="hljs-keyword">foreach</span> (<span class="hljs-variable">$i</span> <span class="hljs-keyword">in</span> <span class="hljs-variable">$list</span>) {
+    <span class="hljs-built_in">Write-Output</span> <span class="hljs-variable">$i</span>
+}
