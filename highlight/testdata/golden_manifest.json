@@ -642,5 +642,9 @@
   {
     "file": "sample.yaml",
     "language": "yaml"
+  },
+  {
+    "file": "sample.tap",
+    "language": "tap"
   }
 ]
