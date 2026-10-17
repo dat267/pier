@@ -1,0 +1,14 @@
+<span class="hljs-comment">* a comment</span>
+<span class="hljs-keyword">clear</span> all
+<span class="hljs-keyword">set</span> obs 10
+
+<span class="hljs-keyword">gen</span> x = _n
+<span class="hljs-keyword">gen</span> y = x^2
+<span class="hljs-keyword">replace</span> y = y + 1 <span class="hljs-keyword">if</span> x &gt; 5
+
+<span class="hljs-keyword">summarize</span> x y
+<span class="hljs-keyword">regress</span> y x
+
+<span class="hljs-keyword">local</span> name <span class="hljs-string">&quot;world&quot;</span>
+<span class="hljs-keyword">display</span> <span class="hljs-string">&quot;Hello, `name&#x27;&quot;</span>
+<span class="hljs-keyword">display</span> <span class="hljs-built_in">abs</span>(-3)

@@ -686,5 +686,9 @@
   {
     "file": "sample.mel",
     "language": "mel"
+  },
+  {
+    "file": "sample.do",
+    "language": "stata"
   }
 ]
