@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
@@ -739,5 +740,56 @@ func TestRPCUnknownCommand(t *testing.T) {
 	want := "{\"id\":\"<&>\",\"type\":\"response\",\"command\":\"missing\",\"success\":false,\"error\":\"Unknown command: missing\"}\n"
 	if output.String() != want {
 		t.Fatalf("response = %s, want %s", output.String(), want)
+	}
+}
+
+// pi v1.3.0 rpc-mode.ts export_html calls
+// pi v1.3.0 rpc-mode.ts export_html calls agent-session.exportToHtml with the
+// optional outputPath and responds { path }. The renderer lives in the
+// interactive package, so the host injects it as a seam.
+func TestRPCExportHTML(t *testing.T) {
+	session := rpcTestSession(t)
+	type call struct {
+		session    *AgentSession
+		outputPath string
+	}
+	calls := make(chan call, 4)
+	stubPath := filepath.Join(t.TempDir(), "session.html")
+	client := startRPCTestWith(t, session, RPCModeOptions{
+		ExportToHtml: func(called *AgentSession, outputPath string) (string, error) {
+			calls <- call{called, outputPath}
+			return stubPath, nil
+		},
+	})
+	assertPath := func(id string) {
+		t.Helper()
+		record := client.until(t, func(record map[string]any) bool { return record["id"] == id })
+		if record["type"] != "response" || record["command"] != "export_html" || record["success"] != true {
+			t.Fatalf("response = %+v", record)
+		}
+		if data, ok := record["data"].(map[string]any); !ok || data["path"] != stubPath {
+			t.Fatalf("data = %+v", record["data"])
+		}
+	}
+	client.send(t, `{"id":"e1","type":"export_html","outputPath":"/tmp/out.html"}`)
+	assertPath("e1")
+	if got := <-calls; got.session != session || got.outputPath != "/tmp/out.html" {
+		t.Fatalf("seam call = %+v", got)
+	}
+	client.send(t, `{"id":"e2","type":"export_html"}`)
+	assertPath("e2")
+	if got := <-calls; got.session != session || got.outputPath != "" {
+		t.Fatalf("omitted outputPath reached the seam as %q", got.outputPath)
+	}
+}
+
+// Without an injected renderer export_html fails explicitly, like the other
+// host-provided surfaces.
+func TestRPCExportHTMLWithoutRenderer(t *testing.T) {
+	client := startRPCTest(t, rpcTestSession(t))
+	client.send(t, `{"id":"e","type":"export_html"}`)
+	record := client.until(t, func(record map[string]any) bool { return record["id"] == "e" })
+	if record["success"] != false || record["error"] != "HTML export is not available in this build" {
+		t.Fatalf("response = %+v", record)
 	}
 }

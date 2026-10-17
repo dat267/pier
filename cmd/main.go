@@ -508,7 +508,11 @@ func run(appName string, args *coding.Args) error {
 
 	if rpcMode {
 		replacer := rpcSessionReplacer(sessionOptions, settings, agentDir, args.ProjectTrustOverride, setMCPSession)
-		err := runRPCSession(ctx, created.Session, replacer)
+		themeName := ""
+		if theme := settings.GetThemeSetting(); theme != nil {
+			themeName = *theme
+		}
+		err := runRPCSession(ctx, created.Session, replacer, themeName)
 		offloopGroup.FlushAll()
 		return err
 	}

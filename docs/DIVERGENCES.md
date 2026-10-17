@@ -1991,9 +1991,12 @@ Deliberate boundaries and Go-specific behavior:
   session shares the model runtime, settings and tool selection, a
   cross-project switch resolves that project's trust without a prompt and
   rebinds the one settings manager (D160), and the MCP first-turn hook is
-  re-pointed at the new session. HTML export, extensions/UI and the typed
-  subprocess client remain deferred; this does not wire the independent
-  framed-CBOR server into the CLI.
+  re-pointed at the new session. `export_html` renders through an injected
+  `RPCModeOptions.ExportToHtml` seam because the exporter lives in
+  `coding/interactive` and `coding` cannot import it; `cmd` supplies
+  `interactive.ExportSessionToHTML` with the settings theme. Extensions/UI and
+  the typed subprocess client remain deferred; this does not wire the
+  independent framed-CBOR server into the CLI.
 - `SessionManager.CreateBranchedSession` held the manager lock and then called
   the locking `GetBranch`, deadlocking every call. No prior caller exercised
   it; the RPC fork/clone path does, so it now uses the locked `branchLocked`

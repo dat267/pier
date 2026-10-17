@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -245,4 +246,80 @@ func TestRPCNewSessionCLI(t *testing.T) {
 	if before == "" || after == "" || before == after {
 		t.Fatalf("session ids before=%q after=%q", before, after)
 	}
+}
+
+// pi v1.3.0 rpc-mode.ts export_html runs the session's HTML export through the
+// host renderer and responds with the resolved path. The CLI supplies the
+// interactive renderer, so a real process writes a real file.
+func TestRPCExportHTMLCLI(t *testing.T) {
+	if os.Getenv("PIER_RPC_EXPORT_CHILD") == "1" {
+		os.Args = []string{"pier", "--mode", "rpc", "--offline", "--no-mcp", "--no-tools", "--session", os.Getenv("PIER_RPC_EXPORT_SESSION")}
+		Execute()
+		os.Exit(0)
+	}
+	isolatedAgentDir(t)
+	t.Setenv("TMPDIR", t.TempDir())
+	dir := t.TempDir()
+	source := makeSessionFile(t, dir)
+	output := filepath.Join(t.TempDir(), "rpc-export.html")
+	t.Setenv("PIER_RPC_EXPORT_CHILD", "1")
+	t.Setenv("PIER_RPC_EXPORT_SESSION", source.GetSessionFile())
+	binary, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, binary, "-test.run=^TestRPCExportHTMLCLI$")
+	command.Dir = dir
+	input, err := command.StdinPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer input.Close()
+	stdout, err := command.StdoutPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stderr strings.Builder
+	command.Stderr = &stderr
+	if err := command.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = command.Process.Kill() }()
+	if _, err := io.WriteString(input, `{"id":"e","type":"export_html","outputPath":`+strconv.Quote(output)+"}\n"); err != nil {
+		t.Fatal(err)
+	}
+	line, err := bufio.NewReader(stdout).ReadBytes('\n')
+	if err != nil {
+		t.Fatalf("read response: %v\n%s", err, stderr.String())
+	}
+	var response struct {
+		ID      string `json:"id"`
+		Type    string `json:"type"`
+		Command string `json:"command"`
+		Success bool   `json:"success"`
+		Error   string `json:"error"`
+		Data    struct {
+			Path string `json:"path"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(line, &response); err != nil {
+		t.Fatalf("stdout is not one JSON response: %q: %v", line, err)
+	}
+	if response.ID != "e" || response.Type != "response" || response.Command != "export_html" || !response.Success {
+		t.Fatalf("response = %s (%s)", line, response.Error)
+	}
+	if response.Data.Path != output {
+		t.Fatalf("path = %q want %q", response.Data.Path, output)
+	}
+	document, err := os.ReadFile(output)
+	if err != nil {
+		t.Fatalf("export file: %v", err)
+	}
+	if !strings.Contains(string(document), `id="session-data"`) {
+		t.Fatalf("export document missing session data: %d bytes", len(document))
+	}
+	_ = input.Close()
+	_ = command.Wait()
 }

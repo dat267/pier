@@ -8,13 +8,14 @@ import (
 	"syscall"
 
 	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/coding/interactive"
 )
 
 // runRPCSession follows pi v1.3.0 rpc-mode.ts signal cleanup. Return the
 // status through run so MCP, settings and accepted-write defers still execute.
 // replace builds a session for a session-replacement command; nil disables
-// them.
-func runRPCSession(parent context.Context, session *coding.AgentSession, replace func(context.Context, *coding.SessionManager) (*coding.AgentSession, error)) error {
+// them. themeName seeds the export_html theme (empty uses the active theme).
+func runRPCSession(parent context.Context, session *coding.AgentSession, replace func(context.Context, *coding.SessionManager) (*coding.AgentSession, error), themeName string) error {
 	ctx, cancel := context.WithCancel(parent)
 	signals := make(chan os.Signal, 1)
 	if runtime.GOOS == "windows" {
@@ -36,7 +37,12 @@ func runRPCSession(parent context.Context, session *coding.AgentSession, replace
 		case <-ctx.Done():
 		}
 	}()
-	err := coding.RunRPCMode(ctx, session, coding.RPCModeOptions{Input: os.Stdin, Output: os.Stdout, ReplaceSession: replace})
+	err := coding.RunRPCMode(ctx, session, coding.RPCModeOptions{
+		Input: os.Stdin, Output: os.Stdout, ReplaceSession: replace,
+		ExportToHtml: func(exported *coding.AgentSession, outputPath string) (string, error) {
+			return interactive.ExportSessionToHTML(exported, outputPath, themeName)
+		},
+	})
 	signal.Stop(signals)
 	cancel()
 	<-done

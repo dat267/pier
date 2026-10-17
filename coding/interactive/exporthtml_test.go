@@ -335,3 +335,39 @@ func TestExportSessionDataShape(t *testing.T) {
 		t.Fatalf("standalone = %s", standalone)
 	}
 }
+
+// The RPC export_html seam calls the package function directly, without an
+// AppSession wrapper (upstream agent-session.exportToHtml).
+func TestExportSessionToHTMLPackageFunction(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	InitTheme("dark", false)
+
+	dir := t.TempDir()
+	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: boolPtr(true)})
+	agentSession, err := coding.NewAgentSession(&coding.SessionConfig{
+		Cwd: dir, Model: &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic"},
+		StreamFn: func(*ai.Model, ai.TranscriptContext, *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+			return nil
+		},
+	})
+	if err != nil {
+		t.Fatalf("session: %v", err)
+	}
+	agentSession.Sessions = manager
+	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "export me"}})
+
+	output := filepath.Join(dir, "rpc-export.html")
+	path, err := ExportSessionToHTML(agentSession, output, "")
+	if err != nil {
+		t.Fatalf("export: %v", err)
+	}
+	if path != output {
+		t.Fatalf("path = %q want %q", path, output)
+	}
+	if _, err := os.Stat(output); err != nil {
+		t.Fatalf("stat: %v", err)
+	}
+}

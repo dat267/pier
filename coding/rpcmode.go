@@ -26,6 +26,11 @@ type RPCModeOptions struct {
 	// current session before calling it and subscribes the result. When nil,
 	// replacement commands fail explicitly.
 	ReplaceSession func(ctx context.Context, manager *SessionManager) (*AgentSession, error)
+	// ExportToHtml renders the session branch to an HTML file and returns the
+	// resolved path (upstream agent-session.exportToHtml). The interactive
+	// package owns the renderer, so the host injects it. When nil, export_html
+	// fails explicitly.
+	ExportToHtml func(session *AgentSession, outputPath string) (string, error)
 }
 
 type rpcCommand struct {
@@ -48,6 +53,7 @@ type rpcCommand struct {
 	SessionPath        *string           `json:"sessionPath"`
 	EntryID            *string           `json:"entryId"`
 	Position           *string           `json:"position"`
+	OutputPath         *string           `json:"outputPath"`
 }
 
 type rpcSessionState struct {
@@ -75,6 +81,7 @@ type rpcRuntime struct {
 	cancel         context.CancelFunc
 	session        *AgentSession
 	replaceSession func(context.Context, *SessionManager) (*AgentSession, error)
+	exportToHtml   func(*AgentSession, string) (string, error)
 	unsubscribe    func()
 	packets        chan rpcPacket
 	outputMu       sync.Mutex
@@ -95,7 +102,8 @@ func RunRPCMode(ctx context.Context, session *AgentSession, options RPCModeOptio
 	ctx, cancel := context.WithCancel(ctx)
 	runtime := &rpcRuntime{
 		ctx: ctx, cancel: cancel, session: session, replaceSession: options.ReplaceSession,
-		packets: make(chan rpcPacket), promptSlots: make(chan struct{}, 4),
+		exportToHtml: options.ExportToHtml,
+		packets:      make(chan rpcPacket), promptSlots: make(chan struct{}, 4),
 	}
 	runtime.bindSession()
 	go runtime.writePackets(options.Output)
@@ -202,6 +210,7 @@ func (r *rpcRuntime) handleLine(line []byte) error {
 		{"sessionPath", &command.SessionPath},
 		{"entryId", &command.EntryID},
 		{"position", &command.Position},
+		{"outputPath", &command.OutputPath},
 	} {
 		if raw, ok := object[field.name]; ok {
 			if err := json.Unmarshal(raw, field.target); err != nil {
@@ -218,7 +227,7 @@ func (r *rpcRuntime) handleLine(line []byte) error {
 	// Commands that can block for a long time run off the read loop so a later
 	// abort/abort_bash can cancel them (upstream's fire-and-forget
 	// handleInputLine does the same).
-	if command.Type == "bash" || command.Type == "compact" {
+	if command.Type == "bash" || command.Type == "compact" || command.Type == "export_html" {
 		return r.startBlocking(command)
 	}
 	data, hasData, commandErr := r.handle(command)
@@ -698,6 +707,19 @@ func (r *rpcRuntime) handle(command rpcCommand) (any, bool, error) {
 		return nil, false, nil
 	case "get_session_stats":
 		return rpcSessionStatsValue(session.GetSessionStats()), true, nil
+	case "export_html":
+		if r.exportToHtml == nil {
+			return nil, false, fmt.Errorf("HTML export is not available in this build")
+		}
+		outputPath := ""
+		if command.OutputPath != nil {
+			outputPath = *command.OutputPath
+		}
+		path, err := r.exportToHtml(session, outputPath)
+		if err != nil {
+			return nil, false, err
+		}
+		return jsonEventObject{{"path", path}}, true, nil
 	case "get_last_assistant_text":
 		// Upstream builds { text } from string | undefined; JSON.stringify drops
 		// the undefined value, so no assistant text omits the field.

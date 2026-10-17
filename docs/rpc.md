@@ -59,6 +59,11 @@ present, including an empty string. Omitted ids remain omitted.
   when there is no assistant text.
 - `get_session_stats`: returns the camelCase session counters, token totals,
   cost, and context usage when a model window is known.
+- `export_html`: optional `outputPath`; renders the current session branch with
+  the same exporter as `/export` and returns `{ "path": ... }`. An in-memory
+  session fails with `Cannot export in-memory session to HTML`; a persisted
+  session with no file yet fails with `Nothing to export yet - start a
+  conversation first`.
 - `get_fork_messages`: returns `{ "messages": [{ "entryId": ..., "text": ... }] }`
   for the user messages that can seed a fork.
 - `get_entries`: returns `{ "entries": [...], "leafId": ... }`. An optional
@@ -158,7 +163,6 @@ still be blocked.
 
 ## Not implemented in this milestone
 
-- HTML export (`export_html`).
 - Extensions, extension UI requests/responses, and extension commands.
 - A typed subprocess RPC client library.
 

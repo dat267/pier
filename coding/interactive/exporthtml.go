@@ -471,9 +471,11 @@ func exportHeaderJSON(header *coding.SessionHeader) json.RawMessage {
 
 // ExportSessionToHTML exports the current session branch to an HTML file
 // (upstream exportSessionToHtml, via agent-session.exportToHtml). An empty
-// themeName uses the currently applied theme.
-func (s *AppSession) ExportSessionToHTML(outputPath string, themeName string) (string, error) {
-	sessionManager := s.Sessions
+// themeName uses the currently applied theme. This is a package function so
+// non-interactive hosts (the RPC runner) can inject it as a seam; the
+// interactive AppSession method delegates to it.
+func ExportSessionToHTML(session *coding.AgentSession, outputPath string, themeName string) (string, error) {
+	sessionManager := session.Sessions
 	sessionFile := sessionManager.GetSessionFile()
 	if sessionFile == "" {
 		return "", fmt.Errorf("Cannot export in-memory session to HTML")
@@ -483,7 +485,7 @@ func (s *AppSession) ExportSessionToHTML(outputPath string, themeName string) (s
 	}
 
 	entries := sessionManager.GetEntries()
-	state := s.Agent.State()
+	state := session.Agent.State()
 	tools := make([]exportTool, 0, len(state.Tools))
 	for _, tool := range state.Tools {
 		tools = append(tools, exportTool{
@@ -515,4 +517,11 @@ func (s *AppSession) ExportSessionToHTML(outputPath string, themeName string) (s
 		return "", err
 	}
 	return outputPath, nil
+}
+
+// ExportSessionToHTML exports the current session branch to an HTML file
+// (upstream exportSessionToHtml, via agent-session.exportToHtml). An empty
+// themeName uses the currently applied theme.
+func (s *AppSession) ExportSessionToHTML(outputPath string, themeName string) (string, error) {
+	return ExportSessionToHTML(s.AgentSession, outputPath, themeName)
 }
