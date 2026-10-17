@@ -746,5 +746,9 @@
   {
     "file": "sample.less",
     "language": "less"
+  },
+  {
+    "file": "sample.ls",
+    "language": "livescript"
   }
 ]
