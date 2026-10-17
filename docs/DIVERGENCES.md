@@ -1994,9 +1994,11 @@ Deliberate boundaries and Go-specific behavior:
   re-pointed at the new session. `export_html` renders through an injected
   `RPCModeOptions.ExportToHtml` seam because the exporter lives in
   `coding/interactive` and `coding` cannot import it; `cmd` supplies
-  `interactive.ExportSessionToHTML` with the settings theme. Extensions/UI and
-  the typed subprocess client remain deferred; this does not wire the
-  independent framed-CBOR server into the CLI.
+  `interactive.ExportSessionToHTML` with the settings theme. Extensions/UI
+  remain deferred; this does not wire the independent framed-CBOR server into
+  the CLI. The typed subprocess client is ported separately in
+  `coding/rpcclient` (spawn, id-correlated requests, `OnEvent`, wait/collect
+  helpers, SIGTERM stop with a one-second kill escalation).
 - `SessionManager.CreateBranchedSession` held the manager lock and then called
   the locking `GetBranch`, deadlocking every call. No prior caller exercised
   it; the RPC fork/clone path does, so it now uses the locked `branchLocked`

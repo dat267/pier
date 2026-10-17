@@ -161,10 +161,30 @@ mutate session state. A Go caller of `coding.RunRPCMode` must reserve its stream
 for that run and must not reuse a canceled output while an in-flight write may
 still be blocked.
 
+## Go client
+
+`coding/rpcclient` ports the reference `RpcClient`: it spawns a peer with
+`--mode rpc` (or `Options.PeerArgs` for a custom peer), correlates responses by
+id with a 30s default request timeout, forwards non-response records to
+`OnEvent`, and exposes one typed method per command (`Prompt`, `State`,
+`SetModel`, `Compact`, `ExportHTML`, `Entries`, `Commands`, and so on).
+`WaitForIdle`, `CollectEvents` and `PromptAndWait` resolve on `agent_settled`.
+`Stop` sends SIGTERM and escalates to a kill after one second. An in-flight
+request is rejected when the child exits, with the child's stderr in the
+error.
+
+```go
+client := rpcclient.New(rpcclient.Options{CLIPath: "pier", Args: []string{"--offline"}})
+if err := client.Start(ctx); err != nil {
+	return err
+}
+defer client.Stop()
+state, err := client.State()
+```
+
 ## Not implemented in this milestone
 
 - Extensions, extension UI requests/responses, and extension commands.
-- A typed subprocess RPC client library.
 
 The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
