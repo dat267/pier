@@ -463,6 +463,14 @@ func (c *GoalController) HandleCommand(args string) {
 	}
 }
 
+// goalToolSnippets are the goal tools' one-line prompt entries (upstream
+// promptSnippet). They list the tools in the system prompt's tools section.
+var goalToolSnippets = map[string]string{
+	"get_goal":    "Read the current goal objective and state",
+	"create_goal": "Create a goal for long-running objectives",
+	"update_goal": "Complete, block, or clear the current goal",
+}
+
 // goalToolGuidelines supplies the goal tools' prompt bullets.
 var goalToolGuidelines = map[string][]string{
 	"get_goal": {"Call get_goal before update_goal to copy the exact id and revision."},

@@ -37,10 +37,23 @@ func (s *AgentSession) toolPromptContributions() (map[string]string, map[string]
 	snippets := map[string]string{}
 	guidelines := map[string][]string{}
 	for name := range s.control.Tools {
-		if snippet, ok := builtinToolPromptSnippets[name]; ok && snippet != "" {
+		entry := s.control.Tools[name]
+		// The builtin tools carry their snippet and guideline bullets in the
+		// maps below; a definition field wins when set, so registry tools like
+		// the goal tools contribute through their definitions (upstream reads
+		// only the definition).
+		snippet := entry.PromptSnippet
+		if snippet == "" {
+			snippet = builtinToolPromptSnippets[name]
+		}
+		if snippet != "" {
 			snippets[name] = snippet
 		}
-		if bullets, ok := builtinToolPromptGuidelines[name]; ok && len(bullets) > 0 {
+		bullets := entry.PromptGuidelines
+		if len(bullets) == 0 {
+			bullets = builtinToolPromptGuidelines[name]
+		}
+		if len(bullets) > 0 {
 			guidelines[name] = append([]string{}, bullets...)
 		}
 	}

@@ -85,6 +85,10 @@ type AgentSessionControl struct {
 type AgentToolDefinition struct {
 	Tool       agent.AgentTool
 	SourceInfo *SourceInfo
+	// PromptSnippet is the tool's one-line prompt entry (upstream
+	// `definition.promptSnippet`). Tools without one are not listed in the
+	// system prompt's tools section.
+	PromptSnippet string
 	// PromptGuidelines are the tool's prompt bullets (upstream reads these
 	// from the tool definition).
 	PromptGuidelines []string
@@ -490,7 +494,11 @@ func (s *AgentSession) registerGoalTools() {
 	}
 	for _, tool := range s.Goal.Tools() {
 		if _, ok := s.control.Tools[tool.Name]; !ok {
-			s.control.Tools[tool.Name] = AgentToolDefinition{Tool: tool, PromptGuidelines: goalToolGuidelines[tool.Name]}
+			s.control.Tools[tool.Name] = AgentToolDefinition{
+				Tool:             tool,
+				PromptSnippet:    goalToolSnippets[tool.Name],
+				PromptGuidelines: goalToolGuidelines[tool.Name],
+			}
 		}
 	}
 }
