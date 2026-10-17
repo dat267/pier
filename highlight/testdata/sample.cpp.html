@@ -1,0 +1,31 @@
+<span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;vector&gt;</span></span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;string&gt;</span></span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> MAX 42</span>
+
+<span class="hljs-keyword">namespace</span> demo {
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">typename</span> T&gt;
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Box</span> {</span>
+<span class="hljs-keyword">public</span>:
+	<span class="hljs-function"><span class="hljs-keyword">explicit</span> <span class="hljs-title">Box</span><span class="hljs-params">(T value)</span> : value_(value) {</span>}
+	<span class="hljs-function">T <span class="hljs-title">get</span><span class="hljs-params">()</span> <span class="hljs-keyword">const</span> </span>{ <span class="hljs-keyword">return</span> value_; }
+<span class="hljs-keyword">private</span>:
+	T value_;
+};
+
+<span class="hljs-function">std::vector&lt;<span class="hljs-keyword">int</span>&gt; <span class="hljs-title">make</span><span class="hljs-params">(<span class="hljs-keyword">int</span> n)</span> </span>{
+	std::vector&lt;<span class="hljs-keyword">int</span>&gt; out;
+	<span class="hljs-keyword">auto</span> raw = <span class="hljs-string">R&quot;delim(raw &quot;string&quot;)delim&quot;</span>;
+	<span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = <span class="hljs-number">0</span>; i &lt; n; ++i) {
+		out.<span class="hljs-built_in">push_back</span>(i * <span class="hljs-number">2</span>);
+	}
+	<span class="hljs-keyword">return</span> out;
+}
+
+} <span class="hljs-comment">// namespace demo</span>
+
+<span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">main</span><span class="hljs-params">()</span> </span>{
+	<span class="hljs-keyword">auto</span> box = demo::Box&lt;std::string&gt;(<span class="hljs-string">&quot;pier&quot;</span>);
+	std::cout &lt;&lt; box.<span class="hljs-built_in">get</span>() &lt;&lt; MAX &lt;&lt; std::endl;
+	<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}
