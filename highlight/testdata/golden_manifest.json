@@ -618,5 +618,9 @@
   {
     "file": "sample.cr",
     "language": "crystal"
+  },
+  {
+    "file": "sample.re",
+    "language": "reasonml"
   }
 ]

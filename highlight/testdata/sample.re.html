@@ -1,0 +1,22 @@
+<span class="hljs-comment">/* a comment */</span>
+<span class="hljs-keyword">type</span> person = {
+  name: <span class="hljs-built_in">string</span>,
+  age: <span class="hljs-built_in">int</span>
+};
+
+<span class="hljs-keyword">let</span> add =<span class="hljs-function"> (<span class="hljs-params">a</span>, <span class="hljs-params">b</span>) =&gt;</span> a + b;
+
+<span class="hljs-keyword">let</span> greet =<span class="hljs-function"> (<span class="hljs-params">p</span>: <span class="hljs-params">person</span>) =&gt;</span> {
+  print<span class="hljs-constructor">_string(<span class="hljs-string">&quot;Hello, &quot;</span> <span class="hljs-operator">++</span> <span class="hljs-params">p</span>.<span class="hljs-params">name</span>)</span>
+};
+
+<span class="hljs-keyword">let</span> numbers = <span class="hljs-literal">[<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>]</span>;
+
+<span class="hljs-keyword">let</span> result = switch (x) {
+<span class="hljs-pattern-match">| <span class="hljs-constructor">Some(<span class="hljs-params">v</span>)</span> =&gt;</span> v
+<span class="hljs-pattern-match">| <span class="hljs-constructor">None</span> =&gt;</span> <span class="hljs-number">0</span>
+};
+
+<span class="hljs-keyword">module</span> Util = {
+  <span class="hljs-keyword">let</span> double =<span class="hljs-function"> (<span class="hljs-params">x</span>) =&gt;</span> x<span class="hljs-operator"> * </span><span class="hljs-number">2</span>;
+};
