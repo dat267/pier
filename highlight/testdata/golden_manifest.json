@@ -566,5 +566,13 @@
   {
     "file": "sample.htvbs",
     "language": "vbscript-html"
+  },
+  {
+    "file": "sample.hbs",
+    "language": "handlebars"
+  },
+  {
+    "file": "sample.htmlbars",
+    "language": "htmlbars"
   }
 ]
