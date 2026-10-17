@@ -474,12 +474,17 @@ func (s *AltScreen) afterTerminalStop(options TuiStopOptions) {
 	for _, line := range documentLines {
 		trimmed = append(trimmed, stripZonePrefix(line))
 	}
-	lines := s.ApplyLineResets(replaceAllStrings(trimmed, CursorMarker, ""))
+	lines := replaceAllStrings(trimmed, CursorMarker, "")
 	for index, line := range lines {
 		if !IsImageLine(line) && VisibleWidth(line) > width {
 			lines[index] = SliceByColumn(line, 0, width, true)
 		}
 	}
+	// Clamp before the reset: slicing to the width drops trailing zero-width
+	// codes, so a reset appended first would be lost and the line's style would
+	// leak into the next row (whose erase line paints with the current
+	// background).
+	lines = s.ApplyLineResets(lines)
 	s.lastDocument = lines
 
 	var builder strings.Builder
@@ -2202,12 +2207,16 @@ func (s *AltScreen) doRender() {
 			}
 		}
 	}
-	screen = s.ApplyLineResets(screen)
 	for index, line := range screen {
 		if !IsImageLine(line) && VisibleWidth(line) > width {
 			screen[index] = SliceByColumn(line, 0, width, true)
 		}
 	}
+	// Clamp before the reset: slicing to the width drops trailing zero-width
+	// codes, so a reset appended first would be lost and the line's style would
+	// leak into the next row (whose erase line paints with the current
+	// background).
+	screen = s.ApplyLineResets(screen)
 
 	fullRedraw := len(s.previousScreen) == 0 || s.previousScreenWidth != width || s.previousScreenHeight != height
 	imagesNeedRedraw := false
