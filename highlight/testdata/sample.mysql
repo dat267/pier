@@ -1,0 +1,11 @@
+-- MySQL sample
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO users (name) VALUES ('alice');
+SELECT id, name FROM users WHERE name LIKE 'a%' LIMIT 10;
+UPDATE users SET name = "bob" WHERE id = 1;
+DROP TABLE users;

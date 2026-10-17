@@ -602,5 +602,9 @@
   {
     "file": "sample.sql",
     "language": "sql"
+  },
+  {
+    "file": "sample.mysql",
+    "language": "sql_more"
   }
 ]

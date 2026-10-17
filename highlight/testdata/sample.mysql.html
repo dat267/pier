@@ -1,0 +1,11 @@
+<span class="hljs-comment">-- MySQL sample</span>
+<span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">TABLE</span> <span class="hljs-keyword">users</span> (
+    <span class="hljs-keyword">id</span> <span class="hljs-built_in">INT</span> AUTO_INCREMENT PRIMARY <span class="hljs-keyword">KEY</span>,
+    <span class="hljs-keyword">name</span> <span class="hljs-built_in">VARCHAR</span>(<span class="hljs-number">255</span>) <span class="hljs-keyword">NOT</span> <span class="hljs-literal">NULL</span>,
+    created_at DATETIME <span class="hljs-keyword">DEFAULT</span> <span class="hljs-keyword">CURRENT_TIMESTAMP</span>
+);
+
+<span class="hljs-keyword">INSERT</span> <span class="hljs-keyword">INTO</span> <span class="hljs-keyword">users</span> (<span class="hljs-keyword">name</span>) <span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;alice&#x27;</span>);
+<span class="hljs-keyword">SELECT</span> <span class="hljs-keyword">id</span>, <span class="hljs-keyword">name</span> <span class="hljs-keyword">FROM</span> <span class="hljs-keyword">users</span> <span class="hljs-keyword">WHERE</span> <span class="hljs-keyword">name</span> <span class="hljs-keyword">LIKE</span> <span class="hljs-string">&#x27;a%&#x27;</span> <span class="hljs-keyword">LIMIT</span> <span class="hljs-number">10</span>;
+<span class="hljs-keyword">UPDATE</span> <span class="hljs-keyword">users</span> <span class="hljs-keyword">SET</span> <span class="hljs-keyword">name</span> = <span class="hljs-string">&quot;bob&quot;</span> <span class="hljs-keyword">WHERE</span> <span class="hljs-keyword">id</span> = <span class="hljs-number">1</span>;
+<span class="hljs-keyword">DROP</span> <span class="hljs-keyword">TABLE</span> <span class="hljs-keyword">users</span>;
