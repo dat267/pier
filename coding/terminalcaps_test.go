@@ -80,3 +80,68 @@ func TestHyperlinksSupported(t *testing.T) {
 		})
 	}
 }
+
+// Cases ported from packages/tui/test/terminal-image.test.ts detectCapabilities,
+// covering the image protocol and the PI_* overrides.
+func TestDetectTerminalCapabilities(t *testing.T) {
+	for _, testCase := range []struct {
+		name       string
+		env        map[string]string
+		platform   string
+		tmux       bool
+		wantImages string
+		wantTrue   bool
+		wantLinks  bool
+	}{
+		{name: "unknown terminal", env: map[string]string{"TERM": "xterm-256color"}},
+		{name: "kitty", env: map[string]string{"KITTY_WINDOW_ID": "1"}, wantImages: "kitty", wantTrue: true, wantLinks: true},
+		{name: "ghostty", env: map[string]string{"TERM_PROGRAM": "ghostty"}, wantImages: "kitty", wantTrue: true, wantLinks: true},
+		{name: "wezterm", env: map[string]string{"TERM_PROGRAM": "wezterm"}, wantImages: "kitty", wantTrue: true, wantLinks: true},
+		{name: "warp", env: map[string]string{"TERM_PROGRAM": "WarpTerminal"}, wantImages: "kitty", wantTrue: true, wantLinks: true},
+		{name: "iterm2", env: map[string]string{"TERM_PROGRAM": "iterm.app"}, wantImages: "iterm2", wantTrue: true, wantLinks: true},
+		{name: "herdr", env: map[string]string{"TERM_PROGRAM": "herdr", "KITTY_WINDOW_ID": "1"}, wantImages: "kitty", wantLinks: true},
+		{name: "windows terminal", env: map[string]string{"WT_SESSION": "x"}, wantTrue: true, wantLinks: true},
+		{name: "tmux keeps no images", env: map[string]string{"TMUX": "/tmp/t,1,0", "TERM_PROGRAM": "ghostty"}, tmux: true, wantLinks: true},
+		{
+			name:       "PI_IMAGE_PROTOCOL and PI_TRUE_COLOR override",
+			env:        map[string]string{"PI_IMAGE_PROTOCOL": "kitty", "PI_TRUE_COLOR": "1", "PI_HYPERLINKS": "1"},
+			wantImages: "kitty", wantTrue: true, wantLinks: true,
+		},
+		{
+			name:       "PI_IMAGE_PROTOCOL none clears a detected protocol",
+			env:        map[string]string{"TERM_PROGRAM": "iterm.app", "PI_IMAGE_PROTOCOL": "none"},
+			wantImages: "", wantTrue: true, wantLinks: true,
+		},
+		{
+			name:       "PI_IMAGE_PROTOCOL auto keeps detection",
+			env:        map[string]string{"TERM_PROGRAM": "ghostty", "PI_IMAGE_PROTOCOL": "auto"},
+			wantImages: "kitty", wantTrue: true, wantLinks: true,
+		},
+		{
+			name:       "PI_HYPERLINKS 0 forces hyperlinks off without probing",
+			env:        map[string]string{"PI_HYPERLINKS": "0", "PI_IMAGE_PROTOCOL": "kitty", "PI_TRUE_COLOR": "0"},
+			wantImages: "kitty", wantTrue: false, wantLinks: false,
+		},
+		{
+			name:       "PI_TRUE_COLOR 0 overrides a detected truecolor",
+			env:        map[string]string{"KITTY_WINDOW_ID": "1", "PI_TRUE_COLOR": "0"},
+			wantImages: "kitty", wantTrue: false, wantLinks: true,
+		},
+	} {
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
+			platform := testCase.platform
+			if platform == "" {
+				platform = "linux"
+			}
+			env := func(key string) string { return testCase.env[key] }
+			got := DetectTerminalCapabilities(env, platform, func() bool { return testCase.tmux })
+			if got.Images != testCase.wantImages || got.TrueColor != testCase.wantTrue || got.Hyperlinks != testCase.wantLinks {
+				t.Fatalf("caps = %+v, want images=%q trueColor=%v hyperlinks=%v", got, testCase.wantImages, testCase.wantTrue, testCase.wantLinks)
+			}
+			if testCase.name == "PI_HYPERLINKS 0 forces hyperlinks off without probing" && testCase.tmux {
+				t.Fatal("probe should not be trusted")
+			}
+		})
+	}
+}

@@ -344,6 +344,18 @@ func (q *terminalQueries) SetNotify(writer terminalQueryWriter, enabled bool) {
 	}
 }
 
+// QueryCellSize asks the terminal for its cell size in pixels (CSI 16 t). It is
+// skipped when the terminal cannot render inline images, the only consumer of
+// the answer.
+func (q *terminalQueries) QueryCellSize(writer terminalQueryWriter) {
+	if GetTerminalCapabilities().Images == "" {
+		return
+	}
+	if writer != nil {
+		writer.Write("\x1b[16t")
+	}
+}
+
 // NotifyOnStart replays a notification toggle requested before the terminal was
 // started, and marks it started.
 func (q *terminalQueries) NotifyOnStart(writer terminalQueryWriter) {

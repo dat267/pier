@@ -382,6 +382,7 @@ func (t *Renderer) Start() {
 	// flag; replay it now, after the terminal is in raw mode, so the mode sequence
 	// is not echoed into the input stream.
 	t.queries.NotifyOnStart(t.Terminal)
+	t.queries.QueryCellSize(t.Terminal)
 	if t.OnAfterTerminalStart != nil {
 		t.OnAfterTerminalStart()
 	}
@@ -606,6 +607,17 @@ func (t *Renderer) QueryTerminalColorScheme(timeoutMS int) (TerminalColorScheme,
 // HandleTerminalInput routes input: listeners first, then the focused
 // component. Keyboard input preempts the throttled render path.
 func (t *Renderer) HandleTerminalInput(data string) {
+	// A cell-size reply (CSI 6 ; height ; width t) updates the pixel size the
+	// image renderer uses. Components re-render because the answer arrives after
+	// start, often before any image has been laid out.
+	if size, ok := ParseCellSizeResponse(data); ok {
+		if size.WidthPx > 0 && size.HeightPx > 0 {
+			SetCellDimensions(size)
+			t.Invalidate()
+			t.RequestRender(false)
+		}
+		return
+	}
 	// Terminal query replies (an OSC 11 reply, a color-scheme report) are
 	// consumed before any listener sees them: a reply is never user input.
 	if t.queries.ConsumeInput(data) {

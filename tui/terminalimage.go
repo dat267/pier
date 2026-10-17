@@ -636,6 +636,26 @@ func RenderImage(base64Data string, imageDimensions ImageDimensions, options Ima
 
 // Hyperlink wraps text in OSC 8 open/close sequences (defined in markdown.go).
 
+var cellSizeResponsePattern = regexp.MustCompile(`^\x1b\[6;(\d+);(\d+)t$`)
+
+// ParseCellSizeResponse parses a CSI 6 ; height ; width t reply (the reply to
+// the CSI 16 t cell-size query).
+func ParseCellSizeResponse(data string) (CellDimensions, bool) {
+	match := cellSizeResponsePattern.FindStringSubmatch(data)
+	if match == nil {
+		return CellDimensions{}, false
+	}
+	heightPx, err := strconv.Atoi(match[1])
+	if err != nil {
+		return CellDimensions{}, false
+	}
+	widthPx, err := strconv.Atoi(match[2])
+	if err != nil {
+		return CellDimensions{}, false
+	}
+	return CellDimensions{WidthPx: widthPx, HeightPx: heightPx}, true
+}
+
 func shortenImagePath(filename string) string {
 	home, err := os.UserHomeDir()
 	if err != nil || home == "" {

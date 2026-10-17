@@ -551,15 +551,22 @@ func run(appName string, args *coding.Args) error {
 	// The explicit setting wins; otherwise the terminal is asked through the environment
 	// detection upstream uses. The port injects capabilities instead of detecting them
 	// inside the tui package (D69), so this is where they are installed.
-	hyperlinks := coding.HyperlinksSupported(os.Getenv, goruntime.GOOS, coding.TmuxForwardsHyperlinks)
+	capabilities := coding.DetectTerminalCapabilities(os.Getenv, goruntime.GOOS, coding.TmuxForwardsHyperlinks)
 	if terminalOverrides.Hyperlinks != nil {
-		hyperlinks = *terminalOverrides.Hyperlinks
+		capabilities.Hyperlinks = *terminalOverrides.Hyperlinks
 	}
-	tui.SetTerminalCapabilities(tui.TerminalCapabilities{Hyperlinks: hyperlinks})
+	if terminalOverrides.HasImages {
+		capabilities.Images = ""
+		if override, ok := terminalOverrides.Images.(string); ok {
+			capabilities.Images = override
+		}
+	}
+	tui.SetTerminalCapabilities(capabilities)
 
 	app := interactive.NewApp(interactive.AppOptions{
 		Cwd:          runtimeCwd,
-		Hyperlinks:   hyperlinks,
+		Hyperlinks:   capabilities.Hyperlinks,
+		Images:       capabilities.Images,
 		AgentDir:     agentDir,
 		TuiMode:      tuiMode,
 		Version:      coding.Version,

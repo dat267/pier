@@ -495,3 +495,41 @@ func mustBase64(t *testing.T, hexPayload string) string {
 	}
 	return base64.StdEncoding.EncodeToString(buffer)
 }
+
+type recordingTerminalWriter struct{ data strings.Builder }
+
+func (w *recordingTerminalWriter) Write(text string) { w.data.WriteString(text) }
+
+func TestParseCellSizeResponse(t *testing.T) {
+	size, ok := ParseCellSizeResponse("\x1b[6;36;18t")
+	if !ok || size != (CellDimensions{WidthPx: 18, HeightPx: 36}) {
+		t.Fatalf("size = %+v ok = %v", size, ok)
+	}
+	for _, invalid := range []string{"plain", "\x1b[6;36t", "\x1b[8;1;1t"} {
+		if _, ok := ParseCellSizeResponse(invalid); ok {
+			t.Fatalf("%q parsed as a cell-size reply", invalid)
+		}
+	}
+	// A zero dimension still parses (the reply is consumed); the renderer path
+	// refuses to apply it.
+	if size, ok := ParseCellSizeResponse("\x1b[6;0;18t"); !ok || size.HeightPx != 0 {
+		t.Fatalf("zero reply = %+v ok = %v", size, ok)
+	}
+}
+
+func TestQueryCellSizeOnlyWhenImagesAreSupported(t *testing.T) {
+	previous := GetTerminalCapabilities()
+	t.Cleanup(func() { SetTerminalCapabilities(previous) })
+	queries := &terminalQueries{}
+	writer := &recordingTerminalWriter{}
+	SetTerminalCapabilities(TerminalCapabilities{})
+	queries.QueryCellSize(writer)
+	if writer.data.String() != "" {
+		t.Fatalf("query without images = %q", writer.data.String())
+	}
+	SetTerminalCapabilities(TerminalCapabilities{Images: ImageProtocolKitty})
+	queries.QueryCellSize(writer)
+	if writer.data.String() != "\x1b[16t" {
+		t.Fatalf("query = %q", writer.data.String())
+	}
+}
