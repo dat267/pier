@@ -23,9 +23,10 @@ const (
 
 // matchData identifies the rule a group belongs to.
 type matchData struct {
-	rule     *compiledMode
-	typ      ruleType
-	position int
+	rule       *compiledMode
+	typ        ruleType
+	position   int
+	keepGroups bool
 }
 
 // match is one rule match. index is the byte index into the whole source.
@@ -45,18 +46,27 @@ type multiRegex struct {
 	matchAt      int
 	position     int
 	matcherRe    *regexp.Regexp
+	// firstBytes is the set of bytes that can begin a match (an IndexAny
+	// argument); empty when the skip is not selective or not safe.
+	firstBytes string
+	// verifyStart is set when a match can evaluate a context-sensitive
+	// assertion before consuming, in which case verifyRe (the same alternation
+	// prefixed with a single-char wildcard) decides whether a boundary match
+	// also matches with the real preceding byte.
+	verifyStart bool
+	verifyRe    *regexp.Regexp
 }
 
 func newMultiRegex() *multiRegex {
 	return &multiRegex{matchIndexes: map[int]matchData{}, matchAt: 1}
 }
 
-func (m *multiRegex) addRule(re *regexp.Regexp, data matchData) {
+func (m *multiRegex) addRule(source string, data matchData) {
 	data.position = m.position
 	m.position++
 	m.matchIndexes[m.matchAt] = data
-	m.regexes = append(m.regexes, re.String())
-	m.matchAt += re.NumSubexp() + 1
+	m.regexes = append(m.regexes, source)
+	m.matchAt += countCapturingGroups(source) + 1
 }
 
 // compile builds the joined alternation. It is the port of join(), without the
@@ -79,11 +89,25 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 	if caseInsensitive {
 		flags += "i"
 	}
+	expr := "(?" + flags + ")" + b.String()
 	re, err := compilePattern(b.String(), flags)
 	if err != nil {
 		return err
 	}
 	m.matcherRe = re
+	if parsed := parsePattern(expr); parsed != nil && leadingContextSensitive(parsed) {
+		m.verifyStart = true
+		m.firstBytes, _ = firstByteSet(expr, parsed)
+		verifyRe, err := compilePattern("(?s).(?:"+b.String()+")", flags)
+		if err == nil {
+			m.verifyRe = verifyRe
+		}
+	}
+	if m.verifyRe == nil && m.firstBytes == "" {
+		if parsed := parsePattern(expr); parsed != nil {
+			m.firstBytes, _ = firstByteSet(expr, parsed)
+		}
+	}
 	return nil
 }
 
@@ -92,10 +116,40 @@ func (m *multiRegex) exec(s string, lastIndex int) *match {
 	if m.matcherRe == nil || lastIndex > len(s) {
 		return nil
 	}
-	loc := m.matcherRe.FindStringSubmatchIndex(s[lastIndex:])
-	if loc == nil {
-		return nil
+	search := lastIndex
+	for {
+		if m.firstBytes != "" {
+			candidate := strings.IndexAny(s[search:], m.firstBytes)
+			if candidate < 0 {
+				return nil
+			}
+			search += candidate
+		}
+		loc := m.matcherRe.FindStringSubmatchIndex(s[search:])
+		if loc == nil {
+			return nil
+		}
+		if loc[0] != 0 || !m.verifyStart || search == 0 {
+			return m.buildMatch(s, search, loc)
+		}
+		// The match begins exactly at the slice boundary, where the regexp sees
+		// a text start that may not exist. verifyRe consumes the real preceding
+		// byte and then the same alternation, so a match at relative 0 proves
+		// the boundary match is also a match in context.
+		if m.verifyRe != nil {
+			if vloc := m.verifyRe.FindStringIndex(s[search-1:]); vloc != nil && vloc[0] == 0 {
+				return m.buildMatch(s, search, loc)
+			}
+		}
+		search++
+		if search > len(s) {
+			return nil
+		}
 	}
+}
+
+// matchAt builds a match from a submatch result relative to base.
+func (m *multiRegex) buildMatch(s string, base int, loc []int) *match {
 	group := 1
 	for ; group < len(loc)/2; group++ {
 		if loc[2*group] >= 0 {
@@ -106,14 +160,17 @@ func (m *multiRegex) exec(s string, lastIndex int) *match {
 	if !ok {
 		return nil
 	}
-	start := lastIndex + loc[0]
-	end := lastIndex + loc[1]
-	groups := make([]int, len(loc))
-	for i, v := range loc {
-		if v >= 0 {
-			groups[i] = lastIndex + v
-		} else {
-			groups[i] = -1
+	start := base + loc[0]
+	end := base + loc[1]
+	var groups []int
+	if data.keepGroups {
+		groups = make([]int, len(loc))
+		for i, v := range loc {
+			if v >= 0 {
+				groups[i] = base + v
+			} else {
+				groups[i] = -1
+			}
 		}
 	}
 	return &match{
@@ -131,7 +188,7 @@ func (m *multiRegex) exec(s string, lastIndex int) *match {
 // guarded so a compiled language can be shared by concurrent highlights; the
 // cursor lives in the caller's modeInstance.
 type resumableMultiRegex struct {
-	rules        []*regexp.Regexp
+	sources      []string
 	datas        []matchData
 	multiRegexes []*multiRegex
 	count        int
@@ -139,8 +196,12 @@ type resumableMultiRegex struct {
 	mu           sync.Mutex
 }
 
-func (r *resumableMultiRegex) addRule(re *regexp.Regexp, data matchData) {
-	r.rules = append(r.rules, re)
+func (r *resumableMultiRegex) addRule(source string, keepGroups bool, data matchData) {
+	if !keepGroups {
+		source = stripCapturingGroups(source)
+	}
+	data.keepGroups = keepGroups
+	r.sources = append(r.sources, source)
 	r.datas = append(r.datas, data)
 	if data.typ == ruleBegin {
 		r.count++
@@ -154,13 +215,13 @@ func (r *resumableMultiRegex) getMatcher(index int) *multiRegex {
 		return r.multiRegexes[index]
 	}
 	if index >= len(r.multiRegexes) {
-		grown := make([]*multiRegex, len(r.rules))
+		grown := make([]*multiRegex, len(r.sources))
 		copy(grown, r.multiRegexes)
 		r.multiRegexes = grown
 	}
 	matcher := newMultiRegex()
-	for i := index; i < len(r.rules); i++ {
-		matcher.addRule(r.rules[i], r.datas[i])
+	for i := index; i < len(r.sources); i++ {
+		matcher.addRule(r.sources[i], r.datas[i])
 	}
 	if err := matcher.compile(r.caseIgnore); err != nil {
 		matcher.matcherRe = nil

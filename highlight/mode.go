@@ -94,8 +94,10 @@ type compiledMode struct {
 	keywords         map[string]keywordData
 	keywordPatternRe *regexp.Regexp
 	beginRe          *regexp.Regexp
+	beginSource      string
 	endRe            *regexp.Regexp
 	illegalRe        *regexp.Regexp
+	illegalSource    string
 	terminatorEnd    string
 	contains         []*compiledMode
 	starts           *compiledMode
@@ -105,6 +107,11 @@ type compiledMode struct {
 	beforeBegin func(m *match, resp *Response)
 	onBegin     func(m *match, resp *Response)
 	onEnd       func(m *match, resp *Response)
+
+	// keepGroups is set when a callback may read the match's capture groups, so
+	// the inner groups must survive into the compiled matcher. Most rules only
+	// need the wrapper group that identifies the rule.
+	keepGroups bool
 }
 
 // Response is highlight.js's Response: callbacks can ignore the match.
@@ -150,6 +157,7 @@ func (c *compiler) compileMode(mode *Mode, parent *compiledMode) (*compiledMode,
 		onBegin:        mode.OnBegin,
 		onEnd:          mode.OnEnd,
 		subLanguage:    mode.SubLanguage,
+		keepGroups:     mode.OnBegin != nil || mode.OnEnd != nil,
 	}
 	c.compiled[mode] = cmode
 
@@ -233,6 +241,7 @@ func (c *compiler) compileMode(mode *Mode, parent *compiledMode) (*compiledMode,
 			return nil, err
 		}
 		cmode.beginRe = beginRe
+		cmode.beginSource = mode.Begin
 		if mode.EndSameAsBegin {
 			mode.End = mode.Begin
 		}
@@ -260,6 +269,7 @@ func (c *compiler) compileMode(mode *Mode, parent *compiledMode) (*compiledMode,
 			return nil, err
 		}
 		cmode.illegalRe = illegalRe
+		cmode.illegalSource = mode.Illegal
 	}
 
 	contains := mode.Contains
@@ -294,16 +304,13 @@ func (c *compiler) compileMode(mode *Mode, parent *compiledMode) (*compiledMode,
 func (c *compiler) buildModeRegex(mode *compiledMode) *resumableMultiRegex {
 	mm := &resumableMultiRegex{caseIgnore: c.language.CaseInsensitive}
 	for _, term := range mode.contains {
-		mm.addRule(term.beginRe, matchData{rule: term, typ: ruleBegin})
+		mm.addRule(term.beginSource, term.keepGroups, matchData{rule: term, typ: ruleBegin})
 	}
 	if mode.terminatorEnd != "" {
-		re, err := c.langRe(mode.terminatorEnd)
-		if err == nil {
-			mm.addRule(re, matchData{typ: ruleEnd})
-		}
+		mm.addRule(mode.terminatorEnd, true, matchData{typ: ruleEnd})
 	}
-	if mode.illegalRe != nil {
-		mm.addRule(mode.illegalRe, matchData{typ: ruleIllegal})
+	if mode.illegalSource != "" {
+		mm.addRule(mode.illegalSource, false, matchData{typ: ruleIllegal})
 	}
 	return mm
 }
@@ -412,6 +419,92 @@ func cloneMode(m *Mode) *Mode {
 	}
 	c.Variants = nil
 	return &c
+}
+
+// stripCapturingGroups rewrites inner capturing groups to non-capturing ones.
+// The wrapper group added when joining rules still identifies the rule, so only
+// modes whose callbacks read groups keep their inner captures.
+func stripCapturingGroups(src string) string {
+	if !strings.Contains(src, "(") {
+		return src
+	}
+	var b strings.Builder
+	b.Grow(len(src))
+	inClass := false
+	for i := 0; i < len(src); i++ {
+		c := src[i]
+		if c == '\\' && i+1 < len(src) {
+			b.WriteByte(c)
+			b.WriteByte(src[i+1])
+			i++
+			continue
+		}
+		if inClass {
+			if c == ']' {
+				inClass = false
+			}
+			b.WriteByte(c)
+			continue
+		}
+		if c == '[' {
+			inClass = true
+			b.WriteByte(c)
+			continue
+		}
+		if c == '(' {
+			if i+1 < len(src) && src[i+1] == '?' {
+				// (?P<name>...) is capturing; drop the name and make it
+				// non-capturing.
+				if i+2 < len(src) && src[i+2] == 'P' {
+					if end := strings.IndexByte(src[i:], '>'); end >= 0 {
+						b.WriteString("(?:")
+						i += end
+						continue
+					}
+				}
+				b.WriteByte(c)
+				continue
+			}
+			b.WriteString("(?:")
+			continue
+		}
+		b.WriteByte(c)
+	}
+	return b.String()
+}
+
+// countCapturingGroups counts capturing groups syntactically, before the
+// joined alternation is compiled.
+func countCapturingGroups(src string) int {
+	count := 0
+	inClass := false
+	for i := 0; i < len(src); i++ {
+		c := src[i]
+		if c == '\\' {
+			i++
+			continue
+		}
+		if inClass {
+			if c == ']' {
+				inClass = false
+			}
+			continue
+		}
+		if c == '[' {
+			inClass = true
+			continue
+		}
+		if c == '(' {
+			if i+1 < len(src) && src[i+1] == '?' {
+				if i+2 < len(src) && src[i+2] == 'P' {
+					count++
+				}
+				continue
+			}
+			count++
+		}
+	}
+	return count
 }
 
 func isWordByte(b byte) bool {
