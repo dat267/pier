@@ -750,5 +750,9 @@
   {
     "file": "sample.ls",
     "language": "livescript"
+  },
+  {
+    "file": "sample.coffee",
+    "language": "coffeescript"
   }
 ]
