@@ -1,0 +1,31 @@
+/* a comment */
+:root {
+  --main: #1f2937;
+}
+
+body, .card:hover > a::before {
+  color: #abcdef;
+  background-color: rgba(0, 0, 0, 0.5);
+  width: calc(100% - 1.5em);
+  margin: 0 auto;
+  padding: 10px 2rem;
+  font-family: "Helvetica Neue", 'Arial', sans-serif;
+  background-image: url(images/bg.png);
+  -webkit-transition: all 0.3s ease-in-out;
+}
+
+@media (min-width: 768px) and (orientation: landscape) {
+  .card {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+input[type="text"] {
+  border-color: red;
+}

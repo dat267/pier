@@ -118,3 +118,9 @@ func Shebang(binary string, relevance int) *Mode {
 
 // MethodGuard excludes method names from keyword processing.
 var MethodGuard = Zero(Mode{Begin: `\.\s*` + UnderscoreIdentRe})
+
+// CSSNumberMode matches a CSS number with an optional unit (core.js).
+var CSSNumberMode = Zero(Mode{
+	ClassName: "number",
+	Begin:     NumberRe + "(%|em|ex|ch|rem|vw|vh|vmin|vmax|cm|mm|in|pt|pc|px|deg|grad|rad|turn|s|ms|Hz|kHz|dpi|dpcm|dppx)?",
+})

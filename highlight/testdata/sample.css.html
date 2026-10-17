@@ -1,0 +1,31 @@
+<span class="hljs-comment">/* a comment */</span>
+<span class="hljs-selector-pseudo">:root</span> {
+  --<span class="hljs-selector-tag">main</span>: <span class="hljs-number">#1f2937</span>;
+}
+
+<span class="hljs-selector-tag">body</span>, <span class="hljs-selector-class">.card</span><span class="hljs-selector-pseudo">:hover</span> &gt; <span class="hljs-selector-tag">a</span><span class="hljs-selector-pseudo">::before</span> {
+  <span class="hljs-attribute">color</span>: <span class="hljs-number">#abcdef</span>;
+  <span class="hljs-attribute">background-color</span>: <span class="hljs-built_in">rgba</span>(<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0.5</span>);
+  <span class="hljs-attribute">width</span>: <span class="hljs-built_in">calc</span>(<span class="hljs-number">100%</span> - <span class="hljs-number">1.5em</span>);
+  <span class="hljs-attribute">margin</span>: <span class="hljs-number">0</span> auto;
+  <span class="hljs-attribute">padding</span>: <span class="hljs-number">10px</span> <span class="hljs-number">2rem</span>;
+  <span class="hljs-attribute">font-family</span>: <span class="hljs-string">&quot;Helvetica Neue&quot;</span>, <span class="hljs-string">&#x27;Arial&#x27;</span>, sans-serif;
+  <span class="hljs-attribute">background-image</span>: <span class="hljs-built_in">url</span>(<span class="hljs-string">images/bg.png</span>);
+  -webkit-<span class="hljs-attribute">transition</span>: all <span class="hljs-number">0.3s</span> ease-in-out;
+}
+
+<span class="hljs-keyword">@media</span> (<span class="hljs-attribute">min-width</span>: <span class="hljs-number">768px</span>) <span class="hljs-keyword">and</span> (<span class="hljs-attribute">orientation</span>: landscape) {
+  <span class="hljs-selector-class">.card</span> {
+    <span class="hljs-attribute">display</span>: grid <span class="hljs-meta">!important</span>;
+    grid-template-<span class="hljs-attribute">columns</span>: <span class="hljs-built_in">repeat</span>(<span class="hljs-number">3</span>, <span class="hljs-number">1</span>fr);
+  }
+}
+
+<span class="hljs-keyword">@keyframes</span> spin {
+  <span class="hljs-selector-tag">from</span> { <span class="hljs-attribute">transform</span>: <span class="hljs-built_in">rotate</span>(<span class="hljs-number">0deg</span>); }
+  <span class="hljs-selector-tag">to</span> { <span class="hljs-attribute">transform</span>: <span class="hljs-built_in">rotate</span>(<span class="hljs-number">360deg</span>); }
+}
+
+<span class="hljs-selector-tag">input</span><span class="hljs-selector-attr">[type=<span class="hljs-string">&quot;text&quot;</span>]</span> {
+  <span class="hljs-attribute">border-color</span>: red;
+}
