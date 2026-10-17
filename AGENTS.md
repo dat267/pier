@@ -328,6 +328,7 @@ Prefer a D-row over silently approximating the reference.
 ## Out of scope (documented)
 
 Native clipboard, kitty/iterm image transport internals beyond the
-line-detection helpers, extension mechanics, the package manager, and the rpc
-mode. Mermaid rendering needs `grok-mermaid` and is inert.
+line-detection helpers, extension mechanics, and the package manager. Stdio RPC
+has a bounded first milestone; supported commands and remaining gaps are in
+`docs/rpc.md` (D235). Mermaid rendering needs `grok-mermaid` and is inert.
 

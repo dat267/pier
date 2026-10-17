@@ -1,8 +1,8 @@
 // Package cmd boots the port of pi's interactive coding-agent CLI: it wires
 // the settings, auth, model runtime and agent session from the command-line
-// flags and runs the ported interactive mode (coding/interactive). The upstream
-// rpc mode, package manager, extensions and migrations are out of scope
-// (see README). Print and JSON modes follow upstream's extension-free core.
+// flags and runs the interactive mode (coding/interactive), print mode or the
+// bounded stdio RPC subset (pi v1.3.0 modes/rpc/rpc-mode.ts; docs/rpc.md).
+// The package manager, extensions and migrations remain out of scope.
 //
 // The module root's main.go is a thin wrapper over Execute, so the module is
 // installable from a release asset (`pier update`) rather than
@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	goruntime "runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dat267/pier/ai"
@@ -118,10 +119,6 @@ func Execute() {
 		fmt.Println("Exported to: " + result)
 		return
 	}
-	if args.Mode == coding.CLIModeRPC {
-		fmt.Fprintln(os.Stderr, appName+": rpc mode is not supported by this build")
-		os.Exit(1)
-	}
 	if err := run(appName, args); err != nil {
 		var status interface{ ExitCode() int }
 		if errors.As(err, &status) {
@@ -149,7 +146,7 @@ func applyOfflineMode(args *coding.Args) {
 
 func resolvePrintMode(args *coding.Args, stdinIsTTY, stdoutIsTTY bool) bool {
 	if args.Mode == coding.CLIModeRPC {
-		return false // Execute rejects RPC before run; it never becomes print mode.
+		return false // RPC owns stdin as a live command stream, never print input.
 	}
 	return args.Print || args.Mode == coding.CLIModeJSON || !stdinIsTTY || !stdoutIsTTY
 }
@@ -169,11 +166,23 @@ func catalogRefreshAllowedAtCreate(offline, printMode, listingModels bool) bool 
 }
 
 func run(appName string, args *coding.Args) error {
+	if args.Mode == coding.CLIModeRPC {
+		if len(args.FileArgs) != 0 {
+			return fmt.Errorf("@file arguments are not supported in RPC mode")
+		}
+		// D235: a headless protocol never opens a terminal picker or consumes
+		// command records as answers to startup prompts.
+		if args.Resume {
+			return fmt.Errorf("RPC mode requires --continue or --session instead of the interactive --resume picker")
+		}
+	}
 	ctx := context.Background()
 	applyOfflineMode(args)
 	// v1.2.0 main.ts resolveAppMode selects headless mode for either non-TTY
 	// stream, as well as explicit -p/--mode json (D162 closed).
 	printMode := resolvePrintMode(args, term.IsTerminal(int(os.Stdin.Fd())), term.IsTerminal(int(os.Stdout.Fd())))
+	rpcMode := args.Mode == coding.CLIModeRPC
+	headlessMode := printMode || rpcMode
 	// Bounds the create-time catalog refresh (upstream leaves it unbounded; the
 	// Go refresh is synchronous, so it needs a ceiling).
 	modelRefreshTimeoutMS := int64(15000)
@@ -285,7 +294,7 @@ func run(appName string, args *coding.Args) error {
 	// its background refresh (D220).
 	runtime, err := coding.CreateModelRuntime(coding.CreateModelRuntimeOptions{
 		AuthPath:              agentDir + "/auth.json",
-		AllowModelNetwork:     catalogRefreshAllowedAtCreate(args.Offline, printMode, listingModels),
+		AllowModelNetwork:     catalogRefreshAllowedAtCreate(args.Offline, headlessMode, listingModels),
 		ModelRefreshTimeoutMS: &modelRefreshTimeoutMS,
 		Signal:                ctx,
 	})
@@ -320,7 +329,7 @@ func run(appName string, args *coding.Args) error {
 		agentDir:  agentDir,
 		override:  args.ProjectTrustOverride,
 		bootstrap: settings,
-		hasUI:     !printMode,
+		hasUI:     !headlessMode,
 		prompt:    startupTrustPrompt(settings),
 	})
 	if trustErr != nil {
@@ -407,10 +416,18 @@ func run(appName string, args *coding.Args) error {
 	// Print mode waits for the direct-tool servers at the first turn (upstream
 	// waits inside before_agent_start, print mode included), attaches whatever
 	// connected, and reports the connection failures; the interactive mode
-	// wires the same wait with UI notification (AppOptions.MCP).
+	// wires the same wait with UI notification (AppOptions.MCP). The holder is
+	// mutex-guarded because an RPC session replacement installs a new session
+	// while this hook may run on another goroutine.
+	var mcpSessionMu sync.Mutex
 	var mcpSession *coding.AgentSession
+	setMCPSession := func(session *coding.AgentSession) {
+		mcpSessionMu.Lock()
+		mcpSession = session
+		mcpSessionMu.Unlock()
+	}
 	var beforeFirstTurn func(ctx context.Context)
-	if mcpManager != nil && printMode {
+	if mcpManager != nil && headlessMode {
 		beforeFirstTurn = func(mcpCtx context.Context) {
 			if !mcpManager.WaitForDirectTools(mcpCtx, time.Duration(coding.McpStartupWaitMs)*time.Millisecond) {
 				fmt.Fprintln(os.Stderr, coding.FormatCLIDiagnostic(coding.CLIDiagnostic{
@@ -418,7 +435,10 @@ func run(appName string, args *coding.Args) error {
 					Message: "MCP servers are still connecting; their tools become available once connected.",
 				}))
 			}
-			if session := mcpSession; session != nil {
+			mcpSessionMu.Lock()
+			session := mcpSession
+			mcpSessionMu.Unlock()
+			if session != nil {
 				session.AttachExtraTools(mcpManager.DirectTools())
 			}
 			for _, message := range mcpManager.ConnectionErrors() {
@@ -426,7 +446,9 @@ func run(appName string, args *coding.Args) error {
 			}
 		}
 	}
-	created, err := coding.CreateAgentSession(ctx, &coding.CreateAgentSessionOptions{
+	// sessionOptions is kept so an RPC session-replacement command can rebuild
+	// the session against the target manager (upstream createRuntime).
+	sessionOptions := &coding.CreateAgentSessionOptions{
 		Cwd:             runtimeCwd,
 		AgentDir:        agentDir,
 		Model:           model,
@@ -455,11 +477,12 @@ func run(appName string, args *coding.Args) error {
 		// Prompt templates: explicit paths load even when discovery is off.
 		PromptTemplatePaths: coding.ResolveCLIPaths(cwd, args.PromptTemplates),
 		NoPromptTemplates:   args.NoPromptTemplates,
-	})
+	}
+	created, err := coding.CreateAgentSession(ctx, sessionOptions)
 	if err != nil {
 		return err
 	}
-	mcpSession = created.Session
+	setMCPSession(created.Session)
 	coding.Time("createAgentSession", coding.TimingMain)
 
 	// --api-key pins the credential for this run. It needs a model to attach to,
@@ -481,6 +504,13 @@ func run(appName string, args *coding.Args) error {
 		if err := runtime.SetRuntimeAPIKey(provider, *args.APIKey, ctx); err != nil {
 			return err
 		}
+	}
+
+	if rpcMode {
+		replacer := rpcSessionReplacer(sessionOptions, settings, agentDir, args.ProjectTrustOverride, setMCPSession)
+		err := runRPCSession(ctx, created.Session, replacer)
+		offloopGroup.FlushAll()
+		return err
 	}
 
 	if printMode {
@@ -906,6 +936,9 @@ func resumeSession(args *coding.Args, cwd string, agentDir string, settings *cod
 		case "path", "local":
 			return coding.OpenSession(resolved.path, sessionDir, "")
 		case "global":
+			if args.Mode == coding.CLIModeRPC {
+				return nil, fmt.Errorf("RPC mode cannot prompt to fork a session from another project; use --fork or a session file path")
+			}
 			// Upstream prompts to fork the session into the current directory
 			// (promptConfirm + forkSessionOrExit); declining aborts.
 			fmt.Printf("\033[33mSession found in different project: %s\033[0m\n", resolved.cwd)
@@ -925,7 +958,11 @@ func resumeSession(args *coding.Args, cwd string, agentDir string, settings *cod
 		}
 		// Upstream (createSessionManager): warn, then create a new session
 		// carrying the requested id.
-		fmt.Printf("\033[33mWarning: No project session found with id '%s'; creating a new session with that id.\033[0m\n", *args.SessionID)
+		warningOutput := os.Stdout
+		if args.Mode == coding.CLIModeRPC {
+			warningOutput = os.Stderr
+		}
+		fmt.Fprintf(warningOutput, "\033[33mWarning: No project session found with id '%s'; creating a new session with that id.\033[0m\n", *args.SessionID)
 		sm := coding.NewSessionManager(cwd, &coding.SessionManagerOptions{SessionDir: sessionDir})
 		sm.NewSession(&coding.NewSessionOptions{ID: *args.SessionID})
 		return sm, nil

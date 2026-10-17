@@ -2,7 +2,7 @@
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
-in code comments; not every ID has a full entry here. The range is **D1–D223**.
+in code comments; not every ID has a full entry here. The range is **D1–D235**.
 Entries are ordered numerically. Closed, retired, and withdrawn rows keep their
 IDs for historical references; overlapping rows refer to the owning explanation.
 
@@ -561,7 +561,8 @@ touched. The model still receives "[Output truncated. Full output: <path>]".
 
 `cmd.resolvePrintMode` follows v1.2.0 `main.ts.resolveAppMode`: either non-TTY
 stream selects text print mode, while `-p` and `--mode json` remain explicit
-options. RPC stays rejected, never converted to print mode.
+options. RPC remains a separate mode, never converted to print mode; D235
+implements its first supported command subset.
 `TestResolvePrintMode` checks precedence and both streams;
 `TestNonTTYStartsPrintMode` runs piped startup without a renderer.
 
@@ -575,8 +576,8 @@ Failures report on stderr with exit 1. Initial images attach in both modes
 disposal, accepted session saves and stdout have drained; normal returns also
 remove the signal registration and join its waiter. Nonzero print statuses
 return through `cmd.run` so deferred host cleanup runs before `Execute` exits.
-Extensions/runtime rebind remain out of scope (D41). RPC is still explicitly
-rejected; JSON print mode is not a bidirectional RPC implementation.
+Extensions/runtime rebind remain out of scope (D41). JSON print mode is not a
+bidirectional RPC implementation; D235 adds a separate stdio runner.
 
 ## D163
 
@@ -1944,3 +1945,85 @@ queues the first round.
 
 `get_goal` is the only other tool. `DesiredToolNames` keeps `set_goal` always
 active and `get_goal` only while a goal is pursued.
+
+## D235
+
+**Stdio RPC has a bounded extension-free first milestone.**
+
+Reference: pi v1.3.0 `packages/coding-agent/src/modes/rpc/{rpc-mode,rpc-types,jsonl}.ts`.
+`coding/rpcmode.go` implements prompt/steer/follow_up/abort/clear_queue,
+state/messages, model/thinking selection, queue modes, session introspection
+(stats/entries/tree/fork messages/last assistant text), naming, `get_commands`,
+compaction and retry controls, bash execution, and the session-replacement
+commands (`new_session`, `switch_session`, `fork`, `clone`). It uses the
+existing JSON event shaper, preserves optional correlation ids and response key
+order, and keeps auth preflight off the command owner. Successful prompt
+acceptance reports `started`/`queued`, after the run flag is installed,
+independently of completion. The old boolean preflight callback remains
+available to Go callers.
+
+Deliberate boundaries and Go-specific behavior:
+
+- Four pending prompt preflights may wait in addition to an accepted turn.
+  Admission stays in input order; excess requests get a correlated failure,
+  rather than growing an unbounded goroutine queue.
+- Untrusted command shapes and required fields are checked explicitly. A valid
+  id/type survives a field error; invalid envelopes and JSON syntax errors use
+  `command: "parse"`. Parser error text is Go's, not JavaScript's engine text.
+- A single unbuffered byte handoff serializes records and backpressures
+  producers. Cancellation releases the owner and prompt workers even when an
+  OS read/write cannot be interrupted. At most one input read and one output
+  write may remain blocked until the OS releases them or the process exits;
+  these pumps never mutate session state. In-flight output may be lost at
+  shutdown, but accepted session saves drain without a deadline.
+- RPC never opens the `--resume` picker or the cross-project session-fork
+  confirmation. It rejects those paths with guidance to use noninteractive
+  flags, and session-id warnings go to stderr, not protocol stdout. `@file`
+  rejection follows upstream; images arrive through command payloads.
+- `bash` and `compact` run off the read loop so a later `abort`/`abort_bash`
+  can cancel them; the reference fires every input line without awaiting, which
+  this port narrows to those two long-running commands. `abort` also cancels a
+  manual compaction and branch summary (upstream `abort()` does).
+- Session replacement runs through `RPCModeOptions.ReplaceSession`. The runner
+  unsubscribes and disposes the old session after settling its workers, then
+  builds and subscribes the replacement; with no factory the commands fail
+  explicitly. `cmd` supplies the factory (upstream `createRuntime`): the new
+  session shares the model runtime, settings and tool selection, a
+  cross-project switch resolves that project's trust without a prompt and
+  rebinds the one settings manager (D160), and the MCP first-turn hook is
+  re-pointed at the new session. HTML export, extensions/UI and the typed
+  subprocess client remain deferred; this does not wire the independent
+  framed-CBOR server into the CLI.
+- `SessionManager.CreateBranchedSession` held the manager lock and then called
+  the locking `GetBranch`, deadlocking every call. No prior caller exercised
+  it; the RPC fork/clone path does, so it now uses the locked `branchLocked`
+  helper (regression test `TestCreateBranchedSessionBranchesInPlace`).
+- `get_last_assistant_text` omits `text` when there is no text. The reference
+  runtime does the same (`JSON.stringify` drops the `undefined` value) even
+  though its declared response type says `text: string | null`.
+- `get_commands` lists prompt templates and then skills, each with `sourceInfo`.
+  It never emits extension commands, which are out of scope.
+- `set_auto_retry` writes the persisted retry setting
+  (`settingsManager.setRetryEnabled`), the value the run loop reads, rather
+  than the in-memory display toggle.
+
+`cmd/rpcmode.go` unregisters and joins its signal waiter and returns 143/129
+through the normal host cleanup path. The shared session queue-display lists
+are mutex-protected across commands and agent events; listeners run outside
+the lock. Queued user messages retain empty texts, image blocks and creation
+timestamps. `AbortBash` now passes the tracked child context to execution,
+matching upstream instead of cancelling an unused controller.
+
+Tests: `coding/rpcmode_test.go` covers wire errors/correlation, LF/CRLF/Unicode
+and large records, acceptance/events, queued templates/images/empty texts,
+abort during auth and generation, admission limits, model/thinking/queue
+selection, output failure/backpressure, and EOF accepted-save draining.
+`coding/rpcmode_session_test.go` covers the session introspection, compaction,
+retry and bash commands and the new field validation.
+`coding/rpcmode_replace_test.go` covers new_session, switch_session, fork
+(before/at), clone and the unavailable-factory errors.
+`cmd/rpcmode_test.go` exercises CLI boot, noninteractive startup boundaries,
+stdout cleanliness, signal unwinding, and an end-to-end `new_session` through
+the real binary. `TestSessionAbortBashReachesExecution`
+reproduces and guards the shell cancellation fix. See `docs/rpc.md` for usage
+and the complete supported subset.

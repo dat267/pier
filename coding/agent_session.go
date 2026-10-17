@@ -143,7 +143,7 @@ type AgentSession struct {
 	Settings SessionSettings
 	Cwd      string
 
-	// mu guards retry state and the control block.
+	// mu guards retry state, queue-display tracking and the control block.
 	mu sync.Mutex
 
 	// control holds the optional collaborators and mutation state ported from
@@ -497,14 +497,18 @@ func (s *AgentSession) handleAgentEvent(event *agent.AgentEvent) {
 	if event.Type == agent.MessageStart && event.Message != nil && ai.RoleOf(event.Message) == ai.RoleUser {
 		if user, ok := event.Message.(*ai.UserMessage); ok {
 			messageText := contentTextJoinedNoSep(user.Content)
-			if messageText != "" {
-				if idx := indexOf(s.steeringMessages, messageText); idx != -1 {
-					s.steeringMessages = append(s.steeringMessages[:idx], s.steeringMessages[idx+1:]...)
-					s.emitQueueUpdate()
-				} else if idx := indexOf(s.followUpMessages, messageText); idx != -1 {
-					s.followUpMessages = append(s.followUpMessages[:idx], s.followUpMessages[idx+1:]...)
-					s.emitQueueUpdate()
-				}
+			changed := false
+			s.mu.Lock()
+			if idx := indexOf(s.steeringMessages, messageText); idx != -1 {
+				s.steeringMessages = append(s.steeringMessages[:idx], s.steeringMessages[idx+1:]...)
+				changed = true
+			} else if idx := indexOf(s.followUpMessages, messageText); idx != -1 {
+				s.followUpMessages = append(s.followUpMessages[:idx], s.followUpMessages[idx+1:]...)
+				changed = true
+			}
+			s.mu.Unlock()
+			if changed {
+				s.emitQueueUpdate()
 			}
 		}
 	}
@@ -558,11 +562,14 @@ func (s *AgentSession) handleAgentEvent(event *agent.AgentEvent) {
 func indexOf(list []string, want string) int { return slices.Index(list, want) }
 
 func (s *AgentSession) emitQueueUpdate() {
-	s.emit(&SessionEvent{
+	s.mu.Lock()
+	event := &SessionEvent{
 		Type:     SessionQueueUpdate,
 		Steering: append([]string{}, s.steeringMessages...),
 		FollowUp: append([]string{}, s.followUpMessages...),
-	})
+	}
+	s.mu.Unlock()
+	s.emit(event)
 }
 
 // willRetryAfterAgentEnd: retry policy enabled, attempts remain, and the last
@@ -589,23 +596,23 @@ func (s *AgentSession) willRetryAfterAgentEnd(event *agent.AgentEvent) bool {
 // Steer queues a steering message (drained after the current turn). The queue
 // records the message's text so it can be restored to the editor.
 func (s *AgentSession) Steer(message ai.Message) {
+	s.mu.Lock()
 	s.Agent.Steer(message)
 	if user, ok := message.(*ai.UserMessage); ok {
-		if text := contentTextJoinedNoSep(user.Content); text != "" {
-			s.steeringMessages = append(s.steeringMessages, text)
-		}
+		s.steeringMessages = append(s.steeringMessages, contentTextJoinedNoSep(user.Content))
 	}
+	s.mu.Unlock()
 	s.emitQueueUpdate()
 }
 
 // FollowUp queues a message to run after the agent would stop.
 func (s *AgentSession) FollowUp(message ai.Message) {
+	s.mu.Lock()
 	s.Agent.FollowUp(message)
 	if user, ok := message.(*ai.UserMessage); ok {
-		if text := contentTextJoinedNoSep(user.Content); text != "" {
-			s.followUpMessages = append(s.followUpMessages, text)
-		}
+		s.followUpMessages = append(s.followUpMessages, contentTextJoinedNoSep(user.Content))
 	}
+	s.mu.Unlock()
 	s.emitQueueUpdate()
 }
 

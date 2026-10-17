@@ -101,6 +101,60 @@ func TestSessionExecuteBash(t *testing.T) {
 	}
 }
 
+// pi v1.3.0 core/agent-session.ts passes each tracked controller's signal
+// to executeBashWithOperations; abortBash must reach that backend.
+type abortObservingBash struct {
+	started   chan struct{}
+	release   chan struct{}
+	cancelled chan bool
+}
+
+func (b abortObservingBash) Exec(ctx ctxpkg.Context, command, cwd string, options BashExecOptions) (*int, error) {
+	close(b.started)
+	<-b.release
+	select {
+	case <-options.Signal:
+		b.cancelled <- true
+	default:
+		b.cancelled <- false
+	}
+	code := 0
+	return &code, nil
+}
+
+func TestSessionAbortBashReachesExecution(t *testing.T) {
+	persist := false
+	session, err := NewAgentSession(&SessionConfig{
+		Cwd: t.TempDir(), StreamFn: stubStreamFn,
+		Sessions: NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: &persist}),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Dispose()
+	backend := abortObservingBash{make(chan struct{}), make(chan struct{}), make(chan bool, 1)}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		result, err := session.ExecuteBash(ctxpkg.Background(), "probe", nil, &ExecuteBashOptions{Operations: backend})
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if !result.Cancelled {
+			t.Error("execution result must report cancellation")
+		}
+	}()
+	<-backend.started
+	session.AbortBash()
+	close(backend.release)
+	cancelled := <-backend.cancelled
+	<-done
+	if !cancelled {
+		t.Fatal("AbortBash did not cancel the backend signal")
+	}
+}
+
 func TestSessionExecuteBashDeferredWhileStreaming(t *testing.T) {
 	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic"}
 	session, err := NewAgentSession(&SessionConfig{

@@ -36,8 +36,8 @@ func (s *AgentSession) ExecuteBash(ctx context.Context, command string, onChunk 
 	if options == nil {
 		options = &ExecuteBashOptions{}
 	}
-	cancel := s.trackBashRun()
-	defer s.untrackBashRun(cancel)
+	ctx, cancel := s.trackBashRun(ctx)
+	defer cancel()
 
 	// Apply the configured command prefix (for example alias support).
 	resolvedCommand := command
@@ -75,7 +75,7 @@ func (s *AgentSession) ExecuteBash(ctx context.Context, command string, onChunk 
 }
 
 // trackBashRun registers a cancellable bash run.
-func (s *AgentSession) trackBashRun() context.CancelFunc {
+func (s *AgentSession) trackBashRun(parent context.Context) (context.Context, context.CancelFunc) {
 	s.bashMu.Lock()
 	defer s.bashMu.Unlock()
 	if s.bashCancels == nil {
@@ -83,18 +83,12 @@ func (s *AgentSession) trackBashRun() context.CancelFunc {
 	}
 	s.bashNextID++
 	id := s.bashNextID
-	_, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(parent)
 	s.bashCancels[id] = cancel
-	return func() {
+	return ctx, func() {
 		s.bashMu.Lock()
 		delete(s.bashCancels, id)
 		s.bashMu.Unlock()
-		cancel()
-	}
-}
-
-func (s *AgentSession) untrackBashRun(cancel context.CancelFunc) {
-	if cancel != nil {
 		cancel()
 	}
 }

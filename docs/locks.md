@@ -49,6 +49,14 @@ by that package's own mutex, so no UI lock or off-loop path is introduced.
 | `FooterDataProvider.mu` | `coding/footerdata.go` | cwd/git/status + listener registry, shared with its 500 ms git-HEAD watcher | **retained (D149)**: closing it needs the poll result posted to the loop and the listener fan-out delivered outside the lock; a `coding/` change outside this refactor |
 | `AgentSession.promptOptionsMu` | `coding/agent_session.go` | `SystemPromptOptions`, re-read by the prompt/tool loadout between turns | **retained**: the work goroutine re-applies the loadout while the UI loop rebuilds the options on `/reload` and tool changes; only a struct copy is taken under it |
 
+D235's stdio RPC runtime adds no UI lock. The existing `AgentSession.mu` also
+guards steering/follow-up display queues across command admission and agent
+events; snapshots are taken under it and listeners are called outside it.
+`rpcRuntime.outputMu` guards only the first output error. The byte writer and
+all callbacks run outside it. Prompt admission and cancellation handles belong
+to the command owner; four pending preflights and an unbuffered byte handoff
+bound concurrent work without unbounded queues.
+
 Retired along the way (all struck from the code). Searching non-test Go files
 in `tui/` and `coding/interactive/` for mutex declarations finds only the
 retained locks listed above:

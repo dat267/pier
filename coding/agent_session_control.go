@@ -222,11 +222,13 @@ func (s *AgentSession) SyncQueueModesFromSettings() {
 
 // ClearQueue drains both queues and reports what was removed.
 func (s *AgentSession) ClearQueue() (steering []string, followUp []string) {
-	steering = s.GetSteeringMessages()
-	followUp = s.GetFollowUpMessages()
+	s.mu.Lock()
+	steering = append([]string{}, s.steeringMessages...)
+	followUp = append([]string{}, s.followUpMessages...)
 	s.Agent.ClearAllQueues()
 	s.steeringMessages = nil
 	s.followUpMessages = nil
+	s.mu.Unlock()
 	s.emitQueueUpdate()
 	return steering, followUp
 }

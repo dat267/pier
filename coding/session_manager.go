@@ -890,7 +890,9 @@ func (m *SessionManager) BranchWithSummary(branchFromID string, summary string, 
 func (m *SessionManager) CreateBranchedSession(leafID string) (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	path := m.GetBranch(leafID)
+	// branchLocked, not GetBranch: the manager lock is already held (the
+	// re-entrant GetBranch deadlocked every persisted fork/clone).
+	path := m.branchLocked(leafID)
 	if len(path) == 0 {
 		return "", fmt.Errorf("Entry %s not found", leafID)
 	}
@@ -937,8 +939,11 @@ func (m *SessionManager) CreateBranchedSession(leafID string) (string, error) {
 
 	m.fileEntries = append([]FileEntry{{Header: &header}}, newEntries...)
 	m.sessionID = newSessionID
-	m.sessionFile = newSessionFile
 	m.writeState = &sessionWriteState{}
+	// In-memory sessions branch with no file, as upstream does.
+	if m.persist {
+		m.sessionFile = newSessionFile
+	}
 	m.buildIndex()
 
 	// Use the same rule as persistEntry: write now if the branched path already

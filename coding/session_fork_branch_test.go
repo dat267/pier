@@ -2,6 +2,7 @@ package coding
 
 import (
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/ai"
 )
@@ -79,5 +80,46 @@ func TestForkSessionAtEntryKeepsTheChosenLeaf(t *testing.T) {
 	// The source is untouched.
 	if got := len(source.GetEntries()); got != 3 {
 		t.Errorf("source entries = %d, want 3", got)
+	}
+}
+
+// CreateBranchedSession holds the manager lock and must use the locked branch
+// helper: calling the locking GetBranch from inside deadlocked the persisted
+// RPC fork/clone path.
+func TestCreateBranchedSessionBranchesInPlace(t *testing.T) {
+	t.Setenv("PI_CODING_AGENT_DIR", t.TempDir())
+	source := NewSessionManager(t.TempDir(), &SessionManagerOptions{SessionDir: t.TempDir()})
+	source.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "first"}})
+	source.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "second"}})
+	entries := source.GetEntries()
+	if len(entries) != 2 {
+		t.Fatalf("entries = %d, want 2", len(entries))
+	}
+
+	type branchResult struct {
+		path string
+		err  error
+	}
+	done := make(chan branchResult, 1)
+	go func() {
+		path, err := source.CreateBranchedSession(entries[0].ID)
+		done <- branchResult{path, err}
+	}()
+	select {
+	case result := <-done:
+		if result.err != nil {
+			t.Fatal(result.err)
+		}
+		if result.path == "" {
+			t.Fatal("a persisted branch should have a session file")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("CreateBranchedSession deadlocked")
+	}
+	if got := len(source.GetEntries()); got != 1 {
+		t.Fatalf("branch entries = %d, want 1", got)
+	}
+	if leaf := source.GetLeafID(); leaf == nil || *leaf != entries[0].ID {
+		t.Fatalf("branch leaf = %v, want %q", leaf, entries[0].ID)
 	}
 }

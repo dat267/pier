@@ -38,6 +38,9 @@ type PromptOptions struct {
 	// PreflightResult observes whether the prompt was queued/executed (true) or
 	// dropped (false).
 	PreflightResult func(ok bool)
+	// OnAccepted reports "started" or "queued" after successful preflight.
+	// Extensions are absent (D41), so "handled" is never produced.
+	OnAccepted func(disposition string)
 }
 
 // InputSource names where user input came from.
@@ -176,6 +179,9 @@ func (s *AgentSession) Prompt(ctx context.Context, text string, options *PromptO
 			s.queueSteer(expandedText, options.Images)
 		}
 		preflight(true)
+		if options.OnAccepted != nil {
+			options.OnAccepted("queued")
+		}
 		return nil
 	}
 
@@ -221,7 +227,6 @@ func (s *AgentSession) Prompt(ctx context.Context, text string, options *PromptO
 		messages = append([]ai.Message{update}, messages...)
 	}
 
-	preflight(true)
 	if s.CacheWarmer != nil && options.SessionID != "" && options.SessionID == s.SessionID() {
 		requestOptions := &ai.SimpleStreamOptions{SessionID: options.SessionID}
 		if len(options.Images) > 0 {
@@ -232,7 +237,12 @@ func (s *AgentSession) Prompt(ctx context.Context, text string, options *PromptO
 			Model: s.Model(), Context: ai.Context{Messages: messages}, Options: requestOptions,
 		}, s.cacheContextIsCurrent())
 	}
-	return s.runAgentPrompt(ctx, messages)
+	return s.runAgentPrompt(ctx, messages, func() {
+		preflight(true)
+		if options.OnAccepted != nil {
+			options.OnAccepted("started")
+		}
+	})
 }
 
 func (s *AgentSession) queueSteer(text string, images []ai.ImageContent) {
@@ -240,7 +250,7 @@ func (s *AgentSession) queueSteer(text string, images []ai.ImageContent) {
 	for _, image := range images {
 		content = append(content, image)
 	}
-	s.Steer(&ai.UserMessage{Content: ai.StringOrBlocks{Blocks: content}})
+	s.Steer(&ai.UserMessage{Content: ai.StringOrBlocks{Blocks: content}, Timestamp: time.Now().UnixMilli()})
 }
 
 func (s *AgentSession) queueFollowUp(text string, images []ai.ImageContent) {
@@ -248,7 +258,7 @@ func (s *AgentSession) queueFollowUp(text string, images []ai.ImageContent) {
 	for _, image := range images {
 		content = append(content, image)
 	}
-	s.FollowUp(&ai.UserMessage{Content: ai.StringOrBlocks{Blocks: content}})
+	s.FollowUp(&ai.UserMessage{Content: ai.StringOrBlocks{Blocks: content}, Timestamp: time.Now().UnixMilli()})
 }
 
 // validateModelAuth checks that the selected model's provider has usable auth.
@@ -273,7 +283,14 @@ func (s *AgentSession) validateModelAuth(ctx context.Context) error {
 
 // runAgentPrompt runs one agent prompt with the run-active flag and idle
 // resolution.
-func (s *AgentSession) runAgentPrompt(ctx context.Context, messages []ai.Message) error {
+func (s *AgentSession) runAgentPrompt(ctx context.Context, messages []ai.Message, onStarted ...func()) error {
+	state := s.prompt()
+	state.mu.Lock()
+	state.runActive = true
+	state.mu.Unlock()
+	for _, notify := range onStarted {
+		notify()
+	}
 	// The once-per-session pre-turn hook (upstream before_agent_start): the
 	// MCP first-prompt wait installs here, so the first request carries the
 	// tools that connected in time.
@@ -288,10 +305,6 @@ func (s *AgentSession) runAgentPrompt(ctx context.Context, messages []ai.Message
 			hook(ctx)
 		})
 	}
-	state := s.prompt()
-	state.mu.Lock()
-	state.runActive = true
-	state.mu.Unlock()
 
 	err := s.Agent.PromptMessages(ctx, messages)
 	if err == nil {
