@@ -730,5 +730,9 @@
   {
     "file": "sample.isbl",
     "language": "isbl"
+  },
+  {
+    "file": "sample.scss",
+    "language": "scss"
   }
 ]
