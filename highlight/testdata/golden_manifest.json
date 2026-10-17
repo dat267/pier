@@ -722,5 +722,9 @@
   {
     "file": "sample.gml",
     "language": "gml"
+  },
+  {
+    "file": "sample.1c",
+    "language": "1c"
   }
 ]

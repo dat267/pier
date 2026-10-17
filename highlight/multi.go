@@ -79,9 +79,13 @@ type multiRegex struct {
 	manuals   []manualRule
 	// manualByByte indexes the manual rules by their first byte, in rule order.
 	manualByByte [256][]manualRule
-	// firstBytes is the set of bytes that can begin a match (an IndexAny
-	// argument); empty when the skip is not selective or not safe.
-	firstBytes string
+	// firstByteTable is the set of bytes that can begin a match, used as a byte
+	// pre-filter. hasFirstBytes is false when the skip is not selective or not
+	// safe (a rule can match empty). A byte table, not strings.IndexAny, because
+	// IndexAny decodes its argument as UTF-8 runes and so misses a non-ASCII
+	// leading byte (for example Cyrillic).
+	firstByteTable [256]bool
+	hasFirstBytes  bool
 	// verifyStart is set when a match can evaluate a context-sensitive
 	// assertion before consuming, in which case verifyRe (the same alternation
 	// prefixed with a single-char wildcard) decides whether a boundary match
@@ -155,12 +159,12 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 					m.prefixedRe = prefixed
 				}
 			}
-			m.firstBytes, _ = firstByteSet(parsedExpr, parsed)
 		}
 	}
 
-	// Per-byte dispatch is usable when every regex rule always consumes at least
-	// one byte and its first-byte set is known.
+	// The pre-filter's byte set: every byte that can begin a match, including the
+	// manual rules'. It is disabled when a regex rule can match empty, since such
+	// a rule can begin at any byte.
 	m.ruleFirst = make([]string, len(m.regexes))
 	usable := true
 	var union [256]bool
@@ -180,7 +184,19 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 			union[mr.firsts[i]] = true
 		}
 	}
-	m.dispatch = usable && (len(m.regexes) > 1 || len(m.manuals) > 0)
+	if usable {
+		count := 0
+		for i := 0; i < 256; i++ {
+			if union[i] {
+				count++
+			}
+		}
+		if count > 0 && count <= 240 {
+			m.firstByteTable = union
+			m.hasFirstBytes = true
+		}
+	}
+	m.dispatch = usable && m.hasFirstBytes && (len(m.regexes) > 1 || len(m.manuals) > 0)
 	if m.dispatch {
 		for _, mr := range m.manuals {
 			for i := 0; i < len(mr.firsts); i++ {
@@ -188,18 +204,22 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 				m.manualByByte[b] = append(m.manualByByte[b], mr)
 			}
 		}
-		var ub strings.Builder
-		for i := 0; i < 256; i++ {
-			if union[i] {
-				ub.WriteByte(byte(i))
-			}
-		}
-		m.firstBytes = ub.String()
-		if len(m.firstBytes) > 240 {
-			m.dispatch = false
-		}
 	}
 	return nil
+}
+
+// indexFirstByte returns the first index at or after from whose byte can begin
+// a match, or -1.
+func (m *multiRegex) indexFirstByte(s string, from int) int {
+	if !m.hasFirstBytes {
+		return -1
+	}
+	for i := from; i < len(s); i++ {
+		if m.firstByteTable[s[i]] {
+			return i
+		}
+	}
+	return -1
 }
 
 // subMatcher returns a matcher containing only the regex rules that can begin
@@ -261,11 +281,11 @@ func (m *multiRegex) exec(s string, lastIndex int) *match {
 func (m *multiRegex) execDispatch(s string, lastIndex int) *match {
 	search := lastIndex
 	for search <= len(s) {
-		candidate := strings.IndexAny(s[search:], m.firstBytes)
+		candidate := m.indexFirstByte(s, search)
 		if candidate < 0 {
 			return nil
 		}
-		search += candidate
+		search = candidate
 		b := s[search]
 
 		var regexMatch, manualMatch *match
@@ -321,12 +341,12 @@ func (m *multiRegex) execScan(s string, lastIndex int) *match {
 		regexAbs := -1
 		var regexLoc []int
 		if m.matcherRe != nil {
-			if m.firstBytes != "" {
-				candidate := strings.IndexAny(s[search:], m.firstBytes)
-				if candidate < 0 && len(m.manuals) == 0 {
+			if m.hasFirstBytes {
+				candidate := m.indexFirstByte(s, search)
+				if candidate < 0 {
 					return nil
 				}
-				search += candidate
+				search = candidate
 			}
 			regexLoc = m.matcherRe.FindStringSubmatchIndex(s[search:])
 			if regexLoc != nil {

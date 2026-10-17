@@ -74,3 +74,16 @@ func TestBeginKeywordsPrefersTheLongestMatch(t *testing.T) {
 		t.Fatalf("`def` was not read as a keyword:\n%s", html)
 	}
 }
+
+// TestNonASCIIRuleStartIsNotSkipped guards the byte pre-filter: it is a set of
+// bytes, and strings.IndexAny would decode a non-ASCII leading byte as an
+// invalid rune and skip it. 1C's Cyrillic `процедура` rule must still match.
+func TestNonASCIIRuleStartIsNotSkipped(t *testing.T) {
+	result, err := Highlight("процедура Тест()", "1c")
+	if err != nil {
+		t.Fatalf("highlight: %v", err)
+	}
+	if html := RenderHTML(result.Nodes); !strings.Contains(html, `class="hljs-function"`) {
+		t.Fatalf("a non-ASCII rule begin was skipped:\n%s", html)
+	}
+}
