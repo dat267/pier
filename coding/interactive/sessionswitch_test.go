@@ -142,3 +142,26 @@ func TestSwitchSessionUpdatesFooterCwd(t *testing.T) {
 		t.Fatalf("footer cwd %s, want %s", app.footerData.Cwd(), targetCwd)
 	}
 }
+
+// A session rebind replaces the AgentSession (and with it the goal controller),
+// so the idle-round launcher must be rewired or /goal resume would stop
+// starting a run after /new, /resume or /fork.
+func TestSwitchSessionRewiresGoalStartWork(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+
+	if controller := app.session.Goal; controller != nil && !controller.StartWorkWired() {
+		t.Fatal("goal launcher not wired at construction")
+	}
+	target := makePersistedSession(t, t.TempDir(), "from the other session")
+	if _, err := app.switchSession(context.Background(), target.GetSessionFile(), ""); err != nil {
+		t.Fatalf("switchSession: %v", err)
+	}
+	controller := app.session.Goal
+	if controller == nil {
+		t.Skip("goals are disabled for this session")
+	}
+	if !controller.StartWorkWired() {
+		t.Fatal("goal launcher not rewired after a session switch")
+	}
+}

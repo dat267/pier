@@ -179,6 +179,14 @@ func (c *GoalController) SetStartWork(fn func(fn func(context.Context) error)) {
 	c.mu.Unlock()
 }
 
+// StartWorkWired reports whether a work scheduler is installed. The interactive
+// wiring uses it to check that a session rebind rewired the launcher.
+func (c *GoalController) StartWorkWired() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.startWork != nil
+}
+
 // deliverGoalMessage ports sendCustomMessage's triggerTurn routing: while a run
 // is active the message queues behind it; otherwise a run starts. The two
 // trigger-turn round sources (a /goal command and agent_before_settle) share

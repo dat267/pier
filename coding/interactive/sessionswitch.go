@@ -156,6 +156,7 @@ func (a *App) applySessionReplacement(sessionManager *coding.SessionManager) (*S
 	// The *AppSession pointer is shared by every wiring, so swapping the
 	// embedded AgentSession rebinds them all at once.
 	a.session.AgentSession = created.Session
+	a.wireGoalStartWork()
 	a.sessionMgr = sessionManager
 	a.footerData.SetCwd(sessionManager.GetCwd())
 	a.transcript.SessionInfo = sessionManager
@@ -184,6 +185,15 @@ func (a *App) applySessionReplacement(sessionManager *coding.SessionManager) (*S
 	a.showLoadedResources(false)
 	a.ui.RequestRender(false)
 	return &SessionSwitchResult{}, nil
+}
+
+// wireGoalStartWork routes an idle goal round through the loop's work slot. The
+// goal controller is replaced with the session, so this runs on every bind
+// (construction, /new, /resume, /fork).
+func (a *App) wireGoalStartWork() {
+	if controller := a.session.Goal; controller != nil {
+		controller.SetStartWork(a.events.StartWork)
+	}
 }
 
 // rebindProjectSettings re-points the settings manager at a session's project,
