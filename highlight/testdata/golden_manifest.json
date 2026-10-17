@@ -702,5 +702,9 @@
   {
     "file": "sample.lsl",
     "language": "lsl"
+  },
+  {
+    "file": "sample.lc",
+    "language": "livecodeserver"
   }
 ]

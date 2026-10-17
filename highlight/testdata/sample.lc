@@ -1,0 +1,12 @@
+-- a comment
+on mouseUp
+  put "Hello, world" into field "greeting"
+  add 1 to gCounter
+  if gCounter > 3 then
+    answer "Clicked"
+  end if
+end mouseUp
+
+command greet pName
+  return "Hello"
+end greet
