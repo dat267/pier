@@ -1,0 +1,15 @@
+<span class="hljs-comment">$ontext
+This is a block comment.
+$offtext</span>
+
+<span class="hljs-keyword">Set</span> i /<span class="hljs-number">1</span>*<span class="hljs-number">3</span>/;
+<span class="hljs-keyword">Parameter</span>
+    a(i) /<span class="hljs-number">1</span> <span class="hljs-number">10</span>, <span class="hljs-number">2</span> <span class="hljs-number">20</span>, <span class="hljs-number">3</span> <span class="hljs-number">30</span>/
+    b ;
+<span class="hljs-keyword">Scalar</span> c /<span class="hljs-number">5</span>/;
+<span class="hljs-keyword">Variable</span> z;
+<span class="hljs-keyword">Equation</span> eq ;
+
+<span class="hljs-function"><span class="hljs-title">eq</span></span>.. z <span class="hljs-symbol">=e=</span> <span class="hljs-keyword">sum</span>(i, a(i));
+<span class="hljs-keyword">Model</span> m /<span class="hljs-keyword">all</span>/;
+<span class="hljs-keyword">Solve</span> m <span class="hljs-keyword">using</span> lp <span class="hljs-keyword">maximizing</span> z;

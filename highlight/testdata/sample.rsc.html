@@ -1,0 +1,13 @@
+<span class="hljs-comment"># a comment</span>
+<span class="hljs-keyword">:global</span> myVar <span class="hljs-string">&quot;hello&quot;</span>
+<span class="hljs-keyword">:local</span> x 42
+
+<span class="hljs-built_in">/ip firewall filter
+</span><span class="hljs-builtin-name">add</span> <span class="hljs-attribute">chain</span>=input <span class="hljs-attribute">action</span>=accept <span class="hljs-attribute">protocol</span>=tcp <span class="hljs-attribute">dst-port</span>=22
+
+<span class="hljs-built_in">/interface ethernet
+</span><span class="hljs-builtin-name">set</span> ether1 <span class="hljs-attribute">name</span>=wan
+
+<span class="hljs-keyword">:if</span> (<span class="hljs-variable">$x</span> &gt; 10) <span class="hljs-keyword">do</span>={
+    <span class="hljs-keyword">:log</span> <span class="hljs-builtin-name">info</span> <span class="hljs-string">&quot;big&quot;</span>
+}

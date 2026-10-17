@@ -530,5 +530,13 @@
   {
     "file": "sample.aj",
     "language": "aspectj"
+  },
+  {
+    "file": "sample.rsc",
+    "language": "routeros"
+  },
+  {
+    "file": "sample.gms",
+    "language": "gams"
   }
 ]
