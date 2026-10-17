@@ -614,5 +614,9 @@
   {
     "file": "sample.d",
     "language": "d"
+  },
+  {
+    "file": "sample.cr",
+    "language": "crystal"
   }
 ]
