@@ -99,7 +99,7 @@ func OneC() *Language {
 								End:            ",",
 								ExcludeEnd:     true,
 								EndsWithParent: true,
-								Keywords:       Keywords{"$pattern": "[A-Za-zА-Яа-яёЁ_][A-Za-zА-Яа-яёЁ_0-9]+", "keyword": "знач", "literal": "null истина ложь неопределено"},
+								Keywords:       Keywords{"keyword": "знач", "literal": "null истина ложь неопределено"},
 								Contains: []*Mode{&Mode{
 									ClassName:    "number",
 									Begin:        "\\b\\d+(\\.\\d+)?",
@@ -149,7 +149,7 @@ func OneC() *Language {
 							End:            ",",
 							ExcludeEnd:     true,
 							EndsWithParent: true,
-							Keywords:       Keywords{"$pattern": "[A-Za-zА-Яа-яёЁ_][A-Za-zА-Яа-яёЁ_0-9]+", "keyword": "знач", "literal": "null истина ложь неопределено"},
+							Keywords:       Keywords{"keyword": "знач", "literal": "null истина ложь неопределено"},
 							Contains: []*Mode{&Mode{
 								ClassName:    "number",
 								Begin:        "\\b\\d+(\\.\\d+)?",

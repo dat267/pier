@@ -9,6 +9,7 @@ func Lsl() *Language {
 		Aliases:         []string{},
 		CaseInsensitive: false,
 		Mode: Mode{
+			Illegal: ":",
 			Contains: []*Mode{
 				&Mode{
 					ClassName: "string",
