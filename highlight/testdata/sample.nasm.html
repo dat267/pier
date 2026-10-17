@@ -1,0 +1,17 @@
+<span class="hljs-comment">; a comment</span>
+<span class="hljs-meta">section</span> .data
+    msg <span class="hljs-built_in">db</span> <span class="hljs-string">&quot;Hello, world&quot;</span>, <span class="hljs-number">0</span>
+    len <span class="hljs-built_in">equ</span> $ - msg
+
+<span class="hljs-meta">section</span> .text
+<span class="hljs-meta">global</span> _start
+<span class="hljs-symbol">
+_start:</span>
+    <span class="hljs-keyword">mov</span> <span class="hljs-built_in">rax</span>, <span class="hljs-number">1</span>
+    <span class="hljs-keyword">mov</span> <span class="hljs-built_in">rdi</span>, <span class="hljs-number">1</span>
+    <span class="hljs-keyword">lea</span> <span class="hljs-built_in">rsi</span>, [msg]
+    <span class="hljs-keyword">mov</span> <span class="hljs-built_in">rdx</span>, len
+    <span class="hljs-keyword">syscall</span>
+    <span class="hljs-keyword">mov</span> <span class="hljs-built_in">rax</span>, <span class="hljs-number">60</span>
+    <span class="hljs-keyword">xor</span> <span class="hljs-built_in">rdi</span>, <span class="hljs-built_in">rdi</span>
+    <span class="hljs-keyword">syscall</span>

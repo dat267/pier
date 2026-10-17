@@ -714,5 +714,9 @@
   {
     "file": "sample.sqf",
     "language": "sqf"
+  },
+  {
+    "file": "sample.nasm",
+    "language": "x86asm"
   }
 ]
