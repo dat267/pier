@@ -1,0 +1,15 @@
+<span class="hljs-keyword">cmake_minimum_required</span>(VERSION <span class="hljs-number">3.20</span>)
+<span class="hljs-keyword">project</span>(demo LANGUAGES C CXX)
+
+<span class="hljs-keyword">set</span>(CMAKE_CXX_STANDARD <span class="hljs-number">20</span>)
+<span class="hljs-keyword">set</span>(CMAKE_CXX_STANDARD_REQUIRED <span class="hljs-keyword">ON</span>)
+
+<span class="hljs-keyword">option</span>(BUILD_TESTS <span class="hljs-string">&quot;Build the tests&quot;</span> <span class="hljs-keyword">OFF</span>)
+
+<span class="hljs-keyword">add_executable</span>(demo main.cpp)
+<span class="hljs-keyword">target_link_libraries</span>(demo PRIVATE fmt::fmt)
+
+<span class="hljs-keyword">if</span>(BUILD_TESTS)
+    <span class="hljs-keyword">enable_testing</span>()
+    <span class="hljs-keyword">add_test</span>(NAME demo_test <span class="hljs-keyword">COMMAND</span> demo)
+<span class="hljs-keyword">endif</span>()

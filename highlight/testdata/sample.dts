@@ -1,0 +1,28 @@
+/dts-v1/;
+
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+    model = "Example Board";
+    compatible = "vendor,board";
+    #address-cells = <1>;
+    #size-cells = <1>;
+
+    chosen {
+        bootargs = "console=ttyS0,115200";
+    };
+
+    memory@80000000 {
+        device_type = "memory";
+        reg = <0x80000000 0x10000000>;
+    };
+
+    led {
+        compatible = "gpio-leds";
+        led0 {
+            label = "status";
+            gpios = <&gpio0 5 GPIO_ACTIVE_HIGH>;
+            linux,default-trigger = "heartbeat";
+        };
+    };
+};

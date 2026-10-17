@@ -1,0 +1,15 @@
+<span class="hljs-meta">.text</span>
+.globl main
+<span class="hljs-symbol">
+main:</span>
+    li $<span class="hljs-built_in">t0</span>, <span class="hljs-number">0</span>
+    li $<span class="hljs-built_in">t1</span>, <span class="hljs-number">10</span>
+<span class="hljs-symbol">loop:</span>
+    <span class="hljs-keyword">addi </span>$<span class="hljs-built_in">t0</span>, $<span class="hljs-built_in">t0</span>, <span class="hljs-number">1</span>
+    <span class="hljs-keyword">bne </span>$<span class="hljs-built_in">t0</span>, $<span class="hljs-built_in">t1</span>, loop
+    <span class="hljs-keyword">nop
+</span>    <span class="hljs-keyword">jr </span>$<span class="hljs-built_in">ra</span>
+    <span class="hljs-keyword">syscall
+</span>
+<span class="hljs-meta">.data</span>
+<span class="hljs-symbol">msg:</span> .asciiz <span class="hljs-string">&quot;done&quot;</span>

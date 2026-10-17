@@ -302,5 +302,21 @@
   {
     "file": "sample.cal",
     "language": "cal"
+  },
+  {
+    "file": "sample.dts",
+    "language": "dts"
+  },
+  {
+    "file": "sample.cmake",
+    "language": "cmake"
+  },
+  {
+    "file": "sample.mips",
+    "language": "mipsasm"
+  },
+  {
+    "file": "sample.ll",
+    "language": "llvm"
   }
 ]

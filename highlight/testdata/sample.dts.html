@@ -1,0 +1,28 @@
+<span class="hljs-meta-keyword">/dts-v1/</span>;
+
+<span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;dt-bindings/gpio/gpio.h&gt;</span></span>
+
+<span class="hljs-class">/ {
+    model = <span class="hljs-string">&quot;Example Board&quot;</span>;
+    compatible = <span class="hljs-string">&quot;vendor,board&quot;</span>;
+    #address-cells = <span class="hljs-params">&lt;<span class="hljs-number">1</span>&gt;</span>;
+    #size-cells = <span class="hljs-params">&lt;<span class="hljs-number">1</span>&gt;</span>;
+
+    <span class="hljs-class">chosen </span>{
+        bootargs = <span class="hljs-string">&quot;console=ttyS0,115200&quot;</span>;
+    };</span>
+
+    <span class="hljs-class">memory@80000000 </span>{
+        device_type = <span class="hljs-string">&quot;memory&quot;</span>;
+        reg = <span class="hljs-params">&lt;<span class="hljs-number">0x80000000</span> <span class="hljs-number">0x10000000</span>&gt;</span>;
+    };
+
+    <span class="hljs-class">led </span>{
+        compatible = <span class="hljs-string">&quot;gpio-leds&quot;</span>;
+        <span class="hljs-class">led0 </span>{
+            label = <span class="hljs-string">&quot;status&quot;</span>;
+            gpios = <span class="hljs-params">&lt;<span class="hljs-variable">&amp;gpio0</span> <span class="hljs-number">5</span> GPIO_ACTIVE_HIGH&gt;</span>;
+            linux,default-trigger = <span class="hljs-string">&quot;heartbeat&quot;</span>;
+        };
+    };
+};
