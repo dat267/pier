@@ -658,5 +658,9 @@
   {
     "file": "sample.au3",
     "language": "autoit"
+  },
+  {
+    "file": "sample.xq",
+    "language": "xquery"
   }
 ]
