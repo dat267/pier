@@ -1,0 +1,16 @@
+<span class="hljs-keyword">Class</span> Demo.Person
+{
+<span class="hljs-keyword">Property</span> Name <span class="hljs-keyword">As</span> <span class="hljs-built_in">%String</span><span class="hljs-comment">;</span>
+
+<span class="hljs-keyword">ClassMethod</span> Greet(name <span class="hljs-keyword">As</span> <span class="hljs-built_in">%String</span>) <span class="hljs-keyword">As</span> <span class="hljs-built_in">%String</span>
+{
+    <span class="hljs-keyword">Set</span> greeting = <span class="hljs-string">&quot;Hello, &quot;</span> _ name
+    <span class="hljs-keyword">Write</span> greeting,!
+    <span class="hljs-keyword">Quit</span> greeting
+}
+
+<span class="hljs-keyword">ClassMethod</span> Main()
+{
+    <span class="hljs-keyword">Do</span> <span class="hljs-built_in">..Greet</span>(<span class="hljs-string">&quot;world&quot;</span>)
+}
+}

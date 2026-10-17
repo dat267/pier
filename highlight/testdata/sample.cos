@@ -1,0 +1,16 @@
+Class Demo.Person
+{
+Property Name As %String;
+
+ClassMethod Greet(name As %String) As %String
+{
+    Set greeting = "Hello, " _ name
+    Write greeting,!
+    Quit greeting
+}
+
+ClassMethod Main()
+{
+    Do ..Greet("world")
+}
+}

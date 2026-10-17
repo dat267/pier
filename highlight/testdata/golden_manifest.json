@@ -574,5 +574,13 @@
   {
     "file": "sample.htmlbars",
     "language": "htmlbars"
+  },
+  {
+    "file": "sample.cos",
+    "language": "cos"
+  },
+  {
+    "file": "sample.ex",
+    "language": "elixir"
   }
 ]
