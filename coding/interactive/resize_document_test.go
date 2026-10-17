@@ -87,3 +87,23 @@ func TestTranscriptResizeYieldsBetweenWarmChunks(t *testing.T) {
 		t.Fatal("resize did not publish complete, ordered new-width frame")
 	}
 }
+
+// A resize must re-wrap real Markdown at the new width. The incremental line
+// cache once reused block lines rendered at the old width, so a scrolled
+// transcript kept its old width and the renderer truncated it.
+func TestTranscriptResizeRerendersMarkdownWidth(t *testing.T) {
+	mdTheme := GetMarkdownTheme()
+	chat := &tui.Container{}
+	for i := 0; i < 5; i++ {
+		text := "# Heading\n\nA long paragraph that must wrap differently at each width, repeated for the test body. "
+		chat.AddChild(tui.NewMarkdown(text+text, 1, 0, mdTheme, nil, tui.MarkdownOptions{}))
+	}
+	document := newResizeDocument(chat, func() {})
+	document.Render(80)
+	lines := document.Render(40)
+	for _, line := range lines {
+		if tui.VisibleWidth(line) > 40 {
+			t.Fatalf("published line wider than the frame: %q (%d)", line, tui.VisibleWidth(line))
+		}
+	}
+}

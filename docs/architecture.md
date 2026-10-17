@@ -762,7 +762,11 @@ The component lexes incrementally too: `tui/markdown.go` keeps the block keys
 and final lines before the trailing open run and calls `markdown.LexFrom` for
 the tail, with `markdown.FirstUnstable` the boundary rule `Document.Update`
 shares. Only keys, lines and two offsets are retained between renders, never a
-block tree. Streaming 200 growing paragraphs costs 8.3 ms / 13.7 MB / 23k
+block tree. The block keys are width-independent, so the block-line reuse is
+guarded on the cached render's width as well: a render at a new width re-renders
+every block. Without that guard a resize reused old-width lines (the keys still
+matched), and the terminal truncated the transcript instead of re-wrapping it.
+Streaming 200 growing paragraphs costs 8.3 ms / 13.7 MB / 23k
 allocations, against 244.5 ms / 166 MB / 1.73M rebuilding the component on every
 append; the full re-lexes alone were 35.7 ms. `LexFrom` is byte-identical to
 `Lex` from every stable boundary, and chunked streaming output is checked

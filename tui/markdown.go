@@ -418,9 +418,20 @@ func (m *Markdown) Render(width int) []string {
 	// and extend the reuse through the re-lexed tail by key comparison. A block's
 	// lines were rendered with the following block as context, so the last
 	// matching block is only reused when its successor also matches.
+	//
+	// The block keys are width-independent, so a matching key does not mean the
+	// cached lines are: they were rendered at m.cacheWidth. Reusing them across a
+	// width change published old-width lines (the terminal then truncated the
+	// frame). Guard the reuse on the cached render's width; canReuseLex already
+	// requires it for the window path, but the key path is independent.
+	cacheMatchesWidth := m.cacheWidth == width
 	matched := matchBlockKeys(blocks, windowBase, total, m.cacheTokenKeys)
+	if !cacheMatchesWidth {
+		matched = windowBase
+	}
 	if windowBase > 0 && matched == windowBase {
 		// The stable-prefix invariant did not hold; redo the whole source.
+		// canReuseLex required the same width, so the recomputed match is safe.
 		windowBase, windowOffset = 0, 0
 		blocks = markdown.LexFrom(normalizedText, 0)
 		markdown.TrimPartialClosingFences(blocks)

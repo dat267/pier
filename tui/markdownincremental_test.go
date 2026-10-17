@@ -116,3 +116,28 @@ func TestMarkdownStreamingDoesNotDriftFromFreshRender(t *testing.T) {
 		}
 	}
 }
+
+// TestMarkdownResizeRerendersAtTheNewWidth pins that a width change re-wraps
+// every block. The incremental cache holds block lines rendered at the old
+// width; a render at a new width must not reuse them (it published old-width
+// lines, which the terminal then truncated).
+func TestMarkdownResizeRerendersAtTheNewWidth(t *testing.T) {
+	theme := mdTestTheme()
+	for _, widths := range [][2]int{{80, 40}, {40, 80}, {80, 33}, {33, 80}} {
+		first, second := widths[0], widths[1]
+		m := NewMarkdown(incrementalSample, 1, 0, theme, nil, MarkdownOptions{})
+		m.Render(first)
+		got := m.Render(second)
+
+		fresh := NewMarkdown(incrementalSample, 1, 0, theme, nil, MarkdownOptions{})
+		want := fresh.Render(second)
+		if strings.Join(got, "\n") != strings.Join(want, "\n") {
+			t.Fatalf("width %d -> %d:\n got %q\nwant %q", first, second, got, want)
+		}
+		for _, line := range got {
+			if VisibleWidth(line) > second {
+				t.Fatalf("width %d -> %d: line wider than the frame: %q", first, second, line)
+			}
+		}
+	}
+}
