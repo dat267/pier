@@ -1,0 +1,29 @@
+<span class="hljs-meta">#import <span class="hljs-meta-string">&lt;Foundation/Foundation.h&gt;</span></span>
+
+<span class="hljs-class"><span class="hljs-keyword">@interface</span> <span class="hljs-title">Person</span> : <span class="hljs-title">NSObject</span></span>
+<span class="hljs-keyword">@property</span> (<span class="hljs-keyword">nonatomic</span>, <span class="hljs-keyword">strong</span>) <span class="hljs-built_in">NSString</span> *name;
+- (<span class="hljs-keyword">instancetype</span>)initWithName:(<span class="hljs-built_in">NSString</span> *)name;
+- (<span class="hljs-keyword">void</span>)greet;
+<span class="hljs-keyword">@end</span>
+
+<span class="hljs-class"><span class="hljs-keyword">@implementation</span> <span class="hljs-title">Person</span></span>
+- (<span class="hljs-keyword">instancetype</span>)initWithName:(<span class="hljs-built_in">NSString</span> *)name {
+    <span class="hljs-keyword">self</span> = [<span class="hljs-keyword">super</span> init];
+    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">self</span>) {
+        _name = name;
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">self</span>;
+}
+
+- (<span class="hljs-keyword">void</span>)greet {
+    <span class="hljs-built_in">NSLog</span>(<span class="hljs-string">@&quot;Hello, %@&quot;</span>, <span class="hljs-keyword">self</span>.name);
+}
+<span class="hljs-keyword">@end</span>
+
+<span class="hljs-keyword">int</span> main() {
+    <span class="hljs-keyword">@autoreleasepool</span> {
+        Person *p = [[Person alloc] initWithName:<span class="hljs-string">@&quot;world&quot;</span>];
+        [p greet];
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}

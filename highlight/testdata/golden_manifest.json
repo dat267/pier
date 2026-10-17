@@ -594,5 +594,9 @@
   {
     "file": "sample.ino",
     "language": "arduino"
+  },
+  {
+    "file": "sample.mm",
+    "language": "objectivec"
   }
 ]
