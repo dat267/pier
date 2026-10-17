@@ -606,5 +606,9 @@
   {
     "file": "sample.mysql",
     "language": "sql_more"
+  },
+  {
+    "file": "sample.pgsql",
+    "language": "pgsql"
   }
 ]

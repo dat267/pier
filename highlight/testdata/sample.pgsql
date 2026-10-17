@@ -1,0 +1,16 @@
+-- PostgreSQL sample
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO users (name) VALUES ('alice') RETURNING id;
+
+SELECT u.id, u.name
+FROM users u
+WHERE u.name ILIKE 'a%' AND u.id IS NOT NULL
+ORDER BY u.id DESC
+LIMIT 10;
+
+SELECT EXTRACT(YEAR FROM now()), CAST(id AS TEXT) FROM users;

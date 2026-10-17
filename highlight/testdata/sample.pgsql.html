@@ -1,0 +1,16 @@
+<span class="hljs-comment">-- PostgreSQL sample</span>
+<span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">TABLE</span> users (
+    id <span class="hljs-type">SERIAL</span> <span class="hljs-keyword">PRIMARY KEY</span>,
+    <span class="hljs-type">name</span> <span class="hljs-type">TEXT</span> <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">NULL</span>,
+    created_at <span class="hljs-type">TIMESTAMP</span> <span class="hljs-type">WITH TIME ZONE</span> <span class="hljs-keyword">DEFAULT</span> <span class="hljs-built_in">CURRENT_TIMESTAMP</span>
+);
+
+<span class="hljs-keyword">INSERT</span> <span class="hljs-keyword">INTO</span> users (<span class="hljs-type">name</span>) <span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;alice&#x27;</span>) <span class="hljs-keyword">RETURNING</span> id;
+
+<span class="hljs-keyword">SELECT</span> u.id, u.name
+<span class="hljs-keyword">FROM</span> users u
+<span class="hljs-keyword">WHERE</span> u.name <span class="hljs-keyword">ILIKE</span> <span class="hljs-string">&#x27;a%&#x27;</span> <span class="hljs-keyword">AND</span> u.id <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">NULL</span>
+<span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span> u.id <span class="hljs-keyword">DESC</span>
+<span class="hljs-keyword">LIMIT</span> <span class="hljs-number">10</span>;
+
+<span class="hljs-keyword">SELECT</span> EXTRACT(<span class="hljs-type">YEAR</span> <span class="hljs-keyword">FROM</span> now()), CAST(id <span class="hljs-keyword">AS</span> <span class="hljs-type">TEXT</span>) <span class="hljs-keyword">FROM</span> users;
