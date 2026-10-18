@@ -232,7 +232,7 @@ type Container struct {
 	Children []Component
 
 	// mouseLayout is the child hit-test layout from the last render. Render is
-	// loop-owned (D146), so it needs no lock.
+	// loop-owned, so it needs no lock.
 	mouseLayout      []mouseChild
 	mouseLayoutWidth int
 

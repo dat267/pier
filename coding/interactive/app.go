@@ -26,9 +26,6 @@ import (
 // Divergences:
 //   D131: process-level effects and resource-loader/extension collaborators are
 //   injected seams.
-//   D132: branch summarization is now tracked as compaction (IsCompacting) and
-//   can be aborted (AbortBranchSummary), mirroring upstream's
-//   _branchSummaryAbortController.
 //   D133: the app's transcript session adapter returns no extension tool
 //   renderers (D41); built-in tools render through the fallback renderer.
 //   D134: the app takes a pre-booted session/settings/runtime (main.ts builds
@@ -923,7 +920,7 @@ func (a *App) lifecycleCheckShutdown() { a.lifecycle.CheckShutdownRequested() }
 
 // newLoopTui creates a renderer wired to the UI loop: terminal input and
 // resize notifications are delivered as channel messages instead of being
-// dispatched inline (stage 3). With a D147 raw-input terminal the handler
+// dispatched inline (stage 3). With a raw-input terminal the handler
 // receives RAW stdin chunks; the loop reassembles them through FeedInput on
 // the loop goroutine.
 func (a *App) newLoopTui(options InteractiveTuiOptions) tui.TUI {

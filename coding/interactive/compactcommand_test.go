@@ -14,7 +14,7 @@ import (
 //
 // The command is invoked before the loop starts, so its events are queued and
 // drained by the loop (stage 1: producers only enqueue). Running the command
-// while the loop applies events would exercise the D136-class input race that
+// while the loop applies events would exercise the input race that
 // stage 3 removes, not this behaviour.
 func TestCompactCommandReportsErrorAndClearsIndicator(t *testing.T) {
 	app, cleanup := newTestApp(t)

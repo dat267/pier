@@ -117,7 +117,7 @@ func (r *RetryStatusIndicator) Dispose() {
 // NewCompactionStatusIndicator creates the compaction indicator. colorFn, when
 // set, colors the spinner and message (the editor border color when embedded).
 //
-// D173 is closed: labels and cancel hints already match v1.2.0
+// Labels and cancel hints already match v1.2.0
 // status-indicator.ts CompactionStatusIndicator.
 func NewCompactionStatusIndicator(host tui.RenderRequester, reason string, colorFn func(string) string) *StatusIndicator {
 	// Upstream labels the manual, threshold and overflow reasons differently.

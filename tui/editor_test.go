@@ -242,7 +242,7 @@ func TestEditorCleanLargePasteDoesNotCopyFilteredText(t *testing.T) {
 	}
 }
 
-// TestEditorSubmitReentrancy guards D136: the submit handler runs outside the
+// TestEditorSubmitReentrancy: the submit handler runs outside the
 // editor lock, so it may call back into the editor without deadlocking.
 func TestEditorSubmitReentrancy(t *testing.T) {
 	editor := NewEditor(&editorHost{rows: 10}, editorTestTheme(), EditorOptions{})

@@ -142,7 +142,7 @@ func TestStdinBufferPartialSequences(t *testing.T) {
 	}
 
 	// Incomplete sequences flush after the timeout: the consumer checks
-	// PendingTimeout and calls FlushExpired once it passes (D147 — no
+	// PendingTimeout and calls FlushExpired once it passes (no
 	// internal timer).
 	buffer.Clear()
 	resetEmitted()
@@ -161,7 +161,7 @@ func TestStdinBufferPartialSequences(t *testing.T) {
 
 func TestStdinBufferLoneEscape(t *testing.T) {
 	// A lone ESC waits for the escape timeout, not the sequence timeout: the
-	// pending deadline uses EscapeTimeout, and FlushExpired honors it (D147).
+	// pending deadline uses EscapeTimeout, and FlushExpired honors it.
 	buffer, emitted, resetEmitted := collectBuffer(StdinBufferOptions{Timeout: 200, EscapeTimeout: 10})
 	buffer.ProcessString("\x1b")
 	if got := emitted(); len(got) != 0 {
@@ -568,7 +568,7 @@ func TestKittyProtocolGlobals(t *testing.T) {
 	}
 }
 
-// TestStdinBufferCallbackReentrancy guards D139: OnData runs outside the buffer
+// TestStdinBufferCallbackReentrancy: OnData runs outside the buffer
 // lock, so a handler that destroys the buffer (the shutdown path) must not
 // deadlock.
 func TestStdinBufferCallbackReentrancy(t *testing.T) {

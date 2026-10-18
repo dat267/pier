@@ -21,7 +21,7 @@ func newFlashTestScreen(t *testing.T) *AltScreen {
 //
 // Upstream gives each flash its own setTimeout whose callback removes the entry
 // and calls requestRender(), so a flash lives exactly its duration. The port has
-// no internal timer (D146): the hide is a deadline the consumer's animation walk
+// no internal timer: the hide is a deadline the consumer's animation walk
 // has to wake on. But the flash container is a field composited over the screen
 // rather than a child in the tree, so the walk cannot reach it, and AltScreen's
 // own AnimationFrame considered only the selection drag. Nothing asked for a

@@ -572,7 +572,7 @@ func newTestSessionManager(t *testing.T) *SessionManager {
 
 // TestNavigateTreeAbortBranchSummary covers the branch-summary abort
 // controller: navigation reports IsCompacting and AbortBranchSummary cancels
-// the in-flight summary (D132).
+// the in-flight summary.
 func TestNavigateTreeAbortBranchSummary(t *testing.T) {
 	manager := sessionWithBranch(t)
 	entries := manager.GetEntries()

@@ -301,7 +301,7 @@ func (c *ModelSelectorComponent) Dispose() {
 }
 
 // disposeLocked stops the background refresh for callers that already hold the
-// state mutex (the input handler; D137).
+// state mutex (the input handler).
 func (c *ModelSelectorComponent) dispose() {
 	if c.closed {
 		return
@@ -547,7 +547,7 @@ func (c *ModelSelectorComponent) HandleInput(data string) {
 		c.filterModels(c.searchInput.Value())
 	}
 
-	// Invoke callbacks outside the state mutex (D137): they mutate the session
+	// Invoke callbacks outside the state mutex: they mutate the session
 	// and request renders, which can otherwise invert with the renderer lock.
 	if selectModel != nil && c.onSelect != nil {
 		c.onSelect(selectModel)

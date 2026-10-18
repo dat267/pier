@@ -21,7 +21,7 @@ import (
 // getMarkdownThemeWithSettings, updateAvailableProviderCount,
 // maybeWarnAboutAnthropicSubscriptionAuth).
 //
-// Divergences: the terminal/process collaborators are injected (D123); the
+// Divergences: the terminal/process collaborators are injected; the
 // extension/resource seams stay out of scope (D41).
 
 // StartupSession is the session surface the startup helpers need.

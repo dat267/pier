@@ -7,8 +7,8 @@ import (
 )
 
 // RunStartupScreenLoop drives a startup screen to completion: terminal input and
-// paints share this goroutine, replacing the renderer's internal render timer
-// (D146). The caller's settled callback ends the loop; the UI is stopped here.
+// paints share this goroutine, replacing the renderer's internal render timer.
+// The caller's settled callback ends the loop; the UI is stopped here.
 // SelectSession and ShowStartupSelector both run their screen this way.
 func RunStartupScreenLoop(ui *tui.MainScreen, terminal tui.Terminal, settled func() bool) {
 	rawTerminal, isRaw := terminal.(tui.RawInputTerminal)

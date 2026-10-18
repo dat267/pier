@@ -179,7 +179,7 @@ func run(appName string, args *coding.Args) error {
 	ctx := context.Background()
 	applyOfflineMode(args)
 	// v1.2.0 main.ts resolveAppMode selects headless mode for either non-TTY
-	// stream, as well as explicit -p/--mode json (D162 closed).
+	// stream, as well as explicit -p/--mode json.
 	printMode := resolvePrintMode(args, term.IsTerminal(int(os.Stdin.Fd())), term.IsTerminal(int(os.Stdout.Fd())))
 	rpcMode := args.Mode == coding.CLIModeRPC
 	headlessMode := printMode || rpcMode

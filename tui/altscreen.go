@@ -373,7 +373,7 @@ func (s *AltScreen) CopyActiveSelectionToClipboard() bool {
 // replace the transcript calls it, because the selection coordinates point into the
 // transcript that is going away (upstream #9311).
 //
-// Owner-loop only, like every other UI mutation here (D146).
+// Owner-loop only, like every other UI mutation here.
 func (s *AltScreen) ResetTextSelection() {
 	s.clearTextSelectionLocked()
 	s.lastClick = nil
@@ -1692,7 +1692,7 @@ const selectionAutoScrollIntervalMS = 50
 func (s *AltScreen) AnimationFrame(now time.Time) (bool, time.Duration) {
 	// A flash is composited over the screen rather than parented to it, so the
 	// tree walk never reaches its container: upstream gave each flash its own
-	// setTimeout, and D146 hands the deadline to the consumer's walk instead, so
+	// setTimeout, and the deadline is handed to the consumer's walk instead, so
 	// the screen has to forward it or nothing wakes at the expiry and the flash
 	// stays up until some unrelated repaint.
 	want, delay := s.flashes.AnimationFrame(now)

@@ -218,7 +218,7 @@ func waitForConditionWithin(t *testing.T, condition func() bool, timeout time.Du
 
 // renderAppChat renders the chat without racing the app's loop: when the loop
 // is running it executes the render on the loop goroutine (the containers are
-// loop-owned since D146 removed the container lock); otherwise nothing else
+// loop-owned since the container lock was removed); otherwise nothing else
 // paints and the test renders directly.
 func renderAppChat(app *App) string {
 	done := make(chan []string, 1)

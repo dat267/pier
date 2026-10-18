@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// TestTerminalInputHandlerNotHeldUnderLock guards D138 (and its D147 form):
+// TestTerminalInputHandlerNotHeldUnderLock:
 // the terminal must not hold a lock while delivering input to the handler,
 // because the handler (the renderer) may write back to the terminal. The
 // legacy delivery path runs the handler with no terminal lock held; the raw
@@ -44,7 +44,7 @@ func TestTerminalInputHandlerNotHeldUnderLock(t *testing.T) {
 	}
 }
 
-// TestRawTerminalFeedInput covers the D147 raw-input contract: raw chunks
+// TestRawTerminalFeedInput covers the raw-input contract: raw chunks
 // reassemble into sequences on the consumer goroutine, the flush deadline is
 // reported and honored, and negotiation responses are filtered out.
 func TestRawTerminalFeedInput(t *testing.T) {

@@ -240,7 +240,7 @@ func (s *AgentSession) AbortCompaction() {
 }
 
 // AbortBranchSummary cancels an in-flight branch summarization (upstream
-// abortBranchSummary; D132).
+// abortBranchSummary).
 func (s *AgentSession) AbortBranchSummary() {
 	s.control.stateMu.Lock()
 	cancel := s.control.branchSummaryCancel

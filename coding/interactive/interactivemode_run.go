@@ -131,7 +131,7 @@ type RunWiring struct {
 	// transcript materializer uses it to attach deferred chunks between
 	// paints.
 	OnBeat func()
-	// RawInputs carries RAW stdin chunks from a D147 raw-input terminal;
+	// RawInputs carries RAW stdin chunks from a raw-input terminal;
 	// the loop reassembles them through RawTerminal.FeedInput on the loop
 	// goroutine. Nil for sequence-mode terminals (fakes, library use).
 	RawInputs <-chan string

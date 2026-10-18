@@ -202,7 +202,7 @@ func TestEnabledIDHelpers(t *testing.T) {
 	}
 }
 
-// TestModelSelectorSelectNoDeadlock guards D137: selecting a model must not
+// TestModelSelectorSelectNoDeadlock: selecting a model must not
 // deadlock on the component's state mutex (Dispose re-locks) and the onSelect
 // callback runs outside the lock.
 func TestModelSelectorSelectNoDeadlock(t *testing.T) {

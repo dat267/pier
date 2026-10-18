@@ -32,7 +32,7 @@ func TestRequestRenderCoalescesIntoTicks(t *testing.T) {
 	}
 }
 
-// TestRequestRenderNeverArmsATimer pins the D146 contract: there is no
+// TestRequestRenderNeverArmsATimer pins the contract: there is no
 // internal render timer — requests only coalesce onto the tick channel, and
 // the owner paints.
 func TestRequestRenderNeverArmsATimer(t *testing.T) {

@@ -340,7 +340,7 @@ func (w *ModelWiring) ShowModelsSelector(ctx context.Context) {
 			}
 			snapshot := w.Session.ModelRuntime().GetAvailableSnapshot()
 			// Mutations of the selector and the captured state are marshaled
-			// onto the UI side: serialized with renders and input (D136 class).
+			// onto the UI side: serialized with renders and input.
 			w.UI.Post(func() {
 				if disposed {
 					return

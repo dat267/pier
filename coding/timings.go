@@ -9,7 +9,7 @@ import (
 )
 
 // Port of core/timings.ts: central startup timing instrumentation, enabled with
-// PI_TIMING=1, captured once at initialization like upstream (D30 closed).
+// PI_TIMING=1, captured once at initialization like upstream.
 // SetTimingsEnabled remains a test override. `cmd` marks boot phases with Time
 // and prints the table before entering the run loop, as upstream's main.ts does.
 

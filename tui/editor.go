@@ -101,7 +101,7 @@ type Editor struct {
 	autocompletePrefix     string
 	autocompleteMaxVisible int
 
-	// Autocomplete request state (owner loop only; D71): startToken invalidates
+	// Autocomplete request state (owner loop only): startToken invalidates
 	// scheduled requests, requestID drops stale results, cancel aborts the
 	// in-flight provider call, debounce holds the pending timer.
 	autocompleteStartToken int
@@ -134,7 +134,7 @@ type Editor struct {
 	OnSubmit func(text string)
 	OnChange func(text string)
 	// pendingSubmit defers OnSubmit until after the editor lock is released
-	// (D136): the submit handler calls back into the editor (SetText,
+	// the submit handler calls back into the editor (SetText,
 	// AddToHistory), which would deadlock a non-reentrant mutex.
 	pendingSubmit *string
 	// TopBorder overrides the top border rendering (see renderTopBorder).
@@ -552,7 +552,7 @@ func (e *Editor) HandleInput(data string) {
 	e.handleInputLocked(data)
 	pending := e.pendingSubmit
 	e.pendingSubmit = nil
-	// Invoke the submit handler outside the lock (D136).
+	// Invoke the submit handler outside the lock.
 	if pending != nil && e.OnSubmit != nil {
 		e.OnSubmit(*pending)
 	}

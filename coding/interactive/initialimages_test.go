@@ -13,7 +13,7 @@ import (
 // buildInitialMessage puts an image's content on the initial message, so it rides
 // the first prompt — and only that one: a later initial message is its own prompt
 // with no images. Before this, the images were dropped with a warning because the
-// interactive mode had no path to attach them (D153).
+// interactive mode had no path to attach them.
 func TestInitialImagesRideTheFirstPrompt(t *testing.T) {
 	wiring, _ := newRunTestWiring(t)
 	images := []ai.ImageContent{{Data: "AAAA", MimeType: "image/png"}}

@@ -207,7 +207,7 @@ func loadModule(dir string) (*module, error) {
 			roots[fn] = rel
 		}
 	}
-	// Closures stored into wiring-struct func fields are loop code by the D136
+	// Closures stored into wiring-struct func fields are loop code by the same
 	// marshaling discipline: the loop or loop-driven UI invokes them directly
 	// (OnBeat, settings callbacks, key handlers). Their bodies are rooted here
 	// because func-value calls are not followed during traversal.

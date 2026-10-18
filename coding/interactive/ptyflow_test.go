@@ -1,6 +1,6 @@
 package interactive
 
-// Functional replacements for the PTY flow tests removed with the D136-D139
+// Functional replacements for the PTY flow tests removed with the
 // watchdog suite (see ptywatch_test.go's header and docs/locks.md): driving the
 // real binary through a pty proved the mutex-deadlock class cannot happen, but
 // the stage-4 refactor retired every UI mutex, so the class is structurally
@@ -84,7 +84,7 @@ func waitForPromptRecorded(t *testing.T, app *App, prompt string) {
 	waitForConditionWithin(t, func() bool { return sessionHasUserMessage(app, prompt) }, time.Millisecond)
 }
 
-// chatText renders the chat on the loop goroutine, where the containers live (D146).
+// chatText renders the chat on the loop goroutine, where the containers live.
 func chatText(app *App) string {
 	return postValue(app, func() string {
 		return coding.StripAnsi(strings.Join(app.chat.Render(120), "\n"))

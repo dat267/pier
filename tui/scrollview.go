@@ -55,7 +55,7 @@ type ScrollView struct {
 	scrollbarActive           bool
 	// scrollbarHideDeadline drives the transient scrollbar's lazy hide: the
 	// consumer's animation walk wakes on it and the next Render hides the
-	// scrollbar (D146: no internal timer, no mutex — loop-owned state).
+	// scrollbar (no internal timer, no mutex — loop-owned state).
 	scrollbarHideDeadline time.Time
 }
 
@@ -379,7 +379,7 @@ func (s *ScrollView) childComponents() []Component {
 // Render renders the child at the content width, padding a trailing column
 // when the scrollbar takes one.
 // Render renders the scrolled view, lazily expiring the transient scrollbar's
-// hide deadline (D146: the deadline is driven by the consumer's animation
+// hide deadline (the deadline is driven by the consumer's animation
 // walk; the next render after it passes hides the scrollbar).
 func (s *ScrollView) Render(width int) []string {
 	if !s.scrollbarHideDeadline.IsZero() && !time.Now().Before(s.scrollbarHideDeadline) {

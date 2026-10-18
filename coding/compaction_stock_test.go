@@ -9,7 +9,7 @@ import (
 
 // TestCompactUsesStockSummarizer follows v1.2.0
 // core/compaction/compaction.ts compact: the built-in compaction extension is
-// not run (D142 closed), so the stock prompt is sent and the caller's auth
+// not run, so the stock prompt is sent and the caller's auth
 // headers reach the summarizer request.
 func TestCompactUsesStockSummarizer(t *testing.T) {
 	var prompt string

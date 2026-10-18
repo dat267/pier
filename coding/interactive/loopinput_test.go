@@ -34,7 +34,7 @@ func startLoopApp(t *testing.T, app *App) func() {
 }
 
 // editorText snapshots the editor text on the app's loop goroutine (the editor
-// is loop-owned since D146 removed the editor lock). Falls back to a direct
+// is loop-owned since the editor lock was removed). Falls back to a direct
 // read when no loop is running.
 func editorText(app *App) string {
 	done := make(chan string, 1)
@@ -109,7 +109,7 @@ func TestLoopDispatchesSignals(t *testing.T) {
 	waitForConditionWithin(t, func() bool { return handled.Load() == 1 }, 6*time.Second)
 }
 
-// TestLoopModeTakesNoRenderLock encodes the D146 invariant: the renderer has
+// TestLoopModeTakesNoRenderLock encodes the loop invariant: the renderer has
 // no timer-mode render lock at all — input dispatch and painting share the
 // owner goroutine, and the renderer arms no internal timers.
 func TestLoopModeTakesNoRenderLock(t *testing.T) {
@@ -119,10 +119,10 @@ func TestLoopModeTakesNoRenderLock(t *testing.T) {
 	}
 	text := string(source)
 	if strings.Contains(text, "renderMu") {
-		t.Fatal("renderMu must be gone (D146): input dispatch and painting share the owner goroutine")
+		t.Fatal("renderMu must be gone: input dispatch and painting share the owner goroutine")
 	}
 	if strings.Contains(text, "time.AfterFunc") {
-		t.Fatal("the renderer must not arm internal timers (D146)")
+		t.Fatal("the renderer must not arm internal timers")
 	}
 }
 
@@ -279,6 +279,6 @@ func TestCompactCommandDuringTurnDoesNotQueueBehindIt(t *testing.T) {
 	}
 
 	close(releaseTurn)
-} // TestLoopModeTakesNoRenderLock encodes the D146 invariant: the renderer has
+} // TestLoopModeTakesNoRenderLock encodes the loop invariant: the renderer has
 // no timer-mode render lock at all — input dispatch and painting share the
 // owner goroutine.

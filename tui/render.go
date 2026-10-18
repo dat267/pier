@@ -16,7 +16,7 @@ import (
 // Upstream's TuiBase declares an abstract doRender() implemented by
 // TuiMainScreen/TuiAltScreen. Go has no abstract methods, so Renderer carries a
 // DoRender hook that the concrete screen constructor sets (divergence D44).
-// Input, rendering and UI mutation share the owner goroutine (D146). There
+// Input, rendering and UI mutation share the owner goroutine. There
 // is no internal render timer; postMu protects only the off-loop callback
 // handoff, not renderer or component state.
 
@@ -130,7 +130,7 @@ type Renderer struct {
 	inputListeners         []TuiInputListener
 	// postMu guards the posted-callback queue: Post is called from off-loop
 	// goroutines (loaders, watchers) and drained by the owner's render pass
-	// (D146: queue serialization only — no UI state under the lock).
+	// (queue serialization only — no UI state under the lock).
 	postMu sync.Mutex
 	posted []func()
 	// animationTicks is when each animating component was last ticked. The
@@ -164,7 +164,7 @@ type Renderer struct {
 	loopResize func()
 
 	// renderTicks receives render requests (capacity 1, so bursts coalesce):
-	// the owner renders on its own goroutine (D146: there is no internal
+	// the owner renders on its own goroutine (there is no internal
 	// render timer — input and paints share the owner goroutine).
 	renderTicks chan struct{}
 	// renderCount counts completed paints (test seam for coalescing).
@@ -442,7 +442,7 @@ func (t *Renderer) RemoveInputListener(listener TuiInputListener) {
 }
 
 // EnableRenderTicks is retained for compatibility: every renderer is
-// tick-driven since D146 removed the internal timer (the channel is created
+// tick-driven since the internal timer was removed (the channel is created
 // at construction, so requests never race its initialization).
 func (t *Renderer) EnableRenderTicks() {}
 
@@ -482,14 +482,13 @@ func (t *Renderer) EnableLoopInput(onInput func(string), onResize func()) {
 }
 
 // RequestRender requests a paint. With a tick channel the request coalesces
-// onto it and the owner paints (D146: no internal timer, no throttling).
+// onto it and the owner paints (no internal timer, no throttling).
 func (t *Renderer) RequestRender(force bool) {
 	t.signalRender()
 }
 
 // DisableAutoRender is retained as a no-op for compatibility: rendering is
-// always owner-driven (D146 removed the internal timer the seam used to
-// disable; divergence D83).
+// always owner-driven (the internal timer the seam used to disable is gone).
 func (t *Renderer) DisableAutoRender() {}
 
 // requestRender is RequestRender for internal callers.
@@ -652,7 +651,7 @@ func (t *Renderer) HandleTerminalInput(data string) {
 
 	// Pass input to the focused component (including Ctrl+C); the component
 	// decides how to handle it. No locks are held: input and paints share the
-	// owner goroutine (D146).
+	// owner goroutine.
 	focused := t.overlays.Focused()
 	handler, ok := focused.(InputHandler)
 	if ok && focused != nil {

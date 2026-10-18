@@ -13,7 +13,7 @@ import (
 )
 
 // loopEditorText reads the editor on the loop goroutine (the editor is
-// loop-owned since D146). A read is serviced during a render pass, so a value
+// loop-owned). A read is serviced during a render pass, so a value
 // containing the keystroke means the input was dispatched and painted.
 func loopEditorText(t *testing.T, app *App) string {
 	t.Helper()
@@ -148,7 +148,7 @@ func (s *slowTerminal) Write(data string) {
 }
 
 // onLoop runs fn on the loop goroutine and waits for it: the renderer and the
-// display options are loop-owned (D146).
+// display options are loop-owned.
 func onLoop(t *testing.T, app *App, fn func()) {
 	t.Helper()
 	done := make(chan struct{})

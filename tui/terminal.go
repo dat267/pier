@@ -125,7 +125,7 @@ func ResolveEscapeTimeoutMs(env func(string) string) int {
 // inputHandlerFunc wraps the input handler for the atomic pointer.
 type inputHandlerFunc func(data string)
 
-// RawInputTerminal is implemented by terminals that support the D147
+// RawInputTerminal is implemented by terminals that support the
 // raw-input mode: the consumer (the UI loop) feeds raw stdin chunks through
 // FeedInput and drives force-flushes via the deadline accessors, instead of
 // the terminal reassembling sequences on its own reader goroutine.
@@ -145,7 +145,7 @@ type RawInputTerminal interface {
 
 // ProcessTerminal is the Terminal implementation over os.Stdin/os.Stdout.
 //
-// D147: the interactive consumer (the UI loop) owns input — it feeds raw
+// The interactive consumer (the UI loop) owns input — it feeds raw
 // bytes through FeedInput and drives flushing via NextInputFlushDeadline /
 // FlushPendingInput, so the stdin buffer and the keyboard-protocol
 // negotiation state are loop-owned and lock-free. The protocol flags are
@@ -343,7 +343,7 @@ func (t *ProcessTerminal) readRawStdin() {
 }
 
 // setupLegacyStdinBuffer reads stdin and forwards complete sequences (the
-// pre-D147 path, kept for library consumers whose Terminal is not driven by
+// legacy path, kept for library consumers whose Terminal is not driven by
 // a UI loop).
 func (t *ProcessTerminal) setupLegacyStdinBuffer() {
 	t.stdinBuffer = NewStdinBuffer(StdinBufferOptions{EscapeTimeout: ResolveEscapeTimeoutMs(os.Getenv)})
@@ -587,7 +587,7 @@ func (t *ProcessTerminal) takeKeyboardProtocolNegotiationBuffer() string {
 }
 
 // deliverInput normalizes a sequence and hands it to the input handler without
-// holding the terminal lock (D138).
+// holding the terminal lock.
 func deliverInput(handler func(string), sequence string) {
 	if handler == nil || sequence == "" {
 		return

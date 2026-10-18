@@ -322,7 +322,7 @@ func GenerateBranchSummary(entries []SessionEntry, options GenerateBranchSummary
 	response, err := CompleteSummarization(options.Model, transcript, requestOptions, options.StreamFn, options.Retry, options.Callbacks)
 	if err != nil {
 		// A cancelled context is an abort, not a failure (upstream's abort signal
-		// surfaces as result.aborted; D132).
+		// surfaces as result.aborted).
 		if options.Ctx != nil && options.Ctx.Err() != nil {
 			return &BranchSummaryResult{Aborted: true}, nil
 		}
@@ -397,7 +397,7 @@ func (s *AgentSession) NavigateTree(ctx context.Context, targetID string, option
 	}
 
 	// Set up the branch-summary abort controller (upstream sets it for the whole
-	// navigation, so isCompacting reports the navigation as busy; D132).
+	// navigation, so isCompacting reports the navigation as busy).
 	summaryCtx, cancel := context.WithCancel(ctx)
 	s.control.stateMu.Lock()
 	s.control.branchSummaryCancel = cancel

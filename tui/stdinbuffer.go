@@ -233,7 +233,7 @@ func parseUnmodifiedKittyPrintableCodepoint(sequence string) (int, bool) {
 // StdinBuffer buffers stdin input and emits complete sequences. Upstream
 // extends EventEmitter; Go takes callbacks (divergence D51).
 //
-// D147: the buffer is owned by the terminal's input consumer (the UI loop in
+// The buffer is owned by the terminal's input consumer (the UI loop in
 // interactive mode), which drives flushing through the deadline accessors —
 // no mutex and no internal timer. PendingTimeout reports when an incomplete
 // sequence must be force-flushed; FlushExpired flushes it once the deadline

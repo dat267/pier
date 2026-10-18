@@ -14,7 +14,7 @@ import (
 
 // Port of core/compaction/compaction.ts and compaction/utils.ts: context
 // compaction for long sessions (pure functions; the session manager does I/O).
-// The user's compaction extension is not built in (D142 closed); extension
+// The user's compaction extension is not built in; extension
 // mechanics stay out of scope (D41).
 
 // CompactionSettings tune automatic compaction.
@@ -957,8 +957,8 @@ type CompactionOptions struct {
 }
 
 // Compact generates summaries for compaction using prepared data
-// (port of compact). The user's compaction extension is not built in
-// (D142 closed): the stock summarizer is the only path, like upstream with
+// (port of compact). The user's compaction extension is not built in:
+// the stock summarizer is the only path, like upstream with
 // extension mechanics out of scope (D41).
 func Compact(preparation *CompactionPreparation, options CompactionOptions) (*CompactionResult, error) {
 	var summary string

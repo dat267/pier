@@ -68,7 +68,7 @@ func SelectSession(options SelectSessionOptions) string {
 	ui.AddChild(selector)
 	ui.SetFocus(selector.GetSessionList())
 
-	// D146: the picker is driven by its own loop, shared with the startup prompts
+	// The picker is driven by its own loop, shared with the startup prompts
 	// — terminal input and paints on this goroutine instead of the renderer's
 	// internal render timer.
 	RunStartupScreenLoop(ui, terminal, func() bool { return settled })
