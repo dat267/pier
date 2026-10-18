@@ -150,6 +150,16 @@ func projectWindow(path []*SessionEntry, cache *messageCache) projectedWindow {
 	return window
 }
 
+// ProjectedEntries returns the projection's per-entry contributions (upstream
+// buildSessionProjection().entries): what each kept entry adds to the context
+// after context edits.
+func (m *SessionManager) ProjectedEntries() []ProjectedEntry {
+	m.mu.Lock()
+	path := m.branchPointersLocked("")
+	m.mu.Unlock()
+	return projectWindow(path, &m.messages).Entries
+}
+
 // ProjectedContextEstimate estimates the tokens the current projection carries
 // (port of estimateProjectedContextTokens). Callers use it instead of raw
 // message sizes when a context edit may have changed what the model sees.

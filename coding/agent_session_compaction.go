@@ -54,9 +54,58 @@ func (s *AgentSession) CheckCompaction(ctx context.Context, assistant *ai.Assist
 		}
 	}
 
-	// Cases 1 and 2: context overflow (or a recoverable length stop).
-	recoverableLength := sameModel && ai.IsRecoverableLength(assistant, maxTokensOf(model))
-	contextOverflow := sameModel && ai.IsContextOverflow(assistant, contextWindow)
+	// Cases 1 and 2: context overflow (or a recoverable length stop). Only an
+	// assistant that is still part of the projection can recover, and its usage
+	// only describes the current context when no edit came after it; an explicit
+	// overflow error additionally needs the attempt to be retained, not omitted
+	// or compacted away (upstream assistantIsProjected /
+	// assistantUsageMatchesProjection / assistantRetainedForExplicitRecovery).
+	assistantID := s.entryIDForMessage(assistant)
+	assistantIsProjected := assistantID == ""
+	for _, entry := range s.Sessions.ProjectedEntries() {
+		if assistantID == "" || entry.Source.ID != assistantID {
+			continue
+		}
+		for _, message := range entry.Messages {
+			if ai.RoleOf(message) == ai.RoleAssistant {
+				assistantIsProjected = true
+			}
+		}
+	}
+
+	hasPostAssistantEdit := false
+	compactedAfterAssistant := false
+	assistantOmitted := false
+	if assistantID != "" {
+		branch := s.Sessions.GetBranch("")
+		assistantIndex := -1
+		for index := range branch {
+			if branch[index].ID == assistantID {
+				assistantIndex = index
+				break
+			}
+		}
+		if assistantIndex >= 0 {
+			for _, entry := range branch[assistantIndex+1:] {
+				if entry.Type == "compaction" {
+					compactedAfterAssistant = true
+				}
+				if entry.Type == "context_edit" {
+					hasPostAssistantEdit = true
+					if entry.TargetID == assistantID {
+						assistantOmitted = contextEditIsOmission(entry.Replacement)
+					}
+				}
+			}
+		}
+	}
+	assistantRetained := assistantID == "" || (!compactedAfterAssistant && !assistantOmitted)
+	assistantUsageMatchesProjection := assistantIsProjected && !hasPostAssistantEdit
+	explicitOverflow := assistant.StopReason == ai.StopError && ai.IsContextOverflow(assistant, 0)
+	contextOverflow := sameModel &&
+		((explicitOverflow && assistantRetained) ||
+			(assistantUsageMatchesProjection && ai.IsContextOverflow(assistant, contextWindow)))
+	recoverableLength := sameModel && assistantIsProjected && ai.IsRecoverableLength(assistant, maxTokensOf(model))
 	if contextOverflow || recoverableLength {
 		willRetry := assistant.StopReason != ai.StopStop
 
@@ -123,6 +172,15 @@ func (s *AgentSession) CheckCompaction(ctx context.Context, assistant *ai.Assist
 		return s.RunAutoCompaction(ctx, CompactionThreshold, false)
 	}
 	return false, nil
+}
+
+// entryIDForMessage returns the session entry id recorded for a message, or ""
+// when the message was not appended through the event stream (upstream
+// _findPersistedMessageEntryId's mapped case).
+func (s *AgentSession) entryIDForMessage(message ai.Message) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.entryIDsByMessage[message]
 }
 
 // omitRecoveryAttempt persists a context_edit that excludes the failed response

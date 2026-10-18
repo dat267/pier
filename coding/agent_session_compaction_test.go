@@ -550,3 +550,67 @@ func TestCheckCompactionProjectsContextEdits(t *testing.T) {
 		t.Fatal("stale pre-edit usage triggered a compaction")
 	}
 }
+
+// TestCheckCompactionIgnoresOmittedAssistant covers the projection guards on
+// the overflow cases: an assistant a context edit removed from the projection
+// cannot trigger recovery again, and silent overflow needs usage that still
+// matches the projection (upstream assistantIsProjected /
+// assistantUsageMatchesProjection).
+func TestCheckCompactionIgnoresOmittedAssistant(t *testing.T) {
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 1000, MaxTokens: 100}
+	session := compactionTestSession(t, model, unreachableStreamFn, smallCompactionSettings())
+	seedBranch(t, session)
+
+	failed := &ai.AssistantMessage{
+		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m", Timestamp: timeNowMS(),
+		StopReason: ai.StopError, ErrorMessage: strPtr("prompt is too long: 2000 tokens > 1000 maximum"),
+	}
+	failedID := session.Sessions.AppendMessage(failed)
+	session.entryIDsByMessage = map[ai.Message]string{ai.Message(failed): failedID}
+	if _, err := session.Sessions.AppendContextEdit(failedID, json.RawMessage("null")); err != nil {
+		t.Fatal(err)
+	}
+	session.Agent.SetMessages(session.Sessions.Projection().Messages)
+
+	compacted, err := session.CheckCompaction(ctxpkg.Background(), failed, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if compacted {
+		t.Fatal("an omitted assistant must not trigger overflow recovery")
+	}
+	if session.Sessions.LatestCompaction() != nil {
+		t.Fatal("an omitted assistant must not trigger compaction")
+	}
+}
+
+// TestCheckCompactionRequiresProjectedUsage covers silent overflow: a
+// successful response whose usage exceeds the window only counts when no
+// context edit came after it, because the edit changed what the model saw.
+func TestCheckCompactionRequiresProjectedUsage(t *testing.T) {
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 1000, MaxTokens: 100}
+	session := compactionTestSession(t, model, unreachableStreamFn, smallCompactionSettings())
+	seedBranch(t, session)
+
+	entries := session.Sessions.GetEntries()
+	usageAssistant := &ai.AssistantMessage{
+		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m", Timestamp: timeNowMS(),
+		StopReason: ai.StopStop, Usage: ai.Usage{Input: 2000, TotalTokens: 2000},
+	}
+	// The response is persisted, then a context edit lands after it.
+	usageID := session.Sessions.AppendMessage(usageAssistant)
+	session.entryIDsByMessage = map[ai.Message]string{ai.Message(usageAssistant): usageID}
+	if _, err := session.Sessions.AppendContextEdit(entries[0].ID, json.RawMessage("null")); err != nil {
+		t.Fatal(err)
+	}
+	if !ai.IsContextOverflow(usageAssistant, model.ContextWindow) {
+		t.Fatal("fixture must be a silent-overflow response")
+	}
+	compacted, err := session.CheckCompaction(ctxpkg.Background(), usageAssistant, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if compacted || session.Sessions.LatestCompaction() != nil {
+		t.Fatal("usage recorded before a context edit must not trigger silent-overflow compaction")
+	}
+}
