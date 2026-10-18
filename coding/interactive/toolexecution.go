@@ -342,7 +342,8 @@ func (c *ToolExecutionComponent) ChangedFrom() (int, bool) { return c.frames.Cha
 // ticks. It is reported at the tool level: the animation walk finds the tool as
 // a direct chat child, so it does not depend on descending through the result
 // wrappers (content box, mouse region) to reach the elapsed component. A shell
-// tool and every other running tool use the upstream 1s tick (D194 closed).
+// tool ticks at shellElapsedTick (100ms, D238); every other running tool keeps
+// the upstream 1s tick.
 func (c *ToolExecutionComponent) AnimationFrame(now time.Time) (bool, time.Duration) {
 	if !c.executionStarted || !c.isPartial {
 		return false, 0

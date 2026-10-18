@@ -2093,3 +2093,15 @@ transcript is self-contained and the restore resolves the recorded loadout. A
 session already in the broken state (its transcript never declared the
 built-ins) stays broken; resuming it with an explicit `--tools` list takes the
 non-default-tools path, skips the restore, and recovers it.
+## D238
+
+The shell elapsed label ticks at 100ms instead of upstream's 1000ms.
+`core/tools/render-utils.ts` arms `setInterval(() => context.invalidate(), 1000)`
+while a shell call runs, but its label formats with `toFixed(1)` (tenths), so
+the running clock is displayed with a resolution its redraw period cannot show:
+`Elapsed 2.0s` jumps to `3.0s` a whole second at a time. The port's
+`shellElapsedTick` is 100ms, so the display moves by .1s and the tenths
+resolution is real. Non-shell running tools keep the upstream 1s tick, and the
+final `Took` value is unaffected (it reads the recorded duration). Supersedes
+the D194 tick-frequency match for the shell label only; the cost is ten small
+differential paints a second while a shell command runs.

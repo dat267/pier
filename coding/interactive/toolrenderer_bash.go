@@ -449,9 +449,11 @@ type shellCallState struct {
 	preview bashResultState
 }
 
-// shellElapsedTick matches v1.2.0 core/tools/render-utils.ts's 1000ms redraw
-// while preserving the tenths display resolution (D194 closed).
-const shellElapsedTick = time.Second
+// shellElapsedTick departs from v1.2.0 core/tools/render-utils.ts's 1000ms
+// redraw (D238): the label's display resolution is tenths (formatDuration's
+// toFixed(1)), so the port ticks at 100ms and the running clock moves by .1s
+// instead of jumping a whole second at a time.
+const shellElapsedTick = 100 * time.Millisecond
 
 // shellElapsedComponent renders the running/final duration. The value is
 // computed at render time (so a frame shows the current elapsed time), and

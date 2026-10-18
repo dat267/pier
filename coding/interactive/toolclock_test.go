@@ -52,3 +52,20 @@ func TestPendingClockReusesVersionedFrame(t *testing.T) {
 		t.Fatal("skipping parent missed in-place clock update")
 	}
 }
+
+// The elapsed label displays tenths (formatDuration's toFixed(1)), so the tick
+// must be 100ms for the display to move by .1s. Upstream redraws at 1000ms and
+// shows the same tenths resolution only once a second; the port deliberately
+// ticks faster (D238).
+func TestShellElapsedTickAdvancesInTenths(t *testing.T) {
+	newRendererTestTheme(t)
+	if shellElapsedTick != 100*time.Millisecond {
+		t.Fatalf("shellElapsedTick = %v, want 100ms", shellElapsedTick)
+	}
+	state := &shellCallState{startedAtMS: 1}
+	elapsed := &shellElapsedComponent{state: state, theme: ActiveTheme()}
+	_, delay := elapsed.AnimationFrame(time.Now())
+	if delay != shellElapsedTick {
+		t.Fatalf("AnimationFrame delay = %v, want %v", delay, shellElapsedTick)
+	}
+}
