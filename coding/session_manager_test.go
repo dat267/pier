@@ -434,6 +434,39 @@ func TestListSessions(t *testing.T) {
 	}
 }
 
+// TestListSessionsBreaksModifiedTiesByFilenameDescending pins upstream
+// sortSessionInfos plus listAll's basename localeCompare tie-break: sessions
+// with equal millisecond activity times keep the filename-descending order
+// instead of an unstable one.
+func TestListSessionsBreaksModifiedTiesByFilenameDescending(t *testing.T) {
+	dir := t.TempDir()
+	sessions := filepath.Join(dir, "sessions")
+	os.MkdirAll(sessions, 0o755)
+	for _, name := range []string{"a", "b", "c"} {
+		path := filepath.Join(sessions, name+".jsonl")
+		header, _ := ai.MarshalJSON(map[string]any{
+			"type": "session", "version": 3, "id": name,
+			"timestamp": "2026-09-19T00:00:00.000Z", "cwd": dir,
+		})
+		msg := map[string]any{
+			"type": "message", "id": "e" + name, "parentId": nil,
+			"timestamp": "2026-09-19T00:00:00.000Z",
+			"message":   map[string]any{"role": "user", "content": "hi", "timestamp": int64(1000)},
+		}
+		msgLine, _ := ai.MarshalJSON(msg)
+		os.WriteFile(path, append(append(header, '\n'), msgLine...), 0o644)
+	}
+	list := ListSessions(dir, sessions)
+	if len(list) != 3 {
+		t.Fatalf("list = %d, want 3", len(list))
+	}
+	for i, want := range []string{"c", "b", "a"} {
+		if list[i].ID != want {
+			t.Fatalf("order[%d] = %q, want %q (%v)", i, list[i].ID, want, []string{list[0].ID, list[1].ID, list[2].ID})
+		}
+	}
+}
+
 func TestSessionInvalidIDRejected(t *testing.T) {
 	if err := AssertValidSessionID(""); err == nil {
 		t.Fatal("empty id must fail")

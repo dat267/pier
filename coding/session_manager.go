@@ -1010,12 +1010,7 @@ func ListSessions(cwd string, sessionDir string) []SessionInfo {
 			sessions = append(sessions, *info)
 		}
 	}
-	for i := 1; i < len(sessions); i++ {
-		for j := i; j > 0 && sessions[j].Modified.After(sessions[j-1].Modified); j-- {
-			sessions[j], sessions[j-1] = sessions[j-1], sessions[j]
-		}
-	}
-	return sessions
+	return sortSessionInfos(sessions)
 }
 
 // buildSessionInfo extracts listing metadata (port of buildSessionInfo). The
@@ -1296,7 +1291,7 @@ func ListAllSessions(sessionDir string) []SessionInfo {
 	if sessionDir != "" {
 		// Upstream listAll(customSessionDir) scans the directory without a cwd
 		// filter (listSessionsFromDir), never through list().
-		return listSessionsFromDir(sessionDir)
+		return sortSessionInfos(listSessionsFromDir(sessionDir))
 	}
 	sessionsDir := DefaultSessionsDir()
 	entries, err := os.ReadDir(sessionsDir)
@@ -1312,8 +1307,20 @@ func ListAllSessions(sessionDir string) []SessionInfo {
 		name := DecodeUTF8WithReplacement([]byte(entry.Name()))
 		sessions = append(sessions, listSessionsFromDir(filepath.Join(sessionsDir, name))...)
 	}
-	sort.Slice(sessions, func(i, j int) bool {
-		return sessions[i].Modified.After(sessions[j].Modified)
+	return sortSessionInfos(sessions)
+}
+
+// sortSessionInfos orders sessions like upstream sortSessionInfos: modified
+// time descending, and for equal millisecond timestamps the filename
+// descending (listAll's basename localeCompare tie-break, which for the
+// timestamp_uuid session names is a byte comparison).
+func sortSessionInfos(sessions []SessionInfo) []SessionInfo {
+	sort.SliceStable(sessions, func(i, j int) bool {
+		left, right := sessions[i].Modified.UnixMilli(), sessions[j].Modified.UnixMilli()
+		if left != right {
+			return left > right
+		}
+		return filepath.Base(sessions[i].Path) > filepath.Base(sessions[j].Path)
 	})
 	return sessions
 }
@@ -1336,10 +1343,7 @@ func listSessionsFromDir(dir string) []SessionInfo {
 			sessions = append(sessions, *info)
 		}
 	}
-	sort.Slice(sessions, func(i, j int) bool {
-		return sessions[i].Modified.After(sessions[j].Modified)
-	})
-	return sessions
+	return sortSessionInfos(sessions)
 }
 
 // messageListing is the listing view of one message: the role, the message
