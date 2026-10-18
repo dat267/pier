@@ -29,6 +29,7 @@ type recordedGoalMessage struct {
 
 type fakeGoalSink struct {
 	entries       []recordedGoalEntry
+	rawEntries    [][]byte
 	messages      []recordedGoalMessage
 	notifies      []string
 	active        []string
@@ -42,6 +43,7 @@ func (f *fakeGoalSink) AppendGoalEntry(entryType string, data json.RawMessage) {
 	var decoded map[string]any
 	_ = json.Unmarshal(data, &decoded)
 	f.entries = append(f.entries, recordedGoalEntry{entryType: entryType, data: decoded})
+	f.rawEntries = append(f.rawEntries, append([]byte(nil), data...))
 }
 
 func (f *fakeGoalSink) SendGoalMessage(customType string, content string, display bool, details json.RawMessage, triggerTurn bool) {
@@ -106,6 +108,34 @@ func goalAgentEndEvent(assistant *ai.AssistantMessage) *agent.AgentEvent {
 
 func completedAssistant() *ai.AssistantMessage {
 	return &ai.AssistantMessage{StopReason: ai.StopStop}
+}
+
+// Goal durable entries and custom messages are persisted session payloads, so
+// they marshal through ai.MarshalJSON (no HTML escaping of <, >, &). Goals are
+// port-local, so byte parity is against the extension's JSON.stringify, which
+// does not escape those either.
+func TestGoalPayloadsDoNotHTMLEscape(t *testing.T) {
+	controller, sink := newGoalControllerTest(t)
+	goalToolText(t, controller, "set_goal", `{"objective":"fix <b> & <i>"}`)
+	if len(sink.rawEntries) == 0 {
+		t.Fatal("no durable entry recorded")
+	}
+	entry := string(sink.rawEntries[len(sink.rawEntries)-1])
+	if strings.Contains(entry, `\u003c`) || strings.Contains(entry, `\u0026`) {
+		t.Fatalf("goal entry HTML-escaped: %s", entry)
+	}
+	if !strings.Contains(entry, "fix <b> & <i>") {
+		t.Fatalf("goal entry lost the objective text: %s", entry)
+	}
+
+	content := goal.PauseContext("ship <it> & co", goal.BlockedReason{Code: "human-paused", Message: "Paused by user."})
+	message := goalEventMessage(goal.GoalEventType, content, false, json.RawMessage(`{"kind":"paused"}`))
+	if strings.Contains(string(message.Content), `\u003c`) || strings.Contains(string(message.Content), `\u0026`) {
+		t.Fatalf("goal message HTML-escaped: %s", message.Content)
+	}
+	if !strings.Contains(string(message.Content), "ship <it> & co") {
+		t.Fatalf("goal message lost the content: %s", message.Content)
+	}
 }
 
 func TestGoalControllerRegistersTwoTools(t *testing.T) {
@@ -269,7 +299,8 @@ func TestGoalControllerAgentEndErrorPausesWithoutContinuation(t *testing.T) {
 	assistant := completedAssistant()
 	assistant.StopReason = ai.StopError
 	controller.AgentEnd(goalAgentEndEvent(assistant))
-	if len(sink.messages) != 0 {
+	// D239: a pause reports the stop to the model, but never queues a round.
+	if len(sink.messages) != 1 || sink.messages[0].triggerTurn || !strings.Contains(sink.messages[0].content, "<goal_paused>") {
 		t.Fatalf("error queued a round: %+v", sink.messages)
 	}
 	if !goalPausedWithReason(sink.entries, "run-error") {
@@ -284,7 +315,8 @@ func TestGoalControllerAgentEndAbortPauses(t *testing.T) {
 	assistant := completedAssistant()
 	assistant.StopReason = ai.StopAborted
 	controller.AgentEnd(goalAgentEndEvent(assistant))
-	if len(sink.messages) != 0 {
+	// D239: a pause reports the stop to the model, but never queues a round.
+	if len(sink.messages) != 1 || sink.messages[0].triggerTurn || !strings.Contains(sink.messages[0].content, "<goal_paused>") {
 		t.Fatalf("abort queued a round: %+v", sink.messages)
 	}
 	if !goalPausedWithReason(sink.entries, "cancelled") {

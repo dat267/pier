@@ -253,7 +253,7 @@ func (c *GoalController) roundPromptIfMissing(messages []ai.Message) *ai.CustomM
 		}
 	}
 	content := goal.GoalRoundPrompt(*snapshot.Goal, turn, time.Now())
-	details, _ := json.Marshal(goalRoundDetails(snapshot.Goal.ID, turn))
+	details, _ := ai.MarshalJSON(goalRoundDetails(snapshot.Goal.ID, turn))
 	return goalEventMessage(goal.GoalEventType, content, false, details)
 }
 
@@ -263,7 +263,7 @@ func (c *GoalController) Apply(effects []goal.Effect) {
 	for _, effect := range effects {
 		switch typed := effect.(type) {
 		case goal.AppendEntryEffect:
-			data, err := json.Marshal(typed.Data)
+			data, err := ai.MarshalJSON(typed.Data)
 			if err != nil {
 				continue
 			}
@@ -278,7 +278,7 @@ func (c *GoalController) Apply(effects []goal.Effect) {
 					}
 				}
 			}
-			details, _ := json.Marshal(detailValues)
+			details, _ := ai.MarshalJSON(detailValues)
 			c.deliverGoalMessage(typed.CustomType, typed.Content, typed.Display, details, typed.TriggerTurn)
 		case goal.NotifyEffect:
 			c.notice(typed.Message, typed.Level)
@@ -290,7 +290,7 @@ func (c *GoalController) Apply(effects []goal.Effect) {
 			if snapshot := c.Snapshot().Goal; snapshot != nil {
 				detailValues = goalRoundDetails(snapshot.ID, typed.Turn)
 			}
-			details, _ := json.Marshal(detailValues)
+			details, _ := ai.MarshalJSON(detailValues)
 			c.deliverGoalMessage(goal.GoalEventType, typed.Content, false, details, true)
 		}
 	}
@@ -502,7 +502,7 @@ func (c *GoalController) getGoalTool() agent.AgentTool {
 			if err != nil {
 				return agent.AgentToolResult{}, err
 			}
-			details, _ := json.Marshal(map[string]any{"goal": view})
+			details, _ := ai.MarshalJSON(map[string]any{"goal": view})
 			return agent.AgentToolResult{
 				Content: []ai.Content{ai.TextContent{Text: string(payload)}},
 				Details: details,
@@ -583,7 +583,7 @@ func (c *GoalController) setGoalToolResult(result goal.DispatchResult, status st
 	if result.Reply != nil {
 		reply = *result.Reply
 	}
-	details, _ := json.Marshal(map[string]any{"goal": c.Snapshot().Goal, "action": status})
+	details, _ := ai.MarshalJSON(map[string]any{"goal": c.Snapshot().Goal, "action": status})
 	return agent.AgentToolResult{
 		Content: []ai.Content{ai.TextContent{Text: reply}},
 		Details: details,
@@ -596,7 +596,7 @@ func (c *GoalController) toolResult(result goal.DispatchResult, fallback string)
 	if result.Reply != nil {
 		reply = *result.Reply
 	}
-	details, _ := json.Marshal(map[string]any{"goal": c.Snapshot().Goal})
+	details, _ := ai.MarshalJSON(map[string]any{"goal": c.Snapshot().Goal})
 	return agent.AgentToolResult{
 		Content: []ai.Content{ai.TextContent{Text: reply}},
 		Details: details,
@@ -616,14 +616,14 @@ func goalErrorResult(message string) (agent.AgentToolResult, error) {
 // envelope, so ConvertToLlm reaches the model and a display:false message stays
 // out of the transcript.
 func goalEventMessage(customType string, content string, display bool, details json.RawMessage) *ai.CustomMessage {
-	contentJSON, err := json.Marshal(content)
+	contentJSON, err := ai.MarshalJSON(content)
 	if err != nil {
 		contentJSON = json.RawMessage(`""`)
 	}
 	if len(details) == 0 {
 		details = json.RawMessage(`{}`)
 	}
-	fields, err := json.Marshal(customMessageFields{
+	fields, err := ai.MarshalJSON(customMessageFields{
 		CustomType: customType,
 		Content:    contentJSON,
 		Display:    display,
