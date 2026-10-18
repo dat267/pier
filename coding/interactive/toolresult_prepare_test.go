@@ -1,10 +1,12 @@
 package interactive
 
 import (
+	"encoding/json"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
 )
 
@@ -88,5 +90,25 @@ func TestMidSizeToolResultPreparesOffLoop(t *testing.T) {
 	c.Render(80)
 	if !submitted {
 		t.Fatal("a ~10KiB bash result ran inline; the off-loop preparation must start at 8KiB")
+	}
+}
+
+// The edit result's details are decoded in the renderer on every pass, and a
+// theme change invalidates the whole tree (the live 18:02 stall log caught
+// formatEditResult -> toolDetailsFrom -> json.Unmarshal of a large diff on the
+// loop). The details are immutable per result, so the decode is memoized.
+func TestToolResultDetailsDecodeIsCached(t *testing.T) {
+	raw, err := json.Marshal(coding.EditToolDetails{Diff: strings.Repeat("+added line\n", 5000)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := &SortToolResultContent{Details: json.RawMessage(raw)}
+	first := result.detailsAs[coding.EditToolDetails]()
+	if first == nil || first.Diff == "" {
+		t.Fatal("details not decoded")
+	}
+	second := result.detailsAs[coding.EditToolDetails]()
+	if first != second {
+		t.Fatal("details decoded again instead of hitting the cache")
 	}
 }

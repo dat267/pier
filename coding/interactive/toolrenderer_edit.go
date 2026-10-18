@@ -218,7 +218,7 @@ var editRenderers = ToolRenderers{
 		var resultDiff string
 		var firstChangedLine *int
 		if !context.IsError {
-			if details := toolDetailsFrom[coding.EditToolDetails](result.Details); details != nil {
+			if details := result.detailsAs[coding.EditToolDetails](); details != nil {
 				resultDiff = details.Diff
 				firstChangedLine = details.FirstChangedLine
 			}
@@ -283,7 +283,7 @@ func formatEditResult(args *editRenderArgs, callComponent *editCallComponent, re
 		return theme.Fg("error", errorText)
 	}
 	var resultDiff string
-	if details := toolDetailsFrom[coding.EditToolDetails](result.Details); details != nil {
+	if details := result.detailsAs[coding.EditToolDetails](); details != nil {
 		resultDiff = details.Diff
 	}
 	if resultDiff != "" && resultDiff != previewDiff {

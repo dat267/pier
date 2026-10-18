@@ -61,7 +61,7 @@ func rebuildBashResult(result *SortToolResultContent, options ToolRenderResultOp
 	output := strings.TrimSpace(GetTextOutput(result, showImages))
 	var truncation *coding.TruncationResult
 	var fullOutputPath string
-	if details := toolDetailsFrom[coding.BashToolDetails](result.Details); details != nil {
+	if details := result.detailsAs[coding.BashToolDetails](); details != nil {
 		if details.Truncation != nil {
 			truncation = details.Truncation
 		}

@@ -1,8 +1,11 @@
 package interactive
 
 import (
+	"encoding/json"
 	"os"
+	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
@@ -50,6 +53,65 @@ type SortToolResultContent struct {
 	Content []ToolResultContent
 	Details any
 	IsError bool
+
+	// detailsMemo caches the typed decode of Details. Details is immutable for a
+	// result, but renderers decode it on every pass, and a theme change
+	// invalidates the whole tree; the live stall log caught formatEditResult
+	// re-unmarshalling a large diff on the UI loop. Lazily created and shared
+	// with the D205 preparation copy, hence the mutex.
+	detailsMemo *toolDetailsMemo
+}
+
+// toolDetailsMemo memoizes decoded tool details by Go type.
+type toolDetailsMemo struct {
+	mu     sync.Mutex
+	byType map[reflect.Type]any
+}
+
+// detailsAs decodes Details to T once per result. It mirrors toolDetailsFrom but
+// keeps the decoded value so a re-render does not pay the JSON parse again.
+func (r *SortToolResultContent) detailsAs[T any]() *T {
+	switch d := r.Details.(type) {
+	case *T:
+		return d
+	case T:
+		return &d
+	}
+	raw, ok := r.Details.(json.RawMessage)
+	if !ok {
+		if bytes, ok := r.Details.([]byte); ok {
+			raw = json.RawMessage(bytes)
+		} else {
+			return nil
+		}
+	}
+	var key reflect.Type = reflect.TypeOf((*T)(nil)).Elem()
+	if r.detailsMemo == nil {
+		r.detailsMemo = &toolDetailsMemo{}
+	}
+	r.detailsMemo.mu.Lock()
+	if cached, ok := r.detailsMemo.byType[key]; ok {
+		decoded, _ := cached.(*T)
+		r.detailsMemo.mu.Unlock()
+		return decoded
+	}
+	r.detailsMemo.mu.Unlock()
+	var decoded T
+	if json.Unmarshal(raw, &decoded) != nil {
+		return nil
+	}
+	r.detailsMemo.mu.Lock()
+	if r.detailsMemo.byType == nil {
+		r.detailsMemo.byType = map[reflect.Type]any{}
+	}
+	if cached, ok := r.detailsMemo.byType[key]; ok {
+		r.detailsMemo.mu.Unlock()
+		existing, _ := cached.(*T)
+		return existing
+	}
+	r.detailsMemo.byType[key] = &decoded
+	r.detailsMemo.mu.Unlock()
+	return &decoded
 }
 
 // GetTextOutput joins the text blocks and appends image indicators when images
