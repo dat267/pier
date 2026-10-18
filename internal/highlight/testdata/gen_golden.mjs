@@ -14,7 +14,7 @@ import { fileURLToPath } from "url";
 
 const require = createRequire(import.meta.url);
 const here = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(here, "..", "..");
+const repoRoot = path.resolve(here, "..", "..", "..");
 const hljs = require(path.join(repoRoot, "pi", "node_modules", "highlight.js", "lib", "index.js"));
 
 const manifest = JSON.parse(fs.readFileSync(path.join(here, "golden_manifest.json"), "utf8"));
