@@ -282,6 +282,29 @@ func TestValidateMcpProviderAuth(t *testing.T) {
 	}
 }
 
+// The WHATWG hostname is lowercased; Go preserves host case, so a mixed-case
+// loopback host must still count as loopback.
+func TestIsLoopbackRedirectURIHostCase(t *testing.T) {
+	for _, value := range []string{"http://localhost:8080/callback", "http://LOCALHOST:8080/callback", "http://[::1]:8080/callback"} {
+		if !IsLoopbackRedirectURI(value) {
+			t.Errorf("IsLoopbackRedirectURI(%q) = false, want true", value)
+		}
+	}
+	if IsLoopbackRedirectURI("http://example.com/callback") {
+		t.Error("IsLoopbackRedirectURI accepted a non-loopback host")
+	}
+}
+
+// Provider auth on a mixed-case loopback host validates like the lowercase one.
+func TestValidateMcpProviderAuthMixedCaseLoopback(t *testing.T) {
+	global := `{ "mcpServers": { "local": { "url": "http://LOCALHOST:8788/mcp", "auth": { "provider": "radius-dev" } } } }`
+	agentDir, projectDir := writeMCPFile(t, global, "")
+	loaded := LoadMcpConfig(McpConfigLoadOptions{AgentDir: agentDir, Cwd: projectDir})
+	if got := mcpEntryNames(loaded.Servers); strings.Join(got, ",") != "local" {
+		t.Fatalf("servers = %v errors = %v", got, loaded.Errors)
+	}
+}
+
 // TestValidateMcpServerConfigMessages pins the remaining validation messages
 // (upstream validateMcpServerConfig).
 func TestValidateMcpServerConfigMessages(t *testing.T) {

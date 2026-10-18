@@ -99,8 +99,9 @@ func (c *McpServerConfig) IsHTTP() bool { return c.URL != "" }
 var mcpServerNamePattern = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
 // mcpLoopbackHosts are the hosts on which http is acceptable. Go's
-// url.Hostname strips the brackets from an IPv6 literal, so both spellings are
-// listed (upstream compares WHATWG hostnames, which keep them).
+// url.Hostname strips the brackets from an IPv6 literal and preserves host
+// case, unlike the WHATWG hostname upstream compares, so the lookup lowercases
+// and trims the brackets itself.
 var mcpLoopbackHosts = []string{"localhost", "127.0.0.1", "[::1]", "::1"}
 
 // McpNamespace is a server's tool namespace: `mcp__<server>` with `-` replaced
@@ -123,6 +124,7 @@ func IsLoopbackRedirectURI(value string) bool {
 }
 
 func isMcpLoopbackHost(host string) bool {
+	host = strings.ToLower(strings.Trim(host, "[]"))
 	for _, candidate := range mcpLoopbackHosts {
 		if host == candidate {
 			return true
