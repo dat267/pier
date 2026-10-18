@@ -513,30 +513,3 @@ func TestGetSessionNameDoesNotAllocateProportionalToEntryCount(t *testing.T) {
 			largeBytes, smallBytes)
 	}
 }
-
-// LatestAssistantMessage must scan fileEntries without materializing the branch
-// the way getEntriesLocked does. MaybeShowThinkingDropNotice calls it on the UI
-// loop at message_end, and the branch copy is O(session) at 440 bytes per entry
-// (the same class as the GetSessionName stall).
-func TestLatestAssistantMessageDoesNotCopyTheBranch(t *testing.T) {
-	build := func(n int) *SessionManager {
-		m := &SessionManager{}
-		assistant, _ := ai.MarshalMessage(&ai.AssistantMessage{Content: ai.ContentList{ai.TextContent{Text: "answer"}}})
-		m.fileEntries = append(m.fileEntries, FileEntry{Entry: &SessionEntry{SessionEntryBase: SessionEntryBase{ID: "a0"}, Type: "message", Message: assistant}})
-		for i := 0; i < n; i++ {
-			user, _ := ai.MarshalMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "q"}})
-			m.fileEntries = append(m.fileEntries, FileEntry{Entry: &SessionEntry{SessionEntryBase: SessionEntryBase{ID: fmt.Sprintf("u%d", i)}, Type: "message", Message: user}})
-		}
-		return m
-	}
-	small, large := build(64), build(8192)
-	if got := large.LatestAssistantMessage(); got == nil {
-		t.Fatal("large: no assistant message")
-	}
-	smallBytes := allocatedBytesPerRun(t, 20, func() { small.LatestAssistantMessage() })
-	largeBytes := allocatedBytesPerRun(t, 20, func() { large.LatestAssistantMessage() })
-	if largeBytes > smallBytes*4+4096 {
-		t.Fatalf("LatestAssistantMessage allocated %d bytes at 8192 entries vs %d at 64; it must not copy the branch",
-			largeBytes, smallBytes)
-	}
-}

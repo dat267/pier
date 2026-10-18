@@ -760,12 +760,20 @@ func (r *TranscriptRenderer) MaybeShowThinkingDropNotice(message *ai.AssistantMe
 	}
 
 	previousDroppedCount := 0
-	// The newest assistant message is the previous response (message_end reaches
-	// the UI before the current message is persisted, mirroring upstream). Read it
-	// without materializing the branch: this runs on the UI loop at every
-	// assistant message_end, and the branch copy is O(session).
-	if previous := r.SessionInfo.LatestAssistantMessage(); previous != nil {
-		previousDroppedCount = CountDroppedThinkingBlocks(previous)
+	branch := r.SessionInfo.GetBranch("")
+	for index := len(branch) - 1; index >= 0; index-- {
+		entry := branch[index]
+		if entry.Type != "message" || len(entry.Message) == 0 {
+			continue
+		}
+		decoded, err := ai.UnmarshalMessage(entry.Message)
+		if err != nil {
+			continue
+		}
+		if assistant, ok := decoded.(*ai.AssistantMessage); ok {
+			previousDroppedCount = CountDroppedThinkingBlocks(assistant)
+			break
+		}
 	}
 	if droppedCount <= previousDroppedCount {
 		return
