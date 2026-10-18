@@ -228,7 +228,7 @@ func EstimateAgentMessageTokens(message ai.Message) int {
 			case ai.ThinkingContent:
 				chars += JSLength(b.Thinking)
 			case ai.ToolCall:
-				chars += JSLength(b.Name) + len(mustMarshalJSON(json.RawMessage(b.Arguments)))
+				chars += JSLength(b.Name) + JSLength(string(mustMarshalJSON(json.RawMessage(b.Arguments))))
 			}
 		}
 		return ceilDiv(chars, 4)

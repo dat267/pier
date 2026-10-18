@@ -407,3 +407,17 @@ func TestSerializeConversationJoinsAssistantTextWithNewlines(t *testing.T) {
 		t.Fatalf("assistant text = %q; want newline join", serialized)
 	}
 }
+
+// Upstream adds JSON.stringify(arguments).length, a UTF-16 code-unit count, so
+// multi-byte tool arguments must not inflate the compaction estimate the way a
+// byte count would.
+func TestEstimateAgentMessageTokensMeasuresJSStringLength(t *testing.T) {
+	raw := `{"text":"日本"}` // 13 UTF-16 code units, 17 bytes
+	assistant := &ai.AssistantMessage{Content: ai.ContentList{
+		ai.ToolCall{ID: "c", Name: "echo", Arguments: json.RawMessage(raw)},
+	}}
+	// ceil((4 + 13) / 4) = 5; a byte count (4 + 17 = 21) would give 6.
+	if got := EstimateAgentMessageTokens(assistant); got != 5 {
+		t.Fatalf("assistant tokens = %d; want 5", got)
+	}
+}
