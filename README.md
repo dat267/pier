@@ -1,10 +1,10 @@
 # pier, a Go coding agent
 
-A from-scratch Go implementation of an AI coding agent with a terminal UI,
-built against Mario Zechner's [pi](https://github.com/earendil-works/pi) as its
-strongest reference. pi is a reference, not a specification: the code follows
-its structure and behavior closely, and where it departs, the departure is a
-deliberate feature. Development conventions are in `AGENTS.md`.
+A from-scratch Go implementation of an AI coding agent with a terminal UI that
+ports the core features of Mario Zechner's
+[pi](https://github.com/earendil-works/pi). The code follows its structure and
+behavior closely, and where it departs, the departure is a deliberate feature.
+Development conventions are in `AGENTS.md`.
 
 ## Reference pin
 
