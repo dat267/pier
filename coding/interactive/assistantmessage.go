@@ -229,6 +229,7 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 			markdown.PaddingX = c.outputPad
 			markdown.Options = tui.MarkdownOptions{
 				Transform: CreateMarkdownTransform("assistant", c.isStreaming, c.transformers),
+				Streaming: c.isStreaming,
 			}
 			markdown.SetTextIfChanged(ai.JSTrim(content.Text))
 			c.blockComponents[key] = markdown
@@ -291,6 +292,7 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 				}
 				markdown.Options = tui.MarkdownOptions{
 					Transform: CreateMarkdownTransform("assistant-thinking", c.isStreaming, c.transformers),
+					Streaming: c.isStreaming,
 				}
 				markdown.SetTextIfChanged(joinThinkingBlocks(thinkingBlocks))
 				thinkingComponent = markdown

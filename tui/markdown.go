@@ -78,6 +78,11 @@ type MarkdownOptions struct {
 	Transform func(markdown string, availableWidth int) string
 	// RenderLatex toggles LaTeX rendering (default true).
 	RenderLatex *bool
+	// Streaming marks a live streaming message. Its first render may already be
+	// over the preparation threshold (a large first chunk), so it prepares
+	// off-loop from the start; history keeps a synchronous first render to avoid
+	// a placeholder.
+	Streaming bool
 }
 
 // markdownTerminal adapts the tui's terminal primitives to the renderer's
@@ -381,7 +386,7 @@ func (m *Markdown) Render(width int) []string {
 	// placeholder; streaming deltas — any cache miss — divert to the worker
 	// instead of re-wrapping the open paragraph on the owner). At 64 KiB the
 	// cold render submits off-loop too, unchanged from D204.
-	if m.preparation != nil && len(m.Text) >= largeMarkdownBytes && (m.rendered || len(m.Text) >= veryLargeMarkdownBytes) {
+	if m.preparation != nil && len(m.Text) >= largeMarkdownBytes && (m.rendered || m.Options.Streaming || len(m.Text) >= veryLargeMarkdownBytes) {
 		return m.prepareLarge(width)
 	}
 
