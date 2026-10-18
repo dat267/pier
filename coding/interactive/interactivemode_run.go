@@ -93,9 +93,10 @@ type RunWiring struct {
 	StallLogCPUAfter time.Duration
 	// stallStreak bookkeeping for contiguous busy runs across phases; confined
 	// to the loop goroutine (see phase).
-	stallStreakStart  time.Time
-	stallStreakEnd    time.Time
-	stallStreakPhases []string
+	stallStreakStart    time.Time
+	stallStreakEnd      time.Time
+	stallStreakPhases   []string
+	stallStreakRecorded bool
 	// OnThemeChange registers the theme-file watcher callback.
 	OnThemeChange func(callback func()) func()
 	// OnBranchChange registers the git-branch watcher callback.
@@ -640,6 +641,7 @@ func (w *RunWiring) phase(name string) func() {
 	if w.stallStreakEnd.IsZero() || start.Sub(w.stallStreakEnd) > stallStreakGap {
 		w.stallStreakStart = start
 		w.stallStreakPhases = append(w.stallStreakPhases[:0], name)
+		w.stallStreakRecorded = false
 	} else {
 		w.stallStreakPhases = append(w.stallStreakPhases, name)
 		if len(w.stallStreakPhases) > stallStreakPhaseLimit {
@@ -667,7 +669,11 @@ func (w *RunWiring) phase(name string) func() {
 			w.stallStreakStart = now
 			w.stallStreakPhases = w.stallStreakPhases[:0]
 			w.writeStallRecord(name, elapsed, "", profile)
-		case now.Sub(w.stallStreakStart) >= w.StallLogThreshold:
+		case now.Sub(w.stallStreakStart) >= w.StallLogThreshold && !w.stallStreakRecorded:
+			// One record per streak: a streaming turn keeps the loop busy for
+			// seconds, and recording every phase-end after the crossing flooded
+			// the log (30+ records in the first live streak).
+			w.stallStreakRecorded = true
 			w.writeStallRecord("streak", now.Sub(w.stallStreakStart), " phases="+strings.Join(w.stallStreakPhases, "+"), profile)
 		}
 	}

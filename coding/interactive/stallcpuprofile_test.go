@@ -174,3 +174,32 @@ func TestStallLogIdleGapBreaksStreak(t *testing.T) {
 		t.Fatalf("spaced-out short phases recorded: %v (%d bytes: %s)", err, info.Size(), data)
 	}
 }
+
+// A streak is recorded once: the record fires when the contiguous run first
+// crosses the threshold, and later phase-ends in the same run stay silent (a
+// streaming turn keeps the loop busy for seconds; one record per streak, not
+// one per phase — the first live streak produced 30+ records in 4 seconds).
+func TestStallLogStreakRecordsOnce(t *testing.T) {
+	dir := t.TempDir()
+	w := &RunWiring{StallLogPath: filepath.Join(dir, "pier-stall.log"), StallLogThreshold: 50 * time.Millisecond}
+	run := func(name string) {
+		done := w.phase(name)
+		time.Sleep(20 * time.Millisecond)
+		done()
+		time.Sleep(2 * time.Millisecond)
+	}
+	run("events") // streak 20ms
+	run("events") // streak 42ms
+	run("render") // streak 64ms: crosses here
+	run("render") // streak 86ms: the flood bug would record again
+	run("render")
+
+	record, err := os.ReadFile(w.StallLogPath)
+	if err != nil {
+		t.Fatalf("no streak record: %v", err)
+	}
+	streaks := strings.Count(string(record), `slow UI phase "streak"`)
+	if streaks != 1 {
+		t.Fatalf("streak recorded %d times, want 1:\n%s", streaks, record)
+	}
+}
