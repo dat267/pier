@@ -101,6 +101,17 @@ type RunWiring struct {
 	stallStreakStart  time.Time
 	stallStreakEnd    time.Time
 	stallStreakPhases []string
+	// stallStreakWatchdog fires mid-streak (across phase boundaries) once the
+	// contiguous busy run reaches the threshold, so the goroutine dump catches
+	// the loop in the phase that is actually busy; the per-phase timers only
+	// fire for a single long phase.
+	stallStreakWatchdog *time.Timer
+	// stallStreakEndNanos lets the watchdog goroutine tell an active streak from
+	// one that ended (the loop went idle).
+	stallStreakEndNanos atomic.Int64
+	// stallStreakPhasesText is the joined phase list the watchdog goroutine
+	// reads; the loop-owned slice cannot be read from the timer goroutine.
+	stallStreakPhasesText atomic.Value
 	// stallStreakRecorded flips when the streak-start record is written from
 	// the watchdog goroutine; atomic because phase() reads it on the loop.
 	stallStreakRecorded atomic.Bool
@@ -646,14 +657,23 @@ func (w *RunWiring) phase(name string) func() {
 	// does. The gap bound says how idle the loop must be before the streak
 	// restarts.
 	if w.stallStreakEnd.IsZero() || start.Sub(w.stallStreakEnd) > stallStreakGap {
+		if w.stallStreakWatchdog != nil {
+			w.stallStreakWatchdog.Stop()
+		}
 		w.stallStreakStart = start
 		w.stallStreakPhases = append(w.stallStreakPhases[:0], name)
 		w.stallStreakRecorded.Store(false)
+		w.stallStreakPhasesText.Store(name)
+		streakStart := start
+		w.stallStreakWatchdog = time.AfterFunc(w.StallLogThreshold, func() {
+			w.recordStreakMidFlight(streakStart)
+		})
 	} else {
 		w.stallStreakPhases = append(w.stallStreakPhases, name)
 		if len(w.stallStreakPhases) > stallStreakPhaseLimit {
 			w.stallStreakPhases = w.stallStreakPhases[len(w.stallStreakPhases)-stallStreakPhaseLimit:]
 		}
+		w.stallStreakPhasesText.Store(strings.Join(w.stallStreakPhases, "+"))
 	}
 	streakSoFar := start.Sub(w.stallStreakStart)
 	var cpu *stallCPUWatch
@@ -670,6 +690,7 @@ func (w *RunWiring) phase(name string) func() {
 		watchdog.Stop()
 		now := time.Now()
 		w.stallStreakEnd = now
+		w.stallStreakEndNanos.Store(now.UnixNano())
 		profile := cpu.finish()
 		elapsed := now.Sub(start)
 		switch {
@@ -692,6 +713,23 @@ func (w *RunWiring) phase(name string) func() {
 			w.writeStallRecord("streak", now.Sub(w.stallStreakStart), " phases="+strings.Join(w.stallStreakPhases, "+"), profile)
 		}
 	}
+}
+
+// recordStreakMidFlight writes the streak record from a timer goroutine while
+// the loop is still busy, so the goroutine dump names the frame; it skips a
+// streak that ended (the loop went idle) and one already recorded.
+func (w *RunWiring) recordStreakMidFlight(streakStart time.Time) {
+	if end := w.stallStreakEndNanos.Load(); end != 0 && time.Since(time.Unix(0, end)) > stallStreakGap {
+		return
+	}
+	if !w.stallStreakRecorded.CompareAndSwap(false, true) {
+		return
+	}
+	note := " (mid-flight)"
+	if phases, _ := w.stallStreakPhasesText.Load().(string); phases != "" {
+		note = " phases=" + phases + " (mid-flight)"
+	}
+	w.writeStallRecord("streak", time.Since(streakStart), note, nil)
 }
 
 // stallStreakGap is how idle the loop may be between phases before a busy

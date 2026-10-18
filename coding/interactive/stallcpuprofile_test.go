@@ -238,3 +238,33 @@ func TestStreakStartRecordDumpsTheLoopMidPhase(t *testing.T) {
 		t.Fatalf("mid-streak record written more than once:\n%s", text)
 	}
 }
+
+// A busy run of short phases (streaming: beat+events repeated) must still be
+// attributed. The per-phase timers never fire for a 10ms phase, so a watchdog
+// armed once per streak writes a mid-flight record and dump.
+func TestStreakMidFlightRecordDumpsDuringShortPhases(t *testing.T) {
+	oldGap := stallStreakGap
+	stallStreakGap = 5 * time.Millisecond
+	defer func() { stallStreakGap = oldGap }()
+
+	dir := t.TempDir()
+	w := &RunWiring{StallLogPath: filepath.Join(dir, "pier-stall.log"), StallLogThreshold: 50 * time.Millisecond, StallLogCPUAfter: time.Hour}
+	for i := 0; i < 12; i++ {
+		done := w.phase("events")
+		time.Sleep(10 * time.Millisecond)
+		done()
+		time.Sleep(2 * time.Millisecond)
+	}
+	time.Sleep(20 * time.Millisecond)
+	record, err := os.ReadFile(w.StallLogPath)
+	if err != nil {
+		t.Fatalf("no streak record: %v", err)
+	}
+	text := string(record)
+	if !strings.Contains(text, `slow UI phase "streak"`) || !strings.Contains(text, "(mid-flight)") {
+		t.Fatalf("no mid-flight streak record:\n%s", text)
+	}
+	if !strings.Contains(text, "goroutine profile:") {
+		t.Fatalf("mid-flight record carries no dump:\n%s", text)
+	}
+}
