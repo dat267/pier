@@ -2144,13 +2144,3 @@ preparation now covers results from 8 KiB (the same threshold D239 chose for
 assistant markdown), sharing D204's four-job optional queue; the owner keeps the
 previous complete frame while the worker prepares the new one, and admission
 failure falls back to the synchronous path.
-
-## D242
-
-Prepared assistant Markdown now starts at 2 KiB, not D239's 8 KiB. The 18:36
-stall dump caught a message below 8 KiB re-rendering its markdown on the UI
-loop on every coalesced paint (`Markdown.Render` -> `Finalize` ->
-`WrapTextWithAnsi` -> `VisibleWidth`), producing 101-110 ms streaks. Lowering
-the threshold moves those deltas to the D204/D239 worker; the first render stays
-synchronous and the owner paints the previous complete frame while the worker
-prepares the new one.

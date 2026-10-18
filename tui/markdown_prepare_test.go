@@ -135,25 +135,3 @@ func TestStreamingMarkdownPreparesFromTheSecondRender(t *testing.T) {
 		t.Fatal("a delta render must paint the stale lines, not block on a fresh render")
 	}
 }
-
-// D242: a streaming message below 8KiB still re-rendered its markdown on every
-// coalesced paint (the 18:36 stall dump caught Markdown.Render -> Finalize ->
-// WrapTextWithAnsi -> VisibleWidth on the loop). The off-loop threshold drops
-// to 2KiB: history's first render stays synchronous, deltas then prepare off.
-func TestStreamingMarkdownPreparesFrom2KiB(t *testing.T) {
-	text := strings.Repeat("a short paragraph that wraps a little.\n", 80) // ~2.9 KiB
-	if len(text) < 2*1024 {
-		t.Fatalf("fixture is only %d bytes", len(text))
-	}
-	markdown := NewMarkdown(text, 0, 0, MarkdownTheme{}, nil, MarkdownOptions{})
-	submits := 0
-	markdown.SetPreparation(&MarkdownPreparation{
-		Submit: func(run func() func()) bool { submits++; return true },
-	})
-	markdown.Render(80) // first render stays synchronous
-	markdown.SetText(text + "one more sentence for the delta.\n")
-	markdown.Render(80)
-	if submits != 1 {
-		t.Fatalf("a ~3KiB delta render submits = %d, want 1", submits)
-	}
-}

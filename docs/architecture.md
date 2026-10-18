@@ -205,9 +205,7 @@ with historical measurements retained to explain the design.
   GC, final flattening and plain-text tool-result work are not reduced by it.
   D239 lowers the streaming threshold to 8 KiB with a synchronous first render:
   a live profile showed deltas re-wrapping the open paragraph on the loop below
-  64 KiB (one paint at 94 ms, keystrokes waiting 100-200 ms). D242 lowers it
-  again to 2 KiB after the loop was caught rendering a sub-8 KiB streaming
-  message per coalesced paint (101-110 ms streaks).
+  64 KiB (one paint at 94 ms, keystrokes waiting 100-200 ms).
 - **D205 large built-in tool results use private snapshots.** Text-only expanded
   read and both bash/powershell display modes at 8 KiB (D241 lowered this from
   64 KiB after the loop was caught rendering a mid-size bash result inline)
