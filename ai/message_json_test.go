@@ -323,13 +323,22 @@ func TestMarshalMessageKeepsRoleFirst(t *testing.T) {
 			if string(enc) != testCase.want {
 				t.Fatalf("marshal:\n got %s\nwant %s", enc, testCase.want)
 			}
-			// The custom message already carries its own role field.
-			custom, err := MarshalMessage(&CustomMessage{Role: "custom", Content: json.RawMessage(`{"x":1}`)})
+			// A factory-built custom payload already carries role/timestamp and is
+			// emitted verbatim; a hand-built payload without role gets it spliced.
+			flat := `{"role":"custom","customType":"t","content":"x","display":false,"timestamp":5}`
+			custom, err := MarshalMessage(&CustomMessage{Role: "custom", Content: json.RawMessage(flat), Timestamp: 5})
 			if err != nil {
 				t.Fatal(err)
 			}
-			if string(custom) != `{"role":"custom","content":{"x":1}}` {
+			if string(custom) != flat {
 				t.Fatalf("custom = %s", custom)
+			}
+			spliced, err := MarshalMessage(&CustomMessage{Role: "custom", Content: json.RawMessage(`{"customType":"t","content":"x"}`)})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(spliced) != `{"role":"custom","customType":"t","content":"x"}` {
+				t.Fatalf("spliced custom = %s", spliced)
 			}
 		})
 	}

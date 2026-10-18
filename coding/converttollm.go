@@ -21,16 +21,35 @@ const (
 	RoleCompactionSummary = "compactionSummary"
 )
 
+// bashExecutionPayload is the flat BashExecutionMessage shape (core/messages.ts
+// field order). exitCode is omitted when the command never exited (cancelled),
+// fullOutputPath when empty, and excludeFromContext when false.
+type bashExecutionPayload struct {
+	Role               string  `json:"role"`
+	Command            string  `json:"command"`
+	Output             string  `json:"output"`
+	ExitCode           *int    `json:"exitCode,omitempty"`
+	Cancelled          bool    `json:"cancelled"`
+	Truncated          bool    `json:"truncated"`
+	FullOutputPath     *string `json:"fullOutputPath,omitempty"`
+	Timestamp          int64   `json:"timestamp"`
+	ExcludeFromContext bool    `json:"excludeFromContext,omitempty"`
+}
+
 // CreateBashExecutionMessage builds the `!` bash-execution message.
-func CreateBashExecutionMessage(command, output string, exitCode int, cancelled, truncated bool, fullOutputPath string, excludeFromContext bool, timestamp int64) *ai.CustomMessage {
+func CreateBashExecutionMessage(command, output string, exitCode *int, cancelled, truncated bool, fullOutputPath string, excludeFromContext bool, timestamp int64) *ai.CustomMessage {
 	if timestamp == 0 {
 		timestamp = time.Now().UnixMilli()
 	}
-	raw, _ := ai.MarshalJSON(map[string]any{
-		"role": RoleBashExecution, "command": command, "output": output,
-		"exitCode": exitCode, "cancelled": cancelled, "truncated": truncated,
-		"fullOutputPath": fullOutputPath, "timestamp": timestamp,
-		"excludeFromContext": excludeFromContext,
+	var fullPath *string
+	if fullOutputPath != "" {
+		fullPath = &fullOutputPath
+	}
+	raw, _ := ai.MarshalJSON(bashExecutionPayload{
+		Role: RoleBashExecution, Command: command, Output: output,
+		ExitCode: exitCode, Cancelled: cancelled, Truncated: truncated,
+		FullOutputPath: fullPath, Timestamp: timestamp,
+		ExcludeFromContext: excludeFromContext,
 	})
 	return &ai.CustomMessage{Role: RoleBashExecution, Content: raw, Timestamp: timestamp}
 }

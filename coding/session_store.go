@@ -830,17 +830,41 @@ const (
 )
 
 // CreateCustomMessage builds a custom-role AgentMessage.
+// customMessagePayload is the flat CustomMessage shape (core/messages.ts
+// field order); details is omitted when absent.
+type customMessagePayload struct {
+	Role       string          `json:"role"`
+	CustomType string          `json:"customType"`
+	Content    json.RawMessage `json:"content"`
+	Display    bool            `json:"display"`
+	Details    json.RawMessage `json:"details,omitempty"`
+	Timestamp  int64           `json:"timestamp"`
+}
+
+// compactionSummaryPayload is the flat CompactionSummaryMessage shape.
+type compactionSummaryPayload struct {
+	Role         string `json:"role"`
+	Summary      string `json:"summary"`
+	TokensBefore int64  `json:"tokensBefore"`
+	Timestamp    int64  `json:"timestamp"`
+}
+
+// branchSummaryPayload is the flat BranchSummaryMessage shape.
+type branchSummaryPayload struct {
+	Role      string `json:"role"`
+	Summary   string `json:"summary"`
+	FromID    string `json:"fromId"`
+	Timestamp int64  `json:"timestamp"`
+}
+
 func CreateCustomMessage(customType string, content json.RawMessage, display bool, details json.RawMessage, timestamp int64) *ai.CustomMessage {
 	if timestamp == 0 {
 		timestamp = time.Now().UnixMilli()
 	}
-	fields := map[string]any{
-		"role": "custom", "customType": customType, "content": content, "display": display, "timestamp": timestamp,
-	}
-	if len(details) > 0 {
-		fields["details"] = details
-	}
-	raw, _ := ai.MarshalJSON(fields)
+	raw, _ := ai.MarshalJSON(customMessagePayload{
+		Role: "custom", CustomType: customType, Content: content, Display: display,
+		Details: details, Timestamp: timestamp,
+	})
 	return &ai.CustomMessage{Role: "custom", Content: raw, Timestamp: timestamp}
 }
 
@@ -849,8 +873,8 @@ func CreateCompactionSummaryMessage(summary string, tokensBefore int64, timestam
 	if timestamp == 0 {
 		timestamp = time.Now().UnixMilli()
 	}
-	raw, _ := ai.MarshalJSON(map[string]any{
-		"role": "compactionSummary", "summary": summary, "tokensBefore": tokensBefore, "timestamp": timestamp,
+	raw, _ := ai.MarshalJSON(compactionSummaryPayload{
+		Role: "compactionSummary", Summary: summary, TokensBefore: tokensBefore, Timestamp: timestamp,
 	})
 	return &ai.CustomMessage{Role: "compactionSummary", Content: raw, Timestamp: timestamp}
 }
@@ -860,8 +884,8 @@ func CreateBranchSummaryMessage(summary string, fromID string, timestamp int64) 
 	if timestamp == 0 {
 		timestamp = time.Now().UnixMilli()
 	}
-	raw, _ := ai.MarshalJSON(map[string]any{
-		"role": "branchSummary", "summary": summary, "fromId": fromID, "timestamp": timestamp,
+	raw, _ := ai.MarshalJSON(branchSummaryPayload{
+		Role: "branchSummary", Summary: summary, FromID: fromID, Timestamp: timestamp,
 	})
 	return &ai.CustomMessage{Role: "branchSummary", Content: raw, Timestamp: timestamp}
 }

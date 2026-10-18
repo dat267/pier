@@ -205,8 +205,8 @@ func TestSerializeConversation(t *testing.T) {
 }
 
 func TestConvertToLlmCustomRoles(t *testing.T) {
-	bashMsg := CreateBashExecutionMessage("ls -la", "file1", 0, false, false, "", false, 100)
-	excluded := CreateBashExecutionMessage("secret", "", 0, false, false, "", true, 101)
+	bashMsg := CreateBashExecutionMessage("ls -la", "file1", intPtr(0), false, false, "", false, 100)
+	excluded := CreateBashExecutionMessage("secret", "", intPtr(0), false, false, "", true, 101)
 	compacted := CreateCompactionSummaryMessage("the summary", 1000, 102)
 	branch := CreateBranchSummaryMessage("branch summary", "root", 103)
 	messages := []ai.Message{createUserMessage("hi"), bashMsg, excluded, compacted, branch}

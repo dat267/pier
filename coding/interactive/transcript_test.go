@@ -100,7 +100,7 @@ func TestTranscriptSkillBlock(t *testing.T) {
 func TestTranscriptSpecialMessages(t *testing.T) {
 	renderer, _ := newTranscriptTestRenderer(t, false)
 
-	renderer.AddMessageToChat(coding.CreateBashExecutionMessage("ls -la", "file.txt", 0, false, false, "", false, 1), false)
+	renderer.AddMessageToChat(coding.CreateBashExecutionMessage("ls -la", "file.txt", intPtr(0), false, false, "", false, 1), false)
 	if len(renderer.Chat.Children) != 1 {
 		t.Fatalf("bash children = %d", len(renderer.Chat.Children))
 	}
@@ -429,3 +429,5 @@ func TestRenderSessionItemsUpdatesEditorBorder(t *testing.T) {
 		t.Fatalf("border updates = %d; want still 1", called)
 	}
 }
+
+func intPtr(value int) *int { return &value }

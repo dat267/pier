@@ -1,8 +1,10 @@
 package ai
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"strconv"
 )
 
 // ContentList is a JSON array of discriminated content blocks.
@@ -162,6 +164,88 @@ func unmarshalContentBlock(data json.RawMessage) (Content, error) {
 	default:
 		return nil, fmt.Errorf("ai: unknown content block type %q", probe.Type)
 	}
+}
+
+// CustomMessage serializes as upstream's flat custom-agent-message union:
+// bashExecution, custom, branchSummary and compactionSummary each write their
+// own fields next to role and timestamp, not nested under a content member.
+// Content holds that flat object (the app factories build it in field order);
+// Extra preserves a loaded object verbatim so unknown custom roles round-trip.
+func (m *CustomMessage) MarshalJSON() ([]byte, error) {
+	if len(m.Extra) > 0 {
+		return m.Extra, nil
+	}
+	if len(m.Content) > 0 {
+		if customContentHasRole(m.Content) {
+			return m.Content, nil
+		}
+		// A hand-built message carries only the role fields; splice role first
+		// and timestamp last (upstream's custom shape).
+		return spliceCustomRole(m.Content, m.Role, m.Timestamp)
+	}
+	role, err := MarshalJSON(m.Role)
+	if err != nil {
+		return nil, err
+	}
+	out := []byte(`{"role":` + string(role))
+	if m.Timestamp != 0 {
+		out = append(out, `,"timestamp":`...)
+		out = append(out, strconv.FormatInt(m.Timestamp, 10)...)
+	}
+	return append(out, '}'), nil
+}
+
+// UnmarshalJSON reads an upstream flat custom-agent message, keeping the whole
+// object as both Content (for the role-specific decoders) and Extra (so an
+// unknown custom role round-trips verbatim).
+func (m *CustomMessage) UnmarshalJSON(data []byte) error {
+	var probe struct {
+		Role      string `json:"role"`
+		Timestamp int64  `json:"timestamp"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	m.Role = probe.Role
+	m.Timestamp = probe.Timestamp
+	m.Content = append(json.RawMessage(nil), data...)
+	m.Extra = append(json.RawMessage(nil), data...)
+	return nil
+}
+
+func customContentHasRole(data json.RawMessage) bool {
+	var object map[string]json.RawMessage
+	if json.Unmarshal(data, &object) != nil {
+		return false
+	}
+	_, ok := object["role"]
+	return ok
+}
+
+func spliceCustomRole(content json.RawMessage, role string, timestamp int64) ([]byte, error) {
+	trimmed := bytes.TrimSpace(content)
+	if len(trimmed) < 2 || trimmed[0] != '{' || trimmed[len(trimmed)-1] != '}' {
+		return nil, fmt.Errorf("ai: custom message content must be a JSON object")
+	}
+	inner := trimmed[1 : len(trimmed)-1]
+	roleEnc, err := MarshalJSON(role)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]byte, 0, len(inner)+len(roleEnc)+48)
+	out = append(out, '{')
+	out = append(out, `"role":`...)
+	out = append(out, roleEnc...)
+	if len(bytes.TrimSpace(inner)) > 0 {
+		out = append(out, ',')
+		out = append(out, inner...)
+	}
+	if timestamp != 0 {
+		out = append(out, `,"timestamp":`...)
+		out = append(out, strconv.FormatInt(timestamp, 10)...)
+	}
+	out = append(out, '}')
+	return out, nil
 }
 
 // MarshalMessage encodes one message with upstream's role discrimination.

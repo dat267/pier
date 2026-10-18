@@ -20,14 +20,6 @@ type ExecuteBashOptions struct {
 	Operations BashOperations
 }
 
-// exitCodeValue flattens an optional exit code.
-func exitCodeValue(exitCode *int) int {
-	if exitCode == nil {
-		return 0
-	}
-	return *exitCode
-}
-
 // bashRunSet guards the running bash commands and deferred messages.
 
 // ExecuteBash runs a bash command in the session's working directory, streams
@@ -96,7 +88,7 @@ func (s *AgentSession) trackBashRun(parent context.Context) (context.Context, co
 // RecordBashResult records a bash execution result in session history. While
 // the agent is streaming the message is deferred to keep tool-call ordering.
 func (s *AgentSession) RecordBashResult(command string, result BashResult, excludeFromContext bool) {
-	message := CreateBashExecutionMessage(command, result.Output, exitCodeValue(result.ExitCode),
+	message := CreateBashExecutionMessage(command, result.Output, result.ExitCode,
 		result.Cancelled, result.Truncated, result.FullOutputPath, excludeFromContext, 0)
 
 	if s.IsStreaming() {

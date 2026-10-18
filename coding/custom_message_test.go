@@ -86,7 +86,7 @@ func TestCustomMessageTokenEstimateMatchesUpstream(t *testing.T) {
 		t.Fatalf("block estimate = %d; want 2", got)
 	}
 	// bashExecution counts command + output.
-	bash := CreateBashExecutionMessage(strings.Repeat("c", 4), strings.Repeat("o", 4), 0, false, false, "", false, 0)
+	bash := CreateBashExecutionMessage(strings.Repeat("c", 4), strings.Repeat("o", 4), intPtr(0), false, false, "", false, 0)
 	if got := EstimateAgentMessageTokens(bash); got != 2 {
 		t.Fatalf("bash estimate = %d; want 2", got)
 	}
@@ -94,5 +94,97 @@ func TestCustomMessageTokenEstimateMatchesUpstream(t *testing.T) {
 	summary := CreateCompactionSummaryMessage(strings.Repeat("s", 8), 0, 0)
 	if got := EstimateAgentMessageTokens(summary); got != 2 {
 		t.Fatalf("summary estimate = %d; want 2", got)
+	}
+}
+
+// Upstream custom agent messages are flat: the role-specific fields sit next to
+// role and timestamp, not nested under a content member. The port nested them,
+// so a session created by pi could not be read back and the on-disk bytes
+// differed.
+func TestCustomAgentMessageFlatShapes(t *testing.T) {
+	exitCode := 3
+	cases := []struct {
+		name    string
+		message *ai.CustomMessage
+		want    string
+	}{
+		{
+			name:    "bashExecution",
+			message: CreateBashExecutionMessage("ls", "out", &exitCode, false, true, "/tmp/out", true, 7),
+			want:    `{"role":"bashExecution","command":"ls","output":"out","exitCode":3,"cancelled":false,"truncated":true,"fullOutputPath":"/tmp/out","timestamp":7,"excludeFromContext":true}`,
+		},
+		{
+			name:    "bashExecution cancelled omits exitCode",
+			message: CreateBashExecutionMessage("sleep", "", nil, true, false, "", false, 8),
+			want:    `{"role":"bashExecution","command":"sleep","output":"","cancelled":true,"truncated":false,"timestamp":8}`,
+		},
+		{
+			name:    "custom",
+			message: CreateCustomMessage("t", json.RawMessage(`"x"`), true, json.RawMessage(`{"k":1}`), 9),
+			want:    `{"role":"custom","customType":"t","content":"x","display":true,"details":{"k":1},"timestamp":9}`,
+		},
+		{
+			name:    "compactionSummary",
+			message: CreateCompactionSummaryMessage("sum", 10, 11),
+			want:    `{"role":"compactionSummary","summary":"sum","tokensBefore":10,"timestamp":11}`,
+		},
+		{
+			name:    "branchSummary",
+			message: CreateBranchSummaryMessage("sum", "from", 12),
+			want:    `{"role":"branchSummary","summary":"sum","fromId":"from","timestamp":12}`,
+		},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			enc, err := ai.MarshalMessage(testCase.message)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(enc) != testCase.want {
+				t.Fatalf("marshal:\n got %s\nwant %s", enc, testCase.want)
+			}
+			back, err := ai.UnmarshalMessage(enc)
+			if err != nil {
+				t.Fatal(err)
+			}
+			custom, ok := back.(*ai.CustomMessage)
+			if !ok {
+				t.Fatalf("decoded %T", back)
+			}
+			if custom.Role != testCase.message.Role {
+				t.Fatalf("role = %q, want %q", custom.Role, testCase.message.Role)
+			}
+			reenc, err := ai.MarshalMessage(custom)
+			if err != nil || string(reenc) != testCase.want {
+				t.Fatalf("re-marshal = %s (%v), want %s", reenc, err, testCase.want)
+			}
+		})
+	}
+}
+
+// A flat upstream bash execution loads and contributes its command/output to
+// the model context; the old nested reader dropped it.
+func TestFlatBashExecutionLoadsIntoContext(t *testing.T) {
+	flat := `{"role":"bashExecution","command":"ls -la","output":"file.txt","cancelled":false,"truncated":false,"timestamp":42}`
+	message, err := ai.UnmarshalMessage(json.RawMessage(flat))
+	if err != nil {
+		t.Fatal(err)
+	}
+	converted := convertCustomMessage(message.(*ai.CustomMessage))
+	if converted == nil {
+		t.Fatal("flat bash execution dropped from context")
+	}
+	user, ok := converted.(*ai.UserMessage)
+	if !ok {
+		t.Fatalf("converted %T", converted)
+	}
+	text := ""
+	for _, block := range user.Content.Blocks {
+		if t, ok := block.(ai.TextContent); ok {
+			text += t.Text
+		}
+	}
+	if !strings.Contains(text, "ls -la") || !strings.Contains(text, "file.txt") {
+		t.Fatalf("converted text = %q", text)
 	}
 }
