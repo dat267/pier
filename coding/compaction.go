@@ -75,31 +75,45 @@ func (f *FileOperations) markEdited(path string) {
 }
 
 // ExtractFileOpsFromMessage extracts file paths from a tool call
-// (read/write/edit) in an assistant message.
+// (read/write/edit) in an assistant message, or from the nested calls recorded
+// on a tool result (upstream extractFileOpsFromMessage).
 func ExtractFileOpsFromMessage(message ai.Message, fileOps *FileOperations) {
-	assistant, ok := message.(*ai.AssistantMessage)
-	if !ok {
+	switch m := message.(type) {
+	case *ai.ToolResultMessage:
+		// Calls made from codemode scripts are recorded on the script's result.
+		if m.NestedCalls == nil {
+			return
+		}
+		for _, call := range m.NestedCalls.Calls {
+			addFileOp(call.Name, call.Arguments, fileOps)
+		}
+		return
+	case *ai.AssistantMessage:
+		for _, block := range m.Content {
+			call, ok := block.(ai.ToolCall)
+			if !ok {
+				continue
+			}
+			addFileOp(call.Name, call.Arguments, fileOps)
+		}
+	}
+}
+
+// addFileOp records one read/write/edit call's path.
+func addFileOp(toolName string, arguments json.RawMessage, fileOps *FileOperations) {
+	var args struct {
+		Path string `json:"path"`
+	}
+	if json.Unmarshal(arguments, &args) != nil || args.Path == "" {
 		return
 	}
-	for _, block := range assistant.Content {
-		call, ok := block.(ai.ToolCall)
-		if !ok {
-			continue
-		}
-		var args struct {
-			Path string `json:"path"`
-		}
-		if json.Unmarshal(call.Arguments, &args) != nil || args.Path == "" {
-			continue
-		}
-		switch call.Name {
-		case "read":
-			fileOps.markRead(args.Path)
-		case "write":
-			fileOps.markWritten(args.Path)
-		case "edit":
-			fileOps.markEdited(args.Path)
-		}
+	switch toolName {
+	case "read":
+		fileOps.markRead(args.Path)
+	case "write":
+		fileOps.markWritten(args.Path)
+	case "edit":
+		fileOps.markEdited(args.Path)
 	}
 }
 

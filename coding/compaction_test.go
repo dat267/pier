@@ -171,6 +171,37 @@ func TestFileOperationsAndSerialization(t *testing.T) {
 	}
 }
 
+func TestFileOperationsFromNestedToolCalls(t *testing.T) {
+	// Upstream extractFileOpsFromMessage reads the nested calls recorded on a
+	// tool result, which is how codemode script file access reaches the
+	// compaction file lists. A byte-heavy call arrives without arguments, so it
+	// must be skipped rather than contributing an empty path.
+	fileOps := CreateFileOps()
+	ExtractFileOpsFromMessage(&ai.ToolResultMessage{
+		ToolCallID: "c1", ToolName: "bash",
+		NestedCalls: &ai.NestedToolCalls{Complete: true, Calls: []ai.NestedToolCallRecord{
+			{ID: "n1", Name: "read", Arguments: json.RawMessage(`{"path":"script-read.txt"}`)},
+			{ID: "n2", Name: "write", Arguments: json.RawMessage(`{"path":"script-write.txt"}`)},
+			{ID: "n3", Name: "edit", Arguments: json.RawMessage(`{"path":"script-edit.txt"}`)},
+			{ID: "n4", Name: "read", ArgumentsBytes: intPtr(9000)},
+		}},
+	}, fileOps)
+
+	readFiles, modifiedFiles := ComputeFileLists(fileOps)
+	if len(readFiles) != 1 || readFiles[0] != "script-read.txt" {
+		t.Fatalf("readFiles = %v", readFiles)
+	}
+	if len(modifiedFiles) != 2 || modifiedFiles[0] != "script-edit.txt" || modifiedFiles[1] != "script-write.txt" {
+		t.Fatalf("modifiedFiles = %v", modifiedFiles)
+	}
+	// A tool result without nested calls contributes nothing.
+	empty := CreateFileOps()
+	ExtractFileOpsFromMessage(&ai.ToolResultMessage{ToolCallID: "c2", ToolName: "read"}, empty)
+	if len(empty.Read)+len(empty.Written)+len(empty.Edited) != 0 {
+		t.Fatalf("plain tool result added file ops: %+v", empty)
+	}
+}
+
 func TestSerializeConversation(t *testing.T) {
 	messages := []ai.Message{
 		createUserMessage("do the thing"),
