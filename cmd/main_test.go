@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"errors"
+	"io"
+	"os"
 	"strings"
 	"testing"
 
@@ -131,6 +133,55 @@ func TestResumeSessionIDInvalidFormat(t *testing.T) {
 	args := &coding.Args{SessionID: strPtr("bad id!")}
 	if _, err := resumeSession(args, cwd, t.TempDir(), nil); err == nil {
 		t.Fatal("expected an error for an invalid --session-id format")
+	}
+}
+
+// captureStdio redirects os.Stdout and os.Stderr for the duration of fn so a
+// test can assert which stream a diagnostic used.
+func captureStdio(t *testing.T, fn func()) (stdout string, stderr string) {
+	t.Helper()
+	outR, outW, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	errR, errW, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	origOut, origErr := os.Stdout, os.Stderr
+	os.Stdout, os.Stderr = outW, errW
+	defer func() { os.Stdout, os.Stderr = origOut, origErr }()
+	fn()
+	_ = outW.Close()
+	_ = errW.Close()
+	outBytes, _ := io.ReadAll(outR)
+	errBytes, _ := io.ReadAll(errR)
+	return string(outBytes), string(errBytes)
+}
+
+// Upstream prints the session-id warning with console.error and has already
+// taken stdout over in every non-interactive mode, so the warning must never
+// reach stdout (a JSONL consumer parses every line).
+func TestResumeSessionIDWarningGoesToStderr(t *testing.T) {
+	isolatedAgentDir(t)
+	cwd := t.TempDir()
+	for _, mode := range []coding.CLIMode{coding.CLIModeText, coding.CLIModeJSON, coding.CLIModeRPC} {
+		t.Run(string(mode), func(t *testing.T) {
+			args := &coding.Args{SessionID: strPtr("019463a7-1111-7111-8111-111111111111"), Mode: mode}
+			var err error
+			stdout, stderr := captureStdio(t, func() {
+				_, err = resumeSession(args, cwd, t.TempDir(), nil)
+			})
+			if err != nil {
+				t.Fatalf("resumeSession: %v", err)
+			}
+			if strings.Contains(stdout, "No project session found") {
+				t.Fatalf("%s: warning on stdout: %q", mode, stdout)
+			}
+			if !strings.Contains(stderr, "No project session found") {
+				t.Fatalf("%s: warning not on stderr: stdout=%q stderr=%q", mode, stdout, stderr)
+			}
+		})
 	}
 }
 

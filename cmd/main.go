@@ -4,6 +4,11 @@
 // bounded stdio RPC subset (pi v1.3.0 modes/rpc/rpc-mode.ts; docs/rpc.md).
 // The package manager, extensions and migrations remain out of scope.
 //
+// D236: the unreachable upstream packages (chord, client, protocol, server,
+// telemetry, durable) have no counterpart in the built CLI's dependency graph;
+// the entry composition here reaches only ai, agent, coding, coding/interactive,
+// coding/rpcclient, tui and mcp.
+//
 // The module root's main.go is a thin wrapper over Execute, so the module is
 // installable from a release asset (`pier update`) rather than
 // `go install github.com/dat267/pier@latest`, which would publish this module to
@@ -971,11 +976,11 @@ func resumeSession(args *coding.Args, cwd string, agentDir string, settings *cod
 		}
 		// Upstream (createSessionManager): warn, then create a new session
 		// carrying the requested id.
-		warningOutput := os.Stdout
-		if args.Mode == coding.CLIModeRPC {
-			warningOutput = os.Stderr
-		}
-		fmt.Fprintf(warningOutput, "\033[33mWarning: No project session found with id '%s'; creating a new session with that id.\033[0m\n", *args.SessionID)
+		// Upstream writes this warning with console.error, and its stdout
+		// takeover is active in every non-interactive mode, so the warning must
+		// go to stderr for text and JSON print mode as well as RPC: a JSONL
+		// consumer parses every stdout line.
+		fmt.Fprintf(os.Stderr, "\033[33mWarning: No project session found with id '%s'; creating a new session with that id.\033[0m\n", *args.SessionID)
 		sm := coding.NewSessionManager(cwd, &coding.SessionManagerOptions{SessionDir: sessionDir})
 		sm.NewSession(&coding.NewSessionOptions{ID: *args.SessionID})
 		return sm, nil
