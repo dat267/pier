@@ -1182,14 +1182,14 @@ func Compact(preparation *CompactionPreparation, options CompactionOptions) (*Co
 		}
 		var historyUsage *ai.Usage
 		if len(preparation.MessagesToSummarize) > 0 {
-			result, err := generateSummaryWithUsage(preparation.MessagesToSummarize, options, preparation.PreviousSummary)
+			result, err := generateSummaryWithUsage(preparation.MessagesToSummarize, options, preparation.PreviousSummary, preparation.Settings.ReserveTokens)
 			if err != nil {
 				return nil, err
 			}
 			historyText = result.text
 			historyUsage = result.usage
 		}
-		turnPrefixResult, err := generateTurnPrefixSummary(preparation.TurnPrefixMessages, options)
+		turnPrefixResult, err := generateTurnPrefixSummary(preparation.TurnPrefixMessages, options, preparation.Settings.ReserveTokens)
 		if err != nil {
 			return nil, err
 		}
@@ -1201,7 +1201,7 @@ func Compact(preparation *CompactionPreparation, options CompactionOptions) (*Co
 		}
 		hasUsage = true
 	} else {
-		result, err := generateSummaryWithUsage(preparation.MessagesToSummarize, options, preparation.PreviousSummary)
+		result, err := generateSummaryWithUsage(preparation.MessagesToSummarize, options, preparation.PreviousSummary, preparation.Settings.ReserveTokens)
 		if err != nil {
 			return nil, err
 		}
@@ -1237,9 +1237,9 @@ type summaryWithUsage struct {
 }
 
 // generateSummaryWithUsage generates or updates a conversation summary.
-func generateSummaryWithUsage(currentMessages []ai.Message, options CompactionOptions, previousSummary string) (*summaryWithUsage, error) {
+func generateSummaryWithUsage(currentMessages []ai.Message, options CompactionOptions, previousSummary string, reserveTokens int64) (*summaryWithUsage, error) {
 	model := options.Model
-	maxTokens := math.Floor(0.8 * float64(DefaultCompactionSettings.ReserveTokens))
+	maxTokens := math.Floor(0.8 * float64(reserveTokens))
 	if model.MaxTokens > 0 && maxTokens > float64(model.MaxTokens) {
 		maxTokens = float64(model.MaxTokens)
 	}
@@ -1276,9 +1276,9 @@ func generateSummaryWithUsage(currentMessages []ai.Message, options CompactionOp
 }
 
 // generateTurnPrefixSummary summarizes a split turn's prefix.
-func generateTurnPrefixSummary(messages []ai.Message, options CompactionOptions) (*summaryWithUsage, error) {
+func generateTurnPrefixSummary(messages []ai.Message, options CompactionOptions, reserveTokens int64) (*summaryWithUsage, error) {
 	model := options.Model
-	maxTokens := math.Floor(0.5 * float64(DefaultCompactionSettings.ReserveTokens))
+	maxTokens := math.Floor(0.5 * float64(reserveTokens))
 	if model.MaxTokens > 0 && maxTokens > float64(model.MaxTokens) {
 		maxTokens = float64(model.MaxTokens)
 	}

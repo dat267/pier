@@ -382,7 +382,8 @@ func TestTurnPrefixPromptUsesMarkdownBoundaries(t *testing.T) {
 		},
 	}
 	if _, err := generateTurnPrefixSummary(
-		[]ai.Message{&ai.UserMessage{Content: ai.StringOrBlocks{Text: "Summarize this."}, Timestamp: 1}}, options); err != nil {
+		[]ai.Message{&ai.UserMessage{Content: ai.StringOrBlocks{Text: "Summarize this."}, Timestamp: 1}}, options,
+		DefaultCompactionSettings.ReserveTokens); err != nil {
 		t.Fatal(err)
 	}
 	if strings.Contains(captured, "<conversation>") {
@@ -545,5 +546,58 @@ func TestPrepareCompactionAdvancesPastRecoveryOmission(t *testing.T) {
 	}
 	if preparation.TokensBefore != m.ProjectedContextEstimate().Tokens {
 		t.Fatalf("tokensBefore = %d, projected estimate %d", preparation.TokensBefore, m.ProjectedContextEstimate().Tokens)
+	}
+}
+
+// TestCompactCapsSummaryTokensFromSettings covers the summarization output cap
+// (upstream generateSummaryWithUsage / generateTurnPrefixSummary): it is a
+// fraction of the configured reserve tokens, not of the defaults, so a session
+// with a smaller reserve asks for a smaller summary.
+func TestCompactCapsSummaryTokensFromSettings(t *testing.T) {
+	newPreparation := func(reserveTokens int64) *CompactionPreparation {
+		m := NewSessionManager("/tmp", &SessionManagerOptions{Persist: boolPtr(false)})
+		for i := 0; i < 3; i++ {
+			m.AppendMessage(createUserMessage(strings.Repeat("u", 400)))
+			m.AppendMessage(createAssistantMessageT(strings.Repeat("a", 400)))
+		}
+		preparation := PrepareCompaction(m.GetEntries(), CompactionSettings{
+			Enabled: true, ReserveTokens: reserveTokens, KeepRecentTokens: 200,
+		})
+		if preparation == nil {
+			t.Fatal("compaction should be preparable")
+		}
+		return preparation
+	}
+
+	run := func(preparation *CompactionPreparation) int {
+		var maxTokens int
+		options := CompactionOptions{
+			// A model limit above the reserve-derived cap so the cap is what the
+			// test measures.
+			Model: &ai.Model{ID: "mock", API: "openai-responses", Provider: "openai", MaxTokens: 100000},
+			StreamFn: func(model *ai.Model, context ai.TranscriptContext, streamOptions *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+				if streamOptions.MaxTokens != nil {
+					maxTokens = *streamOptions.MaxTokens
+				}
+				stream := ai.NewAssistantMessageEventStream()
+				stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
+					Content: ai.ContentList{ai.TextContent{Text: "## Goal\nsummary text long enough to pass the usability check"}},
+					API:     model.API, Provider: model.Provider, Model: model.ID,
+					StopReason: ai.StopStop, Timestamp: 1,
+				}})
+				return stream
+			},
+		}
+		if _, err := Compact(preparation, options); err != nil {
+			t.Fatal(err)
+		}
+		return maxTokens
+	}
+
+	if got := run(newPreparation(16384)); got != 13107 {
+		t.Fatalf("max tokens with the default reserve = %d, want 13107", got)
+	}
+	if got := run(newPreparation(4000)); got != 3200 {
+		t.Fatalf("max tokens with a 4000-token reserve = %d, want 3200", got)
 	}
 }
