@@ -116,7 +116,7 @@ func DiscoverProtectedResourceMetadata(ctx context.Context, serverURL string, op
 	if err != nil {
 		return nil, err
 	}
-	target := *server
+	target := url.URL{Scheme: server.Scheme, Host: server.Host}
 	if options.ResourceMetadataURL != nil {
 		configured, err := url.Parse(*options.ResourceMetadataURL)
 		if err != nil {
@@ -125,7 +125,7 @@ func DiscoverProtectedResourceMetadata(ctx context.Context, serverURL string, op
 		target = *configured
 	} else if suffix := pathSuffix(server.Path); suffix != "" {
 		// Upstream joins the well-known path onto the origin, replacing the
-		// server path.
+		// server path (and dropping userinfo, query and fragment).
 		target.Path = "/.well-known/oauth-protected-resource" + suffix
 	} else {
 		target.Path = "/.well-known/oauth-protected-resource"
@@ -136,8 +136,7 @@ func DiscoverProtectedResourceMetadata(ctx context.Context, serverURL string, op
 	}
 	if options.ResourceMetadataURL == nil && server.Path != "/" && isDiscoveryMiss(response.StatusCode) {
 		discard(response)
-		fallback := *server
-		fallback.Path = "/.well-known/oauth-protected-resource"
+		fallback := url.URL{Scheme: server.Scheme, Host: server.Host, Path: "/.well-known/oauth-protected-resource"}
 		response, err = fetchMetadata(ctx, fetch, &fallback, version)
 		if err != nil {
 			return nil, err
@@ -198,9 +197,10 @@ func BuildAuthorizationServerDiscoveryUrls(authorizationServerURL string) []stru
 }
 
 func joinPath(base url.URL, suffix string) string {
-	clone := base
-	clone.Path = suffix
-	return clone.String()
+	// Upstream resolves against the issuer's origin, which drops userinfo,
+	// query and fragment.
+	origin := url.URL{Scheme: base.Scheme, Host: base.Host, Path: suffix}
+	return origin.String()
 }
 
 // DiscoverAuthorizationServerMetadata walks the well-known candidates
@@ -313,6 +313,10 @@ func DiscoverOAuthServerInfo(ctx context.Context, serverURL string, options Disc
 		}
 		root := *parsed
 		root.Path = "/"
+		root.RawQuery = ""
+		root.ForceQuery = false
+		root.Fragment = ""
+		root.RawFragment = ""
 		authorizationServerURL = root.String()
 	}
 	metadata, err := DiscoverAuthorizationServerMetadata(ctx, authorizationServerURL, DiscoveryOptions{

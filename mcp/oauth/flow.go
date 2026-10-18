@@ -263,6 +263,11 @@ func joinPathForServer(serverURL, path string) string {
 	}
 	clone := *parsed
 	clone.Path = path
+	clone.RawPath = ""
+	clone.RawQuery = ""
+	clone.ForceQuery = false
+	clone.Fragment = ""
+	clone.RawFragment = ""
 	return clone.String()
 }
 
