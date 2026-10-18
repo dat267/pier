@@ -294,7 +294,10 @@ func AppendGrammarToolInputJSONDelta(buffer *GrammarToolInputJSONBuffer, inputPr
 	if !strings.HasPrefix(nextInput, buffer.Input) {
 		return "", false, fmt.Errorf("grammar tool input for property %q changed non-monotonically", inputProperty)
 	}
-	inputDelta := nextInput[JSLength(buffer.Input):]
+	// buffer.Input is a byte prefix of nextInput (checked above), so the delta
+	// starts at len(buffer.Input). JS slice(buffer.input.length) indexes UTF-16
+	// units, but slicing a Go string there would cut multi-byte text.
+	inputDelta := nextInput[len(buffer.Input):]
 	if !close && len(inputDelta) == 0 {
 		return "", true, nil
 	}
