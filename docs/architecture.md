@@ -43,6 +43,15 @@ with historical measurements retained to explain the design.
   terminal-input sends select on cancellation and queue/input closure. The
   standalone startup/picker loop exits when its selection is settled, not
   through the app's run context.
+- **The main loop must never stall more than 100 ms.** Any handler, render path
+  or watcher callback that can exceed the budget moves its blocking or heavy
+  work off-loop (`RunWork`/detached work) or chunks it. The `OnStall` hook and
+  `TestMainLoopStallBudgetStreaming` enforce the streaming path (they fail on a
+  phase over the budget); `TestHandleResumeSessionPreparesOffLoop` and
+  `TestSessionSelectorDeleteFlow` enforce that session resume and delete do
+  their heavy work off-loop. Session event drains are bounded (64 per pass),
+  paints coalesce, large markdown/tool work prepares off-loop (D204/D205/D239),
+  and per-paint session walks are memoized or avoided (D239).
 - **Slow-phase logging is on by default at 100 ms**; `PIER_STALL_MS=<ms>`
   overrides the threshold and `PIER_STALL_MS=0` disables it. Every phase the
   loop measures (`render`, `events`, `event-apply`, `partial-event-apply`, `beat`, `input`,

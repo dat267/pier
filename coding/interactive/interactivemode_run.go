@@ -88,6 +88,10 @@ type RunWiring struct {
 	// and PIER_STALL_MS overrides it (0 disables).
 	StallLogPath      string
 	StallLogThreshold time.Duration
+	// OnStall, when set, is invoked (from the loop or the watchdog goroutine)
+	// for every phase that trips StallLogThreshold. The 100ms loop-budget tests
+	// use it to fail without reading files; production leaves it nil.
+	OnStall func(name string, elapsed time.Duration)
 	// StallLogCPUAfter is how long a busy streak must run before its CPU
 	// profile starts; 0 disables profile capture. Resolved once from
 	// PIER_STALL_CPU_MS at construction.
@@ -808,6 +812,9 @@ var stallWriteMu sync.Mutex
 // observed when a quit key's phase crossed the threshold), which reads as a
 // defect instead of a torn write.
 func (w *RunWiring) writeStallRecord(name string, elapsed time.Duration, note string, cpu []byte) {
+	if w.OnStall != nil {
+		w.OnStall(name, elapsed)
+	}
 	stallWriteMu.Lock()
 	defer stallWriteMu.Unlock()
 	var record strings.Builder

@@ -218,7 +218,14 @@ Blocking session-event and terminal-input sends are released by run-context
 cancellation or queue/input closure. Standalone startup screens instead end
 when their selection is settled.
 
-Stages 2 (rendering) and 3 (input and signals) are also on the loop. Slow phases
+Stages 2 (rendering) and 3 (input and signals) are also on the loop. **The
+main loop must never stall more than 100ms**: a handler, render path or watcher
+callback that can exceed that budget must move its blocking or heavy work
+off-loop (`RunWork`/detached work) or chunk it, never run it inline. The
+`OnStall` hook and `TestMainLoopStallBudgetStreaming` enforce the budget for
+the streaming path; the picker's `TestHandleResumeSessionPreparesOffLoop` and
+`TestSessionSelectorDeleteFlow` enforce that resume and delete do their heavy
+work off-loop. Slow phases
 over `PIER_STALL_MS` (default 100; `0` disables) and keystroke round trips over
 `PIER_INPUT_LAT_MS` (default 100, matching `PIER_STALL_MS`) append to
 `<agentDir>/logs/pier-stall.log` and `<agentDir>/logs/pier-input-latency.log`,
