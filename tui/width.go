@@ -435,6 +435,13 @@ func VisibleWidth(text string) int {
 	if cached, ok := widthCache.Load(text); ok {
 		return cached.(int)
 	}
+	// Styled ASCII (SGR-colored output and diffs) is the common per-line case in
+	// a Box's background pass: measure it without allocating a stripped copy or
+	// walking graphemes. Anything else falls through to the general path.
+	if width, ok := styledASCIIWidth(text); ok {
+		widthCacheStore(text, width)
+		return width
+	}
 
 	clean := text
 	if strings.Contains(clean, "\t") {
@@ -544,3 +551,43 @@ func isLetterRune(r rune) bool { return unicode.IsLetter(r) }
 func isDigitRune(r rune) bool { return unicode.IsDigit(r) }
 
 func isMarkRune(r rune) bool { return unicode.IsMark(r) }
+
+// styledASCIIWidth returns the display width of a string that is ASCII apart
+// from ANSI CSI escape sequences, without allocating a stripped copy or walking
+// graphemes. It reports false for tabs, non-ASCII bytes, or non-CSI escapes, so
+// the general path handles those. Used by VisibleWidth's fast path; the box
+// background pass measures every line of a long output.
+func styledASCIIWidth(text string) (int, bool) {
+	width := 0
+	sawEscape := false
+	for i := 0; i < len(text); {
+		c := text[i]
+		if c == 0x1b {
+			if i+1 >= len(text) || text[i+1] != '[' {
+				return 0, false
+			}
+			sawEscape = true
+			j := i + 2
+			for j < len(text) && (text[j] < 0x40 || text[j] > 0x7e) {
+				if text[j] == 0x1b {
+					return 0, false
+				}
+				j++
+			}
+			if j >= len(text) {
+				return 0, false
+			}
+			i = j + 1
+			continue
+		}
+		if c < 0x20 || c > 0x7e {
+			return 0, false
+		}
+		width++
+		i++
+	}
+	if !sawEscape {
+		return 0, false
+	}
+	return width, true
+}

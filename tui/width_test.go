@@ -255,3 +255,36 @@ func BenchmarkVisibleWidthStyledLineGraphemeWalk(b *testing.B) {
 		}
 	}
 }
+
+// Box.applyBg measures every line of a long tool output on re-render, and the
+// live stall log caught the loop there (a theme change re-applied the box
+// background to a large edit diff). Styled ASCII lines are the common case, so
+// VisibleWidth handles them without allocating a stripped copy or walking
+// graphemes; the result must match the general path exactly.
+func TestVisibleWidthStyledASCIITFastPathMatches(t *testing.T) {
+	cases := []string{
+		"plain ascii",
+		"\x1b[31mred\x1b[0m",
+		"\x1b[38;5;208m\x1b[48;5;236mcolored content here\x1b[0m",
+		"a\x1b[1mb\x1b[0mc\x1b[2md\x1b[0m",
+		"\x1b[1;38;2;10;20;30mrgb\x1b[0m text",
+		"\x1b[7mreversed\x1b[0m and \x1b[9mstruck\x1b[0m",
+		"",
+		// Non-ASCII after stripping must fall back to the grapheme walk, not the
+		// ASCII fast path.
+		"\x1b[31m\u4f60\u597d\x1b[0m",
+		"\x1b[1m\U0001f600 emoji\x1b[0m",
+		"e\u0301\x1b[0m combining",
+		"\x1b[31m\ttabbed\x1b[0m",
+	}
+	for _, text := range cases {
+		clean := StripTerminalSequences(text)
+		want := 0
+		for _, segment := range segmentGraphemes(clean) {
+			want += graphemeWidth(segment)
+		}
+		if got := VisibleWidth(text); got != want {
+			t.Errorf("VisibleWidth(%q) = %d, want %d", text, got, want)
+		}
+	}
+}
