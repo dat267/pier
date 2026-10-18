@@ -2119,17 +2119,3 @@ the existing generation checks; the owner paints the stale lines meanwhile.
 At 64 KiB (`veryLargeMarkdownBytes`) the cold first render submits off-loop
 too, exactly as D204 specified. Standalone renderers without a preparation
 stay synchronous.
-## D240
-
-A session resume and a session delete run off the UI loop; upstream runs both
-synchronously. The stall log's mid-phase dumps attributed two picker actions:
-selecting a session ran `CreateAgentSession` → `SessionManager.Projection` →
-`messageCache.decodeEntry` on the loop, decoding every message of a
-40k-entry session (220 ms), and deleting a session ran the `trash` CLI
-(`spawnSync` upstream) synchronously (121 ms). The port now opens and warms the
-projection on a worker and posts only the bind to the owner loop; the delete
-runs on a worker and posts its UI update. The projection warm is safe off-loop
-because it touches only the freshly opened manager, never the running app's
-state, and the loop's own `CreateAgentSession` projection is then a cache hit.
-`/clone`, fork-from-message and `/import` still bind synchronously (they open or
-fork a session the same way, but are rarer).
