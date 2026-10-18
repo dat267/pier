@@ -592,20 +592,28 @@ var newlinePattern = regexp.MustCompile(`[\r\n]+`)
 func (m *SessionManager) GetSessionName() string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	entries := m.getEntriesLocked()
-	for i := len(entries) - 1; i >= 0; i-- {
+	// Upstream's getSessionName reads fileEntries directly for the same reason,
+	// in its own words: "the footer calls this on every frame, and getEntries()
+	// copies the whole session". The program-status reporter calls this on every
+	// status event while a run is active, so getEntriesLocked()'s copy of every
+	// entry (440 B each, ~84 MB at 40k entries) under m.mu was stalling the UI
+	// loop: 80 of 134 event-apply stall records caught it inside that copy, and
+	// 20 more waited for the lock in CacheMissFor.
+	for i := len(m.fileEntries) - 1; i >= 0; i-- {
+		entry := m.fileEntries[i].Entry
+		if entry == nil || entry.Type != "session_info" {
+			continue
+		}
 		// Upstream returns at the newest session_info entry even when its name
 		// is missing (`entry.name?.trim() || undefined`).
-		if entries[i].Type == "session_info" {
-			if entries[i].Name == nil {
-				return ""
-			}
-			name := ai.JSTrim(*entries[i].Name)
-			if name != "" {
-				return name
-			}
+		if entry.Name == nil {
 			return ""
 		}
+		name := ai.JSTrim(*entry.Name)
+		if name != "" {
+			return name
+		}
+		return ""
 	}
 	return ""
 }

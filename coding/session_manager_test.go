@@ -482,3 +482,34 @@ func TestGetSessionNameStopsAtNewestSessionInfo(t *testing.T) {
 		t.Fatalf("name = %q; want empty", name)
 	}
 }
+
+// GetSessionName must read fileEntries directly, the way upstream's
+// getSessionName does ("the footer calls this on every frame, and getEntries()
+// copies the whole session"): the program-status reporter calls it on every
+// status event while a run is active, so a per-call copy of all entries (440 B
+// each) under m.mu is a UI-loop stall on a real 40k-entry session — 80 of 134
+// event-apply stall records were caught inside that copy loop.
+func TestGetSessionNameDoesNotAllocateProportionalToEntryCount(t *testing.T) {
+	build := func(n int) *SessionManager {
+		m := &SessionManager{}
+		name := "title"
+		// The name is set once near the start, so the reverse walk spans all
+		// entries — the realistic worst case for the scan, and the case where
+		// copying them was easy to mistake for O(1) work.
+		m.fileEntries = append(m.fileEntries, FileEntry{Entry: &SessionEntry{Type: "session_info", Name: &name}})
+		for i := 0; i < n; i++ {
+			m.fileEntries = append(m.fileEntries, FileEntry{Entry: &SessionEntry{Type: "custom_message", CustomType: "filler"}})
+		}
+		return m
+	}
+	small, large := build(64), build(8192)
+	if got := large.GetSessionName(); got != "title" {
+		t.Fatalf("name = %q, want title", got)
+	}
+	smallBytes := allocatedBytesPerRun(t, 20, func() { small.GetSessionName() })
+	largeBytes := allocatedBytesPerRun(t, 20, func() { large.GetSessionName() })
+	if largeBytes > smallBytes*4+4096 {
+		t.Fatalf("GetSessionName allocated %d bytes at 8192 entries vs %d at 64; the copy must not happen",
+			largeBytes, smallBytes)
+	}
+}
