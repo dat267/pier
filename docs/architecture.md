@@ -51,7 +51,11 @@ with historical measurements retained to explain the design.
   `TestSessionSelectorDeleteFlow` enforce that session resume and delete do
   their heavy work off-loop. Session event drains are bounded (64 per pass),
   paints coalesce, large markdown/tool work prepares off-loop (D204/D205/D239),
-  and per-paint session walks are memoized or avoided (D239).
+  and per-paint session walks are memoized or avoided (D239). A theme change
+  invalidates every mounted component; the tool-display rebuild is deferred to
+  the component's next Render (`ToolExecutionComponent.displayDirty`) so D203's
+  cooperative warming spreads it across frames instead of one eager sweep
+  inside `drainPosted`.
 - **Slow-phase logging is on by default at 100 ms**; `PIER_STALL_MS=<ms>`
   overrides the threshold and `PIER_STALL_MS=0` disables it. Every phase the
   loop measures (`render`, `events`, `event-apply`, `partial-event-apply`, `beat`, `input`,

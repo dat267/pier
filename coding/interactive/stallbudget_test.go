@@ -84,6 +84,16 @@ func TestMainLoopStallBudgetStreaming(t *testing.T) {
 		})
 	}, 30*time.Second)
 
+	// A theme change walks and invalidates every mounted component (the trigger
+	// behind the 18:02/18:18 stalls). The tool rebuild is deferred to Render,
+	// which D203's cooperative warming spreads across frames; it must not
+	// produce a single over-budget phase.
+	app.ui.Post(func() { app.ui.Invalidate() })
+	waitForConditionWithin(t, func() bool {
+		return postValue(app, func() bool { return app.transcript.StreamingComponent == nil })
+	}, 10*time.Second)
+	time.Sleep(200 * time.Millisecond)
+
 	mu.Lock()
 	got := append([]string(nil), stalls...)
 	mu.Unlock()

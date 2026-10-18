@@ -109,3 +109,32 @@ func TestToolWorkerPreparesCompleteBoxFrame(t *testing.T) {
 		})
 	}
 }
+
+// A theme change invalidates the whole tree (Renderer.Invalidate walks every
+// component). Rebuilding the tool's display eagerly inside that walk made the
+// 18:02/18:18 stalls; the rebuild is deferred to the component's next Render
+// instead, which is coalesced with the paint.
+func TestToolInvalidateRebuildsLazily(t *testing.T) {
+	InitTheme("dark", false)
+	calls := 0
+	definition := &ToolRenderers{
+		RenderCall: func(any, *Theme, *ToolRenderContext) tui.Component { return tui.NewText("call", 0, 0, nil) },
+		RenderResult: func(*SortToolResultContent, ToolRenderResultOptions, *Theme, *ToolRenderContext) tui.Component {
+			calls++
+			return tui.NewText("result", 0, 0, nil)
+		},
+	}
+	c := NewToolExecutionComponent("custom", "call", map[string]any{}, ToolExecutionOptions{}, definition, nil, "/tmp")
+	c.UpdateResult(&SortToolResultContent{Content: []ToolResultContent{{Type: "text", Text: "out"}}}, false)
+	if calls != 1 {
+		t.Fatalf("update result calls = %d, want 1", calls)
+	}
+	c.Invalidate()
+	if calls != 1 {
+		t.Fatalf("Invalidate rebuilt eagerly (%d calls)", calls)
+	}
+	c.Render(80)
+	if calls != 2 {
+		t.Fatalf("Render did not rebuild after Invalidate (%d calls)", calls)
+	}
+}
