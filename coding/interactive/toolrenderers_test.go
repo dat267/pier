@@ -400,7 +400,7 @@ func TestFormatSearchResultExpandedShowsAllLines(t *testing.T) {
 	}
 }
 
-// A known language in a read preview is syntax highlighted (D227 superseded),
+// A known language in a read preview is syntax highlighted (D231),
 // with the source preserved after the ANSI is stripped.
 func TestFormatReadResultHighlightsKnownLanguage(t *testing.T) {
 	installPierThemeForTest(t)

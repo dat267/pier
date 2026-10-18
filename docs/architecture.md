@@ -622,7 +622,7 @@ fell from ~1.27 s to ~0.88 s over 20 s on the 97 MB session
 
 ## Syntax highlighting
 
-Syntax highlighting is built in (D231, superseding D217 and D227). Upstream
+Syntax highlighting is built in (D231). Upstream
 renders Markdown code blocks and read/write previews with highlight.js and maps
 the `hljs-*` scopes to `syntax*` theme tokens (`renderHighlightedHtml` plus
 `buildCliHighlightTheme`). `highlight` is a from-scratch port of highlight.js
@@ -637,7 +637,7 @@ the TUI walks the tree directly and skips the HTML round-trip; the two are
 equivalent because the HTML walk was exactly escape-then-unescape. On the
 10.9 KB `internal/highlight/testdata/sample_big.go`, `highlightCode` measures 1.86 ms
 (5.86 MB/s) against the reference's 3.20 ms (3.42 MB/s) in the same session, and
-against the retired Chroma measurement (~0.5 MB/s, D227). The scope sequence and
+against the retired Chroma measurement (~0.5 MB/s). The scope sequence and
 the scope-to-token mapping match upstream; only the theme palette differs
 (D154). The per-fragment formatter lookup is a switch, so the wire-in adds no
 lock and no off-loop path.

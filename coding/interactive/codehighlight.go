@@ -8,8 +8,8 @@ import (
 
 // This file is the port of the reference's
 // packages/coding-agent/src/utils/syntax-highlight.ts and the terminal half of
-// theme/theme.ts's buildCliHighlightTheme. It supersedes D227: syntax
-// highlighting is built in again, and a code block with a registered language
+// theme/theme.ts's buildCliHighlightTheme. Syntax highlighting is built in: a
+// code block with a registered language
 // gets per-token colors instead of one code-block color.
 //
 // The reference builds highlight.js's HTML and then walks it, matching each

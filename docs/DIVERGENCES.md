@@ -2,7 +2,7 @@
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
-in code comments; not every ID has a full entry here. The range is **D1–D235**.
+in code comments; not every ID has a full entry here. The range is **D1–D238**.
 Entries are ordered numerically. Closed, retired, and withdrawn rows keep their
 IDs for historical references; overlapping rows refer to the owning explanation.
 
@@ -939,24 +939,9 @@ from the first changed line. `bashPreviewComponent.Invalidate` also retains
 incremental line counts.
 
 For a 2000-line result, tick cost fell from 2.15 ms to 0.07 ms; bash preview
-from 139 µs to 0.0009 ms. D194 now matches upstream tick frequency; D207/D208 refine
+from 139 µs to 0.0009 ms. D238 sets the shell tick; D207/D208 refine
 pending-frame clocks. References: `packages/coding-agent/src/modes/interactive/components/tool-execution.ts`
 and `packages/coding-agent/src/core/tools/renderers/bash.ts`.
-
-## D191
-
-**Historical: the user goal extension was removed.**
-
-The built-in `goal/` package and `GoalController` existed until v0.0.14, but
-`~/.pi/agent/extensions/goal` was a user extension, not stock pi. Removal restores
-stock behavior at the D41/D133 extension boundary.
-
-Historically `SessionGoalSink.SendGoalMessage` encoded an invisible
-`ai.CustomMessage` (`role: "custom"`, `{customType, content, display: false, details}`)
-and queued `AgentSession.FollowUp` to start on settlement. `ConvertToLlm` made
-it model-visible user content; transcript `decodeCustomMessage` skipped it.
-Existing `pi-goal` entries still replay as generic cards; goal renderers were
-gone until D223 re-ported the feature.
 
 ## D192
 
@@ -994,17 +979,6 @@ transparent (`transparentBackgroundColors`). The overlay runs in
 remain upstream-parity.
 
 Reference: `packages/coding-agent/src/modes/interactive/theme/system-theme.ts`.
-
-## D194
-
-**Closed: shell elapsed labels refresh every 1000 ms.**
-
-`bash`/`powershell` use a 1s `shellElapsedTick`, matching v1.2.0
-`core/tools/render-utils.ts.toolTimerText`. Tenths display resolution and
-recorded final durations remain unchanged. Tool-level animation still drives
-silent calls through cached parents, and D190's efficient revision bump remains.
-`TestShellElapsedDuration` checks the interval; elapsed-label regressions cover
-live clocks and final `Took` values.
 
 ## D195
 
@@ -1506,19 +1480,6 @@ v1.1.0's `packages/tui/src/keybindings.ts` mapping (`6100fe5a8`), retained in
 v1.2.0, uses `Home`/`End` for the editor and `Ctrl+Home`/`Ctrl+End` for the
 transcript. ID retained for historical references.
 
-## D217
-
-**Chroma replaces highlight.js.**
-
-Upstream `theme.ts.highlightCode` uses `cli-highlight` with syntax theme tokens.
-Pier uses Go-native Chroma v3.0.0-alpha.5 for Markdown code blocks and read/write
-previews, mapping categories to `syntax*`. Unknown languages/lexer failures use
-plain `mdCodeBlock` styling. Lexer/token boundaries differ, so ANSI is not
-byte-identical. Reference:
-`packages/coding-agent/src/modes/interactive/theme/theme.ts`.
-
-Superseded by D227: Chroma is removed, so no language applies token colors.
-
 ## D218
 
 **The combined system-color query waits off the owner loop.**
@@ -1633,9 +1594,8 @@ in `durable/durable_test.go`.
 **The user goal extension is re-ported as a builtin internal package.**
 
 `~/.pi/agent/extensions/goal` is an installed user extension, not stock pi, and
-the port has no extension host (D41). D191 removed the earlier builtin; this
-row records the deliberate decision to reintroduce the feature as tree code on
-the user's request: `internal/goal` holds the state, machine, command parser and
+the port has no extension host (D41). An earlier builtin was removed, then
+re-ported as tree code on the user's request: `internal/goal` holds the state, machine, command parser and
 renderers, `coding.GoalController` is the host glue, and `coding/interactive`
 renders the transcript and tool cards.
 
@@ -1743,42 +1703,6 @@ goal extension to interleave.
 Any custom role is held, not just the goal event; the ordering rule is about
 the tool pair, and the roles are out-of-band notes rather than turns.
 
-## D227
-
-**Syntax highlighting is not built in.**
-
-Upstream renders Markdown code blocks and read/write previews with highlight.js
-(D217 recorded the Chroma substitution). Chroma v3 compiles every lexer rule
-with `dlclark/regexp2`, a pure-Go interpreted backtracking engine, and tries the
-rules one at a time: the Go lexer's `root` has 28 rules and its own tracing
-shows ~14.5 regex attempts per token (153,560 attempts for 10,597 tokens on
-`tui/markdown.go`). It measured ~0.5 MB/s, against ~7-11 MB/s for highlight.js
-on the same files (V8's JIT-compiled irregexp, one combined regex per step),
-about 14-19x slower.
-
-That cost sat inside `Markdown.Render` on the UI loop, so every re-render of a
-fence re-tokenised it: 90 fences on one whole-UI invalidate frame, and the whole
-growing fence on every streaming partial (a 600-partial fenced thinking block
-measured 31 s). A user session's `pier-stall.log` shows idle 190-235 ms `render`
-phases stuck in `highlightCodeWithChroma`.
-
-The port now renders every language with upstream's own no-valid-language
-fallback: each line of a fence gets one `mdCodeBlock` color, no token colors
-(`coding/interactive/codehighlight.go`). `HighlightCode(code, lang)` keeps the
-markdown theme hook signature and language detection still drives the tool
-renderers, but the language no longer changes the output. Code fences remain
-visually distinct from body text; only the per-token coloring is gone.
-
-Two consequences: ANSI output for code blocks is now identical across languages
-and does not match upstream's highlighted output; and diff/tool previews lose
-their syntax colors. Removing the dependency drops `github.com/alecthomas/chroma/v3`
-and its `dlclark/regexp2` indirect dependency and the lexer registry init at
-startup: the binary fell from 31.1 MB to 27.1 MB (-3.9 MB), and `pier --version`
-went from 12.3 ms to 5.3 ms median (-7 ms) on the same machine.
-
-Superseded by D231: the `highlight` port is wired back in, so a registered
-language colors its tokens again.
-
 ## D228
 
 **Mid-line `$$`/`\[` are literal text, not a paragraph split.**
@@ -1850,10 +1774,10 @@ cell replacement, not the whole frame.
 
 ## D231
 
-**Syntax highlighting is built in again (supersedes D217 and D227).**
+**Syntax highlighting is built in.**
 
-D227 removed syntax highlighting because Chroma v3 ran at ~0.5 MB/s on the UI
-loop and made code fences a render stall. The `highlight` package is now a
+Syntax highlighting was removed earlier because Chroma v3 ran at ~0.5 MB/s on
+the UI loop and made code fences a render stall. The `highlight` package is now a
 from-scratch port of highlight.js 10.7.3 (the v1.3.0 reference engine), all 191
 `lib/index.js` languages are registered, and `TestGoldenHighlight` matches the
 reference HTML byte-for-byte on every fixture.
@@ -1883,10 +1807,10 @@ walks the tree directly and skips the HTML round-trip (equivalent, since the
 HTML walk was exactly escape-then-unescape). On the 10.9 KB
 `internal/highlight/testdata/sample_big.go`, the wired path measures 1.86 ms (5.86 MB/s)
 against the reference's JS wired path at 3.20 ms (3.42 MB/s) in the same
-session, so the D227 stall does not return, and the port has no third-party
+session, so that stall does not return, and the port has no third-party
 dependency:
 `github.com/alecthomas/chroma/v3` and its `dlclark/regexp2` indirect dependency
-stay removed, keeping the binary and startup gains D227 recorded.
+stay removed, keeping the binary and startup gains that removal produced.
 
 One divergence remains from the reference loader: pi registers 21 languages
 eagerly and imports the rest lazily, so an uncommon language can render plain
@@ -2101,6 +2025,6 @@ the running clock is displayed with a resolution its redraw period cannot show:
 `Elapsed 2.0s` jumps to `3.0s` a whole second at a time. The port's
 `shellElapsedTick` is 100ms, so the display moves by .1s and the tenths
 resolution is real. Non-shell running tools keep the upstream 1s tick, and the
-final `Took` value is unaffected (it reads the recorded duration). Supersedes
-the D194 tick-frequency match for the shell label only; the cost is ten small
+final `Took` value is unaffected (it reads the recorded duration). This departs
+from upstream's 1000 ms tick for the shell label only; the cost is ten small
 differential paints a second while a shell command runs.

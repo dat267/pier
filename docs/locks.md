@@ -29,11 +29,10 @@ are unchanged.
 D209 extends owner-only in-place Container flattening to first-child changes.
 Revision/change-offset metadata guards parent caches, and removed string slots
 are cleared on shrink. No shared UI mutation or additional lock is introduced.
-D227 removed syntax highlighting instead of adding a cache lock: no lock or
-off-loop path was introduced for it. D231 wires the `highlight` port back in
-instead of restoring that cache lock: `coding/interactive/codehighlight.go` is
-pure and calls the `highlight` package, whose compiled-language cache is guarded
-by that package's own mutex, so no UI lock or off-loop path is introduced.
+Syntax highlighting adds no UI lock or off-loop path: D231 wires the
+`highlight` port in, `coding/interactive/codehighlight.go` is pure and calls the
+`highlight` package, whose compiled-language cache is guarded by that package's
+own mutex, so no UI lock or off-loop path is introduced.
 
 | Lock | Where | Protects | Retirement |
 |---|---|---|---|

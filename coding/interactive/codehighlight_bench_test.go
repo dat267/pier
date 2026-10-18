@@ -6,7 +6,7 @@ import (
 )
 
 // BenchmarkHighlightCodeGo measures the wired-in render path on a real Go
-// source file. It is the guard that the highlight.js port, not Chroma (D227),
+// source file. It is the guard that the highlight.js port, not Chroma,
 // backs the per-fence work.
 func BenchmarkHighlightCodeGo(b *testing.B) {
 	code, err := os.ReadFile("../../internal/highlight/testdata/sample_big.go")

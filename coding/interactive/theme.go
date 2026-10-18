@@ -25,7 +25,7 @@ import (
 //
 // Divergences: chalk's style helpers become equivalent ANSI sequences
 // (verified against chalk output); syntax highlighting is built in via the
-// `highlight` port (D231 supersedes D217 and D227); the file watcher polls
+// `highlight` port (D231); the file watcher polls
 // instead of using fs.watch (D75).
 
 //go:embed themes/*.json

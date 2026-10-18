@@ -512,7 +512,7 @@ var bashRenderers = CreateShellRenderers("$")
 var powershellRenderers = CreateShellRenderers("PS>")
 
 // isShellTool reports whether a tool name uses the shell renderers, whose
-// elapsed label ticks at shellElapsedTick (D194).
+// elapsed label ticks at shellElapsedTick (D238).
 func isShellTool(name string) bool { return name == "bash" || name == "powershell" }
 
 // --- write ------------------------------------------------------------------
