@@ -74,7 +74,11 @@ func ParseWwwAuthenticate(header string) OAuthChallenge {
 	if header == "" {
 		return OAuthChallenge{}
 	}
-	scheme := strings.ToLower(strings.Fields(strings.TrimSpace(header))[0])
+	fields := strings.Fields(strings.TrimSpace(header))
+	if len(fields) == 0 {
+		return OAuthChallenge{}
+	}
+	scheme := strings.ToLower(fields[0])
 	if scheme != "bearer" && scheme != "dpop" {
 		return OAuthChallenge{}
 	}

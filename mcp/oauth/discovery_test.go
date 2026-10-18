@@ -37,6 +37,21 @@ func TestBuildAuthorizationServerDiscoveryUrlsUseOrigin(t *testing.T) {
 	}
 }
 
+// A whitespace-only challenge must not panic on the scheme index (upstream's
+// trimStart().split(/\s+/, 1)[0] yields "").
+func TestParseWwwAuthenticateWhitespaceOnly(t *testing.T) {
+	if got := ParseWwwAuthenticate("   \t  "); got != (OAuthChallenge{}) {
+		t.Fatalf("ParseWwwAuthenticate(whitespace) = %+v, want empty", got)
+	}
+	got := ParseWwwAuthenticate(`Bearer error="insufficient_scope", scope="files:read"`)
+	if got.Error == nil || *got.Error != "insufficient_scope" {
+		t.Fatalf("error = %v, want insufficient_scope", got.Error)
+	}
+	if got.Scope == nil || *got.Scope != "files:read" {
+		t.Fatalf("scope = %v, want files:read", got.Scope)
+	}
+}
+
 // The protected-resource request also targets the origin, so the server URL's
 // query and userinfo never reach the well-known endpoint.
 func TestDiscoverProtectedResourceMetadataUsesOrigin(t *testing.T) {
