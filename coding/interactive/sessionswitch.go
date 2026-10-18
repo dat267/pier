@@ -17,6 +17,21 @@ import (
 // (upstream AgentSessionRuntime.switchSession plus the interactive-mode
 // rebind).
 func (a *App) switchSession(ctx context.Context, sessionPath string, cwdOverride string) (*SessionSwitchResult, error) {
+	sessionManager, err := a.prepareSessionSwitch(ctx, sessionPath, cwdOverride)
+	if err != nil {
+		return nil, err
+	}
+	return a.applyPreparedSwitch(sessionManager)
+}
+
+// prepareSessionSwitch opens the target session and warms its projection. It
+// touches only the freshly opened manager (never the running app's loop-owned
+// state), so the resume flow can run it off the UI loop: building the projection
+// decodes every message and blocked the loop for ~220ms on a 40k-entry session
+// (the streak-start dump caught CreateAgentSession -> SessionManager.Projection
+// -> messageCache.decodeEntry). The warm cache makes the loop's own
+// CreateAgentSession projection call a hit.
+func (a *App) prepareSessionSwitch(_ context.Context, sessionPath string, cwdOverride string) (*coding.SessionManager, error) {
 	sessionManager, err := coding.OpenSession(sessionPath, "", cwdOverride)
 	if err != nil {
 		return nil, err
@@ -24,8 +39,14 @@ func (a *App) switchSession(ctx context.Context, sessionPath string, cwdOverride
 	if err := coding.AssertSessionCwdExists(sessionManager, a.options.Cwd); err != nil {
 		return nil, err
 	}
-	// The previous session's run is gone, so its working or done status must not linger over
-	// the new one (upstream resets the reporter when the session is bound).
+	sessionManager.Projection()
+	return sessionManager, nil
+}
+
+// applyPreparedSwitch binds a prepared session on the owner loop. The previous
+// session's run is gone, so its working or done status must not linger over the
+// new one (upstream resets the reporter when the session is bound).
+func (a *App) applyPreparedSwitch(sessionManager *coding.SessionManager) (*SessionSwitchResult, error) {
 	if a.programStatus != nil {
 		a.programStatus.Reset()
 	}

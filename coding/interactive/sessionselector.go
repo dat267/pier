@@ -1195,7 +1195,25 @@ func (c *SessionSelectorComponent) confirmRename(value string) {
 }
 
 func (c *SessionSelectorComponent) deleteSessionAndRefresh(sessionPath string) {
-	result := c.deleteSession(sessionPath)
+	// The deleter spawns the `trash` CLI (or unlinks), which blocked the UI loop
+	// for ~120ms in the wild. Run it on a worker and apply the result on the owner
+	// loop; without a Post sink (tests) run inline so the behaviour is
+	// synchronous there.
+	if c.Post == nil {
+		c.applyDeleteResult(sessionPath, c.deleteSession(sessionPath))
+		return
+	}
+	c.header.SetStatusMessage(&sessionStatusMessage{Type: "info", Message: "Deleting session…"}, 2000)
+	c.requestRenderNow()
+	c.loads.Add(1)
+	go func() {
+		defer c.loads.Done()
+		result := c.deleteSession(sessionPath)
+		c.postApply(func() { c.applyDeleteResult(sessionPath, result) })
+	}()
+}
+
+func (c *SessionSelectorComponent) applyDeleteResult(sessionPath string, result SessionDeleteResult) {
 	if result.OK {
 		c.currentSessions = filterOutSession(c.currentSessions, sessionPath)
 		c.allSessions = filterOutSession(c.allSessions, sessionPath)

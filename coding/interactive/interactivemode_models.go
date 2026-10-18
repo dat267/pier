@@ -403,8 +403,16 @@ type SessionWiring struct {
 	UI          tui.TUI
 	Keybindings *tui.KeybindingsManager
 
-	// SwitchSession resumes a session (runtimeHost.switchSession).
+	// SwitchSession resumes a session (runtimeHost.switchSession). It is the
+	// synchronous fallback when no work slot is wired.
 	SwitchSession func(ctx context.Context, sessionPath string, cwdOverride string) (*SessionSwitchResult, error)
+	// PrepareSwitch opens and warms the target session off the loop; ApplyPrepared
+	// binds it on the loop. With StartWork and UI.Post wired, a resume runs the
+	// open + projection decode on a worker so the loop stays responsive.
+	PrepareSwitch func(ctx context.Context, sessionPath string, cwdOverride string) (*coding.SessionManager, error)
+	ApplyPrepared func(sessionManager *coding.SessionManager) (*SessionSwitchResult, error)
+	// StartWork schedules blocking work off the UI loop.
+	StartWork func(fn func(context.Context) error)
 	// PromptForMissingCwd resolves a missing-cwd error.
 	PromptForMissingCwd func(ctx context.Context, issue coding.SessionCwdIssue, onCwd func(cwd string, ok bool))
 	// ShowStatus reports a status line.
@@ -502,21 +510,23 @@ func (w *SessionWiring) ShowSessionSelector() {
 	})
 }
 
-// HandleResumeSession switches to another session.
+// HandleResumeSession switches to another session. The open + projection build
+// runs on the work slot and the bind is posted to the owner loop, so a large
+// session's resume cannot freeze the UI (the 220ms stall the streak-start dump
+// attributed to CreateAgentSession's projection). Without a work slot (tests)
+// the same steps run inline.
 func (w *SessionWiring) HandleResumeSession(ctx context.Context, sessionPath string) {
 	if w.ClearStatusIndicator != nil {
 		w.ClearStatusIndicator()
 	}
-	if w.SwitchSession == nil {
+	if w.SwitchSession == nil && w.ApplyPrepared == nil {
 		return
 	}
 
-	// resumeWith switches and, when the session's stored cwd is gone, offers to
-	// continue in the fallback before trying again — upstream's awaits as a
-	// callback chain.
+	// finish handles the outcome. It always runs on the owner loop: inline in the
+	// synchronous fallback, or from UI.Post in the off-loop path.
 	var resumeWith func(cwdOverride string)
-	resumeWith = func(cwdOverride string) {
-		result, err := w.SwitchSession(ctx, sessionPath, cwdOverride)
+	finish := func(cwdOverride string, result *SessionSwitchResult, err error) {
 		if err == nil {
 			if result != nil && result.Cancelled {
 				return
@@ -544,6 +554,36 @@ func (w *SessionWiring) HandleResumeSession(ctx context.Context, sessionPath str
 			return
 		}
 		w.showError("Failed to resume session: " + err.Error())
+	}
+
+	resumeWith = func(cwdOverride string) {
+		if w.StartWork != nil && w.UI != nil && w.PrepareSwitch != nil && w.ApplyPrepared != nil {
+			w.StartWork(func(workCtx context.Context) error {
+				prepared, err := w.PrepareSwitch(workCtx, sessionPath, cwdOverride)
+				w.UI.Post(func() {
+					if err != nil {
+						finish(cwdOverride, nil, err)
+						return
+					}
+					result, applyErr := w.ApplyPrepared(prepared)
+					finish(cwdOverride, result, applyErr)
+				})
+				return nil
+			})
+			return
+		}
+		if w.PrepareSwitch != nil && w.ApplyPrepared != nil {
+			prepared, err := w.PrepareSwitch(ctx, sessionPath, cwdOverride)
+			if err != nil {
+				finish(cwdOverride, nil, err)
+				return
+			}
+			result, applyErr := w.ApplyPrepared(prepared)
+			finish(cwdOverride, result, applyErr)
+			return
+		}
+		result, err := w.SwitchSession(ctx, sessionPath, cwdOverride)
+		finish(cwdOverride, result, err)
 	}
 	resumeWith("")
 }
@@ -590,5 +630,8 @@ func newSessionWiring(app *App) *SessionWiring {
 		Shutdown:             func() { app.lifecycle.Shutdown(false) },
 		RequestRender:        func() { app.ui.RequestRender(false) },
 		ClearStatusIndicator: func() { app.uiState.ClearStatusIndicator("", false) },
-		SwitchSession:        app.switchSession}
+		SwitchSession:        app.switchSession,
+		PrepareSwitch:        app.prepareSessionSwitch,
+		ApplyPrepared:        app.applyPreparedSwitch,
+		StartWork:            func(fn func(context.Context) error) { app.events.StartWork(fn) }}
 }

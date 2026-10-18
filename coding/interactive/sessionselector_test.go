@@ -269,7 +269,13 @@ func TestSessionSelectorDeleteFlow(t *testing.T) {
 		{Path: "/s/a.jsonl", FirstMessage: "a", Modified: now},
 		{Path: "/s/b.jsonl", FirstMessage: "b", Modified: now.Add(-time.Hour)},
 	}
-	var deleted []string
+	var (
+		deletedMu sync.Mutex
+		deleted   []string
+	)
+	// gate blocks the deleter so the test can prove it runs off the caller's
+	// goroutine: if it ran inline, HandleInput on Enter would deadlock here.
+	gate := make(chan struct{})
 	queue := &postQueue{}
 	component := NewSessionSelectorComponent(
 		func(SessionListProgress, context.Context) ([]coding.SessionInfo, error) { return sessions, nil },
@@ -277,7 +283,10 @@ func TestSessionSelectorDeleteFlow(t *testing.T) {
 		func(string) {}, func() {}, func() {}, func() {},
 		SessionSelectorOptions{
 			DeleteSession: func(sessionPath string) SessionDeleteResult {
+				<-gate
+				deletedMu.Lock()
 				deleted = append(deleted, sessionPath)
+				deletedMu.Unlock()
 				return SessionDeleteResult{OK: true, Method: "trash"}
 			},
 			ScheduleTimer: func(ms int, fn func()) {},
@@ -297,13 +306,19 @@ func TestSessionSelectorDeleteFlow(t *testing.T) {
 	if component.GetHeader().confirmingDeletePath != nil {
 		t.Fatal("confirmation not cancelled")
 	}
-	// Ctrl+D then Enter deletes the second session.
+	// Ctrl+D then Enter deletes the second session. The deletion runs on a
+	// worker: the gated deleter means an inline run would deadlock HandleInput.
 	list.HandleInput("\x1b[B")
 	list.HandleInput("\x04")
 	list.HandleInput("\r")
+	close(gate)
 	component.WaitForPendingLoads()
-	if len(deleted) != 1 || deleted[0] != "/s/b.jsonl" {
-		t.Fatalf("deleted = %v", deleted)
+	queue.drain()
+	deletedMu.Lock()
+	got := append([]string(nil), deleted...)
+	deletedMu.Unlock()
+	if len(got) != 1 || got[0] != "/s/b.jsonl" {
+		t.Fatalf("deleted = %v", got)
 	}
 	if message := component.GetHeader().statusMessage; message == nil || message.Message != "Session moved to trash" {
 		t.Fatalf("status = %+v", message)
