@@ -100,7 +100,7 @@ type TokenRequestOptions struct {
 }
 
 func loopback(hostname string) bool {
-	hostname = strings.Trim(hostname, "[]")
+	hostname = strings.ToLower(strings.Trim(hostname, "[]"))
 	return hostname == "localhost" || hostname == "127.0.0.1" || hostname == "::1"
 }
 
