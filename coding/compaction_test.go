@@ -2,6 +2,7 @@ package coding
 
 import (
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -450,5 +451,99 @@ func TestEstimateAgentMessageTokensMeasuresJSStringLength(t *testing.T) {
 	// ceil((4 + 13) / 4) = 5; a byte count (4 + 17 = 21) would give 6.
 	if got := EstimateAgentMessageTokens(assistant); got != 5 {
 		t.Fatalf("assistant tokens = %d; want 5", got)
+	}
+}
+
+// TestPrepareCompactionUsesTheProjection covers prepareCompaction over the
+// session projection: an omitted message is neither summarized nor counted
+// toward tokensBefore, because the model never saw it.
+func TestPrepareCompactionUsesTheProjection(t *testing.T) {
+	m := NewSessionManager(t.TempDir(), nil)
+	m.AppendMessage(&ai.AssistantMessage{
+		API: ai.APIAnthropicMessages, Provider: "p", Model: "m", StopReason: ai.StopToolUse,
+		Content: ai.ContentList{ai.ToolCall{ID: "c1", Name: "bash", Arguments: []byte("{}")}},
+	})
+	omittedID := m.AppendMessage(&ai.ToolResultMessage{
+		ToolCallID: "c1", ToolName: "bash",
+		Content: ai.UserContentList{ai.TextContent{Text: strings.Repeat("x", 40000)}},
+	})
+	m.AppendMessage(createUserMessage("follow up question"))
+	m.AppendMessage(&ai.AssistantMessage{
+		API: ai.APIAnthropicMessages, Provider: "p", Model: "m", StopReason: ai.StopStop,
+		Content: ai.ContentList{ai.TextContent{Text: "answer"}},
+	})
+	if _, err := m.AppendContextEdit(omittedID, json.RawMessage("null")); err != nil {
+		t.Fatal(err)
+	}
+
+	preparation := PrepareCompaction(m.GetBranch(""), CompactionSettings{Enabled: true, ReserveTokens: 0, KeepRecentTokens: 1})
+	if preparation == nil {
+		t.Fatal("nothing to compact")
+	}
+	projected := m.ProjectedContextEstimate()
+	if preparation.TokensBefore != projected.Tokens {
+		t.Fatalf("tokensBefore = %d, projected estimate %d", preparation.TokensBefore, projected.Tokens)
+	}
+	if preparation.TokensBefore > 100 {
+		t.Fatalf("tokensBefore = %d; the omitted tool result still counts", preparation.TokensBefore)
+	}
+	for _, message := range append(append([]ai.Message{}, preparation.MessagesToSummarize...), preparation.TurnPrefixMessages...) {
+		if ai.RoleOf(message) == ai.RoleToolResult {
+			t.Fatalf("the omitted tool result was summarized: %+v", message)
+		}
+	}
+}
+
+// TestPrepareCompactionAdvancesPastRecoveryOmission pins the recovery-suffix
+// rule (upstream findProjectedCutPoint): a closed suffix holding the omitted
+// assistant attempt advances the cut, so the summarized history ends at that
+// attempt. The expected shape is the reference's own output for this branch.
+func TestPrepareCompactionAdvancesPastRecoveryOmission(t *testing.T) {
+	m := NewSessionManager(t.TempDir(), nil)
+	m.AppendMessage(createUserMessage("first question"))
+	m.AppendMessage(&ai.AssistantMessage{
+		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m", StopReason: ai.StopStop,
+		Content: ai.ContentList{ai.TextContent{Text: "first answer with some detail to tokenize"}},
+	})
+	m.AppendMessage(createUserMessage("second question"))
+	m.AppendMessage(&ai.AssistantMessage{
+		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m", StopReason: ai.StopStop,
+		Content: ai.ContentList{ai.TextContent{Text: "second answer"}},
+	})
+	m.AppendMessage(createUserMessage("third question"))
+	failedID := m.AppendMessage(&ai.AssistantMessage{
+		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m", StopReason: ai.StopError,
+		ErrorMessage: strPtr("prompt is too long: 2000 tokens > 1000 maximum"),
+	})
+	if _, err := m.AppendContextEdit(failedID, json.RawMessage("null")); err != nil {
+		t.Fatal(err)
+	}
+
+	preparation := PrepareCompaction(m.GetBranch(""), CompactionSettings{Enabled: true, ReserveTokens: 100, KeepRecentTokens: 1})
+	if preparation == nil {
+		t.Fatal("nothing to compact")
+	}
+	if preparation.FirstKeptEntryID != failedID {
+		t.Fatalf("first kept entry = %s, want the omitted attempt %s", preparation.FirstKeptEntryID, failedID)
+	}
+	if !preparation.IsSplitTurn {
+		t.Fatal("cut at the omitted assistant is a split turn")
+	}
+	roles := func(messages []ai.Message) []string {
+		out := make([]string, 0, len(messages))
+		for _, message := range messages {
+			out = append(out, ai.RoleOf(message))
+		}
+		return out
+	}
+	wantSummary := []string{ai.RoleUser, ai.RoleAssistant, ai.RoleUser, ai.RoleAssistant}
+	if got := roles(preparation.MessagesToSummarize); !reflect.DeepEqual(got, wantSummary) {
+		t.Fatalf("messages to summarize = %v, want %v", got, wantSummary)
+	}
+	if got := roles(preparation.TurnPrefixMessages); !reflect.DeepEqual(got, []string{ai.RoleUser}) {
+		t.Fatalf("turn prefix = %v, want the split turn's user message", got)
+	}
+	if preparation.TokensBefore != m.ProjectedContextEstimate().Tokens {
+		t.Fatalf("tokensBefore = %d, projected estimate %d", preparation.TokensBefore, m.ProjectedContextEstimate().Tokens)
 	}
 }

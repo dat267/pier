@@ -457,6 +457,160 @@ type CutPointResult struct {
 	IsSplitTurn bool
 }
 
+// isProjectedTurnStart reports whether a projected entry starts a turn.
+func isProjectedTurnStart(entry ProjectedEntry) bool {
+	if entry.Source.Type == "compaction" {
+		return false
+	}
+	for _, message := range entry.Messages {
+		if isTurnStartMessage(message) {
+			return true
+		}
+	}
+	return false
+}
+
+// findProjectedTurnStartIndex finds the projected turn start containing
+// entryIndex; -1 when none.
+func findProjectedTurnStartIndex(entries []ProjectedEntry, entryIndex, startIndex int) int {
+	for i := entryIndex; i >= startIndex; i-- {
+		if isProjectedTurnStart(entries[i]) {
+			return i
+		}
+	}
+	return -1
+}
+
+// projectedEntryIntrinsicallyVisible reports whether the entry's raw
+// contribution is context-visible, ignoring context edits (upstream
+// isIntrinsicallyVisible).
+func projectedEntryIntrinsicallyVisible(entry ProjectedEntry) bool {
+	return entry.Source.Type != "context_edit" && len(SessionEntryToContextMessages(entry.Source)) > 0
+}
+
+// projectedEntryOmitted reports a context-visible entry that a context edit
+// removed from the projection.
+func projectedEntryOmitted(entry ProjectedEntry) bool {
+	return projectedEntryIntrinsicallyVisible(entry) && len(entry.Messages) == 0
+}
+
+// contextEditIsOmission reports a null replacement (an omission).
+func contextEditIsOmission(replacement json.RawMessage) bool {
+	return bytes.Equal(bytes.TrimSpace(replacement), []byte("null"))
+}
+
+// findProjectedCutPoint is findCutPoint over the projection (upstream
+// findProjectedCutPoint). Omitted entries carry no messages, so they cost no
+// budget, and a closed recovery-omission suffix at the end advances the cut.
+func findProjectedCutPoint(entries []ProjectedEntry, startIndex, endIndex, keepRecentTokens int) CutPointResult {
+	var cutPoints []int
+	for i := startIndex; i < endIndex; i++ {
+		if entries[i].Source.Type == "compaction" {
+			continue
+		}
+		for _, message := range entries[i].Messages {
+			if isCutPointMessage(message) {
+				cutPoints = append(cutPoints, i)
+				break
+			}
+		}
+	}
+	if len(cutPoints) == 0 {
+		return CutPointResult{FirstKeptEntryIndex: startIndex, TurnStartIndex: -1}
+	}
+
+	accumulatedTokens := 0
+	exceededBudget := false
+	cutIndex := cutPoints[0]
+	for i := endIndex - 1; i >= startIndex; i-- {
+		messageTokens := 0
+		for _, message := range entries[i].Messages {
+			messageTokens += EstimateAgentMessageTokens(message)
+		}
+		if messageTokens == 0 {
+			continue
+		}
+		accumulatedTokens += messageTokens
+		if accumulatedTokens >= keepRecentTokens {
+			exceededBudget = true
+			cutIndex = cutPoints[len(cutPoints)-1]
+			for _, candidate := range cutPoints {
+				if candidate >= i {
+					cutIndex = candidate
+					break
+				}
+			}
+			break
+		}
+	}
+
+	// A recovery attempt and its omission edits are context-invisible after the
+	// last visible input. Advance only for a closed suffix containing an omitted
+	// assistant attempt; arbitrary metadata must not move the cut past unsent
+	// input.
+	if cutIndex+1 <= endIndex {
+		suffix := entries[cutIndex+1 : endIndex]
+		omittedSuffixIDs := map[string]bool{}
+		for _, entry := range suffix {
+			if projectedEntryOmitted(entry) {
+				omittedSuffixIDs[entry.Source.ID] = true
+			}
+		}
+		hasExternalReplacement := false
+		hasOmittedAssistant := false
+		allClosed := true
+		for _, entry := range suffix {
+			if entry.Source.Type == "context_edit" && !contextEditIsOmission(entry.Source.Replacement) &&
+				!omittedSuffixIDs[entry.Source.TargetID] {
+				hasExternalReplacement = true
+			}
+			if projectedEntryHasOmittedAssistant(entry) {
+				hasOmittedAssistant = true
+			}
+			if entry.Source.Type == "compaction" ||
+				(projectedEntryIntrinsicallyVisible(entry) && !projectedEntryOmitted(entry)) {
+				allClosed = false
+			}
+		}
+		if exceededBudget && !hasExternalReplacement && hasOmittedAssistant && allClosed {
+			cutIndex++
+		}
+	}
+
+	// Back up over adjacent metadata entries that do not affect context.
+	for cutIndex > startIndex {
+		previous := entries[cutIndex-1]
+		if previous.Source.Type == "compaction" || len(previous.Messages) > 0 {
+			break
+		}
+		cutIndex--
+	}
+
+	startsTurn := isProjectedTurnStart(entries[cutIndex])
+	turnStartIndex := -1
+	if !startsTurn {
+		turnStartIndex = findProjectedTurnStartIndex(entries, cutIndex, startIndex)
+	}
+	return CutPointResult{
+		FirstKeptEntryIndex: cutIndex, TurnStartIndex: turnStartIndex,
+		IsSplitTurn: !startsTurn && turnStartIndex != -1,
+	}
+}
+
+// projectedEntryHasOmittedAssistant reports an omitted assistant message entry
+// (upstream's sourceEntry.message.role === "assistant" && isOmitted(entry)).
+func projectedEntryHasOmittedAssistant(entry ProjectedEntry) bool {
+	if !projectedEntryOmitted(entry) {
+		return false
+	}
+	for _, message := range SessionEntryToContextMessages(entry.Source) {
+		if ai.RoleOf(message) == ai.RoleAssistant {
+			return true
+		}
+	}
+	return false
+}
+
 // FindCutPoint finds the cut point keeping approximately keepRecentTokens
 // (walk backwards from newest accumulating estimated sizes).
 func FindCutPoint(entries []SessionEntry, startIndex, endIndex, keepRecentTokens int) CutPointResult {
@@ -869,9 +1023,13 @@ type CompactionPreparation struct {
 }
 
 // PrepareCompaction pre-computes the compaction cut and spans
-// (port of prepareCompaction); undefined when there is nothing to compact.
+// (port of prepareCompaction); nil when there is nothing to compact.
+//
+// The cut runs over the session projection, not the raw entries: a context edit
+// removes or rewrites what the model saw, omitted entries must not cost budget,
+// and only projected messages can be summarized.
 func PrepareCompaction(pathEntries []SessionEntry, settings CompactionSettings) *CompactionPreparation {
-	// Nothing to compact without entries (upstream returns null).
+	// Nothing to compact without entries (upstream returns nil).
 	if len(pathEntries) == 0 {
 		return nil
 	}
@@ -879,9 +1037,19 @@ func PrepareCompaction(pathEntries []SessionEntry, settings CompactionSettings) 
 		return nil
 	}
 
+	window := projectWindow(materializePointers(pathEntries), nil)
+	projectedEntries := window.Entries
+	sourceEntries := make([]SessionEntry, len(projectedEntries))
+	for i := range projectedEntries {
+		sourceEntries[i] = *projectedEntries[i].Source
+	}
+
+	// The newest compaction is projected first. Older compaction entries can
+	// still occur in its retained raw range, but their projected contribution is
+	// empty, so they are skipped here.
 	prevCompactionIndex := -1
-	for i := len(pathEntries) - 1; i >= 0; i-- {
-		if pathEntries[i].Type == "compaction" {
+	for i := range projectedEntries {
+		if projectedEntries[i].Source.Type == "compaction" && len(projectedEntries[i].Messages) > 0 {
 			prevCompactionIndex = i
 			break
 		}
@@ -890,32 +1058,19 @@ func PrepareCompaction(pathEntries []SessionEntry, settings CompactionSettings) 
 	previousSummary := ""
 	boundaryStart := 0
 	if prevCompactionIndex >= 0 {
-		prevCompaction := pathEntries[prevCompactionIndex]
-		previousSummary = prevCompaction.Summary
-		firstKeptEntryIndex := -1
-		for i := range pathEntries {
-			if pathEntries[i].ID == prevCompaction.FirstKeptEntryID {
-				firstKeptEntryIndex = i
-				break
-			}
-		}
-		boundaryStart = firstKeptEntryIndex
-		if firstKeptEntryIndex < 0 {
-			boundaryStart = prevCompactionIndex + 1
-		}
+		previousSummary = projectedEntries[prevCompactionIndex].Source.Summary
+		// The projection has already selected the previous compaction's retained
+		// tail, so the boundary follows the compaction entry itself.
+		boundaryStart = prevCompactionIndex + 1
 	}
-	boundaryEnd := len(pathEntries)
+	boundaryEnd := len(projectedEntries)
+	tokensBefore := EstimateProjectedContextTokens(window).Tokens
+	cutPoint := findProjectedCutPoint(projectedEntries, boundaryStart, boundaryEnd, int(settings.KeepRecentTokens))
 
-	contextEntries := BuildContextEntries(pathEntries, nil, nil)
-	contextMessages := make([]ai.Message, 0, len(contextEntries))
-	for i := range contextEntries {
-		contextMessages = append(contextMessages, SessionEntryToContextMessages(&contextEntries[i])...)
+	if cutPoint.FirstKeptEntryIndex < 0 || cutPoint.FirstKeptEntryIndex >= len(projectedEntries) {
+		return nil
 	}
-	tokensBefore := EstimateContextTokens(contextMessages).Tokens
-
-	cutPoint := FindCutPoint(pathEntries, boundaryStart, boundaryEnd, int(settings.KeepRecentTokens))
-
-	firstKeptEntry := pathEntries[cutPoint.FirstKeptEntryIndex]
+	firstKeptEntry := projectedEntries[cutPoint.FirstKeptEntryIndex].Source
 	if firstKeptEntry.ID == "" {
 		return nil // session needs migration
 	}
@@ -927,23 +1082,21 @@ func PrepareCompaction(pathEntries []SessionEntry, settings CompactionSettings) 
 
 	var messagesToSummarize []ai.Message
 	for i := boundaryStart; i < historyEnd; i++ {
-		if msg := getMessageFromEntryForCompaction(&pathEntries[i]); msg != nil {
-			messagesToSummarize = append(messagesToSummarize, msg)
-		}
+		messagesToSummarize = append(messagesToSummarize, getMessagesFromProjectedEntryForCompaction(projectedEntries[i])...)
 	}
 	var turnPrefixMessages []ai.Message
 	if cutPoint.IsSplitTurn {
 		for i := cutPoint.TurnStartIndex; i < cutPoint.FirstKeptEntryIndex; i++ {
-			if msg := getMessageFromEntryForCompaction(&pathEntries[i]); msg != nil {
-				turnPrefixMessages = append(turnPrefixMessages, msg)
-			}
+			turnPrefixMessages = append(turnPrefixMessages, getMessagesFromProjectedEntryForCompaction(projectedEntries[i])...)
 		}
 	}
 	if len(messagesToSummarize) == 0 && len(turnPrefixMessages) == 0 {
 		return nil
 	}
 
-	fileOps := extractFileOperations(messagesToSummarize, pathEntries, prevCompactionIndex)
+	// Extract file operations from edited model-visible messages and the previous
+	// compaction.
+	fileOps := extractFileOperations(messagesToSummarize, sourceEntries, prevCompactionIndex)
 	if cutPoint.IsSplitTurn {
 		for _, msg := range turnPrefixMessages {
 			ExtractFileOpsFromMessage(msg, fileOps)
@@ -982,21 +1135,20 @@ func extractFileOperations(messages []ai.Message, entries []SessionEntry, prevCo
 	return fileOps
 }
 
-// getMessageFromEntryForCompaction projects an entry, dropping compaction
-// entries and system messages (prompt state travels with the compaction
-// entry's replay).
-func getMessageFromEntryForCompaction(entry *SessionEntry) ai.Message {
-	if entry.Type == "compaction" {
+// getMessagesFromProjectedEntryForCompaction returns the model-visible messages
+// of a projected entry, dropping compaction entries and system messages (prompt
+// state travels with the compaction entry's replay).
+func getMessagesFromProjectedEntryForCompaction(entry ProjectedEntry) []ai.Message {
+	if entry.Source.Type == "compaction" {
 		return nil
 	}
-	messages := SessionEntryToContextMessages(entry)
-	if len(messages) == 0 {
-		return nil
+	var messages []ai.Message
+	for _, message := range entry.Messages {
+		if ai.RoleOf(message) != ai.RoleSystem {
+			messages = append(messages, message)
+		}
 	}
-	if ai.RoleOf(messages[0]) == ai.RoleSystem {
-		return nil
-	}
-	return messages[0]
+	return messages
 }
 
 // CompactionOptions carry the LLM access inputs for Compact.

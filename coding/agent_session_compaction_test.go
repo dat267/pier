@@ -172,8 +172,12 @@ func TestCheckCompactionOverflowError(t *testing.T) {
 	if !compacted {
 		t.Fatal("overflow recovery must continue the agent")
 	}
-	if runs.Load() != 1 {
-		t.Fatalf("runs = %d", runs.Load())
+	// The omission leaves the failed assistant as the first kept entry, so the
+	// cut is a split turn: the history and the turn prefix are summarized
+	// separately. Upstream prepareCompaction returns the same shape for this
+	// branch (firstKeptEntryId = the omitted assistant, isSplitTurn = true).
+	if runs.Load() != 2 {
+		t.Fatalf("runs = %d, want the split-turn pair", runs.Load())
 	}
 	// The failed message was removed from the post-compaction projection, not
 	// only from agent state, so agent.continue can run.
