@@ -686,13 +686,7 @@ line).
 The reference builds highlight.js's HTML and then re-parses it to find the
 scopes. The port's `highlight` package already returns the same scope tree, so
 the TUI walks the tree directly and skips the HTML round-trip; the two are
-equivalent because the HTML walk was exactly escape-then-unescape. Rendered
-code blocks are memoized by (language, source) so a streaming turn does not
-re-highlight an unchanged fence on every delta: the Oct 18 streak-start dump
-caught the UI loop inside `HighlightWith`'s regex backtracking at a 100 ms
-stall. `setGlobalTheme` clears the cache, since the rendered lines embed theme
-colors, and the cache is mutex-guarded because a D239 worker renders snapshots
-off-loop. On the
+equivalent because the HTML walk was exactly escape-then-unescape. On the
 10.9 KB `internal/highlight/testdata/sample_big.go`, `highlightCode` measures 1.86 ms
 (5.86 MB/s) against the reference's 3.20 ms (3.42 MB/s) in the same session, and
 against the retired Chroma measurement (~0.5 MB/s, D227). The scope sequence and

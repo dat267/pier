@@ -2,7 +2,6 @@ package interactive
 
 import (
 	"strings"
-	"sync"
 
 	"github.com/dat267/pier/internal/highlight"
 )
@@ -204,9 +203,6 @@ func highlightCodeCore(code string, lang string, theme *Theme, rawFallback bool)
 	if !highlight.SupportsLanguage(lang) {
 		return plainCodeBlock(code, theme)
 	}
-	if lines, ok := lookupHighlightCache(code, lang); ok {
-		return lines
-	}
 	result, err := highlight.HighlightWith(code, lang, true)
 	if err != nil {
 		if rawFallback {
@@ -214,52 +210,5 @@ func highlightCodeCore(code string, lang string, theme *Theme, rawFallback bool)
 		}
 		return plainCodeBlock(code, theme)
 	}
-	lines := strings.Split(renderHighlightedNodes(result.Nodes, theme), "\n")
-	storeHighlightCache(code, lang, lines)
-	return lines
-}
-
-// highlightCache memoizes rendered code-block lines by language and source. A
-// streaming turn re-renders the whole assistant message per delta, and the
-// markdown renderer re-highlights a fence inside the re-lex window even when
-// the fence text is unchanged; the Oct 18 streak-start dump caught the UI loop
-// inside highlight.HighlightWith (regex backtracking) at a 100ms stall. The
-// cache is thread-safe because a D239 worker renders a snapshot off-loop, and
-// setGlobalTheme clears it so a theme change cannot serve stale colors. The
-// returned lines are shared read-only (the markdown renderer only reads them).
-var highlightCache = struct {
-	mu      sync.Mutex
-	entries map[string][]string
-}{}
-
-// highlightCacheMaxEntries bounds the cache; overflow clears it wholesale
-// rather than tracking recency, since a hit is a pure win and recomputing is
-// exactly what happened before the cache existed.
-const highlightCacheMaxEntries = 128
-
-func lookupHighlightCache(code string, lang string) ([]string, bool) {
-	highlightCache.mu.Lock()
-	defer highlightCache.mu.Unlock()
-	lines, ok := highlightCache.entries[lang+"\x00"+code]
-	return lines, ok
-}
-
-func storeHighlightCache(code string, lang string, lines []string) {
-	highlightCache.mu.Lock()
-	defer highlightCache.mu.Unlock()
-	if len(highlightCache.entries) >= highlightCacheMaxEntries {
-		highlightCache.entries = nil
-	}
-	if highlightCache.entries == nil {
-		highlightCache.entries = map[string][]string{}
-	}
-	highlightCache.entries[lang+"\x00"+code] = lines
-}
-
-// ClearHighlightCache drops every memoized code block; setGlobalTheme calls it
-// on a theme change, and tests call it for isolation.
-func ClearHighlightCache() {
-	highlightCache.mu.Lock()
-	highlightCache.entries = nil
-	highlightCache.mu.Unlock()
+	return strings.Split(renderHighlightedNodes(result.Nodes, theme), "\n")
 }

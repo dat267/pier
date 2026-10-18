@@ -1344,9 +1344,6 @@ func mustLoadTheme(name string) *Theme {
 func setGlobalTheme(name string, theme *Theme) {
 	themeState.current.Store(theme)
 	themeState.currentName.Store(&name)
-	// Highlighted code lines embed theme colors; a theme change must not serve
-	// the previous theme's cache.
-	ClearHighlightCache()
 }
 
 // SetTheme switches the global theme.
