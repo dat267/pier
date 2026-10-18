@@ -170,15 +170,34 @@ func MarshalMessage(m Message) (json.RawMessage, error) {
 	if err != nil {
 		return nil, err
 	}
-	var probe map[string]json.RawMessage
-	if err := json.Unmarshal(enc, &probe); err != nil {
-		return nil, err
+	// CustomMessage carries its own role field first (unknown roles persist
+	// through it); the other message types have no role field, and upstream
+	// constructs them as { role, ...fields }. Splice the role in first rather
+	// than round-tripping through a map, which would sort the keys and break
+	// session-file byte parity.
+	switch m.(type) {
+	case *CustomMessage:
+		return enc, nil
 	}
-	probe["role"], err = MarshalJSON(m.messageRole())
+	if len(enc) == 0 || enc[0] != '{' {
+		// A nil message marshals as null; there is no object to prepend to.
+		return enc, nil
+	}
+	role, err := MarshalJSON(m.messageRole())
 	if err != nil {
 		return nil, err
 	}
-	return MarshalJSON(probe)
+	out := make([]byte, 0, len(enc)+len(role)+10)
+	out = append(out, '{')
+	out = append(out, `"role":`...)
+	out = append(out, role...)
+	if len(enc) > 2 { // non-empty object body
+		out = append(out, ',')
+		out = append(out, enc[1:]...)
+	} else {
+		out = append(out, '}')
+	}
+	return out, nil
 }
 
 // UnmarshalMessage decodes one message by its role discriminator.

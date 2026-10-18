@@ -280,3 +280,63 @@ func TestNormalizeContext(t *testing.T) {
 		t.Fatalf("head = %+v", head)
 	}
 }
+
+// Upstream builds every non-custom message as { role, ...fields }, so the role
+// key is first. MarshalMessage must not reorder the fields through a map:
+// session files and proxy payloads are compared byte for byte.
+func TestMarshalMessageKeepsRoleFirst(t *testing.T) {
+	cases := []struct {
+		name    string
+		message Message
+		want    string
+	}{
+		{
+			name:    "user",
+			message: &UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
+			want:    `{"role":"user","content":"hi","timestamp":1}`,
+		},
+		{
+			name: "assistant",
+			message: &AssistantMessage{
+				Content:    ContentList{},
+				API:        APIAnthropicMessages,
+				Provider:   "anthropic",
+				Model:      "m",
+				StopReason: StopStop,
+				Timestamp:  2,
+			},
+			want: `{"role":"assistant","content":[],"api":"anthropic-messages","provider":"anthropic","model":"m","usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"totalTokens":0,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},"stopReason":"stop","timestamp":2}`,
+		},
+		{
+			name:    "toolResult",
+			message: &ToolResultMessage{ToolCallID: "c", ToolName: "read", Content: UserContentList{TextContent{Text: "out"}}, Timestamp: 3},
+			want:    `{"role":"toolResult","toolCallId":"c","toolName":"read","content":[{"type":"text","text":"out"}],"isError":false,"timestamp":3}`,
+		},
+	}
+	for _, testCase := range cases {
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
+			enc, err := MarshalMessage(testCase.message)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(enc) != testCase.want {
+				t.Fatalf("marshal:\n got %s\nwant %s", enc, testCase.want)
+			}
+			// The custom message already carries its own role field.
+			custom, err := MarshalMessage(&CustomMessage{Role: "custom", Content: json.RawMessage(`{"x":1}`)})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(custom) != `{"role":"custom","content":{"x":1}}` {
+				t.Fatalf("custom = %s", custom)
+			}
+		})
+	}
+
+	// A nil message is null, not a malformed object with a spliced role.
+	nilEnc, err := MarshalMessage(nil)
+	if err != nil || string(nilEnc) != "null" {
+		t.Fatalf("nil message = %s (%v)", nilEnc, err)
+	}
+}
