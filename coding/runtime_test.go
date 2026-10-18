@@ -197,6 +197,17 @@ func TestResolveHeaders(t *testing.T) {
 	}
 }
 
+// matchesProviderHost lowercases the WHATWG hostname; Go's url.Hostname
+// preserves host case, so a mixed-case provider host must still match.
+func TestMatchesProviderHostIgnoresCase(t *testing.T) {
+	if !matchesProviderHost("https://INTEGRATE.API.NVIDIA.COM/v1", nvidiaNimHost) {
+		t.Fatal("mixed-case provider host not matched")
+	}
+	if matchesProviderHost("https://example.com/v1", nvidiaNimHost) {
+		t.Fatal("unrelated host matched")
+	}
+}
+
 func TestProviderAttributionHeaders(t *testing.T) {
 	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
 	openRouter := &ai.Model{Provider: "openrouter", BaseURL: "https://openrouter.ai/api/v1"}

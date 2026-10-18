@@ -25,7 +25,8 @@ func matchesProviderHost(baseURL, expectedHost string) bool {
 	if err != nil {
 		return false
 	}
-	return parsed.Hostname() == expectedHost
+	// WHATWG hostnames are lowercased; Go's url.Hostname preserves case.
+	return strings.EqualFold(parsed.Hostname(), expectedHost)
 }
 
 func isOpenRouterModel(model *ai.Model) bool {
