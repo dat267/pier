@@ -157,6 +157,10 @@ type Markdown struct {
 	preparingText         string
 	preparingWidth        int
 	displayLines          []string
+	// rendered is set once the markdown completed a synchronous render; D239's
+	// divert uses it so the first render of a mid-size message stays on the
+	// owner and history never shows a placeholder.
+	rendered bool
 }
 
 // NewMarkdown creates a markdown component.
@@ -372,7 +376,12 @@ func (m *Markdown) Render(width int) []string {
 		return m.cachedLines
 	}
 
-	if m.preparation != nil && len(m.Text) >= largeMarkdownBytes {
+	// D239: prepare from 8 KiB once the markdown has rendered once (the first
+	// render of a mid-size message stays synchronous, so history never shows a
+	// placeholder; streaming deltas — any cache miss — divert to the worker
+	// instead of re-wrapping the open paragraph on the owner). At 64 KiB the
+	// cold render submits off-loop too, unchanged from D204.
+	if m.preparation != nil && len(m.Text) >= largeMarkdownBytes && (m.rendered || len(m.Text) >= veryLargeMarkdownBytes) {
 		return m.prepareLarge(width)
 	}
 
@@ -529,6 +538,7 @@ func (m *Markdown) Render(width int) []string {
 	m.cachedLines = result
 	m.hasCachedLines = true
 	m.displayLines = result
+	m.rendered = true
 
 	if len(result) > 0 {
 		return result

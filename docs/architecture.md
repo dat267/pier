@@ -220,6 +220,9 @@ with historical measurements retained to explain the design.
   cold work versus 0.024 ms/3,704 bytes owner admission (Linux/amd64, three runs).
   Admission timing uses a fake sink, not an end-to-end claim. Background parse,
   GC, final flattening and plain-text tool-result work are not reduced by it.
+  D239 lowers the streaming threshold to 8 KiB with a synchronous first render:
+  a live profile showed deltas re-wrapping the open paragraph on the loop below
+  64 KiB (one paint at 94 ms, keystrokes waiting 100-200 ms).
 - **D205 large built-in tool results use private snapshots.** Text-only expanded
   read and both bash/powershell display modes at 64 KiB share D204's four-job
   optional queue. Workers sanitize, style and wrap captured output; elapsed

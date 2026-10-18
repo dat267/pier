@@ -8,7 +8,15 @@ type MarkdownPreparation struct {
 	RequestRender func()
 }
 
-const largeMarkdownBytes = 64 * 1024
+// D239: 64 KiB left a streaming message re-wrapping its open paragraph on the
+// owner loop for its whole life (one paint measured 94ms); 8 KiB keeps the
+// first (synchronous) render cheap while deltas render off-loop.
+const largeMarkdownBytes = 8 * 1024
+
+// veryLargeMarkdownBytes is D204's cold-preparation threshold: a message this
+// size submits off-loop on its first render (the owner never parses it),
+// accepting the brief placeholder.
+const veryLargeMarkdownBytes = 64 * 1024
 
 // SetPreparation installs an immutable preparation backend before first use.
 // Standalone Markdown stays synchronous unless its caller opts in.
