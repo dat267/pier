@@ -96,10 +96,13 @@ func (s *AgentSession) CheckCompaction(ctx context.Context, assistant *ai.Assist
 
 	// Case 3: threshold compaction without retry. Error or zero-usage messages
 	// estimate from the last valid response so persistent API errors can still
-	// compact and do not reset context accounting.
+	// compact and do not reset context accounting. A context edit invalidates
+	// provider usage, so those sessions are estimated from the projection.
 	contextTokens := int64(0)
 	directContextTokens := int64(ai.CalculateContextTokens(assistant.Usage))
-	if assistant.StopReason == ai.StopError || directContextTokens == 0 {
+	if s.Sessions.HasContextEdits() {
+		contextTokens = int64(s.Sessions.ProjectedContextEstimate().Tokens)
+	} else if assistant.StopReason == ai.StopError || directContextTokens == 0 {
 		messages := s.Agent.State().Messages
 		estimate := EstimateContextTokens(messages)
 		if estimate.LastUsageIndex >= 0 && compactionEntry != nil && estimate.LastUsageIndex < len(messages) {

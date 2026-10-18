@@ -853,7 +853,7 @@ func (s *AgentSession) GetSessionStats() *SessionStats {
 	// Context usage from the current context.
 	model := s.Agent.State().Model
 	if model != nil && model.ContextWindow > 0 {
-		tokens := EstimateContextTokens(s.Sessions.Projection().Messages).Tokens
+		tokens := s.Sessions.ProjectedContextEstimate().Tokens
 		stats.ContextUsage = &ContextUsage{
 			Tokens:        int64(tokens),
 			ContextWindow: model.ContextWindow,

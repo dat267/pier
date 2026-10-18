@@ -333,6 +333,50 @@ func EstimateContextTokens(messages []ai.Message) CompactionContextUsageEstimate
 	}
 }
 
+// EstimateProjectedContextTokens estimates the tokens a projection carries
+// (port of estimateProjectedContextTokens). Provider usage is trusted only when
+// the message it came from still sits after the latest context edit or
+// compaction; otherwise the usage describes an older context and the estimate
+// falls back to message sizes.
+func EstimateProjectedContextTokens(window projectedWindow) CompactionContextUsageEstimate {
+	estimate := EstimateContextTokens(window.Messages)
+	if estimate.LastUsageIndex >= 0 {
+		// Find the entry that contributed the usage-bearing message.
+		projectedIndex := 0
+		usageEntryIndex := -1
+		latestInvalidatingIndex := -1
+		for index, entry := range window.Entries {
+			nextIndex := projectedIndex + len(entry.Messages)
+			if usageEntryIndex < 0 && estimate.LastUsageIndex < nextIndex {
+				usageEntryIndex = index
+			}
+			// A context edit or compaction changes what the messages after it
+			// mean; the entries kept by the window are ordered, so the newest
+			// invalidating entry is enough to decide.
+			if entry.Source.Type == "context_edit" || entry.Source.Type == "compaction" {
+				latestInvalidatingIndex = index
+			}
+			projectedIndex = nextIndex
+		}
+		if usageEntryIndex > latestInvalidatingIndex {
+			return estimate
+		}
+	}
+
+	// Without trustworthy usage, sum the current system prompt and every
+	// non-system projected message.
+	tokens := 0
+	if system := ai.GetCurrentSystemMessage(window.Messages); system != nil {
+		tokens += EstimateAgentMessageTokens(system)
+	}
+	for _, message := range window.Messages {
+		if ai.RoleOf(message) != ai.RoleSystem {
+			tokens += EstimateAgentMessageTokens(message)
+		}
+	}
+	return CompactionContextUsageEstimate{Tokens: tokens, UsageTokens: 0, TrailingTokens: tokens, LastUsageIndex: -1}
+}
+
 // ShouldCompact reports whether compaction should trigger.
 func ShouldCompact(contextTokens int64, contextWindow int64, settings CompactionSettings) bool {
 	if !settings.Enabled {

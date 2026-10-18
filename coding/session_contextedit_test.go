@@ -108,3 +108,111 @@ func TestContextEditEntryRoundTrips(t *testing.T) {
 		t.Fatalf("null replacement lost: %s (%v)", nullEncoded, err)
 	}
 }
+
+// TestProjectedContextEstimateIgnoresOmittedMessages covers the edit-aware
+// token accounting (upstream estimateProjectedContextTokens): an omitted
+// message is not part of the context, so it must not count toward the
+// compaction threshold or the reported context usage.
+func TestProjectedContextEstimateIgnoresOmittedMessages(t *testing.T) {
+	manager := newTestSessionManager(t)
+	manager.AppendMessage(&ai.AssistantMessage{
+		Content: ai.ContentList{ai.ToolCall{ID: "c1", Name: "bash", Arguments: []byte("{}")}},
+		API:     ai.APIOpenAIResponses, Provider: "openai", Model: "m", StopReason: ai.StopToolUse, Timestamp: 1,
+	})
+	// 40k characters is 10k estimated tokens; the message is then omitted.
+	omitted := manager.AppendMessage(&ai.ToolResultMessage{
+		ToolCallID: "c1", ToolName: "bash",
+		Content:   ai.UserContentList{ai.TextContent{Text: strings.Repeat("x", 40000)}},
+		Timestamp: 2,
+	})
+	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "next"}, Timestamp: 3})
+	raw := EstimateContextTokens(manager.Projection().Messages)
+	if _, err := manager.AppendContextEdit(omitted, json.RawMessage("null")); err != nil {
+		t.Fatal(err)
+	}
+
+	projected := manager.ProjectedContextEstimate()
+	// The remaining context is the tool call plus the user message: a handful of
+	// tokens, not the 10k the omitted result used to cost.
+	if projected.Tokens > 100 {
+		t.Fatalf("projected tokens = %d; the omitted result still counts", projected.Tokens)
+	}
+	if raw.Tokens <= projected.Tokens {
+		t.Fatalf("raw estimate %d did not exceed the projected %d", raw.Tokens, projected.Tokens)
+	}
+	// With no usage in the projection the estimate is a pure message-size sum.
+	if projected.LastUsageIndex != -1 {
+		t.Fatalf("last usage index = %d, want -1", projected.LastUsageIndex)
+	}
+}
+
+// TestProjectedContextEstimateInvalidatesStaleUsage covers the other half of
+// the rule: usage from before a context edit describes an older context, so the
+// estimate falls back to message sizes instead of trusting it.
+func TestProjectedContextEstimateInvalidatesStaleUsage(t *testing.T) {
+	manager := newTestSessionManager(t)
+	first := manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "first"}, Timestamp: 1})
+	manager.AppendMessage(&ai.AssistantMessage{
+		Content: ai.ContentList{ai.TextContent{Text: "reply"}},
+		API:     ai.APIOpenAIResponses, Provider: "openai", Model: "m", StopReason: ai.StopStop, Timestamp: 2,
+		Usage: ai.Usage{Input: 900000, Output: 100, TotalTokens: 900100},
+	})
+
+	// Before the edit the provider usage is trustworthy and is used as is.
+	if estimate := manager.ProjectedContextEstimate(); estimate.Tokens != 900100 {
+		t.Fatalf("pre-edit tokens = %d, want the usage-backed 900100", estimate.Tokens)
+	}
+
+	if _, err := manager.AppendContextEdit(first, json.RawMessage(`{"content":"short"}`)); err != nil {
+		t.Fatal(err)
+	}
+	estimate := manager.ProjectedContextEstimate()
+	if estimate.Tokens >= 900100 {
+		t.Fatalf("post-edit tokens = %d; stale usage was trusted", estimate.Tokens)
+	}
+	if estimate.LastUsageIndex != -1 || estimate.UsageTokens != 0 {
+		t.Fatalf("post-edit estimate = %+v, want a pure message-size estimate", estimate)
+	}
+}
+
+// TestProjectedWindowMatchesSessionContext pins the provenance-bearing window
+// against the projection the session hands out: the two are separate code
+// paths and must agree on what each entry contributes.
+func TestProjectedWindowMatchesSessionContext(t *testing.T) {
+	manager := newTestSessionManager(t)
+	first := manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "first"}, Timestamp: 1})
+	manager.AppendMessage(&ai.AssistantMessage{
+		Content: ai.ContentList{ai.TextContent{Text: "reply"}}, API: ai.APIOpenAIResponses,
+		Provider: "openai", Model: "m", StopReason: ai.StopStop, Timestamp: 2,
+	})
+	kept := manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "kept"}, Timestamp: 3})
+	manager.AppendCompaction("earlier summary", kept, 10, nil, false, nil)
+	if _, err := manager.AppendContextEdit(first, json.RawMessage("null")); err != nil {
+		t.Fatal(err)
+	}
+	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "after"}, Timestamp: 4})
+
+	context := manager.Projection()
+	window := projectWindow(materializePointers(manager.GetBranch("")), &manager.messages)
+	if len(window.Messages) != len(context.Messages) {
+		t.Fatalf("window carries %d messages, projection %d", len(window.Messages), len(context.Messages))
+	}
+	for index := range window.Messages {
+		if ai.RoleOf(window.Messages[index]) != ai.RoleOf(context.Messages[index]) {
+			t.Fatalf("message %d: window role %s, projection role %s",
+				index, ai.RoleOf(window.Messages[index]), ai.RoleOf(context.Messages[index]))
+		}
+	}
+	if len(context.Entries) != len(window.Entries) {
+		t.Fatalf("window carries %d entries, projection %d", len(window.Entries), len(context.Entries))
+	}
+	for index := range window.Entries {
+		if window.Entries[index].Source.ID != context.Entries[index].ID {
+			t.Fatalf("entry %d: window %s, projection %s",
+				index, window.Entries[index].Source.ID, context.Entries[index].ID)
+		}
+	}
+	if !manager.HasContextEdits() {
+		t.Fatal("HasContextEdits missed the appended edit")
+	}
+}

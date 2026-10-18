@@ -514,3 +514,35 @@ func TestOverflowRecoveryResetsAfterSuccess(t *testing.T) {
 		t.Fatal("a user message must reset overflow recovery")
 	}
 }
+
+// TestCheckCompactionProjectsContextEdits covers Case 3 when the branch carries
+// a context edit: provider usage recorded before the edit describes an older
+// context, so the projected estimate decides (upstream's hasContextEdits
+// branch). The stale usage here would cross the threshold on its own.
+func TestCheckCompactionProjectsContextEdits(t *testing.T) {
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 8192}
+	session := compactionTestSession(t, model, unreachableStreamFn, smallCompactionSettings())
+	seedBranch(t, session)
+
+	entries := session.Sessions.GetEntries()
+	if _, err := session.Sessions.AppendContextEdit(entries[0].ID, json.RawMessage("null")); err != nil {
+		t.Fatal(err)
+	}
+	session.Agent.SetMessages(session.Sessions.Projection().Messages)
+
+	assistant := &ai.AssistantMessage{
+		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m", Timestamp: timeNowMS(),
+		StopReason: ai.StopStop,
+		Usage:      ai.Usage{Input: 99950, Output: 10, TotalTokens: 99960},
+	}
+	compacted, err := session.CheckCompaction(ctxpkg.Background(), assistant, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if compacted {
+		t.Fatal("threshold compaction must not continue the agent")
+	}
+	if session.Sessions.LatestCompaction() != nil {
+		t.Fatal("stale pre-edit usage triggered a compaction")
+	}
+}

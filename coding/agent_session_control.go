@@ -988,7 +988,10 @@ func (s *AgentSession) GetContextUsage() *ContextUsageReport {
 		}
 	}
 
-	estimate := EstimateContextTokens(s.Messages())
+	// Context edits change what the model sees without producing usage, so the
+	// projection estimate is authoritative when one exists (upstream
+	// estimateProjectedContextTokens).
+	estimate := s.Sessions.ProjectedContextEstimate()
 	tokens := int64(estimate.Tokens)
 	percent := float64(estimate.Tokens) / float64(contextWindow) * 100
 	return &ContextUsageReport{Tokens: &tokens, ContextWindow: contextWindow, Percent: &percent}

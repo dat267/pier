@@ -95,6 +95,84 @@ func (m *SessionManager) LatestCompaction() *SessionEntry {
 	return GetLatestCompactionEntry(m.GetBranch(""))
 }
 
+// ProjectedEntry pairs an appended entry with the model-visible messages it
+// contributes after context edits (upstream ProjectedSessionEntry). State-only
+// entries and omissions carry no messages.
+type ProjectedEntry struct {
+	// Source is the raw append-only entry owning this contribution.
+	Source *SessionEntry
+	// Messages are the messages the entry contributes after context edits.
+	Messages []ai.Message
+}
+
+// projectedWindow is a projection with provenance: the entries the compaction
+// window keeps, the messages each contributes, and the flattened messages.
+type projectedWindow struct {
+	Entries  []ProjectedEntry
+	Messages []ai.Message
+}
+
+// projectWindow resolves the compaction window on path and the messages each
+// kept entry contributes (the entries half of upstream
+// buildSessionProjection). A cache makes the walk read memoized messages
+// instead of decoding the window again; nil is the reference path.
+//
+// buildSessionContextFromPointers derives the same messages with its own loop:
+// that loop is the per-append path and keeps the flattening free of the
+// provenance slice, so the two must stay in agreement
+// (TestProjectedWindowMatchesSessionContext pins it).
+func projectWindow(path []*SessionEntry, cache *messageCache) projectedWindow {
+	var kept []*SessionEntry
+	walkCompactionWindow(path, cache, func(entry *SessionEntry) { kept = append(kept, entry) })
+
+	edits := map[string]*SessionEntry{}
+	for _, entry := range kept {
+		if entry.Type == "context_edit" && entry.TargetID != "" {
+			edits[entry.TargetID] = entry
+		}
+	}
+
+	window := projectedWindow{Entries: make([]ProjectedEntry, 0, len(kept)), Messages: make([]ai.Message, 0, len(kept))}
+	for index, entry := range kept {
+		var messages []ai.Message
+		// The window may retain an older compaction whose raw ID lies inside the
+		// newest retained range; only the newest compaction (index 0) contributes
+		// a checkpoint and summary (upstream buildSessionProjection).
+		if !(entry.Type == "compaction" && index > 0) {
+			messages = projectedMessages(entry, cache)
+			if edit := edits[entry.ID]; edit != nil {
+				messages = applyContextEdit(messages, edit.Replacement)
+			}
+		}
+		window.Entries = append(window.Entries, ProjectedEntry{Source: entry, Messages: messages})
+		window.Messages = append(window.Messages, messages...)
+	}
+	return window
+}
+
+// ProjectedContextEstimate estimates the tokens the current projection carries
+// (port of estimateProjectedContextTokens). Callers use it instead of raw
+// message sizes when a context edit may have changed what the model sees.
+func (m *SessionManager) ProjectedContextEstimate() CompactionContextUsageEstimate {
+	m.mu.Lock()
+	path := m.branchPointersLocked("")
+	m.mu.Unlock()
+	return EstimateProjectedContextTokens(projectWindow(path, &m.messages))
+}
+
+// HasContextEdits reports whether the current projection carries a context edit
+// (upstream projection.entries.some(sourceEntry.type === "context_edit")). An
+// edit changes the context without producing provider usage, so usage-based
+// accounting cannot be trusted for the branch.
+func (m *SessionManager) HasContextEdits() bool {
+	for _, entry := range m.Projection().Entries {
+		if entry.Type == "context_edit" {
+			return true
+		}
+	}
+	return false
+}
+
 // ContextSignature summarizes what the next request's context would carry: the
 // model its messages use and how many messages there are. The cache-warmer
 // currency check re-evaluates it while a warmer runs and the status display
