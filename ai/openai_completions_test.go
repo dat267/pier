@@ -601,3 +601,67 @@ func TestConvertOpenAICompletionsMessagesOmitsEmptyTextParts(t *testing.T) {
 		t.Fatalf("content parts = %+v", parts)
 	}
 }
+
+// TestAppendOpenAIReasoningDetailPreservesKeyOrder covers the reasoning-details
+// merge (port of appendOpenAIReasoningDetail): the merged object keeps each
+// member's position like a JS object, copied members append in source order, and
+// a member assigned undefined is dropped, because the merged payload is stored
+// as the thinking signature and replayed to the provider.
+func TestAppendOpenAIReasoningDetailPreservesKeyOrder(t *testing.T) {
+	cases := []struct {
+		name string
+		last string
+		next string
+		want string
+	}{
+		{
+			name: "text merge keeps positions and appends the copied id",
+			last: `{"type":"reasoning.text","text":"a","signature":"s","index":1}`,
+			next: `{"extra":true,"type":"reasoning.text","text":"b","id":"x"}`,
+			want: `{"type":"reasoning.text","text":"ab","signature":"s","index":1,"id":"x"}`,
+		},
+		{
+			name: "empty signature is filled in place",
+			last: `{"type":"reasoning.text","text":"a","signature":""}`,
+			next: `{"type":"reasoning.text","text":"b","signature":"sig"}`,
+			want: `{"type":"reasoning.text","text":"ab","signature":"sig"}`,
+		},
+		{
+			name: "summary merge appends the copied index",
+			last: `{"type":"reasoning.summary","summary":"a"}`,
+			next: `{"type":"reasoning.summary","summary":"b","index":2}`,
+			want: `{"type":"reasoning.summary","summary":"ab","index":2}`,
+		},
+		{
+			name: "null index is replaced like ??=",
+			last: `{"type":"reasoning.summary","index":null,"summary":"a"}`,
+			next: `{"type":"reasoning.summary","summary":"b","index":7}`,
+			want: `{"type":"reasoning.summary","index":7,"summary":"ab"}`,
+		},
+		{
+			name: "a falsy signature whose source has none drops the member",
+			last: `{"type":"reasoning.text","text":"a","signature":""}`,
+			next: `{"type":"reasoning.text","text":"b"}`,
+			want: `{"type":"reasoning.text","text":"ab"}`,
+		},
+		{
+			name: "different types append unchanged",
+			last: `{"type":"reasoning.text","text":"a"}`,
+			next: `{"type":"reasoning.summary","summary":"b"}`,
+			want: `{"type":"reasoning.text","text":"a"},{"type":"reasoning.summary","summary":"b"}`,
+		},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			merged := appendOpenAIReasoningDetail(
+				[]json.RawMessage{json.RawMessage(testCase.last)}, json.RawMessage(testCase.next))
+			encoded, err := MarshalJSON(merged)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(encoded) != "["+testCase.want+"]" {
+				t.Fatalf("merged = %s, want [%s]", encoded, testCase.want)
+			}
+		})
+	}
+}

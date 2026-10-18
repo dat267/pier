@@ -714,59 +714,100 @@ func findStreaming(byIndex map[int]*openaiStreamingToolCall, byID map[string]*op
 }
 
 // appendOpenAIReasoningDetail merges consecutive reasoning deltas
-// (port of appendOpenAIReasoningDetail).
+// (port of appendOpenAIReasoningDetail). The merge keeps each object's key
+// order, so a replayed reasoning_details payload re-serializes the way the
+// provider sent it.
 func appendOpenAIReasoningDetail(details []json.RawMessage, detail json.RawMessage) []json.RawMessage {
 	if len(details) == 0 {
 		return append(details, detail)
 	}
-	last := details[len(details)-1]
-	var lastObj, newObj map[string]json.RawMessage
-	_ = jsonUnmarshalStrict(last, &lastObj)
-	_ = jsonUnmarshalStrict(detail, &newObj)
-	lastType, newType := rawString(lastObj["type"]), rawString(newObj["type"])
-	if newType == "reasoning.text" && lastType == "reasoning.text" {
-		var lastText, newText string
-		_ = jsonUnmarshalStrict(lastObj["text"], &lastText)
-		_ = jsonUnmarshalStrict(newObj["text"], &newText)
-		merged := lastText + newText
-		lastObj["text"] = mustMarshalJSON(merged)
-		if rawString(lastObj["signature"]) == "" {
-			if sig, ok := newObj["signature"]; ok {
-				lastObj["signature"] = sig
-			}
-		}
-		fillMissingCommonReasoningDetailFields(lastObj, newObj)
-		details[len(details)-1] = mustMarshalJSON(lastObj)
-		return details
+	lastValue, err := decodeOrderedJSON(details[len(details)-1])
+	if err != nil || lastValue.Object == nil {
+		return append(details, detail)
 	}
-	if newType == "reasoning.summary" && lastType == "reasoning.summary" {
-		var lastSummary, newSummary string
-		_ = jsonUnmarshalStrict(lastObj["summary"], &lastSummary)
-		_ = jsonUnmarshalStrict(newObj["summary"], &newSummary)
-		lastObj["summary"] = mustMarshalJSON(lastSummary + newSummary)
+	newValue, err := decodeOrderedJSON(detail)
+	if err != nil || newValue.Object == nil {
+		return append(details, detail)
+	}
+	lastObj, newObj := lastValue.Object, newValue.Object
+	lastType, newType := schemaString(lastObj, "type"), schemaString(newObj, "type")
+	switch {
+	case newType == "reasoning.text" && lastType == "reasoning.text":
+		lastObj.set("text", &schemaValue{IsString: true, String: schemaString(lastObj, "text") + schemaString(newObj, "text")})
+		assignIfFalsy(lastObj, newObj, "signature")
 		fillMissingCommonReasoningDetailFields(lastObj, newObj)
-		details[len(details)-1] = mustMarshalJSON(lastObj)
+		details[len(details)-1] = encodeSchemaValue(lastValue)
+		return details
+	case newType == "reasoning.summary" && lastType == "reasoning.summary":
+		lastObj.set("summary", &schemaValue{IsString: true, String: schemaString(lastObj, "summary") + schemaString(newObj, "summary")})
+		fillMissingCommonReasoningDetailFields(lastObj, newObj)
+		details[len(details)-1] = encodeSchemaValue(lastValue)
 		return details
 	}
 	return append(details, detail)
 }
 
-func fillMissingCommonReasoningDetailFields(target, source map[string]json.RawMessage) {
-	if _, ok := target["id"]; !ok {
-		if v, ok := source["id"]; ok {
-			target["id"] = v
-		}
+// schemaString reads a string member, "" when it is missing or not a string.
+func schemaString(object *schemaObject, key string) string {
+	value, ok := object.get(key)
+	if !ok || value == nil || !value.IsString {
+		return ""
 	}
-	if rawString(target["format"]) == "" {
-		if v, ok := source["format"]; ok {
-			target["format"] = v
-		}
+	return value.String
+}
+
+// fillMissingCommonReasoningDetailFields copies the identifying fields the
+// target is missing (upstream fillMissingCommonReasoningDetailFields).
+func fillMissingCommonReasoningDetailFields(target, source *schemaObject) {
+	assignIfNullish(target, source, "id")
+	assignIfFalsy(target, source, "format")
+	assignIfNullish(target, source, "index")
+}
+
+// assignIfNullish performs `target[key] ??= source[key]`. A source key that is
+// absent or undefined leaves the target without the key, because
+// JSON.stringify drops an undefined member.
+func assignIfNullish(target, source *schemaObject, key string) {
+	if value, ok := target.get(key); ok && value != nil && !value.Null {
+		return
 	}
-	if _, ok := target["index"]; !ok {
-		if v, ok := source["index"]; ok {
-			target["index"] = v
-		}
+	assignFrom(target, source, key)
+}
+
+// assignIfFalsy performs `target[key] ||= source[key]`.
+func assignIfFalsy(target, source *schemaObject, key string) {
+	if value, ok := target.get(key); ok && schemaTruthy(value) {
+		return
 	}
+	assignFrom(target, source, key)
+}
+
+// assignFrom copies the source member, or drops the target member when the
+// source has none (a JS assignment of undefined).
+func assignFrom(target, source *schemaObject, key string) {
+	value, ok := source.get(key)
+	if !ok {
+		target.delete(key)
+		return
+	}
+	target.set(key, value)
+}
+
+// schemaTruthy reports JS truthiness for a decoded JSON value.
+func schemaTruthy(value *schemaValue) bool {
+	switch {
+	case value == nil, value.Null:
+		return false
+	case value.IsString:
+		return value.String != ""
+	case value.IsBool:
+		return value.Bool
+	case value.IsNumber:
+		return value.Number != 0
+	case value.IsArray:
+		return true
+	}
+	return value.Object != nil
 }
 
 func rawString(raw json.RawMessage) string {
