@@ -73,3 +73,20 @@ func TestLargeReadResultPreparesOffLoop(t *testing.T) {
 		t.Fatal("prepared output differs from synchronous rendering")
 	}
 }
+
+// D241: a mid-size tool result must prepare off-loop too. The live stall log
+// caught the UI loop inside ToolExecutionComponent.Render during a turn (a
+// bash result re-rendering per update); 64 KiB left everything below it
+// rendering synchronously on the loop.
+func TestMidSizeToolResultPreparesOffLoop(t *testing.T) {
+	InitTheme("dark", false)
+	c := NewToolExecutionComponent("bash", "call", map[string]any{"command": "output"}, ToolExecutionOptions{}, WithBuiltInRenderers("bash", nil), nil, "/tmp")
+	var submitted bool
+	c.SetResultPreparation(&tui.MarkdownPreparation{Submit: func(run func() func()) bool { submitted = true; run(); return true }})
+	result := &SortToolResultContent{Content: []ToolResultContent{{Type: "text", Text: strings.Repeat("plain output\n", 800)}}} // ~10.4 KiB
+	c.UpdateResult(result, false)
+	c.Render(80)
+	if !submitted {
+		t.Fatal("a ~10KiB bash result ran inline; the off-loop preparation must start at 8KiB")
+	}
+}
