@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -620,15 +621,76 @@ func (w *RunWiring) phase(name string) func() {
 		return func() {}
 	}
 	start := time.Now()
+	cpu := w.armStallCPUWatch()
 	watchdog := time.AfterFunc(w.StallLogThreshold, func() {
-		w.writeStallRecord(name, time.Since(start), " still running")
+		w.writeStallRecord(name, time.Since(start), " still running", nil)
 	})
 	return func() {
 		watchdog.Stop()
+		profile := cpu.finish()
 		if elapsed := time.Since(start); elapsed >= w.StallLogThreshold {
-			w.writeStallRecord(name, elapsed, "")
+			w.writeStallRecord(name, elapsed, "", profile)
 		}
 	}
+}
+
+// stallCPUProfileAfter is how long a phase must still be running before the
+// watchdog starts a CPU profile for it. The goroutine dump cannot attribute a
+// completed render (it fires in the deferred phase end, when the loop is back
+// in the profiler), so a phase that overruns the stall threshold by this much
+// also captures where the CPU went. Test seam: tests shorten it.
+var stallCPUProfileAfter = 250 * time.Millisecond
+
+// stallCPUWatch carries one phase's profiling state between the phase start
+// (which arms the watchdog), the watchdog goroutine (which starts the profile)
+// and the phase end (which stops it). All three touch it under the mutex; no
+// user code runs while held.
+type stallCPUWatch struct {
+	mu     sync.Mutex
+	done   bool
+	active bool
+	buffer *bytes.Buffer
+}
+
+// armStallCPUWatch starts the CPU-profile watchdog for one phase, or returns
+// nil when profiling is off.
+func (w *RunWiring) armStallCPUWatch() *stallCPUWatch {
+	if stallCPUProfileAfter <= 0 {
+		return nil
+	}
+	watch := &stallCPUWatch{}
+	time.AfterFunc(stallCPUProfileAfter, func() {
+		watch.mu.Lock()
+		defer watch.mu.Unlock()
+		if watch.done {
+			return
+		}
+		watch.buffer = &bytes.Buffer{}
+		watch.active = pprof.StartCPUProfile(watch.buffer) == nil
+		if !watch.active {
+			watch.buffer = nil
+		}
+	})
+	return watch
+}
+
+// finish stops a running profile and returns its bytes, or nil when the phase
+// never captured one.
+func (w *stallCPUWatch) finish() []byte {
+	if w == nil {
+		return nil
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.done = true
+	if w.active {
+		pprof.StopCPUProfile()
+		w.active = false
+	}
+	if w.buffer == nil {
+		return nil
+	}
+	return w.buffer.Bytes()
 }
 
 // stallLogMaxBytes bounds the stall log; an oversized file is truncated before
@@ -641,9 +703,10 @@ var stallWriteMu sync.Mutex
 
 // writeStallRecord appends the slow phase and every goroutine stack, so a stall
 // names where the loop was instead of only how long it took. note (possibly
-// empty) distinguishes a mid-flight capture from the after-phase one.
-
-func (w *RunWiring) writeStallRecord(name string, elapsed time.Duration, note string) {
+// empty) distinguishes a mid-flight capture from the after-phase one. A
+// non-empty cpu profile is written to a sibling .pprof file and its path is
+// noted in the record.
+func (w *RunWiring) writeStallRecord(name string, elapsed time.Duration, note string, cpu []byte) {
 	stallWriteMu.Lock()
 	defer stallWriteMu.Unlock()
 	flags := os.O_APPEND | os.O_CREATE | os.O_WRONLY
@@ -657,6 +720,19 @@ func (w *RunWiring) writeStallRecord(name string, elapsed time.Duration, note st
 	defer file.Close()
 	fmt.Fprintf(file, "%s slow UI phase %q %v%s\n", time.Now().Format(time.RFC3339Nano), name, elapsed.Round(time.Millisecond), note)
 	_ = pprof.Lookup("goroutine").WriteTo(file, 1)
+	if len(cpu) > 0 {
+		profilePath := filepath.Join(filepath.Dir(w.StallLogPath),
+			"pier-stall-cpu-"+time.Now().Format("20060102T150405.000000000")+".pprof")
+		if profileFile, err := os.OpenFile(profilePath, os.O_CREATE|os.O_WRONLY, 0o644); err == nil {
+			_, writeErr := profileFile.Write(cpu)
+			_ = profileFile.Close()
+			if writeErr == nil {
+				fmt.Fprintf(file, "cpu-profile=%s\n", profilePath)
+			} else {
+				_ = os.Remove(profilePath)
+			}
+		}
+	}
 }
 
 // LoopBeats reports the loop's iteration count (watchdog beat).
