@@ -271,6 +271,44 @@ func TestUIStateInputListeners(t *testing.T) {
 	}
 }
 
+// TestUIStateRebindInputListenersRebindsOnTheNewRenderer covers the renderer
+// swap: RebindExtensionTerminalInputListeners must re-register the handler on
+// the current renderer instead of dropping it.
+func TestUIStateRebindInputListenersRebindsOnTheNewRenderer(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	InitTheme("dark", false)
+
+	first := tui.NewMainScreen(&fakeRendererTerminal{width: 80, height: 24}, false, "")
+	first.DisableAutoRender()
+	state := NewInteractiveUIState(first)
+	calls := 0
+	var got string
+	state.AddExtensionTerminalInputListener(func(data string) tui.TuiInputListenerResult {
+		calls++
+		got = data
+		return tui.TuiInputListenerResult{}
+	})
+
+	second := tui.NewMainScreen(&fakeRendererTerminal{width: 80, height: 24}, false, "")
+	second.DisableAutoRender()
+	state.UI = second
+	state.RebindExtensionTerminalInputListeners()
+
+	if len(state.inputSubscriptions) != 1 {
+		t.Fatalf("subscriptions after rebind = %d, want 1", len(state.inputSubscriptions))
+	}
+	if calls != 0 {
+		t.Fatalf("the old renderer delivered %d calls, want none", calls)
+	}
+	second.HandleTerminalInput("x")
+	if calls != 1 || got != "x" {
+		t.Fatalf("rebound listener calls = %d got = %q, want one call with %q", calls, got, "x")
+	}
+}
+
 // TestUIStateReset covers the reset surface.
 func TestUIStateReset(t *testing.T) {
 	state, _ := newUIStateTestState(t, true)

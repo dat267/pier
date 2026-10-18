@@ -592,7 +592,10 @@ func NewApp(options AppOptions) *App {
 		OnUncaughtException: options.OnUncaughtException,
 
 		DisableThemeAutoSync:    func() { StopThemeWatcher() },
-		OnTuiModeSwitched:       func() { app.theme.RebindTUI() },
+		OnTuiModeSwitched: func() {
+			app.theme.RebindTUI()
+			app.uiState.RebindExtensionTerminalInputListeners()
+		},
 		RecordCrash:             func(kind string, err error) bool { return app.trust.RecordCrash(kind, err) },
 		CrashReportInstructions: func() string { return app.trust.CrashReportInstructions() }, // Upstream prints "To resume this session: pi --session …" after the
 		// interactive shutdown (interactive-mode.ts shutdown(), chalk.dim

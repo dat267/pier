@@ -57,8 +57,16 @@ type InteractiveUIState struct {
 	customFooter          tui.Component
 	customHeader          tui.Component
 
-	inputSubscriptions map[int]func() // subscription id -> unsubscribe
+	inputSubscriptions map[int]inputSubscription // subscription id -> handler + unsubscribe
 	nextSubscription   int
+}
+
+// inputSubscription remembers a registered terminal input listener so a
+// renderer swap can re-register it on the new renderer (upstream stores the
+// handler alongside its unsubscribe).
+type inputSubscription struct {
+	handler     tui.TuiInputListener
+	unsubscribe func()
 }
 
 // NewInteractiveUIState creates the state machine.
@@ -68,7 +76,7 @@ func NewInteractiveUIState(ui tui.TUI) *InteractiveUIState {
 		WorkingVisible:             true,
 		extensionWidgetsAbove:      map[string]tui.Component{},
 		extensionWidgetsBelow:      map[string]tui.Component{},
-		inputSubscriptions:         map[int]func(){},
+		inputSubscriptions:         map[int]inputSubscription{},
 		DefaultWorkingMessage:      "Working",
 		DefaultHiddenThinkingLabel: defaultHiddenThinkingLabel,
 		Display:                    &DisplayOptions{},
@@ -457,29 +465,34 @@ func (s *InteractiveUIState) AddExtensionTerminalInputListener(handler tui.TuiIn
 	subscriptionID := s.nextSubscription
 	s.nextSubscription++
 	unsubscribe := s.UI.AddInputListener(handler)
-	s.inputSubscriptions[subscriptionID] = unsubscribe
+	s.inputSubscriptions[subscriptionID] = inputSubscription{handler: handler, unsubscribe: unsubscribe}
 	return func() {
 		unsubscribe()
 		delete(s.inputSubscriptions, subscriptionID)
 	}
 }
 
-// RebindExtensionTerminalInputListeners re-registers the listeners (used after
-// a renderer swap).
-func (s *InteractiveUIState) RebindExtensionTerminalInputListeners(handler tui.TuiInputListener) {
-	for _, unsubscribe := range s.inputSubscriptions {
-		unsubscribe()
+// RebindExtensionTerminalInputListeners re-registers every listener on the
+// current renderer (used after a renderer swap).
+func (s *InteractiveUIState) RebindExtensionTerminalInputListeners() {
+	if s.UI == nil {
+		return
 	}
-	s.inputSubscriptions = map[int]func(){}
-	_ = handler
+	for id, subscription := range s.inputSubscriptions {
+		subscription.unsubscribe()
+		s.inputSubscriptions[id] = inputSubscription{
+			handler:     subscription.handler,
+			unsubscribe: s.UI.AddInputListener(subscription.handler),
+		}
+	}
 }
 
 // ClearExtensionTerminalInputListeners removes all listeners.
 func (s *InteractiveUIState) ClearExtensionTerminalInputListeners() {
-	for _, unsubscribe := range s.inputSubscriptions {
-		unsubscribe()
+	for _, subscription := range s.inputSubscriptions {
+		subscription.unsubscribe()
 	}
-	s.inputSubscriptions = map[int]func(){}
+	s.inputSubscriptions = map[int]inputSubscription{}
 }
 
 // ResetExtensionUI resets the extension-facing UI state.
