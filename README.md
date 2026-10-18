@@ -1,122 +1,56 @@
 # pier, a Go coding agent
 
-A from-scratch Go implementation of an AI coding agent with a terminal UI that
-ports the core features of Mario Zechner's
-[pi](https://github.com/earendil-works/pi). The code follows its structure and
-behavior closely, and where it departs, the departure is a deliberate feature.
-Development conventions are in `AGENTS.md`.
+pier is a terminal-based AI coding agent and a from-scratch Go port of
+[Mario Zechner's pi](https://github.com/earendil-works/pi).
 
-## Reference pin
+## Reference and scope
 
-| What | Value |
-|---|---|
-| Repository | https://github.com/earendil-works/pi (cloned at `./pi`, gitignored) |
-| Pin | `71023aec` (Release v1.3.0), the latest released tag |
+The reference pin is pi v1.3.0 (`71023aec`). See [port status](docs/PORTING.md)
+for coverage and [divergences](docs/DIVERGENCES.md) for deliberate differences.
+The extension system is out of scope; `/goal` is built in.
 
-Per-area status and the pin's change log are in `docs/PORTING.md`; every
-deliberate departure is a numbered D-row in `docs/DIVERGENCES.md`.
+There is no built-in filesystem sandbox. Shell, write, and edit tools run with
+your OS permissions, including outside the workspace. Use external confinement.
 
-## Status
+## Build and test
 
-The reference packages the CLI reaches all have counterparts: `ai` (ten wire
-APIs, provider factories, the nine OAuth flows, image generation, overflow
-detection, virtual models), `agent` (the loop), `coding` (session, tools,
-compaction, branch summarization, retry, cache warming, model runtime, stores,
-exports, bug report, crash log, trust), `tui` (the renderer, layout, markdown,
-highlighting, images) and `mcp`. The interactive mode is `coding/interactive`;
-`cmd` and the root `main.go` boot the CLI. The goal workflow is built in
-(D223) rather than loaded as an extension, because pier has no extension host
-(D41).
+Requires Go 1.27 or later.
 
-Out of scope, each with its decision recorded in code: extension mechanics
-(resource loader, sdk surface, agent-session services/runtime, package and
-tools managers), the native Bun-FFI clipboard (text, file-path and image
-clipboard use platform commands, D106), Photon's Lanczos3 resampling and its
-WebP/BMP decoding (a bilinear resizer and stdlib png/jpeg/gif instead, D26),
-the chord node bundler, the bug-report upload transport, `session-backends`,
-and the `evals` harness. `chord`, `client`, `protocol`, `server`, `telemetry`
-and `durable` were ported but unreachable from the CLI, so they were removed
-(D236) and preserved on the `unwired-packages` branch.
-
-There is no built-in filesystem sandbox: shell, write and edit run with
-the OS user's permissions, including outside the workspace. Use external
-confinement.
-
-## Architecture
-
-- **Reference-shaped packages.** `ai`, `agent`, `coding`, `tui` and `mcp` mirror
-  upstream `packages/`; port-local code lives under `internal/`. Upstream's
-  ~4000-line `interactive-mode.ts` becomes narrow, injectable wirings under
-  `coding/interactive`, composed by `app.go`. Each `*Wiring` owns its own
-  field wiring, so the composition root cannot silently skip a seam
-  (`TestAppWiringCompleteness`).
-- **Single-writer UI loop.** Input dispatch, painting and all UI mutation share
-  one owner goroutine; producers enqueue events or post work (D143). Blocking
-  work (turns, session writes, settings persists, theme loads, transcript
-  pre-render, clipboard) runs off-loop through `internal/offloop`. Shutdown
-  drains accepted mandatory saves without a deadline while optional work is
-  cancelled (D199). UI-state mutexes are retired; the retained
-  handoff and I/O locks are inventoried in `docs/locks.md`.
-- **One session projection.** `coding/session_projection.go` resolves the branch
-  path, compaction window, context settings and messages in a single walk and
-  caches by branch version. Callers pass the projection through; assembling it
-  by hand or re-scanning entries per message is a defect.
-- **JSON byte-parity.** Session files, transcripts and wire payloads round-trip
-  exactly and use `ai.MarshalJSON` (JavaScript key order, no HTML escaping).
-  Where pi relies on JS semantics Go lacks, the divergence is a numbered D-row.
-- **Differential renderer.** `tui` diffs frames against a layout engine and
-  scroll view; oversized content prepares off-loop on private snapshots and is
-  adopted on-owner after a generation check. The rationale and measurements are
-  in `docs/architecture.md`.
-
-## Build & test
-
-```bash
-just build      # bin/pier: pure Go (CGO_ENABLED=0), the release flags
-just check      # gofmt + go vet + go test
-just reference  # is ./pi at the pinned tag, and how far past it has moved
-just --list     # install, test-race, cross, clean
+```sh
+just build       # creates bin/pier
+just check       # formatting, vet, and tests
+./bin/pier --help
 ```
 
-Plain Go works too: `main.go` is a thin wrapper over `cmd`, so `go build -o
-bin/pier .` and `go test ./...` are enough. CI runs
-`go test -race -count=2 -timeout 300s ./...`; the race detector cannot run on
-`android/arm64`, so that one check is CI-only.
+Without `just`, use `go build -o bin/pier .` and `go test -count=1 ./...`.
 
 ## Install
 
-Linux x64 (use `pier-linux-arm64`, or `pier-android-arm64` in Termux):
+Install from source with `just install`, or download a release asset and its
+`.sha256` file from [GitHub Releases](https://github.com/dat267/pier/releases).
+Verify the checksum with `sha256sum` or `Get-FileHash` before installing.
+Assets cover Linux (amd64 and arm64), Android (arm64), and Windows (amd64 and
+arm64). macOS users must build from source. Run `pier update` to update an
+existing installation.
 
-```sh
-asset=pier-linux-amd64; base=https://github.com/dat267/pier/releases/latest/download; curl -fsSLo "$asset" "$base/$asset" && curl -fsSLo "$asset.sha256" "$base/$asset.sha256" && sha256sum -c "$asset.sha256" && mkdir -p "$HOME/.local/bin" && install -m 755 "$asset" "$HOME/.local/bin/pier"
-```
+## Use
 
-Windows PowerShell (use `pier-windows-arm64.exe` on ARM64):
+Run `pier` for interactive mode. Use `pier -c` to continue the newest session,
+`pier -r` to choose a session, `pier -p` for print mode, or `pier --mode json`
+for JSON events. `--model`, `--provider`, `--offline`, and `--help` are also
+available. MCP servers configured in settings provide agent tools, and `/login`
+opens the provider authorization page in your browser.
 
-```powershell
-$ErrorActionPreference='Stop'; $base='https://github.com/dat267/pier/releases/latest/download'; $asset='pier-windows-amd64.exe'; $dest=Join-Path $HOME 'bin'; Invoke-WebRequest "$base/$asset" -OutFile $asset -UseBasicParsing; Invoke-WebRequest "$base/$asset.sha256" -OutFile "$asset.sha256" -UseBasicParsing; $want=(Get-Content "$asset.sha256").Split()[0].ToLower(); $got=(Get-FileHash $asset -Algorithm SHA256).Hash.ToLower(); if ($got -ne $want) { throw "checksum mismatch for $asset" }; New-Item -ItemType Directory -Force -Path $dest | Out-Null; Move-Item -Force $asset (Join-Path $dest 'pier.exe')
-```
-
-There are no macOS assets; build from source there. `pier update` replaces the
-binary with the newest release and verifies the same checksum (on Windows it
-moves the running image aside as `pier.exe.old` first). Build from source with
-`just install`, or `just VERSION=1.2.3 install` to stamp `--version`; the binary
-derives its display name from its own file name, so a symlink named `pi` shows
-`pi`.
-
-## Using it
-
-`pier --help` lists the flags. The CLI supports the interactive mode, resume
-(`-c` newest; `-r` picker; `--session` by path, id, prefix or global match;
-`--session-id`; `--fork`), model selection (`--provider`, `--model`),
-`--offline`, `--tui-mode` and initial prompts. Print mode (`-p`) and JSON output
-(`--mode json`) are wired. MCP servers from the settings connect directly and
-their tools become agent tools. `/login` opens the authorization URL in the
-platform browser. Stdio RPC (`--mode rpc`) supports prompting, steering, abort,
-queues, state and messages, model and thinking selection, session
-introspection, compaction, retry, bash control, session replacement and event
-streaming, with a typed subprocess client in `coding/rpcclient`; see
+The built-in `/goal` command tracks multi-round objectives in session history.
+The agent can inspect and update goals with the `get_goal` and `set_goal` tools.
+Stdio RPC (`pier --mode rpc`) and its supported commands are documented in
 [docs/rpc.md](docs/rpc.md).
 
-The built-in `/goal` command tracks a multi-round objective in session history,
-and the agent can inspect or update it with the `get_goal` and `set_goal` tools.
+## Design and contributor docs
+
+Packages follow pi's layout. The interactive UI has a single owner loop, session
+projections supply model context, and persisted JSON preserves JavaScript key
+ordering. See [architecture and performance](docs/architecture.md),
+[lock ownership](docs/locks.md), and
+[terminal output policy](docs/terminal-output.md). Development guidance is in
+[AGENTS.md](AGENTS.md).
