@@ -187,10 +187,7 @@ func safeUrl(input map[string]any, key, name string) (string, error) {
 		return "", fmt.Errorf("Invalid %s", name)
 	}
 	switch strings.ToLower(parsed.Scheme) {
-	case "javascript:", "data:", "vbscript:":
-		return "", fmt.Errorf("Invalid %s", name)
-	}
-	if strings.HasSuffix(strings.ToLower(parsed.Scheme), ":") {
+	case "javascript", "data", "vbscript":
 		return "", fmt.Errorf("Invalid %s", name)
 	}
 	return text, nil
