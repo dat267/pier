@@ -32,9 +32,19 @@ func TestMain(m *testing.M) {
 	if err == nil {
 		os.Setenv("PI_CODING_AGENT_DIR", dir)
 	}
+	// Pin the home directory too: skill discovery reads ~/.agents/skills, and a
+	// host that has one must not leak skills into these tests.
+	home, homeErr := os.MkdirTemp("", "pier-test-home-")
+	if homeErr == nil {
+		os.Setenv("HOME", home)
+		os.Setenv("USERPROFILE", home)
+	}
 	code := m.Run()
 	if err == nil {
 		_ = os.RemoveAll(dir)
+	}
+	if homeErr == nil {
+		_ = os.RemoveAll(home)
 	}
 	os.Exit(code)
 }

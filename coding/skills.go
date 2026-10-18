@@ -354,9 +354,11 @@ type LoadSkillsOptions struct {
 	IncludeDefaults bool
 }
 
-// LoadSkills loads skills from user and project locations. The project's
-// `.pi/skills` is only scanned when trustProject is set (upstream's
-// project-trust rule; pi answers "untrusted" headless by default).
+// LoadSkills loads skills from user and project locations: the agent and user
+// `.pi/skills` dirs, the user `~/.agents/skills` dir, and the project's
+// `.agents/skills` dirs from cwd up to the git repository root. The project
+// dirs are only scanned when trustProject is set (upstream's project-trust
+// rule; pi answers "untrusted" headless by default).
 func LoadSkills(options LoadSkillsOptions, trustProject bool) LoadSkillsResult {
 	resolvedCwd := ResolvePath(options.Cwd, "", PathInputOptions{})
 	resolvedAgentDir := ResolvePath(options.AgentDir, "", PathInputOptions{})
@@ -404,13 +406,28 @@ func LoadSkills(options LoadSkillsOptions, trustProject bool) LoadSkillsResult {
 		return strings.HasPrefix(target, prefix)
 	}
 
+	userAgentsSkillsDir := userAgentsSkillsDirPath()
 	if options.IncludeDefaults {
 		addSkills(loadSkillsFromDir(userSkillsDir, "user"))
 	}
-	// The project skills dir stays gated on project trust (the Go loader's
-	// added parameter; upstream gates it in the resource loader).
+	// The project skills dirs stay gated on project trust (the Go loader's
+	// added parameter; upstream gates them in the resource loader).
 	if trustProject {
 		addSkills(loadSkillsFromDir(projectSkillsDir, "project"))
+		if options.IncludeDefaults {
+			// The workspace's .agents/skills from cwd up to the git repository
+			// root, with the user dir filtered out so it loads once with the
+			// user scope (upstream collectAncestorAgentsSkillDirs and the
+			// package manager's project-trust gate).
+			for _, dir := range projectAgentsSkillDirs(resolvedCwd, true, userAgentsSkillsDir) {
+				addSkills(loadSkillsFromDir(dir, "project"))
+			}
+		}
+	}
+	if options.IncludeDefaults && userAgentsSkillsDir != "" {
+		// ~/.agents/skills is a user-level location, on regardless of trust
+		// (upstream collectResources adds it outside the trust gate).
+		addSkills(loadSkillsFromDir(userAgentsSkillsDir, "user"))
 	}
 
 	getSource := func(resolvedPath string) string {
@@ -454,6 +471,77 @@ func LoadSkills(options LoadSkillsOptions, trustProject bool) LoadSkillsResult {
 	}
 
 	return LoadSkillsResult{Skills: skills, Diagnostics: append(allDiagnostics, collisionDiagnostics...)}
+}
+
+// userAgentsSkillsDirPath resolves the user-level .agents/skills directory
+// (~/.agents/skills), the same way the trust check resolves it so the project
+// walk can filter it out.
+func userAgentsSkillsDirPath() string {
+	home := homeDir()
+	if override := os.Getenv("HOME"); override != "" {
+		home = override
+	}
+	if strings.TrimSpace(home) == "" {
+		return ""
+	}
+	return filepath.Join(CanonicalizePath(ResolvePath(home, "", PathInputOptions{})), ".agents", "skills")
+}
+
+// findGitRepoRoot returns the directory containing .git at or above startDir,
+// or "" when there is none (upstream findGitRepoRoot).
+func findGitRepoRoot(startDir string) string {
+	dir := startDir
+	for {
+		if PathExists(filepath.Join(dir, ".git")) {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return ""
+		}
+		dir = parent
+	}
+}
+
+// collectAncestorAgentsSkillDirs lists .agents/skills from startDir up to and
+// including the git repository root, or the filesystem root when there is none
+// (upstream collectAncestorAgentsSkillDirs).
+func collectAncestorAgentsSkillDirs(startDir string) []string {
+	resolved := CanonicalizePath(ResolvePath(startDir, "", PathInputOptions{}))
+	gitRoot := findGitRepoRoot(resolved)
+	var dirs []string
+	dir := resolved
+	for {
+		dirs = append(dirs, filepath.Join(dir, ".agents", "skills"))
+		if gitRoot != "" && dir == gitRoot {
+			break
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return dirs
+}
+
+// projectAgentsSkillDirs is collectAncestorAgentsSkillDirs gated on project
+// trust, with the user directory removed so it is not loaded twice (upstream
+// filters the resolved user dir out of the project set).
+func projectAgentsSkillDirs(cwd string, trusted bool, userAgentsSkillsDir string) []string {
+	if !trusted {
+		return nil
+	}
+	normalizedUser := filepath.Clean(userAgentsSkillsDir)
+	dirs := collectAncestorAgentsSkillDirs(cwd)
+	filtered := make([]string, 0, len(dirs))
+	for _, dir := range dirs {
+		if filepath.Clean(dir) == normalizedUser {
+			continue
+		}
+		filtered = append(filtered, dir)
+	}
+	return filtered
 }
 
 // escapeXML escapes XML entities (port of escapeXml).

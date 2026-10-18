@@ -270,3 +270,118 @@ func TestLoadSkillsFromDirConcurrentWalksAgree(t *testing.T) {
 		}
 	}
 }
+
+// The workspace's .agents/skills is a discovery location beside .pi/skills
+// (upstream collectAncestorAgentsSkillDirs plus the resource loader's
+// project-trust gate).
+func TestLoadSkillsLoadsProjectAgentsSkillsWhenTrusted(t *testing.T) {
+	home := t.TempDir()
+	setHomeDir(t, home)
+	agentDir := filepath.Join(home, ".pi", "agent")
+
+	cwd := t.TempDir()
+	writeSkill(t, filepath.Join(cwd, ".agents", "skills"), "project-agents", "project agents")
+
+	untrusted := LoadSkills(LoadSkillsOptions{Cwd: cwd, AgentDir: agentDir, IncludeDefaults: true}, false)
+	if strings.Contains(strings.Join(skillNames(untrusted), ","), "project-agents") {
+		t.Fatalf("an untrusted project's .agents skill was loaded: %v", untrusted.Skills)
+	}
+
+	trusted := LoadSkills(LoadSkillsOptions{Cwd: cwd, AgentDir: agentDir, IncludeDefaults: true}, true)
+	found := false
+	for _, skill := range trusted.Skills {
+		if skill.Name == "project-agents" {
+			found = true
+			if skill.SourceInfo.Scope != SourceScopeProject {
+				t.Fatalf("scope = %q, want project", skill.SourceInfo.Scope)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("a trusted project's .agents skill was not loaded: %v", trusted.Skills)
+	}
+}
+
+// ~/.agents/skills is a user-level discovery location, always on when
+// discovery is enabled (upstream collectResources adds it outside the trust
+// gate).
+func TestLoadSkillsLoadsUserAgentsSkills(t *testing.T) {
+	home := t.TempDir()
+	setHomeDir(t, home)
+	agentDir := filepath.Join(home, ".pi", "agent")
+	writeSkill(t, filepath.Join(home, ".agents", "skills"), "user-agents", "user agents")
+
+	for _, trusted := range []bool{false, true} {
+		result := LoadSkills(LoadSkillsOptions{Cwd: t.TempDir(), AgentDir: agentDir, IncludeDefaults: true}, trusted)
+		var found *Skill
+		for index := range result.Skills {
+			if result.Skills[index].Name == "user-agents" {
+				found = &result.Skills[index]
+			}
+		}
+		if found == nil {
+			t.Fatalf("trusted=%v: ~/.agents skill not loaded: %v", trusted, result.Skills)
+		}
+		if found.SourceInfo.Scope != SourceScopeUser {
+			t.Fatalf("scope = %q, want user", found.SourceInfo.Scope)
+		}
+	}
+}
+
+// The project .agents walk stops at the git repository root: a .agents/skills
+// above it belongs to another checkout and must not load (upstream
+// collectAncestorAgentsSkillDirs).
+func TestLoadSkillsAgentsAncestorsStopAtGitRoot(t *testing.T) {
+	home := t.TempDir()
+	setHomeDir(t, home)
+	agentDir := filepath.Join(home, ".pi", "agent")
+
+	outer := t.TempDir()
+	writeSkill(t, filepath.Join(outer, ".agents", "skills"), "outer-skill", "outer")
+	repo := filepath.Join(outer, "repo")
+	if err := os.MkdirAll(filepath.Join(repo, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeSkill(t, filepath.Join(repo, ".agents", "skills"), "repo-skill", "repo")
+	sub := filepath.Join(repo, "sub")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeSkill(t, filepath.Join(sub, ".agents", "skills"), "sub-skill", "sub")
+
+	result := LoadSkills(LoadSkillsOptions{Cwd: sub, AgentDir: agentDir, IncludeDefaults: true}, true)
+	names := strings.Join(skillNames(result), ",")
+	for _, want := range []string{"sub-skill", "repo-skill"} {
+		if !strings.Contains(names, want) {
+			t.Fatalf("skills = %q, missing %q", names, want)
+		}
+	}
+	if strings.Contains(names, "outer-skill") {
+		t.Fatalf("skills = %q, loaded a .agents dir above the git root", names)
+	}
+}
+
+// When cwd is under $HOME, the ancestor walk reaches ~/.agents/skills; the
+// user dir is filtered out of the project set so it loads exactly once
+// (upstream filters resolve(dir) !== resolve(userAgentsSkillsDir)).
+func TestLoadSkillsUserAgentsDirLoadsOnceUnderHome(t *testing.T) {
+	home := t.TempDir()
+	setHomeDir(t, home)
+	agentDir := filepath.Join(home, ".pi", "agent")
+	writeSkill(t, filepath.Join(home, ".agents", "skills"), "user-agents", "user agents")
+
+	cwd := filepath.Join(home, "project")
+	if err := os.MkdirAll(cwd, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	result := LoadSkills(LoadSkillsOptions{Cwd: cwd, AgentDir: agentDir, IncludeDefaults: true}, true)
+	count := 0
+	for _, skill := range result.Skills {
+		if skill.Name == "user-agents" {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Fatalf("user-agents loaded %d times, want 1: %v", count, result.Skills)
+	}
+}
