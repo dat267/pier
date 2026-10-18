@@ -239,32 +239,68 @@ func TestStreakStartRecordDumpsTheLoopMidPhase(t *testing.T) {
 	}
 }
 
-// A busy run of short phases (streaming: beat+events repeated) must still be
-// attributed. The per-phase timers never fire for a 10ms phase, so a watchdog
-// armed once per streak writes a mid-flight record and dump.
-func TestStreakMidFlightRecordDumpsDuringShortPhases(t *testing.T) {
+// A busy run of short phases (streaming: beat+events repeated) is attributed by
+// the loop time it actually executed, not its wall-clock span. The record is
+// written at the phase end where the busy sum crosses the threshold, with a
+// dump of the just-finished phase. A fake clock gives exact durations (a race
+// build inflates real sleeps).
+func TestStreakRecordsBusySumAcrossShortPhases(t *testing.T) {
 	oldGap := stallStreakGap
 	stallStreakGap = 5 * time.Millisecond
 	defer func() { stallStreakGap = oldGap }()
+	oldNow := stallClockNow
+	defer func() { stallClockNow = oldNow }()
 
 	dir := t.TempDir()
 	w := &RunWiring{StallLogPath: filepath.Join(dir, "pier-stall.log"), StallLogThreshold: 50 * time.Millisecond, StallLogCPUAfter: time.Hour}
-	for i := 0; i < 12; i++ {
+	now := time.Unix(1000, 0)
+	stallClockNow = func() time.Time { return now }
+	for i := 0; i < 8; i++ {
 		done := w.phase("events")
-		time.Sleep(10 * time.Millisecond)
+		now = now.Add(10 * time.Millisecond)
 		done()
-		time.Sleep(2 * time.Millisecond)
+		now = now.Add(2 * time.Millisecond)
 	}
-	time.Sleep(20 * time.Millisecond)
 	record, err := os.ReadFile(w.StallLogPath)
 	if err != nil {
-		t.Fatalf("no streak record: %v", err)
+		t.Fatalf("no streak record for 80ms of busy phases: %v", err)
 	}
 	text := string(record)
-	if !strings.Contains(text, `slow UI phase "streak"`) || !strings.Contains(text, "(mid-flight)") {
-		t.Fatalf("no mid-flight streak record:\n%s", text)
+	if !strings.Contains(text, `slow UI phase "streak"`) || !strings.Contains(text, "phases=events") {
+		t.Fatalf("streak record does not name the phases:\n%s", text)
+	}
+	if !strings.Contains(text, "span=") {
+		t.Fatalf("streak record does not report the busy sum and span:\n%s", text)
 	}
 	if !strings.Contains(text, "goroutine profile:") {
-		t.Fatalf("mid-flight record carries no dump:\n%s", text)
+		t.Fatalf("streak record carries no dump:\n%s", text)
+	}
+}
+
+// The false positive behind the 18:46 records: a streaming delta cadence with
+// sub-gap select waits spans >100ms while the loop executes far less. The busy
+// sum must gate the record, so a span over the threshold with under-threshold
+// work is not reported.
+func TestStreakBusySumIgnoresIdleSelectWaits(t *testing.T) {
+	oldGap := stallStreakGap
+	stallStreakGap = 10 * time.Millisecond
+	defer func() { stallStreakGap = oldGap }()
+	oldNow := stallClockNow
+	defer func() { stallClockNow = oldNow }()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "pier-stall.log")
+	w := &RunWiring{StallLogPath: path, StallLogThreshold: 100 * time.Millisecond, StallLogCPUAfter: time.Hour}
+	now := time.Unix(2000, 0)
+	stallClockNow = func() time.Time { return now }
+	for i := 0; i < 10; i++ { // busy 30ms over a 120ms span of one streak
+		done := w.phase("events")
+		now = now.Add(3 * time.Millisecond)
+		done()
+		now = now.Add(9 * time.Millisecond)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		data, _ := os.ReadFile(path)
+		t.Fatalf("a >100ms span with 30ms of work recorded a stall:\n%s", data)
 	}
 }

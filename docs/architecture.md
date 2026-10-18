@@ -67,8 +67,12 @@ with historical measurements retained to explain the design.
   mid-flight by a timer goroutine, whose dump shows where the loop was — the
   after-phase dump only shows the loop back in its event loop. A busy streak
   of contiguous short phases is recorded as one `streak` record naming every
-  phase it crossed when the total crosses the threshold even though no single
-  phase does (a keystroke's round trip spans phases, not one phase). A streak
+  phase it crossed when the accumulated executed time crosses the threshold even
+  though no single phase does. The sum of phase durations, not the wall-clock
+  span, is the metric: a streaming delta cadence parks the loop in select for a
+  few ms between phases, which a span-based streak counted as a >100 ms stall
+  while the loop executed far less (the 18:46 records, whose mid-flight dump
+  showed the loop in `select`). A streak
   still running at the CPU-profile threshold additionally captures a CPU
   profile, written to a sibling `pier-stall-cpu-<timestamp>.pprof` (kept 20,
   `go tool pprof` reads it) whose path the record carries: the goroutine dump

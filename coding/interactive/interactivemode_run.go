@@ -112,6 +112,12 @@ type RunWiring struct {
 	// stallStreakPhasesText is the joined phase list the watchdog goroutine
 	// reads; the loop-owned slice cannot be read from the timer goroutine.
 	stallStreakPhasesText atomic.Value
+	// stallStreakBusy is the sum of the streak's phase durations. The wall-clock
+	// span counts select waits between phases (a streaming delta cadence looks
+	// like a continuous 100ms run while the loop is actually parked between
+	// events); the busy sum is what the loop actually executed.
+	stallStreakBusy      time.Duration
+	stallStreakBusyNanos atomic.Int64
 	// stallStreakRecorded flips when the streak-start record is written from
 	// the watchdog goroutine; atomic because phase() reads it on the loop.
 	stallStreakRecorded atomic.Bool
@@ -648,7 +654,7 @@ func (w *RunWiring) phase(name string) func() {
 	if w.StallLogThreshold <= 0 || w.StallLogPath == "" {
 		return func() {}
 	}
-	start := time.Now()
+	start := stallClockNow()
 	// A keystroke's round trip crosses every phase the loop runs while it
 	// waits, so the user-feel latency is the contiguous busy run, not one
 	// phase: two 40ms phases with a 3ms gap feel like 83ms and each is under
@@ -661,12 +667,15 @@ func (w *RunWiring) phase(name string) func() {
 			w.stallStreakWatchdog.Stop()
 		}
 		w.stallStreakStart = start
+		w.stallStreakBusy = 0
+		w.stallStreakBusyNanos.Store(0)
 		w.stallStreakPhases = append(w.stallStreakPhases[:0], name)
 		w.stallStreakRecorded.Store(false)
 		w.stallStreakPhasesText.Store(name)
 		streakStart := start
+		gap := stallStreakGap
 		w.stallStreakWatchdog = time.AfterFunc(w.StallLogThreshold, func() {
-			w.recordStreakMidFlight(streakStart)
+			w.recordStreakMidFlight(streakStart, gap)
 		})
 	} else {
 		w.stallStreakPhases = append(w.stallStreakPhases, name)
@@ -675,24 +684,27 @@ func (w *RunWiring) phase(name string) func() {
 		}
 		w.stallStreakPhasesText.Store(strings.Join(w.stallStreakPhases, "+"))
 	}
-	streakSoFar := start.Sub(w.stallStreakStart)
+	streakSoFar := w.stallStreakBusy
+	streakStart := w.stallStreakStart
 	var cpu *stallCPUWatch
 	if !w.stallStreakRecorded.Load() {
 		// The phases snapshot at arm time: the callback runs on a timer
 		// goroutine while the loop keeps appending to the slice.
 		phases := strings.Join(w.stallStreakPhases, "+")
-		cpu = w.armStallCPUWatch(w.StallLogCPUAfter, streakSoFar, phases)
+		cpu = w.armStallCPUWatch(w.StallLogCPUAfter, streakSoFar, phases, streakStart)
 	}
 	watchdog := time.AfterFunc(w.StallLogThreshold, func() {
 		w.writeStallRecord(name, time.Since(start), " still running", nil)
 	})
 	return func() {
 		watchdog.Stop()
-		now := time.Now()
+		now := stallClockNow()
 		w.stallStreakEnd = now
 		w.stallStreakEndNanos.Store(now.UnixNano())
 		profile := cpu.finish()
 		elapsed := now.Sub(start)
+		w.stallStreakBusy += elapsed
+		w.stallStreakBusyNanos.Store(int64(w.stallStreakBusy))
 		switch {
 		case elapsed >= w.StallLogThreshold:
 			// The phase itself was slow; it is also the tail of the streak, so
@@ -701,16 +713,17 @@ func (w *RunWiring) phase(name string) func() {
 			// it forward would re-record the same time as a streak on the next
 			// phase.
 			w.stallStreakStart = now
+			w.stallStreakBusy = 0
+			w.stallStreakBusyNanos.Store(0)
 			w.stallStreakPhases = w.stallStreakPhases[:0]
 			w.writeStallRecord(name, elapsed, "", profile)
-		case now.Sub(w.stallStreakStart) >= w.StallLogThreshold && (!w.stallStreakRecorded.Load() || len(profile) > 0):
-			// One streak-start/one streak-end record per streak: a streaming turn
-			// keeps the loop busy for seconds, and recording every phase-end
-			// after the crossing flooded the log (30+ records in the first live
-			// streak). A profile that ran to this phase end is always written
-			// out, even when the streak-start record already fired.
+		case w.stallStreakBusy >= w.StallLogThreshold && (!w.stallStreakRecorded.Load() || len(profile) > 0):
+			// One streak record per busy run: a streaming turn keeps the loop
+			// active for seconds, and recording every phase-end after the
+			// crossing flooded the log (30+ records in the first live streak).
+			// A profile that ran to this phase end is always written out.
 			w.stallStreakRecorded.Store(true)
-			w.writeStallRecord("streak", now.Sub(w.stallStreakStart), " phases="+strings.Join(w.stallStreakPhases, "+"), profile)
+			w.writeStallRecord("streak", w.stallStreakBusy, " span="+now.Sub(w.stallStreakStart).Round(time.Millisecond).String()+" phases="+strings.Join(w.stallStreakPhases, "+"), profile)
 		}
 	}
 }
@@ -718,8 +731,13 @@ func (w *RunWiring) phase(name string) func() {
 // recordStreakMidFlight writes the streak record from a timer goroutine while
 // the loop is still busy, so the goroutine dump names the frame; it skips a
 // streak that ended (the loop went idle) and one already recorded.
-func (w *RunWiring) recordStreakMidFlight(streakStart time.Time) {
-	if end := w.stallStreakEndNanos.Load(); end != 0 && time.Since(time.Unix(0, end)) > stallStreakGap {
+func (w *RunWiring) recordStreakMidFlight(streakStart time.Time, gap time.Duration) {
+	if end := w.stallStreakEndNanos.Load(); end != 0 && time.Since(time.Unix(0, end)) > gap {
+		return
+	}
+	if w.stallStreakBusyNanos.Load() < int64(w.StallLogThreshold) {
+		// The span reached the threshold but the loop executed far less; the
+		// difference is select waits between phases, not a stall.
 		return
 	}
 	if !w.stallStreakRecorded.CompareAndSwap(false, true) {
@@ -735,6 +753,10 @@ func (w *RunWiring) recordStreakMidFlight(streakStart time.Time) {
 // stallStreakGap is how idle the loop may be between phases before a busy
 // streak restarts. Test seam: tests shorten it.
 var stallStreakGap = 10 * time.Millisecond
+
+// stallClockNow is the stall detector's clock. Tests replace it to drive phase
+// durations deterministically instead of sleeping (which a race build inflates).
+var stallClockNow = time.Now
 
 // stallStreakPhaseLimit bounds the phases listed in a streak record.
 const stallStreakPhaseLimit = 8
@@ -778,7 +800,7 @@ type stallCPUWatch struct {
 // before the profile starts: the CPU threshold minus what earlier contiguous
 // phases already spent, so a streak is profiled from the moment it crosses the
 // threshold, not only from a single slow phase.
-func (w *RunWiring) armStallCPUWatch(after time.Duration, streakSoFar time.Duration, phases string) *stallCPUWatch {
+func (w *RunWiring) armStallCPUWatch(after time.Duration, streakSoFar time.Duration, phases string, streakStart time.Time) *stallCPUWatch {
 	if after <= 0 {
 		return nil
 	}
@@ -807,7 +829,7 @@ func (w *RunWiring) armStallCPUWatch(after time.Duration, streakSoFar time.Durat
 			note = " phases=" + phases
 		}
 		w.stallStreakRecorded.Store(true)
-		w.writeStallRecord("streak-start", time.Since(w.stallStreakStart), note, nil)
+		w.writeStallRecord("streak-start", time.Since(streakStart), note, nil)
 	})
 	return watch
 }
