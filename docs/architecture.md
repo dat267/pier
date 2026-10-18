@@ -9,8 +9,8 @@ measurements needed only when working on these areas.
 The interactive mode uses a single-writer UI loop, replacing the earlier
 mutex-guarded shared state (upstream is single-threaded). Input dispatch,
 painting and UI mutation share the owner goroutine; producers only hand off
-work or data. UI-state locks and the internal render timer have been retired
-(D146/D147). Narrow handoff and I/O locks remain; `docs/locks.md` is the
+work or data. UI-state locks and the internal render timer have been retired.
+Narrow handoff and I/O locks remain; `docs/locks.md` is the
 authoritative inventory. The sections below describe the completed stages,
 with historical measurements retained to explain the design.
 
@@ -150,7 +150,7 @@ with historical measurements retained to explain the design.
 
 ### Rendering on the owner loop (stage 2)
 
-- **Every renderer is caller-driven (D146).** Construction creates the
+- **Every renderer is caller-driven.** Construction creates the
   capacity-1 `renderTicks` channel. `RequestRender` coalesces onto it; the owner
   consumes requests and calls `RenderNow`. There is no internal render timer
   or renderer-owned throttle. `EnableRenderTicks` and `DisableAutoRender` are
@@ -306,7 +306,7 @@ with historical measurements retained to explain the design.
   `TestAnimationScanCacheIsDroppedByAPaint`,
   `TestAltScreenMouseMoveRequestsNoRender`,
   `TestVisibleWidthStyledTextMatchesPlainText`.
-- **D163 upstream-parity rendering.** Interactive startup does not enable
+- **Upstream-parity rendering.** Interactive startup does not enable
   low-bandwidth rendering. `tui.SetLowBandwidth` remains available to explicit
   renderer clients, but SSH sessions receive the upstream padded frame output.
   SSH Escape timeout and wheel acceleration follow upstream behavior.
@@ -918,14 +918,14 @@ and the mode method groups), each round verified against upstream Node goldens
 and committed locally with a `docs/PORTING.md` update. The CLI
 (the root `main.go` over the `cmd` package, originally `cmd/pi`) and its
 composition layer (`app.go`) came last,
-followed by five deadlock fixes: D136 (editor submit), D137 (model selector),
-D138 (scroll) and D139 (exit) were found by driving the real binary in a PTY,
+followed by five deadlock fixes: editor submit, model selector,
+scroll and exit were found by driving the real binary in a PTY,
 and D156 (login) by reading the dispatch path, with a test that fails instead of
 hanging when the regression returns. The
 executable was then renamed from `pi` to `gpi` and finally to `pier` (the display name follows the
 invoked file name).
 
-D192 later retired the real-binary D136–D139 mutex-deadlock watchdog flows.
+The real-binary mutex-deadlock watchdog flows were later retired.
 Their functional coverage now lives in `coding/interactive/ptyflow_test.go`
 (in-process despite the filename), while `internal/uiblock` enforces the
 blocking-work invariant statically. Real-binary PTY tests still cover other

@@ -36,8 +36,8 @@ own mutex, so no UI lock or off-loop path is introduced.
 
 | Lock | Where | Protects | Retirement |
 |---|---|---|---|
-| `Renderer.postMu` | `tui/render.go` | the posted-callback queue (`Post` is called from off-loop goroutines: loaders, watchers) | **retained (D146)**: serializes the handoff only; the owner drains it in the render pass and never runs a callback under it |
-| `ProcessTerminal.writeMu` | `tui/terminal.go` | terminal writes, raw-mode transitions, Kitty negotiation bookkeeping shared with the reader | **retained (D147)**: not UI state |
+| `Renderer.postMu` | `tui/render.go` | the posted-callback queue (`Post` is called from off-loop goroutines: loaders, watchers) | **retained**: serializes the handoff only; the owner drains it in the render pass and never runs a callback under it |
+| `ProcessTerminal.writeMu` | `tui/terminal.go` | terminal writes, raw-mode transitions, Kitty negotiation bookkeeping shared with the reader | **retained**: not UI state |
 | `ProcessTerminal.writesMu` | `tui/terminal.go` | the console-write FIFO, byte backlog counters, open-frame buffer, deferred metadata hints and cancellation-aware optional-admission waiters (`Write` appends essential output in submission order; a dedicated goroutine drains it) | **retained**: off-loop writer; the UI loop never writes to the console itself |
 | `resizeWatcherMu` | `tui/terminal_windows.go` | the Windows console-resize poller's stop/done channels | **retained**: the poller runs off the loop |
 | `prerenderState.mu` | `coding/interactive/transcript.go` | the transcript warm-ahead handoff (ready chunk, width, generation) | **retained**: loop ↔ warm-worker handoff, not UI state |
@@ -60,15 +60,15 @@ retained locks listed above:
 
 | Lock | Where | Retired in |
 |---|---|---|
-| `Renderer.renderMu` | `tui/render.go` | D146 (input and painting share the owner goroutine) |
-| `Renderer.mu` | `tui/render.go` | D146 (loop-owned) |
-| `Container.mu` | `tui/component.go` | D146 (loop-owned) |
-| `Editor.mu` | `tui/editor.go` | D146 (loop-owned) |
-| `AltScreen.mu` | `tui/altscreen.go` | D146 (loop-owned) |
-| `ScrollView.mu` | `tui/scrollview.go` | D146; the scrollbar hide timer is a lazy deadline |
+| `Renderer.renderMu` | `tui/render.go` | owner loop (input and painting share the owner goroutine) |
+| `Renderer.mu` | `tui/render.go` | owner loop (loop-owned) |
+| `Container.mu` | `tui/component.go` | owner loop (loop-owned) |
+| `Editor.mu` | `tui/editor.go` | owner loop (loop-owned) |
+| `AltScreen.mu` | `tui/altscreen.go` | owner loop (loop-owned) |
+| `ScrollView.mu` | `tui/scrollview.go` | owner loop; the scrollbar hide timer is a lazy deadline |
 | `Loader.mu` | `tui/selectlist.go` | stage 4 |
 | `AltScreenFlashContainer.mu` | `tui/selectlist.go` | stage 4 |
-| `StdinBuffer.mu` | `tui/stdinbuffer.go` | D147 (consumer-driven flush) |
+| `StdinBuffer.mu` | `tui/stdinbuffer.go` | consumer-driven flush |
 | `negotiationResult.lastDataMu` | `tui/terminal.go` | stage 3 (reader stamps an atomic) |
 | `KeybindingsManager.mu` | `tui/keybindings.go` | stage 4 |
 | `globalKeybindingsState.mu` | `tui/keybindings.go` | stage 4 |
@@ -81,8 +81,8 @@ retained locks listed above:
 | `scheduleOnce` local `mu` | `coding/interactive/sessionselector.go` | stage 4 |
 | `editCallComponent.previewMu` | `coding/interactive/toolrenderer_edit.go` | stage 4 |
 | `FooterComponent.cacheMu` | `coding/interactive/footer.go` | stage 4 |
-| `ModelCatalogRefreshCoordinator.mu` | `coding/interactive/catalogrefresh.go` | stage 4 (D148) |
-| `activeCatalogRefresh.mu` | `coding/interactive/catalogrefresh.go` | stage 4 (D148) |
+| `ModelCatalogRefreshCoordinator.mu` | `coding/interactive/catalogrefresh.go` | stage 4 |
+| `activeCatalogRefresh.mu` | `coding/interactive/catalogrefresh.go` | stage 4 |
 | `Lifecycle.mu` | `coding/interactive/interactivemode_lifecycle.go` | stage 4 |
 | `StartupWiring.mu` | `coding/interactive/interactivemode_startup.go` | stage 1 (input handoff is a channel) |
 | `Theme.mu`, `themeState.mu`, `trueColorState.mu`, `customThemesDirState.mu` | `coding/interactive/theme.go` | stage 4 (atomics / copy-on-write) |
@@ -90,13 +90,13 @@ retained locks listed above:
 When retiring a lock, the invariant is unchanged: no user code under a lock;
 snapshot under and deliver outside.
 
-The D136–D139 mutex-deadlock PTY watchdog flows consumed this list: while a UI
+The mutex-deadlock PTY watchdog flows consumed this list: while a UI
 mutex existed, a flow could park the loop behind one, so the suite drove the real
 binary through the offending interaction and checked the `SIGQUIT` dump. With
 every UI-state lock retired, those specific deadlock paths are gone. Core
 locks and blocking work can still stall the loop, so `internal/uiblock` guards
 the owner-loop invariant statically. The watchdog flows' functional coverage
-moved to `coding/interactive/ptyflow_test.go` (**D192**), which drives the app
+moved to `coding/interactive/ptyflow_test.go`, which drives the app
 in process rather than spawning a PTY. Other real-binary PTY tests and the
 deliberately deadlocking parser helper remain.
 

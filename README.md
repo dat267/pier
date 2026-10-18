@@ -38,7 +38,7 @@ and the `evals` harness. `chord`, `client`, `protocol`, `server`, `telemetry`
 and `durable` were ported but unreachable from the CLI, so they were removed
 (D236) and preserved on the `unwired-packages` branch.
 
-There is no built-in filesystem sandbox (D177): shell, write and edit run with
+There is no built-in filesystem sandbox: shell, write and edit run with
 the OS user's permissions, including outside the workspace. Use external
 confinement.
 
@@ -55,7 +55,7 @@ confinement.
   work (turns, session writes, settings persists, theme loads, transcript
   pre-render, clipboard) runs off-loop through `internal/offloop`. Shutdown
   drains accepted mandatory saves without a deadline while optional work is
-  cancelled (D199). UI-state mutexes are retired (D146/D147); the retained
+  cancelled (D199). UI-state mutexes are retired; the retained
   handoff and I/O locks are inventoried in `docs/locks.md`.
 - **One session projection.** `coding/session_projection.go` resolves the branch
   path, compaction window, context settings and messages in a single walk and
