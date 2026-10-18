@@ -8,10 +8,14 @@ type MarkdownPreparation struct {
 	RequestRender func()
 }
 
-// D239: 64 KiB left a streaming message re-wrapping its open paragraph on the
-// owner loop for its whole life (one paint measured 94ms); 8 KiB keeps the
-// first (synchronous) render cheap while deltas render off-loop.
-const largeMarkdownBytes = 8 * 1024
+// D239/D242: 64 KiB left a streaming message re-wrapping its open paragraph on
+// the owner loop for its whole life (one paint measured 94ms). D239 dropped it
+// to 8 KiB; D242 to 2 KiB, after the 18:36 dump caught Markdown.Render ->
+// Finalize -> WrapTextWithAnsi -> VisibleWidth on the loop for a message below
+// 8 KiB (every coalesced paint re-rendered it). The first render stays
+// synchronous; deltas then prepare off-loop and the owner paints the previous
+// complete frame.
+const largeMarkdownBytes = 2 * 1024
 
 // veryLargeMarkdownBytes is D204's cold-preparation threshold: a message this
 // size submits off-loop on its first render (the owner never parses it),
