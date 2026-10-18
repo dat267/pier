@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -55,6 +56,41 @@ func TestParseToolCallArguments(t *testing.T) {
 		}
 		if !strings.Contains(errText, "Received arguments:\n"+malformed) {
 			t.Errorf("ParseToolCallArguments(%q) error = %q", malformed, errText)
+		}
+	}
+}
+
+// Upstream parses a finished tool call with JSON.parse and later re-stringifies
+// the object, so the model's key order survives. A map round-trip sorted it.
+func TestParseToolCallArgumentsPreservesKeyOrder(t *testing.T) {
+	cases := []struct {
+		raw  string
+		want string
+	}{
+		{`{"z":1,"a":2}`, `{"z":1,"a":2}`},
+		{`{"path":"a","content":"b","mode":"w"}`, `{"path":"a","content":"b","mode":"w"}`},
+		{`{"outer":{"z":1,"a":2},"list":[{"b":1,"a":2}]}`, `{"outer":{"z":1,"a":2},"list":[{"b":1,"a":2}]}`},
+		// Numbers and whitespace normalize like JSON.parse then JSON.stringify.
+		{`{ "n": 1.0 , "m": 1e2 }`, `{"n":1,"m":100}`},
+	}
+	for _, testCase := range cases {
+		got, errText := ParseToolCallArguments(testCase.raw)
+		if errText != "" || string(got) != testCase.want {
+			t.Errorf("ParseToolCallArguments(%s) = %s, %q; want %s", testCase.raw, got, errText, testCase.want)
+		}
+	}
+}
+
+func TestParseStreamingArgsPreservesKeyOrder(t *testing.T) {
+	for _, input := range []string{
+		`{"z":1,"a":2}`,
+		`{"outer":{"z":1,"a":2},"list":[{"b":1,"a":2}]}`,
+		// A truncated tail keeps the completed prefix in order.
+		`{"z":1,"a":2,"tail":`,
+	} {
+		got := string(parseStreamingArgs(json.RawMessage(input)))
+		if !strings.Contains(got, `"z":1,"a":2`) {
+			t.Errorf("parseStreamingArgs(%s) = %s; key order not preserved", input, got)
 		}
 	}
 }

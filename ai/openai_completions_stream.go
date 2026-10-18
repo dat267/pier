@@ -584,10 +584,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 				if toolCall.Function != nil && toolCall.Function.Arguments != "" {
 					deltaText := toolCall.Function.Arguments
 					block.partialArgs += deltaText
-					var parsed map[string]any
-					parseStreamingJSONInto(block.partialArgs, &parsed)
-					enc, _ := MarshalJSON(parsed)
-					block.call.Arguments = enc
+					block.call.Arguments = parseStreamingJSONObject(block.partialArgs)
 				} else if toolCall.Custom != nil && toolCall.Custom.Input != "" {
 					nextInput := customToolInputValue(block) + toolCall.Custom.Input
 					deltaText, ok, derr := AppendGrammarToolInputJSONDelta(&block.customInput.jsonBuffer, block.customInput.property, nextInput, false)

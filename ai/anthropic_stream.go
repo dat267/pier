@@ -675,10 +675,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 				case "input_json_delta":
 					if tc, ok := blocks[idx].block.(ToolCall); ok {
 						blocks[idx].partial = append(blocks[idx].partial, event.Delta.PartialJSON...)
-						var parsed map[string]any
-						parseStreamingJSONInto(string(blocks[idx].partial), &parsed)
-						enc, _ := MarshalJSON(parsed)
-						tc.Arguments = enc
+						tc.Arguments = parseStreamingJSONObject(string(blocks[idx].partial))
 						output.Content[idx] = tc
 						stream.Push(AssistantMessageEvent{Type: EventToolcallDelta, ContentIndex: idx, Delta: event.Delta.PartialJSON, Partial: output})
 					}
@@ -787,12 +784,10 @@ func findBlock(blocks []anthropicStreamBlock, index int) int {
 	return -1
 }
 
-// parseStreamingArgs finalizes tool-call arguments from the scratch buffer.
+// parseStreamingArgs finalizes tool-call arguments from the scratch buffer
+// (upstream parseStreamingJson), preserving object key order.
 func parseStreamingArgs(args json.RawMessage) json.RawMessage {
-	var parsed map[string]any
-	parseStreamingJSONInto(string(args), &parsed)
-	enc, _ := MarshalJSON(parsed)
-	return enc
+	return parseStreamingJSONObject(string(args))
 }
 
 // ParseStreamingJSONText parses a partially streamed JSON object, repairing an
@@ -800,13 +795,7 @@ func parseStreamingArgs(args json.RawMessage) json.RawMessage {
 // wrapper is used by the agent proxy stream (upstream parseStreamingJson with
 // the `|| {}` default).
 func ParseStreamingJSONText(text string) json.RawMessage {
-	var parsed map[string]any
-	parseStreamingJSONInto(text, &parsed)
-	if parsed == nil {
-		parsed = map[string]any{}
-	}
-	enc, _ := MarshalJSON(parsed)
-	return enc
+	return parseStreamingJSONObject(text)
 }
 
 func hasPreferredStrictAnthropicTools(model *Model, context TranscriptContext) bool {

@@ -1,8 +1,10 @@
 package ai
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 	"unicode/utf16"
 )
@@ -135,54 +137,151 @@ func ParseToolCallArguments(jsonText string) (json.RawMessage, string) {
 	if JSTrim(jsonText) == "" {
 		return json.RawMessage(`{}`), ""
 	}
-	var parsed any
-	if err := ParseJSONWithRepair(jsonText, &parsed); err != nil {
+	value, err := decodeOrderedJSON([]byte(jsonText))
+	if err != nil {
+		if repaired := RepairJSON(jsonText); repaired != jsonText {
+			if repairedValue, repairedErr := decodeOrderedJSON([]byte(repaired)); repairedErr == nil {
+				value, err = repairedValue, nil
+			}
+		}
+	}
+	if err != nil {
 		return json.RawMessage(`{}`), fmt.Sprintf("%s\n\nReceived arguments:\n%s", err.Error(), jsonText)
 	}
-	object, ok := parsed.(map[string]any)
-	if !ok {
+	// Upstream's typeof/Array.isArray guard: null, arrays and scalars are not an
+	// argument object.
+	if value.Object == nil {
 		return json.RawMessage(`{}`), "Tool arguments must be a JSON object\n\nReceived arguments:\n" + jsonText
 	}
-	encoded, err := MarshalJSON(object)
-	if err != nil {
-		return json.RawMessage(`{}`), fmt.Sprintf("%s\n\nReceived arguments:\n%s", err.Error(), jsonText)
-	}
-	return encoded, ""
+	return encodeSchemaValue(value), ""
 }
 
-// parseStreamingJSONInto attempts to parse potentially incomplete JSON
-// during streaming. Always produces a usable value (empty map when parsing
-// fails entirely); port of parseStreamingJson.
-func parseStreamingJSONInto(partialJSON string, v any) {
-	if JSTrim(partialJSON) == "" {
-		return
+// decodeOrderedJSON parses one JSON value keeping object member order.
+// Upstream parses tool arguments with JSON.parse and re-stringifies the object,
+// so the model's key order survives; a map[string]any would sort it (D6's
+// ordered representation is reused here). Trailing data is rejected like
+// JSON.parse.
+func decodeOrderedJSON(data []byte) (*schemaValue, error) {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	value, err := decodeOrderedToken(dec)
+	if err != nil {
+		return nil, err
 	}
-	if err := ParseJSONWithRepair(partialJSON, v); err == nil {
-		return
+	if _, err := dec.Token(); err != io.EOF {
+		return nil, fmt.Errorf("unexpected data after the JSON value")
 	}
-	if result, err := partialParse(partialJSON); err == nil {
-		if result != nil {
-			mustReencode(result, v)
+	return value, nil
+}
+
+func decodeOrderedToken(dec *json.Decoder) (*schemaValue, error) {
+	tok, err := dec.Token()
+	if err != nil {
+		return nil, err
+	}
+	switch t := tok.(type) {
+	case nil:
+		return &schemaValue{Null: true}, nil
+	case bool:
+		return &schemaValue{Bool: t, IsBool: true}, nil
+	case json.Number:
+		number, err := t.Float64()
+		if err != nil {
+			return nil, err
 		}
-		return
+		return &schemaValue{Number: number, IsNumber: true}, nil
+	case string:
+		return &schemaValue{String: t, IsString: true}, nil
+	case json.Delim:
+		switch t {
+		case '{':
+			object := &schemaObject{values: map[string]*schemaValue{}}
+			for dec.More() {
+				keyToken, err := dec.Token()
+				if err != nil {
+					return nil, err
+				}
+				key, ok := keyToken.(string)
+				if !ok {
+					return nil, fmt.Errorf("object key must be a string")
+				}
+				value, err := decodeOrderedToken(dec)
+				if err != nil {
+					return nil, err
+				}
+				object.set(key, value)
+			}
+			if _, err := dec.Token(); err != nil { // closing }
+				return nil, err
+			}
+			return &schemaValue{Object: object}, nil
+		case '[':
+			array := []*schemaValue{}
+			for dec.More() {
+				value, err := decodeOrderedToken(dec)
+				if err != nil {
+					return nil, err
+				}
+				array = append(array, value)
+			}
+			if _, err := dec.Token(); err != nil { // closing ]
+				return nil, err
+			}
+			return &schemaValue{IsArray: true, Array: array}, nil
+		}
 	}
-	if result, err := partialParse(RepairJSON(partialJSON)); err == nil && result != nil {
-		mustReencode(result, v)
-	}
+	return nil, fmt.Errorf("unexpected JSON token")
 }
 
-func mustReencode(partial any, v any) {
-	enc, err := MarshalJSON(partial)
-	if err != nil {
-		return
+// parseOrderedJSONObject re-encodes a JSON object preserving key order
+// (JSON.parse then JSON.stringify semantics). ok is false when data is not a
+// JSON object.
+func parseOrderedJSONObject(data []byte) (json.RawMessage, bool) {
+	value, err := decodeOrderedJSON(data)
+	if err != nil || value.Object == nil {
+		return nil, false
 	}
-	_ = json.Unmarshal(enc, v)
+	return encodeSchemaValue(value), true
+}
+
+// parseStreamingJSONObject attempts to parse potentially incomplete JSON during
+// streaming, preserving object key order (upstream parseStreamingJson). An
+// empty or unparseable input, or a non-object result, yields {}.
+func parseStreamingJSONObject(partialJSON string) json.RawMessage {
+	if JSTrim(partialJSON) == "" {
+		return json.RawMessage(`{}`)
+	}
+	if encoded, ok := parseOrderedJSONObject([]byte(partialJSON)); ok {
+		return encoded
+	}
+	repaired := RepairJSON(partialJSON)
+	if repaired != partialJSON {
+		if encoded, ok := parseOrderedJSONObject([]byte(repaired)); ok {
+			return encoded
+		}
+	}
+	if value, err := partialParse(partialJSON); err == nil && value.Object != nil {
+		return encodeSchemaValue(value)
+	}
+	if repaired != partialJSON {
+		if value, err := partialParse(repaired); err == nil && value.Object != nil {
+			return encodeSchemaValue(value)
+		}
+	}
+	return json.RawMessage(`{}`)
+}
+
+// parseStreamingJSONInto is the map-shaped form used by tests; production
+// callers re-encode the ordered object directly.
+func parseStreamingJSONInto(partialJSON string, v any) {
+	_ = json.Unmarshal(parseStreamingJSONObject(partialJSON), v)
 }
 
 // partialParse parses truncated JSON, keeping complete prefix fields
 // (truncated strings/objects/arrays). It mirrors the npm partial-json
-// package's default behavior for the streaming cases pi relies on.
-func partialParse(text string) (any, error) {
+// package's default behavior for the streaming cases pi relies on, and keeps
+// object key order in the same representation the ordered JSON decoder uses.
+func partialParse(text string) (*schemaValue, error) {
 	p := &partialParser{units: utf16.Encode([]rune(text))}
 	v, err := p.parseValue()
 	if err != nil {
@@ -216,7 +315,7 @@ func (p *partialParser) skipWhitespace() {
 	}
 }
 
-func (p *partialParser) parseValue() (any, error) {
+func (p *partialParser) parseValue() (*schemaValue, error) {
 	p.skipWhitespace()
 	u, ok := p.peek()
 	if !ok {
@@ -228,73 +327,79 @@ func (p *partialParser) parseValue() (any, error) {
 	case '[':
 		return p.parseArray()
 	case '"':
-		return p.parsePartialString()
+		s, err := p.parsePartialString()
+		if err != nil {
+			return nil, err
+		}
+		return &schemaValue{String: s, IsString: true}, nil
 	default:
 		return p.parseLiteral()
 	}
 }
 
-func (p *partialParser) parseObject() (any, error) {
+func (p *partialParser) parseObject() (*schemaValue, error) {
 	p.pos++ // '{'
-	out := map[string]any{}
+	out := &schemaObject{values: map[string]*schemaValue{}}
+	result := func() *schemaValue { return &schemaValue{Object: out} }
 	for {
 		p.skipWhitespace()
 		u, ok := p.peek()
 		if !ok {
-			return out, nil // truncated after '{' or ','
+			return result(), nil // truncated after '{' or ','
 		}
 		if u == '}' {
 			p.pos++
-			return out, nil
+			return result(), nil
 		}
 		if u == ',' {
 			p.pos++
 			continue
 		}
 		if u != '"' {
-			return out, nil // partial — stop with what we have
+			return result(), nil // partial — stop with what we have
 		}
 		key, ok := p.tryParseFullString()
 		if !ok {
-			return out, nil
+			return result(), nil
 		}
 		p.skipWhitespace()
 		u, ok = p.peek()
 		if !ok {
-			return out, nil
+			return result(), nil
 		}
 		if u != ':' {
-			return out, nil
+			return result(), nil
 		}
 		p.pos++
 		value, err := p.parseValue()
 		if err != nil {
-			return out, nil
+			return result(), nil
 		}
-		out[key] = value
+		out.set(key, value)
 		p.skipWhitespace()
 		if u2, ok := p.peek(); ok && u2 == ',' {
 			p.pos++
 			continue
 		}
 		if u2, ok := p.peek(); !ok || u2 != '}' {
-			return out, nil // truncated value list
+			return result(), nil // truncated value list
 		}
 	}
 }
 
-func (p *partialParser) parseArray() (any, error) {
+func (p *partialParser) parseArray() (*schemaValue, error) {
 	p.pos++ // '['
-	out := []any{}
+	out := []*schemaValue{}
+	result := func() *schemaValue { return &schemaValue{IsArray: true, Array: out} }
 	for {
 		p.skipWhitespace()
 		u, ok := p.peek()
 		if !ok {
-			return out, nil
+			return result(), nil
 		}
 		if u == ']' {
 			p.pos++
-			return out, nil
+			return result(), nil
 		}
 		if u == ',' {
 			p.pos++
@@ -302,7 +407,7 @@ func (p *partialParser) parseArray() (any, error) {
 		}
 		value, err := p.parseValue()
 		if err != nil {
-			return out, nil
+			return result(), nil
 		}
 		out = append(out, value)
 		p.skipWhitespace()
@@ -311,7 +416,7 @@ func (p *partialParser) parseArray() (any, error) {
 			continue
 		}
 		if u2, ok := p.peek(); !ok || u2 != ']' {
-			return out, nil
+			return result(), nil
 		}
 	}
 }
@@ -408,15 +513,15 @@ func (p *partialParser) tryParseFullString() (string, bool) {
 	return "", false
 }
 
-func (p *partialParser) parseLiteral() (any, error) {
+func (p *partialParser) parseLiteral() (*schemaValue, error) {
 	rest := string(utf16.Decode(p.units[p.pos:]))
 	for _, lit := range []struct {
 		name  string
-		value any
+		value *schemaValue
 	}{
-		{"true", true},
-		{"false", false},
-		{"null", nil},
+		{"true", &schemaValue{Bool: true, IsBool: true}},
+		{"false", &schemaValue{Bool: false, IsBool: true}},
+		{"null", &schemaValue{Null: true}},
 	} {
 		if strings.HasPrefix(rest, lit.name) {
 			p.pos += len(lit.name)
@@ -442,5 +547,5 @@ func (p *partialParser) parseLiteral() (any, error) {
 	if err := json.Unmarshal([]byte(numText), &f); err != nil {
 		return nil, err
 	}
-	return f, nil
+	return &schemaValue{Number: f, IsNumber: true}, nil
 }

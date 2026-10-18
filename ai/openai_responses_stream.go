@@ -670,9 +670,7 @@ func ProcessResponsesStream(
 				return
 			}
 			*slot.toolCall.partialJSON += event.Delta
-			var parsed map[string]any
-			parseStreamingJSONInto(*slot.toolCall.partialJSON, &parsed)
-			slot.toolCall.call.Arguments = mustMarshalJSON(parsed)
+			slot.toolCall.call.Arguments = parseStreamingJSONObject(*slot.toolCall.partialJSON)
 			updateContent(slot)
 			pushToolCallDelta(slot, event.Delta)
 		case "response.function_call_arguments.done":
