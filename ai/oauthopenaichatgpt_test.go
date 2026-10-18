@@ -7,6 +7,25 @@ import (
 	"testing"
 )
 
+// TestURLOriginNormalizes pins the WHATWG-origin comparison used for the
+// pasted callback URL: host case is lowered and a default port is dropped.
+func TestURLOriginNormalizes(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{"http://LOCALHOST/x", "http://localhost"},
+		{"https://Example.com:443/y", "https://example.com"},
+		{"http://example.com:80/z", "http://example.com"},
+		{"https://example.com:8443/z", "https://example.com:8443"},
+	} {
+		u, err := url.Parse(tc.in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := urlOrigin(u); got != tc.want {
+			t.Errorf("urlOrigin(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
 // TestOpenAIChatGPTAgentHostID pins the agent-host URI and its validation
 // (upstream agentHostId).
 func TestOpenAIChatGPTAgentHostID(t *testing.T) {
