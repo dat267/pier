@@ -88,7 +88,7 @@ func inputLatencyLogPath(agentDir string) string {
 	if agentDir == "" {
 		return ""
 	}
-	return filepath.Join(agentDir, "pier-input-latency.log")
+	return filepath.Join(diagnosticsLogsDir(agentDir), "pier-input-latency.log")
 }
 
 // installInputLatencyObserver wires the recorder to the raw terminal. No-op

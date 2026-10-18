@@ -47,7 +47,7 @@ with historical measurements retained to explain the design.
   overrides the threshold and `PIER_STALL_MS=0` disables it. Every phase the
   loop measures (`render`, `events`, `event-apply`, `partial-event-apply`, `beat`, `input`,
   `raw-input`) that
-  exceeds the threshold is recorded to `<agentDir>/pier-stall.log`, each with a
+  exceeds the threshold is recorded to `<agentDir>/logs/pier-stall.log`, each with a
   goroutine dump. It exists for stutters that do not reproduce on the
   development machine: a record names the phase and the stacks instead of only
   how long it took. A phase still running at the threshold is also recorded
@@ -56,16 +56,17 @@ with historical measurements retained to explain the design.
   of contiguous short phases is recorded as one `streak` record naming every
   phase it crossed when the total crosses the threshold even though no single
   phase does (a keystroke's round trip spans phases, not one phase). A streak
-  still running at 250 ms (`PIER_STALL_CPU_MS` overrides, 0 disables)
-  additionally captures a CPU profile, written to a sibling
-  `pier-stall-cpu-<timestamp>.pprof` (`go tool pprof` reads it) whose path the
-  record carries: the goroutine dump cannot attribute a completed render, the
-  profile can. Heavy tool-side
+  still running at the CPU-profile threshold additionally captures a CPU
+  profile, written to a sibling `pier-stall-cpu-<timestamp>.pprof` (kept 20,
+  `go tool pprof` reads it) whose path the record carries: the goroutine dump
+  cannot attribute a completed render, the profile can. The profile threshold
+  defaults to the record threshold (so every recorded stall is attributed);
+  `PIER_STALL_CPU_MS` overrides it, 0 disables. Heavy tool-side
   commands (test suites, builds) run `nice`d: on a 4-CPU machine an ungated
   test run competes with the UI goroutine and looks like a freeze. It was opt-in first, but both post-fix freezes struck
   sessions started without the variable, so the default flipped — a capture
   that requires remembering to set an env var does not survive real usage.
-- **Keystroke latency is logged separately** to `<agentDir>/pier-input-latency.log`
+- **Keystroke latency is logged separately** to `<agentDir>/logs/pier-input-latency.log`
   when a round trip exceeds `PIER_INPUT_LAT_MS` (default 50 ms; `0` disables).
   The terminal reader stamps the read (`ProcessTerminal.MarkInputRead`), the loop
   tags the frame it paints (`RunWiring.markInputRead`), and the writer reports

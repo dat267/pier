@@ -220,8 +220,9 @@ when their selection is settled.
 
 Stages 2 (rendering) and 3 (input and signals) are also on the loop. Slow phases
 over `PIER_STALL_MS` (default 100; `0` disables) and keystroke round trips over
-`PIER_INPUT_LAT_MS` (default 50) append to `<agentDir>/pier-stall.log` and
-`<agentDir>/pier-input-latency.log`, respectively. Stall records include
+`PIER_INPUT_LAT_MS` (default 50) append to
+`<agentDir>/logs/pier-stall.log` and `<agentDir>/logs/pier-input-latency.log`,
+respectively. Stall records include
 goroutine dumps; input-latency records split the read, paint and write delays.
 The full design and performance measurements are in `docs/architecture.md`.
 

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/pprof"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -686,24 +687,25 @@ var stallStreakGap = 10 * time.Millisecond
 // stallStreakPhaseLimit bounds the phases listed in a streak record.
 const stallStreakPhaseLimit = 8
 
-// stallCPUProfileAfterDefault is how long a busy streak must run before its
-// CPU profile starts (overridable with PIER_STALL_CPU_MS, 0 disables). The
-// goroutine dump cannot attribute a completed render (it fires in the deferred
-// phase end, when the loop is back in the profiler), so a streak that overruns
-// the stall threshold by this much also captures where the CPU went.
+// stallCPUProfileAfterDefault is the fallback when PIER_STALL_CPU_MS is
+// unset, for callers that profile beyond the record threshold. The wiring
+// defaults the profile threshold to the record threshold instead: the Oct 18
+// live records (110-125ms streaks) sat between the two defaults and so were
+// recorded but never attributed.
 const stallCPUProfileAfterDefault = 250 * time.Millisecond
 
-// stallCPUThresholdFromEnv resolves the CPU-profile threshold the way
-// stallLogThreshold resolves PIER_STALL_MS. Called once at wiring construction;
-// phase reads the wiring field, so a test constructs its own value.
-func stallCPUThresholdFromEnv() time.Duration {
+// stallCPUThresholdFromEnv resolves the CPU-profile threshold. An explicit
+// PIER_STALL_CPU_MS wins (0 disables); otherwise every recorded stall is
+// profiled at its own threshold. Called once at wiring construction; phase
+// reads the wiring field, so a test constructs its own value.
+func stallCPUThresholdFromEnv(stallThreshold time.Duration) time.Duration {
 	value := os.Getenv("PIER_STALL_CPU_MS")
 	if value == "" {
-		return stallCPUProfileAfterDefault
+		return stallThreshold
 	}
 	millis, err := strconv.Atoi(value)
 	if err != nil || millis < 0 {
-		return stallCPUProfileAfterDefault
+		return stallThreshold
 	}
 	return time.Duration(millis) * time.Millisecond
 }
@@ -799,6 +801,7 @@ func (w *RunWiring) writeStallRecord(name string, elapsed time.Duration, note st
 			_ = profileFile.Close()
 			if writeErr == nil {
 				fmt.Fprintf(&record, "cpu-profile=%s\n", profilePath)
+				pruneStallProfiles(filepath.Dir(w.StallLogPath), stallProfileKeep)
 			} else {
 				_ = os.Remove(profilePath)
 			}
@@ -1147,7 +1150,7 @@ func newRunWiring(app *App) *RunWiring {
 		},
 		StallLogPath:      stallLogPath(app.options.AgentDir),
 		StallLogThreshold: stallLogThreshold(),
-		StallLogCPUAfter:  stallCPUThresholdFromEnv(),
+		StallLogCPUAfter:  stallCPUThresholdFromEnv(stallLogThreshold()),
 
 		Prompt: func(ctx context.Context, text string, images []ai.ImageContent) error {
 			return app.session.Prompt(ctx, text, &coding.PromptOptions{Images: images})
@@ -1232,10 +1235,33 @@ func stallLogThreshold() time.Duration {
 	return time.Duration(millis) * time.Millisecond
 }
 
-// stallLogPath is where slow UI phases are recorded (next to the crash log).
+// diagnosticsLogsDir keeps the diagnostic records out of the agent dir root:
+// the CPU-profile records alone littered a real agent dir with 475 files.
+func diagnosticsLogsDir(agentDir string) string {
+	return filepath.Join(agentDir, "logs")
+}
+
+// stallLogPath is where slow UI phases are recorded.
 func stallLogPath(agentDir string) string {
 	if agentDir == "" {
 		return ""
 	}
-	return filepath.Join(agentDir, "pier-stall.log")
+	return filepath.Join(diagnosticsLogsDir(agentDir), "pier-stall.log")
+}
+
+// stallProfileKeep bounds the CPU profiles on disk; the flood run produced 475
+// in an afternoon.
+const stallProfileKeep = 20
+
+// pruneStallProfiles removes the oldest profiles beyond the keep bound. The
+// timestamp names sort chronologically.
+func pruneStallProfiles(dir string, keep int) {
+	entries, err := filepath.Glob(filepath.Join(dir, "pier-stall-cpu-*.pprof"))
+	if err != nil || len(entries) <= keep {
+		return
+	}
+	sort.Strings(entries)
+	for _, path := range entries[:len(entries)-keep] {
+		_ = os.Remove(path)
+	}
 }
