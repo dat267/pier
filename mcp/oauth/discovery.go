@@ -378,7 +378,7 @@ func SelectResource(serverURL string, metadata *OAuthProtectedResourceMetadata) 
 	if err != nil {
 		return nil, fmt.Errorf("Protected resource %s does not match MCP server %s", metadata.Resource, requested)
 	}
-	if requested.Scheme != configured.Scheme || requested.Host != configured.Host {
+	if originOf(requested) != originOf(configured) {
 		return nil, fmt.Errorf("Protected resource %s does not match MCP server %s", metadata.Resource, requested)
 	}
 	requestedPath := ensureSlash(requested.Path)
@@ -394,4 +394,17 @@ func ensureSlash(path string) string {
 		return path
 	}
 	return path + "/"
+}
+
+// originOf renders a URL's origin the way the WHATWG URL parser does: the
+// lowercased scheme and host, with a default port dropped.
+func originOf(u *url.URL) string {
+	scheme := strings.ToLower(u.Scheme)
+	host := strings.ToLower(u.Host)
+	if scheme == "http" {
+		host = strings.TrimSuffix(host, ":80")
+	} else if scheme == "https" {
+		host = strings.TrimSuffix(host, ":443")
+	}
+	return scheme + "://" + host
 }

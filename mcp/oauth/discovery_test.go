@@ -37,6 +37,18 @@ func TestBuildAuthorizationServerDiscoveryUrlsUseOrigin(t *testing.T) {
 	}
 }
 
+// SelectResource compares origins: the WHATWG origin lowercases the host and
+// drops a default port.
+func TestSelectResourceNormalizesOrigin(t *testing.T) {
+	metadata := &OAuthProtectedResourceMetadata{Resource: "https://EXAMPLE.com:443/mcp"}
+	if _, err := SelectResource("https://example.com/mcp", metadata); err != nil {
+		t.Fatalf("SelectResource = %v, want match", err)
+	}
+	if _, err := SelectResource("https://other.example/mcp", metadata); err == nil {
+		t.Fatal("SelectResource accepted a different origin")
+	}
+}
+
 // A whitespace-only challenge must not panic on the scheme index (upstream's
 // trimStart().split(/\s+/, 1)[0] yields "").
 func TestParseWwwAuthenticateWhitespaceOnly(t *testing.T) {
