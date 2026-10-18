@@ -2,32 +2,13 @@
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
-in code comments; not every ID has a full entry here. The range is **D1–D238**.
-Entries are ordered numerically. Closed, retired, and withdrawn rows keep their
-IDs for historical references; overlapping rows refer to the owning explanation.
+in code comments; not every ID has a full entry here, since closed, retired,
+withdrawn, historical and removed-code rows are pruned. The range is
+**D1–D238**. Entries are ordered numerically; overlapping rows refer to the
+owning explanation.
 
 Related documents: [port status](PORTING.md), [architecture](architecture.md),
 [lock inventory](locks.md), and [terminal-output audit](terminal-output.md).
-
-## D11
-
-**Explicit delta drafts instead of JavaScript Proxies.**
-
-`chord/delta/tracker.go` preserves upstream's tracker lifecycle: value/revision,
-`beginChange`, prepare/adopt, `prepareReplace`, staleness, abort, and no-op
-adoption. Go callers mutate an explicit draft; the same diff engine materializes
-its batch at settlement. Upstream calls batches "exact but not canonical", so
-operation tuples may differ while the resulting value matches. `Op`/`WireOp`
-are structs rather than heterogeneous tuples.
-
-## D30
-
-**Closed: timing flags are captured at startup.**
-
-`coding/timings.go` captures `PI_TIMING` at package initialization, like v1.2.0
-`core/timings.ts`. `SetTimingsEnabled` remains a test override; nil restores the
-captured value. `TestTimingsStartupFlag` checks enabled and disabled starts after
-changing the environment.
 
 ## D41
 
@@ -67,38 +48,6 @@ by code pointer.
 
 `StdinBuffer` uses callbacks instead of `EventEmitter`.
 
-## D71
-
-**Closed: autocomplete debounces, aborts and runs off the editor.**
-
-`tui.Editor` follows v1.2.0 `components/editor.ts`:
-
-- Non-forced requests for a trigger token wait
-  `ATTACHMENT_AUTOCOMPLETE_DEBOUNCE_MS` (20 ms, `getAutocompleteDebounceMs`);
-  forced and explicit-Tab requests run immediately.
-- The provider call runs on its own goroutine with a cancelable context
-  (upstream's `AbortController`); the result is posted back through the editor
-  host's `Post`, which the `editorHostAdapter` forwards to the renderer, and is
-  applied on the owner loop.
-- Superseded requests abort their context and their late results are dropped by
-  the request-generation and text/cursor snapshot check
-  (`isAutocompleteRequestCurrent`).
-
-A host without the `EditorPoster` seam (test doubles, a nil host) keeps the
-synchronous provider call, so editor state stays on one goroutine there.
-
-Tests: `TestEditorAutocompleteRunsOffLoop`,
-`TestEditorAutocompleteDebouncesTriggerTyping`,
-`TestEditorAutocompleteDebounceDecision`,
-`TestEditorAutocompleteDropsStaleResults`.
-
-## D83
-
-**Obsolete: `DisableAutoRender` is a compatibility no-op.**
-
-Every renderer is caller-driven since D146. The method remains for tests and
-the API surface.
-
 ## D90
 
 Narrow runtime interfaces provide test seams across the wirings.
@@ -117,23 +66,6 @@ Upstream reads file paths only from the native clipboard; the URI-list and
 PowerShell forms are port-local substitutes. App-owned clipboard lifetime and
 admission are covered by D200/D201.
 
-## D121/D123/D135
-
-**Historical cross-goroutine mutexes.**
-
-Model refresh, startup input/telemetry, lifecycle flags, and the footer watcher
-were made mutex-safe. D123's input lock retired in stage 1 in favor of a buffered
-submission channel; the remaining UI-state locks retired in stages 3–4. See
-D146–D149 and [locks.md](locks.md) for current ownership and retained locks.
-
-## D132
-
-**Closed: branch summarization matches v1.2.0.**
-
-Upstream `core/agent-session.ts.isCompacting` includes branch summarization and
-`abortBranchSummary` cancels it. Pier already matches both;
-`TestNavigateTreeAbortBranchSummary` covers cancellation. This row was stale.
-
 ## D133
 
 **Narrowed: edit preview matches the pin; extension renderer definitions stay out.**
@@ -143,27 +75,6 @@ synchronous-preview gap is closed: `computeEditsPreview` runs on a worker and
 applies through the owner post, matching the asynchronous preview in v1.2.0
 `core/tools/renderers/edit.ts`. `TestEditPreviewAppliesThroughOwnerPost` covers
 that handoff.
-
-## D136
-
-Historical fix: editor `OnSubmit` ran outside the editor lock. The UI lock is
-now retired (D146); watchdog coverage is described in D192.
-
-## D137
-
-Historical fix: model-selector callbacks ran outside the state mutex. The UI
-mutex is now retired (D146); see D192 for replacement coverage.
-
-## D138
-
-Terminal input is delivered outside the terminal lock. UI-state retirement and
-retained terminal I/O locks are covered by D147 and [locks.md](locks.md); see
-D192 for watchdog history.
-
-## D139
-
-Historical fix: stdin-buffer callbacks ran outside its lock. The buffer is now
-consumer-owned and lock-free (D147); see D192 for replacement coverage.
 
 ## D140
 
@@ -183,21 +94,6 @@ the footer and invalidates it on session events. `FormatTokens` and
 `FormatCwdForFooter` retain upstream behavior. `app.UI` uses the D105 forwarder
 so `/tui` and exit-replay renderer swaps reach every holder.
 
-## D142
-
-**Closed: compaction uses the stock summarizer only.**
-
-The user's compaction extension (`~/.pi/agent/extensions/compaction`) is no
-longer built in. `coding.Compact` follows v1.2.0
-`core/compaction/compaction.ts compact`: the stock prompts, the retry-wrapped
-summarizer, the caller's auth headers, and the stock ~13k text budget. The
-extension-only pieces (32k no-reasoning call, pi-better-compact prompts,
-file-list stripping/regeneration, `PI_COMPACT_MODEL`, opencode routing headers)
-were removed, matching upstream with extension mechanics out of scope (D41).
-
-Tests: `TestCompactUsesStockSummarizer` (stock prompt, no `HARD BUDGET`, and
-auth headers reaching the request).
-
 ## D143
 
 **One UI owner loop replaces JavaScript's single-threaded event loop.**
@@ -206,7 +102,7 @@ The interactive loop selects over session events, submissions, work completions,
 and `ctx.Done()`. Blocking work runs off-loop; streaming partials coalesce
 latest-wins. Input/signals, selector callbacks, and lifecycle callbacks also
 apply on that loop (stages 3–4). Upstream awaits prompts on the JS event loop.
-D145–D147 define input/render ownership; D196/D197 define queue ordering and
+D144/D145 define input/render ownership; D196/D197 define queue ordering and
 fairness. [architecture.md](architecture.md) holds the full design.
 
 ## D144
@@ -214,7 +110,7 @@ fairness. [architecture.md](architecture.md) holds the full design.
 **Render requests coalesce on caller-driven ticks.**
 
 The interactive loop paints once per drain instead of arming a throttled render
-timer. D146 later removed timer mode for standalone pickers and library
+timer. Timer mode was later removed for standalone pickers and library
 renderers too; callers now drive every renderer.
 
 ## D145
@@ -223,40 +119,7 @@ renderers too; callers now drive every renderer.
 
 The stdin reader, SIGWINCH watcher, and signal handlers only enqueue. The owner
 loop dispatches input, paints on resize, and handles shutdown; upstream delivers
-these on one JS thread. See D143 for the loop and D147 for decoding.
-
-## D146
-
-**Retired: UI-state mutexes and the renderer's internal timer.**
-
-Input and painting share one owner goroutine everywhere, including the
-standalone `-r` picker. `Renderer.mu`, `renderMu`, `Container.mu`, `Editor.mu`,
-`AltScreen.mu`, and `ScrollView.mu` are deleted. Render requests coalesce on
-the tick channel; cross-goroutine callbacks use `Post`, queued under `postMu`.
-The ScrollView hide timer became an animation-driven lazy deadline. Off-loop
-test readers use `Post` snapshot helpers. [locks.md](locks.md) lists all retired
-and retained locks; D192 records replacement watchdog coverage.
-
-## D147
-
-**Retired: decoder and terminal UI-state locks.**
-
-The input consumer owns `StdinBuffer`. The interactive loop feeds raw chunks
-through `ProcessTerminal.FeedInput` and drives `PendingTimeout`/`FlushExpired`,
-with no internal mutex or timer. Keyboard-protocol negotiation is loop-owned.
-`ProcessTerminal.writeMu` remains for write/raw-mode serialization, including
-OSC 9;4 progress keepalives and shutdown restoration, not UI state. The legacy
-non-raw reader remains for library consumers without a UI loop. The complete
-I/O/handoff lock inventory is in [locks.md](locks.md).
-
-## D148
-
-**Closed: the model-catalog refresh registry is lock-free.**
-
-Atomic copy-on-write maps provide insert-if-absent and unpublish-if-matching;
-refresh outcomes, waiter counts, and cancellation flags are atomic. Publication
-cannot overwrite an entry added after a load, and a waiter slot is claimed only
-after confirming publication. These rules close two races found during retirement.
+these on one JS thread. See D143 for the loop; decoding is consumer-owned.
 
 ## D149
 
@@ -268,31 +131,6 @@ watcher. Retirement would require posting poll results to the UI loop and
 delivering listeners outside the lock, a `coding/` change outside the UI
 refactor. The watcher reads git state and calls `Refresh`. See
 [locks.md](locks.md) for the authoritative inventory.
-
-## D150
-
-**Closed: resource diagnostics, source labels and listings match v1.2.0.**
-
-Skills, Context, Prompts, ctrl+o expansion, and skill/prompt/theme diagnostics
-follow v1.2.0 `interactive-mode.ts.showLoadedResources`. Warnings remain visible
-when startup listings are quiet. Prompt/theme names deduplicate first-wins and
-report collision paths; prompt reads and theme discovery retain warnings.
-Creation/reload propagate prompt diagnostics. Theme diagnostics are published
-per source generation and read without owner-loop file I/O. Discovered themes
-carry user/project/temporary `SourceInfo`, with trusted project discovery before
-explicit paths and after user defaults, matching `core/resource-loader.ts`. The
-port previously rendered a `[Themes]` listing; v1.2.0 has none, so it was removed
-(`addLoadedSection` covers only Context, Skills, Prompts and out-of-scope
-Extensions). Diagnostic paths use upstream's source labels (`user`, `project`,
-`path (temp)`, package source) through `getShortPath`, with parent lookup like
-`findSourceInfoForPath`. `coding.LoadSkills` already resolves paths and
-deduplicates real paths/names. Extensions and package-source discovery remain
-out of scope (D41/D140).
-
-Tests: `TestPromptTemplateCollisionsReachSession`, `TestUnreadablePromptDiagnostic`,
-`TestLoadedPromptConflictsFollowsQuietStartup`, `TestLoadedThemeWarnings`,
-`TestThemeCollisionsKeepFirstSource`, `TestDiscoveredThemeScopes`, and
-`TestLoadedResourcesHasNoThemesSection`.
 
 ## D151
 
@@ -317,63 +155,6 @@ Two differences from the extension:
 
 Startup diagnostics report a switch informationally and an unavailable default
 as a warning.
-
-## D152
-
-**Portable Unix socket publication.**
-
-Upstream atomically hard-links a bound socket without overwriting another
-process's path; cleanup tracks its device/inode. Android denies `link(2)` to
-app domains, so Pier's `publishSocket` tries hard link, then
-`renameat2(RENAME_NOREPLACE)`, then plain rename. A link failure with `EEXIST`
-returns immediately. The plain-rename fallback stays atomic but can replace a
-path created in the intervening race window.
-
-Implementation: `server/unix.go`, `server/publish_linux.go`, and
-`server/publish_other.go`. `renameNoReplace` uses `//go:build linux` (also
-Android); elsewhere it returns `errors.ErrUnsupported` before plain rename.
-
-## D153
-
-**Closed: supported CLI flags and initial images reach startup and reload.**
-
-Implementation: `cmd/main.go`, `coding/clidiagnostics.go`, `cliinitial.go`,
-`listmodels.go`, `paths.go`, and `sessionresourceload.go`. Fifteen flags plus two
-non-flag inputs had no consumers. Current rules follow upstream except the
-explicit omissions below:
-
-- Diagnostics run after parsing, before `--version`; any error exits 1. Unknown
-  long flags enter `UnknownFlags` for extensions and are not errors; unknown
-  short flags report `Unknown option: -z`. Invalid `--thinking` and blank
-  `--name` are errors.
-- `@file` text precedes the first positional prompt; remaining prompts queue
-  behind it (`buildInitialMessage`). Images travel only with that first prompt:
-  `ProcessFileArguments`, `InitialPrompt.Images`, then interactive
-  `RunOptions.InitialImages` or headless `PrintModeOptions.InitialImages`, and
-  `PromptOptions.Images`. `TestPrintModeInitialImagesOnlyAttachToFirstPrompt`
-  covers text and JSON modes against v1.2.0 `modes/print-mode.ts`.
-- `--skill`, `--prompt-template`, and `--theme` paths resolve against process
-  cwd (`ResolveCLIPaths`/`IsLocalPath`, upstream `resolveCliPaths`). Explicit
-  paths survive their corresponding `--no-*`; discovery refusal does not
-  refuse named resources. `--no-skills`, `--no-prompt-templates`,
-  `--no-context-files`, and `--no-themes` suppress settings paths/discovery.
-  `LoadPromptTemplates` now has a caller, enabling `/template`, prompt commands,
-  and the startup Prompts section.
-- These resource switches persist across `/reload`. `reloadResources` no longer
-  restores suppressed resources or drops explicit paths.
-- Themes resolve by declared name across discovered sources, not by an old
-  `<dir>/<name>.json` fallback that bypassed `--no-themes`.
-- `--models` overrides enabled-model settings, warns for unmatched patterns,
-  and seeds new sessions: use the default if in scope, otherwise the first
-  scoped model (`buildSessionOptions`). A pattern's `model:thinking-level`
-  applies unless pinned separately. `--api-key` pins the resolved model
-  provider's credential; `--name` writes `session_info`.
-- `--approve`/`--no-approve` decide run trust. `--export` and `--list-models`
-  complete before the TUI.
-- `-e`/`--extension` enters `Extensions` but reports "this build loads no
-  extensions" (D41); a missing value errors. `-ne`/`--no-extensions` enters
-  `NoExtensions` silently because none load. Neither appears in `--help`, and
-  tool descriptions omit extension tools.
 
 ## D154
 
@@ -563,37 +344,6 @@ The active file, unrelated tool logs, and matching directory names are never
 touched. The model still receives "[Output truncated. Full output: <path>]".
 `TestSweepTempOutputFiles` checks exclusions and oldest-first order.
 
-## D162
-
-**Closed: non-TTY stdin or stdout selects print mode.**
-
-`cmd.resolvePrintMode` follows v1.2.0 `main.ts.resolveAppMode`: either non-TTY
-stream selects text print mode, while `-p` and `--mode json` remain explicit
-options. RPC remains a separate mode, never converted to print mode; D235
-implements its first supported command subset.
-`TestResolvePrintMode` checks precedence and both streams;
-`TestNonTTYStartsPrintMode` runs piped startup without a renderer.
-
-Text prints the final assistant text; JSON emits the tagged session header and
-events. The shared event shaper omits both the outer cumulative `message` and
-inner `partial` from `message_update`, retains block index zero and required
-empty deltas, and forwards event-specific tool/session payloads. The
-`coding/testdata/gen_json_events.mjs` goldens follow v1.3.0 `modes/json-event.ts`.
-Failures report on stderr with exit 1. Initial images attach in both modes
-(D153). SIGTERM/SIGHUP cancel the operation and return 143/129 after runtime
-disposal, accepted session saves and stdout have drained; normal returns also
-remove the signal registration and join its waiter. Nonzero print statuses
-return through `cmd.run` so deferred host cleanup runs before `Execute` exits.
-Extensions/runtime rebind remain out of scope (D41). JSON print mode is not a
-bidirectional RPC implementation; D235 adds a separate stdio runner.
-
-## D163
-
-**Historical: low-bandwidth renderer mode was removed for parity.**
-
-SSH uses upstream padded frames. Escape timeout and wheel scrolling remain
-aligned with `packages/tui/src/terminal.ts` and `wheel-scroll.ts`.
-
 ## D164
 
 **Input paints only when requested.**
@@ -703,15 +453,6 @@ Tests: `TestSplitMouseReportAcrossTheDeadline`,
 `TestOrphanedMouseReportIsStillDispatched`, and
 `TestTruncatedMouseReportIsConsumed`.
 
-## D170
-
-**Closed: both header variants already include the upstream hint.**
-
-`BuildStartupHeader` includes
-`Pi can explain its own features and look up its docs. Ask it how to use or extend Pi.`
-like v1.2.0 `interactive-mode.ts`. `TestRunStartupHeader` checks compact and
-expanded variants. The omission recorded here was stale.
-
 ## D171
 
 **OS socket failures are retryable.**
@@ -722,16 +463,6 @@ and `timed out`. Pier also retries `software caused connection abort`
 (ECONNABORTED, Termux/Windows), `connection reset by peer` (ECONNRESET),
 `broken pipe` (EPIPE), and `unexpected EOF`. Quota/billing checks still run
 first, so a usage-limit error mentioning a reset is not retried.
-
-## D173
-
-**Closed: compaction labels already match v1.2.0.**
-
-`NewCompactionStatusIndicator` shows `Compacting context...` for manual work,
-`Auto-compacting...` for threshold work, and
-`Context overflow detected, Auto-compacting...` for overflow, each with the
-bound `app.interrupt` cancel hint. `TestCompactionStatusLabels` checks these
-against `components/status-indicator.ts`. The plain-label description was stale.
 
 ## D174
 
@@ -780,17 +511,6 @@ Pier ships port/architecture notes, not that tree or `examples/`, so
 `coding/systemprompt.go` omits the section rather than naming nonexistent files.
 The rest, including the preamble naming pi as the reference harness, is unchanged.
 
-## D177
-
-**Historical: native filesystem sandbox removed for stock pi parity.**
-
-Read-only/workspace-write/full-access modes, Linux Landlock launcher, write/edit
-path guards, `/permissions`, footer codes, and the sandbox prompt section are
-removed. Upstream `core/tools/{bash,edit,write}.ts` uses ordinary OS permissions
-without a built-in sandbox; `coding/sdk.go` now does so on every platform, with
-no backend probe or read-only fallback. External/parent-process confinement
-remains outside this feature. This ID records removal, not an active divergence.
-
 ## D178
 
 **Shell cancellation cannot wait forever on surviving descendants' pipes.**
@@ -806,28 +526,6 @@ whose parent exited, unlike `taskkill /T`; assignment failure falls back to
 taskkill. Normal completion closes the job without termination so intentional
 background processes survive. The reproducer fell from 9s after cancellation
 to under 0.1s.
-
-## D179
-
-**Closed: color parsing and truecolor boot detection follow v1.2.0.**
-
-`tui.ParseColor(any)` accepts strings and numeric ANSI indices like upstream
-`parseColor(string | number)`. Theme documents retain `ColorValue`
-(`IsIndex`/`Index`) for JSON shape. `ThemeBoot.EnableCapabilities` follows
-`detectCapabilitiesFromEnvironment`, then applies `PI_TRUE_COLOR`, then
-`terminal.trueColor`. The injectable seam (D69) remains without forcing truecolor.
-
-Tests: `TestParseColorAcceptsNumericPaletteIndex`, `TestTerminalDetectsTrueColor`,
-`TestThemeBootDetectsTrueColorFromEnvironment`, `TestThemeBootPITrueColorOverride`,
-and `TestThemeBootTrueColorOverride`.
-
-Appearance notifications cover `system` and light/dark pairs. Selection uses
-reported background, then appearance, then `COLORFGBG`, matching
-`detectTerminalTheme`. `applyFromSettings` and `applyTerminalColorSchemeChange`
-refresh combined colors. OSC 11 listener fan-out and its regressions live in
-D165; off-loop waits live in D218. Additional tests:
-`TestAutoThemeSettingQueriesCurrentTerminalColors` and
-`TestSystemThemeRefreshesTerminalColorsOnAppearanceChange`.
 
 ## D180
 
@@ -888,43 +586,6 @@ for exposure, namespaces, codemode, `tool_search`, resources, `/mcp` UI, and
 
 Reference: `packages/coding-agent/src/extensions/mcp` and `core/mcp-servers.ts`.
 
-## D187
-
-**Attached-state callbacks are synchronous.**
-
-`chord/services/attachedstate.go` ports the attachment half of `services/state.ts`
-without upstream's per-subscription async queue (100 pending deliveries,
-newest-wins overflow). Required durable rules remain: atomic snapshots,
-commit-order buffered drains, cursor-gap errors disposing broken attachments,
-source/op republication by reference, and subscriptions made during publication
-hydrating after the current drain at its then-current sequence. This last rule
-hides updates already covered by late hydration.
-
-## D188
-
-**Durable environment failures use Go errors.**
-
-`env/index.ts`/`env/node.ts` return `Result`; Pier returns `*FileError` and
-`*ExecutionError` with upstream codes and retains Result helpers. Paths,
-`~`/file-URL resolution, error mapping, and tracked temp cleanup match.
-
-Shell support includes Windows Git Bash candidates, `sh -c` fallback, direct
-argv execution, timeout validation, spill rules, process-tree cancellation,
-and stream-tagged `onOutput`. Separate stdout/stderr reader goroutines feed a
-bounded channel, so cross-stream ordering follows send order, not a shared
-pipe's bytes. Callbacks run synchronously on its consumer rather than Node
-per-stream flow control. D214 documents the string/argv API split.
-
-## D189
-
-**Withdrawn: virtual models match upstream behavior.**
-
-`ai.WrapProviderWithVirtualModels` lives in `ai`, not `coding`, because model
-access and dispatch are package-private. It matches `withVirtualModels`: a
-virtual model hides a physical model with its ID, survives filtering, and an
-unrouted stream fails. Package placement is not a behavioral divergence.
-Reference: `packages/coding-agent/src/core/virtual-models.ts`.
-
 ## D190
 
 **Animation ticks do not rebuild full tool output.**
@@ -942,29 +603,6 @@ For a 2000-line result, tick cost fell from 2.15 ms to 0.07 ms; bash preview
 from 139 µs to 0.0009 ms. D238 sets the shell tick; D207/D208 refine
 pending-frame clocks. References: `packages/coding-agent/src/modes/interactive/components/tool-execution.ts`
 and `packages/coding-agent/src/core/tools/renderers/bash.ts`.
-
-## D192
-
-**Retired: UI-mutex deadlock PTY watchdog flows.**
-
-Upstream's single JS thread has no equivalent. Five port watchdog flows for
-D136–D139 drove submit/model/scroll/buffer-exit interactions through a real PTY,
-sent `SIGQUIT`, and rejected dumps containing `sync.runtime_SemacquireMutex`.
-The UI-state locks are now retired (D146/D147, [locks.md](locks.md)); core locks
-and other blocking work still need enforcement.
-
-`internal/uiblock` performs a module-wide SSA check for blocking syscalls,
-network/exec, channel operations, locks, sleeps, and JSON reachable from UI roots.
-Functional flows moved to in-process `coding/interactive/ptyflow_test.go`:
-submit reaches the session, `/quit` requests shutdown, `/model` opens/disposes,
-and transcript scrolls/paints. `TestMutexBlockedDetectorHasTeeth` remains to
-validate the dump parser. The four replacements retain `testing.Short()` skips.
-
-The old five flows cost about 11.5 s within a 27 s package run; replacements
-cost 0.49 s combined. SSA still costs about 6 s (`packages.Load` 3.7 s,
-`prog.Build` 1.4 s); narrowing/caching it would weaken or obscure the check.
-Reference: `packages/coding-agent/src/modes/interactive/interactive-mode.ts`;
-this defect class is port-local.
 
 ## D193
 
@@ -1425,61 +1063,6 @@ for replaced IDs. Single-provider `recomposeProvider` remains unchanged.
 `TestRebuildProvidersPublishesTheWholeSet` concurrently rebuilds/reads and failed
 on the old shape around iteration 1650 of 2000.
 
-## D212
-
-**Closed: initial system-message ordering matches the pin.**
-
-v1.0.2 placed initial system context after user input, affecting prompts/cache.
-v1.1.0's `leadWithSystem` is implemented and retained in v1.2.0. v1.3.0
-(#10904) made it baseline-aware: the first `pi.system` entry after the head
-marker, or of the transcript when no earlier entry carries a system message,
-leads even past kept assistant messages, so a post-compaction baseline still
-becomes the initial prompt/tool set; a non-baseline system message stays in
-place. `TestDeriveContextLeadsWithInitialSystemMessage`,
-`TestDeriveContextLeadsWithBaselineAfterAssistantMessages` and
-`TestDeriveContextKeepsNonBaselineSystemsInPlace` check initial users, later
-assistant/system messages, and unchanged contribution order. ID retained for
-historical references.
-
-## D213
-
-**SQLite first-page scans have no artificial ID cursor.**
-
-Upstream `packages/durable/src/storage/sqlite/storage.ts.scanSql` uses
-`id < Number.MAX_SAFE_INTEGER` for descending scans without a cursor, omitting
-that valid ID unlike memory scans. Pier adds strict `>`/`<` predicates only for
-cursor continuations. `TestConformanceScansIntegerBoundaryIDsInBothOrders`
-checks maximum-safe-ID inclusion in both orders across backends.
-
-## D214
-
-**Shell scripts and direct argv have separate Go methods.**
-
-Upstream `packages/durable/src/env/index.ts` uses a string-or-argv union.
-`Shell.Exec(string, ...)` and `ExecArgv([]string, ...)` preserve the choice without
-`any`. `TestOSShellExecArgvDoesNotParseArguments` checks unparsed argument delivery.
-
-## D215
-
-**Native file notifications have a snapshot-polling fallback.**
-
-Upstream `packages/durable/src/env/node-watch.ts` prefers native watchers and
-polls on Windows/unreliable filesystems. Pier's `github.com/sgtdi/fswatcher`
-triggers snapshot diffs, with a 2-second safety scan for missed/filtered events;
-Windows/Android are polling-only. Snapshots preserve recursion, exclusions,
-coalescing, and directory budget. Transient changes undone before notification
-or scan can still be missed. `TestOSFileSystemWatchReportsRecursiveChanges`
-checks platform modes; `TestOSFileSystemWatchStopsWhenTreeExceedsDirectoryBudget`
-checks the limit.
-
-## D216
-
-**Closed: fullscreen keys match the pin.**
-
-v1.1.0's `packages/tui/src/keybindings.ts` mapping (`6100fe5a8`), retained in
-v1.2.0, uses `Home`/`End` for the editor and `Ctrl+Home`/`Ctrl+End` for the
-transcript. ID retained for historical references.
-
 ## D218
 
 **The combined system-color query waits off the owner loop.**
@@ -1566,28 +1149,6 @@ Tests: `TestParseToolCallArguments`, `TestValidateToolArgumentsReportsMalformedA
 (`ai/jsonparse_test.go`, `ai/validation_test.go`) and
 `TestStreamOpenAICompletionsMalformedFinalArguments`
 (`ai/openai_completions_test.go`).
-
-## D222
-
-**The durable SQLite schema prefix is applied at the database boundary, not
-rendered into each query.**
-
-Upstream v1.3.0 (`storage/sqlite/schema.ts`, `createSqliteSchema`) builds the
-prefixed table and index identifiers and interpolates them into every
-migration statement and runtime query
-(`storage/sqlite/migrations.ts`, `storage/sqlite/storage.ts`, #10937). The port
-keeps the base names in `durable/sqlite.go` and `durable/sqlitedocuments.go`
-and prefixes them in `sqliteSchema.apply`, called by the `sqliteDB`/`sqliteTx`
-wrappers around every `Begin`/`Exec`/`QueryContext`/`QueryRowContext`. The
-resulting statements and schema are identical; only the rendering point
-differs. `ValidateSQLiteSchemaPrefix` and `OpenSqliteStorageWithOptions`
-(`SqliteStorageOptions.Prefix`) match upstream, and the durable conformance
-suite also runs over a `pi_` prefix.
-
-Tests: `TestValidateSQLiteSchemaPrefix`, `TestSqliteStorageNamespaceCoexists`,
-`TestSqliteStorageNamespaceRenamesTables`, `TestSqliteStorageRejectsInvalidPrefix`
-(`durable/sqlitenamespace_test.go`) plus the `sqlite-prefix` conformance rows
-in `durable/durable_test.go`.
 
 ## D223
 
