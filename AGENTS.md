@@ -221,12 +221,10 @@ when their selection is settled.
 Stages 2 (rendering) and 3 (input and signals) are also on the loop. **The
 main loop must never stall more than 100ms**: a handler, render path or watcher
 callback that can exceed that budget must move its blocking or heavy work
-off-loop (`RunWork`/detached work) or chunk it, never run it inline. The
-picker's `TestHandleResumeSessionPreparesOffLoop` and
-`TestSessionSelectorDeleteFlow` enforce that resume and delete do their heavy
-work off-loop; `TestStreamingDeltaCostIndependentOfTranscriptSize` bounds the
-streaming delta path against transcript size. The full design and performance
-measurements are in `docs/architecture.md`.
+off-loop (`RunWork`/detached work) or chunk it, never run it inline.
+`TestStreamingDeltaCostIndependentOfTranscriptSize` bounds the streaming delta
+path against transcript size. The full design and performance measurements are
+in `docs/architecture.md`.
 
 ## Architecture of the interactive mode
 

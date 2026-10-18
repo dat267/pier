@@ -45,12 +45,10 @@ with historical measurements retained to explain the design.
   through the app's run context.
 - **The main loop must never stall more than 100 ms.** Any handler, render path
   or watcher callback that can exceed the budget moves its blocking or heavy
-  work off-loop (`RunWork`/detached work) or chunks it. `TestHandleResumeSessionPreparesOffLoop`
-  and `TestSessionSelectorDeleteFlow` enforce that session resume and delete do
-  their heavy work off-loop; `TestStreamingDeltaCostIndependentOfTranscriptSize`
-  bounds the streaming delta path against transcript size. Session event drains
-  are bounded (64 per pass), paints coalesce, large markdown/tool work prepares
-  off-loop (D204/D205), and per-paint session walks are memoized or avoided.
+  work off-loop (`RunWork`/detached work) or chunks it.
+  `TestStreamingDeltaCostIndependentOfTranscriptSize` bounds the streaming delta
+  path against transcript size. Session event drains are bounded (64 per pass),
+  paints coalesce, and large markdown/tool work prepares off-loop (D204/D205).
 - Heavy tool-side commands (test suites, builds) run `nice`d: on a 4-CPU machine
   an ungated test run competes with the UI goroutine and looks like a freeze.
 - The loop calls a **watchdog beat** once per iteration
