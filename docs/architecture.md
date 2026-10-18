@@ -67,7 +67,7 @@ with historical measurements retained to explain the design.
   sessions started without the variable, so the default flipped — a capture
   that requires remembering to set an env var does not survive real usage.
 - **Keystroke latency is logged separately** to `<agentDir>/logs/pier-input-latency.log`
-  when a round trip exceeds `PIER_INPUT_LAT_MS` (default 50 ms; `0` disables).
+  when a round trip exceeds `PIER_INPUT_LAT_MS` (default 100 ms, matching the stall threshold; `0` disables).
   The terminal reader stamps the read (`ProcessTerminal.MarkInputRead`), the loop
   tags the frame it paints (`RunWiring.markInputRead`), and the writer reports
   the flush (`tui.InputLatencyObserver`), so a record splits the delay into

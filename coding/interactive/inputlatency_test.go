@@ -106,3 +106,23 @@ func TestInstallInputLatencyObserverRespectsThreshold(t *testing.T) {
 		t.Fatal("observer installed when disabled")
 	}
 }
+
+// The default watcher only reports a keystroke whose round trip reaches the
+// same 100ms a stall must reach: at the old 50ms default the log filled with
+// 55-85ms reads that no one acts on. PIER_INPUT_LAT_MS still overrides and 0
+// disables.
+func TestInputLatencyThresholdDefaultsTo100ms(t *testing.T) {
+	t.Setenv("PIER_INPUT_LAT_MS", "")
+	os.Unsetenv("PIER_INPUT_LAT_MS")
+	if got := inputLatencyThreshold(); got != 100*time.Millisecond {
+		t.Fatalf("default threshold = %v, want 100ms", got)
+	}
+	t.Setenv("PIER_INPUT_LAT_MS", "250")
+	if got := inputLatencyThreshold(); got != 250*time.Millisecond {
+		t.Fatalf("override = %v, want 250ms", got)
+	}
+	t.Setenv("PIER_INPUT_LAT_MS", "0")
+	if got := inputLatencyThreshold(); got != 0 {
+		t.Fatalf("0 must disable, got %v", got)
+	}
+}

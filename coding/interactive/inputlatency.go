@@ -10,9 +10,10 @@ import (
 )
 
 // defaultInputLatencyThreshold is the total keystroke round trip (stdin read →
-// console write) above which a record is written. 50 ms is below what a user
-// notices on a local terminal, so ordinary operation stays silent.
-const defaultInputLatencyThreshold = 50 * time.Millisecond
+// console write) above which a record is written. It matches the stall
+// threshold: a round trip that reaches 100ms is worth a record, and the old
+// 50ms default filled the log with 55-85ms reads that no one acts on.
+const defaultInputLatencyThreshold = 100 * time.Millisecond
 
 // inputLatencyRecorder logs keystrokes whose end-to-end round trip exceeds a
 // threshold, splitting it into the part before the app (stdin read), the loop
