@@ -25,6 +25,7 @@ func TestNormalizeGitHubDomain(t *testing.T) {
 		{"https://github.com", "github.com", true},
 		{"company.ghe.com/", "company.ghe.com", true},
 		{"https://company.ghe.com/path", "company.ghe.com", true},
+		{"https://Company.GHE.com/path", "company.ghe.com", true},
 		{"  ", "", false},
 		{"not a domain", "", false},
 	}

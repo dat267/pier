@@ -51,7 +51,8 @@ func NormalizeGitHubDomain(input string) (string, bool) {
 	if err != nil || parsed.Hostname() == "" {
 		return "", false
 	}
-	return parsed.Hostname(), true
+	// WHATWG hostnames are lowercased; Go's url.Hostname preserves case.
+	return strings.ToLower(parsed.Hostname()), true
 }
 
 // GitHubCopilotURLs are the per-domain endpoints.
