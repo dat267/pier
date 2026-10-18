@@ -2,6 +2,8 @@ package coding
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
 	"github.com/dat267/pier/ai"
 )
@@ -79,16 +81,15 @@ func (s *AgentSession) CheckCompaction(ctx context.Context, assistant *ai.Assist
 			return false, nil
 		}
 
-		// Case 1: drop the failed/truncated message from agent state, compact,
-		// and retry once. It stays in session history.
+		// Case 1: persist an omission of the failed/truncated response and its tool
+		// results from model context, compact, and retry once. They stay in session
+		// history but the post-compaction projection must not restore them, or
+		// agent.continue refuses with "Cannot continue from message role: assistant".
 		s.mu.Lock()
 		s.overflowRecovery.attempted = true
 		s.mu.Unlock()
-		messages := s.Agent.State().Messages
-		if len(messages) > 0 {
-			if _, ok := messages[len(messages)-1].(*ai.AssistantMessage); ok {
-				s.Agent.SetMessages(messages[:len(messages)-1])
-			}
+		if err := s.omitRecoveryAttempt(assistant); err != nil {
+			return false, err
 		}
 		return s.RunAutoCompaction(ctx, CompactionOverflow, willRetry)
 	}
@@ -119,6 +120,51 @@ func (s *AgentSession) CheckCompaction(ctx context.Context, assistant *ai.Assist
 		return s.RunAutoCompaction(ctx, CompactionThreshold, false)
 	}
 	return false, nil
+}
+
+// omitRecoveryAttempt persists a context_edit that excludes the failed response
+// and its tool results from model context (upstream _omitRecoveryAttempt).
+func (s *AgentSession) omitRecoveryAttempt(assistant *ai.AssistantMessage) error {
+	s.mu.Lock()
+	assistantID := s.entryIDsByMessage[ai.Message(assistant)]
+	toolResults := append([]ai.Message(nil), s.lastAssistantToolResults...)
+	ids := make([]string, 0, len(toolResults)+1)
+	ids = append(ids, assistantID)
+	for _, result := range toolResults {
+		ids = append(ids, s.entryIDsByMessage[result])
+	}
+	s.mu.Unlock()
+
+	// A projected target with no source entry cannot be omitted; a target that
+	// is not in agent state is simply skipped, like upstream.
+	agentMessages := s.Agent.State().Messages
+	for index, id := range ids {
+		if id != "" {
+			continue
+		}
+		target := ai.Message(assistant)
+		if index > 0 {
+			target = toolResults[index-1]
+		}
+		for _, message := range agentMessages {
+			if message == target {
+				return fmt.Errorf("Cannot persist recovery omission because a projected message has no source entry")
+			}
+		}
+	}
+	for _, id := range ids {
+		if id == "" {
+			continue
+		}
+		editID, err := s.Sessions.AppendContextEdit(id, json.RawMessage("null"))
+		if err != nil {
+			return err
+		}
+		if entry := s.Sessions.GetEntry(editID); entry != nil {
+			s.emit(&SessionEvent{Type: SessionEntryAppended, Entry: entry})
+		}
+	}
+	return nil
 }
 
 func maxTokensOf(model *ai.Model) int64 {

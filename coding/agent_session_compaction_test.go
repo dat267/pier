@@ -160,6 +160,10 @@ func TestCheckCompactionOverflowError(t *testing.T) {
 	}
 	messages := append(session.Agent.State().Messages, ai.Message(failed))
 	session.Agent.SetMessages(messages)
+	// The normal event flow persists the assistant and records its entry id; the
+	// recovery omission needs that source entry to undo it from context.
+	failedEntryID := session.Sessions.AppendMessage(failed)
+	session.entryIDsByMessage = map[ai.Message]string{ai.Message(failed): failedEntryID}
 
 	compacted, err := session.CheckCompaction(ctxpkg.Background(), failed, true)
 	if err != nil {
@@ -171,11 +175,25 @@ func TestCheckCompactionOverflowError(t *testing.T) {
 	if runs.Load() != 1 {
 		t.Fatalf("runs = %d", runs.Load())
 	}
-	// The failed message was removed from agent state.
+	// The failed message was removed from the post-compaction projection, not
+	// only from agent state, so agent.continue can run.
 	for _, message := range session.Messages() {
 		if assistant, ok := message.(*ai.AssistantMessage); ok && assistant.StopReason == ai.StopError {
 			t.Fatalf("failed message must be dropped: %+v", assistant)
 		}
+	}
+	if len(session.Messages()) == 0 || ai.RoleOf(session.Messages()[len(session.Messages())-1]) == ai.RoleAssistant {
+		t.Fatalf("post-compaction transcript must not end with an assistant: %+v", session.Messages())
+	}
+	var omission *SessionEntry
+	for i := range session.Sessions.GetEntries() {
+		entry := &session.Sessions.GetEntries()[i]
+		if entry.Type == "context_edit" && entry.TargetID == failedEntryID && string(entry.Replacement) == "null" {
+			omission = entry
+		}
+	}
+	if omission == nil {
+		t.Fatal("recovery omission context_edit entry not persisted")
 	}
 
 	// A second overflow cannot recover again.
@@ -467,5 +485,32 @@ func TestIsCompactingDuringManualCompaction(t *testing.T) {
 	}
 	if !session.IsIdle() {
 		t.Fatal("session must be idle after the compaction finished")
+	}
+}
+
+// A completed response ends the one-attempt overflow recovery window (upstream
+// resets _overflowRecoveryAttempted for any non-error, non-length stop), so a
+// later overflow can recover again instead of failing outright.
+func TestOverflowRecoveryResetsAfterSuccess(t *testing.T) {
+	var runs atomic.Int64
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 1000, MaxTokens: 100}
+	session := compactionTestSession(t, model, summarizingStreamFn(t, &runs, "summary text that is long enough to pass the usability check"), smallCompactionSettings())
+	seedBranch(t, session)
+	session.overflowRecovery.attempted = true
+
+	success := &ai.AssistantMessage{
+		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m", Timestamp: timeNowMS(),
+		StopReason: ai.StopStop,
+	}
+	session.handleAgentEvent(&agent.AgentEvent{Type: agent.MessageEnd, Message: success})
+	if session.overflowRecovery.attempted {
+		t.Fatal("a successful response must reset overflow recovery")
+	}
+
+	// A user message start also resets it (upstream message_start branch).
+	session.overflowRecovery.attempted = true
+	session.handleAgentEvent(&agent.AgentEvent{Type: agent.MessageStart, Message: &ai.UserMessage{Content: ai.StringOrBlocks{Text: "next"}}})
+	if session.overflowRecovery.attempted {
+		t.Fatal("a user message must reset overflow recovery")
 	}
 }

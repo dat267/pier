@@ -173,10 +173,18 @@ type AgentSession struct {
 	followUpMessages []string
 
 	lastAssistantMessage *ai.AssistantMessage
-	retryAttempt         int
-	retryCancel          context.CancelFunc
-	retryActive          bool
-	willRetry            bool
+	// entryIDsByMessage maps an appended agent message to its session entry id so
+	// post-run recovery can persist a context_edit omission for it (upstream
+	// _entryIdsByMessage / _findPersistedMessageEntryId).
+	entryIDsByMessage map[ai.Message]string
+	// lastAssistantToolResults are the tool results of the turn that produced
+	// lastAssistantMessage (upstream _lastAssistantToolResults); recovery omits
+	// them together with the failed assistant.
+	lastAssistantToolResults []ai.Message
+	retryAttempt             int
+	retryCancel              context.CancelFunc
+	retryActive              bool
+	willRetry                bool
 
 	compactionCancel context.CancelFunc
 	overflowRecovery overflowRecoveryState
@@ -514,6 +522,7 @@ func (s *AgentSession) handleAgentEvent(event *agent.AgentEvent) {
 			messageText := contentTextJoinedNoSep(user.Content)
 			changed := false
 			s.mu.Lock()
+			s.overflowRecovery.attempted = false
 			if idx := indexOf(s.steeringMessages, messageText); idx != -1 {
 				s.steeringMessages = append(s.steeringMessages[:idx], s.steeringMessages[idx+1:]...)
 				changed = true
@@ -545,8 +554,37 @@ func (s *AgentSession) handleAgentEvent(event *agent.AgentEvent) {
 	// Session persistence.
 	if event.Type == agent.MessageEnd && event.Message != nil {
 		switch msg := event.Message.(type) {
-		case *ai.SystemMessage, *ai.UserMessage, *ai.AssistantMessage, *ai.ToolResultMessage:
-			s.Sessions.AppendMessage(event.Message)
+		case *ai.AssistantMessage:
+			entryID := s.Sessions.AppendMessage(event.Message)
+			s.mu.Lock()
+			if s.entryIDsByMessage == nil {
+				s.entryIDsByMessage = map[ai.Message]string{}
+			}
+			s.entryIDsByMessage[event.Message] = entryID
+			s.lastAssistantMessage = msg
+			s.lastAssistantToolResults = nil
+			// A completed response ends the one-attempt overflow recovery window
+			// (upstream resets _overflowRecoveryAttempted for any non-error,
+			// non-length stop).
+			if msg.StopReason != ai.StopError && msg.StopReason != ai.StopLength {
+				s.overflowRecovery.attempted = false
+			}
+			attempt := s.retryAttempt
+			if msg.StopReason != ai.StopError && attempt > 0 {
+				s.retryAttempt = 0
+			}
+			s.mu.Unlock()
+			if msg.StopReason != ai.StopError && attempt > 0 {
+				s.emit(&SessionEvent{Type: SessionAutoRetryEnd, Success: true, Attempt: attempt})
+			}
+		case *ai.SystemMessage, *ai.UserMessage, *ai.ToolResultMessage:
+			entryID := s.Sessions.AppendMessage(event.Message)
+			s.mu.Lock()
+			if s.entryIDsByMessage == nil {
+				s.entryIDsByMessage = map[ai.Message]string{}
+			}
+			s.entryIDsByMessage[event.Message] = entryID
+			s.mu.Unlock()
 		case *ai.CustomMessage:
 			if msg.Role == RoleCustom {
 				var fields customMessageFields
@@ -555,22 +593,11 @@ func (s *AgentSession) handleAgentEvent(event *agent.AgentEvent) {
 			}
 			// bashExecution/compactionSummary/branchSummary persist elsewhere.
 		}
-
-		// Track the assistant message for auto-compaction; a successful response
-		// ends any retry sequence (upstream emits auto_retry_end success and
-		// resets the counter).
-		if assistant, ok := event.Message.(*ai.AssistantMessage); ok {
-			s.mu.Lock()
-			s.lastAssistantMessage = assistant
-			attempt := s.retryAttempt
-			if assistant.StopReason != ai.StopError && attempt > 0 {
-				s.retryAttempt = 0
-			}
-			s.mu.Unlock()
-			if assistant.StopReason != ai.StopError && attempt > 0 {
-				s.emit(&SessionEvent{Type: SessionAutoRetryEnd, Success: true, Attempt: attempt})
-			}
-		}
+	}
+	if event.Type == agent.TurnEnd {
+		s.mu.Lock()
+		s.lastAssistantToolResults = append([]ai.Message(nil), event.ToolResults...)
+		s.mu.Unlock()
 	}
 }
 
