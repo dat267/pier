@@ -67,39 +67,8 @@ func (c *Credential) MarshalJSON() ([]byte, error) {
 			Env  ProviderEnv `json:"env,omitempty"`
 		}{c.Type, c.APIKey.Key, c.APIKey.Env})
 	case CredentialOAuth:
-		base, err := MarshalJSON(c.OAuth.OAuthCredentials)
-		if err != nil {
-			return nil, err
-		}
-		var probe map[string]json.RawMessage
-		if err := json.Unmarshal(base, &probe); err != nil {
-			return nil, err
-		}
-		probe["type"], err = MarshalJSON(CredentialOAuth)
-		if err != nil {
-			return nil, err
-		}
-		// Splice extra keys.
-		for k, v := range c.OAuth.Extra {
-			if _, exists := probe[k]; !exists {
-				probe[k] = v
-			}
-		}
-		// Preserve upstream key order: type first.
-		out := []byte{'{'}
-		out = append(out, []byte(`"type":"oauth"`)...)
-		first := len(probe) == len(c.OAuth.Extra)+1
-		// Emit remaining keys in encoded order (sorted by map marshal).
-		rest, err := MarshalJSON(probe)
-		if err != nil {
-			return nil, err
-		}
-		var ordered map[string]json.RawMessage
-		_ = json.Unmarshal(rest, &ordered)
-		_ = first
-		_ = ordered
-		_ = out
-		// Simplest faithful encoding: rebuild in field order.
+		// Rebuild in field order: type first, then refresh/access/expires,
+		// then extra keys sorted for determinism.
 		var buf []byte
 		buf = append(buf, '{')
 		buf = append(buf, `"type":"oauth","refresh":`...)

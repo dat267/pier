@@ -816,8 +816,6 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 			}
 
 			outputText, details := formatOutput("(no output)")
-			detailsJSON, _ := ai.MarshalJSON(details)
-			_ = detailsJSON
 			var resultDetails json.RawMessage
 			if details != nil {
 				resultDetails, _ = ai.MarshalJSON(*details)

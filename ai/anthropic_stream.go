@@ -336,9 +336,6 @@ func BuildAnthropicRequest(ctx context.Context, model *Model, params *AnthropicM
 			req.Header.Set(name, *value)
 		}
 	}
-	for _, hv := range model.Headers {
-		_ = hv
-	}
 	// Model headers, then dynamic headers, then caller headers (later wins).
 	for name, value := range model.Headers {
 		req.Header.Set(name, value)

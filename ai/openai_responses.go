@@ -703,7 +703,7 @@ type orderedMap struct {
 func (o *orderedMap) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	buf.WriteByte('{')
-	for i, key := range o.keys {
+	for _, key := range o.keys {
 		value, ok := o.values[key]
 		if !ok {
 			continue
@@ -722,7 +722,6 @@ func (o *orderedMap) MarshalJSON() ([]byte, error) {
 			return nil, err
 		}
 		buf.Write(enc)
-		_ = i
 	}
 	buf.WriteByte('}')
 	return buf.Bytes(), nil

@@ -246,7 +246,7 @@ func MigrateKeybindingsConfig(rawConfig map[string]json.RawMessage) (map[string]
 
 // OrderKeybindingsConfig orders the config by the keybinding table order.
 func OrderKeybindingsConfig(config map[string]json.RawMessage) map[string]json.RawMessage {
-	definitions, order := Keybindings()
+	_, order := Keybindings()
 	ordered := map[string]json.RawMessage{}
 	for _, key := range order {
 		if value, ok := config[key]; ok {
@@ -263,7 +263,6 @@ func OrderKeybindingsConfig(config map[string]json.RawMessage) map[string]json.R
 	for _, key := range extras {
 		ordered[key] = config[key]
 	}
-	_ = definitions
 	return ordered
 }
 

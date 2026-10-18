@@ -230,7 +230,6 @@ func (r *TranscriptRenderer) AddCustomEntryToChat(entry *coding.SessionEntry) {
 
 // AddMessageToChat renders one agent message.
 func (r *TranscriptRenderer) AddMessageToChat(message ai.Message, populateHistory bool) {
-	theme := ActiveTheme()
 	switch typed := message.(type) {
 	case *ai.CustomMessage:
 		switch typed.Role {
@@ -308,8 +307,6 @@ func (r *TranscriptRenderer) AddMessageToChat(message ai.Message, populateHistor
 		// Tool results render inline with their tool calls.
 	case *ai.SystemMessage:
 		// Not rendered.
-	default:
-		_ = theme
 	}
 }
 

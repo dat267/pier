@@ -656,8 +656,7 @@ func runFlow(ctx context.Context, provider OAuthClientProvider, options FlowOpti
 		if ctx.Err() != nil {
 			return "", ctx.Err()
 		}
-		if insecure, ok := refreshErr.(*OAuthInsecureEndpointError); ok {
-			_ = insecure
+		if _, ok := refreshErr.(*OAuthInsecureEndpointError); ok {
 			return "", refreshErr
 		}
 		if oauthErr, ok := refreshErr.(*OAuthError); ok && oauthErr.Code != "server_error" {

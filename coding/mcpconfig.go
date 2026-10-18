@@ -97,7 +97,7 @@ func readMcpConfigFile(path string, scope McpServerScope, state *mcpConfigState)
 	if err != nil {
 		return
 	}
-	keys, values, err := readJSONObjectOrdered(data)
+	_, values, err := readJSONObjectOrdered(data)
 	if err != nil {
 		state.errors = append(state.errors, fmt.Sprintf("%s: %s", path, err.Error()))
 		return
@@ -116,7 +116,6 @@ func readMcpConfigFile(path string, scope McpServerScope, state *mcpConfigState)
 			return
 		}
 	}
-	_ = keys
 
 	if raw, ok := values["autoEnableCodemode"]; ok {
 		var enabled bool

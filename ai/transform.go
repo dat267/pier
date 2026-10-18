@@ -66,8 +66,7 @@ func replaceImagesWithPlaceholder(content ContentList, placeholder string) Conte
 	var result ContentList
 	previousWasPlaceholder := false
 	for _, block := range content {
-		if img, ok := block.(ImageContent); ok {
-			_ = img
+		if _, ok := block.(ImageContent); ok {
 			if !previousWasPlaceholder {
 				result = append(result, TextContent{Text: placeholder})
 			}

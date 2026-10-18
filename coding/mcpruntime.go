@@ -693,7 +693,6 @@ func resolveMcpConfigValue(value string, what string) string {
 	if err != nil {
 		return ""
 	}
-	_ = what
 	return resolved
 }
 

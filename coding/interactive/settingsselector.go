@@ -1095,7 +1095,6 @@ func applySettingChange(id string, newValue string, callbacks SettingsCallbacks,
 			callbacks.OnThemeChange(newValue)
 		}
 	}
-	_ = defaultModelByValue
 }
 
 // wheelScrollLinesValue renders the current setting for the list.

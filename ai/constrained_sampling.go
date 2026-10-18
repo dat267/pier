@@ -255,15 +255,8 @@ func makeSchemaNodeStrict(node *schemaNode, check UnsupportedStrictSchemaKeyword
 		}
 	}
 
-	// Property key order: decode the properties object with order preserved.
-	var orderedProps []string
-	{
-		var rawMap map[string]json.RawMessage
-		_ = jsonUnmarshalStrict(propsData, &rawMap)
-		// Recover upstream insertion order from the encoded bytes.
-		orderedProps = orderedKeys(propsData)
-		_ = rawMap
-	}
+	// Recover upstream insertion order from the encoded bytes.
+	orderedProps := orderedKeys(propsData)
 
 	requiredSet := map[string]bool{}
 	for _, key := range required {

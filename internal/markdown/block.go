@@ -386,7 +386,6 @@ func listItemStart(line string) (contentIndent int, ordered bool, ok bool) {
 	if width >= 4 || i >= len(line) {
 		return 0, false, false
 	}
-	start := i
 	c := line[i]
 	if c == '-' || c == '+' || c == '*' {
 		i++
@@ -420,7 +419,6 @@ func listItemStart(line string) (contentIndent int, ordered bool, ok bool) {
 			break
 		}
 	}
-	_ = start
 	contentIndent = columnAt(line, i)
 	if contentIndent > 24 {
 		contentIndent = 24

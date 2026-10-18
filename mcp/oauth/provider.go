@@ -234,7 +234,6 @@ func (p *McpOAuthProvider) ClientInformation(ctx context.Context) (*OAuthClientI
 	if p.configuredClient != nil {
 		return p.configuredClient, nil
 	}
-	_ = true
 	state, err := p.load(ctx)
 	if err != nil {
 		return nil, err

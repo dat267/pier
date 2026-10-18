@@ -387,11 +387,9 @@ func wiringClosures(prog *ssa.Program, all map[*ssa.Function]bool, roots map[*ss
 				}
 				// The field's type must be a signature; the struct owning it
 				// is found from the allocation the field address is based on.
-				sig, ok := typeUnderPointer(field.Type()).(*types.Signature)
-				if !ok {
+				if _, ok := typeUnderPointer(field.Type()).(*types.Signature); !ok {
 					continue
 				}
-				_ = sig
 				alloc, ok := field.X.(*ssa.Alloc)
 				if !ok || !isWiring(typeUnderPointer(alloc.Type())) {
 					continue

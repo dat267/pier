@@ -872,9 +872,6 @@ func (s *AgentSession) emitModelSelect(model, previous *ai.Model, source string)
 	// Upstream emits a model_select event; the Go session carries it on the
 	// model cycle result and the message stream, so only the transcript entry
 	// and thinking-level event are emitted here.
-	_ = model
-	_ = previous
-	_ = source
 }
 
 // GetLastAssistantText returns the last assistant message's trimmed text, or ""
@@ -1005,10 +1002,8 @@ func (s *AgentSession) Dispose() {
 	s.Agent.Abort()
 	// The session's resources (temp files, watchers) are released with the
 	// session id, like upstream's cleanupSessionResources(this.sessionId).
-	if err := CleanupSessionResources(s.SessionID()); err != nil {
-		// Cleanup is best-effort; the remaining dispose steps still run.
-		_ = err
-	}
+	// Cleanup is best-effort; the remaining dispose steps still run.
+	_ = CleanupSessionResources(s.SessionID())
 	s.control.stateMu.Lock()
 	s.control.disposed = true
 	s.control.stateMu.Unlock()

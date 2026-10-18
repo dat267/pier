@@ -591,7 +591,7 @@ func NewApp(options AppOptions) *App {
 		OnTerminalError:     options.OnTerminalError,
 		OnUncaughtException: options.OnUncaughtException,
 
-		DisableThemeAutoSync:    func() { StopThemeWatcher() },
+		DisableThemeAutoSync: func() { StopThemeWatcher() },
 		OnTuiModeSwitched: func() {
 			app.theme.RebindTUI()
 			app.uiState.RebindExtensionTerminalInputListeners()

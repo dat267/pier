@@ -76,11 +76,9 @@ func validateListPage(method, key string, raw json.RawMessage, isItem func(map[s
 }
 
 func isTool(item map[string]any) bool {
-	name, ok := item["name"].(string)
-	if !ok {
+	if _, ok := item["name"].(string); !ok {
 		return false
 	}
-	_ = name
 	schema, ok := item["inputSchema"].(map[string]any)
 	return ok && schema != nil
 }

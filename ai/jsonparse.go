@@ -394,12 +394,10 @@ func escapeUnitLength(units []uint16, pos int) int {
 
 // tryParseFullString parses a complete string; ok is false when truncated.
 func (p *partialParser) tryParseFullString() (string, bool) {
-	start := p.pos
 	s, err := p.parsePartialString()
 	if err != nil {
 		return "", false
 	}
-	_ = start
 	// Distinguish complete from truncated: parsePartialString returns on
 	// closing quote (pos past it) or end of input. Check the last consumed
 	// unit was a quote by re-examining: if pos <= len(units) and the

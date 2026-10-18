@@ -633,11 +633,9 @@ func consumeMistralChatStream(
 	}
 	remainder := buffer.String()
 	if strings.TrimSpace(remainder) != "" {
-		done, err := handle(remainder)
-		if err != nil {
+		if _, err := handle(remainder); err != nil {
 			return err
 		}
-		_ = done
 	}
 	finishMistralBlock(output, stream)
 	finishMistralToolCalls(output, stream, state)
@@ -777,13 +775,12 @@ func mistralCurrentBlock(output *AssistantMessage) (blockRef, bool) {
 	if len(output.Content) == 0 {
 		return blockRef{}, false
 	}
-	switch typed := output.Content[len(output.Content)-1].(type) {
+	switch output.Content[len(output.Content)-1].(type) {
 	case TextContent:
 		return blockRef{kind: KindText}, true
 	case ThinkingContent:
 		return blockRef{kind: KindThinking}, true
 	default:
-		_ = typed
 		return blockRef{}, false
 	}
 }

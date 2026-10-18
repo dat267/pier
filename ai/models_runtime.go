@@ -625,11 +625,7 @@ func (m *Models) Refresh(options *ModelsRefreshOptions) ModelsRefreshResult {
 			m.mu.Unlock()
 			defer func() {
 				m.mu.Lock()
-				if m.refreshCancels[provider.ID] != nil {
-					cancel2 := m.refreshCancels[provider.ID]
-					_ = cancel2
-					delete(m.refreshCancels, provider.ID)
-				}
+				delete(m.refreshCancels, provider.ID)
 				m.mu.Unlock()
 				cancel()
 			}()
