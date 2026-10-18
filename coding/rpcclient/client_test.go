@@ -127,6 +127,35 @@ func TestClientSubprocessPromptAndWait(t *testing.T) {
 	}
 }
 
+// TestPromptAndWaitSubscribesBeforeSending pins upstream's ordering:
+// collectEvents builds its subscription inside the Promise executor, before
+// prompt() runs, so an event emitted while the prompt is acknowledged is
+// still collected. The port used to start collection on a goroutine.
+func TestPromptAndWaitSubscribesBeforeSending(t *testing.T) {
+	client := New(Options{})
+	client.sendFunc = func(command map[string]any) (*response, error) {
+		if command["type"] == "prompt" {
+			client.mu.Lock()
+			listeners := make([]EventListener, 0, len(client.listeners))
+			for _, listener := range client.listeners {
+				listeners = append(listeners, listener)
+			}
+			client.mu.Unlock()
+			for _, listener := range listeners {
+				listener(Event{"type": "agent_settled"})
+			}
+		}
+		return &response{Type: "response", Command: "prompt", Success: true, Data: json.RawMessage(`{"disposition":"started"}`)}, nil
+	}
+	events, err := client.PromptAndWait("hi", nil, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 || events[0].Type() != "agent_settled" {
+		t.Fatalf("events = %+v", events)
+	}
+}
+
 func TestClientRejectsInFlightOnExit(t *testing.T) {
 	client := startFakeClient(t, map[string]string{"PIER_RPC_CLIENT_FAKE_EXIT": "1"})
 	_, err := client.Commands()

@@ -557,50 +557,66 @@ func (c *RpcClient) WaitForIdle(timeout time.Duration) error {
 	}
 }
 
+// eventCollector gathers events through agent_settled. Subscription happens
+// in startEventCollector, so a caller that prompts afterwards cannot miss an
+// event emitted between the prompt and a late subscription (upstream's
+// Promise executor subscribes synchronously, before the prompt is sent).
+type eventCollector struct {
+	mu     sync.Mutex
+	events []Event
+	done   chan struct{}
+	once   sync.Once
+}
+
+func (c *RpcClient) startEventCollector() (*eventCollector, func()) {
+	collector := &eventCollector{done: make(chan struct{})}
+	unsubscribe := c.OnEvent(func(event Event) {
+		collector.mu.Lock()
+		collector.events = append(collector.events, event)
+		collector.mu.Unlock()
+		if event.Type() == "agent_settled" {
+			collector.once.Do(func() { close(collector.done) })
+		}
+	})
+	return collector, unsubscribe
+}
+
+func (c *RpcClient) collectUntil(collector *eventCollector, timeout <-chan time.Time) ([]Event, error) {
+	select {
+	case <-collector.done:
+		collector.mu.Lock()
+		defer collector.mu.Unlock()
+		return append([]Event(nil), collector.events...), nil
+	case <-timeout:
+		return nil, fmt.Errorf("Timeout collecting events. Stderr: %s", c.Stderr())
+	}
+}
+
 // CollectEvents collects events until agent_settled.
 func (c *RpcClient) CollectEvents(timeout time.Duration) ([]Event, error) {
 	if timeout <= 0 {
 		timeout = DefaultIdleTimeout
 	}
-	var mu sync.Mutex
-	var events []Event
-	done := make(chan struct{})
-	var once sync.Once
-	unsubscribe := c.OnEvent(func(event Event) {
-		mu.Lock()
-		events = append(events, event)
-		mu.Unlock()
-		if event.Type() == "agent_settled" {
-			once.Do(func() { close(done) })
-		}
-	})
+	collector, unsubscribe := c.startEventCollector()
 	defer unsubscribe()
-	select {
-	case <-done:
-		mu.Lock()
-		defer mu.Unlock()
-		return append([]Event(nil), events...), nil
-	case <-time.After(timeout):
-		return nil, fmt.Errorf("Timeout collecting events. Stderr: %s", c.Stderr())
-	}
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	return c.collectUntil(collector, timer.C)
 }
 
 // PromptAndWait sends a prompt and returns the events through agent_settled.
 func (c *RpcClient) PromptAndWait(message string, images []ai.ImageContent, timeout time.Duration) ([]Event, error) {
-	collected := make(chan struct {
-		events []Event
-		err    error
-	}, 1)
-	go func() {
-		events, err := c.CollectEvents(timeout)
-		collected <- struct {
-			events []Event
-			err    error
-		}{events, err}
-	}()
+	if timeout <= 0 {
+		timeout = DefaultIdleTimeout
+	}
+	collector, unsubscribe := c.startEventCollector()
+	defer unsubscribe()
+	// Subscribe before sending, like upstream's collectEvents promise, and
+	// start the clock there too.
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
 	if _, err := c.Prompt(message, images, ""); err != nil {
 		return nil, err
 	}
-	result := <-collected
-	return result.events, result.err
+	return c.collectUntil(collector, timer.C)
 }
