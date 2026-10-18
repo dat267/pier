@@ -50,11 +50,7 @@ with historical measurements retained to explain the design.
   their heavy work off-loop; `TestStreamingDeltaCostIndependentOfTranscriptSize`
   bounds the streaming delta path against transcript size. Session event drains
   are bounded (64 per pass), paints coalesce, large markdown/tool work prepares
-  off-loop (D204/D205/D239), and per-paint session walks are memoized or avoided
-  (D239). A theme change invalidates every mounted component; the tool-display
-  rebuild is deferred to the component's next Render
-  (`ToolExecutionComponent.displayDirty`) so D203's cooperative warming spreads
-  it across frames instead of one eager sweep inside `drainPosted`.
+  off-loop (D204/D205), and per-paint session walks are memoized or avoided.
 - Heavy tool-side commands (test suites, builds) run `nice`d: on a 4-CPU machine
   an ungated test run competes with the UI goroutine and looks like a freeze.
 - The loop calls a **watchdog beat** once per iteration

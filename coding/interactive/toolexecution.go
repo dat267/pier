@@ -95,12 +95,6 @@ type ToolExecutionComponent struct {
 	cwd  string
 
 	executionStarted bool
-	// displayDirty defers the display rebuild to Render. A theme change walks
-	// and invalidates every mounted component; rebuilding the tool display
-	// eagerly inside that walk made the 18:02/18:18 stalls, so Invalidate only
-	// marks the component and the next Render rebuilds it (coalesced with the
-	// paint).
-	displayDirty bool
 	// outputPad is the transcript's horizontal padding, applied to the content box.
 	outputPad int
 	// durationMs is the recorded execution time of the finished call, when the tool reported
@@ -308,17 +302,14 @@ func (c *ToolExecutionComponent) SetImageWidthCells(width int) {
 	c.updateDisplay()
 }
 
-// Invalidate marks the display for rebuild on the next Render.
+// Invalidate rebuilds the display.
 func (c *ToolExecutionComponent) Invalidate() {
 	c.Container.Invalidate()
-	c.displayDirty = true
+	c.updateDisplay()
 }
 
 // Render renders the component.
 func (c *ToolExecutionComponent) Render(width int) []string {
-	if c.displayDirty {
-		c.updateDisplay()
-	}
 	if c.hideComponent {
 		return nil
 	}
@@ -503,7 +494,6 @@ func (c *ToolExecutionComponent) updateDisplay() {
 	if c.hasRendererDefinition() && !hasContent {
 		c.hideComponent = true
 	}
-	c.displayDirty = false
 	// The content lives in contentBox/the self container; bump the outer
 	// revision so a parent that skips unchanged versioned children re-renders
 	// this tool.
