@@ -621,7 +621,7 @@ func (w *RunWiring) phase(name string) func() {
 		return func() {}
 	}
 	start := time.Now()
-	cpu := w.armStallCPUWatch()
+	cpu := w.armStallCPUWatch(stallCPUThresholdFromEnv())
 	watchdog := time.AfterFunc(w.StallLogThreshold, func() {
 		w.writeStallRecord(name, time.Since(start), " still running", nil)
 	})
@@ -638,8 +638,24 @@ func (w *RunWiring) phase(name string) func() {
 // watchdog starts a CPU profile for it. The goroutine dump cannot attribute a
 // completed render (it fires in the deferred phase end, when the loop is back
 // in the profiler), so a phase that overruns the stall threshold by this much
-// also captures where the CPU went. Test seam: tests shorten it.
+// also captures where the CPU went. PIER_STALL_CPU_MS overrides it (0
+// disables profiling); the var remains a seam so tests shorten it without an
+// env round trip.
 var stallCPUProfileAfter = 250 * time.Millisecond
+
+// stallCPUThresholdFromEnv resolves the CPU-profile threshold the way
+// stallLogThreshold resolves PIER_STALL_MS.
+func stallCPUThresholdFromEnv() time.Duration {
+	value := os.Getenv("PIER_STALL_CPU_MS")
+	if value == "" {
+		return stallCPUProfileAfter
+	}
+	millis, err := strconv.Atoi(value)
+	if err != nil || millis < 0 {
+		return stallCPUProfileAfter
+	}
+	return time.Duration(millis) * time.Millisecond
+}
 
 // stallCPUWatch carries one phase's profiling state between the phase start
 // (which arms the watchdog), the watchdog goroutine (which starts the profile)
@@ -654,12 +670,12 @@ type stallCPUWatch struct {
 
 // armStallCPUWatch starts the CPU-profile watchdog for one phase, or returns
 // nil when profiling is off.
-func (w *RunWiring) armStallCPUWatch() *stallCPUWatch {
-	if stallCPUProfileAfter <= 0 {
+func (w *RunWiring) armStallCPUWatch(after time.Duration) *stallCPUWatch {
+	if after <= 0 {
 		return nil
 	}
 	watch := &stallCPUWatch{}
-	time.AfterFunc(stallCPUProfileAfter, func() {
+	time.AfterFunc(after, func() {
 		watch.mu.Lock()
 		defer watch.mu.Unlock()
 		if watch.done {

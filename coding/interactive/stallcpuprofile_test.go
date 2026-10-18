@@ -98,3 +98,32 @@ func TestStallPhaseCPUProfileDisabledWithoutStallLog(t *testing.T) {
 	time.Sleep(5 * time.Millisecond)
 	done() // must not panic or start a profile
 }
+
+// stallCPUThresholdFromEnv mirrors the record threshold's env override: the
+// 250ms default targets rare heavy stalls, and a session hunting lighter ones
+// sets PIER_STALL_CPU_MS (0 disables profiling) so every recorded stall also
+// carries a profile.
+func TestStallCPUThresholdFromEnv(t *testing.T) {
+	cases := []struct {
+		env  string
+		set  bool
+		want time.Duration
+	}{
+		{env: "", set: false, want: 250 * time.Millisecond},
+		{env: "0", set: true, want: 0},
+		{env: "100", set: true, want: 100 * time.Millisecond},
+		{env: "garbage", set: true, want: 250 * time.Millisecond},
+		{env: "-3", set: true, want: 250 * time.Millisecond},
+	}
+	for _, tc := range cases {
+		if tc.set {
+			t.Setenv("PIER_STALL_CPU_MS", tc.env)
+		} else {
+			t.Setenv("PIER_STALL_CPU_MS", "")
+			os.Unsetenv("PIER_STALL_CPU_MS")
+		}
+		if got := stallCPUThresholdFromEnv(); got != tc.want {
+			t.Errorf("PIER_STALL_CPU_MS=%q (set=%v): got %v, want %v", tc.env, tc.set, got, tc.want)
+		}
+	}
+}
