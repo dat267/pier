@@ -206,6 +206,44 @@ func TestStreamableHTTPHandlesJSONAndSSEResponses(t *testing.T) {
 	}
 }
 
+func TestStreamableHTTPRejectsEmptyJSONBody(t *testing.T) {
+	fixture := newHTTPFixture(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("content-type", "application/json")
+	})
+	defer fixture.close(t)
+	client := NewClient(ClientOptions{Name: "http-test", Version: "1.0.0"})
+	_, err := client.Connect(context.Background(), NewStreamableHttpTransport(StreamableHttpTransportOptions{URL: fixture.url}))
+	if err == nil {
+		t.Fatal("connect succeeded with an empty JSON body")
+	}
+}
+
+func TestStreamableHTTPHandlesWhitespacePrefixedBatch(t *testing.T) {
+	fixture := newHTTPFixture(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var message struct {
+			ID     json.RawMessage `json:"id"`
+			Method string          `json:"method"`
+		}
+		_ = json.Unmarshal(body, &message)
+		if message.ID == nil {
+			w.WriteHeader(http.StatusAccepted)
+			return
+		}
+		w.Header().Set("content-type", "application/json")
+		w.Header().Set("mcp-session-id", "session-1")
+		// Upstream parses the body with response.json(), so leading
+		// whitespace before a batch array is invisible.
+		fmt.Fprintf(w, "\n  [{\"jsonrpc\":\"2.0\",\"id\":%s,\"result\":{\"protocolVersion\":%q,\"capabilities\":{},\"serverInfo\":{\"name\":\"http-fixture\",\"version\":\"1.0.0\"}}}]", message.ID, protocol.LatestProtocolVersion)
+	})
+	defer fixture.close(t)
+	client := NewClient(ClientOptions{Name: "http-test", Version: "1.0.0"})
+	if _, err := client.Connect(context.Background(), NewStreamableHttpTransport(StreamableHttpTransportOptions{URL: fixture.url})); err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	_ = client.Close(context.Background())
+}
+
 func TestStreamableHTTPClassifiesAuthenticationFailures(t *testing.T) {
 	fixture := newHTTPFixture(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)

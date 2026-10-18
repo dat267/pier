@@ -346,12 +346,17 @@ func (t *StreamableHttpTransport) Send(ctx context.Context, message Message) err
 			return readErr
 		}
 		var items []json.RawMessage
-		if data[0] == '[' {
-			if err := json.Unmarshal(data, &items); err != nil {
+		trimmed := bytes.TrimSpace(data)
+		if len(trimmed) == 0 {
+			// response.json() rejects an empty body; indexing data[0] panicked.
+			return fmt.Errorf("MCP server returned an empty JSON body")
+		}
+		if trimmed[0] == '[' {
+			if err := json.Unmarshal(trimmed, &items); err != nil {
 				return err
 			}
 		} else {
-			items = []json.RawMessage{data}
+			items = []json.RawMessage{trimmed}
 		}
 		for _, item := range items {
 			decoded, err := decodeJSONValue(item)
