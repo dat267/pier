@@ -121,22 +121,21 @@ func TestStallCPUThresholdFromEnv(t *testing.T) {
 // each phase can be under the stall threshold while the user-feel latency is
 // not. The live case: two ~84ms reads at startup with PIER_STALL_MS=50 wrote no
 // record because the loop's phases were each under 50ms. A contiguous run of
-// short phases is recorded as one busy streak naming every phase it crossed,
-// with the CPU profile the same way a single slow phase is.
+// short phases is recorded as one busy streak naming every phase it crossed
+// (the profile path has its own tests; the CPU threshold here is effectively
+// off).
 func TestStallLogRecordsBusyStreakAcrossPhases(t *testing.T) {
 	dir := t.TempDir()
-	w := &RunWiring{StallLogPath: filepath.Join(dir, "pier-stall.log"), StallLogThreshold: 50 * time.Millisecond, StallLogCPUAfter: 20 * time.Millisecond}
-	done := w.phase("events")
-	time.Sleep(10 * time.Millisecond)
-	done()
-	time.Sleep(2 * time.Millisecond) // contiguous: the streak continues
-	done = w.phase("events")
-	time.Sleep(10 * time.Millisecond)
-	done()
-	time.Sleep(2 * time.Millisecond)
-	done = w.phase("render")
-	time.Sleep(30 * time.Millisecond) // single phase under threshold, streak over
-	done()
+	w := &RunWiring{StallLogPath: filepath.Join(dir, "pier-stall.log"), StallLogThreshold: 50 * time.Millisecond, StallLogCPUAfter: time.Hour}
+	run := func(name string) {
+		done := w.phase(name)
+		time.Sleep(20 * time.Millisecond)
+		done()
+		time.Sleep(2 * time.Millisecond)
+	}
+	run("events") // streak 20ms
+	run("events") // streak 42ms
+	run("render") // crossing happens inside this phase: streak 64ms
 
 	record, err := os.ReadFile(w.StallLogPath)
 	if err != nil {
@@ -149,9 +148,8 @@ func TestStallLogRecordsBusyStreakAcrossPhases(t *testing.T) {
 	if strings.Contains(text, `slow UI phase "render"`) || strings.Contains(text, `slow UI phase "events"`) {
 		t.Fatalf("individual phases must not be recorded when only the streak is slow: %s", text)
 	}
-	entries, err := filepath.Glob(filepath.Join(dir, "pier-stall-cpu-*.pprof"))
-	if err != nil || len(entries) != 1 {
-		t.Fatalf("cpu profile files = %v (err %v), want one", entries, err)
+	if entries, _ := filepath.Glob(filepath.Join(dir, "pier-stall-cpu-*.pprof")); len(entries) != 0 {
+		t.Fatalf("cpu profiles = %v, want none", entries)
 	}
 }
 
@@ -191,8 +189,10 @@ func TestStallLogStreakRecordsOnce(t *testing.T) {
 	}
 	run("events") // streak 20ms
 	run("events") // streak 42ms
-	run("render") // streak 64ms: crosses here
-	run("render") // streak 86ms: the flood bug would record again
+	done := w.phase("render")
+	time.Sleep(30 * time.Millisecond) // streak ~74ms: crosses, profile arms at ~60ms with headroom
+	done()
+	run("render") // the flood bug would record again
 	run("render")
 
 	record, err := os.ReadFile(w.StallLogPath)
@@ -202,5 +202,39 @@ func TestStallLogStreakRecordsOnce(t *testing.T) {
 	streaks := strings.Count(string(record), `slow UI phase "streak"`)
 	if streaks != 1 {
 		t.Fatalf("streak recorded %d times, want 1:\n%s", streaks, record)
+	}
+}
+
+// A streak's CPU profile starts at the threshold crossing, so it only covers
+// the streak's tail (the first live capture: 14ms window, one sample, and that
+// sample was a background goroutine). The dump that matters is the one taken
+// at the crossing itself, while the loop is mid-phase: a "streak-start" record
+// carries it, once per streak.
+func TestStreakStartRecordDumpsTheLoopMidPhase(t *testing.T) {
+	dir := t.TempDir()
+	w := &RunWiring{StallLogPath: filepath.Join(dir, "pier-stall.log"), StallLogThreshold: 50 * time.Millisecond, StallLogCPUAfter: 50 * time.Millisecond}
+	run := func(name string) {
+		done := w.phase(name)
+		time.Sleep(20 * time.Millisecond)
+		done()
+		time.Sleep(2 * time.Millisecond)
+	}
+	run("events") // streak 20ms
+	run("events") // streak 42ms
+	run("render") // crosses here: the mid-streak dump fires mid-phase
+
+	record, err := os.ReadFile(w.StallLogPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(record)
+	if !strings.Contains(text, `slow UI phase "streak-start"`) {
+		t.Fatalf("no mid-streak dump record:\n%s", text)
+	}
+	if !strings.Contains(text, "goroutine profile:") {
+		t.Fatalf("mid-streak record carries no dump:\n%s", text)
+	}
+	if strings.Count(text, `streak-start`) != 1 {
+		t.Fatalf("mid-streak record written more than once:\n%s", text)
 	}
 }

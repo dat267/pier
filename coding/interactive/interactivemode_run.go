@@ -94,10 +94,12 @@ type RunWiring struct {
 	StallLogCPUAfter time.Duration
 	// stallStreak bookkeeping for contiguous busy runs across phases; confined
 	// to the loop goroutine (see phase).
-	stallStreakStart    time.Time
-	stallStreakEnd      time.Time
-	stallStreakPhases   []string
-	stallStreakRecorded bool
+	stallStreakStart  time.Time
+	stallStreakEnd    time.Time
+	stallStreakPhases []string
+	// stallStreakRecorded flips when the streak-start record is written from
+	// the watchdog goroutine; atomic because phase() reads it on the loop.
+	stallStreakRecorded atomic.Bool
 	// OnThemeChange registers the theme-file watcher callback.
 	OnThemeChange func(callback func()) func()
 	// OnBranchChange registers the git-branch watcher callback.
@@ -642,7 +644,7 @@ func (w *RunWiring) phase(name string) func() {
 	if w.stallStreakEnd.IsZero() || start.Sub(w.stallStreakEnd) > stallStreakGap {
 		w.stallStreakStart = start
 		w.stallStreakPhases = append(w.stallStreakPhases[:0], name)
-		w.stallStreakRecorded = false
+		w.stallStreakRecorded.Store(false)
 	} else {
 		w.stallStreakPhases = append(w.stallStreakPhases, name)
 		if len(w.stallStreakPhases) > stallStreakPhaseLimit {
@@ -650,7 +652,13 @@ func (w *RunWiring) phase(name string) func() {
 		}
 	}
 	streakSoFar := start.Sub(w.stallStreakStart)
-	cpu := w.armStallCPUWatch(w.StallLogCPUAfter, streakSoFar)
+	var cpu *stallCPUWatch
+	if !w.stallStreakRecorded.Load() {
+		// The phases snapshot at arm time: the callback runs on a timer
+		// goroutine while the loop keeps appending to the slice.
+		phases := strings.Join(w.stallStreakPhases, "+")
+		cpu = w.armStallCPUWatch(w.StallLogCPUAfter, streakSoFar, phases)
+	}
 	watchdog := time.AfterFunc(w.StallLogThreshold, func() {
 		w.writeStallRecord(name, time.Since(start), " still running", nil)
 	})
@@ -670,11 +678,13 @@ func (w *RunWiring) phase(name string) func() {
 			w.stallStreakStart = now
 			w.stallStreakPhases = w.stallStreakPhases[:0]
 			w.writeStallRecord(name, elapsed, "", profile)
-		case now.Sub(w.stallStreakStart) >= w.StallLogThreshold && !w.stallStreakRecorded:
-			// One record per streak: a streaming turn keeps the loop busy for
-			// seconds, and recording every phase-end after the crossing flooded
-			// the log (30+ records in the first live streak).
-			w.stallStreakRecorded = true
+		case now.Sub(w.stallStreakStart) >= w.StallLogThreshold && (!w.stallStreakRecorded.Load() || len(profile) > 0):
+			// One streak-start/one streak-end record per streak: a streaming turn
+			// keeps the loop busy for seconds, and recording every phase-end
+			// after the crossing flooded the log (30+ records in the first live
+			// streak). A profile that ran to this phase end is always written
+			// out, even when the streak-start record already fired.
+			w.stallStreakRecorded.Store(true)
 			w.writeStallRecord("streak", now.Sub(w.stallStreakStart), " phases="+strings.Join(w.stallStreakPhases, "+"), profile)
 		}
 	}
@@ -726,7 +736,7 @@ type stallCPUWatch struct {
 // before the profile starts: the CPU threshold minus what earlier contiguous
 // phases already spent, so a streak is profiled from the moment it crosses the
 // threshold, not only from a single slow phase.
-func (w *RunWiring) armStallCPUWatch(after time.Duration, streakSoFar time.Duration) *stallCPUWatch {
+func (w *RunWiring) armStallCPUWatch(after time.Duration, streakSoFar time.Duration, phases string) *stallCPUWatch {
 	if after <= 0 {
 		return nil
 	}
@@ -746,6 +756,16 @@ func (w *RunWiring) armStallCPUWatch(after time.Duration, streakSoFar time.Durat
 		if !watch.active {
 			watch.buffer = nil
 		}
+		// The crossing is when the loop is mid-phase: dump it now. This is the
+		// attribution a CPU profile started here cannot provide — it only
+		// covers the streak's tail. Once per streak (the caller stops arming
+		// once recorded).
+		note := ""
+		if phases != "" {
+			note = " phases=" + phases
+		}
+		w.stallStreakRecorded.Store(true)
+		w.writeStallRecord("streak-start", time.Since(w.stallStreakStart), note, nil)
 	})
 	return watch
 }
