@@ -1664,3 +1664,12 @@ func scanListingBlock(data []byte) (string, bool, int, bool) {
 	}
 	return "", false, 0, false
 }
+
+// EntryCount reports how many entries the session holds (the memo key for
+// GetContextUsage and other per-paint callers: an O(1) count instead of a
+// branch walk).
+func (m *SessionManager) EntryCount() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return len(m.fileEntries)
+}

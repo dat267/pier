@@ -163,6 +163,9 @@ type AgentSession struct {
 	// Goal is the builtin session-goal controller (nil when disabled).
 	Goal *GoalController
 
+	// usageCache memoizes GetContextUsage between entry appends (D239).
+	usageCache contextUsageCache
+
 	// streamFn is the session's model stream function (compaction, summaries).
 	streamFn agent.StreamFn
 

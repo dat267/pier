@@ -942,6 +942,23 @@ type ContextUsageReport struct {
 }
 
 // GetContextUsage computes context usage, or nil when no model/window is known.
+//
+// The footer calls this on every paint, and during a streaming turn the loop
+// paints per partial delta — while every appended entry invalidates the branch
+// cache. The live Oct 18 profile caught a 50-65ms streak entirely here
+// (FooterComponent.Render → GetContextUsage → GetBranch → branchLocked, plus
+// the compaction gate's unmarshal walk). The usage only changes when entries
+// or agent messages change, so the computed report is memoized on that key
+// (D239); the report pointer is shared read-only.
+type contextUsageCache struct {
+	mu            sync.Mutex
+	entryCount    int
+	messageCount  int
+	modelID       string
+	contextWindow int64
+	report        *ContextUsageReport
+}
+
 func (s *AgentSession) GetContextUsage() *ContextUsageReport {
 	model := s.Model()
 	if model == nil {
@@ -951,6 +968,18 @@ func (s *AgentSession) GetContextUsage() *ContextUsageReport {
 	if contextWindow <= 0 {
 		return nil
 	}
+	entryCount := s.Sessions.EntryCount()
+	messages := s.Messages()
+
+	s.usageCache.mu.Lock()
+	if s.usageCache.report != nil && s.usageCache.entryCount == entryCount &&
+		s.usageCache.messageCount == len(messages) && s.usageCache.modelID == model.ID &&
+		s.usageCache.contextWindow == contextWindow {
+		report := s.usageCache.report
+		s.usageCache.mu.Unlock()
+		return report
+	}
+	s.usageCache.mu.Unlock()
 
 	// After compaction the last assistant usage reflects the pre-compaction
 	// context, so usage is only trusted from an assistant that responded after
@@ -987,14 +1016,26 @@ func (s *AgentSession) GetContextUsage() *ContextUsageReport {
 			}
 		}
 		if !hasPostCompactionUsage {
-			return &ContextUsageReport{ContextWindow: contextWindow}
+			report := &ContextUsageReport{ContextWindow: contextWindow}
+			s.usageCache.mu.Lock()
+			s.usageCache.entryCount, s.usageCache.messageCount = entryCount, len(messages)
+			s.usageCache.modelID, s.usageCache.contextWindow = model.ID, contextWindow
+			s.usageCache.report = report
+			s.usageCache.mu.Unlock()
+			return report
 		}
 	}
 
-	estimate := EstimateContextTokens(s.Messages())
+	estimate := EstimateContextTokens(messages)
 	tokens := int64(estimate.Tokens)
 	percent := float64(estimate.Tokens) / float64(contextWindow) * 100
-	return &ContextUsageReport{Tokens: &tokens, ContextWindow: contextWindow, Percent: &percent}
+	report := &ContextUsageReport{Tokens: &tokens, ContextWindow: contextWindow, Percent: &percent}
+	s.usageCache.mu.Lock()
+	s.usageCache.entryCount, s.usageCache.messageCount = entryCount, len(messages)
+	s.usageCache.modelID, s.usageCache.contextWindow = model.ID, contextWindow
+	s.usageCache.report = report
+	s.usageCache.mu.Unlock()
+	return report
 }
 
 // Dispose aborts every active operation and drops listeners.

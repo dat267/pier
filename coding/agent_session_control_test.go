@@ -589,3 +589,57 @@ func stubStreamFn(model *ai.Model, context ai.TranscriptContext, options *ai.Sim
 	}()
 	return stream
 }
+
+// The footer renders GetContextUsage on every paint. During a streaming turn
+// the loop paints per partial delta, and every appended entry invalidates the
+// branch cache — so on a large compacted session each paint re-materialized
+// the branch and re-estimated context (the Oct 18 live profile: 100% of a
+// 50-65ms streak in FooterComponent.Render → GetContextUsage → GetBranch →
+// branchLocked). The usage only changes when entries land, so between appends
+// the call must be a memoized constant.
+func TestGetContextUsageIsCheapBetweenStreamAppends(t *testing.T) {
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 8192}
+	session := compactionTestSession(t, model, unreachableStreamFn, smallCompactionSettings())
+	reply := strings.Repeat("word ", 300) // ~1.5KB per reply
+	for i := 0; i < 1200; i++ {
+		session.Sessions.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "question"}})
+		session.Sessions.AppendMessage(&ai.AssistantMessage{
+			API: model.API, Provider: model.Provider, Model: "m",
+			Content:    ai.ContentList{ai.TextContent{Text: reply}},
+			StopReason: ai.StopStop, Usage: ai.Usage{Input: 100, Output: 300},
+		})
+	}
+	session.Sessions.AppendCompaction("summary", "", 100, json.RawMessage("{}"), false, nil)
+	session.Sessions.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "after compaction"}})
+	session.Sessions.AppendMessage(&ai.AssistantMessage{
+		API: model.API, Provider: model.Provider, Model: "m",
+		Content:    ai.ContentList{ai.TextContent{Text: reply}},
+		StopReason: ai.StopStop, Usage: ai.Usage{Input: 5000, Output: 300},
+	})
+	// The live shape: the compaction is old and everything after it errored or
+	// was aborted (retries, an aborted turn) — no usage anywhere in the tail,
+	// so the compaction gate must walk and unmarshal every one of these
+	// messages to learn there is no post-compaction usage.
+	for i := 0; i < 400; i++ {
+		session.Sessions.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "retry question"}})
+		session.Sessions.AppendMessage(&ai.AssistantMessage{
+			API: model.API, Provider: model.Provider, Model: "m",
+			Content:    ai.ContentList{ai.TextContent{Text: reply}},
+			StopReason: ai.StopError, ErrorMessage: &reply,
+		})
+	}
+	session.Agent.SetMessages(session.Sessions.Projection().Messages)
+
+	first := session.GetContextUsage()
+	if first == nil || first.Tokens == nil || *first.Tokens == 0 {
+		t.Fatalf("usage report = %+v, want tokens", first)
+	}
+
+	// One entry lands mid-turn (a tool result, say), then the footer paints
+	// repeatedly as partial deltas stream — no further appends.
+	session.Sessions.AppendCustomMessageEntry("custom", json.RawMessage(`{}`), false, nil)
+	bytes := allocatedBytesPerRun(t, 5, func() { session.GetContextUsage() })
+	if bytes > 64*1024 {
+		t.Fatalf("GetContextUsage allocated %d bytes per paint between appends; the branch walk must be memoized", bytes)
+	}
+}
