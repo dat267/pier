@@ -2104,18 +2104,3 @@ resolution is real. Non-shell running tools keep the upstream 1s tick, and the
 final `Took` value is unaffected (it reads the recorded duration). Supersedes
 the D194 tick-frequency match for the shell label only; the cost is ten small
 differential paints a second while a shell command runs.
-## D239
-
-Prepared assistant Markdown goes off-loop from 8 KiB and from the second
-render, not from 64 KiB cold. D204's threshold left a streaming message on the
-owner loop for most of its life: every delta re-wrapped the growing open
-paragraph (`markdown.Renderer.Finalize`), and the Oct 18 profile caught one
-paint at 94 ms with 30 of 40 loop samples in that path — keystrokes waited
-100–200 ms while the loop ran a continuous beat/events/render cycle. Now a
-message from 8 KiB renders synchronously once (history shows no placeholder)
-and every later cache miss (streaming delta, width or theme change) diverts to
-the D204 worker, which re-renders the full snapshot off-loop and publishes with
-the existing generation checks; the owner paints the stale lines meanwhile.
-At 64 KiB (`veryLargeMarkdownBytes`) the cold first render submits off-loop
-too, exactly as D204 specified. Standalone renderers without a preparation
-stay synchronous.

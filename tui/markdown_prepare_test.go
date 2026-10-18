@@ -103,35 +103,3 @@ func TestLargeMarkdownPreparationLeavesOwnerRenderingCheap(t *testing.T) {
 		t.Fatal("prepared render differs from synchronous rendering")
 	}
 }
-
-// D239: a streaming assistant message lives below the old 64 KiB threshold for
-// its whole life, so every delta re-wrapped the growing open paragraph on the
-// owner loop (the Oct 18 profile: 30 of 40 loop samples in
-// markdown.Renderer.Finalize, one paint at 94ms). Prepared markdown diverts to
-// the off-loop renderer from 8 KiB, and only from the second render: the first
-// render stays synchronous, so history never shows a placeholder.
-func TestStreamingMarkdownPreparesFromTheSecondRender(t *testing.T) {
-	text := strings.Repeat("paragraph with enough words to wrap a little bit\n", 180) // ~8.6 KiB
-	markdown := NewMarkdown(text, 0, 0, MarkdownTheme{}, nil, MarkdownOptions{})
-	submits := 0
-	markdown.SetPreparation(&MarkdownPreparation{
-		Submit: func(run func() func()) bool { submits++; run(); return true },
-	})
-
-	first := markdown.Render(80)
-	if submits != 0 {
-		t.Fatalf("the first render must stay synchronous (%d submits)", submits)
-	}
-	stale := append([]string(nil), first...)
-
-	// The streaming delta: text grew, the cache misses, and the render must
-	// divert to the preparation instead of re-wrapping on the owner.
-	markdown.SetText(text + "and one more appended sentence for the delta.\n")
-	second := markdown.Render(80)
-	if submits != 1 {
-		t.Fatalf("delta render submits = %d, want 1 (rendered on the owner)", submits)
-	}
-	if strings.Join(second, "\x00") != strings.Join(stale, "\x00") {
-		t.Fatal("a delta render must paint the stale lines, not block on a fresh render")
-	}
-}
