@@ -1673,3 +1673,32 @@ func (m *SessionManager) EntryCount() int {
 	defer m.mu.Unlock()
 	return len(m.fileEntries)
 }
+
+// LatestAssistantMessage returns the newest assistant message in the session,
+// or nil. It scans fileEntries backward under the lock and decodes only the
+// message it returns: callers on the UI loop (message_end's thinking-drop
+// notice) must not pay getEntriesLocked/getBranch's per-entry value copy, which
+// is O(session) at 440 bytes each.
+func (m *SessionManager) LatestAssistantMessage() *ai.AssistantMessage {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for i := len(m.fileEntries) - 1; i >= 0; i-- {
+		entry := m.fileEntries[i].Entry
+		if entry == nil || entry.Type != "message" || len(entry.Message) == 0 {
+			continue
+		}
+		// The memoized role avoids decoding every non-assistant message while
+		// walking backward (the branch copy's cost, in a cheaper form).
+		if m.messages.role(entry) != "assistant" {
+			continue
+		}
+		message, err := ai.UnmarshalMessage(entry.Message)
+		if err != nil {
+			continue
+		}
+		if assistant, ok := message.(*ai.AssistantMessage); ok {
+			return assistant
+		}
+	}
+	return nil
+}
