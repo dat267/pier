@@ -614,3 +614,34 @@ func TestCheckCompactionRequiresProjectedUsage(t *testing.T) {
 		t.Fatal("usage recorded before a context edit must not trigger silent-overflow compaction")
 	}
 }
+
+// TestCompactionReportsEstimatedTokensAfter covers the compaction_end payload:
+// upstream recomputes the context size after appending the compaction
+// (estimatedTokensAfter), and the port used to leave it at zero.
+func TestCompactionReportsEstimatedTokensAfter(t *testing.T) {
+	var runs atomic.Int64
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 8192}
+	session := compactionTestSession(t, model, summarizingStreamFn(t, &runs, "summary text that is long enough to pass the usability check"), smallCompactionSettings())
+	seedBranch(t, session)
+	drain := collectCompactionEvents(session)
+
+	assistant := &ai.AssistantMessage{
+		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m", Timestamp: timeNowMS(),
+		StopReason: ai.StopStop,
+		Usage:      ai.Usage{Input: 99950, Output: 10, TotalTokens: 99960},
+	}
+	if _, err := session.CheckCompaction(ctxpkg.Background(), assistant, true); err != nil {
+		t.Fatal(err)
+	}
+	_, ends, lastEnd := drain()
+	if ends != 1 || lastEnd == nil || lastEnd.Result == nil {
+		t.Fatalf("compaction events = %d, %+v", ends, lastEnd)
+	}
+	result := lastEnd.Result
+	if result.EstimatedTokensAfter <= 0 {
+		t.Fatalf("estimatedTokensAfter = %d, want the post-compaction estimate", result.EstimatedTokensAfter)
+	}
+	if result.EstimatedTokensAfter > result.TokensBefore {
+		t.Fatalf("estimatedTokensAfter = %d exceeds tokensBefore = %d", result.EstimatedTokensAfter, result.TokensBefore)
+	}
+}

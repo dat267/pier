@@ -317,6 +317,11 @@ func (s *AgentSession) RunAutoCompaction(ctx context.Context, reason CompactionR
 	s.Sessions.AppendCompaction(result.Summary, result.FirstKeptEntryID, result.TokensBefore, result.Details, false, result.Usage)
 	sessionContext := s.Sessions.Projection()
 	s.Agent.SetMessages(sessionContext.Messages)
+	// Report the context size after the compaction and refresh the entry mapping
+	// to the finalized context (upstream _refreshFinalizedContext plus
+	// estimatedTokensAfter).
+	result.EstimatedTokensAfter = int64(estimateMessagesTokens(sessionContext.Messages))
+	s.refreshFinalizedContext(sessionContext)
 
 	s.emit(&SessionEvent{Type: SessionCompactionEnd, Reason: reason, Result: result, WillRetry: willRetry})
 	// An overflow recovery that consumed the failed message retries the turn.

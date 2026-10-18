@@ -784,7 +784,33 @@ func (s *AgentSession) runManualCompaction(ctx context.Context, customInstructio
 	s.Sessions.AppendCompaction(result.Summary, result.FirstKeptEntryID, result.TokensBefore, result.Details, false, result.Usage)
 	sessionContext := s.Sessions.Projection()
 	s.Agent.SetMessages(sessionContext.Messages)
+	result.EstimatedTokensAfter = int64(estimateMessagesTokens(sessionContext.Messages))
+	s.refreshFinalizedContext(sessionContext)
 	return result, nil
+}
+
+// estimateMessagesTokens sums the estimated size of every message
+// (upstream estimateMessagesTokens).
+func estimateMessagesTokens(messages []ai.Message) int {
+	tokens := 0
+	for _, message := range messages {
+		tokens += EstimateAgentMessageTokens(message)
+	}
+	return tokens
+}
+
+// refreshFinalizedContext records the finalized context's message-to-entry
+// mapping (upstream _refreshFinalizedContext).
+func (s *AgentSession) refreshFinalizedContext(context SessionContext) {
+	ids := make(map[ai.Message]string, len(context.Messages))
+	for _, entry := range s.Sessions.ProjectedEntries() {
+		for _, message := range entry.Messages {
+			ids[message] = entry.Source.ID
+		}
+	}
+	s.mu.Lock()
+	s.entryIDsByMessage = ids
+	s.mu.Unlock()
 }
 
 // adaptStreamFn wraps a StreamFn into the compaction StreamFnFn shape.
