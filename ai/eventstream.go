@@ -61,6 +61,13 @@ func (s *EventStream[T, R]) resolveResult(r R) {
 	})
 }
 
+// isDone reports whether the stream has completed, under the lock.
+func (s *EventStream[T, R]) isDone() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.done
+}
+
 // Push delivers an event. After completion, pushes are ignored.
 func (s *EventStream[T, R]) Push(event T) {
 	s.mu.Lock()
@@ -235,7 +242,7 @@ func (s *AssistantMessageEventStream) End(result **AssistantMessage) {
 // stream: a stream that only forwards a response, such as a deferred result fetched later,
 // must not time it (upstream #10549).
 func (s *AssistantMessageEventStream) timeMessage(message *AssistantMessage) {
-	if message == nil || s.EventStream.done || message.DurationMs != nil {
+	if message == nil || s.EventStream.isDone() || message.DurationMs != nil {
 		return
 	}
 	if message.Timestamp < s.startedAt {
