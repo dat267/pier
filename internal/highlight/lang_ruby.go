@@ -35,7 +35,7 @@ func rubyHeredocBegin(s string, pos int) (int, bool) {
 		return 0, false
 	}
 	i++
-	for i <= len(s) {
+	for i < len(s) {
 		lineStart := i
 		var line string
 		if nl := strings.IndexByte(s[i:], '\n'); nl < 0 {
