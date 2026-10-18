@@ -87,6 +87,15 @@ type RunWiring struct {
 	// and PIER_STALL_MS overrides it (0 disables).
 	StallLogPath      string
 	StallLogThreshold time.Duration
+	// StallLogCPUAfter is how long a busy streak must run before its CPU
+	// profile starts; 0 disables profile capture. Resolved once from
+	// PIER_STALL_CPU_MS at construction.
+	StallLogCPUAfter time.Duration
+	// stallStreak bookkeeping for contiguous busy runs across phases; confined
+	// to the loop goroutine (see phase).
+	stallStreakStart  time.Time
+	stallStreakEnd    time.Time
+	stallStreakPhases []string
 	// OnThemeChange registers the theme-file watcher callback.
 	OnThemeChange func(callback func()) func()
 	// OnBranchChange registers the git-branch watcher callback.
@@ -621,38 +630,74 @@ func (w *RunWiring) phase(name string) func() {
 		return func() {}
 	}
 	start := time.Now()
-	cpu := w.armStallCPUWatch(stallCPUThresholdFromEnv())
+	// A keystroke's round trip crosses every phase the loop runs while it
+	// waits, so the user-feel latency is the contiguous busy run, not one
+	// phase: two 40ms phases with a 3ms gap feel like 83ms and each is under
+	// any threshold. Track the streak here (loop goroutine only — no locks)
+	// and record it when it crosses the threshold even though no single phase
+	// does. The gap bound says how idle the loop must be before the streak
+	// restarts.
+	if w.stallStreakEnd.IsZero() || start.Sub(w.stallStreakEnd) > stallStreakGap {
+		w.stallStreakStart = start
+		w.stallStreakPhases = append(w.stallStreakPhases[:0], name)
+	} else {
+		w.stallStreakPhases = append(w.stallStreakPhases, name)
+		if len(w.stallStreakPhases) > stallStreakPhaseLimit {
+			w.stallStreakPhases = w.stallStreakPhases[len(w.stallStreakPhases)-stallStreakPhaseLimit:]
+		}
+	}
+	streakSoFar := start.Sub(w.stallStreakStart)
+	cpu := w.armStallCPUWatch(w.StallLogCPUAfter, streakSoFar)
 	watchdog := time.AfterFunc(w.StallLogThreshold, func() {
 		w.writeStallRecord(name, time.Since(start), " still running", nil)
 	})
 	return func() {
 		watchdog.Stop()
+		now := time.Now()
+		w.stallStreakEnd = now
 		profile := cpu.finish()
-		if elapsed := time.Since(start); elapsed >= w.StallLogThreshold {
+		elapsed := now.Sub(start)
+		switch {
+		case elapsed >= w.StallLogThreshold:
+			// The phase itself was slow; it is also the tail of the streak, so
+			// the single-phase record (which names the phase) is the truth. The
+			// streak resets here: its busyness is already recorded, and carrying
+			// it forward would re-record the same time as a streak on the next
+			// phase.
+			w.stallStreakStart = now
+			w.stallStreakPhases = w.stallStreakPhases[:0]
 			w.writeStallRecord(name, elapsed, "", profile)
+		case now.Sub(w.stallStreakStart) >= w.StallLogThreshold:
+			w.writeStallRecord("streak", now.Sub(w.stallStreakStart), " phases="+strings.Join(w.stallStreakPhases, "+"), profile)
 		}
 	}
 }
 
-// stallCPUProfileAfter is how long a phase must still be running before the
-// watchdog starts a CPU profile for it. The goroutine dump cannot attribute a
-// completed render (it fires in the deferred phase end, when the loop is back
-// in the profiler), so a phase that overruns the stall threshold by this much
-// also captures where the CPU went. PIER_STALL_CPU_MS overrides it (0
-// disables profiling); the var remains a seam so tests shorten it without an
-// env round trip.
-var stallCPUProfileAfter = 250 * time.Millisecond
+// stallStreakGap is how idle the loop may be between phases before a busy
+// streak restarts. Test seam: tests shorten it.
+var stallStreakGap = 10 * time.Millisecond
+
+// stallStreakPhaseLimit bounds the phases listed in a streak record.
+const stallStreakPhaseLimit = 8
+
+// stallCPUProfileAfterDefault is how long a busy streak must run before its
+// CPU profile starts (overridable with PIER_STALL_CPU_MS, 0 disables). The
+// goroutine dump cannot attribute a completed render (it fires in the deferred
+// phase end, when the loop is back in the profiler), so a streak that overruns
+// the stall threshold by this much also captures where the CPU went.
+const stallCPUProfileAfterDefault = 250 * time.Millisecond
 
 // stallCPUThresholdFromEnv resolves the CPU-profile threshold the way
-// stallLogThreshold resolves PIER_STALL_MS.
+// stallLogThreshold resolves PIER_STALL_MS. Called once at wiring construction;
+// phase reads the wiring field, so a test constructs its own value.
 func stallCPUThresholdFromEnv() time.Duration {
 	value := os.Getenv("PIER_STALL_CPU_MS")
 	if value == "" {
-		return stallCPUProfileAfter
+		return stallCPUProfileAfterDefault
 	}
 	millis, err := strconv.Atoi(value)
 	if err != nil || millis < 0 {
-		return stallCPUProfileAfter
+		return stallCPUProfileAfterDefault
 	}
 	return time.Duration(millis) * time.Millisecond
 }
@@ -669,13 +714,20 @@ type stallCPUWatch struct {
 }
 
 // armStallCPUWatch starts the CPU-profile watchdog for one phase, or returns
-// nil when profiling is off.
-func (w *RunWiring) armStallCPUWatch(after time.Duration) *stallCPUWatch {
+// nil when profiling is off. The delay is how long the phase's streak may run
+// before the profile starts: the CPU threshold minus what earlier contiguous
+// phases already spent, so a streak is profiled from the moment it crosses the
+// threshold, not only from a single slow phase.
+func (w *RunWiring) armStallCPUWatch(after time.Duration, streakSoFar time.Duration) *stallCPUWatch {
 	if after <= 0 {
 		return nil
 	}
+	delay := after - streakSoFar
+	if delay < 0 {
+		delay = 0
+	}
 	watch := &stallCPUWatch{}
-	time.AfterFunc(after, func() {
+	time.AfterFunc(delay, func() {
 		watch.mu.Lock()
 		defer watch.mu.Unlock()
 		if watch.done {
@@ -719,12 +771,33 @@ var stallWriteMu sync.Mutex
 
 // writeStallRecord appends the slow phase and every goroutine stack, so a stall
 // names where the loop was instead of only how long it took. note (possibly
-// empty) distinguishes a mid-flight capture from the after-phase one. A
-// non-empty cpu profile is written to a sibling .pprof file and its path is
-// noted in the record.
+// empty) distinguishes a mid-flight capture from the after-phase one and names
+// a streak's phases. A non-empty cpu profile is written to a sibling .pprof
+// file and its path is noted in the record.
+//
+// The record is built in memory and written with one Write: a process exiting
+// mid-record otherwise leaves a header without its dump (an 81-byte orphan
+// observed when a quit key's phase crossed the threshold), which reads as a
+// defect instead of a torn write.
 func (w *RunWiring) writeStallRecord(name string, elapsed time.Duration, note string, cpu []byte) {
 	stallWriteMu.Lock()
 	defer stallWriteMu.Unlock()
+	var record strings.Builder
+	fmt.Fprintf(&record, "%s slow UI phase %q %v%s\n", time.Now().Format(time.RFC3339Nano), name, elapsed.Round(time.Millisecond), note)
+	_ = pprof.Lookup("goroutine").WriteTo(&record, 1)
+	if len(cpu) > 0 {
+		profilePath := filepath.Join(filepath.Dir(w.StallLogPath),
+			"pier-stall-cpu-"+time.Now().Format("20060102T150405.000000000")+".pprof")
+		if profileFile, err := os.OpenFile(profilePath, os.O_CREATE|os.O_WRONLY, 0o644); err == nil {
+			_, writeErr := profileFile.Write(cpu)
+			_ = profileFile.Close()
+			if writeErr == nil {
+				fmt.Fprintf(&record, "cpu-profile=%s\n", profilePath)
+			} else {
+				_ = os.Remove(profilePath)
+			}
+		}
+	}
 	flags := os.O_APPEND | os.O_CREATE | os.O_WRONLY
 	if info, err := os.Stat(w.StallLogPath); err == nil && info.Size() > stallLogMaxBytes {
 		flags = os.O_CREATE | os.O_WRONLY | os.O_TRUNC
@@ -734,21 +807,7 @@ func (w *RunWiring) writeStallRecord(name string, elapsed time.Duration, note st
 		return
 	}
 	defer file.Close()
-	fmt.Fprintf(file, "%s slow UI phase %q %v%s\n", time.Now().Format(time.RFC3339Nano), name, elapsed.Round(time.Millisecond), note)
-	_ = pprof.Lookup("goroutine").WriteTo(file, 1)
-	if len(cpu) > 0 {
-		profilePath := filepath.Join(filepath.Dir(w.StallLogPath),
-			"pier-stall-cpu-"+time.Now().Format("20060102T150405.000000000")+".pprof")
-		if profileFile, err := os.OpenFile(profilePath, os.O_CREATE|os.O_WRONLY, 0o644); err == nil {
-			_, writeErr := profileFile.Write(cpu)
-			_ = profileFile.Close()
-			if writeErr == nil {
-				fmt.Fprintf(file, "cpu-profile=%s\n", profilePath)
-			} else {
-				_ = os.Remove(profilePath)
-			}
-		}
-	}
+	_, _ = file.WriteString(record.String())
 }
 
 // LoopBeats reports the loop's iteration count (watchdog beat).
@@ -1082,6 +1141,7 @@ func newRunWiring(app *App) *RunWiring {
 		},
 		StallLogPath:      stallLogPath(app.options.AgentDir),
 		StallLogThreshold: stallLogThreshold(),
+		StallLogCPUAfter:  stallCPUThresholdFromEnv(),
 
 		Prompt: func(ctx context.Context, text string, images []ai.ImageContent) error {
 			return app.session.Prompt(ctx, text, &coding.PromptOptions{Images: images})

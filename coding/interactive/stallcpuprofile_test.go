@@ -14,12 +14,8 @@ import (
 // already back in the profiler), but the Oct 17 render burst (6 paints at
 // 333-449ms) needs to name the component that dominated.
 func TestStallPhaseCapturesCPUProfile(t *testing.T) {
-	oldAfter := stallCPUProfileAfter
-	stallCPUProfileAfter = 2 * time.Millisecond
-	defer func() { stallCPUProfileAfter = oldAfter }()
-
 	dir := t.TempDir()
-	w := &RunWiring{StallLogPath: filepath.Join(dir, "pier-stall.log"), StallLogThreshold: time.Millisecond}
+	w := &RunWiring{StallLogPath: filepath.Join(dir, "pier-stall.log"), StallLogThreshold: time.Millisecond, StallLogCPUAfter: 2 * time.Millisecond}
 	done := w.phase("render")
 	start := time.Now()
 	sink := 0
@@ -58,12 +54,8 @@ func TestStallPhaseCapturesCPUProfile(t *testing.T) {
 // A phase that finishes before the CPU watchdog fires writes no profile file,
 // but still gets its stall record.
 func TestStallPhaseSkipsCPUProfileWhenFast(t *testing.T) {
-	oldAfter := stallCPUProfileAfter
-	stallCPUProfileAfter = time.Second
-	defer func() { stallCPUProfileAfter = oldAfter }()
-
 	dir := t.TempDir()
-	w := &RunWiring{StallLogPath: filepath.Join(dir, "pier-stall.log"), StallLogThreshold: time.Millisecond}
+	w := &RunWiring{StallLogPath: filepath.Join(dir, "pier-stall.log"), StallLogThreshold: time.Millisecond, StallLogCPUAfter: time.Second}
 	done := w.phase("render")
 	time.Sleep(3 * time.Millisecond)
 	done()
@@ -89,11 +81,7 @@ func TestStallPhaseSkipsCPUProfileWhenFast(t *testing.T) {
 
 // Profiling only arms when stall recording is on at all.
 func TestStallPhaseCPUProfileDisabledWithoutStallLog(t *testing.T) {
-	oldAfter := stallCPUProfileAfter
-	stallCPUProfileAfter = time.Nanosecond
-	defer func() { stallCPUProfileAfter = oldAfter }()
-
-	w := &RunWiring{StallLogPath: "", StallLogThreshold: time.Millisecond}
+	w := &RunWiring{StallLogPath: "", StallLogThreshold: time.Millisecond, StallLogCPUAfter: time.Nanosecond}
 	done := w.phase("render")
 	time.Sleep(5 * time.Millisecond)
 	done() // must not panic or start a profile
@@ -125,5 +113,64 @@ func TestStallCPUThresholdFromEnv(t *testing.T) {
 		if got := stallCPUThresholdFromEnv(); got != tc.want {
 			t.Errorf("PIER_STALL_CPU_MS=%q (set=%v): got %v, want %v", tc.env, tc.set, got, tc.want)
 		}
+	}
+}
+
+// A keystroke's round trip crosses every phase the loop runs while it waits;
+// each phase can be under the stall threshold while the user-feel latency is
+// not. The live case: two ~84ms reads at startup with PIER_STALL_MS=50 wrote no
+// record because the loop's phases were each under 50ms. A contiguous run of
+// short phases is recorded as one busy streak naming every phase it crossed,
+// with the CPU profile the same way a single slow phase is.
+func TestStallLogRecordsBusyStreakAcrossPhases(t *testing.T) {
+	dir := t.TempDir()
+	w := &RunWiring{StallLogPath: filepath.Join(dir, "pier-stall.log"), StallLogThreshold: 50 * time.Millisecond, StallLogCPUAfter: 20 * time.Millisecond}
+	done := w.phase("events")
+	time.Sleep(10 * time.Millisecond)
+	done()
+	time.Sleep(2 * time.Millisecond) // contiguous: the streak continues
+	done = w.phase("events")
+	time.Sleep(10 * time.Millisecond)
+	done()
+	time.Sleep(2 * time.Millisecond)
+	done = w.phase("render")
+	time.Sleep(30 * time.Millisecond) // single phase under threshold, streak over
+	done()
+
+	record, err := os.ReadFile(w.StallLogPath)
+	if err != nil {
+		t.Fatalf("no stall record for the busy streak: %v", err)
+	}
+	text := string(record)
+	if !strings.Contains(text, `phases=events+events+render`) {
+		t.Fatalf("streak record does not name the phases: %s", text)
+	}
+	if strings.Contains(text, `slow UI phase "render"`) || strings.Contains(text, `slow UI phase "events"`) {
+		t.Fatalf("individual phases must not be recorded when only the streak is slow: %s", text)
+	}
+	entries, err := filepath.Glob(filepath.Join(dir, "pier-stall-cpu-*.pprof"))
+	if err != nil || len(entries) != 1 {
+		t.Fatalf("cpu profile files = %v (err %v), want one", entries, err)
+	}
+}
+
+// A long idle gap between phases starts a new streak: spaced-out short phases
+// are not a busy loop, and each is under the threshold on its own.
+func TestStallLogIdleGapBreaksStreak(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "pier-stall.log")
+	w := &RunWiring{StallLogPath: path, StallLogThreshold: 50 * time.Millisecond}
+	done := w.phase("events")
+	time.Sleep(10 * time.Millisecond)
+	done()
+	time.Sleep(100 * time.Millisecond) // the loop went idle in between
+	done = w.phase("render")
+	time.Sleep(30 * time.Millisecond)
+	done()
+
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		info, _ := os.Stat(path)
+		data, _ := os.ReadFile(path)
+		t.Fatalf("spaced-out short phases recorded: %v (%d bytes: %s)", err, info.Size(), data)
 	}
 }
