@@ -45,13 +45,17 @@ type scheduleHarness struct {
 	schedule *loopSchedule
 	paints   int
 	reads    int
+	readAt   time.Time
+	lastRead time.Time
 }
 
 func newScheduleHarness() *scheduleHarness {
 	h := &scheduleHarness{host: &fakeLoopHost{}}
+	h.readAt = time.Unix(100, 0)
 	h.schedule = newLoopSchedule(h.host,
 		func() { h.paints++ },
-		func() { h.reads++ },
+		func(t time.Time) { h.reads++; h.lastRead = t },
+		func() time.Time { return h.readAt },
 	)
 	return h
 }
@@ -327,5 +331,53 @@ func TestLoopScheduleFlushesAndPaintsOnAnimationFire(t *testing.T) {
 	}
 	if !h.armed() {
 		t.Fatal("the loop did not re-arm after the frame fired")
+	}
+}
+
+// Input latency is the keystroke's read time to the frame that answers it. The
+// read time is captured when the input is dispatched and consumed once: reading
+// the terminal's last-read time at paint time let an unrelated later paint (an
+// animation tick after a key) inherit the key's stale stamp and report a
+// spurious 100ms+ round trip.
+func TestLoopScheduleStampsInputOnceWithTheCapturedReadTime(t *testing.T) {
+	h := newScheduleHarness()
+	h.readAt = time.Unix(1000, 0)
+	h.host.pushRenderTick()
+	h.schedule.paintIfRequested()
+	if h.reads != 1 || !h.lastRead.Equal(h.readAt) {
+		t.Fatalf("stamps=%d lastRead=%v, want one at %v", h.reads, h.lastRead, h.readAt)
+	}
+	if !h.schedule.pendingInputReadAt.IsZero() {
+		t.Fatal("captured read time was not consumed")
+	}
+	// An unrelated paint must not stamp again.
+	h.schedule.paintNow()
+	if h.reads != 1 {
+		t.Fatalf("unrelated paint stamped a frame (%d stamps)", h.reads)
+	}
+}
+
+// A paint deferred by output backpressure keeps the captured read time, so the
+// frame that finally answers the keystroke still reports the true wait.
+func TestLoopScheduleKeepsCapturedReadTimeAcrossADeferredPaint(t *testing.T) {
+	h := newScheduleHarness()
+	h.readAt = time.Unix(2000, 0)
+	h.host.outputBytes = terminalOutputHighWaterBytes
+	h.host.pushRenderTick()
+	h.schedule.paintIfRequested()
+	if h.reads != 0 || h.paints != 0 {
+		t.Fatalf("paused loop painted (reads=%d paints=%d)", h.reads, h.paints)
+	}
+	if h.schedule.pendingInputReadAt.IsZero() {
+		t.Fatal("deferred paint dropped the captured read time")
+	}
+	// A later stdin read (a terminal reply) lands before the frame is painted;
+	// the frame must still report the keystroke's own read time.
+	h.readAt = time.Unix(3000, 0)
+	h.host.outputBytes = 0
+	h.schedule.paintNow()
+	if h.reads != 1 || !h.lastRead.Equal(time.Unix(2000, 0)) {
+		t.Fatalf("resumed paint stamped %d times, last %v; want the captured %v",
+			h.reads, h.lastRead, time.Unix(2000, 0))
 	}
 }

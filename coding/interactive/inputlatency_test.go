@@ -73,18 +73,21 @@ func TestRunWiringMarksInputRead(t *testing.T) {
 	terminal := &fakeRawTerminal{fakeRendererTerminal: &fakeRendererTerminal{width: 80, height: 24}, readAt: readAt}
 	wiring := &RunWiring{RawTerminal: terminal}
 
-	wiring.markInputRead()
+	wiring.stampInputRead(readAt)
 	if len(terminal.marked) != 1 || !terminal.marked[0].Equal(readAt) {
 		t.Fatalf("marked = %v, want [%v]", terminal.marked, readAt)
 	}
 
 	// A zero read stamp (no input yet) must not be marked: an untagged next
 	// frame would inherit it.
-	terminal.readAt = time.Time{}
 	terminal.marked = nil
-	wiring.markInputRead()
+	wiring.stampInputRead(time.Time{})
 	if len(terminal.marked) != 0 {
 		t.Fatalf("zero readAt marked: %v", terminal.marked)
+	}
+
+	if got := wiring.lastInputReadAt(); !got.Equal(readAt) {
+		t.Fatalf("lastInputReadAt = %v, want %v", got, readAt)
 	}
 }
 

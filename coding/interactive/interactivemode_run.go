@@ -923,7 +923,7 @@ func (w *RunWiring) runLoop(ctx context.Context, initialWork []string, initialIm
 	// scan. Coalesced render requests paint at most once per frame interval, so
 	// a fast event stream (streaming deltas) cannot saturate the loop with
 	// back-to-back full repaints; resize and animation paints stay immediate.
-	schedule := newLoopSchedule(runLoopHost{w}, w.renderUI, w.markInputRead)
+	schedule := newLoopSchedule(runLoopHost{w}, w.renderUI, w.stampInputRead, w.lastInputReadAt)
 	w.schedule = schedule
 	schedule.setContext(ctx)
 	w.StartWork = w.RunWork
@@ -1079,16 +1079,24 @@ func (w *RunWiring) runLoop(ctx context.Context, initialWork []string, initialIm
 	}
 }
 
-// markInputRead tags the coming frame with when the terminal read the
+// lastInputReadAt reports when the terminal last read stdin. The schedule
+// captures it when input is dispatched, so an unrelated later paint cannot tag
+// its frame with the keystroke's stale read time.
+func (w *RunWiring) lastInputReadAt() time.Time {
+	if w.RawTerminal == nil {
+		return time.Time{}
+	}
+	return w.RawTerminal.LastInputAt()
+}
+
+// stampInputRead tags the coming frame with when the terminal read the
 // keystroke, so the writer can report the end-to-end latency (see
 // inputLatencyRecorder). No-op without a raw terminal or instrumentation.
-func (w *RunWiring) markInputRead() {
-	if w.RawTerminal == nil {
+func (w *RunWiring) stampInputRead(readAt time.Time) {
+	if w.RawTerminal == nil || readAt.IsZero() {
 		return
 	}
-	if readAt := w.RawTerminal.LastInputAt(); !readAt.IsZero() {
-		w.RawTerminal.MarkInputRead(readAt)
-	}
+	w.RawTerminal.MarkInputRead(readAt)
 }
 
 // RunOptions are the run orchestration inputs.

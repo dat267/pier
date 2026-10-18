@@ -65,7 +65,7 @@ func TestAnimationScanCacheIsDroppedByAPaint(t *testing.T) {
 	app.Init(context.Background())
 	wiring := newRunWiring(app)
 
-	schedule := newLoopSchedule(runLoopHost{wiring}, wiring.renderUI, nil)
+	schedule := newLoopSchedule(runLoopHost{wiring}, wiring.renderUI, nil, nil)
 	defer schedule.close()
 
 	// Idle: the walk finds no animator, and the loop caches that answer.
