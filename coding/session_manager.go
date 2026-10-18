@@ -548,11 +548,18 @@ func (m *SessionManager) AppendCompaction(summary string, firstKeptEntryID strin
 	systemMessage := m.CurrentSystemMessage()
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	timestamp := time.Now().UTC().Format(time.RFC3339Nano)
+	now := time.Now().UTC()
+	timestamp := now.Format(time.RFC3339Nano)
 	entry := m.nextEntry("compaction")
 	entry.Timestamp = timestamp
 	entry.Summary = summary
+	// A compaction with no kept entry points at itself (upstream
+	// `firstKeptEntryId: firstKeptEntryId ?? id`), so the window keeps the
+	// summary instead of dropping everything before it.
 	entry.FirstKeptEntryID = firstKeptEntryID
+	if entry.FirstKeptEntryID == "" {
+		entry.FirstKeptEntryID = entry.ID
+	}
 	entry.TokensBefore = tokensBefore
 	entry.Details = details
 	entry.Usage = usage
@@ -560,7 +567,9 @@ func (m *SessionManager) AppendCompaction(summary string, firstKeptEntryID strin
 		entry.FromHook = boolPtr(true)
 	}
 	if systemMessage != nil {
-		systemMessage.Timestamp = time.Now().UnixMilli()
+		// The recorded system message carries the compaction's own timestamp
+		// (upstream stamps it with new Date(timestamp).getTime()).
+		systemMessage.Timestamp = now.UnixMilli()
 		entry.SystemMessageJSON = mustMarshalJSON(systemMessage)
 	}
 	return m.appendEntry(&entry)

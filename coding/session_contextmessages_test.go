@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/dat267/pier/ai"
@@ -83,5 +84,36 @@ func TestCompactionContextCarriesTheRecordedSystemMessage(t *testing.T) {
 	broken.SystemMessageJSON = []byte(`{not json`)
 	if messages := SessionEntryToContextMessages(&broken); len(messages) != 1 {
 		t.Errorf("messages = %d, want the summary alone", len(messages))
+	}
+}
+
+// TestAppendCompactionDefaults pins appendCompaction's two fallbacks: a
+// compaction with no first kept entry points at itself (upstream
+// `firstKeptEntryId ?? id`), and the recorded system message carries the
+// compaction's own timestamp rather than a later one.
+func TestAppendCompactionDefaults(t *testing.T) {
+	manager := newTestSessionManager(t)
+	manager.AppendMessage(&ai.SystemMessage{Content: ai.StringOrBlocks{Text: "you are a tool"}, Timestamp: 1})
+	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}, Timestamp: 2})
+
+	id := manager.AppendCompaction("a summary", "", 10, nil, false, nil)
+	entry := manager.GetEntry(id)
+	if entry == nil {
+		t.Fatal("compaction entry missing")
+	}
+	if entry.FirstKeptEntryID != id {
+		t.Fatalf("first kept entry = %q, want the compaction's own id %q", entry.FirstKeptEntryID, id)
+	}
+	var recorded ai.SystemMessage
+	if err := json.Unmarshal(entry.SystemMessageJSON, &recorded); err != nil {
+		t.Fatalf("recorded system message: %v", err)
+	}
+	if recorded.Timestamp != entryTimestampMS(entry) {
+		t.Fatalf("system timestamp = %d, want the entry's %d", recorded.Timestamp, entryTimestampMS(entry))
+	}
+	// A retained first kept entry is kept as given.
+	retained := manager.AppendCompaction("another summary", id, 10, nil, false, nil)
+	if got := manager.GetEntry(retained); got == nil || got.FirstKeptEntryID != id {
+		t.Fatalf("explicit first kept entry was replaced: %+v", got)
 	}
 }
