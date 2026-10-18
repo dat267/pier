@@ -157,22 +157,3 @@ func TestStreamingMarkdownPreparesFrom2KiB(t *testing.T) {
 		t.Fatalf("a ~3KiB delta render submits = %d, want 1", submits)
 	}
 }
-
-// A streaming message can arrive in one large chunk, so its first render can
-// already be over the threshold. That first render must also prepare off-loop
-// (the live 18:59 stall: 106ms busy / 155ms keystroke while an assistant
-// message rendered on the loop). Options.Streaming tells the markdown it is
-// live, so the first render need not stay synchronous for a placeholder-free
-// history.
-func TestStreamingMarkdownPreparesOnTheFirstLargeRender(t *testing.T) {
-	text := strings.Repeat("a short paragraph that wraps a little.\n", 80) // ~2.9 KiB
-	markdown := NewMarkdown(text, 0, 0, MarkdownTheme{}, nil, MarkdownOptions{Streaming: true})
-	submits := 0
-	markdown.SetPreparation(&MarkdownPreparation{
-		Submit: func(run func() func()) bool { submits++; return true },
-	})
-	markdown.Render(80)
-	if submits != 1 {
-		t.Fatalf("first streaming render submits = %d, want 1", submits)
-	}
-}

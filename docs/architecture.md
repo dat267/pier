@@ -207,11 +207,7 @@ with historical measurements retained to explain the design.
   a live profile showed deltas re-wrapping the open paragraph on the loop below
   64 KiB (one paint at 94 ms, keystrokes waiting 100-200 ms). D242 lowers it
   again to 2 KiB after the loop was caught rendering a sub-8 KiB streaming
-  message per coalesced paint (101-110 ms streaks). A live streaming message
-  (`MarkdownOptions.Streaming`) also prepares on its first render, because a
-  large first chunk otherwise rendered synchronously on the loop (the 18:59
-  stall: 106 ms busy, 155 ms keystroke); history keeps the synchronous first
-  render so it never shows a placeholder.
+  message per coalesced paint (101-110 ms streaks).
 - **D205 large built-in tool results use private snapshots.** Text-only expanded
   read and both bash/powershell display modes at 8 KiB (D241 lowered this from
   64 KiB after the loop was caught rendering a mid-size bash result inline)
