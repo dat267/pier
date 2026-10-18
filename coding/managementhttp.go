@@ -73,10 +73,10 @@ func FetchWithRetry(ctx context.Context, request *http.Request, client *http.Cli
 		attemptRequest := request.WithContext(attemptCtx)
 
 		response, err := client.Do(attemptRequest)
-		if attemptCancel != nil {
-			attemptCancel()
-		}
 		if err != nil {
+			if attemptCancel != nil {
+				attemptCancel()
+			}
 			// Caller cancellation and the overall budget are terminal.
 			if baseCtx.Err() != nil {
 				return nil, err
@@ -91,12 +91,21 @@ func FetchWithRetry(ctx context.Context, request *http.Request, client *http.Cli
 
 		shouldRetry := retryOnStatus && retryableStatusCodes[response.StatusCode] && attempt < maxRetries
 		if !shouldRetry {
+			if attemptCancel != nil && response.Body != nil {
+				// Keep the per-attempt budget alive while the caller reads the
+				// body: canceling here would abort the read. Release it when the
+				// body closes, as upstream leaves the attempt signal alone.
+				response.Body = &cancelOnCloseBody{ReadCloser: response.Body, cancel: attemptCancel}
+			}
 			return response, nil
 		}
 		// Discard the body before retrying; the response is being abandoned.
 		if response.Body != nil {
 			_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 1<<20))
 			_ = response.Body.Close()
+		}
+		if attemptCancel != nil {
+			attemptCancel()
 		}
 	}
 }
@@ -105,4 +114,18 @@ func FetchWithRetry(ctx context.Context, request *http.Request, client *http.Cli
 // token becomes the Go runtime version).
 func PiUserAgent(version string) string {
 	return fmt.Sprintf("pi/%s (%s; %s; %s)", version, runtime.GOOS, runtime.Version(), runtime.GOARCH)
+}
+
+// cancelOnCloseBody cancels the per-attempt context when the caller closes the
+// response body. Canceling it inside FetchWithRetry (immediately after Do)
+// aborts the body read, so the attempt budget is released on close instead.
+type cancelOnCloseBody struct {
+	io.ReadCloser
+	cancel context.CancelFunc
+}
+
+func (b *cancelOnCloseBody) Close() error {
+	err := b.ReadCloser.Close()
+	b.cancel()
+	return err
 }
