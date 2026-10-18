@@ -218,10 +218,9 @@ Blocking session-event and terminal-input sends are released by run-context
 cancellation or queue/input closure. Standalone startup screens instead end
 when their selection is settled.
 
-Stages 2 (rendering) and 3 (input and signals) are also on the loop. **The
-main loop must never stall more than 100ms**: a handler, render path or watcher
-callback that can exceed that budget must move its blocking or heavy work
-off-loop (`RunWork`/detached work) or chunk it, never run it inline.
+Stages 2 (rendering) and 3 (input and signals) are also on the loop. Blocking
+or heavy work from a handler, render path or watcher callback runs off-loop
+(`RunWork`/detached work) or is chunked, never inline.
 `TestStreamingDeltaCostIndependentOfTranscriptSize` bounds the streaming delta
 path against transcript size. The full design and performance measurements are
 in `docs/architecture.md`.
