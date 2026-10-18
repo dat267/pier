@@ -351,6 +351,12 @@ func TestSummarizationFailureGuards(t *testing.T) {
 	if got := GetSummarizationFailure(errored, "Summarization"); got != "Summarization failed: boom" {
 		t.Fatalf("failure = %q", got)
 	}
+	// Upstream's `errorMessage || "Unknown error"` treats an empty message as
+	// missing.
+	empty := &ai.AssistantMessage{StopReason: ai.StopError, ErrorMessage: strPtrOf("")}
+	if got := GetSummarizationFailure(empty, "Summarization"); got != "Summarization failed: Unknown error" {
+		t.Fatalf("empty failure = %q", got)
+	}
 	ok := &ai.AssistantMessage{StopReason: ai.StopStop}
 	if got := GetSummarizationFailure(ok, "Summarization"); got != "" {
 		t.Fatalf("failure = %q", got)

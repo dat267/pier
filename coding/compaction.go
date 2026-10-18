@@ -896,7 +896,7 @@ Only summarize information explicitly present above. Do not infer or recreate la
 func GetSummarizationFailure(response *ai.AssistantMessage, label string) string {
 	if response.StopReason == ai.StopError {
 		message := "Unknown error"
-		if response.ErrorMessage != nil {
+		if response.ErrorMessage != nil && *response.ErrorMessage != "" {
 			message = *response.ErrorMessage
 		}
 		return fmt.Sprintf("%s failed: %s", label, message)
