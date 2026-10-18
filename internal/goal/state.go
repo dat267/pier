@@ -537,6 +537,17 @@ func GoalRoundPrompt(goal GoalView, turn int, now time.Time) string {
 	return strings.Join(lines, "\n")
 }
 
+// PauseContext frames the paused notice. It is model-facing context, not a
+// display card: the durable pause entry already shows the human what happened.
+func PauseContext(objective string, reason BlockedReason) string {
+	return strings.Join([]string{
+		`<goal_paused>`,
+		`Goal paused (` + reason.Code + `): ` + reason.Message + ` Objective (reference only, do not continue): ` + objective + `.`,
+		`Stop goal work until the human resumes it with /goal resume.`,
+		`</goal_paused>`,
+	}, "\n")
+}
+
 // WrapupContext frames the completion or blocking notice.
 func WrapupContext(objective string, blockedReason string) string {
 	if blockedReason != "" {

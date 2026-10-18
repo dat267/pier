@@ -120,6 +120,10 @@ func TestRenderGoalEventMessageVariants(t *testing.T) {
 	if len(paused.Children) != 2 {
 		t.Fatal("paused event must render a card")
 	}
+	pausedBody := RenderGoalEventMessage("paused", "<goal_paused>\nPaused\n</goal_paused>", 0, false, PhasePaused, true, stubTheme{}, true)
+	if strings.Contains(renderLines(pausedBody, 200), "goal_paused") {
+		t.Fatal("paused event must strip its wrapper tags")
+	}
 }
 
 func TestRenderGoalTurnEntryIsAFlatLine(t *testing.T) {

@@ -366,6 +366,17 @@ func TestGoalRoundPromptFramesTheObjectiveAsUntrustedUserData(t *testing.T) {
 	}
 }
 
+// D239: the paused notice is model-facing context, so it carries the stop code,
+// the reason, the objective as reference only, and how a human resumes.
+func TestPauseContextTellsTheModelToStop(t *testing.T) {
+	content := PauseContext("ship it", BlockedReason{Code: "budget-tokens", Message: "Token limit reached."})
+	for _, want := range []string{"<goal_paused>", "</goal_paused>", "budget-tokens", "Token limit reached.", "ship it", "do not continue", "/goal resume"} {
+		if !strings.Contains(content, want) {
+			t.Fatalf("pause context missing %q:\n%s", want, content)
+		}
+	}
+}
+
 func TestChangeEntryJSONByteParity(t *testing.T) {
 	g := createTestGoal("obj", t0, nil)
 	entry := GoalChangeEntry{Operation: OpCreate, Goal: &g, Timestamp: t0}

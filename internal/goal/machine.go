@@ -1,6 +1,10 @@
 // This file follows goal/machine.ts: GoalMachine, the deep module owning all
 // goal state. One seam: Dispatch(event) -> { effects, reply, isError }. Effects
 // are plain data; the caller performs all I/O.
+//
+// D223: the user goal extension is re-ported as this builtin internal package
+// (plus coding.GoalController and the coding/interactive renderers), because the
+// port has no extension host (D41).
 package goal
 
 import (
@@ -255,6 +259,24 @@ func (m *GoalMachine) wrapup(kind, objective, blockedReason string) Effect {
 	}
 }
 
+// pausedMessage reports a stop to the model. The reference sends a wrap-up
+// message for complete and blocked only; a pause left the agent with no notice
+// that goal work had stopped, so its next turn could keep pursuing the
+// objective. Context-only, like the wrap-up: the durable pause entry is what
+// the human sees. D239.
+func (m *GoalMachine) pausedMessage() []Effect {
+	if m.view == nil || m.view.BlockedReason == nil {
+		return nil
+	}
+	return []Effect{SendMessageEffect{
+		CustomType:  GoalEventType,
+		Content:     PauseContext(m.view.Objective, *m.view.BlockedReason),
+		Display:     false,
+		Details:     map[string]any{"kind": "paused"},
+		TriggerTurn: false,
+	}}
+}
+
 func (m *GoalMachine) goalUpdate(goalID string, rawRevision any, rawAction, blockedReason string) DispatchResult {
 	if rawAction != "complete" && rawAction != "blocked" && rawAction != "clear" {
 		return DispatchResult{Reply: stringPtr(fmt.Sprintf(`Unknown action %s. Use "complete", "blocked", or "clear".`, jsonQuote(rawAction))), IsError: true}
@@ -469,6 +491,7 @@ func (m *GoalMachine) agentEnd(_ ContextUsage, usage *GoalUsage, aborted bool) D
 			committed, err := m.commit(OpPause, &next, nil)
 			if err == nil {
 				effects = append(effects, committed...)
+				effects = append(effects, m.pausedMessage()...)
 			}
 		} else {
 			m.armed = false
@@ -494,7 +517,7 @@ func (m *GoalMachine) agentBeforeSettle(outcome string, hasPendingMessages bool,
 		if err != nil {
 			return DispatchResult{Effects: []Effect{}, Continue: false}
 		}
-		return DispatchResult{Effects: effects, Continue: false}
+		return DispatchResult{Effects: append(effects, m.pausedMessage()...), Continue: false}
 	}
 	if hasPendingMessages {
 		return DispatchResult{Effects: []Effect{}, Continue: false}
@@ -510,7 +533,7 @@ func (m *GoalMachine) agentBeforeSettle(outcome string, hasPendingMessages bool,
 		if err != nil {
 			return DispatchResult{Effects: []Effect{}, Continue: false}
 		}
-		return DispatchResult{Effects: effects, Continue: false}
+		return DispatchResult{Effects: append(effects, m.pausedMessage()...), Continue: false}
 	}
 	if reason := budgetStopReason(m.view, now); reason != nil {
 		m.armed = false
@@ -523,6 +546,7 @@ func (m *GoalMachine) agentBeforeSettle(outcome string, hasPendingMessages bool,
 		if err != nil {
 			return DispatchResult{Effects: []Effect{}, Continue: false}
 		}
+		effects = append(effects, m.pausedMessage()...)
 		effects = append(effects, NotifyEffect{Message: "Goal paused: " + reason.Message, Level: "warning"})
 		return DispatchResult{Effects: effects, Continue: false}
 	}
@@ -548,7 +572,7 @@ func (m *GoalMachine) goalPause() DispatchResult {
 	if err != nil {
 		return DispatchResult{Reply: stringPtr(err.Error()), IsError: true}
 	}
-	return DispatchResult{Effects: effects}
+	return DispatchResult{Effects: append(effects, m.pausedMessage()...)}
 }
 
 func (m *GoalMachine) goalClear(id string, revision int) DispatchResult {
@@ -662,6 +686,7 @@ func (m *GoalMachine) sessionStart(entries []CustomEntry, reason string) Dispatc
 				NotifyEffect{Message: "Goal not paused after reload: " + commitErr.Error(), Level: "warning"},
 			}}
 		}
+		effects = append(effects, m.pausedMessage()...)
 		effects = append(effects, NotifyEffect{Message: "Goal paused after reload: " + objective + "\nUse /goal resume to continue.", Level: "info"})
 		return DispatchResult{Effects: effects}
 	}

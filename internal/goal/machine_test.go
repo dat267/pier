@@ -59,6 +59,26 @@ func findSendMessage(result DispatchResult) *SendMessageEffect {
 	return nil
 }
 
+// requirePausedMessage asserts the transition emitted the model-facing pause
+// notice: a context-only custom message of kind "paused".
+func requirePausedMessage(t *testing.T, result DispatchResult) *SendMessageEffect {
+	t.Helper()
+	message := findSendMessage(result)
+	if message == nil {
+		t.Fatalf("expected a paused message: %+v", result.Effects)
+	}
+	if message.CustomType != GoalEventType || message.Details["kind"] != "paused" {
+		t.Fatalf("unexpected paused message: %+v", message)
+	}
+	if message.Display || message.TriggerTurn {
+		t.Fatalf("paused message must be context-only: %+v", message)
+	}
+	if !strings.Contains(message.Content, "<goal_paused>") {
+		t.Fatalf("paused message must frame the stop: %q", message.Content)
+	}
+	return message
+}
+
 func findNotify(result DispatchResult) *NotifyEffect {
 	for _, effect := range result.Effects {
 		if notify, ok := effect.(NotifyEffect); ok {
@@ -235,6 +255,7 @@ func TestAbortedGoalAttemptPauses(t *testing.T) {
 	if m.Snapshot().Goal.Phase != PhasePaused || m.Snapshot().Armed {
 		t.Fatalf("unexpected snapshot: %+v", m.Snapshot())
 	}
+	requirePausedMessage(t, result)
 }
 
 func TestAbortedNonAttemptDisarmsOnly(t *testing.T) {
@@ -276,6 +297,7 @@ func TestBeforeSettleProviderErrorPauses(t *testing.T) {
 	if m.Snapshot().Goal.Phase != PhasePaused || m.Snapshot().Goal.BlockedReason.Code != "run-error" || m.Snapshot().PendingTurn != nil {
 		t.Fatalf("unexpected snapshot: %+v", m.Snapshot())
 	}
+	requirePausedMessage(t, result)
 }
 
 func TestBeforeSettleAbortDurablyPauses(t *testing.T) {
@@ -289,6 +311,7 @@ func TestBeforeSettleAbortDurablyPauses(t *testing.T) {
 	if m.Snapshot().Goal.Phase != PhasePaused || m.Snapshot().Goal.BlockedReason.Code != "cancelled" {
 		t.Fatalf("unexpected snapshot: %+v", m.Snapshot())
 	}
+	requirePausedMessage(t, result)
 }
 
 func TestDisarmedGoalsDoNotContinue(t *testing.T) {
@@ -310,6 +333,7 @@ func TestBudgetTimePausesBeforeContinuation(t *testing.T) {
 	if settle.Continue || m.Snapshot().Goal.BlockedReason.Code != "budget-time" {
 		t.Fatalf("unexpected result: %+v snapshot=%+v", settle, m.Snapshot())
 	}
+	requirePausedMessage(t, settle)
 }
 
 func TestBudgetExhaustedCannotResume(t *testing.T) {
@@ -336,6 +360,7 @@ func TestBudgetCostPausesBeforeContinuation(t *testing.T) {
 	if result.Continue || m.Snapshot().Goal.BlockedReason.Code != "budget-cost" {
 		t.Fatalf("unexpected result: %+v snapshot=%+v", result, m.Snapshot())
 	}
+	requirePausedMessage(t, result)
 }
 
 func TestBudgetTokensPausesAndKeepsUsage(t *testing.T) {
@@ -350,6 +375,7 @@ func TestBudgetTokensPausesAndKeepsUsage(t *testing.T) {
 	if m.Snapshot().Goal.UsedTokens != 100 || findAppend(result, "") == nil {
 		t.Fatalf("unexpected usage/effects: %+v", result)
 	}
+	requirePausedMessage(t, result)
 }
 
 func armedMachine(t *testing.T) *GoalMachine {
@@ -538,6 +564,19 @@ func TestGoalPauseCommand(t *testing.T) {
 	if m.Snapshot().Goal.Phase != PhasePaused || m.Snapshot().Armed {
 		t.Fatalf("unexpected snapshot: %+v", m.Snapshot())
 	}
+	requirePausedMessage(t, result)
+}
+
+// D239: a pause sends the model the stop reason and the objective as reference
+// only, so the paused goal is not silently pursued after it stops.
+func TestPausedMessageCarriesTheStopReason(t *testing.T) {
+	m := armedMachine(t)
+	message := requirePausedMessage(t, m.Dispatch(GoalPauseEvent{}))
+	for _, want := range []string{"human-paused", "Paused by user.", "ship it", "do not continue", "/goal resume"} {
+		if !strings.Contains(message.Content, want) {
+			t.Fatalf("paused message missing %q: %q", want, message.Content)
+		}
+	}
 }
 
 func TestGoalClearCommand(t *testing.T) {
@@ -716,9 +755,8 @@ func TestReloadPausesAnActiveGoalDurably(t *testing.T) {
 	if m.Snapshot().Goal.Phase != PhasePaused || m.Snapshot().Armed {
 		t.Fatalf("unexpected snapshot: %+v", m.Snapshot())
 	}
-	if findSendMessage(result) != nil {
-		t.Fatal("reload must not start an LLM turn")
-	}
+	// D239: the pause notice is context-only; it must not start a run.
+	requirePausedMessage(t, result)
 	notify := findNotify(result)
 	if notify == nil || !strings.Contains(notify.Message, "reload") || !strings.Contains(notify.Message, "/goal resume") {
 		t.Fatalf("expected reload notify: %+v", result.Effects)

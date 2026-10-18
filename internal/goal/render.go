@@ -69,7 +69,7 @@ func (c *clickToExpandComponent) HandleMouse(event tui.TuiMouseEvent) *tui.TuiMo
 	return c.region.HandleMouse(event)
 }
 
-var goalTagPattern = regexp.MustCompile(`</?goal_(round|complete|blocked)>\n?`)
+var goalTagPattern = regexp.MustCompile(`</?goal_(round|complete|blocked|paused)>\n?`)
 
 // DisplayBody strips the goal wrapper tags for display.
 func DisplayBody(content string) string {
