@@ -203,9 +203,7 @@ with historical measurements retained to explain the design.
   a live profile showed deltas re-wrapping the open paragraph on the loop below
   64 KiB (one paint at 94 ms, keystrokes waiting 100-200 ms).
 - **D205 large built-in tool results use private snapshots.** Text-only expanded
-  read and both bash/powershell display modes at 8 KiB (D241 lowered this from
-  64 KiB after the loop was caught rendering a mid-size bash result inline)
-  share D204's four-job
+  read and both bash/powershell display modes at 64 KiB share D204's four-job
   optional queue. Workers sanitize, style and wrap captured output; elapsed
   timers and generation checks remain on-owner. Completed output is identical
   to synchronous rendering. Unknown metadata objects, JSON metadata above

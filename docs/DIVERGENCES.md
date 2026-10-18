@@ -2133,14 +2133,3 @@ because it touches only the freshly opened manager, never the running app's
 state, and the loop's own `CreateAgentSession` projection is then a cache hit.
 `/clone`, fork-from-message and `/import` still bind synchronously (they open or
 fork a session the same way, but are rarer).
-
-## D241
-
-Prepared built-in tool results start at 8 KiB, not 64 KiB. D205's 64 KiB
-threshold left a mid-size bash or read result rendering synchronously on the UI
-loop on every update and elapsed-clock tick; the 2026-10-18 stall log caught the
-loop inside `ToolExecutionComponent.Render` during a turn. The off-loop
-preparation now covers results from 8 KiB (the same threshold D239 chose for
-assistant markdown), sharing D204's four-job optional queue; the owner keeps the
-previous complete frame while the worker prepares the new one, and admission
-failure falls back to the synchronous path.

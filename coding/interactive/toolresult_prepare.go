@@ -39,10 +39,7 @@ func (c *ToolExecutionComponent) captureBuiltinResult(theme *Theme, context *Too
 		}
 		size += len(block.Text)
 	}
-	// D241: prepare from 8 KiB, not 64 KiB. The live stall log caught the loop
-	// inside ToolExecutionComponent.Render during a turn; a bash result below
-	// 64 KiB re-rendered synchronously per update (and per elapsed-clock tick).
-	if size < 8*1024 {
+	if size < 64*1024 {
 		return nil
 	}
 	result := *c.result
