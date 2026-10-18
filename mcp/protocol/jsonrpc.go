@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 )
 
@@ -171,10 +172,8 @@ func ParseJsonRpcMessage(value any) error {
 // ParseMessageBytes decodes raw JSON bytes and validates them as one
 // JSON-RPC message.
 func ParseMessageBytes(data []byte) error {
-	var value any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&value); err != nil {
+	value, err := decodeJSONValue(data)
+	if err != nil {
 		return &McpError{Code: JSONRPCErrorCode.ParseError, Msg: "Invalid JSON"}
 	}
 	return ParseJsonRpcMessage(value)
@@ -183,10 +182,8 @@ func ParseMessageBytes(data []byte) error {
 // DecodeMessage decodes raw JSON bytes into the concrete message shape:
 // *JsonRpcRequest, *JsonRpcNotification, or *JsonRpcResponse.
 func DecodeMessage(data []byte) (any, error) {
-	var value any
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&value); err != nil {
+	value, err := decodeJSONValue(data)
+	if err != nil {
 		return nil, &McpError{Code: JSONRPCErrorCode.ParseError, Msg: "Invalid JSON"}
 	}
 	if err := ParseJsonRpcMessage(value); err != nil {
@@ -217,4 +214,19 @@ func DecodeMessage(data []byte) (any, error) {
 // result bytes (json.RawMessage handles that natively).
 func jsonUnmarshalOrdered(data []byte, target any) error {
 	return json.Unmarshal(data, target)
+}
+
+// decodeJSONValue decodes one JSON value with numbers preserved, rejecting
+// trailing data like JSON.parse (Decoder.Decode alone accepts it).
+func decodeJSONValue(data []byte) (any, error) {
+	var value any
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	if err := dec.Decode(&value); err != nil {
+		return nil, err
+	}
+	if _, err := dec.Token(); err != io.EOF {
+		return nil, fmt.Errorf("unexpected data after the JSON value")
+	}
+	return value, nil
 }
