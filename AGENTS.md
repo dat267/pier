@@ -226,6 +226,14 @@ off-loop (`RunWork`/detached work) or chunk it, never run it inline.
 path against transcript size. The full design and performance measurements are
 in `docs/architecture.md`.
 
+**Only optimize what is reproducible.** A performance change needs a
+reproduction of the problem first: a red test, a benchmark that shows the cost,
+or a user report with concrete steps. Do not add speculative caches, lowered
+thresholds, fast paths or off-loop plumbing for a cost nobody has observed;
+the stall-logger chase produced several such changes and they were reverted.
+When a cost does reproduce, encode the reproduction as a test before fixing it
+(`TestStreamingDeltaCostIndependentOfTranscriptSize` is the model).
+
 ## Architecture of the interactive mode
 
 Upstream `interactive-mode.ts` is one ~4000-line class; the port splits it into
