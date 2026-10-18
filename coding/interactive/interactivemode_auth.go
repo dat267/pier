@@ -463,6 +463,8 @@ func (w *AuthWiring) post(fn func()) {
 }
 
 // startLogin runs a login flow off the UI loop and posts its continuation back.
+// This is D156: an inline login would wait on the dialog for input that only
+// the blocked loop could deliver.
 //
 // The flow waits on the dialog for input, so running it on the loop would
 // deadlock: the loop would sit inside the flow, unable to deliver the keystroke

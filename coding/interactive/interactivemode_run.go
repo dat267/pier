@@ -103,6 +103,9 @@ type RunWiring struct {
 	PartialEvents <-chan queuedSessionEvent
 	// InputEvents carries complete terminal sequences from the stdin reader and
 	// ResizeEvents the resize ticks (stage 3). The loop dispatches both.
+	// D145: input, resize and signals are producer messages; the owner loop
+	// dispatches input, paints on resize and handles shutdown, where upstream
+	// delivers these on its single JS thread.
 	InputEvents  <-chan string
 	ResizeEvents <-chan struct{}
 	// SignalEvents carries process signals (SIGTERM/SIGHUP) to the loop.

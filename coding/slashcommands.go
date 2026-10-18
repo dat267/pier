@@ -32,6 +32,8 @@ var BuiltinSlashCommands = []BuiltinSlashCommand{
 	{Name: "new", Description: "Start a new session"},
 	{Name: "compact", Description: "Manually compact the session context"},
 	{Name: "resume", Description: "Resume a different session"},
-	{Name: "reload", Description: "Reload keybindings, extensions, skills, prompts, themes, and context files"},
+	// D41: extensions are out of scope, so the reload notice names only the
+	// resources this port reloads (upstream lists extensions too).
+	{Name: "reload", Description: "Reload keybindings, skills, prompts, themes, and context files"},
 	{Name: "quit", Description: "Quit " + AppName},
 }

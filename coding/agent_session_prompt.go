@@ -54,6 +54,9 @@ const (
 type promptState struct {
 	mu sync.Mutex
 	// pendingCustomMessages await the end of the current turn.
+	// D226: a custom message that lands between a tool call and its result is
+	// deferred here, so ConvertToLlm never turns it into a user message that
+	// interrupts the tool flow.
 	pendingCustomMessages []*ai.CustomMessage
 	// pendingNextTurnMessages are injected with the next user prompt.
 	pendingNextTurnMessages []ai.Message

@@ -45,6 +45,10 @@ own mutex, so no UI lock or off-loop path is introduced.
 | `terminalColors.colorMu` | `tui/terminalqueries.go` | the terminal-colors query queue the blocking caller appends to while the owner loop's input dispatch reads it | **retained**: query bookkeeping, not UI state |
 | `FooterDataProvider.mu` | `coding/footerdata.go` | cwd/git/status + listener registry, shared with its 500 ms git-HEAD watcher | **retained (D149)**: closing it needs the poll result posted to the loop and the listener fan-out delivered outside the lock; a `coding/` change outside this refactor |
 | `AgentSession.promptOptionsMu` | `coding/agent_session.go` | `SystemPromptOptions`, re-read by the prompt/tool loadout between turns | **retained**: the work goroutine re-applies the loadout while the UI loop rebuilds the options on `/reload` and tool changes; only a struct copy is taken under it |
+| `cellDimensionsState.mu` | `tui/terminalimage.go` | the global terminal cell pixel size, written by the size-report reply and read during image layout | **retained**: package-global value shared with the terminal query path, not UI state |
+| `kittyRegistry.mu` | `tui/terminalimage.go` | the package-global kitty placement registry (order, id index, transmission generation) | **retained**: image-protocol bookkeeping, not UI state |
+| `imageTranscodeState.mu` | `tui/imagecomponent.go` | the package-global image transcode cache and injected transcoder | **retained**: shared decode cache, not UI state |
+| `modelCompletionCache.mu` | `coding/interactive/interactivemode_helpers.go` | the autocomplete model-item cache keyed by the session scope revision | **retained**: caches immutable item slices across completion queries, not UI state |
 
 D235's stdio RPC runtime adds no UI lock. The existing `AgentSession.mu` also
 guards steering/follow-up display queues across command admission and agent
@@ -56,7 +60,7 @@ bound concurrent work without unbounded queues.
 
 Retired along the way (all struck from the code). Searching non-test Go files
 in `tui/` and `coding/interactive/` for mutex declarations finds only the
-retained locks listed above:
+retained locks listed above (UI-state handoff plus the package-global caches):
 
 | Lock | Where | Retired in |
 |---|---|---|

@@ -4,7 +4,7 @@ Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D238**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D241**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation.
 
 Related documents: [port status](PORTING.md), [architecture](architecture.md),
@@ -1589,3 +1589,59 @@ resolution is real. Non-shell running tools keep the upstream 1s tick, and the
 final `Took` value is unaffected (it reads the recorded duration). This departs
 from upstream's 1000 ms tick for the shell label only; the cost is ten small
 differential paints a second while a shell command runs.
+## D239
+
+**Every pause transition emits a context-only goal message.**
+
+Reference: the installed goal extension's `machine.ts` (the extension source,
+D223). It wraps up a completed or blocked goal with a `<goal_complete>` or
+`<goal_blocked>` message, but a pause only appends the durable pause entry
+(reload and a budget stop also notify the human). `agent_end` abort,
+`agent_before_settle` abort/error and `/goal pause` therefore left the model
+with no record that goal work had stopped, so its next turn still saw the
+objective as a live task.
+
+The port emits a `<goal_paused>` custom message (`pi-goal-event`, display false,
+triggerTurn false, details `kind: "paused"`) on every transition to paused:
+the round-end abort/error/budget stops, `/goal pause`, and the reload pause. It
+carries the stop code and reason, the objective as reference only, and the
+`/goal resume` hint. It stays context-only and never starts a run; reload and
+the budget stop keep their notify. `DisplayBody` also strips
+`<goal_paused>` so the dormant paused event card renders correctly if an event
+renderer is ever wired.
+## D240
+
+**Proxy resolution uses Go's transport, not upstream's node-http-proxy module.**
+
+Reference: `ai/utils/node-http-proxy.ts` (`getProxyForUrl` /
+`resolveHttpProxyUrlForTarget`, the `no_proxy` parser, the per-provider `env`
+lookup) and its two callers. The port uses `http.DefaultClient`, whose transport
+resolves `HTTP_PROXY`/`HTTPS_PROXY`/`NO_PROXY` and their lowercase forms through
+`net/http.ProxyFromEnvironment` (`coding/httpdispatcher.go` seeds the two
+uppercase forms from the configured proxy setting). Two upstream behaviors are
+therefore absent:
+
+- A provider-scoped `options.env` proxy (`resolveHttpProxyUrlForTarget(url,
+  options.env)`) is ignored; only the process environment is read.
+- Upstream's own `no_proxy` parser (bracketed hosts, `*.`/leading-dot/`*`
+  suffixes, a per-entry port) is replaced by Go's `httpproxy` semantics, which
+  also accept CIDR entries and `*`.
+
+The two upstream call sites do not change the outcome: the Codex one feeds the
+WebSocket transport, which is out of scope (D28), and the Bedrock one only
+forces HTTP/1 and installs proxy agents when the AWS SDK would otherwise use
+HTTP/2, while the port's client is already HTTP/1.1 over the shared transport.
+## D241
+
+**Headless stdout has no takeover; diagnostics are written to stderr.**
+
+Reference: `core/output-guard.ts` (`takeOverStdout`, `writeRawStdout`,
+`waitForRawStdoutBackpressure`, `flushRawStdout`), used by `main.ts`,
+`modes/print-mode.ts` and `modes/rpc-mode.ts`. After takeover, upstream
+redirects every stray `process.stdout.write` to stderr and serializes protocol
+output through a raw tail that retries `ENOBUFS`/`EAGAIN`. The port does not
+patch `os.Stdout`: a Go `os.File` write is blocking, so `coding/printmode.go`'s
+`printStdout` mutex plus that blocking write already provide output ordering and
+backpressure, and the diagnostics upstream would redirect are written to stderr
+directly (`cmd/main.go`, `coding.FormatCLIDiagnostic`). `restoreStdout` has no
+counterpart.

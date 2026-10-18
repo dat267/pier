@@ -55,6 +55,10 @@ func FormatHTTPIdleTimeoutMS(timeoutMS int64) string {
 }
 
 // ApplyHTTPProxySettings seeds the proxy environment from a configured value.
+// D240: upstream resolves a proxy per target through ai/utils/node-http-proxy.ts
+// (including a provider-scoped env and its own no_proxy parser). The port leaves
+// resolution to Go's http.ProxyFromEnvironment on the shared transport, so only
+// the process environment participates and no_proxy follows httpproxy.
 func ApplyHTTPProxySettings(httpProxy string) {
 	proxy := strings.TrimSpace(httpProxy)
 	if proxy == "" {

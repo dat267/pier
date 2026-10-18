@@ -16,7 +16,9 @@ import (
 //
 // Divergences: the command handlers and the clipboard/browser helpers are
 // injected as function values (D115); the extension-command branch is absent
-// (D41).
+// (D41). D155: absent collaborators are never silently nil — each seam the
+// wiring needs is assigned at composition time, so a feature cannot be disabled
+// by an unset function field.
 
 // KeySession is the session surface the key handlers need.
 type KeySession interface {

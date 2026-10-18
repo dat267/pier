@@ -17,7 +17,7 @@ import (
 //     the expensive part of a wake, so its result is cached until a paint
 //     invalidates it and a "nothing animates" result is additionally boxed in
 //     time (see animationScanBox);
-//   - the paint coalescing: a fast event stream paints at most once per frame
+//   - the paint coalescing (D144): a fast event stream paints at most once per frame
 //     interval, while input paints only when the dispatch asked for a render
 //     (D164).
 //

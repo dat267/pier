@@ -31,6 +31,12 @@ type PrintModeOptions struct {
 
 // printStdout serializes writes from the agent and caller. Each JSONL record
 // flushes immediately; a slow consumer backpressures the producer.
+//
+// D241: upstream's core/output-guard.ts takes stdout over so a stray
+// process.stdout.write cannot corrupt the protocol stream, and serializes raw
+// output with an ENOBUFS retry. The port does not patch os.Stdout: the mutex
+// plus Go's blocking write give ordering and backpressure, and headless
+// diagnostics are written to stderr directly.
 type printStdout struct {
 	mu sync.Mutex
 	w  *bufio.Writer

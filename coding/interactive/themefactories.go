@@ -18,7 +18,7 @@ import (
 // every call, so a theme switch reaches components that captured the handle at
 // construction (a rebuild would be needed otherwise). It is created once and
 // never installed as the current theme (setGlobalTheme always stores concrete
-// themes).
+// themes). D166: this stable handle replaces the Proxy.
 var activeTheme = &Theme{resolve: CurrentTheme}
 
 // ActiveTheme returns the active theme; it panics when no theme is

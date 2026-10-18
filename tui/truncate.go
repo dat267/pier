@@ -288,6 +288,9 @@ type SlicedLine struct {
 
 // SliceWithWidth is SliceByColumn with the visible width of the result.
 // strict excludes wide characters that would extend past the range.
+// D167: a slice whose start sits on a style reset flushes the carried prefix
+// before an in-range code, so the reset is not reordered ahead of the colour it
+// cancels.
 func SliceWithWidth(line string, startCol int, length int, strict bool) SlicedLine {
 	if length <= 0 {
 		return SlicedLine{}

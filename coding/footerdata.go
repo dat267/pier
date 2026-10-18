@@ -26,6 +26,9 @@ type FooterDataProviderOptions struct {
 
 // FooterDataProvider provides git branch and extension statuses.
 type FooterDataProvider struct {
+	// D149: retained cross-goroutine lock. It protects cwd, git paths/branch,
+	// statuses and the listener registry shared by footer rendering and the
+	// 500 ms git-HEAD watcher. See docs/locks.md.
 	mu sync.Mutex
 
 	cwd       string
