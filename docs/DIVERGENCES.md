@@ -1076,8 +1076,7 @@ committed output, excluding open frames; unlike `WriteBacklog`, it takes no
 terminal handoff mutex on the UI loop. At 256 KiB or more, new paints pause;
 they resume at 128 KiB or less. The existing timer retains the pending paint
 and retries every 16 ms without needing another request. New requests cannot
-postpone that retry. Input, flush deadlines, events, and cancellation continue;
-input-latency tagging waits until its paint is generated.
+postpone that retry. Input, flush deadlines, events, and cancellation continue.
 
 Committed differential frames/writes are never dropped or reordered. Watermarks
 are not hard caps: a large frame or direct writes can overshoot. This applies
@@ -2133,8 +2132,7 @@ runs on a worker and posts its UI update. The projection warm is safe off-loop
 because it touches only the freshly opened manager, never the running app's
 state, and the loop's own `CreateAgentSession` projection is then a cache hit.
 `/clone`, fork-from-message and `/import` still bind synchronously (they open or
-fork a session the same way, but are rarer); `PIER_STALL_MS` would record them
-if they stall.
+fork a session the same way, but are rarer).
 
 ## D241
 

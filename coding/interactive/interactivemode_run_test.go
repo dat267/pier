@@ -363,7 +363,7 @@ func TestAnimationWalkReachesARunningToolInTheLayout(t *testing.T) {
 	screen.SetLayoutRoot(root)
 	wiring.UI = screen
 
-	schedule := newLoopSchedule(runLoopHost{wiring}, wiring.renderUI, nil, nil)
+	schedule := newLoopSchedule(runLoopHost{wiring}, wiring.renderUI)
 	defer schedule.close()
 
 	if ch := schedule.arm(); ch == nil || schedule.deadline.IsZero() {
@@ -398,7 +398,7 @@ func (h idleBeatHost) HasPendingBeatWork() bool {
 func TestScheduleKeepsTickingWhileBeatWorkPending(t *testing.T) {
 	wiring, _ := newRunTestWiring(t)
 	wiring.PendingBeatWork = func() bool { return true }
-	schedule := newLoopSchedule(idleBeatHost{wiring}, func() {}, nil, nil)
+	schedule := newLoopSchedule(idleBeatHost{wiring}, func() {})
 	defer schedule.close()
 	if ch := schedule.arm(); ch == nil || schedule.deadline.IsZero() {
 		t.Fatal("pending beat work did not arm a wake-up")

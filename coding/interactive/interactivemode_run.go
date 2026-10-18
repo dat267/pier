@@ -1,16 +1,9 @@
 package interactive
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 	"os"
-	"path/filepath"
-	"runtime/pprof"
-	"sort"
-	"strconv"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -82,45 +75,6 @@ type RunWiring struct {
 	// live). Terminal probes that write a query belong here: a query written
 	// before raw mode is echoed back into the input stream.
 	OnStarted func()
-	// StallLogPath, when non-empty, receives a record with a goroutine dump for
-	// any UI-loop phase that exceeds StallLogThreshold. It exists to diagnose
-	// stutters that do not reproduce elsewhere: the threshold defaults to 100ms
-	// and PIER_STALL_MS overrides it (0 disables).
-	StallLogPath      string
-	StallLogThreshold time.Duration
-	// OnStall, when set, is invoked (from the loop or the watchdog goroutine)
-	// for every phase that trips StallLogThreshold. The 100ms loop-budget tests
-	// use it to fail without reading files; production leaves it nil.
-	OnStall func(name string, elapsed time.Duration)
-	// StallLogCPUAfter is how long a busy streak must run before its CPU
-	// profile starts; 0 disables profile capture. Resolved once from
-	// PIER_STALL_CPU_MS at construction.
-	StallLogCPUAfter time.Duration
-	// stallStreak bookkeeping for contiguous busy runs across phases; confined
-	// to the loop goroutine (see phase).
-	stallStreakStart  time.Time
-	stallStreakEnd    time.Time
-	stallStreakPhases []string
-	// stallStreakWatchdog fires mid-streak (across phase boundaries) once the
-	// contiguous busy run reaches the threshold, so the goroutine dump catches
-	// the loop in the phase that is actually busy; the per-phase timers only
-	// fire for a single long phase.
-	stallStreakWatchdog *time.Timer
-	// stallStreakEndNanos lets the watchdog goroutine tell an active streak from
-	// one that ended (the loop went idle).
-	stallStreakEndNanos atomic.Int64
-	// stallStreakPhasesText is the joined phase list the watchdog goroutine
-	// reads; the loop-owned slice cannot be read from the timer goroutine.
-	stallStreakPhasesText atomic.Value
-	// stallStreakBusy is the sum of the streak's phase durations. The wall-clock
-	// span counts select waits between phases (a streaming delta cadence looks
-	// like a continuous 100ms run while the loop is actually parked between
-	// events); the busy sum is what the loop actually executed.
-	stallStreakBusy      time.Duration
-	stallStreakBusyNanos atomic.Int64
-	// stallStreakRecorded flips when the streak-start record is written from
-	// the watchdog goroutine; atomic because phase() reads it on the loop.
-	stallStreakRecorded atomic.Bool
 	// OnThemeChange registers the theme-file watcher callback.
 	OnThemeChange func(callback func()) func()
 	// OnBranchChange registers the git-branch watcher callback.
@@ -555,7 +509,6 @@ const sessionEventDrainBudget = 64
 // drainReadyEvents applies a bounded batch of queued session events. The
 // caller then paints once (loop-side coalescing) and returns to the main select.
 func (w *RunWiring) drainReadyEvents() {
-	defer w.phase("events")()
 	for drained := 0; drained < sessionEventDrainBudget; {
 		before := drained
 		select {
@@ -601,7 +554,6 @@ func (w *RunWiring) drainReadyEvents() {
 // the cached animation walk (D164): the next loop iteration re-walks and
 // re-arms the animation timer.
 func (w *RunWiring) renderUI() {
-	defer w.phase("render")()
 	if w.schedule != nil {
 		w.schedule.invalidateScan()
 	}
@@ -643,267 +595,6 @@ func (w *RunWiring) drainReadyRawInput() {
 			return
 		}
 	}
-}
-
-// phase measures one UI-loop phase, recording it (with the goroutine stacks)
-// when it exceeds the stall threshold. Usage: defer w.phase("render")().
-// A phase still running at the threshold is recorded mid-flight by a timer
-// goroutine, whose dump shows where the loop was — the after-phase record only
-// shows the loop back in its event loop.
-func (w *RunWiring) phase(name string) func() {
-	if w.StallLogThreshold <= 0 || w.StallLogPath == "" {
-		return func() {}
-	}
-	start := stallClockNow()
-	// A keystroke's round trip crosses every phase the loop runs while it
-	// waits, so the user-feel latency is the contiguous busy run, not one
-	// phase: two 40ms phases with a 3ms gap feel like 83ms and each is under
-	// any threshold. Track the streak here (loop goroutine only — no locks)
-	// and record it when it crosses the threshold even though no single phase
-	// does. The gap bound says how idle the loop must be before the streak
-	// restarts.
-	if w.stallStreakEnd.IsZero() || start.Sub(w.stallStreakEnd) > stallStreakGap {
-		if w.stallStreakWatchdog != nil {
-			w.stallStreakWatchdog.Stop()
-		}
-		w.stallStreakStart = start
-		w.stallStreakBusy = 0
-		w.stallStreakBusyNanos.Store(0)
-		w.stallStreakPhases = append(w.stallStreakPhases[:0], name)
-		w.stallStreakRecorded.Store(false)
-		w.stallStreakPhasesText.Store(name)
-		streakStart := start
-		gap := stallStreakGap
-		w.stallStreakWatchdog = time.AfterFunc(w.StallLogThreshold, func() {
-			w.recordStreakMidFlight(streakStart, gap)
-		})
-	} else {
-		w.stallStreakPhases = append(w.stallStreakPhases, name)
-		if len(w.stallStreakPhases) > stallStreakPhaseLimit {
-			w.stallStreakPhases = w.stallStreakPhases[len(w.stallStreakPhases)-stallStreakPhaseLimit:]
-		}
-		w.stallStreakPhasesText.Store(strings.Join(w.stallStreakPhases, "+"))
-	}
-	streakSoFar := w.stallStreakBusy
-	streakStart := w.stallStreakStart
-	var cpu *stallCPUWatch
-	if !w.stallStreakRecorded.Load() {
-		// The phases snapshot at arm time: the callback runs on a timer
-		// goroutine while the loop keeps appending to the slice.
-		phases := strings.Join(w.stallStreakPhases, "+")
-		cpu = w.armStallCPUWatch(w.StallLogCPUAfter, streakSoFar, phases, streakStart)
-	}
-	watchdog := time.AfterFunc(w.StallLogThreshold, func() {
-		w.writeStallRecord(name, time.Since(start), " still running", nil)
-	})
-	return func() {
-		watchdog.Stop()
-		now := stallClockNow()
-		w.stallStreakEnd = now
-		w.stallStreakEndNanos.Store(now.UnixNano())
-		profile := cpu.finish()
-		elapsed := now.Sub(start)
-		w.stallStreakBusy += elapsed
-		w.stallStreakBusyNanos.Store(int64(w.stallStreakBusy))
-		switch {
-		case elapsed >= w.StallLogThreshold:
-			// The phase itself was slow; it is also the tail of the streak, so
-			// the single-phase record (which names the phase) is the truth. The
-			// streak resets here: its busyness is already recorded, and carrying
-			// it forward would re-record the same time as a streak on the next
-			// phase.
-			w.stallStreakStart = now
-			w.stallStreakBusy = 0
-			w.stallStreakBusyNanos.Store(0)
-			w.stallStreakPhases = w.stallStreakPhases[:0]
-			w.writeStallRecord(name, elapsed, "", profile)
-		case w.stallStreakBusy >= w.StallLogThreshold && (!w.stallStreakRecorded.Load() || len(profile) > 0):
-			// One streak record per busy run: a streaming turn keeps the loop
-			// active for seconds, and recording every phase-end after the
-			// crossing flooded the log (30+ records in the first live streak).
-			// A profile that ran to this phase end is always written out.
-			w.stallStreakRecorded.Store(true)
-			w.writeStallRecord("streak", w.stallStreakBusy, " span="+now.Sub(w.stallStreakStart).Round(time.Millisecond).String()+" phases="+strings.Join(w.stallStreakPhases, "+"), profile)
-		}
-	}
-}
-
-// recordStreakMidFlight writes the streak record from a timer goroutine while
-// the loop is still busy, so the goroutine dump names the frame; it skips a
-// streak that ended (the loop went idle) and one already recorded.
-func (w *RunWiring) recordStreakMidFlight(streakStart time.Time, gap time.Duration) {
-	if end := w.stallStreakEndNanos.Load(); end != 0 && time.Since(time.Unix(0, end)) > gap {
-		return
-	}
-	if w.stallStreakBusyNanos.Load() < int64(w.StallLogThreshold) {
-		// The span reached the threshold but the loop executed far less; the
-		// difference is select waits between phases, not a stall.
-		return
-	}
-	if !w.stallStreakRecorded.CompareAndSwap(false, true) {
-		return
-	}
-	note := " (mid-flight)"
-	if phases, _ := w.stallStreakPhasesText.Load().(string); phases != "" {
-		note = " phases=" + phases + " (mid-flight)"
-	}
-	w.writeStallRecord("streak", time.Since(streakStart), note, nil)
-}
-
-// stallStreakGap is how idle the loop may be between phases before a busy
-// streak restarts. Test seam: tests shorten it.
-var stallStreakGap = 10 * time.Millisecond
-
-// stallClockNow is the stall detector's clock. Tests replace it to drive phase
-// durations deterministically instead of sleeping (which a race build inflates).
-var stallClockNow = time.Now
-
-// stallStreakPhaseLimit bounds the phases listed in a streak record.
-const stallStreakPhaseLimit = 8
-
-// stallCPUProfileAfterDefault is the fallback when PIER_STALL_CPU_MS is
-// unset, for callers that profile beyond the record threshold. The wiring
-// defaults the profile threshold to the record threshold instead: the Oct 18
-// live records (110-125ms streaks) sat between the two defaults and so were
-// recorded but never attributed.
-const stallCPUProfileAfterDefault = 250 * time.Millisecond
-
-// stallCPUThresholdFromEnv resolves the CPU-profile threshold. An explicit
-// PIER_STALL_CPU_MS wins (0 disables); otherwise every recorded stall is
-// profiled at its own threshold. Called once at wiring construction; phase
-// reads the wiring field, so a test constructs its own value.
-func stallCPUThresholdFromEnv(stallThreshold time.Duration) time.Duration {
-	value := os.Getenv("PIER_STALL_CPU_MS")
-	if value == "" {
-		return stallThreshold
-	}
-	millis, err := strconv.Atoi(value)
-	if err != nil || millis < 0 {
-		return stallThreshold
-	}
-	return time.Duration(millis) * time.Millisecond
-}
-
-// stallCPUWatch carries one phase's profiling state between the phase start
-// (which arms the watchdog), the watchdog goroutine (which starts the profile)
-// and the phase end (which stops it). All three touch it under the mutex; no
-// user code runs while held.
-type stallCPUWatch struct {
-	mu     sync.Mutex
-	done   bool
-	active bool
-	buffer *bytes.Buffer
-}
-
-// armStallCPUWatch starts the CPU-profile watchdog for one phase, or returns
-// nil when profiling is off. The delay is how long the phase's streak may run
-// before the profile starts: the CPU threshold minus what earlier contiguous
-// phases already spent, so a streak is profiled from the moment it crosses the
-// threshold, not only from a single slow phase.
-func (w *RunWiring) armStallCPUWatch(after time.Duration, streakSoFar time.Duration, phases string, streakStart time.Time) *stallCPUWatch {
-	if after <= 0 {
-		return nil
-	}
-	delay := after - streakSoFar
-	if delay < 0 {
-		delay = 0
-	}
-	watch := &stallCPUWatch{}
-	time.AfterFunc(delay, func() {
-		watch.mu.Lock()
-		defer watch.mu.Unlock()
-		if watch.done {
-			return
-		}
-		watch.buffer = &bytes.Buffer{}
-		watch.active = pprof.StartCPUProfile(watch.buffer) == nil
-		if !watch.active {
-			watch.buffer = nil
-		}
-		// The crossing is when the loop is mid-phase: dump it now. This is the
-		// attribution a CPU profile started here cannot provide — it only
-		// covers the streak's tail. Once per streak (the caller stops arming
-		// once recorded).
-		note := ""
-		if phases != "" {
-			note = " phases=" + phases
-		}
-		w.stallStreakRecorded.Store(true)
-		w.writeStallRecord("streak-start", time.Since(streakStart), note, nil)
-	})
-	return watch
-}
-
-// finish stops a running profile and returns its bytes, or nil when the phase
-// never captured one.
-func (w *stallCPUWatch) finish() []byte {
-	if w == nil {
-		return nil
-	}
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	w.done = true
-	if w.active {
-		pprof.StopCPUProfile()
-		w.active = false
-	}
-	if w.buffer == nil {
-		return nil
-	}
-	return w.buffer.Bytes()
-}
-
-// stallLogMaxBytes bounds the stall log; an oversized file is truncated before
-// the next record.
-const stallLogMaxBytes = 4 << 20
-
-// stallWriteMu serializes the UI goroutine's final record against the watchdog
-// timer's mid-flight one.
-var stallWriteMu sync.Mutex
-
-// writeStallRecord appends the slow phase and every goroutine stack, so a stall
-// names where the loop was instead of only how long it took. note (possibly
-// empty) distinguishes a mid-flight capture from the after-phase one and names
-// a streak's phases. A non-empty cpu profile is written to a sibling .pprof
-// file and its path is noted in the record.
-//
-// The record is built in memory and written with one Write: a process exiting
-// mid-record otherwise leaves a header without its dump (an 81-byte orphan
-// observed when a quit key's phase crossed the threshold), which reads as a
-// defect instead of a torn write.
-func (w *RunWiring) writeStallRecord(name string, elapsed time.Duration, note string, cpu []byte) {
-	if w.OnStall != nil {
-		w.OnStall(name, elapsed)
-	}
-	stallWriteMu.Lock()
-	defer stallWriteMu.Unlock()
-	var record strings.Builder
-	fmt.Fprintf(&record, "%s slow UI phase %q %v%s\n", time.Now().Format(time.RFC3339Nano), name, elapsed.Round(time.Millisecond), note)
-	_ = pprof.Lookup("goroutine").WriteTo(&record, 1)
-	if len(cpu) > 0 {
-		profilePath := filepath.Join(filepath.Dir(w.StallLogPath),
-			"pier-stall-cpu-"+time.Now().Format("20060102T150405.000000000")+".pprof")
-		if profileFile, err := os.OpenFile(profilePath, os.O_CREATE|os.O_WRONLY, 0o644); err == nil {
-			_, writeErr := profileFile.Write(cpu)
-			_ = profileFile.Close()
-			if writeErr == nil {
-				fmt.Fprintf(&record, "cpu-profile=%s\n", profilePath)
-				pruneStallProfiles(filepath.Dir(w.StallLogPath), stallProfileKeep)
-			} else {
-				_ = os.Remove(profilePath)
-			}
-		}
-	}
-	flags := os.O_APPEND | os.O_CREATE | os.O_WRONLY
-	if info, err := os.Stat(w.StallLogPath); err == nil && info.Size() > stallLogMaxBytes {
-		flags = os.O_CREATE | os.O_WRONLY | os.O_TRUNC
-	}
-	file, err := os.OpenFile(w.StallLogPath, flags, 0o644)
-	if err != nil {
-		return
-	}
-	defer file.Close()
-	_, _ = file.WriteString(record.String())
 }
 
 // LoopBeats reports the loop's iteration count (watchdog beat).
@@ -983,7 +674,7 @@ func (w *RunWiring) runLoop(ctx context.Context, initialWork []string, initialIm
 	// scan. Coalesced render requests paint at most once per frame interval, so
 	// a fast event stream (streaming deltas) cannot saturate the loop with
 	// back-to-back full repaints; resize and animation paints stay immediate.
-	schedule := newLoopSchedule(runLoopHost{w}, w.renderUI, w.stampInputRead, w.lastInputReadAt)
+	schedule := newLoopSchedule(runLoopHost{w}, w.renderUI)
 	w.schedule = schedule
 	schedule.setContext(ctx)
 	w.StartWork = w.RunWork
@@ -1011,10 +702,7 @@ func (w *RunWiring) runLoop(ctx context.Context, initialWork []string, initialIm
 	for {
 		w.beats.Add(1)
 		if w.OnBeat != nil {
-			func() {
-				defer w.phase("beat")()
-				w.OnBeat()
-			}()
+			w.OnBeat()
 		}
 		var (
 			inputsCh <-chan string
@@ -1048,10 +736,7 @@ func (w *RunWiring) runLoop(ctx context.Context, initialWork []string, initialIm
 				continue
 			}
 			if w.Events != nil {
-				func() {
-					defer w.phase("event-apply")()
-					w.Events.handleQueuedEvent(event)
-				}()
+				w.Events.handleQueuedEvent(event)
 			}
 		case event, ok := <-w.PartialEvents:
 			if !ok {
@@ -1059,13 +744,7 @@ func (w *RunWiring) runLoop(ctx context.Context, initialWork []string, initialIm
 				continue
 			}
 			if w.Events != nil {
-				// Phased like event-apply: partial events stream in continuously,
-				// and an unphased slow pass would freeze without any stall record
-				// (the blind spot the first armed sessions exposed).
-				func() {
-					defer w.phase("partial-event-apply")()
-					w.Events.handleQueuedEvent(event)
-				}()
+				w.Events.handleQueuedEvent(event)
 			}
 			if w.OnPartialEventApplied != nil {
 				w.OnPartialEventApplied()
@@ -1078,11 +757,8 @@ func (w *RunWiring) runLoop(ctx context.Context, initialWork []string, initialIm
 			// Raw input is latency-sensitive: reassemble, dispatch every
 			// complete sequence already queued, then paint once — if the
 			// dispatch asked for a paint at all (D164).
-			func() {
-				defer w.phase("raw-input")()
-				w.feedRawInput(raw)
-				w.drainReadyRawInput()
-			}()
+			w.feedRawInput(raw)
+			w.drainReadyRawInput()
 			w.drainReadyEvents()
 			schedule.paintIfRequested()
 		case data, ok := <-w.InputEvents:
@@ -1093,10 +769,7 @@ func (w *RunWiring) runLoop(ctx context.Context, initialWork []string, initialIm
 			// Input is latency-sensitive: dispatch, then paint once if it asked
 			// for one.
 			if w.UI != nil {
-				func() {
-					defer w.phase("input")()
-					w.UI.HandleTerminalInput(data)
-				}()
+				w.UI.HandleTerminalInput(data)
 			}
 			w.drainReadyEvents()
 			schedule.paintIfRequested()
@@ -1139,26 +812,6 @@ func (w *RunWiring) runLoop(ctx context.Context, initialWork []string, initialIm
 	}
 }
 
-// lastInputReadAt reports when the terminal last read stdin. The schedule
-// captures it when input is dispatched, so an unrelated later paint cannot tag
-// its frame with the keystroke's stale read time.
-func (w *RunWiring) lastInputReadAt() time.Time {
-	if w.RawTerminal == nil {
-		return time.Time{}
-	}
-	return w.RawTerminal.LastInputAt()
-}
-
-// stampInputRead tags the coming frame with when the terminal read the
-// keystroke, so the writer can report the end-to-end latency (see
-// inputLatencyRecorder). No-op without a raw terminal or instrumentation.
-func (w *RunWiring) stampInputRead(readAt time.Time) {
-	if w.RawTerminal == nil || readAt.IsZero() {
-		return
-	}
-	w.RawTerminal.MarkInputRead(readAt)
-}
-
 // RunOptions are the run orchestration inputs.
 type RunOptions struct {
 	Offline              bool
@@ -1185,7 +838,6 @@ type StartupDiagnostic struct {
 
 // newRunWiring assembles the RunWiring (port of the corresponding InteractiveMode wiring).
 func newRunWiring(app *App) *RunWiring {
-	installInputLatencyObserver(app)
 	return &RunWiring{
 		OnBeat: func() {
 			if app.transcript.HasDeferred() {
@@ -1243,9 +895,6 @@ func newRunWiring(app *App) *RunWiring {
 		TakeCrash: func() *coding.CrashRecord {
 			return coding.TakeUnnotifiedCrash(coding.GetCrashLogPath(app.options.AgentDir), time.Now().UnixMilli())
 		},
-		StallLogPath:      stallLogPath(app.options.AgentDir),
-		StallLogThreshold: stallLogThreshold(),
-		StallLogCPUAfter:  stallCPUThresholdFromEnv(stallLogThreshold()),
 
 		Prompt: func(ctx context.Context, text string, images []ai.ImageContent) error {
 			return app.session.Prompt(ctx, text, &coding.PromptOptions{Images: images})
@@ -1312,51 +961,4 @@ func versionNotification(release *coding.LatestRelease) (*LatestRelease, bool) {
 		return nil, false
 	}
 	return &LatestRelease{Version: release.Version, URL: release.URL}, true
-}
-
-// stallLogThreshold defaults to 100ms so a freeze is captured even when the
-// session was not started with PIER_STALL_MS — the first two freezes after the
-// markdown fix struck sessions with the logger off, and both went undiagnosed.
-// PIER_STALL_MS overrides it; PIER_STALL_MS=0 disables the log entirely.
-func stallLogThreshold() time.Duration {
-	value := os.Getenv("PIER_STALL_MS")
-	if value == "" {
-		return 100 * time.Millisecond
-	}
-	millis, err := strconv.Atoi(value)
-	if err != nil || millis < 0 {
-		return 100 * time.Millisecond
-	}
-	return time.Duration(millis) * time.Millisecond
-}
-
-// diagnosticsLogsDir keeps the diagnostic records out of the agent dir root:
-// the CPU-profile records alone littered a real agent dir with 475 files.
-func diagnosticsLogsDir(agentDir string) string {
-	return filepath.Join(agentDir, "logs")
-}
-
-// stallLogPath is where slow UI phases are recorded.
-func stallLogPath(agentDir string) string {
-	if agentDir == "" {
-		return ""
-	}
-	return filepath.Join(diagnosticsLogsDir(agentDir), "pier-stall.log")
-}
-
-// stallProfileKeep bounds the CPU profiles on disk; the flood run produced 475
-// in an afternoon.
-const stallProfileKeep = 20
-
-// pruneStallProfiles removes the oldest profiles beyond the keep bound. The
-// timestamp names sort chronologically.
-func pruneStallProfiles(dir string, keep int) {
-	entries, err := filepath.Glob(filepath.Join(dir, "pier-stall-cpu-*.pprof"))
-	if err != nil || len(entries) <= keep {
-		return
-	}
-	sort.Strings(entries)
-	for _, path := range entries[:len(entries)-keep] {
-		_ = os.Remove(path)
-	}
 }

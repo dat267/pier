@@ -45,53 +45,18 @@ with historical measurements retained to explain the design.
   through the app's run context.
 - **The main loop must never stall more than 100 ms.** Any handler, render path
   or watcher callback that can exceed the budget moves its blocking or heavy
-  work off-loop (`RunWork`/detached work) or chunks it. The `OnStall` hook and
-  `TestMainLoopStallBudgetStreaming` enforce the streaming path (they fail on a
-  phase over the budget); `TestHandleResumeSessionPreparesOffLoop` and
-  `TestSessionSelectorDeleteFlow` enforce that session resume and delete do
-  their heavy work off-loop. Session event drains are bounded (64 per pass),
-  paints coalesce, large markdown/tool work prepares off-loop (D204/D205/D239),
-  and per-paint session walks are memoized or avoided (D239). A theme change
-  invalidates every mounted component; the tool-display rebuild is deferred to
-  the component's next Render (`ToolExecutionComponent.displayDirty`) so D203's
-  cooperative warming spreads it across frames instead of one eager sweep
-  inside `drainPosted`.
-- **Slow-phase logging is on by default at 100 ms**; `PIER_STALL_MS=<ms>`
-  overrides the threshold and `PIER_STALL_MS=0` disables it. Every phase the
-  loop measures (`render`, `events`, `event-apply`, `partial-event-apply`, `beat`, `input`,
-  `raw-input`) that
-  exceeds the threshold is recorded to `<agentDir>/logs/pier-stall.log`, each with a
-  goroutine dump. It exists for stutters that do not reproduce on the
-  development machine: a record names the phase and the stacks instead of only
-  how long it took. A phase still running at the threshold is also recorded
-  mid-flight by a timer goroutine, whose dump shows where the loop was — the
-  after-phase dump only shows the loop back in its event loop. A busy streak
-  of contiguous short phases is recorded as one `streak` record naming every
-  phase it crossed when the accumulated executed time crosses the threshold even
-  though no single phase does. The sum of phase durations, not the wall-clock
-  span, is the metric: a streaming delta cadence parks the loop in select for a
-  few ms between phases, which a span-based streak counted as a >100 ms stall
-  while the loop executed far less (the 18:46 records, whose mid-flight dump
-  showed the loop in `select`). A streak
-  still running at the CPU-profile threshold additionally captures a CPU
-  profile, written to a sibling `pier-stall-cpu-<timestamp>.pprof` (kept 20,
-  `go tool pprof` reads it) whose path the record carries: the goroutine dump
-  cannot attribute a completed render, the profile can. The profile threshold
-  defaults to the record threshold (so every recorded stall is attributed);
-  `PIER_STALL_CPU_MS` overrides it, 0 disables. Heavy tool-side
-  commands (test suites, builds) run `nice`d: on a 4-CPU machine an ungated
-  test run competes with the UI goroutine and looks like a freeze. It was opt-in first, but both post-fix freezes struck
-  sessions started without the variable, so the default flipped — a capture
-  that requires remembering to set an env var does not survive real usage.
-- **Keystroke latency is logged separately** to `<agentDir>/logs/pier-input-latency.log`
-  when a round trip exceeds `PIER_INPUT_LAT_MS` (default 100 ms, matching the stall threshold; `0` disables).
-  The terminal reader stamps the read (`ProcessTerminal.MarkInputRead`), the loop
-  tags the frame it paints (`RunWiring.markInputRead`), and the writer reports
-  the flush (`tui.InputLatencyObserver`), so a record splits the delay into
-  `read` (before the app) and `write` (console) rather than blaming a phase. It
-  exists to bisect a slow terminal (Windows ConPTY pauses while a selection is
-  active) in one run; the render itself is sub-millisecond warm on a large
-  session (`BenchmarkScrollWarmDiff`).
+  work off-loop (`RunWork`/detached work) or chunks it. `TestHandleResumeSessionPreparesOffLoop`
+  and `TestSessionSelectorDeleteFlow` enforce that session resume and delete do
+  their heavy work off-loop; `TestStreamingDeltaCostIndependentOfTranscriptSize`
+  bounds the streaming delta path against transcript size. Session event drains
+  are bounded (64 per pass), paints coalesce, large markdown/tool work prepares
+  off-loop (D204/D205/D239), and per-paint session walks are memoized or avoided
+  (D239). A theme change invalidates every mounted component; the tool-display
+  rebuild is deferred to the component's next Render
+  (`ToolExecutionComponent.displayDirty`) so D203's cooperative warming spreads
+  it across frames instead of one eager sweep inside `drainPosted`.
+- Heavy tool-side commands (test suites, builds) run `nice`d: on a 4-CPU machine
+  an ungated test run competes with the UI goroutine and looks like a freeze.
 - The loop calls a **watchdog beat** once per iteration
   (`RunWiring.LoopBeats`, read by the app's `loopBeats` test seam): a stalled loop stops
   advancing it, so a watchdog can detect a hang.
@@ -631,7 +596,7 @@ cached walk (D164), so the walk runs on every paint, and it used to tick
 rebuilds its whole output (`updateDisplay` re-creates and re-wraps every result
 `Text`), so scrolling a session with a running tool re-wrapped every tool's full
 output on every frame: a 97 MB session measured 100–143 ms `render` phases per
-wheel event (`pier-stall.log`). The walk now ticks each animator only once per
+wheel event (measured by the since-removed stall log). The walk now ticks each animator only once per
 its own delay (`Renderer.animationTicks`, `nextAnimationForTicked`), matching
 upstream's `setInterval(context.invalidate)` cadence; the same scroll measures
 10–26 ms, once per second. `TestAnimationWalkTicksAnAnimatorOncePerDelay` pins
@@ -982,8 +947,8 @@ Their functional coverage now lives in `coding/interactive/ptyflow_test.go`
 (in-process despite the filename), while `internal/uiblock` enforces the
 blocking-work invariant statically. Real-binary PTY tests still cover other
 flows, and `TestMutexBlockedDetectorHasTeeth` retains the deliberate deadlock
-helper. For a current hang, stall logs and an optional `SIGQUIT` dump are
-useful diagnostics, but the cause need not be a retired UI-state mutex.
+helper. For a current hang, an optional `SIGQUIT` dump is a useful diagnostic,
+but the cause need not be a retired UI-state mutex.
 
 ## Startup cost on a cold filesystem
 

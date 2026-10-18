@@ -94,13 +94,6 @@ type loopSchedule struct {
 	// paint renders the current state. It is what invalidates the animation
 	// scan, so the schedule calls it through here rather than the renderer.
 	paint func()
-	// markInputRead tags the coming frame with the keystroke's read time (see
-	// inputLatencyRecorder). Optional.
-	markInputRead func(readAt time.Time)
-	// inputReadAt returns when the terminal last read stdin, captured when input
-	// is dispatched. Reading it at paint time instead tagged unrelated paints
-	// (an animation tick after a key) with the key's stale read time.
-	inputReadAt func() time.Time
 
 	// work is the loop-owned work queue: at most one blocking unit at a time,
 	// the rest queued in arrival order.
@@ -118,18 +111,13 @@ type loopSchedule struct {
 	paintAt           time.Time
 	outputPaused      bool
 	inputPaintPending bool
-	// pendingInputReadAt is the captured read time of the input whose frame is
-	// still pending; it survives a backpressure-deferred paint.
-	pendingInputReadAt time.Time
 }
 
-func newLoopSchedule(host loopHost, paint func(), markInputRead func(time.Time), inputReadAt func() time.Time) *loopSchedule {
+func newLoopSchedule(host loopHost, paint func()) *loopSchedule {
 	schedule := &loopSchedule{
-		host:          host,
-		paint:         paint,
-		markInputRead: markInputRead,
-		inputReadAt:   inputReadAt,
-		lastPaint:     time.Now(),
+		host:      host,
+		paint:     paint,
+		lastPaint: time.Now(),
 	}
 	schedule.animationTimer = time.NewTimer(time.Hour)
 	schedule.animationTimer.Stop()
@@ -241,11 +229,7 @@ func (s *loopSchedule) paintNow() {
 	}
 	s.outputPaused = false
 	if s.inputPaintPending {
-		if s.markInputRead != nil && !s.pendingInputReadAt.IsZero() {
-			s.markInputRead(s.pendingInputReadAt)
-		}
 		s.inputPaintPending = false
-		s.pendingInputReadAt = time.Time{}
 	}
 	s.paint()
 	// A paint is the only thing that can change a component's animation state,
@@ -275,9 +259,6 @@ func (s *loopSchedule) paintIfRequested() {
 		return
 	}
 	s.inputPaintPending = true
-	if s.inputReadAt != nil {
-		s.pendingInputReadAt = s.inputReadAt()
-	}
 	s.paintNow()
 }
 
