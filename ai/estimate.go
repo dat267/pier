@@ -96,7 +96,7 @@ func EstimateMessageTokens(message Message) int {
 			case ThinkingContent:
 				chars += JSLength(b.Thinking)
 			case ToolCall:
-				chars += JSLength(b.Name) + len(safeJSONStringify(b.Arguments))
+				chars += JSLength(b.Name) + JSLength(safeJSONStringify(b.Arguments))
 			}
 		}
 		return ceilDiv(chars, charsPerToken)

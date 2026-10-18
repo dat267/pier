@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -30,5 +31,18 @@ func TestTextTokenEstimateUsesThreeAndAHalfCharsPerToken(t *testing.T) {
 				t.Fatalf("EstimateTextTokens(%q) = %d, want %d", testCase.text, got, testCase.want)
 			}
 		})
+	}
+}
+
+// A tool call's token estimate measures JSON.stringify(arguments).length, and
+// JS string length is UTF-16 code units, not bytes. A multi-byte argument must
+// not inflate the estimate (the ASCII fixture cannot distinguish the two).
+func TestToolCallTokenEstimateMeasuresJSStringLength(t *testing.T) {
+	raw := `{"text":"日本"}` // 13 UTF-16 code units, 17 bytes
+	message := &AssistantMessage{Content: ContentList{ToolCall{Name: "echo", Arguments: json.RawMessage(raw)}}}
+	// ceil((len("echo") + 13) / 3.5) = ceil(17 / 3.5) = 5; a byte count
+	// (4 + 17 = 21) would give 6.
+	if got := EstimateMessageTokens(message); got != 5 {
+		t.Fatalf("EstimateMessageTokens = %d, want 5", got)
 	}
 }
