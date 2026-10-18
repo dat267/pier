@@ -74,7 +74,7 @@ func (c *ToolExecutionComponent) captureBuiltinResult(theme *Theme, context *Too
 				default:
 					return nil
 				}
-				details := result.detailsAs[coding.BashToolDetails]()
+				details := toolDetailsFrom[coding.BashToolDetails](result.Details)
 				if details == nil {
 					return nil
 				}
