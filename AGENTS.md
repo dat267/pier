@@ -1,10 +1,10 @@
 # AGENTS.md
 
-Guidance for agents working in this repository. Read this first; the
-authoritative per-area port status is `docs/PORTING.md`, the divergence log is
-`docs/DIVERGENCES.md`, the architecture and performance notes are
-`docs/architecture.md`, the lock inventory is `docs/locks.md`, and the README
-covers install and usage.
+Read this first. `docs/PORTING.md` tracks per-area status; `docs/DIVERGENCES.md`
+records intentional differences. See `docs/architecture.md` for architecture and
+performance, `docs/locks.md` for lock ownership, `docs/rpc.md` for stdio RPC, and
+`docs/terminal-output.md` for terminal output policy. The README covers install
+and usage.
 
 ## What this is
 

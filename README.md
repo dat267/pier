@@ -117,3 +117,6 @@ queues, state and messages, model and thinking selection, session
 introspection, compaction, retry, bash control, session replacement and event
 streaming, with a typed subprocess client in `coding/rpcclient`; see
 [docs/rpc.md](docs/rpc.md).
+
+The built-in `/goal` command tracks a multi-round objective in session history,
+and the agent can inspect or update it with the `get_goal` and `set_goal` tools.

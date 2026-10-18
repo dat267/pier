@@ -405,6 +405,19 @@ cost was invisible at the call site. Measured on the 45 MB / 19.4k-entry session
 cold `Projection` 37 ms, cached 0, `AppendCompaction` 0 ms with a warm
 projection (247 ms originally, 56 ms before the cache).
 
+Manual and automatic compaction use the same projection rules: context edits
+precede token estimates and cut selection. Omissions cost no summary budget;
+replacements contribute only projected content. Usage-based overflow recovery
+requires a projected assistant with no later context edit. Explicit overflow
+errors also require that the attempt was not omitted or compacted. Recovery
+keeps the failed response and tool results in history, excludes them from model
+context, then retries once. The refreshed projection supplies post-compaction
+messages, message-to-entry mappings, and the estimated context size. Tests:
+`TestPrepareCompactionUsesTheProjection`,
+`TestPrepareCompactionProjectsTheContextOnce`,
+`TestCheckCompactionIgnoresOmittedAssistant`, and
+`TestCheckCompactionRequiresProjectedUsage`.
+
 A resolution now walks the branch **by pointer** under the session lock
 (`branchPointersLocked`) and copies only the entries the compaction window
 keeps, instead of copying the whole entry tree and rebuilding an id map on every
@@ -454,15 +467,13 @@ beat, so `tui.Preparer.Prepare` renders the chunk ahead of the attach and the
 loop only inserts an already-warmed chunk (a width change discards a chunk
 warmed for the old width; nil queue keeps the synchronous path). A 30 MB /
 15k-entry session paints its first frame in ~20 ms instead of ~400 ms.
-Resizing a huge session
-still costs ~350–430 ms per new width because the layout renders the whole
-attached scroll content at the content width (`ScrollContentLines` calls the
-component render) — this matches upstream `layout.ts` and is deliberately not
-staggered (a partial-width render would show stale text). A manual `/compact`
-on that session spent ~20 s and ~325 GB of allocations in `PrepareCompaction`
-before the summarization request was even built, because the port re-derived
-the context projection inside the loop over it (`BuildContextEntries` once per
-entry); it now builds the projection once (~105 ms at 15.5k entries), pinned by
+Before D203, resizing a huge session took ~350–430 ms because layout rendered
+all attached scroll content at the new width. D203 now warms up to 64 children
+per Render call and keeps the previous complete frame visible until ready. This
+bounds work per call, not total resize time or one large child's render cost.
+A manual `/compact` once spent ~20 s and ~325 GB of allocations because
+`PrepareCompaction` rebuilt the context projection per entry. It now projects
+once (~105 ms at 15.5k entries), covered by
 `TestPrepareCompactionProjectsTheContextOnce`. The other projection was on the
 request path: `cacheContextIsCurrent` (the cache-warmer currency check) built
 the whole `SessionManager` context — ~190 ms on that session — on **every**
@@ -493,13 +504,14 @@ follow from the same profile: `isInTable` returns early for a rune below the
 first range, `graphemeWidth` returns 1 for printable ASCII, and `VisibleWidth`
 re-checks ASCII after stripping ANSI (styled tool output is ASCII underneath).
 Together the expanded 20k-line stream went 468 ms → 35 ms per frame, and the
-collapsed default stays sub-millisecond. **The remaining frame cost is the
-change-detection walk, not the post-processing.** A paint already only fills the
-terminal height (`RenderLayoutFrame` allocates `height` lines and `paintBox`
-fills those), and a warm walk is all cache hits (Markdown reports 100% via a
-`sync/atomic` probe), but the renderer re-walks every mounted component to find
-what changed, so a warm frame is O(components). `BenchmarkTranscriptFrameScaling`
-pins the curve: ~50 us at 1k components, ~150 us at ~4k, ~1.4 ms at 16k.
+collapsed default stays sub-millisecond. At this stage, the **remaining frame
+cost was the change-detection walk, not the post-processing.** A paint already
+only fills the terminal height (`RenderLayoutFrame` allocates `height` lines
+and `paintBox` fills those), and a warm walk is all cache hits. Markdown
+reports 100% via a `sync/atomic` probe, but the renderer re-walks every mounted
+component to find what changed, so a warm frame is O(components).
+`BenchmarkTranscriptFrameScaling` pins the curve: ~50 us at 1k components,
+~150 us at ~4k, ~1.4 ms at 16k.
 
 A warm-frame fast path removes most of that constant. `Container.Render` first
 calls `allChildrenReusable`: it reads each child's revision once into a per-frame
@@ -515,11 +527,11 @@ test seam, and `TestContainerWarmFrameSkipsTheChildWalk`,
 `TestContainerReadsEachChildVersionOncePerWarmFrame` pin the behavior. That took
 the 8,000-pair warm frame from ~2.0 ms to ~1.4 ms (2,000: ~260 us -> ~150 us),
 with no streaming regression (`BenchmarkStreamingAssistantDelta` is unchanged).
-The remaining cost is the memory-bound revision reads (one pointer chase per
-child per frame); the next optimization is a global render revision bumped
-whenever a version does, so an unchanged frame is O(1). The open question is
-making that invalidation discipline complete, since components currently change
-state (e.g. `Text.SetText`) without telling the parent.
+At this stage, the warm `SkipUnchangedChildren` path still paid for memory-bound
+revision reads. D229 later added an aggregate content revision for that path,
+which lets a stable fullscreen transcript frame bypass the per-child scan. See
+D229 below for its scope and measurements; ordinary containers still use their
+child revisions to detect changes.
 
 **The flatten, not the walk, is what makes a streaming frame stall.** Reproduced
 on the live 61 MB session (25.4k attached children): a warm frame is 11 ms, but
@@ -536,8 +548,10 @@ change signal; `Container` carries a `version` bumped on every rebuild and
 exposes `RenderVersion`, and `firstChangedChild`/`zoneMarkedLines` compare it
 (the `MouseRegion` and `ScrollView` pass-throughs and the message/tool components
 that return a container's lines forward the revision). `TestContainerRenderReusesPrefixOnTailChange`
-and `TestContainerRenderDetectsInPlaceChildChange` pin both halves. The
-remaining cost is the per-child revision read described above.
+and `TestContainerRenderDetectsInPlaceChildChange` pin both halves. At that
+stage, the remaining cost was the per-child revision read described above. D229
+later bypassed that scan for stable `SkipUnchangedChildren` frames; streaming
+changes still invalidate and rebuild the changed suffix.
 
 `AppendCompaction` had the
 same shape: its entry records the projected system message, and the port
