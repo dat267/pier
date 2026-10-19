@@ -14,6 +14,12 @@ import (
 // Tests for api/bedrock-converse-stream.ts (message conversion, request
 // construction, and the streaming event fold).
 
+func TestBedrockTextBlockUsesJavaScriptTrim(t *testing.T) {
+	if block := bedrockNonBlankTextBlock("\uFEFF"); block != nil {
+		t.Fatalf("BOM-only text block = %#v; want omitted", block)
+	}
+}
+
 func bedrockTestModel(baseURL string) *Model {
 	return &Model{
 		ID: "anthropic.claude-sonnet-4-5-20250929-v1:0", Name: "Claude Sonnet 4.5",

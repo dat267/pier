@@ -210,9 +210,12 @@ func loadTemplateWithDiagnostics(filePath string, sourceInfo SourceInfo) (*Promp
 	name := strings.TrimSuffix(filepath.Base(filePath), ".md")
 
 	description := parsed.Frontmatter["description"]
+	if parsed.NonStrings["description"] {
+		description = ""
+	}
 	if description == "" {
 		for _, line := range strings.Split(parsed.Body, "\n") {
-			if strings.TrimSpace(line) == "" {
+			if ai.JSTrim(line) == "" {
 				continue
 			}
 			// Upstream slices by UTF-16 code units (String.slice).
@@ -231,7 +234,7 @@ func loadTemplateWithDiagnostics(filePath string, sourceInfo SourceInfo) (*Promp
 		SourceInfo:  sourceInfo,
 		FilePath:    filePath,
 	}
-	if hint, ok := parsed.Frontmatter["argument-hint"]; ok && hint != "" {
+	if hint, ok := parsed.Frontmatter["argument-hint"]; ok && hint != "" && !parsed.NonStrings["argument-hint"] {
 		template.ArgumentHint = hint
 		template.HasArgumentHint = true
 	}

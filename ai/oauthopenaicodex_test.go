@@ -197,7 +197,7 @@ func TestOpenAICodexDeviceAuthFlow(t *testing.T) {
 			if !strings.Contains(raw, OpenAICodexClientID) {
 				t.Errorf("body = %s", raw)
 			}
-			_, _ = writer.Write([]byte(`{"device_auth_id":"device-1","user_code":"CODE","interval":"1"}`))
+			_, _ = writer.Write([]byte(`{"device_auth_id":"device-1","user_code":"CODE","interval":"\uFEFF1\uFEFF"}`))
 		case "/api/accounts/deviceauth/token":
 			polls++
 			if polls == 1 {

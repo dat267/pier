@@ -374,6 +374,16 @@ func TestLoadTemplatesSkipsInvalidUTF8FileNames(t *testing.T) {
 	}
 }
 
+// prompt-templates.ts accepts description and argument-hint only when YAML parses them as strings.
+func TestLoadTemplateIgnoresNonStringFrontmatterValues(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "numeric.md")
+	writeSettingsFile(t, path, "---\ndescription: 123\nargument-hint: 4\n---\nBody description")
+	template := LoadTemplateFromFile(path, CreateSyntheticSourceInfo(path, "local", "", "", filepath.Dir(path)))
+	if template == nil || template.Description != "Body description" || template.HasArgumentHint {
+		t.Fatalf("template = %+v; want body-derived description and no argument hint", template)
+	}
+}
+
 func TestLoadTemplateFrontmatterArgumentHint(t *testing.T) {
 	root := t.TempDir()
 

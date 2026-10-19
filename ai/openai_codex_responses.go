@@ -143,8 +143,8 @@ func ValidateCodexRetryDelay(delay time.Duration, options *OpenAICodexResponsesO
 // ResolveCodexURL builds the Codex responses endpoint (upstream
 // resolveCodexUrl).
 func ResolveCodexURL(baseURL string) string {
-	raw := strings.TrimSpace(baseURL)
-	if raw == "" {
+	raw := baseURL
+	if JSTrim(raw) == "" {
 		raw = defaultCodexBaseURL
 	}
 	normalized := strings.TrimRight(raw, "/")

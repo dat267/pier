@@ -34,15 +34,15 @@ type AzureOpenAIResponsesOptions struct {
 func ParseDeploymentNameMap(value string) map[string]string {
 	result := map[string]string{}
 	for _, entry := range strings.Split(value, ",") {
-		trimmed := strings.TrimSpace(entry)
+		trimmed := JSTrim(entry)
 		if trimmed == "" {
 			continue
 		}
 		parts := strings.SplitN(trimmed, "=", 2)
-		if len(parts) != 2 || strings.TrimSpace(parts[0]) == "" || strings.TrimSpace(parts[1]) == "" {
+		if len(parts) != 2 || JSTrim(parts[0]) == "" || JSTrim(parts[1]) == "" {
 			continue
 		}
-		result[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+		result[JSTrim(parts[0])] = JSTrim(parts[1])
 	}
 	return result
 }
@@ -66,7 +66,7 @@ func ResolveAzureDeploymentName(model *Model, options *AzureOpenAIResponsesOptio
 // NormalizeAzureBaseURL normalizes an Azure endpoint so the v1 surface can
 // append `/responses` (upstream normalizeAzureBaseUrl).
 func NormalizeAzureBaseURL(baseURL string) (string, error) {
-	trimmed := strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	trimmed := strings.TrimRight(JSTrim(baseURL), "/")
 	parsed, err := url.Parse(trimmed)
 	// Go's url.Parse accepts relative input, so require an absolute http(s)
 	// URL the way the upstream URL constructor does.
@@ -110,10 +110,10 @@ func ResolveAzureConfig(model *Model, options *AzureOpenAIResponsesOptions) (str
 
 	baseURL := ""
 	if options != nil {
-		baseURL = strings.TrimSpace(options.AzureBaseURL)
+		baseURL = JSTrim(options.AzureBaseURL)
 	}
 	if baseURL == "" {
-		baseURL = strings.TrimSpace(GetProviderEnvValueOr("AZURE_OPENAI_BASE_URL", env))
+		baseURL = JSTrim(GetProviderEnvValueOr("AZURE_OPENAI_BASE_URL", env))
 	}
 	resourceName := ""
 	if options != nil {

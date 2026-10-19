@@ -47,6 +47,7 @@ func TestExtractCodexAccountIDForRequests(t *testing.T) {
 func TestCodexURLs(t *testing.T) {
 	cases := map[string]string{
 		"":                                      "https://chatgpt.com/backend-api/codex/responses",
+		"\uFEFF":                                "https://chatgpt.com/backend-api/codex/responses",
 		"https://chatgpt.com/backend-api":       "https://chatgpt.com/backend-api/codex/responses",
 		"https://chatgpt.com/backend-api/":      "https://chatgpt.com/backend-api/codex/responses",
 		"https://chatgpt.com/backend-api/codex": "https://chatgpt.com/backend-api/codex/responses",

@@ -63,8 +63,8 @@ func metaTrustedHTTPURL(value any) string {
 // errorDetail).
 func metaErrorDetail(body map[string]any) string {
 	for _, key := range []string{"error_description", "detail", "message", "error"} {
-		if value, ok := body[key].(string); ok && strings.TrimSpace(value) != "" {
-			return ": " + strings.TrimSpace(value)
+		if value, ok := body[key].(string); ok && JSTrim(value) != "" {
+			return ": " + JSTrim(value)
 		}
 	}
 	return ""

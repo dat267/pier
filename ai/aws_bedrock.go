@@ -103,8 +103,8 @@ const maxBedrockDiagnosticValueChars = 200
 // NormalizeBedrockDiagnosticValue trims a diagnostic string, dropping empty and
 // over-long values.
 func NormalizeBedrockDiagnosticValue(value string) (string, bool) {
-	trimmed := strings.TrimSpace(value)
-	if trimmed == "" || len(trimmed) > maxBedrockDiagnosticValueChars {
+	trimmed := JSTrim(value)
+	if trimmed == "" || JSLength(trimmed) > maxBedrockDiagnosticValueChars {
 		return "", false
 	}
 	return trimmed, true

@@ -6,6 +6,7 @@ import (
 	"testing"
 )
 
+// utils/paths.ts isLocalPath excludes builtin: alongside package and URL prefixes.
 func TestIsLocalPath(t *testing.T) {
 	cases := []struct {
 		in   string
@@ -23,6 +24,8 @@ func TestIsLocalPath(t *testing.T) {
 		{"https://example.com/skills.tgz", false},
 		{"http://example.com/skills.tgz", false},
 		{"ssh:host/path", false},
+		{"builtin:core", false},
+		{"\uFEFFbuiltin:core\uFEFF", false},
 		{"  npm:padded  ", false},
 	}
 	for _, tc := range cases {
@@ -81,6 +84,16 @@ func TestNormalizeWindowsShellPath(t *testing.T) {
 		if got := NormalizeWindowsShellPath(input); got != want {
 			t.Errorf("%q: got %q want %q", input, got, want)
 		}
+	}
+}
+
+// utils/paths.ts normalizes trimmed paths with JavaScript String.trim.
+func TestNormalizePathTrimsJavaScriptWhitespace(t *testing.T) {
+	home := t.TempDir()
+	got := NormalizePath("\uFEFF~/project\uFEFF", PathInputOptions{Trim: true, HomeDir: home})
+	want := filepath.Join(home, "project")
+	if got != want {
+		t.Fatalf("NormalizePath() = %q; want %q", got, want)
 	}
 }
 

@@ -792,10 +792,14 @@ func CreateMcpToolDefinition(options McpToolDefinitionOptions) agent.AgentTool {
 	label := options.Server + "/" + options.Tool.Name
 	description := ""
 	if options.Tool.Description != nil {
-		description = strings.TrimSpace(*options.Tool.Description)
+		description = ai.JSTrim(*options.Tool.Description)
 	}
-	if description == "" && options.Tool.Title != nil {
-		description = *options.Tool.Title
+	title := options.Tool.Title
+	if title == nil && options.Tool.Annotations != nil {
+		title = options.Tool.Annotations.Title
+	}
+	if description == "" && title != nil {
+		description = *title
 	}
 	if description == "" {
 		description = "MCP tool " + options.Tool.Name + " from server " + options.Server

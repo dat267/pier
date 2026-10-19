@@ -41,7 +41,9 @@ func TestFindToolForwardsFractionalLimitToFD(t *testing.T) {
 	}
 }
 
-// Upstream find.ts keeps each readline result verbatim before relativizing it.
+// D244: upstream find.ts trims each line before relativizing it, which breaks a
+// file whose name legitimately begins or ends with a space. The port keeps the
+// whitespace so the returned path stays readable.
 func TestFindToolPreservesWhitespaceInFileNames(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Windows does not allow leading/trailing spaces in file names")

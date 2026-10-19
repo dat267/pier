@@ -121,14 +121,42 @@ func oauthPositiveNumber(body map[string]any, field, prefix string) (float64, er
 	return value, nil
 }
 
+// normalizeOAuthHTTPURL reproduces the WHATWG URL constructor's special-scheme
+// host resolution for HTTP(S) URLs before returning a net/url representation.
+func normalizeOAuthHTTPURL(raw string) (*url.URL, string, bool) {
+	parsed, err := url.Parse(raw)
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return nil, "", false
+	}
+	if parsed.Host == "" {
+		colon := strings.IndexByte(raw, ':')
+		if colon < 0 {
+			return nil, "", false
+		}
+		remainder := strings.ReplaceAll(raw[colon+1:], string('\\'), "/")
+		remainder = strings.TrimLeft(remainder, "/")
+		if remainder == "" {
+			return nil, "", false
+		}
+		parsed, err = url.Parse(parsed.Scheme + "://" + remainder)
+		if err != nil || parsed.Host == "" {
+			return nil, "", false
+		}
+	}
+	if parsed.Hostname() == "" {
+		return nil, "", false
+	}
+	return parsed, parsed.String(), true
+}
+
 // ValidateXaiVerificationURI only trusts https verification URIs, because the
 // URI is opened in the user's browser.
 func ValidateXaiVerificationURI(raw string) (string, error) {
-	parsed, err := url.Parse(raw)
-	if err != nil || parsed.Scheme != "https" {
+	parsed, normalized, ok := normalizeOAuthHTTPURL(raw)
+	if !ok || parsed.Scheme != "https" {
 		return "", fmt.Errorf("Untrusted verification URI in xAI OAuth response")
 	}
-	return parsed.String(), nil
+	return normalized, nil
 }
 
 func xaiRequestFailure(action string, response oauthHTTPResponse) error {
@@ -384,11 +412,8 @@ func trustedHTTPURL(value any) (string, bool) {
 	if !ok || text == "" {
 		return "", false
 	}
-	parsed, err := url.Parse(text)
-	if err != nil || (parsed.Scheme != "https" && parsed.Scheme != "http") {
-		return "", false
-	}
-	return parsed.String(), true
+	_, normalized, valid := normalizeOAuthHTTPURL(text)
+	return normalized, valid
 }
 
 // StartKimiDeviceAuthorization begins the Kimi Code device authorization.
@@ -404,7 +429,7 @@ func StartKimiDeviceAuthorization(ctx context.Context, oauthHost string) (*KimiD
 	}
 	if !response.OK {
 		message := fmt.Sprintf("Kimi Code device authorization failed with status %d", response.Status)
-		if text := strings.TrimSpace(response.Text); text != "" {
+		if text := response.Text; text != "" {
 			message += ": " + text
 		}
 		return nil, fmt.Errorf("%s", message)
@@ -480,7 +505,7 @@ func PollKimiForToken(ctx context.Context, oauthHost string, device *KimiDeviceA
 			}
 			if response.Status >= 500 {
 				message := fmt.Sprintf("Kimi Code device token request failed with status %d", response.Status)
-				if text := strings.TrimSpace(response.Text); text != "" {
+				if text := response.Text; text != "" {
 					message += ": " + text
 				}
 				return OAuthDeviceCodePollResult[*kimiTokenResponse]{Status: "failed", Message: message}, nil

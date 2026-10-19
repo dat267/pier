@@ -1,7 +1,11 @@
 package ai
 
 import (
+	"context"
+	"errors"
+	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -36,6 +40,41 @@ func TestRetryDelayParsesNumericPrefixes(t *testing.T) {
 		if err != nil || got != testCase.want {
 			t.Errorf("GetRetryDelayMS(%q) = %d, %v; want %d, nil", testCase.value, got, err, testCase.want)
 		}
+	}
+}
+
+// provider-retry.ts retries APIConnectionError instances with no HTTP status.
+func TestRetryableNetworkErrorsMatchSDKConnectionErrors(t *testing.T) {
+	err := &url.Error{Op: "Post", URL: "https://api.example/v1", Err: &net.OpError{Op: "dial", Net: "tcp", Err: errors.New("connection refused")}}
+	if !isRetryableProviderError(err) {
+		t.Fatal("network connection error is not retryable")
+	}
+	if isRetryableProviderError(errors.New("invalid request")) {
+		t.Fatal("ordinary local error should not be retried")
+	}
+	badURL := &url.Error{Op: "Post", URL: "bad:", Err: errors.New("unsupported protocol scheme")}
+	if isRetryableProviderError(badURL) {
+		t.Fatal("invalid request URL should not be retried")
+	}
+}
+
+// RetryProviderRequest retries network errors like the SDK's APIConnectionError.
+func TestRetryProviderRequestRetriesConnectionErrors(t *testing.T) {
+	previousSleep := providerRetrySleep
+	providerRetrySleep = func(context.Context, int64) error { return nil }
+	defer func() { providerRetrySleep = previousSleep }()
+
+	maxRetries := 1
+	attempts := 0
+	response, err := RetryProviderRequest(context.Background(), func() (*http.Response, error) {
+		attempts++
+		if attempts == 1 {
+			return nil, &url.Error{Op: "Post", URL: "https://api.example/v1", Err: &net.OpError{Op: "dial", Net: "tcp", Err: errors.New("connection refused")}}
+		}
+		return &http.Response{StatusCode: http.StatusOK}, nil
+	}, &ProviderRetryOptions{MaxRetries: &maxRetries})
+	if err != nil || response == nil || response.StatusCode != http.StatusOK || attempts != 2 {
+		t.Fatalf("response = %v, err = %v, attempts = %d; want one retry and success", response, err, attempts)
 	}
 }
 

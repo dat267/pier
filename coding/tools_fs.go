@@ -85,7 +85,9 @@ func CreateReadTool(cwd string, options *ReadToolOptions) agent.AgentTool {
 				return agent.AgentToolResult{}, err
 			}
 
-			if mimeType := DetectImageMimeTypeFromFile(absolutePath); mimeType != "" {
+			if mimeType, mimeErr := DetectSupportedImageMimeTypeFromFile(absolutePath); mimeErr != nil {
+				return agent.AgentToolResult{}, mimeErr
+			} else if mimeType != "" {
 				return readImageFile(absolutePath, mimeType, input.Path, autoResize, modelFor)
 			}
 
@@ -240,32 +242,6 @@ func readImageFile(absolutePath, mimeType, originalPath string, autoResize bool,
 			ai.ImageContent{Data: processed.Data, MimeType: processed.MimeType},
 		},
 	}, nil
-}
-
-// DetectImageMimeTypeFromFile sniffs image MIME from magic bytes.
-func DetectImageMimeTypeFromFile(path string) string {
-	file, err := os.Open(path)
-	if err != nil {
-		return ""
-	}
-	defer file.Close()
-	magic := make([]byte, 16)
-	n, _ := file.Read(magic)
-	magic = magic[:n]
-	switch {
-	case len(magic) >= 8 && string(magic[:8]) == "\x89PNG\r\n\x1a\n":
-		return "image/png"
-	case len(magic) >= 3 && magic[0] == 0xFF && magic[1] == 0xD8:
-		return "image/jpeg"
-	case len(magic) >= 6 && string(magic[:3]) == "GIF" && (magic[3] == '8'):
-		return "image/gif"
-	case len(magic) >= 12 && string(magic[8:12]) == "WEBP":
-		return "image/webp"
-	case len(magic) >= 2 && string(magic[:2]) == "BM":
-		return "image/bmp"
-	default:
-		return ""
-	}
 }
 
 // --- write ---

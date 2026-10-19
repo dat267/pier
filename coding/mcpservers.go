@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Port of core/mcp-servers.ts: the `mcpServers` config shape, its validation
@@ -110,14 +112,56 @@ func McpNamespace(server string) string {
 	return "mcp__" + strings.ReplaceAll(server, "-", "_")
 }
 
+// D245: Go's net/url does not resolve WHATWG special-scheme forms, so the port
+// stores their canonical effective URL instead of retaining the raw config value.
+// parseMcpHTTPURL returns the request URL that WHATWG consumers would use.
+func parseMcpHTTPURL(value string) (*url.URL, string, error) {
+	parsed, err := url.Parse(value)
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return nil, "", fmt.Errorf("not an HTTP URL")
+	}
+	if parsed.Host != "" {
+		if !mcpHTTPURLHasValidPort(parsed) {
+			return nil, "", fmt.Errorf("HTTP URL has an invalid port")
+		}
+		return parsed, value, nil
+	}
+	// WHATWG URL treats backslashes and missing slashes after the special
+	// http(s) scheme as separators. Normalize those forms so net/http receives
+	// an absolute URL with a host, and reject forms such as "https:".
+	colon := strings.IndexByte(value, ':')
+	if colon < 0 {
+		return nil, "", fmt.Errorf("not an absolute HTTP URL")
+	}
+	remainder := strings.ReplaceAll(value[colon+1:], string('\\'), "/")
+	remainder = strings.TrimLeft(remainder, "/")
+	if remainder == "" {
+		return nil, "", fmt.Errorf("HTTP URL has no host")
+	}
+	normalized, err := url.Parse(parsed.Scheme + "://" + remainder)
+	if err != nil || normalized.Host == "" {
+		return nil, "", fmt.Errorf("HTTP URL has no host")
+	}
+	if !mcpHTTPURLHasValidPort(normalized) {
+		return nil, "", fmt.Errorf("HTTP URL has an invalid port")
+	}
+	return normalized, normalized.String(), nil
+}
+
+func mcpHTTPURLHasValidPort(parsed *url.URL) bool {
+	port := parsed.Port()
+	if port == "" {
+		return true
+	}
+	number, err := strconv.Atoi(port)
+	return err == nil && number >= 0 && number <= 65535
+}
+
 // IsLoopbackRedirectURI reports whether a redirect URI can be served by the
 // loopback callback server (upstream isLoopbackRedirectUri).
 func IsLoopbackRedirectURI(value string) bool {
-	parsed, err := url.Parse(value)
-	if err != nil || parsed.Scheme != "http" {
-		return false
-	}
-	if !isMcpLoopbackHost(parsed.Hostname()) {
+	parsed, _, err := parseMcpHTTPURL(value)
+	if err != nil || parsed.Scheme != "http" || !isMcpLoopbackHost(parsed.Hostname()) {
 		return false
 	}
 	return parsed.RawQuery == "" && parsed.Fragment == ""
@@ -229,8 +273,8 @@ func ValidateMcpServerConfig(name string, raw any) (*McpServerConfig, error) {
 	}
 
 	if serverURL, ok := value["url"].(string); ok && (serverType == "" || serverType == "http" || serverType == "streamable-http") {
-		parsed, err := url.Parse(serverURL)
-		if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		parsed, effectiveURL, err := parseMcpHTTPURL(serverURL)
+		if err != nil {
 			return nil, fmt.Errorf("server %q: url must be an http or https URL", name)
 		}
 		if headers, ok := value["headers"]; ok {
@@ -256,7 +300,7 @@ func ValidateMcpServerConfig(name string, raw any) (*McpServerConfig, error) {
 			}
 			config.Auth = &McpProviderAuth{Provider: provider}
 		}
-		config.URL = serverURL
+		config.URL = effectiveURL
 		return config, nil
 	}
 
@@ -352,16 +396,21 @@ func validateMcpOAuth(value any) (*McpOAuthConfig, string) {
 	}
 	if callbackURL, ok := record["callbackUrl"]; ok {
 		text, isString := callbackURL.(string)
-		if !isString || !IsLoopbackRedirectURI(text) {
+		var parsed *url.URL
+		var effectiveURL string
+		if isString {
+			parsed, effectiveURL, _ = parseMcpHTTPURL(text)
+		}
+		if parsed == nil || parsed.Scheme != "http" || !isMcpLoopbackHost(parsed.Hostname()) || parsed.RawQuery != "" || parsed.Fragment != "" {
 			return nil, "oauth.callbackUrl must be an http URI on localhost, 127.0.0.1, or [::1] without query or fragment"
 		}
-		if parsed, err := url.Parse(text); err == nil && parsed.Port() != "" && port != nil {
+		if parsed.Port() != "" && port != nil {
 			urlPort, conversionErr := strconv.Atoi(parsed.Port())
 			if conversionErr != nil || urlPort != *port {
 				return nil, "oauth.callbackUrl and oauth.callbackPort name different ports"
 			}
 		}
-		config.CallbackURL = &text
+		config.CallbackURL = &effectiveURL
 	}
 	if scope, ok := record["scope"]; ok {
 		text, isString := scope.(string)
@@ -372,19 +421,23 @@ func validateMcpOAuth(value any) (*McpOAuthConfig, string) {
 	}
 	if clientName, ok := record["clientName"]; ok {
 		text, isString := clientName.(string)
-		if !isString || strings.TrimSpace(text) == "" {
+		if !isString || ai.JSTrim(text) == "" {
 			return nil, "oauth.clientName must be a non-empty string"
 		}
 		config.ClientName = &text
 	}
 	if metadataURL, ok := record["authServerMetadataUrl"]; ok {
 		text, isString := metadataURL.(string)
-		parsed, err := url.Parse(text)
-		valid := isString && err == nil && (parsed.Scheme == "https" || (parsed.Scheme == "http" && isMcpLoopbackHost(parsed.Hostname())))
+		var parsed *url.URL
+		var effectiveURL string
+		if isString {
+			parsed, effectiveURL, _ = parseMcpHTTPURL(text)
+		}
+		valid := parsed != nil && (parsed.Scheme == "https" || (parsed.Scheme == "http" && isMcpLoopbackHost(parsed.Hostname())))
 		if !valid {
 			return nil, "oauth.authServerMetadataUrl must be an https URL, or http on localhost, 127.0.0.1, or [::1]"
 		}
-		config.AuthServerMetadataURL = &text
+		config.AuthServerMetadataURL = &effectiveURL
 	}
 	return config, ""
 }

@@ -112,7 +112,7 @@ func (t *Text) Render(width int) []string {
 	}
 
 	// Nothing is rendered when there is no actual text.
-	if t.text == "" || strings.TrimSpace(t.text) == "" {
+	if t.text == "" || jsTrim(t.text) == "" {
 		t.cachedText = t.text
 		t.hasCachedText = true
 		t.cachedWidth = width

@@ -305,6 +305,39 @@ func TestValidateMcpProviderAuthMixedCaseLoopback(t *testing.T) {
 	}
 }
 
+// mcp-servers.ts validates with the WHATWG URL constructor, which resolves
+// special-scheme forms such as `http:localhost:...` before fetch.
+func TestValidateMcpServerConfigNormalizesSpecialHTTPSchemeURL(t *testing.T) {
+	for _, rawURL := range []string{`http:localhost:8788/mcp`, `http:\\localhost:8788\\mcp`} {
+		var raw any
+		if err := json.Unmarshal([]byte(`{"url":"`+rawURL+`"}`), &raw); err != nil {
+			t.Fatal(err)
+		}
+		config, err := ValidateMcpServerConfig("local", raw)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if config.URL != "http://localhost:8788/mcp" {
+			t.Fatalf("URL from %q = %q, want WHATWG-normalized URL", rawURL, config.URL)
+		}
+	}
+}
+
+// core/mcp-servers.ts isLoopbackRedirectUri resolves HTTP URLs with WHATWG URL.
+func TestValidateMcpOAuthNormalizesSpecialLoopbackCallbackURL(t *testing.T) {
+	var raw any
+	if err := json.Unmarshal([]byte(`{"url":"https://example.com/mcp","oauth":{"callbackUrl":"http:localhost:8080/callback","callbackPort":8080}}`), &raw); err != nil {
+		t.Fatal(err)
+	}
+	config, err := ValidateMcpServerConfig("remote", raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if config.OAuth.CallbackURL == nil || *config.OAuth.CallbackURL != "http://localhost:8080/callback" {
+		t.Fatalf("callback URL = %v, want WHATWG-normalized loopback URL", config.OAuth.CallbackURL)
+	}
+}
+
 // TestValidateMcpServerConfigMessages pins the remaining validation messages
 // (upstream validateMcpServerConfig).
 func TestValidateMcpServerConfigMessages(t *testing.T) {
@@ -318,11 +351,15 @@ func TestValidateMcpServerConfigMessages(t *testing.T) {
 		{"x", `{"command":"c","env":{"A":1}}`, `env must map names to strings`},
 		{"x", `{"command":"c","cwd":1}`, `cwd must be a string`},
 		{"x", `{"url":"https://a.example/mcp","headers":{"A":1}}`, `headers must map names to strings`},
+		{"x", `{"url":"https:"}`, `url must be an http or https URL`},
+		{"x", `{"url":"https://example.com:99999/mcp"}`, `url must be an http or https URL`},
 		{"x", `{"command":"c","timeout":0}`, `timeout must be a positive number of seconds`},
 		{"x", `{"command":"c","timeout":"5"}`, `timeout must be a positive number of seconds`},
 		{"x", `{"command":"c","toolExposure":["a"]}`, `toolExposure must map tool names to exposures`},
 		{"x", `{"command":"c","enabled":"yes"}`, `enabled must be a boolean`},
 		{"x", `{"url":"https://a.example/mcp","oauth":"none"}`, `oauth must be an object`},
+		{"x", `{"url":"https://a.example/mcp","oauth":{"authServerMetadataUrl":"https:"}}`, `oauth.authServerMetadataUrl must be an https URL`},
+		{"x", `{"url":"https://a.example/mcp","oauth":{"clientName":"\uFEFF"}}`, `oauth.clientName must be a non-empty string`},
 		{"x", `{"command":"c","exposure":"codemode-deferred"}`, ``},
 		{"x", `{"command":"c","timeout":1.5}`, ``},
 		{"x", `{"url":"https://a.example/mcp","headers":{"Authorization":"Bearer ${TOKEN}"}}`, ``},

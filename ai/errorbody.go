@@ -47,7 +47,7 @@ func NormalizeProviderError(err error) NormalizedProviderError {
 	if !ok {
 		return NormalizedProviderError{Message: err.Error(), MessageCarriesBody: false}
 	}
-	body := strings.TrimSpace(pe.Body)
+	body := JSTrim(pe.Body)
 	if body == "" {
 		body = ""
 	} else {
@@ -244,8 +244,8 @@ func ResolveGrammarConstrainedSampling(tool Tool, supportsOpenAIGrammarTools boo
 	}
 	larkDefinition, hasLark := config.Config.Variants["openai_lark"]
 	regexDefinition, hasRegex := config.Config.Variants["openai_regex"]
-	hasLarkDefinition := hasLark && strings.TrimSpace(larkDefinition) != ""
-	hasRegexDefinition := hasRegex && strings.TrimSpace(regexDefinition) != ""
+	hasLarkDefinition := hasLark && JSTrim(larkDefinition) != ""
+	hasRegexDefinition := hasRegex && JSTrim(regexDefinition) != ""
 	if !hasLarkDefinition && !hasRegexDefinition {
 		return nil, fmt.Errorf("Tool %q cannot use grammar constrained sampling: no supported grammar variant was provided.", tool.Name)
 	}

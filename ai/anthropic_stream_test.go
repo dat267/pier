@@ -276,6 +276,7 @@ func TestStreamAnthropicThinkingAndRedacted(t *testing.T) {
 	}
 }
 
+// anthropic-messages.ts hasHeader uses String.trim before accepting auth headers.
 func TestStreamAnthropicErrorPaths(t *testing.T) {
 	t.Run("sse error event", func(t *testing.T) {
 		model := testAnthropicModel()
@@ -315,9 +316,10 @@ func TestStreamAnthropicErrorPaths(t *testing.T) {
 		server := sseServer(t, nil, func(*http.Request, []byte) { called = true })
 		model.BaseURL = server.URL
 		defer server.Close()
+		bomHeader := "\uFEFF"
 		stream := StreamAnthropic(model, NormalizeContext(Context{
 			Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-		}), nil)
+		}), &AnthropicOptions{Headers: map[string]*string{"Authorization": &bomHeader}})
 		msg, _ := stream.Result(context.Background())
 		if called {
 			t.Fatal("no request should be made without auth")

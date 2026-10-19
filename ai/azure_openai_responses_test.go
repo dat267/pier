@@ -29,6 +29,7 @@ func TestNormalizeAzureBaseURL(t *testing.T) {
 		{"https://my-resource.openai.azure.com/openai?api-version=2024-12-01", "https://my-resource.openai.azure.com/openai/v1"},
 		// Query parameters on non-Azure hosts are preserved.
 		{"https://my-proxy.example.com/v1?custom=true", "https://my-proxy.example.com/v1?custom=true"},
+		{"\uFEFFhttps://my-proxy.example.com/v1\uFEFF", "https://my-proxy.example.com/v1"},
 	}
 	for _, testCase := range cases {
 		got, err := NormalizeAzureBaseURL(testCase.input)
@@ -78,6 +79,11 @@ func TestResolveAzureConfig(t *testing.T) {
 	})
 	if err != nil || baseURL != "https://opt.openai.azure.com/openai/v1" {
 		t.Fatalf("base = %q err = %v", baseURL, err)
+	}
+	t.Setenv("AZURE_OPENAI_RESOURCE_NAME", "my-resource")
+	baseURL, _, err = ResolveAzureConfig(model, &AzureOpenAIResponsesOptions{AzureBaseURL: "\uFEFF"})
+	if err != nil || baseURL != "https://my-resource.openai.azure.com/openai/v1" {
+		t.Fatalf("BOM-only override base = %q err = %v; want resource fallback", baseURL, err)
 	}
 
 	// Without any configuration the upstream error is reported.

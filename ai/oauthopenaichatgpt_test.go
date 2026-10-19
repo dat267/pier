@@ -116,6 +116,34 @@ func TestParseOpenAIChatGPTAuthorizationInput(t *testing.T) {
 	}
 }
 
+func TestParseOpenAIChatGPTAuthorizationUsesJavaScriptTrim(t *testing.T) {
+	const state = "state-1"
+	callback := "http://127.0.0.1:1455/auth/callback?code=abc&state=state-1&client_id=%EF%BB%BFoaiapp_issued%EF%BB%BF"
+	result, err := ParseOpenAIChatGPTAuthorizationInput("\uFEFF"+callback+"\uFEFF", state)
+	if err != nil || result.Code != "abc" || result.ClientID != "oaiapp_issued" {
+		t.Fatalf("result = %+v, %v; want BOM-trimmed OAuth values", result, err)
+	}
+}
+
+// openai-chatgpt.ts rejects a stored clientId that is empty after String.trim.
+func TestOpenAIChatGPTClientIDUsesJavaScriptTrim(t *testing.T) {
+	if got := normalizeOpenAIChatGPTClientID("\uFEFF"); got != "" {
+		t.Fatalf("BOM-only client ID = %q; want empty", got)
+	}
+	if got := normalizeOpenAIChatGPTClientID("\uFEFF client-id \uFEFF"); got != "client-id" {
+		t.Fatalf("client ID = %q; want trimmed value", got)
+	}
+}
+
+// openai-chatgpt.ts parses pasted callbacks with the WHATWG URL constructor.
+func TestParseOpenAIChatGPTAuthorizationNormalizesSpecialSchemeURL(t *testing.T) {
+	input := "http:///127.0.0.1:1455/auth/callback?code=abc&state=state-1&client_id=oaiapp_issued"
+	result, err := ParseOpenAIChatGPTAuthorizationInput(input, "state-1")
+	if err != nil || result.Code != "abc" || result.ClientID != "oaiapp_issued" {
+		t.Fatalf("result = %+v, %v; want parsed WHATWG URL", result, err)
+	}
+}
+
 // TestOpenAIChatGPTCredentialStoresClientIDAndScopes pins the credential's
 // extra keys and their JSON round-trip.
 func TestOpenAIChatGPTCredentialStoresClientIDAndScopes(t *testing.T) {

@@ -2,10 +2,14 @@ package ai
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"math"
 	"math/rand"
+	"net"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -33,6 +37,20 @@ func (e *ProviderError) Error() string { return e.Message }
 
 const defaultMaxRetryDelayMS = 60_000
 
+var providerRetrySleep = func(ctx context.Context, delayMS int64) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	timer := time.NewTimer(time.Duration(max(0, delayMS)) * time.Millisecond)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
 var jsParseFloatPrefix = regexp.MustCompile(`^[+-]?(?:Infinity|(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?)`)
 
 func isJSParseFloatWhitespace(r rune) bool {
@@ -58,7 +76,19 @@ func parseJSFloatPrefix(value string) (float64, bool) {
 func isRetryableProviderError(err error) bool {
 	pe, ok := err.(*ProviderError)
 	if !ok {
-		return false
+		var requestErr *url.Error
+		if errors.As(err, &requestErr) {
+			if errors.Is(requestErr.Err, context.Canceled) {
+				return false
+			}
+			if errors.Is(requestErr.Err, context.DeadlineExceeded) || errors.Is(requestErr.Err, io.EOF) || errors.Is(requestErr.Err, io.ErrUnexpectedEOF) {
+				return true
+			}
+			var networkErr net.Error
+			return errors.As(requestErr.Err, &networkErr)
+		}
+		var networkErr net.Error
+		return errors.As(err, &networkErr)
 	}
 	if pe.Headers != nil {
 		switch pe.Headers.Get("x-should-retry") {
@@ -155,14 +185,16 @@ func RetryProviderRequest(ctx context.Context, request func() (*http.Response, e
 		}
 		retryIndex := maxRetries - retriesRemaining
 		retriesRemaining--
-		delay, delayErr := GetRetryDelayMS(err.(*ProviderError), retryIndex, options.maxRetryDelayOrNil())
+		retryError, isProviderError := err.(*ProviderError)
+		if !isProviderError {
+			retryError = &ProviderError{Message: err.Error()}
+		}
+		delay, delayErr := GetRetryDelayMS(retryError, retryIndex, options.maxRetryDelayOrNil())
 		if delayErr != nil {
 			return nil, delayErr
 		}
-		select {
-		case <-time.After(time.Duration(max(0, delay)) * time.Millisecond):
-		case <-ctx.Done():
-			return nil, ctx.Err()
+		if sleepErr := providerRetrySleep(ctx, delay); sleepErr != nil {
+			return nil, sleepErr
 		}
 	}
 }

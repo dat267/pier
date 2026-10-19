@@ -179,6 +179,7 @@ func TestMistralMessageConversion(t *testing.T) {
 		{"", true, false, false, "(image omitted: model does not support images)"},
 		{"", true, false, true, "[tool error] (image omitted: model does not support images)"},
 		{"", false, false, false, "(no tool output)"},
+		{"\uFEFF", false, false, false, "(no tool output)"},
 		{"", false, false, true, "[tool error] (no tool output)"},
 		{"out", true, false, false, "out\n[tool image omitted: model does not support images]"},
 	}
@@ -416,6 +417,24 @@ func TestMistralStreamErrors(t *testing.T) {
 	}
 }
 
+// mistral-conversations.ts formatMistralError calls String.trim on the body.
+func TestMistralErrorFormattingUsesJavaScriptTrim(t *testing.T) {
+	formatted := FormatMistralError(&ProviderError{Status: 429, Body: "\uFEFFbody\uFEFF"})
+	if formatted != "Mistral API error (429): body" {
+		t.Fatalf("formatted = %q; want JavaScript-trimmed body", formatted)
+	}
+}
+
+// mistral-conversations.ts truncateErrorText slices and counts JavaScript string units.
+func TestMistralErrorFormattingCountsUTF16Units(t *testing.T) {
+	body := strings.Repeat("😀", maxMistralErrorBodyChars/2+1)
+	formatted := FormatMistralError(&ProviderError{Status: 429, Body: body})
+	want := "Mistral API error (429): " + strings.Repeat("😀", maxMistralErrorBodyChars/2) + "... [truncated 2 chars]"
+	if formatted != want {
+		t.Fatalf("formatted length = %d; want UTF-16 truncation suffix and boundary", len(formatted))
+	}
+}
+
 func TestMistralErrorFormatting(t *testing.T) {
 	long := strings.Repeat("x", maxMistralErrorBodyChars+50)
 	formatted := FormatMistralError(&ProviderError{Status: 429, Body: long})
@@ -430,6 +449,24 @@ func TestMistralErrorFormatting(t *testing.T) {
 	}
 	if got := FormatMistralError(io.EOF); got != "EOF" {
 		t.Fatalf("formatted = %q", got)
+	}
+}
+
+// mistral-conversations.ts drops text and thinking blocks whose trim() is empty.
+// mistral-conversations.ts parseMistralEvent trims joined data with String.trim.
+func TestParseMistralEventTreatsBOMOnlyDataAsEmpty(t *testing.T) {
+	event, done, err := parseMistralEvent("data: \uFEFF")
+	if err != nil || done || event != nil {
+		t.Fatalf("event = %+v, done = %v, err = %v; want empty event", event, done, err)
+	}
+}
+
+func TestMistralConversionDropsJavaScriptWhitespaceOnlyBlocks(t *testing.T) {
+	messages := toMistralChatMessages([]Message{&AssistantMessage{
+		Content: ContentList{TextContent{Text: "\uFEFF"}, ThinkingContent{Thinking: "\uFEFF"}},
+	}}, false)
+	if len(messages) != 0 {
+		t.Fatalf("messages = %+v; want whitespace-only assistant message omitted", messages)
 	}
 }
 

@@ -441,6 +441,15 @@ func TestCreateMcpToolDefinition(t *testing.T) {
 		t.Fatalf("result = %+v", result.Content)
 	}
 
+	// Annotations.title is the fallback when the top-level title is absent.
+	annotationTitle := "Annotated tool"
+	annotated := CreateMcpToolDefinition(McpToolDefinitionOptions{
+		Server: "docs", Tool: protocol.Tool{Name: "annotated", Annotations: &protocol.ToolAnnotations{Title: &annotationTitle}}, Name: "mcp__docs__annotated",
+	})
+	if annotated.Description != annotationTitle {
+		t.Fatalf("annotated description = %q; want %q", annotated.Description, annotationTitle)
+	}
+
 	// A description without text falls back to the server/tool label.
 	unnamed := CreateMcpToolDefinition(McpToolDefinitionOptions{
 		Server: "docs", Tool: protocol.Tool{Name: "mystery"}, Name: "mcp__docs__mystery",

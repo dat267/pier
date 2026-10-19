@@ -5,6 +5,7 @@ import (
 	ctxpkg "context"
 	"errors"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -115,6 +116,16 @@ func TestResolveConfigValue(t *testing.T) {
 	}
 	if IsCommandConfigValue("$A") || !IsCommandConfigValue("!echo hi") {
 		t.Fatal("command detection")
+	}
+}
+
+func TestResolveConfigValueCommandTrimsJavaScriptWhitespace(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("printf octal escapes are POSIX shell syntax")
+	}
+	value, ok := ResolveConfigValueUncached(`!printf '\357\273\277secret\357\273\277'`, nil)
+	if !ok || value != "secret" {
+		t.Fatalf("command value = %q, %v; want JavaScript-trimmed output", value, ok)
 	}
 }
 

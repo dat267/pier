@@ -61,14 +61,21 @@ type OAuthAuthorizationInput struct {
 // ParseAuthorizationInput parses a pasted redirect URL, `code#state` pair, a
 // query string, or a bare code (upstream parseAuthorizationInput).
 func ParseAuthorizationInput(input string) OAuthAuthorizationInput {
-	value := strings.TrimSpace(input)
+	value := JSTrim(input)
 	if value == "" {
 		return OAuthAuthorizationInput{}
 	}
-	if parsed, err := url.Parse(value); err == nil && parsed.Scheme != "" && parsed.Host != "" {
-		return OAuthAuthorizationInput{
-			Code:  parsed.Query().Get("code"),
-			State: parsed.Query().Get("state"),
+	if parsed, err := url.Parse(value); err == nil && parsed.Scheme != "" {
+		if parsed.Host == "" {
+			if normalized, _, ok := normalizeOAuthHTTPURL(value); ok {
+				parsed = normalized
+			}
+		}
+		if parsed.Host != "" {
+			return OAuthAuthorizationInput{
+				Code:  parsed.Query().Get("code"),
+				State: parsed.Query().Get("state"),
+			}
 		}
 	}
 	if index := strings.Index(value, "#"); index != -1 {

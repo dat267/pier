@@ -39,7 +39,7 @@ const (
 
 // NormalizeGitHubDomain turns a URL or bare domain into a hostname.
 func NormalizeGitHubDomain(input string) (string, bool) {
-	trimmed := strings.TrimSpace(input)
+	trimmed := JSTrim(input)
 	if trimmed == "" {
 		return "", false
 	}
@@ -47,8 +47,8 @@ func NormalizeGitHubDomain(input string) (string, bool) {
 	if !strings.Contains(trimmed, "://") {
 		candidate = "https://" + trimmed
 	}
-	parsed, err := url.Parse(candidate)
-	if err != nil || parsed.Hostname() == "" {
+	parsed, _, valid := normalizeOAuthHTTPURL(candidate)
+	if !valid || parsed.Hostname() == "" {
 		return "", false
 	}
 	// WHATWG hostnames are lowercased; Go's url.Hostname preserves case.
@@ -577,7 +577,7 @@ func LoginGitHubCopilot(interaction *AuthInteraction) (*OAuthCredential, error) 
 	if ctx.Err() != nil {
 		return nil, fmt.Errorf("Login cancelled")
 	}
-	trimmed := strings.TrimSpace(input)
+	trimmed := JSTrim(input)
 	enterpriseDomain, valid := NormalizeGitHubDomain(input)
 	if trimmed != "" && !valid {
 		return nil, fmt.Errorf("Invalid GitHub Enterprise URL/domain")

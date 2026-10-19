@@ -109,6 +109,14 @@ func TestParseArgsValueFlags(t *testing.T) {
 	}
 }
 
+// cli/args.ts trims comma-separated model patterns with JavaScript String.trim.
+func TestParseArgsModelsUseJavaScriptTrim(t *testing.T) {
+	result := ParseArgs([]string{"--models", "\uFEFFgpt-4o\uFEFF"})
+	if len(result.Models) != 1 || result.Models[0] != "gpt-4o" {
+		t.Fatalf("models = %#v; want JavaScript-trimmed model pattern", result.Models)
+	}
+}
+
 func TestParseArgsNameAndSessions(t *testing.T) {
 	if result := ParseArgs([]string{"--name", "my-session"}); result.Name == nil || *result.Name != "my-session" {
 		t.Fatal("--name")

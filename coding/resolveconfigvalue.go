@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Port of core/resolve-config-value.ts: resolve configuration values that may
@@ -323,7 +325,7 @@ func executeWithConfiguredShell(command string, env map[string]string) (value st
 		// The shell could not be spawned (upstream ENOENT).
 		return "", false
 	}
-	return strings.TrimSpace(DecodeUTF8WithReplacement(output)), true
+	return ai.JSTrim(DecodeUTF8WithReplacement(output)), true
 }
 
 // executeWithDefaultShell runs the command through the platform default shell
@@ -345,7 +347,7 @@ func executeWithDefaultShell(command string, env map[string]string) (string, boo
 	if err != nil {
 		return "", false
 	}
-	value := strings.TrimSpace(DecodeUTF8WithReplacement(output))
+	value := ai.JSTrim(DecodeUTF8WithReplacement(output))
 	return value, value != ""
 }
 

@@ -219,7 +219,7 @@ type DefaultAuthContext struct{}
 
 func (DefaultAuthContext) Env(name string) (string, bool) {
 	value, ok := os.LookupEnv(name)
-	if !ok || strings.TrimSpace(value) == "" {
+	if !ok || JSTrim(value) == "" {
 		return "", false
 	}
 	return value, true

@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"math/big"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -373,6 +376,39 @@ typeCheck:
 	return true
 }
 
+var jsDecimalNumberPattern = regexp.MustCompile(`^[+-]?(?:(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?|Infinity)$`)
+
+func parseJSNumberString(value string) (float64, bool) {
+	value = JSTrim(value)
+	if value == "" {
+		return 0, false
+	}
+	if len(value) > 2 && value[0] == '0' {
+		base := 0
+		switch value[1] {
+		case 'x', 'X':
+			base = 16
+		case 'b', 'B':
+			base = 2
+		case 'o', 'O':
+			base = 8
+		}
+		if base != 0 {
+			number, ok := new(big.Int).SetString(value[2:], base)
+			if !ok {
+				return 0, false
+			}
+			parsed, _ := number.Float64()
+			return parsed, !math.IsInf(parsed, 0)
+		}
+	}
+	if !jsDecimalNumberPattern.MatchString(value) {
+		return 0, false
+	}
+	parsed, err := strconv.ParseFloat(value, 64)
+	return parsed, err == nil && !math.IsNaN(parsed) && !math.IsInf(parsed, 0)
+}
+
 // coercePrimitiveByType ports upstream's primitive coercions.
 func coercePrimitiveByType(value *schemaValue, typ string) *schemaValue {
 	switch typ {
@@ -380,12 +416,9 @@ func coercePrimitiveByType(value *schemaValue, typ string) *schemaValue {
 		if value.Null {
 			return &schemaValue{IsNumber: true, Number: 0}
 		}
-		if value.IsString && strings.TrimSpace(value.String) != "" {
-			var parsed float64
-			if _, err := fmt.Sscanf(strings.TrimSpace(value.String), "%g", &parsed); err == nil && !math.IsNaN(parsed) && !math.IsInf(parsed, 0) {
-				if typ == "number" || parsed == math.Trunc(parsed) {
-					return &schemaValue{IsNumber: true, Number: parsed}
-				}
+		if value.IsString {
+			if parsed, ok := parseJSNumberString(value.String); ok && (typ == "number" || parsed == math.Trunc(parsed)) {
+				return &schemaValue{IsNumber: true, Number: parsed}
 			}
 		}
 		if value.IsBool {

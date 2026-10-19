@@ -5,8 +5,11 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Port of utils/frontmatter.ts (the YAML subset skill files use) and
@@ -14,13 +17,14 @@ import (
 
 // D-row D10: upstream parses YAML with the `yaml` package; the Go port
 // implements the flat `key: value` subset the Agent Skills spec's
-// frontmatter uses (string/boolean scalar keys, quoted or bare). Nested
-// YAML structures are not supported.
+// frontmatter uses. It tracks quoted versus plain scalar types and common
+// boolean, numeric and null values, but does not support nested YAML structures.
 
 // ParsedFrontmatter is the parse outcome.
 type ParsedFrontmatter struct {
 	Frontmatter map[string]string
 	Booleans    map[string]bool
+	NonStrings  map[string]bool
 	Body        string
 }
 
@@ -35,6 +39,7 @@ func ParseFrontmatter(content string) ParsedFrontmatter {
 	result := ParsedFrontmatter{
 		Frontmatter: map[string]string{},
 		Booleans:    map[string]bool{},
+		NonStrings:  map[string]bool{},
 	}
 	if !strings.HasPrefix(normalized, "---") {
 		result.Body = normalized
@@ -46,7 +51,7 @@ func ParseFrontmatter(content string) ParsedFrontmatter {
 		return result
 	}
 	yamlString := normalized[4 : 3+endIndex+1]
-	body := strings.TrimSpace(normalized[3+endIndex+4:])
+	body := ai.JSTrim(normalized[3+endIndex+4:])
 
 	for _, line := range strings.Split(yamlString, "\n") {
 		line = strings.TrimSpace(line)
@@ -59,17 +64,74 @@ func ParseFrontmatter(content string) ParsedFrontmatter {
 		}
 		key := strings.TrimSpace(line[:colon])
 		value := strings.TrimSpace(line[colon+1:])
-		// Strip surrounding quotes.
-		if len(value) >= 2 && (value[0] == '"' && value[len(value)-1] == '"' || value[0] == '\'' && value[len(value)-1] == '\'') {
+		if commentIndex := yamlInlineCommentIndex(value); commentIndex >= 0 {
+			value = strings.TrimSpace(value[:commentIndex])
+		}
+		quoted := len(value) >= 2 && (value[0] == '"' && value[len(value)-1] == '"' || value[0] == '\'' && value[len(value)-1] == '\'')
+		if quoted {
 			value = value[1 : len(value)-1]
 		}
 		result.Frontmatter[key] = value
-		if value == "true" {
+		if !quoted && !yamlPlainScalarIsString(value) {
+			result.NonStrings[key] = true
+		}
+		if !quoted && strings.EqualFold(value, "true") {
 			result.Booleans[key] = true
 		}
 	}
 	result.Body = body
 	return result
+}
+
+func yamlPlainScalarIsString(value string) bool {
+	if value == "" {
+		return false
+	}
+	switch strings.ToLower(value) {
+	case "true", "false", "null", "~", ".nan", ".inf", "+.inf", "-.inf":
+		return false
+	case "nan", "+nan", "-nan", "inf", "+inf", "-inf", "infinity", "+infinity", "-infinity":
+		return true
+	}
+	if _, err := strconv.ParseInt(value, 0, 64); err == nil {
+		return false
+	}
+	if _, err := strconv.ParseFloat(value, 64); err == nil {
+		return false
+	}
+	if strings.HasPrefix(value, "[") || strings.HasPrefix(value, "{") || strings.HasPrefix(value, "|") || strings.HasPrefix(value, ">") {
+		return false
+	}
+	return true
+}
+
+func yamlInlineCommentIndex(value string) int {
+	var quote byte
+	for index := 0; index < len(value); index++ {
+		character := value[index]
+		if quote == '"' && character == '\\' {
+			index++
+			continue
+		}
+		if quote == '\'' && character == '\'' && index+1 < len(value) && value[index+1] == '\'' {
+			index++
+			continue
+		}
+		if quote != 0 {
+			if character == quote {
+				quote = 0
+			}
+			continue
+		}
+		if index == 0 && (character == '"' || character == '\'') {
+			quote = character
+			continue
+		}
+		if character == '#' && (index == 0 || value[index-1] == ' ' || value[index-1] == '\t') {
+			return index
+		}
+	}
+	return -1
 }
 
 // StripFrontmatter returns the body only.
@@ -127,7 +189,10 @@ type LoadSkillsResult struct {
 	Diagnostics []ResourceDiagnostic
 }
 
-const maxSkillNameLength = 64
+const (
+	maxSkillNameLength        = 64
+	maxSkillDescriptionLength = 1024
+)
 
 // validateSkillName validates per the Agent Skills spec.
 // skillNameRegex matches a valid skill name: lowercase letters, digits and
@@ -136,8 +201,9 @@ var skillNameRegex = regexp.MustCompile(`^[a-z0-9-]+$`)
 
 func validateSkillName(name string) []string {
 	var errors []string
-	if len(name) > maxSkillNameLength {
-		errors = append(errors, fmt.Sprintf("name exceeds %d characters (%d)", maxSkillNameLength, len(name)))
+	nameLength := ai.JSLength(name)
+	if nameLength > maxSkillNameLength {
+		errors = append(errors, fmt.Sprintf("name exceeds %d characters (%d)", maxSkillNameLength, nameLength))
 	}
 	if !skillNameRegex.MatchString(name) {
 		errors = append(errors, "name contains invalid characters (must be lowercase a-z, 0-9, hyphens only)")
@@ -166,7 +232,10 @@ func loadSkillFromFile(filePath string, source string) (*Skill, []ResourceDiagno
 
 	parsed := ParseFrontmatter(DecodeUTF8WithReplacement(rawContent))
 	description := parsed.Frontmatter["description"]
-	hasDescription := strings.TrimSpace(description) != ""
+	if parsed.NonStrings["description"] {
+		description = ""
+	}
+	hasDescription := ai.JSTrim(description) != ""
 	if !isDeclaredSkill && !hasDescription {
 		return nil, diagnostics
 	}
@@ -184,7 +253,15 @@ func loadSkillFromFile(filePath string, source string) (*Skill, []ResourceDiagno
 		return nil, diagnostics
 	}
 
+	descriptionLength := ai.JSLength(description)
+	if descriptionLength > maxSkillDescriptionLength {
+		diagnostics = append(diagnostics, ResourceDiagnostic{Type: "warning", Message: fmt.Sprintf("description exceeds %d characters (%d)", maxSkillDescriptionLength, descriptionLength), Path: filePath})
+	}
+
 	name := parsed.Frontmatter["name"]
+	if parsed.NonStrings["name"] {
+		name = ""
+	}
 	if name == "" {
 		name = parentDirName
 	}
@@ -223,6 +300,7 @@ type skillScanDir struct {
 	root     *Skill
 	rootDiag []ResourceDiagnostic
 	items    []skillScanItem
+	rules    []skillIgnoreRule
 }
 
 // skillScanItem is one entry in ReadDir order: a subdirectory (scanned later)
@@ -255,15 +333,15 @@ func scanSkillTree(rootDir string, source string) map[string]*skillScanDir {
 	var mu sync.Mutex
 	var wait sync.WaitGroup
 	sem := make(chan struct{}, skillScanConcurrency)
-	var walk func(dir string)
-	walk = func(dir string) {
+	var walk func(dir string, includeRootFiles bool, inheritedRules []skillIgnoreRule)
+	walk = func(dir string, includeRootFiles bool, inheritedRules []skillIgnoreRule) {
 		// Add happens while the parent's count is still held, so it cannot race
 		// the Wait() below (the standard WaitGroup reuse rule).
 		wait.Add(1)
 		go func() {
 			defer wait.Done()
 			sem <- struct{}{}
-			scan := readSkillDir(dir, source)
+			scan := readSkillDir(dir, rootDir, source, includeRootFiles, inheritedRules)
 			<-sem
 			mu.Lock()
 			scans[dir] = scan
@@ -272,46 +350,258 @@ func scanSkillTree(rootDir string, source string) map[string]*skillScanDir {
 			// goroutine returns, so a blocked child cannot deadlock the pool.
 			for _, item := range scan.items {
 				if item.subdir != "" {
-					walk(item.subdir)
+					walk(item.subdir, false, scan.rules)
 				}
 			}
 		}()
 	}
-	walk(rootDir)
+	walk(rootDir, true, nil)
 	wait.Wait()
 	return scans
 }
 
+// skillEntryType follows symlinks like upstream's statSync checks. Broken links
+// are skipped.
+type skillIgnoreRule struct {
+	pattern       *regexp.Regexp
+	negated       bool
+	directoryOnly bool
+}
+
+func skillIgnoreRulesForDir(dir, root string) []skillIgnoreRule {
+	relativeDir, err := filepath.Rel(root, dir)
+	if err != nil || relativeDir == "." {
+		relativeDir = ""
+	} else {
+		relativeDir = strings.ReplaceAll(relativeDir, string(os.PathSeparator), "/") + "/"
+	}
+	var rules []skillIgnoreRule
+	for _, filename := range []string{".gitignore", ".ignore", ".fdignore"} {
+		content, err := os.ReadFile(filepath.Join(dir, filename))
+		if err != nil {
+			continue
+		}
+		for _, line := range strings.Split(string(content), "\n") {
+			rule, ok := parseSkillIgnoreRule(strings.TrimSuffix(line, "\r"), relativeDir)
+			if ok {
+				rules = append(rules, rule)
+			}
+		}
+	}
+	return rules
+}
+
+func parseSkillIgnoreRule(line, prefix string) (skillIgnoreRule, bool) {
+	trimmed := strings.TrimSpace(line)
+	if trimmed == "" || (strings.HasPrefix(trimmed, "#") && !strings.HasPrefix(trimmed, "\\#")) {
+		return skillIgnoreRule{}, false
+	}
+	pattern := line
+	for strings.HasSuffix(pattern, " ") {
+		backslashes := 0
+		for index := len(pattern) - 2; index >= 0 && pattern[index] == 0x5c; index-- {
+			backslashes++
+		}
+		if backslashes%2 == 1 {
+			break
+		}
+		pattern = pattern[:len(pattern)-1]
+	}
+	negated := false
+	if strings.HasPrefix(pattern, "!") {
+		negated = true
+		pattern = pattern[1:]
+	} else if strings.HasPrefix(pattern, "\\!") {
+		pattern = pattern[1:]
+	}
+	if strings.HasPrefix(pattern, "\\#") {
+		pattern = pattern[1:]
+	}
+	anchored := strings.HasPrefix(pattern, "/")
+	pattern = strings.TrimPrefix(pattern, "/")
+	directoryOnly := strings.HasSuffix(pattern, "/")
+	pattern = strings.TrimSuffix(pattern, "/")
+	if prefix != "" {
+		pattern = prefix + pattern
+		anchored = true
+	}
+	if pattern == "" {
+		return skillIgnoreRule{}, false
+	}
+	pattern = strings.ToLower(pattern)
+	regexPattern := globToRegexp(pattern)
+	if !anchored && !strings.Contains(pattern, "/") {
+		regexPattern = `(?:^|/)` + regexPattern
+	}
+	compiled, err := regexp.Compile(`^` + regexPattern + `$`)
+	if err != nil {
+		return skillIgnoreRule{}, false
+	}
+	return skillIgnoreRule{pattern: compiled, negated: negated, directoryOnly: directoryOnly}, true
+}
+
+func encodeIgnorePath(path string) string {
+	var builder strings.Builder
+	for _, character := range path {
+		writeIgnoreUnits(&builder, character)
+	}
+	return builder.String()
+}
+
+func writeIgnoreUnits(builder *strings.Builder, character rune) {
+	if character <= 0xFFFF {
+		builder.WriteRune(character)
+		return
+	}
+	character -= 0x10000
+	builder.WriteRune(0xF0000 + 0xD800 + (character >> 10))
+	builder.WriteRune(0xF0000 + 0xDC00 + (character & 0x3FF))
+}
+
+func writeIgnoreLiteral(builder *strings.Builder, character rune) {
+	if character <= 0xFFFF {
+		builder.WriteString(regexp.QuoteMeta(string(character)))
+		return
+	}
+	character -= 0x10000
+	builder.WriteString(regexp.QuoteMeta(string(rune(0xF0000 + 0xD800 + (character >> 10)))))
+	builder.WriteString(regexp.QuoteMeta(string(rune(0xF0000 + 0xDC00 + (character & 0x3FF)))))
+}
+
+func globToRegexp(pattern string) string {
+	var builder strings.Builder
+	runes := []rune(pattern)
+	for index := 0; index < len(runes); index++ {
+		switch runes[index] {
+		case '\\':
+			if index+1 < len(runes) {
+				index++
+			}
+			writeIgnoreLiteral(&builder, runes[index])
+		case '*':
+			start := index
+			for index+1 < len(runes) && runes[index+1] == '*' {
+				index++
+			}
+			starCount := index - start + 1
+			segmentBoundaryBefore := start == 0 || runes[start-1] == '/'
+			segmentBoundaryAfter := index+1 == len(runes) || runes[index+1] == '/'
+			if starCount == 2 && segmentBoundaryBefore && segmentBoundaryAfter {
+				if index+1 < len(runes) && runes[index+1] == '/' {
+					index++
+					builder.WriteString(`(?s:.*/)?`)
+				} else {
+					builder.WriteString(`(?s:.*)`)
+				}
+			} else {
+				builder.WriteString(`[^/]*`)
+			}
+		case '?':
+			builder.WriteString(`[^/]`)
+		case '[':
+			end := index + 1
+			for end < len(runes) {
+				if runes[end] == '\\' && end+1 < len(runes) {
+					end += 2
+					continue
+				}
+				if runes[end] == ']' {
+					break
+				}
+				end++
+			}
+			if end == len(runes) || end == index+1 || (end == index+2 && runes[index+1] == '!') {
+				builder.WriteString(regexp.QuoteMeta("["))
+				continue
+			}
+			class := runes[index+1 : end]
+			builder.WriteByte('[')
+			if class[0] == '!' {
+				builder.WriteByte('^')
+				class = class[1:]
+			} else if class[0] == '^' {
+				builder.WriteByte('\\')
+			}
+			builder.WriteString(string(class))
+			builder.WriteByte(']')
+			index = end
+		default:
+			writeIgnoreLiteral(&builder, runes[index])
+		}
+	}
+	return builder.String()
+}
+
+func skillPathIgnored(path string, isDirectory bool, rules []skillIgnoreRule) bool {
+	ignored := false
+	for _, rule := range rules {
+		if rule.directoryOnly && !isDirectory {
+			continue
+		}
+		if rule.pattern.MatchString(encodeIgnorePath(strings.ToLower(path))) {
+			ignored = !rule.negated
+		}
+	}
+	return ignored
+}
+
+func relativeSkillPath(root, path string) string {
+	relative, err := filepath.Rel(root, path)
+	if err != nil {
+		return path
+	}
+	return strings.ReplaceAll(relative, string(os.PathSeparator), "/")
+}
+
+func skillEntryType(entry os.DirEntry, fullPath string) (isFile, isDirectory bool) {
+	if entry.Type()&os.ModeSymlink != 0 {
+		info, err := os.Stat(fullPath)
+		if err != nil {
+			return false, false
+		}
+		return info.Mode().IsRegular(), info.IsDir()
+	}
+	return entry.Type().IsRegular(), entry.IsDir()
+}
+
 // readSkillDir reads one directory and parses the skill files directly inside
 // it. A subdirectory becomes an item; its scan is filled in by a later worker.
-func readSkillDir(dir string, source string) *skillScanDir {
+func readSkillDir(dir, root string, source string, includeRootFiles bool, inheritedRules []skillIgnoreRule) *skillScanDir {
 	// ReadDir reports a missing or unreadable directory by itself; a separate
 	// os.Stat would double the walk's directory operations.
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return &skillScanDir{}
 	}
+	rules := append([]skillIgnoreRule(nil), inheritedRules...)
+	rules = append(rules, skillIgnoreRulesForDir(dir, root)...)
 	// A root SKILL.md short-circuits (one skill per directory root).
 	for _, entry := range entries {
 		name := DecodeUTF8WithReplacement([]byte(entry.Name()))
-		if name != "SKILL.md" || entry.IsDir() {
+		fullPath := filepath.Join(dir, name)
+		isFile, _ := skillEntryType(entry, fullPath)
+		if name != "SKILL.md" || !isFile || skillPathIgnored(relativeSkillPath(root, fullPath), false, rules) {
 			continue
 		}
-		skill, diag := loadSkillFromFile(filepath.Join(dir, name), source)
+		skill, diag := loadSkillFromFile(fullPath, source)
 		return &skillScanDir{terminal: true, root: skill, rootDiag: diag}
 	}
-	scan := &skillScanDir{}
+	scan := &skillScanDir{rules: rules}
 	for _, entry := range entries {
 		name := DecodeUTF8WithReplacement([]byte(entry.Name()))
 		if strings.HasPrefix(name, ".") || name == "node_modules" {
 			continue
 		}
 		fullPath := filepath.Join(dir, name)
-		if entry.IsDir() {
+		isFile, isDirectory := skillEntryType(entry, fullPath)
+		if skillPathIgnored(relativeSkillPath(root, fullPath), isDirectory, rules) {
+			continue
+		}
+		if isDirectory {
 			scan.items = append(scan.items, skillScanItem{subdir: fullPath})
 			continue
 		}
-		if !strings.HasSuffix(name, ".md") {
+		if !isFile || !includeRootFiles || !strings.HasSuffix(name, ".md") {
 			continue
 		}
 		skill, diag := loadSkillFromFile(fullPath, source)

@@ -111,7 +111,7 @@ func StreamGoogleVertex(model *Model, context TranscriptContext, options *Google
 // configured value is absent, the ADC marker, or a placeholder
 // (upstream resolveApiKey).
 func ResolveVertexAPIKey(apiKey string) string {
-	trimmed := strings.TrimSpace(apiKey)
+	trimmed := JSTrim(apiKey)
 	if trimmed == "" || trimmed == GCPVertexCredentialsMarker || isPlaceholderAPIKey(trimmed) {
 		return ""
 	}
@@ -127,7 +127,7 @@ func isPlaceholderAPIKey(apiKey string) bool {
 // VertexRequestURL builds the streaming endpoint for a model
 // (upstream buildHttpOptions plus the SDK's URL layout).
 func VertexRequestURL(model *Model, project, location string) (string, error) {
-	base := strings.TrimSpace(model.BaseURL)
+	base := JSTrim(model.BaseURL)
 	custom := ""
 	if base != "" && !strings.Contains(base, "{location}") {
 		custom = base

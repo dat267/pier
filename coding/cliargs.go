@@ -341,7 +341,7 @@ func splitNonEmpty(value string) []string {
 	parts := strings.Split(value, ",")
 	out := []string{}
 	for _, part := range parts {
-		trimmed := strings.TrimSpace(part)
+		trimmed := ai.JSTrim(part)
 		if trimmed != "" {
 			out = append(out, trimmed)
 		}

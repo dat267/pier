@@ -276,6 +276,18 @@ func TestBedrockErrorFormatting(t *testing.T) {
 	}
 }
 
+// bedrock-converse-stream.ts uses JavaScript trim and String.length for header values.
+func TestNormalizeBedrockDiagnosticUsesJavaScriptStringSemantics(t *testing.T) {
+	value := strings.Repeat("é", 101)
+	got, ok := NormalizeBedrockDiagnosticValue(value)
+	if !ok || got != value {
+		t.Fatalf("normalized value has length %d, accepted = %v; want 101 UTF-16 units accepted", len(got), ok)
+	}
+	if got, ok := NormalizeBedrockDiagnosticValue("\uFEFFrequest\uFEFF"); !ok || got != "request" {
+		t.Fatalf("BOM-trimmed value = %q, accepted = %v", got, ok)
+	}
+}
+
 func TestBedrockFailureDiagnostic(t *testing.T) {
 	message := &AssistantMessage{}
 	err := &ProviderError{Status: 503, Body: "x", Code: "ServiceUnavailableException"}

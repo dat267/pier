@@ -45,15 +45,22 @@ func oauthCallbackHost() string {
 // ParseOpenRouterAuthorizationInput extracts a code from a pasted redirect URL,
 // a query string, or a bare code (upstream parseAuthorizationInput).
 func ParseOpenRouterAuthorizationInput(input string) (string, bool) {
-	value := strings.TrimSpace(input)
+	value := JSTrim(input)
 	if value == "" {
 		return "", false
 	}
-	if parsed, err := url.Parse(value); err == nil && parsed.Scheme != "" && parsed.Host != "" {
-		if code := parsed.Query().Get("code"); code != "" {
-			return code, true
+	if parsed, err := url.Parse(value); err == nil && parsed.Scheme != "" {
+		if parsed.Host == "" {
+			if normalized, _, ok := normalizeOAuthHTTPURL(value); ok {
+				parsed = normalized
+			}
 		}
-		return "", false
+		if parsed.Host != "" {
+			if code := parsed.Query().Get("code"); code != "" {
+				return code, true
+			}
+			return "", false
+		}
 	}
 	if strings.Contains(value, "code=") {
 		if values, err := url.ParseQuery(value); err == nil {

@@ -793,25 +793,35 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 				return agent.AgentToolResult{}, fmt.Errorf("%s", appendStatus(outputText, "Command aborted"))
 			}
 			if waitErr != nil {
-				// Timed-out kills and signal kills surface as failures with the
-				// collected output. Signal terminations use the 128+N shell
-				// convention so callers never mistake them for success (the
-				// upstream D68 note covers signals Node cannot name).
-				outputText, _ := formatOutput("")
-				// The timeout flag is authoritative, so it is checked first. Windows
-				// has no signals and its WaitStatus never reports Signaled(), which
-				// is where this check used to live, so a timed-out command there was
-				// reported as "Command exited with code 1" — an ordinary-looking
-				// failure with no hint that the timeout fired.
+				// The timeout flag is authoritative, so it is checked first, and a
+				// timeout or abort throws with empty text (upstream's catch path).
 				if timedOut.Load() {
+					outputText, _ := formatOutput("")
 					return agent.AgentToolResult{}, fmt.Errorf("%s", appendStatus(outputText, fmt.Sprintf("Command timed out after %g seconds", *input.Timeout)))
 				}
 				if ws, ok := waitErr.(*exec.ExitError); ok {
+					// A non-zero exit is an isError result, not a thrown error:
+					// formatOutput keeps the truncation details and defaults the empty
+					// text to "(no output)". Signal terminations use the 128+N shell
+					// convention so callers never mistake them for success (upstream
+					// maps signals the same way; Windows has no signal status and
+					// surfaces the raw code).
+					outputText, details := formatOutput("(no output)")
+					exitCode := ws.ExitCode()
 					if status, ok := ws.Sys().(syscall.WaitStatus); ok && status.Signaled() {
-						return agent.AgentToolResult{}, fmt.Errorf("%s", appendStatus(outputText, fmt.Sprintf("Command exited with code %d", 128+int(status.Signal()))))
+						exitCode = 128 + int(status.Signal())
 					}
-					return agent.AgentToolResult{}, fmt.Errorf("%s", appendStatus(outputText, fmt.Sprintf("Command exited with code %d", ws.ExitCode())))
+					var resultDetails json.RawMessage
+					if details != nil {
+						resultDetails, _ = ai.MarshalJSON(*details)
+					}
+					return agent.AgentToolResult{
+						Content: []ai.Content{ai.TextContent{Text: appendStatus(outputText, fmt.Sprintf("Command exited with code %d", exitCode))}},
+						Details: resultDetails,
+						IsError: true,
+					}, nil
 				}
+				outputText, _ := formatOutput("")
 				return agent.AgentToolResult{}, fmt.Errorf("%s", appendStatus(outputText, waitErr.Error()))
 			}
 

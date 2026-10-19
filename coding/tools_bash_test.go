@@ -149,12 +149,56 @@ func TestBashStdoutAndStderr(t *testing.T) {
 	}
 }
 
-func TestBashNonZeroExitIsError(t *testing.T) {
+// bash.ts returns { isError: true } with the formatted output and truncation
+// details for a non-zero exit; only aborts and timeouts throw. The port
+// returned a Go error, which the loop turns into a bare result and drops the
+// details.
+func TestBashNonZeroExitIsErrorResult(t *testing.T) {
 	dir := t.TempDir()
 	tool := CreateBashTool(dir, nil)
-	_, err := tool.Execute("c", json.RawMessage(`{"command":"echo before; exit 3"}`), context.Background(), nil)
-	if err == nil || !strings.Contains(err.Error(), "before") || !strings.Contains(err.Error(), "Command exited with code 3") {
-		t.Fatalf("err = %v", err)
+	result, err := tool.Execute("c", json.RawMessage(`{"command":"echo before; exit 3"}`), context.Background(), nil)
+	if err != nil {
+		t.Fatalf("err = %v; want an isError result", err)
+	}
+	if !result.IsError {
+		t.Fatal("IsError = false; want true")
+	}
+	text := result.Content[0].(ai.TextContent).Text
+	if !strings.Contains(text, "before") || !strings.Contains(text, "Command exited with code 3") {
+		t.Fatalf("text = %q", text)
+	}
+}
+
+// formatOutput defaults emptyText to "(no output)"; the port passed "" on the
+// non-zero exit path, dropping the placeholder.
+func TestBashNonZeroExitKeepsNoOutputPlaceholder(t *testing.T) {
+	dir := t.TempDir()
+	tool := CreateBashTool(dir, nil)
+	result, err := tool.Execute("c", json.RawMessage(`{"command":"exit 3"}`), context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := result.Content[0].(ai.TextContent).Text
+	if !strings.HasPrefix(text, "(no output)\n\n") || !strings.Contains(text, "Command exited with code 3") {
+		t.Fatalf("text = %q; want the (no output) placeholder", text)
+	}
+}
+
+// Only aborts and timeouts lose the output details; a non-zero exit keeps them.
+func TestBashNonZeroExitKeepsTruncationDetails(t *testing.T) {
+	requirePosixShell(t)
+	t.Setenv("TMPDIR", t.TempDir())
+	dir := t.TempDir()
+	tool := CreateBashTool(dir, nil)
+	result, err := tool.Execute("c", json.RawMessage(`{"command":"head -c 60000 /dev/zero | tr '\\0' a; exit 7"}`), context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.IsError {
+		t.Fatal("IsError = false")
+	}
+	if !strings.Contains(string(result.Details), "fullOutputPath") {
+		t.Fatalf("details = %q; want truncation + fullOutputPath", result.Details)
 	}
 }
 
@@ -195,22 +239,27 @@ func requireShellEnvInjection(t *testing.T) {
 
 func TestBashSignalKillIsNotSuccess(t *testing.T) {
 	requirePosixShell(t)
-	// D68: a signal-terminated command must FAIL, never report success.
+	// A signal-terminated command must report failure (isError), never success.
 	dir := t.TempDir()
 	tool := CreateBashTool(dir, nil)
-	_, err := tool.Execute("c", json.RawMessage(`{"command":"kill -TERM $$"}`), context.Background(), nil)
-	if err == nil {
-		t.Fatal("signal-terminated command must error")
+	result, err := tool.Execute("c", json.RawMessage(`{"command":"kill -TERM $$"}`), context.Background(), nil)
+	if err != nil {
+		t.Fatalf("err = %v; want an isError result", err)
 	}
+	if !result.IsError {
+		t.Fatal("signal-terminated command must set IsError")
+	}
+	text := result.Content[0].(ai.TextContent).Text
 	// 128+N needs a wait status that carries the signal. Windows has none: the
 	// WSL launcher surfaces the raw code (15) instead, so only assert it where
 	// the status reports the signal.
-	if runtime.GOOS != "windows" && !strings.Contains(err.Error(), "143") {
-		t.Fatalf("expected 128+15=143, err = %v", err)
+	if runtime.GOOS != "windows" && !strings.Contains(text, "143") {
+		t.Fatalf("expected 128+15=143, text = %q", text)
 	}
 }
 
 func TestBashTruncationKeepsTail(t *testing.T) {
+	t.Setenv("TMPDIR", t.TempDir())
 	dir := t.TempDir()
 	tool := CreateBashTool(dir, nil)
 	// 3000 lines → tail-truncated to the last 2000 with the notice.

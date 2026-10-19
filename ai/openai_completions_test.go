@@ -513,7 +513,10 @@ func TestStreamOpenAICompletionsMalformedFinalArguments(t *testing.T) {
 func TestStreamOpenAICompletionsErrorsAndFinishFallback(t *testing.T) {
 	t.Run("missing key", func(t *testing.T) {
 		model := testOpenAIModel()
-		stream := StreamOpenAICompletionsSimple(model, NormalizeContext(Context{}), nil)
+		bomHeader := "\uFEFF"
+		stream := StreamOpenAICompletionsSimple(model, NormalizeContext(Context{}), &SimpleStreamOptions{
+			StreamOptions: StreamOptions{Headers: ProviderHeaders{"Authorization": &bomHeader}},
+		})
 		msg, _ := stream.Result(context.Background())
 		if msg.StopReason != StopError || *msg.ErrorMessage != "No API key for provider: openai" {
 			t.Fatalf("message = %+v", msg)

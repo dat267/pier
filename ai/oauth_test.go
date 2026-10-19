@@ -143,7 +143,9 @@ func TestParseAuthorizationInput(t *testing.T) {
 	}{
 		{"", "", ""},
 		{"http://localhost:53692/callback?code=abc&state=verifier", "abc", "verifier"},
+		{"http:///localhost:53692/callback?code=abc&state=verifier", "abc", "verifier"},
 		{"abc#verifier", "abc", "verifier"},
+		{"\uFEFFabc#verifier\uFEFF", "abc", "verifier"},
 		{"code=abc&state=verifier", "abc", "verifier"},
 		{"raw-code", "raw-code", ""},
 		{"  http://localhost:53692/callback?code=abc  ", "abc", ""},

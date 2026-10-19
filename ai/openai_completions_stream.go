@@ -829,7 +829,7 @@ func getClientAPIKey(provider, apiKey string, headers ProviderHeaders) (string, 
 	}
 	for name, value := range headers {
 		lower := strings.ToLower(name)
-		if (lower == "authorization" || lower == "cf-aig-authorization") && value != nil && strings.TrimSpace(*value) != "" {
+		if (lower == "authorization" || lower == "cf-aig-authorization") && value != nil && JSTrim(*value) != "" {
 			return "unused", nil
 		}
 	}

@@ -46,11 +46,124 @@ func setHomeDir(t *testing.T, dir string) {
 	t.Setenv("USERPROFILE", dir)
 }
 
-// TestLoadSkillsDedupesDefaultsAndPaths covers upstream loadSkills' real-path
-// dedupe: the default agent-dir skills dir and a settings skill path pointing
-// at the same directory (e.g. ~/.pi/agent/skills) must load each skill once,
-// with no diagnostic. The port appended both, so every skill appeared twice.
-// skills.ts reads skill files as UTF-8 and replaces malformed sequences.
+// utils/frontmatter.ts trims the extracted body with JavaScript String.trim.
+func TestParseFrontmatterTrimsJavaScriptWhitespaceFromBody(t *testing.T) {
+	got := ParseFrontmatter("---\nname: test\n---\n" + "\uFEFF" + "body" + "\uFEFF").Body
+	if got != "body" {
+		t.Fatalf("body = %q; want JavaScript-trimmed body", got)
+	}
+}
+
+// core/skills.ts validateDescription uses JavaScript String.trim, including BOM.
+func TestLoadSkillTreatsBOMOnlyDescriptionAsEmpty(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "bom", "SKILL.md")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	content := "---\nname: bom\ndescription: \"" + "\uFEFF" + "\"\n---\nbody"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	skill, diagnostics := loadSkillFromFile(path, "user")
+	if skill != nil || len(diagnostics) != 1 || diagnostics[0].Message != "description is required" {
+		t.Fatalf("skill = %+v, diagnostics = %+v; want BOM-only description rejected", skill, diagnostics)
+	}
+}
+
+// core/skills.ts treats disable-model-invocation as boolean true only; YAML
+// quoted `"true"` remains a string under utils/frontmatter.ts's yaml parser.
+func TestLoadSkillQuotedBooleanDoesNotDisableModelInvocation(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "quoted", "SKILL.md")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	content := `---
+name: quoted
+description: test
+disable-model-invocation: "true"
+---
+body`
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	skill, _ := loadSkillFromFile(path, "user")
+	if skill == nil || skill.DisableModelInvocation {
+		t.Fatalf("skill = %+v, want quoted string true not to disable model invocation", skill)
+	}
+}
+
+// core/skills.ts validateDescription warns above MAX_DESCRIPTION_LENGTH (1024).
+func TestLoadSkillWarnsWhenDescriptionExceedsLimit(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "long", "SKILL.md")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	description := strings.Repeat("x", 1025)
+	content := "---\nname: long\ndescription: " + description + "\n---\nbody"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	skill, diagnostics := loadSkillFromFile(path, "user")
+	if skill == nil {
+		t.Fatal("long description should warn but keep loading the skill")
+	}
+	if len(diagnostics) != 1 || diagnostics[0].Message != "description exceeds 1024 characters (1025)" {
+		t.Fatalf("diagnostics = %+v, want description length warning", diagnostics)
+	}
+}
+
+// skills.ts validates names using JavaScript String.length (UTF-16 code units).
+func TestValidateSkillNameCountsUTF16(t *testing.T) {
+	name := strings.Repeat("😀", 32)
+	got := validateSkillName(name)
+	if len(got) != 1 || got[0] != "name contains invalid characters (must be lowercase a-z, 0-9, hyphens only)" {
+		t.Fatalf("validation errors = %v, want only invalid-character warning", got)
+	}
+}
+
+// yaml parser in utils/frontmatter.ts recognizes case-insensitive YAML booleans.
+func TestLoadSkillYAMLTrueVariantsDisableModelInvocation(t *testing.T) {
+	for _, value := range []string{"true", "True", "TRUE", "true # comment"} {
+		path := filepath.Join(t.TempDir(), value, "SKILL.md")
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		content := "---\nname: variant\ndescription: test\ndisable-model-invocation: " + value + "\n---\nbody"
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		skill, _ := loadSkillFromFile(path, "user")
+		if skill == nil || !skill.DisableModelInvocation {
+			t.Errorf("value %q produced skill %+v; want model invocation disabled", value, skill)
+		}
+	}
+}
+
+// core/skills.ts validateDescription requires a string, not a YAML number.
+// utils/frontmatter.ts uses YAML's core schema, where bare NaN is a string.
+func TestParseFrontmatterTreatsBareNaNAsString(t *testing.T) {
+	parsed := ParseFrontmatter("---\ndescription: NaN\n---\nbody")
+	if parsed.NonStrings["description"] {
+		t.Fatal("bare NaN must remain a YAML string")
+	}
+}
+
+func TestLoadSkillRejectsNonStringDescription(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "numeric", "SKILL.md")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	content := "---\nname: numeric\ndescription: 123\n---\nbody"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	skill, diagnostics := loadSkillFromFile(path, "user")
+	if skill != nil || len(diagnostics) != 1 || diagnostics[0].Message != "description is required" {
+		t.Fatalf("skill = %+v, diagnostics = %+v; want missing-string warning and no skill", skill, diagnostics)
+	}
+}
+
+// core/skills.ts reads skill files as UTF-8 and replaces malformed sequences.
 func TestLoadSkillReplacesMalformedUTF8(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "demo", "SKILL.md")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -90,6 +203,8 @@ func TestLoadSkillsSkipsInvalidUTF8DirectoryNames(t *testing.T) {
 	}
 }
 
+// core/skills.ts canonicalizes real paths so the default skills directory and
+// an explicit path to the same directory load each skill only once.
 func TestLoadSkillsDedupesDefaultsAndPaths(t *testing.T) {
 	home := t.TempDir()
 	setHomeDir(t, home)
@@ -203,7 +318,7 @@ func skillNames(result LoadSkillsResult) []string {
 // bounded walk must preserve: the sequential walk appended each skill as it
 // read it, so the parallel scan may not reorder them. Entries are visited in
 // ReadDir order, root SKILL.md files short-circuit their directory, and
-// dotfiles, node_modules and non-markdown files stay skipped.
+// nested ordinary Markdown files, dotfiles, node_modules and non-markdown files stay skipped.
 func TestLoadSkillsFromDirScansInReadDirOrder(t *testing.T) {
 	root := t.TempDir()
 	writeSkill(t, root, "a", "skill a") // a/SKILL.md: root short-circuit
@@ -217,11 +332,145 @@ func TestLoadSkillsFromDirScansInReadDirOrder(t *testing.T) {
 	}
 
 	result := LoadSkillsFromDir(root)
-	if got, want := strings.Join(skillNames(result), ","), "a,x,z,c"; got != want {
+	if got, want := strings.Join(skillNames(result), ","), "a,z,c"; got != want {
 		t.Fatalf("skills = %q, want %q", got, want)
 	}
 	if len(result.Diagnostics) != 0 {
 		t.Fatalf("diagnostics = %v", result.Diagnostics)
+	}
+}
+
+// core/skills.ts passes includeRootFiles=false when descending into a skill
+// collection; ordinary Markdown files in nested directories are not skills.
+func TestLoadSkillsFromDirDoesNotLoadNestedMarkdownFiles(t *testing.T) {
+	root := t.TempDir()
+	writeMarkdownSkill(t, filepath.Join(root, "nested"), "notes.md", "notes", "not a discovered skill")
+
+	result := LoadSkillsFromDir(root)
+	if len(result.Skills) != 0 {
+		t.Fatalf("skills = %+v, want nested Markdown file ignored", result.Skills)
+	}
+}
+
+// core/skills.ts addIgnoreRules applies .gitignore, .ignore, and .fdignore
+// patterns before visiting skill files.
+func TestLoadSkillsFromDirRespectsGitignore(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte("ignored/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	writeSkill(t, root, "ignored", "Must not load")
+
+	result := LoadSkillsFromDir(root)
+	if len(result.Skills) != 0 {
+		t.Fatalf("skills = %+v, want ignored skill omitted", result.Skills)
+	}
+}
+
+// node-ignore matches JS UTF-16 units: one `?` does not consume an astral code point.
+func TestLoadSkillsFromDirIgnoreQuestionMarkUsesUTF16Units(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte("?/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	writeSkill(t, root, "😀", "Should load")
+
+	result := LoadSkillsFromDir(root)
+	if len(result.Skills) != 1 || result.Skills[0].Name != "😀" {
+		t.Fatalf("skills = %+v, want astral directory not matched by one question mark", result.Skills)
+	}
+}
+
+// node-ignore follows gitignore's rule that only a path-segment `**` is a globstar.
+func TestLoadSkillsFromDirDoesNotTreatEmbeddedDoubleStarAsGlobstar(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte("a**/b/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	writeSkill(t, filepath.Join(root, "a", "x"), "b", "Should load")
+
+	result := LoadSkillsFromDir(root)
+	if len(result.Skills) != 1 || result.Skills[0].Name != "b" {
+		t.Fatalf("skills = %+v, want embedded ** not to cross path separators", result.Skills)
+	}
+}
+
+// node-ignore's regex matching requires two `?` code units for an astral code point.
+func TestLoadSkillsFromDirTwoQuestionMarksMatchAstralCodePoint(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte("??/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	writeSkill(t, root, "😀", "Must not load")
+
+	result := LoadSkillsFromDir(root)
+	if len(result.Skills) != 0 {
+		t.Fatalf("skills = %+v, want two question marks to match UTF-16 pair", result.Skills)
+	}
+}
+
+// core/skills.ts uses ignore() with node-ignore's default ignoreCase=true.
+func TestLoadSkillsFromDirIgnoreRulesAreCaseInsensitive(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte("ignored/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	writeSkill(t, root, "IGNORED", "Must not load")
+
+	result := LoadSkillsFromDir(root)
+	if len(result.Skills) != 0 {
+		t.Fatalf("skills = %+v, want case-insensitive ignored match", result.Skills)
+	}
+}
+
+// core/skills.ts uses the `ignore` package, which supports Gitignore glob classes.
+func TestLoadSkillsFromDirSupportsIgnoreCharacterClasses(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte("ignored[0-9]/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	writeSkill(t, root, "ignored3", "Must not load")
+
+	result := LoadSkillsFromDir(root)
+	if len(result.Skills) != 0 {
+		t.Fatalf("skills = %+v, want character-class match ignored", result.Skills)
+	}
+}
+
+// core/skills.ts prefixes each nested ignore file's patterns with its root-relative directory.
+func TestLoadSkillsFromDirUsesNestedIgnoreRules(t *testing.T) {
+	root := t.TempDir()
+	nested := filepath.Join(root, "nested")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(nested, ".ignore"), []byte("blocked/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	writeSkill(t, nested, "blocked", "Must not load")
+
+	result := LoadSkillsFromDir(root)
+	if len(result.Skills) != 0 {
+		t.Fatalf("skills = %+v, want nested ignored skill omitted", result.Skills)
+	}
+}
+
+// core/skills.ts loadSkillsFromDirInternal follows directory symlinks with statSync.
+func TestLoadSkillsFromDirFollowsDirectorySymlinks(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows symlink creation may require elevated privileges")
+	}
+	root := t.TempDir()
+	target := t.TempDir()
+	writeSkill(t, target, "linked-skill", "Discovered through symlink")
+	link := filepath.Join(root, "linked")
+	if err := os.Symlink(filepath.Join(target, "linked-skill"), link); err != nil {
+		t.Fatal(err)
+	}
+
+	result := LoadSkillsFromDir(root)
+	if len(result.Skills) != 1 || result.Skills[0].Name != "linked-skill" {
+		t.Fatalf("skills = %+v, want linked-skill discovered through directory symlink", result.Skills)
 	}
 }
 

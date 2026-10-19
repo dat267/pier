@@ -17,11 +17,21 @@ func TestValidateXaiVerificationURI(t *testing.T) {
 	if _, err := ValidateXaiVerificationURI("https://x.ai/device"); err != nil {
 		t.Fatalf("err = %v", err)
 	}
-	for _, raw := range []string{"http://x.ai/device", "not a url", "javascript:alert(1)", ""} {
+	for _, raw := range []string{"http://x.ai/device", "not a url", "javascript:alert(1)", "https:", ""} {
 		if _, err := ValidateXaiVerificationURI(raw); err == nil ||
 			err.Error() != "Untrusted verification URI in xAI OAuth response" {
 			t.Errorf("ValidateXaiVerificationURI(%q) err = %v", raw, err)
 		}
+	}
+}
+
+func TestValidateXaiVerificationURINormalizesSpecialHTTPScheme(t *testing.T) {
+	got, err := ValidateXaiVerificationURI("https:example.com/device")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "https://example.com/device" {
+		t.Fatalf("URI = %q, want WHATWG-normalized URI", got)
 	}
 }
 
@@ -255,6 +265,16 @@ func TestKimiDeviceCodeFlow(t *testing.T) {
 	}
 }
 
+// kimi-coding.ts trustedHttpUrl uses WHATWG URL and returns its normalized href.
+func TestTrustedHTTPURLMatchesWHATWGSpecialSchemes(t *testing.T) {
+	if got, ok := trustedHTTPURL("https:"); ok {
+		t.Fatalf("https: resolved to %q; want invalid URL", got)
+	}
+	if got, ok := trustedHTTPURL("http:example.com/mcp"); !ok || got != "http://example.com/mcp" {
+		t.Fatalf("special-scheme URL = %q, %v; want normalized HTTP URL", got, ok)
+	}
+}
+
 func TestKimiDeviceAuthorizationValidation(t *testing.T) {
 	// A missing field or an untrusted verification URI is rejected.
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
@@ -270,12 +290,12 @@ func TestKimiDeviceAuthorizationValidation(t *testing.T) {
 	// A failing status reports upstream's message.
 	failServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(http.StatusBadGateway)
-		_, _ = writer.Write([]byte("boom"))
+		_, _ = writer.Write([]byte("  "))
 	}))
 	defer failServer.Close()
 	// The raw response text is appended, matching upstream's `: ${text}`.
 	if _, err := StartKimiDeviceAuthorization(context.Background(), failServer.URL); err == nil ||
-		err.Error() != "Kimi Code device authorization failed with status 502: boom" {
+		err.Error() != "Kimi Code device authorization failed with status 502:   " {
 		t.Fatalf("err = %v", err)
 	}
 }

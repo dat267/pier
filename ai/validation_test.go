@@ -22,6 +22,20 @@ func TestValidateToolArgumentsReportsMalformedArguments(t *testing.T) {
 	}
 }
 
+// validation.ts uses Number(value), which rejects trailing non-numeric text.
+func TestValidateToolArgumentsRejectsNumericPrefixes(t *testing.T) {
+	tool := Tool{Name: "t", Parameters: json.RawMessage(`{"type":"object","properties":{"x":{"type":"number"}}}`)}
+	call := ToolCall{ID: "c", Name: "t", Arguments: json.RawMessage(`{"x":"1abc"}`)}
+	if _, err := ValidateToolArguments(tool, call); err == nil {
+		t.Fatal("numeric prefix must not coerce a string with trailing text")
+	}
+	call.Arguments = json.RawMessage(`{"x":"0x10"}`)
+	result, err := ValidateToolArguments(tool, call)
+	if err != nil || string(result) != `{"x":16}` {
+		t.Fatalf("hex Number coercion = %s, %v; want 16", result, err)
+	}
+}
+
 // Upstream coerces a number to a string with String(value), so small
 // magnitudes keep JS's exponent form (no zero-padded exponent).
 func TestValidateToolArgumentsCoercesNumberToStringLikeJS(t *testing.T) {

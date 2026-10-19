@@ -255,7 +255,7 @@ func NormalizeBedrockToolCallID(id string) string {
 // bedrockNonBlankTextBlock renders a text block, or nil when blank.
 func bedrockNonBlankTextBlock(text string) map[string]any {
 	sanitized := SanitizeSurrogates(text)
-	if strings.TrimSpace(sanitized) == "" {
+	if JSTrim(sanitized) == "" {
 		return nil
 	}
 	return map[string]any{"text": sanitized}
@@ -401,12 +401,12 @@ func ConvertBedrockMessages(context TranscriptContext, model *Model, cacheRetent
 						continue
 					}
 					thinking := SanitizeSurrogates(inner.Thinking)
-					if strings.TrimSpace(thinking) == "" {
+					if JSTrim(thinking) == "" {
 						continue
 					}
 					if SupportsBedrockThinkingSignature(model) {
 						// A missing signature cannot be replayed; fall back to text.
-						if inner.ThinkingSignature == nil || strings.TrimSpace(*inner.ThinkingSignature) == "" {
+						if inner.ThinkingSignature == nil || JSTrim(*inner.ThinkingSignature) == "" {
 							contentBlocks = append(contentBlocks, map[string]any{"text": thinking})
 						} else {
 							contentBlocks = append(contentBlocks, map[string]any{

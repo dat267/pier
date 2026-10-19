@@ -251,3 +251,13 @@ func TestProcessFileArgumentsTextAndImages(t *testing.T) {
 		t.Fatalf("processed = %+v err = %v", processed, err)
 	}
 }
+
+// mime.ts requires the GIF87a/GIF89a version stamp; the port matched any "GIF".
+func TestDetectSupportedImageMimeTypeRejectsUnstampedGIF(t *testing.T) {
+	if got := DetectSupportedImageMimeType([]byte("GIFplain")); got != "" {
+		t.Fatalf("unstamped GIF = %q; want empty", got)
+	}
+	if got := DetectSupportedImageMimeType([]byte("GIF87a")); got != "image/gif" {
+		t.Fatalf("GIF87a = %q; want image/gif", got)
+	}
+}

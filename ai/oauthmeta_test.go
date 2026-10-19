@@ -24,6 +24,14 @@ func withMetaURLs(t *testing.T, base string, run func()) {
 	run()
 }
 
+// oauth/meta.ts errorDetail uses JavaScript String.trim for error fields.
+func TestMetaOAuthErrorDetailUsesJavaScriptTrim(t *testing.T) {
+	got := metaErrorDetail(map[string]any{"error_description": "\uFEFFdetails\uFEFF"})
+	if got != ": details" {
+		t.Fatalf("error detail = %q; want JavaScript-trimmed detail", got)
+	}
+}
+
 // The Meta login runs the RFC 8628 device flow, then exchanges the identity
 // token for a Model API key and stores the identity token as the refresh token
 // (upstream loginMeta).

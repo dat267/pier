@@ -84,7 +84,7 @@ func readRadiusOAuthError(response *http.Response, message string) error {
 	raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
 	oauthError := ""
 	description := ""
-	if text := strings.TrimSpace(string(raw)); text != "" {
+	if text := string(raw); text != "" {
 		var parsed map[string]any
 		if err := json.Unmarshal([]byte(text), &parsed); err == nil {
 			oauthError, _ = parsed["error"].(string)

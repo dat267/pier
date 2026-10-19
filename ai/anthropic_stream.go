@@ -448,7 +448,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 			for name, value := range options.Headers {
 				lower := strings.ToLower(name)
 				if (lower == "authorization" || lower == "x-api-key" || lower == "cf-aig-authorization") &&
-					value != nil && strings.TrimSpace(*value) != "" {
+					value != nil && JSTrim(*value) != "" {
 					hasAuth = true
 				}
 			}
@@ -883,7 +883,7 @@ func StreamAnthropicSimple(model *Model, context TranscriptContext, options *Sim
 		for name, value := range options.Headers {
 			lower := strings.ToLower(name)
 			if (lower == "authorization" || lower == "x-api-key" || lower == "cf-aig-authorization") &&
-				value != nil && strings.TrimSpace(*value) != "" {
+				value != nil && JSTrim(*value) != "" {
 				hasAuth = true
 			}
 		}

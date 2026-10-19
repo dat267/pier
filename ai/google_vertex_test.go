@@ -66,6 +66,14 @@ func TestVertexRequestURLLayout(t *testing.T) {
 		t.Fatalf("duplicated api version: %s", requestURL)
 	}
 
+	// A whitespace-only override behaves like no custom base URL.
+	blankOverride := *model
+	blankOverride.BaseURL = "\uFEFF"
+	requestURL, err = VertexRequestURL(&blankOverride, "p", "us-central1")
+	if err != nil || !strings.HasPrefix(requestURL, "https://aiplatform.googleapis.com/v1/projects/p/") {
+		t.Fatalf("blank override URL = %q, err = %v; want default Vertex endpoint", requestURL, err)
+	}
+
 	// Without a base URL the global endpoint is used.
 	plain := *model
 	plain.BaseURL = ""
@@ -81,6 +89,7 @@ func TestResolveVertexAPIKey(t *testing.T) {
 		"  AIzaSyRealKey  ":      "AIzaSyRealKey",
 		"<authenticated>":        "",
 		"gcp-vertex-credentials": "",
+		"\uFEFF":                 "",
 		"":                       "",
 	}
 	for input, want := range cases {

@@ -165,6 +165,16 @@ func TestPiMessagesErrorBodyParsing(t *testing.T) {
 	}
 }
 
+// pi-messages.ts truncateDiagnosticString uses JavaScript String.length and slice.
+func TestPiMessagesDiagnosticTruncationUsesUTF16Units(t *testing.T) {
+	body := strings.Repeat("😀", 4097)
+	got := truncateDiagnosticString(body)
+	want := strings.Repeat("😀", 4096) + "…"
+	if got != want {
+		t.Fatalf("truncated body has %d UTF-16 units; want %d and a complete rune boundary", JSLength(got), JSLength(want))
+	}
+}
+
 func TestStreamPiMessagesAssemblesEvents(t *testing.T) {
 	var captured *http.Request
 	var payload map[string]any

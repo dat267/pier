@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/dat267/pier/ai"
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -76,7 +77,7 @@ func homeDir() string {
 func NormalizePath(input string, options PathInputOptions) string {
 	normalized := input
 	if options.Trim {
-		normalized = strings.TrimSpace(normalized)
+		normalized = ai.JSTrim(normalized)
 	}
 	if options.NormalizeUnicodeSpaces {
 		normalized = unicodeSpaces.ReplaceAllString(normalized, " ")
@@ -310,8 +311,8 @@ func GetCwdRelativePath(filePath string, cwd string) (string, bool) {
 // rather than a package source (port of isLocalPath). A file: URL counts as
 // local, as upstream resolves it.
 func IsLocalPath(value string) bool {
-	trimmed := strings.TrimSpace(value)
-	for _, prefix := range []string{"npm:", "git:", "github:", "http:", "https:", "ssh:"} {
+	trimmed := ai.JSTrim(value)
+	for _, prefix := range []string{"npm:", "git:", "github:", "http:", "https:", "ssh:", "builtin:"} {
 		if strings.HasPrefix(trimmed, prefix) {
 			return false
 		}

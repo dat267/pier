@@ -294,7 +294,7 @@ func FormatMistralError(err error) string {
 		return ""
 	}
 	if providerErr, ok := err.(*ProviderError); ok {
-		bodyText := strings.TrimSpace(providerErr.Body)
+		bodyText := JSTrim(providerErr.Body)
 		if bodyText != "" {
 			return fmt.Sprintf("Mistral API error (%d): %s", providerErr.Status,
 				truncateErrorText(bodyText, maxMistralErrorBodyChars))
@@ -305,10 +305,11 @@ func FormatMistralError(err error) string {
 }
 
 func truncateErrorText(text string, maxChars int) string {
-	if len(text) <= maxChars {
+	textLength := JSLength(text)
+	if textLength <= maxChars {
 		return text
 	}
-	return fmt.Sprintf("%s... [truncated %d chars]", text[:maxChars], len(text)-maxChars)
+	return fmt.Sprintf("%s... [truncated %d chars]", JSSlice(text, 0, maxChars), textLength-maxChars)
 }
 
 func requestMistralStream(ctx ctxpkg.Context, model *Model, body []byte, options *MistralOptions) (*http.Response, error) {
@@ -536,7 +537,7 @@ func parseMistralEvent(raw string) (*mistralCompletionEvent, bool, error) {
 		}
 		dataLines = append(dataLines, strings.TrimLeft(line[5:], " \t"))
 	}
-	data := strings.TrimSpace(strings.Join(dataLines, "\n"))
+	data := JSTrim(strings.Join(dataLines, "\n"))
 	if data == "" {
 		return nil, false, nil
 	}
@@ -632,7 +633,7 @@ func consumeMistralChatStream(
 		}
 	}
 	remainder := buffer.String()
-	if strings.TrimSpace(remainder) != "" {
+	if JSTrim(remainder) != "" {
 		if _, err := handle(remainder); err != nil {
 			return err
 		}
@@ -1091,11 +1092,11 @@ func toMistralChatMessages(messages []Message, supportsImages bool) []mistralCha
 			for _, block := range typed.Content {
 				switch inner := block.(type) {
 				case TextContent:
-					if strings.TrimSpace(inner.Text) != "" {
+					if JSTrim(inner.Text) != "" {
 						contentParts = append(contentParts, mistralContentChunk{Type: "text", Text: SanitizeSurrogates(inner.Text)})
 					}
 				case ThinkingContent:
-					if strings.TrimSpace(inner.Thinking) != "" {
+					if JSTrim(inner.Thinking) != "" {
 						contentParts = append(contentParts, mistralContentChunk{
 							Type:     "thinking",
 							Thinking: []mistralTextChunk{{Type: "text", Text: SanitizeSurrogates(inner.Thinking)}},
@@ -1150,7 +1151,7 @@ func toMistralChatMessages(messages []Message, supportsImages bool) []mistralCha
 }
 
 func buildMistralToolResultText(text string, hasImages, supportsImages, isError bool) string {
-	trimmed := strings.TrimSpace(text)
+	trimmed := JSTrim(text)
 	errorPrefix := ""
 	if isError {
 		errorPrefix = "[tool error] "

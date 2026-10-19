@@ -233,7 +233,7 @@ func StartOpenAICodexDeviceAuth(ctx context.Context) (*OpenAICodexDeviceAuthInfo
 	case float64:
 		intervalSeconds, hasInterval = typed, true
 	case string:
-		if parsed, err := strconv.ParseFloat(strings.TrimSpace(typed), 64); err == nil {
+		if parsed, err := strconv.ParseFloat(JSTrim(typed), 64); err == nil {
 			intervalSeconds, hasInterval = parsed, true
 		}
 	}

@@ -4,7 +4,7 @@ Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D243**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D245**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation.
 
 Related documents: [port status](PORTING.md), [architecture](architecture.md),
@@ -1692,3 +1692,33 @@ retries never pauses, so it emits no notice (D242).
 Tests: `TestAbortedGoalAttemptPauses`, `TestBeforeSettleAbortDurablyPauses`,
 `TestBeforeSettleProviderErrorPauses`, and
 `TestGoalControllerFinalFailureStillPauses`.
+
+## D244
+
+**`find` keeps leading and trailing whitespace in result paths.**
+
+Reference: `core/tools/find.ts` trims each fd output line
+(`rawLine.replace(/\r$/, "").trim()`) before relativizing it. For a file whose
+name legitimately begins or ends with a space, that trim yields a path that does
+not exist, so the model cannot read what it just found. The port removes only the
+trailing carriage return and preserves the rest of the name; the trim is the
+upstream defect here. Every other line-normalization rule matches: empty lines
+are skipped and the path is still relativized against the search root.
+
+Tests: `TestFindToolPreservesWhitespaceInFileNames`.
+
+## D245
+
+**MCP HTTP URLs in WHATWG special-scheme form are stored canonically.**
+
+Reference: `core/mcp-servers.ts` validates with `URL.canParse` and retains the raw
+config string. The JavaScript HTTP client later resolves special URLs such as
+`http:localhost:8080/mcp` and backslash separators. Go's `net/url` does not
+perform that resolution. The port validates with equivalent effective URL
+semantics and stores the normalized absolute URL so `net/http` and the MCP
+transport reach the same host and path. Ordinary absolute HTTP(S) URLs are
+retained unchanged.
+
+Tests: `TestValidateMcpServerConfigNormalizesSpecialHTTPSchemeURL`,
+`TestValidateMcpOAuthNormalizesSpecialLoopbackCallbackURL`, and
+`TestValidateMcpServerConfigMessages`.

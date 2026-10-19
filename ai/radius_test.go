@@ -154,6 +154,18 @@ func TestLoadRadiusGatewayConfig(t *testing.T) {
 	}
 }
 
+// radius-config.ts truncateHttpBody uses JavaScript String.trim, length and slice.
+func TestTruncateRadiusHTTPBodyUsesJavaScriptStringUnits(t *testing.T) {
+	body := strings.Repeat("😀", 257)
+	want := strings.Repeat("😀", 256) + "…"
+	if got := truncateHTTPBody(body); got != want {
+		t.Fatalf("truncated body has %d UTF-16 units; want %d", JSLength(got), JSLength(want))
+	}
+	if got := truncateHTTPBody("\uFEFFbody\uFEFF"); got != "body" {
+		t.Fatalf("trimmed body = %q; want JavaScript-trimmed text", got)
+	}
+}
+
 func TestRadiusProviderRefresh(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
@@ -361,6 +373,17 @@ func TestRadiusOAuthErrorParsing(t *testing.T) {
 	_, err = RequestRadiusOAuthToken(context.Background(), plainServer.URL, map[string]string{})
 	if err == nil || err.Error() != "Radius OAuth token request failed: upstream down" {
 		t.Fatalf("err = %v", err)
+	}
+
+	// Raw whitespace response text is truthy upstream and is preserved.
+	spaceServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.WriteHeader(http.StatusBadGateway)
+		_, _ = writer.Write([]byte("  "))
+	}))
+	defer spaceServer.Close()
+	_, err = RequestRadiusOAuthToken(context.Background(), spaceServer.URL, map[string]string{})
+	if err == nil || err.Error() != "Radius OAuth token request failed:   " {
+		t.Fatalf("whitespace response error = %q", err)
 	}
 
 	// A response without a body reports the status.

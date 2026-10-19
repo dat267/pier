@@ -205,7 +205,7 @@ func authorizationResultFromCallback(parsed *url.URL, expectedState string) (Ope
 	if state != expectedState {
 		return OpenAIChatGPTAuthorizationResult{}, fmt.Errorf("OAuth state mismatch")
 	}
-	clientID := strings.TrimSpace(parsed.Query().Get("client_id"))
+	clientID := JSTrim(parsed.Query().Get("client_id"))
 	if clientID == "" {
 		return OpenAIChatGPTAuthorizationResult{}, fmt.Errorf("OpenAI OAuth registration callback did not contain an issued client ID")
 	}
@@ -215,8 +215,8 @@ func authorizationResultFromCallback(parsed *url.URL, expectedState string) (Ope
 // ParseOpenAIChatGPTAuthorizationInput extracts the result from a pasted
 // callback URL, rejecting a URL that is not this flow's redirect URI.
 func ParseOpenAIChatGPTAuthorizationInput(input string, expectedState string) (OpenAIChatGPTAuthorizationResult, error) {
-	parsed, err := url.Parse(strings.TrimSpace(input))
-	if err != nil {
+	parsed, _, valid := normalizeOAuthHTTPURL(JSTrim(input))
+	if !valid {
 		return OpenAIChatGPTAuthorizationResult{}, fmt.Errorf("Paste the full callback URL from the browser")
 	}
 	expected, _ := url.Parse(OpenAIChatGPTRedirectURI())
@@ -413,6 +413,8 @@ func ExchangeOpenAIChatGPTAuthorizationCode(ctx context.Context, code, verifier,
 	return openAIChatGPTCredentialFromToken(token, clientID)
 }
 
+func normalizeOpenAIChatGPTClientID(value string) string { return JSTrim(value) }
+
 // RefreshOpenAIChatGPTToken refreshes a ChatGPT credential with its stored
 // issued client id.
 func RefreshOpenAIChatGPTToken(credential *OAuthCredential, ctx context.Context) (*OAuthCredential, error) {
@@ -425,7 +427,8 @@ func RefreshOpenAIChatGPTToken(credential *OAuthCredential, ctx context.Context)
 			}
 		}
 	}
-	if strings.TrimSpace(clientID) == "" {
+	clientID = normalizeOpenAIChatGPTClientID(clientID)
+	if clientID == "" {
 		return nil, fmt.Errorf("Stored OpenAI OAuth credential does not contain an issued client ID; reconnect ChatGPT")
 	}
 	token, err := requestOpenAIChatGPTToken(ctx, url.Values{

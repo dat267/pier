@@ -352,3 +352,19 @@ func TestFileMutationQueueSerializesSameFile(t *testing.T) {
 		t.Fatalf("order = %v, want [first-finish second-start]", order)
 	}
 }
+
+// read.ts detects images with detectSupportedImageMimeTypeFromFile, which
+// rejects a file with the PNG signature but no IHDR; the port's loose sniffer
+// treated it as an image and returned an image-processing note instead of text.
+func TestReadToolTreatsInvalidPNGAsText(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "fake.png")
+	if err := os.WriteFile(path, []byte("\x89PNG\r\n\x1a\nnot really a png"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	result := execTool(t, CreateReadTool(dir, nil), `{"path":"fake.png"}`)
+	got := result.Content[0].(ai.TextContent).Text
+	if strings.HasPrefix(got, "Read image file") || !strings.Contains(got, "not really a png") {
+		t.Fatalf("read text = %q; want the file content", got)
+	}
+}
