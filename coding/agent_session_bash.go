@@ -2,6 +2,7 @@ package coding
 
 import (
 	"context"
+	"time"
 
 	"github.com/dat267/pier/ai"
 )
@@ -50,6 +51,10 @@ func (s *AgentSession) ExecuteBash(ctx context.Context, command string, onChunk 
 		operations = CreateLocalBashOperations(shellPath, nil)
 	}
 
+	// The recorded stamp is when the command started: the transcript shows the
+	// frame at that point, and the session entry is appended when the command
+	// finishes (D248).
+	startedAt := time.Now().UnixMilli()
 	result, err := ExecuteBashWithOperations(ctx, resolvedCommand, s.Sessions.GetCwd(), operations, &BashExecutorOptions{
 		OnChunk: func(delta string) {
 			if onChunk != nil {
@@ -62,7 +67,9 @@ func (s *AgentSession) ExecuteBash(ctx context.Context, command string, onChunk 
 	if err != nil {
 		return nil, err
 	}
-	s.RecordBashResult(command, result, options.ExcludeFromContext)
+	durationMS := time.Now().UnixMilli() - startedAt
+	result.DurationMS = &durationMS
+	s.recordBashResultAt(command, result, options.ExcludeFromContext, startedAt)
 	return &result, nil
 }
 
@@ -88,8 +95,15 @@ func (s *AgentSession) trackBashRun(parent context.Context) (context.Context, co
 // RecordBashResult records a bash execution result in session history. While
 // the agent is streaming the message is deferred to keep tool-call ordering.
 func (s *AgentSession) RecordBashResult(command string, result BashResult, excludeFromContext bool) {
+	s.recordBashResultAt(command, result, excludeFromContext, time.Now().UnixMilli())
+}
+
+// recordBashResultAt records a result stamped at the given time (ExecuteBash
+// passes the command's start, so the transcript can anchor the frame there,
+// D248).
+func (s *AgentSession) recordBashResultAt(command string, result BashResult, excludeFromContext bool, at int64) {
 	message := CreateBashExecutionMessage(command, result.Output, result.ExitCode,
-		result.Cancelled, result.Truncated, result.FullOutputPath, excludeFromContext, 0)
+		result.Cancelled, result.Truncated, result.FullOutputPath, excludeFromContext, at, result.DurationMS)
 
 	if s.IsStreaming() {
 		s.bashMu.Lock()

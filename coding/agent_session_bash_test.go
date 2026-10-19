@@ -2,6 +2,7 @@ package coding
 
 import (
 	ctxpkg "context"
+	"encoding/json"
 	"os"
 	"strings"
 	"sync"
@@ -346,5 +347,82 @@ func TestSessionCompactEventOnError(t *testing.T) {
 	}
 	if end == nil || end.Result != nil || !strings.Contains(end.ErrorMessage, "Compaction failed") {
 		t.Fatalf("end = %+v", end)
+	}
+}
+
+// slowBash records when it runs and finishes after a delay.
+type slowBash struct{ delay time.Duration }
+
+func (b slowBash) Exec(ctx ctxpkg.Context, command, cwd string, options BashExecOptions) (*int, error) {
+	time.Sleep(b.delay)
+	code := 0
+	return &code, nil
+}
+
+// The recorded message is stamped when the command started. The replayed
+// transcript anchors the frame at that point among the turn's entries (D248),
+// so stamping the completion would move it after everything the command ran
+// alongside.
+func TestSessionBashMessageIsStampedAtStart(t *testing.T) {
+	session, err := NewAgentSession(&SessionConfig{Cwd: t.TempDir(), StreamFn: stubStreamFn})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Dispose()
+
+	if _, err := session.ExecuteBash(ctxpkg.Background(), "probe", nil,
+		&ExecuteBashOptions{Operations: slowBash{delay: 60 * time.Millisecond}}); err != nil {
+		t.Fatal(err)
+	}
+	entries := session.Sessions.GetEntries()
+	last := entries[len(entries)-1]
+	message, err := ai.UnmarshalMessage(last.Message)
+	if err != nil {
+		t.Fatal(err)
+	}
+	custom, ok := message.(*ai.CustomMessage)
+	if !ok || custom.Role != RoleBashExecution {
+		t.Fatalf("last entry = %+v", last)
+	}
+	appendedAt, err := time.Parse(time.RFC3339Nano, last.Timestamp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gave := appendedAt.UnixMilli() - custom.Timestamp; gave < 50 {
+		t.Fatalf("message stamped %dms before the entry was appended (want the 60ms run): the stamp is the completion", gave)
+	}
+}
+
+// The recorded duration is part of the message payload, so a reopened session
+// can show the manual command's "Took" (D249).
+func TestSessionBashMessageRecordsDuration(t *testing.T) {
+	session, err := NewAgentSession(&SessionConfig{Cwd: t.TempDir(), StreamFn: stubStreamFn})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Dispose()
+
+	if _, err := session.ExecuteBash(ctxpkg.Background(), "probe", nil,
+		&ExecuteBashOptions{Operations: slowBash{delay: 60 * time.Millisecond}}); err != nil {
+		t.Fatal(err)
+	}
+	entries := session.Sessions.GetEntries()
+	last := entries[len(entries)-1]
+	message, err := ai.UnmarshalMessage(last.Message)
+	if err != nil {
+		t.Fatal(err)
+	}
+	custom, ok := message.(*ai.CustomMessage)
+	if !ok || custom.Role != RoleBashExecution {
+		t.Fatalf("last entry = %+v", last)
+	}
+	var payload struct {
+		DurationMS *int64 `json:"durationMs"`
+	}
+	if err := json.Unmarshal(custom.Content, &payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.DurationMS == nil || *payload.DurationMS < 50 {
+		t.Fatalf("durationMS = %v, want the 60ms run", payload.DurationMS)
 	}
 }

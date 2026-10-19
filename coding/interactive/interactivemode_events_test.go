@@ -160,7 +160,7 @@ func TestEventDispatcherMessages(t *testing.T) {
 		t.Fatalf("pending after end = %d", len(dispatcher.PendingTools()))
 	}
 	lines := strings.Join(renderChat(t, transcript.Chat), "\n")
-	if !strings.Contains(lines, "bash") {
+	if !strings.Contains(lines, "ls -la") {
 		t.Fatalf("tool render = %q", lines)
 	}
 

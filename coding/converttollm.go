@@ -34,10 +34,13 @@ type bashExecutionPayload struct {
 	FullOutputPath     *string `json:"fullOutputPath,omitempty"`
 	Timestamp          int64   `json:"timestamp"`
 	ExcludeFromContext bool    `json:"excludeFromContext,omitempty"`
+	// DurationMS is port-only (D249): upstream's bashExecution payload has no
+	// execution time, so a reopened session cannot show "Took".
+	DurationMS *int64 `json:"durationMs,omitempty"`
 }
 
 // CreateBashExecutionMessage builds the `!` bash-execution message.
-func CreateBashExecutionMessage(command, output string, exitCode *int, cancelled, truncated bool, fullOutputPath string, excludeFromContext bool, timestamp int64) *ai.CustomMessage {
+func CreateBashExecutionMessage(command, output string, exitCode *int, cancelled, truncated bool, fullOutputPath string, excludeFromContext bool, timestamp int64, durationMS *int64) *ai.CustomMessage {
 	if timestamp == 0 {
 		timestamp = time.Now().UnixMilli()
 	}
@@ -49,7 +52,7 @@ func CreateBashExecutionMessage(command, output string, exitCode *int, cancelled
 		Role: RoleBashExecution, Command: command, Output: output,
 		ExitCode: exitCode, Cancelled: cancelled, Truncated: truncated,
 		FullOutputPath: fullPath, Timestamp: timestamp,
-		ExcludeFromContext: excludeFromContext,
+		ExcludeFromContext: excludeFromContext, DurationMS: durationMS,
 	})
 	return &ai.CustomMessage{Role: RoleBashExecution, Content: raw, Timestamp: timestamp}
 }
@@ -63,6 +66,7 @@ type bashExecutionFields struct {
 	Truncated          bool    `json:"truncated"`
 	FullOutputPath     *string `json:"fullOutputPath"`
 	ExcludeFromContext bool    `json:"excludeFromContext"`
+	DurationMS         *int64  `json:"durationMs"`
 }
 
 // BashExecutionToText renders the message for the LLM (port of

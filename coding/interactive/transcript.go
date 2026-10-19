@@ -3,7 +3,10 @@ package interactive
 import (
 	"context"
 	"encoding/json"
+	"sort"
+	"strconv"
 	"sync"
+	"time"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
@@ -234,21 +237,46 @@ func (r *TranscriptRenderer) AddMessageToChat(message ai.Message, populateHistor
 	case *ai.CustomMessage:
 		switch typed.Role {
 		case coding.RoleBashExecution:
+			// A `!` command renders through the shell tool's frame, exactly like
+			// a model bash call (D246); the session entry stays the bashExecution
+			// custom message, so the file and LLM context are upstream's.
 			fields := decodeBashExecutionMessage(typed.Content)
-			component := NewBashExecutionComponent(fields.Command, r.UI, fields.ExcludeFromContext, r.Display.OutputPad)
-			if fields.Output != "" {
-				component.AppendOutput(fields.Output)
+			cwd := ""
+			if r.SessionInfo != nil {
+				cwd = r.SessionInfo.GetCwd()
 			}
-			var truncation *coding.TruncationResult
-			if fields.Truncated {
-				truncation = &coding.TruncationResult{Truncated: true}
+			component := newToolFrame("bash", "replay-bash-"+strconv.FormatInt(typed.Timestamp, 10),
+				map[string]any{"command": fields.Command}, toolFrameOptions{
+					Session: r.Session, Settings: r.Settings, Display: r.Display,
+					Prep: r.MarkdownPreparation, UI: r.UI, Cwd: cwd,
+				})
+			component.MarkExecutionStarted()
+			component.SetArgsComplete()
+			if fields.DurationMS != nil {
+				component.SetResultDuration(fields.DurationMS)
 			}
-			fullOutputPath := ""
-			if fields.FullOutputPath != nil {
-				fullOutputPath = *fields.FullOutputPath
+			details := &coding.BashToolDetails{}
+			if fields.FullOutputPath != nil && *fields.FullOutputPath != "" {
+				details.FullOutputPath = fields.FullOutputPath
 			}
-			component.SetComplete(fields.ExitCode, fields.Cancelled, truncation, fullOutputPath)
+			isError := fields.Cancelled || (fields.ExitCode != nil && *fields.ExitCode != 0)
+			component.UpdateResult(&SortToolResultContent{
+				Content: []ToolResultContent{{Type: "text", Text: fields.Output}},
+				Details: details,
+				IsError: isError,
+			}, false)
 			r.Chat.AddChild(component)
+			// A continued session restores its `!` commands to the editor
+			// history like its prompts; upstream only replays user messages, so
+			// the command was gone after a reload (D250). The recorded command is
+			// trimmed, so the restored entry is the normalized form.
+			if populateHistory && r.Editor != nil && fields.Command != "" {
+				prefix := "!"
+				if fields.ExcludeFromContext {
+					prefix = "!!"
+				}
+				r.Editor.AddToHistory(prefix + fields.Command)
+			}
 		case coding.RoleCompactionSummary:
 			summary, tokensBefore := decodeCompactionSummary(typed.Content)
 			r.Chat.AddChild(tui.NewSpacer(1))
@@ -318,6 +346,7 @@ func decodeBashExecutionMessage(content json.RawMessage) struct {
 	Truncated          bool    `json:"truncated"`
 	FullOutputPath     *string `json:"fullOutputPath"`
 	ExcludeFromContext bool    `json:"excludeFromContext"`
+	DurationMS         *int64  `json:"durationMs"`
 } {
 	var fields struct {
 		Command            string  `json:"command"`
@@ -327,6 +356,7 @@ func decodeBashExecutionMessage(content json.RawMessage) struct {
 		Truncated          bool    `json:"truncated"`
 		FullOutputPath     *string `json:"fullOutputPath"`
 		ExcludeFromContext bool    `json:"excludeFromContext"`
+		DurationMS         *int64  `json:"durationMs"`
 	}
 	if len(content) > 0 {
 		_ = json.Unmarshal(content, &fields)
@@ -664,31 +694,117 @@ func (r *TranscriptRenderer) RenderSessionEntries(entries []coding.SessionEntry,
 		r.ResetTextSelection()
 	}
 	var items []RenderSessionItem
+	// entryTimes mirrors items with the append time of the entry each item
+	// came from; the deferred bash frames are placed by it (D248).
+	entryTimes := make([]int64, 0, len(entries))
+	appendItem := func(item RenderSessionItem, at int64) {
+		items = append(items, item)
+		entryTimes = append(entryTimes, at)
+	}
 	for index := range entries {
 		entry := &entries[index]
+		at := replayEntryTimeMS(entry)
 		if entry.Type == "custom" || (entry.Type == "usage" && entry.Kind == "cache_warm") {
 			if entry.Type == "custom" {
-				items = append(items, RenderSessionItem{CustomEntry: entry})
+				appendItem(RenderSessionItem{CustomEntry: entry}, at)
 			} else {
-				items = append(items, RenderSessionItem{UsageEntry: entry})
+				appendItem(RenderSessionItem{UsageEntry: entry}, at)
 			}
 			continue
 		}
 		messages := coding.SessionEntryToContextMessages(entry)
 		if (entry.Type == "compaction" || entry.Type == "branch_summary") && entry.Usage != nil && len(messages) > 0 {
 			for _, message := range messages {
-				items = append(items, RenderSessionItem{Message: message})
+				appendItem(RenderSessionItem{Message: message}, at)
 			}
-			items = append(items, RenderSessionItem{CostNotice: &CompactionCostNotice{
+			appendItem(RenderSessionItem{CostNotice: &CompactionCostNotice{
 				Type: "compaction_cost", Kind: entry.Type, Usage: *entry.Usage,
-			}})
+			}}, at)
 			continue
 		}
 		for _, message := range messages {
-			items = append(items, RenderSessionItem{Message: message})
+			appendItem(RenderSessionItem{Message: message}, at)
 		}
 	}
+	items, entryTimes = placeReplayedBashFrames(items, entryTimes)
 	r.RenderSessionItems(items, updateFooter, populateHistory)
+}
+
+// replayEntryTimeMS is an entry's append time, or 0 when it cannot be read
+// (such an entry never moves a deferred frame, so it fails toward the order on
+// disk).
+func replayEntryTimeMS(entry *coding.SessionEntry) int64 {
+	if entry.Timestamp == "" {
+		return 0
+	}
+	parsed, err := time.Parse(time.RFC3339Nano, entry.Timestamp)
+	if err != nil {
+		return 0
+	}
+	return parsed.UnixMilli()
+}
+
+// placeReplayedBashFrames puts each `!` frame at the point the live transcript
+// showed it (D248). The frame joins the transcript when the command is
+// triggered, but RecordBashResult appends the session entry when the command
+// completes (and defers it to the turn's end while the agent streams, to keep
+// tool-call ordering). The message timestamp is the command's start, so the
+// frame belongs before the first entry appended after that moment: the entries
+// the command ran alongside replay after it, like the tool frames the live
+// transcript showed below it. A frame never moves later than its entry's own
+// position, so an entry sharing the start millisecond keeps the recorded order.
+func placeReplayedBashFrames(items []RenderSessionItem, entryTimes []int64) ([]RenderSessionItem, []int64) {
+	type frame struct {
+		item RenderSessionItem
+		at   int64
+		orig int
+		pos  int
+	}
+	var frames []frame
+	kept := items[:0]
+	keptTimes := entryTimes[:0]
+	for index := range items {
+		if message, ok := items[index].Message.(*ai.CustomMessage); ok &&
+			message.Role == coding.RoleBashExecution && message.Timestamp > 0 {
+			frames = append(frames, frame{item: items[index], at: message.Timestamp, orig: len(kept)})
+			continue
+		}
+		kept = append(kept, items[index])
+		keptTimes = append(keptTimes, entryTimes[index])
+	}
+	if len(frames) == 0 {
+		return items, entryTimes
+	}
+	for index := range frames {
+		pos := sort.Search(len(keptTimes), func(j int) bool { return keptTimes[j] > frames[index].at })
+		frames[index].pos = min(pos, frames[index].orig)
+	}
+	sort.SliceStable(frames, func(i, j int) bool {
+		if frames[i].pos != frames[j].pos {
+			return frames[i].pos < frames[j].pos
+		}
+		if frames[i].at != frames[j].at {
+			return frames[i].at < frames[j].at
+		}
+		return frames[i].orig < frames[j].orig
+	})
+	mergedItems := make([]RenderSessionItem, 0, len(kept)+len(frames))
+	mergedTimes := make([]int64, 0, len(kept)+len(frames))
+	next := 0
+	for index := range kept {
+		for next < len(frames) && frames[next].pos == index {
+			mergedItems = append(mergedItems, frames[next].item)
+			mergedTimes = append(mergedTimes, frames[next].at)
+			next++
+		}
+		mergedItems = append(mergedItems, kept[index])
+		mergedTimes = append(mergedTimes, keptTimes[index])
+	}
+	for ; next < len(frames); next++ {
+		mergedItems = append(mergedItems, frames[next].item)
+		mergedTimes = append(mergedTimes, frames[next].at)
+	}
+	return mergedItems, mergedTimes
 }
 
 // AddCacheWarmingUsage renders a cache-warming usage entry.

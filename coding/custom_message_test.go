@@ -86,7 +86,7 @@ func TestCustomMessageTokenEstimateMatchesUpstream(t *testing.T) {
 		t.Fatalf("block estimate = %d; want 2", got)
 	}
 	// bashExecution counts command + output.
-	bash := CreateBashExecutionMessage(strings.Repeat("c", 4), strings.Repeat("o", 4), intPtr(0), false, false, "", false, 0)
+	bash := CreateBashExecutionMessage(strings.Repeat("c", 4), strings.Repeat("o", 4), intPtr(0), false, false, "", false, 0, nil)
 	if got := EstimateAgentMessageTokens(bash); got != 2 {
 		t.Fatalf("bash estimate = %d; want 2", got)
 	}
@@ -110,12 +110,12 @@ func TestCustomAgentMessageFlatShapes(t *testing.T) {
 	}{
 		{
 			name:    "bashExecution",
-			message: CreateBashExecutionMessage("ls", "out", &exitCode, false, true, "/tmp/out", true, 7),
+			message: CreateBashExecutionMessage("ls", "out", &exitCode, false, true, "/tmp/out", true, 7, nil),
 			want:    `{"role":"bashExecution","command":"ls","output":"out","exitCode":3,"cancelled":false,"truncated":true,"fullOutputPath":"/tmp/out","timestamp":7,"excludeFromContext":true}`,
 		},
 		{
 			name:    "bashExecution cancelled omits exitCode",
-			message: CreateBashExecutionMessage("sleep", "", nil, true, false, "", false, 8),
+			message: CreateBashExecutionMessage("sleep", "", nil, true, false, "", false, 8, nil),
 			want:    `{"role":"bashExecution","command":"sleep","output":"","cancelled":true,"truncated":false,"timestamp":8}`,
 		},
 		{

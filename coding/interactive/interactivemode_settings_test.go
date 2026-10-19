@@ -381,9 +381,9 @@ func TestApplyOutputPadUpdatesPendingMessages(t *testing.T) {
 	settings := coding.NewInMemorySettingsManager(nil, coding.SettingsManagerCreateOptions{})
 	chat := &tui.Container{}
 	pending := &tui.Container{}
-	bash := NewBashExecutionComponent("ls", nil, false, 0)
-	pending.AddChild(bash)
 	markdownTheme := GetMarkdownTheme()
+	queued := NewUserMessageComponent("queued", &markdownTheme, 0, nil)
+	pending.AddChild(queued)
 	streaming := NewAssistantMessageComponent(nil, false, &markdownTheme, "", 0, nil)
 	wiring := &SettingsWiring{
 		Settings:           settings,
@@ -393,7 +393,7 @@ func TestApplyOutputPadUpdatesPendingMessages(t *testing.T) {
 		RequestRender:      func() {},
 	}
 	wiring.applyOutputPad(3)
-	if bash.outputPad != 3 {
-		t.Fatalf("pending bash outputPad = %d; want 3", bash.outputPad)
+	if queued.outputPad != 3 {
+		t.Fatalf("pending message outputPad = %d; want 3", queued.outputPad)
 	}
 }

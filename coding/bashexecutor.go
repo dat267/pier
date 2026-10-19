@@ -61,6 +61,9 @@ type BashResult struct {
 	Truncated bool
 	// FullOutputPath is the temp file holding the full output, when written.
 	FullOutputPath string
+	// DurationMS is the execution time. Port-only: the transcript shows it as
+	// "Took" and the bash message persists it (D249).
+	DurationMS *int64
 }
 
 // ExecuteBashWithOperations runs a bash command using custom operations (used

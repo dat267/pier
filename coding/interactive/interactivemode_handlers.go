@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"context"
+	"strconv"
 	"strings"
 	"time"
 
@@ -619,54 +620,75 @@ func newSubmitWiring(app *App) *SubmitWiring {
 			// this goroutine.
 			HandleBashCommand: func(command string, excludeFromContext bool) error {
 				app.runDetached(func(ctx context.Context) error {
-					// The `!` command output follows the transcript's padding (upstream #10557).
-					component := NewBashExecutionComponent(command, app.ui, excludeFromContext, app.settings.GetOutputPad())
-					deferred := app.session.IsStreaming()
+					// A `!` command is a manual shell tool call: it renders through
+					// the shell tool's frame (D246) and joins the transcript before it
+					// starts, like a model tool call.
+					built := make(chan *ToolExecutionComponent, 1)
 					app.ui.Post(func() {
-						if deferred {
-							app.queue.PendingBash = append(app.queue.PendingBash, component)
-							app.pendingMessages.AddChild(component)
-						} else {
-							app.chat.AddChild(component)
-						}
+						component := newToolFrame("bash", "user-bash-"+strconv.FormatInt(time.Now().UnixNano(), 10),
+							map[string]any{"command": command}, toolFrameOptions{
+								Session: app.session, Settings: app.settings, Display: app.display,
+								Prep: app.transcript.MarkdownPreparation, UI: app.ui,
+								Cwd: app.session.Sessions.GetCwd(),
+							})
+						component.MarkExecutionStarted()
+						component.SetArgsComplete()
+						// An initial partial result starts the elapsed label, even
+						// for a command that prints nothing.
+						component.UpdateResult(&SortToolResultContent{
+							Content: []ToolResultContent{{Type: "text", Text: ""}},
+						}, true)
+						app.chat.AddChild(component)
 						app.ui.RequestRender(false)
+						built <- component
 					})
+					var component *ToolExecutionComponent
+					select {
+					case component = <-built:
+					case <-ctx.Done():
+						return ctx.Err()
+					}
 
+					accumulator := coding.NewOutputAccumulator(0, 0, "")
 					result, err := app.session.ExecuteBash(ctx, command, func(chunk string) {
+						_ = accumulator.Append([]byte(chunk))
+						snapshot := accumulator.Snapshot(false)
 						app.ui.Post(func() {
-							component.AppendOutput(chunk)
+							component.UpdateResult(&SortToolResultContent{
+								Content: []ToolResultContent{{Type: "text", Text: snapshot.Content}},
+							}, true)
 							app.ui.RequestRender(false)
 						})
 					}, &coding.ExecuteBashOptions{ExcludeFromContext: excludeFromContext})
 					if err != nil {
 						app.ui.Post(func() {
-							component.SetComplete(nil, false, nil, "")
-							// A frame deferred to the dock while the model streams belongs in the
-							// transcript once it stops running: left there, its preview grows the
-							// dock and squeezes the transcript to one row (D244).
-							if app.queue != nil {
-								app.queue.FlushPendingBashComponents()
-							}
+							component.UpdateResult(&SortToolResultContent{
+								Content: []ToolResultContent{{Type: "text", Text: err.Error()}},
+								IsError: true,
+							}, false)
 							app.showError("Bash command failed: " + err.Error())
 						})
 						return err
 					}
 
-					var truncation *coding.TruncationResult
-					if result.Truncated {
-						truncation = &coding.TruncationResult{Truncated: true, Content: result.Output}
+					details := &coding.BashToolDetails{}
+					if result.FullOutputPath != "" {
+						path := result.FullOutputPath
+						details.FullOutputPath = &path
 					}
+					isError := result.Cancelled || (result.ExitCode != nil && *result.ExitCode != 0)
 					app.ui.Post(func() {
 						// ExecuteBash recorded the result itself (upstream executeBash
 						// calls recordBashResult), which is what puts it in the
 						// transcript's replay and keeps the `!!` form out of the model's
 						// context. Recording it here as well wrote every `!` run to the
 						// session twice, and a reopened session rendered it twice.
-						component.SetComplete(result.ExitCode, result.Cancelled, truncation, result.FullOutputPath)
-						// D244: the deferred frame moves to the transcript on completion.
-						if app.queue != nil {
-							app.queue.FlushPendingBashComponents()
-						}
+						component.SetResultDuration(result.DurationMS)
+						component.UpdateResult(&SortToolResultContent{
+							Content: []ToolResultContent{{Type: "text", Text: result.Output}},
+							Details: details,
+							IsError: isError,
+						}, false)
 						app.ui.RequestRender(false)
 					})
 					return nil

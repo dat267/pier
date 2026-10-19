@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
@@ -100,7 +101,7 @@ func TestTranscriptSkillBlock(t *testing.T) {
 func TestTranscriptSpecialMessages(t *testing.T) {
 	renderer, _ := newTranscriptTestRenderer(t, false)
 
-	renderer.AddMessageToChat(coding.CreateBashExecutionMessage("ls -la", "file.txt", intPtr(0), false, false, "", false, 1), false)
+	renderer.AddMessageToChat(coding.CreateBashExecutionMessage("ls -la", "file.txt", intPtr(0), false, false, "", false, 1, nil), false)
 	if len(renderer.Chat.Children) != 1 {
 		t.Fatalf("bash children = %d", len(renderer.Chat.Children))
 	}
@@ -431,3 +432,141 @@ func TestRenderSessionItemsUpdatesEditorBorder(t *testing.T) {
 }
 
 func intPtr(value int) *int { return &value }
+
+// A `!` command run during an agent turn is recorded when it completes, after
+// the entries the turn produced while it ran, but the live transcript showed
+// the frame at its completion point. Replaying the raw entry order drew the
+// frame at the end of the turn instead (D248).
+func TestReplayedBashFrameKeepsItsPositionAmongTheTurn(t *testing.T) {
+	renderer, _ := newTranscriptTestRenderer(t, false)
+
+	stamp := func(ms int64) string {
+		return time.UnixMilli(ms).UTC().Format(time.RFC3339Nano)
+	}
+	messageEntry := func(id string, message ai.Message, ms int64) coding.SessionEntry {
+		encoded, err := ai.MarshalMessage(message)
+		if err != nil {
+			t.Fatalf("marshal %s: %v", id, err)
+		}
+		return coding.SessionEntry{
+			Type:             "message",
+			SessionEntryBase: coding.SessionEntryBase{ID: id, Timestamp: stamp(ms)},
+			Message:          encoded,
+		}
+	}
+	bash := coding.CreateBashExecutionMessage("echo hi", "hi", intPtr(0), false, false, "", false, 3000, nil)
+	entries := []coding.SessionEntry{
+		messageEntry("u1", &ai.UserMessage{Content: ai.StringOrBlocks{Text: "start"}}, 1000),
+		messageEntry("a1", &ai.AssistantMessage{Content: ai.ContentList{ai.TextContent{Text: "first pass"}}, StopReason: ai.StopStop}, 2000),
+		messageEntry("a2", &ai.AssistantMessage{Content: ai.ContentList{ai.TextContent{Text: "second pass"}}, StopReason: ai.StopStop}, 4000),
+		// Deferred while the turn ran, so it is appended at the turn's end
+		// even though the command completed before "second pass" was written.
+		messageEntry("b1", bash, 5000),
+	}
+	renderer.RenderSessionEntries(entries, false, false)
+
+	lines := renderChat(t, renderer.Chat)
+	position := func(text string) int {
+		for index, line := range lines {
+			if strings.Contains(line, text) {
+				return index
+			}
+		}
+		return -1
+	}
+	bashRow := position("$ echo hi")
+	secondRow := position("second pass")
+	if bashRow < 0 || secondRow < 0 {
+		t.Fatalf("missing frames (bash %d, assistant %d):\n%s", bashRow, secondRow, strings.Join(lines, "\n"))
+	}
+	if bashRow > secondRow {
+		t.Fatalf("the bash frame replayed at the end of the turn (row %d, assistant row %d):\n%s",
+			bashRow, secondRow, strings.Join(lines, "\n"))
+	}
+}
+
+// A `!` command's frame never moves later than its entry: a message appended
+// after the command started but stamped in the same millisecond keeps the
+// recorded order (D248).
+func TestReplayedIdleBashFrameStaysInPlace(t *testing.T) {
+	renderer, _ := newTranscriptTestRenderer(t, false)
+	stamp := func(ms int64) string {
+		return time.UnixMilli(ms).UTC().Format(time.RFC3339Nano)
+	}
+	messageEntry := func(id string, message ai.Message, ms int64) coding.SessionEntry {
+		encoded, err := ai.MarshalMessage(message)
+		if err != nil {
+			t.Fatalf("marshal %s: %v", id, err)
+		}
+		return coding.SessionEntry{
+			Type:             "message",
+			SessionEntryBase: coding.SessionEntryBase{ID: id, Timestamp: stamp(ms)},
+			Message:          encoded,
+		}
+	}
+	// The command started at 1500 and its entry was appended at 2000, after a
+	// message stamped in the same millisecond as the start.
+	bash := coding.CreateBashExecutionMessage("echo hi", "hi", intPtr(0), false, false, "", false, 1500, nil)
+	entries := []coding.SessionEntry{
+		messageEntry("a1", &ai.AssistantMessage{Content: ai.ContentList{ai.TextContent{Text: "first pass"}}, StopReason: ai.StopStop}, 1000),
+		messageEntry("b1", bash, 2000),
+		messageEntry("u2", &ai.UserMessage{Content: ai.StringOrBlocks{Text: "next ask"}}, 1500),
+	}
+	renderer.RenderSessionEntries(entries, false, false)
+
+	lines := renderChat(t, renderer.Chat)
+	position := func(text string) int {
+		for index, line := range lines {
+			if strings.Contains(line, text) {
+				return index
+			}
+		}
+		return -1
+	}
+	bashRow := position("$ echo hi")
+	askRow := position("next ask")
+	if bashRow < 0 || askRow < 0 {
+		t.Fatalf("missing frames (bash %d, ask %d):\n%s", bashRow, askRow, strings.Join(lines, "\n"))
+	}
+	if bashRow > askRow {
+		t.Fatalf("the idle bash frame moved past the next message (row %d, ask row %d):\n%s",
+			bashRow, askRow, strings.Join(lines, "\n"))
+	}
+}
+
+// A continued session restores its `!` commands to the editor history, like its
+// prompts: upstream only replays user messages, so the command was lost after a
+// reload (D250).
+func TestTranscriptRestoresBashCommandHistory(t *testing.T) {
+	renderer, _ := newTranscriptTestRenderer(t, false)
+	editor := NewCustomEditor(editorTestHost{}, tui.EditorTheme{}, NewAppKeybindingsManager(nil, ""), CustomEditorOptions{})
+	renderer.Editor = editor
+
+	stamp := func(ms int64) string {
+		return time.UnixMilli(ms).UTC().Format(time.RFC3339Nano)
+	}
+	messageEntry := func(id string, message ai.Message, ms int64) coding.SessionEntry {
+		encoded, err := ai.MarshalMessage(message)
+		if err != nil {
+			t.Fatalf("marshal %s: %v", id, err)
+		}
+		return coding.SessionEntry{
+			Type:             "message",
+			SessionEntryBase: coding.SessionEntryBase{ID: id, Timestamp: stamp(ms)},
+			Message:          encoded,
+		}
+	}
+	entries := []coding.SessionEntry{
+		messageEntry("u1", &ai.UserMessage{Content: ai.StringOrBlocks{Text: "ask"}}, 1000),
+		messageEntry("b1", coding.CreateBashExecutionMessage("echo hi", "hi", intPtr(0), false, false, "", false, 2000, nil), 2000),
+		messageEntry("b2", coding.CreateBashExecutionMessage("secret", "", intPtr(0), false, false, "", true, 3000, nil), 3000),
+	}
+	renderer.RenderSessionEntries(entries, false, true)
+
+	for index, want := range []string{"!!secret", "!echo hi", "ask"} {
+		editor.HandleInput("\x1b[A")
+		if got := editor.GetText(); got != want {
+			t.Fatalf("history entry %d = %q, want %q", index, got, want)
+		}
+	}
+}

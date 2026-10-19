@@ -4,7 +4,7 @@ Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D247**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D250**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation.
 
 Related documents: [port status](PORTING.md), [architecture](architecture.md),
@@ -1725,30 +1725,33 @@ Tests: `TestValidateMcpServerConfigNormalizesSpecialHTTPSchemeURL`,
 
 ## D246
 
-**A completed `!` frame moves to the transcript, and manual bash output is
-click-to-expand.**
+**A `!` command renders through the shell tool's frame.**
 
-Reference: `packages/coding-agent/src/modes/interactive/interactive-mode.ts`
-(`handleBashCommand` defers a frame to `pendingMessagesContainer` while
-`session.isStreaming`, and `flushPendingBashComponents` only runs on a normal
-submission) and `components/bash-execution.ts` (no `MouseRegion`; only
-`components/tool-execution.ts` wraps its result in one).
+Reference: `interactive-mode.ts` `handleBashCommand` (the frame goes into
+`pendingMessagesContainer` while `session.isStreaming`, and
+`flushPendingBashComponents` moves it into the transcript only on a normal
+submission) and `components/bash-execution.ts` (its own bordered `$ command`
+frame with a 20-line preview, status-line hints and a loader).
 
-A deferred frame stays in the input dock until the next normal submission, so a
-completed 20-line preview keeps the dock at its full height: on a 30-row
-terminal the layout gives the transcript one row and the dock 29, which reads as
-the output covering the screen and hanging off the footer. The pinned sources
-reproduce the same allocation, so this is a UI departure, not a port bug. The
-port flushes the frame into the transcript in the same posted callback that
-marks it complete (both the success and error paths), restoring the transcript
-height as soon as the command stops.
+Upstream renders a manual command with a component of its own, keeps it in the
+footer dock while the model streams, and only shows it in the transcript on the
+next submission; the dock sizes to its children, so on a 30-row terminal a
+completed preview leaves the transcript one row. The port treats the command as
+a manual shell **tool call**: it builds the same `ToolExecutionComponent` a
+model `bash` call uses (with `core/tools/renderers/bash.ts`), so the call line,
+collapsed preview and hidden-line hint, click-to-expand, partial/error
+backgrounds and the Elapsed/Took label are upstream's tool behavior, and the
+frame joins the transcript as soon as the command is triggered. The session
+entry is unchanged: a `bashExecution` custom message recorded by
+`recordBashResult` (deferred to the turn's end while the agent streams), which
+`ConvertToLlm` still projects as a user message; D248 restores the frame's
+position on replay. A running `!` command belongs to the active turn, so Escape
+aborts it with the turn. The `!!` form keeps its context exclusion but no longer
+has upstream's separate dim styling, which a tool frame has no equivalent for.
 
-The completed frame is also clickable to toggle its preview, using the same
-left-click `MouseRegion` that tool results use; a running frame ignores the
-click, matching a tool frame with no result yet.
-
-Tests: `TestCompletedPendingBashFrameMovesToTheTranscript` and
-`TestClickingTheBashFrameTogglesExpansion`.
+Tests: `TestBashFrameJoinsTheTranscriptWhileTheModelStreams`,
+`TestManualBashFrameTicksWhileTheAgentIsIdle` and
+`TestEscapeCancelsTheManualCommandWithTheTurn`.
 
 ## D247
 
@@ -1762,3 +1765,58 @@ same state. The port now expires a state only when the map still points to that
 timer's entry.
 
 Test: `TestStaleCallbackTimeoutDoesNotDeleteReplacementWaiter`.
+
+## D248
+
+**A `!` frame replayed from the session keeps the position the live transcript
+gave it, not its entry order.**
+
+Reference: `core/agent-session.ts` `recordBashResult` defers the message while
+the agent is streaming ("to avoid breaking tool_use/tool_result ordering") and
+`_flushPendingBashMessages` appends it when the run ends (`prompt`'s `finally`).
+The session therefore stores a command run during a turn after everything the
+turn produced, while the live transcript shows the frame when it is triggered
+(D246), so a resumed transcript would draw it at the end of the turn.
+
+The port keeps the upstream session order: the entry is still a
+`bashExecution` custom message appended at the turn's end, so the file and the
+LLM context are unchanged, and `ConvertToLlm` already holds a custom message out
+of context when it would split a tool call from its result. The message is
+instead stamped with the command's start (`recordBashResult` keeps the record
+time for callers that bypass `executeBash`), and the replayed transcript places
+the frame before the first entry appended after that moment, which is the
+position the live transcript gave it. A frame never moves later than its own
+entry, so an entry sharing the start millisecond keeps the recorded order;
+entry timestamps that cannot be read never move a frame.
+
+Tests: `TestSessionBashMessageIsStampedAtStart`,
+`TestReplayedBashFrameKeepsItsPositionAmongTheTurn` and
+`TestReplayedIdleBashFrameStaysInPlace`.
+
+## D249
+
+**A `bashExecution` message persists the command's duration.**
+
+Reference: `core/messages.ts` `BashExecutionMessage` has no execution time, so a
+replayed manual command cannot show the shell tool's `Took` label. The port adds
+`durationMs` after the upstream keys (omitted when unknown), so a message
+written before the field existed, or by upstream, stays byte-identical and
+shows no label. `ExecuteBash` records the measured duration with the message
+stamped at the command's start (D248).
+
+Tests: `TestSessionBashMessageIsStampedAtStart` and
+`TestSessionBashMessageRecordsDuration`.
+
+## D250
+
+**A continued session restores its `!` commands to the editor history.**
+
+Reference: `interactive-mode.ts` `addMessageToChat` adds only user-message text
+to the editor history when `populateHistory` is set; its `bashExecution` branch
+renders the frame and stops. A reloaded session therefore loses every `!`/`!!`
+command from the up-arrow history, even though the live submit added the typed
+text. The port restores `!` + the recorded command (`!!` for the excluded form)
+while replaying the message. The command was trimmed before execution, so the
+restored entry is the normalized form rather than the raw typed text.
+
+Tests: `TestTranscriptRestoresBashCommandHistory`.

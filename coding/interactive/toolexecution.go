@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
 )
 
@@ -540,3 +541,44 @@ var (
 	_ tui.Component    = (*ToolExecutionComponent)(nil)
 	_ tui.MouseHandler = (*ToolExecutionComponent)(nil)
 )
+
+// toolFrameOptions are the per-frame collaborators a tool execution frame
+// renders with. Nil fields fall back to the defaults (no custom renderers, no
+// image options, no display settings).
+type toolFrameOptions struct {
+	Session  TranscriptSession
+	Settings *coding.SettingsManager
+	Display  *DisplayOptions
+	Prep     *tui.MarkdownPreparation
+	UI       tui.RenderRequester
+	Cwd      string
+}
+
+// newToolFrame builds a tool execution frame with the options every tool frame
+// gets: the built-in/custom renderers, image display, transcript padding,
+// markdown preparation and the current expansion state. It does not attach the
+// frame to a container.
+func newToolFrame(toolName, toolCallID string, args any, options toolFrameOptions) *ToolExecutionComponent {
+	var definition *ToolRenderers
+	if options.Session != nil {
+		definition = options.Session.GetToolRenderers(toolName)
+	}
+	if definition == nil {
+		// A shell frame must render as a shell even when the host exposes no
+		// session renderers (tests, standalone transcript renderers).
+		definition = WithBuiltInRenderers(toolName, nil)
+	}
+	executionOptions := ToolExecutionOptions{}
+	if options.Settings != nil {
+		showImages := options.Settings.GetShowImages()
+		executionOptions.ShowImages = &showImages
+		executionOptions.ImageWidthCells = options.Settings.GetImageWidthCells()
+	}
+	component := NewToolExecutionComponent(toolName, toolCallID, args, executionOptions, definition, options.UI, options.Cwd)
+	component.SetResultPreparation(options.Prep)
+	if options.Display != nil {
+		component.SetExpanded(options.Display.ToolOutputExpanded)
+		component.SetOutputPad(options.Display.OutputPad)
+	}
+	return component
+}

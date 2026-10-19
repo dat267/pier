@@ -401,27 +401,14 @@ func (d *EventDispatcher) newToolComponent(toolName string, toolCallID string, a
 	if d.Transcript == nil {
 		return nil
 	}
-	var definition *ToolRenderers
-	if d.Transcript.Session != nil {
-		definition = d.Transcript.Session.GetToolRenderers(toolName)
-	}
-	options := ToolExecutionOptions{}
-	if d.Settings != nil {
-		showImages := d.Settings.GetShowImages()
-		options.ShowImages = &showImages
-		options.ImageWidthCells = d.Settings.GetImageWidthCells()
-	}
 	cwd := ""
 	if d.SessionInfo != nil {
 		cwd = d.SessionInfo.GetCwd()
 	}
-	component := NewToolExecutionComponent(toolName, toolCallID, args, options, definition, d.Transcript.UI, cwd)
-	// Tool output follows the transcript's padding from the moment it exists (upstream #10557).
-	if d.Display != nil {
-		component.SetOutputPad(d.Display.OutputPad)
-	}
-	component.SetResultPreparation(d.MarkdownPreparation)
-	component.SetExpanded(d.Display.ToolOutputExpanded)
+	component := newToolFrame(toolName, toolCallID, args, toolFrameOptions{
+		Session: d.Transcript.Session, Settings: d.Settings, Display: d.Display,
+		Prep: d.MarkdownPreparation, UI: d.Transcript.UI, Cwd: cwd,
+	})
 	d.Transcript.Chat.AddChild(component)
 	return component
 }

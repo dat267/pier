@@ -13,32 +13,39 @@ import (
 	"github.com/dat267/pier/tui"
 )
 
-// bashComponentIn returns the transcript's bash component, if any.
-func bashComponentIn(app *App) *BashExecutionComponent {
+// manualBashIn returns the transcript's manual `!` shell frame, if any. A `!`
+// command renders through the shell tool's frame (D246).
+func manualBashIn(app *App) *ToolExecutionComponent {
 	for _, child := range app.chat.Children {
-		if component, ok := child.(*BashExecutionComponent); ok {
+		if component, ok := child.(*ToolExecutionComponent); ok &&
+			strings.HasPrefix(component.toolCallID, "user-bash-") {
 			return component
 		}
 	}
 	return nil
 }
 
+// bashFrameOutput is the frame's current result text.
+func bashFrameOutput(component *ToolExecutionComponent) string {
+	return GetTextOutput(component.result, true)
+}
+
 // pumpUntilBashOutput drains the renderer's posted callbacks — the component
 // work is posted from the command's goroutine — until the output arrives.
-func pumpUntilBashOutput(t *testing.T, app *App, want string) *BashExecutionComponent {
+func pumpUntilBashOutput(t *testing.T, app *App, want string) *ToolExecutionComponent {
 	t.Helper()
 	deadline := time.Now().Add(15 * time.Second)
 	for {
 		app.ui.RenderNow(true)
-		component := bashComponentIn(app)
-		if component != nil && strings.Contains(component.GetOutput(), want) {
+		component := manualBashIn(app)
+		if component != nil && strings.Contains(bashFrameOutput(component), want) {
 			return component
 		}
 		if time.Now().After(deadline) {
 			if component == nil {
-				t.Fatalf("no bash component in the transcript")
+				t.Fatalf("no shell frame in the transcript")
 			}
-			t.Fatalf("bash output = %q, want it to contain %q", component.GetOutput(), want)
+			t.Fatalf("bash output = %q, want it to contain %q", bashFrameOutput(component), want)
 		}
 		time.Sleep(5 * time.Millisecond)
 	}
@@ -98,8 +105,14 @@ func TestBashCommandFromTheEditor(t *testing.T) {
 	}
 
 	component := pumpUntilBashOutput(t, app, "hello-from-bash")
-	if component.GetCommand() != "echo hello-from-bash" {
-		t.Errorf("command = %q", component.GetCommand())
+	if args, ok := component.args.(map[string]any); !ok || args["command"] != "echo hello-from-bash" {
+		t.Errorf("command = %v", component.args)
+	}
+	// The frame is the shell tool's: the same call line and output preview a
+	// model bash call renders (D246).
+	rendered := coding.StripAnsi(strings.Join(component.Render(100), "\n"))
+	if !strings.Contains(rendered, "$ echo hello-from-bash") || !strings.Contains(rendered, "hello-from-bash") {
+		t.Fatalf("shell frame render = %q", rendered)
 	}
 
 	// The result also joins the session, which is what keeps it in the
@@ -131,9 +144,9 @@ func TestBashCommandExcludedForm(t *testing.T) {
 	}
 }
 
-// A command that exits non-zero still completes its component, showing the exit
-// code rather than looking like it succeeded.
-func TestBashCommandShowsTheExitCode(t *testing.T) {
+// A command that exits non-zero completes as an error result, so the shell
+// frame uses the tool error background like a failed model bash call.
+func TestBashCommandMarksAFailure(t *testing.T) {
 	app, cleanup := newTestApp(t)
 	defer cleanup()
 
@@ -142,25 +155,24 @@ func TestBashCommandShowsTheExitCode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	waitForBashExitCode(t, app, "(exit 3)")
+	component := waitForBashFinished(t, app)
+	if component.result == nil || !component.result.IsError {
+		t.Fatalf("failed command result = %+v; want IsError", component.result)
+	}
 }
 
-// waitForBashExitCode drains the loop until the component renders its exit
-// code. SetComplete and the recording both happen in one posted callback, so
-// the rendered exit code means every record that is going to happen has
-// happened.
-func waitForBashExitCode(t *testing.T, app *App, marker string) {
+// waitForBashFinished drains the loop until the frame's result is final. The
+// recording and the final frame both happen in one posted callback.
+func waitForBashFinished(t *testing.T, app *App) *ToolExecutionComponent {
 	t.Helper()
 	deadline := time.Now().Add(15 * time.Second)
 	for {
 		app.ui.RenderNow(true)
-		if component := bashComponentIn(app); component != nil {
-			if rendered := strings.Join(component.Render(80), "\n"); strings.Contains(rendered, marker) {
-				return
-			}
+		if component := manualBashIn(app); component != nil && component.result != nil && !component.isPartial {
+			return component
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("the component never showed %q; children = %d", marker, len(app.chat.Children))
+			t.Fatalf("the shell frame never finished; children = %d", len(app.chat.Children))
 		}
 		time.Sleep(5 * time.Millisecond)
 	}
@@ -204,7 +216,7 @@ func TestBashCommandIsRecordedOnce(t *testing.T) {
 		t.Fatal(err)
 	}
 	pumpUntilRecorded(t, app, "exit 3")
-	waitForBashExitCode(t, app, "(exit 3)")
+	waitForBashFinished(t, app)
 
 	if count := countBashExecutionEntries(t, app); count != 1 {
 		t.Fatalf("session holds %d bash-execution entries for one command; want 1", count)
@@ -279,22 +291,11 @@ func TestBashCommandTrimsJSUrFEFF(t *testing.T) {
 	}
 }
 
-// pendingBashIn returns the bash frame currently attached to the dock.
-func pendingBashIn(app *App) *BashExecutionComponent {
-	for _, child := range app.pendingMessages.Children {
-		if component, ok := child.(*BashExecutionComponent); ok {
-			return component
-		}
-	}
-	return nil
-}
-
-// A `!` command started while the model streams is shown in the pending dock.
-// Once it completes the frame has to move into the transcript: the dock keeps
-// the height its children ask for, so a completed 20-line preview left there
-// squeezes the transcript to a single row, covering the screen and gluing the
-// frame above the footer until the next normal submission.
-func TestCompletedPendingBashFrameMovesToTheTranscript(t *testing.T) {
+// A `!` command joins the transcript as soon as it is triggered, even while
+// the model streams: the frame shows its loader and streaming output in the
+// main window instead of waiting in the footer dock (D246). The dock does not
+// grow, so the transcript keeps its height for the whole run.
+func TestBashFrameJoinsTheTranscriptWhileTheModelStreams(t *testing.T) {
 	app, cleanup := newTestAppB(t)
 	defer cleanup()
 
@@ -333,25 +334,27 @@ func TestCompletedPendingBashFrameMovesToTheTranscript(t *testing.T) {
 	for i := 0; i < 30; i++ {
 		output.WriteString("dua output line\n")
 	}
-	command := "cat <<'EOF'\n" + output.String() + "EOF"
+	command := "sleep 0.3\ncat <<'EOF'\n" + output.String() + "EOF"
 	if err := newSubmitWiring(app).Handlers.HandleBashCommand(command, false); err != nil {
 		t.Fatal(err)
 	}
 
-	waitUntil(15*time.Second, "the bash command to finish", func() bool {
-		return !app.session.IsBashRunning() && (bashComponentIn(app) != nil || pendingBashIn(app) != nil)
+	waitUntil(5*time.Second, "the running frame to join the transcript", func() bool {
+		return manualBashIn(app) != nil
 	})
-	// Drain the posted SetComplete/flush callbacks.
+	if !app.session.IsBashRunning() {
+		t.Fatal("the command finished before the running frame could be checked")
+	}
+
+	waitUntil(15*time.Second, "the bash command to finish", func() bool { return !app.session.IsBashRunning() })
+	// Drain the posted completion callback.
 	for end := time.Now().Add(200 * time.Millisecond); time.Now().Before(end); {
 		app.ui.RenderNow(true)
 		time.Sleep(2 * time.Millisecond)
 	}
 
-	if pendingBashIn(app) != nil {
-		t.Fatal("the completed bash frame is still attached to the footer dock")
-	}
-	if bashComponentIn(app) == nil {
-		t.Fatal("the completed bash frame is not in the transcript")
+	if manualBashIn(app) == nil {
+		t.Fatal("the completed shell frame is not in the transcript")
 	}
 
 	screen, ok := app.lifecycle.CurrentUI().(*tui.AltScreen)
@@ -368,23 +371,91 @@ func TestCompletedPendingBashFrameMovesToTheTranscript(t *testing.T) {
 	}
 }
 
-// A manual `!` frame is click-to-expand like a tool frame (upstream only wires
-// the MouseRegion in tool-execution.ts; bash-execution.ts has no click target).
-func TestClickingTheBashFrameTogglesExpansion(t *testing.T) {
-	component := NewBashExecutionComponent("dua", nil, false, 1)
-	for i := 0; i < 30; i++ {
-		component.AppendOutput("entry " + itoa(i) + "\n")
-	}
-	exit := 0
-	component.SetComplete(&exit, false, nil, "")
+// A running `!` frame keeps ticking while the agent is idle: the shell tool's
+// elapsed label must advance even though nothing else asks for a repaint (the
+// frame is a direct transcript child, so its animation tick reaches the chat's
+// revision cache, D229).
+func TestManualBashFrameTicksWhileTheAgentIsIdle(t *testing.T) {
+	app, cleanup := newTestAppB(t)
+	defer cleanup()
+	stop := runTestAppLoop(t, app)
+	defer stop()
 
-	collapsed := component.Render(80)
-	click := tui.TuiMouseEvent{Type: tui.MouseClick, Button: tui.MouseButtonLeft, X: 2, Y: 3, Width: 80, Height: len(collapsed)}
-	if result := component.HandleMouse(click); result == nil || !result.Handled {
-		t.Fatalf("click on the bash frame was not handled (render = %d rows)", len(collapsed))
+	if err := newSubmitWiring(app).Handlers.HandleBashCommand("sleep 2", false); err != nil {
+		t.Fatal(err)
 	}
-	expanded := component.Render(80)
-	if len(expanded) <= len(collapsed) {
-		t.Fatalf("click did not expand the frame: %d rows -> %d rows", len(collapsed), len(expanded))
+	waitForConditionWithin(t, func() bool { return manualBashIn(app) != nil }, 5*time.Second)
+
+	screen := app.lifecycle.CurrentUI().(*tui.AltScreen)
+	elapsedLine := func() string {
+		frame := tui.RenderLayoutFrame(screen.LayoutRoot(), 100, 30, func() {})
+		for _, line := range frame.Lines {
+			if plain := coding.StripAnsi(line); strings.Contains(plain, "Elapsed") {
+				return plain
+			}
+		}
+		return ""
 	}
+	var first string
+	waitForLabel := time.Now().Add(2 * time.Second)
+	for first = postValue(app, elapsedLine); first == ""; first = postValue(app, elapsedLine) {
+		if time.Now().After(waitForLabel) {
+			t.Fatal("the running frame has no elapsed label")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	deadline := time.Now().Add(1500 * time.Millisecond)
+	for {
+		line := postValue(app, elapsedLine)
+		if line != first {
+			if !strings.Contains(line, "Elapsed") {
+				t.Fatalf("the run finished before the label advanced: %q -> %q", first, line)
+			}
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("the elapsed label did not advance while the agent was idle: %q", first)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+// Escape cancels a manual command together with the turn it runs alongside:
+// the `!` frame is part of the active turn's lifecycle, not an independent job
+// (HandleEscape's streaming branch aborts the run, which aborts the bash runs).
+func TestEscapeCancelsTheManualCommandWithTheTurn(t *testing.T) {
+	app, cleanup := newTestAppB(t)
+	defer cleanup()
+	stop := runTestAppLoop(t, app)
+	defer stop()
+
+	app.session.Agent.StreamFunction = func(model *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		stream := ai.NewAssistantMessageEventStream()
+		go func() {
+			select {
+			case <-options.Ctx.Done():
+			case <-time.After(5 * time.Second):
+			}
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopAborted, Message: &ai.AssistantMessage{
+				API: ai.APIAnthropicMessages, Provider: model.Provider, Model: model.ID,
+				Content: ai.ContentList{ai.TextContent{Text: "stopped"}}, StopReason: ai.StopAborted,
+			}})
+		}()
+		return stream
+	}
+	go func() { _ = app.session.Prompt(context.Background(), "keep working", nil) }()
+	waitForConditionWithin(t, func() bool { return app.session.IsStreaming() }, 10*time.Second)
+
+	if err := newSubmitWiring(app).Handlers.HandleBashCommand("sleep 10", false); err != nil {
+		t.Fatal(err)
+	}
+	waitForConditionWithin(t, func() bool { return app.session.IsBashRunning() }, 10*time.Second)
+
+	postValue(app, func() int {
+		newKeyWiring(app).HandleEscape(func() int64 { return time.Now().UnixMilli() })
+		return 0
+	})
+	waitForConditionWithin(t, func() bool {
+		return !app.session.IsBashRunning() && !app.session.IsStreaming()
+	}, 10*time.Second)
 }

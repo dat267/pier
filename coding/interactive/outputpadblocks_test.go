@@ -14,49 +14,6 @@ func outputPadTheme(t *testing.T) {
 	t.Cleanup(func() { SetRegisteredThemes(nil) })
 }
 
-func indentedLine(rendered, needle string) (string, bool) {
-	for _, line := range strings.Split(rendered, "\n") {
-		if strings.Contains(line, needle) {
-			return line, true
-		}
-	}
-	return "", false
-}
-
-// The `!` command output follows outputPad like every other transcript block (upstream #10557).
-func TestBashExecutionFollowsOutputPad(t *testing.T) {
-	outputPadTheme(t)
-
-	render := func(padding int) string {
-		component := NewBashExecutionComponent("ls", nil, false, padding)
-		return coding.StripAnsi(strings.Join(component.Render(40), "\n"))
-	}
-	paddedHeader, ok := indentedLine(render(1), "$ ls")
-	if !ok {
-		t.Fatal("the padded render has no command header")
-	}
-	unpaddedHeader, ok := indentedLine(render(0), "$ ls")
-	if !ok {
-		t.Fatal("the unpadded render has no command header")
-	}
-	if !strings.HasPrefix(paddedHeader, " ") {
-		t.Fatalf("padded header = %q", paddedHeader)
-	}
-	if strings.HasPrefix(unpaddedHeader, " ") {
-		t.Fatalf("unpadded header = %q", unpaddedHeader)
-	}
-
-	// A later change re-renders in place, the way the settings walk does it.
-	component := NewBashExecutionComponent("ls", nil, false, 0)
-	if line, _ := indentedLine(coding.StripAnsi(strings.Join(component.Render(40), "\n")), "$ ls"); strings.HasPrefix(line, " ") {
-		t.Fatalf("a zero-padded component rendered indented: %q", line)
-	}
-	component.SetOutputPad(1)
-	if line, _ := indentedLine(coding.StripAnsi(strings.Join(component.Render(40), "\n")), "$ ls"); !strings.HasPrefix(line, " ") {
-		t.Fatalf("SetOutputPad did not re-render the header: %q", line)
-	}
-}
-
 // The branch and compaction summary blocks follow it too: at pad 1 the block's lines are
 // indented, at pad 0 they are not.
 func TestSummaryBlocksFollowOutputPad(t *testing.T) {
@@ -86,28 +43,5 @@ func TestSummaryBlocksFollowOutputPad(t *testing.T) {
 	paddedCompaction := indented(compaction.Render(40))
 	if paddedCompaction <= unpaddedCompaction {
 		t.Fatalf("compaction summary indented lines: %d at pad 0, %d at pad 1", unpaddedCompaction, paddedCompaction)
-	}
-}
-
-// The collapsed bash preview passes outputPad to the visual-line truncation
-// (upstream `truncateToVisualLines(styledInput, PREVIEW_LINES, width, this.outputPad)`).
-func TestBashExecutionPreviewFollowsOutputPad(t *testing.T) {
-	outputPadTheme(t)
-
-	render := func(padding int) string {
-		component := NewBashExecutionComponent("ls", nil, false, padding)
-		component.AppendOutput("line one\nline two\n")
-		exit := 0
-		component.SetComplete(&exit, false, nil, "")
-		return coding.StripAnsi(strings.Join(component.Render(40), "\n"))
-	}
-
-	padded, ok := indentedLine(render(1), "line one")
-	if !ok || !strings.HasPrefix(padded, " ") {
-		t.Fatalf("padded preview = %q", padded)
-	}
-	unpadded, ok := indentedLine(render(0), "line one")
-	if !ok || strings.HasPrefix(unpadded, " ") {
-		t.Fatalf("unpadded preview = %q", unpadded)
 	}
 }
