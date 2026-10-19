@@ -298,3 +298,113 @@ func TestTreeToolLabelTruncatesBashCommandByUTF16Units(t *testing.T) {
 		t.Fatalf("label = %q; want %q", got, want)
 	}
 }
+
+// contextEditTree builds the minimal shape GetTree returns for a user message
+// with one context_edit child.
+func contextEditTree(replacement json.RawMessage) []*coding.SessionTreeNode {
+	parentID := "m1"
+	return []*coding.SessionTreeNode{{
+		Entry: coding.SessionEntry{
+			Type:             "message",
+			SessionEntryBase: coding.SessionEntryBase{ID: "m1", Timestamp: "2026-05-01T12:00:00Z"},
+			Message:          json.RawMessage(`{"role":"user","content":[{"type":"text","text":"hello"}]}`),
+		},
+		Children: []*coding.SessionTreeNode{{
+			Entry: coding.SessionEntry{
+				Type:             "context_edit",
+				SessionEntryBase: coding.SessionEntryBase{ID: "e1", ParentID: &parentID, Timestamp: "2026-05-01T12:00:01Z"},
+				TargetID:         "m1",
+				Replacement:      replacement,
+			},
+		}},
+	}}
+}
+
+// tree-selector.ts treats context_edit as a settings/bookkeeping entry, so the
+// default filter hides it. The port omitted it from isSettingsEntry and showed
+// an empty row.
+func TestTreeSelectorHidesContextEditEntriesByDefault(t *testing.T) {
+	InitTheme("dark", false)
+	list := NewTreeList(contextEditTree(json.RawMessage("null")), nil, 40, nil, FilterDefault)
+	rendered := coding.StripAnsi(strings.Join(list.Render(80), "\n"))
+	if !strings.Contains(rendered, "(1/1)") {
+		t.Fatalf("default filter should hide context_edit:\n%s", rendered)
+	}
+}
+
+// tree-selector.ts renders context_edit as [context omit: id] or
+// [context replace: id]; the port's display switch had no case, so the row was
+// blank.
+func TestTreeSelectorLabelsContextEditEntries(t *testing.T) {
+	InitTheme("dark", false)
+	omitted := coding.StripAnsi(strings.Join(
+		NewTreeList(contextEditTree(json.RawMessage("null")), nil, 40, nil, FilterAll).Render(80), "\n"))
+	if !strings.Contains(omitted, "[context omit: m1]") {
+		t.Fatalf("missing omit label:\n%s", omitted)
+	}
+	replaced := coding.StripAnsi(strings.Join(
+		NewTreeList(contextEditTree(json.RawMessage(`{"content":"x"}`)), nil, 40, nil, FilterAll).Render(80), "\n"))
+	if !strings.Contains(replaced, "[context replace: m1]") {
+		t.Fatalf("missing replace label:\n%s", replaced)
+	}
+}
+
+// tree-selector.ts's searchable text includes "context edit <omit|replace>
+// <targetId>"; the port's search switch had no case.
+func TestTreeSelectorSearchesContextEditEntries(t *testing.T) {
+	InitTheme("dark", false)
+	list := NewTreeList(contextEditTree(json.RawMessage("null")), nil, 40, nil, FilterAll)
+	list.searchQuery = "context edit omit"
+	list.ApplyFilter()
+	rendered := coding.StripAnsi(strings.Join(list.Render(80), "\n"))
+	if !strings.Contains(rendered, "[context omit: m1]") {
+		t.Fatalf("search did not match context_edit:\n%s", rendered)
+	}
+}
+
+// customMessageNode builds a tree with one custom_message entry whose content is
+// the given raw JSON.
+func customMessageNode(content json.RawMessage) []*coding.SessionTreeNode {
+	return []*coding.SessionTreeNode{{
+		Entry: coding.SessionEntry{
+			Type:             "custom_message",
+			SessionEntryBase: coding.SessionEntryBase{ID: "c1", Timestamp: "2026-05-01T12:00:00Z"},
+			CustomType:       "note",
+			Content:          content,
+		},
+	}}
+}
+
+// tree-selector.ts renders a custom_message's full content (a string as-is, or
+// its joined text blocks) with no length cap; the port went through
+// extractContent, which slices to 200 UTF-16 units.
+func TestTreeSelectorShowsFullCustomMessageContent(t *testing.T) {
+	InitTheme("dark", false)
+	content, err := json.Marshal(strings.Repeat("a", 250) + "TAIL")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rendered := coding.StripAnsi(strings.Join(
+		NewTreeList(customMessageNode(content), nil, 40, nil, FilterAll).Render(500), "\n"))
+	if !strings.Contains(rendered, "TAIL") {
+		t.Fatalf("custom_message display truncated the content:\n%s", rendered)
+	}
+}
+
+// tree-selector.ts searches a custom_message string content in full (only
+// content blocks go through extractContent); the port capped the string too, so
+// a token past 200 units was unfindable.
+func TestTreeSelectorSearchesFullCustomMessageString(t *testing.T) {
+	InitTheme("dark", false)
+	content, err := json.Marshal(strings.Repeat("a", 250) + "TAIL")
+	if err != nil {
+		t.Fatal(err)
+	}
+	list := NewTreeList(customMessageNode(content), nil, 40, nil, FilterAll)
+	list.searchQuery = "tail"
+	list.ApplyFilter()
+	rendered := coding.StripAnsi(strings.Join(list.Render(500), "\n"))
+	if !strings.Contains(rendered, "[note]: ") {
+		t.Fatalf("search did not match the full custom_message string:\n%s", rendered)
+	}
+}

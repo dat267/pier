@@ -389,7 +389,7 @@ func (t *TreeList) ApplyFilter() {
 			}
 		}
 
-		isSettingsEntry := entry.Type == "label" || entry.Type == "custom" ||
+		isSettingsEntry := entry.Type == "label" || entry.Type == "context_edit" || entry.Type == "custom" ||
 			entry.Type == "model_change" || entry.Type == "thinking_level_change" || entry.Type == "session_info"
 
 		passesFilter := true
@@ -584,6 +584,15 @@ func (t *TreeList) recalculateVisualStructure() {
 	t.visibleChildrenMap = visibleChildren
 }
 
+// contextEditAction maps a context_edit entry's replacement to upstream's
+// action word: a null replacement omits the target, anything else replaces it.
+func contextEditAction(entry coding.SessionEntry) string {
+	if string(entry.Replacement) == "null" {
+		return "omit"
+	}
+	return "replace"
+}
+
 func (t *TreeList) getSearchableText(node *coding.SessionTreeNode) string {
 	entry := node.Entry
 	var parts []string
@@ -602,7 +611,14 @@ func (t *TreeList) getSearchableText(node *coding.SessionTreeNode) string {
 		}
 	case "custom_message":
 		parts = append(parts, entry.CustomType)
-		parts = append(parts, t.extractContent(entry.Content))
+		// A string content is searched in full; content blocks go through
+		// extractContent like upstream.
+		var text string
+		if err := json.Unmarshal(entry.Content, &text); err == nil {
+			parts = append(parts, text)
+		} else {
+			parts = append(parts, t.extractContent(entry.Content))
+		}
 	case "compaction":
 		parts = append(parts, "compaction")
 	case "branch_summary":
@@ -618,6 +634,8 @@ func (t *TreeList) getSearchableText(node *coding.SessionTreeNode) string {
 		parts = append(parts, "thinking", entry.ThinkingLevel)
 	case "custom":
 		parts = append(parts, "custom", entry.CustomType)
+	case "context_edit":
+		parts = append(parts, "context edit", contextEditAction(entry), entry.TargetID)
 	case "label":
 		label := ""
 		if entry.Label != nil {
@@ -880,7 +898,7 @@ func (t *TreeList) getEntryDisplayText(node *coding.SessionTreeNode, isSelected 
 			result = theme.Fg("dim", "["+message.Role+"]")
 		}
 	case "custom_message":
-		result = theme.Fg("customMessageLabel", "["+entry.CustomType+"]: ") + normalize(t.extractContent(entry.Content))
+		result = theme.Fg("customMessageLabel", "["+entry.CustomType+"]: ") + normalize(t.extractFullContent(entry.Content))
 	case "compaction":
 		tokens := (entry.TokensBefore + 500) / 1000
 		result = theme.Fg("borderAccent", "[compaction: "+itoa(int(tokens))+"k tokens]")
@@ -892,6 +910,8 @@ func (t *TreeList) getEntryDisplayText(node *coding.SessionTreeNode, isSelected 
 		result = theme.Fg("dim", "[thinking: "+entry.ThinkingLevel+"]")
 	case "custom":
 		result = theme.Fg("dim", "[custom: "+entry.CustomType+"]")
+	case "context_edit":
+		result = theme.Fg("dim", "[context "+contextEditAction(entry)+": "+entry.TargetID+"]")
 	case "label":
 		label := "(cleared)"
 		if entry.Label != nil {
