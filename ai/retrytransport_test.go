@@ -72,6 +72,25 @@ func TestUpstreamProviderReturnedAnErrorIsRetryable(t *testing.T) {
 	}
 }
 
+// Go's net/http2 reports a peer-reset stream through its StreamError string
+// instead of upstream's fetch/websocket wording, so the classifier must accept
+// it or the whole request fails without a retry (D171).
+func TestHTTP2StreamErrorsAreRetryable(t *testing.T) {
+	messages := []string{
+		`Post "https://api.commandcode.ai/provider/v1/chat/completions": stream error: stream ID 11; PROTOCOL_ERROR; received from peer`,
+		`stream error: stream ID 5; REFUSED_STREAM`,
+		`stream error: stream ID 3; ENHANCE_YOUR_CALM`,
+		`http2: server sent GOAWAY and closed the connection`,
+	}
+	for _, message := range messages {
+		message := message
+		response := &AssistantMessage{StopReason: StopError, ErrorMessage: &message}
+		if !IsRetryableAssistantError(response) {
+			t.Errorf("an HTTP/2 stream reset was not retried: %q", message)
+		}
+	}
+}
+
 // Upstream v1.3.0 extends the retryable wording (utils/retry.ts): the gateway's
 // "The service is temporarily unavailable" (#10965) and a failed upstream
 // response stream, "Unable to forward upstream stream" (#10920), are transient.

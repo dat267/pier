@@ -334,6 +334,10 @@ var retryableProviderErrorPattern = regexp.MustCompile(`(?i)` + strings.Join([]s
 	`websocket.?closed`, `websocket.?error`,
 	`ended without`, `stream ended before message_stop`,
 	`stream ended before a terminal response event`, `http2 request did not get a response`,
+	// Go's net/http2 surfaces peer-reset streams as `stream error: stream ID N;
+	// CODE; received from peer`. Retry that transport error like D171's socket
+	// resets; Go's HTTP/2 wording has no upstream fetch/websocket equivalent.
+	`stream error: stream ID`, `http2: server sent GOAWAY`,
 	// Bedrock cancels a stalled HTTP/2 connection with this text (#10379).
 	`pending stream has been canceled`,
 	`retry delay`,
