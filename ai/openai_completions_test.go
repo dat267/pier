@@ -40,13 +40,13 @@ func TestDetectOpenAICompletionsCompat(t *testing.T) {
 		t.Fatalf("deepseek reasoning effort = %+v", ds)
 	}
 
-	// z.ai: zai format, no reasoning effort, no strict.
+	// z.ai: zai format, no reasoning effort, no strict (upstream's detectCompat
+	// leaves supportsStrictMode false for every provider).
 	zai := DetectOpenAICompletionsCompat(&Model{ID: "glm", Provider: "zai", BaseURL: "https://api.z.ai/api/paas/v4"})
 	if zai.ThinkingFormat != "zai" || zai.SupportsReasoningEffort || !zai.SupportsUsageInStreaming {
 		t.Fatalf("zai compat = %+v", zai)
 	}
-	// z.ai is not in upstream's strict-mode exclusion list.
-	if !zai.SupportsStrictMode {
+	if zai.SupportsStrictMode {
 		t.Fatalf("zai strict = %+v", zai)
 	}
 
@@ -162,9 +162,11 @@ func TestBuildOpenAICompletionsParamsShape(t *testing.T) {
 	if len(tools) != 1 || tools[0].Function == nil || tools[0].Function.Name != "read_file" {
 		t.Fatalf("tools = %+v", tools)
 	}
-	// OpenAI supports strict; a plain tool carries the explicit strict: false.
-	if tools[0].Function.Strict == nil || *tools[0].Function.Strict {
-		t.Fatalf("strict = %+v; want explicit false for plain tools", tools[0].Function.Strict)
+	// Upstream's detectCompat leaves supportsStrictMode false, so no strict field
+	// is sent for a plain tool (convertTools spreads it only when
+	// supportsStrictMode !== false).
+	if tools[0].Function.Strict != nil {
+		t.Fatalf("strict = %+v; want omitted for a plain tool", tools[0].Function.Strict)
 	}
 	var messages []OpenAIMessage
 	if err := json.Unmarshal(probe["messages"], &messages); err != nil {
@@ -663,5 +665,21 @@ func TestAppendOpenAIReasoningDetailPreservesKeyOrder(t *testing.T) {
 				t.Fatalf("merged = %s, want [%s]", encoded, testCase.want)
 			}
 		})
+	}
+}
+
+// detectCompat in upstream openai-completions.ts sets supportsStrictMode false
+// ("OpenAI compatibility alone does not imply strict JSON-schema tool support"),
+// so the detected value is false for every provider; only an explicit
+// model.compat.supportsStrictMode opts in.
+func TestDetectOpenAICompletionsCompatStrictModeMatchesUpstream(t *testing.T) {
+	for _, model := range []*Model{
+		testOpenAIModel(),
+		{ID: "glm", Provider: "zai", BaseURL: "https://api.z.ai/api/paas/v4"},
+		{ID: "kimi", Provider: "moonshotai", BaseURL: "https://api.moonshot.ai/v1"},
+	} {
+		if got := DetectOpenAICompletionsCompat(model); got.SupportsStrictMode {
+			t.Errorf("%s: SupportsStrictMode = true; upstream detection is always false", model.Provider)
+		}
 	}
 }

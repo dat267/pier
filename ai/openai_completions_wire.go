@@ -118,12 +118,15 @@ func DetectOpenAICompletionsCompat(model *Model) ResolvedOpenAICompletionsCompat
 		ChatTemplateArgs:                            map[string]json.RawMessage{},
 		ZaiToolStream:                               false,
 		SupportsThinkingTokenBudget:                 false,
-		SupportsStrictMode:                          !isMoonshot && !isTogether && !isCloudflareAiGateway && !isNvidia,
-		SupportsOpenAIGrammarTools:                  false,
-		SupportsMidConvoSystemMessages:              false,
-		SupportsMidConvoToolAdditions:               false,
-		CacheControlFormat:                          cacheControlFormat,
-		SendSessionAffinityHeaders:                  isOpenRouter,
+		// OpenAI compatibility alone does not imply strict JSON-schema tool
+		// support; only an explicit model.compat.supportsStrictMode opts in
+		// (upstream detectCompat).
+		SupportsStrictMode:             false,
+		SupportsOpenAIGrammarTools:     false,
+		SupportsMidConvoSystemMessages: false,
+		SupportsMidConvoToolAdditions:  false,
+		CacheControlFormat:             cacheControlFormat,
+		SendSessionAffinityHeaders:     isOpenRouter,
 		SessionAffinityFormat: func() SessionAffinityFormat {
 			if isOpenRouter {
 				return SessionAffinityOpenRouter
