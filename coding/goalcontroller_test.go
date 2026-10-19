@@ -37,6 +37,7 @@ type fakeGoalSink struct {
 	streaming     bool
 	runs          int
 	branchEntries []goal.CustomEntry
+	retry         bool
 }
 
 func (f *fakeGoalSink) AppendGoalEntry(entryType string, data json.RawMessage) {
@@ -65,6 +66,8 @@ func (f *fakeGoalSink) SetGoalActiveTools(names []string) { f.active = append([]
 func (f *fakeGoalSink) GoalHasPendingMessages() bool { return f.pending }
 
 func (f *fakeGoalSink) GoalBranchEntries() []goal.CustomEntry { return f.branchEntries }
+
+func (f *fakeGoalSink) willRetry() bool { return f.retry }
 
 func goalControllerForSink(sink *fakeGoalSink) *GoalController {
 	controller := newGoalController(nil, sink)

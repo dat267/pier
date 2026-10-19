@@ -4,7 +4,7 @@ Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D241**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D243**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation.
 
 Related documents: [port status](PORTING.md), [architecture](architecture.md),
@@ -461,8 +461,10 @@ Tests: `TestSplitMouseReportAcrossTheDeadline`,
 `socket hang up`, `connection refused`, `connection lost`, `reset before headers`,
 and `timed out`. Pier also retries `software caused connection abort`
 (ECONNABORTED, Termux/Windows), `connection reset by peer` (ECONNRESET),
-`broken pipe` (EPIPE), and `unexpected EOF`. Quota/billing checks still run
-first, so a usage-limit error mentioning a reset is not retried.
+`broken pipe` (EPIPE), `unexpected EOF`, and Go's HTTP/2 peer-reset wording
+(`stream error: stream ID ...; PROTOCOL_ERROR; received from peer`, plus
+`http2: server sent GOAWAY`). Quota/billing checks still run first, so a
+usage-limit error mentioning a reset is not retried.
 
 ## D174
 
@@ -1608,7 +1610,7 @@ carries the stop code and reason, the objective as reference only, and the
 `/goal resume` hint. It stays context-only and never starts a run; reload and
 the budget stop keep their notify. `DisplayBody` also strips
 `<goal_paused>` so the dormant paused event card renders correctly if an event
-renderer is ever wired.
+renderer is ever wired. D243 extends the notify to every pause.
 ## D240
 
 **Proxy resolution uses Go's transport, not upstream's node-http-proxy module.**
@@ -1645,3 +1647,48 @@ patch `os.Stdout`: a Go `os.File` write is blocking, so `coding/printmode.go`'s
 backpressure, and the diagnostics upstream would redirect are written to stderr
 directly (`cmd/main.go`, `coding.FormatCLIDiagnostic`). `restoreStdout` has no
 counterpart.
+
+## D242
+
+**A goal stays active while the session retries a transient failure.**
+
+Reference: the installed goal extension's `machine.ts` pauses on every
+`agent_before_settle` outcome of `error`. Pier checks the session's
+`willRetryAfterAgentEnd` result first. When auto-retry is enabled, attempts
+remain, and the assistant error is retryable, the goal remains armed and does
+not pause or enqueue a duplicate round. The retry continues the existing round;
+its successful settle can reserve the next one. A final non-retried error still
+pauses with `run-error`. User aborts, exhausted budgets, and reload pauses keep
+their existing pause behavior (D239 covers the context-only pause message).
+
+This applies to transient HTTP/2 stream resets as well: D171's classifier now
+recognizes Go's `stream error: stream ID ...; PROTOCOL_ERROR; received from
+peer` and HTTP/2 GOAWAY wording, which upstream's fetch/websocket error list does
+not contain.
+
+Tests: `TestAgentSessionRetryableFailureRecoveryKeepsGoalActive`,
+`TestGoalControllerFinalFailureStillPauses`, and
+`TestBeforeSettleRetryingKeepsTheGoalActive`.
+
+## D243
+
+**Every goal pause emits a human-facing notification.**
+
+Reference: the installed goal extension's `machine.ts` (the extension source,
+D223). Its `agent_before_settle` abort and error branches, and the `goal_pause`
+branch, commit the durable pause entry without a `notify` effect; only the
+budget stop and the reload pause notify. A goal that stopped after a run error,
+or on a cancellation, therefore went silent in the UI even though the goal had
+stopped.
+
+The port emits `Goal paused: <reason>` (level `warning`) from every pause
+branch: `agent_end` abort, `agent_before_settle` abort and error, the budget
+stop, and the reload pause. `/goal pause` already notifies through the command
+reply, so `goalPause` keeps that notice instead of adding a second. The
+notification is additive: the durable pause entry and D239's context-only
+`<goal_paused>` message are unchanged. A retryable failure that the session
+retries never pauses, so it emits no notice (D242).
+
+Tests: `TestAbortedGoalAttemptPauses`, `TestBeforeSettleAbortDurablyPauses`,
+`TestBeforeSettleProviderErrorPauses`, and
+`TestGoalControllerFinalFailureStillPauses`.

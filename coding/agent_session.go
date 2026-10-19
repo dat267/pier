@@ -540,9 +540,9 @@ func (s *AgentSession) handleAgentEvent(event *agent.AgentEvent) {
 	// Notify listeners (agent_end carries willRetry).
 	if event.Type == agent.AgentEnd {
 		s.willRetry = s.willRetryAfterAgentEnd(event)
-		// The goal controller's agent_end (admission) and agent_before_settle
-		// (continuation/budget/abort) hooks run before listeners see the event,
-		// so a queued round is already in place for the settle.
+		// The goal controller's agent_end and agent_before_settle hooks run before
+		// listeners. A completed settle may queue the next round; a retryable
+		// failure keeps the current round active for runPostRunLoop to retry.
 		if s.Goal != nil {
 			s.Goal.AgentEnd(event)
 		}

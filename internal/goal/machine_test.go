@@ -256,6 +256,10 @@ func TestAbortedGoalAttemptPauses(t *testing.T) {
 		t.Fatalf("unexpected snapshot: %+v", m.Snapshot())
 	}
 	requirePausedMessage(t, result)
+	notify := findNotify(result)
+	if notify == nil || notify.Level != "warning" || !strings.Contains(notify.Message, "cancelled") {
+		t.Fatalf("expected pause notify: %+v", result.Effects)
+	}
 }
 
 func TestAbortedNonAttemptDisarmsOnly(t *testing.T) {
@@ -298,6 +302,27 @@ func TestBeforeSettleProviderErrorPauses(t *testing.T) {
 		t.Fatalf("unexpected snapshot: %+v", m.Snapshot())
 	}
 	requirePausedMessage(t, result)
+	notify := findNotify(result)
+	if notify == nil || notify.Level != "warning" || !strings.Contains(notify.Message, "Goal paused") {
+		t.Fatalf("expected pause notify: %+v", result.Effects)
+	}
+}
+
+// A retryable failure does not pause the goal and does not reserve a round:
+// the session's retry continues the same round, so re-reserving here would
+// queue a duplicate round prompt per attempt.
+func TestBeforeSettleRetryingKeepsTheGoalActive(t *testing.T) {
+	m, _ := testMachine()
+	m.Dispatch(SessionStartEvent{})
+	m.Dispatch(GoalCreateEvent{Objective: "ship it"})
+	m.Dispatch(AgentEndEvent{})
+	result := m.Dispatch(AgentBeforeSettleEvent{Outcome: "retrying"})
+	if result.Continue || len(result.Effects) != 0 || result.Reply != nil {
+		t.Fatalf("a retry must not continue or emit effects: %+v", result)
+	}
+	if m.Snapshot().Goal.Phase != PhaseActive || !m.Snapshot().Armed || m.Snapshot().PendingTurn != nil {
+		t.Fatalf("a retry must leave the goal armed and active: %+v", m.Snapshot())
+	}
 }
 
 func TestBeforeSettleAbortDurablyPauses(t *testing.T) {
@@ -312,6 +337,10 @@ func TestBeforeSettleAbortDurablyPauses(t *testing.T) {
 		t.Fatalf("unexpected snapshot: %+v", m.Snapshot())
 	}
 	requirePausedMessage(t, result)
+	notify := findNotify(result)
+	if notify == nil || notify.Level != "warning" || !strings.Contains(notify.Message, "cancelled") {
+		t.Fatalf("expected pause notify: %+v", result.Effects)
+	}
 }
 
 func TestDisarmedGoalsDoNotContinue(t *testing.T) {
@@ -363,12 +392,13 @@ func TestBudgetCostPausesBeforeContinuation(t *testing.T) {
 	requirePausedMessage(t, result)
 }
 
+// Budget exhaustion pauses even when the provider failure would be retried.
 func TestBudgetTokensPausesAndKeepsUsage(t *testing.T) {
 	m, _ := testMachine()
 	m.Dispatch(SessionStartEvent{})
 	m.Dispatch(GoalCreateEvent{Objective: "ship it", Budget: &GoalBudget{TimeLimitMs: i64(60_000), TokenLimit: i64(100)}})
 	m.Dispatch(AgentEndEvent{Usage: &GoalUsage{Tokens: 100, CostUsd: 0.02}})
-	result := m.Dispatch(AgentBeforeSettleEvent{Outcome: "completed"})
+	result := m.Dispatch(AgentBeforeSettleEvent{Outcome: "retrying"})
 	if result.Continue || m.Snapshot().Goal.Phase != PhasePaused || m.Snapshot().Goal.BlockedReason.Code != "budget-tokens" {
 		t.Fatalf("unexpected result: %+v snapshot=%+v", result, m.Snapshot())
 	}

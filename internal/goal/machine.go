@@ -259,11 +259,21 @@ func (m *GoalMachine) wrapup(kind, objective, blockedReason string) Effect {
 	}
 }
 
+// pauseNotice is the human-facing notification for a durable pause. Upstream
+// notifies only for budget and reload pauses; the port notifies for every
+// pause so a stopped goal is never silent (D243).
+func (m *GoalMachine) pauseNotice(reason *BlockedReason) []Effect {
+	if reason == nil {
+		return nil
+	}
+	return []Effect{NotifyEffect{Message: "Goal paused: " + reason.Message, Level: "warning"}}
+}
+
 // pausedMessage reports a stop to the model. The reference sends a wrap-up
 // message for complete and blocked only; a pause left the agent with no notice
 // that goal work had stopped, so its next turn could keep pursuing the
-// objective. Context-only, like the wrap-up: the durable pause entry is what
-// the human sees. D239.
+// objective. Context-only, like the wrap-up: the durable pause entry renders in
+// the transcript, and D243 adds the human-facing notification. D239.
 func (m *GoalMachine) pausedMessage() []Effect {
 	if m.view == nil || m.view.BlockedReason == nil {
 		return nil
@@ -492,6 +502,7 @@ func (m *GoalMachine) agentEnd(_ ContextUsage, usage *GoalUsage, aborted bool) D
 			if err == nil {
 				effects = append(effects, committed...)
 				effects = append(effects, m.pausedMessage()...)
+				effects = append(effects, m.pauseNotice(next.BlockedReason)...)
 			}
 		} else {
 			m.armed = false
@@ -517,11 +528,14 @@ func (m *GoalMachine) agentBeforeSettle(outcome string, hasPendingMessages bool,
 		if err != nil {
 			return DispatchResult{Effects: []Effect{}, Continue: false}
 		}
-		return DispatchResult{Effects: append(effects, m.pausedMessage()...), Continue: false}
+		effects = append(effects, m.pausedMessage()...)
+		effects = append(effects, m.pauseNotice(next.BlockedReason)...)
+		return DispatchResult{Effects: effects, Continue: false}
 	}
 	if hasPendingMessages {
 		return DispatchResult{Effects: []Effect{}, Continue: false}
 	}
+	// "error" is a final failure the session will not retry: durably pause.
 	if outcome == "error" {
 		m.armed = false
 		next := m.view.GoalSnapshot
@@ -533,7 +547,9 @@ func (m *GoalMachine) agentBeforeSettle(outcome string, hasPendingMessages bool,
 		if err != nil {
 			return DispatchResult{Effects: []Effect{}, Continue: false}
 		}
-		return DispatchResult{Effects: append(effects, m.pausedMessage()...), Continue: false}
+		effects = append(effects, m.pausedMessage()...)
+		effects = append(effects, m.pauseNotice(next.BlockedReason)...)
+		return DispatchResult{Effects: effects, Continue: false}
 	}
 	if reason := budgetStopReason(m.view, now); reason != nil {
 		m.armed = false
@@ -547,8 +563,13 @@ func (m *GoalMachine) agentBeforeSettle(outcome string, hasPendingMessages bool,
 			return DispatchResult{Effects: []Effect{}, Continue: false}
 		}
 		effects = append(effects, m.pausedMessage()...)
-		effects = append(effects, NotifyEffect{Message: "Goal paused: " + reason.Message, Level: "warning"})
+		effects = append(effects, m.pauseNotice(reason)...)
 		return DispatchResult{Effects: effects, Continue: false}
+	}
+	// D242: a retryable failure is not final, so keep the goal armed and let the
+	// session retry the same round. Budget exhaustion above still pauses.
+	if outcome == "retrying" {
+		return DispatchResult{Effects: []Effect{}, Continue: false}
 	}
 	turn := m.view.TurnsStarted + 1
 	m.pendingTurn = &turn

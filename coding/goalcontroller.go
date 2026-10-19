@@ -39,10 +39,16 @@ type goalSink interface {
 	GoalHasPendingMessages() bool
 	// GoalBranchEntries returns the current branch's custom entries for replay.
 	GoalBranchEntries() []goal.CustomEntry
+	// willRetry reports whether the run that just ended will auto-retry. A
+	// retried failure is not final, so the goal must not pause on it.
+	willRetry() bool
 }
 
 // sessionGoalSink adapts an AgentSession to goalSink.
 type sessionGoalSink struct{ session *AgentSession }
+
+// willRetry reports whether the failed run will auto-retry (nil session: no).
+func (s *sessionGoalSink) willRetry() bool { return s.session != nil && s.session.willRetry }
 
 func newSessionGoalSink(session *AgentSession) *sessionGoalSink {
 	return &sessionGoalSink{session: session}
@@ -345,19 +351,19 @@ func (c *GoalController) Start(reason string) {
 	}
 }
 
-// AgentEnd admits the creating run or the reserved round and decides whether
-// the next round continues (the agent_end + agent_before_settle hooks). Both
-// effect sets go through Apply, so the continuation round is delivered the same
-// way as any other goal round.
+// AgentEnd admits goal work and settles its round. A retryable failure stays
+// active for the session's retry; final outcomes may pause or queue the next
+// round. Both hook effects go through Apply.
 func (c *GoalController) AgentEnd(event *agent.AgentEvent) {
 	aborted := goalAgentAborted(event)
+	willRetry := c.sink.willRetry() // D242: don't pause a failure the session will retry.
 	c.mu.Lock()
 	admission := c.machine.Dispatch(goal.AgentEndEvent{Usage: goalUsageFromAgentEvent(event), Aborted: aborted})
 	c.mu.Unlock()
 	c.Apply(admission.Effects)
 	pending := c.sink.GoalHasPendingMessages()
 	c.mu.Lock()
-	settle := c.machine.Dispatch(goal.AgentBeforeSettleEvent{Outcome: goalOutcome(event, aborted), HasPendingMessages: pending})
+	settle := c.machine.Dispatch(goal.AgentBeforeSettleEvent{Outcome: goalOutcome(event, aborted, willRetry), HasPendingMessages: pending})
 	c.mu.Unlock()
 	c.Apply(settle.Effects)
 }
@@ -394,10 +400,15 @@ func goalAgentAborted(event *agent.AgentEvent) bool {
 	return false
 }
 
-// goalOutcome classifies the settle: aborted, error, or completed.
-func goalOutcome(event *agent.AgentEvent, aborted bool) string {
+// goalOutcome classifies the settle: aborted, retrying, error, or completed. A
+// retried failure is not final: the goal stays armed and the round re-runs when
+// the retry succeeds.
+func goalOutcome(event *agent.AgentEvent, aborted bool, willRetry bool) string {
 	if aborted {
 		return "aborted"
+	}
+	if willRetry {
+		return "retrying"
 	}
 	if event != nil {
 		for index := len(event.Messages) - 1; index >= 0; index-- {
