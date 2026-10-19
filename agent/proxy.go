@@ -176,26 +176,32 @@ func StreamProxy(model *ai.Model, context ai.TranscriptContext, options ProxyStr
 		}
 
 		sawTerminal := false
-		processLine := func(line string) {
+		processLine := func(line string) error {
 			if !strings.HasPrefix(line, "data: ") {
-				return
+				return nil
 			}
 			data := strings.TrimSpace(line[len("data: "):])
 			if data == "" {
-				return
+				return nil
 			}
 			var wire proxyWireEvent
 			if err := json.Unmarshal([]byte(data), &wire); err != nil {
-				return
+				// proxy.ts JSON.parses the line without a try, so a malformed
+				// event fails the stream.
+				return err
 			}
-			event := processProxyEvent(&wire, partial, eventScratch)
+			event, err := processProxyEvent(&wire, partial, eventScratch)
+			if err != nil {
+				return err
+			}
 			if event == nil {
-				return
+				return nil
 			}
 			if event.Type == ai.EventDone || event.Type == ai.EventError {
 				sawTerminal = true
 			}
 			stream.Push(*event)
+			return nil
 		}
 
 		reader := bufio.NewReader(response.Body)
@@ -206,7 +212,10 @@ func StreamProxy(model *ai.Model, context ai.TranscriptContext, options ProxyStr
 					fail(ai.StopAborted, "Request aborted by user")
 					return
 				}
-				processLine(strings.TrimRight(strings.TrimRight(line, "\n"), "\r"))
+				if err := processLine(strings.TrimRight(strings.TrimRight(line, "\n"), "\r")); err != nil {
+					fail(ai.StopError, err.Error())
+					return
+				}
 			}
 			if readErr != nil {
 				if readErr != io.EOF {
@@ -264,7 +273,7 @@ func (s *proxyEventScratch) thinkingBuilder(index int) *strings.Builder {
 
 // processProxyEvent applies one server event to the partial message and returns
 // the client event to push (upstream processProxyEvent).
-func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scratch *proxyEventScratch) *ai.AssistantMessageEvent {
+func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scratch *proxyEventScratch) (*ai.AssistantMessageEvent, error) {
 	grow := func() {
 		for len(partial.Content) <= wire.ContentIndex {
 			partial.Content = append(partial.Content, nil)
@@ -276,90 +285,96 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 	}
 	switch wire.Type {
 	case "start":
-		return &ai.AssistantMessageEvent{Type: ai.EventStart, Partial: partial}
+		return &ai.AssistantMessageEvent{Type: ai.EventStart, Partial: partial}, nil
 
 	case "text_start":
 		grow()
 		partial.Content[wire.ContentIndex] = ai.TextContent{}
 		scratch.textBuilder(wire.ContentIndex)
-		return &ai.AssistantMessageEvent{Type: ai.EventTextStart, ContentIndex: wire.ContentIndex, Partial: partial}
+		return &ai.AssistantMessageEvent{Type: ai.EventTextStart, ContentIndex: wire.ContentIndex, Partial: partial}, nil
 
 	case "text_delta":
 		content, ok := contentAt().(ai.TextContent)
 		builder := scratch.text[wire.ContentIndex]
-		if !ok || builder == nil {
-			return nil
+		if !ok {
+			return nil, fmt.Errorf("Received text_delta for non-text content")
+		}
+		if builder == nil {
+			return nil, nil
 		}
 		_, _ = builder.WriteString(wire.Delta)
 		content.Text = builder.String()
 		partial.Content[wire.ContentIndex] = content
-		return &ai.AssistantMessageEvent{Type: ai.EventTextDelta, ContentIndex: wire.ContentIndex, Delta: wire.Delta, Partial: partial}
+		return &ai.AssistantMessageEvent{Type: ai.EventTextDelta, ContentIndex: wire.ContentIndex, Delta: wire.Delta, Partial: partial}, nil
 
 	case "text_end":
 		content, ok := contentAt().(ai.TextContent)
 		if !ok {
-			return nil
+			return nil, fmt.Errorf("Received text_end for non-text content")
 		}
 		if wire.ContentSignature != nil {
 			content.TextSignature = wire.ContentSignature
 		}
 		partial.Content[wire.ContentIndex] = content
-		return &ai.AssistantMessageEvent{Type: ai.EventTextEnd, ContentIndex: wire.ContentIndex, Content: content.Text, Partial: partial}
+		return &ai.AssistantMessageEvent{Type: ai.EventTextEnd, ContentIndex: wire.ContentIndex, Content: content.Text, Partial: partial}, nil
 
 	case "thinking_start":
 		grow()
 		partial.Content[wire.ContentIndex] = ai.ThinkingContent{}
 		scratch.thinkingBuilder(wire.ContentIndex)
-		return &ai.AssistantMessageEvent{Type: ai.EventThinkingStart, ContentIndex: wire.ContentIndex, Partial: partial}
+		return &ai.AssistantMessageEvent{Type: ai.EventThinkingStart, ContentIndex: wire.ContentIndex, Partial: partial}, nil
 
 	case "thinking_delta":
 		content, ok := contentAt().(ai.ThinkingContent)
 		builder := scratch.thinking[wire.ContentIndex]
-		if !ok || builder == nil {
-			return nil
+		if !ok {
+			return nil, fmt.Errorf("Received thinking_delta for non-thinking content")
+		}
+		if builder == nil {
+			return nil, nil
 		}
 		_, _ = builder.WriteString(wire.Delta)
 		content.Thinking = builder.String()
 		partial.Content[wire.ContentIndex] = content
-		return &ai.AssistantMessageEvent{Type: ai.EventThinkingDelta, ContentIndex: wire.ContentIndex, Delta: wire.Delta, Partial: partial}
+		return &ai.AssistantMessageEvent{Type: ai.EventThinkingDelta, ContentIndex: wire.ContentIndex, Delta: wire.Delta, Partial: partial}, nil
 
 	case "thinking_end":
 		content, ok := contentAt().(ai.ThinkingContent)
 		if !ok {
-			return nil
+			return nil, fmt.Errorf("Received thinking_end for non-thinking content")
 		}
 		if wire.ContentSignature != nil {
 			content.ThinkingSignature = wire.ContentSignature
 		}
 		partial.Content[wire.ContentIndex] = content
-		return &ai.AssistantMessageEvent{Type: ai.EventThinkingEnd, ContentIndex: wire.ContentIndex, Content: content.Thinking, Partial: partial}
+		return &ai.AssistantMessageEvent{Type: ai.EventThinkingEnd, ContentIndex: wire.ContentIndex, Content: content.Thinking, Partial: partial}, nil
 
 	case "toolcall_start":
 		grow()
 		partial.Content[wire.ContentIndex] = ai.ToolCall{ID: wire.ID, Name: wire.ToolName, Arguments: json.RawMessage("{}")}
 		scratch.toolCall[wire.ContentIndex] = nil
-		return &ai.AssistantMessageEvent{Type: ai.EventToolcallStart, ContentIndex: wire.ContentIndex, Partial: partial}
+		return &ai.AssistantMessageEvent{Type: ai.EventToolcallStart, ContentIndex: wire.ContentIndex, Partial: partial}, nil
 
 	case "toolcall_delta":
 		content, ok := contentAt().(ai.ToolCall)
 		if !ok {
-			return nil
+			return nil, fmt.Errorf("Received toolcall_delta for non-toolCall content")
 		}
 		scratch.toolCall[wire.ContentIndex] = append(scratch.toolCall[wire.ContentIndex], wire.Delta...)
 		content.Arguments = ai.ParseStreamingJSONText(string(scratch.toolCall[wire.ContentIndex]))
 		partial.Content[wire.ContentIndex] = content
-		return &ai.AssistantMessageEvent{Type: ai.EventToolcallDelta, ContentIndex: wire.ContentIndex, Delta: wire.Delta, Partial: partial}
+		return &ai.AssistantMessageEvent{Type: ai.EventToolcallDelta, ContentIndex: wire.ContentIndex, Delta: wire.Delta, Partial: partial}, nil
 
 	case "toolcall_end":
 		if _, ok := contentAt().(ai.ToolCall); !ok {
-			return nil
+			return nil, nil
 		}
 		if wire.ToolCall == nil {
-			return nil
+			return nil, nil
 		}
 		partial.Content[wire.ContentIndex] = *wire.ToolCall
 		delete(scratch.toolCall, wire.ContentIndex)
-		return &ai.AssistantMessageEvent{Type: ai.EventToolcallEnd, ContentIndex: wire.ContentIndex, ToolCall: wire.ToolCall, Partial: partial}
+		return &ai.AssistantMessageEvent{Type: ai.EventToolcallEnd, ContentIndex: wire.ContentIndex, ToolCall: wire.ToolCall, Partial: partial}, nil
 
 	case "done":
 		partial.StopReason = wire.Reason
@@ -367,7 +382,7 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 			partial.Usage = *wire.Usage
 		}
 		partial.ProviderThinkingLevel = wire.ProviderThinkingLevel
-		return &ai.AssistantMessageEvent{Type: ai.EventDone, Reason: wire.Reason, Message: partial}
+		return &ai.AssistantMessageEvent{Type: ai.EventDone, Reason: wire.Reason, Message: partial}, nil
 
 	case "error":
 		partial.StopReason = wire.Reason
@@ -376,7 +391,7 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 			partial.Usage = *wire.Usage
 		}
 		partial.ProviderThinkingLevel = wire.ProviderThinkingLevel
-		return &ai.AssistantMessageEvent{Type: ai.EventError, Reason: wire.Reason, Error: partial}
+		return &ai.AssistantMessageEvent{Type: ai.EventError, Reason: wire.Reason, Error: partial}, nil
 	}
-	return nil
+	return nil, nil
 }

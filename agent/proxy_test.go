@@ -33,12 +33,12 @@ func measureProxyDeltaAssembly(t *testing.T, startType, deltaType string, initia
 	t.Helper()
 	partial := &ai.AssistantMessage{Content: ai.ContentList{initial}}
 	scratch := newProxyEventScratch()
-	processProxyEvent(&proxyWireEvent{Type: startType}, partial, scratch)
+	_, _ = processProxyEvent(&proxyWireEvent{Type: startType}, partial, scratch)
 
 	var before, after runtime.MemStats
 	runtime.ReadMemStats(&before)
 	for range chunks {
-		processProxyEvent(&proxyWireEvent{Type: deltaType, Delta: delta}, partial, scratch)
+		_, _ = processProxyEvent(&proxyWireEvent{Type: deltaType, Delta: delta}, partial, scratch)
 	}
 	runtime.ReadMemStats(&after)
 
@@ -71,9 +71,9 @@ func BenchmarkProxyTextDeltaAssembly(b *testing.B) {
 	for b.Loop() {
 		partial := &ai.AssistantMessage{Content: ai.ContentList{ai.TextContent{}}}
 		scratch := newProxyEventScratch()
-		processProxyEvent(&proxyWireEvent{Type: "text_start"}, partial, scratch)
+		_, _ = processProxyEvent(&proxyWireEvent{Type: "text_start"}, partial, scratch)
 		for range chunks {
-			processProxyEvent(&proxyWireEvent{Type: "text_delta", Delta: delta}, partial, scratch)
+			_, _ = processProxyEvent(&proxyWireEvent{Type: "text_delta", Delta: delta}, partial, scratch)
 		}
 		if got := partial.Content[0].(ai.TextContent).Text; len(got) != chunks*len(delta) {
 			b.Fatalf("assembled content length = %d, want %d", len(got), chunks*len(delta))
@@ -191,5 +191,45 @@ func TestStreamProxyHTTPError(t *testing.T) {
 	}
 	if result.ErrorMessage == nil || *result.ErrorMessage != "Proxy error: invalid token" {
 		t.Fatalf("error = %+v", result.ErrorMessage)
+	}
+}
+
+// proxy.ts parses each SSE line with JSON.parse outside a try, so a malformed
+// event fails the stream instead of being skipped.
+func TestStreamProxyMalformedEventFails(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = io.WriteString(w, "data: {\"type\":\"start\"}\n\n")
+		_, _ = io.WriteString(w, "data: {\"type\":\n\n")
+		_, _ = io.WriteString(w, `data: {"type":"done","reason":"stop","usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"totalTokens":0,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}}}`+"\n\n")
+	}))
+	defer server.Close()
+	model := &ai.Model{ID: "m", Provider: "p", API: ai.APIOpenAIResponses}
+	result, err := StreamProxy(model, proxyContext(), ProxyStreamOptions{ProxyURL: server.URL}).Result(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.StopReason != ai.StopError || result.ErrorMessage == nil {
+		t.Fatalf("result = %+v; want a parse error instead of the later done event", result)
+	}
+}
+
+// proxy.ts throws when a delta does not match the content block it names.
+func TestStreamProxyRejectsDeltaForOtherContent(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = io.WriteString(w, "data: {\"type\":\"start\"}\n\n")
+		_, _ = io.WriteString(w, "data: {\"type\":\"text_delta\",\"contentIndex\":0,\"delta\":\"x\"}\n\n")
+		_, _ = io.WriteString(w, `data: {"type":"done","reason":"stop","usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"totalTokens":0,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}}}`+"\n\n")
+	}))
+	defer server.Close()
+	model := &ai.Model{ID: "m", Provider: "p", API: ai.APIOpenAIResponses}
+	result, err := StreamProxy(model, proxyContext(), ProxyStreamOptions{ProxyURL: server.URL}).Result(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.StopReason != ai.StopError || result.ErrorMessage == nil ||
+		*result.ErrorMessage != "Received text_delta for non-text content" {
+		t.Fatalf("result = %+v; want the delta mismatch error", result)
 	}
 }

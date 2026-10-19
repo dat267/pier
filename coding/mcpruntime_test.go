@@ -4,10 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/url"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/mcp"
@@ -27,12 +30,14 @@ type mcpFakeServer struct {
 	hasResources bool
 	calls        int
 	onCall       func()
+	instructions string
+	transport    *mcp.InMemoryTransport
 }
 
 func newMCPFakeServer(t *testing.T, noTools bool) (*mcpFakeServer, *mcp.InMemoryTransport) {
 	t.Helper()
 	client, server := mcp.CreateInMemoryTransportPair()
-	fake := &mcpFakeServer{noTools: noTools}
+	fake := &mcpFakeServer{noTools: noTools, transport: server}
 	server.OnMessage(func(message mcp.Message) {
 		request, ok := message.(*protocol.JsonRpcRequest)
 		if !ok {
@@ -57,6 +62,7 @@ func newMCPFakeServer(t *testing.T, noTools bool) (*mcpFakeServer, *mcp.InMemory
 					"protocolVersion": protocol.LatestProtocolVersion,
 					"capabilities":    capabilities,
 					"serverInfo":      map[string]any{"name": "fake", "version": "1.0.0"},
+					"instructions":    fake.instructions,
 				}
 			case request.Method == "tools/list":
 				if fake.noTools {
@@ -459,7 +465,9 @@ func TestCreateMcpToolDefinition(t *testing.T) {
 		t.Fatalf("description = %q", unnamed.Description)
 	}
 
-	// An isError result becomes a Go error carrying the text.
+	// An isError result keeps its converted content and details and flags the
+	// result (upstream convertMcpResult returns them with isError: true), instead
+	// of replacing both with an error string.
 	erroring := CreateMcpToolDefinition(McpToolDefinitionOptions{
 		Server: "docs", Tool: tool, Name: "mcp__docs__echo",
 		GetClient: func(context.Context) (McpToolCaller, error) {
@@ -471,9 +479,18 @@ func TestCreateMcpToolDefinition(t *testing.T) {
 			}), nil
 		},
 	})
-	_, err = erroring.Execute("call-2", json.RawMessage(`{}`), context.Background(), nil)
-	if err == nil || err.Error() != "nope" {
-		t.Fatalf("err = %v", err)
+	errorResult, err := erroring.Execute("call-2", json.RawMessage(`{}`), context.Background(), nil)
+	if err != nil {
+		t.Fatalf("err = %v; want the isError result, not a Go error", err)
+	}
+	if !errorResult.IsError {
+		t.Fatal("result.IsError = false; want true")
+	}
+	if len(errorResult.Content) != 1 || errorResult.Content[0].(ai.TextContent).Text != "nope" {
+		t.Fatalf("content = %+v", errorResult.Content)
+	}
+	if details := string(errorResult.Details); !strings.Contains(details, `"tool":"echo"`) || !strings.Contains(details, `"server":"docs"`) {
+		t.Fatalf("details = %s; want the MCP tool details preserved", details)
 	}
 }
 
@@ -540,5 +557,71 @@ func TestResolveMcpConfigValueEscapes(t *testing.T) {
 	}
 	if got, _ := ResolveMcpConfigValue(" !printf hi"); got != " !printf hi" {
 		t.Fatalf("leading space should not run a command: %q", got)
+	}
+}
+
+// runtime.ts keeps the last 2000 UTF-16 units of the JavaScript-trimmed
+// stderr; slicing bytes split multi-byte characters.
+func TestMcpStderrTailUsesJavaScriptStringUnits(t *testing.T) {
+	tail := truncateMcpStderr(strings.Repeat("界", 2500))
+	if got := ai.JSLength(tail); got != mcpStderrTailChars {
+		t.Fatalf("tail units = %d; want %d", got, mcpStderrTailChars)
+	}
+	if !utf8.ValidString(tail) {
+		t.Fatal("tail is not valid UTF-8; a byte slice split a character")
+	}
+	if got := truncateMcpStderr("\uFEFFerror"); got != "error" {
+		t.Fatalf("tail = %q; want JavaScript trim to strip the BOM", got)
+	}
+}
+
+// runtime.ts advertises the cwd with pathToFileURL(cwd).href, which escapes
+// spaces and `#`, and stores JSTrim(instructions) or undefined.
+func TestMcpConnectionAdvertisesRootsAsFileURLAndTrimsInstructions(t *testing.T) {
+	fake, client := newMCPFakeServer(t, false)
+	fake.instructions = "\uFEFFUse me."
+	cwd := filepath.Join(t.TempDir(), "a b#c")
+	connection := NewMcpServerConnection(McpServerConnectionOptions{
+		Entry: McpServerEntry{Name: "fake", Config: &McpServerConfig{Command: "unused"}, Source: "test", Scope: McpScopeExtension},
+		Cwd:   cwd,
+		CreateTransport: func(McpServerEntry, string, mcp.AuthProvider) (mcp.Transport, error) {
+			return client, nil
+		},
+		Credentials: NewMemoryMcpOAuthCredentialStore(),
+	})
+	t.Cleanup(func() { _ = connection.Close(context.Background()) })
+	if _, err := connection.GetClient(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	responses := make(chan *protocol.JsonRpcResponse, 1)
+	fake.transport.OnMessage(func(message mcp.Message) {
+		if response, ok := message.(*protocol.JsonRpcResponse); ok && response.ID.Num == 99 {
+			responses <- response
+		}
+	})
+	if err := fake.transport.Send(context.Background(), &protocol.JsonRpcRequest{
+		JSONRPC: protocol.JSONRPCVersion, ID: protocol.NumberId(99), Method: "roots/list",
+		Params: json.RawMessage(`{}`),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var response *protocol.JsonRpcResponse
+	select {
+	case response = <-responses:
+	case <-time.After(2 * time.Second):
+		t.Fatal("roots/list was not answered")
+	}
+	var listed struct {
+		Roots []protocol.Root `json:"roots"`
+	}
+	if err := json.Unmarshal(response.Result, &listed); err != nil || len(listed.Roots) != 1 {
+		t.Fatalf("roots = %s, err = %v", response.Result, err)
+	}
+	wantURI := (&url.URL{Scheme: "file", Path: cwd}).String()
+	if listed.Roots[0].URI != wantURI {
+		t.Fatalf("root uri = %s; want %s", listed.Roots[0].URI, wantURI)
+	}
+	if connection.Instructions == nil || *connection.Instructions != "Use me." {
+		t.Fatalf("instructions = %v; want JavaScript-trimmed text", connection.Instructions)
 	}
 }

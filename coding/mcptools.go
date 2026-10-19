@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -148,9 +147,9 @@ type ConvertMcpResultOptions struct {
 }
 
 // ConvertMcpResult converts an MCP result to an agent tool result (upstream
-// convertMcpResult). The boolean reports upstream's `isError`; the port's tool
-// layer returns an error for it, since agent.AgentToolResult carries no error
-// flag (the model-facing text is the same).
+// convertMcpResult). An `isError` result keeps its content and details and sets
+// AgentToolResult.IsError, so the agent loop reports the failure without
+// discarding either. The boolean repeats the flag for callers that need it.
 func ConvertMcpResult(server string, tool string, result *protocol.CallToolResult, options ConvertMcpResultOptions) (agent.AgentToolResult, bool, error) {
 	if result == nil {
 		result = &protocol.CallToolResult{}
@@ -174,7 +173,7 @@ func ConvertMcpResult(server string, tool string, result *protocol.CallToolResul
 	if err != nil {
 		return agent.AgentToolResult{}, false, err
 	}
-	return agent.AgentToolResult{Content: content, Details: encodedDetails}, result.IsError, nil
+	return agent.AgentToolResult{Content: content, Details: encodedDetails, IsError: result.IsError}, result.IsError, nil
 }
 
 // mcpToolDetails is the persisted tool-result detail shape (upstream
@@ -230,7 +229,7 @@ func mcpBlockToContent(server string, block protocol.ContentBlock, options Conve
 	if block.Type == protocol.ContentTypeResource && block.Resource != nil && !block.Resource.TextArm &&
 		!strings.HasPrefix(mcpStringValue(block.Resource.MimeType), "image/") {
 		resource := block.Resource
-		data, err := base64.StdEncoding.DecodeString(resource.Blob)
+		data, err := decodeMcpBase64(resource.Blob)
 		if err != nil {
 			return []ai.Content{ai.TextContent{Text: "[binary resource " + resource.URI + " (invalid base64) omitted]"}}, nil
 		}
@@ -253,6 +252,30 @@ func mcpBlockToContent(server string, block protocol.ContentBlock, options Conve
 		return []ai.Content{ai.TextContent{Text: "[Binary resource " + resource.URI + " (" + kind + ") saved to " + path + "]"}}, nil
 	}
 	return userContentToContent(protocol.Content(&protocol.CallToolResult{Content: []protocol.ContentBlock{block}})), nil
+}
+
+// decodeMcpBase64 decodes a resource blob like Node's
+// Buffer.from(value, "base64"): non-alphabet characters (whitespace, line
+// breaks) are ignored, the first `=` ends the data, and a lone trailing
+// character is dropped. MCP servers routinely wrap base64 at 76 columns, which
+// Go's strict decoder rejected.
+func decodeMcpBase64(value string) ([]byte, error) {
+	var filtered strings.Builder
+	filtered.Grow(len(value))
+	for index := 0; index < len(value); index++ {
+		char := value[index]
+		switch {
+		case char >= 'A' && char <= 'Z', char >= 'a' && char <= 'z', char >= '0' && char <= '9', char == '+', char == '/':
+			filtered.WriteByte(char)
+		case char == '=':
+			return base64.RawStdEncoding.DecodeString(filtered.String())
+		}
+	}
+	text := filtered.String()
+	if len(text)%4 == 1 {
+		text = text[:len(text)-1]
+	}
+	return base64.RawStdEncoding.DecodeString(text)
 }
 
 // mcpStringValue dereferences an optional string ("" when absent).
@@ -312,15 +335,4 @@ func userContentToContent(content []ai.UserContent) []ai.Content {
 		out = append(out, block)
 	}
 	return out
-}
-
-// McpToolError converts an MCP `isError` result into the port's error shape:
-// the joined text is what the model sees (upstream keeps the blocks and sets
-// isError; agent.AgentToolResult has no error flag).
-func McpToolError(result agent.AgentToolResult) error {
-	text := mcpTextOf(result.Content)
-	if text == "" {
-		text = "MCP tool returned an error"
-	}
-	return errors.New(text)
 }

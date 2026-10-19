@@ -450,7 +450,7 @@ func (c *McpServerConnection) connectOnce(ctx context.Context) (*mcp.Client, err
 	roots := []protocol.Root{}
 	if c.cwd != "" {
 		name := filepath.Base(c.cwd)
-		roots = append(roots, protocol.Root{URI: "file://" + c.cwd, Name: &name})
+		roots = append(roots, protocol.Root{URI: pathToFileURL(c.cwd), Name: &name})
 	}
 	client := mcp.NewClient(mcp.ClientOptions{
 		Name:             "pi",
@@ -523,7 +523,7 @@ func (c *McpServerConnection) connectOnce(ctx context.Context) (*mcp.Client, err
 	c.HasResources = hasResources
 	instructions := client.Instructions()
 	if instructions != nil {
-		trimmed := strings.TrimSpace(*instructions)
+		trimmed := ai.JSTrim(*instructions)
 		if trimmed == "" {
 			instructions = nil
 		} else {
@@ -668,9 +668,15 @@ func mcpStderrTail(transport mcp.Transport) string {
 	if !ok {
 		return ""
 	}
-	tail := strings.TrimSpace(stdio.Stderr())
-	if len(tail) > mcpStderrTailChars {
-		tail = tail[len(tail)-mcpStderrTailChars:]
+	return truncateMcpStderr(stdio.Stderr())
+}
+
+// truncateMcpStderr keeps the last mcpStderrTailChars UTF-16 units of the
+// JavaScript-trimmed stderr tail (upstream stderr.trim().slice(-2000)).
+func truncateMcpStderr(stderr string) string {
+	tail := ai.JSTrim(stderr)
+	if length := ai.JSLength(tail); length > mcpStderrTailChars {
+		tail = ai.JSSlice(tail, length-mcpStderrTailChars, length)
 	}
 	return tail
 }
@@ -848,9 +854,9 @@ func CreateMcpToolDefinition(options McpToolDefinitionOptions) agent.AgentTool {
 			if err != nil {
 				return agent.AgentToolResult{}, err
 			}
-			if isError {
-				return converted, McpToolError(converted)
-			}
+			// An isError result is returned as a flagged result: the loop keeps its
+			// content and details (upstream convertMcpResult sets isError).
+			_ = isError
 			return converted, nil
 		},
 	}

@@ -140,8 +140,8 @@ func TestConvertMcpResult(t *testing.T) {
 	if len(flagged.Content) != 1 || flagged.Content[0].(ai.TextContent).Text != "nope" {
 		t.Fatalf("content = %+v", flagged.Content)
 	}
-	if err := McpToolError(flagged); err == nil || err.Error() != "nope" {
-		t.Fatalf("McpToolError = %v", err)
+	if !flagged.IsError {
+		t.Fatal("result.IsError = false; want true")
 	}
 	empty, _, _ := ConvertMcpResult("docs", "t", &protocol.CallToolResult{IsError: true}, ConvertMcpResultOptions{})
 	if len(empty.Content) != 1 || empty.Content[0].(ai.TextContent).Text != "MCP tool docs/t returned an error" {
@@ -298,5 +298,26 @@ func TestTruncateMiddleMultiByte(t *testing.T) {
 	}
 	if len([]rune(parts[0]))+len([]rune(parts[1]))+result.RemovedChars != len([]rune(text)) {
 		t.Fatalf("rune accounting: %d+%d+%d != %d", len([]rune(parts[0])), len([]rune(parts[1])), result.RemovedChars, len([]rune(text)))
+	}
+}
+
+// tools.ts decodes blobs with Buffer.from(blob, "base64"), which ignores
+// whitespace and missing padding; StdEncoding rejected both and dropped the
+// resource.
+func TestMcpBase64ResourceToleratesWhitespaceAndMissingPadding(t *testing.T) {
+	mimeType := "text/plain"
+	content, err := ToModelContent("docs", []protocol.ContentBlock{{
+		Type:     protocol.ContentTypeResource,
+		Resource: &protocol.ResourceContents{URI: "docs://wrapped", MimeType: &mimeType, Blob: "aGVs\nbG8"},
+	}}, ConvertMcpResultOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(content) != 1 {
+		t.Fatalf("content = %+v", content)
+	}
+	text, ok := content[0].(ai.TextContent)
+	if !ok || text.Text != "hello" {
+		t.Fatalf("resource text = %+v; want hello", content[0])
 	}
 }

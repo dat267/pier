@@ -2,6 +2,7 @@ package coding
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -131,6 +132,26 @@ func NormalizeWindowsShellPath(filePath string) string {
 		suffix = strings.ReplaceAll(match[2], "/", "\\")
 	}
 	return strings.ToUpper(match[1]) + ":\\" + suffix
+}
+
+// pathToFileURL converts an absolute path to a file:// URL the way Node's
+// pathToFileURL does (runtime.ts advertises pathToFileURL(cwd).href): spaces,
+// `#`, `?` and `%` are percent-encoded, and on Windows a drive path becomes
+// file:///C:/... while a UNC path keeps its host.
+func pathToFileURL(path string) string {
+	slashed := filepath.ToSlash(path)
+	if runtime.GOOS == "windows" {
+		if strings.HasPrefix(slashed, "//") {
+			// A UNC path already names the authority: //host/share/... .
+			return "file:" + (&url.URL{Path: slashed}).EscapedPath()
+		}
+		if len(slashed) >= 2 && slashed[1] == ':' {
+			slashed = "/" + slashed
+		}
+	} else if !strings.HasPrefix(slashed, "/") {
+		slashed = "/" + slashed
+	}
+	return "file://" + (&url.URL{Path: slashed}).EscapedPath()
 }
 
 // filePathFromURL converts a file:// URL to a path (fileURLToPath).
