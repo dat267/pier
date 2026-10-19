@@ -158,13 +158,20 @@ func JSNumberToString(f float64) string {
 }
 
 // JSSlice slices by UTF-16 code units, matching JavaScript's String.slice.
+// A negative start or end counts from the end (String.prototype.slice resolves
+// each index as max(length+index, 0) before clamping).
 func JSSlice(s string, start, end int) string {
 	units := utf16.Encode([]rune(s))
+	length := len(units)
 	if start < 0 {
-		start = 0
+		start = max(length+start, 0)
+	} else if start > length {
+		start = length
 	}
-	if end > len(units) {
-		end = len(units)
+	if end < 0 {
+		end = max(length+end, 0)
+	} else if end > length {
+		end = length
 	}
 	if start >= end {
 		return ""

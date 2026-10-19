@@ -77,3 +77,25 @@ func TestJSNumberToFixedMatchesJS(t *testing.T) {
 		}
 	}
 }
+
+// JSSlice is documented as String.prototype.slice, which resolves negative
+// indices from the end.
+func TestJSSliceMatchesJSNegativeIndices(t *testing.T) {
+	cases := []struct {
+		text       string
+		start, end int
+		want       string
+	}{
+		{"abcdef", -2, 6, "ef"},
+		{"abcdef", 1, -1, "bcde"},
+		{"abcdef", -100, 100, "abcdef"},
+		{"abcdef", 2, 1, ""},
+		// UTF-16 units: a(1) + emoji(2) + b(1); slice(1, 3) is the emoji.
+		{"a😀b", 1, 3, "😀"},
+	}
+	for _, tc := range cases {
+		if got := JSSlice(tc.text, tc.start, tc.end); got != tc.want {
+			t.Errorf("JSSlice(%q, %d, %d) = %q; want %q", tc.text, tc.start, tc.end, got, tc.want)
+		}
+	}
+}
