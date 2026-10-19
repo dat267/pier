@@ -17,14 +17,16 @@ func invalid(message string) *protocol.McpError {
 
 // validateInitializeResult checks the `initialize` result shape.
 func validateInitializeResult(raw json.RawMessage) (*protocol.InitializeResult, error) {
+	// client.ts checks presence and `typeof`; empty strings are valid, while
+	// null is not a string. Pointers distinguish a missing member from "".
 	var decoded struct {
-		ProtocolVersion string          `json:"protocolVersion"`
+		ProtocolVersion *string         `json:"protocolVersion"`
 		Capabilities    json.RawMessage `json:"capabilities"`
 		ServerInfo      *struct {
-			Name    string `json:"name"`
-			Version string `json:"version"`
+			Name    *string `json:"name"`
+			Version *string `json:"version"`
 		} `json:"serverInfo"`
-		Instructions *string `json:"instructions"`
+		Instructions json.RawMessage `json:"instructions"`
 	}
 	if err := json.Unmarshal(raw, &decoded); err != nil {
 		return nil, invalid("Invalid MCP initialize result")
@@ -33,8 +35,16 @@ func validateInitializeResult(raw json.RawMessage) (*protocol.InitializeResult, 
 	if err := json.Unmarshal(decoded.Capabilities, &capabilities); err != nil || capabilities == nil {
 		return nil, invalid("Invalid MCP initialize result")
 	}
-	if decoded.ProtocolVersion == "" || decoded.ServerInfo == nil || decoded.ServerInfo.Name == "" || decoded.ServerInfo.Version == "" {
+	if decoded.ProtocolVersion == nil || decoded.ServerInfo == nil || decoded.ServerInfo.Name == nil || decoded.ServerInfo.Version == nil {
 		return nil, invalid("Invalid MCP initialize result")
+	}
+	if len(decoded.Instructions) > 0 {
+		// Unmarshalling null into a string is a silent no-op, so keep the
+		// pointer to reject it: `typeof null !== "string"` upstream.
+		var instructions *string
+		if err := json.Unmarshal(decoded.Instructions, &instructions); err != nil || instructions == nil {
+			return nil, invalid("Invalid MCP initialize result")
+		}
 	}
 	var result protocol.InitializeResult
 	if err := json.Unmarshal(raw, &result); err != nil {
@@ -137,8 +147,7 @@ func validateReadResourceResult(raw json.RawMessage) error {
 		if err := json.Unmarshal(contents, &entry); err != nil || entry == nil {
 			return invalid("Invalid contents in MCP resources/read result")
 		}
-		uri, uriOK := entry["uri"].(string)
-		if !uriOK || uri == "" && false {
+		if _, uriOK := entry["uri"].(string); !uriOK {
 			return invalid("Invalid contents in MCP resources/read result")
 		}
 		if _, textOK := entry["text"].(string); textOK {

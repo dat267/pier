@@ -717,3 +717,185 @@ func (s *testServer) waitForMessages(t *testing.T, n int) []Message {
 		time.Sleep(5 * time.Millisecond)
 	}
 }
+
+// client.ts spreads params then sets _meta.progressToken last, so the
+// request's own token replaces a caller-supplied one while other _meta keys
+// survive.
+func TestClientReplacesCallerSuppliedProgressToken(t *testing.T) {
+	client, server := connectTestClient(t)
+	defer func() {
+		if err := client.Close(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	}()
+	server.setHandler("probe", func(*protocol.JsonRpcRequest) (any, error) {
+		return map[string]any{}, nil
+	})
+	if _, err := client.Request(context.Background(), "probe", map[string]any{
+		"_meta": map[string]any{"progressToken": "caller-token", "trace": "abc"},
+	}, RequestOptions{OnProgress: func(*protocol.ProgressNotification) {}}); err != nil {
+		t.Fatal(err)
+	}
+	var call *protocol.JsonRpcRequest
+	for _, message := range server.recordedMessages() {
+		if request, ok := message.(*protocol.JsonRpcRequest); ok && request.Method == "probe" {
+			call = request
+		}
+	}
+	if call == nil {
+		t.Fatal("no probe recorded")
+	}
+	var params struct {
+		Meta map[string]json.RawMessage `json:"_meta"`
+	}
+	if err := json.Unmarshal(call.Params, &params); err != nil {
+		t.Fatal(err)
+	}
+	var token float64
+	if err := json.Unmarshal(params.Meta["progressToken"], &token); err != nil {
+		t.Fatalf("progressToken = %s; want the numeric request id (%v)", params.Meta["progressToken"], err)
+	}
+	if token != call.ID.Num {
+		t.Fatalf("progressToken = %v; want the request id %v", token, call.ID.Num)
+	}
+	var trace string
+	if err := json.Unmarshal(params.Meta["trace"], &trace); err != nil || trace != "abc" {
+		t.Fatalf("trace = %q, %v; want the caller's _meta keys preserved", trace, err)
+	}
+}
+
+// client.ts handleCancelled narrows the id with isJsonRpcId; a numeric id
+// decodes to float64 in Go, not json.Number.
+func TestClientCancelsIncomingRequestByNumericID(t *testing.T) {
+	client, server := connectTestClient(t)
+	defer func() {
+		if err := client.Close(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	}()
+	started := make(chan struct{})
+	cancelled := make(chan struct{})
+	client.SetRequestHandler("sampling/createMessage", func(ctx context.Context, _ json.RawMessage) (any, error) {
+		close(started)
+		<-ctx.Done()
+		close(cancelled)
+		return nil, ctx.Err()
+	})
+	go func() {
+		_ = server.transport.Send(context.Background(), protocol.JsonRpcRequest{
+			JSONRPC: protocol.JSONRPCVersion, ID: protocol.NumberId(42), Method: "sampling/createMessage",
+			Params: json.RawMessage(`{}`),
+		})
+	}()
+	select {
+	case <-started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("the served request never started")
+	}
+	params, _ := json.Marshal(map[string]any{"requestId": 42, "reason": "user"})
+	if err := server.transport.Send(context.Background(), protocol.JsonRpcNotification{
+		JSONRPC: protocol.JSONRPCVersion, Method: "notifications/cancelled", Params: params,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-cancelled:
+	case <-time.After(2 * time.Second):
+		t.Fatal("a numeric requestId did not cancel the served request")
+	}
+}
+
+// client.ts looks a response up by its exact JSON-RPC id, so a fractional id
+// must not resolve the integer request it rounds down to.
+func TestClientIgnoresResponseWithNonIntegerID(t *testing.T) {
+	client, server := connectTestClient(t)
+	defer func() {
+		if err := client.Close(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	}()
+	release := make(chan struct{})
+	started := make(chan protocol.JsonRpcId, 1)
+	server.setHandler("tools/call", func(request *protocol.JsonRpcRequest) (any, error) {
+		started <- request.ID
+		<-release
+		return map[string]any{"content": []any{map[string]any{"type": "text", "text": "real"}}}, nil
+	})
+	reported := make(chan error, 8)
+	client.OnError(func(err error) { reported <- err })
+	type outcome struct {
+		result *protocol.CallToolResult
+		err    error
+	}
+	done := make(chan outcome, 1)
+	go func() {
+		result, err := client.CallTool(context.Background(), "meta", nil, RequestOptions{})
+		done <- outcome{result: result, err: err}
+	}()
+	var id protocol.JsonRpcId
+	select {
+	case id = <-started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("the tool call never reached the server")
+	}
+	if err := server.transport.Send(context.Background(), protocol.JsonRpcResponse{
+		JSONRPC: protocol.JSONRPCVersion, ID: protocol.NumberId(id.Num + 0.5),
+		Result: json.RawMessage(`{"content":[{"type":"text","text":"bogus"}]}`),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-reported:
+	case outcome := <-done:
+		t.Fatalf("a fractional id resolved request %v: %+v", id, outcome)
+	case <-time.After(2 * time.Second):
+		t.Fatal("the fractional response was not dispatched")
+	}
+	close(release)
+	select {
+	case outcome := <-done:
+		if outcome.err != nil {
+			t.Fatal(outcome.err)
+		}
+		if len(outcome.result.Content) != 1 || outcome.result.Content[0].Text != "real" {
+			t.Fatalf("result = %s", jsonNormalize(t, outcome.result))
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("the real response did not resolve the call")
+	}
+}
+
+// client.ts validates initialize members with typeof checks: empty strings
+// are still strings, while `instructions: null` is not.
+func TestClientInitializeValidationUsesJavaScriptTypeChecks(t *testing.T) {
+	server, clientTransport := newTestServer()
+	server.setHandler("initialize", func(*protocol.JsonRpcRequest) (any, error) {
+		return map[string]any{
+			"protocolVersion": protocol.LatestProtocolVersion,
+			"capabilities":    map[string]any{},
+			"serverInfo":      map[string]any{"name": "", "version": ""},
+		}, nil
+	})
+	client := NewClient(ClientOptions{Name: "test-client", Version: "1.0.0"})
+	if _, err := client.Connect(context.Background(), clientTransport); err != nil {
+		t.Fatalf("empty serverInfo strings must still be strings: %v", err)
+	}
+	if err := client.Close(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	server, clientTransport = newTestServer()
+	server.setHandler("initialize", func(*protocol.JsonRpcRequest) (any, error) {
+		return map[string]any{
+			"protocolVersion": protocol.LatestProtocolVersion,
+			"capabilities":    map[string]any{},
+			"serverInfo":      map[string]any{"name": "s", "version": "1"},
+			"instructions":    nil,
+		}, nil
+	})
+	client = NewClient(ClientOptions{Name: "test-client", Version: "1.0.0"})
+	if _, err := client.Connect(context.Background(), clientTransport); err == nil ||
+		err.Error() != "Invalid MCP initialize result" {
+		t.Fatalf("null instructions err = %v; want Invalid MCP initialize result", err)
+	}
+}

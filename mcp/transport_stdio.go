@@ -85,7 +85,9 @@ func (t *StdioTransport) PID() int {
 func (t *StdioTransport) Stderr() string {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	return string(t.stderrBuffer)
+	// stdio.ts's getter is stderrBuffer.toString("utf8"): malformed bytes
+	// become replacement characters.
+	return strings.ToValidUTF8(string(t.stderrBuffer), "\uFFFD")
 }
 
 // SetProtocolVersion is unused on stdio (the wire has no version header).
@@ -252,7 +254,9 @@ func (t *StdioTransport) handleStdout(chunk []byte) {
 			t.mu.Lock()
 			continue
 		}
-		text := strings.TrimSuffix(string(line), "\r")
+		// stdio.ts decodes with Buffer.toString("utf8"), replacing malformed
+		// bytes; Go keeps them raw unless converted.
+		text := strings.TrimSuffix(strings.ToValidUTF8(string(line), "\uFFFD"), "\r")
 		t.stdoutBuffer = append(t.stdoutBuffer[:0], t.stdoutBuffer[newline+1:]...)
 		t.mu.Unlock()
 		t.emitLine(text)
@@ -265,7 +269,7 @@ func (t *StdioTransport) handleStdout(chunk []byte) {
 }
 
 func (t *StdioTransport) emitLine(text string) {
-	if strings.TrimSpace(text) == "" {
+	if jsTrim(text) == "" {
 		return
 	}
 	message, err := protocol.DecodeMessage([]byte(text))
@@ -296,7 +300,7 @@ func (t *StdioTransport) handleStderr(chunk []byte) {
 	}
 	t.mu.Unlock()
 	if t.options.OnStderr != nil {
-		t.options.OnStderr(string(chunk))
+		t.options.OnStderr(strings.ToValidUTF8(string(chunk), "\uFFFD"))
 	}
 }
 

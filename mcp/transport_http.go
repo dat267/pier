@@ -20,7 +20,7 @@ import (
 
 // Streamable-HTTP tuning (upstream streamable-http.ts).
 const (
-	maxErrorBodyBytes          = 8 * 1024
+	maxErrorBodyChars          = 8 * 1024
 	errorMessageBodyChars      = 500
 	defaultReconnectInitialMs  = 1000
 	defaultReconnectMaxMs      = 30000
@@ -431,15 +431,19 @@ func (t *StreamableHttpTransport) authorizedFetch(ctx context.Context, method st
 		if err != nil {
 			return nil, err
 		}
-		request, err := http.NewRequestWithContext(ctx, method, t.parsedURL.String(), nil)
+		// Pass the body to NewRequest so ContentLength is set: fetch sends a
+		// Content-Length for a string body, while a Body assigned afterwards
+		// would switch the request to chunked encoding.
+		var reader io.Reader
+		if body != nil {
+			reader = bytes.NewReader(body)
+		}
+		request, err := http.NewRequestWithContext(ctx, method, t.parsedURL.String(), reader)
 		if err != nil {
 			return nil, err
 		}
 		for key, value := range headers {
 			request.Header.Set(key, value)
-		}
-		if body != nil {
-			request.Body = io.NopCloser(bytes.NewReader(body))
 		}
 		response, err := t.doFetch(ctx, request)
 		if err != nil {
@@ -469,21 +473,6 @@ func (t *StreamableHttpTransport) authorizedFetch(ctx context.Context, method st
 // headers builds the request headers: static options, per-request extras,
 // session and protocol headers, then the bearer token.
 func (t *StreamableHttpTransport) headers(extra map[string]string, _ string) (map[string]string, string, error) {
-	headers := map[string]string{}
-	for key, value := range t.options.Headers {
-		headers[key] = value
-	}
-	for key, value := range extra {
-		headers[key] = value
-	}
-	t.mu.Lock()
-	if t.sessionID != "" {
-		headers["Mcp-Session-Id"] = t.sessionID
-	}
-	if t.protocolVersion != "" {
-		headers["MCP-Protocol-Version"] = t.protocolVersion
-	}
-	t.mu.Unlock()
 	token := ""
 	if t.options.AuthProvider != nil {
 		var err error
@@ -491,37 +480,57 @@ func (t *StreamableHttpTransport) headers(extra map[string]string, _ string) (ma
 		if err != nil {
 			return nil, "", err
 		}
-		if token != "" {
-			headers["Authorization"] = "Bearer " + token
-		}
 		t.mu.Lock()
 		t.lastToken = token
 		t.mu.Unlock()
 	}
-	return headers, token, nil
+	return t.buildHeaders(extra, token), token, nil
+}
+
+// buildHeaders mirrors upstream's buildHeaders: a case-insensitive header set,
+// so session, protocol and auth values replace configured ones with the same
+// name instead of sending both.
+func (t *StreamableHttpTransport) buildHeaders(extra map[string]string, token string) map[string]string {
+	headers := map[string]string{}
+	for key, value := range t.options.Headers {
+		setHeader(headers, key, value)
+	}
+	for key, value := range extra {
+		setHeader(headers, key, value)
+	}
+	t.mu.Lock()
+	sessionID, protocolVersion := t.sessionID, t.protocolVersion
+	t.mu.Unlock()
+	if sessionID != "" {
+		setHeader(headers, "Mcp-Session-Id", sessionID)
+	}
+	if protocolVersion != "" {
+		setHeader(headers, "MCP-Protocol-Version", protocolVersion)
+	}
+	if token != "" {
+		setHeader(headers, "Authorization", "Bearer "+token)
+	}
+	return headers
+}
+
+// setHeader is Headers.set: one entry per name, matched case-insensitively.
+func setHeader(headers map[string]string, name, value string) {
+	for key := range headers {
+		if key != name && strings.EqualFold(key, name) {
+			delete(headers, key)
+		}
+	}
+	headers[name] = value
 }
 
 // lastRequestHeaders builds the session DELETE headers from the token of the last request.
 // Close uses it instead of headers(), whose Token() call may refresh over the network and
 // delay closing a session that is going away anyway (upstream #10565).
 func (t *StreamableHttpTransport) lastRequestHeaders() (map[string]string, string, error) {
-	headers := map[string]string{}
-	for key, value := range t.options.Headers {
-		headers[key] = value
-	}
 	t.mu.Lock()
-	if t.sessionID != "" {
-		headers["Mcp-Session-Id"] = t.sessionID
-	}
-	if t.protocolVersion != "" {
-		headers["MCP-Protocol-Version"] = t.protocolVersion
-	}
 	token := t.lastToken
 	t.mu.Unlock()
-	if token != "" {
-		headers["Authorization"] = "Bearer " + token
-	}
-	return headers, token, nil
+	return t.buildHeaders(nil, token), token, nil
 }
 
 func (t *StreamableHttpTransport) doFetch(ctx context.Context, request *http.Request) (*http.Response, error) {
@@ -544,12 +553,14 @@ func (t *StreamableHttpTransport) checkResponse(response *http.Response) error {
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
 		return nil
 	}
-	body, err := io.ReadAll(io.LimitReader(response.Body, maxErrorBodyBytes))
+	body, err := io.ReadAll(io.LimitReader(response.Body, maxErrorBodyChars*4))
 	_ = response.Body.Close()
 	if err != nil {
 		body = nil
 	}
-	text := string(body)
+	// streamable-http.ts keeps the first MAX_ERROR_BODY_BYTES UTF-16 units of
+	// the decoded text; a byte count would split multi-byte characters.
+	text := jsSlice(string(body), 0, maxErrorBodyChars)
 	if response.StatusCode == http.StatusUnauthorized {
 		return &McpAuthRequiredError{
 			McpHttpError:    McpHttpError{Status: 401, Body: text, Msg: "MCP server requires authentication"},
@@ -566,10 +577,10 @@ func (t *StreamableHttpTransport) checkResponse(response *http.Response) error {
 }
 
 func describeHttpFailure(status int, body string) string {
-	text := strings.TrimSpace(body)
+	text := jsTrim(body)
 	snippet := text
-	if len(text) > errorMessageBodyChars {
-		snippet = text[:errorMessageBodyChars-3] + "..."
+	if jsLength(text) > errorMessageBodyChars {
+		snippet = jsSlice(text, 0, errorMessageBodyChars-3) + "..."
 	}
 	message := fmt.Sprintf("MCP HTTP request failed with status %d", status)
 	if snippet != "" {
@@ -583,7 +594,7 @@ func contentType(response *http.Response) string {
 	if value == "" {
 		return ""
 	}
-	return strings.ToLower(strings.TrimSpace(strings.SplitN(value, ";", 2)[0]))
+	return strings.ToLower(jsTrim(strings.SplitN(value, ";", 2)[0]))
 }
 
 // needsAuthorization: 401, or 403 with an `insufficient_scope` bearer
@@ -633,7 +644,7 @@ func (t *StreamableHttpTransport) consumeSse(body io.Reader, cursor *streamCurso
 			cursor.received = true
 			// Events without data prime resumption; other event types are
 			// not JSON-RPC.
-			if strings.TrimSpace(event.Data) == "" || (event.Event != nil && *event.Event != "message") {
+			if jsTrim(event.Data) == "" || (event.Event != nil && *event.Event != "message") {
 				return
 			}
 			concrete, err := protocol.DecodeMessage([]byte(event.Data))

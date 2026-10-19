@@ -11,6 +11,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/dat267/pier/mcp/protocol"
 )
 
 // Port of packages/mcp/test/stdio.test.ts against Go ports of the upstream
@@ -286,4 +288,41 @@ func liveProcessGroupRegistered(pid int) bool {
 	liveProcessGroupsMu.Lock()
 	defer liveProcessGroupsMu.Unlock()
 	return liveProcessGroups[pid]
+}
+
+// stdio.ts decodes stdout lines and stderr chunks with Buffer.toString("utf8"),
+// which replaces malformed UTF-8 instead of failing the JSON parse.
+func TestStdioTransportReplacesMalformedUTF8(t *testing.T) {
+	transport := NewStdioTransport(StdioTransportOptions{})
+	var messages []Message
+	transport.OnMessage(func(message Message) { messages = append(messages, message) })
+	transport.handleStdout([]byte("{\"jsonrpc\":\"2.0\",\"method\":\"m\",\"params\":{\"x\":\"\xff\"}}\n"))
+	if len(messages) != 1 {
+		t.Fatalf("messages = %d; want the malformed byte replaced, not rejected", len(messages))
+	}
+	notification, ok := messages[0].(*protocol.JsonRpcNotification)
+	if !ok {
+		t.Fatalf("message = %T", messages[0])
+	}
+	if got, want := string(notification.Params), `{"x":"`+"\uFFFD"+`"}`; got != want {
+		t.Fatalf("params = %q; want %q", got, want)
+	}
+}
+
+func TestStdioTransportStderrChunkReplacesMalformedUTF8(t *testing.T) {
+	var seen []string
+	transport := NewStdioTransport(StdioTransportOptions{OnStderr: func(chunk string) { seen = append(seen, chunk) }})
+	transport.handleStderr([]byte("bad \xff byte"))
+	if len(seen) != 1 || seen[0] != "bad \uFFFD byte" {
+		t.Fatalf("stderr chunks = %q; want the replacement character", seen)
+	}
+}
+
+// stdio.ts's stderr getter decodes with Buffer.toString("utf8").
+func TestStdioTransportStderrStringReplacesMalformedUTF8(t *testing.T) {
+	transport := NewStdioTransport(StdioTransportOptions{})
+	transport.handleStderr([]byte("bad \xff byte"))
+	if got := transport.Stderr(); got != "bad \uFFFD byte" {
+		t.Fatalf("stderr = %q; want the replacement character", got)
+	}
 }

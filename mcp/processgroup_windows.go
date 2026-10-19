@@ -10,8 +10,11 @@ import (
 )
 
 // configureProcessGroup leaves the child in this process group; Windows
-// termination goes through taskkill /T /F.
-func configureProcessGroup(cmd *exec.Cmd) {}
+// termination goes through taskkill /T /F. HideWindow matches the upstream
+// spawn's windowsHide: true, so no console window flashes for stdio servers.
+func configureProcessGroup(cmd *exec.Cmd) {
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+}
 
 // killProcessGroup force-kills the process tree (Windows has no process
 // groups to signal).

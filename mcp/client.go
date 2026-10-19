@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"sync"
 	"time"
 
@@ -566,16 +567,19 @@ func withProgressToken(params any, token int64) json.RawMessage {
 			merged = decoded
 		}
 	}
-	meta := map[string]any{"progressToken": token}
 	if merged == nil {
-		enc, _ := protocol.MarshalJSON(map[string]any{"_meta": meta})
+		enc, _ := protocol.MarshalJSON(map[string]any{"_meta": map[string]any{"progressToken": token}})
 		return enc
 	}
+	// client.ts spreads the caller's _meta first and the request's own token
+	// last, so the token always wins.
+	meta := map[string]any{}
 	if existing, ok := merged["_meta"].(map[string]any); ok && existing != nil {
 		for key, value := range existing {
 			meta[key] = value
 		}
 	}
+	meta["progressToken"] = token
 	merged["_meta"] = meta
 	enc, _ := protocol.MarshalJSON(merged)
 	return enc
@@ -607,9 +611,14 @@ func (c *Client) handleMessage(message Message) {
 // handleResponse resolves or rejects the pending request (upstream
 // handleResponse).
 func (c *Client) handleResponse(message *protocol.JsonRpcResponse) {
+	// client.ts looks the response up by its exact id; truncating a fractional
+	// number would resolve the integer request it rounds down to.
+	id, integral := integralRequestID(message.ID)
 	c.mu.Lock()
-	id := int64(message.ID.Num)
-	entry := c.pending[id]
+	var entry *pendingRequest
+	if integral {
+		entry = c.pending[id]
+	}
 	if entry == nil {
 		c.mu.Unlock()
 		c.emitError(fmt.Errorf("Received response for unknown MCP request %s", message.ID.String()))
@@ -769,7 +778,21 @@ func formatId(token int64) string {
 	return fmt.Sprintf("%d", token)
 }
 
-// jsonRpcIdNumber narrows a decoded progressToken to a finite number.
+// integralRequestID narrows a JSON-RPC id to a generated request id: the
+// client only issues integers, and an id that is not exactly representable as
+// one cannot match a pending entry.
+func integralRequestID(id protocol.JsonRpcId) (int64, bool) {
+	if id.IsStr || math.IsNaN(id.Num) || math.IsInf(id.Num, 0) || id.Num != math.Trunc(id.Num) {
+		return 0, false
+	}
+	value := int64(id.Num)
+	if float64(value) != id.Num {
+		return 0, false
+	}
+	return value, true
+}
+
+// jsonRpcIdNumber narrows a decoded progressToken to a generated request id.
 func jsonRpcIdNumber(value any) (int64, bool) {
 	switch v := value.(type) {
 	case json.Number:
@@ -777,9 +800,9 @@ func jsonRpcIdNumber(value any) (int64, bool) {
 		if err != nil {
 			return 0, false
 		}
-		return int64(n), true
+		return integralRequestID(protocol.NumberId(n))
 	case float64:
-		return int64(v), true
+		return integralRequestID(protocol.NumberId(v))
 	}
 	return 0, false
 }
@@ -797,8 +820,13 @@ func (c *Client) handleCancelled(params json.RawMessage) {
 	switch v := decoded.RequestID.(type) {
 	case string:
 		id = protocol.StringId(v)
-	case float64, json.Number:
-		n, _ := v.(json.Number).Float64()
+	case float64:
+		id = protocol.NumberId(v)
+	case json.Number:
+		n, err := v.Float64()
+		if err != nil {
+			return
+		}
 		id = protocol.NumberId(n)
 	default:
 		return

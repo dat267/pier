@@ -872,6 +872,111 @@ func (p *countingAuthProvider) count() int {
 // #10565: closing a session must not ask the auth provider for a token, because that call can
 // refresh over the network before a DELETE for a session that is going away anyway. The DELETE
 // reuses the token of the last request instead.
+// streamable-http.ts buildHeaders starts from `new Headers(options.headers)` and
+// `.set`s the session, protocol and auth headers, so those override configured
+// ones case-insensitively instead of being sent twice.
+func TestStreamableHTTPHeaderOverridesAreCaseInsensitive(t *testing.T) {
+	transport := NewStreamableHttpTransport(StreamableHttpTransportOptions{
+		URL: "https://example.test/mcp",
+		Headers: map[string]string{
+			"mcp-session-id":       "stale-session",
+			"MCP-PROTOCOL-VERSION": "stale-version",
+			"authorization":        "Bearer stale-token",
+			"accept":               "text/plain",
+		},
+		AuthProvider: &countingAuthProvider{token: "fresh-token"},
+	})
+	transport.sessionID = "server-session"
+	transport.protocolVersion = "2025-11-25"
+	headers, _, err := transport.headers(map[string]string{"accept": "application/json"}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]string{
+		"mcp-session-id":       "server-session",
+		"mcp-protocol-version": "2025-11-25",
+		"authorization":        "Bearer fresh-token",
+		"accept":               "application/json",
+	}
+	for name, value := range want {
+		count := 0
+		for key, got := range headers {
+			if strings.EqualFold(key, name) {
+				count++
+				if got != value {
+					t.Fatalf("header %q = %q; want %q", key, got, value)
+				}
+			}
+		}
+		if count != 1 {
+			t.Fatalf("header %q appears %d times; want exactly one case-insensitive entry", name, count)
+		}
+	}
+}
+
+// streamable-http.ts trims and slices the error body with JavaScript string
+// semantics (String.prototype.trim, .length and .slice count UTF-16 units).
+func TestDescribeHTTPFailureUsesJavaScriptStringSemantics(t *testing.T) {
+	body := strings.Repeat("界", 250)
+	if got, want := describeHttpFailure(400, body), "MCP HTTP request failed with status 400: "+body; got != want {
+		t.Fatalf("message = %q; want the untruncated 250-unit body", got)
+	}
+	if got, want := describeHttpFailure(400, "\uFEFFerr"), "MCP HTTP request failed with status 400: err"; got != want {
+		t.Fatalf("message = %q; want JavaScript trim to strip the BOM", got)
+	}
+}
+
+// fetch sets Content-Length for a string body; a request built with a nil body
+// and then given a reader sends chunked encoding instead.
+func TestStreamableHTTPPostsSetContentLength(t *testing.T) {
+	var fixture *httpFixture
+	var mu sync.Mutex
+	lengths := map[string]int64{}
+	fixture = newHTTPFixture(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		lengths[r.Method] = r.ContentLength
+		mu.Unlock()
+		fixture.protocolHandler(w, r, nil)
+	})
+	defer fixture.close(t)
+	transport := NewStreamableHttpTransport(StreamableHttpTransportOptions{URL: fixture.url})
+	client := NewClient(ClientOptions{Name: "http-test", Version: "1.0.0"})
+	if _, err := client.Connect(context.Background(), transport); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := client.ListTools(context.Background(), RequestOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	post := lengths[http.MethodPost]
+	mu.Unlock()
+	if post <= 0 {
+		t.Fatalf("POST content length = %d; want the body length, not chunked encoding", post)
+	}
+}
+
+func TestStreamableHTTPErrorBodyIsSlicedByUTF16Units(t *testing.T) {
+	var fixture *httpFixture
+	fixture = newHTTPFixture(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = io.WriteString(w, strings.Repeat("界", 9000))
+	})
+	defer fixture.close(t)
+	transport := NewStreamableHttpTransport(StreamableHttpTransportOptions{URL: fixture.url})
+	client := NewClient(ClientOptions{Name: "http-test", Version: "1.0.0"})
+	_, err := client.Connect(context.Background(), transport)
+	if err == nil {
+		t.Fatal("connect succeeded against a failing endpoint")
+	}
+	var httpErr *McpHttpError
+	if !errors.As(err, &httpErr) {
+		t.Fatalf("err = %v; want *McpHttpError", err)
+	}
+	if got := jsLength(httpErr.Body); got != maxErrorBodyChars {
+		t.Fatalf("body units = %d; want %d", got, maxErrorBodyChars)
+	}
+}
+
 func TestStreamableHTTPCloseReusesTheLastToken(t *testing.T) {
 	var fixture *httpFixture
 	var mu sync.Mutex

@@ -9,7 +9,9 @@ package oauth
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -318,7 +320,7 @@ func ParseOAuthTokens(value any) (*OAuthTokens, error) {
 	}
 	result := &OAuthTokens{AccessToken: accessToken, TokenType: tokenType}
 	if !absent(input["expires_in"]) {
-		number, ok := toFloat(input["expires_in"])
+		number, ok := jsNumberToInt64(input["expires_in"])
 		if !ok {
 			return nil, fmt.Errorf("Invalid expires_in")
 		}
@@ -396,16 +398,76 @@ func ParseClientInformation(value any) (*OAuthClientInformationFull, error) {
 	return result, nil
 }
 
+// toFloat narrows a JSON number for fields upstream checks with
+// `typeof value === "number"` (client registration timestamps).
 func toFloat(value any) (int64, bool) {
 	switch v := value.(type) {
 	case float64:
-		return int64(v), true
+		return finiteInt64(v)
 	case json.Number:
 		n, err := v.Float64()
 		if err != nil {
 			return 0, false
 		}
-		return int64(n), true
+		return finiteInt64(n)
 	}
 	return 0, false
+}
+
+// jsNumberToInt64 coerces like Number(), which expires_in uses upstream.
+func jsNumberToInt64(value any) (int64, bool) {
+	switch v := value.(type) {
+	case float64:
+		return finiteInt64(v)
+	case json.Number:
+		n, err := v.Float64()
+		if err != nil {
+			return 0, false
+		}
+		return finiteInt64(n)
+	case string:
+		// Number("") is 0, Number("0x10") is 16, and Number trims JavaScript
+		// whitespace (including a BOM).
+		text := strings.TrimFunc(v, isJSWhitespace)
+		if text == "" {
+			return 0, true
+		}
+		if len(text) > 2 && text[0] == '0' {
+			base := 0
+			switch text[1] {
+			case 'x', 'X':
+				base = 16
+			case 'b', 'B':
+				base = 2
+			case 'o', 'O':
+				base = 8
+			}
+			if base != 0 {
+				integer, err := strconv.ParseUint(text[2:], base, 64)
+				if err != nil {
+					return 0, false
+				}
+				return finiteInt64(float64(integer))
+			}
+		}
+		number, err := strconv.ParseFloat(text, 64)
+		if err != nil {
+			return 0, false
+		}
+		return finiteInt64(number)
+	case bool:
+		if v {
+			return 1, true
+		}
+		return 0, true
+	}
+	return 0, false
+}
+
+// finiteInt64 mirrors the `Number.isFinite` check and truncates toward zero.
+func finiteInt64(value float64) (int64, bool) {
+	if math.IsNaN(value) || math.IsInf(value, 0) {
+		return 0, false
+	}
+	return int64(value), true
 }
