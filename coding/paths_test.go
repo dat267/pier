@@ -83,3 +83,15 @@ func TestNormalizeWindowsShellPath(t *testing.T) {
 		}
 	}
 }
+
+// normalizePath resolves file:// URLs through Node's fileURLToPath, whose URL
+// parser lowercases the hostname, so `file://LOCALHOST/path` is a local path.
+// The port compared the raw host against "localhost".
+func TestNormalizePathAcceptsUppercaseLocalhostFileURL(t *testing.T) {
+	if got := NormalizePath("file://LOCALHOST/tmp/skills", PathInputOptions{}); got != "/tmp/skills" {
+		t.Fatalf("NormalizePath(file://LOCALHOST) = %q; want %q", got, "/tmp/skills")
+	}
+	if got := NormalizePath("file://localhost/tmp/skills", PathInputOptions{}); got != "/tmp/skills" {
+		t.Fatalf("NormalizePath(file://localhost) = %q; want %q", got, "/tmp/skills")
+	}
+}

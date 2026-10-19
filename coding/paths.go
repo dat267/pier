@@ -147,7 +147,9 @@ func filePathFromURL(url string) (string, error) {
 			return "", fmtPathError("file URL with no path")
 		}
 		host := path[:idx]
-		if host != "localhost" {
+		// The WHATWG URL parser lowercases the hostname, so file://LOCALHOST is
+		// the same as file://localhost.
+		if !strings.EqualFold(host, "localhost") {
 			return "", fmtPathError("file URL with non-localhost host")
 		}
 		path = path[idx:]
