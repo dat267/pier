@@ -4,7 +4,7 @@ Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D246**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D247**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation.
 
 Related documents: [port status](PORTING.md), [architecture](architecture.md),
@@ -1749,3 +1749,16 @@ click, matching a tool frame with no result yet.
 
 Tests: `TestCompletedPendingBashFrameMovesToTheTranscript` and
 `TestClickingTheBashFrameTogglesExpansion`.
+
+## D247
+
+**A stale callback timeout cannot remove a replacement waiter.**
+
+Reference: `packages/mcp/src/oauth/callback.ts` clears and deletes a state in a
+single-threaded JavaScript event loop. Go's `time.AfterFunc` callbacks can run
+concurrently with callback handling. A timer that had fired before its old
+waiter was removed could otherwise delete a newly registered waiter with the
+same state. The port now expires a state only when the map still points to that
+timer's entry.
+
+Test: `TestStaleCallbackTimeoutDoesNotDeleteReplacementWaiter`.

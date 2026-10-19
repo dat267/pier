@@ -37,6 +37,52 @@ func TestBuildAuthorizationServerDiscoveryUrlsUseOrigin(t *testing.T) {
 	}
 }
 
+// discovery.ts swallows malformed optional protected-resource JSON, then tries authorization-server discovery.
+func TestDiscoverOAuthServerInfoSwallowsInvalidOptionalResourceJSON(t *testing.T) {
+	var paths []string
+	fetch := func(_ context.Context, request *http.Request) (*http.Response, error) {
+		paths = append(paths, request.URL.Path)
+		status, body := http.StatusNotFound, ""
+		if request.URL.Path == "/resource" {
+			status, body = http.StatusOK, "not json"
+		}
+		return &http.Response{StatusCode: status, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(body))}, nil
+	}
+	resourceURL := "https://mcp.example/resource"
+	info, err := DiscoverOAuthServerInfo(context.Background(), "https://mcp.example/mcp", DiscoveryOptions{
+		ResourceMetadataURL: &resourceURL,
+		Fetch:               fetch,
+	})
+	if err != nil || info == nil || info.AuthorizationServerMetadata != nil {
+		t.Fatalf("info = %+v, err = %v; want fallback discovery result", info, err)
+	}
+	if len(paths) < 2 || paths[0] != "/resource" {
+		t.Fatalf("requested paths = %v; want resource document then authorization discovery", paths)
+	}
+}
+
+// discovery.ts treats a bare origin as pathname `/` and does not repeat its root metadata request.
+func TestDiscoverProtectedResourceMetadataDoesNotRetryBareOriginPath(t *testing.T) {
+	requests := 0
+	fetch := func(_ context.Context, _ *http.Request) (*http.Response, error) {
+		requests++
+		return &http.Response{StatusCode: http.StatusNotFound, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(""))}, nil
+	}
+	_, err := DiscoverProtectedResourceMetadata(context.Background(), "https://mcp.example", DiscoveryOptions{Fetch: fetch})
+	if err == nil || requests != 1 {
+		t.Fatalf("err = %v, requests = %d; want one root lookup and its HTTP error", err, requests)
+	}
+}
+
+// discovery.ts uses URL.pathname, which preserves escaped separators in issuer paths.
+func TestBuildAuthorizationServerDiscoveryUrlsPreservesEscapedPath(t *testing.T) {
+	urls := BuildAuthorizationServerDiscoveryUrls("https://issuer.example/tenant%2Fname")
+	want := "https://issuer.example/.well-known/oauth-authorization-server/tenant%2Fname"
+	if len(urls) == 0 || urls[0].URL != want {
+		t.Fatalf("first URL = %v; want %q", urls, want)
+	}
+}
+
 // SelectResource compares origins: the WHATWG origin lowercases the host and
 // drops a default port.
 func TestSelectResourceNormalizesOrigin(t *testing.T) {
@@ -51,6 +97,13 @@ func TestSelectResourceNormalizesOrigin(t *testing.T) {
 
 // A whitespace-only challenge must not panic on the scheme index (upstream's
 // trimStart().split(/\s+/, 1)[0] yields "").
+func TestSelectResourceDoesNotDecodeEscapedPathSeparators(t *testing.T) {
+	metadata := &OAuthProtectedResourceMetadata{Resource: "https://example.com/mcp"}
+	if _, err := SelectResource("https://example.com/mcp%2Fadmin", metadata); err == nil {
+		t.Fatal("an encoded slash must not make a child path inherit the parent resource")
+	}
+}
+
 func TestParseWwwAuthenticateWhitespaceOnly(t *testing.T) {
 	if got := ParseWwwAuthenticate("   \t  "); got != (OAuthChallenge{}) {
 		t.Fatalf("ParseWwwAuthenticate(whitespace) = %+v, want empty", got)
@@ -61,6 +114,9 @@ func TestParseWwwAuthenticateWhitespaceOnly(t *testing.T) {
 	}
 	if got.Scope == nil || *got.Scope != "files:read" {
 		t.Fatalf("scope = %v, want files:read", got.Scope)
+	}
+	if got := ParseWwwAuthenticate("\uFEFFBearer error=invalid_token"); got.Error == nil || *got.Error != "invalid_token" {
+		t.Fatalf("BOM-prefixed challenge = %+v; want parsed error", got)
 	}
 }
 

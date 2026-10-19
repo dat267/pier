@@ -512,7 +512,8 @@ scope; MCP and `durable` are ported). The v1.0.1 (`a7229ddc`) → v1.0.2
   `mcp/oauth` layer — `OAuthClientMetadataDocument`, the provider's
   `ClientMetadataDocument` chooser, the document's redirect URI threaded through
   the authorization and token requests, and the callback server's
-  `ExtraPaths`/per-waiter path matching.
+  `ExtraPaths`/per-waiter path matching, with a stale-timeout identity guard
+  for Go's concurrent timer callbacks (D247).
 
 Not ported from the v1.0.1/v1.0.2 delta, with the reason:
 

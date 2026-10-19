@@ -70,6 +70,103 @@ func moduleRoot() string {
 	}
 }
 
+func TestStdioTransportCloseWaitsForStart(t *testing.T) {
+	originalStart := stdioStartProcess
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	var releaseOnce sync.Once
+	releaseStart := func() { releaseOnce.Do(func() { close(release) }) }
+	stdioStartProcess = func(command *exec.Cmd) error {
+		close(entered)
+		<-release
+		return command.Start()
+	}
+	defer func() {
+		releaseStart()
+		stdioStartProcess = originalStart
+	}()
+
+	transport := NewStdioTransport(StdioTransportOptions{Command: stdioFixtureBin})
+	startDone := make(chan error, 1)
+	go func() { startDone <- transport.Start(context.Background()) }()
+	<-entered
+	closeDone := make(chan error, 1)
+	go func() { closeDone <- transport.Close(context.Background()) }()
+
+	var earlyClose bool
+	select {
+	case err := <-closeDone:
+		if err != nil {
+			t.Fatal(err)
+		}
+		earlyClose = true
+	case <-time.After(25 * time.Millisecond):
+	}
+	releaseStart()
+	if err := <-startDone; err != nil {
+		t.Fatal(err)
+	}
+	if !earlyClose {
+		select {
+		case err := <-closeDone:
+			if err != nil {
+				t.Fatal(err)
+			}
+		case <-time.After(3 * time.Second):
+			t.Fatal("Close did not finish after startup")
+		}
+	}
+	pid := transport.PID()
+	if pid != 0 {
+		process, _ := os.FindProcess(pid)
+		if process != nil {
+			_ = process.Kill()
+		}
+		select {
+		case <-transport.exitCh:
+		case <-time.After(2 * time.Second):
+			t.Fatal("cleanup process did not exit")
+		}
+	}
+	if earlyClose {
+		t.Fatal("Close returned before the in-progress child startup was handled")
+	}
+}
+
+// stdio.ts uses Buffer.subarray(-maxStderrBytes); a negative limit must not panic.
+func TestStdioTransportNegativeStderrLimitDoesNotPanic(t *testing.T) {
+	transport := NewStdioTransport(StdioTransportOptions{MaxStderrBytes: -1})
+	transport.handleStderr([]byte("abcd"))
+	if got := transport.Stderr(); got != "bcd" {
+		t.Fatalf("stderr = %q; want Buffer.subarray(1) result", got)
+	}
+}
+
+func TestStdioTransportWaitsForProcessExitAfterStdoutEOF(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("test command uses POSIX shell syntax")
+	}
+	transport := NewStdioTransport(StdioTransportOptions{
+		Command: "/bin/sh",
+		Args:    []string{"-c", "exec 1>&-; sleep 0.4"},
+	})
+	closed := make(chan struct{}, 1)
+	transport.OnClose(func() { closed <- struct{}{} })
+	if err := transport.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-closed:
+		t.Fatal("transport closed on stdout EOF before the process exited")
+	case <-time.After(100 * time.Millisecond):
+	}
+	select {
+	case <-closed:
+	case <-time.After(2 * time.Second):
+		t.Fatal("transport did not close when the process exited")
+	}
+}
+
 func TestStdioTransportConnectsAndCapturesStderr(t *testing.T) {
 	var stderrMu sync.Mutex
 	stderrChunks := 0

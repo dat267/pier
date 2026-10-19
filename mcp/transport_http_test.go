@@ -151,6 +151,20 @@ func TestConsumeSseStreamParsesChunkedCRLFEvents(t *testing.T) {
 	}
 }
 
+// streamable-http.ts decodes SSE bytes with TextDecoder, replacing malformed UTF-8.
+func TestConsumeSseStreamReplacesMalformedUTF8(t *testing.T) {
+	body := string([]byte("data: {\"x\":\"\xff\"}\n\n"))
+	var got string
+	if err := ConsumeSseStream(strings.NewReader(body), ConsumeSseOptions{
+		OnEvent: func(event SseEvent) { got = event.Data },
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if got != `{"x":"�"}` {
+		t.Fatalf("data = %q; want replacement-decoded UTF-8", got)
+	}
+}
+
 func TestConsumeSseStreamRejectsOversizedPendingEvent(t *testing.T) {
 	body := strings.Repeat("data: xxxxxxxxxxxxxxxx\n", 40)
 	err := ConsumeSseStream(strings.NewReader(body), ConsumeSseOptions{

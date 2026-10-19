@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -43,7 +44,7 @@ type OAuthClientProvider interface {
 	// when the authorization server has none.
 	ClientMetadataDocument(metadata *AuthorizationServerMetadata) *OAuthClientMetadataDocument
 	State(ctx context.Context) (string, error)
-	ClientInformation(ctx context.Context) (*OAuthClientInformation, error)
+	ClientInformation(ctx context.Context) (*OAuthClientInformationFull, error)
 	SaveClientInformation(ctx context.Context, information *OAuthClientInformationFull) error
 	Tokens(ctx context.Context) (*OAuthTokens, error)
 	SaveTokens(ctx context.Context, tokens *OAuthTokens) error
@@ -93,7 +94,7 @@ const (
 // TokenRequestOptions).
 type TokenRequestOptions struct {
 	Metadata                *AuthorizationServerMetadata
-	ClientInformation       *OAuthClientInformation
+	ClientInformation       *OAuthClientInformationFull
 	Resource                *string
 	AddClientAuthentication AddClientAuthentication
 	Fetch                   McpFetch
@@ -106,6 +107,38 @@ func loopback(hostname string) bool {
 
 // deriveApplicationType applies MCP SEP-837 to OAuth redirect URIs: custom
 // schemes and loopback HTTP(S) URLs identify native clients; other URLs are web.
+func parseHTTPURL(value string) (*url.URL, string, error) {
+	parsed, err := url.Parse(value)
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return nil, "", fmt.Errorf("not an HTTP URL")
+	}
+	if parsed.Host == "" {
+		colon := strings.IndexByte(value, ':')
+		if colon < 0 {
+			return nil, "", fmt.Errorf("not an absolute HTTP URL")
+		}
+		remainder := strings.ReplaceAll(value[colon+1:], string('\\'), "/")
+		remainder = strings.TrimLeft(remainder, "/")
+		if remainder == "" {
+			return nil, "", fmt.Errorf("HTTP URL has no host")
+		}
+		parsed, err = url.Parse(parsed.Scheme + "://" + remainder)
+		if err != nil || parsed.Host == "" {
+			return nil, "", fmt.Errorf("HTTP URL has no host")
+		}
+	}
+	if parsed.Hostname() == "" {
+		return nil, "", fmt.Errorf("HTTP URL has no host")
+	}
+	if port := parsed.Port(); port != "" {
+		number, portErr := strconv.Atoi(port)
+		if portErr != nil || number < 0 || number > 65535 {
+			return nil, "", fmt.Errorf("HTTP URL has an invalid port")
+		}
+	}
+	return parsed, parsed.String(), nil
+}
+
 func deriveApplicationType(redirectURIs []string) string {
 	for _, redirectURI := range redirectURIs {
 		parsed, err := url.Parse(redirectURI)
@@ -113,6 +146,12 @@ func deriveApplicationType(redirectURIs []string) string {
 			continue
 		}
 		scheme := strings.ToLower(parsed.Scheme)
+		if (scheme == "http" || scheme == "https") && parsed.Host == "" {
+			parsed, _, err = parseHTTPURL(redirectURI)
+			if err != nil {
+				continue
+			}
+		}
 		if (scheme != "http" && scheme != "https") || loopback(strings.ToLower(parsed.Hostname())) {
 			return "native"
 		}
@@ -123,7 +162,7 @@ func deriveApplicationType(redirectURIs []string) string {
 // secureEndpoint refuses to send credentials over plain HTTP (upstream
 // secureEndpoint).
 func secureEndpoint(value string) (*url.URL, error) {
-	parsed, err := url.Parse(value)
+	parsed, _, err := parseHTTPURL(value)
 	if err != nil {
 		return nil, err
 	}
@@ -139,8 +178,7 @@ func selectClientAuthMethod(information *OAuthClientInformationFull, supported [
 	if information.TokenEndpointAuthMethod != nil {
 		hinted := *information.TokenEndpointAuthMethod
 		known := hinted == ClientAuthSecretBasic || hinted == ClientAuthSecretPost || hinted == ClientAuthNone
-		hasSecret := information.ClientSecret != nil
-		if known && (len(supported) == 0 || contains(supported, hinted)) && (hinted != ClientAuthSecretBasic || hasSecret) {
+		if known && (len(supported) == 0 || contains(supported, hinted)) {
 			return hinted
 		}
 	}
@@ -224,16 +262,16 @@ func StartAuthorization(authorizationServerURL string, options StartAuthorizatio
 	query.Set("code_challenge", challenge)
 	query.Set("code_challenge_method", "S256")
 	query.Set("redirect_uri", options.RedirectURL)
-	if options.State != nil {
+	if options.State != nil && *options.State != "" {
 		query.Set("state", *options.State)
 	}
-	if options.Scope != nil {
+	if options.Scope != nil && *options.Scope != "" {
 		query.Set("scope", *options.Scope)
-		if contains(strings.Fields(*options.Scope), "offline_access") {
+		if contains(splitJSScope(*options.Scope), "offline_access") {
 			query.Set("prompt", "consent")
 		}
 	}
-	if options.Resource != nil {
+	if options.Resource != nil && *options.Resource != "" {
 		query.Set("resource", *options.Resource)
 	}
 	parsed.RawQuery = query.Encode()
@@ -299,8 +337,7 @@ func tokenRequest(ctx context.Context, authorizationServerURL string, options To
 		if options.Metadata != nil && options.Metadata.TokenEndpointAuthMethodsSupported != nil {
 			supported = options.Metadata.TokenEndpointAuthMethodsSupported
 		}
-		hint := &OAuthClientInformationFull{OAuthClientInformation: *options.ClientInformation}
-		if err := applyClientAuthentication(selectClientAuthMethod(hint, supported), options.ClientInformation, headers, params); err != nil {
+		if err := applyClientAuthentication(selectClientAuthMethod(options.ClientInformation, supported), &options.ClientInformation.OAuthClientInformation, headers, params); err != nil {
 			return nil, err
 		}
 	}
@@ -458,7 +495,7 @@ type RefreshOptions struct {
 // withScope: a response without `scope` grants the requested scope (RFC
 // 6749 §5.1).
 func withScope(tokens *OAuthTokens, scope *string) *OAuthTokens {
-	if tokens.Scope == nil && scope != nil {
+	if tokens.Scope == nil && scope != nil && *scope != "" {
 		tokens.Scope = scope
 	}
 	return tokens
@@ -478,7 +515,7 @@ func StepUpScope(granted, challenged *string) *string {
 		if scope == nil {
 			continue
 		}
-		for _, name := range strings.Fields(*scope) {
+		for _, name := range splitJSScope(*scope) {
 			if name == "" || seen[name] {
 				continue
 			}
@@ -557,9 +594,14 @@ func runFlow(ctx context.Context, provider OAuthClientProvider, options FlowOpti
 		scope = options.Scope
 	} else if discovered.ResourceMetadata != nil && len(discovered.ResourceMetadata.ScopesSupported) > 0 {
 		joined := strings.Join(discovered.ResourceMetadata.ScopesSupported, " ")
-		scope = &joined
-	} else if metadata := provider.ClientMetadata(); metadata.Scope != nil {
-		scope = metadata.Scope
+		if joined != "" {
+			scope = &joined
+		}
+	}
+	if scope == nil {
+		if metadata := provider.ClientMetadata(); metadata.Scope != nil {
+			scope = metadata.Scope
+		}
 	}
 	client, err := provider.ClientInformation(ctx)
 	if err != nil {
@@ -570,13 +612,13 @@ func runFlow(ctx context.Context, provider OAuthClientProvider, options FlowOpti
 		clientDocument = provider.ClientMetadataDocument(metadata)
 	}
 	if clientDocument != nil {
-		documentURL, err := url.Parse(clientDocument.URL)
-		if err != nil || documentURL.Scheme != "https" || documentURL.Path == "/" {
+		documentURL, _, err := parseHTTPURL(clientDocument.URL)
+		if err != nil || documentURL.Scheme != "https" || documentURL.Path == "" || documentURL.Path == "/" {
 			return "", fmt.Errorf("Invalid OAuth client metadata URL")
 		}
 	}
 	if client == nil && clientDocument != nil {
-		client = &OAuthClientInformation{ClientID: clientDocument.URL}
+		client = &OAuthClientInformationFull{OAuthClientInformation: OAuthClientInformation{ClientID: clientDocument.URL}}
 	}
 	if client == nil {
 		if options.AuthorizationCode != "" {
@@ -588,7 +630,7 @@ func runFlow(ctx context.Context, provider OAuthClientProvider, options FlowOpti
 		if err != nil {
 			return "", err
 		}
-		client = &registered.OAuthClientInformation
+		client = registered
 		if err := provider.SaveClientInformation(ctx, registered); err != nil {
 			return "", err
 		}
@@ -675,7 +717,7 @@ func runFlow(ctx context.Context, provider OAuthClientProvider, options FlowOpti
 		return "", err
 	}
 	authorization, err := StartAuthorization(discovered.AuthorizationServerURL, StartAuthorizationOptions{
-		Metadata: metadata, ClientInformation: client, RedirectURL: redirectURL,
+		Metadata: metadata, ClientInformation: &client.OAuthClientInformation, RedirectURL: redirectURL,
 		Scope: scope, State: state, Resource: resource,
 	})
 	if err != nil {

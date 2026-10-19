@@ -5,6 +5,8 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"net"
+	"strings"
 	"sync"
 	"time"
 )
@@ -133,7 +135,7 @@ type McpOAuthProvider struct {
 	Metadata         OAuthClientMetadata
 	metadataDocument func(metadata *AuthorizationServerMetadata) *OAuthClientMetadataDocument
 	serverURL        string
-	configuredClient *OAuthClientInformation
+	configuredClient *OAuthClientInformationFull
 	store            McpOAuthStateStore
 	onRedirect       func(ctx context.Context, url string) error
 
@@ -142,10 +144,34 @@ type McpOAuthProvider struct {
 	writesMu sync.Mutex
 }
 
+func canonicalMcpServerURL(raw string) string {
+	parsed, _, err := parseHTTPURL(raw)
+	if err != nil {
+		return raw
+	}
+	hostname := strings.ToLower(parsed.Hostname())
+	port := parsed.Port()
+	if (parsed.Scheme == "http" && port == "80") || (parsed.Scheme == "https" && port == "443") {
+		port = ""
+	}
+	if port != "" {
+		parsed.Host = net.JoinHostPort(hostname, port)
+	} else if strings.Contains(hostname, ":") {
+		parsed.Host = "[" + hostname + "]"
+	} else {
+		parsed.Host = hostname
+	}
+	if parsed.Path == "" {
+		parsed.Path = "/"
+	}
+	return parsed.String()
+}
+
 // NewMcpOAuthProvider builds the provider; the client metadata gets the
 // RFC 7591 defaults (redirect_uris, grant_types, response_types, and the
 // auth method from the secret's presence).
 func NewMcpOAuthProvider(options McpOAuthProviderOptions) *McpOAuthProvider {
+	options.ServerURL = canonicalMcpServerURL(options.ServerURL)
 	metadata := options.ClientMetadata
 	if len(metadata.RedirectURIs) == 0 {
 		metadata.RedirectURIs = []string{options.RedirectURL}
@@ -167,9 +193,9 @@ func NewMcpOAuthProvider(options McpOAuthProviderOptions) *McpOAuthProvider {
 	if store == nil {
 		store = &MemoryOAuthStateStore{}
 	}
-	var configuredClient *OAuthClientInformation
+	var configuredClient *OAuthClientInformationFull
 	if options.ClientID != "" {
-		configuredClient = &OAuthClientInformation{ClientID: options.ClientID}
+		configuredClient = &OAuthClientInformationFull{OAuthClientInformation: OAuthClientInformation{ClientID: options.ClientID}}
 		if options.ClientSecret != "" {
 			secret := options.ClientSecret
 			configuredClient.ClientSecret = &secret
@@ -230,7 +256,7 @@ func (p *McpOAuthProvider) State(ctx context.Context) (string, error) {
 
 // ClientInformation returns the configured or registered client (upstream
 // clientInformation).
-func (p *McpOAuthProvider) ClientInformation(ctx context.Context) (*OAuthClientInformation, error) {
+func (p *McpOAuthProvider) ClientInformation(ctx context.Context) (*OAuthClientInformationFull, error) {
 	if p.configuredClient != nil {
 		return p.configuredClient, nil
 	}
@@ -241,7 +267,7 @@ func (p *McpOAuthProvider) ClientInformation(ctx context.Context) (*OAuthClientI
 	if state.ClientInformation == nil {
 		return nil, nil
 	}
-	return &state.ClientInformation.OAuthClientInformation, nil
+	return state.ClientInformation, nil
 }
 
 // SaveClientInformation stores a dynamic registration (upstream

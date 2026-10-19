@@ -74,7 +74,7 @@ func ConsumeSseStream(body io.Reader, options ConsumeSseOptions) error {
 		dataBytes = 0
 	}
 	processLine := func(rawLine string) error {
-		line := strings.TrimSuffix(rawLine, "\r")
+		line := strings.TrimSuffix(strings.ToValidUTF8(rawLine, "\uFFFD"), "\r")
 		if line == "" {
 			dispatch()
 			return nil

@@ -54,11 +54,11 @@ func (p *testProvider) ClientMetadataDocument(*oauth.AuthorizationServerMetadata
 	return p.clientDocument
 }
 func (p *testProvider) State(context.Context) (string, error) { return "expected-state", nil }
-func (p *testProvider) ClientInformation(context.Context) (*oauth.OAuthClientInformation, error) {
+func (p *testProvider) ClientInformation(context.Context) (*oauth.OAuthClientInformationFull, error) {
 	if p.client == nil {
 		return nil, nil
 	}
-	return &p.client.OAuthClientInformation, nil
+	return p.client, nil
 }
 func (p *testProvider) SaveClientInformation(_ context.Context, information *oauth.OAuthClientInformationFull) error {
 	p.client = information
@@ -198,7 +198,7 @@ func waitCallbackErrorAfterRequest(t *testing.T, callback *oauth.OAuthCallbackSe
 }
 
 func TestOAuthDynamicRegistrationDerivesApplicationType(t *testing.T) {
-	applicationTypes := make(chan any, 6)
+	applicationTypes := make(chan any, 7)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		metadata := readJSONBody(r)
 		applicationTypes <- metadata["application_type"]
@@ -213,6 +213,7 @@ func TestOAuthDynamicRegistrationDerivesApplicationType(t *testing.T) {
 		want            string
 	}{
 		{"http://127.0.0.1:1234/callback", nil, "native"},
+		{"http:localhost:1234/callback", nil, "native"},
 		{"http://[::1]/callback", nil, "native"},
 		{"com.example.app:/callback", nil, "native"},
 		{"https://app.example/callback", nil, "web"},
@@ -875,6 +876,13 @@ func TestOAuthCallbackPages(t *testing.T) {
 			t.Fatalf("page = %+v", last)
 		}
 
+		emptyDescriptionErr, _ := waitCallbackErrorAfterRequest(t, callback, "s3", func() (*http.Response, error) {
+			return http.Get(callback.RedirectURL + "?error=access_denied&error_description=&state=s3")
+		})
+		if emptyDescriptionErr == nil || emptyDescriptionErr.Error() != "" {
+			t.Fatalf("empty error description = %v; want empty error text", emptyDescriptionErr)
+		}
+
 		result, success := waitCallbackAfterRequest(t, callback, "s2", func() (*http.Response, error) {
 			return http.Get(callback.RedirectURL + "?code=abc&state=s2")
 		})
@@ -887,6 +895,73 @@ func TestOAuthCallbackPages(t *testing.T) {
 			t.Fatalf("callback = %+v", result)
 		}
 	})
+}
+
+// flow.ts scope selection uses ||, so an empty joined resource scope falls through to client metadata.
+// flow.ts carries a registered client's token_endpoint_auth_method hint into the token request.
+func TestOAuthClientAuthHintSurvivesTokenExchange(t *testing.T) {
+	provider := newTestProvider("http://127.0.0.1/callback")
+	secret := "secret"
+	hint := "client_secret_post"
+	provider.client = &oauth.OAuthClientInformationFull{
+		OAuthClientInformation: oauth.OAuthClientInformation{ClientID: "client", ClientSecret: &secret},
+		OAuthClientMetadata:    oauth.OAuthClientMetadata{TokenEndpointAuthMethod: &hint},
+	}
+	provider.verifier = "verifier"
+	provider.discovery = &oauth.OAuthDiscoveryState{
+		AuthorizationServerURL: "https://auth.example",
+		AuthorizationServerMetadata: &oauth.AuthorizationServerMetadata{
+			Issuer: "https://auth.example", AuthorizationEndpoint: "https://auth.example/authorize",
+			TokenEndpoint: "https://auth.example/token", ResponseTypesSupported: []string{"code"},
+			TokenEndpointAuthMethodsSupported: []string{"client_secret_basic", "client_secret_post"},
+		},
+	}
+	var gotAuthorization, gotSecret string
+	fetch := func(_ context.Context, request *http.Request) (*http.Response, error) {
+		gotAuthorization = request.Header.Get("Authorization")
+		body, _ := io.ReadAll(request.Body)
+		form, _ := url.ParseQuery(string(body))
+		gotSecret = form.Get("client_secret")
+		return &http.Response{StatusCode: http.StatusOK, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(`{"access_token":"access","token_type":"Bearer"}`))}, nil
+	}
+	result, err := oauth.AuthorizeMcp(context.Background(), provider, oauth.FlowOptions{
+		ServerURL: "https://mcp.example/mcp", AuthorizationCode: "code", Fetch: fetch,
+	})
+	if err != nil || result != oauth.ResultAuthorized {
+		t.Fatalf("authorize = %s, %v", result, err)
+	}
+	if gotAuthorization != "" || gotSecret != secret {
+		t.Fatalf("token auth = Authorization %q, client_secret %q; want client_secret_post", gotAuthorization, gotSecret)
+	}
+}
+
+func TestOAuthEmptyResourceScopesFallThroughToClientMetadata(t *testing.T) {
+	provider := newTestProvider("http://127.0.0.1/callback")
+	provider.clientMetadata.Scope = strPtr("client-scope")
+	provider.client = &oauth.OAuthClientInformationFull{
+		OAuthClientInformation: oauth.OAuthClientInformation{ClientID: "client"},
+	}
+	provider.discovery = &oauth.OAuthDiscoveryState{
+		AuthorizationServerURL: "https://auth.example",
+		AuthorizationServerMetadata: &oauth.AuthorizationServerMetadata{
+			Issuer: "https://auth.example", AuthorizationEndpoint: "https://auth.example/authorize",
+			ResponseTypesSupported: []string{"code"},
+		},
+		ResourceMetadata: &oauth.OAuthProtectedResourceMetadata{
+			Resource: "https://mcp.example", ScopesSupported: []string{""},
+		},
+	}
+	result, err := oauth.AuthorizeMcp(context.Background(), provider, oauth.FlowOptions{ServerURL: "https://mcp.example/mcp"})
+	if err != nil || result != oauth.ResultRedirect {
+		t.Fatalf("authorize = %s, %v", result, err)
+	}
+	parsed, err := url.Parse(provider.authorizationURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := parsed.Query().Get("scope"); got != "client-scope" {
+		t.Fatalf("scope = %q; want fallback client scope", got)
+	}
 }
 
 // TestOAuthClientMetadataDocument covers the inline Client ID Metadata Document:
@@ -928,8 +1003,21 @@ func TestOAuthClientMetadataDocument(t *testing.T) {
 	if provider.client != nil {
 		t.Fatal("a client document must not be stored")
 	}
+
+	// The document URL is validated as a WHATWG URL, while the configured value remains client_id.
+	provider.clientDocument = &oauth.OAuthClientMetadataDocument{
+		URL: "https:pi.dev/oauth/abc/client.json", RedirectURL: "http://127.0.0.1:1455/callback/abc",
+	}
+	if result, err := oauth.AuthorizeMcp(context.Background(), provider, oauth.FlowOptions{ServerURL: origin + "/mcp"}); err != nil || result != oauth.ResultRedirect {
+		t.Fatalf("special client document authorize = %s, %v", result, err)
+	}
+	parsedSpecial, err := url.Parse(provider.authorizationURL)
+	if err != nil || parsedSpecial.Query().Get("client_id") != "https:pi.dev/oauth/abc/client.json" {
+		t.Fatalf("special client_id = %q, err = %v", parsedSpecial.Query().Get("client_id"), err)
+	}
+
 	// A non-https or root-path document URL is rejected.
-	for _, invalid := range []string{"http://pi.dev/oauth/client.json", "https://pi.dev/"} {
+	for _, invalid := range []string{"http://pi.dev/oauth/client.json", "https://pi.dev/", "https://pi.dev", "https:"} {
 		provider.clientDocument = &oauth.OAuthClientMetadataDocument{URL: invalid, RedirectURL: "http://127.0.0.1/callback"}
 		if _, err := oauth.AuthorizeMcp(context.Background(), provider, oauth.FlowOptions{ServerURL: origin + "/mcp"}); err == nil {
 			t.Fatalf("%q must be rejected", invalid)

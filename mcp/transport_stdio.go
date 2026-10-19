@@ -17,6 +17,8 @@ import (
 )
 
 // Stdio transport tuning (upstream stdio.ts).
+var stdioStartProcess = func(command *exec.Cmd) error { return command.Start() }
+
 const (
 	defaultMaxStderrBytes = 64 * 1024
 	defaultCloseTimeoutMs = 2000
@@ -60,6 +62,7 @@ type StdioTransport struct {
 	stdoutBuffer  []byte
 	stderrBuffer  []byte
 	started       bool
+	startDone     chan struct{}
 	closed        bool
 	closeReported bool
 	exitCh        chan struct{}
@@ -100,7 +103,17 @@ func (t *StdioTransport) Start(ctx context.Context) error {
 		return &protocol.McpConnectionClosedError{}
 	}
 	t.started = true
+	startDone := make(chan struct{})
+	t.startDone = startDone
 	t.mu.Unlock()
+	defer func() {
+		t.mu.Lock()
+		if t.startDone == startDone {
+			t.startDone = nil
+			close(startDone)
+		}
+		t.mu.Unlock()
+	}()
 
 	options := t.options
 	env := os.Environ()
@@ -137,7 +150,7 @@ func (t *StdioTransport) Start(ctx context.Context) error {
 			return err
 		}
 	}
-	if err := cmd.Start(); err != nil {
+	if err := stdioStartProcess(cmd); err != nil {
 		return err
 	}
 
@@ -180,7 +193,6 @@ func (t *StdioTransport) pumpStdout(pipe io.Reader) {
 			t.handleStdout(buf[:n])
 		}
 		if err != nil {
-			t.finishClose()
 			return
 		}
 	}
@@ -272,7 +284,15 @@ func (t *StdioTransport) handleStderr(chunk []byte) {
 	t.mu.Lock()
 	t.stderrBuffer = append(t.stderrBuffer, chunk...)
 	if int64(len(t.stderrBuffer)) > maxStderrBytes {
-		t.stderrBuffer = t.stderrBuffer[int64(len(t.stderrBuffer))-maxStderrBytes:]
+		start := int64(len(t.stderrBuffer)) - maxStderrBytes
+		if maxStderrBytes < 0 {
+			if maxStderrBytes < -int64(len(t.stderrBuffer)) {
+				start = int64(len(t.stderrBuffer))
+			} else {
+				start = -maxStderrBytes
+			}
+		}
+		t.stderrBuffer = t.stderrBuffer[int(start):]
 	}
 	t.mu.Unlock()
 	if t.options.OnStderr != nil {
@@ -303,15 +323,25 @@ func (t *StdioTransport) Send(ctx context.Context, message Message) error {
 // Close shuts the server down per the spec: close stdin and let the server
 // exit, then SIGTERM, then SIGKILL.
 func (t *StdioTransport) Close(ctx context.Context) error {
-	t.mu.Lock()
-	if t.closed {
+	var child *exec.Cmd
+	var pid int
+	for {
+		t.mu.Lock()
+		if t.closed {
+			t.mu.Unlock()
+			return nil
+		}
+		if startDone := t.startDone; startDone != nil {
+			t.mu.Unlock()
+			<-startDone
+			continue
+		}
+		t.closed = true
+		child = t.child
+		pid = t.pid
 		t.mu.Unlock()
-		return nil
+		break
 	}
-	t.closed = true
-	child := t.child
-	pid := t.pid
-	t.mu.Unlock()
 	if child == nil {
 		t.emitClose()
 		return nil

@@ -150,15 +150,25 @@ func (s *OAuthCallbackServer) WaitForCallback(state string, path ...string) (OAu
 	}
 	entry := &pendingCallback{ch: make(chan callbackResult, 1), path: expectedPath}
 	entry.timer = time.AfterFunc(time.Duration(s.timeoutMs)*time.Millisecond, func() {
-		s.mu.Lock()
-		delete(s.pending, state)
-		s.mu.Unlock()
-		entry.ch <- callbackResult{err: fmt.Errorf("OAuth callback timed out")}
+		s.expirePending(state, entry)
 	})
 	s.pending[state] = entry
 	s.mu.Unlock()
 	result := <-entry.ch
 	return result.callback, result.err
+}
+
+// D247: Go timer callbacks can race a replacement waiter, unlike callback.ts's
+// single-threaded event loop, so only a timer's own entry may be removed.
+func (s *OAuthCallbackServer) expirePending(state string, entry *pendingCallback) {
+	s.mu.Lock()
+	if s.pending[state] != entry {
+		s.mu.Unlock()
+		return
+	}
+	delete(s.pending, state)
+	s.mu.Unlock()
+	entry.ch <- callbackResult{err: fmt.Errorf("OAuth callback timed out")}
 }
 
 // Pending reports whether a waiter is registered for the state. Tests use it
@@ -240,8 +250,9 @@ func (s *OAuthCallbackServer) handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if failure := parsed.Query().Get("error"); failure != "" {
-		description := parsed.Query().Get("error_description")
-		if description == "" {
+		query := parsed.Query()
+		description := query.Get("error_description")
+		if !query.Has("error_description") {
 			description = failure
 		}
 		entry.ch <- callbackResult{err: fmt.Errorf("%s", description)}

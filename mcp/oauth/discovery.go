@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
+	"unicode"
 
 	"github.com/dat267/pier/mcp/protocol"
 )
@@ -23,6 +25,14 @@ func defaultFetch(ctx context.Context, request *http.Request) (*http.Response, e
 
 // LatestProtocolVersion re-exports the MCP version for metadata requests.
 const LatestProtocolVersion = protocol.LatestProtocolVersion
+
+func isJSWhitespace(r rune) bool {
+	return r == '\uFEFF' || (r != '\u0085' && unicode.IsSpace(r))
+}
+
+func splitJSScope(value string) []string {
+	return strings.FieldsFunc(value, isJSWhitespace)
+}
 
 func discard(response *http.Response) {
 	if response == nil || response.Body == nil {
@@ -74,11 +84,14 @@ func ParseWwwAuthenticate(header string) OAuthChallenge {
 	if header == "" {
 		return OAuthChallenge{}
 	}
-	fields := strings.Fields(strings.TrimSpace(header))
-	if len(fields) == 0 {
+	scheme := strings.TrimLeftFunc(header, isJSWhitespace)
+	if end := strings.IndexFunc(scheme, isJSWhitespace); end >= 0 {
+		scheme = scheme[:end]
+	}
+	if scheme == "" {
 		return OAuthChallenge{}
 	}
-	scheme := strings.ToLower(fields[0])
+	scheme = strings.ToLower(scheme)
 	if scheme != "bearer" && scheme != "dpop" {
 		return OAuthChallenge{}
 	}
@@ -121,16 +134,17 @@ func DiscoverProtectedResourceMetadata(ctx context.Context, serverURL string, op
 		return nil, err
 	}
 	target := url.URL{Scheme: server.Scheme, Host: server.Host}
+	serverPath := server.EscapedPath()
 	if options.ResourceMetadataURL != nil {
 		configured, err := url.Parse(*options.ResourceMetadataURL)
 		if err != nil {
 			return nil, err
 		}
 		target = *configured
-	} else if suffix := pathSuffix(server.Path); suffix != "" {
+	} else if suffix := pathSuffix(serverPath); suffix != "" {
 		// Upstream joins the well-known path onto the origin, replacing the
 		// server path (and dropping userinfo, query and fragment).
-		target.Path = "/.well-known/oauth-protected-resource" + suffix
+		setEscapedPath(&target, "/.well-known/oauth-protected-resource"+suffix)
 	} else {
 		target.Path = "/.well-known/oauth-protected-resource"
 	}
@@ -138,7 +152,7 @@ func DiscoverProtectedResourceMetadata(ctx context.Context, serverURL string, op
 	if err != nil {
 		return nil, err
 	}
-	if options.ResourceMetadataURL == nil && server.Path != "/" && isDiscoveryMiss(response.StatusCode) {
+	if options.ResourceMetadataURL == nil && serverPath != "" && serverPath != "/" && isDiscoveryMiss(response.StatusCode) {
 		discard(response)
 		fallback := url.URL{Scheme: server.Scheme, Host: server.Host, Path: "/.well-known/oauth-protected-resource"}
 		response, err = fetchMetadata(ctx, fetch, &fallback, version)
@@ -183,7 +197,7 @@ func BuildAuthorizationServerDiscoveryUrls(authorizationServerURL string) []stru
 	if err != nil {
 		return nil
 	}
-	path := pathSuffix(issuer.Path)
+	path := pathSuffix(issuer.EscapedPath())
 	urls := []struct {
 		URL  string
 		Type string
@@ -202,9 +216,21 @@ func BuildAuthorizationServerDiscoveryUrls(authorizationServerURL string) []stru
 
 func joinPath(base url.URL, suffix string) string {
 	// Upstream resolves against the issuer's origin, which drops userinfo,
-	// query and fragment.
-	origin := url.URL{Scheme: base.Scheme, Host: base.Host, Path: suffix}
+	// query and fragment while retaining the URL.pathname's escaped form.
+	origin := url.URL{Scheme: base.Scheme, Host: base.Host}
+	setEscapedPath(&origin, suffix)
 	return origin.String()
+}
+
+func setEscapedPath(target *url.URL, escapedPath string) {
+	decoded, err := url.PathUnescape(escapedPath)
+	if err != nil {
+		target.Path = escapedPath
+		target.RawPath = ""
+		return
+	}
+	target.Path = decoded
+	target.RawPath = escapedPath
 }
 
 // DiscoverAuthorizationServerMetadata walks the well-known candidates
@@ -342,7 +368,16 @@ func isNetworkError(err error) bool {
 	if errors.As(err, &status) {
 		return false
 	}
-	return !strings.Contains(err.Error(), "Invalid ")
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) ||
+		errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+		return true
+	}
+	var requestErr *url.Error
+	if errors.As(err, &requestErr) {
+		return true
+	}
+	var networkErr net.Error
+	return errors.As(err, &networkErr)
 }
 
 // ResourceURLFromServerURL strips the fragment (upstream
@@ -381,8 +416,8 @@ func SelectResource(serverURL string, metadata *OAuthProtectedResourceMetadata) 
 	if originOf(requested) != originOf(configured) {
 		return nil, fmt.Errorf("Protected resource %s does not match MCP server %s", metadata.Resource, requested)
 	}
-	requestedPath := ensureSlash(requested.Path)
-	configuredPath := ensureSlash(configured.Path)
+	requestedPath := ensureSlash(requested.EscapedPath())
+	configuredPath := ensureSlash(configured.EscapedPath())
 	if !strings.HasPrefix(requestedPath, configuredPath) {
 		return nil, fmt.Errorf("Protected resource %s does not match MCP server %s", metadata.Resource, requested)
 	}
