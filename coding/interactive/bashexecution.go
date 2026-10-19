@@ -155,7 +155,15 @@ func NewBashExecutionComponent(command string, host tui.RenderRequester, exclude
 
 	component.AddChild(tui.NewSpacer(1))
 	component.AddChild(NewDynamicBorder(borderColor))
-	component.AddChild(component.contentContainer)
+	// Click-to-expand mirrors tool frames (tool-execution.ts wraps its result in a
+	// MouseRegion); upstream's bash-execution.ts has no click target (D244).
+	component.AddChild(tui.NewMouseRegion(component.contentContainer, func(event tui.TuiMouseEvent) *tui.TuiMouseDispatchResult {
+		if component.status == "running" || event.Type != tui.MouseClick || event.Button != tui.MouseButtonLeft {
+			return nil
+		}
+		component.SetExpanded(!component.expanded)
+		return &tui.TuiMouseDispatchResult{TuiMouseEventResult: tui.TuiMouseEventResult{Handled: true}}
+	}))
 
 	header := tui.NewText(theme.Fg(colorKey, theme.Bold("$ "+command)), outputPad, 0, nil)
 	component.contentContainer.AddChild(header)

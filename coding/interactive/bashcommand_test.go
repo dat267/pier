@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/tui"
 )
 
 // bashComponentIn returns the transcript's bash component, if any.
@@ -274,5 +276,115 @@ func TestBashCommandTrimsJSUrFEFF(t *testing.T) {
 	pumpUntilBashOutput(t, app, "js-ws")
 	if command, _, _ := pumpUntilRecorded(t, app, "echo js-ws"); command != "echo js-ws" {
 		t.Errorf("recorded command = %q", command)
+	}
+}
+
+// pendingBashIn returns the bash frame currently attached to the dock.
+func pendingBashIn(app *App) *BashExecutionComponent {
+	for _, child := range app.pendingMessages.Children {
+		if component, ok := child.(*BashExecutionComponent); ok {
+			return component
+		}
+	}
+	return nil
+}
+
+// A `!` command started while the model streams is shown in the pending dock.
+// Once it completes the frame has to move into the transcript: the dock keeps
+// the height its children ask for, so a completed 20-line preview left there
+// squeezes the transcript to a single row, covering the screen and gluing the
+// frame above the footer until the next normal submission.
+func TestCompletedPendingBashFrameMovesToTheTranscript(t *testing.T) {
+	app, cleanup := newTestAppB(t)
+	defer cleanup()
+
+	release := make(chan struct{})
+	var releaseOnce sync.Once
+	releaseTurn := func() { releaseOnce.Do(func() { close(release) }) }
+	defer releaseTurn()
+
+	app.session.Agent.StreamFunction = func(model *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		stream := ai.NewAssistantMessageEventStream()
+		go func() {
+			<-release
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
+				API: ai.APIAnthropicMessages, Provider: model.Provider, Model: model.ID,
+				Content: ai.ContentList{ai.TextContent{Text: "still working"}}, StopReason: ai.StopStop,
+			}})
+		}()
+		return stream
+	}
+	go func() { _ = app.session.Prompt(context.Background(), "keep working", nil) }()
+
+	waitUntil := func(timeout time.Duration, what string, ok func() bool) {
+		t.Helper()
+		deadline := time.Now().Add(timeout)
+		for !ok() {
+			if time.Now().After(deadline) {
+				t.Fatalf("timed out waiting for %s", what)
+			}
+			app.ui.RenderNow(true)
+			time.Sleep(2 * time.Millisecond)
+		}
+	}
+	waitUntil(5*time.Second, "the session to start streaming", func() bool { return app.session.IsStreaming() })
+
+	var output strings.Builder
+	for i := 0; i < 30; i++ {
+		output.WriteString("dua output line\n")
+	}
+	command := "cat <<'EOF'\n" + output.String() + "EOF"
+	if err := newSubmitWiring(app).Handlers.HandleBashCommand(command, false); err != nil {
+		t.Fatal(err)
+	}
+
+	waitUntil(15*time.Second, "the bash command to finish", func() bool {
+		return !app.session.IsBashRunning() && (bashComponentIn(app) != nil || pendingBashIn(app) != nil)
+	})
+	// Drain the posted SetComplete/flush callbacks.
+	for end := time.Now().Add(200 * time.Millisecond); time.Now().Before(end); {
+		app.ui.RenderNow(true)
+		time.Sleep(2 * time.Millisecond)
+	}
+
+	if pendingBashIn(app) != nil {
+		t.Fatal("the completed bash frame is still attached to the footer dock")
+	}
+	if bashComponentIn(app) == nil {
+		t.Fatal("the completed bash frame is not in the transcript")
+	}
+
+	screen, ok := app.lifecycle.CurrentUI().(*tui.AltScreen)
+	if !ok {
+		t.Fatalf("UI = %T", app.lifecycle.CurrentUI())
+	}
+	frame := tui.RenderLayoutFrame(screen.LayoutRoot(), 100, 30, func() {})
+	box, ok := tui.GetScrollViewBox(frame, app.transcriptScrollView)
+	if !ok {
+		t.Fatal("no transcript scroll box")
+	}
+	if box.Rect.Height < 15 {
+		t.Fatalf("transcript height = %d of 30 rows; the dock swallowed the screen", box.Rect.Height)
+	}
+}
+
+// A manual `!` frame is click-to-expand like a tool frame (upstream only wires
+// the MouseRegion in tool-execution.ts; bash-execution.ts has no click target).
+func TestClickingTheBashFrameTogglesExpansion(t *testing.T) {
+	component := NewBashExecutionComponent("dua", nil, false, 1)
+	for i := 0; i < 30; i++ {
+		component.AppendOutput("entry " + itoa(i) + "\n")
+	}
+	exit := 0
+	component.SetComplete(&exit, false, nil, "")
+
+	collapsed := component.Render(80)
+	click := tui.TuiMouseEvent{Type: tui.MouseClick, Button: tui.MouseButtonLeft, X: 2, Y: 3, Width: 80, Height: len(collapsed)}
+	if result := component.HandleMouse(click); result == nil || !result.Handled {
+		t.Fatalf("click on the bash frame was not handled (render = %d rows)", len(collapsed))
+	}
+	expanded := component.Render(80)
+	if len(expanded) <= len(collapsed) {
+		t.Fatalf("click did not expand the frame: %d rows -> %d rows", len(collapsed), len(expanded))
 	}
 }

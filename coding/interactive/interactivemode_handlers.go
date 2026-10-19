@@ -641,6 +641,12 @@ func newSubmitWiring(app *App) *SubmitWiring {
 					if err != nil {
 						app.ui.Post(func() {
 							component.SetComplete(nil, false, nil, "")
+							// A frame deferred to the dock while the model streams belongs in the
+							// transcript once it stops running: left there, its preview grows the
+							// dock and squeezes the transcript to one row (D244).
+							if app.queue != nil {
+								app.queue.FlushPendingBashComponents()
+							}
 							app.showError("Bash command failed: " + err.Error())
 						})
 						return err
@@ -657,6 +663,10 @@ func newSubmitWiring(app *App) *SubmitWiring {
 						// context. Recording it here as well wrote every `!` run to the
 						// session twice, and a reopened session rendered it twice.
 						component.SetComplete(result.ExitCode, result.Cancelled, truncation, result.FullOutputPath)
+						// D244: the deferred frame moves to the transcript on completion.
+						if app.queue != nil {
+							app.queue.FlushPendingBashComponents()
+						}
 						app.ui.RequestRender(false)
 					})
 					return nil

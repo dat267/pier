@@ -4,7 +4,7 @@ Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D245**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D246**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation.
 
 Related documents: [port status](PORTING.md), [architecture](architecture.md),
@@ -1722,3 +1722,30 @@ retained unchanged.
 Tests: `TestValidateMcpServerConfigNormalizesSpecialHTTPSchemeURL`,
 `TestValidateMcpOAuthNormalizesSpecialLoopbackCallbackURL`, and
 `TestValidateMcpServerConfigMessages`.
+
+## D246
+
+**A completed `!` frame moves to the transcript, and manual bash output is
+click-to-expand.**
+
+Reference: `packages/coding-agent/src/modes/interactive/interactive-mode.ts`
+(`handleBashCommand` defers a frame to `pendingMessagesContainer` while
+`session.isStreaming`, and `flushPendingBashComponents` only runs on a normal
+submission) and `components/bash-execution.ts` (no `MouseRegion`; only
+`components/tool-execution.ts` wraps its result in one).
+
+A deferred frame stays in the input dock until the next normal submission, so a
+completed 20-line preview keeps the dock at its full height: on a 30-row
+terminal the layout gives the transcript one row and the dock 29, which reads as
+the output covering the screen and hanging off the footer. The pinned sources
+reproduce the same allocation, so this is a UI departure, not a port bug. The
+port flushes the frame into the transcript in the same posted callback that
+marks it complete (both the success and error paths), restoring the transcript
+height as soon as the command stops.
+
+The completed frame is also clickable to toggle its preview, using the same
+left-click `MouseRegion` that tool results use; a running frame ignores the
+click, matching a tool frame with no result yet.
+
+Tests: `TestCompletedPendingBashFrameMovesToTheTranscript` and
+`TestClickingTheBashFrameTogglesExpansion`.
