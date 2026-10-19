@@ -145,12 +145,17 @@ func (s *AgentSession) IsStreaming() bool {
 	if s.Agent.State().IsStreaming {
 		return true
 	}
-	if s.promptState == nil {
+	// promptState is created lazily under s.mu, so it must be read under the
+	// same lock; a bare field read races the first Prompt.
+	s.mu.Lock()
+	promptState := s.promptState
+	s.mu.Unlock()
+	if promptState == nil {
 		return false
 	}
-	s.promptState.mu.Lock()
-	defer s.promptState.mu.Unlock()
-	return s.promptState.runActive
+	promptState.mu.Lock()
+	defer promptState.mu.Unlock()
+	return promptState.runActive
 }
 
 // compactionInFlight reports whether a manual or automatic compaction is
