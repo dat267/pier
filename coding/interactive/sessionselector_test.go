@@ -549,3 +549,36 @@ func TestFormatTrashErrorHintTruncatesJoinedParts(t *testing.T) {
 		t.Fatalf("hint = %q; want %q", got, want)
 	}
 }
+
+// session-selector-search.ts scores a regex match with JS String.search, a
+// UTF-16 code-unit index; the port used the byte offset, so a match after
+// multibyte text scored too high and could reorder results.
+func TestMatchSessionRegexScoreUsesUTF16Index(t *testing.T) {
+	// Search text is "s  éé X " (id, name, text, cwd joined by spaces); "X" is
+	// at UTF-16 index 6 but byte offset 8.
+	session := coding.SessionInfo{ID: "s", AllMessagesText: "éé X"}
+	match := MatchSession(session, ParseSearchQuery("re:X"))
+	if !match.Matches {
+		t.Fatal("expected a match")
+	}
+	idx := 6
+	if match.Score != float64(idx)*0.1 {
+		t.Fatalf("score = %v; want %v (UTF-16 index %d)", match.Score, float64(idx)*0.1, idx)
+	}
+}
+
+// The phrase branch has the same byte-vs-UTF-16-unit bug: it used
+// strings.Index, whose offset is bytes.
+func TestMatchSessionPhraseScoreUsesUTF16Index(t *testing.T) {
+	// normalizeWhitespaceLower collapses the join spaces, so the search text is
+	// "s 中文éé"; the phrase starts at UTF-16 index 4 but byte offset 8.
+	session := coding.SessionInfo{ID: "s", AllMessagesText: "中文éé"}
+	match := MatchSession(session, ParseSearchQuery(`"éé"`))
+	if !match.Matches {
+		t.Fatal("expected a match")
+	}
+	idx := 4
+	if match.Score != float64(idx)*0.1 {
+		t.Fatalf("score = %v; want %v (UTF-16 index %d)", match.Score, float64(idx)*0.1, idx)
+	}
+}

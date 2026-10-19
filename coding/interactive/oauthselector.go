@@ -168,7 +168,8 @@ func MatchSession(session coding.SessionInfo, parsed ParsedSearchQuery) MatchRes
 		if index == nil {
 			return MatchResult{}
 		}
-		return MatchResult{Matches: true, Score: float64(index[0]) * 0.1}
+		// JS String.search returns a UTF-16 code-unit index, not a byte offset.
+		return MatchResult{Matches: true, Score: float64(ai.JSLength(text[:index[0]])) * 0.1}
 	}
 
 	if len(parsed.Tokens) == 0 {
@@ -193,7 +194,8 @@ func MatchSession(session coding.SessionInfo, parsed ParsedSearchQuery) MatchRes
 			if index < 0 {
 				return MatchResult{}
 			}
-			totalScore += float64(index) * 0.1
+			// JS String.indexOf returns a UTF-16 code-unit index.
+			totalScore += float64(ai.JSLength(normalizedText[:index])) * 0.1
 			continue
 		}
 		match := tui.MatchFuzzy(token.Value, text)
