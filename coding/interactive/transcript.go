@@ -248,7 +248,7 @@ func (r *TranscriptRenderer) AddMessageToChat(message ai.Message, populateHistor
 			component := newToolFrame("bash", "replay-bash-"+strconv.FormatInt(typed.Timestamp, 10),
 				map[string]any{"command": fields.Command}, toolFrameOptions{
 					Session: r.Session, Settings: r.Settings, Display: r.Display,
-					Prep: r.MarkdownPreparation, UI: r.UI, Cwd: cwd,
+					Prep: r.MarkdownPreparation, UI: r.UI, Cwd: cwd, Manual: true,
 				})
 			component.MarkExecutionStarted()
 			component.SetArgsComplete()

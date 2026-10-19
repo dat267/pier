@@ -629,7 +629,7 @@ func newSubmitWiring(app *App) *SubmitWiring {
 							map[string]any{"command": command}, toolFrameOptions{
 								Session: app.session, Settings: app.settings, Display: app.display,
 								Prep: app.transcript.MarkdownPreparation, UI: app.ui,
-								Cwd: app.session.Sessions.GetCwd(),
+								Cwd: app.session.Sessions.GetCwd(), Manual: true,
 							})
 						component.MarkExecutionStarted()
 						component.SetArgsComplete()

@@ -511,6 +511,11 @@ var bashRenderers = CreateShellRenderers("$")
 
 var powershellRenderers = CreateShellRenderers("PS>")
 
+// manualShellRenderers render a manual `!` command with the shell-mode `!`
+// prompt, so it reads as user-invoked while a model bash call keeps `$`
+// (D251). The rest of the frame is the shell tool's.
+var manualShellRenderers = CreateShellRenderers("!")
+
 // isShellTool reports whether a tool name uses the shell renderers, whose
 // elapsed label ticks at shellElapsedTick (D238).
 func isShellTool(name string) bool { return name == "bash" || name == "powershell" }

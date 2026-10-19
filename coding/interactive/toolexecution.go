@@ -552,6 +552,9 @@ type toolFrameOptions struct {
 	Prep     *tui.MarkdownPreparation
 	UI       tui.RenderRequester
 	Cwd      string
+	// Manual marks a shell command the user invoked with `!`, which renders
+	// with the shell-mode `!` prompt instead of the shell tool's `$` (D251).
+	Manual bool
 }
 
 // newToolFrame builds a tool execution frame with the options every tool frame
@@ -567,6 +570,13 @@ func newToolFrame(toolName, toolCallID string, args any, options toolFrameOption
 		// A shell frame must render as a shell even when the host exposes no
 		// session renderers (tests, standalone transcript renderers).
 		definition = WithBuiltInRenderers(toolName, nil)
+	}
+	if options.Manual && definition != nil && isShellTool(toolName) {
+		// The frame is the shell tool's, but the call line uses the shell-mode
+		// `!` prompt (D251); a custom result renderer still applies.
+		manual := *definition
+		manual.RenderCall = manualShellRenderers.RenderCall
+		definition = &manual
 	}
 	executionOptions := ToolExecutionOptions{}
 	if options.Settings != nil {

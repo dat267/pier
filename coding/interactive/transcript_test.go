@@ -474,7 +474,7 @@ func TestReplayedBashFrameKeepsItsPositionAmongTheTurn(t *testing.T) {
 		}
 		return -1
 	}
-	bashRow := position("$ echo hi")
+	bashRow := position("! echo hi")
 	secondRow := position("second pass")
 	if bashRow < 0 || secondRow < 0 {
 		t.Fatalf("missing frames (bash %d, assistant %d):\n%s", bashRow, secondRow, strings.Join(lines, "\n"))
@@ -523,7 +523,7 @@ func TestReplayedIdleBashFrameStaysInPlace(t *testing.T) {
 		}
 		return -1
 	}
-	bashRow := position("$ echo hi")
+	bashRow := position("! echo hi")
 	askRow := position("next ask")
 	if bashRow < 0 || askRow < 0 {
 		t.Fatalf("missing frames (bash %d, ask %d):\n%s", bashRow, askRow, strings.Join(lines, "\n"))

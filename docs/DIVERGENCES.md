@@ -4,7 +4,7 @@ Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D250**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D251**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation.
 
 Related documents: [port status](PORTING.md), [architecture](architecture.md),
@@ -1746,8 +1746,10 @@ entry is unchanged: a `bashExecution` custom message recorded by
 `recordBashResult` (deferred to the turn's end while the agent streams), which
 `ConvertToLlm` still projects as a user message; D248 restores the frame's
 position on replay. A running `!` command belongs to the active turn, so Escape
-aborts it with the turn. The `!!` form keeps its context exclusion but no longer
-has upstream's separate dim styling, which a tool frame has no equivalent for.
+aborts it with the turn. The call line's prompt is the shell-mode `!` rather
+than the tool's `$` (D251). The `!!` form keeps its context exclusion but no
+longer has upstream's separate dim styling, which a tool frame has no equivalent
+for.
 
 Tests: `TestBashFrameJoinsTheTranscriptWhileTheModelStreams`,
 `TestManualBashFrameTicksWhileTheAgentIsIdle` and
@@ -1820,3 +1822,20 @@ while replaying the message. The command was trimmed before execution, so the
 restored entry is the normalized form rather than the raw typed text.
 
 Tests: `TestTranscriptRestoresBashCommandHistory`.
+
+## D251
+
+**A manual `!` command's call line uses the shell-mode `!` prompt.**
+
+Reference: `components/bash-execution.ts` renders its own `$ command` header, and
+`theme.ts` colors the editor border with `bashMode` while the input starts with
+`!`. D246 already gives a manual command the shell tool's frame, so the frame
+alone no longer tells the two apart. The port swaps the call line's prompt from
+the shell tool's `$` to `!` (the sigil the user typed), leaving the rest of the
+frame identical and the color unchanged. A manual power-shell command would use
+the same `!` prompt; the result renderer, including a custom session renderer,
+is unchanged.
+
+Tests: `TestBashCommandFromTheEditor`,
+`TestReplayedBashFrameKeepsItsPositionAmongTheTurn` and
+`TestReplayedIdleBashFrameStaysInPlace`.

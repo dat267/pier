@@ -108,10 +108,10 @@ func TestBashCommandFromTheEditor(t *testing.T) {
 	if args, ok := component.args.(map[string]any); !ok || args["command"] != "echo hello-from-bash" {
 		t.Errorf("command = %v", component.args)
 	}
-	// The frame is the shell tool's: the same call line and output preview a
-	// model bash call renders (D246).
+	// The frame is the shell tool's, with the shell-mode `!` prompt instead of
+	// the tool's `$` (D246/D251).
 	rendered := coding.StripAnsi(strings.Join(component.Render(100), "\n"))
-	if !strings.Contains(rendered, "$ echo hello-from-bash") || !strings.Contains(rendered, "hello-from-bash") {
+	if !strings.Contains(rendered, "! echo hello-from-bash") || !strings.Contains(rendered, "hello-from-bash") {
 		t.Fatalf("shell frame render = %q", rendered)
 	}
 
@@ -384,7 +384,11 @@ func TestManualBashFrameTicksWhileTheAgentIsIdle(t *testing.T) {
 	if err := newSubmitWiring(app).Handlers.HandleBashCommand("sleep 2", false); err != nil {
 		t.Fatal(err)
 	}
-	waitForConditionWithin(t, func() bool { return manualBashIn(app) != nil }, 5*time.Second)
+	// The app loop owns the chat container, so the test reads it on the loop
+	// (D143): a direct read races the posted AddChild under `-race`.
+	waitForConditionWithin(t, func() bool {
+		return postValue(app, func() bool { return manualBashIn(app) != nil })
+	}, 5*time.Second)
 
 	screen := app.lifecycle.CurrentUI().(*tui.AltScreen)
 	elapsedLine := func() string {
