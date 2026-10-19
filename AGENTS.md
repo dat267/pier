@@ -6,6 +6,15 @@ performance, `docs/locks.md` for lock ownership, `docs/rpc.md` for stdio RPC, an
 `docs/terminal-output.md` for terminal output policy. The README covers install
 and usage.
 
+## Skills
+
+Before starting a task, scan the `<available_skills>` block in the system
+prompt. If a skill's description matches the task, read its `SKILL.md` first and
+follow it. Do not start work without checking: the available skills cover
+test-first changes, root-cause debugging and the general coding guardrails, and
+loading one after the first attempt has already begun is too late. A skill file's
+relative paths resolve against the directory containing `SKILL.md`.
+
 ## What this is
 
 A from-scratch Go implementation of an AI coding agent with a terminal UI,
