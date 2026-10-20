@@ -30,14 +30,98 @@ func MatchGlob(pattern, value string, nocase bool) bool {
 	return false
 }
 
-// expandBraces expands the first brace group into alternatives, recursively.
+const (
+	// globBraceExpansionMax and globBraceExpansionMaxLength bound brace
+	// expansion like brace-expansion's EXPANSION_MAX and EXPANSION_MAX_LENGTH
+	// (the CVE-2026-14257 fix): a pattern with many brace groups is truncated
+	// instead of exhausting memory.
+	globBraceExpansionMax       = 100_000
+	globBraceExpansionMaxLength = 4_000_000
+)
+
+// expandBraces expands the brace groups into alternatives. A backslash escapes
+// the character after it, so "\{a,b\}" stays literal. The expansion is
+// breadth-first and truncated at the expansion limits, so a pattern with many
+// brace groups cannot exhaust memory.
 func expandBraces(pattern string) []string {
-	open := -1
+	results := []string{pattern}
+	for {
+		var next []string
+		nextLength := 0
+		expandedAny := false
+		truncated := false
+		for _, current := range results {
+			open, close := globBraceGroup(current)
+			if open < 0 {
+				next = append(next, current)
+				nextLength += len(current)
+				continue
+			}
+			expandedAny = true
+			for _, alternative := range splitTopLevel(current[open+1 : close]) {
+				candidate := current[:open] + alternative + current[close+1:]
+				if len(next) >= globBraceExpansionMax || nextLength+len(candidate) > globBraceExpansionMaxLength {
+					truncated = true
+					break
+				}
+				next = append(next, candidate)
+				nextLength += len(candidate)
+			}
+			if truncated {
+				break
+			}
+		}
+		// Truncation drops the remaining alternatives; they would never match
+		// anyway, and expanding them all is what the limits exist to prevent.
+		if truncated {
+			return unescapeBracePatterns(next)
+		}
+		if !expandedAny || len(next) == 0 {
+			return unescapeBracePatterns(results)
+		}
+		results = next
+	}
+}
+
+// unescapeBracePatterns turns the brace-expansion escapes into their literal
+// characters; the glob matcher handles every other escape.
+func unescapeBracePatterns(patterns []string) []string {
+	for index, pattern := range patterns {
+		if strings.Contains(pattern, "\\") {
+			patterns[index] = unescapeBracePattern(pattern)
+		}
+	}
+	return patterns
+}
+
+// unescapeBracePattern turns the brace-expansion escapes into their literal
+// characters.
+func unescapeBracePattern(pattern string) string {
+	var out strings.Builder
+	out.Grow(len(pattern))
+	for index := 0; index < len(pattern); index++ {
+		if pattern[index] == '\\' && index+1 < len(pattern) {
+			switch pattern[index+1] {
+			case '{', '}', ',', '.':
+				out.WriteByte(pattern[index+1])
+				index++
+				continue
+			}
+		}
+		out.WriteByte(pattern[index])
+	}
+	return out.String()
+}
+
+// globBraceGroup returns the offsets of the first unescaped top-level "{" and
+// its matching "}" (open is -1 when the pattern has no group).
+func globBraceGroup(pattern string) (open, close int) {
+	open = -1
 	depth := 0
-	for index, char := range pattern {
-		switch char {
+	for index := 0; index < len(pattern); index++ {
+		switch pattern[index] {
 		case '\\':
-			continue
+			index++
 		case '{':
 			if depth == 0 {
 				open = index
@@ -47,41 +131,43 @@ func expandBraces(pattern string) []string {
 			if depth > 0 {
 				depth--
 				if depth == 0 {
-					prefix := pattern[:open]
-					body := pattern[open+1 : index]
-					suffix := pattern[index+1:]
-					var out []string
-					for _, alternative := range splitTopLevel(body) {
-						for _, expanded := range expandBraces(prefix + alternative + suffix) {
-							out = append(out, expanded)
-						}
-					}
-					return out
+					return open, index
 				}
 			}
 		}
 	}
-	return []string{pattern}
+	return -1, -1
 }
 
+// splitTopLevel splits a brace body on its unescaped top-level commas.
 func splitTopLevel(body string) []string {
 	var parts []string
 	depth := 0
 	current := strings.Builder{}
-	for _, char := range body {
-		switch char {
+	for index := 0; index < len(body); index++ {
+		switch body[index] {
+		case '\\':
+			current.WriteByte(body[index])
+			index++
+			if index < len(body) {
+				current.WriteByte(body[index])
+			}
 		case '{':
 			depth++
+			current.WriteByte(body[index])
 		case '}':
 			depth--
+			current.WriteByte(body[index])
 		case ',':
 			if depth == 0 {
 				parts = append(parts, current.String())
 				current.Reset()
 				continue
 			}
+			current.WriteByte(body[index])
+		default:
+			current.WriteByte(body[index])
 		}
-		current.WriteRune(char)
 	}
 	parts = append(parts, current.String())
 	return parts
