@@ -1,8 +1,8 @@
 # AGENTS.md
 
-Read this first. `docs/PORTING.md` tracks per-area status, `docs/DIVERGENCES.md`
-the intentional differences, plus `docs/architecture.md`, `docs/locks.md`,
-`docs/rpc.md` and `docs/terminal-output.md`.
+Read this first. Deep dives: `docs/PORTING.md` (per-area status, pin),
+`docs/DIVERGENCES.md` (intentional differences), `docs/architecture.md`,
+`docs/locks.md`, `docs/rpc.md`, `docs/terminal-output.md`.
 
 Scan the `<available_skills>` block before starting a task and read a matching
 `SKILL.md` first (test-first, debugging, guardrails); loading it after the first
@@ -11,13 +11,12 @@ attempt is too late. Relative paths resolve against that directory.
 ## What this is
 
 A from-scratch Go port of Mario Zechner's **pi**
-(`github.com/earendil-works/pi`) and a sibling of its TypeScript monorepo, not a
+(`github.com/earendil-works/pi`), a sibling of its TypeScript monorepo, not a
 fork. Module `github.com/dat267/pier`, Go 1.27, offline-cached modules only
 (`go.mod` is authoritative). The reference checkout is `./pi` (gitignored),
-pinned to `v1.3.0` (`71023aec`): `just reference` fails at another tag, and
-`just reference-fetch` refreshes tags without moving it. Diff through its
-sources (`node --experimental-strip-types`, `FORCE_COLOR=1` for chalk parity),
-and say which tag a review read.
+pinned to `v1.3.0` (`71023aec`); `just reference` fails at another tag and
+`just reference-fetch` refreshes tags without moving it. Diff against those
+sources, not an installed bundle, and say which tag a review read.
 
 ## Reference rules
 
@@ -25,20 +24,19 @@ and say which tag a review read.
    behavior. Cite the reference file in each commit. A departure is a deliberate
    feature, not an approximation to correct silently.
 2. **JSON is byte-parity.** Sessions, transcripts and wire payloads round-trip
-   identically: key names, key order, no HTML escaping. Use `ai.MarshalJSON`,
-   never `encoding/json.Marshal`, for persisted or sent data. JS insertion order
-   is tracked explicitly where it matters.
+   identically, including key order and HTML escaping: persist and send through
+   `ai.MarshalJSON`, never `encoding/json.Marshal`. JS insertion order matters.
 3. **JS semantics where pi relies on them**: object order, `JSON.stringify`,
-   truthiness at API boundaries. Departures get a numbered **D-row** comment with
-   the reproducing scenario and an entry in `docs/DIVERGENCES.md`.
+   truthiness at API boundaries. Departures get a **D-row** comment with the
+   reproducing scenario and an entry in `docs/DIVERGENCES.md`.
 4. **Every behavior change is test-observed**; Go-only tests cite upstream.
 
 ## Layout
 
-`main.go` wraps `cmd`; packages mirror upstream `packages/`: `ai`, `agent`,
-`coding`, `coding/interactive`, `tui`, `coding/rpcclient`. Port-local:
-`internal/offloop`, `internal/uiblock`, `internal/goal` (D223),
-`internal/markdown`, `internal/highlight`; `scripts` generates catalogs.
+Packages mirror upstream `packages/`: `ai`, `agent`, `coding`,
+`coding/interactive`, `tui`, `coding/rpcclient`, with `main.go` wrapping `cmd`.
+Port-local helpers live in `internal/`, `scripts/` generates catalogs, and
+`docs/` holds the status and design documents.
 
 ## Build, test, run
 
@@ -47,72 +45,58 @@ go build ./... && go vet ./... && gofmt -l .   # the local gate
 go test -count=1 ./...
 ```
 
-CI adds `go test -race -count=2 -timeout 300s ./...` with `GOTRACEBACK=all`; do
-not run the race detector locally except to reproduce a CI failure, and treat a
-test that fails only under `-race` as a bug. `just` wraps the gate; install with
-`pier update`, never `go install github.com/dat267/pier@latest`.
+CI runs the same gate with the race detector, twice, and with `GOTRACEBACK=all`.
+Treat a test that fails only under `-race` as a bug, but leave the race gate to
+CI. `just` wraps the gate; install with `pier update`, never `go install`.
 
-CI runs one pinned Ubuntu runner, then cross-builds and cross-`vet`s Windows,
-Linux/arm64, Android/arm64 and macOS, so OS-only `syscall` code cannot break
-`go install`. PTY tests reuse `PIER_TEST_BIN`, else `./bin/pier`, else build
-once; `-short` skips them and SSA.
+CI also cross-builds and cross-`vet`s Windows, Linux/arm64, Android/arm64 and
+macOS on one runner, so OS-only `syscall` code cannot break `go install`. PTY
+tests reuse a prebuilt binary or build one, and `-short` skips them.
 
-Keep fixtures sized to the property (60k appends cost 44 s under `-race`); use
-`allocatedBytesPerRun`/`AllocsPerRun`, not `testing.Benchmark` calls; swap
-`deviceCodeSleep`/`oauthRetrySleep` instead of sleeping; never spawn the editor
-(stub `externalEditorRunner`). Auth: `~/.pi/agent/auth.json` (or
-`PI_CODING_AGENT_DIR`); `--offline` skips the catalog refresh.
+Keep the suite quick: size fixtures to the property under test, use allocation
+counters instead of benchmark loops in ordinary tests, fake sleeps instead of
+sleeping, and never spawn the developer's editor from a test.
 
 ## Concurrency and the interactive mode
 
-The UI is a single-writer loop (D143; upstream is single-threaded). Producers
-only enqueue: `sessionEventQueue` is lossless plus latest-wins partials, and
-blocking work runs off-loop via `internal/offloop`/`RunWork`. D199-D209 own
-shutdown draining, clipboard and detached-work ownership, admission bounds,
-OSC 52 and hint deferral, cooperative resize warming, and 64 KiB Markdown/tool
-rendering with owner-applied generation checks, retained frames and flattened
-containers. The loop select has a `ctx.Done()` arm, pre-paint drains cap at 64
-events (D197), and assistant partials carry a UI-local stream generation (D196).
-Heavy handler, render and watcher work runs off-loop or is chunked, and
-`TestStreamingDeltaCostIndependentOfTranscriptSize` bounds streaming deltas.
+The UI is a single-writer loop; upstream is single-threaded and every Go lock
+bridges that gap (D143). Producers only enqueue, and blocking work (turns,
+session writes, settings, themes, transcript pre-rendering, clipboard) runs
+off-loop. Ownership, shutdown draining, admission bounds, terminal output and
+tool-frame lifecycle are documented row by row in `docs/DIVERGENCES.md` and
+`docs/locks.md`; workers never mutate attached UI state, never run user code
+under a retained mutex, and callbacks are snapshotted under the lock and
+delivered outside it.
 
 **Optimize only what is reproducible**: a red test, a benchmark or a concrete
-report first; speculative caches, thresholds, fast paths and off-loop plumbing get
-reverted. Do not assemble the session projection by hand, re-scan entries per
-message, or run a value-shaped loop on the UI thread.
+report first; speculative caches, thresholds, fast paths and off-loop plumbing
+get reverted. Do not assemble the session projection by hand, re-scan entries
+per message, or run a value-shaped loop on the UI thread.
 
-`interactive-mode.ts` is one ~4000-line class, split into `*Wiring` types in
-`coding/interactive/app.go`. `coding/session_projection.go` is one
-branch-version-cached walk over branch, compaction window, context settings and
-messages; `LatestCompaction`, `ContextSignature` and `CacheMissFor` avoid
-decoding it, and large sessions attach a trailing window.
+`interactive-mode.ts` is one large class; the port splits it into wirings
+composed in `coding/interactive/app.go`, and the session projection lives in one
+module cached by branch version (`docs/architecture.md`).
 
 ## Conventions and gotchas
 
-- `SessionConfig.Control` carries the model runtime, settings, tool registry and
-  toggles; `NewAgentSession` installs it (or an empty block), so no method guards
-  a half-built session. An empty block means auto-compaction and retry are off.
-- UI state belongs to the owner loop; workers enqueue events or use `UI.Post`.
-  Narrow locks remain for handoff, terminal I/O, logging and core state
-  (`docs/locks.md`). Never run user code under a retained mutex: snapshot under,
-  deliver outside. `internal/uiblock` enforces the non-blocking loop.
-- Tests pin `TMPDIR`; a stub that reports through a file writes `out.part` then
-  `mv`s it, so a polling reader never sees an empty `out`.
-- Use `strings.Builder` whenever iteration count scales with input;
-  `TestMarkdownRenderScalesWithInputSize` bounds allocations.
-- `ptyflow_test.go` covers the in-process flows (no PTY); `internal/uiblock`
-  checks the blocking invariant statically; other PTY tests drive the real
-  binary; `ptywatch_test.go` keeps `TestMutexBlockedDetectorHasTeeth`.
-- Go 1.27: function literals passed as arguments need an explicit result type.
-  RE2: no lookaround, `-` first in a class, no `\s` inside `[...]`. `filepath.Rel`
-  returns `"."` for equal paths (Node `""`); `path.Clean` drops trailing slashes;
-  normalize nil vs empty slices when comparing renders.
-- Seams are wired (`SetCustomThemesDir`, `tui.SetKeybindings`,
-  `SetClipboardCopier`, `coding.SetPackageDir`); screens use `RenderNow`. Goldens
-  in `*/testdata/` are `label => JSON` lines generated from upstream with Node.
+- A session always has its collaborators: `NewAgentSession` installs the control
+  block, so no method guards a half-built session; optional fields stay optional
+  and an empty block disables auto-compaction and retry.
+- UI state belongs to the owner loop; workers post events or use `UI.Post`.
+  `internal/uiblock` enforces the non-blocking loop; audit ownership and callback
+  re-entrancy when adding a worker, handoff or lock.
+- Tests pin `TMPDIR`; a file-reporting stub writes a temp name then renames, so a
+  polling reader never sees an empty file.
+- Use `strings.Builder` whenever iteration count scales with input.
+- Go/JS parity traps: `filepath.Rel` returns `"."` for equal paths (Node `""`),
+  `path.Clean` drops trailing slashes, and renders compare nil vs empty slices.
+  Go 1.27 needs an explicit result type on some function-literal arguments; RE2
+  has no lookaround and no `\s` inside `[...]`.
+- Goldens in `*/testdata/` are `label => JSON` lines generated from upstream with
+  Node; Go replays the same scripted input.
 
 ## Out of scope (documented)
 
-Native (Bun FFI) clipboard (platform commands instead, D106); Photon's Lanczos3
-and WebP/BMP decoding (bilinear resizer, stdlib codecs, D26); extensions and the
-package manager; a full stdio RPC (`docs/rpc.md`, D235); Mermaid (inert).
+Native (Bun FFI) clipboard; Photon's Lanczos3/WebP/BMP decoding; extensions and
+the package manager; a full stdio RPC milestone; Mermaid rendering. See
+`docs/PORTING.md` and `docs/DIVERGENCES.md` for the rationale.
