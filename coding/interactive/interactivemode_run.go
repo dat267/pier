@@ -302,14 +302,16 @@ func (w *RunWiring) BuildStartupHeader(scopedModels []coding.ScopedModel) tui.Co
 		compactOnboarding += " and loaded resources"
 	}
 	compactOnboarding = theme.Fg("dim", compactOnboarding+".")
-	onboarding := theme.Fg("dim",
-		"Pi can explain its own features and look up its docs. Ask it how to use or extend Pi.")
+	// Upstream ends the header with an onboarding line claiming the agent can
+	// explain its features and look up its docs. Pier ships no docs tree
+	// (D176) and the prompt carries no product-feature inventory, so the claim
+	// was false; the line is dropped.
 	expanded := w.GetStartupExpansionState()
 	header := NewExpandableText(
 		func() string {
-			return logo + "\n" + compactInstructions + "\n" + compactOnboarding + "\n\n" + onboarding
+			return logo + "\n" + compactInstructions + "\n" + compactOnboarding
 		},
-		func() string { return logo + "\n" + expandedInstructions + "\n\n" + onboarding },
+		func() string { return logo + "\n" + expandedInstructions },
 		expanded, 1, 0)
 	return header
 }
