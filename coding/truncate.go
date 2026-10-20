@@ -385,11 +385,9 @@ type TruncateLineOutput struct {
 }
 
 // TruncateLine truncates a single line to maxChars with a [truncated] suffix
-// (grep match lines).
+// (grep match lines). Upstream's default applies to an omitted argument; Go
+// callers always pass the limit, so an explicit 0 truncates everything.
 func TruncateLine(line string, maxChars int) TruncateLineOutput {
-	if maxChars == 0 {
-		maxChars = GrepMaxLineLength
-	}
 	if ai.JSLength(line) <= maxChars {
 		return TruncateLineOutput{Text: line, WasTruncated: false}
 	}
