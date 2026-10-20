@@ -90,8 +90,9 @@ type RunWiring struct {
 	// TakeCrash returns the unnotified crash record.
 	TakeCrash func() *coding.CrashRecord
 	// CrashLogPath names the file the crash record was written to, for the
-	// startup notice.
-	CrashLogPath func() string
+	// startup notice. It is resolved when the wiring is built: resolving it
+	// reads the agent directory, which must not happen on the UI loop.
+	CrashLogPath string
 	// Prompt sends a prompt to the session.
 	// Prompt submits a prompt; images ride with it the way upstream's
 	// session.prompt(text, images) attaches them (@file images on the first
@@ -477,8 +478,8 @@ func (w *RunWiring) Run(ctx context.Context, options InitOptions, runOptions Run
 	if w.TakeCrash != nil {
 		if crash := w.TakeCrash(); crash != nil {
 			details := ""
-			if w.CrashLogPath != nil {
-				details = " The details are in " + w.CrashLogPath() + ";"
+			if w.CrashLogPath != "" {
+				details = " The details are in " + w.CrashLogPath + ";"
 			}
 			w.ShowChatWarning(w.AppName + " crashed on " + crash.Timestamp + " (" + crash.Message + ")." + details +
 				" Open an issue at " + coding.PortRepositoryURL + "/issues to report it.")
@@ -907,7 +908,7 @@ func newRunWiring(app *App) *RunWiring {
 		TakeCrash: func() *coding.CrashRecord {
 			return coding.TakeUnnotifiedCrash(coding.GetCrashLogPath(app.options.AgentDir), time.Now().UnixMilli())
 		},
-		CrashLogPath: func() string { return coding.GetCrashLogPath(app.options.AgentDir) },
+		CrashLogPath: coding.GetCrashLogPath(app.options.AgentDir),
 
 		Prompt: func(ctx context.Context, text string, images []ai.ImageContent) error {
 			return app.session.Prompt(ctx, text, &coding.PromptOptions{Images: images})

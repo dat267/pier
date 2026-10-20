@@ -4,7 +4,7 @@ Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D259**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D260**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation.
 
 Related documents: [port status](PORTING.md), [architecture](architecture.md),
@@ -2021,3 +2021,21 @@ names `/login <provider>`, which exists. The OAuth form now points at the
 `oauth` block in `mcp.json` instead of at a command that does not exist.
 
 Test: `TestMcpConnectionAsksOAuthServersToSignIn`.
+
+## D260
+
+**A non-RGI emoji ZWJ chain is measured as one two-cell emoji.**
+
+Reference: `packages/tui/src/utils.ts`, `graphemeWidth`, tests the whole cluster
+against `\p{RGI_Emoji}`, which is the explicit Unicode list of ZWJ sequences
+(family, professions, the five selector-lead sequences). The port carries the
+generated `Extended_Pictographic` and emoji-modifier tables, but not the full
+sequence list, so it accepts a ZWJ chain when every part is an emoji base and the
+lead has default emoji presentation (or is one of the five selector-lead
+sequences). A real sequence is measured identically. A chain the list does not
+contain is measured as two cells instead of the reference's part-by-part sum:
+`"\u270a\u200d\u203c\ufe0f\u200d\u270a"` is 4 cells upstream and 2 here, and
+`"\U0001F9B9\ufe0f\u200d\u261d"` is 3 upstream and 2 here. Only text that
+joins emoji bases that Unicode never joined is affected.
+
+Test: `TestVisibleWidthMatchesGraphemeGrouping`.

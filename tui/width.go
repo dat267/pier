@@ -39,20 +39,18 @@ func segmentGraphemes(text string) []string {
 	}
 
 	var segments []string
+	var grouper graphemeGrouper
 	clusterStart := 0
-	previous := rune(0)
 	for index, current := range text {
 		if index == clusterStart {
-			previous = current
+			grouper.start(current)
 			continue
 		}
-		if extendsCluster(previous, current) {
-			previous = current
+		if grouper.extend(current) {
 			continue
 		}
 		segments = append(segments, text[clusterStart:index])
 		clusterStart = index
-		previous = current
 	}
 	return append(segments, text[clusterStart:])
 }
@@ -75,21 +73,19 @@ func scanGraphemes(text string, fn func(segment string) bool) {
 		return
 	}
 	clusterStart := 0
-	previous := rune(0)
+	var grouper graphemeGrouper
 	for index, current := range text {
 		if index == clusterStart {
-			previous = current
+			grouper.start(current)
 			continue
 		}
-		if extendsCluster(previous, current) {
-			previous = current
+		if grouper.extend(current) {
 			continue
 		}
 		if !fn(text[clusterStart:index]) {
 			return
 		}
 		clusterStart = index
-		previous = current
 	}
 	fn(text[clusterStart:])
 }
@@ -104,48 +100,287 @@ func isASCII(text string) bool {
 	return true
 }
 
-// extendsCluster reports whether r continues the grapheme cluster that ends
-// with last.
-func extendsCluster(last, r rune) bool {
-	// Combining marks extend (Mn/Me and the spacing exceptions).
-	if isCombiningMark(r) {
+// graphemeGrouper decides grapheme cluster boundaries: the UAX #29 rules the
+// width math depends on, because some widths are only correct for the cluster
+// Intl.Segmenter would produce (a trailing Hangul jamo, a whole flag, an emoji
+// ZWJ sequence).
+type graphemeGrouper struct {
+	previous     rune
+	previousInfo runeInfo
+	// tailBase is the cluster's last rune that is not an Extend or a spacing
+	// mark. Whether it is an extended pictograph is only asked when a ZWJ
+	// arrives, so the emoji table is not searched per rune.
+	tailBase rune
+	// joinAfterZWJ reports that the cluster ends in ExtPict Extend* ZWJ, so an
+	// extended pictograph joins it (rule GB11).
+	joinAfterZWJ bool
+	// hangul is the Hangul syllable type of previous (rules GB6-GB8).
+	hangul hangulType
+	// regionalIndicators counts the regional indicators in the cluster, which
+	// pair up (rules GB12-GB13).
+	regionalIndicators int
+}
+
+// runeInfo is the per-rune classification of the boundary rules. It is
+// computed once per rune instead of once per neighbouring pair.
+type runeInfo struct {
+	control bool
+	prepend bool
+	linker  bool
+}
+
+func classifyGraphemeRune(r rune) runeInfo {
+	return runeInfo{
+		control: isGraphemeControl(r),
+		prepend: isPrepend(r),
+		linker:  isLinker(r),
+	}
+}
+
+// start begins a cluster at r.
+func (g *graphemeGrouper) start(r rune) { g.begin(r, classifyGraphemeRune(r)) }
+
+// begin begins a cluster at r whose classification is already known.
+func (g *graphemeGrouper) begin(r rune, info runeInfo) {
+	g.previous = r
+	g.previousInfo = info
+	g.tailBase = r
+	g.joinAfterZWJ = false
+	g.hangul = hangulTypeOf(r)
+	if isRegionalIndicator(r) {
+		g.regionalIndicators = 1
+	} else {
+		g.regionalIndicators = 0
+	}
+}
+
+// extend reports whether r continues the current cluster.
+func (g *graphemeGrouper) extend(r rune) bool {
+	info := classifyGraphemeRune(r)
+	previous := g.previous
+	// GB3: CR × LF.
+	if previous == '\r' && r == '\n' {
+		g.append(r, info)
 		return true
 	}
-	// Variation selectors extend.
-	if r == 0xFE0E || r == 0xFE0F {
+	// GB4/GB5: controls break on both sides.
+	if g.previousInfo.control || info.control {
+		g.begin(r, info)
+		return false
+	}
+	// GB9: × (Extend | ZWJ).
+	if isGraphemeExtend(r) {
+		g.append(r, info)
 		return true
 	}
-	// A ZWJ joins the next character into the cluster.
-	if r == 0x200D {
+	// GB9a: × SpacingMark.
+	if isGraphemeSpacingMark(r) {
+		g.append(r, info)
 		return true
 	}
-	// Skin tone modifiers attach to emoji.
-	if isSkinToneModifier(r) {
+	// GB11: ExtPict Extend* ZWJ × ExtPict. A ZWJ after a non-pictograph does not
+	// join what follows it.
+	if g.joinAfterZWJ && isExtendedPictographic(r) {
+		g.append(r, info)
 		return true
 	}
-	// Regional indicator pairs form flag emoji.
-	if isRegionalIndicator(last) && isRegionalIndicator(r) {
+	// GB9b: Prepend ×.
+	if g.previousInfo.prepend {
+		g.append(r, info)
 		return true
 	}
-	// A virama joins the consonant cluster (indic scripts).
-	if isVirama(last) {
+	// GB6-GB8: Hangul syllable sequences.
+	if hangulJoins(g.hangul, hangulTypeOf(r)) {
+		g.append(r, info)
 		return true
 	}
-	// The character after a ZWJ joins the cluster (emoji sequences).
-	if last == 0x200D {
+	// GB12/GB13: regional indicators pair up, so a third one starts a new flag.
+	if isRegionalIndicator(r) && g.regionalIndicators&1 == 1 {
+		g.append(r, info)
 		return true
+	}
+	// A linker joins the following consonant into the same cluster (UAX #29
+	// GB9c): a digit, space or letter of another script starts a new cluster.
+	if g.previousInfo.linker && linkerJoinsConsonant(previous, r) {
+		g.append(r, info)
+		return true
+	}
+	g.begin(r, info)
+	return false
+}
+
+// append records r as part of the current cluster.
+func (g *graphemeGrouper) append(r rune, info runeInfo) {
+	switch {
+	case r == 0x200D:
+		g.joinAfterZWJ = isExtendedPictographic(g.tailBase)
+	case isGraphemeExtend(r) || isGraphemeSpacingMark(r):
+		// Extending code points keep the base a later ZWJ would test.
+		g.joinAfterZWJ = false
+	default:
+		g.tailBase = r
+		g.joinAfterZWJ = false
+	}
+	if isRegionalIndicator(r) {
+		g.regionalIndicators++
+	} else {
+		g.regionalIndicators = 0
+	}
+	g.hangul = hangulTypeOf(r)
+	g.previous = r
+	g.previousInfo = info
+}
+
+// graphemeControlRanges are the UAX #29 Control code points: Cc, the Cf
+// format characters except ZWNJ and ZWJ, Zl and Zp, and the unassigned code
+// points in the tags block. Prepend characters are excluded (rule GB9b attaches
+// them) as are the tag characters and the variation-selector supplement (both
+// Extend). The table is checked against the Unicode predicates by
+// TestGraphemeControlRanges.
+var graphemeControlRanges = [][2]rune{
+	{0x0, 0x1F},
+	{0x7F, 0x9F},
+	{0xAD, 0xAD},
+	{0x61C, 0x61C},
+	{0x180E, 0x180E},
+	{0x200B, 0x200B},
+	{0x200E, 0x200F},
+	{0x2028, 0x202E},
+	{0x2060, 0x2064},
+	{0x2066, 0x206F},
+	{0xFEFF, 0xFEFF},
+	{0xFFF9, 0xFFFB},
+	{0x13430, 0x1343F},
+	{0x1BCA0, 0x1BCA3},
+	{0x1D173, 0x1D17A},
+	{0xE0000, 0xE001F},
+	{0xE0080, 0xE00FF},
+	{0xE01F0, 0xE0FFF},
+}
+
+// isGraphemeControl reports the UAX #29 Control class.
+func isGraphemeControl(r rune) bool { return isInTable(r, graphemeControlRanges) }
+
+// isGraphemeExtend reports the UAX #29 Extend class: marks, variation
+// selectors, emoji modifiers, ZWNJ and tag characters.
+func isGraphemeExtend(r rune) bool {
+	if unicode.IsMark(r) {
+		return true
+	}
+	if unicode.Is(unicode.Variation_Selector, r) || isSkinToneModifier(r) {
+		return true
+	}
+	if r == 0x200C || r == 0x200D {
+		return true
+	}
+	return r >= 0xE0020 && r <= 0xE007F
+}
+
+// prependRanges are the UAX #29 Prepend code points. The
+// Prepended_Concatenation_Mark property Go exposes omits the Malayalam dot reph
+// (U+0D4E) in the Unicode version this build ships, so the class is spelled out.
+var prependRanges = [][2]rune{
+	{0x0600, 0x0605}, {0x06DD, 0x06DD}, {0x070F, 0x070F}, {0x0890, 0x0891},
+	{0x08E2, 0x08E2}, {0x0D4E, 0x0D4E}, {0x110BD, 0x110BD}, {0x110CD, 0x110CD},
+	{0x111C2, 0x111C3}, {0x1193F, 0x1193F}, {0x11941, 0x11941},
+	{0x11A3A, 0x11A3A}, {0x11A84, 0x11A89}, {0x11D46, 0x11D46}, {0x11F02, 0x11F02},
+}
+
+// isGraphemeSpacingMark reports the two spacing marks that are letters rather
+// than Marks (rule GB9a): the Thai and Lao AM vowels. Every other spacing mark
+// is a Mark, which rule GB9 already joins.
+func isGraphemeSpacingMark(r rune) bool { return r == 0x0E33 || r == 0x0EB3 }
+
+// isPrepend reports the UAX #29 Prepend class.
+func isPrepend(r rune) bool { return isInTable(r, prependRanges) }
+
+// isExtendedPictographic reports the Unicode Extended_Pictographic property
+// (the set is generated into the emoji table). It is what makes a ZWJ join the
+// code point after it (rule GB11).
+func isExtendedPictographic(r rune) bool { return isInTable(r, extendedPictographicRanges) }
+
+// hangulType is a Hangul_Syllable_Type value.
+type hangulType uint8
+
+const (
+	hangulNone hangulType = iota
+	hangulL
+	hangulV
+	hangulT
+	hangulLV
+	hangulLVT
+)
+
+// hangulTypeOf classifies a code point for the Hangul rules GB6-GB8.
+func hangulTypeOf(r rune) hangulType {
+	switch {
+	case r >= 0x1100 && r <= 0x115F, r >= 0xA960 && r <= 0xA97C:
+		return hangulL
+	case r >= 0x1160 && r <= 0x11A7, r >= 0xD7B0 && r <= 0xD7C6:
+		return hangulV
+	case r >= 0x11A8 && r <= 0x11FF, r >= 0xD7CB && r <= 0xD7FB:
+		return hangulT
+	case r >= 0xAC00 && r <= 0xD7A3:
+		if (r-0xAC00)%28 == 0 {
+			return hangulLV
+		}
+		return hangulLVT
+	}
+	return hangulNone
+}
+
+// hangulJoins applies rules GB6-GB8.
+func hangulJoins(previous, next hangulType) bool {
+	switch previous {
+	case hangulL:
+		return next == hangulL || next == hangulV || next == hangulLV || next == hangulLVT
+	case hangulLV, hangulV:
+		return next == hangulV || next == hangulT
+	case hangulLVT, hangulT:
+		return next == hangulT
 	}
 	return false
 }
 
-// isVirama covers the indic virama/sign-visarga separatives.
-func isVirama(r rune) bool {
-	switch r {
-	case 0x094D, 0x09CD, 0x0A4D, 0x0ACD, 0x0B4D, 0x0BCD, 0x0C4D, 0x0CCD,
-		0x0D4D, 0x0DCA, 0x0E4C, 0x0E4A, 0x0F84, 0x1039, 0x103A, 0x1714, 0x17D1:
-		return true
+// indicLinkerScripts maps each virama that joins a following consonant (UAX #29
+// InCB=Linker) to the script block its consonants live in. Intl.Segmenter also
+// joins Myanmar U+1039 and Tai Tham U+1A60. Thai, Lao, Tibetan, Khmer, Tamil,
+// Kannada, Sinhala and Gurmukhi viramas do not join: their consonant starts a
+// new cluster.
+func indicLinkerBlock(linker rune) (block [2]rune, ok bool) {
+	switch linker {
+	case 0x094D:
+		return [2]rune{0x0900, 0x097F}, true // Devanagari
+	case 0x09CD:
+		return [2]rune{0x0980, 0x09FF}, true // Bengali
+	case 0x0ACD:
+		return [2]rune{0x0A80, 0x0AFF}, true // Gujarati
+	case 0x0B4D:
+		return [2]rune{0x0B00, 0x0B7F}, true // Oriya
+	case 0x0C4D:
+		return [2]rune{0x0C00, 0x0C7F}, true // Telugu
+	case 0x0D4D:
+		return [2]rune{0x0D00, 0x0D7F}, true // Malayalam
+	case 0x1039:
+		return [2]rune{0x1000, 0x109F}, true // Myanmar
+	case 0x1A60:
+		return [2]rune{0x1A20, 0x1AAF}, true // Tai Tham
 	}
-	return false
+	return block, false
+}
+
+// isLinker reports whether r is one of the linker viramas (rule GB9c).
+func isLinker(r rune) bool {
+	_, ok := indicLinkerBlock(r)
+	return ok
+}
+
+// linkerJoinsConsonant reports whether r is a consonant of the linker's script,
+// which is the rune a virama joins (rule GB9c). A digit, space, or a letter from
+// another script starts a new cluster.
+func linkerJoinsConsonant(linker rune, r rune) bool {
+	block, ok := indicLinkerBlock(linker)
+	return ok && r >= block[0] && r <= block[1] && unicode.IsLetter(r)
 }
 
 // isCombiningMark reports the Unicode Mark general category, matching
