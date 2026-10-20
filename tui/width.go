@@ -107,10 +107,13 @@ func isASCII(text string) bool {
 type graphemeGrouper struct {
 	previous     rune
 	previousInfo runeInfo
-	// tailBase is the cluster's last rune that is not an Extend or a spacing
-	// mark. Whether it is an extended pictograph is only asked when a ZWJ
-	// arrives, so the emoji table is not searched per rune.
+	// tailBase is the cluster's last rune that is not an Extend. Whether it is
+	// an extended pictograph is only asked when a ZWJ arrives, so the emoji table
+	// is not searched per rune.
 	tailBase rune
+	// tailOnlyExtend reports that every rune after tailBase is an Extend, which
+	// is what the ExtPict Extend* ZWJ pattern of rule GB11 requires.
+	tailOnlyExtend bool
 	// joinAfterZWJ reports that the cluster ends in ExtPict Extend* ZWJ, so an
 	// extended pictograph joins it (rule GB11).
 	joinAfterZWJ bool
@@ -145,6 +148,7 @@ func (g *graphemeGrouper) begin(r rune, info runeInfo) {
 	g.previous = r
 	g.previousInfo = info
 	g.tailBase = r
+	g.tailOnlyExtend = true
 	g.joinAfterZWJ = false
 	g.hangul = hangulTypeOf(r)
 	if isRegionalIndicator(r) {
@@ -213,13 +217,22 @@ func (g *graphemeGrouper) extend(r rune) bool {
 func (g *graphemeGrouper) append(r rune, info runeInfo) {
 	switch {
 	case r == 0x200D:
-		g.joinAfterZWJ = isExtendedPictographic(g.tailBase)
-	case isGraphemeExtend(r) || isGraphemeSpacingMark(r):
+		// The ZWJ closes the ExtPict Extend* run it may join from, so a second
+		// ZWJ in the same cluster does not join again.
+		g.joinAfterZWJ = g.tailOnlyExtend && isExtendedPictographic(g.tailBase)
+		g.tailOnlyExtend = false
+	case isGraphemeExtend(r):
 		// Extending code points keep the base a later ZWJ would test.
 		g.joinAfterZWJ = false
-	default:
-		g.tailBase = r
+	case isGraphemeSpacingMark(r):
+		// A spacing mark is not an Extend, so the GB11 chain starts over at it.
 		g.joinAfterZWJ = false
+		g.tailBase = r
+		g.tailOnlyExtend = true
+	default:
+		g.joinAfterZWJ = false
+		g.tailBase = r
+		g.tailOnlyExtend = true
 	}
 	if isRegionalIndicator(r) {
 		g.regionalIndicators++

@@ -34,6 +34,10 @@ func TestSegmentGraphemesMatchesUAX29(t *testing.T) {
 		{"tamil virama is not a linker", "\u0b95\u0bcd\u0bb7", []string{"\u0b95\u0bcd", "\u0bb7"}},
 		{"assigned tag joins its emoji", "\U0001F31B\U000E0030", []string{"\U0001F31B\U000E0030"}},
 		{"unassigned tag block code point breaks", "\U000E0003\u0940", []string{"\U000E0003", "\u0940"}},
+		// GB11 only joins across Extend code points: a spacing mark or a ZWJ
+		// between the pictograph and the next ZWJ breaks the chain.
+		{"spacing mark breaks the zwj chain", "\U0001F916\u200d\u0e33\u200d\U0001F680", []string{"\U0001F916\u200d\u0e33\u200d", "\U0001F680"}},
+		{"zwj breaks the zwj chain", "\U0001F916\u200d\U0001F3FB\u200d\U0001F680", []string{"\U0001F916\u200d\U0001F3FB\u200d", "\U0001F680"}},
 		{"control then mark", "\u0001\u0301", []string{"\u0001", "\u0301"}},
 		{"carriage return then mark", "\r\u0301", []string{"\r", "\u0301"}},
 	}
