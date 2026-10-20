@@ -4,7 +4,7 @@ Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D258**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D259**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation.
 
 Related documents: [port status](PORTING.md), [architecture](architecture.md),
@@ -2008,3 +2008,16 @@ name the recorded crash log (`GetCrashLogPath`) and
 crash record itself is unchanged.
 
 Tests: `TestCrashHelpers`, `TestFatalRuntimeError`.
+
+## D259
+
+**MCP sign-in errors do not name a `/mcp` command.**
+
+Reference: `extensions/mcp/runtime.ts`, `signInRequiredMessage`, tells the user
+to run `/mcp` when a server has no provider auth. Upstream drives OAuth sign-in
+from that command; the port has neither the command nor a sign-in entry point
+(D185 keeps the OAuth store per-process). The provider form of the message still
+names `/login <provider>`, which exists. The OAuth form now points at the
+`oauth` block in `mcp.json` instead of at a command that does not exist.
+
+Test: `TestMcpConnectionAsksOAuthServersToSignIn`.

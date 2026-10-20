@@ -376,6 +376,11 @@ func (c *McpServerConnection) oAuthProviderActive() bool { return c.authProvider
 
 // signInRequiredMessage is the user-facing sign-in hint (upstream
 // signInRequiredMessage).
+//
+// D259: upstream sends the user to its `/mcp` command. The port has no `/mcp`
+// command and no OAuth sign-in entry point, so naming one would name a command
+// that does not exist; the hint points at the config that authenticates a
+// server instead. The provider form is unchanged because `/login` exists.
 func (c *McpServerConnection) signInRequiredMessage() string {
 	provider := ""
 	if c.Entry.Config.Auth != nil {
@@ -384,7 +389,7 @@ func (c *McpServerConnection) signInRequiredMessage() string {
 	if provider != "" {
 		return fmt.Sprintf("MCP server %q requires sign-in. Run /login %s to sign in.", c.Entry.Name, provider)
 	}
-	return fmt.Sprintf("MCP server %q requires sign-in. Run /mcp to sign in.", c.Entry.Name)
+	return fmt.Sprintf("MCP server %q requires sign-in. Configure its oauth credentials in mcp.json to sign in.", c.Entry.Name)
 }
 
 // markNeedsAuth moves the connection into the sign-in state.

@@ -406,6 +406,11 @@ func TestMcpConnectionAsksOAuthServersToSignIn(t *testing.T) {
 	if connection.State != McpServerNeedsAuth {
 		t.Fatalf("state = %s", connection.State)
 	}
+	// The port has no /mcp sign-in command (D185), so the message must not send
+	// the user to one: it names the mcp.json fields that authenticate a server.
+	if message := err.Error(); strings.Contains(message, "/mcp") || !strings.Contains(message, "mcp.json") {
+		t.Fatalf("message = %q", message)
+	}
 }
 
 // TestCreateMcpToolDefinition covers the tool definition's name, label,
