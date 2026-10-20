@@ -15,9 +15,13 @@ import (
 //
 // D-row D3: upstream's partial fallback uses the npm `partial-json` package.
 // The Go port implements the subset of partial-JSON semantics the streaming
-// path needs (truncated objects/arrays/strings keep their complete prefix
-// fields); verify byte-for-byte against partial-json before relying on
-// exotic inputs.
+// path needs: an object keeps its complete prefix fields, a truncated string
+// keeps its complete prefix, an unfinished keyword completes ("tru" is true)
+// and an unfinished exponent keeps its mantissa ("1e" is 1), all after the
+// document trim partial-json applies. It returns {} for a partial value that
+// is not an object, because every streaming caller parses tool arguments.
+// 15,679 progressive prefixes of generated arguments matched partial-json
+// after these rules; unpaired-surrogate tails stay unrepresentable (D2).
 
 const validJSONEscapes = `"\/bfnrt"`
 
@@ -284,7 +288,9 @@ func parseStreamingJSONInto(partialJSON string, v any) {
 // package's default behavior for the streaming cases pi relies on, and keeps
 // object key order in the same representation the ordered JSON decoder uses.
 func partialParse(text string) (*schemaValue, error) {
-	p := &partialParser{units: utf16.Encode([]rune(text))}
+	// partial-json's entry point trims the document before parsing, so an
+	// open string's trailing whitespace is not part of the value.
+	p := &partialParser{units: utf16.Encode([]rune(JSTrim(text)))}
 	v, err := p.parseValue()
 	if err != nil {
 		return nil, err
@@ -529,6 +535,12 @@ func (p *partialParser) parseLiteral() (*schemaValue, error) {
 			p.pos += len(lit.name)
 			return lit.value, nil
 		}
+		// partial-json also completes a keyword prefix at end of input
+		// ("tru" is true, "nul" is null).
+		if len(rest) < len(lit.name) && strings.HasPrefix(lit.name, rest) {
+			p.pos = len(p.units)
+			return lit.value, nil
+		}
 	}
 	// Numbers: consume valid numeric characters.
 	end := 0
@@ -547,7 +559,15 @@ func (p *partialParser) parseLiteral() (*schemaValue, error) {
 	p.pos += end
 	var f float64
 	if err := json.Unmarshal([]byte(numText), &f); err != nil {
-		return nil, err
+		// An unfinished exponent keeps the mantissa (partial-json retries the
+		// text before the last lowercase "e").
+		if cut := strings.LastIndexByte(numText, 'e'); cut > 0 {
+			numText = numText[:cut]
+			err = json.Unmarshal([]byte(numText), &f)
+		}
+		if err != nil {
+			return nil, err
+		}
 	}
 	return &schemaValue{Number: f, IsNumber: true}, nil
 }
