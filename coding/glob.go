@@ -14,9 +14,8 @@ import "strings"
 // `*(...)`), extglob negation patterns (`!pattern`), its POSIX character
 // classes, `\`-escaped separators, and its `matchBase`/`nocase` options beyond
 // ASCII case folding are not implemented; model ids never use them. D262 covers
-// the remaining differences (a `**` that is not a whole segment is a plain `*`
-// here too, a trailing globstar needs one more segment, and trailing-slash and
-// empty-string quirks are not modeled).
+// the remaining differences, which are four pattern shapes model ids cannot
+// reach.
 func MatchGlob(pattern, value string, nocase bool) bool {
 	// An empty pattern matches only the empty path (minimatch does not treat "/"
 	// as an empty match).
