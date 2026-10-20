@@ -742,6 +742,7 @@ func (s *AgentSession) CompactSession(ctx context.Context, customInstructions st
 		s.compactionCancel = nil
 		s.mu.Unlock()
 		cancel()
+		s.resolveIdleWaitIfIdle()
 	}
 	defer cleanup()
 

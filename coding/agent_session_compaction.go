@@ -270,7 +270,6 @@ func (s *AgentSession) RunAutoCompaction(ctx context.Context, reason CompactionR
 		return false, nil
 	}
 
-	s.emit(&SessionEvent{Type: SessionCompactionStart, Reason: reason})
 	compactionCtx, cancel := context.WithCancel(ctx)
 	s.mu.Lock()
 	s.compactionCancel = cancel
@@ -280,7 +279,15 @@ func (s *AgentSession) RunAutoCompaction(ctx context.Context, reason CompactionR
 		s.compactionCancel = nil
 		s.mu.Unlock()
 		cancel()
+		s.resolveIdleWaitIfIdle()
 	}()
+	// Upstream installs the controller before publishing compaction_start, so
+	// listeners can cancel the operation immediately.
+	s.emit(&SessionEvent{Type: SessionCompactionStart, Reason: reason})
+	if compactionCtx.Err() != nil {
+		s.emit(&SessionEvent{Type: SessionCompactionEnd, Reason: reason, Aborted: true})
+		return false, compactionCtx.Err()
+	}
 
 	options := CompactionOptions{
 		Model: model, Ctx: compactionCtx, StreamFn: s.compactionStreamFn(),

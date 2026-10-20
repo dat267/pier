@@ -88,6 +88,7 @@ func (s *AgentSession) PrepareRetry(ctx context.Context, message *ai.AssistantMe
 	}
 
 	retryCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	s.mu.Lock()
 	s.retryCancel = cancel
 	s.retryActive = true
@@ -98,13 +99,7 @@ func (s *AgentSession) PrepareRetry(ctx context.Context, message *ai.AssistantMe
 	select {
 	case <-timer.C:
 	case <-retryCtx.Done():
-		s.mu.Lock()
-		s.retryActive = false
-		s.retryCancel = nil
-		cancelled := s.retryAttempt
-		s.retryAttempt = 0
-		s.mu.Unlock()
-		s.emit(&SessionEvent{Type: SessionAutoRetryEnd, Success: false, Attempt: cancelled, ErrorMessage: "Retry cancelled"})
+		s.finishCancelledRetry()
 		return false, nil
 	}
 
@@ -113,6 +108,20 @@ func (s *AgentSession) PrepareRetry(ctx context.Context, message *ai.AssistantMe
 	s.retryCancel = nil
 	s.mu.Unlock()
 	return true, nil
+}
+
+// finishCancelledRetry mirrors upstream _finishCancelledRetry. It also handles
+// cancellation after the timer fires but before the next low-level run starts.
+func (s *AgentSession) finishCancelledRetry() {
+	s.mu.Lock()
+	s.retryActive = false
+	s.retryCancel = nil
+	attempt := s.retryAttempt
+	s.retryAttempt = 0
+	s.mu.Unlock()
+	if attempt > 0 {
+		s.emit(&SessionEvent{Type: SessionAutoRetryEnd, Success: false, Attempt: attempt, ErrorMessage: "Retry cancelled"})
+	}
 }
 
 // AbortRetry cancels an in-flight retry sleep.
@@ -138,6 +147,10 @@ func (s *AgentSession) IsRetrying() bool {
 func (s *AgentSession) runPostRunLoop(ctx context.Context) error {
 	for {
 		message := s.takeLastAssistantMessage()
+		if ctx.Err() != nil {
+			s.finishCancelledRetry()
+			return nil
+		}
 		if message == nil {
 			return nil
 		}
@@ -146,6 +159,10 @@ func (s *AgentSession) runPostRunLoop(ctx context.Context) error {
 			retry, err := s.PrepareRetry(ctx, message)
 			if err != nil {
 				return err
+			}
+			if ctx.Err() != nil {
+				s.finishCancelledRetry()
+				return nil
 			}
 			if retry {
 				if err := s.Agent.Continue(ctx); err != nil {
@@ -173,6 +190,9 @@ func (s *AgentSession) runPostRunLoop(ctx context.Context) error {
 		compacted, err := s.CheckCompaction(ctx, message, true)
 		if err != nil {
 			return err
+		}
+		if ctx.Err() != nil {
+			return nil
 		}
 		if compacted {
 			if err := s.Agent.Continue(ctx); err != nil {

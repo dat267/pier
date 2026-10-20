@@ -407,6 +407,7 @@ func (s *AgentSession) NavigateTree(ctx context.Context, targetID string, option
 		s.control.branchSummaryCancel = nil
 		s.control.stateMu.Unlock()
 		cancel()
+		s.resolveIdleWaitIfIdle()
 	}()
 
 	collection := CollectEntriesForBranchSummary(s.Sessions, oldLeafID, targetID)
@@ -442,6 +443,7 @@ func (s *AgentSession) NavigateTree(ctx context.Context, targetID string, option
 			Ctx: summaryCtx, CustomInstructions: options.CustomInstructions,
 			ReplaceInstructions: options.ReplaceInstructions, ReserveTokens: reserveTokens,
 			StreamFn:  s.compactionStreamFn(),
+			Retry:     s.retrySettings(),
 			Callbacks: s.summarizationRetryCallbacks("branchSummary"),
 		})
 		if err != nil {

@@ -62,6 +62,9 @@ type promptState struct {
 	pendingNextTurnMessages []ai.Message
 	// runActive mirrors upstream's _isAgentRunActive.
 	runActive bool
+	// Run lifetime spans low-level agent runs, backoff and continuations.
+	abortRequested bool
+	runCancel      context.CancelFunc
 	// idleWait resolves once the session becomes idle.
 	idleWait chan struct{}
 }
@@ -287,8 +290,12 @@ func (s *AgentSession) validateModelAuth(ctx context.Context) error {
 // runAgentPrompt runs one agent prompt with the run-active flag and idle
 // resolution.
 func (s *AgentSession) runAgentPrompt(ctx context.Context, messages []ai.Message, onStarted ...func()) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	state := s.prompt()
 	state.mu.Lock()
+	state.abortRequested = false
+	state.runCancel = cancel
 	state.runActive = true
 	state.mu.Unlock()
 	for _, notify := range onStarted {
@@ -318,18 +325,15 @@ func (s *AgentSession) runAgentPrompt(ctx context.Context, messages []ai.Message
 
 	state.mu.Lock()
 	state.runActive = false
+	state.runCancel = nil
+	aborted := state.abortRequested
 	state.mu.Unlock()
 	s.FlushPendingBashMessages()
 	s.FlushPendingCustomMessages()
 	if s.CacheWarmer != nil {
 		s.CacheWarmer.OnAgentSettled()
 	}
-	// A cancelled run reports idle rather than the interrupted run's outcome, so the
-	// settle event carries whether the run was aborted (upstream agent_settled.aborted).
-	aborted := false
-	if last := s.findLastAssistantMessage(); last != nil {
-		aborted = last.StopReason == ai.StopAborted
-	}
+	// Upstream _emitAgentSettled uses the run abort flag, including backoff.
 	s.emit(&SessionEvent{Type: SessionAgentSettled, Aborted: aborted})
 	s.resolveIdleWaitIfIdle()
 	return err
@@ -471,7 +475,19 @@ func (s *AgentSession) Abort(ctx context.Context) {
 // which upstream never pays because awaiting a promise yields to its event loop
 // (D168).
 func (s *AgentSession) AbortAsync() {
+	state := s.prompt()
+	state.mu.Lock()
+	if state.runActive {
+		state.abortRequested = true
+	}
+	cancel := state.runCancel
+	state.mu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
 	s.AbortRetry()
+	s.AbortCompaction()
+	s.AbortBranchSummary()
 	s.AbortBash()
 	s.Agent.Abort()
 }

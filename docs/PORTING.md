@@ -11,6 +11,27 @@ Reference pin: `71023aec` (Release v1.3.0), read from the `./pi` checkout.
 (`packages/ai/scripts/generate-models.ts --strict --data-only`, which fetches
 models.dev) through `scripts/gen_catalog.py`.
 
+Session aborts now retain cancellation across retry startup, backoff and
+continuations, and `agent_settled.aborted` reports the run's abort flag rather
+than the final assistant's stop reason (`core/agent-session.ts`, `abort`,
+`_handlePostAgentRun`, `_emitAgentSettled`). Regression tests cover aborting from
+the retry-start listener, cancelling backoff and starting a later fresh prompt.
+Compaction cleanup also releases idle waiters on success and failure, general
+abort cancels manual compaction and branch summarization, and automatic
+compaction installs cancellation before publishing its start event (the same
+reference's `_clearManualCompactionState`, `_runAutoCompaction` and `abort`).
+Further v1.3.0 audit fixes: tree navigation releases idle waiters and forwards
+the session retry policy to branch summarization (`core/agent-session.ts`,
+`navigateTree`). The shared retry helper accepts partially supplied callbacks
+and propagates callback errors (`ai/src/utils/retry.ts`). File-mutation queues
+release completed paths, use absolute missing-path keys and propagate realpath
+errors other than missing paths (`core/tools/file-mutation-queue.ts`).
+Transcript transformation now applies JavaScript signature truthiness: an empty
+signature does not preserve blank thinking, and cross-model tool calls retain
+explicitly empty thought signatures (`ai/src/api/transform-messages.ts`). A
+randomized comparison of 8,000 transcripts against the pin matched after these
+fixes; 27,000 head/tail/middle truncation cases also matched.
+
 **Upstream status.** v1.3.0 (`71023aec`) is the latest released tag in the
 reference checkout and the port's pin. The v1.3.0 delta from v1.2.0 is ported
 (see the v1.3.0 audit below); the v1.2.0 delta from v1.1.0 was audited.

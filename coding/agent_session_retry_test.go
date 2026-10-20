@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/dat267/pier/agent"
@@ -351,4 +352,75 @@ func TestRetryOmitsTheFailedAttemptFromContext(t *testing.T) {
 	if assistants != 1 {
 		t.Fatalf("projection has %d assistant messages; want only the recovered response", assistants)
 	}
+}
+
+// pi v1.3.0 core/agent-session.ts: abort retains _agentRunAbortRequested
+// across _prepareRetry and _handlePostAgentRun, including listener callbacks.
+func TestAbortAtRetryStartStopsRun(t *testing.T) {
+	session := retrySession(t, &ai.RetryPolicy{Enabled: true, MaxRetries: 1, BaseDelayMS: 1}, erroringStreamFn(1, "overloaded"))
+	var settled *SessionEvent
+	var cancelled bool
+	session.Subscribe(func(event *SessionEvent) {
+		if event.Type == SessionAutoRetryStart {
+			session.AbortAsync()
+		}
+		if event.Type == SessionAutoRetryEnd && event.ErrorMessage == "Retry cancelled" {
+			cancelled = true
+		}
+		if event.Type == SessionAgentSettled {
+			settled = event
+		}
+	})
+	if err := session.Prompt(ctxpkg.Background(), "hello", nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := session.GetLastAssistantText(); got == "recovered" {
+		t.Fatal("abort allowed another model request")
+	}
+	if !cancelled {
+		t.Fatal("missing retry cancellation event")
+	}
+	if settled == nil || !settled.Aborted {
+		t.Fatalf("settled = %+v", settled)
+	}
+	// An abort belongs to one run; a later prompt must work normally.
+	if err := session.Prompt(ctxpkg.Background(), "next", nil); err != nil {
+		t.Fatal(err)
+	}
+	if settled == nil || settled.Aborted {
+		t.Fatalf("next settled = %+v", settled)
+	}
+	if got := session.GetLastAssistantText(); got != "recovered" {
+		t.Fatalf("next text = %q", got)
+	}
+}
+
+// pi v1.3.0 core/agent-session.ts: _emitAgentSettled reports the run's
+// abort flag even when backoff cancellation leaves no aborted assistant.
+func TestAbortDuringRetryBackoffReportsAborted(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		session := retrySession(t, &ai.RetryPolicy{Enabled: true, MaxRetries: 1, BaseDelayMS: 5000}, erroringStreamFn(1, "overloaded"))
+		var settled *SessionEvent
+		session.Subscribe(func(event *SessionEvent) {
+			if event.Type == SessionAgentSettled {
+				settled = event
+			}
+		})
+		done := make(chan error, 1)
+		go func() { done <- session.Prompt(ctxpkg.Background(), "hello", nil) }()
+		synctest.Wait()
+		if !session.IsRetrying() {
+			t.Fatal("retry did not enter backoff")
+		}
+		session.AbortAsync()
+		if err := <-done; err != nil {
+			t.Fatal(err)
+		}
+		if settled == nil || !settled.Aborted {
+			t.Fatalf("settled = %+v", settled)
+		}
+		if session.IsRetrying() || session.RetryAttempt() != 0 {
+			t.Fatal("retry did not settle")
+		}
+	})
 }
