@@ -513,7 +513,10 @@ func LoadEntriesFromFileBuffered(filePath string) ([]FileEntry, []byte, bool, er
 	}
 	header := entries[0]
 	if header.Header == nil || header.Header.ID == "" {
-		return entries, data, fast, nil
+		// Upstream loadEntriesFromFile discards everything unless the first
+		// parsed entry is a session header, so open reports the file as
+		// invalid instead of loading its entries.
+		return nil, data, fast, nil
 	}
 	if !bytes.HasSuffix(data, []byte("\n")) && len(data) > 0 {
 		_ = os.WriteFile(resolved, append(append([]byte{}, data...), '\n'), 0o644)
