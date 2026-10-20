@@ -383,7 +383,7 @@ into narrow, injectable wirings (all in `coding/interactive`):
   target before wiring an unassigned seam: some seams are unassigned because
   assigning them is wrong. `ConfigureHTTPIdleTimeout` fed a helper that wrote the
   process-wide `http.DefaultTransport` — a data race against in-flight requests —
-  and the setting already reached the wire per request (D40).
+  and the setting already reached the wire per streamed request (D40); `ai/streamidle.go` is the headers/body idle guard that applies it (D254).
 
 `tui/render.go` (+ `mainscreen.go`, `altscreen.go`, `terminal.go`,
 `stdinbuffer.go`) is the differential renderer core. Its owner-loop and

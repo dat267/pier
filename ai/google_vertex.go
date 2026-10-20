@@ -215,7 +215,7 @@ func retryVertexRequest(
 			}
 			req.Header.Set(name, *value)
 		}
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := DoProviderRequest(req, options.TimeoutMs)
 		if err != nil {
 			return nil, err
 		}

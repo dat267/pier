@@ -280,7 +280,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 					}
 					req.Header.Set(name, *value)
 				}
-				hresp, rerr := http.DefaultClient.Do(req)
+				hresp, rerr := DoProviderRequest(req, options.TimeoutMs)
 				if rerr != nil {
 					return nil, rerr
 				}

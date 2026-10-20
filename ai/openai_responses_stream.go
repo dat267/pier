@@ -1116,7 +1116,7 @@ func streamOpenAIResponses(model *Model, context TranscriptContext, options *Ope
 				if nerr != nil {
 					return nil, nerr
 				}
-				hresp, rerr := http.DefaultClient.Do(req)
+				hresp, rerr := DoProviderRequest(req, options.TimeoutMs)
 				if rerr != nil {
 					return nil, rerr
 				}

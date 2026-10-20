@@ -425,7 +425,7 @@ func StreamPiMessages(model *Model, context TranscriptContext, options *PiMessag
 			}
 			request.Header.Set(name, *value)
 		}
-		response, err := http.DefaultClient.Do(request)
+		response, err := DoProviderRequest(request, options.TimeoutMs)
 		if err != nil {
 			fail(err)
 			return

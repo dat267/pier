@@ -151,7 +151,7 @@ func StreamProxy(model *ai.Model, context ai.TranscriptContext, options ProxyStr
 		}
 		request.Header.Set("Authorization", "Bearer "+options.AuthToken)
 		request.Header.Set("Content-Type", "application/json")
-		response, err := http.DefaultClient.Do(request)
+		response, err := ai.DoProviderRequest(request, options.TimeoutMs)
 		if err != nil {
 			if ctx.Err() != nil {
 				fail(ai.StopAborted, "Request aborted by user")

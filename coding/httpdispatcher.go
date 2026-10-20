@@ -14,11 +14,11 @@ import (
 // D40: upstream's dispatcher sets both headersTimeout and bodyTimeout to the idle
 // timeout and can be reconfigured at runtime. Go's http.Transport exposes
 // ResponseHeaderTimeout (the headersTimeout equivalent) and IdleConnTimeout, and
-// there is no per-read body timeout, so a stalled body stays bounded by the
-// caller's context instead. The configured timeout reaches the wire as the
-// per-request timeout: every provider request is built from the settings-backed
-// SimpleStreamOptions.TimeoutMs (coding/sdk.go), so changing the row in /settings
-// applies to the next request.
+// there is no per-read body timeout, so the configured timeout reaches the wire
+// as a per-request timer instead (ai/streamidle.go, D254): every streamed
+// provider request arms it before sending and re-arms it on each body read, so
+// silence before the headers or between chunks cancels the request context while
+// an active stream outlives it. Mistral keeps upstream's headers-only scope.
 //
 // There is deliberately no function here that installs the timeout into the
 // shared transport. http.DefaultTransport is process-wide and is read by net/http

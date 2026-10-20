@@ -4,6 +4,7 @@ import (
 	"bytes"
 	ctxpkg "context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -611,10 +612,6 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 		}
 		headers := BuildCodexSSEHeaders(model.Headers, options.Headers, accountID, options.APIKey, cacheSessionID)
 
-		var httpTimeout time.Duration
-		if options.TimeoutMs != nil && *options.TimeoutMs > 0 {
-			httpTimeout = time.Duration(*options.TimeoutMs) * time.Millisecond
-		}
 		maxRetries := codexDefaultMaxRetries
 		if options.MaxRetries != nil {
 			maxRetries = *options.MaxRetries
@@ -627,23 +624,20 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 				fail(fmt.Errorf("Request was aborted"))
 				return
 			}
-			requestCtx := ctx
-			cancel := func() {}
-			if httpTimeout > 0 {
-				requestCtx, cancel = ctxpkg.WithTimeout(ctx, httpTimeout)
-			}
-			request, err := http.NewRequestWithContext(requestCtx, http.MethodPost, ResolveCodexURL(model.BaseURL), bytes.NewReader(bodyJSON))
+			request, err := http.NewRequestWithContext(ctx, http.MethodPost, ResolveCodexURL(model.BaseURL), bytes.NewReader(bodyJSON))
 			if err != nil {
-				cancel()
 				fail(err)
 				return
 			}
 			request.Header = headers.Clone()
-			response, err = http.DefaultClient.Do(request)
-			cancel()
+			// Upstream arms the headers timeout around the fetch alone and leaves
+			// the body alone; the shared guard bounds the headers wait and keeps
+			// the body alive only while it produces data (D40).
+			response, err = DoProviderRequest(request, options.TimeoutMs)
 			if err != nil {
-				if httpTimeout > 0 && ctxErr(ctx) == nil {
-					fail(fmt.Errorf("Codex SSE response headers timed out after %dms", httpTimeout.Milliseconds()))
+				var idle *idleTimeoutError
+				if errors.As(err, &idle) && !idle.afterHeaders && ctxErr(ctx) == nil {
+					fail(fmt.Errorf("Codex SSE response headers timed out after %dms", idle.timeout.Milliseconds()))
 					return
 				}
 				if ctxErr(ctx) != nil {

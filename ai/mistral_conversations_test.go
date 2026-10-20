@@ -339,20 +339,27 @@ func TestMistralStreamEndToEnd(t *testing.T) {
 	}
 }
 
-func TestMistralActiveStreamCanExceedRequestTimeout(t *testing.T) {
+// The settings timeout bounds silence, not the lifetime of the request: a
+// stream whose gaps stay under it outlives it (D254). Mistral's own headers
+// timer keeps upstream's headers-only message and scope.
+func TestMistralActiveStreamOutlivesTheIdleTimeout(t *testing.T) {
+	deltas := []string{"a", "b", "c", "d", "e"}
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "text/event-stream")
 		flusher := writer.(http.Flusher)
-		_, _ = writer.Write([]byte(`data: {"choices":[{"delta":{"content":"thinking"}}]}` + "\n\n"))
-		flusher.Flush()
-		time.Sleep(40 * time.Millisecond)
+		for _, delta := range deltas {
+			_, _ = writer.Write([]byte(`data: {"choices":[{"delta":{"content":"` + delta + `"}}]}` + "\n\n"))
+			flusher.Flush()
+			time.Sleep(10 * time.Millisecond)
+		}
 		_, _ = writer.Write([]byte(`data: {"choices":[{"finish_reason":"stop","delta":{}}]}` + "\n\n"))
 		_, _ = writer.Write([]byte("data: [DONE]\n\n"))
 	}))
 	defer server.Close()
 
+	// Five 10ms gaps total 50ms, well past the 30ms timeout.
 	stream := StreamMistralConversations(mistralModel(server.URL), mistralUserContext(), &MistralOptions{
-		StreamOptions: StreamOptions{APIKey: "test", TimeoutMs: intPtrT(10)},
+		StreamOptions: StreamOptions{APIKey: "test", TimeoutMs: intPtrT(30)},
 	})
 	message, err := stream.Result(ctxpkg.Background())
 	if err != nil {
@@ -361,7 +368,7 @@ func TestMistralActiveStreamCanExceedRequestTimeout(t *testing.T) {
 	if message.StopReason != StopStop || len(message.Content) != 1 {
 		t.Fatalf("message = %+v", message)
 	}
-	if text, ok := message.Content[0].(TextContent); !ok || text.Text != "thinking" {
+	if text, ok := message.Content[0].(TextContent); !ok || text.Text != "abcde" {
 		t.Fatalf("content = %+v", message.Content)
 	}
 }

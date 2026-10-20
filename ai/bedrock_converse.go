@@ -859,7 +859,7 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 			}
 		}
 
-		response, err := http.DefaultClient.Do(request)
+		response, err := DoProviderRequest(request, options.TimeoutMs)
 		if err != nil {
 			fail(err, "", 0, nil)
 			return

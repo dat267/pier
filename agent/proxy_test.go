@@ -300,3 +300,33 @@ func TestStreamProxyRejectsDeltaForOtherContent(t *testing.T) {
 		t.Fatalf("result = %+v; want the delta mismatch error", result)
 	}
 }
+
+// TestStreamProxyAbortsWhenResponseHeadersIdle covers a proxy server that
+// accepts the connection and never answers: the stream is bounded by the
+// settings-backed idle timeout (D254) instead of hanging the turn.
+func TestStreamProxyAbortsWhenResponseHeadersIdle(t *testing.T) {
+	release := make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-release:
+		case <-r.Context().Done():
+		}
+	}))
+	t.Cleanup(func() {
+		close(release)
+		server.Close()
+	})
+	model := &ai.Model{ID: "m", Provider: "p", API: ai.APIOpenAIResponses}
+	timeout := 200
+	result, err := StreamProxy(model, proxyContext(), ProxyStreamOptions{
+		SimpleStreamOptions: ai.SimpleStreamOptions{TimeoutMs: &timeout},
+		ProxyURL:            server.URL, AuthToken: "tok",
+	}).Result(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.StopReason != ai.StopError || result.ErrorMessage == nil ||
+		!strings.Contains(*result.ErrorMessage, "headers idle") {
+		t.Fatalf("result = %+v", result)
+	}
+}

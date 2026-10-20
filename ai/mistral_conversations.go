@@ -329,10 +329,12 @@ func requestMistralStream(ctx ctxpkg.Context, model *Model, body []byte, options
 	requestCtx, cancel := ctxpkg.WithCancel(ctx)
 	var headerMu sync.Mutex
 	headersReceived := false
+	headerTimedOut := false
 	headerTimer := time.AfterFunc(timeout, func() {
 		headerMu.Lock()
 		defer headerMu.Unlock()
 		if !headersReceived {
+			headerTimedOut = true
 			cancel()
 		}
 	})
@@ -375,24 +377,20 @@ func requestMistralStream(ctx ctxpkg.Context, model *Model, body []byte, options
 	headerMu.Lock()
 	headersReceived = true
 	headerTimer.Stop()
+	timedOut := headerTimedOut
 	headerMu.Unlock()
 	if err != nil {
 		cancel()
+		if timedOut && ctxErr(ctx) == nil {
+			return nil, fmt.Errorf("Mistral response headers timed out after %dms", timeout.Milliseconds())
+		}
 		return nil, err
 	}
-	resp.Body = &cancelOnCloseBody{ReadCloser: resp.Body, cancel: cancel}
+	// The guard watches the caller's context and cancels the request context;
+	// watching requestCtx itself would make its own cancellation look like a
+	// user abort.
+	resp.Body = guardIdleBody(ctx, cancel, resp.Body, options.TimeoutMs)
 	return resp, nil
-}
-
-type cancelOnCloseBody struct {
-	io.ReadCloser
-	cancel ctxpkg.CancelFunc
-}
-
-func (b *cancelOnCloseBody) Close() error {
-	err := b.ReadCloser.Close()
-	b.cancel()
-	return err
 }
 
 func applyMistralHeaderOverrides(req *http.Request, overrides ProviderHeaders) {

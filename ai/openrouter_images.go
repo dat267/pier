@@ -80,7 +80,7 @@ func (OpenRouterImages) GenerateImages(model *ImagesModel, context ImagesContext
 			}
 			request.Header.Set(name, *value)
 		}
-		hresp, rerr := http.DefaultClient.Do(request)
+		hresp, rerr := DoProviderRequest(request, options.TimeoutMs)
 		if rerr != nil {
 			return nil, rerr
 		}
