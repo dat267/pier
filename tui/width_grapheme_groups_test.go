@@ -81,11 +81,53 @@ func TestVisibleWidthMatchesGraphemeGrouping(t *testing.T) {
 		"\u0600a":                        1,
 		"\uac00\u11a8":                   2,
 		"\U0001F468\u200d\U0001F469\u200d\U0001F467": 2,
+		// The RGI ZWJ list is exact: real sequences are one two-cell emoji, a
+		// chain Unicode never joined keeps its part-by-part width, and a
+		// modifier sequence is an RGI emoji.
+		"\u2764\ufe0f\u200d\U0001F525":               2,
+		"\U0001F441\ufe0f\u200d\U0001F5E8\ufe0f":     2,
+		"\U0001F3F3\ufe0f\u200d\U0001F308":           2,
+		"\U0001F468\u200d\U0001F466":                 2,
+		"\U0001F468\u200d\U0001F466\u200d\U0001F466": 2,
+		"\u261d\U0001F3FB":                           2,
+		"\u270a\u200d\u203c\ufe0f\u200d\u270a":       4,
+		"\U0001F9B9\ufe0f\u200d\u261d":               3,
 	}
 	for input, want := range cases {
 		if got := VisibleWidth(input); got != want {
 			t.Errorf("VisibleWidth(%q) = %d, want %d", input, got, want)
 		}
 		resetWidthCacheForTest()
+	}
+}
+
+// TestRGIEmojiZWJTable checks the generated table: sorted (the lookup binary
+// searches it), free of duplicates, and carrying the reference's sequences.
+func TestRGIEmojiZWJTable(t *testing.T) {
+	if len(rgiZWJSequences) < 1500 {
+		t.Fatalf("table has %d sequences; want the generated 1614", len(rgiZWJSequences))
+	}
+	for index := 1; index < len(rgiZWJSequences); index++ {
+		if rgiZWJSequences[index-1] >= rgiZWJSequences[index] {
+			t.Fatalf("table is not sorted at %d: %q then %q", index, rgiZWJSequences[index-1], rgiZWJSequences[index])
+		}
+	}
+	for _, sequence := range []string{
+		"\u2764\ufe0f\u200d\U0001F525",               // heart on fire
+		"\U0001F441\ufe0f\u200d\U0001F5E8\ufe0f",     // eye in speech bubble
+		"\U0001F468\u200d\U0001F469\u200d\U0001F467", // family
+		"\U0001F3F4\u200d\u2620\ufe0f",               // pirate flag
+	} {
+		if !isRGIEmojiZWJSequence(sequence) {
+			t.Errorf("%q is not in the RGI ZWJ table", sequence)
+		}
+	}
+	for _, sequence := range []string{
+		"\U0001F916\u200d\U0001F680", // robot + rocket: not an RGI sequence
+		"\U0001F468\u200d\U0001F466\u200d\U0001F467\u200d\U0001F466",
+	} {
+		if isRGIEmojiZWJSequence(sequence) {
+			t.Errorf("%q must not be in the RGI ZWJ table", sequence)
+		}
 	}
 }

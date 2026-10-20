@@ -485,22 +485,10 @@ func isRGIEmoji(segment string) bool {
 		}
 		return len(base) == 1 && isKeycapBase(base[0])
 	}
-	// ZWJ sequences: every part split by ZWJ is an emoji base, optionally
-	// followed by the emoji presentation selector, and the lead renders as an
-	// emoji. Upstream matches the explicit RGI sequence list; the port accepts a
-	// chain whose lead is emoji by default, plus the five RGI sequences whose
-	// lead needs the presentation selector.
+	// ZWJ sequences are the explicit RGI list (emoji-zwj-sequences.txt); a chain
+	// Unicode never joined is not an RGI emoji and keeps its part-by-part width.
 	if containsRune(runes, 0x200D) {
-		parts := splitRunes(runes, 0x200D)
-		for _, part := range parts {
-			if len(part) == 2 && part[1] == 0xFE0F {
-				part = part[:1]
-			}
-			if len(part) != 1 || !isInTable(part[0], emojiBaseRanges) {
-				return false
-			}
-		}
-		return len(parts) > 1 && (isInTable(parts[0][0], rgiEmojiRanges) || isSelectorLeadZWJSequence(runes))
+		return isRGIEmojiZWJSequence(segment)
 	}
 	// Tag sequences (subdivision flags): a default-presentation emoji, one or
 	// more tag characters, then the cancel tag.
@@ -514,37 +502,6 @@ func isRGIEmoji(segment string) bool {
 			}
 		}
 		return true
-	}
-	return false
-}
-
-// selectorLeadZWJSequences are the RGI ZWJ sequences whose lead renders as an
-// emoji only with the emoji presentation selector.
-var selectorLeadZWJSequences = [][]rune{
-	{0x2764, 0xFE0F, 0x200D, 0x1F525},          // heart on fire
-	{0x2764, 0xFE0F, 0x200D, 0x1FA79},          // mending heart
-	{0x1F441, 0xFE0F, 0x200D, 0x1F5E8, 0xFE0F}, // eye in speech bubble
-	{0x1F3F3, 0xFE0F, 0x200D, 0x1F308},         // rainbow flag
-	{0x1F3F3, 0xFE0F, 0x200D, 0x26A7, 0xFE0F},  // transgender flag
-}
-
-// isSelectorLeadZWJSequence reports an RGI ZWJ sequence whose lead carries the
-// emoji presentation selector.
-func isSelectorLeadZWJSequence(runes []rune) bool {
-	for _, sequence := range selectorLeadZWJSequences {
-		if len(sequence) != len(runes) {
-			continue
-		}
-		same := true
-		for index, r := range sequence {
-			if runes[index] != r {
-				same = false
-				break
-			}
-		}
-		if same {
-			return true
-		}
 	}
 	return false
 }

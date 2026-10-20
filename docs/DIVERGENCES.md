@@ -2022,23 +2022,12 @@ names `/login <provider>`, which exists. The OAuth form now points at the
 
 Test: `TestMcpConnectionAsksOAuthServersToSignIn`.
 
-## D260
+## D260 (resolved)
 
-**A non-RGI emoji ZWJ chain is measured as one two-cell emoji.**
-
-Reference: `packages/tui/src/utils.ts`, `graphemeWidth`, tests the whole cluster
-against `\p{RGI_Emoji}`, which is the explicit Unicode list of ZWJ sequences
-(family, professions, the five selector-lead sequences). The port carries the
-generated `Extended_Pictographic` and emoji-modifier tables, but not the full
-sequence list, so it accepts a ZWJ chain when every part is an emoji base and the
-lead has default emoji presentation (or is one of the five selector-lead
-sequences). A real sequence is measured identically. A chain the list does not
-contain is measured as two cells instead of the reference's part-by-part sum:
-`"\u270a\u200d\u203c\ufe0f\u200d\u270a"` is 4 cells upstream and 2 here, and
-`"\U0001F9B9\ufe0f\u200d\u261d"` is 3 upstream and 2 here. Only text that
-joins emoji bases that Unicode never joined is affected.
-
-Test: `TestVisibleWidthMatchesGraphemeGrouping`.
+The non-RGI ZWJ width divergence is gone: the port carries the generated Unicode
+17.0 `RGI_Emoji_ZWJ_Sequence` table (`tui/emojizwjdata.go`, matching the
+reference's ICU 78 data), so a chain Unicode never joined keeps its part-by-part
+width and a real sequence is one two-cell emoji.
 
 ## D261
 
