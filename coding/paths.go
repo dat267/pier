@@ -161,6 +161,11 @@ func filePathFromURL(url string) (string, error) {
 		return "", fmtPathError("not a file URL")
 	}
 	path := url[len(scheme):]
+	// Strip URL metadata before percent-decoding: encoded ?/# are filename
+	// characters, not search/hash delimiters (Node fileURLToPath).
+	if index := strings.IndexAny(path, "?#"); index >= 0 {
+		path = path[:index]
+	}
 	// file:///abs/path → path starts with '/' (empty host); file://host/path
 	// carries a host component.
 	if !strings.HasPrefix(path, "/") {
@@ -232,7 +237,11 @@ func ResolvePath(input string, baseDir string, options PathInputOptions) string 
 	if filepath.IsAbs(normalized) {
 		return filepath.Clean(normalized)
 	}
-	return filepath.Clean(filepath.Join(normalizedBase, normalized))
+	resolved := filepath.Join(normalizedBase, normalized)
+	if absolute, err := filepath.Abs(resolved); err == nil {
+		return absolute
+	}
+	return filepath.Clean(resolved)
 }
 
 // ExpandPath normalizes with unicode-space folding and @-stripping

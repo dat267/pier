@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -31,6 +32,27 @@ func TestIsLocalPath(t *testing.T) {
 	for _, tc := range cases {
 		if got := IsLocalPath(tc.in); got != tc.want {
 			t.Errorf("IsLocalPath(%q) = %v, want %v", tc.in, got, tc.want)
+		}
+	}
+}
+
+// Reference: pi v1.3.0 utils/paths.ts resolvePath calls node:path.resolve,
+// which makes even an empty or relative base absolute against process.cwd().
+func TestResolvePathWithRelativeBaseIsAbsolute(t *testing.T) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		input, base, suffix string
+	}{
+		{"", "", ""},
+		{"file.txt", "", "file.txt"},
+		{"file.txt", "subdir", filepath.Join("subdir", "file.txt")},
+		{"../file.txt", "subdir", "file.txt"},
+	} {
+		if got, want := ResolvePath(tc.input, tc.base, PathInputOptions{}), filepath.Join(cwd, tc.suffix); got != want {
+			t.Errorf("ResolvePath(%q, %q) = %q; want %q", tc.input, tc.base, got, want)
 		}
 	}
 }
@@ -94,6 +116,21 @@ func TestNormalizePathTrimsJavaScriptWhitespace(t *testing.T) {
 	want := filepath.Join(home, "project")
 	if got != want {
 		t.Fatalf("NormalizePath() = %q; want %q", got, want)
+	}
+}
+
+// Reference: pi v1.3.0 utils/paths.ts uses node:url.fileURLToPath.
+// URL search/hash are metadata, while escaped ?/# remain literal filename bytes.
+func TestNormalizePathFileURLIgnoresQueryAndFragment(t *testing.T) {
+	for _, tc := range []struct{ input, want string }{
+		{"file:///tmp/skills?download=1", "/tmp/skills"},
+		{"file:///tmp/skills#section", "/tmp/skills"},
+		{"file://LOCALHOST/tmp/skills?download=1#section", "/tmp/skills"},
+		{"file:///tmp/skills%3Fv%23a?download=1#section", "/tmp/skills?v#a"},
+	} {
+		if got := NormalizePath(tc.input, PathInputOptions{}); got != tc.want {
+			t.Errorf("NormalizePath(%q) = %q; want %q", tc.input, got, tc.want)
+		}
 	}
 }
 

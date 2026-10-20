@@ -32,6 +32,15 @@ explicitly empty thought signatures (`ai/src/api/transform-messages.ts`). A
 randomized comparison of 8,000 transcripts against the pin matched after these
 fixes; 27,000 head/tail/middle truncation cases also matched.
 
+A follow-up v1.3.0 correctness audit fixed custom-message delivery: triggering
+messages during a run enter the steer/follow-up queue, context-only messages
+flush after tool results at `turn_end`, and appended custom messages publish
+lifecycle events after persistence (`core/agent-session.ts`). The fork selector
+now extracts text from block-shaped user content, including normal submitted
+prompts. `utils/paths.ts` parity fixes make relative path resolution absolute
+and exclude file-URL query/fragment metadata while retaining escaped `?`/`#`.
+Each fix has a regression test observed failing before the change.
+
 **Upstream status.** v1.3.0 (`71023aec`) is the latest released tag in the
 reference checkout and the port's pin. The v1.3.0 delta from v1.2.0 is ported
 (see the v1.3.0 audit below); the v1.2.0 delta from v1.1.0 was audited.
