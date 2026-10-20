@@ -4,7 +4,7 @@ Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D260**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D261**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation.
 
 Related documents: [port status](PORTING.md), [architecture](architecture.md),
@@ -2039,3 +2039,18 @@ contain is measured as two cells instead of the reference's part-by-part sum:
 joins emoji bases that Unicode never joined is affected.
 
 Test: `TestVisibleWidthMatchesGraphemeGrouping`.
+
+## D261
+
+**An invalid `file://` URL is returned unchanged instead of raising.**
+
+Reference: `utils/paths.ts`, `normalizePath`, calls Node's `fileURLToPath`
+unguarded, so a non-local host (`file://host/x`), an encoded slash
+(`file:///tmp/a%2Fb`) or malformed percent encoding throws and the caller reports
+a URL error. `NormalizePath` returns a string and has no error result, so it
+returns the input unchanged when `filePathFromURL` rejects the URL; the caller
+then fails on a path ("file not found: file://host/x") instead of on the URL.
+Valid URLs, including the WHATWG pathname normalization (dot segments, encoded
+dots, backslash separators, an empty path as the root), match the reference.
+
+Test: `TestNormalizePathKeepsAnInvalidFileURL`.

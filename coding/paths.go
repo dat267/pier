@@ -160,33 +160,112 @@ func filePathFromURL(url string) (string, error) {
 	if !strings.HasPrefix(url, scheme) {
 		return "", fmtPathError("not a file URL")
 	}
-	path := url[len(scheme):]
+	// The WHATWG parser treats a backslash as a path separator for the special
+	// file scheme, so file:///tmp\a is /tmp/a.
+	path := strings.ReplaceAll(url[len(scheme):], "\\", "/")
 	// Strip URL metadata before percent-decoding: encoded ?/# are filename
 	// characters, not search/hash delimiters (Node fileURLToPath).
 	if index := strings.IndexAny(path, "?#"); index >= 0 {
 		path = path[:index]
 	}
 	// file:///abs/path → path starts with '/' (empty host); file://host/path
-	// carries a host component.
+	// carries a host component. An empty path is the root.
+	if path == "" {
+		return "/", nil
+	}
 	if !strings.HasPrefix(path, "/") {
 		idx := strings.Index(path, "/")
-		if idx < 0 {
-			return "", fmtPathError("file URL with no path")
+		host := path
+		if idx >= 0 {
+			host = path[:idx]
+			path = path[idx:]
+		} else {
+			path = "/"
 		}
-		host := path[:idx]
 		// The WHATWG URL parser lowercases the hostname, so file://LOCALHOST is
 		// the same as file://localhost.
 		if !strings.EqualFold(host, "localhost") {
 			return "", fmtPathError("file URL with non-localhost host")
 		}
-		path = path[idx:]
 	}
-	// Percent-decoding.
+	// Percent-encoded slashes are rejected before decoding (Node fileURLToPath:
+	// "File URL path must not include encoded / characters").
+	if hasEncodedSlash(path) {
+		return "", fmtPathError("file URL path with an encoded slash")
+	}
+	path = normalizeURLPathname(path)
 	decoded, err := percentDecode(path)
 	if err != nil {
 		return "", err
 	}
 	return decoded, nil
+}
+
+// hasEncodedSlash reports whether path contains a percent-encoded "/" (case
+// insensitive), which fileURLToPath rejects.
+func hasEncodedSlash(path string) bool {
+	for index := 0; index+2 < len(path); index++ {
+		if path[index] != '%' {
+			continue
+		}
+		if path[index+1] == '2' && (path[index+2] == 'f' || path[index+2] == 'F') {
+			return true
+		}
+	}
+	return false
+}
+
+// normalizeURLPathname resolves the "." and ".." segments of a URL pathname the
+// way the WHATWG URL parser does: an encoded dot counts, segments above the root
+// are dropped, a trailing dot segment keeps a trailing slash, and empty segments
+// are preserved. The path must be absolute.
+func normalizeURLPathname(path string) string {
+	segments := strings.Split(path, "/")
+	out := make([]string, 0, len(segments))
+	for index, segment := range segments {
+		last := index == len(segments)-1
+		switch {
+		case isURLSingleDotSegment(segment):
+			if last {
+				out = append(out, "")
+			}
+		case isURLDoubleDotSegment(segment):
+			// The first segment is the empty prefix before the root slash.
+			if len(out) > 1 {
+				out = out[:len(out)-1]
+			}
+			if last {
+				out = append(out, "")
+			}
+		default:
+			out = append(out, segment)
+		}
+	}
+	return strings.Join(out, "/")
+}
+
+// isURLSingleDotSegment reports "." spelled with a literal or encoded dot
+// (WHATWG single-dot path segment).
+func isURLSingleDotSegment(segment string) bool {
+	return segment == "." || strings.EqualFold(segment, "%2e")
+}
+
+// isURLDoubleDotSegment reports ".." where either dot may be encoded.
+func isURLDoubleDotSegment(segment string) bool {
+	dots := 0
+	for index := 0; index < len(segment); {
+		switch {
+		case index+3 <= len(segment) && segment[index] == '%' && segment[index+1] == '2' &&
+			(segment[index+2] == 'e' || segment[index+2] == 'E'):
+			index += 3
+		case segment[index] == '.':
+			index++
+		default:
+			return false
+		}
+		dots++
+	}
+	return dots == 2
 }
 
 func percentDecode(s string) (string, error) {

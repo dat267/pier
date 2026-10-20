@@ -145,3 +145,54 @@ func TestNormalizePathAcceptsUppercaseLocalhostFileURL(t *testing.T) {
 		t.Fatalf("NormalizePath(file://localhost) = %q; want %q", got, "/tmp/skills")
 	}
 }
+
+// Reference: pi v1.3.0 utils/paths.ts calls node:url.fileURLToPath, so the URL
+// parser normalizes the pathname before the path is decoded: dot segments
+// (literal or percent-encoded) resolve, backslashes are separators for the
+// special file scheme, and an empty path is the root. Each expectation was read
+// off the reference.
+func TestNormalizePathFileURLPathname(t *testing.T) {
+	for _, tc := range []struct{ input, want string }{
+		{"file://", "/"},
+		{"file://localhost", "/"},
+		{"file:///?q", "/"},
+		{"file:///tmp/a/../b", "/tmp/b"},
+		{"file:///tmp/a/..", "/tmp/"},
+		{"file:///tmp/a/../", "/tmp/"},
+		{"file:///..", "/"},
+		{"file:///tmp/a/../..", "/"},
+		{"file:///tmp/a/../../..", "/"},
+		{"file:///tmp//a", "/tmp//a"},
+		{"file:///tmp/a/./", "/tmp/a/"},
+		{"file:///tmp/a/.../b", "/tmp/a/.../b"},
+		{"file:///tmp/a/%2e%2e/b", "/tmp/b"},
+		{"file:///tmp/a/.%2e/b", "/tmp/b"},
+		{"file:///tmp/a/%2e./b", "/tmp/b"},
+		{"file:///tmp/a/%2e%2E/b", "/tmp/b"},
+		{"file:///tmp/a/...%2e/b", "/tmp/a/..../b"},
+		{"file:///tmp/a/.%2E%2E/b", "/tmp/a/.../b"},
+		{"file:///tmp/a/%2E/b", "/tmp/a/b"},
+		{"file:///tmp\\a\\..\\b", "/tmp/b"},
+	} {
+		if got := NormalizePath(tc.input, PathInputOptions{}); got != tc.want {
+			t.Errorf("NormalizePath(%q) = %q; want %q", tc.input, got, tc.want)
+		}
+	}
+}
+
+// TestNormalizePathKeepsAnInvalidFileURL pins D261: fileURLToPath throws for a
+// non-local host, an encoded slash or malformed percent encoding, and
+// normalizePath propagates the exception. NormalizePath has no error result, so
+// it returns the input unchanged and the caller fails on the path instead.
+func TestNormalizePathKeepsAnInvalidFileURL(t *testing.T) {
+	for _, input := range []string{
+		"file://host/tmp/x",
+		"file:///tmp/a%2Fb",
+		"file:///tmp/%zz",
+		"file://..",
+	} {
+		if got := NormalizePath(input, PathInputOptions{}); got != input {
+			t.Errorf("NormalizePath(%q) = %q; want the input unchanged", input, got)
+		}
+	}
+}
