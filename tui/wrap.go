@@ -181,6 +181,11 @@ func breakLongWord(word string, maxWidth int, tracker *ansiCodeTracker) []string
 		for _, segment := range segmentGraphemes(word[index:end]) {
 			w := graphemeWidth(segment)
 			if currentWidth+w > maxWidth {
+				// Close an underline or hyperlink before the break; the next piece
+				// reopens it from the tracker (upstream getLineEndReset).
+				if reset := tracker.lineEndReset(); reset != "" {
+					current += reset
+				}
 				pieces = append(pieces, current)
 				current = tracker.activeCodes()
 				currentWidth = 0
@@ -291,7 +296,7 @@ func wrapSingleLine(line string, width int) []string {
 
 		// Adding the token would exceed the width: wrap.
 		if currentVisibleLength+tokenVisibleLength > width && currentVisibleLength > 0 {
-			lineToWrap := strings.TrimRight(currentLine.String(), " \t")
+			lineToWrap := strings.TrimRightFunc(currentLine.String(), isWhitespaceRune)
 			if lineEndReset := tracker.lineEndReset(); lineEndReset != "" {
 				lineToWrap += lineEndReset
 			}
@@ -323,7 +328,7 @@ func wrapSingleLine(line string, width int) []string {
 	if len(wrapped) > 0 {
 		trimmed := make([]string, 0, len(wrapped))
 		for _, line := range wrapped {
-			trimmed = append(trimmed, strings.TrimRight(line, " \t"))
+			trimmed = append(trimmed, strings.TrimRightFunc(line, isWhitespaceRune))
 		}
 		return trimmed
 	}

@@ -29,18 +29,20 @@ func (h *osc8Hyperlink) open() string {
 	return "\x1b]8;" + h.Params + ";" + h.URL + h.Terminator
 }
 
-// parseOsc8Hyperlink parses an OSC 8 hyperlink open sequence; nil for a close.
-func parseOsc8Hyperlink(ansiCode string) *osc8Hyperlink {
+// parseOsc8Hyperlink parses an OSC 8 hyperlink sequence: ok reports that the
+// code is a hyperlink code at all, and a nil link with ok means the code closes
+// the active link (upstream parseOsc8Hyperlink returns null for a close).
+func parseOsc8Hyperlink(ansiCode string) (link *osc8Hyperlink, ok bool) {
 	// ESC ] 8 ; params ; url ST/BEL
 	if !strings.HasPrefix(ansiCode, "\x1b]8;") {
-		return nil
+		return nil, false
 	}
 	body := strings.TrimPrefix(ansiCode, "\x1b]8;")
 	body = strings.TrimSuffix(body, "\x07")
 	body = strings.TrimSuffix(body, "\x1b\\")
 	parts := strings.SplitN(body, ";", 2)
 	if len(parts) != 2 {
-		return nil
+		return nil, false
 	}
 	terminator := "\x07"
 	if strings.HasSuffix(ansiCode, "\x1b\\") {
@@ -48,9 +50,9 @@ func parseOsc8Hyperlink(ansiCode string) *osc8Hyperlink {
 	}
 	// An empty URL closes the link.
 	if parts[1] == "" {
-		return nil
+		return nil, true
 	}
-	return &osc8Hyperlink{Params: parts[0], URL: parts[1], Terminator: terminator}
+	return &osc8Hyperlink{Params: parts[0], URL: parts[1], Terminator: terminator}, true
 }
 
 // ansiCodeTracker tracks active SGR codes and hyperlink state.
@@ -63,7 +65,7 @@ type ansiCodeTracker struct {
 
 // process consumes one terminal sequence, updating tracked SGR state.
 func (t *ansiCodeTracker) process(ansiCode string) {
-	if hyperlink := parseOsc8Hyperlink(ansiCode); hyperlink != nil {
+	if hyperlink, ok := parseOsc8Hyperlink(ansiCode); ok {
 		t.activeHyperlink = hyperlink
 		return
 	}

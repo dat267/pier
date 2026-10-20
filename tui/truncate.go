@@ -85,8 +85,13 @@ func truncateFragmentToWidth(text string, maxWidth int) (string, int) {
 	return result.String(), width
 }
 
-// activeOsc8Close returns the hyperlink close for an active OSC 8 link.
+// activeOsc8Close returns the hyperlink close for a link still open at the end
+// of prefix (upstream getActiveOsc8Close).
 func activeOsc8Close(prefix string) string {
+	if !strings.Contains(prefix, "\x1b]8;") {
+		return ""
+	}
+	var active *osc8Hyperlink
 	index := 0
 	for index < len(prefix) {
 		code, length := ExtractANSICode(prefix, index)
@@ -94,12 +99,15 @@ func activeOsc8Close(prefix string) string {
 			index++
 			continue
 		}
-		if hyperlink := parseOsc8Hyperlink(code); hyperlink != nil {
-			return hyperlink.close()
+		if hyperlink, ok := parseOsc8Hyperlink(code); ok {
+			active = hyperlink
 		}
 		index += length
 	}
-	return ""
+	if active == nil {
+		return ""
+	}
+	return active.close()
 }
 
 // finalizeTruncatedResult assembles the truncated text with reset codes and

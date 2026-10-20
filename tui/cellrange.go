@@ -56,11 +56,12 @@ func GetOsc8LinkAtColumn(line string, column int) (string, bool) {
 	currentCol := 0
 	for i < len(line) {
 		if code, length := ExtractANSICode(line, i); length > 0 {
-			if hyperlink := parseOsc8Hyperlink(code); hyperlink != nil {
-				activeURL = hyperlink.URL
-			} else if strings.HasPrefix(code, "\x1b]8;") {
+			if hyperlink, ok := parseOsc8Hyperlink(code); ok {
 				// A close sequence clears the active link.
 				activeURL = ""
+				if hyperlink != nil {
+					activeURL = hyperlink.URL
+				}
 			}
 			i += length
 			continue

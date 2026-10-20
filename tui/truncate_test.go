@@ -179,10 +179,11 @@ func TestANSITrackerHyperlink(t *testing.T) {
 	if got := bel.lineEndReset(); got != "\x1b]8;;\x07" {
 		t.Fatalf("lineEndReset = %q", got)
 	}
-	// A close sequence is not tracked as an open; the link stays until cleared.
+	// A close sequence clears the link (upstream parseOsc8Hyperlink returns null
+	// for it and process stores the null).
 	bel.process("\x1b]8;;\x07")
-	if bel.activeHyperlink == nil {
-		t.Fatal("upstream keeps the link tracked across a close sequence")
+	if bel.activeHyperlink != nil {
+		t.Fatal("a close sequence must clear the hyperlink")
 	}
 	bel.clear()
 	if bel.activeHyperlink != nil {
