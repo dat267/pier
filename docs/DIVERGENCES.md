@@ -1645,7 +1645,10 @@ output through a raw tail that retries `ENOBUFS`/`EAGAIN`. The port does not
 patch `os.Stdout`: a Go `os.File` write is blocking, so `coding/printmode.go`'s
 `printStdout` mutex plus that blocking write already provide output ordering and
 backpressure, and the diagnostics upstream would redirect are written to stderr
-directly (`cmd/main.go`, `coding.FormatCLIDiagnostic`). `restoreStdout` has no
+directly (`cmd/main.go`, `coding.FormatCLIDiagnostic`). The `--resume` picker,
+which upstream's takeover would also send to stderr, instead draws on stderr for
+the explicit headless flags (`--print`, `--mode json`) and on stdout otherwise
+(`cmd.sessionPickerOutput`). `restoreStdout` has no
 counterpart.
 
 ## D242

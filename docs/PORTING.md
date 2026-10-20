@@ -239,8 +239,14 @@ The agent loop follows the `packages/agent` contract introduced in v1.1.0 and un
 runs before every provider request, `FinishTurn` runs before `turn_end` and can end or explicitly
 continue the run, and loop-level callback errors enter the run-failure lifecycle. `RunToolCall`
 exposes the single-tool execution path with the same validation and tool hooks, including returned
-`isError` and execution duration; tool-hook errors remain tool results. Tool update listener errors
-also fail the tool call, matching upstream's awaited update events. `ShouldStopAfterTurn` remains as
+`isError` and execution duration; tool-hook errors remain tool results. Tool updates reach the sink
+through one ordered consumer per call, so `OnUpdate` is never re-entered and events keep the tool's
+emission order; update listener errors also fail the tool call, matching upstream's awaited update
+events. A panic from a tool's
+`prepareArguments` shim, `beforeToolCall`/`afterToolCall` hook, or `execute` is the same throw
+upstream catches, so it becomes an error tool result and the batch continues; parallel-worker
+panics are re-raised on the loop goroutine so the run-failure contract still applies.
+`ShouldStopAfterTurn` remains as
 a deprecated compatibility callback; new code should use `FinishTurn`.
 
 The response lifecycle follows the v1.1.0 `agent-loop.ts` contract, unchanged in v1.2.0: cancellation reaches
@@ -742,7 +748,18 @@ Ported from the v0.99.1→v1.0.0 delta so far (the rest is still pending):
   (`WithVirtualModels`, through `ai.WrapProviderWithVirtualModels`, so a
   virtual model hides a same-id physical one, filtering keeps virtuals and an
   unrouted stream fails); the branch model resolution still walks its branch
-  per submission (`a0660b174`). Dynamic
+  per submission (`a0660b174`). Virtual-model **routing** itself is not ported:
+  upstream resolves the route in `_installAgentRequestProjection`
+  (`agent-session.ts:788`, a per-request `prepareRequest` hook that also
+  re-projects the transcript, re-reads the model and thinking level, and
+  records router state), and the port has no per-request seam. It refreshes at
+  turn boundaries instead, which matches for physical models because the loop
+  calls `PrepareNextTurn` before every request but the first. Consequences: a
+  virtual model streams as unrouted, `GetBranchSelection` has no production
+  caller, and the threshold-compaction skip upstream applies to virtual
+  selections (`_compactBeforeNextAssistantResponse`) has no counterpart. No
+  builtin catalog entry is virtual, so this is dormant until routing lands.
+  Dynamic
   provider registration does not exist in the port, so `registerProvider`'s
   provisional configured entry (`fddc968b9`) has no surface. Anthropic
   workload identity federation (`a9424cd43`) is ported at the protocol level
@@ -857,7 +874,7 @@ Update the pin whenever upstream source is re-read for a port.
 | `coding` (tools) | `core/tools/{truncate,path-utils,file-mutation-queue,read,write,ls}.ts` | ported (read offsets/limits preserve JavaScript numeric and `Array.slice` behavior, including fractional and negative values; text reads apply UTF-8 replacement semantics; new writes and directories use Node's default modes before umask; `ls` uses Unicode collation after lowercasing, per upstream `localeCompare`) |
 | `coding` (edit) | `core/tools/{edit.ts, edit-diff.ts}` — exact/fuzzy matching, overlap detection, CRLF/BOM preservation, diffs | ported |
 | `coding` (search) | `core/tools/{find.ts, grep.ts}` — real fd/rg backends, gitignore respect, relativized output, match/context formatting, fractional fd limits and grep limits/context behavior, UTF-8 replacement in paths and context lines, and stopping rg at the match limit | ported (D244: find result paths keep leading/trailing whitespace, where upstream's line trim breaks such file names) |
-| `coding` (bash) | `core/tools/bash.ts` + `output-accumulator.ts` — bounded-memory streaming with TextDecoder UTF-8 replacement and initial-BOM behavior, private exclusive 0600 temp-file full output, tree-kill, 128+N signal mapping, finite positive timeout validation with the exact 2,147,483.647-second cap message, timeouts, aborts, PI_* env handling | ported (D161: the port sweeps its own `pi-bash`/`pi-output`/`pi-powershell` temp files down to a byte budget instead of leaving them to OS aging) |
+| `coding` (bash) | `core/tools/bash.ts` + `output-accumulator.ts` — bounded-memory streaming with TextDecoder UTF-8 replacement and initial-BOM behavior, private exclusive 0600 temp-file full output, tree-kill, 128+N signal mapping, finite positive timeout validation with the exact 2,147,483.647-second cap message, timeouts, aborts, PI_* env handling | ported (D161: the port sweeps its own `pi-bash`/`pi-output`/`pi-powershell` temp files down to a byte budget instead of leaving them to OS aging; the 100 ms streamed-update throttle emits inline under its own lock, so the reader and the throttle timer cannot reorder or re-enter the sink) |
 | `coding` (sandbox removal) | `core/tools/{bash,edit,write}.ts` and `core/sdk.ts`: tools use ordinary OS permissions without a built-in sandbox. The port-local Landlock launcher, write/edit guards, permission modes, `/permissions`, footer codes, and sandbox prompt section are removed | parity restored; no platform-specific read-only fallback |
 | `coding` (sessions) | `core/session-manager.ts` — v3 JSONL trees, branching, compaction context, migrations, discovery/listing; `core/messages.ts` custom roles | ported (session directories/files use Node's 0777/0666 defaults before umask and new session files are created exclusively; D210: off-loop writes record failures and recover the accepted prefix instead of throwing on the UI owner loop; `FlushWrites` returns unresolved failures and `DrainWriteErrors` hands out diagnostics) |
 | `coding` (prompt) | `core/system-prompt.ts` (structured sections, forced prompts, section diffing) + `core/skills.ts` + `utils/frontmatter.ts` — skill discovery (including directory and file symlinks, case-insensitive `.gitignore`/`.ignore`/`.fdignore` rules, and top-level Markdown skill files), path resolution (`~`/relative), canonical-real-path dedupe and name-collision diagnostics, plus the `available_skills` prompt block. Skill and prompt-template frontmatter preserve quoted-versus-plain scalar types for consumed fields, recognize YAML boolean variants and inline comments, use JavaScript trimming and UTF-16 length limits, and reject non-string descriptions or hints. Discovery also covers the `.agents/skills` locations (`core/package-manager.ts` `collectAncestorAgentsSkillDirs`): the user `~/.agents/skills`, and the project's `.agents/skills` from cwd up to the git repository root when the project is trusted (the rest of the package manager stays out of scope). The prompt/tool loadout is installed as a system message on each prompt and between turns (`preparePromptAndToolLoadout`), with tool snippets/guidelines filled from the registry | ported |
