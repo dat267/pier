@@ -264,11 +264,11 @@ func RetryAssistantCall(
 	if policy != nil && policy.Enabled {
 		maxAttempts = policy.MaxRetries
 	}
-	notify := func(f func() error) {
-		if f == nil {
-			return
+	finish := func(success bool, attempt int, finalError string) error {
+		if callbacks != nil && callbacks.OnRetryFinished != nil {
+			return callbacks.OnRetryFinished(success, attempt, finalError)
 		}
-		_ = f()
+		return nil
 	}
 
 	attempt := 0
@@ -282,16 +282,20 @@ func RetryAssistantCall(
 
 		// Abort: terminal but not successful. Never retried.
 		if response.StopReason == StopAborted {
-			if lastRetry > 0 && callbacks != nil {
-				notify(func() error { return callbacks.OnRetryFinished(false, lastRetry, "") })
+			if lastRetry > 0 {
+				if err := finish(false, lastRetry, ""); err != nil {
+					return nil, err
+				}
 			}
 			return response, nil
 		}
 
 		// Success: non-error responses return as-is.
 		if response.StopReason != StopError {
-			if lastRetry > 0 && callbacks != nil {
-				notify(func() error { return callbacks.OnRetryFinished(true, lastRetry, "") })
+			if lastRetry > 0 {
+				if err := finish(true, lastRetry, ""); err != nil {
+					return nil, err
+				}
 			}
 			return response, nil
 		}
@@ -302,8 +306,10 @@ func RetryAssistantCall(
 		}
 		// Non-retryable, or budget exhausted.
 		if attempt >= maxAttempts || !IsRetryableAssistantError(response) {
-			if lastRetry > 0 && callbacks != nil {
-				notify(func() error { return callbacks.OnRetryFinished(false, lastRetry, finalMessage) })
+			if lastRetry > 0 {
+				if err := finish(false, lastRetry, finalMessage); err != nil {
+					return nil, err
+				}
 			}
 			return response, nil
 		}
@@ -316,15 +322,17 @@ func RetryAssistantCall(
 		}
 		delayMS := RetryDelayMS(*policy, attempt)
 		if callbacks != nil && callbacks.OnRetryScheduled != nil {
-			notify(func() error { return callbacks.OnRetryScheduled(attempt, maxAttempts, delayMS, lastErrorMessage) })
+			if err := callbacks.OnRetryScheduled(attempt, maxAttempts, delayMS, lastErrorMessage); err != nil {
+				return nil, err
+			}
 		}
 
 		select {
 		case <-time.After(time.Duration(delayMS) * time.Millisecond):
 		case <-ctx.Done():
 			// Aborts during backoff normalize to an aborted AssistantMessage.
-			if callbacks != nil && callbacks.OnRetryFinished != nil {
-				notify(func() error { return callbacks.OnRetryFinished(false, attempt, lastErrorMessage) })
+			if err := finish(false, attempt, lastErrorMessage); err != nil {
+				return nil, err
 			}
 			aborted := *response
 			aborted.ErrorMessage = nil
@@ -332,7 +340,9 @@ func RetryAssistantCall(
 			return &aborted, nil
 		}
 		if callbacks != nil && callbacks.OnRetryAttemptStart != nil {
-			notify(callbacks.OnRetryAttemptStart)
+			if err := callbacks.OnRetryAttemptStart(); err != nil {
+				return nil, err
+			}
 		}
 	}
 }

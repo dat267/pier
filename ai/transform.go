@@ -157,7 +157,7 @@ func TransformMessages(messages []Message, model *Model, normalizeToolCallID Too
 					}
 					// Keep redacted and signed blocks even if the thinking text is empty
 					// (OpenAI encrypted reasoning); they are needed for replay.
-					if b.Redacted || b.ThinkingSignature != nil {
+					if b.Redacted || (b.ThinkingSignature != nil && *b.ThinkingSignature != "") {
 						transformedContent = append(transformedContent, b)
 						continue
 					}
@@ -173,7 +173,7 @@ func TransformMessages(messages []Message, model *Model, normalizeToolCallID Too
 					}
 				case ToolCall:
 					normalized := b
-					if !isSameModel && b.ThoughtSignature != nil {
+					if !isSameModel && b.ThoughtSignature != nil && *b.ThoughtSignature != "" {
 						normalized.ThoughtSignature = nil
 					}
 					if !isSameModel && normalizeToolCallID != nil {
