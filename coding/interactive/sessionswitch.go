@@ -293,5 +293,5 @@ func userMessageEntryText(entry *coding.SessionEntry) (string, bool) {
 	if !ok {
 		return "", false
 	}
-	return user.Content.Text, true
+	return ai.ContentText(user.Content, ""), true
 }

@@ -143,3 +143,27 @@ func TestMessageSelectorForkIsWired(t *testing.T) {
 		t.Fatal("the selector wiring has no runtime fork, so forking from a message does nothing")
 	}
 }
+
+// Reference: pi v1.3.0 core/agent-session-runtime.ts extractUserMessageText
+// joins text blocks without a separator, so a block-shaped prompt returns its
+// full text to the editor when forking before it.
+func TestForkAtEntryJoinsBlockPromptText(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+
+	app.sessionMgr.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Blocks: ai.ContentList{
+		ai.TextContent{Text: "first "}, ai.TextContent{Text: "question"},
+	}}})
+	forks := app.session.GetUserMessagesForForking()
+	if len(forks) != 1 {
+		t.Fatalf("user messages = %d, want 1", len(forks))
+	}
+
+	result, err := app.forkAtEntry(context.Background(), forks[0].EntryID, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.SelectedText == nil || *result.SelectedText != "first question" {
+		t.Errorf("selected text = %v, want the joined block text", result.SelectedText)
+	}
+}

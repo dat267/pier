@@ -449,7 +449,7 @@ func rpcUserMessageEntryText(entry *SessionEntry) (string, bool) {
 	if !ok {
 		return "", false
 	}
-	return user.Content.Text, true
+	return contentTextJoinedNoSep(user.Content), true
 }
 
 // D235: one lossless, unbuffered byte handoff backpressures event producers.
