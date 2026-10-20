@@ -927,7 +927,7 @@ func (s *AgentSession) GetUserMessagesForForking() []UserMessageFork {
 		if !ok {
 			continue
 		}
-		text := user.Content.Text
+		text := contentTextJoinedNoSep(user.Content)
 		if text != "" {
 			out = append(out, UserMessageFork{EntryID: entry.ID, Text: text})
 		}
