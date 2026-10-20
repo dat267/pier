@@ -313,57 +313,58 @@ func toLowerRune(char rune) rune {
 	return char
 }
 
-// matchSegmentHere matches a single path segment; it never sees a "/".
+// matchSegmentHere matches a single path segment; it never sees a "/". The
+// recursion is memoized on (pattern, value) offsets, so a pattern like
+// "*a*a*...*b" cannot backtrack exponentially.
 func matchSegmentHere(pattern, value []rune) bool {
-	for len(pattern) > 0 {
-		switch pattern[0] {
-		case '*':
+	type state struct{ pattern, value int }
+	// 0 is "not computed yet", 1 is false, 2 is true.
+	memo := make(map[state]uint8, (len(pattern)+1)*(len(value)+1))
+	var match func(patternIndex, valueIndex int) bool
+	match = func(patternIndex, valueIndex int) bool {
+		key := state{patternIndex, valueIndex}
+		if cached := memo[key]; cached != 0 {
+			return cached == 2
+		}
+		result := false
+		switch {
+		case patternIndex == len(pattern):
+			result = valueIndex == len(value)
+		case pattern[patternIndex] == '*':
 			// Adjacent stars inside a segment are a single star (minimatch treats
 			// `a**b` as `a*b`).
-			rest := pattern[1:]
-			for len(rest) > 0 && rest[0] == '*' {
-				rest = rest[1:]
+			next := patternIndex + 1
+			for next < len(pattern) && pattern[next] == '*' {
+				next++
 			}
-			for index := 0; index <= len(value); index++ {
-				if matchSegmentHere(rest, value[index:]) {
-					return true
-				}
+			result = match(next, valueIndex) ||
+				(valueIndex < len(value) && match(patternIndex, valueIndex+1))
+		case pattern[patternIndex] == '?':
+			result = valueIndex < len(value) && match(patternIndex+1, valueIndex+1)
+		case pattern[patternIndex] == '[':
+			if valueIndex < len(value) {
+				consumed, ok := matchClass(pattern[patternIndex:], value[valueIndex])
+				result = ok && match(patternIndex+consumed, valueIndex+1)
 			}
-			return false
-		case '?':
-			if len(value) == 0 {
-				return false
+		case pattern[patternIndex] == '\\':
+			escaped := patternIndex + 1
+			if escaped >= len(pattern) {
+				escaped = patternIndex
 			}
-			pattern = pattern[1:]
-			value = value[1:]
-		case '[':
-			if len(value) == 0 {
-				return false
-			}
-			consumed, ok := matchClass(pattern, value[0])
-			if !ok {
-				return false
-			}
-			pattern = pattern[consumed:]
-			value = value[1:]
-		case '\\':
-			if len(pattern) > 1 {
-				pattern = pattern[1:]
-			}
-			if len(value) == 0 || value[0] != pattern[0] {
-				return false
-			}
-			pattern = pattern[1:]
-			value = value[1:]
+			result = valueIndex < len(value) && value[valueIndex] == pattern[escaped] &&
+				match(escaped+1, valueIndex+1)
 		default:
-			if len(value) == 0 || value[0] != pattern[0] {
-				return false
-			}
-			pattern = pattern[1:]
-			value = value[1:]
+			result = valueIndex < len(value) && value[valueIndex] == pattern[patternIndex] &&
+				match(patternIndex+1, valueIndex+1)
 		}
+		if result {
+			memo[key] = 2
+		} else {
+			memo[key] = 1
+		}
+		return result
 	}
-	return len(value) == 0
+	return match(0, 0)
 }
 
 // matchClass matches one character against a character class, returning the

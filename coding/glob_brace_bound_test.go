@@ -3,6 +3,7 @@ package coding
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 // TestExpandBracesIsBounded covers brace-expansion's limits (the CVE-2026-14257
@@ -55,5 +56,24 @@ func TestMatchGlobEscapedBraces(t *testing.T) {
 		if got := MatchGlob(testCase.pattern, testCase.value, false); got != testCase.want {
 			t.Errorf("MatchGlob(%q, %q) = %v, want %v", testCase.pattern, testCase.value, got, testCase.want)
 		}
+	}
+}
+
+// TestMatchGlobBacktrackingIsMemoized covers a pattern of many "*a" segments
+// that fails to match: a naive per-star recursion backtracks exponentially
+// (2^stars) and hangs, while the memoized segment match is polynomial. The
+// reference answers false (there is no "b" in the value).
+func TestMatchGlobBacktrackingIsMemoized(t *testing.T) {
+	pattern := strings.Repeat("*a", 60) + "*b"
+	value := strings.Repeat("a", 200)
+	done := make(chan bool, 1)
+	go func() { done <- MatchGlob(pattern, value, true) }()
+	select {
+	case got := <-done:
+		if got {
+			t.Fatalf("MatchGlob(%q, %q) = true, want false", pattern, value)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatalf("MatchGlob(%q, %q) did not finish", pattern, value)
 	}
 }
