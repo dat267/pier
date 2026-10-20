@@ -342,7 +342,7 @@ func StartGitHubDeviceFlow(ctx context.Context, domain string) (*GitHubDeviceCod
 	request.Header.Set("Accept", "application/json")
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Set("User-Agent", "GitHubCopilotChat/0.35.0")
-	response, err := http.DefaultClient.Do(request)
+	response, err := doBoundedRequest(request)
 	if err != nil {
 		return nil, err
 	}
@@ -403,7 +403,7 @@ func PollForGitHubAccessToken(ctx context.Context, domain string, device *GitHub
 			request.Header.Set("Accept", "application/json")
 			request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			request.Header.Set("User-Agent", "GitHubCopilotChat/0.35.0")
-			response, err := http.DefaultClient.Do(request)
+			response, err := doBoundedRequest(request)
 			if err != nil {
 				return OAuthDeviceCodePollResult[string]{Status: "failed", Message: err.Error()}, nil
 			}
@@ -460,7 +460,7 @@ func RefreshGitHubCopilotAccessToken(ctx context.Context, refreshToken, enterpri
 	for name, value := range GitHubCopilotHeaders {
 		request.Header.Set(name, value)
 	}
-	response, err := http.DefaultClient.Do(request)
+	response, err := doBoundedRequest(request)
 	if err != nil {
 		return nil, err
 	}

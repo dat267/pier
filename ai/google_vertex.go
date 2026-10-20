@@ -395,7 +395,7 @@ func refreshAuthorizedUserToken(ctx ctxpkg.Context, cacheKey string, credentials
 		return "", err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := doBoundedRequest(req)
 	if err != nil {
 		return "", err
 	}
@@ -449,7 +449,7 @@ func metadataAccessToken(ctx ctxpkg.Context, env ProviderEnv) (string, error) {
 		return "", err
 	}
 	req.Header.Set("Metadata-Flavor", "Google")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := doBoundedRequest(req)
 	if err != nil {
 		return "", fmt.Errorf("no Google Cloud credentials found: %w", err)
 	}

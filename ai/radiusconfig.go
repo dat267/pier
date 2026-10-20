@@ -193,7 +193,7 @@ func LoadRadiusGatewayConfig(ctx context.Context, gateway, apiKey string) (*Radi
 	if apiKey != "" {
 		request.Header.Set("authorization", "Bearer "+apiKey)
 	}
-	response, err := http.DefaultClient.Do(request)
+	response, err := doBoundedRequest(request)
 	if err != nil {
 		return nil, err
 	}

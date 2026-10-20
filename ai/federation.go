@@ -199,7 +199,14 @@ func ExchangeFederationToken(ctx context.Context, config FederationConfig) (Fede
 	if client == nil {
 		client = http.DefaultClient
 	}
-	response, err := client.Do(request)
+	var response *http.Response
+	if client == http.DefaultClient {
+		// The token exchange is a non-streaming auth request like any other: a
+		// half-open endpoint must fail it, not hang the turn (D255).
+		response, err = doBoundedRequest(request)
+	} else {
+		response, err = client.Do(request)
+	}
 	if err != nil {
 		return FederationToken{}, &WorkloadIdentityError{Message: fmt.Sprintf("Failed to reach token endpoint %s: %v", endpoint, err)}
 	}

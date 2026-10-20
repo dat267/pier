@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/dat267/pier/mcp/protocol"
@@ -18,9 +19,35 @@ import (
 // McpFetch performs HTTP requests (upstream's fetch injection).
 type McpFetch func(ctx context.Context, request *http.Request) (*http.Response, error)
 
-// defaultFetch is the platform client, called without a receiver (#10188).
+// defaultRequestTimeout bounds one discovery fetch that does not carry its own
+// deadline, matching the 30s MCP request timeout (D255).
+var defaultRequestTimeout = 30 * time.Second
+
+// cancelOnCloseBody releases a request context when the caller is done with the
+// response.
+type cancelOnCloseBody struct {
+	io.ReadCloser
+	cancel context.CancelFunc
+}
+
+func (b *cancelOnCloseBody) Close() error {
+	err := b.ReadCloser.Close()
+	b.cancel()
+	return err
+}
+
+// defaultFetch is the platform client, called without a receiver (#10188). Its
+// response is bounded by defaultRequestTimeout or the caller's earlier
+// deadline, and closing the body releases the timer.
 func defaultFetch(ctx context.Context, request *http.Request) (*http.Response, error) {
-	return http.DefaultClient.Do(request)
+	requestCtx, cancel := context.WithTimeout(ctx, defaultRequestTimeout)
+	response, err := http.DefaultClient.Do(request.WithContext(requestCtx))
+	if err != nil {
+		cancel()
+		return nil, err
+	}
+	response.Body = &cancelOnCloseBody{ReadCloser: response.Body, cancel: cancel}
+	return response, nil
 }
 
 // LatestProtocolVersion re-exports the MCP version for metadata requests.

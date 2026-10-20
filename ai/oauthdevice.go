@@ -68,7 +68,7 @@ func oauthPostForm(ctx context.Context, requestURL string, fields map[string]str
 	}
 	request.Header.Set("Accept", "application/json")
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	response, err := http.DefaultClient.Do(request)
+	response, err := doBoundedRequest(request)
 	if err != nil {
 		if ctx != nil && ctx.Err() != nil {
 			return oauthHTTPResponse{}, fmt.Errorf("Login cancelled")

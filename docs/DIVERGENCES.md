@@ -1920,3 +1920,23 @@ Tests: `TestProviderStreamsAbortWhenResponseHeadersIdle`,
 `TestStreamProxyAbortsWhenResponseHeadersIdle`,
 `TestStreamCodexResponsesKeepsStreamingPastTheHeadersTimeout` and
 `TestOpenRouterImagesAbortsWhenResponseHeadersIdle`.
+
+## D255
+
+**Non-streaming auth and config requests carry their own default timeout.**
+
+Reference: `core/http-dispatcher.ts` installs the idle timeout on the process
+dispatcher, so every `fetch` in pi inherits a bound, including OAuth token
+exchanges, device-code polling, ADC and metadata token discovery, the Radius
+gateway config, MCP OAuth discovery and federation token exchange. The port
+cannot set a transport timeout per request (D40) and the settings-backed value
+only reaches provider streams, so those calls take a default bound when their
+context has none: 60s in `ai` (`ai.doBoundedRequest`) and 30s for MCP OAuth
+discovery (`oauth.defaultFetch`, matching the 30s MCP request timeout). A caller
+deadline is always shorter and wins, and closing the response releases the
+timer. Requests that already carried a shorter bound are unchanged:
+`postOAuthJSON` 30s, the OpenRouter exchange, GitHub Copilot's 5s token retry,
+the OpenRouter catalog's 15s and MCP request timeouts.
+
+Tests: `TestBoundedRequestHonorsTheCallerDeadline`,
+`TestGitHubCopilotTokenRefreshIsBounded` and `TestDefaultFetchIsBounded`.

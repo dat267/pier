@@ -148,3 +148,24 @@ func DoProviderRequest(req *http.Request, timeoutMS *int) (*http.Response, error
 	resp.Body = body
 	return resp, nil
 }
+
+// defaultBoundedRequestTimeout bounds one non-streaming provider, auth or
+// config request that does not carry its own deadline. Upstream installs its
+// idle timeout on every fetch through the dispatcher, so a login or refresh
+// cannot sit on a half-open connection forever (D255). A caller deadline is
+// always shorter and therefore wins.
+var defaultBoundedRequestTimeout = 60 * time.Second
+
+// doBoundedRequest issues one non-streaming request under
+// defaultBoundedRequestTimeout and keeps the timer alive for the body read:
+// closing the response releases it.
+func doBoundedRequest(req *http.Request) (*http.Response, error) {
+	ctx, cancel := context.WithTimeout(req.Context(), defaultBoundedRequestTimeout)
+	resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+	if err != nil {
+		cancel()
+		return nil, err
+	}
+	resp.Body = &cancelOnCloseBody{ReadCloser: resp.Body, cancel: cancel}
+	return resp, nil
+}

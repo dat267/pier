@@ -59,7 +59,7 @@ func LoadRadiusOAuthDiscovery(ctx context.Context, gateway string) (*RadiusOAuth
 		return nil, err
 	}
 	request.Header.Set("accept", "application/json")
-	response, err := http.DefaultClient.Do(request)
+	response, err := doBoundedRequest(request)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func RequestRadiusOAuthToken(ctx context.Context, gateway string, fields map[str
 	}
 	request.Header.Set("accept", "application/json")
 	request.Header.Set("content-type", "application/x-www-form-urlencoded")
-	response, err := http.DefaultClient.Do(request)
+	response, err := doBoundedRequest(request)
 	if err != nil {
 		if ctx != nil && ctx.Err() != nil {
 			return nil, fmt.Errorf("Login cancelled")
@@ -336,7 +336,7 @@ func RequestRadiusDeviceAuthorization(ctx context.Context, gateway string) (*Rad
 	}
 	request.Header.Set("accept", "application/json")
 	request.Header.Set("content-type", "application/x-www-form-urlencoded")
-	response, err := http.DefaultClient.Do(request)
+	response, err := doBoundedRequest(request)
 	if err != nil {
 		if ctx != nil && ctx.Err() != nil {
 			return nil, fmt.Errorf("Login cancelled")

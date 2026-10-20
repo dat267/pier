@@ -327,7 +327,7 @@ func requestOpenAIChatGPTToken(ctx context.Context, body url.Values) (*openAICha
 	}
 	request.Header.Set("Accept", "application/json")
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	response, err := http.DefaultClient.Do(request)
+	response, err := doBoundedRequest(request)
 	if err != nil {
 		return nil, err
 	}

@@ -139,7 +139,7 @@ func openAICodexPostForm(ctx context.Context, requestURL string, fields map[stri
 		return nil, err
 	}
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	response, err := http.DefaultClient.Do(request)
+	response, err := doBoundedRequest(request)
 	if err != nil {
 		if ctx != nil && ctx.Err() != nil {
 			return nil, fmt.Errorf("Login cancelled")
@@ -197,7 +197,7 @@ func StartOpenAICodexDeviceAuth(ctx context.Context) (*OpenAICodexDeviceAuthInfo
 		return nil, err
 	}
 	request.Header.Set("Content-Type", "application/json")
-	response, err := http.DefaultClient.Do(request)
+	response, err := doBoundedRequest(request)
 	if err != nil {
 		if ctx != nil && ctx.Err() != nil {
 			return nil, fmt.Errorf("Login cancelled")
@@ -270,7 +270,7 @@ func PollOpenAICodexDeviceAuth(ctx context.Context, device *OpenAICodexDeviceAut
 				return OAuthDeviceCodePollResult[*OpenAICodexDeviceTokenSuccess]{Status: "failed", Message: err.Error()}, nil
 			}
 			request.Header.Set("Content-Type", "application/json")
-			response, err := http.DefaultClient.Do(request)
+			response, err := doBoundedRequest(request)
 			if err != nil {
 				if ctx != nil && ctx.Err() != nil {
 					return OAuthDeviceCodePollResult[*OpenAICodexDeviceTokenSuccess]{
