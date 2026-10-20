@@ -300,6 +300,12 @@ type SessionConfig struct {
 	// servers, bounded). The caller owns the wait; long work here delays the
 	// first request by design.
 	BeforeFirstTurn func(ctx context.Context)
+	// PrepareNextTurnWithContext runs between turns, before the session's own
+	// refresh (upstream agent-session.ts chains the hook the Agent already
+	// carried). Its messages are emitted before the loadout update, its context
+	// replaces the turn context, and the session's state still supplies the
+	// model, thinking level and tools.
+	PrepareNextTurnWithContext func(turn *agent.AgentTurnContext, ctx context.Context) (*agent.AgentLoopTurnUpdate, error)
 	// Goal enables the builtin session-goal controller. The SDK sets it unless
 	// tools are disabled; upstream always has the extension host available.
 	Goal bool
@@ -358,6 +364,9 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 		Transport:       config.Transport,
 		ThinkingBudgets: config.ThinkingBudgets,
 		MaxRetryDelayMS: config.MaxRetryDelayMS,
+		// Installed here only so the session's own refresh can chain it below;
+		// assigning it directly would drop that refresh.
+		PrepareNextTurnWithContext: config.PrepareNextTurnWithContext,
 	})
 	if err != nil {
 		return nil, err
@@ -455,13 +464,31 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 	// (upstream agent-session.ts prepareNextTurnWithContext, applied by the loop
 	// as nextTurnSnapshot). The prompt/tool loadout is re-applied too, so a
 	// changed system prompt or tool set reaches the rest of the turn.
+	//
+	// The caller's hook is chained, as upstream's _installAgentNextTurnRefresh
+	// chains the hook the Agent already carried: it runs after compaction, its
+	// messages precede the loadout update, its context replaces the turn
+	// context, and the session's state keeps supplying model, thinking level and
+	// tools.
+	previousNextTurn := config.PrepareNextTurnWithContext
 	a.PrepareNextTurnWithContext = func(turn *agent.ShouldStopAfterTurnContext, ctx context.Context) (*agent.AgentLoopTurnUpdate, error) {
 		if err := s.maybeAutoCompact(ctx); err != nil {
 			return nil, err
 		}
+		var caller *agent.AgentLoopTurnUpdate
+		if previousNextTurn != nil {
+			update, err := previousNextTurn(turn, ctx)
+			if err != nil {
+				return nil, err
+			}
+			caller = update
+		}
 		var prepared []ai.Message
+		if caller != nil {
+			prepared = append(prepared, caller.Messages...)
+		}
 		if update := s.preparePromptAndToolLoadout(); update != nil {
-			prepared = []ai.Message{update}
+			prepared = append(prepared, update)
 		}
 		state := s.Agent.State()
 		if s.Goal != nil {
@@ -470,7 +497,11 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 			}
 		}
 		updated := turn.Context
-		updated.Messages = state.Messages
+		if caller != nil && caller.Context != nil {
+			updated = *caller.Context
+		} else {
+			updated.Messages = state.Messages
+		}
 		updated.Tools = append([]agent.AgentTool{}, state.Tools...)
 		return &agent.AgentLoopTurnUpdate{
 			Context:          &updated,

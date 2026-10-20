@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -477,5 +478,70 @@ func TestBashAbortDetachedWriter(t *testing.T) {
 	at := <-cancelledAt
 	if after := returnedAt.Sub(at); after > 3*time.Second {
 		t.Fatalf("abort took %v after cancelling: a detached writer held the output pipe", after)
+	}
+}
+
+// Streamed bash updates are emitted synchronously in snapshot order, as
+// upstream does (bash.ts emitOutputUpdate calls onUpdate inline). The port
+// spawned one goroutine per update, so the sink could be re-entered and updates
+// could arrive out of order.
+func TestBashStreamedUpdatesAreSerializedInOrder(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("uses printf and fractional sleep from a POSIX shell")
+	}
+	dir := t.TempDir()
+	tool := CreateBashTool(dir, nil)
+
+	var mu sync.Mutex
+	var lengths []int
+	call := 0
+	slept := false
+	active := 0
+	overlap := false
+	onUpdate := func(result agent.AgentToolResult) {
+		mu.Lock()
+		call++
+		mine := call
+		active++
+		if active > 1 {
+			overlap = true
+		}
+		text := ""
+		if len(result.Content) > 0 {
+			text = result.Content[0].(ai.TextContent).Text
+		}
+		lengths = append(lengths, len(text))
+		hold := !slept && mine > 1 && len(text) > 0
+		if hold {
+			// The first non-empty emit holds the sink long enough for the next
+			// chunk to be read, which is where a per-update goroutine re-enters
+			// the sink.
+			slept = true
+		}
+		mu.Unlock()
+		if hold {
+			time.Sleep(250 * time.Millisecond)
+		}
+		mu.Lock()
+		active--
+		mu.Unlock()
+	}
+
+	if _, err := tool.Execute("c", json.RawMessage(`{"command":"printf a; sleep 0.15; printf b"}`), context.Background(), onUpdate); err != nil {
+		t.Fatal(err)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	if overlap {
+		t.Fatalf("streamed updates re-entered the sink: %v", lengths)
+	}
+	if len(lengths) < 2 {
+		t.Fatalf("updates = %v; want the throttled follow-up emit", lengths)
+	}
+	for i := 1; i < len(lengths); i++ {
+		if lengths[i] < lengths[i-1] {
+			t.Fatalf("update sizes went backwards: %v", lengths)
+		}
 	}
 }

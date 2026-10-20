@@ -320,3 +320,35 @@ func TestRetryWithNoPolicy(t *testing.T) {
 		t.Fatalf("attempt = %d", session.RetryAttempt())
 	}
 }
+
+// Upstream _prepareRetry persists a context_edit omission for the failed
+// response, so a resumed session does not replay it to the model. The port only
+// dropped it from agent state, leaving the error message in the durable
+// projection.
+func TestRetryOmitsTheFailedAttemptFromContext(t *testing.T) {
+	session := retrySession(t, &ai.RetryPolicy{Enabled: true, MaxRetries: 3, BaseDelayMS: 1}, erroringStreamFn(1, "server overloaded"))
+
+	if err := session.Prompt(ctxpkg.Background(), "hello", nil); err != nil {
+		t.Fatal(err)
+	}
+
+	edits := 0
+	for _, entry := range session.Sessions.GetBranch("") {
+		if entry.Type == "context_edit" {
+			edits++
+		}
+	}
+	if edits == 0 {
+		t.Fatal("the retried failure was not omitted from the durable projection")
+	}
+
+	assistants := 0
+	for _, message := range session.Sessions.Projection().Messages {
+		if ai.RoleOf(message) == ai.RoleAssistant {
+			assistants++
+		}
+	}
+	if assistants != 1 {
+		t.Fatalf("projection has %d assistant messages; want only the recovered response", assistants)
+	}
+}

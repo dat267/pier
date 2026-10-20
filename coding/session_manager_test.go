@@ -546,3 +546,55 @@ func TestGetSessionNameDoesNotAllocateProportionalToEntryCount(t *testing.T) {
 			largeBytes, smallBytes)
 	}
 }
+
+// writeSessionHeaderFile writes a minimal session file so continueRecent can
+// find it, with the given modification time for ordering.
+func writeSessionHeaderFile(t *testing.T, dir, cwd, id string, modified time.Time) string {
+	t.Helper()
+	header := SessionHeader{
+		ID: id, Timestamp: modified.UTC().Format("2006-01-02T15:04:05.000Z"),
+		Cwd: cwd, Version: intPtr(CurrentSessionVersion),
+	}
+	line, err := MarshalFileEntry(FileEntry{Header: &header})
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, id+".jsonl")
+	if err := os.WriteFile(path, []byte(line), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(path, modified, modified); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// ContinueRecentSession opens the most recent session, or creates a new one
+// when the directory has none (upstream SessionManager.continueRecent).
+func TestContinueRecentSessionOpensMostRecent(t *testing.T) {
+	dir := t.TempDir()
+	cwd := t.TempDir()
+
+	writeSessionHeaderFile(t, dir, cwd, "older", time.Now().Add(-time.Hour))
+	newest := writeSessionHeaderFile(t, dir, cwd, "newest", time.Now())
+
+	opened, err := ContinueRecentSession(cwd, dir)
+	if err != nil {
+		t.Fatalf("ContinueRecentSession: %v", err)
+	}
+	if opened.GetSessionFile() != newest {
+		t.Fatalf("opened %q, want the most recent %q", opened.GetSessionFile(), newest)
+	}
+}
+
+// An empty directory starts a fresh session rather than failing.
+func TestContinueRecentSessionCreatesWhenEmpty(t *testing.T) {
+	cwd := t.TempDir()
+	opened, err := ContinueRecentSession(cwd, t.TempDir())
+	if err != nil {
+		t.Fatalf("ContinueRecentSession: %v", err)
+	}
+	if started := opened.GetBranch(""); len(started) != 0 {
+		t.Fatalf("new session has %d entries", len(started))
+	}
+}

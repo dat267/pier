@@ -367,7 +367,7 @@ func TestPrintHelpContent(t *testing.T) {
 		"--provider <name>",
 		"--append-system-prompt <text>",
 		"--use-theme <name[/name]>",
-		"--tui-mode <mode>              TUI mode: regular (default) or fullscreen",
+		"--tui-mode <mode>              TUI mode: fullscreen (default) or regular",
 		"--list-models [search]",
 		"--thinking <level>             Set thinking level: off, minimal, low, medium, high, xhigh, max",
 		"read       - Read file contents",

@@ -258,8 +258,9 @@ func OpenSession(path string, sessionDir string, cwdOverride string) (*SessionMa
 }
 
 // ContinueRecentSession continues the most recent session or creates one
-// (SessionManager.continueRecent).
-func ContinueRecentSession(cwd string, sessionDir string) *SessionManager {
+// (SessionManager.continueRecent). Like upstream, a session that cannot be
+// opened is an error: silently starting a new one would look like lost history.
+func ContinueRecentSession(cwd string, sessionDir string) (*SessionManager, error) {
 	dir := sessionDir
 	if dir == "" {
 		dir = DefaultSessionDir(cwd, "")
@@ -270,12 +271,9 @@ func ContinueRecentSession(cwd string, sessionDir string) *SessionManager {
 		filterValue = cwd
 	}
 	if mostRecent := FindMostRecentSession(dir, filterValue); mostRecent != nil {
-		m, err := OpenSession(*mostRecent, dir, cwd)
-		if err == nil {
-			return m
-		}
+		return OpenSession(*mostRecent, dir, cwd)
 	}
-	return NewSessionManager(cwd, &SessionManagerOptions{SessionDir: dir})
+	return NewSessionManager(cwd, &SessionManagerOptions{SessionDir: dir}), nil
 }
 
 // InMemorySession builds a non-persisting session, optionally from entries

@@ -562,7 +562,6 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 			}
 
 			output := NewOutputAccumulator(0, 0, config.TempFilePrefix)
-			var updateWG sync.WaitGroup
 
 			// Streamed updates are throttled (upstream emitOutputUpdate /
 			// scheduleOutputUpdate): one snapshot per read chunk flooded the UI
@@ -579,14 +578,16 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 				}
 			}
 
+			// emitOutputUpdate holds throttleMu across the snapshot and the sink
+			// call, so the reader and the throttle timer cannot emit concurrently
+			// or out of snapshot order (upstream calls onUpdate inline from
+			// bash.ts emitOutputUpdate).
 			emitOutputUpdate := func() {
 				throttleMu.Lock()
-				due := onUpdate != nil && throttle.take()
-				if !due {
-					throttleMu.Unlock()
+				defer throttleMu.Unlock()
+				if onUpdate == nil || !throttle.take() {
 					return
 				}
-				throttleMu.Unlock()
 				snapshot := output.Snapshot(true)
 				details := map[string]any{}
 				if snapshot.Truncation.Truncated {
@@ -596,15 +597,10 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 					details["fullOutputPath"] = snapshot.FullOutputPath
 				}
 				enc, _ := ai.MarshalJSON(details)
-				update := agent.AgentToolResult{
+				onUpdate(agent.AgentToolResult{
 					Content: []ai.Content{ai.TextContent{Text: snapshot.Content}},
 					Details: enc,
-				}
-				updateWG.Add(1)
-				go func() {
-					defer updateWG.Done()
-					onUpdate(update)
-				}()
+				})
 			}
 
 			// scheduleOutputUpdate defers a chunk's update to the end of the
@@ -744,7 +740,6 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 			waitForPipeDrain(streams, activity, started)
 
 			waitErr := cmd.Wait()
-			updateWG.Wait()
 
 			// Upstream finishOutput: stop the pending update, flush one last
 			// streamed state, then take the final snapshot.
