@@ -12,6 +12,16 @@ import (
 
 // Tests ported from packages/coding-agent/test/prompt-templates.test.ts.
 
+// pi v1.3.0 core/prompt-templates.ts substituteArgs uses Array.slice, which
+// clamps very large lengths to the available arguments without overflowing.
+func TestSubstituteArgsClampsHugeSliceLengths(t *testing.T) {
+	for _, template := range []string{"${@:2:9223372036854775807}", "${@:2:9999999999999999999999999999999999999}"} {
+		if got := SubstituteArgs(template, []string{"a", "b", "c"}); got != "b c" {
+			t.Errorf("SubstituteArgs(%q)=%q; want b c", template, got)
+		}
+	}
+}
+
 func TestSubstituteArgsSimplePlaceholders(t *testing.T) {
 	cases := []struct {
 		template string

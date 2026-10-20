@@ -3,6 +3,7 @@ package coding
 import (
 	"context"
 	"errors"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -15,6 +16,27 @@ import (
 
 // Round 104 tests: management HTTP retry, the HTTP dispatcher helpers, the user
 // agent, and the version check with its semver comparison.
+
+// pi v1.3.0 utils/version-check.ts uses npm semver: core components cannot
+// exceed MAX_SAFE_INTEGER, versions are bounded to 256 characters, and large
+// numeric prereleases retain JavaScript numeric comparison semantics.
+func TestComparePackageVersionsMatchesSemverNumericBounds(t *testing.T) {
+	for _, tt := range []struct {
+		left, right string
+		want        int
+		valid       bool
+	}{
+		{"9007199254740992.0.0", "1.0.0", 0, false},
+		{"1.0.0-a" + strings.Repeat("x", 250), "1.0.0", 0, false},
+		{"1.0.0-9999999999999999999", "1.0.0-1000000000000000000001", -1, true},
+		{"1.0.0-99999999999999999999", "1.0.0-100000000000000000000", 0, true},
+	} {
+		got, ok := ComparePackageVersions(tt.left, tt.right)
+		if got != tt.want || ok != tt.valid {
+			t.Errorf("compare(%q,%q)=%d,%v; want %d,%v", tt.left, tt.right, got, ok, tt.want, tt.valid)
+		}
+	}
+}
 
 func TestFetchWithRetryStatus(t *testing.T) {
 	var attempts atomic.Int64
@@ -356,6 +378,25 @@ func TestPortReleaseCheck(t *testing.T) {
 		plain.Close()
 		if err != nil || release != nil {
 			t.Fatalf("status %d: release = %+v err = %v", status, release, err)
+		}
+	}
+}
+
+// Reference: pi v1.3.0 core/http-dispatcher.ts parses strings with Number(),
+// rejects nonfinite numbers and floors the resulting nonnegative value.
+func TestHTTPIdleTimeoutUsesJavaScriptNumberParsing(t *testing.T) {
+	for _, tc := range []struct {
+		input any
+		want  int64
+		valid bool
+	}{
+		{"30000ms", 0, false}, {"1 2", 0, false}, {"0x10", 16, true}, {"0b10", 2, true}, {"0o10", 8, true},
+		{"+30000", 30000, true}, {".5", 0, true}, {"NaN", 0, false}, {"Infinity", 0, false},
+		{math.NaN(), 0, false}, {math.Inf(1), 0, false}, {math.Inf(-1), 0, false},
+	} {
+		got, valid := ParseHTTPIdleTimeoutMS(tc.input)
+		if valid != tc.valid || valid && got != tc.want {
+			t.Errorf("ParseHTTPIdleTimeoutMS(%v)=(%d,%v), want (%d,%v)", tc.input, got, valid, tc.want, tc.valid)
 		}
 	}
 }

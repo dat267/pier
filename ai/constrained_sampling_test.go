@@ -1,6 +1,72 @@
 package ai
 
-import "testing"
+import (
+	"encoding/json"
+	"reflect"
+	"testing"
+)
+
+// pi v1.3.0 api/constrained-sampling.ts makeJsonSchemaNodeStrict recurses
+// into properties before wrapping optional values in an anyOf object.
+func TestStrictSchemaTransformsPropertySchemas(t *testing.T) {
+	for _, tt := range []struct{ name, input, want string }{
+		{"optional", `{"type":"object","properties":{"value":{"type":"string"}}}`, `{"type":"object","properties":{"value":{"anyOf":[{"type":"string"},{"type":"null"}]}},"required":["value"],"additionalProperties":false}`},
+		{"nested", `{"type":"object","properties":{"nested":{"type":"object","properties":{"value":{"type":"number"}}}},"required":["nested"]}`, `{"type":"object","properties":{"nested":{"type":"object","properties":{"value":{"anyOf":[{"type":"number"},{"type":"null"}]}},"required":["value"],"additionalProperties":false}},"required":["nested"],"additionalProperties":false}`},
+		{"numeric names", `{"type":"object","properties":{"10":{"type":"string"},"2":{"type":"number"}},"required":["10","2"]}`, `{"type":"object","properties":{"2":{"type":"number"},"10":{"type":"string"}},"required":["2","10"],"additionalProperties":false}`},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := MakeStrictJSONSchema(json.RawMessage(tt.input))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var actual, expected any
+			if err := json.Unmarshal(got, &actual); err != nil {
+				t.Fatal(err)
+			}
+			if err := json.Unmarshal([]byte(tt.want), &expected); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(actual, expected) {
+				t.Fatalf("strict schema = %s; want %s", got, tt.want)
+			}
+		})
+	}
+}
+
+// pi v1.3.0 api/constrained-sampling.ts checks schema.type === "object"
+// and rejects null properties/required rather than treating them as missing.
+func TestStrictSchemaRecognizesObjectAndArrayShapes(t *testing.T) {
+	for _, tt := range []struct {
+		name, input string
+		invalid     bool
+	}{
+		{"escaped type", `{"type":"ob\u006aect","properties":{}}`, false},
+		{"nested union type", `{"type":"object","properties":{"x":{"type":["object"],"properties":{}}}}`, true},
+		{"null properties", `{"type":"object","properties":null}`, true},
+		{"null required", `{"type":"object","required":null}`, true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			out, err := MakeStrictJSONSchema(json.RawMessage(tt.input))
+			if (err != nil) != tt.invalid {
+				t.Fatalf("schema=%s error=%v; invalid=%v", out, err, tt.invalid)
+			}
+		})
+	}
+}
+
+// pi v1.3.0 api/anthropic-messages.ts compares minItems to numeric 0/1.
+func TestAnthropicStrictMinimumItemsUsesNumericValue(t *testing.T) {
+	for _, raw := range []string{"0", "-0", "0.0", "1", "1.0", "1e0"} {
+		if AnthropicStrictUnsupportedKeyword("minItems", json.RawMessage(raw)) {
+			t.Errorf("minItems %s rejected", raw)
+		}
+	}
+	for _, raw := range []string{"null", `"1"`, "true", "2"} {
+		if !AnthropicStrictUnsupportedKeyword("minItems", json.RawMessage(raw)) {
+			t.Errorf("minItems %s accepted", raw)
+		}
+	}
+}
 
 // buffer.Input is a byte prefix of nextInput, so the delta starts at its
 // length. Upstream slices by buffer.input.length (UTF-16), and a Go string

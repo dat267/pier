@@ -216,3 +216,39 @@ func TestProjectedWindowMatchesSessionContext(t *testing.T) {
 		t.Fatal("HasContextEdits missed the appended edit")
 	}
 }
+
+// Reference: pi v1.3.0 core/session-manager.ts projectContextEntry replaces
+// content only for user, assistant, toolResult and the literal "custom" role.
+func TestContextEditIgnoresOtherCustomAgentRoles(t *testing.T) {
+	messages := []ai.Message{
+		CreateCompactionSummaryMessage("summary", 100, 1),
+		CreateBranchSummaryMessage("branch", "from", 1),
+		&ai.CustomMessage{Role: RoleBashExecution, Content: json.RawMessage(`{"role":"bashExecution","command":"echo hi","output":"hi","timestamp":1}`), Timestamp: 1},
+	}
+	for _, message := range messages {
+		before, err := ai.MarshalMessage(message)
+		if err != nil {
+			t.Fatal(err)
+		}
+		after := applyContextEdit([]ai.Message{message}, json.RawMessage(`{"content":"replacement"}`))
+		if len(after) != 1 {
+			t.Fatalf("messages=%d", len(after))
+		}
+		encoded, err := ai.MarshalMessage(after[0])
+		if err != nil || string(encoded) != string(before) {
+			t.Fatalf("role %s changed: %s -> %s (%v)", ai.RoleOf(message), before, encoded, err)
+		}
+	}
+}
+
+// projectContextEntry uses object spread, preserving existing property order
+// while replacing content. A map round-trip reordered flat custom messages.
+func TestContextEditPreservesCustomMessageMemberOrder(t *testing.T) {
+	message := CreateCustomMessage("note", json.RawMessage(`"before"`), true, json.RawMessage(`{"z":1,"a":2}`), 1)
+	edited := applyContextEdit([]ai.Message{message}, json.RawMessage(`{"content":"after"}`))
+	got, err := ai.MarshalMessage(edited[0])
+	want := `{"role":"custom","customType":"note","content":"after","display":true,"details":{"z":1,"a":2},"timestamp":1}`
+	if err != nil || string(got) != want {
+		t.Fatalf("message=%s err=%v want=%s", got, err, want)
+	}
+}

@@ -161,8 +161,9 @@ func StreamProxy(model *ai.Model, context ai.TranscriptContext, options ProxyStr
 			return
 		}
 		defer response.Body.Close()
-		if response.StatusCode >= 400 {
-			message := fmt.Sprintf("Proxy error: %d %s", response.StatusCode, response.Status)
+		if response.StatusCode < 200 || response.StatusCode >= 300 {
+			_, statusText, _ := strings.Cut(response.Status, " ")
+			message := fmt.Sprintf("Proxy error: %d %s", response.StatusCode, statusText)
 			if raw, readErr := io.ReadAll(io.LimitReader(response.Body, 1<<20)); readErr == nil {
 				var errorData struct {
 					Error string `json:"error"`
@@ -274,6 +275,15 @@ func (s *proxyEventScratch) thinkingBuilder(index int) *strings.Builder {
 // processProxyEvent applies one server event to the partial message and returns
 // the client event to push (upstream processProxyEvent).
 func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scratch *proxyEventScratch) (*ai.AssistantMessageEvent, error) {
+	// D252: JS arrays accept negative properties, which JSON.stringify drops.
+	// Go slices cannot represent them; reject malformed indexed events rather
+	// than letting an untrusted proxy response panic the streaming goroutine.
+	switch wire.Type {
+	case "text_start", "text_delta", "text_end", "thinking_start", "thinking_delta", "thinking_end", "toolcall_start", "toolcall_delta", "toolcall_end":
+		if wire.ContentIndex < 0 {
+			return nil, fmt.Errorf("Received %s with negative content index %d", wire.Type, wire.ContentIndex)
+		}
+	}
 	grow := func() {
 		for len(partial.Content) <= wire.ContentIndex {
 			partial.Content = append(partial.Content, nil)
@@ -312,9 +322,7 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 		if !ok {
 			return nil, fmt.Errorf("Received text_end for non-text content")
 		}
-		if wire.ContentSignature != nil {
-			content.TextSignature = wire.ContentSignature
-		}
+		content.TextSignature = wire.ContentSignature
 		partial.Content[wire.ContentIndex] = content
 		return &ai.AssistantMessageEvent{Type: ai.EventTextEnd, ContentIndex: wire.ContentIndex, Content: content.Text, Partial: partial}, nil
 
@@ -343,9 +351,7 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 		if !ok {
 			return nil, fmt.Errorf("Received thinking_end for non-thinking content")
 		}
-		if wire.ContentSignature != nil {
-			content.ThinkingSignature = wire.ContentSignature
-		}
+		content.ThinkingSignature = wire.ContentSignature
 		partial.Content[wire.ContentIndex] = content
 		return &ai.AssistantMessageEvent{Type: ai.EventThinkingEnd, ContentIndex: wire.ContentIndex, Content: content.Thinking, Partial: partial}, nil
 
@@ -381,7 +387,9 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 		if wire.Usage != nil {
 			partial.Usage = *wire.Usage
 		}
-		partial.ProviderThinkingLevel = wire.ProviderThinkingLevel
+		if wire.ProviderThinkingLevel != nil {
+			partial.ProviderThinkingLevel = wire.ProviderThinkingLevel
+		}
 		return &ai.AssistantMessageEvent{Type: ai.EventDone, Reason: wire.Reason, Message: partial}, nil
 
 	case "error":
@@ -390,7 +398,9 @@ func processProxyEvent(wire *proxyWireEvent, partial *ai.AssistantMessage, scrat
 		if wire.Usage != nil {
 			partial.Usage = *wire.Usage
 		}
-		partial.ProviderThinkingLevel = wire.ProviderThinkingLevel
+		if wire.ProviderThinkingLevel != nil {
+			partial.ProviderThinkingLevel = wire.ProviderThinkingLevel
+		}
 		return &ai.AssistantMessageEvent{Type: ai.EventError, Reason: wire.Reason, Error: partial}, nil
 	}
 	return nil, nil

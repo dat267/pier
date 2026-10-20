@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -62,8 +63,8 @@ func ParseHTTPIdleTimeoutMS(value any) (int64, bool) {
 		if trimmed == "" {
 			return 0, false
 		}
-		parsed, err := parseJSONNumber(trimmed)
-		if err != nil {
+		parsed, ok := ai.ParseJSNumberString(trimmed)
+		if !ok {
 			return 0, false
 		}
 		return ParseHTTPIdleTimeoutMS(parsed)
@@ -74,7 +75,7 @@ func ParseHTTPIdleTimeoutMS(value any) (int64, bool) {
 		}
 		return ParseHTTPIdleTimeoutMS(number)
 	case float64:
-		if typed < 0 {
+		if math.IsNaN(typed) || math.IsInf(typed, 0) || typed < 0 {
 			return 0, false
 		}
 		return int64(typed), true
@@ -91,16 +92,6 @@ func ParseHTTPIdleTimeoutMS(value any) (int64, bool) {
 	default:
 		return 0, false
 	}
-}
-
-func parseJSONNumber(input string) (any, error) {
-	decoder := json.NewDecoder(strings.NewReader(input))
-	decoder.UseNumber()
-	var value any
-	if err := decoder.Decode(&value); err != nil {
-		return nil, err
-	}
-	return value, nil
 }
 
 // SettingsCompactionOverride are per-model compaction token overrides.

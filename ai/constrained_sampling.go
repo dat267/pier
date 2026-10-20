@@ -165,7 +165,8 @@ func AnthropicStrictUnsupportedKeyword(key string, value json.RawMessage) bool {
 		"maxItems", "uniqueItems", "minContains", "maxContains", "minProperties", "maxProperties":
 		return true
 	case "minItems":
-		return !(string(value) == "0" || string(value) == "1")
+		number := decodeSchemaValue(value)
+		return !number.IsNumber || (number.Number != 0 && number.Number != 1)
 	case "format":
 		var format string
 		if jsonUnmarshalStrict(value, &format) != nil {
@@ -226,11 +227,11 @@ func makeSchemaNodeStrict(node *schemaNode, check UnsupportedStrictSchemaKeyword
 		node.set("items", strict)
 	}
 
-	types := []string{}
+	var objectType string
 	if t, ok := node.raw("type"); ok {
-		types = schemaTypes(t)
+		_ = jsonUnmarshalStrict(t, &objectType)
 	}
-	isObjectSchema := len(types) == 1 && types[0] == "object"
+	isObjectSchema := objectType == "object"
 
 	if _, hasProps := node.raw("properties"); hasProps && !isObjectSchema {
 		return &strictSchemaError{msg: "properties require type object"}
@@ -244,18 +245,18 @@ func makeSchemaNodeStrict(node *schemaNode, check UnsupportedStrictSchemaKeyword
 	propsData, hasProps := node.raw("properties")
 	var properties map[string]json.RawMessage
 	if hasProps {
-		if err := jsonUnmarshalStrict(propsData, &properties); err != nil {
+		if err := jsonUnmarshalStrict(propsData, &properties); err != nil || properties == nil {
 			return &strictSchemaError{msg: "object properties must be a schema map"}
 		}
 	}
 	var required []string
 	if reqData, ok := node.raw("required"); ok {
-		if err := jsonUnmarshalStrict(reqData, &required); err != nil {
+		if err := jsonUnmarshalStrict(reqData, &required); err != nil || required == nil {
 			return &strictSchemaError{msg: "object required must be a string array"}
 		}
 	}
 
-	// Recover upstream insertion order from the encoded bytes.
+	// Object.keys uses numeric-index order before other insertion-ordered keys.
 	orderedProps := orderedKeys(propsData)
 
 	requiredSet := map[string]bool{}
@@ -268,16 +269,16 @@ func makeSchemaNodeStrict(node *schemaNode, check UnsupportedStrictSchemaKeyword
 		}
 	}
 	for _, key := range orderedProps {
-		property := properties[key]
-		if err := strictSubSchemaInPlace(property, check); err != nil {
+		property, err := makeStrictSubSchemaValue(properties[key], check)
+		if err != nil {
 			return err
 		}
-		// Re-read: strictSubSchemaInPlace mutates via re-encoding below.
-		if !requiredSet[key] && !schemaAllowsNull(properties[key]) {
-			anyOf := []json.RawMessage{properties[key], json.RawMessage(`{"type":"null"}`)}
-			enc, _ := MarshalJSON(anyOf)
-			properties[key] = enc
+		if !requiredSet[key] && !schemaAllowsNull(property) {
+			property, _ = MarshalJSON(struct {
+				AnyOf []json.RawMessage `json:"anyOf"`
+			}{[]json.RawMessage{property, json.RawMessage(`{"type":"null"}`)}})
 		}
+		properties[key] = property
 	}
 	newRequired := append([]string{}, orderedProps...)
 	reqEnc, _ := MarshalJSON(newRequired)
@@ -319,7 +320,7 @@ func sortedObjectJSON(data json.RawMessage) json.RawMessage {
 	return append(buf, '}')
 }
 
-// orderedKeys recovers the encoded key order of a JSON object.
+// orderedKeys recovers JavaScript Object.keys order from a JSON object.
 func orderedKeys(data json.RawMessage) []string {
 	dec := json.NewDecoder(strings.NewReader(string(data)))
 	tok, err := dec.Token()
@@ -330,28 +331,21 @@ func orderedKeys(data json.RawMessage) []string {
 		return nil
 	}
 	var keys []string
+	seen := make(map[string]bool)
 	for dec.More() {
 		tok, err := dec.Token()
 		if err != nil {
 			return keys
 		}
-		keys = append(keys, tok.(string))
+		key := tok.(string)
+		if !seen[key] {
+			keys = appendJSObjectKey(keys, key)
+			seen[key] = true
+		}
 		var raw json.RawMessage
 		_ = dec.Decode(&raw)
 	}
 	return keys
-}
-
-// strictSubSchemaInPlace makes a raw sub-schema strict, re-encoding it.
-func strictSubSchemaInPlace(data json.RawMessage, check UnsupportedStrictSchemaKeywordCheck) error {
-	node, err := decodeSchemaNode(data)
-	if err != nil {
-		return &strictSchemaError{msg: "boolean schemas are unsupported"}
-	}
-	if err := makeSchemaNodeStrict(node, check); err != nil {
-		return err
-	}
-	return nil
 }
 
 // makeStrictSubSchemaValue returns the strict encoding of a sub-schema without
@@ -384,7 +378,8 @@ func makeStrictSubSchema(data json.RawMessage, check UnsupportedStrictSchemaKeyw
 		return nil, &strictSchemaError{msg: "root schema must have type object"}
 	}
 	t, _ := node.raw("type")
-	if string(t) != `"object"` {
+	var objectType string
+	if jsonUnmarshalStrict(t, &objectType) != nil || objectType != "object" {
 		return nil, &strictSchemaError{msg: "root schema must have type object"}
 	}
 	return strict, nil

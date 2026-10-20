@@ -2,9 +2,113 @@ package ai
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"testing/synctest"
 	"time"
 )
+
+// pi v1.3.0 utils/event-stream.ts result() returns one shared Promise, so
+// every caller waiting before completion receives the same final result.
+func TestEventStreamResultWakesAllCallers(t *testing.T) {
+	for _, terminal := range []bool{false, true} {
+		synctest.Test(t, func(t *testing.T) {
+			stream := NewEventStream(func(event int) bool { return terminal }, func(event int) int { return event })
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+			results := make(chan error, 4)
+			for range 4 {
+				go func() {
+					value, err := stream.Result(ctx)
+					if err == nil && value != 7 {
+						err = fmt.Errorf("result = %d; want 7", value)
+					}
+					results <- err
+				}()
+			}
+			synctest.Wait()
+			if terminal {
+				stream.Push(7)
+			} else {
+				value := 7
+				stream.End(&value)
+			}
+			for range 4 {
+				if err := <-results; err != nil {
+					t.Errorf("Result: %v", err)
+				}
+			}
+		})
+	}
+}
+
+// pi v1.3.0 utils/event-stream.ts invokes its callbacks synchronously, and
+// they can call end() again. The first resolved result wins while the outer
+// push still delivers its event, even when the predicate itself ends it.
+func TestEventStreamCallbacksCanEndStream(t *testing.T) {
+	for _, terminal := range []bool{false, true} {
+		t.Run(fmt.Sprint(terminal), func(t *testing.T) {
+			var stream *EventStream[int, int]
+			ended := 9
+			stream = NewEventStream(func(event int) bool {
+				if !terminal {
+					stream.End(&ended)
+				}
+				return terminal
+			}, func(event int) int {
+				stream.End(&ended)
+				return event
+			})
+			pushed := make(chan struct{})
+			go func() { stream.Push(7); close(pushed) }()
+			select {
+			case <-pushed:
+			case <-time.After(time.Second):
+				t.Fatal("callback deadlocked while ending stream")
+			}
+			result, err := stream.Result(context.Background())
+			if err != nil || result != ended {
+				t.Fatalf("result=%d, error=%v; want 9", result, err)
+			}
+			events := stream.Events(context.Background())
+			if len(events) != 1 || events[0] != 7 {
+				t.Fatalf("events=%v; want [7]", events)
+			}
+		})
+	}
+}
+
+// pi v1.3.0 utils/event-stream.ts publishes its terminal event synchronously.
+// A consumer must not observe EOF between terminal admission and publishing
+// its event while the result extractor runs without the stream lock.
+func TestEventStreamDeliversTerminalDuringExtraction(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		entered, release := make(chan struct{}), make(chan struct{})
+		stream := NewEventStream(func(int) bool { return true }, func(event int) int {
+			close(entered)
+			<-release
+			return event
+		})
+		go stream.Push(7)
+		<-entered
+		result := make(chan iteratorResult[int], 1)
+		go func() {
+			value, ok := stream.Next(context.Background())
+			result <- iteratorResult[int]{value: value, done: !ok}
+		}()
+		synctest.Wait()
+		select {
+		case early := <-result:
+			t.Fatalf("consumer returned before terminal event: %+v", early)
+		default:
+		}
+		close(release)
+		got := <-result
+		if got.done || got.value != 7 {
+			t.Fatalf("Next=%+v; want value 7", got)
+		}
+	})
+}
 
 // Port of packages/ai/test/event-stream.test.ts — regression tests for
 // upstream issue #9055.

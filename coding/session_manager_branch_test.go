@@ -65,3 +65,39 @@ func TestSessionManagerBranchCacheSurvivesFromID(t *testing.T) {
 		t.Fatal("explicit GetBranch(fromID) clobbered the leaf cache")
 	}
 }
+
+// Reference: pi v1.3.0 core/session-manager.ts getTree compares Date.getTime,
+// not timestamp strings. Equal millisecond values retain insertion order.
+func TestSessionTreeOrdersChildrenByJavaScriptTime(t *testing.T) {
+	for _, tc := range []struct {
+		name, first, second string
+		firstWins           bool
+	}{
+		{"timezone offset", "2026-10-20T01:00:00Z", "2026-10-20T02:00:00+02:00", false},
+		{"omitted fractional seconds", "2026-10-20T00:00:00.100Z", "2026-10-20T00:00:00Z", false},
+		{"same millisecond", "2026-10-20T00:00:00.0009Z", "2026-10-20T00:00:00.0001Z", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: boolPtr(false)})
+			root := manager.AppendMessage(createUserMessage("root"))
+			first := manager.AppendMessage(createUserMessage("first"))
+			if err := manager.Branch(root); err != nil {
+				t.Fatal(err)
+			}
+			second := manager.AppendMessage(createUserMessage("second"))
+			manager.byID[first].Timestamp = tc.first
+			manager.byID[second].Timestamp = tc.second
+			roots := manager.GetTree()
+			if len(roots) != 1 || len(roots[0].Children) != 2 {
+				t.Fatalf("invalid fixture tree=%v", roots)
+			}
+			want := second
+			if tc.firstWins {
+				want = first
+			}
+			if got := roots[0].Children[0].Entry.ID; got != want {
+				t.Fatalf("first child=%s want=%s", got, want)
+			}
+		})
+	}
+}

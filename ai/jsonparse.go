@@ -3,8 +3,10 @@ package ai
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"unicode/utf16"
 )
@@ -186,7 +188,7 @@ func decodeOrderedToken(dec *json.Decoder) (*schemaValue, error) {
 		return &schemaValue{Bool: t, IsBool: true}, nil
 	case json.Number:
 		number, err := t.Float64()
-		if err != nil {
+		if err != nil && !errors.Is(err, strconv.ErrRange) {
 			return nil, err
 		}
 		return &schemaValue{Number: number, IsNumber: true}, nil

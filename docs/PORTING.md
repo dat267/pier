@@ -41,6 +41,36 @@ prompts. `utils/paths.ts` parity fixes make relative path resolution absolute
 and exclude file-URL query/fragment metadata while retaining escaped `?`/`#`.
 Each fix has a regression test observed failing before the change.
 
+The next v1.3.0 audit corrected JSON line-separator escaping, floating-point
+spellings (with native integer precision retained under D253), JavaScript numeric
+property enumeration and overflowing tool-argument numbers (`ai/src/utils/`
+`json-parse.ts`, `validation.ts`). Literal enum/const validation now compares
+decoded values, `oneOf` requires exactly one match, and object validation
+enforces required keys, forbidden extras and boolean property schemas.
+Strict schemas retain nested transformations and wrap optional properties in
+`anyOf` objects (`ai/src/api/constrained-sampling.ts`).
+Session forks write one newline per record and report serialization failures;
+JSONL export preserves an existing destination when serialization fails
+(`core/session-manager.ts`, `core/session-export.ts`). Session projection now
+normalizes missing content, excludes retained older compaction summaries and
+limits context edits to the upstream roles; custom edits preserve field order.
+Tree children sort by millisecond timestamps rather than timestamp spelling
+(`core/session-manager.ts`). Timeout settings and read-range labels share
+JavaScript number parsing (`core/http-dispatcher.ts`, `core/tools/render-utils.ts`).
+Event-stream completion broadcasts its result to all callers, and callbacks
+can reenter `end` without holding a mutex (`ai/src/utils/event-stream.ts`).
+Prompt argument slices clamp huge lengths instead of overflowing
+(`core/prompt-templates.ts`), and version comparison follows npm semver's
+numeric bounds and prerelease comparisons (`utils/version-check.ts`). Proxy
+streams match HTTP error status handling and optional-field assignments
+(`agent/src/proxy.ts`); negative content indices return protocol errors (D252).
+Generated comparisons matched 10,000 argument objects, 4,000 session
+projections, 32,000 argument validations, 5,000 strict schemas, 1,500
+output-accumulator cases, 19,989 finite numeric encodings and 10,000 version
+pairs against the pin after the fixes; concise regression tests cover each
+changed behavior. Eight-minute fuzz runs of session entries, JSON repair,
+message codecs, terminal input, incremental Markdown and MCP messages passed.
+
 **Upstream status.** v1.3.0 (`71023aec`) is the latest released tag in the
 reference checkout and the port's pin. The v1.3.0 delta from v1.2.0 is ported
 (see the v1.3.0 audit below); the v1.2.0 delta from v1.1.0 was audited.

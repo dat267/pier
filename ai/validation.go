@@ -23,6 +23,7 @@ import (
 // subset (pattern, format, minimum, ...) do not constrain validation.
 
 type jsonSchema struct {
+	RejectAll               bool
 	Raw                     map[string]json.RawMessage `json:"-"`
 	Order                   []string                   `json:"-"`
 	Types                   []string
@@ -40,6 +41,10 @@ type jsonSchema struct {
 
 func parseJSONSchema(data json.RawMessage) *jsonSchema {
 	schema := &jsonSchema{Raw: map[string]json.RawMessage{}, Required: map[string]bool{}}
+	if string(bytes.TrimSpace(data)) == "false" {
+		schema.RejectAll = true
+		return schema
+	}
 	if len(data) == 0 || string(data) == "null" {
 		return schema
 	}
@@ -101,7 +106,7 @@ func parseJSONSchema(data json.RawMessage) *jsonSchema {
 	}
 	for _, combinator := range []string{"anyOf", "oneOf", "allOf"} {
 		if c, ok := raw[combinator]; ok {
-			var list []*jsonSchema
+			list := []*jsonSchema{}
 			var rawList []json.RawMessage
 			if jsonUnmarshalStrict(c, &rawList) == nil {
 				for _, item := range rawList {
@@ -159,7 +164,7 @@ func (o *schemaObject) get(key string) (*schemaValue, bool) {
 
 func (o *schemaObject) set(key string, value *schemaValue) {
 	if _, ok := o.values[key]; !ok {
-		o.keys = append(o.keys, key)
+		o.keys = appendJSObjectKey(o.keys, key)
 	}
 	o.values[key] = value
 }
@@ -232,7 +237,10 @@ func encodeSchemaValue(v *schemaValue) json.RawMessage {
 	case v.IsBool:
 		return mustMarshalJSON(v.Bool)
 	case v.IsNumber:
-		return mustMarshalJSON(v.Number)
+		if math.IsNaN(v.Number) || math.IsInf(v.Number, 0) {
+			return json.RawMessage("null")
+		}
+		return json.RawMessage(JSNumberToString(v.Number))
 	case v.IsString:
 		return mustMarshalJSON(v.String)
 	case v.IsArray:
@@ -266,7 +274,7 @@ func matchesJSONType(value *schemaValue, typ string) bool {
 	case "number":
 		return value.IsNumber
 	case "integer":
-		return value.IsNumber && value.Number == math.Trunc(value.Number)
+		return value.IsNumber && !math.IsInf(value.Number, 0) && value.Number == math.Trunc(value.Number)
 	case "boolean":
 		return value.IsBool
 	case "string":
@@ -287,32 +295,46 @@ func schemaCheck(value *schemaValue, schema *jsonSchema) bool {
 	if schema == nil {
 		return true
 	}
-	// anyOf/oneOf: any member matches (upstream delegates to TypeBox, whose
-	// anyOf/oneOf both accept any member for validation purposes here).
-	for _, variant := range append(append([]*jsonSchema{}, schema.AnyOf...), schema.OneOf...) {
-		if schemaCheck(value, variant) {
-			goto typeCheck
-		}
-	}
-	if len(schema.AnyOf) > 0 || len(schema.OneOf) > 0 {
+	if schema.RejectAll {
 		return false
 	}
-typeCheck:
+	if schema.AnyOf != nil {
+		matched := false
+		for _, variant := range schema.AnyOf {
+			if schemaCheck(value, variant) {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			return false
+		}
+	}
+	if schema.OneOf != nil {
+		matches := 0
+		for _, variant := range schema.OneOf {
+			if schemaCheck(value, variant) {
+				matches++
+			}
+		}
+		if matches != 1 {
+			return false
+		}
+	}
 	for _, nested := range schema.AllOf {
 		if !schemaCheck(value, nested) {
 			return false
 		}
 	}
 	if schema.Const != nil {
-		if string(encodeSchemaValue(value)) != string(schema.Const) {
+		if !schemaLiteralEqual(value, decodeSchemaValue(schema.Const)) {
 			return false
 		}
 	}
-	if len(schema.Enum) > 0 {
-		encoded := string(encodeSchemaValue(value))
+	if schema.Enum != nil {
 		matched := false
 		for _, option := range schema.Enum {
-			if string(option) == encoded {
+			if schemaLiteralEqual(value, decodeSchemaValue(option)) {
 				matched = true
 			}
 		}
@@ -323,7 +345,7 @@ typeCheck:
 	if len(schema.Types) > 0 {
 		matched := false
 		for _, typ := range schema.Types {
-			if matchesJSONType(value, typ) {
+			if matchesJSONType(value, typ) && !(typ == "number" && (math.IsInf(value.Number, 0) || math.IsNaN(value.Number))) {
 				matched = true
 			}
 		}
@@ -332,6 +354,11 @@ typeCheck:
 		}
 	}
 	if value.Object != nil {
+		for key := range schema.Required {
+			if _, ok := value.Object.get(key); !ok {
+				return false
+			}
+		}
 		for key, property := range schema.Properties {
 			field, ok := value.Object.get(key)
 			if !ok {
@@ -344,13 +371,13 @@ typeCheck:
 				return false
 			}
 		}
-		if schema.HasAdditionalProperties && schema.AdditionalProperties != nil {
+		if schema.HasAdditionalProperties {
 			for _, key := range value.Object.keys {
 				if _, declared := schema.Properties[key]; declared {
 					continue
 				}
 				field, _ := value.Object.get(key)
-				if !schemaCheck(field, schema.AdditionalProperties) {
+				if schema.AdditionalProperties == nil || !schemaCheck(field, schema.AdditionalProperties) {
 					return false
 				}
 			}
@@ -378,7 +405,9 @@ typeCheck:
 
 var jsDecimalNumberPattern = regexp.MustCompile(`^[+-]?(?:(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?|Infinity)$`)
 
-func parseJSNumberString(value string) (float64, bool) {
+// ParseJSNumberString parses a nonempty, finite JavaScript numeric string,
+// including hexadecimal, binary and octal literals.
+func ParseJSNumberString(value string) (float64, bool) {
 	value = JSTrim(value)
 	if value == "" {
 		return 0, false
@@ -394,6 +423,9 @@ func parseJSNumberString(value string) (float64, bool) {
 			base = 8
 		}
 		if base != 0 {
+			if value[2] == '+' || value[2] == '-' {
+				return 0, false
+			}
 			number, ok := new(big.Int).SetString(value[2:], base)
 			if !ok {
 				return 0, false
@@ -417,7 +449,7 @@ func coercePrimitiveByType(value *schemaValue, typ string) *schemaValue {
 			return &schemaValue{IsNumber: true, Number: 0}
 		}
 		if value.IsString {
-			if parsed, ok := parseJSNumberString(value.String); ok && (typ == "number" || parsed == math.Trunc(parsed)) {
+			if parsed, ok := ParseJSNumberString(value.String); ok && (typ == "number" || parsed == math.Trunc(parsed)) {
 				return &schemaValue{IsNumber: true, Number: parsed}
 			}
 		}
@@ -530,6 +562,44 @@ func schemaValueEqual(a, b *schemaValue) bool {
 		return true
 	}
 	return string(encodeSchemaValue(a)) == string(encodeSchemaValue(b))
+}
+
+// TypeBox compares const/enum values structurally, not their JSON spelling.
+// Object member order does not matter; array order and primitive types do.
+func schemaLiteralEqual(a, b *schemaValue) bool {
+	if a.Null || b.Null {
+		return a.Null && b.Null
+	}
+	if a.IsBool || b.IsBool {
+		return a.IsBool && b.IsBool && a.Bool == b.Bool
+	}
+	if a.IsNumber || b.IsNumber {
+		return a.IsNumber && b.IsNumber && a.Number == b.Number
+	}
+	if a.IsString || b.IsString {
+		return a.IsString && b.IsString && a.String == b.String
+	}
+	if a.IsArray || b.IsArray {
+		if !a.IsArray || !b.IsArray || len(a.Array) != len(b.Array) {
+			return false
+		}
+		for i, value := range a.Array {
+			if !schemaLiteralEqual(value, b.Array[i]) {
+				return false
+			}
+		}
+		return true
+	}
+	if a.Object == nil || b.Object == nil || len(a.Object.keys) != len(b.Object.keys) {
+		return false
+	}
+	for _, key := range a.Object.keys {
+		other, ok := b.Object.get(key)
+		if !ok || !schemaLiteralEqual(a.Object.values[key], other) {
+			return false
+		}
+	}
+	return true
 }
 
 func coerceWithUnionSchema(value *schemaValue, schemas []*jsonSchema) *schemaValue {

@@ -23,13 +23,14 @@ import (
 //   - end() without a result wakes waiting consumers and keeps any result
 //     already fixed by a terminal event.
 type EventStream[T any, R any] struct {
-	mu      sync.Mutex
-	queue   []T
-	waiting []chan iteratorResult[T]
-	done    bool
+	mu        sync.Mutex
+	queue     []T
+	waiting   []chan iteratorResult[T]
+	done      bool // rejects new pushes before extracting a terminal result
+	exhausted bool // terminal event is available, or End explicitly closed delivery
 
 	resultOnce sync.Once
-	resultCh   chan R
+	resultCh   chan struct{}
 	hasResult  bool
 	result     R
 
@@ -47,7 +48,7 @@ type iteratorResult[T any] struct {
 // result extractor (upstream's isComplete/extractResult constructor args).
 func NewEventStream[T any, R any](isComplete func(T) bool, extractResult func(T) R) *EventStream[T, R] {
 	return &EventStream[T, R]{
-		resultCh:      make(chan R, 1),
+		resultCh:      make(chan struct{}),
 		isComplete:    isComplete,
 		extractResult: extractResult,
 	}
@@ -57,7 +58,7 @@ func (s *EventStream[T, R]) resolveResult(r R) {
 	s.resultOnce.Do(func() {
 		s.result = r
 		s.hasResult = true
-		s.resultCh <- r
+		close(s.resultCh)
 	})
 }
 
@@ -71,13 +72,27 @@ func (s *EventStream[T, R]) isDone() bool {
 // Push delivers an event. After completion, pushes are ignored.
 func (s *EventStream[T, R]) Push(event T) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	if s.done {
+		s.mu.Unlock()
 		return
 	}
-	if s.isComplete != nil && s.isComplete(event) {
+	s.mu.Unlock()
+	// These are caller-supplied callbacks. Upstream permits reentrant push/end;
+	// never hold the state lock while invoking them. Admission was checked
+	// above, so an end from the callback does not discard this event.
+	complete := s.isComplete != nil && s.isComplete(event)
+	var result R
+	if complete {
+		s.mu.Lock()
 		s.done = true
-		s.resolveResult(s.extractResult(event))
+		s.mu.Unlock()
+		result = s.extractResult(event)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if complete {
+		s.resolveResult(result)
+		s.exhausted = true
 	}
 	// Deliver to a waiting consumer or queue it.
 	if len(s.waiting) > 0 {
@@ -97,6 +112,7 @@ func (s *EventStream[T, R]) End(result *R) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.done = true
+	s.exhausted = true
 	if result != nil {
 		s.resolveResult(*result)
 	}
@@ -120,7 +136,7 @@ func (s *EventStream[T, R]) Next(ctx context.Context) (T, bool) {
 			s.mu.Unlock()
 			return ev, true
 		}
-		if s.done {
+		if s.exhausted {
 			s.mu.Unlock()
 			var zero T
 			return zero, false
@@ -164,8 +180,8 @@ func (s *EventStream[T, R]) Result(ctx context.Context) (R, error) {
 		return s.result, nil
 	}
 	select {
-	case r := <-s.resultCh:
-		return r, nil
+	case <-s.resultCh:
+		return s.result, nil
 	case <-ctx.Done():
 		var zero R
 		return zero, ctx.Err()

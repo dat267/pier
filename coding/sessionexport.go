@@ -13,6 +13,13 @@ import (
 // the current branch, re-chained parent ids, plus optional export-only trailing
 // entries.
 func SerializeSessionBranch(sessionManager *SessionManager, createTrailingEntries func(parentID *string, timestamp string) []*SessionEntry) string {
+	serialized, _ := serializeSessionBranch(sessionManager, createTrailingEntries)
+	return serialized
+}
+
+// serializeSessionBranch retains serialization failures for file exporters;
+// the legacy string-only helper above keeps its empty-string failure contract.
+func serializeSessionBranch(sessionManager *SessionManager, createTrailingEntries func(parentID *string, timestamp string) []*SessionEntry) (string, error) {
 	timestamp := time.Now().UTC().Format(time.RFC3339Nano)
 	version := CurrentSessionVersion
 	header := SessionHeader{
@@ -26,7 +33,7 @@ func SerializeSessionBranch(sessionManager *SessionManager, createTrailingEntrie
 	// session file; D130).
 	headerLine, err := MarshalFileEntry(FileEntry{Header: &header})
 	if err != nil {
-		return ""
+		return "", err
 	}
 	lines := []string{strings.TrimRight(headerLine, "\n")}
 	var parentID *string
@@ -36,7 +43,7 @@ func SerializeSessionBranch(sessionManager *SessionManager, createTrailingEntrie
 		entry.ParentID = current
 		line, err := MarshalFileEntry(FileEntry{Entry: &entry})
 		if err != nil {
-			return ""
+			return "", err
 		}
 		lines = append(lines, strings.TrimRight(line, "\n"))
 		parentID = &entry.ID
@@ -45,12 +52,12 @@ func SerializeSessionBranch(sessionManager *SessionManager, createTrailingEntrie
 		for _, entry := range createTrailingEntries(parentID, timestamp) {
 			line, err := MarshalFileEntry(FileEntry{Entry: entry})
 			if err != nil {
-				return ""
+				return "", err
 			}
 			lines = append(lines, strings.TrimRight(line, "\n"))
 		}
 	}
-	return strings.Join(lines, "\n") + "\n"
+	return strings.Join(lines, "\n") + "\n", nil
 }
 
 // ExportSessionToJsonl writes the current branch to a JSONL file and returns
@@ -66,7 +73,11 @@ func ExportSessionToJsonl(sessionManager *SessionManager, outputPath string, cre
 			return "", err
 		}
 	}
-	if err := os.WriteFile(filePath, []byte(SerializeSessionBranch(sessionManager, createTrailingEntries)), 0o666); err != nil {
+	serialized, err := serializeSessionBranch(sessionManager, createTrailingEntries)
+	if err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(filePath, []byte(serialized), 0o666); err != nil {
 		return "", err
 	}
 	return filePath, nil

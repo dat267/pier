@@ -289,3 +289,39 @@ func TestCompactedProjectionCostsTheWindowNotTheSession(t *testing.T) {
 		t.Fatalf("the projection copied the session (%d bytes for an 8-entry window)", allocated)
 	}
 }
+
+// Reference: pi v1.3.0 core/session-manager.ts buildSessionProjection emits
+// only the newest compaction's messages when its kept range includes an older
+// compaction entry. Provenance retains that older entry with no contribution.
+func TestProjectionDoesNotReplayRetainedOldCompaction(t *testing.T) {
+	manager := newTestSessionForProjection(t)
+	first := manager.AppendMessage(createUserMessage("first kept user"))
+	manager.AppendMessage(createAssistantMessageT("first reply"))
+	oldID := manager.AppendCompaction("old summary", first, 100, nil, false, nil)
+	manager.AppendMessage(createUserMessage("later user"))
+	manager.AppendCompaction("new summary", first, 200, nil, false, nil)
+
+	for _, context := range []SessionContext{manager.Projection(), BuildSessionContext(manager.GetEntries(), nil, nil)} {
+		summaries := 0
+		for _, message := range context.Messages {
+			if custom, ok := message.(*ai.CustomMessage); ok && custom.Role == RoleCompactionSummary {
+				summaries++
+			}
+		}
+		if summaries != 1 {
+			t.Fatalf("projected %d compaction summaries, want only newest", summaries)
+		}
+	}
+	foundOld := false
+	for _, entry := range manager.ProjectedEntries() {
+		if entry.Source.ID == oldID {
+			foundOld = true
+			if len(entry.Messages) != 0 {
+				t.Fatal("old provenance entry still contributes messages")
+			}
+		}
+	}
+	if !foundOld {
+		t.Fatal("older compaction must remain in provenance")
+	}
+}

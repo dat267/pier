@@ -94,3 +94,25 @@ func TestParseStreamingArgsPreservesKeyOrder(t *testing.T) {
 		}
 	}
 }
+
+// Reference: pi v1.3.0 utils/json-parse.ts returns JSON.parse objects. Their
+// JSON.stringify form enumerates array-index keys first, normalizes -0 to 0,
+// and serializes overflowed numeric values as null.
+func TestToolArgumentsMatchJavaScriptObjectEnumeration(t *testing.T) {
+	for _, tc := range []struct{ raw, want string }{
+		{`{"z":0,"10":10,"2":2,"a":1}`, `{"2":2,"10":10,"z":0,"a":1}`},
+		{`{"4294967295":1,"4294967294":2,"01":3,"0":4,"-0":5}`, `{"0":4,"4294967294":2,"4294967295":1,"01":3,"-0":5}`},
+		{`{"n":-0,"nested":{"9":9,"3":3,"z":0}}`, `{"n":0,"nested":{"3":3,"9":9,"z":0}}`},
+		{`{"n":1e400,"negative":-1e400}`, `{"n":null,"negative":null}`},
+	} {
+		t.Run(tc.raw, func(t *testing.T) {
+			got, errText := ParseToolCallArguments(tc.raw)
+			if errText != "" || string(got) != tc.want {
+				t.Fatalf("finished = %s error=%q want=%s", got, errText, tc.want)
+			}
+			if got := parseStreamingJSONObject(tc.raw); string(got) != tc.want {
+				t.Fatalf("streaming = %s want=%s", got, tc.want)
+			}
+		})
+	}
+}

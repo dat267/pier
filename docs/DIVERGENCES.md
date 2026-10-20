@@ -4,7 +4,7 @@ Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D251**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D253**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation.
 
 Related documents: [port status](PORTING.md), [architecture](architecture.md),
@@ -1797,6 +1797,35 @@ entry timestamps that cannot be read never move a frame.
 Tests: `TestSessionBashMessageIsStampedAtStart`,
 `TestReplayedBashFrameKeepsItsPositionAmongTheTurn` and
 `TestReplayedIdleBashFrameStaysInPlace`.
+
+## D252
+
+**Proxy content events reject negative array indices.**
+
+Reference: `packages/agent/src/proxy.ts` assigns `partial.content[contentIndex]`.
+A proxy sending `{"type":"text_start","contentIndex":-1}` creates a JavaScript
+array property that is absent from JSON output. The same assignment panicked
+in the port's streaming goroutine and could terminate the process. Indexed
+proxy events now return a protocol error for negative indices; the stream
+reports its ordinary error event instead of attempting a Go slice access.
+
+Test: `TestProxyRejectsNegativeContentIndex` covers every indexed event type.
+
+## D253
+
+**Integer JSON tokens retain the port's native integer precision.**
+
+Reference: `core/session-manager.ts` and AI providers serialize JavaScript
+numbers with `JSON.stringify`. Go's typed timestamp and token-count fields use
+`int64`; rewriting their integer tokens through a double can move a valid Go
+value outside its type's range. For example, `9223372036854775807` rounds to
+`9223372036854776000`, which cannot be read back into `int64`. The shared JSON
+encoder retains integer token precision while normalizing floating-point
+spellings and negative zero. Tool arguments still use JavaScript double
+semantics through their ordered value decoder.
+
+Test: `TestMarshalJSONPreservesTypedIntegerRange` observes the round-trip
+failure when the encoder normalizes all integer tokens through a double.
 
 ## D249
 

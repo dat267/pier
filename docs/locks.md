@@ -9,6 +9,13 @@ handoff, terminal I/O and logging locks, plus selected cross-goroutine `coding/`
 collaborators. It is not an inventory of every core, provider or storage lock.
 File paths intentionally omit line numbers so ordinary edits do not stale them.
 
+`ai.EventStream.mu` protects its FIFO, waiters and terminal state. Completion
+closes a shared notification channel so every result waiter observes the same
+immutable result. Caller-supplied completion predicates and result extractors
+run outside the mutex and may reenter `Push`/`End`; terminal admission stops
+new pushes before extraction, while EOF waits for publication of the terminal
+event unless `End` explicitly closes delivery.
+
 D205 adds no lock: tool result generations, displayed lines and shell elapsed
 state stay on-owner. Workers mutate only private component snapshots and return
 owner-applied completions through D204's bounded optional queue and UI-post gate.

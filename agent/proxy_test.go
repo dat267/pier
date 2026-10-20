@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -85,6 +86,55 @@ func proxyContext() ai.TranscriptContext {
 	return ai.TranscriptContext{Messages: []ai.Message{
 		&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hi"}, Timestamp: 1},
 	}}
+}
+
+// pi v1.3.0 agent/src/proxy.ts uses JS array properties; a negative index
+// is invisible in serialized content. D252 rejects it as a protocol error
+// rather than indexing a Go slice and crashing the process.
+func TestProxyRejectsNegativeContentIndex(t *testing.T) {
+	for _, eventType := range []string{"text_start", "text_delta", "text_end", "thinking_start", "thinking_delta", "thinking_end", "toolcall_start", "toolcall_delta", "toolcall_end"} {
+		t.Run(eventType, func(t *testing.T) {
+			_, err := processProxyEvent(&proxyWireEvent{Type: eventType, ContentIndex: -1}, &ai.AssistantMessage{Content: ai.ContentList{}}, newProxyEventScratch())
+			if err == nil || !strings.Contains(err.Error(), "negative content index") {
+				t.Fatalf("error=%v; want negative content index", err)
+			}
+		})
+	}
+}
+
+// pi v1.3.0 agent/src/proxy.ts assigns contentSignature on every block end,
+// but assigns providerThinkingLevel only when the terminal event supplies it.
+func TestProxyPreservesOptionalFieldAssignmentSemantics(t *testing.T) {
+	for _, thinking := range []bool{false, true} {
+		partial := &ai.AssistantMessage{}
+		scratch := newProxyEventScratch()
+		prefix := "text"
+		if thinking {
+			prefix = "thinking"
+		}
+		_, _ = processProxyEvent(&proxyWireEvent{Type: prefix + "_start"}, partial, scratch)
+		signature := "sig"
+		_, _ = processProxyEvent(&proxyWireEvent{Type: prefix + "_end", ContentSignature: &signature}, partial, scratch)
+		_, _ = processProxyEvent(&proxyWireEvent{Type: prefix + "_end"}, partial, scratch)
+		switch content := partial.Content[0].(type) {
+		case ai.TextContent:
+			if content.TextSignature != nil {
+				t.Error("absent text signature did not clear previous signature")
+			}
+		case ai.ThinkingContent:
+			if content.ThinkingSignature != nil {
+				t.Error("absent thinking signature did not clear previous signature")
+			}
+		}
+	}
+	for _, eventType := range []string{"done", "error"} {
+		level := "high"
+		partial := &ai.AssistantMessage{ProviderThinkingLevel: &level}
+		_, _ = processProxyEvent(&proxyWireEvent{Type: eventType, Reason: ai.StopStop}, partial, newProxyEventScratch())
+		if partial.ProviderThinkingLevel == nil || *partial.ProviderThinkingLevel != "high" {
+			t.Errorf("%s cleared absent provider thinking level", eventType)
+		}
+	}
 }
 
 // TestStreamProxyReconstructsMessage covers the client side: the request shape
@@ -191,6 +241,23 @@ func TestStreamProxyHTTPError(t *testing.T) {
 	}
 	if result.ErrorMessage == nil || *result.ErrorMessage != "Proxy error: invalid token" {
 		t.Fatalf("error = %+v", result.ErrorMessage)
+	}
+}
+
+// pi v1.3.0 agent/src/proxy.ts rejects every !response.ok status and formats
+// the status code once, followed by response.statusText when JSON has no error.
+func TestStreamProxyHTTPStatusFallback(t *testing.T) {
+	for _, status := range []int{http.StatusServiceUnavailable, http.StatusMultipleChoices} {
+		t.Run(http.StatusText(status), func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(status) }))
+			defer server.Close()
+			model := &ai.Model{ID: "m", Provider: "p", API: ai.APIOpenAIResponses}
+			result, err := StreamProxy(model, proxyContext(), ProxyStreamOptions{ProxyURL: server.URL}).Result(context.Background())
+			want := fmt.Sprintf("Proxy error: %d %s", status, http.StatusText(status))
+			if err != nil || result.ErrorMessage == nil || *result.ErrorMessage != want {
+				t.Fatalf("result=%+v error=%v; want %s", result, err, want)
+			}
+		})
 	}
 }
 

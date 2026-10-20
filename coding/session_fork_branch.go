@@ -88,16 +88,17 @@ func writeForkedSession(targetCwd string, sessionDir string, parentSession *stri
 		return nil, err
 	}
 	writer := bufio.NewWriter(file)
-	if _, err := writer.WriteString(headerLine + "\n"); err != nil {
+	if _, err := writer.WriteString(headerLine); err != nil {
 		file.Close()
 		return nil, err
 	}
 	for i := range entries {
 		line, err := MarshalFileEntry(FileEntry{Entry: &entries[i]})
 		if err != nil {
-			continue
+			file.Close()
+			return nil, err
 		}
-		if _, err := writer.WriteString(line + "\n"); err != nil {
+		if _, err := writer.WriteString(line); err != nil {
 			file.Close()
 			return nil, err
 		}

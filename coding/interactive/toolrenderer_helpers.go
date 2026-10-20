@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -172,15 +171,7 @@ func formatToolLimit(value float64) string {
 func parseLineNumber(value any) (float64, bool) {
 	switch typed := value.(type) {
 	case string:
-		trimmed := strings.TrimSpace(typed)
-		if trimmed == "" {
-			return 0, false
-		}
-		number, err := strconv.ParseFloat(trimmed, 64)
-		if err != nil || math.IsInf(number, 0) || math.IsNaN(number) {
-			return 0, false
-		}
-		return number, true
+		return ai.ParseJSNumberString(typed)
 	case float64:
 		if math.IsInf(typed, 0) || math.IsNaN(typed) {
 			return 0, false

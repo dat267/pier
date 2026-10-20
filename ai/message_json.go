@@ -284,10 +284,21 @@ func MarshalMessage(m Message) (json.RawMessage, error) {
 	return out, nil
 }
 
-// UnmarshalMessage decodes one message by its role discriminator.
+// jsonContentPresent distinguishes absent/null content without copying the
+// payload into a RawMessage during the discriminator pass.
+type jsonContentPresent bool
+
+func (p *jsonContentPresent) UnmarshalJSON(data []byte) error {
+	*p = jsonContentPresent(!bytes.Equal(data, []byte("null")))
+	return nil
+}
+
+// UnmarshalMessage decodes one message by its role discriminator. Missing/null
+// content is normalized as in sessionEntryToContextMessages/transformMessages.
 func UnmarshalMessage(data json.RawMessage) (Message, error) {
 	var probe struct {
-		Role Role `json:"role"`
+		Role    Role               `json:"role"`
+		Content jsonContentPresent `json:"content"`
 	}
 	if err := json.Unmarshal(data, &probe); err != nil {
 		return nil, err
@@ -298,11 +309,17 @@ func UnmarshalMessage(data json.RawMessage) (Message, error) {
 		if err := json.Unmarshal(data, &m); err != nil {
 			return nil, err
 		}
+		if !probe.Content {
+			m.Content = StringOrBlocks{Text: ""}
+		}
 		return &m, nil
 	case RoleUser:
 		var m UserMessage
 		if err := json.Unmarshal(data, &m); err != nil {
 			return nil, err
+		}
+		if !probe.Content {
+			m.Content = StringOrBlocks{Blocks: ContentList{}}
 		}
 		return &m, nil
 	case RoleAssistant:

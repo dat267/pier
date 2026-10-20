@@ -117,3 +117,41 @@ func TestAppendCompactionDefaults(t *testing.T) {
 		t.Fatalf("explicit first kept entry was replaced: %+v", got)
 	}
 }
+
+// Reference: pi v1.3.0 core/session-manager.ts sessionEntryToContextMessages
+// normalizes null/missing content by role, including custom-message entries.
+func TestContextMessagesNormalizeMissingContent(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		entry SessionEntry
+		want  string
+	}{
+		{"user missing", SessionEntry{Type: "message", Message: json.RawMessage(`{"role":"user","timestamp":1}`)}, `[]`},
+		{"user null", SessionEntry{Type: "message", Message: json.RawMessage(`{"role":"user","content":null,"timestamp":1}`)}, `[]`},
+		{"user empty string", SessionEntry{Type: "message", Message: json.RawMessage(`{"role":"user","content":"","timestamp":1}`)}, `""`},
+		{"system null", SessionEntry{Type: "message", Message: json.RawMessage(`{"role":"system","content":null,"timestamp":1}`)}, `""`},
+		{"system empty blocks", SessionEntry{Type: "message", Message: json.RawMessage(`{"role":"system","content":[],"timestamp":1}`)}, `[]`},
+		{"custom missing", SessionEntry{Type: "custom_message", CustomType: "note"}, `[]`},
+		{"custom null", SessionEntry{Type: "custom_message", CustomType: "note", Content: json.RawMessage(`null`)}, `[]`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			messages := SessionEntryToContextMessages(&tc.entry)
+			if len(messages) != 1 {
+				t.Fatalf("messages=%d", len(messages))
+			}
+			encoded, err := ai.MarshalMessage(messages[0])
+			if err != nil {
+				t.Fatal(err)
+			}
+			var probe struct {
+				Content json.RawMessage `json:"content"`
+			}
+			if err := json.Unmarshal(encoded, &probe); err != nil {
+				t.Fatal(err)
+			}
+			if string(probe.Content) != tc.want {
+				t.Fatalf("content=%s want=%s", probe.Content, tc.want)
+			}
+		})
+	}
+}

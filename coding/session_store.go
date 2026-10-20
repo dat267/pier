@@ -901,7 +901,11 @@ func SessionEntryToContextMessages(entry *SessionEntry) []ai.Message {
 		}
 		return []ai.Message{message}
 	case "custom_message":
-		return []ai.Message{CreateCustomMessage(entry.CustomType, entry.Content, entry.Display != nil && *entry.Display, entry.Details, entryTimestampMS(entry))}
+		content := entry.Content
+		if len(content) == 0 || bytes.Equal(bytes.TrimSpace(content), []byte("null")) {
+			content = json.RawMessage(`[]`)
+		}
+		return []ai.Message{CreateCustomMessage(entry.CustomType, content, entry.Display != nil && *entry.Display, entry.Details, entryTimestampMS(entry))}
 	case "branch_summary":
 		if entry.Summary != "" {
 			return []ai.Message{CreateBranchSummaryMessage(entry.Summary, entry.FromID, entryTimestampMS(entry))}
@@ -1053,6 +1057,11 @@ func buildSessionContextFromPointers(path []*SessionEntry, cache *messageCache) 
 	edits := contextEditsFromEntries(contextEntries)
 	messages := make([]ai.Message, 0, len(contextEntries))
 	for i := range contextEntries {
+		// An older compaction can lie in the newest checkpoint's kept range.
+		// It remains provenance, but only index zero contributes a summary.
+		if contextEntries[i].Type == "compaction" && i > 0 {
+			continue
+		}
 		projected := projectedMessages(&contextEntries[i], cache)
 		if edit := edits[contextEntries[i].ID]; edit != nil {
 			projected = applyContextEdit(projected, edit.Replacement)
@@ -1307,8 +1316,13 @@ func applyContextEdit(messages []ai.Message, replacement json.RawMessage) []ai.M
 	isString := content[0] == '"'
 	out := make([]ai.Message, 0, len(messages))
 	for _, message := range messages {
-		switch message.(type) {
-		case *ai.UserMessage, *ai.AssistantMessage, *ai.ToolResultMessage, *ai.CustomMessage:
+		switch typed := message.(type) {
+		case *ai.UserMessage, *ai.AssistantMessage, *ai.ToolResultMessage:
+		case *ai.CustomMessage:
+			if typed.Role != RoleCustom {
+				out = append(out, message)
+				continue
+			}
 		default:
 			out = append(out, message)
 			continue
@@ -1336,12 +1350,19 @@ func withReplacedContent(message ai.Message, content json.RawMessage) ai.Message
 	if err != nil {
 		return message
 	}
-	var object map[string]json.RawMessage
-	if err := json.Unmarshal(encoded, &object); err != nil {
+	keys, object, err := readJSONObjectOrdered(encoded)
+	if err != nil {
 		return message
 	}
+	if _, exists := object["content"]; !exists {
+		keys = append(keys, "content")
+	}
 	object["content"] = content
-	rebuilt, err := ai.MarshalJSON(object)
+	ordered := orderedObject{}
+	for _, key := range keys {
+		ordered.set(key, object[key], true)
+	}
+	rebuilt, err := ordered.marshal()
 	if err != nil {
 		return message
 	}

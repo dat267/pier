@@ -46,3 +46,38 @@ func TestSerializeSessionBranchHeader(t *testing.T) {
 		t.Fatalf("entries = %d", len(opened.GetEntries()))
 	}
 }
+
+// Reference: pi v1.3.0 core/session-export.ts serializes before writeFileSync;
+// a serialization failure cannot truncate an existing destination.
+func TestExportSessionSerializationFailurePreservesDestination(t *testing.T) {
+	for _, trailing := range []bool{false, true} {
+		name := "branch"
+		if trailing {
+			name = "trailing"
+		}
+		t.Run(name, func(t *testing.T) {
+			manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: boolPtr(false)})
+			manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}})
+			var create func(*string, string) []*SessionEntry
+			if trailing {
+				create = func(*string, string) []*SessionEntry {
+					return []*SessionEntry{{Type: "custom", CustomType: "broken", Data: json.RawMessage(`{`)}}
+				}
+			} else {
+				manager.AppendCustomEntry("broken", json.RawMessage(`{`))
+			}
+			path := filepath.Join(t.TempDir(), "keep.jsonl")
+			const before = "existing export\n"
+			if err := os.WriteFile(path, []byte(before), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := ExportSessionToJsonl(manager, path, create); err == nil {
+				t.Fatal("invalid serialization reported success")
+			}
+			data, err := os.ReadFile(path)
+			if err != nil || string(data) != before {
+				t.Fatalf("destination=%q err=%v", data, err)
+			}
+		})
+	}
+}

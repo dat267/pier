@@ -170,10 +170,7 @@ func SubstituteArgs(content string, args []string) string {
 			}
 			if sliceLength, hasLength := group(4); hasLength {
 				length, _ := strconv.Atoi(sliceLength)
-				end := start + length
-				if end > len(args) {
-					end = len(args)
-				}
+				end := start + min(length, len(args)-start)
 				builder.WriteString(strings.Join(args[start:end], " "))
 			} else {
 				builder.WriteString(strings.Join(args[start:], " "))

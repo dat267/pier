@@ -75,7 +75,7 @@ type semver struct {
 // parseSemver parses a semver string (the npm `semver.valid` subset: strict
 // x.y.z with optional -prerelease and +build).
 func parseSemver(value string) (semver, bool) {
-	if value == "" {
+	if value == "" || len(value) > 256 {
 		return semver{}, false
 	}
 	main := value
@@ -110,7 +110,7 @@ func parseSemver(value string) (semver, bool) {
 			return semver{}, false
 		}
 		number, err := strconv.Atoi(part)
-		if err != nil || number < 0 {
+		if err != nil || number < 0 || uint64(number) > 1<<53-1 {
 			return semver{}, false
 		}
 		numbers[index] = number
@@ -123,14 +123,7 @@ func validPrereleaseIdentifiers(value string) bool {
 		if identifier == "" {
 			return false
 		}
-		numeric := true
-		for _, character := range identifier {
-			if character < '0' || character > '9' {
-				numeric = false
-				break
-			}
-		}
-		if numeric {
+		if isSemverNumeric(identifier) {
 			// Numeric identifiers must not have leading zeroes.
 			if len(identifier) > 1 && identifier[0] == '0' {
 				return false
@@ -174,6 +167,18 @@ func isSemverIdentifierCharacter(character rune) bool {
 	return false
 }
 
+func isSemverNumeric(identifier string) bool {
+	if identifier == "" {
+		return false
+	}
+	for _, character := range identifier {
+		if character < '0' || character > '9' {
+			return false
+		}
+	}
+	return true
+}
+
 // compare returns -1, 0, or 1 per semver precedence.
 func (v semver) compare(other semver) int {
 	if v.major != other.major {
@@ -201,16 +206,20 @@ func (v semver) compare(other semver) int {
 	}
 	for index := 0; index < length; index++ {
 		left, right := v.prerelease[index], other.prerelease[index]
-		leftNumber, leftErr := strconv.Atoi(left)
-		rightNumber, rightErr := strconv.Atoi(right)
+		leftNumeric, rightNumeric := isSemverNumeric(left), isSemverNumeric(right)
 		switch {
-		case leftErr == nil && rightErr == nil:
+		case leftNumeric && rightNumeric:
+			leftNumber, _ := strconv.ParseFloat(left, 64)
+			rightNumber, _ := strconv.ParseFloat(right, 64)
 			if leftNumber != rightNumber {
-				return compareInts(leftNumber, rightNumber)
+				if leftNumber < rightNumber {
+					return -1
+				}
+				return 1
 			}
-		case leftErr == nil:
+		case leftNumeric:
 			return -1 // numeric identifiers rank lower than alphanumeric
-		case rightErr == nil:
+		case rightNumeric:
 			return 1
 		default:
 			if left != right {

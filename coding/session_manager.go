@@ -1269,7 +1269,12 @@ func (m *SessionManager) GetTree() []*SessionTreeNode {
 		node := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
 		sort.SliceStable(node.Children, func(i int, j int) bool {
-			return node.Children[i].Entry.Timestamp < node.Children[j].Entry.Timestamp
+			left, leftErr := time.Parse(time.RFC3339Nano, node.Children[i].Entry.Timestamp)
+			right, rightErr := time.Parse(time.RFC3339Nano, node.Children[j].Entry.Timestamp)
+			// Upstream compares Date.getTime(), so offsets affect ordering and
+			// sub-millisecond differences tie. Invalid dates compare as NaN,
+			// which leaves their relative order unchanged in the stable sort.
+			return leftErr == nil && rightErr == nil && left.UnixMilli() < right.UnixMilli()
 		})
 		stack = append(stack, node.Children...)
 	}
