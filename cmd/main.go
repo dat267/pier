@@ -644,7 +644,10 @@ func readPipedStdin() (string, bool, error) {
 	if err != nil {
 		return "", false, err
 	}
-	return string(data), true, nil
+	// Upstream trims the piped content and treats whitespace-only input as
+	// absent (readPipedStdin: `data.trim() || undefined`), so a prompt from
+	// `echo ... | pier -p` carries no trailing newline.
+	return strings.TrimSpace(string(data)), true, nil
 }
 
 // applyThemeSources performs the theme boot's source stage (ThemeBoot owns the
@@ -858,9 +861,20 @@ var promptConfirm = func(message string) bool {
 	return answer == "y" || answer == "yes"
 }
 
+// sessionPickerOutput keeps stdout clean in headless modes: a JSONL consumer
+// parses every stdout line, and upstream's takeOverStdout redirects stray writes
+// to stderr (the port has no takeover, D241), so the picker draws on stderr
+// there and on stdout in interactive mode.
+func sessionPickerOutput(headless bool) *os.File {
+	if headless {
+		return os.Stderr
+	}
+	return os.Stdout
+}
+
 // selectResumeSession shows the interactive session picker (upstream
 // cli/session-picker.ts selectSession). A var so tests can stub it.
-var selectResumeSession = func(cwd string, sessionDir string, settings *coding.SettingsManager) (string, bool) {
+var selectResumeSession = func(cwd string, sessionDir string, settings *coding.SettingsManager, headless bool) (string, bool) {
 	current := func(_ interactive.SessionListProgress, ctx context.Context) ([]coding.SessionInfo, error) {
 		return coding.ListSessions(cwd, sessionDir), nil
 	}
@@ -874,6 +888,7 @@ var selectResumeSession = func(cwd string, sessionDir string, settings *coding.S
 		Settings:      settings,
 		CurrentLoader: current,
 		AllLoader:     all,
+		Terminal:      tui.NewProcessTerminal(os.Stdin, sessionPickerOutput(headless)),
 	})
 	return selected, selected != ""
 }
@@ -927,7 +942,12 @@ func resumeSession(args *coding.Args, cwd string, agentDir string, settings *cod
 	if args.Continue {
 		// Upstream -c uses SessionManager.continueRecent(cwd, sessionDir), which
 		// keeps sessionDir = default(cwd) so the resume hint stays `pi --session …`.
-		return coding.ContinueRecentSession(cwd, sessionDir), nil
+		// A session that cannot be opened is an error, not a silent new session.
+		recent, err := coding.ContinueRecentSession(cwd, sessionDir)
+		if err != nil {
+			return nil, err
+		}
+		return recent, nil
 	}
 	if args.Fork != nil {
 		// Upstream createSessionManager's fork branch.
@@ -986,8 +1006,11 @@ func resumeSession(args *coding.Args, cwd string, agentDir string, settings *cod
 		return sm, nil
 	}
 	if args.Resume {
-		// Upstream parsed.resume opens the interactive session picker.
-		selected, ok := selectResumeSession(cwd, sessionDir, settings)
+		// Upstream parsed.resume opens the interactive session picker. A headless
+		// mode keeps stdout for the protocol stream or the final text and draws the
+		// picker on stderr.
+		headless := args.Print || args.Mode == coding.CLIModeJSON
+		selected, ok := selectResumeSession(cwd, sessionDir, settings, headless)
 		if !ok {
 			return nil, errNoSessionSelected
 		}

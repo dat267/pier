@@ -58,3 +58,36 @@ func TestReadPipedStdin(t *testing.T) {
 		t.Fatalf("character device: piped = %v, %v", piped, err)
 	}
 }
+
+// Upstream readPipedStdin trims the piped content (`data.trim() || undefined`),
+// so a prompt from `echo ... | pi -p` has no trailing newline and a
+// whitespace-only pipe contributes nothing.
+func TestReadPipedStdinTrimsLikeUpstream(t *testing.T) {
+	previous := os.Stdin
+	t.Cleanup(func() { os.Stdin = previous })
+
+	read := func(input string) string {
+		reader, writer, err := os.Pipe()
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer reader.Close()
+		os.Stdin = reader
+		if _, err := writer.WriteString(input); err != nil {
+			t.Fatal(err)
+		}
+		writer.Close()
+		text, piped, err := readPipedStdin()
+		if err != nil || !piped {
+			t.Fatalf("readPipedStdin(%q) = %q, %v, %v", input, text, piped, err)
+		}
+		return text
+	}
+
+	if got := read("  piped prompt\n\n"); got != "piped prompt" {
+		t.Fatalf("piped prompt = %q; want the trimmed text", got)
+	}
+	if got := read(" \n\t\n"); got != "" {
+		t.Fatalf("whitespace-only stdin = %q; want empty", got)
+	}
+}

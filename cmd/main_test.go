@@ -259,7 +259,7 @@ func TestResumeSessionPickerCancelled(t *testing.T) {
 	isolatedAgentDir(t)
 	cwd := t.TempDir()
 	previous := selectResumeSession
-	selectResumeSession = func(cwd, sessionDir string, settings *coding.SettingsManager) (string, bool) {
+	selectResumeSession = func(cwd, sessionDir string, settings *coding.SettingsManager, headless bool) (string, bool) {
 		return "", false
 	}
 	defer func() { selectResumeSession = previous }()
@@ -275,7 +275,7 @@ func TestResumeSessionPickerSelection(t *testing.T) {
 	cwd := t.TempDir()
 	source := makeSessionFile(t, cwd)
 	previous := selectResumeSession
-	selectResumeSession = func(cwd, sessionDir string, settings *coding.SettingsManager) (string, bool) {
+	selectResumeSession = func(cwd, sessionDir string, settings *coding.SettingsManager, headless bool) (string, bool) {
 		return source.GetSessionFile(), true
 	}
 	defer func() { selectResumeSession = previous }()
@@ -328,5 +328,43 @@ func TestResumeSessionGlobalPromptsForkOnDecline(t *testing.T) {
 	args := &coding.Args{Session: strPtr(source.GetSessionID())}
 	if _, err := resumeSession(args, cwd, t.TempDir(), nil); !errors.Is(err, errSessionAborted) {
 		t.Fatalf("error %v, want errSessionAborted", err)
+	}
+}
+
+// The --resume picker must not draw on stdout in a headless mode: a JSONL
+// consumer parses every stdout line, and upstream keeps the stream clean by
+// redirecting stray stdout writes to stderr (takeOverStdout). The port has no
+// stdout takeover (D241), so the picker's own terminal is pointed at stderr.
+func TestResumePickerKeepsStdoutCleanInHeadlessModes(t *testing.T) {
+	if got := sessionPickerOutput(true); got != os.Stderr {
+		t.Fatalf("headless picker output = %v, want stderr", got)
+	}
+	if got := sessionPickerOutput(false); got != os.Stdout {
+		t.Fatalf("interactive picker output = %v, want stdout", got)
+	}
+
+	isolatedAgentDir(t)
+	cwd := t.TempDir()
+	previous := selectResumeSession
+	var sawHeadless bool
+	selectResumeSession = func(cwd, sessionDir string, settings *coding.SettingsManager, headless bool) (string, bool) {
+		sawHeadless = headless
+		return "", false
+	}
+	defer func() { selectResumeSession = previous }()
+
+	for _, tc := range []struct {
+		args *coding.Args
+		want bool
+	}{
+		{&coding.Args{Resume: true}, false},
+		{&coding.Args{Resume: true, Mode: coding.CLIModeJSON}, true},
+		{&coding.Args{Resume: true, Print: true}, true},
+	} {
+		sawHeadless = false
+		_, _ = resumeSession(tc.args, cwd, t.TempDir(), nil)
+		if sawHeadless != tc.want {
+			t.Fatalf("picker headless = %v for %+v, want %v", sawHeadless, tc.args, tc.want)
+		}
 	}
 }

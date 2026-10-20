@@ -100,7 +100,7 @@ func TestRPCRejectsInteractiveStartupInputs(t *testing.T) {
 	t.Chdir(t.TempDir())
 	previous := selectResumeSession
 	called := false
-	selectResumeSession = func(cwd, sessionDir string, settings *coding.SettingsManager) (string, bool) {
+	selectResumeSession = func(cwd, sessionDir string, settings *coding.SettingsManager, headless bool) (string, bool) {
 		called = true
 		return "", false
 	}
