@@ -5,17 +5,26 @@ import "strings"
 // MatchGlob matches a value against a minimatch-style pattern as used by
 // model-scope resolution (upstream uses minimatch with { nocase: true }).
 //
-// Supported syntax: `*` (any run of characters except "/"), `**` (any run
-// including "/"), `?` (one character except "/"), `[...]` character classes
-// with ranges and `!`/`^` negation, `{a,b}` brace expansion, and `\` escaping.
+// Supported syntax: `*` (any run of characters except "/"), a whole-segment `**`
+// (any run of path segments, never crossing into a segment that starts with
+// "."), `?` (one character except "/"), `[...]` character classes with ranges
+// and `!`/`^` negation, `{a,b}` brace expansion, and `\` escaping.
 //
 // D22: minimatch's extended globs (`!(...)`, `+(...)`, `?(...)`, `@(...)`,
-// `*(...)`), extglob negation patterns (`!pattern`), and its
-// dotfile/`matchBase`/`nocase` options beyond case folding are not
-// implemented; model ids never use them.
+// `*(...)`), extglob negation patterns (`!pattern`), its POSIX character
+// classes, `\`-escaped separators, and its `matchBase`/`nocase` options beyond
+// ASCII case folding are not implemented; model ids never use them. D262 covers
+// the remaining differences (a `**` that is not a whole segment is a plain `*`
+// here too, a trailing globstar needs one more segment, and trailing-slash and
+// empty-string quirks are not modeled).
 func MatchGlob(pattern, value string, nocase bool) bool {
+	// An empty pattern matches only the empty path (minimatch does not treat "/"
+	// as an empty match).
+	if pattern == "" {
+		return value == ""
+	}
 	for _, expanded := range expandBraces(pattern) {
-		if matchGlobOne(expanded, value, nocase) {
+		if matchGlobSegments(expanded, value, nocase) {
 			return true
 		}
 	}
@@ -79,7 +88,118 @@ func splitTopLevel(body string) []string {
 	return parts
 }
 
-func matchGlobOne(pattern, value string, nocase bool) bool {
+func matchGlobSegments(pattern, value string, nocase bool) bool {
+	return matchSegmentList(globSegments(pattern), globSegments(value), nocase)
+}
+
+// globSegments splits a pattern or value into path segments the way minimatch
+// does by default (preserveMultipleSlashes is off): runs of separators collapse,
+// and a trailing separator stays as one empty segment so "a/" keeps requiring
+// one while "b/" still matches the pattern "b".
+func globSegments(path string) []string {
+	if path == "" {
+		return nil
+	}
+	segments := make([]string, 0, 4)
+	for index, segment := range strings.Split(path, "/") {
+		if segment != "" {
+			segments = append(segments, segment)
+			continue
+		}
+		// Keep the empty segment that marks a leading slash (an absolute path);
+		// the other runs collapse.
+		if index == 0 {
+			segments = append(segments, "")
+		}
+	}
+	if strings.HasSuffix(path, "/") {
+		segments = append(segments, "")
+	}
+	return segments
+}
+
+// matchSegmentList matches the pattern's path segments against the value's,
+// treating a whole-segment `**` as a globstar and every other segment as a
+// single-segment glob.
+func matchSegmentList(pattern, value []string, nocase bool) bool {
+	// dotFreeFrom[index] reports that no segment from index on starts with a
+	// dot, which a globstar will not enter.
+	dotFreeFrom := make([]bool, len(value)+1)
+	dotFreeFrom[len(value)] = true
+	for index := len(value) - 1; index >= 0; index-- {
+		dotFreeFrom[index] = dotFreeFrom[index+1] && !isDotSegment(value[index])
+	}
+
+	type state struct{ pattern, value int }
+	memo := make(map[state]bool, len(pattern)*len(value)+1)
+	seen := make(map[state]bool, len(memo))
+	var match func(patternIndex, valueIndex int) bool
+	match = func(patternIndex, valueIndex int) bool {
+		key := state{patternIndex, valueIndex}
+		if seen[key] {
+			return memo[key]
+		}
+		result := false
+		switch {
+		case patternIndex == len(pattern):
+			// Extra trailing separators in the value are allowed (minimatch
+			// preserves neither, but accepts "b/" for the pattern "b").
+			result = true
+			for _, segment := range value[valueIndex:] {
+				if segment != "" {
+					result = false
+					break
+				}
+			}
+		case pattern[patternIndex] == "**":
+			if patternIndex == len(pattern)-1 {
+				// A trailing globstar consumes every remaining segment, so it needs
+				// at least one (minimatch: "a/**" does not match "a"). A globstar
+				// that is the whole pattern also matches the empty path.
+				dotFree := dotFreeFrom[valueIndex]
+				remaining := valueIndex < len(value)
+				soleGlobstar := patternIndex == 0 && len(pattern) == 1
+				result = dotFree && (remaining || soleGlobstar)
+				break
+			}
+			// A globstar between segments may consume nothing, which lets
+			// "a/**/b" match "a/b".
+			if match(patternIndex+1, valueIndex) {
+				result = true
+			} else if valueIndex < len(value) && !isDotSegment(value[valueIndex]) {
+				result = match(patternIndex, valueIndex+1)
+			}
+		default:
+			// The empty segment that marks a leading slash is only matched by an
+			// absolute pattern (or consumed by a globstar, above).
+			root := valueIndex == 0 && valueIndex < len(value) && value[0] == "" && pattern[patternIndex] != ""
+			result = !root && valueIndex < len(value) &&
+				matchGlobSegment(pattern[patternIndex], value[valueIndex], nocase) &&
+				match(patternIndex+1, valueIndex+1)
+		}
+		seen[key] = true
+		memo[key] = result
+		return result
+	}
+	return match(0, 0)
+}
+
+// isDotSegment reports a path segment minimatch's globstar will not consume.
+func isDotSegment(segment string) bool {
+	return strings.HasPrefix(segment, ".")
+}
+
+// matchGlobSegment matches one pattern segment against one value segment.
+func matchGlobSegment(pattern, value string, nocase bool) bool {
+	// minimatch's parser turns a class that holds only a dot into a literal dot.
+	if strings.HasPrefix(pattern, "[.]") {
+		pattern = "." + pattern[len("[.]"):]
+	}
+	// A wildcard segment needs at least one character (only a trailing-separator
+	// segment, spelled "", matches an empty one).
+	if value == "" && pattern != "" {
+		return false
+	}
 	p := []rune(pattern)
 	s := []rune(value)
 	if nocase {
@@ -90,7 +210,15 @@ func matchGlobOne(pattern, value string, nocase bool) bool {
 			s[index] = toLowerRune(s[index])
 		}
 	}
-	return matchHere(p, s)
+	// The dotfile rule: a wildcard at the start of a segment does not match a
+	// leading "." (a literal dot in the pattern still does).
+	if len(s) > 0 && s[0] == '.' && len(p) > 0 {
+		switch p[0] {
+		case '*', '?', '[':
+			return false
+		}
+	}
+	return matchSegmentHere(p, s)
 }
 
 func toLowerRune(char rune) rune {
@@ -100,33 +228,31 @@ func toLowerRune(char rune) rune {
 	return char
 }
 
-func matchHere(pattern, value []rune) bool {
+// matchSegmentHere matches a single path segment; it never sees a "/".
+func matchSegmentHere(pattern, value []rune) bool {
 	for len(pattern) > 0 {
 		switch pattern[0] {
 		case '*':
-			globstar := len(pattern) > 1 && pattern[1] == '*'
+			// Adjacent stars inside a segment are a single star (minimatch treats
+			// `a**b` as `a*b`).
 			rest := pattern[1:]
-			if globstar {
-				rest = pattern[2:]
+			for len(rest) > 0 && rest[0] == '*' {
+				rest = rest[1:]
 			}
-			// Try every split point; a single star never crosses "/".
 			for index := 0; index <= len(value); index++ {
-				if !globstar && index > 0 && value[index-1] == '/' {
-					break
-				}
-				if matchHere(rest, value[index:]) {
+				if matchSegmentHere(rest, value[index:]) {
 					return true
 				}
 			}
 			return false
 		case '?':
-			if len(value) == 0 || value[0] == '/' {
+			if len(value) == 0 {
 				return false
 			}
 			pattern = pattern[1:]
 			value = value[1:]
 		case '[':
-			if len(value) == 0 || value[0] == '/' {
+			if len(value) == 0 {
 				return false
 			}
 			consumed, ok := matchClass(pattern, value[0])

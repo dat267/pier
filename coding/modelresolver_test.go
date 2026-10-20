@@ -559,7 +559,11 @@ func TestMatchGlobSemantics(t *testing.T) {
 	}{
 		{"*sonnet*", "claude-sonnet-4-5", true},
 		{"*sonnet*", "anthropic/claude-sonnet-4-5", false}, // "*" does not cross "/"
-		{"**sonnet**", "anthropic/claude-sonnet-4-5", true},
+		// minimatch treats `**` as a globstar only as a whole segment, so this
+		// remains unmatched here just as it does upstream.
+		{"**sonnet**", "anthropic/claude-sonnet-4-5", false},
+		{"**/claude-sonnet-4-5", "anthropic/claude-sonnet-4-5", true},
+		{"**/*sonnet*", "anthropic/claude-sonnet-4-5", true},
 		{"anthropic/*", "anthropic/claude-sonnet-4-5", true},
 		{"anthropic/*", "openai/gpt-4o", false},
 		{"?pt-4o", "gpt-4o", true},

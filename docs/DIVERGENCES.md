@@ -4,7 +4,7 @@ Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D261**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D262**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation.
 
 Related documents: [port status](PORTING.md), [architecture](architecture.md),
@@ -2054,3 +2054,30 @@ Valid URLs, including the WHATWG pathname normalization (dot segments, encoded
 dots, backslash separators, an empty path as the root), match the reference.
 
 Test: `TestNormalizePathKeepsAnInvalidFileURL`.
+
+## D262
+
+**Glob matching matches minimatch except for four unreachable pattern shapes.**
+
+Reference: `core/model-resolver.ts` matches scoped-model patterns with
+`minimatch(value, pattern, { nocase: true })`. A differential over 50,000
+generated pattern/value pairs found four remaining shapes where
+`coding.MatchGlob` and minimatch disagree. Model ids are never `.` or `..`, never
+empty, and never scoped by a single-alternative brace, so the port keeps the
+simpler rule for each:
+
+- a comma-less brace group is literal upstream (`{a}` does not match `a`); the
+  port expands it;
+- minimatch never matches the `.` or `..` path segments with a pattern that
+  starts with a dot wildcard (`.*` does not match `.`); the port matches them;
+- minimatch matches an empty path against a pattern of globstar segments
+  (`**/**`); the port requires a segment;
+- a `..` segment inside a brace alternative (which upstream normalizes) is not
+  modeled.
+
+Everything else matches, including whole-segment globstars (`a/**/b`,
+`**/x`), the dotfile rule, absolute patterns, repeated separators, and trailing
+separators. The earlier simplification (a globstar anywhere, no dotfile rule) is
+gone: `**sonnet**` no longer crosses a separator, as upstream.
+
+Tests: `TestMatchGlobAgainstMinimatch`, `TestMatchGlobResidualMinimatchQuirks`.
