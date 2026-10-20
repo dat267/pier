@@ -1,6 +1,10 @@
 package coding
 
-import "strings"
+import (
+	"regexp"
+	"strconv"
+	"strings"
+)
 
 // MatchGlob matches a value against a minimatch-style pattern as used by
 // model-scope resolution (upstream uses minimatch with { nocase: true }).
@@ -8,22 +12,27 @@ import "strings"
 // Supported syntax: `*` (any run of characters except "/"), a whole-segment `**`
 // (any run of path segments, never crossing into a segment that starts with
 // "."), `?` (one character except "/"), `[...]` character classes with ranges
-// and `!`/`^` negation, `{a,b}` brace expansion, and `\` escaping.
+// and `!`/`^` negation, brace groups (comma alternatives and `{1..3}`-style
+// sequences) and `\` escaping.
 //
 // D22: minimatch's extended globs (`!(...)`, `+(...)`, `?(...)`, `@(...)`,
 // `*(...)`), extglob negation patterns (`!pattern`), its POSIX character
 // classes, `\`-escaped separators, and its `matchBase`/`nocase` options beyond
 // ASCII case folding are not implemented; model ids never use them. D262 covers
-// the remaining differences, which are four pattern shapes model ids cannot
-// reach.
+// the one remaining difference, in minimatch's escaped-suffix fast path.
 func MatchGlob(pattern, value string, nocase bool) bool {
 	// An empty pattern matches only the empty path (minimatch does not treat "/"
 	// as an empty match).
 	if pattern == "" {
 		return value == ""
 	}
+	valueSegments := globSegments(value)
+	if value == "" {
+		// An empty path has one empty segment, which a globstar may consume.
+		valueSegments = []string{""}
+	}
 	for _, expanded := range expandBraces(pattern) {
-		if matchGlobSegments(expanded, value, nocase) {
+		if matchSegmentList(canonicalGlobPattern(expanded), valueSegments, nocase) {
 			return true
 		}
 	}
@@ -39,48 +48,210 @@ const (
 	globBraceExpansionMaxLength = 4_000_000
 )
 
-// expandBraces expands the brace groups into alternatives. A backslash escapes
-// the character after it, so "\{a,b\}" stays literal. The expansion is
-// breadth-first and truncated at the expansion limits, so a pattern with many
-// brace groups cannot exhaust memory.
+// expandBraces expands brace groups like brace-expansion: a comma group and a
+// numeric or alphabetic sequence expand, a group with neither stays literal, and
+// brace groups nested inside a non-expanding group still expand inner-first
+// ("{a{b,c}}" is "{ab}" and "{ac}"). A backslash escapes the character after it.
+// The expansion is bounded by the limits below.
 func expandBraces(pattern string) []string {
-	results := []string{pattern}
+	return unescapeBracePatterns(expandBracesWithin(pattern, true))
+}
+
+// expandBracesWithin mirrors brace-expansion's expand_: it consumes the
+// pattern's brace groups left to right while combining a running accumulator.
+// top marks the outermost call, where an empty alternative is dropped (Bash
+// behavior) for a comma group.
+func expandBracesWithin(pattern string, top bool) []string {
+	acc := []string{""}
+	dropEmpties := false
+	firstGroup := true
+	current := pattern
 	for {
-		var next []string
-		nextLength := 0
-		expandedAny := false
+		open, close := globBraceGroup(current)
+		if open < 0 {
+			out, _ := combineExpansions(acc, current, []string{""}, dropEmpties)
+			return out
+		}
+		pre, body, post := current[:open], current[open+1:close], current[close+1:]
+		isAlphaSequence, isSequence := braceSequenceKind(body)
+		if !isSequence && !strings.Contains(body, ",") {
+			// Nothing here expands; the rest of the string is literal.
+			out, _ := combineExpansions(acc, current, []string{""}, dropEmpties)
+			return out
+		}
+		if firstGroup {
+			dropEmpties = top && !isSequence
+			firstGroup = false
+		}
+		var values []string
 		truncated := false
-		for _, current := range results {
-			open, close := globBraceGroup(current)
-			if open < 0 {
-				next = append(next, current)
-				nextLength += len(current)
+		if isSequence {
+			values, truncated = expandBraceSequence(body, isAlphaSequence)
+			dropEmpties = false
+		} else {
+			parts := splitTopLevel(body)
+			if len(parts) == 1 {
+				// A comma nested in a brace inside the body: expand the body and
+				// keep its braces ("{a{b,c}}" -> "{ab}", "{ac}").
+				for _, expanded := range expandBracesWithin(parts[0], false) {
+					values = append(values, "{"+expanded+"}")
+				}
+			} else {
+				for _, part := range parts {
+					values = append(values, expandBracesWithin(part, false)...)
+				}
+			}
+		}
+		var combineTruncated bool
+		// Bash drops empty results only when nothing follows the group.
+		acc, combineTruncated = combineExpansions(acc, pre, values, dropEmpties && post == "")
+		if truncated || combineTruncated || len(post) == 0 {
+			return acc
+		}
+		current = post
+	}
+}
+
+// combineExpansions builds acc[a] + pre + values[v] for every combination,
+// stopping at the expansion limits. Once a combination is truncated the rest of
+// the pattern is left unexpanded: expanding it would only produce alternatives
+// beyond the limits.
+func combineExpansions(acc []string, pre string, values []string, dropEmpties bool) (out []string, truncated bool) {
+	out = make([]string, 0, len(acc)*len(values))
+	length := 0
+	for _, prefix := range acc {
+		for _, value := range values {
+			if len(out) >= globBraceExpansionMax {
+				return out, true
+			}
+			expansion := prefix + pre + value
+			if dropEmpties && expansion == "" {
 				continue
 			}
-			expandedAny = true
-			for _, alternative := range splitTopLevel(current[open+1 : close]) {
-				candidate := current[:open] + alternative + current[close+1:]
-				if len(next) >= globBraceExpansionMax || nextLength+len(candidate) > globBraceExpansionMaxLength {
-					truncated = true
-					break
-				}
-				next = append(next, candidate)
-				nextLength += len(candidate)
+			if length+len(expansion) > globBraceExpansionMaxLength {
+				return out, true
 			}
-			if truncated {
+			length += len(expansion)
+			out = append(out, expansion)
+		}
+	}
+	return out, false
+}
+
+// braceSequenceKind reports whether a brace body is a numeric or alphabetic
+// sequence ("1..5", "a..e..2").
+func braceSequenceKind(body string) (isAlpha bool, isSequence bool) {
+	if globNumericSequenceRegex.MatchString(body) {
+		return false, true
+	}
+	if globAlphaSequenceRegex.MatchString(body) {
+		return true, true
+	}
+	return false, false
+}
+
+var (
+	globNumericSequenceRegex = regexp.MustCompile(`^-?\d+\.\.-?\d+(?:\.\.-?\d+)?$`)
+	globAlphaSequenceRegex   = regexp.MustCompile(`^[a-zA-Z]\.\.[a-zA-Z](?:\.\.-?\d+)?$`)
+)
+
+// expandBraceSequence expands "1..5", "5..1", "01..05" and "a..e..2", stopping
+// at the expansion limits.
+func expandBraceSequence(body string, isAlpha bool) (values []string, truncated bool) {
+	parts := strings.Split(body, "..")
+	if len(parts) < 2 {
+		return nil, false
+	}
+	from := braceNumericValue(parts[0])
+	to := braceNumericValue(parts[1])
+	width := max(len(parts[0]), len(parts[1]))
+	step := int64(1)
+	if len(parts) == 3 {
+		step = braceNumericValue(parts[2])
+		if step < 0 {
+			step = -step
+		}
+		if step == 0 {
+			step = 1
+		}
+	}
+	reverse := to < from
+	if reverse {
+		step = -step
+	}
+	padded := false
+	for _, part := range parts {
+		if globPaddedSequenceRegex.MatchString(part) {
+			padded = true
+			break
+		}
+	}
+	total := 0
+	for value := from; ; value += step {
+		if reverse {
+			if value < to {
 				break
 			}
+		} else if value > to {
+			break
 		}
-		// Truncation drops the remaining alternatives; they would never match
-		// anyway, and expanding them all is what the limits exist to prevent.
-		if truncated {
-			return unescapeBracePatterns(next)
+		if len(values) >= globBraceExpansionMax {
+			return values, true
 		}
-		if !expandedAny || len(next) == 0 {
-			return unescapeBracePatterns(results)
+		var text string
+		if isAlpha {
+			text = string(rune(value))
+			if text == "\\" {
+				text = ""
+			}
+		} else if padded {
+			text = padBraceNumber(value, width)
+		} else {
+			text = strconv.FormatInt(value, 10)
 		}
-		results = next
+		if total+len(text) > globBraceExpansionMaxLength {
+			return values, true
+		}
+		total += len(text)
+		values = append(values, text)
+		if step > 0 && value > to-step {
+			break
+		}
+		if step < 0 && value < to-step {
+			break
+		}
 	}
+	return values, false
+}
+
+var globPaddedSequenceRegex = regexp.MustCompile(`^-?0\d`)
+
+// braceNumericValue is brace-expansion's numeric(): a numeric string is its
+// value, anything else is the first character's code point.
+func braceNumericValue(text string) int64 {
+	if value, err := strconv.ParseInt(text, 10, 64); err == nil {
+		return value
+	}
+	if text == "" {
+		return 0
+	}
+	return int64(text[0])
+}
+
+// padBraceNumber zero-pads a numeric sequence member to width.
+func padBraceNumber(value int64, width int) string {
+	digits := strconv.FormatInt(value, 10)
+	negative := strings.HasPrefix(digits, "-")
+	if negative {
+		digits = digits[1:]
+	}
+	for len(digits) < width {
+		digits = "0" + digits
+	}
+	if negative {
+		return "-" + digits
+	}
+	return digits
 }
 
 // unescapeBracePatterns turns the brace-expansion escapes into their literal
@@ -173,8 +344,30 @@ func splitTopLevel(body string) []string {
 	return parts
 }
 
-func matchGlobSegments(pattern, value string, nocase bool) bool {
-	return matchSegmentList(globSegments(pattern), globSegments(value), nocase)
+// canonicalGlobPattern applies minimatch's level-one optimization to an expanded
+// pattern: adjacent globstars collapse and a ".." segment removes the segment
+// before it unless that is "..", "." or "**". A pattern reduced to nothing is the
+// empty segment, which matches "" and "/".
+func canonicalGlobPattern(pattern string) []string {
+	segments := globSegments(pattern)
+	out := make([]string, 0, len(segments))
+	for _, segment := range segments {
+		if segment == "**" && len(out) > 0 && out[len(out)-1] == "**" {
+			continue
+		}
+		if segment == ".." && len(out) > 0 {
+			previous := out[len(out)-1]
+			if previous != ".." && previous != "." && previous != "**" && previous != "" {
+				out = out[:len(out)-1]
+				continue
+			}
+		}
+		out = append(out, segment)
+	}
+	if len(out) == 0 {
+		return []string{""}
+	}
+	return out
 }
 
 // globSegments splits a pattern or value into path segments the way minimatch
@@ -283,6 +476,11 @@ func matchGlobSegment(pattern, value string, nocase bool) bool {
 	// A wildcard segment needs at least one character (only a trailing-separator
 	// segment, spelled "", matches an empty one).
 	if value == "" && pattern != "" {
+		return false
+	}
+	// minimatch never matches the "." or ".." path segments with anything but
+	// that literal segment.
+	if (value == "." || value == "..") && pattern != value {
 		return false
 	}
 	p := []rune(pattern)

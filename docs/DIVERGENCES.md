@@ -2046,27 +2046,25 @@ Test: `TestNormalizePathKeepsAnInvalidFileURL`.
 
 ## D262
 
-**Glob matching matches minimatch except for four unreachable pattern shapes.**
+**An escaped suffix after a wildcard is matched literally, without minimatch's
+fast-path shortcut.**
 
 Reference: `core/model-resolver.ts` matches scoped-model patterns with
-`minimatch(value, pattern, { nocase: true })`. A differential over 50,000
-generated pattern/value pairs found four remaining shapes where
-`coding.MatchGlob` and minimatch disagree. Model ids are never `.` or `..`, never
-empty, and never scoped by a single-alternative brace, so the port keeps the
-simpler rule for each:
+`minimatch(value, pattern, { nocase: true })`. The port now matches minimatch on
+80,000 generated pattern/value pairs for brace expansion (comma groups,
+`{1..3}`-style sequences, literal `{a}`, inner-first nesting, escapes), path
+canonicalization (`..` removes the preceding segment; `.` stays literal), the
+`.`/`..` and dotfile segment rules, empty paths, absolute paths, repeated and
+trailing separators, and globstars.
 
-- a comma-less brace group is literal upstream (`{a}` does not match `a`); the
-  port expands it;
-- minimatch never matches the `.` or `..` path segments with a pattern that
-  starts with a dot wildcard (`.*` does not match `.`); the port matches them;
-- minimatch matches an empty path against a pattern of globstar segments
-  (`**/**`); the port requires a segment;
-- a `..` segment inside a brace alternative (which upstream normalizes) is not
-  modeled.
+One difference remains, in minimatch's fast paths (`starDotExtRE` and
+`qmarksRE`): for a pattern whose wildcard is followed by an escaped suffix such
+as `*\}`, minimatch compares the raw escape text (`endsWith("\\}")`) instead of
+the escaped character, so `*\}` does not match `}`. Pier compares the unescaped
+character and matches, which is what minimatch's own compiled regex does. The
+affected shape is a wildcard followed only by characters outside
+`+@!?*[(` with an escape among them; a model-scope pattern has no use for it.
 
-Everything else matches, including whole-segment globstars (`a/**/b`,
-`**/x`), the dotfile rule, absolute patterns, repeated separators, and trailing
-separators. The earlier simplification (a globstar anywhere, no dotfile rule) is
-gone: `**sonnet**` no longer crosses a separator, as upstream.
-
-Tests: `TestMatchGlobAgainstMinimatch`, `TestMatchGlobResidualMinimatchQuirks`.
+Tests: `TestMatchGlobAgainstMinimatch`,
+`TestMatchGlobBraceSequencesAndDotSegments`,
+`TestMatchGlobEscapedSuffixFastPath`.

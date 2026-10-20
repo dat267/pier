@@ -86,29 +86,78 @@ func TestMatchGlobAgainstMinimatch(t *testing.T) {
 	}
 }
 
-// TestMatchGlobResidualMinimatchQuirks pins D262's remaining differences, which
-// a differential over 50,000 generated pattern/value pairs found. Model ids are
-// never "." / "..", are never empty, and their scoped patterns do not use a
-// single-alternative brace, so the port keeps the simpler behavior here.
-func TestMatchGlobResidualMinimatchQuirks(t *testing.T) {
+// TestMatchGlobBraceSequencesAndDotSegments covers the shapes D262 used to
+// list: a comma-less brace group is literal, `{1..3}`-style sequences expand
+// with brace-expansion's padding and step rules, dot segments are matched
+// literally, ".." removes the segment before it, and an empty path is one empty
+// segment. Expectations read off minimatch 10.x.
+func TestMatchGlobBraceSequencesAndDotSegments(t *testing.T) {
 	cases := []struct {
 		pattern string
 		value   string
-		port    bool
+		want    bool
 	}{
-		// minimatch treats a comma-less brace group as literal text.
-		{"{a}", "a", true},
-		// minimatch never matches the "." or ".." path segments with a pattern
-		// that starts with a dot wildcard.
-		{".*", ".", true},
-		{".*", "..", true},
-		// minimatch matches an empty path against a pattern of globstar segments.
-		{"**/**", "", false},
-		{"**/", "", false},
+		{"{a}", "a", false},
+		{"{a}", "{a}", true},
+		{"{}", "{}", true},
+		{"{a{b,c}}", "{ab}", true},
+		{"{a{b,c}}", "ab", false},
+		{"{1..3}", "2", true},
+		{"{1..3}", "4", false},
+		{"{3..1}", "2", true},
+		{"{a..c}", "b", true},
+		{"{01..03}", "02", true},
+		{"{1..05}", "05", true},
+		{"{1..05}", "5", false},
+		{"{-1..1}", "0", true},
+		{"{1..5..2}", "3", true},
+		{"{a..c}{1..2}", "b2", true},
+
+		{"a/../b", "b", true},
+		{"a/../b", "a/b", false},
+		{"a/..", "/", true},
+		{"a/..", "", true},
+		{"a/..", ".", false},
+		{"a/b/..", "a", true},
+		{"a/b/../../..", "..", true},
+		{"/a/../b", "/b", true},
+		{"/a/../b", "b", false},
+		{".**/..", "//", true},
+
+		{".*", ".", false},
+		{".*", "..", false},
+		{".*", "..a", true},
+		{"?", ".", false},
+		{"**/.", ".", true},
+		{"**/..", "..", true},
+
+		{"**/**", "", true},
+		{"**/", "", true},
+		{"**", "", true},
+		{"**/*", "", false},
+		{"*", "", false},
 	}
 	for _, testCase := range cases {
-		if got := MatchGlob(testCase.pattern, testCase.value, true); got != testCase.port {
-			t.Errorf("MatchGlob(%q, %q) = %v, want the documented %v", testCase.pattern, testCase.value, got, testCase.port)
+		if got := MatchGlob(testCase.pattern, testCase.value, true); got != testCase.want {
+			t.Errorf("MatchGlob(%q, %q) = %v, want %v", testCase.pattern, testCase.value, got, testCase.want)
+		}
+	}
+}
+
+// TestMatchGlobEscapedSuffixFastPath pins D262's one remaining difference:
+// minimatch's fast path for "*<literal>" and "?<literal>" patterns compares the
+// raw escape text, so `*\}` does not match "}", while the port (and minimatch's
+// own compiled regex) matches the escaped character.
+func TestMatchGlobEscapedSuffixFastPath(t *testing.T) {
+	cases := []struct{ pattern, value string }{
+		{`*\}`, "}"},
+		{`x*\}`, "x}"},
+		{`?\}`, "x}"},
+		{`*\}`, "2.{}"},
+	}
+	for _, testCase := range cases {
+		if !MatchGlob(testCase.pattern, testCase.value, true) {
+			t.Errorf("MatchGlob(%q, %q) = false; the port matches the escaped character", testCase.pattern, testCase.value)
 		}
 	}
 }
