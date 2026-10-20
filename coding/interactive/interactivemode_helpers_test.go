@@ -59,12 +59,19 @@ func TestCrashHelpers(t *testing.T) {
 	wiring, _, _ := newHelpersTestWiring(t)
 	wiring.SessionFile = func() string { return "" }
 
-	if instructions := wiring.CrashReportInstructions(); instructions != "To report this crash: start pi and run /bug. The crash details are attached automatically." {
-		t.Fatalf("instructions = %q", instructions)
+	// The port has no /bug flow (D41), so the hint names the issue tracker and
+	// the recorded crash log instead of a command that does not exist.
+	logPath := coding.GetCrashLogPath(wiring.AgentDir)
+	wantInstructions := "To report this crash: open an issue at " + coding.PortRepositoryURL + "/issues and attach " + logPath + "."
+	if instructions := wiring.CrashReportInstructions(); instructions != wantInstructions {
+		t.Fatalf("instructions = %q, want %q", instructions, wantInstructions)
+	}
+	if strings.Contains(wantInstructions, "/bug") {
+		t.Fatal("crash instructions must not name the removed /bug command")
 	}
 	wiring.SessionFile = func() string { return "/tmp/sess.jsonl" }
-	if instructions := wiring.CrashReportInstructions(); instructions != "To report this crash: run `pi -r` to resume the session, then run /bug. The crash details are attached automatically." {
-		t.Fatalf("instructions = %q", instructions)
+	if instructions := wiring.CrashReportInstructions(); instructions != wantInstructions {
+		t.Fatalf("instructions with a session = %q", instructions)
 	}
 
 	// A recorded crash writes a record.
@@ -97,7 +104,7 @@ func TestFatalRuntimeError(t *testing.T) {
 		t.Fatalf("watcher = %d, stop = %q, exit = %d", stoppedWatcher, stopped, exitCode)
 	}
 	lines := coding.StripAnsi(strings.Join(wiring.Chat.Render(100), "\n"))
-	if !strings.Contains(lines, "To report this crash: start pi and run /bug.") {
+	if !strings.Contains(lines, "To report this crash: open an issue at "+coding.PortRepositoryURL+"/issues") {
 		t.Fatalf("chat = %q", lines)
 	}
 }

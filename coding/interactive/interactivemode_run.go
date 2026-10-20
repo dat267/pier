@@ -89,6 +89,9 @@ type RunWiring struct {
 	CheckTmux func() string
 	// TakeCrash returns the unnotified crash record.
 	TakeCrash func() *coding.CrashRecord
+	// CrashLogPath names the file the crash record was written to, for the
+	// startup notice.
+	CrashLogPath func() string
 	// Prompt sends a prompt to the session.
 	// Prompt submits a prompt; images ride with it the way upstream's
 	// session.prompt(text, images) attaches them (@file images on the first
@@ -473,8 +476,12 @@ func (w *RunWiring) Run(ctx context.Context, options InitOptions, runOptions Run
 	}
 	if w.TakeCrash != nil {
 		if crash := w.TakeCrash(); crash != nil {
-			w.ShowChatWarning(w.AppName + " crashed on " + crash.Timestamp + " (" + crash.Message +
-				"). Run /bug to report it; the crash details are attached automatically.")
+			details := ""
+			if w.CrashLogPath != nil {
+				details = " The details are in " + w.CrashLogPath() + ";"
+			}
+			w.ShowChatWarning(w.AppName + " crashed on " + crash.Timestamp + " (" + crash.Message + ")." + details +
+				" Open an issue at " + coding.PortRepositoryURL + "/issues to report it.")
 		}
 	}
 	if w.WarnAnthropic != nil {
@@ -900,6 +907,7 @@ func newRunWiring(app *App) *RunWiring {
 		TakeCrash: func() *coding.CrashRecord {
 			return coding.TakeUnnotifiedCrash(coding.GetCrashLogPath(app.options.AgentDir), time.Now().UnixMilli())
 		},
+		CrashLogPath: func() string { return coding.GetCrashLogPath(app.options.AgentDir) },
 
 		Prompt: func(ctx context.Context, text string, images []ai.ImageContent) error {
 			return app.session.Prompt(ctx, text, &coding.PromptOptions{Images: images})

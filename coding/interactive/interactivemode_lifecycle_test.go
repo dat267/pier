@@ -285,13 +285,13 @@ func TestLifecycleCrashPaths(t *testing.T) {
 	crash.options.RecordCrash = func(kind string, err error) bool {
 		return kind == "uncaught_exception" && err.Error() == "boom"
 	}
-	crash.options.CrashReportInstructions = func() string { return "Run /bug" }
+	crash.options.CrashReportInstructions = func() string { return "Report hint" }
 	crash.UncaughtCrash(errorsNew("boom"))
 	if len(*exits2) != 1 || (*exits2)[0] != 1 {
 		t.Fatalf("exits = %v", *exits2)
 	}
 	joined := strings.Join(errText, "")
-	if !strings.Contains(joined, "exiting due to uncaughtException") || !strings.Contains(joined, "Run /bug") {
+	if !strings.Contains(joined, "exiting due to uncaughtException") || !strings.Contains(joined, "Report hint") {
 		t.Fatalf("stderr = %q", joined)
 	}
 

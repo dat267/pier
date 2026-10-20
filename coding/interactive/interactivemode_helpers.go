@@ -134,14 +134,12 @@ func (w *TrustCrashWiring) RecordCrash(kind string, err error) bool {
 	}, coding.GetCrashLogPath(w.AgentDir)) != nil
 }
 
-// CrashReportInstructions returns the post-crash bug-report hint (upstream
-// crashReportInstructions).
+// CrashReportInstructions returns the post-crash report hint. Upstream points
+// at its /bug flow; the port has no bug-report flow (D41), so the hint names the
+// issue tracker and the crash log the user can attach.
 func (w *TrustCrashWiring) CrashReportInstructions() string {
-	resume := "start pi and"
-	if w.SessionFile != nil && w.SessionFile() != "" {
-		resume = "run `" + w.AppName + " -r` to resume the session, then"
-	}
-	return "To report this crash: " + resume + " run /bug. The crash details are attached automatically."
+	return "To report this crash: open an issue at " + coding.PortRepositoryURL + "/issues and attach " +
+		coding.GetCrashLogPath(w.AgentDir) + "."
 }
 
 // MaybeSaveImplicitProjectTrustAfterReload saves the implicit trust decision.

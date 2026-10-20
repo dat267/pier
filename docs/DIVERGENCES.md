@@ -4,7 +4,7 @@ Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D257**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D258**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation.
 
 Related documents: [port status](PORTING.md), [architecture](architecture.md),
@@ -1994,3 +1994,17 @@ selects `model-z` regardless of the host locale. Locale and Unicode collation
 version differences are not an assertion of byte-identical ICU behavior.
 
 Test: `TestFuzzyModelAliasLocaleOrdering`.
+
+## D258
+
+**The crash hint names the issue tracker, not `/bug`.**
+
+Reference: `modes/interactive/interactive-mode.ts` points the crash report at
+its `/bug` flow, which uploads a bundle to the developers. The port omits the
+share and bug-report flows (D41), so a hint that says "run /bug" names a command
+that does not exist. The startup notice and the post-crash instructions instead
+name the recorded crash log (`GetCrashLogPath`) and
+`https://github.com/dat267/pier/issues`, which is what a user can act on. The
+crash record itself is unchanged.
+
+Tests: `TestCrashHelpers`, `TestFatalRuntimeError`.
