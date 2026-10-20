@@ -19,28 +19,6 @@ import (
 // The byte set is a safe over-approximation: it must never exclude a byte that
 // can begin a match. A near-full set disables the skip.
 
-func firstByteSet(expr string, parsed *syntax.Regexp) (string, bool) {
-	if parsed == nil {
-		return "", false
-	}
-	if minMatchLen(parsed) == 0 {
-		return "", false
-	}
-	var set [256]bool
-	addFirstBytes(&set, parsed)
-	var b strings.Builder
-	for i := 0; i < 256; i++ {
-		if set[i] {
-			b.WriteByte(byte(i))
-		}
-	}
-	chars := b.String()
-	if chars == "" || len(chars) > 240 {
-		return "", false
-	}
-	return chars, true
-}
-
 // ruleFirstByteSet returns the bytes that can begin a non-empty match of one
 // rule. usable is false when the rule can match empty, in which case per-byte
 // dispatch cannot be used. caseInsensitive must match the language so a class

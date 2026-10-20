@@ -810,17 +810,6 @@ func schemaTruthy(value *schemaValue) bool {
 	return value.Object != nil
 }
 
-func rawString(raw json.RawMessage) string {
-	if len(raw) == 0 {
-		return ""
-	}
-	var s string
-	if jsonUnmarshalStrict(raw, &s) == nil {
-		return s
-	}
-	return ""
-}
-
 // getClientAPIKey resolves the request key (port of getClientApiKey):
 // header-owned auth substitutes "unused".
 func getClientAPIKey(provider, apiKey string, headers ProviderHeaders) (string, error) {

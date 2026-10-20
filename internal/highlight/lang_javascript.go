@@ -18,9 +18,6 @@ var (
 
 const jsIdentRe = `[A-Za-z$_][0-9A-Za-z$_]*`
 
-// JSParamsContains returns the rule set the reference exports for TypeScript.
-func jsParamsContains() []*Mode { return append([]*Mode{}, jsComment().Contains...) }
-
 func jsComment() *Mode {
 	return &Mode{ClassName: "comment", Variants: []*Mode{
 		jsJSDoc(),

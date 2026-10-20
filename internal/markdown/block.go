@@ -18,10 +18,6 @@ type line struct {
 	next int
 }
 
-func (l *line) hasNewline(src string) bool {
-	return l.next > 0 && l.next <= len(src) && src[l.next-1] == '\n'
-}
-
 func nextLine(src string, at int) line {
 	if at >= len(src) {
 		return line{text: "", next: at}
