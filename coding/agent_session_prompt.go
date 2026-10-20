@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
 )
 
@@ -410,7 +411,11 @@ func (s *AgentSession) SendMessage(ctx context.Context, message *ai.CustomMessag
 			state.mu.Unlock()
 			return nil
 		}
-		s.AppendCustomMessage(message)
+		if options.DeliverAs == "followUp" {
+			s.FollowUp(message)
+		} else {
+			s.Steer(message)
+		}
 		return nil
 	default:
 		s.AppendCustomMessage(message)
@@ -425,9 +430,13 @@ func (s *AgentSession) AppendCustomMessage(message *ai.CustomMessage) {
 	var fields customMessageFields
 	if err := json.Unmarshal(message.Content, &fields); err == nil && fields.CustomType != "" {
 		s.Sessions.AppendCustomMessageEntry(fields.CustomType, fields.Content, fields.Display, fields.Details)
-		return
+	} else {
+		s.Sessions.AppendCustomMessageEntry(message.Role, message.Content, false, nil)
 	}
-	s.Sessions.AppendCustomMessageEntry(message.Role, message.Content, false, nil)
+	// The custom entry is already persisted. Publish directly rather than
+	// passing through handleAgentEvent, which would append it a second time.
+	s.emit(&SessionEvent{Type: SessionMessageStart, Agent: &agent.AgentEvent{Type: agent.MessageStart, Message: message}})
+	s.emit(&SessionEvent{Type: SessionMessageEnd, Agent: &agent.AgentEvent{Type: agent.MessageEnd, Message: message}})
 }
 
 // FlushPendingCustomMessages appends custom messages queued during a run.

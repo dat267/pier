@@ -629,6 +629,9 @@ func (s *AgentSession) handleAgentEvent(event *agent.AgentEvent) {
 		s.mu.Lock()
 		s.lastAssistantToolResults = append([]ai.Message(nil), event.ToolResults...)
 		s.mu.Unlock()
+		// Context-only custom messages must follow every tool result, but reach
+		// the model before the next turn (upstream _handleAgentEvent).
+		s.FlushPendingCustomMessages()
 	}
 }
 
