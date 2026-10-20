@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"io"
 	"os"
 )
 
@@ -49,7 +50,7 @@ func DetectSupportedImageMimeTypeFromFile(filePath string) (string, error) {
 	defer file.Close()
 	buffer := make([]byte, imageTypeSniffBytes)
 	read, err := file.Read(buffer)
-	if err != nil && read == 0 {
+	if err != nil && err != io.EOF {
 		return "", err
 	}
 	return DetectSupportedImageMimeType(buffer[:read]), nil

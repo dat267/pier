@@ -71,6 +71,24 @@ pairs against the pin after the fixes; concise regression tests cover each
 changed behavior. Eight-minute fuzz runs of session entries, JSON repair,
 message codecs, terminal input, incremental Markdown and MCP messages passed.
 
+The 13 reproduced findings recorded in `TODO.md` were resolved against the same
+v1.3.0 pin, with red-first regression tests. Event streams atomically claim a
+terminal push; agent snapshots own their pending-call map, completed runs release
+parent cancellation registrations, and failure-event listener errors reach the
+caller (`agent/src/agent.ts`, `ai/src/utils/event-stream.ts`). Overflow patterns
+now reproduce JavaScript whitespace, line terminators and ASCII case folding.
+Raw JSON values canonicalize escaped strings, duplicate fields and numeric keys
+while retaining ordinary insertion order and D253 integer precision. Validation
+diagnostics walk the failing properties and array items instead of blaming a
+valid root container (`ai/src/utils/{overflow,validation}.ts`). Fuzzy model IDs
+use root collation (D257), quoted frontmatter scalars decode YAML escapes, empty
+files read as empty text, read-tool options distinguish omitted resizing from
+explicit false, and whitespace-only edit targets use JavaScript split counts
+(`core/model-resolver.ts`, `utils/{frontmatter,mime}.ts`, `core/tools/`
+`{read,edit-diff}.ts`). Settings saves recover stale lock directories and legacy
+files, maintaining live leases with the proper-lockfile default timing
+(`core/settings-manager.ts`). Completed findings are removed from `TODO.md`.
+
 **Upstream status.** v1.3.0 (`71023aec`) is the latest released tag in the
 reference checkout and the port's pin. The v1.3.0 delta from v1.2.0 is ported
 (see the v1.3.0 audit below); the v1.2.0 delta from v1.1.0 was audited.

@@ -23,11 +23,12 @@ import (
 //   - end() without a result wakes waiting consumers and keeps any result
 //     already fixed by a terminal event.
 type EventStream[T any, R any] struct {
-	mu        sync.Mutex
-	queue     []T
-	waiting   []chan iteratorResult[T]
-	done      bool // rejects new pushes before extracting a terminal result
-	exhausted bool // terminal event is available, or End explicitly closed delivery
+	mu              sync.Mutex
+	queue           []T
+	waiting         []chan iteratorResult[T]
+	done            bool // rejects new pushes before extracting a terminal result
+	exhausted       bool // terminal event is available, or End explicitly closed delivery
+	terminalClaimed bool // only one evaluated push may claim completion
 
 	resultOnce sync.Once
 	resultCh   chan struct{}
@@ -81,14 +82,21 @@ func (s *EventStream[T, R]) Push(event T) {
 	// never hold the state lock while invoking them. Admission was checked
 	// above, so an end from the callback does not discard this event.
 	complete := s.isComplete != nil && s.isComplete(event)
+	s.mu.Lock()
+	if s.terminalClaimed {
+		s.mu.Unlock()
+		return
+	}
+	if complete {
+		s.terminalClaimed = true
+		s.done = true
+	}
 	var result R
 	if complete {
-		s.mu.Lock()
-		s.done = true
 		s.mu.Unlock()
 		result = s.extractResult(event)
+		s.mu.Lock()
 	}
-	s.mu.Lock()
 	defer s.mu.Unlock()
 	if complete {
 		s.resolveResult(result)

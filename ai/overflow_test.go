@@ -1,7 +1,6 @@
 package ai
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -173,7 +172,7 @@ func TestGetOverflowPatterns(t *testing.T) {
 	}
 	found := false
 	for _, pattern := range GetOverflowPatterns() {
-		if strings.Contains(pattern.String(), "too many tokens") {
+		if pattern.MatchString("too many tokens") {
 			found = true
 		}
 	}

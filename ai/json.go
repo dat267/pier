@@ -23,77 +23,36 @@ func MarshalJSON(v any) ([]byte, error) {
 	if len(out) > 0 && out[len(out)-1] == '\n' {
 		out = out[:len(out)-1]
 	}
-	return javascriptJSONNumbers(literalJSONLineSeparators(out)), nil
+	return canonicalJavaScriptJSON(out)
 }
 
 // MarshalIndentJSON encodes v the way JavaScript's JSON.stringify(v, null, 2)
 // does: two-space indentation and no HTML escaping.
 func MarshalIndentJSON(v any) ([]byte, error) {
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	enc.SetEscapeHTML(false)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(v); err != nil {
+	encoded, err := MarshalJSON(v)
+	if err != nil {
 		return nil, err
 	}
-	out := buf.Bytes()
-	if len(out) > 0 && out[len(out)-1] == '\n' {
-		out = out[:len(out)-1]
+	var out bytes.Buffer
+	if err := json.Indent(&out, encoded, "", "  "); err != nil {
+		return nil, err
 	}
-	return javascriptJSONNumbers(literalJSONLineSeparators(out)), nil
+	return out.Bytes(), nil
 }
 
 // RawMessage/json.Number can retain floating-point spellings that a JavaScript
-// value cannot: -0, 1.0 and padded exponents. Rewrite these without decoding
-// objects, so insertion order and indentation stay intact. D253 keeps integral
-// tokens exact for the port's typed integer fields.
-func javascriptJSONNumbers(encoded []byte) []byte {
-	var normalized strings.Builder
-	normalized.Grow(len(encoded))
-	for read := 0; read < len(encoded); {
-		start := read
-		if encoded[read] == '"' {
-			read++
-			for read < len(encoded) {
-				if encoded[read] == '\\' {
-					read += 2
-					continue
-				}
-				read++
-				if encoded[read-1] == '"' {
-					break
-				}
-			}
-			normalized.Write(encoded[start:read])
-			continue
-		}
-		if encoded[read] == '-' || encoded[read] >= '0' && encoded[read] <= '9' {
-			read++
-			for read < len(encoded) {
-				c := encoded[read]
-				if c >= '0' && c <= '9' || c == '.' || c == 'e' || c == 'E' || c == '+' || c == '-' {
-					read++
-				} else {
-					break
-				}
-			}
-			token := string(encoded[start:read])
-			if token != "-0" && !strings.ContainsAny(token, ".eE") {
-				normalized.WriteString(token)
-				continue
-			}
-			number, _ := strconv.ParseFloat(token, 64)
-			if math.IsInf(number, 0) {
-				normalized.WriteString("null")
-			} else {
-				normalized.WriteString(JSNumberToString(number))
-			}
-			continue
-		}
-		normalized.WriteByte(encoded[read])
-		read++
+// value cannot: -0, 1.0 and padded exponents. The canonical value writer uses
+// this helper for number tokens. D253 keeps integral tokens exact for the
+// port's typed integer fields.
+func javascriptJSONNumber(token string) []byte {
+	if token != "-0" && !strings.ContainsAny(token, ".eE") {
+		return []byte(token)
 	}
-	return []byte(normalized.String())
+	number, _ := strconv.ParseFloat(token, 64)
+	if math.IsInf(number, 0) {
+		return []byte("null")
+	}
+	return []byte(JSNumberToString(number))
 }
 
 // encoding/json escapes U+2028/U+2029 even with HTML escaping disabled.

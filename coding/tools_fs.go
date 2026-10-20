@@ -29,7 +29,7 @@ func numSchema(description string) map[string]any {
 // ReadToolOptions tune the read tool.
 type ReadToolOptions struct {
 	// AutoResizeImages resizes images to 2000x2000 max. Default true.
-	AutoResizeImages bool
+	AutoResizeImages *bool
 	// Model returns the model in play, read per call the way upstream reads
 	// ctx.model: a session can switch models, and both the image resize limits and
 	// the non-vision note depend on the current one. Nil means unknown, which
@@ -58,7 +58,10 @@ const ReadToolDescription = "Read the contents of a file. Supports text files an
 
 // CreateReadTool builds the read tool.
 func CreateReadTool(cwd string, options *ReadToolOptions) agent.AgentTool {
-	autoResize := options == nil || options.AutoResizeImages
+	autoResize := true
+	if options != nil && options.AutoResizeImages != nil {
+		autoResize = *options.AutoResizeImages
+	}
 	var modelFor func() *ai.Model
 	if options != nil {
 		modelFor = options.Model

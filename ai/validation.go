@@ -726,23 +726,14 @@ func ValidateToolArguments(tool Tool, toolCall ToolCall) (json.RawMessage, error
 		return encodeSchemaValue(args), nil
 	}
 
-	var errorLines []string
-	if len(schema.Types) > 0 {
-		errorLines = append(errorLines, fmt.Sprintf("  - root: Expected %s", strings.Join(schema.Types, " | ")))
-	}
-	for key := range schema.Required {
-		if _, ok := args.Object.get(key); !ok && args.Object != nil {
-			errorLines = append(errorLines, fmt.Sprintf("  - %s: required property missing", key))
-		}
-	}
+	errorLines := schemaErrorLines(args, schema, "")
 	if len(errorLines) == 0 {
 		errorLines = append(errorLines, "  - root: Unknown validation error")
 	}
 	var received json.RawMessage = toolCall.Arguments
 	if len(toolCall.Arguments) > 0 {
-		var buf bytes.Buffer
-		if err := json.Indent(&buf, toolCall.Arguments, "", "  "); err == nil {
-			received = json.RawMessage(buf.String())
+		if formatted, err := MarshalIndentJSON(toolCall.Arguments); err == nil {
+			received = formatted
 		}
 	}
 	return nil, fmt.Errorf("Validation failed for tool %q:\n%s\n\nReceived arguments:\n%s",

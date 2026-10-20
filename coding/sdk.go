@@ -327,14 +327,13 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 	// model in play, read per call the way upstream reads ctx.model, so a
 	// mid-session model switch takes effect. The session is created below, hence
 	// the pointer. AutoResizeImages takes the settings value as upstream does at
-	// tool-build time (a non-nil ReadToolOptions otherwise selects its zero value,
-	// which would disable resizing).
+	// tool-build time.
 	var sessionForTools *AgentSession
 	// The upstream tool registry is an insertion-ordered object; keep that order
 	// explicitly because Go map iteration would make wildcard selections unstable.
 	toolByName := CreateAllTools(cwd, &ToolsOptions{
 		Read: &ReadToolOptions{
-			AutoResizeImages: settingsManager.GetImageAutoResize(),
+			AutoResizeImages: boolPtr(settingsManager.GetImageAutoResize()),
 			Model: func() *ai.Model {
 				if sessionForTools == nil {
 					return nil

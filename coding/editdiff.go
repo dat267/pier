@@ -249,6 +249,9 @@ func FuzzyFindText(content string, oldText string) FuzzyMatchResult {
 func countOccurrences(content string, oldText string) int {
 	fuzzyContent := NormalizeForFuzzyMatch(content)
 	fuzzyOldText := NormalizeForFuzzyMatch(oldText)
+	if fuzzyOldText == "" {
+		return JSLength(fuzzyContent) - 1
+	}
 	return strings.Count(fuzzyContent, fuzzyOldText)
 }
 

@@ -4,7 +4,7 @@ Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D253**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D257**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation.
 
 Related documents: [port status](PORTING.md), [architecture](architecture.md),
@@ -1979,3 +1979,18 @@ Tests: `TestCanceledToolCallReportsOperationAborted`,
 `TestModelRuntimeStreamCancellationReachesOAuthAuthResolution`,
 `TestNormalizeProviderErrorReportsCanceledRequestsAsAborts` and
 `TestHandleRunFailureMapsCanceledContextToAbortMessage`.
+
+## D257
+
+**Fuzzy model aliases use locale-neutral collation.**
+
+Reference: pi v1.3.0 `core/model-resolver.ts`, `bestFuzzyMatch`, sorts IDs by
+Node's default `localeCompare`. Pier uses `golang.org/x/text/collate` root
+collation, consistent with its file listing, rather than byte order or a
+host-selected locale. This restores the reported punctuation and case ordering
+(`model-2` over `model_1`, `model-Z` over `model-z`) while keeping model selection
+deterministic. On a Swedish Node host, `model-ä` ranks after `model-z`; Pier
+selects `model-z` regardless of the host locale. Locale and Unicode collation
+version differences are not an assertion of byte-identical ICU behavior.
+
+Test: `TestFuzzyModelAliasLocaleOrdering`.

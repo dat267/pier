@@ -14,7 +14,20 @@ closes a shared notification channel so every result waiter observes the same
 immutable result. Caller-supplied completion predicates and result extractors
 run outside the mutex and may reenter `Push`/`End`; terminal admission stops
 new pushes before extraction, while EOF waits for publication of the terminal
-event unless `End` explicitly closes delivery.
+event unless `End` explicitly closes delivery. A terminal claim is made under
+that mutex after predicate evaluation, so concurrently evaluated pushes cannot
+both publish terminal events.
+
+`agent.Agent.State` copies the pending-tool-call map under the agent mutex;
+snapshots never expose the map that tool-start/tool-end events mutate. Successful
+runs release their parent-context cancellation registrations only after their
+listeners settle, without changing the reported abort status.
+
+Settings storage uses a `settings.json.lock` directory, matching proper-lockfile.
+It reclaims artifacts older than 10 seconds (including legacy regular files),
+refreshes live leases every 5 seconds, and joins its refresher before release.
+Release checks file identity before removing the lock. Storage callbacks and
+file I/O remain off the interactive owner loop; no new UI-state lock is added.
 
 D205 adds no lock: tool result generations, displayed lines and shell elapsed
 state stay on-owner. Workers mutate only private component snapshots and return

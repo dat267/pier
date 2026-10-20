@@ -388,10 +388,20 @@ func acquireLockWithRetry(path string) (func(), error) {
 	lockPath := path + ".lock"
 	var lastErr error
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		file, err := os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
+		err := os.Mkdir(lockPath, 0o700)
+		if errors.Is(err, os.ErrExist) {
+			info, statErr := os.Stat(lockPath)
+			if statErr == nil && time.Since(info.ModTime()) > 10*time.Second {
+				// Remove only the stale artifact, never its contents. Regular
+				// files are locks left by older Pier versions.
+				if removeErr := os.Remove(lockPath); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+					return nil, removeErr
+				}
+				err = os.Mkdir(lockPath, 0o700)
+			}
+		}
 		if err == nil {
-			_ = file.Close()
-			return func() { _ = os.Remove(lockPath) }, nil
+			return maintainSettingsLock(lockPath)
 		}
 		if !errors.Is(err, os.ErrExist) || attempt == maxAttempts {
 			return nil, err
@@ -400,6 +410,49 @@ func acquireLockWithRetry(path string) (func(), error) {
 		time.Sleep(delay)
 	}
 	return nil, lastErr
+}
+
+// maintainSettingsLock mirrors proper-lockfile's five-second lease refresh.
+// Stop and join the refresher before removal, so it cannot touch a later owner.
+func maintainSettingsLock(path string) (func(), error) {
+	owned, err := os.Stat(path)
+	if err != nil {
+		_ = os.Remove(path)
+		return nil, err
+	}
+	stillOwned := func() bool {
+		current, err := os.Stat(path)
+		return err == nil && os.SameFile(owned, current)
+	}
+	stop, done := make(chan struct{}), make(chan struct{})
+	go func() {
+		defer close(done)
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-stop:
+				return
+			case now := <-ticker.C:
+				if !stillOwned() {
+					return
+				}
+				if err := os.Chtimes(path, now, now); err != nil {
+					return
+				}
+			}
+		}
+	}()
+	var once sync.Once
+	return func() {
+		once.Do(func() {
+			close(stop)
+			<-done
+			if stillOwned() {
+				_ = os.Remove(path)
+			}
+		})
+	}, nil
 }
 
 // InMemorySettingsStorage is the process-local storage backend.

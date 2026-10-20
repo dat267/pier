@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"unicode/utf8"
 
 	"github.com/dat267/pier/ai"
 )
@@ -69,7 +70,7 @@ func ParseFrontmatter(content string) ParsedFrontmatter {
 		}
 		quoted := len(value) >= 2 && (value[0] == '"' && value[len(value)-1] == '"' || value[0] == '\'' && value[len(value)-1] == '\'')
 		if quoted {
-			value = value[1 : len(value)-1]
+			value = yamlQuotedScalar(value)
 		}
 		result.Frontmatter[key] = value
 		if !quoted && !yamlPlainScalarIsString(value) {
@@ -81,6 +82,50 @@ func ParseFrontmatter(content string) ParsedFrontmatter {
 	}
 	result.Body = body
 	return result
+}
+
+// yamlQuotedScalar decodes the single-line quoted scalars in D10's flat subset.
+func yamlQuotedScalar(value string) string {
+	body := value[1 : len(value)-1]
+	if value[0] == '\'' {
+		return strings.ReplaceAll(body, "''", "'")
+	}
+	var out strings.Builder
+	for i := 0; i < len(body); i++ {
+		if body[i] != '\\' {
+			out.WriteByte(body[i])
+			continue
+		}
+		i++
+		if i == len(body) {
+			return body
+		}
+		const escapes = "0abtnvfre \"/\\N_LP"
+		const decoded = "\x00\a\b\t\n\v\f\r\x1b \"/\\\u0085\u00a0\u2028\u2029"
+		if index := strings.IndexByte(escapes, body[i]); index >= 0 {
+			out.WriteRune([]rune(decoded)[index])
+			continue
+		}
+		length := 0
+		switch body[i] {
+		case 'x':
+			length = 2
+		case 'u':
+			length = 4
+		case 'U':
+			length = 8
+		}
+		if length == 0 || i+length >= len(body) {
+			return body
+		}
+		code, err := strconv.ParseUint(body[i+1:i+1+length], 16, 32)
+		if err != nil || !utf8.ValidRune(rune(code)) {
+			return body
+		}
+		out.WriteRune(rune(code))
+		i += length
+	}
+	return out.String()
 }
 
 func yamlPlainScalarIsString(value string) bool {

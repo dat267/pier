@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"sync"
 	"time"
 
@@ -322,7 +323,9 @@ func (a *Agent) Subscribe(listener Listener) func() {
 func (a *Agent) State() AgentState {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	return *a.state
+	snapshot := *a.state
+	snapshot.PendingToolCalls = maps.Clone(a.state.PendingToolCalls)
+	return snapshot
 }
 
 // SetTools replaces the executable tools (copied).
@@ -645,25 +648,27 @@ func (a *Agent) runWithLifecycle(ctx context.Context, executor func(ctx context.
 		a.activeRun = nil
 		a.mu.Unlock()
 		runContexts.Delete(a)
+		cancel()
 		close(run.done)
 	}()
 
 	// Upstream: executor throws become rejected promises caught here, folded
 	// into failure lifecycle events.
-	func() {
+	err := func() (err error) {
 		defer func() {
 			if r := recover(); r != nil {
-				if err, ok := r.(error); ok {
-					a.handleRunFailure(runCtx, err, ctxDone(runCtx))
+				if failure, ok := r.(error); ok {
+					err = failure
 				} else {
-					a.handleRunFailure(runCtx, fmt.Errorf("%v", r), ctxDone(runCtx))
+					err = fmt.Errorf("%v", r)
 				}
 			}
 		}()
-		if err := executor(runCtx); err != nil {
-			a.handleRunFailure(runCtx, err, ctxDone(runCtx))
-		}
+		return executor(runCtx)
 	}()
+	if err != nil {
+		return a.handleRunFailure(runCtx, err, ctxDone(runCtx))
+	}
 	return nil
 }
 
@@ -674,7 +679,7 @@ func contextOrBackground(ctx context.Context) context.Context {
 	return ctx
 }
 
-func (a *Agent) handleRunFailure(ctx context.Context, err error, aborted bool) {
+func (a *Agent) handleRunFailure(ctx context.Context, err error, aborted bool) error {
 	stopReason := ai.StopError
 	if aborted {
 		stopReason = ai.StopAborted
@@ -696,10 +701,17 @@ func (a *Agent) handleRunFailure(ctx context.Context, err error, aborted bool) {
 		ErrorMessage: &message,
 		Timestamp:    time.Now().UnixMilli(),
 	}
-	_ = a.processEvents(AgentEvent{Type: MessageStart, Message: failureMessage}, ctx)
-	_ = a.processEvents(AgentEvent{Type: MessageEnd, Message: failureMessage}, ctx)
-	_ = a.processEvents(AgentEvent{Type: TurnEnd, Message: failureMessage, ToolResults: []ai.Message{}}, ctx)
-	_ = a.processEvents(AgentEvent{Type: AgentEnd, Messages: []ai.Message{failureMessage}}, ctx)
+	for _, event := range []AgentEvent{
+		{Type: MessageStart, Message: failureMessage},
+		{Type: MessageEnd, Message: failureMessage},
+		{Type: TurnEnd, Message: failureMessage, ToolResults: []ai.Message{}},
+		{Type: AgentEnd, Messages: []ai.Message{failureMessage}},
+	} {
+		if err := a.processEvents(event, ctx); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // processEvents reduces internal state for a loop event, then runs listeners

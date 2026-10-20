@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/dat267/pier/ai"
+	"golang.org/x/text/collate"
+	"golang.org/x/text/language"
 )
 
 // Port of core/model-resolver.ts plus the thinking-level validation from
@@ -425,7 +427,10 @@ func bestFuzzyMatch(matches []*ai.Model) *ai.Model {
 		pool = aliases
 	}
 	sorted := append([]*ai.Model{}, pool...)
-	sort.SliceStable(sorted, func(i, j int) bool { return sorted[i].ID > sorted[j].ID })
+	// D257: use root collation, like the file listing, rather than byte
+	// order or the host locale (Swedish sorts model-ä after model-z).
+	collator := collate.New(language.Und)
+	sort.SliceStable(sorted, func(i, j int) bool { return collator.CompareString(sorted[i].ID, sorted[j].ID) > 0 })
 	return sorted[0]
 }
 
