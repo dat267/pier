@@ -906,13 +906,30 @@ func (r *ModelRuntime) PrepareRequest(model *ai.Model, apiKey string, env map[st
 // Stream streams a model response with auth applied.
 func (r *ModelRuntime) Stream(model *ai.Model, context ai.Context, options *ai.ModelsStreamOptions) *ai.AssistantMessageEventStream {
 	transcript := ai.NormalizeContext(context)
-	return ai.LazyStreamFunc(model, func() (*ai.AssistantMessageEventStream, error) {
+	// A cancel during auth resolution is an abort, not a provider failure (D256).
+	return ai.LazyStreamFuncForRequest(model, streamRequestCtx(options), func() (*ai.AssistantMessageEventStream, error) {
 		prepared, err := r.prepareStreamRequest(model, options)
 		if err != nil {
 			return nil, err
 		}
 		return prepared.Provider.Stream(prepared.Model, transcript, prepared.Options), nil
 	})
+}
+
+// streamRequestCtx is the request context a stream setup can be canceled by.
+func streamRequestCtx(options *ai.ModelsStreamOptions) context.Context {
+	if options == nil {
+		return nil
+	}
+	return options.Ctx
+}
+
+// simpleRequestCtx is the SimpleStreamOptions variant of streamRequestCtx.
+func simpleRequestCtx(options *ai.ModelsSimpleStreamOptions) context.Context {
+	if options == nil {
+		return nil
+	}
+	return options.Ctx
 }
 
 // Complete streams and waits for the final message.
@@ -923,7 +940,7 @@ func (r *ModelRuntime) Complete(model *ai.Model, context ai.Context, options *ai
 // StreamSimple streams with reasoning/tool-selection options.
 func (r *ModelRuntime) StreamSimple(model *ai.Model, context ai.Context, options *ai.ModelsSimpleStreamOptions) *ai.AssistantMessageEventStream {
 	transcript := ai.NormalizeContext(context)
-	return ai.LazyStreamFunc(model, func() (*ai.AssistantMessageEventStream, error) {
+	return ai.LazyStreamFuncForRequest(model, simpleRequestCtx(options), func() (*ai.AssistantMessageEventStream, error) {
 		prepared, err := r.prepareSimpleRequest(model, options)
 		if err != nil {
 			return nil, err

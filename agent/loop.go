@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -1019,6 +1020,13 @@ func executePreparedToolCall(prepared *preparedToolCallValue, ctx context.Contex
 	if err == nil {
 		return executedToolCallOutcome{result: result, isError: result.IsError, durationMS: durationMS}
 	}
+	if ctxDone(ctx) && isContextError(err) {
+		// A tool canceled with the run is the abort upstream cannot produce: its
+		// tools take an AbortSignal, so no tool throws a context error. Report
+		// the same result the loop gives a call it aborted before starting it
+		// instead of Go's "context canceled" (D256).
+		err = errors.New("Operation aborted")
+	}
 	return executedToolCallOutcome{result: createErrorToolResult(err.Error()), isError: true, durationMS: durationMS}
 }
 
@@ -1140,6 +1148,12 @@ func createToolResultMessage(finalized finalizedToolCallOutcome) *ai.ToolResultM
 func emitToolResultMessage(toolResultMessage *ai.ToolResultMessage, emit AgentEventSink) {
 	mustEmit(emit, AgentEvent{Type: MessageStart, Message: toolResultMessage})
 	mustEmit(emit, AgentEvent{Type: MessageEnd, Message: toolResultMessage})
+}
+
+// isContextError reports whether a tool failure is the run's cancellation
+// rather than the tool's own error.
+func isContextError(err error) bool {
+	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
 }
 
 func ctxDone(ctx context.Context) bool {

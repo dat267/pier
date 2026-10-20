@@ -323,6 +323,19 @@ func (s streamSource) forwardInto(target *AssistantMessageEventStream) {
 // resolution, lazy module loading) behind it. Setup failures terminate the
 // stream with an error event (port of api/lazy.ts lazyStream).
 func LazyStream(model *Model, setup func() (eventSource, error)) *AssistantMessageEventStream {
+	return lazyStream(model, nil, setup)
+}
+
+// LazyStreamForRequest is LazyStream for a request that carries a context: a
+// setup failure caused by that context being canceled is the abort it is, not a
+// provider error. Upstream's applyAuth calls signal.throwIfAborted, so a cancel
+// during auth resolution never reaches the model as a provider failure; the port
+// reports its canonical abort text instead of Go's transport wording (D256).
+func LazyStreamForRequest(model *Model, ctx context.Context, setup func() (eventSource, error)) *AssistantMessageEventStream {
+	return lazyStream(model, ctx, setup)
+}
+
+func lazyStream(model *Model, ctx context.Context, setup func() (eventSource, error)) *AssistantMessageEventStream {
 	// Setup can take a while (auth resolution, lazy module loading), so the
 	// failure message keeps the request start time, not the failure time
 	// (upstream #10549).
@@ -332,6 +345,10 @@ func LazyStream(model *Model, setup func() (eventSource, error)) *AssistantMessa
 		inner, err := setup()
 		if err != nil {
 			message := createSetupErrorMessage(model, err, startedAt)
+			if ctxErr(ctx) != nil && isContextError(err) {
+				aborted := RequestAbortedMessage
+				message.ErrorMessage = &aborted
+			}
 			outer.Push(AssistantMessageEvent{Type: EventError, Reason: StopError, Error: message})
 			outer.End(&message)
 			return
@@ -349,12 +366,24 @@ func AsEventSource(s *AssistantMessageEventStream) eventSource { return streamSo
 // is forwarded into the outer stream.
 func LazyStreamFunc(model *Model, create func() (*AssistantMessageEventStream, error)) *AssistantMessageEventStream {
 	return LazyStream(model, func() (eventSource, error) {
-		inner, err := create()
-		if err != nil {
-			return nil, err
-		}
-		return AsEventSource(inner), nil
+		return lazyStreamSource(create)
 	})
+}
+
+// LazyStreamFuncForRequest is LazyStreamFunc for a request context; see
+// LazyStreamForRequest.
+func LazyStreamFuncForRequest(model *Model, ctx context.Context, create func() (*AssistantMessageEventStream, error)) *AssistantMessageEventStream {
+	return LazyStreamForRequest(model, ctx, func() (eventSource, error) {
+		return lazyStreamSource(create)
+	})
+}
+
+func lazyStreamSource(create func() (*AssistantMessageEventStream, error)) (eventSource, error) {
+	inner, err := create()
+	if err != nil {
+		return nil, err
+	}
+	return AsEventSource(inner), nil
 }
 
 // ErrorStreamForModel builds a lazy stream that terminates with a typed
@@ -1017,7 +1046,7 @@ func (m *Models) Stream(model *Model, context Context, options *ModelsStreamOpti
 	if options == nil {
 		options = &ModelsStreamOptions{}
 	}
-	return LazyStream(model, func() (eventSource, error) {
+	return LazyStreamForRequest(model, options.Ctx, func() (eventSource, error) {
 		provider, err := m.requireProvider(model)
 		if err != nil {
 			return nil, err
@@ -1041,7 +1070,7 @@ func (m *Models) StreamSimple(model *Model, context Context, options *ModelsSimp
 	if options == nil {
 		options = &ModelsSimpleStreamOptions{}
 	}
-	return LazyStream(model, func() (eventSource, error) {
+	return LazyStreamForRequest(model, options.Ctx, func() (eventSource, error) {
 		provider, err := m.requireProvider(model)
 		if err != nil {
 			return nil, err

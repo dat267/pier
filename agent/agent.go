@@ -3,7 +3,6 @@ package agent
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -681,9 +680,11 @@ func (a *Agent) handleRunFailure(ctx context.Context, err error, aborted bool) {
 		stopReason = ai.StopAborted
 	}
 	message := err.Error()
-	if aborted && errors.Is(err, context.Canceled) {
+	if aborted && isContextError(err) {
 		// Upstream throws Error("Request was aborted") when the run's signal is
-		// aborted; the transcript maps that to "Operation aborted".
+		// aborted; the transcript maps that to "Operation aborted". A wrapped
+		// context error counts, so Go's "context canceled" never reaches the
+		// transcript (D256).
 		message = ai.RequestAbortedMessage
 	}
 	failureMessage := &ai.AssistantMessage{

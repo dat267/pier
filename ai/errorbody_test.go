@@ -1,7 +1,9 @@
 package ai
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 )
 
@@ -27,5 +29,21 @@ func TestNormalizeProviderErrorTrimsJavaScriptWhitespace(t *testing.T) {
 	})
 	if normalized.Body != "body" {
 		t.Fatalf("body = %q; want JavaScript-trimmed body", normalized.Body)
+	}
+}
+
+// A canceled or expired caller is an abort, not a provider failure. Upstream
+// throws Error("Request was aborted") when the signal is aborted, so a wrapped
+// context error must not reach the message as Go's "context canceled" (D256).
+func TestNormalizeProviderErrorReportsCanceledRequestsAsAborts(t *testing.T) {
+	for _, err := range []error{
+		context.Canceled,
+		context.DeadlineExceeded,
+		fmt.Errorf("stream failed: %w", context.Canceled),
+		fmt.Errorf("stream failed: %w", context.DeadlineExceeded),
+	} {
+		if got := NormalizeProviderError(err).Message; got != RequestAbortedMessage {
+			t.Fatalf("%v: message = %q, want %q", err, got, RequestAbortedMessage)
+		}
 	}
 }

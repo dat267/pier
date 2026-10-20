@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -462,28 +463,34 @@ func TestAgentBeforeToolCallReachesTheLoop(t *testing.T) {
 // instead of the transport's raw "context canceled" (upstream throws
 // Error("Request was aborted") when the signal is aborted).
 func TestHandleRunFailureMapsCanceledContextToAbortMessage(t *testing.T) {
-	agent, err := NewAgent(&AgentOptions{StreamFn: unusedStreamFn()})
-	if err != nil {
-		t.Fatal(err)
-	}
-	agent.handleRunFailure(context.Background(), context.Canceled, true)
-
-	messages := agent.State().Messages
-	if len(messages) == 0 {
-		t.Fatal("no failure message emitted")
-	}
-	failure, ok := messages[len(messages)-1].(*ai.AssistantMessage)
-	if !ok {
-		t.Fatalf("failure message = %T", messages[len(messages)-1])
-	}
-	if failure.StopReason != ai.StopAborted {
-		t.Fatalf("stopReason = %s, want aborted", failure.StopReason)
-	}
-	if failure.ErrorMessage == nil || *failure.ErrorMessage != ai.RequestAbortedMessage {
-		got := "<nil>"
-		if failure.ErrorMessage != nil {
-			got = *failure.ErrorMessage
+	for _, runErr := range []error{
+		context.Canceled,
+		context.DeadlineExceeded,
+		fmt.Errorf("provider read: %w", context.Canceled),
+	} {
+		agent, err := NewAgent(&AgentOptions{StreamFn: unusedStreamFn()})
+		if err != nil {
+			t.Fatal(err)
 		}
-		t.Fatalf("errorMessage = %q, want %q", got, ai.RequestAbortedMessage)
+		agent.handleRunFailure(context.Background(), runErr, true)
+
+		messages := agent.State().Messages
+		if len(messages) == 0 {
+			t.Fatalf("%v: no failure message emitted", runErr)
+		}
+		failure, ok := messages[len(messages)-1].(*ai.AssistantMessage)
+		if !ok {
+			t.Fatalf("%v: failure message = %T", runErr, messages[len(messages)-1])
+		}
+		if failure.StopReason != ai.StopAborted {
+			t.Fatalf("%v: stopReason = %s, want aborted", runErr, failure.StopReason)
+		}
+		if failure.ErrorMessage == nil || *failure.ErrorMessage != ai.RequestAbortedMessage {
+			got := "<nil>"
+			if failure.ErrorMessage != nil {
+				got = *failure.ErrorMessage
+			}
+			t.Fatalf("%v: errorMessage = %q, want %q", runErr, got, ai.RequestAbortedMessage)
+		}
 	}
 }

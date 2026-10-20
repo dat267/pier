@@ -384,8 +384,11 @@ func TestModelRuntimeStreamCancellationReachesOAuthAuthResolution(t *testing.T) 
 	message, _ := runtime.Stream(model, ai.Context{}, &ai.ModelsStreamOptions{
 		StreamOptions: ai.StreamOptions{Ctx: ctx},
 	}).Result(ctxpkg.Background())
-	if message.StopReason != ai.StopError || message.ErrorMessage == nil || !strings.Contains(*message.ErrorMessage, "context canceled") {
-		t.Fatalf("message = %+v; want auth cancellation", message)
+	// A cancel during auth resolution is the abort it is, not a provider
+	// failure: upstream's applyAuth throws the abort reason (D256).
+	if message.StopReason != ai.StopError || message.ErrorMessage == nil ||
+		*message.ErrorMessage != ai.RequestAbortedMessage {
+		t.Fatalf("message = %+v; want the canonical abort text", message)
 	}
 	if streamCalled {
 		t.Fatal("provider stream ran after request context was cancelled during auth")

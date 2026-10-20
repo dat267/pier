@@ -1940,3 +1940,42 @@ the OpenRouter catalog's 15s and MCP request timeouts.
 
 Tests: `TestBoundedRequestHonorsTheCallerDeadline`,
 `TestGitHubCopilotTokenRefreshIsBounded` and `TestDefaultFetchIsBounded`.
+
+## D256
+
+**A cancellation never reaches the model as Go's context text.**
+
+Reference: `agent/src/agent-loop.ts` reports a call it aborted before starting it
+as `createErrorToolResult("Operation aborted")`, provider streams shape their
+terminal event with `output.stopReason = signal.aborted ? "aborted" : "error"`,
+and `api/models.ts` `applyAuth` calls `signal.throwIfAborted()`, so a cancel
+during auth resolution fails `lazyStream` with the abort reason. Upstream tools
+take an `AbortSignal` and cannot produce a context error; in Go the cancellation
+is a `context.Canceled` (or a `DeadlineExceeded`) value that any tool, hook or
+auth step can return, and it used to reach the transcript as "context canceled".
+
+The port normalizes it at three boundaries, all wrapping-aware
+(`ai.isContextError`, `agent.isContextError`):
+
+- Tool execution: a canceled run whose tool returns a context error records
+  `Operation aborted`, the same result the loop writes for a call it aborted
+  before starting it. A tool's own failure keeps its message even when the run is
+  canceled around it.
+- Lazy stream setup: a setup failure caused by the request context is reported
+  with `Request was aborted` while keeping upstream's `error` stop reason
+  (`api/lazy.ts` `createSetupErrorMessage` hardcodes `stopReason: "error"`).
+  Upstream shows the DOMException text there ("This operation was aborted"); the
+  port uses its canonical abort text so one cancellation reads the same wherever
+  it lands.
+- Provider error normalization and run failure: `NormalizeProviderError` and
+  `handleRunFailure` map any wrapping context error to `Request was aborted`, so
+  the openai-completions/google/bedrock/responses/codex fail paths and the
+  agent's failure message agree. Upstream reaches the same text by throwing
+  `Error("Request was aborted")` at each abort check.
+
+Tests: `TestCanceledToolCallReportsOperationAborted`,
+`TestToolFailureKeepsItsMessageWhileTheRunIsCanceled`,
+`TestModelsStreamSetupFailureOnCancelReportsAbort`,
+`TestModelRuntimeStreamCancellationReachesOAuthAuthResolution`,
+`TestNormalizeProviderErrorReportsCanceledRequestsAsAborts` and
+`TestHandleRunFailureMapsCanceledContextToAbortMessage`.

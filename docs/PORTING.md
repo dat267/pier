@@ -313,9 +313,12 @@ The response lifecycle follows the v1.1.0 `agent-loop.ts` contract, unchanged in
 provider work through its request context, while the loop keeps consuming events
 and awaits the provider's terminal result. Abandoning those waits on cancellation
 left an assistant component open and synthesized a second aborted message, producing
-two visible `Operation aborted` notices for one committed abort. Start/update events
-now carry shallow message-field snapshots, matching upstream's object spreads, so
-later provider cleanup cannot change their queued stop reason. Regression tests
+two visible `Operation aborted` notices for one committed abort. A cancellation
+also never reaches the model as Go's context text: tool results, lazy-stream
+setup failures, provider error normalization and run failures all report the
+canonical abort (D256). Start/update events now carry shallow message-field
+snapshots, matching upstream's object spreads, so later provider cleanup cannot
+change their queued stop reason. Regression tests
 cover delayed abort cleanup, preserved partial content, and one cancellation notice
 when the UI drains its queue after cleanup. The final message also records the
 requested Pi thinking level, matching upstream's `Object.assign(result, { thinkingLevel:

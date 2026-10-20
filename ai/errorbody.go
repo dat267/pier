@@ -14,6 +14,12 @@ import (
 
 const MaxProviderErrorBodyChars = 4000
 
+// isContextError reports whether err is the caller's cancellation rather than a
+// provider failure.
+func isContextError(err error) bool {
+	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
+}
+
 // RequestAbortedMessage is the canonical text for a canceled request. Upstream
 // throws Error("Request was aborted") when the request signal is aborted, and
 // the transcript renders it as "Operation aborted".
@@ -39,8 +45,10 @@ func NormalizeProviderError(err error) NormalizedProviderError {
 		return NormalizedProviderError{Message: "undefined"}
 	}
 	// A canceled request is an abort, not a provider failure: report the
-	// canonical abort text so the transcript shows "Operation aborted".
-	if errors.Is(err, context.Canceled) {
+	// canonical abort text so the transcript shows "Operation aborted". A
+	// wrapped context error counts too, since providers compose their fail path
+	// around it (D256).
+	if isContextError(err) {
 		return NormalizedProviderError{Message: RequestAbortedMessage}
 	}
 	pe, ok := err.(*ProviderError)
