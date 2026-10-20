@@ -102,7 +102,7 @@ func NormalizePath(input string, options PathInputOptions) string {
 			return home
 		}
 		if strings.HasPrefix(normalized, "~/") || (runtime.GOOS == "windows" && strings.HasPrefix(normalized, "~\\")) {
-			return filepath.Join(home, normalized[2:])
+			return joinExpandedHome(home, normalized[2:])
 		}
 	}
 	if strings.HasPrefix(normalized, "file://") {
@@ -111,6 +111,28 @@ func NormalizePath(input string, options PathInputOptions) string {
 		}
 	}
 	return normalized
+}
+
+// joinExpandedHome joins the home directory with the rest of a `~/` path the way
+// Node's path.join does: dot segments resolve, but a trailing separator survives
+// unless the last segment is "." or "..". filepath.Join always cleans it away.
+func joinExpandedHome(home, rest string) string {
+	joined := filepath.Join(home, rest)
+	trailing := "/"
+	if runtime.GOOS == "windows" {
+		trailing = "\\"
+	}
+	separatorSuffix := strings.HasSuffix(rest, "/")
+	if runtime.GOOS == "windows" && strings.HasSuffix(rest, "\\") {
+		separatorSuffix = true
+	}
+	if !separatorSuffix {
+		return joined
+	}
+	if strings.HasSuffix(joined, trailing) {
+		return joined
+	}
+	return joined + trailing
 }
 
 var windowsShellPathPattern = regexp.MustCompile(`(?i)^/(?:mnt/|cygdrive/)?([a-z])(?:/(.*))?$`)

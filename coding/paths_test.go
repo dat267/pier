@@ -196,3 +196,26 @@ func TestNormalizePathKeepsAnInvalidFileURL(t *testing.T) {
 		}
 	}
 }
+
+// Reference: pi v1.3.0 utils/paths.ts expands `~` with node:path.join, which
+// keeps a trailing separator. Go's filepath.Join cleans it away, so "~///"
+// lost the slash the reference keeps. Expectations read off the reference.
+func TestNormalizePathTildeKeepsTrailingSeparator(t *testing.T) {
+	for _, tc := range []struct{ input, want string }{
+		{"~/", "/home/u"},
+		{"~///", "/home/u/"},
+		{"~/file://", "/home/u/file:/"},
+		{"~/a/./", "/home/u/a/"},
+		{"~/a/..", "/home/u"},
+		{"~/a/../", "/home/u/"},
+		{"~//b", "/home/u/b"},
+		{"~/a//", "/home/u/a/"},
+		{"~/.", "/home/u"},
+		{"~/..", "/home"},
+	} {
+		got := NormalizePath(tc.input, PathInputOptions{HomeDir: "/home/u"})
+		if got != tc.want {
+			t.Errorf("NormalizePath(%q) = %q; want %q", tc.input, got, tc.want)
+		}
+	}
+}
