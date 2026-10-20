@@ -422,7 +422,10 @@ func (d *EventDispatcher) handleMessageEnd(event *coding.SessionEvent) {
 	if !ok || d.streamingComponent == nil {
 		return
 	}
-	d.streamingMessage = assistant
+	// The abort notice is display-only. The message belongs to the agent and the
+	// session, which read and persist it from another goroutine, so the notice
+	// goes on a shallow copy instead of the event message.
+	display := assistant
 	errorMessage := ""
 	if assistant.StopReason == ai.StopAborted {
 		retryAttempt := 0
@@ -438,9 +441,12 @@ func (d *EventDispatcher) handleMessageEnd(event *coding.SessionEvent) {
 		} else {
 			errorMessage = "Operation aborted"
 		}
-		assistant.ErrorMessage = &errorMessage
+		copied := *assistant
+		copied.ErrorMessage = &errorMessage
+		display = &copied
 	}
-	d.streamingComponent.UpdateContent(d.streamingMessage, false)
+	d.streamingMessage = display
+	d.streamingComponent.UpdateContent(display, false)
 
 	if assistant.StopReason == ai.StopAborted || assistant.StopReason == ai.StopError {
 		if errorMessage == "" {

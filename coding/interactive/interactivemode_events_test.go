@@ -506,3 +506,32 @@ func TestEventDispatcherUserMessageStartRefreshesPendingMessages(t *testing.T) {
 		t.Fatalf("pending message updates = %d", calls)
 	}
 }
+
+// The abort notice is a display string: the dispatcher must not write it onto
+// the assistant message, which the agent and the session still own (the write
+// raced with turn_end and could land in the persisted session file).
+func TestAbortedMessageDisplayDoesNotMutateTheEventMessage(t *testing.T) {
+	dispatcher, session, transcript, _ := newEventTestDispatcher(t)
+	session.retryAttempt = 2
+
+	started := &ai.AssistantMessage{Content: ai.ContentList{}, StopReason: ai.StopPending}
+	dispatcher.HandleEvent(&coding.SessionEvent{
+		Type: coding.SessionMessageStart, Agent: agentEvent("message_start", started),
+	})
+
+	aborted := &ai.AssistantMessage{
+		Content:    ai.ContentList{ai.TextContent{Text: "stopped"}},
+		StopReason: ai.StopAborted,
+	}
+	dispatcher.HandleEvent(&coding.SessionEvent{
+		Type: coding.SessionMessageEnd, Agent: agentEvent("message_end", aborted),
+	})
+
+	if aborted.ErrorMessage != nil {
+		t.Fatalf("the dispatcher wrote %q onto the message it was given", *aborted.ErrorMessage)
+	}
+	lines := strings.Join(renderChat(t, transcript.Chat), "\n")
+	if !strings.Contains(lines, "Aborted after 2 retry attempts") {
+		t.Fatalf("aborted render = %q", lines)
+	}
+}
