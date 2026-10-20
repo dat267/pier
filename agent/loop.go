@@ -717,6 +717,12 @@ func executeToolCallsParallel(
 	// emitted in completion order (inside each goroutine).
 	var wg sync.WaitGroup
 	results := make([]finalizedToolCallOutcome, len(entries))
+	// A worker panic is re-raised on the loop goroutine after the workers settle:
+	// the sequential executor's panics (an emit error, a hook) propagate there, so
+	// the parallel path must reach the same run-failure contract instead of
+	// killing the process from a worker goroutine.
+	var workerPanic any
+	var panicMu sync.Mutex
 	for i, entry := range entries {
 		if entry.settled != nil {
 			results[i] = *entry.settled
@@ -725,10 +731,22 @@ func executeToolCallsParallel(
 		wg.Add(1)
 		go func(i int, run func() finalizedToolCallOutcome) {
 			defer wg.Done()
+			defer func() {
+				if recovered := recover(); recovered != nil {
+					panicMu.Lock()
+					if workerPanic == nil {
+						workerPanic = recovered
+					}
+					panicMu.Unlock()
+				}
+			}()
 			results[i] = run()
 		}(i, entry.run)
 	}
 	wg.Wait()
+	if workerPanic != nil {
+		panic(workerPanic)
+	}
 
 	var messages []ai.Message
 	for _, finalized := range results {
@@ -803,6 +821,41 @@ func prepareToolCall(
 		}}
 	}
 
+	// Preparation is caller code (a tool's prepareArguments shim, beforeToolCall)
+	// and upstream wraps it in try/catch: a throw becomes a tool error result, so
+	// the batch continues. Without this a panic escapes the loop and fails the
+	// whole run.
+	var outcome prepareOutcome
+	func() {
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				outcome = prepareOutcome{immediate: &immediateToolCallOutcome{
+					result: createErrorToolResult(panicMessage(recovered)), isError: true,
+				}}
+			}
+		}()
+		outcome = prepareToolCallUnprotected(currentContext, assistantMessage, toolCall, tool, config, ctx)
+	}()
+	return outcome
+}
+
+// panicMessage renders a recovered panic the way upstream renders a thrown
+// value (`error.message` for an Error, `String(error)` otherwise).
+func panicMessage(recovered any) string {
+	if err, ok := recovered.(error); ok {
+		return err.Error()
+	}
+	return fmt.Sprintf("%v", recovered)
+}
+
+func prepareToolCallUnprotected(
+	currentContext *AgentContext,
+	assistantMessage *ai.AssistantMessage,
+	toolCall ai.ToolCall,
+	tool *AgentTool,
+	config *AgentLoopConfig,
+	ctx context.Context,
+) prepareOutcome {
 	preparedCall := prepareToolCallArguments(tool, toolCall)
 	validatedArgs, err := ai.ValidateToolArguments(ai.Tool{
 		Name: tool.Name, Description: tool.Description, Parameters: tool.Parameters,
@@ -850,49 +903,117 @@ func prepareToolCall(
 	return prepareOutcome{prepared: &preparedToolCallValue{toolCall: toolCall, tool: tool, args: validatedArgs}}
 }
 
-func executePreparedToolCall(prepared *preparedToolCallValue, ctx context.Context, emit AgentEventSink) executedToolCallOutcome {
-	var updateWG sync.WaitGroup
-	var updateMu sync.Mutex
-	acceptingUpdates := true
-	var updateErr error
+// toolUpdateDispatcher delivers tool_execution_update events to the sink in the
+// order the tool emitted them, from one consumer goroutine. The tool never
+// blocks on a slow sink (upstream queues the update promises and awaits them
+// after execute returns), but the sink is never re-entered and order is kept.
+type toolUpdateDispatcher struct {
+	mu      sync.Mutex
+	cond    *sync.Cond
+	pending []AgentEvent
+	err     error
+	closed  bool
+	done    chan struct{}
+}
 
-	startedAt := time.Now()
-	result, err := prepared.tool.Execute(prepared.toolCall.ID, prepared.args, ctx, func(partialResult AgentToolResult) {
-		updateMu.Lock()
-		if !acceptingUpdates {
-			updateMu.Unlock()
+func newToolUpdateDispatcher(emit AgentEventSink) *toolUpdateDispatcher {
+	dispatcher := &toolUpdateDispatcher{done: make(chan struct{})}
+	dispatcher.cond = sync.NewCond(&dispatcher.mu)
+	go dispatcher.run(emit)
+	return dispatcher
+}
+
+func (d *toolUpdateDispatcher) run(emit AgentEventSink) {
+	defer close(d.done)
+	for {
+		d.mu.Lock()
+		for len(d.pending) == 0 && !d.closed {
+			d.cond.Wait()
+		}
+		if len(d.pending) == 0 {
+			d.mu.Unlock()
 			return
 		}
-		updateWG.Add(1)
-		updateMu.Unlock()
+		event := d.pending[0]
+		d.pending[0] = AgentEvent{}
+		d.pending = d.pending[1:]
+		d.mu.Unlock()
+		d.deliver(emit, event)
+	}
+}
 
-		event := AgentEvent{
-			Type: ToolExecutionUpdate, ToolCallID: prepared.toolCall.ID,
-			ToolName: prepared.toolCall.Name, Args: prepared.toolCall.Arguments,
-			PartialResult: partialResult,
+func (d *toolUpdateDispatcher) deliver(emit AgentEventSink, event AgentEvent) {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			d.recordError(fmt.Errorf("%s", panicMessage(recovered)))
 		}
-		go func() {
-			defer updateWG.Done()
-			if emitErr := emit(event); emitErr != nil {
-				updateMu.Lock()
-				if updateErr == nil {
-					updateErr = emitErr
-				}
-				updateMu.Unlock()
+	}()
+	if err := emit(event); err != nil {
+		d.recordError(err)
+	}
+}
+
+func (d *toolUpdateDispatcher) recordError(err error) {
+	d.mu.Lock()
+	if d.err == nil {
+		d.err = err
+	}
+	d.mu.Unlock()
+}
+
+// send queues one update. A tool that keeps emitting after Execute returned is
+// ignored, matching upstream's acceptingUpdates guard.
+func (d *toolUpdateDispatcher) send(event AgentEvent) {
+	d.mu.Lock()
+	if d.closed {
+		d.mu.Unlock()
+		return
+	}
+	d.pending = append(d.pending, event)
+	d.cond.Signal()
+	d.mu.Unlock()
+}
+
+// close drains every queued update, stops accepting new ones, and reports the
+// first delivery error.
+func (d *toolUpdateDispatcher) close() error {
+	d.mu.Lock()
+	d.closed = true
+	d.cond.Broadcast()
+	d.mu.Unlock()
+	<-d.done
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.err
+}
+
+func executePreparedToolCall(prepared *preparedToolCallValue, ctx context.Context, emit AgentEventSink) executedToolCallOutcome {
+	updates := newToolUpdateDispatcher(emit)
+
+	startedAt := time.Now()
+	var result AgentToolResult
+	var err error
+	func() {
+		// A panicking tool (or an onUpdate shim) is a tool error in upstream's
+		// try/catch. In the parallel executor the call runs on a worker
+		// goroutine, where an escaping panic would kill the process.
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				err = fmt.Errorf("%s", panicMessage(recovered))
 			}
 		}()
-	})
+		result, err = prepared.tool.Execute(prepared.toolCall.ID, prepared.args, ctx, func(partialResult AgentToolResult) {
+			updates.send(AgentEvent{
+				Type: ToolExecutionUpdate, ToolCallID: prepared.toolCall.ID,
+				ToolName: prepared.toolCall.Name, Args: prepared.toolCall.Arguments,
+				PartialResult: partialResult,
+			})
+		})
+	}()
 	// The measurement stops when Execute returns, before the update events drain, so a slow
 	// emitter cannot inflate the tool's own time (upstream captures it at the same point).
 	durationMS := roundDurationMilliseconds(time.Since(startedAt))
-	updateMu.Lock()
-	acceptingUpdates = false
-	updateMu.Unlock()
-	updateWG.Wait()
-	updateMu.Lock()
-	errFromUpdate := updateErr
-	updateMu.Unlock()
-	if errFromUpdate != nil {
+	if errFromUpdate := updates.close(); errFromUpdate != nil {
 		err = errFromUpdate
 	}
 	if err == nil {
@@ -925,14 +1046,26 @@ func finalizeExecutedToolCall(
 	isError := executed.isError
 
 	if config.AfterToolCall != nil {
-		afterResult, err := config.AfterToolCall(&AfterToolCallContext{
-			AssistantMessage: assistantMessage,
-			ToolCall:         prepared.toolCall,
-			Args:             prepared.args,
-			Result:           executed.result,
-			IsError:          executed.isError,
-			Context:          *currentContext,
-		}, ctx)
+		var afterResult *AfterToolCallResult
+		var err error
+		func() {
+			// A panicking hook is a tool error in upstream's try/catch. The call can
+			// run on a parallel-executor worker goroutine, where an escaping panic
+			// would kill the process.
+			defer func() {
+				if recovered := recover(); recovered != nil {
+					err = fmt.Errorf("%s", panicMessage(recovered))
+				}
+			}()
+			afterResult, err = config.AfterToolCall(&AfterToolCallContext{
+				AssistantMessage: assistantMessage,
+				ToolCall:         prepared.toolCall,
+				Args:             prepared.args,
+				Result:           executed.result,
+				IsError:          executed.isError,
+				Context:          *currentContext,
+			}, ctx)
+		}()
 		if err != nil {
 			return finalizedToolCallOutcome{
 				toolCall: prepared.toolCall,
