@@ -323,8 +323,10 @@ emission order; update listener errors also fail the tool call, matching upstrea
 events. A panic from a tool's
 `prepareArguments` shim, `beforeToolCall`/`afterToolCall` hook, or `execute` is the same throw
 upstream catches, so it becomes an error tool result and the batch continues; parallel-worker
-panics are re-raised on the loop goroutine so the run-failure contract still applies.
-`ShouldStopAfterTurn` remains as
+panics are re-raised on the loop goroutine so the run-failure contract still applies. A panic that
+escapes the interactive owner loop also follows upstream's `uncaughtException` contract: the app's
+entry point converts it to the handled crash, which restores the terminal, records the crash and
+exits 1, instead of dying with the terminal left in raw mode. `ShouldStopAfterTurn` remains as
 a deprecated compatibility callback; new code should use `FinishTurn`.
 
 The response lifecycle follows the v1.1.0 `agent-loop.ts` contract, unchanged in v1.2.0: cancellation reaches

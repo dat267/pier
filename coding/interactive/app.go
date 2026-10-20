@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"regexp"
 	"strings"
@@ -853,6 +854,33 @@ func (a *App) runDone() <-chan struct{} {
 
 // Run initializes and runs the interactive loop.
 func (a *App) Run(ctx context.Context) {
+	a.runGuarded(func() { a.run(ctx) })
+}
+
+// runGuarded converts a panic escaping the owner loop into the handled crash
+// upstream's process uncaughtException handler produces: the terminal is
+// restored, the crash recorded and the process exits 1. Without it a panic
+// would kill the process with the terminal still in raw mode on the alternate
+// screen.
+func (a *App) runGuarded(body func()) {
+	defer func() {
+		recovered := recover()
+		if recovered == nil {
+			return
+		}
+		failure, ok := recovered.(error)
+		if !ok {
+			failure = fmt.Errorf("%v", recovered)
+		}
+		if a.lifecycle == nil {
+			panic(recovered)
+		}
+		a.lifecycle.UncaughtCrash(failure)
+	}()
+	body()
+}
+
+func (a *App) run(ctx context.Context) {
 	a.runCtx.Store(&ctx)
 	if a.sessionEvents != nil {
 		a.sessionEvents.SetContext(ctx)
