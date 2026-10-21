@@ -369,6 +369,9 @@ func (c *RpcClient) Stop() {
 	c.pending = map[string]*pendingRequest{}
 	c.mu.Unlock()
 	c.waiters.Wait()
+	c.mu.Lock()
+	c.started = false
+	c.mu.Unlock()
 }
 
 func (c *RpcClient) drainStderr(stderr io.Reader) {

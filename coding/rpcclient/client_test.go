@@ -179,6 +179,23 @@ func TestClientStopIsIdempotent(t *testing.T) {
 	}
 }
 
+// Reference: pi v1.3.0 modes/rpc/rpc-client.ts stop clears this.process, so the
+// same client can start a fresh subprocess after its previous one is stopped.
+func TestClientCanRestartAfterStop(t *testing.T) {
+	client := startFakeClient(t, nil)
+	if _, err := client.State(); err != nil {
+		t.Fatal(err)
+	}
+	client.Stop()
+	if err := client.Start(context.Background()); err != nil {
+		t.Fatalf("restart: %v", err)
+	}
+	state, err := client.State()
+	if err != nil || state.SessionID != "fake" {
+		t.Fatalf("state after restart = %+v, %v", state, err)
+	}
+}
+
 // TestRPCClientRealServer drives the client against the real CLI: the child is
 // this test binary re-executed, and cmd.Execute runs the shipped RPC mode.
 func TestRPCClientRealServer(t *testing.T) {
