@@ -1,9 +1,12 @@
 package coding
 
 import (
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/dat267/pier/ai"
 )
 
 // MatchGlob matches a value against a minimatch-style pattern as used by
@@ -44,8 +47,10 @@ const (
 	// expansion like brace-expansion's EXPANSION_MAX and EXPANSION_MAX_LENGTH
 	// (the CVE-2026-14257 fix): a pattern with many brace groups is truncated
 	// instead of exhausting memory.
-	globBraceExpansionMax       = 100_000
-	globBraceExpansionMaxLength = 4_000_000
+	globBraceExpansionMax         = 100_000
+	globBraceExpansionMaxLength   = 4_000_000
+	globBraceExpansionMaxDepth    = 1_000
+	globBraceExpansionMaxRewrites = 1_000
 )
 
 // expandBraces expands brace groups like brace-expansion: a comma group and a
@@ -54,58 +59,101 @@ const (
 // ("{a{b,c}}" is "{ab}" and "{ac}"). A backslash escapes the character after it.
 // The expansion is bounded by the limits below.
 func expandBraces(pattern string) []string {
-	return unescapeBracePatterns(expandBracesWithin(pattern, true))
+	// minimatch only invokes brace-expansion when this syntax is present. That
+	// layer unescapes backslash pairs in addition to the escaped punctuation.
+	unescapeSlashes := globBraceExpansionRegex.MatchString(pattern)
+	// brace-expansion preserves a leading empty group even before a comma set.
+	if strings.HasPrefix(pattern, "{}") {
+		pattern = `\{\}` + pattern[2:]
+	}
+	return unescapeBracePatterns(expandBracesWithin(pattern, true, 0), unescapeSlashes)
 }
 
 // expandBracesWithin mirrors brace-expansion's expand_: it consumes the
 // pattern's brace groups left to right while combining a running accumulator.
 // top marks the outermost call, where an empty alternative is dropped (Bash
 // behavior) for a comma group.
-func expandBracesWithin(pattern string, top bool) []string {
+func expandBracesWithin(pattern string, top bool, depth int) []string {
+	if depth > globBraceExpansionMaxDepth {
+		return []string{pattern}
+	}
 	acc := []string{""}
 	dropEmpties := false
 	firstGroup := true
+	rewrites := 0
 	current := pattern
 	for {
 		open, close := globBraceGroup(current)
 		if open < 0 {
-			out, _ := combineExpansions(acc, current, []string{""}, dropEmpties)
-			return out
+			return combineExpansions(acc, current, []string{""}, dropEmpties)
 		}
 		pre, body, post := current[:open], current[open+1:close], current[close+1:]
+		if strings.HasSuffix(pre, "$") {
+			acc = combineExpansions(acc, current[:close+1], []string{""}, dropEmpties && post == "")
+			firstGroup = false
+			if post == "" {
+				return acc
+			}
+			current = post
+			continue
+		}
 		isAlphaSequence, isSequence := braceSequenceKind(body)
 		if !isSequence && !strings.Contains(body, ",") {
+			if rewrites < globBraceExpansionMaxRewrites && globBraceRewriteRegex.MatchString(post) {
+				rewrites++
+				current = pre + "{" + body + `\}` + post
+				top = true
+				continue
+			}
 			// Nothing here expands; the rest of the string is literal.
-			out, _ := combineExpansions(acc, current, []string{""}, dropEmpties)
-			return out
+			return combineExpansions(acc, current, []string{""}, dropEmpties)
 		}
 		if firstGroup {
 			dropEmpties = top && !isSequence
 			firstGroup = false
 		}
 		var values []string
-		truncated := false
 		if isSequence {
-			values, truncated = expandBraceSequence(body, isAlphaSequence)
-			dropEmpties = false
+			values = expandBraceSequence(body, isAlphaSequence)
 		} else {
 			parts := splitTopLevel(body)
 			if len(parts) == 1 {
 				// A comma nested in a brace inside the body: expand the body and
 				// keep its braces ("{a{b,c}}" -> "{ab}", "{ac}").
-				for _, expanded := range expandBracesWithin(parts[0], false) {
+				for _, expanded := range expandBracesWithin(parts[0], false, depth+1) {
 					values = append(values, "{"+expanded+"}")
 				}
 			} else {
+				dropEmptyValues := dropEmpties && post == "" && pre == ""
+				for _, prefix := range acc {
+					if prefix != "" {
+						dropEmptyValues = false
+						break
+					}
+				}
+				length := 0
+			alternatives:
 				for _, part := range parts {
-					values = append(values, expandBracesWithin(part, false)...)
+					expandedParts := expandBracesWithin(part, false, depth+1)
+					if values == nil {
+						values = make([]string, 0, globExpansionCapacity(len(parts), len(expandedParts)))
+					}
+					for _, expanded := range expandedParts {
+						if dropEmptyValues && expanded == "" {
+							continue
+						}
+						if len(values) >= globBraceExpansionMax || length+len(expanded) > globBraceExpansionMaxLength {
+							break alternatives
+						}
+						values = append(values, expanded)
+						length += len(expanded)
+					}
 				}
 			}
 		}
-		var combineTruncated bool
 		// Bash drops empty results only when nothing follows the group.
-		acc, combineTruncated = combineExpansions(acc, pre, values, dropEmpties && post == "")
-		if truncated || combineTruncated || len(post) == 0 {
+		acc = combineExpansions(acc, pre, values, dropEmpties && post == "")
+		if len(post) == 0 {
 			return acc
 		}
 		current = post
@@ -113,29 +161,38 @@ func expandBracesWithin(pattern string, top bool) []string {
 }
 
 // combineExpansions builds acc[a] + pre + values[v] for every combination,
-// stopping at the expansion limits. Once a combination is truncated the rest of
-// the pattern is left unexpanded: expanding it would only produce alternatives
-// beyond the limits.
-func combineExpansions(acc []string, pre string, values []string, dropEmpties bool) (out []string, truncated bool) {
-	out = make([]string, 0, len(acc)*len(values))
+// stopping at the expansion limits. Subsequent groups and literal suffixes must
+// still be appended to the retained alternatives.
+func combineExpansions(acc []string, pre string, values []string, dropEmpties bool) []string {
+	out := make([]string, 0, globExpansionCapacity(len(acc), len(values)))
 	length := 0
 	for _, prefix := range acc {
 		for _, value := range values {
 			if len(out) >= globBraceExpansionMax {
-				return out, true
+				return out
 			}
 			expansion := prefix + pre + value
 			if dropEmpties && expansion == "" {
 				continue
 			}
 			if length+len(expansion) > globBraceExpansionMaxLength {
-				return out, true
+				return out
 			}
 			length += len(expansion)
 			out = append(out, expansion)
 		}
 	}
-	return out, false
+	return out
+}
+
+func globExpansionCapacity(left, right int) int {
+	if right == 0 {
+		return 0
+	}
+	if left > globBraceExpansionMax/right {
+		return globBraceExpansionMax
+	}
+	return left * right
 }
 
 // braceSequenceKind reports whether a brace body is a numeric or alphabetic
@@ -153,27 +210,23 @@ func braceSequenceKind(body string) (isAlpha bool, isSequence bool) {
 var (
 	globNumericSequenceRegex = regexp.MustCompile(`^-?\d+\.\.-?\d+(?:\.\.-?\d+)?$`)
 	globAlphaSequenceRegex   = regexp.MustCompile(`^[a-zA-Z]\.\.[a-zA-Z](?:\.\.-?\d+)?$`)
+	globBraceRewriteRegex    = regexp.MustCompile(`,(?:[^,\r\n\x{2028}\x{2029}][^\r\n\x{2028}\x{2029}]*)?}`)
+	globBraceExpansionRegex  = regexp.MustCompile(`\{[^{\r\n\x{2028}\x{2029}]*\}`)
 )
 
 // expandBraceSequence expands "1..5", "5..1", "01..05" and "a..e..2", stopping
 // at the expansion limits.
-func expandBraceSequence(body string, isAlpha bool) (values []string, truncated bool) {
+func expandBraceSequence(body string, isAlpha bool) (values []string) {
 	parts := strings.Split(body, "..")
 	if len(parts) < 2 {
-		return nil, false
+		return nil
 	}
 	from := braceNumericValue(parts[0])
 	to := braceNumericValue(parts[1])
 	width := max(len(parts[0]), len(parts[1]))
-	step := int64(1)
+	step := float64(1)
 	if len(parts) == 3 {
-		step = braceNumericValue(parts[2])
-		if step < 0 {
-			step = -step
-		}
-		if step == 0 {
-			step = 1
-		}
+		step = math.Max(math.Abs(braceNumericValue(parts[2])), 1)
 	}
 	reverse := to < from
 	if reverse {
@@ -187,16 +240,9 @@ func expandBraceSequence(body string, isAlpha bool) (values []string, truncated 
 		}
 	}
 	total := 0
-	for value := from; ; value += step {
-		if reverse {
-			if value < to {
-				break
-			}
-		} else if value > to {
-			break
-		}
+	for value := from; (!reverse && value <= to) || (reverse && value >= to); value += step {
 		if len(values) >= globBraceExpansionMax {
-			return values, true
+			return values
 		}
 		var text string
 		if isAlpha {
@@ -207,46 +253,41 @@ func expandBraceSequence(body string, isAlpha bool) (values []string, truncated 
 		} else if padded {
 			text = padBraceNumber(value, width)
 		} else {
-			text = strconv.FormatInt(value, 10)
+			text = ai.JSNumberToString(value)
 		}
 		if total+len(text) > globBraceExpansionMaxLength {
-			return values, true
+			return values
 		}
 		total += len(text)
 		values = append(values, text)
-		if step > 0 && value > to-step {
-			break
-		}
-		if step < 0 && value < to-step {
-			break
-		}
 	}
-	return values, false
+	return values
 }
 
 var globPaddedSequenceRegex = regexp.MustCompile(`^-?0\d`)
 
 // braceNumericValue is brace-expansion's numeric(): a numeric string is its
 // value, anything else is the first character's code point.
-func braceNumericValue(text string) int64 {
-	if value, err := strconv.ParseInt(text, 10, 64); err == nil {
+func braceNumericValue(text string) float64 {
+	if value, err := strconv.ParseFloat(text, 64); err == nil || math.IsInf(value, 0) {
 		return value
 	}
 	if text == "" {
 		return 0
 	}
-	return int64(text[0])
+	return float64(text[0])
 }
 
 // padBraceNumber zero-pads a numeric sequence member to width.
-func padBraceNumber(value int64, width int) string {
-	digits := strconv.FormatInt(value, 10)
+func padBraceNumber(value float64, width int) string {
+	digits := ai.JSNumberToString(value)
 	negative := strings.HasPrefix(digits, "-")
 	if negative {
 		digits = digits[1:]
+		width--
 	}
-	for len(digits) < width {
-		digits = "0" + digits
+	if len(digits) < width {
+		digits = strings.Repeat("0", width-len(digits)) + digits
 	}
 	if negative {
 		return "-" + digits
@@ -256,10 +297,10 @@ func padBraceNumber(value int64, width int) string {
 
 // unescapeBracePatterns turns the brace-expansion escapes into their literal
 // characters; the glob matcher handles every other escape.
-func unescapeBracePatterns(patterns []string) []string {
+func unescapeBracePatterns(patterns []string, unescapeSlashes bool) []string {
 	for index, pattern := range patterns {
 		if strings.Contains(pattern, "\\") {
-			patterns[index] = unescapeBracePattern(pattern)
+			patterns[index] = unescapeBracePattern(pattern, unescapeSlashes)
 		}
 	}
 	return patterns
@@ -267,7 +308,7 @@ func unescapeBracePatterns(patterns []string) []string {
 
 // unescapeBracePattern turns the brace-expansion escapes into their literal
 // characters.
-func unescapeBracePattern(pattern string) string {
+func unescapeBracePattern(pattern string, unescapeSlashes bool) string {
 	var out strings.Builder
 	out.Grow(len(pattern))
 	for index := 0; index < len(pattern); index++ {
@@ -277,6 +318,13 @@ func unescapeBracePattern(pattern string) string {
 				out.WriteByte(pattern[index+1])
 				index++
 				continue
+			case '\\':
+				out.WriteByte('\\')
+				if !unescapeSlashes {
+					out.WriteByte('\\')
+				}
+				index++
+				continue
 			}
 		}
 		out.WriteByte(pattern[index])
@@ -284,30 +332,32 @@ func unescapeBracePattern(pattern string) string {
 	return out.String()
 }
 
-// globBraceGroup returns the offsets of the first unescaped top-level "{" and
-// its matching "}" (open is -1 when the pattern has no group).
+// globBraceGroup returns the first balanced unescaped brace group. Like
+// balanced-match, it falls back to a complete inner group if an outer opening
+// brace has no matching close (open is -1 when the pattern has no group).
 func globBraceGroup(pattern string) (open, close int) {
-	open = -1
-	depth := 0
+	open, close = -1, -1
+	var openings []int
 	for index := 0; index < len(pattern); index++ {
 		switch pattern[index] {
 		case '\\':
 			index++
 		case '{':
-			if depth == 0 {
-				open = index
-			}
-			depth++
+			openings = append(openings, index)
 		case '}':
-			if depth > 0 {
-				depth--
-				if depth == 0 {
-					return open, index
+			if len(openings) > 0 {
+				start := openings[len(openings)-1]
+				openings = openings[:len(openings)-1]
+				if len(openings) == 0 {
+					return start, index
+				}
+				if open < 0 || start < open {
+					open, close = start, index
 				}
 			}
 		}
 	}
-	return -1, -1
+	return open, close
 }
 
 // splitTopLevel splits a brace body on its unescaped top-level commas.
@@ -409,8 +459,8 @@ func matchSegmentList(pattern, value []string, nocase bool) bool {
 	}
 
 	type state struct{ pattern, value int }
-	memo := make(map[state]bool, len(pattern)*len(value)+1)
-	seen := make(map[state]bool, len(memo))
+	memo := make(map[state]bool)
+	seen := make(map[state]bool)
 	var match func(patternIndex, valueIndex int) bool
 	match = func(patternIndex, valueIndex int) bool {
 		key := state{patternIndex, valueIndex}
@@ -480,8 +530,8 @@ func matchGlobSegment(pattern, value string, nocase bool) bool {
 	}
 	// minimatch never matches the "." or ".." path segments with anything but
 	// that literal segment.
-	if (value == "." || value == "..") && pattern != value {
-		return false
+	if value == "." || value == ".." {
+		return strings.ReplaceAll(pattern, "[.]", ".") == value
 	}
 	p := []rune(pattern)
 	s := []rune(value)
@@ -517,7 +567,7 @@ func toLowerRune(char rune) rune {
 func matchSegmentHere(pattern, value []rune) bool {
 	type state struct{ pattern, value int }
 	// 0 is "not computed yet", 1 is false, 2 is true.
-	memo := make(map[state]uint8, (len(pattern)+1)*(len(value)+1))
+	memo := make(map[state]uint8)
 	var match func(patternIndex, valueIndex int) bool
 	match = func(patternIndex, valueIndex int) bool {
 		key := state{patternIndex, valueIndex}
@@ -575,26 +625,38 @@ func matchClass(pattern []rune, char rune) (int, bool) {
 		index++
 	}
 	matched := false
+	valid := false
 	first := true
 	for index < len(pattern) && (pattern[index] != ']' || first) {
 		first = false
-		if index+2 < len(pattern) && pattern[index+1] == '-' && pattern[index+2] != ']' {
-			low, high := pattern[index], pattern[index+2]
+		low := pattern[index]
+		if low == '\\' && index+1 < len(pattern) {
+			index++
+			low = pattern[index]
+		}
+		index++
+		if index+1 < len(pattern) && pattern[index] == '-' && pattern[index+1] != ']' {
+			high := pattern[index+1]
+			index += 2
+			if high == '\\' && index < len(pattern) {
+				high = pattern[index]
+				index++
+			}
 			if low <= char && char <= high {
 				matched = true
 			}
-			index += 3
+			valid = valid || low <= high
 			continue
 		}
-		if pattern[index] == char {
+		valid = true
+		if low == char {
 			matched = true
 		}
-		index++
 	}
 	if index >= len(pattern) {
 		// Unterminated class: treat "[" as a literal.
 		return 1, char == '['
 	}
 	consumed := index + 1
-	return consumed, matched != negated
+	return consumed, valid && matched != negated
 }
