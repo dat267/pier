@@ -88,8 +88,8 @@ type Client struct {
 	requestHandlers       map[string]RequestHandler
 	notificationListeners map[string][]*listenerEntry[func(json.RawMessage)]
 	notificationMu        sync.Mutex
-	errorListeners        []listenerEntry[func(error)]
-	closeListeners        []listenerEntry[func()]
+	errorListeners        []*listenerEntry[func(error)]
+	closeListeners        []*listenerEntry[func()]
 	transportDisposers    []func()
 }
 
@@ -302,8 +302,8 @@ func (c *Client) OnNotification(method string, listener func(json.RawMessage)) f
 func (c *Client) OnError(listener func(error)) func() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.errorListeners = append(c.errorListeners, listenerEntry[func(error)]{fn: listener})
-	token := &c.errorListeners[len(c.errorListeners)-1]
+	token := &listenerEntry[func(error)]{fn: listener}
+	c.errorListeners = append(c.errorListeners, token)
 	return func() {
 		c.mu.Lock()
 		defer c.mu.Unlock()
@@ -316,8 +316,8 @@ func (c *Client) OnError(listener func(error)) func() {
 func (c *Client) OnClose(listener func()) func() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.closeListeners = append(c.closeListeners, listenerEntry[func()]{fn: listener})
-	token := &c.closeListeners[len(c.closeListeners)-1]
+	token := &listenerEntry[func()]{fn: listener}
+	c.closeListeners = append(c.closeListeners, token)
 	return func() {
 		c.mu.Lock()
 		defer c.mu.Unlock()
@@ -637,14 +637,13 @@ func (c *Client) handleResponse(message *protocol.JsonRpcResponse) {
 func (c *Client) handleRequest(message *protocol.JsonRpcRequest) {
 	c.mu.Lock()
 	transport := c.transport
-	c.mu.Unlock()
 	if transport == nil {
+		c.mu.Unlock()
 		return
 	}
-	c.mu.Lock()
 	handler := c.requestHandlers[message.Method]
-	c.mu.Unlock()
 	if handler == nil {
+		c.mu.Unlock()
 		errorResponse := protocol.JsonRpcResponse{
 			JSONRPC: protocol.JSONRPCVersion,
 			ID:      message.ID,
@@ -656,46 +655,56 @@ func (c *Client) handleRequest(message *protocol.JsonRpcRequest) {
 		return
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	c.mu.Lock()
 	c.incoming[message.ID] = cancel
 	c.mu.Unlock()
-	defer func() {
-		cancel()
-		c.mu.Lock()
-		delete(c.incoming, message.ID)
-		c.mu.Unlock()
-	}()
-	result, err := handler(ctx, message.Params)
-	if err == nil {
-		if result == nil {
-			result = map[string]any{}
-		}
-		enc, marshalErr := protocol.MarshalJSON(result)
-		if marshalErr == nil {
-			err = transport.Send(context.Background(), protocol.JsonRpcResponse{
-				JSONRPC: protocol.JSONRPCVersion, ID: message.ID, Result: enc,
-			})
-		} else {
-			err = marshalErr
-		}
-	}
-	if err != nil {
-		responseError := &protocol.JsonRpcErrorObject{Code: protocol.JSONRPCErrorCode.InternalError}
-		if mcpErr, ok := err.(*protocol.McpError); ok {
-			responseError.Code = mcpErr.Code
-			responseError.Message = mcpErr.Msg
-			if raw, ok := mcpErr.Data.(json.RawMessage); ok {
-				responseError.Data = raw
+	// Register cancellation before returning to the read pump, then await the
+	// handler off-pump like upstream's async handleRequest.
+	go func() {
+		defer func() {
+			cancel()
+			c.mu.Lock()
+			delete(c.incoming, message.ID)
+			c.mu.Unlock()
+		}()
+		result, err := func() (result any, err error) {
+			defer func() {
+				if recovered := recover(); recovered != nil {
+					err = protocol.ToError(recovered)
+				}
+			}()
+			return handler(ctx, message.Params)
+		}()
+		if err == nil {
+			if result == nil {
+				result = map[string]any{}
 			}
-		} else {
-			responseError.Message = err.Error()
+			enc, marshalErr := protocol.MarshalJSON(result)
+			if marshalErr == nil {
+				err = transport.Send(context.Background(), protocol.JsonRpcResponse{
+					JSONRPC: protocol.JSONRPCVersion, ID: message.ID, Result: enc,
+				})
+			} else {
+				err = marshalErr
+			}
 		}
-		if sendErr := transport.Send(context.Background(), protocol.JsonRpcResponse{
-			JSONRPC: protocol.JSONRPCVersion, ID: message.ID, Error: responseError,
-		}); sendErr != nil {
-			c.emitError(sendErr)
+		if err != nil {
+			responseError := &protocol.JsonRpcErrorObject{Code: protocol.JSONRPCErrorCode.InternalError}
+			if mcpErr, ok := err.(*protocol.McpError); ok {
+				responseError.Code = mcpErr.Code
+				responseError.Message = mcpErr.Msg
+				if raw, ok := mcpErr.Data.(json.RawMessage); ok {
+					responseError.Data = raw
+				}
+			} else {
+				responseError.Message = err.Error()
+			}
+			if sendErr := transport.Send(context.Background(), protocol.JsonRpcResponse{
+				JSONRPC: protocol.JSONRPCVersion, ID: message.ID, Error: responseError,
+			}); sendErr != nil {
+				c.emitError(sendErr)
+			}
 		}
-	}
+	}()
 }
 
 // handleNotification dispatches notifications (upstream handleNotification).

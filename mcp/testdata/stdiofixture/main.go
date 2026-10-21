@@ -54,7 +54,11 @@ func main() {
 			continue
 		}
 		if message.ID == nil {
-			// A notification; the fixture has no use for one.
+			if message.Method == "notifications/initialized" && os.Getenv("PIER_MCP_CANCEL_REQUEST_FIXTURE") == "1" {
+				fmt.Fprintln(os.Stdout, `{"jsonrpc":"2.0","id":"server-request","method":"wait"}`)
+				fmt.Fprintln(os.Stdout, `{"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":"server-request"}}`)
+			}
+			// Notifications do not need a response.
 			continue
 		}
 		var result json.RawMessage

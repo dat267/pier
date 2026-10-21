@@ -47,9 +47,9 @@ type listenerEntry[T any] struct {
 // are snapshotted under the lock and delivered outside it.
 type transportEvents struct {
 	mu               sync.Mutex
-	messageListeners []listenerEntry[func(Message)]
-	errorListeners   []listenerEntry[func(error)]
-	closeListeners   []listenerEntry[func()]
+	messageListeners []*listenerEntry[func(Message)]
+	errorListeners   []*listenerEntry[func(error)]
+	closeListeners   []*listenerEntry[func()]
 	closeEmitted     bool
 }
 
@@ -68,11 +68,11 @@ func (b *transportEvents) OnClose(listener func()) func() {
 	return b.register(&b.closeListeners, listener)
 }
 
-func (b *transportEvents) register[T any](set *[]listenerEntry[T], fn T) func() {
+func (b *transportEvents) register[T any](set *[]*listenerEntry[T], fn T) func() {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	*set = append(*set, listenerEntry[T]{fn: fn})
-	token := &(*set)[len(*set)-1]
+	token := &listenerEntry[T]{fn: fn}
+	*set = append(*set, token)
 	return func() {
 		b.mu.Lock()
 		defer b.mu.Unlock()
@@ -82,7 +82,7 @@ func (b *transportEvents) register[T any](set *[]listenerEntry[T], fn T) func() 
 
 // snapshotLocked collects the live listeners and compacts; the caller holds
 // b.mu.
-func snapshotLocked[T any](set *[]listenerEntry[T]) []T {
+func snapshotLocked[T any](set *[]*listenerEntry[T]) []T {
 	live := make([]T, 0, len(*set))
 	for _, entry := range *set {
 		if !entry.removed {
