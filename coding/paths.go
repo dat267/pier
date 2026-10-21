@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/dat267/pier/ai"
 	"golang.org/x/text/unicode/norm"
@@ -182,9 +183,19 @@ func filePathFromURL(url string) (string, error) {
 	if !strings.HasPrefix(url, scheme) {
 		return "", fmtPathError("not a file URL")
 	}
-	// The WHATWG parser treats a backslash as a path separator for the special
-	// file scheme, so file:///tmp\a is /tmp/a.
-	path := strings.ReplaceAll(url[len(scheme):], "\\", "/")
+	// WHATWG strips trailing C0 controls/spaces and raw tabs/newlines. A
+	// backslash is a path separator for the special file scheme.
+	url = strings.TrimRightFunc(url, func(r rune) bool { return r <= 0x20 })
+	path := strings.Map(func(r rune) rune {
+		switch r {
+		case '\t', '\r', '\n':
+			return -1
+		case '\\':
+			return '/'
+		default:
+			return r
+		}
+	}, url[len(scheme):])
 	// Strip URL metadata before percent-decoding: encoded ?/# are filename
 	// characters, not search/hash delimiters (Node fileURLToPath).
 	if index := strings.IndexAny(path, "?#"); index >= 0 {
@@ -197,28 +208,39 @@ func filePathFromURL(url string) (string, error) {
 	}
 	if !strings.HasPrefix(path, "/") {
 		idx := strings.Index(path, "/")
-		host := path
-		if idx >= 0 {
-			host = path[:idx]
-			path = path[idx:]
-		} else {
-			path = "/"
+		if idx < 0 {
+			idx = len(path)
 		}
-		// The WHATWG URL parser lowercases the hostname, so file://LOCALHOST is
-		// the same as file://localhost.
-		if !strings.EqualFold(host, "localhost") {
-			return "", fmtPathError("file URL with non-localhost host")
+		host := path[:idx]
+		if isURLWindowsDriveLetter(host) {
+			path = "/" + path
+		} else {
+			path = path[idx:]
+			if path == "" {
+				path = "/"
+			}
+			// WHATWG decodes and lowercases the hostname before checking localhost.
+			decodedHost, err := percentDecode(host)
+			if err != nil {
+				return "", err
+			}
+			if !strings.EqualFold(decodedHost, "localhost") {
+				return "", fmtPathError("file URL with non-localhost host")
+			}
 		}
 	}
-	// Percent-encoded slashes are rejected before decoding (Node fileURLToPath:
+	path = normalizeURLPathname(path)
+	// Percent-encoded slashes are rejected after URL normalization and before decoding (Node fileURLToPath:
 	// "File URL path must not include encoded / characters").
 	if hasEncodedSlash(path) {
 		return "", fmtPathError("file URL path with an encoded slash")
 	}
-	path = normalizeURLPathname(path)
 	decoded, err := percentDecode(path)
 	if err != nil {
 		return "", err
+	}
+	if !utf8.ValidString(decoded) {
+		return "", fmtPathError("file URL path with invalid UTF-8")
 	}
 	return decoded, nil
 }
@@ -253,17 +275,26 @@ func normalizeURLPathname(path string) string {
 			}
 		case isURLDoubleDotSegment(segment):
 			// The first segment is the empty prefix before the root slash.
-			if len(out) > 1 {
+			driveRoot := len(out) == 2 && isURLWindowsDriveLetter(out[1])
+			if len(out) > 1 && !driveRoot {
 				out = out[:len(out)-1]
 			}
 			if last {
 				out = append(out, "")
 			}
 		default:
+			if len(out) == 1 && out[0] == "" && isURLWindowsDriveLetter(segment) {
+				segment = segment[:1] + ":"
+			}
 			out = append(out, segment)
 		}
 	}
 	return strings.Join(out, "/")
+}
+
+func isURLWindowsDriveLetter(segment string) bool {
+	return len(segment) == 2 && ((segment[0] >= 'a' && segment[0] <= 'z') ||
+		(segment[0] >= 'A' && segment[0] <= 'Z')) && (segment[1] == ':' || segment[1] == '|')
 }
 
 // isURLSingleDotSegment reports "." spelled with a literal or encoded dot

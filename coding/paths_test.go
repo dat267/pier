@@ -180,6 +180,89 @@ func TestNormalizePathFileURLPathname(t *testing.T) {
 	}
 }
 
+// Reference: pi v1.3.0 utils/paths.ts calls node:url.fileURLToPath, which
+// validates encoded separators in the normalized URL pathname, not in path
+// segments already removed by "..".
+func TestNormalizePathFileURLRemovesEncodedSlashBeforeValidation(t *testing.T) {
+	for _, tc := range []struct{ input, want string }{
+		{"file:///tmp/%2f/../safe", "/tmp/safe"},
+		{"file:///tmp/%2F/..", "/tmp/"},
+		{"file:///tmp/%2f/safe", "file:///tmp/%2f/safe"},
+	} {
+		if got := NormalizePath(tc.input, PathInputOptions{}); got != tc.want {
+			t.Errorf("NormalizePath(%q) = %q, want %q", tc.input, got, tc.want)
+		}
+	}
+}
+
+// Reference: pi v1.3.0 utils/paths.ts -> node:url.fileURLToPath rejects invalid
+// percent-encoded UTF-8. D261 keeps a rejected URL unchanged instead of throwing.
+func TestNormalizePathFileURLRejectsInvalidUTF8(t *testing.T) {
+	for _, tc := range []struct{ input, want string }{
+		{"file:///tmp/%FF", "file:///tmp/%FF"},
+		{"file:///tmp/%C0%AF", "file:///tmp/%C0%AF"},
+		{"file:///tmp/%ED%A0%80", "file:///tmp/%ED%A0%80"},
+		{"file:///tmp/%E2%82", "file:///tmp/%E2%82"},
+		{"file:///tmp/%FF/../safe", "/tmp/safe"},
+		{"file:///tmp/%E2%82%AC", "/tmp/€"},
+	} {
+		if got := NormalizePath(tc.input, PathInputOptions{}); got != tc.want {
+			t.Errorf("NormalizePath(%q) = %q, want %q", tc.input, got, tc.want)
+		}
+	}
+}
+
+// Reference: pi v1.3.0 utils/paths.ts -> node:url.fileURLToPath uses the WHATWG
+// parser: raw tabs/newlines disappear and trailing C0 controls/spaces are
+// stripped, while percent-encoded whitespace remains part of the filename.
+func TestNormalizePathFileURLIgnoresParserWhitespace(t *testing.T) {
+	for _, tc := range []struct{ input, want string }{
+		{"file:///tmp/a\tb\nc\rd", "/tmp/abcd"},
+		{"file://local\thost/tmp/a", "/tmp/a"},
+		{"file:///tmp/a \r\n", "/tmp/a"},
+		{"file:///tmp/a\x00\x1f ", "/tmp/a"},
+		{"file:///tmp/a%20%09%0a", "/tmp/a \t\n"},
+	} {
+		if got := NormalizePath(tc.input, PathInputOptions{}); got != tc.want {
+			t.Errorf("NormalizePath(%q) = %q, want %q", tc.input, got, tc.want)
+		}
+	}
+}
+
+// Reference: pi v1.3.0 utils/paths.ts -> node:url.fileURLToPath normalizes the
+// URL host, including percent escapes, before recognizing localhost.
+func TestNormalizePathFileURLAcceptsEscapedLocalhost(t *testing.T) {
+	for _, input := range []string{
+		"file://%6cocalhost/tmp/a",
+		"file://local%68ost/tmp/a",
+		"file://%4cOCALHOST/tmp/a",
+	} {
+		if got := NormalizePath(input, PathInputOptions{}); got != "/tmp/a" {
+			t.Errorf("NormalizePath(%q) = %q, want /tmp/a", input, got)
+		}
+	}
+}
+
+// Reference: pi v1.3.0 utils/paths.ts -> node:url.fileURLToPath on POSIX.
+// The WHATWG file parser recognizes drive letters even on POSIX, normalizes
+// the legacy C| spelling, and does not let ".." remove the drive root.
+func TestNormalizePathFileURLRecognizesDriveRoots(t *testing.T) {
+	for _, tc := range []struct{ input, want string }{
+		{"file://C:/tmp/a", "/C:/tmp/a"},
+		{"file://C:", "/C:"},
+		{"file://C|/tmp/a", "/C:/tmp/a"},
+		{"file:///C|/tmp/a", "/C:/tmp/a"},
+		{"file:///C:/..", "/C:/"},
+		{"file:///C:/tmp/../..", "/C:/"},
+		{"file:///C:/../../a", "/C:/a"},
+		{"file:///tmp/C|/a", "/tmp/C|/a"},
+	} {
+		if got := NormalizePath(tc.input, PathInputOptions{}); got != tc.want {
+			t.Errorf("NormalizePath(%q) = %q, want %q", tc.input, got, tc.want)
+		}
+	}
+}
+
 // TestNormalizePathKeepsAnInvalidFileURL pins D261: fileURLToPath throws for a
 // non-local host, an encoded slash or malformed percent encoding, and
 // normalizePath propagates the exception. NormalizePath has no error result, so
