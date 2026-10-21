@@ -2,9 +2,39 @@ package coding
 
 import (
 	"fmt"
+	"math"
 	"strings"
 	"testing"
 )
+
+// Reference: pi v1.3.0 core/tools/truncate.ts grows its output array only for
+// retained lines. An effectively unlimited line budget must not be used as a
+// slice capacity when only the byte limit triggers truncation.
+func TestTruncateTailSupportsUnboundedLineLimit(t *testing.T) {
+	result := TruncateTail("hello", TruncationOptions{MaxLines: math.MaxInt, MaxBytes: 2})
+	if result.Content != "lo" || !result.Truncated || result.TruncatedBy != TruncatedByBytes || !result.LastLinePartial {
+		t.Fatalf("byte-only truncation = %+v, want partial tail lo", result)
+	}
+	if result.MaxLines != math.MaxInt {
+		t.Fatalf("reported line limit = %d, want %d", result.MaxLines, math.MaxInt)
+	}
+}
+
+// Reference: pi v1.3.0 core/tools/truncate.ts formatSize divides JavaScript
+// numbers before toFixed(1), without an overflowing integer multiplication.
+func TestFormatSizeLargeByteCountDoesNotOverflow(t *testing.T) {
+	for _, tc := range []struct {
+		bytes int64
+		want  string
+	}{
+		{math.MaxInt64, "8796093022208.0MB"},
+		{math.MaxInt64 / 2, "4398046511104.0MB"},
+	} {
+		if got := FormatSize(tc.bytes); got != tc.want {
+			t.Errorf("FormatSize(%d) = %q, want %q", tc.bytes, got, tc.want)
+		}
+	}
+}
 
 // TestTruncateTailBuildsTheWindowWithoutPrepending pins the bash tool's
 // per-chunk snapshot cost: the tail window was built by prepending each kept

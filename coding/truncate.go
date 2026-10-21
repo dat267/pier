@@ -160,12 +160,9 @@ func FormatSize(bytes int64) string {
 }
 
 // formatToFixed1 renders bytes/divisor with one decimal like JS
-// Number.toFixed(1) (round half up on the exact value), unlike Go's %.1f
-// (round half to even) and a floating-point multiply-then-round.
+// Number.toFixed(1), without multiplying the byte count in an integer type.
 func formatToFixed1(bytes, divisor int64) string {
-	// floor(bytes*10/divisor + 1/2) == (20*bytes + divisor) / (2*divisor)
-	n := (20*bytes + divisor) / (2 * divisor)
-	return fmt.Sprintf("%d.%d", n/10, n%10)
+	return ai.JSNumberToFixed(float64(bytes)/float64(divisor), 1)
 }
 
 // TruncateHead keeps the first N lines/bytes (file reads). Never returns
@@ -321,7 +318,7 @@ func TruncateTail(content string, options TruncationOptions) TruncationResult {
 	// Collect the window backwards, then reverse it once: prepending into a
 	// fresh slice per kept line made this quadratic (34 MB allocated to keep
 	// 2000 lines), and the bash tool snapshots its output on every 64 KB read.
-	reversed := make([]string, 0, maxLines)
+	reversed := make([]string, 0, min(maxLines, totalLines))
 	outputBytesCount := 0
 	truncatedBy := TruncatedByLines
 	lastLinePartial := false
