@@ -1,12 +1,9 @@
 # AGENTS.md
 
-Read this first. Deep dives: `docs/PORTING.md` (per-area status, pin),
-`docs/DIVERGENCES.md` (intentional differences), `docs/architecture.md`,
-`docs/locks.md`, `docs/rpc.md`, `docs/terminal-output.md`.
-
-Scan the `<available_skills>` block before starting a task and read a matching
-`SKILL.md` first (test-first, debugging, guardrails); loading it after the first
-attempt is too late. Relative paths resolve against that directory.
+Read this first. Deep dives: `docs/PORTING.md` (authoritative per-area status,
+pin), `docs/DIVERGENCES.md` (intentional differences), `docs/architecture.md`,
+`docs/locks.md`, `docs/rpc.md`, `docs/terminal-output.md`. `README.md` is the
+user-facing summary, not the port status.
 
 ## What this is
 
@@ -15,14 +12,16 @@ A from-scratch Go port of Mario Zechner's **pi**
 fork. Module `github.com/dat267/pier`, Go 1.27, offline-cached modules only
 (`go.mod` is authoritative). The reference checkout is `./pi` (gitignored),
 pinned to `v1.3.0` (`71023aec`); `just reference` fails at another tag and
-`just reference-fetch` refreshes tags without moving it. Diff against those
-sources, not an installed bundle, and say which tag a review read.
+`just reference-fetch` refreshes tags without moving it. Treat `./pi` as
+read-only. Diff against those sources, not an installed bundle, and say which
+tag a review read.
 
 ## Reference rules
 
 1. **pi is the reference, not the spec.** Read the TypeScript; never infer
-   behavior. Cite the reference file in each commit. A departure is a deliberate
-   feature, not an approximation to correct silently.
+   behavior. Cite the reference file (and upstream commit where one exists) in
+   each commit, and use `type(scope): summary` messages (`fix(coding): …`). A
+   departure is a deliberate feature, not an approximation to correct silently.
 2. **JSON is byte-parity.** Sessions, transcripts and wire payloads round-trip
    identically, including key order and HTML escaping: persist and send through
    `ai.MarshalJSON`, never `encoding/json.Marshal`. JS insertion order matters.
@@ -33,25 +32,34 @@ sources, not an installed bundle, and say which tag a review read.
 
 ## Layout
 
-Packages mirror upstream `packages/`: `ai`, `agent`, `coding`,
-`coding/interactive`, `tui`, `coding/rpcclient`, with `main.go` wrapping `cmd`.
-Port-local helpers live in `internal/`, `scripts/` generates catalogs, and
-`docs/` holds the status and design documents.
+Packages mirror upstream: `ai` (providers and wire), `agent` (loop), `coding`
+(session, tools, settings) with `coding/interactive` (UI), `tui` (renderer and
+markdown), `mcp`, and `coding/rpcclient`. `ai` and `agent` must not import
+`coding` or `tui`, and `tui` must not import `coding`; `coding` composes them.
+The root `main.go` only calls `cmd.Execute`; boot, flags and modes live in
+`cmd`. Helpers are in `internal/`, catalog generators in `scripts/`.
 
 ## Build, test, run
 
 ```bash
-go build ./... && go vet ./... && gofmt -l .   # the local gate
-go test -count=1 ./...
+just check                                  # gofmt -l, go vet, go test (local gate)
+just cross                                  # cross-build + vet the CI matrix
+go test -count=1 ./coding -run TestName     # one package / one test
+go test -short ./...                        # skips the slower real-binary PTY tests
 ```
 
-CI runs the same gate with the race detector, twice, and with `GOTRACEBACK=all`.
-Treat a test that fails only under `-race` as a bug, but leave the race gate to
-CI. `just` wraps the gate; install with `pier update`, never `go install`.
+`just build` writes `bin/pier`; `just install` wraps local `go install`.
+Released installs and updates use `pier update`, not `go install ...@latest`
+(the module is not published that way). CGO is off everywhere.
 
-CI also cross-builds and cross-`vet`s Windows, Linux/arm64, Android/arm64 and
-macOS on one runner, so OS-only `syscall` code cannot break `go install`. PTY
-tests reuse a prebuilt binary or build one, and `-short` skips them.
+CI runs the same gate with `-race -count=2 -timeout 300s` and `GOTRACEBACK=all`,
+then cross-builds and vets windows (amd64/arm64), linux/arm64, android/arm64 and
+darwin (amd64/arm64) on one runner. Treat a test that fails only under `-race` as
+a bug, but leave the race gate to CI. OS-specific code needs build tags and must
+survive `just cross`.
+
+Real-binary PTY tests use `$PIER_TEST_BIN`, then `bin/pier`, then build a temp
+binary; set `PIER_TEST_BIN` to avoid rebuilding. `-short` skips the slow ones.
 
 Keep the suite quick: size fixtures to the property under test, use allocation
 counters instead of benchmark loops in ordinary tests, fake sleeps instead of
@@ -85,15 +93,23 @@ module cached by branch version (`docs/architecture.md`).
 - UI state belongs to the owner loop; workers post events or use `UI.Post`.
   `internal/uiblock` enforces the non-blocking loop; audit ownership and callback
   re-entrancy when adding a worker, handoff or lock.
-- Tests pin `TMPDIR`; a file-reporting stub writes a temp name then renames, so a
-  polling reader never sees an empty file.
+- Package `TestMain`s pin `HOME`, `PI_CODING_AGENT_DIR`, `VISUAL`/`EDITOR`, and
+  (in `coding/interactive`) the golden timezone; use `t.Setenv`/`t.TempDir` and
+  never write the real agent directory. Tests pin `TMPDIR`; a file-reporting stub
+  writes a temp name then renames, so a polling reader never sees an empty file.
+- `ai/models_catalog.json` is generated: regenerate with
+  `python3 scripts/gen_catalog.py ./pi > ai/models_catalog.json`, never hand-edit.
+  `image_catalog.json` needs upstream's `generate-image-models`; see
+  `docs/PORTING.md`.
+- `TODO.md` holds only reproduced, unresolved findings; remove each one when its
+  fix lands, not speculative work items.
 - Use `strings.Builder` whenever iteration count scales with input.
 - Go/JS parity traps: `filepath.Rel` returns `"."` for equal paths (Node `""`),
   `path.Clean` drops trailing slashes, and renders compare nil vs empty slices.
   Go 1.27 needs an explicit result type on some function-literal arguments; RE2
   has no lookaround and no `\s` inside `[...]`.
-- Goldens in `*/testdata/` are `label => JSON` lines generated from upstream with
-  Node; Go replays the same scripted input.
+- Upstream goldens in `*/testdata/` (often `label => JSON` lines) are generated
+  with Node; use the regeneration command in the test header and never hand-edit.
 
 ## Out of scope (documented)
 
