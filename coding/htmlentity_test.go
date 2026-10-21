@@ -1,6 +1,9 @@
 package coding
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // Reference: pi v1.3.0 utils/html.ts decodes a numeric entity with
 // Number.parseInt and String.fromCodePoint. parseInt skips leading whitespace,
@@ -76,6 +79,30 @@ func TestDecodeHtmlEntityAtBoundary(t *testing.T) {
 		if decoded.Text != testCase.want || ok != testCase.ok || (ok && decoded.Length != testCase.length) {
 			t.Errorf("DecodeHtmlEntityAt(%q) = %+v, %v; want %q, %d, %v",
 				testCase.html, decoded, ok, testCase.want, testCase.length, testCase.ok)
+		}
+	}
+}
+
+// Reference: pi v1.3.0 utils/html.ts measures the entity window in UTF-16
+// code units, not UTF-8 bytes. Numeric entities may contain ignored suffixes
+// because Number.parseInt stops at the first non-digit.
+func TestDecodeHtmlEntityWindowCountsUTF16Units(t *testing.T) {
+	for _, tc := range []struct {
+		suffix string
+		ok     bool
+	}{
+		{strings.Repeat("界", 12), true},
+		{strings.Repeat("😀", 6), true},
+		{strings.Repeat("界", 13), false},
+		{strings.Repeat("😀", 7), false},
+	} {
+		html := "&#65" + tc.suffix + ";"
+		decoded, ok := DecodeHtmlEntityAt(html, 0)
+		if ok != tc.ok {
+			t.Errorf("DecodeHtmlEntityAt(%q) accepted = %v, want %v", html, ok, tc.ok)
+		}
+		if ok && (decoded.Text != "A" || decoded.Length != len(html)) {
+			t.Errorf("DecodeHtmlEntityAt(%q) = %+v, want A and %d consumed bytes", html, decoded, len(html))
 		}
 	}
 }

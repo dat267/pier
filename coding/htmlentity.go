@@ -10,7 +10,8 @@ import (
 
 // HtmlDecodedEntity is one decoded entity.
 type HtmlDecodedEntity struct {
-	Text   string
+	Text string
+	// Length counts consumed UTF-8 bytes for slicing the Go input string.
 	Length int
 }
 
@@ -107,7 +108,7 @@ func DecodeHtmlEntityAt(html string, index int) (HtmlDecodedEntity, bool) {
 	semicolon := strings.Index(rest, ";")
 	// The reference allows the semicolon at most sixteen code units after the
 	// "&" (semicolonIndex - index > 16 is rejected).
-	if semicolon == -1 || semicolon >= 16 {
+	if semicolon == -1 || ai.JSLength(rest[:semicolon]) >= 16 {
 		return HtmlDecodedEntity{}, false
 	}
 	text, ok := DecodeHtmlEntity(rest[:semicolon])
