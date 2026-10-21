@@ -45,12 +45,11 @@ type idleStreamBody struct {
 	gotHeaders atomic.Bool
 	blocked    atomic.Bool
 	fired      atomic.Bool
+	closed     atomic.Bool
 }
 
 func (b *idleStreamBody) Read(p []byte) (int, error) {
-	if b.timer != nil {
-		b.timer.Reset(b.timeout)
-	}
+	b.resetTimer()
 	b.blocked.Store(true)
 	n, err := b.rc.Read(p)
 	b.blocked.Store(false)
@@ -60,17 +59,30 @@ func (b *idleStreamBody) Read(p []byte) (int, error) {
 	if n > 0 {
 		// The window runs from the last delivered bytes, so a consumer that is
 		// slow to ask for more is not mistaken for a silent connection.
-		b.timer.Reset(b.timeout)
+		b.resetTimer()
 	}
 	return n, err
 }
 
 func (b *idleStreamBody) Close() error {
+	b.closed.Store(true)
 	if b.timer != nil {
 		b.timer.Stop()
 	}
 	b.cancel()
 	return b.rc.Close()
+}
+
+func (b *idleStreamBody) resetTimer() {
+	if b.timer == nil || b.closed.Load() {
+		return
+	}
+	b.timer.Reset(b.timeout)
+	// Close can stop the timer between the first check and Reset. Stop it
+	// again if that happened, including resets from an in-flight callback.
+	if b.closed.Load() {
+		b.timer.Stop()
+	}
 }
 
 func (b *idleStreamBody) idleError() error {
@@ -85,13 +97,16 @@ func newIdleBody(parent context.Context, cancel context.CancelFunc, timeout time
 }
 
 func (b *idleStreamBody) fire() {
+	if b.closed.Load() {
+		return
+	}
 	// A cancelled parent is a user abort, not an idle stream.
 	if ctxErr(b.parent) != nil {
 		return
 	}
 	if b.gotHeaders.Load() && !b.blocked.Load() {
 		// Nobody is waiting on the socket: keep waiting for the consumer.
-		b.timer.Reset(b.timeout)
+		b.resetTimer()
 		return
 	}
 	b.fired.Store(true)
