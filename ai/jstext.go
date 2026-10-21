@@ -67,6 +67,9 @@ func JSNumberToFixed(value float64, digits int) string {
 	if digits < 0 || digits > 100 {
 		digits = 0
 	}
+	if math.Abs(value) >= 1e21 {
+		return JSNumberToString(value)
+	}
 	sign := ""
 	if value < 0 {
 		sign = "-"

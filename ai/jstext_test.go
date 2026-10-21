@@ -78,6 +78,24 @@ func TestJSNumberToFixedMatchesJS(t *testing.T) {
 	}
 }
 
+// Reference: pi v1.3.0 core/tools/truncate.ts and utils/image-resize.ts use
+// Number.prototype.toFixed. At magnitude 1e21 it delegates to Number.toString,
+// regardless of the requested fraction digits.
+func TestJSNumberToFixedUsesExponentForLargeMagnitudes(t *testing.T) {
+	for _, tc := range []struct {
+		value float64
+		want  string
+	}{
+		{1e21, "1e+21"},
+		{-1e21, "-1e+21"},
+		{1.25e22, "1.25e+22"},
+	} {
+		if got := JSNumberToFixed(tc.value, 2); got != tc.want {
+			t.Errorf("JSNumberToFixed(%v, 2) = %q, want %q", tc.value, got, tc.want)
+		}
+	}
+}
+
 // JSSlice is documented as String.prototype.slice, which resolves negative
 // indices from the end.
 func TestJSSliceMatchesJSNegativeIndices(t *testing.T) {
