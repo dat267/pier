@@ -626,7 +626,8 @@ func discardBody(response *http.Response) {
 }
 
 // consumeSse parses one SSE stream, tracking resumption state.
-func (t *StreamableHttpTransport) consumeSse(body io.Reader, cursor *streamCursor, onMessage func(Message)) error {
+func (t *StreamableHttpTransport) consumeSse(body io.ReadCloser, cursor *streamCursor, onMessage func(Message)) error {
+	defer body.Close()
 	maxEventBytes := t.options.MaxMessageBytes
 	if maxEventBytes == 0 {
 		maxEventBytes = DefaultMaxMessageBytes
@@ -672,7 +673,7 @@ func (t *StreamableHttpTransport) consumeResponseStream(body io.ReadCloser, requ
 			answered = true
 		}
 	}
-	var stream io.Reader = body
+	var stream io.ReadCloser = body
 	var failure error
 	for attempt := 0; ; {
 		if stream != nil {
