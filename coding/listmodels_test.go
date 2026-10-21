@@ -86,6 +86,39 @@ func TestListModelsTextSortsByProviderThenID(t *testing.T) {
 	}
 }
 
+// Reference: pi v1.3.0 cli/list-models.ts copies getAvailable() into a fresh
+// array before sorting. Rendering must not reorder the caller's model list.
+func TestListModelsTextPreservesInputOrder(t *testing.T) {
+	first := listModel("openai", "z", 1000, 1000, false, "text")
+	second := listModel("anthropic", "a", 1000, 1000, false, "text")
+	models := []*ai.Model{first, second}
+	ListModelsText(models, "")
+	if models[0] != first || models[1] != second {
+		t.Fatal("rendering the table reordered the input models")
+	}
+}
+
+// Reference: pi v1.3.0 cli/list-models.ts sorts providers and IDs with
+// localeCompare, not byte order. D257 uses root collation for the Go equivalent.
+func TestListModelsTextUsesLocaleOrdering(t *testing.T) {
+	models := []*ai.Model{
+		listModel("vendor-a", "b", 1000, 1000, false, "text"),
+		listModel("vendor_a", "A", 1000, 1000, false, "text"),
+		listModel("vendor_a", "a", 1000, 1000, false, "text"),
+	}
+	lines := strings.Split(strings.TrimSpace(ListModelsText(models, "")), "\n")
+	want := []string{"vendor_a/a", "vendor_a/A", "vendor-a/b"}
+	if len(lines) != len(want)+1 {
+		t.Fatalf("table has %d lines, want %d", len(lines), len(want)+1)
+	}
+	for i, model := range want {
+		fields := strings.Fields(lines[i+1])
+		if got := fields[0] + "/" + fields[1]; got != model {
+			t.Errorf("row %d = %q, want %q", i, got, model)
+		}
+	}
+}
+
 func TestListModelsTextNoModels(t *testing.T) {
 	got := ListModelsText(nil, "")
 	if !strings.HasPrefix(got, "No models available.") {

@@ -10,6 +10,8 @@ import (
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/tui"
+	"golang.org/x/text/collate"
+	"golang.org/x/text/language"
 )
 
 // Port of cli/list-models.ts: the --list-models table.
@@ -62,7 +64,7 @@ func ListModelsText(models []*ai.Model, searchPattern string) string {
 		return FormatNoModelsAvailableMessage() + "\n"
 	}
 
-	filtered := models
+	filtered := append([]*ai.Model(nil), models...)
 	if searchPattern != "" {
 		filtered = tui.FuzzyFilter(models, searchPattern, func(model *ai.Model) string {
 			return model.Provider + " " + model.ID
@@ -74,11 +76,13 @@ func ListModelsText(models []*ai.Model, searchPattern string) string {
 
 	// Provider, then model id. Filtering sorts by match score, so the order has
 	// to be re-established afterwards.
+	// D257: root collation follows localeCompare rather than byte ordering.
+	collator := collate.New(language.Und)
 	sort.SliceStable(filtered, func(i, j int) bool {
-		if filtered[i].Provider != filtered[j].Provider {
-			return filtered[i].Provider < filtered[j].Provider
+		if compared := collator.CompareString(filtered[i].Provider, filtered[j].Provider); compared != 0 {
+			return compared < 0
 		}
-		return filtered[i].ID < filtered[j].ID
+		return collator.CompareString(filtered[i].ID, filtered[j].ID) < 0
 	})
 
 	rows := make([]modelListRow, 0, len(filtered))
