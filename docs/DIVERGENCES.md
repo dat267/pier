@@ -1896,6 +1896,12 @@ delivered bytes, so a loaded machine, a GC pause or a slow renderer cannot
 abort a connection whose bytes already arrived. A nil or non-positive timeout
 sends the request unbounded.
 
+Close marks the body closed before stopping the timer; resets check that flag
+again afterwards. A pending read returning buffered bytes after close, or a late
+timer callback, cannot restart a timer that retains the closed response.
+`TestIdleGuardDoesNotRearmAfterCloseDuringRead` covers that shutdown race without
+sleeping.
+
 Codex keeps upstream's `Codex SSE response headers timed out` wording for the
 headers case, and Mistral keeps upstream's headers-only header timer and
 `Mistral response headers timed out` wording (`ai/mistral_conversations.go`;
@@ -1982,10 +1988,11 @@ Tests: `TestCanceledToolCallReportsOperationAborted`,
 
 ## D257
 
-**Fuzzy model aliases use locale-neutral collation.**
+**Model ordering uses locale-neutral collation.**
 
-Reference: pi v1.3.0 `core/model-resolver.ts`, `bestFuzzyMatch`, sorts IDs by
-Node's default `localeCompare`. Pier uses `golang.org/x/text/collate` root
+Reference: pi v1.3.0 `core/model-resolver.ts`, `bestFuzzyMatch`, and
+`cli/list-models.ts` sort providers and IDs by Node's default `localeCompare`.
+Pier uses `golang.org/x/text/collate` root
 collation, consistent with its file listing, rather than byte order or a
 host-selected locale. This restores the reported punctuation and case ordering
 (`model-2` over `model_1`, `model-Z` over `model-z`) while keeping model selection
@@ -1993,7 +2000,7 @@ deterministic. On a Swedish Node host, `model-ä` ranks after `model-z`; Pier
 selects `model-z` regardless of the host locale. Locale and Unicode collation
 version differences are not an assertion of byte-identical ICU behavior.
 
-Test: `TestFuzzyModelAliasLocaleOrdering`.
+Tests: `TestFuzzyModelAliasLocaleOrdering`, `TestListModelsTextUsesLocaleOrdering`.
 
 ## D258
 
@@ -2035,14 +2042,23 @@ width and a real sequence is one two-cell emoji.
 
 Reference: `utils/paths.ts`, `normalizePath`, calls Node's `fileURLToPath`
 unguarded, so a non-local host (`file://host/x`), an encoded slash
-(`file:///tmp/a%2Fb`) or malformed percent encoding throws and the caller reports
+(`file:///tmp/a%2Fb`), malformed percent encoding or invalid encoded UTF-8 throws
+and the caller reports
 a URL error. `NormalizePath` returns a string and has no error result, so it
 returns the input unchanged when `filePathFromURL` rejects the URL; the caller
 then fails on a path ("file not found: file://host/x") instead of on the URL.
-Valid URLs, including the WHATWG pathname normalization (dot segments, encoded
-dots, backslash separators, an empty path as the root), match the reference.
+The follow-up URL-parser audit matched 1,174 generated inputs against Node:
+dot segments resolve before encoded-slash validation, invalid encoded UTF-8 is
+rejected, raw tabs/newlines and trailing C0 whitespace follow WHATWG rules,
+escaped localhost is recognized, and drive-letter roots survive parent segments
+(including the legacy `C|` spelling).
 
-Test: `TestNormalizePathKeepsAnInvalidFileURL`.
+Tests: `TestNormalizePathKeepsAnInvalidFileURL`,
+`TestNormalizePathFileURLRemovesEncodedSlashBeforeValidation`,
+`TestNormalizePathFileURLRejectsInvalidUTF8`,
+`TestNormalizePathFileURLIgnoresParserWhitespace`,
+`TestNormalizePathFileURLAcceptsEscapedLocalhost`,
+`TestNormalizePathFileURLRecognizesDriveRoots`.
 
 ## D262
 
@@ -2050,12 +2066,24 @@ Test: `TestNormalizePathKeepsAnInvalidFileURL`.
 fast-path shortcut.**
 
 Reference: `core/model-resolver.ts` matches scoped-model patterns with
-`minimatch(value, pattern, { nocase: true })`. The port now matches minimatch on
-80,000 generated pattern/value pairs for brace expansion (comma groups,
+`minimatch(value, pattern, { nocase: true })`. A follow-up comparison of 61,412
+generated pattern/value pairs left 87 mismatches, all in the escaped-suffix
+shortcut below, for brace expansion (comma groups,
 `{1..3}`-style sequences, literal `{a}`, inner-first nesting, escapes), path
 canonicalization (`..` removes the preceding segment; `.` stays literal), the
 `.`/`..` and dotfile segment rules, empty paths, absolute paths, repeated and
 trailing separators, and globstars.
+
+Brace expansion caps Cartesian-product allocation and nested alternatives before
+growing buffers, retains suffixes after truncating alternatives, ignores discarded
+empty alternatives when counting the budget, and honors the reference's nesting
+and rewrite limits. Negative padding counts the sign, large sequence values use
+JavaScript numbers, escaped class hyphens stay literal, empty invalid ranges
+match nothing even when negated, backslash pairs follow
+minimatch's conditional brace-expansion pass, and literal-brace and `${...}`
+handling follows brace-expansion. Matcher memo tables grow with visited
+states instead of reserving the full pattern/value product on a first-character
+mismatch. Regression tests measure allocations with modest fixtures.
 
 One difference remains, in minimatch's fast paths (`starDotExtRE` and
 `qmarksRE`): for a pattern whose wildcard is followed by an escaped suffix such

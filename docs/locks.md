@@ -23,6 +23,19 @@ snapshots never expose the map that tool-start/tool-end events mutate. Successfu
 runs release their parent-context cancellation registrations only after their
 listeners settle, without changing the reported abort status.
 
+MCP listener registries retain stable entry pointers, so slice growth and
+snapshot compaction cannot invalidate unsubscribe handles. Callbacks remain
+outside their existing registry mutexes. `mcp.Client.mu` admits incoming request
+cancellation before its handler starts on a worker; the stdio reader remains
+free to dispatch cancellation notifications. Close snapshots and clears incoming
+cancellation handles under the mutex, then invokes them outside it. User handlers
+run outside locks and their panics are converted to JSON-RPC error responses.
+No new mutex or interactive UI worker is introduced.
+
+`ai.idleStreamBody` marks close atomically before stopping its timer. Every timer
+reset checks close again afterwards, so a final buffered read or an in-flight
+timer callback cannot rearm a response that has already closed.
+
 Settings storage uses a `settings.json.lock` directory, matching proper-lockfile.
 It reclaims artifacts older than 10 seconds (including legacy regular files),
 refreshes live leases every 5 seconds, and joins its refresher before release.
@@ -123,4 +136,3 @@ the owner-loop invariant statically. The watchdog flows' functional coverage
 moved to `coding/interactive/ptyflow_test.go`, which drives the app
 in process rather than spawning a PTY. Other real-binary PTY tests and the
 deliberately deadlocking parser helper remain.
-

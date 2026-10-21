@@ -89,6 +89,38 @@ explicit false, and whitespace-only edit targets use JavaScript split counts
 files, maintaining live leases with the proper-lockfile default timing
 (`core/settings-manager.ts`). Completed findings are removed from `TODO.md`.
 
+A further v1.3.0 audit bounds glob expansion and matcher allocations, preserves
+literal suffixes after expansion limits, and corrects brace/class parsing and
+numeric sequences (`core/model-resolver.ts`'s minimatch dependency; D262).
+File-URL parsing now validates the normalized pathname, rejects invalid encoded
+UTF-8, handles WHATWG whitespace and escaped localhost, and retains drive roots
+through parent segments (`utils/paths.ts`; D261). Each change has a regression
+test observed failing first; differential checks cover 61,412 glob pairs and
+1,174 file URLs. Glob differences in that pool are confined to D262.
+Byte-only tail truncation no longer reserves an unlimited line-budget slice,
+large size formatting avoids integer multiplication overflow, and the shared
+`toFixed` helper switches to exponent notation at the JavaScript 1e21 boundary
+(`core/tools/truncate.ts`, `utils/image-resize.ts`). Eight-minute fuzz runs of
+JSON repair and incremental Markdown passed after this audit.
+The model-list renderer also preserves the caller's catalog order and sorts its
+own copy using locale-neutral collation (`cli/list-models.ts`; D257).
+HTML entity lookahead counts UTF-16 units rather than UTF-8 bytes
+(`utils/html.ts`), retaining byte offsets for Go callers. Ten-minute fuzz runs
+of message codecs (2,525,130 executions) and key parsing (3,710,540 executions)
+also passed.
+Twenty-minute fuzz runs of session entries (4,360,518 executions) and settings
+codecs (4,757,807 executions) passed as well.
+
+The broader lifecycle audit corrected MCP unsubscribe handles invalidated by
+listener-slice growth (`mcp/src/{client,transports/transport}.ts`). Incoming MCP
+request handlers now run off the stdio read pump after cancellation admission,
+so `notifications/cancelled` can reach a waiting handler; handler panics become
+JSON-RPC errors as upstream's try/catch requires (`mcp/src/client.ts`). Completed
+HTTP SSE readers close their Go response bodies (`transports/streamable-http.ts`),
+and provider-body reads cannot resurrect idle timers after close (D254).
+The typed RPC client can restart after `Stop`, matching `modes/rpc/rpc-client.ts`.
+Each finding has a regression test observed failing before its fix.
+
 **Upstream status.** v1.3.0 (`71023aec`) is the latest released tag in the
 reference checkout and the port's pin. The v1.3.0 delta from v1.2.0 is ported
 (see the v1.3.0 audit below); the v1.2.0 delta from v1.1.0 was audited.
