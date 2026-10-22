@@ -1,10 +1,12 @@
 package interactive
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"testing"
 
+	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
 )
 
@@ -112,6 +114,36 @@ func TestHandleReloadCommand(t *testing.T) {
 	}
 	if wiring.EditorContainer.Children[0] != tui.Component(wiring.Editor) {
 		t.Fatal("editor not restored after failure")
+	}
+}
+
+// Reference: pi v1.3.0 core/agent-session.ts reload reloads settings before
+// extensions/mcp/index.ts session_start reads the MCP config and project trust.
+func TestReloadLoadsSettingsBeforeMCP(t *testing.T) {
+	for _, detached := range []bool{false, true} {
+		name := "synchronous"
+		if detached {
+			name = "detached"
+		}
+		t.Run(name, func(t *testing.T) {
+			wiring, _ := newReloadTestWiring(t)
+			var calls []string
+			wiring.ReloadNow = func() (string, bool, error) {
+				calls = append(calls, "settings")
+				return "", false, nil
+			}
+			wiring.ReloadMCP = func(context.Context) (*coding.McpManager, []string) {
+				calls = append(calls, "mcp")
+				return nil, nil
+			}
+			if detached {
+				wiring.RunDetached = func(fn func()) bool { fn(); return true }
+			}
+			wiring.HandleReloadCommand()
+			if got := strings.Join(calls, ","); got != "settings,mcp" {
+				t.Fatalf("reload order = %q, want settings,mcp", got)
+			}
+		})
 	}
 }
 

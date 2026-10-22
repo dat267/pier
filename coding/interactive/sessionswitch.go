@@ -158,6 +158,12 @@ func (a *App) applySessionReplacement(sessionManager *coding.SessionManager) (*S
 	a.session.AgentSession = created.Session
 	a.wireGoalStartWork()
 	a.sessionMgr = sessionManager
+	// Upstream's createRuntime builds a fresh extension runtime for every bind,
+	// so the incoming session_start re-reads mcp.json for the new cwd and
+	// reconnects. Reattaching the outgoing manager instead would keep tools
+	// from the old config and miss servers added while the app was running.
+	// The config errors are shown after the transcript is rebuilt below.
+	mcpErrors := a.reloadMCP(context.Background(), sessionManager.GetCwd())
 	a.footerData.SetCwd(sessionManager.GetCwd())
 	a.transcript.SessionInfo = sessionManager
 	a.events.SessionInfo = sessionManager
@@ -183,6 +189,9 @@ func (a *App) applySessionReplacement(sessionManager *coding.SessionManager) (*S
 	// showLoadedResources. Without it, /new and a resume leave Context/Skills
 	// blank until the next /reload.
 	a.showLoadedResources(false)
+	for _, message := range mcpErrors {
+		a.showWarning(message)
+	}
 	a.ui.RequestRender(false)
 	return &SessionSwitchResult{}, nil
 }

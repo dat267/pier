@@ -358,13 +358,15 @@ func (w *CommandWiring) HandleReloadCommand() {
 		}
 		return
 	}
+	// Same order as the detached path and upstream: settings reload first, so
+	// the MCP config read sees the reloaded project trust.
+	onlyModelsJSONError, savedTrust, err := w.ReloadNow()
 	var connectionErrors []string
 	if w.ReloadMCP != nil {
 		if _, errors := w.ReloadMCP(context.Background()); errors != nil {
 			connectionErrors = errors
 		}
 	}
-	onlyModelsJSONError, savedTrust, err := w.ReloadNow()
 	finish(onlyModelsJSONError, savedTrust, err, connectionErrors)
 }
 

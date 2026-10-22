@@ -168,6 +168,9 @@ type App struct {
 	// mcpAgentDir is the agent directory the manager's config re-reads on
 	// /reload (options.AgentDir, resolved in NewApp).
 	mcpAgentDir string
+	// mcpOptionsOverride replaces the manager options a reload builds; the
+	// tests inject fake transports through it (production: mcpOptions).
+	mcpOptionsOverride func(coding.LoadedMcpConfig) coding.McpManagerOptions
 	// TranscriptScrollView is the fullscreen transcript scroll view (upstream's
 	// transcriptScrollView).
 	transcriptScrollView *tui.ScrollView
@@ -1316,7 +1319,18 @@ func (a *App) wireMcpManager(manager *coding.McpManager) {
 // and reconnects). Called off the loop; the wiring posts the rebuilt tools onto
 // the loop through the callbacks registered here.
 func (a *App) reloadMCP(ctx context.Context, cwd string) []string {
-	config := coding.LoadMcpConfig(coding.McpConfigLoadOptions{AgentDir: a.mcpAgentDir, Cwd: cwd, ProjectTrusted: true})
+	trusted := false
+	if a.settings != nil {
+		trusted = a.settings.IsProjectTrusted()
+	}
+	// Upstream's defaultLoadConfig reads ctx.isProjectTrusted(); the reload's
+	// implicit trust save runs after session_start, so an untrusted project's
+	// .pi/mcp.json stays out of the reload.
+	config := coding.LoadMcpConfig(coding.McpConfigLoadOptions{AgentDir: a.mcpAgentDir, Cwd: cwd, ProjectTrusted: trusted})
+	buildOptions := a.mcpOptions
+	if a.mcpOptionsOverride != nil {
+		buildOptions = a.mcpOptionsOverride
+	}
 	var next *coding.McpManager
 	if a.mcpManager == nil {
 		enabled := 0
@@ -1328,10 +1342,10 @@ func (a *App) reloadMCP(ctx context.Context, cwd string) []string {
 		if enabled == 0 {
 			return config.Errors
 		}
-		next = coding.NewMcpManagerAsync(ctx, a.mcpOptions(config))
+		next = coding.NewMcpManagerAsync(ctx, buildOptions(config))
 	} else {
 		next = coding.ReloadMCPExchange(ctx, a.mcpManager, func(mcpCtx context.Context, reloaded coding.LoadedMcpConfig) *coding.McpManager {
-			return coding.NewMcpManagerAsync(mcpCtx, a.mcpOptions(reloaded))
+			return coding.NewMcpManagerAsync(mcpCtx, buildOptions(reloaded))
 		}, config, nil)
 	}
 	a.mcpManager = next
