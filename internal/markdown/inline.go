@@ -132,8 +132,12 @@ func ParseInline(src string) []Inline {
 				i = consumed
 				continue
 			}
-			text.WriteByte(c)
-			i++
+			// A delimiter run is consumed whole: a later position inside it is
+			// not a new opener, so `a__b__c` stays literal.
+			for i < len(src) && src[i] == c {
+				text.WriteByte(c)
+				i++
+			}
 		case '~':
 			if i+1 < len(src) && src[i+1] == '~' {
 				if close := strings.Index(src[i+2:], "~~"); close >= 0 {
@@ -360,62 +364,7 @@ func findRun(src string, from int, ch byte, want int) int {
 
 // parseDelimited parses *emphasis* / **strong** / ***both*** / _…_ starting at i.
 func parseDelimited(src string, i int, ch byte) (int, Inline, bool) {
-	j := i
-	for j < len(src) && src[j] == ch {
-		j++
-	}
-	run := j - i
-	if run > 3 {
-		run = 3
-	}
-	// An underscore may not open intraword emphasis.
-	if ch == '_' && i > 0 && isAlnum(src[i-1]) {
-		return 0, Inline{}, false
-	}
-	if j >= len(src) || src[j] == ' ' || src[j] == '\t' || src[j] == '\n' {
-		return 0, Inline{}, false
-	}
-	closeIdx, closeLen := findClosingRun(src, j, ch, run)
-	if closeIdx < 0 {
-		return 0, Inline{}, false
-	}
-	inner := src[j:closeIdx]
-	if strings.TrimSpace(inner) == "" {
-		return 0, Inline{}, false
-	}
-	consumed := closeIdx + closeLen
-	children := ParseInline(inner)
-	switch run {
-	case 2:
-		return consumed, Inline{Kind: InlineStrong, Text: inner, Children: children}, true
-	case 3:
-		// ***both*** nests strong inside em; the em's text keeps the strong
-		// markers (Marked's inner source).
-		strong := Inline{Kind: InlineStrong, Text: inner, Children: children}
-		return consumed, Inline{Kind: InlineEmphasis, Text: "**" + inner + "**", Children: []Inline{strong}}, true
-	default:
-		return consumed, Inline{Kind: InlineEmphasis, Text: inner, Children: children}, true
-	}
-}
-
-// findClosingRun finds the next run of at least want copies of ch that is
-// right-flanking (preceded by a non-space byte).
-func findClosingRun(src string, from int, ch byte, want int) (int, int) {
-	for i := from; i < len(src); {
-		if src[i] != ch {
-			i++
-			continue
-		}
-		j := i
-		for j < len(src) && src[j] == ch {
-			j++
-		}
-		if j-i >= want && i > 0 && src[i-1] != ' ' && src[i-1] != '\t' && src[i-1] != '\n' {
-			return i, j - i
-		}
-		i = j
-	}
-	return -1, 0
+	return parseEmStrong(src, i, ch)
 }
 
 // parseLink parses `[text](dest "title")` (or the image form when image is

@@ -367,3 +367,43 @@ func itoa(n int) string {
 	}
 	return string(buf[i:])
 }
+
+// The emphasis cases added for v1.4.0 b2d0da6fe were generated with marked
+// 18.0.11 plus marked-cjk-friendly 0.1.2 (upstream's markdown.ts pipeline):
+//
+//	node -e '...' > cases   # lex tui/testdata/md_corpus.json, project tokens
+//
+// The projection mirrors projectBlock/projectInline above; the LaTeX extension
+// and trimPartialClosingFences are pier/upstream wrapper behaviors that the
+// generator does not apply, so those existing lines were kept as generated
+// earlier.
+func TestMarkedGoldenParityCoversCJKEmphasis(t *testing.T) {
+	corpus := loadGoldenCorpus(t)
+	golden := loadGolden(t)
+	for _, label := range []string{
+		"cjk-strong-punctuation",
+		"cjk-strong-then-digit",
+		"cjk-strong-quotes",
+		"cjk-em-punctuation",
+		"em-punctuation-then-letter",
+		"em-intraword-underscore",
+		"em-intraword-underscore-run",
+		"em-strong-underscore-run",
+		"em-strong-nested-in-strong",
+		"em-strong-in-em-different-run",
+		"em-mixed-run-lengths",
+		"em-triple-then-single",
+	} {
+		source, ok := corpus[label]
+		if !ok {
+			t.Fatalf("%s missing from the corpus", label)
+		}
+		if _, ok := golden[label]; !ok {
+			t.Fatalf("%s missing from the golden", label)
+		}
+		got := stableValue(projectBlocks(Lex(source)))
+		if got != golden[label] {
+			t.Fatalf("%s:\n got %s\nwant %s", label, got, golden[label])
+		}
+	}
+}

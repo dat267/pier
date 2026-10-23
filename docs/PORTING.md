@@ -341,6 +341,14 @@ fetch models.dev; the tag only pins the generator.
 defaults would otherwise resolve to the provider's first model; a test now
 asserts every default exists in the shipped catalog.
 
+Emphasis follows CommonMark's flanking rules the way Marked applies them, with
+the `marked-cjk-friendly` extension upstream adds (`b2d0da6fe`, #10154): a run
+opens when it is left-flanking and closes when it is right-flanking, CJK
+characters count as punctuation, and an underscore never pairs intraword. A
+delimiter run is consumed whole, so `a__b__c` and `a_b_c` stay literal while
+`_foo_bar_baz_` still emphasizes. The 95-case token corpus, generated from marked
+18.0.11 plus the extension, pins the behavior, including the CJK cases.
+
 Tool changes after the first request now say how a transport can express them
 (`TranscriptToolSupport`): `"none"` keeps the current tools at the top,
 `"additions"` adds a tool at a later system message, and `"changes"` declares
