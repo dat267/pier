@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/dat267/pier/agent"
@@ -58,6 +59,24 @@ func RelativizeFindResultPath(resultPath string, searchPath string) string {
 		return posixPath + "/"
 	}
 	return posixPath
+}
+
+// findFullPathVariable returns the fd pattern and whether --full-path applies
+// (port of find.ts's pattern handling). fd --glob matches basenames unless
+// --full-path is set; there it matches the absolute candidate path with native
+// separators, so on Windows each '/' becomes a [/\\] class.
+func findFullPathVariable(pattern, goos string) (effectivePattern string, fullPath bool) {
+	effectivePattern = pattern
+	if !strings.Contains(pattern, "/") {
+		return effectivePattern, false
+	}
+	if !strings.HasPrefix(pattern, "/") && !strings.HasPrefix(pattern, "**/") && pattern != "**" {
+		effectivePattern = "**/" + effectivePattern
+	}
+	if goos == "windows" {
+		effectivePattern = strings.ReplaceAll(effectivePattern, "/", "[/\\\\]")
+	}
+	return effectivePattern, true
 }
 
 // CreateFindTool builds the find tool.
@@ -122,12 +141,9 @@ func CreateFindTool(cwd string) agent.AgentTool {
 
 			// fd --glob matches basenames unless --full-path; a path-
 			// containing pattern needs a leading **/ to match anything.
-			effectivePattern := input.Pattern
-			if strings.Contains(input.Pattern, "/") {
+			effectivePattern, fullPath := findFullPathVariable(input.Pattern, runtime.GOOS)
+			if fullPath {
 				args = append(args, "--full-path")
-				if !strings.HasPrefix(input.Pattern, "/") && !strings.HasPrefix(input.Pattern, "**/") && input.Pattern != "**" {
-					effectivePattern = "**/" + effectivePattern
-				}
 			}
 			args = append(args, "--", effectivePattern, searchPath)
 
@@ -141,9 +157,15 @@ func CreateFindTool(cwd string) agent.AgentTool {
 			}
 			output := strings.TrimRight(DecodeUTF8WithReplacement([]byte(stdout.String())), "\n")
 			if runErr != nil {
+				// A spawn failure is not an exit code (upstream find.ts's
+				// child.on("error")).
+				exitErr, exited := runErr.(*exec.ExitError)
+				if !exited {
+					return agent.AgentToolResult{}, fmt.Errorf("Failed to run fd: %s", runErr.Error())
+				}
 				errorMsg := strings.TrimSpace(stderr.String())
 				if errorMsg == "" {
-					errorMsg = fmt.Sprintf("fd exited with code %d", cmd.ProcessState.ExitCode())
+					errorMsg = fmt.Sprintf("fd exited with code %d", exitErr.ExitCode())
 				}
 				if output == "" {
 					return agent.AgentToolResult{}, fmt.Errorf("%s", errorMsg)
