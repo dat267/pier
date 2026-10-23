@@ -67,10 +67,11 @@ func CreateReadTool(cwd string, options *ReadToolOptions) agent.AgentTool {
 		modelFor = options.Model
 	}
 	return agent.AgentTool{
-		Name:        "read",
-		Description: ReadToolDescription,
-		Parameters:  readSchemaJSON,
-		Label:       "read",
+		Name:                "read",
+		Description:         ReadToolDescription,
+		Parameters:          readSchemaJSON,
+		Label:               "read",
+		ConstrainedSampling: preferStrictJSONSchema,
 		Execute: func(toolCallID string, params json.RawMessage, ctx context.Context, onUpdate func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
 			if ctxErrOf(ctx) != nil {
 				return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
@@ -264,10 +265,11 @@ var writeSchemaJSON = mustMarshalJSON(map[string]any{
 // CreateWriteTool builds the write tool.
 func CreateWriteTool(cwd string) agent.AgentTool {
 	return agent.AgentTool{
-		Name:        "write",
-		Description: WriteToolDescription,
-		Parameters:  writeSchemaJSON,
-		Label:       "write",
+		Name:                "write",
+		Description:         WriteToolDescription,
+		Parameters:          writeSchemaJSON,
+		Label:               "write",
+		ConstrainedSampling: preferStrictJSONSchema,
 		Execute: func(toolCallID string, params json.RawMessage, ctx context.Context, onUpdate func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
 			var input struct {
 				Path    string `json:"path"`

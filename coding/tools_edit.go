@@ -179,10 +179,11 @@ func PrepareEditArguments(input json.RawMessage) json.RawMessage {
 // CreateEditTool builds the edit tool.
 func CreateEditTool(cwd string) agent.AgentTool {
 	return agent.AgentTool{
-		Name:        "edit",
-		Description: EditToolDescription,
-		Parameters:  editSchema,
-		Label:       "edit",
+		Name:                "edit",
+		Description:         EditToolDescription,
+		Parameters:          editSchema,
+		Label:               "edit",
+		ConstrainedSampling: preferStrictJSONSchema,
 		PrepareArguments: func(args json.RawMessage) json.RawMessage {
 			return PrepareEditArguments(args)
 		},

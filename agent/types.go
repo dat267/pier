@@ -95,11 +95,14 @@ type AgentTool struct {
 	Replay string
 	// ExecutionMode overrides the per-run default.
 	ExecutionMode ToolExecutionMode
+	// ConstrainedSampling mirrors upstream AgentTool.constrainedSampling
+	// (tool-definition-wrapper.ts); ToolDeclaration carries it to the model.
+	ConstrainedSampling ai.ConstrainedSamplingValue
 }
 
 // ToolDeclaration projects the tool onto its ai.Tool declaration.
 func (t AgentTool) ToolDeclaration() ai.Tool {
-	return ai.Tool{Name: t.Name, Description: t.Description, Parameters: t.Parameters}
+	return ai.Tool{Name: t.Name, Description: t.Description, Parameters: t.Parameters, ConstrainedSampling: t.ConstrainedSampling}
 }
 
 // AgentContext is the context snapshot passed into the low-level loop.

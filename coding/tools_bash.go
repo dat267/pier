@@ -535,6 +535,9 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 		Description: BashToolDescription(config.ShellName),
 		Parameters:  bashSchemaJSON,
 		Label:       config.Label,
+		// Upstream createShellToolDefinition declares constrainedSampling for
+		// every shell variant, including PowerShell.
+		ConstrainedSampling: preferStrictJSONSchema,
 		Execute: func(toolCallID string, params json.RawMessage, ctx context.Context, onUpdate func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
 			var input struct {
 				Command string   `json:"command"`

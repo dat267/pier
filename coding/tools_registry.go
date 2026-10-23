@@ -4,10 +4,18 @@ import (
 	"fmt"
 
 	"github.com/dat267/pier/agent"
+	"github.com/dat267/pier/ai"
 )
 
 // Port of core/tools/index.ts: the tool registry and the tool-set
 // constructors.
+
+// preferStrictJSONSchema is upstream's constrainedSampling declaration on the
+// read, write, edit and bash tools ({ type: "json_schema", strict: "prefer" }).
+var preferStrictJSONSchema = ai.ConstrainedSamplingValue{
+	Set:    true,
+	Config: &ai.ConstrainedSamplingConfig{Type: "json_schema", Strict: "prefer"},
+}
 
 // ToolName names one built-in tool.
 type ToolName = string
