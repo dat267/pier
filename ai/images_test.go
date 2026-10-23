@@ -293,3 +293,22 @@ func staticCredentialStore(providerID, key string) CredentialStore {
 	}, context.Background())
 	return store
 }
+
+// The v1.4.0 image catalog comes from the same generator output as the chat
+// catalog (upstream packages/ai/src/providers/data, IMAGE_MODELS entries), so
+// the models OpenRouter added after the v1.2.0 snapshot are present and every
+// entry still carries the provider and api pier resolves with.
+func TestImageCatalogCarriesTheV140Refresh(t *testing.T) {
+	model := GetBuiltinImageModel("openrouter", "black-forest-labs/flux-3-image")
+	if model == nil {
+		t.Fatal("flux-3-image missing from the image catalog")
+	}
+	if model.Provider != "openrouter" || model.API != KnownImagesApiOpenRouter || model.Name == "" {
+		t.Fatalf("model = %+v", model)
+	}
+	for _, candidate := range GetBuiltinImageModels("openrouter") {
+		if candidate.Provider != "openrouter" || candidate.API != KnownImagesApiOpenRouter {
+			t.Fatalf("entry %q = provider %q api %q", candidate.ID, candidate.Provider, candidate.API)
+		}
+	}
+}

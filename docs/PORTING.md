@@ -341,6 +341,15 @@ fetch models.dev; the tag only pins the generator.
 defaults would otherwise resolve to the provider's first model; a test now
 asserts every default exists in the shipped catalog.
 
+`ai/image_catalog.json` is refreshed too. The `generate-image-models` script the
+older pin used no longer exists; the same `--data-only` run writes the image
+entries into the provider data files, and `scripts/gen_image_catalog.py` now
+flattens the `type: "image"` ones the way upstream's
+`flattenImageModelCatalog` does. 63 OpenRouter image models (55 before), adding
+`flux-3-image`, `gemini-nano-banana-2.1`, `qwen-image-2.1-*`, `seedream-5-0-flash`
+and others, dropping `inclusionai/ming-image-0.1-design`, and carrying the
+`inputLimits` and `type` keys verbatim like the chat catalog.
+
 Out of scope in the v1.3.0 delta (in addition to the chord, codemode, Nix and
 extension items above): `sessionShareDestination` and the `/share` destination,
 because the port already excludes `/share` and its gist/Radius upload transport
@@ -373,9 +382,10 @@ the Azure provider rename, `azure-openai-responses` to `azure` (upstream `9714`)
 breaking for `auth.json`, `settings.json` and `models.json` entries, and Azure's second
 API: Foundry Chat Completions deployments now stream through the endpoint and deployment
 resolution the provider shares with the Responses API (`ai/providers/azure.go`).
-`ai/image_catalog.json` is *not* regenerated: its upstream input
-(`image-models.generated.ts`) is produced by a script that is not present at the tag, so a
-re-run needs that tool first. The catalog's `radius` snapshot also supplies the Radius
+`ai/image_catalog.json` was not regenerated for v1.2.0: its upstream input
+(`image-models.generated.ts`) is produced by a script that was not present at that tag, so a
+re-run needed that tool first. The v1.4.0 generator carries image entries in the same data
+files as the chat catalog, so that refresh covers both (below). The catalog's `radius` snapshot also supplies the Radius
 provider's default-gateway cold-start baseline, which `43d376399` keeps as the fallback
 under a fetched or cached catalogue rather than merging into it (`ai/radiusconfig.go`).
 

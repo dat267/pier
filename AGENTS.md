@@ -97,10 +97,11 @@ module cached by branch version (`docs/architecture.md`).
   (in `coding/interactive`) the golden timezone; use `t.Setenv`/`t.TempDir` and
   never write the real agent directory. Tests pin `TMPDIR`; a file-reporting stub
   writes a temp name then renames, so a polling reader never sees an empty file.
-- `ai/models_catalog.json` is generated: regenerate with
-  `python3 scripts/gen_catalog.py ./pi > ai/models_catalog.json`, never hand-edit.
-  `image_catalog.json` needs upstream's `generate-image-models`; see
-  `docs/PORTING.md`.
+- `ai/models_catalog.json` and `ai/image_catalog.json` are generated from the
+  same upstream data: regenerate with `python3 scripts/gen_catalog.py ./pi >
+  ai/models_catalog.json` and `python3 scripts/gen_image_catalog.py ./pi >
+  ai/image_catalog.json` after running upstream's `generate-models.ts --strict
+  --data-only`; never hand-edit.
 - `TODO.md` holds only reproduced, unresolved findings; remove each one when its
   fix lands, not speculative work items.
 - Use `strings.Builder` whenever iteration count scales with input.
