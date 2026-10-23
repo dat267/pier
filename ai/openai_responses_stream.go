@@ -1055,9 +1055,13 @@ func streamOpenAIResponses(model *Model, context TranscriptContext, options *Ope
 			}
 			message := FormatProviderError(NormalizeProviderError(err), config.errorPrefix)
 			// Sign in with ChatGPT shares the subscription's usage limit with
-			// other apps (pi api/openai-responses.ts CHATGPT_USAGE_URL).
+			// other apps (pi api/openai-responses.ts CHATGPT_USAGE_URL). On
+			// ChatGPT Business plans the workspace admin also sets a per-user
+			// limit, which needs a different hint (upstream v1.4.0 cedefc532).
 			if strings.Contains(message, "subscription_sharing_usage_limit_exceeded") {
 				message += "\nCheck your ChatGPT usage: " + OpenAIChatGPTUsageURL
+			} else if strings.Contains(message, "subscription_sharing_workplace_individual_usage_limit_exceeded") {
+				message += "\n" + OpenAIChatGPTWorkspaceLimitHint
 			}
 			output.ErrorMessage = &message
 			stream.Push(AssistantMessageEvent{Type: EventError, Reason: output.StopReason, Error: output})

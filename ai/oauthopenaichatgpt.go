@@ -40,6 +40,11 @@ const (
 // (upstream CHATGPT_USAGE_URL).
 const OpenAIChatGPTUsageURL = "https://chatgpt.com/settings/usage"
 
+// OpenAIChatGPTWorkspaceLimitHint answers a ChatGPT Business workspace limit:
+// the workspace admin sets that limit, so the usage page cannot help
+// (upstream CHATGPT_WORKSPACE_LIMIT_HINT, v1.4.0 cedefc532).
+const OpenAIChatGPTWorkspaceLimitHint = "You've reached your ChatGPT workspace's usage limit. Ask your workspace admin to increase it at admin.openai.com → Workspace → Usage limits."
+
 // OpenAIChatGPTRedirectURI is the loopback redirect the dynamic client is
 // registered against.
 func OpenAIChatGPTRedirectURI() string {

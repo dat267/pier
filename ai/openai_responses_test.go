@@ -685,3 +685,57 @@ func TestResponsesToolResultWhitespaceOnlyUsesPlaceholder(t *testing.T) {
 		t.Fatalf("output = %v; want the text verbatim", got)
 	}
 }
+
+// ChatGPT subscription limits split in two. Upstream v1.4.0 cedefc532: the
+// shared subscription limit keeps pointing at the usage page, while a ChatGPT
+// Business per-user workspace limit tells the user to ask their workspace admin.
+func TestOpenAIResponsesChatGPTLimitHints(t *testing.T) {
+	hint := "You've reached your ChatGPT workspace's usage limit. Ask your workspace admin to increase it at admin.openai.com → Workspace → Usage limits."
+	cases := []struct {
+		name string
+		code string
+		want []string
+		deny []string
+	}{
+		{
+			name: "shared subscription limit",
+			code: "subscription_sharing_usage_limit_exceeded",
+			want: []string{"Check your ChatGPT usage: " + OpenAIChatGPTUsageURL},
+			deny: []string{hint},
+		},
+		{
+			name: "workspace per-user limit",
+			code: "subscription_sharing_workplace_individual_usage_limit_exceeded",
+			want: []string{hint},
+			deny: []string{OpenAIChatGPTUsageURL},
+		},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			body := `{"error":{"type":"invalid_request_error","code":"` + testCase.code + `","message":"usage limit reached"}}`
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte(body))
+			}))
+			defer server.Close()
+			model := testResponsesModel()
+			model.BaseURL = server.URL
+			stream := StreamOpenAIResponses(model, NormalizeContext(Context{}),
+				&OpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+			msg, _ := stream.Result(context.Background())
+			if msg.ErrorMessage == nil {
+				t.Fatalf("message = %+v; want a provider error", msg)
+			}
+			for _, want := range testCase.want {
+				if !strings.Contains(*msg.ErrorMessage, want) {
+					t.Fatalf("error = %q; want it to contain %q", *msg.ErrorMessage, want)
+				}
+			}
+			for _, deny := range testCase.deny {
+				if strings.Contains(*msg.ErrorMessage, deny) {
+					t.Fatalf("error = %q; must not contain %q", *msg.ErrorMessage, deny)
+				}
+			}
+		})
+	}
+}

@@ -179,3 +179,19 @@ func TestRetryableProviderErrorsMatchRelayedGatewayWording(t *testing.T) {
 		}
 	}
 }
+
+// A ChatGPT Business workspace limit is set by the workspace admin, so retrying
+// it cannot succeed. Upstream v1.4.0 cedefc532 lists it with the subscription
+// limits instead of leaving it to the retry policy.
+func TestChatGPTWorkspaceLimitIsNotRetryable(t *testing.T) {
+	// A limit that arrives with an otherwise retryable status must still be
+	// treated as a limit, which is the ordering upstream relies on.
+	message := errorAssistant("429 subscription_sharing_workplace_individual_usage_limit_exceeded usage limit reached")
+	if IsRetryableAssistantError(message) {
+		t.Fatal("a workspace usage limit must not be retried")
+	}
+	// The shared subscription limit stays non-retryable as before.
+	if IsRetryableAssistantError(errorAssistant("429 subscription_sharing_usage_limit_exceeded rate limit")) {
+		t.Fatal("a shared subscription limit must not be retried")
+	}
+}
