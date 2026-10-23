@@ -39,6 +39,7 @@ func runClipboardCommand(ctx context.Context, command string, args []string, opt
 	commandCtx, cancel := context.WithTimeout(ctx, time.Duration(timeoutMS)*time.Millisecond)
 	defer cancel()
 	cmd := exec.CommandContext(commandCtx, command, args...)
+	detachClipboardCommand(cmd)
 	if options.input == "" {
 		cmd.Stdin = nil
 	} else {
