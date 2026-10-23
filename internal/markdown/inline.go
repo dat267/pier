@@ -2,6 +2,7 @@ package markdown
 
 import (
 	"strings"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -139,14 +140,11 @@ func ParseInline(src string) []Inline {
 				i++
 			}
 		case '~':
-			if i+1 < len(src) && src[i+1] == '~' {
-				if close := strings.Index(src[i+2:], "~~"); close >= 0 {
-					inner := src[i+2 : i+2+close]
-					flush()
-					out = append(out, Inline{Kind: InlineStrikethrough, Text: inner, Children: ParseInline(inner)})
-					i = i + 2 + close + 2
-					continue
-				}
+			if end, inner, ok := strictStrikethrough(src, i); ok {
+				flush()
+				out = append(out, Inline{Kind: InlineStrikethrough, Text: inner, Children: ParseInline(inner)})
+				i = end
+				continue
 			}
 			text.WriteByte(c)
 			i++
@@ -360,6 +358,43 @@ func findRun(src string, from int, ch byte, want int) int {
 		i = j
 	}
 	return -1
+}
+
+// strictStrikethrough matches upstream's StrictStrikethroughTokenizer
+// (/^(~~)(?=[^\s~])((?:\\.|[^\\])*?(?:\\.|[^\s~\\]))\1(?=[^~]|$)/): the opener
+// must be followed by a non-space, non-tilde character, the content must end
+// with one, and the closer must not be followed by another tilde.
+func strictStrikethrough(src string, i int) (int, string, bool) {
+	const marker = "~~"
+	if !strings.HasPrefix(src[i:], marker) {
+		return 0, "", false
+	}
+	start := i + len(marker)
+	if start >= len(src) {
+		return 0, "", false
+	}
+	first, _ := utf8.DecodeRuneInString(src[start:])
+	if unicode.IsSpace(first) || first == '~' {
+		return 0, "", false
+	}
+	for k := start; k+len(marker) <= len(src); k++ {
+		if src[k] != '~' || k+1 >= len(src) || src[k+1] != '~' {
+			continue
+		}
+		inner := src[start:k]
+		if inner == "" {
+			continue
+		}
+		last, _ := utf8.DecodeLastRuneInString(inner)
+		if unicode.IsSpace(last) || last == '~' {
+			continue
+		}
+		if k+len(marker) < len(src) && src[k+len(marker)] == '~' {
+			continue
+		}
+		return k + len(marker), inner, true
+	}
+	return 0, "", false
 }
 
 // parseDelimited parses *emphasis* / **strong** / ***both*** / _…_ starting at i.

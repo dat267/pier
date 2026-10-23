@@ -66,3 +66,59 @@ func TestEmphasisFlanking(t *testing.T) {
 func itoaInline(kind InlineKind) string {
 	return string(rune('0' + kind))
 }
+
+// Upstream's StrictStrikethroughTokenizer (marked.ts):
+// /^(~~)(?=[^\s~])((?:\\.|[^\\])*?(?:\\.|[^\s~\\]))\1(?=[^~]|$)/. The opener
+// needs a non-space, non-tilde character after it, the content must end with
+// one, and the closer must not be followed by another tilde.
+func TestStrictStrikethrough(t *testing.T) {
+	cases := []struct {
+		src  string
+		want string
+	}{
+		{"~~gone~~", "D(gone)"},
+		{"a ~~b **c** d~~ e", "a D(b S(c) d) e"},
+		{"~~ a~~", "~~ a~~"},
+		{"~~a ~~", "~~a ~~"},
+		{"~~a~~~", "~~a~~~"},
+		{"~~a~~~~b", "~~a~~~~b"},
+	}
+	for _, tc := range cases {
+		blocks := Lex(tc.src)
+		var got string
+		var flat func(Inline) string
+		flat = func(in Inline) string {
+			switch in.Kind {
+			case InlineText:
+				return in.Text
+			case InlineStrong:
+				out := "S("
+				for _, child := range in.Children {
+					out += flat(child)
+				}
+				return out + ")"
+			case InlineEmphasis:
+				out := "E("
+				for _, child := range in.Children {
+					out += flat(child)
+				}
+				return out + ")"
+			case InlineStrikethrough:
+				out := "D("
+				for _, child := range in.Children {
+					out += flat(child)
+				}
+				return out + ")"
+			}
+			return "?"
+		}
+		for _, block := range blocks {
+			for _, in := range block.Inlines {
+				got += flat(in)
+			}
+		}
+		if got != tc.want {
+			t.Fatalf("%q = %q, want %q", tc.src, got, tc.want)
+		}
+	}
+}
