@@ -524,13 +524,15 @@ func (c *GoalController) getGoalTool() agent.AgentTool {
 
 // setGoalTool is the one write tool: an objective starts or replaces the goal, a
 // status ends it. The exact id/revision guard is gone, so the model never has to
-// copy a ref back (D234).
+// copy a ref back (D234). Nullable properties also support callers that expose
+// every argument as required without applying strict-schema conversion: unused
+// objective/status/blocked_reason values can be null instead of conflicting.
 func (c *GoalController) setGoalTool() agent.AgentTool {
 	return agent.AgentTool{
 		Name:        "set_goal",
 		Label:       "Set Goal",
-		Description: "Set, replace, or end the session goal. objective: start the goal, or replace a live one. status: end it - complete (objective achieved, with evidence), blocked (blocked_reason required; only after 3 consecutive goal rounds), or clear (no longer relevant or superseded). Provide exactly one of objective or status.",
-		Parameters:  json.RawMessage(`{"type":"object","properties":{"objective":{"type":"string","description":"Concrete completion objective. Starts or replaces the goal."},"status":{"type":"string","enum":["complete","blocked","clear"],"description":"Ends the current goal."},"blocked_reason":{"type":"string","description":"Blocking condition (blocked only)."}},"additionalProperties":false}`),
+		Description: "Set, replace, or end the session goal. objective: start the goal, or replace a live one. status: end it - complete (objective achieved, with evidence), blocked (blocked_reason required; only after 3 consecutive goal rounds), or clear (no longer relevant or superseded). Provide exactly one non-null objective or status. Omit unused fields or set them to null.",
+		Parameters:  json.RawMessage(`{"type":"object","properties":{"objective":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"Concrete completion objective. Starts or replaces the goal. Omit or set to null when ending a goal."},"status":{"anyOf":[{"type":"string","enum":["complete","blocked","clear"]},{"type":"null"}],"description":"Ends the current goal. Omit or set to null when setting an objective."},"blocked_reason":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"Blocking condition (blocked only). Otherwise omit or set to null."}},"additionalProperties":false}`),
 		Execute: func(_ string, params json.RawMessage, _ context.Context, _ func(agent.AgentToolResult)) (agent.AgentToolResult, error) {
 			var input struct {
 				Objective     string `json:"objective"`

@@ -1440,6 +1440,18 @@ queues the first round.
 `get_goal` is the only other tool. `DesiredToolNames` keeps `set_goal` always
 active and `get_goal` only while a goal is pursued.
 
+All three `set_goal` properties explicitly accept null, while remaining optional.
+Reproducer: a caller exposes every property as required without strict-schema
+conversion, forcing a non-null `status` alongside a new `objective`; execution
+rejects both and retries cannot express the intended call. Nullable properties
+let that caller send `{"objective":"fix it","status":null,"blocked_reason":null}`.
+The reverse ends a goal with a null objective. Exactly one nonempty objective or
+status is still required; two active values and two null values remain errors.
+The regression test exercises both strict and non-strict Responses declarations
+with all properties required, normal agent validation, and execution. The
+upstream reference is the extension's separate create/update tools above, not a
+pi built-in tool.
+
 ## D235
 
 **Stdio RPC has a bounded extension-free first milestone.**
