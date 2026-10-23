@@ -648,7 +648,9 @@ func convertResponsesToolResultOutput(model *Model, content UserContentList) any
 		}
 	}
 	textResult := strings.Join(textParts, "\n")
-	hasText := len(textResult) > 0
+	// Whitespace-only text counts as empty: some providers reject it with a 400,
+	// which then repeats on every request (upstream 4dd2b149d, #8720).
+	hasText := !JSTrimIsEmpty(textResult)
 	hasImageInput := false
 	for _, input := range model.Input {
 		if input == "image" {

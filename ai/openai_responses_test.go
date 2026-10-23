@@ -666,3 +666,22 @@ func TestConvertResponsesMessagesDropsMismatchedItemIds(t *testing.T) {
 	}
 	t.Fatal("no custom_tool_call item")
 }
+
+// A whitespace-only tool result is empty as far as the provider is concerned.
+// Upstream v1.4.0 4dd2b149d (issue #8720): some providers reject whitespace-only
+// tool content with a 400, and the failure then repeats on every request in the
+// session, so a bare "\r\n" from bash uses the empty-output placeholder.
+func TestResponsesToolResultWhitespaceOnlyUsesPlaceholder(t *testing.T) {
+	model := testResponsesModel()
+	for _, text := range []string{"", " ", "\r\n", "\n\n\t ", "\u00A0", "\uFEFF"} {
+		got := convertResponsesToolResultOutput(model, UserContentList{TextContent{Text: text}})
+		if got != "(no tool output)" {
+			t.Fatalf("output for %q = %v; want the empty-output placeholder", text, got)
+		}
+	}
+	// Text with any visible content still travels verbatim, whitespace included.
+	got := convertResponsesToolResultOutput(model, UserContentList{TextContent{Text: " \r\nout\r\n "}})
+	if got != " \r\nout\r\n " {
+		t.Fatalf("output = %v; want the text verbatim", got)
+	}
+}

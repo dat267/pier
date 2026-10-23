@@ -686,3 +686,31 @@ func TestDetectOpenAICompletionsCompatStrictModeMatchesUpstream(t *testing.T) {
 		}
 	}
 }
+
+// A whitespace-only tool result is empty as far as the provider is concerned.
+// Upstream v1.4.0 4dd2b149d (issue #8720): some providers reject whitespace-only
+// tool content with a 400, and the failure then repeats on every request in the
+// session, so a bare "\r\n" from bash uses the empty-output placeholder.
+func TestConvertOpenAICompletionsWhitespaceToolResultUsesPlaceholder(t *testing.T) {
+	model := testOpenAIModel()
+	compat := DetectOpenAICompletionsCompat(model)
+	for _, text := range []string{"", " ", "\r\n", "\n\n\t ", "\u00A0", "\uFEFF"} {
+		messages := []Message{
+			&UserMessage{Content: StringOrBlocks{Text: "run"}, Timestamp: 1},
+			&AssistantMessage{
+				Content: ContentList{ToolCall{ID: "c1", Name: "bash", Arguments: json.RawMessage(`{"cmd":"ls"}`)}},
+				API:     APIOpenAICompletions, Provider: "openai", Model: "gpt-5",
+				StopReason: StopToolUse, Timestamp: 2,
+			},
+			&ToolResultMessage{ToolCallID: "c1", ToolName: "bash", Content: UserContentList{TextContent{Text: text}}, Timestamp: 3},
+		}
+		params := ConvertOpenAICompletionsMessages(model, TranscriptContext{Messages: messages}, compat, nil)
+		var toolText string
+		if err := json.Unmarshal(params[2].Content, &toolText); err != nil {
+			t.Fatalf("tool content for %q: %v", text, err)
+		}
+		if toolText != "(no tool output)" {
+			t.Fatalf("tool content for %q = %q; want the empty-output placeholder", text, toolText)
+		}
+	}
+}

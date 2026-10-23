@@ -287,9 +287,11 @@ func ConvertOpenAICompletionsMessages(
 						hasImages = true
 					}
 				}
-				// Always send tool result with text (or placeholder).
+				// Always send tool result with text (or placeholder). Whitespace-only
+				// text counts as empty: some providers reject it with a 400, which then
+				// repeats on every request in the session (upstream 4dd2b149d, #8720).
 				toolResultText := textResult
-				if len(toolResultText) == 0 {
+				if JSTrimIsEmpty(toolResultText) {
 					if hasImages {
 						toolResultText = "(see attached image)"
 					} else {

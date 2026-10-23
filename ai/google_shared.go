@@ -313,7 +313,9 @@ func ConvertGoogleMessages(model *Model, context TranscriptContext) ([]GoogleCon
 				}
 			}
 			textResult := strings.Join(textParts, "\n")
-			hasText := len(textResult) > 0
+			// Whitespace-only text counts as no text: some providers reject it with a
+			// 400, which then repeats on every request (upstream 4dd2b149d, #8720).
+			hasText := !JSTrimIsEmpty(textResult)
 			hasImages := len(images) > 0
 
 			modelSupportsMultimodal := supportsMultimodalFunctionResponse(model.ID)

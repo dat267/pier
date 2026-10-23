@@ -446,3 +446,37 @@ func TestStreamGoogleGenerativeAIErrors(t *testing.T) {
 		}
 	})
 }
+
+// A whitespace-only tool result counts as no text, so the function response
+// carries the empty value (or the image placeholder) instead of the whitespace,
+// which some providers reject. Upstream v1.4.0 4dd2b149d (issue #8720) changed
+// google-shared.ts's hasText to `textResult.trim().length > 0`.
+func TestConvertGoogleMessagesWhitespaceToolResultHasNoText(t *testing.T) {
+	model := testGoogleModel()
+	for _, text := range []string{"", " ", "\r\n", "\n\n\t ", "\u00A0", "\uFEFF"} {
+		messages := []Message{&ToolResultMessage{
+			ToolCallID: "call_1", ToolName: "bash",
+			Content: UserContentList{TextContent{Text: text}}, Timestamp: 1,
+		}}
+		contents, err := ConvertGoogleMessages(model, TranscriptContext{Messages: messages})
+		if err != nil {
+			t.Fatal(err)
+		}
+		response := contents[0].Parts[0].FunctionResponse
+		if response == nil || string(response.Response) != `{"output":""}` {
+			t.Fatalf("function response for %q = %+v; want an empty output", text, response)
+		}
+	}
+	// Visible text travels verbatim, surrounding whitespace included.
+	messages := []Message{&ToolResultMessage{
+		ToolCallID: "call_1", ToolName: "bash",
+		Content: UserContentList{TextContent{Text: " \r\nout\r\n "}}, Timestamp: 1,
+	}}
+	contents, err := ConvertGoogleMessages(model, TranscriptContext{Messages: messages})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := string(contents[0].Parts[0].FunctionResponse.Response); got != `{"output":" \r\nout\r\n "}` {
+		t.Fatalf("function response = %s; want the text verbatim", got)
+	}
+}
