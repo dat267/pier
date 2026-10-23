@@ -290,3 +290,27 @@ func TestAssistantMessageEventStreamErrorResult(t *testing.T) {
 		t.Fatalf("Result() = %v, %v; want error message", result, err)
 	}
 }
+
+// Reference: pi v1.4.0 utils/event-stream.ts AssistantMessageEventStream#time:
+// Math.max(0, Math.round(performance.now() - startedAt)). The duration is part
+// of the persisted assistant message, so a truncated millisecond would change
+// the transcript bytes.
+func TestAssistantStreamDurationRoundsToNearestMillisecond(t *testing.T) {
+	stream := NewAssistantMessageEventStream()
+	stream.startedAt = time.Now().Add(-time.Hour).UnixMilli()
+	stream.startedAtMonotonic = time.Now().Add(-1500 * time.Microsecond)
+	message := &AssistantMessage{StopReason: StopStop, Timestamp: time.Now().UnixMilli()}
+	stream.End(&message)
+	if message.DurationMs == nil || *message.DurationMs != 2 {
+		t.Fatalf("durationMs = %v, want 2", *message.DurationMs)
+	}
+
+	stream = NewAssistantMessageEventStream()
+	stream.startedAt = time.Now().Add(-time.Hour).UnixMilli()
+	stream.startedAtMonotonic = time.Now().Add(-1499 * time.Microsecond)
+	message = &AssistantMessage{StopReason: StopStop, Timestamp: time.Now().UnixMilli()}
+	stream.End(&message)
+	if message.DurationMs == nil || *message.DurationMs != 1 {
+		t.Fatalf("durationMs = %v, want 1", *message.DurationMs)
+	}
+}

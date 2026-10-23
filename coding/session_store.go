@@ -8,11 +8,13 @@ import (
 	jsonv2 "encoding/json/v2"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -115,22 +117,134 @@ type FileEntry struct {
 // MarshalFileEntry encodes one JSONL line.
 func MarshalFileEntry(entry FileEntry) (string, error) {
 	if entry.Header != nil {
-		enc, err := ai.MarshalJSON(struct {
-			Type          string  `json:"type"`
-			Version       int     `json:"version,omitempty"`
-			ID            string  `json:"id"`
-			Timestamp     string  `json:"timestamp"`
-			Cwd           string  `json:"cwd"`
-			ParentSession *string `json:"parentSession,omitempty"`
-		}{
-			Type: "session", Version: CurrentSessionVersion,
-			ID: entry.Header.ID, Timestamp: entry.Header.Timestamp,
-			Cwd: entry.Header.Cwd, ParentSession: entry.Header.ParentSession,
-		})
+		enc, err := ai.MarshalJSON(entry.Header)
 		return string(enc) + "\n", err
 	}
 	enc, err := ai.MarshalJSON(entry.Entry)
 	return string(enc) + "\n", err
+}
+
+// MarshalJSON re-emits a header loaded from a file from its retained line.
+// Upstream rewrites a migrated file by stringifying the parsed objects, so
+// members the port does not model survive and keep their order. Headers the
+// port constructs have no retained line and are encoded field by field.
+func (h *SessionHeader) MarshalJSON() ([]byte, error) {
+	if len(h.raw) > 0 {
+		return h.raw, nil
+	}
+	version := CurrentSessionVersion
+	if h.Version != nil {
+		version = *h.Version
+	}
+	return marshalJSONNoEscape(struct {
+		Type          string  `json:"type"`
+		Version       int     `json:"version,omitempty"`
+		ID            string  `json:"id"`
+		Timestamp     string  `json:"timestamp"`
+		Cwd           string  `json:"cwd"`
+		ParentSession *string `json:"parentSession,omitempty"`
+	}{
+		Type: "session", Version: version,
+		ID: h.ID, Timestamp: h.Timestamp, Cwd: h.Cwd, ParentSession: h.ParentSession,
+	})
+}
+
+// MarshalJSON likewise re-emits a loaded entry from its retained line. The
+// session rewrite, branch and export paths mutate members through the raw
+// helpers below so those changes reach the emitted line.
+func (e *SessionEntry) MarshalJSON() ([]byte, error) {
+	if len(e.raw) > 0 {
+		return e.raw, nil
+	}
+	type entryJSON SessionEntry
+	return marshalJSONNoEscape((*entryJSON)(e))
+}
+
+// setRawMember replaces a top-level member in a retained line, or appends it
+// when absent, matching JavaScript property assignment order. A nil raw (an
+// entry the port constructed) needs no update: the struct encoding writes it.
+func (e *SessionEntry) setRawMember(key string, value json.RawMessage) {
+	if len(e.raw) == 0 {
+		return
+	}
+	if updated, ok := setRawJSONMember(e.raw, key, value); ok {
+		e.raw = updated
+	}
+}
+
+// setParentID re-chains the entry and its retained line. Upstream mutates the
+// stored parentId in place when it drops label entries or exports a branch.
+func (e *SessionEntry) setParentID(parentID *string) {
+	e.ParentID = parentID
+	e.setRawMember("parentId", mustMarshalJSON(parentID))
+}
+
+// setFirstKeptEntryID replaces a compaction target in the struct and line.
+func (e *SessionEntry) setFirstKeptEntryID(id string) {
+	e.FirstKeptEntryID = id
+	e.setRawMember("firstKeptEntryId", mustMarshalJSON(id))
+}
+
+// deleteRawMember removes a top-level member from a retained line.
+func (e *SessionEntry) deleteRawMember(key string) {
+	if len(e.raw) == 0 {
+		return
+	}
+	if updated, ok := deleteRawJSONMember(e.raw, key); ok {
+		e.raw = updated
+	}
+}
+
+// setRawJSONMember rebuilds raw with key set to value, keeping every other
+// member and its position.
+func setRawJSONMember(raw json.RawMessage, key string, value json.RawMessage) (json.RawMessage, bool) {
+	keys, values, err := readJSONObjectOrdered(raw)
+	if err != nil {
+		return raw, false
+	}
+	if _, exists := values[key]; !exists {
+		keys = append(keys, key)
+	}
+	values[key] = value
+	return joinRawJSONObject(keys, values), true
+}
+
+// deleteRawJSONMember rebuilds raw without key.
+func deleteRawJSONMember(raw json.RawMessage, key string) (json.RawMessage, bool) {
+	keys, values, err := readJSONObjectOrdered(raw)
+	if err != nil {
+		return raw, false
+	}
+	filtered := keys[:0]
+	for _, existing := range keys {
+		if existing != key {
+			filtered = append(filtered, existing)
+		}
+	}
+	if len(filtered) == len(keys) {
+		return raw, true
+	}
+	delete(values, key)
+	return joinRawJSONObject(filtered, values), true
+}
+
+func joinRawJSONObject(keys []string, values map[string]json.RawMessage) json.RawMessage {
+	var buffer bytes.Buffer
+	buffer.WriteByte('{')
+	for index, key := range keys {
+		if index > 0 {
+			buffer.WriteByte(',')
+		}
+		encodedKey, err := marshalJSONNoEscape(key)
+		if err != nil {
+			return nil
+		}
+		buffer.Write(encodedKey)
+		buffer.WriteByte(':')
+		buffer.Write(values[key])
+	}
+	buffer.WriteByte('}')
+	return buffer.Bytes()
 }
 
 // sessionLineMeta is what the index scan extracts from one JSONL line.
@@ -640,62 +754,116 @@ func generateID(byID map[string]*SessionEntry) string {
 
 // Migration functions.
 
-// migrateV1ToV2 adds id/parentId tree structure (mutates entries).
+// migrateV1ToV2 adds id/parentId tree structure (mutates entries). Upstream
+// assigns the new members on the parsed object, so they land after the v1
+// members; the retained line is rebuilt the same way instead of via the
+// struct's field order.
 func migrateV1ToV2(entries []FileEntry) {
 	ids := map[string]bool{}
 	var prevID *string
 	for i := range entries {
 		if entries[i].Header != nil {
-			v := 2
-			entries[i].Header.Version = &v
+			version := 2
+			setHeaderVersion(entries[i].Header, version)
 			continue
 		}
 		entry := entries[i].Entry
-		entry.ID = generateID(nil)
-		for ids[entry.ID] {
-			entry.ID = generateID(nil)
+		id := generateID(nil)
+		for ids[id] {
+			id = generateID(nil)
 		}
-		ids[entry.ID] = true
+		ids[id] = true
+		entry.ID = id
 		entry.ParentID = prevID
-		prevID = &entry.ID
+		entry.setRawMember("id", mustMarshalJSON(id))
+		entry.setRawMember("parentId", mustMarshalJSON(prevID))
 
 		// firstKeptEntryIndex → firstKeptEntryId for compaction.
 		if entry.Type == "compaction" {
-			var legacy struct {
-				FirstKeptEntryIndex *int `json:"firstKeptEntryIndex"`
-			}
-			if json.Unmarshal(entry.raw, &legacy) == nil && legacy.FirstKeptEntryIndex != nil {
-				idx := *legacy.FirstKeptEntryIndex
-				if idx >= 0 && idx < len(entries) && entries[idx].Entry != nil {
-					entry.FirstKeptEntryID = entries[idx].Entry.ID
+			if index, ok := legacyFirstKeptIndex(entry.raw); ok {
+				if targetID := firstKeptTargetID(entries, index); targetID != "" {
+					entry.FirstKeptEntryID = targetID
+					entry.setRawMember("firstKeptEntryId", mustMarshalJSON(targetID))
 				}
+				entry.deleteRawMember("firstKeptEntryIndex")
 			}
 		}
+		entryID := entry.ID
+		prevID = &entryID
 	}
 }
 
-// migrateV2ToV3 renames hookMessage roles to custom.
+// migrateV2ToV3 renames hookMessage roles to custom, replacing the value in
+// place so the message's member order survives the rewrite.
 func migrateV2ToV3(entries []FileEntry) {
 	for i := range entries {
 		if entries[i].Header != nil {
-			v := 3
-			entries[i].Header.Version = &v
+			setHeaderVersion(entries[i].Header, 3)
 			continue
 		}
 		entry := entries[i].Entry
-		if entry.Type == "message" && len(entry.Message) > 0 {
-			var msg map[string]json.RawMessage
-			if json.Unmarshal(entry.Message, &msg) == nil {
-				if roleRaw, ok := msg["role"]; ok {
-					var role string
-					if json.Unmarshal(roleRaw, &role) == nil && role == "hookMessage" {
-						msg["role"] = json.RawMessage(`"custom"`)
-						entry.Message = mustMarshalJSON(msg)
-					}
-				}
-			}
+		if entry.Type != "message" || len(entry.Message) == 0 {
+			continue
 		}
+		_, values, err := readJSONObjectOrdered(entry.Message)
+		if err != nil {
+			continue
+		}
+		roleRaw, ok := values["role"]
+		if !ok {
+			continue
+		}
+		var role string
+		if json.Unmarshal(roleRaw, &role) != nil || role != "hookMessage" {
+			continue
+		}
+		message, ok := setRawJSONMember(entry.Message, "role", json.RawMessage(`"custom"`))
+		if !ok {
+			continue
+		}
+		entry.Message = message
+		entry.setRawMember("message", message)
 	}
+}
+
+func setHeaderVersion(header *SessionHeader, version int) {
+	header.Version = &version
+	if updated, ok := setRawJSONMember(header.raw, "version", mustMarshalJSON(version)); ok {
+		header.raw = updated
+	}
+}
+
+// legacyFirstKeptIndex reports the v1 compaction cut index. A JSON number that
+// is not a usable array index yields -1: upstream still deletes the legacy key
+// because typeof value === "number", but resolves no target entry.
+func legacyFirstKeptIndex(raw json.RawMessage) (int, bool) {
+	_, values, err := readJSONObjectOrdered(raw)
+	if err != nil {
+		return 0, false
+	}
+	value, ok := values["firstKeptEntryIndex"]
+	if !ok {
+		return 0, false
+	}
+	trimmed := bytes.TrimSpace(value)
+	if len(trimmed) == 0 || !(trimmed[0] == '-' || trimmed[0] >= '0' && trimmed[0] <= '9') {
+		return 0, false
+	}
+	number, err := strconv.ParseFloat(string(trimmed), 64)
+	if err != nil || math.IsNaN(number) || number != math.Trunc(number) || number < 0 {
+		return -1, true
+	}
+	return int(number), true
+}
+
+// firstKeptTargetID resolves the v1 index against the whole file entry array.
+// Forward references have no id yet while the migration runs, which upstream
+// writes as an omitted member; a session header is never a target.
+func firstKeptTargetID(entries []FileEntry, index int) string {
+	if index < 0 || index >= len(entries) || entries[index].Entry == nil {
+		return ""
+	}
+	return entries[index].Entry.ID
 }
 
 // migrateToCurrentVersion brings entries to v3; returns true when applied.

@@ -40,7 +40,7 @@ func serializeSessionBranch(sessionManager *SessionManager, createTrailingEntrie
 	for _, entry := range sessionManager.GetBranch("") {
 		// A fresh pointer per entry: they all re-chain to the previous entry.
 		current := parentID
-		entry.ParentID = current
+		entry.setParentID(current)
 		line, err := MarshalFileEntry(FileEntry{Entry: &entry})
 		if err != nil {
 			return "", err

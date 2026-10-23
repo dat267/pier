@@ -251,6 +251,19 @@ reserved-header rules. Twelve Node-generated cases execute the pinned
 Bedrock helper and AWS SDK middleware. The port intentionally omits metadata
 claiming to run the JavaScript SDK (D266).
 
+A supported-path audit against the pin found and fixed three more divergences.
+Legacy session migration now rewrites the retained JSONL line the way
+`migrateSessionEntries` mutates the parsed object: a v1 header's version and
+tree ids append after the existing members, `hookMessage` becomes `custom` in
+place, unknown members survive, a forward `firstKeptEntryIndex` becomes an
+omitted `firstKeptEntryId`, and re-chained `parentId`/`firstKeptEntryId` values
+from branch extraction and export reach the written line. Provider request
+params now emit JavaScript member order (D267) instead of sorted keys, and
+assistant-stream `durationMs` rounds to the nearest millisecond as upstream's
+`Math.round` does rather than truncating. Migration output was checked against
+the pinned `migrateSessionEntries`; the params order against both `buildParams`
+builders.
+
 Remaining v1.4.0 items, grouped by why they are not in this tree:
 
 - **Removed packages (D236)**: `telemetry` (the `telemetry` span option, spans,

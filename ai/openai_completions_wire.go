@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"bytes"
 	"encoding/json"
 	"strings"
 )
@@ -340,105 +341,175 @@ type OpenAIReasoningParam struct {
 	Enabled *bool   `json:"enabled,omitempty"`
 }
 
+// orderedJSONFields emits object members in first-assignment order, the way a
+// JavaScript object literal plus later property assignments does: replacing an
+// existing member keeps its position, a new member appends. Upstream builds
+// every request params object this way, and the payloads are byte-compared.
+type orderedJSONFields struct {
+	keys   []string
+	values map[string]json.RawMessage
+}
+
+func (o *orderedJSONFields) set(key string, value json.RawMessage) {
+	if o.values == nil {
+		o.values = map[string]json.RawMessage{}
+	}
+	if _, exists := o.values[key]; !exists {
+		o.keys = append(o.keys, key)
+	}
+	o.values[key] = value
+}
+
+func (o *orderedJSONFields) setAny(key string, value any) error {
+	enc, err := MarshalJSON(value)
+	if err != nil {
+		return err
+	}
+	o.set(key, enc)
+	return nil
+}
+
+func (o *orderedJSONFields) marshal() ([]byte, error) {
+	var buf bytes.Buffer
+	buf.WriteByte('{')
+	for index, key := range o.keys {
+		if index > 0 {
+			buf.WriteByte(',')
+		}
+		keyEnc, err := MarshalJSON(key)
+		if err != nil {
+			return nil, err
+		}
+		buf.Write(keyEnc)
+		buf.WriteByte(':')
+		buf.Write(o.values[key])
+	}
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
+}
+
 // MarshalJSON emits upstream's key order, including the dynamic
 // thinking-token-budget field and sampling extras merged last.
 func (p *OpenAICompletionsParams) MarshalJSON() ([]byte, error) {
-	type base struct {
-		Model    string          `json:"model"`
-		Messages []OpenAIMessage `json:"messages"`
-		Stream   bool            `json:"stream"`
+	var fields orderedJSONFields
+	if err := fields.setAny("model", p.Model); err != nil {
+		return nil, err
 	}
-	root := map[string]json.RawMessage{}
-	put := func(key string, v any) {
-		enc, err := MarshalJSON(v)
-		if err != nil {
-			panic(err)
-		}
-		root[key] = enc
+	if err := fields.setAny("messages", p.Messages); err != nil {
+		return nil, err
 	}
-	put("model", p.Model)
-	put("messages", p.Messages)
-	put("stream", p.Stream)
+	if err := fields.setAny("stream", p.Stream); err != nil {
+		return nil, err
+	}
 	if p.PromptCacheKey != nil {
-		put("prompt_cache_key", *p.PromptCacheKey)
+		if err := fields.setAny("prompt_cache_key", *p.PromptCacheKey); err != nil {
+			return nil, err
+		}
 	}
 	if p.PromptCacheRetention != nil {
-		put("prompt_cache_retention", *p.PromptCacheRetention)
+		if err := fields.setAny("prompt_cache_retention", *p.PromptCacheRetention); err != nil {
+			return nil, err
+		}
 	}
 	if p.StreamOptions != nil {
-		put("stream_options", p.StreamOptions)
+		if err := fields.setAny("stream_options", p.StreamOptions); err != nil {
+			return nil, err
+		}
 	}
 	if p.Store != nil {
-		put("store", *p.Store)
+		if err := fields.setAny("store", *p.Store); err != nil {
+			return nil, err
+		}
 	}
 	if p.MaxCompletionTokens != nil {
-		put("max_completion_tokens", *p.MaxCompletionTokens)
+		if err := fields.setAny("max_completion_tokens", *p.MaxCompletionTokens); err != nil {
+			return nil, err
+		}
 	}
 	if p.MaxTokens != nil {
-		put("max_tokens", *p.MaxTokens)
+		if err := fields.setAny("max_tokens", *p.MaxTokens); err != nil {
+			return nil, err
+		}
 	}
 	if p.Temperature != nil {
-		put("temperature", *p.Temperature)
+		if err := fields.setAny("temperature", *p.Temperature); err != nil {
+			return nil, err
+		}
 	}
 	if p.Tools != nil {
-		put("tools", p.Tools)
+		if err := fields.setAny("tools", p.Tools); err != nil {
+			return nil, err
+		}
+		// tool_stream is assigned inside upstream's tools branch, before the
+		// later tool_choice assignment.
+		if p.ToolStream != nil {
+			if err := fields.setAny("tool_stream", *p.ToolStream); err != nil {
+				return nil, err
+			}
+		}
 	}
 	if p.ToolChoice != nil {
-		root["tool_choice"] = p.ToolChoice
-	}
-	if p.ToolStream != nil {
-		put("tool_stream", *p.ToolStream)
+		fields.set("tool_choice", p.ToolChoice)
 	}
 	if p.Priority != nil {
-		put("priority", *p.Priority)
+		if err := fields.setAny("priority", *p.Priority); err != nil {
+			return nil, err
+		}
 	}
 	if p.Thinking != nil {
-		put("thinking", p.Thinking)
+		if err := fields.setAny("thinking", p.Thinking); err != nil {
+			return nil, err
+		}
 	}
 	if p.EnableThinking != nil {
-		put("enable_thinking", *p.EnableThinking)
+		if err := fields.setAny("enable_thinking", *p.EnableThinking); err != nil {
+			return nil, err
+		}
 	}
 	if p.ChatTemplateKwargs != nil {
-		put("chat_template_kwargs", p.ChatTemplateKwargs)
+		if err := fields.setAny("chat_template_kwargs", p.ChatTemplateKwargs); err != nil {
+			return nil, err
+		}
 	}
 	if p.ChatTemplateArgs != nil {
-		put("chat_template_args", p.ChatTemplateArgs)
+		if err := fields.setAny("chat_template_args", p.ChatTemplateArgs); err != nil {
+			return nil, err
+		}
+	}
+	// The together format assigns reasoning before reasoning_effort; the other
+	// thinking formats set only one of the two.
+	if p.ReasoningObj != nil {
+		if err := fields.setAny("reasoning", p.ReasoningObj); err != nil {
+			return nil, err
+		}
 	}
 	if p.ReasoningEffort != nil {
-		put("reasoning_effort", *p.ReasoningEffort)
-	}
-	if p.ReasoningObj != nil {
-		put("reasoning", p.ReasoningObj)
+		if err := fields.setAny("reasoning_effort", *p.ReasoningEffort); err != nil {
+			return nil, err
+		}
 	}
 	// Thinking token budget under its provider-specific field name.
 	if p.ThinkingTokenBudget != nil && p.ThinkingTokenBudgetField != "" {
-		put(p.ThinkingTokenBudgetField, *p.ThinkingTokenBudget)
+		if err := fields.setAny(p.ThinkingTokenBudgetField, *p.ThinkingTokenBudget); err != nil {
+			return nil, err
+		}
 	}
 	if p.ProviderRouting != nil {
-		root["provider"] = p.ProviderRouting
+		fields.set("provider", p.ProviderRouting)
 	}
 	if p.ProviderOptions != nil {
-		root["providerOptions"] = p.ProviderOptions
+		fields.set("providerOptions", p.ProviderOptions)
 	}
-	// Sampling params merged last so they override the named fields.
-	for key, value := range p.SamplingExtras {
-		root[key] = value
+	// Sampling params are merged last so they override the named fields. The
+	// model's own member order is not retained in the port's map form (D267),
+	// so the extras are applied in sorted key order.
+	extras := make([]string, 0, len(p.SamplingExtras))
+	for key := range p.SamplingExtras {
+		extras = append(extras, key)
 	}
-	keys := make([]string, 0, len(root))
-	for key := range root {
-		keys = append(keys, key)
+	sortStrings(extras)
+	for _, key := range extras {
+		fields.set(key, p.SamplingExtras[key])
 	}
-	sortStrings(keys)
-	var buf []byte
-	buf = append(buf, '{')
-	for i, key := range keys {
-		if i > 0 {
-			buf = append(buf, ',')
-		}
-		keyEnc, _ := MarshalJSON(key)
-		buf = append(buf, keyEnc...)
-		buf = append(buf, ':')
-		buf = append(buf, root[key]...)
-	}
-	return append(buf, '}'), nil
+	return fields.marshal()
 }

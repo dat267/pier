@@ -939,14 +939,14 @@ func (m *SessionManager) CreateBranchedSession(leafID string) (string, error) {
 		}
 		if entry.Type == "compaction" && entry.FirstKeptEntryID != "" {
 			if replacement, ok := replacementByLabelID[entry.FirstKeptEntryID]; ok && replacement != "" {
-				entry.FirstKeptEntryID = replacement
+				entry.setFirstKeptEntryID(replacement)
 			}
 		}
 		if pathParentID == "" {
-			entry.ParentID = nil
+			entry.setParentID(nil)
 		} else {
 			parent := pathParentID
-			entry.ParentID = &parent
+			entry.setParentID(&parent)
 		}
 		pathParentID = entry.ID
 		newEntries = append(newEntries, FileEntry{Entry: &entry})

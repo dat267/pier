@@ -2,6 +2,7 @@ package ai
 
 import (
 	"context"
+	"math"
 	"sync"
 	"time"
 )
@@ -272,6 +273,7 @@ func (s *AssistantMessageEventStream) timeMessage(message *AssistantMessage) {
 	if message.Timestamp < s.startedAt {
 		return
 	}
-	duration := time.Since(s.startedAtMonotonic).Milliseconds()
+	// Upstream rounds, so the persisted duration matches to the millisecond.
+	duration := int64(math.Round(float64(time.Since(s.startedAtMonotonic)) / float64(time.Millisecond)))
 	message.DurationMs = &duration
 }

@@ -154,97 +154,81 @@ func BuildOpenAIResponsesParamsWithProviders(
 }
 
 // MarshalJSON emits upstream's key order plus sampling extras merged last.
+// Members keep their first-assignment order, as in the params object literal.
 func (p *OpenAIResponsesParams) MarshalJSON() ([]byte, error) {
-	root := map[string]json.RawMessage{}
-	put := func(key string, value any) error {
-		enc, err := MarshalJSON(value)
-		if err != nil {
-			return err
-		}
-		root[key] = enc
-		return nil
-	}
-	if err := put("model", p.Model); err != nil {
+	var fields orderedJSONFields
+	set := func(key string, value any) error { return fields.setAny(key, value) }
+	if err := set("model", p.Model); err != nil {
 		return nil, err
 	}
-	root["input"] = p.Input
-	if err := put("stream", p.Stream); err != nil {
+	fields.set("input", p.Input)
+	if err := set("stream", p.Stream); err != nil {
 		return nil, err
 	}
 	if p.PromptCacheKey != nil {
-		if err := put("prompt_cache_key", *p.PromptCacheKey); err != nil {
+		if err := set("prompt_cache_key", *p.PromptCacheKey); err != nil {
 			return nil, err
 		}
 	}
 	if p.PromptCacheRetention != nil {
-		if err := put("prompt_cache_retention", *p.PromptCacheRetention); err != nil {
+		if err := set("prompt_cache_retention", *p.PromptCacheRetention); err != nil {
 			return nil, err
 		}
 	}
 	if p.PromptCacheOptions != nil {
-		if err := put("prompt_cache_options", p.PromptCacheOptions); err != nil {
+		if err := set("prompt_cache_options", p.PromptCacheOptions); err != nil {
 			return nil, err
 		}
 	}
 	if p.Store != nil {
-		if err := put("store", *p.Store); err != nil {
+		if err := set("store", *p.Store); err != nil {
 			return nil, err
 		}
 	}
 	if p.MaxOutputTokens != nil {
-		if err := put("max_output_tokens", *p.MaxOutputTokens); err != nil {
+		if err := set("max_output_tokens", *p.MaxOutputTokens); err != nil {
 			return nil, err
 		}
 	}
 	if p.Temperature != nil {
-		if err := put("temperature", *p.Temperature); err != nil {
+		if err := set("temperature", *p.Temperature); err != nil {
 			return nil, err
 		}
 	}
 	if p.ServiceTier != nil {
-		if err := put("service_tier", *p.ServiceTier); err != nil {
+		if err := set("service_tier", *p.ServiceTier); err != nil {
 			return nil, err
 		}
 	}
 	if p.Tools != nil {
-		if err := put("tools", p.Tools); err != nil {
+		if err := set("tools", p.Tools); err != nil {
 			return nil, err
 		}
 	}
 	if len(p.ToolChoice) > 0 {
-		root["tool_choice"] = p.ToolChoice
+		fields.set("tool_choice", p.ToolChoice)
 	}
 	if p.Reasoning != nil {
-		if err := put("reasoning", p.Reasoning); err != nil {
+		if err := set("reasoning", p.Reasoning); err != nil {
 			return nil, err
 		}
 	}
 	if p.Include != nil {
-		if err := put("include", p.Include); err != nil {
+		if err := set("include", p.Include); err != nil {
 			return nil, err
 		}
 	}
-	for key, value := range p.SamplingExtras {
-		root[key] = value
+	// Sampling params are merged last so they override the named fields. The
+	// model's own member order is not retained in the port's map form (D267).
+	extras := make([]string, 0, len(p.SamplingExtras))
+	for key := range p.SamplingExtras {
+		extras = append(extras, key)
 	}
-	keys := make([]string, 0, len(root))
-	for key := range root {
-		keys = append(keys, key)
+	sortStrings(extras)
+	for _, key := range extras {
+		fields.set(key, p.SamplingExtras[key])
 	}
-	sortStrings(keys)
-	var buf bytes.Buffer
-	buf.WriteByte('{')
-	for i, key := range keys {
-		if i > 0 {
-			buf.WriteByte(',')
-		}
-		keyEnc, _ := MarshalJSON(key)
-		buf.Write(keyEnc)
-		buf.WriteByte(':')
-		buf.Write(root[key])
-	}
-	buf.WriteByte('}')
-	return buf.Bytes(), nil
+	return fields.marshal()
 }
 
 // responsesStreamEvent is one Responses SSE event (subset pi consumes).
