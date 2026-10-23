@@ -422,9 +422,6 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 
 	appendSystemToolAdditions := func(message *aiSystemMessageAlias, seed string) error {
 		tools := message.ToolsAdded
-		for _, removed := range message.ToolsRemoved {
-			unavailableTools = append(unavailableTools, removed.Name)
-		}
 		for _, tool := range tools {
 			removeUnavailable(tool.Name)
 		}
@@ -523,6 +520,9 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 					if len(removed) > 0 {
 						parts = append(parts, toolRemovalNotice(removed))
 					}
+					// Recorded after this message's additions, whose notice
+					// precedes this removal notice.
+					unavailableTools = append(unavailableTools, removed...)
 				}
 				var nonEmpty []string
 				for _, part := range parts {

@@ -423,3 +423,43 @@ func TestCompletionsKimiToolMessagesAnchorAfterFolding(t *testing.T) {
 		t.Fatalf("Kimi tool messages = %v; want the later load only", anchored)
 	}
 }
+
+// Upstream v1.4.0 530015d93: the incremental notice precedes the removal notice
+// of the same message, so it restates only removals announced by earlier
+// messages.
+func TestResponsesNoticeIgnoresTheRemovalItPrecedes(t *testing.T) {
+	items, _ := responsesPayload(t, additionalToolsTestModel(), []Message{
+		&SystemMessage{
+			Content:    StringOrBlocks{Text: "base prompt"},
+			ToolsAdded: []Tool{namedTestTool("base_tool", "base_tool tool"), namedTestTool("drop_tool", "drop_tool tool")},
+			Timestamp:  0,
+		},
+		&SystemMessage{
+			Content:      StringOrBlocks{Text: ""},
+			ToolsAdded:   []Tool{namedTestTool("late_tool", "late_tool tool")},
+			ToolsRemoved: []ToolReference{{Name: "drop_tool"}},
+			Timestamp:    1,
+		},
+		&UserMessage{Content: StringOrBlocks{Text: "go"}, Timestamp: 2},
+	})
+	// Like Codex: notice, then the tools, then the removal notice.
+	if len(items) < 4 {
+		t.Fatalf("items = %d; want notice, tools, removal notice and the user message", len(items))
+	}
+	tail := items[len(items)-4:]
+	if !strings.Contains(tail[0].text(), "This is an incremental tools update.") {
+		t.Fatalf("tail[0] = %q; want the incremental notice", tail[0].text())
+	}
+	if strings.Contains(tail[0].text(), "Still unavailable") {
+		t.Fatalf("notice = %q; the removal it precedes is not announced yet", tail[0].text())
+	}
+	if tail[1].Type != "additional_tools" || strings.Join(tail[1].toolNames(t), ",") != "late_tool" {
+		t.Fatalf("tail[1] = %+v; want the late_tool declaration", tail[1])
+	}
+	if !strings.Contains(tail[2].text(), "no longer available. Do not call them:\n- drop_tool") {
+		t.Fatalf("tail[2] = %q; want the removal notice", tail[2].text())
+	}
+	if tail[3].Role != "user" {
+		t.Fatalf("tail[3] = %+v; want the user message", tail[3])
+	}
+}
