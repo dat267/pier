@@ -1,9 +1,9 @@
 # Reproduced audit findings
 
-## Compaction audit of `48081fe`
+## Compaction audits of `48081fe` and `5918595`
 
 Reference: pi **v1.3.0** (`71023aec1546d6d677a65669c5665c0927ce0dd0`).
-All five findings below reproduced on three consecutive runs. No production
+All eight findings below reproduced on three consecutive runs. No production
 fixes have been applied. The failing probes live under
 `coding/testdata/compaction-audit/` so they do not break the normal test gate.
 See that directory's `README.md` for the reproduction command.
@@ -49,6 +49,33 @@ See that directory's `README.md` for the reproduction command.
    requests carry an empty reasoning level. Upstream `_getSummarizationRequestAuth`
    and `_runDefaultCompaction` forward the selected level.
    Probe: `TestAuditCompactionKeepsSelectedReasoning`.
+
+6. **High: failed overflow compaction leaves live context out of sync.**
+   `coding/agent_session_compaction.go`'s `omitRecoveryAttempt` persists the
+   omission but does not refresh the live agent context. If the subsequent
+   summarization fails, the success-only refresh in `RunAutoCompaction` never
+   runs. The next `PromptText` sends the omitted overflow response back to the
+   provider, even though it is absent from the persisted projection. Upstream
+   `_omitRecoveryAttempt` immediately calls `_refreshFinalizedContext`.
+   Probe: `TestAuditCompactionFailureKeepsLiveContextProjected`.
+
+7. **Medium: compaction cancellation does not reach auth resolution.**
+   `runManualCompaction` (`coding/agent_session.go`) and `RunAutoCompaction`
+   (`coding/agent_session_compaction.go`) call `GetAuthForModel(model, nil)`
+   instead of forwarding the compaction context. In both paths, cancelling the
+   request leaves the API-key auth resolver's context uncancelled. Auth work
+   that waits on that context cannot stop promptly. This is separate from the
+   intentional cancellation shielding of an already-started OAuth token
+   rotation. Upstream `_getSummarizationRequestAuth` forwards the signal.
+   Probe: `TestAuditCompactionAuthReceivesRequestContext`.
+
+8. **Low: summary file lists use the wrong Unicode sort order.**
+   `coding/compaction.go`'s `sortStrings` compares UTF-8 strings, whereas upstream
+   `core/compaction/utils.ts`'s `computeFileLists` uses JavaScript's default
+   UTF-16 code-unit order. With paths `\\ue000.txt` and `😀.txt`, Pier puts the
+   private-use character first, while upstream puts the emoji first. The
+   summary's file sections and persisted details therefore fail byte parity.
+   Probe: `TestAuditCompactionFileListsUseUTF16Order`.
 
 ## Earlier audit
 
