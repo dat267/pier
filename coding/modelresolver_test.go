@@ -411,7 +411,12 @@ func TestDefaultModelPerProviderTracksCurrentModels(t *testing.T) {
 		"xai":                        "grok-4.7",
 		"qwen-token-plan-individual": "qwen3.8-max",
 		"meta":                       "muse-spark-1.3",
-		"nvidia":                     "nvidia/nemotron-3-ultra-550b-a55b",
+		"nvidia":                     "nvidia/nemotron-3.5-super-vl-120b-a12b",
+		"github-copilot":             "gpt-6.1-sol",
+		"xiaomi":                     "mimo-v2.6-pro",
+		"xiaomi-token-plan-cn":       "mimo-v2.6-pro",
+		"xiaomi-token-plan-ams":      "mimo-v2.6-pro",
+		"xiaomi-token-plan-sgp":      "mimo-v2.6-pro",
 	}
 	for provider, want := range expectations {
 		if got := DefaultModelPerProvider[provider]; got != want {
@@ -424,6 +429,18 @@ func TestDefaultModelPerProviderTracksCurrentModels(t *testing.T) {
 	for _, provider := range DefaultProviderOrder {
 		if _, ok := DefaultModelPerProvider[provider]; !ok {
 			t.Fatalf("provider order lists %s with no default", provider)
+		}
+	}
+	// A default that the pinned catalog retired would silently resolve to the
+	// provider's first model instead, so the table has to track the catalog it
+	// ships with.
+	for provider, modelID := range DefaultModelPerProvider {
+		if provider == "radius" {
+			// The Radius default is a gateway tier name, not a model id.
+			continue
+		}
+		if ai.GetBuiltinModel(string(provider), modelID) == nil {
+			t.Fatalf("%s default %q is not in the builtin catalog", provider, modelID)
 		}
 	}
 }
