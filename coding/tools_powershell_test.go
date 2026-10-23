@@ -3,6 +3,7 @@ package coding
 import (
 	"context"
 	"encoding/json"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
@@ -230,5 +231,119 @@ func TestToolRegistry(t *testing.T) {
 func TestIsLegacyWslBashPathRequiresDriveLetter(t *testing.T) {
 	if isLegacyWslBashPath(`1:\windows\system32\bash.exe`) {
 		t.Fatal("a non-letter drive should not match")
+	}
+}
+
+// PowerShell discovery falls back to installation directories when the shell is
+// not on PATH. Upstream v1.4.0 61060ddf8: %ProgramFiles%\PowerShell\7\pwsh.exe is
+// checked before powershell.exe on PATH, and %SystemRoot%\System32\WindowsPowerShell\v1.0
+// last, so an install on another drive without a PATH entry still works.
+func TestResolvePowerShellShellOrder(t *testing.T) {
+	onDisk := map[string]bool{}
+	onPath := map[string]string{}
+	exists := func(path string) bool { return onDisk[path] }
+	findOnPath := func(executable string) string { return onPath[executable] }
+	env := func(key string) string {
+		switch key {
+		case "ProgramFiles":
+			return `C:\Program Files`
+		case "SystemRoot":
+			return `D:\Win`
+		}
+		return ""
+	}
+	pwsh7 := filepath.Join(env("ProgramFiles"), "PowerShell", "7", "pwsh.exe")
+	windowsPowerShell := filepath.Join(env("SystemRoot"), "System32", "WindowsPowerShell", "v1.0", "powershell.exe")
+
+	cases := []struct {
+		name  string
+		setup func()
+		want  string
+	}{
+		{"pwsh on PATH", func() { onPath["pwsh.exe"] = `C:\bin\pwsh.exe` }, `C:\bin\pwsh.exe`},
+		{"pwsh 7 in ProgramFiles", func() { onDisk[pwsh7] = true }, pwsh7},
+		{"powershell on PATH", func() { onPath["powershell.exe"] = `C:\bin\powershell.exe` }, `C:\bin\powershell.exe`},
+		{"windows powershell in SystemRoot", func() { onDisk[windowsPowerShell] = true }, windowsPowerShell},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			clear(onDisk)
+			clear(onPath)
+			testCase.setup()
+			config, err := resolvePowerShellShell("windows", env, findOnPath, exists)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if config.Shell != testCase.want {
+				t.Fatalf("shell = %q; want %q", config.Shell, testCase.want)
+			}
+			if len(config.Args) != len(PowerShellArgs) {
+				t.Fatalf("args = %#v", config.Args)
+			}
+		})
+	}
+
+	// Nothing found anywhere, and no environment to fall back on.
+	clear(onDisk)
+	clear(onPath)
+	if _, err := resolvePowerShellShell("windows", env, findOnPath, exists); err == nil ||
+		err.Error() != "No PowerShell executable found. Install PowerShell or add powershell.exe/pwsh.exe to PATH." {
+		t.Fatalf("err = %v", err)
+	}
+	// Missing environment variables fall back to the PATH search only.
+	emptyEnv := func(string) string { return "" }
+	if _, err := resolvePowerShellShell("windows", emptyEnv, findOnPath, exists); err == nil {
+		t.Fatal("missing installation directories should fail the same way")
+	}
+	if _, err := resolvePowerShellShell("linux", env, findOnPath, exists); err == nil ||
+		err.Error() != "The powershell tool is only available on Windows." {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+// The legacy WSL bash launcher lives in the configured Windows directory, which
+// need not be C:\Windows: upstream v1.4.0 61060ddf8 compares against
+// %SystemRoot%\System32 and %SystemRoot%\Sysnative.
+func TestIsLegacyWslBashPathHonorsSystemRoot(t *testing.T) {
+	t.Setenv("SystemRoot", `D:\Win`)
+	for _, path := range []string{`D:\Win\System32\bash.exe`, `D:\WIN\system32\BASH.EXE`, `D:\Win\Sysnative\bash.exe`} {
+		if !isLegacyWslBashPath(path) {
+			t.Fatalf("%q should be the legacy WSL launcher", path)
+		}
+	}
+	// With the Windows directory known, a different drive's C:\Windows is not it.
+	for _, path := range []string{`C:\Windows\System32\bash.exe`, `D:\Win\System32\wsl.exe`, `D:\Win\bash.exe`} {
+		if isLegacyWslBashPath(path) {
+			t.Fatalf("%q must not be the legacy WSL launcher", path)
+		}
+	}
+	// A Windows directory that is not drive-absolute cannot match either.
+	for _, systemRoot := range []string{`\\server\share`, `Win`, `relative\Win`} {
+		t.Setenv("SystemRoot", systemRoot)
+		if isLegacyWslBashPath(`C:\Windows\System32\bash.exe`) {
+			t.Fatalf("SystemRoot %q must not fall back to the conventional path", systemRoot)
+		}
+	}
+
+	// Without a Windows directory, only the conventional location matches.
+	t.Setenv("SystemRoot", "")
+	for _, path := range []string{`C:\Windows\System32\bash.exe`, `d:\windows\sysnative\bash.exe`} {
+		if !isLegacyWslBashPath(path) {
+			t.Fatalf("%q should match the conventional launcher path", path)
+		}
+	}
+	// Any drive letter matches, since the Windows directory is unknown.
+	for _, path := range []string{`C:\Windows\System32\bash`, `C:\Windows\bash.exe`, `C:\Windows\System64\bash.exe`} {
+		if isLegacyWslBashPath(path) {
+			t.Fatalf("%q must not match the conventional launcher path", path)
+		}
+	}
+
+	// Separators and dot segments normalize like win32 path normalization.
+	t.Setenv("SystemRoot", `D:/Win/`)
+	for _, path := range []string{`D:\Win\System32\bash.exe`, `D:/Win/System32/bash.exe`, `D:\Win\\System32\bash.exe`, `D:\Win\.\System32\bash.exe`, `D:\Win\other\..\System32\bash.exe`} {
+		if !isLegacyWslBashPath(path) {
+			t.Fatalf("%q should normalize to the legacy WSL launcher", path)
+		}
 	}
 }
