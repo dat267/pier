@@ -2125,3 +2125,38 @@ Tests: `TestThinkingMarkdownKeepsStyledTextItalic`,
 `TestMarkdownForceItalicRestoresResets`,
 `TestMarkdownForceItalicKeepsImagePayloads`, and
 `TestMarkdownForceItalicSurvivesDetachedPreparation`.
+
+## D264
+
+**A summarization that hits the output cap is retried once instead of failing
+the compaction.**
+
+Reference: `core/compaction/compaction.ts` (`generateSummaryWithUsage`,
+`generateSummaryWithUsage`'s `maxTokens = min(floor(0.8 * reserveTokens),
+model.maxTokens)`, `createSummarizationOptions`, `getSummarizationFailure`,
+`completeSummarization`).
+
+Upstream fails the whole compaction with `Summarization failed: generation hit
+the token cap and the summary is incomplete`, which leaves a long session
+uncompactable: the turn loop then either drops the request or keeps re-sending
+the oversized context. The cap it reports is the room left in the window, not
+the summary's own size. At the point compaction fires, `contextWindow -
+reserveTokens` of context is already in use, so the answer has roughly the
+reserve to work with, and reasoning tokens are drawn from that same budget
+(`max_tokens` covers thinking for the providers that report it). A `high`
+thinking level can therefore consume most of the reserve and leave too little
+for the summary text.
+
+The port keeps upstream's request shape on the success path and, on a `length`
+stop, retries once with both levers freed: reasoning off, and the budget raised
+to the model's own output limit clamped to what still fits the window
+(`ai.ClampMaxTokensToContext`, the same clamp the Anthropic and Bedrock request
+paths apply). One retry only, sharing the first attempt's routing id, and only
+when a lever is actually left; a second length stop reports upstream's message
+unchanged, so partial text still never becomes a checkpoint. The failed
+attempt's usage is not counted, matching `completeSummarization`'s own retry
+loop.
+
+Tests: `TestSummarizationRetriesOnceWhenTheTokenCapIsHit`,
+`TestSummarizationRetryIsBoundedAndStillFailsLoudly` and
+`TestSummarizationDoesNotRetryWithoutALever`.

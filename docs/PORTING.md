@@ -396,6 +396,10 @@ requested Pi thinking level, matching upstream's `Object.assign(result, { thinki
 config.reasoning ?? "off" })` (`agent-loop.ts:409`), so a port-produced assistant
 message carries the same `thinkingLevel` key as upstream.
 
+Compaction keeps upstream's request shape and failure message, but a
+summarization that stops at the output cap is retried once with reasoning off
+and the model's own output limit before it gives up (D264).
+
 Tool output was aligned with the pin's `read.ts`/`edit-diff.ts` line handling:
 the `read` tool splits on `\n` the way `read.ts:136` does, keeping the empty
 element after a trailing newline, so the final newline and the reported total

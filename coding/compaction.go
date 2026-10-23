@@ -1311,9 +1311,13 @@ func generateTurnPrefixSummary(messages []ai.Message, options CompactionOptions,
 	return &summaryWithUsage{text: contentTextOf(response.Content), usage: &response.Usage}, nil
 }
 
-// runSummarization builds the context and calls the LLM once (via the
-// retry-wrapped choke point). The caller's headers and reasoning level ride on
-// the request.
+// runSummarization builds the summarization context and runs the request. A
+// length stop holds partial text, so it cannot become a checkpoint; the budget
+// it ran into is the room left in the window, which at compaction time is the
+// reserve, and reasoning tokens come out of that same budget. The model can
+// therefore run out of answer room while the window still has some, so one
+// retry frees both levers: the model's own output limit (clamped to what fits)
+// and reasoning off. Upstream fails the compaction instead (D264).
 func runSummarization(model *ai.Model, promptText string, maxTokens int, options CompactionOptions, reasoning ai.ThinkingLevel) (*ai.AssistantMessage, error) {
 	context := ai.NormalizeContext(ai.Context{
 		SystemPrompt: strPtrOf(SummarizationSystemPrompt),
@@ -1322,6 +1326,41 @@ func runSummarization(model *ai.Model, promptText string, maxTokens int, options
 			Timestamp: time.Now().UnixMilli(),
 		}},
 	})
+	// Both attempts share one routing id, as upstream's retry loop in
+	// completeSummarization does; a per-attempt id would split the cache hints.
+	if options.SessionID == "" {
+		options.SessionID = UUIDv7()
+	}
+	// Upstream createSummarizationOptions sets reasoning only for a
+	// reasoning-capable model and a selected level.
+	reasoningApplied := model.Reasoning && reasoning != "" && reasoning != ai.ThinkOff
+	response, err := requestSummarization(model, context, maxTokens, options, reasoningApplied, reasoning)
+	if err != nil || response.StopReason != ai.StopLength {
+		return response, err
+	}
+	retryMaxTokens := maxTokens
+	if model.MaxTokens > 0 {
+		if roomy := ai.ClampMaxTokensToContext(model, context, int(model.MaxTokens)); roomy > retryMaxTokens {
+			retryMaxTokens = roomy
+		}
+	}
+	if !reasoningApplied && retryMaxTokens == maxTokens {
+		// No lever left: report the length stop as upstream does.
+		return response, nil
+	}
+	return requestSummarization(model, context, retryMaxTokens, options, false, ai.ThinkOff)
+}
+
+// requestSummarization issues one summarization request through the
+// retry-wrapped choke point.
+func requestSummarization(
+	model *ai.Model,
+	context ai.TranscriptContext,
+	maxTokens int,
+	options CompactionOptions,
+	reasoningEnabled bool,
+	reasoning ai.ThinkingLevel,
+) (*ai.AssistantMessage, error) {
 	streamOptions := ai.SimpleStreamOptions{
 		StreamOptions: ai.StreamOptions{
 			APIKey:    options.APIKey,
@@ -1331,16 +1370,11 @@ func runSummarization(model *ai.Model, promptText string, maxTokens int, options
 			Headers:   stringHeaders(options.Headers),
 		},
 	}
-	// Upstream createSummarizationOptions sets reasoning only for a
-	// reasoning-capable model and a selected level.
-	if model.Reasoning && reasoning != "" && reasoning != ai.ThinkOff {
+	if reasoningEnabled {
 		streamOptions.Reasoning = reasoning
 	}
 	// maxTokens plumbs through SamplingExtras-free path: the named field.
 	streamOptions.MaxTokens = &maxTokens
-	if !(model.Reasoning && reasoning != "" && reasoning != ai.ThinkOff) {
-		streamOptions.Reasoning = ""
-	}
 	return CompleteSummarization(model, context, &streamOptions, options.StreamFn, options.Retry, options.Callbacks)
 }
 

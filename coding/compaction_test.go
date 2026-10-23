@@ -607,3 +607,120 @@ func TestCompactCapsSummaryTokensFromSettings(t *testing.T) {
 		t.Fatalf("max tokens with a 4000-token reserve = %d, want 3200", got)
 	}
 }
+
+// A length stop cannot become a checkpoint, but it is not always the summary's
+// own size: at compaction time the room left in the window is the reserve, and
+// reasoning tokens come out of the same budget, so the text can run out while
+// the model still has room. The port retries once with the whole window
+// available and reasoning off (D264); upstream fails the compaction here.
+func TestSummarizationRetriesOnceWhenTheTokenCapIsHit(t *testing.T) {
+	var requests []*ai.SimpleStreamOptions
+	streamFn := func(model *ai.Model, _ ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		captured := *options
+		requests = append(requests, &captured)
+		stream := ai.NewAssistantMessageEventStream()
+		if len(requests) == 1 {
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopLength, Message: &ai.AssistantMessage{
+				API: model.API, Provider: model.Provider, Model: model.ID,
+				Content: ai.ContentList{ai.TextContent{Text: "## Goal\npartial"}}, StopReason: ai.StopLength,
+			}})
+			return stream
+		}
+		stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
+			API: model.API, Provider: model.Provider, Model: model.ID,
+			Content: ai.ContentList{ai.TextContent{Text: "## Goal\ncomplete summary"}}, StopReason: ai.StopStop,
+		}})
+		return stream
+	}
+	model := &ai.Model{
+		ID: "mock", API: ai.APIAnthropicMessages, Provider: "anthropic",
+		ContextWindow: 200000, MaxTokens: 64000, Reasoning: true,
+	}
+	result, err := generateSummaryWithUsage(
+		[]ai.Message{&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}}},
+		CompactionOptions{Model: model, StreamFn: streamFn, ThinkingLevel: ai.ThinkHigh, Retry: &ai.RetryPolicy{Enabled: true, MaxRetries: 1}},
+		"", 16384,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(requests) != 2 {
+		t.Fatalf("summarization requests = %d; want a single retry", len(requests))
+	}
+	// The first request carries the configured reasoning level and the
+	// reserve-derived budget; the retry frees both.
+	if requests[0].Reasoning != ai.ThinkHigh || requests[0].MaxTokens == nil || *requests[0].MaxTokens > 16384 {
+		t.Fatalf("first request = reasoning %q, maxTokens %v", requests[0].Reasoning, requests[0].MaxTokens)
+	}
+	if requests[1].Reasoning != "" && requests[1].Reasoning != ai.ThinkOff {
+		t.Fatalf("retry reasoning = %q; want off", requests[1].Reasoning)
+	}
+	if requests[1].MaxTokens == nil || *requests[1].MaxTokens <= *requests[0].MaxTokens {
+		t.Fatalf("retry maxTokens = %v; want more room than %v", requests[1].MaxTokens, *requests[0].MaxTokens)
+	}
+	if !strings.Contains(result.text, "complete summary") {
+		t.Fatalf("summary = %q", result.text)
+	}
+	if requests[0].SessionID == "" || requests[0].SessionID != requests[1].SessionID {
+		t.Fatalf("routing ids = %q, %q; want one shared id", requests[0].SessionID, requests[1].SessionID)
+	}
+}
+
+// The retry is bounded: a model that hits the cap twice still fails with
+// upstream's message, and the partial text never becomes a checkpoint.
+func TestSummarizationRetryIsBoundedAndStillFailsLoudly(t *testing.T) {
+	calls := 0
+	streamFn := func(model *ai.Model, _ ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		calls++
+		stream := ai.NewAssistantMessageEventStream()
+		stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopLength, Message: &ai.AssistantMessage{
+			API: model.API, Provider: model.Provider, Model: model.ID,
+			Content: ai.ContentList{ai.TextContent{Text: "## Goal\npartial"}}, StopReason: ai.StopLength,
+		}})
+		return stream
+	}
+	model := &ai.Model{
+		ID: "mock", API: ai.APIAnthropicMessages, Provider: "anthropic",
+		ContextWindow: 200000, MaxTokens: 64000, Reasoning: true,
+	}
+	_, err := generateSummaryWithUsage(
+		[]ai.Message{&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}}},
+		CompactionOptions{Model: model, StreamFn: streamFn, ThinkingLevel: ai.ThinkHigh},
+		"", 16384,
+	)
+	if err == nil || !strings.Contains(err.Error(), "token cap") {
+		t.Fatalf("err = %v; want the upstream failure", err)
+	}
+	if calls != 2 {
+		t.Fatalf("summarization calls = %d; want 2 (one retry, then fail)", calls)
+	}
+}
+
+// Nothing is retried when there is no lever left: reasoning already off and the
+// budget already at the model's cap.
+func TestSummarizationDoesNotRetryWithoutALever(t *testing.T) {
+	calls := 0
+	streamFn := func(model *ai.Model, _ ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		calls++
+		stream := ai.NewAssistantMessageEventStream()
+		stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopLength, Message: &ai.AssistantMessage{
+			API: model.API, Provider: model.Provider, Model: model.ID,
+			Content: ai.ContentList{ai.TextContent{Text: "## Goal\npartial"}}, StopReason: ai.StopLength,
+		}})
+		return stream
+	}
+	// 0.8*16384 caps at the model's own 8192 output limit, and the model takes
+	// no reasoning level, so neither lever is left.
+	model := &ai.Model{ID: "mock", API: ai.APIOpenAICompletions, Provider: "openai", ContextWindow: 128000, MaxTokens: 8192}
+	_, err := generateSummaryWithUsage(
+		[]ai.Message{&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}}},
+		CompactionOptions{Model: model, StreamFn: streamFn},
+		"", 16384,
+	)
+	if err == nil || !strings.Contains(err.Error(), "token cap") {
+		t.Fatalf("err = %v; want the upstream failure", err)
+	}
+	if calls != 1 {
+		t.Fatalf("calls = %d; want 1 (no lever left, no retry)", calls)
+	}
+}
