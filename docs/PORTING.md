@@ -143,12 +143,146 @@ suite.
 **Upstream status.** v1.4.0 (`4a080252`) is the latest released tag after
 refreshing upstream tags and is the port's reference pin. It is 81 commits past
 v1.3.0. The pin identifies the sources to review, not a claim that every change
-is ported. The v1.4.0 catalog, transcript tool-change modes and Markdown work
-are described below; a complete v1.3.0-to-v1.4.0 delta audit remains open.
+is ported. The v1.4.0 catalog, transcript tool-change modes, Markdown work and the
+completed delta audit are described below. The audit classifies all 81 commits;
+the remaining in-scope gaps are client identity in pi-ai, telemetry and the
+durable v1.4 harness, plus the documented out-of-scope areas.
 The v1.3.0 delta from v1.2.0 is ported (see the historical v1.3.0 audit below);
 the v1.2.0 delta from v1.1.0 was audited. Confirmed gaps, porting progress and
 out-of-scope areas are recorded below. Earlier release notes retain upstream
 versions and commit IDs as historical context.
+
+### v1.4.0 delta audit
+
+The v1.4.0 delta is 81 commits and 343 files. Every commit is classified
+below; "ported" groups were implemented before this audit, "fixed" was
+corrected here, "gap" is an in-scope behavior still missing, and "out"/"n/a"
+are documented out-of-scope areas or non-runtime changes. This audit found and
+fixed four parity regressions:
+
+- **PI user agent on pi-messages**: the request sent Go's default
+  `Go-http-client/1.1`, because only the other providers set it. It now uses
+  `GetPiUserAgent` before caller headers, matching `getIdentityHeaders` in
+  upstream `api/pi-messages.ts` (`adc5fa9f8`).
+- **Cloudflare attribution**: the pre-v1.4 coding-agent override
+  `User-Agent: pi-coding-agent` was still sent. Upstream moved attribution to
+  pi-ai and no longer maps Cloudflare, so the `pi` agent is used
+  (`adc5fa9f8`, `04a93bad8`).
+- **OpenCode client attribution**: `x-opencode-client: pi` was sent even with
+  install telemetry off. It is now telemetry-gated attribution, while
+  `x-opencode-session` stays unconditional, as `getOpenCodeSessionHeaders` and
+  `getClientIdentity` specify (`04a93bad8`).
+- **Rex truecolor**: `TERM_PROGRAM=rex` now reports truecolor (and still
+  reports kitty images and OSC 8 links) without COLORTERM, matching
+  `detectCapabilitiesFromEnvironment` (`0ed1b0431`, `396ecd7b8`, #11131).
+
+Remaining in-scope v1.4.0 gaps:
+
+- **Client identity in pi-ai**: there is no per-request `identity` option, so
+  the detailed `pi/<version> (<platform>; <runtime>; <arch>)` user agent,
+  custom/short modes, the Bedrock SDK user-agent pairs, and the
+  `telemetry`/identity split are absent. The port keeps its older
+  `pi (<platform> <release>; <arch>)` form and applies attribution in `coding`.
+- **Telemetry**: the chord/pi-ai/durable telemetry stack (spans, metrics,
+  SQLite store, trace renderer) is not ported, so entries marked "out" below
+  stay out of scope.
+- **Durable**: the v1.4 harness features (sleeping tasks and host timers,
+  crash-loop guard, `ReportInfo`, `checkpointWhen`, per-model compaction in the
+  harness, function-valued model/settings options, IndexedDB storage) and the
+  remaining conformance cases are unported, as is the reverted commit-log
+  replication. `ToolControl.terminate` typing is TypeScript-only.
+- **Chord**: the SQLite driver move, exclusive/replicated operations, WAL
+  reader and telemetry store belong to the unported typed-host rewrite; the
+  replication commits were reverted upstream.
+- **Extensions, codemode, classifier, package manager, HTML export**: the
+  extension-dialog stacking, extension tool activation, codemode worker queue,
+  System One classifier image input and managed-install marker changes stay
+  out of scope (D41, D140); the HTML export renderer is injected at the RPC
+  boundary, so the vendored Marked CJK bundle does not apply.
+
+| Commit | Change | Status |
+|---|---|---|
+| `ae7b16d43` | Add [Unreleased] section for next cycle | n/a: changelog metadata |
+| `4954d7605` | feat: check the model catalog against the latest release before publishing (#11007) | out: release tooling |
+| `6085986e4` | fix(durable): type ToolControl.terminate as boolean | gap: durable harness |
+| `c4cf7957b` | feat(durable): per-model compaction settings via compaction.modelOverrides | gap: durable harness |
+| `790271cd0` | fix(durable): restore ToolControl.terminate changes dropped by c4cf7957b | gap: durable harness |
+| `0fbdbd3f8` | fix(ai): retry node-fetch 'request to ... failed' errors | ported: retry classification |
+| `99fe14897` | fix(ai): use mimo-v2.6 models in Xiaomi tests | ported: catalog tests |
+| `90d863f7c` | fix(coding-agent): use mimo-v2.6-pro as Xiaomi default model | ported: catalog default |
+| `6fcb48670` | fix(coding-agent): remove fixed output limits from summary requests (#11036) | ported: summary output limit |
+| `4dd2b149d` | fix(ai): treat whitespace-only tool output as empty | ported: empty tool output |
+| `698a2d23b` | fix(ai): retry more gateway upstream failure errors | ported: retry classification |
+| `7ec1f648e` | feat(durable): accept functions for HarnessOptions.models and settings | gap: durable harness |
+| `2331785c3` | fix(durable): run the Codex prompt-cache e2e test on gpt-6.1-sol | gap: durable tests |
+| `14ff455a0` | fix(env): make the read/bash differential test deterministic and meaningful | out: env package |
+| `95364a54e` | feat(coding-agent): default NVIDIA to Nemotron 3.5 Super VL (#10910) | ported: catalog default |
+| `8efd314fa` | docs(ai,coding-agent): generate models.json reference from schemas (#11038) | n/a: generated docs |
+| `c268154ca` | feat(chord): move Durable's SQLite drivers into chord/sqlite | out: chord |
+| `f75b3240a` | feat(durable): durable sleeping state replaces runtime.sleep | gap: durable timers |
+| `ea7c64843` | feat(durable): workerd tests for Durable Object hosting | out: workerd runtime |
+| `de47e488f` | docs(durable): changelog for sleeping tasks, timers, and wakeups | n/a: docs |
+| `26b5535a5` | docs(durable): clarify the SQLite schema migration in the changelog | n/a: docs |
+| `ec1be23eb` | fix(durable): review fixes for sleeping tasks and host timers | gap: durable harness |
+| `00bf7193d` | fix(durable): arm before resume in the Durable Object example; timer wording | out: durable example |
+| `0b102787c` | docs(coding-agent): restore extension guide details (#11039) | out: extension docs |
+| `e17e2e105` | fix(durable): release the second slow call when the first finished, not after 200 polls | gap: durable timers |
+| `a30c2a81d` | feat(durable): crash-loop guard, report sources, inbox after failed runs, blocked tasks in the task graph | gap: durable harness |
+| `440a5fcdb` | fix(durable): review fixes for the crash-loop guard, reports, and blocked tasks | gap: durable harness |
+| `5ba1cbaf3` | fix(durable): close keeps admitted aborts, reports name the extension that ran, review nits | gap: durable harness |
+| `91b33cab3` | feat(durable): ReportInfo says what happened, with typed reasons | gap: durable reports |
+| `482c1381a` | fix(ai): update GLM-4.6V Coding Plan cache read price in test | ported: catalog test |
+| `48909d987` | feat: telemetry propagation, span links and metrics; telemetry member in chord/context | out: telemetry |
+| `1402973a9` | fix: chord boundary test allows pi-telemetry, the dependency of Context.telemetry | out: chord |
+| `2ec55d808` | feat: Durable and pi-ai telemetry; Context.telemetry is always a span | out: telemetry |
+| `e28e70804` | ignore .pi/settings.json | n/a: repo hygiene |
+| `d2e7d8b7c` | feat(ai): add MiniMax-M3.1-Flash and hide only old MiniMax models | ported: catalog |
+| `d9025a5f5` | feat: SQLite telemetry store in Chord, shared TelemetryStore and trace renderer | out: telemetry |
+| `e86b05475` | fix(ai): OpenRouter reasoning test uses deepseek-r1-0528, deepseek-r1 left the catalog | ported: catalog test |
+| `5c1736f82` | feat: checkpointWhen is required on Durable document definitions | gap: durable documents |
+| `28bea006b` | fix(coding-agent): accept Windows Store shell aliases | ported: Windows shells |
+| `61060ddf8` | fix(coding-agent): resolve Windows shells from installation directories | ported: Windows shells |
+| `0ed1b0431` | feat(tui): detect Rex terminal for OSC 8 hyperlinks | fixed: Rex truecolor; images already ported |
+| `73f8de80b` | fix(ai): recover from Copilot request-size overflow | ported: overflow detection |
+| `caa6967b6` | fix(ai): keep the prompt cache across tool changes on Responses (#11142) | ported: tool-change cache |
+| `530015d93` | fix(ai): only list announced removals as still unavailable | ported: tool-change cache |
+| `ea25697e9` | fix(coding-agent): accept managed install markers with a UTF-8 BOM | out: package manager |
+| `1d01b3b1f` | Break single Mermaid diagram into two | n/a: docs |
+| `b2d0da6fe` | fix(tui): render CJK emphasis next to punctuation (#10730) | ported: CJK emphasis |
+| `a731ba8b8` | docs(tui): add changelog entry for CJK emphasis fix | n/a: changelog |
+| `fbc456d82` | fix(ai): expect xhigh thinking for Grok 4.3 and Grok 4.5 | ported: catalog test |
+| `26293e74f` | fix(coding-agent): render CJK emphasis in HTML export (#11168) | out: HTML export |
+| `48c8f3228` | feat(chord): exclusive SQLite operations and a replicated connection wrapper | out: chord |
+| `fdce48eb4` | fix(ai): drop Codex models rejected for ChatGPT accounts (#11173) | ported: catalog |
+| `396ecd7b8` | feat(tui): enable Kitty images for Rex | ported: Rex images |
+| `2ed3118b0` | fix(tui): stop unclosed display math from swallowing Markdown tables | ported: math/table lexing |
+| `9df819de3` | fix(tui): restore terminal modes when the process exits without stop() | ported: exit restore |
+| `38847563f` | fix(coding-agent): stack concurrent extension dialogs instead of replacing them | out: extension dialogs |
+| `f8ab362cc` | fix(coding-agent): keep clipboard helpers out of pi's process group so Ctrl+Z does not stop them | ported: clipboard detach |
+| `885a564b3` | fix(coding-agent): queue codemode scripts at the worker limit | out: codemode |
+| `22dc6c26f` | fix(coding-agent): expose @earendil-works/pi-ai/models in the extension loader | out: extension loader |
+| `bdd9f0399` | fix(coding-agent): accept mcp.json files with a UTF-8 BOM | ported: MCP BOM |
+| `16f5f0af4` | feat(durable): IndexedDbStorage, a browser storage backed by IndexedDB (@earendil-works/pi-durable/storage/indexeddb) | out: browser storage |
+| `e5fe9777b` | fix(ai,coding-agent): drop models retired upstream | ported: catalog |
+| `cedefc532` | fix(ai): handle ChatGPT Business workspace usage limit errors | ported: usage-limit error |
+| `82432219a` | docs: note generated model data is gitignored in AGENTS.md | n/a: docs |
+| `29057ece3` | fix(ai): retry Codex CLI stream disconnect errors relayed by proxies | ported: retry classification |
+| `6e491cfa9` | fix(ai): match retryable status codes only as standalone numbers | ported: retry classification |
+| `612a172e6` | fix(tui): escape regex metacharacters in single-segment fd queries (#11212) | ported: fd query escaping |
+| `adfc14461` | fix(coding-agent): apply /compact instructions to split-turn prefix summary | ported: split-turn instructions |
+| `adc5fa9f8` | feat(ai,agent,coding-agent): move client identity and provider attribution into pi-ai | fixed: attribution/UA; identity option remaining |
+| `04a93bad8` | fix(ai,agent,coding-agent,durable): client identity follow-ups | fixed: attribution/UA; identity option remaining |
+| `4759f09fb` | feat(chord): WAL reader, page checksums and segment container for SQLite replication | out: chord |
+| `89e309581` | fix(chord): remove WAL page replication | out: chord |
+| `4c25119f5` | feat(durable): replicate storages as a commit log | out: durable replication (reverted) |
+| `cae9fd28a` | Revert "feat(durable): replicate storages as a commit log" | out: durable replication (reverted) |
+| `bd3c9b823` | fix(coding-agent): activate extension tools registered after the branch recorded its loadout | out: extension tools |
+| `8c4e87389` | fix(coding-agent): grep tool ignores ripgrep config via --no-config | ported: grep --no-config |
+| `02726086d` | fix(coding-agent): recovery omits tool results with the truncated tool call | ported: recovery tool results |
+| `7f225f25d` | feat(ai,coding-agent): image input for System One classifiers | out: classifier images |
+| `f76b248ca` | docs(ai,tui,coding-agent): audit changelogs since v1.3.0 | n/a: this audit |
+| `18e56a069` | fix(ai): expect compat on OpenRouter decision models in catalog test | out: classifier test |
+| `4a080252f` | Release v1.4.0 | n/a: release commit |
 
 **v1.2.0 parity fixes so far.** The built-in catalog is regenerated from the
 pinned v1.2.0 generator and current upstream catalog APIs. OpenRouter model
@@ -1058,7 +1192,7 @@ Update the pin whenever upstream source is re-read for a port.
 | `ai` (proxy env) | `utils/node-http-proxy.ts` (`getProxyForUrl`/`resolveHttpProxyUrlForTarget`, the `no_proxy` parser, the per-provider `env` lookup) and its Bedrock/Codex callers | not ported (D240: Go's `http.ProxyFromEnvironment` resolves the process proxy environment; a provider-scoped proxy override and upstream's `no_proxy` parser are replaced by Go's `httpproxy` semantics. The Codex caller is the out-of-scope WebSocket transport, D28; the Bedrock caller only selects HTTP/1 plus proxy agents, and the port is already HTTP/1.1) |
 | `ai` (oauth, openai codex) | `auth/oauth/openai-codex.ts` — the ChatGPT OAuth flow: the authorize URL (extra `id_token_add_organizations`/`codex_cli_simplified_flow`/`originator` params), PKCE + random hex state, the fixed-port loopback server whose listen failure hands over to manual paste, the WHATWG-tolerant JWT decoding used to require a `chatgpt_account_id` claim into the credential, token exchange/refresh with the upstream operation-labelled messages, and the device-code path (string-or-number interval, 403/404 and `deviceauth_authorization_pending`/`slow_down` polling, nested `error.code`) with the device redirect URI | ported |
 | `ai` (radius) | `providers/{radius-config,radius}.ts` + `auth/oauth/radius.ts` — gateway URL normalization, the strict catalogue validator (model shape filtering, thinking-level maps), the `/v1/config` loader with body truncation, the dynamic provider (default-gateway baseline, per-provider catalogue cache, stored-entry restore, legacy credential import, network refresh with persisted check timestamps), and the OAuth flow (discovery endpoint, browser sign-in with PKCE/state/`handoff=url` on the fixed loopback port, device-code sign-in with the coded error mapping, refresh, api-key derivation) | ported with the pi-messages API adapter wired |
-| `ai` (pi-messages) | `api/pi-messages.ts` — pi's own message protocol: the `{model, context, options}` POST to `<baseUrl>/messages` (context rendered through the canonical message marshaller), optional `debug=1`, bearer + SSE headers, header overrides, the SSE reader (CRLF folding, `data:` lines, `[DONE]`), the event converter assembling text/thinking/tool-call blocks with streaming argument parsing and terminal done/error payloads (usage, response id, provider thinking level), rewrite-impact diagnostics, the coded response error with structured diagnostic details (provider, model, url, status, error object or truncated body), the legacy `PI_CACHE_RETENTION` mapping, and the missing-terminal-event error | ported |
+| `ai` (pi-messages) | `api/pi-messages.ts` — pi's own message protocol: the `{model, context, options}` POST to `<baseUrl>/messages` (context rendered through the canonical message marshaller), optional `debug=1`, bearer + SSE + identity `User-Agent` headers, header overrides, the SSE reader (CRLF folding, `data:` lines, `[DONE]`), the event converter assembling text/thinking/tool-call blocks with streaming argument parsing and terminal done/error payloads (usage, response id, provider thinking level), rewrite-impact diagnostics, the coded response error with structured diagnostic details (provider, model, url, status, error object or truncated body), the legacy `PI_CACHE_RETENTION` mapping, and the missing-terminal-event error | ported |
 | `ai` (images) | `image-models.ts`, `api/openrouter-images.ts`, `providers/openrouter-images.ts` + the generated image catalogue — the image-generation counterpart of the model runtime (provider auth/model listing/refresh with shared in-flight fetches, generation that resolves auth and merges explicit options per field, error results instead of rejections), the OpenRouter images API (chat completions with `modalities`, data-URL extraction with remote URLs skipped, cache-write/read usage accounting and per-million cost), and `builtinImagesProviders`/`builtinImagesModels` | ported (the catalogue comes from upstream's generated data evaluated with Node's type stripping) |
 | `ai` (bedrock plumbing) | AWS SigV4 request signing (canonical request, derived signing key, session tokens, verified against the AWS documentation vector), credential/region/endpoint resolution (explicit env credentials, `~/.aws/credentials`/`config` profile parsing, bearer tokens with `AWS_BEDROCK_SKIP_AUTH`, ARN-embedded regions, standard-endpoint detection and the explicit-endpoint rule, GovCloud detection), Bedrock error formatting with the stable exception prefixes and data-retention hint, failure diagnostics, reserved-header rules, stop-reason mapping, and the AWS event-stream binary decoder (prelude/message CRC validation, typed headers, varints) | ported with the Converse adapter wired |
 | `ai/providers` (extension providers) | the user's pi provider extensions ported as providers — Charm Hyper (`hyper`: https://hyper.charm.land/v1, `HYPER_API_KEY`, openai-completions, the 11-model catalog with the deepseek thinking format) and Command Code (`commandcode`: https://api.commandcode.ai/provider/v1, `COMMAND_CODE_API_KEY`, Claude models over anthropic-messages from the base URL minus `/v1`, the seed catalog minus the extension's unavailable/dominated ids) | ported (`ExtensionProviders()` registered alongside the built-ins, D140) |

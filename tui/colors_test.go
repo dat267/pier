@@ -143,6 +143,8 @@ func TestTerminalDetectsTrueColor(t *testing.T) {
 		{"COLORTERM truecolor", map[string]string{"COLORTERM": "truecolor"}, true},
 		{"COLORTERM 24bit", map[string]string{"COLORTERM": "24BIT"}, true},
 		{"TERM -direct", map[string]string{"TERM": "xterm-direct"}, true},
+		{"Rex", map[string]string{"TERM_PROGRAM": "rex"}, true},
+		{"Rex inside tmux", map[string]string{"TERM_PROGRAM": "rex", "TMUX": "1"}, false},
 		{"Kitty", map[string]string{"TERM_PROGRAM": "kitty"}, true},
 		{"Kitty inside tmux", map[string]string{"TERM_PROGRAM": "kitty", "TMUX": "1"}, false},
 		{"Ghostty TERM", map[string]string{"TERM": "xterm-ghostty"}, true},

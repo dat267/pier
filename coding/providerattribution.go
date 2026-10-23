@@ -13,11 +13,9 @@ import (
 // per-session OpenCode headers, merged with caller-supplied headers.
 
 const (
-	openRouterHost          = "openrouter.ai"
-	nvidiaNimHost           = "integrate.api.nvidia.com"
-	cloudflareAPIHost       = "api.cloudflare.com"
-	cloudflareAIGatewayHost = "gateway.ai.cloudflare.com"
-	openCodeHost            = "opencode.ai"
+	openRouterHost = "openrouter.ai"
+	nvidiaNimHost  = "integrate.api.nvidia.com"
+	openCodeHost   = "opencode.ai"
 )
 
 func matchesProviderHost(baseURL, expectedHost string) bool {
@@ -37,13 +35,6 @@ func isNvidiaNimModel(model *ai.Model) bool {
 	return model.Provider == "nvidia" || matchesProviderHost(model.BaseURL, nvidiaNimHost)
 }
 
-func isCloudflareModel(model *ai.Model) bool {
-	return model.Provider == "cloudflare-workers-ai" ||
-		model.Provider == "cloudflare-ai-gateway" ||
-		matchesProviderHost(model.BaseURL, cloudflareAPIHost) ||
-		matchesProviderHost(model.BaseURL, cloudflareAIGatewayHost)
-}
-
 // GetDefaultAttributionHeaders returns the install-telemetry attribution headers
 // for a model, or nil when telemetry is disabled or the provider is unlisted.
 func GetDefaultAttributionHeaders(model *ai.Model, settingsManager *SettingsManager) map[string]string {
@@ -60,22 +51,25 @@ func GetDefaultAttributionHeaders(model *ai.Model, settingsManager *SettingsMana
 	if isNvidiaNimModel(model) {
 		return map[string]string{"X-BILLING-INVOKE-ORIGIN": "Pi"}
 	}
-	if isCloudflareModel(model) {
-		return map[string]string{"User-Agent": "pi-coding-agent"}
+	if isOpenCodeModel(model) {
+		return map[string]string{"x-opencode-client": "pi"}
 	}
 	return nil
 }
 
-// GetSessionHeaders returns the OpenCode session-affinity headers.
+func isOpenCodeModel(model *ai.Model) bool {
+	return model.Provider == "opencode" || model.Provider == "opencode-go" ||
+		matchesProviderHost(model.BaseURL, openCodeHost)
+}
+
+// GetSessionHeaders returns the OpenCode session-affinity header, which applies
+// even when attribution is off (upstream getOpenCodeSessionHeaders). The client
+// attribution header is telemetry-gated in GetDefaultAttributionHeaders.
 func GetSessionHeaders(model *ai.Model, sessionID string) map[string]string {
-	if sessionID == "" {
+	if sessionID == "" || !isOpenCodeModel(model) {
 		return nil
 	}
-	if model.Provider != "opencode" && model.Provider != "opencode-go" &&
-		!matchesProviderHost(model.BaseURL, openCodeHost) {
-		return nil
-	}
-	return map[string]string{"x-opencode-session": sessionID, "x-opencode-client": "pi"}
+	return map[string]string{"x-opencode-session": sessionID}
 }
 
 // MergeProviderAttributionHeaders merges session headers, default attribution

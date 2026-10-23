@@ -237,9 +237,11 @@ func TestProviderAttributionHeaders(t *testing.T) {
 	if GetDefaultAttributionHeaders(nvidia, settings)["X-BILLING-INVOKE-ORIGIN"] != "Pi" {
 		t.Fatal("nvidia headers")
 	}
+	// v1.4.0 moved attribution into pi-ai and dropped the Cloudflare
+	// User-Agent override; Cloudflare requests use the plain pi agent.
 	cloudflare := &ai.Model{Provider: "cloudflare-workers-ai", BaseURL: "https://api.cloudflare.com/x"}
-	if GetDefaultAttributionHeaders(cloudflare, settings)["User-Agent"] != "pi-coding-agent" {
-		t.Fatal("cloudflare headers")
+	if headers := GetDefaultAttributionHeaders(cloudflare, settings); headers != nil {
+		t.Fatalf("cloudflare headers = %v", headers)
 	}
 	if headers := GetDefaultAttributionHeaders(&ai.Model{Provider: "anthropic"}, settings); headers != nil {
 		t.Fatalf("headers = %v", headers)
@@ -267,8 +269,12 @@ func TestProviderAttributionHeaders(t *testing.T) {
 	// Session headers only apply to OpenCode providers/hosts.
 	openCode := &ai.Model{Provider: "opencode", BaseURL: "https://opencode.ai/x"}
 	session := GetSessionHeaders(openCode, "sess-1")
-	if session["x-opencode-session"] != "sess-1" || session["x-opencode-client"] != "pi" {
+	if len(session) != 1 || session["x-opencode-session"] != "sess-1" {
 		t.Fatalf("session = %v", session)
+	}
+	// The client header is attribution, so it follows the telemetry toggle.
+	if client := GetDefaultAttributionHeaders(openCode, settings); client["x-opencode-client"] != "pi" {
+		t.Fatalf("opencode client header = %v", client)
 	}
 	if GetSessionHeaders(openCode, "") != nil {
 		t.Fatal("no session id")
@@ -279,6 +285,13 @@ func TestProviderAttributionHeaders(t *testing.T) {
 	if GetSessionHeaders(&ai.Model{Provider: "anthropic", BaseURL: "https://api.anthropic.com"}, "s") != nil {
 		t.Fatal("unrelated provider")
 	}
+	// With attribution off, only the session header remains.
+	t.Setenv("PI_TELEMETRY", "0")
+	off := MergeProviderAttributionHeaders(openCode, settings, "sess-3")
+	if len(off) != 1 || off["x-opencode-session"] != "sess-3" {
+		t.Fatalf("telemetry-off headers = %v", off)
+	}
+	t.Setenv("PI_TELEMETRY", "")
 
 	// The merge order is session, attribution, then caller sources.
 	merged := MergeProviderAttributionHeaders(openCode, settings, "sess-2",

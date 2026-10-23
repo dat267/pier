@@ -389,6 +389,11 @@ func terminalDetectsTrueColor(env func(string) string, windowsConsole bool) bool
 	if termProgram == "herdr" {
 		return hint
 	}
+	if termProgram == "rex" {
+		// Rex supports OSC 8 and enough of the Kitty graphics protocol for pi
+		// (upstream 0ed1b0431/396ecd7b8, #11131).
+		return true
+	}
 	if env("KITTY_WINDOW_ID") != "" || termProgram == "kitty" {
 		return true
 	}
