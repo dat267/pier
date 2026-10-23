@@ -51,7 +51,9 @@ func escapeAutocompleteRegex(value string) string {
 func buildFdPathQuery(query string) string {
 	normalized := toDisplayPath(query)
 	if !strings.Contains(normalized, "/") {
-		return normalized
+		// A single segment is still an fd pattern, so a query like "[" or "f("
+		// must match those characters literally (upstream 612a172e6, #10972).
+		return escapeAutocompleteRegex(normalized)
 	}
 
 	hasTrailingSeparator := strings.HasSuffix(normalized, "/")
@@ -67,9 +69,6 @@ func buildFdPathQuery(query string) string {
 			continue
 		}
 		segments = append(segments, escapeAutocompleteRegex(segment))
-	}
-	if len(segments) == 0 {
-		return normalized
 	}
 
 	pattern := strings.Join(segments, separatorPattern)

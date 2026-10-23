@@ -132,6 +132,44 @@ func TestFileCompletionUnderHomeFiltersInsideHome(t *testing.T) {
 	}
 }
 
+// A query containing regex metacharacters must match names literally, so a
+// bracket directory is reachable from both a single-segment and a path query
+// (upstream 612a172e6, #10972: "@" completion returned nothing for "@pages/[").
+func TestAutocompleteFDQueryTreatsMetacharactersLiterally(t *testing.T) {
+	fdPath, err := exec.LookPath("fd")
+	if err != nil {
+		t.Skip("fd is not installed")
+	}
+	root := t.TempDir()
+	for _, name := range []string{"pages/[id].tsx", "pages/index.tsx", "pages/(group).ts"} {
+		full := filepath.Join(root, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+		if err := os.WriteFile(full, []byte("x"), 0o644); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+	}
+	provider := NewCombinedAutocompleteProvider(nil, root, fdPath)
+	for line, want := range map[string]string{
+		"@pages/[": "@pages/[id].tsx",
+		"@pages/(": "@pages/(group).ts",
+		"@[id":     "@pages/[id].tsx",
+	} {
+		suggestions := provider.GetSuggestions(context.Background(), []string{line}, 0, len(line), false)
+		if suggestions == nil {
+			t.Fatalf("%s: no suggestions", line)
+		}
+		var values []string
+		for _, item := range suggestions.Items {
+			values = append(values, item.Value)
+		}
+		if strings.Join(values, " ") != want {
+			t.Fatalf("%s: suggestions = %v; want %q", line, values, want)
+		}
+	}
+}
+
 // TestAutocompleteAgainstUpstreamGolden replays the upstream provider corpus.
 func TestAutocompleteAgainstUpstreamGolden(t *testing.T) {
 	fdPath, err := exec.LookPath("fd")
@@ -279,6 +317,14 @@ func TestAutocompleteHelpers(t *testing.T) {
 	}
 	if got := buildFdPathQuery("a.b/c+d"); got != `a\.b[\\/]c\+d` {
 		t.Fatalf("buildFdPathQuery escaped = %q", got)
+	}
+	// A single-segment query is still an fd pattern, not literal text
+	// (upstream 612a172e6, #10972).
+	if got := buildFdPathQuery("[id"); got != `\[id` {
+		t.Fatalf("buildFdPathQuery single segment escaped = %q", got)
+	}
+	if got := buildFdPathQuery("f(x)"); got != `f\(x\)` {
+		t.Fatalf("buildFdPathQuery parentheses escaped = %q", got)
 	}
 
 	parsed := parsePathPrefix(`@"a b`)
