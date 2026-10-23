@@ -857,7 +857,23 @@ func (a *App) runDone() <-chan struct{} {
 
 // Run initializes and runs the interactive loop.
 func (a *App) Run(ctx context.Context) {
+	// Last-resort restore for a return path that skipped Stop, like a panic in
+	// the owner loop's cleanup (upstream's process exit handler, v1.4.0
+	// 9df819de3). RestoreOnExit no-ops once the renderer stopped, and a hard kill
+	// runs no Go code at all.
+	defer a.restoreTerminalOnExit()
 	a.runGuarded(func() { a.run(ctx) })
+}
+
+// restoreTerminalOnExit restores the terminal if the run did not stop it.
+func (a *App) restoreTerminalOnExit() {
+	if a.lifecycle == nil {
+		return
+	}
+	func() {
+		defer func() { _ = recover() }()
+		a.lifecycle.RestoreOnExit()
+	}()
 }
 
 // runGuarded converts a panic escaping the owner loop into the handled crash

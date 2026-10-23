@@ -51,6 +51,7 @@ func (f *fakeTerminal) joinedWrites() string {
 
 func (f *fakeTerminal) Start(onInput func(string), onResize func()) {}
 func (f *fakeTerminal) Stop()                                       {}
+func (f *fakeTerminal) RestoreOnExit(before, after string)          { f.appendWrite(before + after) }
 func (f *fakeTerminal) DrainInput(maxMs int, idleMs int) error      { return nil }
 func (f *fakeTerminal) Write(data string)                           { f.appendWrite(data) }
 func (f *fakeTerminal) Columns() int                                { return f.width }

@@ -687,6 +687,33 @@ func (t *ProcessTerminal) swapInputHandlerRestore(previous func(string)) {
 	t.setInputHandler(previous)
 }
 
+// RestoreOnExit writes the mode resets for an exit path that never called Stop,
+// synchronously: the write queue's goroutine may already be gone, so queued
+// bytes would never reach the terminal (upstream Terminal.restoreOnExit uses
+// fs.writeSync for the same reason). before and after bracket this terminal's
+// own resets.
+func (t *ProcessTerminal) RestoreOnExit(before, after string) {
+	var sequence strings.Builder
+	sequence.WriteString(before)
+	if t.clearProgressIntervalLocked() {
+		sequence.WriteString(terminalProgressClearSequence)
+	}
+	// Bracketed paste, then the Kitty keyboard protocol, then modifyOtherKeys.
+	sequence.WriteString("\x1b[?2004l")
+	if t.keyboardProtocolPushed.Load() || t.kittyProtocolActive.Load() {
+		sequence.WriteString("\x1b[<u")
+		t.keyboardProtocolPushed.Store(false)
+		t.kittyProtocolActive.Store(false)
+		SetKittyProtocolActive(false)
+	}
+	if t.modifyOtherKeysActive.Load() {
+		sequence.WriteString("\x1b[>4;0m")
+		t.modifyOtherKeysActive.Store(false)
+	}
+	sequence.WriteString(after)
+	t.writeDirect(sequence.String())
+}
+
 // Stop restores the terminal state.
 func (t *ProcessTerminal) Stop() {
 	t.writeMu.Lock()

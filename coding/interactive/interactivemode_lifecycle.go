@@ -423,6 +423,15 @@ func (l *Lifecycle) stopMode() {
 	l.Stop()
 }
 
+// RestoreOnExit restores the terminal for an exit path that skipped Stop. It is
+// a no-op once the renderer stopped (upstream's process exit handler,
+// v1.4.0 9df819de3).
+func (l *Lifecycle) RestoreOnExit() {
+	if ui := l.CurrentUI(); ui != nil {
+		ui.RestoreOnExit()
+	}
+}
+
 // Stop stops the renderer.
 func (l *Lifecycle) Stop() {
 	l.beginShutdownOutput()

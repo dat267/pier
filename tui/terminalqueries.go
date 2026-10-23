@@ -365,6 +365,10 @@ func (q *terminalQueries) NotifyOnStart(writer terminalQueryWriter) {
 	}
 }
 
+// NotifyEnabled reports whether the `CSI ? 2031` notifications are on, for the
+// exit restore that cannot go through NotifyOnStop.
+func (q *terminalQueries) NotifyEnabled() bool { return q.notify }
+
 // NotifyOnStop disables an enabled notification and marks the terminal stopped.
 func (q *terminalQueries) NotifyOnStop(writer terminalQueryWriter) {
 	started := q.started

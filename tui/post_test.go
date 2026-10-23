@@ -116,6 +116,7 @@ type fakePostTerminal struct {
 
 func (f *fakePostTerminal) Start(onInput func(string), onResize func()) {}
 func (f *fakePostTerminal) Stop()                                       {}
+func (f *fakePostTerminal) RestoreOnExit(before, after string)          {}
 func (f *fakePostTerminal) DrainInput(maxMs int, idleMs int) error      { return nil }
 func (f *fakePostTerminal) Write(data string)                           {}
 func (f *fakePostTerminal) Columns() int                                { return f.width }

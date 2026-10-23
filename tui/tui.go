@@ -31,6 +31,9 @@ type TUI interface {
 	GetTerminal() Terminal
 	Start()
 	Stop(options TuiStopOptions)
+	// RestoreOnExit writes the mode resets for an exit path that skipped Stop
+	// (upstream TUI.exitRestoreHandler).
+	RestoreOnExit()
 	// Post runs fn on the UI side: serialized with renders and input handling
 	// (under the render lock), never concurrent with a paint. Callbacks may
 	// call back into the renderer, but must not call RenderNow or Stop.
@@ -110,6 +113,9 @@ func (r *TuiReference) RawChildren() []Component { return r.get().RawChildren() 
 
 // GetTerminal returns the active terminal.
 func (r *TuiReference) GetTerminal() Terminal { return r.get().GetTerminal() }
+
+// RestoreOnExit forwards to the current renderer.
+func (r *TuiReference) RestoreOnExit() { r.get().RestoreOnExit() }
 
 // Start starts the active renderer.
 func (r *TuiReference) Start() { r.get().Start() }

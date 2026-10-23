@@ -28,6 +28,12 @@ type Terminal interface {
 	Start(onInput func(data string), onResize func())
 	// Stop restores the terminal state.
 	Stop()
+	// RestoreOnExit writes the mode resets for an exit path that never called
+	// Stop. before and after come from the renderer (cursor, color-scheme
+	// notifications, alternate screen); the terminal adds its own protocol
+	// resets between them and writes the whole sequence synchronously, because
+	// the write queue's goroutine may already be gone.
+	RestoreOnExit(before, after string)
 	// DrainInput drains stdin before exiting.
 	DrainInput(maxMs int, idleMs int) error
 	// Write writes output to the terminal.
@@ -389,6 +395,33 @@ func (t *Renderer) Start() {
 	t.Terminal.HideCursor()
 	t.RequestRender(false)
 }
+
+// RestoreOnExit restores the terminal modes for an exit path that skipped Stop,
+// such as a panic or a direct exit (upstream TuiBase.exitRestoreHandler, v1.4.0
+// 9df819de3). A hard kill runs no Go code and cannot be covered.
+func (t *Renderer) RestoreOnExit() {
+	if t.stopped.Load() {
+		return
+	}
+	if t.Terminal == nil {
+		return
+	}
+	t.Terminal.RestoreOnExit(t.exitRestorePrefix(), t.exitRestoreSuffix())
+}
+
+// exitRestorePrefix is written before the terminal's own resets: color-scheme
+// notifications off when they were on, then the cursor shown again.
+func (t *Renderer) exitRestorePrefix() string {
+	prefix := ""
+	if t.queries.NotifyEnabled() {
+		prefix = "\x1b[?2031l"
+	}
+	return prefix + "\x1b[?25h"
+}
+
+// exitRestoreSuffix is written after the terminal's own resets. The main screen
+// owns nothing beyond them.
+func (t *Renderer) exitRestoreSuffix() string { return "" }
 
 // Stop stops the renderer and restores the terminal.
 func (t *Renderer) Stop(options TuiStopOptions) {

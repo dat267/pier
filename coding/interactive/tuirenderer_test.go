@@ -155,6 +155,7 @@ type fakeRendererTerminal struct {
 
 func (f *fakeRendererTerminal) Start(onInput func(string), onResize func()) {}
 func (f *fakeRendererTerminal) Stop()                                       {}
+func (f *fakeRendererTerminal) RestoreOnExit(before, after string)          {}
 func (f *fakeRendererTerminal) DrainInput(maxMs int, idleMs int) error      { return nil }
 func (f *fakeRendererTerminal) Write(data string)                           {}
 func (f *fakeRendererTerminal) Columns() int                                { return f.width }

@@ -61,6 +61,7 @@ func (t *recordingTerminal) resetWrites() {
 
 func (t *recordingTerminal) Start(onInput func(string), onResize func()) {}
 func (t *recordingTerminal) Stop()                                       {}
+func (t *recordingTerminal) RestoreOnExit(before, after string)          { t.appendWrite(before + after) }
 func (t *recordingTerminal) DrainInput(maxMs int, idleMs int) error      { return nil }
 func (t *recordingTerminal) Write(data string)                           { t.appendWrite(data) }
 func (t *recordingTerminal) Columns() int                                { return t.width }

@@ -508,3 +508,57 @@ func TestHandleCtrlZSuspendsProcess(t *testing.T) {
 		t.Fatalf("windows: suspend=%d statuses=%v", called, statuses)
 	}
 }
+
+// The last-resort restore reaches the active renderer, and only while it is
+// still active: upstream's process exit handler (v1.4.0 9df819de3) restores the
+// terminal when the run never called stop().
+func TestLifecycleRestoreOnExitReachesTheActiveRenderer(t *testing.T) {
+	terminal := &restoreSpyTerminal{width: 40, height: 12}
+	ui := CreateInteractiveTui(InteractiveTuiOptions{TuiMode: "regular", Terminal: terminal})
+	lifecycle := NewLifecycle(LifecycleOptions{UI: ui, Exit: func(int) {}, Platform: "linux"})
+
+	lifecycle.RestoreOnExit()
+	if terminal.restores != 1 {
+		t.Fatalf("restores = %d; want the renderer to be asked once", terminal.restores)
+	}
+	if !strings.Contains(terminal.restored, "\x1b[?25h") {
+		t.Fatalf("restore = %q; want the cursor shown again", terminal.restored)
+	}
+
+	// Once stopped, the exit path has nothing left to restore.
+	lifecycle.Stop()
+	terminal.restores = 0
+	lifecycle.RestoreOnExit()
+	// Stop itself restores through the normal path, so only count the exit call.
+	if terminal.restores != 0 {
+		t.Fatalf("restores = %d; want none after Stop", terminal.restores)
+	}
+}
+
+// restoreSpyTerminal records RestoreOnExit calls.
+type restoreSpyTerminal struct {
+	fakeRendererTerminal
+	restores int
+	restored string
+}
+
+func (t *restoreSpyTerminal) RestoreOnExit(before, after string) {
+	t.restores++
+	t.restored = before + after
+}
+
+// App.restoreTerminalOnExit is the deferred last-resort hook: it never panics,
+// and it restores through the lifecycle when there is one.
+func TestAppRestoreTerminalOnExit(t *testing.T) {
+	// No lifecycle: nothing to restore, and no panic.
+	bare := &App{}
+	bare.restoreTerminalOnExit()
+
+	terminal := &restoreSpyTerminal{width: 40, height: 12}
+	ui := CreateInteractiveTui(InteractiveTuiOptions{TuiMode: "regular", Terminal: terminal})
+	app := &App{lifecycle: NewLifecycle(LifecycleOptions{UI: ui, Exit: func(int) {}, Platform: "linux"})}
+	app.restoreTerminalOnExit()
+	if terminal.restores != 1 {
+		t.Fatalf("restores = %d; want 1", terminal.restores)
+	}
+}

@@ -448,6 +448,41 @@ func (s *AltScreen) beforeTerminalStart() {
 	}
 }
 
+// RestoreOnExit restores the modes the alternate screen owns, for an exit path
+// that skipped Stop (upstream TuiAltScreen.getExitRestorePrefix/Suffix, v1.4.0
+// 9df819de3).
+func (s *AltScreen) RestoreOnExit() {
+	if s.stopped.Load() || s.Terminal == nil {
+		return
+	}
+	s.Terminal.RestoreOnExit(s.exitRestorePrefix(), s.exitRestoreSuffix())
+}
+
+// exitRestorePrefix ends the synchronized-output block the frame started,
+// releases the mouse, restores autowrap, then adds the main-screen resets.
+func (s *AltScreen) exitRestorePrefix() string {
+	prefix := s.Renderer.exitRestorePrefix()
+	if !s.altScreenActive {
+		return prefix
+	}
+	disable := ""
+	if s.mouseEnabled {
+		disable = disableMouse
+	}
+	return endSynchronizedOutput + disable + enableAutowrap + prefix
+}
+
+// exitRestoreSuffix leaves the alternate screen after the terminal popped its
+// per-screen modes: the Kitty keyboard flags are per screen, so they go before
+// this.
+func (s *AltScreen) exitRestoreSuffix() string {
+	suffix := s.Renderer.exitRestoreSuffix()
+	if s.altScreenActive {
+		suffix += exitAltScreen + "\x1b[?25h"
+	}
+	return suffix
+}
+
 func (s *AltScreen) beforeTerminalStop(options TuiStopOptions) {
 	s.closeSearchLocked()
 	s.stopSelectionAutoScrollLocked()
