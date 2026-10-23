@@ -1246,14 +1246,59 @@ type summaryWithUsage struct {
 	usage *ai.Usage
 }
 
+// maxSummarizationRequests bounds the requests one summarization may spend when
+// the answer does not fit: each extra pass re-sends conversation text, so the
+// escalation stops and reports the failure instead of looping.
+const maxSummarizationRequests = 10
+
+// summarizationPlan is the target of one summarization: its instructions, the
+// label its failures carry, and the first attempt's budget.
+type summarizationPlan struct {
+	label string
+	// prompt renders the request for one chunk. previousSummary is empty only
+	// for the first chunk of a summary that starts from nothing.
+	prompt    func(messages []ai.Message, previousSummary string) string
+	maxTokens int
+	reasoning ai.ThinkingLevel
+}
+
+// summarizationEscalation carries the request budget and the accumulated usage
+// of one summarization across its passes.
+type summarizationEscalation struct {
+	requests int
+	usage    ai.Usage
+}
+
 // generateSummaryWithUsage generates or updates a conversation summary.
 func generateSummaryWithUsage(currentMessages []ai.Message, options CompactionOptions, previousSummary string, reserveTokens int64) (*summaryWithUsage, error) {
-	model := options.Model
-	maxTokens := math.Floor(0.8 * float64(reserveTokens))
-	if model.MaxTokens > 0 && maxTokens > float64(model.MaxTokens) {
-		maxTokens = float64(model.MaxTokens)
-	}
+	return summarizeConversation(currentMessages, options, previousSummary, summarizationPlan{
+		label: "Summarization",
+		prompt: func(messages []ai.Message, previous string) string {
+			return conversationSummaryPrompt(messages, options, previous)
+		},
+		maxTokens: summarizationBudgetTokens(options.Model, 0.8, reserveTokens),
+		reasoning: options.ThinkingLevel,
+	})
+}
 
+// generateTurnPrefixSummary summarizes a split turn's prefix.
+func generateTurnPrefixSummary(messages []ai.Message, options CompactionOptions, reserveTokens int64) (*summaryWithUsage, error) {
+	return summarizeConversation(messages, options, "", summarizationPlan{
+		label:     "Turn prefix summarization",
+		prompt:    turnPrefixSummaryPrompt,
+		maxTokens: summarizationBudgetTokens(options.Model, 0.5, reserveTokens),
+		reasoning: options.ThinkingLevel,
+	})
+}
+
+// conversationSummaryPrompt renders the conversation summary request, port of
+// generateSummaryWithUsage's prompt assembly.
+func conversationSummaryPrompt(messages []ai.Message, options CompactionOptions, previousSummary string) string {
+	conversationText := SerializeConversation(ConvertToLlm(messages))
+	promptText := fmt.Sprintf("<conversation>\n%s\n</conversation>\n\n", conversationText)
+	if previousSummary != "" {
+		promptText += fmt.Sprintf("<previous-summary>\n%s\n</previous-summary>\n\n", previousSummary)
+	}
 	basePrompt := summarizationPrompt
 	if previousSummary != "" {
 		basePrompt = updateSummarizationPrompt
@@ -1261,98 +1306,170 @@ func generateSummaryWithUsage(currentMessages []ai.Message, options CompactionOp
 	if options.CustomInstructions != "" {
 		basePrompt = fmt.Sprintf("%s\n\nAdditional focus: %s", basePrompt, options.CustomInstructions)
 	}
-
-	llmMessages := ConvertToLlm(currentMessages)
-	conversationText := SerializeConversation(llmMessages)
-	promptText := fmt.Sprintf("<conversation>\n%s\n</conversation>\n\n", conversationText)
-	if previousSummary != "" {
-		promptText += fmt.Sprintf("<previous-summary>\n%s\n</previous-summary>\n\n", previousSummary)
-	}
-	promptText += basePrompt
-
-	response, err := runSummarization(model, promptText, int(maxTokens), options, options.ThinkingLevel)
-	if err != nil {
-		return nil, err
-	}
-	if failure := GetSummarizationFailure(response, "Summarization"); failure != "" {
-		return nil, fmt.Errorf("%s", failure)
-	}
-	for _, block := range response.Content {
-		if _, ok := block.(ai.ToolCall); ok {
-			return nil, fmt.Errorf("Summarization attempted to call a tool")
-		}
-	}
-	return &summaryWithUsage{text: contentTextOf(response.Content), usage: &response.Usage}, nil
+	return promptText + basePrompt
 }
 
-// generateTurnPrefixSummary summarizes a split turn's prefix.
-func generateTurnPrefixSummary(messages []ai.Message, options CompactionOptions, reserveTokens int64) (*summaryWithUsage, error) {
-	model := options.Model
-	maxTokens := math.Floor(0.5 * float64(reserveTokens))
+// turnPrefixSummaryPrompt renders the split-turn prompt. A later chunk merges
+// through the update instructions, so the checkpoint sections stay one list
+// instead of two concatenated ones.
+func turnPrefixSummaryPrompt(messages []ai.Message, previousSummary string) string {
+	conversationText := SerializeConversation(ConvertToLlm(messages))
+	if previousSummary == "" {
+		return fmt.Sprintf("# Conversation\n%s\n\n# Instructions\n%s", conversationText, turnPrefixSummarizationPrompt)
+	}
+	return fmt.Sprintf("# Conversation\n%s\n\n# Previous summary\n%s\n\n# Instructions\n%s",
+		conversationText, previousSummary, updateSummarizationPrompt)
+}
+
+// summarizationBudgetTokens is upstream's min(fraction * reserveTokens,
+// model.maxTokens) answer-room budget.
+func summarizationBudgetTokens(model *ai.Model, fraction float64, reserveTokens int64) int {
+	maxTokens := math.Floor(fraction * float64(reserveTokens))
 	if model.MaxTokens > 0 && maxTokens > float64(model.MaxTokens) {
 		maxTokens = float64(model.MaxTokens)
 	}
-	llmMessages := ConvertToLlm(messages)
-	conversationText := SerializeConversation(llmMessages)
-	promptText := fmt.Sprintf("# Conversation\n%s\n\n# Instructions\n%s", conversationText, turnPrefixSummarizationPrompt)
+	return int(maxTokens)
+}
 
-	response, err := runSummarization(model, promptText, int(maxTokens), options, options.ThinkingLevel)
+// summarizeConversation summarizes messages under one plan, escalating until the
+// answer fits (port of generateSummaryWithUsage with D264's escalation).
+func summarizeConversation(messages []ai.Message, options CompactionOptions, previousSummary string, plan summarizationPlan) (*summaryWithUsage, error) {
+	// Every pass of one summarization shares one routing id, as upstream's retry
+	// loop in completeSummarization does; a per-pass id would split the cache
+	// hints across the escalation.
+	if options.SessionID == "" {
+		options.SessionID = UUIDv7()
+	}
+	escalation := &summarizationEscalation{}
+	summary, err := summarizeChunks(options.Model, messages, options, plan, previousSummary, plan.maxTokens, plan.reasoning, escalation)
 	if err != nil {
 		return nil, err
 	}
-	if failure := GetSummarizationFailure(response, "Turn prefix summarization"); failure != "" {
-		return nil, fmt.Errorf("%s", failure)
-	}
-	for _, block := range response.Content {
-		if _, ok := block.(ai.ToolCall); ok {
-			return nil, fmt.Errorf("Turn prefix summarization attempted to call a tool")
-		}
-	}
-	return &summaryWithUsage{text: contentTextOf(response.Content), usage: &response.Usage}, nil
+	summary.usage = &escalation.usage
+	return summary, nil
 }
 
-// runSummarization builds the summarization context and runs the request. A
-// length stop holds partial text, so it cannot become a checkpoint; the budget
-// it ran into is the room left in the window, which at compaction time is the
-// reserve, and reasoning tokens come out of that same budget. The model can
-// therefore run out of answer room while the window still has some, so one
-// retry frees both levers: the model's own output limit (clamped to what fits)
-// and reasoning off. Upstream fails the compaction instead (D264).
-func runSummarization(model *ai.Model, promptText string, maxTokens int, options CompactionOptions, reasoning ai.ThinkingLevel) (*ai.AssistantMessage, error) {
-	context := ai.NormalizeContext(ai.Context{
+// summarizeChunks summarizes one chunk of messages. A length stop holds partial
+// text and cannot become a checkpoint, so the budget it ran into is resolved
+// before the request is worth repeating: first with the same input and more room
+// (the budget is what the window had left, and reasoning tokens come out of that
+// same budget), then conclusively by summarizing less input at a time and
+// merging each chunk into the summary so far. Upstream fails the compaction on
+// the first length stop (D264).
+func summarizeChunks(
+	model *ai.Model,
+	messages []ai.Message,
+	options CompactionOptions,
+	plan summarizationPlan,
+	previousSummary string,
+	maxTokens int,
+	reasoning ai.ThinkingLevel,
+	escalation *summarizationEscalation,
+) (*summaryWithUsage, error) {
+	if len(messages) == 0 {
+		return &summaryWithUsage{text: previousSummary}, nil
+	}
+	if escalation.requests >= maxSummarizationRequests {
+		// Every chunk that reached this point already ran out of answer room, so
+		// a further pass would only spend another full conversation send.
+		return nil, summarizationLengthFailure(plan.label)
+	}
+	context := summarizationContext(plan.prompt(messages, previousSummary))
+	response, err := requestSummarization(model, context, maxTokens, options, summarizationReasoningEnabled(model, reasoning), reasoning, escalation)
+	if err != nil {
+		return nil, err
+	}
+	if response.StopReason != ai.StopLength {
+		return summarizationResult(plan.label, response)
+	}
+	// Same input, more room: free the whole window and the reasoning budget.
+	roomy := ai.ClampMaxTokensToContext(model, context, int(model.MaxTokens))
+	if summarizationReasoningEnabled(model, reasoning) || roomy > maxTokens {
+		next := max(roomy, maxTokens)
+		response, err = requestSummarization(model, context, next, options, false, ai.ThinkOff, escalation)
+		if err != nil {
+			return nil, err
+		}
+		if response.StopReason != ai.StopLength {
+			return summarizationResult(plan.label, response)
+		}
+		maxTokens, reasoning = next, ai.ThinkOff
+	}
+	// Conclusive step: less input at a time, so each chunk's answer has the whole
+	// budget. One message that still overflows is a real failure, not a budget
+	// problem.
+	if len(messages) <= 1 {
+		return nil, summarizationLengthFailure(plan.label)
+	}
+	split := summarizationSplitPoint(messages)
+	if split <= 0 || split >= len(messages) {
+		return nil, summarizationLengthFailure(plan.label)
+	}
+	first, err := summarizeChunks(model, messages[:split], options, plan, previousSummary, maxTokens, reasoning, escalation)
+	if err != nil {
+		return nil, err
+	}
+	return summarizeChunks(model, messages[split:], options, plan, first.text, maxTokens, reasoning, escalation)
+}
+
+// summarizationContext wraps a prompt in the summarization request.
+func summarizationContext(promptText string) ai.TranscriptContext {
+	return ai.NormalizeContext(ai.Context{
 		SystemPrompt: strPtrOf(SummarizationSystemPrompt),
 		Messages: []ai.Message{&ai.UserMessage{
 			Content:   ai.StringOrBlocks{Blocks: ai.ContentList{ai.TextContent{Text: promptText}}},
 			Timestamp: time.Now().UnixMilli(),
 		}},
 	})
-	// Both attempts share one routing id, as upstream's retry loop in
-	// completeSummarization does; a per-attempt id would split the cache hints.
-	if options.SessionID == "" {
-		options.SessionID = UUIDv7()
+}
+
+// summarizationReasoningEnabled reports whether the request carries a thinking
+// level (upstream createSummarizationOptions sets reasoning only for a
+// reasoning-capable model and a selected level).
+func summarizationReasoningEnabled(model *ai.Model, reasoning ai.ThinkingLevel) bool {
+	return model.Reasoning && reasoning != "" && reasoning != ai.ThinkOff
+}
+
+// summarizationSplitPoint splits messages near the middle by estimated tokens,
+// so both halves fit where the whole input did not.
+func summarizationSplitPoint(messages []ai.Message) int {
+	total := int64(0)
+	for _, message := range messages {
+		total += int64(EstimateAgentMessageTokens(message))
 	}
-	// Upstream createSummarizationOptions sets reasoning only for a
-	// reasoning-capable model and a selected level.
-	reasoningApplied := model.Reasoning && reasoning != "" && reasoning != ai.ThinkOff
-	response, err := requestSummarization(model, context, maxTokens, options, reasoningApplied, reasoning)
-	if err != nil || response.StopReason != ai.StopLength {
-		return response, err
-	}
-	retryMaxTokens := maxTokens
-	if model.MaxTokens > 0 {
-		if roomy := ai.ClampMaxTokensToContext(model, context, int(model.MaxTokens)); roomy > retryMaxTokens {
-			retryMaxTokens = roomy
+	half := total / 2
+	sum := int64(0)
+	for index, message := range messages {
+		sum += int64(EstimateAgentMessageTokens(message))
+		if sum >= half {
+			return index + 1
 		}
 	}
-	if !reasoningApplied && retryMaxTokens == maxTokens {
-		// No lever left: report the length stop as upstream does.
-		return response, nil
+	return len(messages)
+}
+
+// summarizationResult turns a final summarization response into a summary,
+// rejecting the responses that cannot become a checkpoint.
+func summarizationResult(label string, response *ai.AssistantMessage) (*summaryWithUsage, error) {
+	if failure := GetSummarizationFailure(response, label); failure != "" {
+		return nil, fmt.Errorf("%s", failure)
 	}
-	return requestSummarization(model, context, retryMaxTokens, options, false, ai.ThinkOff)
+	for _, block := range response.Content {
+		if _, ok := block.(ai.ToolCall); ok {
+			return nil, fmt.Errorf("%s attempted to call a tool", label)
+		}
+	}
+	return &summaryWithUsage{text: contentTextOf(response.Content)}, nil
+}
+
+// summarizationLengthFailure is upstream's message for a summary that never fit,
+// built from the same helper so the wording stays single-sourced.
+func summarizationLengthFailure(label string) error {
+	return fmt.Errorf("%s", GetSummarizationFailure(&ai.AssistantMessage{StopReason: ai.StopLength}, label))
 }
 
 // requestSummarization issues one summarization request through the
-// retry-wrapped choke point.
+// retry-wrapped choke point and accounts its usage.
 func requestSummarization(
 	model *ai.Model,
 	context ai.TranscriptContext,
@@ -1360,6 +1477,7 @@ func requestSummarization(
 	options CompactionOptions,
 	reasoningEnabled bool,
 	reasoning ai.ThinkingLevel,
+	escalation *summarizationEscalation,
 ) (*ai.AssistantMessage, error) {
 	streamOptions := ai.SimpleStreamOptions{
 		StreamOptions: ai.StreamOptions{
@@ -1375,7 +1493,12 @@ func requestSummarization(
 	}
 	// maxTokens plumbs through SamplingExtras-free path: the named field.
 	streamOptions.MaxTokens = &maxTokens
-	return CompleteSummarization(model, context, &streamOptions, options.StreamFn, options.Retry, options.Callbacks)
+	escalation.requests++
+	response, err := CompleteSummarization(model, context, &streamOptions, options.StreamFn, options.Retry, options.Callbacks)
+	if response != nil {
+		escalation.usage = CombineUsage(escalation.usage, response.Usage)
+	}
+	return response, err
 }
 
 func strPtrOf(s string) *string { return &s }

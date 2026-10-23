@@ -2128,35 +2128,50 @@ Tests: `TestThinkingMarkdownKeepsStyledTextItalic`,
 
 ## D264
 
-**A summarization that hits the output cap is retried once instead of failing
-the compaction.**
+**A summarization that hits the output cap escalates instead of failing the
+compaction.**
 
-Reference: `core/compaction/compaction.ts` (`generateSummaryWithUsage`,
-`generateSummaryWithUsage`'s `maxTokens = min(floor(0.8 * reserveTokens),
-model.maxTokens)`, `createSummarizationOptions`, `getSummarizationFailure`,
-`completeSummarization`).
+Reference: `core/compaction/compaction.ts` (`generateSummaryWithUsage`'s
+`maxTokens = min(floor(0.8 * reserveTokens), model.maxTokens)`,
+`createSummarizationOptions`, `getSummarizationFailure`,
+`completeSummarization`, `UPDATE_SUMMARIZATION_PROMPT`).
 
-Upstream fails the whole compaction with `Summarization failed: generation hit
-the token cap and the summary is incomplete`, which leaves a long session
-uncompactable: the turn loop then either drops the request or keeps re-sending
-the oversized context. The cap it reports is the room left in the window, not
-the summary's own size. At the point compaction fires, `contextWindow -
-reserveTokens` of context is already in use, so the answer has roughly the
-reserve to work with, and reasoning tokens are drawn from that same budget
-(`max_tokens` covers thinking for the providers that report it). A `high`
-thinking level can therefore consume most of the reserve and leave too little
-for the summary text.
+Upstream fails the whole compaction on the first `length` stop with
+`Summarization failed: generation hit the token cap and the summary is
+incomplete`, which leaves a long session uncompactable. The cap it reports is
+the room left in the window, not the summary's own size: compaction fires at
+`contextWindow - reserveTokens`, so the answer has roughly the reserve to work
+with, and reasoning tokens are drawn from that same `max_tokens` budget. A
+`high` thinking level can consume most of the reserve and leave too little for
+the summary text.
 
-The port keeps upstream's request shape on the success path and, on a `length`
-stop, retries once with both levers freed: reasoning off, and the budget raised
-to the model's own output limit clamped to what still fits the window
-(`ai.ClampMaxTokensToContext`, the same clamp the Anthropic and Bedrock request
-paths apply). One retry only, sharing the first attempt's routing id, and only
-when a lever is actually left; a second length stop reports upstream's message
-unchanged, so partial text still never becomes a checkpoint. The failed
-attempt's usage is not counted, matching `completeSummarization`'s own retry
-loop.
+Raising the cap is not the fix. Where the window is full it changes nothing, and
+where it does apply it can exceed the window on the providers that do not clamp
+(only Anthropic and Bedrock do), or produce a summary so long that it becomes
+the leading context of every later request, defeating the point of compacting.
+
+The port keeps upstream's request shape on the success path and escalates only
+after a `length` stop, in two steps:
+
+1. Same input, more room: reasoning off and the budget raised to the model's own
+   output limit clamped to what still fits the window
+   (`ai.ClampMaxTokensToContext`), which is exactly the room the answer lacked.
+2. Conclusively, less input at a time: the messages are split near the middle by
+   estimated token weight, the first half is summarized down to a checkpoint, and
+   the second half is merged into it through upstream's update prompt. Each chunk
+   then has the whole budget for its own answer, and a chunk that still overflows
+   splits again.
+
+One summarization spends at most `maxSummarizationRequests` (10) requests, and
+every pass shares one routing id so the escalation does not fragment cache
+hints. Usage accumulates across the passes, since the tokens were really spent.
+Only a single message that overflows on its own, or a model that overflows every
+chunk, still reports upstream's message, so partial text never becomes a
+checkpoint. The split-turn path uses the same escalation, merging through the
+update instructions so its checkpoint stays one set of sections.
 
 Tests: `TestSummarizationRetriesOnceWhenTheTokenCapIsHit`,
-`TestSummarizationRetryIsBoundedAndStillFailsLoudly` and
-`TestSummarizationDoesNotRetryWithoutALever`.
+`TestSummarizationRetryIsBoundedAndStillFailsLoudly`,
+`TestSummarizationDoesNotRetryWithoutALever`,
+`TestSummarizationSplitsTheInputWhenTheCapKeepsHitting` and
+`TestSummarizationSplitStaysBounded`.

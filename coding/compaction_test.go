@@ -2,6 +2,7 @@ package coding
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -722,5 +723,103 @@ func TestSummarizationDoesNotRetryWithoutALever(t *testing.T) {
 	}
 	if calls != 1 {
 		t.Fatalf("calls = %d; want 1 (no lever left, no retry)", calls)
+	}
+}
+
+// capModelStreamFn simulates a provider whose answer room is a message count: a
+// prompt carrying more than maxMessages conversation lines stops at the token
+// cap, anything smaller completes. It lets the escalation be tested against a
+// monotone constraint instead of a hand-written attempt script.
+func capModelStreamFn(t *testing.T, maxMessages int, requests *int) StreamFnFn {
+	t.Helper()
+	return func(model *ai.Model, context ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		if requests != nil {
+			*requests++
+		}
+		prompt := ""
+		for _, message := range context.Messages {
+			if user, ok := message.(*ai.UserMessage); ok {
+				prompt += ai.ContentText(user.Content, "")
+			}
+		}
+		stream := ai.NewAssistantMessageEventStream()
+		if strings.Count(prompt, "[User]: ") > maxMessages {
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopLength, Message: &ai.AssistantMessage{
+				API: model.API, Provider: model.Provider, Model: model.ID,
+				Content: ai.ContentList{ai.TextContent{Text: "## Goal\npartial"}}, StopReason: ai.StopLength,
+			}})
+			return stream
+		}
+		text := "## Goal\n" + lastConversationMarker(prompt)
+		stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
+			API: model.API, Provider: model.Provider, Model: model.ID,
+			Content: ai.ContentList{ai.TextContent{Text: text}}, StopReason: ai.StopStop,
+		}})
+		return stream
+	}
+}
+
+// lastConversationMarker extracts the last serialized user line so a test can
+// see which chunk a summary came from.
+func lastConversationMarker(prompt string) string {
+	marker := ""
+	for _, line := range strings.Split(prompt, "\n") {
+		if after, ok := strings.CutPrefix(line, "[User]: "); ok {
+			marker = after
+		}
+	}
+	return marker
+}
+
+// A summarization whose input is the problem falls back to smaller chunks merged
+// into the summary so far, instead of failing the compaction: each chunk gets
+// the whole budget (D264).
+func TestSummarizationSplitsTheInputWhenTheCapKeepsHitting(t *testing.T) {
+	requests := 0
+	messages := make([]ai.Message, 0, 8)
+	for index := 0; index < 8; index++ {
+		messages = append(messages, &ai.UserMessage{
+			Content: ai.StringOrBlocks{Text: fmt.Sprintf("chunk-%d %s", index, strings.Repeat("x", 200))},
+		})
+	}
+	model := &ai.Model{ID: "mock", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 200000, MaxTokens: 64000}
+	result, err := generateSummaryWithUsage(messages, CompactionOptions{
+		Model: model, StreamFn: capModelStreamFn(t, 4, &requests),
+	}, "", 16384)
+	if err != nil {
+		t.Fatalf("err = %v; want the split fallback to complete the summary", err)
+	}
+	if result.text == "" || !strings.Contains(result.text, "chunk-7") {
+		t.Fatalf("summary = %q; want the last chunk folded in", result.text)
+	}
+	if requests < 3 {
+		t.Fatalf("requests = %d; want the whole-input attempts plus one split", requests)
+	}
+}
+
+// The escalation is bounded: an input that never fits stops with upstream's
+// message instead of re-sending the conversation forever.
+func TestSummarizationSplitStaysBounded(t *testing.T) {
+	requests := 0
+	streamFn := func(model *ai.Model, _ ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		requests++
+		stream := ai.NewAssistantMessageEventStream()
+		stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopLength, Message: &ai.AssistantMessage{
+			API: model.API, Provider: model.Provider, Model: model.ID,
+			Content: ai.ContentList{ai.TextContent{Text: "## Goal\npartial"}}, StopReason: ai.StopLength,
+		}})
+		return stream
+	}
+	messages := make([]ai.Message, 0, 16)
+	for index := 0; index < 16; index++ {
+		messages = append(messages, &ai.UserMessage{Content: ai.StringOrBlocks{Text: fmt.Sprintf("chunk-%d", index)}})
+	}
+	model := &ai.Model{ID: "mock", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 200000, MaxTokens: 64000}
+	_, err := generateSummaryWithUsage(messages, CompactionOptions{Model: model, StreamFn: streamFn}, "", 16384)
+	if err == nil || !strings.Contains(err.Error(), "token cap") {
+		t.Fatalf("err = %v; want the upstream failure", err)
+	}
+	if requests > maxSummarizationRequests {
+		t.Fatalf("requests = %d; want at most %d", requests, maxSummarizationRequests)
 	}
 }
