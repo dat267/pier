@@ -224,11 +224,13 @@ func (s *AgentSession) cacheEntryIDForMessage(message ai.Message, id string) {
 }
 
 // omitRecoveryAttempt persists a context_edit that excludes the failed response
-// and its tool results from model context (upstream _omitRecoveryAttempt).
+// and its tool results from model context (upstream _omitRecoveryAttempt). The
+// results are found in the projected context rather than taken from the caller,
+// so an attempt that a resumed session persisted with its results is omitted as
+// a pair; an unpaired result makes providers reject every later request
+// (upstream v1.4.0 #11227).
 func (s *AgentSession) omitRecoveryAttempt(assistant *ai.AssistantMessage) error {
-	s.mu.Lock()
-	toolResults := append([]ai.Message(nil), s.lastAssistantToolResults...)
-	s.mu.Unlock()
+	toolResults := s.omissionToolResults(assistant)
 	assistantID := s.entryIDForMessage(assistant)
 	ids := make([]string, 0, len(toolResults)+1)
 	ids = append(ids, assistantID)
@@ -272,6 +274,48 @@ func (s *AgentSession) omitRecoveryAttempt(assistant *ai.AssistantMessage) error
 	s.Agent.SetMessages(sessionContext.Messages)
 	s.refreshFinalizedContext(sessionContext)
 	return nil
+}
+
+// omissionToolResults finds the tool results answering the message's tool calls
+// in agent state: the messages after it up to the next assistant message, matched
+// by call id. It mirrors upstream _omitRecoveryAttempt's search, including
+// matching a projected copy through the persisted entry id.
+func (s *AgentSession) omissionToolResults(assistant *ai.AssistantMessage) []ai.Message {
+	callIDs := map[string]struct{}{}
+	for _, block := range assistant.Content {
+		if call, ok := block.(ai.ToolCall); ok && call.ID != "" {
+			callIDs[call.ID] = struct{}{}
+		}
+	}
+	if len(callIDs) == 0 {
+		return nil
+	}
+	assistantID := s.entryIDForMessage(assistant)
+	messages := s.Agent.State().Messages
+	index := -1
+	s.mu.Lock()
+	for position, message := range messages {
+		if message == assistant || (assistantID != "" && s.entryIDsByMessage[message] == assistantID) {
+			index = position
+			break
+		}
+	}
+	s.mu.Unlock()
+	if index < 0 {
+		return nil
+	}
+	results := make([]ai.Message, 0, len(callIDs))
+	for _, message := range messages[index+1:] {
+		if ai.RoleOf(message) == ai.RoleAssistant {
+			break
+		}
+		if result, ok := message.(*ai.ToolResultMessage); ok {
+			if _, wanted := callIDs[result.ToolCallID]; wanted {
+				results = append(results, message)
+			}
+		}
+	}
+	return results
 }
 
 func maxTokensOf(model *ai.Model) int64 {

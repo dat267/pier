@@ -309,3 +309,78 @@ func TestCompareUTF16MatchesEncodedUnits(t *testing.T) {
 		}
 	}
 }
+
+// Reference: pi v1.4.0 02726086d core/agent-session.ts _omitRecoveryAttempt
+// (issue #11227). Recovery of a length stop that a resumed session persisted
+// along with the tool results answering its calls omitted only the assistant
+// message, so the orphaned results reached the next request and providers
+// rejected it: "Messages with role 'tool' must be a response to a preceding
+// message with 'tool_calls'".
+func TestRecoveryOmitsToolResultsWithTheirToolCall(t *testing.T) {
+	model := &ai.Model{ID: "m", API: ai.APIOpenAICompletions, Provider: "openai", ContextWindow: 1000, MaxTokens: 100}
+	var requests [][]ai.Message
+	streamFn := func(m *ai.Model, transcript ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		requests = append(requests, append([]ai.Message(nil), transcript.Messages...))
+		stream := ai.NewAssistantMessageEventStream()
+		stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
+			API: m.API, Provider: m.Provider, Model: m.ID,
+			Content: ai.ContentList{ai.TextContent{Text: "done"}}, StopReason: ai.StopStop,
+		}})
+		return stream
+	}
+	session := compactionTestSession(t, model, streamFn, smallCompactionSettings())
+	seedBranch(t, session)
+
+	// A truncated response and its tool result, as a resumed session finds them.
+	truncated := &ai.AssistantMessage{
+		API: ai.APIOpenAICompletions, Provider: "openai", Model: "m",
+		Content: ai.ContentList{
+			ai.TextContent{Text: "checking"},
+			ai.ToolCall{ID: "call_truncated", Name: "bash", Arguments: json.RawMessage(`{"command":"echo"}`)},
+		},
+		StopReason: ai.StopLength,
+		Usage:      ai.Usage{Input: 500, Output: 16, TotalTokens: 516},
+	}
+	result := &ai.ToolResultMessage{
+		ToolCallID: "call_truncated", ToolName: "bash", IsError: true,
+		Content: ai.UserContentList{ai.TextContent{Text: "Not executed: output token limit reached."}},
+	}
+	session.Sessions.AppendMessage(truncated)
+	session.Sessions.AppendMessage(result)
+	projection := session.Sessions.Projection()
+	session.Agent.SetMessages(projection.Messages)
+	session.refreshFinalizedContext(projection)
+
+	summaryCalls := atomic.Int64{}
+	session.CompactionStreamFn = summarizingStreamFn(t, &summaryCalls, "summary")
+	if err := session.PromptText(context.Background(), "continue"); err != nil {
+		t.Fatal(err)
+	}
+	if summaryCalls.Load() == 0 {
+		t.Fatal("pre-prompt recovery did not compact")
+	}
+	if len(requests) == 0 {
+		t.Fatal("no provider request reached the model")
+	}
+	for _, message := range requests[0] {
+		if ai.RoleOf(message) == ai.RoleToolResult {
+			t.Fatalf("request carried an orphaned tool result:\n%s", dumpRequestRoles(requests[0]))
+		}
+		if assistant, ok := message.(*ai.AssistantMessage); ok && assistant.StopReason == ai.StopLength {
+			t.Fatalf("request replayed the truncated response:\n%s", dumpRequestRoles(requests[0]))
+		}
+	}
+}
+
+// dumpRequestRoles renders the request roles for a failure message.
+func dumpRequestRoles(messages []ai.Message) string {
+	roles := make([]string, 0, len(messages))
+	for _, message := range messages {
+		role := ai.RoleOf(message)
+		if result, ok := message.(*ai.ToolResultMessage); ok {
+			role += "(" + result.ToolCallID + ")"
+		}
+		roles = append(roles, role)
+	}
+	return strings.Join(roles, ", ")
+}

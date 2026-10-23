@@ -177,14 +177,10 @@ type AgentSession struct {
 	// post-run recovery can persist a context_edit omission for it (upstream
 	// _entryIdsByMessage / _findPersistedMessageEntryId).
 	entryIDsByMessage map[ai.Message]string
-	// lastAssistantToolResults are the tool results of the turn that produced
-	// lastAssistantMessage (upstream _lastAssistantToolResults); recovery omits
-	// them together with the failed assistant.
-	lastAssistantToolResults []ai.Message
-	retryAttempt             int
-	retryCancel              context.CancelFunc
-	retryActive              bool
-	willRetry                bool
+	retryAttempt      int
+	retryCancel       context.CancelFunc
+	retryActive       bool
+	willRetry         bool
 
 	compactionCancel context.CancelFunc
 	overflowRecovery overflowRecoveryState
@@ -593,7 +589,6 @@ func (s *AgentSession) handleAgentEvent(event *agent.AgentEvent) {
 			}
 			s.entryIDsByMessage[event.Message] = entryID
 			s.lastAssistantMessage = msg
-			s.lastAssistantToolResults = nil
 			// A completed response ends the one-attempt overflow recovery window
 			// (upstream resets _overflowRecoveryAttempted for any non-error,
 			// non-length stop).
@@ -626,9 +621,6 @@ func (s *AgentSession) handleAgentEvent(event *agent.AgentEvent) {
 		}
 	}
 	if event.Type == agent.TurnEnd {
-		s.mu.Lock()
-		s.lastAssistantToolResults = append([]ai.Message(nil), event.ToolResults...)
-		s.mu.Unlock()
 		// Context-only custom messages must follow every tool result, but reach
 		// the model before the next turn (upstream _handleAgentEvent).
 		s.FlushPendingCustomMessages()
