@@ -1198,7 +1198,7 @@ func Compact(preparation *CompactionPreparation, options CompactionOptions) (*Co
 			historyText = result.text
 			historyUsage = result.usage
 		}
-		turnPrefixResult, err := generateTurnPrefixSummary(preparation.TurnPrefixMessages, options)
+		turnPrefixResult, err := generateTurnPrefixSummary(preparation.TurnPrefixMessages, options, options.CustomInstructions)
 		if err != nil {
 			return nil, err
 		}
@@ -1282,11 +1282,16 @@ func generateSummaryWithUsage(currentMessages []ai.Message, options CompactionOp
 	})
 }
 
-// generateTurnPrefixSummary summarizes a split turn's prefix.
-func generateTurnPrefixSummary(messages []ai.Message, options CompactionOptions) (*summaryWithUsage, error) {
+// generateTurnPrefixSummary summarizes a split turn's prefix, under the same
+// /compact instructions as the conversation summary: a split turn can be all the
+// new content since the last compaction, so dropping them there would drop them
+// entirely (upstream v1.4.0 adfc14461).
+func generateTurnPrefixSummary(messages []ai.Message, options CompactionOptions, customInstructions string) (*summaryWithUsage, error) {
 	return summarizeConversation(messages, options, "", summarizationPlan{
-		label:     "Turn prefix summarization",
-		prompt:    turnPrefixSummaryPrompt,
+		label: "Turn prefix summarization",
+		prompt: func(messages []ai.Message, previous string) string {
+			return turnPrefixSummaryPrompt(messages, previous, customInstructions)
+		},
 		reasoning: options.ThinkingLevel,
 	})
 }
@@ -1312,13 +1317,19 @@ func conversationSummaryPrompt(messages []ai.Message, options CompactionOptions,
 // turnPrefixSummaryPrompt renders the split-turn prompt. A later chunk merges
 // into the checkpoint so far, so the sections stay one list instead of two
 // concatenated ones.
-func turnPrefixSummaryPrompt(messages []ai.Message, previousSummary string) string {
+func turnPrefixSummaryPrompt(messages []ai.Message, previousSummary, customInstructions string) string {
 	conversationText := SerializeConversation(ConvertToLlm(messages))
+	var promptText string
 	if previousSummary == "" {
-		return fmt.Sprintf("# Conversation\n%s\n\n# Instructions\n%s", conversationText, turnPrefixSummarizationPrompt)
+		promptText = fmt.Sprintf("# Conversation\n%s\n\n# Instructions\n%s", conversationText, turnPrefixSummarizationPrompt)
+	} else {
+		promptText = fmt.Sprintf("# Conversation\n%s\n\n<previous-summary>\n%s\n</previous-summary>\n\n# Instructions\n%s\n\n%s",
+			conversationText, previousSummary, turnPrefixMergeInstruction, turnPrefixSummarizationPrompt)
 	}
-	return fmt.Sprintf("# Conversation\n%s\n\n<previous-summary>\n%s\n</previous-summary>\n\n# Instructions\n%s\n\n%s",
-		conversationText, previousSummary, turnPrefixMergeInstruction, turnPrefixSummarizationPrompt)
+	if customInstructions != "" {
+		promptText = fmt.Sprintf("%s\n\nAdditional focus: %s", promptText, customInstructions)
+	}
+	return promptText
 }
 
 // turnPrefixMergeInstruction keeps a merged turn-prefix checkpoint in its own

@@ -389,7 +389,7 @@ func TestTurnPrefixPromptUsesMarkdownBoundaries(t *testing.T) {
 		},
 	}
 	if _, err := generateTurnPrefixSummary(
-		[]ai.Message{&ai.UserMessage{Content: ai.StringOrBlocks{Text: "Summarize this."}, Timestamp: 1}}, options); err != nil {
+		[]ai.Message{&ai.UserMessage{Content: ai.StringOrBlocks{Text: "Summarize this."}, Timestamp: 1}}, options, ""); err != nil {
 		t.Fatal(err)
 	}
 	if strings.Contains(captured, "<conversation>") {
@@ -990,7 +990,7 @@ func TestTurnPrefixSummaryMergeKeepsItsOwnSections(t *testing.T) {
 		&ai.UserMessage{Content: heavyMessage(40)},
 		&ai.UserMessage{Content: heavyMessage(40)},
 	}
-	if _, err := generateTurnPrefixSummary(messages, options); err != nil {
+	if _, err := generateTurnPrefixSummary(messages, options, ""); err != nil {
 		t.Fatal(err)
 	}
 	merges := 0
@@ -1011,5 +1011,51 @@ func TestTurnPrefixSummaryMergeKeepsItsOwnSections(t *testing.T) {
 	}
 	if merges != 1 {
 		t.Fatalf("merge passes = %d in %d prompts; want 1", merges, len(prompts))
+	}
+}
+
+// /compact <instructions> reaches the split turn's prefix too. Upstream v1.4.0
+// adfc14461 (issue #11058): when the split turn is the only new content since
+// the last compaction, the conversation summary is skipped, so the instructions
+// were dropped entirely.
+func TestTurnPrefixSummaryAppliesCompactInstructions(t *testing.T) {
+	m := NewSessionManager("/tmp", &SessionManagerOptions{Persist: boolPtr(false)})
+	m.AppendMessage(createUserMessage("earlier question"))
+	m.AppendMessage(createAssistantMessageT("earlier answer"))
+	// A user message inside the turn being split becomes the turn prefix.
+	m.AppendMessage(createUserMessage(strings.Repeat("u", 400)))
+	m.AppendMessage(createAssistantMessageT(strings.Repeat("a", 400)))
+	preparation := PrepareCompaction(m.GetEntries(), CompactionSettings{
+		Enabled: true, ReserveTokens: 16384, KeepRecentTokens: 20,
+	})
+	if preparation == nil || !preparation.IsSplitTurn || len(preparation.TurnPrefixMessages) == 0 {
+		t.Fatalf("preparation = %+v; want a split turn with a prefix", preparation)
+	}
+	var prompts []string
+	options := CompactionOptions{
+		Model:              &ai.Model{ID: "mock", API: ai.APIAnthropicMessages, Provider: "anthropic", MaxTokens: 8192},
+		CustomInstructions: "keep migration decisions",
+		StreamFn: func(model *ai.Model, context ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+			for _, message := range context.Messages {
+				if user, ok := message.(*ai.UserMessage); ok {
+					prompts = append(prompts, ai.ContentText(user.Content, ""))
+				}
+			}
+			stream := ai.NewAssistantMessageEventStream()
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
+				API: model.API, Provider: model.Provider, Model: model.ID,
+				Content: ai.ContentList{ai.TextContent{Text: "## Goal\nsummary"}}, StopReason: ai.StopStop,
+			}})
+			return stream
+		},
+	}
+	if _, err := Compact(preparation, options); err != nil {
+		t.Fatal(err)
+	}
+	if len(prompts) < 2 {
+		t.Fatalf("summarization prompts = %d; want a history and a turn-prefix request", len(prompts))
+	}
+	if !strings.Contains(prompts[len(prompts)-1], "Additional focus: keep migration decisions") {
+		t.Fatalf("turn prefix prompt dropped the compact instructions:\n%s", prompts[len(prompts)-1])
 	}
 }
