@@ -360,7 +360,11 @@ var nonRetryableProviderLimitErrorPattern = regexp.MustCompile(`(?i)` + strings.
 // Retryable provider/transport errors.
 var retryableProviderErrorPattern = regexp.MustCompile(`(?i)` + strings.Join([]string{
 	`overloaded`, `server_busy`, `servers are currently busy`, `currently experiencing high demand`, `model is at capacity`, `rate.?limit`, `too many requests`,
-	`429`, `500`, `502`, `503`, `504`, `520`, `524`,
+	// A status code only when it stands alone: digits inside a request id or a
+	// byte count are not a status code (upstream v1.4.0 6e491cfa9, #11057).
+	// Upstream writes this with a lookbehind; RE2 has none, so the boundary is
+	// matched by consuming it.
+	`(?:^|[^a-z0-9])(?:429|500|502|503|504|520|524)(?:[^a-z0-9]|$)`,
 	`service.?(?:is.?)?(?:temporarily.?)?unavailable`, `server.?error`, `internal.?error`,
 	`provider.?returned.?(?:an.?)?error`, `exceeded request buffer limit while retrying upstream`,
 	`unable to forward upstream`,

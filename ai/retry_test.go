@@ -111,3 +111,38 @@ func TestServerRetryDelayMessageUsesJSNumber(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 }
+
+// Status codes are only status codes when they stand alone. Upstream v1.4.0
+// 6e491cfa9 (issue #11057): digits inside a request id or a byte count used to
+// match "503"/"524" and made a permanent failure retryable.
+func TestRetryableStatusCodesMatchOnlyStandaloneNumbers(t *testing.T) {
+	retryable := []string{
+		`{"error":{"message":"Internal server error"},"status":500}`,
+		`upstream returned 503`,
+		`Error: 429 Too Many Requests`,
+		`503`,
+		`got 524 from the gateway`,
+		`code=502, message=bad gateway`,
+	}
+	for _, message := range retryable {
+		if !IsRetryableAssistantError(errorAssistant(message)) {
+			t.Fatalf("%q should be retryable", message)
+		}
+	}
+	notRetryable := []string{
+		`401 {"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"},"request_id":"req_011CU503xyz"}`,
+		`400 image exceeds 5 MB maximum: 5316784 bytes > 5242880 bytes`,
+		`400 model gpt-5.1 refuses the request`,
+	}
+	for _, message := range notRetryable {
+		if IsRetryableAssistantError(errorAssistant(message)) {
+			t.Fatalf("%q must not be retryable: the digits are not a status code", message)
+		}
+	}
+}
+
+// errorAssistant wraps a provider error message in a failed assistant message.
+func errorAssistant(message string) *AssistantMessage {
+	text := message
+	return &AssistantMessage{StopReason: StopError, ErrorMessage: &text}
+}
