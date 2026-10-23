@@ -1,7 +1,6 @@
 package coding
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -142,22 +141,32 @@ func ParseArgs(args []string) *Args {
 		case arg == "--provider":
 			if value, ok := next(); ok {
 				result.Provider = &value
+			} else {
+				missingFlagValue(result, arg)
 			}
 		case arg == "--model":
 			if value, ok := next(); ok {
 				result.Model = &value
+			} else {
+				missingFlagValue(result, arg)
 			}
 		case arg == "--api-key":
 			if value, ok := next(); ok {
 				result.APIKey = &value
+			} else {
+				missingFlagValue(result, arg)
 			}
 		case arg == "--system-prompt":
 			if value, ok := next(); ok {
 				result.SystemPrompt = &value
+			} else {
+				missingFlagValue(result, arg)
 			}
 		case arg == "--append-system-prompt":
 			if value, ok := next(); ok {
 				result.AppendSystemPrompt = append(result.AppendSystemPrompt, value)
+			} else {
+				missingFlagValue(result, arg)
 			}
 		case arg == "--name" || arg == "-n":
 			if value, ok := next(); ok {
@@ -170,24 +179,34 @@ func ParseArgs(args []string) *Args {
 		case arg == "--session":
 			if value, ok := next(); ok {
 				result.Session = &value
+			} else {
+				missingFlagValue(result, arg)
 			}
 		case arg == "--session-id":
 			if value, ok := next(); ok {
 				result.SessionID = &value
+			} else {
+				missingFlagValue(result, arg)
 			}
 		case arg == "--fork":
 			if value, ok := next(); ok {
 				result.Fork = &value
+			} else {
+				missingFlagValue(result, arg)
 			}
 		case arg == "--session-dir":
 			if value, ok := next(); ok {
 				result.SessionDir = &value
+			} else {
+				missingFlagValue(result, arg)
 			}
 		case arg == "--models":
 			if value, ok := next(); ok {
 				// A trailing comma must not produce an empty pattern, which
 				// would substring-match every model (9b3c19da5).
 				result.Models = splitNonEmpty(value)
+			} else {
+				missingFlagValue(result, arg)
 			}
 		case arg == "--no-tools" || arg == "-nt":
 			result.NoTools = true
@@ -201,10 +220,14 @@ func ParseArgs(args []string) *Args {
 				} else {
 					result.Tools = tools
 				}
+			} else {
+				missingFlagValue(result, arg)
 			}
 		case arg == "--exclude-tools" || arg == "-xt":
 			if value, ok := next(); ok {
 				result.ExcludeTools = splitNonEmpty(value)
+			} else {
+				missingFlagValue(result, arg)
 			}
 		case arg == "--thinking":
 			if value, ok := next(); ok {
@@ -214,9 +237,11 @@ func ParseArgs(args []string) *Args {
 				} else {
 					result.Diagnostics = append(result.Diagnostics, CLIDiagnostic{
 						Type:    "warning",
-						Message: fmt.Sprintf("Invalid thinking level %q. Valid values: %s", value, strings.Join(validThinkingLevelStrings(), ", ")),
+						Message: "Invalid thinking level \"" + value + "\". Valid values: " + strings.Join(validThinkingLevelStrings(), ", "),
 					})
 				}
+			} else {
+				missingFlagValue(result, arg)
 			}
 		case arg == "--print" || arg == "-p":
 			result.Print = true
@@ -230,6 +255,8 @@ func ParseArgs(args []string) *Args {
 		case arg == "--export":
 			if value, ok := next(); ok {
 				result.Export = &value
+			} else {
+				missingFlagValue(result, arg)
 			}
 		case arg == "--extension" || arg == "-e":
 			if value, ok := next(); ok {
@@ -239,6 +266,9 @@ func ParseArgs(args []string) *Args {
 					Message: "Ignoring " + arg + " " + value + ": this build loads no extensions.",
 				})
 			} else {
+				// Deliberate: this build has no extensions, so an incomplete
+				// flag is reported (cliargs_help_test.go) instead of becoming
+				// an unknownFlags entry like upstream's fall-through.
 				result.Diagnostics = append(result.Diagnostics, CLIDiagnostic{Type: "error", Message: "--extension requires a value"})
 			}
 		case arg == "--no-mcp":
@@ -251,14 +281,20 @@ func ParseArgs(args []string) *Args {
 		case arg == "--skill":
 			if value, ok := next(); ok {
 				result.Skills = append(result.Skills, value)
+			} else {
+				missingFlagValue(result, arg)
 			}
 		case arg == "--prompt-template":
 			if value, ok := next(); ok {
 				result.PromptTemplates = append(result.PromptTemplates, value)
+			} else {
+				missingFlagValue(result, arg)
 			}
 		case arg == "--theme":
 			if value, ok := next(); ok {
 				result.Themes = append(result.Themes, value)
+			} else {
+				missingFlagValue(result, arg)
 			}
 		case arg == "--use-theme":
 			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
@@ -294,7 +330,7 @@ func ParseArgs(args []string) *Args {
 					i++
 					result.Diagnostics = append(result.Diagnostics, CLIDiagnostic{
 						Type:    "error",
-						Message: fmt.Sprintf("Invalid TUI mode %q. Valid values: regular, fullscreen", value),
+						Message: "Invalid TUI mode \"" + value + "\". Valid values: regular, fullscreen",
 					})
 				}
 			} else {
@@ -335,6 +371,18 @@ func ParseArgs(args []string) *Args {
 	}
 
 	return result
+}
+
+// missingFlagValue records a value-taking flag seen without its value the way
+// upstream's parse chain falls through: a long flag lands in unknownFlags like
+// an unknown extension flag, and a short flag reports "Unknown option"
+// (cli/args.ts guards each case with i + 1 < args.length).
+func missingFlagValue(result *Args, arg string) {
+	if strings.HasPrefix(arg, "--") {
+		result.UnknownFlags[arg[2:]] = true
+		return
+	}
+	result.Diagnostics = append(result.Diagnostics, CLIDiagnostic{Type: "error", Message: "Unknown option: " + arg})
 }
 
 func splitNonEmpty(value string) []string {

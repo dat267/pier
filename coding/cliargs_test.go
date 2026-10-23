@@ -675,3 +675,56 @@ func TestNormalizeSessionNameUsesJSTrim(t *testing.T) {
 		t.Fatalf("U+0085 should survive, got %v", name)
 	}
 }
+
+// Upstream parseArgs guards each value-taking case with i + 1 < args.length,
+// so a flag without its value falls through to the tail handling: a long flag
+// becomes a boolean unknownFlags entry, a short flag reports "Unknown option"
+// (cli/args.ts). The extension flags are excluded: this build reports their
+// missing value deliberately (TestExtensionFlagsAreReported).
+func TestParseArgsMissingFlagValuesFallThrough(t *testing.T) {
+	longFlags := map[string]string{
+		"--provider": "provider", "--model": "model", "--api-key": "api-key",
+		"--system-prompt": "system-prompt", "--append-system-prompt": "append-system-prompt",
+		"--session": "session", "--session-id": "session-id", "--fork": "fork",
+		"--session-dir": "session-dir", "--models": "models", "--tools": "tools",
+		"--exclude-tools": "exclude-tools", "--thinking": "thinking", "--export": "export",
+		"--skill": "skill", "--prompt-template": "prompt-template",
+		"--theme": "theme",
+	}
+	for flag, name := range longFlags {
+		result := ParseArgs([]string{flag})
+		if got, ok := result.UnknownFlags[name]; !ok || got != true {
+			t.Fatalf("ParseArgs([%q]).UnknownFlags[%q] = %v, %v; want true", flag, name, got, ok)
+		}
+		if len(result.Diagnostics) != 0 {
+			t.Fatalf("ParseArgs([%q]) diagnostics = %v; want none", flag, result.Diagnostics)
+		}
+		if len(result.Messages) != 0 {
+			t.Fatalf("ParseArgs([%q]) messages = %v; want none", flag, result.Messages)
+		}
+	}
+	for _, flag := range []string{"-t", "-xt"} {
+		result := ParseArgs([]string{flag})
+		if len(result.Diagnostics) != 1 || result.Diagnostics[0].Message != "Unknown option: "+flag {
+			t.Fatalf("ParseArgs([%q]) diagnostics = %v; want Unknown option: %s", flag, result.Diagnostics, flag)
+		}
+		if len(result.UnknownFlags) != 0 {
+			t.Fatalf("ParseArgs([%q]) unknownFlags = %v; want none", flag, result.UnknownFlags)
+		}
+	}
+}
+
+// Upstream formats diagnostics with template literals, so invalid values are
+// quoted verbatim (cli/args.ts: `Invalid thinking level "${level}"...`).
+func TestParseArgsDiagnosticQuotesValuesVerbatim(t *testing.T) {
+	result := ParseArgs([]string{"--thinking", `a"b`})
+	want := `Invalid thinking level "a"b". Valid values: off, minimal, low, medium, high, xhigh, max`
+	if len(result.Diagnostics) != 1 || result.Diagnostics[0].Message != want {
+		t.Fatalf("thinking diagnostic = %v; want %s", result.Diagnostics, want)
+	}
+	result = ParseArgs([]string{"--tui-mode", `a"b`})
+	want = `Invalid TUI mode "a"b". Valid values: regular, fullscreen`
+	if len(result.Diagnostics) != 1 || result.Diagnostics[0].Message != want {
+		t.Fatalf("tui-mode diagnostic = %v; want %s", result.Diagnostics, want)
+	}
+}
