@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/tui"
 )
 
@@ -318,10 +319,162 @@ func NewAppKeybindingsManager(userBindings map[string][]string, configPath strin
 	}
 }
 
-// CreateAppKeybindings creates the manager from the agent directory.
+// CreateAppKeybindings creates the manager from the agent directory. A legacy
+// keybindings.json is rewritten in place first (upstream runMigrations ->
+// migrateKeybindingsConfigFile); malformed files are ignored like upstream's
+// surrounding try/catch.
 func CreateAppKeybindings(agentDir string) *AppKeybindingsManager {
 	configPath := filepath.Join(agentDir, "keybindings.json")
+	MigrateKeybindingsFile(configPath)
 	return NewAppKeybindingsManager(loadKeybindingsFile(configPath), configPath)
+}
+
+// MigrateKeybindingsFile rewrites a legacy keybindings.json to namespaced ids
+// when any name changes, with the two-space-indented JSON and trailing newline
+// upstream writes. It reports whether the file was rewritten.
+func MigrateKeybindingsFile(path string) bool {
+	raw, ok := LoadRawKeybindingsConfig(path)
+	if !ok {
+		return false
+	}
+	migrated, changed := MigrateKeybindingsConfig(raw)
+	if !changed {
+		return false
+	}
+	encoded, err := marshalOrderedKeybindings(migrated)
+	if err != nil {
+		return false
+	}
+	if err := os.WriteFile(path, encoded, 0o644); err != nil {
+		return false
+	}
+	return true
+}
+
+// marshalOrderedKeybindings renders the migrated config in table order (then
+// sorted extras) with two-space indentation, matching
+// JSON.stringify(config, null, 2) plus a trailing newline.
+func marshalOrderedKeybindings(config map[string]json.RawMessage) ([]byte, error) {
+	_, order := Keybindings()
+	keys := make([]string, 0, len(config))
+	for _, key := range order {
+		if _, ok := config[key]; ok {
+			keys = append(keys, key)
+		}
+	}
+	var extras []string
+	seen := map[string]bool{}
+	for _, key := range keys {
+		seen[key] = true
+	}
+	for key := range config {
+		if !seen[key] {
+			extras = append(extras, key)
+		}
+	}
+	sort.Strings(extras)
+	keys = append(keys, extras...)
+
+	var out strings.Builder
+	out.WriteString("{")
+	for index, key := range keys {
+		if index > 0 {
+			out.WriteString(",")
+		}
+		out.WriteString("\n  ")
+		keyJSON, err := ai.MarshalJSON(key)
+		if err != nil {
+			return nil, err
+		}
+		out.Write(keyJSON)
+		out.WriteString(": ")
+		valueJSON, err := ai.MarshalJSON(config[key])
+		if err != nil {
+			return nil, err
+		}
+		indentJSON(&out, valueJSON, 1)
+	}
+	if len(keys) > 0 {
+		out.WriteString("\n}")
+	} else {
+		out.WriteString("}")
+	}
+	out.WriteString("\n")
+	return []byte(out.String()), nil
+}
+
+// indentJSON writes compact JSON with two-space indentation starting one level
+// in, the shape JSON.stringify(value, null, 2) produces for a property value.
+func indentJSON(out *strings.Builder, raw json.RawMessage, depth int) {
+	trimmed := strings.TrimSpace(string(raw))
+	if len(trimmed) == 0 {
+		out.WriteString("null")
+		return
+	}
+	if trimmed[0] != '{' && trimmed[0] != '[' {
+		out.WriteString(trimmed)
+		return
+	}
+	indent := strings.Repeat("  ", depth)
+	childIndent := strings.Repeat("  ", depth+1)
+	closing := byte('}')
+	if trimmed[0] == '[' {
+		closing = ']'
+	}
+
+	// Split the container into its top-level elements, preserving their text.
+	elements := []string{}
+	start := 1
+	inString := false
+	escaped := false
+	level := 0
+	for index := 0; index < len(trimmed); index++ {
+		char := trimmed[index]
+		if inString {
+			if escaped {
+				escaped = false
+			} else if char == '\\' {
+				escaped = true
+			} else if char == '"' {
+				inString = false
+			}
+			continue
+		}
+		switch char {
+		case '"':
+			inString = true
+		case '{', '[':
+			level++
+		case '}', ']':
+			level--
+			if level == 0 {
+				if end := strings.TrimSpace(trimmed[start:index]); end != "" {
+					elements = append(elements, end)
+				}
+			}
+		case ',':
+			if level == 1 {
+				elements = append(elements, strings.TrimSpace(trimmed[start:index]))
+				start = index + 1
+			}
+		}
+	}
+	if len(elements) == 0 {
+		out.WriteString(trimmed[:1] + string(closing))
+		return
+	}
+	out.WriteString(trimmed[:1])
+	for index, element := range elements {
+		if index > 0 {
+			out.WriteString(",")
+		}
+		out.WriteString("\n")
+		out.WriteString(childIndent)
+		indentJSON(out, json.RawMessage(element), depth+1)
+	}
+	out.WriteString("\n")
+	out.WriteString(indent)
+	out.WriteByte(closing)
 }
 
 // Reload re-reads the user config file.
