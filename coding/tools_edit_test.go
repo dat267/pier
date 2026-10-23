@@ -60,7 +60,9 @@ func TestEditSingleReplacement(t *testing.T) {
 	if details.FirstChangedLine == nil || *details.FirstChangedLine != 2 {
 		t.Fatalf("firstChangedLine = %v", details.FirstChangedLine)
 	}
-	if !strings.HasPrefix(details.Patch, "====") || !strings.Contains(details.Patch, "@@ -1,3 +1,3 @@") {
+	// jsdiff FILE_HEADERS_ONLY emits the file headers without the index or
+	// underline lines (upstream generateUnifiedPatch).
+	if !strings.HasPrefix(details.Patch, "--- f.txt\n+++ f.txt\n") || !strings.Contains(details.Patch, "@@ -1,3 +1,3 @@") {
 		t.Fatalf("patch = %q", details.Patch)
 	}
 }

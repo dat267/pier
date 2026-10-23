@@ -5,6 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/dat267/pier/internal/jsdiff"
 	"github.com/dat267/pier/tui"
 )
 
@@ -127,114 +128,15 @@ func wordEquals(left string, right string) bool {
 	return strings.TrimSpace(left) == strings.TrimSpace(right)
 }
 
+// diffComponents returns the jsdiff components for the word tokens, comparing
+// with the word-diff whitespace rule.
 func diffComponents(oldTokens []string, newTokens []string) []*diffComponent {
-	newLen := len(newTokens)
-	oldLen := len(oldTokens)
-
-	bestPath := map[int]*diffPath{0: {oldPos: -1}}
-	editLength := 1
-	maxEditLength := newLen + oldLen
-	minDiagonalToConsider := -1 << 30
-	maxDiagonalToConsider := 1 << 30
-
-	extractCommon := func(basePath *diffPath, diagonalPath int) int {
-		oldPos := basePath.oldPos
-		newPos := oldPos - diagonalPath
-		commonCount := 0
-		for newPos+1 < newLen && oldPos+1 < oldLen && wordEquals(oldTokens[oldPos+1], newTokens[newPos+1]) {
-			newPos++
-			oldPos++
-			commonCount++
-		}
-		if commonCount > 0 {
-			basePath.last = &diffComponent{count: commonCount, previous: basePath.last}
-		}
-		basePath.oldPos = oldPos
-		return newPos
+	components := jsdiff.DiffComponents(oldTokens, newTokens, wordEquals)
+	out := make([]*diffComponent, len(components))
+	for index, component := range components {
+		out[index] = &diffComponent{count: component.Count, added: component.Added, removed: component.Removed}
 	}
-
-	addToPath := func(path *diffPath, added bool, removed bool, oldPosInc int) *diffPath {
-		last := path.last
-		if last != nil && last.added == added && last.removed == removed {
-			return &diffPath{
-				oldPos: path.oldPos + oldPosInc,
-				last: &diffComponent{
-					count: last.count + 1, added: added, removed: removed, previous: last.previous,
-				},
-			}
-		}
-		return &diffPath{
-			oldPos: path.oldPos + oldPosInc,
-			last:   &diffComponent{count: 1, added: added, removed: removed, previous: last},
-		}
-	}
-
-	newPos := extractCommon(bestPath[0], 0)
-	if bestPath[0].oldPos+1 >= oldLen && newPos+1 >= newLen {
-		return collectComponents(bestPath[0].last)
-	}
-
-	for editLength <= maxEditLength {
-		found := false
-		var foundPath *diffPath
-		start := max(minDiagonalToConsider, -editLength)
-		end := min(maxDiagonalToConsider, editLength)
-		for diagonalPath := start; diagonalPath <= end; diagonalPath += 2 {
-			removePath := bestPath[diagonalPath-1]
-			addPath := bestPath[diagonalPath+1]
-			if removePath != nil {
-				delete(bestPath, diagonalPath-1)
-			}
-			canAdd := false
-			if addPath != nil {
-				addPathNewPos := addPath.oldPos - diagonalPath
-				canAdd = addPathNewPos >= 0 && addPathNewPos < newLen
-			}
-			canRemove := removePath != nil && removePath.oldPos+1 < oldLen
-			if !canAdd && !canRemove {
-				delete(bestPath, diagonalPath)
-				continue
-			}
-
-			var basePath *diffPath
-			if !canRemove || (canAdd && removePath.oldPos < addPath.oldPos) {
-				basePath = addToPath(addPath, true, false, 0)
-			} else {
-				basePath = addToPath(removePath, false, true, 1)
-			}
-			newPos = extractCommon(basePath, diagonalPath)
-			if basePath.oldPos+1 >= oldLen && newPos+1 >= newLen {
-				found = true
-				foundPath = basePath
-				break
-			}
-			bestPath[diagonalPath] = basePath
-			if basePath.oldPos+1 >= oldLen {
-				maxDiagonalToConsider = min(maxDiagonalToConsider, diagonalPath-1)
-			}
-			if newPos+1 >= newLen {
-				minDiagonalToConsider = max(minDiagonalToConsider, diagonalPath+1)
-			}
-		}
-		if found {
-			return collectComponents(foundPath.last)
-		}
-		editLength++
-	}
-	return nil
-}
-
-func collectComponents(last *diffComponent) []*diffComponent {
-	var components []*diffComponent
-	for last != nil {
-		components = append(components, last)
-		last = last.previous
-	}
-	// Reverse.
-	for i, j := 0, len(components)-1; i < j; i, j = i+1, j-1 {
-		components[i], components[j] = components[j], components[i]
-	}
-	return components
+	return out
 }
 
 func buildDiffValues(components []*diffComponent, newTokens []string, oldTokens []string) []DiffChange {

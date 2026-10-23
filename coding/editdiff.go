@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/dat267/pier/internal/jsdiff"
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -392,87 +393,192 @@ func toReplacements(matched []matchedEdit) []textReplacement {
 }
 
 // GenerateUnifiedPatch builds a unified diff patch (port of
-// generateUnifiedPatch; D9: Go LCS line-diff vs jsdiff — verify hunk
-// boundaries byte-for-byte against upstream before relying on the format).
-func GenerateUnifiedPatch(path string, oldContent, newContent string, contextLines int) string {
-	if contextLines == 0 {
+// generateUnifiedPatch -> jsdiff 8.0.4 createTwoFilesPatch with
+// FILE_HEADERS_ONLY). Lines are newline-carrying tokens, so a final line
+// without a newline differs from one with it and gets the standard
+// "\ No newline at end of file" marker; hunks group like structuredPatch
+// (an unchanged run of at most 2*context lines joins two hunks).
+func GenerateUnifiedPatch(path, oldContent, newContent string, contextLines int) string {
+	if contextLines <= 0 {
 		contextLines = 4
 	}
-	oldLines := splitLinesForCounting(oldContent)
-	newLines := splitLinesForCounting(newContent)
-	ops := diffLinesOps(oldLines, newLines)
+	oldTokens := splitPatchTokens(oldContent)
+	newTokens := splitPatchTokens(newContent)
+	// jsdiff diffs newline-carrying tokens with its Myers search; the LCS used by
+	// the display diff picks different alignments for repeated lines.
+	ops := patchOpsFromComponents(jsdiff.DiffComponents(oldTokens, newTokens, func(a, b string) bool { return a == b }))
+	hunks := buildPatchHunks(oldTokens, newTokens, ops, contextLines)
 
-	var patch strings.Builder
-	patch.WriteString("===================================================================\n")
-	patch.WriteString("--- " + path + "\n")
-	patch.WriteString("+++ " + path + "\n")
+	var out strings.Builder
+	out.WriteString("--- " + path + "\n")
+	out.WriteString("+++ " + path + "\n")
+	for _, hunk := range hunks {
+		oldStart, newStart := hunk.oldStart, hunk.newStart
+		// Unified diff quirk: a zero-length range starts one line earlier.
+		if hunk.oldLines == 0 {
+			oldStart--
+		}
+		if hunk.newLines == 0 {
+			newStart--
+		}
+		fmt.Fprintf(&out, "@@ -%d,%d +%d,%d @@\n", oldStart, hunk.oldLines, newStart, hunk.newLines)
+		for _, line := range hunk.lines {
+			// Each entry still carries its newline; a line without one gets the
+			// marker after it (upstream structuredPatch step 2).
+			if strings.HasSuffix(line, "\n") {
+				out.WriteString(strings.TrimSuffix(line, "\n"))
+			} else {
+				out.WriteString(line)
+				out.WriteString("\n\\ No newline at end of file")
+			}
+			out.WriteString("\n")
+		}
+	}
+	return out.String()
+}
 
-	i := 0
-	for i < len(ops) {
-		if ops[i].kind == opEqual {
-			i++
+// splitPatchTokens splits content into lines that keep their terminator, the
+// jsdiff diffLines token model: the last token has no terminator only when the
+// content does not end with one.
+func splitPatchTokens(text string) []string {
+	tokens := []string{}
+	for start := 0; start < len(text); {
+		if end := strings.IndexByte(text[start:], '\n'); end >= 0 {
+			tokens = append(tokens, text[start:start+end+1])
+			start += end + 1
 			continue
 		}
-		// Hunk start: back up context.
-		hunkStart := max(0, i-contextLines)
-		// Extend to the end of the change block plus trailing context.
-		j := i
-		for j < len(ops) {
-			if ops[j].kind != opEqual {
-				j++
-				continue
-			}
-			// Look ahead: does another change start within contextLines?
-			runEnd := j
-			for runEnd < len(ops) && ops[runEnd].kind == opEqual {
-				runEnd++
-			}
-			if runEnd < len(ops) && runEnd-j <= contextLines {
-				j = runEnd
-				continue
-			}
-			break
-		}
-		hunkEnd := min(len(ops), j+contextLines)
-
-		oldStart, newStart := 1, 1
-		for k := 0; k < hunkStart; k++ {
-			switch ops[k].kind {
-			case opEqual:
-				oldStart++
-				newStart++
-			case opRemove:
-				oldStart++
-			case opAdd:
-				newStart++
-			}
-		}
-		oldCount, newCount := 0, 0
-		for k := hunkStart; k < hunkEnd; k++ {
-			switch ops[k].kind {
-			case opEqual:
-				oldCount++
-				newCount++
-			case opRemove:
-				oldCount++
-			case opAdd:
-				newCount++
-			}
-		}
-		fmt.Fprintf(&patch, "@@ -%d,%d +%d,%d @@\n", oldStart, max(oldCount, 1), newStart, max(newCount, 1))
-		for k := hunkStart; k < hunkEnd; k++ {
-			switch ops[k].kind {
-			case opEqual:
-				patch.WriteString(" " + oldLines[ops[k].oldIndex] + "\n")
-			case opRemove:
-				patch.WriteString("-" + oldLines[ops[k].oldIndex] + "\n")
-			case opAdd:
-				patch.WriteString("+" + newLines[ops[k].newIndex] + "\n")
-			}
-		}
-		i = hunkEnd
+		tokens = append(tokens, text[start:])
+		start = len(text)
 	}
-	return patch.String()
+	// Empty content has no tokens (jsdiff's tokenizer drops the lone empty
+	// split element), so a pure insertion or deletion has no opposite lines.
+	return tokens
+}
+
+// patchOpsFromComponents expands jsdiff components into per-token ops in diff
+// order.
+func patchOpsFromComponents(components []jsdiff.Component) []diffOp {
+	var ops []diffOp
+	oldIndex, newIndex := 0, 0
+	for _, component := range components {
+		for count := 0; count < component.Count; count++ {
+			switch {
+			case component.Added:
+				ops = append(ops, diffOp{kind: opAdd, newIndex: newIndex})
+				newIndex++
+			case component.Removed:
+				ops = append(ops, diffOp{kind: opRemove, oldIndex: oldIndex})
+				oldIndex++
+			default:
+				ops = append(ops, diffOp{kind: opEqual, oldIndex: oldIndex, newIndex: newIndex})
+				oldIndex++
+				newIndex++
+			}
+		}
+	}
+	return ops
+}
+
+// patchHunk is one structuredPatch hunk before formatting.
+type patchHunk struct {
+	oldStart, oldLines int
+	newStart, newLines int
+	lines              []string
+}
+
+// patchPart is one run of the line diff (upstream diffLines' parts).
+type patchPart struct {
+	equal bool
+	added bool
+	lines []string
+}
+
+// buildPatchHunks groups diff ops into jsdiff structuredPatch hunks.
+func buildPatchHunks(oldTokens, newTokens []string, ops []diffOp, context int) []patchHunk {
+	parts := make([]patchPart, 0, len(ops)+1)
+	for _, op := range ops {
+		var part patchPart
+		var line string
+		switch op.kind {
+		case opEqual:
+			part.equal = true
+			line = oldTokens[op.oldIndex]
+		case opRemove:
+			line = oldTokens[op.oldIndex]
+		case opAdd:
+			part.added = true
+			line = newTokens[op.newIndex]
+		}
+		last := len(parts) - 1
+		if last >= 0 && parts[last].equal == part.equal && parts[last].added == part.added {
+			parts[last].lines = append(parts[last].lines, line)
+			continue
+		}
+		parts = append(parts, patchPart{equal: part.equal, added: part.added, lines: []string{line}})
+	}
+	// The sentinel part makes the final context flush without special cases.
+	parts = append(parts, patchPart{equal: true})
+
+	contextLines := func(lines []string) []string {
+		out := make([]string, len(lines))
+		for i, line := range lines {
+			out[i] = " " + line
+		}
+		return out
+	}
+
+	var hunks []patchHunk
+	oldRangeStart, newRangeStart := 0, 0
+	var current []string
+	oldLine, newLine := 1, 1
+	for index := 0; index < len(parts); index++ {
+		part := parts[index]
+		if !part.equal {
+			if oldRangeStart == 0 {
+				oldRangeStart, newRangeStart = oldLine, newLine
+				if index > 0 && context > 0 {
+					previous := parts[index-1].lines
+					start := max(0, len(previous)-context)
+					current = contextLines(previous[start:])
+					oldRangeStart -= len(current)
+					newRangeStart -= len(current)
+				}
+			}
+			prefix := "-"
+			if part.added {
+				prefix = "+"
+			}
+			for _, line := range part.lines {
+				current = append(current, prefix+line)
+			}
+			if part.added {
+				newLine += len(part.lines)
+			} else {
+				oldLine += len(part.lines)
+			}
+			continue
+		}
+		if oldRangeStart != 0 {
+			// An unchanged run of at most 2*context lines joins the hunks; the
+			// final sentinel (index len(parts)-1) always closes the range.
+			if len(part.lines) <= context*2 && index < len(parts)-1 {
+				current = append(current, contextLines(part.lines)...)
+			} else {
+				contextSize := min(len(part.lines), context)
+				current = append(current, contextLines(part.lines[:contextSize])...)
+				hunks = append(hunks, patchHunk{
+					oldStart: oldRangeStart, oldLines: oldLine - oldRangeStart + contextSize,
+					newStart: newRangeStart, newLines: newLine - newRangeStart + contextSize,
+					lines: current,
+				})
+				oldRangeStart, newRangeStart, current = 0, 0, nil
+			}
+		}
+		oldLine += len(part.lines)
+		newLine += len(part.lines)
+	}
+	return hunks
 }
 
 type opKind int
@@ -666,5 +772,7 @@ func GenerateDiffString(oldContent, newContent string, contextLines int) (diff s
 		lastWasChange = false
 	}
 
-	return strings.Join(output, "\n"), firstChanged, true
+	// ok reports whether anything changed (upstream returns an undefined
+	// firstChangedLine for identical content).
+	return strings.Join(output, "\n"), firstChanged, firstChanged >= 0
 }
