@@ -73,18 +73,11 @@ func (s *AgentSession) PrepareRetry(ctx context.Context, message *ai.AssistantMe
 
 	// Persist an omission of the failed response and its tool results, so a
 	// resumed session does not replay them to the model (upstream
-	// _prepareRetry -> _omitRecoveryAttempt). They stay in session history.
+	// _prepareRetry -> _omitRecoveryAttempt). They stay in session history; the
+	// omitted message leaves live context with the immediate finalized-context
+	// refresh inside omitRecoveryAttempt.
 	if err := s.omitRecoveryAttempt(message); err != nil {
 		return false, err
-	}
-
-	// Remove the error message from agent state so the retried turn does not
-	// continue from an assistant tail (upstream's _refreshFinalizedContext).
-	messages := s.Agent.State().Messages
-	if len(messages) > 0 {
-		if _, ok := messages[len(messages)-1].(*ai.AssistantMessage); ok {
-			s.Agent.SetMessages(messages[:len(messages)-1])
-		}
 	}
 
 	retryCtx, cancel := context.WithCancel(ctx)

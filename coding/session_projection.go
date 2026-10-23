@@ -106,10 +106,12 @@ type ProjectedEntry struct {
 }
 
 // projectedWindow is a projection with provenance: the entries the compaction
-// window keeps, the messages each contributes, and the flattened messages.
+// window keeps, the messages each contributes, the flattened messages, and the
+// branch path the window was resolved on.
 type projectedWindow struct {
 	Entries  []ProjectedEntry
 	Messages []ai.Message
+	Branch   []*SessionEntry
 }
 
 // projectWindow resolves the compaction window on path and the messages each
@@ -132,7 +134,7 @@ func projectWindow(path []*SessionEntry, cache *messageCache) projectedWindow {
 		}
 	}
 
-	window := projectedWindow{Entries: make([]ProjectedEntry, 0, len(kept)), Messages: make([]ai.Message, 0, len(kept))}
+	window := projectedWindow{Entries: make([]ProjectedEntry, 0, len(kept)), Messages: make([]ai.Message, 0, len(kept)), Branch: path}
 	for index, entry := range kept {
 		var messages []ai.Message
 		// The window may retain an older compaction whose raw ID lies inside the
@@ -148,6 +150,28 @@ func projectWindow(path []*SessionEntry, cache *messageCache) projectedWindow {
 		window.Messages = append(window.Messages, messages...)
 	}
 	return window
+}
+
+// MessageEntryID resolves the raw entry that persists a live message by
+// identity (upstream _findPersistedMessageEntryId's reversed branch scan).
+// Messages decoded for a projection share the cache's objects, so a resumed
+// message installed from the projection matches its source entry here.
+func (m *SessionManager) MessageEntryID(message ai.Message) string {
+	m.mu.Lock()
+	path := m.branchPointersLocked("")
+	m.mu.Unlock()
+	for index := len(path) - 1; index >= 0; index-- {
+		entry := path[index]
+		if entry.Type != "message" {
+			continue
+		}
+		for _, candidate := range m.messages.messages(entry) {
+			if candidate == message {
+				return entry.ID
+			}
+		}
+	}
+	return ""
 }
 
 // ProjectedEntries returns the projection's per-entry contributions (upstream

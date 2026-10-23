@@ -2,12 +2,14 @@ package coding
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
 	"math"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/dat267/pier/ai"
 )
@@ -343,20 +345,28 @@ func EstimateProjectedContextTokens(window projectedWindow) CompactionContextUsa
 	if estimate.LastUsageIndex >= 0 {
 		// Find the entry that contributed the usage-bearing message.
 		projectedIndex := 0
-		usageEntryIndex := -1
-		latestInvalidatingIndex := -1
-		for index, entry := range window.Entries {
+		usageEntryID := ""
+		for _, entry := range window.Entries {
 			nextIndex := projectedIndex + len(entry.Messages)
-			if usageEntryIndex < 0 && estimate.LastUsageIndex < nextIndex {
-				usageEntryIndex = index
-			}
-			// A context edit or compaction changes what the messages after it
-			// mean; the entries kept by the window are ordered, so the newest
-			// invalidating entry is enough to decide.
-			if entry.Source.Type == "context_edit" || entry.Source.Type == "compaction" {
-				latestInvalidatingIndex = index
+			if usageEntryID == "" && estimate.LastUsageIndex < nextIndex {
+				usageEntryID = entry.Source.ID
 			}
 			projectedIndex = nextIndex
+		}
+		// Compare provenance in branch order (upstream maps the usage entry
+		// into branchEntries): the window replays its newest compaction first,
+		// so replay positions do not preserve chronology. A context edit or
+		// compaction changes what the messages after it mean; the newest
+		// invalidating entry decides.
+		usageEntryIndex := -1
+		latestInvalidatingIndex := -1
+		for index, entry := range window.Branch {
+			if usageEntryID != "" && entry.ID == usageEntryID {
+				usageEntryIndex = index
+			}
+			if entry.Type == "context_edit" || entry.Type == "compaction" {
+				latestInvalidatingIndex = index
+			}
 		}
 		if usageEntryIndex > latestInvalidatingIndex {
 			return estimate
@@ -1316,10 +1326,15 @@ func runSummarization(model *ai.Model, promptText string, maxTokens int, options
 		StreamOptions: ai.StreamOptions{
 			APIKey:    options.APIKey,
 			Ctx:       options.Ctx,
+			Env:       ai.ProviderEnv(options.Env),
 			SessionID: options.SessionID,
 			Headers:   stringHeaders(options.Headers),
 		},
-		Reasoning: reasoning,
+	}
+	// Upstream createSummarizationOptions sets reasoning only for a
+	// reasoning-capable model and a selected level.
+	if model.Reasoning && reasoning != "" && reasoning != ai.ThinkOff {
+		streamOptions.Reasoning = reasoning
 	}
 	// maxTokens plumbs through SamplingExtras-free path: the named field.
 	streamOptions.MaxTokens = &maxTokens
@@ -1343,12 +1358,61 @@ func contentTextOf(content ai.ContentList) string {
 }
 
 // Local aliases to the ai package's JS-semantics helpers.
+// sortStrings orders strings by UTF-16 code units (JavaScript's default string
+// ordering, upstream computeFileLists' Array.prototype.sort). The surrogate
+// range sits below the last BMP scalars, so a supplementary scalar sorts
+// before scalars like U+E000, unlike Go's UTF-8 byte comparison.
 func sortStrings(list []string) {
 	for i := 1; i < len(list); i++ {
-		for j := i; j > 0 && list[j] < list[j-1]; j-- {
+		for j := i; j > 0 && compareUTF16(list[j], list[j-1]) < 0; j-- {
 			list[j], list[j-1] = list[j-1], list[j]
 		}
 	}
+}
+
+// compareUTF16 compares two strings by their UTF-16 code-unit sequences.
+// Equal decoded runes carry equal unit sequences, so a rune walk decides at
+// the first differing rune; its two units are compared in order (a decoded Go
+// rune never encodes to a lone surrogate, so a one-unit rune cannot prefix a
+// two-unit one).
+func compareUTF16(a, b string) int {
+	indexA, indexB := 0, 0
+	for indexA < len(a) && indexB < len(b) {
+		runeA, sizeA := utf8.DecodeRuneInString(a[indexA:])
+		runeB, sizeB := utf8.DecodeRuneInString(b[indexB:])
+		if runeA != runeB {
+			if first := cmp.Compare(utf16Unit(runeA, 0), utf16Unit(runeB, 0)); first != 0 {
+				return first
+			}
+			return cmp.Compare(utf16Unit(runeA, 1), utf16Unit(runeB, 1))
+		}
+		indexA += sizeA
+		indexB += sizeB
+	}
+	switch {
+	case indexA < len(a):
+		return 1
+	case indexB < len(b):
+		return -1
+	default:
+		return 0
+	}
+}
+
+// utf16Unit returns the first (index 0) or second (index 1) UTF-16 code unit
+// of r; a BMP scalar has no second unit, which no comparison can reach.
+func utf16Unit(r rune, index int) uint16 {
+	if r < 0x10000 {
+		if index == 0 {
+			return uint16(r)
+		}
+		return 0
+	}
+	shifted := r - 0x10000
+	if index == 0 {
+		return uint16(0xD800 + shifted>>10)
+	}
+	return uint16(0xDC00 + shifted&0x3FF)
 }
 
 func JSLength(s string) int { return ai.JSLength(s) }

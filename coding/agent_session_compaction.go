@@ -174,27 +174,67 @@ func (s *AgentSession) CheckCompaction(ctx context.Context, assistant *ai.Assist
 	return false, nil
 }
 
-// entryIDForMessage returns the session entry id recorded for a message, or ""
-// when the message was not appended through the event stream (upstream
-// _findPersistedMessageEntryId's mapped case).
+// entryIDForMessage returns the session entry id that persists a message
+// (upstream _findPersistedMessageEntryId): the live event-stream mapping first,
+// then persisted message provenance, then the projection's positional
+// provenance. The fallbacks cover messages a resume installed directly into
+// agent state without message_end events.
 func (s *AgentSession) entryIDForMessage(message ai.Message) string {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.entryIDsByMessage[message]
+	if id := s.entryIDsByMessage[message]; id != "" {
+		s.mu.Unlock()
+		return id
+	}
+	s.mu.Unlock()
+	if id := s.Sessions.MessageEntryID(message); id != "" {
+		s.cacheEntryIDForMessage(message, id)
+		return id
+	}
+	messageIndex := -1
+	for index, candidate := range s.Agent.State().Messages {
+		if candidate == message {
+			messageIndex = index
+			break
+		}
+	}
+	if messageIndex < 0 {
+		return ""
+	}
+	projectedIndex := 0
+	for _, entry := range s.Sessions.ProjectedEntries() {
+		nextIndex := projectedIndex + len(entry.Messages)
+		if messageIndex < nextIndex {
+			s.cacheEntryIDForMessage(message, entry.Source.ID)
+			return entry.Source.ID
+		}
+		projectedIndex = nextIndex
+	}
+	return ""
+}
+
+// cacheEntryIDForMessage records a provenance-resolved mapping (upstream
+// _findPersistedMessageEntryId memoizes the projection fallback).
+func (s *AgentSession) cacheEntryIDForMessage(message ai.Message, id string) {
+	s.mu.Lock()
+	if s.entryIDsByMessage == nil {
+		s.entryIDsByMessage = map[ai.Message]string{}
+	}
+	s.entryIDsByMessage[message] = id
+	s.mu.Unlock()
 }
 
 // omitRecoveryAttempt persists a context_edit that excludes the failed response
 // and its tool results from model context (upstream _omitRecoveryAttempt).
 func (s *AgentSession) omitRecoveryAttempt(assistant *ai.AssistantMessage) error {
 	s.mu.Lock()
-	assistantID := s.entryIDsByMessage[ai.Message(assistant)]
 	toolResults := append([]ai.Message(nil), s.lastAssistantToolResults...)
+	s.mu.Unlock()
+	assistantID := s.entryIDForMessage(assistant)
 	ids := make([]string, 0, len(toolResults)+1)
 	ids = append(ids, assistantID)
 	for _, result := range toolResults {
-		ids = append(ids, s.entryIDsByMessage[result])
+		ids = append(ids, s.entryIDForMessage(result))
 	}
-	s.mu.Unlock()
 
 	// A projected target with no source entry cannot be omitted; a target that
 	// is not in agent state is simply skipped, like upstream.
@@ -225,6 +265,12 @@ func (s *AgentSession) omitRecoveryAttempt(assistant *ai.AssistantMessage) error
 			s.emit(&SessionEvent{Type: SessionEntryAppended, Entry: entry})
 		}
 	}
+	// Refresh immediately (upstream _omitRecoveryAttempt calls
+	// _refreshFinalizedContext): the omission must reach live agent state even
+	// if the follow-up summarization fails.
+	sessionContext := s.Sessions.Projection()
+	s.Agent.SetMessages(sessionContext.Messages)
+	s.refreshFinalizedContext(sessionContext)
 	return nil
 }
 
@@ -292,10 +338,11 @@ func (s *AgentSession) RunAutoCompaction(ctx context.Context, reason CompactionR
 	options := CompactionOptions{
 		Model: model, Ctx: compactionCtx, StreamFn: s.compactionStreamFn(),
 		Retry: s.retrySettings(), SessionID: s.Sessions.GetSessionID(),
-		Callbacks: s.summarizationRetryCallbacksForCompaction(reason),
+		ThinkingLevel: s.ThinkingLevel(),
+		Callbacks:     s.summarizationRetryCallbacksForCompaction(reason),
 	}
 	if s.control.ModelRuntime != nil {
-		resolution, err := s.control.ModelRuntime.GetAuthForModel(model, nil)
+		resolution, err := s.control.ModelRuntime.GetAuthForModel(model, &ModelRuntimeAuthOverrides{Ctx: compactionCtx})
 		if err == nil && resolution != nil {
 			options.APIKey = resolution.Auth.APIKey
 			options.Headers = headersToStrings(resolution.Auth.Headers)

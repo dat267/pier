@@ -792,10 +792,10 @@ func (s *AgentSession) runManualCompaction(ctx context.Context, customInstructio
 	options := CompactionOptions{
 		Model: model, Ctx: ctx, CustomInstructions: customInstructions,
 		StreamFn: s.compactionStreamFn(), Retry: s.retrySettings(),
-		SessionID: s.Sessions.GetSessionID(),
+		SessionID: s.Sessions.GetSessionID(), ThinkingLevel: s.ThinkingLevel(),
 	}
 	if s.control.ModelRuntime != nil {
-		resolution, err := s.control.ModelRuntime.GetAuthForModel(model, nil)
+		resolution, err := s.control.ModelRuntime.GetAuthForModel(model, &ModelRuntimeAuthOverrides{Ctx: ctx})
 		if err == nil && resolution != nil {
 			options.APIKey = resolution.Auth.APIKey
 			options.Headers = headersToStrings(resolution.Auth.Headers)
@@ -858,16 +858,23 @@ func adaptStreamFn(streamFn agent.StreamFn) StreamFnFn {
 	}
 }
 
-// maybeAutoCompact checks the threshold and compacts when crossed (the
-// prepareNextTurn hook upstream: _compactBeforeNextAssistantResponse).
-// maybeAutoCompact runs the pre-turn compaction check over the last assistant
-// message (upstream's pre-prompt _checkCompaction(lastAssistant, false)).
+// maybeAutoCompact checks the threshold over the complete projected context
+// and compacts when crossed (the prepareNextTurn hook upstream:
+// _compactBeforeNextAssistantResponse -> _exceedsCompactionThreshold). The
+// estimate covers every projected message, including tool results appended
+// after the last provider usage, not only the usage of the last assistant.
 func (s *AgentSession) maybeAutoCompact(ctx context.Context) error {
-	last := s.findLastAssistantMessage()
-	if last == nil {
+	settings, enabled := s.compactionSettings()
+	if !enabled {
 		return nil
 	}
-	if _, err := s.CheckCompaction(ctx, last, false); err != nil {
+	model := s.Model()
+	if model == nil || model.ContextWindow <= 0 {
+		return nil
+	}
+	contextTokens := int64(s.Sessions.ProjectedContextEstimate().Tokens)
+	if ShouldCompact(contextTokens, model.ContextWindow, settings) {
+		_, err := s.RunAutoCompaction(ctx, CompactionThreshold, false)
 		return err
 	}
 	return nil
