@@ -262,6 +262,11 @@ func (s *AssistantMessageEventStream) End(result **AssistantMessage) {
 	s.EventStream.End(result)
 }
 
+// roundDurationMS reproduces upstream's Math.round of the elapsed milliseconds.
+func roundDurationMS(elapsed time.Duration) int64 {
+	return int64(math.Round(float64(elapsed) / float64(time.Millisecond)))
+}
+
 // timeMessage stamps durationMs with the monotonic time since the stream was created. A
 // message that already carries one is left alone, as is one whose timestamp predates the
 // stream: a stream that only forwards a response, such as a deferred result fetched later,
@@ -273,7 +278,6 @@ func (s *AssistantMessageEventStream) timeMessage(message *AssistantMessage) {
 	if message.Timestamp < s.startedAt {
 		return
 	}
-	// Upstream rounds, so the persisted duration matches to the millisecond.
-	duration := int64(math.Round(float64(time.Since(s.startedAtMonotonic)) / float64(time.Millisecond)))
+	duration := roundDurationMS(time.Since(s.startedAtMonotonic))
 	message.DurationMs = &duration
 }

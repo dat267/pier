@@ -296,21 +296,19 @@ func TestAssistantMessageEventStreamErrorResult(t *testing.T) {
 // of the persisted assistant message, so a truncated millisecond would change
 // the transcript bytes.
 func TestAssistantStreamDurationRoundsToNearestMillisecond(t *testing.T) {
-	stream := NewAssistantMessageEventStream()
-	stream.startedAt = time.Now().Add(-time.Hour).UnixMilli()
-	stream.startedAtMonotonic = time.Now().Add(-1500 * time.Microsecond)
-	message := &AssistantMessage{StopReason: StopStop, Timestamp: time.Now().UnixMilli()}
-	stream.End(&message)
-	if message.DurationMs == nil || *message.DurationMs != 2 {
-		t.Fatalf("durationMs = %v, want 2", *message.DurationMs)
-	}
-
-	stream = NewAssistantMessageEventStream()
-	stream.startedAt = time.Now().Add(-time.Hour).UnixMilli()
-	stream.startedAtMonotonic = time.Now().Add(-1499 * time.Microsecond)
-	message = &AssistantMessage{StopReason: StopStop, Timestamp: time.Now().UnixMilli()}
-	stream.End(&message)
-	if message.DurationMs == nil || *message.DurationMs != 1 {
-		t.Fatalf("durationMs = %v, want 1", *message.DurationMs)
+	for _, testCase := range []struct {
+		elapsed time.Duration
+		want    int64
+	}{
+		{0, 0},
+		{499 * time.Microsecond, 0},
+		{500 * time.Microsecond, 1},
+		{1499 * time.Microsecond, 1},
+		{1500 * time.Microsecond, 2},
+		{2500 * time.Microsecond, 3},
+	} {
+		if got := roundDurationMS(testCase.elapsed); got != testCase.want {
+			t.Fatalf("roundDurationMS(%v) = %d, want %d", testCase.elapsed, got, testCase.want)
+		}
 	}
 }
