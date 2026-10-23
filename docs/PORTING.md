@@ -341,6 +341,20 @@ fetch models.dev; the tag only pins the generator.
 defaults would otherwise resolve to the provider's first model; a test now
 asserts every default exists in the shipped catalog.
 
+Tool changes after the first request now say how a transport can express them
+(`TranscriptToolSupport`): `"none"` keeps the current tools at the top,
+`"additions"` adds a tool at a later system message, and `"changes"` declares
+every tool in place. The Responses transports take the mode from the model's
+compat flags, and `additional_tools` items start at the head of the input like
+Codex, so a later item can replace an earlier in-place definition but never a
+top-level tool. Removals are announced as text (no wire item can remove a
+declared tool) and every later item is preceded by the incremental tools notice,
+restating the tools that are still unavailable (upstream `caa6967b6`, #10940).
+The resolver reports how many leading system messages the top-level field covers,
+so a removal invalidates the cache once instead of on every later load, and the
+notice restates only removals announced by earlier messages rather than the one
+it precedes (upstream `530015d93`).
+
 `ai/image_catalog.json` is refreshed too. The `generate-image-models` script the
 older pin used no longer exists; the same `--data-only` run writes the image
 entries into the provider data files, and `scripts/gen_image_catalog.py` now
