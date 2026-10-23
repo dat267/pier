@@ -1,6 +1,14 @@
 # Reproduced audit findings
 
-No unresolved findings. The compaction audits of `48081fe` and `5918595`
+**A pipe-free table header does not start a table (v1.4.0).** `internal/markdown`
+requires a `|` in the header row (`tryTable`, `looksLikeTableStart`), but Marked,
+as upstream reads it, accepts a pipe-free header when the delimiter row has a
+pipe: upstream `2ed3118b0`'s own case renders `["$$", "x^2", "", "Value",
+"| --- |", "1"]` as a table, and pier renders it as text. Independent of the
+math fix that surfaced it; needs the Marked table-start rule ported with its own
+regression cases.
+
+No unresolved findings otherwise. The compaction audits of `48081fe` and `5918595`
 recorded eight findings against pi v1.3.0
 (`71023aec1546d6d677a65669c5665c0927ce0dd0`): resumed overflow blocking the
 next prompt, the between-turn threshold ignoring new tool-result tokens,

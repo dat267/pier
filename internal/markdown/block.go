@@ -1,6 +1,9 @@
 package markdown
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
 
 // Lex parses src into top-level blocks with their inline content resolved.
 // It is the full (non-incremental) entry point.
@@ -115,8 +118,11 @@ func (l *blockLexer) lexBlocks(from, to int) []*Block {
 func (l *blockLexer) lexBlock(start int, raw string, ln line) (*Block, int, bool) {
 	// LaTeX block (the upstream extension runs before the built-ins).
 	if isLatexBlockStart(raw) {
-		b, next := l.lexLatex(start)
-		return b, next, true
+		// A block whose body reaches a table start is not math: the opener stays
+		// text and the table lexes normally (upstream 2ed3118b0, #11159).
+		if b, next, ok := l.lexLatex(start); ok {
+			return b, next, true
+		}
 	}
 	// ATX heading.
 	if level, text, ok := atxHeading(raw); ok {
@@ -285,9 +291,28 @@ func isLatexBlockStart(line string) bool {
 	return strings.HasPrefix(rest, "$$") || strings.HasPrefix(rest, `\[`)
 }
 
+// tableDelimiterRowPattern matches a GFM delimiter row such as `|---|`, `| --- |`
+// or `:---:` (upstream TABLE_DELIMITER_ROW_REGEX).
+var tableDelimiterRowPattern = regexp.MustCompile(`^ {0,3}\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)*\|?[ \t]*$`)
+
+// containsTableStart reports whether these lines begin a GFM table: a header row
+// followed by a delimiter row. A pipe-free header needs a pipe in the delimiter
+// row and vice versa, otherwise the delimiter row is a thematic break.
+func containsTableStart(lines []string) bool {
+	for index := 0; index+1 < len(lines); index++ {
+		delimiter := lines[index+1]
+		if (strings.Contains(delimiter, "|") || strings.Contains(lines[index], "|")) &&
+			tableDelimiterRowPattern.MatchString(delimiter) {
+			return true
+		}
+	}
+	return false
+}
+
 // lexLatex lexes a `$$…$$` or `\[…\]` block, folding a following blank line
-// into its raw like Marked's extension token.
-func (l *blockLexer) lexLatex(start int) (*Block, int) {
+// into its raw like Marked's extension token. ok is false when the body reaches
+// a table start, which makes the opener ordinary text.
+func (l *blockLexer) lexLatex(start int) (*Block, int, bool) {
 	src := l.src
 	first := nextLine(src, start)
 	trimmed := strings.TrimSpace(first.text)
@@ -299,10 +324,12 @@ func (l *blockLexer) lexLatex(start int) (*Block, int) {
 		closer, openerLen = `\]`, 2
 	}
 	body := strings.TrimSpace(trimmed[openerLen:])
+	bodyLines := []string{trimmed[openerLen:]}
 	at := first.next
 	closed := false
 	if body != "" && strings.HasSuffix(body, closer) {
 		body = strings.TrimSpace(body[:len(body)-len(closer)])
+		bodyLines = []string{body}
 		closed = true
 	}
 	if !closed {
@@ -313,6 +340,7 @@ func (l *blockLexer) lexLatex(start int) (*Block, int) {
 					body += "\n"
 				}
 				body += ln.text[:idx]
+				bodyLines = append(bodyLines, ln.text[:idx])
 				at = ln.next
 				closed = true
 				break
@@ -321,15 +349,19 @@ func (l *blockLexer) lexLatex(start int) (*Block, int) {
 				body += "\n"
 			}
 			body += ln.text
+			bodyLines = append(bodyLines, ln.text)
 			at = ln.next
 		}
+	}
+	if containsTableStart(bodyLines) {
+		return nil, start, false
 	}
 	end := at
 	// A single following blank line is absorbed into the raw.
 	if next := nextLine(src, end); isBlankLine(next.text) && next.next > end {
 		end = next.next
 	}
-	return &Block{Kind: BlockLatex, Start: start, End: end, Raw: src[start:end], Text: strings.TrimSpace(body), Pending: !closed}, end
+	return &Block{Kind: BlockLatex, Start: start, End: end, Raw: src[start:end], Text: strings.TrimSpace(body), Pending: !closed}, end, true
 }
 
 func isThematicBreak(line string) bool {
