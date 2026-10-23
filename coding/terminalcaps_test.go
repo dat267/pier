@@ -25,6 +25,7 @@ func TestHyperlinksSupported(t *testing.T) {
 		},
 		{name: "kitty by window id", env: map[string]string{"KITTY_WINDOW_ID": "1"}, want: true},
 		{name: "kitty by term program", env: map[string]string{"TERM_PROGRAM": "kitty"}, want: true},
+		{name: "rex", env: map[string]string{"TERM_PROGRAM": "rex"}, want: true},
 		{name: "ghostty by term program", env: map[string]string{"TERM_PROGRAM": "ghostty"}, want: true},
 		{name: "ghostty by term", env: map[string]string{"TERM": "xterm-ghostty"}, want: true},
 		{name: "ghostty by resources dir", env: map[string]string{"GHOSTTY_RESOURCES_DIR": "/x"}, want: true},
@@ -100,6 +101,11 @@ func TestDetectTerminalCapabilities(t *testing.T) {
 		{name: "warp", env: map[string]string{"TERM_PROGRAM": "WarpTerminal"}, wantImages: "kitty", wantTrue: true, wantLinks: true},
 		{name: "iterm2", env: map[string]string{"TERM_PROGRAM": "iterm.app"}, wantImages: "iterm2", wantTrue: true, wantLinks: true},
 		{name: "herdr", env: map[string]string{"TERM_PROGRAM": "herdr", "KITTY_WINDOW_ID": "1"}, wantImages: "kitty", wantLinks: true},
+		// Rex implements enough of the Kitty graphics protocol for pi's images
+		// and forwards OSC 8; a leaked KITTY_WINDOW_ID must not decide it
+		// (upstream 0ed1b0431 and 396ecd7b8, #11131).
+		{name: "rex", env: map[string]string{"TERM_PROGRAM": "rex", "TERM": "xterm-256color"}, wantImages: "kitty", wantTrue: true, wantLinks: true},
+		{name: "rex with a leaked kitty window id", env: map[string]string{"TERM_PROGRAM": "rex", "KITTY_WINDOW_ID": "1"}, wantImages: "kitty", wantTrue: true, wantLinks: true},
 		{name: "windows terminal", env: map[string]string{"WT_SESSION": "x"}, wantTrue: true, wantLinks: true},
 		{name: "tmux keeps no images", env: map[string]string{"TMUX": "/tmp/t,1,0", "TERM_PROGRAM": "ghostty"}, tmux: true, wantLinks: true},
 		{
@@ -121,6 +127,11 @@ func TestDetectTerminalCapabilities(t *testing.T) {
 			name:       "PI_HYPERLINKS 0 forces hyperlinks off without probing",
 			env:        map[string]string{"PI_HYPERLINKS": "0", "PI_IMAGE_PROTOCOL": "kitty", "PI_TRUE_COLOR": "0"},
 			wantImages: "kitty", wantTrue: false, wantLinks: false,
+		},
+		{
+			name:       "rex honors PI_HYPERLINKS 0",
+			env:        map[string]string{"TERM_PROGRAM": "rex", "PI_HYPERLINKS": "0"},
+			wantImages: "kitty", wantTrue: true, wantLinks: false,
 		},
 		{
 			name:       "PI_TRUE_COLOR 0 overrides a detected truecolor",

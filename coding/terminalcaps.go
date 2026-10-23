@@ -50,6 +50,12 @@ func detectTerminalCapabilities(env func(string) string, platform string, tmuxFo
 		// Herdr forwards OSC 8 and supports kitty graphics; it is checked
 		// before KITTY_WINDOW_ID, which can leak into its panes (#10573).
 		return detectedTerminalCapabilities{images: tui.ImageProtocolKitty, trueColor: hasTrueColorHint, hyperlinks: true}
+	case termProgram == "rex":
+		// Rex forwards OSC 8 and implements enough of the Kitty graphics protocol
+		// for pi's images (no Unicode placeholders). Checked before the outer
+		// terminal checks, so a leaked KITTY_WINDOW_ID does not decide it
+		// (upstream 0ed1b0431 and 396ecd7b8, #11131).
+		return detectedTerminalCapabilities{images: tui.ImageProtocolKitty, trueColor: true, hyperlinks: true}
 	case env("KITTY_WINDOW_ID") != "" || termProgram == "kitty":
 		return detectedTerminalCapabilities{images: tui.ImageProtocolKitty, trueColor: true, hyperlinks: true}
 	case termProgram == "ghostty" || strings.Contains(term, "ghostty") || env("GHOSTTY_RESOURCES_DIR") != "":
