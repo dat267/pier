@@ -208,14 +208,37 @@ func TestResolveHeaders(t *testing.T) {
 	}
 }
 
-// matchesProviderHost lowercases the WHATWG hostname; Go's url.Hostname
-// preserves host case, so a mixed-case provider host must still match.
-func TestMatchesProviderHostIgnoresCase(t *testing.T) {
-	if !matchesProviderHost("https://INTEGRATE.API.NVIDIA.COM/v1", nvidiaNimHost) {
-		t.Fatal("mixed-case provider host not matched")
+// Reference: pi v1.4.0 utils/identity.ts. WHATWG hostnames are
+// lowercased; a mixed-case provider host must still qualify for attribution.
+func TestProviderAttributionHostIgnoresCase(t *testing.T) {
+	model := &ai.Model{Provider: "custom", BaseURL: "https://INTEGRATE.API.NVIDIA.COM/v1"}
+	if headers := ai.AttributionHeaders(model, &ai.ClientIdentity{Attribution: ai.PIAttribution}); headers["X-BILLING-INVOKE-ORIGIN"] != "Pi" {
+		t.Fatalf("mixed-case provider host headers = %v", headers)
 	}
-	if matchesProviderHost("https://example.com/v1", nvidiaNimHost) {
-		t.Fatal("unrelated host matched")
+	model.BaseURL = "https://example.com/v1"
+	if headers := ai.AttributionHeaders(model, &ai.ClientIdentity{Attribution: ai.PIAttribution}); len(headers) != 0 {
+		t.Fatalf("unrelated host headers = %v", headers)
+	}
+}
+
+// Client identity carries the build version and gates attribution on install
+// telemetry (upstream getClientIdentity, v1.4.0 adc5fa9f8).
+func TestClientIdentity(t *testing.T) {
+	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
+	t.Setenv("PI_TELEMETRY", "")
+	identity := ClientIdentity(settings)
+	if identity.Version != Version || identity.Attribution != ai.PIAttribution {
+		t.Fatalf("identity = %+v", identity)
+	}
+	t.Setenv("PI_TELEMETRY", "0")
+	if identity := ClientIdentity(settings); identity.Version != Version || identity.Attribution != nil {
+		t.Fatalf("telemetry-off identity = %+v", identity)
+	}
+	if !IsInstallTelemetryEnabledWithEnv(settings, "1") || IsInstallTelemetryEnabledWithEnv(settings, "0") {
+		t.Fatal("env flag")
+	}
+	if IsInstallTelemetryEnabledWithEnv(settings, "no") {
+		t.Fatal("no is false")
 	}
 }
 

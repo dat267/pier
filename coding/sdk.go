@@ -471,15 +471,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 			connect := int(connectTimeout)
 			merged.WebsocketConnectTimeoutMs = &connect
 		}
-		previousTransform := merged.TransformHeaders
-		merged.TransformHeaders = func(requestHeaders ai.ProviderHeaders) ai.ProviderHeaders {
-			mergedHeaders := MergeProviderAttributionHeaders(requestModel, settingsManager, merged.SessionID, headersToStrings(requestHeaders))
-			transformed := stringHeaders(mergedHeaders)
-			if previousTransform != nil {
-				return previousTransform(transformed)
-			}
-			return transformed
-		}
+		merged.Identity = ClientIdentity(settingsManager)
 		return &merged
 	}
 

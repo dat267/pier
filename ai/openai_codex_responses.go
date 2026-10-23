@@ -178,21 +178,21 @@ func ResolveCodexWebSocketURL(baseURL string) string {
 // BuildCodexBaseHeaders applies the shared Codex auth headers
 // (upstream buildBaseCodexHeaders).
 func BuildCodexBaseHeaders(initHeaders map[string]string, additionalHeaders ProviderHeaders, accountID, token string) http.Header {
-	// Defaults first, so model headers and caller headers override them like the other
-	// providers do; the auth headers set afterwards still win (upstream #10429).
+	return buildCodexBaseHeaders(IdentityHeaders(nil, nil), initHeaders, additionalHeaders, accountID, token)
+}
+
+func buildCodexBaseHeaders(defaultHeaders, initHeaders map[string]string, additionalHeaders ProviderHeaders, accountID, token string) http.Header {
+	// Keep each layer separate until http.Header canonicalizes its names:
+	// a lowercase model override must beat an uppercase identity default.
 	headers := http.Header{}
 	headers.Set("originator", "pi")
-	headers.Set("User-Agent", GetPiUserAgent())
+	for name, value := range defaultHeaders {
+		headers.Set(name, value)
+	}
 	for name, value := range initHeaders {
 		headers.Set(name, value)
 	}
-	for name, value := range additionalHeaders {
-		if value == nil {
-			headers.Del(name)
-			continue
-		}
-		headers.Set(name, *value)
-	}
+	applyProviderHeaders(headers, additionalHeaders)
 	headers.Set("Authorization", "Bearer "+token)
 	headers.Set("chatgpt-account-id", accountID)
 	return headers
@@ -201,7 +201,11 @@ func BuildCodexBaseHeaders(initHeaders map[string]string, additionalHeaders Prov
 // BuildCodexSSEHeaders builds the SSE request headers (upstream
 // buildSSEHeaders).
 func BuildCodexSSEHeaders(initHeaders map[string]string, additionalHeaders ProviderHeaders, accountID, token, sessionID string) http.Header {
-	headers := BuildCodexBaseHeaders(initHeaders, additionalHeaders, accountID, token)
+	return buildCodexSSEHeaders(IdentityHeaders(nil, nil), initHeaders, additionalHeaders, accountID, token, sessionID)
+}
+
+func buildCodexSSEHeaders(defaultHeaders, initHeaders map[string]string, additionalHeaders ProviderHeaders, accountID, token, sessionID string) http.Header {
+	headers := buildCodexBaseHeaders(defaultHeaders, initHeaders, additionalHeaders, accountID, token)
 	headers.Set("OpenAI-Beta", "responses=experimental")
 	headers.Set("accept", "text/event-stream")
 	headers.Set("content-type", "application/json")
@@ -611,7 +615,7 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 			fail(err)
 			return
 		}
-		headers := BuildCodexSSEHeaders(model.Headers, options.Headers, accountID, options.APIKey, cacheSessionID)
+		headers := buildCodexSSEHeaders(IdentityHeaders(model, options.Identity), model.Headers, options.Headers, accountID, options.APIKey, cacheSessionID)
 
 		maxRetries := codexDefaultMaxRetries
 		if options.MaxRetries != nil {

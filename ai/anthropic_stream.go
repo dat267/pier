@@ -272,6 +272,7 @@ type anthropicClientOptions struct {
 	APIKey    string
 	Headers   ProviderHeaders
 	SessionID string
+	Identity  *ClientIdentity
 	// FederationBearer is a workload-identity access token; it authorizes the
 	// request as a Bearer token when no key or auth header is present.
 	FederationBearer string
@@ -299,7 +300,7 @@ func BuildAnthropicRequest(ctx context.Context, model *Model, params *AnthropicM
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("anthropic-dangerous-direct-browser-access", "true")
 	req.Header.Set("anthropic-version", "2023-06-01")
-	req.Header.Set("User-Agent", GetPiUserAgent())
+	ApplyIdentityHeaders(req.Header, model, options.Identity)
 
 	if model.Provider == "github-copilot" {
 		// Copilot: Bearer auth.
@@ -327,15 +328,6 @@ func BuildAnthropicRequest(ctx context.Context, model *Model, params *AnthropicM
 		req.Header.Set(header, options.SessionID)
 	}
 
-	applyHeaders := func(headers ProviderHeaders) {
-		for name, value := range headers {
-			if value == nil {
-				req.Header.Del(name)
-				continue
-			}
-			req.Header.Set(name, *value)
-		}
-	}
 	// Model headers, then dynamic headers, then caller headers (later wins).
 	for name, value := range model.Headers {
 		req.Header.Set(name, value)
@@ -343,7 +335,7 @@ func BuildAnthropicRequest(ctx context.Context, model *Model, params *AnthropicM
 	for name, value := range options.DynamicHeaders {
 		req.Header.Set(name, value)
 	}
-	applyHeaders(options.Headers)
+	applyProviderHeaders(req.Header, options.Headers)
 	return req, nil
 }
 
@@ -494,6 +486,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 			APIKey:           options.APIKey,
 			Headers:          options.Headers,
 			SessionID:        options.SessionID,
+			Identity:         options.Identity,
 			FederationBearer: federationBearer,
 		}
 		if clientOpts.SessionID != "" && ResolveCacheRetention(options.CacheRetention, options.Env) == CacheRetentionNone {

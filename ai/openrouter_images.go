@@ -68,18 +68,14 @@ func (OpenRouterImages) GenerateImages(model *ImagesModel, context ImagesContext
 			return nil, nerr
 		}
 		request.Header.Set("Content-Type", "application/json")
-		request.Header.Set("User-Agent", GetPiUserAgent())
+		for name, value := range ImagesIdentityHeaders(model, options.Identity) {
+			request.Header.Set(name, value)
+		}
 		request.Header.Set("Authorization", "Bearer "+options.APIKey)
 		for name, value := range model.Headers {
 			request.Header.Set(name, value)
 		}
-		for name, value := range options.Headers {
-			if value == nil {
-				request.Header.Del(name)
-				continue
-			}
-			request.Header.Set(name, *value)
-		}
+		applyProviderHeaders(request.Header, options.Headers)
 		hresp, rerr := DoProviderRequest(request, options.TimeoutMs)
 		if rerr != nil {
 			return nil, rerr

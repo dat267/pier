@@ -2182,3 +2182,24 @@ Tests: `TestSummarizationSendsNoOutputLimit`,
 `TestSummarizationSplitSummarizesACallWithItsResult`,
 `TestTurnPrefixSummaryMergeKeepsItsOwnSections` and
 `TestBranchSummarySendsNoOutputLimit`.
+
+## D265
+
+**Detailed request identity names the actual Go runtime and Go platform.**
+
+Reference: pi v1.4.0 (`4a080252`),
+`packages/ai/src/utils/identity.ts` (`adc5fa9f8`, `04a93bad8`). Upstream's
+`formatUserAgent` reports Node/Bun and JavaScript platform/architecture names.
+For example, a Node request on Linux amd64 identifies itself as
+`pi/1.4.0 (linux; node/v<version>; x64)`.
+
+The port keeps the product/version and detailed layout but reports
+`runtime.GOOS`, `go/<runtime.Version without the go prefix>` and
+`runtime.GOARCH`: `pi/1.4.0 (linux; go/<version>; amd64)` in that scenario.
+Windows reports `windows`, not `win32`. This identifies the actual runtime
+rather than pretending to run Node. Short mode remains exactly `pi`; custom
+mode is verbatim, including an empty value. In the Go options,
+`CustomUserAgent` selects a literal even when it equals `short` or `detailed`.
+
+Tests: `TestFormatUserAgent`, `TestLiteralUserAgent`,
+`TestRequestIdentityHeaders` and `TestImageRequestIdentityHeaders`.

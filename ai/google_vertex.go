@@ -196,7 +196,7 @@ func retryVertexRequest(
 			return nil, err
 		}
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("User-Agent", GetPiUserAgent())
+		ApplyIdentityHeaders(req.Header, model, options.Identity)
 		if accessToken != "" {
 			req.Header.Set("Authorization", "Bearer "+accessToken)
 			if project := GetProviderEnvValueOr("GOOGLE_CLOUD_PROJECT", options.Env); project != "" {
@@ -208,13 +208,7 @@ func retryVertexRequest(
 		for name, value := range model.Headers {
 			req.Header.Set(name, value)
 		}
-		for name, value := range options.Headers {
-			if value == nil {
-				req.Header.Del(name)
-				continue
-			}
-			req.Header.Set(name, *value)
-		}
+		applyProviderHeaders(req.Header, options.Headers)
 		resp, err := DoProviderRequest(req, options.TimeoutMs)
 		if err != nil {
 			return nil, err

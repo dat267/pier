@@ -415,19 +415,11 @@ func StreamPiMessages(model *Model, context TranscriptContext, options *PiMessag
 			fail(err)
 			return
 		}
+		ApplyIdentityHeaders(request.Header, model, options.Identity)
 		request.Header.Set("authorization", "Bearer "+options.APIKey)
 		request.Header.Set("accept", "text/event-stream")
-		// Identity headers are defaults: caller headers below may override them
-		// (upstream v1.4.0 adc5fa9f8, api/pi-messages.ts).
-		request.Header.Set("User-Agent", GetPiUserAgent())
 		request.Header.Set("content-type", "application/json")
-		for name, value := range options.Headers {
-			if value == nil {
-				request.Header.Del(name)
-				continue
-			}
-			request.Header.Set(name, *value)
-		}
+		applyProviderHeaders(request.Header, options.Headers)
 		response, err := DoProviderRequest(request, options.TimeoutMs)
 		if err != nil {
 			fail(err)

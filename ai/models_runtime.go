@@ -1011,7 +1011,20 @@ func ApplyResolvedAuth(model *Model, auth ModelAuth, resolutionEnv ProviderEnv, 
 	if apiKey == "" {
 		apiKey = auth.APIKey
 	}
-	headers := MergeHeaders(auth.Headers, options.Headers)
+	requestModel := model
+	if auth.BaseURL != "" {
+		cloned := *model
+		cloned.BaseURL = auth.BaseURL
+		requestModel = &cloned
+	}
+	var sessionHeaders ProviderHeaders
+	if session := OpenCodeSessionHeaders(requestModel, options.SessionID); len(session) > 0 {
+		sessionHeaders = make(ProviderHeaders, len(session))
+		for name, value := range session {
+			sessionHeaders[name] = &value
+		}
+	}
+	headers := MergeHeaders(MergeHeaders(sessionHeaders, auth.Headers), options.Headers)
 	if options.TransformHeaders != nil {
 		headers = options.TransformHeaders(headers)
 	}
@@ -1024,12 +1037,6 @@ func ApplyResolvedAuth(model *Model, auth ModelAuth, resolutionEnv ProviderEnv, 
 		for k, v := range options.Env {
 			env[k] = v
 		}
-	}
-	requestModel := model
-	if auth.BaseURL != "" {
-		cloned := *model
-		cloned.BaseURL = auth.BaseURL
-		requestModel = &cloned
 	}
 	requestOptions := options
 	requestOptions.APIKey = apiKey

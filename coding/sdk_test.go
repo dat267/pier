@@ -736,6 +736,7 @@ func TestCreateAgentSessionBlockImages(t *testing.T) {
 }
 
 func TestCreateAgentSessionRequestOptions(t *testing.T) {
+	t.Setenv("PI_TELEMETRY", "")
 	tempAgentDir(t)
 	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
 		AuthPath:        filepath.Join(GetAgentDir(), "auth.json"),
@@ -805,8 +806,20 @@ func TestCreateAgentSessionRequestOptions(t *testing.T) {
 	if captured.SessionID == "" {
 		t.Fatal("session id missing")
 	}
-	// The attribution transform ran over the merged headers (no headers here,
-	// so the result is nil).
+	// v1.4.0 core/client-identity.ts and core/sdk.ts: the identity carries
+	// the build version and reads the telemetry setting on every request.
+	if captured.Identity == nil || captured.Identity.Version != Version || captured.Identity.Attribution != ai.PIAttribution {
+		t.Fatalf("identity = %+v", captured.Identity)
+	}
+	settings.SetEnableInstallTelemetry(false)
+	if err := session.Session.Prompt(ctxpkg.Background(), "again", nil); err != nil {
+		t.Fatal(err)
+	}
+	if captured.Identity == nil || captured.Identity.Version != Version || captured.Identity.Attribution != nil {
+		t.Fatalf("telemetry-off identity = %+v", captured.Identity)
+	}
+	// No attribution headers are injected into caller headers. Provider
+	// defaults now come from identity, so null caller overrides survive.
 	if captured.Headers != nil {
 		t.Fatalf("headers = %v", captured.Headers)
 	}

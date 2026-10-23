@@ -974,7 +974,7 @@ func buildOpenAIResponsesRequest(
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", GetPiUserAgent())
+	ApplyIdentityHeaders(req.Header, model, options.Identity)
 	if apiKey != "" {
 		req.Header.Set("Authorization", "Bearer "+apiKey)
 	}
@@ -997,13 +997,7 @@ func buildOpenAIResponsesRequest(
 	for name, value := range model.Headers {
 		req.Header.Set(name, value)
 	}
-	for name, value := range options.Headers {
-		if value == nil {
-			req.Header.Del(name)
-			continue
-		}
-		req.Header.Set(name, *value)
-	}
+	applyProviderHeaders(req.Header, options.Headers)
 	return req, nil
 }
 

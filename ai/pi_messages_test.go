@@ -262,7 +262,7 @@ func TestStreamPiMessagesAssemblesEvents(t *testing.T) {
 	// The request carries the protocol shape.
 	if captured.Header.Get("authorization") != "Bearer radius-token" ||
 		captured.Header.Get("accept") != "text/event-stream" ||
-		captured.Header.Get("User-Agent") != GetPiUserAgent() {
+		captured.Header.Get("User-Agent") != FormatUserAgent(nil) {
 		t.Fatalf("headers = %v", captured.Header)
 	}
 	if !strings.HasSuffix(captured.URL.Path, "/messages") || captured.URL.Query().Get("debug") != "1" {

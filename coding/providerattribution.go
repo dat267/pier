@@ -2,78 +2,40 @@ package coding
 
 import (
 	"context"
-	"net/url"
 	"os"
 	"strings"
 
 	"github.com/dat267/pier/ai"
 )
 
-// Port of core/provider-attribution.ts: default attribution headers and
-// per-session OpenCode headers, merged with caller-supplied headers.
+// Port of core/client-identity.ts. Attribution and session routing are
+// implemented in ai; the older coding helpers remain compatibility wrappers.
 
-const (
-	openRouterHost = "openrouter.ai"
-	nvidiaNimHost  = "integrate.api.nvidia.com"
-	openCodeHost   = "opencode.ai"
-)
-
-func matchesProviderHost(baseURL, expectedHost string) bool {
-	parsed, err := url.Parse(baseURL)
-	if err != nil {
-		return false
+// ClientIdentity resolves how session requests identify pi: a detailed user
+// agent with the build version, attributing requests to pi while install
+// telemetry is enabled (upstream getClientIdentity, v1.4.0 adc5fa9f8). A nil
+// attribution sends no attribution headers.
+func ClientIdentity(settingsManager *SettingsManager) *ai.ClientIdentity {
+	identity := &ai.ClientIdentity{Version: Version}
+	if IsInstallTelemetryEnabled(settingsManager) {
+		identity.Attribution = ai.PIAttribution
 	}
-	// WHATWG hostnames are lowercased; Go's url.Hostname preserves case.
-	return strings.EqualFold(parsed.Hostname(), expectedHost)
+	return identity
 }
 
-func isOpenRouterModel(model *ai.Model) bool {
-	return model.Provider == "openrouter" || strings.Contains(model.BaseURL, openRouterHost)
-}
-
-func isNvidiaNimModel(model *ai.Model) bool {
-	return model.Provider == "nvidia" || matchesProviderHost(model.BaseURL, nvidiaNimHost)
-}
-
-// GetDefaultAttributionHeaders returns the install-telemetry attribution headers
-// for a model, or nil when telemetry is disabled or the provider is unlisted.
+// GetDefaultAttributionHeaders returns the telemetry-gated attribution headers.
+// New callers should pass ClientIdentity to ai request options instead.
 func GetDefaultAttributionHeaders(model *ai.Model, settingsManager *SettingsManager) map[string]string {
-	if !IsInstallTelemetryEnabled(settingsManager) {
-		return nil
-	}
-	if isOpenRouterModel(model) {
-		return map[string]string{
-			"HTTP-Referer":            "https://pi.dev",
-			"X-OpenRouter-Title":      "pi",
-			"X-OpenRouter-Categories": "cli-agent",
-		}
-	}
-	if isNvidiaNimModel(model) {
-		return map[string]string{"X-BILLING-INVOKE-ORIGIN": "Pi"}
-	}
-	if isOpenCodeModel(model) {
-		return map[string]string{"x-opencode-client": "pi"}
-	}
-	return nil
+	return ai.AttributionHeaders(model, ClientIdentity(settingsManager))
 }
 
-func isOpenCodeModel(model *ai.Model) bool {
-	return model.Provider == "opencode" || model.Provider == "opencode-go" ||
-		matchesProviderHost(model.BaseURL, openCodeHost)
-}
-
-// GetSessionHeaders returns the OpenCode session-affinity header, which applies
-// even when attribution is off (upstream getOpenCodeSessionHeaders). The client
-// attribution header is telemetry-gated in GetDefaultAttributionHeaders.
+// GetSessionHeaders returns the OpenCode routing header regardless of telemetry.
 func GetSessionHeaders(model *ai.Model, sessionID string) map[string]string {
-	if sessionID == "" || !isOpenCodeModel(model) {
-		return nil
-	}
-	return map[string]string{"x-opencode-session": sessionID}
+	return ai.OpenCodeSessionHeaders(model, sessionID)
 }
 
-// MergeProviderAttributionHeaders merges session headers, default attribution
-// headers, and caller header sources (later sources win).
+// MergeProviderAttributionHeaders is the legacy coding header merger. Requests
+// created by the SDK now pass identity and session options to ai instead.
 func MergeProviderAttributionHeaders(model *ai.Model, settingsManager *SettingsManager, sessionID string, headerSources ...map[string]string) map[string]string {
 	merged := map[string]string{}
 	for key, value := range GetSessionHeaders(model, sessionID) {

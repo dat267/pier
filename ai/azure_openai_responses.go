@@ -181,7 +181,7 @@ func StreamAzureOpenAIResponses(model *Model, context TranscriptContext, options
 				return nil, err
 			}
 			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("User-Agent", GetPiUserAgent())
+			ApplyIdentityHeaders(req.Header, model, options.Identity)
 			// The Azure OpenAI SDK authenticates with the api-key header.
 			if apiKey != "" {
 				req.Header.Set("api-key", apiKey)
@@ -199,13 +199,7 @@ func StreamAzureOpenAIResponses(model *Model, context TranscriptContext, options
 			for name, value := range model.Headers {
 				req.Header.Set(name, value)
 			}
-			for name, value := range options.Headers {
-				if value == nil {
-					req.Header.Del(name)
-					continue
-				}
-				req.Header.Set(name, *value)
-			}
+			applyProviderHeaders(req.Header, options.Headers)
 			return req, nil
 		},
 	}

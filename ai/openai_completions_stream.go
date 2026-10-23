@@ -255,7 +255,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 					return nil, nerr
 				}
 				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("User-Agent", GetPiUserAgent())
+				ApplyIdentityHeaders(req.Header, model, options.Identity)
 				req.Header.Set("Authorization", "Bearer "+apiKey)
 				for name, value := range model.Headers {
 					req.Header.Set(name, value)
@@ -273,13 +273,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 						req.Header.Set("x-session-affinity", cacheSessionID)
 					}
 				}
-				for name, value := range options.Headers {
-					if value == nil {
-						req.Header.Del(name)
-						continue
-					}
-					req.Header.Set(name, *value)
-				}
+				applyProviderHeaders(req.Header, options.Headers)
 				hresp, rerr := DoProviderRequest(req, options.TimeoutMs)
 				if rerr != nil {
 					return nil, rerr

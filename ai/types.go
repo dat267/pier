@@ -144,7 +144,10 @@ type StreamOptions struct {
 	Env    ProviderEnv
 	// Headers are merged with provider defaults; caller values override
 	// default headers. A nil value suppresses a default header.
-	Headers                   ProviderHeaders
+	Headers ProviderHeaders
+	// Identity selects the User-Agent and provider attribution headers.
+	// Nil sends the detailed pi user agent with no attribution.
+	Identity                  *ClientIdentity
 	Temperature               *float64
 	SamplingParams            SamplingParams
 	MaxTokens                 *int

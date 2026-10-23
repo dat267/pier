@@ -345,7 +345,7 @@ func requestMistralStream(ctx ctxpkg.Context, model *Model, body []byte, options
 		if nerr != nil {
 			return nil, nerr
 		}
-		req.Header.Set("User-Agent", GetPiUserAgent())
+		ApplyIdentityHeaders(req.Header, model, options.Identity)
 		req.Header.Set("accept", "text/event-stream")
 		req.Header.Set("authorization", "Bearer "+options.APIKey)
 		req.Header.Set("content-type", "application/json")
@@ -394,13 +394,7 @@ func requestMistralStream(ctx ctxpkg.Context, model *Model, body []byte, options
 }
 
 func applyMistralHeaderOverrides(req *http.Request, overrides ProviderHeaders) {
-	for name, value := range overrides {
-		if value == nil {
-			req.Header.Del(name)
-			continue
-		}
-		req.Header.Set(name, *value)
-	}
+	applyProviderHeaders(req.Header, overrides)
 }
 
 func hasMistralHeaderOverride(overrides ProviderHeaders, target string) bool {

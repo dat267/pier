@@ -145,8 +145,8 @@ refreshing upstream tags and is the port's reference pin. It is 81 commits past
 v1.3.0. The pin identifies the sources to review, not a claim that every change
 is ported. The v1.4.0 catalog, transcript tool-change modes, Markdown work and the
 completed delta audit are described below. The audit classifies all 81 commits;
-the remaining in-scope gaps are client identity in pi-ai, telemetry and the
-durable v1.4 harness, plus the documented out-of-scope areas.
+the remaining in-scope gaps are the rest of client identity in pi-ai/agent,
+telemetry and the durable v1.4 harness, plus the documented out-of-scope areas.
 The v1.3.0 delta from v1.2.0 is ported (see the historical v1.3.0 audit below);
 the v1.2.0 delta from v1.1.0 was audited. Confirmed gaps, porting progress and
 out-of-scope areas are recorded below. Earlier release notes retain upstream
@@ -156,14 +156,14 @@ versions and commit IDs as historical context.
 
 The v1.4.0 delta is 81 commits and 343 files. Every commit is classified
 below; "ported" groups were implemented before this audit, "fixed" was
-corrected here, "gap" is an in-scope behavior still missing, and "out"/"n/a"
-are documented out-of-scope areas or non-runtime changes. This audit found and
-fixed four parity regressions:
+corrected here, "partial" has a ported subset with remaining gaps, "gap" is
+an in-scope behavior still missing, and "out"/"n/a" are documented out-of-scope
+areas or non-runtime changes. This audit found and fixed four parity regressions:
 
 - **PI user agent on pi-messages**: the request sent Go's default
   `Go-http-client/1.1`, because only the other providers set it. It now uses
-  `GetPiUserAgent` before caller headers, matching `getIdentityHeaders` in
-  upstream `api/pi-messages.ts` (`adc5fa9f8`).
+  `FormatUserAgent` through request identity before caller headers, matching
+  `getIdentityHeaders` in upstream `api/pi-messages.ts` (`adc5fa9f8`).
 - **Cloudflare attribution**: the pre-v1.4 coding-agent override
   `User-Agent: pi-coding-agent` was still sent. Upstream moved attribution to
   pi-ai and no longer maps Cloudflare, so the `pi` agent is used
@@ -176,13 +176,37 @@ fixed four parity regressions:
   reports kitty images and OSC 8 links) without COLORTERM, matching
   `detectCapabilitiesFromEnvironment` (`0ed1b0431`, `396ecd7b8`, #11131).
 
+The client-identity follow-up ports the per-request `StreamOptions.Identity`
+option across the Anthropic, OpenAI Completions/Responses, Azure, Codex SSE,
+Google/Vertex, Mistral, pi-messages and OpenRouter image adapters, including
+their simple adapters. Detailed, short and literal custom user agents and
+OpenRouter/NVIDIA/OpenCode attribution are applied below model and request
+headers. A null caller `User-Agent` suppresses Go's transport default rather
+than leaking `Go-http-client/1.1`. NVIDIA capitalization uses the first UTF-16
+unit and full uppercase expansion, as upstream does. The detailed user agent
+truthfully names the Go runtime and Go platform/architecture (D265).
+
+OpenCode session routing now lives in the shared ai auth application step:
+it follows the resolved endpoint, precedes auth/request headers and reaches
+`TransformHeaders` once with null overrides intact. The coding SDK sets its
+build-version identity per request and reads install telemetry each time;
+turning attribution off does not disable session routing. The older exported
+coding header helpers remain compatibility wrappers.
+
+Verification: request-level header probes cover nine text APIs and image
+generation, including short/custom modes, attribution off, model/caller
+precedence and null removals. They fail against the pre-identity adapters.
+Auth tests cover endpoint overrides and session-header precedence; SDK tests
+cover the build version and changing telemetry between prompts.
+
 Remaining in-scope v1.4.0 gaps:
 
-- **Client identity in pi-ai**: there is no per-request `identity` option, so
-  the detailed `pi/<version> (<platform>; <runtime>; <arch>)` user agent,
-  custom/short modes, the Bedrock SDK user-agent pairs, and the
-  `telemetry`/identity split are absent. The port keeps its older
-  `pi (<platform> <release>; <arch>)` form and applies attribution in `coding`.
+- **Client identity follow-ups**: field-wise identity merging (including
+  absent versus explicit null attribution and empty version), default identity
+  on `Models`, `withClientIdentity`, agent defaults/overrides and identity JSON
+  persistence are not ported. Bedrock's AWS SDK user-agent pairs are also
+  unported; its raw HTTP adapter does not yet consume identity. The
+  `telemetry` span option remains absent and is separate from identity.
 - **Telemetry**: the chord/pi-ai/durable telemetry stack (spans, metrics,
   SQLite store, trace renderer) is not ported, so entries marked "out" below
   stay out of scope.
@@ -270,8 +294,8 @@ Remaining in-scope v1.4.0 gaps:
 | `6e491cfa9` | fix(ai): match retryable status codes only as standalone numbers | ported: retry classification |
 | `612a172e6` | fix(tui): escape regex metacharacters in single-segment fd queries (#11212) | ported: fd query escaping |
 | `adfc14461` | fix(coding-agent): apply /compact instructions to split-turn prefix summary | ported: split-turn instructions |
-| `adc5fa9f8` | feat(ai,agent,coding-agent): move client identity and provider attribution into pi-ai | fixed: attribution/UA; identity option remaining |
-| `04a93bad8` | fix(ai,agent,coding-agent,durable): client identity follow-ups | fixed: attribution/UA; identity option remaining |
+| `adc5fa9f8` | feat(ai,agent,coding-agent): move client identity and provider attribution into pi-ai | partial: request identity/attribution and coding wiring; merging, agent defaults and Bedrock remain |
+| `04a93bad8` | fix(ai,agent,coding-agent,durable): client identity follow-ups | partial: header precedence and OpenCode routing; identity defaults/wrappers remain |
 | `4759f09fb` | feat(chord): WAL reader, page checksums and segment container for SQLite replication | out: chord |
 | `89e309581` | fix(chord): remove WAL page replication | out: chord |
 | `4c25119f5` | feat(durable): replicate storages as a commit log | out: durable replication (reverted) |
