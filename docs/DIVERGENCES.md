@@ -2167,17 +2167,20 @@ after a `length` stop, in two steps:
    because a separated pair still beats failing the compaction.
 
 One summarization spends at most `maxSummarizationRequests` (10) requests, and
-every pass shares one routing id so the escalation does not fragment cache
-hints. Usage accumulates across the passes, since the tokens were really spent.
-Only a single message that overflows on its own, or a model that overflows every
-chunk, still reports upstream's message, so partial text never becomes a
-checkpoint. The split-turn path uses the same escalation, merging through the
-update instructions so its checkpoint stays one set of sections.
+every pass shares one routing id, as one upstream `completeSummarization` call
+does across its retries. Usage accumulates across the passes, since the tokens
+were really spent. Only a single message that overflows on its own, a model that
+overflows every chunk, or a summarization that exhausts that budget still
+reports upstream's message, so partial text never becomes a checkpoint. The split-turn path uses the same escalation, merging through a
+turn-prefix merge instruction so its checkpoint keeps the turn-prefix sections
+(`## Original Request`, `## Progress So Far`, `## Context Needed to Continue`)
+instead of being restyled into the conversation ones.
 
 Tests: `TestSummarizationRetriesOnceWhenTheTokenCapIsHit`,
 `TestSummarizationRetryIsBoundedAndStillFailsLoudly`,
 `TestSummarizationDoesNotRetryWithoutALever`,
 `TestSummarizationSplitsTheInputWhenTheCapKeepsHitting`,
 `TestSummarizationSplitStaysBounded`,
-`TestSummarizationSplitKeepsToolCallsWithTheirResults` and
-`TestSummarizationSplitSummarizesACallWithItsResult`.
+`TestSummarizationSplitKeepsToolCallsWithTheirResults`,
+`TestSummarizationSplitSummarizesACallWithItsResult` and
+`TestTurnPrefixSummaryMergeKeepsItsOwnSections`.

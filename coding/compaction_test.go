@@ -961,3 +961,63 @@ func TestSummarizationSplitSummarizesACallWithItsResult(t *testing.T) {
 		}
 	}
 }
+
+// A split turn's checkpoint keeps its own sections when the escalation has to
+// merge chunks: the turn-prefix prompt asks for different sections than the
+// conversation prompt, so merging through the conversation update instructions
+// would restyle the checkpoint that compact() prefixes as "* Turn prefix: ...".
+func TestTurnPrefixSummaryMergeKeepsItsOwnSections(t *testing.T) {
+	prompts := make([]string, 0, 4)
+	model := &ai.Model{ID: "mock", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 200000, MaxTokens: 64000}
+	options := CompactionOptions{
+		Model: model,
+		StreamFn: func(model *ai.Model, context ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+			prompt := ""
+			for _, message := range context.Messages {
+				if user, ok := message.(*ai.UserMessage); ok {
+					prompt += ai.ContentText(user.Content, "")
+				}
+			}
+			prompts = append(prompts, prompt)
+			stream := ai.NewAssistantMessageEventStream()
+			reason, text := ai.StopStop, "## Original Request\npartial"
+			// The answer room is two messages, so a four-message prefix splits.
+			if strings.Count(prompt, "[User]: ") > 2 {
+				reason, text = ai.StopLength, "## Original Request\ncut"
+			}
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: reason, Message: &ai.AssistantMessage{
+				API: model.API, Provider: model.Provider, Model: model.ID,
+				Content: ai.ContentList{ai.TextContent{Text: text}}, StopReason: reason,
+			}})
+			return stream
+		},
+	}
+	messages := []ai.Message{
+		&ai.UserMessage{Content: heavyMessage(40)},
+		&ai.UserMessage{Content: heavyMessage(40)},
+		&ai.UserMessage{Content: heavyMessage(40)},
+		&ai.UserMessage{Content: heavyMessage(40)},
+	}
+	if _, err := generateTurnPrefixSummary(messages, options, DefaultCompactionSettings.ReserveTokens); err != nil {
+		t.Fatal(err)
+	}
+	merges := 0
+	for _, prompt := range prompts {
+		if !strings.Contains(prompt, "<previous-summary>") {
+			continue
+		}
+		merges++
+		if !strings.Contains(prompt, "## Original Request\npartial") {
+			t.Fatalf("merge pass does not carry the earlier checkpoint:\n%s", prompt)
+		}
+		if !strings.Contains(prompt, "## Context Needed to Continue") {
+			t.Fatalf("merge pass dropped the turn-prefix sections:\n%s", prompt)
+		}
+		if strings.Contains(prompt, "## Key Decisions") || strings.Contains(prompt, "### In Progress") {
+			t.Fatalf("merge pass restyled the checkpoint into the conversation sections:\n%s", prompt)
+		}
+	}
+	if merges != 1 {
+		t.Fatalf("merge passes = %d in %d prompts; want 1", merges, len(prompts))
+	}
+}

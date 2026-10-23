@@ -1310,16 +1310,23 @@ func conversationSummaryPrompt(messages []ai.Message, options CompactionOptions,
 }
 
 // turnPrefixSummaryPrompt renders the split-turn prompt. A later chunk merges
-// through the update instructions, so the checkpoint sections stay one list
-// instead of two concatenated ones.
+// into the checkpoint so far, so the sections stay one list instead of two
+// concatenated ones.
 func turnPrefixSummaryPrompt(messages []ai.Message, previousSummary string) string {
 	conversationText := SerializeConversation(ConvertToLlm(messages))
 	if previousSummary == "" {
 		return fmt.Sprintf("# Conversation\n%s\n\n# Instructions\n%s", conversationText, turnPrefixSummarizationPrompt)
 	}
-	return fmt.Sprintf("# Conversation\n%s\n\n# Previous summary\n%s\n\n# Instructions\n%s",
-		conversationText, previousSummary, updateSummarizationPrompt)
+	return fmt.Sprintf("# Conversation\n%s\n\n<previous-summary>\n%s\n</previous-summary>\n\n# Instructions\n%s\n\n%s",
+		conversationText, previousSummary, turnPrefixMergeInstruction, turnPrefixSummarizationPrompt)
 }
+
+// turnPrefixMergeInstruction keeps a merged turn-prefix checkpoint in its own
+// shape. The turn-prefix sections (Original Request, Progress So Far, Context
+// Needed to Continue) differ from the conversation ones, so the conversation
+// update prompt cannot be reused here: it would restyle a checkpoint that
+// compact() prefixes as "* Turn prefix: ...".
+const turnPrefixMergeInstruction = `The summary in <previous-summary> was produced from earlier messages of this same turn. Merge it with the messages above: keep everything it established, add what these messages show, and use exactly the sections below.`
 
 // summarizationBudgetTokens is upstream's min(fraction * reserveTokens,
 // model.maxTokens) answer-room budget.
@@ -1334,9 +1341,9 @@ func summarizationBudgetTokens(model *ai.Model, fraction float64, reserveTokens 
 // summarizeConversation summarizes messages under one plan, escalating until the
 // answer fits (port of generateSummaryWithUsage with D264's escalation).
 func summarizeConversation(messages []ai.Message, options CompactionOptions, previousSummary string, plan summarizationPlan) (*summaryWithUsage, error) {
-	// Every pass of one summarization shares one routing id, as upstream's retry
-	// loop in completeSummarization does; a per-pass id would split the cache
-	// hints across the escalation.
+	// One summarization keeps one routing id for all of its passes, the way
+	// upstream's completeSummarization generates the id once and its retries reuse
+	// it, so escalated passes are recognizable as one request group.
 	if options.SessionID == "" {
 		options.SessionID = UUIDv7()
 	}
@@ -1397,7 +1404,7 @@ func summarizeChunks(
 	}
 	// Conclusive step: less input at a time, so each chunk's answer has the whole
 	// budget. One message that still overflows is a real failure, not a budget
-	// problem.
+	// problem. A chunk that still overflows splits again.
 	if len(messages) <= 1 {
 		return nil, summarizationLengthFailure(plan.label)
 	}
@@ -1543,7 +1550,6 @@ func requestSummarization(
 	if reasoningEnabled {
 		streamOptions.Reasoning = reasoning
 	}
-	// maxTokens plumbs through SamplingExtras-free path: the named field.
 	streamOptions.MaxTokens = &maxTokens
 	escalation.requests++
 	response, err := CompleteSummarization(model, context, &streamOptions, options.StreamFn, options.Retry, options.Callbacks)
