@@ -1,11 +1,13 @@
 package coding
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"syscall"
 
 	"github.com/dat267/pier/agent"
@@ -115,12 +117,37 @@ var editSchema = func() json.RawMessage {
 
 // PrepareEditArguments ports the edit tool's prepareArguments shim: JSON-
 // string edits arrays, single-edit objects, and the legacy oldText/newText
-// shape all normalize to the edits[] array.
+// shape all normalize to the edits[] array. The prepared object keeps the
+// caller's key order (upstream spreads the input and overwrites edits in
+// place), which RPC tool_execution_start args expose.
 func PrepareEditArguments(input json.RawMessage) json.RawMessage {
-	var args map[string]json.RawMessage
-	if err := jsonUnmarshalStrictTool(input, &args); err != nil {
+	keys, args, err := readJSONObjectOrdered(bytes.TrimSpace(input))
+	if err != nil {
 		return input
 	}
+	order := append([]string{}, keys...)
+	setValue := func(key string, value json.RawMessage) {
+		if _, ok := args[key]; !ok {
+			order = append(order, key)
+		}
+		args[key] = value
+	}
+	removeValue := func(key string) {
+		if _, ok := args[key]; !ok {
+			return
+		}
+		delete(args, key)
+		for index, candidate := range order {
+			if candidate == key {
+				order = append(order[:index], order[index+1:]...)
+				break
+			}
+		}
+	}
+	editShape := struct {
+		OldText *string `json:"oldText"`
+		NewText *string `json:"newText"`
+	}{}
 
 	// Some models (Opus 4.6, GLM-5.1) send edits as a JSON string instead of
 	// an array; others send a single edit object instead of a one-element
@@ -130,35 +157,25 @@ func PrepareEditArguments(input json.RawMessage) json.RawMessage {
 		if jsonUnmarshalStrictTool(raw, &asString) == nil {
 			var parsed []json.RawMessage
 			if err := jsonUnmarshalStrictTool(json.RawMessage(asString), &parsed); err != nil {
-				var single struct {
-					OldText *string `json:"oldText"`
-					NewText *string `json:"newText"`
-				}
-				if jsonUnmarshalStrictTool(json.RawMessage(asString), &single) == nil && single.OldText != nil && single.NewText != nil {
-					args["edits"] = mustMarshalJSON([]json.RawMessage{json.RawMessage(asString)})
+				if jsonUnmarshalStrictTool(json.RawMessage(asString), &editShape) == nil && editShape.OldText != nil && editShape.NewText != nil {
+					setValue("edits", mustMarshalJSON([]json.RawMessage{json.RawMessage(asString)}))
 				}
 			} else {
-				args["edits"] = json.RawMessage(asString)
+				setValue("edits", json.RawMessage(asString))
 			}
-		} else {
+		} else if jsonUnmarshalStrictTool(raw, &editShape) == nil && editShape.OldText != nil && editShape.NewText != nil {
 			// Single edit object?
-			var single struct {
-				OldText *string `json:"oldText"`
-				NewText *string `json:"newText"`
-			}
-			if jsonUnmarshalStrictTool(raw, &single) == nil && single.OldText != nil && single.NewText != nil {
-				args["edits"] = mustMarshalJSON([]json.RawMessage{raw})
-			}
+			setValue("edits", mustMarshalJSON([]json.RawMessage{raw}))
 		}
 	}
 
 	// Legacy flat shape: oldText/newText at the top level.
-	var legacy struct {
+	legacy := struct {
 		OldText *string `json:"oldText"`
 		NewText *string `json:"newText"`
-	}
-	if err := jsonUnmarshalStrictTool(input, &legacy); err != nil || legacy.OldText == nil || legacy.NewText == nil {
-		return mustMarshalJSON(args)
+	}{}
+	if jsonUnmarshalStrictTool(input, &legacy) != nil || legacy.OldText == nil || legacy.NewText == nil {
+		return marshalOrderedObject(order, args)
 	}
 	edits := []json.RawMessage{}
 	if raw, ok := args["edits"]; ok {
@@ -167,13 +184,36 @@ func PrepareEditArguments(input json.RawMessage) json.RawMessage {
 			edits = append(edits, list...)
 		}
 	}
-	edits = append(edits, mustMarshalJSON(map[string]string{
-		"oldText": *legacy.OldText, "newText": *legacy.NewText,
-	}))
-	args["edits"] = mustMarshalJSON(edits)
-	delete(args, "oldText")
-	delete(args, "newText")
-	return mustMarshalJSON(args)
+	// Upstream builds { oldText, newText } in that order.
+	editJSON := "{" + string(mustMarshalJSON("oldText")) + ":" + string(mustMarshalJSON(*legacy.OldText)) + "," +
+		string(mustMarshalJSON("newText")) + ":" + string(mustMarshalJSON(*legacy.NewText)) + "}"
+	edits = append(edits, json.RawMessage(editJSON))
+	setValue("edits", mustMarshalJSON(edits))
+	removeValue("oldText")
+	removeValue("newText")
+	return marshalOrderedObject(order, args)
+}
+
+// marshalOrderedObject serializes an ordered key list with raw values.
+func marshalOrderedObject(order []string, values map[string]json.RawMessage) json.RawMessage {
+	var out strings.Builder
+	out.WriteByte('{')
+	written := 0
+	for _, key := range order {
+		value, ok := values[key]
+		if !ok {
+			continue
+		}
+		if written > 0 {
+			out.WriteByte(',')
+		}
+		written++
+		out.Write(mustMarshalJSON(key))
+		out.WriteByte(':')
+		out.Write(bytes.TrimSpace(value))
+	}
+	out.WriteByte('}')
+	return json.RawMessage(out.String())
 }
 
 // CreateEditTool builds the edit tool.

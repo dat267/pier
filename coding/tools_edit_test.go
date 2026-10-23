@@ -235,3 +235,21 @@ func TestEditMissingFileReportsNodeErrorCode(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 }
+
+// Upstream prepareEditArguments spreads the input and folds legacy fields in
+// place, so the prepared JSON keeps the caller's key order and writes
+// oldText before newText (visible in RPC tool_execution_start args).
+func TestPrepareEditArgumentsPreservesKeyOrder(t *testing.T) {
+	cases := []struct{ input, want string }{
+		{`{"path":"f","oldText":"a","newText":"b"}`, `{"path":"f","edits":[{"oldText":"a","newText":"b"}]}`},
+		{`{"path":"f","edits":[{"oldText":"a","newText":"b"}],"oldText":"c","newText":"d"}`, `{"path":"f","edits":[{"oldText":"a","newText":"b"},{"oldText":"c","newText":"d"}]}`},
+		{`{"path":"f","edits":"[{\"oldText\":\"a\",\"newText\":\"b\"}]"}`, `{"path":"f","edits":[{"oldText":"a","newText":"b"}]}`},
+		{`{"edits":{"oldText":"a","newText":"b"},"path":"f"}`, `{"edits":[{"oldText":"a","newText":"b"}],"path":"f"}`},
+	}
+	for _, test := range cases {
+		got := string(PrepareEditArguments(json.RawMessage(test.input)))
+		if got != test.want {
+			t.Fatalf("PrepareEditArguments(%s) = %s; want %s", test.input, got, test.want)
+		}
+	}
+}
