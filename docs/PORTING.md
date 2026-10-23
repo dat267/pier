@@ -199,12 +199,31 @@ precedence and null removals. They fail against the pre-identity adapters.
 Auth tests cover endpoint overrides and session-header precedence; SDK tests
 cover the build version and changing telemetry between prompts.
 
+`MergeClientIdentity` now merges defined fields left to right without mutating
+sources. Missing attribution inherits, explicit null clears, and an explicit
+empty version overrides a previous version. Go callers use `AttributionSet`
+and `VersionSet` to distinguish those zero values from omitted fields;
+non-nil attribution and non-empty versions need no presence flag. The JSON
+codec preserves field presence, insertion order, empty categories and unknown
+fields, including fields on custom user-agent objects. Merge output follows
+upstream's assignment order and drops unknown top-level identity fields, as
+`mergeClientIdentity` does.
+
+`CreateModelsOptions.Identity` supplies defaults for text, deferred and image
+requests (the port's separate `ImagesModels` registry accepts the same
+options). Per-request identities override those defaults field by field.
+Coding identity now explicitly serializes detailed mode, the build version
+and nullable attribution, so disabling telemetry also clears attribution
+inherited through a merge. Tests use Node-generated v1.4.0 fixtures for 12
+JSON round trips and 10 merges, plus provider-boundary tests for all request
+methods and resolved/unresolved image auth paths. Those tests also exposed
+and fixed two deferred-cancel bugs: nil options panicked, and auth endpoint
+overrides were discarded instead of reaching the provider.
+
 Remaining in-scope v1.4.0 gaps:
 
-- **Client identity follow-ups**: field-wise identity merging (including
-  absent versus explicit null attribution and empty version), default identity
-  on `Models`, `withClientIdentity`, agent defaults/overrides and identity JSON
-  persistence are not ported. Bedrock's AWS SDK user-agent pairs are also
+- **Client identity follow-ups**: `withClientIdentity` and agent
+  defaults/overrides are not ported. Bedrock's AWS SDK user-agent pairs are also
   unported; its raw HTTP adapter does not yet consume identity. The
   `telemetry` span option remains absent and is separate from identity.
 - **Telemetry**: the chord/pi-ai/durable telemetry stack (spans, metrics,
@@ -294,8 +313,8 @@ Remaining in-scope v1.4.0 gaps:
 | `6e491cfa9` | fix(ai): match retryable status codes only as standalone numbers | ported: retry classification |
 | `612a172e6` | fix(tui): escape regex metacharacters in single-segment fd queries (#11212) | ported: fd query escaping |
 | `adfc14461` | fix(coding-agent): apply /compact instructions to split-turn prefix summary | ported: split-turn instructions |
-| `adc5fa9f8` | feat(ai,agent,coding-agent): move client identity and provider attribution into pi-ai | partial: request identity/attribution and coding wiring; merging, agent defaults and Bedrock remain |
-| `04a93bad8` | fix(ai,agent,coding-agent,durable): client identity follow-ups | partial: header precedence and OpenCode routing; identity defaults/wrappers remain |
+| `adc5fa9f8` | feat(ai,agent,coding-agent): move client identity and provider attribution into pi-ai | partial: request identity/attribution, JSON, merges, Models defaults and coding wiring; agent defaults and Bedrock remain |
+| `04a93bad8` | fix(ai,agent,coding-agent,durable): client identity follow-ups | partial: header precedence, OpenCode routing and identity defaults; wrapper remains |
 | `4759f09fb` | feat(chord): WAL reader, page checksums and segment container for SQLite replication | out: chord |
 | `89e309581` | fix(chord): remove WAL page replication | out: chord |
 | `4c25119f5` | feat(durable): replicate storages as a commit log | out: durable replication (reverted) |

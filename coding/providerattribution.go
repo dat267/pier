@@ -16,7 +16,7 @@ import (
 // telemetry is enabled (upstream getClientIdentity, v1.4.0 adc5fa9f8). A nil
 // attribution sends no attribution headers.
 func ClientIdentity(settingsManager *SettingsManager) *ai.ClientIdentity {
-	identity := &ai.ClientIdentity{Version: Version}
+	identity := &ai.ClientIdentity{UserAgent: "detailed", Version: Version, VersionSet: true, AttributionSet: true}
 	if IsInstallTelemetryEnabled(settingsManager) {
 		identity.Attribution = ai.PIAttribution
 	}

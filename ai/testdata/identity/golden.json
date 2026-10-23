@@ -1,0 +1,156 @@
+{
+  "roundTrips": [
+    "{}",
+    "{\"userAgent\":\"short\"}",
+    "{\"version\":\"\",\"attribution\":null}",
+    "{\"version\":\"9.9.9\",\"userAgent\":\"detailed\"}",
+    "{\"userAgent\":{\"custom\":\"\"}}",
+    "{\"userAgent\":{\"custom\":\"short\"}}",
+    "{\"userAgent\":{\"extension\":true,\"custom\":\"acme\"}}",
+    "{\"userAgent\":{\"custom\":\"<acme>&  \"}}",
+    "{\"attribution\":{\"name\":\"acme\",\"url\":\"https://acme.example\"}}",
+    "{\"attribution\":{\"categories\":[],\"url\":\"https://acme.example\",\"name\":\"acme\"}}",
+    "{\"attribution\":{\"name\":\"pi\",\"url\":\"https://pi.dev\",\"categories\":[\"cli-agent\"]},\"version\":\"1.0.0\"}",
+    "{\"extension\":{\"1\":\"one\",\"2\":\"two\",\"html\":\"<&>\"},\"version\":\"9\"}"
+  ],
+  "merges": [
+    {
+      "sources": [
+        null,
+        null
+      ],
+      "want": null
+    },
+    {
+      "sources": [
+        null,
+        {}
+      ],
+      "want": "{}"
+    },
+    {
+      "sources": [
+        {
+          "attribution": {
+            "name": "pi",
+            "url": "https://pi.dev",
+            "categories": [
+              "cli-agent"
+            ]
+          },
+          "userAgent": "short"
+        },
+        {
+          "version": "1.0.0"
+        }
+      ],
+      "want": "{\"userAgent\":\"short\",\"attribution\":{\"name\":\"pi\",\"url\":\"https://pi.dev\",\"categories\":[\"cli-agent\"]},\"version\":\"1.0.0\"}"
+    },
+    {
+      "sources": [
+        {
+          "attribution": {
+            "name": "pi",
+            "url": "https://pi.dev",
+            "categories": [
+              "cli-agent"
+            ]
+          }
+        },
+        {
+          "attribution": null
+        }
+      ],
+      "want": "{\"attribution\":null}"
+    },
+    {
+      "sources": [
+        {
+          "version": "base"
+        },
+        {
+          "version": ""
+        }
+      ],
+      "want": "{\"version\":\"\"}"
+    },
+    {
+      "sources": [
+        {
+          "userAgent": {
+            "extension": true,
+            "custom": "acme"
+          }
+        },
+        {
+          "version": "2"
+        }
+      ],
+      "want": "{\"userAgent\":{\"extension\":true,\"custom\":\"acme\"},\"version\":\"2\"}"
+    },
+    {
+      "sources": [
+        {
+          "userAgent": {
+            "custom": "acme"
+          }
+        },
+        {
+          "userAgent": "short"
+        }
+      ],
+      "want": "{\"userAgent\":\"short\"}"
+    },
+    {
+      "sources": [
+        {
+          "userAgent": "short"
+        },
+        {
+          "userAgent": {
+            "custom": "short"
+          }
+        }
+      ],
+      "want": "{\"userAgent\":{\"custom\":\"short\"}}"
+    },
+    {
+      "sources": [
+        {
+          "version": "base"
+        },
+        {
+          "userAgent": "short"
+        },
+        {
+          "attribution": null
+        }
+      ],
+      "want": "{\"version\":\"base\",\"userAgent\":\"short\",\"attribution\":null}"
+    },
+    {
+      "sources": [
+        {
+          "extension": true,
+          "version": "9",
+          "attribution": {
+            "name": "pi",
+            "url": "https://pi.dev",
+            "categories": [
+              "cli-agent"
+            ]
+          },
+          "userAgent": "short"
+        },
+        {
+          "attribution": null,
+          "userAgent": {
+            "custom": ""
+          },
+          "version": ""
+        }
+      ],
+      "want": "{\"userAgent\":{\"custom\":\"\"},\"attribution\":null,\"version\":\"\"}"
+    }
+  ]
+}

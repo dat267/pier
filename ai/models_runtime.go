@@ -434,6 +434,7 @@ type Models struct {
 	credentials CredentialStore
 	modelsStore ModelsStore
 	authContext AuthContext
+	identity    *ClientIdentity
 	// refresh bookkeeping (upstream refreshGenerations/refreshControllers)
 	refreshGenerations map[string]int
 	refreshCancels     map[string]context.CancelFunc
@@ -448,6 +449,9 @@ func CreateModels(options *CreateModelsOptions) *Models {
 		refreshGenerations: map[string]int{},
 		refreshCancels:     map[string]context.CancelFunc{},
 		publicationMu:      map[string]*sync.Mutex{},
+	}
+	if options != nil {
+		m.identity = options.Identity
 	}
 	if options != nil && options.Credentials != nil {
 		m.credentials = options.Credentials
@@ -472,6 +476,8 @@ type CreateModelsOptions struct {
 	Credentials CredentialStore
 	ModelsStore ModelsStore
 	AuthContext AuthContext
+	// Identity is the default request identity; request fields override it.
+	Identity *ClientIdentity
 }
 
 // SetProvider upserts by Provider.ID (ids are unique).
@@ -982,6 +988,9 @@ func (m *Models) requireProvider(model *Model) (*Provider, error) {
 // applyAuth resolves auth and merges request options. Explicit request
 // options win per-field; the Models-only transform runs last.
 func (m *Models) applyAuth(model *Model, options *ModelsStreamOptions) (*Model, *ModelsStreamOptions, error) {
+	if options == nil {
+		options = &ModelsStreamOptions{}
+	}
 	if _, err := m.requireProvider(model); err != nil {
 		return nil, nil, err
 	}
@@ -997,6 +1006,7 @@ func (m *Models) applyAuth(model *Model, options *ModelsStreamOptions) (*Model, 
 		return nil, nil, NewModelsError(ErrCodeAuth, fmt.Sprintf("Provider is not configured: %s", model.Provider), nil)
 	}
 	requestModel, requestOptions := ApplyResolvedAuth(model, resolution.Auth, resolution.Env, options.StreamOptions)
+	requestOptions.Identity = MergeClientIdentity(m.identity, options.Identity)
 	return requestModel, &ModelsStreamOptions{StreamOptions: requestOptions}, nil
 }
 
@@ -1126,11 +1136,11 @@ func (m *Models) CancelDeferred(model *Model, handle *DeferredHandle, options *M
 	if err != nil {
 		return err
 	}
-	_, requestOptions, err := m.applyAuth(model, options)
+	requestModel, requestOptions, err := m.applyAuth(model, options)
 	if err != nil {
 		return err
 	}
-	return provider.CancelDeferred(model, handle, &requestOptions.StreamOptions)
+	return provider.CancelDeferred(requestModel, handle, &requestOptions.StreamOptions)
 }
 
 // CalculateCost computes usage cost from model rates and mutates

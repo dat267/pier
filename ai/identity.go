@@ -22,6 +22,7 @@ type ClientAttribution struct {
 	Name       string
 	URL        string
 	Categories []string
+	jsonFields []identityJSONField
 }
 
 // PIAttribution is pi's own provider attribution.
@@ -36,10 +37,50 @@ type ClientIdentity struct {
 	// CustomUserAgent is a literal value, including "", "short", or
 	// "detailed". When set it wins over UserAgent (upstream { custom }).
 	CustomUserAgent *string
-	// Version overrides the version in the detailed user agent when non-empty.
+	// Version overrides the detailed user-agent version. Empty is absent
+	// unless VersionSet is true.
 	Version string
+	// VersionSet makes an empty Version explicit rather than absent.
+	VersionSet bool
 	// Attribution adds provider attribution headers; nil adds none.
 	Attribution *ClientAttribution
+	// AttributionSet makes nil Attribution explicit, clearing inherited attribution.
+	AttributionSet  bool
+	jsonFields      []identityJSONField
+	userAgentSet    bool
+	userAgentFields []identityJSONField
+}
+
+// MergeClientIdentity merges defined fields left to right without changing
+// any source. A non-nil empty identity remains distinct from no identity.
+// Nested attribution/custom values are shared, matching upstream's shallow merge.
+func MergeClientIdentity(sources ...*ClientIdentity) *ClientIdentity {
+	var merged *ClientIdentity
+	for _, source := range sources {
+		if source == nil {
+			continue
+		}
+		if merged == nil {
+			merged = &ClientIdentity{}
+		}
+		if source.UserAgent != "" || source.CustomUserAgent != nil || source.userAgentSet {
+			merged.UserAgent, merged.CustomUserAgent = source.UserAgent, source.CustomUserAgent
+			merged.userAgentSet = true
+			merged.userAgentFields = source.userAgentFields
+			merged.rememberJSONKey("userAgent")
+		}
+		if source.Attribution != nil || source.AttributionSet {
+			merged.Attribution = source.Attribution
+			merged.AttributionSet = true
+			merged.rememberJSONKey("attribution")
+		}
+		if source.Version != "" || source.VersionSet {
+			merged.Version = source.Version
+			merged.VersionSet = true
+			merged.rememberJSONKey("version")
+		}
+	}
+	return merged
 }
 
 // FormatUserAgent renders the User-Agent of an identity. The detailed form is
@@ -54,7 +95,7 @@ func FormatUserAgent(identity *ClientIdentity) string {
 			return *identity.CustomUserAgent
 		}
 		mode = identity.UserAgent
-		if identity.Version != "" {
+		if identity.Version != "" || identity.VersionSet {
 			version = identity.Version
 		}
 	}

@@ -221,6 +221,36 @@ func TestProviderAttributionHostIgnoresCase(t *testing.T) {
 	}
 }
 
+// Reference: pi v1.4.0 core/client-identity.ts returns explicit detailed mode,
+// the build version and nullable attribution in that insertion order.
+func TestClientIdentityJSON(t *testing.T) {
+	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
+	version, err := ai.MarshalJSON(Version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, telemetry := range []string{"1", "0"} {
+		t.Setenv("PI_TELEMETRY", telemetry)
+		identity := ClientIdentity(settings)
+		encoded, err := ai.MarshalJSON(identity)
+		if err != nil {
+			t.Fatal(err)
+		}
+		attribution := `{"name":"pi","url":"https://pi.dev","categories":["cli-agent"]}`
+		if telemetry == "0" {
+			attribution = "null"
+		}
+		want := `{"userAgent":"detailed","version":` + string(version) + `,"attribution":` + attribution + `}`
+		if string(encoded) != want {
+			t.Fatalf("telemetry %s: identity = %s; want %s", telemetry, encoded, want)
+		}
+		merged := ai.MergeClientIdentity(&ai.ClientIdentity{Attribution: ai.PIAttribution}, identity)
+		if telemetry == "0" && merged.Attribution != nil {
+			t.Fatal("telemetry-off identity inherited attribution")
+		}
+	}
+}
+
 // Client identity carries the build version and gates attribution on install
 // telemetry (upstream getClientIdentity, v1.4.0 adc5fa9f8).
 func TestClientIdentity(t *testing.T) {

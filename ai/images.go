@@ -174,13 +174,16 @@ type ImagesModels struct {
 	providers   map[string]*ImagesProvider
 	credentials CredentialStore
 	authContext AuthContext
+	identity    *ClientIdentity
 }
 
 // CreateImagesModels builds an empty image-model registry.
 func CreateImagesModels(options *CreateModelsOptions) *ImagesModels {
 	credentials := CredentialStore(NewInMemoryCredentialStore())
 	authContext := AuthContext(DefaultAuthContext{})
+	var identity *ClientIdentity
 	if options != nil {
+		identity = options.Identity
 		if options.Credentials != nil {
 			credentials = options.Credentials
 		}
@@ -188,7 +191,7 @@ func CreateImagesModels(options *CreateModelsOptions) *ImagesModels {
 			authContext = options.AuthContext
 		}
 	}
-	return &ImagesModels{providers: map[string]*ImagesProvider{}, credentials: credentials, authContext: authContext}
+	return &ImagesModels{providers: map[string]*ImagesProvider{}, credentials: credentials, authContext: authContext, identity: identity}
 }
 
 // SetProvider upserts a provider by id.
@@ -301,9 +304,12 @@ func (m *ImagesModels) GetAuth(providerID string, overrides *AuthResolutionOverr
 // GenerateImages resolves auth and generates, never failing: errors come back
 // as a result with StopReason "error" (upstream ImagesModels.generateImages).
 func (m *ImagesModels) GenerateImages(model *ImagesModel, context ImagesContext, options *ImagesOptions) *AssistantImages {
-	if options == nil {
-		options = &ImagesOptions{}
+	var requestOptions ImagesOptions
+	if options != nil {
+		requestOptions = *options
 	}
+	requestOptions.Identity = MergeClientIdentity(m.identity, requestOptions.Identity)
+	options = &requestOptions
 	provider := m.GetProvider(model.Provider)
 	if provider == nil {
 		return imagesError(model, fmt.Sprintf("Unknown provider: %s", model.Provider), options)
