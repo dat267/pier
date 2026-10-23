@@ -78,6 +78,9 @@ type MarkdownOptions struct {
 	Transform func(markdown string, availableWidth int) string
 	// RenderLatex toggles LaTeX rendering (default true).
 	RenderLatex *bool
+	// ForceItalic applies italic to every rendered text element, including
+	// headings and highlighted code. Opt-in for thinking blocks (D263).
+	ForceItalic bool
 }
 
 // markdownTerminal adapts the tui's terminal primitives to the renderer's
@@ -463,6 +466,11 @@ func (m *Markdown) Render(width int) []string {
 		m.renderedTokens++
 		rendered := renderer.RenderBlock(blocks[index-windowBase], contentWidth, next)
 		finals[index] = renderer.Finalize(rendered, width, contentWidth, m.PaddingX)
+		if m.Options.ForceItalic {
+			for lineIndex, line := range finals[index] {
+				finals[index][lineIndex] = forceMarkdownItalic(line)
+			}
+		}
 	}
 
 	var contentLines []string

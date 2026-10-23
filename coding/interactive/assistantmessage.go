@@ -291,6 +291,8 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 				}
 				markdown.Options = tui.MarkdownOptions{
 					Transform: CreateMarkdownTransform("assistant-thinking", c.isStreaming, c.transformers),
+					// D263: headings and code bypass the default text style.
+					ForceItalic: styleColorsEnabled(),
 				}
 				markdown.SetTextIfChanged(joinThinkingBlocks(thinkingBlocks))
 				thinkingComponent = markdown

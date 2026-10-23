@@ -2096,3 +2096,32 @@ affected shape is a wildcard followed only by characters outside
 Tests: `TestMatchGlobAgainstMinimatch`,
 `TestMatchGlobBraceSequencesAndDotSegments`,
 `TestMatchGlobEscapedSuffixFastPath`.
+
+## D263
+
+**Expanded thinking keeps italic across all Markdown text elements.**
+
+Reference: pi v1.3.0 (`71023aec`),
+`packages/coding-agent/src/modes/interactive/components/assistant-message.ts`
+sets `defaultTextStyle.italic`, but
+`packages/tui/src/components/markdown.ts` renders headings, code spans, fenced
+code and their decorations through separate styles. For example, a thinking
+block containing `# Heading` and an inline code span displays those elements
+without italic even while its ordinary prose is italic.
+
+The port opts expanded thinking into `MarkdownOptions.ForceItalic`. After
+Markdown styling and wrapping, each newly rendered text line inherits italic,
+restores it after SGR resets (including combined and empty parameters), and
+closes it at the line boundary. Bold, colors, links and syntax highlighting
+remain intact. Image escape payloads are not wrapped. This presentation is
+cached with the rendered block and captured by detached Markdown preparation;
+it does not add a transcript-wide rendering pass. Normal Markdown, answer text,
+collapsed thinking, disabled terminal styles and model-facing messages are
+unchanged.
+
+Tests: `TestThinkingMarkdownKeepsStyledTextItalic`,
+`TestThinkingItalicSurvivesStreamingAndVisibility`,
+`TestThinkingItalicRespectsDisabledStyles`,
+`TestMarkdownForceItalicRestoresResets`,
+`TestMarkdownForceItalicKeepsImagePayloads`, and
+`TestMarkdownForceItalicSurvivesDetachedPreparation`.

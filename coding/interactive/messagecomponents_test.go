@@ -110,10 +110,32 @@ func TestMessagesAgainstUpstreamGolden(t *testing.T) {
 	for _, label := range assistantLabels {
 		spec := corpus.Assistant[label]
 		component := NewAssistantMessageComponent(assistantMessageFromSpec(spec), spec.HideThinking, nil, "", 1, nil)
-		checkGolden(t, golden, "assistant "+label+"@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+		checkAssistant := func(key string) {
+			got := append([]string{}, normalizeRender(component.Render(spec.Width))...)
+			if !component.hideThinkingBlock && len(component.thinkingMarkdowns) > 0 {
+				// D263 changes only italic inheritance for expanded thinking.
+				// Keep the upstream fixture and compare every other style and
+				// layout byte; thinkingitalic_test.go checks actual italic state.
+				var want []string
+				if err := json.Unmarshal([]byte(golden[key]), &want); err != nil {
+					t.Fatalf("decode %s: %v", key, err)
+				}
+				stripItalic := strings.NewReplacer("\x1b[3m", "", "\x1b[23m", "")
+				for i := range got {
+					got[i] = stripItalic.Replace(got[i])
+				}
+				for i := range want {
+					want[i] = stripItalic.Replace(want[i])
+				}
+				checkGolden(t, map[string]string{key: mustJSON(want)}, key, got)
+				return
+			}
+			checkGolden(t, golden, key, got)
+		}
+		checkAssistant("assistant " + label + "@" + itoa(spec.Width))
 		if spec.ExpandThinking != nil {
 			component.SetHideThinkingBlock(*spec.ExpandThinking)
-			checkGolden(t, golden, "assistant "+label+"-toggled@"+itoa(spec.Width), normalizeRender(component.Render(spec.Width)))
+			checkAssistant("assistant " + label + "-toggled@" + itoa(spec.Width))
 		}
 	}
 
