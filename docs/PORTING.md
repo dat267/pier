@@ -144,10 +144,11 @@ suite.
 refreshing upstream tags and is the port's reference pin. It is 81 commits past
 v1.3.0. The pin identifies the sources to review, not a claim that every change
 is ported. The v1.4.0 catalog, transcript tool-change modes, Markdown work and the
-completed delta audit are described below. The audit classifies all 81 commits;
-the remaining in-scope gaps are telemetry and the durable v1.4 harness,
-including its identity wiring, plus the documented out-of-scope areas.
-Supported ai/agent/coding client identity is ported with the explicit Go
+completed delta audit are described below. The audit classifies all 81 commits.
+Every unported row in the supported `ai`/`agent`/`coding`/`tui`/`mcp` runtime
+is either removed-package work (D236) or a documented out-of-scope area; the
+durable, telemetry and chord sources are not in the built binary. Supported
+ai/agent/coding client identity is ported with the explicit Go
 runtime and SDK-metadata differences in D265/D266.
 The v1.3.0 delta from v1.2.0 is ported (see the historical v1.3.0 audit below);
 the v1.2.0 delta from v1.1.0 was audited. Confirmed gaps, porting progress and
@@ -159,8 +160,12 @@ versions and commit IDs as historical context.
 The v1.4.0 delta is 81 commits and 343 files. Every commit is classified
 below; "ported" groups were implemented before this audit, "fixed" was
 corrected here, "partial" has a ported subset with remaining gaps, "gap" is
-an in-scope behavior still missing, and "out"/"n/a" are documented out-of-scope
-areas or non-runtime changes. This audit found and fixed four parity regressions:
+an in-scope behavior still missing from a supported runtime path, and
+"out"/"n/a" are documented out-of-scope areas or non-runtime changes. Rows
+marked "removed (D236)" classify reference work in a package the port deleted
+because nothing in the built CLI used it; they are historical for this tree,
+and none is an outstanding port fix. This audit found and fixed four parity
+regressions:
 
 - **PI user agent on pi-messages**: the request sent Go's default
   `Go-http-client/1.1`, because only the other providers set it. It now uses
@@ -246,20 +251,20 @@ reserved-header rules. Twelve Node-generated cases execute the pinned
 Bedrock helper and AWS SDK middleware. The port intentionally omits metadata
 claiming to run the JavaScript SDK (D266).
 
-Remaining in-scope v1.4.0 gaps:
+Remaining v1.4.0 items, grouped by why they are not in this tree:
 
-- **Telemetry**: the `telemetry` span option and chord/pi-ai/durable telemetry
-  stack (spans, metrics, SQLite store, trace renderer) are not ported, so entries
-  marked "out" below stay out of scope.
-- **Durable**: the v1.4 harness features (sleeping tasks and host timers,
-  crash-loop guard, `ReportInfo`, `checkpointWhen`, per-model compaction in the
-  harness, function-valued model/settings options, IndexedDB storage) and the
-  remaining conformance cases are unported, as is the reverted commit-log
-  replication. Harness identity wiring is also unported.
-  `ToolControl.terminate` typing is TypeScript-only.
-- **Chord**: the SQLite driver move, exclusive/replicated operations, WAL
-  reader and telemetry store belong to the unported typed-host rewrite; the
-  replication commits were reverted upstream.
+- **Removed packages (D236)**: `telemetry` (the `telemetry` span option, spans,
+  metrics, the SQLite store and the trace renderer), the durable v1.4 harness
+  (sleeping tasks and host timers, crash-loop guard, `ReportInfo`,
+  `checkpointWhen`, per-model compaction in the harness, function-valued
+  model/settings options, IndexedDB storage, harness identity wiring) and
+  chord's typed-host rewrite (SQLite drivers, exclusive/replicated operations,
+  WAL reader, telemetry store) were deleted from `main` because nothing
+  reachable from the built CLI imported them. The rows below still classify the
+  reference commits, but restoring any of these is a feature decision that
+  starts by wiring a runtime path, not a port fix. The reverted commit-log
+  replication stays out either way, and `ToolControl.terminate` typing is
+  TypeScript-only.
 - **Extensions, codemode, classifier, package manager, HTML export**: the
   extension-dialog stacking, extension tool activation, codemode worker queue,
   System One classifier image input and managed-install marker changes stay
@@ -270,42 +275,42 @@ Remaining in-scope v1.4.0 gaps:
 |---|---|---|
 | `ae7b16d43` | Add [Unreleased] section for next cycle | n/a: changelog metadata |
 | `4954d7605` | feat: check the model catalog against the latest release before publishing (#11007) | out: release tooling |
-| `6085986e4` | fix(durable): type ToolControl.terminate as boolean | gap: durable harness |
-| `c4cf7957b` | feat(durable): per-model compaction settings via compaction.modelOverrides | gap: durable harness |
-| `790271cd0` | fix(durable): restore ToolControl.terminate changes dropped by c4cf7957b | gap: durable harness |
+| `6085986e4` | fix(durable): type ToolControl.terminate as boolean | removed (D236): durable harness |
+| `c4cf7957b` | feat(durable): per-model compaction settings via compaction.modelOverrides | removed (D236): durable harness |
+| `790271cd0` | fix(durable): restore ToolControl.terminate changes dropped by c4cf7957b | removed (D236): durable harness |
 | `0fbdbd3f8` | fix(ai): retry node-fetch 'request to ... failed' errors | ported: retry classification |
 | `99fe14897` | fix(ai): use mimo-v2.6 models in Xiaomi tests | ported: catalog tests |
 | `90d863f7c` | fix(coding-agent): use mimo-v2.6-pro as Xiaomi default model | ported: catalog default |
 | `6fcb48670` | fix(coding-agent): remove fixed output limits from summary requests (#11036) | ported: summary output limit |
 | `4dd2b149d` | fix(ai): treat whitespace-only tool output as empty | ported: empty tool output |
 | `698a2d23b` | fix(ai): retry more gateway upstream failure errors | ported: retry classification |
-| `7ec1f648e` | feat(durable): accept functions for HarnessOptions.models and settings | gap: durable harness |
-| `2331785c3` | fix(durable): run the Codex prompt-cache e2e test on gpt-6.1-sol | gap: durable tests |
+| `7ec1f648e` | feat(durable): accept functions for HarnessOptions.models and settings | removed (D236): durable harness |
+| `2331785c3` | fix(durable): run the Codex prompt-cache e2e test on gpt-6.1-sol | removed (D236): durable tests |
 | `14ff455a0` | fix(env): make the read/bash differential test deterministic and meaningful | out: env package |
 | `95364a54e` | feat(coding-agent): default NVIDIA to Nemotron 3.5 Super VL (#10910) | ported: catalog default |
 | `8efd314fa` | docs(ai,coding-agent): generate models.json reference from schemas (#11038) | n/a: generated docs |
-| `c268154ca` | feat(chord): move Durable's SQLite drivers into chord/sqlite | out: chord |
-| `f75b3240a` | feat(durable): durable sleeping state replaces runtime.sleep | gap: durable timers |
+| `c268154ca` | feat(chord): move Durable's SQLite drivers into chord/sqlite | removed (D236): chord |
+| `f75b3240a` | feat(durable): durable sleeping state replaces runtime.sleep | removed (D236): durable timers |
 | `ea7c64843` | feat(durable): workerd tests for Durable Object hosting | out: workerd runtime |
 | `de47e488f` | docs(durable): changelog for sleeping tasks, timers, and wakeups | n/a: docs |
 | `26b5535a5` | docs(durable): clarify the SQLite schema migration in the changelog | n/a: docs |
-| `ec1be23eb` | fix(durable): review fixes for sleeping tasks and host timers | gap: durable harness |
+| `ec1be23eb` | fix(durable): review fixes for sleeping tasks and host timers | removed (D236): durable harness |
 | `00bf7193d` | fix(durable): arm before resume in the Durable Object example; timer wording | out: durable example |
 | `0b102787c` | docs(coding-agent): restore extension guide details (#11039) | out: extension docs |
-| `e17e2e105` | fix(durable): release the second slow call when the first finished, not after 200 polls | gap: durable timers |
-| `a30c2a81d` | feat(durable): crash-loop guard, report sources, inbox after failed runs, blocked tasks in the task graph | gap: durable harness |
-| `440a5fcdb` | fix(durable): review fixes for the crash-loop guard, reports, and blocked tasks | gap: durable harness |
-| `5ba1cbaf3` | fix(durable): close keeps admitted aborts, reports name the extension that ran, review nits | gap: durable harness |
-| `91b33cab3` | feat(durable): ReportInfo says what happened, with typed reasons | gap: durable reports |
+| `e17e2e105` | fix(durable): release the second slow call when the first finished, not after 200 polls | removed (D236): durable timers |
+| `a30c2a81d` | feat(durable): crash-loop guard, report sources, inbox after failed runs, blocked tasks in the task graph | removed (D236): durable harness |
+| `440a5fcdb` | fix(durable): review fixes for the crash-loop guard, reports, and blocked tasks | removed (D236): durable harness |
+| `5ba1cbaf3` | fix(durable): close keeps admitted aborts, reports name the extension that ran, review nits | removed (D236): durable harness |
+| `91b33cab3` | feat(durable): ReportInfo says what happened, with typed reasons | removed (D236): durable reports |
 | `482c1381a` | fix(ai): update GLM-4.6V Coding Plan cache read price in test | ported: catalog test |
-| `48909d987` | feat: telemetry propagation, span links and metrics; telemetry member in chord/context | out: telemetry |
-| `1402973a9` | fix: chord boundary test allows pi-telemetry, the dependency of Context.telemetry | out: chord |
-| `2ec55d808` | feat: Durable and pi-ai telemetry; Context.telemetry is always a span | out: telemetry |
+| `48909d987` | feat: telemetry propagation, span links and metrics; telemetry member in chord/context | removed (D236): telemetry |
+| `1402973a9` | fix: chord boundary test allows pi-telemetry, the dependency of Context.telemetry | removed (D236): chord |
+| `2ec55d808` | feat: Durable and pi-ai telemetry; Context.telemetry is always a span | removed (D236): telemetry |
 | `e28e70804` | ignore .pi/settings.json | n/a: repo hygiene |
 | `d2e7d8b7c` | feat(ai): add MiniMax-M3.1-Flash and hide only old MiniMax models | ported: catalog |
-| `d9025a5f5` | feat: SQLite telemetry store in Chord, shared TelemetryStore and trace renderer | out: telemetry |
+| `d9025a5f5` | feat: SQLite telemetry store in Chord, shared TelemetryStore and trace renderer | removed (D236): telemetry |
 | `e86b05475` | fix(ai): OpenRouter reasoning test uses deepseek-r1-0528, deepseek-r1 left the catalog | ported: catalog test |
-| `5c1736f82` | feat: checkpointWhen is required on Durable document definitions | gap: durable documents |
+| `5c1736f82` | feat: checkpointWhen is required on Durable document definitions | removed (D236): durable documents |
 | `28bea006b` | fix(coding-agent): accept Windows Store shell aliases | ported: Windows shells |
 | `61060ddf8` | fix(coding-agent): resolve Windows shells from installation directories | ported: Windows shells |
 | `0ed1b0431` | feat(tui): detect Rex terminal for OSC 8 hyperlinks | fixed: Rex truecolor; images already ported |
@@ -318,7 +323,7 @@ Remaining in-scope v1.4.0 gaps:
 | `a731ba8b8` | docs(tui): add changelog entry for CJK emphasis fix | n/a: changelog |
 | `fbc456d82` | fix(ai): expect xhigh thinking for Grok 4.3 and Grok 4.5 | ported: catalog test |
 | `26293e74f` | fix(coding-agent): render CJK emphasis in HTML export (#11168) | out: HTML export |
-| `48c8f3228` | feat(chord): exclusive SQLite operations and a replicated connection wrapper | out: chord |
+| `48c8f3228` | feat(chord): exclusive SQLite operations and a replicated connection wrapper | removed (D236): chord |
 | `fdce48eb4` | fix(ai): drop Codex models rejected for ChatGPT accounts (#11173) | ported: catalog |
 | `396ecd7b8` | feat(tui): enable Kitty images for Rex | ported: Rex images |
 | `2ed3118b0` | fix(tui): stop unclosed display math from swallowing Markdown tables | ported: math/table lexing |
@@ -336,10 +341,10 @@ Remaining in-scope v1.4.0 gaps:
 | `6e491cfa9` | fix(ai): match retryable status codes only as standalone numbers | ported: retry classification |
 | `612a172e6` | fix(tui): escape regex metacharacters in single-segment fd queries (#11212) | ported: fd query escaping |
 | `adfc14461` | fix(coding-agent): apply /compact instructions to split-turn prefix summary | ported: split-turn instructions |
-| `adc5fa9f8` | feat(ai,agent,coding-agent): move client identity and provider attribution into pi-ai | partial: supported ai/agent/coding identity ported (D265/D266); durable/classifier remain |
-| `04a93bad8` | fix(ai,agent,coding-agent,durable): client identity follow-ups | partial: supported wrappers, defaults and routing ported; durable harness remains |
-| `4759f09fb` | feat(chord): WAL reader, page checksums and segment container for SQLite replication | out: chord |
-| `89e309581` | fix(chord): remove WAL page replication | out: chord |
+| `adc5fa9f8` | feat(ai,agent,coding-agent): move client identity and provider attribution into pi-ai | partial: supported ai/agent/coding identity ported (D265/D266); durable removed (D236), classifier out |
+| `04a93bad8` | fix(ai,agent,coding-agent,durable): client identity follow-ups | partial: supported wrappers, defaults and routing ported; durable harness removed (D236) |
+| `4759f09fb` | feat(chord): WAL reader, page checksums and segment container for SQLite replication | removed (D236): chord |
+| `89e309581` | fix(chord): remove WAL page replication | removed (D236): chord |
 | `4c25119f5` | feat(durable): replicate storages as a commit log | out: durable replication (reverted) |
 | `cae9fd28a` | Revert "feat(durable): replicate storages as a commit log" | out: durable replication (reverted) |
 | `bd3c9b823` | fix(coding-agent): activate extension tools registered after the branch recorded its loadout | out: extension tools |
@@ -516,7 +521,10 @@ Ported so far:
   the port already behaved this way and now mirrors the upstream
   `json-parse.test.ts` cases.
 
-All in-scope v1.3.0 items are ported.
+All in-scope v1.3.0 items are ported. The `durable` items were ported at the
+time, but D236 later removed that package from `main` because nothing in the
+built CLI imported it; that code lives on the `unwired-packages` branch, not in
+this tree.
 
 The `durable` base64 `btoa` fix (#10923) is a V8 concatenation-tree memory fix;
 the port already encodes with Go's `encoding/base64`, so it does not apply.
