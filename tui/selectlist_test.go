@@ -356,9 +356,15 @@ func TestLoaderRenderAdvancesFrame(t *testing.T) {
 	loader := NewLoader(nil, identityFunc, identityFunc, "Working",
 		&LoaderIndicatorOptions{Frames: []string{"A", "B"}, HasFrames: true, IntervalMS: 5})
 	first := strings.Join(loader.Render(20), "\n")
-	time.Sleep(15 * time.Millisecond)
+	// Move the clock three frames on by ageing the start rather than sleeping:
+	// a wall-clock sleep made this test depend on scheduler latency, and a
+	// Render that reuses the frame cached at start is what it must catch.
+	loader.startedAt = loader.startedAt.Add(-15 * time.Millisecond)
 	second := strings.Join(loader.Render(20), "\n")
 	if first == second {
-		t.Fatalf("Render did not advance the frame with the clock: %q", first)
+		t.Fatalf("Render did not advance the frame with the clock: %q and %q", first, second)
+	}
+	if !strings.Contains(second, "B") {
+		t.Fatalf("second render = %q; want the next frame", second)
 	}
 }
