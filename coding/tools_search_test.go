@@ -328,3 +328,31 @@ func TestFindFullPathVariable(t *testing.T) {
 		})
 	}
 }
+
+// The grep tool's contract must not depend on ambient ripgrep configuration.
+// Upstream v1.4.0 8c4e87389 (issue #11203): the tool now spawns rg with
+// --no-config, so RIPGREP_CONFIG_PATH (a config containing --fixed-strings, say)
+// cannot turn a regex search into a literal one.
+func TestGrepToolIgnoresRipgrepConfig(t *testing.T) {
+	requireBinary(t, "rg")
+	dir := t.TempDir()
+	configFile := filepath.Join(t.TempDir(), "rg-config")
+	if err := os.WriteFile(configFile, []byte("--fixed-strings\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("RIPGREP_CONFIG_PATH", configFile)
+	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("aXb\na.b\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	tool := CreateGrepTool(dir)
+	result := execTool(t, tool, `{"pattern":"a.b"}`)
+	text := result.Content[0].(ai.TextContent).Text
+	// A regex search matches both lines; a literal search (what the config would
+	// force) matches only the second.
+	if !strings.Contains(text, "aXb") {
+		t.Fatalf("grep honored RIPGREP_CONFIG_PATH --fixed-strings, so the regex became literal: %q", text)
+	}
+	if !strings.Contains(text, "a.b") {
+		t.Fatalf("regex search lost its match: %q", text)
+	}
+}

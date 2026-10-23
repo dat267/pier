@@ -311,7 +311,11 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 				return filepath.Base(filePath)
 			}
 
-			args := []string{"--json", "--line-number", "--color=never", "--hidden"}
+			// --no-config: the tool contract (literal, glob, limit, ...) must not
+			// depend on ambient ripgrep configuration such as RIPGREP_CONFIG_PATH;
+			// users customize through bash or extensions instead (upstream v1.4.0
+			// 8c4e87389, #11203).
+			args := []string{"--no-config", "--json", "--line-number", "--color=never", "--hidden"}
 			if input.IgnoreCase != nil && *input.IgnoreCase {
 				args = append(args, "--ignore-case")
 			}
