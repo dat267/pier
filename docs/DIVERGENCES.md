@@ -2160,7 +2160,11 @@ after a `length` stop, in two steps:
    estimated token weight, the first half is summarized down to a checkpoint, and
    the second half is merged into it through upstream's update prompt. Each chunk
    then has the whole budget for its own answer, and a chunk that still overflows
-   splits again.
+   splits again. The split never falls between a tool call and its result: the
+   boundary nearest the weight midpoint is chosen whose left side has no
+   outstanding call, so a parallel batch and its results stay in one chunk. Only
+   when every boundary sits inside a call/result chain does the weight split win,
+   because a separated pair still beats failing the compaction.
 
 One summarization spends at most `maxSummarizationRequests` (10) requests, and
 every pass shares one routing id so the escalation does not fragment cache
@@ -2173,5 +2177,7 @@ update instructions so its checkpoint stays one set of sections.
 Tests: `TestSummarizationRetriesOnceWhenTheTokenCapIsHit`,
 `TestSummarizationRetryIsBoundedAndStillFailsLoudly`,
 `TestSummarizationDoesNotRetryWithoutALever`,
-`TestSummarizationSplitsTheInputWhenTheCapKeepsHitting` and
-`TestSummarizationSplitStaysBounded`.
+`TestSummarizationSplitsTheInputWhenTheCapKeepsHitting`,
+`TestSummarizationSplitStaysBounded`,
+`TestSummarizationSplitKeepsToolCallsWithTheirResults` and
+`TestSummarizationSplitSummarizesACallWithItsResult`.

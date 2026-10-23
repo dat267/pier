@@ -1354,8 +1354,8 @@ func summarizeConversation(messages []ai.Message, options CompactionOptions, pre
 // before the request is worth repeating: first with the same input and more room
 // (the budget is what the window had left, and reasoning tokens come out of that
 // same budget), then conclusively by summarizing less input at a time and
-// merging each chunk into the summary so far. Upstream fails the compaction on
-// the first length stop (D264).
+// merging each chunk into the summary so far. Splits keep a tool call with its
+// result. Upstream fails the compaction on the first length stop (D264).
 func summarizeChunks(
 	model *ai.Model,
 	messages []ai.Message,
@@ -1430,9 +1430,37 @@ func summarizationReasoningEnabled(model *ai.Model, reasoning ai.ThinkingLevel) 
 	return model.Reasoning && reasoning != "" && reasoning != ai.ThinkOff
 }
 
-// summarizationSplitPoint splits messages near the middle by estimated tokens,
-// so both halves fit where the whole input did not.
+// summarizationSplitPoint splits messages near the middle by estimated tokens so
+// both halves fit where the whole input did not, and never between a tool call
+// and its result: a chunk has to read on its own, and a call without its answer
+// (or an answer without its call) summarizes worse than a slightly uneven split
+// (D264).
 func summarizationSplitPoint(messages []ai.Message) int {
+	target := summarizationWeightMidpoint(messages)
+	outstanding := map[string]struct{}{}
+	best := 0
+	for boundary := 1; boundary < len(messages); boundary++ {
+		summarizationTrackToolCalls(messages[boundary-1], outstanding)
+		if len(outstanding) > 0 {
+			// A call issued on the left is still waiting for a result on the
+			// right, so this boundary would separate the pair.
+			continue
+		}
+		if best == 0 || absInt(boundary-target) < absInt(best-target) {
+			best = boundary
+		}
+	}
+	if best == 0 {
+		// Every boundary sits inside a call/result chain; a separated pair still
+		// beats failing the compaction, so keep the weight split.
+		return target
+	}
+	return best
+}
+
+// summarizationWeightMidpoint is the weight-only split: the first boundary at
+// which the left side reaches half of the estimated tokens.
+func summarizationWeightMidpoint(messages []ai.Message) int {
 	total := int64(0)
 	for _, message := range messages {
 		total += int64(EstimateAgentMessageTokens(message))
@@ -1446,6 +1474,30 @@ func summarizationSplitPoint(messages []ai.Message) int {
 		}
 	}
 	return len(messages)
+}
+
+// summarizationTrackToolCalls folds one message into the outstanding-call set: an
+// assistant message opens its tool calls, and a tool result closes its own. A
+// result whose call was summarized earlier closes nothing.
+func summarizationTrackToolCalls(message ai.Message, outstanding map[string]struct{}) {
+	switch m := message.(type) {
+	case *ai.AssistantMessage:
+		for _, block := range m.Content {
+			if call, ok := block.(ai.ToolCall); ok && call.ID != "" {
+				outstanding[call.ID] = struct{}{}
+			}
+		}
+	case *ai.ToolResultMessage:
+		delete(outstanding, m.ToolCallID)
+	}
+}
+
+// absInt is |value|.
+func absInt(value int) int {
+	if value < 0 {
+		return -value
+	}
+	return value
 }
 
 // summarizationResult turns a final summarization response into a summary,

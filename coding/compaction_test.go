@@ -823,3 +823,141 @@ func TestSummarizationSplitStaysBounded(t *testing.T) {
 		t.Fatalf("requests = %d; want at most %d", requests, maxSummarizationRequests)
 	}
 }
+
+// heavyMessage is a message whose estimated weight dominates a probe slice, so
+// the weight-only midpoint lands where the test wants it.
+func heavyMessage(chars int) ai.StringOrBlocks {
+	return ai.StringOrBlocks{Text: strings.Repeat("x", chars)}
+}
+
+// A chunk is summarized with the calls it answers: the split never lands between
+// a tool call and its result, which would leave one half with a call it cannot
+// explain and the other with an unexplained result.
+func TestSummarizationSplitKeepsToolCallsWithTheirResults(t *testing.T) {
+	// Small, small, call, result, small, small: the weight-only midpoint is 3,
+	// which is exactly the gap between the call and the result.
+	pair := []ai.Message{
+		&ai.UserMessage{Content: heavyMessage(40)},
+		&ai.UserMessage{Content: heavyMessage(40)},
+		&ai.AssistantMessage{
+			Content: ai.ContentList{
+				ai.TextContent{Text: strings.Repeat("x", 4000)},
+				ai.ToolCall{ID: "call-1", Name: "bash", Arguments: json.RawMessage(`{"command":"ls"}`)},
+			},
+			StopReason: ai.StopToolUse,
+		},
+		&ai.ToolResultMessage{ToolCallID: "call-1", ToolName: "bash", Content: ai.UserContentList{ai.TextContent{Text: strings.Repeat("x", 4000)}}},
+		&ai.UserMessage{Content: heavyMessage(40)},
+		&ai.UserMessage{Content: heavyMessage(40)},
+	}
+	if midpoint := tokenMidpoint(pair); midpoint != 3 {
+		t.Fatalf("probe midpoint = %d; want 3 for the test to exercise the gap", midpoint)
+	}
+	if got := summarizationSplitPoint(pair); got == 3 {
+		t.Fatalf("split = 3; the call and its result must stay in one chunk")
+	} else if got != 2 && got != 4 {
+		t.Fatalf("split = %d; want the nearest boundary outside the pair (2 or 4)", got)
+	}
+
+	// A parallel batch keeps the whole batch together.
+	batch := []ai.Message{
+		&ai.UserMessage{Content: heavyMessage(40)},
+		&ai.UserMessage{Content: heavyMessage(40)},
+		&ai.AssistantMessage{Content: ai.ContentList{
+			ai.TextContent{Text: strings.Repeat("x", 2000)},
+			ai.ToolCall{ID: "a", Name: "read", Arguments: json.RawMessage(`{}`)},
+			ai.ToolCall{ID: "b", Name: "read", Arguments: json.RawMessage(`{}`)},
+		}},
+		&ai.ToolResultMessage{ToolCallID: "a", ToolName: "read", Content: ai.UserContentList{ai.TextContent{Text: strings.Repeat("x", 2000)}}},
+		&ai.ToolResultMessage{ToolCallID: "b", ToolName: "read", Content: ai.UserContentList{ai.TextContent{Text: strings.Repeat("x", 2000)}}},
+		&ai.UserMessage{Content: heavyMessage(40)},
+		&ai.UserMessage{Content: heavyMessage(40)},
+	}
+	if got := summarizationSplitPoint(batch); got != 2 && got != 5 {
+		t.Fatalf("split = %d; want 2 or 5, outside the whole batch", got)
+	}
+
+	// A result whose call was summarized earlier imposes nothing, so the split
+	// is the plain midpoint by weight.
+	orphan := []ai.Message{
+		&ai.UserMessage{Content: heavyMessage(40)},
+		&ai.UserMessage{Content: heavyMessage(4000)},
+		&ai.ToolResultMessage{ToolCallID: "gone", ToolName: "read", Content: ai.UserContentList{ai.TextContent{Text: strings.Repeat("x", 4000)}}},
+		&ai.UserMessage{Content: heavyMessage(4000)},
+	}
+	if got, want := summarizationSplitPoint(orphan), tokenMidpoint(orphan); got != want {
+		t.Fatalf("split = %d; want the plain midpoint %d", got, want)
+	}
+}
+
+// tokenMidpoint is the weight-only split the escalation used before tool calls
+// had to stay with their results.
+func tokenMidpoint(messages []ai.Message) int {
+	total := 0
+	for _, message := range messages {
+		total += EstimateAgentMessageTokens(message)
+	}
+	half := total / 2
+	sum := 0
+	for index, message := range messages {
+		sum += EstimateAgentMessageTokens(message)
+		if sum >= half {
+			return index + 1
+		}
+	}
+	return len(messages)
+}
+
+// The split fallback folds the call and its result into one chunk in practice.
+func TestSummarizationSplitSummarizesACallWithItsResult(t *testing.T) {
+	prompts := make([]string, 0, 8)
+	model := &ai.Model{ID: "mock", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 200000, MaxTokens: 64000}
+	streamFn := func(model *ai.Model, context ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		prompt := ""
+		for _, message := range context.Messages {
+			if user, ok := message.(*ai.UserMessage); ok {
+				prompt += ai.ContentText(user.Content, "")
+			}
+		}
+		prompts = append(prompts, prompt)
+		stream := ai.NewAssistantMessageEventStream()
+		reason := ai.StopStop
+		text := "## Goal\nsummary " + itoa(len(prompts))
+		// The answer room is three messages, so the six-message input must split.
+		if strings.Count(prompt, "[User]: ") > 3 {
+			reason = ai.StopLength
+			text = "## Goal\npartial"
+		}
+		stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: reason, Message: &ai.AssistantMessage{
+			API: model.API, Provider: model.Provider, Model: model.ID,
+			Content: ai.ContentList{ai.TextContent{Text: text}}, StopReason: reason,
+		}})
+		return stream
+	}
+	// Small, small, call, result, small, small: the weight midpoint is the gap
+	// between the call and the result.
+	messages := []ai.Message{
+		&ai.UserMessage{Content: heavyMessage(40)},
+		&ai.UserMessage{Content: heavyMessage(40)},
+		&ai.AssistantMessage{
+			Content: ai.ContentList{
+				ai.TextContent{Text: strings.Repeat("x", 4000)},
+				ai.ToolCall{ID: "call-1", Name: "bash", Arguments: json.RawMessage(`{"command":"ls"}`)},
+			},
+			StopReason: ai.StopToolUse,
+		},
+		&ai.ToolResultMessage{ToolCallID: "call-1", ToolName: "bash", Content: ai.UserContentList{ai.TextContent{Text: strings.Repeat("x", 4000)}}},
+		&ai.UserMessage{Content: heavyMessage(40)},
+		&ai.UserMessage{Content: heavyMessage(40)},
+	}
+	if _, err := generateSummaryWithUsage(messages, CompactionOptions{Model: model, StreamFn: streamFn}, "", 16384); err != nil {
+		t.Fatal(err)
+	}
+	for _, prompt := range prompts {
+		hasCall := strings.Contains(prompt, "[Assistant tool calls]: bash(")
+		hasResult := strings.Contains(prompt, "[Tool result]: ")
+		if hasCall != hasResult {
+			t.Fatalf("chunk has call=%v result=%v; want them together:\n%s", hasCall, hasResult, prompt)
+		}
+	}
+}
