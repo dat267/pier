@@ -319,3 +319,76 @@ func TestInlineDollarHeuristics(t *testing.T) {
 		}
 	}
 }
+
+// Upstream v1.4.0 2ed3118b0's own case: a pipe-free header still starts a table
+// when the delimiter row has a pipe (Marked's table rule), so `Value` above
+// `| --- |` is a one-column table rather than a paragraph.
+func TestLexTableWithPipeFreeHeader(t *testing.T) {
+	b := firstBlock(t, "Value\n| --- |\n1\n", BlockTable)
+	if len(b.Header) != 1 || b.Header[0] != "Value" {
+		t.Fatalf("header = %v", b.Header)
+	}
+	if len(b.Rows) != 1 || b.Rows[0][0] != "1" {
+		t.Fatalf("rows = %v", b.Rows)
+	}
+
+	// Without a pipe on either row the delimiter row is a setext underline.
+	heading := firstBlock(t, "Value\n---\n", BlockHeading)
+	if heading.Level != 2 || heading.Text != "Value" {
+		t.Fatalf("heading = level %d text %q", heading.Level, heading.Text)
+	}
+}
+
+// A pipe-free header interrupts a paragraph the same way a piped one does.
+func TestLexTableWithPipeFreeHeaderInterruptsParagraph(t *testing.T) {
+	blocks := Lex("Value\n| --- |\n1\n")
+	if len(blocks) != 1 || blocks[0].Kind != BlockTable {
+		t.Fatalf("blocks = %v", kinds(blocks))
+	}
+}
+
+// Marked's table body rules, verified against marked 18.0.11: any line that is
+// not blank and does not start another block is a row, cells are fitted to the
+// header count, and a pipe-free header still forms a table.
+func TestLexTableBodyRules(t *testing.T) {
+	// A plain line is a row and is padded to the column count.
+	b := firstBlock(t, "| a | b |\n|---|---|\ntext\n", BlockTable)
+	if len(b.Rows) != 1 || strings.Join(b.Rows[0], "|") != "text|" {
+		t.Fatalf("rows = %v; want [[text \"\"]]", b.Rows)
+	}
+	// Extra cells are dropped.
+	b = firstBlock(t, "| a |\n|---|\n1 | 2\n", BlockTable)
+	if len(b.Rows) != 1 || strings.Join(b.Rows[0], "|") != "1" {
+		t.Fatalf("rows = %v; want [[1]]", b.Rows)
+	}
+	// Another block starts after the table.
+	for _, src := range []string{
+		"| a |\n|---|\n# h\n",
+		"| a |\n|---|\n- item\n",
+		"| a |\n|---|\n> quote\n",
+		"| a |\n|---|\n```\nx\n```\n",
+		"| a |\n|---|\n---\n",
+		"| a |\n|---|\n<div>x</div>\n",
+		"| a |\n|---|\n    indented\n",
+	} {
+		blocks := Lex(src)
+		if len(blocks) < 2 || blocks[0].Kind != BlockTable || len(blocks[0].Rows) != 0 {
+			t.Fatalf("%q: blocks = %v, rows = %v", src, kinds(blocks), blocks[0].Rows)
+		}
+	}
+}
+
+// The rendered shape of upstream 2ed3118b0's pipe-free-header case.
+func TestLayoutTableWithPipeFreeHeader(t *testing.T) {
+	got := render(t, "Value\n| --- |\n1\n", 40)
+	want := []string{
+		"┌───────┐",
+		"│ Value │",
+		"├───────┤",
+		"│ 1     │",
+		"└───────┘",
+	}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("got %q\nwant %q", got, want)
+	}
+}

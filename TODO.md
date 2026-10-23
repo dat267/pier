@@ -1,13 +1,5 @@
 # Reproduced audit findings
 
-**A pipe-free table header does not start a table (v1.4.0).** `internal/markdown`
-requires a `|` in the header row (`tryTable`, `looksLikeTableStart`), but Marked,
-as upstream reads it, accepts a pipe-free header when the delimiter row has a
-pipe: upstream `2ed3118b0`'s own case renders `["$$", "x^2", "", "Value",
-"| --- |", "1"]` as a table, and pier renders it as text. Independent of the
-math fix that surfaced it; needs the Marked table-start rule ported with its own
-regression cases.
-
 **Emphasis ignores CommonMark's punctuation flanking (v1.4.0).** pier closes an
 emphasis run before any non-space character, so `**end.**Then next` renders bold;
 upstream's Marked leaves the markers literal because a `**` preceded by
@@ -19,7 +11,8 @@ Closing the gap means porting Marked's `emStrong` delimiter model (left/right
 flanking with Unicode punctuation and whitespace classes, the mod-3 rule, and the
 CJK "treat adjacent CJK as punctuation" extension), which touches every inline
 parse and needs the 79-case token corpus re-verified.
- The compaction audits of `48081fe` and `5918595`
+
+No unresolved findings otherwise. The compaction audits of `48081fe` and `5918595`
 recorded eight findings against pi v1.3.0
 (`71023aec1546d6d677a65669c5665c0927ce0dd0`): resumed overflow blocking the
 next prompt, the between-turn threshold ignoring new tool-result tokens,

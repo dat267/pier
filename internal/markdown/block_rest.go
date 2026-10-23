@@ -65,15 +65,23 @@ func (l *blockLexer) lexParagraph(start, to int) (*Block, int) {
 // looksLikeTableStart reports a header row followed by a delimiter row.
 func (l *blockLexer) looksLikeTableStart(at int) bool {
 	header := nextLine(l.src, at)
-	if !strings.Contains(header.text, "|") {
-		return false
-	}
 	delim := nextLine(l.src, header.next)
 	if delim.next <= header.next {
 		return false
 	}
+	if !tableStartRows(header.text, delim.text) {
+		return false
+	}
 	_, ok := parseDelimiterRow(delim.text)
 	return ok
+}
+
+// tableStartRows reports whether a header row and a delimiter row start a table.
+// A pipe-free header still starts one when the delimiter row has a pipe; with a
+// pipe on neither row the delimiter row is a setext underline or a thematic
+// break instead (Marked's table rule, upstream 2ed3118b0's case).
+func tableStartRows(header string, delimiter string) bool {
+	return strings.Contains(header, "|") || strings.Contains(delimiter, "|")
 }
 
 func setextLevel(line string) (int, bool) {
@@ -372,11 +380,11 @@ func isHTMLBlockStart(line string) bool {
 func (l *blockLexer) tryTable(start int) (*Block, bool) {
 	src := l.src
 	header := nextLine(src, start)
-	if !strings.Contains(header.text, "|") {
-		return nil, false
-	}
 	delim := nextLine(src, header.next)
 	if delim.next <= header.next {
+		return nil, false
+	}
+	if !tableStartRows(header.text, delim.text) {
 		return nil, false
 	}
 	aligns, ok := parseDelimiterRow(delim.text)
@@ -384,19 +392,52 @@ func (l *blockLexer) tryTable(start int) (*Block, bool) {
 		return nil, false
 	}
 	table := &Block{Kind: BlockTable, Start: start, Align: aligns}
-	table.Header = splitTableRow(header.text)
+	table.Header = tableRowCells(header.text, len(aligns))
 	at := delim.next
 	for at < len(src) {
 		ln := nextLine(src, at)
-		if isBlankLine(ln.text) || !strings.Contains(ln.text, "|") {
+		// A table body ends at a blank line or at another block; any other line
+		// is a row, even without a pipe, and its cells are fitted to the header
+		// count (Marked's table rule; verified against marked 18.0.11).
+		if isBlankLine(ln.text) || startsOtherBlock(ln.text) {
 			break
 		}
-		table.Rows = append(table.Rows, splitTableRow(ln.text))
+		table.Rows = append(table.Rows, tableRowCells(ln.text, len(aligns)))
 		at = ln.next
 	}
 	table.End = at
 	table.Raw = src[start:at]
 	return table, true
+}
+
+// startsOtherBlock reports whether a line starts a block that ends a table
+// body: a heading, fence, thematic break, blockquote, list, HTML block or
+// indented code.
+func startsOtherBlock(line string) bool {
+	if _, _, ok := atxHeading(line); ok {
+		return true
+	}
+	if _, _, ok := fenceStart(line); ok {
+		return true
+	}
+	if isThematicBreak(line) || isBlockquoteStart(line) || isHTMLBlockStart(line) || indentWidth(line) >= 4 {
+		return true
+	}
+	_, _, ok := listItemStart(line)
+	return ok
+}
+
+// tableRowCells splits a table row and fits it to the table's column count the
+// way Marked does: extra cells are dropped and missing ones are empty.
+func tableRowCells(line string, columns int) []string {
+	cells := splitTableRow(line)
+	if len(cells) > columns {
+		return cells[:columns]
+	}
+	for len(cells) < columns {
+		cells = append(cells, "")
+	}
+	return cells
 }
 
 func parseDelimiterRow(line string) ([]Align, bool) {
