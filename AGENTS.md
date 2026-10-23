@@ -11,7 +11,7 @@ A from-scratch Go port of Mario Zechner's **pi**
 (`github.com/earendil-works/pi`), a sibling of its TypeScript monorepo, not a
 fork. Module `github.com/dat267/pier`, Go 1.27, offline-cached modules only
 (`go.mod` is authoritative). The reference checkout is `./pi` (gitignored),
-pinned to `v1.3.0` (`71023aec`); `just reference` fails at another tag and
+pinned to `v1.4.0` (`4a080252`); `just reference` fails at another tag and
 `just reference-fetch` refreshes tags without moving it. Treat `./pi` as
 read-only. Diff against those sources, not an installed bundle, and say which
 tag a review read.

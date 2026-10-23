@@ -1,5 +1,28 @@
 package markdown
 
+import (
+	"regexp"
+	"unicode"
+	"unicode/utf8"
+)
+
+// The first right-delimiter alternative masks a mixed-marker span at the start
+// of the clipped input. Consume the final pair only to implement its lookahead,
+// then leave that pair for the following delimiter scan.
+var emphasisSkipAsterisk = regexp.MustCompile(`^[^_*]*?__[^_*]*?\*[^_*]*?__`)
+var emphasisSkipUnderscore = regexp.MustCompile(`^[^_*]*?\*\*[^_*]*?_[^_*]*?\*\*`)
+
+func emphasisScanStart(src string, ch byte) int {
+	pattern := emphasisSkipAsterisk
+	if ch == '_' {
+		pattern = emphasisSkipUnderscore
+	}
+	if match := pattern.FindStringIndex(src); match != nil {
+		return match[1] - 2
+	}
+	return 0
+}
+
 // Emphasis runs, ported from Marked's emStrong tokenizer as upstream v1.4.0
 // configures it (marked 18 + marked-cjk-friendly, b2d0da6fe, #10154).
 //
@@ -11,30 +34,49 @@ package markdown
 // as `**这是测试。**后面` pair.
 
 // parseEmStrong parses *…* / **…** / ***…*** / _…_ starting at i.
-func parseEmStrong(src string, i int, ch byte) (int, Inline, bool) {
+func parseEmStrong(src string, i int, ch byte, prev rune, hasPrev bool) (int, Inline, bool) {
 	j := i
 	for j < len(src) && src[j] == ch {
 		j++
 	}
 	openLength := j - i
 
-	prev, hasPrev := runeBefore(src, i)
 	next, hasNext := runeAt(src, j)
-	openLeft, openRight := delimiterFlanking(prev, hasPrev, next, hasNext)
-	if !openLeft && !isCJKRune(prev) && !isCJKRune(next) {
+	if !hasNext || isDelimiterWhitespace(next) {
 		return 0, Inline{}, false
 	}
-	// An underscore opens only when it is left-flanking and either not also
-	// right-flanking or preceded by punctuation, so it never opens intraword.
-	if ch == '_' && openRight && !(hasPrev && isDelimiterPunctuation(prev)) {
+	// Marked sees a UTF-16 code unit here; only the CJK extension recovers
+	// supplementary predecessors for its punctuation override.
+	if prev > 0xffff {
+		prev = 0xdc00 + ((prev - 0x10000) & 0x3ff)
+	}
+	// The left-delimiter regex distinguishes punctuation from word content
+	// before applying the CJK override. GFM treats tilde as word content for *.
+	nextPunct := unicode.IsPunct(next) || unicode.IsSymbol(next)
+	if ch == '*' && next == '~' {
+		nextPunct = false
+	}
+	if ch == '_' && !nextPunct && hasPrev && (unicode.IsLetter(prev) || unicode.IsNumber(prev)) {
 		return 0, Inline{}, false
 	}
-	prevIsSameDelimiter := hasPrev && byte(prev) == ch
+	prevPunct := prev != '*' && prev != '_' && (isDelimiterWhitespace(prev) || isDelimiterPunctuation(prev))
+	prevCJK := false
+	if hasPrev && !prevPunct {
+		before, _ := runeBefore(src, i)
+		if before >= 0xfe00 && before <= 0xfe0e {
+			before, _ = runeBefore(src, i-utf8.RuneLen(before))
+		}
+		prevCJK = isCJKRune(before) || before >= 0xe0100 && before <= 0xe01ef
+	}
+	if nextPunct && hasPrev && !prevPunct && !prevCJK && !isCJKRune(next) {
+		return 0, Inline{}, false
+	}
+	prevIsSameDelimiter := hasPrev && prev == rune(ch)
 
 	clipped := src[j:]
 	delimTotal := openLength
 	midDelimTotal := 0
-	for k := 0; k < len(clipped); {
+	for k := emphasisScanStart(clipped, ch); k < len(clipped); {
 		if clipped[k] != ch {
 			k++
 			continue
@@ -55,15 +97,8 @@ func parseEmStrong(src string, i int, ch byte) (int, Inline, bool) {
 			k = runEnd
 			continue
 		}
-		if ch == '_' && closeLeft && !closeRight && !(closeHasNext && isDelimiterPunctuation(closeNext)) && !cjkAdjacent {
-			// An underscore closes only when it is right-flanking, and then only
-			// when it is not also left-flanking or is followed by punctuation.
-			// An intraword run is content, not a nested opener.
-			k = runEnd
-			continue
-		}
 		if ch == '_' && closeLeft && closeRight && !(closeHasNext && isDelimiterPunctuation(closeNext)) && !cjkAdjacent {
-			// The same rule for a both-flanking intraword run: content.
+			// A both-flanking intraword underscore run is content.
 			k = runEnd
 			continue
 		}

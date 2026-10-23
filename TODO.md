@@ -1,16 +1,14 @@
 # Reproduced audit findings
 
-**Pathological emphasis runs differ from Marked (v1.4.0).** Well-formed
-emphasis now matches Marked, including the flanking rules and the CJK extension
-upstream applies with `marked-cjk-friendly` (`b2d0da6fe`, #10154): the 95-case
-token corpus and a 26-case matrix agree, and 391 of 400 random emphasis-heavy
-strings do too. The rest are malformed delimiter runs where Marked's regex-based
-scan picks a different boundary, for example `：__1_` (Marked renders `_` literal
-then em(1); pier leaves the text literal) and `**__(___*` (pier opens a strong
-where Marked does not). Matching those needs Marked's exact `emStrong` regex
-alternatives, which RE2 cannot express, so the scan reimplements their intent.
+No unresolved findings. The pathological emphasis runs recorded against pi
+v1.4.0's Markdown pipeline are fixed, including `：__1_` and `**__(___*`. Red-first
+regressions in `internal/markdown/emphasis_test.go` cover failed-run retries,
+text-predecessor tracking, mixed-marker masking, nested underscore openers,
+JavaScript whitespace and supplementary-character handling. Two deterministic
+50,002-case comparisons against Marked 18.0.11 with marked-cjk-friendly 0.1.2
+matched after the fixes (one emphasis-only pool, one expanded Unicode pool).
 
-No unresolved findings otherwise. The compaction audits of `48081fe` and `5918595`
+The compaction audits of `48081fe` and `5918595`
 recorded eight findings against pi v1.3.0
 (`71023aec1546d6d677a65669c5665c0927ce0dd0`): resumed overflow blocking the
 next prompt, the between-turn threshold ignoring new tool-result tokens,

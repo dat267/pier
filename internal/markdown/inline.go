@@ -51,7 +51,10 @@ func ParseInline(src string) []Inline {
 	}
 	var out []Inline
 	var text strings.Builder
+	var prevText rune
+	hasPrevText := false
 	flush := func() {
+		hasPrevText = false
 		if text.Len() > 0 {
 			out = append(out, Inline{Kind: InlineText, Text: text.String()})
 			text.Reset()
@@ -60,6 +63,14 @@ func ParseInline(src string) []Inline {
 
 	i := 0
 	for i < len(src) {
+		if text.Len() > 0 {
+			value := text.String()
+			// Marked updates prevChar only for text not ending in `_`.
+			if value[len(value)-1] != '_' {
+				prevText, _ = utf8.DecodeLastRuneInString(value)
+				hasPrevText = true
+			}
+		}
 		c := src[i]
 		switch c {
 		case '\\':
@@ -126,19 +137,17 @@ func ParseInline(src string) []Inline {
 			text.WriteString(src[i:j])
 			i = j
 		case '*', '_':
-			consumed, inline, ok := parseDelimited(src, i, c)
+			consumed, inline, ok := parseEmStrong(src, i, c, prevText, hasPrevText)
 			if ok {
 				flush()
 				out = append(out, inline)
 				i = consumed
 				continue
 			}
-			// A delimiter run is consumed whole: a later position inside it is
-			// not a new opener, so `a__b__c` stays literal.
-			for i < len(src) && src[i] == c {
-				text.WriteByte(c)
-				i++
-			}
+			// Marked retries inside an unmatched run after emitting one marker
+			// as text, so `：__1_` can still contain a one-marker opener.
+			text.WriteByte(c)
+			i++
 		case '~':
 			if end, inner, ok := strictStrikethrough(src, i); ok {
 				flush()
@@ -395,11 +404,6 @@ func strictStrikethrough(src string, i int) (int, string, bool) {
 		return k + len(marker), inner, true
 	}
 	return 0, "", false
-}
-
-// parseDelimited parses *emphasis* / **strong** / ***both*** / _…_ starting at i.
-func parseDelimited(src string, i int, ch byte) (int, Inline, bool) {
-	return parseEmStrong(src, i, ch)
 }
 
 // parseLink parses `[text](dest "title")` (or the image form when image is

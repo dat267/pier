@@ -5,7 +5,7 @@ pier is a terminal-based AI coding agent and a from-scratch Go port of
 
 ## Reference and scope
 
-The reference pin is pi v1.3.0 (`71023aec`). See [port status](docs/PORTING.md)
+The reference pin is pi v1.4.0 (`4a080252`). See [port status](docs/PORTING.md)
 for coverage and [divergences](docs/DIVERGENCES.md) for deliberate differences.
 The extension system is out of scope; `/goal` is built in.
 

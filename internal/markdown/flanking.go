@@ -11,8 +11,11 @@ import (
 // and CJK characters count as punctuation so an emphasis marker next to CJK
 // punctuation still pairs.
 
-// isDelimiterWhitespace reports whether r is whitespace for flanking.
-func isDelimiterWhitespace(r rune) bool { return unicode.IsSpace(r) }
+// isDelimiterWhitespace follows JavaScript's \s, which includes a byte-order
+// mark but excludes NEXT LINE (U+0085), unlike unicode.IsSpace.
+func isDelimiterWhitespace(r rune) bool {
+	return r == '\ufeff' || r != '\u0085' && unicode.IsSpace(r)
+}
 
 // isDelimiterPunctuation reports whether r is punctuation or a symbol for
 // flanking. CJK characters count too, which is what makes `**这是测试。**后面`

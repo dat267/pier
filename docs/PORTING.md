@@ -4,7 +4,7 @@ How much of upstream pi this port covers, package by package, plus the upstream
 pin's change log. The user-facing summary lives in `README.md`; this file is the
 authoritative per-area status.
 
-Reference pin: `71023aec` (Release v1.3.0), read from the `./pi` checkout.
+Reference pin: `4a080252` (Release v1.4.0), read from the `./pi` checkout.
 `just reference` checks that the checkout really is at that tag, and
 `just reference-fetch` refreshes its tags without moving the checkout.
 `ai/models_catalog.json` is regenerated from the pin's own generator
@@ -140,12 +140,15 @@ by UTF-16 code units like JavaScript (`core/compaction/utils.ts`
 with their findings; the directory is gone and the tests live in the normal
 suite.
 
-**Upstream status.** v1.3.0 (`71023aec`) is the latest released tag in the
-reference checkout and the port's pin. The v1.3.0 delta from v1.2.0 is ported
-(see the v1.3.0 audit below); the v1.2.0 delta from v1.1.0 was audited.
-Confirmed gaps, porting progress, and out-of-scope areas are recorded below.
-Earlier release notes retain upstream versions and commit IDs as historical
-context.
+**Upstream status.** v1.4.0 (`4a080252`) is the latest released tag after
+refreshing upstream tags and is the port's reference pin. It is 81 commits past
+v1.3.0. The pin identifies the sources to review, not a claim that every change
+is ported. The v1.4.0 catalog, transcript tool-change modes and Markdown work
+are described below; a complete v1.3.0-to-v1.4.0 delta audit remains open.
+The v1.3.0 delta from v1.2.0 is ported (see the historical v1.3.0 audit below);
+the v1.2.0 delta from v1.1.0 was audited. Confirmed gaps, porting progress and
+out-of-scope areas are recorded below. Earlier release notes retain upstream
+versions and commit IDs as historical context.
 
 **v1.2.0 parity fixes so far.** The built-in catalog is regenerated from the
 pinned v1.2.0 generator and current upstream catalog APIs. OpenRouter model
@@ -234,9 +237,9 @@ applied (`6f2f164ab`, `core/agent-session.ts`). The invalid `\u` escape repair
 landed as `34a8bb38b` (a text note) and was replaced within the release by
 `5ab7fe74c`: the images now follow the tool results of the turn.
 
-**v1.3.0 delta audit (the pin).** The reference checkout holds `v1.3.0`
-(`71023aec`, Release v1.3.0), 63 commits past v1.2.0 (207 files), and is the
-port's pin. This mapping is authoritative for the in-scope work.
+**v1.3.0 delta audit (previous pin).** The v1.3.0 release (`71023aec`) is
+63 commits past v1.2.0 (207 files) and was the port's previous pin. This mapping
+records the completed in-scope v1.3.0 work.
 `packages/tui/src`, `packages/agent/src` and `packages/mcp/src` are unchanged
 in the delta, so only `ai`, `coding-agent` and `durable` carry work. Out of
 scope (documented, not ported): chord's typed-host rewrite and protocol
@@ -341,13 +344,19 @@ fetch models.dev; the tag only pins the generator.
 defaults would otherwise resolve to the provider's first model; a test now
 asserts every default exists in the shipped catalog.
 
-Emphasis follows CommonMark's flanking rules the way Marked applies them, with
-the `marked-cjk-friendly` extension upstream adds (`b2d0da6fe`, #10154): a run
-opens when it is left-flanking and closes when it is right-flanking, CJK
-characters count as punctuation, and an underscore never pairs intraword. A
-delimiter run is consumed whole, so `a__b__c` and `a_b_c` stay literal while
-`_foo_bar_baz_` still emphasizes. The 95-case token corpus, generated from marked
-18.0.11 plus the extension, pins the behavior, including the CJK cases.
+Emphasis follows Marked 18.0.11 with the `marked-cjk-friendly` 0.1.2 extension
+upstream adds (`b2d0da6fe`, #10154). Failed delimiter runs emit one marker at a
+time, preserving Marked's text predecessor across underscores and clearing it
+after inline tokens. Mixed-marker spans use the right-delimiter regex's initial
+skip alternative, and nested underscore openers contribute to the delimiter
+balance. Opening guards distinguish punctuation from word content before the
+CJK overrides, including JavaScript whitespace and UTF-16 predecessor semantics.
+This resolves the pathological runs previously recorded in `TODO.md`, including
+`：__1_` and `**__(___*`, without changing intraword underscore behavior. Red-first
+regression tests and the existing 95-case token corpus pass. Two deterministic
+50,002-case comparisons against the pinned Marked/extension versions matched:
+one emphasis-only pool and one expanded with supplementary CJK, variation
+selectors and JavaScript-specific whitespace.
 
 Tool changes after the first request now say how a transport can express them
 (`TranscriptToolSupport`): `"none"` keeps the current tools at the top,
