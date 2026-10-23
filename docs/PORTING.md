@@ -121,6 +121,25 @@ and provider-body reads cannot resurrect idle timers after close (D254).
 The typed RPC client can restart after `Stop`, matching `modes/rpc/rpc-client.ts`.
 Each finding has a regression test observed failing before its fix.
 
+The eight reproduced compaction findings from the audits of `48081fe` and
+`5918595` were resolved the same way, with red-first regression tests in
+`coding/compaction_findings_test.go`. Recovery omissions refresh finalized
+context immediately and resolve source entries through persisted and positional
+provenance, so a resumed session can recover overflow and a failed summary
+cannot replay an omitted response (`core/agent-session.ts`
+`_omitRecoveryAttempt`, `_findPersistedMessageEntryId`). The next-turn
+threshold check estimates the complete projection including new tool results
+(`_compactBeforeNextAssistantResponse`), and usage is trusted only when its
+source entry follows the latest context edit or compaction in branch order
+(`core/compaction/compaction.ts` `estimateProjectedContextTokens`). Summary
+requests forward provider environment and the selected reasoning level, and
+both compaction paths pass the request signal into auth resolution
+(`createSummarizationOptions`, `_getSummarizationRequestAuth`). File lists sort
+by UTF-16 code units like JavaScript (`core/compaction/utils.ts`
+`computeFileLists`). The promoted probes left `coding/testdata/compaction-audit/`
+with their findings; the directory is gone and the tests live in the normal
+suite.
+
 **Upstream status.** v1.3.0 (`71023aec`) is the latest released tag in the
 reference checkout and the port's pin. The v1.3.0 delta from v1.2.0 is ported
 (see the v1.3.0 audit below); the v1.2.0 delta from v1.1.0 was audited.

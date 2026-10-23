@@ -1,81 +1,15 @@
 # Reproduced audit findings
 
-## Compaction audits of `48081fe` and `5918595`
-
-Reference: pi **v1.3.0** (`71023aec1546d6d677a65669c5665c0927ce0dd0`).
-All eight findings below reproduced on three consecutive runs. No production
-fixes have been applied. The failing probes live under
-`coding/testdata/compaction-audit/` so they do not break the normal test gate.
-See that directory's `README.md` for the reproduction command.
-
-1. **High: resumed overflow prevents the next prompt.**
-   `coding/agent_session_compaction.go`'s `entryIDForMessage` only consults the
-   live message-to-entry map. SDK resume installs messages with `SetMessages`
-   (`coding/sdk.go`) without filling that map. A resumed session ending in a
-   context-overflow error fails its next `PromptText` with
-   `Cannot persist recovery omission because a projected message has no source entry`.
-   Upstream `_findPersistedMessageEntryId` falls back to branch/projection
-   provenance. Probe: `TestAuditCompactionRecoversResumedOverflow`.
-
-2. **High: the between-turn threshold check ignores new tool-result tokens.**
-   `coding/agent_session.go`'s `maybeAutoCompact` calls `CheckCompaction` on the
-   last assistant; without context edits, that uses its usage directly rather
-   than estimating trailing messages. With 610 reported tokens and an 800-token
-   tool result, the next request is sent without compaction in a 1000-token
-   window (reserve 100). Upstream `_compactBeforeNextAssistantResponse` checks
-   the complete projection. Probe: `TestAuditCompactionCountsNewToolResults`.
-
-3. **Medium: retained pre-compaction usage remains trusted.**
-   `coding/compaction.go`'s `EstimateProjectedContextTokens` compares entry
-   positions in replay order, where the latest compaction precedes its retained
-   messages, instead of chronological branch order. A short summary and two
-   short retained messages still report 900100 tokens after compaction.
-   The same fixture through upstream `estimateProjectedContextTokens` reports
-   12 tokens with no usage-backed estimate. This also affects preparation's
-   `TokensBefore`. Probe: `TestAuditCompactionInvalidatesRetainedUsage`.
-
-4. **Medium: compaction drops configured provider environment.**
-   `coding/compaction.go`'s `runSummarization` never copies `CompactionOptions.Env`
-   into stream options. A configured `AWS_REGION` is absent from the summary
-   request, even though auth resolution supplies environment in both session
-   compaction paths. Providers using scoped environment can fail or use process
-   defaults instead. Upstream `createSummarizationOptions` forwards `env`.
-   Probe: `TestAuditCompactionForwardsProviderEnvironment`.
-
-5. **Medium: manual and automatic compaction drop the selected reasoning level.**
-   `runManualCompaction` (`coding/agent_session.go`) and `RunAutoCompaction`
-   (`coding/agent_session_compaction.go`) construct `CompactionOptions` without
-   `ThinkingLevel`. With a reasoning-capable model set to `high`, both summary
-   requests carry an empty reasoning level. Upstream `_getSummarizationRequestAuth`
-   and `_runDefaultCompaction` forward the selected level.
-   Probe: `TestAuditCompactionKeepsSelectedReasoning`.
-
-6. **High: failed overflow compaction leaves live context out of sync.**
-   `coding/agent_session_compaction.go`'s `omitRecoveryAttempt` persists the
-   omission but does not refresh the live agent context. If the subsequent
-   summarization fails, the success-only refresh in `RunAutoCompaction` never
-   runs. The next `PromptText` sends the omitted overflow response back to the
-   provider, even though it is absent from the persisted projection. Upstream
-   `_omitRecoveryAttempt` immediately calls `_refreshFinalizedContext`.
-   Probe: `TestAuditCompactionFailureKeepsLiveContextProjected`.
-
-7. **Medium: compaction cancellation does not reach auth resolution.**
-   `runManualCompaction` (`coding/agent_session.go`) and `RunAutoCompaction`
-   (`coding/agent_session_compaction.go`) call `GetAuthForModel(model, nil)`
-   instead of forwarding the compaction context. In both paths, cancelling the
-   request leaves the API-key auth resolver's context uncancelled. Auth work
-   that waits on that context cannot stop promptly. This is separate from the
-   intentional cancellation shielding of an already-started OAuth token
-   rotation. Upstream `_getSummarizationRequestAuth` forwards the signal.
-   Probe: `TestAuditCompactionAuthReceivesRequestContext`.
-
-8. **Low: summary file lists use the wrong Unicode sort order.**
-   `coding/compaction.go`'s `sortStrings` compares UTF-8 strings, whereas upstream
-   `core/compaction/utils.ts`'s `computeFileLists` uses JavaScript's default
-   UTF-16 code-unit order. With paths `\\ue000.txt` and `😀.txt`, Pier puts the
-   private-use character first, while upstream puts the emoji first. The
-   summary's file sections and persisted details therefore fail byte parity.
-   Probe: `TestAuditCompactionFileListsUseUTF16Order`.
+No unresolved findings. The compaction audits of `48081fe` and `5918595`
+recorded eight findings against pi v1.3.0
+(`71023aec1546d6d677a65669c5665c0927ce0dd0`): resumed overflow blocking the
+next prompt, the between-turn threshold ignoring new tool-result tokens,
+retained usage trusted after compaction, compaction dropping provider
+environment and the selected reasoning level, failed overflow compaction
+replaying the omitted response, compaction auth resolution escaping the request
+context, and UTF-8 file-list ordering. All eight now have red-first regression
+tests in `coding/compaction_findings_test.go`; each probe was promoted from
+`coding/testdata/compaction-audit/` and observed failing before its fix landed.
 
 ## Earlier audit
 
