@@ -270,3 +270,21 @@ func TestFooterSanitizesExtensionStatuses(t *testing.T) {
 		t.Fatalf("sanitize = %q; want %q", got, "padded")
 	}
 }
+
+// Upstream sanitizeStatusText only rewrites \r, \n and \t and only collapses
+// ASCII space runs, so other whitespace (NBSP, vertical tab, ideographic space)
+// survives in the footer.
+func TestFooterStatusSanitizerKeepsNonCollapsedWhitespace(t *testing.T) {
+	for _, test := range []struct{ input, want string }{
+		{"a\u00a0b", "a\u00a0b"},
+		{"a\vb", "a\vb"},
+		{"a\fb", "a\fb"},
+		{"a\u3000b", "a\u3000b"},
+		{"a \u00a0 b", "a \u00a0 b"},
+		{"\u00a0 padded \u00a0", "padded"},
+	} {
+		if got := sanitizeStatusText(test.input); got != test.want {
+			t.Fatalf("sanitize(%q) = %q; want %q", test.input, got, test.want)
+		}
+	}
+}
