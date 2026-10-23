@@ -2128,59 +2128,57 @@ Tests: `TestThinkingMarkdownKeepsStyledTextItalic`,
 
 ## D264
 
-**A summarization that hits the output cap escalates instead of failing the
+**A summarization that runs out of answer room escalates instead of failing the
 compaction.**
 
-Reference: `core/compaction/compaction.ts` (`generateSummaryWithUsage`'s
-`maxTokens = min(floor(0.8 * reserveTokens), model.maxTokens)`,
+Reference: `core/compaction/compaction.ts` (`generateSummaryWithUsage`,
 `createSummarizationOptions`, `getSummarizationFailure`,
 `completeSummarization`, `UPDATE_SUMMARIZATION_PROMPT`).
 
-Upstream fails the whole compaction on the first `length` stop with
+Upstream v1.3.0 failed the whole compaction on the first `length` stop with
 `Summarization failed: generation hit the token cap and the summary is
-incomplete`, which leaves a long session uncompactable. The cap it reports is
-the room left in the window, not the summary's own size: compaction fires at
-`contextWindow - reserveTokens`, so the answer has roughly the reserve to work
-with, and reasoning tokens are drawn from that same `max_tokens` budget. A
-`high` thinking level can consume most of the reserve and leave too little for
-the summary text.
+incomplete`, which left a long session uncompactable. Upstream v1.4.0 addresses
+the common cause by sending no `maxTokens` for a summary request
+(`6fcb48670`), so the provider sizes the answer from the request: the model's
+output limit, reduced to fit the remaining context, as for a normal turn. The
+port does the same, and the fixed caps (`0.8 * reserveTokens` for a conversation
+summary, `0.5` for a turn prefix, a hardcoded `4096` for a branch summary) are
+gone with them.
 
-Raising the cap is not the fix. Where the window is full it changes nothing, and
-where it does apply it can exceed the window on the providers that do not clamp
-(only Anthropic and Bedrock do), or produce a summary so long that it becomes
-the leading context of every later request, defeating the point of compacting.
+What remains reachable is a `length` stop where the answer really did fill the
+room that was left, or where the thinking tokens took most of it. The port
+escalates there instead of giving up:
 
-The port keeps upstream's request shape on the success path and escalates only
-after a `length` stop, in two steps:
-
-1. Same input, more room: reasoning off and the budget raised to the model's own
-   output limit clamped to what still fits the window
-   (`ai.ClampMaxTokensToContext`), which is exactly the room the answer lacked.
-2. Conclusively, less input at a time: the messages are split near the middle by
-   estimated token weight, the first half is summarized down to a checkpoint, and
-   the second half is merged into it through upstream's update prompt. Each chunk
-   then has the whole budget for its own answer, and a chunk that still overflows
-   splits again. The split never falls between a tool call and its result: the
-   boundary nearest the weight midpoint is chosen whose left side has no
-   outstanding call, so a parallel batch and its results stay in one chunk. Only
-   when every boundary sits inside a call/result chain does the weight split win,
-   because a separated pair still beats failing the compaction.
+1. Same input, without the thinking tokens: the retry turns reasoning off, which
+   is the only share left to free once the provider sizes the budget.
+2. Less input at a time: the messages are split near the middle by estimated
+   token weight, the first half is summarized down to a checkpoint, and the
+   second half is merged into it through upstream's update prompt. Each chunk's
+   answer then has the whole budget for its own request, and a chunk that still
+   overflows splits again. The split never falls between a tool call and its
+   result: the boundary nearest the weight midpoint is chosen whose left side has
+   no outstanding call, so a parallel batch and its results stay in one chunk.
+   Only when every boundary sits inside a call/result chain does the weight split
+   win, because a separated pair still beats failing the compaction.
 
 One summarization spends at most `maxSummarizationRequests` (10) requests, and
 every pass shares one routing id, as one upstream `completeSummarization` call
 does across its retries. Usage accumulates across the passes, since the tokens
 were really spent. Only a single message that overflows on its own, a model that
 overflows every chunk, or a summarization that exhausts that budget still
-reports upstream's message, so partial text never becomes a checkpoint. The split-turn path uses the same escalation, merging through a
-turn-prefix merge instruction so its checkpoint keeps the turn-prefix sections
+reports upstream's message, so partial text never becomes a checkpoint. The
+split-turn path uses the same escalation, merging through a turn-prefix merge
+instruction so its checkpoint keeps the turn-prefix sections
 (`## Original Request`, `## Progress So Far`, `## Context Needed to Continue`)
 instead of being restyled into the conversation ones.
 
-Tests: `TestSummarizationRetriesOnceWhenTheTokenCapIsHit`,
+Tests: `TestSummarizationSendsNoOutputLimit`,
+`TestSummarizationRetriesOnceWhenTheTokenCapIsHit`,
 `TestSummarizationRetryIsBoundedAndStillFailsLoudly`,
 `TestSummarizationDoesNotRetryWithoutALever`,
 `TestSummarizationSplitsTheInputWhenTheCapKeepsHitting`,
 `TestSummarizationSplitStaysBounded`,
 `TestSummarizationSplitKeepsToolCallsWithTheirResults`,
-`TestSummarizationSplitSummarizesACallWithItsResult` and
-`TestTurnPrefixSummaryMergeKeepsItsOwnSections`.
+`TestSummarizationSplitSummarizesACallWithItsResult`,
+`TestTurnPrefixSummaryMergeKeepsItsOwnSections` and
+`TestBranchSummarySendsNoOutputLimit`.

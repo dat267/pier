@@ -389,8 +389,7 @@ func TestTurnPrefixPromptUsesMarkdownBoundaries(t *testing.T) {
 		},
 	}
 	if _, err := generateTurnPrefixSummary(
-		[]ai.Message{&ai.UserMessage{Content: ai.StringOrBlocks{Text: "Summarize this."}, Timestamp: 1}}, options,
-		DefaultCompactionSettings.ReserveTokens); err != nil {
+		[]ai.Message{&ai.UserMessage{Content: ai.StringOrBlocks{Text: "Summarize this."}, Timestamp: 1}}, options); err != nil {
 		t.Fatal(err)
 	}
 	if strings.Contains(captured, "<conversation>") {
@@ -556,56 +555,48 @@ func TestPrepareCompactionAdvancesPastRecoveryOmission(t *testing.T) {
 	}
 }
 
-// TestCompactCapsSummaryTokensFromSettings covers the summarization output cap
-// (upstream generateSummaryWithUsage / generateTurnPrefixSummary): it is a
-// fraction of the configured reserve tokens, not of the defaults, so a session
-// with a smaller reserve asks for a smaller summary.
-func TestCompactCapsSummaryTokensFromSettings(t *testing.T) {
-	newPreparation := func(reserveTokens int64) *CompactionPreparation {
-		m := NewSessionManager("/tmp", &SessionManagerOptions{Persist: boolPtr(false)})
-		for i := 0; i < 3; i++ {
-			m.AppendMessage(createUserMessage(strings.Repeat("u", 400)))
-			m.AppendMessage(createAssistantMessageT(strings.Repeat("a", 400)))
-		}
-		preparation := PrepareCompaction(m.GetEntries(), CompactionSettings{
-			Enabled: true, ReserveTokens: reserveTokens, KeepRecentTokens: 200,
-		})
-		if preparation == nil {
-			t.Fatal("compaction should be preparable")
-		}
-		return preparation
+// TestSummarizationSendsNoOutputLimit pins upstream v1.4.0 6fcb48670: summary
+// requests carry no maxTokens, so the provider sizes output from the actual
+// request (the model's output limit, reduced to fit the remaining context). The
+// old fixed caps (0.8 and 0.5 of reserveTokens) assumed the summary request is
+// as large as the whole context, and reasoning shares the cap on the providers
+// that bill thinking against it.
+func TestSummarizationSendsNoOutputLimit(t *testing.T) {
+	m := NewSessionManager("/tmp", &SessionManagerOptions{Persist: boolPtr(false)})
+	for i := 0; i < 3; i++ {
+		m.AppendMessage(createUserMessage(strings.Repeat("u", 400)))
+		m.AppendMessage(createAssistantMessageT(strings.Repeat("a", 400)))
 	}
-
-	run := func(preparation *CompactionPreparation) int {
-		var maxTokens int
-		options := CompactionOptions{
-			// A model limit above the reserve-derived cap so the cap is what the
-			// test measures.
-			Model: &ai.Model{ID: "mock", API: "openai-responses", Provider: "openai", MaxTokens: 100000},
-			StreamFn: func(model *ai.Model, context ai.TranscriptContext, streamOptions *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
-				if streamOptions.MaxTokens != nil {
-					maxTokens = *streamOptions.MaxTokens
-				}
-				stream := ai.NewAssistantMessageEventStream()
-				stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
-					Content: ai.ContentList{ai.TextContent{Text: "## Goal\nsummary text long enough to pass the usability check"}},
-					API:     model.API, Provider: model.Provider, Model: model.ID,
-					StopReason: ai.StopStop, Timestamp: 1,
-				}})
-				return stream
-			},
-		}
-		if _, err := Compact(preparation, options); err != nil {
-			t.Fatal(err)
-		}
-		return maxTokens
+	preparation := PrepareCompaction(m.GetEntries(), CompactionSettings{
+		Enabled: true, ReserveTokens: 16384, KeepRecentTokens: 200,
+	})
+	if preparation == nil {
+		t.Fatal("compaction should be preparable")
 	}
-
-	if got := run(newPreparation(16384)); got != 13107 {
-		t.Fatalf("max tokens with the default reserve = %d, want 13107", got)
+	var limits []*int
+	options := CompactionOptions{
+		Model: &ai.Model{ID: "mock", API: "openai-responses", Provider: "openai", MaxTokens: 100000},
+		StreamFn: func(model *ai.Model, _ ai.TranscriptContext, streamOptions *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+			limits = append(limits, streamOptions.MaxTokens)
+			stream := ai.NewAssistantMessageEventStream()
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
+				Content: ai.ContentList{ai.TextContent{Text: "## Goal\nsummary text long enough to pass the usability check"}},
+				API:     model.API, Provider: model.Provider, Model: model.ID,
+				StopReason: ai.StopStop, Timestamp: 1,
+			}})
+			return stream
+		},
 	}
-	if got := run(newPreparation(4000)); got != 3200 {
-		t.Fatalf("max tokens with a 4000-token reserve = %d, want 3200", got)
+	if _, err := Compact(preparation, options); err != nil {
+		t.Fatal(err)
+	}
+	if len(limits) == 0 {
+		t.Fatal("no summarization request was sent")
+	}
+	for index, limit := range limits {
+		if limit != nil {
+			t.Fatalf("summarization request %d sent maxTokens %d; want none", index, *limit)
+		}
 	}
 }
 
@@ -640,7 +631,7 @@ func TestSummarizationRetriesOnceWhenTheTokenCapIsHit(t *testing.T) {
 	result, err := generateSummaryWithUsage(
 		[]ai.Message{&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}}},
 		CompactionOptions{Model: model, StreamFn: streamFn, ThinkingLevel: ai.ThinkHigh, Retry: &ai.RetryPolicy{Enabled: true, MaxRetries: 1}},
-		"", 16384,
+		"",
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -648,16 +639,18 @@ func TestSummarizationRetriesOnceWhenTheTokenCapIsHit(t *testing.T) {
 	if len(requests) != 2 {
 		t.Fatalf("summarization requests = %d; want a single retry", len(requests))
 	}
-	// The first request carries the configured reasoning level and the
-	// reserve-derived budget; the retry frees both.
-	if requests[0].Reasoning != ai.ThinkHigh || requests[0].MaxTokens == nil || *requests[0].MaxTokens > 16384 {
-		t.Fatalf("first request = reasoning %q, maxTokens %v", requests[0].Reasoning, requests[0].MaxTokens)
+	// The first request carries the configured reasoning level; the retry frees
+	// the answer room the thinking tokens were taking.
+	if requests[0].Reasoning != ai.ThinkHigh {
+		t.Fatalf("first request reasoning = %q; want the configured level", requests[0].Reasoning)
 	}
 	if requests[1].Reasoning != "" && requests[1].Reasoning != ai.ThinkOff {
 		t.Fatalf("retry reasoning = %q; want off", requests[1].Reasoning)
 	}
-	if requests[1].MaxTokens == nil || *requests[1].MaxTokens <= *requests[0].MaxTokens {
-		t.Fatalf("retry maxTokens = %v; want more room than %v", requests[1].MaxTokens, *requests[0].MaxTokens)
+	for index, request := range requests {
+		if request.MaxTokens != nil {
+			t.Fatalf("request %d sent maxTokens %d; summaries take no output limit", index, *request.MaxTokens)
+		}
 	}
 	if !strings.Contains(result.text, "complete summary") {
 		t.Fatalf("summary = %q", result.text)
@@ -687,7 +680,7 @@ func TestSummarizationRetryIsBoundedAndStillFailsLoudly(t *testing.T) {
 	_, err := generateSummaryWithUsage(
 		[]ai.Message{&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}}},
 		CompactionOptions{Model: model, StreamFn: streamFn, ThinkingLevel: ai.ThinkHigh},
-		"", 16384,
+		"",
 	)
 	if err == nil || !strings.Contains(err.Error(), "token cap") {
 		t.Fatalf("err = %v; want the upstream failure", err)
@@ -697,8 +690,8 @@ func TestSummarizationRetryIsBoundedAndStillFailsLoudly(t *testing.T) {
 	}
 }
 
-// Nothing is retried when there is no lever left: reasoning already off and the
-// budget already at the model's cap.
+// Nothing is retried when there is no lever left: a model that takes no
+// reasoning level has nothing to free.
 func TestSummarizationDoesNotRetryWithoutALever(t *testing.T) {
 	calls := 0
 	streamFn := func(model *ai.Model, _ ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
@@ -710,13 +703,12 @@ func TestSummarizationDoesNotRetryWithoutALever(t *testing.T) {
 		}})
 		return stream
 	}
-	// 0.8*16384 caps at the model's own 8192 output limit, and the model takes
-	// no reasoning level, so neither lever is left.
+	// The model takes no reasoning level, so there is no lever to pull.
 	model := &ai.Model{ID: "mock", API: ai.APIOpenAICompletions, Provider: "openai", ContextWindow: 128000, MaxTokens: 8192}
 	_, err := generateSummaryWithUsage(
 		[]ai.Message{&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}}},
 		CompactionOptions{Model: model, StreamFn: streamFn},
-		"", 16384,
+		"",
 	)
 	if err == nil || !strings.Contains(err.Error(), "token cap") {
 		t.Fatalf("err = %v; want the upstream failure", err)
@@ -785,7 +777,7 @@ func TestSummarizationSplitsTheInputWhenTheCapKeepsHitting(t *testing.T) {
 	model := &ai.Model{ID: "mock", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 200000, MaxTokens: 64000}
 	result, err := generateSummaryWithUsage(messages, CompactionOptions{
 		Model: model, StreamFn: capModelStreamFn(t, 4, &requests),
-	}, "", 16384)
+	}, "")
 	if err != nil {
 		t.Fatalf("err = %v; want the split fallback to complete the summary", err)
 	}
@@ -815,7 +807,7 @@ func TestSummarizationSplitStaysBounded(t *testing.T) {
 		messages = append(messages, &ai.UserMessage{Content: ai.StringOrBlocks{Text: fmt.Sprintf("chunk-%d", index)}})
 	}
 	model := &ai.Model{ID: "mock", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 200000, MaxTokens: 64000}
-	_, err := generateSummaryWithUsage(messages, CompactionOptions{Model: model, StreamFn: streamFn}, "", 16384)
+	_, err := generateSummaryWithUsage(messages, CompactionOptions{Model: model, StreamFn: streamFn}, "")
 	if err == nil || !strings.Contains(err.Error(), "token cap") {
 		t.Fatalf("err = %v; want the upstream failure", err)
 	}
@@ -950,7 +942,7 @@ func TestSummarizationSplitSummarizesACallWithItsResult(t *testing.T) {
 		&ai.UserMessage{Content: heavyMessage(40)},
 		&ai.UserMessage{Content: heavyMessage(40)},
 	}
-	if _, err := generateSummaryWithUsage(messages, CompactionOptions{Model: model, StreamFn: streamFn}, "", 16384); err != nil {
+	if _, err := generateSummaryWithUsage(messages, CompactionOptions{Model: model, StreamFn: streamFn}, ""); err != nil {
 		t.Fatal(err)
 	}
 	for _, prompt := range prompts {
@@ -998,7 +990,7 @@ func TestTurnPrefixSummaryMergeKeepsItsOwnSections(t *testing.T) {
 		&ai.UserMessage{Content: heavyMessage(40)},
 		&ai.UserMessage{Content: heavyMessage(40)},
 	}
-	if _, err := generateTurnPrefixSummary(messages, options, DefaultCompactionSettings.ReserveTokens); err != nil {
+	if _, err := generateTurnPrefixSummary(messages, options); err != nil {
 		t.Fatal(err)
 	}
 	merges := 0

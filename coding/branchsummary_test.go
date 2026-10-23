@@ -694,3 +694,37 @@ func TestFreshSessionPersistsItsInitialToolDeclaration(t *testing.T) {
 		t.Fatalf("resumed active = %v; want read,bash", names)
 	}
 }
+
+// A branch summary takes no output limit either: upstream v1.4.0 6fcb48670
+// removed the hardcoded 4096 cap so the provider sizes the answer from the
+// request, like every other summary.
+func TestBranchSummarySendsNoOutputLimit(t *testing.T) {
+	entries := branchEntries()
+	var limit *int
+	var seen bool
+	streamFn := func(model *ai.Model, _ ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		seen = true
+		limit = options.MaxTokens
+		stream := ai.NewAssistantMessageEventStream()
+		go func() {
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
+				API: ai.APIAnthropicMessages, Provider: "anthropic", Model: model.ID,
+				Content:    ai.ContentList{ai.TextContent{Text: "## Goal\ndo the thing"}},
+				StopReason: ai.StopStop,
+			}})
+		}()
+		return stream
+	}
+	if _, err := GenerateBranchSummary(entries, GenerateBranchSummaryOptions{
+		Model:    &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 100000, MaxTokens: 8192},
+		StreamFn: streamFn, Ctx: ctxpkg.Background(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if !seen {
+		t.Fatal("no branch summary request was sent")
+	}
+	if limit != nil {
+		t.Fatalf("branch summary sent maxTokens %d; want none", *limit)
+	}
+}

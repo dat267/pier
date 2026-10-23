@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -1192,14 +1191,14 @@ func Compact(preparation *CompactionPreparation, options CompactionOptions) (*Co
 		}
 		var historyUsage *ai.Usage
 		if len(preparation.MessagesToSummarize) > 0 {
-			result, err := generateSummaryWithUsage(preparation.MessagesToSummarize, options, preparation.PreviousSummary, preparation.Settings.ReserveTokens)
+			result, err := generateSummaryWithUsage(preparation.MessagesToSummarize, options, preparation.PreviousSummary)
 			if err != nil {
 				return nil, err
 			}
 			historyText = result.text
 			historyUsage = result.usage
 		}
-		turnPrefixResult, err := generateTurnPrefixSummary(preparation.TurnPrefixMessages, options, preparation.Settings.ReserveTokens)
+		turnPrefixResult, err := generateTurnPrefixSummary(preparation.TurnPrefixMessages, options)
 		if err != nil {
 			return nil, err
 		}
@@ -1211,7 +1210,7 @@ func Compact(preparation *CompactionPreparation, options CompactionOptions) (*Co
 		}
 		hasUsage = true
 	} else {
-		result, err := generateSummaryWithUsage(preparation.MessagesToSummarize, options, preparation.PreviousSummary, preparation.Settings.ReserveTokens)
+		result, err := generateSummaryWithUsage(preparation.MessagesToSummarize, options, preparation.PreviousSummary)
 		if err != nil {
 			return nil, err
 		}
@@ -1258,7 +1257,6 @@ type summarizationPlan struct {
 	// prompt renders the request for one chunk. previousSummary is empty only
 	// for the first chunk of a summary that starts from nothing.
 	prompt    func(messages []ai.Message, previousSummary string) string
-	maxTokens int
 	reasoning ai.ThinkingLevel
 }
 
@@ -1269,24 +1267,26 @@ type summarizationEscalation struct {
 	usage    ai.Usage
 }
 
-// generateSummaryWithUsage generates or updates a conversation summary.
-func generateSummaryWithUsage(currentMessages []ai.Message, options CompactionOptions, previousSummary string, reserveTokens int64) (*summaryWithUsage, error) {
+// generateSummaryWithUsage generates or updates a conversation summary. The
+// request carries no output limit: the provider sizes the answer from the actual
+// request, so consistency with normal turns comes for free and reasoning tokens
+// cannot starve the summary (upstream v1.4.0 6fcb48670; reserveTokens only
+// decides when compaction starts).
+func generateSummaryWithUsage(currentMessages []ai.Message, options CompactionOptions, previousSummary string) (*summaryWithUsage, error) {
 	return summarizeConversation(currentMessages, options, previousSummary, summarizationPlan{
 		label: "Summarization",
 		prompt: func(messages []ai.Message, previous string) string {
 			return conversationSummaryPrompt(messages, options, previous)
 		},
-		maxTokens: summarizationBudgetTokens(options.Model, 0.8, reserveTokens),
 		reasoning: options.ThinkingLevel,
 	})
 }
 
 // generateTurnPrefixSummary summarizes a split turn's prefix.
-func generateTurnPrefixSummary(messages []ai.Message, options CompactionOptions, reserveTokens int64) (*summaryWithUsage, error) {
+func generateTurnPrefixSummary(messages []ai.Message, options CompactionOptions) (*summaryWithUsage, error) {
 	return summarizeConversation(messages, options, "", summarizationPlan{
 		label:     "Turn prefix summarization",
 		prompt:    turnPrefixSummaryPrompt,
-		maxTokens: summarizationBudgetTokens(options.Model, 0.5, reserveTokens),
 		reasoning: options.ThinkingLevel,
 	})
 }
@@ -1328,16 +1328,6 @@ func turnPrefixSummaryPrompt(messages []ai.Message, previousSummary string) stri
 // compact() prefixes as "* Turn prefix: ...".
 const turnPrefixMergeInstruction = `The summary in <previous-summary> was produced from earlier messages of this same turn. Merge it with the messages above: keep everything it established, add what these messages show, and use exactly the sections below.`
 
-// summarizationBudgetTokens is upstream's min(fraction * reserveTokens,
-// model.maxTokens) answer-room budget.
-func summarizationBudgetTokens(model *ai.Model, fraction float64, reserveTokens int64) int {
-	maxTokens := math.Floor(fraction * float64(reserveTokens))
-	if model.MaxTokens > 0 && maxTokens > float64(model.MaxTokens) {
-		maxTokens = float64(model.MaxTokens)
-	}
-	return int(maxTokens)
-}
-
 // summarizeConversation summarizes messages under one plan, escalating until the
 // answer fits (port of generateSummaryWithUsage with D264's escalation).
 func summarizeConversation(messages []ai.Message, options CompactionOptions, previousSummary string, plan summarizationPlan) (*summaryWithUsage, error) {
@@ -1348,7 +1338,7 @@ func summarizeConversation(messages []ai.Message, options CompactionOptions, pre
 		options.SessionID = UUIDv7()
 	}
 	escalation := &summarizationEscalation{}
-	summary, err := summarizeChunks(options.Model, messages, options, plan, previousSummary, plan.maxTokens, plan.reasoning, escalation)
+	summary, err := summarizeChunks(options.Model, messages, options, plan, previousSummary, plan.reasoning, escalation)
 	if err != nil {
 		return nil, err
 	}
@@ -1369,7 +1359,6 @@ func summarizeChunks(
 	options CompactionOptions,
 	plan summarizationPlan,
 	previousSummary string,
-	maxTokens int,
 	reasoning ai.ThinkingLevel,
 	escalation *summarizationEscalation,
 ) (*summaryWithUsage, error) {
@@ -1382,25 +1371,25 @@ func summarizeChunks(
 		return nil, summarizationLengthFailure(plan.label)
 	}
 	context := summarizationContext(plan.prompt(messages, previousSummary))
-	response, err := requestSummarization(model, context, maxTokens, options, summarizationReasoningEnabled(model, reasoning), reasoning, escalation)
+	response, err := requestSummarization(model, context, options, summarizationReasoningEnabled(model, reasoning), reasoning, escalation)
 	if err != nil {
 		return nil, err
 	}
 	if response.StopReason != ai.StopLength {
 		return summarizationResult(plan.label, response)
 	}
-	// Same input, more room: free the whole window and the reasoning budget.
-	roomy := ai.ClampMaxTokensToContext(model, context, int(model.MaxTokens))
-	if summarizationReasoningEnabled(model, reasoning) || roomy > maxTokens {
-		next := max(roomy, maxTokens)
-		response, err = requestSummarization(model, context, next, options, false, ai.ThinkOff, escalation)
+	// Same input, without the thinking tokens competing for the answer: the
+	// provider already sized the budget from the request, so only the reasoning
+	// share is left to free.
+	if summarizationReasoningEnabled(model, reasoning) {
+		response, err = requestSummarization(model, context, options, false, ai.ThinkOff, escalation)
 		if err != nil {
 			return nil, err
 		}
 		if response.StopReason != ai.StopLength {
 			return summarizationResult(plan.label, response)
 		}
-		maxTokens, reasoning = next, ai.ThinkOff
+		reasoning = ai.ThinkOff
 	}
 	// Conclusive step: less input at a time, so each chunk's answer has the whole
 	// budget. One message that still overflows is a real failure, not a budget
@@ -1412,11 +1401,11 @@ func summarizeChunks(
 	if split <= 0 || split >= len(messages) {
 		return nil, summarizationLengthFailure(plan.label)
 	}
-	first, err := summarizeChunks(model, messages[:split], options, plan, previousSummary, maxTokens, reasoning, escalation)
+	first, err := summarizeChunks(model, messages[:split], options, plan, previousSummary, reasoning, escalation)
 	if err != nil {
 		return nil, err
 	}
-	return summarizeChunks(model, messages[split:], options, plan, first.text, maxTokens, reasoning, escalation)
+	return summarizeChunks(model, messages[split:], options, plan, first.text, reasoning, escalation)
 }
 
 // summarizationContext wraps a prompt in the summarization request.
@@ -1532,7 +1521,6 @@ func summarizationLengthFailure(label string) error {
 func requestSummarization(
 	model *ai.Model,
 	context ai.TranscriptContext,
-	maxTokens int,
 	options CompactionOptions,
 	reasoningEnabled bool,
 	reasoning ai.ThinkingLevel,
@@ -1550,7 +1538,6 @@ func requestSummarization(
 	if reasoningEnabled {
 		streamOptions.Reasoning = reasoning
 	}
-	streamOptions.MaxTokens = &maxTokens
 	escalation.requests++
 	response, err := CompleteSummarization(model, context, &streamOptions, options.StreamFn, options.Retry, options.Callbacks)
 	if response != nil {

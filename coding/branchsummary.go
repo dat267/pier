@@ -296,11 +296,6 @@ func GenerateBranchSummary(entries []SessionEntry, options GenerateBranchSummary
 		Content:   ai.StringOrBlocks{Blocks: ai.ContentList{ai.TextContent{Text: promptText}}},
 		Timestamp: time.Now().UnixMilli(),
 	}}
-	maxTokens := int64(4096)
-	if options.Model.MaxTokens > 0 && options.Model.MaxTokens < maxTokens {
-		maxTokens = options.Model.MaxTokens
-	}
-
 	systemPrompt := SummarizationSystemPrompt
 	transcript := ai.NormalizeContext(ai.Context{
 		SystemPrompt: &systemPrompt,
@@ -309,7 +304,6 @@ func GenerateBranchSummary(entries []SessionEntry, options GenerateBranchSummary
 	requestOptions := &ai.SimpleStreamOptions{
 		StreamOptions: ai.StreamOptions{
 			APIKey: options.APIKey, Headers: options.Headers,
-			MaxTokens: intPtr(int(maxTokens)),
 		},
 	}
 	if len(options.Env) > 0 {

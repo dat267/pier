@@ -396,11 +396,12 @@ requested Pi thinking level, matching upstream's `Object.assign(result, { thinki
 config.reasoning ?? "off" })` (`agent-loop.ts:409`), so a port-produced assistant
 message carries the same `thinkingLevel` key as upstream.
 
-Compaction keeps upstream's request shape and failure message, but a
-summarization that stops at the output cap escalates instead of failing: the
-same input with reasoning off and the model's output limit, then the input split
-in halves merged through the update prompt, never between a tool call and its
-result, and bounded per compaction (D264).
+Compaction keeps upstream's request shape and failure message. Summary requests
+carry no output limit (upstream v1.4.0 `6fcb48670`), so the provider sizes the
+answer from the request, and a summarization that still stops at the cap
+escalates instead of failing: the same input with reasoning off, then the input
+split in halves merged through the update prompt, never between a tool call and
+its result, and bounded per compaction (D264).
 
 Tool output was aligned with the pin's `read.ts`/`edit-diff.ts` line handling:
 the `read` tool splits on `\n` the way `read.ts:136` does, keeping the empty
