@@ -589,3 +589,30 @@ func stubStreamFn(model *ai.Model, context ai.TranscriptContext, options *ai.Sim
 	}()
 	return stream
 }
+
+// Upstream getSessionStats returns getContextUsage(), so after a compaction
+// without post-compaction assistant usage the stats carry null tokens and
+// percent rather than an estimate.
+func TestSessionStatsContextUsageMatchesGetContextUsage(t *testing.T) {
+	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 1000, MaxTokens: 100}
+	session := newControlSession(t, model, nil)
+	session.Sessions.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "question"}})
+	stats := session.GetSessionStats()
+	if stats.ContextUsage == nil || stats.ContextUsage.Tokens == nil || stats.ContextUsage.Percent == nil {
+		t.Fatalf("pre-compaction stats contextUsage = %+v", stats.ContextUsage)
+	}
+	session.Sessions.AppendCompaction("summary", "", 42, nil, false, nil)
+	stats = session.GetSessionStats()
+	if stats.ContextUsage == nil {
+		t.Fatal("stats lost contextUsage")
+	}
+	if stats.ContextUsage.Tokens != nil || stats.ContextUsage.Percent != nil {
+		t.Fatalf("post-compaction stats contextUsage = %+v; want null tokens/percent", stats.ContextUsage)
+	}
+	if stats.ContextUsage.ContextWindow != 1000 {
+		t.Fatalf("contextWindow = %d; want 1000", stats.ContextUsage.ContextWindow)
+	}
+	if usage := session.GetContextUsage(); usage == nil || usage.Tokens != nil || stats.ContextUsage.ContextWindow != usage.ContextWindow {
+		t.Fatalf("stats diverged from GetContextUsage: stats %+v usage %+v", stats.ContextUsage, usage)
+	}
+}

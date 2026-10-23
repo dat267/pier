@@ -398,3 +398,21 @@ func TestRPCNewCommandFieldValidation(t *testing.T) {
 		}
 	}
 }
+
+// Upstream get_session_stats returns getSessionStats() unchanged, so an unknown
+// post-compaction context count serializes as null tokens and percent.
+func TestRPCGetSessionStatsNullContextUsage(t *testing.T) {
+	session := rpcTestSession(t)
+	session.Agent.SetModel(&ai.Model{ID: "m", Provider: "test", API: ai.APIAnthropicMessages, ContextWindow: 1000})
+	session.Sessions.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}})
+	session.Sessions.AppendCompaction("summary", "", 42, nil, false, nil)
+
+	records := runRPCScript(t, session, `{"id":"s","type":"get_session_stats"}`+"\n")
+	usage := rpcResponseData(t, records)["contextUsage"].(map[string]any)
+	if usage["tokens"] != nil || usage["percent"] != nil {
+		t.Fatalf("post-compaction contextUsage = %+v; want null tokens and percent", usage)
+	}
+	if usage["contextWindow"].(float64) != 1000 {
+		t.Fatalf("contextWindow = %v; want 1000", usage["contextWindow"])
+	}
+}

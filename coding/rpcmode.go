@@ -839,6 +839,8 @@ func rpcSessionStatsValue(stats *SessionStats) jsonEventObject {
 	})
 	value.add("cost", stats.Cost)
 	if stats.ContextUsage != nil {
+		// Unknown tokens/percent stay null (upstream returns getContextUsage()
+		// unchanged, and JSON.stringify keeps the nulls).
 		value.add("contextUsage", jsonEventObject{
 			{"tokens", stats.ContextUsage.Tokens},
 			{"contextWindow", stats.ContextUsage.ContextWindow},

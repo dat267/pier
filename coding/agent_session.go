@@ -884,14 +884,6 @@ func (s *AgentSession) maybeAutoCompact(ctx context.Context) error {
 // Stats
 // ---------------------------------------------------------------------------
 
-// ContextUsage is the context-window fill report.
-type ContextUsage struct {
-	Tokens                int64
-	ContextWindow         int64
-	Percent               float64
-	IsOverTokenSoftTarget bool
-}
-
 // SessionStats is the session counters report.
 type SessionStats struct {
 	SessionFile       string
@@ -908,8 +900,10 @@ type SessionStats struct {
 		CacheWrite int64
 		Total      int64
 	}
-	Cost         float64
-	ContextUsage *ContextUsage
+	Cost float64
+	// ContextUsage is getContextUsage()'s report (upstream getSessionStats
+	// returns it unchanged, so unknown tokens/percent stay null).
+	ContextUsage *ContextUsageReport
 }
 
 // GetSessionStats aggregates the session entries (port of getSessionStats). The
@@ -917,16 +911,6 @@ type SessionStats struct {
 // the context usage needs the live agent state, which the port reads here.
 func (s *AgentSession) GetSessionStats() *SessionStats {
 	stats := s.Sessions.SessionStats()
-
-	// Context usage from the current context.
-	model := s.Agent.State().Model
-	if model != nil && model.ContextWindow > 0 {
-		tokens := s.Sessions.ProjectedContextEstimate().Tokens
-		stats.ContextUsage = &ContextUsage{
-			Tokens:        int64(tokens),
-			ContextWindow: model.ContextWindow,
-			Percent:       float64(tokens) / float64(model.ContextWindow) * 100,
-		}
-	}
+	stats.ContextUsage = s.GetContextUsage()
 	return stats
 }
