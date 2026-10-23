@@ -318,13 +318,28 @@ All in-scope v1.3.0 items are ported.
 The `durable` base64 `btoa` fix (#10923) is a V8 concatenation-tree memory fix;
 the port already encodes with Go's `encoding/base64`, so it does not apply.
 
-**Catalog regenerated for v1.3.0.** `ai/models_catalog.json` is rebuilt from the
-v1.3.0 generator output shipped in the installed package
-(`pi-ai/dist/providers/data`, schema 6, manifest
-`f5b811296040611e9314534f2fb2464a007a47efe8b11b1e07dde80651a70bd4`, generated
-2026-10-15) through `scripts/gen_catalog.py`: 41 providers, 1614 chat models
-(1605 before). The generator itself is unchanged, so the data files can come
-from either the tag's generator or the published package.
+**Catalog regenerated for v1.4.0.** `ai/models_catalog.json` is rebuilt from the
+v1.4.0 generator (`packages/ai/scripts/generate-models.ts --strict --data-only`,
+schema 6, manifest
+`ac52f772486d829cd2ed5ae7bd07f67712ee7ad440bd58143b44a10d06070f0f`, generated
+2026-10-23) through `scripts/gen_catalog.py`: 41 providers, 1590 chat models
+(1614 before; 52 added, 76 removed, 167 entries changed).
+
+Almost all of that churn is live provider data moving in the 8 days since the
+previous snapshot, not the tag: running the previous pin's own generator today
+produces the same 1590 ids. The generator's own deltas are two models. It adds
+`MiniMax-M3.1-Flash` (upstream `d2e7d8b7c`) and drops `openai-codex`'s `gpt-5.5`
+and `gpt-5.3-codex-spark` (upstream `e5fe9777b`); it also carries Grok's `xhigh`
+thinking level (`fbc456d82`) and the corrected GLM prices (`482c1381a`). The
+data files are generator output, not committed sources, so a refresh has to
+fetch models.dev; the tag only pins the generator.
+
+`DefaultModelPerProvider` follows the tag: `github-copilot` moves to
+`gpt-6.1-sol` (upstream `e5fe9777b`), the four Xiaomi providers to
+`mimo-v2.6-pro` (`90d863f7c`) and `nvidia` to its Nemotron 3.5 Super VL entry
+(`95364a54e`). The refresh retired the old Copilot and Xiaomi ids, so those
+defaults would otherwise resolve to the provider's first model; a test now
+asserts every default exists in the shipped catalog.
 
 Out of scope in the v1.3.0 delta (in addition to the chord, codemode, Nix and
 extension items above): `sessionShareDestination` and the `/share` destination,
