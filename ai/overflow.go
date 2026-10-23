@@ -64,6 +64,10 @@ var overflowPatterns = []*regexp.Regexp{
 	compileOverflowPattern(`(?i)context[_ ]length[_ ]exceeded`),                                                               // Generic fallback
 	compileOverflowPattern(`(?i)too many tokens`),                                                                             // Generic fallback
 	compileOverflowPattern(`(?i)token limit exceeded`),                                                                        // Generic fallback
+	// HTTP 413 means request-size overflow regardless of provider or body text.
+	// Match raw SDK errors and formatProviderError's prefix, not a status
+	// mentioned in the body (upstream v1.4.0 73f8de80b).
+	compileOverflowPattern(`(?i)^(?:[\w -]+ API error \(413\):|413(?:\s|:|$))`),
 }
 
 // cerebrasBodylessOverflowPattern matches Cerebras' bodyless 400/413.

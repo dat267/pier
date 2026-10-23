@@ -180,3 +180,56 @@ func TestGetOverflowPatterns(t *testing.T) {
 		t.Fatal("generic fallback pattern missing")
 	}
 }
+
+// HTTP 413 is a request-size overflow for every provider, whatever the body
+// says. Upstream v1.4.0 73f8de80b: Copilot rejects a body over its byte limit
+// with a generic "failed to parse request" body, so the token-count heuristics
+// never matched and the raw error reached the user instead of compacting.
+func TestIsContextOverflowRequestSizeStatus(t *testing.T) {
+	overflowMessages := []string{
+		`github-copilot API error (413): {"message":"failed to parse request","code":""}`,
+		"custom-provider API error (413): Payload Too Large",
+		`413 {"error":{"message":"failed to parse request","code":""}}`,
+		"413",
+	}
+	for _, text := range overflowMessages {
+		message := overflowError(overflowAssistant("github-copilot", StopError), text)
+		// A byte-size overflow needs no token accounting and no window hint.
+		if !IsContextOverflow(message, 1_000_000) {
+			t.Errorf("expected overflow for %q", text)
+		}
+		if !IsContextOverflow(message, 0) {
+			t.Errorf("expected overflow without a context window for %q", text)
+		}
+	}
+
+	// Only a leading status is a status: a 413 inside the body or a longer number
+	// that merely starts with 413 is unrelated.
+	notOverflow := []string{
+		`github-copilot API error (400): {"message":"failed to parse request","code":""}`,
+		"custom-provider API error (429): Too many requests",
+		`github-copilot API error (400): {"message":"failed to parse request: invalid value 413"}`,
+		"custom-provider API error (400): upstream mentioned OpenAI API error (413): invalid input",
+		"custom-provider API error (4130): invalid input",
+		"4130 failed to parse request",
+	}
+	for _, text := range notOverflow {
+		if IsContextOverflow(overflowError(overflowAssistant("github-copilot", StopError), text), 1_000_000) {
+			t.Errorf("expected no overflow for %q", text)
+		}
+	}
+
+	// The status only counts on a failed response.
+	for _, stopReason := range []string{StopAborted, StopStop} {
+		message := overflowError(overflowAssistant("github-copilot", StopError), `github-copilot API error (413): failed to parse request`)
+		message.StopReason = stopReason
+		if IsContextOverflow(message, 1_000_000) {
+			t.Errorf("stop reason %q must not be an overflow", stopReason)
+		}
+	}
+	// A bodyless 400 stays Cerebras-only, so a 413 pattern does not widen it.
+	bodyless := overflowError(overflowAssistant("opencode-go", StopError), "400 status code (no body)")
+	if IsContextOverflow(bodyless, 1_000_000) {
+		t.Error("bodyless 400 must stay specific to cerebras")
+	}
+}
