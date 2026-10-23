@@ -847,6 +847,12 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 			return
 		}
 		request.Header.Set("content-type", "application/json")
+		// D-row D266: detailed mode sends pi/1.4.0 in both UA headers,
+		// without an aws-sdk-js/runtime prefix. The raw Go adapter emits
+		// the escaped identity contribution, not fabricated SDK metadata.
+		userAgent := bedrockIdentityUserAgent(options.Identity)
+		request.Header.Set("User-Agent", userAgent)
+		request.Header.Set("x-amz-user-agent", userAgent)
 		for name, value := range customHeaders {
 			request.Header.Set(name, value)
 		}

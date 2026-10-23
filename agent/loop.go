@@ -13,6 +13,10 @@ import (
 
 // Port of packages/agent/src/agent-loop.ts.
 
+// DefaultAgentIdentity attributes loop requests to pi. AgentLoopConfig.Identity
+// overrides it field by field (upstream DEFAULT_AGENT_IDENTITY, v1.4.0).
+var DefaultAgentIdentity = &ai.ClientIdentity{Attribution: ai.PIAttribution}
+
 // AgentEventSink receives loop events.
 type AgentEventSink func(event AgentEvent) error
 
@@ -461,6 +465,7 @@ func streamAssistantResponse(
 	}
 
 	options := config.SimpleStreamOptions
+	options.Identity = ai.MergeClientIdentity(DefaultAgentIdentity, config.Identity)
 	options.APIKey = resolvedAPIKey
 	options.Ctx = ctx
 	response := streamFunction(config.Model, llmContext, &options)

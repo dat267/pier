@@ -145,8 +145,10 @@ refreshing upstream tags and is the port's reference pin. It is 81 commits past
 v1.3.0. The pin identifies the sources to review, not a claim that every change
 is ported. The v1.4.0 catalog, transcript tool-change modes, Markdown work and the
 completed delta audit are described below. The audit classifies all 81 commits;
-the remaining in-scope gaps are the rest of client identity in pi-ai/agent,
-telemetry and the durable v1.4 harness, plus the documented out-of-scope areas.
+the remaining in-scope gaps are telemetry and the durable v1.4 harness,
+including its identity wiring, plus the documented out-of-scope areas.
+Supported ai/agent/coding client identity is ported with the explicit Go
+runtime and SDK-metadata differences in D265/D266.
 The v1.3.0 delta from v1.2.0 is ported (see the historical v1.3.0 audit below);
 the v1.2.0 delta from v1.1.0 was audited. Confirmed gaps, porting progress and
 out-of-scope areas are recorded below. Earlier release notes retain upstream
@@ -220,20 +222,41 @@ methods and resolved/unresolved image auth paths. Those tests also exposed
 and fixed two deferred-cancel bugs: nil options panicked, and auth endpoint
 overrides were discarded instead of reaching the provider.
 
+Agent loops now merge `DefaultAgentIdentity` (pi attribution) beneath
+`AgentLoopConfig.Identity` for every provider request. `AgentOptions.Identity`
+and the public `Agent.Identity` reach each new loop configuration, including
+explicit null attribution overrides. The coding SDK still replaces that
+identity per request so telemetry-off settings do not inherit pi attribution.
+
+`WithClientIdentity` adds layered registry defaults without copying provider,
+auth or lock state. All seven supported text/deferred request methods delegate
+to the same source method with copied options; request identity wins over
+outer wrappers, inner wrappers and registry defaults. Getters and auth methods
+remain delegated unchanged. The Go return interface preserves the source's
+three upstream mutation methods through `MutableModelRegistry`; read-only
+sources remain read-only. `WithImagesClientIdentity` and the image registry
+interfaces provide the corresponding behavior for the port's split image
+collection.
+
+Bedrock now consumes request identity in both its direct and simple adapters:
+detailed/short modes use the SDK product/version pairs, and custom values use
+the SDK's ASCII-token and UTF-16 escaping rules. Both user-agent headers are
+installed before signing; caller headers retain upstream's override and
+reserved-header rules. Twelve Node-generated cases execute the pinned
+Bedrock helper and AWS SDK middleware. The port intentionally omits metadata
+claiming to run the JavaScript SDK (D266).
+
 Remaining in-scope v1.4.0 gaps:
 
-- **Client identity follow-ups**: `withClientIdentity` and agent
-  defaults/overrides are not ported. Bedrock's AWS SDK user-agent pairs are also
-  unported; its raw HTTP adapter does not yet consume identity. The
-  `telemetry` span option remains absent and is separate from identity.
-- **Telemetry**: the chord/pi-ai/durable telemetry stack (spans, metrics,
-  SQLite store, trace renderer) is not ported, so entries marked "out" below
-  stay out of scope.
+- **Telemetry**: the `telemetry` span option and chord/pi-ai/durable telemetry
+  stack (spans, metrics, SQLite store, trace renderer) are not ported, so entries
+  marked "out" below stay out of scope.
 - **Durable**: the v1.4 harness features (sleeping tasks and host timers,
   crash-loop guard, `ReportInfo`, `checkpointWhen`, per-model compaction in the
   harness, function-valued model/settings options, IndexedDB storage) and the
   remaining conformance cases are unported, as is the reverted commit-log
-  replication. `ToolControl.terminate` typing is TypeScript-only.
+  replication. Harness identity wiring is also unported.
+  `ToolControl.terminate` typing is TypeScript-only.
 - **Chord**: the SQLite driver move, exclusive/replicated operations, WAL
   reader and telemetry store belong to the unported typed-host rewrite; the
   replication commits were reverted upstream.
@@ -313,8 +336,8 @@ Remaining in-scope v1.4.0 gaps:
 | `6e491cfa9` | fix(ai): match retryable status codes only as standalone numbers | ported: retry classification |
 | `612a172e6` | fix(tui): escape regex metacharacters in single-segment fd queries (#11212) | ported: fd query escaping |
 | `adfc14461` | fix(coding-agent): apply /compact instructions to split-turn prefix summary | ported: split-turn instructions |
-| `adc5fa9f8` | feat(ai,agent,coding-agent): move client identity and provider attribution into pi-ai | partial: request identity/attribution, JSON, merges, Models defaults and coding wiring; agent defaults and Bedrock remain |
-| `04a93bad8` | fix(ai,agent,coding-agent,durable): client identity follow-ups | partial: header precedence, OpenCode routing and identity defaults; wrapper remains |
+| `adc5fa9f8` | feat(ai,agent,coding-agent): move client identity and provider attribution into pi-ai | partial: supported ai/agent/coding identity ported (D265/D266); durable/classifier remain |
+| `04a93bad8` | fix(ai,agent,coding-agent,durable): client identity follow-ups | partial: supported wrappers, defaults and routing ported; durable harness remains |
 | `4759f09fb` | feat(chord): WAL reader, page checksums and segment container for SQLite replication | out: chord |
 | `89e309581` | fix(chord): remove WAL page replication | out: chord |
 | `4c25119f5` | feat(durable): replicate storages as a commit log | out: durable replication (reverted) |

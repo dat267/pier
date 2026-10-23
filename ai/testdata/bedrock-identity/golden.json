@@ -1,0 +1,135 @@
+[
+  {
+    "identity": null,
+    "custom": [
+      [
+        "pi",
+        "1.4.0"
+      ]
+    ],
+    "want": "pi/1.4.0",
+    "amzWant": "pi/1.4.0"
+  },
+  {
+    "identity": {
+      "version": "9.9.9"
+    },
+    "custom": [
+      [
+        "pi",
+        "9.9.9"
+      ]
+    ],
+    "want": "pi/9.9.9",
+    "amzWant": "pi/9.9.9"
+  },
+  {
+    "identity": {
+      "version": ""
+    },
+    "custom": [
+      [
+        "pi",
+        ""
+      ]
+    ],
+    "want": "pi",
+    "amzWant": "pi"
+  },
+  {
+    "identity": {
+      "userAgent": "short",
+      "version": "ignored"
+    },
+    "custom": [
+      [
+        "pi"
+      ]
+    ],
+    "want": "pi",
+    "amzWant": "pi"
+  },
+  {
+    "identity": {
+      "userAgent": {
+        "custom": "acme/1.0"
+      }
+    },
+    "custom": "acme/1.0",
+    "want": "acme/1.0",
+    "amzWant": "acme/1.0"
+  },
+  {
+    "identity": {
+      "userAgent": {
+        "custom": ""
+      }
+    },
+    "custom": "",
+    "want": "",
+    "amzWant": ""
+  },
+  {
+    "identity": {
+      "userAgent": {
+        "custom": "short"
+      }
+    },
+    "custom": "short",
+    "want": "short",
+    "amzWant": "short"
+  },
+  {
+    "identity": {
+      "userAgent": {
+        "custom": "api/MyAPI/One"
+      }
+    },
+    "custom": "api/MyAPI/One",
+    "want": "api/myapi/one",
+    "amzWant": "api/myapi/one"
+  },
+  {
+    "identity": {
+      "userAgent": {
+        "custom": "/"
+      }
+    },
+    "custom": "/",
+    "want": "",
+    "amzWant": ""
+  },
+  {
+    "identity": {
+      "userAgent": {
+        "custom": "//"
+      }
+    },
+    "custom": "//",
+    "want": "/",
+    "amzWant": "/"
+  },
+  {
+    "identity": {
+      "userAgent": {
+        "custom": "acme a:b#c/é😀"
+      }
+    },
+    "custom": "acme a:b#c/é😀",
+    "want": "acme-a-b-c/---",
+    "amzWant": "acme-a-b-c/---"
+  },
+  {
+    "identity": {
+      "version": "a/b#c é😀"
+    },
+    "custom": [
+      [
+        "pi",
+        "a/b#c é😀"
+      ]
+    ],
+    "want": "pi/a-b#c----",
+    "amzWant": "pi/a-b#c----"
+  }
+]

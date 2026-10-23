@@ -72,6 +72,8 @@ type AgentOptions struct {
 	FollowUpMode               QueueMode
 	// SessionID is forwarded to providers for cache-aware backends.
 	SessionID string
+	// Identity overrides DefaultAgentIdentity field by field.
+	Identity *ai.ClientIdentity
 	// ThinkingBudgets are forwarded to the stream function.
 	ThinkingBudgets *ai.ThinkingBudgets
 	// Transport is forwarded to the stream function.
@@ -174,6 +176,7 @@ type Agent struct {
 	PrepareNextTurn            func(ctx context.Context) (*AgentLoopTurnUpdate, error)
 	PrepareNextTurnWithContext func(*PrepareNextTurnContext, context.Context) (*AgentLoopTurnUpdate, error)
 	SessionID                  string
+	Identity                   *ai.ClientIdentity
 	ThinkingBudgets            *ai.ThinkingBudgets
 	Transport                  ai.Transport
 	MaxRetryDelayMS            *int
@@ -274,6 +277,7 @@ func NewAgent(options *AgentOptions) (*Agent, error) {
 		PrepareNextTurn:            options.PrepareNextTurn,
 		PrepareNextTurnWithContext: options.PrepareNextTurnWithContext,
 		SessionID:                  options.SessionID,
+		Identity:                   options.Identity,
 		ThinkingBudgets:            options.ThinkingBudgets,
 		Transport:                  transport,
 		MaxRetryDelayMS:            options.MaxRetryDelayMS,
@@ -542,6 +546,7 @@ func (a *Agent) createLoopConfig(skipInitialSteeringPoll bool) *AgentLoopConfig 
 		SimpleStreamOptions: ai.SimpleStreamOptions{
 			StreamOptions: ai.StreamOptions{
 				SessionID:             a.SessionID,
+				Identity:              a.Identity,
 				Transport:             a.Transport,
 				MaxRetryDelayMs:       a.MaxRetryDelayMS,
 				OnPayload:             a.OnPayload,
