@@ -368,8 +368,15 @@ var retryableProviderErrorPattern = regexp.MustCompile(`(?i)` + strings.Join([]s
 	`service.?(?:is.?)?(?:temporarily.?)?unavailable`, `server.?error`, `internal.?error`,
 	`provider.?returned.?(?:an.?)?error`, `exceeded request buffer limit while retrying upstream`,
 	`unable to forward upstream`,
+	// Other gateway upstream failures relayed as `response.failed` error codes
+	// (upstream v1.4.0 698a2d23b, #10920).
+	`upstream.?request.?failed`, `upstream_stream_read_error`, `stream was interrupted`, `http/?2 stream failed`,
 	`network.?error`, `connection.?error`, `connection.?refused`, `connection.?lost`,
-	`other side closed`, `fetch failed`, `getaddrinfo`, `ENOTFOUND`, `EAI_AGAIN`,
+	`other side closed`, `fetch failed`,
+	// node-fetch system errors, e.g. the Google ADC OAuth token refresh used by
+	// google-vertex. The reason is often empty (upstream v1.4.0 0fbdbd3f8, #10996).
+	`request to \S+ failed, reason:`,
+	`getaddrinfo`, `ENOTFOUND`, `EAI_AGAIN`,
 	`upstream.?connect`, `reset before headers`, `socket hang up`, `socket connection was closed`,
 	// OS-level socket aborts (D171): "software caused connection abort"
 	// (ECONNABORTED — what Termux and Windows emit), "connection reset by peer"
@@ -380,6 +387,9 @@ var retryableProviderErrorPattern = regexp.MustCompile(`(?i)` + strings.Join([]s
 	`websocket.?closed`, `websocket.?error`,
 	`ended without`, `stream ended before message_stop`,
 	`stream ended before a terminal response event`, `http2 request did not get a response`,
+	// Codex CLI mid-stream disconnect relayed by proxies that wrap the Codex CLI,
+	// e.g. "stream closed before response.completed" (upstream v1.4.0 29057ece3).
+	`stream disconnected before completion`,
 	// Go's net/http2 surfaces peer-reset streams as `stream error: stream ID N;
 	// CODE; received from peer`. Retry that transport error like D171's socket
 	// resets; Go's HTTP/2 wording has no upstream fetch/websocket equivalent.

@@ -146,3 +146,36 @@ func errorAssistant(message string) *AssistantMessage {
 	text := message
 	return &AssistantMessage{StopReason: StopError, ErrorMessage: &text}
 }
+
+// Gateway and transport wording relayed by proxies is transient. Upstream
+// v1.4.0: 29057ece3 (Codex CLI mid-stream disconnect), 698a2d23b (gateway
+// upstream failures sent as response.failed codes, #10920) and 0fbdbd3f8
+// (node-fetch system errors from the Vertex OAuth refresh, #10996).
+func TestRetryableProviderErrorsMatchRelayedGatewayWording(t *testing.T) {
+	retryable := []string{
+		// 29057ece3
+		"stream disconnected before completion: stream closed before response.completed",
+		// 698a2d23b
+		"upstream_error: Upstream request failed",
+		"upstream_stream_read_error: read tcp 10.0.0.1:443: connection reset by peer",
+		"stream was interrupted",
+		"Upstream HTTP/2 stream failed",
+		// 0fbdbd3f8
+		"request to https://oauth2.googleapis.com/token failed, reason:",
+		"request to https://oauth2.googleapis.com/token failed, reason: connect ECONNREFUSED 127.0.0.1:9",
+	}
+	for _, message := range retryable {
+		if !IsRetryableAssistantError(errorAssistant(message)) {
+			t.Fatalf("%q should be retryable", message)
+		}
+	}
+	// A request that merely failed is not a node-fetch transport failure.
+	for _, message := range []string{
+		"400 request to the model failed validation",
+		"404 upstream request not found",
+	} {
+		if IsRetryableAssistantError(errorAssistant(message)) {
+			t.Fatalf("%q must not be retryable", message)
+		}
+	}
+}
