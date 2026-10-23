@@ -482,3 +482,28 @@ func TestLoadMcpConfigProjectOverrides(t *testing.T) {
 		}
 	}
 }
+
+// Windows PowerShell 5.1 and many editors write a UTF-8 BOM. Upstream v1.4.0
+// bdd9f0399 (issue #11191) strips it before parsing mcp.json, which otherwise
+// fails to parse: every server in the file is skipped and `mcp add`/`mcp remove`
+// fail on a file the user can see is valid.
+func TestMcpConfigAcceptsUTF8BOM(t *testing.T) {
+	agentDir := t.TempDir()
+	projectDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(projectDir, ConfigDirName), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(agentDir, "mcp.json"), "\uFEFF"+`{"mcpServers":{"demo":{"command":"echo","enabled":false}}}`+"\n")
+	writeFile(t, filepath.Join(projectDir, ConfigDirName, "mcp.json"), "\uFEFF"+`{"mcpServers":{"local":{"command":"local-cmd"}}}`+"\n")
+
+	loaded := LoadMcpConfig(McpConfigLoadOptions{AgentDir: agentDir, Cwd: projectDir, ProjectTrusted: true})
+	if len(loaded.Errors) > 0 {
+		t.Fatalf("errors = %v; want both BOM-prefixed files to parse", loaded.Errors)
+	}
+	if len(loaded.Servers) != 2 {
+		t.Fatalf("servers = %+v; want the global and project servers", loaded.Servers)
+	}
+	if loaded.ProjectConfig == "" {
+		t.Fatal("project config was not recorded")
+	}
+}

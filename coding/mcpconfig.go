@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Port of extensions/mcp/config.ts's read side: MCP servers come from `mcp.json`
@@ -97,6 +98,10 @@ func readMcpConfigFile(path string, scope McpServerScope, state *mcpConfigState)
 	if err != nil {
 		return
 	}
+	// A leading UTF-8 BOM (Windows PowerShell 5.1, many editors) would make the
+	// whole file fail to parse, silently skipping every server in it (upstream
+	// v1.4.0 bdd9f0399, #11191).
+	data = []byte(strings.TrimPrefix(string(data), "\uFEFF"))
 	_, values, err := readJSONObjectOrdered(data)
 	if err != nil {
 		state.errors = append(state.errors, fmt.Sprintf("%s: %s", path, err.Error()))
