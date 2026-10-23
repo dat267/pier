@@ -43,8 +43,8 @@ func BuildOpenAIResponsesParamsWithProviders(
 		grammarToolInputProperties = CreateGrammarToolInputProperties(
 			GetDeclaredTools(context.Messages), compat.SupportsOpenAIGrammarTools)
 	}
-	transcriptTools := ResolveTranscriptTools(context.Messages,
-		compat.SupportsAdditionalTools || compat.SupportsToolSearch)
+	transcriptTools := ResolveTranscriptTools(context.Messages, GetResponsesToolSupport(
+		compat.SupportsMidConvoSystemMessages, compat.SupportsAdditionalTools, compat.SupportsToolSearch))
 	toolOptions := &ConvertResponsesToolsOptions{
 		SupportsStrictMode:         compat.SupportsStrictMode,
 		SupportsOpenAIGrammarTools: compat.SupportsOpenAIGrammarTools,

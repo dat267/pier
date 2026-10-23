@@ -9,6 +9,16 @@ import (
 // Port of api/openai-completions.ts conversion half: convertMessages,
 // convertTools, parseChunkUsage, mapStopReason, BuildOpenAICompletionsParams.
 
+// completionsToolSupport maps the completions compat flags to the transcript's
+// tool-change mode: an addition-only transport can anchor later loads, anything
+// else sends the current tool set.
+func completionsToolSupport(compat ResolvedOpenAICompletionsCompat) TranscriptToolSupport {
+	if compat.SupportsMidConvoSystemMessages && compat.SupportsMidConvoToolAdditions {
+		return TranscriptToolSupportAdditions
+	}
+	return TranscriptToolSupportNone
+}
+
 // ConvertOpenAICompletionsMessages converts a transcript to Chat Completions
 // wire messages (port of convertMessages).
 func ConvertOpenAICompletionsMessages(
@@ -49,14 +59,14 @@ func ConvertOpenAICompletionsMessages(
 	transformedMessages := TransformMessages(normalizedContext.Messages, model, func(id string, _ *Model, _ *AssistantMessage) string {
 		return normalizeToolCallID(id)
 	})
-	transcriptTools := ResolveTranscriptTools(normalizedContext.Messages,
-		compat.SupportsMidConvoSystemMessages && compat.SupportsMidConvoToolAdditions)
+	transcriptTools := ResolveTranscriptTools(normalizedContext.Messages, completionsToolSupport(compat))
 	instructionRole := "system"
 	if model.Reasoning && compat.SupportsDeveloperRole {
 		instructionRole = "developer"
 	}
 
 	lastRole := ""
+	systemIndex := 0
 	for i := 0; i < len(transformedMessages); i++ {
 		msg := transformedMessages[i]
 		// Some providers don't allow user messages directly after tool
@@ -70,10 +80,13 @@ func ConvertOpenAICompletionsMessages(
 
 		switch m := msg.(type) {
 		case *SystemMessage:
+			// transformMessages keeps system messages in order, so their position
+			// matches the transcript.
 			addedTools := []Tool{}
-			if i > 0 && transcriptTools.AnchorsAdditions {
+			if systemIndex >= transcriptTools.FoldedSystemMessages {
 				addedTools = m.ToolsAdded
 			}
+			systemIndex++
 			if len(addedTools) > 0 {
 				tools, _ := ConvertOpenAICompletionsTools(addedTools, compat)
 				// Kimi tool system message: role + tools, no content key.
@@ -522,8 +535,7 @@ func BuildOpenAICompletionsParams(model *Model, context TranscriptContext, optio
 	if grammarToolInputProperties == nil {
 		grammarToolInputProperties = CreateGrammarToolInputProperties(GetDeclaredTools(context.Messages), compat.SupportsOpenAIGrammarTools)
 	}
-	transcriptTools := ResolveTranscriptTools(context.Messages,
-		compat.SupportsMidConvoSystemMessages && compat.SupportsMidConvoToolAdditions)
+	transcriptTools := ResolveTranscriptTools(context.Messages, completionsToolSupport(*compat))
 	messages := ConvertOpenAICompletionsMessages(model, context, *compat, &ConvertCompletionsMessagesOptions{
 		GrammarToolInputProperties: grammarToolInputProperties,
 	})

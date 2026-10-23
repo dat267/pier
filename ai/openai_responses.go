@@ -280,6 +280,51 @@ type ConvertResponsesMessagesOptions struct {
 	ConfigurationUpdateEffort string
 }
 
+// GetResponsesToolSupport says how a Responses transport expresses tool changes
+// (upstream getResponsesToolSupport).
+//
+// `additional_tools` items accumulate: a later item adds tools and replaces
+// same-name definitions from earlier items, but it cannot replace a top-level
+// tool and cannot remove any tool. Like Codex, every tool is therefore declared
+// in `additional_tools` items, starting with one at the head of the input, and
+// removals are announced as text. Synthetic tool search can only add tools.
+// Without mid-conversation system messages there is nothing to anchor.
+func GetResponsesToolSupport(supportsMidConvoSystemMessages bool, supportsAdditionalTools bool, supportsToolSearch bool) TranscriptToolSupport {
+	if supportsMidConvoSystemMessages && supportsAdditionalTools {
+		return TranscriptToolSupportChanges
+	}
+	if supportsToolSearch {
+		return TranscriptToolSupportAdditions
+	}
+	return TranscriptToolSupportNone
+}
+
+// incrementalToolsNotice precedes every additional_tools item after the first.
+// Without it, models read the latest item as the complete tool set once a
+// removal was announced; Codex precedes its incremental tool batches with the
+// same guidance. Restating the tools that are still unavailable keeps smaller
+// models from calling them again after later loads.
+func incrementalToolsNotice(unavailable []string) string {
+	notice := "This is an incremental tools update. Previously declared tools remain available unless explicitly marked unavailable. " +
+		"A tool declared again here is available again, and its latest definition replaces the earlier one."
+	if len(unavailable) > 0 {
+		return notice + "\nStill unavailable: " + strings.Join(unavailable, ", ") + "."
+	}
+	return notice
+}
+
+// toolRemovalNotice announces the tools a later system message removed, since
+// no wire item can remove a declared tool.
+func toolRemovalNotice(names []string) string {
+	var builder strings.Builder
+	builder.WriteString("The following tools are no longer available. Do not call them:")
+	for _, name := range names {
+		builder.WriteString("\n- ")
+		builder.WriteString(name)
+	}
+	return builder.String()
+}
+
 // configurationUpdateRequestEffort is the fixed reasoning.effort while
 // configuration_update items carry the thinking level.
 const configurationUpdateRequestEffort = "medium"
@@ -352,18 +397,47 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 	}
 
 	transformedMessages := TransformMessages(normalizedContext.Messages, model, normalizeToolCallID)
-	transcriptTools := ResolveTranscriptTools(normalizedContext.Messages,
-		options.SupportsAdditionalTools || options.SupportsToolSearch)
+	compat := GetOpenAIResponsesCompat(model)
+	instructionRole := "system"
+	if model.Reasoning && compat.SupportsDeveloperRole {
+		instructionRole = "developer"
+	}
+	toolSupport := GetResponsesToolSupport(
+		options.SupportsMidConvoSystemMessages, options.SupportsAdditionalTools, options.SupportsToolSearch)
+	transcriptTools := ResolveTranscriptTools(normalizedContext.Messages, toolSupport)
+	// declaredAdditionalTools reports whether an additional_tools item was sent,
+	// so every later one is preceded by the incremental notice.
+	declaredAdditionalTools := false
+	// unavailableTools are the tools announced as removed and not declared again
+	// since, in announcement order (upstream keeps a Set's insertion order).
+	var unavailableTools []string
+	removeUnavailable := func(name string) {
+		for i, existing := range unavailableTools {
+			if existing == name {
+				unavailableTools = append(unavailableTools[:i], unavailableTools[i+1:]...)
+				return
+			}
+		}
+	}
 
 	appendSystemToolAdditions := func(message *aiSystemMessageAlias, seed string) error {
-		tools := []Tool{}
-		if transcriptTools.AnchorsAdditions {
-			tools = message.ToolsAdded
+		tools := message.ToolsAdded
+		for _, removed := range message.ToolsRemoved {
+			unavailableTools = append(unavailableTools, removed.Name)
+		}
+		for _, tool := range tools {
+			removeUnavailable(tool.Name)
 		}
 		if len(tools) == 0 {
 			return nil
 		}
-		if options.SupportsAdditionalTools {
+		if toolSupport == TranscriptToolSupportChanges {
+			if declaredAdditionalTools {
+				messages = append(messages, mustMarshalJSON(orderKeys(map[string]any{
+					"role": instructionRole, "content": incrementalToolsNotice(unavailableTools),
+				}, "role", "content")))
+			}
+			declaredAdditionalTools = true
 			converted, err := ConvertResponsesTools(tools, options.ToolOptions)
 			if err != nil {
 				return err
@@ -372,7 +446,7 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 			messages = append(messages, mustMarshalJSON(orderKeys(item, "type", "role", "tools")))
 			return nil
 		}
-		if !options.SupportsToolSearch {
+		if toolSupport != TranscriptToolSupportAdditions {
 			return nil
 		}
 		var names []string
@@ -402,11 +476,6 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 	}
 
 	includeInitialSystemMessage := options.IncludeSystemPrompt == nil || *options.IncludeSystemPrompt
-	compat := GetOpenAIResponsesCompat(model)
-	instructionRole := "system"
-	if model.Reasoning && compat.SupportsDeveloperRole {
-		instructionRole = "developer"
-	}
 
 	pushConfigurationUpdate := func(effort string) {
 		messages = append(messages, mustMarshalJSON(orderKeys(map[string]any{
@@ -417,22 +486,51 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 
 	msgIndex := 0
 	sourceIndex := 0
+	systemIndex := 0
 	for _, msg := range transformedMessages {
 		isLeadingSystemMessage := sourceIndex == 0 && RoleOf(msg) == RoleSystem
 		sourceIndex++
 
 		switch m := msg.(type) {
 		case *SystemMessage:
-			if !isLeadingSystemMessage {
+			// transformMessages keeps system messages in order, so their position
+			// matches the transcript.
+			anchorsToolChanges := systemIndex >= transcriptTools.FoldedSystemMessages
+			systemIndex++
+			if anchorsToolChanges {
 				if err := appendSystemToolAdditions((*aiSystemMessageAlias)(m), "system:"+fmt.Sprint(msgIndex)); err != nil {
 					return nil, err
 				}
 			}
 			if !isLeadingSystemMessage || includeInitialSystemMessage {
-				text := RenderSystemMessageUpdate(m)
+				parts := []string{RenderSystemMessageUpdate(m)}
 				if isLeadingSystemMessage {
-					text = GetSystemMessageText(m)
+					parts[0] = GetSystemMessageText(m)
 				}
+				if anchorsToolChanges {
+					// A redefinition is a removal plus an addition of the same name;
+					// only true removals are announced.
+					added := map[string]bool{}
+					for _, tool := range m.ToolsAdded {
+						added[tool.Name] = true
+					}
+					var removed []string
+					for _, tool := range m.ToolsRemoved {
+						if !added[tool.Name] {
+							removed = append(removed, tool.Name)
+						}
+					}
+					if len(removed) > 0 {
+						parts = append(parts, toolRemovalNotice(removed))
+					}
+				}
+				var nonEmpty []string
+				for _, part := range parts {
+					if len(part) > 0 {
+						nonEmpty = append(nonEmpty, part)
+					}
+				}
+				text := strings.Join(nonEmpty, "\n\n")
 				if len(text) > 0 {
 					messages = append(messages, mustMarshalJSON(orderKeys(map[string]any{
 						"role": instructionRole, "content": SanitizeSurrogates(text),

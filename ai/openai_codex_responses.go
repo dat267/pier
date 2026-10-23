@@ -309,7 +309,8 @@ func BuildCodexRequestBody(model *Model, context TranscriptContext, options *Ope
 	supportsStrictMode := compat.SupportsStrictMode
 	supportsAdditionalTools := compat.SupportsAdditionalTools
 	supportsToolSearch := compat.SupportsToolSearch
-	transcriptTools := ResolveTranscriptTools(context.Messages, supportsAdditionalTools || supportsToolSearch)
+	transcriptTools := ResolveTranscriptTools(context.Messages, GetResponsesToolSupport(
+		compat.SupportsMidConvoSystemMessages, supportsAdditionalTools, supportsToolSearch))
 	if grammarToolInputProperties == nil {
 		grammarToolInputProperties = CreateGrammarToolInputProperties(
 			GetDeclaredTools(context.Messages), compat.SupportsOpenAIGrammarTools)

@@ -34,22 +34,17 @@ func TestGetCurrentToolsRemovalAndReaddition(t *testing.T) {
 	}
 }
 
-func TestResolveTranscriptToolsAnchorsAdditions(t *testing.T) {
+// TranscriptToolSupport modes (upstream v1.4.0 caa6967b6): "none" keeps the
+// current tools at the top, "changes" declares every tool in place, and
+// "additions" folds the prefix up to the last removal or redeclaration so later
+// loads stay anchored.
+func TestResolveTranscriptToolsSupportModes(t *testing.T) {
 	baseTool, lateTool := testTool("base_tool"), testTool("late_tool")
 	additionContext := []Message{
 		&SystemMessage{Content: StringOrBlocks{Text: "base prompt"}, ToolsAdded: []Tool{baseTool}, Timestamp: 0},
 		&UserMessage{Content: StringOrBlocks{Text: "before"}, Timestamp: 1},
 		&SystemMessage{Content: StringOrBlocks{Text: "updated guidance"}, ToolsAdded: []Tool{lateTool}, Timestamp: 2},
 	}
-	got := ResolveTranscriptTools(additionContext, true)
-	if !got.AnchorsAdditions {
-		t.Fatal("expected additions anchored")
-	}
-	if len(got.RequestTools) != 1 || got.RequestTools[0].Name != "base_tool" {
-		t.Fatalf("requestTools = %v; want [base_tool]", got.RequestTools)
-	}
-
-	// Removals disable anchoring; full current set is sent.
 	removalContext := []Message{
 		&SystemMessage{Content: StringOrBlocks{Text: "base prompt"}, ToolsAdded: []Tool{baseTool}, Timestamp: 0},
 		&UserMessage{Content: StringOrBlocks{Text: "before"}, Timestamp: 1},
@@ -60,13 +55,65 @@ func TestResolveTranscriptToolsAnchorsAdditions(t *testing.T) {
 			Timestamp:    2,
 		},
 	}
-	got = ResolveTranscriptTools(removalContext, true)
-	if got.AnchorsAdditions {
-		t.Fatal("expected no anchoring with removals")
+
+	// Additions without a non-additive change anchor after the leading message.
+	got := ResolveTranscriptTools(additionContext, TranscriptToolSupportAdditions)
+	if got.FoldedSystemMessages != 1 {
+		t.Fatalf("folded = %d; want the leading system message only", got.FoldedSystemMessages)
 	}
-	if len(got.RequestTools) != 1 || got.RequestTools[0].Name != "late_tool" {
-		t.Fatalf("requestTools = %v; want [late_tool]", got.RequestTools)
+	if names := toolNames(got.RequestTools); !reflect.DeepEqual(names, []string{"base_tool"}) {
+		t.Fatalf("requestTools = %v; want [base_tool]", names)
 	}
+
+	// A removal folds everything up to and including that message, so later
+	// loads stay anchored instead of resending the whole list.
+	got = ResolveTranscriptTools(removalContext, TranscriptToolSupportAdditions)
+	if got.FoldedSystemMessages != 2 {
+		t.Fatalf("folded = %d; want both system messages", got.FoldedSystemMessages)
+	}
+	if names := toolNames(got.RequestTools); !reflect.DeepEqual(names, []string{"late_tool"}) {
+		t.Fatalf("requestTools = %v; want [late_tool]", names)
+	}
+
+	// A redeclaration counts even after the tool was removed.
+	redeclared := []Message{
+		&SystemMessage{Content: StringOrBlocks{Text: "base"}, ToolsAdded: []Tool{baseTool}, Timestamp: 0},
+		&SystemMessage{
+			Content:      StringOrBlocks{Text: "remove"},
+			ToolsRemoved: []ToolReference{{Name: "base_tool"}},
+			Timestamp:    1,
+		},
+		&UserMessage{Content: StringOrBlocks{Text: "u"}, Timestamp: 2},
+		&SystemMessage{Content: StringOrBlocks{Text: "again"}, ToolsAdded: []Tool{baseTool}, Timestamp: 3},
+	}
+	got = ResolveTranscriptTools(redeclared, TranscriptToolSupportAdditions)
+	if got.FoldedSystemMessages != 3 {
+		t.Fatalf("folded = %d; want all three system messages", got.FoldedSystemMessages)
+	}
+
+	// "changes": nothing at the top; every message declares in place.
+	got = ResolveTranscriptTools(removalContext, TranscriptToolSupportChanges)
+	if got.FoldedSystemMessages != 0 || len(got.RequestTools) != 0 {
+		t.Fatalf("changes = %+v; want an empty top-level list", got)
+	}
+
+	// "none": the top-level list is the current set and every system message is
+	// folded into it.
+	got = ResolveTranscriptTools(removalContext, TranscriptToolSupportNone)
+	if got.FoldedSystemMessages != 2 {
+		t.Fatalf("folded = %d; want both system messages", got.FoldedSystemMessages)
+	}
+	if names := toolNames(got.RequestTools); !reflect.DeepEqual(names, []string{"late_tool"}) {
+		t.Fatalf("requestTools = %v; want [late_tool]", names)
+	}
+}
+
+func toolNames(tools []Tool) []string {
+	names := make([]string, 0, len(tools))
+	for _, tool := range tools {
+		names = append(names, tool.Name)
+	}
+	return names
 }
 
 func TestCollapseAndResolveTranscript(t *testing.T) {
