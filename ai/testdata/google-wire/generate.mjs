@@ -92,6 +92,7 @@ const cases = [{
 			routingConfig: { autoMode: { modelRoutingPreference: "BALANCED" } },
 			modelSelectionConfig: { featureSelectionPreference: "PRIORITIZE_QUALITY" },
 			labels: { audit: "enabled" }, audioTimestamp: true,
+			imageConfig: { aspectRatio: "16:9", outputMimeType: "image/png", outputCompressionQuality: 85 },
 			modelArmorConfig: { promptTemplateName: "projects/audit/locations/us-central1/templates/test" },
 		},
 	},

@@ -745,6 +745,11 @@
           "audit": "enabled"
         },
         "audioTimestamp": true,
+        "imageConfig": {
+          "aspectRatio": "16:9",
+          "outputMimeType": "image/png",
+          "outputCompressionQuality": 85
+        },
         "modelArmorConfig": {
           "promptTemplateName": "projects/audit/locations/us-central1/templates/test"
         }
@@ -752,7 +757,7 @@
     },
     "payload": "{\"model\":\"gemini-3-pro\",\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"hello\"}]}],\"config\":{}}",
     "path": "/v1/publishers/google/models/gemini-3-pro:streamGenerateContent",
-    "body": "{\"contents\":[{\"parts\":[{\"text\":\"hello\"}],\"role\":\"user\"}],\"labels\":{\"audit\":\"enabled\"},\"modelArmorConfig\":{\"promptTemplateName\":\"projects/audit/locations/us-central1/templates/test\"},\"generationConfig\":{\"routingConfig\":{\"autoMode\":{\"modelRoutingPreference\":\"BALANCED\"}},\"modelConfig\":{\"featureSelectionPreference\":\"PRIORITIZE_QUALITY\"},\"audioTimestamp\":true}}"
+    "body": "{\"contents\":[{\"parts\":[{\"text\":\"hello\"}],\"role\":\"user\"}],\"labels\":{\"audit\":\"enabled\"},\"modelArmorConfig\":{\"promptTemplateName\":\"projects/audit/locations/us-central1/templates/test\"},\"generationConfig\":{\"routingConfig\":{\"autoMode\":{\"modelRoutingPreference\":\"BALANCED\"}},\"modelConfig\":{\"featureSelectionPreference\":\"PRIORITIZE_QUALITY\"},\"audioTimestamp\":true,\"imageConfig\":{\"aspectRatio\":\"16:9\",\"imageOutputOptions\":{\"mimeType\":\"image/png\",\"compressionQuality\":85}}}}"
   },
   {
     "api": "google-vertex",

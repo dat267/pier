@@ -147,24 +147,35 @@ func googleSDKRequest(raw json.RawMessage, api Api) (string, []byte, error) {
 	}
 	if payload.Config != nil {
 		var generation orderedJSONFields
-		for _, key := range []string{"temperature", "topP", "topK", "candidateCount", "maxOutputTokens", "stopSequences", "responseLogprobs", "logprobs", "presencePenalty", "frequencyPenalty", "seed", "responseMimeType", "responseSchema", "responseJsonSchema", "responseModalities", "mediaResolution", "speechConfig", "audioTranscriptionConfig", "imageConfig", "thinkingConfig"} {
-			if value, ok := payload.Config[key]; ok && strings.TrimSpace(string(value)) != "null" {
-				generation.set(key, value)
-			}
-		}
-		if api == APIGoogleGenerativeAI {
-			if value, ok := payload.Config["enableEnhancedCivicAnswers"]; ok && strings.TrimSpace(string(value)) != "null" {
-				generation.set("enableEnhancedCivicAnswers", value)
-			}
-		}
 		if api == APIGoogleVertex {
-			for _, key := range []string{"routingConfig", "modelSelectionConfig", "audioTimestamp"} {
+			for _, key := range []string{"routingConfig", "modelSelectionConfig"} {
 				if value, ok := payload.Config[key]; ok && strings.TrimSpace(string(value)) != "null" {
 					if key == "modelSelectionConfig" {
 						key = "modelConfig"
 					}
 					generation.set(key, value)
 				}
+			}
+		}
+		generationKeys := []string{"temperature", "topP", "topK", "candidateCount", "maxOutputTokens", "stopSequences", "responseLogprobs", "logprobs", "presencePenalty", "frequencyPenalty", "seed", "responseMimeType", "responseSchema", "responseJsonSchema", "responseModalities", "mediaResolution", "speechConfig"}
+		if api == APIGoogleVertex {
+			generationKeys = append(generationKeys, "audioTimestamp")
+		}
+		generationKeys = append(generationKeys, "thinkingConfig", "audioTranscriptionConfig", "imageConfig")
+		for _, key := range generationKeys {
+			if value, ok := payload.Config[key]; ok && strings.TrimSpace(string(value)) != "null" {
+				if key == "imageConfig" && api == APIGoogleVertex {
+					value, err = googleVertexImageConfig(value)
+					if err != nil {
+						return "", nil, err
+					}
+				}
+				generation.set(key, value)
+			}
+		}
+		if api == APIGoogleGenerativeAI {
+			if value, ok := payload.Config["enableEnhancedCivicAnswers"]; ok && strings.TrimSpace(string(value)) != "null" {
+				generation.set("enableEnhancedCivicAnswers", value)
 			}
 		}
 		generationJSON, err := generation.marshal()
@@ -179,4 +190,39 @@ func googleSDKRequest(raw json.RawMessage, api Api) (string, []byte, error) {
 	}
 	bodyJSON, err = MarshalJSON(json.RawMessage(bodyJSON))
 	return payload.Model, bodyJSON, err
+}
+
+func googleVertexImageConfig(raw json.RawMessage) (json.RawMessage, error) {
+	source, err := decodeSchemaNode(raw)
+	if err != nil {
+		return nil, err
+	}
+	var config orderedJSONFields
+	for _, key := range []string{"aspectRatio", "imageSize", "personGeneration"} {
+		if value, ok := source.raw(key); ok && strings.TrimSpace(string(value)) != "null" {
+			config.set(key, value)
+		}
+	}
+	if options, ok := source.raw("imageOutputOptions"); ok && strings.TrimSpace(string(options)) != "null" {
+		config.set("imageOutputOptions", options)
+	} else {
+		var output orderedJSONFields
+		if value, ok := source.raw("outputMimeType"); ok && strings.TrimSpace(string(value)) != "null" {
+			output.set("mimeType", value)
+		}
+		if value, ok := source.raw("outputCompressionQuality"); ok && strings.TrimSpace(string(value)) != "null" {
+			output.set("compressionQuality", value)
+		}
+		if len(output.keys) > 0 {
+			encoded, err := output.marshal()
+			if err != nil {
+				return nil, err
+			}
+			config.set("imageOutputOptions", encoded)
+		}
+	}
+	if value, ok := source.raw("prominentPeople"); ok && strings.TrimSpace(string(value)) != "null" {
+		config.set("prominentPeople", value)
+	}
+	return config.marshal()
 }

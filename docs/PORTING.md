@@ -285,7 +285,8 @@ text/thinking parts, null tool arguments, model/config replacement, scalar
 generation controls, and additional SDK config fields (`safetySettings`,
 `cachedContent`, `mediaResolution`, `speechConfig`, `serviceTier`, Vertex
 `routingConfig`,
-`modelSelectionConfig`, `labels`, `audioTimestamp`, `modelArmorConfig`,
+`modelSelectionConfig`, `labels`, `audioTimestamp`, Vertex image-output aliases
+(`outputMimeType` and `outputCompressionQuality`), `modelArmorConfig`,
 `responseSchema`, `audioTranscriptionConfig`, `imageConfig`, and Developer API
 `enableEnhancedCivicAnswers`). The port emits SDK content/field order, the
 default empty `generationConfig`, the system instruction's `role: "user"`, and
