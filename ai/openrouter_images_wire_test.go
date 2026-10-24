@@ -34,6 +34,10 @@ func TestOpenRouterImagesWireMatchesUpstream(t *testing.T) {
 		Path        string            `json:"path"`
 		Body        string            `json:"body"`
 		Result      string            `json:"result"`
+		Fail        *struct {
+			Status int    `json:"status"`
+			Body   string `json:"body"`
+		} `json:"fail"`
 	}
 	if err := json.Unmarshal(data, &fixtures); err != nil {
 		t.Fatal(err)
@@ -47,6 +51,11 @@ func TestOpenRouterImagesWireMatchesUpstream(t *testing.T) {
 				bodies <- string(b)
 				paths <- r.URL.Path
 				w.Header().Set("Content-Type", "application/json")
+				if fixture.Fail != nil {
+					w.WriteHeader(fixture.Fail.Status)
+					io.WriteString(w, fixture.Fail.Body)
+					return
+				}
 				io.WriteString(w, `{"id":"r","choices":[{"message":{"content":"ok","images":[{"image_url":"data:image/png;base64,QUJD"}]}}],"usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}}`)
 			}))
 			defer server.Close()
@@ -81,10 +90,16 @@ func TestOpenRouterImagesWireMatchesUpstream(t *testing.T) {
 			options.OnResponse = func(ProviderResponse, *Model) {}
 			options.OnResponse = func(_ ProviderResponse, hooked *Model) { responseModel = hooked }
 			result := OpenRouterImages{}.GenerateImages(&model, ImagesContext{Input: input}, options)
-			if result.StopReason != ImagesStopStop {
+			if fixture.Fail == nil && result.StopReason != ImagesStopStop {
 				t.Fatalf("result = %+v", result)
 			}
-			for name, hooked := range map[string]*Model{"onPayload": payloadModel, "onResponse": responseModel} {
+			hookModels := map[string]*Model{"onPayload": payloadModel}
+			if fixture.Fail == nil {
+				hookModels["onResponse"] = responseModel
+			} else if responseModel != nil {
+				t.Errorf("onResponse ran for a failed request")
+			}
+			for name, hooked := range hookModels {
 				if hooked == nil {
 					t.Fatalf("%s model was not passed", name)
 				}

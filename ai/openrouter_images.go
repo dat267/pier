@@ -84,10 +84,11 @@ func (OpenRouterImages) GenerateImages(model *ImagesModel, context ImagesContext
 		if hresp.StatusCode >= 400 {
 			raw, _ := io.ReadAll(io.LimitReader(hresp.Body, 1<<20))
 			hresp.Body.Close()
+			message, body := openAIAPIError(hresp.StatusCode, raw)
 			return nil, &ProviderError{
 				Status: hresp.StatusCode, Headers: hresp.Header,
-				Message: fmt.Sprintf("%d %s: %s", hresp.StatusCode, http.StatusText(hresp.StatusCode), string(raw)),
-				Body:    string(raw),
+				Message: message,
+				Body:    body,
 			}
 		}
 		return hresp, nil
@@ -202,6 +203,39 @@ type openRouterImagesURL struct {
 type openRouterImagesImagePart struct {
 	Type     string              `json:"type"`
 	ImageURL openRouterImagesURL `json:"image_url"`
+}
+
+// openAIAPIError reproduces the openai SDK's APIError message and the body
+// normalizeProviderError reports: the parsed `error` object when the body is a
+// JSON envelope, otherwise the raw text. The message is "<status> <text>",
+// or "<status> status code (no body)" for an empty body.
+func openAIAPIError(status int, raw []byte) (string, string) {
+	text := JSTrim(string(raw))
+	if text == "" {
+		return fmt.Sprintf("%d status code (no body)", status), ""
+	}
+	// The SDK parses `errorResponse.error` and uses its string `message` (or the
+	// stringified object) in the APIError message.
+	var envelope struct {
+		Error json.RawMessage `json:"error"`
+	}
+	if err := json.Unmarshal(raw, &envelope); err == nil && len(envelope.Error) > 0 {
+		var inner map[string]json.RawMessage
+		if err := json.Unmarshal(envelope.Error, &inner); err == nil && len(inner) > 0 {
+			var compact bytes.Buffer
+			if json.Compact(&compact, envelope.Error) == nil {
+				descriptor := compact.String()
+				if message, ok := inner["message"]; ok {
+					var text string
+					if err := json.Unmarshal(message, &text); err == nil {
+						descriptor = text
+					}
+				}
+				return fmt.Sprintf("%d %s", status, descriptor), compact.String()
+			}
+		}
+	}
+	return fmt.Sprintf("%d %s", status, text), text
 }
 
 // buildOpenRouterImagesParams renders the chat completions payload.
