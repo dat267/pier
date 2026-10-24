@@ -742,7 +742,7 @@ func TestBedrockStreamSigV4AndErrors(t *testing.T) {
 		t.Fatalf("details = %s", details)
 	}
 
-	// An HTTP failure is surfaced with its status and body.
+	// An unmodeled JSON service error uses the SDK's Unknown prefix and body message.
 	failing := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("x-amzn-requestid", "req-2")
 		writer.WriteHeader(http.StatusForbidden)
@@ -754,7 +754,7 @@ func TestBedrockStreamSigV4AndErrors(t *testing.T) {
 	}}, &BedrockOptions{BearerToken: "token"})
 	message, _ = stream.Result(context.Background())
 	if message.StopReason != StopError || message.ErrorMessage == nil ||
-		!strings.Contains(*message.ErrorMessage, "403") || !strings.Contains(*message.ErrorMessage, "no access") {
+		*message.ErrorMessage != "Unknown: no access" {
 		t.Fatalf("message = %+v", message)
 	}
 }

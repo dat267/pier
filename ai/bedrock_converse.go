@@ -926,11 +926,7 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 		}
 		if response.StatusCode >= 400 {
 			raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
-			fail(&ProviderError{
-				Status: response.StatusCode, Headers: response.Header,
-				Message: fmt.Sprintf("%d %s: %s", response.StatusCode, http.StatusText(response.StatusCode), string(raw)),
-				Body:    string(raw),
-			}, requestID, response.StatusCode, response.Header)
+			fail(bedrockHTTPError(response.StatusCode, response.Header, raw), requestID, response.StatusCode, response.Header)
 			return
 		}
 
@@ -962,6 +958,76 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 		stream.End(&output)
 	}()
 	return stream
+}
+
+func bedrockHTTPError(status int, headers http.Header, raw []byte) error {
+	fields := map[string]json.RawMessage{}
+	if len(bytes.TrimSpace(raw)) > 0 {
+		if err := json.Unmarshal(raw, &fields); err != nil || fields == nil {
+			if _, parseErr := canonicalJavaScriptJSON(raw); parseErr == nil {
+				fields = map[string]json.RawMessage{}
+			} else {
+				// The AWS SDK throws the JSON deserialization SyntaxError here.
+				// Keep the Go adapter's status/body diagnostic until the V8
+				// wording is deliberately emulated (D270).
+				return &ProviderError{
+					Status: status, Headers: headers,
+					Message: fmt.Sprintf("%d %s: %s", status, http.StatusText(status), string(raw)),
+					Body:    string(raw),
+				}
+			}
+		}
+	}
+	message := "UnknownError"
+	for _, key := range []string{"message", "Message"} {
+		var value string
+		if json.Unmarshal(fields[key], &value) == nil && value != "" {
+			message = value
+			break
+		}
+	}
+	code := headers.Get("x-amzn-errortype")
+	if code == "" {
+		for _, key := range []string{"code", "__type"} {
+			if value, ok := bedrockHTTPErrorFieldString(fields[key]); ok {
+				code = value
+				break
+			}
+		}
+	}
+	code = sanitizeBedrockHTTPErrorCode(code)
+	var body string
+	if errorBody, ok := fields["error"]; ok && len(errorBody) > 0 && errorBody[0] == '{' {
+		if encoded, err := canonicalJavaScriptJSON(errorBody); err == nil {
+			body = string(encoded)
+		}
+	}
+	if code == "" {
+		code = "Unknown"
+	}
+	return &ProviderError{Status: status, Headers: headers, Message: message, Code: code, Body: body}
+}
+
+func bedrockHTTPErrorFieldString(raw json.RawMessage) (string, bool) {
+	var text string
+	if json.Unmarshal(raw, &text) == nil {
+		return text, text != ""
+	}
+	var number json.Number
+	if json.Unmarshal(raw, &number) == nil {
+		return number.String(), true
+	}
+	return "", false
+}
+
+func sanitizeBedrockHTTPErrorCode(code string) string {
+	if index := strings.IndexAny(code, ",:"); index >= 0 {
+		code = code[:index]
+	}
+	if index := strings.LastIndex(code, "#"); index >= 0 {
+		code = code[index+1:]
+	}
+	return code
 }
 
 // withBedrockStatus attaches HTTP metadata to an error for formatting and

@@ -83,8 +83,9 @@ func FormatBedrockError(err error) string {
 	if providerErr, ok := errAsProviderError(err); ok {
 		// Only modeled Bedrock service exceptions get the prefix treatment; a
 		// transport name such as TimeoutError falls through to the plain
-		// message (upstream checks the SDK exception base class).
-		if strings.HasSuffix(providerErr.Code, "Exception") {
+		// message (upstream checks the SDK exception base class). The SDK's
+		// base exception for an unmodeled REST error is named Unknown.
+		if strings.HasSuffix(providerErr.Code, "Exception") || providerErr.Code == "Unknown" {
 			prefix := providerErr.Code
 			if mapped, ok := bedrockErrorPrefixes[providerErr.Code]; ok {
 				prefix = mapped

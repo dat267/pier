@@ -1,0 +1,112 @@
+[
+  {
+    "name": "modeled-throttling-json",
+    "requestId": "req-throttle",
+    "http": {
+      "status": 429,
+      "contentType": "application/json",
+      "body": "{\"message\":\"rate exceeded\",\"__type\":\"ThrottlingException\"}"
+    },
+    "errorMessage": "Throttling error: rate exceeded",
+    "stopReason": "error",
+    "diagnosticDetails": {
+      "status": 429,
+      "errorCode": "ThrottlingException",
+      "requestId": "req-throttle"
+    }
+  },
+  {
+    "name": "gateway-json-error-object",
+    "requestId": "req-json",
+    "http": {
+      "status": 403,
+      "contentType": "application/json",
+      "body": "{\"error\":{\"message\":\"gateway says no\"}}"
+    },
+    "errorMessage": "Unknown: 403: {\"message\":\"gateway says no\"}",
+    "stopReason": "error",
+    "diagnosticDetails": {
+      "status": 403,
+      "requestId": "req-json"
+    }
+  },
+  {
+    "name": "gateway-json-message",
+    "requestId": "req-message",
+    "http": {
+      "status": 403,
+      "contentType": "application/json",
+      "body": "{\"message\":\"no access\"}"
+    },
+    "errorMessage": "Unknown: no access",
+    "stopReason": "error",
+    "diagnosticDetails": {
+      "status": 403,
+      "requestId": "req-message"
+    }
+  },
+  {
+    "name": "gateway-json-scalar",
+    "requestId": "req-scalar",
+    "http": {
+      "status": 418,
+      "contentType": "application/json",
+      "body": "\"gateway says no\""
+    },
+    "errorMessage": "Unknown: UnknownError",
+    "stopReason": "error",
+    "diagnosticDetails": {
+      "status": 418,
+      "requestId": "req-scalar"
+    }
+  },
+  {
+    "name": "gateway-text-body",
+    "requestId": "req-text",
+    "dRow": "D270",
+    "http": {
+      "status": 502,
+      "contentType": "text/plain",
+      "body": "proxy exploded"
+    },
+    "errorMessage": "Unexpected token 'p', \"proxy exploded\" is not valid JSON\n  Deserialization error: to see the raw response, inspect the hidden field {error}.$response on this object.",
+    "stopReason": "error",
+    "diagnosticDetails": {
+      "status": 502,
+      "requestId": "req-text"
+    }
+  },
+  {
+    "name": "empty-http-body",
+    "requestId": "req-empty",
+    "http": {
+      "status": 400,
+      "contentType": "application/json",
+      "body": ""
+    },
+    "errorMessage": "Unknown: UnknownError",
+    "stopReason": "error",
+    "diagnosticDetails": {
+      "status": 400,
+      "requestId": "req-empty"
+    }
+  },
+  {
+    "name": "modeled-stream-error",
+    "requestId": "req-stream",
+    "streamError": {
+      "name": "ModelStreamErrorException",
+      "member": "modelStreamErrorException",
+      "message": "model said no",
+      "originalStatusCode": 503,
+      "originalMessage": "backend unavailable"
+    },
+    "errorMessage": "Model stream error: model said no",
+    "stopReason": "error",
+    "diagnosticDetails": {
+      "status": 200,
+      "errorCode": "ModelStreamErrorException",
+      "requestId": "req-stream"
+    }
+  }
+]
