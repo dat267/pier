@@ -2,7 +2,7 @@ package ai
 
 import "testing"
 
-// Reference: pi v1.3.0 api/transform-messages.ts checks signature truthiness,
+// Reference: pi v1.4.0 api/transform-messages.ts checks signature truthiness,
 // so an empty signature does not preserve an empty unsigned thinking block.
 func TestTransformThinkingUsesSignatureTruthiness(t *testing.T) {
 	empty, signature := "", "opaque"

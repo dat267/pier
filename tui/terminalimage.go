@@ -1,6 +1,6 @@
 package tui
 
-// Port of pi v1.3.0 packages/tui/src/terminal-image.ts: inline-image capability
+// Port of pi v1.4.0 packages/tui/src/terminal-image.ts: inline-image capability
 // detection inputs, the kitty and iTerm2 encoders, image dimension parsing,
 // cell-size math, the kitty placement registry used for scroll clipping, and
 // the text fallback. The package-level capability value is injected (D69), so

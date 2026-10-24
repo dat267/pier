@@ -2,7 +2,7 @@ package coding
 
 import "testing"
 
-// Reference: pi v1.3.0 utils/frontmatter.ts parses quoted YAML scalars.
+// Reference: pi v1.4.0 utils/frontmatter.ts parses quoted YAML scalars.
 func TestFrontmatterQuotedScalarEscapes(t *testing.T) {
 	for _, tc := range []struct{ raw, want string }{
 		{`'Don''t repeat'`, "Don't repeat"},

@@ -6,10 +6,10 @@ import (
 	"testing"
 )
 
-// Upstream v1.3.0 parseToolCallArguments (#10944): a finished tool call whose
+// Upstream v1.4.0 parseToolCallArguments (#10944): a finished tool call whose
 // complete arguments text is not a JSON object keeps no parsed prefix; the
 // arguments become {} and the error carries the text the model sent.
-// Upstream v1.3.0 json-parse.test.ts (#10868, commit 4b994d5e5): an invalid
+// Upstream v1.4.0 json-parse.test.ts (#10868, commit 4b994d5e5): an invalid
 // \u escape such as \usepackage is repaired to literal text instead of
 // failing the parse and letting the partial-json fallback drop the field.
 func TestParseStreamingJSONInvalidUnicodeEscapes(t *testing.T) {
@@ -95,7 +95,7 @@ func TestParseStreamingArgsPreservesKeyOrder(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 utils/json-parse.ts returns JSON.parse objects. Their
+// Reference: pi v1.4.0 utils/json-parse.ts returns JSON.parse objects. Their
 // JSON.stringify form enumerates array-index keys first, normalizes -0 to 0,
 // and serializes overflowed numeric values as null.
 func TestToolArgumentsMatchJavaScriptObjectEnumeration(t *testing.T) {

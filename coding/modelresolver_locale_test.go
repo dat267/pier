@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// Reference: pi v1.3.0 core/model-resolver.ts bestFuzzyMatch sorts IDs with
+// Reference: pi v1.4.0 core/model-resolver.ts bestFuzzyMatch sorts IDs with
 // descending localeCompare. Match Node's default English/root collation.
 func TestFuzzyModelAliasLocaleOrdering(t *testing.T) {
 	for _, tc := range []struct {

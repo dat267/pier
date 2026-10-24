@@ -7,7 +7,7 @@ import (
 	"testing/synctest"
 )
 
-// Reference: pi v1.3.0 utils/event-stream.ts synchronous completion closes
+// Reference: pi v1.4.0 utils/event-stream.ts synchronous completion closes
 // admission before another producer can complete. Never wait for both predicates:
 // that would deadlock an implementation that serializes admission.
 func TestConcurrentTerminalPushAdmitsOneEvent(t *testing.T) {

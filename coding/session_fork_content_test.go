@@ -7,7 +7,7 @@ import (
 	"github.com/dat267/pier/ai"
 )
 
-// Reference: pi v1.3.0 core/agent-session.ts getUserMessagesForForking uses
+// Reference: pi v1.4.0 core/agent-session.ts getUserMessagesForForking uses
 // contentText(content, ""). Prompt builds block content even without images.
 func TestForkSelectorIncludesSubmittedPrompt(t *testing.T) {
 	session := newPromptSession(t, &ai.Model{ID: "m", Provider: "anthropic", API: ai.APIAnthropicMessages, ContextWindow: 100000}, mockSessionStreamFn(createAssistantMessageT("reply")))

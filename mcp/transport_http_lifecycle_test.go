@@ -21,7 +21,7 @@ func (b *trackedSseBody) Close() error {
 	return nil
 }
 
-// Reference: pi v1.3.0 packages/mcp/src/transports/streamable-http.ts releases
+// Reference: pi v1.4.0 packages/mcp/src/transports/streamable-http.ts releases
 // its SSE reader in finally. The Go HTTP body must likewise be closed when
 // consumption finishes, so its connection and request resources are released.
 func TestHttpResponseStreamClosesBodyAfterEOF(t *testing.T) {

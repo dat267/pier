@@ -872,7 +872,7 @@ func BuildAnthropicParams(model *Model, context TranscriptContext, isOAuthToken 
 		len(initialTools) > 0
 
 	// Effort cannot change between messages while thinking is disabled, so
-	// "off" sends no effort markers (upstream v1.3.0 thinkingDisabled).
+	// "off" sends no effort markers (upstream v1.4.0 thinkingDisabled).
 	offVal, hasOff := model.ThinkingLevelMap[ThinkOff]
 	thinkingDisabled := model.Reasoning && options.ThinkingEnabled != nil && !*options.ThinkingEnabled &&
 		(!hasOff || offVal != nil)

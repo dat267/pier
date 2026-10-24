@@ -19,7 +19,7 @@ func (b *closingReadBody) Read(p []byte) (int, error) {
 
 func (b *closingReadBody) Close() error { return nil }
 
-// Reference: pi v1.3.0 core/http-dispatcher.ts's bodyTimeout; D254 implements
+// Reference: pi v1.4.0 core/http-dispatcher.ts's bodyTimeout; D254 implements
 // it with a Go timer. A pending read may return buffered bytes after Close,
 // but must not resurrect the closed response's timer and retain it forever.
 func TestIdleGuardDoesNotRearmAfterCloseDuringRead(t *testing.T) {

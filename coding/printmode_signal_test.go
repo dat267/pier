@@ -34,7 +34,7 @@ func TestPrintModeReturnStopsSignalWaiter(t *testing.T) {
 }
 
 func TestPrintModeReturnDisposesRuntime(t *testing.T) {
-	// v1.3.0 print-mode.ts disposes on ordinary returns as well as signals.
+	// v1.4.0 print-mode.ts disposes on ordinary returns as well as signals.
 	session, sessions := newPrintSession(t)
 	disposed := false
 	unregister := RegisterSessionResourceCleanup(func(id string) {
@@ -49,7 +49,7 @@ func TestPrintModeReturnDisposesRuntime(t *testing.T) {
 	}
 }
 
-// v1.3.0 print-mode.ts disposes the runtime before signal exit. Accepted saves
+// v1.4.0 print-mode.ts disposes the runtime before signal exit. Accepted saves
 // must survive even if the process is stopped while a provider is streaming.
 func TestPrintModeSignalDrainsAcceptedSaves(t *testing.T) {
 	if os.Getenv("PIER_PRINT_SIGNAL_HELPER") == "1" {

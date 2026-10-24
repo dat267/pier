@@ -1,7 +1,7 @@
 package coding
 
 // Second RPC tranche: session introspection, compaction/retry controls and
-// bash execution (pi v1.3.0 modes/rpc/rpc-mode.ts).
+// bash execution (pi v1.4.0 modes/rpc/rpc-mode.ts).
 
 import (
 	"os"
@@ -32,7 +32,7 @@ func rpcResponseData(t *testing.T, records []map[string]any) map[string]any {
 	return data
 }
 
-// pi v1.3.0 rpc-mode.ts returns the last assistant text, omitting the field
+// pi v1.4.0 rpc-mode.ts returns the last assistant text, omitting the field
 // when there is none (JSON.stringify drops the undefined value).
 func TestRPCGetLastAssistantText(t *testing.T) {
 	session := rpcTestSession(t)
@@ -52,7 +52,7 @@ func TestRPCGetLastAssistantText(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 rpc-mode.ts set_session_name trims and rejects an empty name.
+// pi v1.4.0 rpc-mode.ts set_session_name trims and rejects an empty name.
 func TestRPCSessionName(t *testing.T) {
 	session := rpcTestSession(t)
 	records := runRPCScript(t, session, `{"id":"a","type":"set_session_name","name":"   "}`+"\n"+
@@ -72,7 +72,7 @@ func TestRPCSessionName(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 get_fork_messages lists the user messages with their entry ids.
+// pi v1.4.0 get_fork_messages lists the user messages with their entry ids.
 func TestRPCForkMessages(t *testing.T) {
 	session := rpcTestSession(t)
 	firstID := session.Sessions.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "first"}})
@@ -93,7 +93,7 @@ func TestRPCForkMessages(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 get_entries returns every entry plus the leaf id, and supports a
+// pi v1.4.0 get_entries returns every entry plus the leaf id, and supports a
 // `since` cursor that excludes the named entry.
 func TestRPCGetEntries(t *testing.T) {
 	session := rpcTestSession(t)
@@ -122,7 +122,7 @@ func TestRPCGetEntries(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 get_tree returns the entry tree and the leaf id; labels are
+// pi v1.4.0 get_tree returns the entry tree and the leaf id; labels are
 // attached only when present.
 func TestRPCGetTree(t *testing.T) {
 	session := rpcTestSession(t)
@@ -161,7 +161,7 @@ func TestRPCGetTree(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 get_session_stats uses the camelCase SessionStats shape.
+// pi v1.4.0 get_session_stats uses the camelCase SessionStats shape.
 func TestRPCGetSessionStats(t *testing.T) {
 	session := rpcTestSession(t)
 	session.Sessions.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}})
@@ -191,7 +191,7 @@ func TestRPCGetSessionStats(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 get_commands lists prompt templates, then skills, each with
+// pi v1.4.0 get_commands lists prompt templates, then skills, each with
 // source metadata. Extensions are absent in this port.
 func TestRPCGetCommands(t *testing.T) {
 	persist := false
@@ -233,7 +233,7 @@ func TestRPCGetCommands(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 set_auto_compaction / set_auto_retry / abort_retry toggle session
+// pi v1.4.0 set_auto_compaction / set_auto_retry / abort_retry toggle session
 // state without requiring a model.
 func TestRPCCompactionAndRetryControls(t *testing.T) {
 	session := rpcTestSession(t)
@@ -255,7 +255,7 @@ func TestRPCCompactionAndRetryControls(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 compact returns the CompactionResult fields.
+// pi v1.4.0 compact returns the CompactionResult fields.
 func TestRPCCompact(t *testing.T) {
 	var runs atomic.Int64
 	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 1000, MaxTokens: 100}
@@ -281,7 +281,7 @@ func TestRPCCompact(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 compact forwards customInstructions into the summarization prompt.
+// pi v1.4.0 compact forwards customInstructions into the summarization prompt.
 func TestRPCCompactCustomInstructions(t *testing.T) {
 	var mu sync.Mutex
 	var captured string
@@ -319,7 +319,7 @@ func TestRPCCompactCustomInstructions(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 bash executes in the session cwd and returns a BashResult.
+// pi v1.4.0 bash executes in the session cwd and returns a BashResult.
 func TestRPCBash(t *testing.T) {
 	if _, err := os.Stat("/bin/sh"); err != nil {
 		t.Skip("no shell available")
@@ -344,7 +344,7 @@ func TestRPCBash(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 abort_bash succeeds even when no command is running.
+// pi v1.4.0 abort_bash succeeds even when no command is running.
 func TestRPCAbortBash(t *testing.T) {
 	records := runRPCScript(t, rpcTestSession(t), `{"id":"a","type":"abort_bash"}`+"\n")
 	if response := rpcResponses(records)[0]; response["success"] != true {
@@ -352,7 +352,7 @@ func TestRPCAbortBash(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 handles commands without blocking the input loop, so abort_bash can
+// pi v1.4.0 handles commands without blocking the input loop, so abort_bash can
 // cancel a running bash command through the tracked run context.
 func TestRPCAbortBashCancelsRunningCommand(t *testing.T) {
 	if _, err := os.Stat("/bin/sh"); err != nil {
@@ -381,7 +381,7 @@ func TestRPCAbortBashCancelsRunningCommand(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 requires the new command fields to have the right types.
+// pi v1.4.0 requires the new command fields to have the right types.
 func TestRPCNewCommandFieldValidation(t *testing.T) {
 	records := runRPCScript(t, rpcTestSession(t),
 		`{"id":"a","type":"bash","command":5}`+"\n"+

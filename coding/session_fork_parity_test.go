@@ -9,7 +9,7 @@ import (
 	"github.com/dat267/pier/ai"
 )
 
-// Reference: pi v1.3.0 core/session-manager.ts forkFrom appends one newline
+// Reference: pi v1.4.0 core/session-manager.ts forkFrom appends one newline
 // per JSON.stringify(entry). Extra blank lines violate the JSONL byte contract.
 func TestForkSessionWritesExactlyOneNewlinePerEntry(t *testing.T) {
 	tempAgentDir(t)

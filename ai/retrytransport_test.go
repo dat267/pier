@@ -91,7 +91,7 @@ func TestHTTP2StreamErrorsAreRetryable(t *testing.T) {
 	}
 }
 
-// Upstream v1.3.0 extends the retryable wording (utils/retry.ts): the gateway's
+// Upstream v1.4.0's retryable wording (utils/retry.ts) includes the gateway's
 // "The service is temporarily unavailable" (#10965) and a failed upstream
 // response stream, "Unable to forward upstream stream" (#10920), are transient.
 func TestTemporaryServiceAndForwardedStreamErrorsAreRetryable(t *testing.T) {

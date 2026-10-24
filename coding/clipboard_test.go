@@ -144,7 +144,7 @@ func TestClipboardTermuxCopyOnAndroid(t *testing.T) {
 
 func plainLinuxFile(string) ([]byte, error) { return []byte("Linux version"), nil }
 
-// pi v1.3.0 copyToClipboard: WSL prefers OSC 52 under Windows Terminal over
+// pi v1.4.0 copyToClipboard: WSL prefers OSC 52 under Windows Terminal over
 // the PowerShell round trip.
 func TestCopyTextWSLPrefersOSC52UnderWindowsTerminal(t *testing.T) {
 	env := map[string]string{"WSL_DISTRO_NAME": "Ubuntu", "WT_SESSION": "session"}

@@ -318,7 +318,7 @@ func TestBedrockMessageConversion(t *testing.T) {
 	}
 
 	// An assistant message from a different model has its thinking (signed and
-	// redacted) dropped (the shared transcript transform, v1.3.0), and an
+	// redacted) dropped (the shared transcript transform, v1.4.0), and an
 	// orphaned tool call gains a synthetic error result.
 	foreign := &AssistantMessage{
 		Provider: "anthropic", API: APIAnthropicMessages, Model: "claude-other",

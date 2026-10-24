@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// Reference: pi v1.3.0 core/tools/truncate.ts grows its output array only for
+// Reference: pi v1.4.0 core/tools/truncate.ts grows its output array only for
 // retained lines. An effectively unlimited line budget must not be used as a
 // slice capacity when only the byte limit triggers truncation.
 func TestTruncateTailSupportsUnboundedLineLimit(t *testing.T) {
@@ -20,7 +20,7 @@ func TestTruncateTailSupportsUnboundedLineLimit(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/tools/truncate.ts formatSize divides JavaScript
+// Reference: pi v1.4.0 core/tools/truncate.ts formatSize divides JavaScript
 // numbers before toFixed(1), without an overflowing integer multiplication.
 func TestFormatSizeLargeByteCountDoesNotOverflow(t *testing.T) {
 	for _, tc := range []struct {

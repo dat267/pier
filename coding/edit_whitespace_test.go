@@ -2,7 +2,7 @@ package coding
 
 import "testing"
 
-// Reference: pi v1.3.0 core/tools/edit-diff.ts countOccurrences uses JS split;
+// Reference: pi v1.4.0 core/tools/edit-diff.ts countOccurrences uses JS split;
 // splitting on an empty normalized target counts UTF-16 units minus one.
 func TestEmptyNormalizedOccurrenceCountMatchesSplit(t *testing.T) {
 	if got := countOccurrences(" ", " "); got != -1 {

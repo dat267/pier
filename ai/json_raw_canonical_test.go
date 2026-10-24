@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// Reference: pi v1.3.0 core/session-manager.ts and agent/src/proxy.ts use
+// Reference: pi v1.4.0 core/session-manager.ts and agent/src/proxy.ts use
 // JSON.stringify on parsed values, including imported/nested raw payloads.
 func TestMarshalRawJSONCanonicalizesJavaScriptValues(t *testing.T) {
 	for _, tc := range []struct{ raw, want string }{

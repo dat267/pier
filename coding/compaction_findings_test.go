@@ -14,7 +14,7 @@ import (
 )
 
 // Promoted from coding/testdata/compaction-audit (finding 3). Reference: pi
-// v1.3.0 core/compaction/compaction.ts estimateProjectedContextTokens compares
+// v1.4.0 core/compaction/compaction.ts estimateProjectedContextTokens compares
 // usage provenance in branch order, not the compaction window's replay order.
 func TestCompactionInvalidatesRetainedUsage(t *testing.T) {
 	manager := newTestSessionManager(t)
@@ -33,7 +33,7 @@ func TestCompactionInvalidatesRetainedUsage(t *testing.T) {
 }
 
 // Promoted from coding/testdata/compaction-audit (finding 1). Reference: pi
-// v1.3.0 core/agent-session.ts _findPersistedMessageEntryId falls back to
+// v1.4.0 core/agent-session.ts _findPersistedMessageEntryId falls back to
 // persisted/projection provenance for resumed messages.
 func TestCompactionRecoversResumedOverflow(t *testing.T) {
 	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 1000, MaxTokens: 100}
@@ -52,7 +52,7 @@ func TestCompactionRecoversResumedOverflow(t *testing.T) {
 }
 
 // Promoted from coding/testdata/compaction-audit (finding 2). Reference: pi
-// v1.3.0 core/agent-session.ts _compactBeforeNextAssistantResponse estimates
+// v1.4.0 core/agent-session.ts _compactBeforeNextAssistantResponse estimates
 // the complete projection, including tool results since the previous provider
 // usage.
 func TestCompactionCountsNewToolResults(t *testing.T) {
@@ -103,7 +103,7 @@ func TestCompactionCountsNewToolResults(t *testing.T) {
 }
 
 // Promoted from coding/testdata/compaction-audit (finding 6). Reference: pi
-// v1.3.0 core/agent-session.ts _omitRecoveryAttempt refreshes finalized
+// v1.4.0 core/agent-session.ts _omitRecoveryAttempt refreshes finalized
 // context immediately, even if the subsequent compaction fails.
 func TestCompactionFailureKeepsLiveContextProjected(t *testing.T) {
 	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 1000, MaxTokens: 100}
@@ -144,7 +144,7 @@ func TestCompactionFailureKeepsLiveContextProjected(t *testing.T) {
 }
 
 // Promoted from coding/testdata/compaction-audit (finding 4). Reference: pi
-// v1.3.0 core/compaction/compaction.ts createSummarizationOptions forwards
+// v1.4.0 core/compaction/compaction.ts createSummarizationOptions forwards
 // provider environment for both summaries.
 func TestCompactionForwardsProviderEnvironment(t *testing.T) {
 	preparation := &CompactionPreparation{
@@ -175,7 +175,7 @@ func TestCompactionForwardsProviderEnvironment(t *testing.T) {
 }
 
 // Promoted from coding/testdata/compaction-audit (finding 5). Reference: pi
-// v1.3.0 core/agent-session.ts _getSummarizationRequestAuth and
+// v1.4.0 core/agent-session.ts _getSummarizationRequestAuth and
 // _runDefaultCompaction carry the selected thinking level into compaction.
 func TestCompactionKeepsSelectedReasoning(t *testing.T) {
 	for _, manual := range []bool{true, false} {
@@ -212,7 +212,7 @@ func TestCompactionKeepsSelectedReasoning(t *testing.T) {
 }
 
 // Promoted from coding/testdata/compaction-audit (finding 7). Reference: pi
-// v1.3.0 core/agent-session.ts _getSummarizationRequestAuth passes the
+// v1.4.0 core/agent-session.ts _getSummarizationRequestAuth passes the
 // compaction signal into auth resolution in both compaction paths.
 func TestCompactionAuthReceivesRequestContext(t *testing.T) {
 	for _, manual := range []bool{true, false} {
@@ -257,7 +257,7 @@ func TestCompactionAuthReceivesRequestContext(t *testing.T) {
 }
 
 // Promoted from coding/testdata/compaction-audit (finding 8). Reference: pi
-// v1.3.0 core/compaction/utils.ts computeFileLists uses JavaScript's default
+// v1.4.0 core/compaction/utils.ts computeFileLists uses JavaScript's default
 // UTF-16 code-unit sort, not UTF-8 byte order.
 func TestCompactionFileListsUseUTF16Order(t *testing.T) {
 	ops := CreateFileOps()

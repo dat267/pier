@@ -1,6 +1,6 @@
 package tui
 
-// Port of pi v1.3.0 packages/tui/test/terminal-image.test.ts: the inline-image
+// Port of pi v1.4.0 packages/tui/test/terminal-image.test.ts: the inline-image
 // encoders, dimension parsers, cell-size math, the kitty placement registry and
 // the text fallback.
 

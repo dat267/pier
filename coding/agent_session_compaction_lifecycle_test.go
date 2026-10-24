@@ -9,7 +9,7 @@ import (
 	"github.com/dat267/pier/ai"
 )
 
-// Reference: pi v1.3.0 packages/coding-agent/src/core/agent-session.ts:
+// Reference: pi v1.4.0 packages/coding-agent/src/core/agent-session.ts:
 // _runAutoCompaction installs its controller before compaction_start;
 // abort cancels both compaction controllers.
 func TestCompactionStartCanBeAborted(t *testing.T) {
@@ -64,7 +64,7 @@ func TestCompactionStartCanBeAborted(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/agent-session.ts abort -> abortBranchSummary.
+// Reference: pi v1.4.0 core/agent-session.ts abort -> abortBranchSummary.
 func TestAbortAsyncCancelsBranchSummary(t *testing.T) {
 	s := compactionTestSession(t, nil, unreachableStreamFn, smallCompactionSettings())
 	ctx, cancel := context.WithCancel(context.Background())
@@ -78,7 +78,7 @@ func TestAbortAsyncCancelsBranchSummary(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/agent-session.ts _clearManualCompactionState and
+// Reference: pi v1.4.0 core/agent-session.ts _clearManualCompactionState and
 // _runAutoCompaction finally release idle waiters after clearing controllers.
 func TestCompactionCompletionReleasesIdleWaiters(t *testing.T) {
 	for _, manual := range []bool{false, true} {

@@ -10,7 +10,7 @@ import (
 	"github.com/dat267/pier/mcp/protocol"
 )
 
-// Reference: pi v1.3.0 packages/mcp/src/client.ts handleRequest catches an
+// Reference: pi v1.4.0 packages/mcp/src/client.ts handleRequest catches an
 // exception from the registered handler and sends a JSON-RPC error response.
 func TestClientServerRequestHandlerPanicBecomesRPCError(t *testing.T) {
 	client, server := connectTestClient(t)

@@ -78,7 +78,7 @@ func TestJSNumberToFixedMatchesJS(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/tools/truncate.ts and utils/image-resize.ts use
+// Reference: pi v1.4.0 core/tools/truncate.ts and utils/image-resize.ts use
 // Number.prototype.toFixed. At magnitude 1e21 it delegates to Number.toString,
 // regardless of the requested fraction digits.
 func TestJSNumberToFixedUsesExponentForLargeMagnitudes(t *testing.T) {

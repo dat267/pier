@@ -348,7 +348,7 @@ func ResolveCredentialForPrint(args *Args, runtime *ModelRuntime, kind AuthComma
 			providers = append(providers, printTarget{id: provider.ID})
 		}
 	} else {
-		// Upstream v1.3.0 #10913: the shared resolver restricts matches to
+		// Upstream v1.4.0 #10913: the shared resolver restricts matches to
 		// catalog models of configured providers, so an uncatalogued model id
 		// on another configured provider does not count as a match.
 		models := runtime.GetModels("")

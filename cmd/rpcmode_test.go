@@ -19,7 +19,7 @@ import (
 	"github.com/dat267/pier/coding"
 )
 
-// pi v1.3.0 rpc-mode.ts unwinds the host on SIGTERM/SIGHUP instead of
+// pi v1.4.0 rpc-mode.ts unwinds the host on SIGTERM/SIGHUP instead of
 // allowing the default process termination to bypass accepted-save cleanup.
 func TestRPCSignalUnwinds(t *testing.T) {
 	if os.Getenv("PIER_RPC_SIGNAL_CHILD") == "1" {
@@ -140,7 +140,7 @@ func TestRPCSessionIDWarningDoesNotPolluteStdout(t *testing.T) {
 	TestRPCStartsHeadlessly(t)
 }
 
-// pi v1.3.0 main.ts selects runRpcMode before piped-stdin handling. RPC
+// pi v1.4.0 main.ts selects runRpcMode before piped-stdin handling. RPC
 // starts without credentials or a terminal and stdout contains only JSONL.
 func TestRPCStartsHeadlessly(t *testing.T) {
 	if os.Getenv("PIER_RPC_TEST_CHILD") == "1" {
@@ -187,7 +187,7 @@ func TestRPCStartsHeadlessly(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 rpc-mode.ts new_session rebuilds the runtime session through the
+// pi v1.4.0 rpc-mode.ts new_session rebuilds the runtime session through the
 // host factory. The CLI supplies that factory, so a real process reverts to a
 // fresh session id.
 func TestRPCNewSessionCLI(t *testing.T) {
@@ -248,7 +248,7 @@ func TestRPCNewSessionCLI(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 rpc-mode.ts export_html runs the session's HTML export through the
+// pi v1.4.0 rpc-mode.ts export_html runs the session's HTML export through the
 // host renderer and responds with the resolved path. The CLI supplies the
 // interactive renderer, so a real process writes a real file.
 func TestRPCExportHTMLCLI(t *testing.T) {

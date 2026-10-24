@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// Reference: pi v1.3.0 core/settings-manager.ts uses proper-lockfile's
+// Reference: pi v1.4.0 core/settings-manager.ts uses proper-lockfile's
 // default 10-second stale directory recovery. Recover legacy Pier files too.
 // A live holder refreshes its lease even while its callback runs.
 func TestSettingsLiveLockDoesNotBecomeStale(t *testing.T) {

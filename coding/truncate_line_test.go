@@ -2,7 +2,7 @@ package coding
 
 import "testing"
 
-// Reference: pi v1.3.0 core/tools/truncate.ts, `truncateLine(line, maxChars)`:
+// Reference: pi v1.4.0 core/tools/truncate.ts, `truncateLine(line, maxChars)`:
 // the default applies to an omitted argument only, so an explicit 0 truncates
 // everything and keeps the suffix. The port treated 0 as "use the default".
 func TestTruncateLineZeroLimit(t *testing.T) {

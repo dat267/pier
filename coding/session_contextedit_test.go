@@ -217,7 +217,7 @@ func TestProjectedWindowMatchesSessionContext(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/session-manager.ts projectContextEntry replaces
+// Reference: pi v1.4.0 core/session-manager.ts projectContextEntry replaces
 // content only for user, assistant, toolResult and the literal "custom" role.
 func TestContextEditIgnoresOtherCustomAgentRoles(t *testing.T) {
 	messages := []ai.Message{

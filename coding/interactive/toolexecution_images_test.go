@@ -7,7 +7,7 @@ import (
 	"github.com/dat267/pier/tui"
 )
 
-// pi v1.3.0 tool-execution.ts renders image result blocks inline when the
+// pi v1.4.0 tool-execution.ts renders image result blocks inline when the
 // terminal supports an image protocol and show-images is on, and falls back to
 // the text placeholder otherwise.
 func TestToolExecutionRendersInlineImages(t *testing.T) {

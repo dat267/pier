@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// pi v1.3.0 utils/event-stream.ts result() returns one shared Promise, so
+// pi v1.4.0 utils/event-stream.ts result() returns one shared Promise, so
 // every caller waiting before completion receives the same final result.
 func TestEventStreamResultWakesAllCallers(t *testing.T) {
 	for _, terminal := range []bool{false, true} {
@@ -42,7 +42,7 @@ func TestEventStreamResultWakesAllCallers(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 utils/event-stream.ts invokes its callbacks synchronously, and
+// pi v1.4.0 utils/event-stream.ts invokes its callbacks synchronously, and
 // they can call end() again. The first resolved result wins while the outer
 // push still delivers its event, even when the predicate itself ends it.
 func TestEventStreamCallbacksCanEndStream(t *testing.T) {
@@ -78,7 +78,7 @@ func TestEventStreamCallbacksCanEndStream(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 utils/event-stream.ts publishes its terminal event synchronously.
+// pi v1.4.0 utils/event-stream.ts publishes its terminal event synchronously.
 // A consumer must not observe EOF between terminal admission and publishing
 // its event while the result extractor runs without the stream lock.
 func TestEventStreamDeliversTerminalDuringExtraction(t *testing.T) {

@@ -179,7 +179,7 @@ func TestClientStopIsIdempotent(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 modes/rpc/rpc-client.ts stop clears this.process, so the
+// Reference: pi v1.4.0 modes/rpc/rpc-client.ts stop clears this.process, so the
 // same client can start a fresh subprocess after its previous one is stopped.
 func TestClientCanRestartAfterStop(t *testing.T) {
 	client := startFakeClient(t, nil)

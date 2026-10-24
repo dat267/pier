@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// Reference: pi v1.3.0 core/model-resolver.ts calls minimatch with
+// Reference: pi v1.4.0 core/model-resolver.ts calls minimatch with
 // { nocase: true }. Every expectation was read off minimatch 10.x with the same
 // pattern, so `**` is a globstar only as a whole path segment, a wildcard never
 // matches a leading dot, and a trailing globstar consumes at least one segment.
@@ -147,7 +147,7 @@ func TestMatchGlobBraceSequencesAndDotSegments(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/model-resolver.ts uses minimatch 10.2.6.
+// Reference: pi v1.4.0 core/model-resolver.ts uses minimatch 10.2.6.
 // brace-expansion counts the minus sign in the width of a padded number.
 func TestMatchGlobNegativeBracePaddingIncludesSign(t *testing.T) {
 	for _, testCase := range []struct {
@@ -165,7 +165,7 @@ func TestMatchGlobNegativeBracePaddingIncludesSign(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/model-resolver.ts -> minimatch 10.2.6.
+// Reference: pi v1.4.0 core/model-resolver.ts -> minimatch 10.2.6.
 // An escaped hyphen in a character class is literal, not a range operator.
 func TestMatchGlobEscapedClassHyphenIsLiteral(t *testing.T) {
 	for _, testCase := range []struct {
@@ -180,7 +180,7 @@ func TestMatchGlobEscapedClassHyphenIsLiteral(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/model-resolver.ts -> minimatch 10.2.6.
+// Reference: pi v1.4.0 core/model-resolver.ts -> minimatch 10.2.6.
 // brace-expansion preserves ${...} while still expanding later brace groups.
 func TestMatchGlobDollarBracesStayLiteral(t *testing.T) {
 	for _, testCase := range []struct {
@@ -198,7 +198,7 @@ func TestMatchGlobDollarBracesStayLiteral(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/model-resolver.ts -> minimatch's brace-expansion
+// Reference: pi v1.4.0 core/model-resolver.ts -> minimatch's brace-expansion
 // dependency uses balanced-match, which finds a balanced inner group even when
 // an earlier opening brace is unmatched.
 func TestMatchGlobUnclosedOuterBraceKeepsInnerExpansion(t *testing.T) {
@@ -210,7 +210,7 @@ func TestMatchGlobUnclosedOuterBraceKeepsInnerExpansion(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/model-resolver.ts -> minimatch 10.2.6.
+// Reference: pi v1.4.0 core/model-resolver.ts -> minimatch 10.2.6.
 // brace-expansion reparses a literal group followed by a comma and closing
 // brace, allowing a later group to expand instead of stopping at the first.
 func TestMatchGlobLiteralBraceBeforeCommaSet(t *testing.T) {
@@ -232,7 +232,7 @@ func TestMatchGlobLiteralBraceBeforeCommaSet(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/model-resolver.ts -> minimatch 10.2.6.
+// Reference: pi v1.4.0 core/model-resolver.ts -> minimatch 10.2.6.
 // The singleton [.] class becomes a literal dot, including after another dot.
 func TestMatchGlobLiteralDotClassesMatchParentSegment(t *testing.T) {
 	for _, pattern := range []string{".[.]", "[.][.]"} {
@@ -242,7 +242,7 @@ func TestMatchGlobLiteralDotClassesMatchParentSegment(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/model-resolver.ts -> minimatch's brace-expansion
+// Reference: pi v1.4.0 core/model-resolver.ts -> minimatch's brace-expansion
 // uses JavaScript numbers. A sequence bound or step outside int64 must not
 // turn into its first digit or overflow into a sequence in the other direction.
 func TestMatchGlobLargeBraceSequenceNumbers(t *testing.T) {
@@ -261,7 +261,7 @@ func TestMatchGlobLargeBraceSequenceNumbers(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/model-resolver.ts -> minimatch 10.2.6.
+// Reference: pi v1.4.0 core/model-resolver.ts -> minimatch 10.2.6.
 // When minimatch invokes brace-expansion, that layer consumes one of two
 // backslashes before glob parsing. Without braces, minimatch skips that layer.
 func TestMatchGlobBraceExpansionUnescapesBackslashPairs(t *testing.T) {
@@ -281,7 +281,7 @@ func TestMatchGlobBraceExpansionUnescapesBackslashPairs(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/model-resolver.ts -> minimatch 10.2.6 skips
+// Reference: pi v1.4.0 core/model-resolver.ts -> minimatch 10.2.6 skips
 // brace-expansion when no brace group is present. A backslash pair then protects
 // itself, rather than letting its second slash escape a following dot.
 func TestMatchGlobBackslashPairBeforeLiteralDot(t *testing.T) {
@@ -290,7 +290,7 @@ func TestMatchGlobBackslashPairBeforeLiteralDot(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/model-resolver.ts -> minimatch 10.2.6.
+// Reference: pi v1.4.0 core/model-resolver.ts -> minimatch 10.2.6.
 // An alphabetic range crossing backslash contains an empty member. Whether it
 // survives is decided by the first group, not reset by a later sequence.
 func TestMatchGlobFirstBraceGroupControlsEmptyResults(t *testing.T) {
@@ -302,7 +302,7 @@ func TestMatchGlobFirstBraceGroupControlsEmptyResults(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/model-resolver.ts -> minimatch's brace-expansion
+// Reference: pi v1.4.0 core/model-resolver.ts -> minimatch's brace-expansion
 // stops when a JavaScript sequence comparison becomes false, including NaN
 // produced by adding opposite infinities.
 func TestMatchGlobInfiniteBraceStepDoesNotProduceNaN(t *testing.T) {
@@ -316,7 +316,7 @@ func TestMatchGlobInfiniteBraceStepDoesNotProduceNaN(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/model-resolver.ts -> brace-expansion's comma-set
+// Reference: pi v1.4.0 core/model-resolver.ts -> brace-expansion's comma-set
 // rewrite uses a JavaScript dot without dotAll, so no JS line terminator may
 // be crossed while looking for the later closing brace.
 func TestMatchGlobBraceRewriteDoesNotCrossLineTerminators(t *testing.T) {
@@ -328,7 +328,7 @@ func TestMatchGlobBraceRewriteDoesNotCrossLineTerminators(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/model-resolver.ts -> minimatch 10.2.6 parseClass.
+// Reference: pi v1.4.0 core/model-resolver.ts -> minimatch 10.2.6 parseClass.
 // Out-of-order ranges are discarded. If none of the class remains, it matches
 // nothing even when negated, rather than becoming a universal character class.
 func TestMatchGlobInvalidNegatedRangeMatchesNothing(t *testing.T) {

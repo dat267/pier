@@ -1,7 +1,7 @@
 package coding
 
 // Session-replacement RPC commands: new_session, switch_session, fork, clone
-// (pi v1.3.0 modes/rpc/rpc-mode.ts + core/agent-session-runtime.ts).
+// (pi v1.4.0 modes/rpc/rpc-mode.ts + core/agent-session-runtime.ts).
 
 import (
 	"context"
@@ -45,7 +45,7 @@ func byResponseID(id string) func(map[string]any) bool {
 	}
 }
 
-// pi v1.3.0 new_session starts a fresh session in the current directory and
+// pi v1.4.0 new_session starts a fresh session in the current directory and
 // rebinds the runtime to it.
 func TestRPCNewSession(t *testing.T) {
 	session := rpcPersistentSession(t)
@@ -70,7 +70,7 @@ func TestRPCNewSession(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 switch_session opens an existing session file and rebinds to it.
+// pi v1.4.0 switch_session opens an existing session file and rebinds to it.
 func TestRPCSwitchSession(t *testing.T) {
 	cwd := t.TempDir()
 	persist := true
@@ -95,7 +95,7 @@ func TestRPCSwitchSession(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 fork with position "before" branches at the message's parent and
+// pi v1.4.0 fork with position "before" branches at the message's parent and
 // returns its text for resending.
 func TestRPCForkBefore(t *testing.T) {
 	session := rpcPersistentSession(t)
@@ -121,7 +121,7 @@ func TestRPCForkBefore(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 fork with position "at" keeps the named entry and omits selectedText.
+// pi v1.4.0 fork with position "at" keeps the named entry and omits selectedText.
 func TestRPCForkAt(t *testing.T) {
 	session := rpcPersistentSession(t)
 	firstID := session.Sessions.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "first"}})
@@ -142,7 +142,7 @@ func TestRPCForkAt(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 clone forks at the current leaf.
+// pi v1.4.0 clone forks at the current leaf.
 func TestRPCClone(t *testing.T) {
 	session := rpcPersistentSession(t)
 	session.Sessions.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "first"}})
@@ -162,7 +162,7 @@ func TestRPCClone(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 clone without a leaf fails explicitly.
+// pi v1.4.0 clone without a leaf fails explicitly.
 func TestRPCCloneWithoutEntry(t *testing.T) {
 	client := startRPCTestWith(t, rpcPersistentSession(t), RPCModeOptions{ReplaceSession: rpcReplaceFactory()})
 	client.send(t, `{"id":"c","type":"clone"}`)
@@ -172,7 +172,7 @@ func TestRPCCloneWithoutEntry(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 fork rejects a missing entry and a non-user "before" entry.
+// pi v1.4.0 fork rejects a missing entry and a non-user "before" entry.
 func TestRPCForkInvalidEntry(t *testing.T) {
 	session := rpcPersistentSession(t)
 	assistantID := session.Sessions.AppendMessage(&ai.AssistantMessage{
@@ -191,7 +191,7 @@ func TestRPCForkInvalidEntry(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 replacement commands fail explicitly when the host supplies no
+// pi v1.4.0 replacement commands fail explicitly when the host supplies no
 // factory (the session cannot be rebuilt).
 func TestRPCSessionReplacementUnavailable(t *testing.T) {
 	session := rpcPersistentSession(t)
@@ -207,7 +207,7 @@ func TestRPCSessionReplacementUnavailable(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 forks an in-memory session in place: the same manager is branched
+// pi v1.4.0 forks an in-memory session in place: the same manager is branched
 // and there is still no session file afterwards.
 func TestRPCForkInMemory(t *testing.T) {
 	session := rpcTestSession(t)

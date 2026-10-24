@@ -18,7 +18,7 @@ func (p *observingRunParent) AfterFunc(func()) func() bool {
 	return func() bool { p.stopped.Add(1); return true }
 }
 
-// Reference: pi v1.3.0 agent.ts finishRun releases runtime-owned run state.
+// Reference: pi v1.4.0 agent.ts finishRun releases runtime-owned run state.
 // Go additionally owns the registration on a caller's cancellation context.
 func TestFinishedRunReleasesParentCancellation(t *testing.T) {
 	p := &observingRunParent{Context: context.Background(), done: make(chan struct{})}

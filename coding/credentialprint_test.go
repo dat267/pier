@@ -36,7 +36,7 @@ func credentialPrintProvider(id string, modelIDs ...string) *ai.Provider {
 	})
 }
 
-// Upstream v1.3.0 #10913 (credential-print.test.ts): with only --model, a
+// Upstream v1.4.0 #10913 (credential-print.test.ts): with only --model, a
 // credential is printed only for providers whose catalog holds that model, so
 // an uncatalogued id on another configured provider does not count as a match.
 func TestResolveCredentialForPrintResolvesOnlyCatalogModels(t *testing.T) {

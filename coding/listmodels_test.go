@@ -86,7 +86,7 @@ func TestListModelsTextSortsByProviderThenID(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 cli/list-models.ts copies getAvailable() into a fresh
+// Reference: pi v1.4.0 cli/list-models.ts copies getAvailable() into a fresh
 // array before sorting. Rendering must not reorder the caller's model list.
 func TestListModelsTextPreservesInputOrder(t *testing.T) {
 	first := listModel("openai", "z", 1000, 1000, false, "text")
@@ -98,7 +98,7 @@ func TestListModelsTextPreservesInputOrder(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 cli/list-models.ts sorts providers and IDs with
+// Reference: pi v1.4.0 cli/list-models.ts sorts providers and IDs with
 // localeCompare, not byte order. D257 uses root collation for the Go equivalent.
 func TestListModelsTextUsesLocaleOrdering(t *testing.T) {
 	models := []*ai.Model{

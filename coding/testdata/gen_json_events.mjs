@@ -1,5 +1,5 @@
 // Run from the repository root: node --experimental-strip-types coding/testdata/gen_json_events.mjs
-// Reference: pi v1.3.0 modes/json-event.ts. Output is label => JSON.stringify(event).
+// Reference: pi v1.4.0 modes/json-event.ts. Output is label => JSON.stringify(event).
 import { toJsonEvent } from '../../pi/packages/coding-agent/src/modes/json-event.ts';
 const usage = {input:0,output:0,cacheRead:0,cacheWrite:0,totalTokens:0,cost:{input:0,output:0,cacheRead:0,cacheWrite:0,total:0}};
 const message = {role:'assistant',content:[],api:'openai-responses',provider:'openai',model:'mock',usage,stopReason:'stop',timestamp:1};

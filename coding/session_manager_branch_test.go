@@ -66,7 +66,7 @@ func TestSessionManagerBranchCacheSurvivesFromID(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/session-manager.ts getTree compares Date.getTime,
+// Reference: pi v1.4.0 core/session-manager.ts getTree compares Date.getTime,
 // not timestamp strings. Equal millisecond values retain insertion order.
 func TestSessionTreeOrdersChildrenByJavaScriptTime(t *testing.T) {
 	for _, tc := range []struct {

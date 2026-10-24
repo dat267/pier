@@ -354,7 +354,7 @@ func TestRetryOmitsTheFailedAttemptFromContext(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 core/agent-session.ts: abort retains _agentRunAbortRequested
+// pi v1.4.0 core/agent-session.ts: abort retains _agentRunAbortRequested
 // across _prepareRetry and _handlePostAgentRun, including listener callbacks.
 func TestAbortAtRetryStartStopsRun(t *testing.T) {
 	session := retrySession(t, &ai.RetryPolicy{Enabled: true, MaxRetries: 1, BaseDelayMS: 1}, erroringStreamFn(1, "overloaded"))
@@ -395,7 +395,7 @@ func TestAbortAtRetryStartStopsRun(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 core/agent-session.ts: _emitAgentSettled reports the run's
+// pi v1.4.0 core/agent-session.ts: _emitAgentSettled reports the run's
 // abort flag even when backoff cancellation leaves no aborted assistant.
 func TestAbortDuringRetryBackoffReportsAborted(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {

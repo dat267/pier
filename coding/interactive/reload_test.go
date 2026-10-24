@@ -117,7 +117,7 @@ func TestHandleReloadCommand(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/agent-session.ts reload reloads settings before
+// Reference: pi v1.4.0 core/agent-session.ts reload reloads settings before
 // extensions/mcp/index.ts session_start reads the MCP config and project trust.
 func TestReloadLoadsSettingsBeforeMCP(t *testing.T) {
 	for _, detached := range []bool{false, true} {

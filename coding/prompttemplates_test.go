@@ -12,7 +12,7 @@ import (
 
 // Tests ported from packages/coding-agent/test/prompt-templates.test.ts.
 
-// pi v1.3.0 core/prompt-templates.ts substituteArgs uses Array.slice, which
+// pi v1.4.0 core/prompt-templates.ts substituteArgs uses Array.slice, which
 // clamps very large lengths to the available arguments without overflowing.
 func TestSubstituteArgsClampsHugeSliceLengths(t *testing.T) {
 	for _, template := range []string{"${@:2:9223372036854775807}", "${@:2:9999999999999999999999999999999999999}"} {

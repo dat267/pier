@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// Reference: pi v1.3.0 utils/validation.ts formatValidationPath and TypeBox
+// Reference: pi v1.4.0 utils/validation.ts formatValidationPath and TypeBox
 // 1.3.27 en_US diagnostics. These literals were checked against its source.
 func TestValidationErrorPrintsParsedOriginalArguments(t *testing.T) {
 	_, err := ValidateToolArguments(Tool{Name: "t", Parameters: json.RawMessage(`{"type":"object","properties":{"n":{"type":"integer"}}}`)}, ToolCall{Name: "t", Arguments: json.RawMessage(`{"n":"\u0074wo"}`)})

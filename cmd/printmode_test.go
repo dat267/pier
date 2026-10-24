@@ -37,7 +37,7 @@ func TestResolvePrintMode(t *testing.T) {
 }
 
 func TestPrintFailureReturnsThroughCommandCleanup(t *testing.T) {
-	// v1.3.0 print-mode.ts disposes its host before exiting. run must return
+	// v1.4.0 print-mode.ts disposes its host before exiting. run must return
 	// the reported status so its MCP/settings/queue defers can execute too.
 	if os.Getenv("PIER_PRINT_FAILURE_CHILD") == "1" {
 		t.Setenv("OPENAI_API_KEY", "")

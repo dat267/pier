@@ -11,7 +11,7 @@ import (
 	"github.com/dat267/pier/coding/interactive"
 )
 
-// runRPCSession follows pi v1.3.0 rpc-mode.ts signal cleanup. Return the
+// runRPCSession follows pi v1.4.0 rpc-mode.ts signal cleanup. Return the
 // status through run so MCP, settings and accepted-write defers still execute.
 // replace builds a session for a session-replacement command; nil disables
 // them. themeName seeds the export_html theme (empty uses the active theme).

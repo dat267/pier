@@ -14,7 +14,7 @@ func kittyImageLine(t *testing.T, imageID int, payload string) string {
 	})
 }
 
-// pi v1.3.0 prepareKittyScreen: the first frame keeps the transmission, and a
+// pi v1.4.0 prepareKittyScreen: the first frame keeps the transmission, and a
 // later frame with the same generation reuses its placement.
 func TestPrepareKittyScreenReusesUploadedTransmission(t *testing.T) {
 	line := kittyImageLine(t, 101, "AAAA")

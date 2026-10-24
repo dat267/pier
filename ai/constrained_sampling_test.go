@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// pi v1.3.0 api/constrained-sampling.ts makeJsonSchemaNodeStrict recurses
+// pi v1.4.0 api/constrained-sampling.ts makeJsonSchemaNodeStrict recurses
 // into properties before wrapping optional values in an anyOf object.
 func TestStrictSchemaTransformsPropertySchemas(t *testing.T) {
 	for _, tt := range []struct{ name, input, want string }{
@@ -33,7 +33,7 @@ func TestStrictSchemaTransformsPropertySchemas(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 api/constrained-sampling.ts checks schema.type === "object"
+// pi v1.4.0 api/constrained-sampling.ts checks schema.type === "object"
 // and rejects null properties/required rather than treating them as missing.
 func TestStrictSchemaRecognizesObjectAndArrayShapes(t *testing.T) {
 	for _, tt := range []struct {
@@ -54,7 +54,7 @@ func TestStrictSchemaRecognizesObjectAndArrayShapes(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 api/anthropic-messages.ts compares minItems to numeric 0/1.
+// pi v1.4.0 api/anthropic-messages.ts compares minItems to numeric 0/1.
 func TestAnthropicStrictMinimumItemsUsesNumericValue(t *testing.T) {
 	for _, raw := range []string{"0", "-0", "0.0", "1", "1.0", "1e0"} {
 		if AnthropicStrictUnsupportedKeyword("minItems", json.RawMessage(raw)) {

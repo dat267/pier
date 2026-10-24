@@ -44,7 +44,7 @@ func TestMarkdownForceItalicKeepsImagePayloads(t *testing.T) {
 	}
 }
 
-// D263 deliberately extends pi v1.3.0 components/markdown.ts: only the
+// D263 deliberately extends pi v1.4.0 components/markdown.ts: only the
 // opt-in thinking presentation overrides resets inside styled elements.
 func TestMarkdownForceItalicRestoresResets(t *testing.T) {
 	for _, test := range []struct{ name, input, want string }{

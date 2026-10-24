@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// Reference: pi v1.3.0 core/model-resolver.ts uses minimatch 10.2.6;
+// Reference: pi v1.4.0 core/model-resolver.ts uses minimatch 10.2.6;
 // brace-expansion's combine caps results before growing its output array.
 // A modest Cartesian product catches reserving the entire product without
 // reproducing the 160 GB allocation of {1..100000}{1..100000}.
@@ -24,7 +24,7 @@ func TestMatchGlobBraceProductAllocationIsBounded(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/model-resolver.ts -> minimatch -> brace-expansion.
+// Reference: pi v1.4.0 core/model-resolver.ts -> minimatch -> brace-expansion.
 // Reaching the expansion limit truncates alternatives, not the rest of each
 // pattern: the retained alternatives still include their literal suffix.
 func TestMatchGlobTruncatedBraceExpansionKeepsSuffix(t *testing.T) {
@@ -37,7 +37,7 @@ func TestMatchGlobTruncatedBraceExpansionKeepsSuffix(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/model-resolver.ts -> minimatch -> brace-expansion.
+// Reference: pi v1.4.0 core/model-resolver.ts -> minimatch -> brace-expansion.
 // The intermediate list of comma alternatives is bounded as well as the final
 // Cartesian product; otherwise many sequence alternatives bypass the budget.
 func TestMatchGlobNestedBraceAlternativesAllocationIsBounded(t *testing.T) {
@@ -54,7 +54,7 @@ func TestMatchGlobNestedBraceAlternativesAllocationIsBounded(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/model-resolver.ts -> minimatch. A literal mismatch
+// Reference: pi v1.4.0 core/model-resolver.ts -> minimatch. A literal mismatch
 // needs no backtracking states; reserving patternLen*valueLen map entries
 // before inspecting the first character makes a short input exhaust memory.
 func TestMatchGlobLiteralMismatchAllocationIsLinear(t *testing.T) {
@@ -71,7 +71,7 @@ func TestMatchGlobLiteralMismatchAllocationIsLinear(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/model-resolver.ts -> minimatch. The same bound
+// Reference: pi v1.4.0 core/model-resolver.ts -> minimatch. The same bound
 // applies across path segments: a mismatch at the first segment must not
 // reserve every possible pair of subsequent segment offsets.
 func TestMatchGlobPathMismatchAllocationIsLinear(t *testing.T) {
@@ -88,7 +88,7 @@ func TestMatchGlobPathMismatchAllocationIsLinear(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/model-resolver.ts -> minimatch -> brace-expansion.
+// Reference: pi v1.4.0 core/model-resolver.ts -> minimatch -> brace-expansion.
 // Top-level empty alternatives are discarded before counting against the
 // retained-result limit, so they cannot hide a later non-empty alternative.
 func TestMatchGlobDiscardedEmptyAlternativesDoNotUseBudget(t *testing.T) {
@@ -98,7 +98,7 @@ func TestMatchGlobDiscardedEmptyAlternativesDoNotUseBudget(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/model-resolver.ts -> minimatch 10.2.6 with
+// Reference: pi v1.4.0 core/model-resolver.ts -> minimatch 10.2.6 with
 // brace-expansion 5.0.12. Beyond EXPANSION_MAX_DEPTH (1000), nested groups stay
 // literal instead of consuming unbounded parser stack and repeated scans.
 func TestMatchGlobDeepBraceNestingStaysLiteral(t *testing.T) {

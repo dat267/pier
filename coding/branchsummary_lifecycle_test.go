@@ -8,7 +8,7 @@ import (
 	"github.com/dat267/pier/ai"
 )
 
-// Reference: pi v1.3.0 core/agent-session.ts navigateTree passes the session's
+// Reference: pi v1.4.0 core/agent-session.ts navigateTree passes the session's
 // retry settings to generateBranchSummary, just as compaction does.
 func TestNavigateTreeUsesSummarizationRetrySettings(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
@@ -36,7 +36,7 @@ func TestNavigateTreeUsesSummarizationRetrySettings(t *testing.T) {
 	})
 }
 
-// Reference: pi v1.3.0 core/agent-session.ts navigateTree's finally clears
+// Reference: pi v1.4.0 core/agent-session.ts navigateTree's finally clears
 // _branchSummaryAbortController and calls _resolveIdleWaitIfIdle.
 func TestNavigateTreeReleasesIdleWaiters(t *testing.T) {
 	for _, failure := range []bool{false, true} {

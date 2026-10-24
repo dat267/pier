@@ -290,7 +290,7 @@ func TestCompactedProjectionCostsTheWindowNotTheSession(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/session-manager.ts buildSessionProjection emits
+// Reference: pi v1.4.0 core/session-manager.ts buildSessionProjection emits
 // only the newest compaction's messages when its kept range includes an older
 // compaction entry. Provenance retains that older entry with no contribution.
 func TestProjectionDoesNotReplayRetainedOldCompaction(t *testing.T) {

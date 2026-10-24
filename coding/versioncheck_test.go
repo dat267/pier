@@ -17,7 +17,7 @@ import (
 // Round 104 tests: management HTTP retry, the HTTP dispatcher helpers, the user
 // agent, and the version check with its semver comparison.
 
-// pi v1.3.0 utils/version-check.ts uses npm semver: core components cannot
+// pi v1.4.0 utils/version-check.ts uses npm semver: core components cannot
 // exceed MAX_SAFE_INTEGER, versions are bounded to 256 characters, and large
 // numeric prereleases retain JavaScript numeric comparison semantics.
 func TestComparePackageVersionsMatchesSemverNumericBounds(t *testing.T) {
@@ -382,7 +382,7 @@ func TestPortReleaseCheck(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/http-dispatcher.ts parses strings with Number(),
+// Reference: pi v1.4.0 core/http-dispatcher.ts parses strings with Number(),
 // rejects nonfinite numbers and floors the resulting nonnegative value.
 func TestHTTPIdleTimeoutUsesJavaScriptNumberParsing(t *testing.T) {
 	for _, tc := range []struct {

@@ -196,7 +196,7 @@ func TestBuildParamsToolResultPairingAndSyntheticResults(t *testing.T) {
 	}
 }
 
-// Upstream v1.3.0 #10753: a managed-effort model that cannot turn thinking off
+// Upstream v1.4.0 #10753: a managed-effort model that cannot turn thinking off
 // (thinkingLevelMap.off === null) keeps adaptive thinking instead of sending
 // disabled, while one that can sends disabled and no effort markers.
 func TestAnthropicManagedEffortRespectsOffSupport(t *testing.T) {
@@ -237,7 +237,7 @@ func TestAnthropicManagedEffortRespectsOffSupport(t *testing.T) {
 }
 
 func TestBuildParamsErrorToolResultImagesFollowToolResults(t *testing.T) {
-	// Upstream v1.3.0 #10794 (api/anthropic-messages.ts convertMessages):
+	// Upstream v1.4.0 #10794 (api/anthropic-messages.ts convertMessages):
 	// Anthropic rejects error tool results whose content is not all text, so the
 	// images follow all tool results of the turn in the same user message, and
 	// the result itself carries a note. Successful results keep images in place.

@@ -47,7 +47,7 @@ func TestSerializeSessionBranchHeader(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/session-export.ts serializes before writeFileSync;
+// Reference: pi v1.4.0 core/session-export.ts serializes before writeFileSync;
 // a serialization failure cannot truncate an existing destination.
 func TestExportSessionSerializationFailurePreservesDestination(t *testing.T) {
 	for _, trailing := range []bool{false, true} {

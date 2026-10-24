@@ -2,7 +2,7 @@ package ai
 
 import "testing"
 
-// Reference: pi v1.3.0 utils/overflow.ts regexes use JS whitespace, dot and
+// Reference: pi v1.4.0 utils/overflow.ts regexes use JS whitespace, dot and
 // non-Unicode /i case folding (not RE2's Unicode folding).
 func TestOverflowJavaScriptRegexSemantics(t *testing.T) {
 	for _, tc := range []struct {

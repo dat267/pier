@@ -185,7 +185,7 @@ func TestConvertGoogleMessagesNormalizesAstralToolCallIDLikeJavaScript(t *testin
 
 func TestConvertGoogleMessagesCrossModelThinking(t *testing.T) {
 	model := testGoogleModel()
-	// Thinking from a DIFFERENT model is dropped entirely (v1.3.0 #11000), so an
+	// Thinking from a DIFFERENT model is dropped entirely (v1.4.0 #11000), so an
 	// assistant message that contains only thinking has no content left.
 	messages := []Message{
 		&AssistantMessage{

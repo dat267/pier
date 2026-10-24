@@ -144,7 +144,7 @@ func TestMessageSelectorForkIsWired(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/agent-session-runtime.ts extractUserMessageText
+// Reference: pi v1.4.0 core/agent-session-runtime.ts extractUserMessageText
 // joins text blocks without a separator, so a block-shaped prompt returns its
 // full text to the editor when forking before it.
 func TestForkAtEntryJoinsBlockPromptText(t *testing.T) {

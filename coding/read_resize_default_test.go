@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-// Reference: pi v1.3.0 core/tools/read.ts defaults omitted autoResizeImages to true.
+// Reference: pi v1.4.0 core/tools/read.ts defaults omitted autoResizeImages to true.
 func TestReadModelOptionKeepsDefaultResize(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "wide.png"), solidPNG(t, 2001, 1), 0600); err != nil {

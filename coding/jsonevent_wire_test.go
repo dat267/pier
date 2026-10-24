@@ -11,7 +11,7 @@ import (
 	"github.com/dat267/pier/ai"
 )
 
-// v1.3.0 modes/json-event.ts removes both the outer cumulative message and
+// v1.4.0 modes/json-event.ts removes both the outer cumulative message and
 // the inner partial. Wire size must not depend on the accumulated response.
 func jsonEventGoldens(t *testing.T) map[string]string {
 	t.Helper()
@@ -141,7 +141,7 @@ func TestJSONSessionEventsMatchUpstream(t *testing.T) {
 }
 
 func TestJSONSessionNameChangeCarriesNormalizedName(t *testing.T) {
-	// v1.3.0 agent-session.ts setSessionName emits getSessionName(), not raw input.
+	// v1.4.0 agent-session.ts setSessionName emits getSessionName(), not raw input.
 	session, _ := newPrintSession(t)
 	var wires []string
 	session.Subscribe(func(event *SessionEvent) {
@@ -162,7 +162,7 @@ func TestJSONSessionNameChangeCarriesNormalizedName(t *testing.T) {
 }
 
 func TestJSONEventMapPreservesOptionalUsage(t *testing.T) {
-	// v1.3.0 json-event.ts forwards the full Usage value, not a fixed subset.
+	// v1.4.0 json-event.ts forwards the full Usage value, not a fixed subset.
 	reasoning, cacheWrite1h := int64(7), int64(3)
 	message := createAssistantMessageT("")
 	message.Usage.Reasoning = &reasoning
@@ -179,7 +179,7 @@ func TestJSONEventMapPreservesOptionalUsage(t *testing.T) {
 }
 
 func TestPrintModeJSONPreservesTerminalPayloads(t *testing.T) {
-	// v1.3.0 print-mode.ts serializes toJsonEvent directly. Check actual stdout,
+	// v1.4.0 print-mode.ts serializes toJsonEvent directly. Check actual stdout,
 	// not only the exported mapper, so the two paths cannot drift again.
 	session, sessions := newPrintSession(t, createAssistantMessageT("reply"))
 	var code int
@@ -227,7 +227,7 @@ func TestPrintModeJSONPreservesTerminalPayloads(t *testing.T) {
 }
 
 func TestJSONWirePreservesUpstreamFieldOrder(t *testing.T) {
-	// Literal from v1.3.0 modes/json-event.ts, JSON.stringify(toJsonEvent(event)).
+	// Literal from v1.4.0 modes/json-event.ts, JSON.stringify(toJsonEvent(event)).
 	event := &SessionEvent{Type: SessionMessageUpdate, Agent: &agent.AgentEvent{
 		Message:               createAssistantMessageT("ignored"),
 		AssistantMessageEvent: &ai.AssistantMessageEvent{Type: ai.EventTextDelta, ContentIndex: 1, Delta: "<>&"},

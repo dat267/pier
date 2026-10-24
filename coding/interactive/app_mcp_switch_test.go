@@ -12,7 +12,7 @@ import (
 	"github.com/dat267/pier/mcp/protocol"
 )
 
-// Reference: pi v1.3.0 src/core/agent-session-runtime.ts and
+// Reference: pi v1.4.0 src/core/agent-session-runtime.ts and
 // src/extensions/mcp/index.ts (session_start and defaultLoadConfig).
 //
 // TestSessionReplacementReattachesMcpTools covers the MCP half of the

@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// Reference: pi v1.3.0 core/session-manager.ts loadEntriesFromFile returns no
+// Reference: pi v1.4.0 core/session-manager.ts loadEntriesFromFile returns no
 // entries unless the first parsed entry is a session header with a string id,
 // so SessionManager._setSessionFile rejects a non-session file instead of
 // loading its entries.

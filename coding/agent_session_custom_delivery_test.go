@@ -9,7 +9,7 @@ import (
 	"github.com/dat267/pier/ai"
 )
 
-// Reference: pi v1.3.0 core/agent-session.ts sendCustomMessage queues a
+// Reference: pi v1.4.0 core/agent-session.ts sendCustomMessage queues a
 // triggering message during a run. An agent_end listener must not merely
 // append it to history, leaving its requested turn unserved.
 func TestSendMessageDuringRunTriggersQueuedTurn(t *testing.T) {
@@ -37,7 +37,7 @@ func TestSendMessageDuringRunTriggersQueuedTurn(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/agent-session.ts sendCustomMessage's idle
+// Reference: pi v1.4.0 core/agent-session.ts sendCustomMessage's idle
 // non-triggering branch persists the
 // message before publishing message_start/message_end, so UI listeners can
 // display it without waiting for another run or rebuilding the transcript.
@@ -67,7 +67,7 @@ func TestContextOnlyCustomMessagePublishesLifecycle(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/agent-session.ts _handleAgentEvent flushes
+// Reference: pi v1.4.0 core/agent-session.ts _handleAgentEvent flushes
 // context-only custom messages at turn_end, after tool results and before
 // the next request. Waiting until the entire run ends hides them from the model.
 func TestContextOnlyCustomMessageReachesNextTurn(t *testing.T) {

@@ -88,7 +88,7 @@ func proxyContext() ai.TranscriptContext {
 	}}
 }
 
-// pi v1.3.0 agent/src/proxy.ts uses JS array properties; a negative index
+// pi v1.4.0 agent/src/proxy.ts uses JS array properties; a negative index
 // is invisible in serialized content. D252 rejects it as a protocol error
 // rather than indexing a Go slice and crashing the process.
 func TestProxyRejectsNegativeContentIndex(t *testing.T) {
@@ -102,7 +102,7 @@ func TestProxyRejectsNegativeContentIndex(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 agent/src/proxy.ts assigns contentSignature on every block end,
+// pi v1.4.0 agent/src/proxy.ts assigns contentSignature on every block end,
 // but assigns providerThinkingLevel only when the terminal event supplies it.
 func TestProxyPreservesOptionalFieldAssignmentSemantics(t *testing.T) {
 	for _, thinking := range []bool{false, true} {
@@ -244,7 +244,7 @@ func TestStreamProxyHTTPError(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 agent/src/proxy.ts rejects every !response.ok status and formats
+// pi v1.4.0 agent/src/proxy.ts rejects every !response.ok status and formats
 // the status code once, followed by response.statusText when JSON has no error.
 func TestStreamProxyHTTPStatusFallback(t *testing.T) {
 	for _, status := range []int{http.StatusServiceUnavailable, http.StatusMultipleChoices} {

@@ -118,7 +118,7 @@ func TestAppendCompactionDefaults(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 core/session-manager.ts sessionEntryToContextMessages
+// Reference: pi v1.4.0 core/session-manager.ts sessionEntryToContextMessages
 // normalizes null/missing content by role, including custom-message entries.
 func TestContextMessagesNormalizeMissingContent(t *testing.T) {
 	for _, tc := range []struct {

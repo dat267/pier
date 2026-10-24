@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// Reference: pi v1.3.0 packages/mcp/src/client.ts handleMessage starts the async
+// Reference: pi v1.4.0 packages/mcp/src/client.ts handleMessage starts the async
 // handleRequest without awaiting it. A handler awaiting cancellation must not
 // block the stdio reader from dispatching notifications/cancelled.
 func TestClientStdioHandlerCanReceiveCancellation(t *testing.T) {

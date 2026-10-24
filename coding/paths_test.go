@@ -36,7 +36,7 @@ func TestIsLocalPath(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 utils/paths.ts resolvePath calls node:path.resolve,
+// Reference: pi v1.4.0 utils/paths.ts resolvePath calls node:path.resolve,
 // which makes even an empty or relative base absolute against process.cwd().
 func TestResolvePathWithRelativeBaseIsAbsolute(t *testing.T) {
 	cwd, err := os.Getwd()
@@ -119,7 +119,7 @@ func TestNormalizePathTrimsJavaScriptWhitespace(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 utils/paths.ts uses node:url.fileURLToPath.
+// Reference: pi v1.4.0 utils/paths.ts uses node:url.fileURLToPath.
 // URL search/hash are metadata, while escaped ?/# remain literal filename bytes.
 func TestNormalizePathFileURLIgnoresQueryAndFragment(t *testing.T) {
 	for _, tc := range []struct{ input, want string }{
@@ -146,7 +146,7 @@ func TestNormalizePathAcceptsUppercaseLocalhostFileURL(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 utils/paths.ts calls node:url.fileURLToPath, so the URL
+// Reference: pi v1.4.0 utils/paths.ts calls node:url.fileURLToPath, so the URL
 // parser normalizes the pathname before the path is decoded: dot segments
 // (literal or percent-encoded) resolve, backslashes are separators for the
 // special file scheme, and an empty path is the root. Each expectation was read
@@ -180,7 +180,7 @@ func TestNormalizePathFileURLPathname(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 utils/paths.ts calls node:url.fileURLToPath, which
+// Reference: pi v1.4.0 utils/paths.ts calls node:url.fileURLToPath, which
 // validates encoded separators in the normalized URL pathname, not in path
 // segments already removed by "..".
 func TestNormalizePathFileURLRemovesEncodedSlashBeforeValidation(t *testing.T) {
@@ -195,7 +195,7 @@ func TestNormalizePathFileURLRemovesEncodedSlashBeforeValidation(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 utils/paths.ts -> node:url.fileURLToPath rejects invalid
+// Reference: pi v1.4.0 utils/paths.ts -> node:url.fileURLToPath rejects invalid
 // percent-encoded UTF-8. D261 keeps a rejected URL unchanged instead of throwing.
 func TestNormalizePathFileURLRejectsInvalidUTF8(t *testing.T) {
 	for _, tc := range []struct{ input, want string }{
@@ -212,7 +212,7 @@ func TestNormalizePathFileURLRejectsInvalidUTF8(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 utils/paths.ts -> node:url.fileURLToPath uses the WHATWG
+// Reference: pi v1.4.0 utils/paths.ts -> node:url.fileURLToPath uses the WHATWG
 // parser: raw tabs/newlines disappear and trailing C0 controls/spaces are
 // stripped, while percent-encoded whitespace remains part of the filename.
 func TestNormalizePathFileURLIgnoresParserWhitespace(t *testing.T) {
@@ -229,7 +229,7 @@ func TestNormalizePathFileURLIgnoresParserWhitespace(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 utils/paths.ts -> node:url.fileURLToPath normalizes the
+// Reference: pi v1.4.0 utils/paths.ts -> node:url.fileURLToPath normalizes the
 // URL host, including percent escapes, before recognizing localhost.
 func TestNormalizePathFileURLAcceptsEscapedLocalhost(t *testing.T) {
 	for _, input := range []string{
@@ -243,7 +243,7 @@ func TestNormalizePathFileURLAcceptsEscapedLocalhost(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 utils/paths.ts -> node:url.fileURLToPath on POSIX.
+// Reference: pi v1.4.0 utils/paths.ts -> node:url.fileURLToPath on POSIX.
 // The WHATWG file parser recognizes drive letters even on POSIX, normalizes
 // the legacy C| spelling, and does not let ".." remove the drive root.
 func TestNormalizePathFileURLRecognizesDriveRoots(t *testing.T) {
@@ -280,7 +280,7 @@ func TestNormalizePathKeepsAnInvalidFileURL(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 utils/paths.ts expands `~` with node:path.join, which
+// Reference: pi v1.4.0 utils/paths.ts expands `~` with node:path.join, which
 // keeps a trailing separator. Go's filepath.Join cleans it away, so "~///"
 // lost the slash the reference keeps. Expectations read off the reference.
 func TestNormalizePathTildeKeepsTrailingSeparator(t *testing.T) {

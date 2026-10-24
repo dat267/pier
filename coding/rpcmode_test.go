@@ -145,7 +145,7 @@ func (client *rpcTestClient) untilResponses(t *testing.T, ids ...string) map[str
 	return found
 }
 
-// pi v1.3.0 rpc-mode.ts acknowledges accepted prompts independently of the
+// pi v1.4.0 rpc-mode.ts acknowledges accepted prompts independently of the
 // eventual run; events continue streaming while commands remain readable.
 func blockingRPCSession(t *testing.T) *AgentSession {
 	t.Helper()
@@ -179,7 +179,7 @@ func TestRPCPromptAcknowledgedBeforeCompletion(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 rpc-mode.ts awaits session.abort before acknowledging it.
+// pi v1.4.0 rpc-mode.ts awaits session.abort before acknowledging it.
 func TestRPCAbortAcknowledgesAfterSettled(t *testing.T) {
 	client := startRPCTest(t, blockingRPCSession(t))
 	client.send(t, `{"id":"prompt","type":"prompt","message":"hello"}`)
@@ -202,7 +202,7 @@ func TestRPCAbortAcknowledgesAfterSettled(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 rpc-mode.ts returns queued dispositions and clear_queue
+// pi v1.4.0 rpc-mode.ts returns queued dispositions and clear_queue
 // returns expanded texts for both queues, including empty arrays.
 func TestRPCQueuedInputControl(t *testing.T) {
 	for _, command := range []string{
@@ -253,7 +253,7 @@ func TestRPCQueuedInputControl(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 rpc-mode.ts queue mode setters affect get_state without
+// pi v1.4.0 rpc-mode.ts queue mode setters affect get_state without
 // persisting global settings.
 func TestRPCQueueModes(t *testing.T) {
 	records := runRPCScript(t, rpcTestSession(t), `{"type":"set_steering_mode","mode":"all"}
@@ -279,7 +279,7 @@ func rpcResponses(records []map[string]any) []map[string]any {
 	return responses
 }
 
-// pi v1.3.0 rpc-mode.ts delegates thinking selection and cycling to the
+// pi v1.4.0 rpc-mode.ts delegates thinking selection and cycling to the
 // session; the setters do not persist global defaults.
 func TestRPCThinkingSelection(t *testing.T) {
 	session := rpcTestSession(t)
@@ -303,7 +303,7 @@ func TestRPCThinkingSelection(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 rpc-mode.ts uses the available (authenticated) model snapshot.
+// pi v1.4.0 rpc-mode.ts uses the available (authenticated) model snapshot.
 func TestRPCModelSelection(t *testing.T) {
 	session := rpcTestSession(t)
 	runtime := runtimeWithProviders(t, stubProvider("alpha"), stubProvider("beta"))
@@ -515,7 +515,7 @@ func TestRPCStateWithoutSelectedModel(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 rpc-mode.ts disposes on input EOF. The accepted user prompt
+// pi v1.4.0 rpc-mode.ts disposes on input EOF. The accepted user prompt
 // must survive even when its session write is still queued at shutdown.
 func TestRPCDrainsAcceptedSavesOnEOF(t *testing.T) {
 	dir := t.TempDir()
@@ -574,7 +574,7 @@ func TestRPCDrainsAcceptedSavesOnEOF(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 jsonl.ts uses LF-only framing, accepts a final unterminated
+// pi v1.4.0 jsonl.ts uses LF-only framing, accepts a final unterminated
 // record, and does not split payload strings at U+2028/U+2029.
 func TestRPCJSONLFraming(t *testing.T) {
 	id := strings.Repeat("界", 24000) + "\u2028\u2029"
@@ -585,7 +585,7 @@ func TestRPCJSONLFraming(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 rpc-mode.ts sends one authoritative preflight failure, not a
+// pi v1.4.0 rpc-mode.ts sends one authoritative preflight failure, not a
 // success followed by an error response for the same prompt.
 func TestRPCPromptPreflightFailure(t *testing.T) {
 	client := startRPCTest(t, rpcTestSession(t))
@@ -617,7 +617,7 @@ func TestRPCPromptDuringRunRequiresStreamingBehavior(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 agent-session.ts _queueSteer/_queueFollowUp preserve image
+// pi v1.4.0 agent-session.ts _queueSteer/_queueFollowUp preserve image
 // blocks and stamp the queued user message before it enters the transcript.
 func TestRPCQueuedImagesReachTranscript(t *testing.T) {
 	for _, kind := range []string{"steer", "follow_up"} {
@@ -659,7 +659,7 @@ func TestRPCQueuedImagesReachTranscript(t *testing.T) {
 	}
 }
 
-// Empty queued texts are still messages in pi v1.3.0, including image-only
+// Empty queued texts are still messages in pi v1.4.0, including image-only
 // input. clear_queue returns them rather than confusing them with no input.
 func TestRPCEmptyQueuedMessageIsRetained(t *testing.T) {
 	for _, kind := range []string{"steer", "follow_up"} {
@@ -677,7 +677,7 @@ func TestRPCEmptyQueuedMessageIsRetained(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 uses null for unavailable cycles, but empty arrays for
+// pi v1.4.0 uses null for unavailable cycles, but empty arrays for
 // collection-valued responses; neither optional data shape may disappear.
 func TestRPCUnavailableSelections(t *testing.T) {
 	var output bytes.Buffer
@@ -710,7 +710,7 @@ func TestRPCFieldNamesAreCaseSensitive(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 rpc-mode.ts get_messages returns role-tagged messages, not
+// pi v1.4.0 rpc-mode.ts get_messages returns role-tagged messages, not
 // session entries, and an empty transcript is an array rather than null.
 func TestRPCGetMessages(t *testing.T) {
 	for _, text := range []string{"", "hello <world>"} {
@@ -745,7 +745,7 @@ func TestRPCGetMessages(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 rpc-mode.ts reports malformed JSON and keeps reading commands.
+// pi v1.4.0 rpc-mode.ts reports malformed JSON and keeps reading commands.
 func TestRPCMalformedInputDoesNotCloseSession(t *testing.T) {
 	for _, input := range []string{"{", "null", "[]", "42", `{"type":42}`, `{"type":"prompt","message":false}`} {
 		t.Run(input, func(t *testing.T) {
@@ -757,7 +757,7 @@ func TestRPCMalformedInputDoesNotCloseSession(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 rpc-mode.ts returns a correlated failure for unknown commands.
+// pi v1.4.0 rpc-mode.ts returns a correlated failure for unknown commands.
 func TestRPCUnknownCommand(t *testing.T) {
 	var output bytes.Buffer
 	err := RunRPCMode(context.Background(), rpcTestSession(t), RPCModeOptions{
@@ -772,8 +772,8 @@ func TestRPCUnknownCommand(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 rpc-mode.ts export_html calls
-// pi v1.3.0 rpc-mode.ts export_html calls agent-session.exportToHtml with the
+// pi v1.4.0 rpc-mode.ts export_html calls
+// pi v1.4.0 rpc-mode.ts export_html calls agent-session.exportToHtml with the
 // optional outputPath and responds { path }. The renderer lives in the
 // interactive package, so the host injects it as a seam.
 func TestRPCExportHTML(t *testing.T) {

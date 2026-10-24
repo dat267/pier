@@ -1,6 +1,6 @@
 package tui
 
-// Port of pi v1.3.0 packages/tui/src/components/image.ts: the inline-image
+// Port of pi v1.4.0 packages/tui/src/components/image.ts: the inline-image
 // component. It renders the active protocol's sequence with padding rows for
 // the reserved height, or the text fallback when the terminal cannot render
 // images.

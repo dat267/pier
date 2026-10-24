@@ -1,6 +1,6 @@
 package coding
 
-// Print mode (single-shot), port of v1.3.0 modes/print-mode.ts. Extensions and
+// Print mode (single-shot), port of v1.4.0 modes/print-mode.ts. Extensions and
 // runtime rebind remain out of scope (D41). JSON shaping lives in jsonevent.go.
 
 import (

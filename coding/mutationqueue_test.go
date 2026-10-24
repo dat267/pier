@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// Reference: pi v1.3.0 core/tools/file-mutation-queue.ts deletes a path's
+// Reference: pi v1.4.0 core/tools/file-mutation-queue.ts deletes a path's
 // queue after its last registered operation finishes, including thrown calls.
 func TestFileMutationQueueReleasesFinishedPaths(t *testing.T) {
 	mutationQueuesMu.Lock()

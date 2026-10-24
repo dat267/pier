@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// pi v1.3.0 utils/validation.ts validates enum/const with TypeBox on decoded
+// pi v1.4.0 utils/validation.ts validates enum/const with TypeBox on decoded
 // values, independent of JSON whitespace, number spelling and member order.
 func TestValidateToolArgumentsMatchesLiteralValues(t *testing.T) {
 	for _, tt := range []struct {
@@ -33,7 +33,7 @@ func TestValidateToolArgumentsMatchesLiteralValues(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 utils/validation.ts delegates combinator validation to TypeBox:
+// pi v1.4.0 utils/validation.ts delegates combinator validation to TypeBox:
 // oneOf requires exactly one match and anyOf/oneOf constraints both apply.
 func TestValidateToolArgumentsChecksCombinatorsIndependently(t *testing.T) {
 	for _, tt := range []struct {
@@ -56,7 +56,7 @@ func TestValidateToolArgumentsChecksCombinatorsIndependently(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 utils/validation.ts uses TypeBox's required and
+// pi v1.4.0 utils/validation.ts uses TypeBox's required and
 // additionalProperties checks even when a required key has no property schema.
 func TestValidateToolArgumentsEnforcesObjectConstraints(t *testing.T) {
 	for _, tt := range []struct {
@@ -137,7 +137,7 @@ func TestValidateToolArgumentsCoercesNumberToStringLikeJS(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 utils/validation.ts uses TypeBox's finite number
+// Reference: pi v1.4.0 utils/validation.ts uses TypeBox's finite number
 // validation, but coercion to string still follows String(Infinity).
 func TestValidateToolArgumentsHandlesOverflowedNumbers(t *testing.T) {
 	for _, tc := range []struct {

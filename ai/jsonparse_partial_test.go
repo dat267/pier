@@ -2,7 +2,7 @@ package ai
 
 import "testing"
 
-// Reference: pi v1.3.0 utils/json-parse.ts parseStreamingJson falls back to the
+// Reference: pi v1.4.0 utils/json-parse.ts parseStreamingJson falls back to the
 // npm partial-json package, which trims the document, completes a keyword
 // prefix at end of input ("tru" -> true) and keeps a number's mantissa before an
 // unfinished exponent ("1e" -> 1).

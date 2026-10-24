@@ -1,6 +1,6 @@
 package coding
 
-// Port of v1.3.0 modes/json-event.ts. Both public entry points use the same
+// Port of v1.4.0 modes/json-event.ts. Both public entry points use the same
 // event-shaped objects; wire objects retain JavaScript insertion order.
 
 import (

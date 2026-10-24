@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// Reference: pi v1.3.0 utils/mime.ts accepts a zero-byte sniff;
+// Reference: pi v1.4.0 utils/mime.ts accepts a zero-byte sniff;
 // core/tools/read.ts returns an empty text block for an empty file.
 func TestReadEmptyTextFile(t *testing.T) {
 	dir := t.TempDir()

@@ -1,6 +1,6 @@
 package rpcclient
 
-// Port of pi v1.3.0 modes/rpc/rpc-client.ts: a typed client for the stdio RPC
+// Port of pi v1.4.0 modes/rpc/rpc-client.ts: a typed client for the stdio RPC
 // mode. It spawns the CLI with `--mode rpc` and speaks the JSONL protocol over
 // the child's stdin/stdout. Only the extension-free command surface exists
 // (D41), so the command methods cover exactly the commands rpc-mode.ts

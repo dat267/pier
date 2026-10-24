@@ -9,7 +9,7 @@ import (
 	"github.com/dat267/pier/tui"
 )
 
-// D263: pi v1.3.0 components/assistant-message.ts uses defaultTextStyle.italic,
+// D263: pi v1.4.0 components/assistant-message.ts uses defaultTextStyle.italic,
 // but tui/components/markdown.ts bypasses it for headings and code. Pier keeps
 // every expanded thinking element italic without changing answer Markdown.
 func TestThinkingMarkdownKeepsStyledTextItalic(t *testing.T) {

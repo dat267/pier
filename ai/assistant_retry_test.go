@@ -7,7 +7,7 @@ import (
 	"testing/synctest"
 )
 
-// Reference: pi v1.3.0 packages/ai/src/utils/retry.ts retryAssistantCall
+// Reference: pi v1.4.0 packages/ai/src/utils/retry.ts retryAssistantCall
 // uses optional chaining for every callback, including onRetryFinished.
 func TestAssistantRetryAllowsPartialCallbacks(t *testing.T) {
 	for _, reason := range []StopReason{StopStop, StopAborted, StopError} {

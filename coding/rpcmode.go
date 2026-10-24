@@ -1,6 +1,6 @@
 package coding
 
-// Port of pi v1.3.0 modes/rpc/rpc-mode.ts. This runner exposes the
+// Port of pi v1.4.0 modes/rpc/rpc-mode.ts. This runner exposes the
 // extension-free stdio command surface, not packages/server's CBOR protocol.
 
 import (

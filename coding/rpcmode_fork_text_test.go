@@ -6,7 +6,7 @@ import (
 	"github.com/dat267/pier/ai"
 )
 
-// Reference: pi v1.3.0 core/agent-session-runtime.ts extractUserMessageText
+// Reference: pi v1.4.0 core/agent-session-runtime.ts extractUserMessageText
 // joins text blocks without a separator for a "before" fork.
 func TestRPCUserMessageEntryTextJoinsBlockContent(t *testing.T) {
 	raw, err := ai.MarshalMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Blocks: ai.ContentList{

@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// Reference: pi v1.3.0 agent.ts state/processEvents run on one JS thread.
+// Reference: pi v1.4.0 agent.ts state/processEvents run on one JS thread.
 // A Go snapshot must not expose the map that later tool events mutate.
 func TestStatePendingCallsSnapshotIsIndependent(t *testing.T) {
 	a, err := NewAgent(&AgentOptions{StreamFn: unusedStreamFn()})

@@ -24,7 +24,7 @@ func testResponsesModel() *Model {
 	}
 }
 
-// Upstream v1.3.0 #10930/#10853: with supportsMidConvoEffort, changing the
+// Upstream v1.4.0 #10930/#10853: with supportsMidConvoEffort, changing the
 // thinking level is sent as configuration_update items at a fixed
 // reasoning.effort of "medium", so earlier input (and the prompt cache) does
 // not change. The reply records the level so the next request replays it.

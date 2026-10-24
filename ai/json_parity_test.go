@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// pi v1.3.0 API providers and session-manager.ts use JSON.stringify for
+// pi v1.4.0 API providers and session-manager.ts use JSON.stringify for
 // numeric payloads too, including unpadded exponents and negative zero.
 func TestMarshalJSONFormatsJavaScriptNumbers(t *testing.T) {
 	for _, tt := range []struct {
@@ -30,7 +30,7 @@ func TestMarshalJSONFormatsJavaScriptNumbers(t *testing.T) {
 	}
 }
 
-// D253: pi v1.3.0 core/session-manager.ts JSON.stringify uses JS doubles.
+// D253: pi v1.4.0 core/session-manager.ts JSON.stringify uses JS doubles.
 // Integer fields remain representable by the port's typed decoders; rounding
 // MaxInt64 through float64 would serialize a number outside the int64 range.
 func TestMarshalJSONPreservesTypedIntegerRange(t *testing.T) {
@@ -49,7 +49,7 @@ func TestMarshalJSONPreservesTypedIntegerRange(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 coding-agent/core/session-manager.ts persists with
+// Reference: pi v1.4.0 coding-agent/core/session-manager.ts persists with
 // JSON.stringify; ai API implementations also stringify request payloads.
 // Node's JSON.stringify leaves U+2028/U+2029 literal, unlike encoding/json.
 func TestMarshalJSONPreservesJavaScriptLineSeparators(t *testing.T) {

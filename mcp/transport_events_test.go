@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// Reference: pi v1.3.0 packages/mcp/src/transports/transport.ts keeps listeners
+// Reference: pi v1.4.0 packages/mcp/src/transports/transport.ts keeps listeners
 // in Sets. Registering another listener must not invalidate an earlier
 // unsubscribe function when the Go listener slice grows.
 func TestTransportUnsubscribeSurvivesListenerRegistration(t *testing.T) {
@@ -21,7 +21,7 @@ func TestTransportUnsubscribeSurvivesListenerRegistration(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 packages/mcp/src/client.ts onClose uses stable Set
+// Reference: pi v1.4.0 packages/mcp/src/client.ts onClose uses stable Set
 // membership, just like TransportEvents.
 func TestClientCloseUnsubscribeSurvivesListenerRegistration(t *testing.T) {
 	client := NewClient(ClientOptions{})
@@ -37,7 +37,7 @@ func TestClientCloseUnsubscribeSurvivesListenerRegistration(t *testing.T) {
 	}
 }
 
-// Reference: pi v1.3.0 packages/mcp/src/client.ts onError. Reproduce through a
+// Reference: pi v1.4.0 packages/mcp/src/client.ts onError. Reproduce through a
 // connected in-memory transport, not by invoking the client's private emitter.
 func TestClientErrorUnsubscribeSurvivesListenerRegistration(t *testing.T) {
 	client, server := connectTestClient(t)

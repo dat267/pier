@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// Reference: pi v1.3.0 agent.ts runWithLifecycle awaits handleRunFailure;
+// Reference: pi v1.4.0 agent.ts runWithLifecycle awaits handleRunFailure;
 // an error from failure-event listeners rejects the prompt.
 func TestFailureLifecycleListenerErrorReachesCaller(t *testing.T) {
 	a, err := NewAgent(&AgentOptions{StreamFn: unusedStreamFn()})

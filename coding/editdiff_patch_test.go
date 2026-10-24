@@ -6,7 +6,7 @@ import "testing"
 // FILE_HEADERS_ONLY: no index or underline header, newline-carrying line tokens
 // (so a final line without a newline differs from one with it), and
 // "\ No newline at end of file" markers. Expectations generated with the pinned
-// jsdiff 8.0.4 through pi v1.3.0 core/tools/edit-diff.ts.
+// jsdiff 8.0.4 through pi v1.4.0 core/tools/edit-diff.ts.
 func TestGenerateUnifiedPatchMatchesJsdiff(t *testing.T) {
 	cases := []struct {
 		name, oldContent, newContent, want string

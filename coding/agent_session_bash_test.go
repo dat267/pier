@@ -102,7 +102,7 @@ func TestSessionExecuteBash(t *testing.T) {
 	}
 }
 
-// pi v1.3.0 core/agent-session.ts passes each tracked controller's signal
+// pi v1.4.0 core/agent-session.ts passes each tracked controller's signal
 // to executeBashWithOperations; abortBash must reach that backend.
 type abortObservingBash struct {
 	started   chan struct{}

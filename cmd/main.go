@@ -1,7 +1,7 @@
 // Package cmd boots the port of pi's interactive coding-agent CLI: it wires
 // the settings, auth, model runtime and agent session from the command-line
 // flags and runs the interactive mode (coding/interactive), print mode or the
-// bounded stdio RPC subset (pi v1.3.0 modes/rpc/rpc-mode.ts; docs/rpc.md).
+// bounded stdio RPC subset (pi v1.4.0 modes/rpc/rpc-mode.ts; docs/rpc.md).
 // The package manager, extensions and migrations remain out of scope.
 //
 // D236: the unreachable upstream packages (chord, client, protocol, server,

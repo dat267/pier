@@ -277,7 +277,7 @@ func TestCheckCompactionGuards(t *testing.T) {
 }
 
 func TestAutoCompactionEndReportsContinuation(t *testing.T) {
-	// v1.3.0 agent-session.ts _runAutoCompaction emits its willRetry argument.
+	// v1.4.0 agent-session.ts _runAutoCompaction emits its willRetry argument.
 	for _, retry := range []bool{false, true} {
 		t.Run(fmt.Sprint(retry), func(t *testing.T) {
 			var runs atomic.Int64
