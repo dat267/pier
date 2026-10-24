@@ -213,8 +213,10 @@ func applyModelOverride(model *ai.Model, override ModelsJSONModelOverride) (*ai.
 			merged[key] = encoded
 		}
 		updated.SamplingParams = merged
+		updated.SamplingParamsOrder = mergeOrderedSamplingKeys(model.SamplingParamsOrder, override.SamplingParamsOrder)
 	}
 	updated.SamplingParamsByThinkingLevel = mergeSamplingParamsByThinkingLevel(model.SamplingParamsByThinkingLevel, override.SamplingParamsByThinkingLevel)
+	updated.SamplingParamsByThinkingLevelOrder = mergeSamplingParamsOrders(model.SamplingParamsByThinkingLevelOrder, override.SamplingParamsByThinkingLevelOrder)
 	compat, err := mergeCompatJSON(model.API, model.Compat, override.Compat)
 	if err != nil {
 		return nil, err
@@ -305,21 +307,23 @@ func modelFromJSON(providerID string, definition ModelsJSONModel, providerConfig
 	samplingParams := encodeSamplingParams(definition.SamplingParams)
 
 	return &ai.Model{
-		ID:                            definition.ID,
-		Name:                          name,
-		API:                           api,
-		Provider:                      providerID,
-		BaseURL:                       baseURL,
-		Reasoning:                     reasoning,
-		ThinkingLevelMap:              definition.ThinkingLevelMap,
-		Input:                         append([]string{}, input...),
-		InputLimits:                   definition.InputLimits,
-		Cost:                          cost,
-		ContextWindow:                 contextWindow,
-		MaxTokens:                     maxTokens,
-		SamplingParams:                samplingParams,
-		SamplingParamsByThinkingLevel: samplingParamsByThinkingLevel(definition.SamplingParamsByThinkingLevel),
-		Compat:                        compat,
+		ID:                                 definition.ID,
+		Name:                               name,
+		API:                                api,
+		Provider:                           providerID,
+		BaseURL:                            baseURL,
+		Reasoning:                          reasoning,
+		ThinkingLevelMap:                   definition.ThinkingLevelMap,
+		Input:                              append([]string{}, input...),
+		InputLimits:                        definition.InputLimits,
+		Cost:                               cost,
+		ContextWindow:                      contextWindow,
+		MaxTokens:                          maxTokens,
+		SamplingParams:                     samplingParams,
+		SamplingParamsOrder:                definition.SamplingParamsOrder,
+		SamplingParamsByThinkingLevel:      samplingParamsByThinkingLevel(definition.SamplingParamsByThinkingLevel),
+		SamplingParamsByThinkingLevelOrder: samplingParamsOrderByThinkingLevel(definition.SamplingParamsByThinkingLevelOrder),
+		Compat:                             compat,
 	}, nil
 }
 
@@ -344,6 +348,46 @@ func encodeSamplingParams(params map[string]any) map[string]json.RawMessage {
 
 // samplingParamsByThinkingLevel decodes a JSON per-level sampling-params
 // object.
+func mergeSamplingParamsOrders(base, override map[string][]string) map[ai.ModelThinkingLevel][]string {
+	if len(base) == 0 && len(override) == 0 {
+		return nil
+	}
+	merged := make(map[ai.ModelThinkingLevel][]string, len(base)+len(override))
+	for level, keys := range base {
+		merged[ai.ModelThinkingLevel(level)] = append([]string(nil), keys...)
+	}
+	for level, keys := range override {
+		key := ai.ModelThinkingLevel(level)
+		merged[key] = mergeOrderedSamplingKeys(merged[key], keys)
+	}
+	return merged
+}
+
+func mergeOrderedSamplingKeys(base, override []string) []string {
+	seen := make(map[string]bool, len(base)+len(override))
+	merged := make([]string, 0, len(base)+len(override))
+	for _, keys := range [][]string{base, override} {
+		for _, key := range keys {
+			if !seen[key] {
+				seen[key] = true
+				merged = append(merged, key)
+			}
+		}
+	}
+	return merged
+}
+
+func samplingParamsOrderByThinkingLevel(input map[string][]string) map[ai.ModelThinkingLevel][]string {
+	if len(input) == 0 {
+		return nil
+	}
+	out := make(map[ai.ModelThinkingLevel][]string, len(input))
+	for level, keys := range input {
+		out[ai.ModelThinkingLevel(level)] = append([]string(nil), keys...)
+	}
+	return out
+}
+
 func samplingParamsByThinkingLevel(raw map[string]map[string]any) map[string]map[string]json.RawMessage {
 	if len(raw) == 0 {
 		return nil

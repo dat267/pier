@@ -2,6 +2,7 @@ package ai
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -34,6 +35,28 @@ func TestResolveSamplingParamsMergesByThinkingLevel(t *testing.T) {
 	// No parameters anywhere is nil, not an empty map.
 	if empty := ResolveSamplingParams(&Model{Reasoning: true}, ThinkOff, nil); empty != nil {
 		t.Fatalf("empty merge = %v", empty)
+	}
+}
+
+func TestBuildOpenAICompletionsParamsPreservesModelSamplingParamOrder(t *testing.T) {
+	// Reference: pi v1.4.0 (4a080252), api/simple-options.ts and
+	// api/openai-completions.ts buildParams. JavaScript object assignment
+	// retains the model's samplingParams key order.
+	var model Model
+	if err := json.Unmarshal([]byte(`{"id":"m","name":"m","api":"openai-completions","provider":"custom","baseUrl":"https://invalid.test/v1","reasoning":false,"input":["text"],"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0},"contextWindow":1000,"maxTokens":100,"samplingParams":{"top_k":5,"seed":1}}`), &model); err != nil {
+		t.Fatal(err)
+	}
+	params, err := BuildOpenAICompletionsParams(&model, NormalizeContext(Context{}), nil, nil, "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := json.Marshal(params)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(encoded)
+	if strings.Index(got, `"top_k"`) < 0 || strings.Index(got, `"seed"`) < 0 || strings.Index(got, `"top_k"`) > strings.Index(got, `"seed"`) {
+		t.Fatalf("sampling parameter order = %s, want top_k before seed", got)
 	}
 }
 

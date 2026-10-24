@@ -147,8 +147,10 @@ func BuildOpenAIResponsesParamsWithProviders(
 		}
 	}
 
-	if extras := ResolveSamplingParams(model, samplingThinkingLevel(reasoningEffort), options.SamplingParams); len(extras) > 0 {
+	extras, extraOrder := ResolveSamplingParamsWithOrder(model, samplingThinkingLevel(reasoningEffort), options.SamplingParams, options.SamplingParamsOrder)
+	if len(extras) > 0 {
 		params.SamplingExtras = extras
+		params.SamplingExtraOrder = extraOrder
 	}
 	return params, nil
 }
@@ -218,14 +220,9 @@ func (p *OpenAIResponsesParams) MarshalJSON() ([]byte, error) {
 			return nil, err
 		}
 	}
-	// Sampling params are merged last so they override the named fields. The
-	// model's own member order is not retained in the port's map form (D267).
-	extras := make([]string, 0, len(p.SamplingExtras))
-	for key := range p.SamplingExtras {
-		extras = append(extras, key)
-	}
-	sortStrings(extras)
-	for _, key := range extras {
+	// Sampling params are merged last so they override the named fields, in
+	// JavaScript assignment order.
+	for _, key := range orderedSamplingKeys(p.SamplingExtras, p.SamplingExtraOrder) {
 		fields.set(key, p.SamplingExtras[key])
 	}
 	return fields.marshal()

@@ -8,6 +8,8 @@ registerHooks({resolve(s,c,next){return s==="@earendil-works/pi-telemetry"?{url:
 const metadata={z:"1",a:"2"},custom={z:1,a:2};
 const toolMessage={role:"system",content:"system",toolsAdded:[{name:"lookup",description:"Look up",parameters:{type:"object",properties:{z:{type:"string"},a:{type:"number"}},required:["z","a"]}}],timestamp:1};
 const cases=[
+	{name:"openai-completions-sampling-order",api:"openai-completions",id:"gpt-4o",provider:"openai",baseUrl:"https://invalid.test/v1",samplingParams:{top_k:5,seed:1},messages:[{role:"user",content:"hello",timestamp:1}]},
+	{name:"openai-responses-sampling-order",api:"openai-responses",id:"gpt-5",provider:"openai",baseUrl:"https://invalid.test/v1",samplingParams:{top_k:5,seed:1},messages:[{role:"user",content:"hello",timestamp:1}]},
 	{name:"openai-completions-replacement",api:"openai-completions",id:"gpt-4o",provider:"openai",baseUrl:"https://invalid.test/v1",messages:[{role:"user",content:"hello",timestamp:1}],replacement:{model:"replacement",messages:[{role:"user",content:"changed"}],stream:true,metadata,custom}},
 	{name:"anthropic-messages-replacement",api:"anthropic-messages",id:"claude-sonnet-4-5",provider:"anthropic",baseUrl:"https://invalid.test",messages:[toolMessage,{role:"user",content:"hello",timestamp:2}],replacement:{model:"replacement",messages:[{role:"user",content:"changed"}],max_tokens:8,stream:false,betas:["custom-beta","custom-two"],metadata,custom}},
 	{name:"anthropic-messages-default",api:"anthropic-messages",id:"claude-sonnet-4-5",provider:"anthropic",baseUrl:"https://invalid.test",messages:[toolMessage,{role:"user",content:"hello",timestamp:2}]},
@@ -40,6 +42,7 @@ for(const input of cases){
 	};
 	const model={api:input.api,id:input.id,provider:input.provider,baseUrl:input.baseUrl,reasoning:false,maxTokens:8192,contextWindow:128000,input:["text","image"],cost:{input:0,output:0,cacheRead:0,cacheWrite:0}};
 	if(input.compat)model.compat=input.compat;
+	if(input.samplingParams)model.samplingParams=input.samplingParams;
 	const messages=input.messages;
 	const apiKey=input.oauth?"sk-ant-oat01-token":input.api==="openai-codex-responses"?`h.${Buffer.from(JSON.stringify({"https://api.openai.com/auth":{chatgpt_account_id:"acct"}})).toString("base64url")}.s`:"token";
 	const options={apiKey,env:{},transport:"sse"};

@@ -22,6 +22,8 @@ const {stream}=await import(pathToFileURL(resolve(root,"packages/ai/src/api/bedr
 const model={api:"bedrock-converse-stream",id:"anthropic.claude-sonnet-4-5-20250929-v1:0",name:"Claude Sonnet 4.5",provider:"amazon-bedrock",baseUrl:"https://invalid.test",
 	reasoning:true,maxTokens:8192,contextWindow:200000,input:["text","image"],compat:{supportsStrictMode:true},cost:{input:3,output:15,cacheRead:0.3,cacheWrite:3.75}};
 const cases=[{name:"minimal",messages:[{role:"user",content:"hello",timestamp:1}],options:{}}, {
+	name:"request-metadata-order",messages:[{role:"user",content:"hello",timestamp:1}],options:{requestMetadata:{z:"1",a:"2"}},
+}, {
 	name:"configured-tools",messages:[
 		{role:"system",content:"system",toolsAdded:[{name:"lookup",description:"Look up",parameters:{type:"object",properties:{z:{type:"string"},a:{type:"number"}},required:["z","a"]},constrainedSampling:{type:"json_schema",strict:"prefer"}}],timestamp:1},
 		{role:"user",content:"hello",timestamp:2},

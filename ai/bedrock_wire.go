@@ -10,6 +10,32 @@ type bedrockWireField struct {
 	shape string
 }
 
+func marshalBedrockRequestMetadata(values map[string]string, preferred []string) (json.RawMessage, error) {
+	var fields orderedJSONFields
+	seen := make(map[string]bool, len(values))
+	keys := append([]string(nil), preferred...)
+	remaining := make([]string, 0, len(values))
+	for key := range values {
+		if !containsString(keys, key) {
+			remaining = append(remaining, key)
+		}
+	}
+	sortStrings(remaining)
+	keys = append(keys, remaining...)
+	for _, key := range keys {
+		value, ok := values[key]
+		if !ok || seen[key] {
+			continue
+		}
+		seen[key] = true
+		if err := fields.setAny(key, value); err != nil {
+			return nil, err
+		}
+	}
+	encoded, err := fields.marshal()
+	return json.RawMessage(encoded), err
+}
+
 // These fields are a provider Document, so the SDK preserves the order in
 // which buildAdditionalModelRequestFields constructs them instead of applying
 // a modeled-structure field order.

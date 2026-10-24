@@ -195,37 +195,41 @@ type ModelsJSONCompat struct {
 
 // ModelsJSONModel is one model definition in models.json.
 type ModelsJSONModel struct {
-	ID                            string                    `json:"id"`
-	Name                          string                    `json:"name,omitempty"`
-	API                           string                    `json:"api,omitempty"`
-	BaseURL                       string                    `json:"baseUrl,omitempty"`
-	Reasoning                     *bool                     `json:"reasoning,omitempty"`
-	ThinkingLevelMap              ai.ThinkingLevelMap       `json:"thinkingLevelMap,omitempty"`
-	Input                         []string                  `json:"input,omitempty"`
-	InputLimits                   *ai.ModelInputLimits      `json:"inputLimits,omitempty"`
-	Cost                          *ModelsJSONCost           `json:"cost,omitempty"`
-	ContextWindow                 *float64                  `json:"contextWindow,omitempty"`
-	MaxTokens                     *float64                  `json:"maxTokens,omitempty"`
-	SamplingParams                map[string]any            `json:"samplingParams,omitempty"`
-	SamplingParamsByThinkingLevel map[string]map[string]any `json:"samplingParamsByThinkingLevel,omitempty"`
-	Headers                       map[string]string         `json:"headers,omitempty"`
-	Compat                        *ModelsJSONCompat         `json:"compat,omitempty"`
+	ID                                 string                    `json:"id"`
+	Name                               string                    `json:"name,omitempty"`
+	API                                string                    `json:"api,omitempty"`
+	BaseURL                            string                    `json:"baseUrl,omitempty"`
+	Reasoning                          *bool                     `json:"reasoning,omitempty"`
+	ThinkingLevelMap                   ai.ThinkingLevelMap       `json:"thinkingLevelMap,omitempty"`
+	Input                              []string                  `json:"input,omitempty"`
+	InputLimits                        *ai.ModelInputLimits      `json:"inputLimits,omitempty"`
+	Cost                               *ModelsJSONCost           `json:"cost,omitempty"`
+	ContextWindow                      *float64                  `json:"contextWindow,omitempty"`
+	MaxTokens                          *float64                  `json:"maxTokens,omitempty"`
+	SamplingParams                     map[string]any            `json:"samplingParams,omitempty"`
+	SamplingParamsOrder                []string                  `json:"-"`
+	SamplingParamsByThinkingLevel      map[string]map[string]any `json:"samplingParamsByThinkingLevel,omitempty"`
+	SamplingParamsByThinkingLevelOrder map[string][]string       `json:"-"`
+	Headers                            map[string]string         `json:"headers,omitempty"`
+	Compat                             *ModelsJSONCompat         `json:"compat,omitempty"`
 }
 
 // ModelsJSONModelOverride is a partial override of a built-in model.
 type ModelsJSONModelOverride struct {
-	Name                          string                    `json:"name,omitempty"`
-	Reasoning                     *bool                     `json:"reasoning,omitempty"`
-	ThinkingLevelMap              ai.ThinkingLevelMap       `json:"thinkingLevelMap,omitempty"`
-	Input                         []string                  `json:"input,omitempty"`
-	InputLimits                   *ai.ModelInputLimits      `json:"inputLimits,omitempty"`
-	Cost                          *ModelsJSONCostOverride   `json:"cost,omitempty"`
-	ContextWindow                 *float64                  `json:"contextWindow,omitempty"`
-	MaxTokens                     *float64                  `json:"maxTokens,omitempty"`
-	SamplingParams                map[string]any            `json:"samplingParams,omitempty"`
-	SamplingParamsByThinkingLevel map[string]map[string]any `json:"samplingParamsByThinkingLevel,omitempty"`
-	Headers                       map[string]string         `json:"headers,omitempty"`
-	Compat                        *ModelsJSONCompat         `json:"compat,omitempty"`
+	Name                               string                    `json:"name,omitempty"`
+	Reasoning                          *bool                     `json:"reasoning,omitempty"`
+	ThinkingLevelMap                   ai.ThinkingLevelMap       `json:"thinkingLevelMap,omitempty"`
+	Input                              []string                  `json:"input,omitempty"`
+	InputLimits                        *ai.ModelInputLimits      `json:"inputLimits,omitempty"`
+	Cost                               *ModelsJSONCostOverride   `json:"cost,omitempty"`
+	ContextWindow                      *float64                  `json:"contextWindow,omitempty"`
+	MaxTokens                          *float64                  `json:"maxTokens,omitempty"`
+	SamplingParams                     map[string]any            `json:"samplingParams,omitempty"`
+	SamplingParamsOrder                []string                  `json:"-"`
+	SamplingParamsByThinkingLevel      map[string]map[string]any `json:"samplingParamsByThinkingLevel,omitempty"`
+	SamplingParamsByThinkingLevelOrder map[string][]string       `json:"-"`
+	Headers                            map[string]string         `json:"headers,omitempty"`
+	Compat                             *ModelsJSONCompat         `json:"compat,omitempty"`
 }
 
 // ModelsJSONProvider is one provider entry in models.json.
@@ -310,13 +314,10 @@ func LoadModelConfig(modelsJSONPath string) *ModelConfig {
 	}
 
 	providers := make(map[string]ModelsJSONProvider, len(providersObject))
-	for providerID, rawProvider := range providersObject {
-		encoded, err := ai.MarshalJSON(rawProvider)
-		if err != nil {
-			continue
-		}
+	providersRaw := modelConfigProperty([]byte(StripJSONComments(StripBom(string(raw)))), "providers")
+	for providerID, rawProvider := range modelConfigRawObjectValues(providersRaw) {
 		var provider ModelsJSONProvider
-		if err := json.Unmarshal(encoded, &provider); err != nil {
+		if err := json.Unmarshal(rawProvider, &provider); err != nil {
 			continue
 		}
 		providers[providerID] = provider

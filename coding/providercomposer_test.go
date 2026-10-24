@@ -306,6 +306,56 @@ func derefHeader(value *string) string {
 	return *value
 }
 
+func TestComposeModelOverridePreservesSamplingParamOrder(t *testing.T) {
+	baseModel := &ai.Model{
+		ID: "builtin", Name: "Builtin", API: ai.APIOpenAICompletions, Provider: "custom",
+		BaseURL: "https://base.example.com/v1", Input: []string{"text"}, MaxTokens: 100,
+		ContextWindow: 1000,
+	}
+	base := ai.CreateProvider(ai.CreateProviderOptions{
+		ID: "custom", BaseURL: baseModel.BaseURL, Auth: ai.ProviderAuth{APIKey: &ai.ApiKeyAuth{Name: "key"}},
+		Models: []*ai.Model{baseModel},
+	})
+	config := loadConfig(t, `{"providers":{"custom":{"modelOverrides":{"builtin":{"samplingParams":{"top_k":5,"seed":1}}}}}}`)
+	provider, err := ComposeModelProvider("custom", base, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	params, err := ai.BuildOpenAICompletionsParams(provider.GetModels()[0], ai.NormalizeContext(ai.Context{}), nil, nil, "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := json.Marshal(params)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(encoded)
+	if strings.Index(got, `"top_k"`) < 0 || strings.Index(got, `"seed"`) < 0 || strings.Index(got, `"top_k"`) > strings.Index(got, `"seed"`) {
+		t.Fatalf("sampling parameter order = %s, want top_k before seed", got)
+	}
+}
+
+func TestComposeCustomModelPreservesSamplingParamOrder(t *testing.T) {
+	config := loadConfig(t, `{"providers":{"custom":{"baseUrl":"https://proxy.example.com","api":"openai-completions","apiKey":"key","models":[{"id":"ordered","samplingParams":{"top_k":5,"seed":1}}]}}}`)
+	provider, err := ComposeModelProvider("custom", nil, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	model := provider.GetModels()[0]
+	params, err := ai.BuildOpenAICompletionsParams(model, ai.NormalizeContext(ai.Context{}), nil, nil, "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := json.Marshal(params)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(encoded)
+	if strings.Index(got, `"top_k"`) < 0 || strings.Index(got, `"seed"`) < 0 || strings.Index(got, `"top_k"`) > strings.Index(got, `"seed"`) {
+		t.Fatalf("sampling parameter order = %s, want top_k before seed", got)
+	}
+}
+
 func TestComposeModelProvider(t *testing.T) {
 	config := loadConfig(t, `{"providers":{"anthropic":{
 		"name":"Anthropic Custom",

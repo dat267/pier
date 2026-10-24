@@ -835,7 +835,12 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 			commandInput["additionalModelRequestFields"] = json.RawMessage(encoded)
 		}
 		if options.RequestMetadata != nil {
-			commandInput["requestMetadata"] = options.RequestMetadata
+			metadata, err := marshalBedrockRequestMetadata(options.RequestMetadata, options.RequestMetadataOrder)
+			if err != nil {
+				fail(err, "", 0, nil)
+				return
+			}
+			commandInput["requestMetadata"] = metadata
 		}
 		var payload any = commandInput
 		requestModel := model

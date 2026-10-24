@@ -150,6 +150,7 @@ type StreamOptions struct {
 	Identity                  *ClientIdentity
 	Temperature               *float64
 	SamplingParams            SamplingParams
+	SamplingParamsOrder       []string
 	MaxTokens                 *int
 	Transport                 Transport
 	CacheRetention            CacheRetention

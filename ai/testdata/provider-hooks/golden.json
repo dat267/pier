@@ -1,5 +1,81 @@
 [
   {
+    "name": "openai-completions-sampling-order",
+    "model": {
+      "api": "openai-completions",
+      "id": "gpt-4o",
+      "provider": "openai",
+      "baseUrl": "https://invalid.test/v1",
+      "reasoning": false,
+      "maxTokens": 8192,
+      "contextWindow": 128000,
+      "input": [
+        "text",
+        "image"
+      ],
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "samplingParams": {
+        "top_k": 5,
+        "seed": 1
+      }
+    },
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "apiKey": "token",
+    "path": "/v1/chat/completions",
+    "httpHeaders": {},
+    "body": "{\"model\":\"gpt-4o\",\"messages\":[{\"role\":\"user\",\"content\":\"hello\"}],\"stream\":true,\"stream_options\":{\"include_usage\":true},\"store\":false,\"top_k\":5,\"seed\":1}",
+    "stopReason": "stop"
+  },
+  {
+    "name": "openai-responses-sampling-order",
+    "model": {
+      "api": "openai-responses",
+      "id": "gpt-5",
+      "provider": "openai",
+      "baseUrl": "https://invalid.test/v1",
+      "reasoning": false,
+      "maxTokens": 8192,
+      "contextWindow": 128000,
+      "input": [
+        "text",
+        "image"
+      ],
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "samplingParams": {
+        "top_k": 5,
+        "seed": 1
+      }
+    },
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "apiKey": "token",
+    "path": "/v1/responses",
+    "httpHeaders": {},
+    "body": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"hello\"}]}],\"stream\":true,\"store\":false,\"top_k\":5,\"seed\":1}",
+    "stopReason": "stop"
+  },
+  {
     "name": "openai-completions-replacement",
     "model": {
       "api": "openai-completions",

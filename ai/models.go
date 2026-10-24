@@ -1,6 +1,9 @@
 package ai
 
-import "encoding/json"
+import (
+	"bytes"
+	"encoding/json"
+)
 
 // Port of the Model half of types.ts: ModelCost, Model, and the per-API
 // compat interfaces.
@@ -276,6 +279,12 @@ type Model struct {
 	// SamplingParams are default sampling parameters for this model. See
 	// StreamOptions.SamplingParams; per-request keys override these.
 	SamplingParams SamplingParams `json:"samplingParams,omitempty"`
+	// SamplingParamsOrder retains JavaScript insertion order for samplingParams
+	// loaded from JSON. Go map literals should set this explicitly when wire
+	// member order matters.
+	SamplingParamsOrder []string `json:"-"`
+	// SamplingParamsByThinkingLevelOrder retains per-level JSON key order.
+	SamplingParamsByThinkingLevelOrder map[ModelThinkingLevel][]string `json:"-"`
 	// SamplingParamsByThinkingLevel overrides SamplingParams per effective
 	// pi thinking level.
 	SamplingParamsByThinkingLevel SamplingParamsByThinkingLevel `json:"samplingParamsByThinkingLevel,omitempty"`
@@ -289,4 +298,82 @@ type Model struct {
 	PromptCache ModelPromptCache `json:"promptCache,omitempty"`
 	// Type is the model type; absent means chat (upstream Model.type).
 	Type string `json:"type,omitempty"`
+}
+
+func (m *Model) UnmarshalJSON(data []byte) error {
+	type modelAlias Model
+	var decoded modelAlias
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	*m = Model(decoded)
+	m.captureSamplingParamOrder(data)
+	return nil
+}
+
+func (m *Model) captureSamplingParamOrder(data []byte) {
+	m.SamplingParamsOrder = jsonObjectPropertyKeys(data, "samplingParams")
+	if raw := jsonObjectProperty(data, "samplingParamsByThinkingLevel"); len(raw) > 0 {
+		var levels map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &levels); err == nil {
+			m.SamplingParamsByThinkingLevelOrder = make(map[ModelThinkingLevel][]string, len(levels))
+			for level, params := range levels {
+				m.SamplingParamsByThinkingLevelOrder[ModelThinkingLevel(level)] = directJSONObjectKeys(params)
+			}
+		}
+	}
+}
+
+func jsonObjectProperty(data []byte, property string) json.RawMessage {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	if _, err := dec.Token(); err != nil {
+		return nil
+	}
+	var found json.RawMessage
+	for dec.More() {
+		token, err := dec.Token()
+		if err != nil {
+			return nil
+		}
+		key, ok := token.(string)
+		if !ok {
+			return nil
+		}
+		var value json.RawMessage
+		if err := dec.Decode(&value); err != nil {
+			return nil
+		}
+		if key == property {
+			found = value
+		}
+	}
+	return found
+}
+
+func jsonObjectPropertyKeys(data []byte, property string) []string {
+	return directJSONObjectKeys(jsonObjectProperty(data, property))
+}
+
+func directJSONObjectKeys(data []byte) []string {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	if token, err := dec.Token(); err != nil || token != json.Delim('{') {
+		return nil
+	}
+	var keys []string
+	for dec.More() {
+		token, err := dec.Token()
+		if err != nil {
+			return nil
+		}
+		key, ok := token.(string)
+		if !ok {
+			return nil
+		}
+		keys = append(keys, key)
+		var value json.RawMessage
+		if err := dec.Decode(&value); err != nil {
+			return nil
+		}
+	}
+	return keys
 }

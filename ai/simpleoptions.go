@@ -42,22 +42,68 @@ func samplingThinkingLevel(effort ThinkingLevel) ModelThinkingLevel {
 // the effective thinking level, and the request parameters, in that order (the
 // port of resolveSamplingParams in api/simple-options.ts).
 func ResolveSamplingParams(model *Model, thinkingLevel ModelThinkingLevel, requestParams SamplingParams) SamplingParams {
+	params, _ := ResolveSamplingParamsWithOrder(model, thinkingLevel, requestParams, nil)
+	return params
+}
+
+// ResolveSamplingParamsWithOrder resolves values and preserves first-assignment
+// order across model defaults, thinking-level overrides, and request values.
+func ResolveSamplingParamsWithOrder(model *Model, thinkingLevel ModelThinkingLevel, requestParams SamplingParams, requestOrder []string) (SamplingParams, []string) {
 	effective := ClampThinkingLevel(model, thinkingLevel)
 	levelParams := model.SamplingParamsByThinkingLevel[effective]
 	if model.SamplingParams == nil && levelParams == nil && len(requestParams) == 0 {
-		return nil
+		return nil, nil
 	}
 	merged := SamplingParams{}
-	for key, value := range model.SamplingParams {
-		merged[key] = value
+	order := make([]string, 0, len(model.SamplingParams)+len(levelParams)+len(requestParams))
+	merge := func(params SamplingParams, preferred []string) {
+		seen := make(map[string]bool, len(params))
+		for _, key := range preferred {
+			if _, ok := params[key]; ok && !seen[key] {
+				if _, exists := merged[key]; !exists {
+					order = append(order, key)
+				}
+				merged[key] = params[key]
+				seen[key] = true
+			}
+		}
+		remaining := make([]string, 0, len(params)-len(seen))
+		for key := range params {
+			if !seen[key] {
+				remaining = append(remaining, key)
+			}
+		}
+		sortStrings(remaining)
+		for _, key := range remaining {
+			if _, exists := merged[key]; !exists {
+				order = append(order, key)
+			}
+			merged[key] = params[key]
+		}
 	}
-	for key, value := range levelParams {
-		merged[key] = value
+	merge(model.SamplingParams, model.SamplingParamsOrder)
+	merge(levelParams, model.SamplingParamsByThinkingLevelOrder[effective])
+	merge(requestParams, requestOrder)
+	return merged, order
+}
+
+func orderedSamplingKeys(params SamplingParams, preferred []string) []string {
+	order := make([]string, 0, len(params))
+	seen := make(map[string]bool, len(params))
+	for _, key := range preferred {
+		if _, ok := params[key]; ok && !seen[key] {
+			order = append(order, key)
+			seen[key] = true
+		}
 	}
-	for key, value := range requestParams {
-		merged[key] = value
+	remaining := make([]string, 0, len(params)-len(seen))
+	for key := range params {
+		if !seen[key] {
+			remaining = append(remaining, key)
+		}
 	}
-	return merged
+	sortStrings(remaining)
+	return append(order, remaining...)
 }
 
 func intPtr(n int) *int { return &n }

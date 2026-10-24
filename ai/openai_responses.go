@@ -152,7 +152,8 @@ type OpenAIResponsesParams struct {
 	Reasoning            *OpenAIResponsesReasoning `json:"reasoning,omitempty"`
 	Include              []string                  `json:"include,omitempty"`
 	// Sampling params merge last (key overrides).
-	SamplingExtras map[string]json.RawMessage `json:"-"`
+	SamplingExtras     map[string]json.RawMessage `json:"-"`
+	SamplingExtraOrder []string                   `json:"-"`
 }
 
 // OpenAIResponsesReasoning is the reasoning request field.

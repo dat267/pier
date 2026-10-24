@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
@@ -33,11 +34,22 @@ type BedrockOptions struct {
 	// ThinkingDisplay is "summarized" (default) or "omitted".
 	ThinkingDisplay string
 	// RequestMetadata attaches cost-allocation tags to the request.
-	// D267: Go map keys emit sorted; a raw OnPayload replacement can retain
-	// an explicit metadata member order.
 	RequestMetadata map[string]string
+	// RequestMetadataOrder retains the input JSON key order when known.
+	RequestMetadataOrder []string `json:"-"`
 	// BearerToken uses Bedrock API-key authentication instead of SigV4.
 	BearerToken string
+}
+
+func (o *BedrockOptions) UnmarshalJSON(data []byte) error {
+	type optionsAlias BedrockOptions
+	var decoded optionsAlias
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	*o = BedrockOptions(decoded)
+	o.RequestMetadataOrder = jsonObjectPropertyKeys(data, "requestMetadata")
+	return nil
 }
 
 // BEDROCK_ERROR_PREFIXES maps AWS SDK exception names to their human-readable

@@ -36,6 +36,27 @@ type catalogModelEntry struct {
 	Compat json.RawMessage `json:"compat"`
 }
 
+func (entry *catalogModelEntry) UnmarshalJSON(data []byte) error {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return err
+	}
+	entry.Compat = fields["compat"]
+	delete(fields, "compat")
+	modelJSON, err := json.Marshal(fields)
+	if err != nil {
+		return err
+	}
+	type modelAlias Model
+	var model modelAlias
+	if err := json.Unmarshal(modelJSON, &model); err != nil {
+		return err
+	}
+	entry.Model = Model(model)
+	entry.Model.captureSamplingParamOrder(data)
+	return nil
+}
+
 var (
 	catalogOnce   sync.Once
 	catalog       catalogShape

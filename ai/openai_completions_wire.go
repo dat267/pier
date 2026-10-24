@@ -316,6 +316,7 @@ type OpenAICompletionsParams struct {
 	ThinkingTokenBudget      *int64                     `json:"-"`
 	ThinkingTokenBudgetField string                     `json:"-"`
 	SamplingExtras           map[string]json.RawMessage `json:"-"`
+	SamplingExtraOrder       []string                   `json:"-"`
 	ProviderRouting          json.RawMessage            `json:"-"`
 	ProviderOptions          json.RawMessage            `json:"-"`
 }
@@ -500,14 +501,9 @@ func (p *OpenAICompletionsParams) MarshalJSON() ([]byte, error) {
 	if p.ProviderOptions != nil {
 		fields.set("providerOptions", p.ProviderOptions)
 	}
-	// Sampling params are merged last so they override the named fields. The
-	// model's own member order is not retained in the port's map form (D267),
-	// so the extras are applied in sorted key order.
-	extras := make([]string, 0, len(p.SamplingExtras))
-	for key := range p.SamplingExtras {
-		extras = append(extras, key)
-	}
-	sortStrings(extras)
+	// Sampling params are merged last so they override the named fields. Their
+	// source key order follows JavaScript assignment order.
+	extras := orderedSamplingKeys(p.SamplingExtras, p.SamplingExtraOrder)
 	for _, key := range extras {
 		fields.set(key, p.SamplingExtras[key])
 	}
