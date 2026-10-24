@@ -221,8 +221,7 @@ func retryVertexRequest(
 			resp.Body.Close()
 			return nil, &ProviderError{
 				Status: resp.StatusCode, Headers: resp.Header,
-				Message: fmt.Sprintf("%d %s: %s", resp.StatusCode, http.StatusText(resp.StatusCode), string(raw)),
-				Body:    string(raw),
+				Message: googleAPIErrorMessage(resp.StatusCode, resp.Status, resp.Header.Get("Content-Type"), raw),
 			}
 		}
 		return resp, nil

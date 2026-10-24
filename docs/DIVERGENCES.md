@@ -4,7 +4,7 @@ Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D268**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D269**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation.
 
 Related documents: [port status](PORTING.md), [architecture](architecture.md),
@@ -2306,3 +2306,24 @@ The Bedrock fixture generator normalizes native binary values only when
 recording the hook's JSON view; it never changes the command passed to the SDK
 or the captured HTTP body. `TestBedrockRequestsMatchSDKWire/binary-content`
 covers image and redacted-reasoning bytes.
+
+## D269
+
+**An unparseable Google error body carries the Go decoder message, not V8's.**
+
+Reference: pi v1.4.0 (`4a080252`), `packages/ai/src/api/google-generative-ai.ts`
+catch plus `@google/genai`'s `throwErrorIfNotOK`: a non-2xx response whose
+`content-type` includes `application/json` is read with `response.json()`, so a
+malformed body throws V8's `SyntaxError` (`Unexpected token 'o', "nope" is not
+valid JSON`, `Unexpected end of JSON input`) and that text becomes
+`errorMessage`. The port re-parses the body for its
+`JSON.parse`/`JSON.stringify`-equivalent message and, when that fails, reports
+its decoder's error text instead (`invalid character 'o' in literal null
+(expecting 'u')`; an empty body reports `unexpected end of JSON input`). The
+shape is preserved: no status prefix is added, and the request still fails with
+`stopReason: "error"`. Valid JSON bodies and non-JSON content types match
+upstream byte-for-byte. Same class as D221.
+
+Tests: `TestProviderPayloadReplacementsMatchUpstream/google-generative-ai-*`
+(`ai/provider_payload_replacements_test.go`) and
+`TestGoogleAPIErrorMessage` (`ai/google_generative_ai_test.go`).

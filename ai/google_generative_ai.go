@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -516,6 +517,54 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 	return stream
 }
 
+// googleAPIErrorMessage composes the @google/genai ApiError message that
+// throwErrorIfNotOK raises (google-generative-ai.ts catch ->
+// normalizeProviderError -> formatProviderError). A JSON response is
+// re-stringified like JSON.parse/JSON.stringify; any other content type is
+// wrapped in the SDK's {"error":{message,code,status}} envelope.
+func googleAPIErrorMessage(status int, statusLine, contentType string, raw []byte) string {
+	if strings.Contains(contentType, "application/json") {
+		if len(bytes.TrimSpace(raw)) == 0 {
+			// D269: upstream reports V8's "Unexpected end of JSON input".
+			return "unexpected end of JSON input"
+		}
+		encoded, err := canonicalJavaScriptJSON(raw)
+		if err != nil {
+			// The SDK lets its JSON.parse SyntaxError escape; the port surfaces
+			// its decoder message instead (D269).
+			return err.Error()
+		}
+		return string(encoded)
+	}
+	type googleErrorDetail struct {
+		Message string `json:"message"`
+		Code    int    `json:"code"`
+		Status  string `json:"status"`
+	}
+	envelope := struct {
+		Error googleErrorDetail `json:"error"`
+	}{Error: googleErrorDetail{
+		Message: string(raw),
+		Code:    status,
+		Status:  googleStatusText(statusLine, status),
+	}}
+	encoded, err := MarshalJSON(envelope)
+	if err != nil {
+		return string(raw)
+	}
+	return string(encoded)
+}
+
+// googleStatusText takes the reason phrase from the response status line, the
+// same value fetch exposes as Response.statusText.
+func googleStatusText(statusLine string, status int) string {
+	prefix := strconv.Itoa(status) + " "
+	if strings.HasPrefix(statusLine, prefix) {
+		return strings.TrimPrefix(statusLine, prefix)
+	}
+	return http.StatusText(status)
+}
+
 // requestGoogleStream issues the streamGenerateContent call with the shared
 // provider retry policy.
 func requestGoogleStream(ctx context.Context, model *Model, body []byte, options *GoogleOptions) (*http.Response, error) {
@@ -541,8 +590,7 @@ func requestGoogleStream(ctx context.Context, model *Model, body []byte, options
 			hresp.Body.Close()
 			return nil, &ProviderError{
 				Status: hresp.StatusCode, Headers: hresp.Header,
-				Message: fmt.Sprintf("%d %s: %s", hresp.StatusCode, http.StatusText(hresp.StatusCode), string(raw)),
-				Body:    string(raw),
+				Message: googleAPIErrorMessage(hresp.StatusCode, hresp.Status, hresp.Header.Get("Content-Type"), raw),
 			}
 		}
 		return hresp, nil

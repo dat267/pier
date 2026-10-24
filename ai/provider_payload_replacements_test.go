@@ -37,8 +37,9 @@ func TestProviderPayloadReplacementsMatchUpstream(t *testing.T) {
 		StopReason   string            `json:"stopReason"`
 		ErrorMessage *string           `json:"errorMessage"`
 		Fail         *struct {
-			Status int    `json:"status"`
-			Body   string `json:"body"`
+			Status      int    `json:"status"`
+			ContentType string `json:"contentType"`
+			Body        string `json:"body"`
 		} `json:"fail"`
 	}
 	if err := json.Unmarshal(data, &fixtures); err != nil {
@@ -61,7 +62,11 @@ func TestProviderPayloadReplacementsMatchUpstream(t *testing.T) {
 				}
 				headers <- got
 				if fixture.Fail != nil {
-					w.Header().Set("Content-Type", "application/json")
+					contentType := fixture.Fail.ContentType
+					if contentType == "" {
+						contentType = "application/json"
+					}
+					w.Header().Set("Content-Type", contentType)
 					w.WriteHeader(fixture.Fail.Status)
 					io.WriteString(w, fixture.Fail.Body)
 					return
@@ -96,6 +101,8 @@ func TestProviderPayloadReplacementsMatchUpstream(t *testing.T) {
 			switch model.API {
 			case APIOpenAICompletions:
 				stream = StreamOpenAICompletions(&model, TranscriptContext{Messages: messages}, &OpenAICompletionsOptions{StreamOptions: options})
+			case APIGoogleGenerativeAI:
+				stream = StreamGoogleGenerativeAI(&model, TranscriptContext{Messages: messages}, &GoogleOptions{StreamOptions: options})
 			case APIOpenAIResponses:
 				stream = StreamOpenAIResponses(&model, TranscriptContext{Messages: messages}, &OpenAIResponsesOptions{StreamOptions: options})
 			case APIAnthropicMessages:

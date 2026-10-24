@@ -519,6 +519,129 @@
     }
   },
   {
+    "name": "google-generative-ai-json-error",
+    "model": {
+      "api": "google-generative-ai",
+      "id": "gemini-3-pro",
+      "provider": "google",
+      "baseUrl": "https://invalid.test/v1beta",
+      "reasoning": false,
+      "maxTokens": 8192,
+      "contextWindow": 128000,
+      "input": [
+        "text",
+        "image"
+      ],
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "apiKey": "token",
+    "path": "/v1beta/models/gemini-3-pro:streamGenerateContent",
+    "httpHeaders": {},
+    "body": "{\"contents\":[{\"parts\":[{\"text\":\"hello\"}],\"role\":\"user\"}],\"generationConfig\":{}}",
+    "stopReason": "error",
+    "errorMessage": "{\"error\":{\"code\":401,\"message\":\"API key not valid\"}}",
+    "fail": {
+      "status": 401,
+      "statusText": "Unauthorized",
+      "contentType": "application/json",
+      "body": "{\"error\":{\"code\":401,\"message\":\"API key not valid\"}}"
+    }
+  },
+  {
+    "name": "google-generative-ai-nested-error",
+    "model": {
+      "api": "google-generative-ai",
+      "id": "gemini-3-pro",
+      "provider": "google",
+      "baseUrl": "https://invalid.test/v1beta",
+      "reasoning": false,
+      "maxTokens": 8192,
+      "contextWindow": 128000,
+      "input": [
+        "text",
+        "image"
+      ],
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "apiKey": "token",
+    "path": "/v1beta/models/gemini-3-pro:streamGenerateContent",
+    "httpHeaders": {},
+    "body": "{\"contents\":[{\"parts\":[{\"text\":\"hello\"}],\"role\":\"user\"}],\"generationConfig\":{}}",
+    "stopReason": "error",
+    "errorMessage": "{\"z\":1,\"a\":{\"y\":2,\"b\":3}}",
+    "fail": {
+      "status": 403,
+      "statusText": "Forbidden",
+      "contentType": "application/json; charset=utf-8",
+      "body": "{\"z\":1,\"a\":{\"y\":2,\"b\":3}}"
+    }
+  },
+  {
+    "name": "google-generative-ai-text-error",
+    "model": {
+      "api": "google-generative-ai",
+      "id": "gemini-3-pro",
+      "provider": "google",
+      "baseUrl": "https://invalid.test/v1beta",
+      "reasoning": false,
+      "maxTokens": 8192,
+      "contextWindow": 128000,
+      "input": [
+        "text",
+        "image"
+      ],
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "apiKey": "token",
+    "path": "/v1beta/models/gemini-3-pro:streamGenerateContent",
+    "httpHeaders": {},
+    "body": "{\"contents\":[{\"parts\":[{\"text\":\"hello\"}],\"role\":\"user\"}],\"generationConfig\":{}}",
+    "stopReason": "error",
+    "errorMessage": "{\"error\":{\"message\":\"nope\",\"code\":403,\"status\":\"Forbidden\"}}",
+    "fail": {
+      "status": 403,
+      "statusText": "Forbidden",
+      "contentType": "text/plain",
+      "body": "nope"
+    }
+  },
+  {
     "name": "openai-codex-responses-replacement",
     "model": {
       "api": "openai-codex-responses",
