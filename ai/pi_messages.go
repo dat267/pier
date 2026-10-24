@@ -391,17 +391,14 @@ func StreamPiMessages(model *Model, context TranscriptContext, options *PiMessag
 			requestURL.RawQuery = query.Encode()
 		}
 
-		payload := map[string]any{
-			"model":   model.ID,
-			"context": contextJSONValue(context),
-			"options": piMessagesOptionsPayload(options),
-		}
+		var payload any = struct {
+			Model   string `json:"model"`
+			Context any    `json:"context"`
+			Options any    `json:"options"`
+		}{model.ID, contextJSONValue(context), piMessagesOptionsPayload(options)}
 		if options.OnPayload != nil {
 			if next := options.OnPayload(mustMarshalJSON(payload), model); next != nil {
-				var replaced map[string]any
-				if perr := json.Unmarshal(next, &replaced); perr == nil {
-					payload = replaced
-				}
+				payload = next
 			}
 		}
 		body, err := MarshalJSON(payload)
@@ -470,46 +467,34 @@ func StreamPiMessages(model *Model, context TranscriptContext, options *PiMessag
 // messages go through the canonical message marshaller, so the wire shape
 // matches the JSON transcript format (upstream sends the context object).
 func contextJSONValue(context TranscriptContext) any {
-	messages := make([]any, 0, len(context.Messages))
+	messages := make([]json.RawMessage, 0, len(context.Messages))
 	for _, message := range context.Messages {
 		encoded, err := MarshalMessage(message)
 		if err != nil {
 			continue
 		}
-		var value any
-		if err := json.Unmarshal(encoded, &value); err != nil {
-			continue
-		}
-		messages = append(messages, value)
+		messages = append(messages, encoded)
 	}
-	return map[string]any{"messages": messages}
+	return struct {
+		Messages []json.RawMessage `json:"messages"`
+	}{messages}
 }
 
 // piMessagesOptionsPayload renders the request's options object.
-func piMessagesOptionsPayload(options *PiMessagesOptions) map[string]any {
-	payload := map[string]any{}
-	if options.Temperature != nil {
-		payload["temperature"] = *options.Temperature
+func piMessagesOptionsPayload(options *PiMessagesOptions) any {
+	toolChoice := options.ToolChoice
+	if !json.Valid(toolChoice) {
+		toolChoice = nil
 	}
-	if options.MaxTokens != nil {
-		payload["maxTokens"] = *options.MaxTokens
-	}
-	if options.Reasoning != "" {
-		payload["reasoning"] = options.Reasoning
-	}
-	if retention := resolvePiMessagesCacheRetention(options.CacheRetention, options.Env); retention != "" {
-		payload["cacheRetention"] = retention
-	}
-	if options.SessionID != "" {
-		payload["sessionId"] = options.SessionID
-	}
-	if len(options.ToolChoice) > 0 {
-		var toolChoice any
-		if err := json.Unmarshal(options.ToolChoice, &toolChoice); err == nil {
-			payload["toolChoice"] = toolChoice
-		}
-	}
-	return payload
+	return struct {
+		Temperature    *float64        `json:"temperature,omitempty"`
+		MaxTokens      *int            `json:"maxTokens,omitempty"`
+		Reasoning      ThinkingLevel   `json:"reasoning,omitempty"`
+		CacheRetention CacheRetention  `json:"cacheRetention,omitempty"`
+		SessionID      string          `json:"sessionId,omitempty"`
+		ToolChoice     json.RawMessage `json:"toolChoice,omitempty"`
+	}{options.Temperature, options.MaxTokens, options.Reasoning,
+		resolvePiMessagesCacheRetention(options.CacheRetention, options.Env), options.SessionID, toolChoice}
 }
 
 var piMessagesEventBoundary = []byte("\n\n")

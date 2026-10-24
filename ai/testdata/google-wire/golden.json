@@ -1,0 +1,394 @@
+[
+  {
+    "api": "google-generative-ai",
+    "name": "minimal",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "options": {},
+    "body": "{\"contents\":[{\"parts\":[{\"text\":\"hello\"}],\"role\":\"user\"}],\"generationConfig\":{}}"
+  },
+  {
+    "api": "google-generative-ai",
+    "name": "configured",
+    "messages": [
+      {
+        "role": "system",
+        "content": "system",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "lookup",
+            "description": "Look up",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "z": {
+                  "type": "string"
+                },
+                "a": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "z",
+                "a"
+              ]
+            },
+            "constrainedSampling": {
+              "type": "json_schema",
+              "strict": "prefer"
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 2
+      }
+    ],
+    "options": {
+      "temperature": 0.5,
+      "maxTokens": 16,
+      "toolChoice": "any",
+      "thinking": {
+        "enabled": true,
+        "budgetTokens": 128
+      }
+    },
+    "body": "{\"contents\":[{\"parts\":[{\"text\":\"hello\"}],\"role\":\"user\"}],\"systemInstruction\":{\"parts\":[{\"text\":\"system\"}],\"role\":\"user\"},\"tools\":[{\"functionDeclarations\":[{\"name\":\"lookup\",\"description\":\"Look up\",\"parametersJsonSchema\":{\"type\":\"object\",\"properties\":{\"z\":{\"type\":\"string\"},\"a\":{\"type\":\"number\"}},\"required\":[\"z\",\"a\"],\"additionalProperties\":false}}]}],\"toolConfig\":{\"functionCallingConfig\":{\"mode\":\"ANY\"}},\"generationConfig\":{\"temperature\":0.5,\"maxOutputTokens\":16,\"thinkingConfig\":{\"includeThoughts\":true,\"thinkingBudget\":128}}}"
+  },
+  {
+    "api": "google-generative-ai",
+    "name": "tool-call-and-image",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "image",
+            "data": "aW1hZ2U=",
+            "mimeType": "image/png"
+          }
+        ],
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "call-1",
+            "name": "lookup",
+            "arguments": {
+              "z": 1,
+              "a": 2
+            },
+            "thoughtSignature": "c2ln"
+          }
+        ],
+        "stopReason": "toolUse",
+        "timestamp": 2,
+        "api": "google-generative-ai",
+        "provider": "google",
+        "model": "gemini-3-pro"
+      },
+      {
+        "role": "toolResult",
+        "toolCallId": "call-1",
+        "toolName": "lookup",
+        "content": [
+          {
+            "type": "text",
+            "text": "found"
+          },
+          {
+            "type": "image",
+            "data": "aW1hZ2U=",
+            "mimeType": "image/png"
+          }
+        ],
+        "isError": false,
+        "timestamp": 3
+      }
+    ],
+    "options": {},
+    "body": "{\"contents\":[{\"parts\":[{\"inlineData\":{\"data\":\"aW1hZ2U=\",\"mimeType\":\"image/png\"}}],\"role\":\"user\"},{\"parts\":[{\"functionCall\":{\"args\":{\"z\":1,\"a\":2},\"id\":\"call-1\",\"name\":\"lookup\"},\"thoughtSignature\":\"c2ln\"}],\"role\":\"model\"},{\"parts\":[{\"functionResponse\":{\"name\":\"lookup\",\"response\":{\"output\":\"found\"},\"parts\":[{\"inlineData\":{\"mimeType\":\"image/png\",\"data\":\"aW1hZ2U=\"}}],\"id\":\"call-1\"}}],\"role\":\"user\"}],\"generationConfig\":{}}"
+  },
+  {
+    "api": "google-generative-ai",
+    "name": "signed-empty-parts",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "",
+            "textSignature": "c2ln"
+          },
+          {
+            "type": "thinking",
+            "thinking": "",
+            "thinkingSignature": "c2ln"
+          }
+        ],
+        "stopReason": "stop",
+        "timestamp": 2,
+        "api": "google-generative-ai",
+        "provider": "google",
+        "model": "gemini-3-pro"
+      }
+    ],
+    "options": {},
+    "body": "{\"contents\":[{\"parts\":[{\"text\":\"hello\"}],\"role\":\"user\"},{\"parts\":[{\"text\":\"\",\"thoughtSignature\":\"c2ln\"},{\"text\":\"\",\"thought\":true,\"thoughtSignature\":\"c2ln\"}],\"role\":\"model\"}],\"generationConfig\":{}}"
+  },
+  {
+    "api": "google-generative-ai",
+    "name": "null-tool-arguments",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "call-1",
+            "name": "lookup",
+            "arguments": null
+          }
+        ],
+        "stopReason": "toolUse",
+        "timestamp": 2,
+        "api": "google-generative-ai",
+        "provider": "google",
+        "model": "gemini-3-pro"
+      },
+      {
+        "role": "toolResult",
+        "toolCallId": "call-1",
+        "toolName": "lookup",
+        "content": [
+          {
+            "type": "text",
+            "text": "found"
+          }
+        ],
+        "isError": false,
+        "timestamp": 3
+      }
+    ],
+    "options": {},
+    "body": "{\"contents\":[{\"parts\":[{\"text\":\"hello\"}],\"role\":\"user\"},{\"parts\":[{\"functionCall\":{\"args\":{},\"id\":\"call-1\",\"name\":\"lookup\"}}],\"role\":\"model\"},{\"parts\":[{\"functionResponse\":{\"name\":\"lookup\",\"response\":{\"output\":\"found\"},\"id\":\"call-1\"}}],\"role\":\"user\"}],\"generationConfig\":{}}"
+  },
+  {
+    "api": "google-vertex",
+    "name": "minimal",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "options": {},
+    "body": "{\"contents\":[{\"parts\":[{\"text\":\"hello\"}],\"role\":\"user\"}],\"generationConfig\":{}}"
+  },
+  {
+    "api": "google-vertex",
+    "name": "configured",
+    "messages": [
+      {
+        "role": "system",
+        "content": "system",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "lookup",
+            "description": "Look up",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "z": {
+                  "type": "string"
+                },
+                "a": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "z",
+                "a"
+              ]
+            },
+            "constrainedSampling": {
+              "type": "json_schema",
+              "strict": "prefer"
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 2
+      }
+    ],
+    "options": {
+      "temperature": 0.5,
+      "maxTokens": 16,
+      "toolChoice": "any",
+      "thinking": {
+        "enabled": true,
+        "budgetTokens": 128
+      }
+    },
+    "body": "{\"contents\":[{\"parts\":[{\"text\":\"hello\"}],\"role\":\"user\"}],\"systemInstruction\":{\"parts\":[{\"text\":\"system\"}],\"role\":\"user\"},\"tools\":[{\"functionDeclarations\":[{\"name\":\"lookup\",\"description\":\"Look up\",\"parametersJsonSchema\":{\"type\":\"object\",\"properties\":{\"z\":{\"type\":\"string\"},\"a\":{\"type\":\"number\"}},\"required\":[\"z\",\"a\"],\"additionalProperties\":false}}]}],\"toolConfig\":{\"functionCallingConfig\":{\"mode\":\"ANY\"}},\"generationConfig\":{\"temperature\":0.5,\"maxOutputTokens\":16,\"thinkingConfig\":{\"includeThoughts\":true,\"thinkingBudget\":128}}}"
+  },
+  {
+    "api": "google-vertex",
+    "name": "tool-call-and-image",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "image",
+            "data": "aW1hZ2U=",
+            "mimeType": "image/png"
+          }
+        ],
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "call-1",
+            "name": "lookup",
+            "arguments": {
+              "z": 1,
+              "a": 2
+            },
+            "thoughtSignature": "c2ln"
+          }
+        ],
+        "stopReason": "toolUse",
+        "timestamp": 2,
+        "api": "google-vertex",
+        "provider": "google-vertex",
+        "model": "gemini-3-pro"
+      },
+      {
+        "role": "toolResult",
+        "toolCallId": "call-1",
+        "toolName": "lookup",
+        "content": [
+          {
+            "type": "text",
+            "text": "found"
+          },
+          {
+            "type": "image",
+            "data": "aW1hZ2U=",
+            "mimeType": "image/png"
+          }
+        ],
+        "isError": false,
+        "timestamp": 3
+      }
+    ],
+    "options": {},
+    "body": "{\"contents\":[{\"parts\":[{\"inlineData\":{\"mimeType\":\"image/png\",\"data\":\"aW1hZ2U=\"}}],\"role\":\"user\"},{\"parts\":[{\"functionCall\":{\"name\":\"lookup\",\"args\":{\"z\":1,\"a\":2},\"id\":\"call-1\"},\"thoughtSignature\":\"c2ln\"}],\"role\":\"model\"},{\"parts\":[{\"functionResponse\":{\"name\":\"lookup\",\"response\":{\"output\":\"found\"},\"parts\":[{\"inlineData\":{\"mimeType\":\"image/png\",\"data\":\"aW1hZ2U=\"}}],\"id\":\"call-1\"}}],\"role\":\"user\"}],\"generationConfig\":{}}"
+  },
+  {
+    "api": "google-vertex",
+    "name": "signed-empty-parts",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "",
+            "textSignature": "c2ln"
+          },
+          {
+            "type": "thinking",
+            "thinking": "",
+            "thinkingSignature": "c2ln"
+          }
+        ],
+        "stopReason": "stop",
+        "timestamp": 2,
+        "api": "google-vertex",
+        "provider": "google-vertex",
+        "model": "gemini-3-pro"
+      }
+    ],
+    "options": {},
+    "body": "{\"contents\":[{\"parts\":[{\"text\":\"hello\"}],\"role\":\"user\"},{\"parts\":[{\"text\":\"\",\"thoughtSignature\":\"c2ln\"},{\"text\":\"\",\"thought\":true,\"thoughtSignature\":\"c2ln\"}],\"role\":\"model\"}],\"generationConfig\":{}}"
+  },
+  {
+    "api": "google-vertex",
+    "name": "null-tool-arguments",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "call-1",
+            "name": "lookup",
+            "arguments": null
+          }
+        ],
+        "stopReason": "toolUse",
+        "timestamp": 2,
+        "api": "google-vertex",
+        "provider": "google-vertex",
+        "model": "gemini-3-pro"
+      },
+      {
+        "role": "toolResult",
+        "toolCallId": "call-1",
+        "toolName": "lookup",
+        "content": [
+          {
+            "type": "text",
+            "text": "found"
+          }
+        ],
+        "isError": false,
+        "timestamp": 3
+      }
+    ],
+    "options": {},
+    "body": "{\"contents\":[{\"parts\":[{\"text\":\"hello\"}],\"role\":\"user\"},{\"parts\":[{\"functionCall\":{\"name\":\"lookup\",\"args\":{},\"id\":\"call-1\"}}],\"role\":\"model\"},{\"parts\":[{\"functionResponse\":{\"name\":\"lookup\",\"response\":{\"output\":\"found\"},\"id\":\"call-1\"}}],\"role\":\"user\"}],\"generationConfig\":{}}"
+  }
+]

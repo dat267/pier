@@ -154,12 +154,12 @@ func supportsMultimodalFunctionResponse(modelID string) bool {
 
 // GooglePart is one Gemini content part.
 type GooglePart struct {
+	FunctionCall     *GoogleFunctionCall     `json:"functionCall,omitempty"`
+	FunctionResponse *GoogleFunctionResponse `json:"functionResponse,omitempty"`
+	InlineData       *GoogleInlineData       `json:"inlineData,omitempty"`
 	Text             string                  `json:"text,omitempty"`
 	Thought          *bool                   `json:"thought,omitempty"`
 	ThoughtSignature *string                 `json:"thoughtSignature,omitempty"`
-	InlineData       *GoogleInlineData       `json:"inlineData,omitempty"`
-	FunctionCall     *GoogleFunctionCall     `json:"functionCall,omitempty"`
-	FunctionResponse *GoogleFunctionResponse `json:"functionResponse,omitempty"`
 }
 
 // GoogleInlineData is base64 media.
@@ -185,8 +185,8 @@ type GoogleFunctionResponse struct {
 
 // GoogleContent is one conversation turn.
 type GoogleContent struct {
-	Role  string       `json:"role"`
 	Parts []GooglePart `json:"parts"`
+	Role  string       `json:"role"`
 }
 
 // GoogleThinkingConfig is the thinking control.
@@ -277,7 +277,11 @@ func ConvertGoogleMessages(model *Model, context TranscriptContext) ([]GoogleCon
 					}
 				case ToolCall:
 					thoughtSignature := resolveThoughtSignature(isSameProviderAndModel, deref(b.ThoughtSignature))
-					call := &GoogleFunctionCall{Name: b.Name, Args: b.Arguments}
+					arguments := b.Arguments
+					if len(arguments) == 0 || strings.TrimSpace(string(arguments)) == "null" {
+						arguments = json.RawMessage(`{}`)
+					}
+					call := &GoogleFunctionCall{Name: b.Name, Args: arguments}
 					if RequiresToolCallID(model.ID) {
 						call.ID = b.ID
 					}

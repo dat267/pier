@@ -733,7 +733,7 @@ func legacyInputSchema(parameters json.RawMessage) (json.RawMessage, error) {
 		return nil, err
 	}
 	props := schema.Properties
-	if len(props) == 0 {
+	if len(props) == 0 || strings.TrimSpace(string(props)) == "null" {
 		props = json.RawMessage("{}")
 	}
 	required := schema.Required
@@ -750,18 +750,18 @@ func legacyInputSchema(parameters json.RawMessage) (json.RawMessage, error) {
 // overlaySchema merges a strict parameters object with the legacy fields,
 // legacy winning (upstream spread order).
 func overlaySchema(parameters, legacy json.RawMessage) (json.RawMessage, error) {
-	var p map[string]json.RawMessage
-	if err := jsonUnmarshalStrict(parameters, &p); err != nil {
+	p, err := decodeSchemaNode(parameters)
+	if err != nil {
 		return nil, err
 	}
-	var l map[string]json.RawMessage
-	if err := jsonUnmarshalStrict(legacy, &l); err != nil {
+	l, err := decodeSchemaNode(legacy)
+	if err != nil {
 		return nil, err
 	}
-	for k, v := range l {
-		p[k] = v
+	for _, key := range l.keys {
+		p.set(key, l.fields[key])
 	}
-	return sortedObjectJSON(mustMarshalJSON(p)), nil
+	return p.encode()
 }
 
 // GetBetaFeatures resolves the anthropic-beta list (port of getBetaFeatures).

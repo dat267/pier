@@ -3,7 +3,6 @@ package ai
 import (
 	"encoding/json"
 	"fmt"
-	"sort"
 	"strings"
 )
 
@@ -285,39 +284,13 @@ func makeSchemaNodeStrict(node *schemaNode, check UnsupportedStrictSchemaKeyword
 	node.set("required", reqEnc)
 	node.set("additionalProperties", json.RawMessage("false"))
 	if hasProps {
-		propEnc, _ := MarshalJSON(properties)
-		// Re-encode with deterministic key order matching the original where
-		// possible; Go maps sort keys, which changes byte order but not
-		// schema semantics. Upstream preserves insertion order; sorted order
-		// is a D-row (D4) — schemas are semantically equal, wire bytes differ.
-		node.set("properties", sortedObjectJSON(propEnc))
+		propEnc, err := (&schemaNode{fields: properties, keys: orderedProps}).encode()
+		if err != nil {
+			return err
+		}
+		node.set("properties", propEnc)
 	}
 	return nil
-}
-
-// sortedObjectJSON re-encodes an object with sorted keys (canonical form).
-func sortedObjectJSON(data json.RawMessage) json.RawMessage {
-	var m map[string]json.RawMessage
-	if err := jsonUnmarshalStrict(data, &m); err != nil {
-		return data
-	}
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	var buf []byte
-	buf = append(buf, '{')
-	for i, k := range keys {
-		if i > 0 {
-			buf = append(buf, ',')
-		}
-		kEnc, _ := MarshalJSON(k)
-		buf = append(buf, kEnc...)
-		buf = append(buf, ':')
-		buf = append(buf, m[k]...)
-	}
-	return append(buf, '}')
 }
 
 // orderedKeys recovers JavaScript Object.keys order from a JSON object.

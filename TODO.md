@@ -1,6 +1,23 @@
 # Reproduced audit findings
 
-No unresolved findings. The pathological emphasis runs recorded against pi
+## Google/Vertex payload-hook shape
+
+Reproduced against pi v1.4.0 (`4a080252`),
+`packages/ai/src/api/{google-generative-ai,google-vertex}.ts` `stream` and
+`buildParams`. With one `hello` user message and no generation options,
+upstream calls `onPayload` with
+`{"model":"gemini-3-pro","contents":[{"role":"user","parts":[{"text":"hello"}]}],"config":{}}`.
+Both Go streams instead call `OnPayload` with
+`{"contents":[{"parts":[{"text":"hello"}],"role":"user"}],"generationConfig":{}}`.
+Thus an upstream-compatible hook reading `config` or replacing `model` cannot
+work unchanged. The HTTP-body parity fixtures do not cover this hook boundary.
+Reproduce by capturing the callback argument from either public stream with
+that transcript and an API key, using a local/fake HTTP response so no provider
+is contacted.
+
+## Resolved findings
+
+The pathological emphasis runs recorded against pi
 v1.4.0's Markdown pipeline are fixed, including `：__1_` and `**__(___*`. Red-first
 regressions in `internal/markdown/emphasis_test.go` cover failed-run retries,
 text-predecessor tracking, mixed-marker masking, nested underscore openers,

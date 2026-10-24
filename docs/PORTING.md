@@ -264,6 +264,32 @@ assistant-stream `durationMs` rounds to the nearest millisecond as upstream's
 the pinned `migrateSessionEntries`; the params order against both `buildParams`
 builders.
 
+A follow-up provider audit against v1.4.0 (`4a080252`), still the latest
+released tag after refreshing upstream tags, fixed four more mismatches:
+Anthropic strict tool schemas now keep spread order and the shared strict
+schema converter keeps property declaration order (removing the historical
+D4 sorting workaround); Anthropic legacy schemas default explicit null
+`properties` to `{}`; pi-messages preserves request, transcript and option
+member order; and pi-messages accepts every defined `onPayload` JSON value
+without decoding it into a sorted object map. Four red-first tests cover these
+changes. Their expected bytes were also checked by executing the pinned
+Anthropic `convertTools` and pi-messages `stream` functions. This pass does not
+claim an exhaustive byte-level review of Google/Vertex, Bedrock, Mistral or
+Azure adapters. Sampling-param order remains the D267 divergence.
+
+The Google/Vertex wire pass now has ten Node-generated fixtures that execute
+both pinned provider streams and `@google/genai` 2.21.0, then compare the captured
+HTTP body byte for byte. Five red-first cases cover minimal and configured
+requests, signed tool calls with images, signed empty text/thinking parts, and
+null tool arguments. The port now emits SDK content/field order, the default
+empty `generationConfig`, the system instruction's `role: "user"`, and the
+Developer API's distinct direct-image/function-call order without rewriting
+Vertex objects or nested function-result images. Explicit empty signed text is
+retained, and null/missing tool arguments become `{}`. The payload-hook shape
+still differs: upstream exposes SDK `{model, contents, config}` params, while
+the port exposes the REST body (`TODO.md`). Bedrock, Mistral and Azure bodies
+remain outside this byte-level pass.
+
 Remaining v1.4.0 items, grouped by why they are not in this tree:
 
 - **Removed packages (D236)**: `telemetry` (the `telemetry` span option, spans,

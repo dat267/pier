@@ -36,9 +36,9 @@ type GoogleThinkingOption struct {
 // GoogleGenerateContentParams is the streaming request body.
 type GoogleGenerateContentParams struct {
 	Contents          []GoogleContent          `json:"contents"`
+	SystemInstruction *GoogleSystemInstruction `json:"systemInstruction,omitempty"`
 	Tools             []GoogleToolGroup        `json:"tools,omitempty"`
 	ToolConfig        *GoogleToolConfig        `json:"toolConfig,omitempty"`
-	SystemInstruction *GoogleSystemInstruction `json:"systemInstruction,omitempty"`
 	GenerationConfig  *GoogleGenerationConfig  `json:"generationConfig,omitempty"`
 }
 
@@ -55,6 +55,7 @@ type GoogleFunctionCallingConfig struct {
 // GoogleSystemInstruction carries the system prompt.
 type GoogleSystemInstruction struct {
 	Parts []GooglePart `json:"parts"`
+	Role  string       `json:"role"`
 }
 
 // GoogleGenerationConfig is the generation configuration.
@@ -95,6 +96,7 @@ func BuildGoogleParams(model *Model, context TranscriptContext, options *GoogleO
 	if systemInstruction != "" {
 		params.SystemInstruction = &GoogleSystemInstruction{
 			Parts: []GooglePart{{Text: SanitizeSurrogates(systemInstruction)}},
+			Role:  "user",
 		}
 	}
 	if len(currentTools) > 0 {
@@ -111,15 +113,12 @@ func BuildGoogleParams(model *Model, context TranscriptContext, options *GoogleO
 	}
 
 	generationConfig := &GoogleGenerationConfig{}
-	hasGenerationConfig := false
 	if options.Temperature != nil {
 		generationConfig.Temperature = options.Temperature
-		hasGenerationConfig = true
 	}
 	if options.MaxTokens != nil {
 		tokens := int64(*options.MaxTokens)
 		generationConfig.MaxOutputTokens = &tokens
-		hasGenerationConfig = true
 	}
 
 	if options.Thinking != nil && options.Thinking.Enabled && model.Reasoning {
@@ -131,14 +130,10 @@ func BuildGoogleParams(model *Model, context TranscriptContext, options *GoogleO
 			thinkingConfig.ThinkingBudget = options.Thinking.BudgetTokens
 		}
 		generationConfig.ThinkingConfig = thinkingConfig
-		hasGenerationConfig = true
 	} else if model.Reasoning && options.Thinking != nil && !options.Thinking.Enabled {
 		generationConfig.ThinkingConfig = GetDisabledGoogleThinkingConfig(model)
-		hasGenerationConfig = true
 	}
-	if hasGenerationConfig {
-		params.GenerationConfig = generationConfig
-	}
+	params.GenerationConfig = generationConfig
 	return params, nil
 }
 
@@ -504,7 +499,7 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 // requestGoogleStream issues the streamGenerateContent call with the shared
 // provider retry policy.
 func requestGoogleStream(ctx context.Context, model *Model, params *GoogleGenerateContentParams, options *GoogleOptions) (*http.Response, error) {
-	body, err := MarshalJSON(params)
+	body, err := marshalGoogleDeveloperRequest(params)
 	if err != nil {
 		return nil, err
 	}
