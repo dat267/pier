@@ -84,6 +84,74 @@ func (p googleSDKPart) MarshalJSON() ([]byte, error) {
 	return MarshalJSON(GooglePart(p))
 }
 
+// googleVertexOnlyReplacements are the config members the Developer API
+// serializer rejects before it reaches modelArmorConfig (SDK
+// generateContentConfigToMldev; imageConfig sits between the two).
+var googleVertexOnlyReplacements = []string{"routingConfig", "modelSelectionConfig", "labels", "audioTimestamp"}
+
+const (
+	// googleModelArmorReplacement is rejected last by the Developer serializer.
+	googleModelArmorReplacement = "modelArmorConfig"
+	// googleCivicAnswersReplacement is the only member the Vertex serializer
+	// rejects (SDK generateContentConfigToVertex).
+	googleCivicAnswersReplacement = "enableEnhancedCivicAnswers"
+)
+
+func googleReplacementError(key string, api Api) error {
+	if api == APIGoogleGenerativeAI {
+		return fmt.Errorf("%s parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.", key)
+	}
+	return fmt.Errorf("%s parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.", key)
+}
+
+// googleValidateReplacements reproduces the SDK's per-API config validation,
+// which rejects members the other API supports. The hook has already run by
+// the time the SDK serializes, so these surface before any request is sent.
+func googleValidateReplacements(config map[string]json.RawMessage, api Api) error {
+	if api == APIGoogleGenerativeAI {
+		for _, key := range googleVertexOnlyReplacements {
+			if _, ok := config[key]; ok {
+				return googleReplacementError(key, api)
+			}
+		}
+		if raw, ok := config["imageConfig"]; ok && strings.TrimSpace(string(raw)) != "null" {
+			if _, err := googleDeveloperImageConfig(raw); err != nil {
+				return err
+			}
+		}
+		if _, ok := config[googleModelArmorReplacement]; ok {
+			return googleReplacementError(googleModelArmorReplacement, api)
+		}
+		return nil
+	}
+	if _, ok := config[googleCivicAnswersReplacement]; ok {
+		return googleReplacementError(googleCivicAnswersReplacement, api)
+	}
+	return nil
+}
+
+// googleDeveloperImageConfig maps a replacement imageConfig the way the
+// Developer API serializer does: only aspectRatio and imageSize survive, and
+// the Vertex-only members are rejected when present.
+func googleDeveloperImageConfig(raw json.RawMessage) (json.RawMessage, error) {
+	source, err := decodeSchemaNode(raw)
+	if err != nil {
+		return nil, err
+	}
+	var config orderedJSONFields
+	for _, key := range []string{"aspectRatio", "imageSize"} {
+		if value, ok := source.raw(key); ok && strings.TrimSpace(string(value)) != "null" {
+			config.set(key, value)
+		}
+	}
+	for _, key := range []string{"personGeneration", "outputMimeType", "outputCompressionQuality", "imageOutputOptions", "prominentPeople"} {
+		if _, ok := source.raw(key); ok {
+			return nil, googleReplacementError(key, APIGoogleGenerativeAI)
+		}
+	}
+	return config.marshal()
+}
+
 // googleSDKRequest applies a hook's SDK-shaped replacement before the REST
 // serializer. Generation controls use the SDK's field order, not hook order.
 func googleSDKRequest(raw json.RawMessage, api Api) (string, []byte, error) {
@@ -97,6 +165,9 @@ func googleSDKRequest(raw json.RawMessage, api Api) (string, []byte, error) {
 	}
 	if payload.Model == "" {
 		return "", nil, fmt.Errorf("model is required")
+	}
+	if err := googleValidateReplacements(payload.Config, api); err != nil {
+		return "", nil, err
 	}
 	params := &GoogleGenerateContentParams{Contents: payload.Contents}
 	var encoded []byte
@@ -164,8 +235,12 @@ func googleSDKRequest(raw json.RawMessage, api Api) (string, []byte, error) {
 		generationKeys = append(generationKeys, "thinkingConfig", "audioTranscriptionConfig", "imageConfig")
 		for _, key := range generationKeys {
 			if value, ok := payload.Config[key]; ok && strings.TrimSpace(string(value)) != "null" {
-				if key == "imageConfig" && api == APIGoogleVertex {
-					value, err = googleVertexImageConfig(value)
+				if key == "imageConfig" {
+					if api == APIGoogleVertex {
+						value, err = googleVertexImageConfig(value)
+					} else {
+						value, err = googleDeveloperImageConfig(value)
+					}
 					if err != nil {
 						return "", nil, err
 					}

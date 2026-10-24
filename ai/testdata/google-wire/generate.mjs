@@ -132,6 +132,46 @@ const cases = [{
 			candidateCount: 1, topK: 0, topP: 0, temperature: 0,
 		},
 	},
+}, {
+	name: "developer-rejects-vertex-labels",
+	apis: ["google-generative-ai"],
+	expectError: true,
+	messages: [{ role: "user", content: "hello", timestamp: 1 }],
+	options: {},
+	replacement: {
+		model: "gemini-3-pro", contents: [{ role: "user", parts: [{ text: "hello" }] }],
+		config: { labels: { audit: "enabled" } },
+	},
+}, {
+	name: "developer-rejects-null-vertex-labels",
+	apis: ["google-generative-ai"],
+	expectError: true,
+	messages: [{ role: "user", content: "hello", timestamp: 1 }],
+	options: {},
+	replacement: {
+		model: "gemini-3-pro", contents: [{ role: "user", parts: [{ text: "hello" }] }],
+		config: { labels: null },
+	},
+}, {
+	name: "developer-rejects-vertex-image-config",
+	apis: ["google-generative-ai"],
+	expectError: true,
+	messages: [{ role: "user", content: "hello", timestamp: 1 }],
+	options: {},
+	replacement: {
+		model: "gemini-3-pro", contents: [{ role: "user", parts: [{ text: "hello" }] }],
+		config: { imageConfig: { aspectRatio: "16:9", personGeneration: "ALLOW_ALL" } },
+	},
+}, {
+	name: "vertex-rejects-developer-civic-answers",
+	apis: ["google-vertex"],
+	expectError: true,
+	messages: [{ role: "user", content: "hello", timestamp: 1 }],
+	options: {},
+	replacement: {
+		model: "gemini-3-pro", contents: [{ role: "user", parts: [{ text: "hello" }] }],
+		config: { enableEnhancedCivicAnswers: true },
+	},
 }];
 const fixtures = [];
 for (const { api, stream } of providers) {
@@ -156,6 +196,12 @@ for (const { api, stream } of providers) {
 			...input.options, apiKey: "token", project: "project", location: "global", env: {},
 			onPayload(params) { payload = JSON.stringify(params); return input.replacement; },
 		}).result();
+		if (input.expectError) {
+			if (!result.errorMessage) throw new Error("expected an error");
+			if (body !== undefined) throw new Error("rejected config sent a request");
+			fixtures.push({ api, ...input, messages, payload, error: result.errorMessage });
+			continue;
+		}
 		if (result.errorMessage || typeof body !== "string") throw new Error(result.errorMessage ?? "no body captured");
 		fixtures.push({ api, ...input, messages, payload, path, body });
 	}

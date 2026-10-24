@@ -426,6 +426,113 @@
     "body": "{\"contents\":[{\"parts\":[{\"text\":\"changed\"}],\"role\":\"user\"}],\"generationConfig\":{\"temperature\":0,\"topP\":0,\"topK\":0,\"candidateCount\":1,\"maxOutputTokens\":0,\"stopSequences\":[\"END\"],\"responseLogprobs\":false,\"logprobs\":0,\"presencePenalty\":0,\"frequencyPenalty\":0,\"seed\":0,\"responseMimeType\":\"application/json\",\"responseJsonSchema\":{\"type\":\"object\",\"properties\":{\"z\":{\"type\":\"string\"}}},\"responseModalities\":[\"TEXT\"],\"thinkingConfig\":{\"includeThoughts\":false,\"thinkingBudget\":0}}}"
   },
   {
+    "api": "google-generative-ai",
+    "name": "developer-rejects-vertex-labels",
+    "apis": [
+      "google-generative-ai"
+    ],
+    "expectError": true,
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "options": {},
+    "replacement": {
+      "model": "gemini-3-pro",
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "hello"
+            }
+          ]
+        }
+      ],
+      "config": {
+        "labels": {
+          "audit": "enabled"
+        }
+      }
+    },
+    "payload": "{\"model\":\"gemini-3-pro\",\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"hello\"}]}],\"config\":{}}",
+    "error": "labels parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode."
+  },
+  {
+    "api": "google-generative-ai",
+    "name": "developer-rejects-null-vertex-labels",
+    "apis": [
+      "google-generative-ai"
+    ],
+    "expectError": true,
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "options": {},
+    "replacement": {
+      "model": "gemini-3-pro",
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "hello"
+            }
+          ]
+        }
+      ],
+      "config": {
+        "labels": null
+      }
+    },
+    "payload": "{\"model\":\"gemini-3-pro\",\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"hello\"}]}],\"config\":{}}",
+    "error": "labels parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode."
+  },
+  {
+    "api": "google-generative-ai",
+    "name": "developer-rejects-vertex-image-config",
+    "apis": [
+      "google-generative-ai"
+    ],
+    "expectError": true,
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "options": {},
+    "replacement": {
+      "model": "gemini-3-pro",
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "hello"
+            }
+          ]
+        }
+      ],
+      "config": {
+        "imageConfig": {
+          "aspectRatio": "16:9",
+          "personGeneration": "ALLOW_ALL"
+        }
+      }
+    },
+    "payload": "{\"model\":\"gemini-3-pro\",\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"hello\"}]}],\"config\":{}}",
+    "error": "personGeneration parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode."
+  },
+  {
     "api": "google-vertex",
     "name": "minimal",
     "messages": [
@@ -817,5 +924,39 @@
     "payload": "{\"model\":\"gemini-3-pro\",\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"hello\"}]}],\"config\":{}}",
     "path": "/v1/publishers/google/models/gemini-3-pro:streamGenerateContent",
     "body": "{\"contents\":[{\"parts\":[{\"text\":\"changed\"}],\"role\":\"user\"}],\"generationConfig\":{\"temperature\":0,\"topP\":0,\"topK\":0,\"candidateCount\":1,\"maxOutputTokens\":0,\"stopSequences\":[\"END\"],\"responseLogprobs\":false,\"logprobs\":0,\"presencePenalty\":0,\"frequencyPenalty\":0,\"seed\":0,\"responseMimeType\":\"application/json\",\"responseJsonSchema\":{\"type\":\"object\",\"properties\":{\"z\":{\"type\":\"string\"}}},\"responseModalities\":[\"TEXT\"],\"thinkingConfig\":{\"includeThoughts\":false,\"thinkingBudget\":0}}}"
+  },
+  {
+    "api": "google-vertex",
+    "name": "vertex-rejects-developer-civic-answers",
+    "apis": [
+      "google-vertex"
+    ],
+    "expectError": true,
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "options": {},
+    "replacement": {
+      "model": "gemini-3-pro",
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "hello"
+            }
+          ]
+        }
+      ],
+      "config": {
+        "enableEnhancedCivicAnswers": true
+      }
+    },
+    "payload": "{\"model\":\"gemini-3-pro\",\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"hello\"}]}],\"config\":{}}",
+    "error": "enableEnhancedCivicAnswers parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode."
   }
 ]

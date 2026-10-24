@@ -28,6 +28,7 @@ func TestGoogleRequestsMatchSDKWire(t *testing.T) {
 		Payload     string            `json:"payload"`
 		Replacement json.RawMessage   `json:"replacement"`
 		Path        string            `json:"path"`
+		Error       string            `json:"error"`
 	}
 	if err := json.Unmarshal(data, &fixtures); err != nil {
 		t.Fatal(err)
@@ -75,11 +76,24 @@ func TestGoogleRequestsMatchSDKWire(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if result.StopReason != StopStop {
-				t.Fatalf("stopReason = %s, error = %v", result.StopReason, result.ErrorMessage)
-			}
 			if got := <-payloads; got != fixture.Payload {
 				t.Errorf("payload = %s\nwant      %s", got, fixture.Payload)
+			}
+			if fixture.Error != "" {
+				// The SDK rejects config members the API does not support while
+				// serializing, so the hook runs and no request is sent.
+				if result.StopReason != StopError || result.ErrorMessage == nil || *result.ErrorMessage != fixture.Error {
+					t.Fatalf("result = %+v, want error %q", result, fixture.Error)
+				}
+				select {
+				case path := <-paths:
+					t.Fatalf("rejected config sent a request: %s", path)
+				default:
+				}
+				return
+			}
+			if result.StopReason != StopStop {
+				t.Fatalf("stopReason = %s, error = %v", result.StopReason, result.ErrorMessage)
 			}
 			if got := <-paths; got != fixture.Path {
 				t.Errorf("path = %s, want %s", got, fixture.Path)
