@@ -304,6 +304,17 @@ func splitAnthropicBetaParams(body []byte) ([]byte, []string, error) {
 	return encoded, betas, nil
 }
 
+// anthropicAPIErrorMessage reproduces the pinned @anthropic-ai/sdk APIError
+// message: "<status> <body>", or "<status> status code (no body)". The SDK
+// already folds the body into the message, so no separate status text is added.
+func anthropicAPIErrorMessage(status int, body []byte) string {
+	text := JSTrim(string(body))
+	if text == "" {
+		return fmt.Sprintf("%d status code (no body)", status)
+	}
+	return fmt.Sprintf("%d %s", status, text)
+}
+
 // BuildAnthropicRequest builds the HTTP request for the messages API,
 // mirroring the pinned @anthropic-ai/sdk: POST {baseURL}/v1/messages?beta=true
 // with x-api-key (or Bearer for OAuth tokens), anthropic-version, and the
@@ -549,7 +560,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 					hresp.Body.Close()
 					return nil, &ProviderError{
 						Status: hresp.StatusCode, Headers: hresp.Header,
-						Message: fmt.Sprintf("%d %s: %s", hresp.StatusCode, http.StatusText(hresp.StatusCode), string(body)),
+						Message: anthropicAPIErrorMessage(hresp.StatusCode, body),
 						Body:    string(body),
 					}
 				}

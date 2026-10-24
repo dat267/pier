@@ -402,6 +402,123 @@
     }
   },
   {
+    "name": "anthropic-messages-error",
+    "model": {
+      "api": "anthropic-messages",
+      "id": "claude-sonnet-4-5",
+      "provider": "anthropic",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "maxTokens": 8192,
+      "contextWindow": 128000,
+      "input": [
+        "text",
+        "image"
+      ],
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "apiKey": "token",
+    "path": "/v1/messages",
+    "httpHeaders": {},
+    "body": "{\"model\":\"claude-sonnet-4-5\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"hello\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"max_tokens\":8192,\"stream\":true}",
+    "stopReason": "error",
+    "errorMessage": "401 {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"}}",
+    "fail": {
+      "status": 401,
+      "body": "{\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"}}"
+    }
+  },
+  {
+    "name": "anthropic-messages-text-error",
+    "model": {
+      "api": "anthropic-messages",
+      "id": "claude-sonnet-4-5",
+      "provider": "anthropic",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "maxTokens": 8192,
+      "contextWindow": 128000,
+      "input": [
+        "text",
+        "image"
+      ],
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "apiKey": "token",
+    "path": "/v1/messages",
+    "httpHeaders": {},
+    "body": "{\"model\":\"claude-sonnet-4-5\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"hello\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"max_tokens\":8192,\"stream\":true}",
+    "stopReason": "error",
+    "errorMessage": "403 nope",
+    "fail": {
+      "status": 403,
+      "body": "nope"
+    }
+  },
+  {
+    "name": "anthropic-messages-empty-error",
+    "model": {
+      "api": "anthropic-messages",
+      "id": "claude-sonnet-4-5",
+      "provider": "anthropic",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "maxTokens": 8192,
+      "contextWindow": 128000,
+      "input": [
+        "text",
+        "image"
+      ],
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "apiKey": "token",
+    "path": "/v1/messages",
+    "httpHeaders": {},
+    "body": "{\"model\":\"claude-sonnet-4-5\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"hello\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"max_tokens\":8192,\"stream\":true}",
+    "stopReason": "error",
+    "errorMessage": "400 status code (no body)",
+    "fail": {
+      "status": 400,
+      "body": ""
+    }
+  },
+  {
     "name": "openai-codex-responses-replacement",
     "model": {
       "api": "openai-codex-responses",

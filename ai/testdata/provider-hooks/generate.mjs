@@ -15,6 +15,9 @@ const cases=[
 	{name:"anthropic-messages-oauth",api:"anthropic-messages",id:"claude-sonnet-4-5",provider:"anthropic",baseUrl:"https://invalid.test",messages:[toolMessage,{role:"user",content:"hello",timestamp:2}],oauth:true},
 	{name:"openai-completions-error",api:"openai-completions",id:"gpt-4o",provider:"openai",baseUrl:"https://invalid.test/v1",messages:[{role:"user",content:"hello",timestamp:1}],fail:{status:401,body:'{"error":{"message":"no key"}}'}},
 	{name:"openai-responses-error",api:"openai-responses",id:"gpt-5",provider:"openai",baseUrl:"https://invalid.test/v1",messages:[{role:"user",content:"hello",timestamp:1}],fail:{status:403,body:"nope"}},
+	{name:"anthropic-messages-error",api:"anthropic-messages",id:"claude-sonnet-4-5",provider:"anthropic",baseUrl:"https://invalid.test",messages:[{role:"user",content:"hello",timestamp:1}],fail:{status:401,body:'{"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"}}'}},
+	{name:"anthropic-messages-text-error",api:"anthropic-messages",id:"claude-sonnet-4-5",provider:"anthropic",baseUrl:"https://invalid.test",messages:[{role:"user",content:"hello",timestamp:1}],fail:{status:403,body:"nope"}},
+	{name:"anthropic-messages-empty-error",api:"anthropic-messages",id:"claude-sonnet-4-5",provider:"anthropic",baseUrl:"https://invalid.test",messages:[{role:"user",content:"hello",timestamp:1}],fail:{status:400,body:""}},
 	{name:"openai-codex-responses-replacement",api:"openai-codex-responses",id:"gpt-5-codex",provider:"openai-codex",baseUrl:"https://invalid.test/v1",messages:[{role:"user",content:"hello",timestamp:1}],replacement:{model:"replacement",input:[{role:"user",content:"changed"}],stream:true,store:false,metadata,custom}},
 ];
 const fixtures=[];
