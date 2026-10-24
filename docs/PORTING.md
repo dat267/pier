@@ -279,12 +279,13 @@ Azure adapters. Sampling-param order remains the D267 divergence.
 
 The Google/Vertex pass now has seventeen Node-generated fixtures that execute
 both pinned provider streams and `@google/genai` 2.21.0, then compare the payload
-hook input, request path and HTTP body byte for byte. Nine cases cover minimal
+hook input, request path and HTTP body byte for byte. Ten cases cover minimal
 and configured requests, signed tool calls with images, signed empty
 text/thinking parts, null tool arguments, model/config replacement, scalar
 generation controls, and additional SDK config fields (`safetySettings`,
-`cachedContent`, `mediaResolution`, `speechConfig`). The port emits SDK
-content/field order, the default empty `generationConfig`, the system
+`cachedContent`, `mediaResolution`, `speechConfig`, Vertex `routingConfig`,
+`modelSelectionConfig`, `labels`, `audioTimestamp` and `modelArmorConfig`). The
+port emits SDK content/field order,content/field order, the default empty `generationConfig`, the system
 instruction's `role: "user"`, and the Developer API's distinct direct-image/
 function-call order without rewriting Vertex objects or nested function-result
 images. Explicit empty signed text is retained, and null/missing tool arguments

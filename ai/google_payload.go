@@ -135,11 +135,28 @@ func googleSDKRequest(raw json.RawMessage, api Api) (string, []byte, error) {
 			body.set(key, value)
 		}
 	}
+	if api == APIGoogleVertex {
+		for _, key := range []string{"labels", "modelArmorConfig"} {
+			if value, ok := payload.Config[key]; ok && strings.TrimSpace(string(value)) != "null" {
+				body.set(key, value)
+			}
+		}
+	}
 	if payload.Config != nil {
 		var generation orderedJSONFields
 		for _, key := range []string{"temperature", "topP", "topK", "candidateCount", "maxOutputTokens", "stopSequences", "responseLogprobs", "logprobs", "presencePenalty", "frequencyPenalty", "seed", "responseMimeType", "responseJsonSchema", "responseModalities", "mediaResolution", "speechConfig", "thinkingConfig"} {
 			if value, ok := payload.Config[key]; ok && strings.TrimSpace(string(value)) != "null" {
 				generation.set(key, value)
+			}
+		}
+		if api == APIGoogleVertex {
+			for _, key := range []string{"routingConfig", "modelSelectionConfig", "audioTimestamp"} {
+				if value, ok := payload.Config[key]; ok && strings.TrimSpace(string(value)) != "null" {
+					if key == "modelSelectionConfig" {
+						key = "modelConfig"
+					}
+					generation.set(key, value)
+				}
 			}
 		}
 		generationJSON, err := generation.marshal()

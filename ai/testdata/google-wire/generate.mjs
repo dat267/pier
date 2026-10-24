@@ -81,6 +81,20 @@ const cases = [{
 		},
 	},
 }, {
+	name: "vertex-enterprise-config-replacement",
+	apis: ["google-vertex"],
+	messages: [{ role: "user", content: "hello", timestamp: 1 }],
+	options: {},
+	replacement: {
+		model: "gemini-3-pro", contents: [{ role: "user", parts: [{ text: "hello" }] }],
+		config: {
+			routingConfig: { autoMode: { modelRoutingPreference: "BALANCED" } },
+			modelSelectionConfig: { featureSelectionPreference: "PRIORITIZE_QUALITY" },
+			labels: { audit: "enabled" }, audioTimestamp: true,
+			modelArmorConfig: { promptTemplateName: "projects/audit/locations/us-central1/templates/test" },
+		},
+	},
+}, {
 	name: "cached-content-replacement",
 	apis: ["google-generative-ai"],
 	messages: [{ role: "user", content: "hello", timestamp: 1 }],
