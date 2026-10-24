@@ -26,14 +26,20 @@ func TestProviderPayloadReplacementsMatchUpstream(t *testing.T) {
 		t.Fatal(err)
 	}
 	var fixtures []struct {
-		Name        string            `json:"name"`
-		Model       Model             `json:"model"`
-		Messages    []json.RawMessage `json:"messages"`
-		APIKey      string            `json:"apiKey"`
-		Replacement json.RawMessage   `json:"replacement"`
-		HTTPHeaders map[string]string `json:"httpHeaders"`
-		Body        string            `json:"body"`
-		Path        string            `json:"path"`
+		Name         string            `json:"name"`
+		Model        Model             `json:"model"`
+		Messages     []json.RawMessage `json:"messages"`
+		APIKey       string            `json:"apiKey"`
+		Replacement  json.RawMessage   `json:"replacement"`
+		HTTPHeaders  map[string]string `json:"httpHeaders"`
+		Body         string            `json:"body"`
+		Path         string            `json:"path"`
+		StopReason   string            `json:"stopReason"`
+		ErrorMessage *string           `json:"errorMessage"`
+		Fail         *struct {
+			Status int    `json:"status"`
+			Body   string `json:"body"`
+		} `json:"fail"`
 	}
 	if err := json.Unmarshal(data, &fixtures); err != nil {
 		t.Fatal(err)
@@ -54,6 +60,12 @@ func TestProviderPayloadReplacementsMatchUpstream(t *testing.T) {
 					}
 				}
 				headers <- got
+				if fixture.Fail != nil {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(fixture.Fail.Status)
+					io.WriteString(w, fixture.Fail.Body)
+					return
+				}
 				w.Header().Set("Content-Type", "text/event-stream")
 				switch fixture.Model.API {
 				case APIOpenAICompletions:
@@ -84,6 +96,8 @@ func TestProviderPayloadReplacementsMatchUpstream(t *testing.T) {
 			switch model.API {
 			case APIOpenAICompletions:
 				stream = StreamOpenAICompletions(&model, TranscriptContext{Messages: messages}, &OpenAICompletionsOptions{StreamOptions: options})
+			case APIOpenAIResponses:
+				stream = StreamOpenAIResponses(&model, TranscriptContext{Messages: messages}, &OpenAIResponsesOptions{StreamOptions: options})
 			case APIAnthropicMessages:
 				stream = StreamAnthropic(&model, TranscriptContext{Messages: messages}, &AnthropicOptions{StreamOptions: options})
 			case APIOpenAICodexResponses:
@@ -96,8 +110,13 @@ func TestProviderPayloadReplacementsMatchUpstream(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if result.StopReason != StopStop {
-				t.Fatalf("result = %+v", result)
+			if result.StopReason != fixture.StopReason {
+				t.Fatalf("stopReason = %s, want %s (%+v)", result.StopReason, fixture.StopReason, result)
+			}
+			if fixture.ErrorMessage != nil {
+				if result.ErrorMessage == nil || *result.ErrorMessage != *fixture.ErrorMessage {
+					t.Fatalf("errorMessage = %v, want %q", result.ErrorMessage, *fixture.ErrorMessage)
+				}
 			}
 			if got := <-paths; got != fixture.Path {
 				t.Errorf("path = %s, want %s", got, fixture.Path)

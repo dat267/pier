@@ -330,9 +330,10 @@ Map-backed sampling params and native Bedrock metadata retain the documented
 D267 ordering limit. These 34 Google/Vertex, Mistral, Azure and Bedrock fixtures
 cover the listed paths, not every optional SDK field or provider behavior.
 
-Six additional upstream captures cover raw `OnPayload` replacements for
-Anthropic, OpenAI Completions and Codex plus the Anthropic beta header for the
-default, tool-streaming and OAuth paths. Unknown members and nested object order
+Eight additional upstream captures cover raw `OnPayload` replacements for
+Anthropic, OpenAI Completions and Codex, the Anthropic beta header for the
+default, tool-streaming and OAuth paths, and the openai SDK error text for
+Completions and Responses. Unknown members and nested object order
 now survive instead of being dropped or sorted by typed/map decoders. Anthropic
 still forces `stream: true` after applying a replacement, including its
 original member position, and moves a `betas` member into `anthropic-beta`
