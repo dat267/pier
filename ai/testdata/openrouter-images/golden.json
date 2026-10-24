@@ -1,0 +1,97 @@
+[
+  {
+    "name": "default",
+    "model": {
+      "id": "google/gemini-2.5-flash-image",
+      "name": "Gemini Image",
+      "api": "openrouter-images",
+      "provider": "openrouter",
+      "baseUrl": "https://invalid.test/api/v1",
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "image",
+        "text"
+      ],
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "input": [
+      {
+        "type": "text",
+        "text": "a cat"
+      },
+      {
+        "type": "image",
+        "data": "QUJD",
+        "mimeType": "image/png"
+      }
+    ],
+    "path": "/api/v1/chat/completions",
+    "body": "{\"model\":\"google/gemini-2.5-flash-image\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"a cat\"},{\"type\":\"image_url\",\"image_url\":{\"url\":\"data:image/png;base64,QUJD\"}}]}],\"stream\":false,\"modalities\":[\"image\",\"text\"]}"
+  },
+  {
+    "name": "payload-replacement",
+    "model": {
+      "id": "google/gemini-2.5-flash-image",
+      "name": "Gemini Image",
+      "api": "openrouter-images",
+      "provider": "openrouter",
+      "baseUrl": "https://invalid.test/api/v1",
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "image",
+        "text"
+      ],
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "input": [
+      {
+        "type": "text",
+        "text": "a cat"
+      },
+      {
+        "type": "image",
+        "data": "QUJD",
+        "mimeType": "image/png"
+      }
+    ],
+    "path": "/api/v1/chat/completions",
+    "body": "{\"model\":\"replacement\",\"messages\":[{\"role\":\"user\",\"content\":\"changed\"}],\"stream\":false,\"modalities\":[\"image\"],\"metadata\":{\"z\":\"1\",\"a\":\"2\"},\"custom\":{\"z\":1,\"a\":2}}",
+    "replacement": {
+      "model": "replacement",
+      "messages": [
+        {
+          "role": "user",
+          "content": "changed"
+        }
+      ],
+      "stream": false,
+      "modalities": [
+        "image"
+      ],
+      "metadata": {
+        "z": "1",
+        "a": "2"
+      },
+      "custom": {
+        "z": 1,
+        "a": 2
+      }
+    }
+  }
+]

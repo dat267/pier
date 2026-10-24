@@ -37,16 +37,15 @@ func (OpenRouterImages) GenerateImages(model *ImagesModel, context ImagesContext
 		return output
 	}
 
-	params := buildOpenRouterImagesParams(model, context)
+	var params any = buildOpenRouterImagesParams(model, context)
 	if options.OnPayload != nil {
 		payload := mustMarshalJSON(params)
 		if next := options.OnPayload(payload, &Model{
 			ID: model.ID, Name: model.Name, API: model.API, Provider: model.Provider, BaseURL: model.BaseURL,
 		}); next != nil {
-			var replaced map[string]any
-			if err := json.Unmarshal(next, &replaced); err == nil {
-				params = replaced
-			}
+			// Upstream sends a replacement verbatim; a map round trip would
+			// re-sort every member and drop unknown nested order.
+			params = next
 		}
 	}
 	body, err := MarshalJSON(params)
@@ -176,31 +175,57 @@ func (OpenRouterImages) GenerateImages(model *ImagesModel, context ImagesContext
 
 var openRouterDataURLPattern = regexp.MustCompile(`^data:([^;]+);base64,(.+)$`)
 
+// openRouterImagesParams mirrors the upstream object literal, whose member
+// order is the request wire order.
+type openRouterImagesParams struct {
+	Model      string                    `json:"model"`
+	Messages   []openRouterImagesMessage `json:"messages"`
+	Stream     bool                      `json:"stream"`
+	Modalities []string                  `json:"modalities"`
+}
+
+type openRouterImagesMessage struct {
+	Role    string `json:"role"`
+	Content []any  `json:"content"`
+}
+
+type openRouterImagesTextPart struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
+}
+
+type openRouterImagesURL struct {
+	URL string `json:"url"`
+}
+
+type openRouterImagesImagePart struct {
+	Type     string              `json:"type"`
+	ImageURL openRouterImagesURL `json:"image_url"`
+}
+
 // buildOpenRouterImagesParams renders the chat completions payload.
-func buildOpenRouterImagesParams(model *ImagesModel, context ImagesContext) map[string]any {
+func buildOpenRouterImagesParams(model *ImagesModel, context ImagesContext) openRouterImagesParams {
 	content := make([]any, 0, len(context.Input))
 	for _, item := range context.Input {
 		switch typed := item.(type) {
 		case TextContent:
-			content = append(content, map[string]any{"type": "text", "text": SanitizeSurrogates(typed.Text)})
+			content = append(content, openRouterImagesTextPart{Type: "text", Text: SanitizeSurrogates(typed.Text)})
 		case ImageContent:
-			content = append(content, map[string]any{
-				"type": "image_url",
-				"image_url": map[string]any{
-					"url": "data:" + typed.MimeType + ";base64," + typed.Data,
-				},
+			content = append(content, openRouterImagesImagePart{
+				Type:     "image_url",
+				ImageURL: openRouterImagesURL{URL: "data:" + typed.MimeType + ";base64," + typed.Data},
 			})
 		}
 	}
-	modalities := []any{"image"}
+	modalities := []string{"image"}
 	if containsString(model.Output, "text") {
-		modalities = []any{"image", "text"}
+		modalities = []string{"image", "text"}
 	}
-	return map[string]any{
-		"model":      model.ID,
-		"messages":   []any{map[string]any{"role": "user", "content": content}},
-		"stream":     false,
-		"modalities": modalities,
+	return openRouterImagesParams{
+		Model:      model.ID,
+		Messages:   []openRouterImagesMessage{{Role: "user", Content: content}},
+		Stream:     false,
+		Modalities: modalities,
 	}
 }
 
