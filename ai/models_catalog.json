@@ -1,8 +1,8 @@
 {
  "_meta": {
-  "generatedAt": "2026-10-23T17:52:07.322Z",
+  "generatedAt": "2026-10-24T07:51:21.318Z",
   "schemaVersion": 6,
-  "upstreamManifestSHA256": "ac52f772486d829cd2ed5ae7bd07f67712ee7ad440bd58143b44a10d06070f0f"
+  "upstreamManifestSHA256": "0a897b8c9448a5327c82158ee123c56ceb4df225285459642b043953c845504c"
  },
  "providers": {
   "amazon-bedrock": {
@@ -19736,6 +19736,92 @@
      },
      "type": "chat"
     },
+    "k3.1-pro": {
+     "api": "openai-completions",
+     "baseUrl": "https://api.kimi.com/coding/v1",
+     "compat": {
+      "maxTokensField": "max_tokens",
+      "supportsDeveloperRole": false,
+      "supportsMidConvoSystemMessages": true,
+      "supportsReasoningEffort": false,
+      "supportsStore": false,
+      "supportsStrictMode": false,
+      "thinkingFormat": "deepseek"
+     },
+     "contextWindow": 1048576,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0,
+      "output": 0
+     },
+     "id": "k3.1-pro",
+     "input": [
+      "text",
+      "image"
+     ],
+     "inputLimits": {
+      "images": {
+       "resize": {
+        "jpegQuality": 80,
+        "maxBytes": 4718592,
+        "maxHeight": 2000,
+        "maxWidth": 2000
+       }
+      }
+     },
+     "maxTokens": 131072,
+     "name": "Kimi K3.1 Pro",
+     "provider": "kimi-coding",
+     "reasoning": true,
+     "thinkingLevelMap": {
+      "off": null
+     },
+     "type": "chat"
+    },
+    "k3.1-pro-highspeed": {
+     "api": "openai-completions",
+     "baseUrl": "https://api.kimi.com/coding/v1",
+     "compat": {
+      "maxTokensField": "max_tokens",
+      "supportsDeveloperRole": false,
+      "supportsMidConvoSystemMessages": true,
+      "supportsReasoningEffort": false,
+      "supportsStore": false,
+      "supportsStrictMode": false,
+      "thinkingFormat": "deepseek"
+     },
+     "contextWindow": 1048576,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0,
+      "output": 0
+     },
+     "id": "k3.1-pro-highspeed",
+     "input": [
+      "text",
+      "image"
+     ],
+     "inputLimits": {
+      "images": {
+       "resize": {
+        "jpegQuality": 80,
+        "maxBytes": 4718592,
+        "maxHeight": 2000,
+        "maxWidth": 2000
+       }
+      }
+     },
+     "maxTokens": 131072,
+     "name": "Kimi K3.1 Pro Highspeed",
+     "provider": "kimi-coding",
+     "reasoning": true,
+     "thinkingLevelMap": {
+      "off": null
+     },
+     "type": "chat"
+    },
     "kimi-for-coding": {
      "api": "openai-completions",
      "baseUrl": "https://api.kimi.com/coding/v1",
@@ -21491,6 +21577,84 @@
       "xhigh": null
      },
      "type": "chat"
+    },
+    "kimi-k3.1-pro": {
+     "api": "openai-completions",
+     "baseUrl": "https://api.moonshot.ai/v1",
+     "compat": {
+      "maxTokensField": "max_tokens",
+      "supportsDeveloperRole": false,
+      "supportsReasoningEffort": false,
+      "supportsStore": false,
+      "supportsStrictMode": false,
+      "thinkingFormat": "deepseek"
+     },
+     "contextWindow": 1048576,
+     "cost": {
+      "cacheRead": 0.2,
+      "cacheWrite": 2,
+      "input": 2,
+      "output": 10
+     },
+     "id": "kimi-k3.1-pro",
+     "input": [
+      "text",
+      "image"
+     ],
+     "inputLimits": {
+      "images": {
+       "resize": {
+        "jpegQuality": 80,
+        "maxBytes": 4718592,
+        "maxHeight": 2000,
+        "maxWidth": 2000
+       }
+      }
+     },
+     "maxTokens": 1048576,
+     "name": "Kimi K3.1 Pro",
+     "provider": "moonshotai",
+     "reasoning": true,
+     "type": "chat"
+    },
+    "kimi-k3.1-pro-highspeed": {
+     "api": "openai-completions",
+     "baseUrl": "https://api.moonshot.ai/v1",
+     "compat": {
+      "maxTokensField": "max_tokens",
+      "supportsDeveloperRole": false,
+      "supportsReasoningEffort": false,
+      "supportsStore": false,
+      "supportsStrictMode": false,
+      "thinkingFormat": "deepseek"
+     },
+     "contextWindow": 1048576,
+     "cost": {
+      "cacheRead": 0.2,
+      "cacheWrite": 4,
+      "input": 4,
+      "output": 20
+     },
+     "id": "kimi-k3.1-pro-highspeed",
+     "input": [
+      "text",
+      "image"
+     ],
+     "inputLimits": {
+      "images": {
+       "resize": {
+        "jpegQuality": 80,
+        "maxBytes": 4718592,
+        "maxHeight": 2000,
+        "maxWidth": 2000
+       }
+      }
+     },
+     "maxTokens": 1048576,
+     "name": "Kimi K3.1 Pro Highspeed",
+     "provider": "moonshotai",
+     "reasoning": true,
+     "type": "chat"
     }
    }
   },
@@ -21671,6 +21835,84 @@
       "off": null,
       "xhigh": null
      },
+     "type": "chat"
+    },
+    "kimi-k3.1-pro": {
+     "api": "openai-completions",
+     "baseUrl": "https://api.moonshot.cn/v1",
+     "compat": {
+      "maxTokensField": "max_tokens",
+      "supportsDeveloperRole": false,
+      "supportsReasoningEffort": false,
+      "supportsStore": false,
+      "supportsStrictMode": false,
+      "thinkingFormat": "deepseek"
+     },
+     "contextWindow": 1048576,
+     "cost": {
+      "cacheRead": 0.1944,
+      "cacheWrite": 1.9437,
+      "input": 1.9437,
+      "output": 10.1671
+     },
+     "id": "kimi-k3.1-pro",
+     "input": [
+      "text",
+      "image"
+     ],
+     "inputLimits": {
+      "images": {
+       "resize": {
+        "jpegQuality": 80,
+        "maxBytes": 4718592,
+        "maxHeight": 2000,
+        "maxWidth": 2000
+       }
+      }
+     },
+     "maxTokens": 1048576,
+     "name": "Kimi K3.1 Pro",
+     "provider": "moonshotai-cn",
+     "reasoning": true,
+     "type": "chat"
+    },
+    "kimi-k3.1-pro-highspeed": {
+     "api": "openai-completions",
+     "baseUrl": "https://api.moonshot.cn/v1",
+     "compat": {
+      "maxTokensField": "max_tokens",
+      "supportsDeveloperRole": false,
+      "supportsReasoningEffort": false,
+      "supportsStore": false,
+      "supportsStrictMode": false,
+      "thinkingFormat": "deepseek"
+     },
+     "contextWindow": 1048576,
+     "cost": {
+      "cacheRead": 0.1944,
+      "cacheWrite": 3.8874,
+      "input": 3.8874,
+      "output": 20.3342
+     },
+     "id": "kimi-k3.1-pro-highspeed",
+     "input": [
+      "text",
+      "image"
+     ],
+     "inputLimits": {
+      "images": {
+       "resize": {
+        "jpegQuality": 80,
+        "maxBytes": 4718592,
+        "maxHeight": 2000,
+        "maxWidth": 2000
+       }
+      }
+     },
+     "maxTokens": 1048576,
+     "name": "Kimi K3.1 Pro Highspeed",
+     "provider": "moonshotai-cn",
+     "reasoning": true,
      "type": "chat"
     }
    }
@@ -26430,7 +26672,7 @@
      "contextWindow": 1048576,
      "cost": {
       "cacheRead": 0.3,
-      "cacheWrite": 0,
+      "cacheWrite": 3,
       "input": 3,
       "output": 15
      },
@@ -28820,7 +29062,7 @@
      "contextWindow": 1048576,
      "cost": {
       "cacheRead": 0.3,
-      "cacheWrite": 0,
+      "cacheWrite": 3,
       "input": 3,
       "output": 15
      },
@@ -28846,6 +29088,52 @@
      "thinkingLevelMap": {
       "high": null,
       "low": null,
+      "max": "max",
+      "medium": null,
+      "minimal": null,
+      "off": null,
+      "xhigh": null
+     },
+     "type": "chat"
+    },
+    "kimi-k3.1-pro": {
+     "api": "openai-completions",
+     "baseUrl": "https://opencode.ai/inference/go/v1",
+     "compat": {
+      "maxTokensField": "max_tokens",
+      "supportsDeveloperRole": false,
+      "supportsStore": false,
+      "supportsStrictMode": true
+     },
+     "contextWindow": 1048576,
+     "cost": {
+      "cacheRead": 0.2,
+      "cacheWrite": 2,
+      "input": 2,
+      "output": 10
+     },
+     "id": "kimi-k3.1-pro",
+     "input": [
+      "text",
+      "image"
+     ],
+     "inputLimits": {
+      "images": {
+       "resize": {
+        "jpegQuality": 80,
+        "maxBytes": 4718592,
+        "maxHeight": 2000,
+        "maxWidth": 2000
+       }
+      }
+     },
+     "maxTokens": 131072,
+     "name": "Kimi K3.1 Pro",
+     "provider": "opencode-go",
+     "reasoning": true,
+     "thinkingLevelMap": {
+      "high": "high",
+      "low": "low",
       "max": "max",
       "medium": null,
       "minimal": null,
@@ -31782,10 +32070,10 @@
      },
      "contextWindow": 1024000,
      "cost": {
-      "cacheRead": 0.069557,
+      "cacheRead": 0.03828,
       "cacheWrite": 0,
-      "input": 0.834678,
-      "output": 1.669356
+      "input": 0.45936,
+      "output": 0.91872
      },
      "id": "deepseek/deepseek-v4-pro",
      "input": [
@@ -31854,10 +32142,10 @@
      },
      "contextWindow": 1048576,
      "cost": {
-      "cacheRead": 0.006,
+      "cacheRead": 0.015,
       "cacheWrite": 0,
-      "input": 0.3,
-      "output": 1.2
+      "input": 0.02,
+      "output": 1
      },
      "id": "deepseek/deepseek-v4.1-flash",
      "input": [
@@ -33393,10 +33681,10 @@
      },
      "contextWindow": 262144,
      "cost": {
-      "cacheRead": 0.05,
+      "cacheRead": 0.0375,
       "cacheWrite": 0,
-      "input": 0.09,
-      "output": 0.3
+      "input": 0.0675,
+      "output": 0.225
      },
      "id": "google/gemma-4-26b-a4b-it",
      "input": [
@@ -35688,6 +35976,52 @@
      },
      "maxTokens": 131072,
      "name": "MoonshotAI: Kimi K3",
+     "provider": "openrouter",
+     "reasoning": true,
+     "thinkingLevelMap": {
+      "high": "high",
+      "low": "low",
+      "max": "max",
+      "medium": null,
+      "minimal": null,
+      "off": "none",
+      "xhigh": null
+     },
+     "type": "chat"
+    },
+    "moonshotai/kimi-k3.1-pro": {
+     "api": "openai-completions",
+     "baseUrl": "https://openrouter.ai/api/v1",
+     "compat": {
+      "sendSessionAffinityHeaders": true,
+      "supportsDeveloperRole": false,
+      "supportsStrictMode": true,
+      "thinkingFormat": "openrouter"
+     },
+     "contextWindow": 1048576,
+     "cost": {
+      "cacheRead": 0.2,
+      "cacheWrite": 0,
+      "input": 2,
+      "output": 10
+     },
+     "id": "moonshotai/kimi-k3.1-pro",
+     "input": [
+      "text",
+      "image"
+     ],
+     "inputLimits": {
+      "images": {
+       "resize": {
+        "jpegQuality": 80,
+        "maxBytes": 4718592,
+        "maxHeight": 2000,
+        "maxWidth": 2000
+       }
+      }
+     },
+     "maxTokens": 943718,
+     "name": "MoonshotAI: Kimi K3.1 Pro",
      "provider": "openrouter",
      "reasoning": true,
      "thinkingLevelMap": {
@@ -42752,10 +43086,10 @@
      },
      "contextWindow": 262144,
      "cost": {
-      "cacheRead": 0.020625,
+      "cacheRead": 0.033,
       "cacheWrite": 0,
-      "input": 0.0825,
-      "output": 0.33
+      "input": 0.132,
+      "output": 0.528
      },
      "id": "tencent/hy3",
      "input": [
@@ -42822,10 +43156,10 @@
      },
      "contextWindow": 1048576,
      "cost": {
-      "cacheRead": 0.0378,
+      "cacheRead": 0.042,
       "cacheWrite": 0,
-      "input": 0.7506,
-      "output": 2.2509
+      "input": 0.834,
+      "output": 2.501
      },
      "id": "tencent/hy4-preview",
      "input": [
@@ -43942,7 +44276,7 @@
      },
      "contextWindow": 131072,
      "cost": {
-      "cacheRead": 0.055,
+      "cacheRead": 0.05,
       "cacheWrite": 0,
       "input": 0.3,
       "output": 0.9
@@ -44621,10 +44955,10 @@
      },
      "contextWindow": 1048576,
      "cost": {
-      "cacheRead": 0.008,
+      "cacheRead": 0.015,
       "cacheWrite": 0,
-      "input": 0.07,
-      "output": 0.5
+      "input": 0.02,
+      "output": 1
      },
      "id": "~deepseek/deepseek-flash-latest",
      "input": [
@@ -44703,10 +45037,10 @@
      },
      "contextWindow": 1048576,
      "cost": {
-      "cacheRead": 0.0275,
+      "cacheRead": 0.028,
       "cacheWrite": 0,
       "input": 0.0422,
-      "output": 0.1729
+      "output": 0.1694
      },
      "id": "~deepseek/deepseek-v4-flash-latest",
      "input": [
@@ -44830,10 +45164,10 @@
      },
      "contextWindow": 1048576,
      "cost": {
-      "cacheRead": 0.228,
+      "cacheRead": 0.21,
       "cacheWrite": 0,
-      "input": 0.238,
-      "output": 24
+      "input": 0.2137,
+      "output": 7.7001
      },
      "id": "~moonshotai/kimi-latest",
      "input": [
@@ -45234,10 +45568,10 @@
      },
      "contextWindow": 1048576,
      "cost": {
-      "cacheRead": 0.0052,
+      "cacheRead": 0.0175,
       "cacheWrite": 0,
-      "input": 0.0052,
-      "output": 0.1985
+      "input": 0.0175,
+      "output": 0.1425
      },
      "id": "~z-ai/glm-flash-latest",
      "input": [
@@ -45254,7 +45588,7 @@
        }
       }
      },
-     "maxTokens": 943718,
+     "maxTokens": 131072,
      "name": "Z.ai: GLM Flash Latest",
      "provider": "openrouter",
      "reasoning": true,
@@ -54689,7 +55023,7 @@
      "contextWindow": 1048576,
      "cost": {
       "cacheRead": 0.2,
-      "cacheWrite": 0,
+      "cacheWrite": 2,
       "input": 2,
       "output": 10
      },
@@ -54723,7 +55057,7 @@
      "contextWindow": 1048576,
      "cost": {
       "cacheRead": 0.2,
-      "cacheWrite": 0,
+      "cacheWrite": 4,
       "input": 4,
       "output": 20
      },
