@@ -330,6 +330,13 @@ Map-backed sampling params and native Bedrock metadata retain the documented
 D267 ordering limit. These 34 Google/Vertex, Mistral, Azure and Bedrock fixtures
 cover the listed paths, not every optional SDK field or provider behavior.
 
+Three additional upstream captures cover raw `OnPayload` replacements for
+Anthropic, OpenAI Completions and Codex. Unknown members and nested object order
+now survive instead of being dropped or sorted by typed/map decoders.
+Anthropic still forces `stream: true` after applying a replacement, including
+its original member position. This comparison uses decoded JSON payloads;
+Codex's upstream zstd content coding is not treated as JSON byte order.
+
 Remaining v1.4.0 items, grouped by why they are not in this tree:
 
 - **Removed packages (D236)**: `telemetry` (the `telemetry` span option, spans,

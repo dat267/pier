@@ -230,12 +230,10 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 			fail(err)
 			return
 		}
+		var payload any = params
 		if options.OnPayload != nil {
 			if next := options.OnPayload(mustMarshalJSON(params), model); next != nil {
-				var replaced OpenAICompletionsParams
-				if perr := jsonUnmarshalStrict(next, &replaced); perr == nil {
-					params = &replaced
-				}
+				payload = next
 			}
 		}
 
@@ -245,7 +243,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 		requestErr := func() error {
 			var attemptErr error
 			resp, attemptErr = RetryProviderRequest(ctx, func() (*http.Response, error) {
-				body, berr := MarshalJSON(params)
+				body, berr := MarshalJSON(payload)
 				if berr != nil {
 					return nil, berr
 				}

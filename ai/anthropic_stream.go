@@ -283,7 +283,7 @@ type anthropicClientOptions struct {
 // mirroring the pinned @anthropic-ai/sdk: POST {baseURL}/v1/messages?beta=true
 // with x-api-key (or Bearer for OAuth tokens), anthropic-version, and the
 // merged default headers.
-func BuildAnthropicRequest(ctx context.Context, model *Model, params *AnthropicMessageCreateParams, options anthropicClientOptions) (*http.Request, error) {
+func BuildAnthropicRequest(ctx context.Context, model *Model, params any, options anthropicClientOptions) (*http.Request, error) {
 	compat := GetAnthropicCompat(model)
 	isOAuth := IsOAuthAnthropicToken(options.APIKey)
 
@@ -463,24 +463,30 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 		}
 		isOAuth := IsOAuthAnthropicToken(options.APIKey)
 
-		applyPayload := func(params *AnthropicMessageCreateParams) *AnthropicMessageCreateParams {
+		applyPayload := func(params *AnthropicMessageCreateParams) (any, error) {
 			if options.OnPayload != nil {
 				if next := options.OnPayload(mustMarshalJSON(params), model); next != nil {
-					var replaced AnthropicMessageCreateParams
-					if perr := jsonUnmarshalStrict(next, &replaced); perr == nil {
-						replaced.Stream = true
-						params = &replaced
+					replaced, err := decodeSchemaNode(next)
+					if err != nil {
+						return nil, err
 					}
+					replaced.set("stream", json.RawMessage("true"))
+					encoded, err := replaced.encode()
+					return json.RawMessage(encoded), err
 				}
 			}
-			return params
+			return params, nil
 		}
 		params, err := BuildAnthropicParams(model, normalizedContext, isOAuth, options)
 		if err != nil {
 			fail(err)
 			return
 		}
-		params = applyPayload(params)
+		payload, err := applyPayload(params)
+		if err != nil {
+			fail(err)
+			return
+		}
 
 		clientOpts := anthropicClientOptions{
 			APIKey:           options.APIKey,
@@ -494,7 +500,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 		}
 
 		// Each request gets a fresh body so a strict-tool fallback can retry once.
-		sendRequest := func(params *AnthropicMessageCreateParams) (*http.Response, error) {
+		sendRequest := func(params any) (*http.Response, error) {
 			return RetryProviderRequest(ctx, func() (*http.Response, error) {
 				req, berr := BuildAnthropicRequest(ctx, model, params, clientOpts)
 				if berr != nil {
@@ -516,7 +522,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 				return hresp, nil
 			}, &ProviderRetryOptions{MaxRetries: options.MaxRetries, MaxRetryDelayMS: options.MaxRetryDelayMs})
 		}
-		resp, requestErr := sendRequest(params)
+		resp, requestErr := sendRequest(payload)
 		if requestErr != nil && ctxErr(ctx) == nil && hasPreferredStrictAnthropicTools(model, normalizedContext) {
 			fallbackContext, changed := downgradePreferredStrictAnthropicTools(normalizedContext)
 			if changed && isAnthropicStrictToolLimitError(requestErr) {
@@ -525,13 +531,17 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 					fail(buildErr)
 					return
 				}
-				fallbackParams = applyPayload(fallbackParams)
+				fallbackPayload, payloadErr := applyPayload(fallbackParams)
+				if payloadErr != nil {
+					fail(payloadErr)
+					return
+				}
 				output.Diagnostics = append(output.Diagnostics, AssistantMessageDiagnostic{
 					Type: "anthropic_strict_tools_fallback", Timestamp: time.Now().UnixMilli(),
 					Error:   &DiagnosticErrorInfo{Message: requestErr.Error()},
 					Details: json.RawMessage(`{"reason":"strict_tool_limits_exceeded"}`),
 				})
-				resp, requestErr = sendRequest(fallbackParams)
+				resp, requestErr = sendRequest(fallbackPayload)
 			}
 		}
 		if requestErr != nil {

@@ -602,15 +602,13 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 			fail(err)
 			return
 		}
+		var payload any = body
 		if options.OnPayload != nil {
 			if next := options.OnPayload(mustMarshalJSON(body), model); next != nil {
-				var replaced map[string]any
-				if perr := json.Unmarshal(next, &replaced); perr == nil {
-					body = replaced
-				}
+				payload = next
 			}
 		}
-		bodyJSON, err := MarshalJSON(body)
+		bodyJSON, err := MarshalJSON(payload)
 		if err != nil {
 			fail(err)
 			return
