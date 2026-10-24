@@ -87,7 +87,6 @@ func TestOpenRouterImagesWireMatchesUpstream(t *testing.T) {
 				}
 				return fixture.Replacement
 			}
-			options.OnResponse = func(ProviderResponse, *Model) {}
 			options.OnResponse = func(_ ProviderResponse, hooked *Model) { responseModel = hooked }
 			result := OpenRouterImages{}.GenerateImages(&model, ImagesContext{Input: input}, options)
 			if fixture.Fail == nil && result.StopReason != ImagesStopStop {

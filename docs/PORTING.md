@@ -277,9 +277,10 @@ Anthropic `convertTools` and pi-messages `stream` functions. This pass does not
 claim an exhaustive byte-level review of Google/Vertex, Bedrock, Mistral or
 Azure adapters. Sampling-param order remains the D267 divergence.
 
-The Google/Vertex pass now has nineteen Node-generated fixtures that execute
+The Google/Vertex pass now has twenty-three Node-generated fixtures that execute
 both pinned provider streams and `@google/genai` 2.21.0, then compare the payload
-hook input, request path and HTTP body byte for byte. Eleven cases cover minimal
+hook input, request path and HTTP error or body byte for byte. Fifteen cases
+cover minimal
 and configured requests, signed tool calls with images, signed empty
 text/thinking parts, null tool arguments, model/config replacement, scalar
 generation controls, and additional SDK config fields (`safetySettings`,
@@ -291,7 +292,13 @@ generation controls, and additional SDK config fields (`safetySettings`,
 `enableEnhancedCivicAnswers`). The port emits SDK content/field order, the
 default empty `generationConfig`, the system instruction's `role: "user"`, and
 the Developer API's distinct direct-image/function-call order without rewriting
-Vertex objects or nested function-result images. Explicit empty signed text is
+Vertex objects or nested function-result images. A replacement that carries a
+member the other API serializes is rejected with the SDK's message before any
+request (Developer: `routingConfig`, `modelSelectionConfig`, `labels`,
+`audioTimestamp`, `modelArmorConfig` and the Vertex-only `imageConfig` members;
+Vertex: `enableEnhancedCivicAnswers`), and the Developer path keeps only
+`aspectRatio`/`imageSize` from `imageConfig`, as the SDK does. Explicit empty
+signed text is
 retained, and null/missing tool arguments become `{}`. Hooks now receive SDK
 `{model, contents, config}` params; replacements can change the request model,
 contents, system instruction, tools and tested generation controls without
@@ -301,7 +308,7 @@ project and location were supplied. The old test expectation was corrected
 against captured upstream paths. Advanced SDK-only hook fields are not claimed
 exhaustively ported.
 
-The Mistral pass executes the pinned `mistral-conversations.ts` stream for six
+The Mistral pass executes the pinned `mistral-conversations.ts` stream for five
 Node-generated fixtures (minimal, image/tool transcript with strict schemas,
 payload replacement covering every camelCase-to-wire option, named tool choice
 and a required-strict schema error). Public Go-stream tests compare the hook
