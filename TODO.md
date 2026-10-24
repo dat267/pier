@@ -1,11 +1,6 @@
 # Reproduced audit findings
 
-- **Bedrock malformed HTTP error text.** The pinned SDK produces V8's JSON
-  parse SyntaxError plus its deserialization suffix for a non-JSON response
-  body; pier reports `<status> <status text>: <body>`. Reproduced by executing
-  pi v1.4.0 against a stubbed `502 text/plain` response and covered by
-  `TestBedrockErrorsMatchPinnedSDK/gateway-text-body`. Kept as D270 rather than
-  adding a runtime-specific V8 diagnostic emulator.
+No unresolved findings from the completed audit slices.
 
 
 ## Resolved findings
