@@ -144,9 +144,14 @@ func googleSDKRequest(raw json.RawMessage, api Api) (string, []byte, error) {
 	}
 	if payload.Config != nil {
 		var generation orderedJSONFields
-		for _, key := range []string{"temperature", "topP", "topK", "candidateCount", "maxOutputTokens", "stopSequences", "responseLogprobs", "logprobs", "presencePenalty", "frequencyPenalty", "seed", "responseMimeType", "responseJsonSchema", "responseModalities", "mediaResolution", "speechConfig", "thinkingConfig"} {
+		for _, key := range []string{"temperature", "topP", "topK", "candidateCount", "maxOutputTokens", "stopSequences", "responseLogprobs", "logprobs", "presencePenalty", "frequencyPenalty", "seed", "responseMimeType", "responseSchema", "responseJsonSchema", "responseModalities", "mediaResolution", "speechConfig", "audioTranscriptionConfig", "imageConfig", "thinkingConfig"} {
 			if value, ok := payload.Config[key]; ok && strings.TrimSpace(string(value)) != "null" {
 				generation.set(key, value)
+			}
+		}
+		if api == APIGoogleGenerativeAI {
+			if value, ok := payload.Config["enableEnhancedCivicAnswers"]; ok && strings.TrimSpace(string(value)) != "null" {
+				generation.set("enableEnhancedCivicAnswers", value)
 			}
 		}
 		if api == APIGoogleVertex {

@@ -95,6 +95,19 @@ const cases = [{
 		},
 	},
 }, {
+	name: "developer-media-and-schema-config-replacement",
+	apis: ["google-generative-ai"],
+	messages: [{ role: "user", content: "hello", timestamp: 1 }],
+	options: {},
+	replacement: {
+		model: "gemini-3-pro", contents: [{ role: "user", parts: [{ text: "hello" }] }],
+		config: {
+			responseSchema: { type: "OBJECT", properties: { ok: { type: "BOOLEAN" } } },
+			audioTranscriptionConfig: { languageCodes: ["en-US"], wordTimestamp: true },
+			imageConfig: { aspectRatio: "16:9", imageSize: "1K" }, enableEnhancedCivicAnswers: true,
+		},
+	},
+}, {
 	name: "cached-content-replacement",
 	apis: ["google-generative-ai"],
 	messages: [{ role: "user", content: "hello", timestamp: 1 }],

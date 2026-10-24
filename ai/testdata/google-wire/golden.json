@@ -281,6 +281,58 @@
   },
   {
     "api": "google-generative-ai",
+    "name": "developer-media-and-schema-config-replacement",
+    "apis": [
+      "google-generative-ai"
+    ],
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "options": {},
+    "replacement": {
+      "model": "gemini-3-pro",
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "hello"
+            }
+          ]
+        }
+      ],
+      "config": {
+        "responseSchema": {
+          "type": "OBJECT",
+          "properties": {
+            "ok": {
+              "type": "BOOLEAN"
+            }
+          }
+        },
+        "audioTranscriptionConfig": {
+          "languageCodes": [
+            "en-US"
+          ],
+          "wordTimestamp": true
+        },
+        "imageConfig": {
+          "aspectRatio": "16:9",
+          "imageSize": "1K"
+        },
+        "enableEnhancedCivicAnswers": true
+      }
+    },
+    "payload": "{\"model\":\"gemini-3-pro\",\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"hello\"}]}],\"config\":{}}",
+    "path": "/v1/models/gemini-3-pro:streamGenerateContent",
+    "body": "{\"contents\":[{\"parts\":[{\"text\":\"hello\"}],\"role\":\"user\"}],\"generationConfig\":{\"responseSchema\":{\"type\":\"OBJECT\",\"properties\":{\"ok\":{\"type\":\"BOOLEAN\"}}},\"audioTranscriptionConfig\":{\"languageCodes\":[\"en-US\"],\"wordTimestamp\":true},\"imageConfig\":{\"aspectRatio\":\"16:9\",\"imageSize\":\"1K\"},\"enableEnhancedCivicAnswers\":true}}"
+  },
+  {
+    "api": "google-generative-ai",
     "name": "cached-content-replacement",
     "apis": [
       "google-generative-ai"
