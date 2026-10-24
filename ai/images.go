@@ -62,6 +62,98 @@ type ImagesOptions struct {
 	Metadata map[string]any
 }
 
+// imagesTextOutput and imagesImageOutput mirror the blocks openrouter-images.ts
+// pushes into output: the image block is built as {type, mimeType, data}, not in
+// the ImageContent declaration order.
+type imagesTextOutput struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
+}
+
+type imagesImageOutput struct {
+	Type     string `json:"type"`
+	MimeType string `json:"mimeType"`
+	Data     string `json:"data"`
+}
+
+// MarshalJSON emits the upstream AssistantImages member order and includes the
+// output blocks (tagged `json:"-"` so the default encoder skips them).
+func (a AssistantImages) MarshalJSON() ([]byte, error) {
+	node := &schemaNode{fields: map[string]json.RawMessage{}}
+	set := func(name string, value any) error {
+		raw, err := MarshalJSON(value)
+		if err != nil {
+			return err
+		}
+		node.set(name, raw)
+		return nil
+	}
+	for _, name := range []string{"api", "provider"} {
+		value := any(a.API)
+		if name == "provider" {
+			value = a.Provider
+		}
+		if err := set(name, value); err != nil {
+			return nil, err
+		}
+	}
+	if err := set("model", a.Model); err != nil {
+		return nil, err
+	}
+	blocks := make([]json.RawMessage, 0, len(a.Output))
+	for _, block := range a.Output {
+		encoded, err := marshalImagesOutputContent(block)
+		if err != nil {
+			return nil, err
+		}
+		blocks = append(blocks, encoded)
+	}
+	encodedBlocks, err := MarshalJSON(blocks)
+	if err != nil {
+		return nil, err
+	}
+	node.set("output", encodedBlocks)
+	if err := set("stopReason", a.StopReason); err != nil {
+		return nil, err
+	}
+	if err := set("timestamp", a.Timestamp); err != nil {
+		return nil, err
+	}
+	// Upstream assigns these after the literal that creates the result, so they
+	// follow stopReason/timestamp in the serialized object.
+	if a.ResponseID != nil {
+		if err := set("responseId", *a.ResponseID); err != nil {
+			return nil, err
+		}
+	}
+	if a.Usage != nil {
+		if err := set("usage", a.Usage); err != nil {
+			return nil, err
+		}
+	}
+	if a.ErrorMessage != nil {
+		if err := set("errorMessage", *a.ErrorMessage); err != nil {
+			return nil, err
+		}
+	}
+	return node.encode()
+}
+
+func marshalImagesOutputContent(block Content) (json.RawMessage, error) {
+	switch typed := block.(type) {
+	case TextContent:
+		return MarshalJSON(imagesTextOutput{Type: string(KindText), Text: typed.Text})
+	case *TextContent:
+		return MarshalJSON(imagesTextOutput{Type: string(KindText), Text: typed.Text})
+	case ImageContent:
+		return MarshalJSON(imagesImageOutput{Type: string(KindImage), MimeType: typed.MimeType, Data: typed.Data})
+	case *ImageContent:
+		return MarshalJSON(imagesImageOutput{Type: string(KindImage), MimeType: typed.MimeType, Data: typed.Data})
+	default:
+		return marshalContentBlock(block)
+	}
+}
+
 // AssistantImages is the generation result.
 type AssistantImages struct {
 	API          ImagesApi             `json:"api"`

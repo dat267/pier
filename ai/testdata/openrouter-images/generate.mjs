@@ -22,7 +22,8 @@ for(const input of cases){
 	const options={apiKey:"token",onPayload:input.replacement?()=>input.replacement:undefined};
 	const result=await generateImages(model,context,options);
 	if(result.stopReason!=="stop"||typeof body!=="string")throw Error(`${input.name}: ${result.errorMessage??"no request"}`);
-	const fixture={name:input.name,model,input:context.input,path,body};
+	result.timestamp=1; // normalize so the golden regenerates byte-identically
+	const fixture={name:input.name,model,input:context.input,path,body,result:JSON.stringify(result)};
 	if(input.replacement)fixture.replacement=input.replacement;
 	fixtures.push(fixture);
 }

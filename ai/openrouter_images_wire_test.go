@@ -10,9 +10,16 @@ import (
 	"testing"
 )
 
+// imagesResultProbe reads the fixture timestamp so the generated timestamp does
+// not make the result comparison flaky.
+type imagesResultProbe struct {
+	Timestamp int64 `json:"timestamp"`
+}
+
 // Reference: pi v1.4.0 (4a080252), api/openrouter-images.ts buildParams and
-// onPayload handling. The params object literal fixes the body member order and
-// a replacement is sent as-is.
+// onPayload handling plus the AssistantImages shape (the params object literal
+// fixes the body member order, a replacement is sent as-is, and output blocks
+// carry their type discriminator with the OpenRouter construction order).
 // Regenerate: node --experimental-strip-types testdata/openrouter-images/generate.mjs ../pi > testdata/openrouter-images/golden.json
 func TestOpenRouterImagesWireMatchesUpstream(t *testing.T) {
 	data, err := os.ReadFile("testdata/openrouter-images/golden.json")
@@ -26,6 +33,7 @@ func TestOpenRouterImagesWireMatchesUpstream(t *testing.T) {
 		Replacement json.RawMessage   `json:"replacement"`
 		Path        string            `json:"path"`
 		Body        string            `json:"body"`
+		Result      string            `json:"result"`
 	}
 	if err := json.Unmarshal(data, &fixtures); err != nil {
 		t.Fatal(err)
@@ -39,7 +47,7 @@ func TestOpenRouterImagesWireMatchesUpstream(t *testing.T) {
 				bodies <- string(b)
 				paths <- r.URL.Path
 				w.Header().Set("Content-Type", "application/json")
-				io.WriteString(w, `{"id":"r","choices":[{"message":{"content":"ok"}}]}`)
+				io.WriteString(w, `{"id":"r","choices":[{"message":{"content":"ok","images":[{"image_url":"data:image/png;base64,QUJD"}]}}],"usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}}`)
 			}))
 			defer server.Close()
 			model := fixture.Model
@@ -75,6 +83,18 @@ func TestOpenRouterImagesWireMatchesUpstream(t *testing.T) {
 			}
 			if got := <-bodies; got != fixture.Body {
 				t.Errorf("body = %s\nwant   %s", got, fixture.Body)
+			}
+			var probe imagesResultProbe
+			if err := json.Unmarshal([]byte(fixture.Result), &probe); err != nil {
+				t.Fatal(err)
+			}
+			result.Timestamp = probe.Timestamp
+			encoded, err := MarshalJSON(*result)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got, want := string(encoded), fixture.Result; got != want {
+				t.Errorf("result = %s\nwant     %s", got, want)
 			}
 		})
 	}
