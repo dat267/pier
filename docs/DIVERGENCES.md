@@ -1138,7 +1138,7 @@ Tests: `TestCatalogRefreshAllowedAtCreate` (`cmd/catalogrefresh_test.go`) and
 **A malformed finished tool call's `argumentsError` carries the Go decoder
 message, not V8's.**
 
-Upstream v1.3.0 (`parseToolCallArguments`, `ai/utils/json-parse.ts`) sets
+Upstream v1.4.0 (`parseToolCallArguments`, `ai/utils/json-parse.ts`) sets
 `argumentsError` from the `JSON.parse` (or repair) `SyntaxError` message when a
 finished tool call's complete arguments text is not a JSON object. The port
 produces the same shape (`<message>`, a blank line, `Received arguments:`, the
@@ -1341,7 +1341,7 @@ cell replacement, not the whole frame.
 
 Syntax highlighting was removed earlier because Chroma v3 ran at ~0.5 MB/s on
 the UI loop and made code fences a render stall. The `highlight` package is now a
-from-scratch port of highlight.js 10.7.3 (the v1.3.0 reference engine), all 191
+from-scratch port of highlight.js 10.7.3 (the v1.4.0 reference engine), all 191
 `lib/index.js` languages are registered, and `TestGoldenHighlight` matches the
 reference HTML byte-for-byte on every fixture.
 
@@ -1456,7 +1456,7 @@ pi built-in tool.
 
 **Stdio RPC has a bounded extension-free first milestone.**
 
-Reference: pi v1.3.0 `packages/coding-agent/src/modes/rpc/{rpc-mode,rpc-types,jsonl}.ts`.
+Reference: pi v1.4.0 `packages/coding-agent/src/modes/rpc/{rpc-mode,rpc-types,jsonl}.ts`.
 `coding/rpcmode.go` implements prompt/steer/follow_up/abort/clear_queue,
 state/messages, model/thinking selection, queue modes, session introspection
 (stats/entries/tree/fork messages/last assistant text), naming, `get_commands`,
@@ -1543,16 +1543,19 @@ and the complete supported subset.
 
 **The unreachable reference packages are removed from the tree.**
 
-Reference: pi v1.3.0 `packages/{chord,client,protocol,server,telemetry,durable}`.
-The Go port had a counterpart for each, but none is reachable from the built
-CLI: `go list -deps github.com/dat267/pier` never pulls in `chord`,
+Reference: pi v1.4.0 `packages/{chord,durable,telemetry}`; the `client`,
+`protocol` and `server` packages were already replaced by the typed host before
+v1.3.0. The Go port had a counterpart for these and for the already-removed
+`client`/`protocol`/`server` packages, but none is reachable from the built CLI:
+`go list -deps github.com/dat267/pier` never pulls in `chord`,
 `chord/{delta,services,facets}`, `client`, `protocol`, `server`,
 `server/testing`, `telemetry` or `durable`. The CLI's only consumers are the
 interactive, print and RPC modes over `ai`/`agent`/`coding`/`tui`/`mcp`; the
-chord transport belongs to the durable remote-execution host, and upstream's
-v1.3.0 typed-host rewrite already replaced those packages (`docs/PORTING.md`
-records that). `telemetry` is ported but imported by nothing: upstream `ai`
-only carries an optional `telemetryContext`, which the port does not set.
+chord transport belongs to the durable remote-execution host, which the CLI does
+not run, and upstream's typed-host rewrite already replaced those packages
+(`docs/PORTING.md` records that). `telemetry` is ported but imported by nothing:
+upstream `ai` only carries an optional `telemetryContext`, which the port does
+not set.
 
 The packages and their tests are removed from `main` and preserved on the
 `unwired-packages` branch, which points at the pre-removal commit. `go mod
@@ -1568,7 +1571,7 @@ runtime path first, then move it back from the branch.
 **A fresh session persists its initial tool declaration, so a resumed transcript
 resolves its loadout.**
 
-Reference: pi v1.3.0 `core/agent-session.ts` `_restoreToolsFromTranscript`
+Reference: pi v1.4.0 `core/agent-session.ts` `_restoreToolsFromTranscript`
 (6f2f164ab) and `agent/agent.ts` `createMutableAgentState`. The agent seeds the
 initial system message (prompt plus the active tools in `toolsAdded`) into
 state, but the loop only emits that message when `declareToolChanges` finds a
@@ -1591,6 +1594,15 @@ transcript is self-contained and the restore resolves the recorded loadout. A
 session already in the broken state (its transcript never declared the
 built-ins) stays broken; resuming it with an explicit `--tools` list takes the
 non-default-tools path, skips the restore, and recovers it.
+
+v1.4.0 (`bd3c9b823`) resolves the loadout from every system message on the
+branch, honors the removals those messages record, and activates extension tools
+registered after the branch recorded its loadout. The port replays the same
+declarations through `GetCurrentTools`, so removals and pre-compaction
+declarations reach the restored set. Extension activation stays out of scope
+(D41); MCP tools that register later are attached by the CLI's manager
+(`AttachExtraTools`), not by this restore.
+
 ## D238
 
 The shell elapsed label ticks at 100ms instead of upstream's 1000ms.
@@ -2002,7 +2014,7 @@ Tests: `TestCanceledToolCallReportsOperationAborted`,
 
 **Model ordering uses locale-neutral collation.**
 
-Reference: pi v1.3.0 `core/model-resolver.ts`, `bestFuzzyMatch`, and
+Reference: pi v1.4.0 `core/model-resolver.ts`, `bestFuzzyMatch`, and
 `cli/list-models.ts` sort providers and IDs by Node's default `localeCompare`.
 Pier uses `golang.org/x/text/collate` root
 collation, consistent with its file listing, rather than byte order or a
@@ -2113,7 +2125,7 @@ Tests: `TestMatchGlobAgainstMinimatch`,
 
 **Expanded thinking keeps italic across all Markdown text elements.**
 
-Reference: pi v1.3.0 (`71023aec`),
+Reference: pi v1.4.0 (`4a080252`),
 `packages/coding-agent/src/modes/interactive/components/assistant-message.ts`
 sets `defaultTextStyle.italic`, but
 `packages/tui/src/components/markdown.ts` renders headings, code spans, fenced
