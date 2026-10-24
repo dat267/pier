@@ -241,6 +241,80 @@
   },
   {
     "api": "google-generative-ai",
+    "name": "optional-sdk-config-replacement",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "options": {},
+    "replacement": {
+      "model": "gemini-3-pro",
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "hello"
+            }
+          ]
+        }
+      ],
+      "config": {
+        "safetySettings": [
+          {
+            "category": "HARM_CATEGORY_HATE_SPEECH",
+            "threshold": "BLOCK_NONE"
+          }
+        ],
+        "mediaResolution": "MEDIA_RESOLUTION_HIGH",
+        "speechConfig": {
+          "languageCode": "en-US"
+        }
+      }
+    },
+    "payload": "{\"model\":\"gemini-3-pro\",\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"hello\"}]}],\"config\":{}}",
+    "path": "/v1/models/gemini-3-pro:streamGenerateContent",
+    "body": "{\"contents\":[{\"parts\":[{\"text\":\"hello\"}],\"role\":\"user\"}],\"safetySettings\":[{\"category\":\"HARM_CATEGORY_HATE_SPEECH\",\"threshold\":\"BLOCK_NONE\"}],\"generationConfig\":{\"mediaResolution\":\"MEDIA_RESOLUTION_HIGH\",\"speechConfig\":{\"languageCode\":\"en-US\"}}}"
+  },
+  {
+    "api": "google-generative-ai",
+    "name": "cached-content-replacement",
+    "apis": [
+      "google-generative-ai"
+    ],
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "options": {},
+    "replacement": {
+      "model": "gemini-3-pro",
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "hello"
+            }
+          ]
+        }
+      ],
+      "config": {
+        "cachedContent": "cachedContents/audit"
+      }
+    },
+    "payload": "{\"model\":\"gemini-3-pro\",\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"hello\"}]}],\"config\":{}}",
+    "path": "/v1/models/gemini-3-pro:streamGenerateContent",
+    "body": "{\"contents\":[{\"parts\":[{\"text\":\"hello\"}],\"role\":\"user\"}],\"cachedContent\":\"cachedContents/audit\",\"generationConfig\":{}}"
+  },
+  {
+    "api": "google-generative-ai",
     "name": "generation-controls-replacement",
     "messages": [
       {
@@ -537,6 +611,46 @@
     "payload": "{\"model\":\"gemini-3-pro\",\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"hello\"}]}],\"config\":{}}",
     "path": "/v1/publishers/google/models/gemini-3-flash:streamGenerateContent",
     "body": "{\"contents\":[{\"parts\":[{\"text\":\"changed\"}],\"role\":\"user\"}],\"systemInstruction\":{\"parts\":[{\"text\":\"changed\"}],\"role\":\"user\"},\"generationConfig\":{\"temperature\":0,\"topK\":5,\"maxOutputTokens\":8}}"
+  },
+  {
+    "api": "google-vertex",
+    "name": "optional-sdk-config-replacement",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "options": {},
+    "replacement": {
+      "model": "gemini-3-pro",
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "hello"
+            }
+          ]
+        }
+      ],
+      "config": {
+        "safetySettings": [
+          {
+            "category": "HARM_CATEGORY_HATE_SPEECH",
+            "threshold": "BLOCK_NONE"
+          }
+        ],
+        "mediaResolution": "MEDIA_RESOLUTION_HIGH",
+        "speechConfig": {
+          "languageCode": "en-US"
+        }
+      }
+    },
+    "payload": "{\"model\":\"gemini-3-pro\",\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"hello\"}]}],\"config\":{}}",
+    "path": "/v1/publishers/google/models/gemini-3-pro:streamGenerateContent",
+    "body": "{\"contents\":[{\"parts\":[{\"text\":\"hello\"}],\"role\":\"user\"}],\"safetySettings\":[{\"category\":\"HARM_CATEGORY_HATE_SPEECH\",\"threshold\":\"BLOCK_NONE\"}],\"generationConfig\":{\"mediaResolution\":\"MEDIA_RESOLUTION_HIGH\",\"speechConfig\":{\"languageCode\":\"en-US\"}}}"
   },
   {
     "api": "google-vertex",

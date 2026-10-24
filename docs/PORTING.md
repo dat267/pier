@@ -277,16 +277,18 @@ Anthropic `convertTools` and pi-messages `stream` functions. This pass does not
 claim an exhaustive byte-level review of Google/Vertex, Bedrock, Mistral or
 Azure adapters. Sampling-param order remains the D267 divergence.
 
-The Google/Vertex pass now has fourteen Node-generated fixtures that execute
+The Google/Vertex pass now has seventeen Node-generated fixtures that execute
 both pinned provider streams and `@google/genai` 2.21.0, then compare the payload
-hook input, request path and HTTP body byte for byte. Seven red-first cases
-cover minimal and configured requests, signed tool calls with images, signed
-empty text/thinking parts, null tool arguments, model/config replacement and
-scalar generation controls. The port emits SDK content/field order, the default
-empty `generationConfig`, the system instruction's `role: "user"`, and the
-Developer API's distinct direct-image/function-call order without rewriting
-Vertex objects or nested function-result images. Explicit empty signed text is
-retained, and null/missing tool arguments become `{}`. Hooks now receive SDK
+hook input, request path and HTTP body byte for byte. Nine cases cover minimal
+and configured requests, signed tool calls with images, signed empty
+text/thinking parts, null tool arguments, model/config replacement, scalar
+generation controls, and additional SDK config fields (`safetySettings`,
+`cachedContent`, `mediaResolution`, `speechConfig`). The port emits SDK
+content/field order, the default empty `generationConfig`, the system
+instruction's `role: "user"`, and the Developer API's distinct direct-image/
+function-call order without rewriting Vertex objects or nested function-result
+images. Explicit empty signed text is retained, and null/missing tool arguments
+become `{}`. Hooks now receive SDK
 `{model, contents, config}` params; replacements can change the request model,
 contents, system instruction, tools and tested generation controls without
 mutating the caller's model. Vertex API-key requests use Express-mode publisher

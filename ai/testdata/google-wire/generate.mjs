@@ -69,6 +69,27 @@ const cases = [{
 		config: { temperature: 0, topK: 5, maxOutputTokens: 8, systemInstruction: "changed" },
 	},
 }, {
+	name: "optional-sdk-config-replacement",
+	messages: [{ role: "user", content: "hello", timestamp: 1 }],
+	options: {},
+	replacement: {
+		model: "gemini-3-pro", contents: [{ role: "user", parts: [{ text: "hello" }] }],
+		config: {
+			safetySettings: [{ category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" }],
+			mediaResolution: "MEDIA_RESOLUTION_HIGH",
+			speechConfig: { languageCode: "en-US" },
+		},
+	},
+}, {
+	name: "cached-content-replacement",
+	apis: ["google-generative-ai"],
+	messages: [{ role: "user", content: "hello", timestamp: 1 }],
+	options: {},
+	replacement: {
+		model: "gemini-3-pro", contents: [{ role: "user", parts: [{ text: "hello" }] }],
+		config: { cachedContent: "cachedContents/audit" },
+	},
+}, {
 	name: "generation-controls-replacement",
 	messages: [{ role: "user", content: "hello", timestamp: 1 }],
 	options: {},
@@ -86,6 +107,7 @@ const cases = [{
 const fixtures = [];
 for (const { api, stream } of providers) {
 	for (const input of cases) {
+		if (input.apis && !input.apis.includes(api)) continue;
 		const model = {
 			api, id: "gemini-3-pro", provider: api === "google-vertex" ? "google-vertex" : "google",
 			baseUrl: "https://invalid.test/v1", reasoning: true, maxTokens: 1000, contextWindow: 10000,
