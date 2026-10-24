@@ -64,11 +64,11 @@ type mistralRequestToolCall struct {
 
 type mistralChatMessage struct {
 	Role       string                   `json:"role"`
-	Content    any                      `json:"content,omitempty"`
-	ToolCalls  []mistralRequestToolCall `json:"toolCalls,omitempty"`
+	Prefix     *bool                    `json:"prefix,omitempty"`
 	ToolCallID string                   `json:"toolCallId,omitempty"`
 	Name       string                   `json:"name,omitempty"`
-	Prefix     *bool                    `json:"prefix,omitempty"`
+	Content    any                      `json:"content,omitempty"`
+	ToolCalls  []mistralRequestToolCall `json:"toolCalls,omitempty"`
 }
 
 type mistralFunctionTool struct {
@@ -183,17 +183,14 @@ func StreamMistralConversations(model *Model, context TranscriptContext, options
 		normalize := newMistralToolCallIDNormalizer()
 		transformed := TransformMessages(normalizedContext.Messages, model,
 			func(id string, _ *Model, _ *AssistantMessage) string { return normalize(id) })
-		payload := buildMistralChatPayload(model, normalizedContext, transformed, options)
+		var payload any = buildMistralChatPayload(model, normalizedContext, transformed, options)
 		if options.OnPayload != nil {
 			if next := options.OnPayload(mustMarshalJSON(payload), model); next != nil {
-				var replaced mistralChatPayload
-				if perr := jsonUnmarshalStrict(next, &replaced); perr == nil {
-					payload = &replaced
-				}
+				payload = next
 			}
 		}
 
-		body, err := MarshalJSON(mistralWirePayload(payload))
+		body, err := mistralWirePayload(payload)
 		if err != nil {
 			fail(err)
 			return
@@ -471,14 +468,14 @@ var nonAlphanumeric = regexp.MustCompile(`[^a-zA-Z0-9]`)
 
 // mistralWirePayload renames the SDK-style keys to the wire keys
 // (upstream toMistralWirePayload).
-func mistralWirePayload(payload *mistralChatPayload) map[string]any {
+func mistralWirePayload(payload any) (json.RawMessage, error) {
 	encoded, err := MarshalJSON(payload)
 	if err != nil {
-		return map[string]any{}
+		return nil, err
 	}
-	var wire map[string]any
-	if err := json.Unmarshal(encoded, &wire); err != nil {
-		return map[string]any{}
+	wire, err := decodeSchemaNode(encoded)
+	if err != nil {
+		return nil, err
 	}
 	for _, rename := range [][2]string{
 		{"topP", "top_p"},
@@ -496,24 +493,80 @@ func mistralWirePayload(payload *mistralChatPayload) map[string]any {
 	} {
 		remapMistralProperty(wire, rename[0], rename[1])
 	}
-	if messages, ok := wire["messages"].([]any); ok {
-		for _, message := range messages {
-			if record, ok := message.(map[string]any); ok {
-				remapMistralProperty(record, "toolCalls", "tool_calls")
-				remapMistralProperty(record, "toolCallId", "tool_call_id")
+	var messages []json.RawMessage
+	if err := jsonUnmarshalStrict(wire.fields["messages"], &messages); err != nil {
+		return nil, err
+	}
+	for i, raw := range messages {
+		message, err := decodeSchemaNode(raw)
+		if err != nil {
+			return nil, err
+		}
+		remapMistralProperty(message, "toolCalls", "tool_calls")
+		remapMistralProperty(message, "toolCallId", "tool_call_id")
+		var chunks []json.RawMessage
+		if jsonUnmarshalStrict(message.fields["content"], &chunks) == nil && chunks != nil {
+			for j, rawChunk := range chunks {
+				chunk, err := decodeSchemaNode(rawChunk)
+				if err != nil {
+					return nil, err
+				}
+				for _, rename := range [][2]string{{"imageUrl", "image_url"}, {"documentUrl", "document_url"}, {"documentName", "document_name"}, {"fileId", "file_id"}, {"referenceIds", "reference_ids"}, {"inputAudio", "input_audio"}} {
+					remapMistralProperty(chunk, rename[0], rename[1])
+				}
+				chunks[j], err = chunk.encode()
+				if err != nil {
+					return nil, err
+				}
 			}
+			chunkJSON, err := MarshalJSON(chunks)
+			if err != nil {
+				return nil, err
+			}
+			message.set("content", chunkJSON)
+		}
+		messages[i], err = message.encode()
+		if err != nil {
+			return nil, err
 		}
 	}
-	return wire
+	messageJSON, err := MarshalJSON(messages)
+	if err != nil {
+		return nil, err
+	}
+	wire.set("messages", messageJSON)
+	if format, err := decodeSchemaNode(wire.fields["response_format"]); err == nil {
+		remapMistralProperty(format, "jsonSchema", "json_schema")
+		if schema, err := decodeSchemaNode(format.fields["json_schema"]); err == nil {
+			remapMistralProperty(schema, "schemaDefinition", "schema")
+			encoded, err := schema.encode()
+			if err != nil {
+				return nil, err
+			}
+			format.set("json_schema", encoded)
+		}
+		encoded, err := format.encode()
+		if err != nil {
+			return nil, err
+		}
+		wire.set("response_format", encoded)
+	}
+	return wire.encode()
 }
 
-func remapMistralProperty(record map[string]any, source, target string) {
-	value, ok := record[source]
+func remapMistralProperty(record *schemaNode, source, target string) {
+	value, ok := record.fields[source]
 	if !ok {
 		return
 	}
-	record[target] = value
-	delete(record, source)
+	record.set(target, value)
+	delete(record.fields, source)
+	for i, key := range record.keys {
+		if key == source {
+			record.keys = append(record.keys[:i], record.keys[i+1:]...)
+			break
+		}
+	}
 }
 
 // sseLineBreakRegex splits a raw SSE event block into lines.
@@ -977,9 +1030,14 @@ func buildMistralChatPayload(model *Model, context TranscriptContext, messages [
 
 func mapMistralToolChoice(options *MistralOptions) json.RawMessage {
 	if options.ToolChoiceFunction != "" {
-		return mustMarshalJSON(map[string]any{
-			"type": "function", "function": map[string]any{"name": options.ToolChoiceFunction},
-		})
+		return mustMarshalJSON(struct {
+			Type     string `json:"type"`
+			Function struct {
+				Name string `json:"name"`
+			} `json:"function"`
+		}{Type: "function", Function: struct {
+			Name string `json:"name"`
+		}{options.ToolChoiceFunction}})
 	}
 	return mustMarshalJSON(options.ToolChoice)
 }
@@ -1024,11 +1082,7 @@ func stripJSONSymbolKeys(raw json.RawMessage) json.RawMessage {
 	if len(raw) == 0 {
 		return json.RawMessage(`{}`)
 	}
-	var value any
-	if err := json.Unmarshal(raw, &value); err != nil {
-		return json.RawMessage(`{}`)
-	}
-	encoded, err := MarshalJSON(value)
+	encoded, err := MarshalJSON(raw)
 	if err != nil {
 		return json.RawMessage(`{}`)
 	}

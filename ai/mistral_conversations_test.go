@@ -92,7 +92,14 @@ func TestMistralWirePayloadRenamesKeys(t *testing.T) {
 		ToolChoice:    "auto",
 		PromptMode:    "reasoning",
 	})
-	wire := mistralWirePayload(payload)
+	encoded, err := mistralWirePayload(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wire map[string]any
+	if err := json.Unmarshal(encoded, &wire); err != nil {
+		t.Fatal(err)
+	}
 	if wire["max_tokens"] != float64(100) {
 		t.Fatalf("max_tokens = %#v", wire["max_tokens"])
 	}

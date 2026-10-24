@@ -1,0 +1,186 @@
+[
+  {
+    "name": "minimal",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "options": {},
+    "payload": "{\"model\":\"mistral-large-latest\",\"stream\":true,\"messages\":[{\"role\":\"user\",\"content\":\"hello\"}]}",
+    "path": "/v1/chat/completions",
+    "body": "{\"model\":\"mistral-large-latest\",\"stream\":true,\"messages\":[{\"role\":\"user\",\"content\":\"hello\"}]}"
+  },
+  {
+    "name": "image-and-tools",
+    "messages": [
+      {
+        "role": "system",
+        "content": "system",
+        "toolsAdded": [
+          {
+            "name": "lookup",
+            "description": "Look up",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "z": {
+                  "type": "string"
+                },
+                "a": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "z",
+                "a"
+              ]
+            },
+            "constrainedSampling": {
+              "type": "json_schema",
+              "strict": "prefer"
+            }
+          }
+        ],
+        "timestamp": 1
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "look"
+          },
+          {
+            "type": "image",
+            "data": "aW1hZ2U=",
+            "mimeType": "image/png"
+          }
+        ],
+        "timestamp": 2
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "search"
+          },
+          {
+            "type": "thinking",
+            "thinking": "think"
+          },
+          {
+            "type": "toolCall",
+            "id": "call-1",
+            "name": "lookup",
+            "arguments": {
+              "z": 1,
+              "a": 2
+            }
+          }
+        ],
+        "stopReason": "toolUse",
+        "timestamp": 3,
+        "api": "mistral-conversations",
+        "provider": "mistral",
+        "model": "mistral-large-latest"
+      },
+      {
+        "role": "toolResult",
+        "toolCallId": "call-1",
+        "toolName": "lookup",
+        "content": [
+          {
+            "type": "text",
+            "text": "found"
+          }
+        ],
+        "isError": false,
+        "timestamp": 4
+      }
+    ],
+    "options": {
+      "temperature": 0.5,
+      "maxTokens": 16,
+      "toolChoice": "auto",
+      "promptMode": "reasoning",
+      "reasoningEffort": "high",
+      "sessionId": "session"
+    },
+    "payload": "{\"model\":\"mistral-large-latest\",\"stream\":true,\"messages\":[{\"role\":\"system\",\"content\":\"system\"},{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"look\"},{\"type\":\"image_url\",\"imageUrl\":\"data:image/png;base64,aW1hZ2U=\"}]},{\"role\":\"assistant\",\"prefix\":false,\"content\":[{\"type\":\"text\",\"text\":\"search\"},{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"think\"}]}],\"toolCalls\":[{\"id\":\"call-1\",\"type\":\"function\",\"function\":{\"name\":\"lookup\",\"arguments\":\"{\\\"z\\\":1,\\\"a\\\":2}\"},\"index\":0}]},{\"role\":\"tool\",\"toolCallId\":\"call-1\",\"name\":\"lookup\",\"content\":[{\"type\":\"text\",\"text\":\"found\"}]}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"lookup\",\"description\":\"Look up\",\"parameters\":{\"type\":\"object\",\"properties\":{\"z\":{\"type\":\"string\"},\"a\":{\"type\":\"number\"}},\"required\":[\"z\",\"a\"],\"additionalProperties\":false},\"strict\":true}}],\"temperature\":0.5,\"maxTokens\":16,\"toolChoice\":\"auto\",\"promptMode\":\"reasoning\",\"reasoningEffort\":\"high\",\"promptCacheKey\":\"session\"}",
+    "path": "/v1/chat/completions",
+    "body": "{\"model\":\"mistral-large-latest\",\"stream\":true,\"messages\":[{\"role\":\"system\",\"content\":\"system\"},{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"look\"},{\"type\":\"image_url\",\"image_url\":\"data:image/png;base64,aW1hZ2U=\"}]},{\"role\":\"assistant\",\"prefix\":false,\"content\":[{\"type\":\"text\",\"text\":\"search\"},{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"think\"}]}],\"tool_calls\":[{\"id\":\"call-1\",\"type\":\"function\",\"function\":{\"name\":\"lookup\",\"arguments\":\"{\\\"z\\\":1,\\\"a\\\":2}\"},\"index\":0}]},{\"role\":\"tool\",\"name\":\"lookup\",\"content\":[{\"type\":\"text\",\"text\":\"found\"}],\"tool_call_id\":\"call-1\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"lookup\",\"description\":\"Look up\",\"parameters\":{\"type\":\"object\",\"properties\":{\"z\":{\"type\":\"string\"},\"a\":{\"type\":\"number\"}},\"required\":[\"z\",\"a\"],\"additionalProperties\":false},\"strict\":true}}],\"temperature\":0.5,\"max_tokens\":16,\"tool_choice\":\"auto\",\"reasoning_effort\":\"high\",\"prompt_mode\":\"reasoning\",\"prompt_cache_key\":\"session\"}"
+  },
+  {
+    "name": "payload-replacement",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "options": {},
+    "replacement": {
+      "model": "mistral-small-latest",
+      "stream": true,
+      "messages": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "document_url",
+              "documentUrl": "https://example.test/document",
+              "documentName": "report"
+            }
+          ]
+        }
+      ],
+      "topP": 0,
+      "responseFormat": {
+        "type": "json_schema",
+        "jsonSchema": {
+          "name": "Output",
+          "schemaDefinition": {
+            "type": "object",
+            "properties": {
+              "z": {
+                "type": "string"
+              },
+              "a": {
+                "type": "number"
+              }
+            }
+          },
+          "strict": true
+        }
+      },
+      "safePrompt": false,
+      "extra": {
+        "z": 1,
+        "a": 2
+      }
+    },
+    "payload": "{\"model\":\"mistral-large-latest\",\"stream\":true,\"messages\":[{\"role\":\"user\",\"content\":\"hello\"}]}",
+    "path": "/v1/chat/completions",
+    "body": "{\"model\":\"mistral-small-latest\",\"stream\":true,\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"document_url\",\"document_url\":\"https://example.test/document\",\"document_name\":\"report\"}]}],\"extra\":{\"z\":1,\"a\":2},\"top_p\":0,\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"name\":\"Output\",\"strict\":true,\"schema\":{\"type\":\"object\",\"properties\":{\"z\":{\"type\":\"string\"},\"a\":{\"type\":\"number\"}}}}},\"safe_prompt\":false}"
+  },
+  {
+    "name": "named-tool-choice",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "options": {},
+    "forcedTool": "lookup",
+    "payload": "{\"model\":\"mistral-large-latest\",\"stream\":true,\"messages\":[{\"role\":\"user\",\"content\":\"hello\"}],\"toolChoice\":{\"type\":\"function\",\"function\":{\"name\":\"lookup\"}}}",
+    "path": "/v1/chat/completions",
+    "body": "{\"model\":\"mistral-large-latest\",\"stream\":true,\"messages\":[{\"role\":\"user\",\"content\":\"hello\"}],\"tool_choice\":{\"type\":\"function\",\"function\":{\"name\":\"lookup\"}}}"
+  }
+]

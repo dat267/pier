@@ -293,8 +293,17 @@ mutating the caller's model. Vertex API-key requests use Express-mode publisher
 paths rather than project/location paths, matching the SDK even when both
 project and location were supplied. The old test expectation was corrected
 against captured upstream paths. Advanced SDK-only hook fields are not claimed
-exhaustively ported. Bedrock, Mistral and Azure bodies remain outside this
-byte-level pass.
+exhaustively ported.
+
+The Mistral pass executes the pinned `mistral-conversations.ts` stream for four
+Node-generated fixtures (minimal, image/tool transcript with strict schemas,
+payload replacement and named tool choice). Public Go-stream tests compare the
+hook input, request path and body byte for byte. Fixes retain JS assignment and
+schema-property order, rename image/document content keys to their wire forms,
+keep hook-supplied extras, and translate nested response-format schemas
+(`jsonSchema`/`schemaDefinition`) without sorting them. The previous converter
+left image chunks with `imageUrl`, which is not the API's `image_url` field.
+Bedrock and Azure bodies remain outside this byte-level pass.
 
 Remaining v1.4.0 items, grouped by why they are not in this tree:
 
