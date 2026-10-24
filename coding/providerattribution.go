@@ -8,8 +8,8 @@ import (
 	"github.com/dat267/pier/ai"
 )
 
-// Port of core/client-identity.ts. Attribution and session routing are
-// implemented in ai; the older coding helpers remain compatibility wrappers.
+// Port of core/client-identity.ts. Attribution and session routing live in ai;
+// this file resolves the coding identity that request options carry.
 
 // ClientIdentity resolves how session requests identify pi: a detailed user
 // agent with the build version, attributing requests to pi while install
@@ -21,38 +21,6 @@ func ClientIdentity(settingsManager *SettingsManager) *ai.ClientIdentity {
 		identity.Attribution = ai.PIAttribution
 	}
 	return identity
-}
-
-// GetDefaultAttributionHeaders returns the telemetry-gated attribution headers.
-// New callers should pass ClientIdentity to ai request options instead.
-func GetDefaultAttributionHeaders(model *ai.Model, settingsManager *SettingsManager) map[string]string {
-	return ai.AttributionHeaders(model, ClientIdentity(settingsManager))
-}
-
-// GetSessionHeaders returns the OpenCode routing header regardless of telemetry.
-func GetSessionHeaders(model *ai.Model, sessionID string) map[string]string {
-	return ai.OpenCodeSessionHeaders(model, sessionID)
-}
-
-// MergeProviderAttributionHeaders is the legacy coding header merger. Requests
-// created by the SDK now pass identity and session options to ai instead.
-func MergeProviderAttributionHeaders(model *ai.Model, settingsManager *SettingsManager, sessionID string, headerSources ...map[string]string) map[string]string {
-	merged := map[string]string{}
-	for key, value := range GetSessionHeaders(model, sessionID) {
-		merged[key] = value
-	}
-	for key, value := range GetDefaultAttributionHeaders(model, settingsManager) {
-		merged[key] = value
-	}
-	for _, headers := range headerSources {
-		for key, value := range headers {
-			merged[key] = value
-		}
-	}
-	if len(merged) == 0 {
-		return nil
-	}
-	return merged
 }
 
 // IsInstallTelemetryEnabled reports whether install telemetry is on: the

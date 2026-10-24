@@ -459,14 +459,22 @@ func TestBedrockCachePoints(t *testing.T) {
 
 func TestBedrockToolConfigConversion(t *testing.T) {
 	tool := Tool{Name: "read", Description: "Read a file", Parameters: json.RawMessage(`{"type":"object"}`)}
+	convert := func(tools []Tool, choice, name string) map[string]any {
+		t.Helper()
+		config, err := convertBedrockToolConfig(tools, choice, name, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return config
+	}
 	// toolChoice "none" disables the config entirely, as does an empty tool list.
-	if config := ConvertBedrockToolConfig([]Tool{tool}, "none", "", false); config != nil {
+	if config := convert([]Tool{tool}, "none", ""); config != nil {
 		t.Fatalf("config = %#v", config)
 	}
-	if config := ConvertBedrockToolConfig(nil, "auto", "", false); config != nil {
+	if config := convert(nil, "auto", ""); config != nil {
 		t.Fatalf("config = %#v", config)
 	}
-	config := ConvertBedrockToolConfig([]Tool{tool}, "auto", "", false)
+	config := convert([]Tool{tool}, "auto", "")
 	tools, _ := config["tools"].([]any)
 	spec, _ := tools[0].(map[string]any)["toolSpec"].(map[string]any)
 	if spec["name"] != "read" || spec["inputSchema"] == nil {
@@ -477,19 +485,19 @@ func TestBedrockToolConfigConversion(t *testing.T) {
 		t.Fatalf("choice = %#v", choice)
 	}
 	// A forced tool choice names the tool.
-	config = ConvertBedrockToolConfig([]Tool{tool}, "tool", "read", false)
+	config = convert([]Tool{tool}, "tool", "read")
 	choice, _ = config["toolChoice"].(map[string]any)
 	forced, _ := choice["tool"].(map[string]any)
 	if forced["name"] != "read" {
 		t.Fatalf("choice = %#v", config["toolChoice"])
 	}
 	// "any" and no choice at all.
-	config = ConvertBedrockToolConfig([]Tool{tool}, "any", "", false)
+	config = convert([]Tool{tool}, "any", "")
 	choice, _ = config["toolChoice"].(map[string]any)
 	if _, ok := choice["any"]; !ok {
 		t.Fatalf("choice = %#v", choice)
 	}
-	config = ConvertBedrockToolConfig([]Tool{tool}, "", "", false)
+	config = convert([]Tool{tool}, "", "")
 	if config["toolChoice"] != nil {
 		t.Fatalf("config = %#v", config)
 	}

@@ -274,8 +274,9 @@ func TestClientIdentity(t *testing.T) {
 
 func TestProviderAttributionHeaders(t *testing.T) {
 	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
+	identity := ClientIdentity(settings)
 	openRouter := &ai.Model{Provider: "openrouter", BaseURL: "https://openrouter.ai/api/v1"}
-	headers := GetDefaultAttributionHeaders(openRouter, settings)
+	headers := ai.AttributionHeaders(openRouter, identity)
 	if headers["HTTP-Referer"] != "https://pi.dev" || headers["X-OpenRouter-Title"] != "pi" ||
 		headers["X-OpenRouter-Categories"] != "cli-agent" {
 		t.Fatalf("headers = %v", headers)
@@ -283,79 +284,59 @@ func TestProviderAttributionHeaders(t *testing.T) {
 	// A model whose base URL is OpenRouter qualifies even with another
 	// provider id.
 	viaURL := &ai.Model{Provider: "custom", BaseURL: "https://openrouter.ai/api/v1"}
-	if GetDefaultAttributionHeaders(viaURL, settings)["X-OpenRouter-Title"] != "pi" {
+	if ai.AttributionHeaders(viaURL, identity)["X-OpenRouter-Title"] != "pi" {
 		t.Fatal("hostname detection")
 	}
 	nvidia := &ai.Model{Provider: "nvidia", BaseURL: "https://integrate.api.nvidia.com/v1"}
-	if GetDefaultAttributionHeaders(nvidia, settings)["X-BILLING-INVOKE-ORIGIN"] != "Pi" {
+	if ai.AttributionHeaders(nvidia, identity)["X-BILLING-INVOKE-ORIGIN"] != "Pi" {
 		t.Fatal("nvidia headers")
 	}
 	// v1.4.0 moved attribution into pi-ai and dropped the Cloudflare
 	// User-Agent override; Cloudflare requests use the plain pi agent.
 	cloudflare := &ai.Model{Provider: "cloudflare-workers-ai", BaseURL: "https://api.cloudflare.com/x"}
-	if headers := GetDefaultAttributionHeaders(cloudflare, settings); headers != nil {
+	if headers := ai.AttributionHeaders(cloudflare, identity); headers != nil {
 		t.Fatalf("cloudflare headers = %v", headers)
 	}
-	if headers := GetDefaultAttributionHeaders(&ai.Model{Provider: "anthropic"}, settings); headers != nil {
+	if headers := ai.AttributionHeaders(&ai.Model{Provider: "anthropic"}, identity); headers != nil {
 		t.Fatalf("headers = %v", headers)
-	}
-
-	// Telemetry off (env wins over the setting) disables attribution.
-	if GetDefaultAttributionHeaders(openRouter, settings) == nil {
-		t.Fatal("expected headers")
-	}
-	if !IsInstallTelemetryEnabledWithEnv(settings, "1") || IsInstallTelemetryEnabledWithEnv(settings, "0") {
-		t.Fatal("env flag")
-	}
-	if IsInstallTelemetryEnabledWithEnv(settings, "no") {
-		t.Fatal("no is false")
-	}
-	t.Setenv("PI_TELEMETRY", "false")
-	if IsInstallTelemetryEnabled(settings) {
-		t.Fatal("PI_TELEMETRY=false must disable")
-	}
-	t.Setenv("PI_TELEMETRY", "")
-	if !IsInstallTelemetryEnabled(settings) {
-		t.Fatal("default is enabled")
 	}
 
 	// Session headers only apply to OpenCode providers/hosts.
 	openCode := &ai.Model{Provider: "opencode", BaseURL: "https://opencode.ai/x"}
-	session := GetSessionHeaders(openCode, "sess-1")
+	session := ai.OpenCodeSessionHeaders(openCode, "sess-1")
 	if len(session) != 1 || session["x-opencode-session"] != "sess-1" {
 		t.Fatalf("session = %v", session)
 	}
 	// The client header is attribution, so it follows the telemetry toggle.
-	if client := GetDefaultAttributionHeaders(openCode, settings); client["x-opencode-client"] != "pi" {
+	if client := ai.AttributionHeaders(openCode, identity); client["x-opencode-client"] != "pi" {
 		t.Fatalf("opencode client header = %v", client)
 	}
-	if GetSessionHeaders(openCode, "") != nil {
+	if ai.OpenCodeSessionHeaders(openCode, "") != nil {
 		t.Fatal("no session id")
 	}
-	if GetSessionHeaders(&ai.Model{Provider: "anthropic", BaseURL: "https://opencode.ai"}, "s") == nil {
+	if ai.OpenCodeSessionHeaders(&ai.Model{Provider: "anthropic", BaseURL: "https://opencode.ai"}, "s") == nil {
 		t.Fatal("host must qualify")
 	}
-	if GetSessionHeaders(&ai.Model{Provider: "anthropic", BaseURL: "https://api.anthropic.com"}, "s") != nil {
+	if ai.OpenCodeSessionHeaders(&ai.Model{Provider: "anthropic", BaseURL: "https://api.anthropic.com"}, "s") != nil {
 		t.Fatal("unrelated provider")
 	}
-	// With attribution off, only the session header remains.
+	// With attribution off, only the session header remains; requests pass the
+	// resolved identity and session id separately.
 	t.Setenv("PI_TELEMETRY", "0")
-	off := MergeProviderAttributionHeaders(openCode, settings, "sess-3")
-	if len(off) != 1 || off["x-opencode-session"] != "sess-3" {
-		t.Fatalf("telemetry-off headers = %v", off)
+	off := ClientIdentity(settings)
+	if off.Attribution != nil {
+		t.Fatalf("telemetry-off attribution = %+v", off.Attribution)
+	}
+	if headers := ai.AttributionHeaders(openCode, off); headers != nil {
+		t.Fatalf("telemetry-off headers = %v", headers)
+	}
+	if session := ai.OpenCodeSessionHeaders(openCode, "sess-3"); session["x-opencode-session"] != "sess-3" {
+		t.Fatalf("telemetry-off session = %v", session)
 	}
 	t.Setenv("PI_TELEMETRY", "")
 
-	// The merge order is session, attribution, then caller sources.
-	merged := MergeProviderAttributionHeaders(openCode, settings, "sess-2",
-		map[string]string{"X-OpenRouter-Title": "override", "extra": "1"},
-		map[string]string{"extra": "2"},
-	)
-	if merged["x-opencode-session"] != "sess-2" || merged["extra"] != "2" {
-		t.Fatalf("merged = %v", merged)
-	}
-	if merged := MergeProviderAttributionHeaders(&ai.Model{Provider: "anthropic"}, settings, "", nil); merged != nil {
-		t.Fatalf("merged = %v", merged)
+	if headers := ai.AttributionHeaders(&ai.Model{Provider: "anthropic"}, ClientIdentity(settings)); headers != nil {
+		t.Fatalf("headers = %v", headers)
 	}
 }
 

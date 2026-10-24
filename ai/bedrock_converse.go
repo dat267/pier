@@ -528,14 +528,9 @@ func decodeBedrockRedactedContent(signature *string) []byte {
 	return decoded
 }
 
-// ConvertBedrockToolConfig renders the tool configuration
-// (upstream convertToolConfig). Invalid required strict schemas return nil;
-// the stream uses the checked converter to expose the diagnostic as an error.
-func ConvertBedrockToolConfig(tools []Tool, toolChoice string, toolChoiceName string, supportsStrictMode bool) map[string]any {
-	config, _ := convertBedrockToolConfig(tools, toolChoice, toolChoiceName, supportsStrictMode)
-	return config
-}
-
+// convertBedrockToolConfig renders the tool configuration (upstream
+// convertToolConfig) and reports an invalid required strict schema so the
+// stream stops before the payload hook or HTTP.
 func convertBedrockToolConfig(tools []Tool, toolChoice string, toolChoiceName string, supportsStrictMode bool) (map[string]any, error) {
 	if len(tools) == 0 || toolChoice == "none" {
 		return nil, nil
