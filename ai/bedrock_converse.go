@@ -271,6 +271,13 @@ func bedrockRequiredTextBlock(text string) map[string]any {
 // SanitizeBedrockDocument strips empty keys from a document value.
 func SanitizeBedrockDocument(value any) any {
 	switch typed := value.(type) {
+	case json.RawMessage:
+		parsed, err := decodeOrderedJSON(typed)
+		if err != nil {
+			return json.RawMessage(`{}`)
+		}
+		sanitizeBedrockDocumentValue(parsed)
+		return encodeSchemaValue(parsed)
 	case []any:
 		out := make([]any, 0, len(typed))
 		for _, item := range typed {
@@ -387,7 +394,7 @@ func ConvertBedrockMessages(context TranscriptContext, model *Model, cacheRetent
 						"toolUse": map[string]any{
 							"toolUseId": inner.ID,
 							"name":      inner.Name,
-							"input":     SanitizeBedrockDocument(rawMessageValue(inner.Arguments)),
+							"input":     SanitizeBedrockDocument(inner.Arguments),
 						},
 					})
 				case ThinkingContent:
@@ -496,16 +503,16 @@ func bedrockToolResultBlock(message *ToolResultMessage, content UserContentList)
 	}
 }
 
-// rawMessageValue decodes a raw JSON value into a generic value.
-func rawMessageValue(raw json.RawMessage) any {
-	if len(raw) == 0 {
-		return map[string]any{}
+func sanitizeBedrockDocumentValue(value *schemaValue) {
+	if value.Object != nil {
+		value.Object.delete("")
+		for _, key := range value.Object.keys {
+			sanitizeBedrockDocumentValue(value.Object.values[key])
+		}
 	}
-	var value any
-	if err := json.Unmarshal(raw, &value); err != nil {
-		return map[string]any{}
+	for _, item := range value.Array {
+		sanitizeBedrockDocumentValue(item)
 	}
-	return value
 }
 
 // decodeBedrockRedactedContent decodes a stored redacted payload; a signature
@@ -536,7 +543,7 @@ func ConvertBedrockToolConfig(tools []Tool, toolChoice string, toolChoiceName st
 		spec := map[string]any{
 			"name":        tool.Name,
 			"description": tool.Description,
-			"inputSchema": map[string]any{"json": SanitizeBedrockDocument(rawMessageValue(GetJSONSchemaToolParameters(tool, strict)))},
+			"inputSchema": map[string]any{"json": GetJSONSchemaToolParameters(tool, strict)},
 		}
 		if !unset && strict {
 			spec["strict"] = true
@@ -688,7 +695,7 @@ func bedrockRequestURL(model *Model, region string, useExplicitEndpoint bool) st
 	if !useExplicitEndpoint || base == "" {
 		base = fmt.Sprintf("https://bedrock-runtime.%s.amazonaws.com", region)
 	}
-	return base + "/model/" + url.PathEscape(model.ID) + "/converse-stream"
+	return base + "/model/" + strings.ReplaceAll(url.QueryEscape(model.ID), "+", "%20") + "/converse-stream"
 }
 
 // StreamBedrockConverse streams a Bedrock Converse request (upstream stream).
@@ -800,9 +807,7 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 		if system := BuildBedrockSystemPrompt(initialSystemPrompt, model, cacheRetention, options.Env); system != nil {
 			commandInput["system"] = system
 		}
-		if len(inferenceConfig) > 0 {
-			commandInput["inferenceConfig"] = inferenceConfig
-		}
+		commandInput["inferenceConfig"] = inferenceConfig
 		toolChoice := options.ToolChoice
 		if toolChoice == "tool" && options.ToolChoiceName != "" {
 			toolChoice = "tool"
@@ -811,26 +816,50 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 			commandInput["toolConfig"] = toolConfig
 		}
 		if additional := BuildBedrockAdditionalModelRequestFields(model, options); additional != nil {
-			commandInput["additionalModelRequestFields"] = additional
+			encoded, err := marshalBedrockAdditionalFields(additional)
+			if err != nil {
+				fail(err, "", 0, nil)
+				return
+			}
+			commandInput["additionalModelRequestFields"] = json.RawMessage(encoded)
 		}
 		if options.RequestMetadata != nil {
 			commandInput["requestMetadata"] = options.RequestMetadata
 		}
+		var payload any = commandInput
+		requestModel := model
 		if options.OnPayload != nil {
-			if next := options.OnPayload(mustMarshalJSON(commandInput), model); next != nil {
-				var replaced map[string]any
-				if perr := json.Unmarshal(next, &replaced); perr == nil {
-					commandInput = replaced
+			// D-row D268: an image or redacted byte slice is base64 in this
+			// JSON hook, where upstream supplies a native Uint8Array.
+			hookPayload, err := marshalBedrockCommand(commandInput, true)
+			if err != nil {
+				fail(err, "", 0, nil)
+				return
+			}
+			if next := options.OnPayload(hookPayload, model); next != nil {
+				var target struct {
+					ModelID string `json:"modelId"`
 				}
+				if err := jsonUnmarshalStrict(next, &target); err != nil {
+					fail(err, "", 0, nil)
+					return
+				}
+				if target.ModelID == "" {
+					fail(fmt.Errorf("modelId is required"), "", 0, nil)
+					return
+				}
+				copy := *model
+				copy.ID = target.ModelID
+				requestModel, payload = &copy, next
 			}
 		}
-		body, err := MarshalJSON(commandInput)
+		body, err := marshalBedrockCommand(payload, false)
 		if err != nil {
 			fail(err, "", 0, nil)
 			return
 		}
 
-		requestURL := bedrockRequestURL(model, region, useExplicitEndpoint)
+		requestURL := bedrockRequestURL(requestModel, region, useExplicitEndpoint)
 		customHeaders := map[string]string{}
 		for name, value := range options.Headers {
 			if value == nil {

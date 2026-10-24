@@ -4,7 +4,7 @@ Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D262**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D268**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation.
 
 Related documents: [port status](PORTING.md), [architecture](architecture.md),
@@ -2251,7 +2251,7 @@ values, reserved headers and the signed `x-amz-user-agent` header.
 
 ## D267
 
-**Request params keep JavaScript member order; sampling params are sorted.**
+**Request params keep JavaScript member order; map-backed options are sorted.**
 
 Reference: pi v1.4.0 (`4a080252`), `packages/ai/src/api/openai-completions.ts`
 `buildParams` and `packages/ai/src/api/openai-responses.ts` `buildParams`.
@@ -2274,7 +2274,35 @@ order than upstream. Reproducing scenario: a `models.json` entry with
 `"samplingParams": {"top_k": 5, "seed": 1}`; upstream sends `top_k` then
 `seed`, the port sends `seed` then `top_k`.
 
+Bedrock's `RequestMetadata map[string]string` has the same boundary. With
+upstream `requestMetadata: {z: "1", a: "2"}`, the SDK sends `z` then `a`; a Go
+map sends `a` then `z`. The native Go map cannot express insertion order. A raw
+Bedrock `OnPayload` replacement can express it and is preserved, as checked by
+`TestBedrockRequestsMatchSDKWire/payload-replacement`. This does not affect tag
+values, but those native map inputs are not byte-parity with ordered JS objects.
+
 Tests: `TestOpenAICompletionsParamsEmitJavaScriptKeyOrder`,
 `TestOpenAICompletionsToolFieldsKeepUpstreamOrder`,
 `TestOpenAICompletionsThinkingFieldsKeepUpstreamOrder` and
 `TestOpenAIResponsesParamsEmitJavaScriptKeyOrder`.
+
+## D268
+
+**Bedrock JSON hooks represent native binary values as base64 strings.**
+
+Reference: pi v1.4.0 (`4a080252`),
+`packages/ai/src/api/bedrock-converse-stream.ts` `createImageBlock` and
+`decodeRedactedContent`, plus its AWS SDK Converse serializer.
+
+Upstream passes native `Uint8Array` values to `onPayload` for image bytes and
+redacted reasoning. The Go hook accepts JSON (`json.RawMessage`), not a native
+JavaScript object, and represents those values as base64 strings. Reproducer:
+an image block with `data: "aW1hZ2U="` produces native bytes at
+`messages[0].content[0].image.source.bytes` upstream; the Go hook's member is
+`"aW1hZ2U="`. HTTP serialization uses base64 in both implementations, so the
+wire body is still byte-compared without normalization.
+
+The Bedrock fixture generator normalizes native binary values only when
+recording the hook's JSON view; it never changes the command passed to the SDK
+or the captured HTTP body. `TestBedrockRequestsMatchSDKWire/binary-content`
+covers image and redacted-reasoning bytes.

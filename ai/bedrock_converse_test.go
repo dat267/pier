@@ -669,7 +669,8 @@ func TestBedrockStreamFold(t *testing.T) {
 	if !strings.HasSuffix(captured.URL.Path, "/model/"+model.ID+"/converse-stream") {
 		t.Fatalf("path = %s", captured.URL.Path)
 	}
-	if payload["modelId"] != model.ID {
+	// The AWS SDK binds modelId to the HTTP path, not the JSON body.
+	if _, exists := payload["modelId"]; exists {
 		t.Fatalf("payload = %#v", payload)
 	}
 	system, ok := payload["system"].([]any)

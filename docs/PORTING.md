@@ -310,7 +310,22 @@ options through the shared stream, use Azure's strict-tool default and cache-key
 rules, avoid OpenAI-only cache-retention fields, and preserve raw replacement
 members in the shared Responses hook instead of silently dropping them through
 a typed decoder. Hook inputs, paths, API versions and bodies are byte-compared.
-Bedrock bodies remain outside this byte-level pass.
+The Bedrock pass adds seven Node-generated AWS SDK captures: minimal and
+configured tools, signed thinking, payload/model replacement, binary content,
+Nova defaults and adaptive thinking. A request-only Smithy shape table generated
+by `scripts/gen_bedrock_wire.mjs` supplies modeled member order and field
+projection. The HTTP body no longer includes the path-bound `modelId`, unknown
+modeled fields are filtered like the SDK, and path labels use the SDK's percent
+encoding. Hook replacements can change the target model without mutating the
+caller. Document/schema order survives, empty argument keys are stripped without
+sorting, empty schema-property names are retained, thinking fields keep their
+construction order, and non-Claude defaults still emit `inferenceConfig: {}`.
+The earlier test expecting `modelId` in the body was corrected against actual
+SDK captures. Only the recorded hook view normalizes native binary values to
+Go's base64 JSON representation (D268); HTTP bodies are compared unchanged.
+Map-backed sampling params and native Bedrock metadata retain the documented
+D267 ordering limit. These 30 Google/Vertex, Mistral, Azure and Bedrock fixtures
+cover the listed paths, not every optional SDK field or provider behavior.
 
 Remaining v1.4.0 items, grouped by why they are not in this tree:
 

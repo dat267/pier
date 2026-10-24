@@ -33,6 +33,8 @@ type BedrockOptions struct {
 	// ThinkingDisplay is "summarized" (default) or "omitted".
 	ThinkingDisplay string
 	// RequestMetadata attaches cost-allocation tags to the request.
+	// D267: Go map keys emit sorted; a raw OnPayload replacement can retain
+	// an explicit metadata member order.
 	RequestMetadata map[string]string
 	// BearerToken uses Bedrock API-key authentication instead of SigV4.
 	BearerToken string
