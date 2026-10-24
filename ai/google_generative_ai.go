@@ -231,7 +231,7 @@ type googleStreamConfig struct {
 	// preflight validates the request configuration before building params.
 	preflight func(model *Model, options *GoogleOptions) error
 	// request issues the streaming call.
-	request func(ctx context.Context, model *Model, params *GoogleGenerateContentParams, options *GoogleOptions) (*http.Response, error)
+	request func(ctx context.Context, model *Model, body []byte, options *GoogleOptions) (*http.Response, error)
 	// noFinishReasonMessage is reported when the stream ends without a finish
 	// reason.
 	noFinishReasonMessage string
@@ -300,16 +300,36 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 			fail(err)
 			return
 		}
+		var body []byte
+		if config.api == APIGoogleGenerativeAI {
+			body, err = marshalGoogleDeveloperRequest(params)
+		} else {
+			body, err = MarshalJSON(params)
+		}
+		if err != nil {
+			fail(err)
+			return
+		}
+		requestModel := model
 		if options.OnPayload != nil {
-			if next := options.OnPayload(mustMarshalJSON(params), model); next != nil {
-				var replaced GoogleGenerateContentParams
-				if perr := jsonUnmarshalStrict(next, &replaced); perr == nil {
-					params = &replaced
+			payload, err := googleSDKPayload(model, params)
+			if err != nil {
+				fail(err)
+				return
+			}
+			if next := options.OnPayload(payload, model); next != nil {
+				modelName, replacement, err := googleSDKRequest(next, config.api)
+				if err != nil {
+					fail(err)
+					return
 				}
+				copy := *model
+				copy.ID = modelName
+				requestModel, body = &copy, replacement
 			}
 		}
 
-		resp, err := config.request(ctx, model, params, options)
+		resp, err := config.request(ctx, requestModel, body, options)
 		if err != nil {
 			fail(err)
 			return
@@ -498,14 +518,9 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 
 // requestGoogleStream issues the streamGenerateContent call with the shared
 // provider retry policy.
-func requestGoogleStream(ctx context.Context, model *Model, params *GoogleGenerateContentParams, options *GoogleOptions) (*http.Response, error) {
-	body, err := marshalGoogleDeveloperRequest(params)
-	if err != nil {
-		return nil, err
-	}
+func requestGoogleStream(ctx context.Context, model *Model, body []byte, options *GoogleOptions) (*http.Response, error) {
 	url := strings.TrimSuffix(model.BaseURL, "/") + "/models/" + model.ID + ":streamGenerateContent?alt=sse"
-	var resp *http.Response
-	resp, err = RetryProviderRequest(ctx, func() (*http.Response, error) {
+	resp, err := RetryProviderRequest(ctx, func() (*http.Response, error) {
 		req, nerr := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 		if nerr != nil {
 			return nil, nerr

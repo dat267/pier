@@ -142,7 +142,9 @@ func TestVertexStreamWithAPIKey(t *testing.T) {
 	if captured.Header.Get("Authorization") != "" {
 		t.Fatalf("unexpected authorization header: %q", captured.Header.Get("Authorization"))
 	}
-	if !strings.Contains(captured.URL.Path, "/projects/test-project/locations/us-central1/") {
+	// Reference: @google/genai 2.21.0 tModel uses Express-mode publisher
+	// paths for API-key clients, even when project/location are supplied.
+	if captured.URL.Path != "/v1/publishers/google/models/gemini-3-flash-preview:streamGenerateContent" {
 		t.Fatalf("url = %s", captured.URL.String())
 	}
 }

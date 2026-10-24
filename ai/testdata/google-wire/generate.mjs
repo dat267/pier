@@ -59,6 +59,29 @@ const cases = [{
 		{ role: "toolResult", toolCallId: "call-1", toolName: "lookup", content: [{ type: "text", text: "found" }], isError: false, timestamp: 3 },
 	],
 	options: {},
+}, {
+	name: "model-config-replacement",
+	messages: [{ role: "user", content: "hello", timestamp: 1 }],
+	options: {},
+	replacement: {
+		model: "gemini-3-flash",
+		contents: [{ role: "user", parts: [{ text: "changed" }] }],
+		config: { temperature: 0, topK: 5, maxOutputTokens: 8, systemInstruction: "changed" },
+	},
+}, {
+	name: "generation-controls-replacement",
+	messages: [{ role: "user", content: "hello", timestamp: 1 }],
+	options: {},
+	replacement: {
+		model: "gemini-3-pro", contents: [{ role: "user", parts: [{ text: "changed" }] }],
+		config: {
+			thinkingConfig: { includeThoughts: false, thinkingBudget: 0 },
+			responseModalities: ["TEXT"], responseJsonSchema: { type: "object", properties: { z: { type: "string" } } },
+			responseMimeType: "application/json", seed: 0, frequencyPenalty: 0, presencePenalty: 0,
+			logprobs: 0, responseLogprobs: false, stopSequences: ["END"], maxOutputTokens: 0,
+			candidateCount: 1, topK: 0, topP: 0, temperature: 0,
+		},
+	},
 }];
 const fixtures = [];
 for (const { api, stream } of providers) {
@@ -70,8 +93,9 @@ for (const { api, stream } of providers) {
 		};
 		const messages = input.messages.map(message => message.role === "assistant"
 			? { ...message, api, provider: model.provider, model: model.id } : message);
-		let body;
-		globalThis.fetch = async (_url, init) => {
+		let body, payload, path;
+		globalThis.fetch = async (url, init) => {
+			path = new URL(url).pathname;
 			if (body !== undefined) throw new Error("unexpected second request");
 			body = init.body;
 			return new Response('data: {"candidates":[{"content":{"parts":[{"text":"ok"}],"role":"model"},"finishReason":"STOP"}]}\n\n',
@@ -79,9 +103,10 @@ for (const { api, stream } of providers) {
 		};
 		const result = await stream(model, { messages }, {
 			...input.options, apiKey: "token", project: "project", location: "global", env: {},
+			onPayload(params) { payload = JSON.stringify(params); return input.replacement; },
 		}).result();
 		if (result.errorMessage || typeof body !== "string") throw new Error(result.errorMessage ?? "no body captured");
-		fixtures.push({ api, ...input, messages, body });
+		fixtures.push({ api, ...input, messages, payload, path, body });
 	}
 }
 console.log(JSON.stringify(fixtures, null, 2));

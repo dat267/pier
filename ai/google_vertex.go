@@ -84,8 +84,8 @@ func StreamGoogleVertex(model *Model, context TranscriptContext, options *Google
 			_, err := vertexAccessToken(ctx, options.Env)
 			return err
 		},
-		request: func(requestCtx ctxpkg.Context, model *Model, params *GoogleGenerateContentParams, options *GoogleOptions) (*http.Response, error) {
-			requestURL, err := VertexRequestURL(model, project, location)
+		request: func(requestCtx ctxpkg.Context, model *Model, body []byte, options *GoogleOptions) (*http.Response, error) {
+			requestURL, err := vertexRequestURL(model, project, location, ResolveVertexAPIKey(options.APIKey) != "")
 			if err != nil {
 				return nil, err
 			}
@@ -95,10 +95,6 @@ func StreamGoogleVertex(model *Model, context TranscriptContext, options *Google
 				if err != nil {
 					return nil, err
 				}
-			}
-			body, err := MarshalJSON(params)
-			if err != nil {
-				return nil, err
 			}
 			return retryVertexRequest(requestCtx, model, requestURL, body, options, token)
 		},
@@ -127,6 +123,10 @@ func isPlaceholderAPIKey(apiKey string) bool {
 // VertexRequestURL builds the streaming endpoint for a model
 // (upstream buildHttpOptions plus the SDK's URL layout).
 func VertexRequestURL(model *Model, project, location string) (string, error) {
+	return vertexRequestURL(model, project, location, false)
+}
+
+func vertexRequestURL(model *Model, project, location string, express bool) (string, error) {
 	base := JSTrim(model.BaseURL)
 	custom := ""
 	if base != "" && !strings.Contains(base, "{location}") {
@@ -138,6 +138,9 @@ func VertexRequestURL(model *Model, project, location string) (string, error) {
 	}
 	path := fmt.Sprintf("projects/%s/locations/%s/publishers/google/models/%s:streamGenerateContent?alt=sse",
 		project, location, model.ID)
+	if express {
+		path = fmt.Sprintf("publishers/google/models/%s:streamGenerateContent?alt=sse", model.ID)
+	}
 	if custom != "" {
 		segments := []string{strings.TrimSuffix(custom, "/")}
 		if version != "" {

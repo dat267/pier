@@ -1,19 +1,6 @@
 # Reproduced audit findings
 
-## Google/Vertex payload-hook shape
-
-Reproduced against pi v1.4.0 (`4a080252`),
-`packages/ai/src/api/{google-generative-ai,google-vertex}.ts` `stream` and
-`buildParams`. With one `hello` user message and no generation options,
-upstream calls `onPayload` with
-`{"model":"gemini-3-pro","contents":[{"role":"user","parts":[{"text":"hello"}]}],"config":{}}`.
-Both Go streams instead call `OnPayload` with
-`{"contents":[{"parts":[{"text":"hello"}],"role":"user"}],"generationConfig":{}}`.
-Thus an upstream-compatible hook reading `config` or replacing `model` cannot
-work unchanged. The HTTP-body parity fixtures do not cover this hook boundary.
-Reproduce by capturing the callback argument from either public stream with
-that transcript and an API key, using a local/fake HTTP response so no provider
-is contacted.
+No unresolved findings from the completed audit slices.
 
 ## Resolved findings
 
