@@ -330,12 +330,14 @@ Map-backed sampling params and native Bedrock metadata retain the documented
 D267 ordering limit. These 34 Google/Vertex, Mistral, Azure and Bedrock fixtures
 cover the listed paths, not every optional SDK field or provider behavior.
 
-Three additional upstream captures cover raw `OnPayload` replacements for
-Anthropic, OpenAI Completions and Codex. Unknown members and nested object order
-now survive instead of being dropped or sorted by typed/map decoders.
-Anthropic still forces `stream: true` after applying a replacement, including
-its original member position. This comparison uses decoded JSON payloads;
-Codex's upstream zstd content coding is not treated as JSON byte order.
+Five additional upstream captures cover raw `OnPayload` replacements for
+Anthropic, OpenAI Completions and Codex plus the Anthropic beta header. Unknown
+members and nested object order now survive instead of being dropped or sorted
+by typed/map decoders. Anthropic still forces `stream: true` after applying a
+replacement, including its original member position, and moves a `betas`
+member into `anthropic-beta` (the default and replacement cases cover both).
+This comparison uses decoded JSON payloads; Codex's upstream zstd content
+coding is not treated as JSON byte order.
 
 Remaining v1.4.0 items, grouped by why they are not in this tree:
 
@@ -1338,7 +1340,7 @@ Update the pin whenever upstream source is re-read for a port.
 | `coding` (nested tool calls) | `core/nested-tool-calls.ts` — `NestedCallLimits`, `NestedCallRecorder` (start/finish/duration, the argument-size and call-count limits, usage summing, snapshot) and the `nestedCalls` field on `ai.ToolResultMessage` | ported (the execution host `NestedToolCallRunner` and the session `ctx.executeTool()` wiring are out of scope: the port has no tool-execution API and their only triggers, codemode and extension tools, are out of scope) |
 | `coding` (context edits) | the `context_edit` session entry (`ContextEditEntry`) — `SessionManager.AppendContextEdit` with upstream's validation and assistant/tool-result string normalization, the `replacement` field preserved on load and rewrite, and the projection applying it (a null replacement omits the target, a value replaces its content) | ported |
 | `ai` (catalog) | generated model data via upstream's own generator (`scripts/gen_catalog.py`), `env-api-keys.ts`, `utils/provider-env.ts` | ported |
-| `ai` (anthropic wire) | `api/anthropic-messages.ts` request construction (`buildParams`), `transform-messages.ts`, `simple-options.ts`, `constrained-sampling.ts`, `utils/{json-parse,estimate,sanitize-unicode}.ts` | ported |
+| `ai` (anthropic wire) | `api/anthropic-messages.ts` request construction (`buildParams`), `transform-messages.ts`, `simple-options.ts`, `constrained-sampling.ts`, `utils/{json-parse,estimate,sanitize-unicode}.ts`; the pinned SDK moves the params `betas` member into the `anthropic-beta` header (never the body) | ported |
 | `ai` (google-vertex) | `api/google-vertex.ts` — Vertex AI dialect over the shared Google streaming loop: `{location}`-templated and custom base URLs with API-version detection, project/location resolution with upstream's error messages, Vertex API keys (including the ADC marker and `<placeholder>` fallback), Application Default Credentials (authorized-user refresh-token and GCE metadata flows with token caching; service-account keys reported per D27), bearer + `x-goog-user-project` headers, and the Vertex thinking budget/level mapping | ported |
 | `ai` (azure-openai-responses) | `api/azure-openai-responses.ts` — Azure dialect over the shared Responses loop: base-URL resolution (options → env → resource name → model base URL) with Azure-host normalization to `/openai/v1`, query stripping only on Azure hosts, `v1` default API version, the `api-version` query parameter, `api-key` header auth, deployment-name resolution (explicit → `AZURE_OPENAI_DEPLOYMENT_NAME_MAP` → model id) sent as the body model, and the Azure tool-call provider set | ported |
 | `ai` (mistral) | `api/mistral-conversations.ts` — the native Mistral chat completions endpoint: SDK-to-wire key remapping (maxTokens/toolChoice/promptMode/... and per-message/per-chunk keys), message conversion (string user content, image data URLs with omission notes, assistant thinking parts and tool calls, tool-result text forms), function tools with strict sampling, deterministic 9-character tool-call id normalization, prompt caching via `prompt_cache_key` plus the `x-affinity` header, the CRLF-tolerant SSE event reader with the `[DONE]` sentinel, streaming assembly of text/thinking/tool-call blocks with incremental argument parsing, cached-token usage accounting, reasoning effort vs prompt mode per model, and upstream's error formatting with body truncation | ported |

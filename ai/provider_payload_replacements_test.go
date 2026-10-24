@@ -7,12 +7,18 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 )
 
+// capturedHeaders are the request headers the hook fixtures compare; they are
+// the GitHub/Anthropic SDK headers that pi's params contribute.
+var capturedHeaders = []string{"anthropic-beta", "originator", "openai-beta", "session_id"}
+
 // Reference: pi v1.4.0 (4a080252), api/{anthropic-messages,
-// openai-completions,openai-codex-responses}.ts stream payload replacement.
+// openai-completions,openai-codex-responses}.ts stream payload replacement and
+// the SDK request shaping (beta params become headers, not body members).
 // Regenerate: node --experimental-strip-types testdata/provider-hooks/generate.mjs ../pi > testdata/provider-hooks/golden.json
 func TestProviderPayloadReplacementsMatchUpstream(t *testing.T) {
 	data, err := os.ReadFile("testdata/provider-hooks/golden.json")
@@ -20,9 +26,11 @@ func TestProviderPayloadReplacementsMatchUpstream(t *testing.T) {
 		t.Fatal(err)
 	}
 	var fixtures []struct {
+		Name        string            `json:"name"`
 		Model       Model             `json:"model"`
 		Messages    []json.RawMessage `json:"messages"`
 		Replacement json.RawMessage   `json:"replacement"`
+		HTTPHeaders map[string]string `json:"httpHeaders"`
 		Body        string            `json:"body"`
 		Path        string            `json:"path"`
 	}
@@ -30,13 +38,21 @@ func TestProviderPayloadReplacementsMatchUpstream(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, fixture := range fixtures {
-		t.Run(string(fixture.Model.API), func(t *testing.T) {
+		t.Run(fixture.Name, func(t *testing.T) {
 			bodies := make(chan string, 1)
 			paths := make(chan string, 1)
+			headers := make(chan map[string]string, 1)
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				b, _ := io.ReadAll(r.Body)
 				bodies <- string(b)
 				paths <- r.URL.Path
+				got := map[string]string{}
+				for _, name := range capturedHeaders {
+					if value := r.Header.Get(name); value != "" {
+						got[name] = value
+					}
+				}
+				headers <- got
 				w.Header().Set("Content-Type", "text/event-stream")
 				switch fixture.Model.API {
 				case APIOpenAICompletions:
@@ -58,7 +74,11 @@ func TestProviderPayloadReplacementsMatchUpstream(t *testing.T) {
 				}
 				messages = append(messages, m)
 			}
-			options := StreamOptions{APIKey: "token", Env: ProviderEnv{}, OnPayload: func(json.RawMessage, *Model) json.RawMessage { return fixture.Replacement }}
+			options := StreamOptions{APIKey: "token", Env: ProviderEnv{}}
+			if len(fixture.Replacement) > 0 {
+				replacement := fixture.Replacement
+				options.OnPayload = func(json.RawMessage, *Model) json.RawMessage { return replacement }
+			}
 			var stream *AssistantMessageEventStream
 			switch model.API {
 			case APIOpenAICompletions:
@@ -80,6 +100,13 @@ func TestProviderPayloadReplacementsMatchUpstream(t *testing.T) {
 			}
 			if got := <-paths; got != fixture.Path {
 				t.Errorf("path = %s, want %s", got, fixture.Path)
+			}
+			wantHeaders := fixture.HTTPHeaders
+			if wantHeaders == nil {
+				wantHeaders = map[string]string{}
+			}
+			if got := <-headers; !reflect.DeepEqual(got, wantHeaders) {
+				t.Errorf("headers = %v, want %v", got, wantHeaders)
 			}
 			if got := <-bodies; got != fixture.Body {
 				t.Errorf("body = %s\nwant   %s", got, fixture.Body)

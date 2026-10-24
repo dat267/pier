@@ -80,6 +80,20 @@ func (n *schemaNode) set(key string, value json.RawMessage) {
 	n.fields[key] = value
 }
 
+// remove deletes a member while keeping the remaining declaration order.
+func (n *schemaNode) remove(key string) {
+	if _, seen := n.fields[key]; !seen {
+		return
+	}
+	delete(n.fields, key)
+	for i, existing := range n.keys {
+		if existing == key {
+			n.keys = append(n.keys[:i], n.keys[i+1:]...)
+			return
+		}
+	}
+}
+
 func schemaTypes(data json.RawMessage) []string {
 	var single string
 	if err := jsonUnmarshalStrict(data, &single); err == nil {

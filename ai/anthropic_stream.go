@@ -279,6 +279,31 @@ type anthropicClientOptions struct {
 	DynamicHeaders   map[string]string
 }
 
+// splitAnthropicBetaParams removes the client-level `betas` member from a
+// messages payload and returns it for the anthropic-beta header. The pinned
+// SDK's beta.messages.create destructures `betas` (and the profile/workspace
+// ids) out of the body before POSTing; pi puts its beta feature list there.
+func splitAnthropicBetaParams(body []byte) ([]byte, []string, error) {
+	node, err := decodeSchemaNode(body)
+	if err != nil {
+		return body, nil, nil
+	}
+	raw, ok := node.raw("betas")
+	if !ok {
+		return body, nil, nil
+	}
+	var betas []string
+	if err := jsonUnmarshalStrict(raw, &betas); err != nil {
+		return nil, nil, err
+	}
+	node.remove("betas")
+	encoded, err := node.encode()
+	if err != nil {
+		return nil, nil, err
+	}
+	return encoded, betas, nil
+}
+
 // BuildAnthropicRequest builds the HTTP request for the messages API,
 // mirroring the pinned @anthropic-ai/sdk: POST {baseURL}/v1/messages?beta=true
 // with x-api-key (or Bearer for OAuth tokens), anthropic-version, and the
@@ -292,6 +317,10 @@ func BuildAnthropicRequest(ctx context.Context, model *Model, params any, option
 	if err != nil {
 		return nil, err
 	}
+	body, betas, err := splitAnthropicBetaParams(body)
+	if err != nil {
+		return nil, err
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
@@ -300,6 +329,11 @@ func BuildAnthropicRequest(ctx context.Context, model *Model, params any, option
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("anthropic-dangerous-direct-browser-access", "true")
 	req.Header.Set("anthropic-version", "2023-06-01")
+	if len(betas) > 0 {
+		// The SDK moves `betas` from the params into this header; it is never
+		// part of the request body.
+		req.Header.Set("anthropic-beta", strings.Join(betas, ","))
+	}
 	ApplyIdentityHeaders(req.Header, model, options.Identity)
 
 	if model.Provider == "github-copilot" {
