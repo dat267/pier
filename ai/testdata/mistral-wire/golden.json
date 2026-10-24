@@ -140,6 +140,8 @@
         }
       ],
       "topP": 0,
+      "maxTokens": 0,
+      "randomSeed": 0,
       "responseFormat": {
         "type": "json_schema",
         "jsonSchema": {
@@ -158,6 +160,13 @@
           "strict": true
         }
       },
+      "toolChoice": "none",
+      "presencePenalty": 0,
+      "frequencyPenalty": 0,
+      "parallelToolCalls": false,
+      "reasoningEffort": "max",
+      "promptMode": "reasoning",
+      "promptCacheKey": "cache-key",
       "safePrompt": false,
       "extra": {
         "z": 1,
@@ -166,7 +175,7 @@
     },
     "payload": "{\"model\":\"mistral-large-latest\",\"stream\":true,\"messages\":[{\"role\":\"user\",\"content\":\"hello\"}]}",
     "path": "/v1/chat/completions",
-    "body": "{\"model\":\"mistral-small-latest\",\"stream\":true,\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"document_url\",\"document_url\":\"https://example.test/document\",\"document_name\":\"report\"}]}],\"extra\":{\"z\":1,\"a\":2},\"top_p\":0,\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"name\":\"Output\",\"strict\":true,\"schema\":{\"type\":\"object\",\"properties\":{\"z\":{\"type\":\"string\"},\"a\":{\"type\":\"number\"}}}}},\"safe_prompt\":false}"
+    "body": "{\"model\":\"mistral-small-latest\",\"stream\":true,\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"document_url\",\"document_url\":\"https://example.test/document\",\"document_name\":\"report\"}]}],\"extra\":{\"z\":1,\"a\":2},\"top_p\":0,\"max_tokens\":0,\"random_seed\":0,\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"name\":\"Output\",\"strict\":true,\"schema\":{\"type\":\"object\",\"properties\":{\"z\":{\"type\":\"string\"},\"a\":{\"type\":\"number\"}}}}},\"tool_choice\":\"none\",\"presence_penalty\":0,\"frequency_penalty\":0,\"parallel_tool_calls\":false,\"reasoning_effort\":\"max\",\"prompt_mode\":\"reasoning\",\"prompt_cache_key\":\"cache-key\",\"safe_prompt\":false}"
   },
   {
     "name": "named-tool-choice",

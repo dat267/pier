@@ -299,10 +299,11 @@ project and location were supplied. The old test expectation was corrected
 against captured upstream paths. Advanced SDK-only hook fields are not claimed
 exhaustively ported.
 
-The Mistral pass executes the pinned `mistral-conversations.ts` stream for five
+The Mistral pass executes the pinned `mistral-conversations.ts` stream for six
 Node-generated fixtures (minimal, image/tool transcript with strict schemas,
-payload replacement, named tool choice and a required-strict schema error). Public Go-stream tests compare the
-hook input, request path and body byte for byte. Fixes retain JS assignment and
+payload replacement covering every camelCase-to-wire option, named tool choice
+and a required-strict schema error). Public Go-stream tests compare the hook
+input, request path and body byte for byte. Fixes retain JS assignment and
 schema-property order, rename image/document content keys to their wire forms,
 keep hook-supplied extras, and translate nested response-format schemas
 (`jsonSchema`/`schemaDefinition`) without sorting them. The previous converter

@@ -24,7 +24,9 @@ const cases = [{ name: "minimal", messages: [{ role: "user", content: "hello", t
 	replacement: {
 		model: "mistral-small-latest", stream: true,
 		messages: [{ role: "user", content: [{ type: "document_url", documentUrl: "https://example.test/document", documentName: "report" }] }],
-		topP: 0, responseFormat: { type: "json_schema", jsonSchema: { name: "Output", schemaDefinition: { type: "object", properties: { z: { type: "string" }, a: { type: "number" } } }, strict: true } },
+		topP: 0, maxTokens: 0, randomSeed: 0, responseFormat: { type: "json_schema", jsonSchema: { name: "Output", schemaDefinition: { type: "object", properties: { z: { type: "string" }, a: { type: "number" } } }, strict: true } },
+		toolChoice: "none", presencePenalty: 0, frequencyPenalty: 0, parallelToolCalls: false,
+		reasoningEffort: "max", promptMode: "reasoning", promptCacheKey: "cache-key",
 		safePrompt: false, extra: { z: 1, a: 2 },
 	},
 }, {
