@@ -529,16 +529,22 @@ func decodeBedrockRedactedContent(signature *string) []byte {
 }
 
 // ConvertBedrockToolConfig renders the tool configuration
-// (upstream convertToolConfig).
+// (upstream convertToolConfig). Invalid required strict schemas return nil;
+// the stream uses the checked converter to expose the diagnostic as an error.
 func ConvertBedrockToolConfig(tools []Tool, toolChoice string, toolChoiceName string, supportsStrictMode bool) map[string]any {
+	config, _ := convertBedrockToolConfig(tools, toolChoice, toolChoiceName, supportsStrictMode)
+	return config
+}
+
+func convertBedrockToolConfig(tools []Tool, toolChoice string, toolChoiceName string, supportsStrictMode bool) (map[string]any, error) {
 	if len(tools) == 0 || toolChoice == "none" {
-		return nil
+		return nil, nil
 	}
 	bedrockTools := make([]any, 0, len(tools))
 	for _, tool := range tools {
 		strict, unset, err := ResolveJSONSchemaStrictSampling(tool, supportsStrictMode, nil)
 		if err != nil {
-			strict = false
+			return nil, err
 		}
 		spec := map[string]any{
 			"name":        tool.Name,
@@ -567,7 +573,7 @@ func ConvertBedrockToolConfig(tools []Tool, toolChoice string, toolChoiceName st
 	if choice != nil {
 		config["toolChoice"] = choice
 	}
-	return config
+	return config, nil
 }
 
 var bedrockOpenAIGPTEffort = map[ThinkingLevel]string{
@@ -812,7 +818,12 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 		if toolChoice == "tool" && options.ToolChoiceName != "" {
 			toolChoice = "tool"
 		}
-		if toolConfig := ConvertBedrockToolConfig(GetCurrentTools(normalizedContext.Messages), toolChoice, options.ToolChoiceName, supportsStrictMode); toolConfig != nil {
+		toolConfig, err := convertBedrockToolConfig(GetCurrentTools(normalizedContext.Messages), toolChoice, options.ToolChoiceName, supportsStrictMode)
+		if err != nil {
+			fail(err, "", 0, nil)
+			return
+		}
+		if toolConfig != nil {
 			commandInput["toolConfig"] = toolConfig
 		}
 		if additional := BuildBedrockAdditionalModelRequestFields(model, options); additional != nil {

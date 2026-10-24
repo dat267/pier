@@ -183,7 +183,12 @@ func StreamMistralConversations(model *Model, context TranscriptContext, options
 		normalize := newMistralToolCallIDNormalizer()
 		transformed := TransformMessages(normalizedContext.Messages, model,
 			func(id string, _ *Model, _ *AssistantMessage) string { return normalize(id) })
-		var payload any = buildMistralChatPayload(model, normalizedContext, transformed, options)
+		built, err := buildMistralChatPayload(model, normalizedContext, transformed, options)
+		if err != nil {
+			fail(err)
+			return
+		}
+		var payload any = built
 		if options.OnPayload != nil {
 			if next := options.OnPayload(mustMarshalJSON(payload), model); next != nil {
 				payload = next
@@ -997,7 +1002,7 @@ func mistralCachedPromptTokens(raw json.RawMessage, promptTokens int64) int64 {
 	return 0
 }
 
-func buildMistralChatPayload(model *Model, context TranscriptContext, messages []Message, options *MistralOptions) *mistralChatPayload {
+func buildMistralChatPayload(model *Model, context TranscriptContext, messages []Message, options *MistralOptions) (*mistralChatPayload, error) {
 	payload := &mistralChatPayload{
 		Model:    model.ID,
 		Stream:   true,
@@ -1005,7 +1010,11 @@ func buildMistralChatPayload(model *Model, context TranscriptContext, messages [
 	}
 	currentTools := GetCurrentTools(context.Messages)
 	if len(currentTools) > 0 {
-		payload.Tools = toMistralFunctionTools(currentTools)
+		tools, err := toMistralFunctionTools(currentTools)
+		if err != nil {
+			return nil, err
+		}
+		payload.Tools = tools
 	}
 	if options.Temperature != nil {
 		payload.Temperature = options.Temperature
@@ -1025,7 +1034,7 @@ func buildMistralChatPayload(model *Model, context TranscriptContext, messages [
 	if shouldUseMistralPromptCaching(options) {
 		payload.PromptCacheKey = options.SessionID
 	}
-	return payload
+	return payload, nil
 }
 
 func mapMistralToolChoice(options *MistralOptions) json.RawMessage {
@@ -1059,11 +1068,14 @@ func containsString(values []string, target string) bool {
 	return false
 }
 
-func toMistralFunctionTools(tools []Tool) []mistralFunctionTool {
+func toMistralFunctionTools(tools []Tool) ([]mistralFunctionTool, error) {
 	out := make([]mistralFunctionTool, 0, len(tools))
 	for _, tool := range tools {
 		strict, unset, err := ResolveJSONSchemaStrictSampling(tool, true, nil)
-		if err != nil || unset {
+		if err != nil {
+			return nil, err
+		}
+		if unset {
 			strict = false
 		}
 		entry := mistralFunctionTool{Type: "function"}
@@ -1073,7 +1085,7 @@ func toMistralFunctionTools(tools []Tool) []mistralFunctionTool {
 		entry.Function.Strict = strict
 		out = append(out, entry)
 	}
-	return out
+	return out, nil
 }
 
 // stripJSONSymbolKeys drops non-JSON values (Go has no symbol keys, so this only

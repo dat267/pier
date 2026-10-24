@@ -27,6 +27,7 @@ func TestMistralRequestsMatchUpstreamWire(t *testing.T) {
 		Payload     string            `json:"payload"`
 		Path        string            `json:"path"`
 		Body        string            `json:"body"`
+		Error       string            `json:"error"`
 	}
 	if err := json.Unmarshal(data, &fixtures); err != nil {
 		t.Fatal(err)
@@ -69,6 +70,19 @@ func TestMistralRequestsMatchUpstreamWire(t *testing.T) {
 			result, err := StreamMistralConversations(model, TranscriptContext{Messages: messages}, &options).Result(context.Background())
 			if err != nil {
 				t.Fatal(err)
+			}
+			if fixture.Error != "" {
+				if result.StopReason != StopError || result.ErrorMessage == nil || *result.ErrorMessage != fixture.Error {
+					t.Fatalf("result = %+v, want error %q", result, fixture.Error)
+				}
+				select {
+				case body := <-bodies:
+					t.Fatalf("invalid strict schema sent an HTTP request: %s", body)
+				case payload := <-payloads:
+					t.Fatalf("invalid strict schema reached the hook: %s", payload)
+				default:
+				}
+				return
 			}
 			if result.StopReason != StopStop {
 				t.Fatalf("stopReason = %s, error = %v", result.StopReason, result.ErrorMessage)

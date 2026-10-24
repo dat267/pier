@@ -87,11 +87,14 @@ func TestMistralWirePayloadRenamesKeys(t *testing.T) {
 	model := mistralModel("https://api.mistral.ai")
 	maxTokens := 100
 	temperature := 0.5
-	payload := buildMistralChatPayload(model, mistralUserContext(), mistralUserContext().Messages, &MistralOptions{
+	payload, err := buildMistralChatPayload(model, mistralUserContext(), mistralUserContext().Messages, &MistralOptions{
 		StreamOptions: StreamOptions{MaxTokens: &maxTokens, Temperature: &temperature},
 		ToolChoice:    "auto",
 		PromptMode:    "reasoning",
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	encoded, err := mistralWirePayload(payload)
 	if err != nil {
 		t.Fatal(err)

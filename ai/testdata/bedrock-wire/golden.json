@@ -293,5 +293,103 @@
     "payload": "{\"modelId\":\"anthropic.claude-opus-4-7-v1:0\",\"messages\":[{\"role\":\"user\",\"content\":[{\"text\":\"hello\"}]}],\"system\":[{\"text\":\"system\"}],\"inferenceConfig\":{\"maxTokens\":8192},\"toolConfig\":{\"tools\":[{\"toolSpec\":{\"name\":\"empty-key\",\"description\":\"Empty key is valid\",\"inputSchema\":{\"json\":{\"type\":\"object\",\"properties\":{\"\":{\"type\":\"string\"},\"z\":{\"type\":\"number\"}},\"required\":[]}}}}]},\"additionalModelRequestFields\":{\"thinking\":{\"type\":\"adaptive\",\"display\":\"omitted\",\"block_binding\":{\"prefix_mismatch_behavior\":\"drop_block\"}},\"output_config\":{\"effort\":\"medium\"},\"anthropic_beta\":[\"thinking-binding-controls-2026-08-01\"]}}",
     "path": "/model/anthropic.claude-opus-4-7-v1%3A0/converse-stream",
     "body": "{\"messages\":[{\"role\":\"user\",\"content\":[{\"text\":\"hello\"}]}],\"system\":[{\"text\":\"system\"}],\"inferenceConfig\":{\"maxTokens\":8192},\"toolConfig\":{\"tools\":[{\"toolSpec\":{\"name\":\"empty-key\",\"inputSchema\":{\"json\":{\"type\":\"object\",\"properties\":{\"\":{\"type\":\"string\"},\"z\":{\"type\":\"number\"}},\"required\":[]}},\"description\":\"Empty key is valid\"}}]},\"additionalModelRequestFields\":{\"thinking\":{\"type\":\"adaptive\",\"display\":\"omitted\",\"block_binding\":{\"prefix_mismatch_behavior\":\"drop_block\"}},\"output_config\":{\"effort\":\"medium\"},\"anthropic_beta\":[\"thinking-binding-controls-2026-08-01\"]}}"
+  },
+  {
+    "name": "required-strict-unsupported",
+    "expectError": true,
+    "strictSupport": false,
+    "messages": [
+      {
+        "role": "system",
+        "content": "system",
+        "toolsAdded": [
+          {
+            "name": "lookup",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            },
+            "constrainedSampling": {
+              "type": "json_schema",
+              "strict": "require"
+            }
+          }
+        ],
+        "timestamp": 1
+      },
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 2
+      }
+    ],
+    "options": {},
+    "error": "Tool \"lookup\" requires JSON-schema constrained sampling, but strict tools are unsupported."
+  },
+  {
+    "name": "required-strict-schema-error",
+    "expectError": true,
+    "messages": [
+      {
+        "role": "system",
+        "content": "system",
+        "toolsAdded": [
+          {
+            "name": "lookup",
+            "parameters": {
+              "type": "object",
+              "$ref": "#/$defs/X"
+            },
+            "constrainedSampling": {
+              "type": "json_schema",
+              "strict": "require"
+            }
+          }
+        ],
+        "timestamp": 1
+      },
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 2
+      }
+    ],
+    "options": {},
+    "error": "Tool \"lookup\" requires JSON-schema constrained sampling, but $ref schemas are unsupported."
+  },
+  {
+    "name": "disabled-required-strict",
+    "strictSupport": false,
+    "messages": [
+      {
+        "role": "system",
+        "content": "system",
+        "toolsAdded": [
+          {
+            "name": "lookup",
+            "parameters": {
+              "type": "object",
+              "$ref": "#/$defs/X"
+            },
+            "constrainedSampling": {
+              "type": "json_schema",
+              "strict": "require"
+            }
+          }
+        ],
+        "timestamp": 1
+      },
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 2
+      }
+    ],
+    "options": {
+      "toolChoice": "none"
+    },
+    "payload": "{\"modelId\":\"anthropic.claude-sonnet-4-5-20250929-v1:0\",\"messages\":[{\"role\":\"user\",\"content\":[{\"text\":\"hello\"},{\"cachePoint\":{\"type\":\"default\"}}]}],\"system\":[{\"text\":\"system\"},{\"cachePoint\":{\"type\":\"default\"}}],\"inferenceConfig\":{\"maxTokens\":8192}}",
+    "path": "/model/anthropic.claude-sonnet-4-5-20250929-v1%3A0/converse-stream",
+    "body": "{\"messages\":[{\"role\":\"user\",\"content\":[{\"text\":\"hello\"},{\"cachePoint\":{\"type\":\"default\"}}]}],\"system\":[{\"text\":\"system\"},{\"cachePoint\":{\"type\":\"default\"}}],\"inferenceConfig\":{\"maxTokens\":8192}}"
   }
 ]

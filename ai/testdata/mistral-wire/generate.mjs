@@ -29,6 +29,9 @@ const cases = [{ name: "minimal", messages: [{ role: "user", content: "hello", t
 	},
 }, {
 	name: "named-tool-choice", messages: [{ role: "user", content: "hello", timestamp: 1 }], options: {}, forcedTool: "lookup",
+}, {
+	name: "required-strict-schema-error", expectError: true,
+	messages: [{ role: "system", content: "system", toolsAdded: [{ name: "lookup", parameters: { type: "object", $ref: "#/$defs/X" }, constrainedSampling: { type: "json_schema", strict: "require" } }], timestamp: 1 }, { role: "user", content: "hello", timestamp: 2 }], options: {},
 }];
 const model = { api: "mistral-conversations", id: "mistral-large-latest", provider: "mistral", baseUrl: "https://invalid.test",
 	reasoning: true, maxTokens: 8192, contextWindow: 128000, input: ["text", "image"], cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } };
@@ -46,6 +49,11 @@ for (const input of cases) {
 		toolChoice: input.forcedTool ? { type: "function", function: { name: input.forcedTool } } : input.options.toolChoice,
 		onPayload(value) { payload = JSON.stringify(value); return input.replacement; },
 	}).result();
+	if (input.expectError) {
+		if (!result.errorMessage || body !== undefined || payload !== undefined) throw new Error("strict schema did not fail before hooks/HTTP");
+		fixtures.push({ ...input, messages, error: result.errorMessage });
+		continue;
+	}
 	if (result.errorMessage || typeof body !== "string") throw new Error(result.errorMessage ?? "no request");
 	fixtures.push({ ...input, messages, payload, path, body });
 }

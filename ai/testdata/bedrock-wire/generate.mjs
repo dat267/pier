@@ -49,11 +49,20 @@ const cases=[{name:"minimal",messages:[{role:"user",content:"hello",timestamp:1}
 	name:"adaptive-thinking",modelId:"anthropic.claude-opus-4-7-v1:0",modelName:"Claude Opus 4.7",messages:[
 		{role:"system",content:"system",toolsAdded:[{name:"empty-key",description:"Empty key is valid",parameters:{type:"object",properties:{"":{type:"string"},z:{type:"number"}},required:[]}}],timestamp:1},
 		{role:"user",content:"hello",timestamp:2}],options:{reasoning:"medium",thinkingDisplay:"omitted",cacheRetention:"none"},
+}, {
+	name:"required-strict-unsupported",expectError:true,strictSupport:false,
+	messages:[{role:"system",content:"system",toolsAdded:[{name:"lookup",parameters:{type:"object",properties:{}},constrainedSampling:{type:"json_schema",strict:"require"}}],timestamp:1},{role:"user",content:"hello",timestamp:2}],options:{},
+}, {
+	name:"required-strict-schema-error",expectError:true,
+	messages:[{role:"system",content:"system",toolsAdded:[{name:"lookup",parameters:{type:"object",$ref:"#/$defs/X"},constrainedSampling:{type:"json_schema",strict:"require"}}],timestamp:1},{role:"user",content:"hello",timestamp:2}],options:{},
+}, {
+	name:"disabled-required-strict",strictSupport:false,
+	messages:[{role:"system",content:"system",toolsAdded:[{name:"lookup",parameters:{type:"object",$ref:"#/$defs/X"},constrainedSampling:{type:"json_schema",strict:"require"}}],timestamp:1},{role:"user",content:"hello",timestamp:2}],options:{toolChoice:"none"},
 }];
 const fixtures=[];
 for(const input of cases){
 	body=path=undefined;let payload;
-	const activeModel={...model,id:input.modelId??model.id,name:input.modelName??model.name};
+	const activeModel={...model,id:input.modelId??model.id,name:input.modelName??model.name,compat:{supportsStrictMode:input.strictSupport??true}};
 	const messages=input.messages.map(message=>message.role==="assistant"?{...message,api:activeModel.api,provider:activeModel.provider,model:activeModel.id}:message);
 	const result=await stream(activeModel,{messages},{...input.options,env:{AWS_BEDROCK_SKIP_AUTH:"1"},maxRetries:0,onPayload(p){
 		// D268: Go's JSON hook represents native Uint8Array values as base64.
@@ -61,6 +70,10 @@ for(const input of cases){
 		payload=JSON.stringify(p,(_key,value)=>value instanceof Uint8Array?Buffer.from(value.buffer,value.byteOffset,value.byteLength).toString("base64"):value);
 		return input.replacement;
 	}}).result();
+	if(input.expectError){
+		if(body!==undefined||payload!==undefined||!result.errorMessage)throw Error("strict requirement did not fail before hooks/HTTP");
+		fixtures.push({...input,messages,error:result.errorMessage});continue;
+	}
 	if(body===undefined||result.errorMessage!=="fixture-captured")throw Error(result.errorMessage??"no capture");
 	fixtures.push({...input,messages,payload,path,body});
 }

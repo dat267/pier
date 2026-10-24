@@ -295,9 +295,9 @@ project and location were supplied. The old test expectation was corrected
 against captured upstream paths. Advanced SDK-only hook fields are not claimed
 exhaustively ported.
 
-The Mistral pass executes the pinned `mistral-conversations.ts` stream for four
+The Mistral pass executes the pinned `mistral-conversations.ts` stream for five
 Node-generated fixtures (minimal, image/tool transcript with strict schemas,
-payload replacement and named tool choice). Public Go-stream tests compare the
+payload replacement, named tool choice and a required-strict schema error). Public Go-stream tests compare the
 hook input, request path and body byte for byte. Fixes retain JS assignment and
 schema-property order, rename image/document content keys to their wire forms,
 keep hook-supplied extras, and translate nested response-format schemas
@@ -310,9 +310,12 @@ options through the shared stream, use Azure's strict-tool default and cache-key
 rules, avoid OpenAI-only cache-retention fields, and preserve raw replacement
 members in the shared Responses hook instead of silently dropping them through
 a typed decoder. Hook inputs, paths, API versions and bodies are byte-compared.
-The Bedrock pass adds seven Node-generated AWS SDK captures: minimal and
+The Bedrock pass adds ten Node-generated AWS SDK captures: minimal and
 configured tools, signed thinking, payload/model replacement, binary content,
-Nova defaults and adaptive thinking. A request-only Smithy shape table generated
+Nova defaults, adaptive thinking and required-strict validation (unsupported,
+invalid schema and disabled tools). Required strict-sampling failures now stop
+both Mistral and Bedrock before payload hooks or HTTP instead of silently
+falling back to unconstrained tools. A request-only Smithy shape table generated
 by `scripts/gen_bedrock_wire.mjs` supplies modeled member order and field
 projection. The HTTP body no longer includes the path-bound `modelId`, unknown
 modeled fields are filtered like the SDK, and path labels use the SDK's percent
@@ -324,7 +327,7 @@ The earlier test expecting `modelId` in the body was corrected against actual
 SDK captures. Only the recorded hook view normalizes native binary values to
 Go's base64 JSON representation (D268); HTTP bodies are compared unchanged.
 Map-backed sampling params and native Bedrock metadata retain the documented
-D267 ordering limit. These 30 Google/Vertex, Mistral, Azure and Bedrock fixtures
+D267 ordering limit. These 34 Google/Vertex, Mistral, Azure and Bedrock fixtures
 cover the listed paths, not every optional SDK field or provider behavior.
 
 Remaining v1.4.0 items, grouped by why they are not in this tree:

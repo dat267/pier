@@ -20,15 +20,17 @@ func TestBedrockRequestsMatchSDKWire(t *testing.T) {
 		t.Fatal(err)
 	}
 	var fixtures []struct {
-		Name        string            `json:"name"`
-		ModelID     string            `json:"modelId"`
-		ModelName   string            `json:"modelName"`
-		Messages    []json.RawMessage `json:"messages"`
-		Options     BedrockOptions    `json:"options"`
-		Replacement json.RawMessage   `json:"replacement"`
-		Payload     string            `json:"payload"`
-		Path        string            `json:"path"`
-		Body        string            `json:"body"`
+		Name          string            `json:"name"`
+		StrictSupport *bool             `json:"strictSupport"`
+		Error         string            `json:"error"`
+		ModelID       string            `json:"modelId"`
+		ModelName     string            `json:"modelName"`
+		Messages      []json.RawMessage `json:"messages"`
+		Options       BedrockOptions    `json:"options"`
+		Replacement   json.RawMessage   `json:"replacement"`
+		Payload       string            `json:"payload"`
+		Path          string            `json:"path"`
+		Body          string            `json:"body"`
 	}
 	if err := json.Unmarshal(data, &fixtures); err != nil {
 		t.Fatal(err)
@@ -50,7 +52,11 @@ func TestBedrockRequestsMatchSDKWire(t *testing.T) {
 				model.ID = fixture.ModelID
 				model.Name = fixture.ModelName
 			}
-			model.Compat = &ModelCompat{Bedrock: &BedrockCompat{SupportsStrictMode: new(true)}}
+			strictSupport := true
+			if fixture.StrictSupport != nil {
+				strictSupport = *fixture.StrictSupport
+			}
+			model.Compat = &ModelCompat{Bedrock: &BedrockCompat{SupportsStrictMode: &strictSupport}}
 			var messages []Message
 			for _, raw := range fixture.Messages {
 				message, err := UnmarshalMessage(raw)
@@ -66,6 +72,19 @@ func TestBedrockRequestsMatchSDKWire(t *testing.T) {
 			result, err := StreamBedrockConverse(model, TranscriptContext{Messages: messages}, &options).Result(context.Background())
 			if err != nil {
 				t.Fatal(err)
+			}
+			if fixture.Error != "" {
+				if result.StopReason != StopError || result.ErrorMessage == nil || *result.ErrorMessage != fixture.Error {
+					t.Fatalf("result = %+v, want error %q", result, fixture.Error)
+				}
+				select {
+				case body := <-bodies:
+					t.Fatalf("invalid strict requirement sent an HTTP request: %s", body)
+				case payload := <-payloads:
+					t.Fatalf("invalid strict requirement reached the hook: %s", payload)
+				default:
+				}
+				return
 			}
 			if result.StopReason != StopStop {
 				t.Fatalf("stopReason = %s, error = %v", result.StopReason, result.ErrorMessage)
