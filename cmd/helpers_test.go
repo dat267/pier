@@ -4,9 +4,16 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/coding"
 )
+
+// childProcessTimeout bounds a test that spawns this binary as a child. It is a
+// hang guard, not a performance budget: the child is race-instrumented and
+// shares the machine with every other package under `go test -race ./...`, so a
+// short guard fails on load rather than on a real hang.
+const childProcessTimeout = 30 * time.Second
 
 // TestExecutableName derives the display name from the invoked binary, falling
 // back to the product name (main.ts's executable name).

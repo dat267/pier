@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/dat267/pier/coding"
 )
@@ -56,7 +55,7 @@ func TestPrintFailureReturnsThroughCommandCleanup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), childProcessTimeout)
 	defer cancel()
 	command := exec.CommandContext(ctx, binary, "-test.run=^TestPrintFailureReturnsThroughCommandCleanup$")
 	command.Dir = t.TempDir()
@@ -83,7 +82,7 @@ func TestNonTTYStartsPrintMode(t *testing.T) {
 	isolatedAgentDir(t)
 	t.Setenv("TMPDIR", t.TempDir())
 	t.Setenv("PIER_PRINT_MODE_TEST_CHILD", "1")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), childProcessTimeout)
 	defer cancel()
 	command := exec.CommandContext(ctx, binary, "-test.run=^TestNonTTYStartsPrintMode$")
 	command.Dir = t.TempDir()

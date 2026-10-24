@@ -14,7 +14,6 @@ import (
 	"strings"
 	"syscall"
 	"testing"
-	"time"
 
 	"github.com/dat267/pier/coding"
 )
@@ -52,7 +51,7 @@ func TestRPCSignalUnwinds(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), childProcessTimeout)
 			defer cancel()
 			command := exec.CommandContext(ctx, binary, "-test.run=^TestRPCSignalUnwinds$")
 			command.Dir = t.TempDir()
@@ -158,7 +157,9 @@ func TestRPCStartsHeadlessly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	// Hang guard only: the child is a race-instrumented copy of this binary and
+	// shares the machine with every other package under `go test -race ./...`.
+	ctx, cancel := context.WithTimeout(context.Background(), childProcessTimeout)
 	defer cancel()
 	command := exec.CommandContext(ctx, binary, "-test.run=^TestRPCStartsHeadlessly$")
 	command.Dir = t.TempDir()
@@ -203,7 +204,7 @@ func TestRPCNewSessionCLI(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), childProcessTimeout)
 	defer cancel()
 	command := exec.CommandContext(ctx, binary, "-test.run=^TestRPCNewSessionCLI$")
 	command.Dir = t.TempDir()
@@ -268,7 +269,7 @@ func TestRPCExportHTMLCLI(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), childProcessTimeout)
 	defer cancel()
 	command := exec.CommandContext(ctx, binary, "-test.run=^TestRPCExportHTMLCLI$")
 	command.Dir = dir

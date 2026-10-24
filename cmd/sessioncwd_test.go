@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 )
 
 // main.ts at pi v1.0.2 passes process.cwd() to SessionManager.continueRecent.
@@ -24,7 +23,7 @@ func TestContinueCLIUsesPhysicalWorkingDirectory(t *testing.T) {
 		t.Skipf("directory symlinks unavailable: %v", err)
 	}
 	source := makeSessionFile(t, physical)
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), childProcessTimeout)
 	defer cancel()
 	command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestContinueCLIHelper$")
 	command.Dir = logical
