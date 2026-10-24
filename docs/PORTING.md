@@ -283,7 +283,8 @@ hook input, request path and HTTP body byte for byte. Eleven cases cover minimal
 and configured requests, signed tool calls with images, signed empty
 text/thinking parts, null tool arguments, model/config replacement, scalar
 generation controls, and additional SDK config fields (`safetySettings`,
-`cachedContent`, `mediaResolution`, `speechConfig`, Vertex `routingConfig`,
+`cachedContent`, `mediaResolution`, `speechConfig`, `serviceTier`, Vertex
+`routingConfig`,
 `modelSelectionConfig`, `labels`, `audioTimestamp`, `modelArmorConfig`,
 `responseSchema`, `audioTranscriptionConfig`, `imageConfig`, and Developer API
 `enableEnhancedCivicAnswers`). The port emits SDK content/field order, the

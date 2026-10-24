@@ -263,6 +263,7 @@
         }
       ],
       "config": {
+        "serviceTier": "FLEX",
         "safetySettings": [
           {
             "category": "HARM_CATEGORY_HATE_SPEECH",
@@ -277,7 +278,7 @@
     },
     "payload": "{\"model\":\"gemini-3-pro\",\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"hello\"}]}],\"config\":{}}",
     "path": "/v1/models/gemini-3-pro:streamGenerateContent",
-    "body": "{\"contents\":[{\"parts\":[{\"text\":\"hello\"}],\"role\":\"user\"}],\"safetySettings\":[{\"category\":\"HARM_CATEGORY_HATE_SPEECH\",\"threshold\":\"BLOCK_NONE\"}],\"generationConfig\":{\"mediaResolution\":\"MEDIA_RESOLUTION_HIGH\",\"speechConfig\":{\"languageCode\":\"en-US\"}}}"
+    "body": "{\"contents\":[{\"parts\":[{\"text\":\"hello\"}],\"role\":\"user\"}],\"serviceTier\":\"FLEX\",\"safetySettings\":[{\"category\":\"HARM_CATEGORY_HATE_SPEECH\",\"threshold\":\"BLOCK_NONE\"}],\"generationConfig\":{\"mediaResolution\":\"MEDIA_RESOLUTION_HIGH\",\"speechConfig\":{\"languageCode\":\"en-US\"}}}"
   },
   {
     "api": "google-generative-ai",
@@ -688,6 +689,7 @@
         }
       ],
       "config": {
+        "serviceTier": "FLEX",
         "safetySettings": [
           {
             "category": "HARM_CATEGORY_HATE_SPEECH",
@@ -702,7 +704,7 @@
     },
     "payload": "{\"model\":\"gemini-3-pro\",\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"hello\"}]}],\"config\":{}}",
     "path": "/v1/publishers/google/models/gemini-3-pro:streamGenerateContent",
-    "body": "{\"contents\":[{\"parts\":[{\"text\":\"hello\"}],\"role\":\"user\"}],\"safetySettings\":[{\"category\":\"HARM_CATEGORY_HATE_SPEECH\",\"threshold\":\"BLOCK_NONE\"}],\"generationConfig\":{\"mediaResolution\":\"MEDIA_RESOLUTION_HIGH\",\"speechConfig\":{\"languageCode\":\"en-US\"}}}"
+    "body": "{\"contents\":[{\"parts\":[{\"text\":\"hello\"}],\"role\":\"user\"}],\"serviceTier\":\"FLEX\",\"safetySettings\":[{\"category\":\"HARM_CATEGORY_HATE_SPEECH\",\"threshold\":\"BLOCK_NONE\"}],\"generationConfig\":{\"mediaResolution\":\"MEDIA_RESOLUTION_HIGH\",\"speechConfig\":{\"languageCode\":\"en-US\"}}}"
   },
   {
     "api": "google-vertex",

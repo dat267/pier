@@ -75,6 +75,7 @@ const cases = [{
 	replacement: {
 		model: "gemini-3-pro", contents: [{ role: "user", parts: [{ text: "hello" }] }],
 		config: {
+			serviceTier: "FLEX",
 			safetySettings: [{ category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" }],
 			mediaResolution: "MEDIA_RESOLUTION_HIGH",
 			speechConfig: { languageCode: "en-US" },

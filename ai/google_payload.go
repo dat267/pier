@@ -115,6 +115,9 @@ func googleSDKRequest(raw json.RawMessage, api Api) (string, []byte, error) {
 	}
 	var body orderedJSONFields
 	body.set("contents", contents.fields["contents"])
+	if value, ok := payload.Config["serviceTier"]; ok && strings.TrimSpace(string(value)) != "null" {
+		body.set("serviceTier", value)
+	}
 	if system, ok := payload.Config["systemInstruction"]; ok && strings.TrimSpace(string(system)) != "null" {
 		var text string
 		if jsonUnmarshalStrict(system, &text) == nil {
