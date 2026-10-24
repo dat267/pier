@@ -12,6 +12,7 @@ const cases=[
 	{name:"anthropic-messages-replacement",api:"anthropic-messages",id:"claude-sonnet-4-5",provider:"anthropic",baseUrl:"https://invalid.test",messages:[toolMessage,{role:"user",content:"hello",timestamp:2}],replacement:{model:"replacement",messages:[{role:"user",content:"changed"}],max_tokens:8,stream:false,betas:["custom-beta","custom-two"],metadata,custom}},
 	{name:"anthropic-messages-default",api:"anthropic-messages",id:"claude-sonnet-4-5",provider:"anthropic",baseUrl:"https://invalid.test",messages:[toolMessage,{role:"user",content:"hello",timestamp:2}]},
 	{name:"anthropic-messages-beta-header",api:"anthropic-messages",id:"claude-sonnet-4-5",provider:"anthropic",baseUrl:"https://invalid.test",messages:[toolMessage,{role:"user",content:"hello",timestamp:2}],compat:{supportsEagerToolInputStreaming:false}},
+	{name:"anthropic-messages-oauth",api:"anthropic-messages",id:"claude-sonnet-4-5",provider:"anthropic",baseUrl:"https://invalid.test",messages:[toolMessage,{role:"user",content:"hello",timestamp:2}],oauth:true},
 	{name:"openai-codex-responses-replacement",api:"openai-codex-responses",id:"gpt-5-codex",provider:"openai-codex",baseUrl:"https://invalid.test/v1",messages:[{role:"user",content:"hello",timestamp:1}],replacement:{model:"replacement",input:[{role:"user",content:"changed"}],stream:true,store:false,metadata,custom}},
 ];
 const fixtures=[];
@@ -31,12 +32,12 @@ for(const input of cases){
 	const model={api:input.api,id:input.id,provider:input.provider,baseUrl:input.baseUrl,reasoning:false,maxTokens:8192,contextWindow:128000,input:["text","image"],cost:{input:0,output:0,cacheRead:0,cacheWrite:0}};
 	if(input.compat)model.compat=input.compat;
 	const messages=input.messages;
-	const apiKey=input.api==="openai-codex-responses"?`h.${Buffer.from(JSON.stringify({"https://api.openai.com/auth":{chatgpt_account_id:"acct"}})).toString("base64url")}.s`:"token";
+	const apiKey=input.oauth?"sk-ant-oat01-token":input.api==="openai-codex-responses"?`h.${Buffer.from(JSON.stringify({"https://api.openai.com/auth":{chatgpt_account_id:"acct"}})).toString("base64url")}.s`:"token";
 	const options={apiKey,env:{},transport:"sse"};
 	if(input.replacement)options.onPayload=()=>input.replacement;
 	const result=await stream(model,{messages},options).result();
 	if(result.errorMessage||typeof body!=="string")throw Error(`${input.name}: ${result.errorMessage??"no request"}`);
-	const fixture={name:input.name,model,messages,payload,path,httpHeaders,body};
+	const fixture={name:input.name,model,messages,apiKey,payload,path,httpHeaders,body};
 	if(input.replacement)fixture.replacement=input.replacement;
 	fixtures.push(fixture);
 }

@@ -27,6 +27,7 @@
         "timestamp": 1
       }
     ],
+    "apiKey": "token",
     "path": "/v1/chat/completions",
     "httpHeaders": {},
     "body": "{\"model\":\"replacement\",\"messages\":[{\"role\":\"user\",\"content\":\"changed\"}],\"stream\":true,\"metadata\":{\"z\":\"1\",\"a\":\"2\"},\"custom\":{\"z\":1,\"a\":2}}",
@@ -103,6 +104,7 @@
         "timestamp": 2
       }
     ],
+    "apiKey": "token",
     "path": "/v1/messages",
     "httpHeaders": {
       "anthropic-beta": "custom-beta,custom-two"
@@ -186,6 +188,7 @@
         "timestamp": 2
       }
     ],
+    "apiKey": "token",
     "path": "/v1/messages",
     "httpHeaders": {},
     "body": "{\"model\":\"claude-sonnet-4-5\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"hello\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"max_tokens\":8192,\"stream\":true,\"system\":[{\"type\":\"text\",\"text\":\"system\",\"cache_control\":{\"type\":\"ephemeral\"}}],\"tools\":[{\"name\":\"lookup\",\"description\":\"Look up\",\"eager_input_streaming\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"z\":{\"type\":\"string\"},\"a\":{\"type\":\"number\"}},\"required\":[\"z\",\"a\"]},\"cache_control\":{\"type\":\"ephemeral\"}}]}"
@@ -247,11 +250,73 @@
         "timestamp": 2
       }
     ],
+    "apiKey": "token",
     "path": "/v1/messages",
     "httpHeaders": {
       "anthropic-beta": "fine-grained-tool-streaming-2025-05-14"
     },
     "body": "{\"model\":\"claude-sonnet-4-5\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"hello\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"max_tokens\":8192,\"stream\":true,\"system\":[{\"type\":\"text\",\"text\":\"system\",\"cache_control\":{\"type\":\"ephemeral\"}}],\"tools\":[{\"name\":\"lookup\",\"description\":\"Look up\",\"input_schema\":{\"type\":\"object\",\"properties\":{\"z\":{\"type\":\"string\"},\"a\":{\"type\":\"number\"}},\"required\":[\"z\",\"a\"]},\"cache_control\":{\"type\":\"ephemeral\"}}]}"
+  },
+  {
+    "name": "anthropic-messages-oauth",
+    "model": {
+      "api": "anthropic-messages",
+      "id": "claude-sonnet-4-5",
+      "provider": "anthropic",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "maxTokens": 8192,
+      "contextWindow": 128000,
+      "input": [
+        "text",
+        "image"
+      ],
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "messages": [
+      {
+        "role": "system",
+        "content": "system",
+        "toolsAdded": [
+          {
+            "name": "lookup",
+            "description": "Look up",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "z": {
+                  "type": "string"
+                },
+                "a": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "z",
+                "a"
+              ]
+            }
+          }
+        ],
+        "timestamp": 1
+      },
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 2
+      }
+    ],
+    "apiKey": "sk-ant-oat01-token",
+    "path": "/v1/messages",
+    "httpHeaders": {
+      "anthropic-beta": "claude-code-20250219,oauth-2025-04-20"
+    },
+    "body": "{\"model\":\"claude-sonnet-4-5\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"hello\",\"cache_control\":{\"type\":\"ephemeral\"}}]}],\"max_tokens\":8192,\"stream\":true,\"system\":[{\"type\":\"text\",\"text\":\"You are Claude Code, Anthropic's official CLI for Claude.\",\"cache_control\":{\"type\":\"ephemeral\"}},{\"type\":\"text\",\"text\":\"system\",\"cache_control\":{\"type\":\"ephemeral\"}}],\"tools\":[{\"name\":\"lookup\",\"description\":\"Look up\",\"eager_input_streaming\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"z\":{\"type\":\"string\"},\"a\":{\"type\":\"number\"}},\"required\":[\"z\",\"a\"]},\"cache_control\":{\"type\":\"ephemeral\"}}]}"
   },
   {
     "name": "openai-codex-responses-replacement",
@@ -281,6 +346,7 @@
         "timestamp": 1
       }
     ],
+    "apiKey": "h.eyJodHRwczovL2FwaS5vcGVuYWkuY29tL2F1dGgiOnsiY2hhdGdwdF9hY2NvdW50X2lkIjoiYWNjdCJ9fQ.s",
     "path": "/v1/codex/responses",
     "httpHeaders": {
       "originator": "pi",

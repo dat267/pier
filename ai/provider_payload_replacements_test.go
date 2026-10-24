@@ -29,6 +29,7 @@ func TestProviderPayloadReplacementsMatchUpstream(t *testing.T) {
 		Name        string            `json:"name"`
 		Model       Model             `json:"model"`
 		Messages    []json.RawMessage `json:"messages"`
+		APIKey      string            `json:"apiKey"`
 		Replacement json.RawMessage   `json:"replacement"`
 		HTTPHeaders map[string]string `json:"httpHeaders"`
 		Body        string            `json:"body"`
@@ -74,7 +75,7 @@ func TestProviderPayloadReplacementsMatchUpstream(t *testing.T) {
 				}
 				messages = append(messages, m)
 			}
-			options := StreamOptions{APIKey: "token", Env: ProviderEnv{}}
+			options := StreamOptions{APIKey: fixture.APIKey, Env: ProviderEnv{}}
 			if len(fixture.Replacement) > 0 {
 				replacement := fixture.Replacement
 				options.OnPayload = func(json.RawMessage, *Model) json.RawMessage { return replacement }
