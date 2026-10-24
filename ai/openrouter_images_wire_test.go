@@ -69,14 +69,29 @@ func TestOpenRouterImagesWireMatchesUpstream(t *testing.T) {
 					input = append(input, ImageContent{Data: probe.Data, MimeType: probe.MimeType})
 				}
 			}
+			var payloadModel, responseModel *Model
 			options := &ImagesOptions{StreamOptions: StreamOptions{APIKey: "token"}}
-			if len(fixture.Replacement) > 0 {
-				replacement := fixture.Replacement
-				options.OnPayload = func(json.RawMessage, *Model) json.RawMessage { return replacement }
+			options.OnPayload = func(_ json.RawMessage, hooked *Model) json.RawMessage {
+				payloadModel = hooked
+				if len(fixture.Replacement) == 0 {
+					return nil
+				}
+				return fixture.Replacement
 			}
+			options.OnResponse = func(ProviderResponse, *Model) {}
+			options.OnResponse = func(_ ProviderResponse, hooked *Model) { responseModel = hooked }
 			result := OpenRouterImages{}.GenerateImages(&model, ImagesContext{Input: input}, options)
 			if result.StopReason != ImagesStopStop {
 				t.Fatalf("result = %+v", result)
+			}
+			for name, hooked := range map[string]*Model{"onPayload": payloadModel, "onResponse": responseModel} {
+				if hooked == nil {
+					t.Fatalf("%s model was not passed", name)
+				}
+				if hooked.ID != model.ID || hooked.Name != model.Name || hooked.API != model.API ||
+					hooked.Provider != model.Provider || hooked.BaseURL != model.BaseURL {
+					t.Errorf("%s model = %+v, want %+v", name, hooked, model)
+				}
 			}
 			if got := <-paths; got != fixture.Path {
 				t.Errorf("path = %s, want %s", got, fixture.Path)

@@ -37,12 +37,14 @@ func (OpenRouterImages) GenerateImages(model *ImagesModel, context ImagesContext
 		return output
 	}
 
+	// Upstream passes the image model itself to both hooks.
+	hookModel := &Model{
+		ID: model.ID, Name: model.Name, API: model.API, Provider: model.Provider, BaseURL: model.BaseURL,
+	}
 	var params any = buildOpenRouterImagesParams(model, context)
 	if options.OnPayload != nil {
 		payload := mustMarshalJSON(params)
-		if next := options.OnPayload(payload, &Model{
-			ID: model.ID, Name: model.Name, API: model.API, Provider: model.Provider, BaseURL: model.BaseURL,
-		}); next != nil {
+		if next := options.OnPayload(payload, hookModel); next != nil {
 			// Upstream sends a replacement verbatim; a map round trip would
 			// re-sort every member and drop unknown nested order.
 			params = next
@@ -106,8 +108,7 @@ func (OpenRouterImages) GenerateImages(model *ImagesModel, context ImagesContext
 		for name, values := range response.Header {
 			headers[strings.ToLower(name)] = strings.Join(values, ", ")
 		}
-		options.OnResponse(ProviderResponse{Status: response.StatusCode, Headers: headers},
-			&Model{ID: model.ID, Provider: model.Provider, API: model.API})
+		options.OnResponse(ProviderResponse{Status: response.StatusCode, Headers: headers}, hookModel)
 	}
 
 	raw, _ := io.ReadAll(io.LimitReader(response.Body, 8<<20))
