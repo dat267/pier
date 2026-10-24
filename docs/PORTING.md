@@ -324,8 +324,9 @@ options through the shared stream, use Azure's strict-tool default and cache-key
 rules, avoid OpenAI-only cache-retention fields, and preserve raw replacement
 members in the shared Responses hook instead of silently dropping them through
 a typed decoder. Hook inputs, paths, API versions and bodies are byte-compared.
-The Bedrock pass adds ten Node-generated AWS SDK captures: minimal and
-configured tools, signed thinking, payload/model replacement, binary content,
+The Bedrock pass adds eleven Node-generated AWS SDK captures: minimal and
+configured tools, request-metadata order, signed thinking, payload/model
+replacement, binary content,
 Nova defaults, adaptive thinking and required-strict validation (unsupported,
 invalid schema and disabled tools). Required strict-sampling failures now stop
 both Mistral and Bedrock before payload hooks or HTTP instead of silently
@@ -341,7 +342,7 @@ The earlier test expecting `modelId` in the body was corrected against actual
 SDK captures. Only the recorded hook view normalizes native binary values to
 Go's base64 JSON representation (D268); HTTP bodies are compared unchanged.
 Map-backed sampling params and native Bedrock metadata retain the documented
-D267 ordering limit. These 34 Google/Vertex, Mistral, Azure and Bedrock fixtures
+D267 ordering limit. These 44 Google/Vertex, Mistral, Azure and Bedrock fixtures
 cover the listed paths, not every optional SDK field or provider behavior.
 
 Eleven additional upstream captures cover raw `OnPayload` replacements for
