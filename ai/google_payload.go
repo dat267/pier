@@ -134,7 +134,7 @@ func googleValidateReplacements(config map[string]json.RawMessage, api Api) erro
 // Developer API serializer does: only aspectRatio and imageSize survive, and
 // the Vertex-only members are rejected when present.
 func googleDeveloperImageConfig(raw json.RawMessage) (json.RawMessage, error) {
-	source, err := decodeSchemaNode(raw)
+	source, err := decodeOrderedJSONFields(raw)
 	if err != nil {
 		return nil, err
 	}
@@ -180,12 +180,12 @@ func googleSDKRequest(raw json.RawMessage, api Api) (string, []byte, error) {
 	if err != nil {
 		return "", nil, err
 	}
-	contents, err := decodeSchemaNode(encoded)
+	contents, err := decodeOrderedJSONFields(encoded)
 	if err != nil {
 		return "", nil, err
 	}
 	var body orderedJSONFields
-	body.set("contents", contents.fields["contents"])
+	body.set("contents", contents.values["contents"])
 	if value, ok := payload.Config["serviceTier"]; ok && strings.TrimSpace(string(value)) != "null" {
 		body.set("serviceTier", value)
 	}
@@ -268,7 +268,7 @@ func googleSDKRequest(raw json.RawMessage, api Api) (string, []byte, error) {
 }
 
 func googleVertexImageConfig(raw json.RawMessage) (json.RawMessage, error) {
-	source, err := decodeSchemaNode(raw)
+	source, err := decodeOrderedJSONFields(raw)
 	if err != nil {
 		return nil, err
 	}

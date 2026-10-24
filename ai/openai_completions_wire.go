@@ -3,6 +3,7 @@ package ai
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"strings"
 )
 
@@ -342,13 +343,43 @@ type OpenAIReasoningParam struct {
 	Enabled *bool   `json:"enabled,omitempty"`
 }
 
-// orderedJSONFields emits object members in first-assignment order, the way a
+// orderedJSONFields is a JSON object that keeps member order, the way a
 // JavaScript object literal plus later property assignments does: replacing an
-// existing member keeps its position, a new member appends. Upstream builds
-// every request params object this way, and the payloads are byte-compared.
+// existing member keeps its position, a new member appends after the existing
+// array-index keys. Upstream builds every request params object and rewrites
+// schemas this way, and the payloads are byte-compared.
 type orderedJSONFields struct {
 	keys   []string
 	values map[string]json.RawMessage
+}
+
+// decodeOrderedJSONFields decodes one JSON object, keeping its member order.
+func decodeOrderedJSONFields(data []byte) (*orderedJSONFields, error) {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	tok, err := dec.Token()
+	if err != nil {
+		return nil, err
+	}
+	if delim, ok := tok.(json.Delim); !ok || delim != '{' {
+		return nil, fmt.Errorf("not an object")
+	}
+	fields := &orderedJSONFields{values: map[string]json.RawMessage{}}
+	for dec.More() {
+		tok, err := dec.Token()
+		if err != nil {
+			return nil, err
+		}
+		key, ok := tok.(string)
+		if !ok {
+			return nil, fmt.Errorf("not an object")
+		}
+		var raw json.RawMessage
+		if err := dec.Decode(&raw); err != nil {
+			return nil, err
+		}
+		fields.set(key, raw)
+	}
+	return fields, nil
 }
 
 func (o *orderedJSONFields) set(key string, value json.RawMessage) {
@@ -356,7 +387,7 @@ func (o *orderedJSONFields) set(key string, value json.RawMessage) {
 		o.values = map[string]json.RawMessage{}
 	}
 	if _, exists := o.values[key]; !exists {
-		o.keys = append(o.keys, key)
+		o.keys = appendJSObjectKey(o.keys, key)
 	}
 	o.values[key] = value
 }
@@ -368,6 +399,25 @@ func (o *orderedJSONFields) setAny(key string, value any) error {
 	}
 	o.set(key, enc)
 	return nil
+}
+
+func (o *orderedJSONFields) raw(key string) (json.RawMessage, bool) {
+	value, ok := o.values[key]
+	return value, ok
+}
+
+// remove deletes a member while keeping the remaining declaration order.
+func (o *orderedJSONFields) remove(key string) {
+	if _, exists := o.values[key]; !exists {
+		return
+	}
+	delete(o.values, key)
+	for index, existing := range o.keys {
+		if existing == key {
+			o.keys = append(o.keys[:index], o.keys[index+1:]...)
+			return
+		}
+	}
 }
 
 func (o *orderedJSONFields) marshal() ([]byte, error) {

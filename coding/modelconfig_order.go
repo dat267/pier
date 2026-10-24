@@ -1,7 +1,6 @@
 package coding
 
 import (
-	"bytes"
 	"encoding/json"
 )
 
@@ -42,75 +41,30 @@ func modelConfigNestedObjectKeys(raw json.RawMessage) map[string][]string {
 }
 
 func modelConfigProperty(data []byte, property string) json.RawMessage {
-	dec := json.NewDecoder(bytes.NewReader(data))
-	if _, err := dec.Token(); err != nil {
+	keys, values, err := readJSONObjectOrdered(data)
+	if err != nil {
 		return nil
 	}
-	var found json.RawMessage
-	for dec.More() {
-		token, err := dec.Token()
-		if err != nil {
-			return nil
-		}
-		key, ok := token.(string)
-		if !ok {
-			return nil
-		}
-		var value json.RawMessage
-		if err := dec.Decode(&value); err != nil {
-			return nil
-		}
+	for _, key := range keys {
 		if key == property {
-			found = value
+			return values[key]
 		}
 	}
-	return found
+	return nil
 }
 
 func modelConfigRawObjectValues(raw []byte) map[string]json.RawMessage {
-	dec := json.NewDecoder(bytes.NewReader(raw))
-	if token, err := dec.Token(); err != nil || token != json.Delim('{') {
+	_, values, err := readJSONObjectOrdered(raw)
+	if err != nil {
 		return nil
-	}
-	values := make(map[string]json.RawMessage)
-	for dec.More() {
-		token, err := dec.Token()
-		if err != nil {
-			return nil
-		}
-		key, ok := token.(string)
-		if !ok {
-			return nil
-		}
-		var value json.RawMessage
-		if err := dec.Decode(&value); err != nil {
-			return nil
-		}
-		values[key] = value
 	}
 	return values
 }
 
 func modelConfigObjectKeys(raw []byte) []string {
-	dec := json.NewDecoder(bytes.NewReader(raw))
-	if token, err := dec.Token(); err != nil || token != json.Delim('{') {
+	keys, _, err := readJSONObjectOrdered(raw)
+	if err != nil {
 		return nil
-	}
-	var keys []string
-	for dec.More() {
-		token, err := dec.Token()
-		if err != nil {
-			return nil
-		}
-		key, ok := token.(string)
-		if !ok {
-			return nil
-		}
-		keys = append(keys, key)
-		var value json.RawMessage
-		if err := dec.Decode(&value); err != nil {
-			return nil
-		}
 	}
 	return keys
 }

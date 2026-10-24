@@ -284,7 +284,7 @@ type anthropicClientOptions struct {
 // SDK's beta.messages.create destructures `betas` (and the profile/workspace
 // ids) out of the body before POSTing; pi puts its beta feature list there.
 func splitAnthropicBetaParams(body []byte) ([]byte, []string, error) {
-	node, err := decodeSchemaNode(body)
+	node, err := decodeOrderedJSONFields(body)
 	if err != nil {
 		return body, nil, nil
 	}
@@ -297,7 +297,7 @@ func splitAnthropicBetaParams(body []byte) ([]byte, []string, error) {
 		return nil, nil, err
 	}
 	node.remove("betas")
-	encoded, err := node.encode()
+	encoded, err := node.marshal()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -511,12 +511,12 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 		applyPayload := func(params *AnthropicMessageCreateParams) (any, error) {
 			if options.OnPayload != nil {
 				if next := options.OnPayload(mustMarshalJSON(params), model); next != nil {
-					replaced, err := decodeSchemaNode(next)
+					replaced, err := decodeOrderedJSONFields(next)
 					if err != nil {
 						return nil, err
 					}
 					replaced.set("stream", json.RawMessage("true"))
-					encoded, err := replaced.encode()
+					encoded, err := replaced.marshal()
 					return json.RawMessage(encoded), err
 				}
 			}

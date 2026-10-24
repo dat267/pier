@@ -97,14 +97,14 @@ func projectBedrockJSON(raw json.RawMessage, shape string, hook bool) (json.RawM
 		}
 		return MarshalJSON(list)
 	}
-	node, err := decodeSchemaNode(raw)
+	node, err := decodeOrderedJSONFields(raw)
 	if err != nil {
 		return nil, err
 	}
 	var fields orderedJSONFields
 	if strings.HasPrefix(shape, "{}") {
 		for _, key := range node.keys {
-			value, err := projectBedrockJSON(node.fields[key], shape[2:], hook)
+			value, err := projectBedrockJSON(node.values[key], shape[2:], hook)
 			if err != nil {
 				return nil, err
 			}
@@ -124,7 +124,7 @@ func projectBedrockJSON(raw json.RawMessage, shape string, hook bool) (json.RawM
 		}
 	}
 	for _, member := range members {
-		value, exists := node.fields[member.name]
+		value, exists := node.values[member.name]
 		if !exists || string(value) == "null" {
 			continue
 		}

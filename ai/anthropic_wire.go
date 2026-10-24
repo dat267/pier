@@ -750,18 +750,18 @@ func legacyInputSchema(parameters json.RawMessage) (json.RawMessage, error) {
 // overlaySchema merges a strict parameters object with the legacy fields,
 // legacy winning (upstream spread order).
 func overlaySchema(parameters, legacy json.RawMessage) (json.RawMessage, error) {
-	p, err := decodeSchemaNode(parameters)
+	p, err := decodeOrderedJSONFields(parameters)
 	if err != nil {
 		return nil, err
 	}
-	l, err := decodeSchemaNode(legacy)
+	l, err := decodeOrderedJSONFields(legacy)
 	if err != nil {
 		return nil, err
 	}
 	for _, key := range l.keys {
-		p.set(key, l.fields[key])
+		p.set(key, l.values[key])
 	}
-	return p.encode()
+	return p.marshal()
 }
 
 // GetBetaFeatures resolves the anthropic-beta list (port of getBetaFeatures).

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"strings"
 )
 
 // Identity is plain JSON upstream (utils/identity.ts). Keep its object order,
@@ -21,80 +20,37 @@ type identityJSONValue struct {
 }
 
 func decodeIdentityJSON(data []byte) ([]identityJSONField, error) {
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	token, err := decoder.Token()
+	object, err := decodeOrderedJSONFields(data)
 	if err != nil {
-		return nil, err
-	}
-	if token != json.Delim('{') {
 		return nil, fmt.Errorf("ai: client identity must be a JSON object")
 	}
-	keys := []string{}
-	values := map[string]json.RawMessage{}
-	for decoder.More() {
-		token, err := decoder.Token()
-		if err != nil {
-			return nil, err
-		}
-		key := token.(string)
-		var value json.RawMessage
-		if err := decoder.Decode(&value); err != nil {
-			return nil, err
-		}
-		if _, exists := values[key]; !exists {
-			keys = appendJSObjectKey(keys, key)
-		}
-		values[key] = value
-	}
-	if _, err := decoder.Token(); err != nil {
-		return nil, err
-	}
-	fields := make([]identityJSONField, 0, len(keys))
-	for _, key := range keys {
-		fields = append(fields, identityJSONField{key, values[key]})
+	fields := make([]identityJSONField, 0, len(object.keys))
+	for _, key := range object.keys {
+		fields = append(fields, identityJSONField{key: key, raw: object.values[key]})
 	}
 	return fields, nil
 }
 
+// marshalIdentityJSON re-emits a loaded identity object, applying the fields the
+// caller sets and dropping the ones it clears. Members the port does not model
+// keep their position, as JavaScript property assignment does.
 func marshalIdentityJSON(original []identityJSONField, fields ...identityJSONValue) ([]byte, error) {
-	keys := []string{}
-	values := map[string]json.RawMessage{}
+	var object orderedJSONFields
 	for _, field := range original {
-		keys = appendJSObjectKey(keys, field.key)
-		values[field.key] = field.raw
+		object.set(field.key, field.raw)
 	}
 	for _, field := range fields {
 		if !field.present {
-			delete(values, field.key)
+			object.remove(field.key)
 			continue
 		}
 		raw, err := MarshalJSON(field.value)
 		if err != nil {
 			return nil, err
 		}
-		if _, exists := values[field.key]; !exists {
-			keys = appendJSObjectKey(keys, field.key)
-		}
-		values[field.key] = raw
+		object.set(field.key, raw)
 	}
-	var out strings.Builder
-	out.WriteByte('{')
-	first := true
-	for _, key := range keys {
-		value, exists := values[key]
-		if !exists {
-			continue
-		}
-		if !first {
-			out.WriteByte(',')
-		}
-		first = false
-		out.Write(canonicalJSONString(key))
-		out.WriteByte(':')
-		out.Write(value)
-	}
-	out.WriteByte('}')
-	return []byte(out.String()), nil
+	return object.marshal()
 }
 
 func (a ClientAttribution) MarshalJSON() ([]byte, error) {

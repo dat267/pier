@@ -79,7 +79,7 @@ type imagesImageOutput struct {
 // MarshalJSON emits the upstream AssistantImages member order and includes the
 // output blocks (tagged `json:"-"` so the default encoder skips them).
 func (a AssistantImages) MarshalJSON() ([]byte, error) {
-	node := &schemaNode{fields: map[string]json.RawMessage{}}
+	node := &orderedJSONFields{values: map[string]json.RawMessage{}}
 	set := func(name string, value any) error {
 		raw, err := MarshalJSON(value)
 		if err != nil {
@@ -136,7 +136,7 @@ func (a AssistantImages) MarshalJSON() ([]byte, error) {
 			return nil, err
 		}
 	}
-	return node.encode()
+	return node.marshal()
 }
 
 func marshalImagesOutputContent(block Content) (json.RawMessage, error) {

@@ -18,82 +18,6 @@ var unsupportedStrictSchemaKeys = []string{
 	"contains", "prefixItems", "not", "if", "then", "else",
 }
 
-// schemaNode is a decoded JSON-schema object preserving key order for
-// property maps (Go maps would sort; use ordered maps).
-type schemaNode struct {
-	fields map[string]json.RawMessage
-	keys   []string
-}
-
-func decodeSchemaNode(data []byte) (*schemaNode, error) {
-	dec := json.NewDecoder(strings.NewReader(string(data)))
-	tok, err := dec.Token()
-	if err != nil {
-		return nil, err
-	}
-	if delim, ok := tok.(json.Delim); !ok || delim != '{' {
-		return nil, fmt.Errorf("not an object")
-	}
-	node := &schemaNode{fields: map[string]json.RawMessage{}}
-	for dec.More() {
-		tok, err := dec.Token()
-		if err != nil {
-			return nil, err
-		}
-		key := tok.(string)
-		var raw json.RawMessage
-		if err := dec.Decode(&raw); err != nil {
-			return nil, err
-		}
-		if _, seen := node.fields[key]; !seen {
-			node.keys = append(node.keys, key)
-		}
-		node.fields[key] = raw
-	}
-	return node, nil
-}
-
-func (n *schemaNode) encode() ([]byte, error) {
-	var buf []byte
-	buf = append(buf, '{')
-	for i, key := range n.keys {
-		if i > 0 {
-			buf = append(buf, ',')
-		}
-		keyEnc, _ := MarshalJSON(key)
-		buf = append(buf, keyEnc...)
-		buf = append(buf, ':')
-		buf = append(buf, n.fields[key]...)
-	}
-	return append(buf, '}'), nil
-}
-
-func (n *schemaNode) raw(key string) (json.RawMessage, bool) {
-	v, ok := n.fields[key]
-	return v, ok
-}
-
-func (n *schemaNode) set(key string, value json.RawMessage) {
-	if _, seen := n.fields[key]; !seen {
-		n.keys = append(n.keys, key)
-	}
-	n.fields[key] = value
-}
-
-// remove deletes a member while keeping the remaining declaration order.
-func (n *schemaNode) remove(key string) {
-	if _, seen := n.fields[key]; !seen {
-		return
-	}
-	delete(n.fields, key)
-	for i, existing := range n.keys {
-		if existing == key {
-			n.keys = append(n.keys[:i], n.keys[i+1:]...)
-			return
-		}
-	}
-}
-
 func schemaTypes(data json.RawMessage) []string {
 	var single string
 	if err := jsonUnmarshalStrict(data, &single); err == nil {
@@ -107,7 +31,7 @@ func schemaTypes(data json.RawMessage) []string {
 }
 
 func isStructuredSchema(data json.RawMessage) bool {
-	node, err := decodeSchemaNode(data)
+	node, err := decodeOrderedJSONFields(data)
 	if err != nil {
 		return false
 	}
@@ -126,7 +50,7 @@ func isStructuredSchema(data json.RawMessage) bool {
 }
 
 func schemaAllowsNull(data json.RawMessage) bool {
-	node, err := decodeSchemaNode(data)
+	node, err := decodeOrderedJSONFields(data)
 	if err != nil {
 		return false
 	}
@@ -195,7 +119,7 @@ var anthropicStrictStringFormats = map[string]bool{
 	"email": true, "hostname": true, "uri": true, "ipv4": true, "ipv6": true, "uuid": true,
 }
 
-func makeSchemaNodeStrict(node *schemaNode, check UnsupportedStrictSchemaKeywordCheck) error {
+func makeSchemaNodeStrict(node *orderedJSONFields, check UnsupportedStrictSchemaKeywordCheck) error {
 	for _, key := range unsupportedStrictSchemaKeys {
 		if _, ok := node.raw(key); ok {
 			return &strictSchemaError{msg: key + " schemas are unsupported"}
@@ -203,7 +127,7 @@ func makeSchemaNodeStrict(node *schemaNode, check UnsupportedStrictSchemaKeyword
 	}
 	if check != nil {
 		for _, key := range node.keys {
-			if check(key, node.fields[key]) {
+			if check(key, node.values[key]) {
 				return &strictSchemaError{msg: key + " is unsupported"}
 			}
 		}
@@ -298,7 +222,7 @@ func makeSchemaNodeStrict(node *schemaNode, check UnsupportedStrictSchemaKeyword
 	node.set("required", reqEnc)
 	node.set("additionalProperties", json.RawMessage("false"))
 	if hasProps {
-		propEnc, err := (&schemaNode{fields: properties, keys: orderedProps}).encode()
+		propEnc, err := (&orderedJSONFields{values: properties, keys: orderedProps}).marshal()
 		if err != nil {
 			return err
 		}
@@ -340,14 +264,14 @@ func orderedKeys(data json.RawMessage) []string {
 // through makeJsonSchemaNodeStrict directly, and only the tool's root schema
 // must be an object.
 func makeStrictSubSchemaValue(data json.RawMessage, check UnsupportedStrictSchemaKeywordCheck) (json.RawMessage, error) {
-	node, err := decodeSchemaNode(data)
+	node, err := decodeOrderedJSONFields(data)
 	if err != nil {
 		return nil, &strictSchemaError{msg: "boolean schemas are unsupported"}
 	}
 	if err := makeSchemaNodeStrict(node, check); err != nil {
 		return nil, err
 	}
-	enc, err := node.encode()
+	enc, err := node.marshal()
 	if err != nil {
 		return nil, err
 	}
@@ -360,7 +284,7 @@ func makeStrictSubSchema(data json.RawMessage, check UnsupportedStrictSchemaKeyw
 	if err != nil {
 		return nil, err
 	}
-	node, err := decodeSchemaNode(strict)
+	node, err := decodeOrderedJSONFields(strict)
 	if err != nil {
 		return nil, &strictSchemaError{msg: "root schema must have type object"}
 	}

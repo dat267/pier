@@ -478,7 +478,7 @@ func mistralWirePayload(payload any) (json.RawMessage, error) {
 	if err != nil {
 		return nil, err
 	}
-	wire, err := decodeSchemaNode(encoded)
+	wire, err := decodeOrderedJSONFields(encoded)
 	if err != nil {
 		return nil, err
 	}
@@ -499,27 +499,27 @@ func mistralWirePayload(payload any) (json.RawMessage, error) {
 		remapMistralProperty(wire, rename[0], rename[1])
 	}
 	var messages []json.RawMessage
-	if err := jsonUnmarshalStrict(wire.fields["messages"], &messages); err != nil {
+	if err := jsonUnmarshalStrict(wire.values["messages"], &messages); err != nil {
 		return nil, err
 	}
 	for i, raw := range messages {
-		message, err := decodeSchemaNode(raw)
+		message, err := decodeOrderedJSONFields(raw)
 		if err != nil {
 			return nil, err
 		}
 		remapMistralProperty(message, "toolCalls", "tool_calls")
 		remapMistralProperty(message, "toolCallId", "tool_call_id")
 		var chunks []json.RawMessage
-		if jsonUnmarshalStrict(message.fields["content"], &chunks) == nil && chunks != nil {
+		if jsonUnmarshalStrict(message.values["content"], &chunks) == nil && chunks != nil {
 			for j, rawChunk := range chunks {
-				chunk, err := decodeSchemaNode(rawChunk)
+				chunk, err := decodeOrderedJSONFields(rawChunk)
 				if err != nil {
 					return nil, err
 				}
 				for _, rename := range [][2]string{{"imageUrl", "image_url"}, {"documentUrl", "document_url"}, {"documentName", "document_name"}, {"fileId", "file_id"}, {"referenceIds", "reference_ids"}, {"inputAudio", "input_audio"}} {
 					remapMistralProperty(chunk, rename[0], rename[1])
 				}
-				chunks[j], err = chunk.encode()
+				chunks[j], err = chunk.marshal()
 				if err != nil {
 					return nil, err
 				}
@@ -530,7 +530,7 @@ func mistralWirePayload(payload any) (json.RawMessage, error) {
 			}
 			message.set("content", chunkJSON)
 		}
-		messages[i], err = message.encode()
+		messages[i], err = message.marshal()
 		if err != nil {
 			return nil, err
 		}
@@ -540,32 +540,32 @@ func mistralWirePayload(payload any) (json.RawMessage, error) {
 		return nil, err
 	}
 	wire.set("messages", messageJSON)
-	if format, err := decodeSchemaNode(wire.fields["response_format"]); err == nil {
+	if format, err := decodeOrderedJSONFields(wire.values["response_format"]); err == nil {
 		remapMistralProperty(format, "jsonSchema", "json_schema")
-		if schema, err := decodeSchemaNode(format.fields["json_schema"]); err == nil {
+		if schema, err := decodeOrderedJSONFields(format.values["json_schema"]); err == nil {
 			remapMistralProperty(schema, "schemaDefinition", "schema")
-			encoded, err := schema.encode()
+			encoded, err := schema.marshal()
 			if err != nil {
 				return nil, err
 			}
 			format.set("json_schema", encoded)
 		}
-		encoded, err := format.encode()
+		encoded, err := format.marshal()
 		if err != nil {
 			return nil, err
 		}
 		wire.set("response_format", encoded)
 	}
-	return wire.encode()
+	return wire.marshal()
 }
 
-func remapMistralProperty(record *schemaNode, source, target string) {
-	value, ok := record.fields[source]
+func remapMistralProperty(record *orderedJSONFields, source, target string) {
+	value, ok := record.values[source]
 	if !ok {
 		return
 	}
 	record.set(target, value)
-	delete(record.fields, source)
+	delete(record.values, source)
 	for i, key := range record.keys {
 		if key == source {
 			record.keys = append(record.keys[:i], record.keys[i+1:]...)
