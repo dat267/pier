@@ -1,6 +1,12 @@
 # Reproduced audit findings
 
-No unresolved findings from the completed audit slices.
+- **Google HTTP error text.** pi v1.4.0 (`4a080252`,
+  `api/google-generative-ai.ts`) surfaces a JSON error body verbatim
+  (`{"error":{"code":401,"message":"API key not valid"}}`) and a non-JSON body
+  as the JS `JSON.parse` failure. The port reports
+  `401 Unauthorized: <body>` (`ai/google_generative_ai.go`). Reproduced by
+  executing the pinned reference against a stubbed 401; not yet covered by a
+  committed fixture.
 
 ## Resolved findings
 
