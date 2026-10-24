@@ -1,0 +1,150 @@
+[
+  {
+    "name": "minimal",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "options": {},
+    "payload": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"hello\"}]}],\"stream\":true,\"store\":false,\"reasoning\":{\"effort\":\"none\"}}",
+    "path": "/openai/v1/responses",
+    "apiVersion": "v1",
+    "body": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"hello\"}]}],\"stream\":true,\"store\":false,\"reasoning\":{\"effort\":\"none\"}}"
+  },
+  {
+    "name": "endpoint-options",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "options": {
+      "azureBaseUrl": "https://invalid.test/custom",
+      "azureApiVersion": "2026-01-01",
+      "azureDeploymentName": "deployment"
+    },
+    "payload": "{\"model\":\"deployment\",\"input\":[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"hello\"}]}],\"stream\":true,\"store\":false,\"reasoning\":{\"effort\":\"none\"}}",
+    "path": "/custom/responses",
+    "apiVersion": "2026-01-01",
+    "body": "{\"model\":\"deployment\",\"input\":[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"hello\"}]}],\"stream\":true,\"store\":false,\"reasoning\":{\"effort\":\"none\"}}"
+  },
+  {
+    "name": "tools-and-generation",
+    "messages": [
+      {
+        "role": "system",
+        "content": "system",
+        "toolsAdded": [
+          {
+            "name": "lookup",
+            "description": "Look up",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "z": {
+                  "type": "string"
+                },
+                "a": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "z",
+                "a"
+              ]
+            },
+            "constrainedSampling": {
+              "type": "json_schema",
+              "strict": "prefer"
+            }
+          }
+        ],
+        "timestamp": 1
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "look"
+          },
+          {
+            "type": "image",
+            "data": "aW1hZ2U=",
+            "mimeType": "image/png"
+          }
+        ],
+        "timestamp": 2
+      }
+    ],
+    "options": {
+      "temperature": 0,
+      "maxTokens": 1,
+      "toolChoice": "auto",
+      "reasoningEffort": "low",
+      "reasoningSummary": "auto",
+      "cacheRetention": "none",
+      "sessionId": "session"
+    },
+    "payload": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"developer\",\"content\":\"system\"},{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"look\"},{\"type\":\"input_image\",\"detail\":\"auto\",\"image_url\":\"data:image/png;base64,aW1hZ2U=\"}]}],\"stream\":true,\"prompt_cache_key\":\"session\",\"store\":false,\"max_output_tokens\":16,\"temperature\":0,\"tools\":[{\"type\":\"function\",\"name\":\"lookup\",\"description\":\"Look up\",\"parameters\":{\"type\":\"object\",\"properties\":{\"z\":{\"type\":\"string\"},\"a\":{\"type\":\"number\"}},\"required\":[\"z\",\"a\"],\"additionalProperties\":false},\"strict\":true}],\"tool_choice\":\"auto\",\"reasoning\":{\"effort\":\"low\",\"summary\":\"auto\"},\"include\":[\"reasoning.encrypted_content\"]}",
+    "path": "/openai/v1/responses",
+    "apiVersion": "v1",
+    "body": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"developer\",\"content\":\"system\"},{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"look\"},{\"type\":\"input_image\",\"detail\":\"auto\",\"image_url\":\"data:image/png;base64,aW1hZ2U=\"}]}],\"stream\":true,\"prompt_cache_key\":\"session\",\"store\":false,\"max_output_tokens\":16,\"temperature\":0,\"tools\":[{\"type\":\"function\",\"name\":\"lookup\",\"description\":\"Look up\",\"parameters\":{\"type\":\"object\",\"properties\":{\"z\":{\"type\":\"string\"},\"a\":{\"type\":\"number\"}},\"required\":[\"z\",\"a\"],\"additionalProperties\":false},\"strict\":true}],\"tool_choice\":\"auto\",\"reasoning\":{\"effort\":\"low\",\"summary\":\"auto\"},\"include\":[\"reasoning.encrypted_content\"]}"
+  },
+  {
+    "name": "long-cache",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "options": {
+      "cacheRetention": "long",
+      "sessionId": "session"
+    },
+    "payload": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"hello\"}]}],\"stream\":true,\"prompt_cache_key\":\"session\",\"store\":false,\"reasoning\":{\"effort\":\"none\"}}",
+    "path": "/openai/v1/responses",
+    "apiVersion": "v1",
+    "body": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"hello\"}]}],\"stream\":true,\"prompt_cache_key\":\"session\",\"store\":false,\"reasoning\":{\"effort\":\"none\"}}"
+  },
+  {
+    "name": "payload-replacement",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "options": {},
+    "replacement": {
+      "model": "replacement",
+      "input": [
+        {
+          "role": "user",
+          "content": "changed"
+        }
+      ],
+      "stream": true,
+      "metadata": {
+        "z": "1",
+        "a": "2"
+      },
+      "custom": {
+        "z": 1,
+        "a": 2
+      }
+    },
+    "payload": "{\"model\":\"gpt-5\",\"input\":[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"hello\"}]}],\"stream\":true,\"store\":false,\"reasoning\":{\"effort\":\"none\"}}",
+    "path": "/openai/v1/responses",
+    "apiVersion": "v1",
+    "body": "{\"model\":\"replacement\",\"input\":[{\"role\":\"user\",\"content\":\"changed\"}],\"stream\":true,\"metadata\":{\"z\":\"1\",\"a\":\"2\"},\"custom\":{\"z\":1,\"a\":2}}"
+  }
+]

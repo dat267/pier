@@ -152,24 +152,20 @@ func StreamAzureOpenAIResponses(model *Model, context TranscriptContext, options
 		errorPrefix:         "Azure OpenAI API error",
 		noStopReasonMessage: "Azure OpenAI Responses stream ended without a stop reason",
 		toolCallProviders:   azureToolCallProviders,
-		modelName: func(model *Model, options *OpenAIResponsesOptions) string {
-			azureOptions := &AzureOpenAIResponsesOptions{OpenAIResponsesOptions: *options}
-			if options != nil {
-				azureOptions.Env = options.Env
-			}
-			if options != nil && options.Headers != nil {
-				azureOptions.Headers = options.Headers
-			}
-			return ResolveAzureDeploymentName(model, azureOptions)
+		modelName: func(model *Model, _ *OpenAIResponsesOptions) string {
+			return ResolveAzureDeploymentName(model, options)
 		},
 		buildRequest: func(
 			ctx ctxpkg.Context, model *Model, body []byte, apiKey string,
-			options *OpenAIResponsesOptions, compat ResolvedOpenAIResponsesCompat,
+			requestOptions *OpenAIResponsesOptions, compat ResolvedOpenAIResponsesCompat,
 			cacheSessionID string, messages []Message,
 		) (*http.Request, error) {
 			azureOptions := &AzureOpenAIResponsesOptions{}
 			if options != nil {
-				azureOptions.OpenAIResponsesOptions = *options
+				*azureOptions = *options
+			}
+			if requestOptions != nil {
+				azureOptions.OpenAIResponsesOptions = *requestOptions
 			}
 			baseURL, apiVersion, err := ResolveAzureConfig(model, azureOptions)
 			if err != nil {
@@ -181,7 +177,7 @@ func StreamAzureOpenAIResponses(model *Model, context TranscriptContext, options
 				return nil, err
 			}
 			req.Header.Set("Content-Type", "application/json")
-			ApplyIdentityHeaders(req.Header, model, options.Identity)
+			ApplyIdentityHeaders(req.Header, model, requestOptions.Identity)
 			// The Azure OpenAI SDK authenticates with the api-key header.
 			if apiKey != "" {
 				req.Header.Set("api-key", apiKey)
@@ -199,7 +195,7 @@ func StreamAzureOpenAIResponses(model *Model, context TranscriptContext, options
 			for name, value := range model.Headers {
 				req.Header.Set(name, value)
 			}
-			applyProviderHeaders(req.Header, options.Headers)
+			applyProviderHeaders(req.Header, requestOptions.Headers)
 			return req, nil
 		},
 	}

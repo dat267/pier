@@ -73,11 +73,11 @@ func BuildOpenAIResponsesParamsWithProviders(
 		Stream: true,
 		Store:  boolPtr(false),
 	}
-	if cacheRetention != CacheRetentionNone && options.SessionID != "" {
+	if (cacheRetention != CacheRetentionNone || model.API == APIAzureOpenAIResponses) && options.SessionID != "" {
 		clamped := ClampOpenAIPromptCacheKey(options.SessionID)
 		params.PromptCacheKey = &clamped
 	}
-	if !omitUnsupportedFields {
+	if !omitUnsupportedFields && model.API != APIAzureOpenAIResponses {
 		if retention := GetPromptCacheRetention(*compat, cacheRetention); retention != "" {
 			params.PromptCacheRetention = &retention
 		}
@@ -1077,12 +1077,10 @@ func streamOpenAIResponses(model *Model, context TranscriptContext, options *Ope
 			fail(err)
 			return
 		}
+		var payload any = params
 		if options.OnPayload != nil {
 			if next := options.OnPayload(mustMarshalJSON(params), model); next != nil {
-				var replaced OpenAIResponsesParams
-				if perr := jsonUnmarshalStrict(next, &replaced); perr == nil {
-					params = &replaced
-				}
+				payload = next
 			}
 		}
 
@@ -1090,7 +1088,7 @@ func streamOpenAIResponses(model *Model, context TranscriptContext, options *Ope
 		requestErr := func() error {
 			var attemptErr error
 			resp, attemptErr = RetryProviderRequest(ctx, func() (*http.Response, error) {
-				body, berr := aiMarshalNoHTMLEscaping(params)
+				body, berr := aiMarshalNoHTMLEscaping(payload)
 				if berr != nil {
 					return nil, berr
 				}

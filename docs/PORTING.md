@@ -303,7 +303,14 @@ schema-property order, rename image/document content keys to their wire forms,
 keep hook-supplied extras, and translate nested response-format schemas
 (`jsonSchema`/`schemaDefinition`) without sorting them. The previous converter
 left image chunks with `imageUrl`, which is not the API's `image_url` field.
-Bedrock and Azure bodies remain outside this byte-level pass.
+The Azure pass has five Node-generated SDK captures covering a minimal request,
+explicit endpoint/version/deployment overrides, strict tools with generation
+options, long-cache settings and payload replacement. Fixes retain Azure-only
+options through the shared stream, use Azure's strict-tool default and cache-key
+rules, avoid OpenAI-only cache-retention fields, and preserve raw replacement
+members in the shared Responses hook instead of silently dropping them through
+a typed decoder. Hook inputs, paths, API versions and bodies are byte-compared.
+Bedrock bodies remain outside this byte-level pass.
 
 Remaining v1.4.0 items, grouped by why they are not in this tree:
 

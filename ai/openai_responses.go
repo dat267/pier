@@ -62,6 +62,7 @@ func detectOpenAIResponsesSessionAffinity(model *Model) SessionAffinityFormat {
 func GetOpenAIResponsesCompat(model *Model) ResolvedOpenAIResponsesCompat {
 	compat := ResolvedOpenAIResponsesCompat{
 		SupportsDeveloperRole:      true,
+		SupportsStrictMode:         model.API == APIAzureOpenAIResponses,
 		SessionAffinityFormat:      detectOpenAIResponsesSessionAffinity(model),
 		SupportsLongCacheRetention: true,
 		SupportsMaxOutputTokens:    true,
