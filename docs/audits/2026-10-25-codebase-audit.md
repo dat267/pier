@@ -3,7 +3,7 @@
 ## Baseline and scope
 
 This is a **partial multi-round review**, not a completed codebase-wide audit.
-Sixteen confirmed findings have been planned in `TODO.md`, repaired red-first,
+Seventeen confirmed findings have been planned in `TODO.md`, repaired red-first,
 and verified. Remaining files and unconfirmed leads below still need review.
 
 - Starting commit: `80dcf0d09249222f98f39bccb2f93d278766009b`.
@@ -40,6 +40,12 @@ bottleneck is asserted without evidence. Unlisted files remain unreviewed.
   `pi/packages/ai/src/auth/credential-store.ts`. Checked per-provider admission,
   canceled-tail draining, lock-free callback execution and owned snapshots.
   D272 is intentional, not a new finding.
+- `ai/anthropic_stream.go`: P/L/C inspected in round 9 against
+  `api/anthropic-messages.ts` for the `message_start`/`message_delta` usage
+  mapping, content-block transitions and terminal errors. **CR-017** repaired;
+  the eight-scenario corpus now compares the event projection and terminal
+  message. Not covered: retry/lazy-tool downgrade paths beyond their Go tests,
+  and the OpenAI-completions/Responses stream parsers still have no such corpus.
 - `ai/retry.go` `GetRetryDelayMS`/`isRetryableProviderError`: P/L/C inspected in
   round 8 against `utils/provider-retry.ts`, including `Number.parseFloat`
   prefix semantics, the NaN/Infinity fall-through, the empty-string truthiness
@@ -583,6 +589,8 @@ After explicit user authorization:
 - `8080a42`: key-parsing corpus (coverage).
 - `bc9825a`: CR-016, final-newline display diff.
 - `7424e36`: edit-application corpus (coverage, no divergence).
+- `3f0ec1a`: CR-017, Anthropic `usage.cacheWrite1h` presence.
+- `e636760`: Anthropic stream-event corpus (coverage plus the CR-017 regression).
 
 All changes were verified before committing. Audit status and lock ownership
 are recorded with this ledger in a separate documentation commit. No push.
@@ -640,6 +648,30 @@ node coding/testdata/edit-diff-patch/generate.mjs ./pi
 go test -count=1 ./coding -run '^TestEditDiffPatchCorpusMatchesUpstream$'
 ```
 
+## Round 9 finding
+
+### CR-017, P3: Anthropic messages omitted `usage.cacheWrite1h` (fixed)
+
+Every Anthropic streamed response whose `message_start` carries no
+`cache_creation` block stored an assistant message without
+`usage.cacheWrite1h`, while the reference assigns
+`cache_creation?.ephemeral_1h_input_tokens || 0` and therefore persists
+`"cacheWrite1h": 0`. The cost breakdown was already identical, so only the JSON
+of the stored message differed, which breaks byte parity for session entries
+written by Pier. Reachable on every Anthropic response; message_delta keeps its
+presence-based assignment in both implementations, and Bedrock already
+defaults the field.
+
+Evidence: a focused test failed with `usage.cacheWrite1h missing` before the
+repair. The new event corpus executes the pinned provider and now matches on all
+eight scenarios, including that key.
+
+```sh
+go test -count=1 ./ai -run '^TestAnthropicStreamUsageAlwaysReportsCacheWrite1h$'
+go test -count=1 ./ai -run '^TestAnthropicStreamEventsMatchUpstream$'
+node --experimental-strip-types ai/testdata/anthropic-stream/generate.mjs ./pi
+```
+
 ## Unconfirmed leads, not TODOs
 
 - Previously listed RPC lifecycle leads are CR-005/CR-006, and overlapping
@@ -687,6 +719,9 @@ All completed with `GOPROXY=off GOSUMDB=off` on Go commands/recipes:
   integrity/unsupported-host tests also failed red, then passed. `go test
   -count=1 ./coding -run '^TestRPC'` and `go test -count=1 ./mcp/...
   ./coding/rpcclient ./coding/interactive`: PASS.
+- Round 9: the Anthropic stream-event corpus matches on all eight scenarios
+  after CR-017; `just check`, `just cross` and `just reference` pass, and the
+  corpus regenerates byte-identically.
 - Round 8: the edit-application corpus matched on its first run;
   `go test -count=1 ./coding -run 'Apply|Edit|Diff'` passes.
 - Round 7: the edit-diff corpus failed on three newline-only pairs before
