@@ -1,0 +1,668 @@
+[
+  {
+    "name": "text",
+    "sse": "data: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"model\":\"gpt-5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"model\":\"gpt-5\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Hel\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"model\":\"gpt-5\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"lo\"},\"finish_reason\":null}]}\n\ndata: {\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 0,
+        "delta": "Hel"
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 0,
+        "delta": "lo"
+      },
+      {
+        "type": "text_end",
+        "contentIndex": 0,
+        "content": "Hello"
+      },
+      {
+        "type": "done",
+        "reason": "stop",
+        "message": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Hello"
+            }
+          ],
+          "api": "openai-completions",
+          "provider": "openai",
+          "model": "gpt-5",
+          "stopReason": "stop",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 0,
+            "output": 0,
+            "totalTokens": 0
+          },
+          "responseId": "chatcmpl-1",
+          "rawStopReason": "stop"
+        }
+      }
+    ]
+  },
+  {
+    "name": "reasoning-then-text",
+    "sse": "data: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"model\":\"gpt-5\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"plan \"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"model\":\"gpt-5\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"more\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"model\":\"gpt-5\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"answer\"},\"finish_reason\":null}]}\n\ndata: {\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "thinking_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "thinking_delta",
+        "contentIndex": 0,
+        "delta": "plan "
+      },
+      {
+        "type": "thinking_delta",
+        "contentIndex": 0,
+        "delta": "more"
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 1
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 1,
+        "delta": "answer"
+      },
+      {
+        "type": "thinking_end",
+        "contentIndex": 0,
+        "content": "plan more"
+      },
+      {
+        "type": "text_end",
+        "contentIndex": 1,
+        "content": "answer"
+      },
+      {
+        "type": "done",
+        "reason": "stop",
+        "message": {
+          "content": [
+            {
+              "type": "thinking",
+              "thinking": "plan more",
+              "thinkingSignature": "reasoning_content"
+            },
+            {
+              "type": "text",
+              "text": "answer"
+            }
+          ],
+          "api": "openai-completions",
+          "provider": "openai",
+          "model": "gpt-5",
+          "stopReason": "stop",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 0,
+            "output": 0,
+            "totalTokens": 0
+          },
+          "responseId": "chatcmpl-1",
+          "rawStopReason": "stop"
+        }
+      }
+    ]
+  },
+  {
+    "name": "tool-use",
+    "sse": "data: {\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"call_1\",\"type\":\"function\",\"function\":{\"name\":\"lookup\",\"arguments\":\"{\\\"pat\"}}]}}]}\n\ndata: {\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"h\\\":\\\"x\\\"}\"}}]}}]}\n\ndata: {\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"tool_calls\"}]}\n\ndata: [DONE]\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "toolcall_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "toolcall_delta",
+        "contentIndex": 0,
+        "delta": "{\"pat"
+      },
+      {
+        "type": "toolcall_delta",
+        "contentIndex": 0,
+        "delta": "h\":\"x\"}"
+      },
+      {
+        "type": "toolcall_end",
+        "contentIndex": 0,
+        "toolCall": {
+          "id": "call_1",
+          "name": "lookup",
+          "arguments": {
+            "path": "x"
+          }
+        }
+      },
+      {
+        "type": "done",
+        "reason": "toolUse",
+        "message": {
+          "content": [
+            {
+              "type": "toolCall",
+              "id": "call_1",
+              "name": "lookup",
+              "arguments": {
+                "path": "x"
+              }
+            }
+          ],
+          "api": "openai-completions",
+          "provider": "openai",
+          "model": "gpt-5",
+          "stopReason": "toolUse",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 0,
+            "output": 0,
+            "totalTokens": 0
+          },
+          "rawStopReason": "tool_calls"
+        }
+      }
+    ]
+  },
+  {
+    "name": "parallel-tools",
+    "sse": "data: {\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"call_1\",\"type\":\"function\",\"function\":{\"name\":\"read\",\"arguments\":\"{\\\"path\\\":\\\"a\\\"}\"}},{\"index\":1,\"id\":\"call_2\",\"type\":\"function\",\"function\":{\"name\":\"read\",\"arguments\":\"{\\\"path\\\":\\\"b\\\"}\"}}]}}]}\n\ndata: {\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"tool_calls\"}]}\n\ndata: [DONE]\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "toolcall_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "toolcall_delta",
+        "contentIndex": 0,
+        "delta": "{\"path\":\"a\"}"
+      },
+      {
+        "type": "toolcall_start",
+        "contentIndex": 1
+      },
+      {
+        "type": "toolcall_delta",
+        "contentIndex": 1,
+        "delta": "{\"path\":\"b\"}"
+      },
+      {
+        "type": "toolcall_end",
+        "contentIndex": 0,
+        "toolCall": {
+          "id": "call_1",
+          "name": "read",
+          "arguments": {
+            "path": "a"
+          }
+        }
+      },
+      {
+        "type": "toolcall_end",
+        "contentIndex": 1,
+        "toolCall": {
+          "id": "call_2",
+          "name": "read",
+          "arguments": {
+            "path": "b"
+          }
+        }
+      },
+      {
+        "type": "done",
+        "reason": "toolUse",
+        "message": {
+          "content": [
+            {
+              "type": "toolCall",
+              "id": "call_1",
+              "name": "read",
+              "arguments": {
+                "path": "a"
+              }
+            },
+            {
+              "type": "toolCall",
+              "id": "call_2",
+              "name": "read",
+              "arguments": {
+                "path": "b"
+              }
+            }
+          ],
+          "api": "openai-completions",
+          "provider": "openai",
+          "model": "gpt-5",
+          "stopReason": "toolUse",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 0,
+            "output": 0,
+            "totalTokens": 0
+          },
+          "rawStopReason": "tool_calls"
+        }
+      }
+    ]
+  },
+  {
+    "name": "usage",
+    "sse": "data: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"model\":\"gpt-5\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"hi\"},\"finish_reason\":null}]}\n\ndata: {\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"model\":\"gpt-5\",\"choices\":[],\"usage\":{\"prompt_tokens\":11,\"completion_tokens\":7,\"total_tokens\":18,\"prompt_tokens_details\":{\"cached_tokens\":3},\"completion_tokens_details\":{\"reasoning_tokens\":2}}}\n\ndata: [DONE]\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 0,
+        "delta": "hi"
+      },
+      {
+        "type": "text_end",
+        "contentIndex": 0,
+        "content": "hi"
+      },
+      {
+        "type": "done",
+        "reason": "stop",
+        "message": {
+          "content": [
+            {
+              "type": "text",
+              "text": "hi"
+            }
+          ],
+          "api": "openai-completions",
+          "provider": "openai",
+          "model": "gpt-5",
+          "stopReason": "stop",
+          "usage": {
+            "cacheRead": 3,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 3.75e-7,
+              "cacheWrite": 0,
+              "input": 0.00001,
+              "output": 0.00007000000000000001,
+              "total": 0.000080375
+            },
+            "input": 8,
+            "output": 7,
+            "reasoning": 2,
+            "totalTokens": 18
+          },
+          "responseId": "chatcmpl-1",
+          "rawStopReason": "stop"
+        }
+      }
+    ]
+  },
+  {
+    "name": "length",
+    "sse": "data: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"model\":\"gpt-5\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"truncated\"},\"finish_reason\":null}]}\n\ndata: {\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"length\"}]}\n\ndata: [DONE]\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 0,
+        "delta": "truncated"
+      },
+      {
+        "type": "text_end",
+        "contentIndex": 0,
+        "content": "truncated"
+      },
+      {
+        "type": "done",
+        "reason": "length",
+        "message": {
+          "content": [
+            {
+              "type": "text",
+              "text": "truncated"
+            }
+          ],
+          "api": "openai-completions",
+          "provider": "openai",
+          "model": "gpt-5",
+          "stopReason": "length",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 0,
+            "output": 0,
+            "totalTokens": 0
+          },
+          "responseId": "chatcmpl-1",
+          "rawStopReason": "length"
+        }
+      }
+    ]
+  },
+  {
+    "name": "no-finish-reason",
+    "sse": "data: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"model\":\"gpt-5\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"hanging\"},\"finish_reason\":null}]}\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 0,
+        "delta": "hanging"
+      },
+      {
+        "type": "text_end",
+        "contentIndex": 0,
+        "content": "hanging"
+      },
+      {
+        "type": "error",
+        "reason": "error",
+        "error": {
+          "content": [
+            {
+              "type": "text",
+              "text": "hanging"
+            }
+          ],
+          "api": "openai-completions",
+          "provider": "openai",
+          "model": "gpt-5",
+          "stopReason": "error",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 0,
+            "output": 0,
+            "totalTokens": 0
+          },
+          "responseId": "chatcmpl-1",
+          "errorMessage": "Stream ended without finish_reason"
+        }
+      }
+    ]
+  },
+  {
+    "name": "error-chunk",
+    "sse": "data: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"model\":\"gpt-5\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"partial\"},\"finish_reason\":null}]}\n\ndata: {\"error\":{\"message\":\"boom\",\"type\":\"server_error\"}}\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 0,
+        "delta": "partial"
+      },
+      {
+        "type": "error",
+        "reason": "error",
+        "error": {
+          "content": [
+            {
+              "type": "text",
+              "text": "partial"
+            }
+          ],
+          "api": "openai-completions",
+          "provider": "openai",
+          "model": "gpt-5",
+          "stopReason": "error",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 0,
+            "output": 0,
+            "totalTokens": 0
+          },
+          "responseId": "chatcmpl-1",
+          "errorMessage": "boom"
+        }
+      }
+    ]
+  },
+  {
+    "name": "error-chunk-metadata",
+    "sse": "data: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"model\":\"gpt-5\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"partial\"},\"finish_reason\":null}]}\n\ndata: {\"error\":{\"message\":\"boom\",\"metadata\":{\"raw\":\"upstream-raw-detail\"}}}\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 0,
+        "delta": "partial"
+      },
+      {
+        "type": "error",
+        "reason": "error",
+        "error": {
+          "content": [
+            {
+              "type": "text",
+              "text": "partial"
+            }
+          ],
+          "api": "openai-completions",
+          "provider": "openai",
+          "model": "gpt-5",
+          "stopReason": "error",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 0,
+            "output": 0,
+            "totalTokens": 0
+          },
+          "responseId": "chatcmpl-1",
+          "errorMessage": "boom\nupstream-raw-detail"
+        }
+      }
+    ]
+  },
+  {
+    "name": "error-chunk-string",
+    "sse": "data: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"model\":\"gpt-5\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"partial\"},\"finish_reason\":null}]}\n\ndata: {\"error\":\"plain failure\"}\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 0,
+        "delta": "partial"
+      },
+      {
+        "type": "error",
+        "reason": "error",
+        "error": {
+          "content": [
+            {
+              "type": "text",
+              "text": "partial"
+            }
+          ],
+          "api": "openai-completions",
+          "provider": "openai",
+          "model": "gpt-5",
+          "stopReason": "error",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 0,
+            "output": 0,
+            "totalTokens": 0
+          },
+          "responseId": "chatcmpl-1",
+          "errorMessage": "\"plain failure\""
+        }
+      }
+    ]
+  },
+  {
+    "name": "error-chunk-object",
+    "sse": "data: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"model\":\"gpt-5\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"partial\"},\"finish_reason\":null}]}\n\ndata: {\"error\":{\"type\":\"server_error\"}}\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 0,
+        "delta": "partial"
+      },
+      {
+        "type": "error",
+        "reason": "error",
+        "error": {
+          "content": [
+            {
+              "type": "text",
+              "text": "partial"
+            }
+          ],
+          "api": "openai-completions",
+          "provider": "openai",
+          "model": "gpt-5",
+          "stopReason": "error",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 0,
+            "output": 0,
+            "totalTokens": 0
+          },
+          "responseId": "chatcmpl-1",
+          "errorMessage": "{\"type\":\"server_error\"}"
+        }
+      }
+    ]
+  }
+]
