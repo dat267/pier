@@ -41,6 +41,7 @@ type ProjectTrustOption struct {
 // trustRequiringProjectConfigResources are the .pi entries that gate trust.
 var trustRequiringProjectConfigResources = []string{
 	"settings.json",
+	"mcp.json",
 	"extensions",
 	"skills",
 	"prompts",

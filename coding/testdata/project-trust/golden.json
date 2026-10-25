@@ -1,0 +1,136 @@
+[
+  {
+    "name": "empty",
+    "resources": [],
+    "policy": "never",
+    "expected": {
+      "hasResources": false,
+      "trusted": true,
+      "prompts": 0,
+      "servers": 0
+    }
+  },
+  {
+    "name": "settings",
+    "resources": [
+      "settings.json"
+    ],
+    "policy": "never",
+    "expected": {
+      "hasResources": true,
+      "trusted": false,
+      "prompts": 0,
+      "servers": 0
+    }
+  },
+  {
+    "name": "mcp-never",
+    "resources": [
+      "mcp.json"
+    ],
+    "policy": "never",
+    "expected": {
+      "hasResources": true,
+      "trusted": false,
+      "prompts": 0,
+      "servers": 0
+    }
+  },
+  {
+    "name": "mcp-ask-headless",
+    "resources": [
+      "mcp.json"
+    ],
+    "policy": "ask",
+    "expected": {
+      "hasResources": true,
+      "trusted": false,
+      "prompts": 0,
+      "servers": 0
+    }
+  },
+  {
+    "name": "mcp-stored-denial",
+    "resources": [
+      "mcp.json"
+    ],
+    "policy": "always",
+    "stored": false,
+    "expected": {
+      "hasResources": true,
+      "trusted": false,
+      "prompts": 0,
+      "servers": 0
+    }
+  },
+  {
+    "name": "mcp-stored-approval",
+    "resources": [
+      "mcp.json"
+    ],
+    "policy": "never",
+    "stored": true,
+    "expected": {
+      "hasResources": true,
+      "trusted": true,
+      "prompts": 0,
+      "servers": 1
+    }
+  },
+  {
+    "name": "mcp-explicit-approval",
+    "resources": [
+      "mcp.json"
+    ],
+    "policy": "never",
+    "override": true,
+    "expected": {
+      "hasResources": true,
+      "trusted": true,
+      "prompts": 0,
+      "servers": 1
+    }
+  },
+  {
+    "name": "mcp-explicit-denial",
+    "resources": [
+      "mcp.json"
+    ],
+    "policy": "always",
+    "override": false,
+    "expected": {
+      "hasResources": true,
+      "trusted": false,
+      "prompts": 0,
+      "servers": 0
+    }
+  },
+  {
+    "name": "mcp-prompt-denial",
+    "resources": [
+      "mcp.json"
+    ],
+    "policy": "ask",
+    "selection": "Do not trust (this session only)",
+    "expected": {
+      "hasResources": true,
+      "trusted": false,
+      "prompts": 1,
+      "servers": 0
+    }
+  },
+  {
+    "name": "mcp-prompt-approval",
+    "resources": [
+      "mcp.json"
+    ],
+    "policy": "ask",
+    "selection": "Trust (this session only)",
+    "expected": {
+      "hasResources": true,
+      "trusted": true,
+      "prompts": 1,
+      "servers": 1
+    }
+  }
+]
