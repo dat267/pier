@@ -484,7 +484,7 @@ how it was reported ("running bash freezes the TUI"). The check now compares
 cheap `SessionManager.ContextSignature` values (branch-cache lookup + entry
 scan) and the projection snapshots the entries and projects outside the lock;
 see `TestCacheContextIsCurrentDoesNotProjectTheSession` (37 MB → 0 allocated per
-call) and `TestBuildSessionContextDoesNotHoldTheSessionLock`. The remaining
+call) and `TestProjectionDoesNotHoldTheSessionLock`. The remaining
 frame cost was the bash preview: counting a command's output (for the
 "… (N earlier lines" hint) went through `tui.WrapTextWithAnsi` per line, ~1 ms
 and ~8000 allocations per 2000-line output, and a rebuilt transcript (compaction,
@@ -524,7 +524,7 @@ revisions and reuse flags that scan already read, so a frame never dispatches
 other versioned child instead of re-rendering. `Container.RenderWalks` is the
 test seam, and `TestContainerWarmFrameSkipsTheChildWalk`,
 `TestContainerWarmFrameKeepsTheMouseLayout` and
-`TestContainerReadsEachChildVersionOncePerWarmFrame` pin the behavior. That took
+`TestContainerReadsEachChildVersionOncePerWalkFrame` pin the behavior. That took
 the 8,000-pair warm frame from ~2.0 ms to ~1.4 ms (2,000: ~260 us -> ~150 us),
 with no streaming regression (`BenchmarkStreamingAssistantDelta` is unchanged).
 At this stage, the warm `SkipUnchangedChildren` path still paid for memory-bound

@@ -389,7 +389,7 @@ The edit display diff now tokenizes with newline-carrying lines, matching
 final-newline-only edit previously produced an empty diff and no
 `firstChangedLine` even though the unified patch was correct, so the persisted
 tool details and the interactive preview omitted the change. The generated
-corpus compares both the display diff and the patch over 27 content pairs.
+corpus compares both the display diff and the patch over 26 content pairs.
 
 **Upstream status.** v1.4.0 (`4a080252`) is the latest released tag after
 refreshing upstream tags and is the port's reference pin. It is 81 commits past
@@ -891,7 +891,12 @@ v1.4.0 generator (`packages/ai/scripts/generate-models.ts --strict --data-only`,
 schema 6, manifest
 `ac52f772486d829cd2ed5ae7bd07f67712ee7ad440bd58143b44a10d06070f0f`, generated
 2026-10-23) through `scripts/gen_catalog.py`: 41 providers, 1590 chat models
-(1614 before; 52 added, 76 removed, 167 entries changed).
+(1614 before; 52 added, 76 removed, 167 entries changed). One further refresh
+(`e703359`, manifest
+`0a897b8c9448a5327c82158ee123c56ceb4df225285459642b043953c845504c`, generated
+2026-10-24) produced the shipped file: 41 providers, 1598 chat models, adding
+the Kimi K3.1 entries and refreshing cost data for 14 existing ones without
+removing a model.
 
 Almost all of that churn is live provider data moving in the 8 days since the
 previous snapshot, not the tag: running the previous pin's own generator today

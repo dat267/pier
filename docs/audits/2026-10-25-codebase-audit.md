@@ -105,7 +105,7 @@ bottleneck is asserted without evidence. Unlisted files remain unreviewed.
   not a signature-verification or upstream trust-policy claim.
 - `coding/editdiff.go`: P/L/C inspected in round 7 against
   `core/tools/edit-diff.ts` (`generateUnifiedPatch`, `generateDiffString`).
-  **CR-016** repaired; the generated corpus covers both outputs over 27 pairs.
+  **CR-016** repaired; the generated corpus covers both outputs over 26 pairs.
   Round 8 added a 28-case corpus for `applyEditsToNormalizedContent`
   (`applyEditsToNormalizedContent`: exact/fuzzy matches, error messages,
   overlap and duplicate rejection, unchanged-line preservation), which matched
@@ -632,10 +632,10 @@ An edit whose only effect is the trailing newline (`same` → `same`, or
 `a\nb\nc` → `a\nb\nc\n`) produced an empty diff and no `firstChangedLine`,
 while the reference reported `-1 same`/`+1 same` (and `-3 c`/`+3 c`). The
 unified patch already matched, so only the persisted `EditToolDetails` and the
-interactive edit preview disagreed. The 27-pair corpus executes the pinned
+interactive edit preview disagreed. The 26-pair corpus executes the pinned
 `edit-diff.ts` (jsdiff 8.0.4 through `pi`'s own `node_modules`) and compares
 patch, display diff and first changed line; three newline cases failed before
-the repair and the other 24 pairs were controls.
+the repair and the other 23 pairs were controls.
 
 Root cause: the display path tokenized with `splitLinesForCounting`, which
 drops the empty element after a trailing newline, so `c` and `c\n` compared

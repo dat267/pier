@@ -101,7 +101,9 @@ module cached by branch version (`docs/architecture.md`).
   same upstream data: regenerate with `python3 scripts/gen_catalog.py ./pi >
   ai/models_catalog.json` and `python3 scripts/gen_image_catalog.py ./pi >
   ai/image_catalog.json` after running upstream's `generate-models.ts --strict
-  --data-only`; never hand-edit.
+  --data-only`; never hand-edit. The generator fetches models.dev and rewrites
+  `packages/ai/src/providers/data/`, so run it in a scratch copy of the
+  checkout and point both scripts at that copy (`./pi` stays untouched).
 - `TODO.md` holds only reproduced, unresolved findings; remove each one when its
   fix lands, not speculative work items.
 - Use `strings.Builder` whenever iteration count scales with input.
