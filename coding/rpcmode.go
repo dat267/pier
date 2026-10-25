@@ -377,6 +377,9 @@ func (r *rpcRuntime) newSessionManager() *SessionManager {
 // .fork). It returns the selected user text for a "before" fork, or nil for
 // "at".
 func (r *rpcRuntime) forkManager(entryID string, atPosition bool) (*SessionManager, *string, error) {
+	if r.replaceSession == nil {
+		return nil, nil, fmt.Errorf("Session replacement is not available in this build")
+	}
 	current := r.session.Sessions
 	entry := current.GetEntry(entryID)
 	if entry == nil {
@@ -398,6 +401,9 @@ func (r *rpcRuntime) forkManager(entryID string, atPosition bool) (*SessionManag
 
 	// In-memory sessions branch in place (upstream reuses the same manager).
 	if !current.IsPersisted() {
+		// The outgoing turn must persist its aborted tail before the shared
+		// manager changes branches, not into the replacement branch.
+		r.settleWorkers()
 		if targetLeafID == "" {
 			current.NewSession(nil)
 		} else if _, err := current.CreateBranchedSession(targetLeafID); err != nil {
