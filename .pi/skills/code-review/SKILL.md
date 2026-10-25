@@ -10,8 +10,9 @@ Run only when explicitly invoked with `/skill:code-review`. Default workflow:
 inspect the whole first-party codebase, reproduce findings, plan in `TODO.md`,
 then execute the repairs. Optional instructions after the command can narrow
 the scope, set a time budget, request audit-only, or resume existing findings.
-Honor those limits. Do not interpret invocation as permission to commit, push,
-release, install dependencies, or modify the reference checkout.
+Honor those limits. Finished, verified work is committed as it lands (§4 step 5);
+invocation is not permission to push, release, install dependencies, or modify
+the reference checkout.
 
 All repository paths below are relative to the repository root, not this skill.
 
@@ -160,6 +161,18 @@ For each finding, in priority order:
    and `docs/DIVERGENCES.md` entry only for an intentional departure. Remove the
    finding from `TODO.md` only after its repair is verified; keep its resolution
    and evidence in the audit ledger. Do not erase unrelated or blocked work.
+5. Commit the finished piece before starting the next one. "Finished" means one
+   independent unit: a finding's regression plus its minimal fix, or one
+   coherent docs/skill change. Do not batch unrelated findings into one commit,
+   and do not commit a red test, a half-applied repair, or work whose focused
+   tests have not passed. If a piece cannot be verified, leave it uncommitted,
+   say which check failed, and revert or park it rather than committing broken
+   work. First confirm the tree contains only that piece's changes
+   (`git status --short`, `git diff`); unrelated edits from the user stay out of
+   the commit. Use `type(scope): summary`, cite the pinned reference
+   file/function/commit, and state the verification actually run. Commit audit
+   ledger and documentation updates as their own piece when they are the only
+   change.
 
 Finish the inventory rather than treating one repaired slice as a codebase-wide
 audit. When time or context is limited, leave exact remaining areas and replay
@@ -180,6 +193,5 @@ audit complete merely because its confirmed findings are fixed.
 - Report fixed findings, remaining `TODO.md` entries, ledger path, verification,
   and any required next action concisely. Static analysis plus passing tests
   cannot certify the absence of bugs, vulnerabilities, or races.
-- Leave changes uncommitted unless the user explicitly authorized committing.
-  If authorized, use `type(scope): summary` and cite the pinned reference
-  paths/commit where applicable. Never push or release without authorization.
+- Leave genuinely unfinished or blocked work uncommitted and name it. Never push
+  or release without authorization.
