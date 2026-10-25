@@ -90,6 +90,12 @@ bottleneck is asserted without evidence. Unlisted files remain unreviewed.
 - `coding/bashexecutor.go` `ExecuteBashWithOperations`: L/C/S/F inspected in
   round 5 against `core/bash-executor.ts`; P compared for the rolling display
   buffer, sanitization order and full-output file. **CR-015** repaired.
+- `coding/truncate.go`: P/L/C/S/F inspected in round 5 against
+  `core/tools/truncate.ts`; P compared by a generated 128-case corpus that
+  matched on its first run (head, tail, line, middle, size). Recorded as
+  coverage. One deliberate representation difference: Go options use zero for
+  "unset" while the reference distinguishes an explicit `0` via `??`; no
+  upstream caller passes zero, so the corpus omits that unreachable input.
 - `coding/tools_bash.go` `OutputAccumulator` and `bashUpdateThrottle`: P/L/C/S/F
   inspected in round 5 against `core/tools/output-accumulator.ts` and the
   throttle in `renderers/bash.ts`. A generated 12-case corpus (limits, partial
@@ -537,6 +543,7 @@ After explicit user authorization:
 - `b47e0d8`: review skill commits each finished piece.
 - `6fedf16`: CR-015, bash display output sized in UTF-16 units.
 - `2e02b2b`: output-accumulator snapshot corpus (coverage, no divergence).
+- `5af0539`: truncation corpus (coverage, no divergence).
 
 All changes were verified before committing. Audit status and lock ownership
 are recorded with this ledger in a separate documentation commit. No push.
@@ -617,7 +624,8 @@ All completed with `GOPROXY=off GOSUMDB=off` on Go commands/recipes:
   -count=1 ./coding -run '^TestRPC'` and `go test -count=1 ./mcp/...
   ./coding/rpcclient ./coding/interactive`: PASS.
 - Round 5: bash-executor corpus failed on two multibyte cases before CR-015,
-  then passed; the output-accumulator corpus matched on its first run.
+  then passed; the output-accumulator and truncate corpora matched on their
+  first run.
   `go test -count=1 ./coding -run 'Bash'` and the full `coding` package pass.
 - Round 4 last-assistant-text session/RPC corpus: observed red assertions,
   then PASS with `ai.JSTrim`. All three new corpora regenerate byte-identically.
