@@ -40,6 +40,13 @@ bottleneck is asserted without evidence. Unlisted files remain unreviewed.
   `pi/packages/ai/src/auth/credential-store.ts`. Checked per-provider admission,
   canceled-tail draining, lock-free callback execution and owned snapshots.
   D272 is intentional, not a new finding.
+- `ai/retry.go` `GetRetryDelayMS`/`isRetryableProviderError`: P/L/C inspected in
+  round 8 against `utils/provider-retry.ts`, including `Number.parseFloat`
+  prefix semantics, the NaN/Infinity fall-through, the empty-string truthiness
+  checks and the `Math.ceil` delay messages. No differential corpus was
+  recorded: the exponential branch is randomized and the HTTP-date branch
+  reads the clock, so only the header branches are deterministic. No divergence
+  found by inspection; treat as inspected, not proven.
 - `ai/streamidle.go`: P/L/C/S/F inspected, with
   `pi/packages/coding-agent/src/core/http-dispatcher.ts` and D254/D255 as the
   timeout authority. Close/reset atomics and bounded request body lifetimes
@@ -92,8 +99,11 @@ bottleneck is asserted without evidence. Unlisted files remain unreviewed.
 - `coding/editdiff.go`: P/L/C inspected in round 7 against
   `core/tools/edit-diff.ts` (`generateUnifiedPatch`, `generateDiffString`).
   **CR-016** repaired; the generated corpus covers both outputs over 27 pairs.
-  The fuzzy-match and multi-edit application paths are not yet compared
-  beyond their existing tests.
+  Round 8 added a 28-case corpus for `applyEditsToNormalizedContent`
+  (`applyEditsToNormalizedContent`: exact/fuzzy matches, error messages,
+  overlap and duplicate rejection, unchanged-line preservation), which matched
+  on its first run. `computeEditsDiff` (filesystem-backed preview) and the
+  renderer's own diff formatting are not yet compared.
 - `coding/paths.go`, `coding/mutationqueue.go`, `coding/tools_edit.go` and
   `coding/tools_fs.go`: P/L/C/S/F inspected in round 2 against
   `utils/paths.ts`, `core/tools/{path-utils,file-mutation-queue,write,ls}.ts`,
@@ -572,6 +582,7 @@ After explicit user authorization:
 - `f3c2399`: context-overflow corpus (coverage).
 - `8080a42`: key-parsing corpus (coverage).
 - `bc9825a`: CR-016, final-newline display diff.
+- `7424e36`: edit-application corpus (coverage, no divergence).
 
 All changes were verified before committing. Audit status and lock ownership
 are recorded with this ledger in a separate documentation commit. No push.
@@ -676,6 +687,8 @@ All completed with `GOPROXY=off GOSUMDB=off` on Go commands/recipes:
   integrity/unsupported-host tests also failed red, then passed. `go test
   -count=1 ./coding -run '^TestRPC'` and `go test -count=1 ./mcp/...
   ./coding/rpcclient ./coding/interactive`: PASS.
+- Round 8: the edit-application corpus matched on its first run;
+  `go test -count=1 ./coding -run 'Apply|Edit|Diff'` passes.
 - Round 7: the edit-diff corpus failed on three newline-only pairs before
   CR-016, then passed; `go test -count=1 ./coding ./coding/interactive ./tui`
   passes, and `just check`/`just cross` pass.
