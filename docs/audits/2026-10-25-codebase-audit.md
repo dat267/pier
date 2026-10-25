@@ -87,12 +87,21 @@ bottleneck is asserted without evidence. Unlisted files remain unreviewed.
   follow symlinks; they are not a filesystem sandbox. No new reproduced
   finding in this slice. Platform-specific file URL handling and queue FIFO
   admission still need independent probes (see leads).
-- `coding/bashexecutor.go` `ExecuteBashWithOperations` and the
-  `coding/tools_bash.go` `OutputAccumulator` declarations: L/C/S/F inspected in
-  round 5 against `core/bash-executor.ts`; P compared for the executor's rolling
-  buffer and full-output file. **CR-015** repaired. `OutputAccumulator` itself
-  (its own byte/line accounting and the bash tool wrapper) is not yet compared
-  with `core/tools/output-accumulator.ts`.
+- `coding/bashexecutor.go` `ExecuteBashWithOperations`: L/C/S/F inspected in
+  round 5 against `core/bash-executor.ts`; P compared for the rolling display
+  buffer, sanitization order and full-output file. **CR-015** repaired.
+- `coding/tools_bash.go` `OutputAccumulator` and `bashUpdateThrottle`: P/L/C/S/F
+  inspected in round 5 against `core/tools/output-accumulator.ts` and the
+  throttle in `renderers/bash.ts`. A generated 12-case corpus (limits, partial
+  lines, multibyte, CRLF, BOM, split chunks) matches on the first run, so it is
+  recorded as coverage, not a finding. `readFullOutput` (structured content for
+  codemode callers) is out of scope with codemode.
+- `coding/tools_bash.go` `CreateShellTool` and `coding/tools_powershell.go`:
+  L/C/S/F inspected in round 5 against `createShellToolDefinition`,
+  `createLocalShellOperations` and `resolveSpawnContext`. Checked abort/timeout
+  kill paths, pipe-drain ordering, streamed-update throttling, truncation
+  notices and exit-status mapping. One prompt-guideline divergence is reachable
+  only from a Go host's own wiring (see leads), not from the CLI.
 - `coding/agent_session_control.go` `GetLastAssistantText`: P/L/C/S/F
   inspected in round 4 against the pinned `agent-session.ts` method and
   generated session/RPC cases. **CR-014** repaired; message selection and
@@ -525,6 +534,9 @@ After explicit user authorization:
 - `c1ec637`: CR-011, cancel MCP HTTP POSTs on transport close.
 - `c67ac9e`: CR-014, JS-trim parity for last-assistant text.
 - `56b5ca4`: manual-only workspace code-review skill.
+- `b47e0d8`: review skill commits each finished piece.
+- `6fedf16`: CR-015, bash display output sized in UTF-16 units.
+- `2e02b2b`: output-accumulator snapshot corpus (coverage, no divergence).
 
 All changes were verified before committing. Audit status and lock ownership
 are recorded with this ledger in a separate documentation commit. No push.
@@ -567,6 +579,17 @@ go test -count=1 ./coding -run Bash
   `fileURLToPath` drive/UNC rules merit a target-runtime comparison. This pass
   ran on Linux and did not execute the Go implementation on Windows. No
   Windows behavior change is justified from cross-builds alone.
+- Bash prompt guidelines are not gated on `exposeSessionEnvironment`
+  (`core/tools/bash.ts` sets `promptGuidelines` only when it is true). Pier's
+  contributions are static per-tool maps, so a Go host that builds the shell
+  tool with `ExposeSessionEnvironment: false` still gets the "You can inspect
+  PI_* environment variables" bullet while the environment is stripped. No
+  shipped CLI or SDK path sets it false, so this has no user-facing
+  reproduction yet; a fix would have to move the bullet onto the tool
+  definition. Recorded, not planned.
+- `find` checks the search path before resolving `fd`, while `find.ts` resolves
+  the tool first. The difference only shows when both the path is missing and
+  `fd` is unavailable, and only changes which message wins. Unverified.
 - Mutation admission still uses a Go mutex rather than upstream's promise
   FIFO; a supported-boundary ordering reproduction remains needed. The prior
   UI pending-slice retention lead is now CR-010 and repaired.
@@ -593,6 +616,9 @@ All completed with `GOPROXY=off GOSUMDB=off` on Go commands/recipes:
   integrity/unsupported-host tests also failed red, then passed. `go test
   -count=1 ./coding -run '^TestRPC'` and `go test -count=1 ./mcp/...
   ./coding/rpcclient ./coding/interactive`: PASS.
+- Round 5: bash-executor corpus failed on two multibyte cases before CR-015,
+  then passed; the output-accumulator corpus matched on its first run.
+  `go test -count=1 ./coding -run 'Bash'` and the full `coding` package pass.
 - Round 4 last-assistant-text session/RPC corpus: observed red assertions,
   then PASS with `ai.JSTrim`. All three new corpora regenerate byte-identically.
 - `just check`: PASS in all four rounds (formatting, vet, all package tests,
