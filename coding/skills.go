@@ -464,21 +464,20 @@ func parseSkillIgnoreRule(line, prefix string) (skillIgnoreRule, bool) {
 	if strings.HasPrefix(pattern, "\\#") {
 		pattern = pattern[1:]
 	}
-	anchored := strings.HasPrefix(pattern, "/")
+	// Upstream prefixIgnorePattern removes a leading slash before node-ignore.
 	pattern = strings.TrimPrefix(pattern, "/")
 	directoryOnly := strings.HasSuffix(pattern, "/")
 	pattern = strings.TrimSuffix(pattern, "/")
 	if prefix != "" {
 		pattern = prefix + pattern
-		anchored = true
 	}
 	if pattern == "" {
 		return skillIgnoreRule{}, false
 	}
 	pattern = strings.ToLower(pattern)
 	regexPattern := globToRegexp(pattern)
-	if !anchored && !strings.Contains(pattern, "/") {
-		regexPattern = `(?:^|/)` + regexPattern
+	if !strings.Contains(pattern, "/") {
+		regexPattern = `(?:[^/]+/)*` + regexPattern
 	}
 	compiled, err := regexp.Compile(`^` + regexPattern + `$`)
 	if err != nil {
@@ -749,16 +748,14 @@ func LoadSkills(options LoadSkillsOptions, trustProject bool) LoadSkillsResult {
 	}
 	// The project skills dirs stay gated on project trust (the Go loader's
 	// added parameter; upstream gates them in the resource loader).
-	if trustProject {
+	if trustProject && options.IncludeDefaults {
 		addSkills(loadSkillsFromDir(projectSkillsDir, "project"))
-		if options.IncludeDefaults {
-			// The workspace's .agents/skills from cwd up to the git repository
-			// root, with the user dir filtered out so it loads once with the
-			// user scope (upstream collectAncestorAgentsSkillDirs and the
-			// package manager's project-trust gate).
-			for _, dir := range projectAgentsSkillDirs(resolvedCwd, true, userAgentsSkillsDir) {
-				addSkills(loadSkillsFromDir(dir, "project"))
-			}
+		// The workspace's .agents/skills from cwd up to the git repository
+		// root, with the user dir filtered out so it loads once with the
+		// user scope (upstream collectAncestorAgentsSkillDirs and the
+		// package manager's project-trust gate).
+		for _, dir := range projectAgentsSkillDirs(resolvedCwd, true, userAgentsSkillsDir) {
+			addSkills(loadSkillsFromDir(dir, "project"))
 		}
 	}
 	if options.IncludeDefaults && userAgentsSkillsDir != "" {

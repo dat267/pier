@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -49,6 +50,53 @@ func TestCreateAgentSessionSkillPaths(t *testing.T) {
 	// ...and with nothing explicit, NoSkills really does mean nothing.
 	if got := skillNames(&CreateAgentSessionOptions{NoSkills: true}); len(got) != 0 {
 		t.Errorf("skills with NoSkills alone = %v, want none", got)
+	}
+}
+
+// pi v1.4.0 (4a080252), core/skills.ts loadSkills gates both default
+// directories on includeDefaults; resource-loader.ts preserves explicit paths
+// under noSkills. The same switches must remain in effect on reload.
+func TestCreateAgentSessionNoSkillsSkipsTrustedDefaults(t *testing.T) {
+	for _, explicit := range []bool{false, true} {
+		name := "no-explicit-path"
+		if explicit {
+			name = "explicit-path"
+		}
+		t.Run(name, func(t *testing.T) {
+			tempAgentDir(t)
+			t.Setenv("HOME", t.TempDir())
+			cwd, agentDir := t.TempDir(), GetAgentDir()
+			writeSkill(t, filepath.Join(cwd, ".pi", "skills"), "project-default", "Project default")
+			writeSkill(t, filepath.Join(agentDir, "skills"), "user-default", "User default")
+			settings := NewSettingsManagerFromFiles(cwd, agentDir, SettingsManagerCreateOptions{ProjectTrusted: boolPtr(true)})
+			paths, want := []string{}, []string{}
+			if explicit {
+				path := t.TempDir()
+				writeSkill(t, path, "extra", "Explicit skill")
+				paths, want = []string{path}, []string{"extra"}
+			}
+			created, err := CreateAgentSession(context.Background(), &CreateAgentSessionOptions{
+				Cwd: cwd, AgentDir: agentDir, ModelRuntime: testSessionRuntime(t), SettingsManager: settings,
+				SessionManager: InMemorySession(cwd, nil, nil), NoSkills: true, SkillPaths: paths,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer created.Session.Dispose()
+			check := func(phase string) {
+				t.Helper()
+				got := []string{}
+				for _, skill := range created.Session.Skills() {
+					got = append(got, skill.Name)
+				}
+				if !reflect.DeepEqual(got, want) {
+					t.Errorf("%s skills = %v, want %v", phase, got, want)
+				}
+			}
+			check("initial")
+			created.Session.Reload()
+			check("reload")
+		})
 	}
 }
 

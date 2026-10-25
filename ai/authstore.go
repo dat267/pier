@@ -2,6 +2,8 @@ package ai
 
 import (
 	"context"
+	"maps"
+	"slices"
 	"sync"
 )
 
@@ -10,15 +12,16 @@ import (
 
 // InMemoryCredentialStore is the default in-memory credential store. Apps
 // inject persistent stores. Writes are serialized per provider id (upstream
-// serializes through a promise chain; Go uses a per-id mutex with the same
-// mutual-exclusion guarantee).
+// serializes through a promise chain; Go uses completion-channel chains).
+// The data mutex is never retained across a user callback.
 type InMemoryCredentialStore struct {
 	mu    sync.Mutex
 	creds map[string]*Credential
+	tails map[string]chan struct{}
 }
 
 func NewInMemoryCredentialStore() *InMemoryCredentialStore {
-	return &InMemoryCredentialStore{creds: map[string]*Credential{}}
+	return &InMemoryCredentialStore{creds: map[string]*Credential{}, tails: map[string]chan struct{}{}}
 }
 
 func (s *InMemoryCredentialStore) Read(providerID string, ctx context.Context) (*Credential, error) {
@@ -27,11 +30,7 @@ func (s *InMemoryCredentialStore) Read(providerID string, ctx context.Context) (
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if c, ok := s.creds[providerID]; ok {
-		cloned := *c
-		return &cloned, nil
-	}
-	return nil, nil
+	return cloneMemoryCredential(s.creds[providerID]), nil
 }
 
 func (s *InMemoryCredentialStore) List(ctx context.Context) ([]CredentialInfo, error) {
@@ -47,40 +46,104 @@ func (s *InMemoryCredentialStore) List(ctx context.Context) ([]CredentialInfo, e
 	return out, nil
 }
 
-func (s *InMemoryCredentialStore) Modify(providerID string, fn func(current *Credential) (*Credential, error), ctx context.Context) (*Credential, error) {
-	if err := ctxErr(ctx); err != nil {
+func (s *InMemoryCredentialStore) beginWrite(providerID string, ctx context.Context) (func(), error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	current := s.creds[providerID]
+	previous := s.tails[providerID]
+	done := make(chan struct{})
+	s.tails[providerID] = done
+	s.mu.Unlock()
+	finish := func() {
+		s.mu.Lock()
+		if s.tails[providerID] == done {
+			delete(s.tails, providerID)
+		}
+		close(done)
+		s.mu.Unlock()
+	}
+	if previous != nil {
+		select {
+		case <-previous:
+		case <-ctx.Done():
+			// Keep this cancelled tail behind the active operation: releasing
+			// it now would admit later writes before that operation settles.
+			go func() { <-previous; finish() }()
+			return nil, ctx.Err()
+		}
+	}
+	if err := ctx.Err(); err != nil {
+		finish()
+		return nil, err
+	}
+	return finish, nil
+}
+
+func (s *InMemoryCredentialStore) Modify(providerID string, fn func(current *Credential) (*Credential, error), ctx context.Context) (*Credential, error) {
+	finish, err := s.beginWrite(providerID, ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer finish()
+	s.mu.Lock()
+	current := cloneMemoryCredential(s.creds[providerID])
+	s.mu.Unlock()
 	next, err := fn(current)
 	if err != nil {
 		return nil, err
 	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if err := ctxErr(ctx); err != nil {
 		return nil, err
 	}
-	if next != nil {
-		s.creds[providerID] = next
+	if next == nil {
+		next = current
 	}
 	if next != nil {
-		cloned := *next
-		return &cloned, nil
+		s.creds[providerID] = cloneMemoryCredential(next)
 	}
-	if current != nil {
-		cloned := *current
-		return &cloned, nil
+	return cloneMemoryCredential(next), nil
+}
+
+// D272: owned snapshots let callbacks run outside the data mutex without
+// exposing in-flight edits or caller-owned maps to concurrent readers.
+func cloneMemoryCredential(credential *Credential) *Credential {
+	if credential == nil {
+		return nil
 	}
-	return nil, nil
+	cloned := *credential
+	if credential.APIKey != nil {
+		key := *credential.APIKey
+		key.Env = maps.Clone(key.Env)
+		cloned.APIKey = &key
+	}
+	if credential.OAuth != nil {
+		oauth := *credential.OAuth
+		oauth.Extra = maps.Clone(oauth.Extra)
+		for key, raw := range oauth.Extra {
+			oauth.Extra[key] = slices.Clone(raw)
+		}
+		cloned.OAuth = &oauth
+	}
+	return &cloned
 }
 
 func (s *InMemoryCredentialStore) Delete(providerID string, ctx context.Context) error {
+	finish, err := s.beginWrite(providerID, ctx)
+	if err != nil {
+		return err
+	}
+	defer finish()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if err := ctxErr(ctx); err != nil {
 		return err
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	delete(s.creds, providerID)
 	return nil
 }

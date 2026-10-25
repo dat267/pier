@@ -18,6 +18,15 @@ event unless `End` explicitly closes delivery. A terminal claim is made under
 that mutex after predicate evaluation, so concurrently evaluated pushes cannot
 both publish terminal events.
 
+`ai.InMemoryCredentialStore.mu` protects the credential map and per-provider
+completion-chain tails, never callback execution. Callbacks receive deep owned
+snapshots and commit under the data mutex after their error/cancellation checks;
+read/list calls expose only committed snapshots (D272). Modify/delete share FIFO
+admission per provider, while unrelated providers progress independently. A
+cancelled queued caller returns immediately; a small drain goroutine releases
+its tail only after the preceding operation settles. Completed tails are removed
+when still current, so completed provider IDs are not retained by the queue.
+
 `agent.Agent.State` copies the pending-tool-call map under the agent mutex;
 snapshots never expose the map that tool-start/tool-end events mutate. Successful
 runs release their parent-context cancellation registrations only after their

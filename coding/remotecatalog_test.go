@@ -244,7 +244,7 @@ func TestRemoteCatalog404AndError(t *testing.T) {
 	defer server.Close()
 	store := NewInMemoryCodingAgentModelsStore()
 	ctx := ctxpkg.Background()
-	// A stored overlay is cleared when the server no longer serves it.
+	// pi v1.4.0 retains the body while invalidating freshness and the validator.
 	lastModified := int64(500)
 	etag := `"old"`
 	stored := &ai.ModelsStoreEntry{
@@ -270,8 +270,8 @@ func TestRemoteCatalog404AndError(t *testing.T) {
 		t.Fatal(err)
 	}
 	cleared, _ := store.Read("p", ctx)
-	// pi v1.4.0 persists an empty array, not null, for a missing catalog.
-	if cleared.Models == nil || len(cleared.Models) != 0 || cleared.Etag != nil || *cleared.LastModified != 0 {
+	// core/remote-catalog-provider.ts spreads stored, including its models array.
+	if len(cleared.Models) != 1 || cleared.Models[0].ID != "gone" || cleared.Etag != nil || *cleared.LastModified != 0 {
 		t.Fatalf("cleared = %+v", cleared)
 	}
 

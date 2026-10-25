@@ -25,7 +25,7 @@ const RemoteCatalogAttemptTimeoutMS int64 = 4_000
 // RemoteCatalogRefreshIntervalMS is how long a stored catalog stays fresh.
 const RemoteCatalogRefreshIntervalMS int64 = 4 * 60 * 60 * 1000
 
-const personalizedRemoteCatalogModelTypes = "chat,image,classifier"
+const remoteCatalogModelTypes = "chat,image,classifier"
 
 // mergeCatalogModels merges dynamic models over a baseline by model type and id.
 // The lookup is one map pass: upstream mergeModels ran a findIndex per remote
@@ -64,18 +64,33 @@ func mergeCatalogModels(baseline, dynamic []*ai.Model) []*ai.Model {
 }
 
 // ParseRemoteCatalog parses a catalog payload: a bare array, an object with a
-// models array, or an object whose values are models.
+// models array, or an object whose values are models. Pass json.RawMessage to
+// retain source property order; Go maps have no insertion order.
 func ParseRemoteCatalog(providerID string, value any) ([]*ai.Model, error) {
-	var entries []any
-	switch typed := value.(type) {
-	case []any:
-		entries = typed
-	case map[string]any:
-		if models, ok := typed["models"].([]any); ok {
-			entries = models
+	// Canonicalization retains string-key insertion order, resolves duplicate
+	// keys and sorts array-index keys like JSON.parse/Object.values upstream.
+	raw, err := ai.MarshalJSON(value)
+	if err != nil {
+		return nil, err
+	}
+	var entries []json.RawMessage
+	switch raw[0] {
+	case '[':
+		if err := json.Unmarshal(raw, &entries); err != nil {
+			return nil, err
+		}
+	case '{':
+		keys, values, err := readJSONObjectOrdered(raw)
+		if err != nil {
+			return nil, err
+		}
+		if models := values["models"]; len(models) > 0 && models[0] == '[' {
+			if err := json.Unmarshal(models, &entries); err != nil {
+				return nil, err
+			}
 		} else {
-			for _, item := range typed {
-				entries = append(entries, item)
+			for _, key := range keys {
+				entries = append(entries, values[key])
 			}
 		}
 	default:
@@ -83,25 +98,40 @@ func ParseRemoteCatalog(providerID string, value any) ([]*ai.Model, error) {
 	}
 	var models []*ai.Model
 	for _, entry := range entries {
-		object, ok := entry.(map[string]any)
-		if !ok {
+		if !isJSONObject(entry) {
+			continue
+		}
+		var object map[string]json.RawMessage
+		if err := json.Unmarshal(entry, &object); err != nil {
 			continue
 		}
 		if _, hasID := object["id"]; !hasID {
 			continue
 		}
-		encoded, err := json.Marshal(object)
-		if err != nil {
-			continue
+		if rawType, present := object["type"]; present {
+			var modelType string
+			if json.Unmarshal(rawType, &modelType) != nil || (modelType != "chat" && modelType != "image" && modelType != "classifier") {
+				continue
+			}
 		}
 		var model ai.Model
-		if err := json.Unmarshal(encoded, &model); err != nil {
+		if err := json.Unmarshal(entry, &model); err != nil {
 			continue
 		}
 		model.Provider = ai.ProviderId(providerID)
 		models = append(models, &model)
 	}
 	return models, nil
+}
+
+func chatCatalogModels(models []*ai.Model) []*ai.Model {
+	chat := make([]*ai.Model, 0, len(models))
+	for _, model := range models {
+		if ai.IsModelType(model, "chat") {
+			chat = append(chat, model)
+		}
+	}
+	return chat
 }
 
 // remoteCatalogModels decides which stored models are usable: a stored overlay
@@ -119,6 +149,23 @@ func remoteCatalogModels(entry *ai.ModelsStoreEntry, localGeneratedAt int64, has
 // RemoteCatalogFetcher performs the catalog HTTP request (the shared
 // management-HTTP helper; swappable in tests).
 type RemoteCatalogFetcher func(ctx context.Context, request *http.Request) (*http.Response, error)
+
+// remoteCatalogURL mirrors requestCatalog's absolute path and encodeURIComponent
+// provider ID, discarding any base pathname, query and fragment.
+func remoteCatalogURL(catalogBaseURL, providerID string) (string, error) {
+	base, err := url.Parse(catalogBaseURL)
+	if err != nil {
+		return "", err
+	}
+	encodedID := strings.NewReplacer(
+		"+", "%20", "%21", "!", "%27", "'", "%28", "(", "%29", ")", "%2A", "*",
+	).Replace(url.QueryEscape(providerID))
+	endpoint, err := base.Parse("/api/models/providers/" + encodedID)
+	if err != nil {
+		return "", err
+	}
+	return endpoint.String(), nil
+}
 
 // WithRemoteCatalog adds a persisted pi.dev catalog overlay to a static
 // built-in provider. The overlay only applies when the stored catalog is newer
@@ -160,7 +207,7 @@ func WithRemoteCatalog(provider *ai.Provider, catalogBaseURL string, localGenera
 		// The baseline is the built-in catalog; the persisted pi.dev overlay
 		// merges over it by model id.
 		ModelsGetter: func() []*ai.Model {
-			return mergeCatalogModels(provider.GetModels(), dynamicModels)
+			return mergeCatalogModels(provider.GetModels(), chatCatalogModels(dynamicModels))
 		},
 		Single: implementation,
 	})
@@ -200,13 +247,19 @@ func WithRemoteCatalog(provider *ai.Provider, catalogBaseURL string, localGenera
 		if stored != nil && len(stored.Models) > 0 && stored.Etag != nil {
 			validator = *stored.Etag
 		}
-		endpoint := strings.TrimSuffix(catalogBaseURL, "/") + "/api/models/providers/" + url.PathEscape(provider.ID)
+		endpoint, err := remoteCatalogURL(catalogBaseURL, provider.ID)
+		if err != nil {
+			return err
+		}
 		request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 		if err != nil {
 			return err
 		}
 		request.Header.Set("accept", "application/json")
 		request.Header.Set("User-Agent", PiUserAgent(Version))
+		query := request.URL.Query()
+		query.Set("types", remoteCatalogModelTypes)
+		request.URL.RawQuery = query.Encode()
 		if validator != "" {
 			request.Header.Set("if-none-match", validator)
 		}
@@ -241,11 +294,7 @@ func WithRemoteCatalog(provider *ai.Provider, catalogBaseURL string, localGenera
 		if err != nil {
 			return err
 		}
-		var payload any
-		if err := json.Unmarshal(raw, &payload); err != nil {
-			return err
-		}
-		refreshed, err := ParseRemoteCatalog(provider.ID, payload)
+		refreshed, err := ParseRemoteCatalog(provider.ID, json.RawMessage(raw))
 		if err != nil {
 			return err
 		}
@@ -297,9 +346,9 @@ func WithPersonalizedCatalog(
 	personalModels := []*ai.Model{}
 	getModels := func() []*ai.Model {
 		if len(personalModels) == 0 {
-			return provider.GetModels()
+			return chatCatalogModels(provider.GetModels())
 		}
-		return personalModels
+		return chatCatalogModels(personalModels)
 	}
 	streams := funcStreams{
 		stream: func(model *ai.Model, transcript ai.TranscriptContext, options *ai.StreamOptions) *ai.AssistantMessageEventStream {
@@ -337,7 +386,10 @@ func WithPersonalizedCatalog(
 		if !refresh.AllowNetwork || ctx.Err() != nil {
 			return nil
 		}
-		endpoint := strings.TrimSuffix(catalogBaseURL, "/") + "/api/models/providers/" + url.PathEscape(provider.ID)
+		endpoint, err := remoteCatalogURL(catalogBaseURL, provider.ID)
+		if err != nil {
+			return err
+		}
 		request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 		if err != nil {
 			return err
@@ -345,7 +397,7 @@ func WithPersonalizedCatalog(
 		request.Header.Set("accept", "application/json")
 		request.Header.Set("User-Agent", PiUserAgent(Version))
 		query := request.URL.Query()
-		query.Set("types", personalizedRemoteCatalogModelTypes)
+		query.Set("types", remoteCatalogModelTypes)
 		request.URL.RawQuery = query.Encode()
 		response, err := fetch(ctx, request)
 		if err != nil {
@@ -361,11 +413,7 @@ func WithPersonalizedCatalog(
 			if err != nil {
 				return err
 			}
-			var payload any
-			if err := json.Unmarshal(raw, &payload); err != nil {
-				return err
-			}
-			parsed, err := ParseRemoteCatalog(provider.ID, payload)
+			parsed, err := ParseRemoteCatalog(provider.ID, json.RawMessage(raw))
 			if err != nil {
 				return err
 			}
@@ -407,10 +455,10 @@ func storedWithCheckedAt(stored *ai.ModelsStoreEntry, checkedAt int64) *ai.Model
 	return &copied
 }
 
-// storedWithoutOverlay clears a catalog that the server no longer serves.
+// storedWithoutOverlay invalidates freshness and the validator but retains the
+// cached body, matching remote-catalog-provider.ts's spread of stored.
 func storedWithoutOverlay(stored *ai.ModelsStoreEntry, checkedAt int64) *ai.ModelsStoreEntry {
 	copied := *storedWithCheckedAt(stored, checkedAt)
-	copied.Models = nil
 	zero := int64(0)
 	copied.LastModified = &zero
 	copied.Etag = nil

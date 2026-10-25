@@ -203,18 +203,19 @@ Skill body here.`), 0o644)
 }
 
 func TestSkillsProjectTrustGate(t *testing.T) {
-	cwd := t.TempDir()
+	t.Setenv("HOME", t.TempDir())
+	cwd, agentDir := t.TempDir(), t.TempDir()
 	projectSkill := filepath.Join(cwd, ".pi", "skills", "proj")
 	os.MkdirAll(projectSkill, 0o755)
 	os.WriteFile(filepath.Join(projectSkill, "SKILL.md"), []byte("---\nname: proj\ndescription: project skill\n---\n"), 0o644)
 
 	// Untrusted (default): project skills are NOT scanned.
-	result := LoadSkills(LoadSkillsOptions{Cwd: cwd, IncludeDefaults: false}, false)
+	result := LoadSkills(LoadSkillsOptions{Cwd: cwd, AgentDir: agentDir, IncludeDefaults: true}, false)
 	if len(result.Skills) != 0 {
 		t.Fatal("untrusted project skills must not load")
 	}
 	// Trusted: scanned.
-	result = LoadSkills(LoadSkillsOptions{Cwd: cwd, IncludeDefaults: false}, true)
+	result = LoadSkills(LoadSkillsOptions{Cwd: cwd, AgentDir: agentDir, IncludeDefaults: true}, true)
 	if len(result.Skills) != 1 || result.Skills[0].Name != "proj" {
 		t.Fatalf("trusted skills = %+v", result.Skills)
 	}

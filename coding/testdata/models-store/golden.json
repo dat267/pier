@@ -1,0 +1,50 @@
+[
+  {
+    "operation": "write-other",
+    "initial": "{\"openrouter\":{\"models\":[{\"type\":\"image\",\"id\":\"image-model\",\"output\":[\"image\"],\"name\":\"Image\",\"api\":\"openrouter-images\",\"provider\":\"openrouter\",\"baseUrl\":\"https://provider.invalid/v1\",\"input\":[\"text\"],\"vendor\":{\"z\":\"<image>\",\"a\":1},\"headers\":{\"X-Fixture\":\"present\"},\"cost\":{\"input\":0,\"output\":0,\"cacheRead\":0,\"cacheWrite\":0}}],\"checkedAt\":123},\"other\":{\"models\":[],\"checkedAt\":123}}",
+    "modelJSON": "{\"type\":\"image\",\"id\":\"image-model\",\"output\":[\"image\"],\"name\":\"Image\",\"api\":\"openrouter-images\",\"provider\":\"openrouter\",\"baseUrl\":\"https://provider.invalid/v1\",\"input\":[\"text\"],\"vendor\":{\"z\":\"<image>\",\"a\":1},\"headers\":{\"X-Fixture\":\"present\"},\"cost\":{\"input\":0,\"output\":0,\"cacheRead\":0,\"cacheWrite\":0}}",
+    "checkedAt": 123,
+    "generation": {
+      "stopReason": "stop",
+      "outputTypes": [
+        "image"
+      ]
+    }
+  },
+  {
+    "operation": "delete-other",
+    "initial": "{\"openrouter\":{\"models\":[{\"type\":\"image\",\"id\":\"image-model\",\"output\":[\"image\"],\"name\":\"Image\",\"api\":\"openrouter-images\",\"provider\":\"openrouter\",\"baseUrl\":\"https://provider.invalid/v1\",\"input\":[\"text\"],\"vendor\":{\"z\":\"<image>\",\"a\":1},\"headers\":{\"X-Fixture\":\"present\"},\"cost\":{\"input\":0,\"output\":0,\"cacheRead\":0,\"cacheWrite\":0}}],\"checkedAt\":123},\"other\":{\"models\":[],\"checkedAt\":123}}",
+    "modelJSON": "{\"type\":\"image\",\"id\":\"image-model\",\"output\":[\"image\"],\"name\":\"Image\",\"api\":\"openrouter-images\",\"provider\":\"openrouter\",\"baseUrl\":\"https://provider.invalid/v1\",\"input\":[\"text\"],\"vendor\":{\"z\":\"<image>\",\"a\":1},\"headers\":{\"X-Fixture\":\"present\"},\"cost\":{\"input\":0,\"output\":0,\"cacheRead\":0,\"cacheWrite\":0}}",
+    "checkedAt": 123,
+    "generation": {
+      "stopReason": "stop",
+      "outputTypes": [
+        "image"
+      ]
+    }
+  },
+  {
+    "operation": "update-metadata",
+    "initial": "{\"openrouter\":{\"models\":[{\"type\":\"image\",\"id\":\"image-model\",\"output\":[\"image\"],\"name\":\"Image\",\"api\":\"openrouter-images\",\"provider\":\"openrouter\",\"baseUrl\":\"https://provider.invalid/v1\",\"input\":[\"text\"],\"vendor\":{\"z\":\"<image>\",\"a\":1},\"headers\":{\"X-Fixture\":\"present\"},\"cost\":{\"input\":0,\"output\":0,\"cacheRead\":0,\"cacheWrite\":0}}],\"checkedAt\":123},\"other\":{\"models\":[],\"checkedAt\":123}}",
+    "modelJSON": "{\"type\":\"image\",\"id\":\"image-model\",\"output\":[\"image\"],\"name\":\"Image\",\"api\":\"openrouter-images\",\"provider\":\"openrouter\",\"baseUrl\":\"https://provider.invalid/v1\",\"input\":[\"text\"],\"vendor\":{\"z\":\"<image>\",\"a\":1},\"headers\":{\"X-Fixture\":\"present\"},\"cost\":{\"input\":0,\"output\":0,\"cacheRead\":0,\"cacheWrite\":0}}",
+    "checkedAt": 456,
+    "generation": {
+      "stopReason": "stop",
+      "outputTypes": [
+        "image"
+      ]
+    }
+  },
+  {
+    "operation": "edit-model",
+    "initial": "{\"openrouter\":{\"models\":[{\"type\":\"image\",\"id\":\"image-model\",\"output\":[\"image\"],\"name\":\"Image\",\"api\":\"openrouter-images\",\"provider\":\"openrouter\",\"baseUrl\":\"https://provider.invalid/v1\",\"input\":[\"text\"],\"vendor\":{\"z\":\"<image>\",\"a\":1},\"headers\":{\"X-Fixture\":\"present\"},\"cost\":{\"input\":0,\"output\":0,\"cacheRead\":0,\"cacheWrite\":0}}],\"checkedAt\":123},\"other\":{\"models\":[],\"checkedAt\":123}}",
+    "modelJSON": "{\"type\":\"image\",\"id\":\"image-model\",\"output\":[\"image\"],\"name\":\"Renamed\",\"api\":\"openrouter-images\",\"provider\":\"openrouter\",\"baseUrl\":\"https://provider.invalid/v1\",\"input\":[\"text\"],\"vendor\":{\"z\":\"<image>\",\"a\":1},\"cost\":{\"input\":0,\"output\":0,\"cacheRead\":0,\"cacheWrite\":0}}",
+    "checkedAt": 123,
+    "generation": {
+      "stopReason": "stop",
+      "outputTypes": [
+        "image"
+      ]
+    }
+  }
+]

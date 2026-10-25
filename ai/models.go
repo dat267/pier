@@ -298,16 +298,112 @@ type Model struct {
 	PromptCache ModelPromptCache `json:"promptCache,omitempty"`
 	// Type is the model type; absent means chat (upstream Model.type).
 	Type string `json:"type,omitempty"`
+	// Loaded records may be image models or carry fields this chat descriptor
+	// does not expose. Keep immutable JSON provenance for lossless store clones
+	// while still applying changes to the typed fields.
+	jsonOriginal json.RawMessage
+	jsonBaseline *orderedJSONFields
+}
+
+// MarshalJSON preserves loaded fields and member order while applying typed
+// edits. Sampling order survives JSON-based model-store clones (upstream
+// models-store.ts uses structuredClone).
+func (m Model) MarshalJSON() ([]byte, error) {
+	fields, err := m.marshalJSONFields()
+	if err != nil {
+		return nil, err
+	}
+	if m.jsonOriginal == nil {
+		return fields.marshal()
+	}
+	original, err := decodeOrderedJSONFields(m.jsonOriginal)
+	if err != nil {
+		return nil, err
+	}
+	for _, key := range fields.keys {
+		before, present := m.jsonBaseline.raw(key)
+		after := fields.values[key]
+		if !present || !bytes.Equal(before, after) {
+			original.set(key, after)
+		}
+	}
+	for _, key := range m.jsonBaseline.keys {
+		if _, present := fields.raw(key); !present {
+			original.remove(key)
+		}
+	}
+	return original.marshal()
+}
+
+func (m Model) marshalJSONFields() (*orderedJSONFields, error) {
+	type modelAlias Model
+	encoded, err := MarshalJSON(modelAlias(m))
+	if err != nil {
+		return nil, err
+	}
+	fields, err := decodeOrderedJSONFields(encoded)
+	if err != nil {
+		return nil, err
+	}
+	if len(m.SamplingParams) > 0 {
+		params, err := marshalModelSamplingParams(m.SamplingParams, m.SamplingParamsOrder)
+		if err != nil {
+			return nil, err
+		}
+		fields.set("samplingParams", params)
+	}
+	if len(m.SamplingParamsByThinkingLevel) > 0 {
+		levels := make(map[ModelThinkingLevel]json.RawMessage, len(m.SamplingParamsByThinkingLevel))
+		for level, params := range m.SamplingParamsByThinkingLevel {
+			levels[level], err = marshalModelSamplingParams(params, m.SamplingParamsByThinkingLevelOrder[level])
+			if err != nil {
+				return nil, err
+			}
+		}
+		if err := fields.setAny("samplingParamsByThinkingLevel", levels); err != nil {
+			return nil, err
+		}
+	}
+	return fields, nil
+}
+
+func marshalModelSamplingParams(params SamplingParams, order []string) ([]byte, error) {
+	if params == nil {
+		return []byte("null"), nil
+	}
+	var fields orderedJSONFields
+	for _, key := range orderedSamplingKeys(params, order) {
+		if err := fields.setAny(key, params[key]); err != nil {
+			return nil, err
+		}
+	}
+	return fields.marshal()
 }
 
 func (m *Model) UnmarshalJSON(data []byte) error {
 	type modelAlias Model
 	var decoded modelAlias
-	if err := json.Unmarshal(data, &decoded); err != nil {
+	wire := struct {
+		*modelAlias
+		Compat json.RawMessage `json:"compat"`
+	}{modelAlias: &decoded}
+	if err := json.Unmarshal(data, &wire); err != nil {
 		return err
 	}
+	compat, err := DecodeModelCompat(decoded.API, wire.Compat)
+	if err != nil {
+		return err
+	}
+	decoded.Compat = compat
 	*m = Model(decoded)
 	m.captureSamplingParamOrder(data)
+	if trimmed := bytes.TrimSpace(data); len(trimmed) > 0 && trimmed[0] == '{' {
+		m.jsonOriginal = append(json.RawMessage(nil), data...)
+		m.jsonBaseline, err = m.marshalJSONFields()
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

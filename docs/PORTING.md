@@ -11,6 +11,42 @@ Reference pin: `4a080252` (Release v1.4.0), read from the `./pi` checkout.
 (`packages/ai/scripts/generate-models.ts --strict --data-only`, which fetches
 models.dev) through `scripts/gen_catalog.py`.
 
+The v1.4.0 remote-catalog follow-up retains cached bodies on 404/501 while
+invalidating freshness and the ETag (`core/remote-catalog-provider.ts`). Both
+catalog wrappers request the same supported model types, reject unknown types
+and expose only chat models through `GetModels`, including offline restores;
+image execution remains in the separate image-model runtime, and classifier
+execution remains out of scope. Response parsing keeps JavaScript property
+order for object-form catalogs, including numeric and duplicate keys. Red-first
+regressions cover these paths; source-generated fixtures compare published and
+persisted model-array order for both wrappers. D271 distinguishes a genuinely
+empty catalog from an existing cached body and documents legacy-null repair.
+Model JSON decoding also selects compatibility overrides by the enclosing API
+rather than guessing from their keys (`ai/src/types.ts`, `api/openai-completions.ts`
+`getCompat`). JSON-based model-store clones now retain sampling-parameter order,
+including thinking-level overrides (`core/models-store.ts`, `api/simple-options.ts`).
+Regressions cover both in-memory stores, file storage and captured request bytes.
+Both remote-catalog wrappers resolve the absolute provider endpoint from the base
+origin, discarding a base path/query/fragment and encoding the provider ID like
+`encodeURIComponent` (`core/remote-catalog-provider.ts`, `requestCatalog`).
+Shared model-store rewrites also preserve loaded model fields and member order,
+including image `output` and fields outside the chat descriptor, while applying
+edits to typed fields (`core/models-store.ts`). Source-generated fixtures cover
+unrelated writes/deletes, metadata updates and model edits, with image-generation
+checks. The in-memory credential store runs callbacks outside its data mutex
+and serializes only same-provider writes (`ai/src/auth/credential-store.ts`);
+reentrant reads, cross-provider progress and queued cancellation are covered by
+channel-coordinated regressions. D272 documents committed credential snapshots
+as the race-safe Go ownership boundary.
+Skill discovery now requires both default discovery and project trust before
+scanning a project's `.pi/skills` (`core/skills.ts`, `loadSkills`), so
+`NoSkills` suppresses those defaults during session creation and reload while
+retaining explicit skill paths. Basename ignore rules match nested paths, with
+the pin's leading-slash preprocessing and nested-rule prefixes preserved
+(`core/skills.ts`, `prefixIgnorePattern`/`loadSkillsFromDirInternal`). A
+source-generated 24-case corpus covers `.gitignore`, `.ignore`, `.fdignore`,
+negation and directory pruning; Go tests also check the resulting skill prompt.
+
 Session aborts now retain cancellation across retry startup, backoff and
 continuations, and `agent_settled.aborted` reports the run's abort flag rather
 than the final assistant's stop reason (`core/agent-session.ts`, `abort`,

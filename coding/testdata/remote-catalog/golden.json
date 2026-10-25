@@ -1,0 +1,182 @@
+[
+  {
+    "name": "string-key-order",
+    "payload": "{\"z\":{\"id\":\"z\"},\"a\":{\"id\":\"a\"},\"m\":{\"id\":\"m\"}}",
+    "personalized": false,
+    "persistedIds": [
+      "z",
+      "a",
+      "m"
+    ],
+    "chatIds": [
+      "z",
+      "a",
+      "m"
+    ]
+  },
+  {
+    "name": "string-key-order",
+    "payload": "{\"z\":{\"id\":\"z\"},\"a\":{\"id\":\"a\"},\"m\":{\"id\":\"m\"}}",
+    "personalized": true,
+    "persistedIds": [
+      "z",
+      "a",
+      "m"
+    ],
+    "chatIds": [
+      "z",
+      "a",
+      "m"
+    ]
+  },
+  {
+    "name": "index-key-order",
+    "payload": "{\"10\":{\"id\":\"ten\"},\"z\":{\"id\":\"z\"},\"2\":{\"id\":\"two\"},\"01\":{\"id\":\"leading-zero\"},\"0\":{\"id\":\"zero\"},\"4294967295\":{\"id\":\"not-index\"},\"4294967294\":{\"id\":\"last-index\"}}",
+    "personalized": false,
+    "persistedIds": [
+      "zero",
+      "two",
+      "ten",
+      "last-index",
+      "z",
+      "leading-zero",
+      "not-index"
+    ],
+    "chatIds": [
+      "zero",
+      "two",
+      "ten",
+      "last-index",
+      "z",
+      "leading-zero",
+      "not-index"
+    ]
+  },
+  {
+    "name": "index-key-order",
+    "payload": "{\"10\":{\"id\":\"ten\"},\"z\":{\"id\":\"z\"},\"2\":{\"id\":\"two\"},\"01\":{\"id\":\"leading-zero\"},\"0\":{\"id\":\"zero\"},\"4294967295\":{\"id\":\"not-index\"},\"4294967294\":{\"id\":\"last-index\"}}",
+    "personalized": true,
+    "persistedIds": [
+      "zero",
+      "two",
+      "ten",
+      "last-index",
+      "z",
+      "leading-zero",
+      "not-index"
+    ],
+    "chatIds": [
+      "zero",
+      "two",
+      "ten",
+      "last-index",
+      "z",
+      "leading-zero",
+      "not-index"
+    ]
+  },
+  {
+    "name": "duplicate-key-order",
+    "payload": "{\"z\":{\"id\":\"old\"},\"a\":{\"id\":\"a\"},\"z\":{\"id\":\"replacement\"},\"m\":{\"id\":\"m\"}}",
+    "personalized": false,
+    "persistedIds": [
+      "replacement",
+      "a",
+      "m"
+    ],
+    "chatIds": [
+      "replacement",
+      "a",
+      "m"
+    ]
+  },
+  {
+    "name": "duplicate-key-order",
+    "payload": "{\"z\":{\"id\":\"old\"},\"a\":{\"id\":\"a\"},\"z\":{\"id\":\"replacement\"},\"m\":{\"id\":\"m\"}}",
+    "personalized": true,
+    "persistedIds": [
+      "replacement",
+      "a",
+      "m"
+    ],
+    "chatIds": [
+      "replacement",
+      "a",
+      "m"
+    ]
+  },
+  {
+    "name": "models-array",
+    "payload": "{\"models\":[{\"id\":\"z\"},{\"id\":\"a\"},{\"id\":\"m\"}],\"metadata\":{\"id\":\"ignored\"}}",
+    "personalized": false,
+    "persistedIds": [
+      "z",
+      "a",
+      "m"
+    ],
+    "chatIds": [
+      "z",
+      "a",
+      "m"
+    ]
+  },
+  {
+    "name": "models-array",
+    "payload": "{\"models\":[{\"id\":\"z\"},{\"id\":\"a\"},{\"id\":\"m\"}],\"metadata\":{\"id\":\"ignored\"}}",
+    "personalized": true,
+    "persistedIds": [
+      "z",
+      "a",
+      "m"
+    ],
+    "chatIds": [
+      "z",
+      "a",
+      "m"
+    ]
+  },
+  {
+    "name": "models-object-fallback",
+    "payload": "{\"z\":{\"id\":\"z\"},\"models\":{\"id\":\"models\"},\"a\":{\"id\":\"a\"}}",
+    "personalized": false,
+    "persistedIds": [
+      "z",
+      "models",
+      "a"
+    ],
+    "chatIds": [
+      "z",
+      "models",
+      "a"
+    ]
+  },
+  {
+    "name": "models-object-fallback",
+    "payload": "{\"z\":{\"id\":\"z\"},\"models\":{\"id\":\"models\"},\"a\":{\"id\":\"a\"}}",
+    "personalized": true,
+    "persistedIds": [
+      "z",
+      "models",
+      "a"
+    ],
+    "chatIds": [
+      "z",
+      "models",
+      "a"
+    ]
+  },
+  {
+    "name": "empty-object",
+    "payload": "{}",
+    "personalized": false,
+    "persistedIds": [],
+    "chatIds": []
+  },
+  {
+    "name": "empty-object",
+    "payload": "{}",
+    "personalized": true,
+    "persistedIds": [],
+    "chatIds": []
+  }
+]

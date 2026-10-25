@@ -1,0 +1,267 @@
+{
+  "skillFiles": {
+    "blocked/SKILL.md": "---\nname: blocked-root\ndescription: A fixture skill\n---\nInstructions.\n",
+    "nested/blocked/SKILL.md": "---\nname: blocked-nested\ndescription: A fixture skill\n---\nInstructions.\n",
+    "nested/deeper/blocked/SKILL.md": "---\nname: blocked-deep\ndescription: A fixture skill\n---\nInstructions.\n",
+    "nested/visible/SKILL.md": "---\nname: visible\ndescription: A fixture skill\n---\nInstructions.\n",
+    "root.md": "---\nname: root-file\ndescription: A fixture skill\n---\nInstructions.\n"
+  },
+  "allNames": [
+    "blocked-root",
+    "blocked-nested",
+    "blocked-deep",
+    "visible",
+    "root-file"
+  ],
+  "cases": [
+    {
+      "name": ".gitignore/basename-directory",
+      "ignoreFiles": {
+        ".gitignore": "blocked/\n"
+      },
+      "names": [
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".gitignore/basename-file",
+      "ignoreFiles": {
+        ".gitignore": "SKILL.md\n"
+      },
+      "names": [
+        "root-file"
+      ]
+    },
+    {
+      "name": ".gitignore/explicit-path",
+      "ignoreFiles": {
+        ".gitignore": "nested/blocked/\n"
+      },
+      "names": [
+        "blocked-root",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".gitignore/leading-slash",
+      "ignoreFiles": {
+        ".gitignore": "/blocked/\n"
+      },
+      "names": [
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".gitignore/file-negation",
+      "ignoreFiles": {
+        ".gitignore": "SKILL.md\n!nested/visible/SKILL.md\n"
+      },
+      "names": [
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".gitignore/pruned-directory-negation",
+      "ignoreFiles": {
+        ".gitignore": "blocked/\n!nested/blocked/SKILL.md\n"
+      },
+      "names": [
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".gitignore/globstar",
+      "ignoreFiles": {
+        ".gitignore": "**/blocked/\n"
+      },
+      "names": [
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".gitignore/nested-prefix",
+      "ignoreFiles": {
+        "nested/.gitignore": "blocked/\n"
+      },
+      "names": [
+        "blocked-root",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".ignore/basename-directory",
+      "ignoreFiles": {
+        ".ignore": "blocked/\n"
+      },
+      "names": [
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".ignore/basename-file",
+      "ignoreFiles": {
+        ".ignore": "SKILL.md\n"
+      },
+      "names": [
+        "root-file"
+      ]
+    },
+    {
+      "name": ".ignore/explicit-path",
+      "ignoreFiles": {
+        ".ignore": "nested/blocked/\n"
+      },
+      "names": [
+        "blocked-root",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".ignore/leading-slash",
+      "ignoreFiles": {
+        ".ignore": "/blocked/\n"
+      },
+      "names": [
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".ignore/file-negation",
+      "ignoreFiles": {
+        ".ignore": "SKILL.md\n!nested/visible/SKILL.md\n"
+      },
+      "names": [
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".ignore/pruned-directory-negation",
+      "ignoreFiles": {
+        ".ignore": "blocked/\n!nested/blocked/SKILL.md\n"
+      },
+      "names": [
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".ignore/globstar",
+      "ignoreFiles": {
+        ".ignore": "**/blocked/\n"
+      },
+      "names": [
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".ignore/nested-prefix",
+      "ignoreFiles": {
+        "nested/.ignore": "blocked/\n"
+      },
+      "names": [
+        "blocked-root",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".fdignore/basename-directory",
+      "ignoreFiles": {
+        ".fdignore": "blocked/\n"
+      },
+      "names": [
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".fdignore/basename-file",
+      "ignoreFiles": {
+        ".fdignore": "SKILL.md\n"
+      },
+      "names": [
+        "root-file"
+      ]
+    },
+    {
+      "name": ".fdignore/explicit-path",
+      "ignoreFiles": {
+        ".fdignore": "nested/blocked/\n"
+      },
+      "names": [
+        "blocked-root",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".fdignore/leading-slash",
+      "ignoreFiles": {
+        ".fdignore": "/blocked/\n"
+      },
+      "names": [
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".fdignore/file-negation",
+      "ignoreFiles": {
+        ".fdignore": "SKILL.md\n!nested/visible/SKILL.md\n"
+      },
+      "names": [
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".fdignore/pruned-directory-negation",
+      "ignoreFiles": {
+        ".fdignore": "blocked/\n!nested/blocked/SKILL.md\n"
+      },
+      "names": [
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".fdignore/globstar",
+      "ignoreFiles": {
+        ".fdignore": "**/blocked/\n"
+      },
+      "names": [
+        "visible",
+        "root-file"
+      ]
+    },
+    {
+      "name": ".fdignore/nested-prefix",
+      "ignoreFiles": {
+        "nested/.fdignore": "blocked/\n"
+      },
+      "names": [
+        "blocked-root",
+        "blocked-deep",
+        "visible",
+        "root-file"
+      ]
+    }
+  ]
+}
