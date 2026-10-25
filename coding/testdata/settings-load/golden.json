@@ -1,0 +1,151 @@
+{
+  "valid-baseline": {
+    "getters": {
+      "steeringMode": "all",
+      "theme": "dark",
+      "transport": "websocket",
+      "defaultTools": [
+        "read",
+        "bash"
+      ],
+      "editorPaddingX": 3,
+      "compactionReserveTokens": 12000,
+      "retry": {
+        "enabled": true,
+        "maxRetries": 5,
+        "baseDelayMs": 250,
+        "maxAgentDelayMs": 60000
+      }
+    }
+  },
+  "global-theme-number": {
+    "getters": {
+      "steeringMode": "all",
+      "theme": null,
+      "transport": "websocket",
+      "defaultTools": [
+        "read",
+        "bash"
+      ],
+      "editorPaddingX": 3,
+      "compactionReserveTokens": 12000,
+      "retry": {
+        "enabled": true,
+        "maxRetries": 5,
+        "baseDelayMs": 250,
+        "maxAgentDelayMs": 60000
+      }
+    }
+  },
+  "global-theme-array": {
+    "getters": {
+      "steeringMode": "all",
+      "theme": null,
+      "transport": "websocket",
+      "defaultTools": [
+        "read",
+        "bash"
+      ],
+      "editorPaddingX": 3,
+      "compactionReserveTokens": 12000,
+      "retry": {
+        "enabled": true,
+        "maxRetries": 5,
+        "baseDelayMs": 250,
+        "maxAgentDelayMs": 60000
+      }
+    }
+  },
+  "global-compaction-enabled-string": {
+    "getters": {
+      "steeringMode": "all",
+      "theme": "dark",
+      "transport": "websocket",
+      "defaultTools": [
+        "read",
+        "bash"
+      ],
+      "editorPaddingX": 3,
+      "compactionReserveTokens": 12000,
+      "retry": {
+        "enabled": true,
+        "maxRetries": 5,
+        "baseDelayMs": 250,
+        "maxAgentDelayMs": 60000
+      }
+    }
+  },
+  "project-theme-number": {
+    "getters": {
+      "steeringMode": "all",
+      "theme": null,
+      "transport": "websocket",
+      "defaultTools": [
+        "read",
+        "bash"
+      ],
+      "editorPaddingX": 7,
+      "compactionReserveTokens": 12000,
+      "retry": {
+        "enabled": true,
+        "maxRetries": 5,
+        "baseDelayMs": 250,
+        "maxAgentDelayMs": 60000
+      }
+    }
+  },
+  "project-compaction-enabled-string": {
+    "getters": {
+      "steeringMode": "all",
+      "theme": "dark",
+      "transport": "websocket",
+      "defaultTools": [
+        "read",
+        "bash"
+      ],
+      "editorPaddingX": 3,
+      "compactionReserveTokens": 12000,
+      "retry": {
+        "enabled": true,
+        "maxRetries": 5,
+        "baseDelayMs": 250,
+        "maxAgentDelayMs": 60000
+      }
+    }
+  },
+  "invalid-json": {
+    "getters": {
+      "steeringMode": "one-at-a-time",
+      "theme": null,
+      "transport": "auto",
+      "defaultTools": null,
+      "editorPaddingX": 0,
+      "compactionReserveTokens": 16384,
+      "retry": {
+        "enabled": true,
+        "maxRetries": 3,
+        "baseDelayMs": 2000,
+        "maxAgentDelayMs": 60000
+      }
+    }
+  },
+  "unknown-key": {
+    "getters": {
+      "steeringMode": "all",
+      "theme": "dark",
+      "transport": "websocket",
+      "defaultTools": [
+        "read",
+        "bash"
+      ],
+      "editorPaddingX": 3,
+      "compactionReserveTokens": 12000,
+      "retry": {
+        "enabled": true,
+        "maxRetries": 5,
+        "baseDelayMs": 250,
+        "maxAgentDelayMs": 60000
+      }
+    }
+  }
+}

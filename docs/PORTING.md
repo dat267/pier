@@ -283,6 +283,19 @@ mapping. `AddClientAuthentication` now receives the ordered form. Values,
 headers, Basic auth, PKCE and endpoint defaults were already identical. The
 capturing-request corpus lives in `mcp/oauth/testdata/flow/`.
 
+**Settings-load audit.** A bounded audit of `core/settings-manager.ts` fixed a
+data-loss bug in settings loading: the typed decode discarded the whole file
+when any known member had the wrong JSON type, so a single `"enabled": "yes"`
+reset the theme, modes, transport, compaction, retry, model defaults and
+`defaultTools` for the session. `MigrateSettingsRaw` now decodes member by
+member, including nested struct members, so only the mistyped member falls back
+to its default; a rejected project member masks the inherited global value the
+way the reference's project layer does. The raw file already survived on disk.
+Typed getters cannot echo a raw wrong-typed value the way the reference's
+non-validating getters can, and invalid elements inside a leaf array or map are
+dropped; D277 records both. Eight global/project fixtures from the pinned
+manager pin the getters (`coding/testdata/settings-load/`).
+
 **Upstream status.** v1.4.0 (`4a080252`) is the latest released tag after
 refreshing upstream tags and is the port's reference pin. It is 81 commits past
 v1.3.0. The pin identifies the sources to review, not a claim that every change

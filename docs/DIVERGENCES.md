@@ -4,7 +4,7 @@ Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D276**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D277**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation.
 
 Related documents: [port status](PORTING.md), [architecture](architecture.md),
@@ -2519,3 +2519,40 @@ preprocessing is applied before parsing, so padded inputs behave as upstream.
 Test: `mcp/oauth/testdata/parse/golden.json` pins the whitespace cases and the
 `selectResource` decisions; the default-port and host-case helper outputs are
 excluded there for this reason.
+
+## D277
+
+**A mistyped settings member falls back to its typed default.**
+
+Reference: pi v1.4.0 (`4a080252`), `packages/coding-agent/src/core/
+settings-manager.ts`. The reference parses `settings.json` into a raw object and
+reads each member with a `??` default, so a wrong-typed value survives the load
+and its getter can return it as-is: with `"compaction": {"enabled": "yes"}`,
+`getCompactionEnabled()` returns the string `"yes"`, and a mistyped
+`thinkingBudgets.low` is echoed by `getThinkingBudgets()`. A mistyped project
+value also shadows the global one before the getter defaults.
+
+Pier decodes into typed structs. `MigrateSettingsRaw` now decodes member by
+member (and nested struct members within a member), so a value the field cannot
+hold only leaves that member at its zero value and the typed getter applies its
+default; unrelated members survive. A project member rejected this way masks the
+inherited global member, so the default applies instead of the global value
+showing through. The public `MigrateSettingsRaw`/`MigrateSettings` use the same
+path.
+
+The remaining differences are deliberate:
+
+- A getter that the reference does not type-check can echo the raw value there
+  (`compactionEnabled == "yes"`). Pier's typed getters always return their
+  declared type and therefore the default.
+- A leaf collection with an invalid element (`"defaultTools": ["read", 5]`, a
+  map value of the wrong type) is left at its zero value; the reference keeps
+  the raw array/map and lets the getter filter. A present-but-empty object is
+  kept (as `{}` would be), so schema round trips and save paths are unchanged.
+- A member with an unsupported JSON type is absent from the typed view, but the
+  raw file survives on disk: the persist path merges modified members into the
+  raw content, and the value is repaired only when the user fixes it.
+
+Tests: `TestSettingsLoadMatchesUpstream` with `coding/testdata/settings-load/`
+(global and project scope, mistyped string/number/array/nested values, an
+invalid-JSON control and an unknown-member control).

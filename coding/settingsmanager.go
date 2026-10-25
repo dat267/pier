@@ -523,8 +523,11 @@ type SettingsManager struct {
 
 	globalSettingsLoadError  error
 	projectSettingsLoadError error
-	errors                   []SettingsError
-	settingsPaths            map[SettingsScope]string
+	// projectRejected lists project settings members whose JSON type the typed
+	// settings cannot hold; they mask the inherited global member.
+	projectRejected []string
+	errors          []SettingsError
+	settingsPaths   map[SettingsScope]string
 
 	// cwd and agentDir are the resolved scope roots: with them the manager can be
 	// re-pointed at another project (RebindProject).
@@ -588,16 +591,18 @@ func (m *SettingsManager) RebindProject(cwd string, trusted bool) {
 	if !trusted {
 		m.projectSettings = &Settings{}
 		m.projectSettingsLoadError = nil
-		m.settings = DeepMergeSettings(m.globalSettings, m.projectSettings)
+		m.projectRejected = nil
+		m.settings = mergeSettingsWithRejects(m.globalSettings, m.projectSettings, nil)
 		return
 	}
-	projectLoad, projectErr := tryLoadFromStorage(m.storage, SettingsScopeProject, trusted)
+	projectLoad, projectRejected, projectErr := tryLoadFromStorageWithRejects(m.storage, SettingsScopeProject, trusted)
 	m.projectSettings = projectLoad
 	m.projectSettingsLoadError = projectErr
+	m.projectRejected = projectRejected
 	if projectErr != nil {
 		m.recordError(SettingsScopeProject, projectErr)
 	}
-	m.settings = DeepMergeSettings(m.globalSettings, m.projectSettings)
+	m.settings = mergeSettingsWithRejects(m.globalSettings, m.projectSettings, m.projectRejected)
 }
 
 func newSettingsManagerFromStorage(storage SettingsStorage, options SettingsManagerCreateOptions, paths map[SettingsScope]string) *SettingsManager {
@@ -606,7 +611,7 @@ func newSettingsManagerFromStorage(storage SettingsStorage, options SettingsMana
 		projectTrusted = *options.ProjectTrusted
 	}
 	globalLoad, globalErr := tryLoadFromStorage(storage, SettingsScopeGlobal, true)
-	projectLoad, projectErr := tryLoadFromStorage(storage, SettingsScopeProject, projectTrusted)
+	projectLoad, projectRejected, projectErr := tryLoadFromStorageWithRejects(storage, SettingsScopeProject, projectTrusted)
 
 	manager := &SettingsManager{
 		storage:                  storage,
@@ -620,9 +625,10 @@ func newSettingsManagerFromStorage(storage SettingsStorage, options SettingsMana
 		modifiedProjectNested:    map[string]map[string]bool{},
 		globalSettingsLoadError:  globalErr,
 		projectSettingsLoadError: projectErr,
+		projectRejected:          projectRejected,
 		settingsPaths:            paths,
 	}
-	manager.settings = DeepMergeSettings(manager.globalSettings, manager.projectSettings)
+	manager.settings = mergeSettingsWithRejects(manager.globalSettings, manager.projectSettings, manager.projectRejected)
 	if globalErr != nil {
 		manager.recordError(SettingsScopeGlobal, globalErr)
 	}
@@ -642,32 +648,47 @@ func NewInMemorySettingsManager(settings *Settings, options SettingsManagerCreat
 }
 
 func loadFromStorage(storage SettingsStorage, scope SettingsScope, projectTrusted bool) (*Settings, error) {
+	settings, _, err := loadFromStorageWithRejects(storage, scope, projectTrusted)
+	return settings, err
+}
+
+// loadFromStorageWithRejects loads one scope and reports the known members the
+// typed settings could not hold.
+func loadFromStorageWithRejects(storage SettingsStorage, scope SettingsScope, projectTrusted bool) (*Settings, []string, error) {
 	if scope == SettingsScopeProject && !projectTrusted {
-		return &Settings{}, nil
+		return &Settings{}, nil, nil
 	}
 	var content *string
 	if err := storage.WithLock(scope, func(current *string) *string {
 		content = current
 		return nil
 	}); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if content == nil || *content == "" {
-		return &Settings{}, nil
+		return &Settings{}, nil, nil
 	}
 	var raw map[string]any
 	if err := json.Unmarshal([]byte(StripBom(*content)), &raw); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return MigrateSettingsRaw(raw), nil
+	settings, rejected := migrateSettingsRawWithRejects(raw)
+	return settings, rejected, nil
 }
 
 func tryLoadFromStorage(storage SettingsStorage, scope SettingsScope, projectTrusted bool) (*Settings, error) {
-	settings, err := loadFromStorage(storage, scope, projectTrusted)
+	settings, _, err := tryLoadFromStorageWithRejects(storage, scope, projectTrusted)
+	return settings, err
+}
+
+// tryLoadFromStorageWithRejects is tryLoadFromStorage plus the rejected member
+// names.
+func tryLoadFromStorageWithRejects(storage SettingsStorage, scope SettingsScope, projectTrusted bool) (*Settings, []string, error) {
+	settings, rejected, err := loadFromStorageWithRejects(storage, scope, projectTrusted)
 	if err != nil {
-		return &Settings{}, err
+		return &Settings{}, nil, err
 	}
-	return settings, nil
+	return settings, rejected, nil
 }
 
 // StripBom removes a leading UTF-8 BOM.
@@ -690,18 +711,36 @@ func MigrateSettings(settings *Settings) *Settings {
 
 // MigrateSettingsRaw applies the migrations to a raw settings object.
 // MigrateSettingsRaw parses a raw settings object after the legacy-key
-// migrations (upstream migrateSettings).
+// migrations (upstream migrateSettings). Decoding is member by member, so a
+// value the typed struct cannot hold (for example `"enabled": "yes"`) only
+// leaves that member at its zero value instead of discarding the whole file,
+// which is what the reference's per-member defaults do.
 func MigrateSettingsRaw(settings map[string]any) *Settings {
+	migrated, _ := migrateSettingsRawWithRejects(settings)
+	return migrated
+}
+
+// migrateSettingsRawWithRejects is MigrateSettingsRaw plus the known member
+// names whose value the typed struct could not hold.
+func migrateSettingsRawWithRejects(settings map[string]any) (*Settings, []string) {
 	settings = migrateSettingsMap(settings)
 	encoded, err := marshalJSONNoEscape(settings)
 	if err != nil {
-		return &Settings{}
+		return &Settings{}, nil
 	}
-	var out Settings
-	if err := json.Unmarshal(encoded, &out); err != nil {
-		return &Settings{}
+	out := &Settings{}
+	return out, decodeSettingsTolerantWithRejects(encoded, out)
+}
+
+// mergeSettingsWithRejects merges the scopes, then zeroes the members a project
+// value shadowed without being representable: upstream's project value overrides
+// the global one and the getter falls back to its default.
+func mergeSettingsWithRejects(global, project *Settings, rejected []string) *Settings {
+	merged := DeepMergeSettings(global, project)
+	for _, name := range rejected {
+		clearSettingsMember(merged, name)
 	}
-	return &out
+	return merged
 }
 
 // migrateSettingsMap applies the legacy-key migrations to a raw settings
@@ -1139,16 +1178,18 @@ func (m *SettingsManager) SetProjectTrusted(trusted bool) {
 	if !trusted {
 		m.projectSettings = &Settings{}
 		m.projectSettingsLoadError = nil
-		m.settings = DeepMergeSettings(m.globalSettings, m.projectSettings)
+		m.projectRejected = nil
+		m.settings = mergeSettingsWithRejects(m.globalSettings, m.projectSettings, nil)
 		return
 	}
-	projectLoad, projectErr := tryLoadFromStorage(m.storage, SettingsScopeProject, trusted)
+	projectLoad, projectRejected, projectErr := tryLoadFromStorageWithRejects(m.storage, SettingsScopeProject, trusted)
 	m.projectSettings = projectLoad
 	m.projectSettingsLoadError = projectErr
+	m.projectRejected = projectRejected
 	if projectErr != nil {
 		m.recordErrorLocked(SettingsScopeProject, projectErr)
 	}
-	m.settings = DeepMergeSettings(m.globalSettings, m.projectSettings)
+	m.settings = mergeSettingsWithRejects(m.globalSettings, m.projectSettings, m.projectRejected)
 }
 
 // Reload re-reads both scopes from storage.
@@ -1166,15 +1207,16 @@ func (m *SettingsManager) Reload() {
 	m.modifiedFields = map[string]bool{}
 	m.modifiedNestedFields = map[string]map[string]bool{}
 
-	projectLoad, projectErr := tryLoadFromStorage(m.storage, SettingsScopeProject, m.projectTrusted)
+	projectLoad, projectRejected, projectErr := tryLoadFromStorageWithRejects(m.storage, SettingsScopeProject, m.projectTrusted)
 	if projectErr == nil {
 		m.projectSettings = projectLoad
 		m.projectSettingsLoadError = nil
+		m.projectRejected = projectRejected
 	} else {
 		m.projectSettingsLoadError = projectErr
 		m.recordErrorLocked(SettingsScopeProject, projectErr)
 	}
-	m.settings = DeepMergeSettings(m.globalSettings, m.projectSettings)
+	m.settings = mergeSettingsWithRejects(m.globalSettings, m.projectSettings, m.projectRejected)
 }
 
 // ApplyOverrides layers additional settings over the current view.
@@ -1248,7 +1290,7 @@ func (m *SettingsManager) clearModifiedScope(scope SettingsScope) {
 // storage roundtrip (lock retries, file read and write) runs on the persist
 // queue because the caller is the UI loop in interactive mode.
 func (m *SettingsManager) save() {
-	m.settings = DeepMergeSettings(m.globalSettings, m.projectSettings)
+	m.settings = mergeSettingsWithRejects(m.globalSettings, m.projectSettings, m.projectRejected)
 	if m.globalSettingsLoadError != nil {
 		return
 	}
@@ -1301,7 +1343,7 @@ func (m *SettingsManager) saveProjectSettings(settings *Settings) {
 		return
 	}
 	m.projectSettings = cloneSettings(settings)
-	m.settings = DeepMergeSettings(m.globalSettings, m.projectSettings)
+	m.settings = mergeSettingsWithRejects(m.globalSettings, m.projectSettings, m.projectRejected)
 	if m.projectSettingsLoadError != nil {
 		return
 	}
