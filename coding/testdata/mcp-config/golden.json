@@ -1,0 +1,993 @@
+{
+  "validate": [
+    {
+      "name": "url-type-number",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "type": 5
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\" needs either \"command\" (stdio) or \"url\" (streamable HTTP)"
+    },
+    {
+      "name": "url-type-null",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "type": null
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\" needs either \"command\" (stdio) or \"url\" (streamable HTTP)"
+    },
+    {
+      "name": "url-type-bool",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "type": true
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\" needs either \"command\" (stdio) or \"url\" (streamable HTTP)"
+    },
+    {
+      "name": "url-type-array",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "type": []
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\" needs either \"command\" (stdio) or \"url\" (streamable HTTP)"
+    },
+    {
+      "name": "command-type-number",
+      "serverName": "srv",
+      "raw": {
+        "command": "npx",
+        "type": 5
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\" needs either \"command\" (stdio) or \"url\" (streamable HTTP)"
+    },
+    {
+      "name": "command-type-null",
+      "serverName": "srv",
+      "raw": {
+        "command": "npx",
+        "type": null
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\" needs either \"command\" (stdio) or \"url\" (streamable HTTP)"
+    },
+    {
+      "name": "url-type-http",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "type": "http"
+      },
+      "toolExposureOrder": null,
+      "config": {
+        "url": "https://example.com/mcp",
+        "type": "http"
+      }
+    },
+    {
+      "name": "url-type-streamable",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "type": "streamable-http"
+      },
+      "toolExposureOrder": null,
+      "config": {
+        "url": "https://example.com/mcp",
+        "type": "streamable-http"
+      }
+    },
+    {
+      "name": "url-type-unknown-string",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "type": "foo"
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\" needs either \"command\" (stdio) or \"url\" (streamable HTTP)"
+    },
+    {
+      "name": "command-type-stdio",
+      "serverName": "srv",
+      "raw": {
+        "command": "npx",
+        "type": "stdio"
+      },
+      "toolExposureOrder": null,
+      "config": {
+        "command": "npx",
+        "type": "stdio"
+      }
+    },
+    {
+      "name": "url-and-command",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "command": "npx"
+      },
+      "toolExposureOrder": null,
+      "config": {
+        "url": "https://example.com/mcp",
+        "command": "npx"
+      }
+    },
+    {
+      "name": "command-and-url-type-stdio",
+      "serverName": "srv",
+      "raw": {
+        "command": "npx",
+        "url": "https://example.com/mcp",
+        "type": "stdio"
+      },
+      "toolExposureOrder": null,
+      "config": {
+        "command": "npx",
+        "url": "https://example.com/mcp",
+        "type": "stdio"
+      }
+    },
+    {
+      "name": "invalid-name-quote",
+      "serverName": "a\"b",
+      "raw": {
+        "command": "x"
+      },
+      "toolExposureOrder": null,
+      "error": "invalid server name \"a\"b\" (use letters, digits, \"_\" and \"-\")"
+    },
+    {
+      "name": "invalid-name-backslash",
+      "serverName": "a\\b",
+      "raw": {
+        "command": "x"
+      },
+      "toolExposureOrder": null,
+      "error": "invalid server name \"a\\b\" (use letters, digits, \"_\" and \"-\")"
+    },
+    {
+      "name": "invalid-name-space",
+      "serverName": "a b",
+      "raw": {
+        "command": "x"
+      },
+      "toolExposureOrder": null,
+      "error": "invalid server name \"a b\" (use letters, digits, \"_\" and \"-\")"
+    },
+    {
+      "name": "invalid-name-unicode",
+      "serverName": "serveur-général",
+      "raw": {
+        "command": "x"
+      },
+      "toolExposureOrder": null,
+      "error": "invalid server name \"serveur-général\" (use letters, digits, \"_\" and \"-\")"
+    },
+    {
+      "name": "timeout-string",
+      "serverName": "srv",
+      "raw": {
+        "command": "x",
+        "timeout": "5"
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": timeout must be a positive number of seconds"
+    },
+    {
+      "name": "timeout-zero",
+      "serverName": "srv",
+      "raw": {
+        "command": "x",
+        "timeout": 0
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": timeout must be a positive number of seconds"
+    },
+    {
+      "name": "timeout-negative",
+      "serverName": "srv",
+      "raw": {
+        "command": "x",
+        "timeout": -1
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": timeout must be a positive number of seconds"
+    },
+    {
+      "name": "timeout-fraction",
+      "serverName": "srv",
+      "raw": {
+        "command": "x",
+        "timeout": 1.5
+      },
+      "toolExposureOrder": null,
+      "config": {
+        "command": "x",
+        "timeout": 1.5
+      }
+    },
+    {
+      "name": "exposure-alias",
+      "serverName": "srv",
+      "raw": {
+        "command": "x",
+        "exposure": "tool"
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": exposure must be one of \"codemode\", \"deferred\", \"direct\", \"hidden\""
+    },
+    {
+      "name": "exposure-invalid",
+      "serverName": "srv",
+      "raw": {
+        "command": "x",
+        "exposure": "nope"
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": exposure must be one of \"codemode\", \"deferred\", \"direct\", \"hidden\""
+    },
+    {
+      "name": "tool-exposure-multi-invalid",
+      "serverName": "srv",
+      "raw": {
+        "command": "x",
+        "toolExposure": {
+          "z": "nope",
+          "a": "bad"
+        }
+      },
+      "toolExposureOrder": [
+        "z",
+        "a"
+      ],
+      "error": "server \"srv\": toolExposure \"z\" must be one of \"codemode\", \"deferred\", \"direct\", \"hidden\""
+    },
+    {
+      "name": "exposure-alias-real",
+      "serverName": "srv",
+      "raw": {
+        "command": "x",
+        "exposure": "codemode-deferred"
+      },
+      "toolExposureOrder": null,
+      "config": {
+        "command": "x",
+        "exposure": "codemode"
+      }
+    },
+    {
+      "name": "tool-exposure-pattern-alias",
+      "serverName": "srv",
+      "raw": {
+        "command": "x",
+        "toolExposure": {
+          "read_*": "codemode-deferred"
+        }
+      },
+      "toolExposureOrder": [
+        "read_*"
+      ],
+      "config": {
+        "command": "x",
+        "toolExposure": {
+          "read_*": "codemode"
+        }
+      }
+    },
+    {
+      "name": "headers-numeric",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "headers": {
+          "A": 1
+        }
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": headers must map names to strings"
+    },
+    {
+      "name": "headers-null",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "headers": null
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": headers must map names to strings"
+    },
+    {
+      "name": "args-mixed",
+      "serverName": "srv",
+      "raw": {
+        "command": "x",
+        "args": [
+          "a",
+          1
+        ]
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": args must be an array of strings"
+    },
+    {
+      "name": "args-null",
+      "serverName": "srv",
+      "raw": {
+        "command": "x",
+        "args": null
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": args must be an array of strings"
+    },
+    {
+      "name": "env-null",
+      "serverName": "srv",
+      "raw": {
+        "command": "x",
+        "env": null
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": env must map names to strings"
+    },
+    {
+      "name": "cwd-number",
+      "serverName": "srv",
+      "raw": {
+        "command": "x",
+        "cwd": 1
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": cwd must be a string"
+    },
+    {
+      "name": "cwd-null",
+      "serverName": "srv",
+      "raw": {
+        "command": "x",
+        "cwd": null
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": cwd must be a string"
+    },
+    {
+      "name": "url-number",
+      "serverName": "srv",
+      "raw": {
+        "url": 5
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\" needs either \"command\" (stdio) or \"url\" (streamable HTTP)"
+    },
+    {
+      "name": "url-empty",
+      "serverName": "srv",
+      "raw": {
+        "url": ""
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": url must be an http or https URL"
+    },
+    {
+      "name": "url-ftp",
+      "serverName": "srv",
+      "raw": {
+        "url": "ftp://example.com/x"
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": url must be an http or https URL"
+    },
+    {
+      "name": "url-uppercase-scheme",
+      "serverName": "srv",
+      "raw": {
+        "url": "HTTPS://EXAMPLE.COM/MCP"
+      },
+      "toolExposureOrder": null,
+      "config": {
+        "url": "HTTPS://EXAMPLE.COM/MCP"
+      }
+    },
+    {
+      "name": "url-whitespace",
+      "serverName": "srv",
+      "raw": {
+        "url": " https://example.com/mcp "
+      },
+      "toolExposureOrder": null,
+      "config": {
+        "url": " https://example.com/mcp "
+      }
+    },
+    {
+      "name": "url-relative",
+      "serverName": "srv",
+      "raw": {
+        "url": "/mcp"
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": url must be an http or https URL"
+    },
+    {
+      "name": "url-with-fragment",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp#x"
+      },
+      "toolExposureOrder": null,
+      "config": {
+        "url": "https://example.com/mcp#x"
+      }
+    },
+    {
+      "name": "auth-empty-provider",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "auth": {
+          "provider": ""
+        }
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": auth.provider must be a provider name"
+    },
+    {
+      "name": "auth-http-non-loopback",
+      "serverName": "srv",
+      "raw": {
+        "url": "http://example.com/mcp",
+        "auth": {
+          "provider": "p"
+        }
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": auth requires an https URL, or http on localhost, 127.0.0.1, or [::1]"
+    },
+    {
+      "name": "auth-http-localhost",
+      "serverName": "srv",
+      "raw": {
+        "url": "http://localhost:8080/mcp",
+        "auth": {
+          "provider": "p"
+        }
+      },
+      "toolExposureOrder": null,
+      "config": {
+        "url": "http://localhost:8080/mcp",
+        "auth": {
+          "provider": "p"
+        }
+      }
+    },
+    {
+      "name": "auth-http-ipv6",
+      "serverName": "srv",
+      "raw": {
+        "url": "http://[::1]:8080/mcp",
+        "auth": {
+          "provider": "p"
+        }
+      },
+      "toolExposureOrder": null,
+      "config": {
+        "url": "http://[::1]:8080/mcp",
+        "auth": {
+          "provider": "p"
+        }
+      }
+    },
+    {
+      "name": "oauth-port-zero",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "oauth": {
+          "callbackPort": 0
+        }
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": oauth.callbackPort must be a port number"
+    },
+    {
+      "name": "oauth-port-max",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "oauth": {
+          "callbackPort": 65535
+        }
+      },
+      "toolExposureOrder": null,
+      "config": {
+        "url": "https://example.com/mcp",
+        "oauth": {
+          "callbackPort": 65535
+        }
+      }
+    },
+    {
+      "name": "oauth-port-over",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "oauth": {
+          "callbackPort": 65536
+        }
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": oauth.callbackPort must be a port number"
+    },
+    {
+      "name": "oauth-port-fraction",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "oauth": {
+          "callbackPort": 1.5
+        }
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": oauth.callbackPort must be a port number"
+    },
+    {
+      "name": "oauth-port-string",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "oauth": {
+          "callbackPort": "80"
+        }
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": oauth.callbackPort must be a port number"
+    },
+    {
+      "name": "oauth-callback-url",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "oauth": {
+          "callbackUrl": "http://127.0.0.1:33418/callback"
+        }
+      },
+      "toolExposureOrder": null,
+      "config": {
+        "url": "https://example.com/mcp",
+        "oauth": {
+          "callbackUrl": "http://127.0.0.1:33418/callback"
+        }
+      }
+    },
+    {
+      "name": "oauth-callback-nonloopback",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "oauth": {
+          "callbackUrl": "http://example.com/callback"
+        }
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": oauth.callbackUrl must be an http URI on localhost, 127.0.0.1, or [::1] without query or fragment"
+    },
+    {
+      "name": "oauth-callback-query",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "oauth": {
+          "callbackUrl": "http://localhost/cb?x=1"
+        }
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": oauth.callbackUrl must be an http URI on localhost, 127.0.0.1, or [::1] without query or fragment"
+    },
+    {
+      "name": "oauth-callback-port-mismatch",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "oauth": {
+          "callbackUrl": "http://localhost:8080/cb",
+          "callbackPort": 8081
+        }
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": oauth.callbackUrl and oauth.callbackPort name different ports"
+    },
+    {
+      "name": "oauth-client-name-blank",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "oauth": {
+          "clientName": "  "
+        }
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": oauth.clientName must be a non-empty string"
+    },
+    {
+      "name": "oauth-metadata-http-remote",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "oauth": {
+          "authServerMetadataUrl": "http://example.com/meta"
+        }
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": oauth.authServerMetadataUrl must be an https URL, or http on localhost, 127.0.0.1, or [::1]"
+    },
+    {
+      "name": "oauth-metadata-https",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "oauth": {
+          "authServerMetadataUrl": "https://example.com/meta"
+        }
+      },
+      "toolExposureOrder": null,
+      "config": {
+        "url": "https://example.com/mcp",
+        "oauth": {
+          "authServerMetadataUrl": "https://example.com/meta"
+        }
+      }
+    },
+    {
+      "name": "oauth-metadata-invalid",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "oauth": {
+          "authServerMetadataUrl": "not a url"
+        }
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": oauth.authServerMetadataUrl must be an https URL, or http on localhost, 127.0.0.1, or [::1]"
+    },
+    {
+      "name": "url-leading-space",
+      "serverName": "srv",
+      "raw": {
+        "url": " https://example.com/mcp"
+      },
+      "toolExposureOrder": null,
+      "config": {
+        "url": " https://example.com/mcp"
+      }
+    },
+    {
+      "name": "url-trailing-newline",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp\n"
+      },
+      "toolExposureOrder": null,
+      "config": {
+        "url": "https://example.com/mcp\n"
+      }
+    },
+    {
+      "name": "url-inner-space-path",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/a b"
+      },
+      "toolExposureOrder": null,
+      "config": {
+        "url": "https://example.com/a b"
+      }
+    },
+    {
+      "name": "url-inner-space-host",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://exa mple.com/mcp"
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": url must be an http or https URL"
+    },
+    {
+      "name": "url-invalid-port",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com:99999/mcp"
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": url must be an http or https URL"
+    },
+    {
+      "name": "url-port-zero",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com:0/mcp"
+      },
+      "toolExposureOrder": null,
+      "config": {
+        "url": "https://example.com:0/mcp"
+      }
+    },
+    {
+      "name": "url-tab",
+      "serverName": "srv",
+      "raw": {
+        "url": "\thttps://example.com/mcp"
+      },
+      "toolExposureOrder": null,
+      "config": {
+        "url": "\thttps://example.com/mcp"
+      }
+    },
+    {
+      "name": "url-only-scheme",
+      "serverName": "srv",
+      "raw": {
+        "url": "https:"
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": url must be an http or https URL"
+    },
+    {
+      "name": "url-file",
+      "serverName": "srv",
+      "raw": {
+        "url": "file:///tmp/mcp"
+      },
+      "toolExposureOrder": null,
+      "error": "server \"srv\": url must be an http or https URL"
+    },
+    {
+      "name": "auth-url-whitespace",
+      "serverName": "srv",
+      "raw": {
+        "url": " https://example.com/mcp",
+        "auth": {
+          "provider": "p"
+        }
+      },
+      "toolExposureOrder": null,
+      "config": {
+        "url": " https://example.com/mcp",
+        "auth": {
+          "provider": "p"
+        }
+      }
+    },
+    {
+      "name": "oauth-metadata-whitespace",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "oauth": {
+          "authServerMetadataUrl": " https://example.com/meta"
+        }
+      },
+      "toolExposureOrder": null,
+      "config": {
+        "url": "https://example.com/mcp",
+        "oauth": {
+          "authServerMetadataUrl": " https://example.com/meta"
+        }
+      }
+    },
+    {
+      "name": "oauth-callback-whitespace",
+      "serverName": "srv",
+      "raw": {
+        "url": "https://example.com/mcp",
+        "oauth": {
+          "callbackUrl": " http://localhost/cb"
+        }
+      },
+      "toolExposureOrder": null,
+      "config": {
+        "url": "https://example.com/mcp",
+        "oauth": {
+          "callbackUrl": " http://localhost/cb"
+        }
+      }
+    },
+    {
+      "name": "non-object",
+      "serverName": "srv",
+      "raw": "just a string",
+      "toolExposureOrder": null,
+      "error": "server \"srv\" must be an object"
+    },
+    {
+      "name": "non-object-array",
+      "serverName": "srv",
+      "raw": [
+        1,
+        2
+      ],
+      "toolExposureOrder": null,
+      "error": "server \"srv\" must be an object"
+    }
+  ],
+  "load": [
+    {
+      "name": "type-null-url",
+      "config": {
+        "mcpServers": {
+          "srv": {
+            "url": "https://example.com/mcp",
+            "type": null
+          }
+        }
+      },
+      "servers": [],
+      "errors": [
+        "<path>/mcp.json: server \"srv\" needs either \"command\" (stdio) or \"url\" (streamable HTTP)"
+      ]
+    },
+    {
+      "name": "type-number-command",
+      "config": {
+        "mcpServers": {
+          "srv": {
+            "command": "npx",
+            "type": 5
+          }
+        }
+      },
+      "servers": [],
+      "errors": [
+        "<path>/mcp.json: server \"srv\" needs either \"command\" (stdio) or \"url\" (streamable HTTP)"
+      ]
+    },
+    {
+      "name": "whitespace-url",
+      "config": {
+        "mcpServers": {
+          "srv": {
+            "url": " https://example.com/mcp\n"
+          }
+        }
+      },
+      "servers": [
+        "srv"
+      ],
+      "errors": []
+    },
+    {
+      "name": "invalid-name-quote",
+      "config": {
+        "mcpServers": {
+          "a\"b": {
+            "command": "npx"
+          }
+        }
+      },
+      "servers": [],
+      "errors": [
+        "<path>/mcp.json: invalid server name \"a\"b\" (use letters, digits, \"_\" and \"-\")"
+      ]
+    },
+    {
+      "name": "valid-control",
+      "config": {
+        "mcpServers": {
+          "ok": {
+            "command": "npx",
+            "args": [
+              "-y",
+              "server"
+            ]
+          }
+        }
+      },
+      "servers": [
+        "ok"
+      ],
+      "errors": []
+    },
+    {
+      "name": "type-bool-url",
+      "config": {
+        "mcpServers": {
+          "srv": {
+            "url": "https://example.com/mcp",
+            "type": true
+          }
+        }
+      },
+      "servers": [],
+      "errors": [
+        "<path>/mcp.json: server \"srv\" needs either \"command\" (stdio) or \"url\" (streamable HTTP)"
+      ]
+    },
+    {
+      "name": "invalid-name-backslash",
+      "config": {
+        "mcpServers": {
+          "a\\b": {
+            "command": "npx"
+          }
+        }
+      },
+      "servers": [],
+      "errors": [
+        "<path>/mcp.json: invalid server name \"a\\b\" (use letters, digits, \"_\" and \"-\")"
+      ]
+    },
+    {
+      "name": "timeout-string",
+      "config": {
+        "mcpServers": {
+          "srv": {
+            "command": "npx",
+            "timeout": "5"
+          }
+        }
+      },
+      "servers": [],
+      "errors": [
+        "<path>/mcp.json: server \"srv\": timeout must be a positive number of seconds"
+      ]
+    },
+    {
+      "name": "tool-exposure-order",
+      "config": {
+        "mcpServers": {
+          "srv": {
+            "command": "npx",
+            "toolExposure": {
+              "z": "nope",
+              "a": "bad"
+            }
+          }
+        }
+      },
+      "servers": [],
+      "errors": [
+        "<path>/mcp.json: server \"srv\": toolExposure \"z\" must be one of \"codemode\", \"deferred\", \"direct\", \"hidden\""
+      ]
+    },
+    {
+      "name": "callback-whitespace",
+      "config": {
+        "mcpServers": {
+          "srv": {
+            "url": "https://example.com/mcp",
+            "oauth": {
+              "callbackUrl": " http://localhost/cb"
+            }
+          }
+        }
+      },
+      "servers": [
+        "srv"
+      ],
+      "errors": []
+    },
+    {
+      "name": "sse-rejected",
+      "config": {
+        "mcpServers": {
+          "srv": {
+            "url": "https://example.com/mcp",
+            "type": "sse"
+          }
+        }
+      },
+      "servers": [],
+      "errors": [
+        "<path>/mcp.json: server \"srv\": legacy SSE transport is not supported; use the streamable HTTP URL"
+      ]
+    }
+  ]
+}

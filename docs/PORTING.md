@@ -218,6 +218,20 @@ usage entries, a compaction reset, consecutive warms, a full hit, and a
 malformed timestamp (D273). Usage totals, cost breakdowns, the warmer's
 decisions and their formatting matched the pin.
 
+**MCP configuration audit.** A bounded audit of `core/mcp-servers.ts` and
+`extensions/mcp/config.ts` fixed four validation differences reproduced by
+executing the pinned `validateMcpServerConfig` and `loadMcpConfig`. A present
+non-string `type` (`null`, number, boolean, array, object) now selects neither
+transport, as upstream's strict comparisons do, instead of counting as absent;
+WHATWG URL whitespace (leading/trailing C0 controls and spaces, tab/CR/LF
+anywhere) is stripped before validating `url`, `oauth.callbackUrl` and
+`oauth.authServerMetadataUrl`; invalid server names are interpolated without Go
+`%q` escaping; and `toolExposure` validation walks the config file's key order
+so the first invalid key reported is upstream's. `oauth.clientRegistration`
+rules stay out of scope with the unported `/mcp` sign-in UI. Seventy validation
+cases and eleven loader cases are generated from the pin
+(`coding/testdata/mcp-config/`).
+
 **Upstream status.** v1.4.0 (`4a080252`) is the latest released tag after
 refreshing upstream tags and is the port's reference pin. It is 81 commits past
 v1.3.0. The pin identifies the sources to review, not a claim that every change

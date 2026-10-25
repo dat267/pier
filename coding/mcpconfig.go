@@ -144,7 +144,7 @@ func readMcpConfigFile(path string, scope McpServerScope, state *mcpConfigState)
 			applyMcpOverride(path, name, raw, state)
 			continue
 		}
-		config, validationErr := ValidateMcpServerConfig(name, value)
+		config, validationErr := ValidateMcpServerConfigOrdered(name, value, jsonObjectKeyOrder(raw, "toolExposure"))
 		if validationErr != nil {
 			state.errors = append(state.errors, fmt.Sprintf("%s: %s", path, validationErr.Error()))
 			continue
@@ -221,16 +221,18 @@ func applyMcpOverride(path, name string, raw json.RawMessage, state *mcpConfigSt
 		state.errors = append(state.errors, fmt.Sprintf("%s: server %q: %s", path, name, err.Error()))
 		return
 	}
-	config, validationErr := ValidateMcpServerConfig(name, mergedValue)
+	// The override replaces toolExposure wholesale, so validation walks its own
+	// file order when it sets the field and the global entry's order otherwise.
+	order := jsonObjectKeyOrder(raw, "toolExposure")
+	if order == nil {
+		order = base.Config.toolExposureOrder
+	}
+	config, validationErr := ValidateMcpServerConfigOrdered(name, mergedValue, order)
 	if validationErr != nil {
 		state.errors = append(state.errors, fmt.Sprintf("%s: %s", path, validationErr.Error()))
 		return
 	}
-	if order := jsonObjectKeyOrder(raw, "toolExposure"); order != nil {
-		config.toolExposureOrder = order
-	} else {
-		config.toolExposureOrder = base.Config.toolExposureOrder
-	}
+	config.toolExposureOrder = order
 	base.Config = config
 	base.Override = path
 	state.servers[name] = base

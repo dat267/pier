@@ -1753,7 +1753,10 @@ config string. The JavaScript HTTP client later resolves special URLs such as
 perform that resolution. The port validates with equivalent effective URL
 semantics and stores the normalized absolute URL so `net/http` and the MCP
 transport reach the same host and path. Ordinary absolute HTTP(S) URLs are
-retained unchanged.
+retained unchanged. The WHATWG parser's whitespace preprocessing (leading and
+trailing C0 controls/spaces stripped, tab/CR/LF removed anywhere) is applied
+before validation and parsing, so a config URL with a stray space or newline
+loads as upstream's does; the stored effective URL is the stripped form.
 
 Tests: `TestValidateMcpServerConfigNormalizesSpecialHTTPSchemeURL`,
 `TestValidateMcpOAuthNormalizesSpecialLoopbackCallbackURL`, and

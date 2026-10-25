@@ -116,6 +116,7 @@ func McpNamespace(server string) string {
 // stores their canonical effective URL instead of retaining the raw config value.
 // parseMcpHTTPURL returns the request URL that WHATWG consumers would use.
 func parseMcpHTTPURL(value string) (*url.URL, string, error) {
+	value = stripWHATWGURLWhitespace(value)
 	parsed, err := url.Parse(value)
 	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
 		return nil, "", fmt.Errorf("not an HTTP URL")
@@ -146,6 +147,25 @@ func parseMcpHTTPURL(value string) (*url.URL, string, error) {
 		return nil, "", fmt.Errorf("HTTP URL has an invalid port")
 	}
 	return normalized, normalized.String(), nil
+}
+
+// stripWHATWGURLWhitespace applies the WHATWG URL parser's preprocessing, which
+// URL.canParse and `new URL` run before parsing: leading and trailing C0
+// controls or spaces are stripped, and ASCII tab, CR and LF are removed
+// anywhere. Go's url.Parse rejects those characters instead, so an otherwise
+// valid config URL with a stray space or newline would fail validation.
+func stripWHATWGURLWhitespace(value string) string {
+	value = strings.TrimFunc(value, func(r rune) bool { return r <= 0x20 })
+	if !strings.ContainsAny(value, "\t\r\n") {
+		return value
+	}
+	return strings.Map(func(r rune) rune {
+		switch r {
+		case '\t', '\r', '\n':
+			return -1
+		}
+		return r
+	}, value)
 }
 
 func mcpHTTPURLHasValidPort(parsed *url.URL) bool {
@@ -221,8 +241,23 @@ func McpToolExposure(config *McpServerConfig, toolName string) McpExposure {
 // validateMcpServerConfig). It returns the config with exposure aliases
 // resolved, or an error whose message matches upstream's.
 func ValidateMcpServerConfig(name string, raw any) (*McpServerConfig, error) {
+	return validateMcpServerConfig(name, raw, nil)
+}
+
+// ValidateMcpServerConfigOrdered validates one entry while walking
+// toolExposure keys in the given order (the config file's, upstream
+// Object.entries); keys missing from the order fall back to sorted order.
+// Callers that hold the raw config file use this so the first invalid key in
+// file order is reported.
+func ValidateMcpServerConfigOrdered(name string, raw any, toolExposureOrder []string) (*McpServerConfig, error) {
+	return validateMcpServerConfig(name, raw, toolExposureOrder)
+}
+
+func validateMcpServerConfig(name string, raw any, toolExposureOrder []string) (*McpServerConfig, error) {
 	if !mcpServerNamePattern.MatchString(name) {
-		return nil, fmt.Errorf("invalid server name %q (use letters, digits, \"_\" and \"-\")", name)
+		// Upstream interpolates the raw name inside literal quotes, so an
+		// invalid name keeps its own quotes and backslashes (no Go escaping).
+		return nil, fmt.Errorf("invalid server name \"%s\" (use letters, digits, \"_\" and \"-\")", name)
 	}
 	value, ok := mcpRecord(raw)
 	if !ok {
@@ -230,7 +265,13 @@ func ValidateMcpServerConfig(name string, raw any) (*McpServerConfig, error) {
 	}
 	value = resolveMcpExposureAliases(value)
 
-	serverType, _ := value["type"].(string)
+	// Upstream compares `type` against undefined and the two transport names
+	// strictly: any other present value (including null or a number) selects
+	// neither transport instead of counting as absent.
+	typeValue, hasType := value["type"]
+	serverType, typeIsString := typeValue.(string)
+	urlTransport := !hasType || (typeIsString && (serverType == "http" || serverType == "streamable-http"))
+	commandTransport := !hasType || (typeIsString && serverType == "stdio")
 	exposureNames := make([]string, 0, len(mcpExposures))
 	for _, exposure := range mcpExposures {
 		exposureNames = append(exposureNames, fmt.Sprintf("%q", exposure))
@@ -245,7 +286,7 @@ func ValidateMcpServerConfig(name string, raw any) (*McpServerConfig, error) {
 		if !isRecord {
 			return nil, fmt.Errorf("server %q: toolExposure must map tool names to exposures", name)
 		}
-		for _, tool := range sortedKeys(record) {
+		for _, tool := range orderedKeys(record, toolExposureOrder) {
 			if !isMcpExposure(record[tool]) {
 				return nil, fmt.Errorf("server %q: toolExposure %q must be one of %s", name, tool, exposures)
 			}
@@ -263,7 +304,7 @@ func ValidateMcpServerConfig(name string, raw any) (*McpServerConfig, error) {
 			return nil, fmt.Errorf("server %q: timeout must be a positive number of seconds", name)
 		}
 	}
-	if serverType == "sse" {
+	if typeIsString && serverType == "sse" {
 		return nil, fmt.Errorf("server %q: legacy SSE transport is not supported; use the streamable HTTP URL", name)
 	}
 
@@ -272,7 +313,7 @@ func ValidateMcpServerConfig(name string, raw any) (*McpServerConfig, error) {
 		return nil, fmt.Errorf("server %q: %w", name, err)
 	}
 
-	if serverURL, ok := value["url"].(string); ok && (serverType == "" || serverType == "http" || serverType == "streamable-http") {
+	if serverURL, ok := value["url"].(string); ok && urlTransport {
 		parsed, effectiveURL, err := parseMcpHTTPURL(serverURL)
 		if err != nil {
 			return nil, fmt.Errorf("server %q: url must be an http or https URL", name)
@@ -304,7 +345,7 @@ func ValidateMcpServerConfig(name string, raw any) (*McpServerConfig, error) {
 		return config, nil
 	}
 
-	if command, ok := value["command"].(string); ok && (serverType == "" || serverType == "stdio") {
+	if command, ok := value["command"].(string); ok && commandTransport {
 		if argsValue, ok := value["args"]; ok {
 			args, isStringArray := mcpStringArray(argsValue)
 			if !isStringArray {
@@ -548,6 +589,30 @@ func isString(value any) bool {
 func isBool(value any) bool {
 	_, ok := value.(bool)
 	return ok
+}
+
+// orderedKeys returns the record's keys in the given file order first, then any
+// remaining keys sorted. Go maps have no insertion order, so callers that hold
+// the config file pass the document order (upstream walks Object.entries).
+func orderedKeys[V any](record map[string]V, order []string) []string {
+	if len(order) == 0 {
+		return sortedKeys(record)
+	}
+	seen := make(map[string]bool, len(record))
+	keys := make([]string, 0, len(record))
+	for _, key := range order {
+		if _, ok := record[key]; !ok || seen[key] {
+			continue
+		}
+		seen[key] = true
+		keys = append(keys, key)
+	}
+	for _, key := range sortedKeys(record) {
+		if !seen[key] {
+			keys = append(keys, key)
+		}
+	}
+	return keys
 }
 
 func sortedKeys[V any](record map[string]V) []string {
