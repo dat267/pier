@@ -3,7 +3,7 @@
 ## Baseline and scope
 
 This is a **partial multi-round review**, not a completed codebase-wide audit.
-Nineteen confirmed findings have been planned in `TODO.md`, repaired red-first,
+Twenty confirmed findings have been planned in `TODO.md`, repaired red-first,
 and verified. Remaining files and unconfirmed leads below still need review.
 
 - Starting commit: `80dcf0d09249222f98f39bccb2f93d278766009b`.
@@ -47,6 +47,17 @@ bottleneck is asserted without evidence. Unlisted files remain unreviewed.
   the eight-scenario corpus now compares the event projection and terminal
   message. Not covered: retry/lazy-tool downgrade paths beyond their Go tests,
   and the OpenAI-completions/Responses stream parsers still have no such corpus.
+- `ai/google_generative_ai.go`: P/L/C/S inspected in round 12 against
+  `api/google-generative-ai.ts` and `google-shared.ts`. **CR-020** repaired; a
+  twelve-scenario corpus compares the event projection and terminal message,
+  covering thought parts and signatures, function calls with and without ids,
+  usage, `MAX_TOKENS`/`SAFETY` termination, missing finish reasons and empty
+  parts. Not yet compared: `google-vertex` beyond its request corpus, inline
+  image output, and the retry/disable-thinking paths beyond their Go tests.
+- `ai/google_vertex.go`, `ai/google_payload.go`, `ai/google_wire.go`: L/C
+  inspected in round 12 while following the Google stream and request builders;
+  request shape stays covered by `testdata/google-wire`. No divergence found by
+  inspection; not differentially compared at the stream boundary.
 - `ai/openai_responses_stream.go`: P/L/C/S inspected in round 11 against
   `api/openai-responses.ts` and `openai-responses-shared.ts`
   (`processResponsesStream`). **CR-019** repaired; a fifteen-scenario corpus
@@ -611,6 +622,8 @@ After explicit user authorization:
 - `2a9ddea`: OpenAI-completions stream-event corpus.
 - `5191795`: CR-019, Responses reasoning backfill.
 - `9c4d65d`: OpenAI Responses stream-event corpus.
+- `1c8d457`: CR-020, present-but-empty Google text parts.
+- `1ab5179`: Google stream-event corpus.
 
 All changes were verified before committing. Audit status and lock ownership
 are recorded with this ledger in a separate documentation commit. No push.
@@ -749,6 +762,29 @@ go test -count=1 ./ai -run '^TestOpenAIResponsesStreamEventsMatchUpstream$'
 node --experimental-strip-types ai/testdata/openai-responses-stream/generate.mjs ./pi
 ```
 
+## Round 12 finding
+
+### CR-020, P3: Google streams dropped a present-but-empty text part (fixed)
+
+`{"text": ""}` is a part the Gemini API sends (finish chunks, and ahead of a
+function call). The reference opens a text block and pushes an empty delta for
+it; Pier tested `part.Text != ""` and skipped it, so a tool-call-only response
+lost three events and the persisted empty text block. `GooglePart` now records
+whether the wire carried a `text` member (`textPresent` via a custom
+`UnmarshalJSON`, exposed as `HasText()`), and the stream keys the branch on
+`HasText() || Thought != nil` like the reference.
+
+Evidence: the focused test emitted
+`start,toolcall_start,toolcall_delta,toolcall_end,done` before the change and the
+reference's eight events after; the twelve-scenario corpus failed only on the
+six scenarios with an empty text part beforehand.
+
+```sh
+go test -count=1 ./ai -run '^TestGoogleStreamKeepsPresentButEmptyTextParts$'
+go test -count=1 ./ai -run '^TestGoogleStreamEventsMatchUpstream$'
+node --experimental-strip-types ai/testdata/google-stream/generate.mjs ./pi
+```
+
 ## Unconfirmed leads, not TODOs
 
 - Previously listed RPC lifecycle leads are CR-005/CR-006, and overlapping
@@ -796,6 +832,9 @@ All completed with `GOPROXY=off GOSUMDB=off` on Go commands/recipes:
   integrity/unsupported-host tests also failed red, then passed. `go test
   -count=1 ./coding -run '^TestRPC'` and `go test -count=1 ./mcp/...
   ./coding/rpcclient ./coding/interactive`: PASS.
+- Round 12: the Google corpus failed only on the six empty-text scenarios
+  before CR-020 and matches on all twelve after; `just check`, `just cross` and
+  `just reference` pass and regeneration is byte-identical.
 - Round 11: the Responses corpus failed only on the backfill scenario before
   CR-019 and matches on all fifteen after; `just check`, `just cross` and
   `just reference` pass and regeneration is byte-identical.

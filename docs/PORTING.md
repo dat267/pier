@@ -391,6 +391,14 @@ final-newline-only edit previously produced an empty diff and no
 tool details and the interactive preview omitted the change. The generated
 corpus compares both the display diff and the patch over 26 content pairs.
 
+Google streams keep a text part that is present but empty. The reference keys
+block creation on `part.text !== undefined`, so `{"text": ""}` still opens a text
+block and pushes an empty delta; Pier tested the string for emptiness and
+dropped the part, losing the block from both the event stream and the persisted
+message when the part arrived first (tool-call-only turns). `GooglePart` now
+records wire presence and exposes `HasText()`. A generated corpus compares
+twelve Google stream scenarios.
+
 Responses reasoning signatures now carry the terminal backfill. Azure OpenAI
 can omit `reasoning.encrypted_content` from `response.output_item.done` and
 supply it only in `response.completed.response.output`; the reference merges it
