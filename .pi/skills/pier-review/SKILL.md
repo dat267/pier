@@ -1,12 +1,12 @@
 ---
-name: code-review
+name: pier-review
 description: Manually audit Pier codebase-wide for parity gaps, logic flaws, concurrency bugs, security vulnerabilities, and measured performance problems. Record reproduced findings in TODO.md, then implement and verify their fixes.
 disable-model-invocation: true
 ---
 
-# Code review
+# Pier review
 
-Run only when explicitly invoked with `/skill:code-review`. Default workflow:
+Run only when explicitly invoked with `/skill:pier-review`. Default workflow:
 inspect the whole first-party codebase, reproduce findings, plan in `TODO.md`,
 then execute the repairs. Optional instructions after the command can narrow
 the scope, set a time budget, request audit-only, or resume existing findings.

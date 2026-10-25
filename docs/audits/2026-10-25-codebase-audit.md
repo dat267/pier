@@ -9,7 +9,8 @@ and verified. Remaining files and unconfirmed leads below still need review.
 - Starting commit: `80dcf0d09249222f98f39bccb2f93d278766009b`.
 - Reference: pi v1.4.0 (`4a080252f`), verified by `just reference`;
   `git -C pi status --porcelain` empty before and after the pass.
-- Existing untracked work: `.pi/skills/code-review/SKILL.md`, preserved.
+- Existing untracked work: the workspace skill now at
+  `.pi/skills/pier-review/SKILL.md`, preserved.
 - `GOPROXY=off GOSUMDB=off go vet ./...`: PASS.
 - `GOPROXY=off GOSUMDB=off go test -short ./...`: PASS, all packages.
 - Full race gate belongs to CI, not run locally. No race-freedom claim.
@@ -579,7 +580,7 @@ After explicit user authorization:
 - `c678533`: CR-012/CR-013, RPC fork ordering and unavailable-host integrity.
 - `c1ec637`: CR-011, cancel MCP HTTP POSTs on transport close.
 - `c67ac9e`: CR-014, JS-trim parity for last-assistant text.
-- `56b5ca4`: manual-only workspace code-review skill.
+- `56b5ca4`: manual-only workspace skill (renamed to `pier-review`).
 - `b47e0d8`: review skill commits each finished piece.
 - `6fedf16`: CR-015, bash display output sized in UTF-16 units.
 - `2e02b2b`: output-accumulator snapshot corpus (coverage, no divergence).
