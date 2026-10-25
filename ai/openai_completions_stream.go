@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -49,11 +50,72 @@ func iterateOpenAIChunks(ctx context.Context, body io.Reader, emit func(json.Raw
 	return nil
 }
 
+// jsJSONTruthy reports JavaScript truthiness for a JSON value: only null,
+// false, 0 and "" are falsy.
+func jsJSONTruthy(raw json.RawMessage) bool {
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) == 0 {
+		return false
+	}
+	switch trimmed[0] {
+	case 'n': // null
+		return false
+	case 'f': // false
+		return false
+	case '"':
+		var text string
+		return jsonUnmarshalStrict(trimmed, &text) == nil && text != ""
+	case '0':
+		// 0, 0.0, 0e1; a leading zero is otherwise invalid JSON.
+		var number float64
+		return jsonUnmarshalStrict(trimmed, &number) != nil || number != 0
+	default:
+		return true // object, array, true, non-zero number
+	}
+}
+
+// openAIStreamErrorMessage composes the text the OpenAI SDK's APIError carries
+// for a streamed error payload: `error.message` when that is a non-empty
+// string, otherwise the JavaScript JSON.stringify of the value. Upstream's
+// normalizeProviderError finds no status or body on that error, so this text is
+// displayed verbatim; the catch path then appends `error.metadata.raw` when the
+// message does not already contain it.
+func openAIStreamErrorMessage(raw json.RawMessage) string {
+	message := ""
+	var parsed struct {
+		Message  json.RawMessage `json:"message"`
+		Metadata *struct {
+			Raw *string `json:"raw"`
+		} `json:"metadata"`
+	}
+	if jsonUnmarshalStrict(raw, &parsed) == nil && len(parsed.Message) > 0 {
+		var text string
+		if jsonUnmarshalStrict(parsed.Message, &text) == nil {
+			message = text
+		} else if jsJSONTruthy(parsed.Message) {
+			if encoded, err := canonicalJavaScriptJSON(parsed.Message); err == nil {
+				message = string(encoded)
+			}
+		}
+	}
+	if message == "" {
+		if encoded, err := canonicalJavaScriptJSON(raw); err == nil {
+			message = string(encoded)
+		}
+	}
+	if parsed.Metadata != nil && parsed.Metadata.Raw != nil &&
+		*parsed.Metadata.Raw != "" && !strings.Contains(message, *parsed.Metadata.Raw) {
+		message += "\n" + *parsed.Metadata.Raw
+	}
+	return message
+}
+
 // openaiChunk is the parsed ChatCompletionChunk subset pi consumes.
 type openaiChunk struct {
 	ID      string          `json:"id"`
 	Model   string          `json:"model"`
 	Usage   json.RawMessage `json:"usage,omitempty"`
+	Error   json.RawMessage `json:"error,omitempty"`
 	Choices []struct {
 		FinishReason string           `json:"finish_reason"`
 		Delta        openaiChunkDelta `json:"delta"`
@@ -458,6 +520,12 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 			var chunk openaiChunk
 			if err := jsonUnmarshalStrict(raw, &chunk); err != nil {
 				return // upstream skips non-object chunks
+			}
+			// The OpenAI SDK throws as soon as a chunk carries a truthy
+			// `error`, before yielding it, so no later field is applied and the
+			// provider callback never sees it.
+			if len(chunk.Error) > 0 && jsJSONTruthy(chunk.Error) {
+				panic(errors.New(openAIStreamErrorMessage(chunk.Error)))
 			}
 			if options.OnProviderStreamEvent != nil {
 				options.OnProviderStreamEvent(raw, model)
