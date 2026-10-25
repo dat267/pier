@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -90,7 +91,7 @@ func ListenCallbackServer(ctx context.Context, options OAuthCallbackServerOption
 	if timeoutMs == 0 {
 		timeoutMs = 5 * 60000
 	}
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, options.Port))
+	listener, err := net.Listen("tcp", net.JoinHostPort(host, strconv.Itoa(options.Port)))
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +230,9 @@ func (s *OAuthCallbackServer) handle(w http.ResponseWriter, r *http.Request) {
 		s.reply(w, http.StatusBadRequest, OAuthCallbackPage{OK: false, Message: "Invalid or expired OAuth state"})
 		return
 	}
-	if !containsPath(s.paths, parsed.Path) {
+	// JS URL.pathname retains escapes, unlike Go's decoded URL.Path.
+	path := parsed.EscapedPath()
+	if !containsPath(s.paths, path) {
 		s.reply(w, http.StatusNotFound, OAuthCallbackPage{OK: false, Message: "Not found"})
 		return
 	}
@@ -244,7 +247,7 @@ func (s *OAuthCallbackServer) handle(w http.ResponseWriter, r *http.Request) {
 	entry.timer.Stop()
 	delete(s.pending, state)
 	s.mu.Unlock()
-	if entry.path != "" && parsed.Path != entry.path {
+	if entry.path != "" && path != entry.path {
 		entry.ch <- callbackResult{err: fmt.Errorf("The authorization response arrived on another redirect URI")}
 		s.reply(w, http.StatusBadRequest, OAuthCallbackPage{OK: false, Message: "Unexpected redirect URI"})
 		return

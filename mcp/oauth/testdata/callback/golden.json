@@ -1,0 +1,115 @@
+[
+  {
+    "name": "ipv4",
+    "options": {
+      "host": "127.0.0.1"
+    },
+    "requestPath": "/callback",
+    "expected": {
+      "status": 400,
+      "body": "Invalid or expired OAuth state"
+    }
+  },
+  {
+    "name": "ipv6",
+    "options": {
+      "host": "::1"
+    },
+    "requestPath": "/callback",
+    "expected": {
+      "status": 400,
+      "body": "Invalid or expired OAuth state"
+    }
+  },
+  {
+    "name": "unknown-path",
+    "options": {},
+    "requestPath": "/other",
+    "expected": {
+      "status": 404,
+      "body": "Not found"
+    }
+  },
+  {
+    "name": "escaped-path",
+    "options": {
+      "path": "/callback%2Fcustom"
+    },
+    "requestPath": "/callback%2Fcustom",
+    "expected": {
+      "status": 400,
+      "body": "Invalid or expired OAuth state"
+    }
+  },
+  {
+    "name": "encoded-alias",
+    "options": {},
+    "requestPath": "/call%62ack",
+    "expected": {
+      "status": 404,
+      "body": "Not found"
+    }
+  },
+  {
+    "name": "extra-path",
+    "options": {
+      "extraPaths": [
+        "/other"
+      ]
+    },
+    "requestPath": "/other",
+    "expected": {
+      "status": 400,
+      "body": "Invalid or expired OAuth state"
+    }
+  },
+  {
+    "name": "escaped-pending",
+    "options": {
+      "path": "/callback%2Fcustom"
+    },
+    "requestPath": "/callback%2Fcustom?state=fixture-state&code=fixture-code",
+    "expectedPath": "/callback%2Fcustom",
+    "expected": {
+      "status": 200,
+      "body": "Authorization complete. You may close this window.",
+      "callback": {
+        "code": "fixture-code",
+        "state": "fixture-state"
+      }
+    }
+  },
+  {
+    "name": "extra-escaped-pending",
+    "options": {
+      "extraPaths": [
+        "/other%2Fcallback"
+      ]
+    },
+    "requestPath": "/other%2Fcallback?state=fixture-state&code=fixture-code",
+    "expectedPath": "/other%2Fcallback",
+    "expected": {
+      "status": 200,
+      "body": "Authorization complete. You may close this window.",
+      "callback": {
+        "code": "fixture-code",
+        "state": "fixture-state"
+      }
+    }
+  },
+  {
+    "name": "wrong-pending-path",
+    "options": {
+      "extraPaths": [
+        "/other"
+      ]
+    },
+    "requestPath": "/other?state=fixture-state&code=fixture-code",
+    "expectedPath": "/callback",
+    "expected": {
+      "status": 400,
+      "body": "Unexpected redirect URI",
+      "error": "The authorization response arrived on another redirect URI"
+    }
+  }
+]
