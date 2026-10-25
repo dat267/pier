@@ -26,11 +26,11 @@ func isDelimiterPunctuation(r rune) bool {
 
 // delimiterFlanking classifies a delimiter run by the characters around it:
 // left reports whether the run can open, right whether it can close.
-func delimiterFlanking(prev rune, hasPrev bool, next rune, hasNext bool) (left bool, right bool) {
+func delimiterFlanking(prev rune, hasPrev bool, next rune, hasNext bool, marker byte) (left bool, right bool) {
 	prevSpace := !hasPrev || isDelimiterWhitespace(prev)
-	prevPunct := hasPrev && isDelimiterPunctuation(prev)
+	prevPunct := hasPrev && isDelimiterPunctuation(prev) && !(marker == '*' && prev == '~')
 	nextSpace := !hasNext || isDelimiterWhitespace(next)
-	nextPunct := hasNext && isDelimiterPunctuation(next)
+	nextPunct := hasNext && isDelimiterPunctuation(next) && !(marker == '*' && next == '~')
 
 	left = !nextSpace && (!nextPunct || prevSpace || prevPunct)
 	right = !prevSpace && (!prevPunct || nextSpace || nextPunct)

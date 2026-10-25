@@ -7,6 +7,7 @@ func init() { RegisterLanguage("yaml", YAML()) }
 const (
 	yamlLiterals      = "true false yes no null"
 	yamlURICharacters = `[\w#;/?:@&=+$,.~*'()[\]]+`
+	yamlWhitespace    = `\t\n\v\f\r \x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}`
 )
 
 // yamlAfterColon is the reference's `(?=[ \t]|$)` after a key's colon.
@@ -141,14 +142,14 @@ func YAML() *Language {
 	stringBase.Variants = []*Mode{
 		Variant(stringBase, func(m *Mode) { m.Begin = `'`; m.End = `'` }),
 		Variant(stringBase, func(m *Mode) { m.Begin = `"`; m.End = `"` }),
-		Variant(stringBase, func(m *Mode) { m.Begin = `\S+` }),
+		Variant(stringBase, func(m *Mode) { m.Begin = `[^` + yamlWhitespace + `]+` }),
 	}
 
 	containerString := &Mode{ClassName: "string", HasRelevance: true, Relevance: 0, Contains: []*Mode{BackslashEscape, templateBase}}
 	containerString.Variants = []*Mode{
 		Variant(containerString, func(m *Mode) { m.Begin = `'`; m.End = `'` }),
 		Variant(containerString, func(m *Mode) { m.Begin = `"`; m.End = `"` }),
-		Variant(containerString, func(m *Mode) { m.Begin = `[^\s,{}[\]]+` }),
+		Variant(containerString, func(m *Mode) { m.Begin = `[^` + yamlWhitespace + `,{}[\]]+` }),
 	}
 
 	const dateRe = `[0-9]{4}(-[0-9][0-9]){0,2}`
@@ -193,7 +194,7 @@ func YAML() *Language {
 
 	modes := []*Mode{
 		keyBase,
-		{ClassName: "meta", Begin: `^---\s*$`, HasRelevance: true, Relevance: 10},
+		{ClassName: "meta", Begin: `^---[` + yamlWhitespace + `]*$`, HasRelevance: true, Relevance: 10},
 		blockScalar,
 		{
 			Begin:        `<%[%=-]?`,

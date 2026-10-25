@@ -1,0 +1,142 @@
+[
+  {
+    "name": "ambient workers",
+    "kind": "workers-ai",
+    "env": {
+      "CLOUDFLARE_API_KEY": "fixture-key",
+      "CLOUDFLARE_ACCOUNT_ID": "fixture-account",
+      "CLOUDFLARE_GATEWAY_ID": "fixture-gateway"
+    },
+    "present": true,
+    "queries": [
+      "CLOUDFLARE_API_KEY",
+      "CLOUDFLARE_ACCOUNT_ID"
+    ]
+  },
+  {
+    "name": "ambient gateway",
+    "kind": "ai-gateway",
+    "env": {
+      "CLOUDFLARE_API_KEY": "fixture-key",
+      "CLOUDFLARE_ACCOUNT_ID": "fixture-account",
+      "CLOUDFLARE_GATEWAY_ID": "fixture-gateway"
+    },
+    "present": true,
+    "queries": [
+      "CLOUDFLARE_API_KEY",
+      "CLOUDFLARE_ACCOUNT_ID",
+      "CLOUDFLARE_GATEWAY_ID"
+    ]
+  },
+  {
+    "name": "empty stored key",
+    "kind": "workers-ai",
+    "credential": {
+      "key": ""
+    },
+    "env": {
+      "CLOUDFLARE_API_KEY": "fixture-key",
+      "CLOUDFLARE_ACCOUNT_ID": "fixture-account",
+      "CLOUDFLARE_GATEWAY_ID": "fixture-gateway"
+    },
+    "present": false,
+    "queries": [
+      "CLOUDFLARE_ACCOUNT_ID"
+    ]
+  },
+  {
+    "name": "empty stored account",
+    "kind": "workers-ai",
+    "credential": {
+      "key": "stored-key",
+      "env": {
+        "CLOUDFLARE_ACCOUNT_ID": ""
+      }
+    },
+    "env": {
+      "CLOUDFLARE_API_KEY": "fixture-key",
+      "CLOUDFLARE_ACCOUNT_ID": "fixture-account",
+      "CLOUDFLARE_GATEWAY_ID": "fixture-gateway"
+    },
+    "present": false,
+    "queries": []
+  },
+  {
+    "name": "empty stored gateway",
+    "kind": "ai-gateway",
+    "credential": {
+      "key": "stored-key",
+      "env": {
+        "CLOUDFLARE_GATEWAY_ID": ""
+      }
+    },
+    "env": {
+      "CLOUDFLARE_API_KEY": "fixture-key",
+      "CLOUDFLARE_ACCOUNT_ID": "fixture-account",
+      "CLOUDFLARE_GATEWAY_ID": "fixture-gateway"
+    },
+    "present": false,
+    "queries": [
+      "CLOUDFLARE_ACCOUNT_ID"
+    ]
+  },
+  {
+    "name": "missing stored account uses ambient",
+    "kind": "workers-ai",
+    "credential": {
+      "key": "stored-key"
+    },
+    "env": {
+      "CLOUDFLARE_API_KEY": "fixture-key",
+      "CLOUDFLARE_ACCOUNT_ID": "fixture-account",
+      "CLOUDFLARE_GATEWAY_ID": "fixture-gateway"
+    },
+    "present": true,
+    "queries": [
+      "CLOUDFLARE_ACCOUNT_ID"
+    ]
+  },
+  {
+    "name": "empty ambient key",
+    "kind": "workers-ai",
+    "env": {
+      "CLOUDFLARE_API_KEY": "",
+      "CLOUDFLARE_ACCOUNT_ID": "fixture-account",
+      "CLOUDFLARE_GATEWAY_ID": "fixture-gateway"
+    },
+    "present": false,
+    "queries": [
+      "CLOUDFLARE_API_KEY",
+      "CLOUDFLARE_ACCOUNT_ID"
+    ]
+  },
+  {
+    "name": "empty ambient account",
+    "kind": "workers-ai",
+    "env": {
+      "CLOUDFLARE_API_KEY": "fixture-key",
+      "CLOUDFLARE_ACCOUNT_ID": "",
+      "CLOUDFLARE_GATEWAY_ID": "fixture-gateway"
+    },
+    "present": false,
+    "queries": [
+      "CLOUDFLARE_API_KEY",
+      "CLOUDFLARE_ACCOUNT_ID"
+    ]
+  },
+  {
+    "name": "empty ambient gateway",
+    "kind": "ai-gateway",
+    "env": {
+      "CLOUDFLARE_API_KEY": "fixture-key",
+      "CLOUDFLARE_ACCOUNT_ID": "fixture-account",
+      "CLOUDFLARE_GATEWAY_ID": ""
+    },
+    "present": false,
+    "queries": [
+      "CLOUDFLARE_API_KEY",
+      "CLOUDFLARE_ACCOUNT_ID",
+      "CLOUDFLARE_GATEWAY_ID"
+    ]
+  }
+]

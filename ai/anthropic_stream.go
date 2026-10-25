@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/text/encoding/unicode"
 )
 
 // Port of api/anthropic-messages.ts streaming half: SSE decoding, HTTP
@@ -202,7 +204,8 @@ type anthropicStreamUsage struct {
 // message_stop (port of iterateAnthropicEvents). Events are delivered to the
 // returned channel; the error is non-nil when iteration terminated early.
 func IterateAnthropicEvents(ctx context.Context, body io.Reader, emit func(anthropicStreamEvent)) error {
-	scanner := bufio.NewScanner(body)
+	scanner := bufio.NewScanner(unicode.UTF8BOM.NewDecoder().Reader(body))
+	scanner.Split(newSSELineSplitter())
 	scanner.Buffer(make([]byte, 0, 64*1024), 16*1024*1024)
 	decoder := &SSEDecoder{}
 	sawMessageStart := false

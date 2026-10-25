@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+
+	"github.com/dat267/pier/ai"
 )
 
 // compiledLanguage is a language compiled for highlighting and cached.
@@ -38,6 +40,7 @@ func RegisterLanguage(name string, language *Language) {
 
 // supportsLanguage reports whether a language (or alias) is registered.
 func supportsLanguage(name string) bool {
+	name = ai.JSLower(name)
 	registryMu.RLock()
 	defer registryMu.RUnlock()
 	_, ok := registry[name]
@@ -45,6 +48,7 @@ func supportsLanguage(name string) bool {
 }
 
 func getCompiledLanguage(name string) (*compiledLanguage, error) {
+	name = ai.JSLower(name)
 	compiledMu.RLock()
 	if lang, ok := compiledLanguages[name]; ok {
 		compiledMu.RUnlock()

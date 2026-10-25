@@ -1,0 +1,160 @@
+[
+  {
+    "name": "public client",
+    "client": {
+      "client_id": "fixture-client"
+    },
+    "request": {
+      "authorization": null,
+      "body": "grant_type=authorization_code&code=fixture-code&code_verifier=fixture-verifier&redirect_uri=http%3A%2F%2F127.0.0.1%2Fcallback&client_id=fixture-client",
+      "params": {
+        "grant_type": "authorization_code",
+        "code": "fixture-code",
+        "code_verifier": "fixture-verifier",
+        "redirect_uri": "http://127.0.0.1/callback",
+        "client_id": "fixture-client"
+      }
+    }
+  },
+  {
+    "name": "empty secret",
+    "client": {
+      "client_id": "fixture-client",
+      "client_secret": ""
+    },
+    "request": {
+      "authorization": null,
+      "body": "grant_type=authorization_code&code=fixture-code&code_verifier=fixture-verifier&redirect_uri=http%3A%2F%2F127.0.0.1%2Fcallback&client_id=fixture-client",
+      "params": {
+        "grant_type": "authorization_code",
+        "code": "fixture-code",
+        "code_verifier": "fixture-verifier",
+        "redirect_uri": "http://127.0.0.1/callback",
+        "client_id": "fixture-client"
+      }
+    }
+  },
+  {
+    "name": "nonempty secret",
+    "client": {
+      "client_id": "fixture-client",
+      "client_secret": "fixture-secret"
+    },
+    "request": {
+      "authorization": "Basic Zml4dHVyZS1jbGllbnQ6Zml4dHVyZS1zZWNyZXQ=",
+      "body": "grant_type=authorization_code&code=fixture-code&code_verifier=fixture-verifier&redirect_uri=http%3A%2F%2F127.0.0.1%2Fcallback",
+      "params": {
+        "grant_type": "authorization_code",
+        "code": "fixture-code",
+        "code_verifier": "fixture-verifier",
+        "redirect_uri": "http://127.0.0.1/callback"
+      }
+    }
+  },
+  {
+    "name": "empty secret with basic hint",
+    "client": {
+      "client_id": "fixture-client",
+      "client_secret": "",
+      "token_endpoint_auth_method": "client_secret_basic"
+    },
+    "error": "client_secret_basic requires a client secret"
+  },
+  {
+    "name": "empty secret with post hint",
+    "client": {
+      "client_id": "fixture-client",
+      "client_secret": "",
+      "token_endpoint_auth_method": "client_secret_post"
+    },
+    "request": {
+      "authorization": null,
+      "body": "grant_type=authorization_code&code=fixture-code&code_verifier=fixture-verifier&redirect_uri=http%3A%2F%2F127.0.0.1%2Fcallback&client_id=fixture-client",
+      "params": {
+        "grant_type": "authorization_code",
+        "code": "fixture-code",
+        "code_verifier": "fixture-verifier",
+        "redirect_uri": "http://127.0.0.1/callback",
+        "client_id": "fixture-client"
+      }
+    }
+  },
+  {
+    "name": "empty secret with supported basic",
+    "client": {
+      "client_id": "fixture-client",
+      "client_secret": ""
+    },
+    "supported": [
+      "client_secret_basic"
+    ],
+    "request": {
+      "authorization": null,
+      "body": "grant_type=authorization_code&code=fixture-code&code_verifier=fixture-verifier&redirect_uri=http%3A%2F%2F127.0.0.1%2Fcallback&client_id=fixture-client",
+      "params": {
+        "grant_type": "authorization_code",
+        "code": "fixture-code",
+        "code_verifier": "fixture-verifier",
+        "redirect_uri": "http://127.0.0.1/callback",
+        "client_id": "fixture-client"
+      }
+    }
+  },
+  {
+    "name": "nonempty secret with post hint",
+    "client": {
+      "client_id": "fixture-client",
+      "client_secret": "fixture-secret",
+      "token_endpoint_auth_method": "client_secret_post"
+    },
+    "request": {
+      "authorization": null,
+      "body": "grant_type=authorization_code&code=fixture-code&code_verifier=fixture-verifier&redirect_uri=http%3A%2F%2F127.0.0.1%2Fcallback&client_id=fixture-client&client_secret=fixture-secret",
+      "params": {
+        "grant_type": "authorization_code",
+        "code": "fixture-code",
+        "code_verifier": "fixture-verifier",
+        "redirect_uri": "http://127.0.0.1/callback",
+        "client_id": "fixture-client",
+        "client_secret": "fixture-secret"
+      }
+    }
+  },
+  {
+    "name": "empty resource",
+    "client": {
+      "client_id": "fixture-client"
+    },
+    "resource": "",
+    "request": {
+      "authorization": null,
+      "body": "grant_type=authorization_code&code=fixture-code&code_verifier=fixture-verifier&redirect_uri=http%3A%2F%2F127.0.0.1%2Fcallback&client_id=fixture-client",
+      "params": {
+        "grant_type": "authorization_code",
+        "code": "fixture-code",
+        "code_verifier": "fixture-verifier",
+        "redirect_uri": "http://127.0.0.1/callback",
+        "client_id": "fixture-client"
+      }
+    }
+  },
+  {
+    "name": "nonempty resource",
+    "client": {
+      "client_id": "fixture-client"
+    },
+    "resource": "https://resource.example/mcp",
+    "request": {
+      "authorization": null,
+      "body": "grant_type=authorization_code&code=fixture-code&code_verifier=fixture-verifier&redirect_uri=http%3A%2F%2F127.0.0.1%2Fcallback&resource=https%3A%2F%2Fresource.example%2Fmcp&client_id=fixture-client",
+      "params": {
+        "grant_type": "authorization_code",
+        "code": "fixture-code",
+        "code_verifier": "fixture-verifier",
+        "redirect_uri": "http://127.0.0.1/callback",
+        "resource": "https://resource.example/mcp",
+        "client_id": "fixture-client"
+      }
+    }
+  }
+]

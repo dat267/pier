@@ -196,7 +196,7 @@ type RpcClient struct {
 	processDone chan struct{}
 	pending     map[string]*pendingRequest
 	nextID      int
-	listeners   map[int]EventListener
+	listeners   []eventListener
 	listenerSeq int
 	stderr      strings.Builder
 
@@ -208,9 +208,15 @@ type RpcClient struct {
 	sendFunc func(command map[string]any) (*response, error)
 }
 
+// eventListener carries the unsubscribe identity for one subscription.
+type eventListener struct {
+	id       int
+	listener EventListener
+}
+
 // New returns a client for the given options.
 func New(options Options) *RpcClient {
-	return &RpcClient{options: options, pending: map[string]*pendingRequest{}, listeners: map[int]EventListener{}}
+	return &RpcClient{options: options, pending: map[string]*pendingRequest{}}
 }
 
 // Stderr returns the child's collected stderr output.
@@ -225,13 +231,18 @@ func (c *RpcClient) OnEvent(listener EventListener) func() {
 	c.mu.Lock()
 	id := c.listenerSeq
 	c.listenerSeq++
-	c.listeners[id] = listener
+	c.listeners = append(c.listeners, eventListener{id: id, listener: listener})
 	c.mu.Unlock()
 	var once sync.Once
 	return func() {
 		once.Do(func() {
 			c.mu.Lock()
-			delete(c.listeners, id)
+			for index, entry := range c.listeners {
+				if entry.id == id {
+					c.listeners = append(c.listeners[:index], c.listeners[index+1:]...)
+					break
+				}
+			}
 			c.mu.Unlock()
 		})
 	}
@@ -404,6 +415,9 @@ func (c *RpcClient) readLines(stdout io.Reader) {
 }
 
 func (c *RpcClient) handleLine(line string) {
+	// Upstream catches the entire dispatch, including listener failures, so a
+	// failed callback does not terminate stdout reading or pending requests.
+	defer func() { _ = recover() }()
 	var decoded map[string]any
 	if err := json.Unmarshal([]byte(line), &decoded); err != nil {
 		return // Ignore non-JSON lines.
@@ -416,8 +430,8 @@ func (c *RpcClient) handleLine(line string) {
 	}
 	c.mu.Lock()
 	listeners := make([]EventListener, 0, len(c.listeners))
-	for _, listener := range c.listeners {
-		listeners = append(listeners, listener)
+	for _, entry := range c.listeners {
+		listeners = append(listeners, entry.listener)
 	}
 	c.mu.Unlock()
 	event := Event(decoded)

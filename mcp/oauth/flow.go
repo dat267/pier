@@ -182,22 +182,23 @@ func selectClientAuthMethod(information *OAuthClientInformationFull, supported [
 			return hinted
 		}
 	}
+	hasSecret := information.ClientSecret != nil && *information.ClientSecret != ""
 	if len(supported) == 0 {
-		if information.ClientSecret != nil {
+		if hasSecret {
 			return ClientAuthSecretBasic
 		}
 		return ClientAuthNone
 	}
-	if information.ClientSecret != nil && contains(supported, ClientAuthSecretBasic) {
+	if hasSecret && contains(supported, ClientAuthSecretBasic) {
 		return ClientAuthSecretBasic
 	}
-	if information.ClientSecret != nil && contains(supported, ClientAuthSecretPost) {
+	if hasSecret && contains(supported, ClientAuthSecretPost) {
 		return ClientAuthSecretPost
 	}
 	if contains(supported, ClientAuthNone) {
 		return ClientAuthNone
 	}
-	if information.ClientSecret != nil {
+	if hasSecret {
 		return ClientAuthSecretPost
 	}
 	return ClientAuthNone
@@ -209,7 +210,7 @@ func contains(list []string, value string) bool { return slices.Contains(list, v
 // applyClientAuthentication).
 func applyClientAuthentication(method string, information *OAuthClientInformation, headers map[string]string, params url.Values) error {
 	if method == ClientAuthSecretBasic {
-		if information.ClientSecret == nil {
+		if information.ClientSecret == nil || *information.ClientSecret == "" {
 			return fmt.Errorf("client_secret_basic requires a client secret")
 		}
 		auth := base64.StdEncoding.EncodeToString([]byte(information.ClientID + ":" + *information.ClientSecret))
@@ -217,7 +218,7 @@ func applyClientAuthentication(method string, information *OAuthClientInformatio
 		return nil
 	}
 	params.Set("client_id", information.ClientID)
-	if method == ClientAuthSecretPost && information.ClientSecret != nil {
+	if method == ClientAuthSecretPost && information.ClientSecret != nil && *information.ClientSecret != "" {
 		params.Set("client_secret", *information.ClientSecret)
 	}
 	return nil
@@ -325,7 +326,7 @@ func tokenRequest(ctx context.Context, authorizationServerURL string, options To
 		"Accept":       "application/json",
 		"content-type": "application/x-www-form-urlencoded",
 	}
-	if options.Resource != nil {
+	if options.Resource != nil && *options.Resource != "" {
 		params.Set("resource", *options.Resource)
 	}
 	if options.AddClientAuthentication != nil {
@@ -366,7 +367,7 @@ func tokenRequest(ctx context.Context, authorizationServerURL string, options To
 		decoded = nil
 	}
 	if m, ok := decoded.(map[string]any); ok {
-		if errorText, ok := m["error"].(string); ok && errorText != "" {
+		if errorText, ok := m["error"].(string); ok {
 			description := errorText
 			if text, ok := m["error_description"].(string); ok {
 				description = text

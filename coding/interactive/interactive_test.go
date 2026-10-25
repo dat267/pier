@@ -372,7 +372,6 @@ func TestThemeControllerProbesSystemColors(t *testing.T) {
 	controller := NewInteractiveThemeController(ThemeControllerOptions{
 		UI:                 ui,
 		GetSettingsManager: func() ThemeSettings { return settings },
-		Detector:           nil,
 		TimeoutMS:          1,
 		Env:                func(key string) string { return "" },
 	})
@@ -558,7 +557,12 @@ func (f *fakeThemeSettings) Flush() { f.flushes++ }
 
 // TestThemeControllerLifecycle verifies the controller's settings-driven flow.
 func TestThemeControllerLifecycle(t *testing.T) {
-	t.Cleanup(func() { SetSystemTerminalColors(tui.TerminalColors{}) })
+	SetSystemTerminalColors(tui.TerminalColors{})
+	SetSystemTerminalColorScheme(nil)
+	t.Cleanup(func() {
+		SetSystemTerminalColors(tui.TerminalColors{})
+		SetSystemTerminalColorScheme(nil)
+	})
 	dir := t.TempDir()
 	SetCustomThemesDir(dir)
 	SetRegisteredThemes(nil)
@@ -573,7 +577,6 @@ func TestThemeControllerLifecycle(t *testing.T) {
 		GetSettingsManager: func() ThemeSettings { return settings },
 		ShowError:          func(message string) { errors = append(errors, message) },
 		OnChanged:          func() { changed++ },
-		Detector:           nil,
 		TimeoutMS:          1,
 		Env:                func(key string) string { return "" },
 	})
@@ -596,15 +599,16 @@ func TestThemeControllerLifecycle(t *testing.T) {
 		t.Fatalf("selection = %q", selection)
 	}
 
-	// An unknown theme reports the error and falls back to dark.
+	// pi v1.4.0 theme-controller.ts applyThemeName reports the error and
+	// falls back to the system theme.
 	result = controller.SetThemeName("missing", true)
 	if result.Success {
 		t.Fatal("missing theme accepted")
 	}
-	if controller.ActiveThemeName() != "dark" {
+	if controller.ActiveThemeName() != SystemThemeName {
 		t.Fatalf("active = %q", controller.ActiveThemeName())
 	}
-	if len(errors) != 1 || !strings.Contains(errors[0], "Fell back to dark theme") {
+	if len(errors) != 1 || !strings.Contains(errors[0], "Fell back to the system theme.") {
 		t.Fatalf("errors = %v", errors)
 	}
 
@@ -689,7 +693,6 @@ func TestThemeControllerUsesSystemThemeWhenUnset(t *testing.T) {
 	controller := NewInteractiveThemeController(ThemeControllerOptions{
 		UI:                 ui,
 		GetSettingsManager: func() ThemeSettings { return settings },
-		Detector:           nil,
 		TimeoutMS:          1,
 		Env:                func(key string) string { return env[key] },
 	})
@@ -895,7 +898,6 @@ func TestThemeSettingAppliesOnTheQueue(t *testing.T) {
 	var marshaled int
 	controller := NewInteractiveThemeController(ThemeControllerOptions{
 		UI:         ui,
-		Detector:   nil,
 		TimeoutMS:  1,
 		Env:        func(string) string { return "" },
 		Marshal:    func(fn func()) { marshaled++; fn() },

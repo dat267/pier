@@ -2,44 +2,54 @@ package markdown
 
 import (
 	"strings"
-	"unicode"
 	"unicode/utf8"
 )
 
-// ParseInlines resolves the inline content of every block in the tree.
+// ParseInlines resolves the inline content of every block in the tree. The
+// reference lexer keeps its inline flags for the whole document, so `<a `
+// regions and link labels span blocks the same way.
 func ParseInlines(blocks []*Block) {
+	state := &inlineState{}
+	parseInlines(blocks, state)
+}
+
+func parseInlines(blocks []*Block, state *inlineState) {
 	for _, b := range blocks {
-		parseBlockInlines(b)
+		parseBlockInlines(b, state)
 	}
 }
 
-func parseBlockInlines(b *Block) {
+func parseBlockInlines(b *Block, state *inlineState) {
 	switch b.Kind {
 	case BlockHeading, BlockParagraph:
-		b.Inlines = ParseInline(b.Text)
+		b.Inlines = parseInline(b.Text, state)
 	case BlockListItem:
 		for _, child := range b.Blocks {
-			parseBlockInlines(child)
+			parseBlockInlines(child, state)
 		}
 	case BlockTable:
 		b.headerInlines = make([][]Inline, len(b.Header))
 		for i, cell := range b.Header {
-			b.headerInlines[i] = ParseInline(cell)
+			b.headerInlines[i] = parseInline(cell, state)
 		}
 		b.rowInlines = make([][][]Inline, len(b.Rows))
 		for r, row := range b.Rows {
 			b.rowInlines[r] = make([][]Inline, len(row))
 			for c, cell := range row {
-				b.rowInlines[r][c] = ParseInline(cell)
+				b.rowInlines[r][c] = parseInline(cell, state)
 			}
 		}
 	case BlockQuote, BlockList:
-		ParseInlines(b.Blocks)
+		parseInlines(b.Blocks, state)
 	}
 }
 
 // ParseInline parses a single inline source into inline elements.
 func ParseInline(src string) []Inline {
+	return parseInline(src, &inlineState{})
+}
+
+func parseInline(src string, state *inlineState) []Inline {
 	if src == "" {
 		return nil
 	}
@@ -49,6 +59,7 @@ func ParseInline(src string) []Inline {
 	if !hasInlineMarkup(src) {
 		return []Inline{{Kind: InlineText, Text: src}}
 	}
+	masked := maskEmphasisSource(src)
 	var out []Inline
 	var text strings.Builder
 	var prevText rune
@@ -59,6 +70,49 @@ func ParseInline(src string) []Inline {
 			out = append(out, Inline{Kind: InlineText, Text: text.String()})
 			text.Reset()
 		}
+	}
+
+	// Bare autolinks need Marked's ordering: the url tokenizer runs only after
+	// every earlier tokenizer declined. Email matches are cached per local-part
+	// run so a long word costs one scan, not one per byte.
+	emailRunStart, emailRunEnd := 0, 0
+	emailRunOK := false
+	emailStart := func(i int) bool {
+		if i >= emailRunStart && i < emailRunEnd {
+			return emailRunOK
+		}
+		emailRunStart, emailRunEnd, emailRunOK = i, i, false
+		if !isEmailLocalChar(src[i]) {
+			return false
+		}
+		end := i
+		for end < len(src) && isEmailLocalChar(src[end]) {
+			end++
+		}
+		emailRunEnd = end
+		if end < len(src) && src[end] == '@' {
+			_, emailRunOK = matchBareEmail(src, i)
+		}
+		return emailRunOK
+	}
+	tryAutolink := func(i int) (int, Inline, bool) {
+		if state.inLink || i >= len(src) || !canStartBareAutolink(src[i]) {
+			return 0, Inline{}, false
+		}
+		text, dest, length, ok := matchAutolinkPrefixForm(src, i)
+		if !ok {
+			if !emailStart(i) {
+				return 0, Inline{}, false
+			}
+			end, matched := matchBareEmail(src, i)
+			if !matched {
+				return 0, Inline{}, false
+			}
+			text = src[i:end]
+			dest = "mailto:" + text
+			length = len(text)
+		}
+		return i + length, Inline{Kind: InlineLink, Text: text, Dest: dest, Children: []Inline{{Kind: InlineText, Text: text}}}, true
 	}
 
 	i := 0
@@ -81,20 +135,26 @@ func ParseInline(src string) []Inline {
 					i += 2
 					continue
 				}
-				if src[i+1] == '(' {
-					if close := strings.Index(src[i+2:], `\)`); close >= 0 {
-						inner := src[i+2 : i+2+close]
+				if src[i+1] == '(' || src[i+1] == '[' {
+					closing := `\)`
+					if src[i+1] == '[' {
+						closing = `\]`
+					}
+					if close := findInlineLatexClosing(src, i+2, closing); close >= 0 {
+						inner := src[i+2 : close]
+						if inner != "" && !strings.Contains(inner, "\n") {
+							flush()
+							out = append(out, Inline{Kind: InlineLatex, Raw: src[i : close+2], Text: inner})
+							i = close + 2
+							continue
+						}
+					} else {
+						// An open backslash-delimited math span remains pending.
 						flush()
-						out = append(out, Inline{Kind: InlineLatex, Raw: src[i : i+2+close+2], Text: inner})
-						i = i + 2 + close + 2
+						out = append(out, Inline{Kind: InlineLatex, Raw: src[i:], Text: src[i+2:], Pending: true})
+						i = len(src)
 						continue
 					}
-					// A `\(` with no `\)` yet is a streamed, still-open math span:
-					// upstream marks it pending and renders its raw source.
-					flush()
-					out = append(out, Inline{Kind: InlineLatex, Raw: src[i:], Text: src[i+2:], Pending: true})
-					i = len(src)
-					continue
 				}
 				if isASCIIPunct(src[i+1]) {
 					flush()
@@ -137,8 +197,16 @@ func ParseInline(src string) []Inline {
 			text.WriteString(src[i:j])
 			i = j
 		case '*', '_':
-			consumed, inline, ok := parseEmStrong(src, i, c, prevText, hasPrevText)
+			consumed, inline, ok := parseEmStrong(src, masked, i, c, prevText, hasPrevText, state)
 			if ok {
+				flush()
+				out = append(out, inline)
+				i = consumed
+				continue
+			}
+			// Marked falls through to its url tokenizer after emStrong fails, so
+			// `_@e.f` is an email while `_@e.f_` stays emphasis.
+			if consumed, inline, ok := tryAutolink(i); ok {
 				flush()
 				out = append(out, inline)
 				i = consumed
@@ -151,15 +219,19 @@ func ParseInline(src string) []Inline {
 		case '~':
 			if end, inner, ok := strictStrikethrough(src, i); ok {
 				flush()
-				out = append(out, Inline{Kind: InlineStrikethrough, Text: inner, Children: ParseInline(inner)})
+				out = append(out, Inline{Kind: InlineStrikethrough, Text: inner, Children: parseInline(inner, state)})
 				i = end
 				continue
 			}
-			text.WriteByte(c)
-			i++
+			end := i + 1
+			for end < len(src) && src[end] == '~' {
+				end++
+			}
+			text.WriteString(src[i:end])
+			i = end
 		case '!':
 			if i+1 < len(src) && src[i+1] == '[' {
-				if inline, consumed, ok := parseLink(src, i, true); ok {
+				if inline, consumed, ok := parseLink(src, i, true, state); ok {
 					flush()
 					out = append(out, inline)
 					i = consumed
@@ -169,7 +241,7 @@ func ParseInline(src string) []Inline {
 			text.WriteByte(c)
 			i++
 		case '[':
-			if inline, consumed, ok := parseLink(src, i, false); ok {
+			if inline, consumed, ok := parseLink(src, i, false, state); ok {
 				flush()
 				out = append(out, inline)
 				i = consumed
@@ -187,37 +259,54 @@ func ParseInline(src string) []Inline {
 			if tag, consumed, ok := parseInlineHTML(src, i); ok {
 				flush()
 				out = append(out, Inline{Kind: InlineHTML, Text: tag})
+				// Marked tracks an open `<a ` region so bare URLs inside it stay
+				// text; `</a>` closes it and an explicit link resets it.
+				if !state.inLink && hasFoldPrefix(tag, "<a ") {
+					state.inLink = true
+				} else if state.inLink && hasFoldPrefix(tag, "</a>") {
+					state.inLink = false
+				}
 				i = consumed
 				continue
 			}
 			text.WriteByte(c)
 			i++
 		case '$':
-			if i+1 < len(src) && src[i+1] != '$' {
-				next, _ := utf8.DecodeRuneInString(src[i+1:])
-				if !isWhitespaceRune(next) {
-					if close := findInlineDollar(src, i+1); close >= 0 {
-						inner := src[i+1 : close]
-						if !rejectInlineDollar(inner, src[close+1:]) {
-							flush()
-							out = append(out, Inline{Kind: InlineLatex, Raw: src[i : close+1], Text: inner})
-							i = close + 1
-							continue
-						}
-					} else if looksLikePendingDollarMath(src[i+1:]) {
-						// A `$…` with no closing `$` yet is a streamed math span when
-						// the tail looks like math; upstream marks it pending and
-						// renders its raw source (markdown.ts tokenizeInlineLatex).
+			opening, closing := 1, "$"
+			canOpen := true
+			if i+1 < len(src) {
+				if src[i+1] == '$' {
+					opening, closing = 2, "$$"
+				} else {
+					next, _ := utf8.DecodeRuneInString(src[i+1:])
+					canOpen = !isWhitespaceRune(next)
+				}
+			}
+			if canOpen {
+				if close := findInlineLatexClosing(src, i+opening, closing); close >= 0 {
+					inner, after := src[i+opening:close], src[close+opening:]
+					if inner != "" && !strings.Contains(inner, "\n") && (opening == 2 || !rejectInlineDollar(inner, after)) {
 						flush()
-						out = append(out, Inline{Kind: InlineLatex, Raw: src[i:], Text: src[i+1:], Pending: true})
-						i = len(src)
+						out = append(out, Inline{Kind: InlineLatex, Raw: src[i : close+opening], Text: inner})
+						i = close + opening
 						continue
 					}
+				} else if looksLikePendingDollarMath(src[i+opening:]) {
+					flush()
+					out = append(out, Inline{Kind: InlineLatex, Raw: src[i:], Text: src[i+opening:], Pending: true})
+					i = len(src)
+					continue
 				}
 			}
 			text.WriteByte(c)
 			i++
 		default:
+			if consumed, inline, ok := tryAutolink(i); ok {
+				flush()
+				out = append(out, inline)
+				i = consumed
+				continue
+			}
 			text.WriteByte(c)
 			i++
 		}
@@ -240,24 +329,34 @@ func hasInlineMarkup(src string) bool {
 			}
 		}
 	}
-	return false
+	return containsBareAutolink(src)
 }
 
-// findInlineDollar finds the closing `$` of an inline latex span on the same
-// line as the opener.
-func findInlineDollar(src string, from int) int {
-	for i := from; i < len(src); i++ {
-		switch src[i] {
-		case '\n':
+// hasFoldPrefix reports an ASCII case-insensitive prefix match.
+func hasFoldPrefix(s, prefix string) bool {
+	if len(s) < len(prefix) {
+		return false
+	}
+	return strings.EqualFold(s[:len(prefix)], prefix)
+}
+
+// findInlineLatexClosing follows markdown.ts findClosingDelimiter: a closing
+// delimiter preceded by an odd number of backslashes is escaped.
+func findInlineLatexClosing(src string, start int, closing string) int {
+	for start < len(src) {
+		relative := strings.Index(src[start:], closing)
+		if relative < 0 {
 			return -1
-		case '\\':
-			i++
-		case '$':
-			if i+1 < len(src) && src[i+1] == '$' {
-				return -1
-			}
-			return i
 		}
+		index := start + relative
+		backslashes := 0
+		for previous := index - 1; previous >= 0 && src[previous] == '\\'; previous-- {
+			backslashes++
+		}
+		if backslashes%2 == 0 {
+			return index
+		}
+		start = index + len(closing)
 	}
 	return -1
 }
@@ -383,32 +482,37 @@ func strictStrikethrough(src string, i int) (int, string, bool) {
 		return 0, "", false
 	}
 	first, _ := utf8.DecodeRuneInString(src[start:])
-	if unicode.IsSpace(first) || first == '~' {
+	if isDelimiterWhitespace(first) || first == '~' {
 		return 0, "", false
 	}
-	for k := start; k+len(marker) <= len(src); k++ {
-		if src[k] != '~' || k+1 >= len(src) || src[k+1] != '~' {
-			continue
+	lastCanEnd := false
+	for position := start; position < len(src); {
+		if lastCanEnd && strings.HasPrefix(src[position:], marker) && (position+2 == len(src) || src[position+2] != '~') {
+			return position + 2, src[start:position], true
 		}
-		inner := src[start:k]
-		if inner == "" {
-			continue
+		if src[position] == '\\' {
+			if position+1 >= len(src) {
+				break
+			}
+			escaped, size := utf8.DecodeRuneInString(src[position+1:])
+			// The reference's \\. atom uses JS dot without the s flag.
+			if escaped == '\n' || escaped == '\r' || escaped == '\u2028' || escaped == '\u2029' {
+				break
+			}
+			position += 1 + size
+			lastCanEnd = true
+		} else {
+			current, size := utf8.DecodeRuneInString(src[position:])
+			lastCanEnd = !isDelimiterWhitespace(current) && current != '~'
+			position += size
 		}
-		last, _ := utf8.DecodeLastRuneInString(inner)
-		if unicode.IsSpace(last) || last == '~' {
-			continue
-		}
-		if k+len(marker) < len(src) && src[k+len(marker)] == '~' {
-			continue
-		}
-		return k + len(marker), inner, true
 	}
 	return 0, "", false
 }
 
 // parseLink parses `[text](dest "title")` (or the image form when image is
 // true, with `[` at i or `![` at i).
-func parseLink(src string, i int, image bool) (Inline, int, bool) {
+func parseLink(src string, i int, image bool, state *inlineState) (Inline, int, bool) {
 	open := i
 	if image {
 		open = i + 1
@@ -443,12 +547,27 @@ func parseLink(src string, i int, image bool) (Inline, int, bool) {
 	}
 	target := strings.TrimSpace(src[end+2 : end+2+close])
 	dest, title := splitLinkTarget(target)
-	label := src[open+1 : end]
+	label := strings.ReplaceAll(strings.ReplaceAll(src[open+1:end], `\[`, "["), `\]`, "]")
 	kind := InlineLink
 	if image {
 		kind = InlineImage
 	}
-	return Inline{Kind: kind, Text: label, Children: ParseInline(label), Dest: dest, Title: title}, end + 2 + close + 1, true
+	previous := state.linkEmitted
+	state.linkEmitted = false
+	state.inLink = true
+	children := parseInline(label, state)
+	nested := state.linkEmitted
+	state.linkEmitted = previous
+	// The reference's outputLink leaves inLink false even when it was set by an
+	// enclosing `<a ` region.
+	state.inLink = false
+	if !image {
+		if nested {
+			return Inline{}, 0, false
+		}
+		state.linkEmitted = true
+	}
+	return Inline{Kind: kind, Text: label, Children: children, Dest: dest, Title: title}, end + 2 + close + 1, true
 }
 
 func splitLinkTarget(target string) (dest, title string) {
@@ -472,25 +591,15 @@ func splitLinkTarget(target string) (dest, title string) {
 
 // parseAngle parses an autolink `<scheme:...>` or `<user@host>`.
 func parseAngle(src string, i int) (Inline, int, bool) {
-	end := strings.IndexByte(src[i:], '>')
-	if end < 0 {
+	match := angleAutolinkPattern.FindStringSubmatch(src[i:])
+	if match == nil {
 		return Inline{}, 0, false
 	}
-	body := src[i+1 : i+end]
-	if body == "" {
-		return Inline{}, 0, false
+	body, dest := match[1], match[1]
+	if match[2] == "@" {
+		dest = "mailto:" + body
 	}
-	if strings.IndexByte(body, '@') > 0 && strings.IndexByte(body, ' ') < 0 && strings.IndexByte(body, '<') < 0 {
-		dest := "mailto:" + body
-		return Inline{Kind: InlineLink, Text: body, Children: []Inline{{Kind: InlineText, Text: body}}, Dest: dest}, i + end + 1, true
-	}
-	if colon := strings.IndexByte(body, ':'); colon > 0 {
-		scheme := body[:colon]
-		if isASCIIAlpha(scheme) {
-			return Inline{Kind: InlineLink, Text: body, Children: []Inline{{Kind: InlineText, Text: body}}, Dest: body}, i + end + 1, true
-		}
-	}
-	return Inline{}, 0, false
+	return Inline{Kind: InlineLink, Text: body, Children: []Inline{{Kind: InlineText, Text: body}}, Dest: dest}, i + len(match[0]), true
 }
 
 // parseInlineHTML parses an inline HTML tag or comment.
@@ -502,20 +611,11 @@ func parseInlineHTML(src string, i int) (string, int, bool) {
 	if c != '/' && c != '!' && c != '?' && !isASCIILetter(c) {
 		return "", 0, false
 	}
-	end := strings.IndexByte(src[i:], '>')
-	if end < 0 {
+	tag := inlineHTMLPattern.FindString(src[i:])
+	if tag == "" {
 		return "", 0, false
 	}
-	return src[i : i+end+1], i + end + 1, true
-}
-
-func isASCIIAlpha(s string) bool {
-	for i := 0; i < len(s); i++ {
-		if !isASCIILetter(s[i]) {
-			return false
-		}
-	}
-	return len(s) > 0
+	return tag, i + len(tag), true
 }
 
 func isASCIILetter(c byte) bool {

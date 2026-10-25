@@ -295,7 +295,6 @@ func loadSkillFromFile(filePath string, source string) (*Skill, []ResourceDiagno
 				Type: "warning", Message: "description is required", Path: filePath,
 			})
 		}
-		return nil, diagnostics
 	}
 
 	descriptionLength := ai.JSLength(description)
@@ -312,6 +311,9 @@ func loadSkillFromFile(filePath string, source string) (*Skill, []ResourceDiagno
 	}
 	for _, err := range validateSkillName(name) {
 		diagnostics = append(diagnostics, ResourceDiagnostic{Type: "warning", Message: err, Path: filePath})
+	}
+	if !hasDescription {
+		return nil, diagnostics
 	}
 
 	return &Skill{

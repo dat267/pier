@@ -38,7 +38,7 @@ type proxyRequestOptions struct {
 	Reasoning       string                     `json:"reasoning,omitempty"`
 	CacheRetention  string                     `json:"cacheRetention,omitempty"`
 	SessionID       string                     `json:"sessionId,omitempty"`
-	Headers         map[string]string          `json:"headers,omitempty"`
+	Headers         ai.ProviderHeaders         `json:"headers,omitempty"`
 	Metadata        map[string]json.RawMessage `json:"metadata,omitempty"`
 	Transport       string                     `json:"transport,omitempty"`
 	ThinkingBudgets *ai.ThinkingBudgets        `json:"thinkingBudgets,omitempty"`
@@ -79,21 +79,11 @@ func proxyRequestOptionsOf(options ProxyStreamOptions) proxyRequestOptions {
 		Reasoning:       options.Reasoning,
 		CacheRetention:  stream.CacheRetention,
 		SessionID:       stream.SessionID,
+		Headers:         stream.Headers,
 		Metadata:        stream.Metadata,
 		Transport:       stream.Transport,
 		ThinkingBudgets: options.ThinkingBudgets,
 		MaxRetryDelayMS: stream.MaxRetryDelayMs,
-	}
-	if len(stream.Headers) > 0 {
-		headers := map[string]string{}
-		for key, value := range stream.Headers {
-			if value != nil {
-				headers[key] = *value
-			}
-		}
-		if len(headers) > 0 {
-			out.Headers = headers
-		}
 	}
 	return out
 }

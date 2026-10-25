@@ -1324,7 +1324,7 @@ func InitTheme(themeName string, enableWatcher bool) {
 	themeState.currentName.Store(&name)
 	theme, err := loadTheme(name, "")
 	if err != nil {
-		setGlobalTheme("dark", mustLoadTheme("dark"))
+		setGlobalTheme(SystemThemeName, mustLoadTheme(SystemThemeName))
 		return
 	}
 	setGlobalTheme(name, theme)
@@ -1364,7 +1364,7 @@ func setThemeContext(ctx context.Context, name string, enableWatcher bool, load 
 		return false, ""
 	}
 	if err != nil {
-		setGlobalTheme("dark", mustLoadTheme("dark"))
+		setGlobalTheme(SystemThemeName, mustLoadTheme(SystemThemeName))
 		return false, err.Error()
 	}
 	setGlobalTheme(name, theme)

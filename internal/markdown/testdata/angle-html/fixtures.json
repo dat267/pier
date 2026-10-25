@@ -1,0 +1,2040 @@
+[
+  {
+    "name": "<a:b>",
+    "source": "<a:b>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<a:b>"
+      }
+    ]
+  },
+  {
+    "name": "<a@b>",
+    "source": "<a@b>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<a@b>"
+      }
+    ]
+  },
+  {
+    "name": "<x:y z>",
+    "source": "<x:y z>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<x:y z>"
+      }
+    ]
+  },
+  {
+    "name": "<https://x.com >",
+    "source": "<https://x.com >",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<"
+      },
+      {
+        "type": "link",
+        "text": "https://x.com",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "https://x.com"
+          }
+        ],
+        "href": "https://x.com"
+      },
+      {
+        "type": "text",
+        "text": " >"
+      }
+    ]
+  },
+  {
+    "name": "<see HTTP://Example.COM>",
+    "source": "<see HTTP://Example.COM>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<see "
+      },
+      {
+        "type": "link",
+        "text": "HTTP://Example.COM>",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "HTTP://Example.COM>"
+          }
+        ],
+        "href": "HTTP://Example.COM>"
+      }
+    ]
+  },
+  {
+    "name": "<ab:c>",
+    "source": "<ab:c>",
+    "tokens": [
+      {
+        "type": "link",
+        "text": "ab:c",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "ab:c"
+          }
+        ],
+        "href": "ab:c"
+      }
+    ]
+  },
+  {
+    "name": "<ab:>",
+    "source": "<ab:>",
+    "tokens": [
+      {
+        "type": "link",
+        "text": "ab:",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "ab:"
+          }
+        ],
+        "href": "ab:"
+      }
+    ]
+  },
+  {
+    "name": "<a1:x>",
+    "source": "<a1:x>",
+    "tokens": [
+      {
+        "type": "link",
+        "text": "a1:x",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "a1:x"
+          }
+        ],
+        "href": "a1:x"
+      }
+    ]
+  },
+  {
+    "name": "<a+.:x>",
+    "source": "<a+.:x>",
+    "tokens": [
+      {
+        "type": "link",
+        "text": "a+.:x",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "a+.:x"
+          }
+        ],
+        "href": "a+.:x"
+      }
+    ]
+  },
+  {
+    "name": "<a-:x>",
+    "source": "<a-:x>",
+    "tokens": [
+      {
+        "type": "link",
+        "text": "a-:x",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "a-:x"
+          }
+        ],
+        "href": "a-:x"
+      }
+    ]
+  },
+  {
+    "name": "<a.b:c>",
+    "source": "<a.b:c>",
+    "tokens": [
+      {
+        "type": "link",
+        "text": "a.b:c",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "a.b:c"
+          }
+        ],
+        "href": "a.b:c"
+      }
+    ]
+  },
+  {
+    "name": "<1a:x>",
+    "source": "<1a:x>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<1a:x>"
+      }
+    ]
+  },
+  {
+    "name": "<https://a@b.com>",
+    "source": "<https://a@b.com>",
+    "tokens": [
+      {
+        "type": "link",
+        "text": "https://a@b.com",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "https://a@b.com"
+          }
+        ],
+        "href": "https://a@b.com"
+      }
+    ]
+  },
+  {
+    "name": "<mailto:a@example.com>",
+    "source": "<mailto:a@example.com>",
+    "tokens": [
+      {
+        "type": "link",
+        "text": "mailto:a@example.com",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "mailto:a@example.com"
+          }
+        ],
+        "href": "mailto:a@example.com"
+      }
+    ]
+  },
+  {
+    "name": "<http://x.com/例え>",
+    "source": "<http://x.com/例え>",
+    "tokens": [
+      {
+        "type": "link",
+        "text": "http://x.com/例え",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "http://x.com/例え"
+          }
+        ],
+        "href": "http://x.com/例え"
+      }
+    ]
+  },
+  {
+    "name": "<aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:x>",
+    "source": "<aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:x>",
+    "tokens": [
+      {
+        "type": "link",
+        "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:x",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:x"
+          }
+        ],
+        "href": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:x"
+      }
+    ]
+  },
+  {
+    "name": "<aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:x>",
+    "source": "<aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:x>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:x>"
+      }
+    ]
+  },
+  {
+    "name": "<a@example.com>",
+    "source": "<a@example.com>",
+    "tokens": [
+      {
+        "type": "link",
+        "text": "a@example.com",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "a@example.com"
+          }
+        ],
+        "href": "mailto:a@example.com"
+      }
+    ]
+  },
+  {
+    "name": "<a+b_c-d.e@example.co.uk>",
+    "source": "<a+b_c-d.e@example.co.uk>",
+    "tokens": [
+      {
+        "type": "link",
+        "text": "a+b_c-d.e@example.co.uk",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "a+b_c-d.e@example.co.uk"
+          }
+        ],
+        "href": "mailto:a+b_c-d.e@example.co.uk"
+      }
+    ]
+  },
+  {
+    "name": "<a!#$%&'*+/=?^_`{|}~-@b.c>",
+    "source": "<a!#$%&'*+/=?^_`{|}~-@b.c>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<a!#"
+      },
+      {
+        "type": "latex",
+        "raw": "$%&'*+/=?^_`{|}~-@b.c>",
+        "text": "%&'*+/=?^_`{|}~-@b.c>",
+        "pending": true
+      }
+    ]
+  },
+  {
+    "name": "<a@-b.com>",
+    "source": "<a@-b.com>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<"
+      },
+      {
+        "type": "link",
+        "text": "a@-b.com",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "a@-b.com"
+          }
+        ],
+        "href": "mailto:a@-b.com"
+      },
+      {
+        "type": "text",
+        "text": ">"
+      }
+    ]
+  },
+  {
+    "name": "<a@b-.com>",
+    "source": "<a@b-.com>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<"
+      },
+      {
+        "type": "link",
+        "text": "a@b-.com",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "a@b-.com"
+          }
+        ],
+        "href": "mailto:a@b-.com"
+      },
+      {
+        "type": "text",
+        "text": ">"
+      }
+    ]
+  },
+  {
+    "name": "<a@b_c.d>",
+    "source": "<a@b_c.d>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<"
+      },
+      {
+        "type": "link",
+        "text": "a@b_c.d",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "a@b_c.d"
+          }
+        ],
+        "href": "mailto:a@b_c.d"
+      },
+      {
+        "type": "text",
+        "text": ">"
+      }
+    ]
+  },
+  {
+    "name": "<a@b..c>",
+    "source": "<a@b..c>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<a@b..c>"
+      }
+    ]
+  },
+  {
+    "name": "<a@b.c->",
+    "source": "<a@b.c->",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<a@b.c->"
+      }
+    ]
+  },
+  {
+    "name": "<a@b.c_>",
+    "source": "<a@b.c_>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<a@b.c_>"
+      }
+    ]
+  },
+  {
+    "name": "<a@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.com>",
+    "source": "<a@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.com>",
+    "tokens": [
+      {
+        "type": "link",
+        "text": "a@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.com",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "a@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.com"
+          }
+        ],
+        "href": "mailto:a@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.com"
+      }
+    ]
+  },
+  {
+    "name": "<a@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.com>",
+    "source": "<a@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.com>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<"
+      },
+      {
+        "type": "link",
+        "text": "a@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.com",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "a@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.com"
+          }
+        ],
+        "href": "mailto:a@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.com"
+      },
+      {
+        "type": "text",
+        "text": ">"
+      }
+    ]
+  },
+  {
+    "name": "<a@b.ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc>",
+    "source": "<a@b.ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc>",
+    "tokens": [
+      {
+        "type": "link",
+        "text": "a@b.ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "a@b.ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        ],
+        "href": "mailto:a@b.ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      }
+    ]
+  },
+  {
+    "name": "<a@b.cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc>",
+    "source": "<a@b.cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<"
+      },
+      {
+        "type": "link",
+        "text": "a@b.cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "a@b.cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        ],
+        "href": "mailto:a@b.cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      {
+        "type": "text",
+        "text": ">"
+      }
+    ]
+  },
+  {
+    "name": "<b>",
+    "source": "<b>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<b>"
+      }
+    ]
+  },
+  {
+    "name": "</b>",
+    "source": "</b>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "</b>"
+      }
+    ]
+  },
+  {
+    "name": "<br/>",
+    "source": "<br/>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<br/>"
+      }
+    ]
+  },
+  {
+    "name": "<br />",
+    "source": "<br />",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<br />"
+      }
+    ]
+  },
+  {
+    "name": "<a:b>",
+    "source": "<a:b>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<a:b>"
+      }
+    ]
+  },
+  {
+    "name": "</a:b>",
+    "source": "</a:b>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "</a:b>"
+      }
+    ]
+  },
+  {
+    "name": "<tag_name>",
+    "source": "<tag_name>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag_name>"
+      }
+    ]
+  },
+  {
+    "name": "<tag-name>",
+    "source": "<tag-name>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag-name>"
+      }
+    ]
+  },
+  {
+    "name": "<3tag>",
+    "source": "<3tag>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<3tag>"
+      }
+    ]
+  },
+  {
+    "name": "<_tag>",
+    "source": "<_tag>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<_tag>"
+      }
+    ]
+  },
+  {
+    "name": "<tag.name>",
+    "source": "<tag.name>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<tag.name>"
+      }
+    ]
+  },
+  {
+    "name": "<tag attr>",
+    "source": "<tag attr>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr>"
+      }
+    ]
+  },
+  {
+    "name": "<tag a:b=foo>",
+    "source": "<tag a:b=foo>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag a:b=foo>"
+      }
+    ]
+  },
+  {
+    "name": "<tag :x='v'>",
+    "source": "<tag :x='v'>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag :x='v'>"
+      }
+    ]
+  },
+  {
+    "name": "<tag _x=\"v\">",
+    "source": "<tag _x=\"v\">",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag _x=\"v\">"
+      }
+    ]
+  },
+  {
+    "name": "<tag foo/bar>",
+    "source": "<tag foo/bar>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<tag foo/bar>"
+      }
+    ]
+  },
+  {
+    "name": "<tag a=b=c>",
+    "source": "<tag a=b=c>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<tag a=b=c>"
+      }
+    ]
+  },
+  {
+    "name": "<tag a=>",
+    "source": "<tag a=>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<tag a=>"
+      }
+    ]
+  },
+  {
+    "name": "<tag a=\"unclosed>",
+    "source": "<tag a=\"unclosed>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<tag a=\"unclosed>"
+      }
+    ]
+  },
+  {
+    "name": "<tag a='>'> tail",
+    "source": "<tag a='>'> tail",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag a='>'>"
+      },
+      {
+        "type": "text",
+        "text": " tail"
+      }
+    ]
+  },
+  {
+    "name": "<tag a=\"one>two\" b=three> tail",
+    "source": "<tag a=\"one>two\" b=three> tail",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag a=\"one>two\" b=three>"
+      },
+      {
+        "type": "text",
+        "text": " tail"
+      }
+    ]
+  },
+  {
+    "name": "<tag a='one\ntwo'>",
+    "source": "<tag a='one\ntwo'>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag a='one\ntwo'>"
+      }
+    ]
+  },
+  {
+    "name": "<tag a = b b = 'c'>",
+    "source": "<tag a = b b = 'c'>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag a = b b = 'c'>"
+      }
+    ]
+  },
+  {
+    "name": "</tag attr>",
+    "source": "</tag attr>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "</tag attr>"
+      }
+    ]
+  },
+  {
+    "name": "</tag />",
+    "source": "</tag />",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "</tag />"
+      }
+    ]
+  },
+  {
+    "name": "</tag\n>",
+    "source": "</tag\n>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "</tag\n>"
+      }
+    ]
+  },
+  {
+    "name": "<!-- comment -->",
+    "source": "<!-- comment -->",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<!-- comment -->"
+      }
+    ]
+  },
+  {
+    "name": "<!-- a > b --> tail",
+    "source": "<!-- a > b --> tail",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<!-- a > b -->"
+      },
+      {
+        "type": "text",
+        "text": " tail"
+      }
+    ]
+  },
+  {
+    "name": "<!-->",
+    "source": "<!-->",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<!-->"
+      }
+    ]
+  },
+  {
+    "name": "<!--->",
+    "source": "<!--->",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<!--->"
+      }
+    ]
+  },
+  {
+    "name": "<!-- unclosed>",
+    "source": "<!-- unclosed>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<!-- unclosed>"
+      }
+    ]
+  },
+  {
+    "name": "<!-- one --> two -->",
+    "source": "<!-- one --> two -->",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<!-- one -->"
+      },
+      {
+        "type": "text",
+        "text": " two -->"
+      }
+    ]
+  },
+  {
+    "name": "<!-- -- -->",
+    "source": "<!-- -- -->",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<!-- -- -->"
+      }
+    ]
+  },
+  {
+    "name": "<?pi x > y?> tail",
+    "source": "<?pi x > y?> tail",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<?pi x > y?>"
+      },
+      {
+        "type": "text",
+        "text": " tail"
+      }
+    ]
+  },
+  {
+    "name": "<?pi unclosed>",
+    "source": "<?pi unclosed>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<?pi unclosed>"
+      }
+    ]
+  },
+  {
+    "name": "<!DOCTYPE html>",
+    "source": "<!DOCTYPE html>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<!DOCTYPE html>"
+      }
+    ]
+  },
+  {
+    "name": "<!DOCTYPE>",
+    "source": "<!DOCTYPE>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<!DOCTYPE>"
+      }
+    ]
+  },
+  {
+    "name": "<!declaration x > tail",
+    "source": "<!declaration x > tail",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<!declaration x >"
+      },
+      {
+        "type": "text",
+        "text": " tail"
+      }
+    ]
+  },
+  {
+    "name": "<![CDATA[a > b]]> tail",
+    "source": "<![CDATA[a > b]]> tail",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<![CDATA[a > b]]>"
+      },
+      {
+        "type": "text",
+        "text": " tail"
+      }
+    ]
+  },
+  {
+    "name": "<![CDATA[unclosed>",
+    "source": "<![CDATA[unclosed>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<![CDATA[unclosed>"
+      }
+    ]
+  },
+  {
+    "name": "<<tag>>",
+    "source": "<<tag>>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<"
+      },
+      {
+        "type": "html",
+        "text": "<tag>"
+      },
+      {
+        "type": "text",
+        "text": ">"
+      }
+    ]
+  },
+  {
+    "name": "\\<tag>",
+    "source": "\\<tag>",
+    "tokens": [
+      {
+        "type": "escape",
+        "raw": "\\<",
+        "text": "<"
+      },
+      {
+        "type": "text",
+        "text": "tag>"
+      }
+    ]
+  },
+  {
+    "name": "<a href='x'>https://y.com</a> https://z.com",
+    "source": "<a href='x'>https://y.com</a> https://z.com",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<a href='x'>"
+      },
+      {
+        "type": "text",
+        "text": "https://y.com"
+      },
+      {
+        "type": "html",
+        "text": "</a>"
+      },
+      {
+        "type": "text",
+        "text": " "
+      },
+      {
+        "type": "link",
+        "text": "https://z.com",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "https://z.com"
+          }
+        ],
+        "href": "https://z.com"
+      }
+    ]
+  },
+  {
+    "name": "<A HREF='x'>www.y.com</A> www.z.com",
+    "source": "<A HREF='x'>www.y.com</A> www.z.com",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<A HREF='x'>"
+      },
+      {
+        "type": "text",
+        "text": "www.y.com"
+      },
+      {
+        "type": "html",
+        "text": "</A>"
+      },
+      {
+        "type": "text",
+        "text": " "
+      },
+      {
+        "type": "link",
+        "text": "www.z.com",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "www.z.com"
+          }
+        ],
+        "href": "http://www.z.com"
+      }
+    ]
+  },
+  {
+    "name": "<a>https://y.com",
+    "source": "<a>https://y.com",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<a>"
+      },
+      {
+        "type": "link",
+        "text": "https://y.com",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "https://y.com"
+          }
+        ],
+        "href": "https://y.com"
+      }
+    ]
+  },
+  {
+    "name": "<a\thref='x'>https://y.com",
+    "source": "<a\thref='x'>https://y.com",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<a\thref='x'>"
+      },
+      {
+        "type": "link",
+        "text": "https://y.com",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "https://y.com"
+          }
+        ],
+        "href": "https://y.com"
+      }
+    ]
+  },
+  {
+    "name": "URI whitespace \"\\t\"",
+    "source": "<ab:x\ty>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<ab:x\ty>"
+      }
+    ]
+  },
+  {
+    "name": "HTML attribute whitespace \"\\t\"",
+    "source": "<tag\tattr\t=\t'v'>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag\tattr\t=\t'v'>"
+      }
+    ]
+  },
+  {
+    "name": "HTML unquoted value whitespace \"\\t\"",
+    "source": "<tag attr=x\tnext>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr=x\tnext>"
+      }
+    ]
+  },
+  {
+    "name": "HTML closing whitespace \"\\t\"",
+    "source": "</tag\t>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "</tag\t>"
+      }
+    ]
+  },
+  {
+    "name": "declaration whitespace \"\\t\"",
+    "source": "<!DOCTYPE\thtml>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<!DOCTYPE\thtml>"
+      }
+    ]
+  },
+  {
+    "name": "URI whitespace \"\\n\"",
+    "source": "<ab:x\ny>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<ab:x\ny>"
+      }
+    ]
+  },
+  {
+    "name": "HTML attribute whitespace \"\\n\"",
+    "source": "<tag\nattr\n=\n'v'>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag\nattr\n=\n'v'>"
+      }
+    ]
+  },
+  {
+    "name": "HTML unquoted value whitespace \"\\n\"",
+    "source": "<tag attr=x\nnext>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr=x\nnext>"
+      }
+    ]
+  },
+  {
+    "name": "HTML closing whitespace \"\\n\"",
+    "source": "</tag\n>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "</tag\n>"
+      }
+    ]
+  },
+  {
+    "name": "declaration whitespace \"\\n\"",
+    "source": "<!DOCTYPE\nhtml>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<!DOCTYPE\nhtml>"
+      }
+    ]
+  },
+  {
+    "name": "URI whitespace \"\\u000b\"",
+    "source": "<ab:x\u000by>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<ab:x\u000by>"
+      }
+    ]
+  },
+  {
+    "name": "HTML attribute whitespace \"\\u000b\"",
+    "source": "<tag\u000battr\u000b=\u000b'v'>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag\u000battr\u000b=\u000b'v'>"
+      }
+    ]
+  },
+  {
+    "name": "HTML unquoted value whitespace \"\\u000b\"",
+    "source": "<tag attr=x\u000bnext>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr=x\u000bnext>"
+      }
+    ]
+  },
+  {
+    "name": "HTML closing whitespace \"\\u000b\"",
+    "source": "</tag\u000b>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "</tag\u000b>"
+      }
+    ]
+  },
+  {
+    "name": "declaration whitespace \"\\u000b\"",
+    "source": "<!DOCTYPE\u000bhtml>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<!DOCTYPE\u000bhtml>"
+      }
+    ]
+  },
+  {
+    "name": "URI whitespace \"\\f\"",
+    "source": "<ab:x\fy>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<ab:x\fy>"
+      }
+    ]
+  },
+  {
+    "name": "HTML attribute whitespace \"\\f\"",
+    "source": "<tag\fattr\f=\f'v'>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag\fattr\f=\f'v'>"
+      }
+    ]
+  },
+  {
+    "name": "HTML unquoted value whitespace \"\\f\"",
+    "source": "<tag attr=x\fnext>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr=x\fnext>"
+      }
+    ]
+  },
+  {
+    "name": "HTML closing whitespace \"\\f\"",
+    "source": "</tag\f>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "</tag\f>"
+      }
+    ]
+  },
+  {
+    "name": "declaration whitespace \"\\f\"",
+    "source": "<!DOCTYPE\fhtml>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<!DOCTYPE\fhtml>"
+      }
+    ]
+  },
+  {
+    "name": "URI whitespace \"\\r\"",
+    "source": "<ab:x\ry>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<ab:x\ry>"
+      }
+    ]
+  },
+  {
+    "name": "HTML attribute whitespace \"\\r\"",
+    "source": "<tag\rattr\r=\r'v'>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag\rattr\r=\r'v'>"
+      }
+    ]
+  },
+  {
+    "name": "HTML unquoted value whitespace \"\\r\"",
+    "source": "<tag attr=x\rnext>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr=x\rnext>"
+      }
+    ]
+  },
+  {
+    "name": "HTML closing whitespace \"\\r\"",
+    "source": "</tag\r>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "</tag\r>"
+      }
+    ]
+  },
+  {
+    "name": "declaration whitespace \"\\r\"",
+    "source": "<!DOCTYPE\rhtml>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<!DOCTYPE\rhtml>"
+      }
+    ]
+  },
+  {
+    "name": "URI whitespace \" \"",
+    "source": "<ab:x y>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<ab:x y>"
+      }
+    ]
+  },
+  {
+    "name": "HTML attribute whitespace \" \"",
+    "source": "<tag attr = 'v'>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr = 'v'>"
+      }
+    ]
+  },
+  {
+    "name": "HTML unquoted value whitespace \" \"",
+    "source": "<tag attr=x next>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr=x next>"
+      }
+    ]
+  },
+  {
+    "name": "HTML closing whitespace \" \"",
+    "source": "</tag >",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "</tag >"
+      }
+    ]
+  },
+  {
+    "name": "declaration whitespace \" \"",
+    "source": "<!DOCTYPE html>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<!DOCTYPE html>"
+      }
+    ]
+  },
+  {
+    "name": "URI whitespace \" \"",
+    "source": "<ab:x y>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<ab:x y>"
+      }
+    ]
+  },
+  {
+    "name": "HTML attribute whitespace \" \"",
+    "source": "<tag attr = 'v'>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr = 'v'>"
+      }
+    ]
+  },
+  {
+    "name": "HTML unquoted value whitespace \" \"",
+    "source": "<tag attr=x next>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr=x next>"
+      }
+    ]
+  },
+  {
+    "name": "HTML closing whitespace \" \"",
+    "source": "</tag >",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "</tag >"
+      }
+    ]
+  },
+  {
+    "name": "declaration whitespace \" \"",
+    "source": "<!DOCTYPE html>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<!DOCTYPE html>"
+      }
+    ]
+  },
+  {
+    "name": "URI whitespace \" \"",
+    "source": "<ab:x y>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<ab:x y>"
+      }
+    ]
+  },
+  {
+    "name": "HTML attribute whitespace \" \"",
+    "source": "<tag attr = 'v'>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr = 'v'>"
+      }
+    ]
+  },
+  {
+    "name": "HTML unquoted value whitespace \" \"",
+    "source": "<tag attr=x next>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr=x next>"
+      }
+    ]
+  },
+  {
+    "name": "HTML closing whitespace \" \"",
+    "source": "</tag >",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "</tag >"
+      }
+    ]
+  },
+  {
+    "name": "declaration whitespace \" \"",
+    "source": "<!DOCTYPE html>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<!DOCTYPE html>"
+      }
+    ]
+  },
+  {
+    "name": "URI whitespace \" \"",
+    "source": "<ab:x y>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<ab:x y>"
+      }
+    ]
+  },
+  {
+    "name": "HTML attribute whitespace \" \"",
+    "source": "<tag attr = 'v'>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr = 'v'>"
+      }
+    ]
+  },
+  {
+    "name": "HTML unquoted value whitespace \" \"",
+    "source": "<tag attr=x next>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr=x next>"
+      }
+    ]
+  },
+  {
+    "name": "HTML closing whitespace \" \"",
+    "source": "</tag >",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "</tag >"
+      }
+    ]
+  },
+  {
+    "name": "declaration whitespace \" \"",
+    "source": "<!DOCTYPE html>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<!DOCTYPE html>"
+      }
+    ]
+  },
+  {
+    "name": "URI whitespace \" \"",
+    "source": "<ab:x y>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<ab:x y>"
+      }
+    ]
+  },
+  {
+    "name": "HTML attribute whitespace \" \"",
+    "source": "<tag attr = 'v'>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr = 'v'>"
+      }
+    ]
+  },
+  {
+    "name": "HTML unquoted value whitespace \" \"",
+    "source": "<tag attr=x next>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr=x next>"
+      }
+    ]
+  },
+  {
+    "name": "HTML closing whitespace \" \"",
+    "source": "</tag >",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "</tag >"
+      }
+    ]
+  },
+  {
+    "name": "declaration whitespace \" \"",
+    "source": "<!DOCTYPE html>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<!DOCTYPE html>"
+      }
+    ]
+  },
+  {
+    "name": "URI whitespace \" \"",
+    "source": "<ab:x y>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<ab:x y>"
+      }
+    ]
+  },
+  {
+    "name": "HTML attribute whitespace \" \"",
+    "source": "<tag attr = 'v'>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr = 'v'>"
+      }
+    ]
+  },
+  {
+    "name": "HTML unquoted value whitespace \" \"",
+    "source": "<tag attr=x next>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr=x next>"
+      }
+    ]
+  },
+  {
+    "name": "HTML closing whitespace \" \"",
+    "source": "</tag >",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "</tag >"
+      }
+    ]
+  },
+  {
+    "name": "declaration whitespace \" \"",
+    "source": "<!DOCTYPE html>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<!DOCTYPE html>"
+      }
+    ]
+  },
+  {
+    "name": "URI whitespace \" \"",
+    "source": "<ab:x y>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<ab:x y>"
+      }
+    ]
+  },
+  {
+    "name": "HTML attribute whitespace \" \"",
+    "source": "<tag attr = 'v'>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr = 'v'>"
+      }
+    ]
+  },
+  {
+    "name": "HTML unquoted value whitespace \" \"",
+    "source": "<tag attr=x next>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr=x next>"
+      }
+    ]
+  },
+  {
+    "name": "HTML closing whitespace \" \"",
+    "source": "</tag >",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "</tag >"
+      }
+    ]
+  },
+  {
+    "name": "declaration whitespace \" \"",
+    "source": "<!DOCTYPE html>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<!DOCTYPE html>"
+      }
+    ]
+  },
+  {
+    "name": "URI whitespace \" \"",
+    "source": "<ab:x y>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<ab:x y>"
+      }
+    ]
+  },
+  {
+    "name": "HTML attribute whitespace \" \"",
+    "source": "<tag attr = 'v'>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr = 'v'>"
+      }
+    ]
+  },
+  {
+    "name": "HTML unquoted value whitespace \" \"",
+    "source": "<tag attr=x next>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr=x next>"
+      }
+    ]
+  },
+  {
+    "name": "HTML closing whitespace \" \"",
+    "source": "</tag >",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "</tag >"
+      }
+    ]
+  },
+  {
+    "name": "declaration whitespace \" \"",
+    "source": "<!DOCTYPE html>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<!DOCTYPE html>"
+      }
+    ]
+  },
+  {
+    "name": "URI whitespace \" \"",
+    "source": "<ab:x y>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<ab:x y>"
+      }
+    ]
+  },
+  {
+    "name": "HTML attribute whitespace \" \"",
+    "source": "<tag attr = 'v'>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr = 'v'>"
+      }
+    ]
+  },
+  {
+    "name": "HTML unquoted value whitespace \" \"",
+    "source": "<tag attr=x next>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr=x next>"
+      }
+    ]
+  },
+  {
+    "name": "HTML closing whitespace \" \"",
+    "source": "</tag >",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "</tag >"
+      }
+    ]
+  },
+  {
+    "name": "declaration whitespace \" \"",
+    "source": "<!DOCTYPE html>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<!DOCTYPE html>"
+      }
+    ]
+  },
+  {
+    "name": "URI whitespace \" \"",
+    "source": "<ab:x y>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<ab:x y>"
+      }
+    ]
+  },
+  {
+    "name": "HTML attribute whitespace \" \"",
+    "source": "<tag attr = 'v'>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr = 'v'>"
+      }
+    ]
+  },
+  {
+    "name": "HTML unquoted value whitespace \" \"",
+    "source": "<tag attr=x next>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr=x next>"
+      }
+    ]
+  },
+  {
+    "name": "HTML closing whitespace \" \"",
+    "source": "</tag >",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "</tag >"
+      }
+    ]
+  },
+  {
+    "name": "declaration whitespace \" \"",
+    "source": "<!DOCTYPE html>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<!DOCTYPE html>"
+      }
+    ]
+  },
+  {
+    "name": "URI whitespace \"　\"",
+    "source": "<ab:x　y>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<ab:x　y>"
+      }
+    ]
+  },
+  {
+    "name": "HTML attribute whitespace \"　\"",
+    "source": "<tag　attr　=　'v'>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag　attr　=　'v'>"
+      }
+    ]
+  },
+  {
+    "name": "HTML unquoted value whitespace \"　\"",
+    "source": "<tag attr=x　next>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr=x　next>"
+      }
+    ]
+  },
+  {
+    "name": "HTML closing whitespace \"　\"",
+    "source": "</tag　>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "</tag　>"
+      }
+    ]
+  },
+  {
+    "name": "declaration whitespace \"　\"",
+    "source": "<!DOCTYPE　html>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<!DOCTYPE　html>"
+      }
+    ]
+  },
+  {
+    "name": "URI whitespace \"﻿\"",
+    "source": "<ab:x﻿y>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<ab:x﻿y>"
+      }
+    ]
+  },
+  {
+    "name": "HTML attribute whitespace \"﻿\"",
+    "source": "<tag﻿attr﻿=﻿'v'>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag﻿attr﻿=﻿'v'>"
+      }
+    ]
+  },
+  {
+    "name": "HTML unquoted value whitespace \"﻿\"",
+    "source": "<tag attr=x﻿next>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<tag attr=x﻿next>"
+      }
+    ]
+  },
+  {
+    "name": "HTML closing whitespace \"﻿\"",
+    "source": "</tag﻿>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "</tag﻿>"
+      }
+    ]
+  },
+  {
+    "name": "declaration whitespace \"﻿\"",
+    "source": "<!DOCTYPE﻿html>",
+    "tokens": [
+      {
+        "type": "html",
+        "text": "<!DOCTYPE﻿html>"
+      }
+    ]
+  },
+  {
+    "name": "URI control \"\\u0000\"",
+    "source": "<ab:x\u0000y>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<ab:x\u0000y>"
+      }
+    ]
+  },
+  {
+    "name": "HTML attribute control \"\\u0000\"",
+    "source": "<tag\u0000attr='v'>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<tag\u0000attr='v'>"
+      }
+    ]
+  },
+  {
+    "name": "URI control \"\\u0001\"",
+    "source": "<ab:x\u0001y>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<ab:x\u0001y>"
+      }
+    ]
+  },
+  {
+    "name": "HTML attribute control \"\\u0001\"",
+    "source": "<tag\u0001attr='v'>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<tag\u0001attr='v'>"
+      }
+    ]
+  },
+  {
+    "name": "URI control \"\\u001f\"",
+    "source": "<ab:x\u001fy>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<ab:x\u001fy>"
+      }
+    ]
+  },
+  {
+    "name": "HTML attribute control \"\\u001f\"",
+    "source": "<tag\u001fattr='v'>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<tag\u001fattr='v'>"
+      }
+    ]
+  },
+  {
+    "name": "URI control \"\"",
+    "source": "<ab:xy>",
+    "tokens": [
+      {
+        "type": "link",
+        "text": "ab:xy",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "ab:xy"
+          }
+        ],
+        "href": "ab:xy"
+      }
+    ]
+  },
+  {
+    "name": "HTML attribute control \"\"",
+    "source": "<tagattr='v'>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<tagattr='v'>"
+      }
+    ]
+  },
+  {
+    "name": "URI control \"\"",
+    "source": "<ab:xy>",
+    "tokens": [
+      {
+        "type": "link",
+        "text": "ab:xy",
+        "tokens": [
+          {
+            "type": "text",
+            "text": "ab:xy"
+          }
+        ],
+        "href": "ab:xy"
+      }
+    ]
+  },
+  {
+    "name": "HTML attribute control \"\"",
+    "source": "<tagattr='v'>",
+    "tokens": [
+      {
+        "type": "text",
+        "text": "<tagattr='v'>"
+      }
+    ]
+  }
+]

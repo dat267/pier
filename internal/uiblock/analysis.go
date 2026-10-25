@@ -77,7 +77,7 @@ var pkgBlockers = map[string]Kind{
 var cheapOS = map[string]bool{
 	"os.JoinPath": true, "os.PathSeparator": true, "os.PathListSeparator": true,
 	"os.Getenv": true, "os.Setenv": true, "os.Unsetenv": true, "os.Clearenv": true,
-	"os.Expand": true, "os.Getpagesize": true, "os.Hostname": true,
+	"os.Expand": true, "os.Getpagesize": true,
 }
 
 var namedBlockers = map[string]Kind{

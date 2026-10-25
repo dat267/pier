@@ -11,8 +11,9 @@ import (
 	"fmt"
 	"math"
 	"strconv"
-	"strings"
 	"time"
+
+	"github.com/dat267/pier/ai"
 )
 
 // BlockedAfterTurns is the number of consecutive rounds before set_goal may
@@ -340,7 +341,7 @@ func (m *GoalMachine) goalUpdate(goalID string, rawRevision any, rawAction, bloc
 	if m.view.TurnsStarted < BlockedAfterTurns {
 		return DispatchResult{Reply: stringPtr(fmt.Sprintf("Cannot block before %d consecutive goal rounds (current: %d). Keep working or try a different approach.", BlockedAfterTurns, m.view.TurnsStarted)), IsError: true}
 	}
-	reason := strings.TrimSpace(blockedReason)
+	reason := ai.JSTrim(blockedReason)
 	if reason == "" {
 		return DispatchResult{Reply: stringPtr("blocked_reason is required."), IsError: true}
 	}

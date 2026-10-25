@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -879,14 +880,14 @@ func prepareToolCallUnprotected(
 			Args:             validatedArgs,
 			Context:          *currentContext,
 		}, ctx)
-		if ctxDone(ctx) {
-			return prepareOutcome{immediate: &immediateToolCallOutcome{
-				result: createErrorToolResult("Operation aborted"), isError: true,
-			}}
-		}
 		if berr != nil {
 			return prepareOutcome{immediate: &immediateToolCallOutcome{
 				result: createErrorToolResult(berr.Error()), isError: true,
+			}}
+		}
+		if ctxDone(ctx) {
+			return prepareOutcome{immediate: &immediateToolCallOutcome{
+				result: createErrorToolResult("Operation aborted"), isError: true,
 			}}
 		}
 		if beforeResult != nil && beforeResult.Block {
@@ -1087,10 +1088,10 @@ func finalizeExecutedToolCall(
 			}
 		}
 		if afterResult != nil {
-			if afterResult.HasContent {
+			if afterResult.HasContent && afterResult.Content != nil {
 				result.Content = afterResult.Content
 			}
-			if afterResult.HasDetails {
+			if afterResult.HasDetails && len(afterResult.Details) > 0 && !bytes.Equal(bytes.TrimSpace(afterResult.Details), []byte("null")) {
 				result.Details = afterResult.Details
 			}
 			if afterResult.Usage != nil {

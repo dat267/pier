@@ -66,6 +66,7 @@ type StdioTransport struct {
 	closed        bool
 	closeReported bool
 	exitCh        chan struct{}
+	readers       sync.WaitGroup
 }
 
 // NewStdioTransport builds a transport; nothing runs until Start.
@@ -87,7 +88,7 @@ func (t *StdioTransport) Stderr() string {
 	defer t.mu.Unlock()
 	// stdio.ts's getter is stderrBuffer.toString("utf8"): malformed bytes
 	// become replacement characters.
-	return strings.ToValidUTF8(string(t.stderrBuffer), "\uFFFD")
+	return decodeUTF8(t.stderrBuffer)
 }
 
 // SetProtocolVersion is unused on stdio (the wire has no version header).
@@ -141,20 +142,39 @@ func (t *StdioTransport) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	stdoutPipe, err := cmd.StdoutPipe()
+	// Own the output pipes: Cmd.Wait closes StdoutPipe/StderrPipe before
+	// their readers necessarily finish, losing a fast server's final output.
+	stdoutPipe, stdoutWriter, err := os.Pipe()
 	if err != nil {
+		_ = stdinPipe.Close()
 		return err
 	}
-	var stderrPipe io.ReadCloser
+	defer stdoutWriter.Close()
+	cmd.Stdout = stdoutWriter
+	var stderrPipe *os.File
+	spawned := false
+	defer func() {
+		if !spawned {
+			_ = stdinPipe.Close()
+			_ = stdoutPipe.Close()
+			if stderrPipe != nil {
+				_ = stderrPipe.Close()
+			}
+		}
+	}()
 	if stderrPiped {
-		stderrPipe, err = cmd.StderrPipe()
+		var stderrWriter *os.File
+		stderrPipe, stderrWriter, err = os.Pipe()
 		if err != nil {
 			return err
 		}
+		defer stderrWriter.Close()
+		cmd.Stderr = stderrWriter
 	}
 	if err := stdioStartProcess(cmd); err != nil {
 		return err
 	}
+	spawned = true
 
 	t.mu.Lock()
 	t.child = cmd
@@ -163,8 +183,10 @@ func (t *StdioTransport) Start(ctx context.Context) error {
 	t.mu.Unlock()
 
 	if stderrPiped {
+		t.readers.Add(1)
 		go t.pumpStderr(stderrPipe)
 	}
+	t.readers.Add(1)
 	go t.pumpStdout(stdoutPipe)
 	installExitHook()
 	// Register before watchExit starts: an instantly-exiting server must not
@@ -174,7 +196,9 @@ func (t *StdioTransport) Start(ctx context.Context) error {
 	return nil
 }
 
-func (t *StdioTransport) pumpStderr(pipe io.Reader) {
+func (t *StdioTransport) pumpStderr(pipe io.ReadCloser) {
+	defer t.readers.Done()
+	defer pipe.Close()
 	buf := make([]byte, 32*1024)
 	for {
 		n, err := pipe.Read(buf)
@@ -187,7 +211,9 @@ func (t *StdioTransport) pumpStderr(pipe io.Reader) {
 	}
 }
 
-func (t *StdioTransport) pumpStdout(pipe io.Reader) {
+func (t *StdioTransport) pumpStdout(pipe io.ReadCloser) {
+	defer t.readers.Done()
+	defer pipe.Close()
 	buf := make([]byte, 64*1024)
 	for {
 		n, err := pipe.Read(buf)
@@ -204,11 +230,14 @@ func (t *StdioTransport) pumpStdout(pipe io.Reader) {
 // drops the process group from the live set, and finalizes the close path.
 func (t *StdioTransport) watchExit(cmd *exec.Cmd, pid int) {
 	_ = cmd.Wait()
+	// Publish process exit before waiting for readers, since a reader callback
+	// may synchronously call Close. The close event itself follows pipe EOF.
+	close(t.exitCh)
+	t.readers.Wait()
 	unregisterLiveProcessGroup(pid)
 	t.mu.Lock()
 	t.child = nil
 	t.mu.Unlock()
-	close(t.exitCh)
 	t.finishClose()
 }
 
@@ -256,7 +285,7 @@ func (t *StdioTransport) handleStdout(chunk []byte) {
 		}
 		// stdio.ts decodes with Buffer.toString("utf8"), replacing malformed
 		// bytes; Go keeps them raw unless converted.
-		text := strings.TrimSuffix(strings.ToValidUTF8(string(line), "\uFFFD"), "\r")
+		text := strings.TrimSuffix(decodeUTF8(line), "\r")
 		t.stdoutBuffer = append(t.stdoutBuffer[:0], t.stdoutBuffer[newline+1:]...)
 		t.mu.Unlock()
 		t.emitLine(text)
@@ -300,7 +329,7 @@ func (t *StdioTransport) handleStderr(chunk []byte) {
 	}
 	t.mu.Unlock()
 	if t.options.OnStderr != nil {
-		t.options.OnStderr(strings.ToValidUTF8(string(chunk), "\uFFFD"))
+		t.options.OnStderr(decodeUTF8(chunk))
 	}
 }
 
@@ -347,7 +376,7 @@ func (t *StdioTransport) Close(ctx context.Context) error {
 		break
 	}
 	if child == nil {
-		t.emitClose()
+		t.finishClose()
 		return nil
 	}
 	select {
@@ -384,7 +413,8 @@ func (t *StdioTransport) Close(ctx context.Context) error {
 	t.mu.Lock()
 	t.child = nil
 	t.mu.Unlock()
-	t.finishClose()
+	// The watcher emits close after the output readers finish. Waiting for
+	// them here would deadlock a listener that called Close synchronously.
 	return nil
 }
 

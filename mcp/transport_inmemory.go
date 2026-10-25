@@ -7,14 +7,16 @@ import (
 )
 
 // InMemoryTransport is an in-process transport paired with a peer (upstream
-// InMemoryTransport). Messages are delivered on their own goroutine, like
-// upstream's queueMicrotask, and deep-copied so a mutation on one side is
+// InMemoryTransport). One delivery goroutine per peer preserves upstream's
+// queueMicrotask FIFO. Messages are deep-copied so a mutation on one side is
 // not visible on the other.
 type InMemoryTransport struct {
 	transportEvents
-	peer    *InMemoryTransport
-	started bool
-	closed  bool
+	peer       *InMemoryTransport
+	started    bool
+	closed     bool
+	pending    []Message
+	delivering bool
 }
 
 // ConnectPeer wires this transport to its peer; each side of the pair calls
@@ -69,7 +71,15 @@ func (t *InMemoryTransport) Send(ctx context.Context, message Message) error {
 	if err != nil {
 		return err
 	}
-	go peer.deliver(copy)
+	peer.mu.Lock()
+	if !peer.closed {
+		peer.pending = append(peer.pending, copy)
+		if !peer.delivering {
+			peer.delivering = true
+			go peer.deliver()
+		}
+	}
+	peer.mu.Unlock()
 	return nil
 }
 
@@ -78,6 +88,7 @@ func (t *InMemoryTransport) Close(ctx context.Context) error {
 	t.mu.Lock()
 	alreadyClosed := t.closed
 	t.closed = true
+	t.pending = nil
 	peer := t.peer
 	t.mu.Unlock()
 	if alreadyClosed {
@@ -94,14 +105,21 @@ func (t *InMemoryTransport) Close(ctx context.Context) error {
 // override).
 func (t *InMemoryTransport) EmitError(err error) { t.emitError(err) }
 
-func (t *InMemoryTransport) deliver(message Message) {
-	t.mu.Lock()
-	closed := t.closed
-	t.mu.Unlock()
-	if closed {
-		return
+func (t *InMemoryTransport) deliver() {
+	for {
+		t.mu.Lock()
+		if t.closed || len(t.pending) == 0 {
+			t.pending = nil
+			t.delivering = false
+			t.mu.Unlock()
+			return
+		}
+		message := t.pending[0]
+		t.pending[0] = nil
+		t.pending = t.pending[1:]
+		t.mu.Unlock()
+		t.emitMessage(message)
 	}
-	t.emitMessage(message)
 }
 
 // cloneMessage round-trips a message through JSON: every MCP message is a

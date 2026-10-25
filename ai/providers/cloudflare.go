@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -34,14 +35,15 @@ const (
 // cloudflareResolveValue merges one field: the credential value wins, then the
 // ambient environment (upstream resolveValue's per-field merge, so a key-only
 // credential still picks up the account id from the environment).
-func cloudflareResolveValue(name string, ctx ai.AuthContext, credential *ai.ApiKeyCredential) (string, bool) {
+func cloudflareResolveValue(name string, ctx ai.AuthContext, credential *ai.ApiKeyCredential, signal context.Context) (string, bool) {
+	if ctxErrOf(signal) != nil {
+		return "", false
+	}
 	if credential != nil {
 		if name == CloudflareAPIKeyEnv {
-			if credential.Key != "" {
-				return credential.Key, true
-			}
+			return credential.Key, true
 		} else if credential.Env != nil {
-			if value, ok := credential.Env[name]; ok && value != "" {
+			if value, ok := credential.Env[name]; ok {
 				return value, true
 			}
 		}
@@ -49,7 +51,11 @@ func cloudflareResolveValue(name string, ctx ai.AuthContext, credential *ai.ApiK
 	if ctx == nil {
 		return "", false
 	}
-	return ctx.Env(name)
+	value, ok := ctx.Env(name)
+	if ctxErrOf(signal) != nil {
+		return "", false
+	}
+	return value, ok
 }
 
 // ResolveCloudflareEnv resolves the API key plus the account/gateway ids.
@@ -58,14 +64,18 @@ func ResolveCloudflareEnv(
 	ctx ai.AuthContext,
 	credential *ai.ApiKeyCredential,
 ) (*ai.AuthResult, bool) {
-	apiKey, hasKey := cloudflareResolveValue(CloudflareAPIKeyEnv, ctx, credential)
-	accountID, hasAccount := cloudflareResolveValue(CloudflareAccountIDEnv, ctx, credential)
+	return resolveCloudflareEnv(kind, ctx, credential, nil)
+}
+
+func resolveCloudflareEnv(kind CloudflareAuthKind, ctx ai.AuthContext, credential *ai.ApiKeyCredential, signal context.Context) (*ai.AuthResult, bool) {
+	apiKey, hasKey := cloudflareResolveValue(CloudflareAPIKeyEnv, ctx, credential, signal)
+	accountID, hasAccount := cloudflareResolveValue(CloudflareAccountIDEnv, ctx, credential, signal)
 	gatewayID := ""
 	hasGateway := true
 	if kind == CloudflareAuthAIGateway {
-		gatewayID, hasGateway = cloudflareResolveValue(CloudflareGatewayIDEnv, ctx, credential)
+		gatewayID, hasGateway = cloudflareResolveValue(CloudflareGatewayIDEnv, ctx, credential, signal)
 	}
-	if !hasKey || !hasAccount || !hasGateway {
+	if !hasKey || apiKey == "" || !hasAccount || accountID == "" || !hasGateway || (kind == CloudflareAuthAIGateway && gatewayID == "") {
 		return nil, false
 	}
 
@@ -114,7 +124,10 @@ func CloudflareWorkersAIAuth() *ai.ApiKeyAuth {
 			if err := ctxErrOf(input.Ctx2); err != nil {
 				return nil, err
 			}
-			result, ok := ResolveCloudflareEnv(CloudflareAuthWorkersAI, input.Ctx, input.Credential)
+			result, ok := resolveCloudflareEnv(CloudflareAuthWorkersAI, input.Ctx, input.Credential, input.Ctx2)
+			if err := ctxErrOf(input.Ctx2); err != nil {
+				return nil, err
+			}
 			if !ok {
 				return nil, nil
 			}
@@ -149,7 +162,10 @@ func CloudflareAIGatewayAuth() *ai.ApiKeyAuth {
 			if err := ctxErrOf(input.Ctx2); err != nil {
 				return nil, err
 			}
-			result, ok := ResolveCloudflareEnv(CloudflareAuthAIGateway, input.Ctx, input.Credential)
+			result, ok := resolveCloudflareEnv(CloudflareAuthAIGateway, input.Ctx, input.Credential, input.Ctx2)
+			if err := ctxErrOf(input.Ctx2); err != nil {
+				return nil, err
+			}
 			if !ok {
 				return nil, nil
 			}

@@ -1,7 +1,11 @@
 // This file follows goal/command.ts: the pure /goal argument parser.
 package goal
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/dat267/pier/ai"
+)
 
 // GoalCommandKind names one parsed /goal intent.
 type GoalCommandKind string
@@ -28,7 +32,7 @@ var GoalCommandCompletions = []string{"status", "set", "pause", "resume", "clear
 
 // ParseGoalCommand parses the raw /goal argument string.
 func ParseGoalCommand(args string) GoalCommand {
-	trimmed := strings.TrimSpace(args)
+	trimmed := ai.JSTrim(args)
 
 	if trimmed == "" {
 		return GoalCommand{Kind: CmdError, Message: "Usage: /goal status | /goal set <objective> | /goal pause | /goal resume | /goal clear"}
@@ -50,7 +54,7 @@ func ParseGoalCommand(args string) GoalCommand {
 		return GoalCommand{Kind: CmdError, Message: `Unknown subcommand "` + TruncateObjective(trimmed, 20) + `". Use /goal status, /goal set <objective>, /goal pause, /goal resume, or /goal clear.`}
 	}
 
-	objective := strings.TrimSpace(trimmed[3:])
+	objective := ai.JSTrim(trimmed[3:])
 	if objective == "" {
 		return GoalCommand{Kind: CmdError, Message: "Usage: /goal set <objective>"}
 	}

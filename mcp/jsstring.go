@@ -3,6 +3,8 @@ package mcp
 import (
 	"strings"
 	"unicode/utf16"
+
+	"golang.org/x/text/encoding/unicode"
 )
 
 // JavaScript string semantics used by the MCP transports.
@@ -10,6 +12,13 @@ import (
 // The canonical implementation lives in ai/jstext.go, but the MCP packages are
 // standalone (they must not depend on the provider layer), so the few helpers
 // the transports need are repeated here with the same semantics.
+
+// decodeUTF8 matches Buffer.toString("utf8"), preserving a BOM and replacing
+// each malformed subsequence rather than merging adjacent malformed bytes.
+func decodeUTF8(data []byte) string {
+	decoded, _ := unicode.UTF8.NewDecoder().Bytes(data)
+	return string(decoded)
+}
 
 // jsSpace is the String.prototype.trim whitespace class: Unicode space
 // separators plus U+FEFF, excluding U+0085 (which Go's strings.TrimSpace

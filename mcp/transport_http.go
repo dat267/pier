@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/dat267/pier/mcp/protocol"
+	"golang.org/x/text/encoding/unicode"
 )
 
 // Streamable-HTTP tuning (upstream streamable-http.ts).
@@ -56,7 +57,7 @@ func ConsumeSseStream(body io.Reader, options ConsumeSseOptions) error {
 	if maxEventBytes == 0 {
 		maxEventBytes = DefaultMaxMessageBytes
 	}
-	reader := bufio.NewReader(body)
+	reader := bufio.NewReader(unicode.UTF8BOM.NewDecoder().Reader(body))
 	var eventName, eventId *string
 	var dataLines []string
 	var dataBytes int64
@@ -67,14 +68,20 @@ func ConsumeSseStream(body io.Reader, options ConsumeSseOptions) error {
 			return
 		}
 		data := strings.Join(dataLines, "\n")
-		event := SseEvent{Data: data, Event: eventName, ID: eventId}
+		event := SseEvent{Data: data}
+		if eventName != nil && *eventName != "" {
+			event.Event = eventName
+		}
+		if eventId != nil && *eventId != "" {
+			event.ID = eventId
+		}
 		options.OnEvent(event)
 		eventName, eventId = nil, nil
 		dataLines = nil
 		dataBytes = 0
 	}
 	processLine := func(rawLine string) error {
-		line := strings.TrimSuffix(strings.ToValidUTF8(rawLine, "\uFFFD"), "\r")
+		line := strings.TrimSuffix(rawLine, "\r")
 		if line == "" {
 			dispatch()
 			return nil
@@ -122,8 +129,8 @@ func ConsumeSseStream(body io.Reader, options ConsumeSseOptions) error {
 	}
 
 	var buffered string
-	// Read in chunks and decode as UTF-8; a chunk boundary never splits a
-	// byte because the line search works on bytes.
+	// Read decoded chunks. The UTF-8 decoder retains incomplete sequences
+	// across reads, while the line search works on the decoded UTF-8 bytes.
 	chunk := make([]byte, 32*1024)
 	for {
 		n, err := reader.Read(chunk)

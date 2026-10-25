@@ -46,11 +46,11 @@ func (id *JsonRpcId) UnmarshalJSON(data []byte) error {
 		id.IsStr, id.Num = true, 0
 		return json.Unmarshal(data, &id.Str)
 	}
-	var num float64
-	if err := json.Unmarshal(data, &num); err != nil {
+	var num *float64
+	if err := json.Unmarshal(data, &num); err != nil || num == nil {
 		return fmt.Errorf("json-rpc id must be a string or a finite number")
 	}
-	id.IsStr, id.Str, id.Num = false, "", num
+	id.IsStr, id.Str, id.Num = false, "", *num
 	return nil
 }
 

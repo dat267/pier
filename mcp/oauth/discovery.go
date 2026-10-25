@@ -84,10 +84,25 @@ func pathSuffix(pathname string) string {
 	return pathname
 }
 
+const jsWhitespaceClass = `\t\n\v\f\r \x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}`
+
 // field pulls one auth-param out of a challenge header; an empty value
 // (`scope=""`) carries no information and counts as absent.
 func field(header, name string) *string {
-	re, err := regexp.Compile(`(?i)(?:^|[,\s])` + regexp.QuoteMeta(name) + `=(?:"([^"]*)"|([^\s,]+))`)
+	// Parameter names are ASCII literals. Go's (?i) would also match Unicode
+	// folds such as long s, unlike JavaScript's /i without /u.
+	var pattern strings.Builder
+	for _, char := range name {
+		if char >= 'a' && char <= 'z' {
+			pattern.WriteByte('[')
+			pattern.WriteRune(char)
+			pattern.WriteRune(char - ('a' - 'A'))
+			pattern.WriteByte(']')
+		} else {
+			pattern.WriteString(regexp.QuoteMeta(string(char)))
+		}
+	}
+	re, err := regexp.Compile(`(?:^|[,` + jsWhitespaceClass + `])` + pattern.String() + `=(?:"([^"]*)"|([^` + jsWhitespaceClass + `,]+))`)
 	if err != nil {
 		return nil
 	}

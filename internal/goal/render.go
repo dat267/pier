@@ -5,8 +5,8 @@ package goal
 import (
 	"fmt"
 	"regexp"
-	"strings"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/tui"
 )
 
@@ -73,7 +73,7 @@ var goalTagPattern = regexp.MustCompile(`</?goal_(round|complete|blocked|paused)
 
 // DisplayBody strips the goal wrapper tags for display.
 func DisplayBody(content string) string {
-	return strings.TrimSpace(goalTagPattern.ReplaceAllString(content, ""))
+	return ai.JSTrim(goalTagPattern.ReplaceAllString(content, ""))
 }
 
 // GoalCard is the label/body/phase/detail of one goal card.
@@ -100,7 +100,7 @@ func RenderGoalCard(theme Theme, card GoalCard, expanded bool) *tui.Box {
 	}
 	box.AddChild(tui.NewText(label, 0, 0, nil))
 	body := card.Body
-	if !expanded && len([]rune(body)) > 80 {
+	if !expanded && ai.JSLength(body) > 80 {
 		body = TruncateObjective(body, 64) + " (click or expand for full text)"
 	}
 	box.AddChild(tui.NewText(theme.Fg("customMessageText", body), 0, 0, nil))
@@ -215,8 +215,8 @@ func RenderGetGoalRenderResult(goal *GoalView, theme Theme) *tui.Text {
 
 // RenderSetGoalRenderCall is the set_goal call card when an objective is set.
 func RenderSetGoalRenderCall(objective string, theme Theme, expanded bool) *tui.Text {
-	normalized := strings.TrimSpace(goalWhitespace.ReplaceAllString(objective, " "))
-	truncated := !expanded && len([]rune(normalized)) > 60
+	normalized := ai.JSTrim(goalWhitespace.ReplaceAllString(objective, " "))
+	truncated := !expanded && ai.JSLength(normalized) > 60
 	shown := objective
 	if !expanded {
 		shown = TruncateObjective(objective, 60)
@@ -238,8 +238,8 @@ func RenderSetGoalStatusRenderCall(action, blockedReason string, theme Theme, ex
 		text += theme.Fg("toolTitle", action)
 	}
 	if blockedReason != "" {
-		normalized := strings.TrimSpace(goalWhitespace.ReplaceAllString(blockedReason, " "))
-		truncated := !expanded && len([]rune(normalized)) > 60
+		normalized := ai.JSTrim(goalWhitespace.ReplaceAllString(blockedReason, " "))
+		truncated := !expanded && ai.JSLength(normalized) > 60
 		shown := normalized
 		if !expanded {
 			shown = TruncateObjective(normalized, 60)

@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"context"
+	"slices"
 
 	"github.com/dat267/pier/internal/offloop"
 	"github.com/dat267/pier/tui"
@@ -47,10 +48,8 @@ type ThemeControllerOptions struct {
 	// theme file from disk, which the UI loop must never do. nil (the default)
 	// keeps theme application synchronous.
 	ThemeQueue *offloop.Queue
-	// Query detections (the terminal queries behind the auto theme).
-	Detector  TerminalAutoThemeDetector
-	TimeoutMS int
-	Env       func(string) string
+	TimeoutMS  int
+	Env        func(string) string
 }
 
 // ThemeResult is a theme application outcome.
@@ -66,11 +65,10 @@ type InteractiveThemeController struct {
 	getSettings func() ThemeSettings
 	showError   func(string)
 	onChanged   func()
-	detector    TerminalAutoThemeDetector
 	timeoutMS   int
-	env         func(string) string
 
 	currentThemeSetting *string
+	terminalColors      *tui.TerminalColors
 	terminalTheme       TerminalTheme
 	activeThemeName     string
 	autoSyncEnabled     bool
@@ -91,9 +89,7 @@ func NewInteractiveThemeController(options ThemeControllerOptions) *InteractiveT
 		getSettings:         options.GetSettingsManager,
 		showError:           options.ShowError,
 		onChanged:           options.OnChanged,
-		detector:            options.Detector,
 		timeoutMS:           options.TimeoutMS,
-		env:                 options.Env,
 		currentThemeSetting: options.InitialThemeSetting,
 		marshal:             options.Marshal,
 		themeQueue:          options.ThemeQueue,
@@ -102,7 +98,7 @@ func NewInteractiveThemeController(options ThemeControllerOptions) *InteractiveT
 	if controller.timeoutMS == 0 {
 		controller.timeoutMS = 100
 	}
-	controller.terminalTheme = DetectTerminalBackgroundFromEnv(controller.env).Theme
+	controller.terminalTheme = DetectTerminalBackgroundFromEnv(options.Env).Theme
 
 	setting := controller.currentThemeSetting
 	if setting == nil && controller.getSettings != nil {
@@ -174,6 +170,14 @@ func (c *InteractiveThemeController) ProbeSystemColors() {
 	c.querySystemColors()
 }
 
+func sameTerminalColors(a, b tui.TerminalColors) bool {
+	sameRGB := func(a, b *tui.RgbColor) bool {
+		return a == b || (a != nil && b != nil && *a == *b)
+	}
+	return sameRGB(a.Foreground, b.Foreground) && sameRGB(a.Background, b.Background) &&
+		(a.Palette == nil) == (b.Palette == nil) && slices.Equal(a.Palette, b.Palette)
+}
+
 // querySystemColors refreshes the terminal palette. Unlike ProbeSystemColors,
 // the appearance-change path may call it repeatedly after startup.
 func (c *InteractiveThemeController) querySystemColors() {
@@ -188,16 +192,16 @@ func (c *InteractiveThemeController) querySystemColors() {
 		// the listener's reply.
 		previous := systemThemeTerminalColors()
 		merged := mergeTerminalColors(colors, previous)
+		if c.terminalColors != nil && sameTerminalColors(*c.terminalColors, merged) {
+			return
+		}
+		c.terminalColors = &merged
 		SetSystemTerminalColors(merged)
 		// The combined color query consumes its OSC 11 reply before the separate
 		// background listener can see it. As upstream applyTerminalColors does,
 		// apply that background to system and light/dark theme selection here.
 		if merged.Background != nil {
-			terminalTheme := GetThemeForRgbColor(RgbColor{
-				R: merged.Background.R,
-				G: merged.Background.G,
-				B: merged.Background.B,
-			})
+			terminalTheme := TerminalTheme(getTerminalTheme())
 			if c.activeThemeName == SystemThemeName {
 				c.terminalTheme = terminalTheme
 			} else {
@@ -207,6 +211,8 @@ func (c *InteractiveThemeController) querySystemColors() {
 		if c.activeThemeName == SystemThemeName {
 			c.applyThemeName(SystemThemeName, false)
 		}
+		c.ui.Invalidate()
+		c.ui.RequestRender()
 	}
 	if c.marshal == nil {
 		colors := c.ui.QueryTerminalColors(c.timeoutMS, apply)
@@ -237,7 +243,7 @@ func (c *InteractiveThemeController) ApplyFromSettings() {
 	}
 
 	if light, dark, ok := ParseAutoThemeSetting(themeSetting); ok {
-		c.terminalTheme = DetectTerminalThemeForAuto(c.detector, c.timeoutMS, c.env)
+		c.terminalTheme = TerminalTheme(getTerminalTheme())
 		c.setAutoSync(true)
 		name := dark
 		if c.terminalTheme == TerminalThemeLight {
@@ -317,15 +323,7 @@ func (c *InteractiveThemeController) applyThemeNameAsync(themeName string) {
 			if ctx.Err() != nil {
 				return
 			}
-			if success {
-				c.activeThemeName = themeName
-			} else {
-				c.activeThemeName = "dark"
-			}
-			c.notifyChanged()
-			if !success && c.showError != nil {
-				c.showError("Failed to load theme \"" + themeName + "\": " + message + "\nFell back to dark theme.")
-			}
+			c.recordThemeApply(themeName, success, message, true)
 		})
 	})
 }
@@ -423,11 +421,11 @@ func (c *InteractiveThemeController) recordThemeApply(themeName string, success 
 	if success {
 		c.activeThemeName = themeName
 	} else {
-		c.activeThemeName = "dark"
+		c.activeThemeName = SystemThemeName
 	}
 	c.notifyChanged()
 	if !success && showError && c.showError != nil {
-		c.showError("Failed to load theme \"" + themeName + "\": " + message + "\nFell back to dark theme.")
+		c.showError("Failed to load theme \"" + themeName + "\": " + message + "\nFell back to the system theme.")
 	}
 	return ThemeResult{Success: success, Error: message}
 }
@@ -459,8 +457,11 @@ func (c *InteractiveThemeController) bindTerminalColorSchemeListener() {
 		if !c.autoSyncEnabled {
 			return
 		}
+		previous := getTerminalTheme()
 		SetSystemTerminalColorScheme(&terminalTheme)
-		c.applyTerminalTheme(terminalTheme)
+		if current := getTerminalTheme(); current != previous {
+			c.applyTerminalTheme(TerminalTheme(current))
+		}
 		c.querySystemColors()
 	})
 }
@@ -473,7 +474,7 @@ func (c *InteractiveThemeController) bindTerminalBackgroundListener() {
 	}
 	c.unsubscribeBg = c.ui.OnTerminalBackgroundColorChange(func(color tui.RgbColor) {
 		SetSystemTerminalBackgroundColor(color)
-		c.applyTerminalTheme(GetThemeForRgbColor(RgbColor{R: color.R, G: color.G, B: color.B}))
+		c.applyTerminalTheme(TerminalTheme(getTerminalTheme()))
 	})
 }
 

@@ -19,6 +19,7 @@ import (
 // stopping at `data: [DONE]`. Chunk decoding is lenient (JSON per event).
 func iterateOpenAIChunks(ctx context.Context, body io.Reader, emit func(json.RawMessage)) error {
 	scanner := bufio.NewScanner(body)
+	scanner.Split(newSSELineSplitter())
 	scanner.Buffer(make([]byte, 0, 64*1024), 16*1024*1024)
 	decoder := &SSEDecoder{}
 	for scanner.Scan() {

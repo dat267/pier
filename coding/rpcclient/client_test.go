@@ -137,8 +137,8 @@ func TestPromptAndWaitSubscribesBeforeSending(t *testing.T) {
 		if command["type"] == "prompt" {
 			client.mu.Lock()
 			listeners := make([]EventListener, 0, len(client.listeners))
-			for _, listener := range client.listeners {
-				listeners = append(listeners, listener)
+			for _, entry := range client.listeners {
+				listeners = append(listeners, entry.listener)
 			}
 			client.mu.Unlock()
 			for _, listener := range listeners {

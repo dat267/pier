@@ -16,6 +16,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/dat267/pier/ai"
 )
 
 // GoalPhase is the lifecycle phase of a goal.
@@ -390,16 +392,20 @@ func maxInt64(a, b int64) int64 {
 	return b
 }
 
-var goalWhitespace = regexp.MustCompile(`\s+`)
+var goalWhitespace = regexp.MustCompile(`[\t\n\v\f\r \x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}]+`)
 
-// TruncateObjective flattens whitespace and caps the rune length.
+// TruncateObjective flattens whitespace and caps the JavaScript string length.
 func TruncateObjective(text string, max int) string {
-	flat := strings.TrimSpace(goalWhitespace.ReplaceAllString(text, " "))
-	runes := []rune(flat)
-	if max <= 0 || len(runes) <= max {
+	flat := ai.JSTrim(goalWhitespace.ReplaceAllString(text, " "))
+	length := ai.JSLength(flat)
+	if length <= max {
 		return flat
 	}
-	return string(runes[:max-1]) + "…"
+	// Clamp before subtracting so the most negative Go int cannot overflow.
+	if max <= -length {
+		return "…"
+	}
+	return ai.JSSlice(flat, 0, max-1) + "…"
 }
 
 // GoalViewPayload is the get_goal tool-result goal payload.

@@ -34,7 +34,7 @@ func emphasisScanStart(src string, ch byte) int {
 // as `**这是测试。**后面` pair.
 
 // parseEmStrong parses *…* / **…** / ***…*** / _…_ starting at i.
-func parseEmStrong(src string, i int, ch byte, prev rune, hasPrev bool) (int, Inline, bool) {
+func parseEmStrong(src, masked string, i int, ch byte, prev rune, hasPrev bool, state *inlineState) (int, Inline, bool) {
 	j := i
 	for j < len(src) && src[j] == ch {
 		j++
@@ -51,9 +51,9 @@ func parseEmStrong(src string, i int, ch byte, prev rune, hasPrev bool) (int, In
 		prev = 0xdc00 + ((prev - 0x10000) & 0x3ff)
 	}
 	// The left-delimiter regex distinguishes punctuation from word content
-	// before applying the CJK override. GFM treats tilde as word content for *.
+	// before applying the CJK override. GFM treats tilde as word content.
 	nextPunct := unicode.IsPunct(next) || unicode.IsSymbol(next)
-	if ch == '*' && next == '~' {
+	if next == '~' {
 		nextPunct = false
 	}
 	if ch == '_' && !nextPunct && hasPrev && (unicode.IsLetter(prev) || unicode.IsNumber(prev)) {
@@ -73,7 +73,7 @@ func parseEmStrong(src string, i int, ch byte, prev rune, hasPrev bool) (int, In
 	}
 	prevIsSameDelimiter := hasPrev && prev == rune(ch)
 
-	clipped := src[j:]
+	clipped := masked[j:]
 	delimTotal := openLength
 	midDelimTotal := 0
 	for k := emphasisScanStart(clipped, ch); k < len(clipped); {
@@ -87,9 +87,9 @@ func parseEmStrong(src string, i int, ch byte, prev rune, hasPrev bool) (int, In
 		}
 		closeLength := runEnd - k
 		runStart := j + k
-		closePrev, closeHasPrev := runeBefore(src, runStart)
-		closeNext, closeHasNext := runeAt(src, j+runEnd)
-		closeLeft, closeRight := delimiterFlanking(closePrev, closeHasPrev, closeNext, closeHasNext)
+		closePrev, closeHasPrev := runeBefore(masked, runStart)
+		closeNext, closeHasNext := runeAt(masked, j+runEnd)
+		closeLeft, closeRight := delimiterFlanking(closePrev, closeHasPrev, closeNext, closeHasNext, ch)
 		cjkAdjacent := isCJKRune(closePrev) || isCJKRune(closeNext)
 
 		if !closeLeft && !closeRight && !cjkAdjacent {
@@ -137,14 +137,14 @@ func parseEmStrong(src string, i int, ch byte, prev rune, hasPrev bool) (int, In
 		raw := src[i:end]
 		if openLength < consumed {
 			if openLength%2 != 0 {
-				return end, Inline{Kind: InlineEmphasis, Text: raw[1 : len(raw)-1], Children: ParseInline(raw[1 : len(raw)-1])}, true
+				return end, Inline{Kind: InlineEmphasis, Text: raw[1 : len(raw)-1], Children: parseInline(raw[1:len(raw)-1], state)}, true
 			}
-			return end, Inline{Kind: InlineStrong, Text: raw[2 : len(raw)-2], Children: ParseInline(raw[2 : len(raw)-2])}, true
+			return end, Inline{Kind: InlineStrong, Text: raw[2 : len(raw)-2], Children: parseInline(raw[2:len(raw)-2], state)}, true
 		}
 		if consumed%2 != 0 {
-			return end, Inline{Kind: InlineEmphasis, Text: raw[1 : len(raw)-1], Children: ParseInline(raw[1 : len(raw)-1])}, true
+			return end, Inline{Kind: InlineEmphasis, Text: raw[1 : len(raw)-1], Children: parseInline(raw[1:len(raw)-1], state)}, true
 		}
-		return end, Inline{Kind: InlineStrong, Text: raw[2 : len(raw)-2], Children: ParseInline(raw[2 : len(raw)-2])}, true
+		return end, Inline{Kind: InlineStrong, Text: raw[2 : len(raw)-2], Children: parseInline(raw[2:len(raw)-2], state)}, true
 	}
 	return 0, Inline{}, false
 }

@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -24,6 +25,14 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	if helper := os.Getenv("PIER_MCP_UTF8_HELPER"); helper != "" {
+		_, _ = os.Stdout.Write([]byte("{\"jsonrpc\":\"2.0\",\"method\":\"\xff\xff\"}\n"))
+		_, _ = os.Stderr.Write([]byte("\ufeff\xff\xff"))
+		if helper == "wait" {
+			_, _ = io.Copy(io.Discard, os.Stdin)
+		}
+		return
+	}
 	tempDir, err := os.MkdirTemp("", "pier-mcp-fixtures")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)

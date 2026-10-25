@@ -227,15 +227,21 @@ func (q *terminalQueries) QueryTerminalColors(writer terminalQueryWriter, timeou
 // consumeTerminalColorResponse routes a color reply or DA1 to the oldest pending
 // terminal-colors query.
 func (q *terminalQueries) consumeTerminalColorResponse(data string) bool {
+	var deliver func()
 	q.colorMu.Lock()
-	defer q.colorMu.Unlock()
+	defer func() {
+		q.colorMu.Unlock()
+		if deliver != nil {
+			deliver()
+		}
+	}()
 	if len(q.pendingTerminalColorQueries) == 0 {
 		return false
 	}
 	query := q.pendingTerminalColorQueries[0]
 	if deviceAttributesResponsePattern.MatchString(data) {
 		q.pendingTerminalColorQueries = q.pendingTerminalColorQueries[1:]
-		q.completeTerminalColorQueryLocked(query)
+		deliver = q.completeTerminalColorQueryLocked(query)
 		return true
 	}
 	response, ok := ParseOscColorResponse(data)
@@ -262,7 +268,7 @@ func (q *terminalQueries) consumeTerminalColorResponse(data string) bool {
 		query.palette[response.Target.Index] = terminalColorResponseRGB(response)
 	}
 	if len(query.replied) == terminalColorReplyCount {
-		q.completeTerminalColorQueryLocked(query)
+		deliver = q.completeTerminalColorQueryLocked(query)
 	}
 	return true
 }
@@ -288,12 +294,14 @@ func terminalColorQueryResult(query *pendingTerminalColorQuery) TerminalColors {
 	return colors
 }
 
-func (q *terminalQueries) completeTerminalColorQueryLocked(query *pendingTerminalColorQuery) {
+func (q *terminalQueries) completeTerminalColorQueryLocked(query *pendingTerminalColorQuery) func() {
 	deliver := query.deliver
 	query.deliver = nil
-	if deliver != nil {
-		deliver(terminalColorQueryResult(query))
+	if deliver == nil {
+		return nil
 	}
+	colors := terminalColorQueryResult(query)
+	return func() { deliver(colors) }
 }
 
 // QueryColorScheme queries the terminal's color-scheme preference with DSR

@@ -21,9 +21,10 @@ import (
 )
 
 type task struct {
-	key    string // coalesce key, "" when not coalesced
-	run    func()
-	latest bool
+	key       string
+	run       func()
+	latest    bool
+	coalesced bool
 }
 
 type latestTask struct {
@@ -108,7 +109,7 @@ func (q *Queue) GoCoalesced(key string, run func()) {
 		return
 	}
 	q.inFlight[key] = true
-	q.enqueueLocked(task{key: key, run: run})
+	q.enqueueLocked(task{key: key, coalesced: true, run: run})
 }
 
 // GoCoalescedContext is GoCoalesced with the queue's lifetime context.
@@ -204,7 +205,7 @@ func (q *Queue) loop() {
 		t.run()
 
 		q.mu.Lock()
-		if t.key != "" && !t.latest {
+		if t.coalesced {
 			delete(q.inFlight, t.key)
 		}
 		q.active--

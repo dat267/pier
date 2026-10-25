@@ -310,7 +310,8 @@ func TestThemeRegistry(t *testing.T) {
 	if success || !strings.Contains(message, "Theme not found") {
 		t.Fatalf("missing theme = %v %q", success, message)
 	}
-	if CurrentThemeName() != "dark" {
+	// pi v1.4.0 theme.ts setTheme falls back to the system theme.
+	if CurrentThemeName() != SystemThemeName {
 		t.Fatalf("fallback name = %q", CurrentThemeName())
 	}
 

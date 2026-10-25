@@ -10,7 +10,6 @@
 package protocol
 
 import (
-	"bytes"
 	"encoding/json"
 
 	ai "github.com/dat267/pier/ai"
@@ -181,12 +180,12 @@ func Content(result *CallToolResult) []ai.UserContent {
 	return out
 }
 
-// IndentJSON reformats compact JSON with the two-space shape of
-// JSON.stringify(value, null, 2); byte order is preserved.
+// IndentJSON formats a decoded JSON value like JSON.stringify(value, null, 2),
+// including property enumeration, duplicate members and normalized literals.
 func IndentJSON(data []byte) string {
-	var buf bytes.Buffer
-	if err := json.Indent(&buf, data, "", "  "); err != nil {
+	formatted, err := ai.MarshalIndentJSON(json.RawMessage(data))
+	if err != nil {
 		return string(data)
 	}
-	return buf.String()
+	return string(formatted)
 }

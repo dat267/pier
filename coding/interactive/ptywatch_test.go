@@ -350,7 +350,9 @@ func TestMutexBlockedDetectorHasTeeth(t *testing.T) {
 	defer unix.Close(master)
 	slaveFile := os.NewFile(uintptr(slave), "pty-slave")
 
-	cmd := exec.Command(os.Args[0], "-test.run=TestDeadlockHelper")
+	// Keep the test alarm armed so Go cannot exit with its own deadlock dump
+	// before the parent sends SIGQUIT. It also bounds a stalled helper.
+	cmd := exec.Command(os.Args[0], "-test.run=TestDeadlockHelper", "-test.timeout=30s")
 	cmd.Env = append(os.Environ(), "PIER_DEADLOCK_HELPER=1")
 	cmd.Stdin = slaveFile
 	cmd.Stdout = slaveFile

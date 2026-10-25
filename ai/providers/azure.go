@@ -68,7 +68,9 @@ func resolveAzureRequest(model *ai.Model, options *ai.StreamOptions) (*ai.Model,
 	next.OnPayload = func(payload json.RawMessage, payloadModel *ai.Model) json.RawMessage {
 		rewritten := withPayloadModel(payload, deployment)
 		if previous != nil {
-			return previous(rewritten, payloadModel)
+			if replacement := previous(rewritten, payloadModel); replacement != nil {
+				return replacement
+			}
 		}
 		return rewritten
 	}
@@ -98,7 +100,7 @@ func azureErrorStream(model *ai.Model, err error) *ai.AssistantMessageEventStrea
 // the member where it was and the rest of the document untouched; a map round trip would
 // reorder every key, and this payload is wire data.
 func withPayloadModel(payload []byte, name string) []byte {
-	encoded, err := json.Marshal(name)
+	encoded, err := ai.MarshalJSON(name)
 	if err != nil {
 		return payload
 	}

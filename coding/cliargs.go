@@ -314,8 +314,10 @@ func ParseArgs(args []string) *Args {
 		case arg == "--list-models":
 			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") && !strings.HasPrefix(args[i+1], "@") {
 				result.ListModels = &args[i+1]
+				result.ListModelsAll = false
 				i++
 			} else {
+				result.ListModels = nil
 				result.ListModelsAll = true
 			}
 		case arg == "--tui-mode":

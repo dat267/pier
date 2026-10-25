@@ -1,0 +1,26 @@
+[
+  {
+    "input": "{\"2\":\"two\",\"1\":\"one\",\"tail\":true}",
+    "text": "{\n  \"1\": \"one\",\n  \"2\": \"two\",\n  \"tail\": true\n}"
+  },
+  {
+    "input": "{\"value\":1.0,\"zero\":-0,\"exponent\":1e2}",
+    "text": "{\n  \"value\": 1,\n  \"zero\": 0,\n  \"exponent\": 100\n}"
+  },
+  {
+    "input": "{\"value\":\"\\u003c\\u0026\\u003e\\u2028\\u2029\"}",
+    "text": "{\n  \"value\": \"<&>  \"\n}"
+  },
+  {
+    "input": "{\"duplicate\":\"first\",\"tail\":true,\"duplicate\":\"last\"}",
+    "text": "{\n  \"duplicate\": \"last\",\n  \"tail\": true\n}"
+  },
+  {
+    "input": "[null, false, 1e-7]",
+    "text": "[\n  null,\n  false,\n  1e-7\n]"
+  },
+  {
+    "input": "null",
+    "text": "null"
+  }
+]

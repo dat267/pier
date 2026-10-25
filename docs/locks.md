@@ -30,7 +30,16 @@ cancellation before its handler starts on a worker; the stdio reader remains
 free to dispatch cancellation notifications. Close snapshots and clears incoming
 cancellation handles under the mutex, then invokes them outside it. User handlers
 run outside locks and their panics are converted to JSON-RPC error responses.
-No new mutex or interactive UI worker is introduced.
+No new mutex or interactive UI worker is introduced. In-memory transports use
+that existing mutex to append copied messages and claim one FIFO delivery
+worker per peer. The worker removes a message under the mutex, then invokes
+listeners after unlocking; close discards queued messages without waiting for
+a reentrant listener. Stdio transports own their output pipes instead of using
+`Cmd.StdoutPipe`/`StderrPipe`, so `Wait` cannot close unread final output. The
+watcher publishes process exit before joining pipe readers, allowing a reader
+callback to call `Close` without waiting on itself; the final close event and
+incomplete-tail check occur only after both readers finish. Pipe resources are
+closed on startup failure and by their respective readers after startup.
 
 `ai.idleStreamBody` marks close atomically before stopping its timer. Every timer
 reset checks close again afterwards, so a final buffered read or an in-flight
@@ -75,7 +84,7 @@ own mutex, so no UI lock or off-loop path is introduced.
 | `resizeWatcherMu` | `tui/terminal_windows.go` | the Windows console-resize poller's stop/done channels | **retained**: the poller runs off the loop |
 | `prerenderState.mu` | `coding/interactive/transcript.go` | the transcript warm-ahead handoff (ready chunk, width, generation) | **retained**: loop ↔ warm-worker handoff, not UI state |
 | `systemThemeState.mu` | `coding/interactive/theme.go` | the terminal-report colors the system theme is generated from (written by the terminal query reply path, read at theme load) | **retained**: a pointer swap of two values, never UI state |
-| `terminalColors.colorMu` | `tui/terminalqueries.go` | the terminal-colors query queue the blocking caller appends to while the owner loop's input dispatch reads it | **retained**: query bookkeeping, not UI state |
+| `terminalColors.colorMu` | `tui/terminalqueries.go` | the terminal-colors query queue the blocking caller appends to while the owner loop's input dispatch reads it | **retained**: query bookkeeping, not UI state; completed colors and delivery are snapshotted under the lock, then the callback runs after unlocking so it may start another query |
 | `FooterDataProvider.mu` | `coding/footerdata.go` | cwd/git/status + listener registry, shared with its 500 ms git-HEAD watcher | **retained (D149)**: closing it needs the poll result posted to the loop and the listener fan-out delivered outside the lock; a `coding/` change outside this refactor |
 | `AgentSession.promptOptionsMu` | `coding/agent_session.go` | `SystemPromptOptions`, re-read by the prompt/tool loadout between turns | **retained**: the work goroutine re-applies the loadout while the UI loop rebuilds the options on `/reload` and tool changes; only a struct copy is taken under it |
 | `cellDimensionsState.mu` | `tui/terminalimage.go` | the global terminal cell pixel size, written by the size-report reply and read during image layout | **retained**: package-global value shared with the terminal query path, not UI state |
