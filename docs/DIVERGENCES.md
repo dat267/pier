@@ -4,7 +4,7 @@ Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D274**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D276**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation.
 
 Related documents: [port status](PORTING.md), [architecture](architecture.md),
@@ -2474,3 +2474,48 @@ Tests: the MCP tool fixtures (`coding/testdata/mcp-tools/golden.json`)
 deliberately exclude both null cases; `TestResourceContentsArmByPresence`
 pins key-presence tracking, and `TestMcpToolContentMatchesUpstream` covers the
 neither-member resource that shares this code path.
+
+## D275
+
+**MCP OAuth documents keep only members the typed model can hold.**
+
+Reference: pi v1.4.0 (`4a080252`), `packages/mcp/src/oauth/types.ts`. The
+reference parsers spread the whole input object and only override the fields
+they validate, so a document's unknown members (`revocation_endpoint`,
+`x_extra`, `x_custom`), an empty `authorization_servers: []`, and a declared
+member with the wrong type (`grant_types: "authorization_code"`,
+`token_endpoint_auth_method: 5`) all survive in the result and its structured
+clone.
+
+Pier models the documents with structs. `ParseClientInformation` now copies
+every declared metadata member verbatim (including empty strings) and keeps
+`redirect_uris`' `[]` default, so a valid registration response matches the
+pin; `ParseProtectedResourceMetadata` and `ParseAuthorizationServerMetadata`
+validate every declared field. Members outside that model are dropped: unknown
+keys, wrongly typed declared members (the Go field stays nil), and empty
+`authorization_servers`/`scopes_supported` arrays (`omitempty`). The extra
+members are kept on the metadata structs' `Extra` map but are not marshaled.
+
+No supported path observes them: discovery state lives in the in-memory store
+and every consumer reads typed fields. `mcp/oauth/testdata/parse/golden.json`
+therefore excludes those cases, with the reasons recorded in its generator.
+
+## D276
+
+**`ResourceURLFromServerURL` keeps the input's port and host case.**
+
+Reference: `packages/mcp/src/oauth/discovery.ts` `resourceUrlFromServerUrl`
+returns a WHATWG `URL`, so `https://example.com:443/mcp` serializes as
+`https://example.com/mcp` and `HTTPS://EXAMPLE.COM/MCP` lowercases the host.
+Pier's helper returns a Go `url.URL` string with the fragment cleared, keeping
+the explicit default port and the host case.
+
+The helper's only consumer is `SelectResource`, which compares origins
+(lowercased hosts, default ports stripped) and paths, so every match decision
+and returned resource string agrees with the pin; only the helper's own output
+and a mismatch message built from it can differ. WHATWG whitespace
+preprocessing is applied before parsing, so padded inputs behave as upstream.
+
+Test: `mcp/oauth/testdata/parse/golden.json` pins the whitespace cases and the
+`selectResource` decisions; the default-port and host-case helper outputs are
+excluded there for this reason.

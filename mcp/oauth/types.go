@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"net/url"
 	"strconv"
 	"strings"
 )
@@ -48,12 +47,12 @@ type AuthorizationServerMetadata struct {
 
 // OAuthTokens is a token response (upstream OAuthTokens).
 type OAuthTokens struct {
-	AccessToken  string  `json:"access_token"`
-	TokenType    string  `json:"token_type"`
-	ExpiresIn    *int64  `json:"expires_in,omitempty"`
-	Scope        *string `json:"scope,omitempty"`
-	RefreshToken *string `json:"refresh_token,omitempty"`
-	IDToken      *string `json:"id_token,omitempty"`
+	AccessToken  string   `json:"access_token"`
+	TokenType    string   `json:"token_type"`
+	ExpiresIn    *float64 `json:"expires_in,omitempty"`
+	Scope        *string  `json:"scope,omitempty"`
+	RefreshToken *string  `json:"refresh_token,omitempty"`
+	IDToken      *string  `json:"id_token,omitempty"`
 }
 
 // OAuthClientMetadata is the RFC 7591 client metadata (upstream
@@ -82,10 +81,10 @@ type OAuthClientMetadata struct {
 // OAuthClientInformation is the registered client identity (upstream
 // OAuthClientInformation).
 type OAuthClientInformation struct {
-	ClientID              string  `json:"client_id"`
-	ClientSecret          *string `json:"client_secret,omitempty"`
-	ClientIDIssuedAt      *int64  `json:"client_id_issued_at,omitempty"`
-	ClientSecretExpiresAt *int64  `json:"client_secret_expires_at,omitempty"`
+	ClientID              string   `json:"client_id"`
+	ClientSecret          *string  `json:"client_secret,omitempty"`
+	ClientIDIssuedAt      *float64 `json:"client_id_issued_at,omitempty"`
+	ClientSecretExpiresAt *float64 `json:"client_secret_expires_at,omitempty"`
 }
 
 // OAuthClientInformationFull is OAuthClientInformation + OAuthClientMetadata
@@ -184,7 +183,7 @@ func safeUrl(input map[string]any, key, name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	parsed, err := url.Parse(text)
+	parsed, err := parseWHATWGURL(text)
 	if err != nil || parsed.Scheme == "" {
 		return "", fmt.Errorf("Invalid %s", name)
 	}
@@ -320,7 +319,7 @@ func ParseOAuthTokens(value any) (*OAuthTokens, error) {
 	}
 	result := &OAuthTokens{AccessToken: accessToken, TokenType: tokenType}
 	if !absent(input["expires_in"]) {
-		number, ok := jsNumberToInt64(input["expires_in"])
+		number, ok := jsNumberToFloat64(input["expires_in"])
 		if !ok {
 			return nil, fmt.Errorf("Invalid expires_in")
 		}
@@ -361,10 +360,10 @@ func ParseClientInformation(value any) (*OAuthClientInformationFull, error) {
 		return nil, err
 	}
 	result.ClientSecret = secret
-	if issued, ok := toFloat(input["client_id_issued_at"]); ok && !absent(input["client_id_issued_at"]) {
+	if issued, ok := numberValue(input["client_id_issued_at"]); ok && !absent(input["client_id_issued_at"]) {
 		result.ClientIDIssuedAt = &issued
 	}
-	if expires, ok := toFloat(input["client_secret_expires_at"]); ok && !absent(input["client_secret_expires_at"]) {
+	if expires, ok := numberValue(input["client_secret_expires_at"]); ok && !absent(input["client_secret_expires_at"]) {
 		result.ClientSecretExpiresAt = &expires
 	}
 	redirects, err := optionalStrings(input, "redirect_uris", "redirect_uris")
@@ -375,56 +374,92 @@ func ParseClientInformation(value any) (*OAuthClientInformationFull, error) {
 		redirects = []string{}
 	}
 	result.RedirectURIs = redirects
-	// Remaining metadata members pass through (token_endpoint_auth_method,
-	// grant_types, ...).
-	if method, err := optionalString(input, "token_endpoint_auth_method", "token_endpoint_auth_method"); err == nil {
-		result.TokenEndpointAuthMethod = method
+	// Upstream spreads the registration response and overrides only the
+	// identity fields, so the remaining metadata members pass through without
+	// validation; unknown and wrongly typed members are D275.
+	copyStringMember(input, "token_endpoint_auth_method", &result.TokenEndpointAuthMethod)
+	copyStringsMember(input, "grant_types", &result.GrantTypes)
+	copyStringsMember(input, "response_types", &result.ResponseTypes)
+	copyStringMember(input, "client_name", &result.ClientName)
+	copyStringMember(input, "application_type", &result.ApplicationType)
+	copyStringMember(input, "client_uri", &result.ClientURI)
+	copyStringMember(input, "logo_uri", &result.LogoURI)
+	copyStringMember(input, "scope", &result.Scope)
+	copyStringsMember(input, "contacts", &result.Contacts)
+	copyStringMember(input, "tos_uri", &result.TOSURI)
+	copyStringMember(input, "policy_uri", &result.PolicyURI)
+	copyStringMember(input, "jwks_uri", &result.JWKSURI)
+	if raw, ok := input["jwks"]; ok {
+		if encoded, err := marshalJSON(raw); err == nil {
+			result.JWKS = encoded
+		}
 	}
-	if grants, err := optionalStrings(input, "grant_types", "grant_types"); err == nil {
-		result.GrantTypes = grants
-	}
-	if types, err := optionalStrings(input, "response_types", "response_types"); err == nil {
-		result.ResponseTypes = types
-	}
-	if name, err := optionalString(input, "client_name", "client_name"); err == nil {
-		result.ClientName = name
-	}
-	if applicationType, err := optionalString(input, "application_type", "application_type"); err == nil {
-		result.ApplicationType = applicationType
-	}
-	if scope, err := optionalString(input, "scope", "scope"); err == nil {
-		result.Scope = scope
-	}
+	copyStringMember(input, "software_id", &result.SoftwareID)
+	copyStringMember(input, "software_version", &result.SoftwareVersion)
+	copyStringMember(input, "software_statement", &result.SoftwareStatement)
 	return result, nil
 }
 
-// toFloat narrows a JSON number for fields upstream checks with
-// `typeof value === "number"` (client registration timestamps).
-func toFloat(value any) (int64, bool) {
+// copyStringMember copies a string member verbatim (an empty string is kept,
+// as upstream's spread keeps it).
+func copyStringMember(input map[string]any, key string, target **string) {
+	if value, ok := input[key].(string); ok {
+		text := value
+		*target = &text
+	}
+}
+
+// copyStringsMember copies an all-string array member; anything else is left
+// for D275.
+func copyStringsMember(input map[string]any, key string, target *[]string) {
+	list, ok := input[key].([]any)
+	if !ok {
+		return
+	}
+	out := make([]string, 0, len(list))
+	for _, item := range list {
+		text, isString := item.(string)
+		if !isString {
+			return
+		}
+		out = append(out, text)
+	}
+	*target = out
+}
+
+// numberValue narrows a JSON number for fields upstream checks with
+// `typeof value === "number"` (client registration timestamps), keeping
+// fractions.
+func numberValue(value any) (float64, bool) {
 	switch v := value.(type) {
 	case float64:
-		return finiteInt64(v)
+		return finiteNumber(v)
 	case json.Number:
 		n, err := v.Float64()
 		if err != nil {
 			return 0, false
 		}
-		return finiteInt64(n)
+		return finiteNumber(n)
 	}
 	return 0, false
 }
 
-// jsNumberToInt64 coerces like Number(), which expires_in uses upstream.
-func jsNumberToInt64(value any) (int64, bool) {
+// jsNumberToFloat64 coerces like Number(), which expires_in uses upstream.
+// Arrays coerce through their single element, as Number([5]) is 5 and
+// Number([]) is 0.
+func jsNumberToFloat64(value any) (float64, bool) {
 	switch v := value.(type) {
 	case float64:
-		return finiteInt64(v)
+		return finiteNumber(v)
 	case json.Number:
 		n, err := v.Float64()
 		if err != nil {
 			return 0, false
 		}
-		return finiteInt64(n)
+		if math.IsNaN(n) || math.IsInf(n, 0) {
+			return 0, false
+		}
+		return n, true
 	case string:
 		// Number("") is 0, Number("0x10") is 16, and Number trims JavaScript
 		// whitespace (including a BOM).
@@ -447,27 +482,35 @@ func jsNumberToInt64(value any) (int64, bool) {
 				if err != nil {
 					return 0, false
 				}
-				return finiteInt64(float64(integer))
+				return float64(integer), true
 			}
 		}
 		number, err := strconv.ParseFloat(text, 64)
 		if err != nil {
 			return 0, false
 		}
-		return finiteInt64(number)
+		return finiteNumber(number)
 	case bool:
 		if v {
 			return 1, true
 		}
 		return 0, true
+	case []any:
+		switch len(v) {
+		case 0:
+			return 0, true
+		case 1:
+			return jsNumberToFloat64(v[0])
+		}
+		return 0, false
 	}
 	return 0, false
 }
 
-// finiteInt64 mirrors the `Number.isFinite` check and truncates toward zero.
-func finiteInt64(value float64) (int64, bool) {
+// finiteNumber mirrors the `Number.isFinite` check.
+func finiteNumber(value float64) (float64, bool) {
 	if math.IsNaN(value) || math.IsInf(value, 0) {
 		return 0, false
 	}
-	return int64(value), true
+	return value, true
 }

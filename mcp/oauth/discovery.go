@@ -143,7 +143,7 @@ func ParseWwwAuthenticate(header string) OAuthChallenge {
 		ErrorDescription: field(header, "error_description"),
 	}
 	if resourceMetadata := field(header, "resource_metadata"); resourceMetadata != nil {
-		if parsed, err := url.Parse(*resourceMetadata); err == nil && parsed.Scheme != "" {
+		if parsed, err := parseWHATWGURL(*resourceMetadata); err == nil && parsed.Scheme != "" {
 			challenge.ResourceMetadataURL = resourceMetadata
 		}
 	}
@@ -171,14 +171,14 @@ func DiscoverProtectedResourceMetadata(ctx context.Context, serverURL string, op
 	if version == "" {
 		version = LatestProtocolVersion
 	}
-	server, err := url.Parse(serverURL)
+	server, err := parseWHATWGURL(serverURL)
 	if err != nil {
 		return nil, err
 	}
 	target := url.URL{Scheme: server.Scheme, Host: server.Host}
 	serverPath := server.EscapedPath()
 	if options.ResourceMetadataURL != nil {
-		configured, err := url.Parse(*options.ResourceMetadataURL)
+		configured, err := parseWHATWGURL(*options.ResourceMetadataURL)
 		if err != nil {
 			return nil, err
 		}
@@ -235,7 +235,7 @@ func BuildAuthorizationServerDiscoveryUrls(authorizationServerURL string) []stru
 	URL  string
 	Type string // "oauth" | "oidc"
 } {
-	issuer, err := url.Parse(authorizationServerURL)
+	issuer, err := parseWHATWGURL(authorizationServerURL)
 	if err != nil {
 		return nil
 	}
@@ -347,7 +347,7 @@ func DiscoverOAuthServerInfo(ctx context.Context, serverURL string, options Disc
 		return nil, err
 	}
 	if options.AuthorizationServerMetadataURL != nil {
-		parsed, err := url.Parse(*options.AuthorizationServerMetadataURL)
+		parsed, err := parseWHATWGURL(*options.AuthorizationServerMetadataURL)
 		if err != nil {
 			return nil, err
 		}
@@ -379,7 +379,7 @@ func DiscoverOAuthServerInfo(ctx context.Context, serverURL string, options Disc
 	if resourceMetadata != nil && len(resourceMetadata.AuthorizationServers) > 0 {
 		authorizationServerURL = resourceMetadata.AuthorizationServers[0]
 	} else {
-		parsed, err := url.Parse(serverURL)
+		parsed, err := parseWHATWGURL(serverURL)
 		if err != nil {
 			return nil, err
 		}
@@ -425,7 +425,7 @@ func isNetworkError(err error) bool {
 // ResourceURLFromServerURL strips the fragment (upstream
 // resourceUrlFromServerUrl).
 func ResourceURLFromServerURL(value string) string {
-	parsed, err := url.Parse(value)
+	parsed, err := parseWHATWGURL(value)
 	if err != nil {
 		return value
 	}
@@ -447,11 +447,11 @@ func SelectResource(serverURL string, metadata *OAuthProtectedResourceMetadata) 
 	if metadata == nil {
 		return nil, nil
 	}
-	requested, err := url.Parse(ResourceURLFromServerURL(serverURL))
+	requested, err := parseWHATWGURL(ResourceURLFromServerURL(serverURL))
 	if err != nil {
 		return nil, err
 	}
-	configured, err := url.Parse(metadata.Resource)
+	configured, err := parseWHATWGURL(metadata.Resource)
 	if err != nil {
 		return nil, fmt.Errorf("Protected resource %s does not match MCP server %s", metadata.Resource, requested)
 	}

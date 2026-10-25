@@ -295,7 +295,7 @@ func (p *McpOAuthProvider) SaveTokens(ctx context.Context, tokens *OAuthTokens) 
 		if tokens.ExpiresIn == nil {
 			next.TokensExpireAt = nil
 		} else {
-			expire := time.Now().UnixMilli() + *tokens.ExpiresIn*1000
+			expire := time.Now().UnixMilli() + int64(*tokens.ExpiresIn*1000)
 			next.TokensExpireAt = &expire
 		}
 	})

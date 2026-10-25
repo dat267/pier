@@ -249,6 +249,23 @@ and `blob` members stay normalized rather than matched (D274).
 and fourteen name cases are generated from the pin
 (`coding/testdata/mcp-tools/`).
 
+**MCP OAuth document audit.** A bounded audit of
+`packages/mcp/src/oauth/{types,discovery,flow}.ts` fixed four differences
+reproduced by executing the pinned parsers over 96 cases. OAuth document URLs
+(`resource`, `issuer`, the endpoints, each `authorization_servers` entry, and
+`SelectResource`'s inputs) now accept WHATWG whitespace by validating on the
+preprocessed text while keeping the raw value, so a padded discovery document
+loads as upstream's does. `ParseClientInformation` copies every declared client
+metadata member verbatim (including `client_uri`, `logo_uri`, `contacts`,
+`tos_uri`, `policy_uri`, `jwks_uri`, `jwks`, `software_*`) instead of a
+hand-picked subset; members outside the typed model stay D275. `StepUpScope`
+treats a present-but-empty challenged scope as absent, and `expires_in` plus
+the registration timestamps keep JavaScript numbers (`3599.5`, array coercion)
+instead of truncating to int64. `SelectResource`'s decisions and the token,
+protected-resource and server documents matched otherwise; the helper's
+port/host-case output stays D276. The case corpus lives in
+`mcp/oauth/testdata/parse/`.
+
 **Upstream status.** v1.4.0 (`4a080252`) is the latest released tag after
 refreshing upstream tags and is the port's reference pin. It is 81 commits past
 v1.3.0. The pin identifies the sources to review, not a claim that every change

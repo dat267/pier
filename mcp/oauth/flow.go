@@ -108,6 +108,7 @@ func loopback(hostname string) bool {
 // deriveApplicationType applies MCP SEP-837 to OAuth redirect URIs: custom
 // schemes and loopback HTTP(S) URLs identify native clients; other URLs are web.
 func parseHTTPURL(value string) (*url.URL, string, error) {
+	value = stripWHATWGURLWhitespace(value)
 	parsed, err := url.Parse(value)
 	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
 		return nil, "", fmt.Errorf("not an HTTP URL")
@@ -141,7 +142,7 @@ func parseHTTPURL(value string) (*url.URL, string, error) {
 
 func deriveApplicationType(redirectURIs []string) string {
 	for _, redirectURI := range redirectURIs {
-		parsed, err := url.Parse(redirectURI)
+		parsed, err := parseWHATWGURL(redirectURI)
 		if err != nil || parsed.Scheme == "" {
 			continue
 		}
@@ -249,7 +250,7 @@ func StartAuthorization(authorizationServerURL string, options StartAuthorizatio
 	if metadata != nil {
 		endpoint = metadata.AuthorizationEndpoint
 	}
-	parsed, err := url.Parse(endpoint)
+	parsed, err := parseWHATWGURL(endpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +297,7 @@ type AuthorizationDraft struct {
 }
 
 func joinPathForServer(serverURL, path string) string {
-	parsed, err := url.Parse(serverURL)
+	parsed, err := parseWHATWGURL(serverURL)
 	if err != nil {
 		return serverURL + path
 	}
@@ -507,7 +508,8 @@ func withScope(tokens *OAuthTokens, scope *string) *OAuthTokens {
 // token with just those would lose access the old one had (SEP-2350).
 // Without challenged scopes, nil lets the flow pick its default.
 func StepUpScope(granted, challenged *string) *string {
-	if challenged == nil {
+	// Upstream's falsy check treats a present-but-empty scope as absent.
+	if challenged == nil || *challenged == "" {
 		return nil
 	}
 	seen := map[string]bool{}

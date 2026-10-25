@@ -8,7 +8,7 @@ func TestParseOAuthTokensCoercesExpiresInLikeNumber(t *testing.T) {
 	base := map[string]any{"access_token": "a", "token_type": "Bearer"}
 	for _, test := range []struct {
 		value any
-		want  int64
+		want  float64
 	}{
 		{"3600", 3600},
 		{" 3600 ", 3600},
@@ -19,7 +19,7 @@ func TestParseOAuthTokensCoercesExpiresInLikeNumber(t *testing.T) {
 		response := map[string]any{"access_token": base["access_token"], "token_type": base["token_type"], "expires_in": test.value}
 		tokens, err := ParseOAuthTokens(response)
 		if err != nil || tokens.ExpiresIn == nil || *tokens.ExpiresIn != test.want {
-			t.Fatalf("expires_in %#v -> %+v, %v; want %d", test.value, tokens, err, test.want)
+			t.Fatalf("expires_in %#v -> %+v, %v; want %v", test.value, tokens, err, test.want)
 		}
 	}
 	// absent() treats "" like undefined, so it means no expiry rather than 0.

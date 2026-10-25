@@ -1,0 +1,1034 @@
+{
+  "tokens": {
+    "minimal": {
+      "input": {
+        "access_token": "at",
+        "token_type": "Bearer"
+      },
+      "ok": true,
+      "value": {
+        "access_token": "at",
+        "token_type": "Bearer"
+      }
+    },
+    "full": {
+      "input": {
+        "access_token": "at",
+        "token_type": "Bearer",
+        "expires_in": 3600,
+        "scope": "read write",
+        "refresh_token": "rt",
+        "id_token": "id"
+      },
+      "ok": true,
+      "value": {
+        "access_token": "at",
+        "expires_in": 3600,
+        "id_token": "id",
+        "refresh_token": "rt",
+        "scope": "read write",
+        "token_type": "Bearer"
+      }
+    },
+    "expires-string": {
+      "input": {
+        "access_token": "at",
+        "token_type": "Bearer",
+        "expires_in": "3600"
+      },
+      "ok": true,
+      "value": {
+        "access_token": "at",
+        "expires_in": 3600,
+        "token_type": "Bearer"
+      }
+    },
+    "expires-fraction": {
+      "input": {
+        "access_token": "at",
+        "token_type": "Bearer",
+        "expires_in": 3599.5
+      },
+      "ok": true,
+      "value": {
+        "access_token": "at",
+        "expires_in": 3599.5,
+        "token_type": "Bearer"
+      }
+    },
+    "expires-zero": {
+      "input": {
+        "access_token": "at",
+        "token_type": "Bearer",
+        "expires_in": 0
+      },
+      "ok": true,
+      "value": {
+        "access_token": "at",
+        "expires_in": 0,
+        "token_type": "Bearer"
+      }
+    },
+    "expires-null": {
+      "input": {
+        "access_token": "at",
+        "token_type": "Bearer",
+        "expires_in": null
+      },
+      "ok": true,
+      "value": {
+        "access_token": "at",
+        "token_type": "Bearer"
+      }
+    },
+    "expires-empty": {
+      "input": {
+        "access_token": "at",
+        "token_type": "Bearer",
+        "expires_in": ""
+      },
+      "ok": true,
+      "value": {
+        "access_token": "at",
+        "token_type": "Bearer"
+      }
+    },
+    "expires-bool": {
+      "input": {
+        "access_token": "at",
+        "token_type": "Bearer",
+        "expires_in": true
+      },
+      "ok": true,
+      "value": {
+        "access_token": "at",
+        "expires_in": 1,
+        "token_type": "Bearer"
+      }
+    },
+    "expires-hex": {
+      "input": {
+        "access_token": "at",
+        "token_type": "Bearer",
+        "expires_in": "0x10"
+      },
+      "ok": true,
+      "value": {
+        "access_token": "at",
+        "expires_in": 16,
+        "token_type": "Bearer"
+      }
+    },
+    "expires-space": {
+      "input": {
+        "access_token": "at",
+        "token_type": "Bearer",
+        "expires_in": " 3600 "
+      },
+      "ok": true,
+      "value": {
+        "access_token": "at",
+        "expires_in": 3600,
+        "token_type": "Bearer"
+      }
+    },
+    "expires-exponent": {
+      "input": {
+        "access_token": "at",
+        "token_type": "Bearer",
+        "expires_in": "1e3"
+      },
+      "ok": true,
+      "value": {
+        "access_token": "at",
+        "expires_in": 1000,
+        "token_type": "Bearer"
+      }
+    },
+    "expires-nan": {
+      "input": {
+        "access_token": "at",
+        "token_type": "Bearer",
+        "expires_in": "abc"
+      },
+      "ok": false,
+      "error": "Invalid expires_in"
+    },
+    "expires-object": {
+      "input": {
+        "access_token": "at",
+        "token_type": "Bearer",
+        "expires_in": {}
+      },
+      "ok": false,
+      "error": "Invalid expires_in"
+    },
+    "expires-array-empty": {
+      "input": {
+        "access_token": "at",
+        "token_type": "Bearer",
+        "expires_in": []
+      },
+      "ok": true,
+      "value": {
+        "access_token": "at",
+        "expires_in": 0,
+        "token_type": "Bearer"
+      }
+    },
+    "expires-array-one": {
+      "input": {
+        "access_token": "at",
+        "token_type": "Bearer",
+        "expires_in": [
+          5
+        ]
+      },
+      "ok": true,
+      "value": {
+        "access_token": "at",
+        "expires_in": 5,
+        "token_type": "Bearer"
+      }
+    },
+    "scope-empty": {
+      "input": {
+        "access_token": "at",
+        "token_type": "Bearer",
+        "scope": ""
+      },
+      "ok": true,
+      "value": {
+        "access_token": "at",
+        "token_type": "Bearer"
+      }
+    },
+    "scope-null": {
+      "input": {
+        "access_token": "at",
+        "token_type": "Bearer",
+        "scope": null
+      },
+      "ok": true,
+      "value": {
+        "access_token": "at",
+        "token_type": "Bearer"
+      }
+    },
+    "scope-number": {
+      "input": {
+        "access_token": "at",
+        "token_type": "Bearer",
+        "scope": 5
+      },
+      "ok": false,
+      "error": "Invalid scope"
+    },
+    "missing-access": {
+      "input": {
+        "token_type": "Bearer"
+      },
+      "ok": false,
+      "error": "Invalid access_token"
+    },
+    "empty-access": {
+      "input": {
+        "access_token": "",
+        "token_type": "Bearer"
+      },
+      "ok": false,
+      "error": "Invalid access_token"
+    },
+    "missing-type": {
+      "input": {
+        "access_token": "at"
+      },
+      "ok": false,
+      "error": "Invalid token_type"
+    },
+    "not-object": {
+      "input": "nope",
+      "ok": false,
+      "error": "Invalid OAuth token response"
+    },
+    "array": {
+      "input": [
+        1,
+        2
+      ],
+      "ok": false,
+      "error": "Invalid OAuth token response"
+    },
+    "null": {
+      "input": null,
+      "ok": false,
+      "error": "Invalid OAuth token response"
+    }
+  },
+  "clients": {
+    "minimal": {
+      "input": {
+        "client_id": "cid"
+      },
+      "ok": true,
+      "value": {
+        "client_id": "cid",
+        "redirect_uris": []
+      }
+    },
+    "secret-empty": {
+      "input": {
+        "client_id": "cid",
+        "client_secret": ""
+      },
+      "ok": true,
+      "value": {
+        "client_id": "cid",
+        "redirect_uris": []
+      }
+    },
+    "secret-null": {
+      "input": {
+        "client_id": "cid",
+        "client_secret": null
+      },
+      "ok": true,
+      "value": {
+        "client_id": "cid",
+        "redirect_uris": []
+      }
+    },
+    "secret": {
+      "input": {
+        "client_id": "cid",
+        "client_secret": "s"
+      },
+      "ok": true,
+      "value": {
+        "client_id": "cid",
+        "client_secret": "s",
+        "redirect_uris": []
+      }
+    },
+    "redirects": {
+      "input": {
+        "client_id": "cid",
+        "redirect_uris": [
+          "http://127.0.0.1/cb"
+        ]
+      },
+      "ok": true,
+      "value": {
+        "client_id": "cid",
+        "redirect_uris": [
+          "http://127.0.0.1/cb"
+        ]
+      }
+    },
+    "redirects-null": {
+      "input": {
+        "client_id": "cid",
+        "redirect_uris": null
+      },
+      "ok": true,
+      "value": {
+        "client_id": "cid",
+        "redirect_uris": []
+      }
+    },
+    "redirects-empty": {
+      "input": {
+        "client_id": "cid",
+        "redirect_uris": []
+      },
+      "ok": true,
+      "value": {
+        "client_id": "cid",
+        "redirect_uris": []
+      }
+    },
+    "redirects-invalid": {
+      "input": {
+        "client_id": "cid",
+        "redirect_uris": "http://127.0.0.1/cb"
+      },
+      "ok": false,
+      "error": "Invalid redirect_uris"
+    },
+    "redirects-mixed": {
+      "input": {
+        "client_id": "cid",
+        "redirect_uris": [
+          "a",
+          1
+        ]
+      },
+      "ok": false,
+      "error": "Invalid redirect_uris"
+    },
+    "issued-at": {
+      "input": {
+        "client_id": "cid",
+        "client_id_issued_at": 1700000000
+      },
+      "ok": true,
+      "value": {
+        "client_id": "cid",
+        "client_id_issued_at": 1700000000,
+        "redirect_uris": []
+      }
+    },
+    "issued-at-string": {
+      "input": {
+        "client_id": "cid",
+        "client_id_issued_at": "1700000000"
+      },
+      "ok": true,
+      "value": {
+        "client_id": "cid",
+        "redirect_uris": []
+      }
+    },
+    "issued-at-null": {
+      "input": {
+        "client_id": "cid",
+        "client_id_issued_at": null
+      },
+      "ok": true,
+      "value": {
+        "client_id": "cid",
+        "redirect_uris": []
+      }
+    },
+    "issued-at-fraction": {
+      "input": {
+        "client_id": "cid",
+        "client_id_issued_at": 1.5
+      },
+      "ok": true,
+      "value": {
+        "client_id": "cid",
+        "client_id_issued_at": 1.5,
+        "redirect_uris": []
+      }
+    },
+    "metadata": {
+      "input": {
+        "client_id": "cid",
+        "token_endpoint_auth_method": "none",
+        "grant_types": [
+          "authorization_code"
+        ],
+        "response_types": [
+          "code"
+        ],
+        "client_name": "Pier",
+        "application_type": "native",
+        "client_uri": "https://example.com",
+        "logo_uri": "https://example.com/logo.png",
+        "contacts": [
+          "a@example.com"
+        ],
+        "tos_uri": "https://example.com/tos",
+        "policy_uri": "https://example.com/policy",
+        "jwks_uri": "https://example.com/jwks",
+        "jwks": {
+          "keys": []
+        },
+        "software_id": "sid",
+        "software_version": "1.0",
+        "software_statement": "stmt",
+        "scope": "read"
+      },
+      "ok": true,
+      "value": {
+        "application_type": "native",
+        "client_id": "cid",
+        "client_name": "Pier",
+        "client_uri": "https://example.com",
+        "contacts": [
+          "a@example.com"
+        ],
+        "grant_types": [
+          "authorization_code"
+        ],
+        "jwks": {
+          "keys": []
+        },
+        "jwks_uri": "https://example.com/jwks",
+        "logo_uri": "https://example.com/logo.png",
+        "policy_uri": "https://example.com/policy",
+        "redirect_uris": [],
+        "response_types": [
+          "code"
+        ],
+        "scope": "read",
+        "software_id": "sid",
+        "software_statement": "stmt",
+        "software_version": "1.0",
+        "token_endpoint_auth_method": "none",
+        "tos_uri": "https://example.com/tos"
+      }
+    },
+    "missing-id": {
+      "input": {
+        "client_secret": "s"
+      },
+      "ok": false,
+      "error": "Invalid client_id"
+    },
+    "empty-id": {
+      "input": {
+        "client_id": ""
+      },
+      "ok": false,
+      "error": "Invalid client_id"
+    },
+    "not-object": {
+      "input": 5,
+      "ok": false,
+      "error": "Invalid OAuth client registration response"
+    }
+  },
+  "protected": {
+    "minimal": {
+      "input": {
+        "resource": "https://example.com/mcp"
+      },
+      "ok": true,
+      "value": {
+        "resource": "https://example.com/mcp"
+      }
+    },
+    "full": {
+      "input": {
+        "resource": "https://example.com/mcp",
+        "authorization_servers": [
+          "https://auth.example.com"
+        ],
+        "scopes_supported": [
+          "read"
+        ]
+      },
+      "ok": true,
+      "value": {
+        "authorization_servers": [
+          "https://auth.example.com"
+        ],
+        "resource": "https://example.com/mcp",
+        "scopes_supported": [
+          "read"
+        ]
+      }
+    },
+    "servers-null": {
+      "input": {
+        "resource": "https://example.com/mcp",
+        "authorization_servers": null
+      },
+      "ok": true,
+      "value": {
+        "resource": "https://example.com/mcp"
+      }
+    },
+    "servers-mixed": {
+      "input": {
+        "resource": "https://example.com/mcp",
+        "authorization_servers": [
+          "https://a",
+          5
+        ]
+      },
+      "ok": false,
+      "error": "Invalid authorization_servers"
+    },
+    "server-javascript": {
+      "input": {
+        "resource": "https://example.com/mcp",
+        "authorization_servers": [
+          "javascript:alert(1)"
+        ]
+      },
+      "ok": false,
+      "error": "Invalid authorization server URL"
+    },
+    "server-relative": {
+      "input": {
+        "resource": "https://example.com/mcp",
+        "authorization_servers": [
+          "/auth"
+        ]
+      },
+      "ok": false,
+      "error": "Invalid authorization server URL"
+    },
+    "scopes-mixed": {
+      "input": {
+        "resource": "https://example.com/mcp",
+        "scopes_supported": [
+          "read",
+          5
+        ]
+      },
+      "ok": false,
+      "error": "Invalid scopes_supported"
+    },
+    "resource-javascript": {
+      "input": {
+        "resource": "javascript:alert(1)"
+      },
+      "ok": false,
+      "error": "Invalid OAuth protected resource metadata resource"
+    },
+    "resource-relative": {
+      "input": {
+        "resource": "/mcp"
+      },
+      "ok": false,
+      "error": "Invalid OAuth protected resource metadata resource"
+    },
+    "resource-empty": {
+      "input": {
+        "resource": ""
+      },
+      "ok": false,
+      "error": "Invalid OAuth protected resource metadata resource"
+    },
+    "resource-whitespace": {
+      "input": {
+        "resource": " https://example.com/mcp "
+      },
+      "ok": true,
+      "value": {
+        "resource": " https://example.com/mcp "
+      }
+    },
+    "not-object": {
+      "input": [],
+      "ok": false,
+      "error": "Invalid OAuth protected resource metadata"
+    }
+  },
+  "servers": {
+    "minimal": {
+      "input": {
+        "issuer": "https://auth.example.com",
+        "authorization_endpoint": "https://auth.example.com/authorize",
+        "token_endpoint": "https://auth.example.com/token",
+        "response_types_supported": [
+          "code"
+        ]
+      },
+      "ok": true,
+      "value": {
+        "authorization_endpoint": "https://auth.example.com/authorize",
+        "issuer": "https://auth.example.com",
+        "response_types_supported": [
+          "code"
+        ],
+        "token_endpoint": "https://auth.example.com/token"
+      }
+    },
+    "full": {
+      "input": {
+        "issuer": "https://auth.example.com",
+        "authorization_endpoint": "https://auth.example.com/authorize",
+        "token_endpoint": "https://auth.example.com/token",
+        "response_types_supported": [
+          "code"
+        ],
+        "registration_endpoint": "https://auth.example.com/register",
+        "scopes_supported": [
+          "read"
+        ],
+        "grant_types_supported": [
+          "authorization_code"
+        ],
+        "token_endpoint_auth_methods_supported": [
+          "none"
+        ],
+        "code_challenge_methods_supported": [
+          "S256"
+        ],
+        "client_id_metadata_document_supported": true,
+        "authorization_response_iss_parameter_supported": true
+      },
+      "ok": true,
+      "value": {
+        "authorization_endpoint": "https://auth.example.com/authorize",
+        "authorization_response_iss_parameter_supported": true,
+        "client_id_metadata_document_supported": true,
+        "code_challenge_methods_supported": [
+          "S256"
+        ],
+        "grant_types_supported": [
+          "authorization_code"
+        ],
+        "issuer": "https://auth.example.com",
+        "registration_endpoint": "https://auth.example.com/register",
+        "response_types_supported": [
+          "code"
+        ],
+        "scopes_supported": [
+          "read"
+        ],
+        "token_endpoint": "https://auth.example.com/token",
+        "token_endpoint_auth_methods_supported": [
+          "none"
+        ]
+      }
+    },
+    "missing-response-types": {
+      "input": {
+        "issuer": "https://auth.example.com",
+        "authorization_endpoint": "https://auth.example.com/authorize",
+        "token_endpoint": "https://auth.example.com/token"
+      },
+      "ok": false,
+      "error": "Invalid response_types_supported"
+    },
+    "empty-response-types": {
+      "input": {
+        "issuer": "https://auth.example.com",
+        "authorization_endpoint": "https://auth.example.com/authorize",
+        "token_endpoint": "https://auth.example.com/token",
+        "response_types_supported": []
+      },
+      "ok": true,
+      "value": {
+        "authorization_endpoint": "https://auth.example.com/authorize",
+        "issuer": "https://auth.example.com",
+        "response_types_supported": [],
+        "token_endpoint": "https://auth.example.com/token"
+      }
+    },
+    "registration-empty": {
+      "input": {
+        "issuer": "https://auth.example.com",
+        "authorization_endpoint": "https://auth.example.com/authorize",
+        "token_endpoint": "https://auth.example.com/token",
+        "response_types_supported": [
+          "code"
+        ],
+        "registration_endpoint": ""
+      },
+      "ok": true,
+      "value": {
+        "authorization_endpoint": "https://auth.example.com/authorize",
+        "issuer": "https://auth.example.com",
+        "response_types_supported": [
+          "code"
+        ],
+        "token_endpoint": "https://auth.example.com/token"
+      }
+    },
+    "flag-string": {
+      "input": {
+        "issuer": "https://auth.example.com",
+        "authorization_endpoint": "https://auth.example.com/authorize",
+        "token_endpoint": "https://auth.example.com/token",
+        "response_types_supported": [
+          "code"
+        ],
+        "client_id_metadata_document_supported": "true"
+      },
+      "ok": true,
+      "value": {
+        "authorization_endpoint": "https://auth.example.com/authorize",
+        "issuer": "https://auth.example.com",
+        "response_types_supported": [
+          "code"
+        ],
+        "token_endpoint": "https://auth.example.com/token"
+      }
+    },
+    "issuer-whitespace": {
+      "input": {
+        "issuer": " https://auth.example.com",
+        "authorization_endpoint": "https://auth.example.com/authorize",
+        "token_endpoint": "https://auth.example.com/token",
+        "response_types_supported": [
+          "code"
+        ]
+      },
+      "ok": true,
+      "value": {
+        "authorization_endpoint": "https://auth.example.com/authorize",
+        "issuer": " https://auth.example.com",
+        "response_types_supported": [
+          "code"
+        ],
+        "token_endpoint": "https://auth.example.com/token"
+      }
+    },
+    "issuer-data": {
+      "input": {
+        "issuer": "data:text/plain,x",
+        "authorization_endpoint": "https://auth.example.com/authorize",
+        "token_endpoint": "https://auth.example.com/token",
+        "response_types_supported": [
+          "code"
+        ]
+      },
+      "ok": false,
+      "error": "Invalid authorization server issuer"
+    },
+    "not-object": {
+      "input": null,
+      "ok": false,
+      "error": "Invalid authorization server metadata"
+    }
+  },
+  "selectResource": {
+    "exact": {
+      "server": "https://example.com/mcp",
+      "resource": "https://example.com/mcp",
+      "metadata": {
+        "resource": "https://example.com/mcp"
+      },
+      "ok": true,
+      "value": "https://example.com/mcp"
+    },
+    "trailing-slash": {
+      "server": "https://example.com/mcp/",
+      "resource": "https://example.com/mcp",
+      "metadata": {
+        "resource": "https://example.com/mcp"
+      },
+      "ok": true,
+      "value": "https://example.com/mcp"
+    },
+    "nested": {
+      "server": "https://example.com/mcp/sub",
+      "resource": "https://example.com/mcp",
+      "metadata": {
+        "resource": "https://example.com/mcp"
+      },
+      "ok": true,
+      "value": "https://example.com/mcp"
+    },
+    "root-resource": {
+      "server": "https://example.com/mcp",
+      "resource": "https://example.com/",
+      "metadata": {
+        "resource": "https://example.com/"
+      },
+      "ok": true,
+      "value": "https://example.com/"
+    },
+    "path-prefix-mismatch": {
+      "server": "https://example.com/mcpx",
+      "resource": "https://example.com/mcp",
+      "metadata": {
+        "resource": "https://example.com/mcp"
+      },
+      "ok": false,
+      "error": "Protected resource https://example.com/mcp does not match MCP server https://example.com/mcpx"
+    },
+    "different-host": {
+      "server": "https://example.com/mcp",
+      "resource": "https://other.example.com/mcp",
+      "metadata": {
+        "resource": "https://other.example.com/mcp"
+      },
+      "ok": false,
+      "error": "Protected resource https://other.example.com/mcp does not match MCP server https://example.com/mcp"
+    },
+    "different-scheme": {
+      "server": "https://example.com/mcp",
+      "resource": "http://example.com/mcp",
+      "metadata": {
+        "resource": "http://example.com/mcp"
+      },
+      "ok": false,
+      "error": "Protected resource http://example.com/mcp does not match MCP server https://example.com/mcp"
+    },
+    "default-port": {
+      "server": "https://example.com:443/mcp",
+      "resource": "https://example.com/mcp",
+      "metadata": {
+        "resource": "https://example.com/mcp"
+      },
+      "ok": true,
+      "value": "https://example.com/mcp"
+    },
+    "other-port": {
+      "server": "https://example.com:8443/mcp",
+      "resource": "https://example.com/mcp",
+      "metadata": {
+        "resource": "https://example.com/mcp"
+      },
+      "ok": false,
+      "error": "Protected resource https://example.com/mcp does not match MCP server https://example.com:8443/mcp"
+    },
+    "uppercase-host": {
+      "server": "https://EXAMPLE.com/mcp",
+      "resource": "https://example.com/mcp",
+      "metadata": {
+        "resource": "https://example.com/mcp"
+      },
+      "ok": true,
+      "value": "https://example.com/mcp"
+    },
+    "encoded-path": {
+      "server": "https://example.com/a%2Fb",
+      "resource": "https://example.com/a%2Fb",
+      "metadata": {
+        "resource": "https://example.com/a%2Fb"
+      },
+      "ok": true,
+      "value": "https://example.com/a%2Fb"
+    },
+    "unicode-path": {
+      "server": "https://example.com/%C3%BC",
+      "resource": "https://example.com/%C3%BC",
+      "metadata": {
+        "resource": "https://example.com/%C3%BC"
+      },
+      "ok": true,
+      "value": "https://example.com/%C3%BC"
+    },
+    "fragment-server": {
+      "server": "https://example.com/mcp#frag",
+      "resource": "https://example.com/mcp",
+      "metadata": {
+        "resource": "https://example.com/mcp"
+      },
+      "ok": true,
+      "value": "https://example.com/mcp"
+    },
+    "query-resource": {
+      "server": "https://example.com/mcp",
+      "resource": "https://example.com/mcp?x=1",
+      "metadata": {
+        "resource": "https://example.com/mcp?x=1"
+      },
+      "ok": true,
+      "value": "https://example.com/mcp?x=1"
+    },
+    "ipv6": {
+      "server": "https://[::1]:8443/mcp",
+      "resource": "https://[::1]:8443/mcp",
+      "metadata": {
+        "resource": "https://[::1]:8443/mcp"
+      },
+      "ok": true,
+      "value": "https://[::1]:8443/mcp"
+    },
+    "no-metadata": {
+      "server": "https://example.com/mcp",
+      "resource": null,
+      "metadata": null,
+      "ok": true
+    },
+    "whitespace-resource": {
+      "server": "https://example.com/mcp",
+      "resource": " https://example.com/mcp ",
+      "metadata": {
+        "resource": " https://example.com/mcp "
+      },
+      "ok": true,
+      "value": " https://example.com/mcp "
+    },
+    "whitespace-server": {
+      "server": " https://example.com/mcp ",
+      "resource": "https://example.com/mcp",
+      "metadata": {
+        "resource": "https://example.com/mcp"
+      },
+      "ok": true,
+      "value": "https://example.com/mcp"
+    }
+  },
+  "resourceUrls": {
+    "plain": {
+      "url": "https://example.com/mcp",
+      "ok": true,
+      "value": "https://example.com/mcp"
+    },
+    "fragment": {
+      "url": "https://example.com/mcp#frag",
+      "ok": true,
+      "value": "https://example.com/mcp"
+    },
+    "query": {
+      "url": "https://example.com/mcp?x=1",
+      "ok": true,
+      "value": "https://example.com/mcp?x=1"
+    },
+    "trailing-slash": {
+      "url": "https://example.com/mcp/",
+      "ok": true,
+      "value": "https://example.com/mcp/"
+    },
+    "relative": {
+      "url": "/mcp",
+      "ok": false,
+      "error": "Invalid URL"
+    },
+    "whitespace": {
+      "url": " https://example.com/mcp ",
+      "ok": true,
+      "value": "https://example.com/mcp"
+    }
+  },
+  "stepUp": {
+    "none": {
+      "granted": null,
+      "challenged": null,
+      "ok": true
+    },
+    "challenged-only": {
+      "granted": null,
+      "challenged": "read write",
+      "ok": true,
+      "value": "read write"
+    },
+    "granted-only": {
+      "granted": "read",
+      "challenged": null,
+      "ok": true
+    },
+    "merge": {
+      "granted": "read",
+      "challenged": "write",
+      "ok": true,
+      "value": "read write"
+    },
+    "overlap": {
+      "granted": "read write",
+      "challenged": "write admin",
+      "ok": true,
+      "value": "read write admin"
+    },
+    "empty-challenged": {
+      "granted": "read",
+      "challenged": "",
+      "ok": true
+    },
+    "empty-granted": {
+      "granted": "",
+      "challenged": "read",
+      "ok": true,
+      "value": "read"
+    },
+    "whitespace": {
+      "granted": "  read   write  ",
+      "challenged": " admin ",
+      "ok": true,
+      "value": "read write admin"
+    },
+    "duplicates": {
+      "granted": "read read",
+      "challenged": "read",
+      "ok": true,
+      "value": "read"
+    },
+    "tabs-newlines": {
+      "granted": "read\twrite\nadmin",
+      "challenged": "extra",
+      "ok": true,
+      "value": "read write admin extra"
+    }
+  }
+}
