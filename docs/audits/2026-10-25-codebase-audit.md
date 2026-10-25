@@ -3,7 +3,7 @@
 ## Baseline and scope
 
 This is a **partial multi-round review**, not a completed codebase-wide audit.
-Fifteen confirmed findings have been planned in `TODO.md`, repaired red-first,
+Sixteen confirmed findings have been planned in `TODO.md`, repaired red-first,
 and verified. Remaining files and unconfirmed leads below still need review.
 
 - Starting commit: `80dcf0d09249222f98f39bccb2f93d278766009b`.
@@ -89,6 +89,11 @@ bottleneck is asserted without evidence. Unlisted files remain unreviewed.
   D174/D175. Checked checksum validation before replacement, temp placement,
   fallback restore and redirect handling. No new confirmed finding; this is
   not a signature-verification or upstream trust-policy claim.
+- `coding/editdiff.go`: P/L/C inspected in round 7 against
+  `core/tools/edit-diff.ts` (`generateUnifiedPatch`, `generateDiffString`).
+  **CR-016** repaired; the generated corpus covers both outputs over 27 pairs.
+  The fuzzy-match and multi-edit application paths are not yet compared
+  beyond their existing tests.
 - `coding/paths.go`, `coding/mutationqueue.go`, `coding/tools_edit.go` and
   `coding/tools_fs.go`: P/L/C/S/F inspected in round 2 against
   `utils/paths.ts`, `core/tools/{path-utils,file-mutation-queue,write,ls}.ts`,
@@ -566,6 +571,7 @@ After explicit user authorization:
 - `9320c6a`: JavaScript number-formatting corpus (coverage).
 - `f3c2399`: context-overflow corpus (coverage).
 - `8080a42`: key-parsing corpus (coverage).
+- `bc9825a`: CR-016, final-newline display diff.
 
 All changes were verified before committing. Audit status and lock ownership
 are recorded with this ledger in a separate documentation commit. No push.
@@ -596,6 +602,31 @@ Replay:
 node coding/testdata/bash-executor/generate.mjs ./pi
 go test -count=1 ./coding -run '^TestBashExecutorRollingOutputMatchesUpstream$'
 go test -count=1 ./coding -run Bash
+```
+
+## Round 7 finding
+
+### CR-016, P3: the display diff hid a final-newline-only edit (fixed)
+
+An edit whose only effect is the trailing newline (`same` → `same`, or
+`a\nb\nc` → `a\nb\nc\n`) produced an empty diff and no `firstChangedLine`,
+while the reference reported `-1 same`/`+1 same` (and `-3 c`/`+3 c`). The
+unified patch already matched, so only the persisted `EditToolDetails` and the
+interactive edit preview disagreed. The 27-pair corpus executes the pinned
+`edit-diff.ts` (jsdiff 8.0.4 through `pi`'s own `node_modules`) and compares
+patch, display diff and first changed line; three newline cases failed before
+the repair and the other 24 pairs were controls.
+
+Root cause: the display path tokenized with `splitLinesForCounting`, which
+drops the empty element after a trailing newline, so `c` and `c\n` compared
+equal. It now uses the newline-carrying tokens of `splitPatchTokens` with the
+existing jsdiff search, rendering each run as upstream does. Line-number width,
+context collapsing, `...` markers and unchanged-content reporting are
+unchanged.
+
+```sh
+node coding/testdata/edit-diff-patch/generate.mjs ./pi
+go test -count=1 ./coding -run '^TestEditDiffPatchCorpusMatchesUpstream$'
 ```
 
 ## Unconfirmed leads, not TODOs
@@ -645,6 +676,9 @@ All completed with `GOPROXY=off GOSUMDB=off` on Go commands/recipes:
   integrity/unsupported-host tests also failed red, then passed. `go test
   -count=1 ./coding -run '^TestRPC'` and `go test -count=1 ./mcp/...
   ./coding/rpcclient ./coding/interactive`: PASS.
+- Round 7: the edit-diff corpus failed on three newline-only pairs before
+  CR-016, then passed; `go test -count=1 ./coding ./coding/interactive ./tui`
+  passes, and `just check`/`just cross` pass.
 - Round 6: the number-formatting, overflow-detection and key-parsing corpora
   each matched on their first run; `go test -count=1 ./ai ./tui` passes.
 - Round 5: bash-executor corpus failed on two multibyte cases before CR-015,
