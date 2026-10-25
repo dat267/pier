@@ -125,7 +125,11 @@ func projectMessage(t *testing.T, message *AssistantMessage) any {
 	for _, block := range message.Content {
 		switch typed := block.(type) {
 		case TextContent:
-			content = append(content, map[string]any{"type": "text", "text": typed.Text})
+			projected := map[string]any{"type": "text", "text": typed.Text}
+			if typed.TextSignature != nil {
+				projected["textSignature"] = *typed.TextSignature
+			}
+			content = append(content, projected)
 		case ThinkingContent:
 			signature := ""
 			if typed.ThinkingSignature != nil {
