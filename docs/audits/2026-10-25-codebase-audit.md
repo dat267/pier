@@ -3,7 +3,7 @@
 ## Baseline and scope
 
 This is a **partial multi-round review**, not a completed codebase-wide audit.
-Fourteen confirmed findings have been planned in `TODO.md`, repaired red-first,
+Fifteen confirmed findings have been planned in `TODO.md`, repaired red-first,
 and verified. Remaining files and unconfirmed leads below still need review.
 
 - Starting commit: `80dcf0d09249222f98f39bccb2f93d278766009b`.
@@ -87,6 +87,12 @@ bottleneck is asserted without evidence. Unlisted files remain unreviewed.
   follow symlinks; they are not a filesystem sandbox. No new reproduced
   finding in this slice. Platform-specific file URL handling and queue FIFO
   admission still need independent probes (see leads).
+- `coding/bashexecutor.go` `ExecuteBashWithOperations` and the
+  `coding/tools_bash.go` `OutputAccumulator` declarations: L/C/S/F inspected in
+  round 5 against `core/bash-executor.ts`; P compared for the executor's rolling
+  buffer and full-output file. **CR-015** repaired. `OutputAccumulator` itself
+  (its own byte/line accounting and the bash tool wrapper) is not yet compared
+  with `core/tools/output-accumulator.ts`.
 - `coding/agent_session_control.go` `GetLastAssistantText`: P/L/C/S/F
   inspected in round 4 against the pinned `agent-session.ts` method and
   generated session/RPC cases. **CR-014** repaired; message selection and
@@ -522,6 +528,34 @@ After explicit user authorization:
 
 All changes were verified before committing. Audit status and lock ownership
 are recorded with this ledger in a separate documentation commit. No push.
+
+## Round 5 finding
+
+### CR-015, P2: bash display output collapses for multibyte text (fixed)
+
+A command emitting 40,000 `漢` characters plus `tail` showed the model only
+`tail` (4 bytes, `truncated: false`), while the pinned function kept a 51,199
+byte tail flagged truncated; 30,000 `😀` reproduced it (4 bytes versus
+51,200). ASCII output of comparable size, small output, and a many-small-chunk
+run matched, so the boundary is character width, not the budget itself. The
+persisted full-output file hash matched in every case, so file recovery was
+unaffected and only the tool result was misleading.
+
+The corpus (`coding/testdata/bash-executor/`) executes the pinned
+`core/bash-executor.ts` function with its real helpers and records output and
+file SHA-256 values; it was added before any production edit. After the plan
+was recorded in `TODO.md`, the rolling buffer gained a separate
+JavaScript-length counter (`JSLength`) while the temp-file threshold kept its
+byte counter, matching upstream's distinct `totalBytes` and `text.length`.
+Truncation limits, sanitization, callbacks and file handling are unchanged.
+
+Replay:
+
+```sh
+node coding/testdata/bash-executor/generate.mjs ./pi
+go test -count=1 ./coding -run '^TestBashExecutorRollingOutputMatchesUpstream$'
+go test -count=1 ./coding -run Bash
+```
 
 ## Unconfirmed leads, not TODOs
 

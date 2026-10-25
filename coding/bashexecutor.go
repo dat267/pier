@@ -77,6 +77,10 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 	}
 	var outputChunks []string
 	outputBytes := 0
+	// outputUnits is the rolling buffer's JavaScript length (UTF-16 units).
+	// bash-executor.ts compares `text.length` with DEFAULT_MAX_BYTES * 2, so
+	// multibyte text must not consume two to four units per character.
+	outputUnits := 0
 	maxOutputBytes := DefaultMaxBytes * 2
 
 	var tempFilePath string
@@ -116,6 +120,7 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 
 		outputChunks = append(outputChunks, text)
 		outputBytes += len(text)
+		outputUnits += JSLength(text)
 
 		// Start writing to the temp file once the threshold is crossed.
 		if tempFilePath == "" && outputBytes > DefaultMaxBytes {
@@ -133,10 +138,11 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 		}
 
 		// Keep a rolling buffer.
-		for outputBytes > maxOutputBytes && len(outputChunks) > 1 {
+		for outputUnits > maxOutputBytes && len(outputChunks) > 1 {
 			removed := outputChunks[0]
 			outputChunks = outputChunks[1:]
 			outputBytes -= len(removed)
+			outputUnits -= JSLength(removed)
 			if flushedChunks > 0 {
 				flushedChunks--
 			}

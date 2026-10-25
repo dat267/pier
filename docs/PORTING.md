@@ -376,6 +376,14 @@ reply is absent. The pinned `agent-session.ts` method generates a nine-case
 corpus, also checked through `get_last_assistant_text` RPC responses; normal
 text, block joins and aborted/non-text message selection remain controls.
 
+Bash display truncation now measures its rolling buffer in JavaScript string
+length (UTF-16 code units) rather than UTF-8 bytes, matching
+`core/bash-executor.ts`'s `outputBytes += text.length`. Multibyte output between
+roughly 50 KB and 300 KB previously collapsed to its final chunk and reported
+`truncated: false`; the reference kept the last ~50 KB. The corpus executes the
+pinned function and compares output and persisted-file SHA-256 values, with
+ASCII and small-chunk controls.
+
 **Upstream status.** v1.4.0 (`4a080252`) is the latest released tag after
 refreshing upstream tags and is the port's reference pin. It is 81 commits past
 v1.3.0. The pin identifies the sources to review, not a claim that every change
