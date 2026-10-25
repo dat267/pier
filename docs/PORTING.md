@@ -232,6 +232,23 @@ rules stay out of scope with the unported `/mcp` sign-in UI. Seventy validation
 cases and eleven loader cases are generated from the pin
 (`coding/testdata/mcp-config/`).
 
+**MCP tool-result audit.** A bounded audit of `extensions/mcp/tools.ts` fixed
+five reproduced differences. MCP tool names now sanitize per UTF-16 code unit,
+so an astral character becomes two underscores as upstream's non-Unicode regex
+produces, instead of one; two names that upstream keeps apart no longer merge.
+Binary resource blobs decode the base64url alphabet (`-`/`_`) like
+`Buffer.from(value, "base64")`, instead of dropping those characters and
+truncating the payload. The binary branch now requires the `blob` member
+(`protocol.ResourceContents.BlobArm`), so a resource with neither `text` nor
+`blob` reaches the shared converter's omission note instead of saving an empty
+temp file. An empty `resource_link` description no longer renders `": "`, and
+opaque resource URIs (`mailto:`, `urn:`, drive letters) keep the pathname's
+extension in the saved file name by falling back to `url.Opaque`. Null `size`
+and `blob` members stay normalized rather than matched (D274).
+`limitMcpContent` and `convertMcpResult` matched the pin. Thirty content cases
+and fourteen name cases are generated from the pin
+(`coding/testdata/mcp-tools/`).
+
 **Upstream status.** v1.4.0 (`4a080252`) is the latest released tag after
 refreshing upstream tags and is the port's reference pin. It is 81 commits past
 v1.3.0. The pin identifies the sources to review, not a claim that every change

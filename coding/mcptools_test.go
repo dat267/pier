@@ -70,7 +70,7 @@ func TestMcpTextResourceReplacesMalformedUTF8(t *testing.T) {
 	mimeType := "text/plain"
 	content, err := ToModelContent("docs", []protocol.ContentBlock{{
 		Type:     protocol.ContentTypeResource,
-		Resource: &protocol.ResourceContents{URI: "docs://invalid", MimeType: &mimeType, Blob: blob},
+		Resource: &protocol.ResourceContents{URI: "docs://invalid", MimeType: &mimeType, Blob: blob, BlobArm: true},
 	}}, ConvertMcpResultOptions{})
 	if err != nil {
 		t.Fatal(err)
@@ -172,13 +172,13 @@ func TestConvertMcpResultResourceLinksAndBinaries(t *testing.T) {
 			{
 				Type: protocol.ContentTypeResource,
 				Resource: &protocol.ResourceContents{
-					URI: "file:///r/report.pdf", MimeType: stringPtr("application/pdf"), Blob: "JVBERg==",
+					URI: "file:///r/report.pdf", MimeType: stringPtr("application/pdf"), Blob: "JVBERg==", BlobArm: true,
 				},
 			},
 			{
 				Type: protocol.ContentTypeResource,
 				Resource: &protocol.ResourceContents{
-					URI: "docs://logo", MimeType: stringPtr("image/png"), Blob: "AAAA",
+					URI: "docs://logo", MimeType: stringPtr("image/png"), Blob: "AAAA", BlobArm: true,
 				},
 			},
 		},
@@ -308,7 +308,7 @@ func TestMcpBase64ResourceToleratesWhitespaceAndMissingPadding(t *testing.T) {
 	mimeType := "text/plain"
 	content, err := ToModelContent("docs", []protocol.ContentBlock{{
 		Type:     protocol.ContentTypeResource,
-		Resource: &protocol.ResourceContents{URI: "docs://wrapped", MimeType: &mimeType, Blob: "aGVs\nbG8"},
+		Resource: &protocol.ResourceContents{URI: "docs://wrapped", MimeType: &mimeType, Blob: "aGVs\nbG8", BlobArm: true},
 	}}, ConvertMcpResultOptions{})
 	if err != nil {
 		t.Fatal(err)

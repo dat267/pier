@@ -1,0 +1,725 @@
+{
+  "toolNames": [
+    {
+      "name": "plain",
+      "server": "srv",
+      "tool": "tool",
+      "taken": false,
+      "expected": "mcp__srv__tool"
+    },
+    {
+      "name": "hyphen",
+      "server": "srv",
+      "tool": "tool-name",
+      "taken": false,
+      "expected": "mcp__srv__tool_name"
+    },
+    {
+      "name": "dot-space-slash",
+      "server": "a+b",
+      "tool": "c d/e.f",
+      "taken": false,
+      "expected": "mcp__a_b__c_d_e_f"
+    },
+    {
+      "name": "bmp-accent",
+      "server": "srv",
+      "tool": "outil-é",
+      "taken": false,
+      "expected": "mcp__srv__outil__"
+    },
+    {
+      "name": "astral-tool",
+      "server": "srv",
+      "tool": "😀",
+      "taken": false,
+      "expected": "mcp__srv____"
+    },
+    {
+      "name": "astral-inside",
+      "server": "srv",
+      "tool": "a😀b",
+      "taken": false,
+      "expected": "mcp__srv__a__b"
+    },
+    {
+      "name": "astral-many",
+      "server": "srv",
+      "tool": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+      "taken": false,
+      "expected": "mcp__srv__________________________________________"
+    },
+    {
+      "name": "astral-server",
+      "server": "server😀",
+      "tool": "tool",
+      "taken": false,
+      "expected": "mcp__server____tool"
+    },
+    {
+      "name": "astral-taken",
+      "server": "srv",
+      "tool": "😀",
+      "taken": true,
+      "expected": "mcp__srv_____2ab126ff"
+    },
+    {
+      "name": "astral-long",
+      "server": "srv",
+      "tool": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+      "taken": true,
+      "expected": "mcp__srv________________________________________________8709ebc2"
+    },
+    {
+      "name": "ascii-64",
+      "server": "srv",
+      "tool": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "taken": false,
+      "expected": "mcp__srv__xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_f60a986f"
+    },
+    {
+      "name": "ascii-65",
+      "server": "srv",
+      "tool": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "taken": false,
+      "expected": "mcp__srv__xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_c5447d59"
+    },
+    {
+      "name": "ascii-long",
+      "server": "srv",
+      "tool": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "taken": false,
+      "expected": "mcp__srv__xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_9f2c8104"
+    },
+    {
+      "name": "taken-short",
+      "server": "srv",
+      "tool": "tool",
+      "taken": true,
+      "expected": "mcp__srv__tool_f4ed36a6"
+    }
+  ],
+  "content": {
+    "link-minimal": {
+      "blocks": [
+        {
+          "type": "resource_link",
+          "uri": "file:///a.txt",
+          "name": "a"
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "[Resource file:///a.txt \"a\". Read it with read_mcp_resource (server \"srv\")]"
+        }
+      ],
+      "saveCalls": []
+    },
+    "link-full": {
+      "blocks": [
+        {
+          "type": "resource_link",
+          "uri": "file:///a.txt",
+          "name": "a",
+          "title": "A",
+          "mimeType": "text/plain",
+          "size": 1536,
+          "description": "the a file"
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "[Resource file:///a.txt \"A\" (text/plain, 1.5KB): the a file. Read it with read_mcp_resource (server \"srv\")]"
+        }
+      ],
+      "saveCalls": []
+    },
+    "link-empty-description": {
+      "blocks": [
+        {
+          "type": "resource_link",
+          "uri": "file:///a.txt",
+          "name": "a",
+          "description": ""
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "[Resource file:///a.txt \"a\". Read it with read_mcp_resource (server \"srv\")]"
+        }
+      ],
+      "saveCalls": []
+    },
+    "link-null-description": {
+      "blocks": [
+        {
+          "type": "resource_link",
+          "uri": "file:///a.txt",
+          "name": "a",
+          "description": null
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "[Resource file:///a.txt \"a\". Read it with read_mcp_resource (server \"srv\")]"
+        }
+      ],
+      "saveCalls": []
+    },
+    "link-null-title": {
+      "blocks": [
+        {
+          "type": "resource_link",
+          "uri": "file:///a.txt",
+          "name": "a",
+          "title": null
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "[Resource file:///a.txt \"a\". Read it with read_mcp_resource (server \"srv\")]"
+        }
+      ],
+      "saveCalls": []
+    },
+    "link-size-zero": {
+      "blocks": [
+        {
+          "type": "resource_link",
+          "uri": "file:///a.txt",
+          "name": "a",
+          "size": 0
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "[Resource file:///a.txt \"a\" (0B). Read it with read_mcp_resource (server \"srv\")]"
+        }
+      ],
+      "saveCalls": []
+    },
+    "resource-text-arm": {
+      "blocks": [
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "file:///b.txt",
+            "text": "inline body",
+            "mimeType": "text/plain"
+          }
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "inline body"
+        }
+      ],
+      "saveCalls": []
+    },
+    "resource-empty-text-arm": {
+      "blocks": [
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "file:///b.txt",
+            "text": "",
+            "mimeType": "text/plain"
+          }
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": ""
+        }
+      ],
+      "saveCalls": []
+    },
+    "resource-neither-arm": {
+      "blocks": [
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "file:///h.txt"
+          }
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "[binary resource file:///h.txt (unknown type) omitted]"
+        }
+      ],
+      "saveCalls": []
+    },
+    "resource-empty-blob": {
+      "blocks": [
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "file:///e.bin",
+            "blob": "",
+            "mimeType": "application/octet-stream"
+          }
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "[Binary resource file:///e.bin (application/octet-stream, 0B) saved to /tmp/full.bin]"
+        }
+      ],
+      "saveCalls": [
+        {
+          "bytes": 0,
+          "extension": ".bin"
+        }
+      ]
+    },
+    "resource-both-arms": {
+      "blocks": [
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "file:///both.bin",
+            "text": "inline",
+            "blob": "AAEC",
+            "mimeType": "application/octet-stream"
+          }
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "[Binary resource file:///both.bin (application/octet-stream, 3B) saved to /tmp/full.bin]"
+        }
+      ],
+      "saveCalls": [
+        {
+          "bytes": 3,
+          "extension": ".bin"
+        }
+      ]
+    },
+    "resource-text-blob": {
+      "blocks": [
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "file:///c.txt",
+            "blob": "aGVsbG8=",
+            "mimeType": "text/plain"
+          }
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "hello"
+        }
+      ],
+      "saveCalls": []
+    },
+    "resource-json-blob": {
+      "blocks": [
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "file:///d.json",
+            "blob": "eyJuIjoxfQ==",
+            "mimeType": "application/json; charset=utf-8"
+          }
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"n\":1}"
+        }
+      ],
+      "saveCalls": []
+    },
+    "resource-binary-blob": {
+      "blocks": [
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "file:///e.pdf",
+            "blob": "AAEC",
+            "mimeType": "application/pdf"
+          }
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "[Binary resource file:///e.pdf (application/pdf, 3B) saved to /tmp/full.pdf]"
+        }
+      ],
+      "saveCalls": [
+        {
+          "bytes": 3,
+          "extension": ".pdf"
+        }
+      ]
+    },
+    "resource-image-blob": {
+      "blocks": [
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "file:///g.png",
+            "blob": "aW1n",
+            "mimeType": "image/png"
+          }
+        }
+      ],
+      "content": [
+        {
+          "type": "image",
+          "mimeType": "image/png",
+          "data": "aW1n"
+        }
+      ],
+      "saveCalls": []
+    },
+    "resource-wrapped-blob": {
+      "blocks": [
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "file:///i.bin",
+            "blob": "aGVs\nbG8g\nd29y\nbGQ=",
+            "mimeType": "application/octet-stream"
+          }
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "[Binary resource file:///i.bin (application/octet-stream, 11B) saved to /tmp/full.bin]"
+        }
+      ],
+      "saveCalls": [
+        {
+          "bytes": 11,
+          "extension": ".bin"
+        }
+      ]
+    },
+    "base64url-one": {
+      "blocks": [
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "file:///u1.bin",
+            "blob": "_-",
+            "mimeType": "application/octet-stream"
+          }
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "[Binary resource file:///u1.bin (application/octet-stream, 1B) saved to /tmp/full.bin]"
+        }
+      ],
+      "saveCalls": [
+        {
+          "bytes": 1,
+          "extension": ".bin"
+        }
+      ]
+    },
+    "base64url-two": {
+      "blocks": [
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "file:///u2.bin",
+            "blob": "a-b",
+            "mimeType": "application/octet-stream"
+          }
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "[Binary resource file:///u2.bin (application/octet-stream, 2B) saved to /tmp/full.bin]"
+        }
+      ],
+      "saveCalls": [
+        {
+          "bytes": 2,
+          "extension": ".bin"
+        }
+      ]
+    },
+    "base64url-three": {
+      "blocks": [
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "file:///u3.bin",
+            "blob": "AA_A",
+            "mimeType": "application/octet-stream"
+          }
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "[Binary resource file:///u3.bin (application/octet-stream, 3B) saved to /tmp/full.bin]"
+        }
+      ],
+      "saveCalls": [
+        {
+          "bytes": 3,
+          "extension": ".bin"
+        }
+      ]
+    },
+    "base64url-text": {
+      "blocks": [
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "file:///u4.txt",
+            "blob": "aGVsbG8_",
+            "mimeType": "text/plain"
+          }
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "hello?"
+        }
+      ],
+      "saveCalls": []
+    },
+    "uri-opaque-mailto": {
+      "blocks": [
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "mailto:a@b.txt",
+            "blob": "AAEC",
+            "mimeType": "application/octet-stream"
+          }
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "[Binary resource mailto:a@b.txt (application/octet-stream, 3B) saved to /tmp/full.txt]"
+        }
+      ],
+      "saveCalls": [
+        {
+          "bytes": 3,
+          "extension": ".txt"
+        }
+      ]
+    },
+    "uri-opaque-urn": {
+      "blocks": [
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "urn:a.b",
+            "blob": "AAEC",
+            "mimeType": "application/octet-stream"
+          }
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "[Binary resource urn:a.b (application/octet-stream, 3B) saved to /tmp/full.b]"
+        }
+      ],
+      "saveCalls": [
+        {
+          "bytes": 3,
+          "extension": ".b"
+        }
+      ]
+    },
+    "uri-drive-letter": {
+      "blocks": [
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "C:\\dir\\file.txt",
+            "blob": "AAEC",
+            "mimeType": "application/octet-stream"
+          }
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "[Binary resource C:\\dir\\file.txt (application/octet-stream, 3B) saved to /tmp/full.txt]"
+        }
+      ],
+      "saveCalls": [
+        {
+          "bytes": 3,
+          "extension": ".txt"
+        }
+      ]
+    },
+    "uri-file-query": {
+      "blocks": [
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "file:///y.tar.gz?v=1",
+            "blob": "AAEC",
+            "mimeType": "application/octet-stream"
+          }
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "[Binary resource file:///y.tar.gz?v=1 (application/octet-stream, 3B) saved to /tmp/full.gz]"
+        }
+      ],
+      "saveCalls": [
+        {
+          "bytes": 3,
+          "extension": ".gz"
+        }
+      ]
+    },
+    "uri-raw-query": {
+      "blocks": [
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "x.txt?a.b",
+            "blob": "AAEC",
+            "mimeType": "application/octet-stream"
+          }
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "[Binary resource x.txt?a.b (application/octet-stream, 3B) saved to /tmp/full.b]"
+        }
+      ],
+      "saveCalls": [
+        {
+          "bytes": 3,
+          "extension": ".b"
+        }
+      ]
+    },
+    "uri-no-extension": {
+      "blocks": [
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "file:///noext",
+            "blob": "AAEC",
+            "mimeType": "application/octet-stream"
+          }
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "[Binary resource file:///noext (application/octet-stream, 3B) saved to /tmp/full.bin]"
+        }
+      ],
+      "saveCalls": [
+        {
+          "bytes": 3,
+          "extension": ".bin"
+        }
+      ]
+    },
+    "save-failure": {
+      "blocks": [
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "file:///j.fail",
+            "blob": "AAEC",
+            "mimeType": "application/octet-stream"
+          }
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "[Binary resource file:///j.fail (application/octet-stream, 3B) could not be saved: disk full]"
+        }
+      ],
+      "saveCalls": [
+        {
+          "bytes": 3,
+          "extension": ".fail"
+        }
+      ]
+    },
+    "text-block": {
+      "blocks": [
+        {
+          "type": "text",
+          "text": "hello"
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "hello"
+        }
+      ],
+      "saveCalls": []
+    },
+    "image-block": {
+      "blocks": [
+        {
+          "type": "image",
+          "data": "aW1n",
+          "mimeType": "image/png"
+        }
+      ],
+      "content": [
+        {
+          "type": "image",
+          "mimeType": "image/png",
+          "data": "aW1n"
+        }
+      ],
+      "saveCalls": []
+    },
+    "audio-block": {
+      "blocks": [
+        {
+          "type": "audio",
+          "data": "YXVk",
+          "mimeType": "audio/wav"
+        }
+      ],
+      "content": [
+        {
+          "type": "text",
+          "text": "[audio audio/wav omitted]"
+        }
+      ],
+      "saveCalls": []
+    }
+  }
+}

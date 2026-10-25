@@ -39,8 +39,9 @@ type ImageContent struct {
 }
 
 // ResourceContents is TextResourceContents or BlobResourceContents.
-// Upstream discriminates the arm by key presence ("text" in resource), which
-// matters for an empty text payload; TextArm records that (D181).
+// Upstream discriminates the arm by key presence ("text" in resource, "blob"
+// in resource), which matters for an empty payload; TextArm and BlobArm record
+// that (D181).
 type ResourceContents struct {
 	URI      string          `json:"uri"`
 	MimeType *string         `json:"mimeType,omitempty"`
@@ -49,9 +50,12 @@ type ResourceContents struct {
 	Meta     json.RawMessage `json:"_meta,omitempty"`
 
 	TextArm bool `json:"-"`
+	// BlobArm records that the blob member was present, which upstream's
+	// `"blob" in resource` check requires even when the payload is empty.
+	BlobArm bool `json:"-"`
 }
 
-// UnmarshalJSON records whether the text member was present.
+// UnmarshalJSON records which member was present.
 func (r *ResourceContents) UnmarshalJSON(data []byte) error {
 	type alias ResourceContents
 	var a alias
@@ -63,6 +67,7 @@ func (r *ResourceContents) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	_, a.TextArm = probe["text"]
+	_, a.BlobArm = probe["blob"]
 	*r = ResourceContents(a)
 	return nil
 }

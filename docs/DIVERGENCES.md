@@ -4,7 +4,7 @@ Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D273**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D274**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation.
 
 Related documents: [port status](PORTING.md), [architecture](architecture.md),
@@ -2448,3 +2448,29 @@ Test: `warm-invalid-timestamp` in `coding/testdata/cache-stats/golden.json`,
 generated from the pinned `cache-stats.ts`; the fixture records upstream's
 `idleMs: null` (`NaN`) and `coding/cachestats_parity_test.go` asserts the zero
 sentinel plus the unchanged token/cost accounting.
+
+## D274
+
+**Null MCP resource members are normalized instead of rejected.**
+
+Reference: pi v1.4.0 (`4a080252`), `packages/coding-agent/src/extensions/mcp/
+tools.ts` `blockToContent`. Both members below are malformed: the MCP schema
+types `size` as a number and `blob` as a string.
+
+- A `resource_link` with `"size": null` formats the null in upstream:
+  `formatSize(null)` returns `"nullB"`, so the message reads
+  `[Resource <uri> "<name>" (nullB)]`. Pier's `ContentBlock.Size` is a Go
+  `*int64`, where JSON null and an absent member are both nil, so it omits the
+  parenthesized detail. Matching the text would require a raw-member presence
+  flag for invalid data, so the omission is deliberate.
+- A resource with `"blob": null` satisfies upstream's `"blob" in resource`
+  check, and `Buffer.from(null, "base64")` then throws a `TypeError` that
+  rejects the whole conversion. Pier decodes null into the empty string and
+  treats it as an empty blob, saving a zero-byte temp file with the
+  "(unknown type, 0B)"/"(<mime>, 0B) saved to ..." text. The blob arm is
+  otherwise key-presence tracked (`protocol.ResourceContents.BlobArm`, D181).
+
+Tests: the MCP tool fixtures (`coding/testdata/mcp-tools/golden.json`)
+deliberately exclude both null cases; `TestResourceContentsArmByPresence`
+pins key-presence tracking, and `TestMcpToolContentMatchesUpstream` covers the
+neither-member resource that shares this code path.

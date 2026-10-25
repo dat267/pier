@@ -63,14 +63,14 @@ func floatPtr(f float64) *float64 { return &f }
 func strPtr(s string) *string     { return &s }
 
 // The resource arm is discriminated by key presence upstream ("text" in
-// resource), so an empty text payload stays the text arm (D181).
+// resource and "blob" in resource), so an empty payload keeps its arm (D181).
 func TestResourceContentsArmByPresence(t *testing.T) {
 	var contents ResourceContents
 	if err := json.Unmarshal([]byte(`{"uri":"file:///e.txt","text":""}`), &contents); err != nil {
 		t.Fatal(err)
 	}
-	if !contents.TextArm {
-		t.Fatal("empty text did not record the text arm")
+	if !contents.TextArm || contents.BlobArm {
+		t.Fatal("empty text did not record only the text arm")
 	}
 	enc, err := json.Marshal(contents)
 	if err != nil {
@@ -84,8 +84,8 @@ func TestResourceContentsArmByPresence(t *testing.T) {
 	if err := json.Unmarshal([]byte(`{"uri":"file:///f.bin","blob":""}`), &blob); err != nil {
 		t.Fatal(err)
 	}
-	if blob.TextArm {
-		t.Fatal("blob arm recorded as text")
+	if blob.TextArm || !blob.BlobArm {
+		t.Fatal("empty blob did not record only the blob arm")
 	}
 	enc, err = json.Marshal(blob)
 	if err != nil {
@@ -93,5 +93,15 @@ func TestResourceContentsArmByPresence(t *testing.T) {
 	}
 	if string(enc) != `{"uri":"file:///f.bin","blob":""}` {
 		t.Fatalf("marshal = %s", enc)
+	}
+
+	// A resource with neither member has neither arm; upstream's `"blob" in`
+	// check is what decides the binary branch (D181).
+	var neither ResourceContents
+	if err := json.Unmarshal([]byte(`{"uri":"file:///g.bin"}`), &neither); err != nil {
+		t.Fatal(err)
+	}
+	if neither.TextArm || neither.BlobArm {
+		t.Fatalf("neither-arm resource recorded an arm: %+v", neither)
 	}
 }

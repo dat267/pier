@@ -79,6 +79,8 @@ func CreateMcpToolName(server string, tool string, isTaken func(string) bool) st
 }
 
 // sanitizeMcpToolName replaces everything outside [A-Za-z0-9_] with `_`.
+// Upstream's regex runs on UTF-16 code units, so a supplementary-plane
+// character (two code units) becomes two underscores.
 func sanitizeMcpToolName(name string) string {
 	var builder strings.Builder
 	builder.Grow(len(name))
@@ -86,6 +88,8 @@ func sanitizeMcpToolName(name string) string {
 		switch {
 		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '_':
 			builder.WriteRune(r)
+		case r > 0xFFFF:
+			builder.WriteString("__")
 		default:
 			builder.WriteByte('_')
 		}
@@ -217,7 +221,7 @@ func mcpBlockToContent(server string, block protocol.ContentBlock, options Conve
 			read = ". Read it with " + ReadMcpResourceTool + " (server \"" + server + "\")"
 		}
 		description := ""
-		if block.Description != nil {
+		if block.Description != nil && *block.Description != "" {
 			description = ": " + *block.Description
 		}
 		detailText := ""
@@ -226,7 +230,9 @@ func mcpBlockToContent(server string, block protocol.ContentBlock, options Conve
 		}
 		return []ai.Content{ai.TextContent{Text: "[Resource " + block.URI + " \"" + title + "\"" + detailText + description + read + "]"}}, nil
 	}
-	if block.Type == protocol.ContentTypeResource && block.Resource != nil && !block.Resource.TextArm &&
+	// Upstream checks `"blob" in resource`, so a resource with neither member
+	// falls through to the shared block converter and its omission note.
+	if block.Type == protocol.ContentTypeResource && block.Resource != nil && block.Resource.BlobArm &&
 		!strings.HasPrefix(mcpStringValue(block.Resource.MimeType), "image/") {
 		resource := block.Resource
 		data, err := decodeMcpBase64(resource.Blob)
@@ -267,6 +273,12 @@ func decodeMcpBase64(value string) ([]byte, error) {
 		switch {
 		case char >= 'A' && char <= 'Z', char >= 'a' && char <= 'z', char >= '0' && char <= '9', char == '+', char == '/':
 			filtered.WriteByte(char)
+		// Node's base64 decoder accepts the base64url alphabet, mapping `-` to
+		// 62 and `_` to 63 (Buffer.from(value, "base64")).
+		case char == '-':
+			filtered.WriteByte('+')
+		case char == '_':
+			filtered.WriteByte('/')
 		case char == '=':
 			return base64.RawStdEncoding.DecodeString(filtered.String())
 		}
@@ -291,7 +303,12 @@ func mcpStringValue(value *string) string {
 func mcpExtensionOf(uri string) string {
 	path := uri
 	if parsed, err := url.Parse(uri); err == nil && parsed.Scheme != "" {
+		// WHATWG takes the URL's pathname; Go keeps non-hierarchical URIs
+		// (mailto:, urn:, a drive letter) in Opaque.
 		path = parsed.Path
+		if path == "" {
+			path = parsed.Opaque
+		}
 	}
 	base := path
 	if index := strings.LastIndexByte(base, '/'); index >= 0 {
