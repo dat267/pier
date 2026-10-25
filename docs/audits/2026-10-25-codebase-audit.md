@@ -47,6 +47,18 @@ bottleneck is asserted without evidence. Unlisted files remain unreviewed.
 - `ai/sse_lines.go`: L/C/S/F inspected; P not yet inspected in this pass beyond
   existing baseline tests. The splitter is per-stream state, not a shared
   buffer. Provider-specific request/response code remains mostly unreviewed.
+- `ai/jstext.go` number formatting (`JSNumberToString`, `JSNumberToFixed`):
+  P compared in round 6 by a 188-value corpus recorded from Node, including
+  subnormals, the 1e21/1e-6 notation switches, 2^53 boundaries and tie
+  rounding. Matched on the first run; coverage only.
+- `ai/overflow.go`: P/L/S inspected in round 6 against `utils/overflow.ts`; P
+  compared by a 110-case corpus executing the pinned detector (provider texts,
+  near-misses, Cerebras-only branch, silent and length-stop usage). Matched;
+  coverage only.
+- `ai/jstext.go` case mapping: `JSLower` was probed against Node's
+  `toLowerCase` for 27 strings covering U+0130, final sigma, titlecase
+  digraphs, `ẞ`, ligatures, fullwidth and astral letters. All matched; the
+  probe is temporary and this row is its only record.
 
 ### agent
 
@@ -162,6 +174,13 @@ bottleneck is asserted without evidence. Unlisted files remain unreviewed.
 
 ### tui
 
+- `tui/keys.go` `ParseKey`: P/L/S inspected in round 6 against
+  `packages/tui/src/keys.ts`; P compared by a 234-case corpus executing the
+  pinned parser in legacy and Kitty modes (control characters, symbols, CSI/SS3
+  arrows and function keys, modifiers, mouse reports, CSI-u variants, bracketed
+  paste, astral and combining runes, malformed prefixes). Matched; coverage only.
+  `matchesKey`, the kitty negotiation globals and keybinding resolution are not
+  yet compared in this pass.
 - `tui/stdinbuffer.go` sequence parsing, paste, timeout and clear paths:
   L/C/S/F inspected; P not yet independently compared in this pass.
   Consumer ownership is explicit; paste terminator search advances over the
@@ -544,6 +563,9 @@ After explicit user authorization:
 - `6fedf16`: CR-015, bash display output sized in UTF-16 units.
 - `2e02b2b`: output-accumulator snapshot corpus (coverage, no divergence).
 - `5af0539`: truncation corpus (coverage, no divergence).
+- `9320c6a`: JavaScript number-formatting corpus (coverage).
+- `f3c2399`: context-overflow corpus (coverage).
+- `8080a42`: key-parsing corpus (coverage).
 
 All changes were verified before committing. Audit status and lock ownership
 are recorded with this ledger in a separate documentation commit. No push.
@@ -623,6 +645,8 @@ All completed with `GOPROXY=off GOSUMDB=off` on Go commands/recipes:
   integrity/unsupported-host tests also failed red, then passed. `go test
   -count=1 ./coding -run '^TestRPC'` and `go test -count=1 ./mcp/...
   ./coding/rpcclient ./coding/interactive`: PASS.
+- Round 6: the number-formatting, overflow-detection and key-parsing corpora
+  each matched on their first run; `go test -count=1 ./ai ./tui` passes.
 - Round 5: bash-executor corpus failed on two multibyte cases before CR-015,
   then passed; the output-accumulator and truncate corpora matched on their
   first run.
