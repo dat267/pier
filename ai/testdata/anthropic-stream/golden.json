@@ -1,0 +1,504 @@
+[
+  {
+    "name": "text",
+    "sse": "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"id\":\"msg_1\",\"model\":\"claude-sonnet-4-5\",\"usage\":{\"input_tokens\":10,\"output_tokens\":1}}}\n\nevent: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"Hel\"}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"lo\"}}\n\nevent: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":0}\n\nevent: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\"},\"usage\":{\"output_tokens\":5}}\n\nevent: message_stop\ndata: {\"type\":\"message_stop\"}\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 0,
+        "delta": "Hel"
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 0,
+        "delta": "lo"
+      },
+      {
+        "type": "text_end",
+        "contentIndex": 0,
+        "content": "Hello"
+      },
+      {
+        "type": "done",
+        "reason": "stop",
+        "message": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Hello"
+            }
+          ],
+          "api": "anthropic-messages",
+          "provider": "anthropic",
+          "model": "claude-sonnet-4-5",
+          "stopReason": "stop",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cacheWrite1h": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0.00003,
+              "output": 0.00007500000000000001,
+              "total": 0.000105
+            },
+            "input": 10,
+            "output": 5,
+            "totalTokens": 15
+          },
+          "responseId": "msg_1",
+          "rawStopReason": "end_turn"
+        }
+      }
+    ]
+  },
+  {
+    "name": "thinking",
+    "sse": "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"id\":\"msg_2\",\"model\":\"claude-sonnet-4-5\",\"usage\":{\"input_tokens\":3,\"output_tokens\":1}}}\n\nevent: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"thinking\",\"thinking\":\"\"}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"plan\"}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"signature_delta\",\"signature\":\"sig\"}}\n\nevent: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":0}\n\nevent: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":1,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"done\"}}\n\nevent: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":1}\n\nevent: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\"},\"usage\":{\"output_tokens\":7}}\n\nevent: message_stop\ndata: {\"type\":\"message_stop\"}\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "thinking_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "thinking_delta",
+        "contentIndex": 0,
+        "delta": "plan"
+      },
+      {
+        "type": "thinking_end",
+        "contentIndex": 0,
+        "content": "plan"
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 1
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 1,
+        "delta": "done"
+      },
+      {
+        "type": "text_end",
+        "contentIndex": 1,
+        "content": "done"
+      },
+      {
+        "type": "done",
+        "reason": "stop",
+        "message": {
+          "content": [
+            {
+              "type": "thinking",
+              "thinking": "plan",
+              "thinkingSignature": "sig"
+            },
+            {
+              "type": "text",
+              "text": "done"
+            }
+          ],
+          "api": "anthropic-messages",
+          "provider": "anthropic",
+          "model": "claude-sonnet-4-5",
+          "stopReason": "stop",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cacheWrite1h": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0.000009,
+              "output": 0.000105,
+              "total": 0.000114
+            },
+            "input": 3,
+            "output": 7,
+            "totalTokens": 10
+          },
+          "responseId": "msg_2",
+          "rawStopReason": "end_turn"
+        }
+      }
+    ]
+  },
+  {
+    "name": "redacted-thinking",
+    "sse": "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"id\":\"msg_3\",\"model\":\"claude-sonnet-4-5\",\"usage\":{\"input_tokens\":3,\"output_tokens\":0}}}\n\nevent: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"redacted_thinking\",\"data\":\"opaque\"}}\n\nevent: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":0}\n\nevent: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\"},\"usage\":{\"output_tokens\":0}}\n\nevent: message_stop\ndata: {\"type\":\"message_stop\"}\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "thinking_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "thinking_end",
+        "contentIndex": 0,
+        "content": "[Reasoning redacted]"
+      },
+      {
+        "type": "done",
+        "reason": "stop",
+        "message": {
+          "content": [
+            {
+              "type": "thinking",
+              "thinking": "[Reasoning redacted]",
+              "thinkingSignature": "opaque",
+              "redacted": true
+            }
+          ],
+          "api": "anthropic-messages",
+          "provider": "anthropic",
+          "model": "claude-sonnet-4-5",
+          "stopReason": "stop",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cacheWrite1h": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0.000009,
+              "output": 0,
+              "total": 0.000009
+            },
+            "input": 3,
+            "output": 0,
+            "totalTokens": 3
+          },
+          "responseId": "msg_3",
+          "rawStopReason": "end_turn"
+        }
+      }
+    ]
+  },
+  {
+    "name": "tool-use",
+    "sse": "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"id\":\"msg_4\",\"model\":\"claude-sonnet-4-5\",\"usage\":{\"input_tokens\":9,\"output_tokens\":1}}}\n\nevent: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"tool_use\",\"id\":\"toolu_1\",\"name\":\"lookup\",\"input\":{}}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"input_json_delta\",\"partial_json\":\"{\\\"pat\"}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"input_json_delta\",\"partial_json\":\"h\\\":\\\"x\\\"}\"}}\n\nevent: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":0}\n\nevent: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"tool_use\"},\"usage\":{\"output_tokens\":4}}\n\nevent: message_stop\ndata: {\"type\":\"message_stop\"}\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "toolcall_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "toolcall_delta",
+        "contentIndex": 0,
+        "delta": "{\"pat"
+      },
+      {
+        "type": "toolcall_delta",
+        "contentIndex": 0,
+        "delta": "h\":\"x\"}"
+      },
+      {
+        "type": "toolcall_end",
+        "contentIndex": 0,
+        "toolCall": {
+          "id": "toolu_1",
+          "name": "lookup",
+          "arguments": {
+            "path": "x"
+          }
+        }
+      },
+      {
+        "type": "done",
+        "reason": "toolUse",
+        "message": {
+          "content": [
+            {
+              "type": "toolCall",
+              "id": "toolu_1",
+              "name": "lookup",
+              "arguments": {
+                "path": "x"
+              }
+            }
+          ],
+          "api": "anthropic-messages",
+          "provider": "anthropic",
+          "model": "claude-sonnet-4-5",
+          "stopReason": "toolUse",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cacheWrite1h": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0.000027,
+              "output": 0.00006,
+              "total": 0.000087
+            },
+            "input": 9,
+            "output": 4,
+            "totalTokens": 13
+          },
+          "responseId": "msg_4",
+          "rawStopReason": "tool_use"
+        }
+      }
+    ]
+  },
+  {
+    "name": "text-then-tool",
+    "sse": "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"id\":\"msg_5\",\"model\":\"claude-sonnet-4-5\",\"usage\":{\"input_tokens\":5,\"output_tokens\":1,\"cache_read_input_tokens\":2,\"cache_creation_input_tokens\":3}}}\n\nevent: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"looking\"}}\n\nevent: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":0}\n\nevent: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":1,\"content_block\":{\"type\":\"tool_use\",\"id\":\"toolu_2\",\"name\":\"read\",\"input\":{}}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"input_json_delta\",\"partial_json\":\"{\\\"path\\\":\\\"a.txt\\\"}\"}}\n\nevent: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":1}\n\nevent: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"tool_use\"},\"usage\":{\"output_tokens\":6}}\n\nevent: message_stop\ndata: {\"type\":\"message_stop\"}\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 0,
+        "delta": "looking"
+      },
+      {
+        "type": "text_end",
+        "contentIndex": 0,
+        "content": "looking"
+      },
+      {
+        "type": "toolcall_start",
+        "contentIndex": 1
+      },
+      {
+        "type": "toolcall_delta",
+        "contentIndex": 1,
+        "delta": "{\"path\":\"a.txt\"}"
+      },
+      {
+        "type": "toolcall_end",
+        "contentIndex": 1,
+        "toolCall": {
+          "id": "toolu_2",
+          "name": "read",
+          "arguments": {
+            "path": "a.txt"
+          }
+        }
+      },
+      {
+        "type": "done",
+        "reason": "toolUse",
+        "message": {
+          "content": [
+            {
+              "type": "text",
+              "text": "looking"
+            },
+            {
+              "type": "toolCall",
+              "id": "toolu_2",
+              "name": "read",
+              "arguments": {
+                "path": "a.txt"
+              }
+            }
+          ],
+          "api": "anthropic-messages",
+          "provider": "anthropic",
+          "model": "claude-sonnet-4-5",
+          "stopReason": "toolUse",
+          "usage": {
+            "cacheRead": 2,
+            "cacheWrite": 3,
+            "cacheWrite1h": 0,
+            "cost": {
+              "cacheRead": 6e-7,
+              "cacheWrite": 0.00001125,
+              "input": 0.000015,
+              "output": 0.00009,
+              "total": 0.00011685000000000001
+            },
+            "input": 5,
+            "output": 6,
+            "totalTokens": 16
+          },
+          "responseId": "msg_5",
+          "rawStopReason": "tool_use"
+        }
+      }
+    ]
+  },
+  {
+    "name": "max-tokens",
+    "sse": "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"id\":\"msg_6\",\"model\":\"claude-sonnet-4-5\",\"usage\":{\"input_tokens\":2,\"output_tokens\":1}}}\n\nevent: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"truncated\"}}\n\nevent: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":0}\n\nevent: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"max_tokens\"},\"usage\":{\"output_tokens\":2}}\n\nevent: message_stop\ndata: {\"type\":\"message_stop\"}\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 0,
+        "delta": "truncated"
+      },
+      {
+        "type": "text_end",
+        "contentIndex": 0,
+        "content": "truncated"
+      },
+      {
+        "type": "done",
+        "reason": "length",
+        "message": {
+          "content": [
+            {
+              "type": "text",
+              "text": "truncated"
+            }
+          ],
+          "api": "anthropic-messages",
+          "provider": "anthropic",
+          "model": "claude-sonnet-4-5",
+          "stopReason": "length",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cacheWrite1h": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0.000006,
+              "output": 0.00003,
+              "total": 0.000036
+            },
+            "input": 2,
+            "output": 2,
+            "totalTokens": 4
+          },
+          "responseId": "msg_6",
+          "rawStopReason": "max_tokens"
+        }
+      }
+    ]
+  },
+  {
+    "name": "stream-error",
+    "sse": "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"id\":\"msg_7\",\"model\":\"claude-sonnet-4-5\",\"usage\":{\"input_tokens\":2,\"output_tokens\":1}}}\n\nevent: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"partial\"}}\n\nevent: error\ndata: {\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"Overloaded\"}}\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 0,
+        "delta": "partial"
+      },
+      {
+        "type": "error",
+        "reason": "error",
+        "error": {
+          "content": [
+            {
+              "type": "text",
+              "text": "partial"
+            }
+          ],
+          "api": "anthropic-messages",
+          "provider": "anthropic",
+          "model": "claude-sonnet-4-5",
+          "stopReason": "error",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cacheWrite1h": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0.000006,
+              "output": 0.000015,
+              "total": 0.000021000000000000002
+            },
+            "input": 2,
+            "output": 1,
+            "totalTokens": 3
+          },
+          "responseId": "msg_7",
+          "errorMessage": "{\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"Overloaded\"}}"
+        }
+      }
+    ]
+  },
+  {
+    "name": "unterminated-block",
+    "sse": "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"id\":\"msg_8\",\"model\":\"claude-sonnet-4-5\",\"usage\":{\"input_tokens\":2,\"output_tokens\":1}}}\n\nevent: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"hi\"}}\n\nevent: message_stop\ndata: {\"type\":\"message_stop\"}\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 0,
+        "delta": "hi"
+      },
+      {
+        "type": "error",
+        "reason": "error",
+        "error": {
+          "content": [
+            {
+              "type": "text",
+              "text": "hi"
+            }
+          ],
+          "api": "anthropic-messages",
+          "provider": "anthropic",
+          "model": "claude-sonnet-4-5",
+          "stopReason": "error",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cacheWrite1h": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0.000006,
+              "output": 0.000015,
+              "total": 0.000021000000000000002
+            },
+            "input": 2,
+            "output": 1,
+            "totalTokens": 3
+          },
+          "responseId": "msg_8",
+          "errorMessage": "Anthropic stream ended without a stop reason"
+        }
+      }
+    ]
+  }
+]
