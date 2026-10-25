@@ -201,7 +201,6 @@ type RpcClient struct {
 	stderr      strings.Builder
 
 	writeMu sync.Mutex
-	waiters sync.WaitGroup
 
 	// sendFunc replaces the process transport in tests, like upstream's
 	// overridable send.
@@ -256,7 +255,16 @@ func (c *RpcClient) Start(ctx context.Context) error {
 		c.mu.Unlock()
 		return errors.New("Client already started")
 	}
+	c.started = true // Reserve admission before spawning outside the data mutex.
 	c.mu.Unlock()
+	spawned := false
+	defer func() {
+		if !spawned {
+			c.mu.Lock()
+			c.started = false
+			c.mu.Unlock()
+		}
+	}()
 
 	cliPath := c.options.CLIPath
 	if cliPath == "" {
@@ -286,37 +294,48 @@ func (c *RpcClient) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	stdout, err := command.StdoutPipe()
+	// Own the output pipes: Cmd.Wait closes StdoutPipe/StderrPipe even when
+	// an event callback has not returned to drain the remaining peer output.
+	stdout, stdoutWriter, err := os.Pipe()
 	if err != nil {
+		_ = stdin.Close()
 		return err
 	}
-	stderr, err := command.StderrPipe()
+	defer stdoutWriter.Close()
+	stderr, stderrWriter, err := os.Pipe()
 	if err != nil {
+		_ = stdin.Close()
+		_ = stdout.Close()
 		return err
 	}
+	defer stderrWriter.Close()
+	command.Stdout, command.Stderr = stdoutWriter, stderrWriter
 	if err := command.Start(); err != nil {
+		_ = stdin.Close()
+		_ = stdout.Close()
+		_ = stderr.Close()
 		return err
 	}
+	spawned = true
+	_ = stdoutWriter.Close()
+	_ = stderrWriter.Close()
 
 	c.mu.Lock()
 	c.process, c.stdin = command, stdin
 	c.exitErr = nil
-	c.started = true
 	c.processDone = make(chan struct{})
 	done := c.processDone
 	c.mu.Unlock()
 
-	c.waiters.Add(3)
 	go func() {
-		defer c.waiters.Done()
+		defer stderr.Close()
 		c.drainStderr(stderr)
 	}()
 	go func() {
-		defer c.waiters.Done()
+		defer stdout.Close()
 		c.readLines(stdout)
 	}()
 	go func() {
-		defer c.waiters.Done()
 		waitErr := command.Wait()
 		exitErrValue := c.processExitError(waitErr)
 		c.mu.Lock()
@@ -376,11 +395,10 @@ func (c *RpcClient) Stop() {
 			<-done
 		}
 	}
+	// A listener can call Stop from the stdout reader. Join only process exit,
+	// not the reader callbacks, which would make that listener wait on itself.
 	c.mu.Lock()
 	c.pending = map[string]*pendingRequest{}
-	c.mu.Unlock()
-	c.waiters.Wait()
-	c.mu.Lock()
 	c.started = false
 	c.mu.Unlock()
 }
@@ -541,6 +559,9 @@ func (c *RpcClient) send(command map[string]any) (*response, error) {
 func (c *RpcClient) processExitError(waitErr error) error {
 	code := "null"
 	signal := "null"
+	if waitErr == nil {
+		code = "0"
+	}
 	var exit *exec.ExitError
 	if errors.As(waitErr, &exit) {
 		if exit.ExitCode() >= 0 {
