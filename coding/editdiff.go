@@ -642,13 +642,15 @@ func GenerateDiffString(oldContent, newContent string, contextLines int) (diff s
 	if contextLines == 0 {
 		contextLines = 4
 	}
-	oldLines := splitLinesForCounting(oldContent)
-	newLines := splitLinesForCounting(newContent)
-	ops := diffLinesOps(oldLines, newLines)
+	// diffLines() diffs newline-carrying tokens, so a line without its trailing
+	// newline differs from one with it. Stripping the newline first would hide a
+	// final-newline-only edit.
+	oldTokens := splitPatchTokens(oldContent)
+	newTokens := splitPatchTokens(newContent)
+	components := jsdiff.DiffComponents(oldTokens, newTokens, func(a, b string) bool { return a == b })
 
 	// Upstream sizes the line-number column from `oldContent.split("\n")`, which
-	// keeps the empty element after a trailing newline; the diff itself uses the
-	// jsdiff line model (no trailing empty), matching splitLinesForCounting.
+	// keeps the empty element after a trailing newline.
 	maxLineNum := max(len(strings.Split(oldContent, "\n")), len(strings.Split(newContent, "\n")))
 	lineNumWidth := len(fmt.Sprintf("%d", maxLineNum))
 	pad := func(n int) string {
@@ -664,26 +666,41 @@ func GenerateDiffString(oldContent, newContent string, contextLines int) (diff s
 	lastWasChange := false
 	firstChanged := -1
 
-	// Group ops into runs by kind.
+	// Group the components into runs of text by kind, then split each run into
+	// its lines the way upstream renders `part.value.split("\n")`.
 	type part struct {
 		kind  opKind
 		lines []string
 	}
 	var parts []part
-	for _, op := range ops {
-		var line string
-		switch op.kind {
-		case opEqual:
-			line = oldLines[op.oldIndex]
-		case opRemove:
-			line = oldLines[op.oldIndex]
-		case opAdd:
-			line = newLines[op.newIndex]
+	appendRun := func(kind opKind, tokens []string) {
+		value := strings.Join(tokens, "")
+		lines := strings.Split(value, "\n")
+		if lines[len(lines)-1] == "" {
+			lines = lines[:len(lines)-1]
 		}
-		if len(parts) > 0 && parts[len(parts)-1].kind == op.kind {
-			parts[len(parts)-1].lines = append(parts[len(parts)-1].lines, line)
-		} else {
-			parts = append(parts, part{kind: op.kind, lines: []string{line}})
+		if len(lines) == 0 {
+			return
+		}
+		if len(parts) > 0 && parts[len(parts)-1].kind == kind {
+			parts[len(parts)-1].lines = append(parts[len(parts)-1].lines, lines...)
+			return
+		}
+		parts = append(parts, part{kind: kind, lines: lines})
+	}
+	oldIndex, newIndex := 0, 0
+	for _, component := range components {
+		switch {
+		case component.Added:
+			appendRun(opAdd, newTokens[newIndex:newIndex+component.Count])
+			newIndex += component.Count
+		case component.Removed:
+			appendRun(opRemove, oldTokens[oldIndex:oldIndex+component.Count])
+			oldIndex += component.Count
+		default:
+			appendRun(opEqual, oldTokens[oldIndex:oldIndex+component.Count])
+			oldIndex += component.Count
+			newIndex += component.Count
 		}
 	}
 

@@ -384,6 +384,13 @@ roughly 50 KB and 300 KB previously collapsed to its final chunk and reported
 pinned function and compares output and persisted-file SHA-256 values, with
 ASCII and small-chunk controls.
 
+The edit display diff now tokenizes with newline-carrying lines, matching
+`core/tools/edit-diff.ts` `generateDiffString`'s `Diff.diffLines`. A
+final-newline-only edit previously produced an empty diff and no
+`firstChangedLine` even though the unified patch was correct, so the persisted
+tool details and the interactive preview omitted the change. The generated
+corpus compares both the display diff and the patch over 27 content pairs.
+
 **Upstream status.** v1.4.0 (`4a080252`) is the latest released tag after
 refreshing upstream tags and is the port's reference pin. It is 81 commits past
 v1.3.0. The pin identifies the sources to review, not a claim that every change

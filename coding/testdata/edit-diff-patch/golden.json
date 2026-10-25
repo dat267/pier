@@ -1,0 +1,210 @@
+[
+  {
+    "name": "identical",
+    "oldContent": "same\n",
+    "newContent": "same\n",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n",
+    "expectedDiff": "",
+    "expectedFirstChangedLine": -1
+  },
+  {
+    "name": "newline-only",
+    "oldContent": "same",
+    "newContent": "same\n",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n@@ -1,1 +1,1 @@\n-same\n\\ No newline at end of file\n+same\n",
+    "expectedDiff": "-1 same\n+1 same",
+    "expectedFirstChangedLine": 1
+  },
+  {
+    "name": "newline-only-reverse",
+    "oldContent": "same\n",
+    "newContent": "same",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n@@ -1,1 +1,1 @@\n-same\n+same\n\\ No newline at end of file\n",
+    "expectedDiff": "-1 same\n+1 same",
+    "expectedFirstChangedLine": 1
+  },
+  {
+    "name": "from-empty",
+    "oldContent": "",
+    "newContent": "new\n",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n@@ -0,0 +1,1 @@\n+new\n",
+    "expectedDiff": "+1 new",
+    "expectedFirstChangedLine": 1
+  },
+  {
+    "name": "to-empty",
+    "oldContent": "old\n",
+    "newContent": "",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n@@ -1,1 +0,0 @@\n-old\n",
+    "expectedDiff": "-1 old",
+    "expectedFirstChangedLine": 1
+  },
+  {
+    "name": "both-empty",
+    "oldContent": "",
+    "newContent": "",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n",
+    "expectedDiff": "",
+    "expectedFirstChangedLine": -1
+  },
+  {
+    "name": "both-empty-different-newline",
+    "oldContent": "",
+    "newContent": "\n",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n@@ -0,0 +1,1 @@\n+\n",
+    "expectedDiff": "+1 ",
+    "expectedFirstChangedLine": 1
+  },
+  {
+    "name": "prepend",
+    "oldContent": "b\nc\n",
+    "newContent": "a\nb\nc\n",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n@@ -1,2 +1,3 @@\n+a\n b\n c\n",
+    "expectedDiff": "+1 a\n 1 b\n 2 c",
+    "expectedFirstChangedLine": 1
+  },
+  {
+    "name": "append",
+    "oldContent": "a\nb\n",
+    "newContent": "a\nb\nc\n",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n@@ -1,2 +1,3 @@\n a\n b\n+c\n",
+    "expectedDiff": " 1 a\n 2 b\n+3 c",
+    "expectedFirstChangedLine": 3
+  },
+  {
+    "name": "delete-middle",
+    "oldContent": "a\nb\nc\n",
+    "newContent": "a\nc\n",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n@@ -1,3 +1,2 @@\n a\n-b\n c\n",
+    "expectedDiff": " 1 a\n-2 b\n 3 c",
+    "expectedFirstChangedLine": 2
+  },
+  {
+    "name": "change-first",
+    "oldContent": "a\nb\nc\n",
+    "newContent": "x\nb\nc\n",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n@@ -1,3 +1,3 @@\n-a\n+x\n b\n c\n",
+    "expectedDiff": "-1 a\n+1 x\n 2 b\n 3 c",
+    "expectedFirstChangedLine": 1
+  },
+  {
+    "name": "change-last",
+    "oldContent": "a\nb\nc\n",
+    "newContent": "a\nb\nx\n",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n@@ -1,3 +1,3 @@\n a\n b\n-c\n+x\n",
+    "expectedDiff": " 1 a\n 2 b\n-3 c\n+3 x",
+    "expectedFirstChangedLine": 3
+  },
+  {
+    "name": "all-change",
+    "oldContent": "a\nb\nc\n",
+    "newContent": "x\ny\nz\n",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n@@ -1,3 +1,3 @@\n-a\n-b\n-c\n+x\n+y\n+z\n",
+    "expectedDiff": "-1 a\n-2 b\n-3 c\n+1 x\n+2 y\n+3 z",
+    "expectedFirstChangedLine": 1
+  },
+  {
+    "name": "duplicate-lines",
+    "oldContent": "a\na\na\n",
+    "newContent": "a\n",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n@@ -1,3 +1,1 @@\n a\n-a\n-a\n",
+    "expectedDiff": " 1 a\n-2 a\n-3 a",
+    "expectedFirstChangedLine": 2
+  },
+  {
+    "name": "duplicate-insert",
+    "oldContent": "a\n",
+    "newContent": "a\na\na\n",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n@@ -1,1 +1,3 @@\n a\n+a\n+a\n",
+    "expectedDiff": " 1 a\n+2 a\n+3 a",
+    "expectedFirstChangedLine": 2
+  },
+  {
+    "name": "interleaved",
+    "oldContent": "a\nb\na\nb\n",
+    "newContent": "b\na\nb\na\n",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n@@ -1,4 +1,4 @@\n-a\n b\n a\n b\n+a\n",
+    "expectedDiff": "-1 a\n 2 b\n 3 a\n 4 b\n+4 a",
+    "expectedFirstChangedLine": 1
+  },
+  {
+    "name": "crlf",
+    "oldContent": "a\r\nb\r\n",
+    "newContent": "a\r\nc\r\n",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n@@ -1,2 +1,2 @@\n a\r\n-b\r\n+c\r\n",
+    "expectedDiff": " 1 a\r\n-2 b\r\n+2 c\r",
+    "expectedFirstChangedLine": 2
+  },
+  {
+    "name": "multibyte",
+    "oldContent": "漢\n字\n",
+    "newContent": "漢\n新\n",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n@@ -1,2 +1,2 @@\n 漢\n-字\n+新\n",
+    "expectedDiff": " 1 漢\n-2 字\n+2 新",
+    "expectedFirstChangedLine": 2
+  },
+  {
+    "name": "astral",
+    "oldContent": "😀\n😁\n",
+    "newContent": "😀\n😂\n",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n@@ -1,2 +1,2 @@\n 😀\n-😁\n+😂\n",
+    "expectedDiff": " 1 😀\n-2 😁\n+2 😂",
+    "expectedFirstChangedLine": 2
+  },
+  {
+    "name": "blank-lines",
+    "oldContent": "a\n\n\nb\n",
+    "newContent": "a\n\nb\n",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n@@ -1,4 +1,3 @@\n a\n \n-\n b\n",
+    "expectedDiff": " 1 a\n 2 \n-3 \n 4 b",
+    "expectedFirstChangedLine": 3
+  },
+  {
+    "name": "long-context",
+    "oldContent": "line0\nline1\nline2\nline3\nline4\nline5\nline6\nline7\nline8\nline9\nline10\nline11\n",
+    "newContent": "line0\nline1\nline2\nline3\nline4\nchanged\ntail0\ntail1\ntail2\ntail3\ntail4\ntail5\n",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n@@ -2,11 +2,11 @@\n line1\n line2\n line3\n line4\n-line5\n-line6\n-line7\n-line8\n-line9\n-line10\n-line11\n+changed\n+tail0\n+tail1\n+tail2\n+tail3\n+tail4\n+tail5\n",
+    "expectedDiff": "    ...\n  2 line1\n  3 line2\n  4 line3\n  5 line4\n- 6 line5\n- 7 line6\n- 8 line7\n- 9 line8\n-10 line9\n-11 line10\n-12 line11\n+ 6 changed\n+ 7 tail0\n+ 8 tail1\n+ 9 tail2\n+10 tail3\n+11 tail4\n+12 tail5",
+    "expectedFirstChangedLine": 6
+  },
+  {
+    "name": "two-hunks",
+    "oldContent": "line0\nline1\nline2\nline3\nline4\nline5\nline6\nline7\nline8\nline9\nline10\nline11\nline12\nline13\nline14\nline15\nline16\nline17\nline18\nline19\n",
+    "newContent": "line0\nline1\ntwo\nmid0\nmid1\nmid2\nnine\ntail0\ntail1\ntail2\ntail3\ntail4\ntail5\ntail6\ntail7\ntail8\ntail9\ntail10\ntail11\ntail12\ntail13\n",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n@@ -1,20 +1,21 @@\n line0\n line1\n-line2\n-line3\n-line4\n-line5\n-line6\n-line7\n-line8\n-line9\n-line10\n-line11\n-line12\n-line13\n-line14\n-line15\n-line16\n-line17\n-line18\n-line19\n+two\n+mid0\n+mid1\n+mid2\n+nine\n+tail0\n+tail1\n+tail2\n+tail3\n+tail4\n+tail5\n+tail6\n+tail7\n+tail8\n+tail9\n+tail10\n+tail11\n+tail12\n+tail13\n",
+    "expectedDiff": "  1 line0\n  2 line1\n- 3 line2\n- 4 line3\n- 5 line4\n- 6 line5\n- 7 line6\n- 8 line7\n- 9 line8\n-10 line9\n-11 line10\n-12 line11\n-13 line12\n-14 line13\n-15 line14\n-16 line15\n-17 line16\n-18 line17\n-19 line18\n-20 line19\n+ 3 two\n+ 4 mid0\n+ 5 mid1\n+ 6 mid2\n+ 7 nine\n+ 8 tail0\n+ 9 tail1\n+10 tail2\n+11 tail3\n+12 tail4\n+13 tail5\n+14 tail6\n+15 tail7\n+16 tail8\n+17 tail9\n+18 tail10\n+19 tail11\n+20 tail12\n+21 tail13",
+    "expectedFirstChangedLine": 3
+  },
+  {
+    "name": "no-final-newline-change",
+    "oldContent": "a\nb\nc",
+    "newContent": "a\nb\nd",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n@@ -1,3 +1,3 @@\n a\n b\n-c\n\\ No newline at end of file\n+d\n\\ No newline at end of file\n",
+    "expectedDiff": " 1 a\n 2 b\n-3 c\n+3 d",
+    "expectedFirstChangedLine": 3
+  },
+  {
+    "name": "only-final-newline-differs",
+    "oldContent": "a\nb\nc\n",
+    "newContent": "a\nb\nc",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n@@ -1,3 +1,3 @@\n a\n b\n-c\n+c\n\\ No newline at end of file\n",
+    "expectedDiff": " 1 a\n 2 b\n-3 c\n+3 c",
+    "expectedFirstChangedLine": 3
+  },
+  {
+    "name": "trailing-blank",
+    "oldContent": "a\nb\n\n",
+    "newContent": "a\nb\n",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n@@ -1,3 +1,2 @@\n a\n b\n-\n",
+    "expectedDiff": " 1 a\n 2 b\n-3 ",
+    "expectedFirstChangedLine": 3
+  },
+  {
+    "name": "whitespace-only",
+    "oldContent": "a\n \nb\n",
+    "newContent": "a\n  \nb\n",
+    "expectedPatch": "--- f.txt\n+++ f.txt\n@@ -1,3 +1,3 @@\n a\n- \n+  \n b\n",
+    "expectedDiff": " 1 a\n-2  \n+2   \n 3 b",
+    "expectedFirstChangedLine": 2
+  }
+]
