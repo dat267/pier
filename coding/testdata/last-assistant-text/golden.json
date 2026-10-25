@@ -1,0 +1,239 @@
+[
+  {
+    "name": "no-assistant",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "expectedText": "",
+    "rpcData": {}
+  },
+  {
+    "name": "plain-trim",
+    "messages": [
+      {
+        "role": "assistant",
+        "api": "anthropic-messages",
+        "provider": "fixture",
+        "model": "m",
+        "content": [
+          {
+            "type": "text",
+            "text": " \tanswer\r\n"
+          }
+        ],
+        "stopReason": "stop",
+        "timestamp": 1
+      }
+    ],
+    "expectedText": "answer",
+    "rpcData": {
+      "text": "answer"
+    }
+  },
+  {
+    "name": "bom-boundaries",
+    "messages": [
+      {
+        "role": "assistant",
+        "api": "anthropic-messages",
+        "provider": "fixture",
+        "model": "m",
+        "content": [
+          {
+            "type": "text",
+            "text": "﻿answer﻿"
+          }
+        ],
+        "stopReason": "stop",
+        "timestamp": 1
+      }
+    ],
+    "expectedText": "answer",
+    "rpcData": {
+      "text": "answer"
+    }
+  },
+  {
+    "name": "nel-boundaries",
+    "messages": [
+      {
+        "role": "assistant",
+        "api": "anthropic-messages",
+        "provider": "fixture",
+        "model": "m",
+        "content": [
+          {
+            "type": "text",
+            "text": "answer"
+          }
+        ],
+        "stopReason": "stop",
+        "timestamp": 1
+      }
+    ],
+    "expectedText": "answer",
+    "rpcData": {
+      "text": "answer"
+    }
+  },
+  {
+    "name": "bom-only",
+    "messages": [
+      {
+        "role": "assistant",
+        "api": "anthropic-messages",
+        "provider": "fixture",
+        "model": "m",
+        "content": [
+          {
+            "type": "text",
+            "text": "﻿"
+          }
+        ],
+        "stopReason": "stop",
+        "timestamp": 1
+      }
+    ],
+    "expectedText": "",
+    "rpcData": {}
+  },
+  {
+    "name": "text-blocks",
+    "messages": [
+      {
+        "role": "assistant",
+        "api": "anthropic-messages",
+        "provider": "fixture",
+        "model": "m",
+        "content": [
+          {
+            "type": "text",
+            "text": " first"
+          },
+          {
+            "type": "thinking",
+            "thinking": "hidden"
+          },
+          {
+            "type": "text",
+            "text": " second "
+          }
+        ],
+        "stopReason": "stop",
+        "timestamp": 1
+      }
+    ],
+    "expectedText": "first second",
+    "rpcData": {
+      "text": "first second"
+    }
+  },
+  {
+    "name": "aborted-empty-skipped",
+    "messages": [
+      {
+        "role": "assistant",
+        "api": "anthropic-messages",
+        "provider": "fixture",
+        "model": "m",
+        "content": [
+          {
+            "type": "text",
+            "text": "previous"
+          }
+        ],
+        "stopReason": "stop",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "api": "anthropic-messages",
+        "provider": "fixture",
+        "model": "m",
+        "content": [],
+        "stopReason": "aborted",
+        "timestamp": 1
+      }
+    ],
+    "expectedText": "previous",
+    "rpcData": {
+      "text": "previous"
+    }
+  },
+  {
+    "name": "aborted-with-text",
+    "messages": [
+      {
+        "role": "assistant",
+        "api": "anthropic-messages",
+        "provider": "fixture",
+        "model": "m",
+        "content": [
+          {
+            "type": "text",
+            "text": "previous"
+          }
+        ],
+        "stopReason": "stop",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "api": "anthropic-messages",
+        "provider": "fixture",
+        "model": "m",
+        "content": [
+          {
+            "type": "text",
+            "text": " latest "
+          }
+        ],
+        "stopReason": "aborted",
+        "timestamp": 1
+      }
+    ],
+    "expectedText": "latest",
+    "rpcData": {
+      "text": "latest"
+    }
+  },
+  {
+    "name": "latest-non-text",
+    "messages": [
+      {
+        "role": "assistant",
+        "api": "anthropic-messages",
+        "provider": "fixture",
+        "model": "m",
+        "content": [
+          {
+            "type": "text",
+            "text": "previous"
+          }
+        ],
+        "stopReason": "stop",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "api": "anthropic-messages",
+        "provider": "fixture",
+        "model": "m",
+        "content": [
+          {
+            "type": "thinking",
+            "thinking": "hidden"
+          }
+        ],
+        "stopReason": "stop",
+        "timestamp": 1
+      }
+    ],
+    "expectedText": "",
+    "rpcData": {}
+  }
+]

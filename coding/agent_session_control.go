@@ -898,7 +898,7 @@ func (s *AgentSession) GetLastAssistantText() string {
 				builder.WriteString(text.Text)
 			}
 		}
-		if trimmed := strings.TrimSpace(builder.String()); trimmed != "" {
+		if trimmed := ai.JSTrim(builder.String()); trimmed != "" {
 			return trimmed
 		}
 		return ""
