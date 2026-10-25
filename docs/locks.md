@@ -101,6 +101,21 @@ own mutex, so no UI lock or off-loop path is introduced.
 | `imageTranscodeState.mu` | `tui/imagecomponent.go` | the package-global image transcode cache and injected transcoder | **retained**: shared decode cache, not UI state |
 | `modelCompletionCache.mu` | `coding/interactive/interactivemode_helpers.go` | the autocomplete model-item cache keyed by the session scope revision | **retained**: caches immutable item slices across completion queries, not UI state |
 
+`StreamableHttpTransport.Send` links its caller context to the transport stop
+context. Synchronous responses release that link on return; an SSE response
+worker owns it through stream consumption. Closing the transport therefore
+cancels both POSTs and GETs, without canceling a live SSE body at the initial
+Send return or changing shared auth recovery ownership. No new mutex is added.
+
+The typed `coding/rpcclient.RpcClient` snapshots request/listener state under
+`mu` and serializes stdin writes under `writeMu`. Event callbacks run outside
+both. Output readers own their pipe handles, so `Cmd.Wait` cannot close unread
+final events. Natural process exit still rejects pending requests immediately;
+`Stop` waits for that process-exit publication, not reader completion, since a
+reader callback may itself call `Stop`. Startup reserves admission under `mu`
+before spawning outside it, and releases that reservation on setup failure.
+No callback queue or UI lock is added.
+
 D235's stdio RPC runtime adds no UI lock. The existing `AgentSession.mu` also
 guards steering/follow-up display queues across command admission and agent
 events; snapshots are taken under it and listeners are called outside it.

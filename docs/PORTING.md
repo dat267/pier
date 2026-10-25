@@ -332,6 +332,50 @@ a bash-only branch, the exit/truncation text, `custom_message`, summary entries
 with cumulative file lists, tool-call file operations, both budget cases and
 the inactive entry types.
 
+**Code-review follow-up (2026-10-25).** Project `.pi/mcp.json` now participates
+in `HasTrustRequiringProjectResources`, matching `core/trust-manager.ts`.
+Previously an MCP-only project hit the no-resource fast path and was trusted
+without consulting its stored decision, default policy or trust prompt, so
+project server commands could be admitted without project approval. The
+source-generated `coding/testdata/project-trust/` corpus checks refusal,
+stored decisions, explicit overrides, prompts and admitted config entries;
+no fixture starts a server command. MCP OAuth callbacks also bind IPv6 hosts
+with `net.JoinHostPort` and compare escaped request paths like JS `URL.pathname`
+(`packages/mcp/src/oauth/callback.ts`); a nine-case source-generated corpus
+covers ordinary/extra paths, aliases, pending redirects and IPv4/IPv6. The Go
+worker bridge clears consumed queue slots so completed closures no longer
+retain session snapshots through the backing array. Its channel-scheduled,
+weak-reference regression fails before the change and passes after it. The
+[coverage ledger](audits/2026-10-25-codebase-audit.md) records the partial
+review and remaining work, not a claim of exhaustive safety.
+
+The next review slice fixes the typed RPC client's subprocess lifecycle
+(`modes/rpc/rpc-client.ts`, `modes/rpc/jsonl.ts`): listener-initiated `Stop` no
+longer joins its own stdout reader, parent-owned output pipes preserve final
+events across natural process exit, and a nil Go wait error reports exit code
+0 rather than null. Channel-scheduled subprocess regressions reproduce both
+lifecycle failures, with nonzero/zero exit and restart controls. The UI
+scheduler also retains its pending input wake across an otherwise-idle beat,
+so a lone Escape cannot lose its timeout when no component animates
+(`tui/src/stdin-buffer.ts`, D143/D145). A real input-buffer regression runs
+under `testing/synctest`; no new timer or worker is introduced.
+
+A third slice makes RPC startup admission atomic before spawning, clears
+consumed UI work slots so prompt captures can be collected, and links MCP HTTP
+POST lifetimes to transport shutdown without closing an SSE body when `Send`
+returns after headers (`mcp/src/transports/streamable-http.ts`). In-memory RPC
+forks now settle the outgoing turn before mutating the reused manager, matching
+`core/agent-session-runtime.ts`; otherwise its aborted tail appeared in the new
+branch. Fork/clone also reject a missing Go replacement factory before branch
+side effects. These repairs have red-first admission, weak-reference, loopback
+HTTP cancellation and JSONL session-integrity regressions.
+
+The next parity check corrects `GetLastAssistantText` to use JavaScript's trim
+set: U+FEFF is removed at the boundaries, U+0085 is retained, and a U+FEFF-only
+reply is absent. The pinned `agent-session.ts` method generates a nine-case
+corpus, also checked through `get_last_assistant_text` RPC responses; normal
+text, block joins and aborted/non-text message selection remain controls.
+
 **Upstream status.** v1.4.0 (`4a080252`) is the latest released tag after
 refreshing upstream tags and is the port's reference pin. It is 81 commits past
 v1.3.0. The pin identifies the sources to review, not a claim that every change
