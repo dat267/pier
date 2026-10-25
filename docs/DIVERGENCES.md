@@ -4,7 +4,7 @@ Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D277**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D278**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation.
 
 Related documents: [port status](PORTING.md), [architecture](architecture.md),
@@ -2556,3 +2556,28 @@ The remaining differences are deliberate:
 Tests: `TestSettingsLoadMatchesUpstream` with `coding/testdata/settings-load/`
 (global and project scope, mistyped string/number/array/nested values, an
 invalid-JSON control and an unknown-member control).
+
+## D278
+
+**A malformed session header id is rejected by listing and loading alike.**
+
+Reference: pi v1.4.0 (`4a080252`), `packages/coding-agent/src/core/
+session-manager.ts`. `loadEntriesFromFile` requires the first parsed entry to be
+a `session` header whose `id` is a string; an empty string counts, while a
+missing, `null` or non-string id discards the file. `buildSessionInfo` (the
+resume listing) only checks `type === "session"`, so the reference *lists* such
+a file with the invalid id (`undefined`, `null` or a number) even though it
+cannot open it — the picker offers a session that fails to resume.
+
+Pier's typed `SessionHeader` cannot hold a non-string id, so the header line
+fails to decode and the listing skips the file. Loading and listing therefore
+both reject a header whose id is missing, `null` or non-string, which is
+deliberately stricter than the reference's listing. A header with a string id —
+including `""` — is accepted by both, matching the reference; the loaders check
+the raw member so an empty id is distinguished from an absent one
+(`sessionHeaderHasStringID`).
+
+Tests: `TestSessionLoadMatchesUpstream` with `coding/testdata/session-load/`
+(valid, empty, missing, null and non-string ids, a non-session first entry, and
+malformed/blank first lines; listing is compared where the header id is a
+string).

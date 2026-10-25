@@ -153,8 +153,12 @@ func contains(list []string, want string) bool { return slices.Contains(list, wa
 // BuildSystemPromptSections builds the ordered prompt sections
 // (port of buildSystemPromptSections).
 func BuildSystemPromptSections(input BuildSystemPromptOptions) (SystemPromptSections, error) {
+	// Only an omitted list gets the default tools (upstream's `??`): an
+	// explicit empty list means the session has no tools, so the rules and the
+	// skill-reader check must see it empty. Session callers always pass the
+	// active tool names, which is a non-nil (possibly empty) list.
 	selectedTools := input.SelectedTools
-	if len(selectedTools) == 0 {
+	if selectedTools == nil {
 		selectedTools = []string{"read", "bash", "edit", "write"}
 	}
 	toolSnippets := input.ToolSnippets

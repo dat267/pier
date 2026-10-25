@@ -626,10 +626,10 @@ func LoadEntriesFromFileBuffered(filePath string) ([]FileEntry, []byte, bool, er
 		return entries, data, fast, nil
 	}
 	header := entries[0]
-	if header.Header == nil || header.Header.ID == "" {
+	if header.Header == nil || (header.Header.ID == "" && !sessionHeaderHasStringID(header.Header)) {
 		// Upstream loadEntriesFromFile discards everything unless the first
-		// parsed entry is a session header, so open reports the file as
-		// invalid instead of loading its entries.
+		// parsed entry is a session header whose id is a string, so open
+		// reports the file as invalid instead of loading its entries.
 		return nil, data, fast, nil
 	}
 	if !bytes.HasSuffix(data, []byte("\n")) && len(data) > 0 {
@@ -708,6 +708,26 @@ func UnmarshalFileEntry(line string) (*FileEntry, error) {
 	}
 	entry.raw = json.RawMessage(line)
 	return &FileEntry{Entry: &entry}, nil
+}
+
+// sessionHeaderHasStringID reports whether the header's JSON carried an "id"
+// member holding a string. The typed field cannot tell a missing id from an
+// empty one, and the reference accepts any string id, including "".
+func sessionHeaderHasStringID(header *SessionHeader) bool {
+	if header == nil || len(header.raw) == 0 {
+		return false
+	}
+	var probe map[string]json.RawMessage
+	if json.Unmarshal(header.raw, &probe) != nil {
+		return false
+	}
+	raw, ok := probe["id"]
+	if !ok || len(raw) == 0 || raw[0] != '"' {
+		// Absent, null and non-string ids are not the reference's string id.
+		return false
+	}
+	var text string
+	return json.Unmarshal(raw, &text) == nil
 }
 
 // UUIDv7 generates a time-ordered UUID (port of uuidv7).
@@ -1300,7 +1320,7 @@ func LoadEntriesFromFile(filePath string) ([]FileEntry, error) {
 		return entries, nil
 	}
 	header := entries[0]
-	if header.Header == nil || header.Header.ID == "" {
+	if header.Header == nil || (header.Header.ID == "" && !sessionHeaderHasStringID(header.Header)) {
 		return nil, nil
 	}
 	if !strings.HasSuffix(text, "\n") && text != "" {

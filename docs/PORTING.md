@@ -307,6 +307,19 @@ timestamp otherwise, in both the fast line scanner and the decoding fallback
 parentSessionPath, created, messageCount, firstMessage, allMessagesText)
 matched. The generated corpus is in `coding/testdata/session-list/`.
 
+**Prompt and session-loading audit.** Two more reproduced differences were
+fixed. The system prompt applied its default tool list whenever the selected
+list was empty, so a session with no tools (`--no-tools`, or `--tools` naming
+only unknown tools) still got the bash rule and a skills block naming the `read`
+tool; only an omitted list now defaults (`system-prompt.ts`
+`normalizeBuildSystemPromptOptions`). Both session loaders required a non-empty
+header id, so a file with `"id": ""` was listed by the picker but could not be
+opened where the reference loads it; the header now needs a present string id
+(empty allowed) checked against the raw member, matching
+`loadEntriesFromFile`. The reference's listing of headers whose id is
+missing/null/non-string is deliberately not matched (D278). Generated corpora
+cover both (`coding/testdata/system-prompt/`, `coding/testdata/session-load/`).
+
 **Upstream status.** v1.4.0 (`4a080252`) is the latest released tag after
 refreshing upstream tags and is the port's reference pin. It is 81 commits past
 v1.3.0. The pin identifies the sources to review, not a claim that every change

@@ -1,0 +1,132 @@
+{
+  "valid-id": {
+    "lines": [
+      "{\"type\":\"session\",\"id\":\"s1\",\"timestamp\":\"2026-01-01T00:00:00.000Z\",\"cwd\":\"/work\"}",
+      "{\"type\":\"message\",\"id\":\"m1\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:01.000Z\",\"message\":{\"role\":\"user\",\"timestamp\":1767225601000,\"content\":[{\"type\":\"text\",\"text\":\"hi\"}]}}"
+    ],
+    "entries": [
+      {
+        "kind": "session",
+        "type": "session",
+        "id": "s1"
+      },
+      {
+        "kind": "entry",
+        "type": "message",
+        "id": "m1"
+      }
+    ],
+    "list": {
+      "count": 1,
+      "ids": [
+        "s1"
+      ]
+    }
+  },
+  "empty-id": {
+    "lines": [
+      "{\"type\":\"session\",\"id\":\"\",\"timestamp\":\"2026-01-01T00:00:00.000Z\",\"cwd\":\"/work\"}",
+      "{\"type\":\"message\",\"id\":\"m1\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:01.000Z\",\"message\":{\"role\":\"user\",\"timestamp\":1767225601000,\"content\":[{\"type\":\"text\",\"text\":\"hi\"}]}}"
+    ],
+    "entries": [
+      {
+        "kind": "session",
+        "type": "session",
+        "id": ""
+      },
+      {
+        "kind": "entry",
+        "type": "message",
+        "id": "m1"
+      }
+    ],
+    "list": {
+      "count": 1,
+      "ids": [
+        ""
+      ]
+    }
+  },
+  "missing-id": {
+    "lines": [
+      "{\"type\":\"session\",\"timestamp\":\"2026-01-01T00:00:00.000Z\",\"cwd\":\"/work\"}",
+      "{\"type\":\"message\",\"id\":\"m1\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:01.000Z\",\"message\":{\"role\":\"user\",\"timestamp\":1767225601000,\"content\":[{\"type\":\"text\",\"text\":\"hi\"}]}}"
+    ],
+    "entries": []
+  },
+  "null-id": {
+    "lines": [
+      "{\"type\":\"session\",\"id\":null,\"timestamp\":\"2026-01-01T00:00:00.000Z\",\"cwd\":\"/work\"}",
+      "{\"type\":\"message\",\"id\":\"m1\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:01.000Z\",\"message\":{\"role\":\"user\",\"timestamp\":1767225601000,\"content\":[{\"type\":\"text\",\"text\":\"hi\"}]}}"
+    ],
+    "entries": []
+  },
+  "non-string-id": {
+    "lines": [
+      "{\"type\":\"session\",\"id\":5,\"timestamp\":\"2026-01-01T00:00:00.000Z\",\"cwd\":\"/work\"}",
+      "{\"type\":\"message\",\"id\":\"m1\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:01.000Z\",\"message\":{\"role\":\"user\",\"timestamp\":1767225601000,\"content\":[{\"type\":\"text\",\"text\":\"hi\"}]}}"
+    ],
+    "entries": []
+  },
+  "non-session-first": {
+    "lines": [
+      "{\"type\":\"message\",\"id\":\"m1\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:01.000Z\",\"message\":{\"role\":\"user\",\"timestamp\":1767225601000,\"content\":[{\"type\":\"text\",\"text\":\"hi\"}]}}",
+      "{\"type\":\"session\",\"id\":\"s1\",\"timestamp\":\"2026-01-01T00:00:00.000Z\",\"cwd\":\"/work\"}"
+    ],
+    "entries": [],
+    "list": {
+      "count": 0,
+      "ids": []
+    }
+  },
+  "malformed-first": {
+    "lines": [
+      "{not json",
+      "{\"type\":\"session\",\"id\":\"s1\",\"timestamp\":\"2026-01-01T00:00:00.000Z\",\"cwd\":\"/work\"}",
+      "{\"type\":\"message\",\"id\":\"m1\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:01.000Z\",\"message\":{\"role\":\"user\",\"timestamp\":1767225601000,\"content\":[{\"type\":\"text\",\"text\":\"hi\"}]}}"
+    ],
+    "entries": [
+      {
+        "kind": "session",
+        "type": "session",
+        "id": "s1"
+      },
+      {
+        "kind": "entry",
+        "type": "message",
+        "id": "m1"
+      }
+    ],
+    "list": {
+      "count": 1,
+      "ids": [
+        "s1"
+      ]
+    }
+  },
+  "blank-first": {
+    "lines": [
+      "",
+      "{\"type\":\"session\",\"id\":\"s1\",\"timestamp\":\"2026-01-01T00:00:00.000Z\",\"cwd\":\"/work\"}",
+      "{\"type\":\"message\",\"id\":\"m1\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:01.000Z\",\"message\":{\"role\":\"user\",\"timestamp\":1767225601000,\"content\":[{\"type\":\"text\",\"text\":\"hi\"}]}}"
+    ],
+    "entries": [
+      {
+        "kind": "session",
+        "type": "session",
+        "id": "s1"
+      },
+      {
+        "kind": "entry",
+        "type": "message",
+        "id": "m1"
+      }
+    ],
+    "list": {
+      "count": 1,
+      "ids": [
+        "s1"
+      ]
+    }
+  }
+}
