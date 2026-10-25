@@ -355,7 +355,9 @@ func ProcessResponsesStream(
 	sawTerminalResponseEvent := false
 	unfinishedToolCalls := map[int]bool{}
 	outputSlots := map[int]*responsesOutputSlot{}
-	reasoningBlocksByID := map[string]*ThinkingContent{}
+	// Keyed by item id; the slot also carries the content index the merged
+	// signature must be written back to.
+	reasoningSlotsByID := map[string]*responsesOutputSlot{}
 
 	applyMessagePhaseStopReason := func(item *responsesItem) {
 		if item.Type == "message" && item.Phase == "final_answer" {
@@ -497,22 +499,35 @@ func ProcessResponsesStream(
 			if jsonUnmarshalStrict(raw, &item) != nil || item.Type != "reasoning" || item.EncryptedContent == nil {
 				continue
 			}
-			block := reasoningBlocksByID[item.ID]
-			if block == nil || block.ThinkingSignature == nil || *block.ThinkingSignature == "" {
+			slot := reasoningSlotsByID[item.ID]
+			if slot == nil || slot.thinking == nil || slot.thinking.ThinkingSignature == nil || *slot.thinking.ThinkingSignature == "" {
 				continue
 			}
-			if strings.Contains(*block.ThinkingSignature, "encrypted_content") {
+			// Upstream skips only when the stored item's field is truthy, and
+			// appends the field last (`{...storedItem, encrypted_content}`).
+			var stored struct {
+				EncryptedContent *string `json:"encrypted_content"`
+			}
+			if jsonUnmarshalStrict(json.RawMessage(*slot.thinking.ThinkingSignature), &stored) != nil {
 				continue
 			}
-			var stored map[string]json.RawMessage
-			if jsonUnmarshalStrict(json.RawMessage(*block.ThinkingSignature), &stored) != nil {
+			if stored.EncryptedContent != nil && *stored.EncryptedContent != "" {
+				continue
+			}
+			object := strings.TrimSpace(*slot.thinking.ThinkingSignature)
+			if !strings.HasPrefix(object, "{") || !strings.HasSuffix(object, "}") {
 				continue
 			}
 			enc, _ := MarshalJSON(*item.EncryptedContent)
-			stored["encrypted_content"] = enc
-			merged, _ := MarshalJSON(stored)
-			signature := string(merged)
-			block.ThinkingSignature = &signature
+			merged := object[:len(object)-1]
+			if strings.TrimSpace(merged) != "{" {
+				merged += ","
+			}
+			signature := merged + `"encrypted_content":` + string(enc) + "}"
+			slot.thinking.ThinkingSignature = &signature
+			// The block inside output.Content is a copy; write it back so the
+			// persisted and emitted message carries the merged signature.
+			updateContent(slot)
 		}
 	}
 	finalizeResponse := func(response *responsesTerminalResponse) {
@@ -703,7 +718,7 @@ func ProcessResponsesStream(
 				}
 				signature := string(event.Item)
 				slot.thinking.ThinkingSignature = &signature
-				reasoningBlocksByID[item.ID] = slot.thinking
+				reasoningSlotsByID[item.ID] = slot
 				updateContent(slot)
 				stream.Push(AssistantMessageEvent{Type: EventThinkingEnd, ContentIndex: slot.contentIndex, Content: slot.thinking.Thinking, Partial: output})
 				delete(outputSlots, event.OutputIndex)
