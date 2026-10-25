@@ -391,6 +391,17 @@ final-newline-only edit previously produced an empty diff and no
 tool details and the interactive preview omitted the change. The generated
 corpus compares both the display diff and the patch over 26 content pairs.
 
+OpenAI-compatible streaming now surfaces a streamed error payload. The OpenAI
+SDK's iterator throws on any chunk carrying a truthy `error` before yielding it,
+so the reference ends with that provider message and no block-end events.
+Gateways such as OpenRouter and LiteLLM report mid-stream failures this way;
+Pier previously ignored the payload and reported
+`Stream ended without finish_reason` after finishing its open blocks. The port
+composes the message like the SDK (`error.message`, else the canonical
+JavaScript JSON of the payload, then the `error.metadata.raw` suffix) and aborts
+before the provider callback. A generated corpus compares eleven
+OpenAI-completions stream scenarios, including four error shapes.
+
 **Upstream status.** v1.4.0 (`4a080252`) is the latest released tag after
 refreshing upstream tags and is the port's reference pin. It is 81 commits past
 v1.3.0. The pin identifies the sources to review, not a claim that every change

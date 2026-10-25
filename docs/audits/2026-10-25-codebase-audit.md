@@ -3,7 +3,7 @@
 ## Baseline and scope
 
 This is a **partial multi-round review**, not a completed codebase-wide audit.
-Seventeen confirmed findings have been planned in `TODO.md`, repaired red-first,
+Eighteen confirmed findings have been planned in `TODO.md`, repaired red-first,
 and verified. Remaining files and unconfirmed leads below still need review.
 
 - Starting commit: `80dcf0d09249222f98f39bccb2f93d278766009b`.
@@ -47,6 +47,13 @@ bottleneck is asserted without evidence. Unlisted files remain unreviewed.
   the eight-scenario corpus now compares the event projection and terminal
   message. Not covered: retry/lazy-tool downgrade paths beyond their Go tests,
   and the OpenAI-completions/Responses stream parsers still have no such corpus.
+- `ai/openai_completions_stream.go`: P/L/C/S inspected in round 10 against
+  `api/openai-completions.ts` and the OpenAI SDK's SSE/stream iterator.
+  **CR-018** repaired; an eleven-scenario corpus compares the event projection
+  and terminal message. Not yet compared: request payloads (covered separately
+  by `provider-hooks`), the parse-failure and named-event paths listed below,
+  and `openai-responses`/`google`/`mistral` streams, which still have no event
+  corpus.
 - `ai/retry.go` `GetRetryDelayMS`/`isRetryableProviderError`: P/L/C inspected in
   round 8 against `utils/provider-retry.ts`, including `Number.parseFloat`
   prefix semantics, the NaN/Infinity fall-through, the empty-string truthiness
@@ -592,6 +599,8 @@ After explicit user authorization:
 - `7424e36`: edit-application corpus (coverage, no divergence).
 - `3f0ec1a`: CR-017, Anthropic `usage.cacheWrite1h` presence.
 - `e636760`: Anthropic stream-event corpus (coverage plus the CR-017 regression).
+- `f164f50`: CR-018, streamed OpenAI error payloads.
+- `2a9ddea`: OpenAI-completions stream-event corpus.
 
 All changes were verified before committing. Audit status and lock ownership
 are recorded with this ledger in a separate documentation commit. No push.
@@ -673,6 +682,41 @@ go test -count=1 ./ai -run '^TestAnthropicStreamEventsMatchUpstream$'
 node --experimental-strip-types ai/testdata/anthropic-stream/generate.mjs ./pi
 ```
 
+## Round 10 finding
+
+### CR-018, P2: OpenAI-compatible streams dropped a streamed `error` payload (fixed)
+
+A chunk carrying `{"error":{"message":"boom"}}` (OpenRouter, LiteLLM and other
+gateways report mid-stream failures this way) was ignored: the port finished its
+open blocks and failed with `Stream ended without finish_reason`, while the
+reference aborts at the SDK iterator with the provider's own message and without
+block-end events. The four payload shapes now match the reference exactly:
+`boom`, `boom\nupstream-raw-detail`, `"plain failure"` and
+`{"type":"server_error"}`.
+
+Evidence: the focused test emitted
+`start,text_start,text_delta,text_end,error` before the repair and
+`start,text_start,text_delta,error` after; the eleven-scenario corpus failed only
+on the four error cases beforehand and matches on all eleven now.
+
+```sh
+go test -count=1 ./ai -run '^TestOpenAIStreamFailsOnStreamedErrorPayload$'
+go test -count=1 ./ai -run '^TestOpenAIStreamEventsMatchUpstream$'
+node --experimental-strip-types ai/testdata/openai-stream/generate.mjs ./pi
+```
+
+Leads from the same iterator, not reproducible enough for `TODO.md`:
+
+- A `data:` line that is not valid JSON makes the SDK throw (an `error` event
+  with V8's `SyntaxError` text); the port skips the line and later reports
+  `Stream ended without finish_reason`. The behavior differs but the message is
+  the declined V8 diagnostic emulation (D221).
+- A named `event: error` record makes the reference SDK's SSE reader fail before
+  the chunk loop ("malformed server-sent event JSON"), so the corpus cannot
+  compare that shape.
+- Chunks after `[DONE]` are skipped by the SDK rather than stopping the read;
+  both implementations ignore them, so no observable difference was found.
+
 ## Unconfirmed leads, not TODOs
 
 - Previously listed RPC lifecycle leads are CR-005/CR-006, and overlapping
@@ -720,6 +764,9 @@ All completed with `GOPROXY=off GOSUMDB=off` on Go commands/recipes:
   integrity/unsupported-host tests also failed red, then passed. `go test
   -count=1 ./coding -run '^TestRPC'` and `go test -count=1 ./mcp/...
   ./coding/rpcclient ./coding/interactive`: PASS.
+- Round 10: the OpenAI-completions corpus failed on its four error scenarios
+  before CR-018 and matches on all eleven after; `just check`, `just cross` and
+  `just reference` pass and regeneration is byte-identical.
 - Round 9: the Anthropic stream-event corpus matches on all eight scenarios
   after CR-017; `just check`, `just cross` and `just reference` pass, and the
   corpus regenerates byte-identically.
