@@ -627,7 +627,16 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 			if u.CacheCreationInputTokens != nil {
 				output.Usage.CacheWrite = *u.CacheCreationInputTokens
 			}
-			if u.CacheCreation != nil && u.CacheCreation.Ephemeral1hInputTokens != nil {
+			// message_start defaults the 1h split to 0, so the field is always
+			// present in the persisted message; message_delta only reports it
+			// when the wire carries it (upstream's `|| 0` vs `!= null`).
+			if overwrite {
+				oneHour := int64(0)
+				if u.CacheCreation != nil && u.CacheCreation.Ephemeral1hInputTokens != nil {
+					oneHour = *u.CacheCreation.Ephemeral1hInputTokens
+				}
+				output.Usage.CacheWrite1h = &oneHour
+			} else if u.CacheCreation != nil && u.CacheCreation.Ephemeral1hInputTokens != nil {
 				v := *u.CacheCreation.Ephemeral1hInputTokens
 				output.Usage.CacheWrite1h = &v
 			}
