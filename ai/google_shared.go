@@ -152,7 +152,9 @@ func supportsMultimodalFunctionResponse(modelID string) bool {
 	return true
 }
 
-// GooglePart is one Gemini content part.
+// GooglePart is one Gemini content part. The wire may carry `"text": ""`, so
+// presence is tracked separately from the value: upstream keys block creation
+// and deltas on `part.text !== undefined`, not on non-empty text.
 type GooglePart struct {
 	FunctionCall     *GoogleFunctionCall     `json:"functionCall,omitempty"`
 	FunctionResponse *GoogleFunctionResponse `json:"functionResponse,omitempty"`
@@ -160,7 +162,30 @@ type GooglePart struct {
 	Text             string                  `json:"text,omitempty"`
 	Thought          *bool                   `json:"thought,omitempty"`
 	ThoughtSignature *string                 `json:"thoughtSignature,omitempty"`
+
+	textPresent bool
 }
+
+// UnmarshalJSON records whether the wire carried a `text` member.
+func (p *GooglePart) UnmarshalJSON(data []byte) error {
+	type plain GooglePart
+	var decoded plain
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	var probe struct {
+		Text json.RawMessage `json:"text"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	*p = GooglePart(decoded)
+	p.textPresent = len(probe.Text) > 0
+	return nil
+}
+
+// HasText reports whether the part carries a text member, empty or not.
+func (p *GooglePart) HasText() bool { return p.textPresent || p.Text != "" }
 
 // GoogleInlineData is base64 media.
 type GoogleInlineData struct {

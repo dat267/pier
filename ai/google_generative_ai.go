@@ -362,7 +362,7 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 				if candidate.Content != nil {
 					for i := range candidate.Content.Parts {
 						part := &candidate.Content.Parts[i]
-						if part.Text != "" || part.Thought != nil {
+						if part.HasText() || part.Thought != nil {
 							isThinking := IsThinkingPart(part)
 							if currentBlock == nil ||
 								(isThinking && currentBlock.contentKind() != KindThinking) ||
