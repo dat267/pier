@@ -192,6 +192,7 @@ func (s *loopSchedule) finishWork() {
 	s.work.done = nil
 	if pending := s.work.pending; len(pending) > 0 {
 		next := pending[0]
+		pending[0] = nil // Release completed captures from the retained backing array.
 		s.work.pending = pending[1:]
 		s.startWork(next)
 	}
@@ -296,9 +297,13 @@ func (s *loopSchedule) arm() <-chan time.Time {
 		if delay := time.Until(flushDeadline); delay <= 0 {
 			// Already expired: flush on this beat, before painting.
 			s.flushExpiredInput()
-		} else if s.deadline.IsZero() || flushDeadline.Before(s.deadline) {
-			s.animationTimer.Reset(delay)
-			s.deadline = flushDeadline
+		} else {
+			if s.deadline.IsZero() || flushDeadline.Before(s.deadline) {
+				s.animationTimer.Reset(delay)
+				s.deadline = flushDeadline
+			}
+			// Preserve an equal or earlier wake while input is pending. Falling
+			// through to an idle animation scan would stop the input timer.
 			return s.animationTimer.C
 		}
 	}
