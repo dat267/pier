@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"regexp"
 	"testing"
 )
 
@@ -100,11 +101,15 @@ func projectEvent(t *testing.T, event AssistantMessageEvent) any {
 		out["content"] = event.Content
 	}
 	if event.ToolCall != nil && event.Type == EventToolcallEnd {
-		out["toolCall"] = map[string]any{
-			"id":        event.ToolCall.ID,
+		toolCall := map[string]any{
+			"id":        normalizeSyntheticToolCallID(event.ToolCall.ID),
 			"name":      event.ToolCall.Name,
 			"arguments": canonicalRaw(t, event.ToolCall.Arguments),
 		}
+		if event.ToolCall.ThoughtSignature != nil {
+			toolCall["thoughtSignature"] = *event.ToolCall.ThoughtSignature
+		}
+		out["toolCall"] = toolCall
 	}
 	switch event.Type {
 	case EventDone, EventError:
@@ -145,12 +150,16 @@ func projectMessage(t *testing.T, message *AssistantMessage) any {
 			}
 			content = append(content, projected)
 		case ToolCall:
-			content = append(content, map[string]any{
+			projected := map[string]any{
 				"type":      "toolCall",
-				"id":        typed.ID,
+				"id":        normalizeSyntheticToolCallID(typed.ID),
 				"name":      typed.Name,
 				"arguments": canonicalRaw(t, typed.Arguments),
-			})
+			}
+			if typed.ThoughtSignature != nil {
+				projected["thoughtSignature"] = *typed.ThoughtSignature
+			}
+			content = append(content, projected)
 		default:
 			t.Fatalf("unexpected content block %T", block)
 		}
@@ -182,6 +191,18 @@ func projectMessage(t *testing.T, message *AssistantMessage) any {
 		out["providerThinkingLevel"] = *message.ProviderThinkingLevel
 	}
 	return out
+}
+
+// normalizeSyntheticToolCallID hides the process-dependent parts of the id
+// Google providers synthesize (`<name>_<Date.now()>_<counter>`, where the
+// counter is module-global in both implementations).
+var syntheticToolCallID = regexp.MustCompile(`^(.+)_\d{10,}_\d+$`)
+
+func normalizeSyntheticToolCallID(id string) string {
+	if match := syntheticToolCallID.FindStringSubmatch(id); match != nil {
+		return match[1] + "_<ts>_<n>"
+	}
+	return id
 }
 
 func mustMarshalTestJSON(t *testing.T, value any) []byte {
