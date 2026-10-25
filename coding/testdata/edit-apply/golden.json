@@ -1,0 +1,450 @@
+[
+  {
+    "name": "exact-single",
+    "content": "alpha\nbeta\ngamma\n",
+    "edits": [
+      {
+        "oldText": "beta",
+        "newText": "BETA"
+      }
+    ],
+    "expected": {
+      "baseContent": "alpha\nbeta\ngamma\n",
+      "newContent": "alpha\nBETA\ngamma\n",
+      "error": null
+    }
+  },
+  {
+    "name": "exact-multiline",
+    "content": "one\ntwo\nthree\nfour\n",
+    "edits": [
+      {
+        "oldText": "one\ntwo",
+        "newText": "1\n2"
+      }
+    ],
+    "expected": {
+      "baseContent": "one\ntwo\nthree\nfour\n",
+      "newContent": "1\n2\nthree\nfour\n",
+      "error": null
+    }
+  },
+  {
+    "name": "append-at-end",
+    "content": "only",
+    "edits": [
+      {
+        "oldText": "only",
+        "newText": "only\nadded"
+      }
+    ],
+    "expected": {
+      "baseContent": "only",
+      "newContent": "only\nadded",
+      "error": null
+    }
+  },
+  {
+    "name": "final-newline-added",
+    "content": "same",
+    "edits": [
+      {
+        "oldText": "same",
+        "newText": "same\n"
+      }
+    ],
+    "expected": {
+      "baseContent": "same",
+      "newContent": "same\n",
+      "error": null
+    }
+  },
+  {
+    "name": "final-newline-removed",
+    "content": "same\n",
+    "edits": [
+      {
+        "oldText": "same\n",
+        "newText": "same"
+      }
+    ],
+    "expected": {
+      "baseContent": "same\n",
+      "newContent": "same",
+      "error": null
+    }
+  },
+  {
+    "name": "two-disjoint",
+    "content": "a\nb\nc\nd\ne\n",
+    "edits": [
+      {
+        "oldText": "a",
+        "newText": "A"
+      },
+      {
+        "oldText": "e",
+        "newText": "E"
+      }
+    ],
+    "expected": {
+      "baseContent": "a\nb\nc\nd\ne\n",
+      "newContent": "A\nb\nc\nd\nE\n",
+      "error": null
+    }
+  },
+  {
+    "name": "two-adjacent",
+    "content": "a\nb\n",
+    "edits": [
+      {
+        "oldText": "a",
+        "newText": "A"
+      },
+      {
+        "oldText": "b",
+        "newText": "B"
+      }
+    ],
+    "expected": {
+      "baseContent": "a\nb\n",
+      "newContent": "A\nB\n",
+      "error": null
+    }
+  },
+  {
+    "name": "not-found",
+    "content": "alpha\n",
+    "edits": [
+      {
+        "oldText": "missing",
+        "newText": "x"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Could not find the exact text in f.txt. The old text must match exactly including all whitespace and newlines."
+    }
+  },
+  {
+    "name": "not-found-multi",
+    "content": "alpha\n",
+    "edits": [
+      {
+        "oldText": "alpha",
+        "newText": "x"
+      },
+      {
+        "oldText": "missing",
+        "newText": "y"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Could not find edits[1] in f.txt. The oldText must match exactly including all whitespace and newlines."
+    }
+  },
+  {
+    "name": "duplicate",
+    "content": "a\na\n",
+    "edits": [
+      {
+        "oldText": "a",
+        "newText": "b"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Found 2 occurrences of the text in f.txt. The text must be unique. Please provide more context to make it unique."
+    }
+  },
+  {
+    "name": "duplicate-multi",
+    "content": "a\na\nz\n",
+    "edits": [
+      {
+        "oldText": "a",
+        "newText": "b"
+      },
+      {
+        "oldText": "z",
+        "newText": "y"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Found 2 occurrences of edits[0] in f.txt. Each oldText must be unique. Please provide more context to make it unique."
+    }
+  },
+  {
+    "name": "empty-old-text",
+    "content": "alpha\n",
+    "edits": [
+      {
+        "oldText": "",
+        "newText": "x"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "oldText must not be empty in f.txt."
+    }
+  },
+  {
+    "name": "no-change",
+    "content": "alpha\n",
+    "edits": [
+      {
+        "oldText": "alpha",
+        "newText": "alpha"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "No changes made to f.txt. The replacement produced identical content. This might indicate an issue with special characters or the text not existing as expected."
+    }
+  },
+  {
+    "name": "no-change-multi",
+    "content": "alpha\nbeta\n",
+    "edits": [
+      {
+        "oldText": "alpha",
+        "newText": "alpha"
+      },
+      {
+        "oldText": "beta",
+        "newText": "beta"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "No changes made to f.txt. The replacements produced identical content."
+    }
+  },
+  {
+    "name": "overlap",
+    "content": "alpha beta gamma\n",
+    "edits": [
+      {
+        "oldText": "alpha beta",
+        "newText": "X"
+      },
+      {
+        "oldText": "beta gamma",
+        "newText": "Y"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[0] and edits[1] overlap in f.txt. Merge them into one edit or target disjoint regions."
+    }
+  },
+  {
+    "name": "nested",
+    "content": "alpha\n",
+    "edits": [
+      {
+        "oldText": "alpha",
+        "newText": "alPHA"
+      },
+      {
+        "oldText": "alpha",
+        "newText": "ALPHA"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "edits[0] and edits[1] overlap in f.txt. Merge them into one edit or target disjoint regions."
+    }
+  },
+  {
+    "name": "fuzzy-trailing-space",
+    "content": "alpha   \nbeta\n",
+    "edits": [
+      {
+        "oldText": "alpha\nbeta",
+        "newText": "alpha\nBETA"
+      }
+    ],
+    "expected": {
+      "baseContent": "alpha   \nbeta\n",
+      "newContent": "alpha\nBETA\n",
+      "error": null
+    }
+  },
+  {
+    "name": "fuzzy-indent",
+    "content": "  alpha\n  beta\n",
+    "edits": [
+      {
+        "oldText": "\talpha\n\tbeta",
+        "newText": "\talpha\n\tBETA"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Could not find the exact text in f.txt. The old text must match exactly including all whitespace and newlines."
+    }
+  },
+  {
+    "name": "fuzzy-crlf",
+    "content": "alpha\r\nbeta\r\n",
+    "edits": [
+      {
+        "oldText": "alpha beta",
+        "newText": "alpha BETA"
+      }
+    ],
+    "expected": {
+      "baseContent": null,
+      "newContent": null,
+      "error": "Could not find the exact text in f.txt. The old text must match exactly including all whitespace and newlines."
+    }
+  },
+  {
+    "name": "fuzzy-curly-quotes",
+    "content": "say “hi” now\n",
+    "edits": [
+      {
+        "oldText": "say \"hi\" now",
+        "newText": "say hello now"
+      }
+    ],
+    "expected": {
+      "baseContent": "say “hi” now\n",
+      "newContent": "say hello now\n",
+      "error": null
+    }
+  },
+  {
+    "name": "fuzzy-dashes",
+    "content": "a – b\n",
+    "edits": [
+      {
+        "oldText": "a - b",
+        "newText": "a plus b"
+      }
+    ],
+    "expected": {
+      "baseContent": "a – b\n",
+      "newContent": "a plus b\n",
+      "error": null
+    }
+  },
+  {
+    "name": "fuzzy-nbsp",
+    "content": "x y\n",
+    "edits": [
+      {
+        "oldText": "x y",
+        "newText": "x z"
+      }
+    ],
+    "expected": {
+      "baseContent": "x y\n",
+      "newContent": "x z\n",
+      "error": null
+    }
+  },
+  {
+    "name": "fuzzy-unchanged-lines",
+    "content": "keep   \nchange me  \n",
+    "edits": [
+      {
+        "oldText": "change me",
+        "newText": "CHANGED"
+      }
+    ],
+    "expected": {
+      "baseContent": "keep   \nchange me  \n",
+      "newContent": "keep   \nCHANGED  \n",
+      "error": null
+    }
+  },
+  {
+    "name": "unicode",
+    "content": "漢字\n新\n",
+    "edits": [
+      {
+        "oldText": "漢字",
+        "newText": "漢"
+      }
+    ],
+    "expected": {
+      "baseContent": "漢字\n新\n",
+      "newContent": "漢\n新\n",
+      "error": null
+    }
+  },
+  {
+    "name": "astral",
+    "content": "😀😁\n",
+    "edits": [
+      {
+        "oldText": "😁",
+        "newText": "😂"
+      }
+    ],
+    "expected": {
+      "baseContent": "😀😁\n",
+      "newContent": "😀😂\n",
+      "error": null
+    }
+  },
+  {
+    "name": "empty-new-text",
+    "content": "a\nb\n",
+    "edits": [
+      {
+        "oldText": "b\n",
+        "newText": ""
+      }
+    ],
+    "expected": {
+      "baseContent": "a\nb\n",
+      "newContent": "a\n",
+      "error": null
+    }
+  },
+  {
+    "name": "blank-lines",
+    "content": "a\n\n\nb\n",
+    "edits": [
+      {
+        "oldText": "a\n\n",
+        "newText": "a\n"
+      }
+    ],
+    "expected": {
+      "baseContent": "a\n\n\nb\n",
+      "newContent": "a\n\nb\n",
+      "error": null
+    }
+  },
+  {
+    "name": "insert-between",
+    "content": "a\nc\n",
+    "edits": [
+      {
+        "oldText": "a\nc",
+        "newText": "a\nb\nc"
+      }
+    ],
+    "expected": {
+      "baseContent": "a\nc\n",
+      "newContent": "a\nb\nc\n",
+      "error": null
+    }
+  }
+]
