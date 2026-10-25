@@ -3,7 +3,7 @@
 ## Baseline and scope
 
 This is a **partial multi-round review**, not a completed codebase-wide audit.
-Eighteen confirmed findings have been planned in `TODO.md`, repaired red-first,
+Nineteen confirmed findings have been planned in `TODO.md`, repaired red-first,
 and verified. Remaining files and unconfirmed leads below still need review.
 
 - Starting commit: `80dcf0d09249222f98f39bccb2f93d278766009b`.
@@ -47,6 +47,14 @@ bottleneck is asserted without evidence. Unlisted files remain unreviewed.
   the eight-scenario corpus now compares the event projection and terminal
   message. Not covered: retry/lazy-tool downgrade paths beyond their Go tests,
   and the OpenAI-completions/Responses stream parsers still have no such corpus.
+- `ai/openai_responses_stream.go`: P/L/C/S inspected in round 11 against
+  `api/openai-responses.ts` and `openai-responses-shared.ts`
+  (`processResponsesStream`). **CR-019** repaired; a fifteen-scenario corpus
+  compares the event projection and terminal message, covering reasoning,
+  refusals, function and custom calls, terminals with every status, the
+  `final_answer` phase override, `done` without `added`, the encrypted-content
+  backfill and unfinished tool calls. Not yet compared: the custom-tool input
+  path, service-tier pricing and `openai-codex-responses` beyond its Go tests.
 - `ai/openai_completions_stream.go`: P/L/C/S inspected in round 10 against
   `api/openai-completions.ts` and the OpenAI SDK's SSE/stream iterator.
   **CR-018** repaired; an eleven-scenario corpus compares the event projection
@@ -601,6 +609,8 @@ After explicit user authorization:
 - `e636760`: Anthropic stream-event corpus (coverage plus the CR-017 regression).
 - `f164f50`: CR-018, streamed OpenAI error payloads.
 - `2a9ddea`: OpenAI-completions stream-event corpus.
+- `5191795`: CR-019, Responses reasoning backfill.
+- `9c4d65d`: OpenAI Responses stream-event corpus.
 
 All changes were verified before committing. Audit status and lock ownership
 are recorded with this ledger in a separate documentation commit. No push.
@@ -717,6 +727,28 @@ Leads from the same iterator, not reproducible enough for `TODO.md`:
 - Chunks after `[DONE]` are skipped by the SDK rather than stopping the read;
   both implementations ignore them, so no observable difference was found.
 
+## Round 11 finding
+
+### CR-019, P2: the Responses reasoning backfill never reached the message (fixed)
+
+When the terminal `response.completed` carries `reasoning.encrypted_content` that
+`response.output_item.done` omitted (the Azure OpenAI quirk behind #6409), the
+reference merges it into the persisted thinking signature; Pier kept the old one,
+so `store: false` replay dropped the encrypted reasoning payload. The same
+function also differed twice: a substring test instead of the stored field's
+truthiness (an empty value must be backfilled) and a key-sorting map merge instead
+of the reference's append-last spread.
+
+Evidence: the focused test failed with the unmerged signature before the change
+and passes after, as does the corpus scenario that also pins the merged key
+order; fourteen other scenarios are controls.
+
+```sh
+go test -count=1 ./ai -run '^TestResponsesBackfillsEncryptedReasoningContent$'
+go test -count=1 ./ai -run '^TestOpenAIResponsesStreamEventsMatchUpstream$'
+node --experimental-strip-types ai/testdata/openai-responses-stream/generate.mjs ./pi
+```
+
 ## Unconfirmed leads, not TODOs
 
 - Previously listed RPC lifecycle leads are CR-005/CR-006, and overlapping
@@ -764,6 +796,9 @@ All completed with `GOPROXY=off GOSUMDB=off` on Go commands/recipes:
   integrity/unsupported-host tests also failed red, then passed. `go test
   -count=1 ./coding -run '^TestRPC'` and `go test -count=1 ./mcp/...
   ./coding/rpcclient ./coding/interactive`: PASS.
+- Round 11: the Responses corpus failed only on the backfill scenario before
+  CR-019 and matches on all fifteen after; `just check`, `just cross` and
+  `just reference` pass and regeneration is byte-identical.
 - Round 10: the OpenAI-completions corpus failed on its four error scenarios
   before CR-018 and matches on all eleven after; `just check`, `just cross` and
   `just reference` pass and regeneration is byte-identical.

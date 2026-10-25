@@ -391,6 +391,16 @@ final-newline-only edit previously produced an empty diff and no
 tool details and the interactive preview omitted the change. The generated
 corpus compares both the display diff and the patch over 26 content pairs.
 
+Responses reasoning signatures now carry the terminal backfill. Azure OpenAI
+can omit `reasoning.encrypted_content` from `response.output_item.done` and
+supply it only in `response.completed.response.output`; the reference merges it
+into the block already inside `output.content` for `store: false` replay
+(#6409). Pier replaced the signature on a side-map block only, because
+`updateContent` copies blocks into the message, so the persisted signature lost
+the field; the merge also sorted keys instead of appending `encrypted_content`
+last and treated an empty stored value as present. A generated corpus compares
+fifteen Responses stream scenarios, including that backfill.
+
 OpenAI-compatible streaming now surfaces a streamed error payload. The OpenAI
 SDK's iterator throws on any chunk carrying a truthy `error` before yielding it,
 so the reference ends with that provider message and no block-end events.
