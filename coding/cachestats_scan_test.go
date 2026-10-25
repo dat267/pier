@@ -76,4 +76,17 @@ func TestCacheMissForMatchesTheFullScan(t *testing.T) {
 	// branch sees the branch summary's reset, not the pre-branch request.
 	afterAgain := cacheStatsAssistant(700, 100, 0, 8)
 	checkCacheMiss(t, m, afterAgain, "after branch append")
+	m.AppendMessage(afterAgain)
+
+	// A cache-warming usage entry is the branch's latest request, so the next
+	// assistant message is measured against the warmed prompt in both paths.
+	m.AppendUsage("cache_warm", "anthropic", "claude-opus-4-5", ai.Usage{CacheRead: 800}, "")
+	afterWarm := cacheStatsAssistant(800, 0, 0, 9)
+	checkCacheMiss(t, m, afterWarm, "after cache warm")
+	m.AppendMessage(afterWarm)
+
+	// Other usage kinds leave the scan state alone.
+	m.AppendUsage("other", "anthropic", "claude-opus-4-5", ai.Usage{CacheRead: 900}, "")
+	afterOtherUsage := cacheStatsAssistant(200, 700, 0, 10)
+	checkCacheMiss(t, m, afterOtherUsage, "after other usage kind")
 }

@@ -4,7 +4,7 @@ Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D272**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D273**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation.
 
 Related documents: [port status](PORTING.md), [architecture](architecture.md),
@@ -300,6 +300,15 @@ computes inline. Measurements on that session:
 Three recorded gaps are closed: `type === "usage"` cache-warming spend is
 attributed to provider/model; synthetic messages use `entry.timestamp`, not
 projection time; recorded compaction system messages precede summaries.
+
+Cache-warming usage entries also seed the scan's previous request, as upstream
+`scan` does: a `cache_warm` entry with non-zero prompt tokens becomes the
+branch's latest request (its prompt, provider/model and timestamp,
+`reportedCache: true`), so a following total miss is counted instead of being
+suppressed by the older assistant turn's missing cache activity. Other usage
+kinds leave the scan alone. Both the running state and the free-function scan
+share that rule, and `TestCacheStatsCacheWarmParity` pins it against fixtures
+generated from the pin (D273 covers the unparseable-timestamp idle gap).
 
 ## D160
 
@@ -2412,3 +2421,27 @@ Tests: `TestInMemoryCredentialStoreModifyCanRead`,
 `TestInMemoryCredentialStoreOAuthCallbackUsesSnapshot`
 (`ai/authstore_reentrancy_test.go`), plus ordering, cross-provider progress and
 cancellation coverage in `ai/authstore_queue_test.go`.
+
+## D273
+
+**An unparseable cache-warming timestamp leaves the idle gap unmeasured.**
+
+Reference: pi v1.4.0 (`4a080252`), `packages/coding-agent/src/core/cache-stats.ts`
+`scan`. A `cache_warm` usage entry seeds the previous request with
+`timestamp: Date.parse(entry.timestamp)`. `Date.parse` returns `NaN` for a
+malformed timestamp, so the next turn's `idleMs` is `Math.max(0, ts - NaN)`,
+which is `NaN`. That value is below `CACHE_TTL_MS` and never selects the
+"Cache miss after Nm idle" label; the notice still reports the token and cost
+part of the miss.
+
+Pier stores `CacheMiss.IdleMs` as an `int64`, which cannot hold `NaN`. When the
+entry timestamp does not parse, the previous request keeps the warmed prompt,
+model key and `reportedCache`, but its idle gap is reported as zero
+(`timestampKnown` is false in `coding/cachestats.go`). The observable behavior
+matches: the miss is counted, and the TTL idle label is not chosen. A
+timestamp that does parse behaves exactly as upstream.
+
+Test: `warm-invalid-timestamp` in `coding/testdata/cache-stats/golden.json`,
+generated from the pinned `cache-stats.ts`; the fixture records upstream's
+`idleMs: null` (`NaN`) and `coding/cachestats_parity_test.go` asserts the zero
+sentinel plus the unchanged token/cost accounting.

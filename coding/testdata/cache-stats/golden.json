@@ -1,0 +1,817 @@
+{
+  "cases": [
+    {
+      "name": "warm-total-miss",
+      "entries": [
+        {
+          "type": "message",
+          "id": "a",
+          "parentId": null,
+          "timestamp": "2026-01-01T00:00:00.000Z",
+          "message": {
+            "role": "assistant",
+            "provider": "anthropic",
+            "model": "claude-opus-4-5",
+            "timestamp": 1767225600000,
+            "usage": {
+              "input": 10000,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 10000,
+              "cost": {
+                "input": 0.03,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "content": [],
+            "stopReason": "stop",
+            "api": "anthropic-messages"
+          }
+        },
+        {
+          "type": "usage",
+          "id": "w",
+          "parentId": null,
+          "timestamp": "2026-01-01T00:01:00.000Z",
+          "kind": "cache_warm",
+          "provider": "anthropic",
+          "model": "claude-opus-4-5",
+          "usage": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 12000,
+            "cacheWrite": 0,
+            "total": 12000,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            }
+          }
+        },
+        {
+          "type": "message",
+          "id": "b",
+          "parentId": null,
+          "timestamp": "2026-01-01T00:02:00.000Z",
+          "message": {
+            "role": "assistant",
+            "provider": "anthropic",
+            "model": "claude-opus-4-5",
+            "timestamp": 1767225720000,
+            "usage": {
+              "input": 12000,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 12000,
+              "cost": {
+                "input": 0.036,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "content": [],
+            "stopReason": "stop",
+            "api": "anthropic-messages"
+          }
+        }
+      ],
+      "miss": {
+        "missedTokens": 12000,
+        "missedCost": 0.036,
+        "idleMs": 60000,
+        "modelChanged": false
+      },
+      "totals": {
+        "missedTokens": 12000,
+        "missedCost": 0.036,
+        "missCount": 1
+      },
+      "misses": [
+        {
+          "missedTokens": 12000,
+          "missedCost": 0.036,
+          "idleMs": 60000,
+          "modelChanged": false
+        }
+      ]
+    },
+    {
+      "name": "warm-partial-hit",
+      "entries": [
+        {
+          "type": "usage",
+          "id": "w",
+          "parentId": null,
+          "timestamp": "2026-01-01T00:01:00.000Z",
+          "kind": "cache_warm",
+          "provider": "anthropic",
+          "model": "claude-opus-4-5",
+          "usage": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 20000,
+            "cacheWrite": 0,
+            "total": 20000,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            }
+          }
+        },
+        {
+          "type": "message",
+          "id": "b",
+          "parentId": null,
+          "timestamp": "2026-01-01T00:02:00.000Z",
+          "message": {
+            "role": "assistant",
+            "provider": "anthropic",
+            "model": "claude-opus-4-5",
+            "timestamp": 1767225720000,
+            "usage": {
+              "input": 5000,
+              "output": 0,
+              "cacheRead": 10000,
+              "cacheWrite": 0,
+              "total": 15000,
+              "cost": {
+                "input": 0.015,
+                "output": 0,
+                "cacheRead": 0.003,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "content": [],
+            "stopReason": "stop",
+            "api": "anthropic-messages"
+          }
+        }
+      ],
+      "miss": {
+        "missedTokens": 5000,
+        "missedCost": 0.0135,
+        "idleMs": 60000,
+        "modelChanged": false
+      },
+      "totals": {
+        "missedTokens": 5000,
+        "missedCost": 0.0135,
+        "missCount": 1
+      },
+      "misses": [
+        {
+          "missedTokens": 5000,
+          "missedCost": 0.0135,
+          "idleMs": 60000,
+          "modelChanged": false
+        }
+      ]
+    },
+    {
+      "name": "warm-model-change",
+      "entries": [
+        {
+          "type": "message",
+          "id": "a",
+          "parentId": null,
+          "timestamp": "2026-01-01T00:00:00.000Z",
+          "message": {
+            "role": "assistant",
+            "provider": "anthropic",
+            "model": "claude-opus-4-5",
+            "timestamp": 1767225600000,
+            "usage": {
+              "input": 10000,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 10000,
+              "cost": {
+                "input": 0.03,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "content": [],
+            "stopReason": "stop",
+            "api": "anthropic-messages"
+          }
+        },
+        {
+          "type": "usage",
+          "id": "w",
+          "parentId": null,
+          "timestamp": "2026-01-01T00:01:00.000Z",
+          "kind": "cache_warm",
+          "provider": "openai",
+          "model": "gpt-5",
+          "usage": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 12000,
+            "cacheWrite": 0,
+            "total": 12000,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            }
+          }
+        },
+        {
+          "type": "message",
+          "id": "b",
+          "parentId": null,
+          "timestamp": "2026-01-01T00:02:00.000Z",
+          "message": {
+            "role": "assistant",
+            "provider": "anthropic",
+            "model": "claude-opus-4-5",
+            "timestamp": 1767225720000,
+            "usage": {
+              "input": 12000,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 12000,
+              "cost": {
+                "input": 0.036,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "content": [],
+            "stopReason": "stop",
+            "api": "anthropic-messages"
+          }
+        }
+      ],
+      "miss": {
+        "missedTokens": 12000,
+        "missedCost": 0.036,
+        "idleMs": 60000,
+        "modelChanged": true
+      },
+      "totals": {
+        "missedTokens": 12000,
+        "missedCost": 0.036,
+        "missCount": 1
+      },
+      "misses": [
+        {
+          "missedTokens": 12000,
+          "missedCost": 0.036,
+          "idleMs": 60000,
+          "modelChanged": true
+        }
+      ]
+    },
+    {
+      "name": "warm-zero-prompt-tokens",
+      "entries": [
+        {
+          "type": "message",
+          "id": "a",
+          "parentId": null,
+          "timestamp": "2026-01-01T00:00:00.000Z",
+          "message": {
+            "role": "assistant",
+            "provider": "anthropic",
+            "model": "claude-opus-4-5",
+            "timestamp": 1767225600000,
+            "usage": {
+              "input": 10000,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 10000,
+              "cost": {
+                "input": 0.03,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "content": [],
+            "stopReason": "stop",
+            "api": "anthropic-messages"
+          }
+        },
+        {
+          "type": "usage",
+          "id": "w",
+          "parentId": null,
+          "timestamp": "2026-01-01T00:01:00.000Z",
+          "kind": "cache_warm",
+          "provider": "anthropic",
+          "model": "claude-opus-4-5",
+          "usage": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            }
+          }
+        },
+        {
+          "type": "message",
+          "id": "b",
+          "parentId": null,
+          "timestamp": "2026-01-01T00:02:00.000Z",
+          "message": {
+            "role": "assistant",
+            "provider": "anthropic",
+            "model": "claude-opus-4-5",
+            "timestamp": 1767225720000,
+            "usage": {
+              "input": 12000,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 12000,
+              "cost": {
+                "input": 0.036,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "content": [],
+            "stopReason": "stop",
+            "api": "anthropic-messages"
+          }
+        }
+      ],
+      "miss": null,
+      "totals": {
+        "missedTokens": 0,
+        "missedCost": 0,
+        "missCount": 0
+      },
+      "misses": []
+    },
+    {
+      "name": "non-cache-warm-usage",
+      "entries": [
+        {
+          "type": "message",
+          "id": "a",
+          "parentId": null,
+          "timestamp": "2026-01-01T00:00:00.000Z",
+          "message": {
+            "role": "assistant",
+            "provider": "anthropic",
+            "model": "claude-opus-4-5",
+            "timestamp": 1767225600000,
+            "usage": {
+              "input": 10000,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 10000,
+              "cost": {
+                "input": 0.03,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "content": [],
+            "stopReason": "stop",
+            "api": "anthropic-messages"
+          }
+        },
+        {
+          "type": "usage",
+          "id": "w",
+          "parentId": null,
+          "timestamp": "2026-01-01T00:01:00.000Z",
+          "kind": "other",
+          "provider": "anthropic",
+          "model": "claude-opus-4-5",
+          "usage": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 12000,
+            "cacheWrite": 0,
+            "total": 12000,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            }
+          }
+        },
+        {
+          "type": "message",
+          "id": "b",
+          "parentId": null,
+          "timestamp": "2026-01-01T00:02:00.000Z",
+          "message": {
+            "role": "assistant",
+            "provider": "anthropic",
+            "model": "claude-opus-4-5",
+            "timestamp": 1767225720000,
+            "usage": {
+              "input": 12000,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 12000,
+              "cost": {
+                "input": 0.036,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "content": [],
+            "stopReason": "stop",
+            "api": "anthropic-messages"
+          }
+        }
+      ],
+      "miss": null,
+      "totals": {
+        "missedTokens": 0,
+        "missedCost": 0,
+        "missCount": 0
+      },
+      "misses": []
+    },
+    {
+      "name": "warm-then-compaction-reset",
+      "entries": [
+        {
+          "type": "message",
+          "id": "a",
+          "parentId": null,
+          "timestamp": "2026-01-01T00:00:00.000Z",
+          "message": {
+            "role": "assistant",
+            "provider": "anthropic",
+            "model": "claude-opus-4-5",
+            "timestamp": 1767225600000,
+            "usage": {
+              "input": 10000,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 10000,
+              "cost": {
+                "input": 0.03,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "content": [],
+            "stopReason": "stop",
+            "api": "anthropic-messages"
+          }
+        },
+        {
+          "type": "usage",
+          "id": "w",
+          "parentId": null,
+          "timestamp": "2026-01-01T00:01:00.000Z",
+          "kind": "cache_warm",
+          "provider": "anthropic",
+          "model": "claude-opus-4-5",
+          "usage": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 12000,
+            "cacheWrite": 0,
+            "total": 12000,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            }
+          }
+        },
+        {
+          "type": "compaction",
+          "id": "c",
+          "parentId": null,
+          "timestamp": "2026-01-01T00:01:30.000Z",
+          "summary": "summary",
+          "firstKeptEntryId": "a",
+          "tokensBefore": 1000
+        },
+        {
+          "type": "message",
+          "id": "b",
+          "parentId": null,
+          "timestamp": "2026-01-01T00:02:00.000Z",
+          "message": {
+            "role": "assistant",
+            "provider": "anthropic",
+            "model": "claude-opus-4-5",
+            "timestamp": 1767225720000,
+            "usage": {
+              "input": 12000,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 12000,
+              "cost": {
+                "input": 0.036,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "content": [],
+            "stopReason": "stop",
+            "api": "anthropic-messages"
+          }
+        }
+      ],
+      "miss": null,
+      "totals": {
+        "missedTokens": 0,
+        "missedCost": 0,
+        "missCount": 0
+      },
+      "misses": []
+    },
+    {
+      "name": "consecutive-warms",
+      "entries": [
+        {
+          "type": "usage",
+          "id": "w1",
+          "parentId": null,
+          "timestamp": "2026-01-01T00:01:00.000Z",
+          "kind": "cache_warm",
+          "provider": "anthropic",
+          "model": "claude-opus-4-5",
+          "usage": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 12000,
+            "cacheWrite": 0,
+            "total": 12000,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            }
+          }
+        },
+        {
+          "type": "usage",
+          "id": "w2",
+          "parentId": null,
+          "timestamp": "2026-01-01T00:01:30.000Z",
+          "kind": "cache_warm",
+          "provider": "anthropic",
+          "model": "claude-opus-4-5",
+          "usage": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 15000,
+            "cacheWrite": 0,
+            "total": 15000,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            }
+          }
+        },
+        {
+          "type": "message",
+          "id": "b",
+          "parentId": null,
+          "timestamp": "2026-01-01T00:02:00.000Z",
+          "message": {
+            "role": "assistant",
+            "provider": "anthropic",
+            "model": "claude-opus-4-5",
+            "timestamp": 1767225720000,
+            "usage": {
+              "input": 15000,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 15000,
+              "cost": {
+                "input": 0.045,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "content": [],
+            "stopReason": "stop",
+            "api": "anthropic-messages"
+          }
+        }
+      ],
+      "miss": {
+        "missedTokens": 15000,
+        "missedCost": 0.045,
+        "idleMs": 30000,
+        "modelChanged": false
+      },
+      "totals": {
+        "missedTokens": 15000,
+        "missedCost": 0.045,
+        "missCount": 1
+      },
+      "misses": [
+        {
+          "missedTokens": 15000,
+          "missedCost": 0.045,
+          "idleMs": 30000,
+          "modelChanged": false
+        }
+      ]
+    },
+    {
+      "name": "warm-invalid-timestamp",
+      "entries": [
+        {
+          "type": "usage",
+          "id": "w",
+          "parentId": null,
+          "timestamp": "not-a-date",
+          "kind": "cache_warm",
+          "provider": "anthropic",
+          "model": "claude-opus-4-5",
+          "usage": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 12000,
+            "cacheWrite": 0,
+            "total": 12000,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            }
+          }
+        },
+        {
+          "type": "message",
+          "id": "b",
+          "parentId": null,
+          "timestamp": "2026-01-01T00:02:00.000Z",
+          "message": {
+            "role": "assistant",
+            "provider": "anthropic",
+            "model": "claude-opus-4-5",
+            "timestamp": 1767225720000,
+            "usage": {
+              "input": 12000,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 12000,
+              "cost": {
+                "input": 0.036,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "content": [],
+            "stopReason": "stop",
+            "api": "anthropic-messages"
+          }
+        }
+      ],
+      "miss": {
+        "missedTokens": 12000,
+        "missedCost": 0.036,
+        "idleMs": null,
+        "modelChanged": false
+      },
+      "totals": {
+        "missedTokens": 12000,
+        "missedCost": 0.036,
+        "missCount": 1
+      },
+      "misses": [
+        {
+          "missedTokens": 12000,
+          "missedCost": 0.036,
+          "idleMs": null,
+          "modelChanged": false
+        }
+      ]
+    },
+    {
+      "name": "warm-then-full-hit",
+      "entries": [
+        {
+          "type": "usage",
+          "id": "w",
+          "parentId": null,
+          "timestamp": "2026-01-01T00:01:00.000Z",
+          "kind": "cache_warm",
+          "provider": "anthropic",
+          "model": "claude-opus-4-5",
+          "usage": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 12000,
+            "cacheWrite": 0,
+            "total": 12000,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            }
+          }
+        },
+        {
+          "type": "message",
+          "id": "b",
+          "parentId": null,
+          "timestamp": "2026-01-01T00:02:00.000Z",
+          "message": {
+            "role": "assistant",
+            "provider": "anthropic",
+            "model": "claude-opus-4-5",
+            "timestamp": 1767225720000,
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 12000,
+              "cacheWrite": 0,
+              "total": 12000,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0.0036,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "content": [],
+            "stopReason": "stop",
+            "api": "anthropic-messages"
+          }
+        }
+      ],
+      "miss": null,
+      "totals": {
+        "missedTokens": 0,
+        "missedCost": 0,
+        "missCount": 0
+      },
+      "misses": []
+    }
+  ]
+}

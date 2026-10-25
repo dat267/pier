@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"time"
 
 	"github.com/dat267/pier/ai"
 )
@@ -57,6 +58,9 @@ type previousRequest struct {
 	PromptTokens int64
 	ModelKey     string
 	Timestamp    int64
+	// timestampKnown is false for a cache-warming entry whose timestamp did not
+	// parse: upstream keeps NaN there (D273), so the idle gap is unmeasured.
+	timestampKnown bool
 	// reportedCache is sticky: some earlier request in this scan segment
 	// reported cache activity, which distinguishes a total miss on a
 	// cache-read-only provider from one that never reports caching.
@@ -107,9 +111,18 @@ func detectCacheMissFor(prev *previousRequest, message *ai.AssistantMessage, mod
 	return CacheMiss{
 		MissedTokens: missedTokens,
 		MissedCost:   float64(missedTokens) * math.Max(0, paidPerToken-readPerToken),
-		IdleMs:       max(0, message.Timestamp-prev.Timestamp),
+		IdleMs:       cacheMissIdleMs(prev, message),
 		ModelChanged: fmt.Sprintf("%s/%s", message.Provider, message.Model) != prev.ModelKey,
 	}, true
+}
+
+// cacheMissIdleMs is the gap since the previous request. An unparseable
+// cache-warming timestamp leaves it unmeasured (D273).
+func cacheMissIdleMs(prev *previousRequest, message *ai.AssistantMessage) int64 {
+	if !prev.timestampKnown {
+		return 0
+	}
+	return max(0, message.Timestamp-prev.Timestamp)
 }
 
 func asPreviousRequest(message *ai.AssistantMessage, reportedCache bool) *previousRequest {
@@ -124,11 +137,36 @@ func newPreviousRequest(usage ai.Usage, provider string, model string, timestamp
 		return nil
 	}
 	return &previousRequest{
-		PromptTokens:  promptTokens,
-		ModelKey:      fmt.Sprintf("%s/%s", provider, model),
-		Timestamp:     timestamp,
-		reportedCache: reportedCache || usage.CacheRead+usage.CacheWrite > 0,
+		PromptTokens:   promptTokens,
+		ModelKey:       fmt.Sprintf("%s/%s", provider, model),
+		Timestamp:      timestamp,
+		timestampKnown: true,
+		reportedCache:  reportedCache || usage.CacheRead+usage.CacheWrite > 0,
 	}
+}
+
+// cacheWarmPreviousRequest is the previous request a persisted cache-warming
+// usage entry reports (upstream scan's `type === "usage" && kind ===
+// "cache_warm"` branch): the prompt the warm request left cached, which the
+// next turn is measured against. Nil when the entry reports no prompt tokens.
+func cacheWarmPreviousRequest(entry *SessionEntry) *previousRequest {
+	if entry.Kind != "cache_warm" || entry.Usage == nil {
+		return nil
+	}
+	promptTokens := promptTokensOf(*entry.Usage)
+	if promptTokens <= 0 {
+		return nil
+	}
+	request := &previousRequest{
+		PromptTokens:  promptTokens,
+		ModelKey:      entry.Provider + "/" + entry.Model,
+		reportedCache: true,
+	}
+	if parsed, err := time.Parse(time.RFC3339Nano, entry.Timestamp); err == nil {
+		request.Timestamp = parsed.UnixMilli()
+		request.timestampKnown = true
+	}
+	return request
 }
 
 func promptTokensOf(usage ai.Usage) int64 {
@@ -217,6 +255,12 @@ func (s *cacheScanState) consume(entry *SessionEntry) {
 		record.usageEntry = true
 		record.usage = entry.Usage
 		record.usageKey = entry.Provider + "/" + entry.Model
+		// A cache-warming request is the branch's latest request: the next turn
+		// is measured against the prompt it left cached (upstream scan). Other
+		// usage kinds do not move the scan.
+		if next := cacheWarmPreviousRequest(entry); next != nil {
+			s.prev = next
+		}
 		s.candidates = append(s.candidates, record)
 		return
 	case "compaction", "branch_summary":
@@ -340,6 +384,14 @@ func scanCacheEntries(entries []SessionEntry, models ModelPriceSource, cache *me
 			// content, not re-billed content. Model switches are NOT exempt:
 			// they re-bill the full prompt and should be counted.
 			result.prev = nil
+			continue
+		}
+		if entry.Type == "usage" {
+			// A cache-warming request is the branch's latest request (upstream
+			// scan); other usage kinds leave the scan alone.
+			if next := cacheWarmPreviousRequest(entry); next != nil {
+				result.prev = next
+			}
 			continue
 		}
 		if entry.Type != "message" || projectedRole(entry, cache) != "assistant" {
