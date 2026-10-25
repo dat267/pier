@@ -98,6 +98,19 @@ type ModelsStoreEntry struct {
 	Etag *string `json:"etag,omitempty"`
 }
 
+// MarshalJSON preserves pi's required array shape for an empty catalog:
+// models-store.ts declares models as readonly AnyModel[], never null. D271:
+// upstream's FileModelsStore.write round-trips the parsed file, so a legacy
+// "models":null left by an older Pier build would survive a write; this
+// normalizes every entry to the array shape pi expects.
+func (entry ModelsStoreEntry) MarshalJSON() ([]byte, error) {
+	type plain ModelsStoreEntry
+	if entry.Models == nil {
+		entry.Models = []*Model{}
+	}
+	return MarshalJSON(plain(entry))
+}
+
 // ModelsStore is persistent model catalogs keyed by provider ID.
 type ModelsStore interface {
 	Read(providerID string, ctx context.Context) (*ModelsStoreEntry, error)

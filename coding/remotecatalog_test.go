@@ -270,7 +270,8 @@ func TestRemoteCatalog404AndError(t *testing.T) {
 		t.Fatal(err)
 	}
 	cleared, _ := store.Read("p", ctx)
-	if cleared.Models != nil || cleared.Etag != nil || *cleared.LastModified != 0 {
+	// pi v1.4.0 persists an empty array, not null, for a missing catalog.
+	if cleared.Models == nil || len(cleared.Models) != 0 || cleared.Etag != nil || *cleared.LastModified != 0 {
 		t.Fatalf("cleared = %+v", cleared)
 	}
 

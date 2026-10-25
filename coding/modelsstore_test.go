@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"bytes"
 	ctxpkg "context"
 	"encoding/json"
 	"errors"
@@ -83,6 +84,57 @@ func TestInMemoryModelsStore(t *testing.T) {
 	}
 	if err := store.Delete("openai", cancelled); !errors.Is(err, ctxpkg.Canceled) {
 		t.Fatalf("err = %v", err)
+	}
+}
+
+// pi v1.4.0 packages/ai/src/models-store.ts requires models to be an array.
+// remote-catalog-provider.ts restores it with .filter(), so null breaks Pi when
+// Pier shares ~/.pi/agent/models-store.json after an empty catalog refresh.
+func TestFileModelsStoreEmptyCatalogIsArray(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "models-store.json")
+	store := NewFileModelsStore(path)
+	zero := int64(0)
+	if err := store.Write("deepseek", &ai.ModelsStoreEntry{LastModified: &zero}, ctxpkg.Background()); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var data map[string]map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &data); err != nil {
+		t.Fatal(err)
+	}
+	if got := string(data["deepseek"]["models"]); got != "[]" {
+		t.Fatalf("empty catalog must be [] for Pi compatibility, got %s", got)
+	}
+}
+
+func TestFileModelsStoreWriteRepairsLegacyNullCatalog(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "models-store.json")
+	// Older Pier builds wrote this shape; any subsequent write must not carry
+	// it back into the shared cache. Keep the old entry's metadata unchanged.
+	if err := os.WriteFile(path, []byte(`{"deepseek":{"models":null,"lastModified":0,"checkedAt":123}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	store := NewFileModelsStore(path)
+	if err := store.Write("openai", sampleEntry("gpt-5"), ctxpkg.Background()); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var data map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &data); err != nil {
+		t.Fatal(err)
+	}
+	var compact bytes.Buffer
+	if err := json.Compact(&compact, data["deepseek"]); err != nil {
+		t.Fatal(err)
+	}
+	if got := compact.String(); got != `{"models":[],"lastModified":0,"checkedAt":123}` {
+		t.Fatalf("legacy catalog was not repaired without losing metadata: %s", got)
 	}
 }
 
