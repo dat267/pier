@@ -1,0 +1,1650 @@
+[
+  {
+    "name": "anthropic/0",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "prompt is too long: 213462 tokens > 200000 maximum",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/0",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "prompt is too long: 213462 tokens > 200000 maximum",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/1",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "PROMPT IS TOO LONG",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/1",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "PROMPT IS TOO LONG",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/2",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "Prompt Too Long",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/2",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "Prompt Too Long",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/3",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "ＰＲＯＭＰＴ TOO LONG",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "cerebras/3",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "ＰＲＯＭＰＴ TOO LONG",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "anthropic/4",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "prompt is too long",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "cerebras/4",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "prompt is too long",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "anthropic/5",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "prompt too long",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/5",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "prompt too long",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/6",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "prompt exceeds max length",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/6",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "prompt exceeds max length",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/7",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "413 {\"error\":{\"type\":\"request_too_large\",\"message\":\"Request exceeds the maximum size\"}}",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/7",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "413 {\"error\":{\"type\":\"request_too_large\",\"message\":\"Request exceeds the maximum size\"}}",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/8",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "request_too_large",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/8",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "request_too_large",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/9",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "input is too long for requested model",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/9",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "input is too long for requested model",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/10",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "Your input exceeds the context window of this model",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/10",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "Your input exceeds the context window of this model",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/11",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "Requested token count exceeds the model's maximum context length of 131072 tokens",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/11",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "Requested token count exceeds the model's maximum context length of 131072 tokens",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/12",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "exceeds model's maximum context length (262144)",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/12",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "exceeds model's maximum context length (262144)",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/13",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "The input token count (1196265) exceeds the maximum number of tokens allowed (1048575)",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/13",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "The input token count (1196265) exceeds the maximum number of tokens allowed (1048575)",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/14",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "This model's maximum prompt length is 131072 but the request contains 537812 tokens",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/14",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "This model's maximum prompt length is 131072 but the request contains 537812 tokens",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/15",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "Please reduce the length of the messages or completion",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/15",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "Please reduce the length of the messages or completion",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/16",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "This endpoint's maximum context length is 200000 tokens. However, you requested about 300000 tokens",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/16",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "This endpoint's maximum context length is 200000 tokens. However, you requested about 300000 tokens",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/17",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "Input length 300000 exceeds the maximum allowed input length of 200000 tokens.",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/17",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "Input length 300000 exceeds the maximum allowed input length of 200000 tokens.",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/18",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "The input (265330 tokens) is longer than the model's context length (262144 tokens).",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/18",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "The input (265330 tokens) is longer than the model's context length (262144 tokens).",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/19",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "the request exceeds the available context size, try increasing it",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/19",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "the request exceeds the available context size, try increasing it",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/20",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "tokens to keep from the initial prompt is greater than the context length",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/20",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "tokens to keep from the initial prompt is greater than the context length",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/21",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "prompt token count of 300000 exceeds the limit of 200000",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/21",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "prompt token count of 300000 exceeds the limit of 200000",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/22",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "github-copilot API error (413): {\"message\":\"failed to parse request\",\"code\":\"\"}",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/22",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "github-copilot API error (413): {\"message\":\"failed to parse request\",\"code\":\"\"}",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/23",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "invalid params, context window exceeds limit",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/23",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "invalid params, context window exceeds limit",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/24",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "Your request exceeded model token limit: 300000 (requested: 200000)",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/24",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "Your request exceeded model token limit: 300000 (requested: 200000)",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/25",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "Prompt has 300000 tokens, but the configured context size is 200000 tokens",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/25",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "Prompt has 300000 tokens, but the configured context size is 200000 tokens",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/26",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "400 status code (no body)",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "cerebras/26",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "400 status code (no body)",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/27",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "413 status code (no body)",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/27",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "413 status code (no body)",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/28",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "400 (no body)",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "cerebras/28",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "400 (no body)",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/29",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "Prompt contains 300000 tokens too large for model with 200000 maximum context length",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/29",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "Prompt contains 300000 tokens too large for model with 200000 maximum context length",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/30",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "model_context_window_exceeded",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/30",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "model_context_window_exceeded",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/31",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "prompt too long; exceeded max context length",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/31",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "prompt too long; exceeded max context length",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/32",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "prompt too long; exceeded context length by 5 tokens",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/32",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "prompt too long; exceeded context length by 5 tokens",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/33",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "Range of input length should be [1, 200000]",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/33",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "Range of input length should be [1, 200000]",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/34",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "context_length_exceeded",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/34",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "context_length_exceeded",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/35",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "context length exceeded",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/35",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "context length exceeded",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/36",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "Too many tokens",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/36",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "Too many tokens",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/37",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "token limit exceeded",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/37",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "token limit exceeded",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/38",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "413",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/38",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "413",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/39",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "413 ",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/39",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "413 ",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/40",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "error 413 occurred",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "cerebras/40",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "error 413 occurred",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "anthropic/41",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "note: status 413 in body",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "cerebras/41",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "note: status 413 in body",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "anthropic/42",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "gemini API error (413): request too large",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "cerebras/42",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "gemini API error (413): request too large",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": true
+  },
+  {
+    "name": "anthropic/43",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "Throttling error: Too many tokens, please wait before trying again",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "cerebras/43",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "Throttling error: Too many tokens, please wait before trying again",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "anthropic/44",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "Service unavailable: prompt too long",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "cerebras/44",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "Service unavailable: prompt too long",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "anthropic/45",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "Rate limit reached: token limit exceeded",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "cerebras/45",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "Rate limit reached: token limit exceeded",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "anthropic/46",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "Too Many Requests: prompt exceeds max length",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "cerebras/46",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "Too Many Requests: prompt exceeds max length",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "anthropic/47",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "Connection reset by peer",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "cerebras/47",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "Connection reset by peer",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "anthropic/48",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "cerebras/48",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "anthropic/49",
+    "provider": "anthropic",
+    "stopReason": "error",
+    "errorMessage": "   ",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "cerebras/49",
+    "provider": "cerebras",
+    "stopReason": "error",
+    "errorMessage": "   ",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "stop/over-window",
+    "provider": "zai",
+    "stopReason": "stop",
+    "usage": {
+      "input": 100001,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "contextWindow": 100000,
+    "expected": true
+  },
+  {
+    "name": "stop/at-window",
+    "provider": "zai",
+    "stopReason": "stop",
+    "usage": {
+      "input": 100000,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "contextWindow": 100000,
+    "expected": false
+  },
+  {
+    "name": "stop/cache-read-counts",
+    "provider": "zai",
+    "stopReason": "stop",
+    "usage": {
+      "input": 60000,
+      "output": 0,
+      "cacheRead": 40001,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "contextWindow": 100000,
+    "expected": true
+  },
+  {
+    "name": "stop/no-window",
+    "provider": "zai",
+    "stopReason": "stop",
+    "usage": {
+      "input": 100001,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "length/zero-output-full",
+    "provider": "mimo",
+    "stopReason": "length",
+    "usage": {
+      "input": 99000,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "contextWindow": 100000,
+    "expected": true
+  },
+  {
+    "name": "length/zero-output-under",
+    "provider": "mimo",
+    "stopReason": "length",
+    "usage": {
+      "input": 98000,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "contextWindow": 100000,
+    "expected": false
+  },
+  {
+    "name": "length/some-output",
+    "provider": "mimo",
+    "stopReason": "length",
+    "usage": {
+      "input": 100000,
+      "output": 5,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "contextWindow": 100000,
+    "expected": false
+  },
+  {
+    "name": "length/no-window",
+    "provider": "mimo",
+    "stopReason": "length",
+    "usage": {
+      "input": 100000,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "tool-use/ignored",
+    "provider": "anthropic",
+    "stopReason": "toolUse",
+    "errorMessage": "prompt is too long",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  },
+  {
+    "name": "stop-with-error-text",
+    "provider": "anthropic",
+    "stopReason": "stop",
+    "errorMessage": "prompt is too long",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {}
+    },
+    "expected": false
+  }
+]
