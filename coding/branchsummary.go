@@ -99,14 +99,10 @@ func branchMessageFromEntry(entry *SessionEntry) ai.Message {
 		if _, ok := message.(*ai.ToolResultMessage); ok {
 			return nil
 		}
-		// Custom (non-LLM) messages contribute through the custom arm.
+		// Custom (non-LLM) messages keep their role: ConvertToLlm projects a
+		// bash execution to user text (`excludeFromContext` ones are dropped
+		// there), so they count toward the summary budget like the reference.
 		if custom, ok := message.(*ai.CustomMessage); ok {
-			switch custom.Role {
-			case RoleBashExecution:
-				return nil
-			case RoleCustom, RoleBranchSummary, RoleCompactionSummary:
-				return custom
-			}
 			return custom
 		}
 		return message

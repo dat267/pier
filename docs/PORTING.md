@@ -320,6 +320,18 @@ opened where the reference loads it; the header now needs a present string id
 missing/null/non-string is deliberately not matched (D278). Generated corpora
 cover both (`coding/testdata/system-prompt/`, `coding/testdata/session-load/`).
 
+**Branch-summary audit.** Branch preparation dropped message entries whose
+role is `bashExecution`, so a branch worked through `!` commands summarized
+without those commands or their output and undercounted its tokens. Upstream
+`getMessageFromEntry` skips only tool results, so the message is prepared and
+`convertToLlm` renders it through `bashExecutionToText` (`!!` messages are
+prepared, then dropped by their `excludeFromContext` flag). Pier now keeps the
+custom message, and the existing `ConvertToLlm` arm produces the same text.
+The generated corpus (`coding/testdata/branch-preparation/`) covers `!`, `!!`,
+a bash-only branch, the exit/truncation text, `custom_message`, summary entries
+with cumulative file lists, tool-call file operations, both budget cases and
+the inactive entry types.
+
 **Upstream status.** v1.4.0 (`4a080252`) is the latest released tag after
 refreshing upstream tags and is the port's reference pin. It is 81 commits past
 v1.3.0. The pin identifies the sources to review, not a claim that every change

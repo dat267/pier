@@ -1,0 +1,737 @@
+{
+  "bash-execution": {
+    "entries": [
+      {
+        "id": "u1",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "message",
+        "message": {
+          "role": "user",
+          "timestamp": 1767225600000,
+          "content": [
+            {
+              "type": "text",
+              "text": "hello"
+            }
+          ]
+        }
+      },
+      {
+        "id": "b1",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "message",
+        "message": {
+          "role": "bashExecution",
+          "command": "!ls -la",
+          "output": "file1\nfile2",
+          "exitCode": 0,
+          "cancelled": false,
+          "truncated": false,
+          "timestamp": 1767225600000
+        }
+      },
+      {
+        "id": "a1",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "message",
+        "message": {
+          "role": "assistant",
+          "timestamp": 1767225600000,
+          "stopReason": "stop",
+          "api": "anthropic-messages",
+          "content": [
+            {
+              "type": "text",
+              "text": "done"
+            }
+          ]
+        }
+      }
+    ],
+    "budget": 0,
+    "preparedRoles": [
+      "user",
+      "bashExecution",
+      "assistant"
+    ],
+    "converted": [
+      {
+        "role": "user",
+        "text": "hello"
+      },
+      {
+        "role": "user",
+        "text": "Ran `!ls -la`\n```\nfile1\nfile2\n```"
+      },
+      {
+        "role": "assistant",
+        "text": "done"
+      }
+    ],
+    "fileOps": {
+      "read": [],
+      "written": [],
+      "edited": []
+    },
+    "totalTokens": 8
+  },
+  "bash-excluded": {
+    "entries": [
+      {
+        "id": "u1",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "message",
+        "message": {
+          "role": "user",
+          "timestamp": 1767225600000,
+          "content": [
+            {
+              "type": "text",
+              "text": "hello"
+            }
+          ]
+        }
+      },
+      {
+        "id": "b1",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "message",
+        "message": {
+          "role": "bashExecution",
+          "command": "!!secret",
+          "output": "hidden",
+          "exitCode": 0,
+          "cancelled": false,
+          "truncated": false,
+          "timestamp": 1767225600000,
+          "excludeFromContext": true
+        }
+      },
+      {
+        "id": "a1",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "message",
+        "message": {
+          "role": "assistant",
+          "timestamp": 1767225600000,
+          "stopReason": "stop",
+          "api": "anthropic-messages",
+          "content": [
+            {
+              "type": "text",
+              "text": "done"
+            }
+          ]
+        }
+      }
+    ],
+    "budget": 0,
+    "preparedRoles": [
+      "user",
+      "bashExecution",
+      "assistant"
+    ],
+    "converted": [
+      {
+        "role": "user",
+        "text": "hello"
+      },
+      {
+        "role": "assistant",
+        "text": "done"
+      }
+    ],
+    "fileOps": {
+      "read": [],
+      "written": [],
+      "edited": []
+    },
+    "totalTokens": 7
+  },
+  "bash-execution-details": {
+    "entries": [
+      {
+        "id": "b1",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "message",
+        "message": {
+          "role": "bashExecution",
+          "command": "!npm test",
+          "output": "line1\nline2\nline3",
+          "exitCode": 2,
+          "cancelled": false,
+          "truncated": true,
+          "timestamp": 1767225600000,
+          "fullOutputPath": "/tmp/full.txt"
+        }
+      }
+    ],
+    "budget": 0,
+    "preparedRoles": [
+      "bashExecution"
+    ],
+    "converted": [
+      {
+        "role": "user",
+        "text": "Ran `!npm test`\n```\nline1\nline2\nline3\n```\n\nCommand exited with code 2\n\n[Output truncated. Full output: /tmp/full.txt]"
+      }
+    ],
+    "fileOps": {
+      "read": [],
+      "written": [],
+      "edited": []
+    },
+    "totalTokens": 7
+  },
+  "bash-only": {
+    "entries": [
+      {
+        "id": "b1",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "message",
+        "message": {
+          "role": "bashExecution",
+          "command": "!pwd",
+          "output": "/work",
+          "exitCode": 0,
+          "cancelled": false,
+          "truncated": false,
+          "timestamp": 1767225600000
+        }
+      }
+    ],
+    "budget": 0,
+    "preparedRoles": [
+      "bashExecution"
+    ],
+    "converted": [
+      {
+        "role": "user",
+        "text": "Ran `!pwd`\n```\n/work\n```"
+      }
+    ],
+    "fileOps": {
+      "read": [],
+      "written": [],
+      "edited": []
+    },
+    "totalTokens": 3
+  },
+  "custom-message": {
+    "entries": [
+      {
+        "id": "u1",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "message",
+        "message": {
+          "role": "user",
+          "timestamp": 1767225600000,
+          "content": [
+            {
+              "type": "text",
+              "text": "hello"
+            }
+          ]
+        }
+      },
+      {
+        "id": "c1",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "custom_message",
+        "customType": "note",
+        "content": "remember this",
+        "display": true
+      },
+      {
+        "id": "a1",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "message",
+        "message": {
+          "role": "assistant",
+          "timestamp": 1767225600000,
+          "stopReason": "stop",
+          "api": "anthropic-messages",
+          "content": [
+            {
+              "type": "text",
+              "text": "done"
+            }
+          ]
+        }
+      }
+    ],
+    "budget": 0,
+    "preparedRoles": [
+      "user",
+      "custom",
+      "assistant"
+    ],
+    "converted": [
+      {
+        "role": "user",
+        "text": "hello"
+      },
+      {
+        "role": "user",
+        "text": "remember this"
+      },
+      {
+        "role": "assistant",
+        "text": "done"
+      }
+    ],
+    "fileOps": {
+      "read": [],
+      "written": [],
+      "edited": []
+    },
+    "totalTokens": 7
+  },
+  "summaries": {
+    "entries": [
+      {
+        "id": "u1",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "message",
+        "message": {
+          "role": "user",
+          "timestamp": 1767225600000,
+          "content": [
+            {
+              "type": "text",
+              "text": "start"
+            }
+          ]
+        }
+      },
+      {
+        "id": "s1",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "branch_summary",
+        "summary": "branch summary text",
+        "fromId": "x",
+        "fromHook": false,
+        "details": {
+          "readFiles": [
+            "/r"
+          ],
+          "modifiedFiles": [
+            "/m"
+          ]
+        }
+      },
+      {
+        "id": "k1",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "compaction",
+        "summary": "compaction summary text",
+        "tokensBefore": 1234
+      },
+      {
+        "id": "u2",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "message",
+        "message": {
+          "role": "user",
+          "timestamp": 1767225600000,
+          "content": [
+            {
+              "type": "text",
+              "text": "after"
+            }
+          ]
+        }
+      }
+    ],
+    "budget": 0,
+    "preparedRoles": [
+      "user",
+      "branchSummary",
+      "compactionSummary",
+      "user"
+    ],
+    "converted": [
+      {
+        "role": "user",
+        "text": "start"
+      },
+      {
+        "role": "user",
+        "text": "The following is a summary of a branch that this conversation came back from:\n\n<summary>\nbranch summary text</summary>"
+      },
+      {
+        "role": "user",
+        "text": "The conversation history before this point was compacted into the following summary:\n\n<summary>\ncompaction summary text\n</summary>"
+      },
+      {
+        "role": "user",
+        "text": "after"
+      }
+    ],
+    "fileOps": {
+      "read": [
+        "/r"
+      ],
+      "written": [],
+      "edited": [
+        "/m"
+      ]
+    },
+    "totalTokens": 15
+  },
+  "tool-files": {
+    "entries": [
+      {
+        "id": "u1",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "message",
+        "message": {
+          "role": "user",
+          "timestamp": 1767225600000,
+          "content": [
+            {
+              "type": "text",
+              "text": "go"
+            }
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "message",
+        "message": {
+          "role": "assistant",
+          "timestamp": 1767225600000,
+          "stopReason": "stop",
+          "api": "anthropic-messages",
+          "content": [
+            {
+              "type": "toolCall",
+              "id": "t1",
+              "name": "read",
+              "arguments": {
+                "path": "/r"
+              }
+            },
+            {
+              "type": "toolCall",
+              "id": "t2",
+              "name": "write",
+              "arguments": {
+                "path": "/w"
+              }
+            },
+            {
+              "type": "toolCall",
+              "id": "t3",
+              "name": "edit",
+              "arguments": {
+                "path": "/e"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "r1",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "message",
+        "message": {
+          "role": "toolResult",
+          "toolCallId": "t1",
+          "toolName": "read",
+          "timestamp": 1767225600000,
+          "content": [
+            {
+              "type": "text",
+              "text": "out"
+            }
+          ]
+        }
+      }
+    ],
+    "budget": 0,
+    "preparedRoles": [
+      "user",
+      "assistant"
+    ],
+    "converted": [
+      {
+        "role": "user",
+        "text": "go"
+      },
+      {
+        "role": "assistant",
+        "text": ""
+      }
+    ],
+    "fileOps": {
+      "read": [
+        "/r"
+      ],
+      "written": [
+        "/w"
+      ],
+      "edited": [
+        "/e"
+      ]
+    },
+    "totalTokens": 14
+  },
+  "budget-tiny": {
+    "entries": [
+      {
+        "id": "u1",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "message",
+        "message": {
+          "role": "user",
+          "timestamp": 1767225600000,
+          "content": [
+            {
+              "type": "text",
+              "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "message",
+        "message": {
+          "role": "assistant",
+          "timestamp": 1767225600000,
+          "stopReason": "stop",
+          "api": "anthropic-messages",
+          "content": [
+            {
+              "type": "text",
+              "text": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            }
+          ]
+        }
+      },
+      {
+        "id": "u2",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "message",
+        "message": {
+          "role": "user",
+          "timestamp": 1767225600000,
+          "content": [
+            {
+              "type": "text",
+              "text": "recent"
+            }
+          ]
+        }
+      }
+    ],
+    "budget": 120,
+    "preparedRoles": [
+      "assistant",
+      "user"
+    ],
+    "converted": [
+      {
+        "role": "assistant",
+        "text": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "role": "user",
+        "text": "recent"
+      }
+    ],
+    "fileOps": {
+      "read": [],
+      "written": [],
+      "edited": []
+    },
+    "totalTokens": 102
+  },
+  "budget-summary-fits": {
+    "entries": [
+      {
+        "id": "u1",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "message",
+        "message": {
+          "role": "user",
+          "timestamp": 1767225600000,
+          "content": [
+            {
+              "type": "text",
+              "text": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ]
+        }
+      },
+      {
+        "id": "k1",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "compaction",
+        "summary": "short summary",
+        "tokensBefore": 100
+      },
+      {
+        "id": "u2",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "message",
+        "message": {
+          "role": "user",
+          "timestamp": 1767225600000,
+          "content": [
+            {
+              "type": "text",
+              "text": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+            }
+          ]
+        }
+      }
+    ],
+    "budget": 200,
+    "preparedRoles": [
+      "compactionSummary",
+      "user"
+    ],
+    "converted": [
+      {
+        "role": "user",
+        "text": "The conversation history before this point was compacted into the following summary:\n\n<summary>\nshort summary\n</summary>"
+      },
+      {
+        "role": "user",
+        "text": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    ],
+    "fileOps": {
+      "read": [],
+      "written": [],
+      "edited": []
+    },
+    "totalTokens": 104
+  },
+  "ignored-entries": {
+    "entries": [
+      {
+        "id": "u1",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "message",
+        "message": {
+          "role": "user",
+          "timestamp": 1767225600000,
+          "content": [
+            {
+              "type": "text",
+              "text": "hello"
+            }
+          ]
+        }
+      },
+      {
+        "id": "o1",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "thinking_level_change",
+        "thinkingLevel": "high"
+      },
+      {
+        "id": "o2",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "model_change",
+        "provider": "p",
+        "modelId": "m"
+      },
+      {
+        "id": "o3",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "custom",
+        "customType": "x",
+        "data": {}
+      },
+      {
+        "id": "o4",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "label",
+        "targetId": "u1",
+        "label": "L"
+      },
+      {
+        "id": "o5",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "session_info",
+        "name": "n"
+      },
+      {
+        "id": "a1",
+        "parentId": null,
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "type": "message",
+        "message": {
+          "role": "assistant",
+          "timestamp": 1767225600000,
+          "stopReason": "stop",
+          "api": "anthropic-messages",
+          "content": [
+            {
+              "type": "text",
+              "text": "hi"
+            }
+          ]
+        }
+      }
+    ],
+    "budget": 0,
+    "preparedRoles": [
+      "user",
+      "assistant"
+    ],
+    "converted": [
+      {
+        "role": "user",
+        "text": "hello"
+      },
+      {
+        "role": "assistant",
+        "text": "hi"
+      }
+    ],
+    "fileOps": {
+      "read": [],
+      "written": [],
+      "edited": []
+    },
+    "totalTokens": 3
+  }
+}
