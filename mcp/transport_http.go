@@ -318,6 +318,15 @@ func (t *StreamableHttpTransport) Send(ctx context.Context, message Message) err
 	if err != nil {
 		return err
 	}
+	ctx, cancel := context.WithCancel(ctx)
+	stopOnClose := context.AfterFunc(t.stopCtx, cancel)
+	finish := func() { stopOnClose(); cancel() }
+	finishOnReturn := true
+	defer func() {
+		if finishOnReturn {
+			finish()
+		}
+	}()
 	response, err := t.authorizedFetch(ctx, http.MethodPost, map[string]string{
 		"accept":       "application/json, text/event-stream",
 		"content-type": "application/json",
@@ -382,7 +391,12 @@ func (t *StreamableHttpTransport) Send(ctx context.Context, message Message) err
 		return nil
 	case "text/event-stream":
 		if response.Body != nil {
-			go t.consumeResponseStream(response.Body, request.ID)
+			// The response worker owns the request context after Send returns.
+			finishOnReturn = false
+			go func() {
+				defer finish()
+				t.consumeResponseStream(response.Body, request.ID)
+			}()
 			return nil
 		}
 	}
