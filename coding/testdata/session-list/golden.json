@@ -1,0 +1,185 @@
+{
+  "assistant-last": {
+    "lines": [
+      "{\"type\":\"session\",\"id\":\"s1\",\"timestamp\":\"2026-01-01T00:00:00.000Z\",\"cwd\":\"/work\"}",
+      "{\"type\":\"message\",\"id\":\"m1\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:01.000Z\",\"message\":{\"role\":\"user\",\"timestamp\":1767225601000,\"content\":[{\"type\":\"text\",\"text\":\"hello\"}]}}",
+      "{\"type\":\"message\",\"id\":\"m2\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:02.000Z\",\"message\":{\"role\":\"assistant\",\"timestamp\":1767225602000,\"content\":[{\"type\":\"text\",\"text\":\"hi there\"}],\"stopReason\":\"stop\",\"api\":\"anthropic-messages\"}}"
+    ],
+    "sessions": [
+      {
+        "id": "s1",
+        "cwd": "/work",
+        "name": null,
+        "parentSessionPath": null,
+        "created": "2026-01-01T00:00:00.000Z",
+        "modified": "2026-01-01T00:00:02.000Z",
+        "messageCount": 2,
+        "firstMessage": "hello",
+        "allMessagesText": "hello hi there"
+      }
+    ]
+  },
+  "tool-result-last": {
+    "lines": [
+      "{\"type\":\"session\",\"id\":\"s1\",\"timestamp\":\"2026-01-01T00:00:00.000Z\",\"cwd\":\"/work\"}",
+      "{\"type\":\"message\",\"id\":\"m1\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:01.000Z\",\"message\":{\"role\":\"user\",\"timestamp\":1767225601000,\"content\":[{\"type\":\"text\",\"text\":\"hello\"}]}}",
+      "{\"type\":\"message\",\"id\":\"m2\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:02.000Z\",\"message\":{\"role\":\"assistant\",\"timestamp\":1767225602000,\"content\":[{\"type\":\"text\",\"text\":\"calling\"}],\"stopReason\":\"stop\",\"api\":\"anthropic-messages\"}}",
+      "{\"type\":\"message\",\"id\":\"m3\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:03.000Z\",\"message\":{\"role\":\"toolResult\",\"toolCallId\":\"c1\",\"toolName\":\"read\",\"timestamp\":1767225603000,\"content\":[{\"type\":\"text\",\"text\":\"result\"}]}}"
+    ],
+    "sessions": [
+      {
+        "id": "s1",
+        "cwd": "/work",
+        "name": null,
+        "parentSessionPath": null,
+        "created": "2026-01-01T00:00:00.000Z",
+        "modified": "2026-01-01T00:00:02.000Z",
+        "messageCount": 3,
+        "firstMessage": "hello",
+        "allMessagesText": "hello calling"
+      }
+    ]
+  },
+  "custom-last": {
+    "lines": [
+      "{\"type\":\"session\",\"id\":\"s1\",\"timestamp\":\"2026-01-01T00:00:00.000Z\",\"cwd\":\"/work\"}",
+      "{\"type\":\"message\",\"id\":\"m1\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:01.000Z\",\"message\":{\"role\":\"user\",\"timestamp\":1767225601000,\"content\":[{\"type\":\"text\",\"text\":\"hello\"}]}}",
+      "{\"type\":\"message\",\"id\":\"m2\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:02.000Z\",\"message\":{\"role\":\"assistant\",\"timestamp\":1767225602000,\"content\":[{\"type\":\"text\",\"text\":\"hi\"}],\"stopReason\":\"stop\",\"api\":\"anthropic-messages\"}}",
+      "{\"type\":\"message\",\"id\":\"m3\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:03.000Z\",\"message\":{\"role\":\"custom\",\"customType\":\"note\",\"timestamp\":1767225603000,\"content\":[{\"type\":\"text\",\"text\":\"custom\"}]}}"
+    ],
+    "sessions": [
+      {
+        "id": "s1",
+        "cwd": "/work",
+        "name": null,
+        "parentSessionPath": null,
+        "created": "2026-01-01T00:00:00.000Z",
+        "modified": "2026-01-01T00:00:02.000Z",
+        "messageCount": 3,
+        "firstMessage": "hello",
+        "allMessagesText": "hello hi"
+      }
+    ]
+  },
+  "system-last": {
+    "lines": [
+      "{\"type\":\"session\",\"id\":\"s1\",\"timestamp\":\"2026-01-01T00:00:00.000Z\",\"cwd\":\"/work\"}",
+      "{\"type\":\"message\",\"id\":\"m1\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:01.000Z\",\"message\":{\"role\":\"user\",\"timestamp\":1767225601000,\"content\":[{\"type\":\"text\",\"text\":\"hello\"}]}}",
+      "{\"type\":\"message\",\"id\":\"m2\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:02.000Z\",\"message\":{\"role\":\"assistant\",\"timestamp\":1767225602000,\"content\":[{\"type\":\"text\",\"text\":\"hi\"}],\"stopReason\":\"stop\",\"api\":\"anthropic-messages\"}}",
+      "{\"type\":\"message\",\"id\":\"m3\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:03.000Z\",\"message\":{\"role\":\"system\",\"timestamp\":1767225603000,\"content\":[{\"type\":\"text\",\"text\":\"system\"}]}}"
+    ],
+    "sessions": [
+      {
+        "id": "s1",
+        "cwd": "/work",
+        "name": null,
+        "parentSessionPath": null,
+        "created": "2026-01-01T00:00:00.000Z",
+        "modified": "2026-01-01T00:00:02.000Z",
+        "messageCount": 3,
+        "firstMessage": "hello",
+        "allMessagesText": "hello hi"
+      }
+    ]
+  },
+  "assistant-no-content": {
+    "lines": [
+      "{\"type\":\"session\",\"id\":\"s1\",\"timestamp\":\"2026-01-01T00:00:00.000Z\",\"cwd\":\"/work\"}",
+      "{\"type\":\"message\",\"id\":\"m1\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:01.000Z\",\"message\":{\"role\":\"user\",\"timestamp\":1767225601000,\"content\":[{\"type\":\"text\",\"text\":\"hello\"}]}}",
+      "{\"type\":\"message\",\"id\":\"m2\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:02.000Z\",\"message\":{\"role\":\"assistant\",\"timestamp\":1767225602000}}",
+      "{\"type\":\"message\",\"id\":\"m3\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:03.000Z\",\"message\":{\"role\":\"toolResult\",\"toolCallId\":\"c1\",\"toolName\":\"read\",\"timestamp\":1767225603000,\"content\":[{\"type\":\"text\",\"text\":\"result\"}]}}"
+    ],
+    "sessions": [
+      {
+        "id": "s1",
+        "cwd": "/work",
+        "name": null,
+        "parentSessionPath": null,
+        "created": "2026-01-01T00:00:00.000Z",
+        "modified": "2026-01-01T00:00:01.000Z",
+        "messageCount": 3,
+        "firstMessage": "hello",
+        "allMessagesText": "hello"
+      }
+    ]
+  },
+  "user-no-content-last": {
+    "lines": [
+      "{\"type\":\"session\",\"id\":\"s1\",\"timestamp\":\"2026-01-01T00:00:00.000Z\",\"cwd\":\"/work\"}",
+      "{\"type\":\"message\",\"id\":\"m1\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:02.000Z\",\"message\":{\"role\":\"assistant\",\"timestamp\":1767225602000,\"content\":[{\"type\":\"text\",\"text\":\"hi\"}],\"stopReason\":\"stop\",\"api\":\"anthropic-messages\"}}",
+      "{\"type\":\"message\",\"id\":\"m2\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:03.000Z\",\"message\":{\"role\":\"user\",\"timestamp\":1767225603000}}"
+    ],
+    "sessions": [
+      {
+        "id": "s1",
+        "cwd": "/work",
+        "name": null,
+        "parentSessionPath": null,
+        "created": "2026-01-01T00:00:00.000Z",
+        "modified": "2026-01-01T00:00:02.000Z",
+        "messageCount": 2,
+        "firstMessage": "(no messages)",
+        "allMessagesText": "hi"
+      }
+    ]
+  },
+  "assistant-no-message-timestamp": {
+    "lines": [
+      "{\"type\":\"session\",\"id\":\"s1\",\"timestamp\":\"2026-01-01T00:00:00.000Z\",\"cwd\":\"/work\"}",
+      "{\"type\":\"message\",\"id\":\"m1\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:01.000Z\",\"message\":{\"role\":\"user\",\"timestamp\":1767225601000,\"content\":[{\"type\":\"text\",\"text\":\"hello\"}]}}",
+      "{\"type\":\"message\",\"id\":\"m2\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:02.000Z\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"no timestamp\"}]}}"
+    ],
+    "sessions": [
+      {
+        "id": "s1",
+        "cwd": "/work",
+        "name": null,
+        "parentSessionPath": null,
+        "created": "2026-01-01T00:00:00.000Z",
+        "modified": "2026-01-01T00:00:02.000Z",
+        "messageCount": 2,
+        "firstMessage": "hello",
+        "allMessagesText": "hello no timestamp"
+      }
+    ]
+  },
+  "no-activity": {
+    "lines": [
+      "{\"type\":\"session\",\"id\":\"s1\",\"timestamp\":\"2026-01-01T00:00:00.000Z\",\"cwd\":\"/work\"}",
+      "{\"type\":\"message\",\"id\":\"m1\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:03.000Z\",\"message\":{\"role\":\"toolResult\",\"toolCallId\":\"c1\",\"toolName\":\"read\",\"timestamp\":1767225603000,\"content\":[{\"type\":\"text\",\"text\":\"result\"}]}}"
+    ],
+    "sessions": [
+      {
+        "id": "s1",
+        "cwd": "/work",
+        "name": null,
+        "parentSessionPath": null,
+        "created": "2026-01-01T00:00:00.000Z",
+        "modified": "2026-01-01T00:00:00.000Z",
+        "messageCount": 1,
+        "firstMessage": "(no messages)",
+        "allMessagesText": ""
+      }
+    ]
+  },
+  "empty-name": {
+    "lines": [
+      "{\"type\":\"session\",\"id\":\"s1\",\"timestamp\":\"2026-01-01T00:00:00.000Z\",\"cwd\":\"/work\"}",
+      "{\"type\":\"message\",\"id\":\"m1\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:01.000Z\",\"message\":{\"role\":\"user\",\"timestamp\":1767225601000,\"content\":[{\"type\":\"text\",\"text\":\"hello\"}]}}",
+      "{\"type\":\"session_info\",\"id\":\"i1\",\"parentId\":null,\"timestamp\":\"2026-01-01T00:00:01.500Z\",\"name\":\"  \"}"
+    ],
+    "sessions": [
+      {
+        "id": "s1",
+        "cwd": "/work",
+        "name": null,
+        "parentSessionPath": null,
+        "created": "2026-01-01T00:00:00.000Z",
+        "modified": "2026-01-01T00:00:01.000Z",
+        "messageCount": 1,
+        "firstMessage": "hello",
+        "allMessagesText": "hello"
+      }
+    ]
+  }
+}

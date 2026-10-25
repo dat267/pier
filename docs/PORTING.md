@@ -296,6 +296,17 @@ non-validating getters can, and invalid elements inside a leaf array or map are
 dropped; D277 records both. Eight global/project fixtures from the pinned
 manager pin the getters (`coding/testdata/settings-load/`).
 
+**Session-list audit.** A bounded audit of `core/session-manager.ts` listing
+fixed the `modified` timestamp: Pier counted activity from every message with a
+timestamp, so a trailing tool result, custom or system message made a session
+look newer than pi's, and a message without its own timestamp lost its activity
+entirely. Activity now comes only from user/assistant messages that carry a
+`content` member, using the message timestamp when it is a number and the entry
+timestamp otherwise, in both the fast line scanner and the decoding fallback
+(`getMessageActivityTime`). The remaining listing fields (id, cwd, name,
+parentSessionPath, created, messageCount, firstMessage, allMessagesText)
+matched. The generated corpus is in `coding/testdata/session-list/`.
+
 **Upstream status.** v1.4.0 (`4a080252`) is the latest released tag after
 refreshing upstream tags and is the port's reference pin. It is 81 commits past
 v1.3.0. The pin identifies the sources to review, not a claim that every change

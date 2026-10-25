@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -75,9 +76,25 @@ func TestScanListingMessageMatchesTypedDecode(t *testing.T) {
 			if !scanned.ok {
 				t.Fatalf("scanner rejected a decodable message")
 			}
-			if scanned.role != role || scanned.timestamp != sessionMessageTimestamp(message) || scanned.text != text {
+			if scanned.role != role || scanned.timestamp != listingMessageTimestamp(message) || scanned.text != text {
 				t.Fatalf("scanner = %+v, reference role=%q timestamp=%d text=%q",
-					scanned, role, sessionMessageTimestamp(message), text)
+					scanned, role, listingMessageTimestamp(message), text)
+			}
+			var fields map[string]json.RawMessage
+			if err := json.Unmarshal([]byte(testCase.raw), &fields); err != nil {
+				t.Fatal(err)
+			}
+			_, wantContent := fields["content"]
+			if scanned.hasContent != wantContent {
+				t.Fatalf("scanner hasContent = %v, want %v", scanned.hasContent, wantContent)
+			}
+			var number float64
+			wantTimestamp := false
+			if raw, ok := fields["timestamp"]; ok && json.Unmarshal(raw, &number) == nil {
+				wantTimestamp = true
+			}
+			if scanned.hasTimestamp != wantTimestamp {
+				t.Fatalf("scanner hasTimestamp = %v, want %v", scanned.hasTimestamp, wantTimestamp)
 			}
 		})
 	}
@@ -139,4 +156,22 @@ func TestBuildSessionInfoSkipsUnusedMessagePayloads(t *testing.T) {
 	if allocated > int64(info.Size())*2 {
 		t.Fatalf("buildSessionInfo allocated %d bytes for a %d-byte file of unread payloads", allocated, info.Size())
 	}
+}
+
+// listingMessageTimestamp is the numeric timestamp a decoded message carries
+// (the scanner's counterpart before presence handling).
+func listingMessageTimestamp(message ai.Message) int64 {
+	switch m := message.(type) {
+	case *ai.SystemMessage:
+		return m.Timestamp
+	case *ai.UserMessage:
+		return m.Timestamp
+	case *ai.AssistantMessage:
+		return m.Timestamp
+	case *ai.ToolResultMessage:
+		return m.Timestamp
+	case *ai.CustomMessage:
+		return m.Timestamp
+	}
+	return 0
 }

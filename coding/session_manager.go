@@ -1043,12 +1043,22 @@ func buildSessionInfo(filePath string) *SessionInfo {
 	name := ""
 	var lastActivityTime int64
 
-	recordListing := func(role string, timestamp int64, text string) {
-		// Activity time from the message timestamp (upstream
-		// getMessageActivityTime).
-		if timestamp > 0 && timestamp > lastActivityTime {
+	// recordActivity applies upstream getMessageActivityTime: only a user or
+	// assistant message that carries a content member counts, using its numeric
+	// timestamp when present and the entry timestamp otherwise.
+	recordActivity := func(role string, hasContent bool, messageTimestamp int64, hasMessageTimestamp bool, entryTimestamp int64) {
+		if (role != "user" && role != "assistant") || !hasContent {
+			return
+		}
+		timestamp := entryTimestamp
+		if hasMessageTimestamp {
+			timestamp = messageTimestamp
+		}
+		if timestamp > lastActivityTime {
 			lastActivityTime = timestamp
 		}
+	}
+	recordText := func(role string, text string) {
 		if (role != "user" && role != "assistant") || text == "" {
 			return
 		}
@@ -1057,13 +1067,15 @@ func buildSessionInfo(filePath string) *SessionInfo {
 			firstMessage = text
 		}
 	}
-	recordMessage := func(message ai.Message) {
-		role := string(ai.RoleOf(message))
-		text := ""
-		if role == "user" || role == "assistant" {
-			text = extractTextContent(message)
+	// recordMessageLine records activity from the raw message object and text
+	// from the decoded message (the shared path when the scanner declines).
+	recordMessageLine := func(rawMessage []byte, entryTimestamp int64) {
+		if activity, ok := scanMessageActivity(rawMessage); ok {
+			recordActivity(activity.role, activity.hasContent, activity.timestamp, activity.hasTimestamp, entryTimestamp)
 		}
-		recordListing(role, sessionMessageTimestamp(message), text)
+		if message, err := ai.UnmarshalMessage(json.RawMessage(rawMessage)); err == nil {
+			recordText(string(ai.RoleOf(message)), extractTextContent(message))
+		}
 	}
 
 	// process consumes one JSONL line. It reports true when the line is a
@@ -1086,10 +1098,12 @@ func buildSessionInfo(filePath string) *SessionInfo {
 		// Anything it does not fully understand falls back to the decoder.
 		if meta, ok := scanSessionLine(line); ok && meta.typ == "message" && meta.id != "" {
 			messageCount++
+			entryTimestamp := entryTimestampMillis(meta.timestamp)
 			if listing := scanListingMessage(meta.message); listing.ok {
-				recordListing(listing.role, listing.timestamp, listing.text)
-			} else if message, mErr := ai.UnmarshalMessage(json.RawMessage(meta.message)); mErr == nil {
-				recordMessage(message)
+				recordActivity(listing.role, listing.hasContent, listing.timestamp, listing.hasTimestamp, entryTimestamp)
+				recordText(listing.role, listing.text)
+			} else {
+				recordMessageLine(meta.message, entryTimestamp)
 			}
 			return false
 		}
@@ -1103,9 +1117,7 @@ func buildSessionInfo(filePath string) *SessionInfo {
 		}
 		if e.Type == "message" {
 			messageCount++
-			if message, mErr := ai.UnmarshalMessage(e.Message); mErr == nil {
-				recordMessage(message)
-			}
+			recordMessageLine(e.Message, entryTimestampMillis(e.Timestamp))
 		}
 		return false
 	}
@@ -1154,22 +1166,50 @@ func buildSessionInfo(filePath string) *SessionInfo {
 	}
 }
 
-// sessionMessageTimestamp is the numeric timestamp carried by a message
-// (upstream getMessageActivityTime's message branch).
-func sessionMessageTimestamp(message ai.Message) int64 {
-	switch m := message.(type) {
-	case *ai.SystemMessage:
-		return m.Timestamp
-	case *ai.UserMessage:
-		return m.Timestamp
-	case *ai.AssistantMessage:
-		return m.Timestamp
-	case *ai.ToolResultMessage:
-		return m.Timestamp
-	case *ai.CustomMessage:
-		return m.Timestamp
+// entryTimestampMillis parses an entry timestamp like the reference's
+// Date.parse, returning 0 (ignored by the activity comparison) when it is not
+// a valid RFC 3339 value.
+func entryTimestampMillis(value string) int64 {
+	if value == "" {
+		return 0
 	}
-	return 0
+	parsed, err := time.Parse(time.RFC3339Nano, value)
+	if err != nil {
+		return 0
+	}
+	return parsed.UnixMilli()
+}
+
+// messageActivity is the raw-message shape upstream getMessageActivityTime
+// reads: a string role, a present content member, and a numeric timestamp.
+type messageActivity struct {
+	role         string
+	hasContent   bool
+	timestamp    int64
+	hasTimestamp bool
+}
+
+// scanMessageActivity reads the activity fields from a raw message object,
+// which keeps the "content" presence and the timestamp type that the typed
+// message cannot express.
+func scanMessageActivity(rawMessage []byte) (messageActivity, bool) {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(rawMessage, &fields); err != nil || fields == nil {
+		return messageActivity{}, false
+	}
+	var activity messageActivity
+	if role, ok := fields["role"]; ok {
+		_ = json.Unmarshal(role, &activity.role)
+	}
+	_, activity.hasContent = fields["content"]
+	if timestamp, ok := fields["timestamp"]; ok {
+		var number float64
+		if json.Unmarshal(timestamp, &number) == nil {
+			activity.timestamp = int64(number)
+			activity.hasTimestamp = true
+		}
+	}
+	return activity, true
 }
 
 func derefOrEmpty(s *string) string {
@@ -1363,10 +1403,12 @@ func listSessionsFromDir(dir string) []SessionInfo {
 // arguments, thinking or tool-result bodies, so the scanner skips them instead
 // of decoding them.
 type messageListing struct {
-	role      string
-	timestamp int64
-	text      string
-	ok        bool
+	role         string
+	timestamp    int64
+	hasTimestamp bool
+	hasContent   bool
+	text         string
+	ok           bool
 }
 
 // scanListingMessage extracts the listing view of a raw message object without
@@ -1488,6 +1530,8 @@ func scanListingMessage(data []byte) messageListing {
 		listing.text = text
 	}
 	listing.ok = true
+	listing.hasContent = sawContent
+	listing.hasTimestamp = sawTimestamp
 	return listing
 }
 
