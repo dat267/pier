@@ -196,6 +196,7 @@ func (q *Queue) loop() {
 			return
 		}
 		t := q.tasks[0]
+		q.tasks[0] = task{} // Release the closure and captures from the backing array.
 		q.tasks = q.tasks[1:]
 		if t.latest {
 			delete(q.latest, t.key)
