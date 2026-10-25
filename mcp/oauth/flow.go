@@ -22,8 +22,9 @@ const (
 )
 
 // AddClientAuthentication customizes the token-request auth (upstream
-// AddClientAuthentication).
-type AddClientAuthentication func(headers map[string]string, params url.Values, tokenURL string, metadata *AuthorizationServerMetadata) error
+// AddClientAuthentication). params is the ordered token form, so a custom
+// callback sees the same insertion order the reference's URLSearchParams has.
+type AddClientAuthentication func(headers map[string]string, params *OrderedForm, tokenURL string, metadata *AuthorizationServerMetadata) error
 
 // OAuthClientMetadataDocument is a Client ID Metadata Document: an https URL
 // used as `client_id`, and a redirect URI it lists (upstream
@@ -209,7 +210,7 @@ func contains(list []string, value string) bool { return slices.Contains(list, v
 
 // applyClientAuthentication writes the auth into headers/params (upstream
 // applyClientAuthentication).
-func applyClientAuthentication(method string, information *OAuthClientInformation, headers map[string]string, params url.Values) error {
+func applyClientAuthentication(method string, information *OAuthClientInformation, headers map[string]string, params *OrderedForm) error {
 	if method == ClientAuthSecretBasic {
 		if information.ClientSecret == nil || *information.ClientSecret == "" {
 			return fmt.Errorf("client_secret_basic requires a client secret")
@@ -254,7 +255,10 @@ func StartAuthorization(authorizationServerURL string, options StartAuthorizatio
 	if err != nil {
 		return nil, err
 	}
-	query := parsed.Query()
+	// URLSearchParams keeps the endpoint's query entries in place and appends
+	// new names in assignment order; url.Values would sort and escape
+	// differently.
+	query := NewOrderedForm(parsed.RawQuery)
 	verifier, challenge, err := pkce()
 	if err != nil {
 		return nil, err
@@ -314,7 +318,7 @@ func joinPathForServer(serverURL, path string) string {
 // tokenRequest posts the token form and parses the response (upstream
 // tokenRequest). Servers may report OAuth errors with any status, so the
 // body is checked before the status.
-func tokenRequest(ctx context.Context, authorizationServerURL string, options TokenRequestOptions, params url.Values) (*OAuthTokens, error) {
+func tokenRequest(ctx context.Context, authorizationServerURL string, options TokenRequestOptions, params *OrderedForm) (*OAuthTokens, error) {
 	tokenEndpoint := joinPathForServer(authorizationServerURL, "/token")
 	if options.Metadata != nil {
 		tokenEndpoint = options.Metadata.TokenEndpoint
@@ -397,19 +401,59 @@ func RegisterClient(ctx context.Context, authorizationServerURL string, options 
 		endpoint = *options.Metadata.RegistrationEndpoint
 	}
 	body := options.ClientMetadata
-	payload := map[string]any{}
-	if enc, err := marshalJSON(body); err != nil {
-		return nil, err
-	} else if err := unmarshalJSON(enc, &payload); err != nil {
-		return nil, err
+	// Upstream spreads the client metadata, inserts `application_type` in place
+	// (or appends it) and appends a truthy `scope`; a Go struct keeps the same
+	// members but not their order, so they are assembled explicitly.
+	members := make([]jsonMember, 0, 18)
+	add := func(name string, value any) { members = append(members, jsonMember{name: name, value: value}) }
+	addString := func(name string, value *string) {
+		if value != nil {
+			add(name, *value)
+		}
 	}
-	if options.ClientMetadata.ApplicationType == nil {
-		payload["application_type"] = deriveApplicationType(options.ClientMetadata.RedirectURIs)
+	addStrings := func(name string, values []string) {
+		if len(values) > 0 {
+			add(name, values)
+		}
 	}
-	if options.Scope != nil {
-		payload["scope"] = *options.Scope
+	// The provider fills client_name first, then redirect_uris, grant_types,
+	// response_types and token_endpoint_auth_method (NewMcpOAuthProvider).
+	addString("client_name", body.ClientName)
+	add("redirect_uris", body.RedirectURIs)
+	addStrings("grant_types", body.GrantTypes)
+	addStrings("response_types", body.ResponseTypes)
+	addString("token_endpoint_auth_method", body.TokenEndpointAuthMethod)
+	addString("client_uri", body.ClientURI)
+	addString("logo_uri", body.LogoURI)
+	scopeIndex := -1
+	if body.Scope != nil {
+		add("scope", *body.Scope)
+		scopeIndex = len(members) - 1
 	}
-	enc, err := marshalJSON(payload)
+	addStrings("contacts", body.Contacts)
+	addString("tos_uri", body.TOSURI)
+	addString("policy_uri", body.PolicyURI)
+	addString("jwks_uri", body.JWKSURI)
+	if len(body.JWKS) > 0 {
+		add("jwks", body.JWKS)
+	}
+	addString("software_id", body.SoftwareID)
+	addString("software_version", body.SoftwareVersion)
+	addString("software_statement", body.SoftwareStatement)
+	applicationType := deriveApplicationType(body.RedirectURIs)
+	if body.ApplicationType != nil {
+		applicationType = *body.ApplicationType
+	}
+	add("application_type", applicationType)
+	// options.Scope overrides the metadata's scope in place, or appends it.
+	if options.Scope != nil && *options.Scope != "" {
+		if scopeIndex >= 0 {
+			members[scopeIndex] = jsonMember{name: "scope", value: *options.Scope}
+		} else {
+			add("scope", *options.Scope)
+		}
+	}
+	enc, err := marshalOrderedJSONObject(members)
 	if err != nil {
 		return nil, err
 	}
@@ -453,12 +497,11 @@ type RegisterClientOptions struct {
 // ExchangeAuthorizationCode swaps the browser-redirect code for tokens
 // (upstream exchangeAuthorizationCode).
 func ExchangeAuthorizationCode(ctx context.Context, authorizationServerURL string, options ExchangeOptions) (*OAuthTokens, error) {
-	params := url.Values{
-		"grant_type":    {"authorization_code"},
-		"code":          {options.Code},
-		"code_verifier": {options.CodeVerifier},
-		"redirect_uri":  {options.RedirectURL},
-	}
+	params := NewOrderedForm("")
+	params.Set("grant_type", "authorization_code")
+	params.Set("code", options.Code)
+	params.Set("code_verifier", options.CodeVerifier)
+	params.Set("redirect_uri", options.RedirectURL)
 	return tokenRequest(ctx, authorizationServerURL, options.TokenRequestOptions, params)
 }
 
@@ -473,10 +516,9 @@ type ExchangeOptions struct {
 // RefreshAuthorization refreshes tokens (upstream refreshAuthorization); a
 // response without `refresh_token` keeps the previous one (RFC 6749 §6).
 func RefreshAuthorization(ctx context.Context, authorizationServerURL string, options RefreshOptions) (*OAuthTokens, error) {
-	params := url.Values{
-		"grant_type":    {"refresh_token"},
-		"refresh_token": {options.RefreshToken},
-	}
+	params := NewOrderedForm("")
+	params.Set("grant_type", "refresh_token")
+	params.Set("refresh_token", options.RefreshToken)
 	tokens, err := tokenRequest(ctx, authorizationServerURL, options.TokenRequestOptions, params)
 	if err != nil {
 		return nil, err

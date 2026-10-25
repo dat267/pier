@@ -266,6 +266,23 @@ protected-resource and server documents matched otherwise; the helper's
 port/host-case output stays D276. The case corpus lives in
 `mcp/oauth/testdata/parse/`.
 
+**MCP OAuth request audit.** A bounded audit of `packages/mcp/src/oauth/flow.ts`
+fixed the request serialization. The dynamic-registration JSON body, the
+authorization URL query and the token form bodies now use the reference's
+insertion order and `URLSearchParams` form escaping (alphanumerics plus
+`*-._` raw, space as `+`, uppercase percent escapes): registration emits
+`client_name`, the provider defaults, the remaining metadata members,
+`application_type` and a truthy `scope`; the authorization query keeps the
+endpoint's entries in place and appends the assignment order
+(`response_type`, `client_id`, `code_challenge`, `code_challenge_method`,
+`redirect_uri`, `state`, `scope`, `prompt`, `resource`); token bodies keep the
+grant field order, then `resource`, then client authentication. Because the Go
+metadata struct has no caller-object order, registration uses the provider's
+construction order for the members it sets, and direct callers get that fixed
+mapping. `AddClientAuthentication` now receives the ordered form. Values,
+headers, Basic auth, PKCE and endpoint defaults were already identical. The
+capturing-request corpus lives in `mcp/oauth/testdata/flow/`.
+
 **Upstream status.** v1.4.0 (`4a080252`) is the latest released tag after
 refreshing upstream tags and is the port's reference pin. It is 81 commits past
 v1.3.0. The pin identifies the sources to review, not a claim that every change

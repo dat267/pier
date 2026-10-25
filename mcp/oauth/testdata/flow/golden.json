@@ -1,0 +1,295 @@
+{
+  "registration": {
+    "defaults": {
+      "input": {
+        "clientMetadata": {
+          "client_name": "pi",
+          "redirect_uris": [
+            "http://127.0.0.1:33418/callback"
+          ],
+          "grant_types": [
+            "authorization_code",
+            "refresh_token"
+          ],
+          "response_types": [
+            "code"
+          ],
+          "token_endpoint_auth_method": "none"
+        }
+      },
+      "request": {
+        "url": "https://auth.example.com/register",
+        "method": "POST",
+        "contentType": "application/json",
+        "authorization": "",
+        "body": "{\"client_name\":\"pi\",\"redirect_uris\":[\"http://127.0.0.1:33418/callback\"],\"grant_types\":[\"authorization_code\",\"refresh_token\"],\"response_types\":[\"code\"],\"token_endpoint_auth_method\":\"none\",\"application_type\":\"native\"}"
+      }
+    },
+    "explicit-application-type": {
+      "input": {
+        "clientMetadata": {
+          "client_name": "pi",
+          "redirect_uris": [
+            "http://127.0.0.1:33418/callback"
+          ],
+          "grant_types": [
+            "authorization_code",
+            "refresh_token"
+          ],
+          "response_types": [
+            "code"
+          ],
+          "token_endpoint_auth_method": "none",
+          "application_type": "web"
+        }
+      },
+      "request": {
+        "url": "https://auth.example.com/register",
+        "method": "POST",
+        "contentType": "application/json",
+        "authorization": "",
+        "body": "{\"client_name\":\"pi\",\"redirect_uris\":[\"http://127.0.0.1:33418/callback\"],\"grant_types\":[\"authorization_code\",\"refresh_token\"],\"response_types\":[\"code\"],\"token_endpoint_auth_method\":\"none\",\"application_type\":\"web\"}"
+      }
+    },
+    "scope": {
+      "input": {
+        "clientMetadata": {
+          "client_name": "pi",
+          "redirect_uris": [
+            "http://127.0.0.1:33418/callback"
+          ],
+          "grant_types": [
+            "authorization_code",
+            "refresh_token"
+          ],
+          "response_types": [
+            "code"
+          ],
+          "token_endpoint_auth_method": "none",
+          "client_uri": "https://example.com"
+        },
+        "scope": "read write"
+      },
+      "request": {
+        "url": "https://auth.example.com/register",
+        "method": "POST",
+        "contentType": "application/json",
+        "authorization": "",
+        "body": "{\"client_name\":\"pi\",\"redirect_uris\":[\"http://127.0.0.1:33418/callback\"],\"grant_types\":[\"authorization_code\",\"refresh_token\"],\"response_types\":[\"code\"],\"token_endpoint_auth_method\":\"none\",\"client_uri\":\"https://example.com\",\"application_type\":\"native\",\"scope\":\"read write\"}"
+      }
+    },
+    "empty-scope": {
+      "input": {
+        "clientMetadata": {
+          "client_name": "pi",
+          "redirect_uris": [
+            "http://127.0.0.1:33418/callback"
+          ],
+          "grant_types": [
+            "authorization_code",
+            "refresh_token"
+          ],
+          "response_types": [
+            "code"
+          ],
+          "token_endpoint_auth_method": "none"
+        },
+        "scope": ""
+      },
+      "request": {
+        "url": "https://auth.example.com/register",
+        "method": "POST",
+        "contentType": "application/json",
+        "authorization": "",
+        "body": "{\"client_name\":\"pi\",\"redirect_uris\":[\"http://127.0.0.1:33418/callback\"],\"grant_types\":[\"authorization_code\",\"refresh_token\"],\"response_types\":[\"code\"],\"token_endpoint_auth_method\":\"none\",\"application_type\":\"native\"}"
+      }
+    },
+    "web-redirect": {
+      "input": {
+        "clientMetadata": {
+          "client_name": "pi",
+          "redirect_uris": [
+            "https://example.com/callback"
+          ],
+          "grant_types": [
+            "authorization_code",
+            "refresh_token"
+          ],
+          "response_types": [
+            "code"
+          ],
+          "token_endpoint_auth_method": "client_secret_post"
+        }
+      },
+      "request": {
+        "url": "https://auth.example.com/register",
+        "method": "POST",
+        "contentType": "application/json",
+        "authorization": "",
+        "body": "{\"client_name\":\"pi\",\"redirect_uris\":[\"https://example.com/callback\"],\"grant_types\":[\"authorization_code\",\"refresh_token\"],\"response_types\":[\"code\"],\"token_endpoint_auth_method\":\"client_secret_post\",\"application_type\":\"web\"}"
+      }
+    }
+  },
+  "authorization": {
+    "basic": {
+      "input": {
+        "clientInformation": {
+          "client_id": "cid"
+        },
+        "redirectUrl": "http://127.0.0.1:33418/callback"
+      },
+      "authorizationUrl": "https://auth.example.com/authorize?response_type=code&client_id=cid&code_challenge=<x>&code_challenge_method=S256&redirect_uri=http%3A%2F%2F127.0.0.1%3A33418%2Fcallback",
+      "verifierLength": 43
+    },
+    "full": {
+      "input": {
+        "clientInformation": {
+          "client_id": "cid"
+        },
+        "redirectUrl": "http://127.0.0.1:33418/callback",
+        "scope": "read write offline_access",
+        "state": "state-value",
+        "resource": "https://mcp.example.com/mcp"
+      },
+      "authorizationUrl": "https://auth.example.com/authorize?response_type=code&client_id=cid&code_challenge=<x>&code_challenge_method=S256&redirect_uri=http%3A%2F%2F127.0.0.1%3A33418%2Fcallback&state=state-value&scope=read+write+offline_access&prompt=consent&resource=https%3A%2F%2Fmcp.example.com%2Fmcp",
+      "verifierLength": 43
+    },
+    "special-characters": {
+      "input": {
+        "clientInformation": {
+          "client_id": "cid"
+        },
+        "redirectUrl": "http://127.0.0.1:33418/cb~x*y$z",
+        "scope": "read~write*scope",
+        "state": "s+t",
+        "resource": "https://mcp.example.com/mcp~x"
+      },
+      "authorizationUrl": "https://auth.example.com/authorize?response_type=code&client_id=cid&code_challenge=<x>&code_challenge_method=S256&redirect_uri=http%3A%2F%2F127.0.0.1%3A33418%2Fcb%7Ex*y%24z&state=s%2Bt&scope=read%7Ewrite*scope&resource=https%3A%2F%2Fmcp.example.com%2Fmcp%7Ex",
+      "verifierLength": 43
+    },
+    "endpoint-query": {
+      "input": {
+        "clientInformation": {
+          "client_id": "cid"
+        },
+        "redirectUrl": "http://127.0.0.1:33418/callback",
+        "scope": "read",
+        "state": "st",
+        "metadata": {
+          "authorization_endpoint": "https://auth.example.com/authorize?audience=x&scope=old&audience=y",
+          "token_endpoint": "https://auth.example.com/token",
+          "response_types_supported": [
+            "code"
+          ],
+          "code_challenge_methods_supported": [
+            "S256"
+          ]
+        }
+      },
+      "authorizationUrl": "https://auth.example.com/authorize?audience=x&scope=read&audience=y&response_type=code&client_id=cid&code_challenge=<x>&code_challenge_method=S256&redirect_uri=http%3A%2F%2F127.0.0.1%3A33418%2Fcallback&state=st",
+      "verifierLength": 43
+    }
+  },
+  "tokens": {
+    "exchange-basic": {
+      "input": {
+        "kind": "exchange",
+        "clientInformation": {
+          "client_id": "cid",
+          "client_secret": "sec"
+        },
+        "code": "the-code",
+        "codeVerifier": "verifier",
+        "redirectUrl": "http://127.0.0.1:33418/callback",
+        "resource": "https://mcp.example.com/mcp"
+      },
+      "request": {
+        "url": "https://auth.example.com/token",
+        "method": "POST",
+        "contentType": "application/x-www-form-urlencoded",
+        "authorization": "Basic Y2lkOnNlYw==",
+        "body": "grant_type=authorization_code&code=the-code&code_verifier=verifier&redirect_uri=http%3A%2F%2F127.0.0.1%3A33418%2Fcallback&resource=https%3A%2F%2Fmcp.example.com%2Fmcp"
+      }
+    },
+    "exchange-none": {
+      "input": {
+        "kind": "exchange",
+        "clientInformation": {
+          "client_id": "cid"
+        },
+        "code": "the code",
+        "codeVerifier": "verifier+value",
+        "redirectUrl": "http://127.0.0.1:33418/callback",
+        "metadata": {
+          "token_endpoint": "https://auth.example.com/token",
+          "response_types_supported": [
+            "code"
+          ],
+          "token_endpoint_auth_methods_supported": [
+            "none"
+          ]
+        }
+      },
+      "request": {
+        "url": "https://auth.example.com/token",
+        "method": "POST",
+        "contentType": "application/x-www-form-urlencoded",
+        "authorization": "",
+        "body": "grant_type=authorization_code&code=the+code&code_verifier=verifier%2Bvalue&redirect_uri=http%3A%2F%2F127.0.0.1%3A33418%2Fcallback&client_id=cid"
+      }
+    },
+    "refresh-basic": {
+      "input": {
+        "kind": "refresh",
+        "clientInformation": {
+          "client_id": "cid",
+          "client_secret": "sec"
+        },
+        "refreshToken": "rt",
+        "metadata": {
+          "token_endpoint": "https://auth.example.com/token",
+          "response_types_supported": [
+            "code"
+          ],
+          "token_endpoint_auth_methods_supported": [
+            "client_secret_basic"
+          ]
+        }
+      },
+      "request": {
+        "url": "https://auth.example.com/token",
+        "method": "POST",
+        "contentType": "application/x-www-form-urlencoded",
+        "authorization": "Basic Y2lkOnNlYw==",
+        "body": "grant_type=refresh_token&refresh_token=rt"
+      }
+    },
+    "refresh-post": {
+      "input": {
+        "kind": "refresh",
+        "clientInformation": {
+          "client_id": "cid",
+          "client_secret": "sec"
+        },
+        "refreshToken": "rt~1",
+        "metadata": {
+          "token_endpoint": "https://auth.example.com/token",
+          "response_types_supported": [
+            "code"
+          ],
+          "token_endpoint_auth_methods_supported": [
+            "client_secret_post"
+          ]
+        },
+        "resource": "https://mcp.example.com/mcp"
+      },
+      "request": {
+        "url": "https://auth.example.com/token",
+        "method": "POST",
+        "contentType": "application/x-www-form-urlencoded",
+        "authorization": "",
+        "body": "grant_type=refresh_token&refresh_token=rt%7E1&resource=https%3A%2F%2Fmcp.example.com%2Fmcp&client_id=cid&client_secret=sec"
+      }
+    }
+  }
+}
