@@ -417,6 +417,12 @@ mutation and durable goal-record appends are serialized together; parallel
 `set_goal` calls cannot corrupt the replay log by interleaving clear/create
 entries. Host callbacks and model work remain outside the state lock.
 
+Compaction's file-operation lists are pinned by an 11-case corpus executing the
+pinned tracking helpers: read-only, written and edited paths, read-then-edited
+moving a file to the modified list, duplicates, missing or non-string paths,
+unknown tools, codemode nested calls recorded on a tool result, mixed messages,
+and an astral-versus-BMP path pair that pins JavaScript's UTF-16 sort order.
+
 Compaction's summary serialization is pinned by a 16-case corpus executing the
 pinned `serializeConversation` after message conversion: user strings and blocks
 with images, thinking-only and text-only assistants, tool-call argument key order

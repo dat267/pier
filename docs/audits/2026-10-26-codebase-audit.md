@@ -828,3 +828,20 @@ truncation boundary and its counted suffix), and a mixed conversation.
 All 16 matched on the first run, so this records coverage, not a finding.
 Regeneration is byte-identical; `go test -count=1 ./coding`, `just check`,
 `just cross` (six targets) and `just reference` pass.
+
+## File-operation corpus
+
+`coding/testdata/file-ops/generate.mjs` executes the pinned
+`extractFileOpsFromMessage`/`computeFileLists`/`formatFileOperations` for 11
+message sets; `TestFileOperationsMatchUpstream` decodes the same JSON and
+compares both lists and the rendered XML.
+
+Cases: read-only files, written and edited files, a read path later edited (it
+moves to the modified list), duplicates, calls with a missing or non-string
+`path`, an unrelated tool name, codemode `nestedCalls` recorded on a tool result,
+a mixed conversation, and `😀.ts`/`ｚ.ts`/`Z.ts` together, which pins
+`Array.prototype.sort`'s UTF-16 order rather than rune order.
+
+All 11 matched on the first run, so this records coverage, not a finding.
+Regeneration is byte-identical; `go test -count=1 ./coding`, `just check`,
+`just cross` (six targets) and `just reference` pass.

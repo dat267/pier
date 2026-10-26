@@ -1,0 +1,606 @@
+[
+  {
+    "name": "read-only",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "c0",
+            "name": "read",
+            "arguments": {
+              "path": "a.ts"
+            }
+          },
+          {
+            "type": "toolCall",
+            "id": "c1",
+            "name": "read",
+            "arguments": {
+              "path": "b.ts"
+            }
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "toolUse",
+        "timestamp": 1
+      }
+    ],
+    "readFiles": [
+      "a.ts",
+      "b.ts"
+    ],
+    "modifiedFiles": [],
+    "formatted": "\n\n<read-files>\na.ts\nb.ts\n</read-files>"
+  },
+  {
+    "name": "modified",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "c0",
+            "name": "write",
+            "arguments": {
+              "path": "w.ts"
+            }
+          },
+          {
+            "type": "toolCall",
+            "id": "c1",
+            "name": "edit",
+            "arguments": {
+              "path": "e.ts"
+            }
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "toolUse",
+        "timestamp": 1
+      }
+    ],
+    "readFiles": [],
+    "modifiedFiles": [
+      "e.ts",
+      "w.ts"
+    ],
+    "formatted": "\n\n<modified-files>\ne.ts\nw.ts\n</modified-files>"
+  },
+  {
+    "name": "read-then-edited",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "c0",
+            "name": "read",
+            "arguments": {
+              "path": "x.ts"
+            }
+          },
+          {
+            "type": "toolCall",
+            "id": "c1",
+            "name": "edit",
+            "arguments": {
+              "path": "x.ts"
+            }
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "toolUse",
+        "timestamp": 1
+      }
+    ],
+    "readFiles": [],
+    "modifiedFiles": [
+      "x.ts"
+    ],
+    "formatted": "\n\n<modified-files>\nx.ts\n</modified-files>"
+  },
+  {
+    "name": "read-then-written",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "c0",
+            "name": "read",
+            "arguments": {
+              "path": "y.ts"
+            }
+          },
+          {
+            "type": "toolCall",
+            "id": "c1",
+            "name": "write",
+            "arguments": {
+              "path": "y.ts"
+            }
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "toolUse",
+        "timestamp": 1
+      }
+    ],
+    "readFiles": [],
+    "modifiedFiles": [
+      "y.ts"
+    ],
+    "formatted": "\n\n<modified-files>\ny.ts\n</modified-files>"
+  },
+  {
+    "name": "duplicates",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "c0",
+            "name": "read",
+            "arguments": {
+              "path": "d.ts"
+            }
+          },
+          {
+            "type": "toolCall",
+            "id": "c1",
+            "name": "read",
+            "arguments": {
+              "path": "d.ts"
+            }
+          },
+          {
+            "type": "toolCall",
+            "id": "c2",
+            "name": "edit",
+            "arguments": {
+              "path": "m.ts"
+            }
+          },
+          {
+            "type": "toolCall",
+            "id": "c3",
+            "name": "edit",
+            "arguments": {
+              "path": "m.ts"
+            }
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "toolUse",
+        "timestamp": 1
+      }
+    ],
+    "readFiles": [
+      "d.ts"
+    ],
+    "modifiedFiles": [
+      "m.ts"
+    ],
+    "formatted": "\n\n<read-files>\nd.ts\n</read-files>\n\n<modified-files>\nm.ts\n</modified-files>"
+  },
+  {
+    "name": "missing-path",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "c0",
+            "name": "read",
+            "arguments": {}
+          },
+          {
+            "type": "toolCall",
+            "id": "c1",
+            "name": "edit",
+            "arguments": {
+              "path": 5
+            }
+          },
+          {
+            "type": "toolCall",
+            "id": "c2",
+            "name": "write",
+            "arguments": {
+              "path": null
+            }
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "toolUse",
+        "timestamp": 1
+      }
+    ],
+    "readFiles": [],
+    "modifiedFiles": [],
+    "formatted": ""
+  },
+  {
+    "name": "unknown-tool",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "c0",
+            "name": "grep",
+            "arguments": {
+              "path": "z.ts"
+            }
+          },
+          {
+            "type": "toolCall",
+            "id": "c1",
+            "name": "read",
+            "arguments": {
+              "path": "keep.ts"
+            }
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "toolUse",
+        "timestamp": 1
+      }
+    ],
+    "readFiles": [
+      "keep.ts"
+    ],
+    "modifiedFiles": [],
+    "formatted": "\n\n<read-files>\nkeep.ts\n</read-files>"
+  },
+  {
+    "name": "nested-calls",
+    "messages": [
+      {
+        "role": "toolResult",
+        "toolCallId": "call",
+        "toolName": "bash",
+        "content": [
+          {
+            "type": "text",
+            "text": "ok"
+          }
+        ],
+        "isError": false,
+        "timestamp": 2,
+        "nestedCalls": {
+          "calls": [
+            {
+              "name": "read",
+              "arguments": {
+                "path": "n1.ts"
+              },
+              "toolCallId": "n0"
+            },
+            {
+              "name": "write",
+              "arguments": {
+                "path": "n2.ts"
+              },
+              "toolCallId": "n1"
+            }
+          ],
+          "complete": true
+        }
+      }
+    ],
+    "readFiles": [
+      "n1.ts"
+    ],
+    "modifiedFiles": [
+      "n2.ts"
+    ],
+    "formatted": "\n\n<read-files>\nn1.ts\n</read-files>\n\n<modified-files>\nn2.ts\n</modified-files>"
+  },
+  {
+    "name": "mixed",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "c0",
+            "name": "read",
+            "arguments": {
+              "path": "a"
+            }
+          },
+          {
+            "type": "toolCall",
+            "id": "c1",
+            "name": "write",
+            "arguments": {
+              "path": "b"
+            }
+          },
+          {
+            "type": "toolCall",
+            "id": "c2",
+            "name": "edit",
+            "arguments": {
+              "path": "c"
+            }
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "toolUse",
+        "timestamp": 1
+      },
+      {
+        "role": "toolResult",
+        "toolCallId": "call",
+        "toolName": "bash",
+        "content": [
+          {
+            "type": "text",
+            "text": "ok"
+          }
+        ],
+        "isError": false,
+        "timestamp": 2,
+        "nestedCalls": {
+          "calls": [
+            {
+              "name": "edit",
+              "arguments": {
+                "path": "c"
+              },
+              "toolCallId": "n0"
+            }
+          ],
+          "complete": true
+        }
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "c0",
+            "name": "read",
+            "arguments": {
+              "path": "d"
+            }
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "toolUse",
+        "timestamp": 1
+      }
+    ],
+    "readFiles": [
+      "a",
+      "d"
+    ],
+    "modifiedFiles": [
+      "b",
+      "c"
+    ],
+    "formatted": "\n\n<read-files>\na\nd\n</read-files>\n\n<modified-files>\nb\nc\n</modified-files>"
+  },
+  {
+    "name": "astral-order",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "c0",
+            "name": "read",
+            "arguments": {
+              "path": "😀.ts"
+            }
+          },
+          {
+            "type": "toolCall",
+            "id": "c1",
+            "name": "read",
+            "arguments": {
+              "path": "ｚ.ts"
+            }
+          },
+          {
+            "type": "toolCall",
+            "id": "c2",
+            "name": "read",
+            "arguments": {
+              "path": "Z.ts"
+            }
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "toolUse",
+        "timestamp": 1
+      }
+    ],
+    "readFiles": [
+      "Z.ts",
+      "😀.ts",
+      "ｚ.ts"
+    ],
+    "modifiedFiles": [],
+    "formatted": "\n\n<read-files>\nZ.ts\n😀.ts\nｚ.ts\n</read-files>"
+  },
+  {
+    "name": "empty",
+    "messages": [],
+    "readFiles": [],
+    "modifiedFiles": [],
+    "formatted": ""
+  }
+]
