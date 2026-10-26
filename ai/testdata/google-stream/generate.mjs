@@ -142,6 +142,50 @@ const scenarios = [
 		],
 	},
 	{
+		name: "two-text-parts-one-chunk",
+		chunks: [
+			{
+				candidates: [
+					{ content: { role: "model", parts: [{ text: "one" }, { text: "two" }] } },
+				],
+			},
+			done("STOP"),
+		],
+	},
+	{
+		name: "call-then-text",
+		chunks: [
+			{
+				candidates: [
+					{
+						content: { role: "model", parts: [{ functionCall: { id: "c1", name: "lookup", args: { a: 1 } } }] },
+						finishReason: "STOP",
+					},
+				],
+			},
+			text("trailing"),
+		],
+	},
+	{
+		name: "empty-candidates",
+		chunks: [
+			{ candidates: [] },
+			text("after-empty-candidates"),
+			done("STOP"),
+		],
+	},
+	{
+		name: "safety-with-usage",
+		chunks: [
+			text("partial"),
+			{
+				candidates: [{ content: { role: "model", parts: [{ text: "" }] }, finishReason: "SAFETY" }],
+				usageMetadata: { promptTokenCount: 8, candidatesTokenCount: 2, totalTokenCount: 10 },
+				promptFeedback: { blockReason: "SAFETY" },
+			},
+		],
+	},
+	{
 		name: "empty-parts",
 		chunks: [
 			{ candidates: [{ content: { role: "model", parts: [] } }] },
