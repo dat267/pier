@@ -1,0 +1,132 @@
+[
+  {
+    "name": "jpeg",
+    "hex": "ffd8ffe00000",
+    "expected": "image/jpeg"
+  },
+  {
+    "name": "jpeg2000",
+    "hex": "ffd8fff70000",
+    "expected": null
+  },
+  {
+    "name": "png-valid",
+    "hex": "89504e470d0a1a0a0000000d4948445200000000000000000000000000000000000000000349444154010203000000000000000049454e4400000000",
+    "expected": "image/png"
+  },
+  {
+    "name": "png-animated",
+    "hex": "89504e470d0a1a0a0000000d494844520000000000000000000000000000000000000000086163544c00000001000000010000000000000001494441540100000000",
+    "expected": null
+  },
+  {
+    "name": "png-truncated-header",
+    "hex": "89504e470d0a1a0a",
+    "expected": null
+  },
+  {
+    "name": "png-wrong-ihdr-length",
+    "hex": "89504e470d0a1a0a0000000c49484452000000000000000000000000",
+    "expected": null
+  },
+  {
+    "name": "png-no-ihdr-type",
+    "hex": "89504e470d0a1a0a0000000d5858585800000000000000000000000000",
+    "expected": null
+  },
+  {
+    "name": "gif87a",
+    "hex": "4749463837612e2e2e2e",
+    "expected": "image/gif"
+  },
+  {
+    "name": "gif89a",
+    "hex": "4749463839612e2e2e2e",
+    "expected": "image/gif"
+  },
+  {
+    "name": "gif-wrong-version",
+    "hex": "4749463930612e2e2e2e",
+    "expected": null
+  },
+  {
+    "name": "webp",
+    "hex": "52494646640000005745425056503820",
+    "expected": "image/webp"
+  },
+  {
+    "name": "webp-short",
+    "hex": "5249464600000000",
+    "expected": null
+  },
+  {
+    "name": "riff-not-webp",
+    "hex": "524946466400000057415645666d7420",
+    "expected": null
+  },
+  {
+    "name": "bmp-valid-12",
+    "hex": "424d1e000000000000001a0000000c000000000000000100180000000000",
+    "expected": "image/bmp"
+  },
+  {
+    "name": "bmp-valid-40",
+    "hex": "424d3800000000000000360000002800000000000000000000000100180000000000",
+    "expected": "image/bmp"
+  },
+  {
+    "name": "bmp-bad-planes",
+    "hex": "424d1e000000000000001a0000000c000000000000000200180000000000",
+    "expected": null
+  },
+  {
+    "name": "bmp-bad-bpp",
+    "hex": "424d1e000000000000001a0000000c000000000000000100030000000000",
+    "expected": null
+  },
+  {
+    "name": "bmp-header-too-large",
+    "hex": "424d1e000000000000001a000000c800000000000000000000000100180000000000",
+    "expected": null
+  },
+  {
+    "name": "bmp-offset-before-header",
+    "hex": "424d1e000000000000000e0000000c000000000000000100180000000000",
+    "expected": null
+  },
+  {
+    "name": "bmp-declared-too-small",
+    "hex": "424d14000000000000001a0000000c000000000000000100180000000000",
+    "expected": null
+  },
+  {
+    "name": "bmp-declared-zero",
+    "hex": "424d00000000000000001a0000000c000000000000000100180000000000",
+    "expected": "image/bmp"
+  },
+  {
+    "name": "bmp-offset-at-declared",
+    "hex": "424d3800000000000000380000002800000000000000000000000100180000000000",
+    "expected": null
+  },
+  {
+    "name": "bmp-size-mismatch",
+    "hex": "424d64000000000000001a0000000c000000000000000100180000000000",
+    "expected": "image/bmp"
+  },
+  {
+    "name": "bmp-too-short",
+    "hex": "424d1a0000000c000000",
+    "expected": null
+  },
+  {
+    "name": "empty",
+    "hex": "",
+    "expected": null
+  },
+  {
+    "name": "text",
+    "hex": "68656c6c6f20776f726c64",
+    "expected": null
+  }
+]

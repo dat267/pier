@@ -776,6 +776,7 @@ at the closing checkpoint:
 | `coding/testdata/write-tool` | 7 | `core/tools/write.ts` (D279 excluded) |
 | `coding/testdata/grep-tool` | 12 | `core/tools/grep.ts` |
 | `coding/testdata/find-tool` | 7 | `core/tools/find.ts` |
+| `coding/testdata/image-mime` | 26 | `utils/mime.ts` |
 
 Earlier corpora (`edit-diff-patch`, `edit-apply`, `truncate`, `js-numbers`,
 `overflow`, `parse-key`, Anthropic/OpenAI/Responses stream corpora) remain green.
@@ -1162,3 +1163,22 @@ tool-corpus helpers moved to `coding/tool_parity_helpers_test.go`.
   recovery, and platform terminal I/O. Passing tests and static review cannot
   certify the absence of defects.
 - Nothing was pushed, released, or installed.
+
+## Image-MIME corpus
+
+`coding/testdata/image-mime/generate.mjs` executes the pinned
+`detectSupportedImageMimeType` over 26 byte buffers and records each result;
+`TestDetectSupportedImageMimeTypeMatchesUpstream` decodes the same hex and
+compares.
+
+Cases: JPEG and JPEG 2000 codestreams, a valid PNG, an animated (acTL) PNG, a
+truncated signature-only PNG, a wrong IHDR length and a non-IHDR chunk type,
+GIF87a/GIF89a versus an unknown version, WebP versus other RIFF payloads, BMP
+with 12-byte and 40-byte DIB headers, wrong plane count and bit depth, an
+oversized DIB header, a pixel offset before the header or at the declared size,
+declared sizes that are zero, too small or larger than the buffer, a short
+buffer, empty input and plain text.
+
+All 26 matched on the first run, so this records coverage, not a finding.
+Regeneration is byte-identical; `go test -count=1 ./coding`, `just check`,
+`just cross` (six targets) and `just reference` pass.
