@@ -1024,6 +1024,7 @@ with its focused regression, `just check`, `just cross` (six targets),
 | CR-041 | `5a4576d` | Pi-messages: contain callback failures |
 | CR-042 | `f5ea097` | find: let fd report a missing search path |
 | CR-043 | `dccf7f8` | Tool resolution: empty list, not null, in `changes` mode |
+| CR-044 | `890d715` | Cache warming: unrecognized stored mode falls back to streaming |
 
 Coverage commits: `5dc51eb`, `22a6532`, `df8e227`, `f720e5b`, `edba452`,
 `6494612`, `0605146`, `3c71c43`, `e204928`, `6cc1920`, `3652608`, `eb681b5`,
