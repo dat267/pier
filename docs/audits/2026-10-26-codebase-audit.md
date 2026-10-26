@@ -104,4 +104,39 @@ conversion is covered separately by `testdata/mistral-wire`. Stream cancellation
 network failures and observer errors remain bounded by their existing Go tests,
 not source-executed differential cases in this corpus.
 
-Completed pieces: `97dc354` (CR-021), `42db086` (CR-022), `087fdd7` (CR-023).
+Completed pieces: `97dc354` (CR-021), `42db086` (CR-022), `087fdd7` (CR-023),
+`5dc51eb` (Mistral stream corpus).
+
+## CR-024, P2: Mistral simple streams ignored reasoning maps and off (fixed)
+
+Authority: `packages/ai/src/api/mistral-conversations.ts`, `streamSimple`, uses
+`model.reasoning ? model.thinkingLevelMap : undefined` to choose the effort
+path. Disabled/unspecified reasoning uses `effortMap.off`; enabled reasoning
+uses the clamped level's mapped value (fallback `high`). Only reasoning models
+without maps use `prompt_mode`.
+
+Pier instead used a hardcoded model-id list and omitted off mapping. Built-in
+`mistral-large-4` high and `zai-glm-5-3` low sent `prompt_mode: reasoning` instead
+of `reasoning_effort: high/low`. `mistral-small-2603` with off/unspecified omitted
+`reasoning_effort: none`, so turning reasoning off was not honored in the
+request. Custom maps failed by the same root cause.
+
+Repair: select mode by map presence and honor the off mapping. Removed the
+obsolete private model-id predicates and their incorrect assertions; public
+source-executed cases cover those decisions instead. The mapped-effort/fallback
+helper assertions remain.
+
+```sh
+go test -count=1 ./ai -run '^TestMistralSimpleReasoningMatchesUpstream$'
+node --experimental-strip-types ai/testdata/mistral-simple/generate.mjs ./pi > /tmp/mistral-simple.json
+cmp ai/testdata/mistral-simple/golden.json /tmp/mistral-simple.json
+```
+
+Six of nine cases failed red: small off/unspecified, large-4 high, GLM-5.3 low,
+custom mapped model, and a small-named custom model without a map. Small high
+with a map, custom reasoning without a map and nonreasoning were controls.
+All now pass. The fixture compares only reasoning mode fields, not other base
+options; max-token defaults/context clamping remain a separate inspection lead.
+
+Verification: all `TestMistral` tests and all ai tests pass; regeneration is
+byte-identical; `just check`, `just cross` (six targets), `just reference` pass.

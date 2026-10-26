@@ -487,22 +487,7 @@ func TestMistralConversionDropsJavaScriptWhitespaceOnlyBlocks(t *testing.T) {
 	}
 }
 
-func TestMistralReasoningModes(t *testing.T) {
-	if !usesMistralReasoningEffort(&Model{ID: "mistral-small-latest"}) {
-		t.Fatal("mistral-small-latest uses reasoning effort")
-	}
-	if !usesMistralReasoningEffort(&Model{ID: "mistral-medium-2508"}) {
-		t.Fatal("mistral-medium-* uses reasoning effort")
-	}
-	if !usesMistralReasoningEffort(&Model{ID: "zai-glm-5-2"}) {
-		t.Fatal("zai-glm-5-2 uses reasoning effort")
-	}
-	if usesMistralReasoningEffort(&Model{ID: "mistral-large-latest"}) {
-		t.Fatal("mistral-large uses prompt mode")
-	}
-	if !usesMistralPromptMode(&Model{ID: "mistral-large-latest", Reasoning: true}) {
-		t.Fatal("reasoning models use prompt mode")
-	}
+func TestMistralReasoningEffortMapping(t *testing.T) {
 	high := "high"
 	model := &Model{ID: "mistral-large-latest", Reasoning: true, ThinkingLevelMap: ThinkingLevelMap{"high": &high}}
 	if got := mapMistralReasoningEffort(model, ThinkHigh); got != "high" {

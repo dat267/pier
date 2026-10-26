@@ -266,15 +266,18 @@ func StreamMistralConversationsSimple(model *Model, context TranscriptContext, o
 		if options.ToolChoice != nil {
 			mistralOptions.ToolChoice = mapToolChoiceType(*options.ToolChoice)
 		}
-		if options.Reasoning != "" {
-			clamped := ClampThinkingLevel(model, options.Reasoning)
-			if clamped != ThinkOff && model.Reasoning {
-				if usesMistralReasoningEffort(model) {
-					mistralOptions.ReasoningEffort = mapMistralReasoningEffort(model, clamped)
-				} else if usesMistralPromptMode(model) {
-					mistralOptions.PromptMode = "reasoning"
-				}
+		reasoning := options.Reasoning
+		if reasoning != "" {
+			reasoning = ClampThinkingLevel(model, reasoning)
+		}
+		if model.Reasoning && model.ThinkingLevelMap != nil {
+			if reasoning != "" && reasoning != ThinkOff {
+				mistralOptions.ReasoningEffort = mapMistralReasoningEffort(model, reasoning)
+			} else {
+				mistralOptions.ReasoningEffort = deref(model.ThinkingLevelMap[ThinkOff])
 			}
+		} else if model.Reasoning && reasoning != "" && reasoning != ThinkOff {
+			mistralOptions.PromptMode = "reasoning"
 		}
 		forwardStream(stream, StreamMistralConversations(model, context, mistralOptions))
 	}()
@@ -1244,15 +1247,6 @@ func buildMistralToolResultText(text string, hasImages, supportsImages, isError 
 		return "[tool error] (no tool output)"
 	}
 	return "(no tool output)"
-}
-
-func usesMistralReasoningEffort(model *Model) bool {
-	return model.ID == "mistral-small-2603" || model.ID == "mistral-small-latest" ||
-		strings.HasPrefix(model.ID, "mistral-medium-") || model.ID == "zai-glm-5-2"
-}
-
-func usesMistralPromptMode(model *Model) bool {
-	return model.Reasoning && !usesMistralReasoningEffort(model)
 }
 
 func mapMistralReasoningEffort(model *Model, level ThinkingLevel) MistralReasoningEffort {

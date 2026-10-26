@@ -399,6 +399,11 @@ Parallel calls emit `toolcall_end` in first-seen order, not Go map order.
 Absent/null tool arguments emit the default `{}` delta, while string arguments
 (including an empty string) remain verbatim. A generated 22-scenario corpus
 compares Mistral stream event scalars and terminal messages against the pin.
+Simple Mistral requests choose `reasoning_effort` whenever a reasoning model has
+a `thinkingLevelMap`, including its `off` mapping for disabled/unspecified
+reasoning. Models without a map use `prompt_mode` for enabled reasoning. A
+nine-case source corpus covers built-in and custom maps; hardcoded model-id
+checks no longer select the mode.
 
 Google streams keep a text part that is present but empty. The reference keys
 block creation on `part.text !== undefined`, so `{"text": ""}` still opens a text

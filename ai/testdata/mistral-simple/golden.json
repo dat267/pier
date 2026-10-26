@@ -1,0 +1,281 @@
+[
+  {
+    "name": "small-off",
+    "model": {
+      "api": "mistral-conversations",
+      "provider": "mistral",
+      "baseUrl": "https://invalid.test",
+      "reasoning": true,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 128000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "id": "mistral-small-2603",
+      "thinkingLevelMap": {
+        "off": "none",
+        "minimal": null,
+        "low": null,
+        "medium": null,
+        "high": "high",
+        "xhigh": null,
+        "max": null
+      }
+    },
+    "reasoning": "off",
+    "expected": {
+      "reasoningEffort": "none"
+    }
+  },
+  {
+    "name": "small-unspecified",
+    "model": {
+      "api": "mistral-conversations",
+      "provider": "mistral",
+      "baseUrl": "https://invalid.test",
+      "reasoning": true,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 128000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "id": "mistral-small-2603",
+      "thinkingLevelMap": {
+        "off": "none",
+        "minimal": null,
+        "low": null,
+        "medium": null,
+        "high": "high",
+        "xhigh": null,
+        "max": null
+      }
+    },
+    "expected": {
+      "reasoningEffort": "none"
+    }
+  },
+  {
+    "name": "small-high",
+    "model": {
+      "api": "mistral-conversations",
+      "provider": "mistral",
+      "baseUrl": "https://invalid.test",
+      "reasoning": true,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 128000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "id": "mistral-small-2603",
+      "thinkingLevelMap": {
+        "off": "none",
+        "minimal": null,
+        "low": null,
+        "medium": null,
+        "high": "high",
+        "xhigh": null,
+        "max": null
+      }
+    },
+    "reasoning": "high",
+    "expected": {
+      "reasoningEffort": "high"
+    }
+  },
+  {
+    "name": "large-4-high",
+    "model": {
+      "api": "mistral-conversations",
+      "provider": "mistral",
+      "baseUrl": "https://invalid.test",
+      "reasoning": true,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 128000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "id": "mistral-large-4",
+      "thinkingLevelMap": {
+        "off": "none",
+        "minimal": null,
+        "low": null,
+        "medium": null,
+        "high": "high",
+        "xhigh": null,
+        "max": null
+      }
+    },
+    "reasoning": "high",
+    "expected": {
+      "reasoningEffort": "high"
+    }
+  },
+  {
+    "name": "glm-5-3-low",
+    "model": {
+      "api": "mistral-conversations",
+      "provider": "mistral",
+      "baseUrl": "https://invalid.test",
+      "reasoning": true,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 128000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "id": "zai-glm-5-3",
+      "thinkingLevelMap": {
+        "off": null,
+        "minimal": null,
+        "low": "low",
+        "medium": null,
+        "high": "high",
+        "xhigh": null,
+        "max": "max"
+      }
+    },
+    "reasoning": "low",
+    "expected": {
+      "reasoningEffort": "low"
+    }
+  },
+  {
+    "name": "custom-map",
+    "model": {
+      "api": "mistral-conversations",
+      "provider": "mistral",
+      "baseUrl": "https://invalid.test",
+      "reasoning": true,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 128000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "id": "custom",
+      "thinkingLevelMap": {
+        "high": "max"
+      }
+    },
+    "reasoning": "high",
+    "expected": {
+      "reasoningEffort": "max"
+    }
+  },
+  {
+    "name": "no-map-reasoning",
+    "model": {
+      "api": "mistral-conversations",
+      "provider": "mistral",
+      "baseUrl": "https://invalid.test",
+      "reasoning": true,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 128000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "id": "custom"
+    },
+    "reasoning": "high",
+    "expected": {
+      "promptMode": "reasoning"
+    }
+  },
+  {
+    "name": "small-no-map",
+    "model": {
+      "api": "mistral-conversations",
+      "provider": "mistral",
+      "baseUrl": "https://invalid.test",
+      "reasoning": true,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 128000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "id": "mistral-small-latest"
+    },
+    "reasoning": "high",
+    "expected": {
+      "promptMode": "reasoning"
+    }
+  },
+  {
+    "name": "nonreasoning",
+    "model": {
+      "api": "mistral-conversations",
+      "provider": "mistral",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 128000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "id": "custom",
+      "thinkingLevelMap": {
+        "off": "none",
+        "minimal": null,
+        "low": null,
+        "medium": null,
+        "high": "high",
+        "xhigh": null,
+        "max": null
+      }
+    },
+    "reasoning": "high",
+    "expected": {}
+  }
+]
