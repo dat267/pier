@@ -17,8 +17,8 @@ import (
 //
 // The startup renderer's theme loading (upstream loadStartupThemes, which
 // resolves theme resources through the package manager) has no port here: the
-// CLI installs the port's palette before this runs (D154), and the theme paths
-// from --theme and the global settings are registered with it.
+// palettes are built in (D154), and the CLI discovers theme paths from --theme
+// and the global settings before this runs.
 
 // StartupSelectorOptions are ShowStartupSelector inputs.
 type StartupSelectorOptions struct {

@@ -1190,9 +1190,10 @@ Fixed and recorded as CR-044 through CR-048:
 | CR-047 | `5fad435` | Responses usage always carries a reasoning count |
 | CR-048 | `53600ee` | HTML export ships the pinned Marked 18.0.11 and the CJK bundle |
 
-Unresolved and recorded in `TODO.md`: CR-049 (the embedded upstream dark/light
-palettes predate upstream's okhsl redesign; refreshing them requires regenerating
-15 interactive goldens whose generators are not in the repository).
+CR-049 was initially left open because the embedded upstream snapshot predated
+upstream's okhsl redesign and the color golden generators were missing. The owner
+chose to keep pier's own palette and consolidate it instead of adopting upstream's
+colors. It is now resolved by the palette cleanup below (D154).
 
 Corpus work in this run: new `coding/testdata/image-mime` (26), `ai/testdata/
 short-hash` (18), `tui/testdata/wrap` (204) and `tui/testdata/truncate` (206);
@@ -1204,9 +1205,60 @@ TypeScript; the `openai-stream` and `openai-responses-stream` extensions found
 CR-046 and CR-047.
 
 Not exhaustively probed: the remaining interactive wiring and renderers, the
-platform terminal I/O paths, MCP OAuth discovery edge cases, and the theme data
-refresh above. Passing tests and static review cannot certify the absence of
-defects.
+platform terminal I/O paths and MCP OAuth discovery edge cases. Passing tests
+and static review cannot certify the absence of defects.
+
+### CR-049 follow-up: one palette, reproducible color fixtures
+
+The owner's decision supersedes the original proposed upstream palette refresh:
+pier's amber-accented colors remain deliberate (D154). `themes/dark.json` and
+`light.json` now hold the former CLI palette, including explicit appearances and
+HTML export colors. The duplicate Go palette constructors, old upstream JSON
+snapshot and `InstallPierTheme` override are removed. Library/export callers
+without a registry now see the same palette as the CLI. The adaptive system
+fallback reads its signal panels from those JSON files, not another map.
+Caller-registered themes and their precedence remain supported.
+
+Red-first evidence:
+
+- `go test ./coding/interactive -run '^TestBuiltinThemesUsePierPaletteWithoutInstaller$' -count=1`
+  failed with dark `#8abeb7` versus `#ffb454`, and light `#5a8080` versus
+  `#b45309`, then passed after changing the embedded data.
+- `go test ./coding/interactive -run '^TestThemeBootCapabilitiesPreserveRegisteredThemes$' -count=1`
+  failed with `the capability stage replaced caller-registered themes`, then
+  passed after removing the redundant palette installation from capability boot.
+- A temporary migration check compared every old Go palette token and export
+  color with the new JSON, plus appearance and all foreground/background ANSI
+  maps in both truecolor and 256color. It passed before deleting the old
+  constructors. Permanent tests pin accents, all signal fills, transparent
+  decorative backgrounds, complete token coverage, distinct 256-color tool
+  states, appearance selection and HTML export.
+
+Fifteen Node generators now drive read-only reference rendering code with the
+palette JSON. Before changing colors, the recreated generators reproduced every
+existing labeled JSON value in fourteen families and every byte of the edit
+render fixture. No labels were removed. One independently generated user-message
+render replaces an inline Go capture in the single-copy regression. The final
+fixtures regenerate byte-identically with:
+
+```sh
+node --experimental-strip-types coding/interactive/testdata/regenerate.mjs ./pi
+```
+
+This is not a claim that all old component fixtures match v1.4.0. Reconstruction
+exposed retained non-color contracts: setup's detected-appearance choices, OAuth
+`unconfigured` wording, name-only throwing-renderer fallback, and the settings
+menu's absent share row and `Automatic` display casing. They are preserved by
+explicit source adapters, not silently fixed or normalized away. Source revisions
+(v1.4.0 `4a080252`, plus selected `d1230ea` code) and D94/D263 fixture handling are
+listed in `coding/interactive/testdata/README.md`. Review those non-color areas
+separately; they remain limits of the existing parity coverage.
+
+Verification: focused `./coding/interactive ./coding ./cmd`, `just check`,
+`go test -count=2 -timeout 600s ./...`, `just cross` (six targets),
+`just reference` and fifteen golden byte comparisons passed. The final full
+checks used a freshly built binary through `PIER_TEST_BIN`. The reference tree
+remains clean. No pushes, releases or installs.
 
 ## Image-MIME corpus
 

@@ -21,16 +21,18 @@ func TestThemeBootRejectsSourcesBeforeCapabilities(t *testing.T) {
 	NewThemeBoot().ApplySources(ThemeSources{})
 }
 
-// TestThemeBootCapabilitiesInstallThePalette pins the division of labour
-// between the two stages: the capability stage registers the port's palette
-// (that is all it does — loading one is the source stage's job), so a later
-// name resolves against it.
-func TestThemeBootCapabilitiesInstallThePalette(t *testing.T) {
+// The capability stage must not replace caller-registered themes now that pier's
+// palette is built in. Reference: pi v1.4.0 theme.ts registered-theme precedence.
+func TestThemeBootCapabilitiesPreserveRegisteredThemes(t *testing.T) {
 	SetCustomThemesDir(t.TempDir())
+	custom := *getBuiltinThemes()["dark"]
+	custom.Name = "custom"
+	SetRegisteredThemes([]*Theme{CreateTheme(&custom, ColorModeTruecolor, "")})
+	t.Cleanup(func() { SetRegisteredThemes(nil) })
 	boot := NewThemeBoot()
 	boot.EnableCapabilities()
-	if _, ok := registeredThemesGet("dark"); !ok {
-		t.Fatalf("the palette was not registered: %v", AvailableThemes())
+	if GetThemeByName("custom") == nil {
+		t.Fatal("the capability stage replaced caller-registered themes")
 	}
 
 	boot.ApplySources(ThemeSources{})

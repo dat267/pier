@@ -5,53 +5,37 @@ import (
 	"testing"
 )
 
-// installPierThemeForTest puts the port's palette in place the way the CLI
-// does, without the rest of the app's setup.
-func installPierThemeForTest(t *testing.T) {
+// useBuiltinPierThemeForTest matches CLI color capabilities without registration.
+func useBuiltinPierThemeForTest(t *testing.T) {
 	t.Helper()
 	SetCustomThemesDir(t.TempDir())
 	SetRegisteredThemes(nil)
 	SetTrueColorSupport(true)
 	SetStyleColorsEnabled(true)
-	InstallPierTheme()
 }
 
-// The install must actually take effect: it shadows the embedded upstream
-// palettes, which is what makes the difference visible at startup.
-func TestInstallPierThemeShadowsUpstream(t *testing.T) {
+// Registry-free consumers must see the same palette as the CLI (D154).
+// Reference: pi v1.4.0 theme.ts loadThemeByName; the colors are pier's design.
+func TestBuiltinThemesUsePierPaletteWithoutInstaller(t *testing.T) {
 	SetCustomThemesDir(t.TempDir())
 	SetRegisteredThemes(nil)
-
-	upstream, err := GetResolvedThemeColors("dark")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if upstream["accent"] != "#8abeb7" {
-		t.Fatalf("unregistered dark accent = %q, want the upstream teal", upstream["accent"])
-	}
-
-	installPierThemeForTest(t)
-
-	installed, err := GetResolvedThemeColors("dark")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if installed["accent"] != "#ffb454" {
-		t.Errorf("installed dark accent = %q, want the port's amber", installed["accent"])
-	}
-	light, err := GetResolvedThemeColors("light")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if light["accent"] != "#b45309" {
-		t.Errorf("installed light accent = %q", light["accent"])
+	for _, tc := range []struct{ name, accent string }{
+		{"dark", "#ffb454"}, {"light", "#b45309"},
+	} {
+		colors, err := GetResolvedThemeColors(tc.name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if colors["accent"] != tc.accent {
+			t.Errorf("%s accent = %q, want %q without an installer", tc.name, colors["accent"], tc.accent)
+		}
 	}
 }
 
 // The point of the palette: the terminal's own background shows through the
 // decorative fills, so none of them may resolve to a colour.
 func TestPierThemeDecorativeBackgroundsAreTerminalDefault(t *testing.T) {
-	installPierThemeForTest(t)
+	useBuiltinPierThemeForTest(t)
 	for _, name := range []string{"dark", "light"} {
 		t.Run(name, func(t *testing.T) {
 			theme := GetThemeByName(name)
@@ -91,10 +75,10 @@ func TestPierThemeFilledBackgroundsDiffer(t *testing.T) {
 		mode ColorMode
 		json *ThemeJSON
 	}{
-		{"dark", ColorModeTruecolor, pierDarkJSON()},
-		{"light", ColorModeTruecolor, pierLightJSON()},
-		{"dark/256", ColorMode256, pierDarkJSON()},
-		{"light/256", ColorMode256, pierLightJSON()},
+		{"dark", ColorModeTruecolor, getBuiltinThemes()["dark"]},
+		{"light", ColorModeTruecolor, getBuiltinThemes()["light"]},
+		{"dark/256", ColorMode256, getBuiltinThemes()["dark"]},
+		{"light/256", ColorMode256, getBuiltinThemes()["light"]},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			theme := CreateTheme(tc.json, tc.mode, "")
@@ -119,32 +103,29 @@ func TestPierThemeFilledBackgroundsDiffer(t *testing.T) {
 	}
 }
 
-// The fills carry a signal, but the look stays this port's. Copying upstream's
-// values would make a user message (or a finished tool call) read as pi's.
-func TestPierThemeFilledBackgroundsDifferFromUpstream(t *testing.T) {
-	upstream := getBuiltinThemes()
-	for _, tc := range []struct {
-		name string
-		json *ThemeJSON
-	}{
-		{"dark", pierDarkJSON()},
-		{"light", pierLightJSON()},
+// D154's panels are pier's design, not a copy of an upstream palette.
+// Literal values keep the CLI's pre-migration signal colors pinned.
+func TestPierThemeSignalPanelColors(t *testing.T) {
+	useBuiltinPierThemeForTest(t)
+	for name, want := range map[string]map[string]string{
+		"dark":  {"toolPendingBg": "#2b2b2b", "toolSuccessBg": "#22302a", "toolErrorBg": "#3a2424", "userMessageBg": "#393630", "customMessageBg": "#2e2640"},
+		"light": {"toolPendingBg": "#ececec", "toolSuccessBg": "#e6f2e9", "toolErrorBg": "#f7e7e7", "userMessageBg": "#f4eee1", "customMessageBg": "#f0e9fb"},
 	} {
-		t.Run(tc.name, func(t *testing.T) {
-			ours := CreateTheme(tc.json, ColorModeTruecolor, "")
-			theirs := CreateTheme(upstream[tc.name], ColorModeTruecolor, "")
-			for _, key := range filledBackgroundColors {
-				if ours.bgColors[key] == theirs.bgColors[key] {
-					t.Errorf("%s: %s = %q is upstream's value", tc.name, key, ours.bgColors[key])
-				}
+		colors, err := GetResolvedThemeColors(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for key, value := range want {
+			if colors[key] != value {
+				t.Errorf("%s %s = %q, want %q", name, key, colors[key], value)
 			}
-		})
+		}
 	}
 }
 
 // Every token the UI can ask for must exist, or Fg/Bg panic at render time.
 func TestPierThemeDefinesEveryToken(t *testing.T) {
-	installPierThemeForTest(t)
+	useBuiltinPierThemeForTest(t)
 	for _, name := range []string{"dark", "light"} {
 		t.Run(name, func(t *testing.T) {
 			theme := GetThemeByName(name)
@@ -168,7 +149,7 @@ func TestPierThemeDefinesEveryToken(t *testing.T) {
 
 // A palette that kept upstream's teal would defeat the point of shipping one.
 func TestPierThemeIsDistinctFromUpstream(t *testing.T) {
-	installPierThemeForTest(t)
+	useBuiltinPierThemeForTest(t)
 	for _, name := range []string{"dark", "light"} {
 		colors, err := GetResolvedThemeColors(name)
 		if err != nil {
@@ -188,7 +169,7 @@ func TestPierThemeIsDistinctFromUpstream(t *testing.T) {
 // Dark and light are selected the same way as before: by the setting, or by the
 // terminal's own background when nothing is configured.
 func TestPierThemeSelection(t *testing.T) {
-	installPierThemeForTest(t)
+	useBuiltinPierThemeForTest(t)
 
 	// A bare name resolves to itself.
 	if got, ok := ResolveThemeSetting(strPtr("light"), TerminalThemeDark); !ok || got != "light" {
@@ -214,7 +195,7 @@ func TestPierThemeSelection(t *testing.T) {
 		}
 	}
 
-	// What the app does: install, then init by name.
+	// What the app does: initialize the built-in theme by name.
 	InitTheme("light", false)
 	if CurrentThemeName() != "light" {
 		t.Errorf("current theme = %q", CurrentThemeName())
@@ -224,10 +205,9 @@ func TestPierThemeSelection(t *testing.T) {
 	}
 }
 
-// The registered palette carries its document, so the export path can still
-// resolve tokens that came from memory rather than a file.
+// The built-in palette also supplies its HTML document colors without a registry.
 func TestPierThemeExportColorsResolve(t *testing.T) {
-	installPierThemeForTest(t)
+	useBuiltinPierThemeForTest(t)
 
 	pageBg, cardBg, infoBg, err := GetThemeExportColors("dark")
 	if err != nil {

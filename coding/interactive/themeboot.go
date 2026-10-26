@@ -14,8 +14,7 @@ import (
 // later they are here, where a violation is a panic and a test.
 //
 //   - The capability stage precedes anything that loads a theme: a theme bakes
-//     its 256-colour or truecolor escapes when it is created, and the port's
-//     palette is registered under the upstream names (D154).
+//     its 256-colour or truecolor escapes when it is created (D154).
 //   - The source stage installs discovery before the name is resolved, because
 //     resolving it is what reads those sources.
 //   - The project's own theme directory is a source only once the project is
@@ -65,11 +64,9 @@ func (b *ThemeBoot) SetTrueColorOverride(value *bool) { b.trueColorOverride = va
 // NewThemeBoot creates a boot that has performed no stage yet.
 func NewThemeBoot() *ThemeBoot { return &ThemeBoot{} }
 
-// EnableCapabilities performs the capability stage: detects color depth from
-// the terminal environment, then applies PI_TRUE_COLOR and the settings
-// override before the style helpers and port palette are installed. The order
-// matters — the palette bakes its escapes on creation, so the capability switch
-// has to precede the install (D154). It is idempotent, and it must precede ApplySources.
+// EnableCapabilities detects color depth, then applies PI_TRUE_COLOR and the
+// settings override before a theme is loaded. Themes bake their escapes at
+// creation (D154), so this idempotent stage must precede ApplySources.
 func (b *ThemeBoot) EnableCapabilities() {
 	trueColor := tui.TerminalDetectsTrueColor(os.Getenv)
 	switch os.Getenv("PI_TRUE_COLOR") {
@@ -83,7 +80,6 @@ func (b *ThemeBoot) EnableCapabilities() {
 	}
 	SetTrueColorSupport(trueColor)
 	SetStyleColorsEnabled(true)
-	InstallPierTheme()
 	b.capabilities = true
 }
 

@@ -225,11 +225,9 @@ func run(appName string, args *coding.Args) error {
 	if args.UseTheme != nil {
 		settings.ApplyOverrides(&coding.Settings{Theme: args.UseTheme})
 	}
-	// The port ships its own palette under the upstream theme names (D154):
-	// terminal-default backgrounds and an amber accent, so it is obvious at a
-	// glance which build is running. The embedded upstream palettes stay as the
-	// fallback for library consumers and as what the upstream-parity test corpus
-	// renders with.
+	// The built-in dark/light themes use pier's palette everywhere (D154):
+	// terminal-default decorative fills, distinct signal panels and an amber
+	// accent. Library callers and parity fixtures use the same embedded JSON.
 	theme := interactive.NewThemeBoot()
 	// terminal.trueColor from the settings forces the capability before the
 	// palette bakes its escapes (upstream setCapabilityOverrides).

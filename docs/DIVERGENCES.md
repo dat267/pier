@@ -160,10 +160,11 @@ as a warning.
 
 **Pier has its own dark/light palette.**
 
-`coding/interactive/piertheme.go` registers overrides under upstream names
-`dark` and `light`. `ResolveThemeSetting`, `ParseAutoThemeSetting`, and
-`GetDefaultTheme` still select by terminal appearance. Compared with upstream
-`dark.json`/`light.json`:
+`coding/interactive/themes/dark.json` and `light.json` are the single palette
+source for the CLI, library callers and HTML export. `ResolveThemeSetting`,
+`ParseAutoThemeSetting`, and `GetDefaultTheme` still select by terminal
+appearance. Pier deliberately does not track pi v1.4.0's okhsl palette redesign.
+Compared with upstream `theme/{dark,light}.json`:
 
 - Decorative fills (`selectedBg`, `searchMatchBg`) are unset (`\x1b[49m`) so
   transparent/blurred terminal backgrounds show through. Primary text uses
@@ -172,20 +173,29 @@ as a warning.
   `userMessageBg`, and `customMessageBg`. They distinguish tool states, user
   blocks, and custom/compaction frames; failed and successful tools otherwise
   had identical output. HTML export uses the same signal tokens.
-- Amber replaces teal for the wordmark, borders, selection, and list bullets.
-  User panels are warm (`#393630` dark, `#f4eee1` light), not upstream's
-  `#343541` blue-gray or `#e8e8e8` gray.
+- Amber identifies the wordmark, borders, selection, and list bullets.
+  User panels are warm (`#393630` dark, `#f4eee1` light), rather than the
+  original upstream snapshot's `#343541` blue-gray or `#e8e8e8` gray.
 
 Fills remain distinct after `rgbTo256`: low-spread dark colors use the gray
 ramp, hues use the cube. `#393630` maps to 237 versus pending 235; a subtler dark
 collapsed onto the same index. `piertheme_test.go` pins the palette.
 
-Embedded upstream palettes remain for parity goldens (which clear the registry)
-and library callers without the installer. Both `loadThemeJSON` and `loadTheme`
-prefer the registry, avoiding shadowed-theme/export mismatches. `Theme` retains
-its source document so registered themes without disk files can export to HTML.
-Install follows capability setup because escapes are baked at construction.
-D193 covers system fallback panels; D219 covers adaptive system accents.
+The former embedded upstream snapshot and redundant `InstallPierTheme` override
+are gone. No caller needs to install the palette; clearing the registry exposes
+pier's built-ins, not a second color scheme. Both `loadThemeJSON` and `loadTheme`
+still prefer caller-registered themes, and `Theme` retains their source documents
+so memory-only themes can export. Capability setup must precede theme loading
+because escapes are baked at construction. D193's no-color system panels read
+these same JSON files; D219 covers adaptive system accents.
+
+Fifteen interactive golden families are reproducibly generated using read-only
+upstream rendering code with pier's JSON data, rather than pinning an unused
+upstream palette. See `coding/interactive/testdata/README.md` for commands,
+source revisions and the explicitly retained legacy non-color fixture contracts.
+Reference: pi v1.4.0 (`4a080252`), `modes/interactive/theme/theme.ts` and
+`theme/{dark,light}.json`. Scenario: resolve `dark` without a registry, or export
+it from a library caller; colors must agree with the CLI's amber palette.
 
 ## D155
 
@@ -620,7 +630,7 @@ and `packages/coding-agent/src/core/tools/renderers/bash.ts`.
 **System fallback keeps Pier's signal fills.**
 
 Upstream `system-theme.ts.indexedColors` leaves all panels transparent when no
-OSC 10/11/4 colors arrive. Pier applies D154's `pierSignalPanelHex` for the
+OSC 10/11/4 colors arrive. Pier reads D154's built-in JSON signal fills for the
 detected appearance to `toolPendingBg`, `toolSuccessBg`, `toolErrorBg`,
 `userMessageBg`, and `customMessageBg`. `selectedBg`/`searchMatchBg` remain
 transparent (`transparentBackgroundColors`). The overlay runs in

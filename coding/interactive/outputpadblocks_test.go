@@ -9,7 +9,7 @@ import (
 
 func outputPadTheme(t *testing.T) {
 	t.Helper()
-	installPierThemeForTest(t)
+	useBuiltinPierThemeForTest(t)
 	InitTheme("dark", false)
 	t.Cleanup(func() { SetRegisteredThemes(nil) })
 }

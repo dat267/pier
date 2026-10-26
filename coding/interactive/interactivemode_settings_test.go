@@ -376,7 +376,7 @@ func TestOutputPadChangeUpdatesTheDisplayOptions(t *testing.T) {
 // The output-padding change reaches the pending-messages container too
 // (upstream onOutputPadChange iterates chatContainer and pendingMessagesContainer).
 func TestApplyOutputPadUpdatesPendingMessages(t *testing.T) {
-	installPierThemeForTest(t)
+	useBuiltinPierThemeForTest(t)
 	InitTheme("dark", false)
 	settings := coding.NewInMemorySettingsManager(nil, coding.SettingsManagerCreateOptions{})
 	chat := &tui.Container{}

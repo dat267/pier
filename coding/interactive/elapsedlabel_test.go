@@ -58,7 +58,7 @@ func TestElapsedLabelUpdatesAcrossPaints(t *testing.T) {
 // the test is deterministic.
 func TestRunningBashToolElapsedLabelUpdatesAcrossPaints(t *testing.T) {
 	SetCustomThemesDir(t.TempDir())
-	installPierThemeForTest(t)
+	useBuiltinPierThemeForTest(t)
 	InitTheme("dark", false)
 
 	definition := builtinToolRenderers["bash"]

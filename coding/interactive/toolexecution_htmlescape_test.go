@@ -8,7 +8,7 @@ import (
 // tool-execution.ts renders expanded args with JSON.stringify(args, null, 2),
 // which does not HTML-escape.
 func TestToolExecutionFormatDoesNotHTMLEscapeArgs(t *testing.T) {
-	installPierThemeForTest(t)
+	useBuiltinPierThemeForTest(t)
 	InitTheme("dark", false)
 	component := NewToolExecutionComponent("custom", "call-1",
 		map[string]any{"text": "a < b & c > d"}, ToolExecutionOptions{},

@@ -371,7 +371,7 @@ func TestShellElapsedUsesTheRecordedDuration(t *testing.T) {
 // Upstream formatShellCall uses a truthy timeout and interpolates the number
 // verbatim, so a zero timeout is omitted and a fractional one keeps its value.
 func TestFormatShellCallTimeoutSuffix(t *testing.T) {
-	installPierThemeForTest(t)
+	useBuiltinPierThemeForTest(t)
 	InitTheme("dark", false)
 	theme := ActiveTheme()
 	if got := formatShellCall(map[string]any{"command": "ls", "timeout": 0.0}, "bash", theme); strings.Contains(got, "timeout") {
@@ -386,7 +386,7 @@ func TestFormatShellCallTimeoutSuffix(t *testing.T) {
 // Upstream search/ls result renderers show every line when expanded
 // (`maxLines = options.expanded ? lines.length : N`).
 func TestFormatSearchResultExpandedShowsAllLines(t *testing.T) {
-	installPierThemeForTest(t)
+	useBuiltinPierThemeForTest(t)
 	InitTheme("dark", false)
 	theme := ActiveTheme()
 	var lines []string
@@ -403,7 +403,7 @@ func TestFormatSearchResultExpandedShowsAllLines(t *testing.T) {
 // A known language in a read preview is syntax highlighted (D231),
 // with the source preserved after the ANSI is stripped.
 func TestFormatReadResultHighlightsKnownLanguage(t *testing.T) {
-	installPierThemeForTest(t)
+	useBuiltinPierThemeForTest(t)
 	SetTrueColorSupport(true)
 	InitTheme("dark", false)
 	theme := ActiveTheme()
@@ -425,7 +425,7 @@ func TestFormatReadResultHighlightsKnownLanguage(t *testing.T) {
 // Upstream uses truncation.maxLines (falling back to DEFAULT_MAX_LINES) in the
 // read line-limit notice.
 func TestFormatReadResultUsesTruncationMaxLines(t *testing.T) {
-	installPierThemeForTest(t)
+	useBuiltinPierThemeForTest(t)
 	InitTheme("dark", false)
 	theme := ActiveTheme()
 	result := &SortToolResultContent{
@@ -443,7 +443,7 @@ func TestFormatReadResultUsesTruncationMaxLines(t *testing.T) {
 // Upstream uses truncation.maxBytes (falling back to DEFAULT_MAX_BYTES) in the
 // read byte-limit notices.
 func TestFormatReadResultUsesTruncationMaxBytes(t *testing.T) {
-	installPierThemeForTest(t)
+	useBuiltinPierThemeForTest(t)
 	InitTheme("dark", false)
 	theme := ActiveTheme()
 	options := ToolRenderResultOptions{Expanded: true}
@@ -472,7 +472,7 @@ func TestFormatReadResultUsesTruncationMaxBytes(t *testing.T) {
 // Upstream guards the limit warnings with truthiness (`if (resultLimit)`), so a
 // zero limit is not reported.
 func TestTruncationWarningsSkipZeroLimits(t *testing.T) {
-	installPierThemeForTest(t)
+	useBuiltinPierThemeForTest(t)
 	InitTheme("dark", false)
 	theme := ActiveTheme()
 	zero := 0.0
@@ -499,7 +499,7 @@ func TestTruncationWarningsSkipZeroLimits(t *testing.T) {
 // Upstream's edit error text maps every text block (`c.text || ""`) and joins
 // them, so an empty text block still contributes its separator newline.
 func TestFormatEditResultKeepsEmptyTextBlocks(t *testing.T) {
-	installPierThemeForTest(t)
+	useBuiltinPierThemeForTest(t)
 	InitTheme("dark", false)
 	theme := ActiveTheme()
 	result := &SortToolResultContent{Content: []ToolResultContent{
@@ -537,7 +537,7 @@ func TestComputeEditsPreviewDirectoryReportsRawError(t *testing.T) {
 // Upstream's write error text maps every text block (`c.text || ""`) and joins
 // them, so an empty text block still contributes its separator newline.
 func TestFormatWriteResultKeepsEmptyTextBlocks(t *testing.T) {
-	installPierThemeForTest(t)
+	useBuiltinPierThemeForTest(t)
 	InitTheme("dark", false)
 	theme := ActiveTheme()
 	result := &SortToolResultContent{Content: []ToolResultContent{

@@ -11,7 +11,7 @@ import (
 // padding it carried before (upstream #10557, which extended outputPad from chat messages to
 // every transcript block).
 func TestToolOutputFollowsOutputPad(t *testing.T) {
-	installPierThemeForTest(t)
+	useBuiltinPierThemeForTest(t)
 	InitTheme("dark", false)
 	t.Cleanup(func() { SetRegisteredThemes(nil) })
 

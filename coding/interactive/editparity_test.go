@@ -12,16 +12,13 @@ import (
 )
 
 // TestEditToolRenderUpstreamParity pins the edit tool block's rendered bytes
-// against the installed upstream (pi 0.86.1 bundle, chunk-CMRUVXTE.js). The
-// golden was produced by driving its ToolExecutionComponent +
-// createEditToolDefinition with the same file, edits, result and width via
-// node (probe: /tmp/parity/editprobe-0861.mjs, FORCE_COLOR=1 so
-// chalk.inverse parity holds) and dumping component.render(80) as JSON lines.
+// against pi v1.4.0 (4a080252), ToolExecutionComponent and tools/renderers/edit.ts,
+// using pier's palette (D154). Regenerate from the repository root:
 //
-// It covers the self-shell layout (single Box(1,1): one space horizontal
-// padding, one blank line vertical padding — 0.86.1 added
-// renderShell:"self"; the 0.86.0 checkout renders a nested double box) and
-// the diff line formatting ("-1 ", "+1 ", " 2 " context normalization).
+//	node --experimental-strip-types coding/interactive/testdata/gen-edittool-parity.mjs ./pi > coding/interactive/testdata/edittool_parity_golden.txt
+//
+// It covers the self-shell layout, one horizontal/vertical padding cell, and
+// diff line formatting ("-1 ", "+1 ", " 2 " context normalization).
 func TestEditToolRenderUpstreamParity(t *testing.T) {
 	// The golden was recorded on a Unix host driving /tmp/pier_parity and embeds
 	// that path. The renderer prints the path it was given (filepath.Join's form,
