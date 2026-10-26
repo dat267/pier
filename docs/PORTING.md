@@ -391,6 +391,11 @@ final-newline-only edit previously produced an empty diff and no
 tool details and the interactive preview omitted the change. The generated
 corpus compares both the display diff and the patch over 26 content pairs.
 
+Bedrock contains host callback failures within the stream, like the reference's
+`try/catch`: a panic from `OnPayload`, `OnResponse` or `OnProviderStreamEvent`
+now uses the existing failed-message finalization instead of terminating the
+process. Other provider stream goroutines already recover at this boundary.
+
 Simple provider streams now apply `api/simple-options.ts`'s default and
 context-aware output cap before mapping provider options. Anthropic, Bedrock,
 Google/Vertex, Mistral, OpenAI Completions/Responses and Azure reserve 4096 safety

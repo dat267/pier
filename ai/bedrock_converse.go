@@ -741,6 +741,16 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 			stream.End(&output)
 		}
 
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				if err, ok := recovered.(error); ok {
+					fail(err, "", 0, nil)
+				} else {
+					fail(fmt.Errorf("%v", recovered), "", 0, nil)
+				}
+			}
+		}()
+
 		// Region/endpoint resolution.
 		optionsProfile := options.Profile
 		if optionsProfile == "" && options.Env != nil {

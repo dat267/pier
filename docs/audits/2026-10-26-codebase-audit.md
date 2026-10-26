@@ -180,3 +180,31 @@ before recording the finding; no estimator change was needed.
 Verification: focused corpus and all ai tests pass; fixture regeneration is
 byte-identical; `just check`, `just cross` (all six targets), `just reference`
 pass. The CI race gate remains unrun locally.
+
+## CR-026, P2: Bedrock callback failures crashed the application (fixed)
+
+Authority: `packages/ai/src/api/bedrock-converse-stream.ts`, `stream`, awaits
+OnPayload, OnResponse and OnProviderStreamEvent inside its try/catch. A throwing
+payload hook was executed against the pinned source and returned stopReason
+`error`, errorMessage `payload hook failed`, without terminating Node.
+
+Pier's Bedrock goroutine lacked the defer/recover used by adjacent adapters.
+A panic from any of the three host callbacks therefore terminated the entire
+process. Added the equivalent recovery boundary, passing failures through the
+existing finalization, cancellation normalization and diagnostic path. Response
+body cleanup remains deferred.
+
+```sh
+go test -count=5 ./ai -run '^TestBedrockCallbackFailuresStayInStream$'
+```
+
+Observed red: isolated child processes exited status 2 with `panic: hook failed`
+for payload, response and provider-event callbacks. The local-stream control
+exited successfully. After the fix all cases return the expected stream result
+and child processes exit successfully. Each child has a test timeout and a
+parent cancellation deadline; all credentials are synthetic and HTTP is loopback.
+
+Verification: focused test passes five repetitions; all ai tests, `just check`,
+`just cross` (all six targets), `just reference` pass. No local race run.
+
+Completed subsequent pieces: `a3f104a` (CR-024), `60a036b` (CR-025).
