@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
-	"time"
 )
 
 // Branch fork: the runtime's fork, which the interactive mode's /clone and its
@@ -66,8 +64,8 @@ func writeForkedSession(targetCwd string, sessionDir string, parentSession *stri
 	if options != nil && options.ID != "" {
 		newSessionID = options.ID
 	}
-	timestamp := time.Now().UTC().Format(time.RFC3339Nano)
-	fileTimestamp := strings.NewReplacer(":", "-", ".", "-").Replace(timestamp)
+	timestamp := sessionTimestamp()
+	fileTimestamp := sessionFileTimestamp(timestamp)
 	newSessionFile := filepath.Join(dir, fmt.Sprintf("%s_%s.jsonl", fileTimestamp, newSessionID))
 
 	newHeader := SessionHeader{

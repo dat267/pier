@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 // Port of core/session-export.ts: serializing the current branch as JSONL.
@@ -20,7 +19,7 @@ func SerializeSessionBranch(sessionManager *SessionManager, createTrailingEntrie
 // serializeSessionBranch retains serialization failures for file exporters;
 // the legacy string-only helper above keeps its empty-string failure contract.
 func serializeSessionBranch(sessionManager *SessionManager, createTrailingEntries func(parentID *string, timestamp string) []*SessionEntry) (string, error) {
-	timestamp := time.Now().UTC().Format(time.RFC3339Nano)
+	timestamp := sessionTimestamp()
 	version := CurrentSessionVersion
 	header := SessionHeader{
 		Version:   &version,
@@ -65,7 +64,7 @@ func serializeSessionBranch(sessionManager *SessionManager, createTrailingEntrie
 func ExportSessionToJsonl(sessionManager *SessionManager, outputPath string, createTrailingEntries func(parentID *string, timestamp string) []*SessionEntry) (string, error) {
 	filePath := ResolvePath(outputPath, "", PathInputOptions{})
 	if outputPath == "" {
-		filePath = ResolvePath("session-"+strings.ReplaceAll(strings.ReplaceAll(time.Now().UTC().Format(time.RFC3339Nano), ":", "-"), ".", "-")+".jsonl", "", PathInputOptions{})
+		filePath = ResolvePath("session-"+sessionFileTimestamp(sessionTimestamp())+".jsonl", "", PathInputOptions{})
 	}
 	dir := filepath.Dir(filePath)
 	if !PathExists(dir) {

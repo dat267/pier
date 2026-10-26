@@ -435,3 +435,36 @@ Not verified, and therefore not cleared:
   reproduced: the interactive app and the CLI RPC host both create managers with
   synchronous writes (`WriteQueue` nil) unless a library caller supplies one, and
   no such caller exists in the tree. Recorded as a lead rather than patched.
+
+## CR-071: P3 session timestamps and file names used nanosecond precision (fixed)
+
+Reference: read-only pi v1.4.0 (`4a080252`), `core/session-manager.ts` and
+`core/session-export.ts`: every session header and entry is stamped with
+`new Date().toISOString()` (UTC, exactly three fractional digits) and file names
+are derived from that same string by replacing `:` and `.` with `-`. Pier used
+`time.RFC3339Nano`, so every persisted entry, the header and the file name
+carried nine digits.
+
+Reproduced by forking one six-entry scenario through the pinned manager and
+through `CreateBranchedSession`: key order and structure matched, timestamps did
+not (`2026-10-26T19:50:58.245128308Z` against `2026-10-26T19:50:45.108Z`), and
+the session file name was
+`2026-10-26T19-55-34-679916664Z_<id>.jsonl` instead of
+`2026-10-26T19-55-34-679Z_<id>.jsonl`. Nothing in `docs/` documented a precision
+divergence, and session JSONL is supposed to be byte-parity.
+
+`TestSessionTimestampsMatchJavaScriptISOShape` failed on the file name before
+the repair; `TestForkAndExportTimestampsMatchJavaScriptISOShape` failed on the
+fork header. One `sessionTimestamp` helper now writes
+`2006-01-02T15:04:05.000Z` and one `sessionFileTimestamp` helper builds the
+file-name form, used by `NewSession`, `nextEntry`, `AppendCompaction`,
+`CreateBranchedSession`, `ForkSessionAtEntry`, the export header and the default
+export path. Reading is unchanged and still accepts nanosecond values:
+`TestLegacyNanosecondSessionStillLoads` pins that a nine-digit session from an
+earlier build loads with its timestamp preserved.
+
+Verification: `go test -count=1 ./coding` passed; the fork differential now
+reports `2026-10-26T20:00:18.322Z` and
+`2026-10-26T20-00-18-322Z_<id>.jsonl`; `just check`, `just cross` (six targets),
+`just reference`, all 15 interactive golden families and the 65 offline corpora
+are unchanged and byte-identical.

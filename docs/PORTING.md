@@ -91,6 +91,10 @@ Theme files are validated like the reference: an invalid color or an
 unknown/circular `vars` entry is reported through `LoadThemeFromPath` and
 `loadTheme` instead of panicking, so discovery, the theme selector and the file
 watcher skip the theme as `theme.ts` does.
+Session headers and entries are stamped with JavaScript's `toISOString()` shape
+(UTC, three fractional digits) and file names are derived from it, so persisted
+JSONL and session file names match `core/session-manager.ts`; nanosecond
+timestamps from earlier builds still load.
 
 Session aborts now retain cancellation across retry startup, backoff and
 continuations, and `agent_settled.aborted` reports the run's abort flag rather

@@ -169,7 +169,7 @@ func (m *SessionManager) NewSession(options *NewSessionOptions) string {
 	} else {
 		m.sessionID = UUIDv7()
 	}
-	timestamp := time.Now().UTC().Format(time.RFC3339Nano)
+	timestamp := sessionTimestamp()
 	header := SessionHeader{
 		Version:   intPtr(CurrentSessionVersion),
 		ID:        m.sessionID,
@@ -193,13 +193,30 @@ func (m *SessionManager) NewSession(options *NewSessionOptions) string {
 	m.writeState = &sessionWriteState{}
 
 	if m.persist {
-		fileTimestamp := strings.NewReplacer(":", "-", ".", "-").Replace(timestamp)
+		fileTimestamp := sessionFileTimestamp(timestamp)
 		m.sessionFile = filepath.Join(m.SessionDir(), fmt.Sprintf("%s_%s.jsonl", fileTimestamp, m.sessionID))
 	}
 	return m.sessionFile
 }
 
 func intPtr(n int) *int { return &n }
+
+// sessionTimestampFormatter is JavaScript's Date.prototype.toISOString(): UTC
+// with exactly three fractional digits. Upstream stamps every session header
+// and entry with it and derives the session file name from the same string, so
+// the extra digits time.RFC3339Nano emits would make the persisted JSONL and
+// the file names differ from the reference (CR-071). Reading stays tolerant:
+// RFC3339Nano parsing accepts both shapes.
+const sessionTimestampLayout = "2006-01-02T15:04:05.000Z"
+
+// sessionTimestamp stamps a session header or entry like the reference.
+func sessionTimestamp() string { return time.Now().UTC().Format(sessionTimestampLayout) }
+
+// sessionFileTimestamp converts a session timestamp to the file-name form
+// (upstream replaces every ":" and ".").
+func sessionFileTimestamp(timestamp string) string {
+	return strings.NewReplacer(":", "-", ".", "-").Replace(timestamp)
+}
 
 // OpenSession loads a session file (SessionManager.open).
 func OpenSession(path string, sessionDir string, cwdOverride string) (*SessionManager, error) {
@@ -498,7 +515,7 @@ func (m *SessionManager) nextEntry(entryType string) SessionEntry {
 		SessionEntryBase: SessionEntryBase{
 			ID:        generateID(m.byID),
 			ParentID:  m.leafID,
-			Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
+			Timestamp: sessionTimestamp(),
 		},
 	}
 }
@@ -547,7 +564,7 @@ func (m *SessionManager) AppendCompaction(summary string, firstKeptEntryID strin
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	now := time.Now().UTC()
-	timestamp := now.Format(time.RFC3339Nano)
+	timestamp := now.Format(sessionTimestampLayout)
 	entry := m.nextEntry("compaction")
 	entry.Timestamp = timestamp
 	entry.Summary = summary
@@ -913,8 +930,8 @@ func (m *SessionManager) CreateBranchedSession(leafID string) (string, error) {
 	}
 
 	newSessionID := UUIDv7()
-	timestamp := time.Now().UTC().Format(time.RFC3339Nano)
-	fileTimestamp := strings.NewReplacer(":", "-", ".", "-").Replace(timestamp)
+	timestamp := sessionTimestamp()
+	fileTimestamp := sessionFileTimestamp(timestamp)
 	newSessionFile := filepath.Join(m.sessionDir, fmt.Sprintf("%s_%s.jsonl", fileTimestamp, newSessionID))
 
 	header := SessionHeader{
