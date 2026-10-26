@@ -1130,3 +1130,15 @@ pin CR-042 end to end: the caller sees fd's own diagnostic rather than a Go
 precheck. All 7 matched; the suite skips when fd/fdfind is unavailable.
 Regeneration is byte-identical; `go test -count=1 ./coding`, `just check`,
 `just cross` (six targets) and `just reference` pass.
+
+## Corpus stabilisation
+
+The first find/grep tool corpora compared raw output order. `fd` and `ripgrep`
+do not promise a cross-file traversal order, and `fd`'s limited traversal
+returns an unspecified subset, so `just check` caught the grep fractional-limit
+case returning a different file order and the find limit case selecting different
+files. The corpora now compare sorted match lines with trailing notices kept in
+place; the grep limit case is scoped to one file, and the find limit selection is
+asserted only by its notice and count in `TestFindToolResultLimitNotice`. Both
+pass 20 repetitions and the whole coding suite twice afterwards. Shared
+tool-corpus helpers moved to `coding/tool_parity_helpers_test.go`.
