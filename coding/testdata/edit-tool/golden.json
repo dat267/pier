@@ -1,0 +1,179 @@
+[
+  {
+    "name": "simple",
+    "file": "plain.txt",
+    "edits": [
+      {
+        "oldText": "beta",
+        "newText": "BETA"
+      }
+    ],
+    "expected": {
+      "text": "Successfully replaced 1 block(s) in plain.txt.",
+      "details": {
+        "diff": " 1 alpha\n-2 beta\n+2 BETA\n 3 gamma",
+        "patch": "--- plain.txt\n+++ plain.txt\n@@ -1,3 +1,3 @@\n alpha\n-beta\n+BETA\n gamma\n",
+        "firstChangedLine": 2
+      },
+      "file": "alpha\nBETA\ngamma\n"
+    }
+  },
+  {
+    "name": "crlf-restored",
+    "file": "crlf.txt",
+    "edits": [
+      {
+        "oldText": "beta",
+        "newText": "BETA"
+      }
+    ],
+    "expected": {
+      "text": "Successfully replaced 1 block(s) in crlf.txt.",
+      "details": {
+        "diff": " 1 alpha\n-2 beta\n+2 BETA\n 3 gamma",
+        "patch": "--- crlf.txt\n+++ crlf.txt\n@@ -1,3 +1,3 @@\n alpha\n-beta\n+BETA\n gamma\n",
+        "firstChangedLine": 2
+      },
+      "file": "alpha\r\nBETA\r\ngamma\r\n"
+    }
+  },
+  {
+    "name": "bom-preserved",
+    "file": "bom.txt",
+    "edits": [
+      {
+        "oldText": "beta",
+        "newText": "BETA"
+      }
+    ],
+    "expected": {
+      "text": "Successfully replaced 1 block(s) in bom.txt.",
+      "details": {
+        "diff": " 1 alpha\n-2 beta\n+2 BETA",
+        "patch": "--- bom.txt\n+++ bom.txt\n@@ -1,2 +1,2 @@\n alpha\n-beta\n+BETA\n",
+        "firstChangedLine": 2
+      },
+      "file": "﻿alpha\nBETA\n"
+    }
+  },
+  {
+    "name": "multiple-edits",
+    "file": "multi.txt",
+    "edits": [
+      {
+        "oldText": "one",
+        "newText": "1"
+      },
+      {
+        "oldText": "five",
+        "newText": "5"
+      }
+    ],
+    "expected": {
+      "text": "Successfully replaced 2 block(s) in multi.txt.",
+      "details": {
+        "diff": "-1 one\n+1 1\n 2 two\n 3 three\n 4 four\n-5 five\n+5 5",
+        "patch": "--- multi.txt\n+++ multi.txt\n@@ -1,5 +1,5 @@\n-one\n+1\n two\n three\n four\n-five\n+5\n",
+        "firstChangedLine": 1
+      },
+      "file": "1\ntwo\nthree\nfour\n5\n"
+    }
+  },
+  {
+    "name": "fuzzy-indent",
+    "file": "fuzzy.txt",
+    "edits": [
+      {
+        "oldText": "alpha\nbeta",
+        "newText": "alpha\nBETA"
+      }
+    ],
+    "expected": {
+      "error": "Could not find the exact text in fuzzy.txt. The old text must match exactly including all whitespace and newlines."
+    }
+  },
+  {
+    "name": "append-trailing-newline",
+    "file": "no-trailing.txt",
+    "edits": [
+      {
+        "oldText": "beta",
+        "newText": "beta\n"
+      }
+    ],
+    "expected": {
+      "text": "Successfully replaced 1 block(s) in no-trailing.txt.",
+      "details": {
+        "diff": " 1 alpha\n-2 beta\n+2 beta",
+        "patch": "--- no-trailing.txt\n+++ no-trailing.txt\n@@ -1,2 +1,2 @@\n alpha\n-beta\n\\ No newline at end of file\n+beta\n",
+        "firstChangedLine": 2
+      },
+      "file": "alpha\nbeta\n"
+    }
+  },
+  {
+    "name": "duplicate-error",
+    "file": "duplicate.txt",
+    "edits": [
+      {
+        "oldText": "a",
+        "newText": "b"
+      }
+    ],
+    "expected": {
+      "error": "Found 2 occurrences of the text in duplicate.txt. The text must be unique. Please provide more context to make it unique."
+    }
+  },
+  {
+    "name": "not-found-error",
+    "file": "plain.txt",
+    "edits": [
+      {
+        "oldText": "missing",
+        "newText": "x"
+      }
+    ],
+    "expected": {
+      "error": "Could not find the exact text in plain.txt. The old text must match exactly including all whitespace and newlines."
+    }
+  },
+  {
+    "name": "no-change-error",
+    "file": "plain.txt",
+    "edits": [
+      {
+        "oldText": "beta",
+        "newText": "beta"
+      }
+    ],
+    "expected": {
+      "error": "No changes made to plain.txt. The replacement produced identical content. This might indicate an issue with special characters or the text not existing as expected."
+    }
+  },
+  {
+    "name": "empty-old-text",
+    "file": "plain.txt",
+    "edits": [
+      {
+        "oldText": "",
+        "newText": "x"
+      }
+    ],
+    "expected": {
+      "error": "oldText must not be empty in plain.txt."
+    }
+  },
+  {
+    "name": "missing-file",
+    "file": "nope.txt",
+    "edits": [
+      {
+        "oldText": "a",
+        "newText": "b"
+      }
+    ],
+    "expected": {
+      "error": "Could not edit file: nope.txt. Error code: ENOENT."
+    }
+  }
+]

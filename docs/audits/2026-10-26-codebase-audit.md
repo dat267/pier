@@ -1042,3 +1042,21 @@ consistent with D269/D270) with `TestReadToolMissingFileError` pinning the
 port's message; the case is excluded from the parity corpus. Regeneration is
 byte-identical; `go test -count=1 ./coding`, `just check`, `just cross` (six
 targets) and `just reference` pass.
+
+## Edit-tool corpus
+
+`coding/testdata/edit-tool/generate.mjs` runs the pinned `edit.ts` definition
+over 11 cases, resetting the seed files before each one, and records the result
+text, details and the file bytes after the edit. `TestEditToolMatchesUpstream`
+recreates the seed files and compares all three.
+
+Cases: a simple replacement, CRLF restoration, BOM preservation, two disjoint
+edits, a fuzzy-indent rejection, adding a final newline, and the duplicate,
+not-found, no-change, empty-`oldText` and missing-file errors. Error wording
+matches as well, including `Could not edit file: nope.txt. Error code: ENOENT.`.
+
+All 11 matched. The first harness draft shared one directory across cases, so an
+earlier successful edit changed the file a later error case expected to read;
+resetting the seed per case fixed the fixtures, not the product. Regeneration is
+byte-identical; `go test -count=1 ./coding`, `just check`, `just cross` (six
+targets) and `just reference` pass.

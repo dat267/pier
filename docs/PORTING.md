@@ -417,6 +417,12 @@ mutation and durable goal-record appends are serialized together; parallel
 `set_goal` calls cannot corrupt the replay log by interleaving clear/create
 entries. Host callbacks and model work remain outside the state lock.
 
+The edit tool is pinned end to end by an 11-case corpus that runs the pinned
+definition and the Go tool over identical seed files: a simple replacement,
+CRLF and BOM preservation, two disjoint edits, a fuzzy-indent rejection, adding
+a final newline, duplicate/not-found/no-change/empty-oldText errors and a missing
+file. Error texts and the resulting file bytes both match.
+
 The read tool's text path is pinned end to end by a 16-case corpus that runs the
 pinned definition and the Go tool over the same files: empty input, offsets and
 limits (including fractional and out-of-range), blank lines, CRLF, a BOM, invalid
