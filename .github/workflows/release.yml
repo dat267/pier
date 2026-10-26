@@ -33,7 +33,7 @@ jobs:
           set -euo pipefail
           if [ -z "${VERSION#v}" ] || [ "$VERSION" = "main" ]; then VERSION="${GITHUB_SHA::7}"; fi
           mkdir -p dist
-          for target in android/arm64 linux/amd64 linux/arm64 windows/amd64 windows/arm64; do
+          for target in android/arm64 linux/amd64 linux/arm64 windows/amd64 windows/arm64 darwin/amd64 darwin/arm64; do
             export GOOS="${target%/*}" GOARCH="${target#*/}"
             asset="pier-${GOOS}-${GOARCH}"
             if [ "$GOOS" = "windows" ]; then asset="${asset}.exe"; fi

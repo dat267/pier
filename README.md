@@ -29,9 +29,10 @@ Without `just`, use `go build -o bin/pier .` and `go test -count=1 ./...`.
 Install from source with `just install`, or download a release asset and its
 `.sha256` file from [GitHub Releases](https://github.com/dat267/pier/releases).
 Verify the checksum with `sha256sum` or `Get-FileHash` before installing.
-Assets cover Linux (amd64 and arm64), Android (arm64), and Windows (amd64 and
-arm64). macOS users must build from source. Run `pier update` to update an
-existing installation.
+Assets cover Linux (amd64 and arm64), Android (arm64), Windows (amd64 and
+arm64), and macOS (amd64 and arm64). Run `pier update` to update an existing
+installation on each platform. macOS release binaries are unsigned, so a
+browser-downloaded copy may need `xattr -d com.apple.quarantine` before it runs.
 
 ## Use
 
