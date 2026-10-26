@@ -747,3 +747,22 @@ Coverage remains partial: interactive wiring and renderers, the full settings
 manager, compaction cut selection (D264), MCP OAuth recovery and platform terminal
 I/O were not exhaustively re-probed this round. Passing tests and static review
 cannot certify the absence of defects.
+
+## Leads, not findings
+
+These were inspected or hypothesised this round and deliberately left out of
+`TODO.md` because no supported reproduction exists yet:
+
+- `SessionManager.ContextSignature` can over-count checkpoint system messages or
+  under-count messages removed by context edits. After CR-036 no cache-warming
+  path consumes it; remaining users (`cacheContextIsCurrent` was removed) are the
+  status/estimation surfaces, and no user-visible failure was reproduced.
+- The projection cache is keyed by leaf id plus `len(byID)`. A reopened manager
+  could reuse an entry id at the same count, but every supported open path builds
+  a new manager and `buildIndex` resets the id map, so the scenario needs an
+  API that does not exist. Recorded, not planned.
+- `find`/`grep` kill the direct child on abort; a grandchild shell can survive,
+  matching the reference's single-child kill. No divergence is claimed.
+- Compaction cut selection, the interactive renderer/layout and the full settings
+  manager were not re-probed against the pin this round; D264's deliberate
+  splitting/retry changes were not revisited.
