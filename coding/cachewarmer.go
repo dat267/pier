@@ -345,6 +345,16 @@ func (w *CacheWarmer) Cancel() {
 	w.stop("inactive", nil)
 }
 
+// dispose releases the run and its owning session's callback together. A host
+// callback already admitted for delivery can finish outside the lock.
+func (w *CacheWarmer) dispose() {
+	w.mu.Lock()
+	w.clearRunLocked()
+	w.inactive = CacheWarmingStatus{State: "inactive", Reason: "inactive"}
+	w.OnWarmed = nil
+	w.mu.Unlock()
+}
+
 func (w *CacheWarmer) clearRunLocked() {
 	run := w.run
 	if run == nil {
@@ -461,8 +471,14 @@ func (w *CacheWarmer) refresh(run *cacheWarmingRun) {
 			note = "extension override"
 		}
 		entry := w.SessionManager.AppendUsage("cache_warm", string(message.Provider), responseModel, message.Usage, note)
-		if w.OnWarmed != nil {
-			w.OnWarmed(entry)
+		w.mu.Lock()
+		onWarmed := w.OnWarmed
+		if w.run != run {
+			onWarmed = nil
+		}
+		w.mu.Unlock()
+		if onWarmed != nil {
+			onWarmed(entry)
 		}
 	}
 	if w.currentIs(run) {

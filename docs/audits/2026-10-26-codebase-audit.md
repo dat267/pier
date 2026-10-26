@@ -442,3 +442,32 @@ Verification: focused regressions; compaction, navigation and goal tests;
 all coding and interactive tests; `just check`, `just cross` (six targets),
 `just reference` pass. Cache-warmer teardown remains a separate inspection lead
 at this checkpoint. No local race run.
+
+## CR-035, P2: session disposal left paid cache warming scheduled (fixed)
+
+Authority: pi v1.4.0 `core/agent-session.ts`, dispose, clears the warmer's
+onWarmed callback and calls cancel. AbortAsync does not own this independent
+background run. Pier did neither, so disposed/replaced sessions retained timers,
+paid refreshes, usage writes and their old session callback.
+
+Repair: a private warmer disposal operation clears its run/timer/context and
+callback under the existing lock. Session Dispose calls it. Refresh workers
+snapshot OnWarmed under that lock and invoke it after unlocking, so teardown
+introduces no callback read/write race or callback self-join. An already-admitted
+callback may finish, matching the port's snapshot-delivery ownership rule.
+
+```sh
+go test -count=20 ./coding -run '^TestDisposeStopsSessionCacheWarming$'
+```
+
+Observed red with testing/synctest: disposed warmer still reported scheduled,
+made one refresh and one notification after the virtual clock advanced (want
+zero), and retained its callback. A live-session control made one refresh and
+one notification. All now match. The clock and stream are synthetic; no real
+sleep, network call or credential is involved.
+
+Verification: focused test passes 20 repetitions; cache-warmer, SDK construction
+and disposal tests pass; `just check`, `just cross` (six targets), `just reference`
+pass. No local race run.
+
+Completed subsequent pieces: `710aac0` (CR-033), `028989e` (CR-034).

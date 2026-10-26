@@ -32,6 +32,12 @@ snapshots never expose the map that tool-start/tool-end events mutate. Successfu
 runs release their parent-context cancellation registrations only after their
 listeners settle, without changing the reported abort status.
 
+`coding.CacheWarmer.mu` also guards callback detachment at session disposal.
+Disposal clears the current run, stops its timer, cancels its request context
+and releases `OnWarmed`. Refresh workers snapshot an admitted callback under
+that mutex and invoke it outside the lock; an already-admitted callback may
+finish without making disposal join itself. No new worker or mutex is added.
+
 `coding.GoalController.mu` serializes machine transitions with their durable
 append effects. A clear/create pair cannot interleave with another tool's
 transition records, even when tools execute in parallel. The private session

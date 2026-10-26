@@ -384,7 +384,11 @@ text, block joins and aborted/non-text message selection remain controls.
 Session disposal uses the complete nonblocking abort path, including manual
 and automatic compaction, branch summarization and the session run context.
 A disposed session cannot finish those summaries and persist their results
-merely because only its low-level agent was aborted.
+merely because only its low-level agent was aborted. Disposal also stops the
+cache warmer's timer/request context and detaches its session callback, so
+queued refreshes do not continue spending after teardown. Warm callbacks are
+snapshotted under the warmer lock and delivered outside it; a callback already
+admitted may finish.
 
 The builtin goal tool normalizes objectives with JavaScript's trim set, like
 D223's extension source. BOM-only input is rejected as empty, BOM boundaries

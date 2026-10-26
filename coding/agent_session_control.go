@@ -1006,6 +1006,9 @@ func (s *AgentSession) GetContextUsage() *ContextUsageReport {
 func (s *AgentSession) Dispose() {
 	defer func() { _ = recover() }()
 	s.AbortAsync()
+	if s.CacheWarmer != nil {
+		s.CacheWarmer.dispose()
+	}
 	// The session's resources (temp files, watchers) are released with the
 	// session id, like upstream's cleanupSessionResources(this.sessionId).
 	// Cleanup is best-effort; the remaining dispose steps still run.
