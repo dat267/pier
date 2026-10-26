@@ -346,6 +346,29 @@ func (a *Agent) SetMessages(messages []ai.Message) {
 	a.state.Messages = append([]ai.Message{}, messages...)
 }
 
+// MessagePrefixIsCurrent captures the current transcript prefix and returns a
+// predicate for cache warming (core/sdk.ts cacheContextIsCurrent). Messages are
+// append-only between SetMessages calls, which replace the backing slice, so
+// retaining this read-only prefix needs no copy or session projection.
+func (a *Agent) MessagePrefixIsCurrent(requestModel *ai.Model) func() bool {
+	a.mu.Lock()
+	prefix := a.state.Messages[:len(a.state.Messages):len(a.state.Messages)]
+	a.mu.Unlock()
+	return func() bool {
+		a.mu.Lock()
+		defer a.mu.Unlock()
+		if !ai.ModelsAreEqual(a.state.Model, requestModel) || len(a.state.Messages) < len(prefix) {
+			return false
+		}
+		for index, message := range prefix {
+			if a.state.Messages[index] != message {
+				return false
+			}
+		}
+		return true
+	}
+}
+
 // SetModel updates the active model.
 func (a *Agent) SetModel(model *ai.Model) {
 	a.mu.Lock()

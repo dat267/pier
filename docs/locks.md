@@ -31,6 +31,10 @@ when still current, so completed provider IDs are not retained by the queue.
 snapshots never expose the map that tool-start/tool-end events mutate. Successful
 runs release their parent-context cancellation registrations only after their
 listeners settle, without changing the reported abort status.
+`Agent.MessagePrefixIsCurrent` retains an immutable message-reference prefix and
+checks it under the same agent mutex. Transcript appends preserve the prefix;
+SetMessages replaces its backing slice. Checks decode no JSON, copy no session
+entries, and invoke no user callback while locked.
 
 `coding.CacheWarmer.mu` also guards callback detachment at session disposal.
 Disposal clears the current run, stops its timer, cancels its request context

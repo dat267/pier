@@ -498,7 +498,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		if merged.SessionID == sessionManager.GetSessionID() {
 			cacheWarmer.Start(CacheWarmRequest{
 				Model: requestModel, Context: ai.Context{Messages: requestContext.Messages}, Options: merged,
-			}, cacheContextIsCurrent(sessionManager, requestModel))
+			}, sessionForTools.Agent.MessagePrefixIsCurrent(requestModel))
 		}
 		return innerStreamFn(requestModel, requestContext, merged)
 	}
@@ -641,22 +641,6 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		DefaultSyncMessage:   defaultSync.Message,
 		DefaultSyncWarning:   defaultSync.Warning,
 	}, nil
-}
-
-// cacheContextIsCurrent reports whether the session's context still extends the
-// warmed request: the model is the request's model and no earlier message was
-// dropped. The currency check is re-evaluated while the warmer runs (and by the
-// status display), so it compares cheap context signatures instead of
-// projecting the session.
-func cacheContextIsCurrent(sessionManager *SessionManager, requestModel *ai.Model) func() bool {
-	warm := sessionManager.ContextSignature()
-	return func() bool {
-		current := sessionManager.ContextSignature()
-		if current.Provider != string(requestModel.Provider) || current.ModelID != requestModel.ID {
-			return false
-		}
-		return warm.MessageCount <= current.MessageCount
-	}
 }
 
 func derefString(value *string) string {

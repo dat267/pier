@@ -90,13 +90,17 @@ func TestCacheContextIsCurrentDoesNotProjectTheSession(t *testing.T) {
 		m.AppendMessage(assistant)
 	}
 	model := &ai.Model{Provider: "anthropic", ID: "claude-opus-4-5"}
-	isCurrent := cacheContextIsCurrent(m, model)
+	session, err := NewAgentSession(&SessionConfig{Cwd: m.GetCwd(), Sessions: m, Model: model, StreamFn: stubStreamFn})
+	if err != nil {
+		t.Fatal(err)
+	}
+	isCurrent := session.Agent.MessagePrefixIsCurrent(model)
 	if !isCurrent() {
 		t.Fatal("an unchanged session must be current")
 	}
 
-	// Larger sessions must not matter: the call is a branch-cache lookup plus a
-	// scan, not a projection.
+	// Only message references are compared: no session-entry copy, JSON decode
+	// or model projection belongs in a repeated currency check.
 	before := runtime.MemStats{}
 	runtime.ReadMemStats(&before)
 	const runs = 50

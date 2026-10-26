@@ -388,7 +388,11 @@ merely because only its low-level agent was aborted. Disposal also stops the
 cache warmer's timer/request context and detaches its session callback, so
 queued refreshes do not continue spending after teardown. Warm callbacks are
 snapshotted under the warmer lock and delivered outside it; a callback already
-admitted may finish.
+admitted may finish. Cache warming also requires the current agent transcript
+to retain every warmed-prefix message by identity, not merely have the same
+model and length. Same-length replacements stop warming; appending without
+changing the prefix preserves it. The predicate reads message references under
+the agent lock without decoding or copying session projections.
 
 The builtin goal tool normalizes objectives with JavaScript's trim set, like
 D223's extension source. BOM-only input is rejected as empty, BOM boundaries

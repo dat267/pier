@@ -80,17 +80,9 @@ func (s *AgentSession) prompt() *promptState {
 }
 
 // cacheContextIsCurrent reports whether the live transcript still extends the
-// warmed request's prefix (upstream cacheContextIsCurrent; message identity is
-// approximated by comparing the transcript length and model).
+// warmed request's prefix by message identity (upstream cacheContextIsCurrent).
 func (s *AgentSession) cacheContextIsCurrent() func() bool {
-	requestModel := s.Model()
-	messages := s.Agent.State().Messages
-	return func() bool {
-		currentModel := s.Model()
-		currentMessages := s.Agent.State().Messages
-		return ai.ModelsAreEqual(currentModel, requestModel) &&
-			len(messages) <= len(currentMessages)
-	}
+	return s.Agent.MessagePrefixIsCurrent(s.Model())
 }
 
 // GetCacheWarmingStatus reports the warmer's state.

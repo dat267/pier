@@ -207,11 +207,9 @@ func (m *SessionManager) HasContextEdits() bool {
 	return false
 }
 
-// ContextSignature summarizes what the next request's context would carry: the
-// model its messages use and how many messages there are. The cache-warmer
-// currency check re-evaluates it while a warmer runs and the status display
-// reads it, so it must stay cheap: the count comes from the compaction window
-// without decoding messages (a message entry projects to one message).
+// ContextSignature summarizes branch metadata without decoding messages. Cache
+// warming checks the live agent's message-reference prefix instead: counts
+// alone cannot establish whether the warmed context is still current.
 type ContextSignature struct {
 	Provider     string
 	ModelID      string
@@ -241,8 +239,7 @@ func contextSignatureFrom(path []*SessionEntry) ContextSignature {
 
 // contextEntryYieldsMessage reports whether projecting the entry produces a
 // message (sessionEntryToContextMessages; a message entry that fails to
-// unmarshal is still counted, which only makes the conservative comparison in
-// cacheContextIsCurrent slightly more permissive).
+// unmarshal is still counted).
 func contextEntryYieldsMessage(entry *SessionEntry) bool {
 	switch entry.Type {
 	case "message", "custom_message", "compaction":

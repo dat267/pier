@@ -397,7 +397,9 @@ walk, caches the result by branch version (leaf + entry count), and hands its
 slices out with no spare capacity so a caller's append cannot write into the
 cache. `CurrentSystemMessage` uses that projection. `LatestCompaction` and
 `ContextSignature` inspect the current branch without decoding the full
-message projection. Before this, ten call sites assembled the projection by hand
+message projection. Cache-warmer currency now checks the live agent's captured
+message-reference prefix, because branch counts cannot detect same-length
+message replacement. Before this, ten call sites assembled the projection by hand
 from `buildSessionPath` / `applyCompactionWindow` / `getSessionContextSettings` /
 `getEntriesLocked`, which is how the cache-warmer currency check ended up
 re-projecting the whole session per request: nothing owned the answer and the
@@ -480,12 +482,19 @@ the whole `SessionManager` context — ~190 ms on that session — on **every**
 model request, and `BuildSessionContext` held the session mutex while it ran,
 so the UI thread (the footer re-reads the session on each status change) parked
 behind it and the TUI froze for ~200 ms right after every tool result, which is
-how it was reported ("running bash freezes the TUI"). The check now compares
-cheap `SessionManager.ContextSignature` values (branch-cache lookup + entry
-scan) and the projection snapshots the entries and projects outside the lock;
-see `TestCacheContextIsCurrentDoesNotProjectTheSession` (37 MB → 0 allocated per
-call) and `TestProjectionDoesNotHoldTheSessionLock`. The remaining
-frame cost was the bash preview: counting a command's output (for the
+how it was reported ("running bash freezes the TUI"). An intermediate repair
+compared cheap `SessionManager.ContextSignature` counts (branch-cache lookup +
+entry scan), but counts did not prove that a warmed prefix remained unchanged.
+The check now captures the agent-owned immutable message-reference slice and
+compares only message identities and model under the agent lock, without JSON
+decoding, session-entry value copies or projection allocation. Same-length
+replacements invalidate it; appended prefixes and restoration of the original
+references remain valid. The projection still resolves outside the session lock.
+`TestCacheContextIsCurrentDoesNotProjectTheSession` preserves the allocation
+guard from the original 37 MB to zero-allocation improvement, and
+`TestProjectionDoesNotHoldTheSessionLock` guards the independent projection lock
+boundary. The remaining frame cost was the bash preview: counting a command's
+output (for the
 "… (N earlier lines" hint) went through `tui.WrapTextWithAnsi` per line, ~1 ms
 and ~8000 allocations per 2000-line output, and a rebuilt transcript (compaction,
 `/reload`, resume) starts with every attached bash component cold, so the first

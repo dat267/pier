@@ -471,3 +471,41 @@ and disposal tests pass; `just check`, `just cross` (six targets), `just referen
 pass. No local race run.
 
 Completed subsequent pieces: `710aac0` (CR-033), `028989e` (CR-034).
+
+## CR-036, P2: cache warming accepted a replaced message prefix (fixed)
+
+Authority: pi v1.4.0 `core/sdk.ts`, cacheContextIsCurrent, checks the selected
+model, prefix length and every captured message by object identity. Pier's SDK
+path compared persisted context counts, and its direct-session helper compared
+only live model/length. Both could keep warming an obsolete request after a
+same-length replacement.
+
+Repair: `Agent.MessagePrefixIsCurrent` captures the agent-owned read-only prefix
+and compares message references under the existing agent mutex. SetMessages
+replaces the backing slice, while appends preserve existing elements. The check
+performs no session projection, entry-value copying or JSON decoding. SDK and
+direct-session warming use this predicate; the count-only SDK helper is removed.
+The no-projection allocation guard still runs against the actual currency path.
+
+```sh
+go test -count=1 ./coding -run '^TestSDKCacheWarmerRejectsReplacedMessagePrefix$|^TestCacheContextIsCurrentDoesNotProjectTheSession$'
+go test -count=1 ./agent -run '^TestMessagePrefixCurrencyMatchesUpstream$'
+```
+
+Observed red through CreateAgentSession and public Agent.SetMessages: replacing
+an earlier message in an owned slice left status scheduled, want
+inactive/conversation context changed. Prefix-preserving append was a passing
+control. The first harness draft mutated the live getter's backing slice; that
+also mutates the reference's captured array and is not this scenario. It was
+corrected to copy the slice, and the corrected test was observed red against
+the unchanged implementation before reapplying the repair.
+
+The reference predicate itself was extracted unchanged from the pinned SDK
+module, type-erased with Node's stripTypeScriptTypes, and executed for append,
+replacement, restoration, truncation and model change. Agent controls match all
+five, plus replacement of an unwarmed tail. Restoration of original references
+remains current, which an epoch-only approximation would incorrectly reject.
+
+Verification: focused regressions and allocation guard; all agent, coding and
+interactive tests; `just check`, `just cross` (six targets), `just reference`
+pass. No local race run.
