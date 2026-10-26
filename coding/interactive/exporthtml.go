@@ -39,6 +39,9 @@ var exportTemplateJS string
 //go:embed exporthtml/vendor/marked.min.js
 var exportMarkedJS string
 
+//go:embed exporthtml/vendor/marked-cjk-friendly.min.js
+var exportMarkedCJKFriendlyJS string
+
 //go:embed exporthtml/vendor/highlight.min.js
 var exportHighlightJS string
 
@@ -415,6 +418,7 @@ func GenerateSessionHTML(data *exportSessionData, themeName string) string {
 	html = strings.Replace(html, "{{JS}}", exportTemplateJS, 1)
 	html = strings.Replace(html, "{{SESSION_DATA}}", sessionDataBase64, 1)
 	html = strings.Replace(html, "{{MARKED_JS}}", exportMarkedJS, 1)
+	html = strings.Replace(html, "{{MARKED_CJK_FRIENDLY_JS}}", exportMarkedCJKFriendlyJS, 1)
 	html = strings.Replace(html, "{{HIGHLIGHT_JS}}", exportHighlightJS, 1)
 	return html
 }

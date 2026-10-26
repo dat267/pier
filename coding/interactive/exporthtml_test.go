@@ -90,10 +90,19 @@ func TestExportSessionToHTML(t *testing.T) {
 		t.Fatalf("read: %v", err)
 	}
 	document := string(html)
-	for _, placeholder := range []string{"{{CSS}}", "{{JS}}", "{{SESSION_DATA}}", "{{MARKED_JS}}", "{{HIGHLIGHT_JS}}", "{{THEME_VARS}}", "{{BODY_BG}}"} {
+	for _, placeholder := range []string{"{{CSS}}", "{{JS}}", "{{SESSION_DATA}}", "{{MARKED_JS}}", "{{MARKED_CJK_FRIENDLY_JS}}", "{{HIGHLIGHT_JS}}", "{{THEME_VARS}}", "{{BODY_BG}}"} {
 		if strings.Contains(document, placeholder) {
 			t.Errorf("placeholder %s not substituted", placeholder)
 		}
+	}
+	// The pinned export bundles Marked's CJK-friendly tokenizer override, which
+	// its template.js applies to emStrong; without it exported emphasis next to
+	// CJK text renders differently from the reference.
+	if !strings.Contains(document, "marked-cjk-friendly v0.1.2") {
+		t.Error("export document does not embed the CJK-friendly Marked bundle")
+	}
+	if !strings.Contains(document, "markedCjkFriendly().tokenizer.emStrong") {
+		t.Error("export document does not apply the CJK-friendly emStrong override")
 	}
 	// Decode the embedded payload and check the session data round-trips.
 	start := strings.Index(document, `<script id="session-data" type="application/json">`) + len(`<script id="session-data" type="application/json">`)

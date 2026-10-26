@@ -853,8 +853,8 @@ Remaining v1.4.0 items, grouped by why they are not in this tree:
 - **Extensions, codemode, classifier, package manager, HTML export**: the
   extension-dialog stacking, extension tool activation, codemode worker queue,
   System One classifier image input and managed-install marker changes stay
-  out of scope (D41, D140); the HTML export renderer is injected at the RPC
-  boundary, so the vendored Marked CJK bundle does not apply.
+  out of scope (D41, D140). The CLI's HTML export does use the vendored
+  template and Marked bundles, so changes to `core/export-html` apply here.
 
 | Commit | Change | Status |
 |---|---|---|
@@ -907,7 +907,7 @@ Remaining v1.4.0 items, grouped by why they are not in this tree:
 | `b2d0da6fe` | fix(tui): render CJK emphasis next to punctuation (#10730) | ported: CJK emphasis |
 | `a731ba8b8` | docs(tui): add changelog entry for CJK emphasis fix | n/a: changelog |
 | `fbc456d82` | fix(ai): expect xhigh thinking for Grok 4.3 and Grok 4.5 | ported: catalog test |
-| `26293e74f` | fix(coding-agent): render CJK emphasis in HTML export (#11168) | out: HTML export |
+| `26293e74f` | fix(coding-agent): render CJK emphasis in HTML export (#11168) | ported: HTML export CJK bundle |
 | `48c8f3228` | feat(chord): exclusive SQLite operations and a replicated connection wrapper | removed (D236): chord |
 | `fdce48eb4` | fix(ai): drop Codex models rejected for ChatGPT accounts (#11173) | ported: catalog |
 | `396ecd7b8` | feat(tui): enable Kitty images for Rex | ported: Rex images |
