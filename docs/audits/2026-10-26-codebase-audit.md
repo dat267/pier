@@ -780,6 +780,7 @@ at the closing checkpoint:
 | `ai/testdata/short-hash` | 18 | `ai/src/utils/hash.ts` |
 | `ai/testdata/mistral-wire` | 11 | `ai/src/api/mistral-conversations.ts` |
 | `tui/testdata/wrap` | 204 | `tui/src/utils.ts` |
+| `tui/testdata/truncate` | 206 | `tui/src/utils.ts` |
 
 Earlier corpora (`edit-diff-patch`, `edit-apply`, `truncate`, `js-numbers`,
 `overflow`, `parse-key`, Anthropic/OpenAI/Responses stream corpora) remain green.
@@ -1214,5 +1215,20 @@ CJK, emoji with modifiers, combining marks, tabs, table rows and 160 seeded
 mixed sequences built from words, spaces, newlines, wide characters and codes.
 
 All 204 matched on the first run, so this records coverage, not a finding.
+Regeneration is byte-identical; `go test -count=1 ./tui`, `just check`,
+`just cross` (six targets) and `just reference` pass.
+
+## Truncate corpus
+
+`tui/testdata/truncate/generate.mjs` executes the pinned
+`tui/src/utils.ts` `truncateToWidth` over 206 cases (curated plus 160 seeded
+mixtures); `TestTruncateToWidthMatchesUpstream` compares the strings. Inputs
+cover zero and negative widths, empty text with and without padding, ASCII fast
+paths, ellipses that are empty, wide, exactly the width or longer, CJK, emoji
+with modifiers, ZWJ sequences, combining marks, tabs, newlines, SGR styles
+(after content and bare), OSC-8 hyperlinks with and without padding, and random
+mixtures of the above.
+
+All 206 matched on the first run, so this records coverage, not a finding.
 Regeneration is byte-identical; `go test -count=1 ./tui`, `just check`,
 `just cross` (six targets) and `just reference` pass.

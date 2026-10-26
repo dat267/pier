@@ -1,0 +1,1444 @@
+[
+  {
+    "text": "",
+    "maxWidth": 0,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": ""
+  },
+  {
+    "text": "",
+    "maxWidth": 5,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": ""
+  },
+  {
+    "text": "",
+    "maxWidth": 5,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "     "
+  },
+  {
+    "text": "abc",
+    "maxWidth": 0,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": ""
+  },
+  {
+    "text": "abc",
+    "maxWidth": -3,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": ""
+  },
+  {
+    "text": "abc",
+    "maxWidth": 3,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "abc"
+  },
+  {
+    "text": "abc",
+    "maxWidth": 2,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "\u001b[0m..\u001b[0m"
+  },
+  {
+    "text": "abc",
+    "maxWidth": 5,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "abc  "
+  },
+  {
+    "text": "abcdef",
+    "maxWidth": 4,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "a\u001b[0m...\u001b[0m"
+  },
+  {
+    "text": "abcdef",
+    "maxWidth": 4,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "a\u001b[0m...\u001b[0m"
+  },
+  {
+    "text": "abcdef",
+    "maxWidth": 3,
+    "ellipsis": "..",
+    "pad": true,
+    "expected": "a\u001b[0m..\u001b[0m"
+  },
+  {
+    "text": "abcdef",
+    "maxWidth": 2,
+    "ellipsis": "",
+    "pad": false,
+    "expected": "ab\u001b[0m"
+  },
+  {
+    "text": "abcdef",
+    "maxWidth": 2,
+    "ellipsis": "",
+    "pad": true,
+    "expected": "ab\u001b[0m"
+  },
+  {
+    "text": "abcdef",
+    "maxWidth": 1,
+    "ellipsis": "…",
+    "pad": false,
+    "expected": "\u001b[0m…\u001b[0m"
+  },
+  {
+    "text": "abcdef",
+    "maxWidth": 4,
+    "ellipsis": "…",
+    "pad": false,
+    "expected": "abc\u001b[0m…\u001b[0m"
+  },
+  {
+    "text": "日本語",
+    "maxWidth": 4,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "\u001b[0m...\u001b[0m"
+  },
+  {
+    "text": "日本語",
+    "maxWidth": 4,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "\u001b[0m...\u001b[0m "
+  },
+  {
+    "text": "日本語",
+    "maxWidth": 2,
+    "ellipsis": "日",
+    "pad": false,
+    "expected": "\u001b[0m日\u001b[0m"
+  },
+  {
+    "text": "日本語",
+    "maxWidth": 1,
+    "ellipsis": "日",
+    "pad": false,
+    "expected": ""
+  },
+  {
+    "text": "日本語",
+    "maxWidth": 2,
+    "ellipsis": "",
+    "pad": false,
+    "expected": "日\u001b[0m"
+  },
+  {
+    "text": "😀😀😀",
+    "maxWidth": 5,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "😀\u001b[0m...\u001b[0m"
+  },
+  {
+    "text": "😀😀😀",
+    "maxWidth": 3,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "\u001b[0m...\u001b[0m"
+  },
+  {
+    "text": "😀😀😀",
+    "maxWidth": 2,
+    "ellipsis": "..",
+    "pad": true,
+    "expected": "\u001b[0m..\u001b[0m"
+  },
+  {
+    "text": "a😀b",
+    "maxWidth": 3,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "\u001b[0m...\u001b[0m"
+  },
+  {
+    "text": "éé",
+    "maxWidth": 2,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "éé"
+  },
+  {
+    "text": "👨‍👩‍👧‍👦x",
+    "maxWidth": 4,
+    "ellipsis": "+",
+    "pad": false,
+    "expected": "👨‍👩‍👧‍👦x"
+  },
+  {
+    "text": "\u001b[31mred text\u001b[0m",
+    "maxWidth": 5,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "\u001b[31mre\u001b[0m...\u001b[0m"
+  },
+  {
+    "text": "\u001b[31mred text\u001b[0m",
+    "maxWidth": 5,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "\u001b[31mre\u001b[0m...\u001b[0m"
+  },
+  {
+    "text": "\u001b[31m\u001b[1mstyled\u001b[0m tail",
+    "maxWidth": 4,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "\u001b[31m\u001b[1ms\u001b[0m...\u001b[0m"
+  },
+  {
+    "text": "\u001b[4munderline\u001b[24m plain",
+    "maxWidth": 6,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "\u001b[4mund\u001b[0m...\u001b[0m"
+  },
+  {
+    "text": "\u001b[38;2;1;2;3mtruecolor\u001b[0m",
+    "maxWidth": 6,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "\u001b[38;2;1;2;3mtru\u001b[0m...\u001b[0m"
+  },
+  {
+    "text": "\u001b]8;;https://example.com\u001b\\click here\u001b]8;;\u001b\\",
+    "maxWidth": 6,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "\u001b]8;;https://example.com\u001b\\cli\u001b]8;;\u001b\\\u001b[0m...\u001b[0m"
+  },
+  {
+    "text": "\u001b]8;;https://example.com\u001b\\click here\u001b]8;;\u001b\\",
+    "maxWidth": 12,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "\u001b]8;;https://example.com\u001b\\click here\u001b]8;;\u001b\\  "
+  },
+  {
+    "text": "\u001b]8;;https://example.com\u001b\\click here\u001b]8;;\u001b\\",
+    "maxWidth": 3,
+    "ellipsis": "",
+    "pad": false,
+    "expected": "\u001b]8;;https://example.com\u001b\\cli\u001b]8;;\u001b\\\u001b[0m"
+  },
+  {
+    "text": "tab\there",
+    "maxWidth": 4,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "t\u001b[0m...\u001b[0m"
+  },
+  {
+    "text": "\t\t",
+    "maxWidth": 1,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "\u001b[0m.\u001b[0m"
+  },
+  {
+    "text": "a\tb",
+    "maxWidth": 2,
+    "ellipsis": "",
+    "pad": false,
+    "expected": "a\u001b[0m"
+  },
+  {
+    "text": "line\nbreak",
+    "maxWidth": 6,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "lin\u001b[0m...\u001b[0m"
+  },
+  {
+    "text": "spaces   end",
+    "maxWidth": 7,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "spac\u001b[0m...\u001b[0m"
+  },
+  {
+    "text": "abc",
+    "maxWidth": 1,
+    "ellipsis": "日本語",
+    "pad": false,
+    "expected": ""
+  },
+  {
+    "text": "abcdef",
+    "maxWidth": 2,
+    "ellipsis": "日本語",
+    "pad": true,
+    "expected": "\u001b[0m日\u001b[0m"
+  },
+  {
+    "text": "x",
+    "maxWidth": 10,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "x         "
+  },
+  {
+    "text": "\u001b[0m",
+    "maxWidth": 3,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "\u001b[0m   "
+  },
+  {
+    "text": "\u001b[31m",
+    "maxWidth": 3,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "\u001b[31m   "
+  },
+  {
+    "text": "\u001b[31mabc",
+    "maxWidth": 3,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "\u001b[31mabc"
+  },
+  {
+    "text": "| a | b |",
+    "maxWidth": 4,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "|\u001b[0m...\u001b[0m"
+  },
+  {
+    "text": "\u001b[1m\u001b[0m😀\u001b[31m",
+    "maxWidth": 8,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "\u001b[1m\u001b[0m😀\u001b[31m      "
+  },
+  {
+    "text": "é\u001b[4m…",
+    "maxWidth": 5,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "é\u001b[4m…"
+  },
+  {
+    "text": "😀\t😀",
+    "maxWidth": 8,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "😀\t😀 "
+  },
+  {
+    "text": "\u001b[1m…wordccc😀\u001b[4m",
+    "maxWidth": 2,
+    "ellipsis": "",
+    "pad": true,
+    "expected": "\u001b[1m…w\u001b[0m"
+  },
+  {
+    "text": "",
+    "maxWidth": 2,
+    "ellipsis": "..",
+    "pad": true,
+    "expected": "  "
+  },
+  {
+    "text": "😀",
+    "maxWidth": 11,
+    "ellipsis": "",
+    "pad": false,
+    "expected": "😀"
+  },
+  {
+    "text": "\u001b[4mé😀accc",
+    "maxWidth": 0,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": ""
+  },
+  {
+    "text": "\u001b[1m+",
+    "maxWidth": 0,
+    "ellipsis": "..",
+    "pad": true,
+    "expected": ""
+  },
+  {
+    "text": "é\t+",
+    "maxWidth": 13,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "é\t+"
+  },
+  {
+    "text": "é",
+    "maxWidth": 6,
+    "ellipsis": "+",
+    "pad": true,
+    "expected": "é     "
+  },
+  {
+    "text": "word\u001b[0mword \u001b[0m\u001b]8;;u\u001b\\",
+    "maxWidth": 6,
+    "ellipsis": "+",
+    "pad": true,
+    "expected": "word\u001b[0mw\u001b[0m+\u001b[0m"
+  },
+  {
+    "text": " 😀wordbb",
+    "maxWidth": 2,
+    "ellipsis": "",
+    "pad": true,
+    "expected": " \u001b[0m "
+  },
+  {
+    "text": "cccword\u001b[1m\u001b]8;;u\u001b\\\u001b[4m",
+    "maxWidth": 7,
+    "ellipsis": "…",
+    "pad": false,
+    "expected": "cccword\u001b[1m\u001b]8;;u\u001b\\\u001b[4m"
+  },
+  {
+    "text": "\u001b[31ma\u001b[31m\t+ ",
+    "maxWidth": 3,
+    "ellipsis": "…",
+    "pad": false,
+    "expected": "\u001b[31ma\u001b[0m…\u001b[0m"
+  },
+  {
+    "text": "\u001b]8;;\u001b\\\u001b[4m …é ",
+    "maxWidth": 11,
+    "ellipsis": "…",
+    "pad": false,
+    "expected": "\u001b]8;;\u001b\\\u001b[4m …é "
+  },
+  {
+    "text": "日",
+    "maxWidth": 6,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "日    "
+  },
+  {
+    "text": "\t",
+    "maxWidth": 11,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "\t"
+  },
+  {
+    "text": "",
+    "maxWidth": 3,
+    "ellipsis": "…",
+    "pad": false,
+    "expected": ""
+  },
+  {
+    "text": "\u001b[4m\u001b[1m ",
+    "maxWidth": 8,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "\u001b[4m\u001b[1m        "
+  },
+  {
+    "text": "",
+    "maxWidth": 4,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "    "
+  },
+  {
+    "text": "\u001b]8;;\u001b\\",
+    "maxWidth": 7,
+    "ellipsis": "…",
+    "pad": false,
+    "expected": "\u001b]8;;\u001b\\"
+  },
+  {
+    "text": "\u001b[31m\t\t\u001b[31m",
+    "maxWidth": 3,
+    "ellipsis": "..",
+    "pad": false,
+    "expected": "\u001b[0m..\u001b[0m"
+  },
+  {
+    "text": "…éword\u001b]8;;\u001b\\",
+    "maxWidth": 11,
+    "ellipsis": "+",
+    "pad": false,
+    "expected": "…éword\u001b]8;;\u001b\\"
+  },
+  {
+    "text": "\u001b]8;;\u001b\\……é",
+    "maxWidth": 11,
+    "ellipsis": "",
+    "pad": false,
+    "expected": "\u001b]8;;\u001b\\……é"
+  },
+  {
+    "text": "",
+    "maxWidth": 9,
+    "ellipsis": "+",
+    "pad": false,
+    "expected": ""
+  },
+  {
+    "text": "é\u001b[0ma\t ",
+    "maxWidth": 2,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "\u001b[0m..\u001b[0m"
+  },
+  {
+    "text": "é\t😀😀\u001b]8;;\u001b\\",
+    "maxWidth": 5,
+    "ellipsis": "…",
+    "pad": false,
+    "expected": "é\t\u001b[0m…\u001b[0m"
+  },
+  {
+    "text": "é",
+    "maxWidth": 4,
+    "ellipsis": "..",
+    "pad": true,
+    "expected": "é   "
+  },
+  {
+    "text": "\t\u001b[4m\u001b[31mccc\u001b]8;;\u001b\\",
+    "maxWidth": 7,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "\t\u001b[4m\u001b[31mccc\u001b]8;;\u001b\\"
+  },
+  {
+    "text": "",
+    "maxWidth": 5,
+    "ellipsis": "",
+    "pad": false,
+    "expected": ""
+  },
+  {
+    "text": "\t 日\u001b]8;;u\u001b\\",
+    "maxWidth": 11,
+    "ellipsis": "..",
+    "pad": false,
+    "expected": "\t 日\u001b]8;;u\u001b\\"
+  },
+  {
+    "text": "",
+    "maxWidth": 1,
+    "ellipsis": "+",
+    "pad": false,
+    "expected": ""
+  },
+  {
+    "text": "ccc😀\u001b[1m",
+    "maxWidth": 4,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "c\u001b[0m...\u001b[0m"
+  },
+  {
+    "text": "ccc",
+    "maxWidth": 11,
+    "ellipsis": "+",
+    "pad": false,
+    "expected": "ccc"
+  },
+  {
+    "text": "",
+    "maxWidth": 7,
+    "ellipsis": "+",
+    "pad": false,
+    "expected": ""
+  },
+  {
+    "text": "\u001b]8;;\u001b\\\u001b[1m+word",
+    "maxWidth": 5,
+    "ellipsis": "…",
+    "pad": false,
+    "expected": "\u001b]8;;\u001b\\\u001b[1m+word"
+  },
+  {
+    "text": "\u001b]8;;u\u001b\\\u001b[31mbb…\u001b[4m+",
+    "maxWidth": 11,
+    "ellipsis": "..",
+    "pad": false,
+    "expected": "\u001b]8;;u\u001b\\\u001b[31mbb…\u001b[4m+"
+  },
+  {
+    "text": "\u001b[31m\u001b]8;;u\u001b\\",
+    "maxWidth": 13,
+    "ellipsis": "",
+    "pad": false,
+    "expected": "\u001b[31m\u001b]8;;u\u001b\\"
+  },
+  {
+    "text": "\u001b[0m\u001b[0ma",
+    "maxWidth": 4,
+    "ellipsis": "..",
+    "pad": true,
+    "expected": "\u001b[0m\u001b[0ma   "
+  },
+  {
+    "text": "日日word日",
+    "maxWidth": 6,
+    "ellipsis": "…",
+    "pad": true,
+    "expected": "日日w\u001b[0m…\u001b[0m"
+  },
+  {
+    "text": "ccc😀\u001b]8;;u\u001b\\\u001b[31m",
+    "maxWidth": 6,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "ccc😀\u001b]8;;u\u001b\\\u001b[31m "
+  },
+  {
+    "text": "",
+    "maxWidth": 0,
+    "ellipsis": "…",
+    "pad": true,
+    "expected": ""
+  },
+  {
+    "text": "\u001b[0m\u001b[0m\u001b]8;;u\u001b\\é\u001b]8;;\u001b\\\u001b]8;;u\u001b\\",
+    "maxWidth": 4,
+    "ellipsis": "",
+    "pad": true,
+    "expected": "\u001b[0m\u001b[0m\u001b]8;;u\u001b\\é\u001b]8;;\u001b\\\u001b]8;;u\u001b\\   "
+  },
+  {
+    "text": "é\u001b]8;;u\u001b\\\t\u001b]8;;\u001b\\bb\u001b]8;;u\u001b\\",
+    "maxWidth": 10,
+    "ellipsis": "",
+    "pad": true,
+    "expected": "é\u001b]8;;u\u001b\\\t\u001b]8;;\u001b\\bb\u001b]8;;u\u001b\\    "
+  },
+  {
+    "text": "word",
+    "maxWidth": 11,
+    "ellipsis": "",
+    "pad": false,
+    "expected": "word"
+  },
+  {
+    "text": "…a+…\tword",
+    "maxWidth": 7,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "…a+…\u001b[0m...\u001b[0m"
+  },
+  {
+    "text": "\u001b[4mbb …\u001b[1m",
+    "maxWidth": 12,
+    "ellipsis": "",
+    "pad": true,
+    "expected": "\u001b[4mbb …\u001b[1m        "
+  },
+  {
+    "text": "😀",
+    "maxWidth": 9,
+    "ellipsis": "..",
+    "pad": false,
+    "expected": "😀"
+  },
+  {
+    "text": "\u001b]8;;u\u001b\\…",
+    "maxWidth": 11,
+    "ellipsis": "",
+    "pad": false,
+    "expected": "\u001b]8;;u\u001b\\…"
+  },
+  {
+    "text": "+😀",
+    "maxWidth": 3,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "+😀"
+  },
+  {
+    "text": "",
+    "maxWidth": 5,
+    "ellipsis": "+",
+    "pad": false,
+    "expected": ""
+  },
+  {
+    "text": " é\u001b[1ma\u001b]8;;u\u001b\\",
+    "maxWidth": 12,
+    "ellipsis": "+",
+    "pad": true,
+    "expected": " é\u001b[1ma\u001b]8;;u\u001b\\         "
+  },
+  {
+    "text": "\u001b]8;;\u001b\\+",
+    "maxWidth": 10,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "\u001b]8;;\u001b\\+         "
+  },
+  {
+    "text": "\u001b[1m",
+    "maxWidth": 1,
+    "ellipsis": "…",
+    "pad": false,
+    "expected": "\u001b[1m"
+  },
+  {
+    "text": "\u001b[1m\u001b]8;;u\u001b\\\u001b]8;;u\u001b\\",
+    "maxWidth": 6,
+    "ellipsis": "…",
+    "pad": true,
+    "expected": "\u001b[1m\u001b]8;;u\u001b\\\u001b]8;;u\u001b\\      "
+  },
+  {
+    "text": "\ta\u001b[4mword😀",
+    "maxWidth": 3,
+    "ellipsis": "+",
+    "pad": false,
+    "expected": "\u001b[0m+\u001b[0m"
+  },
+  {
+    "text": "\u001b]8;;u\u001b\\",
+    "maxWidth": 10,
+    "ellipsis": "..",
+    "pad": true,
+    "expected": "\u001b]8;;u\u001b\\          "
+  },
+  {
+    "text": "\u001b[4m\u001b]8;;u\u001b\\ \u001b[1m",
+    "maxWidth": 0,
+    "ellipsis": "..",
+    "pad": true,
+    "expected": ""
+  },
+  {
+    "text": "",
+    "maxWidth": 12,
+    "ellipsis": "",
+    "pad": true,
+    "expected": "            "
+  },
+  {
+    "text": "accc…é…é",
+    "maxWidth": 10,
+    "ellipsis": "",
+    "pad": true,
+    "expected": "accc…é…é  "
+  },
+  {
+    "text": "\t",
+    "maxWidth": 5,
+    "ellipsis": "+",
+    "pad": false,
+    "expected": "\t"
+  },
+  {
+    "text": "\u001b]8;;\u001b\\\u001b[1mword\u001b[1m\u001b[31m",
+    "maxWidth": 8,
+    "ellipsis": "",
+    "pad": true,
+    "expected": "\u001b]8;;\u001b\\\u001b[1mword\u001b[1m\u001b[31m    "
+  },
+  {
+    "text": "ccca\u001b[1mé",
+    "maxWidth": 2,
+    "ellipsis": "+",
+    "pad": true,
+    "expected": "c\u001b[0m+\u001b[0m"
+  },
+  {
+    "text": "worda+",
+    "maxWidth": 13,
+    "ellipsis": "..",
+    "pad": false,
+    "expected": "worda+"
+  },
+  {
+    "text": " ccca\tcccbb",
+    "maxWidth": 1,
+    "ellipsis": "+",
+    "pad": false,
+    "expected": "\u001b[0m+\u001b[0m"
+  },
+  {
+    "text": "\u001b]8;;\u001b\\é\u001b[0m\u001b[4m…bb",
+    "maxWidth": 11,
+    "ellipsis": "…",
+    "pad": false,
+    "expected": "\u001b]8;;\u001b\\é\u001b[0m\u001b[4m…bb"
+  },
+  {
+    "text": "\u001b]8;;u\u001b\\\u001b[0m\u001b[0méa",
+    "maxWidth": 2,
+    "ellipsis": "..",
+    "pad": true,
+    "expected": "\u001b]8;;u\u001b\\\u001b[0m\u001b[0méa"
+  },
+  {
+    "text": "",
+    "maxWidth": 6,
+    "ellipsis": "…",
+    "pad": true,
+    "expected": "      "
+  },
+  {
+    "text": "\u001b[31m",
+    "maxWidth": 9,
+    "ellipsis": "",
+    "pad": false,
+    "expected": "\u001b[31m"
+  },
+  {
+    "text": "\u001b[31m\u001b[4mccc\u001b[31mccc",
+    "maxWidth": 8,
+    "ellipsis": "",
+    "pad": true,
+    "expected": "\u001b[31m\u001b[4mccc\u001b[31mccc  "
+  },
+  {
+    "text": "ccc😀\u001b[4m",
+    "maxWidth": 3,
+    "ellipsis": "..",
+    "pad": false,
+    "expected": "c\u001b[0m..\u001b[0m"
+  },
+  {
+    "text": "\u001b]8;;\u001b\\",
+    "maxWidth": 4,
+    "ellipsis": "+",
+    "pad": true,
+    "expected": "\u001b]8;;\u001b\\    "
+  },
+  {
+    "text": "\u001b]8;;\u001b\\\u001b]8;;\u001b\\ \u001b[4m",
+    "maxWidth": 6,
+    "ellipsis": "",
+    "pad": true,
+    "expected": "\u001b]8;;\u001b\\\u001b]8;;\u001b\\ \u001b[4m     "
+  },
+  {
+    "text": "ccc\u001b[4m\u001b[1mccc😀",
+    "maxWidth": 3,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "\u001b[0m...\u001b[0m"
+  },
+  {
+    "text": "…\u001b[1m",
+    "maxWidth": 5,
+    "ellipsis": "+",
+    "pad": false,
+    "expected": "…\u001b[1m"
+  },
+  {
+    "text": " ",
+    "maxWidth": 6,
+    "ellipsis": "…",
+    "pad": true,
+    "expected": "      "
+  },
+  {
+    "text": "",
+    "maxWidth": 12,
+    "ellipsis": "",
+    "pad": true,
+    "expected": "            "
+  },
+  {
+    "text": "ccc\u001b[31m…word",
+    "maxWidth": 0,
+    "ellipsis": "..",
+    "pad": true,
+    "expected": ""
+  },
+  {
+    "text": "é\u001b]8;;\u001b\\日😀+",
+    "maxWidth": 1,
+    "ellipsis": "+",
+    "pad": false,
+    "expected": "\u001b[0m+\u001b[0m"
+  },
+  {
+    "text": "😀\u001b[0m+é",
+    "maxWidth": 9,
+    "ellipsis": "+",
+    "pad": false,
+    "expected": "😀\u001b[0m+é"
+  },
+  {
+    "text": "cccword",
+    "maxWidth": 3,
+    "ellipsis": "…",
+    "pad": false,
+    "expected": "cc\u001b[0m…\u001b[0m"
+  },
+  {
+    "text": "日word日\u001b[1m日\u001b[31m",
+    "maxWidth": 3,
+    "ellipsis": "..",
+    "pad": false,
+    "expected": "\u001b[0m..\u001b[0m"
+  },
+  {
+    "text": "é ",
+    "maxWidth": 13,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "é "
+  },
+  {
+    "text": "+日\u001b]8;;\u001b\\ word",
+    "maxWidth": 2,
+    "ellipsis": "..",
+    "pad": true,
+    "expected": "\u001b[0m..\u001b[0m"
+  },
+  {
+    "text": "…\u001b]8;;\u001b\\a+日\u001b]8;;\u001b\\",
+    "maxWidth": 10,
+    "ellipsis": "",
+    "pad": true,
+    "expected": "…\u001b]8;;\u001b\\a+日\u001b]8;;\u001b\\     "
+  },
+  {
+    "text": "+\u001b[4m\u001b[0m",
+    "maxWidth": 13,
+    "ellipsis": "…",
+    "pad": false,
+    "expected": "+\u001b[4m\u001b[0m"
+  },
+  {
+    "text": "cccbb",
+    "maxWidth": 11,
+    "ellipsis": "…",
+    "pad": false,
+    "expected": "cccbb"
+  },
+  {
+    "text": "cccbb\u001b]8;;\u001b\\bbé",
+    "maxWidth": 2,
+    "ellipsis": "…",
+    "pad": true,
+    "expected": "c\u001b[0m…\u001b[0m"
+  },
+  {
+    "text": "",
+    "maxWidth": 10,
+    "ellipsis": "",
+    "pad": true,
+    "expected": "          "
+  },
+  {
+    "text": "wordbb",
+    "maxWidth": 6,
+    "ellipsis": "",
+    "pad": true,
+    "expected": "wordbb"
+  },
+  {
+    "text": "\u001b[4m\u001b[4mworda日",
+    "maxWidth": 13,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "\u001b[4m\u001b[4mworda日"
+  },
+  {
+    "text": "",
+    "maxWidth": 5,
+    "ellipsis": "+",
+    "pad": false,
+    "expected": ""
+  },
+  {
+    "text": "\u001b]8;;u\u001b\\+",
+    "maxWidth": 1,
+    "ellipsis": "",
+    "pad": false,
+    "expected": "\u001b]8;;u\u001b\\+"
+  },
+  {
+    "text": "\u001b]8;;\u001b\\  ",
+    "maxWidth": 10,
+    "ellipsis": "…",
+    "pad": true,
+    "expected": "\u001b]8;;\u001b\\          "
+  },
+  {
+    "text": "\u001b[0m\u001b[1m\t😀accc",
+    "maxWidth": 12,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "\u001b[0m\u001b[1m\t😀accc   "
+  },
+  {
+    "text": "cccbb\u001b]8;;\u001b\\😀+",
+    "maxWidth": 7,
+    "ellipsis": "…",
+    "pad": false,
+    "expected": "cccbb\u001b[0m…\u001b[0m"
+  },
+  {
+    "text": " ",
+    "maxWidth": 12,
+    "ellipsis": "+",
+    "pad": true,
+    "expected": "            "
+  },
+  {
+    "text": "+é",
+    "maxWidth": 12,
+    "ellipsis": "…",
+    "pad": true,
+    "expected": "+é          "
+  },
+  {
+    "text": "",
+    "maxWidth": 6,
+    "ellipsis": "…",
+    "pad": true,
+    "expected": "      "
+  },
+  {
+    "text": " word",
+    "maxWidth": 4,
+    "ellipsis": "+",
+    "pad": true,
+    "expected": " wo\u001b[0m+\u001b[0m"
+  },
+  {
+    "text": "\u001b[31m\u001b]8;;\u001b\\\u001b[31m",
+    "maxWidth": 5,
+    "ellipsis": "",
+    "pad": false,
+    "expected": "\u001b[31m\u001b]8;;\u001b\\\u001b[31m"
+  },
+  {
+    "text": "\u001b[4m\u001b[0m ++",
+    "maxWidth": 4,
+    "ellipsis": "..",
+    "pad": true,
+    "expected": "\u001b[4m\u001b[0m ++ "
+  },
+  {
+    "text": "\u001b[31mword ",
+    "maxWidth": 13,
+    "ellipsis": "..",
+    "pad": false,
+    "expected": "\u001b[31mword "
+  },
+  {
+    "text": "…acccbb",
+    "maxWidth": 9,
+    "ellipsis": "",
+    "pad": false,
+    "expected": "…acccbb"
+  },
+  {
+    "text": "",
+    "maxWidth": 3,
+    "ellipsis": "…",
+    "pad": false,
+    "expected": ""
+  },
+  {
+    "text": "… \u001b[4m",
+    "maxWidth": 0,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": ""
+  },
+  {
+    "text": "\u001b[0m😀+\u001b[1mword",
+    "maxWidth": 7,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "\u001b[0m😀+\u001b[1mword"
+  },
+  {
+    "text": "bb",
+    "maxWidth": 0,
+    "ellipsis": "..",
+    "pad": true,
+    "expected": ""
+  },
+  {
+    "text": "😀bb",
+    "maxWidth": 4,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "😀bb"
+  },
+  {
+    "text": "\u001b[31m\t\u001b[1mbb\u001b]8;;\u001b\\\u001b[0m",
+    "maxWidth": 10,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "\u001b[31m\t\u001b[1mbb\u001b]8;;\u001b\\\u001b[0m     "
+  },
+  {
+    "text": "",
+    "maxWidth": 0,
+    "ellipsis": "+",
+    "pad": true,
+    "expected": ""
+  },
+  {
+    "text": "\u001b]8;;\u001b\\\u001b]8;;u\u001b\\worda",
+    "maxWidth": 10,
+    "ellipsis": "+",
+    "pad": true,
+    "expected": "\u001b]8;;\u001b\\\u001b]8;;u\u001b\\worda     "
+  },
+  {
+    "text": "日\u001b]8;;\u001b\\ccc",
+    "maxWidth": 9,
+    "ellipsis": "",
+    "pad": false,
+    "expected": "日\u001b]8;;\u001b\\ccc"
+  },
+  {
+    "text": "wordword😀word\u001b]8;;\u001b\\",
+    "maxWidth": 12,
+    "ellipsis": "",
+    "pad": true,
+    "expected": "wordword😀wo\u001b[0m"
+  },
+  {
+    "text": "\u001b]8;;u\u001b\\\u001b[0m\u001b[4m\tccc\u001b[31m",
+    "maxWidth": 8,
+    "ellipsis": "..",
+    "pad": true,
+    "expected": "\u001b]8;;u\u001b\\\u001b[0m\u001b[4m\tccc\u001b[31m  "
+  },
+  {
+    "text": "",
+    "maxWidth": 12,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "            "
+  },
+  {
+    "text": "😀\u001b[31m",
+    "maxWidth": 6,
+    "ellipsis": "+",
+    "pad": true,
+    "expected": "😀\u001b[31m    "
+  },
+  {
+    "text": "é\u001b[4m\u001b[4m",
+    "maxWidth": 9,
+    "ellipsis": "..",
+    "pad": false,
+    "expected": "é\u001b[4m\u001b[4m"
+  },
+  {
+    "text": "日+",
+    "maxWidth": 3,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "日+"
+  },
+  {
+    "text": "\u001b]8;;\u001b\\bb",
+    "maxWidth": 13,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "\u001b]8;;\u001b\\bb"
+  },
+  {
+    "text": "😀",
+    "maxWidth": 8,
+    "ellipsis": "…",
+    "pad": true,
+    "expected": "😀      "
+  },
+  {
+    "text": "bb \u001b[1m\t \u001b[1m",
+    "maxWidth": 8,
+    "ellipsis": "..",
+    "pad": true,
+    "expected": "bb \u001b[1m\t \u001b[1m "
+  },
+  {
+    "text": " é\u001b[1m…",
+    "maxWidth": 10,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": " é\u001b[1m…       "
+  },
+  {
+    "text": "\u001b]8;;\u001b\\\u001b]8;;u\u001b\\\u001b[31ma",
+    "maxWidth": 10,
+    "ellipsis": "…",
+    "pad": true,
+    "expected": "\u001b]8;;\u001b\\\u001b]8;;u\u001b\\\u001b[31ma         "
+  },
+  {
+    "text": "\u001b[0m",
+    "maxWidth": 7,
+    "ellipsis": "+",
+    "pad": false,
+    "expected": "\u001b[0m"
+  },
+  {
+    "text": "…\u001b[0m\u001b[4m\u001b[4m…",
+    "maxWidth": 6,
+    "ellipsis": "",
+    "pad": true,
+    "expected": "…\u001b[0m\u001b[4m\u001b[4m…    "
+  },
+  {
+    "text": "+",
+    "maxWidth": 9,
+    "ellipsis": "+",
+    "pad": false,
+    "expected": "+"
+  },
+  {
+    "text": "😀\u001b]8;;u\u001b\\",
+    "maxWidth": 5,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "😀\u001b]8;;u\u001b\\"
+  },
+  {
+    "text": "word\u001b]8;;\u001b\\\u001b]8;;u\u001b\\\u001b[4m+",
+    "maxWidth": 6,
+    "ellipsis": "..",
+    "pad": true,
+    "expected": "word\u001b]8;;\u001b\\\u001b]8;;u\u001b\\\u001b[4m+ "
+  },
+  {
+    "text": "\u001b[0mccc\u001b]8;;\u001b\\bbccc\u001b[1m",
+    "maxWidth": 8,
+    "ellipsis": "+",
+    "pad": true,
+    "expected": "\u001b[0mccc\u001b]8;;\u001b\\bbccc\u001b[1m"
+  },
+  {
+    "text": "word",
+    "maxWidth": 9,
+    "ellipsis": "+",
+    "pad": false,
+    "expected": "word"
+  },
+  {
+    "text": "a\u001b[4ma",
+    "maxWidth": 6,
+    "ellipsis": "",
+    "pad": true,
+    "expected": "a\u001b[4ma    "
+  },
+  {
+    "text": "é\t",
+    "maxWidth": 12,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "é\t        "
+  },
+  {
+    "text": "\u001b[0m\tccc… é",
+    "maxWidth": 12,
+    "ellipsis": "",
+    "pad": true,
+    "expected": "\u001b[0m\tccc… é   "
+  },
+  {
+    "text": "日\t++…",
+    "maxWidth": 1,
+    "ellipsis": "",
+    "pad": false,
+    "expected": "\u001b[0m"
+  },
+  {
+    "text": "",
+    "maxWidth": 1,
+    "ellipsis": "..",
+    "pad": false,
+    "expected": ""
+  },
+  {
+    "text": "日bb\u001b[4m",
+    "maxWidth": 0,
+    "ellipsis": "…",
+    "pad": true,
+    "expected": ""
+  },
+  {
+    "text": " ",
+    "maxWidth": 9,
+    "ellipsis": "",
+    "pad": false,
+    "expected": " "
+  },
+  {
+    "text": "é\u001b[0mword",
+    "maxWidth": 6,
+    "ellipsis": "…",
+    "pad": true,
+    "expected": "é\u001b[0mword "
+  },
+  {
+    "text": "😀\u001b[31m +\u001b[4m\u001b[31m",
+    "maxWidth": 2,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "\u001b[0m..\u001b[0m"
+  },
+  {
+    "text": "\u001b[4mééé\u001b]8;;\u001b\\ ",
+    "maxWidth": 10,
+    "ellipsis": "",
+    "pad": true,
+    "expected": "\u001b[4mééé\u001b]8;;\u001b\\       "
+  },
+  {
+    "text": "a+",
+    "maxWidth": 4,
+    "ellipsis": "+",
+    "pad": true,
+    "expected": "a+  "
+  },
+  {
+    "text": "\u001b]8;;u\u001b\\",
+    "maxWidth": 5,
+    "ellipsis": "...",
+    "pad": false,
+    "expected": "\u001b]8;;u\u001b\\"
+  },
+  {
+    "text": "\u001b]8;;\u001b\\éa\u001b[31m+",
+    "maxWidth": 8,
+    "ellipsis": "",
+    "pad": true,
+    "expected": "\u001b]8;;\u001b\\éa\u001b[31m+     "
+  },
+  {
+    "text": "",
+    "maxWidth": 10,
+    "ellipsis": "…",
+    "pad": true,
+    "expected": "          "
+  },
+  {
+    "text": "",
+    "maxWidth": 2,
+    "ellipsis": "+",
+    "pad": true,
+    "expected": "  "
+  },
+  {
+    "text": "bbccc+\u001b[0m…",
+    "maxWidth": 7,
+    "ellipsis": "",
+    "pad": false,
+    "expected": "bbccc+\u001b[0m…"
+  },
+  {
+    "text": "\u001b]8;;u\u001b\\a\t",
+    "maxWidth": 0,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": ""
+  },
+  {
+    "text": "\u001b]8;;\u001b\\ \u001b]8;;u\u001b\\😀",
+    "maxWidth": 12,
+    "ellipsis": "..",
+    "pad": true,
+    "expected": "\u001b]8;;\u001b\\ \u001b]8;;u\u001b\\😀         "
+  },
+  {
+    "text": "😀\t😀\u001b[0m",
+    "maxWidth": 10,
+    "ellipsis": "…",
+    "pad": true,
+    "expected": "😀\t😀\u001b[0m   "
+  },
+  {
+    "text": "\u001b[4mbb\u001b]8;;\u001b\\日",
+    "maxWidth": 10,
+    "ellipsis": "...",
+    "pad": true,
+    "expected": "\u001b[4mbb\u001b]8;;\u001b\\日      "
+  },
+  {
+    "text": "\u001b[0m\u001b[31mbb",
+    "maxWidth": 11,
+    "ellipsis": "+",
+    "pad": false,
+    "expected": "\u001b[0m\u001b[31mbb"
+  },
+  {
+    "text": "ccc…bbccc…",
+    "maxWidth": 4,
+    "ellipsis": "",
+    "pad": true,
+    "expected": "ccc…\u001b[0m"
+  },
+  {
+    "text": "\u001b[1m\u001b[1m\u001b[31m\u001b[0m",
+    "maxWidth": 8,
+    "ellipsis": "+",
+    "pad": true,
+    "expected": "\u001b[1m\u001b[1m\u001b[31m\u001b[0m        "
+  },
+  {
+    "text": "……word日bb\t",
+    "maxWidth": 10,
+    "ellipsis": "..",
+    "pad": true,
+    "expected": "……word日\u001b[0m..\u001b[0m"
+  },
+  {
+    "text": "\u001b]8;;\u001b\\é",
+    "maxWidth": 4,
+    "ellipsis": "..",
+    "pad": true,
+    "expected": "\u001b]8;;\u001b\\é   "
+  },
+  {
+    "text": "\u001b]8;;u\u001b\\\t+word",
+    "maxWidth": 10,
+    "ellipsis": "",
+    "pad": true,
+    "expected": "\u001b]8;;u\u001b\\\t+word  "
+  },
+  {
+    "text": "+wordbb\twordé",
+    "maxWidth": 10,
+    "ellipsis": "…",
+    "pad": true,
+    "expected": "+wordbb\u001b[0m…\u001b[0m  "
+  },
+  {
+    "text": "😀\u001b[1m",
+    "maxWidth": 2,
+    "ellipsis": "",
+    "pad": true,
+    "expected": "😀\u001b[1m"
+  },
+  {
+    "text": "a😀",
+    "maxWidth": 2,
+    "ellipsis": "…",
+    "pad": true,
+    "expected": "a\u001b[0m…\u001b[0m"
+  }
+]
