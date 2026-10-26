@@ -1,3 +1,10 @@
 # Reproduced audit findings
 
-No confirmed unresolved findings.
+## CR-063: P2 Stopping the terminal from its resize callback deadlocks
+- Category and affected paths or functions: concurrency/shutdown, `ProcessTerminal.Stop`, `startResizeWatcher`/`stopResizeWatcher` on Unix and analogous Windows joining code.
+- Scenario, expected behavior, actual behavior, and impact: a library host calls `terminal.Stop()` synchronously from its `onResize` callback. The callback should be able to stop its own subscription; on Unix it waits forever for the watcher goroutine currently executing that callback, hanging shutdown or mode replacement. Normal interactive callbacks only enqueue and do not exercise this path.
+- Evidence: build `/tmp/pier-5am-audit/resize-stop.go`, then `python3 /tmp/pier-5am-audit/resize-stop.py`. A disposable PTY resizes 80 to 81 columns. The outside-callback control exits 0 with `resize-entered` and `stopped`; the callback case hangs after `resize-entered`. SIGQUIT proves `ProcessTerminal.Stop -> stopResizeWatcher` waiting on the current watcher goroutine. No real terminal or user files are touched. Windows has the same join pattern but is not runtime-reproduced here.
+- Authority: pi v1.4.0 (`4a080252`), `packages/tui/src/terminal.ts` stop removes the resize listener without joining its own callback. Local reentrant-callback/shutdown invariants also apply.
+- Root cause: the event watcher invokes the user callback inline, while Stop synchronously joins that watcher.
+- Repair plan and required decision: allow already-admitted resize callbacks to finish after Stop rather than joining them, while rejecting later delivery and preserving one-worker admission across stop/start. This changes the currently documented watcher-join lifetime and needs approval before repair. Do not merely dispatch an unbounded goroutine per resize or return without guarding restart generations.
+- Verification after approval: red-capable subprocess/public callback regression, normal-stop and callback-restart controls, blocked-query/restart admission test; full gates and cross-build/vet.
