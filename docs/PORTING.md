@@ -61,6 +61,9 @@ assistants are omitted from the projection, matching `core/agent-session.ts`
 Branch-summary navigation also forwards its cancellation context into auth
 resolution, so abort and disposal cancel provider auth work as they do for
 manual and automatic compaction (`core/agent-session.ts`, `navigateTree`).
+Branch-summary preparation retains chronological order with one reversal rather
+than repeated Go slice prepends: an 8,000-message probe dropped from about
+540 MB/253 ms to 1.07 MB/10 ms of preparation, with an allocation regression.
 
 Session aborts now retain cancellation across retry startup, backoff and
 continuations, and `agent_settled.aborted` reports the run's abort flag rather

@@ -198,14 +198,17 @@ func PrepareBranchEntries(entries []SessionEntry, tokenBudget int) BranchPrepara
 			// carries important context.
 			if entry.Type == "compaction" || entry.Type == "branch_summary" {
 				if float64(totalTokens) < float64(tokenBudget)*0.9 {
-					messages = append([]ai.Message{message}, messages...)
+					messages = append(messages, message)
 					totalTokens += tokens
 				}
 			}
 			break
 		}
-		messages = append([]ai.Message{message}, messages...)
+		messages = append(messages, message)
 		totalTokens += tokens
+	}
+	for left, right := 0, len(messages)-1; left < right; left, right = left+1, right-1 {
+		messages[left], messages[right] = messages[right], messages[left]
 	}
 	return BranchPreparation{Messages: messages, FileOps: fileOps, TotalTokens: totalTokens}
 }

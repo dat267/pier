@@ -126,3 +126,26 @@ previous-checkpoint merging and usage accounting for all three requests.
 Verification: `go test -count=1 ./coding -run
 'TestCompactionSplitsResultHeavy|TestSummarization|TestTurnPrefix|Test.*Compaction'`
 passed, including the existing paired/parallel-tool and bounded-retry controls.
+
+## CR-062: P2 branch preparation copied growing slices quadratically (fixed)
+
+Reference: read-only pi v1.4.0 (`4a080252`),
+`core/compaction/branch-summarization.ts`, `prepareBranchEntries`. Its contract
+is newest-first admission and chronological output. Pier implemented each
+prepend by allocating a new Go slice and copying every previously admitted
+message, so 8,000 small messages within the ordinary token budget allocated
+540,135,296 bytes and took 253.48 ms locally. At 4,000 messages it allocated
+138,825,384 bytes and took 66.21 ms.
+
+`TestBranchPreparationAllocationsStayLinear` uses allocation counters on 512
+messages, not timing or benchmark loops. Before the repair it allocated
+2,308,352 bytes against a generous 1,048,576-byte ceiling. The repair appends
+during the backwards walk and reverses once; budget/important-summary branches
+are unchanged. The test also verifies every output message's chronological
+position.
+
+Verification: branch/preparation/generation/navigation tests passed with
+`-count=30`. The original 8,000-message probe retained the same count, allocated
+1,073,128 bytes and took 10.09 ms; 4,000 messages allocated 528,920 bytes and
+took 4.96 ms. These are local preparation measurements, not end-to-end summary
+latency. Probe source and before/after outputs are in `/tmp/pier-5am-audit/`.
