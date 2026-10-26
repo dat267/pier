@@ -1320,3 +1320,29 @@ mixtures of the above.
 All 206 matched on the first run, so this records coverage, not a finding.
 Regeneration is byte-identical; `go test -count=1 ./tui`, `just check`,
 `just cross` (six targets) and `just reference` pass.
+
+## CR-050: login search omitted authentication method names (fixed)
+
+The midnight-window audit began from clean `a5d2c30`, with `just check` passing
+and the read-only reference still pi v1.4.0 (`4a080252`). Typing `ChatGPT` in
+/login's provider list displayed `No matching providers`, although OpenAI's
+OAuth method is named `OpenAI (ChatGPT subscription)`. Searching `OpenAI` worked.
+
+`oauthselector.go` looked for a `GetName()` interface that neither runtime auth
+method implements. It now reads `Name` from `*ai.OAuthAuth` and `*ai.ApiKeyAuth`,
+while retaining the existing optional/GetName seam. The corresponding upstream
+`components/oauth-selector.ts` `filterProviders` includes `provider.method?.name`;
+`interactive-mode.ts` `getLoginProviderOptions` forwards those actual methods.
+No subscription labels, palettes or auth policy change.
+
+Reproduction: `go test -count=1 ./coding/interactive -run
+'^TestOAuthSelectorSearchesAuthMethodName$'` failed before the repair with
+`query "ChatGPT" selected "", want match=true` and the empty-list render.
+The test uses the real runtime's provider options and drives Enter through the
+selector. `OpenAI` and an unknown-name query are matching/nonmatching controls.
+A Node probe of the pinned real `openaiProvider()` and selector selected
+`openai` for both `ChatGPT` and `OpenAI`, and nothing for the unknown query.
+
+Verification: the regression and adjacent auth/search tests pass; `just check`,
+`just cross` (six targets) and `just reference` pass. All fifteen existing color
+fixture families regenerate byte-identically, with no fixture changes.

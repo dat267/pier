@@ -359,8 +359,17 @@ func (c *OAuthSelectorComponent) FilterProviders(query string) {
 	if query != "" {
 		c.filteredProviders = tui.FuzzyFilter(c.allProviders, query, func(provider AuthSelectorProvider) string {
 			methodName := ""
-			if named, ok := provider.Method.(interface{ GetName() string }); ok {
-				methodName = named.GetName()
+			switch method := provider.Method.(type) {
+			case *ai.OAuthAuth:
+				if method != nil {
+					methodName = method.Name
+				}
+			case *ai.ApiKeyAuth:
+				if method != nil {
+					methodName = method.Name
+				}
+			case interface{ GetName() string }:
+				methodName = method.GetName()
 			}
 			return provider.Name + " " + provider.ID + " " + provider.AuthType + " " + methodName
 		})
