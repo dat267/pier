@@ -474,10 +474,14 @@ func ParseChunkUsage(raw []byte, model *Model) Usage {
 		TotalTokens: input + outputTokens + cacheReadTokens + cacheWriteTokens,
 		Cost:        UsageCost{},
 	}
+	// Upstream always reports a numeric reasoning count
+	// (`completion_tokens_details?.reasoning_tokens || 0`), so an absent block
+	// still serializes "reasoning":0 in the assistant message.
+	reasoning := int64(0)
 	if u.CompletionTokensDetails != nil && u.CompletionTokensDetails.ReasoningTokens != nil {
-		reasoning := *u.CompletionTokensDetails.ReasoningTokens
-		usage.Reasoning = &reasoning
+		reasoning = *u.CompletionTokensDetails.ReasoningTokens
 	}
+	usage.Reasoning = &reasoning
 	CalculateCost(model, &usage)
 	return usage
 }

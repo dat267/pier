@@ -146,6 +146,70 @@ const scenarios = [
 		name: "error-chunk-object",
 		chunks: [chunk({ content: "partial" }), { error: { type: "server_error" } }],
 	},
+	{
+		name: "error-chunk-empty-object",
+		chunks: [chunk({ content: "partial" }), { error: {} }],
+	},
+	{
+		name: "error-chunk-array",
+		chunks: [chunk({ content: "partial" }), { error: [{ message: "boom" }] }],
+	},
+	{
+		name: "usage-without-reasoning-details",
+		chunks: [
+			chunk({ content: "hi" }),
+			{ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] },
+			{
+				id: "chatcmpl-1",
+				object: "chat.completion.chunk",
+				model: "gpt-5",
+				choices: [],
+				usage: { prompt_tokens: 4, completion_tokens: 2 },
+			},
+			"[DONE]",
+		],
+	},
+	{
+		name: "duplicate-finish",
+		chunks: [
+			chunk({ content: "x" }),
+			{ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] },
+			{ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] },
+			"[DONE]",
+		],
+	},
+	{
+		name: "call-continued-after-text",
+		chunks: [
+			{
+				choices: [
+					{
+						index: 0,
+						delta: {
+							tool_calls: [
+								{ index: 0, id: "call_1", type: "function", function: { name: "lookup", arguments: '{"a":' } },
+							],
+						},
+					},
+				],
+			},
+			chunk({ content: "between" }),
+			{
+				choices: [
+					{ index: 0, delta: { tool_calls: [{ index: 0, function: { arguments: "1}" } }] } },
+				],
+			},
+			{ choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }] },
+			"[DONE]",
+		],
+	},
+	{
+		name: "second-choice-only",
+		chunks: [
+			{ choices: [{ index: 1, delta: { content: "other" }, finish_reason: "stop" }] },
+			"[DONE]",
+		],
+	},
 ];
 
 // `partial` is the documented live response-so-far helper rather than an
