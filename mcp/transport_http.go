@@ -483,15 +483,16 @@ func (t *StreamableHttpTransport) authorizedFetch(ctx context.Context, method st
 			return response, nil
 		}
 		info := UnauthorizedInfo{Response: response, ServerURL: t.parsedURL.String(), Fetch: t.doFetch, Token: token}
-		err = t.options.AuthProvider.OnUnauthorized(t.stopCtx, info)
+		err = func() error {
+			defer discardBody(response)
+			return t.options.AuthProvider.OnUnauthorized(t.stopCtx, info)
+		}()
 		if ctxErr := ctx.Err(); ctxErr != nil {
-			discardBody(response)
 			return nil, ctxErr
 		}
 		if err == nil {
 			continue
 		}
-		discardBody(response)
 		return nil, err
 	}
 }

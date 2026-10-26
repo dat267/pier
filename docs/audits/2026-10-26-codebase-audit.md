@@ -235,3 +235,28 @@ the control. The regression uses an injected fetch only, with no external HTTP.
 Verification: focused test passes 30 repetitions; `go test -count=1 ./mcp/...`,
 `go test -count=1 ./coding -run 'MCP|Mcp'`, `just check`, `just cross` (six
 targets), `just reference` pass. No local race run.
+
+## CR-028, P2: successful MCP auth recovery leaked the rejected body (fixed)
+
+Authority: pi v1.4.0 `packages/mcp/src/transports/streamable-http.ts`,
+`authorizedFetch`, brackets OnUnauthorized in try/finally and always awaits
+`discard(response)`. Pier discarded only on cancellation or callback error;
+when recovery succeeded it retried with the rejected response body still open.
+Repeated recoveries could retain HTTP resources and prevent connection reuse.
+
+Repair: scope the callback in a closure with deferred response discard. The
+retry cannot dispatch before cleanup, and error/panic unwinding also cleans up.
+Removed the redundant error/cancellation-path discards at that call site.
+
+```sh
+go test -count=20 ./mcp -run '^TestStreamableHTTPClosesUnauthorizedBodyBeforeRetry$'
+```
+
+Observed red: success retried with the body open, and close count was zero
+instead of one. Failed-recovery control already closed once. The pinned-source
+probe canceled its rejected response body before retry on success and on failure.
+All regression cases now close exactly once, with success cleanup before retry.
+Only an injected fetch is used; no external HTTP or real tokens.
+
+Verification: focused test passes 20 repetitions; all mcp tests, coding MCP
+tests, `just check`, `just cross` (six targets), `just reference` pass.

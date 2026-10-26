@@ -371,7 +371,9 @@ side effects. These repairs have red-first admission, weak-reference, loopback
 HTTP cancellation and JSONL session-integrity regressions. MCP HTTP also checks
 caller cancellation after shared token acquisition and before invoking fetch;
 a sender canceled during a token wait cannot dispatch through an injected
-fetch that does not itself enforce the canceled context.
+fetch that does not itself enforce the canceled context. Rejected 401/step-up
+403 bodies are discarded after authorization recovery before retrying, including
+successful recovery; the previous success path left those bodies open.
 
 The next parity check corrects `GetLastAssistantText` to use JavaScript's trim
 set: U+FEFF is removed at the boundaries, U+0085 is retained, and a U+FEFF-only
