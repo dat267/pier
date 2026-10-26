@@ -350,3 +350,66 @@ exported signature and documented panic, so no public contract changed.
 
 Verification: `go test -count=1 ./coding/interactive` passed (14.2 s);
 `just check`, `just cross` (six targets) and `just reference` passed.
+
+## Coverage and limits
+
+Baseline: clean `main` at `d1aaf68` (v0.0.38), read-only reference `./pi` at
+pi v1.4.0 (`4a080252`), confirmed with `just reference`. Gates run before any
+change and again at the end: `just check`, `just cross` (six targets),
+`just reference`, `go test -count=2 ./...` with a freshly built
+`PIER_TEST_BIN`, plus the affected packages at `-count=5`/`-count=20`/
+`-count=30` where a finding touched them.
+
+Read in full or in the cited ranges this session: `coding` session manager,
+store, projection, message cache, persistence, reload, retry, compaction,
+branch summary, trust, trust store, settings storage/manager entry points,
+auth storage, `resolveconfigvalue`, `updatecommand`, tools search, bash
+executor and process helpers, `mcptools`, `mcpruntime` tool dispatch,
+`cmd/main.go` boot half, `cmd/trust.go`, `cmd/rpcmode.go`; `agent/loop.go` and
+`agent/agent.go` run/failure paths; `ai/retry.go`, `ai/streamidle.go`,
+`ai/sse_lines.go`, `ai/openai_completions_stream.go`, `ai/json.go`,
+`ai/google_generative_ai.go` request half, `ai/jstext.go`; `mcp/client.go`,
+`mcp/transport_stdio.go`, `mcp/transport_http.go`; `coding/rpcclient`;
+`internal/goal/machine.go`, `internal/offloop`; `tui/terminal*.go`,
+`tui/stdinbuffer.go`, `tui/text.go`, `tui/altscreen.go` head,
+`tui/colors.go`/`oklab.go` via differential; `coding/interactive` theme,
+sessionswitch, transcript chat-assembly, tool-execution fallbacks,
+event queue and assistant message.
+
+Differential evidence produced (no finding): OKHSL/OKLCH parse and conversion
+match the pinned `tui/src/colors.ts` over 10 inputs including out-of-range hue,
+missing `%` and padded whitespace; `ai.JSWhitespaceClass` matches JavaScript's
+`\s` across every Unicode code point; the 65 generator-backed corpora that can
+run offline regenerate byte-identically (64 in the sweep plus `angle-html`
+re-run separately); all 15 interactive golden families regenerate
+byte-identically; the HTML export escapes adversarial message text and keeps
+session data in a base64 `application/json` block, with a scheme allow-list for
+links and images; documented RPC lifecycle behaviour (`SIGTERM` → 143,
+`SIGHUP` → 129, stdin close → 0, empty-string ids echoed, unknown command
+error shape) matches `docs/rpc.md`.
+
+Not verified, and therefore not cleared:
+
+- `internal/markdown/testdata/angle-html` needs `marked` 18.0.11 and
+  `marked-cjk-friendly` 0.1.2 installed in a temporary `node_modules`; the
+  second package is not in the pinned checkout and installing it is out of
+  scope, so that fixture was checked against `marked` alone only by the
+  interactive theme/export goldens.
+- `internal/highlight` (32k lines of generated language definitions) was not
+  reviewed beyond its API surface and the existing golden tests.
+- Deep renderer paths in `tui/editor.go`, `tui/latex.go`, `tui/keys.go`,
+  `coding/interactive/treeselector.go` and `coding/interactive/settingsselector.go`
+  were skimmed, not traced.
+- `ai/bedrock_converse.go` and `ai/mistral_conversations.go` were covered by
+  their corpora and the whitespace finding only, not by a full re-read.
+- `cmd/main.go`'s print-mode half and the model-catalog scripts were not
+  re-read this session.
+- No race-detector run was possible locally (`CGO_ENABLED=0`); CI remains the
+  race gate. This session's new worker code (the RPC writer slot and the
+  resize generation) is therefore covered by hand-traced ownership plus
+  repeated runs, not by `-race`.
+- Untrusted-input fuzzing: the seven pre-existing targets were run for 120 s
+  and five more for 300 s (all passed); JSON repair, message codec, session
+  entries, MCP messages, stdin, keys and incremental Markdown are covered,
+  glob/grapheme/model-config/MCP-config/settings were added. Provider wire
+  parsers, the theme loader and the HTML template are not fuzzed.
