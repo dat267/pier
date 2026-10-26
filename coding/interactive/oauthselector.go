@@ -278,11 +278,21 @@ type AuthSelectorProvider struct {
 	AuthType string // "oauth" | "api_key"
 	Method   any
 	Status   *ai.AuthCheck
+	// Subscription is nil for the default subscription label, false for an
+	// account without a subscription (pi v1.4.0 oauth-selector.ts).
+	Subscription *bool
 }
 
 // FormatAuthSelectorProviderType formats the auth type label.
 func FormatAuthSelectorProviderType(authType string) string {
+	return formatAuthSelectorProviderType(authType, nil)
+}
+
+func formatAuthSelectorProviderType(authType string, subscription *bool) string {
 	if authType == "oauth" {
+		if subscription != nil && !*subscription {
+			return "account"
+		}
 		return "subscription"
 	}
 	return "API key"
@@ -393,7 +403,7 @@ func (c *OAuthSelectorComponent) updateList() {
 		statusIndicator := c.formatStatusIndicator(provider)
 		authTypeLabel := ""
 		if c.showAuthTypeLabels {
-			authTypeLabel = theme.Fg("muted", " ["+FormatAuthSelectorProviderType(provider.AuthType)+"]")
+			authTypeLabel = theme.Fg("muted", " ["+formatAuthSelectorProviderType(provider.AuthType, provider.Subscription)+"]")
 		}
 		line := "  " + theme.Fg("text", provider.Name) + authTypeLabel + statusIndicator
 		if isSelected {
@@ -428,10 +438,7 @@ func (c *OAuthSelectorComponent) formatStatusIndicator(provider AuthSelectorProv
 		return theme.Fg("muted", " • not configured")
 	}
 	if provider.Status.Type != provider.AuthType {
-		label := "API key configured"
-		if provider.Status.Type == "oauth" {
-			label = "subscription configured"
-		}
+		label := formatAuthSelectorProviderType(provider.Status.Type, provider.Subscription) + " configured"
 		return theme.Fg("muted", " • ") + theme.Fg("warning", label)
 	}
 	if provider.Status.Source == "" || provider.Status.Source == "OAuth" || provider.Status.Source == "stored credential" {

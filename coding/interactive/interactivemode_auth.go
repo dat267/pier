@@ -127,16 +127,17 @@ func (w *AuthWiring) GetLoginProviderOptions(authType string) []AuthSelectorProv
 			}
 			status = &ai.AuthCheck{Type: checkType, Source: source}
 		}
+		subscription := provider.Auth.OAuth != nil && provider.Auth.OAuth.IsSubscription
 		if (authType == "" || authType == "oauth") && provider.Auth.OAuth != nil {
 			options = append(options, AuthSelectorProvider{
 				ID: provider.ID, Name: provider.Name, AuthType: "oauth",
-				Method: provider.Auth.OAuth, Status: status,
+				Method: provider.Auth.OAuth, Status: status, Subscription: &subscription,
 			})
 		}
 		if (authType == "" || authType == "api_key") && provider.Auth.APIKey != nil {
 			options = append(options, AuthSelectorProvider{
 				ID: provider.ID, Name: provider.Name, AuthType: "api_key",
-				Method: provider.Auth.APIKey, Status: status,
+				Method: provider.Auth.APIKey, Status: status, Subscription: &subscription,
 			})
 		}
 	}
@@ -154,12 +155,14 @@ func (w *AuthWiring) GetLogoutProviderOptions(ctx context.Context) ([]AuthSelect
 	options := make([]AuthSelectorProvider, 0, len(credentials))
 	for _, credential := range credentials {
 		name := credential.ProviderID
+		subscription := false
 		if provider := runtime.GetProvider(credential.ProviderID); provider != nil {
 			name = provider.Name
+			subscription = provider.Auth.OAuth != nil && provider.Auth.OAuth.IsSubscription
 		}
 		options = append(options, AuthSelectorProvider{
 			ID: credential.ProviderID, Name: name, AuthType: credential.Type,
-			Status: &ai.AuthCheck{Type: credential.Type, Source: "stored credential"},
+			Status: &ai.AuthCheck{Type: credential.Type, Source: "stored credential"}, Subscription: &subscription,
 		})
 	}
 	sort.SliceStable(options, func(i int, j int) bool { return options[i].Name < options[j].Name })

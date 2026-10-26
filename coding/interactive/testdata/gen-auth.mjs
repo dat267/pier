@@ -39,7 +39,10 @@ for (const [label, s] of entries(c.oauth)) {
 	for (const input of s.inputs ?? []) v.handleInput(input);
 	emit(`a oauth ${label}@${s.width}`, v.render(s.width));
 }
-emit("a authtype", ["oauth", "api_key"].map(formatAuthSelectorProviderType));
+emit("a authtype", [
+	formatAuthSelectorProviderType("oauth"),
+	formatAuthSelectorProviderType("api_key"),
+]);
 for (const [label, s] of entries(c.login)) {
 	const v = new LoginDialogComponent(ui, "openai", () => {});
 	if (s.deviceCode?.length === 2) v.showDeviceCode({ verificationUri: s.deviceCode[0], userCode: s.deviceCode[1] });

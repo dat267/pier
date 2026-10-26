@@ -1365,3 +1365,40 @@ legacy fixture contracts remain untouched.
 Verification: focused OAuth/search/login-dialog tests, `just check`, `just cross`
 (six targets), `just reference`, and all fifteen interactive golden byte checks
 pass. The only changed fixture values are the three unconfigured-provider renders.
+
+## CR-052: auth selectors called accounts subscriptions (fixed)
+
+The /login provider list labeled non-subscription OpenRouter OAuth as
+`[subscription]`; the pin labels it `[account]`. Stored-credential /logout rows
+lost the same metadata, and a status for OAuth credentials on an API-key option
+always said `subscription configured`. Upstream `ed8b3bcc1` introduced this
+account/subscription distinction.
+
+`AuthSelectorProvider` now carries optional subscription metadata. Both real
+provider-option builders snapshot `OAuth.IsSubscription`, including false for
+an unknown provider on logout. The renderer and mismatched-credential status
+share the same type formatter. Explicit false means account; absent/true retains
+the prior subscription default. The existing exported single-argument
+`FormatAuthSelectorProviderType` signature/default is unchanged.
+
+Red-first evidence:
+
+- `TestAuthLoginSelectorLabelsNonSubscriptionAccounts` failed for the real
+  OpenRouter provider with `[subscription]` versus `[account]`; Anthropic's
+  subscription label passed as the control. It passes after propagating and
+  rendering the flag on login options.
+- `TestAuthLogoutSelectorLabelsNonSubscriptionAccounts` then failed for the
+  same account after loading synthetic stored credentials. It passes after
+  propagating the flag through logout options. Anthropic and API-key rows are
+  controls; no credential/token data is printed or changed by the render.
+- A new pinned Node `account-labels@90` render covers explicit false, true and
+  absent flags plus both credential-type mismatches. It failed at the status
+  row (`subscription configured` versus `account configured`) before sharing
+  the formatter. All existing default-label cases remain unchanged.
+
+Verification: `go test -count=1 ./coding/interactive`, `just check`, `just cross`
+(six targets), `just reference` and fifteen interactive golden byte checks pass.
+Reference: pi v1.4.0 (`4a080252`), `interactive-mode.ts`
+`getLoginProviderOptions`/`getLogoutProviderOptions`, and
+`components/oauth-selector.ts` `formatAuthSelectorProviderType`/
+`formatAuthSelectorProviderStatus`.

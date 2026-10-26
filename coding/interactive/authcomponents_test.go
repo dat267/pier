@@ -29,10 +29,11 @@ type sessionSpec struct {
 }
 
 type oauthProviderSpec struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	AuthType string `json:"authType"`
-	Status   *struct {
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	AuthType     string `json:"authType"`
+	Subscription *bool  `json:"subscription"`
+	Status       *struct {
 		Type   string `json:"type"`
 		Source string `json:"source"`
 	} `json:"status"`
@@ -211,7 +212,7 @@ func TestOAuthSelectorAgainstUpstreamGolden(t *testing.T) {
 		spec := corpus.OAuth[label]
 		providers := make([]AuthSelectorProvider, 0, len(spec.Providers))
 		for _, provider := range spec.Providers {
-			entry := AuthSelectorProvider{ID: provider.ID, Name: provider.Name, AuthType: provider.AuthType}
+			entry := AuthSelectorProvider{ID: provider.ID, Name: provider.Name, AuthType: provider.AuthType, Subscription: provider.Subscription}
 			if provider.Status != nil {
 				entry.Status = &ai.AuthCheck{Type: provider.Status.Type, Source: provider.Status.Source}
 			}
