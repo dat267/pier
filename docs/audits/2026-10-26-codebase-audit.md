@@ -810,3 +810,21 @@ ignored in precedence, and 20-digit numeric identifiers that must not lose
 precision. All matched on the first run, so this records coverage, not a finding.
 Regeneration is byte-identical; `go test -count=1 ./coding`, `just check`,
 `just cross` (six targets) and `just reference` pass.
+
+## Summary-serialization corpus
+
+`coding/testdata/serialize-conversation/generate.mjs` executes the pinned
+`core/compaction/utils.ts` `serializeConversation` for 16 LLM-message sets;
+`TestSerializeConversationMatchesUpstream` decodes the same JSON with
+`ai.UnmarshalMessage` and compares the serialized text byte for byte.
+
+Cases: user strings, user blocks mixing text and an image, empty user blocks,
+CRLF text, text-only and thinking-plus-text assistants, tool calls with nested
+arguments in insertion order and `<`/`&` characters, call-only and multi-call
+assistants, empty assistant content, short/empty/image-only tool results, a
+2500-character ASCII result and 1500 astral emoji (the 2000-UTF-16-unit
+truncation boundary and its counted suffix), and a mixed conversation.
+
+All 16 matched on the first run, so this records coverage, not a finding.
+Regeneration is byte-identical; `go test -count=1 ./coding`, `just check`,
+`just cross` (six targets) and `just reference` pass.

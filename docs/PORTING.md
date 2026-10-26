@@ -417,6 +417,12 @@ mutation and durable goal-record appends are serialized together; parallel
 `set_goal` calls cannot corrupt the replay log by interleaving clear/create
 entries. Host callbacks and model work remain outside the state lock.
 
+Compaction's summary serialization is pinned by a 16-case corpus executing the
+pinned `serializeConversation` after message conversion: user strings and blocks
+with images, thinking-only and text-only assistants, tool-call argument key order
+and `<`/`&` escaping, empty blocks, and tool results truncated at 2000 UTF-16
+units (ASCII and astral). All matched on the first run.
+
 Package-version comparison is pinned by a generated corpus that executes the
 checkout's own `semver` dependency (the module `utils/version-check.ts` uses):
 30 validity inputs and 16 comparison pairs covering leading zeros, `v`/`=`
