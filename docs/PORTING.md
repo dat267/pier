@@ -70,6 +70,9 @@ a valid 8 MiB event dropped from 8.62 GB of cumulative allocation traffic and
 Progress-enabled MCP requests also propagate serialization errors rather than
 silently sending missing params, matching `mcp/src/client.ts` and its HTTP/stdio
 transports; cyclic-argument regressions cover both progress and plain calls.
+OpenAI-compatible streamed error checks also treat negative zero as falsy,
+matching the pinned SDK; source-generated cases cover negative zero, positive
+zero and negative nonzero controls.
 
 Session aborts now retain cancellation across retry startup, backoff and
 continuations, and `agent_settled.aborted` reports the run's abort flag rather

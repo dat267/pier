@@ -190,3 +190,21 @@ both modes and verifies that no malformed tool request reaches the server.
 
 Verification: `go test -count=2 ./mcp` passed, including client progress-token
 replacement, cancellation, timeouts, and HTTP/stdio controls.
+
+## CR-066: P2 negative zero incorrectly aborted OpenAI-compatible streams (fixed)
+
+Reference: read-only pi v1.4.0 (`4a080252`),
+`packages/ai/src/api/openai-completions.ts` and its pinned OpenAI SDK.
+The SDK's error-field check uses JavaScript truthiness. A valid SSE event with
+`{"error":-0}` is falsy and does not interrupt a normal response. Pier's
+`jsJSONTruthy` parsed positive zero but treated all minus-prefixed numbers as
+truthy, ending that stream with error `0` instead of a normal completion.
+
+The source-generated stream corpus grew from 17 to 20 cases: negative zero,
+positive-zero control and negative-nonzero control. Before the repair only the
+negative-zero case failed, with four events rather than five and a terminal
+error instead of done. The existing numeric check now also handles a leading
+minus, preserving negative nonzero truthiness.
+
+Verification: `go test -count=1 ./ai` passed; regenerating the 20-case corpus
+through the pinned source and SDK produced byte-identical fixture output.

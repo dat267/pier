@@ -155,6 +155,28 @@ const scenarios = [
 		chunks: [chunk({ content: "partial" }), { error: [{ message: "boom" }] }],
 	},
 	{
+		name: "error-chunk-negative-zero",
+		chunks: [
+			chunk({ content: "valid" }),
+			'{"error":-0}',
+			{ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] },
+			"[DONE]",
+		],
+	},
+	{
+		name: "error-chunk-zero-control",
+		chunks: [
+			chunk({ content: "valid" }),
+			{ error: 0 },
+			{ choices: [{ index: 0, delta: {}, finish_reason: "stop" }] },
+			"[DONE]",
+		],
+	},
+	{
+		name: "error-chunk-negative-number-control",
+		chunks: [chunk({ content: "partial" }), { error: -1 }],
+	},
+	{
 		name: "usage-without-reasoning-details",
 		chunks: [
 			chunk({ content: "hi" }),

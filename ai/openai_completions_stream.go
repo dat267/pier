@@ -65,8 +65,9 @@ func jsJSONTruthy(raw json.RawMessage) bool {
 	case '"':
 		var text string
 		return jsonUnmarshalStrict(trimmed, &text) == nil && text != ""
-	case '0':
-		// 0, 0.0, 0e1; a leading zero is otherwise invalid JSON.
+	case '0', '-':
+		// Positive and negative zero, including underflowed negative values,
+		// are falsy; other negative numbers remain truthy.
 		var number float64
 		return jsonUnmarshalStrict(trimmed, &number) != nil || number != 0
 	default:

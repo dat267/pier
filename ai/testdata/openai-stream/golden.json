@@ -766,6 +766,166 @@
     ]
   },
   {
+    "name": "error-chunk-negative-zero",
+    "sse": "data: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"model\":\"gpt-5\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"valid\"},\"finish_reason\":null}]}\n\ndata: {\"error\":-0}\n\ndata: {\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 0,
+        "delta": "valid"
+      },
+      {
+        "type": "text_end",
+        "contentIndex": 0,
+        "content": "valid"
+      },
+      {
+        "type": "done",
+        "reason": "stop",
+        "message": {
+          "content": [
+            {
+              "type": "text",
+              "text": "valid"
+            }
+          ],
+          "api": "openai-completions",
+          "provider": "openai",
+          "model": "gpt-5",
+          "stopReason": "stop",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 0,
+            "output": 0,
+            "totalTokens": 0
+          },
+          "responseId": "chatcmpl-1",
+          "rawStopReason": "stop"
+        }
+      }
+    ]
+  },
+  {
+    "name": "error-chunk-zero-control",
+    "sse": "data: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"model\":\"gpt-5\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"valid\"},\"finish_reason\":null}]}\n\ndata: {\"error\":0}\n\ndata: {\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 0,
+        "delta": "valid"
+      },
+      {
+        "type": "text_end",
+        "contentIndex": 0,
+        "content": "valid"
+      },
+      {
+        "type": "done",
+        "reason": "stop",
+        "message": {
+          "content": [
+            {
+              "type": "text",
+              "text": "valid"
+            }
+          ],
+          "api": "openai-completions",
+          "provider": "openai",
+          "model": "gpt-5",
+          "stopReason": "stop",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 0,
+            "output": 0,
+            "totalTokens": 0
+          },
+          "responseId": "chatcmpl-1",
+          "rawStopReason": "stop"
+        }
+      }
+    ]
+  },
+  {
+    "name": "error-chunk-negative-number-control",
+    "sse": "data: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"model\":\"gpt-5\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"partial\"},\"finish_reason\":null}]}\n\ndata: {\"error\":-1}\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 0,
+        "delta": "partial"
+      },
+      {
+        "type": "error",
+        "reason": "error",
+        "error": {
+          "content": [
+            {
+              "type": "text",
+              "text": "partial"
+            }
+          ],
+          "api": "openai-completions",
+          "provider": "openai",
+          "model": "gpt-5",
+          "stopReason": "error",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 0,
+            "output": 0,
+            "totalTokens": 0
+          },
+          "responseId": "chatcmpl-1",
+          "errorMessage": "-1"
+        }
+      }
+    ]
+  },
+  {
     "name": "usage-without-reasoning-details",
     "sse": "data: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"model\":\"gpt-5\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"hi\"},\"finish_reason\":null}]}\n\ndata: {\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"model\":\"gpt-5\",\"choices\":[],\"usage\":{\"prompt_tokens\":4,\"completion_tokens\":2}}\n\ndata: [DONE]\n\n",
     "events": [
