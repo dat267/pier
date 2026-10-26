@@ -766,6 +766,8 @@ at the closing checkpoint:
 | `coding/testdata/file-ops` | 11 | `core/compaction/utils.ts` |
 | `coding/testdata/estimate` | 14 | `core/compaction/compaction.ts` |
 | `coding/testdata/cut-point` | 19 | `core/compaction/compaction.ts` |
+| `coding/testdata/convert-to-llm` | 11 | `core/messages.ts` (D248 excluded) |
+| `ai/testdata/system-prompt` | 19 | `ai/src/utils/{text,transcript}.ts` |
 
 Earlier corpora (`edit-diff-patch`, `edit-apply`, `truncate`, `js-numbers`,
 `overflow`, `parse-key`, Anthropic/OpenAI/Responses stream corpora) remain green.
