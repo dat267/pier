@@ -316,3 +316,34 @@ Verification: all coding goal tests, `go test -count=1 ./internal/goal ./coding`
 
 Completed subsequent pieces: `920f058` (CR-027), `65a50ca` (CR-028),
 `2f44ef4` (CR-029).
+
+## CR-031, P2: deferred goal rounds ran after their reservation was stopped (fixed)
+
+Authority: D223's stop/replace semantics and D143's asynchronous ownership. The
+installed extension `machine.ts` read has SHA-256
+`afcc74bdd5f979d8584cdce12b44e450f683d720b3c3b81a88dc0f0872debba0`.
+This is a Go scheduling bug, not a stock-pi parity claim: the extension does not
+have the Go host's work queue.
+
+A public host scheduler can defer an idle goal round while the user pauses,
+clears, replaces or pauses/resumes the goal. The old closure unconditionally
+started its captured prompt later, causing a model turn after stop or an extra
+turn for a superseded objective. Interactive wiring can queue this behind other
+work while still handling slash commands.
+
+Repair: capture reservation state and recheck goal identity, revision, active
+armed phase and pending turn immediately before starting deferred work. Callbacks
+remain outside the machine lock; no new queue or cancellation policy was added.
+
+```sh
+go test -count=20 ./coding -run '^TestGoalScheduledRoundSkipsInvalidatedReservation$'
+```
+
+Observed red through a real session and its public scheduler hook: clear/pause
+started one model run (want zero), replacement and pause/resume started two
+(want one). An unchanged reservation was a passing control. All now match.
+The revision check matters for pause/resume of the same goal and turn number.
+
+Verification: focused test passes 20 repetitions; internal/goal, coding and
+coding/interactive tests pass; `just check`, `just cross` (six targets),
+`just reference` pass. No local race run.

@@ -1187,6 +1187,11 @@ is the pure `goal.DesiredToolNames` next to the state machine. UI notices
 produced during construction (the restored-goal notice) are buffered and
 delivered by `SetUIHooks`, so the interactive mode sets its callbacks once and
 `/reload` calls `Start("reload")` without re-reading the branch by hand.
+Idle round delivery uses the host work scheduler (D143). A queued closure
+checks that its goal id, revision and pending turn still identify an armed,
+active reservation before starting a run; pausing, clearing, replacing or
+pausing/resuming while it waits invalidates it. Already-started work retains
+its existing cancellation policy.
 
 The two tools (`get_goal`/`set_goal`, D234) are registered in the session
 tool registry and join the default active set; unlike the extension, an explicit `--tools` allowlist still

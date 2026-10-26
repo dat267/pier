@@ -205,7 +205,16 @@ func (c *GoalController) deliverGoalMessage(customType string, content string, d
 		c.sink.SendGoalMessage(customType, content, display, details, true)
 		return
 	}
+	reserved := c.Snapshot()
 	deliver := func(ctx context.Context) error {
+		// The host may queue this behind other work while the user stops or
+		// replaces the goal. Only the same live reservation may start a run.
+		current := c.Snapshot()
+		if reserved.Goal == nil || current.Goal == nil || !current.Armed || current.Goal.Phase != goal.PhaseActive ||
+			current.Goal.ID != reserved.Goal.ID || current.Goal.Revision != reserved.Goal.Revision ||
+			reserved.PendingTurn == nil || current.PendingTurn == nil || *current.PendingTurn != *reserved.PendingTurn {
+			return nil
+		}
 		return c.sink.RunGoalTurn(ctx, customType, content, display, details)
 	}
 	c.mu.Lock()

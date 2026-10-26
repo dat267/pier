@@ -384,7 +384,10 @@ text, block joins and aborted/non-text message selection remain controls.
 The builtin goal tool normalizes objectives with JavaScript's trim set, like
 D223's extension source. BOM-only input is rejected as empty, BOM boundaries
 are removed, and U+0085 remains part of the objective. The port-local status
-interface (D234) is unchanged.
+interface (D234) is unchanged. Deferred idle goal rounds recheck their reserved
+goal id, revision and turn before starting. Pause, clear, replacement and
+pause/resume invalidate old queued work without canceling a round already
+started.
 
 The find tool checks both `fd` and `fdfind` on PATH, preferring `fd`, matching
 `utils/tools-manager.ts`. This supports Debian/Ubuntu's alternative executable
