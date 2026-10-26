@@ -901,3 +901,23 @@ All 19 matched on the first run. This covers cut selection only; D264's
 deliberate summarization splitting and retry behavior is unchanged and not
 re-probed here. Regeneration is byte-identical; `go test -count=1 ./coding`,
 `just check`, `just cross` (six targets) and `just reference` pass.
+
+## Convert-to-LLM corpus
+
+`coding/testdata/convert-to-llm/generate.mjs` executes the pinned
+`core/messages.ts` `convertToLlm`; `TestConvertToLlmMatchesUpstream` decodes the
+same JSON and compares canonical message arrays (each message marshalled with its
+`role` member).
+
+Cases: system/user/assistant/tool-result pass-through, `bashExecution` with and
+without output, the `!!` context exclusion, a cancelled and a truncated command,
+custom notes as a string and as text-plus-image blocks, branch and compaction
+summary wrappers, a mixed sequence and an empty input.
+
+D248 deliberately reorders a custom message that lands between an unanswered tool
+call and its result, so those inputs are excluded; the corpus pins the shared
+behavior around that one documented divergence. All 11 matched once the harness
+was corrected to include the `role` member (Go's message marshal adds it per
+message rather than in the array encoding). Regeneration is byte-identical;
+`go test -count=1 ./coding`, `just check`, `just cross` (six targets) and
+`just reference` pass.

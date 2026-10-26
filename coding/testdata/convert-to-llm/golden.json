@@ -1,0 +1,471 @@
+[
+  {
+    "name": "passthrough",
+    "messages": [
+      {
+        "role": "system",
+        "content": "prompt",
+        "timestamp": 0
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "hello"
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "stop",
+        "timestamp": 2
+      },
+      {
+        "role": "toolResult",
+        "toolCallId": "c1",
+        "toolName": "read",
+        "content": [
+          {
+            "type": "text",
+            "text": "out"
+          }
+        ],
+        "isError": false,
+        "timestamp": 3
+      }
+    ],
+    "expected": [
+      {
+        "content": "prompt",
+        "role": "system",
+        "timestamp": 0
+      },
+      {
+        "content": "hi",
+        "role": "user",
+        "timestamp": 1
+      },
+      {
+        "api": "anthropic-messages",
+        "content": [
+          {
+            "text": "hello",
+            "type": "text"
+          }
+        ],
+        "model": "m",
+        "provider": "anthropic",
+        "role": "assistant",
+        "stopReason": "stop",
+        "timestamp": 2,
+        "usage": {
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "cost": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "input": 0,
+            "output": 0,
+            "total": 0
+          },
+          "input": 0,
+          "output": 0,
+          "totalTokens": 0
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "out",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "role": "toolResult",
+        "timestamp": 3,
+        "toolCallId": "c1",
+        "toolName": "read"
+      }
+    ]
+  },
+  {
+    "name": "bash-included",
+    "messages": [
+      {
+        "role": "bashExecution",
+        "command": "ls",
+        "output": "file.txt",
+        "exitCode": 0,
+        "cancelled": false,
+        "truncated": false,
+        "timestamp": 4
+      }
+    ],
+    "expected": [
+      {
+        "content": [
+          {
+            "text": "Ran `ls`\n```\nfile.txt\n```",
+            "type": "text"
+          }
+        ],
+        "role": "user",
+        "timestamp": 4
+      }
+    ]
+  },
+  {
+    "name": "bash-excluded",
+    "messages": [
+      {
+        "role": "bashExecution",
+        "command": "ls",
+        "output": "file.txt",
+        "exitCode": 0,
+        "cancelled": false,
+        "truncated": false,
+        "timestamp": 4,
+        "excludeFromContext": true
+      },
+      {
+        "role": "user",
+        "content": "after",
+        "timestamp": 1
+      }
+    ],
+    "expected": [
+      {
+        "content": "after",
+        "role": "user",
+        "timestamp": 1
+      }
+    ]
+  },
+  {
+    "name": "bash-cancelled",
+    "messages": [
+      {
+        "role": "bashExecution",
+        "command": "sleep 9",
+        "output": "partial",
+        "exitCode": 0,
+        "cancelled": true,
+        "truncated": false,
+        "timestamp": 4
+      }
+    ],
+    "expected": [
+      {
+        "content": [
+          {
+            "text": "Ran `sleep 9`\n```\npartial\n```\n\n(command cancelled)",
+            "type": "text"
+          }
+        ],
+        "role": "user",
+        "timestamp": 4
+      }
+    ]
+  },
+  {
+    "name": "bash-truncated",
+    "messages": [
+      {
+        "role": "bashExecution",
+        "command": "yes",
+        "output": "line\n",
+        "exitCode": 0,
+        "cancelled": false,
+        "truncated": true,
+        "timestamp": 4
+      }
+    ],
+    "expected": [
+      {
+        "content": [
+          {
+            "text": "Ran `yes`\n```\nline\n\n```",
+            "type": "text"
+          }
+        ],
+        "role": "user",
+        "timestamp": 4
+      }
+    ]
+  },
+  {
+    "name": "custom-string",
+    "messages": [
+      {
+        "role": "custom",
+        "customType": "note",
+        "content": "a note",
+        "display": false,
+        "timestamp": 5
+      }
+    ],
+    "expected": [
+      {
+        "content": [
+          {
+            "text": "a note",
+            "type": "text"
+          }
+        ],
+        "role": "user",
+        "timestamp": 5
+      }
+    ]
+  },
+  {
+    "name": "custom-blocks",
+    "messages": [
+      {
+        "role": "custom",
+        "customType": "note",
+        "content": [
+          {
+            "type": "text",
+            "text": "text"
+          },
+          {
+            "type": "image",
+            "data": "aW1n",
+            "mimeType": "image/png"
+          }
+        ],
+        "display": false,
+        "timestamp": 5
+      }
+    ],
+    "expected": [
+      {
+        "content": [
+          {
+            "text": "text",
+            "type": "text"
+          },
+          {
+            "data": "aW1n",
+            "mimeType": "image/png",
+            "type": "image"
+          }
+        ],
+        "role": "user",
+        "timestamp": 5
+      }
+    ]
+  },
+  {
+    "name": "branch-summary",
+    "messages": [
+      {
+        "role": "branchSummary",
+        "summary": "summary text",
+        "fromId": "e1",
+        "timestamp": 6
+      }
+    ],
+    "expected": [
+      {
+        "content": [
+          {
+            "text": "The following is a summary of a branch that this conversation came back from:\n\n<summary>\nsummary text</summary>",
+            "type": "text"
+          }
+        ],
+        "role": "user",
+        "timestamp": 6
+      }
+    ]
+  },
+  {
+    "name": "compaction-summary",
+    "messages": [
+      {
+        "role": "compactionSummary",
+        "summary": "compact text",
+        "tokensBefore": 100,
+        "timestamp": 7
+      }
+    ],
+    "expected": [
+      {
+        "content": [
+          {
+            "text": "The conversation history before this point was compacted into the following summary:\n\n<summary>\ncompact text\n</summary>",
+            "type": "text"
+          }
+        ],
+        "role": "user",
+        "timestamp": 7
+      }
+    ]
+  },
+  {
+    "name": "mixed-order",
+    "messages": [
+      {
+        "role": "user",
+        "content": "start",
+        "timestamp": 1
+      },
+      {
+        "role": "bashExecution",
+        "command": "cmd",
+        "output": "out",
+        "exitCode": 0,
+        "cancelled": false,
+        "truncated": false,
+        "timestamp": 4
+      },
+      {
+        "role": "custom",
+        "customType": "note",
+        "content": "note",
+        "display": false,
+        "timestamp": 5
+      },
+      {
+        "role": "branchSummary",
+        "summary": "branch",
+        "fromId": "e1",
+        "timestamp": 6
+      },
+      {
+        "role": "compactionSummary",
+        "summary": "compact",
+        "tokensBefore": 100,
+        "timestamp": 7
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "done"
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "stop",
+        "timestamp": 2
+      }
+    ],
+    "expected": [
+      {
+        "content": "start",
+        "role": "user",
+        "timestamp": 1
+      },
+      {
+        "content": [
+          {
+            "text": "Ran `cmd`\n```\nout\n```",
+            "type": "text"
+          }
+        ],
+        "role": "user",
+        "timestamp": 4
+      },
+      {
+        "content": [
+          {
+            "text": "note",
+            "type": "text"
+          }
+        ],
+        "role": "user",
+        "timestamp": 5
+      },
+      {
+        "content": [
+          {
+            "text": "The following is a summary of a branch that this conversation came back from:\n\n<summary>\nbranch</summary>",
+            "type": "text"
+          }
+        ],
+        "role": "user",
+        "timestamp": 6
+      },
+      {
+        "content": [
+          {
+            "text": "The conversation history before this point was compacted into the following summary:\n\n<summary>\ncompact\n</summary>",
+            "type": "text"
+          }
+        ],
+        "role": "user",
+        "timestamp": 7
+      },
+      {
+        "api": "anthropic-messages",
+        "content": [
+          {
+            "text": "done",
+            "type": "text"
+          }
+        ],
+        "model": "m",
+        "provider": "anthropic",
+        "role": "assistant",
+        "stopReason": "stop",
+        "timestamp": 2,
+        "usage": {
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "cost": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "input": 0,
+            "output": 0,
+            "total": 0
+          },
+          "input": 0,
+          "output": 0,
+          "totalTokens": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "empty",
+    "messages": [],
+    "expected": []
+  }
+]

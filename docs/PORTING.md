@@ -417,6 +417,13 @@ mutation and durable goal-record appends are serialized together; parallel
 `set_goal` calls cannot corrupt the replay log by interleaving clear/create
 entries. Host callbacks and model work remain outside the state lock.
 
+`ConvertToLlm` is pinned by an 11-case corpus executing the pinned version:
+pass-through system/user/assistant/tool-result messages, `bashExecution` output
+with cancellation and truncation variants plus the `!!` exclusion, custom notes
+as strings and blocks, branch and compaction summary wrappers, a mixed sequence
+and an empty input. The documented D248 reordering of a custom message inside an
+unanswered tool call is excluded from this corpus.
+
 Compaction's cut-point selection is pinned by 19 cases over 12 synthetic entry
 lists: pair and tool-pair boundaries, metadata entries absorbed into the kept
 range, system messages, an existing compaction boundary, branch summaries and
