@@ -382,6 +382,15 @@ The active file, unrelated tool logs, and matching directory names are never
 touched. The model still receives "[Output truncated. Full output: <path>]".
 `TestSweepTempOutputFiles` checks exclusions and oldest-first order.
 
+The sweep stops at the tool-output prefixes on purpose. MCP output files
+(`pi-mcp-<hex>.txt` and binary resource dumps, written by `SaveMcpToTempFile`
+through the same `utils/output-files.ts` convention) are left to the OS exactly
+as upstream leaves them: they are not swept, are not part of the budget, and a
+sweep triggered by another tool skips them. Extending the sweep to them would
+delete files the model was told it could read back, a further departure this
+port does not need, so a growing MCP scratch directory on tmpfs is accepted and
+matches the reference (CR-072).
+
 ## D164
 
 **Input paints only when requested.**

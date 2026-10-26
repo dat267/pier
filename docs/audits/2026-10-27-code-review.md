@@ -505,3 +505,24 @@ Verification: `go test -count=1 ./coding` passed; the 15-row shape differential
 now matches the pin for every entry type; `just check`, `just cross` (six
 targets), `just reference`, all 15 interactive golden families and the 65
 offline corpora are unchanged.
+
+## CR-072: P3 MCP output files stay outside the D161 scratch sweep (resolved, no code change)
+
+Reference: pi v1.4.0 (`4a080252`), `utils/output-files.ts`: every output file,
+including the MCP ones written by `saveToTempFile`, is created in `tmpdir()`
+with mode `0o600` and left for the OS to age out. Pier's D161 sweep is a
+deliberate departure that covers only its tool-output prefixes
+(`pi-bash-<id>.log`, `pi-output`, `pi-powershell`).
+
+The gap was reproduced rather than assumed: a directory holding two `.log`
+files and two `pi-mcp-*` files swept with budget 0 removed only the logs
+(`removed=2 freed=2048 left=[pi-mcp-ccc.txt pi-mcp-ddd.png]`), and
+`SaveMcpToTempFile` never triggers a sweep. Extending the sweep would delete
+files the model was told it could read back, which is a further departure from
+the reference without a reproduced failure, so the decision was to follow pi:
+MCP scratch files are left to the OS.
+
+Resolution: no code change. D161 now states the scope explicitly — MCP files are
+not swept, not counted in the budget, and skipped by sweeps another tool
+triggers — so the behaviour is documented rather than an oversight, and
+`TODO.md` is empty again.
