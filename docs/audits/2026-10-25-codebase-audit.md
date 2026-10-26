@@ -874,6 +874,13 @@ request a push.
 
 ## Remaining work and resume point
 
+A later session continued this ledger on 2026-10-26 in
+`docs/audits/2026-10-26-codebase-audit.md`. That file records CR-021 through
+CR-042, the new source-executed corpora (Mistral stream/simple options, simple
+max-tokens, Google stream, CLI arguments) and the leads still unresolved. Read it
+before resuming from the list below; this section keeps the original coverage
+map for the areas it names.
+
 Continue with the remaining concurrency/platform probes, then the unreviewed
 areas identified above, especially search/bash tools, provider request/wire
 parsers, session/RPC cancellation, interactive wiring and workers, platform
