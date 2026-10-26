@@ -64,6 +64,9 @@ manual and automatic compaction (`core/agent-session.ts`, `navigateTree`).
 Branch-summary preparation retains chronological order with one reversal rather
 than repeated Go slice prepends: an 8,000-message probe dropped from about
 540 MB/253 ms to 1.07 MB/10 ms of preparation, with an allocation regression.
+MCP SSE parsing also avoids repeated pending-line copies and prefix scans;
+a valid 8 MiB event dropped from 8.62 GB of cumulative allocation traffic and
+2.49 s to 41.72 MB/21 ms locally, with byte-budget and payload regressions.
 
 Session aborts now retain cancellation across retry startup, backoff and
 continuations, and `agent_settled.aborted` reports the run's abort flag rather

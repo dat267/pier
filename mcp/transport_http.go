@@ -128,26 +128,39 @@ func ConsumeSseStream(body io.Reader, options ConsumeSseOptions) error {
 		return nil
 	}
 
-	var buffered string
+	var buffered strings.Builder
+	searchAt := 0
 	// Read decoded chunks. The UTF-8 decoder retains incomplete sequences
 	// across reads, while the line search works on the decoded UTF-8 bytes.
 	chunk := make([]byte, 32*1024)
 	for {
 		n, err := reader.Read(chunk)
 		if n > 0 {
-			buffered += string(chunk[:n])
+			buffered.Write(chunk[:n])
 		}
+		pending := buffered.String()
+		lineStart := 0
 		for {
-			newline := strings.Index(buffered, "\n")
+			newline := strings.IndexByte(pending[searchAt:], '\n')
 			if newline < 0 {
 				break
 			}
-			if err := processLine(buffered[:newline]); err != nil {
+			newline += searchAt
+			if err := processLine(pending[lineStart:newline]); err != nil {
 				return err
 			}
-			buffered = buffered[newline+1:]
+			lineStart = newline + 1
+			searchAt = lineStart
 		}
-		if int64(len(buffered)) > maxEventBytes {
+		remaining := pending[lineStart:]
+		if lineStart > 0 {
+			buffered.Reset()
+			buffered.WriteString(remaining)
+		}
+		// Only newly appended bytes can contain the next newline. Retain the
+		// old prefix without copying or scanning it again on every read.
+		searchAt = len(remaining)
+		if int64(len(remaining)) > maxEventBytes {
 			return fmt.Errorf("MCP SSE event exceeds %d bytes", maxEventBytes)
 		}
 		if err != nil {
@@ -157,8 +170,8 @@ func ConsumeSseStream(body io.Reader, options ConsumeSseOptions) error {
 			return err
 		}
 	}
-	if buffered != "" {
-		if err := processLine(buffered); err != nil {
+	if buffered.Len() > 0 {
+		if err := processLine(buffered.String()); err != nil {
 			return err
 		}
 	}

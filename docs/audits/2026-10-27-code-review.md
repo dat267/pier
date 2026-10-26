@@ -149,3 +149,26 @@ Verification: branch/preparation/generation/navigation tests passed with
 1,073,128 bytes and took 10.09 ms; 4,000 messages allocated 528,920 bytes and
 took 4.96 ms. These are local preparation measurements, not end-to-end summary
 latency. Probe source and before/after outputs are in `/tmp/pier-5am-audit/`.
+
+## CR-064: P2 long MCP SSE lines caused quadratic allocation churn (fixed)
+
+Reference: read-only pi v1.4.0 (`4a080252`),
+`packages/mcp/src/transports/streamable-http.ts`, `consumeSseStream`.
+One valid SSE `data:` line can approach the ordinary 16 MiB cap. Pier copied
+the entire pending line at every decoded read and rescanned its old prefix,
+so an 8 MiB payload dispatched one event only after 8,615,139,480 bytes of
+allocation traffic and 2.49 seconds locally. These are cumulative allocations,
+not retained heap. The 1 MiB and 4 MiB controls used 137,408,568 and
+2,160,101,720 allocated bytes respectively.
+
+`TestConsumeSseLongLineAllocationsStayLinear` uses a 256 KiB valid event and
+asserts its exact payload plus a generous 3,145,728-byte allocation ceiling.
+Before the repair it allocated 9,218,064 bytes. The pending suffix now uses a
+builder and scans only newly appended bytes, resetting only after consuming
+complete lines. Parsing, metadata, UTF-8, EOF and event limits are unchanged.
+
+Verification: all `TestConsumeSse*` controls passed with `-count=30`, and
+`go test -count=2 ./mcp` passed. The original 8 MiB probe dispatched the same
+single event without error using 41,716,456 allocated bytes and 21.07 ms;
+1 MiB used 5,253,864 bytes/2.89 ms and 4 MiB used 21,121,784 bytes/11.22 ms.
+These are local parser measurements, not end-to-end transport latency.
