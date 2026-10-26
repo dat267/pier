@@ -417,6 +417,12 @@ mutation and durable goal-record appends are serialized together; parallel
 `set_goal` calls cannot corrupt the replay log by interleaving clear/create
 entries. Host callbacks and model work remain outside the state lock.
 
+The write tool is pinned by a 7-case corpus: creating a file, overwriting one,
+creating nested directories, empty content, CRLF, content without a trailing
+newline, and non-ASCII text, comparing both the reply text and the written
+bytes. A directory target keeps Go's error wording (D279) and is covered by
+`TestWriteToolDirectoryError`.
+
 The ls tool is pinned by an 8-case corpus over a directory mixing punctuation,
 digits, case and `ä`: sorted output with directory suffixes, an empty directory,
 a nested path, integer and fractional limits, the default cwd, and the

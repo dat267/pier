@@ -1,0 +1,72 @@
+[
+  {
+    "name": "create",
+    "path": "new.txt",
+    "content": "hello\n",
+    "expected": {
+      "text": "Successfully wrote to new.txt",
+      "details": null,
+      "written": "hello\n"
+    }
+  },
+  {
+    "name": "overwrite",
+    "path": "existing.txt",
+    "content": "new\n",
+    "expected": {
+      "text": "Successfully wrote to existing.txt",
+      "details": null,
+      "written": "new\n"
+    }
+  },
+  {
+    "name": "nested-create",
+    "path": "deep/er/file.txt",
+    "content": "nested\n",
+    "expected": {
+      "text": "Successfully wrote to deep/er/file.txt",
+      "details": null,
+      "written": "nested\n"
+    }
+  },
+  {
+    "name": "empty-content",
+    "path": "empty.txt",
+    "content": "",
+    "expected": {
+      "text": "Successfully wrote to empty.txt",
+      "details": null,
+      "written": ""
+    }
+  },
+  {
+    "name": "crlf-content",
+    "path": "crlf.txt",
+    "content": "a\r\nb\r\n",
+    "expected": {
+      "text": "Successfully wrote to crlf.txt",
+      "details": null,
+      "written": "a\r\nb\r\n"
+    }
+  },
+  {
+    "name": "no-trailing-newline",
+    "path": "tail.txt",
+    "content": "tail",
+    "expected": {
+      "text": "Successfully wrote to tail.txt",
+      "details": null,
+      "written": "tail"
+    }
+  },
+  {
+    "name": "unicode",
+    "path": "emoji.txt",
+    "content": "😀 ä\n",
+    "expected": {
+      "text": "Successfully wrote to emoji.txt",
+      "details": null,
+      "written": "😀 ä\n"
+    }
+  }
+]

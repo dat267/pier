@@ -2609,7 +2609,10 @@ Emulating Node's errno phrases would mean porting libuv's per-code messages and
 per-syscall wording (`access`, `open`, `write`), the same class of
 runtime-diagnostic emulation the port declines for V8 JSON errors (D269/D270).
 The tool result still names the path and the failure, and providers read it as
-an error result, not as data. Every other part of the read tool's output is
+an error result, not as data. The write tool's directory case is the same
+divergence: Node reports
+`EISDIR: illegal operation on a directory, open '<path>'` and the port keeps
+Go's os error. Every other part of the read tool's output is
 token-for-token: a generated corpus compares it over 16 cases (empty files,
 offsets and limits including fractional and out-of-range values, blank lines,
 CRLF, a BOM, invalid UTF-8, a >50 KB line, >2000 lines with the truncation

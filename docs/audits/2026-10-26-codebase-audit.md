@@ -773,6 +773,7 @@ at the closing checkpoint:
 | `coding/testdata/read-tool` | 16 | `core/tools/read.ts` (D279 excluded) |
 | `coding/testdata/edit-tool` | 11 | `core/tools/edit.ts` |
 | `coding/testdata/ls-tool` | 8 | `core/tools/ls.ts` |
+| `coding/testdata/write-tool` | 7 | `core/tools/write.ts` (D279 excluded) |
 
 Earlier corpora (`edit-diff-patch`, `edit-apply`, `truncate`, `js-numbers`,
 `overflow`, `parse-key`, Anthropic/OpenAI/Responses stream corpora) remain green.
@@ -1078,3 +1079,21 @@ and the missing-path and not-a-directory errors with their full text.
 All 8 matched on the first run, so this records coverage, not a finding.
 Regeneration is byte-identical; `go test -count=1 ./coding`, `just check`,
 `just cross` (six targets) and `just reference` pass.
+
+## Write-tool corpus
+
+`coding/testdata/write-tool/generate.mjs` runs the pinned `write.ts` definition
+over 7 cases, resetting the fixture files per case, and records the reply text
+and the written bytes; `TestWriteToolMatchesUpstream` recreates the fixture and
+compares both.
+
+Cases: creating a file, overwriting one, creating nested directories, empty
+content, CRLF content, content without a trailing newline, and non-ASCII text.
+All matched.
+
+A directory target is the D279 case: Node reports
+`EISDIR: illegal operation on a directory, open '<path>'` while the port keeps
+Go's os error, so it is pinned separately by `TestWriteToolDirectoryError`
+rather than in the parity corpus. Regeneration is byte-identical;
+`go test -count=1 ./coding`, `just check`, `just cross` (six targets) and
+`just reference` pass.
