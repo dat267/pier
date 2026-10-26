@@ -156,6 +156,57 @@ func (e *SessionEntry) MarshalJSON() ([]byte, error) {
 	if len(e.raw) > 0 {
 		return e.raw, nil
 	}
+	// The reference builds each entry as an object literal that spreads the
+	// base members (id, parentId, timestamp) over the type's own, so these four
+	// types carry their payload before or interleaved with the base members
+	// instead of after them (CR-073). Every other type matches the struct order
+	// and keeps the plain encoding below.
+	switch e.Type {
+	case "custom":
+		return marshalJSONNoEscape(struct {
+			Type       string          `json:"type"`
+			CustomType string          `json:"customType"`
+			Data       json.RawMessage `json:"data,omitempty"`
+			ID         string          `json:"id"`
+			ParentID   *string         `json:"parentId"`
+			Timestamp  string          `json:"timestamp"`
+		}{e.Type, e.CustomType, e.Data, e.ID, e.ParentID, e.Timestamp})
+	case "custom_message":
+		return marshalJSONNoEscape(struct {
+			Type       string          `json:"type"`
+			CustomType string          `json:"customType"`
+			Content    json.RawMessage `json:"content"`
+			Display    bool            `json:"display"`
+			Details    json.RawMessage `json:"details,omitempty"`
+			ID         string          `json:"id"`
+			ParentID   *string         `json:"parentId"`
+			Timestamp  string          `json:"timestamp"`
+		}{e.Type, e.CustomType, e.Content, e.Display != nil && *e.Display, e.Details, e.ID, e.ParentID, e.Timestamp})
+	case "branch_summary":
+		return marshalJSONNoEscape(struct {
+			Type      string          `json:"type"`
+			ID        string          `json:"id"`
+			ParentID  *string         `json:"parentId"`
+			Timestamp string          `json:"timestamp"`
+			FromID    string          `json:"fromId"`
+			Summary   string          `json:"summary"`
+			Details   json.RawMessage `json:"details,omitempty"`
+			Usage     *ai.Usage       `json:"usage,omitempty"`
+			FromHook  *bool           `json:"fromHook,omitempty"`
+		}{e.Type, e.ID, e.ParentID, e.Timestamp, e.FromID, e.Summary, e.Details, e.Usage, e.FromHook})
+	case "usage":
+		return marshalJSONNoEscape(struct {
+			Type      string    `json:"type"`
+			ID        string    `json:"id"`
+			ParentID  *string   `json:"parentId"`
+			Timestamp string    `json:"timestamp"`
+			Kind      string    `json:"kind"`
+			Provider  string    `json:"provider"`
+			Model     string    `json:"model"`
+			Usage     *ai.Usage `json:"usage"`
+			Note      *string   `json:"note,omitempty"`
+		}{e.Type, e.ID, e.ParentID, e.Timestamp, e.Kind, e.Provider, e.Model, e.Usage, e.Note})
+	}
 	type entryJSON SessionEntry
 	return marshalJSONNoEscape((*entryJSON)(e))
 }

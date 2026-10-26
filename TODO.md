@@ -1,10 +1,4 @@
 # Reproduced audit findings
 
 ## CR-072: P3 MCP output files are outside the scratch sweep D161 describes
-- Category and affected paths or functions: port divergence completeness, `coding/tempoutput.go` (`tempOutputPrefixes`, `isTempOutputName`) and `coding/mcptools.go` (`SaveMcpToTempFile`).
-- Scenario, expected behavior, actual behavior, and impact: a session that only writes MCP output grows the temp directory without bound, while the same volume of bash output is capped. D161 states that Pier sweeps its own truncated-output files to a 256 MB budget precisely because `/tmp` is often tmpfs and a single large file can sit there for days; MCP text and binary resource dumps are written by the same convention (`pi-mcp-<hex><ext>`) but never swept, and a sweep triggered by another tool skips them because the prefix list has no `pi-mcp-` entry and `isTempOutputName` also requires a `.log` suffix.
-- Evidence: a directory holding `pi-bash-aaa.log`, `pi-output-bbb.log`, `pi-mcp-ccc.txt` and `pi-mcp-ddd.png` swept with budget 0 removed only the two `.log` files: `removed=2 freed=2048 left=[pi-mcp-ccc.txt pi-mcp-ddd.png]`. `SaveMcpToTempFile` never calls `sweepTempOutputFiles`.
-- Authority: `docs/DIVERGENCES.md` D161 (the port's own invariant and its rationale), and pi v1.4.0 (`4a080252`) `utils/output-files.ts` for the file naming and `0o600` mode that pier already matches.
-- Root cause: the sweep's prefix list and its `.log` suffix test were written for the tool-output producers only.
-- Repair plan and required decision: add the `pi-mcp-` prefix (matched for any extension) and call the sweep after `SaveMcpToTempFile` writes. This widens D161 deliberately — it lets pier delete MCP output files the model was told about, exactly as it already does for bash output — so it needs agreement before patching, together with the D161 text update.
-- Verification after approval: sweep regression covering `pi-mcp-<hex>.txt` and `.png` plus the bash/`pi-output` controls, MCP tool tests, full package and project gates.
+- Recorded earlier this window; repair awaits a decision on widening D161 (it lets pier delete MCP output files the model was told about). No code change yet.

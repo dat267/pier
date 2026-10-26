@@ -1,6 +1,7 @@
 // Run from the repository root: node --experimental-strip-types coding/testdata/gen_json_events.mjs
 // Reference: pi v1.4.0 modes/json-event.ts. Output is label => JSON.stringify(event).
 import { toJsonEvent } from '../../pi/packages/coding-agent/src/modes/json-event.ts';
+import { SessionManager } from '../../pi/packages/coding-agent/src/core/session-manager.ts';
 const usage = {input:0,output:0,cacheRead:0,cacheWrite:0,totalTokens:0,cost:{input:0,output:0,cacheRead:0,cacheWrite:0,total:0}};
 const message = {role:'assistant',content:[],api:'openai-responses',provider:'openai',model:'mock',usage,stopReason:'stop',timestamp:1};
 const call = {type:'toolCall',id:'c',name:'read',arguments:{z:1,a:2}};
@@ -20,7 +21,13 @@ for(const type of ['start','text_start','text_delta','text_end','thinking_start'
 }
 const result = {content:[{type:'text',text:'ok'},{type:'image',data:'AA==',mimeType:'image/png'}],details:{z:1,a:2},usage,isError:true,terminate:true};
 const compaction = {summary:'summary',firstKeptEntryId:'e',tokensBefore:10,estimatedTokensAfter:2,usage,details:{z:1,a:2}};
-const entry = {type:'custom',id:'e',parentId:null,timestamp:'2026-01-01T00:00:00Z',customType:'test',data:{z:1,a:2}};
+// The entry shape comes from the pinned builder, so its member order is the
+// reference's rather than a hand-written literal (CR-073).
+const entryManager = SessionManager.inMemory('/work');
+const entry = entryManager.getEntry(entryManager.appendCustomEntry('test', { z: 1, a: 2 }));
+entry.id = 'e';
+entry.parentId = null;
+entry.timestamp = '2026-01-01T00:00:00Z';
 for(const event of [
  {type:'agent_start'}, {type:'agent_end',messages:[],willRetry:false},
  {type:'agent_settled',aborted:false}, {type:'turn_start'},

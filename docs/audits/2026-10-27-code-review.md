@@ -468,3 +468,40 @@ reports `2026-10-26T20:00:18.322Z` and
 `2026-10-26T20-00-18-322Z_<id>.jsonl`; `just check`, `just cross` (six targets),
 `just reference`, all 15 interactive golden families and the 65 offline corpora
 are unchanged and byte-identical.
+
+## CR-073: P2 appended session entries used the wrong member order (fixed)
+
+Reference: read-only pi v1.4.0 (`4a080252`), `core/session-manager.ts`.
+Each entry type is built as an object literal that spreads the base members
+(`id`, `parentId`, `timestamp`) over the type's own, so the persisted JSONL
+key order differs per type. Pier encoded one struct for every type, which put
+the base members first in all of them. Session JSONL is supposed to be
+byte-parity, so `custom`, `custom_message`, `branch_summary` and `usage`
+entries that Pier appended did not match what the pin writes.
+
+Reproduced by running one 14-entry scenario through the pinned `SessionManager`
+and through the port: `custom` wrote `customType`/`data` last instead of second,
+`custom_message` wrote `details` ahead of `customType`/`content`/`display` and
+all of them after the base members, `branch_summary` wrote `summary` before
+`fromId`, and `usage` wrote `provider`/`usage` ahead of `kind`/`model`. Loaded
+lines were never affected, because they re-emit their retained bytes, so only
+the append path diverged. A second pinned probe pinned the optional-member
+rules: `data`, `details`, `note` and `usage` disappear when absent, while
+`display` and `fromHook` are always written.
+
+`TestAppendedEntryKeyOrderMatchesReference` failed on all four types and now
+asserts their exact key order plus the optional-member rules. `SessionEntry`
+encodes those four types explicitly in the reference's order and leaves every
+other type (and the retained-line path) on the existing encoder.
+
+The change also exposed a hand-written fixture: `coding/testdata/gen_json_events.mjs`
+built its `entry_appended` entry as a literal, so the golden encoded the port's
+struct order rather than the pin's. The generator now creates the entry with the
+pinned `SessionManager.appendCustomEntry` and only overrides `id`, `parentId`
+and `timestamp` in place, so the fixture follows the reference. The regenerated
+golden differs in that one line.
+
+Verification: `go test -count=1 ./coding` passed; the 15-row shape differential
+now matches the pin for every entry type; `just check`, `just cross` (six
+targets), `just reference`, all 15 interactive golden families and the 65
+offline corpora are unchanged.
