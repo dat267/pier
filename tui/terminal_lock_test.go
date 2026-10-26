@@ -10,8 +10,8 @@ import (
 // TestTerminalInputHandlerNotHeldUnderLock:
 // the terminal must not hold a lock while delivering input to the handler,
 // because the handler (the renderer) may write back to the terminal. The
-// legacy delivery path runs the handler with no terminal lock held; the raw
-// path never touches a lock on delivery at all.
+// legacy and raw delivery paths invoke callbacks outside the reader-admission
+// mutex, which only protects reader lifetime across Start/Stop.
 func TestTerminalInputHandlerNotHeldUnderLock(t *testing.T) {
 	inR, inW, err := os.Pipe()
 	if err != nil {

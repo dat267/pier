@@ -104,7 +104,11 @@ with historical measurements retained to explain the design.
 - **Terminal producers.** A raw-capable terminal posts stdin chunks on
   `loopRawInputs` (cap 256); the loop feeds the input buffer and dispatches
   complete sequences. Other terminals post sequences on `loopInputs` (cap
-  256). The resize watcher posts to `loopResizes` (cap 1); the lifecycle's
+  256). One admitted stdin reader survives temporary stop/start cycles when
+  still in a blocking read; it relinquishes ownership if that read finishes
+  while stopped. Restart publishes a fresh legacy buffer and reopens input
+  (D50); read/parse/callback work stays outside the reader-admission mutex.
+  The resize watcher posts to `loopResizes` (cap 1); the lifecycle's
   signal handlers post to `loopSignals` (cap 4, non-blocking so shutdown
   signals coalesce). `Renderer.EnableLoopInput` (wired
   in `App.newLoopTui`, so renderer swaps keep it) stops the renderer from

@@ -148,8 +148,10 @@ type RawInputTerminal interface {
 // The interactive consumer (the UI loop) owns input — it feeds raw
 // bytes through FeedInput and drives flushing via NextInputFlushDeadline /
 // FlushPendingInput, so the stdin buffer and the keyboard-protocol
-// negotiation state are loop-owned and lock-free. The protocol flags are
-// atomics. writeMu serializes raw-mode transitions and the ordering of
+// negotiation state are loop-owned and lock-free. stdinReaderMu only gates
+// reader admission/exit across restarts; it never retains a lock over a read,
+// parsing or a callback. The protocol flags are atomics. writeMu serializes
+// raw-mode transitions and the ordering of
 // enqueued mode sequences between the progress keepalive goroutine, the loop
 // and the shutdown path — it never holds a console write. Output itself runs
 // on the writer goroutine (writesMu), so no caller blocks on the console.
@@ -165,7 +167,7 @@ type ProcessTerminal struct {
 	modifyOtherKeysActive             atomic.Bool
 	keyboardProtocolPushed            atomic.Bool
 	closed                            atomic.Bool
-	useRawInput                       bool
+	useRawInput                       atomic.Bool
 	keyboardProtocolNegotiationBuffer string
 	negotiationDeadline               time.Time
 	// programStatus is the latest OSC 7501 status, kept so a restart reports it again.
@@ -179,9 +181,15 @@ type ProcessTerminal struct {
 	// sentinel yet.
 	programStatusQueryPending bool
 	stdinBuffer               *StdinBuffer
-	progressInterval          *time.Ticker
-	progressDone              chan struct{}
-	writeLogPath              string
+	// stdinReaderMu only serializes reader admission/exit with Start. Blocking
+	// reads, parsing and callbacks run outside it. A stopped reader may still
+	// be inside Read; Start reuses it rather than competing for the same fd.
+	stdinReaderMu      sync.Mutex
+	stdinReaderRunning bool
+	legacyStdinBuffer  atomic.Pointer[StdinBuffer]
+	progressInterval   *time.Ticker
+	progressDone       chan struct{}
+	writeLogPath       string
 
 	// Console writes run on a dedicated goroutine (writesMu/writes/writesCond).
 	// The UI loop must never make a console write itself: on Windows the
@@ -271,7 +279,7 @@ func (t *ProcessTerminal) ModifyOtherKeysActive() bool {
 // the UI loop — feeds them through FeedInput), instead of reassembling
 // sequences on a reader goroutine. Call before Start.
 func (t *ProcessTerminal) EnableRawInput() {
-	t.useRawInput = true
+	t.useRawInput.Store(true)
 }
 
 // Start enables raw mode, bracketed paste, and the keyboard protocol query.
@@ -302,49 +310,62 @@ func (t *ProcessTerminal) Start(onInput func(data string), onResize func()) {
 		})
 	}
 
-	if t.useRawInput {
-		// The reader forwards raw chunks to the input handler (the UI loop);
-		// the loop reassembles them through FeedInput on the loop goroutine.
+	if t.useRawInput.Load() {
+		// The loop owns reassembly; the reader only forwards owned raw chunks.
 		t.stdinBuffer = NewStdinBuffer(StdinBufferOptions{EscapeTimeout: ResolveEscapeTimeoutMs(os.Getenv)})
-		go t.readRawStdin()
 	} else {
-		// Legacy (library) mode: reassemble sequences on the reader goroutine.
+		// Legacy library consumers reassemble on the one stdin reader.
 		t.setupLegacyStdinBuffer()
 	}
+	t.stdinReaderMu.Lock()
+	t.closed.Store(false)
+	if !t.stdinReaderRunning {
+		t.stdinReaderRunning = true
+		go t.readStdin()
+	}
+	t.stdinReaderMu.Unlock()
 
 	// Query Kitty keyboard protocol; fall back to modifyOtherKeys when the DA
 	// sentinel confirms no Kitty response.
 	t.queryAndEnableKittyProtocol()
 }
 
-// readRawStdin reads stdin and forwards raw chunks to the input handler
-// until the terminal closes. The handler decides where the bytes go (the UI
-// loop posts them to its input channel); muting is done by swapping the
-// handler to nil (DrainInput).
-func (t *ProcessTerminal) readRawStdin() {
+// readStdin is the sole reader until EOF or until a read finishes while stopped.
+// Stop cannot interrupt a console Read (D50); a restart reuses an in-flight
+// reader, or starts another only after the previous reader has relinquished it.
+func (t *ProcessTerminal) readStdin() {
 	buf := make([]byte, 4096)
 	for {
 		n, err := t.stdin.Read(buf)
+		t.stdinReaderMu.Lock()
 		if t.closed.Load() {
+			t.stdinReaderRunning = false
+			t.stdinReaderMu.Unlock()
 			return
 		}
+		t.stdinReaderMu.Unlock()
 		if n > 0 {
-			t.lastInputAt.Store(time.Now().UnixNano())
-			if handler := t.loadInputHandler(); handler != nil {
-				data := make([]byte, n)
-				copy(data, buf[:n])
-				handler(string(data))
+			data := append([]byte(nil), buf[:n]...)
+			if t.useRawInput.Load() {
+				t.lastInputAt.Store(time.Now().UnixNano())
+				if handler := t.loadInputHandler(); handler != nil {
+					handler(string(data))
+				}
+			} else if buffer := t.legacyStdinBuffer.Load(); buffer != nil {
+				buffer.Process(data)
 			}
 		}
 		if err != nil {
+			t.stdinReaderMu.Lock()
+			t.stdinReaderRunning = false
+			t.stdinReaderMu.Unlock()
 			return
 		}
 	}
 }
 
-// setupLegacyStdinBuffer reads stdin and forwards complete sequences (the
-// legacy path, kept for library consumers whose Terminal is not driven by
-// a UI loop).
+// setupLegacyStdinBuffer publishes fresh sequence reassembly for library
+// consumers whose terminal input is not driven by a UI loop.
 func (t *ProcessTerminal) setupLegacyStdinBuffer() {
 	t.stdinBuffer = NewStdinBuffer(StdinBufferOptions{EscapeTimeout: ResolveEscapeTimeoutMs(os.Getenv)})
 	t.stdinBuffer.OnData = func(sequence string) {
@@ -373,26 +394,7 @@ func (t *ProcessTerminal) setupLegacyStdinBuffer() {
 		}
 	}
 
-	// Pipe stdin data through the buffer.
-	go func() {
-		buf := make([]byte, 4096)
-		for {
-			n, err := t.stdin.Read(buf)
-			if t.closed.Load() {
-				return
-			}
-			if n > 0 {
-				if buffer := t.stdinBuffer; buffer != nil {
-					data := make([]byte, n)
-					copy(data, buf[:n])
-					buffer.Process(data)
-				}
-			}
-			if err != nil {
-				return
-			}
-		}
-	}()
+	t.legacyStdinBuffer.Store(t.stdinBuffer)
 }
 
 // FeedInput feeds raw stdin bytes through the input buffer on the consumer

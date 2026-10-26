@@ -1402,3 +1402,37 @@ Reference: pi v1.4.0 (`4a080252`), `interactive-mode.ts`
 `getLoginProviderOptions`/`getLogoutProviderOptions`, and
 `components/oauth-selector.ts` `formatAuthSelectorProviderType`/
 `formatAuthSelectorProviderStatus`.
+
+## CR-053: terminal restart permanently dropped keyboard input (fixed)
+
+`ProcessTerminal.Stop` set `closed=true`, but `Start` never reopened input.
+`FeedInput` consequently returned nil forever; the library-mode pipe reader
+dropped the next bytes and exited. `Lifecycle.SwitchTuiMode` and renderer
+stop/start reuse this terminal, so this is a supported renderer-mode and
+suspend/resume failure, not an impossible manually closed object.
+
+Red-first command: `go test -count=1 ./tui -run '^TestProcessTerminalReopens'`.
+The raw test failed with `restarted input = [], want [b]`; the real pipe test
+failed with `restarted input was not delivered`. Both verify fresh `a` first;
+the raw test also checks that stopped input is still rejected.
+
+The repair reopens only after the replacement input state is ready. Clearing
+just the flag would leave an old blocking reader competing with a new reader
+spawned by Start, so admission and stopped-reader exit now share one narrow
+I/O mutex. Start reuses an in-flight reader, or launches another after the old
+reader relinquishes it. Blocking reads, parsing and callbacks retain no mutex.
+The raw buffer remains loop-owned; fresh legacy buffers are atomically
+published to the reader. This preserves D50's inability to synchronously pause
+a Go console read, without leaving multiple readers across restarts.
+
+`TestProcessTerminalCanRestartFromLegacyInputCallback` also verifies reentrant
+stop/start and that an old partial CSI cannot contaminate the replacement
+buffer. The three restart tests pass for 30 consecutive runs. No terminal or
+signal outside the disposable input pipes is used by these regressions.
+
+Verification: affected `./tui ./coding/interactive`, `just check` with a fresh
+`PIER_TEST_BIN`, repeated affected tests (`-count=2`), `just cross` (six targets),
+`just reference` and `git diff --check` pass. The race gate remains for CI.
+Reference: pi v1.4.0 (`4a080252`), `packages/tui/src/terminal.ts` `start`/`stop`;
+call chain `Lifecycle.SwitchTuiMode`, `Renderer.Start`/`Stop`. D50 and the lock
+inventory now explain the retained reader-admission mutex and buffer ownership.

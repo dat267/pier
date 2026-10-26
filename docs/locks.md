@@ -112,6 +112,7 @@ own mutex, so no UI lock or off-loop path is introduced.
 | Lock | Where | Protects | Retirement |
 |---|---|---|---|
 | `Renderer.postMu` | `tui/render.go` | the posted-callback queue (`Post` is called from off-loop goroutines: loaders, watchers) | **retained**: serializes the handoff only; the owner drains it in the render pass and never runs a callback under it |
+| `ProcessTerminal.stdinReaderMu` | `tui/terminal.go` | stdin-reader admission and exit across terminal restarts | **retained**: I/O lifetime handoff only; reads, buffer parsing and callbacks run outside it. Restart reuses an in-flight reader or starts another after the old reader relinquishes ownership; the legacy buffer is atomically published |
 | `ProcessTerminal.writeMu` | `tui/terminal.go` | terminal writes, raw-mode transitions, Kitty negotiation bookkeeping shared with the reader | **retained**: not UI state |
 | `ProcessTerminal.writesMu` | `tui/terminal.go` | the console-write FIFO, byte backlog counters, open-frame buffer, deferred metadata hints and cancellation-aware optional-admission waiters (`Write` appends essential output in submission order; a dedicated goroutine drains it) | **retained**: off-loop writer; the UI loop never writes to the console itself |
 | `resizeWatcherMu` | `tui/terminal_windows.go` | the Windows console-resize poller's stop/done channels | **retained**: the poller runs off the loop |
