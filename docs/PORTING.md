@@ -73,6 +73,10 @@ transports; cyclic-argument regressions cover both progress and plain calls.
 OpenAI-compatible streamed error checks also treat negative zero as falsy,
 matching the pinned SDK; source-generated cases cover negative zero, positive
 zero and negative nonzero controls.
+The typed RPC client bounds one command round trip even when the child stops
+reading its stdin: one writer is admitted at a time and both admission and the
+response wait observe `RequestTimeout`, while a writer finishing after a restart
+cannot affect the replacement process (`modes/rpc/rpc-client.ts`, `send`).
 
 Session aborts now retain cancellation across retry startup, backoff and
 continuations, and `agent_settled.aborted` reports the run's abort flag rather

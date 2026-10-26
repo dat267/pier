@@ -200,7 +200,9 @@ type RpcClient struct {
 	listenerSeq int
 	stderr      strings.Builder
 
-	writeMu sync.Mutex
+	// writeSlot admits one writer worker. Callers waiting for admission or a
+	// response retain their request timeout even if the child stops reading.
+	writeSlot chan struct{}
 
 	// sendFunc replaces the process transport in tests, like upstream's
 	// overridable send.
@@ -215,7 +217,7 @@ type eventListener struct {
 
 // New returns a client for the given options.
 func New(options Options) *RpcClient {
-	return &RpcClient{options: options, pending: map[string]*pendingRequest{}}
+	return &RpcClient{options: options, pending: map[string]*pendingRequest{}, writeSlot: make(chan struct{}, 1)}
 }
 
 // Stderr returns the child's collected stderr output.
@@ -499,6 +501,7 @@ func (c *RpcClient) send(command map[string]any) (*response, error) {
 		return nil, errors.New("Client not started")
 	}
 	stdin := c.stdin
+	processDone := c.processDone
 	if stdin == nil {
 		c.mu.Unlock()
 		return nil, errors.New("Client not started")
@@ -518,6 +521,14 @@ func (c *RpcClient) send(command map[string]any) (*response, error) {
 	c.pending[id] = request
 	c.mu.Unlock()
 
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	timedOut := func() (*response, error) {
+		c.mu.Lock()
+		delete(c.pending, id)
+		c.mu.Unlock()
+		return nil, fmt.Errorf("Timeout waiting for response to %s. Stderr: %s", commandName, c.Stderr())
+	}
 	full := make(map[string]any, len(command)+1)
 	for key, value := range command {
 		full[key] = value
@@ -530,29 +541,42 @@ func (c *RpcClient) send(command map[string]any) (*response, error) {
 		c.mu.Unlock()
 		return nil, err
 	}
-	c.writeMu.Lock()
-	_, err = stdin.Write(append(encoded, '\n'))
-	c.writeMu.Unlock()
-	if err != nil {
-		writeErr := fmt.Errorf("Agent process stdin error: %v. Stderr: %s", err, c.Stderr())
-		c.mu.Lock()
-		delete(c.pending, id)
-		c.exitErr = writeErr
-		c.mu.Unlock()
-		return nil, writeErr
+	select {
+	case c.writeSlot <- struct{}{}:
+	case <-request.done:
+		return request.response, request.err
+	case <-timer.C:
+		return timedOut()
 	}
+	go func() {
+		defer func() { <-c.writeSlot }()
+		data := append(encoded, '\n')
+		n, err := stdin.Write(data)
+		if err == nil && n != len(data) {
+			err = io.ErrShortWrite
+		}
+		if err != nil {
+			writeErr := fmt.Errorf("Agent process stdin error: %v. Stderr: %s", err, c.Stderr())
+			c.mu.Lock()
+			// A stopped process's writer may finish after a restart. It must
+			// never poison the replacement's connection or pending requests.
+			if c.processDone == processDone {
+				c.exitErr = writeErr
+				if c.pending[id] == request {
+					delete(c.pending, id)
+					request.err = writeErr
+					close(request.done)
+				}
+			}
+			c.mu.Unlock()
+		}
+	}()
 
 	select {
 	case <-request.done:
-		if request.err != nil {
-			return nil, request.err
-		}
-		return request.response, nil
-	case <-time.After(timeout):
-		c.mu.Lock()
-		delete(c.pending, id)
-		c.mu.Unlock()
-		return nil, fmt.Errorf("Timeout waiting for response to %s. Stderr: %s", commandName, c.Stderr())
+		return request.response, request.err
+	case <-timer.C:
+		return timedOut()
 	}
 }
 

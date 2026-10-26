@@ -208,3 +208,30 @@ minus, preserving negative nonzero truthiness.
 
 Verification: `go test -count=1 ./ai` passed; regenerating the 20-case corpus
 through the pinned source and SDK produced byte-identical fixture output.
+
+## CR-067: P2 RPC client request timeout did not bound blocked stdin writes (fixed)
+
+Reference: read-only pi v1.4.0 (`4a080252`),
+`packages/coding-agent/src/modes/rpc/rpc-client.ts`, `send` arms the response
+timeout before Node's non-blocking stdin write. In Go the write is a blocking
+syscall, and Pier performed it before starting the timeout select, so a child
+that stops reading its stdin left the caller blocked past `RequestTimeout`
+indefinitely. `DefaultRequestTimeout` documents that it bounds one command
+round trip.
+
+`TestClientRequestTimeoutIncludesBlockedStdinWrite` uses a disposable peer that
+signals readiness and never reads, with a 256 KiB prompt and a 100 ms timeout.
+Before the repair it failed the 2 s hang guard. The same probe hung for 30 s
+(exit 124) against the pre-fix build, while post-fix it reports
+`blocked_write_timeout=true`. Writes now run on one admitted writer whose slot
+wait and response wait both observe the request timer, and a writer that
+finishes after a restart is generation-checked so it cannot set `exitErr` or
+resolve a pending request belonging to the replacement process. No unbounded
+writer queue was added: at most one write is admitted at a time, in FIFO
+request order.
+
+Verification: the probe also covers a second request queued behind the blocked
+writer (`queued_write_timeout=true`) and a restart whose state call succeeds
+(`restart_error=<nil> session="restarted"`). Focused RPC tests passed with
+`-count=20`; `go test -count=2 ./coding/rpcclient`, `just check`, `just cross`
+(six targets) and `just reference` passed.
