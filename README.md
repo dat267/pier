@@ -31,8 +31,9 @@ Install from source with `just install`, or download a release asset and its
 Verify the checksum with `sha256sum` or `Get-FileHash` before installing.
 Assets cover Linux (amd64 and arm64), Android (arm64), Windows (amd64 and
 arm64), and macOS (amd64 and arm64). Run `pier update` to update an existing
-installation on each platform. macOS release binaries are unsigned, so a
-browser-downloaded copy may need `xattr -d com.apple.quarantine` before it runs.
+installation on each platform. macOS release binaries are ad-hoc signed but
+not notarized, so a browser-downloaded copy may still need
+`xattr -d com.apple.quarantine` before it runs.
 
 ## Use
 
