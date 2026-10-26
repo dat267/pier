@@ -1,0 +1,137 @@
+[
+  {
+    "name": "simple",
+    "args": {
+      "pattern": "alpha"
+    },
+    "expected": {
+      "text": "sub/c.txt:1: deep alpha\na.txt:1: alpha one\na.txt:3: alpha three",
+      "details": null
+    }
+  },
+  {
+    "name": "literal",
+    "args": {
+      "pattern": "a.b",
+      "literal": true
+    },
+    "expected": {
+      "text": "c.txt:1: a.b",
+      "details": null
+    }
+  },
+  {
+    "name": "ignore-case",
+    "args": {
+      "pattern": "ALPHA",
+      "ignoreCase": true
+    },
+    "expected": {
+      "text": "sub/c.txt:1: deep alpha\na.txt:1: alpha one\na.txt:3: alpha three",
+      "details": null
+    }
+  },
+  {
+    "name": "glob",
+    "args": {
+      "pattern": "alpha",
+      "glob": "b.txt"
+    },
+    "expected": {
+      "text": "No matches found",
+      "details": null
+    }
+  },
+  {
+    "name": "path-file",
+    "args": {
+      "pattern": "alpha",
+      "path": "a.txt"
+    },
+    "expected": {
+      "text": "a.txt:1: alpha one\na.txt:3: alpha three",
+      "details": null
+    }
+  },
+  {
+    "name": "path-subdir",
+    "args": {
+      "pattern": "alpha",
+      "path": "sub"
+    },
+    "expected": {
+      "text": "c.txt:1: deep alpha",
+      "details": null
+    }
+  },
+  {
+    "name": "context",
+    "args": {
+      "pattern": "beta two",
+      "context": 1
+    },
+    "expected": {
+      "text": "a.txt-1- alpha one\na.txt:2: beta two\na.txt-3- alpha three",
+      "details": null
+    }
+  },
+  {
+    "name": "fractional-context",
+    "args": {
+      "pattern": "beta two",
+      "context": 0.5
+    },
+    "expected": {
+      "text": "a.txt-1.5- \na.txt-2.5- ",
+      "details": null
+    }
+  },
+  {
+    "name": "limit",
+    "args": {
+      "pattern": "match",
+      "limit": 3
+    },
+    "expected": {
+      "text": "many.txt:1: match 1\nmany.txt:2: match 2\nmany.txt:3: match 3\n\n[3 matches limit reached. Use limit=6 for more, or refine pattern]",
+      "details": {
+        "matchLimitReached": 3
+      }
+    }
+  },
+  {
+    "name": "fractional-limit",
+    "args": {
+      "pattern": "alpha",
+      "limit": 1.5
+    },
+    "expected": {
+      "text": "sub/c.txt:1: deep alpha\na.txt:1: alpha one\n\n[1.5 matches limit reached. Use limit=3 for more, or refine pattern]",
+      "details": {
+        "matchLimitReached": 1.5
+      }
+    }
+  },
+  {
+    "name": "long-line",
+    "args": {
+      "pattern": "NEEDLE"
+    },
+    "expected": {
+      "text": "long.txt:1: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx... [truncated]\n\n[Some lines truncated to 500 chars. Use read tool to see full lines]",
+      "details": {
+        "linesTruncated": true
+      }
+    }
+  },
+  {
+    "name": "missing-path",
+    "args": {
+      "pattern": "alpha",
+      "path": "nope"
+    },
+    "expected": {
+      "error": "Path not found: <dir>/nope"
+    }
+  }
+]

@@ -774,6 +774,7 @@ at the closing checkpoint:
 | `coding/testdata/edit-tool` | 11 | `core/tools/edit.ts` |
 | `coding/testdata/ls-tool` | 8 | `core/tools/ls.ts` |
 | `coding/testdata/write-tool` | 7 | `core/tools/write.ts` (D279 excluded) |
+| `coding/testdata/grep-tool` | 12 | `core/tools/grep.ts` |
 
 Earlier corpora (`edit-diff-patch`, `edit-apply`, `truncate`, `js-numbers`,
 `overflow`, `parse-key`, Anthropic/OpenAI/Responses stream corpora) remain green.
@@ -1095,5 +1096,22 @@ A directory target is the D279 case: Node reports
 `EISDIR: illegal operation on a directory, open '<path>'` while the port keeps
 Go's os error, so it is pinned separately by `TestWriteToolDirectoryError`
 rather than in the parity corpus. Regeneration is byte-identical;
+`go test -count=1 ./coding`, `just check`, `just cross` (six targets) and
+`just reference` pass.
+
+## Grep-tool corpus
+
+`coding/testdata/grep-tool/generate.mjs` runs the pinned `grep.ts` definition
+with real ripgrep over one fixture tree; `TestGrepToolMatchesUpstream` recreates
+the tree and compares result text and details.
+
+Cases: matches across directories in ripgrep's traversal order, a file path, a
+subdirectory path, literal (metacharacter) search, case-insensitive search, a
+glob filter that matches nothing, context lines and fractional context, integer
+and fractional limits with their notices, a 600-character line (truncation
+notice), many matches, and the missing-path error.
+
+All 12 matched on the first run. The corpus uses the installed `rg`; the suite
+skips when ripgrep is unavailable. Regeneration is byte-identical;
 `go test -count=1 ./coding`, `just check`, `just cross` (six targets) and
 `just reference` pass.

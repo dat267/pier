@@ -417,6 +417,11 @@ mutation and durable goal-record appends are serialized together; parallel
 `set_goal` calls cannot corrupt the replay log by interleaving clear/create
 entries. Host callbacks and model work remain outside the state lock.
 
+The grep tool is pinned by a 12-case corpus running real ripgrep over a shared
+fixture: matches across directories and a file path, literal and case-insensitive
+searches, a glob filter, context and fractional context, integer and fractional
+limits, long-line truncation, and the missing-path error.
+
 The write tool is pinned by a 7-case corpus: creating a file, overwriting one,
 creating nested directories, empty content, CRLF, content without a trailing
 newline, and non-ASCII text, comparing both the reply text and the written
