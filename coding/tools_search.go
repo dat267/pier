@@ -112,6 +112,9 @@ func CreateFindTool(cwd string) agent.AgentTool {
 
 			fdPath, err := exec.LookPath("fd")
 			if err != nil {
+				fdPath, err = exec.LookPath("fdfind")
+			}
+			if err != nil {
 				return agent.AgentToolResult{}, fmt.Errorf("fd is not available and could not be downloaded")
 			}
 			if ctxErrOf(ctx) != nil {

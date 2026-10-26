@@ -381,6 +381,11 @@ reply is absent. The pinned `agent-session.ts` method generates a nine-case
 corpus, also checked through `get_last_assistant_text` RPC responses; normal
 text, block joins and aborted/non-text message selection remain controls.
 
+The find tool checks both `fd` and `fdfind` on PATH, preferring `fd`, matching
+`utils/tools-manager.ts`. This supports Debian/Ubuntu's alternative executable
+name without installing or downloading anything. Automatic downloads remain
+out of scope.
+
 Bash display truncation now measures its rolling buffer in JavaScript string
 length (UTF-16 code units) rather than UTF-8 bytes, matching
 `core/bash-executor.ts`'s `outputBytes += text.length`. Multibyte output between

@@ -260,3 +260,29 @@ Only an injected fetch is used; no external HTTP or real tokens.
 
 Verification: focused test passes 20 repetitions; all mcp tests, coding MCP
 tests, `just check`, `just cross` (six targets), `just reference` pass.
+
+## CR-029, P2: find ignored an installed fdfind executable (fixed)
+
+Authority: pi v1.4.0 `core/tools/find.ts` uses `ensureTool("fd")`, whose
+`utils/tools-manager.ts` lookup tries system names `fd`, then `fdfind`.
+Debian/Ubuntu commonly install the latter name alone. Pier looked up only fd,
+so find failed despite a supported installed binary.
+
+Repair: fall back to `exec.LookPath("fdfind")` when fd lookup fails. Existing
+fd preference and missing-tool diagnostics stay unchanged; no download or
+installation behavior was introduced.
+
+```sh
+go test -count=1 ./coding -run '^TestFindToolUsesFdfindWhenFDUnavailable$'
+```
+
+Observed red: fdfind-only PATH returned `fd is not available and could not be
+downloaded`; a both-name control already preferred fd. Both now pass. A source
+probe executed actual find/discovery code with a temporary fdfind-only PATH and
+PI_OFFLINE=1; it returned the stub's fixture path. Only unused renderer/wrapper
+modules were replaced to avoid an uncached Markdown package, not find or tool
+lookup. Probe HOME/agent directory were disposable; no dependency was installed.
+
+Verification: find/grep tests, all coding tests, `just check`, `just cross`
+(all six targets), `just reference` pass. POSIX test stubs skip on Windows;
+production lookup is platform-neutral. No local race run.
