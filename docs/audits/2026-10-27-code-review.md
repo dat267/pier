@@ -62,3 +62,26 @@ The test checks both live projection and persisted reopen.
 
 Verification: `go test -count=1 ./coding` passed; the original probe now retains
 two messages with the remapped target, matching the pin.
+
+## CR-059: P2 omitted responses made context usage falsely known (fixed)
+
+Reference: read-only pi v1.4.0 (`4a080252`),
+`packages/coding-agent/src/core/agent-session.ts`, `getContextUsage`.
+After compaction, the reference establishes known context usage only from a
+projected assistant after that compaction. Pier checked raw entries instead,
+so omitting the only valid post-compaction response still made footer/stats
+usage appear known. A public-session probe reported 2 tokens after omission;
+executing the pinned method with its actual projection/estimation dependencies
+reported null tokens and percent. Both controls reported 105 tokens first.
+
+`TestContextUsageUnknownAfterOmittingPostCompactionResponse` failed on the
+unknown-usage assertion before the repair. The branch-position check now uses
+usage-bearing projected assistant IDs, as the reference does. The regression
+also checks that another projected response restores known usage.
+
+Verification: `go test -count=1 ./coding -run
+'TestContextUsage|TestSession.*(Stats|Usage)|TestProjectedContext|TestContextEdit|Test.*Compaction'`
+passed. The original public-session probe now reports null tokens/percent after
+omission, matching the pinned method. The reference method was extracted
+unchanged because directly importing its full class hits an unrelated cached
+package's missing `setImageTranscoder` export; no reference files were edited.

@@ -966,24 +966,20 @@ func (s *AgentSession) GetContextUsage() *ContextUsageReport {
 				compactionIndex = index
 			}
 		}
+		projectedAssistants := map[string]bool{}
+		for _, entry := range s.Sessions.ProjectedEntries() {
+			for _, message := range entry.Messages {
+				assistant, ok := message.(*ai.AssistantMessage)
+				if ok && assistant.StopReason != ai.StopAborted && assistant.StopReason != ai.StopError &&
+					ai.CalculateContextTokens(assistant.Usage) > 0 {
+					projectedAssistants[entry.Source.ID] = true
+					break
+				}
+			}
+		}
 		hasPostCompactionUsage := false
 		for index := len(branch) - 1; index > compactionIndex; index-- {
-			entry := branch[index]
-			if entry.Type != "message" {
-				continue
-			}
-			message, err := ai.UnmarshalMessage(entry.Message)
-			if err != nil {
-				continue
-			}
-			assistant, ok := message.(*ai.AssistantMessage)
-			if !ok {
-				continue
-			}
-			if assistant.StopReason == ai.StopAborted || assistant.StopReason == ai.StopError {
-				continue
-			}
-			if ai.CalculateContextTokens(assistant.Usage) > 0 {
+			if projectedAssistants[branch[index].ID] {
 				hasPostCompactionUsage = true
 				break
 			}

@@ -55,6 +55,9 @@ forks do not lose their kept context window. A
 public-manager regression covers in-memory forks and persisted reopen. Persisted
 branch headers snapshot the source file as `parentSession` rather than aliasing
 the newly replaced session-file field; a reopen regression checks ancestry.
+Context usage stays unknown after compaction when all later usage-bearing
+assistants are omitted from the projection, matching `core/agent-session.ts`
+`getContextUsage`; a regression checks omission and a later valid response.
 
 Session aborts now retain cancellation across retry startup, backoff and
 continuations, and `agent_settled.aborted` reports the run's abort flag rather
