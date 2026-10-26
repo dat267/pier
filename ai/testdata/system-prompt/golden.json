@@ -1,0 +1,404 @@
+{
+  "render": [
+    {
+      "name": "text-string",
+      "message": {
+        "role": "system",
+        "content": "base prompt",
+        "timestamp": 1
+      },
+      "expected": "base prompt"
+    },
+    {
+      "name": "text-blocks",
+      "message": {
+        "role": "system",
+        "content": [
+          {
+            "type": "text",
+            "text": "one"
+          },
+          {
+            "type": "image",
+            "data": "aW1n",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "two"
+          }
+        ],
+        "timestamp": 1
+      },
+      "expected": "one\ntwo"
+    },
+    {
+      "name": "text-sections",
+      "message": {
+        "role": "system",
+        "content": "base",
+        "timestamp": 1,
+        "sections": {
+          "alpha": "A",
+          "beta": "B"
+        }
+      },
+      "expected": "base\n\nA\n\nB"
+    },
+    {
+      "name": "text-null-section",
+      "message": {
+        "role": "system",
+        "content": "base",
+        "timestamp": 1,
+        "sections": {
+          "alpha": "A",
+          "beta": null
+        }
+      },
+      "expected": "base\n\nA"
+    },
+    {
+      "name": "text-empty",
+      "message": {
+        "role": "system",
+        "content": "",
+        "timestamp": 1
+      },
+      "expected": ""
+    },
+    {
+      "name": "text-empty-and-empty-section",
+      "message": {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "sections": {
+          "alpha": "",
+          "beta": "B"
+        }
+      },
+      "expected": "B"
+    }
+  ],
+  "update": [
+    {
+      "name": "update-content-only",
+      "message": {
+        "role": "system",
+        "content": "new instructions",
+        "timestamp": 1
+      },
+      "expected": "new instructions"
+    },
+    {
+      "name": "update-section-set",
+      "message": {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "sections": {
+          "alpha": "A"
+        }
+      },
+      "expected": "Updated system prompt section \"alpha\":\n\nA"
+    },
+    {
+      "name": "update-section-removed",
+      "message": {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "sections": {
+          "alpha": null
+        }
+      },
+      "expected": "Removed system prompt section \"alpha\"."
+    },
+    {
+      "name": "update-mixed",
+      "message": {
+        "role": "system",
+        "content": "also this",
+        "timestamp": 1,
+        "sections": {
+          "alpha": "A",
+          "beta": null
+        }
+      },
+      "expected": "also this\n\nUpdated system prompt section \"alpha\":\n\nA\n\nRemoved system prompt section \"beta\"."
+    },
+    {
+      "name": "update-empty",
+      "message": {
+        "role": "system",
+        "content": "",
+        "timestamp": 1
+      },
+      "expected": ""
+    }
+  ],
+  "current": [
+    {
+      "name": "current-single",
+      "messages": [
+        {
+          "role": "system",
+          "content": "base",
+          "timestamp": 10
+        }
+      ],
+      "expectedMessage": {
+        "role": "system",
+        "content": "base",
+        "timestamp": 10
+      },
+      "expectedPrompt": "base",
+      "expectedTools": []
+    },
+    {
+      "name": "current-append",
+      "messages": [
+        {
+          "role": "system",
+          "content": "base",
+          "timestamp": 10
+        },
+        {
+          "role": "user",
+          "content": "hi",
+          "timestamp": 2
+        },
+        {
+          "role": "system",
+          "content": "more",
+          "timestamp": 20
+        }
+      ],
+      "expectedMessage": {
+        "role": "system",
+        "content": "base\n\nmore",
+        "timestamp": 10
+      },
+      "expectedPrompt": "base\n\nmore",
+      "expectedTools": []
+    },
+    {
+      "name": "current-sections-patch",
+      "messages": [
+        {
+          "role": "system",
+          "content": "base",
+          "timestamp": 10,
+          "sections": {
+            "alpha": "A"
+          }
+        },
+        {
+          "role": "system",
+          "content": "",
+          "timestamp": 20,
+          "sections": {
+            "alpha": "A2",
+            "beta": "B"
+          }
+        }
+      ],
+      "expectedMessage": {
+        "role": "system",
+        "content": "base",
+        "sections": {
+          "alpha": "A2",
+          "beta": "B"
+        },
+        "timestamp": 10
+      },
+      "expectedPrompt": "base\n\nA2\n\nB",
+      "expectedTools": []
+    },
+    {
+      "name": "current-section-removed",
+      "messages": [
+        {
+          "role": "system",
+          "content": "base",
+          "timestamp": 10,
+          "sections": {
+            "alpha": "A",
+            "beta": "B"
+          }
+        },
+        {
+          "role": "system",
+          "content": "",
+          "timestamp": 20,
+          "sections": {
+            "alpha": null
+          }
+        }
+      ],
+      "expectedMessage": {
+        "role": "system",
+        "content": "base",
+        "sections": {
+          "beta": "B"
+        },
+        "timestamp": 10
+      },
+      "expectedPrompt": "base\n\nB",
+      "expectedTools": []
+    },
+    {
+      "name": "current-tools",
+      "messages": [
+        {
+          "role": "system",
+          "content": "base",
+          "timestamp": 10,
+          "toolsAdded": [
+            {
+              "name": "read",
+              "description": "read tool",
+              "parameters": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          ]
+        },
+        {
+          "role": "system",
+          "content": "",
+          "timestamp": 20,
+          "toolsAdded": [
+            {
+              "name": "bash",
+              "description": "bash tool",
+              "parameters": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          ],
+          "toolsRemoved": [
+            {
+              "name": "read"
+            }
+          ]
+        }
+      ],
+      "expectedMessage": {
+        "role": "system",
+        "content": "base",
+        "toolsAdded": [
+          {
+            "name": "bash",
+            "description": "bash tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ],
+        "timestamp": 10
+      },
+      "expectedPrompt": "base",
+      "expectedTools": [
+        {
+          "name": "bash",
+          "description": "bash tool",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      ]
+    },
+    {
+      "name": "current-tools-only",
+      "messages": [
+        {
+          "role": "user",
+          "content": "hi",
+          "timestamp": 2
+        },
+        {
+          "role": "system",
+          "content": "",
+          "timestamp": 30,
+          "toolsAdded": [
+            {
+              "name": "read",
+              "description": "read tool",
+              "parameters": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          ]
+        }
+      ],
+      "expectedMessage": {
+        "role": "system",
+        "content": "",
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "read tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ],
+        "timestamp": 30
+      },
+      "expectedPrompt": "",
+      "expectedTools": [
+        {
+          "name": "read",
+          "description": "read tool",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      ]
+    },
+    {
+      "name": "current-none",
+      "messages": [
+        {
+          "role": "user",
+          "content": "hi",
+          "timestamp": 2
+        }
+      ],
+      "expectedMessage": null,
+      "expectedPrompt": "",
+      "expectedTools": []
+    },
+    {
+      "name": "current-non-leading-system",
+      "messages": [
+        {
+          "role": "user",
+          "content": "hi",
+          "timestamp": 2
+        },
+        {
+          "role": "system",
+          "content": "late",
+          "timestamp": 40
+        }
+      ],
+      "expectedMessage": {
+        "role": "system",
+        "content": "late",
+        "timestamp": 40
+      },
+      "expectedPrompt": "late",
+      "expectedTools": []
+    }
+  ]
+}

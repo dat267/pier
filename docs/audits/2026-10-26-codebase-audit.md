@@ -921,3 +921,20 @@ was corrected to include the `role` member (Go's message marshal adds it per
 message rather than in the array encoding). Regeneration is byte-identical;
 `go test -count=1 ./coding`, `just check`, `just cross` (six targets) and
 `just reference` pass.
+
+## System-prompt corpus
+
+`ai/testdata/system-prompt/generate.mjs` executes the pinned `utils/text.ts` and
+`utils/transcript.ts` helpers; `TestSystemPromptHelpersMatchUpstream` compares
+rendered text, update framing, the replayed system message (marshalled with its
+`role`), the current prompt and the resolved tools.
+
+Cases: content strings and text/image blocks, sections rendered, a null section
+omitted from the prompt but framed as removed in an update, empty content and
+empty sections, appended system messages, section patches and removals across
+messages, tools added then replaced/removed, tools-only and no-system inputs, and
+a non-leading system message.
+
+All 19 matched on the first run, so this records coverage, not a finding.
+Regeneration is byte-identical; `go test -count=1 ./ai`, `just check`,
+`just cross` (six targets) and `just reference` pass.

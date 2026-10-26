@@ -417,6 +417,12 @@ mutation and durable goal-record appends are serialized together; parallel
 `set_goal` calls cannot corrupt the replay log by interleaving clear/create
 entries. Host callbacks and model work remain outside the state lock.
 
+The system-prompt helpers are pinned by a 19-case corpus executing the pinned
+`getSystemMessageText`, `renderSystemMessageUpdate`, `getCurrentSystemMessage`,
+`getCurrentSystemPrompt` and `getCurrentTools`: content strings, text/image
+blocks, section patches and removals, tools added and removed across system
+messages, empty inputs and a non-leading system message.
+
 `ConvertToLlm` is pinned by an 11-case corpus executing the pinned version:
 pass-through system/user/assistant/tool-result messages, `bashExecution` output
 with cancellation and truncation variants plus the `!!` exclusion, custom notes
