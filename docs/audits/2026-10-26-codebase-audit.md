@@ -711,3 +711,39 @@ case skips when fd is absent, and no network is used.
 Verification: find/grep tests, all coding tests, `just check`, `just cross`
 (six targets), `just reference` pass. The fixture regeneration corpus is
 unaffected. No local race run.
+
+## Other coverage this round
+
+- `coding/updatecommand.go` and release resolution: L/C/S reread against the
+  documented D174/D175 port-specific updater. Checksum-before-replace, temp file
+  placement next to the target, the Windows quarantine fallback, redirect
+  handling and the missing-asset/404 paths were traced again; no reproducible
+  defect and no signature-verification claim.
+- `coding/session_projection.go`, `coding/session_messagecache.go` and the
+  path/window/settings helpers in `coding/session_store.go`: compared with the
+  pinned `buildSessionPath`/`buildContextEntries`/`buildSessionProjection`. The
+  compaction window, the older-compaction suppression at index > 0, context-edit
+  application, and forward vs reverse settings precedence agree. A cache-reset
+  poisoning hypothesis was not reachable through supported APIs (file open builds
+  a new manager; branched sessions keep copied values), so it stays a lead, not a
+  finding.
+- `ContextSignature` may over- or under-count checkpoint system messages and
+  context edits; it no longer drives cache warming after CR-036 and no supported
+  consumer failure was reproduced, so it is recorded as a lead only.
+- `coding/tools_fs.go` write/ls and `coding/cliargs.go` were reread. `ls` order
+  was compared against the pinned `ls.ts` sort for 16 adversarial names
+  (punctuation, digits, case, `ä`, spaces): root collation matched JS
+  `localeCompare` exactly, including `10` before `9` and `a` before `ä`.
+- `ai.JSLower` was compared with JS `toLowerCase` for Turkish dotted I, capital
+  sharp S, final sigma in context, titlecase digraphs, long s, Kelvin sign and
+  Roman numerals: identical.
+- Local race runs (informational, CI remains the gate): `go test -race` passes for
+  `./ai`, `./agent`, `./cmd`, `./coding`, `./coding/interactive`, `./tui`,
+  `./mcp/...` and `./internal/...`.
+- Fixture regeneration stays byte-identical for google-stream, mistral-stream,
+  mistral-simple, simple-max-tokens, cli-args, edit-diff-patch and edit-apply.
+
+Coverage remains partial: interactive wiring and renderers, the full settings
+manager, compaction cut selection (D264), MCP OAuth recovery and platform terminal
+I/O were not exhaustively re-probed this round. Passing tests and static review
+cannot certify the absence of defects.
