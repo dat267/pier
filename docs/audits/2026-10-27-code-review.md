@@ -22,5 +22,24 @@ manager probe covered an off-path update, deleting and re-adding a label,
 multiple retained targets and an excluded target; Node and Go output matched.
 
 Verification: `go test -count=1 ./coding` passed, including branch, migration
-and RPC callers. Temporary red logs and reference/control probes are under
-`/tmp/pier-5am-audit/`; these are local evidence, not permanent fixtures.
+and RPC callers.
+
+## CR-057: P2 fork ancestry pointed at the fork itself (fixed)
+
+Reference: read-only pi v1.4.0 (`4a080252`),
+`packages/coding-agent/src/core/session-manager.ts`, `createBranchedSession`.
+The reference captures `previousSessionFile` before changing the session path.
+Pier instead stored `&m.sessionFile` in the new header, so replacing that field
+made the header's `parentSession` point to its own file.
+
+The public-manager reproduction reported `parent_matches_source=false
+parent_matches_fork=true`; executing the pinned manager reported the inverse.
+`TestBranchedSessionRecordsItsSourceFile` failed on the parent path before the
+repair. A local copy of the source path now owns the pointer. The regression
+checks the live header and persisted reopen, with the in-memory omission as a
+matching control.
+
+Verification: `go test -count=1 ./coding -run
+'TestBranchedSession|TestCreateBranchedSession|TestFork|TestRPC.*(Fork|Clone)'`
+passed; the original probe now reports `parent_matches_source=true
+parent_matches_fork=false`.

@@ -924,7 +924,8 @@ func (m *SessionManager) CreateBranchedSession(leafID string) (string, error) {
 		Cwd:       m.cwd,
 	}
 	if m.persist {
-		header.ParentSession = &m.sessionFile
+		previousSessionFile := m.sessionFile
+		header.ParentSession = &previousSessionFile
 	}
 
 	// Re-chain the path (dropping label entries) with fresh parent ids.
