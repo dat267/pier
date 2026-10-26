@@ -4,7 +4,7 @@ Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D278**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D279**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation.
 
 Related documents: [port status](PORTING.md), [architecture](architecture.md),
@@ -620,9 +620,9 @@ for exposure, namespaces, codemode, `tool_search`, resources, `/mcp` UI, and
   persistence is unported. `read_mcp_resource` is absent, so resource links do
   not advertise it.
 - Definitions omit upstream renderers, output schema, and annotations;
-  interactive MCP calls use generic tool rendering. `isError` becomes a Go
-  error containing converted content because `agent.AgentToolResult` has no
-  error flag.
+  interactive MCP calls use generic tool rendering. `isError` stays a flagged
+  `agent.AgentToolResult`, preserving converted content and details through the
+  agent loop; it is not converted to a Go error.
 
 Reference: `packages/coding-agent/src/extensions/mcp` and `core/mcp-servers.ts`.
 
