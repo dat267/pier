@@ -907,8 +907,9 @@ func appendMistralToolCall(output *AssistantMessage, stream *AssistantMessageEve
 
 // finishMistralToolCalls emits toolcall_end for every collected tool block.
 func finishMistralToolCalls(output *AssistantMessage, stream *AssistantMessageEventStream, state *mistralStreamState) {
-	for _, index := range state.toolBlocks {
-		block, ok := output.Content[index].(ToolCall)
+	// Content is appended in the same first-seen order as upstream's Map.
+	for index, content := range output.Content {
+		block, ok := content.(ToolCall)
 		if !ok {
 			continue
 		}

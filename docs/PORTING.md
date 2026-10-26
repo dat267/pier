@@ -395,6 +395,7 @@ Mistral streams distinguish the active text/thinking block from the trailing
 persisted block. When a continued tool call interrupts text or thinking, that
 block ends exactly once; later text opens a fresh block, matching
 `api/mistral-conversations.ts` rather than extending an already-ended block.
+Parallel calls emit `toolcall_end` in first-seen order, not Go map order.
 
 Google streams keep a text part that is present but empty. The reference keys
 block creation on `part.text !== undefined`, so `{"text": ""}` still opens a text

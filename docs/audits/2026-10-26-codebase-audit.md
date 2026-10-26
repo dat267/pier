@@ -34,3 +34,25 @@ corpus is not yet committed while independent findings in it remain unresolved.
 Verification: focused test and all `TestMistral` tests pass; `go test -count=1
 ./ai`, `just check`, `just cross` (all six targets), `just reference` pass.
 The CI race gate was not run locally.
+
+## CR-022, P3: Mistral finalized parallel calls in Go map order (fixed)
+
+Authority: the same reference's `toolBlocksByKey.values()` preserves first-seen
+order. Pier ranged over a Go map when emitting `toolcall_end`, so parallel calls
+ended in nondeterministic order. Finalization now walks persisted content in
+first-seen order without introducing another ordering structure.
+
+Replay:
+
+```sh
+go test -count=30 ./ai -run '^TestMistralToolCallsEndInFirstSeenOrder$'
+```
+
+Observed red order: `call8 call5 call0 call4 call3 call7 call2 call6 call1`;
+expected: `call8 call3 call5 call0 call7 call2 call6 call1 call4`. The test uses
+nonmonotonic provider indexes, so sorting provider indexes would not pass.
+A three-call source-corpus probe also failed across 20 repetitions; contiguous
+single-call streaming remains a control.
+
+Verification: focused test passes 30 repetitions; all ai tests, `just check`,
+`just cross` (all six targets), `just reference` pass.
