@@ -417,6 +417,11 @@ mutation and durable goal-record appends are serialized together; parallel
 `set_goal` calls cannot corrupt the replay log by interleaving clear/create
 entries. Host callbacks and model work remain outside the state lock.
 
+The ls tool is pinned by an 8-case corpus over a directory mixing punctuation,
+digits, case and `ä`: sorted output with directory suffixes, an empty directory,
+a nested path, integer and fractional limits, the default cwd, and the
+missing-path / not-a-directory errors.
+
 The edit tool is pinned end to end by an 11-case corpus that runs the pinned
 definition and the Go tool over identical seed files: a simple replacement,
 CRLF and BOM preservation, two disjoint edits, a fuzzy-indent rejection, adding

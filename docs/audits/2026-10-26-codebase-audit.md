@@ -772,6 +772,7 @@ at the closing checkpoint:
 | `ai/testdata/collapse-system` | 15 | `ai/src/utils/transcript.ts` |
 | `coding/testdata/read-tool` | 16 | `core/tools/read.ts` (D279 excluded) |
 | `coding/testdata/edit-tool` | 11 | `core/tools/edit.ts` |
+| `coding/testdata/ls-tool` | 8 | `core/tools/ls.ts` |
 
 Earlier corpora (`edit-diff-patch`, `edit-apply`, `truncate`, `js-numbers`,
 `overflow`, `parse-key`, Anthropic/OpenAI/Responses stream corpora) remain green.
@@ -1061,3 +1062,19 @@ earlier successful edit changed the file a later error case expected to read;
 resetting the seed per case fixed the fixtures, not the product. Regeneration is
 byte-identical; `go test -count=1 ./coding`, `just check`, `just cross` (six
 targets) and `just reference` pass.
+
+## ls-tool corpus
+
+`coding/testdata/ls-tool/generate.mjs` runs the pinned `ls.ts` definition over 8
+cases and records result text and details. `TestLsToolMatchesUpstream` recreates
+the directory and compares both.
+
+The fixture directory mixes punctuation, digits, case and `ä` (`_x`, `-y`,
+`.hidden`, `10`, `9`, `a`, `ä`, `a b`, `A1`, `B`, `Z`, …) so the corpus pins the
+collator-based sort end to end, not just the sort helper. Cases also cover an
+empty directory, a nested path, integer and fractional limits, the default cwd,
+and the missing-path and not-a-directory errors with their full text.
+
+All 8 matched on the first run, so this records coverage, not a finding.
+Regeneration is byte-identical; `go test -count=1 ./coding`, `just check`,
+`just cross` (six targets) and `just reference` pass.

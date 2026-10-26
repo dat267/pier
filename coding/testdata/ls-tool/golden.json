@@ -1,0 +1,76 @@
+[
+  {
+    "name": "sorted",
+    "path": "tree",
+    "limit": null,
+    "expected": {
+      "text": "_x\n-y\n.hidden\n10\n9\nä\na b\na.txt\nB.txt\nb.txt\nsub/\nZ",
+      "details": null
+    }
+  },
+  {
+    "name": "empty-dir",
+    "path": "empty",
+    "limit": null,
+    "expected": {
+      "text": "(empty directory)",
+      "details": null
+    }
+  },
+  {
+    "name": "nested",
+    "path": "tree/sub",
+    "limit": null,
+    "expected": {
+      "text": "nested.txt",
+      "details": null
+    }
+  },
+  {
+    "name": "limit",
+    "path": "tree",
+    "limit": 3,
+    "expected": {
+      "text": "_x\n-y\n.hidden\n\n[3 entries limit reached. Use limit=6 for more]",
+      "details": {
+        "entryLimitReached": 3
+      }
+    }
+  },
+  {
+    "name": "fractional-limit",
+    "path": "tree",
+    "limit": 2.5,
+    "expected": {
+      "text": "_x\n-y\n.hidden\n\n[2.5 entries limit reached. Use limit=5 for more]",
+      "details": {
+        "entryLimitReached": 2.5
+      }
+    }
+  },
+  {
+    "name": "missing",
+    "path": "nope",
+    "limit": null,
+    "expected": {
+      "error": "Path not found: <dir>/nope"
+    }
+  },
+  {
+    "name": "not-a-directory",
+    "path": "tree/a.txt",
+    "limit": null,
+    "expected": {
+      "error": "Not a directory: <dir>/tree/a.txt"
+    }
+  },
+  {
+    "name": "default-cwd",
+    "path": null,
+    "limit": null,
+    "expected": {
+      "text": "empty/\ntree/",
+      "details": null
+    }
+  }
+]
