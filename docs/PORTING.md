@@ -417,6 +417,13 @@ mutation and durable goal-record appends are serialized together; parallel
 `set_goal` calls cannot corrupt the replay log by interleaving clear/create
 entries. Host callbacks and model work remain outside the state lock.
 
+Compaction's context-token estimation is pinned by a 14-case corpus executing
+the pinned `estimateContextTokens`: user strings and astral text, images, system
+sections plus tool declarations, assistant text/thinking/tool-call blocks, tool
+results with images, custom messages, provider usage by total or by components,
+usage ignored for aborted/error responses, and trailing messages after the last
+usable usage.
+
 Compaction's file-operation lists are pinned by an 11-case corpus executing the
 pinned tracking helpers: read-only, written and edited paths, read-then-edited
 moving a file to the modified list, duplicates, missing or non-string paths,

@@ -1,0 +1,479 @@
+[
+  {
+    "name": "user-string",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 1
+      }
+    ],
+    "expected": {
+      "tokens": 2,
+      "usageTokens": 0,
+      "trailingTokens": 2,
+      "lastUsageIndex": null
+    }
+  },
+  {
+    "name": "user-astral",
+    "messages": [
+      {
+        "role": "user",
+        "content": "😀😀😀",
+        "timestamp": 1
+      }
+    ],
+    "expected": {
+      "tokens": 2,
+      "usageTokens": 0,
+      "trailingTokens": 2,
+      "lastUsageIndex": null
+    }
+  },
+  {
+    "name": "user-image",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "look"
+          },
+          {
+            "type": "image",
+            "data": "aW1n",
+            "mimeType": "image/png"
+          }
+        ],
+        "timestamp": 1
+      }
+    ],
+    "expected": {
+      "tokens": 1201,
+      "usageTokens": 0,
+      "trailingTokens": 1201,
+      "lastUsageIndex": null
+    }
+  },
+  {
+    "name": "system-sections-tools",
+    "messages": [
+      {
+        "role": "system",
+        "content": "base prompt",
+        "timestamp": 0,
+        "sections": {
+          "alpha": "xxxx",
+          "beta": "yyyyy"
+        },
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "d",
+            "parameters": {
+              "type": "object"
+            }
+          }
+        ]
+      }
+    ],
+    "expected": {
+      "tokens": 22,
+      "usageTokens": 0,
+      "trailingTokens": 22,
+      "lastUsageIndex": null
+    }
+  },
+  {
+    "name": "assistant-blocks",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "answer"
+          },
+          {
+            "type": "thinking",
+            "thinking": "plan"
+          },
+          {
+            "type": "toolCall",
+            "id": "c1",
+            "name": "read",
+            "arguments": {
+              "path": "a"
+            }
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "stop",
+        "timestamp": 2
+      }
+    ],
+    "expected": {
+      "tokens": 7,
+      "usageTokens": 0,
+      "trailingTokens": 7,
+      "lastUsageIndex": null
+    }
+  },
+  {
+    "name": "tool-result",
+    "messages": [
+      {
+        "role": "toolResult",
+        "toolCallId": "c1",
+        "toolName": "read",
+        "content": [
+          {
+            "type": "text",
+            "text": "contents"
+          },
+          {
+            "type": "image",
+            "data": "aW1n",
+            "mimeType": "image/png"
+          }
+        ],
+        "isError": false,
+        "timestamp": 3
+      }
+    ],
+    "expected": {
+      "tokens": 1202,
+      "usageTokens": 0,
+      "trailingTokens": 1202,
+      "lastUsageIndex": null
+    }
+  },
+  {
+    "name": "custom",
+    "messages": [
+      {
+        "role": "custom",
+        "customType": "note",
+        "content": "custom text",
+        "display": false,
+        "timestamp": 4
+      }
+    ],
+    "expected": {
+      "tokens": 3,
+      "usageTokens": 0,
+      "trailingTokens": 3,
+      "lastUsageIndex": null
+    }
+  },
+  {
+    "name": "usage-total",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "ok"
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 100,
+          "output": 10,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 110,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "stop",
+        "timestamp": 2
+      }
+    ],
+    "expected": {
+      "tokens": 110,
+      "usageTokens": 110,
+      "trailingTokens": 0,
+      "lastUsageIndex": 1
+    }
+  },
+  {
+    "name": "usage-components",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "ok"
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 100,
+          "output": 10,
+          "cacheRead": 5,
+          "cacheWrite": 3,
+          "totalTokens": 0,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "stop",
+        "timestamp": 2
+      }
+    ],
+    "expected": {
+      "tokens": 118,
+      "usageTokens": 118,
+      "trailingTokens": 0,
+      "lastUsageIndex": 1
+    }
+  },
+  {
+    "name": "usage-ignored-aborted",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "ok"
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 500,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "aborted",
+        "timestamp": 2
+      }
+    ],
+    "expected": {
+      "tokens": 2,
+      "usageTokens": 0,
+      "trailingTokens": 2,
+      "lastUsageIndex": null
+    }
+  },
+  {
+    "name": "usage-ignored-error",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "ok"
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 500,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "error",
+        "timestamp": 2
+      }
+    ],
+    "expected": {
+      "tokens": 2,
+      "usageTokens": 0,
+      "trailingTokens": 2,
+      "lastUsageIndex": null
+    }
+  },
+  {
+    "name": "usage-zero",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "ok"
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "stop",
+        "timestamp": 2
+      }
+    ],
+    "expected": {
+      "tokens": 2,
+      "usageTokens": 0,
+      "trailingTokens": 2,
+      "lastUsageIndex": null
+    }
+  },
+  {
+    "name": "trailing-after-usage",
+    "messages": [
+      {
+        "role": "user",
+        "content": "question",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "answer"
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 50,
+          "output": 5,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 55,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "stop",
+        "timestamp": 2
+      },
+      {
+        "role": "toolResult",
+        "toolCallId": "c1",
+        "toolName": "read",
+        "content": [
+          {
+            "type": "text",
+            "text": "tool output"
+          }
+        ],
+        "isError": false,
+        "timestamp": 3
+      },
+      {
+        "role": "user",
+        "content": "follow up",
+        "timestamp": 1
+      }
+    ],
+    "expected": {
+      "tokens": 61,
+      "usageTokens": 55,
+      "trailingTokens": 6,
+      "lastUsageIndex": 1
+    }
+  },
+  {
+    "name": "empty",
+    "messages": [],
+    "expected": {
+      "tokens": 0,
+      "usageTokens": 0,
+      "trailingTokens": 0,
+      "lastUsageIndex": null
+    }
+  }
+]

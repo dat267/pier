@@ -845,3 +845,19 @@ a mixed conversation, and `😀.ts`/`ｚ.ts`/`Z.ts` together, which pins
 All 11 matched on the first run, so this records coverage, not a finding.
 Regeneration is byte-identical; `go test -count=1 ./coding`, `just check`,
 `just cross` (six targets) and `just reference` pass.
+
+## Context-estimate corpus
+
+`coding/testdata/estimate/generate.mjs` executes the pinned
+`estimateContextTokens` for 14 message sets; `TestEstimateContextTokensMatchesUpstream`
+compares tokens, usage tokens, trailing tokens and the last-usage index.
+
+Cases: user strings and astral text (UTF-16 length), user text plus an image, a
+system message with sections and `toolsAdded`, assistant text/thinking/tool-call
+blocks, a tool result with text and an image, a custom message, usage taken from
+`totalTokens`, usage summed from components, usage ignored for aborted and error
+responses, zero usage, and trailing messages after the last valid usage.
+
+All 14 matched on the first run, so this records coverage, not a finding.
+Regeneration is byte-identical; `go test -count=1 ./coding`, `just check`,
+`just cross` (six targets) and `just reference` pass.
