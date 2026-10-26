@@ -21,6 +21,19 @@ func ClampMaxTokensToContext(model *Model, context TranscriptContext, maxTokens 
 	return min(maxTokens, max(minMaxTokens, available))
 }
 
+// withSimpleMaxTokens ports buildBaseOptions' output ceiling without changing
+// raw stream options: simple calls default to the model cap and reserve room
+// for the current transcript. Other base options are passed through unchanged.
+func withSimpleMaxTokens(model *Model, context TranscriptContext, options StreamOptions) StreamOptions {
+	maxTokens := int(model.MaxTokens)
+	if options.MaxTokens != nil {
+		maxTokens = *options.MaxTokens
+	}
+	clamped := ClampMaxTokensToContext(model, context, maxTokens)
+	options.MaxTokens = &clamped
+	return options
+}
+
 // DefaultThinkingBudgets are the per-level thinking token budgets.
 var DefaultThinkingBudgets = ThinkingBudgets{
 	Minimal: intPtr(1024),

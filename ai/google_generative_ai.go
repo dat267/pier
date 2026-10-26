@@ -655,7 +655,7 @@ func StreamGoogleGenerativeAISimple(model *Model, context TranscriptContext, opt
 		return stream
 	}
 	go func() {
-		googleOptions := &GoogleOptions{StreamOptions: options.StreamOptions, ToolChoice: deref(options.ToolChoice)}
+		googleOptions := &GoogleOptions{StreamOptions: withSimpleMaxTokens(model, context, options.StreamOptions), ToolChoice: deref(options.ToolChoice)}
 		if options.Reasoning == "" {
 			googleOptions.Thinking = &GoogleThinkingOption{Enabled: false}
 			forwardStream(stream, StreamGoogleGenerativeAI(model, context, googleOptions))

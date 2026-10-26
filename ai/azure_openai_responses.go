@@ -223,7 +223,7 @@ func StreamAzureOpenAIResponsesSimple(model *Model, context TranscriptContext, o
 		return stream
 	}
 	go func() {
-		responsesOptions := &OpenAIResponsesOptions{StreamOptions: options.StreamOptions}
+		responsesOptions := &OpenAIResponsesOptions{StreamOptions: withSimpleMaxTokens(model, context, options.StreamOptions)}
 		if options.ToolChoice != nil {
 			responsesOptions.ToolChoice = mustMarshalJSON(*options.ToolChoice)
 		}

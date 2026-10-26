@@ -1,0 +1,1146 @@
+[
+  {
+    "name": "anthropic-messages/default-context-cap",
+    "model": {
+      "api": "anthropic-messages",
+      "provider": "anthropic",
+      "id": "claude-sonnet-4-5",
+      "name": "claude-sonnet-4-5",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {},
+    "simple": true,
+    "expectedMaxTokens": 903
+  },
+  {
+    "name": "anthropic-messages/explicit-context-cap",
+    "model": {
+      "api": "anthropic-messages",
+      "provider": "anthropic",
+      "id": "claude-sonnet-4-5",
+      "name": "claude-sonnet-4-5",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {
+      "maxTokens": 10000
+    },
+    "simple": true,
+    "expectedMaxTokens": 903
+  },
+  {
+    "name": "anthropic-messages/explicit-small-cap",
+    "model": {
+      "api": "anthropic-messages",
+      "provider": "anthropic",
+      "id": "claude-sonnet-4-5",
+      "name": "claude-sonnet-4-5",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {
+      "maxTokens": 20
+    },
+    "simple": true,
+    "expectedMaxTokens": 20
+  },
+  {
+    "name": "anthropic-messages/default-model-cap",
+    "model": {
+      "api": "anthropic-messages",
+      "provider": "anthropic",
+      "id": "claude-sonnet-4-5",
+      "name": "claude-sonnet-4-5",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 128000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {},
+    "simple": true,
+    "expectedMaxTokens": 8192
+  },
+  {
+    "name": "anthropic-messages/raw-stream-control",
+    "model": {
+      "api": "anthropic-messages",
+      "provider": "anthropic",
+      "id": "claude-sonnet-4-5",
+      "name": "claude-sonnet-4-5",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {},
+    "simple": false,
+    "expectedMaxTokens": 8192
+  },
+  {
+    "name": "anthropic-messages/budget-explicit-cap",
+    "model": {
+      "api": "anthropic-messages",
+      "provider": "anthropic",
+      "id": "claude-sonnet-4-5",
+      "name": "claude-sonnet-4-5",
+      "baseUrl": "https://invalid.test",
+      "reasoning": true,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 128000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {
+      "maxTokens": 2000,
+      "reasoning": "low"
+    },
+    "simple": true,
+    "expectedMaxTokens": 4048
+  },
+  {
+    "name": "anthropic-messages/budget-context-cap",
+    "model": {
+      "api": "anthropic-messages",
+      "provider": "anthropic",
+      "id": "claude-sonnet-4-5",
+      "name": "claude-sonnet-4-5",
+      "baseUrl": "https://invalid.test",
+      "reasoning": true,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {
+      "maxTokens": 2000,
+      "reasoning": "low"
+    },
+    "simple": true,
+    "expectedMaxTokens": 903
+  },
+  {
+    "name": "bedrock-converse-stream/default-context-cap",
+    "model": {
+      "api": "bedrock-converse-stream",
+      "provider": "amazon-bedrock",
+      "id": "anthropic.claude-3-7-sonnet-20250219-v1:0",
+      "name": "anthropic.claude-3-7-sonnet-20250219-v1:0",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {},
+    "simple": true,
+    "expectedMaxTokens": 903
+  },
+  {
+    "name": "bedrock-converse-stream/explicit-context-cap",
+    "model": {
+      "api": "bedrock-converse-stream",
+      "provider": "amazon-bedrock",
+      "id": "anthropic.claude-3-7-sonnet-20250219-v1:0",
+      "name": "anthropic.claude-3-7-sonnet-20250219-v1:0",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {
+      "maxTokens": 10000
+    },
+    "simple": true,
+    "expectedMaxTokens": 903
+  },
+  {
+    "name": "bedrock-converse-stream/explicit-small-cap",
+    "model": {
+      "api": "bedrock-converse-stream",
+      "provider": "amazon-bedrock",
+      "id": "anthropic.claude-3-7-sonnet-20250219-v1:0",
+      "name": "anthropic.claude-3-7-sonnet-20250219-v1:0",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {
+      "maxTokens": 20
+    },
+    "simple": true,
+    "expectedMaxTokens": 20
+  },
+  {
+    "name": "bedrock-converse-stream/default-model-cap",
+    "model": {
+      "api": "bedrock-converse-stream",
+      "provider": "amazon-bedrock",
+      "id": "anthropic.claude-3-7-sonnet-20250219-v1:0",
+      "name": "anthropic.claude-3-7-sonnet-20250219-v1:0",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 128000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {},
+    "simple": true,
+    "expectedMaxTokens": 8192
+  },
+  {
+    "name": "bedrock-converse-stream/raw-stream-control",
+    "model": {
+      "api": "bedrock-converse-stream",
+      "provider": "amazon-bedrock",
+      "id": "anthropic.claude-3-7-sonnet-20250219-v1:0",
+      "name": "anthropic.claude-3-7-sonnet-20250219-v1:0",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {},
+    "simple": false,
+    "expectedMaxTokens": 8192
+  },
+  {
+    "name": "bedrock-converse-stream/budget-explicit-cap",
+    "model": {
+      "api": "bedrock-converse-stream",
+      "provider": "amazon-bedrock",
+      "id": "anthropic.claude-3-7-sonnet-20250219-v1:0",
+      "name": "anthropic.claude-3-7-sonnet-20250219-v1:0",
+      "baseUrl": "https://invalid.test",
+      "reasoning": true,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 128000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {
+      "maxTokens": 2000,
+      "reasoning": "low"
+    },
+    "simple": true,
+    "expectedMaxTokens": 4048
+  },
+  {
+    "name": "bedrock-converse-stream/budget-context-cap",
+    "model": {
+      "api": "bedrock-converse-stream",
+      "provider": "amazon-bedrock",
+      "id": "anthropic.claude-3-7-sonnet-20250219-v1:0",
+      "name": "anthropic.claude-3-7-sonnet-20250219-v1:0",
+      "baseUrl": "https://invalid.test",
+      "reasoning": true,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {
+      "maxTokens": 2000,
+      "reasoning": "low"
+    },
+    "simple": true,
+    "expectedMaxTokens": 903
+  },
+  {
+    "name": "google-generative-ai/default-context-cap",
+    "model": {
+      "api": "google-generative-ai",
+      "provider": "google",
+      "id": "gemini-2.5-flash",
+      "name": "gemini-2.5-flash",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {},
+    "simple": true,
+    "expectedMaxTokens": 903
+  },
+  {
+    "name": "google-generative-ai/explicit-context-cap",
+    "model": {
+      "api": "google-generative-ai",
+      "provider": "google",
+      "id": "gemini-2.5-flash",
+      "name": "gemini-2.5-flash",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {
+      "maxTokens": 10000
+    },
+    "simple": true,
+    "expectedMaxTokens": 903
+  },
+  {
+    "name": "google-generative-ai/explicit-small-cap",
+    "model": {
+      "api": "google-generative-ai",
+      "provider": "google",
+      "id": "gemini-2.5-flash",
+      "name": "gemini-2.5-flash",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {
+      "maxTokens": 20
+    },
+    "simple": true,
+    "expectedMaxTokens": 20
+  },
+  {
+    "name": "google-generative-ai/default-model-cap",
+    "model": {
+      "api": "google-generative-ai",
+      "provider": "google",
+      "id": "gemini-2.5-flash",
+      "name": "gemini-2.5-flash",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 128000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {},
+    "simple": true,
+    "expectedMaxTokens": 8192
+  },
+  {
+    "name": "google-generative-ai/raw-stream-control",
+    "model": {
+      "api": "google-generative-ai",
+      "provider": "google",
+      "id": "gemini-2.5-flash",
+      "name": "gemini-2.5-flash",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {},
+    "simple": false,
+    "expectedMaxTokens": null
+  },
+  {
+    "name": "google-vertex/default-context-cap",
+    "model": {
+      "api": "google-vertex",
+      "provider": "google-vertex",
+      "id": "gemini-2.5-flash",
+      "name": "gemini-2.5-flash",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {},
+    "simple": true,
+    "expectedMaxTokens": 903
+  },
+  {
+    "name": "google-vertex/explicit-context-cap",
+    "model": {
+      "api": "google-vertex",
+      "provider": "google-vertex",
+      "id": "gemini-2.5-flash",
+      "name": "gemini-2.5-flash",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {
+      "maxTokens": 10000
+    },
+    "simple": true,
+    "expectedMaxTokens": 903
+  },
+  {
+    "name": "google-vertex/explicit-small-cap",
+    "model": {
+      "api": "google-vertex",
+      "provider": "google-vertex",
+      "id": "gemini-2.5-flash",
+      "name": "gemini-2.5-flash",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {
+      "maxTokens": 20
+    },
+    "simple": true,
+    "expectedMaxTokens": 20
+  },
+  {
+    "name": "google-vertex/default-model-cap",
+    "model": {
+      "api": "google-vertex",
+      "provider": "google-vertex",
+      "id": "gemini-2.5-flash",
+      "name": "gemini-2.5-flash",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 128000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {},
+    "simple": true,
+    "expectedMaxTokens": 8192
+  },
+  {
+    "name": "google-vertex/raw-stream-control",
+    "model": {
+      "api": "google-vertex",
+      "provider": "google-vertex",
+      "id": "gemini-2.5-flash",
+      "name": "gemini-2.5-flash",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {},
+    "simple": false,
+    "expectedMaxTokens": null
+  },
+  {
+    "name": "mistral-conversations/default-context-cap",
+    "model": {
+      "api": "mistral-conversations",
+      "provider": "mistral",
+      "id": "devstral-small-2507",
+      "name": "devstral-small-2507",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {},
+    "simple": true,
+    "expectedMaxTokens": 903
+  },
+  {
+    "name": "mistral-conversations/explicit-context-cap",
+    "model": {
+      "api": "mistral-conversations",
+      "provider": "mistral",
+      "id": "devstral-small-2507",
+      "name": "devstral-small-2507",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {
+      "maxTokens": 10000
+    },
+    "simple": true,
+    "expectedMaxTokens": 903
+  },
+  {
+    "name": "mistral-conversations/explicit-small-cap",
+    "model": {
+      "api": "mistral-conversations",
+      "provider": "mistral",
+      "id": "devstral-small-2507",
+      "name": "devstral-small-2507",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {
+      "maxTokens": 20
+    },
+    "simple": true,
+    "expectedMaxTokens": 20
+  },
+  {
+    "name": "mistral-conversations/default-model-cap",
+    "model": {
+      "api": "mistral-conversations",
+      "provider": "mistral",
+      "id": "devstral-small-2507",
+      "name": "devstral-small-2507",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 128000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {},
+    "simple": true,
+    "expectedMaxTokens": 8192
+  },
+  {
+    "name": "mistral-conversations/raw-stream-control",
+    "model": {
+      "api": "mistral-conversations",
+      "provider": "mistral",
+      "id": "devstral-small-2507",
+      "name": "devstral-small-2507",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {},
+    "simple": false,
+    "expectedMaxTokens": null
+  },
+  {
+    "name": "openai-completions/default-context-cap",
+    "model": {
+      "api": "openai-completions",
+      "provider": "openai",
+      "id": "gpt-4o",
+      "name": "gpt-4o",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {},
+    "simple": true,
+    "expectedMaxTokens": 903
+  },
+  {
+    "name": "openai-completions/explicit-context-cap",
+    "model": {
+      "api": "openai-completions",
+      "provider": "openai",
+      "id": "gpt-4o",
+      "name": "gpt-4o",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {
+      "maxTokens": 10000
+    },
+    "simple": true,
+    "expectedMaxTokens": 903
+  },
+  {
+    "name": "openai-completions/explicit-small-cap",
+    "model": {
+      "api": "openai-completions",
+      "provider": "openai",
+      "id": "gpt-4o",
+      "name": "gpt-4o",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {
+      "maxTokens": 20
+    },
+    "simple": true,
+    "expectedMaxTokens": 20
+  },
+  {
+    "name": "openai-completions/default-model-cap",
+    "model": {
+      "api": "openai-completions",
+      "provider": "openai",
+      "id": "gpt-4o",
+      "name": "gpt-4o",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 128000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {},
+    "simple": true,
+    "expectedMaxTokens": 8192
+  },
+  {
+    "name": "openai-completions/raw-stream-control",
+    "model": {
+      "api": "openai-completions",
+      "provider": "openai",
+      "id": "gpt-4o",
+      "name": "gpt-4o",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {},
+    "simple": false,
+    "expectedMaxTokens": null
+  },
+  {
+    "name": "openai-responses/default-context-cap",
+    "model": {
+      "api": "openai-responses",
+      "provider": "openai",
+      "id": "gpt-4o",
+      "name": "gpt-4o",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {},
+    "simple": true,
+    "expectedMaxTokens": 903
+  },
+  {
+    "name": "openai-responses/explicit-context-cap",
+    "model": {
+      "api": "openai-responses",
+      "provider": "openai",
+      "id": "gpt-4o",
+      "name": "gpt-4o",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {
+      "maxTokens": 10000
+    },
+    "simple": true,
+    "expectedMaxTokens": 903
+  },
+  {
+    "name": "openai-responses/explicit-small-cap",
+    "model": {
+      "api": "openai-responses",
+      "provider": "openai",
+      "id": "gpt-4o",
+      "name": "gpt-4o",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {
+      "maxTokens": 20
+    },
+    "simple": true,
+    "expectedMaxTokens": 20
+  },
+  {
+    "name": "openai-responses/default-model-cap",
+    "model": {
+      "api": "openai-responses",
+      "provider": "openai",
+      "id": "gpt-4o",
+      "name": "gpt-4o",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 128000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {},
+    "simple": true,
+    "expectedMaxTokens": 8192
+  },
+  {
+    "name": "openai-responses/raw-stream-control",
+    "model": {
+      "api": "openai-responses",
+      "provider": "openai",
+      "id": "gpt-4o",
+      "name": "gpt-4o",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {},
+    "simple": false,
+    "expectedMaxTokens": null
+  },
+  {
+    "name": "azure-openai-responses/default-context-cap",
+    "model": {
+      "api": "azure-openai-responses",
+      "provider": "azure",
+      "id": "gpt-4o",
+      "name": "gpt-4o",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {},
+    "simple": true,
+    "expectedMaxTokens": 903
+  },
+  {
+    "name": "azure-openai-responses/explicit-context-cap",
+    "model": {
+      "api": "azure-openai-responses",
+      "provider": "azure",
+      "id": "gpt-4o",
+      "name": "gpt-4o",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {
+      "maxTokens": 10000
+    },
+    "simple": true,
+    "expectedMaxTokens": 903
+  },
+  {
+    "name": "azure-openai-responses/explicit-small-cap",
+    "model": {
+      "api": "azure-openai-responses",
+      "provider": "azure",
+      "id": "gpt-4o",
+      "name": "gpt-4o",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {
+      "maxTokens": 20
+    },
+    "simple": true,
+    "expectedMaxTokens": 20
+  },
+  {
+    "name": "azure-openai-responses/default-model-cap",
+    "model": {
+      "api": "azure-openai-responses",
+      "provider": "azure",
+      "id": "gpt-4o",
+      "name": "gpt-4o",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 128000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {},
+    "simple": true,
+    "expectedMaxTokens": 8192
+  },
+  {
+    "name": "azure-openai-responses/raw-stream-control",
+    "model": {
+      "api": "azure-openai-responses",
+      "provider": "azure",
+      "id": "gpt-4o",
+      "name": "gpt-4o",
+      "baseUrl": "https://invalid.test",
+      "reasoning": false,
+      "input": [
+        "text"
+      ],
+      "contextWindow": 5000,
+      "maxTokens": 8192,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "options": {},
+    "simple": false,
+    "expectedMaxTokens": null
+  }
+]

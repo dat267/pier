@@ -910,7 +910,7 @@ func StreamOpenAICompletionsSimple(model *Model, context TranscriptContext, opti
 
 	go func() {
 		completionsOptions := &OpenAICompletionsOptions{
-			StreamOptions:   options.StreamOptions,
+			StreamOptions:   withSimpleMaxTokens(model, context, options.StreamOptions),
 			ReasoningEffort: options.Reasoning,
 			ThinkingBudgets: options.ThinkingBudgets,
 		}

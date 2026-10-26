@@ -964,7 +964,7 @@ func StreamAnthropicSimple(model *Model, context TranscriptContext, options *Sim
 		return stream
 	}
 
-	base := AnthropicOptions{StreamOptions: options.StreamOptions}
+	base := AnthropicOptions{StreamOptions: withSimpleMaxTokens(model, context, options.StreamOptions)}
 	if options.ToolChoice != nil {
 		base.ToolChoice = mustMarshalJSON(*options.ToolChoice)
 	}
@@ -985,7 +985,7 @@ func StreamAnthropicSimple(model *Model, context TranscriptContext, options *Sim
 		return StreamAnthropic(model, context, &base)
 	}
 
-	baseMaxTokens := options.MaxTokens
+	baseMaxTokens := base.MaxTokens
 	maxTokens, thinkingBudget := AdjustMaxTokensForThinking(baseMaxTokens, int(model.MaxTokens), options.Reasoning, options.ThinkingBudgets)
 	clamped := ClampMaxTokensToContext(model, context, maxTokens)
 	base.MaxTokens = &clamped

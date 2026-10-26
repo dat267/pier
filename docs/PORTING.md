@@ -391,6 +391,15 @@ final-newline-only edit previously produced an empty diff and no
 tool details and the interactive preview omitted the change. The generated
 corpus compares both the display diff and the patch over 26 content pairs.
 
+Simple provider streams now apply `api/simple-options.ts`'s default and
+context-aware output cap before mapping provider options. Anthropic, Bedrock,
+Google/Vertex, Mistral, OpenAI Completions/Responses and Azure reserve 4096 safety
+tokens after the estimated transcript and default to the model output limit;
+raw streams keep their existing provider-specific defaults. Bedrock's
+budget-thinking path also honors the caller's base cap. A 44-case generated
+corpus compares these ceilings, including raw-stream controls. Codex does not
+serialize an output cap, and pi-messages intentionally bypasses this helper.
+
 Mistral streams distinguish the active text/thinking block from the trailing
 persisted block. When a continued tool call interrupts text or thinking, that
 block ends exactly once; later text opens a fresh block, matching

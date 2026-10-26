@@ -140,3 +140,43 @@ options; max-token defaults/context clamping remain a separate inspection lead.
 
 Verification: all `TestMistral` tests and all ai tests pass; regeneration is
 byte-identical; `just check`, `just cross` (six targets), `just reference` pass.
+
+## CR-025, P2: simple provider streams bypassed context output ceilings (fixed)
+
+Authority: pi v1.4.0 `api/simple-options.ts`, `buildBaseOptions`, applies
+`clampMaxTokensToContext(options.maxTokens ?? model.maxTokens)`. Anthropic,
+Bedrock, Google/Vertex, Mistral, Completions, Responses and Azure simple wrappers
+spread those base options before reasoning mapping. Raw stream calls do not.
+Codex serializes no output cap; pi-messages intentionally bypasses the helper.
+
+Pier's simple wrappers copied request options unchanged. For a 5000-token
+context with one estimated input token and model cap 8192, the reference reserves
+4096 safety tokens and sends 903; Pier sent 8192/10000 or omitted the cap. This
+can produce provider context-limit errors as conversations fill. Bedrock's
+budget-thinking path also ignored explicit maxTokens 2000, sending 8192 instead
+of the reference's budget-adjusted 4048.
+
+Repair: `withSimpleMaxTokens` returns an options copy with the model-defaulted,
+context-clamped ceiling. Only the eight affected simple wrappers use it. The
+Anthropic/Bedrock budget paths consume that base ceiling; raw-stream defaults
+and caller option objects remain unchanged. No sampling changes were made.
+
+```sh
+go test -count=1 ./ai -run '^TestSimpleStreamsClampMaxTokensLikeUpstream$'
+node --experimental-strip-types ai/testdata/simple-max-tokens/generate.mjs ./pi > /tmp/simple-max-tokens.json
+cmp ai/testdata/simple-max-tokens/golden.json /tmp/simple-max-tokens.json
+```
+
+Observed red: 23 of 44 cases differed, including null/8192/10000 instead of 903
+and Bedrock 8192 instead of 4048. Small explicit caps, all raw-stream controls,
+and existing budget-context clamping were matching controls. All cases now
+match. The public OnPayload boundary captures the cap before cancellation, so
+no provider HTTP is needed; the source generator throws after the same capture.
+The harness's initial panic-based stop exposed a separate Bedrock callback
+recovery lead, not part of this repair. A one-token estimate mismatch in the
+first draft was a harness input difference (`hello` versus `hi`), corrected
+before recording the finding; no estimator change was needed.
+
+Verification: focused corpus and all ai tests pass; fixture regeneration is
+byte-identical; `just check`, `just cross` (all six targets), `just reference`
+pass. The CI race gate remains unrun locally.

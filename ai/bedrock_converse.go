@@ -1339,7 +1339,7 @@ func StreamBedrockConverseSimple(model *Model, context TranscriptContext, option
 	if options == nil {
 		options = &SimpleStreamOptions{}
 	}
-	bedrockOptions := &BedrockOptions{StreamOptions: options.StreamOptions}
+	bedrockOptions := &BedrockOptions{StreamOptions: withSimpleMaxTokens(model, context, options.StreamOptions)}
 	if options.ToolChoice != nil {
 		if *options.ToolChoice == ToolChoiceAuto {
 			bedrockOptions.ToolChoice = "auto"
@@ -1362,7 +1362,7 @@ func StreamBedrockConverseSimple(model *Model, context TranscriptContext, option
 
 	// Token-budget thinking: fit the budget under the model's output cap, then
 	// under the context window.
-	var baseMaxTokens *int
+	baseMaxTokens := bedrockOptions.MaxTokens
 	adjustedMaxTokens, thinkingBudget := AdjustMaxTokensForThinking(
 		baseMaxTokens, int(model.MaxTokens), options.Reasoning, options.ThinkingBudgets)
 	maxTokens := ClampMaxTokensToContext(model, context, adjustedMaxTokens)

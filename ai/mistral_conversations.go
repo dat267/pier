@@ -262,7 +262,7 @@ func StreamMistralConversationsSimple(model *Model, context TranscriptContext, o
 		return stream
 	}
 	go func() {
-		mistralOptions := &MistralOptions{StreamOptions: options.StreamOptions}
+		mistralOptions := &MistralOptions{StreamOptions: withSimpleMaxTokens(model, context, options.StreamOptions)}
 		if options.ToolChoice != nil {
 			mistralOptions.ToolChoice = mapToolChoiceType(*options.ToolChoice)
 		}

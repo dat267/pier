@@ -237,7 +237,7 @@ func StreamGoogleVertexSimple(model *Model, context TranscriptContext, options *
 	stream := NewAssistantMessageEventStream()
 	go func() {
 		vertexOptions := &GoogleVertexOptions{GoogleOptions: GoogleOptions{
-			StreamOptions: options.StreamOptions, ToolChoice: deref(options.ToolChoice),
+			StreamOptions: withSimpleMaxTokens(model, context, options.StreamOptions), ToolChoice: deref(options.ToolChoice),
 		}}
 		if options.Reasoning == "" {
 			vertexOptions.Thinking = &GoogleThinkingOption{Enabled: false}
