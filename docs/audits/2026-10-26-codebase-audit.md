@@ -984,3 +984,39 @@ is recorded as a lead only.
 
 Regeneration is byte-identical; `go test -count=1 ./ai`, `just check`,
 `just cross` (six targets) and `just reference` pass.
+
+## Complete fix list for this session
+
+Every fix below was reproduced through a supported boundary first, then verified
+with its focused regression, `just check`, `just cross` (six targets),
+`just reference`, and byte-identical corpus regeneration where a corpus applies.
+
+| Finding | Commit | Scope |
+|---|---|---|
+| CR-021 | `97dc354` | Mistral: close content blocks once on continued tool calls |
+| CR-022 | `42db086` | Mistral: finalize parallel tool calls in first-seen order |
+| CR-023 | `087fdd7` | Mistral: default absent tool arguments to `{}` |
+| CR-024 | `a3f104a` | Mistral simple: honour reasoning maps including `off` |
+| CR-025 | `60a036b` | Simple streams: context-aware output ceilings (8 providers) |
+| CR-026 | `859a82e` | Bedrock: contain host callback failures |
+| CR-027 | `920f058` | MCP HTTP: reject canceled requests after token acquisition |
+| CR-028 | `65a50ca` | MCP HTTP: discard unauthorized responses before retry |
+| CR-029 | `2f44ef4` | find: use `fdfind` when `fd` is unavailable |
+| CR-030 | `fdd90a9` | Goal tool: JavaScript trim for objectives |
+| CR-031 | `809e4c8` | Goal: invalidate stopped or superseded queued rounds |
+| CR-032 | `a5a2bd4` | Goal: expose active tools before an idle round |
+| CR-033 | `710aac0` | Goal: persist transitions in machine order |
+| CR-034 | `028989e` | Session dispose: cancel compaction and branch summary |
+| CR-035 | `eff197f` | Session dispose: stop cache warming |
+| CR-036 | `bb142fb` | Cache warming: message-identity prefix check |
+| CR-037 | `45834ef` | Cache warming: late-dispatch deadline |
+| CR-038 | `6a8d7f0` | Cache warming: contain callback failures |
+| CR-039 | `904e1a9` | Cache warming: run-scoped stops |
+| CR-040 | `a1a9550` | MCP HTTP: reject a malformed URL at Start |
+| CR-041 | `5a4576d` | Pi-messages: contain callback failures |
+| CR-042 | `f5ea097` | find: let fd report a missing search path |
+| CR-043 | `dccf7f8` | Tool resolution: empty list, not null, in `changes` mode |
+
+Coverage commits: `5dc51eb`, `22a6532`, `df8e227`, `f720e5b`, `edba452`,
+`6494612`, `0605146`, `3c71c43`, `e204928`, `6cc1920`, `3652608`, `eb681b5`,
+plus the inventory docs `f8c4df4`, `1a2da12`, `0b7ba10`.
