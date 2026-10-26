@@ -17,10 +17,9 @@ import (
 //
 //	node --experimental-strip-types coding/testdata/grep-tool/generate.mjs ./pi > coding/testdata/grep-tool/golden.json
 func TestGrepToolMatchesUpstream(t *testing.T) {
-	if _, err := os.Stat("/usr/bin/rg"); err != nil {
-		if _, lookErr := execLookPath("rg"); lookErr != nil {
-			t.Skip("ripgrep not installed")
-		}
+	// The tool resolves ripgrep through PATH, so the skip must use the same lookup.
+	if _, err := execLookPath("rg"); err != nil {
+		t.Skip("ripgrep not installed")
 	}
 	raw, err := os.ReadFile("testdata/grep-tool/golden.json")
 	if err != nil {
