@@ -1142,3 +1142,23 @@ place; the grep limit case is scoped to one file, and the find limit selection i
 asserted only by its notice and count in `TestFindToolResultLimitNotice`. Both
 pass 20 repetitions and the whole coding suite twice afterwards. Shared
 tool-corpus helpers moved to `coding/tool_parity_helpers_test.go`.
+
+## Closing state
+
+- Findings fixed this session: 23 (CR-021 through CR-043), each reproduced at a
+  supported boundary first and committed with its regression.
+- Coverage: 21 corpora added or extended; every generated fixture in the
+  repository (54 `generate.mjs` directories) reproduces byte-identically from the
+  pinned checkout at close.
+- Gates: whole suite passes with `-count=2`; `just check`, `just cross` (six
+  targets) and `just reference` pass; informational local `-race` runs pass for
+  `ai`, `agent`, `cmd`, `coding`, `coding/interactive`, `tui`, `mcp/...`,
+  `internal/...`.
+- Divergences recorded this session: D279 (filesystem error wording keeps Go's os
+  errors; Node's libuv text is not emulated).
+- `TODO.md` holds no confirmed unresolved findings.
+- Still not exhaustively probed: interactive wiring and renderers, the full
+  settings manager surface, D264's summarization splitting/retry, MCP OAuth
+  recovery, and platform terminal I/O. Passing tests and static review cannot
+  certify the absence of defects.
+- Nothing was pushed, released, or installed.
