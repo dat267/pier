@@ -85,3 +85,23 @@ passed. The original public-session probe now reports null tokens/percent after
 omission, matching the pinned method. The reference method was extracted
 unchanged because directly importing its full class hits an unrelated cached
 package's missing `setImageTranscoder` export; no reference files were edited.
+
+## CR-060: P2 branch-summary cancellation missed auth resolution (fixed)
+
+Reference: read-only pi v1.4.0 (`4a080252`),
+`packages/coding-agent/src/core/agent-session.ts`, `navigateTree` and
+`_getSummarizationRequestAuth`. The reference passes the branch-summary signal
+through auth resolution. Pier passed nil overrides instead, so cancellation
+and disposal left credential commands or OAuth refresh work alive until their
+own timeouts, even though summarization itself was cancelled.
+
+`TestBranchSummaryAbortCancelsAuthResolution` calls the public abort boundary
+from a provider auth callback and observes its request context. Before the
+repair it failed `AbortBranchSummary did not cancel auth resolution context`;
+the normal-summary control passed. Passing the already-owned `summaryCtx` to
+`GetAuthForModel` fixes the lost propagation without a new worker or controller.
+
+Verification: `go test -count=1 ./coding -run
+'TestBranchSummary|Test.*NavigateTree|TestDisposeCancels|TestCompactionAuth'`
+passed. The regression checks cancellation error propagation and that cancelled
+auth cannot persist a branch summary.

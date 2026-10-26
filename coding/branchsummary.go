@@ -409,7 +409,7 @@ func (s *AgentSession) NavigateTree(ctx context.Context, targetID string, option
 		model := s.Model()
 		request := SummarizationRequestAuth{Model: model}
 		if s.control.ModelRuntime != nil {
-			resolution, err := s.control.ModelRuntime.GetAuthForModel(model, nil)
+			resolution, err := s.control.ModelRuntime.GetAuthForModel(model, &ModelRuntimeAuthOverrides{Ctx: summaryCtx})
 			if err != nil {
 				return nil, err
 			}
