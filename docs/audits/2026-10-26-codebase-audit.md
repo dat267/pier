@@ -1028,6 +1028,8 @@ with its focused regression, `just check`, `just cross` (six targets),
 | CR-043 | `dccf7f8` | Tool resolution: empty list, not null, in `changes` mode |
 | CR-044 | `890d715` | Cache warming: unrecognized stored mode falls back to streaming |
 | CR-045 | `b86c541` | Settings: empty steering/follow-up modes resolve to the default |
+| CR-046 | `2197292` | OpenAI-compatible usage always carries a reasoning count |
+| CR-047 | `5fad435` | Responses usage always carries a reasoning count |
 
 Coverage commits: `5dc51eb`, `22a6532`, `df8e227`, `f720e5b`, `edba452`,
 `6494612`, `0605146`, `3c71c43`, `e204928`, `6cc1920`, `3652608`, `eb681b5`,
