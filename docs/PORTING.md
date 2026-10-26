@@ -417,6 +417,13 @@ mutation and durable goal-record appends are serialized together; parallel
 `set_goal` calls cannot corrupt the replay log by interleaving clear/create
 entries. Host callbacks and model work remain outside the state lock.
 
+A 26-case generated corpus executes the pinned `resolveModelReference` for exact
+ids, `provider/id` prefixes (including gateway ids that contain a slash or
+colon), thinking suffixes in lenient/strict/`none` modes, provider constraints,
+fuzzy substrings and the unusable-provider tie-break, then compares the resolved
+model, thinking level, warning and custom-target shape. All matched on the first
+run.
+
 A generated CLI-argument corpus compares 93 argv vectors against the pinned
 `cli/args.ts` `parseArgs`: value and boolean flags, list parsing and trimming,
 `--`, `@file` arguments, unknown/extension flags, diagnostics, mode validation,

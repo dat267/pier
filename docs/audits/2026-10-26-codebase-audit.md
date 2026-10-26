@@ -766,3 +766,26 @@ These were inspected or hypothesised this round and deliberately left out of
 - Compaction cut selection, the interactive renderer/layout and the full settings
   manager were not re-probed against the pin this round; D264's deliberate
   splitting/retry changes were not revisited.
+
+## Model-resolution corpus
+
+`coding/testdata/model-resolve/generate.mjs` executes
+`resolveModelReference` from the pinned `core/model-resolver.ts` over a synthetic
+ten-model pool and 26 requests: bare and `provider/id` references, case-insensitive
+provider prefixes, gateway ids containing `/` and `:`, `:high`/`:off`/invalid
+thinking suffixes in `lenient`, `strict` and `none` modes, a provider constraint,
+fuzzy substrings and typos, empty/whitespace text, and an unusable-provider
+tie-break. The projection covers the resolved model, thinking level, warning, and
+the not-found custom-target shape (provider, provider models in order, model text
+and id).
+
+```sh
+node --experimental-strip-types coding/testdata/model-resolve/generate.mjs ./pi > coding/testdata/model-resolve/golden.json
+go test -count=1 ./coding -run '^TestResolveModelReferenceMatchesUpstream$'
+```
+
+All 26 cases matched on the first run, so this records coverage rather than a
+finding; the documented locale-collation and minimatch deviations (D257/D262)
+apply to scoped-model patterns and ordering, not this reference resolver.
+Regeneration is byte-identical; `go test -count=1 ./coding`, `just check`,
+`just cross` (six targets) and `just reference` pass.

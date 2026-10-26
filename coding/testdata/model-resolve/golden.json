@@ -1,0 +1,419 @@
+{
+  "models": [
+    {
+      "provider": "anthropic",
+      "id": "claude-opus-4-5",
+      "name": "Claude Opus 4.5",
+      "api": "anthropic-messages"
+    },
+    {
+      "provider": "anthropic",
+      "id": "claude-sonnet-4-5",
+      "name": "Claude Sonnet 4.5",
+      "api": "anthropic-messages"
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5",
+      "name": "GPT-5",
+      "api": "anthropic-messages"
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5-mini",
+      "name": "GPT-5 mini",
+      "api": "anthropic-messages"
+    },
+    {
+      "provider": "zai",
+      "id": "glm-5",
+      "name": "GLM-5",
+      "api": "anthropic-messages"
+    },
+    {
+      "provider": "openrouter",
+      "id": "qwen/qwen3-coder:exacto",
+      "name": "Qwen3 Coder (exacto)",
+      "api": "anthropic-messages"
+    },
+    {
+      "provider": "google",
+      "id": "gemini-3-pro",
+      "name": "Gemini 3 Pro",
+      "api": "anthropic-messages"
+    },
+    {
+      "provider": "moonshot",
+      "id": "kimi-k2-thinking",
+      "name": "Kimi K2 Thinking",
+      "api": "anthropic-messages"
+    },
+    {
+      "provider": "custom",
+      "id": "xiaomi/mimo-v2.6-pro",
+      "name": "MiMo v2.6 Pro",
+      "api": "anthropic-messages"
+    },
+    {
+      "provider": "anthropic",
+      "id": "claude-haiku-4",
+      "name": "Claude Haiku 4",
+      "api": "anthropic-messages"
+    }
+  ],
+  "fixtures": [
+    {
+      "name": "claude-opus-4-5|*|lenient|fuzzy=true|all",
+      "request": {
+        "text": "claude-opus-4-5",
+        "thinkingSuffix": "lenient",
+        "fuzzy": true
+      },
+      "usable": "all",
+      "expected": {
+        "status": "resolved",
+        "model": "anthropic/claude-opus-4-5"
+      }
+    },
+    {
+      "name": "claude-opus-4-5:high|*|lenient|fuzzy=true|all",
+      "request": {
+        "text": "claude-opus-4-5:high",
+        "thinkingSuffix": "lenient",
+        "fuzzy": true
+      },
+      "usable": "all",
+      "expected": {
+        "status": "resolved",
+        "model": "anthropic/claude-opus-4-5",
+        "thinkingLevel": "high"
+      }
+    },
+    {
+      "name": "claude-opus-4-5:bogus|*|lenient|fuzzy=true|all",
+      "request": {
+        "text": "claude-opus-4-5:bogus",
+        "thinkingSuffix": "lenient",
+        "fuzzy": true
+      },
+      "usable": "all",
+      "expected": {
+        "status": "resolved",
+        "model": "anthropic/claude-opus-4-5",
+        "warning": "Invalid thinking level \"bogus\" in pattern \"claude-opus-4-5:bogus\". Using default instead."
+      }
+    },
+    {
+      "name": "claude-opus-4-5:bogus|*|strict|fuzzy=true|all",
+      "request": {
+        "text": "claude-opus-4-5:bogus",
+        "thinkingSuffix": "strict",
+        "fuzzy": true
+      },
+      "usable": "all",
+      "expected": {
+        "status": "not-found"
+      }
+    },
+    {
+      "name": "claude-opus-4-5:bogus|*|none|fuzzy=true|all",
+      "request": {
+        "text": "claude-opus-4-5:bogus",
+        "thinkingSuffix": "none",
+        "fuzzy": true
+      },
+      "usable": "all",
+      "expected": {
+        "status": "not-found"
+      }
+    },
+    {
+      "name": "claude-opus-4-5:off|*|lenient|fuzzy=true|all",
+      "request": {
+        "text": "claude-opus-4-5:off",
+        "thinkingSuffix": "lenient",
+        "fuzzy": true
+      },
+      "usable": "all",
+      "expected": {
+        "status": "resolved",
+        "model": "anthropic/claude-opus-4-5",
+        "thinkingLevel": "off"
+      }
+    },
+    {
+      "name": "anthropic/claude-sonnet-4-5|*|lenient|fuzzy=true|all",
+      "request": {
+        "text": "anthropic/claude-sonnet-4-5",
+        "thinkingSuffix": "lenient",
+        "fuzzy": true
+      },
+      "usable": "all",
+      "expected": {
+        "status": "resolved",
+        "model": "anthropic/claude-sonnet-4-5"
+      }
+    },
+    {
+      "name": "ANTHROPIC/Claude-Sonnet-4-5|*|lenient|fuzzy=true|all",
+      "request": {
+        "text": "ANTHROPIC/Claude-Sonnet-4-5",
+        "thinkingSuffix": "lenient",
+        "fuzzy": true
+      },
+      "usable": "all",
+      "expected": {
+        "status": "resolved",
+        "model": "anthropic/claude-sonnet-4-5"
+      }
+    },
+    {
+      "name": "zai/glm-5|*|lenient|fuzzy=true|all",
+      "request": {
+        "text": "zai/glm-5",
+        "thinkingSuffix": "lenient",
+        "fuzzy": true
+      },
+      "usable": "all",
+      "expected": {
+        "status": "resolved",
+        "model": "zai/glm-5"
+      }
+    },
+    {
+      "name": "qwen/qwen3-coder:exacto|*|lenient|fuzzy=true|all",
+      "request": {
+        "text": "qwen/qwen3-coder:exacto",
+        "thinkingSuffix": "lenient",
+        "fuzzy": true
+      },
+      "usable": "all",
+      "expected": {
+        "status": "resolved",
+        "model": "openrouter/qwen/qwen3-coder:exacto"
+      }
+    },
+    {
+      "name": "xiaomi/mimo-v2.6-pro|*|lenient|fuzzy=true|all",
+      "request": {
+        "text": "xiaomi/mimo-v2.6-pro",
+        "thinkingSuffix": "lenient",
+        "fuzzy": true
+      },
+      "usable": "all",
+      "expected": {
+        "status": "resolved",
+        "model": "custom/xiaomi/mimo-v2.6-pro"
+      }
+    },
+    {
+      "name": "openrouter/qwen/qwen3-coder:exacto|*|lenient|fuzzy=true|all",
+      "request": {
+        "text": "openrouter/qwen/qwen3-coder:exacto",
+        "thinkingSuffix": "lenient",
+        "fuzzy": true
+      },
+      "usable": "all",
+      "expected": {
+        "status": "resolved",
+        "model": "openrouter/qwen/qwen3-coder:exacto"
+      }
+    },
+    {
+      "name": "gpt-5|openai|lenient|fuzzy=true|all",
+      "request": {
+        "text": "gpt-5",
+        "provider": "openai",
+        "thinkingSuffix": "lenient",
+        "fuzzy": true
+      },
+      "usable": "all",
+      "expected": {
+        "status": "resolved",
+        "model": "openai/gpt-5"
+      }
+    },
+    {
+      "name": "claude-opus-4-5|openai|lenient|fuzzy=true|all",
+      "request": {
+        "text": "claude-opus-4-5",
+        "provider": "openai",
+        "thinkingSuffix": "lenient",
+        "fuzzy": true
+      },
+      "usable": "all",
+      "expected": {
+        "status": "not-found",
+        "target": {
+          "provider": "openai",
+          "providerModels": [
+            "openai/gpt-5",
+            "openai/gpt-5-mini"
+          ],
+          "modelText": "claude-opus-4-5",
+          "modelId": "claude-opus-4-5"
+        }
+      }
+    },
+    {
+      "name": "claude-opus-4-5|OpenAI|lenient|fuzzy=true|all",
+      "request": {
+        "text": "claude-opus-4-5",
+        "provider": "OpenAI",
+        "thinkingSuffix": "lenient",
+        "fuzzy": true
+      },
+      "usable": "all",
+      "expected": {
+        "status": "not-found",
+        "target": {
+          "provider": "openai",
+          "providerModels": [
+            "openai/gpt-5",
+            "openai/gpt-5-mini"
+          ],
+          "modelText": "claude-opus-4-5",
+          "modelId": "claude-opus-4-5"
+        }
+      }
+    },
+    {
+      "name": "gpt-5x|*|lenient|fuzzy=true|no-openai",
+      "request": {
+        "text": "gpt-5x",
+        "thinkingSuffix": "lenient",
+        "fuzzy": true
+      },
+      "usable": "no-openai",
+      "expected": {
+        "status": "not-found"
+      }
+    },
+    {
+      "name": "sonnet|*|lenient|fuzzy=true|all",
+      "request": {
+        "text": "sonnet",
+        "thinkingSuffix": "lenient",
+        "fuzzy": true
+      },
+      "usable": "all",
+      "expected": {
+        "status": "resolved",
+        "model": "anthropic/claude-sonnet-4-5"
+      }
+    },
+    {
+      "name": "claud-opus|*|lenient|fuzzy=true|all",
+      "request": {
+        "text": "claud-opus",
+        "thinkingSuffix": "lenient",
+        "fuzzy": true
+      },
+      "usable": "all",
+      "expected": {
+        "status": "not-found"
+      }
+    },
+    {
+      "name": "opus|*|lenient|fuzzy=true|all",
+      "request": {
+        "text": "opus",
+        "thinkingSuffix": "lenient",
+        "fuzzy": true
+      },
+      "usable": "all",
+      "expected": {
+        "status": "resolved",
+        "model": "anthropic/claude-opus-4-5"
+      }
+    },
+    {
+      "name": "kimi|*|lenient|fuzzy=true|all",
+      "request": {
+        "text": "kimi",
+        "thinkingSuffix": "lenient",
+        "fuzzy": true
+      },
+      "usable": "all",
+      "expected": {
+        "status": "resolved",
+        "model": "moonshot/kimi-k2-thinking"
+      }
+    },
+    {
+      "name": "<empty>|*|lenient|fuzzy=true|all",
+      "request": {
+        "text": "",
+        "thinkingSuffix": "lenient",
+        "fuzzy": true
+      },
+      "usable": "all",
+      "expected": {
+        "status": "not-found"
+      }
+    },
+    {
+      "name": "   |*|lenient|fuzzy=true|all",
+      "request": {
+        "text": "   ",
+        "thinkingSuffix": "lenient",
+        "fuzzy": true
+      },
+      "usable": "all",
+      "expected": {
+        "status": "not-found"
+      }
+    },
+    {
+      "name": " gemini-3-pro |*|lenient|fuzzy=true|all",
+      "request": {
+        "text": " gemini-3-pro ",
+        "thinkingSuffix": "lenient",
+        "fuzzy": true
+      },
+      "usable": "all",
+      "expected": {
+        "status": "resolved",
+        "model": "google/gemini-3-pro"
+      }
+    },
+    {
+      "name": "unknown/model|*|lenient|fuzzy=true|all",
+      "request": {
+        "text": "unknown/model",
+        "thinkingSuffix": "lenient",
+        "fuzzy": true
+      },
+      "usable": "all",
+      "expected": {
+        "status": "not-found"
+      }
+    },
+    {
+      "name": "unknown:high|*|lenient|fuzzy=true|all",
+      "request": {
+        "text": "unknown:high",
+        "thinkingSuffix": "lenient",
+        "fuzzy": true
+      },
+      "usable": "all",
+      "expected": {
+        "status": "not-found"
+      }
+    },
+    {
+      "name": "claude-opus-4-5:high|*|lenient|fuzzy=false|all",
+      "request": {
+        "text": "claude-opus-4-5:high",
+        "thinkingSuffix": "lenient",
+        "fuzzy": false
+      },
+      "usable": "all",
+      "expected": {
+        "status": "resolved",
+        "model": "anthropic/claude-opus-4-5",
+        "thinkingLevel": "high"
+      }
+    }
+  ]
+}
