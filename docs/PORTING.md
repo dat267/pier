@@ -417,6 +417,12 @@ mutation and durable goal-record appends are serialized together; parallel
 `set_goal` calls cannot corrupt the replay log by interleaving clear/create
 entries. Host callbacks and model work remain outside the state lock.
 
+Package-version comparison is pinned by a generated corpus that executes the
+checkout's own `semver` dependency (the module `utils/version-check.ts` uses):
+30 validity inputs and 16 comparison pairs covering leading zeros, `v`/`=`
+prefixes, build metadata, prerelease numeric-vs-alphanumeric ordering, and
+oversized numeric identifiers. All matched on the first run.
+
 A 26-case generated corpus executes the pinned `resolveModelReference` for exact
 ids, `provider/id` prefixes (including gateway ids that contain a slash or
 colon), thinking suffixes in lenient/strict/`none` modes, provider constraints,

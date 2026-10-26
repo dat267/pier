@@ -789,3 +789,24 @@ finding; the documented locale-collation and minimatch deviations (D257/D262)
 apply to scoped-model patterns and ordering, not this reference resolver.
 Regeneration is byte-identical; `go test -count=1 ./coding`, `just check`,
 `just cross` (six targets) and `just reference` pass.
+
+## Package-version corpus
+
+`coding/testdata/semver/generate.mjs` loads the pinned checkout's `semver`
+dependency, the module `utils/version-check.ts` calls, and records `valid` for
+30 inputs plus `compare` for 16 pairs. `TestPackageVersionComparisonMatchesSemver`
+compares them with `ComparePackageVersions`.
+
+```sh
+node coding/testdata/semver/generate.mjs ./pi > coding/testdata/semver/golden.json
+go test -count=1 ./coding -run '^TestPackageVersionComparisonMatchesSemver$'
+```
+
+Cases cover `v`/`=` prefixes, leading zeros, missing components, build metadata,
+prerelease leading zeros, empty identifiers, `_` in identifiers, numeric versus
+alphanumeric prerelease ordering, numeric identifiers compared by value
+(`2 < 10`) rather than length, prerelease-versus-release ordering, build metadata
+ignored in precedence, and 20-digit numeric identifiers that must not lose
+precision. All matched on the first run, so this records coverage, not a finding.
+Regeneration is byte-identical; `go test -count=1 ./coding`, `just check`,
+`just cross` (six targets) and `just reference` pass.
