@@ -391,6 +391,11 @@ final-newline-only edit previously produced an empty diff and no
 tool details and the interactive preview omitted the change. The generated
 corpus compares both the display diff and the patch over 26 content pairs.
 
+Mistral streams distinguish the active text/thinking block from the trailing
+persisted block. When a continued tool call interrupts text or thinking, that
+block ends exactly once; later text opens a fresh block, matching
+`api/mistral-conversations.ts` rather than extending an already-ended block.
+
 Google streams keep a text part that is present but empty. The reference keys
 block creation on `part.text !== undefined`, so `{"text": ""}` still opens a text
 block and pushes an empty delta; Pier tested the string for emptiness and

@@ -669,7 +669,7 @@ func consumeMistralChatStream(
 					return herr
 				}
 				if done {
-					finishMistralBlock(output, stream)
+					finishMistralBlock(output, stream, state)
 					finishMistralToolCalls(output, stream, state)
 					return nil
 				}
@@ -688,7 +688,7 @@ func consumeMistralChatStream(
 			return err
 		}
 	}
-	finishMistralBlock(output, stream)
+	finishMistralBlock(output, stream, state)
 	finishMistralToolCalls(output, stream, state)
 	return nil
 }
@@ -763,6 +763,9 @@ func applyMistralEvent(model *Model, output *AssistantMessage, stream *Assistant
 // arguments from several deltas land in one block.
 type mistralStreamState struct {
 	toolBlocks map[string]int
+	// contentOpen distinguishes an active text/thinking block from the trailing
+	// persisted block, which can already be closed by a continued tool call.
+	contentOpen bool
 	// partialArgs holds the raw accumulated argument text per block index
 	// (upstream's streaming scratch buffer, which is never persisted).
 	partialArgs    map[int]string
@@ -787,9 +790,10 @@ func appendMistralText(output *AssistantMessage, stream *AssistantMessageEventSt
 		return
 	}
 	current, hasCurrent := mistralCurrentBlock(output)
-	if !hasCurrent || current.kind != KindText {
-		finishMistralBlock(output, stream)
+	if !state.contentOpen || !hasCurrent || current.kind != KindText {
+		finishMistralBlock(output, stream, state)
 		output.Content = append(output.Content, TextContent{Text: ""})
+		state.contentOpen = true
 		stream.Push(AssistantMessageEvent{Type: EventTextStart, ContentIndex: len(output.Content) - 1, Partial: output})
 	}
 	index := len(output.Content) - 1
@@ -807,9 +811,10 @@ func appendMistralThinking(output *AssistantMessage, stream *AssistantMessageEve
 		return
 	}
 	current, hasCurrent := mistralCurrentBlock(output)
-	if !hasCurrent || current.kind != KindThinking {
-		finishMistralBlock(output, stream)
+	if !state.contentOpen || !hasCurrent || current.kind != KindThinking {
+		finishMistralBlock(output, stream, state)
 		output.Content = append(output.Content, ThinkingContent{Thinking: ""})
+		state.contentOpen = true
 		stream.Push(AssistantMessageEvent{Type: EventThinkingStart, ContentIndex: len(output.Content) - 1, Partial: output})
 	}
 	index := len(output.Content) - 1
@@ -839,10 +844,11 @@ func mistralCurrentBlock(output *AssistantMessage) (blockRef, bool) {
 type blockRef struct{ kind ContentKind }
 
 // finishMistralBlock emits the end event for the trailing block.
-func finishMistralBlock(output *AssistantMessage, stream *AssistantMessageEventStream) {
-	if len(output.Content) == 0 {
+func finishMistralBlock(output *AssistantMessage, stream *AssistantMessageEventStream, state *mistralStreamState) {
+	if !state.contentOpen || len(output.Content) == 0 {
 		return
 	}
+	state.contentOpen = false
 	index := len(output.Content) - 1
 	switch typed := output.Content[index].(type) {
 	case TextContent:
@@ -853,7 +859,7 @@ func finishMistralBlock(output *AssistantMessage, stream *AssistantMessageEventS
 }
 
 func appendMistralToolCall(output *AssistantMessage, stream *AssistantMessageEventStream, state *mistralStreamState, toolCall mistralStreamToolCall) {
-	finishMistralBlock(output, stream)
+	finishMistralBlock(output, stream, state)
 
 	callID := toolCall.ID
 	if callID == "" || callID == "null" {
