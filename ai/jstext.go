@@ -37,6 +37,12 @@ var jsSpace = func(r rune) bool {
 	return r >= 0x2000 && r <= 0x200A
 }
 
+// JSWhitespaceClass is the JavaScript `\s` character class for use inside an
+// RE2 pattern: Go's `\s` is `[\t\n\f\r ]`, while JavaScript's also matches the
+// Unicode space separators and U+FEFF. Ported patterns that use `\s` build
+// their class from this constant so the two engines agree (CR-068/CR-069).
+const JSWhitespaceClass = `\t\n\v\f\r \x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}`
+
 func JSTrim(s string) string { return strings.TrimFunc(s, jsSpace) }
 
 // JSTrimLeft implements String.prototype.trimStart.

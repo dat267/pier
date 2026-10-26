@@ -204,7 +204,10 @@ func validateAuthCommandArgs(args *Args, kind AuthCommandKind) (string, string, 
 	return provider, model, nil
 }
 
-var bearerTokenPattern = regexp.MustCompile(`(?i)^Bearer\s+(.+)$`)
+// bearerTokenPattern is the reference's /^Bearer\s+(.+)$/iu. ai.JSWhitespaceClass
+// replaces the ASCII-only RE2 \s so a credential separated by a Unicode space
+// still parses (CR-069).
+var bearerTokenPattern = regexp.MustCompile(`(?i)^Bearer[` + ai.JSWhitespaceClass + `]+(.+)$`)
 
 // GetAuthCredential extracts the printable credential from a resolved auth
 // result: the API key, else a Bearer Authorization header (upstream

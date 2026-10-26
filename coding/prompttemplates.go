@@ -360,7 +360,7 @@ func LoadPromptTemplatesWithDiagnostics(options LoadPromptTemplatesOptions) Load
 }
 
 // jsWhitespaceClass is the JS `\s` class for RE2 (Go's `\s` is ASCII-only).
-const jsWhitespaceClass = `\t\n\v\f\r \x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}`
+const jsWhitespaceClass = ai.JSWhitespaceClass
 
 var promptCommandPattern = regexp.MustCompile(
 	`^/([^` + jsWhitespaceClass + `]+)(?:[` + jsWhitespaceClass + `]+([\s\S]*))?$`)

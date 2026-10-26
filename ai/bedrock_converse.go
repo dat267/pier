@@ -102,7 +102,10 @@ func GetModelMatchCandidates(modelID, modelName string) []string {
 	return candidates
 }
 
-var bedrockCandidateSeparators = regexp.MustCompile(`[\s_.:]+`)
+// bedrockCandidateSeparators is the reference's `[\s_.:]+`. JSWhitespaceClass
+// replaces \s, whose RE2 form is ASCII-only while JavaScript's includes the
+// Unicode space separators (CR-069).
+var bedrockCandidateSeparators = regexp.MustCompile(`[` + JSWhitespaceClass + `_.:]+`)
 
 func bedrockNormalizeCandidate(value string) string {
 	return bedrockCandidateSeparators.ReplaceAllString(value, "-")

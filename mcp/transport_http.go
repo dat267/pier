@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/mcp/protocol"
 	"golang.org/x/text/encoding/unicode"
 )
@@ -655,7 +656,10 @@ func needsAuthorization(response *http.Response) bool {
 	return insufficientScope.MatchString(response.Header.Get("www-authenticate"))
 }
 
-var insufficientScope = regexp.MustCompile(`(?i)(?:^|[\s,])error="?insufficient_scope"?`)
+// insufficientScope is the reference's /(?:^|[\s,])error="?insufficient_scope"?/i.
+// JavaScript's \s includes the Unicode space separators; RE2's does not, so the
+// class comes from ai.JSWhitespaceClass (CR-069).
+var insufficientScope = regexp.MustCompile(`(?i)(?:^|[` + ai.JSWhitespaceClass + `,])error="?insufficient_scope"?`)
 
 // isTransientStatus: statuses worth retrying when a stream fails to
 // (re)open.

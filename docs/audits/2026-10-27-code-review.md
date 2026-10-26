@@ -288,3 +288,36 @@ what is accepted.
 Verification: all seven differential inputs are now byte-identical to the pinned
 function; `go test -count=1 ./coding -run 'TestStripJSONComments|TestLoadModelConfig|TestModelConfig'`
 passed; `just check`, `just cross` and `just reference` passed.
+
+## CR-069: P3 ported patterns used RE2's \s where the reference uses JavaScript's (fixed)
+
+Reference: read-only pi v1.4.0 (`4a080252`): `cli/auth-command.ts`
+`/^Bearer\s+(.+)$/iu`, `api/bedrock-converse-stream.ts`
+`id.replace(/[\s_.:]+/g, "-")`, and `mcp/src/transports/streamable-http.ts`
+`needsAuthorization`'s `/(?:^|[\s,])error="?insufficient_scope"?/i`. JavaScript's
+`\s` includes the Unicode space separators and U+FEFF; RE2's is
+`[\t\n\f\r ]`. A credential header, a Bedrock model identifier or a bearer
+challenge separated by one of those characters parsed differently here.
+
+Each is a parity defect with no reproduced user-visible failure: real headers,
+model identifiers and challenges separate with ASCII whitespace, and the
+repository's catalogs contain none of these characters. They are recorded at P3
+and fixed by reusing one exported class, `ai.JSWhitespaceClass`, which
+`coding/prompttemplates.go` now also builds its prompt-command pattern from, so
+there is one definition instead of two.
+
+Red-first evidence: `TestGetAuthCredentialAcceptsJavaScriptWhitespace` failed
+for U+00A0, U+3000 and U+FEFF; `TestBedrockCandidateSeparatorsUseJavaScriptWhitespace`
+failed for U+00A0 and U+3000; `TestNeedsAuthorizationAcceptsJavaScriptWhitespace`
+failed for U+00A0 and U+3000 and passed after the change, and reverting only the
+pattern reproduced both failures. ASCII space, tab, comma and non-separator
+controls pass in both states.
+
+Verification: `go test -count=1 ./ai ./coding ./mcp` passed; `just check`,
+`just cross` (six targets) and `just reference` passed.
+
+Remaining, unverified: `tui/latex.go`, `coding/changelog.go`,
+`coding/interactive/exporthtml.go` and `internal/highlight` also use `\s` in
+patterns ported from JavaScript, but those sites are display-only, so a
+Unicode-space input changes glyphs or link text rather than behavior. They are
+left unchanged rather than patched without a reproduced case.

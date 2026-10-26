@@ -83,6 +83,10 @@ may stop the terminal from its own resize callback (`packages/tui/src/terminal.t
 delivering another resize.
 `StripJSONComments` uses JavaScript's `\s` class, so a trailing comma before a
 Unicode space separator is stripped exactly as the pin's `utils/json.ts` does.
+Ported patterns that use `\s` build the class from `ai.JSWhitespaceClass` (the
+JavaScript class) instead of RE2's ASCII-only form: the prompt-command pattern,
+markdown-link stripping, Bearer credential extraction, Bedrock model-match
+candidates and MCP step-up detection.
 
 Session aborts now retain cancellation across retry startup, backoff and
 continuations, and `agent_settled.aborted` reports the run's abort flag rather
