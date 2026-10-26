@@ -261,3 +261,30 @@ same signal-and-generation rule; it is cross-built and vetted but not run here.
 Verification: the PTY probe now reports `callback exit=0 output='resize-entered
 stopped'`; the two regressions pass with `-count=5`; `go test -count=1 ./tui`
 passed; `CGO_ENABLED=0 GOOS=windows go vet ./tui/` passed.
+
+## CR-068: P3 StripJSONComments kept a trailing comma before non-ASCII whitespace (fixed)
+
+Reference: read-only pi v1.4.0 (`4a080252`),
+`packages/coding-agent/src/utils/json.ts`, `stripJsonComments`. JavaScript's
+`\s` includes the Unicode space separators and U+FEFF; RE2's is
+`[\t\n\f\r ]`. A trailing comma followed by one of them was stripped by the
+pin and kept by Pier.
+
+This is a pure parity defect: a byte-level differential over seven inputs
+showed three differing cases, but no user-visible failure was reproduced.
+ECMA-404 JSON accepts only ASCII whitespace, so both `JSON.parse` and Go's
+decoder reject the leftover character, and `LoadModelConfig` reports a parse
+error either way. The finding is recorded at P3 and the repair is limited to
+reusing the existing `jsWhitespaceClass` constant, so the exported and
+golden-pinned function now matches the reference exactly.
+
+`TestStripJSONCommentsHandlesJavaScriptWhitespace` covers the whole JavaScript
+class (ASCII space, tab, vertical tab, form feed, U+00A0, U+1680, U+2000,
+U+200A, U+2028, U+2029, U+202F, U+205F, U+3000, U+FEFF) plus a non-whitespace
+control. `TestLoadModelConfigRejectsUnicodeWhitespaceAfterTrailingComma` pins
+that the loader still rejects such a file, so the change cannot silently widen
+what is accepted.
+
+Verification: all seven differential inputs are now byte-identical to the pinned
+function; `go test -count=1 ./coding -run 'TestStripJSONComments|TestLoadModelConfig|TestModelConfig'`
+passed; `just check`, `just cross` and `just reference` passed.

@@ -22,7 +22,11 @@ import (
 
 var (
 	jsonStringOrCommentPattern = regexp.MustCompile(`"(?:\\.|[^"\\])*"|//[^\n]*`)
-	jsonStringOrTrailingComma  = regexp.MustCompile(`"(?:\\.|[^"\\])*"|,(\s*[}\]])`)
+	// The trailing class reuses jsWhitespaceClass (prompttemplates.go): JavaScript's
+	// \s covers the Unicode space separators and the byte order mark, RE2's does
+	// not. A trailing comma followed by one of those is stripped by the pin and
+	// would otherwise reach JSON.parse and reject the whole file (CR-068).
+	jsonStringOrTrailingComma = regexp.MustCompile(`"(?:\\.|[^"\\])*"|,([` + jsWhitespaceClass + `]*[}\]])`)
 )
 
 // StripJSONComments removes `//` line comments and trailing commas from JSON,

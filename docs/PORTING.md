@@ -81,6 +81,8 @@ The terminal resize watcher is signalled rather than joined, so a library host
 may stop the terminal from its own resize callback (`packages/tui/src/terminal.ts`,
 `stop`); a generation guard prevents a superseded or stopped watcher from
 delivering another resize.
+`StripJSONComments` uses JavaScript's `\s` class, so a trailing comma before a
+Unicode space separator is stripped exactly as the pin's `utils/json.ts` does.
 
 Session aborts now retain cancellation across retry startup, backoff and
 continuations, and `agent_settled.aborted` reports the run's abort flag rather
