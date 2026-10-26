@@ -889,13 +889,13 @@ func appendMistralToolCall(output *AssistantMessage, stream *AssistantMessageEve
 		stream.Push(AssistantMessageEvent{Type: EventToolcallStart, ContentIndex: blockIndex, Partial: output})
 	}
 
-	argsDelta := ""
-	if len(toolCall.Function.Arguments) > 0 {
+	argsDelta := "{}"
+	if arguments := bytes.TrimSpace(toolCall.Function.Arguments); len(arguments) > 0 && !bytes.Equal(arguments, []byte("null")) {
 		var asString string
-		if err := json.Unmarshal(toolCall.Function.Arguments, &asString); err == nil {
+		if err := json.Unmarshal(arguments, &asString); err == nil {
 			argsDelta = asString
 		} else {
-			argsDelta = string(toolCall.Function.Arguments)
+			argsDelta = string(arguments)
 		}
 	}
 	partial := state.partialArgs[blockIndex] + argsDelta

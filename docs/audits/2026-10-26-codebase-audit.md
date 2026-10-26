@@ -56,3 +56,26 @@ single-call streaming remains a control.
 
 Verification: focused test passes 30 repetitions; all ai tests, `just check`,
 `just cross` (all six targets), `just reference` pass.
+
+## CR-023, P3: Mistral omitted the default object argument delta (fixed)
+
+Authority: `consumeChatStream` in the same pinned reference uses strings
+verbatim and `JSON.stringify(arguments || {})` for non-string arguments.
+Absent and null arguments therefore emit `{}`. Pier instead emitted an empty
+delta, so stream clients observed different tool arguments. The argument delta
+now defaults to `{}` while explicitly present string arguments remain verbatim.
+
+Replay:
+
+```sh
+go test -count=1 ./ai -run '^TestMistralDefaultsAbsentToolArgumentsToObjectDelta$'
+```
+
+Observed red: absent and null arguments each emitted `""`, want `"{}"`.
+Empty-string and object argument controls passed before and after.
+
+Verification: focused test, all ai tests, `just check`, `just cross` (six
+targets), `just reference` pass. The draft 22-scenario source corpus now matches
+in 20 repetitions and regenerates byte-identically. CR-021 and CR-022 corpus
+reproductions also pass after their repairs. `TODO.md` has no confirmed
+unresolved findings; this does not establish full codebase coverage.
