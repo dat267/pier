@@ -567,3 +567,40 @@ timers and synthetic streams mean no real sleep, provider request or credential.
 Verification: focused test passes 10 repetitions; cache-warmer, SDK, disposal,
 coding and agent tests pass; `just check`, `just cross` (six targets),
 `just reference` pass. No local race run.
+
+## CR-039, P2: a stale cache-warming run could cancel its replacement (fixed)
+
+Authority: pi v1.4.0 `core/cache-warmer.ts`, validateRun/stop. The reference
+checks `this.run !== run` and calls stop with no await between them, so a stale
+run can never stop its replacement. In Go the currency and mode callbacks run
+outside the warmer lock, so the check and the stop were separate steps.
+
+`validateRun` locked, saw itself current, then called `run.isCurrent()` outside
+the lock. A session request could start a replacement run in that window; the
+stale callback's false result then called `stop`, which cleared whatever run was
+current and reported "conversation context changed". Warming stopped for the new
+request, the deadlock-free equivalent of losing a race the reference cannot lose.
+The overdue-age stop and timer installation had the same shape.
+
+Repair: `stopRun` clears the current run only while the caller's run is still
+current; `validateRun`, the policy stop and the age limit use it. A timer
+installed after replacement is stopped instead of attached to the stale run.
+Cancellation, mode changes and disposal still clear the current run as before.
+
+```sh
+go test -count=20 ./coding -run '^TestCacheWarmerStaleRunCannotStopReplacement$'
+```
+
+Reproduced with a synctest bubble: the stale run's currency callback blocks
+inside the refresh, a public `Start` installs the replacement, then the stale
+callback returns false. Before the fix the status became
+`inactive/conversation context changed` with the replacement's timer discarded;
+after it the replacement stays `scheduled`. No sleeps beyond virtual time, and
+no real provider or network traffic.
+
+Verification: 20 repetitions of the focused test; all `TestCacheWarmer*`, the
+cache-warmer/SDK/disposal set, and the `coding`, `agent` and `coding/interactive`
+packages pass; `just check`, `just cross` (six targets), `just reference` pass.
+No local race run. Sequence note: this finding's reproduction and repair were
+done before its tracker entry was written; the evidence above is the durable
+record, and `TODO.md` stays at "no confirmed unresolved findings".

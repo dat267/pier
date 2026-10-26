@@ -399,7 +399,9 @@ after its scheduled time. Late timer/policy work stops with
 an exactly-at-deadline refresh is still admitted. Policy, request and
 warm-notification failures are contained: a failed policy falls back to pi's own
 economics, and a failed refresh or notification stays best-effort and reschedules
-the current run instead of failing the process.
+the current run instead of failing the process. A stale run's stop is scoped to
+that run, so a refresh replaced while it was inside a host currency check cannot
+cancel the newer run or its timer.
 
 The builtin goal tool normalizes objectives with JavaScript's trim set, like
 D223's extension source. BOM-only input is rejected as empty, BOM boundaries

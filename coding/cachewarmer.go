@@ -383,6 +383,10 @@ func (w *CacheWarmer) stop(reason string, stopped *CacheWarmingStatus) {
 
 func (w *CacheWarmer) schedule(run *cacheWarmingRun) {
 	w.mu.Lock()
+	if w.run != run {
+		w.mu.Unlock()
+		return
+	}
 	run.extensionOverride = false
 	run.nextWarmAt = time.Now().UnixMilli() + run.delayMS
 	// Keep half the planned pre-expiry margin for timer/policy delays. A late
@@ -399,13 +403,18 @@ func (w *CacheWarmer) schedule(run *cacheWarmingRun) {
 		if run.phase == "idle" {
 			reason = "30-minute idle safety limit reached"
 		}
-		w.stop(reason, nil)
+		w.stopRun(run, reason, nil)
 		return
 	}
 	timer := time.AfterFunc(time.Duration(max(0, run.nextWarmAt-time.Now().UnixMilli()))*time.Millisecond, func() {
 		w.refresh(run)
 	})
 	w.mu.Lock()
+	if w.run != run {
+		w.mu.Unlock()
+		timer.Stop()
+		return
+	}
 	run.timer = timer
 	w.mu.Unlock()
 }
@@ -443,7 +452,7 @@ func (w *CacheWarmer) refresh(run *cacheWarmingRun) {
 		} else if !decision.EconomicsAvailable {
 			reason = "cache economics unavailable"
 		}
-		w.stop(reason, &CacheWarmingStatus{Decision: &decision, ExtensionOverride: extensionOverride})
+		w.stopRun(run, reason, &CacheWarmingStatus{Decision: &decision, ExtensionOverride: extensionOverride})
 		return
 	}
 
@@ -525,14 +534,34 @@ func (w *CacheWarmer) validateRun(run *cacheWarmingRun) bool {
 	if !current {
 		return false
 	}
+	// modeStopReason and isCurrent are host callbacks and run outside the lock;
+	// the run may have been replaced meanwhile, so their stop is run-scoped.
 	if reason := w.modeStopReason(run); reason != "" {
-		w.stop(reason, nil)
+		w.stopRun(run, reason, nil)
 		return false
 	}
 	if !run.isCurrent() {
-		w.stop("conversation context changed", nil)
+		w.stopRun(run, "conversation context changed", nil)
 		return false
 	}
+	return true
+}
+
+// stopRun stops a run only while it is still the current one. The reference's
+// check and stop are one synchronous step; Go callbacks run between them.
+func (w *CacheWarmer) stopRun(run *cacheWarmingRun, reason string, stopped *CacheWarmingStatus) bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.run != run {
+		return false
+	}
+	w.clearRunLocked()
+	inactive := CacheWarmingStatus{State: "inactive", Reason: reason}
+	if stopped != nil {
+		inactive.Decision = stopped.Decision
+		inactive.ExtensionOverride = stopped.ExtensionOverride
+	}
+	w.inactive = inactive
 	return true
 }
 
