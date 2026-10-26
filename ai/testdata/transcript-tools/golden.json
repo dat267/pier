@@ -1,0 +1,1174 @@
+[
+  {
+    "name": "no-system/none",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      }
+    ],
+    "support": "none",
+    "expected": {
+      "requestTools": [],
+      "foldedSystemMessages": 0
+    }
+  },
+  {
+    "name": "no-system/additions",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      }
+    ],
+    "support": "additions",
+    "expected": {
+      "requestTools": [],
+      "foldedSystemMessages": 0
+    }
+  },
+  {
+    "name": "no-system/changes",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      }
+    ],
+    "support": "changes",
+    "expected": {
+      "requestTools": [],
+      "foldedSystemMessages": 0
+    }
+  },
+  {
+    "name": "initial-only/none",
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "read tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      }
+    ],
+    "support": "none",
+    "expected": {
+      "requestTools": [
+        {
+          "name": "read",
+          "description": "read tool",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      ],
+      "foldedSystemMessages": 1
+    }
+  },
+  {
+    "name": "initial-only/additions",
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "read tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      }
+    ],
+    "support": "additions",
+    "expected": {
+      "requestTools": [
+        {
+          "name": "read",
+          "description": "read tool",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      ],
+      "foldedSystemMessages": 1
+    }
+  },
+  {
+    "name": "initial-only/changes",
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "read tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      }
+    ],
+    "support": "changes",
+    "expected": {
+      "requestTools": [],
+      "foldedSystemMessages": 0
+    }
+  },
+  {
+    "name": "additive/none",
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "read tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "bash",
+            "description": "bash tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      }
+    ],
+    "support": "none",
+    "expected": {
+      "requestTools": [
+        {
+          "name": "read",
+          "description": "read tool",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        {
+          "name": "bash",
+          "description": "bash tool",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      ],
+      "foldedSystemMessages": 2
+    }
+  },
+  {
+    "name": "additive/additions",
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "read tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "bash",
+            "description": "bash tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      }
+    ],
+    "support": "additions",
+    "expected": {
+      "requestTools": [
+        {
+          "name": "read",
+          "description": "read tool",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      ],
+      "foldedSystemMessages": 1
+    }
+  },
+  {
+    "name": "additive/changes",
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "read tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "bash",
+            "description": "bash tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      }
+    ],
+    "support": "changes",
+    "expected": {
+      "requestTools": [],
+      "foldedSystemMessages": 0
+    }
+  },
+  {
+    "name": "removal/none",
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "read tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          {
+            "name": "bash",
+            "description": "bash tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsRemoved": [
+          {
+            "name": "read"
+          }
+        ]
+      }
+    ],
+    "support": "none",
+    "expected": {
+      "requestTools": [
+        {
+          "name": "bash",
+          "description": "bash tool",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      ],
+      "foldedSystemMessages": 2
+    }
+  },
+  {
+    "name": "removal/additions",
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "read tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          {
+            "name": "bash",
+            "description": "bash tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsRemoved": [
+          {
+            "name": "read"
+          }
+        ]
+      }
+    ],
+    "support": "additions",
+    "expected": {
+      "requestTools": [
+        {
+          "name": "bash",
+          "description": "bash tool",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      ],
+      "foldedSystemMessages": 2
+    }
+  },
+  {
+    "name": "removal/changes",
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "read tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          {
+            "name": "bash",
+            "description": "bash tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsRemoved": [
+          {
+            "name": "read"
+          }
+        ]
+      }
+    ],
+    "support": "changes",
+    "expected": {
+      "requestTools": [],
+      "foldedSystemMessages": 0
+    }
+  },
+  {
+    "name": "removal-then-addition/none",
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "read tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsRemoved": [
+          {
+            "name": "read"
+          }
+        ]
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "bash",
+            "description": "bash tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      }
+    ],
+    "support": "none",
+    "expected": {
+      "requestTools": [
+        {
+          "name": "bash",
+          "description": "bash tool",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      ],
+      "foldedSystemMessages": 3
+    }
+  },
+  {
+    "name": "removal-then-addition/additions",
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "read tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsRemoved": [
+          {
+            "name": "read"
+          }
+        ]
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "bash",
+            "description": "bash tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      }
+    ],
+    "support": "additions",
+    "expected": {
+      "requestTools": [],
+      "foldedSystemMessages": 2
+    }
+  },
+  {
+    "name": "removal-then-addition/changes",
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "read tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsRemoved": [
+          {
+            "name": "read"
+          }
+        ]
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "bash",
+            "description": "bash tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      }
+    ],
+    "support": "changes",
+    "expected": {
+      "requestTools": [],
+      "foldedSystemMessages": 0
+    }
+  },
+  {
+    "name": "redefinition/none",
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "old",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "new",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      }
+    ],
+    "support": "none",
+    "expected": {
+      "requestTools": [
+        {
+          "name": "read",
+          "description": "new",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      ],
+      "foldedSystemMessages": 2
+    }
+  },
+  {
+    "name": "redefinition/additions",
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "old",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "new",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      }
+    ],
+    "support": "additions",
+    "expected": {
+      "requestTools": [
+        {
+          "name": "read",
+          "description": "new",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      ],
+      "foldedSystemMessages": 2
+    }
+  },
+  {
+    "name": "redefinition/changes",
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "old",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "new",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      }
+    ],
+    "support": "changes",
+    "expected": {
+      "requestTools": [],
+      "foldedSystemMessages": 0
+    }
+  },
+  {
+    "name": "removed-then-redeclared/none",
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "read tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsRemoved": [
+          {
+            "name": "read"
+          }
+        ]
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "read tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      }
+    ],
+    "support": "none",
+    "expected": {
+      "requestTools": [
+        {
+          "name": "read",
+          "description": "read tool",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      ],
+      "foldedSystemMessages": 3
+    }
+  },
+  {
+    "name": "removed-then-redeclared/additions",
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "read tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsRemoved": [
+          {
+            "name": "read"
+          }
+        ]
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "read tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      }
+    ],
+    "support": "additions",
+    "expected": {
+      "requestTools": [
+        {
+          "name": "read",
+          "description": "read tool",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      ],
+      "foldedSystemMessages": 3
+    }
+  },
+  {
+    "name": "removed-then-redeclared/changes",
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "read tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsRemoved": [
+          {
+            "name": "read"
+          }
+        ]
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "read tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      }
+    ],
+    "support": "changes",
+    "expected": {
+      "requestTools": [],
+      "foldedSystemMessages": 0
+    }
+  },
+  {
+    "name": "system-without-tools/none",
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "system",
+        "content": "more",
+        "timestamp": 1
+      }
+    ],
+    "support": "none",
+    "expected": {
+      "requestTools": [],
+      "foldedSystemMessages": 2
+    }
+  },
+  {
+    "name": "system-without-tools/additions",
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "system",
+        "content": "more",
+        "timestamp": 1
+      }
+    ],
+    "support": "additions",
+    "expected": {
+      "requestTools": [],
+      "foldedSystemMessages": 1
+    }
+  },
+  {
+    "name": "system-without-tools/changes",
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "system",
+        "content": "more",
+        "timestamp": 1
+      }
+    ],
+    "support": "changes",
+    "expected": {
+      "requestTools": [],
+      "foldedSystemMessages": 0
+    }
+  },
+  {
+    "name": "tools-only-no-leading/none",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "grep",
+            "description": "grep tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      }
+    ],
+    "support": "none",
+    "expected": {
+      "requestTools": [
+        {
+          "name": "grep",
+          "description": "grep tool",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      ],
+      "foldedSystemMessages": 1
+    }
+  },
+  {
+    "name": "tools-only-no-leading/additions",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "grep",
+            "description": "grep tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      }
+    ],
+    "support": "additions",
+    "expected": {
+      "requestTools": [],
+      "foldedSystemMessages": 0
+    }
+  },
+  {
+    "name": "tools-only-no-leading/changes",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "grep",
+            "description": "grep tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      }
+    ],
+    "support": "changes",
+    "expected": {
+      "requestTools": [],
+      "foldedSystemMessages": 0
+    }
+  },
+  {
+    "name": "empty/none",
+    "messages": [],
+    "support": "none",
+    "expected": {
+      "requestTools": [],
+      "foldedSystemMessages": 0
+    }
+  },
+  {
+    "name": "empty/additions",
+    "messages": [],
+    "support": "additions",
+    "expected": {
+      "requestTools": [],
+      "foldedSystemMessages": 0
+    }
+  },
+  {
+    "name": "empty/changes",
+    "messages": [],
+    "support": "changes",
+    "expected": {
+      "requestTools": [],
+      "foldedSystemMessages": 0
+    }
+  }
+]

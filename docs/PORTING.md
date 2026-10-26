@@ -417,6 +417,13 @@ mutation and durable goal-record appends are serialized together; parallel
 `set_goal` calls cannot corrupt the replay log by interleaving clear/create
 entries. Host callbacks and model work remain outside the state lock.
 
+Tool resolution is pinned by a 30-case corpus executing the pinned
+`resolveTranscriptTools` over nine system-message sequences and all three
+support modes (`none`, `additions`, `changes`), including removals,
+redefinitions, removed-then-redeclared tools and non-leading system messages.
+It caught one representation gap: the in-place mode returned a nil list where
+the reference returns `[]` (CR-043).
+
 The system-prompt helpers are pinned by a 19-case corpus executing the pinned
 `getSystemMessageText`, `renderSystemMessageUpdate`, `getCurrentSystemMessage`,
 `getCurrentSystemPrompt` and `getCurrentTools`: content strings, text/image

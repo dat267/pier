@@ -406,7 +406,9 @@ func ResolveTranscriptTools(messages []Message, support TranscriptToolSupport) T
 	case TranscriptToolSupportNone:
 		return TranscriptTools{RequestTools: GetCurrentTools(messages), FoldedSystemMessages: len(systemMessages)}
 	case TranscriptToolSupportChanges:
-		return TranscriptTools{}
+		// Upstream returns an empty array, not a missing value: callers may
+		// persist or forward this shape, and null is not [].
+		return TranscriptTools{RequestTools: []Tool{}}
 	}
 	folded := 0
 	if GetInitialSystemMessage(messages) != nil {

@@ -940,3 +940,27 @@ a non-leading system message.
 All 19 matched on the first run, so this records coverage, not a finding.
 Regeneration is byte-identical; `go test -count=1 ./ai`, `just check`,
 `just cross` (six targets) and `just reference` pass.
+
+## CR-043, P3: in-place tool support returned null instead of an empty list (fixed)
+
+Authority: pi v1.4.0 `ai/src/utils/transcript.ts` `resolveTranscriptTools`
+returns `{ requestTools: [], foldedSystemMessages: 0 }` for `"changes"`. The
+other branches already produce an empty array, which the port reproduced.
+
+Pier returned the zero value for that branch, so the exported `RequestTools`
+slice encoded as `null` rather than `[]`. Request builders that test length were
+unaffected, which is why no user-visible failure showed up, but a caller that
+persists, compares or forwards the value sees different bytes.
+
+Repair: the branch returns an empty non-nil slice. The 30-case corpus
+(`ai/testdata/transcript-tools`) executes the pinned resolver over nine system
+message sequences in all three support modes and is now green; the `none` and
+`additions` cases were already matching.
+
+```sh
+go test -count=1 ./ai -run '^TestResolveTranscriptToolsMatchesUpstream$'
+```
+
+Verification: focused corpus, `ai`/`agent`/`coding`/`coding/interactive` suites,
+`just check`, `just cross` (six targets), `just reference`; regeneration is
+byte-identical. No local race run.
