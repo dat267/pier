@@ -381,6 +381,11 @@ reply is absent. The pinned `agent-session.ts` method generates a nine-case
 corpus, also checked through `get_last_assistant_text` RPC responses; normal
 text, block joins and aborted/non-text message selection remain controls.
 
+Session disposal uses the complete nonblocking abort path, including manual
+and automatic compaction, branch summarization and the session run context.
+A disposed session cannot finish those summaries and persist their results
+merely because only its low-level agent was aborted.
+
 The builtin goal tool normalizes objectives with JavaScript's trim set, like
 D223's extension source. BOM-only input is rejected as empty, BOM boundaries
 are removed, and U+0085 remains part of the objective. The port-local status

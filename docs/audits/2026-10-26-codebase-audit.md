@@ -415,3 +415,30 @@ Verification: all coding goal tests, internal/goal, coding and interactive tests
 
 Completed subsequent pieces: `fdd90a9` (CR-030), `809e4c8` (CR-031),
 `a5a2bd4` (CR-032).
+
+## CR-034, P2: session disposal left compaction and branch summaries alive (fixed)
+
+Authority: pi v1.4.0 `core/agent-session.ts`, dispose, aborts compaction and
+branch summarization along with retry/bash/agent work. Pier's Dispose repeated
+only retry/bash/agent cancellation, leaving the independent summary controllers
+active. A summary could therefore continue and persist changes after session
+replacement or teardown.
+
+Repair: reuse the existing nonblocking `AbortAsync`, which includes the
+summarization controllers and session run context, instead of duplicating an
+incomplete subset. Listener/resource cleanup and nonblocking teardown remain.
+
+```sh
+go test -count=1 ./coding -run '^TestDisposeCancelsActive(Compaction|BranchSummary)$'
+```
+
+Observed red: disposal from compaction_start allowed manual and automatic
+compaction to finish successfully; disposal at branch-summary provider dispatch
+returned `Cancelled:false Aborted:false` with a persisted summary entry. All
+now cancel and persist neither compaction nor branch-summary results. Existing
+non-disposed summarization successes remain controls.
+
+Verification: focused regressions; compaction, navigation and goal tests;
+all coding and interactive tests; `just check`, `just cross` (six targets),
+`just reference` pass. Cache-warmer teardown remains a separate inspection lead
+at this checkpoint. No local race run.

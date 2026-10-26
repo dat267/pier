@@ -1005,9 +1005,7 @@ func (s *AgentSession) GetContextUsage() *ContextUsageReport {
 // Dispose aborts every active operation and drops listeners.
 func (s *AgentSession) Dispose() {
 	defer func() { _ = recover() }()
-	s.AbortRetry()
-	s.AbortBash()
-	s.Agent.Abort()
+	s.AbortAsync()
 	// The session's resources (temp files, watchers) are released with the
 	// session id, like upstream's cleanupSessionResources(this.sessionId).
 	// Cleanup is best-effort; the remaining dispose steps still run.
