@@ -75,6 +75,63 @@ const scenarios = [
 		],
 	},
 	{
+		name: "usage-full",
+		events: [
+			{
+				type: "message_start",
+				message: {
+					id: "msg_u1", model: "claude-sonnet-4-5",
+					usage: {
+						input_tokens: 12, output_tokens: 1, cache_read_input_tokens: 7,
+						cache_creation_input_tokens: 5, cache_creation: { ephemeral_1h_input_tokens: 4, ephemeral_5m_input_tokens: 1 },
+					},
+				},
+			},
+			{ type: "content_block_start", index: 0, content_block: { type: "text", text: "" } },
+			{ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "hi" } },
+			{ type: "content_block_stop", index: 0 },
+			{ type: "message_delta", delta: { stop_reason: "end_turn" }, usage: { output_tokens: 6 } },
+			{ type: "message_stop" },
+		],
+	},
+	{
+		name: "usage-thinking-tokens",
+		events: [
+			{
+				type: "message_start",
+				message: { id: "msg_u2", model: "claude-sonnet-4-5", usage: { input_tokens: 4, output_tokens: 1 } },
+			},
+			{ type: "content_block_start", index: 0, content_block: { type: "thinking", thinking: "" } },
+			{ type: "content_block_delta", index: 0, delta: { type: "thinking_delta", thinking: "plan" } },
+			{ type: "content_block_stop", index: 0 },
+			{
+				type: "message_delta", delta: { stop_reason: "end_turn" },
+				usage: { output_tokens: 9, output_tokens_details: { thinking_tokens: 4 } },
+			},
+			{ type: "message_stop" },
+		],
+	},
+	{
+		name: "usage-delta-fields",
+		events: [
+			{
+				type: "message_start",
+				message: { id: "msg_u3", model: "claude-sonnet-4-5", usage: { input_tokens: 4, output_tokens: 0 } },
+			},
+			{ type: "content_block_start", index: 0, content_block: { type: "text", text: "" } },
+			{ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "x" } },
+			{ type: "content_block_stop", index: 0 },
+			{
+				type: "message_delta", delta: { stop_reason: "end_turn" },
+				usage: {
+					input_tokens: 4, output_tokens: 2, cache_read_input_tokens: 3,
+					cache_creation_input_tokens: 2, cache_creation: { ephemeral_1h_input_tokens: 2 },
+				},
+			},
+			{ type: "message_stop" },
+		],
+	},
+	{
 		name: "tool-use",
 		events: [
 			{
