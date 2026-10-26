@@ -417,6 +417,11 @@ mutation and durable goal-record appends are serialized together; parallel
 `set_goal` calls cannot corrupt the replay log by interleaving clear/create
 entries. Host callbacks and model work remain outside the state lock.
 
+The find tool is pinned by a 7-case corpus using real fd: a basename glob that
+respects `.gitignore`, a path-containing glob, hidden files, no match, a result
+limit with its notice, and a file path / missing path, where fd's own error text
+is what the caller sees (CR-042).
+
 The grep tool is pinned by a 12-case corpus running real ripgrep over a shared
 fixture: matches across directories and a file path, literal and case-insensitive
 searches, a glob filter, context and fractional context, integer and fractional

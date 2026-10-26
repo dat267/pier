@@ -775,6 +775,7 @@ at the closing checkpoint:
 | `coding/testdata/ls-tool` | 8 | `core/tools/ls.ts` |
 | `coding/testdata/write-tool` | 7 | `core/tools/write.ts` (D279 excluded) |
 | `coding/testdata/grep-tool` | 12 | `core/tools/grep.ts` |
+| `coding/testdata/find-tool` | 7 | `core/tools/find.ts` |
 
 Earlier corpora (`edit-diff-patch`, `edit-apply`, `truncate`, `js-numbers`,
 `overflow`, `parse-key`, Anthropic/OpenAI/Responses stream corpora) remain green.
@@ -1115,3 +1116,17 @@ All 12 matched on the first run. The corpus uses the installed `rg`; the suite
 skips when ripgrep is unavailable. Regeneration is byte-identical;
 `go test -count=1 ./coding`, `just check`, `just cross` (six targets) and
 `just reference` pass.
+
+## Find-tool corpus
+
+`coding/testdata/find-tool/generate.mjs` runs the pinned `find.ts` definition
+with real fd over a fixture tree (a git repository with `.gitignore`, hidden
+files and nested directories); `TestFindToolMatchesUpstream` recreates the tree
+and compares result text and details.
+
+Cases: a basename glob, a path-containing glob, hidden files, no match, a result
+limit with its continuation notice, a file path, and a missing path. The last two
+pin CR-042 end to end: the caller sees fd's own diagnostic rather than a Go
+precheck. All 7 matched; the suite skips when fd/fdfind is unavailable.
+Regeneration is byte-identical; `go test -count=1 ./coding`, `just check`,
+`just cross` (six targets) and `just reference` pass.

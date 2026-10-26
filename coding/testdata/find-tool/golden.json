@@ -1,0 +1,75 @@
+[
+  {
+    "name": "basename-glob",
+    "args": {
+      "pattern": "*.ts"
+    },
+    "expected": {
+      "text": ".hidden.ts\nsrc/a.ts\nsrc/deep/b.spec.ts",
+      "details": null
+    }
+  },
+  {
+    "name": "path-containing",
+    "args": {
+      "pattern": "src/**/*.spec.ts"
+    },
+    "expected": {
+      "text": "src/deep/b.spec.ts",
+      "details": null
+    }
+  },
+  {
+    "name": "hidden",
+    "args": {
+      "pattern": "*.ts"
+    },
+    "expected": {
+      "text": ".hidden.ts\nsrc/a.ts\nsrc/deep/b.spec.ts",
+      "details": null
+    }
+  },
+  {
+    "name": "no-match",
+    "args": {
+      "pattern": "*.nope"
+    },
+    "expected": {
+      "text": "No files found matching pattern",
+      "details": null
+    }
+  },
+  {
+    "name": "limit",
+    "args": {
+      "pattern": "*.ts",
+      "limit": 2
+    },
+    "expected": {
+      "text": "src/a.ts\nsrc/deep/b.spec.ts\n\n[2 results limit reached. Use limit=4 for more, or refine pattern]",
+      "details": {
+        "resultLimitReached": 2
+      }
+    }
+  },
+  {
+    "name": "path-file",
+    "args": {
+      "pattern": "*.md",
+      "path": "readme.md"
+    },
+    "expected": {
+      "error": "[fd error]: Search path '<dir>/readme.md' is not a directory.\n[fd error]: No valid search paths given."
+    }
+  },
+  {
+    "name": "missing-path",
+    "args": {
+      "pattern": "*.ts",
+      "path": "nope"
+    },
+    "expected": {
+      "error": "[fd error]: Search path '<dir>/nope' is not a directory.\n[fd error]: No valid search paths given."
+    }
+  }
+]
