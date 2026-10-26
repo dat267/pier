@@ -1554,11 +1554,12 @@ func (m *SettingsManager) SetDefaultModelAndProvider(provider, modelID string) {
 	m.save()
 }
 
-// GetSteeringMode returns the steering mode (default one-at-a-time).
+// GetSteeringMode returns the steering mode (default one-at-a-time). Upstream
+// uses `||`, so an empty stored string also resolves to the default.
 func (m *SettingsManager) GetSteeringMode() string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.settings.SteeringMode == nil {
+	if m.settings.SteeringMode == nil || *m.settings.SteeringMode == "" {
 		return "one-at-a-time"
 	}
 	return *m.settings.SteeringMode
@@ -1573,11 +1574,12 @@ func (m *SettingsManager) SetSteeringMode(mode string) {
 	m.save()
 }
 
-// GetFollowUpMode returns the follow-up mode (default one-at-a-time).
+// GetFollowUpMode returns the follow-up mode (default one-at-a-time). Upstream
+// uses `||`, so an empty stored string also resolves to the default.
 func (m *SettingsManager) GetFollowUpMode() string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.settings.FollowUpMode == nil {
+	if m.settings.FollowUpMode == nil || *m.settings.FollowUpMode == "" {
 		return "one-at-a-time"
 	}
 	return *m.settings.FollowUpMode

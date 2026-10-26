@@ -161,6 +161,28 @@ func TestSettingsReload(t *testing.T) {
 	}
 }
 
+// Upstream's getSteeringMode/getFollowUpMode use `||`, so an empty stored
+// string resolves to the default mode rather than to an unknown queue mode.
+func TestSettingsEmptyQueueModesFallBack(t *testing.T) {
+	agentDir, projectDir := settingsDirs(t)
+	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"steeringMode":"","followUpMode":""}`)
+	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	if got := manager.GetSteeringMode(); got != "one-at-a-time" {
+		t.Fatalf("steering = %q, want one-at-a-time", got)
+	}
+	if got := manager.GetFollowUpMode(); got != "one-at-a-time" {
+		t.Fatalf("follow-up = %q, want one-at-a-time", got)
+	}
+	manager.SetSteeringMode("all")
+	manager.SetFollowUpMode("all")
+	if got := manager.GetSteeringMode(); got != "all" {
+		t.Fatalf("steering = %q, want all", got)
+	}
+	if got := manager.GetFollowUpMode(); got != "all" {
+		t.Fatalf("follow-up = %q, want all", got)
+	}
+}
+
 func TestSettingsThemeSetting(t *testing.T) {
 	agentDir, projectDir := settingsDirs(t)
 	settingsPath := filepath.Join(agentDir, "settings.json")
