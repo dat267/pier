@@ -33,6 +33,12 @@ const vectors = [
 	["--unknown", "value"], ["--unknown=value"], ["--unknown"], ["--print", "--mode", "rpc"],
 	["--session", "a", "--resume"], ["--session-id", "x", "--session", "y"], ["--fork", "a", "--resume"],
 	["--offline", "--print", "--model", "m"], ["--", ""], [""], ["--model", "-x"],
+	["--list-models"], ["--list-models", "anthropic"], ["--models", ""], ["--tools", ""],
+	["--exclude-tools", "a, b"], ["--skills", "a, b"], ["--provider=anthropic"],
+	["--model=claude"], ["-n"], ["--session-dir"], ["--fork"], ["--thinking", "off"],
+	["--approve", "false"], ["--no-approve", "--approve"], ["--print", "--"],
+	["--mode", "text", "--mode", "json"], ["--export"], ["--use-theme"],
+	["--tools", "read", "--tools", "bash"], ["--no-tools", "--tools", "read"],
 ];
 const projection = (args) => {
 	const p = (v) => (v === undefined ? null : v);

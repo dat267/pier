@@ -417,10 +417,11 @@ mutation and durable goal-record appends are serialized together; parallel
 `set_goal` calls cannot corrupt the replay log by interleaving clear/create
 entries. Host callbacks and model work remain outside the state lock.
 
-A generated CLI-argument corpus compares 68 argv vectors against the pinned
+A generated CLI-argument corpus compares 93 argv vectors against the pinned
 `cli/args.ts` `parseArgs`: value and boolean flags, list parsing and trimming,
 `--`, `@file` arguments, unknown/extension flags, diagnostics, mode validation,
-session and trust flags. All matched on the first run.
+session and trust flags, `--list-models` in both forms, `=`-joined values,
+missing values and repeated flags. All matched on the first run.
 
 The find tool checks both `fd` and `fdfind` on PATH, preferring `fd`, matching
 `utils/tools-manager.ts`, and resolves the tool before touching the search path:

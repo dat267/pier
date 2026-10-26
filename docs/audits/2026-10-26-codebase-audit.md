@@ -662,7 +662,7 @@ Verification: focused test passes 5 repetitions; all ai tests, `just check`,
 
 ## CLI argument corpus
 
-`coding/testdata/cli-args/generate.mjs` executes the pinned `parseArgs` for 68
+`coding/testdata/cli-args/generate.mjs` executes the pinned `parseArgs` for 93
 argv vectors and records a projection of the parsed `Args`. The projection is
 the parsed contract: values, booleans, list contents, unknown extension flags,
 messages/file arguments, and diagnostics in order. `TestParseArgsMatchesUpstream`
@@ -673,12 +673,17 @@ node --experimental-strip-types coding/testdata/cli-args/generate.mjs ./pi > cod
 go test -count=1 ./coding -run '^TestParseArgsMatchesUpstream$'
 ```
 
-All 68 vectors matched on the first run, so this records coverage rather than a
-finding. Two harness corrections were needed before that run: the projection had
-to normalize Go nil slices to the reference's empty arrays, and an unset mode to
-null instead of the empty string. Neither is a product defect. Regeneration is
-byte-identical; `go test -count=1 ./coding`, `just check`, `just cross` (six
-targets) and `just reference` pass.
+All vectors matched on the first run, so this records coverage rather than a
+finding. The first 68 covered the flag families; 25 more add `--list-models`
+(with and without a provider), empty list values, `=`-joined value flags,
+missing values, repeated flags, ordering between `--no-approve`/`--approve` and
+`--print`/`--`, repeated `--tools`, and `--export`/`--use-theme`/`--fork`
+without values. Harness normalizations were needed, none of them product
+defects: Go nil slices become the reference's empty arrays, an unset mode
+becomes null rather than the empty string, and the port's split
+`ListModelsAll`/`ListModels` fields project back to the reference's
+`string | true`. Regeneration is byte-identical; `go test -count=1 ./coding`,
+`just check`, `just cross` (six targets) and `just reference` pass.
 
 ## CR-042, P3: find prechecked the search path before resolving fd (fixed)
 

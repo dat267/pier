@@ -81,7 +81,14 @@ func cliArgsProjection(args *Args) map[string]any {
 	for _, diagnostic := range args.Diagnostics {
 		diagnostics = append(diagnostics, map[string]any{"type": diagnostic.Type, "message": diagnostic.Message})
 	}
-	listModels := pointer(args.ListModels)
+	// Upstream types listModels as `string | true`; the port splits the flag.
+	var listModels any
+	switch {
+	case args.ListModelsAll:
+		listModels = true
+	case args.ListModels != nil:
+		listModels = *args.ListModels
+	}
 	return map[string]any{
 		"provider": pointer(args.Provider), "model": pointer(args.Model), "apiKey": pointer(args.APIKey),
 		"systemPrompt": pointer(args.SystemPrompt), "appendSystemPrompt": slice(args.AppendSystemPrompt),
