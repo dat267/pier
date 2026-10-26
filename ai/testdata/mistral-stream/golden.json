@@ -1352,5 +1352,551 @@
         }
       }
     ]
+  },
+  {
+    "name": "calls-out-of-order",
+    "sse": "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"name\":\"lookup\",\"arguments\":\"{\\\"b\\\":2}\"},\"id\":\"call1\"}]}}]}\n\ndata: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"name\":\"lookup\",\"arguments\":\"{\\\"a\\\":1}\"},\"id\":\"call0\"}]},\"finish_reason\":\"tool_calls\"}]}\n\ndata: [DONE]\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "toolcall_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "toolcall_delta",
+        "contentIndex": 0,
+        "delta": "{\"b\":2}"
+      },
+      {
+        "type": "toolcall_start",
+        "contentIndex": 1
+      },
+      {
+        "type": "toolcall_delta",
+        "contentIndex": 1,
+        "delta": "{\"a\":1}"
+      },
+      {
+        "type": "toolcall_end",
+        "contentIndex": 0,
+        "toolCall": {
+          "id": "call1",
+          "name": "lookup",
+          "arguments": {
+            "b": 2
+          }
+        }
+      },
+      {
+        "type": "toolcall_end",
+        "contentIndex": 1,
+        "toolCall": {
+          "id": "call0",
+          "name": "lookup",
+          "arguments": {
+            "a": 1
+          }
+        }
+      },
+      {
+        "type": "done",
+        "reason": "toolUse",
+        "message": {
+          "content": [
+            {
+              "type": "toolCall",
+              "id": "call1",
+              "name": "lookup",
+              "arguments": {
+                "b": 2
+              }
+            },
+            {
+              "type": "toolCall",
+              "id": "call0",
+              "name": "lookup",
+              "arguments": {
+                "a": 1
+              }
+            }
+          ],
+          "api": "mistral-conversations",
+          "provider": "mistral",
+          "model": "mistral-large-latest",
+          "stopReason": "toolUse",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 0,
+            "output": 0,
+            "totalTokens": 0
+          },
+          "rawStopReason": "tool_calls"
+        }
+      }
+    ]
+  },
+  {
+    "name": "escaped-arguments",
+    "sse": "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"name\":\"lookup\",\"arguments\":\"{\\\"s\\\":\\\"a\\\\\\\"b\\\\né\\\",\\\"n\\\":[1,null]}\"},\"id\":\"call0\"}]},\"finish_reason\":\"tool_calls\"}]}\n\ndata: [DONE]\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "toolcall_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "toolcall_delta",
+        "contentIndex": 0,
+        "delta": "{\"s\":\"a\\\"b\\né\",\"n\":[1,null]}"
+      },
+      {
+        "type": "toolcall_end",
+        "contentIndex": 0,
+        "toolCall": {
+          "id": "call0",
+          "name": "lookup",
+          "arguments": {
+            "n": [
+              1,
+              null
+            ],
+            "s": "a\"b\né"
+          }
+        }
+      },
+      {
+        "type": "done",
+        "reason": "toolUse",
+        "message": {
+          "content": [
+            {
+              "type": "toolCall",
+              "id": "call0",
+              "name": "lookup",
+              "arguments": {
+                "n": [
+                  1,
+                  null
+                ],
+                "s": "a\"b\né"
+              }
+            }
+          ],
+          "api": "mistral-conversations",
+          "provider": "mistral",
+          "model": "mistral-large-latest",
+          "stopReason": "toolUse",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 0,
+            "output": 0,
+            "totalTokens": 0
+          },
+          "rawStopReason": "tool_calls"
+        }
+      }
+    ]
+  },
+  {
+    "name": "empty-call-array",
+    "sse": "data: {\"choices\":[{\"delta\":{\"tool_calls\":[]}}]}\n\ndata: {\"choices\":[{\"delta\":{\"content\":\"after\"},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 0,
+        "delta": "after"
+      },
+      {
+        "type": "text_end",
+        "contentIndex": 0,
+        "content": "after"
+      },
+      {
+        "type": "done",
+        "reason": "stop",
+        "message": {
+          "content": [
+            {
+              "type": "text",
+              "text": "after"
+            }
+          ],
+          "api": "mistral-conversations",
+          "provider": "mistral",
+          "model": "mistral-large-latest",
+          "stopReason": "stop",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 0,
+            "output": 0,
+            "totalTokens": 0
+          },
+          "rawStopReason": "stop"
+        }
+      }
+    ]
+  },
+  {
+    "name": "length-with-calls",
+    "sse": "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"name\":\"lookup\",\"arguments\":\"{\\\"pa\"},\"id\":\"call0\"}]}}]}\n\ndata: {\"choices\":[{\"delta\":{\"content\":\"x\"},\"finish_reason\":\"length\"}]}\n\ndata: [DONE]\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "toolcall_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "toolcall_delta",
+        "contentIndex": 0,
+        "delta": "{\"pa"
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 1
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 1,
+        "delta": "x"
+      },
+      {
+        "type": "text_end",
+        "contentIndex": 1,
+        "content": "x"
+      },
+      {
+        "type": "toolcall_end",
+        "contentIndex": 0,
+        "toolCall": {
+          "id": "call0",
+          "name": "lookup",
+          "arguments": {}
+        }
+      },
+      {
+        "type": "done",
+        "reason": "length",
+        "message": {
+          "content": [
+            {
+              "type": "toolCall",
+              "id": "call0",
+              "name": "lookup",
+              "arguments": {}
+            },
+            {
+              "type": "text",
+              "text": "x"
+            }
+          ],
+          "api": "mistral-conversations",
+          "provider": "mistral",
+          "model": "mistral-large-latest",
+          "stopReason": "length",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 0,
+            "output": 0,
+            "totalTokens": 0
+          },
+          "rawStopReason": "length"
+        }
+      }
+    ]
+  },
+  {
+    "name": "two-finish-chunks",
+    "sse": "data: {\"choices\":[{\"delta\":{\"content\":\"one\"},\"finish_reason\":\"stop\"}]}\n\ndata: {\"choices\":[{\"delta\":{\"content\":\"two\"},\"finish_reason\":\"tool_calls\"}]}\n\ndata: [DONE]\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 0,
+        "delta": "one"
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 0,
+        "delta": "two"
+      },
+      {
+        "type": "text_end",
+        "contentIndex": 0,
+        "content": "onetwo"
+      },
+      {
+        "type": "done",
+        "reason": "toolUse",
+        "message": {
+          "content": [
+            {
+              "type": "text",
+              "text": "onetwo"
+            }
+          ],
+          "api": "mistral-conversations",
+          "provider": "mistral",
+          "model": "mistral-large-latest",
+          "stopReason": "toolUse",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 0,
+            "output": 0,
+            "totalTokens": 0
+          },
+          "rawStopReason": "tool_calls"
+        }
+      }
+    ]
+  },
+  {
+    "name": "thinking-before-and-after-call",
+    "sse": "data: {\"choices\":[{\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"before\"}]}]}}]}\n\ndata: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"name\":\"lookup\",\"arguments\":\"{\\\"x\\\":1}\"},\"id\":\"call0\"}]}}]}\n\ndata: {\"choices\":[{\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"after\"}]}]},\"finish_reason\":\"tool_calls\"}]}\n\ndata: [DONE]\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "thinking_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "thinking_delta",
+        "contentIndex": 0,
+        "delta": "before"
+      },
+      {
+        "type": "thinking_end",
+        "contentIndex": 0,
+        "content": "before"
+      },
+      {
+        "type": "toolcall_start",
+        "contentIndex": 1
+      },
+      {
+        "type": "toolcall_delta",
+        "contentIndex": 1,
+        "delta": "{\"x\":1}"
+      },
+      {
+        "type": "thinking_start",
+        "contentIndex": 2
+      },
+      {
+        "type": "thinking_delta",
+        "contentIndex": 2,
+        "delta": "after"
+      },
+      {
+        "type": "thinking_end",
+        "contentIndex": 2,
+        "content": "after"
+      },
+      {
+        "type": "toolcall_end",
+        "contentIndex": 1,
+        "toolCall": {
+          "id": "call0",
+          "name": "lookup",
+          "arguments": {
+            "x": 1
+          }
+        }
+      },
+      {
+        "type": "done",
+        "reason": "toolUse",
+        "message": {
+          "content": [
+            {
+              "type": "thinking",
+              "thinking": "before",
+              "thinkingSignature": ""
+            },
+            {
+              "type": "toolCall",
+              "id": "call0",
+              "name": "lookup",
+              "arguments": {
+                "x": 1
+              }
+            },
+            {
+              "type": "thinking",
+              "thinking": "after",
+              "thinkingSignature": ""
+            }
+          ],
+          "api": "mistral-conversations",
+          "provider": "mistral",
+          "model": "mistral-large-latest",
+          "stopReason": "toolUse",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 0,
+            "output": 0,
+            "totalTokens": 0
+          },
+          "rawStopReason": "tool_calls"
+        }
+      }
+    ]
+  },
+  {
+    "name": "zero-total-usage",
+    "sse": "data: {\"choices\":[{\"delta\":{\"content\":\"hi\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":5,\"completion_tokens\":2,\"total_tokens\":0}}\n\ndata: [DONE]\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "text_start",
+        "contentIndex": 0
+      },
+      {
+        "type": "text_delta",
+        "contentIndex": 0,
+        "delta": "hi"
+      },
+      {
+        "type": "text_end",
+        "contentIndex": 0,
+        "content": "hi"
+      },
+      {
+        "type": "done",
+        "reason": "stop",
+        "message": {
+          "content": [
+            {
+              "type": "text",
+              "text": "hi"
+            }
+          ],
+          "api": "mistral-conversations",
+          "provider": "mistral",
+          "model": "mistral-large-latest",
+          "stopReason": "stop",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0.000009999999999999999,
+              "output": 0.000012,
+              "total": 0.000022
+            },
+            "input": 5,
+            "output": 2,
+            "totalTokens": 7
+          },
+          "rawStopReason": "stop"
+        }
+      }
+    ]
+  },
+  {
+    "name": "keepalive-comment",
+    "sse": "data: {\"comment\":\": ping\"}\n\ndata: {\"choices\":[{\"delta\":{\"content\":\"ok\"},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n",
+    "events": [
+      {
+        "type": "start"
+      },
+      {
+        "type": "error",
+        "reason": "error",
+        "error": {
+          "content": [],
+          "api": "mistral-conversations",
+          "provider": "mistral",
+          "model": "mistral-large-latest",
+          "stopReason": "error",
+          "usage": {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 0,
+            "output": 0,
+            "totalTokens": 0
+          },
+          "errorMessage": "Invalid Mistral streaming event"
+        }
+      }
+    ]
   }
 ]

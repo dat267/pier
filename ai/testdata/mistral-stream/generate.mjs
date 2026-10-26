@@ -36,6 +36,14 @@ const scenarios = [
 	{ name: "empty-stream", chunks: [] },
 	{ name: "crlf", separator: "\r\n", chunks: [chunk({ content: "ok" }, "stop")] },
 	{ name: "unterminated", noDone: true, unterminated: true, chunks: [chunk({ content: "ok" }, "stop")] },
+	{ name: "calls-out-of-order", chunks: [chunk({ tool_calls: [call(1, '{"b":2}', { id: "call1" })] }), chunk({ tool_calls: [call(0, '{"a":1}', { id: "call0" })] }, "tool_calls")] },
+	{ name: "escaped-arguments", chunks: [chunk({ tool_calls: [call(0, '{"s":"a\\"b\\n\u00e9","n":[1,null]}', { id: "call0" })] }, "tool_calls")] },
+	{ name: "empty-call-array", chunks: [chunk({ tool_calls: [] }), chunk({ content: "after" }, "stop")] },
+	{ name: "length-with-calls", chunks: [chunk({ tool_calls: [call(0, '{"pa', { id: "call0" })] }), chunk({ content: "x" }, "length")] },
+	{ name: "two-finish-chunks", chunks: [chunk({ content: "one" }, "stop"), chunk({ content: "two" }, "tool_calls")] },
+	{ name: "thinking-before-and-after-call", chunks: [chunk({ content: [thought("before")] }), chunk({ tool_calls: [call(0, '{"x":1}', { id: "call0" })] }), chunk({ content: [thought("after")] }, "tool_calls")] },
+	{ name: "zero-total-usage", chunks: [chunk({ content: "hi" }, "stop", { usage: { prompt_tokens: 5, completion_tokens: 2, total_tokens: 0 } })] },
+	{ name: "keepalive-comment", chunks: [{ comment: ": ping" }, chunk({ content: "ok" }, "stop")] },
 ];
 const indexed = new Set(["text_start", "text_delta", "text_end", "thinking_start", "thinking_delta", "thinking_end", "toolcall_start", "toolcall_delta", "toolcall_end"]);
 function canonical(value) {
