@@ -43,3 +43,22 @@ Verification: `go test -count=1 ./coding -run
 'TestBranchedSession|TestCreateBranchedSession|TestFork|TestRPC.*(Fork|Clone)'`
 passed; the original probe now reports `parent_matches_source=true
 parent_matches_fork=false`.
+
+## CR-058: P1 compacted forks lost retained messages (fixed)
+
+Reference: read-only pi v1.4.0 (`4a080252`),
+`packages/coding-agent/src/core/session-manager.ts`, `createBranchedSession`.
+Compaction cuts back up over metadata, so `firstKeptEntryId` can name a label.
+When filtering labels from a fork, the reference resolves each removed label
+to the next retained entry. Pier stored only unresolved empty placeholders,
+leaving a dangling target and discarding kept pre-compaction messages.
+
+A public-manager probe went from two projected messages to one on fork; the
+pinned Node control retained two. The regression
+`TestBranchedSessionKeepsCompactionWindow` observed the same failure for memory
+and file branches, while direct-message and self-target controls passed. The
+repair resolves pending label IDs before rewriting each retained compaction.
+The test checks both live projection and persisted reopen.
+
+Verification: `go test -count=1 ./coding` passed; the original probe now retains
+two messages with the remapped target, matching the pin.

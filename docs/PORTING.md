@@ -49,7 +49,9 @@ negation and directory pruning; Go tests also check the resulting skill prompt.
 
 Session branch forks also recreate resolved bookmarks for retained entries,
 including labels recorded outside the chosen path, preserving label timestamps
-and insertion order (`core/session-manager.ts`, `createBranchedSession`). A
+and insertion order (`core/session-manager.ts`, `createBranchedSession`). When
+filtering label entries, compaction targets move to the next retained entry so
+forks do not lose their kept context window. A
 public-manager regression covers in-memory forks and persisted reopen. Persisted
 branch headers snapshot the source file as `parentSession` rather than aliasing
 the newly replaced session-file field; a reopen regression checks ancestry.

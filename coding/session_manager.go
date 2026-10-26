@@ -931,13 +931,18 @@ func (m *SessionManager) CreateBranchedSession(leafID string) (string, error) {
 	// Re-chain the path (dropping label entries) with fresh parent ids.
 	var newEntries []FileEntry
 	replacementByLabelID := map[string]string{}
+	var pendingLabelIDs []string
 	pathParentID := ""
 	for i := range path {
 		entry := path[i]
 		if entry.Type == "label" {
-			replacementByLabelID[entry.ID] = "" // resolved lazily by consumers
+			pendingLabelIDs = append(pendingLabelIDs, entry.ID)
 			continue
 		}
+		for _, labelID := range pendingLabelIDs {
+			replacementByLabelID[labelID] = entry.ID
+		}
+		pendingLabelIDs = pendingLabelIDs[:0]
 		if entry.Type == "compaction" && entry.FirstKeptEntryID != "" {
 			if replacement, ok := replacementByLabelID[entry.FirstKeptEntryID]; ok && replacement != "" {
 				entry.setFirstKeptEntryID(replacement)
