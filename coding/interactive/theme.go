@@ -1020,11 +1020,40 @@ func LoadThemeFromPath(themePath string, mode ColorMode) (*Theme, error) {
 	if err != nil {
 		return nil, err
 	}
-	return CreateTheme(themeJSON, mode, themePath), nil
+	return createThemeChecked(themeJSON, mode, themePath)
 }
 
-// CreateTheme builds a Theme from a validated document.
+// CreateTheme builds a Theme from a validated document. An invalid color or a
+// missing or circular variable reference panics, like the reference's Theme
+// constructor; callers handling untrusted files use createThemeChecked instead.
 func CreateTheme(themeJSON *ThemeJSON, mode ColorMode, sourcePath string) *Theme {
+	theme, err := createThemeChecked(themeJSON, mode, sourcePath)
+	if err != nil {
+		panic(err.Error())
+	}
+	return theme
+}
+
+// createThemeChecked is CreateTheme with the reference's throw-then-catch
+// contract: every caller that reads a theme file reports the failure instead of
+// panicking. In Go an escaped panic in the theme watcher goroutine or on the UI
+// loop ends the whole session, where the reference only skips that theme
+// (theme.ts addCustomThemes, the watcher and setTheme all catch) (CR-070).
+func createThemeChecked(themeJSON *ThemeJSON, mode ColorMode, sourcePath string) (theme *Theme, err error) {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			theme = nil
+			if failure, ok := recovered.(error); ok {
+				err = failure
+				return
+			}
+			err = fmt.Errorf("%v", recovered)
+		}
+	}()
+	return createThemeUnprotected(themeJSON, mode, sourcePath), nil
+}
+
+func createThemeUnprotected(themeJSON *ThemeJSON, mode ColorMode, sourcePath string) *Theme {
 	colorMode := mode
 	if colorMode == "" {
 		if terminalCapabilitiesTrueColor() {
@@ -1106,7 +1135,7 @@ func loadTheme(name string, mode ColorMode) (*Theme, error) {
 	if err != nil {
 		return nil, err
 	}
-	return CreateTheme(themeJSON, mode, ""), nil
+	return createThemeChecked(themeJSON, mode, "")
 }
 
 // GetThemeByName loads a theme by name, or nil if it fails.

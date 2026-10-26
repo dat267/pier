@@ -321,3 +321,32 @@ Remaining, unverified: `tui/latex.go`, `coding/changelog.go`,
 patterns ported from JavaScript, but those sites are display-only, so a
 Unicode-space input changes glyphs or link text rather than behavior. They are
 left unchanged rather than patched without a reproduced case.
+
+## CR-070: P2 a malformed user theme crashed the session (fixed)
+
+Reference: read-only pi v1.4.0 (`4a080252`),
+`modes/interactive/theme/theme.ts`. `loadThemeFromPath` and the `Theme`
+constructor throw on an invalid color or an unknown/circular variable
+reference, and every caller wraps them: custom-theme discovery, `setTheme` and
+the theme file watcher all catch and skip the theme. Pier's `ResolveThemeColors`
+and `NewTheme` panic instead, and the two error-returning entry points
+propagated that panic.
+
+Impact: a user theme with a typo (`"accent": "nope"`, `#12345`, `rgb(999,0,0)`,
+`"vars": {"a": "b", "b": "a"}`) crashed the process. Opening `/theme` reached it
+through custom-theme discovery on the UI loop, and saving such a file reached it
+through the watcher goroutine, where an escaping panic always ends the process.
+
+A probe over six malformed documents panicked in all six.
+`TestLoadThemeFromPathReportsBrokenThemes` reproduced it and now asserts a
+reported message for each, and `TestCustomThemeInfosSkipsBrokenThemes` checks
+discovery keeps the good theme and reports the broken one, including loading it
+by declared name.
+
+The repair adds an internal `createThemeChecked` that recovers and returns an
+error; `LoadThemeFromPath` and `loadTheme` both use it, so the watcher's existing
+`err != nil` guard and discovery's warning path now work. `CreateTheme` keeps its
+exported signature and documented panic, so no public contract changed.
+
+Verification: `go test -count=1 ./coding/interactive` passed (14.2 s);
+`just check`, `just cross` (six targets) and `just reference` passed.

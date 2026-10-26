@@ -87,6 +87,10 @@ Ported patterns that use `\s` build the class from `ai.JSWhitespaceClass` (the
 JavaScript class) instead of RE2's ASCII-only form: the prompt-command pattern,
 markdown-link stripping, Bearer credential extraction, Bedrock model-match
 candidates and MCP step-up detection.
+Theme files are validated like the reference: an invalid color or an
+unknown/circular `vars` entry is reported through `LoadThemeFromPath` and
+`loadTheme` instead of panicking, so discovery, the theme selector and the file
+watcher skip the theme as `theme.ts` does.
 
 Session aborts now retain cancellation across retry startup, backoff and
 continuations, and `agent_settled.aborted` reports the run's abort flag rather
