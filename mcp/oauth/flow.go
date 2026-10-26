@@ -576,7 +576,7 @@ func StepUpScope(granted, challenged *string) *string {
 func runFlow(ctx context.Context, provider OAuthClientProvider, options FlowOptions) (FlowResult, error) {
 	fetch := options.Fetch
 	var metadataURL *string
-	if options.AuthorizationServerMetadataURL != nil {
+	if options.AuthorizationServerMetadataURL != nil && *options.AuthorizationServerMetadataURL != "" {
 		secured, err := secureEndpoint(*options.AuthorizationServerMetadataURL)
 		if err != nil {
 			return "", err

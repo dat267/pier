@@ -1470,3 +1470,24 @@ Verification: focused session search/selector tests, `just check`, `just cross`
 `git diff --check` pass. Reference: pi v1.4.0 (`4a080252`),
 `components/session-selector-search.ts` `filterAndSortSessions`, called
 synchronously from the selector's input handler.
+
+## CR-055: empty configured metadata URL was treated as configured (fixed)
+
+A library caller passing `FlowOptions.AuthorizationServerMetadataURL` as a
+pointer to `""` got `not an HTTP URL` instead of the cached-discovery path.
+pi v1.4.0 treats the empty string as absent (`options.authorizationServerMetadataUrl
+&& secureEndpoint(...)`), so cached discovery applies. The settings validator
+rejects empty values, so this is SDK/library-only, not a CLI regression.
+
+The repair ignores exactly-empty values at the flow boundary; non-empty values,
+including whitespace (truthy in JS), still go through secure-endpoint validation.
+
+Red-first evidence: `go test -count=1 ./mcp -run
+'^TestOAuthEmptyConfiguredMetadataURLUsesDiscovery$'` failed with
+`authorize = "", not an HTTP URL; want redirect from cached discovery`. The
+test drives the real `AuthorizeMcp` path with a synthetic cached discovery
+document and client, so no network is involved. Existing configured-metadata,
+insecure-metadata, discovery and full-flow tests are the controls.
+
+Verification: focused `./mcp ./mcp/oauth` pass; `just check` and `just cross`
+(six targets) pass; `just reference` confirms pi v1.4.0; `git diff --check` clean.
