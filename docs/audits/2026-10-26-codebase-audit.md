@@ -659,3 +659,23 @@ credentials only.
 
 Verification: focused test passes 5 repetitions; all ai tests, `just check`,
 `just cross` (six targets), `just reference` pass. No local race run.
+
+## CLI argument corpus
+
+`coding/testdata/cli-args/generate.mjs` executes the pinned `parseArgs` for 68
+argv vectors and records a projection of the parsed `Args`. The projection is
+the parsed contract: values, booleans, list contents, unknown extension flags,
+messages/file arguments, and diagnostics in order. `TestParseArgsMatchesUpstream`
+compares it with `coding.ParseArgs`.
+
+```sh
+node --experimental-strip-types coding/testdata/cli-args/generate.mjs ./pi > coding/testdata/cli-args/golden.json
+go test -count=1 ./coding -run '^TestParseArgsMatchesUpstream$'
+```
+
+All 68 vectors matched on the first run, so this records coverage rather than a
+finding. Two harness corrections were needed before that run: the projection had
+to normalize Go nil slices to the reference's empty arrays, and an unset mode to
+null instead of the empty string. Neither is a product defect. Regeneration is
+byte-identical; `go test -count=1 ./coding`, `just check`, `just cross` (six
+targets) and `just reference` pass.
