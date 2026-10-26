@@ -110,62 +110,6 @@ func TestReadToolMatchesUpstreamTextPath(t *testing.T) {
 	}
 }
 
-func manyLines(count int) string {
-	var builder strings.Builder
-	for index := 1; index <= count; index++ {
-		builder.WriteString("line ")
-		builder.WriteString(itoaForTest(index))
-		builder.WriteString("\n")
-	}
-	return builder.String()
-}
-
-func itoaForTest(value int) string {
-	if value == 0 {
-		return "0"
-	}
-	var digits []byte
-	for value > 0 {
-		digits = append([]byte{byte('0' + value%10)}, digits...)
-		value /= 10
-	}
-	return string(digits)
-}
-
-// canonicalReadJSON decodes and sorts object keys for the details comparison.
-func canonicalReadJSON(t *testing.T, raw []byte) any {
-	t.Helper()
-	if len(raw) == 0 || string(raw) == "null" {
-		return nil
-	}
-	var value any
-	if err := json.Unmarshal(raw, &value); err != nil {
-		t.Fatalf("decode: %v", err)
-	}
-	var sortKeys func(any) any
-	sortKeys = func(input any) any {
-		switch typed := input.(type) {
-		case map[string]any:
-			out := make(map[string]any, len(typed))
-			for key, item := range typed {
-				out[key] = sortKeys(item)
-			}
-			return out
-		case []any:
-			for index := range typed {
-				typed[index] = sortKeys(typed[index])
-			}
-			return typed
-		default:
-			return input
-		}
-	}
-	return sortKeys(value)
-}
-
-// D279: the reference surfaces Node's libuv wording for a missing file
-// ("ENOENT: no such file or directory, access '<path>'"); the port keeps Go's
-// os error text. This pins the port's message so the divergence stays visible.
 func TestReadToolMissingFileError(t *testing.T) {
 	dir := t.TempDir()
 	_, err := CreateReadTool(dir, nil).Execute("call", []byte(`{"path":"nope.txt"}`), context.Background(), nil)

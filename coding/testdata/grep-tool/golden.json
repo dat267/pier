@@ -5,7 +5,7 @@
       "pattern": "alpha"
     },
     "expected": {
-      "text": "sub/c.txt:1: deep alpha\na.txt:1: alpha one\na.txt:3: alpha three",
+      "text": "a.txt:1: alpha one\na.txt:3: alpha three\nsub/c.txt:1: deep alpha",
       "details": null
     }
   },
@@ -27,7 +27,7 @@
       "ignoreCase": true
     },
     "expected": {
-      "text": "sub/c.txt:1: deep alpha\na.txt:1: alpha one\na.txt:3: alpha three",
+      "text": "a.txt:1: alpha one\na.txt:3: alpha three\nsub/c.txt:1: deep alpha",
       "details": null
     }
   },
@@ -71,7 +71,7 @@
       "context": 1
     },
     "expected": {
-      "text": "a.txt-1- alpha one\na.txt:2: beta two\na.txt-3- alpha three",
+      "text": "a.txt-1- alpha one\na.txt-3- alpha three\na.txt:2: beta two",
       "details": null
     }
   },
@@ -93,7 +93,7 @@
       "limit": 3
     },
     "expected": {
-      "text": "many.txt:1: match 1\nmany.txt:2: match 2\nmany.txt:3: match 3\n\n[3 matches limit reached. Use limit=6 for more, or refine pattern]",
+      "text": "many.txt:1: match 1\nmany.txt:2: match 2\nmany.txt:3: match 3\n[3 matches limit reached. Use limit=6 for more, or refine pattern]",
       "details": {
         "matchLimitReached": 3
       }
@@ -103,10 +103,11 @@
     "name": "fractional-limit",
     "args": {
       "pattern": "alpha",
+      "path": "a.txt",
       "limit": 1.5
     },
     "expected": {
-      "text": "sub/c.txt:1: deep alpha\na.txt:1: alpha one\n\n[1.5 matches limit reached. Use limit=3 for more, or refine pattern]",
+      "text": "a.txt:1: alpha one\na.txt:3: alpha three\n[1.5 matches limit reached. Use limit=3 for more, or refine pattern]",
       "details": {
         "matchLimitReached": 1.5
       }
@@ -118,7 +119,7 @@
       "pattern": "NEEDLE"
     },
     "expected": {
-      "text": "long.txt:1: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx... [truncated]\n\n[Some lines truncated to 500 chars. Use read tool to see full lines]",
+      "text": "long.txt:1: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx... [truncated]\n[Some lines truncated to 500 chars. Use read tool to see full lines]",
       "details": {
         "linesTruncated": true
       }

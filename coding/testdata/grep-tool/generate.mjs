@@ -38,7 +38,9 @@ const cases = [
 	{ name: "context", pattern: "beta two", context: 1 },
 	{ name: "fractional-context", pattern: "beta two", context: 0.5 },
 	{ name: "limit", pattern: "match", limit: 3 },
-	{ name: "fractional-limit", pattern: "alpha", limit: 1.5 },
+	// Limit selection over several files depends on ripgrep's traversal order;
+	// scope it to one file so the chosen matches are deterministic.
+	{ name: "fractional-limit", pattern: "alpha", path: "a.txt", limit: 1.5 },
 	{ name: "long-line", pattern: "NEEDLE" },
 	{ name: "missing-path", pattern: "alpha", path: "nope" },
 ];
@@ -51,7 +53,13 @@ for (const testCase of cases) {
 	let result;
 	try {
 		const value = await tool.execute("c", args);
-		result = { text: value.content.filter((block) => block.type === "text").map((block) => block.text).join("\n"), details: value.details ?? null };
+		const raw = value.content.filter((block) => block.type === "text").map((block) => block.text).join("\n");
+		// ripgrep's traversal order across files is not stable; compare sorted lines.
+		const lines = raw.split("\n");
+		const footer = lines.findIndex((line) => line.startsWith("[") && line.endsWith("]"));
+		const body = footer === -1 ? lines : lines.slice(0, footer).filter((line) => line !== "");
+		const notices = footer === -1 ? [] : lines.slice(footer);
+		result = { text: [...body.sort(), ...notices].join("\n"), details: value.details ?? null };
 	} catch (error) {
 		result = { error: error.message.replaceAll(dir, "<dir>") };
 	}

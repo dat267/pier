@@ -36,7 +36,6 @@ const cases = [
 	{ name: "path-containing", pattern: "src/**/*.spec.ts" },
 	{ name: "hidden", pattern: "*.ts" },
 	{ name: "no-match", pattern: "*.nope" },
-	{ name: "limit", pattern: "*.ts", limit: 2 },
 	{ name: "path-file", pattern: "*.md", path: "readme.md" },
 	{ name: "missing-path", pattern: "*.ts", path: "nope" },
 ];
@@ -49,7 +48,14 @@ for (const testCase of cases) {
 	let result;
 	try {
 		const value = await tool.execute("c", args);
-		result = { text: value.content.filter((block) => block.type === "text").map((block) => block.text).join("\n"), details: value.details ?? null };
+		const raw = value.content.filter((block) => block.type === "text").map((block) => block.text).join("\n");
+		// fd's traversal order is not stable; compare sorted match lines and keep
+		// any trailing notice.
+		const lines = raw.split("\n");
+		const footer = lines.findIndex((line) => line.startsWith("[") && line.endsWith("]"));
+		const body = (footer === -1 ? lines : lines.slice(0, footer)).filter((line) => line !== "");
+		const notices = footer === -1 ? [] : lines.slice(footer);
+		result = { text: [...body.sort(), ...notices].join("\n"), details: value.details ?? null };
 	} catch (error) {
 		result = { error: error.message.replaceAll(dir, "<dir>") };
 	}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -85,8 +86,32 @@ func TestFindToolMatchesUpstream(t *testing.T) {
 					text.WriteString(content.Text)
 				}
 			}
-			if text.String() != fixture.Expected.Text {
-				t.Fatalf("text differs\n got: %q\nwant: %q", text.String(), fixture.Expected.Text)
+			// fd's cross-file traversal order is not stable, so the corpus compares
+			// sorted match lines and keeps any trailing notice.
+			lines := strings.Split(text.String(), "\n")
+			footer := -1
+			for index, line := range lines {
+				if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
+					footer = index
+					break
+				}
+			}
+			var body, notices []string
+			if footer == -1 {
+				body = lines
+			} else {
+				body, notices = lines[:footer], lines[footer:]
+			}
+			compacted := make([]string, 0, len(body))
+			for _, line := range body {
+				if line != "" {
+					compacted = append(compacted, line)
+				}
+			}
+			sort.Strings(compacted)
+			compacted = append(compacted, notices...)
+			if got := strings.Join(compacted, "\n"); got != fixture.Expected.Text {
+				t.Fatalf("text differs\n got: %q\nwant: %q", got, fixture.Expected.Text)
 			}
 			gotDetails, err := json.Marshal(canonicalReadJSON(t, result.Details))
 			if err != nil {
@@ -100,5 +125,33 @@ func TestFindToolMatchesUpstream(t *testing.T) {
 				t.Fatalf("details = %s, want %s", gotDetails, wantDetails)
 			}
 		})
+	}
+}
+
+// fd returns an unspecified subset when a result limit truncates the traversal,
+// so only the notice and the count are asserted.
+func TestFindToolResultLimitNotice(t *testing.T) {
+	if _, err := execLookPath("fd"); err != nil {
+		if _, altErr := execLookPath("fdfind"); altErr != nil {
+			t.Skip("fd not installed")
+		}
+	}
+	dir := t.TempDir()
+	for _, name := range []string{"a.ts", "b.ts", "c.ts", "d.ts"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	result, err := CreateFindTool(dir).Execute("call", []byte(`{"pattern":"*.ts","limit":2}`), context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text, _ := result.Content[0].(ai.TextContent)
+	lines := strings.Split(text.Text, "\n")
+	if len(lines) < 3 {
+		t.Fatalf("output = %q", text.Text)
+	}
+	if notice := lines[len(lines)-1]; notice != "[2 results limit reached. Use limit=4 for more, or refine pattern]" {
+		t.Fatalf("notice = %q", notice)
 	}
 }

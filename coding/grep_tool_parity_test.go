@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -85,8 +86,32 @@ func TestGrepToolMatchesUpstream(t *testing.T) {
 					text.WriteString(content.Text)
 				}
 			}
-			if text.String() != fixture.Expected.Text {
-				t.Fatalf("text differs\n got: %q\nwant: %q", text.String(), fixture.Expected.Text)
+			// ripgrep's cross-file traversal order is not stable, so the corpus
+			// compares sorted match lines and keeps notices in place.
+			lines := strings.Split(text.String(), "\n")
+			footer := -1
+			for index, line := range lines {
+				if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
+					footer = index
+					break
+				}
+			}
+			var body, notices []string
+			if footer == -1 {
+				body = lines
+			} else {
+				body, notices = lines[:footer], lines[footer:]
+			}
+			compacted := make([]string, 0, len(body))
+			for _, line := range body {
+				if line != "" {
+					compacted = append(compacted, line)
+				}
+			}
+			sort.Strings(compacted)
+			compacted = append(compacted, notices...)
+			if got := strings.Join(compacted, "\n"); got != fixture.Expected.Text {
+				t.Fatalf("text differs\n got: %q\nwant: %q", got, fixture.Expected.Text)
 			}
 			gotDetails, err := json.Marshal(canonicalReadJSON(t, result.Details))
 			if err != nil {
