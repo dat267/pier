@@ -375,3 +375,43 @@ actual transcript tool declarations at provider dispatch, not a private flag.
 Verification: focused test and CR-031 scheduled-reservation controls pass;
 internal/goal, coding and interactive tests pass; `just check`, `just cross`
 (six targets), `just reference` pass. No local race run.
+
+## CR-033, P2: concurrent goal tools corrupted durable replay ordering (fixed)
+
+Authority: `internal/goal/state.go` ApplyChange/FoldGoal require ordered lifecycle
+entries, D223's goal integration and D143's Go serialization responsibility.
+The installed extension's synchronous dispatch/apply is identified by the
+CR-031 machine digest; stock pi v1.4.0 has no goal tool.
+
+Default parallel tool execution can call set_goal concurrently. The controller
+locked Dispatch, unlocked, then persisted effects through Apply. Another
+transition could therefore persist first, or interleave inside a clear/create
+pair. Every call could succeed while the next restore discarded the accepted
+goal as corrupt.
+
+Repair: `dispatchLocked` commits append effects in the same critical section as
+machine mutation. Its private session sink only writes records; interactive
+disk I/O remains on the existing write queue. Remaining effects and tool
+synchronization run after unlocking, preserving callback reentrancy. Start's
+branch read and replay still share the state lock. Public Apply behavior is
+unchanged. No new mutex or worker was introduced; lock ordering is recorded in
+`docs/locks.md`.
+
+```sh
+go test -count=30 ./coding -run '^TestConcurrentGoalToolsPreserveReplayableTransitions$'
+go test -count=20 ./coding -run '^TestGoalTransitionNotificationCanReadState$'
+```
+
+Observed red in all 20 exploratory repetitions: a real session's public tool,
+called by 16 barrier-started workers, accepted writes but replay reported
+`Goal state corrupt, ignoring: clear of unknown goal` and lost the goal.
+Sequential calls were a passing control. Both now replay to the accepted goal;
+30 focused repetitions pass, and a companion callback test reenters Snapshot
+from the reload notice without deadlocking. No sleeps or private lock gates
+control the concurrent calls.
+
+Verification: all coding goal tests, internal/goal, coding and interactive tests,
+`just check`, `just cross` (six targets), `just reference` pass. No local race run.
+
+Completed subsequent pieces: `fdd90a9` (CR-030), `809e4c8` (CR-031),
+`a5a2bd4` (CR-032).

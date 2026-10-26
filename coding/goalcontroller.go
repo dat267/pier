@@ -272,18 +272,58 @@ func (c *GoalController) roundPromptIfMissing(messages []ai.Message) *ai.CustomM
 	return goalEventMessage(goal.GoalEventType, content, false, details)
 }
 
+// goalTransition separates durable records, committed with the machine lock,
+// from callbacks and model work that must run after unlocking.
+type goalTransition struct {
+	goal.DispatchResult
+	mutated bool
+}
+
+func (c *GoalController) appendGoalEntry(effect goal.AppendEntryEffect) bool {
+	data, err := ai.MarshalJSON(effect.Data)
+	if err != nil {
+		return false
+	}
+	c.sink.AppendGoalEntry(effect.EntryType, data)
+	return true
+}
+
+// dispatchLocked keeps machine mutation and its durable records in one order.
+// The private session sink only appends storage records; it invokes no user
+// callbacks. Interactive session disk writes remain on its existing queue.
+func (c *GoalController) dispatchLocked(event goal.GoalEvent) goalTransition {
+	result := c.machine.Dispatch(event)
+	remaining := make([]goal.Effect, 0, len(result.Effects))
+	mutated := false
+	for _, effect := range result.Effects {
+		if entry, ok := effect.(goal.AppendEntryEffect); ok {
+			if c.appendGoalEntry(entry) {
+				mutated = true
+			}
+		} else {
+			remaining = append(remaining, effect)
+		}
+	}
+	result.Effects = remaining
+	return goalTransition{DispatchResult: result, mutated: mutated}
+}
+
+func (c *GoalController) applyTransition(transition goalTransition) {
+	if transition.mutated {
+		c.SyncTools()
+	}
+	c.Apply(transition.Effects)
+}
+
 // Apply executes the machine's effects against the session.
 func (c *GoalController) Apply(effects []goal.Effect) {
 	mutated := false
 	for _, effect := range effects {
 		switch typed := effect.(type) {
 		case goal.AppendEntryEffect:
-			data, err := ai.MarshalJSON(typed.Data)
-			if err != nil {
-				continue
+			if c.appendGoalEntry(typed) {
+				mutated = true
 			}
-			c.sink.AppendGoalEntry(typed.EntryType, data)
-			mutated = true
 		case goal.SendMessageEffect:
 			// Idle delivery can run the model inline. Expose tools for the
 			// committed goal phase before that first request is assembled.
@@ -356,9 +396,9 @@ func sameToolSet(a, b []string) bool {
 // durably pauses a live goal.
 func (c *GoalController) Start(reason string) {
 	c.mu.Lock()
-	result := c.machine.Dispatch(goal.SessionStartEvent{Entries: c.sink.GoalBranchEntries(), Reason: reason})
+	result := c.dispatchLocked(goal.SessionStartEvent{Entries: c.sink.GoalBranchEntries(), Reason: reason})
 	c.mu.Unlock()
-	c.Apply(result.Effects)
+	c.applyTransition(result)
 	c.SyncTools()
 	snapshot := c.Snapshot()
 	if snapshot.Goal != nil && snapshot.Goal.Phase == goal.PhaseActive && reason != "reload" {
@@ -373,14 +413,14 @@ func (c *GoalController) AgentEnd(event *agent.AgentEvent) {
 	aborted := goalAgentAborted(event)
 	willRetry := c.sink.willRetry() // D242: don't pause a failure the session will retry.
 	c.mu.Lock()
-	admission := c.machine.Dispatch(goal.AgentEndEvent{Usage: goalUsageFromAgentEvent(event), Aborted: aborted})
+	admission := c.dispatchLocked(goal.AgentEndEvent{Usage: goalUsageFromAgentEvent(event), Aborted: aborted})
 	c.mu.Unlock()
-	c.Apply(admission.Effects)
+	c.applyTransition(admission)
 	pending := c.sink.GoalHasPendingMessages()
 	c.mu.Lock()
-	settle := c.machine.Dispatch(goal.AgentBeforeSettleEvent{Outcome: goalOutcome(event, aborted, willRetry), HasPendingMessages: pending})
+	settle := c.dispatchLocked(goal.AgentBeforeSettleEvent{Outcome: goalOutcome(event, aborted, willRetry), HasPendingMessages: pending})
 	c.mu.Unlock()
-	c.Apply(settle.Effects)
+	c.applyTransition(settle)
 }
 
 // goalUsageFromAgentEvent sums the run's assistant usage.
@@ -443,9 +483,9 @@ func (c *GoalController) HandleCommand(args string) {
 	snapshot := c.Snapshot()
 	run := func(event goal.GoalEvent, fallback func() string) {
 		c.mu.Lock()
-		result := c.machine.Dispatch(event)
+		result := c.dispatchLocked(event)
 		c.mu.Unlock()
-		c.Apply(result.Effects)
+		c.applyTransition(result)
 		if result.Reply != nil {
 			level := "info"
 			if result.IsError {
@@ -566,10 +606,10 @@ func (c *GoalController) setGoalTool() agent.AgentTool {
 				return goalErrorResult("Provide an objective to set the goal or a status to end it.")
 			case objective != "":
 				c.mu.Lock()
-				result := c.machine.Dispatch(goal.GoalAgentSetEvent{Objective: objective})
+				result := c.dispatchLocked(goal.GoalAgentSetEvent{Objective: objective})
 				c.mu.Unlock()
-				c.Apply(result.Effects)
-				return c.toolResult(result, "Goal set.")
+				c.applyTransition(result)
+				return c.toolResult(result.DispatchResult, "Goal set.")
 			}
 
 			switch status {
@@ -583,23 +623,23 @@ func (c *GoalController) setGoalTool() agent.AgentTool {
 			}
 			c.mu.Lock()
 			var (
-				result   goal.DispatchResult
+				result   goalTransition
 				fallback string
 			)
 			switch status {
 			case "complete":
-				result = c.machine.Dispatch(goal.GoalUpdateEvent{GoalID: current.ID, Revision: current.Revision, Action: "complete"})
+				result = c.dispatchLocked(goal.GoalUpdateEvent{GoalID: current.ID, Revision: current.Revision, Action: "complete"})
 				fallback = "Goal complete."
 			case "blocked":
-				result = c.machine.Dispatch(goal.GoalUpdateEvent{GoalID: current.ID, Revision: current.Revision, Action: "blocked", BlockedReason: input.BlockedReason})
+				result = c.dispatchLocked(goal.GoalUpdateEvent{GoalID: current.ID, Revision: current.Revision, Action: "blocked", BlockedReason: input.BlockedReason})
 				fallback = "Goal blocked."
 			case "clear":
-				result = c.machine.Dispatch(goal.GoalClearEvent{ID: current.ID, Revision: current.Revision})
+				result = c.dispatchLocked(goal.GoalClearEvent{ID: current.ID, Revision: current.Revision})
 				fallback = "Goal cleared."
 			}
 			c.mu.Unlock()
-			c.Apply(result.Effects)
-			return c.setGoalToolResult(result, status, fallback)
+			c.applyTransition(result)
+			return c.setGoalToolResult(result.DispatchResult, status, fallback)
 		},
 	}
 }

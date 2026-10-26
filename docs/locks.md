@@ -32,6 +32,17 @@ snapshots never expose the map that tool-start/tool-end events mutate. Successfu
 runs release their parent-context cancellation registrations only after their
 listeners settle, without changing the reported abort status.
 
+`coding.GoalController.mu` serializes machine transitions with their durable
+append effects. A clear/create pair cannot interleave with another tool's
+transition records, even when tools execute in parallel. The private session
+sink acquires `SessionManager.mu` for record append; interactive file I/O stays
+on the manager's existing write queue, while standalone callers retain their
+synchronous storage path. No user callbacks run in this locked phase. Tool
+exposure synchronization, notices and model work are applied after unlocking;
+notification callbacks may reenter `Snapshot`. Deferred idle round workers also
+check their goal id, revision and pending turn before starting, so a stopped or
+superseded reservation cannot launch later.
+
 MCP listener registries retain stable entry pointers, so slice growth and
 snapshot compaction cannot invalidate unsubscribe handles. Callbacks remain
 outside their existing registry mutexes. `mcp.Client.mu` admits incoming request

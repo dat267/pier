@@ -1194,6 +1194,11 @@ pausing/resuming while it waits invalidates it. Already-started work retains
 its existing cancellation policy. Tool exposure is synchronized before a
 trigger-turn message can start an idle model request inline, so the first round
 has the active goal's tools rather than waiting until that run returns.
+Machine transitions and their durable append effects share the controller lock,
+so concurrent goal tools cannot persist clear/create entries out of order. The
+private session adapter appends records under that lock (interactive disk I/O
+still uses the existing write queue); tool changes, notices and model work run
+after unlocking.
 
 The two tools (`get_goal`/`set_goal`, D234) are registered in the session
 tool registry and join the default active set; unlike the extension, an explicit `--tools` allowlist still

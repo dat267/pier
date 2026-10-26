@@ -388,7 +388,10 @@ interface (D234) is unchanged. Deferred idle goal rounds recheck their reserved
 goal id, revision and turn before starting. Pause, clear, replacement and
 pause/resume invalidate old queued work without canceling a round already
 started. Goal tool exposure is synchronized before a trigger-turn message can
-start an idle model run, so its first request includes `get_goal`.
+start an idle model run, so its first request includes `get_goal`. Machine
+mutation and durable goal-record appends are serialized together; parallel
+`set_goal` calls cannot corrupt the replay log by interleaving clear/create
+entries. Host callbacks and model work remain outside the state lock.
 
 The find tool checks both `fd` and `fdfind` on PATH, preferring `fd`, matching
 `utils/tools-manager.ts`. This supports Debian/Ubuntu's alternative executable
