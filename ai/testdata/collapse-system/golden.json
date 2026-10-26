@@ -1,0 +1,598 @@
+[
+  {
+    "name": "empty/collapse",
+    "messages": [],
+    "function": "collapse",
+    "expected": []
+  },
+  {
+    "name": "empty/resolve-off",
+    "messages": [],
+    "function": "resolve",
+    "supports": false,
+    "expected": []
+  },
+  {
+    "name": "empty/resolve-on",
+    "messages": [],
+    "function": "resolve",
+    "supports": true,
+    "expected": []
+  },
+  {
+    "name": "no-system/collapse",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "there"
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "stop",
+        "timestamp": 3
+      }
+    ],
+    "function": "collapse",
+    "expected": [
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "there"
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "stop",
+        "timestamp": 3
+      }
+    ]
+  },
+  {
+    "name": "no-system/resolve-off",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "there"
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "stop",
+        "timestamp": 3
+      }
+    ],
+    "function": "resolve",
+    "supports": false,
+    "expected": [
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "there"
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "stop",
+        "timestamp": 3
+      }
+    ]
+  },
+  {
+    "name": "no-system/resolve-on",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "there"
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "stop",
+        "timestamp": 3
+      }
+    ],
+    "function": "resolve",
+    "supports": true,
+    "expected": [
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "there"
+          }
+        ],
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "m",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        },
+        "stopReason": "stop",
+        "timestamp": 3
+      }
+    ]
+  },
+  {
+    "name": "leading-system/collapse",
+    "messages": [
+      {
+        "role": "system",
+        "content": "base",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "read tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      }
+    ],
+    "function": "collapse",
+    "expected": [
+      {
+        "role": "system",
+        "content": "base",
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "read tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ],
+        "timestamp": 1
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      }
+    ]
+  },
+  {
+    "name": "leading-system/resolve-off",
+    "messages": [
+      {
+        "role": "system",
+        "content": "base",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "read tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      }
+    ],
+    "function": "resolve",
+    "supports": false,
+    "expected": [
+      {
+        "role": "system",
+        "content": "base",
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "read tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ],
+        "timestamp": 1
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      }
+    ]
+  },
+  {
+    "name": "leading-system/resolve-on",
+    "messages": [
+      {
+        "role": "system",
+        "content": "base",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "read tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      }
+    ],
+    "function": "resolve",
+    "supports": true,
+    "expected": [
+      {
+        "role": "system",
+        "content": "base",
+        "timestamp": 1,
+        "toolsAdded": [
+          {
+            "name": "read",
+            "description": "read tool",
+            "parameters": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      }
+    ]
+  },
+  {
+    "name": "mid-system-merged/collapse",
+    "messages": [
+      {
+        "role": "system",
+        "content": "base",
+        "timestamp": 1
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "system",
+        "content": "more",
+        "timestamp": 5
+      }
+    ],
+    "function": "collapse",
+    "expected": [
+      {
+        "role": "system",
+        "content": "base\n\nmore",
+        "timestamp": 1
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      }
+    ]
+  },
+  {
+    "name": "mid-system-merged/resolve-off",
+    "messages": [
+      {
+        "role": "system",
+        "content": "base",
+        "timestamp": 1
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "system",
+        "content": "more",
+        "timestamp": 5
+      }
+    ],
+    "function": "resolve",
+    "supports": false,
+    "expected": [
+      {
+        "role": "system",
+        "content": "base\n\nmore",
+        "timestamp": 1
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      }
+    ]
+  },
+  {
+    "name": "mid-system-merged/resolve-on",
+    "messages": [
+      {
+        "role": "system",
+        "content": "base",
+        "timestamp": 1
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "system",
+        "content": "more",
+        "timestamp": 5
+      }
+    ],
+    "function": "resolve",
+    "supports": true,
+    "expected": [
+      {
+        "role": "system",
+        "content": "base",
+        "timestamp": 1
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 2
+      },
+      {
+        "role": "system",
+        "content": "more",
+        "timestamp": 5
+      }
+    ]
+  },
+  {
+    "name": "systems-only/collapse",
+    "messages": [
+      {
+        "role": "system",
+        "content": "base",
+        "timestamp": 1,
+        "sections": {
+          "a": "A"
+        }
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 2,
+        "sections": {
+          "a": null
+        }
+      }
+    ],
+    "function": "collapse",
+    "expected": [
+      {
+        "role": "system",
+        "content": "base",
+        "timestamp": 1
+      }
+    ]
+  },
+  {
+    "name": "systems-only/resolve-off",
+    "messages": [
+      {
+        "role": "system",
+        "content": "base",
+        "timestamp": 1,
+        "sections": {
+          "a": "A"
+        }
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 2,
+        "sections": {
+          "a": null
+        }
+      }
+    ],
+    "function": "resolve",
+    "supports": false,
+    "expected": [
+      {
+        "role": "system",
+        "content": "base",
+        "timestamp": 1
+      }
+    ]
+  },
+  {
+    "name": "systems-only/resolve-on",
+    "messages": [
+      {
+        "role": "system",
+        "content": "base",
+        "timestamp": 1,
+        "sections": {
+          "a": "A"
+        }
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 2,
+        "sections": {
+          "a": null
+        }
+      }
+    ],
+    "function": "resolve",
+    "supports": true,
+    "expected": [
+      {
+        "role": "system",
+        "content": "base",
+        "timestamp": 1,
+        "sections": {
+          "a": "A"
+        }
+      },
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 2,
+        "sections": {
+          "a": null
+        }
+      }
+    ]
+  }
+]

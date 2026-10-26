@@ -964,3 +964,21 @@ go test -count=1 ./ai -run '^TestResolveTranscriptToolsMatchesUpstream$'
 Verification: focused corpus, `ai`/`agent`/`coding`/`coding/interactive` suites,
 `just check`, `just cross` (six targets), `just reference`; regeneration is
 byte-identical. No local race run.
+
+## System-collapse corpus
+
+`ai/testdata/collapse-system/generate.mjs` executes the pinned
+`collapseSystemMessages` and `resolveTranscript` for five message sequences in
+collapse and both resolve modes (15 cases). Covered: an empty sequence, no
+system message, a leading system message carrying tools, a merged
+mid-conversation system message, and systems-only section patches.
+
+The corpus compares structure rather than raw bytes for pass-through members:
+those keep the harness's input key order, while message byte order is pinned by
+the session round-trip tests. All 15 matched. A remaining representation note,
+not a finding: `CollapseSystemMessages` returns a nil message slice for an empty
+input where the reference returns `[]`; no supported consumer observes it, and it
+is recorded as a lead only.
+
+Regeneration is byte-identical; `go test -count=1 ./ai`, `just check`,
+`just cross` (six targets) and `just reference` pass.

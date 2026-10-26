@@ -417,6 +417,12 @@ mutation and durable goal-record appends are serialized together; parallel
 `set_goal` calls cannot corrupt the replay log by interleaving clear/create
 entries. Host callbacks and model work remain outside the state lock.
 
+System-message collapsing is pinned by a 15-case corpus executing the pinned
+`collapseSystemMessages`/`resolveTranscript`: empty input, no system message,
+a leading system message with tools, a merged mid-conversation system message,
+and systems-only section patches, in collapse and both resolve modes. Pass-through
+members keep their input key order, so the corpus compares structure.
+
 Tool resolution is pinned by a 30-case corpus executing the pinned
 `resolveTranscriptTools` over nine system-message sequences and all three
 support modes (`none`, `additions`, `changes`), including removals,
