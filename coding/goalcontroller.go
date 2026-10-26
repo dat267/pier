@@ -285,6 +285,12 @@ func (c *GoalController) Apply(effects []goal.Effect) {
 			c.sink.AppendGoalEntry(typed.EntryType, data)
 			mutated = true
 		case goal.SendMessageEffect:
+			// Idle delivery can run the model inline. Expose tools for the
+			// committed goal phase before that first request is assembled.
+			if typed.TriggerTurn && mutated {
+				c.SyncTools()
+				mutated = false
+			}
 			detailValues := typed.Details
 			if typed.TriggerTurn && typed.CustomType == goal.GoalEventType && typed.Details["kind"] == "round" {
 				if turn, ok := typed.Details["turn"].(int); ok {

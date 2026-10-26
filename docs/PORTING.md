@@ -387,7 +387,8 @@ are removed, and U+0085 remains part of the objective. The port-local status
 interface (D234) is unchanged. Deferred idle goal rounds recheck their reserved
 goal id, revision and turn before starting. Pause, clear, replacement and
 pause/resume invalidate old queued work without canceling a round already
-started.
+started. Goal tool exposure is synchronized before a trigger-turn message can
+start an idle model run, so its first request includes `get_goal`.
 
 The find tool checks both `fd` and `fdfind` on PATH, preferring `fd`, matching
 `utils/tools-manager.ts`. This supports Debian/Ubuntu's alternative executable

@@ -347,3 +347,31 @@ The revision check matters for pause/resume of the same goal and turn number.
 Verification: focused test passes 20 repetitions; internal/goal, coding and
 coding/interactive tests pass; `just check`, `just cross` (six targets),
 `just reference` pass. No local race run.
+
+## CR-032, P3: idle goal turns started before tool exposure synchronized (fixed)
+
+Authority: D223's active-goal tool policy, `internal/goal/tools.go`
+DesiredToolNames and the existing pursued-goal prompt test. The installed
+extension's `index.ts` apply/syncGoalTools source is identified by the CR-030
+digest. Its nonblocking message delivery permits synchronization before provider
+dispatch; Go's idle delivery can synchronously await an entire turn.
+
+`/goal set` on an idle SDK session therefore dispatched its first model request
+without `get_goal`, despite an active goal and prompt rules naming that tool.
+`Apply` synchronized tools only after delivering the trigger-turn effect.
+
+Repair: flush pending tool synchronization before a trigger-turn message starts
+work. Remaining mutations retain the final synchronization. Durable entry order
+and callback/lock ownership are unchanged.
+
+```sh
+go test -count=1 ./coding -run '^TestIdleGoalRoundReceivesActiveGoalTools$'
+```
+
+Observed red: idle-command first request lacked `get_goal`; a tool-created goal
+followed by Prompt was a passing control. Both now expose it. The test inspects
+actual transcript tool declarations at provider dispatch, not a private flag.
+
+Verification: focused test and CR-031 scheduled-reservation controls pass;
+internal/goal, coding and interactive tests pass; `just check`, `just cross`
+(six targets), `just reference` pass. No local race run.

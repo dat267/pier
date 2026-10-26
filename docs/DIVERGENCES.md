@@ -1191,7 +1191,9 @@ Idle round delivery uses the host work scheduler (D143). A queued closure
 checks that its goal id, revision and pending turn still identify an armed,
 active reservation before starting a run; pausing, clearing, replacing or
 pausing/resuming while it waits invalidates it. Already-started work retains
-its existing cancellation policy.
+its existing cancellation policy. Tool exposure is synchronized before a
+trigger-turn message can start an idle model request inline, so the first round
+has the active goal's tools rather than waiting until that run returns.
 
 The two tools (`get_goal`/`set_goal`, D234) are registered in the session
 tool registry and join the default active set; unlike the extension, an explicit `--tools` allowlist still
