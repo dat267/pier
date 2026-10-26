@@ -47,6 +47,11 @@ the pin's leading-slash preprocessing and nested-rule prefixes preserved
 source-generated 24-case corpus covers `.gitignore`, `.ignore`, `.fdignore`,
 negation and directory pruning; Go tests also check the resulting skill prompt.
 
+Session branch forks also recreate resolved bookmarks for retained entries,
+including labels recorded outside the chosen path, preserving label timestamps
+and insertion order (`core/session-manager.ts`, `createBranchedSession`). A
+public-manager regression covers in-memory forks and persisted reopen.
+
 Session aborts now retain cancellation across retry startup, backoff and
 continuations, and `agent_settled.aborted` reports the run's abort flag rather
 than the final assistant's stop reason (`core/agent-session.ts`, `abort`,

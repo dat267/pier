@@ -952,6 +952,50 @@ func (m *SessionManager) CreateBranchedSession(leafID string) (string, error) {
 		newEntries = append(newEntries, FileEntry{Entry: &entry})
 	}
 
+	// Recreate resolved labels for retained targets, including labels recorded
+	// outside the selected path. Slots preserve Map insertion order: updating a
+	// label keeps its position, while deleting and re-adding moves it to the end.
+	retained := make(map[string]*SessionEntry, len(newEntries))
+	for _, entry := range newEntries {
+		retained[entry.Entry.ID] = entry.Entry
+	}
+	labelSlots := map[string]int{}
+	var labels []*SessionEntry
+	for _, fileEntry := range m.fileEntries {
+		entry := fileEntry.Entry
+		if entry == nil || entry.Type != "label" || retained[entry.TargetID] == nil {
+			continue
+		}
+		slot, exists := labelSlots[entry.TargetID]
+		if entry.Label == nil || *entry.Label == "" {
+			if exists {
+				labels[slot] = nil
+				delete(labelSlots, entry.TargetID)
+			}
+		} else if exists {
+			labels[slot] = entry
+		} else {
+			labelSlots[entry.TargetID] = len(labels)
+			labels = append(labels, entry)
+		}
+	}
+	for _, label := range labels {
+		if label == nil {
+			continue
+		}
+		parent := pathParentID
+		entry := &SessionEntry{
+			Type: "label",
+			SessionEntryBase: SessionEntryBase{
+				ID: generateID(retained), ParentID: &parent, Timestamp: label.Timestamp,
+			},
+			TargetID: label.TargetID, Label: label.Label,
+		}
+		retained[entry.ID] = entry
+		pathParentID = entry.ID
+		newEntries = append(newEntries, FileEntry{Entry: entry})
+	}
+
 	m.fileEntries = append([]FileEntry{{Header: &header}}, newEntries...)
 	m.sessionID = newSessionID
 	m.writeState = &sessionWriteState{}

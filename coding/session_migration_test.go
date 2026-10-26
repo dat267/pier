@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -182,8 +183,15 @@ func TestBranchedSessionRechainsRetainedLines(t *testing.T) {
 		t.Fatal(err)
 	}
 	lines := strings.Split(strings.TrimRight(string(data), "\n"), "\n")
-	if len(lines) != 3 {
+	if len(lines) != 4 {
 		t.Fatalf("branched file = %s", data)
+	}
+	var label SessionEntry
+	if err := json.Unmarshal([]byte(lines[3]), &label); err != nil {
+		t.Fatal(err)
+	}
+	if label.Type != "label" || label.TargetID != "m1" || label.Label == nil || *label.Label != "bookmark" || label.ParentID == nil || *label.ParentID != "m2" {
+		t.Fatalf("recreated label = %+v", label)
 	}
 	if want := `{"type":"message","id":"m2","parentId":"m1","timestamp":"2026-01-01T00:00:03Z","message":{"role":"assistant","content":[{"type":"text","text":"hello"}],"api":"test","provider":"test","model":"test","usage":{"input":1,"output":1,"cacheRead":0,"cacheWrite":0},"stopReason":"stop","timestamp":2}}`; lines[2] != want {
 		t.Fatalf("branched entry:\n got %s\nwant %s", lines[2], want)
