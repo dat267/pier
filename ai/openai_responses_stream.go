@@ -570,10 +570,14 @@ func ProcessResponsesStream(
 				TotalTokens: totalTokens,
 				Cost:        UsageCost{},
 			}
+			// Upstream always reports a numeric reasoning count
+			// (`output_tokens_details?.reasoning_tokens || 0`), so an absent
+			// block still serializes "reasoning":0.
+			reasoning := int64(0)
 			if response.Usage.OutputTokensDetails != nil && response.Usage.OutputTokensDetails.ReasoningTokens != nil {
-				reasoning := *response.Usage.OutputTokensDetails.ReasoningTokens
-				output.Usage.Reasoning = &reasoning
+				reasoning = *response.Usage.OutputTokensDetails.ReasoningTokens
 			}
+			output.Usage.Reasoning = &reasoning
 		}
 		CalculateCost(model, &output.Usage)
 		if options != nil && options.ServiceTier != "" {

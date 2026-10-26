@@ -109,6 +109,23 @@ const scenarios = [
 		],
 	},
 	{
+		name: "usage-without-details",
+		events: [
+			created,
+			{ type: "response.output_item.added", output_index: 0, item: { ...messageItem(""), content: [] } },
+			{ type: "response.output_text.delta", output_index: 0, item_id: "msg_1", delta: "hi" },
+			{ type: "response.output_item.done", output_index: 0, item: messageItem("hi") },
+			{
+				type: "response.completed",
+				response: {
+					id: "resp_1",
+					status: "completed",
+					usage: { input_tokens: 6, output_tokens: 3, total_tokens: 9 },
+				},
+			},
+		],
+	},
+	{
 		name: "incomplete-max-tokens",
 		events: [
 			created,
