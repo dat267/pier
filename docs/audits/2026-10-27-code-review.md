@@ -413,3 +413,25 @@ Not verified, and therefore not cleared:
   entries, MCP messages, stdin, keys and incremental Markdown are covered,
   glob/grapheme/model-config/MCP-config/settings were added. Provider wire
   parsers, the theme loader and the HTML template are not fuzzed.
+
+## Later probes without a finding
+
+- **Session files truncated mid-line.** A session cut inside its last record, or
+  followed by a NUL line, loads the intact prefix and skips the partial tail
+  (`get_messages` returned the user message only, `success: true`), matching the
+  pin's `parseSessionEntryLine`. No crash, no whole-file rejection.
+- **`Text.Render` with a negative width** panics in `strings.Repeat`. The pin's
+  `" ".repeat(width)` throws `RangeError` for the same input, so this is shared
+  behaviour, and every in-tree call site clamps first (`Box` uses
+  `max(1, width-paddingX*2)`, `toolframes.go` uses `max(1, …)`). Left unchanged:
+  a Go-side clamp would accept input the reference rejects, and no reachable
+  call passes a negative width.
+- **Image-only user messages render nothing.** `AddMessageToChat` skips a user
+  message whose joined text is empty, exactly as `interactive-mode.ts`
+  `getUserMessageText` plus its `if (textContent)` guard does. Shared with the
+  reference, so not a parity finding.
+- **RPC fork reads the session file from disk.** `forkManager` opens the current
+  file without first draining an optional `SessionManager` write queue. Not
+  reproduced: the interactive app and the CLI RPC host both create managers with
+  synchronous writes (`WriteQueue` nil) unless a library caller supplies one, and
+  no such caller exists in the tree. Recorded as a lead rather than patched.
