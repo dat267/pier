@@ -368,7 +368,9 @@ forks now settle the outgoing turn before mutating the reused manager, matching
 `core/agent-session-runtime.ts`; otherwise its aborted tail appeared in the new
 branch. Fork/clone also reject a missing Go replacement factory before branch
 side effects. These repairs have red-first admission, weak-reference, loopback
-HTTP cancellation and JSONL session-integrity regressions. MCP HTTP also checks
+HTTP cancellation and JSONL session-integrity regressions. MCP HTTP now reports a
+malformed URL from `Start`, before any request can dereference it (upstream
+parses in its constructor); it also checks
 caller cancellation after shared token acquisition and before invoking fetch;
 a sender canceled during a token wait cannot dispatch through an injected
 fetch that does not itself enforce the canceled context. Rejected 401/step-up

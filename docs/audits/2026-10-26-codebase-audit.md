@@ -604,3 +604,31 @@ packages pass; `just check`, `just cross` (six targets), `just reference` pass.
 No local race run. Sequence note: this finding's reproduction and repair were
 done before its tracker entry was written; the evidence above is the durable
 record, and `TODO.md` stays at "no confirmed unresolved findings".
+
+## CR-040, P3: a malformed MCP HTTP URL panicked on first send (fixed)
+
+Authority: pi v1.4.0 `packages/mcp/src/transports/streamable-http.ts` parses the
+URL in its constructor (`this.url = new URL(options.url)`), so a malformed value
+is a caller-visible error before any request. The Go constructor cannot return
+an error, and its own comment already assigned validation to `Start`.
+
+Pier discarded the parse error, kept a nil `parsedURL`, accepted `Start`, and
+then dereferenced the nil URL in `Send`. CLI config validation hid this, but the
+exported transport is public API: one malformed string crashed the process
+instead of returning an error.
+
+Repair: retain the constructor's parse failure and return it from `Start`, ahead
+of the started/closed checks. `Send` already requires a started transport, so a
+rejected start now yields the closed-transport error rather than a panic. No URL
+rewriting or new validation rules were added.
+
+```sh
+go test -count=1 ./mcp -run '^TestStreamableHTTPRejectsMalformedURLAtStart$'
+```
+
+Observed red: `Start` returned nil for `http://[::1`, and a probe then logged
+`send panic = runtime error: invalid memory address or nil pointer dereference`.
+The regression now sees a Start error and no panic. Loopback/HTTP fixtures only.
+
+Verification: `go test -count=1 ./mcp/...`, the coding MCP tests, `just check`,
+`just cross` (six targets), `just reference` pass. No local race run.

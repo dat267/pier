@@ -248,11 +248,14 @@ type StreamableHttpTransport struct {
 	parsedURL *url.URL
 	client    *http.Client
 
-	mu               sync.Mutex
-	stopCtx          context.Context
-	stop             context.CancelFunc
-	started          bool
-	closed           bool
+	mu      sync.Mutex
+	stopCtx context.Context
+	stop    context.CancelFunc
+	started bool
+	closed  bool
+	// urlErr is the constructor's URL parse failure, reported by Start so a
+	// malformed URL never reaches a request (upstream parses in its constructor).
+	urlErr           error
 	sessionID        string
 	protocolVersion  string
 	getStreamStarted bool
@@ -268,11 +271,11 @@ func NewStreamableHttpTransport(options StreamableHttpTransportOptions) *Streama
 	t := &StreamableHttpTransport{
 		options:   options,
 		parsedURL: parsed,
+		urlErr:    err,
 		client:    &http.Client{},
 		stopCtx:   stopCtx,
 		stop:      stop,
 	}
-	_ = err // URL errors surface at fetch time, like upstream's lazy URL parse
 	return t
 }
 
@@ -287,6 +290,9 @@ func (t *StreamableHttpTransport) SessionID() string {
 func (t *StreamableHttpTransport) Start(ctx context.Context) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	if t.urlErr != nil {
+		return t.urlErr
+	}
 	if t.started {
 		return fmt.Errorf("MCP Streamable HTTP transport already started")
 	}
