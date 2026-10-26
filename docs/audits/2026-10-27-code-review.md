@@ -172,3 +172,21 @@ Verification: all `TestConsumeSse*` controls passed with `-count=30`, and
 single event without error using 41,716,456 allocated bytes and 21.07 ms;
 1 MiB used 5,253,864 bytes/2.89 ms and 4 MiB used 21,121,784 bytes/11.22 ms.
 These are local parser measurements, not end-to-end transport latency.
+
+## CR-065: P2 progress-enabled requests swallowed serialization errors (fixed)
+
+Reference: read-only pi v1.4.0 (`4a080252`), `packages/mcp/src/client.ts`
+`requestInternal` and HTTP/stdio transport `JSON.stringify(message)`.
+Cyclic Go SDK arguments failed serialization without `OnProgress`, but adding
+that callback caused the helper to ignore the marshal error and send a request
+without params. A server could even return success for that malformed request.
+
+`TestClientRejectsCyclicArgumentsWithProgress` failed only the progress case,
+which returned nil error. An offline Node control executed the pinned client
+and HTTP transport with an injected fetch; both modes rejected the cycle.
+The helper now returns serialization errors and the caller uses its existing
+pending-request cleanup path, before sending anything. The regression checks
+both modes and verifies that no malformed tool request reaches the server.
+
+Verification: `go test -count=2 ./mcp` passed, including client progress-token
+replacement, cancellation, timeouts, and HTTP/stdio controls.

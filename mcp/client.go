@@ -498,15 +498,15 @@ func (c *Client) request(ctx context.Context, method string, params any, options
 	message.JSONRPC = protocol.JSONRPCVersion
 	message.ID = protocol.NumberId(float64(id))
 	message.Method = method
+	var marshalErr error
 	if entry.progressToken != nil {
-		message.Params = withProgressToken(params, id)
+		message.Params, marshalErr = withProgressToken(params, id)
 	} else if params != nil {
-		enc, marshalErr := protocol.MarshalJSON(params)
-		if marshalErr != nil {
-			c.cancelPending(id, marshalErr, false, "")
-			return nil, marshalErr
-		}
-		message.Params = enc
+		message.Params, marshalErr = protocol.MarshalJSON(params)
+	}
+	if marshalErr != nil {
+		c.cancelPending(id, marshalErr, false, "")
+		return nil, marshalErr
 	}
 	sendCtx, cancelSend := context.WithCancel(ctx)
 	defer cancelSend()
@@ -554,7 +554,7 @@ func (c *Client) request(ctx context.Context, method string, params any, options
 
 // withProgressToken injects `_meta.progressToken` into the params,
 // preserving an existing `_meta` object (upstream requestInternal).
-func withProgressToken(params any, token int64) json.RawMessage {
+func withProgressToken(params any, token int64) (json.RawMessage, error) {
 	var merged map[string]any
 	if object, ok := params.(map[string]any); ok && object != nil {
 		merged = make(map[string]any, len(object)+1)
@@ -563,13 +563,16 @@ func withProgressToken(params any, token int64) json.RawMessage {
 		}
 	} else if params != nil {
 		var decoded map[string]any
-		if enc, err := protocol.MarshalJSON(params); err == nil && json.Unmarshal(enc, &decoded) == nil && decoded != nil {
+		enc, err := protocol.MarshalJSON(params)
+		if err != nil {
+			return nil, err
+		}
+		if json.Unmarshal(enc, &decoded) == nil && decoded != nil {
 			merged = decoded
 		}
 	}
 	if merged == nil {
-		enc, _ := protocol.MarshalJSON(map[string]any{"_meta": map[string]any{"progressToken": token}})
-		return enc
+		return protocol.MarshalJSON(map[string]any{"_meta": map[string]any{"progressToken": token}})
 	}
 	// client.ts spreads the caller's _meta first and the request's own token
 	// last, so the token always wins.
@@ -581,8 +584,7 @@ func withProgressToken(params any, token int64) json.RawMessage {
 	}
 	meta["progressToken"] = token
 	merged["_meta"] = meta
-	enc, _ := protocol.MarshalJSON(merged)
-	return enc
+	return protocol.MarshalJSON(merged)
 }
 
 func (c *Client) requireTransport(allowConnecting bool) (Transport, error) {

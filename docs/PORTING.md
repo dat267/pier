@@ -67,6 +67,9 @@ than repeated Go slice prepends: an 8,000-message probe dropped from about
 MCP SSE parsing also avoids repeated pending-line copies and prefix scans;
 a valid 8 MiB event dropped from 8.62 GB of cumulative allocation traffic and
 2.49 s to 41.72 MB/21 ms locally, with byte-budget and payload regressions.
+Progress-enabled MCP requests also propagate serialization errors rather than
+silently sending missing params, matching `mcp/src/client.ts` and its HTTP/stdio
+transports; cyclic-argument regressions cover both progress and plain calls.
 
 Session aborts now retain cancellation across retry startup, backoff and
 continuations, and `agent_settled.aborted` reports the run's abort flag rather
