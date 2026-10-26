@@ -778,6 +778,7 @@ at the closing checkpoint:
 | `coding/testdata/find-tool` | 7 | `core/tools/find.ts` |
 | `coding/testdata/image-mime` | 26 | `utils/mime.ts` |
 | `ai/testdata/short-hash` | 18 | `ai/src/utils/hash.ts` |
+| `ai/testdata/mistral-wire` | 11 | `ai/src/api/mistral-conversations.ts` |
 | `tui/testdata/wrap` | 204 | `tui/src/utils.ts` |
 
 Earlier corpora (`edit-diff-patch`, `edit-apply`, `truncate`, `js-numbers`,
