@@ -1436,3 +1436,37 @@ Verification: affected `./tui ./coding/interactive`, `just check` with a fresh
 Reference: pi v1.4.0 (`4a080252`), `packages/tui/src/terminal.ts` `start`/`stop`;
 call chain `Lifecycle.SwitchTuiMode`, `Renderer.Start`/`Stop`. D50 and the lock
 inventory now explain the retained reader-admission mutex and buffer ownership.
+
+## CR-054: session relevance sorting was quadratic (fixed)
+
+Searching 8000 recency-ordered sessions for a phrase took about 191 ms per
+keystroke on the owner loop when relevance moved two groups; the same rows
+already relevance-ordered took about 16 ms. The handwritten insertion sort
+swapped whole `coding.SessionInfo` records, so reversing groups produced a
+quadratic number of large copies. The pinned `session-selector-search.ts` uses
+stable score-first, modified-descending `Array.sort`.
+
+The production change replaces only that insertion loop with `sort.SliceStable`,
+keeping the same comparator, filtering and result order. No cache, worker,
+threshold or off-loop path was added.
+
+Evidence:
+
+- Workload probe: `go run /tmp/pier-midnight-audit/session-sort-probe.go`
+  (real `SessionList.HandleInput`; constant-size text; equal allocation counts).
+  Before: 1k 6.56/2.23 ms, 2k 18.76/4.76, 4k 52.43/8.46, 8k 199.02/16.15
+  (reordered/control). After, at 8k: 191.23 ms -> 16.62 ms.
+- Permanent benchmark: `BenchmarkSessionSearchRelevance/8000/{ordered,reordered}`
+  with `-count=3`. Its median ratio gate is 4x the ordered control; local before
+  12.15x (FAIL), after 1.03-1.05x (PASS). The gate lives outside the repo tests
+  (timing-sensitive); ordinary tests assert order, recency ties, stability and
+  that input rows are not mutated.
+- `TestSessionSearchRelevanceSortPreservesTiesAndInput` verifies equal-score
+  modified-descending order, two equal `Modified` rows keep input order, recent
+  mode keeps input order, and the source slice is unchanged.
+
+Verification: focused session search/selector tests, `just check`, `just cross`
+(six targets), `just reference`, fifteen interactive golden byte comparisons and
+`git diff --check` pass. Reference: pi v1.4.0 (`4a080252`),
+`components/session-selector-search.ts` `filterAndSortSessions`, called
+synchronously from the selector's input handler.

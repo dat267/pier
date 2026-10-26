@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -248,18 +249,12 @@ func FilterAndSortSessions(sessions []coding.SessionInfo, query string, sortMode
 			scored = append(scored, scoredSession{session: session, score: match.Score})
 		}
 	}
-	for i := 1; i < len(scored); i++ {
-		for j := i; j > 0; j-- {
-			less := scored[j].score < scored[j-1].score
-			if scored[j].score == scored[j-1].score {
-				less = scored[j].session.Modified.After(scored[j-1].session.Modified)
-			}
-			if !less {
-				break
-			}
-			scored[j], scored[j-1] = scored[j-1], scored[j]
+	sort.SliceStable(scored, func(i, j int) bool {
+		if scored[i].score == scored[j].score {
+			return scored[i].session.Modified.After(scored[j].session.Modified)
 		}
-	}
+		return scored[i].score < scored[j].score
+	})
 	result := make([]coding.SessionInfo, 0, len(scored))
 	for _, entry := range scored {
 		result = append(result, entry.session)
