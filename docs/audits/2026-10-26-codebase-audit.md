@@ -632,3 +632,30 @@ The regression now sees a Start error and no panic. Loopback/HTTP fixtures only.
 
 Verification: `go test -count=1 ./mcp/...`, the coding MCP tests, `just check`,
 `just cross` (six targets), `just reference` pass. No local race run.
+
+## CR-041, P2: pi-messages callback failures terminated the process (fixed)
+
+Authority: pi v1.4.0 `packages/ai/src/api/pi-messages.ts` awaits onPayload,
+onResponse and onProviderStreamEvent inside the stream's try/catch, so a host
+callback failure fails that stream only. Every other Go adapter already recovers
+at this goroutine boundary (CR-026 added the Bedrock one).
+
+Repair: the pi-messages provider goroutine recovers error and non-error panic
+values through its existing `fail` / `createPiMessagesErrorEvent` path, the same
+shape as the adjacent adapters. Wire parsing, cancellation and callback
+contracts are untouched.
+
+```sh
+go test -count=5 ./ai -run '^TestPiMessagesCallbackFailuresStayInStream$'
+```
+
+Observed red in isolated child processes: payload, response and event modes
+exited status 2 with `panic: hook failed`. The first fixture produced an invalid
+pi-messages body, so its control also failed; it was corrected to a
+`text_delta` plus `done` SSE stream, and the control then passed while the three
+callback modes still crashed. All now return a stream error whose message is the
+callback's, and the control completes normally. Loopback HTTP and synthetic
+credentials only.
+
+Verification: focused test passes 5 repetitions; all ai tests, `just check`,
+`just cross` (six targets), `just reference` pass. No local race run.

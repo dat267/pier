@@ -375,6 +375,15 @@ func StreamPiMessages(model *Model, context TranscriptContext, options *PiMessag
 			stream.Push(createPiMessagesErrorEvent(model, err, ctxErr(ctx) != nil))
 			stream.End(nil)
 		}
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				if err, ok := recovered.(error); ok {
+					fail(err)
+				} else {
+					fail(fmt.Errorf("%v", recovered))
+				}
+			}
+		}()
 
 		if options.APIKey == "" {
 			fail(fmt.Errorf("No API key provided for provider %q", model.Provider))
