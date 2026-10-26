@@ -778,6 +778,7 @@ at the closing checkpoint:
 | `coding/testdata/find-tool` | 7 | `core/tools/find.ts` |
 | `coding/testdata/image-mime` | 26 | `utils/mime.ts` |
 | `ai/testdata/short-hash` | 18 | `ai/src/utils/hash.ts` |
+| `tui/testdata/wrap` | 204 | `tui/src/utils.ts` |
 
 Earlier corpora (`edit-diff-patch`, `edit-apply`, `truncate`, `js-numbers`,
 `overflow`, `parse-key`, Anthropic/OpenAI/Responses stream corpora) remain green.
@@ -1197,4 +1198,18 @@ reference in addition to being stable in the port.
 
 All 18 matched on the first run, so this records coverage, not a finding.
 Regeneration is byte-identical; `go test -count=1 ./ai`, `just check`,
+`just cross` (six targets) and `just reference` pass.
+
+## Wrap corpus
+
+`tui/testdata/wrap/generate.mjs` executes the pinned `tui/src/utils.ts`
+`wrapTextWithAnsi` over 204 cases; `TestWrapTextWithAnsiMatchesUpstream`
+compares the line arrays. Cases cover empty and whitespace-only input, long
+words, CR/LF/CRLF breaks, SGR styles carried across wrapped lines and literal
+newlines, underline/bold line-end resets, 256-color and truecolor sequences,
+CJK, emoji with modifiers, combining marks, tabs, table rows and 160 seeded
+mixed sequences built from words, spaces, newlines, wide characters and codes.
+
+All 204 matched on the first run, so this records coverage, not a finding.
+Regeneration is byte-identical; `go test -count=1 ./tui`, `just check`,
 `just cross` (six targets) and `just reference` pass.

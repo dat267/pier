@@ -1,0 +1,1695 @@
+[
+  {
+    "text": "",
+    "width": 10,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": " ",
+    "width": 10,
+    "expected": [
+      " "
+    ]
+  },
+  {
+    "text": "   ",
+    "width": 2,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": "a",
+    "width": 1,
+    "expected": [
+      "a"
+    ]
+  },
+  {
+    "text": "ab",
+    "width": 1,
+    "expected": [
+      "a",
+      "b"
+    ]
+  },
+  {
+    "text": "abc def",
+    "width": 3,
+    "expected": [
+      "abc",
+      "def"
+    ]
+  },
+  {
+    "text": "abc def",
+    "width": 4,
+    "expected": [
+      "abc",
+      "def"
+    ]
+  },
+  {
+    "text": "one two three four",
+    "width": 7,
+    "expected": [
+      "one two",
+      "three",
+      "four"
+    ]
+  },
+  {
+    "text": "one two three four",
+    "width": 20,
+    "expected": [
+      "one two three four"
+    ]
+  },
+  {
+    "text": "  leading",
+    "width": 5,
+    "expected": [
+      "",
+      "leadi",
+      "ng"
+    ]
+  },
+  {
+    "text": "trailing  ",
+    "width": 5,
+    "expected": [
+      "trail",
+      "ing"
+    ]
+  },
+  {
+    "text": "word ",
+    "width": 4,
+    "expected": [
+      "word"
+    ]
+  },
+  {
+    "text": "a b",
+    "width": 1,
+    "expected": [
+      "a",
+      "b"
+    ]
+  },
+  {
+    "text": "\n",
+    "width": 5,
+    "expected": [
+      "",
+      ""
+    ]
+  },
+  {
+    "text": "a\nb",
+    "width": 5,
+    "expected": [
+      "a",
+      "b"
+    ]
+  },
+  {
+    "text": "a\r\nb",
+    "width": 5,
+    "expected": [
+      "a",
+      "b"
+    ]
+  },
+  {
+    "text": "a\rb",
+    "width": 5,
+    "expected": [
+      "a",
+      "b"
+    ]
+  },
+  {
+    "text": "\r\n\r\n",
+    "width": 5,
+    "expected": [
+      "",
+      "",
+      ""
+    ]
+  },
+  {
+    "text": "line one\nline two with more words",
+    "width": 8,
+    "expected": [
+      "line one",
+      "line two",
+      "with",
+      "more",
+      "words"
+    ]
+  },
+  {
+    "text": "\u001b[31mred\u001b[0m text",
+    "width": 4,
+    "expected": [
+      "\u001b[31mred\u001b[0m",
+      "text"
+    ]
+  },
+  {
+    "text": "\u001b[31mred text that wraps\u001b[0m",
+    "width": 6,
+    "expected": [
+      "\u001b[31mred",
+      "\u001b[31mtext",
+      "\u001b[31mthat",
+      "\u001b[31mwraps\u001b[0m"
+    ]
+  },
+  {
+    "text": "\u001b[1;4mbold underline wraps here\u001b[0m",
+    "width": 5,
+    "expected": [
+      "\u001b[1;4mbold \u001b[24m",
+      "\u001b[1;4munder\u001b[24m",
+      "\u001b[1;4mline\u001b[24m",
+      "\u001b[1;4mwraps\u001b[24m",
+      "\u001b[1;4mhere\u001b[0m"
+    ]
+  },
+  {
+    "text": "\u001b[31mline one\nline two\u001b[0m",
+    "width": 6,
+    "expected": [
+      "\u001b[31mline",
+      "\u001b[31mone",
+      "\u001b[31mline",
+      "\u001b[31mtwo\u001b[0m"
+    ]
+  },
+  {
+    "text": "\u001b[31m\u001b[44mbg\u001b[0m and words",
+    "width": 3,
+    "expected": [
+      "\u001b[31m\u001b[44mbg\u001b[0m",
+      "and",
+      "wor",
+      "ds"
+    ]
+  },
+  {
+    "text": "\u001b[38;5;196m256-color text\u001b[0m",
+    "width": 5,
+    "expected": [
+      "\u001b[38;5;196m256-c",
+      "\u001b[38;5;196molor",
+      "\u001b[38;5;196mtext\u001b[0m"
+    ]
+  },
+  {
+    "text": "\u001b[38;2;10;20;30mtruecolor wrapped\u001b[0m",
+    "width": 6,
+    "expected": [
+      "\u001b[38;2;10;20;30mtrueco",
+      "\u001b[38;2;10;20;30mlor",
+      "\u001b[38;2;10;20;30mwrappe",
+      "\u001b[38;2;10;20;30md\u001b[0m"
+    ]
+  },
+  {
+    "text": "日本語のテキスト",
+    "width": 4,
+    "expected": [
+      "日本",
+      "語の",
+      "テキ",
+      "スト"
+    ]
+  },
+  {
+    "text": "日本語 の テキスト",
+    "width": 5,
+    "expected": [
+      "日本",
+      "語 の",
+      "テキ",
+      "スト"
+    ]
+  },
+  {
+    "text": "😀😀😀",
+    "width": 2,
+    "expected": [
+      "😀",
+      "😀",
+      "😀"
+    ]
+  },
+  {
+    "text": "a😀b😀c",
+    "width": 3,
+    "expected": [
+      "a😀",
+      "b😀",
+      "c"
+    ]
+  },
+  {
+    "text": "👍🏽 thumbs",
+    "width": 4,
+    "expected": [
+      "👍🏽",
+      "thum",
+      "bs"
+    ]
+  },
+  {
+    "text": "é combine",
+    "width": 3,
+    "expected": [
+      "é",
+      "com",
+      "bin",
+      "e"
+    ]
+  },
+  {
+    "text": "a\tb",
+    "width": 2,
+    "expected": [
+      "a",
+      "",
+      "b"
+    ]
+  },
+  {
+    "text": "\tindented",
+    "width": 4,
+    "expected": [
+      "\ti",
+      "nden",
+      "ted"
+    ]
+  },
+  {
+    "text": "supercalifragilisticexpialidocious",
+    "width": 5,
+    "expected": [
+      "super",
+      "calif",
+      "ragil",
+      "istic",
+      "expia",
+      "lidoc",
+      "ious"
+    ]
+  },
+  {
+    "text": "a very long word here",
+    "width": 6,
+    "expected": [
+      "a very",
+      "long",
+      "word",
+      "here"
+    ]
+  },
+  {
+    "text": "\u001b[31m\u001b[0m",
+    "width": 5,
+    "expected": [
+      "\u001b[31m\u001b[0m"
+    ]
+  },
+  {
+    "text": "\u001b[31m",
+    "width": 5,
+    "expected": [
+      "\u001b[31m"
+    ]
+  },
+  {
+    "text": "text\u001b[31m",
+    "width": 5,
+    "expected": [
+      "text\u001b[31m"
+    ]
+  },
+  {
+    "text": "\u001b[31mred\nplain",
+    "width": 8,
+    "expected": [
+      "\u001b[31mred",
+      "\u001b[31mplain"
+    ]
+  },
+  {
+    "text": "| a | b |",
+    "width": 3,
+    "expected": [
+      "| a",
+      "| b",
+      "|"
+    ]
+  },
+  {
+    "text": "**bold** and `code`",
+    "width": 5,
+    "expected": [
+      "**bol",
+      "d**",
+      "and",
+      "`code",
+      "`"
+    ]
+  },
+  {
+    "text": "a  b   c",
+    "width": 3,
+    "expected": [
+      "a",
+      "b",
+      "c"
+    ]
+  },
+  {
+    "text": "a  b   c",
+    "width": 5,
+    "expected": [
+      "a  b",
+      "c"
+    ]
+  },
+  {
+    "text": "日\u001b[0m😀\r\n",
+    "width": 4,
+    "expected": [
+      "日\u001b[0m😀",
+      ""
+    ]
+  },
+  {
+    "text": "longwordhereccc",
+    "width": 8,
+    "expected": [
+      "longword",
+      "hereccc"
+    ]
+  },
+  {
+    "text": "😀ccc\t  longwordhere\u001b[4m",
+    "width": 8,
+    "expected": [
+      "😀ccc",
+      "longword",
+      "here\u001b[4m"
+    ]
+  },
+  {
+    "text": "",
+    "width": 6,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": " \u001b[0mlongwordhereé\t",
+    "width": 5,
+    "expected": [
+      "",
+      "\u001b[0mlongw",
+      "ordhe",
+      "reé",
+      ""
+    ]
+  },
+  {
+    "text": "ccc-alongwordhereé",
+    "width": 4,
+    "expected": [
+      "ccc-",
+      "alon",
+      "gwor",
+      "dher",
+      "eé"
+    ]
+  },
+  {
+    "text": "\u001b[1m\r\n",
+    "width": 4,
+    "expected": [
+      "\u001b[1m",
+      "\u001b[1m"
+    ]
+  },
+  {
+    "text": "😀é 本\n",
+    "width": 11,
+    "expected": [
+      "😀é 本",
+      ""
+    ]
+  },
+  {
+    "text": "  😀é日",
+    "width": 5,
+    "expected": [
+      "  😀é",
+      "日"
+    ]
+  },
+  {
+    "text": "\u001b[4m\u001b[31mword\u001b[1m",
+    "width": 7,
+    "expected": [
+      "\u001b[4m\u001b[31mword\u001b[1m"
+    ]
+  },
+  {
+    "text": "a\u001b[1m|",
+    "width": 4,
+    "expected": [
+      "a\u001b[1m|"
+    ]
+  },
+  {
+    "text": "longwordhereccc-本\u001b[1m",
+    "width": 7,
+    "expected": [
+      "longwor",
+      "dherecc",
+      "c-本\u001b[1m"
+    ]
+  },
+  {
+    "text": "a\n\u001b[4m\u001b[31m",
+    "width": 5,
+    "expected": [
+      "a",
+      "\u001b[4m\u001b[31m"
+    ]
+  },
+  {
+    "text": "é\u001b[31m\u001b[0m\né\t",
+    "width": 1,
+    "expected": [
+      "é\u001b[31m\u001b[0m",
+      "é",
+      ""
+    ]
+  },
+  {
+    "text": "ccc-a😀|",
+    "width": 4,
+    "expected": [
+      "ccc-",
+      "a😀|"
+    ]
+  },
+  {
+    "text": "",
+    "width": 6,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": "\u001b[31mword",
+    "width": 2,
+    "expected": [
+      "\u001b[31mwo",
+      "\u001b[31mrd"
+    ]
+  },
+  {
+    "text": "\tword\u001b[1mccc",
+    "width": 8,
+    "expected": [
+      "\tword\u001b[1mc",
+      "\u001b[1mcc"
+    ]
+  },
+  {
+    "text": "😀ccc\t  \n",
+    "width": 3,
+    "expected": [
+      "😀c",
+      "cc",
+      "",
+      ""
+    ]
+  },
+  {
+    "text": "word\u001b[1m",
+    "width": 11,
+    "expected": [
+      "word\u001b[1m"
+    ]
+  },
+  {
+    "text": "word😀é-本bb",
+    "width": 11,
+    "expected": [
+      "word😀é-本",
+      "bb"
+    ]
+  },
+  {
+    "text": "本\u001b[1mé",
+    "width": 12,
+    "expected": [
+      "本\u001b[1mé"
+    ]
+  },
+  {
+    "text": "\n",
+    "width": 11,
+    "expected": [
+      "",
+      ""
+    ]
+  },
+  {
+    "text": "alongwordhereé",
+    "width": 4,
+    "expected": [
+      "alon",
+      "gwor",
+      "dher",
+      "eé"
+    ]
+  },
+  {
+    "text": "bb|\u001b[31m本",
+    "width": 10,
+    "expected": [
+      "bb|\u001b[31m本"
+    ]
+  },
+  {
+    "text": " 本",
+    "width": 2,
+    "expected": [
+      "",
+      "本"
+    ]
+  },
+  {
+    "text": "日本\nccc",
+    "width": 12,
+    "expected": [
+      "日本",
+      "ccc"
+    ]
+  },
+  {
+    "text": "longwordhereccc\twordbbccc",
+    "width": 4,
+    "expected": [
+      "long",
+      "word",
+      "here",
+      "ccc",
+      "\tw",
+      "ordb",
+      "bccc"
+    ]
+  },
+  {
+    "text": "longwordhere| 本",
+    "width": 10,
+    "expected": [
+      "longwordhe",
+      "re| 本"
+    ]
+  },
+  {
+    "text": "-  \n",
+    "width": 3,
+    "expected": [
+      "-  ",
+      ""
+    ]
+  },
+  {
+    "text": "  longwordhere|日wordbb",
+    "width": 7,
+    "expected": [
+      "",
+      "longwor",
+      "dhere|",
+      "日",
+      "wordbb"
+    ]
+  },
+  {
+    "text": "abbccc",
+    "width": 12,
+    "expected": [
+      "abbccc"
+    ]
+  },
+  {
+    "text": "😀\r\n alongwordhere\u001b[4m",
+    "width": 12,
+    "expected": [
+      "😀",
+      "",
+      "alongwordher",
+      "e\u001b[4m"
+    ]
+  },
+  {
+    "text": "bb\r\n日",
+    "width": 1,
+    "expected": [
+      "b",
+      "b",
+      "",
+      "日"
+    ]
+  },
+  {
+    "text": "",
+    "width": 11,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": "  \nccc日a\n",
+    "width": 11,
+    "expected": [
+      "  ",
+      "ccc日a",
+      ""
+    ]
+  },
+  {
+    "text": "a😀\r\n",
+    "width": 8,
+    "expected": [
+      "a😀",
+      ""
+    ]
+  },
+  {
+    "text": "😀\u001b[4m ",
+    "width": 5,
+    "expected": [
+      "😀\u001b[4m "
+    ]
+  },
+  {
+    "text": "é日\u001b[0m",
+    "width": 2,
+    "expected": [
+      "é",
+      "日\u001b[0m"
+    ]
+  },
+  {
+    "text": "\ta\né",
+    "width": 8,
+    "expected": [
+      "\ta",
+      "é"
+    ]
+  },
+  {
+    "text": "bb\u001b[4m\u001b[31mword",
+    "width": 6,
+    "expected": [
+      "bb\u001b[4m\u001b[31mword"
+    ]
+  },
+  {
+    "text": "",
+    "width": 8,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": "",
+    "width": 2,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": "",
+    "width": 4,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": "\n\r\n日\u001b[0m",
+    "width": 10,
+    "expected": [
+      "",
+      "",
+      "日\u001b[0m"
+    ]
+  },
+  {
+    "text": "-  \n",
+    "width": 7,
+    "expected": [
+      "-  ",
+      ""
+    ]
+  },
+  {
+    "text": "\u001b[0m😀",
+    "width": 7,
+    "expected": [
+      "\u001b[0m😀"
+    ]
+  },
+  {
+    "text": "word\né日\u001b[0m\n",
+    "width": 7,
+    "expected": [
+      "word",
+      "é日\u001b[0m",
+      ""
+    ]
+  },
+  {
+    "text": "本bbccc",
+    "width": 8,
+    "expected": [
+      "本bbccc"
+    ]
+  },
+  {
+    "text": "bb\r\n日abbccc",
+    "width": 12,
+    "expected": [
+      "bb",
+      "日abbccc"
+    ]
+  },
+  {
+    "text": "",
+    "width": 10,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": "\tword\u001b[1mé\t",
+    "width": 5,
+    "expected": [
+      "\two",
+      "rd\u001b[1mé",
+      "\u001b[1m"
+    ]
+  },
+  {
+    "text": "é",
+    "width": 8,
+    "expected": [
+      "é"
+    ]
+  },
+  {
+    "text": "\u001b[1m|-本\n",
+    "width": 11,
+    "expected": [
+      "\u001b[1m|-本",
+      "\u001b[1m"
+    ]
+  },
+  {
+    "text": "wordbb\r\n\t\u001b[0m",
+    "width": 10,
+    "expected": [
+      "wordbb",
+      "\t\u001b[0m"
+    ]
+  },
+  {
+    "text": "\t\u001b[0m\u001b[1mé",
+    "width": 8,
+    "expected": [
+      "\t\u001b[0m\u001b[1mé"
+    ]
+  },
+  {
+    "text": "longwordhereé ",
+    "width": 1,
+    "expected": [
+      "l",
+      "o",
+      "n",
+      "g",
+      "w",
+      "o",
+      "r",
+      "d",
+      "h",
+      "e",
+      "r",
+      "e",
+      "é"
+    ]
+  },
+  {
+    "text": "\u001b[4m日",
+    "width": 9,
+    "expected": [
+      "\u001b[4m日"
+    ]
+  },
+  {
+    "text": "\u001b[4m\t  bb",
+    "width": 11,
+    "expected": [
+      "\u001b[4m\t  bb"
+    ]
+  },
+  {
+    "text": "  😀|\t  \n",
+    "width": 11,
+    "expected": [
+      "  😀|\t  ",
+      ""
+    ]
+  },
+  {
+    "text": "",
+    "width": 9,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": "ccc日  \u001b[1m",
+    "width": 11,
+    "expected": [
+      "ccc日  \u001b[1m"
+    ]
+  },
+  {
+    "text": "word😀ccc-",
+    "width": 1,
+    "expected": [
+      "w",
+      "o",
+      "r",
+      "d",
+      "😀",
+      "c",
+      "c",
+      "c",
+      "-"
+    ]
+  },
+  {
+    "text": "| a\u001b[1mccc",
+    "width": 8,
+    "expected": [
+      "| a\u001b[1mccc"
+    ]
+  },
+  {
+    "text": "\u001b[1m\u001b[4m-",
+    "width": 1,
+    "expected": [
+      "\u001b[1m\u001b[4m-"
+    ]
+  },
+  {
+    "text": "|-\u001b[0m",
+    "width": 10,
+    "expected": [
+      "|-\u001b[0m"
+    ]
+  },
+  {
+    "text": " 本longwordhere|-  ",
+    "width": 10,
+    "expected": [
+      " 本",
+      "longwordhe",
+      "re|-"
+    ]
+  },
+  {
+    "text": "-本😀\r\n",
+    "width": 4,
+    "expected": [
+      "-本",
+      "😀",
+      ""
+    ]
+  },
+  {
+    "text": "",
+    "width": 10,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": "",
+    "width": 12,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": "\u001b[1mé word😀",
+    "width": 3,
+    "expected": [
+      "\u001b[1mé",
+      "\u001b[1mwor",
+      "\u001b[1md😀"
+    ]
+  },
+  {
+    "text": "a\u001b[1m|日\u001b[0m",
+    "width": 2,
+    "expected": [
+      "a\u001b[1m|",
+      "\u001b[1m日\u001b[0m"
+    ]
+  },
+  {
+    "text": "   longwordhere\u001b[4m",
+    "width": 4,
+    "expected": [
+      "",
+      "long",
+      "word",
+      "here\u001b[4m"
+    ]
+  },
+  {
+    "text": "\n|\u001b[31m",
+    "width": 1,
+    "expected": [
+      "",
+      "|\u001b[31m"
+    ]
+  },
+  {
+    "text": "\u001b[4m",
+    "width": 12,
+    "expected": [
+      "\u001b[4m"
+    ]
+  },
+  {
+    "text": "😀é",
+    "width": 8,
+    "expected": [
+      "😀é"
+    ]
+  },
+  {
+    "text": "bb\u001b[4m",
+    "width": 4,
+    "expected": [
+      "bb\u001b[4m"
+    ]
+  },
+  {
+    "text": "\né word😀\u001b[4m",
+    "width": 8,
+    "expected": [
+      "",
+      "é word😀\u001b[4m"
+    ]
+  },
+  {
+    "text": "longwordhere\r\n",
+    "width": 4,
+    "expected": [
+      "long",
+      "word",
+      "here",
+      ""
+    ]
+  },
+  {
+    "text": "",
+    "width": 10,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": "\ta\n\u001b[4m-\u001b[0m",
+    "width": 10,
+    "expected": [
+      "\ta",
+      "\u001b[4m-\u001b[0m"
+    ]
+  },
+  {
+    "text": " a",
+    "width": 10,
+    "expected": [
+      " a"
+    ]
+  },
+  {
+    "text": "日",
+    "width": 9,
+    "expected": [
+      "日"
+    ]
+  },
+  {
+    "text": "",
+    "width": 3,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": "word",
+    "width": 2,
+    "expected": [
+      "wo",
+      "rd"
+    ]
+  },
+  {
+    "text": "",
+    "width": 4,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": "\n\u001b[4m-",
+    "width": 5,
+    "expected": [
+      "",
+      "\u001b[4m-"
+    ]
+  },
+  {
+    "text": "é \u001b[0m\n\r\n-",
+    "width": 1,
+    "expected": [
+      "é",
+      " \u001b[0m",
+      "",
+      "-"
+    ]
+  },
+  {
+    "text": "",
+    "width": 11,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": "",
+    "width": 9,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": "",
+    "width": 11,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": "本😀é",
+    "width": 4,
+    "expected": [
+      "本",
+      "😀é"
+    ]
+  },
+  {
+    "text": "bb|日",
+    "width": 5,
+    "expected": [
+      "bb|日"
+    ]
+  },
+  {
+    "text": "\r\n\u001b[31m  \n| ",
+    "width": 5,
+    "expected": [
+      "",
+      "\u001b[31m  ",
+      "\u001b[31m| "
+    ]
+  },
+  {
+    "text": "é-  \n\r\n\u001b[31m",
+    "width": 1,
+    "expected": [
+      "é",
+      "-",
+      "",
+      "\u001b[31m"
+    ]
+  },
+  {
+    "text": "é",
+    "width": 12,
+    "expected": [
+      "é"
+    ]
+  },
+  {
+    "text": "longwordhereé日a\u001b[1m",
+    "width": 3,
+    "expected": [
+      "lon",
+      "gwo",
+      "rdh",
+      "ere",
+      "é日",
+      "a\u001b[1m"
+    ]
+  },
+  {
+    "text": "  😀\u001b[4m日a😀",
+    "width": 11,
+    "expected": [
+      "  😀\u001b[4m日a😀"
+    ]
+  },
+  {
+    "text": "word\n\r\n ",
+    "width": 1,
+    "expected": [
+      "w",
+      "o",
+      "r",
+      "d",
+      "",
+      " "
+    ]
+  },
+  {
+    "text": "\r\n",
+    "width": 8,
+    "expected": [
+      "",
+      ""
+    ]
+  },
+  {
+    "text": "bbccc-alongwordhere\r\n",
+    "width": 8,
+    "expected": [
+      "bbccc-al",
+      "ongwordh",
+      "ere",
+      ""
+    ]
+  },
+  {
+    "text": "\u001b[1m|-a😀",
+    "width": 3,
+    "expected": [
+      "\u001b[1m|-a",
+      "\u001b[1m😀"
+    ]
+  },
+  {
+    "text": "  \u001b[1mccc日\u001b[0m\u001b[1m",
+    "width": 11,
+    "expected": [
+      "  \u001b[1mccc日\u001b[0m\u001b[1m"
+    ]
+  },
+  {
+    "text": "",
+    "width": 5,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": "ccc\u001b[31m",
+    "width": 5,
+    "expected": [
+      "ccc\u001b[31m"
+    ]
+  },
+  {
+    "text": "é\u001b[31mwordlongwordhere",
+    "width": 11,
+    "expected": [
+      "é\u001b[31mwordlongwo",
+      "\u001b[31mrdhere"
+    ]
+  },
+  {
+    "text": "本",
+    "width": 2,
+    "expected": [
+      "本"
+    ]
+  },
+  {
+    "text": "\t  \u001b[1m\u001b[4m",
+    "width": 8,
+    "expected": [
+      "\t  \u001b[1m\u001b[4m"
+    ]
+  },
+  {
+    "text": "bbccc日  ",
+    "width": 2,
+    "expected": [
+      "bb",
+      "cc",
+      "c",
+      "日"
+    ]
+  },
+  {
+    "text": "日\u001b[0m",
+    "width": 6,
+    "expected": [
+      "日\u001b[0m"
+    ]
+  },
+  {
+    "text": " ",
+    "width": 9,
+    "expected": [
+      " "
+    ]
+  },
+  {
+    "text": "ccc\t  bb|日",
+    "width": 5,
+    "expected": [
+      "ccc",
+      "",
+      "bb|日"
+    ]
+  },
+  {
+    "text": "|",
+    "width": 12,
+    "expected": [
+      "|"
+    ]
+  },
+  {
+    "text": "bbé a😀ccc",
+    "width": 4,
+    "expected": [
+      "bbé",
+      "a😀c",
+      "cc"
+    ]
+  },
+  {
+    "text": "bb\u001b[4m日",
+    "width": 9,
+    "expected": [
+      "bb\u001b[4m日"
+    ]
+  },
+  {
+    "text": "é\u001b[31m\u001b[0m\n\r\n",
+    "width": 4,
+    "expected": [
+      "é\u001b[31m\u001b[0m",
+      "",
+      ""
+    ]
+  },
+  {
+    "text": "\u001b[1mccc\u001b[31m\u001b[0mlongwordhere\u001b[4m",
+    "width": 4,
+    "expected": [
+      "\u001b[1mccc\u001b[31m\u001b[0ml",
+      "ongw",
+      "ordh",
+      "ere\u001b[4m"
+    ]
+  },
+  {
+    "text": "\n\r\n\u001b[31m本😀",
+    "width": 11,
+    "expected": [
+      "",
+      "",
+      "\u001b[31m本😀"
+    ]
+  },
+  {
+    "text": "wordbb\u001b[4m-",
+    "width": 9,
+    "expected": [
+      "wordbb\u001b[4m-"
+    ]
+  },
+  {
+    "text": "é\u001b[31mwordbb",
+    "width": 11,
+    "expected": [
+      "é\u001b[31mwordbb"
+    ]
+  },
+  {
+    "text": "  \u001b[1m\u001b[4m",
+    "width": 8,
+    "expected": [
+      "  \u001b[1m\u001b[4m"
+    ]
+  },
+  {
+    "text": "",
+    "width": 2,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": "",
+    "width": 12,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": "longwordhere\u001b[4m\u001b[31mword",
+    "width": 2,
+    "expected": [
+      "lo",
+      "ng",
+      "wo",
+      "rd",
+      "he",
+      "re\u001b[4m\u001b[31m\u001b[24m",
+      "\u001b[4;31mwo\u001b[24m",
+      "\u001b[4;31mrd"
+    ]
+  },
+  {
+    "text": "\t",
+    "width": 9,
+    "expected": [
+      "\t"
+    ]
+  },
+  {
+    "text": "|",
+    "width": 12,
+    "expected": [
+      "|"
+    ]
+  },
+  {
+    "text": "😀ccc",
+    "width": 8,
+    "expected": [
+      "😀ccc"
+    ]
+  },
+  {
+    "text": "\n\u001b[4m日",
+    "width": 1,
+    "expected": [
+      "",
+      "\u001b[4m\u001b[24m",
+      "\u001b[4m日"
+    ]
+  },
+  {
+    "text": "|-本bb\r\n\u001b[31m",
+    "width": 1,
+    "expected": [
+      "|",
+      "-",
+      "",
+      "本",
+      "b",
+      "b",
+      "\u001b[31m"
+    ]
+  },
+  {
+    "text": "",
+    "width": 7,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": "a\u001b[1m|\u001b[31mword\n",
+    "width": 3,
+    "expected": [
+      "a\u001b[1m|\u001b[31mw",
+      "\u001b[1;31mord",
+      "\u001b[1;31m"
+    ]
+  },
+  {
+    "text": "  ",
+    "width": 10,
+    "expected": [
+      "  "
+    ]
+  },
+  {
+    "text": "",
+    "width": 8,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": "😀| word\u001b[1m|",
+    "width": 12,
+    "expected": [
+      "😀| word\u001b[1m|"
+    ]
+  },
+  {
+    "text": "\n\u001b[4m ",
+    "width": 5,
+    "expected": [
+      "",
+      "\u001b[4m "
+    ]
+  },
+  {
+    "text": "\u001b[4m\u001b[31m\u001b[0m\nccc",
+    "width": 12,
+    "expected": [
+      "\u001b[4m\u001b[31m\u001b[0m",
+      "ccc"
+    ]
+  },
+  {
+    "text": "\u001b[1mccc ",
+    "width": 1,
+    "expected": [
+      "\u001b[1mc",
+      "\u001b[1mc",
+      "\u001b[1mc",
+      "\u001b[1m"
+    ]
+  },
+  {
+    "text": "\u001b[4m日a😀|\t",
+    "width": 5,
+    "expected": [
+      "\u001b[4m日\u001b[24m",
+      "\u001b[4ma😀|\u001b[24m",
+      "\u001b[4m"
+    ]
+  },
+  {
+    "text": "é日",
+    "width": 9,
+    "expected": [
+      "é日"
+    ]
+  },
+  {
+    "text": "",
+    "width": 11,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": "word\n|\ta\u001b[1m",
+    "width": 3,
+    "expected": [
+      "wor",
+      "d",
+      "|",
+      "",
+      "a\u001b[1m"
+    ]
+  },
+  {
+    "text": "  😀\u001b[4m",
+    "width": 12,
+    "expected": [
+      "  😀\u001b[4m"
+    ]
+  },
+  {
+    "text": "",
+    "width": 6,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": "日",
+    "width": 1,
+    "expected": [
+      "",
+      "日"
+    ]
+  },
+  {
+    "text": "é日a\u001b[1m\r\n",
+    "width": 4,
+    "expected": [
+      "é日a\u001b[1m",
+      "\u001b[1m"
+    ]
+  },
+  {
+    "text": "\u001b[1m\r\n\t  😀\r\n",
+    "width": 12,
+    "expected": [
+      "\u001b[1m",
+      "\u001b[1m\t  😀",
+      "\u001b[1m"
+    ]
+  },
+  {
+    "text": "longwordhereé\u001b[31mword\u001b[1m",
+    "width": 7,
+    "expected": [
+      "longwor",
+      "dhereé\u001b[31mw",
+      "\u001b[31mord\u001b[1m"
+    ]
+  },
+  {
+    "text": "  \u001b[1m",
+    "width": 3,
+    "expected": [
+      "  \u001b[1m"
+    ]
+  },
+  {
+    "text": "\u001b[0mbb",
+    "width": 7,
+    "expected": [
+      "\u001b[0mbb"
+    ]
+  },
+  {
+    "text": "  😀\r\n-a",
+    "width": 2,
+    "expected": [
+      "",
+      "😀",
+      "-a"
+    ]
+  },
+  {
+    "text": " a😀\r\n",
+    "width": 12,
+    "expected": [
+      " a😀",
+      ""
+    ]
+  },
+  {
+    "text": "\n\r\n",
+    "width": 12,
+    "expected": [
+      "",
+      "",
+      ""
+    ]
+  },
+  {
+    "text": "\nccc-本bb\r\n",
+    "width": 12,
+    "expected": [
+      "",
+      "ccc-本bb",
+      ""
+    ]
+  },
+  {
+    "text": "😀|\t",
+    "width": 9,
+    "expected": [
+      "😀|\t"
+    ]
+  },
+  {
+    "text": "\r\n\u001b[31m  \u001b[1m",
+    "width": 7,
+    "expected": [
+      "",
+      "\u001b[31m  \u001b[1m"
+    ]
+  },
+  {
+    "text": "\u001b[0m\n",
+    "width": 11,
+    "expected": [
+      "\u001b[0m",
+      ""
+    ]
+  },
+  {
+    "text": "",
+    "width": 1,
+    "expected": [
+      ""
+    ]
+  },
+  {
+    "text": "é   ",
+    "width": 10,
+    "expected": [
+      "é   "
+    ]
+  },
+  {
+    "text": "\t本longwordhere",
+    "width": 7,
+    "expected": [
+      "\t本",
+      "longwor",
+      "dhere"
+    ]
+  },
+  {
+    "text": "  ",
+    "width": 10,
+    "expected": [
+      "  "
+    ]
+  }
+]

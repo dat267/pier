@@ -417,6 +417,12 @@ mutation and durable goal-record appends are serialized together; parallel
 `set_goal` calls cannot corrupt the replay log by interleaving clear/create
 entries. Host callbacks and model work remain outside the state lock.
 
+Word wrapping is pinned by a 204-case corpus executing the pinned
+`wrapTextWithAnsi`: empty and whitespace input, long words, explicit CR/LF
+breaks, SGR codes carried across lines, underline/bold line-end resets,
+256-color and truecolor sequences, CJK, emoji with modifiers, combining marks,
+tabs and 160 seeded mixed sequences.
+
 `shortHash` is pinned by an 18-case corpus executing the pinned
 `utils/hash.ts`: empty input, ASCII, astral pairs, mixed BMP/astral text,
 U+0130, NUL, whitespace, a 1000-character input and the Mistral tool-call id
