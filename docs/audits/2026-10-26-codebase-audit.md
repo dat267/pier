@@ -1491,3 +1491,52 @@ insecure-metadata, discovery and full-flow tests are the controls.
 
 Verification: focused `./mcp ./mcp/oauth` pass; `just check` and `just cross`
 (six targets) pass; `just reference` confirms pi v1.4.0; `git diff --check` clean.
+
+## Midnight-window audit coverage (started 20:17 +07)
+
+Baseline: clean `a5d2c30`, `GOPROXY=off GOSUMDB=off just check` rc=0,
+`just reference` at pi v1.4.0 (`4a080252f`); read-only checkout clean. The
+first-party inventory refined outside the repository holds 1455 tracked
+code/test/script/config paths, excluding vendored `pi/`, generated catalogs and
+goldens, and build output.
+
+Findings fixed in this window, each red-first and independently verified:
+CR-050 login method-name search (`3eba8d5`), CR-051 pinned auth-status wording
+(`1be30ba`), CR-052 account/subscription labels (`3ffebf3`), CR-053 terminal
+restart input (`5a66d7e`), CR-054 quadratic session search sorting (`72541b2`),
+CR-055 empty metadata URL (`ef844e4`).
+
+Slices read end to end for their finding or control paths: `/login` selector
+filtering and status rendering, auth provider-option builders (login/logout) and
+their real runtime metadata; `ProcessTerminal` Start/Stop/readers/FeedInput and
+negotiation, unix/Windows resize watchers, renderer Start/Stop, mode-switch
+lifecycle; session selector search/filter/sort and its input path; OAuth
+callback server request handling, provider state binding/load/update, flow
+discovery/refresh/issuer/registration, OAuth adapter sharing, and pinned
+counterparts in `components/oauth-selector.ts`, `interactive-mode.ts`,
+`tui/src/terminal.ts`, `tui/src/stdinbuffer.ts`,
+`components/session-selector-search.ts`, `oauth/{callback,provider,flow,discovery}.ts`.
+
+Checked without a finding: checksum/download/quarantine update path (local
+httptest servers; mismatch and missing-checksum controls preserve the old
+binary), callback state/path/error pages, token-provider cross-server binding,
+issuer mismatch and insecure-endpoint rejection, flow registration and refresh
+fallbacks, auth-type filtering, and the settings getter surface sampled against
+pinned section semantics.
+
+Known coverage limits:
+
+- Not re-read in this window: provider stream parsers and wire codecs, the agent
+  loop, session persistence/compaction internals, project trust resolution,
+  most interactive renderers/queues, TUI input buffering/markdown/layout,
+  MCP transports beyond the OAuth callback path, `internal/*` packages,
+  `cmd` boot paths, scripts and release workflows.
+- Unconfirmed leads: a resize callback that synchronously stops its own
+  terminal joins the watcher goroutine (unreachable from the current renderer
+  callbacks; public-API-only); a Windows paused console can make the size query
+  and watcher join wait (D200 bounds permanent exit output, not this join).
+  Neither was reproduced with a bounded test, so neither was repaired.
+- The race detector was not run locally because this environment builds with
+  `CGO_ENABLED=0`; the CI race gate remains the authority.
+- Passing focused tests, static review and golden comparisons cannot certify
+  the absence of bugs, races or vulnerabilities.
