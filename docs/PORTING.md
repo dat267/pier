@@ -417,6 +417,11 @@ mutation and durable goal-record appends are serialized together; parallel
 `set_goal` calls cannot corrupt the replay log by interleaving clear/create
 entries. Host callbacks and model work remain outside the state lock.
 
+`shortHash` is pinned by an 18-case corpus executing the pinned
+`utils/hash.ts`: empty input, ASCII, astral pairs, mixed BMP/astral text,
+U+0130, NUL, whitespace, a 1000-character input and the Mistral tool-call id
+seeds, comparing the exact base-36 output.
+
 Image-type detection is pinned by a 26-case corpus executing the pinned
 `detectSupportedImageMimeType`: JPEG versus JPEG 2000, valid, truncated,
 wrong-IHDR-length and animated PNGs, GIF87a/89a versus a wrong version, WebP

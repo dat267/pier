@@ -777,6 +777,7 @@ at the closing checkpoint:
 | `coding/testdata/grep-tool` | 12 | `core/tools/grep.ts` |
 | `coding/testdata/find-tool` | 7 | `core/tools/find.ts` |
 | `coding/testdata/image-mime` | 26 | `utils/mime.ts` |
+| `ai/testdata/short-hash` | 18 | `ai/src/utils/hash.ts` |
 
 Earlier corpora (`edit-diff-patch`, `edit-apply`, `truncate`, `js-numbers`,
 `overflow`, `parse-key`, Anthropic/OpenAI/Responses stream corpora) remain green.
@@ -1181,4 +1182,17 @@ buffer, empty input and plain text.
 
 All 26 matched on the first run, so this records coverage, not a finding.
 Regeneration is byte-identical; `go test -count=1 ./coding`, `just check`,
+`just cross` (six targets) and `just reference` pass.
+
+## shortHash corpus
+
+`ai/testdata/short-hash/generate.mjs` executes the pinned `utils/hash.ts`
+`shortHash` for 18 inputs and `TestShortHashMatchesUpstream` compares the exact
+output. Inputs cover empty, ASCII, astral pairs, mixed BMP/astral text, U+0130,
+NUL, whitespace, a 1000-character string and the `toolcall:<n>` seeds Mistral
+derives its tool-call ids from, so the persisted ids are pinned against the
+reference in addition to being stable in the port.
+
+All 18 matched on the first run, so this records coverage, not a finding.
+Regeneration is byte-identical; `go test -count=1 ./ai`, `just check`,
 `just cross` (six targets) and `just reference` pass.

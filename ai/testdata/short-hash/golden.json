@@ -1,0 +1,74 @@
+[
+  {
+    "input": "",
+    "expected": "k4n83c7h0j2b"
+  },
+  {
+    "input": "a",
+    "expected": "m8735310ae7sx"
+  },
+  {
+    "input": "abc",
+    "expected": "y0biex7f9bbh"
+  },
+  {
+    "input": "call_abcdefghijklmnop",
+    "expected": "1q4g8rl152m0sg"
+  },
+  {
+    "input": "😀",
+    "expected": "13wj7r7usi372"
+  },
+  {
+    "input": "😀😀",
+    "expected": "6ehe45164ycwd"
+  },
+  {
+    "input": "a😀b",
+    "expected": "12yrce3kjl8pw"
+  },
+  {
+    "input": "ß",
+    "expected": "x72uj1ue5vvx"
+  },
+  {
+    "input": "İ",
+    "expected": "7469qd131b2q8"
+  },
+  {
+    "input": "line\nbreak",
+    "expected": "1cq1gkd1jvxjeu"
+  },
+  {
+    "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "expected": "zykls21ciz8e3"
+  },
+  {
+    "input": "error failed with status 429",
+    "expected": "i80qsm8ev2ou"
+  },
+  {
+    "input": "deep/seek:model",
+    "expected": "4v73on1m03tyi"
+  },
+  {
+    "input": "toolcall:0",
+    "expected": "1nlso9v7di2pi"
+  },
+  {
+    "input": "toolcall:12",
+    "expected": "1kzj4yw1stun2"
+  },
+  {
+    "input": "\u0000",
+    "expected": "tlnwb21t8w38a"
+  },
+  {
+    "input": " ",
+    "expected": "9sehtbgmr8ro"
+  },
+  {
+    "input": "abcabc",
+    "expected": "1hsjyly60f40m"
+  }
+]
