@@ -509,3 +509,33 @@ remains current, which an epoch-only approximation would incorrectly reject.
 Verification: focused regressions and allocation guard; all agent, coding and
 interactive tests; `just check`, `just cross` (six targets), `just reference`
 pass. No local race run.
+
+## CR-037, P2: cache warming omitted the late-dispatch deadline (fixed)
+
+Authority: pi v1.4.0 `core/cache-warmer.ts`, schedule/refresh, sets
+`refreshDeadlineAt = nextWarmAt + floor((ttlMs - delayMs) / 2)` and checks it
+before policy evaluation and again before request dispatch. Timer/policy delays
+past that margin risk a full-price cache write rather than the expected read.
+Pier retained only the fixed one-hour/30-minute horizons and omitted this guard.
+
+Repair: keep TTL/deadline on the existing run, compute the same deadline on each
+schedule and check it at both dispatch points. The existing lock ensures an
+expired old run cannot stop a replacement run through the new guard. No new
+timer, worker or arbitrary threshold was added.
+
+```sh
+go test -count=20 ./coding -run '^TestCacheWarmerSkipsRefreshPastDispatchDeadline$'
+```
+
+Observed red with a virtual 11-second TTL: the planned refresh is at 1 second
+and the dispatch deadline is at 6 seconds. Validation delayed to 7 seconds
+still evaluated policy and sent a request; a decision delayed to 7 seconds also
+sent a request. Both should send none. On-time and exactly-6-second controls
+already passed. All now match. The pinned CacheWarmer was also executed with
+fake timers/Date.now: late timer and decision stopped with
+`cache refresh deadline missed`, zero requests, while the exact deadline allowed
+one request.
+
+Verification: focused test passes 20 repetitions; cache-warmer, SDK and disposal
+tests pass; `just check`, `just cross` (six targets), `just reference` pass.
+No real sleep/network or local race run.

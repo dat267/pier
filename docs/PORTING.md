@@ -392,7 +392,11 @@ admitted may finish. Cache warming also requires the current agent transcript
 to retain every warmed-prefix message by identity, not merely have the same
 model and length. Same-length replacements stop warming; appending without
 changing the prefix preserves it. The predicate reads message references under
-the agent lock without decoding or copying session projections.
+the agent lock without decoding or copying session projections. Each refresh
+also keeps the reference's dispatch deadline, half the planned pre-expiry margin
+after its scheduled time. Late timer/policy work stops with
+`cache refresh deadline missed` rather than risking a full-price cache rewrite;
+an exactly-at-deadline refresh is still admitted.
 
 The builtin goal tool normalizes objectives with JavaScript's trim set, like
 D223's extension source. BOM-only input is rejected as empty, BOM boundaries

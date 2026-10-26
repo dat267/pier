@@ -178,7 +178,9 @@ type CacheWarmRequest struct {
 type cacheWarmingRun struct {
 	request           CacheWarmRequest
 	isCurrent         func() bool
+	ttlMS             int64
 	delayMS           int64
+	refreshDeadlineAt int64
 	startedAt         int64
 	ctx               context.Context
 	cancel            context.CancelFunc
@@ -296,7 +298,7 @@ func (w *CacheWarmer) Start(request CacheWarmRequest, isCurrent func() bool) {
 	}
 	runCtx, cancel := context.WithCancel(context.Background())
 	run := &cacheWarmingRun{
-		request: request, isCurrent: isCurrent, delayMS: delayMS,
+		request: request, isCurrent: isCurrent, ttlMS: ttlMS, delayMS: delayMS,
 		startedAt: time.Now().UnixMilli(), ctx: runCtx, cancel: cancel, phase: "streaming",
 	}
 	w.mu.Lock()
@@ -383,6 +385,9 @@ func (w *CacheWarmer) schedule(run *cacheWarmingRun) {
 	w.mu.Lock()
 	run.extensionOverride = false
 	run.nextWarmAt = time.Now().UnixMilli() + run.delayMS
+	// Keep half the planned pre-expiry margin for timer/policy delays. A late
+	// refresh risks paying to rewrite an expired cache rather than reading it.
+	run.refreshDeadlineAt = run.nextWarmAt + (run.ttlMS-run.delayMS)/2
 	deadline := run.startedAt + maxCacheWarmingAgeMS
 	if run.phase == "idle" {
 		deadline = run.startedAt + maxIdleCacheWarmingAgeMS
@@ -410,7 +415,7 @@ func (w *CacheWarmer) refresh(run *cacheWarmingRun) {
 	run.timer = nil
 	decide := w.Decide
 	w.mu.Unlock()
-	if !w.validateRun(run) {
+	if !w.validateRun(run) || w.refreshDeadlineMissed(run) {
 		return
 	}
 	decision := w.evaluate(run)
@@ -422,7 +427,7 @@ func (w *CacheWarmer) refresh(run *cacheWarmingRun) {
 			Action: decision.Action,
 		})
 	}
-	if !w.validateRun(run) {
+	if !w.validateRun(run) || w.refreshDeadlineMissed(run) {
 		return
 	}
 	extensionOverride := action != decision.Action
@@ -484,6 +489,20 @@ func (w *CacheWarmer) refresh(run *cacheWarmingRun) {
 	if w.currentIs(run) {
 		w.schedule(run)
 	}
+}
+
+func (w *CacheWarmer) refreshDeadlineMissed(run *cacheWarmingRun) bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.run != run {
+		return true
+	}
+	if time.Now().UnixMilli() <= run.refreshDeadlineAt {
+		return false
+	}
+	w.clearRunLocked()
+	w.inactive = CacheWarmingStatus{State: "inactive", Reason: "cache refresh deadline missed"}
+	return true
 }
 
 func (w *CacheWarmer) currentIs(run *cacheWarmingRun) bool {
