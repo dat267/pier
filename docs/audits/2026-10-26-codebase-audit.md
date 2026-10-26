@@ -1020,3 +1020,24 @@ with its focused regression, `just check`, `just cross` (six targets),
 Coverage commits: `5dc51eb`, `22a6532`, `df8e227`, `f720e5b`, `edba452`,
 `6494612`, `0605146`, `3c71c43`, `e204928`, `6cc1920`, `3652608`, `eb681b5`,
 plus the inventory docs `f8c4df4`, `1a2da12`, `0b7ba10`.
+
+## Read-tool corpus and D279
+
+`coding/testdata/read-tool/generate.mjs` creates a fixture directory, runs the
+pinned `read.ts` definition over 16 inputs and records each result's text and
+details. `TestReadToolMatchesUpstreamTextPath` recreates the same files and
+compares the Go tool's output after canonicalizing details keys.
+
+Cases: an empty file, three lines, a file without a trailing newline, blank
+lines, CRLF, a BOM, invalid UTF-8, offsets 2/0/9 (the last out of range), limits
+2/1.5, offset plus limit, a 60,000-character line (the first-line-exceeds-limit
+branch), 2,500 lines (the measured truncation notice), and a nested path.
+
+All 16 matched on the first run. The only difference found is the wording of a
+missing-file error: Node reports libuv's
+`ENOENT: no such file or directory, access '<path>'`, the port reports Go's os
+error. That is recorded as D279 (runtime-diagnostic wording is not emulated,
+consistent with D269/D270) with `TestReadToolMissingFileError` pinning the
+port's message; the case is excluded from the parity corpus. Regeneration is
+byte-identical; `go test -count=1 ./coding`, `just check`, `just cross` (six
+targets) and `just reference` pass.

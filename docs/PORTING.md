@@ -417,6 +417,13 @@ mutation and durable goal-record appends are serialized together; parallel
 `set_goal` calls cannot corrupt the replay log by interleaving clear/create
 entries. Host callbacks and model work remain outside the state lock.
 
+The read tool's text path is pinned end to end by a 16-case corpus that runs the
+pinned definition and the Go tool over the same files: empty input, offsets and
+limits (including fractional and out-of-range), blank lines, CRLF, a BOM, invalid
+UTF-8, a >50 KB line, >2000 lines with the truncation notice, and nested paths.
+A missing file is the one deviation: the reference surfaces Node's libuv
+`ENOENT: ...` text and the port keeps Go's os error (D279).
+
 System-message collapsing is pinned by a 15-case corpus executing the pinned
 `collapseSystemMessages`/`resolveTranscript`: empty input, no system message,
 a leading system message with tools, a merged mid-conversation system message,
