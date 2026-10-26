@@ -396,7 +396,10 @@ the agent lock without decoding or copying session projections. Each refresh
 also keeps the reference's dispatch deadline, half the planned pre-expiry margin
 after its scheduled time. Late timer/policy work stops with
 `cache refresh deadline missed` rather than risking a full-price cache rewrite;
-an exactly-at-deadline refresh is still admitted.
+an exactly-at-deadline refresh is still admitted. Policy, request and
+warm-notification failures are contained: a failed policy falls back to pi's own
+economics, and a failed refresh or notification stays best-effort and reschedules
+the current run instead of failing the process.
 
 The builtin goal tool normalizes objectives with JavaScript's trim set, like
 D223's extension source. BOM-only input is rejected as empty, BOM boundaries

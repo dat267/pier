@@ -421,11 +421,16 @@ func (w *CacheWarmer) refresh(run *cacheWarmingRun) {
 	decision := w.evaluate(run)
 	action := decision.Action
 	if decide != nil {
-		action = decide(CacheWarmingDecisionEvent{
-			Type: "cache_warming_decision", WarmCost: decision.WarmCost,
-			MissCost: decision.MissCost, ContinuationProbability: decision.ContinuationProbability,
-			Action: decision.Action,
-		})
+		// The reference wraps the awaited decision in try/catch and falls back to
+		// pi's own economics. Go callbacks signal failure with a panic.
+		func() {
+			defer func() { _ = recover() }()
+			action = decide(CacheWarmingDecisionEvent{
+				Type: "cache_warming_decision", WarmCost: decision.WarmCost,
+				MissCost: decision.MissCost, ContinuationProbability: decision.ContinuationProbability,
+				Action: decision.Action,
+			})
+		}()
 	}
 	if !w.validateRun(run) || w.refreshDeadlineMissed(run) {
 		return
@@ -455,37 +460,39 @@ func (w *CacheWarmer) refresh(run *cacheWarmingRun) {
 	options.MaxTokens = &one
 	options.MaxRetries = &zeroRetries
 	options.Ctx = run.ctx
-	message, err := w.StreamSimple(run.request.Model, ai.NormalizeContext(run.request.Context), &options).Result(run.ctx)
-	if err != nil {
-		// Cache warming is best-effort and must not affect the active agent run.
-		if w.currentIs(run) {
-			w.schedule(run)
+	var (
+		message *ai.AssistantMessage
+		err     error
+	)
+	// Refresh is best-effort: the reference catches stream, persistence and
+	// notification failures so none can affect the active agent run.
+	func() {
+		defer func() { _ = recover() }()
+		message, err = w.StreamSimple(run.request.Model, ai.NormalizeContext(run.request.Context), &options).Result(run.ctx)
+		if err != nil || !w.validateRun(run) {
+			return
 		}
-		return
-	}
-	if !w.validateRun(run) {
-		return
-	}
-	if message.StopReason != ai.StopError && message.StopReason != ai.StopAborted {
-		responseModel := message.Model
-		if message.ResponseModel != nil {
-			responseModel = *message.ResponseModel
+		if message.StopReason != ai.StopError && message.StopReason != ai.StopAborted {
+			responseModel := message.Model
+			if message.ResponseModel != nil {
+				responseModel = *message.ResponseModel
+			}
+			note := ""
+			if extensionOverride {
+				note = "extension override"
+			}
+			entry := w.SessionManager.AppendUsage("cache_warm", string(message.Provider), responseModel, message.Usage, note)
+			w.mu.Lock()
+			onWarmed := w.OnWarmed
+			if w.run != run {
+				onWarmed = nil
+			}
+			w.mu.Unlock()
+			if onWarmed != nil {
+				onWarmed(entry)
+			}
 		}
-		note := ""
-		if extensionOverride {
-			note = "extension override"
-		}
-		entry := w.SessionManager.AppendUsage("cache_warm", string(message.Provider), responseModel, message.Usage, note)
-		w.mu.Lock()
-		onWarmed := w.OnWarmed
-		if w.run != run {
-			onWarmed = nil
-		}
-		w.mu.Unlock()
-		if onWarmed != nil {
-			onWarmed(entry)
-		}
-	}
+	}()
 	if w.currentIs(run) {
 		w.schedule(run)
 	}

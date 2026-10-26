@@ -539,3 +539,31 @@ one request.
 Verification: focused test passes 20 repetitions; cache-warmer, SDK and disposal
 tests pass; `just check`, `just cross` (six targets), `just reference` pass.
 No real sleep/network or local race run.
+
+## CR-038, P2: cache-warmer callback failures crashed the application (fixed)
+
+Authority: pi v1.4.0 `core/cache-warmer.ts`, refresh, catches decision failures
+and falls back to pi's own economics, then catches stream/persistence/notification
+failures as best-effort and reschedules. The Go `Decide` field documents the same
+fallback. Go callbacks signal failure with a panic, which escaped the timer
+goroutine and terminated the whole process.
+
+Repair: two narrow recover scopes mirror the reference catch regions. A failed
+policy keeps the economic action; a failed refresh or notification reaches the
+shared current-run reschedule. Currency checks, mode lookup and the existing
+callback/lock ownership are untouched.
+
+```sh
+go test -count=10 ./coding -run '^TestCacheWarmerCallbackFailuresAreBestEffort$'
+```
+
+Observed red in isolated child processes: decision-warm, decision-stop, stream
+and notification modes exited status 2 with their callback panic. The normal
+control passed. All now preserve the process: the failed policy warms or stops
+by economics, and refresh/notification failures leave the run scheduled. The
+pinned warmer executed with fake timers produced the same four outcomes. Virtual
+timers and synthetic streams mean no real sleep, provider request or credential.
+
+Verification: focused test passes 10 repetitions; cache-warmer, SDK, disposal,
+coding and agent tests pass; `just check`, `just cross` (six targets),
+`just reference` pass. No local race run.
