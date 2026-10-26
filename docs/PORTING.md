@@ -77,6 +77,10 @@ The typed RPC client bounds one command round trip even when the child stops
 reading its stdin: one writer is admitted at a time and both admission and the
 response wait observe `RequestTimeout`, while a writer finishing after a restart
 cannot affect the replacement process (`modes/rpc/rpc-client.ts`, `send`).
+The terminal resize watcher is signalled rather than joined, so a library host
+may stop the terminal from its own resize callback (`packages/tui/src/terminal.ts`,
+`stop`); a generation guard prevents a superseded or stopped watcher from
+delivering another resize.
 
 Session aborts now retain cancellation across retry startup, backoff and
 continuations, and `agent_settled.aborted` reports the run's abort flag rather

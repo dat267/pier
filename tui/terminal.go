@@ -282,6 +282,19 @@ func (t *ProcessTerminal) EnableRawInput() {
 	t.useRawInput.Store(true)
 }
 
+// resizeGeneration identifies the current resize watcher. A watcher that is
+// stopped or superseded exits without delivering, so a callback that is already
+// running cannot be followed by another one after Stop returns (CR-063).
+var resizeGeneration atomic.Uint64
+
+// nextResizeGeneration admits a new watcher, invalidating any predecessor.
+func nextResizeGeneration() uint64 { return resizeGeneration.Add(1) }
+
+// resizeGenerationCurrent reports whether generation is still the admitted one.
+func resizeGenerationCurrent(generation uint64) bool {
+	return resizeGeneration.Load() == generation
+}
+
 // Start enables raw mode, bracketed paste, and the keyboard protocol query.
 func (t *ProcessTerminal) Start(onInput func(data string), onResize func()) {
 	t.setInputHandler(onInput)

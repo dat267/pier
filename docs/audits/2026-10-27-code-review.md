@@ -235,3 +235,29 @@ writer (`queued_write_timeout=true`) and a restart whose state call succeeds
 (`restart_error=<nil> session="restarted"`). Focused RPC tests passed with
 `-count=20`; `go test -count=2 ./coding/rpcclient`, `just check`, `just cross`
 (six targets) and `just reference` passed.
+
+## CR-063: P2 stopping the terminal from its resize callback deadlocked (fixed)
+
+Reference: read-only pi v1.4.0 (`4a080252`), `packages/tui/src/terminal.ts`.
+`stop()` removes its resize listener and never waits for it, so a host may stop
+the terminal from inside its own resize callback. Pier's watcher joined the
+goroutine currently executing that callback, so such a host hung. The normal
+interactive path only enqueues from the callback and never hit it.
+
+Reproduced with a disposable PTY running a tiny program that stops the terminal
+from its `onResize` callback: `outside exit=0`, `callback HANG`, and a SIGQUIT
+dump showing `ProcessTerminal.Stop -> stopResizeWatcher` waiting on the active
+watcher goroutine. `TestStopInsideResizeCallbackDoesNotDeadlock` covers it in
+process and initially failed the same way.
+
+The fix signals the watcher and returns instead of joining it, matching the
+reference's listener removal. A resize generation, bumped on every start and
+stop, stops a superseded or stopped watcher from delivering another callback,
+and the watcher exits at its next select. `TestResizeWatcherRestartDeliversOnce`
+replaces a watcher whose callback is still blocked and asserts the replacement
+delivers while the superseded one never does again. The Windows poller uses the
+same signal-and-generation rule; it is cross-built and vetted but not run here.
+
+Verification: the PTY probe now reports `callback exit=0 output='resize-entered
+stopped'`; the two regressions pass with `-count=5`; `go test -count=1 ./tui`
+passed; `CGO_ENABLED=0 GOOS=windows go vet ./tui/` passed.

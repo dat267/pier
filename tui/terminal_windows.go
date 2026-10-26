@@ -38,6 +38,7 @@ func startResizeWatcher(onChange func()) {
 
 	stop := make(chan struct{})
 	done := make(chan struct{})
+	generation := nextResizeGeneration()
 	resizeWatcherMu.Lock()
 	resizeWatcherStop = stop
 	resizeWatcherDone = done
@@ -52,7 +53,7 @@ func startResizeWatcher(onChange func()) {
 			case <-stop:
 				return
 			case <-ticker.C:
-				if onChange != nil {
+				if onChange != nil && resizeGenerationCurrent(generation) {
 					onChange()
 				}
 			}
@@ -60,13 +61,16 @@ func startResizeWatcher(onChange func()) {
 	}()
 }
 
+// stopResizeWatcher invalidates the generation and signals the poller without
+// joining it: a callback that stops its own watcher must not deadlock, and the
+// generation check keeps a late tick from delivering after Stop returns.
 func stopResizeWatcher() {
+	resizeGeneration.Add(1)
 	resizeWatcherMu.Lock()
-	stop, done := resizeWatcherStop, resizeWatcherDone
+	stop := resizeWatcherStop
 	resizeWatcherStop, resizeWatcherDone = nil, nil
 	resizeWatcherMu.Unlock()
 	if stop != nil {
 		close(stop)
-		<-done
 	}
 }

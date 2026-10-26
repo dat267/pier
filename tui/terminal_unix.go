@@ -5,6 +5,7 @@ package tui
 import (
 	"os"
 	"runtime"
+	"sync"
 )
 
 // Platform helpers for the terminal port (unix build).
@@ -18,26 +19,41 @@ func isWindows() bool { return runtime.GOOS == "windows" }
 func nativeShiftPressed() bool { return false }
 
 // resizeWatcher delivers SIGWINCH-driven resize notifications.
+//
+// stopResizeWatcher signals the watcher and returns without joining it. A
+// callback that stops its own watcher is therefore supported (upstream's
+// terminal.stop() removes its resize listener and never waits for it), and the
+// watcher exits at its next select rather than delivering another callback.
+// Joining here deadlocked any host that stopped the terminal from its own
+// resize callback. resizeWatcherMu serializes admission, so a restarted watcher
+// never coexists with a second one that could still deliver.
 var resizeWatcher struct {
 	quit chan struct{}
 	done chan struct{}
 }
 
+var resizeWatcherMu sync.Mutex
+
 func startResizeWatcher(onResize func()) {
 	stopResizeWatcher()
-	resizeWatcher.quit = make(chan struct{})
-	resizeWatcher.done = make(chan struct{})
+	quit := make(chan struct{})
+	done := make(chan struct{})
+	generation := nextResizeGeneration()
+	resizeWatcherMu.Lock()
+	resizeWatcher.quit = quit
+	resizeWatcher.done = done
+	resizeWatcherMu.Unlock()
 	sig := make(chan os.Signal, 1)
 	signalNotifySIGWINCH(sig)
 	go func() {
-		defer close(resizeWatcher.done)
+		defer close(done)
 		for {
 			select {
-			case <-resizeWatcher.quit:
+			case <-quit:
 				signalStopSIGWINCH(sig)
 				return
 			case <-sig:
-				if onResize != nil {
+				if onResize != nil && resizeGenerationCurrent(generation) {
 					onResize()
 				}
 			}
@@ -46,10 +62,21 @@ func startResizeWatcher(onResize func()) {
 }
 
 func stopResizeWatcher() {
-	if resizeWatcher.quit != nil {
-		close(resizeWatcher.quit)
-		<-resizeWatcher.done
-		resizeWatcher.quit = nil
-		resizeWatcher.done = nil
+	// Invalidate the generation first: a watcher that is mid-callback when this
+	// returns cannot deliver another one.
+	resizeGeneration.Add(1)
+	resizeWatcherMu.Lock()
+	quit := resizeWatcher.quit
+	resizeWatcher.quit, resizeWatcher.done = nil, nil
+	resizeWatcherMu.Unlock()
+	if quit != nil {
+		close(quit)
 	}
+}
+
+// resizeWatcherDone reports the running watcher's exit channel (tests).
+func resizeWatcherDone() <-chan struct{} {
+	resizeWatcherMu.Lock()
+	defer resizeWatcherMu.Unlock()
+	return resizeWatcher.done
 }
