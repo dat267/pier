@@ -1148,7 +1148,7 @@ tool-corpus helpers moved to `coding/tool_parity_helpers_test.go`.
 
 - Findings fixed this session: 23 (CR-021 through CR-043), each reproduced at a
   supported boundary first and committed with its regression.
-- Coverage: 21 corpora added or extended; every generated fixture in the
+- Coverage: 22 corpora added or extended; every generated fixture in the
   repository (54 `generate.mjs` directories) reproduces byte-identically from the
   pinned checkout at close.
 - Gates: whole suite passes with `-count=2`; `just check`, `just cross` (six
