@@ -423,7 +423,9 @@ A generated CLI-argument corpus compares 68 argv vectors against the pinned
 session and trust flags. All matched on the first run.
 
 The find tool checks both `fd` and `fdfind` on PATH, preferring `fd`, matching
-`utils/tools-manager.ts`. This supports Debian/Ubuntu's alternative executable
+`utils/tools-manager.ts`, and resolves the tool before touching the search path:
+a missing path surfaces fd's own error, or the unavailable-tool message when no
+binary is installed. This supports Debian/Ubuntu's alternative executable
 name without installing or downloading anything. Automatic downloads remain
 out of scope.
 

@@ -679,3 +679,30 @@ to normalize Go nil slices to the reference's empty arrays, and an unset mode to
 null instead of the empty string. Neither is a product defect. Regeneration is
 byte-identical; `go test -count=1 ./coding`, `just check`, `just cross` (six
 targets) and `just reference` pass.
+
+## CR-042, P3: find prechecked the search path before resolving fd (fixed)
+
+Authority: pi v1.4.0 `core/tools/find.ts` calls `ensureTool("fd")` before
+spawning and never stats the search path in the default branch; only its custom
+operations branch checks existence. Pier added a Go-only `os.Stat` first, so a
+missing path reported `Path not found: ...` even when fd was unavailable, and
+masked fd's own diagnostics when it was installed.
+
+Repair: remove the precheck. The existing unavailable-tool error and fd's
+trimmed stderr now carry the failure, as in the reference. The `fdfind`
+fallback, abort checks and exit-code handling are unchanged.
+
+```sh
+go test -count=1 ./coding -run '^TestFindToolDefersMissingPathToFD$'
+```
+
+Executing the pinned find definition with PI_OFFLINE=1 and a disposable
+HOME/cwd printed `fd is not available and could not be downloaded` for a missing
+path with no fd on PATH, and fd's `[fd error]: Search path ... is not a
+directory.` with fd installed. The Go regression observed `Path not found: ...`
+in both cases before the fix and now matches. POSIX-only test; the installed
+case skips when fd is absent, and no network is used.
+
+Verification: find/grep tests, all coding tests, `just check`, `just cross`
+(six targets), `just reference` pass. The fixture regeneration corpus is
+unaffected. No local race run.

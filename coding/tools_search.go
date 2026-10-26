@@ -106,10 +106,8 @@ func CreateFindTool(cwd string) agent.AgentTool {
 				effectiveLimit = *input.Limit
 			}
 
-			if _, err := os.Stat(searchPath); err != nil {
-				return agent.AgentToolResult{}, fmt.Errorf("Path not found: %s", searchPath)
-			}
-
+			// The reference resolves fd before spawning and never stats the path:
+			// fd's own error (or the unavailable-tool message) is what callers see.
 			fdPath, err := exec.LookPath("fd")
 			if err != nil {
 				fdPath, err = exec.LookPath("fdfind")
