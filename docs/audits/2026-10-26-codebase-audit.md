@@ -770,6 +770,7 @@ at the closing checkpoint:
 | `ai/testdata/system-prompt` | 19 | `ai/src/utils/{text,transcript}.ts` |
 | `ai/testdata/transcript-tools` | 30 | `ai/src/utils/transcript.ts` |
 | `ai/testdata/collapse-system` | 15 | `ai/src/utils/transcript.ts` |
+| `coding/testdata/read-tool` | 16 | `core/tools/read.ts` (D279 excluded) |
 
 Earlier corpora (`edit-diff-patch`, `edit-apply`, `truncate`, `js-numbers`,
 `overflow`, `parse-key`, Anthropic/OpenAI/Responses stream corpora) remain green.
