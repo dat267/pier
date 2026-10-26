@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -1465,14 +1466,21 @@ const (
 // CacheWarmingModes are the offered modes.
 var CacheWarmingModes = []CacheWarmingMode{CacheWarmingOff, CacheWarmingStreaming, CacheWarmingIdle}
 
-// GetCacheWarmingMode returns the warming mode (default "streaming").
+// GetCacheWarmingMode returns the warming mode (default "streaming"). A stored
+// value outside CacheWarmingModes falls back to the default, like upstream's
+// getCacheWarmingMode: an unrecognized mode must not reach the warmer, which
+// stops idle-phase warming only for "streaming".
 func (m *SettingsManager) GetCacheWarmingMode() CacheWarmingMode {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.globalSettings.CacheWarming == nil {
 		return CacheWarmingStreaming
 	}
-	return *m.globalSettings.CacheWarming
+	mode := *m.globalSettings.CacheWarming
+	if !slices.Contains(CacheWarmingModes, mode) {
+		return CacheWarmingStreaming
+	}
+	return mode
 }
 
 // SetCacheWarmingMode persists the warming mode (global scope only).

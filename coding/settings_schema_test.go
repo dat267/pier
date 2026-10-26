@@ -26,6 +26,23 @@ func TestSettingsNewKeysFollowDeclarationOrder(t *testing.T) {
 	}
 }
 
+// An unrecognized stored mode falls back to the default, like upstream's
+// getCacheWarmingMode, whose CACHE_WARMING_MODES guard keeps a hand-edited or
+// foreign value from reaching the warmer (which would then keep warming an
+// idle session instead of stopping it).
+func TestSettingsCacheWarmingUnrecognizedModeFallsBack(t *testing.T) {
+	for _, stored := range []string{`"idle "`, `"IDLE"`, `"on"`} {
+		t.Run(stored, func(t *testing.T) {
+			agentDir, projectDir := settingsDirs(t)
+			writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"cacheWarming":`+stored+`}`)
+			manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+			if got := manager.GetCacheWarmingMode(); got != CacheWarmingStreaming {
+				t.Fatalf("cache warming = %q, want %q", got, CacheWarmingStreaming)
+			}
+		})
+	}
+}
+
 // Cache warming is a port-local global setting. Like upstream's
 // core/settings-manager.ts setters, it must survive a storage round trip.
 func TestSettingsCacheWarmingSurvivesReload(t *testing.T) {
