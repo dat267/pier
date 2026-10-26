@@ -417,6 +417,12 @@ mutation and durable goal-record appends are serialized together; parallel
 `set_goal` calls cannot corrupt the replay log by interleaving clear/create
 entries. Host callbacks and model work remain outside the state lock.
 
+Compaction's cut-point selection is pinned by 19 cases over 12 synthetic entry
+lists: pair and tool-pair boundaries, metadata entries absorbed into the kept
+range, system messages, an existing compaction boundary, branch summaries and
+custom messages, a context edit, sub-windows and an empty window, and a
+mid-turn split. All matched on the first run.
+
 Compaction's context-token estimation is pinned by a 14-case corpus executing
 the pinned `estimateContextTokens`: user strings and astral text, images, system
 sections plus tool declarations, assistant text/thinking/tool-call blocks, tool

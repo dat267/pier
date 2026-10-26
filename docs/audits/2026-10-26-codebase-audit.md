@@ -861,3 +861,21 @@ responses, zero usage, and trailing messages after the last valid usage.
 All 14 matched on the first run, so this records coverage, not a finding.
 Regeneration is byte-identical; `go test -count=1 ./coding`, `just check`,
 `just cross` (six targets) and `just reference` pass.
+
+## Cut-point corpus
+
+`coding/testdata/cut-point/generate.mjs` executes the pinned `findCutPoint` for
+12 synthetic entry lists and 19 windows/budgets; `TestFindCutPointMatchesUpstream`
+compares the first kept index, split-turn start and split-turn flag.
+
+Scenarios: a single short message, user/assistant pairs at two budgets, three
+pairs across four budgets, a tool call with an oversized result, adjacent label
+and thinking-level entries that must be absorbed into the kept range, a system
+message between messages, an existing compaction boundary, branch-summary and
+custom-message entries, a context edit, windows starting inside the list, an
+empty window, and a mid-turn cut.
+
+All 19 matched on the first run. This covers cut selection only; D264's
+deliberate summarization splitting and retry behavior is unchanged and not
+re-probed here. Regeneration is byte-identical; `go test -count=1 ./coding`,
+`just check`, `just cross` (six targets) and `just reference` pass.
