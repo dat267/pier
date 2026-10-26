@@ -58,6 +58,29 @@ const cases=[{name:"minimal",messages:[{role:"user",content:"hello",timestamp:1}
 	name:"required-strict-schema-error",expectError:true,
 	messages:[{role:"system",content:"system",toolsAdded:[{name:"lookup",parameters:{type:"object",$ref:"#/$defs/X"},constrainedSampling:{type:"json_schema",strict:"require"}}],timestamp:1},{role:"user",content:"hello",timestamp:2}],options:{},
 }, {
+	name:"tool-result-image-error",messages:[
+		{role:"user",content:"shot",timestamp:1},
+		{role:"assistant",content:[{type:"toolCall",id:"call-2",name:"shot",arguments:{z:"x"}}],stopReason:"toolUse",timestamp:2},
+		{role:"toolResult",toolCallId:"call-2",toolName:"shot",content:[{type:"text",text:"see"},{type:"image",data:"aW1n",mimeType:"image/jpeg"}],isError:true,timestamp:3},
+	],options:{},
+}, {
+	name:"tools-removed",messages:[
+		{role:"system",content:"sys",toolsRemoved:[{name:"old"},{name:"older"}],timestamp:1},
+		{role:"user",content:"hello",timestamp:2},
+	],options:{toolChoice:"none"},
+}, {
+	name:"assistant-multi-text",messages:[
+		{role:"user",content:"go",timestamp:1},
+		{role:"assistant",content:[{type:"text",text:"one"},{type:"text",text:"two"},{type:"thinking",thinking:"plan",thinkingSignature:"sig"},{type:"text",text:"three"}],stopReason:"stop",timestamp:2},
+		{role:"user",content:"again",timestamp:3},
+	],options:{},
+}, {
+	name:"empty-user-text",messages:[
+		{role:"user",content:"",timestamp:1},
+		{role:"assistant",content:[{type:"text",text:""}],stopReason:"stop",timestamp:2},
+		{role:"user",content:"real",timestamp:3},
+	],options:{},
+}, {
 	name:"disabled-required-strict",strictSupport:false,
 	messages:[{role:"system",content:"system",toolsAdded:[{name:"lookup",parameters:{type:"object",$ref:"#/$defs/X"},constrainedSampling:{type:"json_schema",strict:"require"}}],timestamp:1},{role:"user",content:"hello",timestamp:2}],options:{toolChoice:"none"},
 }];

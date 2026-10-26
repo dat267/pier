@@ -377,6 +377,164 @@
     "error": "Tool \"lookup\" requires JSON-schema constrained sampling, but $ref schemas are unsupported."
   },
   {
+    "name": "tool-result-image-error",
+    "messages": [
+      {
+        "role": "user",
+        "content": "shot",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "call-2",
+            "name": "shot",
+            "arguments": {
+              "z": "x"
+            }
+          }
+        ],
+        "stopReason": "toolUse",
+        "timestamp": 2,
+        "api": "bedrock-converse-stream",
+        "provider": "amazon-bedrock",
+        "model": "anthropic.claude-sonnet-4-5-20250929-v1:0"
+      },
+      {
+        "role": "toolResult",
+        "toolCallId": "call-2",
+        "toolName": "shot",
+        "content": [
+          {
+            "type": "text",
+            "text": "see"
+          },
+          {
+            "type": "image",
+            "data": "aW1n",
+            "mimeType": "image/jpeg"
+          }
+        ],
+        "isError": true,
+        "timestamp": 3
+      }
+    ],
+    "options": {},
+    "payload": "{\"modelId\":\"anthropic.claude-sonnet-4-5-20250929-v1:0\",\"messages\":[{\"role\":\"user\",\"content\":[{\"text\":\"shot\"}]},{\"role\":\"assistant\",\"content\":[{\"toolUse\":{\"toolUseId\":\"call-2\",\"name\":\"shot\",\"input\":{\"z\":\"x\"}}}]},{\"role\":\"user\",\"content\":[{\"toolResult\":{\"toolUseId\":\"call-2\",\"content\":[{\"text\":\"see\"},{\"text\":\"(image attached after the tool results)\"}],\"status\":\"error\"}},{\"text\":\"Images from the error result of tool call call-2 (shot):\"},{\"image\":{\"source\":{\"bytes\":\"aW1n\"},\"format\":\"jpeg\"}},{\"cachePoint\":{\"type\":\"default\"}}]}],\"inferenceConfig\":{\"maxTokens\":8192}}",
+    "path": "/model/anthropic.claude-sonnet-4-5-20250929-v1%3A0/converse-stream",
+    "body": "{\"messages\":[{\"role\":\"user\",\"content\":[{\"text\":\"shot\"}]},{\"role\":\"assistant\",\"content\":[{\"toolUse\":{\"toolUseId\":\"call-2\",\"name\":\"shot\",\"input\":{\"z\":\"x\"}}}]},{\"role\":\"user\",\"content\":[{\"toolResult\":{\"toolUseId\":\"call-2\",\"content\":[{\"text\":\"see\"},{\"text\":\"(image attached after the tool results)\"}],\"status\":\"error\"}},{\"text\":\"Images from the error result of tool call call-2 (shot):\"},{\"image\":{\"format\":\"jpeg\",\"source\":{\"bytes\":\"aW1n\"}}},{\"cachePoint\":{\"type\":\"default\"}}]}],\"inferenceConfig\":{\"maxTokens\":8192}}"
+  },
+  {
+    "name": "tools-removed",
+    "messages": [
+      {
+        "role": "system",
+        "content": "sys",
+        "toolsRemoved": [
+          {
+            "name": "old"
+          },
+          {
+            "name": "older"
+          }
+        ],
+        "timestamp": 1
+      },
+      {
+        "role": "user",
+        "content": "hello",
+        "timestamp": 2
+      }
+    ],
+    "options": {
+      "toolChoice": "none"
+    },
+    "payload": "{\"modelId\":\"anthropic.claude-sonnet-4-5-20250929-v1:0\",\"messages\":[{\"role\":\"user\",\"content\":[{\"text\":\"hello\"},{\"cachePoint\":{\"type\":\"default\"}}]}],\"system\":[{\"text\":\"sys\"},{\"cachePoint\":{\"type\":\"default\"}}],\"inferenceConfig\":{\"maxTokens\":8192}}",
+    "path": "/model/anthropic.claude-sonnet-4-5-20250929-v1%3A0/converse-stream",
+    "body": "{\"messages\":[{\"role\":\"user\",\"content\":[{\"text\":\"hello\"},{\"cachePoint\":{\"type\":\"default\"}}]}],\"system\":[{\"text\":\"sys\"},{\"cachePoint\":{\"type\":\"default\"}}],\"inferenceConfig\":{\"maxTokens\":8192}}"
+  },
+  {
+    "name": "assistant-multi-text",
+    "messages": [
+      {
+        "role": "user",
+        "content": "go",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "one"
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "thinking",
+            "thinking": "plan",
+            "thinkingSignature": "sig"
+          },
+          {
+            "type": "text",
+            "text": "three"
+          }
+        ],
+        "stopReason": "stop",
+        "timestamp": 2,
+        "api": "bedrock-converse-stream",
+        "provider": "amazon-bedrock",
+        "model": "anthropic.claude-sonnet-4-5-20250929-v1:0"
+      },
+      {
+        "role": "user",
+        "content": "again",
+        "timestamp": 3
+      }
+    ],
+    "options": {},
+    "payload": "{\"modelId\":\"anthropic.claude-sonnet-4-5-20250929-v1:0\",\"messages\":[{\"role\":\"user\",\"content\":[{\"text\":\"go\"}]},{\"role\":\"assistant\",\"content\":[{\"text\":\"one\"},{\"text\":\"two\"},{\"reasoningContent\":{\"reasoningText\":{\"text\":\"plan\",\"signature\":\"sig\"}}},{\"text\":\"three\"}]},{\"role\":\"user\",\"content\":[{\"text\":\"again\"},{\"cachePoint\":{\"type\":\"default\"}}]}],\"inferenceConfig\":{\"maxTokens\":8192}}",
+    "path": "/model/anthropic.claude-sonnet-4-5-20250929-v1%3A0/converse-stream",
+    "body": "{\"messages\":[{\"role\":\"user\",\"content\":[{\"text\":\"go\"}]},{\"role\":\"assistant\",\"content\":[{\"text\":\"one\"},{\"text\":\"two\"},{\"reasoningContent\":{\"reasoningText\":{\"text\":\"plan\",\"signature\":\"sig\"}}},{\"text\":\"three\"}]},{\"role\":\"user\",\"content\":[{\"text\":\"again\"},{\"cachePoint\":{\"type\":\"default\"}}]}],\"inferenceConfig\":{\"maxTokens\":8192}}"
+  },
+  {
+    "name": "empty-user-text",
+    "messages": [
+      {
+        "role": "user",
+        "content": "",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": ""
+          }
+        ],
+        "stopReason": "stop",
+        "timestamp": 2,
+        "api": "bedrock-converse-stream",
+        "provider": "amazon-bedrock",
+        "model": "anthropic.claude-sonnet-4-5-20250929-v1:0"
+      },
+      {
+        "role": "user",
+        "content": "real",
+        "timestamp": 3
+      }
+    ],
+    "options": {},
+    "payload": "{\"modelId\":\"anthropic.claude-sonnet-4-5-20250929-v1:0\",\"messages\":[{\"role\":\"user\",\"content\":[{\"text\":\"<empty>\"}]},{\"role\":\"user\",\"content\":[{\"text\":\"real\"},{\"cachePoint\":{\"type\":\"default\"}}]}],\"inferenceConfig\":{\"maxTokens\":8192}}",
+    "path": "/model/anthropic.claude-sonnet-4-5-20250929-v1%3A0/converse-stream",
+    "body": "{\"messages\":[{\"role\":\"user\",\"content\":[{\"text\":\"<empty>\"}]},{\"role\":\"user\",\"content\":[{\"text\":\"real\"},{\"cachePoint\":{\"type\":\"default\"}}]}],\"inferenceConfig\":{\"maxTokens\":8192}}"
+  },
+  {
     "name": "disabled-required-strict",
     "strictSupport": false,
     "messages": [
