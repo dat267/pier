@@ -79,3 +79,29 @@ targets), `just reference` pass. The draft 22-scenario source corpus now matches
 in 20 repetitions and regenerates byte-identically. CR-021 and CR-022 corpus
 reproductions also pass after their repairs. `TODO.md` has no confirmed
 unresolved findings; this does not establish full codebase coverage.
+
+## Mistral stream corpus
+
+`ai/testdata/mistral-stream/generate.mjs` executes the pinned provider, replaying
+the same SSE bodies as `TestMistralStreamEventsMatchUpstream`. The 22 scenarios
+cover text/thinking switches, empty content, contiguous and parallel tool calls,
+continued calls interrupting text/thinking, object/absent/null tool arguments,
+usage-only chunks, cached-token bounds, `length`/`model_length`/`error`/unknown
+finish reasons, missing finish reasons, empty streams, CRLF and an unterminated
+final event. Four scenarios reproduced CR-021/CR-023 on the first run; parallel
+call ordering reproduced CR-022 with repeated runs. The remaining scenarios
+matched initially. All now match in 20 repetitions.
+
+```sh
+go test -count=20 ./ai -run '^TestMistralStreamEventsMatchUpstream$'
+node --experimental-strip-types ai/testdata/mistral-stream/generate.mjs ./pi > /tmp/mistral-stream.json
+cmp ai/testdata/mistral-stream/golden.json /tmp/mistral-stream.json
+```
+
+Regeneration is byte-identical. The projection excludes live `partial`, clocks
+and `argumentsError` diagnostics, not a claim about their parity. Request
+conversion is covered separately by `testdata/mistral-wire`. Stream cancellation,
+network failures and observer errors remain bounded by their existing Go tests,
+not source-executed differential cases in this corpus.
+
+Completed pieces: `97dc354` (CR-021), `42db086` (CR-022), `087fdd7` (CR-023).

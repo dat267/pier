@@ -397,7 +397,8 @@ block ends exactly once; later text opens a fresh block, matching
 `api/mistral-conversations.ts` rather than extending an already-ended block.
 Parallel calls emit `toolcall_end` in first-seen order, not Go map order.
 Absent/null tool arguments emit the default `{}` delta, while string arguments
-(including an empty string) remain verbatim.
+(including an empty string) remain verbatim. A generated 22-scenario corpus
+compares Mistral stream event scalars and terminal messages against the pin.
 
 Google streams keep a text part that is present but empty. The reference keys
 block creation on `part.text !== undefined`, so `{"text": ""}` still opens a text
