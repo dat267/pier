@@ -368,7 +368,10 @@ forks now settle the outgoing turn before mutating the reused manager, matching
 `core/agent-session-runtime.ts`; otherwise its aborted tail appeared in the new
 branch. Fork/clone also reject a missing Go replacement factory before branch
 side effects. These repairs have red-first admission, weak-reference, loopback
-HTTP cancellation and JSONL session-integrity regressions.
+HTTP cancellation and JSONL session-integrity regressions. MCP HTTP also checks
+caller cancellation after shared token acquisition and before invoking fetch;
+a sender canceled during a token wait cannot dispatch through an injected
+fetch that does not itself enforce the canceled context.
 
 The next parity check corrects `GetLastAssistantText` to use JavaScript's trim
 set: U+FEFF is removed at the boundaries, U+0085 is retained, and a U+FEFF-only

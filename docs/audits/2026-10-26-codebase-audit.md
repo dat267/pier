@@ -207,4 +207,31 @@ parent cancellation deadline; all credentials are synthetic and HTTP is loopback
 Verification: focused test passes five repetitions; all ai tests, `just check`,
 `just cross` (all six targets), `just reference` pass. No local race run.
 
-Completed subsequent pieces: `a3f104a` (CR-024), `60a036b` (CR-025).
+Completed subsequent pieces: `a3f104a` (CR-024), `60a036b` (CR-025),
+`859a82e` (CR-026).
+
+## CR-027, P2: MCP dispatched canceled requests after token acquisition (fixed)
+
+Authority: pi v1.4.0 `packages/mcp/src/transports/streamable-http.ts`,
+`authorizedFetch`, checks the sender's signal after shared token acquisition
+and before invoking fetch. Shared auth must not be canceled when one sender
+abandons a request, but that request must not reach the server afterward.
+
+Pier checked cancellation only after fetch returned. A canceled request could
+therefore invoke an injected fetch which ignored its canceled context, even for
+side-effecting `tools/call`. Added `ctx.Err()` admission immediately after
+headers/token resolution; shared token/recovery ownership is unchanged.
+
+```sh
+go test -count=30 ./mcp -run '^TestStreamableHTTPCanceledTokenWaitDoesNotDispatch$'
+```
+
+Observed red: canceled case invoked fetch once, want zero. A channel gate holds
+the token operation while the caller cancels, then releases it. Noncanceled
+control invokes fetch once and succeeds. The pinned-source probe reports
+`AbortError` and zero fetch calls when canceled, versus success and one call for
+the control. The regression uses an injected fetch only, with no external HTTP.
+
+Verification: focused test passes 30 repetitions; `go test -count=1 ./mcp/...`,
+`go test -count=1 ./coding -run 'MCP|Mcp'`, `just check`, `just cross` (six
+targets), `just reference` pass. No local race run.

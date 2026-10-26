@@ -452,6 +452,11 @@ func (t *StreamableHttpTransport) authorizedFetch(ctx context.Context, method st
 		if err != nil {
 			return nil, err
 		}
+		// Token acquisition is shared, but a sender canceled while waiting must
+		// not reach even an injected fetch that ignores the request context.
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		// Pass the body to NewRequest so ContentLength is set: fetch sends a
 		// Content-Length for a string body, while a Body assigned afterwards
 		// would switch the request to chunked encoding.
