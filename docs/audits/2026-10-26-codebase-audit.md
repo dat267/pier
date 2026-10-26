@@ -286,3 +286,33 @@ lookup. Probe HOME/agent directory were disposable; no dependency was installed.
 Verification: find/grep tests, all coding tests, `just check`, `just cross`
 (all six targets), `just reference` pass. POSIX test stubs skip on Windows;
 production lookup is platform-neutral. No local race run.
+
+## CR-030, P3: goal tool accepted an invisible BOM-only objective (fixed)
+
+Authority: D223's installed goal extension `index.ts`, set_goal.execute, trims
+objectives with JavaScript String.trim. Source read SHA-256:
+`5b0d421772a0b3c37f6486092acf9301aeaf7bc2aa288574dff47ba1ce3d662e`.
+Stock pi v1.4.0 has no goal tool; this is not a claim about that checkout's
+source. D234 changes the action interface, not objective normalization. The
+existing empty-objective regression establishes the same local invariant.
+
+Pier used Go TrimSpace at the tool boundary. It accepted and armed a goal whose
+objective was only U+FEFF, preserved BOM boundaries, and removed U+0085 that JS
+preserves. An invisible objective could enter the automatic round loop. Changed
+only objective trimming to `ai.JSTrim`; status handling is unchanged.
+
+```sh
+go test -count=1 ./coding -run '^TestSessionGoalObjectiveUsesJavaScriptTrim$'
+```
+
+Observed red: BOM-only returned success and a persisted active goal, BOM-wrapped
+text retained BOM, U+0085-wrapped text lost U+0085. ASCII-space control already
+passed. All now pass through a real session's registered tool. The installed
+extension's actual callback was separately executed with the same four inputs
+and matched the expected outcomes; only unused rendering exports were stubbed.
+
+Verification: all coding goal tests, `go test -count=1 ./internal/goal ./coding`,
+`just check`, `just cross` (six targets), `just reference` pass. No local race run.
+
+Completed subsequent pieces: `920f058` (CR-027), `65a50ca` (CR-028),
+`2f44ef4` (CR-029).

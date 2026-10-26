@@ -542,7 +542,7 @@ func (c *GoalController) setGoalTool() agent.AgentTool {
 			if err := json.Unmarshal(params, &input); err != nil {
 				return goalErrorResult(err.Error())
 			}
-			objective := strings.TrimSpace(input.Objective)
+			objective := ai.JSTrim(input.Objective)
 			status := strings.TrimSpace(input.Status)
 			switch {
 			case objective != "" && status != "":

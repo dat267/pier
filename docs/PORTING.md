@@ -381,6 +381,11 @@ reply is absent. The pinned `agent-session.ts` method generates a nine-case
 corpus, also checked through `get_last_assistant_text` RPC responses; normal
 text, block joins and aborted/non-text message selection remain controls.
 
+The builtin goal tool normalizes objectives with JavaScript's trim set, like
+D223's extension source. BOM-only input is rejected as empty, BOM boundaries
+are removed, and U+0085 remains part of the objective. The port-local status
+interface (D234) is unchanged.
+
 The find tool checks both `fd` and `fdfind` on PATH, preferring `fd`, matching
 `utils/tools-manager.ts`. This supports Debian/Ubuntu's alternative executable
 name without installing or downloading anything. Automatic downloads remain
