@@ -2236,7 +2236,9 @@ escalates there instead of giving up:
    result: the boundary nearest the weight midpoint is chosen whose left side has
    no outstanding call, so a parallel batch and its results stay in one chunk.
    Only when every boundary sits inside a call/result chain does the weight split
-   win, because a separated pair still beats failing the compaction.
+   win, because a separated pair still beats failing the compaction. That
+   fallback is always an interior boundary, including when a large final tool
+   result alone crosses half the input weight.
 
 One summarization spends at most `maxSummarizationRequests` (10) requests, and
 every pass shares one routing id, as one upstream `completeSummarization` call
@@ -2257,6 +2259,7 @@ Tests: `TestSummarizationSendsNoOutputLimit`,
 `TestSummarizationSplitStaysBounded`,
 `TestSummarizationSplitKeepsToolCallsWithTheirResults`,
 `TestSummarizationSplitSummarizesACallWithItsResult`,
+`TestCompactionSplitsResultHeavyToolPairAtLastResort`,
 `TestTurnPrefixSummaryMergeKeepsItsOwnSections` and
 `TestBranchSummarySendsNoOutputLimit`.
 

@@ -1459,8 +1459,9 @@ func summarizationSplitPoint(messages []ai.Message) int {
 	}
 	if best == 0 {
 		// Every boundary sits inside a call/result chain; a separated pair still
-		// beats failing the compaction, so keep the weight split.
-		return target
+		// beats failing the compaction, so keep the weight split inside the
+		// input even when the final message alone crosses half the weight.
+		return min(target, len(messages)-1)
 	}
 	return best
 }

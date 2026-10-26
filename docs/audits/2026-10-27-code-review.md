@@ -105,3 +105,24 @@ Verification: `go test -count=1 ./coding -run
 'TestBranchSummary|Test.*NavigateTree|TestDisposeCancels|TestCompactionAuth'`
 passed. The regression checks cancellation error propagation and that cancelled
 auth cannot persist a branch summary.
+
+## CR-061: P2 result-heavy tool chains defeated compaction fallback (fixed)
+
+Authority: D264's existing escalation contract. Upstream pi v1.4.0
+(`4a080252`), `core/compaction/compaction.ts`, supplies the preserved prompts
+and result rules but intentionally has no escalation. When every boundary
+separates a tool call from its result, D264 allows a last-resort weight split.
+For a small call and a large final result, the midpoint was the input's end;
+returning it yielded no smaller chunks and rejected a recoverable compaction.
+
+`TestCompactionSplitsResultHeavyToolPairAtLastResort` drives public `Compact`
+with a synthetic provider that can summarize either message but not both. It
+failed with the token-cap error after one request before the repair. The
+fallback now clamps to an interior boundary; it keeps the documented policy,
+including preferring a boundary outside a tool chain whenever one exists.
+The regression verifies whole-input failure followed by two successful chunks,
+previous-checkpoint merging and usage accounting for all three requests.
+
+Verification: `go test -count=1 ./coding -run
+'TestCompactionSplitsResultHeavy|TestSummarization|TestTurnPrefix|Test.*Compaction'`
+passed, including the existing paired/parallel-tool and bounded-retry controls.
