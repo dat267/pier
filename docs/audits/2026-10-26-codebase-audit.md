@@ -1346,3 +1346,22 @@ A Node probe of the pinned real `openaiProvider()` and selector selected
 Verification: the regression and adjacent auth/search tests pass; `just check`,
 `just cross` (six targets) and `just reference` pass. All fifteen existing color
 fixture families regenerate byte-identically, with no fixture changes.
+
+## CR-051: auth status retained the old unconfigured wording (fixed)
+
+The supported login list still rendered ` • unconfigured`; pi v1.4.0 renders
+` • not configured` after upstream `0f8740bb6`. This was an exact visible-render
+parity gap, not a credential-resolution or authentication failure.
+
+The auth generator now imports the pinned `oauth-selector.ts`, not the d1230ea
+legacy component. Regenerating `auth_golden.txt` made
+`go test -count=1 ./coding/interactive -run '^TestOAuthSelectorAgainstUpstreamGolden$'`
+fail on `oauth login-mixed@60` with `unconfigured` versus `not configured`.
+Changing the one status literal fixes the render. Configured status, auth-type
+labels, environment source labels and search controls remain unchanged.
+The old OAuth generator adapter dependency is gone; other explicitly documented
+legacy fixture contracts remain untouched.
+
+Verification: focused OAuth/search/login-dialog tests, `just check`, `just cross`
+(six targets), `just reference`, and all fifteen interactive golden byte checks
+pass. The only changed fixture values are the three unconfigured-provider renders.

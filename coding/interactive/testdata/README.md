@@ -34,9 +34,10 @@ Most components, theme algorithms and all TUI primitives execute from v1.4.0.
 Reconstructing the generators exposed older **non-color** contracts in existing
 fixtures. This color migration deliberately does not change those behaviors:
 
-- `first-time-setup.ts` and `oauth-selector.ts` execute from `d1230ea`, the
-  revision cited by the original port commits (`790fa48` and the original auth
-  port). This preserves detected-appearance setup and the `unconfigured` label.
+- `first-time-setup.ts` executes from `d1230ea`, the revision cited by original
+  port commit `790fa48`. This preserves the built-but-unwired dialog's detected
+  appearance setup. The OAuth selector now executes from v1.4.0, including its
+  `not configured` status wording (CR-051).
 - The generic call-fallback method in `tool-execution.ts` comes from `d1230ea`
   (original port `acd62d7`); all other methods execute from v1.4.0. Thus the
   throwing-call-renderer case keeps its name-only fallback, without adding args.

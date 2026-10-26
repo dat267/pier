@@ -425,7 +425,7 @@ var envVarRegex = regexp.MustCompile(`^[A-Z][A-Z0-9_]*(?:, [A-Z][A-Z0-9_]*)*$`)
 func (c *OAuthSelectorComponent) formatStatusIndicator(provider AuthSelectorProvider) string {
 	theme := ActiveTheme()
 	if provider.Status == nil {
-		return theme.Fg("muted", " • unconfigured")
+		return theme.Fg("muted", " • not configured")
 	}
 	if provider.Status.Type != provider.AuthType {
 		label := "API key configured"

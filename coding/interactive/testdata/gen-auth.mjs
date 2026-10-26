@@ -1,7 +1,7 @@
 // Reference: pi v1.4.0 (4a080252), session-search/oauth-selector/login-dialog.
-import { component, legacyComponent, corpus, entries, emit, ui } from "./golden-reference.mjs";
+import { component, corpus, entries, emit, ui } from "./golden-reference.mjs";
 const search = await component("session-selector-search");
-const { OAuthSelectorComponent, formatAuthSelectorProviderType } = await legacyComponent("oauth-selector");
+const { OAuthSelectorComponent, formatAuthSelectorProviderType } = await component("oauth-selector");
 const { LoginDialogComponent } = await component("login-dialog");
 const c = corpus("auth");
 const sessions = c.sessions.map((s) => ({ ...s, path: s.id, allMessagesText: s.text, modified: new Date(s.modified) }));

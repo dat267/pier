@@ -60,8 +60,8 @@ registerHooks({
 });
 export const upstream = (path) => import(pathToFileURL(resolve(root, "packages", path)).href);
 export const component = (name) => upstream(`coding-agent/src/modes/interactive/components/${name}.ts`);
-// These existing fixtures predate v1.4.0's setup choices, OAuth wording and call
-// fallback arguments. Keep their original contracts rather than bless unrelated
+// These existing fixtures predate v1.4.0's setup choices and call-fallback
+// arguments. Keep their original contracts rather than bless unrelated
 // behavior changes in a palette cleanup. Settings also retains its existing menu
 // surface and label casing. All rendering primitives/theme math still run from
 // v1.4.0. The original port commits cite d1230ea.
