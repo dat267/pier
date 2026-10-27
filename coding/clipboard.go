@@ -10,6 +10,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,9 +24,17 @@ import (
 // MaxOSC52EncodedLength matches upstream's OSC 52 payload cap.
 const MaxOSC52EncodedLength = 100_000
 
+// clipboardMaxBufferBytes is the reference's default maxBufferBytes for a
+// clipboard command's collected stdout (50 MiB). A reader that produces more
+// is aborted rather than buffered.
+const clipboardMaxBufferBytes = 50 * 1024 * 1024
+
 type clipboardCommandOptions struct {
 	input     string
 	timeoutMS int
+	// maxBufferBytes caps collected output like the reference's option; zero
+	// means the reference's 50 MiB default.
+	maxBufferBytes int
 }
 
 // runClipboardCommand runs one clipboard helper. A nil result means the
@@ -49,8 +58,28 @@ func runClipboardCommand(ctx context.Context, command string, args []string, opt
 	cmd.Stderr = nil
 	cmd.Env = os.Environ()
 	if options.input == "" {
-		output, err := cmd.Output()
+		// The reference aborts the reader once its collected output exceeds
+		// maxBufferBytes (clipboard-command.ts), so reading stops one byte past
+		// the cap instead of buffering an unbounded clipboard.
+		limit := options.maxBufferBytes
+		if limit == 0 {
+			limit = clipboardMaxBufferBytes
+		}
+		stdout, err := cmd.StdoutPipe()
 		if err != nil {
+			return nil
+		}
+		if err := cmd.Start(); err != nil {
+			return nil
+		}
+		output, readErr := io.ReadAll(io.LimitReader(stdout, int64(limit)+1))
+		if readErr != nil || len(output) > limit {
+			_ = cmd.Process.Kill()
+			_ = stdout.Close()
+			_ = cmd.Wait()
+			return nil
+		}
+		if err := cmd.Wait(); err != nil {
 			return nil
 		}
 		return output

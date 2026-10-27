@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -231,5 +232,30 @@ func TestCopyTextUnavailableOnDesktop(t *testing.T) {
 		run, plainLinuxFile, func(context.Context, string) error { return nil }, "hello")
 	if err == nil || !strings.Contains(err.Error(), "install `xclip` or `xsel`") {
 		t.Fatalf("err = %v", err)
+	}
+}
+
+// pi v1.4.0 clipboard-command.ts aborts a read whose output exceeds
+// maxBufferBytes (50 MiB by default) instead of collecting it. An oversized
+// clipboard must fail the reader, not be buffered in full.
+func TestClipboardReadAbortsOverMaxBuffer(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("sh fixture")
+	}
+	sh, err := exec.LookPath("sh")
+	if err != nil {
+		t.Skip("no sh")
+	}
+	oversized := runClipboardCommand(context.Background(), sh,
+		[]string{"-c", "printf '%064d' 0"},
+		clipboardCommandOptions{timeoutMS: 5000, maxBufferBytes: 32})
+	if oversized != nil {
+		t.Fatalf("oversized read returned %d bytes, want the abort", len(oversized))
+	}
+	fits := runClipboardCommand(context.Background(), sh,
+		[]string{"-c", "printf '%064d' 0"},
+		clipboardCommandOptions{timeoutMS: 5000, maxBufferBytes: 64})
+	if len(fits) != 64 {
+		t.Fatalf("within-limit read = %d bytes, want 64", len(fits))
 	}
 }
