@@ -162,10 +162,11 @@ func BenchmarkDecodeBuiltinCatalog(b *testing.B) {
 	}
 }
 
-// The embedded catalog is 1.4 MB; decoding it costs about 12 ms and 1.7 MB of
-// allocations on the reference development machine. It must stay out of package
-// init, because that cost lands on every process start — including `--version`,
-// which never reads the catalog. A package-level var that called GetBuiltinModels
+// The embedded catalog is 1.4 MB and must stay out of package init, because
+// decoding there adds work to every process start, including `--version`, which
+// never reads the catalog. BenchmarkDecodeBuiltinCatalog tracks the decode cost;
+// TestCatalogDecodeAllocationBudget guards against per-model JSON round trips.
+// A package-level var that called GetBuiltinModels
 // (builtinCopilotModelIDs) put it back in init once and cost every start 49 ms.
 //
 // The probe needs an untouched process: every other test in this package decodes

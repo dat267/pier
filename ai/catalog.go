@@ -37,23 +37,24 @@ type catalogModelEntry struct {
 }
 
 func (entry *catalogModelEntry) UnmarshalJSON(data []byte) error {
-	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(data, &fields); err != nil {
-		return err
-	}
-	entry.Compat = fields["compat"]
-	delete(fields, "compat")
-	modelJSON, err := json.Marshal(fields)
-	if err != nil {
-		return err
-	}
+	// Decode the descriptor once, retaining compat separately until the
+	// enclosing API selects its type. The alias also avoids the wire-model
+	// round-trip bookkeeping that embedded descriptors do not need.
 	type modelAlias Model
 	var model modelAlias
-	if err := json.Unmarshal(modelJSON, &model); err != nil {
+	wire := struct {
+		*modelAlias
+		Compat json.RawMessage `json:"compat"`
+	}{modelAlias: &model}
+	if err := json.Unmarshal(data, &wire); err != nil {
 		return err
 	}
+	entry.Compat = wire.Compat
 	entry.Model = Model(model)
-	entry.Model.captureSamplingParamOrder(data)
+	// Absent or empty parameter maps have no insertion order to retain.
+	if len(model.SamplingParams) > 0 || len(model.SamplingParamsByThinkingLevel) > 0 {
+		entry.Model.captureSamplingParamOrder(data)
+	}
 	return nil
 }
 
