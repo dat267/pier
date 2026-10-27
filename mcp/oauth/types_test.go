@@ -27,7 +27,9 @@ func TestParseOAuthTokensCoercesExpiresInLikeNumber(t *testing.T) {
 	if err != nil || empty.ExpiresIn != nil {
 		t.Fatalf("expires_in %q -> %+v, %v; want no expiry", "", empty, err)
 	}
-	for _, invalid := range []any{"soon", "Infinity", "NaN"} {
+	// Number() has no numeric separators: "1_0" is NaN there, while Go's
+	// ParseFloat reads it as 10.
+	for _, invalid := range []any{"soon", "Infinity", "NaN", "1_0", "+1_0", "0_1", "1_0.5", "1_0e1"} {
 		response := map[string]any{"access_token": "a", "token_type": "Bearer", "expires_in": invalid}
 		if _, err := ParseOAuthTokens(response); err == nil || err.Error() != "Invalid expires_in" {
 			t.Fatalf("expires_in %#v err = %v; want Invalid expires_in", invalid, err)

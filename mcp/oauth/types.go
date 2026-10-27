@@ -467,6 +467,11 @@ func jsNumberToFloat64(value any) (float64, bool) {
 		if text == "" {
 			return 0, true
 		}
+		// Number() has no numeric separators, but Go's ParseFloat accepts them:
+		// "1_0" is NaN upstream and 10 here.
+		if strings.ContainsRune(text, '_') {
+			return 0, false
+		}
 		if len(text) > 2 && text[0] == '0' {
 			base := 0
 			switch text[1] {
