@@ -1196,13 +1196,13 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D280)
+## Deliberate divergences from pi (D1–D281)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D280**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D281**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation. What is ported per area, and the review history behind each
 fix, is in [CHANGES.md](CHANGES.md).
 
@@ -3935,6 +3935,25 @@ narrow divergence from upstream; synchronous writes still clear under the
 manager lock.
 
 Test: `TestSettingsRetryRetainsChangesAfterOverlappingQueuedSaveFails`.
+
+### D281
+
+**An over-wide editor grapheme does not recursively wrap itself.**
+
+Reference: pi v1.4.0 (`4a080252`), `packages/tui/src/components/editor.ts`
+`wordWrapLine("界", 1)` recurses with identical input until JavaScript throws
+`RangeError: Maximum call stack size exceeded`. The corresponding Go path
+fatally exhausts its goroutine stack. `Editor.Render(2)` reaches this case
+because it reserves one column for the cursor.
+
+Pier only recursively unwraps paste markers, which are multi-grapheme atomic
+editing segments. An indivisible wide grapheme stays intact even when wider
+than the available layout column, avoiding non-progress recursion and preserving
+the pending input. Ordinary wrapping and visual splitting of paste markers are
+unchanged.
+
+Test: `TestEditorRendersWideGraphemeInNarrowTerminal` (normal-width control and
+isolated narrow render, with a child-only stack limit).
 
 ## Lock inventory
 

@@ -129,9 +129,10 @@ func WordWrapLine(line string, maxWidth int, preSegmented []editorSegment) []Tex
 			wrapOppIndex = -1
 		}
 
-		if gWidth > maxWidth {
-			// A single atomic segment wider than the width is re-wrapped
-			// (visual only; it stays atomic for editing).
+		if gWidth > maxWidth && isPasteMarker(grapheme) {
+			// D281: only paste markers merge multiple graphemes. An indivisible
+			// wide grapheme cannot become narrower by recursively wrapping itself.
+			// A marker's visual chunks remain atomic for editing.
 			subChunks := WordWrapLine(grapheme, maxWidth, nil)
 			for j := 0; j < len(subChunks)-1; j++ {
 				sc := subChunks[j]
