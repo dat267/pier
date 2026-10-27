@@ -196,9 +196,9 @@ func TestTreeSelectorLabels(t *testing.T) {
 	tui.SetKeybindings(appKeybindings.KeybindingsManager)
 	defer tui.SetKeybindings(previous)
 
-	entry := coding.SessionEntry{Type: "message"}
-	entry.ID = "a"
-	entry.Message = json.RawMessage(`{"role":"user","content":"hello"}`)
+	entry := coding.SessionEntry{Type: "message",
+		ID:      "a",
+		Message: json.RawMessage(`{"role":"user","content":"hello"}`)}
 	tree := []*coding.SessionTreeNode{{Entry: entry}}
 
 	var changes []string

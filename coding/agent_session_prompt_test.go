@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -276,7 +277,7 @@ func TestSendUserMessageAndCustomMessages(t *testing.T) {
 	// A custom message with triggerTurn runs a turn; without it while idle it is
 	// appended only.
 	custom := &ai.CustomMessage{Role: RoleCustom, Content: []byte(`{"text":"note"}`), Timestamp: 1}
-	if err := session.SendMessage(ctxpkg.Background(), custom, &SendMessageOptions{TriggerTurn: boolPtr(false)}); err != nil {
+	if err := session.SendMessage(ctxpkg.Background(), custom, &SendMessageOptions{TriggerTurn: new(false)}); err != nil {
 		t.Fatal(err)
 	}
 	entries := session.Sessions.GetEntries()
@@ -291,7 +292,7 @@ func TestSendUserMessageAndCustomMessages(t *testing.T) {
 	session.prompt().runActive = true
 	session.prompt().mu.Unlock()
 	buffered := &ai.CustomMessage{Role: RoleCustom, Content: []byte(`{"text":"deferred"}`), Timestamp: 2}
-	if err := session.SendMessage(ctxpkg.Background(), buffered, &SendMessageOptions{TriggerTurn: boolPtr(false)}); err != nil {
+	if err := session.SendMessage(ctxpkg.Background(), buffered, &SendMessageOptions{TriggerTurn: new(false)}); err != nil {
 		t.Fatal(err)
 	}
 	if prompts.Load() != before {
@@ -414,8 +415,8 @@ func firstUserMessage(messages []ai.Message) *ai.UserMessage {
 
 // lastUserMessage returns the most recent user message in a transcript.
 func lastUserMessage(messages []ai.Message) *ai.UserMessage {
-	for index := len(messages) - 1; index >= 0; index-- {
-		if user, ok := messages[index].(*ai.UserMessage); ok {
+	for _, message := range slices.Backward(messages) {
+		if user, ok := message.(*ai.UserMessage); ok {
 			return user
 		}
 	}

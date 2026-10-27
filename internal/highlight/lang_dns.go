@@ -17,18 +17,16 @@ func DNS() *Language {
 	return &Language{
 		Name:    "DNS Zone",
 		Aliases: []string{"bind", "zone"},
-		Mode: Mode{
-			Keywords: Keywords{
-				"keyword": "IN A AAAA AFSDB APL CAA CDNSKEY CDS CERT CNAME DHCID DLV DNAME DNSKEY DS HIP IPSECKEY KEY KX " +
-					"LOC MX NAPTR NS NSEC NSEC3 NSEC3PARAM PTR RRSIG RP SIG SOA SRV SSHFP TA TKEY TLSA TSIG TXT",
-			},
-			Contains: []*Mode{
-				comment,
-				{ClassName: "meta", Begin: `^\$(TTL|GENERATE|INCLUDE|ORIGIN)\b`},
-				{ClassName: "number", Begin: ipv6},
-				{ClassName: "number", Begin: ipv4},
-				Variant(NumberMode, func(m *Mode) { m.Begin = `\b\d+[dhwm]?` }),
-			},
+		Keywords: Keywords{
+			"keyword": "IN A AAAA AFSDB APL CAA CDNSKEY CDS CERT CNAME DHCID DLV DNAME DNSKEY DS HIP IPSECKEY KEY KX " +
+				"LOC MX NAPTR NS NSEC NSEC3 NSEC3PARAM PTR RRSIG RP SIG SOA SRV SSHFP TA TKEY TLSA TSIG TXT",
+		},
+		Contains: []*Mode{
+			comment,
+			{ClassName: "meta", Begin: `^\$(TTL|GENERATE|INCLUDE|ORIGIN)\b`},
+			{ClassName: "number", Begin: ipv6},
+			{ClassName: "number", Begin: ipv4},
+			Variant(NumberMode, func(m *Mode) { m.Begin = `\b\d+[dhwm]?` }),
 		},
 	}
 }

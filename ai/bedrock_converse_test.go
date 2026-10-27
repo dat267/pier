@@ -86,7 +86,7 @@ func TestBedrockThinkingFields(t *testing.T) {
 		t.Fatalf("thinking = %#v", thinking)
 	}
 	// Custom budgets apply to token-based levels; xhigh/max clamp to high.
-	options.ThinkingBudgets = &ThinkingBudgets{High: intPtr(4096)}
+	options.ThinkingBudgets = &ThinkingBudgets{High: new(4096)}
 	fields = BuildBedrockAdditionalModelRequestFields(model, options)
 	thinking, _ = fields["thinking"].(map[string]any)
 	if thinking["budget_tokens"] != 4096 {
@@ -103,7 +103,7 @@ func TestBedrockThinkingFields(t *testing.T) {
 	if len(beta) != 1 || beta[0] != "interleaved-thinking-2025-05-14" {
 		t.Fatalf("beta = %#v", fields["anthropic_beta"])
 	}
-	options.InterleavedThinking = boolPtrForBedrock(false)
+	options.InterleavedThinking = new(false)
 	fields = BuildBedrockAdditionalModelRequestFields(model, options)
 	if fields["anthropic_beta"] != nil {
 		t.Fatalf("interleaved thinking was disabled: %#v", fields["anthropic_beta"])
@@ -121,9 +121,8 @@ func TestBedrockThinkingFields(t *testing.T) {
 		t.Fatalf("output_config = %#v", config)
 	}
 	// GovCloud omits the display field.
-	fields = BuildBedrockAdditionalModelRequestFields(adaptive, &BedrockOptions{StreamOptions: StreamOptions{
-		Env: ProviderEnv{"AWS_REGION": "us-gov-west-1"},
-	}, Reasoning: ThinkHigh})
+	fields = BuildBedrockAdditionalModelRequestFields(adaptive, &BedrockOptions{
+		Env: ProviderEnv{"AWS_REGION": "us-gov-west-1"}, Reasoning: ThinkHigh})
 	thinking, _ = fields["thinking"].(map[string]any)
 	if _, hasDisplay := thinking["display"]; hasDisplay {
 		t.Fatalf("GovCloud must omit display: %#v", thinking)
@@ -145,9 +144,8 @@ func TestBedrockThinkingFields(t *testing.T) {
 	if fields := BuildBedrockAdditionalModelRequestFields(adaptive, &BedrockOptions{Reasoning: ThinkHigh}); fields["anthropic_beta"] != nil {
 		t.Fatalf("opus-4-6 must not send block binding: %#v", fields)
 	}
-	fields = BuildBedrockAdditionalModelRequestFields(bindingModel, &BedrockOptions{StreamOptions: StreamOptions{
-		Env: ProviderEnv{"AWS_REGION": "us-gov-west-1"},
-	}, Reasoning: ThinkHigh})
+	fields = BuildBedrockAdditionalModelRequestFields(bindingModel, &BedrockOptions{
+		Env: ProviderEnv{"AWS_REGION": "us-gov-west-1"}, Reasoning: ThinkHigh})
 	if fields["anthropic_beta"] != nil {
 		t.Fatalf("GovCloud must skip block binding: %#v", fields)
 	}
@@ -223,8 +221,6 @@ func TestBedrockOpenAIReasoningFields(t *testing.T) {
 		t.Fatalf("reasoning-off fields = %#v; want nil", fields)
 	}
 }
-
-func boolPtrForBedrock(value bool) *bool { return &value }
 
 func TestBedrockMessageConversion(t *testing.T) {
 	model := bedrockTestModel("")
@@ -615,16 +611,14 @@ func TestBedrockStreamFold(t *testing.T) {
 		&SystemMessage{Content: StringOrBlocks{Text: "be helpful"}},
 		&UserMessage{Content: StringOrBlocks{Text: "hello"}, Timestamp: 1},
 	}}, &BedrockOptions{
-		StreamOptions: StreamOptions{
-			APIKey: "bearer-token", Env: ProviderEnv{
-				"AWS_ACCESS_KEY_ID": "AKID", "AWS_SECRET_ACCESS_KEY": "SECRET",
-			},
-			OnProviderStreamEvent: func(data json.RawMessage, eventModel *Model) {
-				if eventModel != model || !json.Valid(data) {
-					t.Errorf("provider callback data/model = %s/%p", data, eventModel)
-				}
-				providerEventCount++
-			},
+		APIKey: "bearer-token", Env: ProviderEnv{
+			"AWS_ACCESS_KEY_ID": "AKID", "AWS_SECRET_ACCESS_KEY": "SECRET",
+		},
+		OnProviderStreamEvent: func(data json.RawMessage, eventModel *Model) {
+			if eventModel != model || !json.Valid(data) {
+				t.Errorf("provider callback data/model = %s/%p", data, eventModel)
+			}
+			providerEventCount++
 		},
 		BearerToken: "bearer-token",
 		Reasoning:   ThinkHigh,
@@ -703,9 +697,9 @@ func TestBedrockStreamSigV4AndErrors(t *testing.T) {
 	model := bedrockTestModel(server.URL)
 	stream := StreamBedrockConverse(model, TranscriptContext{Messages: []Message{
 		&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
-	}}, &BedrockOptions{StreamOptions: StreamOptions{Env: ProviderEnv{
+	}}, &BedrockOptions{Env: ProviderEnv{
 		"AWS_ACCESS_KEY_ID": "AKID", "AWS_SECRET_ACCESS_KEY": "SECRET", "AWS_REGION": "us-west-2",
-	}}})
+	}})
 	message, err := stream.Result(context.Background())
 	if err != nil {
 		t.Fatalf("err = %v", err)
@@ -804,7 +798,7 @@ func TestBedrockStreamRedactedReasoning(t *testing.T) {
 			Provider: replayModel.Provider, API: replayModel.API, Model: replayModel.ID,
 			Content: ContentList{ThinkingContent{
 				Thinking: "[Reasoning redacted]", Redacted: true,
-				ThinkingSignature: strPtrForBedrock(base64.StdEncoding.EncodeToString(redacted)),
+				ThinkingSignature: new(base64.StdEncoding.EncodeToString(redacted)),
 			}},
 		},
 	}}, &BedrockOptions{BearerToken: "token"})
@@ -820,8 +814,6 @@ func TestBedrockStreamRedactedReasoning(t *testing.T) {
 		t.Fatalf("payload = %#v", body)
 	}
 }
-
-func strPtrForBedrock(value string) *string { return &value }
 
 func TestBedrockMessageStartValidation(t *testing.T) {
 	frames := [][]byte{bedrockEventFrame("messageStart", map[string]any{"role": "user"})}

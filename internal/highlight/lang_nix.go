@@ -44,11 +44,9 @@ func Nix() *Language {
 	antiquote.Contains = expressions
 
 	return &Language{
-		Name:    "Nix",
-		Aliases: []string{"nixos"},
-		Mode: Mode{
-			Keywords: keywords,
-			Contains: expressions,
-		},
+		Name:     "Nix",
+		Aliases:  []string{"nixos"},
+		Keywords: keywords,
+		Contains: expressions,
 	}
 }

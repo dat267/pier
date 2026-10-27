@@ -179,10 +179,8 @@ func TestFormatResumeCommand(t *testing.T) {
 	}
 
 	// Non-persisted managers produce no command.
-	notPersisted := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: boolPtr(false)})
+	notPersisted := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: new(false)})
 	if command := FormatResumeCommand(notPersisted, "", true); command != "" {
 		t.Fatalf("non-persisted command = %q", command)
 	}
 }
-
-func boolPtr(value bool) *bool { return &value }

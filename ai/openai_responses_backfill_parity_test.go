@@ -21,7 +21,7 @@ func TestResponsesBackfillsEncryptedReasoningContent(t *testing.T) {
 		model.BaseURL = server.URL
 		stream := StreamOpenAIResponses(model, NormalizeContext(Context{
 			Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-		}), &OpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+		}), &OpenAIResponsesOptions{APIKey: "k"})
 		msg, err := stream.Result(context.Background())
 		if err != nil {
 			t.Fatal(err)

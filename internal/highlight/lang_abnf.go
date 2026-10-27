@@ -17,22 +17,20 @@ func ABNF() *Language {
 		}
 	}
 	return &Language{
-		Name: "Augmented Backus-Naur Form",
-		Mode: Mode{
-			Illegal: "[!@#$^&',?+~`|:]",
-			Keywords: Keywords{
-				"keyword": "ALPHA BIT CHAR CR CRLF CTL DIGIT DQUOTE HEXDIG HTAB LF LWSP OCTET SP VCHAR WSP",
-			},
-			Contains: []*Mode{
-				ruleDeclaration,
-				CommentMode(`;`, `$`),
-				{ClassName: "symbol", Begin: `%b[0-1]+(-[0-1]+|(\.[0-1]+)+){0,1}`},
-				{ClassName: "symbol", Begin: `%d[0-9]+(-[0-9]+|(\.[0-9]+)+){0,1}`},
-				{ClassName: "symbol", Begin: `%x[0-9A-F]+(-[0-9A-F]+|(\.[0-9A-F]+)+){0,1}`},
-				{ClassName: "symbol", Begin: `%[si]`},
-				QuoteStringMode,
-				NumberMode,
-			},
+		Name:    "Augmented Backus-Naur Form",
+		Illegal: "[!@#$^&',?+~`|:]",
+		Keywords: Keywords{
+			"keyword": "ALPHA BIT CHAR CR CRLF CTL DIGIT DQUOTE HEXDIG HTAB LF LWSP OCTET SP VCHAR WSP",
+		},
+		Contains: []*Mode{
+			ruleDeclaration,
+			CommentMode(`;`, `$`),
+			{ClassName: "symbol", Begin: `%b[0-1]+(-[0-1]+|(\.[0-1]+)+){0,1}`},
+			{ClassName: "symbol", Begin: `%d[0-9]+(-[0-9]+|(\.[0-9]+)+){0,1}`},
+			{ClassName: "symbol", Begin: `%x[0-9A-F]+(-[0-9A-F]+|(\.[0-9A-F]+)+){0,1}`},
+			{ClassName: "symbol", Begin: `%[si]`},
+			QuoteStringMode,
+			NumberMode,
 		},
 	}
 }

@@ -54,7 +54,7 @@ func ParseFrontmatter(content string) ParsedFrontmatter {
 	yamlString := normalized[4 : 3+endIndex+1]
 	body := ai.JSTrim(normalized[3+endIndex+4:])
 
-	for _, line := range strings.Split(yamlString, "\n") {
+	for line := range strings.SplitSeq(yamlString, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
@@ -384,9 +384,7 @@ func scanSkillTree(rootDir string, source string) map[string]*skillScanDir {
 	walk = func(dir string, includeRootFiles bool, inheritedRules []skillIgnoreRule) {
 		// Add happens while the parent's count is still held, so it cannot race
 		// the Wait() below (the standard WaitGroup reuse rule).
-		wait.Add(1)
-		go func() {
-			defer wait.Done()
+		wait.Go(func() {
 			sem <- struct{}{}
 			scan := readSkillDir(dir, rootDir, source, includeRootFiles, inheritedRules)
 			<-sem
@@ -400,7 +398,7 @@ func scanSkillTree(rootDir string, source string) map[string]*skillScanDir {
 					walk(item.subdir, false, scan.rules)
 				}
 			}
-		}()
+		})
 	}
 	walk(rootDir, true, nil)
 	wait.Wait()
@@ -428,7 +426,7 @@ func skillIgnoreRulesForDir(dir, root string) []skillIgnoreRule {
 		if err != nil {
 			continue
 		}
-		for _, line := range strings.Split(string(content), "\n") {
+		for line := range strings.SplitSeq(string(content), "\n") {
 			rule, ok := parseSkillIgnoreRule(strings.TrimSuffix(line, "\r"), relativeDir)
 			if ok {
 				rules = append(rules, rule)

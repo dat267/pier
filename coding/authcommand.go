@@ -438,8 +438,7 @@ func ResolveCredentialForPrint(args *Args, runtime *ModelRuntime, kind AuthComma
 }
 
 func authCommandErrorMessage(err error, fallback string) string {
-	var commandErr *AuthCommandError
-	if errors.As(err, &commandErr) {
+	if commandErr, ok := errors.AsType[*AuthCommandError](err); ok {
 		return commandErr.Message
 	}
 	return fallback

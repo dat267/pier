@@ -23,8 +23,8 @@ func TestBedrockCallbackFailuresStayInStream(t *testing.T) {
 		}
 		server := bedrockTestServer(t, frames, nil, nil)
 		options := &BedrockOptions{
-			StreamOptions: StreamOptions{APIKey: "test-key", Env: ProviderEnv{"AWS_REGION": "us-east-1"}},
-			BearerToken:   "test-key",
+			APIKey: "test-key", Env: ProviderEnv{"AWS_REGION": "us-east-1"},
+			BearerToken: "test-key",
 		}
 		switch mode {
 		case "payload":

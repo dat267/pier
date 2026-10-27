@@ -70,7 +70,7 @@ func resolverFallbackPath(goos string, stockExists bool, getenv func(string) str
 // bare address gets the standard port.
 func nameserversFromResolvConf(body string) []string {
 	var servers []string
-	for _, line := range strings.Split(body, "\n") {
+	for line := range strings.SplitSeq(body, "\n") {
 		if index := strings.IndexAny(line, "#;"); index >= 0 {
 			line = line[:index]
 		}

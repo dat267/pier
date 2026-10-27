@@ -377,13 +377,11 @@ func buildJS(typescript bool) *Language {
 		aliases = []string{"ts", "tsx"}
 	}
 	return &Language{
-		Name:    name,
-		Aliases: aliases,
-		Mode: Mode{
-			Keywords: kw,
-			Illegal:  `#[^$_A-Za-z]`,
-			Contains: contains,
-		},
+		Name:     name,
+		Aliases:  aliases,
+		Keywords: kw,
+		Illegal:  `#[^$_A-Za-z]`,
+		Contains: contains,
 	}
 }
 

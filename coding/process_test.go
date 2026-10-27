@@ -13,12 +13,10 @@ func TestProcessTreeGuardKillIsConcurrent(t *testing.T) {
 	guard := newProcessTreeGuard(1 << 30) // a pid that cannot exist
 	defer guard.Release()
 	var wg sync.WaitGroup
-	for i := 0; i < 32; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 32 {
+		wg.Go(func() {
 			guard.Kill()
-		}()
+		})
 	}
 	wg.Wait()
 }

@@ -140,9 +140,7 @@ func TestAzureResponsesRequest(t *testing.T) {
 	t.Setenv("AZURE_OPENAI_API_VERSION", "")
 
 	stream := StreamAzureOpenAIResponses(model, context, &AzureOpenAIResponsesOptions{
-		OpenAIResponsesOptions: OpenAIResponsesOptions{
-			StreamOptions: StreamOptions{APIKey: "test-api-key", SessionID: strings.Repeat("x", 67)},
-		},
+		APIKey: "test-api-key", SessionID: strings.Repeat("x", 67),
 	})
 	message, err := stream.Result(ctxpkg.Background())
 	if err != nil {
@@ -216,7 +214,7 @@ func TestAzureResponsesDeploymentNameInBody(t *testing.T) {
 	t.Setenv("AZURE_OPENAI_DEPLOYMENT_NAME_MAP", "gpt-4o-mini=deployment-name")
 
 	stream := StreamAzureOpenAIResponses(model, context, &AzureOpenAIResponsesOptions{
-		OpenAIResponsesOptions: OpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "key"}},
+		APIKey: "key",
 	})
 	if _, err := stream.Result(ctxpkg.Background()); err != nil {
 		t.Fatalf("err = %v", err)
@@ -248,8 +246,8 @@ func TestAzureResponsesReasoningEffort(t *testing.T) {
 	t.Setenv("AZURE_OPENAI_RESOURCE_NAME", "")
 
 	stream := StreamAzureOpenAIResponsesSimple(model, context, &SimpleStreamOptions{
-		StreamOptions: StreamOptions{APIKey: "key"},
-		Reasoning:     ThinkHigh,
+		APIKey:    "key",
+		Reasoning: ThinkHigh,
 	})
 	if _, err := stream.Result(ctxpkg.Background()); err != nil {
 		t.Fatalf("err = %v", err)

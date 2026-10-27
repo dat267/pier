@@ -260,12 +260,10 @@ func Ruby() *Language {
 	contains = append(contains, defaultContains...)
 
 	return &Language{
-		Name:    "Ruby",
-		Aliases: []string{"rb", "gemspec", "podspec", "thor", "irb"},
-		Mode: Mode{
-			Keywords: rubyKeywords,
-			Illegal:  `\/\*`,
-			Contains: contains,
-		},
+		Name:     "Ruby",
+		Aliases:  []string{"rb", "gemspec", "podspec", "thor", "irb"},
+		Keywords: rubyKeywords,
+		Illegal:  `\/\*`,
+		Contains: contains,
 	}
 }

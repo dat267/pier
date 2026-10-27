@@ -91,8 +91,6 @@ func newMcpManager(ctx context.Context, options McpManagerOptions) (*McpManager,
 	connections := make([]*McpServerConnection, len(entries))
 	var wait sync.WaitGroup
 	for index, entry := range entries {
-		entry := entry
-		index := index
 		connection := NewMcpServerConnection(McpServerConnectionOptions{
 			Entry:           entry,
 			Cwd:             options.Cwd,
@@ -102,11 +100,9 @@ func newMcpManager(ctx context.Context, options McpManagerOptions) (*McpManager,
 			OnTools:         func(*McpServerConnection) { manager.rebuildTools() },
 		})
 		connections[index] = connection
-		wait.Add(1)
-		go func() {
-			defer wait.Done()
+		wait.Go(func() {
 			_, _ = connection.GetClient(ctx)
-		}()
+		})
 	}
 	// The connections publish before any can settle, so both variants see the
 	// full set immediately; the write takes the manager mutex because a connect

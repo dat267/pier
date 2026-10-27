@@ -157,12 +157,12 @@ func splitThinkingSuffix(text string) (string, ai.ThinkingLevel, bool) {
 }
 
 func splitProviderPrefix(text string, models []*ai.Model) (string, string, bool) {
-	slashIndex := strings.Index(text, "/")
-	if slashIndex == -1 {
+	before, after, ok := strings.Cut(text, "/")
+	if !ok {
 		return "", "", false
 	}
-	prefix := ai.JSLower(ai.JSTrim(text[:slashIndex]))
-	modelText := ai.JSTrim(text[slashIndex+1:])
+	prefix := ai.JSLower(ai.JSTrim(before))
+	modelText := ai.JSTrim(after)
 	if prefix == "" || modelText == "" {
 		return "", "", false
 	}

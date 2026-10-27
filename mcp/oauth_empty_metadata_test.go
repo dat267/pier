@@ -13,7 +13,7 @@ import (
 func TestOAuthEmptyConfiguredMetadataURLUsesDiscovery(t *testing.T) {
 	provider := newTestProvider("http://127.0.0.1/callback")
 	provider.client = &oauth.OAuthClientInformationFull{
-		OAuthClientInformation: oauth.OAuthClientInformation{ClientID: "client"},
+		ClientID: "client",
 	}
 	provider.discovery = &oauth.OAuthDiscoveryState{
 		AuthorizationServerURL: "https://idp.example",

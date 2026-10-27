@@ -22,10 +22,8 @@ func Shell() *Language {
 	return &Language{
 		Name:    "Shell Session",
 		Aliases: []string{"console"},
-		Mode: Mode{
-			Contains: []*Mode{
-				{ClassName: "meta", Begin: `^\s{0,3}[/~\w\d[\]()@-]*[>%$#]`, Starts: starts},
-			},
+		Contains: []*Mode{
+			{ClassName: "meta", Begin: `^\s{0,3}[/~\w\d[\]()@-]*[>%$#]`, Starts: starts},
 		},
 	}
 }

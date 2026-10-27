@@ -88,7 +88,7 @@ func GetProjectTrustOptions(cwd string, includeSessionOnly bool) []ProjectTrustO
 	options := []ProjectTrustOption{{
 		Label:     "Trust",
 		Trusted:   true,
-		Updates:   []ProjectTrustUpdate{{Path: trustPath, Decision: boolPointer(true)}},
+		Updates:   []ProjectTrustUpdate{{Path: trustPath, Decision: new(true)}},
 		SavedPath: trustPath,
 	}}
 	if parentPath, ok := GetProjectTrustParentPath(cwd); ok {
@@ -96,7 +96,7 @@ func GetProjectTrustOptions(cwd string, includeSessionOnly bool) []ProjectTrustO
 			Label:   fmt.Sprintf("Trust parent folder (%s)", parentPath),
 			Trusted: true,
 			Updates: []ProjectTrustUpdate{
-				{Path: parentPath, Decision: boolPointer(true)},
+				{Path: parentPath, Decision: new(true)},
 				{Path: trustPath, Decision: nil},
 			},
 			SavedPath: parentPath,
@@ -108,7 +108,7 @@ func GetProjectTrustOptions(cwd string, includeSessionOnly bool) []ProjectTrustO
 	options = append(options, ProjectTrustOption{
 		Label:     "Do not trust",
 		Trusted:   false,
-		Updates:   []ProjectTrustUpdate{{Path: trustPath, Decision: boolPointer(false)}},
+		Updates:   []ProjectTrustUpdate{{Path: trustPath, Decision: new(false)}},
 		SavedPath: trustPath,
 	})
 	if includeSessionOnly {
@@ -116,8 +116,6 @@ func GetProjectTrustOptions(cwd string, includeSessionOnly bool) []ProjectTrustO
 	}
 	return options
 }
-
-func boolPointer(value bool) *bool { return &value }
 
 // sleepMilliseconds sleeps for the trust-store retry delay.
 func sleepMilliseconds(ms int) { time.Sleep(time.Duration(ms) * time.Millisecond) }
@@ -148,7 +146,7 @@ func readTrustFile(path string) (trustFile, error) {
 	for _, key := range keys {
 		switch value := object[key].(type) {
 		case bool:
-			data[key] = boolPointer(value)
+			data[key] = new(value)
 		case nil:
 			data[key] = nil
 		default:
@@ -270,7 +268,7 @@ func (s *ProjectTrustStore) Get(cwd string) ProjectTrustDecision {
 	if entry == nil {
 		return nil
 	}
-	return boolPointer(entry.Decision)
+	return new(entry.Decision)
 }
 
 // GetEntry returns the nearest trust entry for a cwd.
@@ -309,7 +307,7 @@ func (s *ProjectTrustStore) SetMany(decisions []ProjectTrustUpdate) error {
 			delete(data, key)
 			continue
 		}
-		data[key] = boolPointer(*update.Decision)
+		data[key] = new(*update.Decision)
 	}
 	return writeTrustFile(s.trustPath, data)
 }

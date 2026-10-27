@@ -40,23 +40,21 @@ func Django() *Language {
 		Name:            "Django",
 		Aliases:         []string{"jinja"},
 		CaseInsensitive: true,
-		Mode: Mode{
-			SubLanguage: []string{"xml"},
-			Contains: []*Mode{
-				CommentMode(`\{%\s*comment\s*%\}`, `\{%\s*endcomment\s*%\}`),
-				CommentMode(`\{#`, `#\}`),
-				{
-					ClassName: "template-tag",
-					Begin:     `\{%`,
-					End:       `%\}`,
-					Contains:  []*Mode{nameMode},
-				},
-				{
-					ClassName: "template-variable",
-					Begin:     `\{\{`,
-					End:       `\}\}`,
-					Contains:  []*Mode{filter},
-				},
+		SubLanguage:     []string{"xml"},
+		Contains: []*Mode{
+			CommentMode(`\{%\s*comment\s*%\}`, `\{%\s*endcomment\s*%\}`),
+			CommentMode(`\{#`, `#\}`),
+			{
+				ClassName: "template-tag",
+				Begin:     `\{%`,
+				End:       `%\}`,
+				Contains:  []*Mode{nameMode},
+			},
+			{
+				ClassName: "template-variable",
+				Begin:     `\{\{`,
+				End:       `\}\}`,
+				Contains:  []*Mode{filter},
 			},
 		},
 	}

@@ -1379,7 +1379,7 @@ func StreamBedrockConverseSimple(model *Model, context TranscriptContext, option
 	adjustedMaxTokens, thinkingBudget := AdjustMaxTokensForThinking(
 		baseMaxTokens, int(model.MaxTokens), options.Reasoning, options.ThinkingBudgets)
 	maxTokens := ClampMaxTokensToContext(model, context, adjustedMaxTokens)
-	bedrockOptions.MaxTokens = intPtr(maxTokens)
+	bedrockOptions.MaxTokens = new(maxTokens)
 
 	budgets := ThinkingBudgets{}
 	if options.ThinkingBudgets != nil {
@@ -1387,19 +1387,16 @@ func StreamBedrockConverseSimple(model *Model, context TranscriptContext, option
 	}
 	clampedReasoning := ClampReasoning(options.Reasoning)
 	room := max(0, maxTokens-1024)
-	budget := thinkingBudget
-	if budget > room {
-		budget = room
-	}
+	budget := min(thinkingBudget, room)
 	switch clampedReasoning {
 	case ThinkMinimal:
-		budgets.Minimal = intPtr(budget)
+		budgets.Minimal = new(budget)
 	case ThinkLow:
-		budgets.Low = intPtr(budget)
+		budgets.Low = new(budget)
 	case ThinkMedium:
-		budgets.Medium = intPtr(budget)
+		budgets.Medium = new(budget)
 	case ThinkHigh, ThinkXHigh, ThinkMax:
-		budgets.High = intPtr(budget)
+		budgets.High = new(budget)
 	}
 	bedrockOptions.ThinkingBudgets = &budgets
 	return StreamBedrockConverse(model, context, bedrockOptions)

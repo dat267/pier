@@ -13,8 +13,8 @@ func additionalToolsTestModel() *Model {
 	model := testResponsesModel()
 	model.ID = "gpt-5.4"
 	model.Compat = &ModelCompat{OpenAIResponses: &OpenAIResponsesCompat{
-		SupportsMidConvoSystemMessages: boolPtrT(true),
-		SupportsAdditionalTools:        boolPtrT(true),
+		SupportsMidConvoSystemMessages: new(true),
+		SupportsAdditionalTools:        new(true),
 	}}
 	return model
 }
@@ -23,8 +23,8 @@ func toolSearchTestModel() *Model {
 	model := testResponsesModel()
 	model.ID = "gpt-5.4"
 	model.Compat = &ModelCompat{OpenAIResponses: &OpenAIResponsesCompat{
-		SupportsMidConvoSystemMessages: boolPtrT(true),
-		SupportsToolSearch:             boolPtrT(true),
+		SupportsMidConvoSystemMessages: new(true),
+		SupportsToolSearch:             new(true),
 	}}
 	return model
 }
@@ -75,7 +75,7 @@ func (item toolChangeItem) toolNames(t *testing.T) []string {
 func responsesPayload(t *testing.T, model *Model, messages []Message) ([]toolChangeItem, []string) {
 	t.Helper()
 	params, err := BuildOpenAIResponsesParams(model, NormalizeContext(Context{Messages: messages}),
-		&OpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "sk-test"}}, nil, nil)
+		&OpenAIResponsesOptions{APIKey: "sk-test"}, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -384,8 +384,8 @@ func TestCompletionsKimiToolMessagesAnchorAfterFolding(t *testing.T) {
 		BaseURL: "https://api.moonshot.ai/v1", Input: []string{"text"},
 		ContextWindow: 256000, MaxTokens: 8000,
 		Compat: &ModelCompat{OpenAICompletions: &OpenAICompletionsCompat{
-			SupportsMidConvoSystemMessages: boolPtrT(true),
-			SupportsMidConvoToolAdditions:  boolPtrT(true),
+			SupportsMidConvoSystemMessages: new(true),
+			SupportsMidConvoToolAdditions:  new(true),
 		}},
 	}
 	params, err := BuildOpenAICompletionsParams(model, NormalizeContext(Context{Messages: []Message{

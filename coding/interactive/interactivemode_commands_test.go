@@ -82,7 +82,7 @@ func newCommandTestWiring(t *testing.T) (*CommandWiring, *commandTestSession, *c
 		stats:   &coding.SessionStats{SessionID: "sess-1", TotalMessages: 3, UserMessages: 1, AssistantMessages: 1, ToolCalls: 1, ToolResults: 1},
 		runtime: runtime,
 	}
-	manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: boolPtr(false)})
+	manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: new(false)})
 	wiring := &CommandWiring{
 		Chat:        &tui.Container{},
 		Settings:    settings,
@@ -391,7 +391,7 @@ func TestSessionCommandRunsTheScansOffTheUILoop(t *testing.T) {
 	screen := tui.NewMainScreen(&fakeRendererTerminal{width: 80, height: 24}, false, "")
 	screen.DisableAutoRender()
 	wiring.UI = screen
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		wiring.SessionInfo.AppendMessage(ai.Message(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}}))
 	}
 

@@ -189,10 +189,8 @@ func C() *Language {
 		Name:              "C",
 		Aliases:           []string{"h"},
 		DisableAutodetect: true,
-		Mode: Mode{
-			Keywords: cppKeywords,
-			Illegal:  `</`,
-			Contains: contains,
-		},
+		Keywords:          cppKeywords,
+		Illegal:           `</`,
+		Contains:          contains,
 	}
 }

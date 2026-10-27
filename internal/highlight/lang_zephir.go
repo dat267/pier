@@ -64,32 +64,30 @@ func Zephir() *Language {
 	}
 
 	return &Language{
-		Name:    "Zephir",
-		Aliases: []string{"zep"},
-		Mode: Mode{
-			Keywords: keywords,
-			Contains: []*Mode{
-				CLineCommentMode,
-				blockComment,
-				heredoc,
-				{Begin: `(::|->)+[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*`},
-				function,
-				classMode,
-				{
-					BeginKeywords: "namespace",
-					End:           `;`,
-					Illegal:       `[.']`,
-					Contains:      []*Mode{UnderscoreTitleMode},
-				},
-				{
-					BeginKeywords: "use",
-					End:           `;`,
-					Contains:      []*Mode{UnderscoreTitleMode},
-				},
-				{Begin: `=>`},
-				strBase,
-				number,
+		Name:     "Zephir",
+		Aliases:  []string{"zep"},
+		Keywords: keywords,
+		Contains: []*Mode{
+			CLineCommentMode,
+			blockComment,
+			heredoc,
+			{Begin: `(::|->)+[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*`},
+			function,
+			classMode,
+			{
+				BeginKeywords: "namespace",
+				End:           `;`,
+				Illegal:       `[.']`,
+				Contains:      []*Mode{UnderscoreTitleMode},
 			},
+			{
+				BeginKeywords: "use",
+				End:           `;`,
+				Contains:      []*Mode{UnderscoreTitleMode},
+			},
+			{Begin: `=>`},
+			strBase,
+			number,
 		},
 	}
 }

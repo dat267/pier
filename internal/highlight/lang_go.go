@@ -13,44 +13,42 @@ func GoLanguage() *Language {
 		"built_in": "append cap close complex copy imag len make new panic print println real recover delete",
 	}
 	return &Language{
-		Name:    "Go",
-		Aliases: []string{"golang"},
-		Mode: Mode{
-			Keywords: keywords,
-			Illegal:  `</`,
-			Contains: []*Mode{
-				CLineCommentMode,
-				CBlockCommentMode,
-				{
-					ClassName: "string",
-					Variants: []*Mode{
-						Variant(QuoteStringMode, func(*Mode) {}),
-						Variant(AposStringMode, func(*Mode) {}),
-						{ClassName: "string", Begin: "`", End: "`"},
-					},
+		Name:     "Go",
+		Aliases:  []string{"golang"},
+		Keywords: keywords,
+		Illegal:  `</`,
+		Contains: []*Mode{
+			CLineCommentMode,
+			CBlockCommentMode,
+			{
+				ClassName: "string",
+				Variants: []*Mode{
+					Variant(QuoteStringMode, func(*Mode) {}),
+					Variant(AposStringMode, func(*Mode) {}),
+					{ClassName: "string", Begin: "`", End: "`"},
 				},
-				{
-					ClassName: "number",
-					Variants: []*Mode{
-						Variant(CNumberMode, func(m *Mode) { m.Begin = CNumberRe + `[i]`; m.Relevance = 1 }),
-						Variant(CNumberMode, func(*Mode) {}),
-					},
+			},
+			{
+				ClassName: "number",
+				Variants: []*Mode{
+					Variant(CNumberMode, func(m *Mode) { m.Begin = CNumberRe + `[i]`; m.Relevance = 1 }),
+					Variant(CNumberMode, func(*Mode) {}),
 				},
-				{Begin: `:=`},
-				{
-					ClassName:     "function",
-					BeginKeywords: "func",
-					End:           `\s*(\{|$)`,
-					ExcludeEnd:    true,
-					Contains: []*Mode{
-						TitleMode,
-						{
-							ClassName: "params",
-							Begin:     `\(`,
-							End:       `\)`,
-							Keywords:  keywords,
-							Illegal:   `["']`,
-						},
+			},
+			{Begin: `:=`},
+			{
+				ClassName:     "function",
+				BeginKeywords: "func",
+				End:           `\s*(\{|$)`,
+				ExcludeEnd:    true,
+				Contains: []*Mode{
+					TitleMode,
+					{
+						ClassName: "params",
+						Begin:     `\(`,
+						End:       `\)`,
+						Keywords:  keywords,
+						Illegal:   `["']`,
 					},
 				},
 			},

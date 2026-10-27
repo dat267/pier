@@ -135,12 +135,10 @@ func highlightWith(lang *compiledLanguage, code string, ignoreIllegals bool) *Re
 		if h.illegal {
 			break
 		}
-		h.index = m.index + processed
-		if h.index > len(code) {
+		h.index = min(m.index+processed,
 			// A zero-width match at the end advances one past it; JavaScript's
 			// substr clamps, Go slicing does not.
-			h.index = len(code)
-		}
+			len(code))
 		if h.iterations > 1000000 {
 			break
 		}

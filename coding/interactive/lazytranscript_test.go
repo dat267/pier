@@ -25,9 +25,9 @@ func TestLazyTranscriptDefersLargeSessions(t *testing.T) {
 	InitTheme("dark", false)
 
 	dir := t.TempDir()
-	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: boolPtr(false)})
+	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: new(false)})
 	const count = 800
-	for i := 0; i < count; i++ {
+	for i := range count {
 		manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: fmt.Sprintf("lazy-msg-%04d", i)}})
 	}
 
@@ -67,8 +67,8 @@ func TestLazyTranscriptSmallSessionsAttachEagerly(t *testing.T) {
 	InitTheme("dark", false)
 
 	dir := t.TempDir()
-	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: boolPtr(false)})
-	for i := 0; i < 30; i++ {
+	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: new(false)})
+	for i := range 30 {
 		manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: fmt.Sprintf("small-msg-%02d", i)}})
 	}
 
@@ -99,8 +99,8 @@ func TestLazyTranscriptLiveAppendsStayOrdered(t *testing.T) {
 	InitTheme("dark", false)
 
 	dir := t.TempDir()
-	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: boolPtr(false)})
-	for i := 0; i < 800; i++ {
+	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: new(false)})
+	for i := range 800 {
 		manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: fmt.Sprintf("lazy-msg-%04d", i)}})
 	}
 
@@ -133,9 +133,9 @@ func TestLazyTranscriptPrerendersOffLoop(t *testing.T) {
 	InitTheme("dark", false)
 
 	dir := t.TempDir()
-	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: boolPtr(false)})
+	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: new(false)})
 	const count = 800
-	for i := 0; i < count; i++ {
+	for i := range count {
 		manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: fmt.Sprintf("lazy-msg-%04d", i)}})
 	}
 
@@ -183,8 +183,8 @@ func TestLazyTranscriptPrerenderRewarmsAfterWidthChange(t *testing.T) {
 	InitTheme("dark", false)
 
 	dir := t.TempDir()
-	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: boolPtr(false)})
-	for i := 0; i < 800; i++ {
+	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: new(false)})
+	for i := range 800 {
 		manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: fmt.Sprintf("lazy-msg-%04d", i)}})
 	}
 

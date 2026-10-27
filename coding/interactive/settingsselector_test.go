@@ -385,7 +385,7 @@ func TestWheelScrollLinesCallbackCycle(t *testing.T) {
 	component := NewSettingsSelectorComponent(config, recordingCallbacks(&events))
 	list := component.GetSettingsList()
 	list.SelectItem("fullscreen-wheel-scroll-lines")
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		list.HandleInput("\r")
 	}
 	want := []string{

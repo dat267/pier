@@ -85,10 +85,8 @@ func Lua() *Language {
 	function.Contains = append(function.Contains, lineComment, blockComment)
 
 	return &Language{
-		Name: "Lua",
-		Mode: Mode{
-			Keywords: keywords,
-			Contains: contains,
-		},
+		Name:     "Lua",
+		Keywords: keywords,
+		Contains: contains,
 	}
 }

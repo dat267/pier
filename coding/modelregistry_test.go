@@ -101,7 +101,7 @@ func TestModelRegistryRequestAuthFallbacks(t *testing.T) {
 	}
 	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
 		ModelsPath:      path,
-		RefreshOnCreate: boolPtr(false),
+		RefreshOnCreate: new(false),
 		Credentials:     newMemoryCredentialStore(),
 	})
 	if err != nil {
@@ -181,7 +181,7 @@ func TestModelRegistryRefresh(t *testing.T) {
 	}
 	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
 		ModelsPath:      path,
-		RefreshOnCreate: boolPtr(false),
+		RefreshOnCreate: new(false),
 		Credentials:     newMemoryCredentialStore(),
 	})
 	if err != nil {

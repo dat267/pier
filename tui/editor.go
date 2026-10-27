@@ -2,6 +2,8 @@ package tui
 
 import (
 	"context"
+	"maps"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -144,10 +146,7 @@ type Editor struct {
 
 // NewEditor creates an editor.
 func NewEditor(host EditorHost, theme EditorTheme, options EditorOptions) *Editor {
-	paddingX := options.PaddingX
-	if paddingX < 0 {
-		paddingX = 0
-	}
+	paddingX := max(options.PaddingX, 0)
 	maxVisible := options.AutocompleteMaxVisible
 	if maxVisible < 3 {
 		maxVisible = 5
@@ -192,10 +191,7 @@ func (e *Editor) PaddingX() int {
 
 // SetPaddingX updates the horizontal padding.
 func (e *Editor) SetPaddingX(padding int) {
-	newPadding := padding
-	if newPadding < 0 {
-		newPadding = 0
-	}
+	newPadding := max(padding, 0)
 	changed := e.paddingX != newPadding
 	e.paddingX = newPadding
 	if changed {
@@ -210,13 +206,7 @@ func (e *Editor) AutocompleteMaxVisible() int {
 
 // SetAutocompleteMaxVisible updates the visible suggestion count.
 func (e *Editor) SetAutocompleteMaxVisible(maxVisible int) {
-	clamped := maxVisible
-	if clamped < 3 {
-		clamped = 3
-	}
-	if clamped > 20 {
-		clamped = 20
-	}
+	clamped := min(max(maxVisible, 3), 20)
 	changed := e.autocompleteMaxVisible != clamped
 	e.autocompleteMaxVisible = clamped
 	if changed {
@@ -496,23 +486,20 @@ func (e *Editor) HandleMouse(event TuiMouseEvent) *TuiMouseDispatchResult {
 		return nil
 	}
 	if event.Y <= 0 || event.Y > e.renderedVisibleLineCount {
-		return &TuiMouseDispatchResult{TuiMouseEventResult: TuiMouseEventResult{Handled: true, Focus: true}}
+		return &TuiMouseDispatchResult{Handled: true, Focus: true}
 	}
 
 	visualLines := e.buildVisualLineMap(e.lastWidth)
 	visualLineIndex := e.scrollOffset + event.Y - 1
 	if visualLineIndex < 0 || visualLineIndex >= len(visualLines) {
-		return &TuiMouseDispatchResult{TuiMouseEventResult: TuiMouseEventResult{Handled: true, Focus: true}}
+		return &TuiMouseDispatchResult{Handled: true, Focus: true}
 	}
 	visualLine := visualLines[visualLineIndex]
 	logicalLine := ""
 	if visualLine.logicalLine < len(e.state.lines) {
 		logicalLine = e.state.lines[visualLine.logicalLine]
 	}
-	chunkEnd := visualLine.startCol + visualLine.length
-	if chunkEnd > len(logicalLine) {
-		chunkEnd = len(logicalLine)
-	}
+	chunkEnd := min(visualLine.startCol+visualLine.length, len(logicalLine))
 	chunk := logicalLine[visualLine.startCol:chunkEnd]
 
 	maxPadding := max(0, (event.Width-1)/2)
@@ -544,7 +531,7 @@ func (e *Editor) HandleMouse(event TuiMouseEvent) *TuiMouseDispatchResult {
 	if e.autocompleteState != "" {
 		e.updateAutocompleteLocked()
 	}
-	return &TuiMouseDispatchResult{TuiMouseEventResult: TuiMouseEventResult{Handled: true, Focus: true}}
+	return &TuiMouseDispatchResult{Handled: true, Focus: true}
 }
 
 // HandleInput processes a key/input chunk.
@@ -832,10 +819,7 @@ func (e *Editor) layoutTextLocked(contentWidth int) []layoutLine {
 				} else {
 					hasCursorInChunk = e.state.cursorCol >= chunk.StartIndex && e.state.cursorCol < chunk.EndIndex
 					if hasCursorInChunk {
-						adjustedCursorPos = e.state.cursorCol - chunk.StartIndex
-						if adjustedCursorPos > len(chunk.Text) {
-							adjustedCursorPos = len(chunk.Text)
-						}
+						adjustedCursorPos = min(e.state.cursorCol-chunk.StartIndex, len(chunk.Text))
 					}
 				}
 			}
@@ -996,12 +980,7 @@ func isAutocompleteWordChar(char string) bool {
 }
 
 func containsString(values []string, value string) bool {
-	for _, candidate := range values {
-		if candidate == value {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, value)
 }
 
 func (e *Editor) textBeforeCursor() string {
@@ -1560,7 +1539,7 @@ func (e *Editor) buildVisualLineMap(width int) []editorVisualLine {
 }
 
 func (e *Editor) findVisualLineAt(visualLines []editorVisualLine, line int, col int) int {
-	for i := 0; i < len(visualLines); i++ {
+	for i := range visualLines {
 		vl := visualLines[i]
 		if vl.logicalLine != line {
 			continue
@@ -1899,9 +1878,7 @@ func (e *Editor) pushUndoSnapshot() {
 	snapshot.state = e.state
 	snapshot.state.lines = append([]string(nil), e.state.lines...)
 	snapshot.pastes = map[int]string{}
-	for id, content := range e.pastes {
-		snapshot.pastes[id] = content
-	}
+	maps.Copy(snapshot.pastes, e.pastes)
 	e.undoStack.Push(snapshot)
 }
 

@@ -86,7 +86,7 @@ func TestCustomMessageTokenEstimateMatchesUpstream(t *testing.T) {
 		t.Fatalf("block estimate = %d; want 2", got)
 	}
 	// bashExecution counts command + output.
-	bash := CreateBashExecutionMessage(strings.Repeat("c", 4), strings.Repeat("o", 4), intPtr(0), false, false, "", false, 0, nil)
+	bash := CreateBashExecutionMessage(strings.Repeat("c", 4), strings.Repeat("o", 4), new(0), false, false, "", false, 0, nil)
 	if got := EstimateAgentMessageTokens(bash); got != 2 {
 		t.Fatalf("bash estimate = %d; want 2", got)
 	}

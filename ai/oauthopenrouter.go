@@ -155,11 +155,10 @@ func ExchangeOpenRouterAuthorizationCode(ctx context.Context, code, verifier str
 	if key == "" {
 		return nil, fmt.Errorf(`OpenRouter OAuth response carries no "key"`)
 	}
-	return &OAuthCredential{OAuthCredentials: OAuthCredentials{
+	return &OAuthCredential{
 		Access: key,
 		// OpenRouter keys do not expire.
-		Expires: 9007199254740991,
-	}}, nil
+		Expires: 9007199254740991}, nil
 }
 
 // OpenRouterCallbackServer is the one-shot loopback callback server (upstream

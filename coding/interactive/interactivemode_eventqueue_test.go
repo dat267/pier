@@ -61,7 +61,7 @@ func TestSessionEventQueueCoalescesPartials(t *testing.T) {
 	partial := func(id string) *coding.SessionEvent {
 		return &coding.SessionEvent{Type: coding.SessionMessageUpdate, ID: id}
 	}
-	for i := 0; i < sessionEventPartialCapacity*3; i++ {
+	for i := range sessionEventPartialCapacity * 3 {
 		queue.enqueue(partial(itoa(i)))
 	}
 	// Terminal events never drop, even with a full partial buffer.
@@ -121,7 +121,7 @@ func TestSessionEventQueueLosslessUnderPressure(t *testing.T) {
 	producerDone := make(chan struct{})
 	go func() {
 		defer close(producerDone)
-		for i := 0; i < total; i++ {
+		for i := range total {
 			queue.enqueue(&coding.SessionEvent{Type: coding.SessionEventType("entry_appended"), ID: itoa(i)})
 		}
 	}()
@@ -146,7 +146,7 @@ func TestSessionEventQueueLosslessUnderPressure(t *testing.T) {
 // producer parked on a full lossless channel instead of hanging forever.
 func TestSessionEventQueueCloseUnblocksProducer(t *testing.T) {
 	queue := newSessionEventQueue()
-	for i := 0; i < sessionEventLosslessCapacity; i++ {
+	for range sessionEventLosslessCapacity {
 		queue.enqueue(&coding.SessionEvent{Type: coding.SessionMessageEnd})
 	}
 	producerExited := make(chan struct{})
@@ -192,15 +192,15 @@ func TestRunLoopDrainsProducedEventsAndShutsDown(t *testing.T) {
 
 	// Observable sink on the loop side: every applied agent_settled event
 	// bumps the counter.
-	var applied int64
-	app.events.CheckShutdownRequested = func() { atomic.AddInt64(&applied, 1) }
+	var applied atomic.Int64
+	app.events.CheckShutdownRequested = func() { applied.Add(1) }
 
 	const total = 64
-	for i := 0; i < total; i++ {
+	for range total {
 		app.sessionEvents.enqueue(&coding.SessionEvent{Type: coding.SessionAgentSettled})
 	}
 	// Producers only enqueue: nothing was applied before the loop ran.
-	if got := atomic.LoadInt64(&applied); got != 0 {
+	if got := applied.Load(); got != 0 {
 		t.Fatalf("producer applied %d events; it must only enqueue", got)
 	}
 
@@ -211,7 +211,7 @@ func TestRunLoopDrainsProducedEventsAndShutsDown(t *testing.T) {
 		app.Run(ctx)
 	}()
 
-	waitForConditionWithin(t, func() bool { return atomic.LoadInt64(&applied) == total }, 6*time.Second)
+	waitForConditionWithin(t, func() bool { return applied.Load() == total }, 6*time.Second)
 
 	cancel()
 	select {
@@ -219,7 +219,7 @@ func TestRunLoopDrainsProducedEventsAndShutsDown(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("run loop did not exit within 2s of cancellation")
 	}
-	if got := atomic.LoadInt64(&applied); got != total {
+	if got := applied.Load(); got != total {
 		t.Fatalf("applied %d events, want %d", got, total)
 	}
 }
@@ -244,15 +244,13 @@ func TestRunLoopConcurrentProducerKeepsDraining(t *testing.T) {
 	waitForConditionWithin(t, func() bool { return app.lifecycle.IsInitialized() }, 6*time.Second)
 
 	var wg sync.WaitGroup
-	for producer := 0; producer < 3; producer++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for i := 0; i < 200; i++ {
+	for range 3 {
+		wg.Go(func() {
+			for range 200 {
 				app.sessionEvents.enqueue(&coding.SessionEvent{Type: coding.SessionMessageUpdate})
 				app.sessionEvents.enqueue(&coding.SessionEvent{Type: coding.SessionAgentSettled})
 			}
-		}()
+		})
 	}
 	wg.Wait()
 
@@ -394,15 +392,15 @@ func TestDrainReadyEventsRendersOncePerBurst(t *testing.T) {
 	app, cleanup := newTestApp(t)
 	defer cleanup()
 
-	var applied int64
-	app.events.CheckShutdownRequested = func() { atomic.AddInt64(&applied, 1) }
+	var applied atomic.Int64
+	app.events.CheckShutdownRequested = func() { applied.Add(1) }
 
 	wiring := app.runner
 	const burst = 32
-	for i := 0; i < burst; i++ {
+	for range burst {
 		app.sessionEvents.enqueue(&coding.SessionEvent{Type: coding.SessionAgentSettled})
 	}
-	for i := 0; i < burst; i++ {
+	for range burst {
 		app.sessionEvents.enqueue(&coding.SessionEvent{Type: coding.SessionMessageUpdate})
 	}
 
@@ -411,7 +409,7 @@ func TestDrainReadyEventsRendersOncePerBurst(t *testing.T) {
 	wiring.drainReadyEvents()
 	wiring.renderUI()
 
-	if got := atomic.LoadInt64(&applied); got != burst {
+	if got := applied.Load(); got != burst {
 		t.Fatalf("applied %d terminal events, want %d", got, burst)
 	}
 	if got := app.ui.RenderCount() - before; got != 1 {
@@ -431,7 +429,7 @@ func TestRenderTicksThrottlePaintRate(t *testing.T) {
 	before := app.ui.RenderCount()
 	const requests = 200
 	start := time.Now()
-	for i := 0; i < requests; i++ {
+	for range requests {
 		app.ui.RequestRender(false)
 		time.Sleep(time.Millisecond)
 	}
@@ -470,7 +468,7 @@ func TestLoopBeatAdvances(t *testing.T) {
 	// five beats. Waiting per event still catches a loop that stops iterating,
 	// and a bare timeout cannot tell a stall from a slow phase, so on timeout we
 	// dump every goroutine stack the way the stall log does.
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		before := app.loopBeats()
 		app.sessionEvents.enqueue(&coding.SessionEvent{Type: coding.SessionAgentSettled})
 		deadline := time.Now().Add(6 * time.Second)
@@ -507,7 +505,7 @@ func TestProducerSendUnblocksOnContextCancel(t *testing.T) {
 	queue := newSessionEventQueue()
 	ctx, cancel := context.WithCancel(context.Background())
 	queue.SetContext(ctx)
-	for i := 0; i < sessionEventLosslessCapacity; i++ {
+	for range sessionEventLosslessCapacity {
 		queue.enqueue(&coding.SessionEvent{Type: coding.SessionMessageEnd})
 	}
 	producerExited := make(chan struct{})
@@ -534,7 +532,7 @@ func TestSubmitSendUnblocksOnContextCancel(t *testing.T) {
 	wiring := &StartupWiring{}
 	ctx, cancel := context.WithCancel(context.Background())
 	wiring.SetContext(ctx)
-	for i := 0; i < inputQueueCapacity; i++ {
+	for range inputQueueCapacity {
 		wiring.QueueUserInput("queued")
 	}
 	producerExited := make(chan struct{})

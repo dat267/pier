@@ -129,7 +129,7 @@ func TestBuildSessionInfoSkipsUnusedMessagePayloads(t *testing.T) {
 	thinking := strings.Repeat("reasoning payload ", 512) // ~9 KiB
 	var buf strings.Builder
 	buf.WriteString(`{"type":"session","version":3,"id":"s1","timestamp":"t0","cwd":"/tmp"}` + "\n")
-	for i := 0; i < 400; i++ {
+	for i := range 400 {
 		// Alternate key order: both exist in stored sessions.
 		if i%2 == 0 {
 			fmt.Fprintf(&buf, `{"type":"message","id":"m%04d","parentId":null,"timestamp":"t","message":{"role":"assistant","content":[{"type":"text","text":"hello %d"},{"type":"thinking","thinking":%q}],"timestamp":%d}}`+"\n", i, i, thinking, i+1)

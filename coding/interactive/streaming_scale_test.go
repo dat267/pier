@@ -17,7 +17,7 @@ func allocatedBytesPerRunI(t *testing.T, runs int, fn func()) int64 {
 	fn()
 	var before, after runtime.MemStats
 	runtime.ReadMemStats(&before)
-	for i := 0; i < runs; i++ {
+	for range runs {
 		fn()
 	}
 	runtime.ReadMemStats(&after)
@@ -36,7 +36,7 @@ func TestStreamingDeltaCostIndependentOfTranscriptSize(t *testing.T) {
 		screen, _ := app.initialUI.(*tui.AltScreen)
 		screen.Start()
 		screen.DisableAutoRender()
-		for i := 0; i < warm; i++ {
+		for i := range warm {
 			a := &ai.AssistantMessage{API: ai.APIAnthropicMessages, Provider: "test", Model: "m", StopReason: ai.StopStop,
 				Content: ai.ContentList{ai.TextContent{Text: fmt.Sprintf("reply %d with some words that wrap across the viewport\n", i)}}}
 			app.events.HandleEvent(&coding.SessionEvent{Type: coding.SessionMessageStart, Agent: agentEvent("message_start", a)})
@@ -46,7 +46,7 @@ func TestStreamingDeltaCostIndependentOfTranscriptSize(t *testing.T) {
 		app.events.HandleEvent(&coding.SessionEvent{Type: coding.SessionMessageStart, Agent: agentEvent("message_start", streaming)})
 		body := ""
 		return allocatedBytesPerRunI(t, 3, func() {
-			for i := 0; i < 20; i++ {
+			for range 20 {
 				body += "appended sentence with **bold** and `code`.\n\n"
 				app.events.HandleEvent(&coding.SessionEvent{Type: coding.SessionMessageUpdate, Agent: agentEvent("message_update", &ai.AssistantMessage{API: ai.APIAnthropicMessages, Provider: "test", Model: "m", StopReason: ai.StopPending, Content: ai.ContentList{ai.TextContent{Text: body}}})})
 				app.ui.RenderNow(true)

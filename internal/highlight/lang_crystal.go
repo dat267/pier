@@ -6,7 +6,6 @@ func init() { RegisterLanguage("crystal", Crystal()) }
 func Crystal() *Language {
 	const intSuffix = `(_?[ui](8|16|32|64|128))?`
 	const floatSuffix = `(_?f(32|64))?`
-	const identRe = `[a-zA-Z_]\w*[!?=]?`
 	methodRe := "[a-zA-Z_]\\w*[!?=]?|[-+~]@|<<|>>|[=!]~|===?|<=>|[<>]=?|\\*\\*|[-/+%^&*~`|]|//|//=|&[-+*]=?|&\\*\\*|\\[\\][=?]?"
 	const pathRe = `[A-Za-z_]\w*(::\w+)*(\?|!)?`
 
@@ -188,11 +187,9 @@ func Crystal() *Language {
 	}
 
 	return &Language{
-		Name:    "Crystal",
-		Aliases: []string{"cr"},
-		Mode: Mode{
-			Keywords: keywords,
-			Contains: defaults,
-		},
+		Name:     "Crystal",
+		Aliases:  []string{"cr"},
+		Keywords: keywords,
+		Contains: defaults,
 	}
 }

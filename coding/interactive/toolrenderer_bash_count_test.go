@@ -34,7 +34,7 @@ func TestPlainWrappedLineCountMatchesTheGenericWrapper(t *testing.T) {
 		seed = seed*1664525 + 1013904223
 		return alphabet[int(seed>>16)%len(alphabet)]
 	}
-	for i := 0; i < 4000; i++ {
+	for range 4000 {
 		length := int(next()) % 30
 		line := make([]byte, length)
 		for j := range line {
@@ -86,7 +86,7 @@ func TestBashPreviewCountIsAllocationFree(t *testing.T) {
 	InitTheme("dark", false)
 
 	var builder strings.Builder
-	for i := 0; i < 2000; i++ {
+	for i := range 2000 {
 		fmt.Fprintf(&builder, "ok  \tgithub.com/dat267/pier/coding/pkg%d\t0.1%03ds\t(line %d with some words)\n", i, i%1000, i)
 	}
 	output := builder.String()

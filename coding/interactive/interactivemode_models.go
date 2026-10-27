@@ -3,6 +3,7 @@ package interactive
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 	"time"
 
@@ -215,12 +216,7 @@ func sortStringsAscending(values []string) {
 }
 
 func containsID(ids []string, id string) bool {
-	for _, candidate := range ids {
-		if candidate == id {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(ids, id)
 }
 
 // ShowModelsSelector opens the scoped-models selector with a catalog refresh.

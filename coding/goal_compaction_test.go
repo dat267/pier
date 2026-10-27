@@ -17,7 +17,7 @@ import (
 // prompt at `agent_before_settle`; a mid-round compaction must not discard it.
 func TestGoalRoundPromptSurvivesCompactionWithinRound(t *testing.T) {
 	manager, dir := newTestSession(t)
-	for index := 0; index < 4; index++ {
+	for index := range 4 {
 		manager.AppendMessage(&ai.UserMessage{
 			Content: ai.StringOrBlocks{Text: fmt.Sprintf("old question %d", index)}, Timestamp: int64(index*2 + 1),
 		})

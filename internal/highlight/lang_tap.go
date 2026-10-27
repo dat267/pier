@@ -20,14 +20,12 @@ func TAP() *Language {
 	return &Language{
 		Name:            "Test Anything Protocol",
 		CaseInsensitive: true,
-		Mode: Mode{
-			Contains: []*Mode{
-				HashCommentMode,
-				metaBase,
-				{Begin: `---$`, End: `\.\.\.$`, SubLanguage: []string{"yaml"}, HasRelevance: true, Relevance: 0},
-				{ClassName: "number", Begin: ` (\d+) `},
-				symbolBase,
-			},
+		Contains: []*Mode{
+			HashCommentMode,
+			metaBase,
+			{Begin: `---$`, End: `\.\.\.$`, SubLanguage: []string{"yaml"}, HasRelevance: true, Relevance: 0},
+			{ClassName: "number", Begin: ` (\d+) `},
+			symbolBase,
 		},
 	}
 }

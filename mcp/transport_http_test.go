@@ -787,7 +787,7 @@ func TestStreamableHTTPUsesInjectedFetch(t *testing.T) {
 	}
 	// The transport parses the URL at construction; point the option at the
 	// live server and route through the injected fetch.
-	transport := NewStreamableHttpTransport(StreamableHttpTransportOptions{URL: fixture.url, Fetch: injected, OpenGetStream: boolPtr(false)})
+	transport := NewStreamableHttpTransport(StreamableHttpTransportOptions{URL: fixture.url, Fetch: injected, OpenGetStream: new(false)})
 	client := NewClient(ClientOptions{Name: "http-test", Version: "1.0.0"})
 	if _, err := client.Connect(context.Background(), transport); err != nil {
 		t.Fatal(err)
@@ -834,16 +834,13 @@ func TestStreamableHTTPClassifiesExpiredSession(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err := client.ListTools(context.Background(), RequestOptions{})
-	var expired *McpSessionExpiredError
-	if !errors.As(err, &expired) {
+	if _, ok := errors.AsType[*McpSessionExpiredError](err); !ok {
 		t.Fatalf("err = %v (%T)", err, err)
 	}
 	if err := client.Close(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 }
-
-func boolPtr(b bool) *bool { return &b }
 
 // countingAuthProvider counts Token calls so a test can assert that a path does not refresh.
 type countingAuthProvider struct {

@@ -135,11 +135,11 @@ func TestConcurrentTerminalProducersStayOrdered(t *testing.T) {
 	defer stop()
 
 	var wg sync.WaitGroup
-	for producer := 0; producer < 2; producer++ {
+	for producer := range 2 {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			for i := 0; i < 20; i++ {
+			for range 20 {
 				app.postTerminalInput("ab")
 			}
 		}(producer)

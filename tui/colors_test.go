@@ -169,9 +169,9 @@ func TestStyleTextClosesInReverseOrder(t *testing.T) {
 	fg, _ := NewRgbColor(18, 52, 86)
 	bg, _ := IndexedColor(9)
 	got := StyleText("Ready", TextStyle{
-		Fg:             &fg,
-		Bg:             &bg,
-		TextAttributes: TextAttributes{Bold: true, Italic: true},
+		Fg:   &fg,
+		Bg:   &bg,
+		Bold: true, Italic: true,
 	}, TerminalColorModeTruecolor)
 	want := "\x1b[38;2;18;52;86m\x1b[48;5;9m\x1b[1m\x1b[3mReady\x1b[23m\x1b[22m\x1b[49m\x1b[39m"
 	if got != want {

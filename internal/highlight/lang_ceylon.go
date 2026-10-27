@@ -40,17 +40,15 @@ func Ceylon() *Language {
 
 	return &Language{
 		Name: "Ceylon",
-		Mode: Mode{
-			Keywords: Keywords{
-				"keyword": keywords + " " + modifiers,
-				"meta":    documentation,
-			},
-			Illegal: `\$[^01]|#[^0-9a-fA-F]`,
-			Contains: append([]*Mode{
-				CLineCommentMode,
-				blockComment,
-				{ClassName: "meta", Begin: `@[a-z]\w*(?::"[^"]*")?`},
-			}, expressions...),
+		Keywords: Keywords{
+			"keyword": keywords + " " + modifiers,
+			"meta":    documentation,
 		},
+		Illegal: `\$[^01]|#[^0-9a-fA-F]`,
+		Contains: append([]*Mode{
+			CLineCommentMode,
+			blockComment,
+			{ClassName: "meta", Begin: `@[a-z]\w*(?::"[^"]*")?`},
+		}, expressions...),
 	}
 }

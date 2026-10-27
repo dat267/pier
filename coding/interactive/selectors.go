@@ -208,10 +208,7 @@ func NewThinkingSelectorComponent(currentLevel string, availableLevels []string,
 }
 
 func (c *ThinkingSelectorComponent) buildSelectList(items []tui.SelectItem, preselect string) *tui.SelectList {
-	maxVisible := len(items)
-	if maxVisible < 1 {
-		maxVisible = 1
-	}
+	maxVisible := max(len(items), 1)
 	list := tui.NewSelectList(items, maxVisible, GetSelectListTheme(), themeSelectListLayout)
 	for index, item := range items {
 		if item.Value == preselect {

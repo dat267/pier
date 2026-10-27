@@ -51,7 +51,7 @@ func TestAnthropicStreamEventsMatchUpstream(t *testing.T) {
 
 			stream := StreamAnthropic(model, NormalizeContext(Context{
 				Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-			}), &AnthropicOptions{StreamOptions: StreamOptions{APIKey: "test-key"}})
+			}), &AnthropicOptions{APIKey: "test-key"})
 
 			var got []string
 			for {

@@ -49,9 +49,9 @@ type ExtractedSegments struct {
 // boundary are dropped. When strictAfter is set, a grapheme extending past the
 // after range is dropped too.
 func ExtractSegments(line string, beforeEnd int, afterStart int, afterLen int, strictAfter bool) ExtractedSegments {
-	before := ""
+	var before strings.Builder
 	beforeWidth := 0
-	after := ""
+	var after strings.Builder
 	afterWidth := 0
 	currentCol := 0
 	i := 0
@@ -75,7 +75,7 @@ func ExtractSegments(line string, beforeEnd int, afterStart int, afterLen int, s
 				// SGR codes are only included once "after" started (styling is
 				// already prepended). Zero-width APC markers such as CursorMarker
 				// are not tracked styling, so keep them at the boundary too.
-				after += code
+				after.WriteString(code)
 			}
 			i += length
 			continue
@@ -94,10 +94,10 @@ func ExtractSegments(line string, beforeEnd int, afterStart int, afterLen int, s
 
 			if currentCol < beforeEnd && currentCol+w <= beforeEnd {
 				if pendingAnsiBefore != "" {
-					before += pendingAnsiBefore
+					before.WriteString(pendingAnsiBefore)
 					pendingAnsiBefore = ""
 				}
-				before += segment
+				before.WriteString(segment)
 				beforeWidth += w
 			} else if currentCol >= afterStart && currentCol < afterEnd {
 				fits := !strictAfter || currentCol+w <= afterEnd
@@ -105,10 +105,10 @@ func ExtractSegments(line string, beforeEnd int, afterStart int, afterLen int, s
 					// On the first "after" grapheme, prepend the inherited
 					// styling from before the overlay.
 					if !afterStarted {
-						after += styleTracker.activeCodes()
+						after.WriteString(styleTracker.activeCodes())
 						afterStarted = true
 					}
-					after += segment
+					after.WriteString(segment)
 					afterWidth += w
 				}
 			}
@@ -125,7 +125,7 @@ func ExtractSegments(line string, beforeEnd int, afterStart int, afterLen int, s
 		}
 	}
 
-	return ExtractedSegments{Before: before, BeforeWidth: beforeWidth, After: after, AfterWidth: afterWidth}
+	return ExtractedSegments{Before: before.String(), BeforeWidth: beforeWidth, After: after.String(), AfterWidth: afterWidth}
 }
 
 // done reports the extraction early-exit condition.

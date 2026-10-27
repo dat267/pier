@@ -151,7 +151,7 @@ func Elixir() *Language {
 	subst.Contains = defaults
 
 	return &Language{
-		Name: "Elixir",
-		Mode: Mode{Keywords: keywords, Contains: defaults},
+		Name:     "Elixir",
+		Keywords: keywords, Contains: defaults,
 	}
 }

@@ -81,20 +81,18 @@ func Haml() *Language {
 	return &Language{
 		Name:            "HAML",
 		CaseInsensitive: true,
-		Mode: Mode{
-			Contains: []*Mode{
-				{
-					ClassName:    "meta",
-					Begin:        `^!!!( (5|1\.1|Strict|Frameset|Basic|Mobile|RDFa|XML\b.*))?$`,
-					HasRelevance: true,
-					Relevance:    10,
-				},
-				comment,
-				rubyLine,
-				tag,
-				{Begin: `^\s*[=~]\s*`},
-				{Begin: `#\{`, Starts: &Mode{End: `\}`, SubLanguage: []string{"ruby"}}},
+		Contains: []*Mode{
+			{
+				ClassName:    "meta",
+				Begin:        `^!!!( (5|1\.1|Strict|Frameset|Basic|Mobile|RDFa|XML\b.*))?$`,
+				HasRelevance: true,
+				Relevance:    10,
 			},
+			comment,
+			rubyLine,
+			tag,
+			{Begin: `^\s*[=~]\s*`},
+			{Begin: `#\{`, Starts: &Mode{End: `\}`, SubLanguage: []string{"ruby"}}},
 		},
 	}
 }

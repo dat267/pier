@@ -129,7 +129,7 @@ func TestMarkdownAgainstUpstreamGolden(t *testing.T) {
 		}},
 		{label: "preserve-markers", text: "- a\n1. b", widths: []int{20}, options: MarkdownOptions{PreserveOrderedListMarkers: true}},
 		{label: "preserve-escapes", text: "a \\* b", widths: []int{20}, options: MarkdownOptions{PreserveBackslashEscapes: true}},
-		{label: "no-latex", text: "math $x$ here", widths: []int{20}, options: MarkdownOptions{RenderLatex: boolPtr(false)}},
+		{label: "no-latex", text: "math $x$ here", widths: []int{20}, options: MarkdownOptions{RenderLatex: new(false)}},
 	}
 
 	for _, tc := range cases {
@@ -152,8 +152,6 @@ func TestMarkdownAgainstUpstreamGolden(t *testing.T) {
 		}
 	}
 }
-
-func boolPtr(value bool) *bool { return &value }
 
 // TestMarkdownLatexAgainstUpstreamGolden verifies the LaTeX path inside the
 // markdown renderer (upstream renders "math $x^2$ here" as "math x² here").

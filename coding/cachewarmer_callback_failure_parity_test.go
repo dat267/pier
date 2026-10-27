@@ -53,7 +53,7 @@ func TestCacheWarmerCallbackFailuresAreBestEffort(t *testing.T) {
 			if mode == "notification" {
 				warmer.OnWarmed = func(*SessionEntry) { entered.Store(true); panic(errors.New("notification failed")) }
 			}
-			warmer.Start(CacheWarmRequest{Model: model, Options: &ai.SimpleStreamOptions{StreamOptions: ai.StreamOptions{CacheRetention: ai.CacheRetentionShort}}}, func() bool { return true })
+			warmer.Start(CacheWarmRequest{Model: model, Options: &ai.SimpleStreamOptions{CacheRetention: ai.CacheRetentionShort}}, func() bool { return true })
 			time.Sleep(1100 * time.Millisecond)
 			synctest.Wait()
 			if mode != "control" && !entered.Load() {

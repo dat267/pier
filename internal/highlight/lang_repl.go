@@ -34,8 +34,8 @@ func PythonRepl() *Language {
 		}
 	}
 	return &Language{
-		Aliases: []string{"pycon"},
-		Mode:    Mode{Contains: []*Mode{base}},
+		Aliases:  []string{"pycon"},
+		Contains: []*Mode{base},
 	}
 }
 
@@ -57,7 +57,7 @@ func NodeRepl() *Language {
 		}
 	}
 	return &Language{
-		Name: "Node REPL",
-		Mode: Mode{Contains: []*Mode{base}},
+		Name:     "Node REPL",
+		Contains: []*Mode{base},
 	}
 }

@@ -364,8 +364,7 @@ func (c *McpServerConnection) withClient(
 // needsSignIn reports whether the error requires a sign-in (upstream
 // needsSignIn).
 func (c *McpServerConnection) needsSignIn(err error) bool {
-	var authorizationRequired *oauth.McpOAuthAuthorizationRequiredError
-	if errors.As(err, &authorizationRequired) {
+	if _, ok := errors.AsType[*oauth.McpOAuthAuthorizationRequiredError](err); ok {
 		return true
 	}
 	var authRequired *mcp.McpAuthRequiredError
@@ -652,15 +651,13 @@ func (c *McpServerConnection) isClosed() bool {
 // isMcpTransientError reports network failures and overloaded or restarting
 // servers (upstream isTransientError).
 func isMcpTransientError(err error) bool {
-	var httpError *mcp.McpHttpError
-	if errors.As(err, &httpError) {
+	if httpError, ok := errors.AsType[*mcp.McpHttpError](err); ok {
 		status := httpError.Status
 		return status == 408 || status == 429 || (status >= 500 && status != 501)
 	}
 	// Go reports network failures as *url.Error or net.Error; upstream checks
 	// for a fetch TypeError (D183).
-	var urlError *url.Error
-	if errors.As(err, &urlError) {
+	if _, ok := errors.AsType[*url.Error](err); ok {
 		return true
 	}
 	var networkError interface{ Timeout() bool }

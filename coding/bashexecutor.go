@@ -345,9 +345,7 @@ func (o *localShellOperations) Exec(ctx context.Context, command, cwd string, ex
 	activity := make(chan struct{}, 1)
 	started := make(chan struct{}, 2)
 	stream := func(reader interface{ Read([]byte) (int, error) }) {
-		streamWG.Add(1)
-		go func() {
-			defer streamWG.Done()
+		streamWG.Go(func() {
 			buffer := make([]byte, 32*1024)
 			started <- struct{}{}
 			for {
@@ -367,7 +365,7 @@ func (o *localShellOperations) Exec(ctx context.Context, command, cwd string, ex
 					return
 				}
 			}
-		}()
+		})
 	}
 	stream(stdout)
 	stream(stderr)
@@ -413,8 +411,7 @@ func (o *localShellOperations) Exec(ctx context.Context, command, cwd string, ex
 
 	exitCode := 0
 	if waitErr != nil {
-		var exitError *exec.ExitError
-		if errors.As(waitErr, &exitError) {
+		if exitError, ok := errors.AsType[*exec.ExitError](waitErr); ok {
 			exitCode = exitError.ExitCode()
 			if exitCode < 0 {
 				// A signal-killed shell has no exit code; use the standard

@@ -82,19 +82,17 @@ func Clojure() *Language {
 	return &Language{
 		Name:    "Clojure",
 		Aliases: []string{"clj"},
-		Mode: Mode{
-			Illegal: `\S`,
-			Contains: []*Mode{
-				list,
-				str,
-				hint,
-				hintCol,
-				comment,
-				key,
-				collection,
-				number,
-				literal,
-			},
+		Illegal: `\S`,
+		Contains: []*Mode{
+			list,
+			str,
+			hint,
+			hintCol,
+			comment,
+			key,
+			collection,
+			number,
+			literal,
 		},
 	}
 }

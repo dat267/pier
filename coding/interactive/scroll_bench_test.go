@@ -54,7 +54,7 @@ func buildScrollTranscript(b *testing.B, app *App) {
 // buildScrollTranscriptN appends n user/assistant message pairs.
 func buildScrollTranscriptN(tb testing.TB, app *App, n int) {
 	tb.Helper()
-	for i := 0; i < n; i++ {
+	for i := range n {
 		app.events.HandleEvent(&coding.SessionEvent{
 			Type: coding.SessionMessageStart,
 			Agent: agentEvent("message_start", &ai.UserMessage{

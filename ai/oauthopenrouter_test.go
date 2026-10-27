@@ -321,7 +321,7 @@ func TestOpenRouterOAuthDefinition(t *testing.T) {
 	if auth.Name != "OpenRouter OAuth" || auth.LoginLabel != "Sign in with OpenRouter" || auth.IsSubscription {
 		t.Fatalf("auth = %+v", auth)
 	}
-	credential := &OAuthCredential{OAuthCredentials: OAuthCredentials{Access: "sk-key"}}
+	credential := &OAuthCredential{Access: "sk-key"}
 	refreshed, err := auth.Refresh(credential, context.Background())
 	if err != nil || refreshed != credential {
 		t.Fatalf("refresh = %+v err = %v", refreshed, err)

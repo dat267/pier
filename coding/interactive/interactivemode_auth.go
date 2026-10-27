@@ -368,8 +368,7 @@ func (w *AuthWiring) ShowOAuthSelector(ctx context.Context, mode string) {
 				}
 				if err := w.Session.ModelRuntime().Logout(providerOption.ID, ctx); err != nil {
 					message := err.Error()
-					var syncErr *coding.CredentialSynchronizationError
-					if errors.As(err, &syncErr) {
+					if _, ok := errors.AsType[*coding.CredentialSynchronizationError](err); ok {
 						w.showError("Credentials removed for " + providerOption.Name +
 							", but local model state could not be synchronized: " + message)
 					} else {
@@ -532,8 +531,7 @@ func (w *AuthWiring) ShowApiKeyLoginDialog(ctx context.Context, providerID strin
 }
 
 func (w *AuthWiring) reportLoginError(err error, providerName string, syncPrefix string, failurePrefix string) {
-	var syncErr *coding.CredentialSynchronizationError
-	if errors.As(err, &syncErr) {
+	if _, ok := errors.AsType[*coding.CredentialSynchronizationError](err); ok {
 		w.showError(syncPrefix + " " + providerName + ", but local model state could not be synchronized: " + err.Error())
 		return
 	}

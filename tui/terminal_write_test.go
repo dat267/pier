@@ -44,7 +44,7 @@ func TestProcessTerminalWritesInOrder(t *testing.T) {
 	}
 
 	var want strings.Builder
-	for i := 0; i < 500; i++ {
+	for i := range 500 {
 		chunk := strconv.Itoa(i) + ","
 		want.WriteString(chunk)
 		terminal.Write(chunk)

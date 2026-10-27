@@ -83,7 +83,7 @@ func TestContextSignatureMatchesTheProjectedContext(t *testing.T) {
 func TestCacheContextIsCurrentDoesNotProjectTheSession(t *testing.T) {
 	persist := false
 	m := NewSessionManager(t.TempDir(), &SessionManagerOptions{SessionDir: t.TempDir(), Persist: &persist})
-	for i := 0; i < 500; i++ {
+	for range 500 {
 		m.AppendMessage(createUserMessage("a message with enough text to make the projection allocate"))
 		assistant := createAssistantMessageT("a reply")
 		assistant.Provider, assistant.Model = "anthropic", "claude-opus-4-5"
@@ -104,7 +104,7 @@ func TestCacheContextIsCurrentDoesNotProjectTheSession(t *testing.T) {
 	before := runtime.MemStats{}
 	runtime.ReadMemStats(&before)
 	const runs = 50
-	for i := 0; i < runs; i++ {
+	for range runs {
 		if !isCurrent() {
 			t.Fatal("an unchanged session must stay current")
 		}
@@ -125,7 +125,7 @@ func TestProjectionDoesNotHoldTheSessionLock(t *testing.T) {
 	m := NewSessionManager(t.TempDir(), &SessionManagerOptions{SessionDir: t.TempDir(), Persist: &persist})
 	// 4000 entries keep the projection (and therefore the observation window)
 	// well past the 50 ms floor under the race detector.
-	for i := 0; i < 4000; i++ {
+	for range 4000 {
 		m.AppendMessage(createUserMessage("a message with enough text that the projection takes a while"))
 	}
 
@@ -251,7 +251,7 @@ func TestAppendCompactionDoesNotHoldTheSessionLock(t *testing.T) {
 	persist := false
 	m := NewSessionManager(t.TempDir(), &SessionManagerOptions{SessionDir: t.TempDir(), Persist: &persist})
 	m.AppendMessage(&ai.SystemMessage{Content: ai.StringOrBlocks{Text: "system"}, Timestamp: 1})
-	for i := 0; i < 3000; i++ {
+	for range 3000 {
 		m.AppendMessage(createUserMessage("a message with enough text that the projection takes a while"))
 	}
 	entries := m.GetEntries()

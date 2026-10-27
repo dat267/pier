@@ -300,7 +300,7 @@ func TestAuthStorageLockingAndCancellation(t *testing.T) {
 
 	// Concurrent modifies serialize; every distinct provider survives.
 	var waitGroup sync.WaitGroup
-	for index := 0; index < 8; index++ {
+	for index := range 8 {
 		waitGroup.Add(1)
 		go func(index int) {
 			defer waitGroup.Done()

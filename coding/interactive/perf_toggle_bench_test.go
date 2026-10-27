@@ -28,7 +28,7 @@ func buildToggleTranscriptTo(b testing.TB, app *App) {
 	reply := strings.Repeat(
 		"Here is the answer, with **emphasis** and `code`:\n\n```go\nfmt.Println(\"hi\")\n```\n", 8)
 
-	for i := 0; i < toggleBenchMessages; i++ {
+	for i := range toggleBenchMessages {
 		user := &ai.UserMessage{Content: ai.StringOrBlocks{Text: fmt.Sprintf("question %d", i)}}
 		app.events.HandleEvent(&coding.SessionEvent{
 			Type: coding.SessionMessageStart, Agent: agentEvent("message_start", user),

@@ -21,7 +21,7 @@ func TestSDKCacheWarmerRejectsReplacedMessagePrefix(t *testing.T) {
 			tempAgentDir(t)
 			runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
 				AuthPath: filepath.Join(GetAgentDir(), "auth.json"), ModelsPath: filepath.Join(GetAgentDir(), "models.json"),
-				Credentials: newMemoryCredentialStore(), RefreshOnCreate: boolPtr(false),
+				Credentials: newMemoryCredentialStore(), RefreshOnCreate: new(false),
 			})
 			if err != nil {
 				t.Fatal(err)

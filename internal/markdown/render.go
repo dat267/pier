@@ -134,7 +134,7 @@ func (r *Renderer) block(b *Block, width int, next *Block, styleContext *inlineS
 				lines = append(lines, indent+hlLine)
 			}
 		} else {
-			for _, codeLine := range strings.Split(b.Body, "\n") {
+			for codeLine := range strings.SplitSeq(b.Body, "\n") {
 				lines = append(lines, indent+r.style.CodeBlock(codeLine))
 			}
 		}
@@ -154,7 +154,7 @@ func (r *Renderer) block(b *Block, width int, next *Block, styleContext *inlineS
 		} else {
 			rendered = jsTrim(b.Raw)
 		}
-		for _, line := range strings.Split(rendered, "\n") {
+		for line := range strings.SplitSeq(rendered, "\n") {
 			lines = append(lines, r.applyDefaultStyle(line))
 		}
 		if next != nil && next.Kind != BlockSpace {
@@ -327,9 +327,9 @@ func (r *Renderer) defaultStylePrefixValue() string {
 func (r *Renderer) stylePrefixOf(styleFn func(string) string) string {
 	const sentinel = "\u0000"
 	styled := styleFn(sentinel)
-	sentinelIndex := strings.Index(styled, sentinel)
-	if sentinelIndex >= 0 {
-		return styled[:sentinelIndex]
+	before, _, ok := strings.Cut(styled, sentinel)
+	if ok {
+		return before
 	}
 	return ""
 }
@@ -580,13 +580,13 @@ func (r *Renderer) renderTable(table *Block, availableWidth int, next *Block, st
 
 	naturalWidths := make([]int, numCols)
 	minWordWidths := make([]int, numCols)
-	for i := 0; i < numCols; i++ {
+	for i := range numCols {
 		headerText := r.renderInlineTokens(table.headerInlinesAt(i), styleContext)
 		naturalWidths[i] = r.term.VisibleWidth(headerText)
 		minWordWidths[i] = max(1, r.getLongestWordWidth(headerText, maxUnbrokenWordWidth, true))
 	}
 	for _, row := range table.rowInlines {
-		for i := 0; i < len(row); i++ {
+		for i := range row {
 			cellText := r.renderInlineTokens(table.rowInlinesAt(row, i), styleContext)
 			if i < numCols {
 				naturalWidths[i] = max(naturalWidths[i], r.term.VisibleWidth(cellText))
@@ -617,7 +617,7 @@ func (r *Renderer) renderTable(table *Block, availableWidth int, next *Block, st
 					growth[i] = weight * remaining / totalWeight
 				}
 			}
-			for i := 0; i < numCols; i++ {
+			for i := range numCols {
 				minColumnWidths[i] += growth[i]
 			}
 			allocated := sumInts(growth)
@@ -635,17 +635,17 @@ func (r *Renderer) renderTable(table *Block, availableWidth int, next *Block, st
 
 	if totalNaturalWidth <= availableWidth {
 		columnWidths = make([]int, numCols)
-		for i := 0; i < numCols; i++ {
+		for i := range numCols {
 			columnWidths[i] = max(naturalWidths[i], minColumnWidths[i])
 		}
 	} else {
 		totalGrowPotential := 0
-		for i := 0; i < numCols; i++ {
+		for i := range numCols {
 			totalGrowPotential += max(0, naturalWidths[i]-minColumnWidths[i])
 		}
 		extraWidth := max(0, availableForCells-minCellsWidth)
 		columnWidths = make([]int, numCols)
-		for i := 0; i < numCols; i++ {
+		for i := range numCols {
 			naturalWidth := naturalWidths[i]
 			minWidthDelta := max(0, naturalWidth-minColumnWidths[i])
 			grow := 0
@@ -679,15 +679,15 @@ func (r *Renderer) renderTable(table *Block, availableWidth int, next *Block, st
 	lines = append(lines, "┌─"+strings.Join(topBorderCells, "─┬─")+"─┐")
 
 	headerCellLines := make([][]string, numCols)
-	for i := 0; i < numCols; i++ {
+	for i := range numCols {
 		text := r.renderInlineTokens(table.headerInlinesAt(i), styleContext)
 		headerCellLines[i] = r.wrapCellText(text, columnWidths[i], stylePrefixOf(styleContext))
 	}
 	headerLineCount := maxLineCount(headerCellLines)
 
-	for lineIdx := 0; lineIdx < headerLineCount; lineIdx++ {
+	for lineIdx := range headerLineCount {
 		rowParts := make([]string, numCols)
-		for colIdx := 0; colIdx < numCols; colIdx++ {
+		for colIdx := range numCols {
 			text := ""
 			if lineIdx < len(headerCellLines[colIdx]) {
 				text = headerCellLines[colIdx][lineIdx]
@@ -707,7 +707,7 @@ func (r *Renderer) renderTable(table *Block, availableWidth int, next *Block, st
 
 	for rowIndex, row := range table.rowInlines {
 		rowCellLines := make([][]string, numCols)
-		for i := 0; i < numCols; i++ {
+		for i := range numCols {
 			text := ""
 			if i < len(row) {
 				text = r.renderInlineTokens(table.rowInlinesAt(row, i), styleContext)
@@ -716,9 +716,9 @@ func (r *Renderer) renderTable(table *Block, availableWidth int, next *Block, st
 		}
 		rowLineCount := maxLineCount(rowCellLines)
 
-		for lineIdx := 0; lineIdx < rowLineCount; lineIdx++ {
+		for lineIdx := range rowLineCount {
 			rowParts := make([]string, numCols)
-			for colIdx := 0; colIdx < numCols; colIdx++ {
+			for colIdx := range numCols {
 				text := ""
 				if lineIdx < len(rowCellLines[colIdx]) {
 					text = rowCellLines[colIdx][lineIdx]

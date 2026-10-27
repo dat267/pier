@@ -21,15 +21,14 @@ func TestAppExportedSurface(t *testing.T) {
 
 	// The pointer type for methods: every App method has a pointer receiver, and
 	// the value type's method set is empty here — a guard that cannot fail.
-	methodSet := reflect.TypeOf((*App)(nil))
-	for i := 0; i < methodSet.NumMethod(); i++ {
-		if name := methodSet.Method(i).Name; !allowed[name] {
+	methodSet := reflect.TypeFor[*App]()
+	for method := range methodSet.Methods() {
+		if name := method.Name; !allowed[name] {
 			t.Errorf("App.%s is exported; the cross-package surface is exactly Init, Run, Close and StopMode", name)
 		}
 	}
-	appType := reflect.TypeOf(App{})
-	for i := 0; i < appType.NumField(); i++ {
-		field := appType.Field(i)
+	appType := reflect.TypeFor[App]()
+	for field := range appType.Fields() {
 		// An embedded type's name is its type's, not App's own surface.
 		if !field.Anonymous && ast.IsExported(field.Name) {
 			t.Errorf("App.%s is exported; App's fields are in-package state", field.Name)

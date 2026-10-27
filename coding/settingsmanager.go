@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"os"
 	"path/filepath"
@@ -648,11 +649,6 @@ func NewInMemorySettingsManager(settings *Settings, options SettingsManagerCreat
 	return newSettingsManagerFromStorage(storage, options, nil)
 }
 
-func loadFromStorage(storage SettingsStorage, scope SettingsScope, projectTrusted bool) (*Settings, error) {
-	settings, _, err := loadFromStorageWithRejects(storage, scope, projectTrusted)
-	return settings, err
-}
-
 // loadFromStorageWithRejects loads one scope and reports the known members the
 // typed settings could not hold.
 func loadFromStorageWithRejects(storage SettingsStorage, scope SettingsScope, projectTrusted bool) (*Settings, []string, error) {
@@ -797,9 +793,7 @@ func migrateSettingsMap(settings map[string]any) map[string]any {
 			}
 			if !hasProviderMax {
 				merged := map[string]any{}
-				for key, value := range provider {
-					merged[key] = value
-				}
+				maps.Copy(merged, provider)
 				merged["maxRetryDelayMs"] = maxDelay
 				rawRetry["provider"] = merged
 			}
@@ -939,9 +933,7 @@ func DeepMergeSettings(base, overrides *Settings) *Settings {
 
 func deepMergeObjects(base, overrides map[string]any) map[string]any {
 	result := make(map[string]any, len(base)+len(overrides))
-	for key, value := range base {
-		result[key] = value
-	}
+	maps.Copy(result, base)
 	for key, overrideValue := range overrides {
 		if overrideValue == nil {
 			continue
@@ -1401,9 +1393,7 @@ func (m *SettingsManager) persistScopedSettings(
 			baseObject, _ := merged[field].(map[string]any)
 			if hasNested && isObject {
 				mergedNested := map[string]any{}
-				for key, entry := range baseObject {
-					mergedNested[key] = entry
-				}
+				maps.Copy(mergedNested, baseObject)
 				for nestedKey := range nestedKeys {
 					// Upstream assigns the in-memory value, which is undefined for a
 					// removed nested field; JSON.stringify drops it, so delete it here
@@ -1426,9 +1416,7 @@ func (m *SettingsManager) persistScopedSettings(
 
 func copyStringSet(source map[string]bool) map[string]bool {
 	out := make(map[string]bool, len(source))
-	for key, value := range source {
-		out[key] = value
-	}
+	maps.Copy(out, source)
 	return out
 }
 
@@ -1436,9 +1424,7 @@ func copyNestedSet(source map[string]map[string]bool) map[string]map[string]bool
 	out := make(map[string]map[string]bool, len(source))
 	for key, value := range source {
 		nested := make(map[string]bool, len(value))
-		for nestedKey, nestedValue := range value {
-			nested[nestedKey] = nestedValue
-		}
+		maps.Copy(nested, value)
 		out[key] = nested
 	}
 	return out
@@ -1653,9 +1639,7 @@ func (m *SettingsManager) GetAllModelThinkingLevels() map[string]string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	out := map[string]string{}
-	for key, value := range m.settings.ModelThinkingLevels {
-		out[key] = value
-	}
+	maps.Copy(out, m.settings.ModelThinkingLevels)
 	return out
 }
 
@@ -2666,10 +2650,8 @@ func (m *SettingsManager) GetTreeFilterMode() string {
 	defer m.mu.Unlock()
 	if m.settings.TreeFilterMode != nil {
 		value := *m.settings.TreeFilterMode
-		for _, valid := range []string{"default", "no-tools", "user-only", "labeled-only", "all"} {
-			if value == valid {
-				return value
-			}
+		if slices.Contains([]string{"default", "no-tools", "user-only", "labeled-only", "all"}, value) {
+			return value
 		}
 	}
 	return "default"

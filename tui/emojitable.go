@@ -4,6 +4,8 @@ package tui
 // points that render double width; Go has no Emoji property, so the code
 // points were enumerated from the reference regex.
 
+import "slices"
+
 // extendedPictographicRanges are the code points with the Unicode
 // Extended_Pictographic property, which Intl.Segmenter reads for its emoji ZWJ
 // rule. Go has no Emoji property, so the set was enumerated from the reference:
@@ -511,22 +513,5 @@ func isKeycapBase(r rune) bool {
 }
 
 func containsRune(runes []rune, target rune) bool {
-	for _, r := range runes {
-		if r == target {
-			return true
-		}
-	}
-	return false
-}
-
-func splitRunes(runes []rune, separator rune) [][]rune {
-	var parts [][]rune
-	start := 0
-	for i, r := range runes {
-		if r == separator {
-			parts = append(parts, runes[start:i])
-			start = i + 1
-		}
-	}
-	return append(parts, runes[start:])
+	return slices.Contains(runes, target)
 }

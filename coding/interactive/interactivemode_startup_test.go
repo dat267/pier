@@ -89,7 +89,7 @@ func TestStartupUserInput(t *testing.T) {
 // TestStartupRebuildAndReset covers the chat rebuild helpers.
 func TestStartupRebuildAndReset(t *testing.T) {
 	wiring, _ := newStartupTestWiring(t)
-	manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: boolPtr(false)})
+	manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: new(false)})
 	manager.AppendMessage(ai.Message(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}}))
 	wiring.SessionInfo = manager
 	wiring.Transcript = NewTranscriptRenderer(wiring.Chat, nil, wiring.Settings, nil, manager)
@@ -253,12 +253,12 @@ func TestStartupAnthropicWarning(t *testing.T) {
 	wiring.ShowWarning = func(message string) { warnings = append(warnings, message) }
 
 	// The setting can disable the warning.
-	settings.SetWarnings(coding.SettingsWarnings{AnthropicExtraUsage: boolPtr(false)})
+	settings.SetWarnings(coding.SettingsWarnings{AnthropicExtraUsage: new(false)})
 	wiring.MaybeWarnAboutAnthropicSubscriptionAuth(context.Background(), &ai.Model{Provider: "anthropic"})
 	if len(warnings) != 0 {
 		t.Fatalf("warnings = %v", warnings)
 	}
-	settings.SetWarnings(coding.SettingsWarnings{AnthropicExtraUsage: boolPtr(true)})
+	settings.SetWarnings(coding.SettingsWarnings{AnthropicExtraUsage: new(true)})
 
 	// A non-anthropic model is ignored.
 	wiring.MaybeWarnAboutAnthropicSubscriptionAuth(context.Background(), &ai.Model{Provider: "openai"})
@@ -287,7 +287,7 @@ func TestClearChatAndRenderInitialMessages(t *testing.T) {
 	SetStyleColorsEnabled(true)
 	InitTheme("dark", false)
 
-	manager := coding.NewSessionManager(t.TempDir(), &coding.SessionManagerOptions{Persist: boolPtr(false)})
+	manager := coding.NewSessionManager(t.TempDir(), &coding.SessionManagerOptions{Persist: new(false)})
 	manager.AppendMessage(ai.Message(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "kept entry"}}))
 
 	chat := &tui.Container{}
@@ -316,7 +316,7 @@ func TestClearChatAndRenderInitialMessages(t *testing.T) {
 // the footer and refreshes the editor border).
 func TestStartupRebuildUpdatesFooter(t *testing.T) {
 	wiring, _ := newStartupTestWiring(t)
-	manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: boolPtr(false)})
+	manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: new(false)})
 	manager.AppendMessage(ai.Message(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}}))
 	wiring.SessionInfo = manager
 	transcript := NewTranscriptRenderer(wiring.Chat, nil, wiring.Settings, nil, manager)

@@ -3,6 +3,7 @@ package ai
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -308,10 +309,8 @@ var deferredToolPlaceholder = AnthropicTool{
 	Name:         "__pi_deferred_placeholder__",
 	Description:  "Reserved placeholder. Never available. Never call this.",
 	InputSchema:  json.RawMessage(`{"type":"object","properties":{},"required":[]}`),
-	DeferLoading: boolPtr(true),
+	DeferLoading: new(true),
 }
-
-func boolPtr(b bool) *bool { return &b }
 
 func shouldUseServerSideFallbackBeta(model *Model) bool {
 	return model.Compat != nil && model.Compat.AnthropicMessages != nil &&
@@ -709,10 +708,10 @@ func ConvertAnthropicTools(
 			InputSchema: inputSchema,
 		}
 		if supportsEagerToolInputStreaming {
-			wire.EagerInputStreaming = boolPtr(true)
+			wire.EagerInputStreaming = new(true)
 		}
 		if isStrict {
-			wire.Strict = boolPtr(true)
+			wire.Strict = new(true)
 		}
 		if cacheControl != nil && index == len(tools)-1 {
 			wire.CacheControl = cacheControl
@@ -791,7 +790,7 @@ func GetBetaFeatures(model *Model, context TranscriptContext, isOAuthToken, nati
 	if configured != nil {
 		seen := map[string]bool{}
 		var out []string
-		for _, feature := range strings.Split(*configured, ",") {
+		for feature := range strings.SplitSeq(*configured, ",") {
 			feature = strings.TrimSpace(feature)
 			if feature == "" || seen[feature] {
 				continue
@@ -804,10 +803,8 @@ func GetBetaFeatures(model *Model, context TranscriptContext, isOAuthToken, nati
 
 	var features []string
 	add := func(f string) {
-		for _, existing := range features {
-			if existing == f {
-				return
-			}
+		if slices.Contains(features, f) {
+			return
 		}
 		features = append(features, f)
 	}
@@ -837,8 +834,6 @@ func GetBetaFeatures(model *Model, context TranscriptContext, isOAuthToken, nati
 	}
 	return features
 }
-
-func ptrString(s string) *string { return &s }
 
 // BuildAnthropicParams builds the streaming request body
 // (port of buildParams).

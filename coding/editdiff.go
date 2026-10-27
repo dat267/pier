@@ -2,6 +2,7 @@ package coding
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/dat267/pier/internal/jsdiff"
@@ -153,8 +154,8 @@ func getReplacementLineRange(lines []lineSpan, replacement textReplacement) (sta
 // an offset) in reverse order so offsets stay stable.
 func applyReplacements(content string, replacements []textReplacement, offset int) string {
 	result := content
-	for i := len(replacements) - 1; i >= 0; i-- {
-		replacement := replacements[i]
+	for _, replacement := range slices.Backward(replacements) {
+
 		matchIndex := replacement.matchIndex - offset
 		result = result[:matchIndex] + replacement.newText + result[matchIndex+replacement.matchLength:]
 	}
@@ -425,8 +426,8 @@ func GenerateUnifiedPatch(path, oldContent, newContent string, contextLines int)
 		for _, line := range hunk.lines {
 			// Each entry still carries its newline; a line without one gets the
 			// marker after it (upstream structuredPatch step 2).
-			if strings.HasSuffix(line, "\n") {
-				out.WriteString(strings.TrimSuffix(line, "\n"))
+			if before, ok := strings.CutSuffix(line, "\n"); ok {
+				out.WriteString(before)
 			} else {
 				out.WriteString(line)
 				out.WriteString("\n\\ No newline at end of file")
@@ -593,47 +594,6 @@ type diffOp struct {
 	kind     opKind
 	oldIndex int
 	newIndex int
-}
-
-// diffLinesOps computes an LCS-based line diff.
-func diffLinesOps(oldLines, newLines []string) []diffOp {
-	n, m := len(oldLines), len(newLines)
-	// LCS table.
-	table := make([][]int, n+1)
-	for i := range table {
-		table[i] = make([]int, m+1)
-	}
-	for i := n - 1; i >= 0; i-- {
-		for j := m - 1; j >= 0; j-- {
-			if oldLines[i] == newLines[j] {
-				table[i][j] = table[i+1][j+1] + 1
-			} else {
-				table[i][j] = max(table[i+1][j], table[i][j+1])
-			}
-		}
-	}
-	var ops []diffOp
-	i, j := 0, 0
-	for i < n && j < m {
-		if oldLines[i] == newLines[j] {
-			ops = append(ops, diffOp{kind: opEqual, oldIndex: i, newIndex: j})
-			i++
-			j++
-		} else if table[i+1][j] >= table[i][j+1] {
-			ops = append(ops, diffOp{kind: opRemove, oldIndex: i})
-			i++
-		} else {
-			ops = append(ops, diffOp{kind: opAdd, newIndex: j})
-			j++
-		}
-	}
-	for ; i < n; i++ {
-		ops = append(ops, diffOp{kind: opRemove, oldIndex: i})
-	}
-	for ; j < m; j++ {
-		ops = append(ops, diffOp{kind: opAdd, newIndex: j})
-	}
-	return ops
 }
 
 // GenerateDiffString builds the display-oriented diff with line numbers and

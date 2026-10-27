@@ -20,7 +20,7 @@ func TestGoogleStreamKeepsPresentButEmptyTextParts(t *testing.T) {
 	model.BaseURL = server.URL + "/v1beta"
 	stream := StreamGoogleGenerativeAI(model, NormalizeContext(Context{
 		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-	}), &GoogleOptions{StreamOptions: StreamOptions{APIKey: "test-key"}})
+	}), &GoogleOptions{APIKey: "test-key"})
 
 	var types []string
 	for {

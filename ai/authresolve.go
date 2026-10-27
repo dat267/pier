@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"strings"
 	"time"
 )
@@ -94,12 +95,8 @@ func ResolveProviderAuth(providerID string, auth ProviderAuth, credentials Crede
 			credential := stored.APIKey
 			if overrides != nil && overrides.Env != nil {
 				merged := ProviderEnv{}
-				for k, v := range credential.Env {
-					merged[k] = v
-				}
-				for k, v := range overrides.Env {
-					merged[k] = v
-				}
+				maps.Copy(merged, credential.Env)
+				maps.Copy(merged, overrides.Env)
 				credential = &ApiKeyCredential{Key: credential.Key, Env: merged}
 			}
 			return resolveAPIKey(requestAuthContext, auth.APIKey, providerID, credential, ctx)
@@ -205,10 +202,7 @@ func refreshStoredOAuthCredential(credentials CredentialStore, providerID string
 // expiry under the lock, refresh once globally, and persist the rotated
 // credential before release.
 func resolveStoredOAuth(credentials CredentialStore, providerID string, oauth *OAuthAuth, stored *OAuthCredential, ctx context.Context, minOAuthValidityMS int64) (*AuthResult, error) {
-	minimumValidityMS := int64(oauthMinimumValidityMS)
-	if minOAuthValidityMS > minimumValidityMS {
-		minimumValidityMS = minOAuthValidityMS
-	}
+	minimumValidityMS := max(minOAuthValidityMS, int64(oauthMinimumValidityMS))
 	expiresSoon := func(credential *OAuthCredential) bool {
 		return time.Now().UnixMilli()+minimumValidityMS >= credential.Expires
 	}

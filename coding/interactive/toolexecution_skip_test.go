@@ -71,7 +71,7 @@ func BenchmarkToolAnimationTick(b *testing.B) {
 	SetRegisteredThemes(nil)
 	InitTheme("dark", false)
 	var sb strings.Builder
-	for i := 0; i < 2000; i++ {
+	for range 2000 {
 		sb.WriteString("some tool output line with several words to wrap around the terminal width\n")
 	}
 	output := sb.String()
@@ -100,7 +100,7 @@ func BenchmarkBashToolAnimationTick(b *testing.B) {
 	SetRegisteredThemes(nil)
 	InitTheme("dark", false)
 	var sb strings.Builder
-	for i := 0; i < 2000; i++ {
+	for range 2000 {
 		sb.WriteString("some tool output line with several words to wrap around the terminal width\n")
 	}
 	output := sb.String()

@@ -150,7 +150,7 @@ func TestModelsStorePreservesSharedImageModels(t *testing.T) {
 			}))
 			defer server.Close()
 			image.BaseURL = server.URL
-			result := (ai.OpenRouterImages{}).GenerateImages(&image, ai.ImagesContext{Input: []ai.ImagesInputContent{ai.TextContent{Text: "draw a dot"}}}, &ai.ImagesOptions{StreamOptions: ai.StreamOptions{APIKey: "mock-key"}})
+			result := (ai.OpenRouterImages{}).GenerateImages(&image, ai.ImagesContext{Input: []ai.ImagesInputContent{ai.TextContent{Text: "draw a dot"}}}, &ai.ImagesOptions{APIKey: "mock-key"})
 			if result.StopReason != fixture.Generation.StopReason {
 				t.Fatalf("generation failed: %+v", result)
 			}
@@ -200,7 +200,7 @@ func parityCompletionsBody(t *testing.T, model *ai.Model) string {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	zero := 0
-	result, err := ai.StreamOpenAICompletions(&copy, ai.TranscriptContext{Messages: []ai.Message{&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hi"}, Timestamp: 1}}}, &ai.OpenAICompletionsOptions{StreamOptions: ai.StreamOptions{Ctx: ctx, APIKey: "mock-key", MaxRetries: &zero}, ReasoningEffort: "high"}).Result(ctx)
+	result, err := ai.StreamOpenAICompletions(&copy, ai.TranscriptContext{Messages: []ai.Message{&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hi"}, Timestamp: 1}}}, &ai.OpenAICompletionsOptions{Ctx: ctx, APIKey: "mock-key", MaxRetries: &zero, ReasoningEffort: "high"}).Result(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -221,11 +221,10 @@ func metaMintAPIKey(identityToken string, ctx context.Context) (*OAuthCredential
 		}
 		return nil, fmt.Errorf("Meta did not issue an API key.")
 	}
-	return &OAuthCredential{OAuthCredentials: OAuthCredentials{
+	return &OAuthCredential{
 		Refresh: identityToken,
 		Access:  apiKey,
-		Expires: time.Now().UnixMilli() + metaAPIKeyLifetimeMS,
-	}}, nil
+		Expires: time.Now().UnixMilli() + metaAPIKeyLifetimeMS}, nil
 }
 
 func metaIntValue(value *int) int {

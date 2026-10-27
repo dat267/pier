@@ -29,7 +29,7 @@ func (c *dispatchProbeComponent) HandleMouse(event TuiMouseEvent) *TuiMouseDispa
 // re-stamping FocusTarget to the outer component.
 func TestDispatchMouseEventPreservesNestedTarget(t *testing.T) {
 	inner := &dispatchProbeComponent{result: &TuiMouseDispatchResult{
-		TuiMouseEventResult: TuiMouseEventResult{Handled: true, Focus: true},
+		Handled: true, Focus: true,
 	}}
 	nested := DispatchMouseEvent(inner, TuiMouseEvent{X: 0, Y: 0, Width: 10, Height: 5, ScreenX: 0, ScreenY: 0})
 	if nested == nil || nested.FocusTarget != Component(inner) {

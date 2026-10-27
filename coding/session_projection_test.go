@@ -29,7 +29,7 @@ func newProjectionTestSession(t *testing.T) *SessionManager {
 	m := NewSessionManager(t.TempDir(), &SessionManagerOptions{SessionDir: t.TempDir(), Persist: &persist})
 	m.AppendMessage(&ai.SystemMessage{Content: ai.StringOrBlocks{Text: "system prompt"}, Timestamp: 1})
 	m.AppendModelChange("anthropic", "claude-opus-4-5")
-	for i := 0; i < 400; i++ {
+	for range 400 {
 		m.AppendMessage(createUserMessage("a message with enough text that decoding it allocates"))
 		m.AppendMessage(createAssistantMessageT("a reply with enough text that decoding it allocates"))
 	}
@@ -191,14 +191,14 @@ func TestProjectionDecodesOnlyTheAppendedEntries(t *testing.T) {
 func TestProjectionCacheMatchesTheReference(t *testing.T) {
 	m := newTestSessionForProjection(t)
 	m.AppendMessage(&ai.SystemMessage{Content: ai.StringOrBlocks{Text: "prompt one"}, Timestamp: 1})
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		m.AppendMessage(createUserMessage("old message"))
 		m.AppendMessage(createAssistantMessageT("old reply"))
 	}
 	entries := m.GetEntries()
 	m.AppendCompaction("summary of the old history", entries[len(entries)-4].ID, 1000, nil, false, nil)
 	m.AppendMessage(&ai.SystemMessage{Content: ai.StringOrBlocks{Text: "prompt two"}, Timestamp: 2})
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		m.AppendMessage(createUserMessage("new message"))
 	}
 
@@ -260,7 +260,7 @@ var projectedTimestampPattern = regexp.MustCompile(`"timestamp":(?:"[^"]*"|[0-9]
 // session; the window here is eight entries (the compaction, the six it kept, and the message after it).
 func TestCompactedProjectionCostsTheWindowNotTheSession(t *testing.T) {
 	m := newTestSessionForProjection(t)
-	for i := 0; i < 500; i++ {
+	for range 500 {
 		m.AppendMessage(createUserMessage("a message with enough text that copying it is visible in the measurement"))
 		m.AppendMessage(createAssistantMessageT("a reply with enough text that copying it is visible too"))
 	}

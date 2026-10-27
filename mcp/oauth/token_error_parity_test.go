@@ -13,11 +13,9 @@ import (
 // value.error === "string", not truthiness, before checking the HTTP status.
 func TestTokenRequestPreservesEmptyOAuthErrorCode(t *testing.T) {
 	_, err := ExchangeAuthorizationCode(context.Background(), "https://auth.example", ExchangeOptions{
-		TokenRequestOptions: TokenRequestOptions{
-			ClientInformation: &OAuthClientInformationFull{OAuthClientInformation: OAuthClientInformation{ClientID: "fixture-client"}},
-			Fetch: func(context.Context, *http.Request) (*http.Response, error) {
-				return &http.Response{StatusCode: 400, Body: io.NopCloser(strings.NewReader(`{"error":"","error_description":"fixture-description"}`))}, nil
-			},
+		ClientInformation: &OAuthClientInformationFull{ClientID: "fixture-client"},
+		Fetch: func(context.Context, *http.Request) (*http.Response, error) {
+			return &http.Response{StatusCode: 400, Body: io.NopCloser(strings.NewReader(`{"error":"","error_description":"fixture-description"}`))}, nil
 		},
 		Code: "fixture-code", CodeVerifier: "fixture-verifier", RedirectURL: "http://127.0.0.1/callback",
 	})

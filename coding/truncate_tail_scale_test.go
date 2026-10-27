@@ -43,7 +43,7 @@ func TestFormatSizeLargeByteCountDoesNotOverflow(t *testing.T) {
 // read, which is why a running command stuttered the UI.
 func TestTruncateTailBuildsTheWindowWithoutPrepending(t *testing.T) {
 	var sb strings.Builder
-	for i := 0; i < 4000; i++ {
+	for i := range 4000 {
 		fmt.Fprintf(&sb, "build output line %d with some text to make it a realistic width\n", i)
 	}
 	content := sb.String()

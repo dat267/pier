@@ -13,6 +13,7 @@ import (
 	"math"
 	"math/rand"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -156,12 +157,7 @@ var goalExpectedPhase = map[GoalOperation]GoalPhase{
 }
 
 func isGoalPhase(value GoalPhase) bool {
-	for _, phase := range goalPhases {
-		if phase == value {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(goalPhases, value)
 }
 
 // NewGoalID mints a goal id: goal-<time36>-<random6>.
@@ -313,12 +309,7 @@ func validateBudget(budget *GoalBudget) error {
 const maxSafeInteger = int64(1)<<53 - 1
 
 func containsPhase(phases []GoalPhase, phase GoalPhase) bool {
-	for _, candidate := range phases {
-		if candidate == phase {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(phases, phase)
 }
 
 // FoldGoal replays every durable entry into the current goal view. It returns

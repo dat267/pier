@@ -3,6 +3,7 @@ package coding
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -69,12 +70,8 @@ func mergeCompatObjects(baseRaw, overrideRaw []byte) ([]byte, error) {
 			overrideNested, overrideIsObject := value.(map[string]any)
 			if baseIsObject || overrideIsObject {
 				mergedNested := map[string]any{}
-				for nestedKey, nestedValue := range baseNested {
-					mergedNested[nestedKey] = nestedValue
-				}
-				for nestedKey, nestedValue := range overrideNested {
-					mergedNested[nestedKey] = nestedValue
-				}
+				maps.Copy(mergedNested, baseNested)
+				maps.Copy(mergedNested, overrideNested)
 				base[key] = mergedNested
 				continue
 			}
@@ -161,12 +158,8 @@ func applyModelOverride(model *ai.Model, override ModelsJSONModelOverride) (*ai.
 	}
 	if override.ThinkingLevelMap != nil {
 		merged := ai.ThinkingLevelMap{}
-		for level, value := range model.ThinkingLevelMap {
-			merged[level] = value
-		}
-		for level, value := range override.ThinkingLevelMap {
-			merged[level] = value
-		}
+		maps.Copy(merged, model.ThinkingLevelMap)
+		maps.Copy(merged, override.ThinkingLevelMap)
 		updated.ThinkingLevelMap = merged
 	}
 	if override.Input != nil {
@@ -202,9 +195,7 @@ func applyModelOverride(model *ai.Model, override ModelsJSONModelOverride) (*ai.
 	}
 	if override.SamplingParams != nil {
 		merged := map[string]json.RawMessage{}
-		for key, value := range model.SamplingParams {
-			merged[key] = value
-		}
+		maps.Copy(merged, model.SamplingParams)
 		for key, value := range override.SamplingParams {
 			encoded, err := ai.MarshalJSON(value)
 			if err != nil {
@@ -233,10 +224,8 @@ func costTiersFromJSON(tiers []ModelsJSONCostTier) []ai.ModelCostTier {
 	for _, tier := range tiers {
 		out = append(out, ai.ModelCostTier{
 			InputTokensAbove: int64(tier.InputTokensAbove),
-			ModelCostRates: ai.ModelCostRates{
-				Input: tier.Input, Output: tier.Output,
-				CacheRead: tier.CacheRead, CacheWrite: tier.CacheWrite,
-			},
+			Input:            tier.Input, Output: tier.Output,
+			CacheRead: tier.CacheRead, CacheWrite: tier.CacheWrite,
 		})
 	}
 	return out
@@ -285,10 +274,9 @@ func modelFromJSON(providerID string, definition ModelsJSONModel, providerConfig
 	}
 	var cost ai.ModelCost
 	if definition.Cost != nil {
-		cost = ai.ModelCost{ModelCostRates: ai.ModelCostRates{
+		cost = ai.ModelCost{
 			Input: definition.Cost.Input, Output: definition.Cost.Output,
-			CacheRead: definition.Cost.CacheRead, CacheWrite: definition.Cost.CacheWrite,
-		}}
+			CacheRead: definition.Cost.CacheRead, CacheWrite: definition.Cost.CacheWrite}
 		cost.Tiers = costTiersFromJSON(definition.Cost.Tiers)
 	}
 	contextWindow := int64(128000)
@@ -411,18 +399,14 @@ func mergeSamplingParamsByThinkingLevel(base map[string]map[string]json.RawMessa
 		return base
 	}
 	merged := map[string]map[string]json.RawMessage{}
-	for level, params := range base {
-		merged[level] = params
-	}
+	maps.Copy(merged, base)
 	for _, level := range []string{"off", "minimal", "low", "medium", "high", "xhigh", "max"} {
 		params, ok := override[level]
 		if !ok {
 			continue
 		}
 		inner := map[string]json.RawMessage{}
-		for key, value := range base[level] {
-			inner[key] = value
-		}
+		maps.Copy(inner, base[level])
 		for key, value := range params {
 			encoded, err := ai.MarshalJSON(value)
 			if err != nil {
@@ -543,18 +527,14 @@ func configuredHeaders(config *ModelsJSONProvider) map[string]string {
 		return nil
 	}
 	out := map[string]string{}
-	for key, value := range config.Headers {
-		out[key] = value
-	}
+	maps.Copy(out, config.Headers)
 	return out
 }
 
 // configContextEnv resolves the environment values a config value references.
 func configContextEnv(values []string, ctx ai.AuthContext, explicit map[string]string) map[string]string {
 	env := map[string]string{}
-	for key, value := range explicit {
-		env[key] = value
-	}
+	maps.Copy(env, explicit)
 	seen := map[string]bool{}
 	for _, value := range values {
 		for _, name := range GetConfigValueEnvVarNames(value) {
@@ -701,13 +681,9 @@ func composeAPIKeyAuth(providerID string, base *ai.Provider, config *ModelsJSONP
 		}
 		explicitEnv := map[string]string{}
 		if input.Credential != nil {
-			for key, value := range input.Credential.Env {
-				explicitEnv[key] = value
-			}
+			maps.Copy(explicitEnv, input.Credential.Env)
 		}
-		for key, value := range result.Env {
-			explicitEnv[key] = value
-		}
+		maps.Copy(explicitEnv, result.Env)
 		values := make([]string, 0, len(rawHeaders))
 		for _, value := range rawHeaders {
 			values = append(values, value)
@@ -732,9 +708,7 @@ func withConfiguredAuth(auth ai.ModelAuth, headers map[string]string, authHeader
 	var merged ai.ProviderHeaders
 	if auth.Headers != nil || len(headers) > 0 {
 		merged = ai.ProviderHeaders{}
-		for key, value := range auth.Headers {
-			merged[key] = value
-		}
+		maps.Copy(merged, auth.Headers)
 		for key, value := range headers {
 			copied := value
 			merged[key] = &copied
@@ -796,15 +770,11 @@ func rawModelHeaders(model *ai.Model, config *ModelsJSONProvider) map[string]str
 	}
 	headers := map[string]string{}
 	if override, ok := config.ModelOverrides[model.ID]; ok {
-		for key, value := range override.Headers {
-			headers[key] = value
-		}
+		maps.Copy(headers, override.Headers)
 	}
 	for _, definition := range config.Models {
 		if definition.ID == model.ID {
-			for key, value := range definition.Headers {
-				headers[key] = value
-			}
+			maps.Copy(headers, definition.Headers)
 		}
 	}
 	if len(headers) == 0 {
@@ -980,12 +950,8 @@ type CompatibilityRequestConfig struct {
 // runs without resolved auth.
 func ResolveCompatibilityRequestConfig(model *ai.Model, config *ModelsJSONProvider) (CompatibilityRequestConfig, error) {
 	combined := map[string]string{}
-	for key, value := range configuredHeaders(config) {
-		combined[key] = value
-	}
-	for key, value := range rawModelHeaders(model, config) {
-		combined[key] = value
-	}
+	maps.Copy(combined, configuredHeaders(config))
+	maps.Copy(combined, rawModelHeaders(model, config))
 	configured, err := ResolveHeadersOrThrow(combined, fmt.Sprintf(`model "%s/%s"`, model.Provider, model.ID), nil)
 	if err != nil {
 		return CompatibilityRequestConfig{}, err

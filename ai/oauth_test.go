@@ -342,7 +342,7 @@ func TestAnthropicOAuthDefinition(t *testing.T) {
 	if auth.Name != "Anthropic (Claude Pro/Max)" || !auth.IsSubscription {
 		t.Fatalf("auth = %+v", auth)
 	}
-	modelAuth, err := auth.ToAuth(&OAuthCredential{OAuthCredentials: OAuthCredentials{Access: "access-token"}})
+	modelAuth, err := auth.ToAuth(&OAuthCredential{Access: "access-token"})
 	if err != nil || modelAuth.APIKey != "access-token" {
 		t.Fatalf("model auth = %+v err = %v", modelAuth, err)
 	}

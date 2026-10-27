@@ -78,8 +78,8 @@ func ParseAuthorizationInput(input string) OAuthAuthorizationInput {
 			}
 		}
 	}
-	if index := strings.Index(value, "#"); index != -1 {
-		return OAuthAuthorizationInput{Code: value[:index], State: value[index+1:]}
+	if before, after, ok := strings.Cut(value, "#"); ok {
+		return OAuthAuthorizationInput{Code: before, State: after}
 	}
 	if strings.Contains(value, "code=") {
 		if values, err := url.ParseQuery(value); err == nil {
@@ -278,11 +278,10 @@ func ExchangeAnthropicAuthorizationCode(ctx context.Context, code, state, verifi
 		return nil, fmt.Errorf("Token exchange returned invalid JSON. url=%s; body=%s; details=%s",
 			anthropicTokenURL(), responseBody, FormatOAuthErrorDetails(err))
 	}
-	return &OAuthCredential{OAuthCredentials: OAuthCredentials{
+	return &OAuthCredential{
 		Refresh: tokenData.RefreshToken,
 		Access:  tokenData.AccessToken,
-		Expires: time.Now().UnixMilli() + tokenData.ExpiresIn*1000 - 5*60*1000,
-	}}, nil
+		Expires: time.Now().UnixMilli() + tokenData.ExpiresIn*1000 - 5*60*1000}, nil
 }
 
 // RefreshAnthropicToken refreshes an Anthropic OAuth credential (upstream
@@ -307,11 +306,10 @@ func RefreshAnthropicToken(ctx context.Context, refreshToken string) (*OAuthCred
 		return nil, fmt.Errorf("Anthropic token refresh returned invalid JSON. url=%s; body=%s; details=%s",
 			anthropicTokenURL(), responseBody, FormatOAuthErrorDetails(err))
 	}
-	return &OAuthCredential{OAuthCredentials: OAuthCredentials{
+	return &OAuthCredential{
 		Refresh: data.RefreshToken,
 		Access:  data.AccessToken,
-		Expires: time.Now().UnixMilli() + data.ExpiresIn*1000 - 5*60*1000,
-	}}, nil
+		Expires: time.Now().UnixMilli() + data.ExpiresIn*1000 - 5*60*1000}, nil
 }
 
 // AnthropicAuthorizeURL builds the authorize URL for a PKCE challenge

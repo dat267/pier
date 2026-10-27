@@ -18,7 +18,7 @@ import (
 func buildThinkingTranscriptN(tb testing.TB, app *App, n int, thinkingLines int) {
 	tb.Helper()
 	thinking := strings.Repeat("a line of reasoning that is long enough to wrap in a narrow viewport\n", thinkingLines)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		app.events.HandleEvent(&coding.SessionEvent{
 			Type: coding.SessionMessageStart,
 			Agent: agentEvent("message_start", &ai.UserMessage{
@@ -108,7 +108,7 @@ func BenchmarkThinkingExpandFirstFrame(b *testing.B) {
 func thinkingSessionItems(n int, thinkingLines int) []RenderSessionItem {
 	thinking := strings.Repeat("a line of reasoning that is long enough to wrap in a narrow viewport\n", thinkingLines)
 	items := make([]RenderSessionItem, 0, n*2)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		items = append(items, RenderSessionItem{Message: &ai.UserMessage{Content: ai.StringOrBlocks{Text: fmt.Sprintf("user message %d", i)}}})
 		items = append(items, RenderSessionItem{Message: &ai.AssistantMessage{
 			API: ai.APIAnthropicMessages, Provider: "test", Model: "m",

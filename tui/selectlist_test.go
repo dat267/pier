@@ -309,7 +309,7 @@ func TestMouseRegion(t *testing.T) {
 	regionCalled := 0
 	region := NewMouseRegion(child, func(event TuiMouseEvent) *TuiMouseDispatchResult {
 		regionCalled++
-		return &TuiMouseDispatchResult{TuiMouseEventResult: TuiMouseEventResult{Handled: true}}
+		return &TuiMouseDispatchResult{Handled: true}
 	})
 
 	if got := region.HandleMouse(TuiMouseEvent{Y: 0, Width: 10, Height: 1}); got == nil || regionCalled != 0 {

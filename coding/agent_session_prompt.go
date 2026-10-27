@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -335,8 +336,8 @@ func (s *AgentSession) runAgentPrompt(ctx context.Context, messages []ai.Message
 // findLastAssistantMessage returns the most recent assistant message.
 func (s *AgentSession) findLastAssistantMessage() *ai.AssistantMessage {
 	messages := s.Messages()
-	for index := len(messages) - 1; index >= 0; index-- {
-		if assistant, ok := messages[index].(*ai.AssistantMessage); ok {
+	for _, message := range slices.Backward(messages) {
+		if assistant, ok := message.(*ai.AssistantMessage); ok {
 			return assistant
 		}
 	}

@@ -85,21 +85,19 @@ func DTS() *Language {
 
 	return &Language{
 		Name: "Device Tree",
-		Mode: Mode{
-			Contains: []*Mode{
-				rootNode,
-				reference,
-				keyword,
-				label,
-				node,
-				cellProperty,
-				CLineCommentMode,
-				CBlockCommentMode,
-				numbers,
-				stringsMode,
-				preprocessor,
-				{Begin: IdentRe + `::`, Keywords: Keywords{}},
-			},
+		Contains: []*Mode{
+			rootNode,
+			reference,
+			keyword,
+			label,
+			node,
+			cellProperty,
+			CLineCommentMode,
+			CBlockCommentMode,
+			numbers,
+			stringsMode,
+			preprocessor,
+			{Begin: IdentRe + `::`, Keywords: Keywords{}},
 		},
 	}
 }

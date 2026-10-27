@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"maps"
+	"slices"
 	"testing"
 	"time"
 )
@@ -24,12 +26,7 @@ func (f *fakeAuthContext) Env(name string) (string, bool) {
 }
 
 func (f *fakeAuthContext) FileExists(path string) bool {
-	for _, p := range f.files {
-		if p == path {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(f.files, path)
 }
 
 // A lazy setup failure stamps the message with the request start time, not the
@@ -293,7 +290,7 @@ func TestCalculateCostWithTiersAndLongCacheWrites(t *testing.T) {
 	model := &Model{
 		Cost: ModelCost{ModelCostRates: ModelCostRates{Input: 3, Output: 15, CacheRead: 0.3, CacheWrite: 3.75},
 			Tiers: []ModelCostTier{
-				{ModelCostRates: ModelCostRates{Input: 2, Output: 10, CacheRead: 0.2, CacheWrite: 2.5}, InputTokensAbove: 100000},
+				{Input: 2, Output: 10, CacheRead: 0.2, CacheWrite: 2.5, InputTokensAbove: 100000},
 			}},
 	}
 
@@ -347,7 +344,7 @@ func TestGetSupportedAndClampThinkingLevels(t *testing.T) {
 	// null marks a level unsupported.
 	limited := &Model{Reasoning: true, ThinkingLevelMap: ThinkingLevelMap{
 		ThinkMinimal: nil,
-		ThinkXHigh:   strPtr("xhigh"),
+		ThinkXHigh:   new("xhigh"),
 	}}
 	got = GetSupportedThinkingLevels(limited)
 	want = []ModelThinkingLevel{"off", "low", "medium", "high", "xhigh"}
@@ -389,8 +386,8 @@ func TestModelsAreEqual(t *testing.T) {
 }
 
 func TestMergeHeadersCaseInsensitive(t *testing.T) {
-	base := ProviderHeaders{"X-Api-Key": strPtr("a"), "Keep": strPtr("1")}
-	override := ProviderHeaders{"x-api-key": strPtr("b")}
+	base := ProviderHeaders{"X-Api-Key": new("a"), "Keep": new("1")}
+	override := ProviderHeaders{"x-api-key": new("b")}
 	merged := MergeHeaders(base, override)
 	if len(merged) != 2 {
 		t.Fatalf("merged = %v", merged)
@@ -447,8 +444,6 @@ func TestCredentialJSONRoundTrip(t *testing.T) {
 	}
 }
 
-func strPtr(s string) *string { return &s }
-
 // capturingStreams records the options a Models request reaches the provider
 // with (the ai-layer counterpart of the coding ModelRuntime contract tests).
 type capturingStreams struct {
@@ -486,7 +481,7 @@ func TestModelsStreamSimpleAppliesResolvedAuthAndSimpleOptions(t *testing.T) {
 		Auth: ProviderAuth{APIKey: &ApiKeyAuth{Name: "p", Resolve: func(AuthResolveInput) (*AuthResult, error) {
 			return &AuthResult{Auth: ModelAuth{
 				APIKey:  "sk",
-				Headers: ProviderHeaders{"X-Auth": strPtr("1")},
+				Headers: ProviderHeaders{"X-Auth": new("1")},
 			}, Source: "test"}, nil
 		}}},
 		Models: []*Model{{ID: "m", Name: "m", Provider: "p", API: APIOpenAICompletions, Input: []string{"text"}, ContextWindow: 1000, MaxTokens: 100}},
@@ -503,22 +498,17 @@ func TestModelsStreamSimpleAppliesResolvedAuthAndSimpleOptions(t *testing.T) {
 	toolChoice := ToolChoice("required")
 	highBudget := 4096
 	transformed := 0
-	_, err := models.StreamSimple(model, Context{}, &ModelsSimpleStreamOptions{SimpleStreamOptions: SimpleStreamOptions{
-		StreamOptions: StreamOptions{
-			TransformHeaders: func(headers ProviderHeaders) ProviderHeaders {
-				transformed++
-				out := ProviderHeaders{}
-				for key, value := range headers {
-					out[key] = value
-				}
-				out["X-Transform"] = strPtr("2")
-				return out
-			},
+	_, err := models.StreamSimple(model, Context{}, &ModelsSimpleStreamOptions{
+		TransformHeaders: func(headers ProviderHeaders) ProviderHeaders {
+			transformed++
+			out := ProviderHeaders{}
+			maps.Copy(out, headers)
+			out["X-Transform"] = new("2")
+			return out
 		},
 		Reasoning:       ThinkHigh,
 		ToolChoice:      &toolChoice,
-		ThinkingBudgets: &ThinkingBudgets{High: &highBudget},
-	}}).Result(bgCtx())
+		ThinkingBudgets: &ThinkingBudgets{High: &highBudget}}).Result(bgCtx())
 	if err != nil {
 		t.Fatal(err)
 	}

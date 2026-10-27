@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"context"
+	"slices"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -478,8 +479,8 @@ func (c *QueueController) UpdateThinkingBlockVisibility(hideThinkingBlock bool) 
 
 	children := c.Chat.Children
 	remaining := thinkingSweepWindowComponents
-	for index := len(children) - 1; index >= 0; index-- {
-		assistant, ok := children[index].(*AssistantMessageComponent)
+	for _, c0 := range slices.Backward(children) {
+		assistant, ok := c0.(*AssistantMessageComponent)
 		if !ok {
 			continue
 		}

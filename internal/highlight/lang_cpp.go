@@ -198,11 +198,9 @@ func CPP() *Language {
 		Name:             "C++",
 		Aliases:          []string{"cc", "c++", "h++", "hpp", "hh", "hxx", "cxx"},
 		ClassNameAliases: map[string]string{"function.dispatch": "built_in"},
-		Mode: Mode{
-			Keywords: cppKeywords,
-			Illegal:  `</`,
-			Contains: contains,
-		},
+		Keywords:         cppKeywords,
+		Illegal:          `</`,
+		Contains:         contains,
 	}
 }
 

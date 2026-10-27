@@ -17,7 +17,7 @@ import (
 // identity used to match replayed assistant messages to cache-miss notices.
 func TestTranscriptReplaySharesPersistedMessages(t *testing.T) {
 	renderer, _ := newTranscriptTestRenderer(t, false)
-	manager := coding.NewSessionManager(t.TempDir(), &coding.SessionManagerOptions{Persist: boolPtr(false)})
+	manager := coding.NewSessionManager(t.TempDir(), &coding.SessionManagerOptions{Persist: new(false)})
 	id := manager.AppendMessage(&ai.AssistantMessage{
 		Content: ai.ContentList{ai.TextContent{Text: "persisted reply"}},
 		API:     ai.APIOpenAIResponses, Provider: "test", Model: "test", StopReason: ai.StopStop,
@@ -41,7 +41,7 @@ func TestTranscriptReplaySharesPersistedMessages(t *testing.T) {
 // should allocate its components, not decode/copy the payload a second time.
 func TestTranscriptReplayDoesNotDecodeCachedLargePayload(t *testing.T) {
 	renderer, _ := newTranscriptTestRenderer(t, false)
-	manager := coding.NewSessionManager(t.TempDir(), &coding.SessionManagerOptions{Persist: boolPtr(false)})
+	manager := coding.NewSessionManager(t.TempDir(), &coding.SessionManagerOptions{Persist: new(false)})
 	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: strings.Repeat("x", 256<<10)}, Timestamp: 1})
 	manager.Projection()
 	renderer.SessionInfo = manager
@@ -62,7 +62,7 @@ func TestTranscriptReplayDoesNotDecodeCachedLargePayload(t *testing.T) {
 // model sees replacement content or a message is omitted from its context.
 func TestTranscriptReplayKeepsOriginalsAfterContextEdits(t *testing.T) {
 	renderer, _ := newTranscriptTestRenderer(t, false)
-	manager := coding.NewSessionManager(t.TempDir(), &coding.SessionManagerOptions{Persist: boolPtr(false)})
+	manager := coding.NewSessionManager(t.TempDir(), &coding.SessionManagerOptions{Persist: new(false)})
 	user := manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "original question"}, Timestamp: 1})
 	assistant := manager.AppendMessage(&ai.AssistantMessage{
 		Content: ai.ContentList{ai.TextContent{Text: "original reply"}},
@@ -95,7 +95,7 @@ func TestTranscriptReplayKeepsOriginalsAfterContextEdits(t *testing.T) {
 // renderSessionItems. Re-decoding the replay used to lose that lookup.
 func TestTranscriptReplayRetainsCacheMissNoticeIdentity(t *testing.T) {
 	renderer, _ := newTranscriptTestRenderer(t, true)
-	manager := coding.NewSessionManager(t.TempDir(), &coding.SessionManagerOptions{Persist: boolPtr(false)})
+	manager := coding.NewSessionManager(t.TempDir(), &coding.SessionManagerOptions{Persist: new(false)})
 	for index, usage := range []ai.Usage{
 		{Input: 1000, CacheRead: 50000},
 		{Input: 51000, Cost: ai.UsageCost{Input: 0.5, Total: 0.5}},

@@ -9,10 +9,7 @@ import (
 
 // ApplyBackgroundToLine applies the background to a line, padding to width.
 func ApplyBackgroundToLine(line string, lineWidth int, bgFn func(text string) string) string {
-	padding := lineWidth - VisibleWidth(line)
-	if padding < 0 {
-		padding = 0
-	}
+	padding := max(lineWidth-VisibleWidth(line), 0)
 	withPadding := line + strings.Repeat(" ", padding)
 	if bgFn == nil {
 		return withPadding

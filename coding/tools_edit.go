@@ -22,8 +22,7 @@ func nodeErrorCode(err error) string {
 	if err == nil {
 		return ""
 	}
-	var errno syscall.Errno
-	if errors.As(err, &errno) {
+	if errno, ok := errors.AsType[syscall.Errno](err); ok {
 		switch errno {
 		case syscall.EPERM:
 			return "EPERM"

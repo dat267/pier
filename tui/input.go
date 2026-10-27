@@ -233,7 +233,7 @@ func (in *Input) HandleMouse(event TuiMouseEvent) *TuiMouseDispatchResult {
 		offset += len(grapheme)
 	}
 	in.lastAction = ""
-	return &TuiMouseDispatchResult{TuiMouseEventResult: TuiMouseEventResult{Handled: true, Focus: true}}
+	return &TuiMouseDispatchResult{Handled: true, Focus: true}
 }
 
 func (in *Input) insertCharacter(char string) {

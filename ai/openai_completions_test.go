@@ -65,7 +65,7 @@ func TestDetectOpenAICompletionsCompat(t *testing.T) {
 	// Explicit model.compat overrides detection.
 	model := testOpenAIModel()
 	model.Compat = &ModelCompat{OpenAICompletions: &OpenAICompletionsCompat{
-		SupportsStore: boolPtrT(false), MaxTokensField: strPtr("max_tokens"),
+		SupportsStore: new(false), MaxTokensField: new("max_tokens"),
 	}}
 	resolved := GetOpenAICompletionsCompat(model)
 	if resolved.SupportsStore || resolved.MaxTokensField != "max_tokens" {
@@ -92,7 +92,7 @@ func TestBuildOpenAICompletionsParamsAcceptsNilOptions(t *testing.T) {
 func TestBuildOpenAICompletionsParamsOmitsZeroMaxTokens(t *testing.T) {
 	zero := 0
 	params, err := BuildOpenAICompletionsParams(testOpenAIModel(), NormalizeContext(Context{}),
-		&OpenAICompletionsOptions{StreamOptions: StreamOptions{MaxTokens: &zero}}, nil, "", nil)
+		&OpenAICompletionsOptions{MaxTokens: &zero}, nil, "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,12 +117,12 @@ func TestBuildOpenAICompletionsParamsShape(t *testing.T) {
 	model := testOpenAIModel()
 	tool := Tool{Name: "read_file", Description: "Reads", Parameters: json.RawMessage(`{"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}`)}
 	ctx := NormalizeContext(Context{
-		SystemPrompt: strPtr("sys"),
+		SystemPrompt: new("sys"),
 		Messages:     []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
 		Tools:        []Tool{tool},
 	})
 	params, err := BuildOpenAICompletionsParams(model, ctx, &OpenAICompletionsOptions{
-		StreamOptions:   StreamOptions{SessionID: "sess", MaxTokens: intPtrT(4000), Temperature: floatPtrT(0.3)},
+		SessionID: "sess", MaxTokens: new(4000), Temperature: new(0.3),
 		ReasoningEffort: ThinkLow,
 	}, nil, "", nil)
 	if err != nil {
@@ -177,16 +177,11 @@ func TestBuildOpenAICompletionsParamsShape(t *testing.T) {
 	}
 }
 
-func intPtrT(n int) *int           { return &n }
-func floatPtrT(f float64) *float64 { return &f }
-
 func TestBuildOpenAICompletionsParamsSamplingExtrasOverride(t *testing.T) {
 	model := testOpenAIModel()
 	params, err := BuildOpenAICompletionsParams(model, NormalizeContext(Context{}), &OpenAICompletionsOptions{
-		StreamOptions: StreamOptions{
-			Temperature:    floatPtrT(0.5),
-			SamplingParams: map[string]json.RawMessage{"temperature": json.RawMessage("0.1"), "top_k": json.RawMessage("40")},
-		},
+		Temperature:    new(0.5),
+		SamplingParams: map[string]json.RawMessage{"temperature": json.RawMessage("0.1"), "top_k": json.RawMessage("40")},
 	}, nil, "", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -245,7 +240,7 @@ func TestConvertOpenAICompletionsMessagesAssistantShapes(t *testing.T) {
 	messages = []Message{
 		&AssistantMessage{
 			Content: ContentList{
-				ThinkingContent{Thinking: "thought", ThinkingSignature: strPtr("reasoning_content")},
+				ThinkingContent{Thinking: "thought", ThinkingSignature: new("reasoning_content")},
 				TextContent{Text: "answer"},
 			},
 			API: APIOpenAICompletions, Provider: "openai", Model: "gpt-5",
@@ -264,7 +259,7 @@ func TestConvertOpenAICompletionsMessagesAssistantShapes(t *testing.T) {
 
 	// requiresThinkingAsText converts thinking to text parts.
 	model2 := *model
-	model2.Compat = &ModelCompat{OpenAICompletions: &OpenAICompletionsCompat{RequiresThinkingAsText: boolPtrT(true)}}
+	model2.Compat = &ModelCompat{OpenAICompletions: &OpenAICompletionsCompat{RequiresThinkingAsText: new(true)}}
 	compat2 := GetOpenAICompletionsCompat(&model2)
 	params = ConvertOpenAICompletionsMessages(&model2, TranscriptContext{Messages: messages}, compat2, nil)
 	var parts []OpenAIContentPart
@@ -301,15 +296,14 @@ func TestStreamOpenAICompletionsTextAndToolFlow(t *testing.T) {
 	var providerEventCount int
 	stream := StreamOpenAICompletions(model, NormalizeContext(Context{
 		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-	}), &OpenAICompletionsOptions{StreamOptions: StreamOptions{
+	}), &OpenAICompletionsOptions{
 		APIKey: "k",
 		OnProviderStreamEvent: func(data json.RawMessage, eventModel *Model) {
 			if eventModel != model || !json.Valid(data) {
 				t.Errorf("provider callback data/model = %s/%p", data, eventModel)
 			}
 			providerEventCount++
-		},
-	}})
+		}})
 
 	var types []string
 	var text string
@@ -374,7 +368,7 @@ func TestStreamOpenAICompletionsTextDeltasAllocateLinearly(t *testing.T) {
 	var before, after runtime.MemStats
 	runtime.ReadMemStats(&before)
 	message, err := StreamOpenAICompletions(model, NormalizeContext(Context{}), &OpenAICompletionsOptions{
-		StreamOptions: StreamOptions{APIKey: "k"},
+		APIKey: "k",
 	}).Result(context.Background())
 	runtime.ReadMemStats(&after)
 	if err != nil {
@@ -412,7 +406,7 @@ func TestStreamOpenAICompletionsReasoningFieldsAndDetails(t *testing.T) {
 	model.BaseURL = server.URL
 	stream := StreamOpenAICompletions(model, NormalizeContext(Context{
 		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-	}), &OpenAICompletionsOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+	}), &OpenAICompletionsOptions{APIKey: "k"})
 	msg, err := stream.Result(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -455,7 +449,7 @@ func TestStreamOpenAICompletionsReasoningPrecedesTextInOneChunk(t *testing.T) {
 	model.BaseURL = server.URL
 	stream := StreamOpenAICompletions(model, NormalizeContext(Context{
 		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-	}), &OpenAICompletionsOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+	}), &OpenAICompletionsOptions{APIKey: "k"})
 	msg, err := stream.Result(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -490,7 +484,7 @@ func TestStreamOpenAICompletionsMalformedFinalArguments(t *testing.T) {
 	model.BaseURL = server.URL
 	stream := StreamOpenAICompletions(model, NormalizeContext(Context{
 		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-	}), &OpenAICompletionsOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+	}), &OpenAICompletionsOptions{APIKey: "k"})
 	msg, err := stream.Result(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -515,7 +509,7 @@ func TestStreamOpenAICompletionsErrorsAndFinishFallback(t *testing.T) {
 		model := testOpenAIModel()
 		bomHeader := "\uFEFF"
 		stream := StreamOpenAICompletionsSimple(model, NormalizeContext(Context{}), &SimpleStreamOptions{
-			StreamOptions: StreamOptions{Headers: ProviderHeaders{"Authorization": &bomHeader}},
+			Headers: ProviderHeaders{"Authorization": &bomHeader},
 		})
 		msg, _ := stream.Result(context.Background())
 		if msg.StopReason != StopError || *msg.ErrorMessage != "No API key for provider: openai" {
@@ -530,7 +524,7 @@ func TestStreamOpenAICompletionsErrorsAndFinishFallback(t *testing.T) {
 		defer server.Close()
 		model := testOpenAIModel()
 		model.BaseURL = server.URL
-		stream := StreamOpenAICompletions(model, NormalizeContext(Context{}), &OpenAICompletionsOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+		stream := StreamOpenAICompletions(model, NormalizeContext(Context{}), &OpenAICompletionsOptions{APIKey: "k"})
 		msg, _ := stream.Result(context.Background())
 		if msg.StopReason != StopError || *msg.ErrorMessage != "Provider finish_reason: content_filter" {
 			t.Fatalf("message = %+v", msg)
@@ -544,7 +538,7 @@ func TestStreamOpenAICompletionsErrorsAndFinishFallback(t *testing.T) {
 		defer server.Close()
 		model := testOpenAIModel()
 		model.BaseURL = server.URL
-		stream := StreamOpenAICompletions(model, NormalizeContext(Context{}), &OpenAICompletionsOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+		stream := StreamOpenAICompletions(model, NormalizeContext(Context{}), &OpenAICompletionsOptions{APIKey: "k"})
 		msg, _ := stream.Result(context.Background())
 		if msg.StopReason != StopError || *msg.ErrorMessage != "Stream ended without finish_reason" {
 			t.Fatalf("message = %+v", msg)
@@ -558,8 +552,8 @@ func TestStreamOpenAICompletionsErrorsAndFinishFallback(t *testing.T) {
 		defer server.Close()
 		model := testOpenAIModel()
 		model.BaseURL = server.URL
-		model.Compat = &ModelCompat{OpenAICompletions: &OpenAICompletionsCompat{SupportsFinishReason: boolPtrT(false)}}
-		stream := StreamOpenAICompletions(model, NormalizeContext(Context{}), &OpenAICompletionsOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+		model.Compat = &ModelCompat{OpenAICompletions: &OpenAICompletionsCompat{SupportsFinishReason: new(false)}}
+		stream := StreamOpenAICompletions(model, NormalizeContext(Context{}), &OpenAICompletionsOptions{APIKey: "k"})
 		msg, _ := stream.Result(context.Background())
 		if msg.StopReason != StopStop {
 			t.Fatalf("stopReason = %s", msg.StopReason)

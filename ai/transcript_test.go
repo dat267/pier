@@ -118,9 +118,9 @@ func toolNames(tools []Tool) []string {
 
 func TestCollapseAndResolveTranscript(t *testing.T) {
 	base := &SystemMessage{Content: StringOrBlocks{Text: "base"}, Timestamp: 0}
-	base.SetSection("rules", strptr("old"))
+	base.SetSection("rules", new("old"))
 	late := &SystemMessage{Content: StringOrBlocks{Text: "extra"}, Timestamp: 2}
-	late.SetSection("rules", strptr("new"))
+	late.SetSection("rules", new("new"))
 	ctx := TranscriptContext{Messages: []Message{
 		base, &UserMessage{Content: StringOrBlocks{Text: "u"}, Timestamp: 1}, late,
 	}}
@@ -191,10 +191,10 @@ func TestToolStateChangesAndRedefinitions(t *testing.T) {
 
 func TestGetCurrentSystemPromptAndSections(t *testing.T) {
 	head := &SystemMessage{Content: StringOrBlocks{Text: "base"}, Timestamp: 0}
-	head.SetSection("rules", strptr("<rules>old</rules>"))
-	head.SetSection("docs", strptr("<docs>read docs</docs>"))
+	head.SetSection("rules", new("<rules>old</rules>"))
+	head.SetSection("docs", new("<docs>read docs</docs>"))
 	late := &SystemMessage{Content: StringOrBlocks{Text: "updated guidance"}, Timestamp: 2}
-	late.SetSection("rules", strptr("<rules>new rules</rules>"))
+	late.SetSection("rules", new("<rules>new rules</rules>"))
 	late.SetSection("docs", nil)
 
 	messages := []Message{
@@ -212,12 +212,12 @@ func TestGetCurrentSystemPromptAndSections(t *testing.T) {
 // A section deleted and then re-added moves to the end, like a JS Map.
 func TestGetCurrentSystemMessageReaddsDeletedSectionAtEnd(t *testing.T) {
 	head := &SystemMessage{Content: StringOrBlocks{Text: "base"}, Timestamp: 0}
-	head.SetSection("a", strptr("1"))
-	head.SetSection("b", strptr("2"))
+	head.SetSection("a", new("1"))
+	head.SetSection("b", new("2"))
 	drop := &SystemMessage{Timestamp: 1}
 	drop.SetSection("a", nil)
 	readd := &SystemMessage{Timestamp: 2}
-	readd.SetSection("a", strptr("3"))
+	readd.SetSection("a", new("3"))
 	message := GetCurrentSystemMessage([]Message{head, drop, readd})
 	if message == nil {
 		t.Fatal("no message")

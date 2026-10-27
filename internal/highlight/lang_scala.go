@@ -61,22 +61,20 @@ func Scala() *Language {
 
 	return &Language{
 		Name: "Scala",
-		Mode: Mode{
-			Keywords: Keywords{
-				"literal": "true false null",
-				"keyword": "type yield lazy override def with val var sealed abstract private trait object if forSome for while throw finally protected extends import final return else break new catch super class case package default try this match continue throws implicit",
-			},
-			Contains: []*Mode{
-				CLineCommentMode,
-				CBlockCommentMode,
-				stringMode,
-				symbol,
-				typeMode,
-				method,
-				classMode,
-				CNumberMode,
-				annotation,
-			},
+		Keywords: Keywords{
+			"literal": "true false null",
+			"keyword": "type yield lazy override def with val var sealed abstract private trait object if forSome for while throw finally protected extends import final return else break new catch super class case package default try this match continue throws implicit",
+		},
+		Contains: []*Mode{
+			CLineCommentMode,
+			CBlockCommentMode,
+			stringMode,
+			symbol,
+			typeMode,
+			method,
+			classMode,
+			CNumberMode,
+			annotation,
 		},
 	}
 }

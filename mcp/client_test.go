@@ -242,7 +242,7 @@ func TestClientListsAndReadsResources(t *testing.T) {
 	if err != nil || page.NextCursor == nil || *page.NextCursor != "2" || len(page.Resources) != 1 {
 		t.Fatalf("page = %+v err %v", page, err)
 	}
-	page, err = client.ListResourcesPage(context.Background(), strPtr("2"), RequestOptions{})
+	page, err = client.ListResourcesPage(context.Background(), new("2"), RequestOptions{})
 	if err != nil || page.NextCursor != nil || len(page.Resources) != 1 || page.Resources[0].Name != "file:///b" {
 		t.Fatalf("page 2 = %+v err %v", page, err)
 	}
@@ -433,8 +433,7 @@ func TestClientCancelsAbortedAndTimedOutRequests(t *testing.T) {
 	cancel(errors.New("stop"))
 	select {
 	case err := <-done:
-		var abortErr *protocol.McpAbortError
-		if !errors.As(err, &abortErr) {
+		if _, ok := errors.AsType[*protocol.McpAbortError](err); !ok {
 			t.Fatalf("abort err = %v (%T)", err, err)
 		}
 	case <-time.After(2 * time.Second):
@@ -466,8 +465,7 @@ func TestClientCancelsAbortedAndTimedOutRequests(t *testing.T) {
 	if _, err := client.CallTool(context.Background(), "wait", map[string]any{}, RequestOptions{TimeoutMs: 5}); err == nil {
 		t.Fatal("timed-out call did not error")
 	} else {
-		var timeoutErr *protocol.McpTimeoutError
-		if !errors.As(err, &timeoutErr) {
+		if _, ok := errors.AsType[*protocol.McpTimeoutError](err); !ok {
 			t.Fatalf("timeout err = %v (%T)", err, err)
 		}
 	}
@@ -592,8 +590,7 @@ func TestClientTimedOutInitializeSendsNoCancellation(t *testing.T) {
 	if _, err := client.Connect(context.Background(), clientTransport); err == nil {
 		t.Fatal("connect did not time out")
 	} else {
-		var timeoutErr *protocol.McpTimeoutError
-		if !errors.As(err, &timeoutErr) {
+		if _, ok := errors.AsType[*protocol.McpTimeoutError](err); !ok {
 			t.Fatalf("connect err = %v (%T)", err, err)
 		}
 	}
@@ -651,7 +648,7 @@ func TestClientAnswersRootsListAndDispatchesNotifications(t *testing.T) {
 	client := NewClient(ClientOptions{
 		Name:    "test-client",
 		Version: "1.0.0",
-		Roots:   []protocol.Root{{URI: "file:///workspace", Name: strPtr("workspace")}},
+		Roots:   []protocol.Root{{URI: "file:///workspace", Name: new("workspace")}},
 	})
 	if _, err := client.Connect(context.Background(), clientTransport); err != nil {
 		t.Fatal(err)
@@ -698,8 +695,6 @@ func TestClientAnswersRootsListAndDispatchesNotifications(t *testing.T) {
 		t.Fatal(err)
 	}
 }
-
-func strPtr(s string) *string { return &s }
 
 // waitForMessages polls until the server has recorded at least n messages
 // (in-memory sends deliver on their own goroutine).

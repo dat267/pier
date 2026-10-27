@@ -74,7 +74,7 @@ func awaitStreamError(t *testing.T, stream *AssistantMessageEventStream, want st
 func anthropicIdleStream(model *Model, timeoutMS int) *AssistantMessageEventStream {
 	return StreamAnthropic(model, NormalizeContext(Context{
 		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-	}), &AnthropicOptions{StreamOptions: StreamOptions{APIKey: "test-key", TimeoutMs: &timeoutMS}})
+	}), &AnthropicOptions{APIKey: "test-key", TimeoutMs: &timeoutMS})
 }
 
 func TestStreamAnthropicAbortsWhenResponseHeadersIdle(t *testing.T) {
@@ -152,23 +152,23 @@ func TestProviderStreamsAbortWhenResponseHeadersIdle(t *testing.T) {
 			model.BaseURL = baseURL
 			return StreamOpenAICompletions(model, NormalizeContext(Context{
 				Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-			}), &OpenAICompletionsOptions{StreamOptions: StreamOptions{APIKey: "test", TimeoutMs: intPtrT(timeoutMS)}})
+			}), &OpenAICompletionsOptions{APIKey: "test", TimeoutMs: new(timeoutMS)})
 		}},
 		{"openai-responses", func(t *testing.T, baseURL string) *AssistantMessageEventStream {
 			model := testResponsesModel()
 			model.BaseURL = baseURL
 			return StreamOpenAIResponses(model, NormalizeContext(Context{
 				Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-			}), &OpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "test", TimeoutMs: intPtrT(timeoutMS)}})
+			}), &OpenAIResponsesOptions{APIKey: "test", TimeoutMs: new(timeoutMS)})
 		}},
 		{"pi-messages", func(t *testing.T, baseURL string) *AssistantMessageEventStream {
 			return StreamPiMessages(piMessagesModel(baseURL), piMessagesContext(), &PiMessagesOptions{
-				StreamOptions: StreamOptions{APIKey: "test", TimeoutMs: intPtrT(timeoutMS)},
+				APIKey: "test", TimeoutMs: new(timeoutMS),
 			})
 		}},
 		{"mistral", func(t *testing.T, baseURL string) *AssistantMessageEventStream {
 			return StreamMistralConversations(mistralModel(baseURL), mistralUserContext(), &MistralOptions{
-				StreamOptions: StreamOptions{APIKey: "test", TimeoutMs: intPtrT(timeoutMS)},
+				APIKey: "test", TimeoutMs: new(timeoutMS),
 			})
 		}},
 		{"google", func(t *testing.T, baseURL string) *AssistantMessageEventStream {
@@ -176,7 +176,7 @@ func TestProviderStreamsAbortWhenResponseHeadersIdle(t *testing.T) {
 			model.BaseURL = baseURL
 			return StreamGoogleGenerativeAI(model, NormalizeContext(Context{
 				Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-			}), &GoogleOptions{StreamOptions: StreamOptions{APIKey: "test", TimeoutMs: intPtrT(timeoutMS)}})
+			}), &GoogleOptions{APIKey: "test", TimeoutMs: new(timeoutMS)})
 		}},
 		{"google-vertex", func(t *testing.T, baseURL string) *AssistantMessageEventStream {
 			model := &Model{
@@ -186,18 +186,16 @@ func TestProviderStreamsAbortWhenResponseHeadersIdle(t *testing.T) {
 			return StreamGoogleVertex(model, NormalizeContext(Context{
 				Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
 			}), &GoogleVertexOptions{
-				GoogleOptions: GoogleOptions{StreamOptions: StreamOptions{APIKey: "test", TimeoutMs: intPtrT(timeoutMS)}},
-				Project:       "test-project", Location: "us-central1",
+				APIKey: "test", TimeoutMs: new(timeoutMS),
+				Project: "test-project", Location: "us-central1",
 			})
 		}},
 		{"bedrock", func(t *testing.T, baseURL string) *AssistantMessageEventStream {
 			return StreamBedrockConverse(bedrockTestModel(baseURL), NormalizeContext(Context{
 				Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
 			}), &BedrockOptions{
-				StreamOptions: StreamOptions{
-					APIKey: "bearer-token", TimeoutMs: intPtrT(timeoutMS),
-					Env: ProviderEnv{"AWS_ACCESS_KEY_ID": "AKID", "AWS_SECRET_ACCESS_KEY": "SECRET"},
-				},
+				APIKey: "bearer-token", TimeoutMs: new(timeoutMS),
+				Env:         ProviderEnv{"AWS_ACCESS_KEY_ID": "AKID", "AWS_SECRET_ACCESS_KEY": "SECRET"},
 				BearerToken: "bearer-token",
 			})
 		}},
@@ -205,8 +203,8 @@ func TestProviderStreamsAbortWhenResponseHeadersIdle(t *testing.T) {
 			return StreamOpenAICodexResponses(codexModel(baseURL), NormalizeContext(Context{
 				Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
 			}), &OpenAICodexResponsesOptions{
-				StreamOptions: StreamOptions{APIKey: codexToken(t, "acct-1"), TimeoutMs: intPtrT(timeoutMS)},
-				Transport:     "sse",
+				APIKey: codexToken(t, "acct-1"), TimeoutMs: new(timeoutMS),
+				Transport: "sse",
 			})
 		}},
 	}
@@ -251,8 +249,8 @@ func TestStreamCodexResponsesKeepsStreamingPastTheHeadersTimeout(t *testing.T) {
 	stream := StreamOpenAICodexResponses(codexModel(server.URL), NormalizeContext(Context{
 		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
 	}), &OpenAICodexResponsesOptions{
-		StreamOptions: StreamOptions{APIKey: codexToken(t, "acct-1"), TimeoutMs: intPtrT(2000)},
-		Transport:     "sse",
+		APIKey: codexToken(t, "acct-1"), TimeoutMs: new(2000),
+		Transport: "sse",
 	})
 	message, err := stream.Result(context.Background())
 	if err != nil {
@@ -280,7 +278,7 @@ func TestOpenRouterImagesAbortsWhenResponseHeadersIdle(t *testing.T) {
 	}
 	result := OpenRouterImages{}.GenerateImages(model, ImagesContext{Input: []ImagesInputContent{
 		TextContent{Text: "a cat"},
-	}}, &ImagesOptions{StreamOptions: StreamOptions{APIKey: "test", TimeoutMs: intPtrT(200)}})
+	}}, &ImagesOptions{APIKey: "test", TimeoutMs: new(200)})
 	if result.StopReason != ImagesStopError {
 		t.Fatalf("stop reason = %v", result.StopReason)
 	}
@@ -343,7 +341,7 @@ func TestIdleGuardDoesNotFireWhileTheConsumerIsBusy(t *testing.T) {
 func TestStreamMistralAbortsWhenStreamIdles(t *testing.T) {
 	server := stallServer(t, true, `data: {"choices":[{"delta":{"content":"thinking"}}]}`+"\n\n")
 	stream := StreamMistralConversations(mistralModel(server.URL), mistralUserContext(), &MistralOptions{
-		StreamOptions: StreamOptions{APIKey: "test", TimeoutMs: intPtrT(200)},
+		APIKey: "test", TimeoutMs: new(200),
 	})
 	awaitStreamError(t, stream, "stream idle")
 }

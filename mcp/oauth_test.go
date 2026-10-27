@@ -40,10 +40,10 @@ func newTestProvider(redirectURL string) *testProvider {
 		redirectURL: redirectURL,
 		clientMetadata: oauth.OAuthClientMetadata{
 			RedirectURIs:            []string{redirectURL},
-			ClientName:              strPtr("pi-mcp-test"),
+			ClientName:              new("pi-mcp-test"),
 			GrantTypes:              []string{"authorization_code", "refresh_token"},
 			ResponseTypes:           []string{"code"},
-			TokenEndpointAuthMethod: strPtr("none"),
+			TokenEndpointAuthMethod: new("none"),
 		},
 	}
 }
@@ -218,7 +218,7 @@ func TestOAuthDynamicRegistrationDerivesApplicationType(t *testing.T) {
 		{"com.example.app:/callback", nil, "native"},
 		{"https://app.example/callback", nil, "web"},
 		{"http://remote.example/callback", nil, "web"},
-		{"http://localhost/callback", strPtr("web"), "web"},
+		{"http://localhost/callback", new("web"), "web"},
 	}
 	for _, testCase := range cases {
 		registered, err := oauth.RegisterClient(context.Background(), server.URL, oauth.RegisterClientOptions{
@@ -253,8 +253,8 @@ func TestOAuthRefreshCancellationDoesNotStartAuthorization(t *testing.T) {
 		server.Close()
 	}()
 	provider := newTestProvider("http://127.0.0.1/callback")
-	provider.client = &oauth.OAuthClientInformationFull{OAuthClientInformation: oauth.OAuthClientInformation{ClientID: "client"}}
-	provider.tokenSet = &oauth.OAuthTokens{AccessToken: "old", RefreshToken: strPtr("refresh"), TokenType: "Bearer"}
+	provider.client = &oauth.OAuthClientInformationFull{ClientID: "client"}
+	provider.tokenSet = &oauth.OAuthTokens{AccessToken: "old", RefreshToken: new("refresh"), TokenType: "Bearer"}
 	provider.discovery = &oauth.OAuthDiscoveryState{
 		AuthorizationServerURL: server.URL,
 		AuthorizationServerMetadata: &oauth.AuthorizationServerMetadata{
@@ -554,13 +554,13 @@ func TestOAuthSharesOneRefreshBetweenConcurrent401s(t *testing.T) {
 	provider := oauth.NewMcpOAuthProvider(oauth.McpOAuthProviderOptions{
 		ServerURL:      origin + "/mcp",
 		RedirectURL:    "http://127.0.0.1/callback",
-		ClientMetadata: oauth.OAuthClientMetadata{ClientName: strPtr("test")},
+		ClientMetadata: oauth.OAuthClientMetadata{ClientName: new("test")},
 		ClientID:       "client",
 		Store:          store,
 		OnRedirect:     func(context.Context, string) error { return nil },
 	})
 	if err := provider.SaveTokens(context.Background(), &oauth.OAuthTokens{
-		AccessToken: "a1", RefreshToken: strPtr("r1"), TokenType: "Bearer",
+		AccessToken: "a1", RefreshToken: new("r1"), TokenType: "Bearer",
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -568,14 +568,12 @@ func TestOAuthSharesOneRefreshBetweenConcurrent401s(t *testing.T) {
 	unauthorized := func() UnauthorizedInfo { return unauthorizedInfo(401, "Bearer", origin+"/mcp", "a1") }
 
 	var wg sync.WaitGroup
-	for i := 0; i < 2; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 2 {
+		wg.Go(func() {
 			if err := auth.OnUnauthorized(context.Background(), unauthorized()); err != nil {
 				t.Errorf("onUnauthorized: %v", err)
 			}
-		}()
+		})
 	}
 	wg.Wait()
 	// A late 401 for a request that still carried the old token must not
@@ -605,8 +603,8 @@ func TestOAuthSharesOneRefreshBetweenConcurrent401s(t *testing.T) {
 // when the server needs more scope".
 func TestOAuthStepUpScope(t *testing.T) {
 	provider := newTestProvider("http://127.0.0.1/callback")
-	provider.client = &oauth.OAuthClientInformationFull{OAuthClientInformation: oauth.OAuthClientInformation{ClientID: "client"}}
-	provider.tokenSet = &oauth.OAuthTokens{AccessToken: "a1", RefreshToken: strPtr("r1"), TokenType: "Bearer", Scope: strPtr("repo read:org")}
+	provider.client = &oauth.OAuthClientInformationFull{ClientID: "client"}
+	provider.tokenSet = &oauth.OAuthTokens{AccessToken: "a1", RefreshToken: new("r1"), TokenType: "Bearer", Scope: new("repo read:org")}
 	mux := http.NewServeMux()
 	server := httptest.NewServer(mux)
 	defer server.Close()
@@ -648,7 +646,7 @@ func TestOAuthBindsCredentialsToServerURL(t *testing.T) {
 	store := &oauth.MemoryOAuthStateStore{}
 	first := oauth.NewMcpOAuthProvider(oauth.McpOAuthProviderOptions{
 		ServerURL: "https://one.example/mcp", RedirectURL: "http://127.0.0.1/callback",
-		ClientMetadata: oauth.OAuthClientMetadata{ClientName: strPtr("test")},
+		ClientMetadata: oauth.OAuthClientMetadata{ClientName: new("test")},
 		Store:          store,
 		OnRedirect:     func(context.Context, string) error { return nil },
 	})
@@ -661,7 +659,7 @@ func TestOAuthBindsCredentialsToServerURL(t *testing.T) {
 	}
 	second := oauth.NewMcpOAuthProvider(oauth.McpOAuthProviderOptions{
 		ServerURL: "https://two.example/mcp", RedirectURL: "http://127.0.0.1/callback",
-		ClientMetadata: oauth.OAuthClientMetadata{ClientName: strPtr("test")},
+		ClientMetadata: oauth.OAuthClientMetadata{ClientName: new("test")},
 		Store:          store,
 		OnRedirect:     func(context.Context, string) error { return nil },
 	})
@@ -712,7 +710,7 @@ func TestOAuthConfiguredMetadataDocument(t *testing.T) {
 		})
 	})
 	provider := newTestProvider("http://127.0.0.1/callback")
-	provider.client = &oauth.OAuthClientInformationFull{OAuthClientInformation: oauth.OAuthClientInformation{ClientID: "client"}}
+	provider.client = &oauth.OAuthClientInformationFull{ClientID: "client"}
 	metadataURL := origin + "/idp/metadata.json"
 	result, err := oauth.AuthorizeMcp(context.Background(), provider, oauth.FlowOptions{
 		ServerURL: origin + "/mcp", AuthorizationServerMetadataURL: &metadataURL,
@@ -769,14 +767,14 @@ func TestOAuthIssParameter(t *testing.T) {
 	})
 	exchange := func(code string, iss *string, issParameterSupported bool, metadata bool) (string, error) {
 		provider := newTestProvider("http://127.0.0.1/callback")
-		provider.client = &oauth.OAuthClientInformationFull{OAuthClientInformation: oauth.OAuthClientInformation{ClientID: "client"}}
+		provider.client = &oauth.OAuthClientInformationFull{ClientID: "client"}
 		provider.verifier = "verifier"
 		provider.discovery = &oauth.OAuthDiscoveryState{AuthorizationServerURL: origin}
 		if metadata {
 			provider.discovery.AuthorizationServerMetadata = &oauth.AuthorizationServerMetadata{
 				Issuer: origin, AuthorizationEndpoint: origin + "/authorize", TokenEndpoint: origin + "/token",
 				ResponseTypesSupported:                     []string{"code"},
-				AuthorizationResponseIssParameterSupported: boolPtr(issParameterSupported),
+				AuthorizationResponseIssParameterSupported: new(issParameterSupported),
 			}
 		}
 		return oauth.AuthorizeMcp(context.Background(), provider, oauth.FlowOptions{
@@ -904,8 +902,8 @@ func TestOAuthClientAuthHintSurvivesTokenExchange(t *testing.T) {
 	secret := "secret"
 	hint := "client_secret_post"
 	provider.client = &oauth.OAuthClientInformationFull{
-		OAuthClientInformation: oauth.OAuthClientInformation{ClientID: "client", ClientSecret: &secret},
-		OAuthClientMetadata:    oauth.OAuthClientMetadata{TokenEndpointAuthMethod: &hint},
+		ClientID: "client", ClientSecret: &secret,
+		TokenEndpointAuthMethod: &hint,
 	}
 	provider.verifier = "verifier"
 	provider.discovery = &oauth.OAuthDiscoveryState{
@@ -937,9 +935,9 @@ func TestOAuthClientAuthHintSurvivesTokenExchange(t *testing.T) {
 
 func TestOAuthEmptyResourceScopesFallThroughToClientMetadata(t *testing.T) {
 	provider := newTestProvider("http://127.0.0.1/callback")
-	provider.clientMetadata.Scope = strPtr("client-scope")
+	provider.clientMetadata.Scope = new("client-scope")
 	provider.client = &oauth.OAuthClientInformationFull{
-		OAuthClientInformation: oauth.OAuthClientInformation{ClientID: "client"},
+		ClientID: "client",
 	}
 	provider.discovery = &oauth.OAuthDiscoveryState{
 		AuthorizationServerURL: "https://auth.example",

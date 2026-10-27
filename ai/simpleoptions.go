@@ -36,10 +36,10 @@ func withSimpleMaxTokens(model *Model, context TranscriptContext, options Stream
 
 // DefaultThinkingBudgets are the per-level thinking token budgets.
 var DefaultThinkingBudgets = ThinkingBudgets{
-	Minimal: intPtr(1024),
-	Low:     intPtr(2048),
-	Medium:  intPtr(8192),
-	High:    intPtr(16384),
+	Minimal: new(1024),
+	Low:     new(2048),
+	Medium:  new(8192),
+	High:    new(16384),
 }
 
 // samplingThinkingLevel maps an absent reasoning effort to off, the
@@ -118,8 +118,6 @@ func orderedSamplingKeys(params SamplingParams, preferred []string) []string {
 	sortStrings(remaining)
 	return append(order, remaining...)
 }
-
-func intPtr(n int) *int { return &n }
 
 // ClampReasoning maps xhigh/max down to high for budget-based thinking.
 func ClampReasoning(effort ThinkingLevel) ThinkingLevel {

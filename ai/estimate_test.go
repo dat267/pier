@@ -25,7 +25,6 @@ func TestTextTokenEstimateUsesThreeAndAHalfCharsPerToken(t *testing.T) {
 		{name: "three runes", text: "日本語", want: 1},
 	}
 	for _, testCase := range cases {
-		testCase := testCase
 		t.Run(testCase.name, func(t *testing.T) {
 			if got := EstimateTextTokens(testCase.text); got != testCase.want {
 				t.Fatalf("EstimateTextTokens(%q) = %d, want %d", testCase.text, got, testCase.want)

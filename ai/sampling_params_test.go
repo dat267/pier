@@ -90,7 +90,7 @@ func TestBuildOpenAICompletionsParamsThinkingLevelSampling(t *testing.T) {
 		ThinkLow: SamplingParams{"temperature": json.RawMessage("0.6"), "top_k": json.RawMessage("64")},
 	}
 	params, err := BuildOpenAICompletionsParams(model, NormalizeContext(Context{}), &OpenAICompletionsOptions{
-		StreamOptions:   StreamOptions{SamplingParams: SamplingParams{"top_p": json.RawMessage("0.5")}},
+		SamplingParams:  SamplingParams{"top_p": json.RawMessage("0.5")},
 		ReasoningEffort: ThinkLow,
 	}, nil, "", nil)
 	if err != nil {

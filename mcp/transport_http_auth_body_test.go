@@ -42,7 +42,7 @@ func TestStreamableHTTPClosesUnauthorizedBodyBeforeRetry(t *testing.T) {
 			calls := 0
 			closedBeforeRetry := false
 			transport := NewStreamableHttpTransport(StreamableHttpTransportOptions{
-				URL: "https://invalid.test", AuthProvider: auth, OpenGetStream: boolPtr(false),
+				URL: "https://invalid.test", AuthProvider: auth, OpenGetStream: new(false),
 				Fetch: func(context.Context, *http.Request) (*http.Response, error) {
 					calls++
 					if calls == 1 {

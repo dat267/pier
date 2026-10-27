@@ -129,25 +129,23 @@ func AspectJ() *Language {
 	}
 
 	return &Language{
-		Name: "AspectJ",
-		Mode: Mode{
-			Keywords: Keywords{"keyword": keywords},
-			Illegal:  `<\/|#`,
-			Contains: []*Mode{
-				docComment,
-				CLineCommentMode,
-				CBlockCommentMode,
-				AposStringMode,
-				QuoteStringMode,
-				aspectClass,
-				classMode,
-				pointcut,
-				colon,
-				{BeginKeywords: "new throw", HasRelevance: true, Relevance: 0},
-				function,
-				CNumberMode,
-				{ClassName: "meta", Begin: `@[A-Za-z]+`},
-			},
+		Name:     "AspectJ",
+		Keywords: Keywords{"keyword": keywords},
+		Illegal:  `<\/|#`,
+		Contains: []*Mode{
+			docComment,
+			CLineCommentMode,
+			CBlockCommentMode,
+			AposStringMode,
+			QuoteStringMode,
+			aspectClass,
+			classMode,
+			pointcut,
+			colon,
+			{BeginKeywords: "new throw", HasRelevance: true, Relevance: 0},
+			function,
+			CNumberMode,
+			{ClassName: "meta", Begin: `@[A-Za-z]+`},
 		},
 	}
 }

@@ -68,7 +68,7 @@ func TestCodexURLs(t *testing.T) {
 }
 
 func TestCodexHeaders(t *testing.T) {
-	headers := BuildCodexSSEHeaders(map[string]string{"x-model": "1"}, ProviderHeaders{"x-extra": strPtr("2")}, "acct-1", "token-1", "session-1")
+	headers := BuildCodexSSEHeaders(map[string]string{"x-model": "1"}, ProviderHeaders{"x-extra": new("2")}, "acct-1", "token-1", "session-1")
 	expectations := map[string]string{
 		"Authorization":       "Bearer token-1",
 		"chatgpt-account-id":  "acct-1",
@@ -93,7 +93,7 @@ func TestCodexHeaders(t *testing.T) {
 	// while the auth header set after them still wins (upstream #10429).
 	headers = BuildCodexSSEHeaders(
 		map[string]string{"originator": "my-app", "User-Agent": "my-agent/1.0"},
-		ProviderHeaders{"chatgpt-account-id": strPtr("caller")}, "acct-2", "token-2", "")
+		ProviderHeaders{"chatgpt-account-id": new("caller")}, "acct-2", "token-2", "")
 	if got := headers.Get("originator"); got != "my-app" {
 		t.Errorf("originator = %q, want my-app", got)
 	}
@@ -163,7 +163,7 @@ func TestCodexRetryClassification(t *testing.T) {
 	// The delay is bounded by maxRetryDelayMs.
 	maxDelay := 1000
 	if _, err := ValidateCodexRetryDelay(2*time.Second, &OpenAICodexResponsesOptions{
-		StreamOptions: StreamOptions{MaxRetryDelayMs: &maxDelay},
+		MaxRetryDelayMs: &maxDelay,
 	}); err == nil || !strings.Contains(err.Error(), "Server requested 2s retry delay (max: 1s)") {
 		t.Fatalf("err = %v", err)
 	}
@@ -203,13 +203,13 @@ func jsonNumber(value int64) string {
 }
 
 func TestCodexServiceTierPricing(t *testing.T) {
-	if got := ResolveCodexServiceTier(strPtr("default"), "flex"); got != "flex" {
+	if got := ResolveCodexServiceTier(new("default"), "flex"); got != "flex" {
 		t.Fatalf("tier = %s", got)
 	}
-	if got := ResolveCodexServiceTier(strPtr("default"), "auto"); got != "default" {
+	if got := ResolveCodexServiceTier(new("default"), "auto"); got != "default" {
 		t.Fatalf("tier = %s", got)
 	}
-	if got := ResolveCodexServiceTier(strPtr("priority"), "flex"); got != "priority" {
+	if got := ResolveCodexServiceTier(new("priority"), "flex"); got != "priority" {
 		t.Fatalf("tier = %s", got)
 	}
 	if got := ResolveCodexServiceTier(nil, "flex"); got != "flex" {
@@ -320,18 +320,16 @@ func TestStreamCodexResponsesSSE(t *testing.T) {
 	stream := StreamOpenAICodexResponses(model, TranscriptContext{Messages: []Message{
 		&UserMessage{Content: StringOrBlocks{Text: "hello"}, Timestamp: 1},
 	}}, &OpenAICodexResponsesOptions{
-		StreamOptions: StreamOptions{
-			APIKey: codexToken(t, "acct-1"), SessionID: "session-1",
-			OnProviderStreamEvent: func(data json.RawMessage, eventModel *Model) {
-				var event struct {
-					Type string `json:"type"`
-				}
-				if eventModel != model || json.Unmarshal(data, &event) != nil {
-					t.Errorf("invalid provider callback data/model = %s/%p", data, eventModel)
-					return
-				}
-				providerEventTypes = append(providerEventTypes, event.Type)
-			},
+		APIKey: codexToken(t, "acct-1"), SessionID: "session-1",
+		OnProviderStreamEvent: func(data json.RawMessage, eventModel *Model) {
+			var event struct {
+				Type string `json:"type"`
+			}
+			if eventModel != model || json.Unmarshal(data, &event) != nil {
+				t.Errorf("invalid provider callback data/model = %s/%p", data, eventModel)
+				return
+			}
+			providerEventTypes = append(providerEventTypes, event.Type)
 		},
 		Transport:   "sse",
 		ServiceTier: "flex",
@@ -391,8 +389,8 @@ func TestStreamCodexResponsesErrors(t *testing.T) {
 	stream = StreamOpenAICodexResponses(model, TranscriptContext{Messages: []Message{
 		&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
 	}}, &OpenAICodexResponsesOptions{
-		StreamOptions: StreamOptions{APIKey: codexToken(t, "acct")},
-		Transport:     "websocket",
+		APIKey:    codexToken(t, "acct"),
+		Transport: "websocket",
 	})
 	message, _ = stream.Result(ctxpkg.Background())
 	if message.ErrorMessage == nil || !strings.Contains(*message.ErrorMessage, "WebSocket transport is not supported") {
@@ -409,7 +407,7 @@ func TestStreamCodexResponsesErrors(t *testing.T) {
 	defer server.Close()
 	stream = StreamOpenAICodexResponses(codexModel(server.URL), TranscriptContext{Messages: []Message{
 		&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
-	}}, &OpenAICodexResponsesOptions{StreamOptions: StreamOptions{APIKey: codexToken(t, "acct")}})
+	}}, &OpenAICodexResponsesOptions{APIKey: codexToken(t, "acct")})
 	message, _ = stream.Result(ctxpkg.Background())
 	if message.StopReason != StopError || message.ErrorMessage == nil ||
 		!strings.Contains(*message.ErrorMessage, "Codex error: bad input") {
@@ -424,7 +422,7 @@ func TestStreamCodexResponsesErrors(t *testing.T) {
 	defer limitServer.Close()
 	stream = StreamOpenAICodexResponses(codexModel(limitServer.URL), TranscriptContext{Messages: []Message{
 		&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
-	}}, &OpenAICodexResponsesOptions{StreamOptions: StreamOptions{APIKey: codexToken(t, "acct")}})
+	}}, &OpenAICodexResponsesOptions{APIKey: codexToken(t, "acct")})
 	message, _ = stream.Result(ctxpkg.Background())
 	if message.ErrorMessage == nil || !strings.Contains(*message.ErrorMessage, "You have hit your ChatGPT usage limit (plus plan)") {
 		t.Fatalf("message = %+v", message)
@@ -439,7 +437,7 @@ func TestStreamCodexResponsesErrors(t *testing.T) {
 	defer truncated.Close()
 	stream = StreamOpenAICodexResponses(codexModel(truncated.URL), TranscriptContext{Messages: []Message{
 		&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
-	}}, &OpenAICodexResponsesOptions{StreamOptions: StreamOptions{APIKey: codexToken(t, "acct")}})
+	}}, &OpenAICodexResponsesOptions{APIKey: codexToken(t, "acct")})
 	message, _ = stream.Result(ctxpkg.Background())
 	if message.StopReason != StopError || message.ErrorMessage == nil ||
 		!strings.Contains(*message.ErrorMessage, "before a terminal response event") {
@@ -467,9 +465,8 @@ func TestStreamCodexResponsesRetries(t *testing.T) {
 	retries := 1
 	stream := StreamOpenAICodexResponses(codexModel(server.URL), TranscriptContext{Messages: []Message{
 		&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
-	}}, &OpenAICodexResponsesOptions{StreamOptions: StreamOptions{
-		APIKey: codexToken(t, "acct"), MaxRetries: &retries,
-	}})
+	}}, &OpenAICodexResponsesOptions{
+		APIKey: codexToken(t, "acct"), MaxRetries: &retries})
 	message, _ := stream.Result(ctxpkg.Background())
 	if message.StopReason != StopStop || attempts != 2 {
 		t.Fatalf("message = %+v attempts = %d", message, attempts)

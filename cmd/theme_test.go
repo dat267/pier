@@ -3,6 +3,7 @@ package cmd
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -82,12 +83,7 @@ func TestThemeSourcesFollowProjectTrust(t *testing.T) {
 }
 
 func containsTheme(themes []string, want string) bool {
-	for _, theme := range themes {
-		if theme == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(themes, want)
 }
 
 // moduleRootForTest walks up to the module root.

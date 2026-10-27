@@ -296,7 +296,7 @@ func OklchToRgb(l, c, h float64) RgbColor {
 	}
 	linear := atChroma(0)
 	low, high := 0.0, c
-	for index := 0; index < 20; index++ {
+	for range 20 {
 		chroma := (low + high) / 2
 		candidate := atChroma(chroma)
 		if isInSrgbGamut(candidate) {

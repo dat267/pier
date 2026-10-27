@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -250,9 +251,7 @@ func mergeJSONObjects(base, override json.RawMessage) (json.RawMessage, error) {
 	if err := json.Unmarshal(override, &overrideObject); err != nil {
 		return nil, err
 	}
-	for key, value := range overrideObject {
-		baseObject[key] = value
-	}
+	maps.Copy(baseObject, overrideObject)
 	return json.Marshal(baseObject)
 }
 

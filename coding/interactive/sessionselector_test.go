@@ -520,14 +520,12 @@ func TestSessionSelectorApplyStaysOnTheLoop(t *testing.T) {
 		SessionSelectorOptions{ScheduleTimer: func(int, func()) {}})
 
 	var worker sync.WaitGroup
-	worker.Add(1)
-	go func() {
-		defer worker.Done()
-		for i := 0; i < 200; i++ {
+	worker.Go(func() {
+		for range 200 {
 			component.postApply(func() { component.header.SetLoading(false) })
 		}
-	}()
-	for i := 0; i < 200; i++ {
+	})
+	for range 200 {
 		_ = component.Render(80)
 	}
 	worker.Wait()

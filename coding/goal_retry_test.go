@@ -18,7 +18,7 @@ func TestGoalControllerRetryableFailureDoesNotPause(t *testing.T) {
 	sink.retry = true
 	assistant := completedAssistant()
 	assistant.StopReason = ai.StopError
-	assistant.ErrorMessage = strPtr("server overloaded")
+	assistant.ErrorMessage = new("server overloaded")
 	controller.AgentEnd(goalAgentEndEvent(assistant))
 
 	if goalPausedWithReason(sink.entries, "run-error") {
@@ -116,7 +116,7 @@ func TestGoalControllerFinalFailureStillPauses(t *testing.T) {
 	sink.retry = false
 	assistant := completedAssistant()
 	assistant.StopReason = ai.StopError
-	assistant.ErrorMessage = strPtr("bad request")
+	assistant.ErrorMessage = new("bad request")
 	controller.AgentEnd(goalAgentEndEvent(assistant))
 
 	if !goalPausedWithReason(sink.entries, "run-error") {

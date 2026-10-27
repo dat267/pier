@@ -37,7 +37,7 @@ func TestSelectSessionSelects(t *testing.T) {
 		return sessions, nil
 	}
 
-	terminal := &scriptedTerminal{fakeRendererTerminal: fakeRendererTerminal{width: 80, height: 24}, started: make(chan struct{})}
+	terminal := &scriptedTerminal{width: 80, height: 24, started: make(chan struct{})}
 	type result struct {
 		path string
 	}
@@ -81,7 +81,7 @@ func TestSelectSessionCancel(t *testing.T) {
 		return nil, nil
 	}
 
-	terminal := &scriptedTerminal{fakeRendererTerminal: fakeRendererTerminal{width: 80, height: 24}, started: make(chan struct{})}
+	terminal := &scriptedTerminal{width: 80, height: 24, started: make(chan struct{})}
 	done := make(chan string, 1)
 	go func() {
 		done <- SelectSession(SelectSessionOptions{

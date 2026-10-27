@@ -390,14 +390,14 @@ func fauxAssistantContentToText(content ai.ContentList) string {
 }
 
 func joinLines(parts []string) string {
-	out := ""
+	var out strings.Builder
 	for i, p := range parts {
 		if i > 0 {
-			out += "\n"
+			out.WriteString("\n")
 		}
-		out += p
+		out.WriteString(p)
 	}
-	return out
+	return out.String()
 }
 
 func fauxToolResultToText(message *ai.ToolResultMessage) string {
@@ -449,14 +449,14 @@ func fauxPromptParts(context ai.TranscriptContext) []string {
 }
 
 func joinWithDoubleNewline(parts []string) string {
-	out := ""
+	var out strings.Builder
 	for i, p := range parts {
 		if i > 0 {
-			out += "\n\n"
+			out.WriteString("\n\n")
 		}
-		out += p
+		out.WriteString(p)
 	}
-	return out
+	return out.String()
 }
 
 // fauxJoinedLength is the UTF-16 length of the prompt that joins the first count
@@ -466,7 +466,7 @@ func fauxJoinedLength(parts []string, count int) int {
 	if count > 0 {
 		length = (count - 1) * 2
 	}
-	for index := 0; index < count; index++ {
+	for index := range count {
 		length += ai.JSLength(parts[index])
 	}
 	return length

@@ -10,6 +10,7 @@ package tui
 import (
 	"os"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -295,12 +296,7 @@ var legacySequenceKeyIDs = map[string]string{
 }
 
 func matchesLegacySequence(data string, sequences []string) bool {
-	for _, sequence := range sequences {
-		if data == sequence {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(sequences, data)
 }
 
 func matchesLegacyModifierSequence(data string, key string, modifier int) bool {

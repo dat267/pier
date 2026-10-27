@@ -35,7 +35,7 @@ func answerConfirm(t *testing.T, app *App, option int) {
 	if !ok {
 		t.Fatalf("dialog = %T, want the extension selector", app.slot.ActiveSelectorComponent())
 	}
-	for i := 0; i < option; i++ {
+	for range option {
 		selector.HandleInput("\x1b[B")
 	}
 	selector.HandleInput("\r")

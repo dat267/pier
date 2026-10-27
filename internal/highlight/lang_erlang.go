@@ -111,38 +111,36 @@ func Erlang() *Language {
 	}
 
 	return &Language{
-		Name:    "Erlang",
-		Aliases: []string{"erl"},
-		Mode: Mode{
-			Keywords: reserved,
-			Illegal:  `(</|\*=|\+=|-=|/\*|\*/|\(\*|\*\))`,
-			Contains: []*Mode{
-				function,
-				comment,
-				{
-					Begin:        `^-`,
-					End:          `\.`,
-					HasRelevance: true,
-					Relevance:    0,
-					ExcludeEnd:   true,
-					ReturnBegin:  true,
-					Keywords: Keywords{
-						"$pattern": `-` + IdentRe,
-						"keyword": "-module|1.5 -record|1.5 -undef|1.5 -export|1.5 -ifdef|1.5 -ifndef|1.5 " +
-							"-author|1.5 -copyright|1.5 -doc|1.5 -vsn|1.5 -import|1.5 -include|1.5 " +
-							"-include_lib|1.5 -compile|1.5 -define|1.5 -else|1.5 -endif|1.5 -file|1.5 " +
-							"-behaviour|1.5 -behavior|1.5 -spec|1.5",
-					},
-					Contains: []*Mode{params},
+		Name:     "Erlang",
+		Aliases:  []string{"erl"},
+		Keywords: reserved,
+		Illegal:  `(</|\*=|\+=|-=|/\*|\*/|\(\*|\*\))`,
+		Contains: []*Mode{
+			function,
+			comment,
+			{
+				Begin:        `^-`,
+				End:          `\.`,
+				HasRelevance: true,
+				Relevance:    0,
+				ExcludeEnd:   true,
+				ReturnBegin:  true,
+				Keywords: Keywords{
+					"$pattern": `-` + IdentRe,
+					"keyword": "-module|1.5 -record|1.5 -undef|1.5 -export|1.5 -ifdef|1.5 -ifndef|1.5 " +
+						"-author|1.5 -copyright|1.5 -doc|1.5 -vsn|1.5 -import|1.5 -include|1.5 " +
+						"-include_lib|1.5 -compile|1.5 -define|1.5 -else|1.5 -endif|1.5 -file|1.5 " +
+						"-behaviour|1.5 -behavior|1.5 -spec|1.5",
 				},
-				number,
-				QuoteStringMode,
-				recordAccess,
-				var1,
-				var2,
-				tuple,
-				{Begin: `\.$`},
+				Contains: []*Mode{params},
 			},
+			number,
+			QuoteStringMode,
+			recordAccess,
+			var1,
+			var2,
+			tuple,
+			{Begin: `\.$`},
 		},
 	}
 }

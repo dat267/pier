@@ -79,7 +79,7 @@ func TestOpenRouterImagesWireMatchesUpstream(t *testing.T) {
 				}
 			}
 			var payloadModel, responseModel *Model
-			options := &ImagesOptions{StreamOptions: StreamOptions{APIKey: "token"}}
+			options := &ImagesOptions{APIKey: "token"}
 			options.OnPayload = func(_ json.RawMessage, hooked *Model) json.RawMessage {
 				payloadModel = hooked
 				if len(fixture.Replacement) == 0 {

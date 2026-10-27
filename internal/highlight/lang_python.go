@@ -131,22 +131,20 @@ func Python() *Language {
 	}
 
 	return &Language{
-		Name:    "Python",
-		Aliases: []string{"py", "gyp", "ipython"},
-		Mode: Mode{
-			Keywords: keywords,
-			Illegal:  `(<\/|->|\?)|=>`,
-			Contains: []*Mode{
-				prompt,
-				number,
-				{Begin: `\bself\b`},
-				{BeginKeywords: "if", HasRelevance: true, Relevance: 0},
-				stringMode,
-				commentType,
-				HashCommentMode,
-				defOrClass,
-				decorator,
-			},
+		Name:     "Python",
+		Aliases:  []string{"py", "gyp", "ipython"},
+		Keywords: keywords,
+		Illegal:  `(<\/|->|\?)|=>`,
+		Contains: []*Mode{
+			prompt,
+			number,
+			{Begin: `\bself\b`},
+			{BeginKeywords: "if", HasRelevance: true, Relevance: 0},
+			stringMode,
+			commentType,
+			HashCommentMode,
+			defOrClass,
+			decorator,
 		},
 	}
 }

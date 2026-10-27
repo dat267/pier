@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"os"
+	"slices"
 	"sort"
 	"strings"
 
@@ -212,12 +213,7 @@ func CreateFuzzyAutocompleteItems[T any](items []T, prefix string, getSearchText
 
 // configContains reports whether a string list holds a value.
 func configContains(values []string, value string) bool {
-	for _, entry := range values {
-		if entry == value {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, value)
 }
 
 // GetLoginProviderCompletionOptions deduplicates the provider options and

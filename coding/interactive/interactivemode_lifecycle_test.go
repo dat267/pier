@@ -42,7 +42,7 @@ func newLifecycleTest(t *testing.T) (*Lifecycle, *lifecycleTestSession, *[]int, 
 	SetStyleColorsEnabled(true)
 	InitTheme("dark", false)
 
-	terminal := &titleTerminal{fakeRendererTerminal: fakeRendererTerminal{width: 80, height: 24}}
+	terminal := &titleTerminal{width: 80, height: 24}
 	screen := tui.NewMainScreen(terminal, false, "")
 	screen.DisableAutoRender()
 	session := &lifecycleTestSession{}

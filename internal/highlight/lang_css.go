@@ -112,28 +112,26 @@ func CSS() *Language {
 		Name:             "CSS",
 		CaseInsensitive:  true,
 		ClassNameAliases: map[string]string{"keyframePosition": "selector-tag"},
-		Mode: Mode{
-			Illegal:  `[=|'\$]`,
-			Keywords: Keywords{"keyframePosition": "from to"},
-			Contains: []*Mode{
-				CBlockCommentMode,
-				vendorPrefix,
-				CSSNumberMode,
-				Zero(Mode{ClassName: "selector-id", Begin: `#[A-Za-z0-9_-]+`}),
-				Zero(Mode{ClassName: "selector-class", Begin: `\.` + identRe}),
-				attributeSelector,
-				{
-					ClassName: "selector-pseudo",
-					Variants: []*Mode{
-						{ClassName: "selector-pseudo", Begin: `:(` + strings.Join(cssPseudoClasses, "|") + `)`},
-						{ClassName: "selector-pseudo", Begin: `::(` + strings.Join(cssPseudoElements, "|") + `)`},
-					},
+		Illegal:          `[=|'\$]`,
+		Keywords:         Keywords{"keyframePosition": "from to"},
+		Contains: []*Mode{
+			CBlockCommentMode,
+			vendorPrefix,
+			CSSNumberMode,
+			Zero(Mode{ClassName: "selector-id", Begin: `#[A-Za-z0-9_-]+`}),
+			Zero(Mode{ClassName: "selector-class", Begin: `\.` + identRe}),
+			attributeSelector,
+			{
+				ClassName: "selector-pseudo",
+				Variants: []*Mode{
+					{ClassName: "selector-pseudo", Begin: `:(` + strings.Join(cssPseudoClasses, "|") + `)`},
+					{ClassName: "selector-pseudo", Begin: `::(` + strings.Join(cssPseudoElements, "|") + `)`},
 				},
-				{ClassName: "attribute", Begin: `\b(` + cssAttributesAlternation + `)\b`},
-				attributeValue,
-				atRule,
-				{ClassName: "selector-tag", Begin: `\b(` + strings.Join(cssTags, "|") + `)\b`},
 			},
+			{ClassName: "attribute", Begin: `\b(` + cssAttributesAlternation + `)\b`},
+			attributeValue,
+			atRule,
+			{ClassName: "selector-tag", Begin: `\b(` + strings.Join(cssTags, "|") + `)\b`},
 		},
 	}
 }

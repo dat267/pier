@@ -70,13 +70,11 @@ func INI() *Language {
 		Name:            "TOML, also INI",
 		Aliases:         []string{"toml"},
 		CaseInsensitive: true,
-		Mode: Mode{
-			Illegal: `\S`,
-			Contains: []*Mode{
-				comments,
-				{ClassName: "section", Begin: `\[+`, End: `\]+`},
-				dottedKey,
-			},
+		Illegal:         `\S`,
+		Contains: []*Mode{
+			comments,
+			{ClassName: "section", Begin: `\[+`, End: `\]+`},
+			dottedKey,
 		},
 	}
 }

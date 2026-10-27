@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 	"time"
 
@@ -361,8 +362,8 @@ func runLoop(
 // pending message.
 func declareToolChanges(context AgentContext, pendingMessages []ai.Message) []ai.Message {
 	systemIndex := -1
-	for i := len(pendingMessages) - 1; i >= 0; i-- {
-		if ai.RoleOf(pendingMessages[i]) == ai.RoleSystem {
+	for i, pendingMessage := range slices.Backward(pendingMessages) {
+		if ai.RoleOf(pendingMessage) == ai.RoleSystem {
 			systemIndex = i
 			break
 		}

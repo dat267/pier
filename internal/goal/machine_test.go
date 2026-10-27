@@ -355,7 +355,7 @@ func TestDisarmedGoalsDoNotContinue(t *testing.T) {
 func TestBudgetTimePausesBeforeContinuation(t *testing.T) {
 	m, _ := testMachine()
 	m.Dispatch(SessionStartEvent{})
-	result := m.Dispatch(GoalCreateEvent{Objective: "ship it", Budget: &GoalBudget{TimeLimitMs: i64(1000)}})
+	result := m.Dispatch(GoalCreateEvent{Objective: "ship it", Budget: &GoalBudget{TimeLimitMs: new(int64(1000))}})
 	_ = result
 	now := m.Snapshot().Goal.CreatedAt + 1000
 	settle := m.Dispatch(AgentBeforeSettleEvent{Outcome: "completed", Now: now, HasNow: true})
@@ -368,7 +368,7 @@ func TestBudgetTimePausesBeforeContinuation(t *testing.T) {
 func TestBudgetExhaustedCannotResume(t *testing.T) {
 	m, _ := testMachine()
 	m.Dispatch(SessionStartEvent{})
-	m.Dispatch(GoalCreateEvent{Objective: "ship it", Budget: &GoalBudget{TokenLimit: i64(10)}})
+	m.Dispatch(GoalCreateEvent{Objective: "ship it", Budget: &GoalBudget{TokenLimit: new(int64(10))}})
 	m.Dispatch(AgentEndEvent{Usage: &GoalUsage{Tokens: 10}})
 	m.Dispatch(AgentBeforeSettleEvent{Outcome: "completed"})
 	resumed := m.Dispatch(GoalResumeEvent{})
@@ -383,7 +383,7 @@ func TestBudgetExhaustedCannotResume(t *testing.T) {
 func TestBudgetCostPausesBeforeContinuation(t *testing.T) {
 	m, _ := testMachine()
 	m.Dispatch(SessionStartEvent{})
-	m.Dispatch(GoalCreateEvent{Objective: "ship it", Budget: &GoalBudget{TimeLimitMs: i64(60_000), CostLimitUsd: f64(0.5)}})
+	m.Dispatch(GoalCreateEvent{Objective: "ship it", Budget: &GoalBudget{TimeLimitMs: new(int64(60_000)), CostLimitUsd: new(0.5)}})
 	m.Dispatch(AgentEndEvent{Usage: &GoalUsage{Tokens: 20, CostUsd: 0.5}})
 	result := m.Dispatch(AgentBeforeSettleEvent{Outcome: "completed"})
 	if result.Continue || m.Snapshot().Goal.BlockedReason.Code != "budget-cost" {
@@ -396,7 +396,7 @@ func TestBudgetCostPausesBeforeContinuation(t *testing.T) {
 func TestBudgetTokensPausesAndKeepsUsage(t *testing.T) {
 	m, _ := testMachine()
 	m.Dispatch(SessionStartEvent{})
-	m.Dispatch(GoalCreateEvent{Objective: "ship it", Budget: &GoalBudget{TimeLimitMs: i64(60_000), TokenLimit: i64(100)}})
+	m.Dispatch(GoalCreateEvent{Objective: "ship it", Budget: &GoalBudget{TimeLimitMs: new(int64(60_000)), TokenLimit: new(int64(100))}})
 	m.Dispatch(AgentEndEvent{Usage: &GoalUsage{Tokens: 100, CostUsd: 0.02}})
 	result := m.Dispatch(AgentBeforeSettleEvent{Outcome: "retrying"})
 	if result.Continue || m.Snapshot().Goal.Phase != PhasePaused || m.Snapshot().Goal.BlockedReason.Code != "budget-tokens" {
@@ -567,7 +567,7 @@ func TestGoalUpdateBlockedBeforeThreeRounds(t *testing.T) {
 
 func TestGoalUpdateBlockedAfterThreeRounds(t *testing.T) {
 	m := armedMachine(t)
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		m.Dispatch(AgentEndEvent{})
 		m.Dispatch(AgentBeforeSettleEvent{Outcome: "completed"})
 	}

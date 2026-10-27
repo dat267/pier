@@ -12,8 +12,8 @@ import (
 func TestSelectClientAuthMethodHonorsBasicHintWithoutSecret(t *testing.T) {
 	hint := ClientAuthSecretBasic
 	information := &OAuthClientInformationFull{
-		OAuthClientInformation: OAuthClientInformation{ClientID: "client"},
-		OAuthClientMetadata:    OAuthClientMetadata{TokenEndpointAuthMethod: &hint},
+		ClientID:                "client",
+		TokenEndpointAuthMethod: &hint,
 	}
 	if got := selectClientAuthMethod(information, nil); got != ClientAuthSecretBasic {
 		t.Fatalf("auth method = %q; want explicit basic hint", got)

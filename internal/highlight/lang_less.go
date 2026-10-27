@@ -131,6 +131,6 @@ func init() {
 		Name:            "Less",
 		Aliases:         []string{},
 		CaseInsensitive: true,
-		Mode:            Mode{Illegal: "[=>'/<($\"]", Contains: []*Mode{lessM0, lessM3, lessM5, lessM19, lessM23, lessM44, lessM24}},
+		Illegal:         "[=>'/<($\"]", Contains: []*Mode{lessM0, lessM3, lessM5, lessM19, lessM23, lessM44, lessM24},
 	})
 }

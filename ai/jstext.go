@@ -148,12 +148,12 @@ func JSNumberToString(f float64) string {
 		return strconv.FormatFloat(f, 'f', -1, 64)
 	}
 	formatted := strconv.FormatFloat(f, 'e', -1, 64)
-	index := strings.IndexByte(formatted, 'e')
-	if index < 0 {
+	before, after, ok := strings.Cut(formatted, "e")
+	if !ok {
 		return formatted
 	}
-	mantissa := formatted[:index]
-	exponent := formatted[index+1:]
+	mantissa := before
+	exponent := after
 	sign := ""
 	if len(exponent) > 0 && (exponent[0] == '+' || exponent[0] == '-') {
 		sign = string(exponent[0])

@@ -44,21 +44,19 @@ func XL() *Language {
 	}
 
 	return &Language{
-		Name:    "XL",
-		Aliases: []string{"tao"},
-		Mode: Mode{
-			Keywords: keywords,
-			Contains: []*Mode{
-				CLineCommentMode,
-				CBlockCommentMode,
-				doubleQuote,
-				singleQuote,
-				longText,
-				functionDefinition,
-				importMode,
-				basedNumber,
-				NumberMode,
-			},
+		Name:     "XL",
+		Aliases:  []string{"tao"},
+		Keywords: keywords,
+		Contains: []*Mode{
+			CLineCommentMode,
+			CBlockCommentMode,
+			doubleQuote,
+			singleQuote,
+			longText,
+			functionDefinition,
+			importMode,
+			basedNumber,
+			NumberMode,
 		},
 	}
 }

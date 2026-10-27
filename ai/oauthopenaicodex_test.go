@@ -328,7 +328,7 @@ func TestOpenAICodexOAuthDefinition(t *testing.T) {
 	if auth.Name != "OpenAI (ChatGPT Plus/Pro)" || !auth.IsSubscription {
 		t.Fatalf("auth = %+v", auth)
 	}
-	credential := &OAuthCredential{OAuthCredentials: OAuthCredentials{Access: "access-token", Refresh: "refresh-token"}}
+	credential := &OAuthCredential{Access: "access-token", Refresh: "refresh-token"}
 	modelAuth, err := auth.ToAuth(credential)
 	if err != nil || modelAuth.APIKey != "access-token" {
 		t.Fatalf("model auth = %+v err = %v", modelAuth, err)

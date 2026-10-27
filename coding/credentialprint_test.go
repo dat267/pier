@@ -62,7 +62,7 @@ func runtimeWithCredentialPrintProviders(t *testing.T, store *memoryCredentialSt
 	t.Helper()
 	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
 		DisableModelsJSON: true,
-		RefreshOnCreate:   boolPtr(false),
+		RefreshOnCreate:   new(false),
 		Credentials:       store,
 		ModelsStore:       NewInMemoryCodingAgentModelsStore(),
 	})

@@ -219,7 +219,7 @@ func TestSelectorUserMessages(t *testing.T) {
 func TestSelectorTrust(t *testing.T) {
 	wiring, _, _, _ := newSelectorTestWiring(t)
 	wiring.AgentDir = t.TempDir()
-	manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: boolPtr(false)})
+	manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: new(false)})
 	wiring.SessionInfo = manager
 	statuses := []string{}
 	wiring.ShowStatus = func(message string) { statuses = append(statuses, message) }
@@ -235,7 +235,7 @@ func TestSelectorTrust(t *testing.T) {
 	}
 	// Select trust: the decision is persisted and the status shown.
 	trust.Select(TrustSelection{Trusted: true, Updates: []coding.ProjectTrustUpdate{
-		{Path: "/tmp/proj", Decision: boolPtr(true)},
+		{Path: "/tmp/proj", Decision: new(true)},
 	}})
 	if !strings.Contains(statuses[len(statuses)-1], "Saved trust decision: trusted") {
 		t.Fatalf("statuses = %v", statuses)
@@ -255,7 +255,7 @@ func TestSelectorTree(t *testing.T) {
 	wiring.ShowError = func(message string) { errors = append(errors, message) }
 	wiring.TerminalRows = func() int { return 30 }
 
-	manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: boolPtr(false)})
+	manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: new(false)})
 	wiring.SessionInfo = manager
 
 	// No entries.
@@ -312,7 +312,7 @@ func TestTreeNavigationRebuildsTranscript(t *testing.T) {
 	wiring.ShowStatus = func(message string) { statuses = append(statuses, message) }
 	wiring.TerminalRows = func() int { return 30 }
 
-	manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: boolPtr(false)})
+	manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: new(false)})
 	wiring.SessionInfo = manager
 	manager.AppendMessage(ai.Message(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}}))
 
@@ -385,7 +385,7 @@ func TestTreeNavigationSummaryIndicatorAndEscape(t *testing.T) {
 	wiring.ShowError = func(message string) { errorMessages = append(errorMessages, message) }
 	wiring.TerminalRows = func() int { return 30 }
 
-	manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: boolPtr(false)})
+	manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: new(false)})
 	wiring.SessionInfo = manager
 	manager.AppendMessage(ai.Message(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}}))
 
@@ -489,7 +489,7 @@ func TestTreeNavigationAvailability(t *testing.T) {
 		t.Helper()
 		wiring, session, _, _ := newSelectorTestWiring(t)
 		wiring.TerminalRows = func() int { return 30 }
-		manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: boolPtr(false)})
+		manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: new(false)})
 		wiring.SessionInfo = manager
 		manager.AppendMessage(ai.Message(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}}))
 		restores := 0

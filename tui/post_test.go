@@ -14,14 +14,14 @@ func TestPostRunsSerializedWithRenders(t *testing.T) {
 	terminal := &fakePostTerminal{width: 40, height: 10}
 	screen := NewMainScreen(terminal, false, "")
 	var inPaint, inCallback int32
-	var overlap int32
+	var overlap atomic.Int32
 	inside := func() bool {
 		if atomic.AddInt32(&inPaint, 1) != 1 {
-			atomic.StoreInt32(&overlap, 1)
+			overlap.Store(1)
 		}
 		time.Sleep(time.Millisecond)
 		atomic.AddInt32(&inPaint, -1)
-		return atomic.LoadInt32(&overlap) == 1
+		return overlap.Load() == 1
 	}
 	// The paint marker runs inside every render.
 	screen.DoRender = func() {
@@ -33,21 +33,19 @@ func TestPostRunsSerializedWithRenders(t *testing.T) {
 	defer screen.Stop(TuiStopOptions{})
 
 	var wg sync.WaitGroup
-	for i := 0; i < 4; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for j := 0; j < 50; j++ {
+	for range 4 {
+		wg.Go(func() {
+			for range 50 {
 				screen.Post(func() {
 					if atomic.AddInt32(&inCallback, 1) != 1 || atomic.LoadInt32(&inPaint) != 0 {
-						atomic.StoreInt32(&overlap, 1)
+						overlap.Store(1)
 					}
 					time.Sleep(time.Millisecond)
 					atomic.AddInt32(&inCallback, -1)
 				})
 				time.Sleep(time.Millisecond)
 			}
-		}()
+		})
 	}
 	wg.Wait()
 	deadline := time.Now().Add(5 * time.Second)
@@ -63,7 +61,7 @@ func TestPostRunsSerializedWithRenders(t *testing.T) {
 	if pending != 0 {
 		t.Fatalf("%d posted callbacks never ran", pending)
 	}
-	if atomic.LoadInt32(&overlap) == 1 {
+	if overlap.Load() == 1 {
 		t.Fatal("callbacks ran concurrently with renders or each other")
 	}
 }

@@ -13,7 +13,7 @@ import (
 // TestSerializeSessionBranchHeader guards D130: the serialized branch starts
 // with a valid session header (`type: "session"`).
 func TestSerializeSessionBranchHeader(t *testing.T) {
-	manager := NewSessionManager("/tmp/proj", &SessionManagerOptions{Persist: boolPtr(false)})
+	manager := NewSessionManager("/tmp/proj", &SessionManagerOptions{Persist: new(false)})
 	manager.AppendMessage(ai.Message(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}}))
 	content := SerializeSessionBranch(manager, func(parentID *string, timestamp string) []*SessionEntry {
 		entry := &SessionEntry{Type: "custom", CustomType: "pi.share"}
@@ -56,7 +56,7 @@ func TestExportSessionSerializationFailurePreservesDestination(t *testing.T) {
 			name = "trailing"
 		}
 		t.Run(name, func(t *testing.T) {
-			manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: boolPtr(false)})
+			manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: new(false)})
 			manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}})
 			var create func(*string, string) []*SessionEntry
 			if trailing {

@@ -80,9 +80,9 @@ func TestAppendWhileSeedingQueuesInOrder(t *testing.T) {
 	// Append while the seed is in flight; whether this lands before or after
 	// the install, the final state must match an eager consume of everything.
 	appended := &SessionEntry{
-		Type:             "message",
-		SessionEntryBase: SessionEntryBase{ID: "m5", Timestamp: "t5"},
-		Message:          mustRaw(`{"role":"assistant","content":[{"type":"text","text":"late"}],"usage":{"input":9000,"output":1,"cacheRead":0,"cacheWrite":0},"provider":"anthropic","model":"claude","timestamp":"t5"}`),
+		Type: "message",
+		ID:   "m5", Timestamp: "t5",
+		Message: mustRaw(`{"role":"assistant","content":[{"type":"text","text":"late"}],"usage":{"input":9000,"output":1,"cacheRead":0,"cacheWrite":0},"provider":"anthropic","model":"claude","timestamp":"t5"}`),
 	}
 	m.mu.Lock()
 	m.appendEntry(appended)

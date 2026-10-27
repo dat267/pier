@@ -101,7 +101,7 @@ func TestTranscriptSkillBlock(t *testing.T) {
 func TestTranscriptSpecialMessages(t *testing.T) {
 	renderer, _ := newTranscriptTestRenderer(t, false)
 
-	renderer.AddMessageToChat(coding.CreateBashExecutionMessage("ls -la", "file.txt", intPtr(0), false, false, "", false, 1, nil), false)
+	renderer.AddMessageToChat(coding.CreateBashExecutionMessage("ls -la", "file.txt", new(0), false, false, "", false, 1, nil), false)
 	if len(renderer.Chat.Children) != 1 {
 		t.Fatalf("bash children = %d", len(renderer.Chat.Children))
 	}
@@ -223,7 +223,7 @@ func TestTranscriptNotices(t *testing.T) {
 
 	// The setting gate lives in MaybeShowCacheMissNotice (upstream's
 	// addCacheMissNotice is unconditional).
-	renderer.SessionInfo = coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: boolPtr(false)})
+	renderer.SessionInfo = coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: new(false)})
 	renderer.MaybeShowCacheMissNotice(&ai.AssistantMessage{})
 	if len(renderer.Chat.Children) != 0 {
 		t.Fatal("notice rendered while disabled")
@@ -283,7 +283,7 @@ func TestTranscriptThinkingDropNotice(t *testing.T) {
 
 	diagnostic := func(count int) ai.AssistantMessageDiagnostic {
 		transformations := make([]map[string]any, 0, count)
-		for i := 0; i < count; i++ {
+		for range count {
 			transformations = append(transformations, map[string]any{"type": "thinking_dropped"})
 		}
 		details, _ := json.Marshal(map[string]any{"transformations": transformations})
@@ -300,7 +300,7 @@ func TestTranscriptThinkingDropNotice(t *testing.T) {
 	}
 
 	// With an empty branch the previous count is zero, so the notice shows.
-	renderer.SessionInfo = coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: boolPtr(false)})
+	renderer.SessionInfo = coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: new(false)})
 	renderer.MaybeShowThinkingDropNotice(message)
 	lines := strings.Join(renderChat(t, renderer.Chat), "\n")
 	if !strings.Contains(lines, "Anthropic dropped 2 thinking blocks") {
@@ -310,7 +310,7 @@ func TestTranscriptThinkingDropNotice(t *testing.T) {
 	// With a branch whose last assistant already dropped >= count: no notice.
 	dir := t.TempDir()
 	manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{
-		SessionDir: dir, Persist: boolPtr(false),
+		SessionDir: dir, Persist: new(false),
 	})
 	manager.AppendMessage(ai.Message(&ai.AssistantMessage{Diagnostics: []ai.AssistantMessageDiagnostic{diagnostic(2)}}))
 	renderer2 := NewTranscriptRenderer(&tui.Container{}, nil, settings, nil, manager)
@@ -358,7 +358,7 @@ func (s *transcriptTestSession) GetModelPriceSource() coding.ModelPriceSource {
 func TestTranscriptToolCalls(t *testing.T) {
 	renderer, _ := newTranscriptTestRenderer(t, false)
 	renderer.Session = &transcriptTestSession{}
-	renderer.SessionInfo = coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: boolPtr(false)})
+	renderer.SessionInfo = coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: new(false)})
 
 	arguments, _ := json.Marshal(map[string]any{"command": "ls"})
 	assistant := &ai.AssistantMessage{
@@ -431,8 +431,6 @@ func TestRenderSessionItemsUpdatesEditorBorder(t *testing.T) {
 	}
 }
 
-func intPtr(value int) *int { return &value }
-
 // A `!` command run during an agent turn is recorded when it completes, after
 // the entries the turn produced while it ran, but the live transcript showed
 // the frame at its completion point. Replaying the raw entry order drew the
@@ -449,12 +447,12 @@ func TestReplayedBashFrameKeepsItsPositionAmongTheTurn(t *testing.T) {
 			t.Fatalf("marshal %s: %v", id, err)
 		}
 		return coding.SessionEntry{
-			Type:             "message",
-			SessionEntryBase: coding.SessionEntryBase{ID: id, Timestamp: stamp(ms)},
-			Message:          encoded,
+			Type: "message",
+			ID:   id, Timestamp: stamp(ms),
+			Message: encoded,
 		}
 	}
-	bash := coding.CreateBashExecutionMessage("echo hi", "hi", intPtr(0), false, false, "", false, 3000, nil)
+	bash := coding.CreateBashExecutionMessage("echo hi", "hi", new(0), false, false, "", false, 3000, nil)
 	entries := []coding.SessionEntry{
 		messageEntry("u1", &ai.UserMessage{Content: ai.StringOrBlocks{Text: "start"}}, 1000),
 		messageEntry("a1", &ai.AssistantMessage{Content: ai.ContentList{ai.TextContent{Text: "first pass"}}, StopReason: ai.StopStop}, 2000),
@@ -499,14 +497,14 @@ func TestReplayedIdleBashFrameStaysInPlace(t *testing.T) {
 			t.Fatalf("marshal %s: %v", id, err)
 		}
 		return coding.SessionEntry{
-			Type:             "message",
-			SessionEntryBase: coding.SessionEntryBase{ID: id, Timestamp: stamp(ms)},
-			Message:          encoded,
+			Type: "message",
+			ID:   id, Timestamp: stamp(ms),
+			Message: encoded,
 		}
 	}
 	// The command started at 1500 and its entry was appended at 2000, after a
 	// message stamped in the same millisecond as the start.
-	bash := coding.CreateBashExecutionMessage("echo hi", "hi", intPtr(0), false, false, "", false, 1500, nil)
+	bash := coding.CreateBashExecutionMessage("echo hi", "hi", new(0), false, false, "", false, 1500, nil)
 	entries := []coding.SessionEntry{
 		messageEntry("a1", &ai.AssistantMessage{Content: ai.ContentList{ai.TextContent{Text: "first pass"}}, StopReason: ai.StopStop}, 1000),
 		messageEntry("b1", bash, 2000),
@@ -551,15 +549,15 @@ func TestTranscriptRestoresBashCommandHistory(t *testing.T) {
 			t.Fatalf("marshal %s: %v", id, err)
 		}
 		return coding.SessionEntry{
-			Type:             "message",
-			SessionEntryBase: coding.SessionEntryBase{ID: id, Timestamp: stamp(ms)},
-			Message:          encoded,
+			Type: "message",
+			ID:   id, Timestamp: stamp(ms),
+			Message: encoded,
 		}
 	}
 	entries := []coding.SessionEntry{
 		messageEntry("u1", &ai.UserMessage{Content: ai.StringOrBlocks{Text: "ask"}}, 1000),
-		messageEntry("b1", coding.CreateBashExecutionMessage("echo hi", "hi", intPtr(0), false, false, "", false, 2000, nil), 2000),
-		messageEntry("b2", coding.CreateBashExecutionMessage("secret", "", intPtr(0), false, false, "", true, 3000, nil), 3000),
+		messageEntry("b1", coding.CreateBashExecutionMessage("echo hi", "hi", new(0), false, false, "", false, 2000, nil), 2000),
+		messageEntry("b2", coding.CreateBashExecutionMessage("secret", "", new(0), false, false, "", true, 3000, nil), 3000),
 	}
 	renderer.RenderSessionEntries(entries, false, true)
 

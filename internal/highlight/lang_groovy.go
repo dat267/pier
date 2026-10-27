@@ -70,29 +70,27 @@ func Groovy() *Language {
 
 	return &Language{
 		Name: "Groovy",
-		Mode: Mode{
-			Keywords: Keywords{
-				"built_in": "this super",
-				"literal":  "true false null",
-				"keyword": "byte short char int long boolean float double void " +
-					"def as in assert trait " +
-					"abstract static volatile transient public private protected synchronized final " +
-					"class interface enum if else for while switch case break default continue " +
-					"throw throws try catch finally implements extends new import package return instanceof",
-			},
-			Illegal: `#|<\//`,
-			Contains: []*Mode{
-				Shebang("groovy", 10),
-				comment,
-				stringMode,
-				regexpMode,
-				number,
-				classMode,
-				meta,
-				attr,
-				ternary,
-				label,
-			},
+		Keywords: Keywords{
+			"built_in": "this super",
+			"literal":  "true false null",
+			"keyword": "byte short char int long boolean float double void " +
+				"def as in assert trait " +
+				"abstract static volatile transient public private protected synchronized final " +
+				"class interface enum if else for while switch case break default continue " +
+				"throw throws try catch finally implements extends new import package return instanceof",
+		},
+		Illegal: `#|<\//`,
+		Contains: []*Mode{
+			Shebang("groovy", 10),
+			comment,
+			stringMode,
+			regexpMode,
+			number,
+			classMode,
+			meta,
+			attr,
+			ternary,
+			label,
 		},
 	}
 }

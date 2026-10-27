@@ -45,11 +45,11 @@ func TestOpenAIResponsesStreamEventsMatchUpstream(t *testing.T) {
 			model.ID = "gpt-5"
 			model.Name = "GPT-5"
 			model.BaseURL = server.URL + "/v1"
-			model.Cost = ModelCost{ModelCostRates: ModelCostRates{Input: 1.25, Output: 10, CacheRead: 0.125}}
+			model.Cost = ModelCost{Input: 1.25, Output: 10, CacheRead: 0.125}
 
 			stream := StreamOpenAIResponses(model, NormalizeContext(Context{
 				Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-			}), &OpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "test-key"}})
+			}), &OpenAIResponsesOptions{APIKey: "test-key"})
 
 			var got []string
 			for {

@@ -41,12 +41,12 @@ func TestGoogleThinkingLevelHelpers(t *testing.T) {
 
 	// thinkingLevelMap resolution, lowercased.
 	model := &Model{ID: "gemini-3-pro", Provider: "google", Reasoning: true,
-		ThinkingLevelMap: ThinkingLevelMap{ThinkMinimal: strPtrT("LOW")}}
+		ThinkingLevelMap: ThinkingLevelMap{ThinkMinimal: new("LOW")}}
 	if level, err := ResolveGoogleThinkingLevel(model, ThinkMinimal); err != nil || level != "low" {
 		t.Fatalf("resolved = %q, %v", level, err)
 	}
 	// Unsupported mapping errors.
-	bad := &Model{ID: "m", Provider: "p", ThinkingLevelMap: ThinkingLevelMap{ThinkHigh: strPtrT("turbo")}}
+	bad := &Model{ID: "m", Provider: "p", ThinkingLevelMap: ThinkingLevelMap{ThinkHigh: new("turbo")}}
 	if _, err := ResolveGoogleThinkingLevel(bad, ThinkHigh); err == nil {
 		t.Fatal("unsupported mapping must error")
 	}
@@ -62,7 +62,7 @@ func TestGoogleThinkingLevelHelpers(t *testing.T) {
 		t.Fatalf("unknown family budget = %d; want -1 (dynamic)", budget)
 	}
 	// Custom budgets win.
-	custom := ThinkingBudgets{High: intPtr(1234)}
+	custom := ThinkingBudgets{High: new(1234)}
 	if budget := GetGoogleBudget(testGoogleModel(), ThinkHigh, &custom); budget != 1234 {
 		t.Fatalf("custom budget = %d", budget)
 	}
@@ -110,7 +110,7 @@ func TestConvertGoogleMessages(t *testing.T) {
 		&UserMessage{Content: StringOrBlocks{Text: "hello"}, Timestamp: 1},
 		&AssistantMessage{
 			Content: ContentList{
-				ThinkingContent{Thinking: "pondering", ThinkingSignature: strPtrT("c2lnbmF0dXJl")},
+				ThinkingContent{Thinking: "pondering", ThinkingSignature: new("c2lnbmF0dXJl")},
 				ToolCall{ID: "call_1", Name: "bash", Arguments: json.RawMessage(`{"cmd":"ls"}`)},
 			},
 			API: APIGoogleGenerativeAI, Provider: "google", Model: "gemini-2.5-flash",
@@ -190,7 +190,7 @@ func TestConvertGoogleMessagesCrossModelThinking(t *testing.T) {
 	messages := []Message{
 		&AssistantMessage{
 			Content: ContentList{
-				ThinkingContent{Thinking: "other model reasoning", ThinkingSignature: strPtrT("c2lnbmF0dXJl")},
+				ThinkingContent{Thinking: "other model reasoning", ThinkingSignature: new("c2lnbmF0dXJl")},
 			},
 			API: APIGoogleGenerativeAI, Provider: "google", Model: "gemini-3-pro",
 			StopReason: StopStop, Timestamp: 1,
@@ -209,14 +209,14 @@ func TestBuildGoogleParams(t *testing.T) {
 	model := testGoogleModel()
 	tool := Tool{Name: "read_file", Description: "Reads", Parameters: json.RawMessage(`{"type":"object","properties":{}}`)}
 	ctx := NormalizeContext(Context{
-		SystemPrompt: strPtrT("sys"),
+		SystemPrompt: new("sys"),
 		Messages:     []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
 		Tools:        []Tool{tool},
 	})
 	budget := 4096
 	params, err := BuildGoogleParams(model, ctx, &GoogleOptions{
-		StreamOptions: StreamOptions{Temperature: floatPtrT(0.5)},
-		Thinking:      &GoogleThinkingOption{Enabled: true, BudgetTokens: &budget},
+		Temperature: new(0.5),
+		Thinking:    &GoogleThinkingOption{Enabled: true, BudgetTokens: &budget},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -277,7 +277,7 @@ func TestStreamGoogleTextDeltasAvoidPrefixCopies(t *testing.T) {
 	const chunks = 512
 	delta := strings.Repeat("x", 128)
 	var body strings.Builder
-	for index := 0; index < chunks; index++ {
+	for index := range chunks {
 		finish := ""
 		if index == chunks-1 {
 			finish = `,"finishReason":"STOP"`
@@ -297,7 +297,7 @@ func TestStreamGoogleTextDeltasAvoidPrefixCopies(t *testing.T) {
 	var before, after runtime.MemStats
 	runtime.ReadMemStats(&before)
 	message, err := StreamGoogleGenerativeAI(model, NormalizeContext(Context{}), &GoogleOptions{
-		StreamOptions: StreamOptions{APIKey: "k"},
+		APIKey: "k",
 	}).Result(context.Background())
 	runtime.ReadMemStats(&after)
 	if err != nil {
@@ -344,15 +344,14 @@ func TestStreamGoogleGenerativeAI(t *testing.T) {
 	var providerEventCount int
 	stream := StreamGoogleGenerativeAI(model, NormalizeContext(Context{
 		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-	}), &GoogleOptions{StreamOptions: StreamOptions{
+	}), &GoogleOptions{
 		APIKey: "k",
 		OnProviderStreamEvent: func(data json.RawMessage, eventModel *Model) {
 			if eventModel != model || !json.Valid(data) {
 				t.Errorf("provider callback data/model = %s/%p", data, eventModel)
 			}
 			providerEventCount++
-		},
-	}})
+		}})
 
 	var types []string
 	var thinking, text string
@@ -426,7 +425,7 @@ func TestStreamGoogleGenerativeAIErrors(t *testing.T) {
 		defer server.Close()
 		model := testGoogleModel()
 		model.BaseURL = server.URL
-		stream := StreamGoogleGenerativeAI(model, NormalizeContext(Context{}), &GoogleOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+		stream := StreamGoogleGenerativeAI(model, NormalizeContext(Context{}), &GoogleOptions{APIKey: "k"})
 		msg, _ := stream.Result(context.Background())
 		if msg.StopReason != StopError || !strings.Contains(*msg.ErrorMessage, "Provider stopped with: SAFETY") {
 			t.Fatalf("message = %+v", msg)
@@ -439,7 +438,7 @@ func TestStreamGoogleGenerativeAIErrors(t *testing.T) {
 		defer server.Close()
 		model := testGoogleModel()
 		model.BaseURL = server.URL
-		stream := StreamGoogleGenerativeAI(model, NormalizeContext(Context{}), &GoogleOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+		stream := StreamGoogleGenerativeAI(model, NormalizeContext(Context{}), &GoogleOptions{APIKey: "k"})
 		msg, _ := stream.Result(context.Background())
 		if msg.StopReason != StopError || !strings.Contains(*msg.ErrorMessage, "without a finish reason") {
 			t.Fatalf("message = %+v", msg)

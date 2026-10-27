@@ -145,7 +145,7 @@ func TestReadToolHonorsTheImageAutoResizeSetting(t *testing.T) {
 		AuthPath:        filepath.Join(GetAgentDir(), "auth.json"),
 		ModelsPath:      filepath.Join(GetAgentDir(), "models.json"),
 		Credentials:     newMemoryCredentialStore(),
-		RefreshOnCreate: boolPtr(false),
+		RefreshOnCreate: new(false),
 	})
 	if err != nil {
 		t.Fatal(err)

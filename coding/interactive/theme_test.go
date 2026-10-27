@@ -161,7 +161,7 @@ func TestThemeDetectionAgainstUpstreamGolden(t *testing.T) {
 	themeGoldenCheck(t, golden, "detect env", detections)
 
 	autoResults := []any{}
-	for _, setting := range []*string{nil, strPtr("light/dark"), strPtr("light/dark/extra"), strPtr("/dark"), strPtr("light/"), strPtr(" light / dark "), strPtr("plain")} {
+	for _, setting := range []*string{nil, new("light/dark"), new("light/dark/extra"), new("/dark"), new("light/"), new(" light / dark "), new("plain")} {
 		light, dark, ok := ParseAutoThemeSetting(setting)
 		if !ok {
 			autoResults = append(autoResults, nil)
@@ -177,11 +177,11 @@ func TestThemeDetectionAgainstUpstreamGolden(t *testing.T) {
 		theme   TerminalTheme
 	}{
 		{nil, TerminalThemeDark},
-		{strPtr("light/dark"), TerminalThemeLight},
-		{strPtr("light/dark"), TerminalThemeDark},
-		{strPtr("solarized"), TerminalThemeDark},
-		{strPtr("bad/"), TerminalThemeDark},
-		{strPtr("a/b/c"), TerminalThemeDark},
+		{new("light/dark"), TerminalThemeLight},
+		{new("light/dark"), TerminalThemeDark},
+		{new("solarized"), TerminalThemeDark},
+		{new("bad/"), TerminalThemeDark},
+		{new("a/b/c"), TerminalThemeDark},
 	} {
 		resolved, ok := ResolveThemeSetting(testCase.setting, testCase.theme)
 		if !ok {
@@ -194,8 +194,6 @@ func TestThemeDetectionAgainstUpstreamGolden(t *testing.T) {
 
 	themeGoldenCheck(t, golden, "available", AvailableThemes())
 }
-
-func strPtr(value string) *string { return &value }
 
 // TestThemeValidation covers the structural theme validation.
 func TestThemeValidation(t *testing.T) {

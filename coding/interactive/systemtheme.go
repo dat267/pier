@@ -3,6 +3,7 @@ package interactive
 import (
 	"fmt"
 	"math"
+	"slices"
 
 	"github.com/dat267/pier/tui"
 )
@@ -254,10 +255,8 @@ var systemSolveOrder = func() []string {
 	order := []string{}
 	var visit func(token string)
 	visit = func(token string) {
-		for _, existing := range order {
-			if existing == token {
-				return
-			}
+		if slices.Contains(order, token) {
+			return
 		}
 		for _, rule := range systemRules {
 			if rule.token != token {
@@ -400,12 +399,7 @@ func systemLevelTarget(level, appearance string, surfaceL float64) (float64, boo
 }
 
 func systemHasString(values []string, wanted string) bool {
-	for _, value := range values {
-		if value == wanted {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, wanted)
 }
 
 func systemIsPanel(token string) bool { return systemHasString(systemPanelTokens, token) }
@@ -468,7 +462,7 @@ func systemWithTextContrast(color tui.RgbColor, surfaces []tui.RgbColor, lighter
 		return at(extreme)
 	}
 	low, high := channels.L, extreme
-	for index := 0; index < 20; index++ {
+	for range 20 {
 		middle := (low + high) / 2
 		if meets(at(middle)) {
 			high = middle
@@ -554,7 +548,7 @@ func GenerateSystemThemeColors(input SystemThemeInput) SystemThemeColors {
 			return color
 		}
 		low, high := backgroundL, l
-		for index := 0; index < 20; index++ {
+		for range 20 {
 			middle := (low + high) / 2
 			if readable(paint(token, middle)) {
 				low = middle
@@ -607,7 +601,7 @@ func GenerateSystemThemeColors(input SystemThemeInput) SystemThemeColors {
 	if !ok {
 		low, high := 0.0, 2.0
 		colors, ok = solve(high)
-		for index := 0; index < 20; index++ {
+		for range 20 {
 			middle := (low + high) / 2
 			if attempt, attemptOK := solve(middle); attemptOK {
 				high = middle

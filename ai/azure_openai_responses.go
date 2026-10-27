@@ -33,7 +33,7 @@ type AzureOpenAIResponsesOptions struct {
 // ("model=deployment,...").
 func ParseDeploymentNameMap(value string) map[string]string {
 	result := map[string]string{}
-	for _, entry := range strings.Split(value, ",") {
+	for entry := range strings.SplitSeq(value, ",") {
 		trimmed := JSTrim(entry)
 		if trimmed == "" {
 			continue

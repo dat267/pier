@@ -59,16 +59,16 @@ func mustPanic(t *testing.T, what string, run func()) {
 func TestThemeStyleMatchesTextStyler(t *testing.T) {
 	theme := loadStyledTheme(t, "dark", nil)
 	got := theme.Style("Ready", ThemeStyle{
-		Fg:             "success",
-		Bg:             "toolSuccessBg",
-		TextAttributes: tui.TextAttributes{Bold: true},
+		Fg:   "success",
+		Bg:   "toolSuccessBg",
+		Bold: true,
 	})
 	success := theme.Colors()["success"]
 	toolSuccessBg := theme.Colors()["toolSuccessBg"]
 	want := tui.StyleText("Ready", tui.TextStyle{
-		Fg:             &success,
-		Bg:             &toolSuccessBg,
-		TextAttributes: tui.TextAttributes{Bold: true},
+		Fg:   &success,
+		Bg:   &toolSuccessBg,
+		Bold: true,
 	}, tui.TerminalColorModeTruecolor)
 	if got != want {
 		t.Errorf("theme.style = %q, want %q", got, want)

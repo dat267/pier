@@ -20,7 +20,7 @@ func newHelpersTestWiring(t *testing.T) (*TrustCrashWiring, *coding.SettingsMana
 	InitTheme("dark", false)
 
 	settings := coding.NewInMemorySettingsManager(nil, coding.SettingsManagerCreateOptions{})
-	manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: boolPtr(false)})
+	manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: new(false)})
 	wiring := &TrustCrashWiring{
 		Chat:        &tui.Container{},
 		Settings:    settings,
@@ -43,7 +43,7 @@ func TestTrustWarning(t *testing.T) {
 
 	// An untrusted project without trust-requiring resources renders nothing.
 	untrusted := coding.NewInMemorySettingsManager(nil, coding.SettingsManagerCreateOptions{
-		ProjectTrusted: boolPtr(false),
+		ProjectTrusted: new(false),
 	})
 	wiring.Settings = untrusted
 	wiring.RenderProjectTrustWarningIfNeeded()
@@ -188,7 +188,7 @@ func TestAutocompleteAssembly(t *testing.T) {
 		t.Fatalf("create runtime: %v", err)
 	}
 	settings := coding.NewInMemorySettingsManager(nil, coding.SettingsManagerCreateOptions{})
-	manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: boolPtr(false)})
+	manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: new(false)})
 	session := &autocompleteTestSession{
 		runtime: runtime,
 		levels:  []ai.ThinkingLevel{"off", "medium", "high"},

@@ -119,7 +119,7 @@ func TestMetaOAuthRefreshRemintsTheKey(t *testing.T) {
 	defer server.Close()
 
 	withMetaURLs(t, server.URL, func() {
-		credential, err := MetaOAuth().Refresh(&OAuthCredential{OAuthCredentials: OAuthCredentials{Refresh: "identity-token"}}, context.Background())
+		credential, err := MetaOAuth().Refresh(&OAuthCredential{Refresh: "identity-token"}, context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -140,7 +140,7 @@ func TestMetaOAuthMintExpiredSession(t *testing.T) {
 	defer server.Close()
 
 	withMetaURLs(t, server.URL, func() {
-		_, err := MetaOAuth().Refresh(&OAuthCredential{OAuthCredentials: OAuthCredentials{Refresh: "stale"}}, context.Background())
+		_, err := MetaOAuth().Refresh(&OAuthCredential{Refresh: "stale"}, context.Background())
 		if err == nil || !strings.Contains(err.Error(), "Run `/login meta` to sign in again") {
 			t.Fatalf("err = %v", err)
 		}

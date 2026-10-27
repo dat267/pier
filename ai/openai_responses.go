@@ -206,7 +206,7 @@ func ConvertResponsesTools(tools []Tool, options *ConvertResponsesToolsOptions) 
 				},
 			}
 			if options.ToolSearchResult {
-				entry.DeferLoading = boolPtr(true)
+				entry.DeferLoading = new(true)
 			}
 			out = append(out, entry)
 			continue
@@ -225,10 +225,10 @@ func ConvertResponsesTools(tools []Tool, options *ConvertResponsesToolsOptions) 
 			Parameters: GetJSONSchemaToolParameters(tool, strict),
 		}
 		if options.ToolSearchResult {
-			entry.DeferLoading = boolPtr(true)
+			entry.DeferLoading = new(true)
 		}
 		if options.SupportsStrictMode {
-			entry.Strict = boolPtr(strict)
+			entry.Strict = new(strict)
 		}
 		out = append(out, entry)
 	}
@@ -581,7 +581,7 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 			}
 			messages = append(messages, items...)
 		case *ToolResultMessage:
-			callID := strings.SplitN(m.ToolCallID, "|", 2)[0]
+			callID, _, _ := strings.Cut(m.ToolCallID, "|")
 			output := convertResponsesToolResultOutput(model, m.Content)
 			itemType := "function_call_output"
 			if len(options.GrammarToolInputProperties) > 0 && options.GrammarToolInputProperties[m.ToolName] != "" {

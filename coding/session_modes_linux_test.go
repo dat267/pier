@@ -132,7 +132,7 @@ func TestSessionExportUsesNodeDefaultDirectoryMode(t *testing.T) {
 	oldMask := syscall.Umask(0)
 	defer syscall.Umask(oldMask)
 
-	manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: boolPtr(false)})
+	manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: new(false)})
 	dir := filepath.Join(t.TempDir(), "exports")
 	if _, err := ExportSessionToJsonl(manager, filepath.Join(dir, "export.jsonl"), nil); err != nil {
 		t.Fatal(err)
@@ -150,7 +150,7 @@ func TestSessionExportUsesNodeDefaultFileMode(t *testing.T) {
 	oldMask := syscall.Umask(0)
 	defer syscall.Umask(oldMask)
 
-	manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: boolPtr(false)})
+	manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: new(false)})
 	path := filepath.Join(t.TempDir(), "export.jsonl")
 	if _, err := ExportSessionToJsonl(manager, path, nil); err != nil {
 		t.Fatal(err)

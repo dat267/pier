@@ -7,6 +7,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -115,10 +116,7 @@ func CreateReadTool(cwd string, options *ReadToolOptions) agent.AgentTool {
 			userLimitedLines := -1.0
 			if input.Limit != nil {
 				endLine := math.Min(startLine+*input.Limit, float64(len(allLines)))
-				sliceEnd := jsArraySliceIndex(endLine, len(allLines))
-				if sliceEnd < sliceStart {
-					sliceEnd = sliceStart
-				}
+				sliceEnd := max(jsArraySliceIndex(endLine, len(allLines)), sliceStart)
 				selectedContent = strings.Join(allLines[sliceStart:sliceEnd], "\n")
 				userLimitedLines = endLine - startLine
 			} else {
@@ -168,10 +166,8 @@ func nonVisionImageNote(model *ai.Model) string {
 	if model == nil {
 		return ""
 	}
-	for _, input := range model.Input {
-		if input == "image" {
-			return ""
-		}
+	if slices.Contains(model.Input, "image") {
+		return ""
 	}
 	return "[Current model does not support images. The image will be omitted from this request.]"
 }
@@ -477,5 +473,3 @@ func mustMarshalJSON(v any) json.RawMessage {
 	}
 	return enc
 }
-
-func boolPtr(b bool) *bool { return &b }

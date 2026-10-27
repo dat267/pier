@@ -17,15 +17,13 @@ func Brainfuck() *Language {
 	return &Language{
 		Name:    "Brainfuck",
 		Aliases: []string{"bf"},
-		Mode: Mode{
-			Contains: []*Mode{
-				comment,
-				{ClassName: "title", Begin: `[\[\]]`, HasRelevance: true, Relevance: 0},
-				{ClassName: "string", Begin: `[\.,]`, HasRelevance: true, Relevance: 0},
-				// The only relevance counter in this language.
-				{Begin: `(?:\+\+|--)`, Contains: []*Mode{literal}},
-				literal,
-			},
+		Contains: []*Mode{
+			comment,
+			{ClassName: "title", Begin: `[\[\]]`, HasRelevance: true, Relevance: 0},
+			{ClassName: "string", Begin: `[\.,]`, HasRelevance: true, Relevance: 0},
+			// The only relevance counter in this language.
+			{Begin: `(?:\+\+|--)`, Contains: []*Mode{literal}},
+			literal,
 		},
 	}
 }

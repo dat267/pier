@@ -3,6 +3,7 @@ package coding
 import (
 	ctxpkg "context"
 	"errors"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -98,9 +99,8 @@ func TestModelsLoginLogout(t *testing.T) {
 			OAuth: &ai.OAuthAuth{
 				Name: "P OAuth",
 				Login: func(interaction *ai.AuthInteraction) (*ai.OAuthCredential, error) {
-					return &ai.OAuthCredential{OAuthCredentials: ai.OAuthCredentials{
-						Access: "access-1", Refresh: "refresh-1", Expires: 1,
-					}}, nil
+					return &ai.OAuthCredential{
+						Access: "access-1", Refresh: "refresh-1", Expires: 1}, nil
 				},
 			},
 		},
@@ -191,7 +191,7 @@ func runtimeWithProviders(t *testing.T, providers ...*ai.Provider) *ModelRuntime
 	t.Helper()
 	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
 		DisableModelsJSON: true,
-		RefreshOnCreate:   boolPtr(false),
+		RefreshOnCreate:   new(false),
 		Credentials:       newMemoryCredentialStore(),
 		ModelsStore:       NewInMemoryCodingAgentModelsStore(),
 	})
@@ -307,7 +307,7 @@ func TestModelRuntimeCredentialSyncFailure(t *testing.T) {
 	}
 	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
 		ModelsPath:      modelsPath,
-		RefreshOnCreate: boolPtr(false),
+		RefreshOnCreate: new(false),
 		Credentials:     store,
 	})
 	if err != nil {
@@ -338,7 +338,7 @@ func TestModelRuntimeCredentialSyncFailure(t *testing.T) {
 func TestModelRuntimeStreamCancellationReachesOAuthAuthResolution(t *testing.T) {
 	store := newMemoryCredentialStore()
 	store.entries["alpha"] = &ai.Credential{Type: ai.CredentialOAuth, OAuth: &ai.OAuthCredential{
-		OAuthCredentials: ai.OAuthCredentials{Access: "old", Refresh: "old-refresh", Expires: 0},
+		Access: "old", Refresh: "old-refresh", Expires: 0,
 	}}
 	ctx, cancel := ctxpkg.WithCancel(ctxpkg.Background())
 	defer cancel()
@@ -347,9 +347,8 @@ func TestModelRuntimeStreamCancellationReachesOAuthAuthResolution(t *testing.T) 
 		Name: "test OAuth",
 		Refresh: func(credential *ai.OAuthCredential, _ ctxpkg.Context) (*ai.OAuthCredential, error) {
 			cancel()
-			return &ai.OAuthCredential{OAuthCredentials: ai.OAuthCredentials{
-				Access: "new", Refresh: "new-refresh", Expires: time.Now().Add(time.Hour).UnixMilli(),
-			}}, nil
+			return &ai.OAuthCredential{
+				Access: "new", Refresh: "new-refresh", Expires: time.Now().Add(time.Hour).UnixMilli()}, nil
 		},
 		ToAuth: func(credential *ai.OAuthCredential) (*ai.ModelAuth, error) {
 			return &ai.ModelAuth{APIKey: credential.Access}, nil
@@ -367,7 +366,7 @@ func TestModelRuntimeStreamCancellationReachesOAuthAuthResolution(t *testing.T) 
 		}},
 	})
 	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
-		DisableModelsJSON: true, RefreshOnCreate: boolPtr(false),
+		DisableModelsJSON: true, RefreshOnCreate: new(false),
 		Credentials: store, ModelsStore: NewInMemoryCodingAgentModelsStore(),
 	})
 	if err != nil {
@@ -382,7 +381,7 @@ func TestModelRuntimeStreamCancellationReachesOAuthAuthResolution(t *testing.T) 
 		t.Fatal("model missing")
 	}
 	message, _ := runtime.Stream(model, ai.Context{}, &ai.ModelsStreamOptions{
-		StreamOptions: ai.StreamOptions{Ctx: ctx},
+		Ctx: ctx,
 	}).Result(ctxpkg.Background())
 	// A cancel during auth resolution is the abort it is, not a provider
 	// failure: upstream's applyAuth throws the abort reason (D256).
@@ -434,7 +433,7 @@ func TestModelRuntimeGetAuthForModelHeaders(t *testing.T) {
 	}
 	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
 		ModelsPath:      modelsPath,
-		RefreshOnCreate: boolPtr(false),
+		RefreshOnCreate: new(false),
 		Credentials:     newMemoryCredentialStore(),
 	})
 	if err != nil {
@@ -513,7 +512,7 @@ func TestCreateModelRuntimeDefaults(t *testing.T) {
 	// modelsPath null disables models.json and uses the in-memory store.
 	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
 		DisableModelsJSON: true,
-		RefreshOnCreate:   boolPtr(false),
+		RefreshOnCreate:   new(false),
 		Credentials:       newMemoryCredentialStore(),
 	})
 	if err != nil {
@@ -537,7 +536,7 @@ func TestCreateModelRuntimeDefaults(t *testing.T) {
 	}
 	broken, err := CreateModelRuntime(CreateModelRuntimeOptions{
 		ModelsPath:      path,
-		RefreshOnCreate: boolPtr(false),
+		RefreshOnCreate: new(false),
 		Credentials:     newMemoryCredentialStore(),
 	})
 	if err != nil {
@@ -556,7 +555,7 @@ func TestModelRuntimeRadiusGateway(t *testing.T) {
 	}
 	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
 		ModelsPath:      path,
-		RefreshOnCreate: boolPtr(false),
+		RefreshOnCreate: new(false),
 		Credentials:     newMemoryCredentialStore(),
 	})
 	if err != nil {
@@ -663,11 +662,10 @@ func TestModelRuntimeStreamSimpleForwardsSimpleOptions(t *testing.T) {
 	toolChoice := ai.ToolChoice("required")
 	highBudget := 4096
 	budgets := &ai.ThinkingBudgets{High: &highBudget}
-	_, _ = runtime.StreamSimple(model, ai.Context{}, &ai.ModelsSimpleStreamOptions{SimpleStreamOptions: ai.SimpleStreamOptions{
+	_, _ = runtime.StreamSimple(model, ai.Context{}, &ai.ModelsSimpleStreamOptions{
 		Reasoning:       ai.ThinkHigh,
 		ToolChoice:      &toolChoice,
-		ThinkingBudgets: budgets,
-	}}).Result(ctx)
+		ThinkingBudgets: budgets}).Result(ctx)
 
 	if got == nil {
 		t.Fatal("the provider's StreamSimple never ran")
@@ -696,7 +694,7 @@ func TestModelRuntimeStreamAppliesResolvedAuthToProvider(t *testing.T) {
 			Resolve: func(input ai.AuthResolveInput) (*ai.AuthResult, error) {
 				return &ai.AuthResult{Auth: ai.ModelAuth{
 					APIKey:  "sk",
-					Headers: ai.ProviderHeaders{"X-Auth": stringPtr("1"), "X-Delete": stringPtr("gone")},
+					Headers: ai.ProviderHeaders{"X-Auth": new("1"), "X-Delete": new("gone")},
 				}, Source: "test"}, nil
 			},
 		}},
@@ -721,18 +719,15 @@ func TestModelRuntimeStreamAppliesResolvedAuthToProvider(t *testing.T) {
 		t.Fatal("model missing")
 	}
 	transformed := 0
-	_, _ = runtime.Stream(model, ai.Context{}, &ai.ModelsStreamOptions{StreamOptions: ai.StreamOptions{
-		Headers: ai.ProviderHeaders{"X-Request": stringPtr("2"), "X-Delete": nil},
+	_, _ = runtime.Stream(model, ai.Context{}, &ai.ModelsStreamOptions{
+		Headers: ai.ProviderHeaders{"X-Request": new("2"), "X-Delete": nil},
 		TransformHeaders: func(headers ai.ProviderHeaders) ai.ProviderHeaders {
 			transformed++
 			out := ai.ProviderHeaders{}
-			for key, value := range headers {
-				out[key] = value
-			}
-			out["X-Transform"] = stringPtr("3")
+			maps.Copy(out, headers)
+			out["X-Transform"] = new("3")
 			return out
-		},
-	}}).Result(ctx)
+		}}).Result(ctx)
 
 	if gotOptions == nil {
 		t.Fatal("the provider's Stream never ran")
@@ -778,7 +773,7 @@ func TestRebuildProvidersPublishesTheWholeSet(t *testing.T) {
 			}
 		}
 	}()
-	for iteration := 0; iteration < 2000; iteration++ {
+	for iteration := range 2000 {
 		for _, id := range []string{"alpha", "beta"} {
 			if runtime.models.GetProvider(id) == nil {
 				close(stop)

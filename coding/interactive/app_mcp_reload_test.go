@@ -178,9 +178,6 @@ func writeMCPReloadConfig(t *testing.T, agentDir string, content string) {
 	}
 }
 
-// directMcp is the direct exposure used by the reload fixture config.
-var directMcp = coding.McpExposureDirect
-
 // newMCPReloadFakeServer answers initialize and a fixed tools/list over an
 // in-memory transport pair (the coding package's fake server fixture is
 // test-package-private, so the smallest equivalent lives here).

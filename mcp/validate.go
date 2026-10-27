@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 
 	"github.com/dat267/pier/mcp/protocol"
 )
@@ -195,9 +196,7 @@ func decodeItem[T any](item map[string]any) (T, error) {
 
 func cloneMap(source map[string]any) map[string]any {
 	out := make(map[string]any, len(source))
-	for key, value := range source {
-		out[key] = value
-	}
+	maps.Copy(out, source)
 	return out
 }
 
@@ -219,7 +218,7 @@ func (c *Client) listAll(ctx context.Context, method, key string, isItem func(ma
 	var items []map[string]any
 	cursors := map[string]bool{}
 	var cursor *string
-	for pageNumber := 0; pageNumber < MaxListPages; pageNumber++ {
+	for range MaxListPages {
 		pageItems, nextCursor, err := c.listPage(ctx, method, key, isItem, cursor, options)
 		if err != nil {
 			return nil, err

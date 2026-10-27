@@ -24,7 +24,7 @@ func TestPiMessagesCallbackFailuresStayInStream(t *testing.T) {
 		}))
 		defer server.Close()
 		model := &Model{ID: "fixture", API: APIPiMessages, Provider: "pi", BaseURL: server.URL}
-		options := &PiMessagesOptions{StreamOptions: StreamOptions{APIKey: "test-key"}}
+		options := &PiMessagesOptions{APIKey: "test-key"}
 		switch mode {
 		case "payload":
 			options.OnPayload = func(json.RawMessage, *Model) json.RawMessage { panic(errors.New("hook failed")) }

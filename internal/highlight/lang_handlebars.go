@@ -13,7 +13,6 @@ func init() {
 var (
 	handlebarsDoubleBrace = regexp.MustCompile(`\A\{\{`)
 	handlebarsElse        = regexp.MustCompile(`\Aelse\}\}`)
-	handlebarsElseIf      = regexp.MustCompile(`\Aelse if`)
 )
 
 // handlebarsLanguage builds the Handlebars definition. htmlbars is the same
@@ -124,27 +123,25 @@ func handlebarsLanguage(name string, disableAutodetect bool) *Language {
 		Aliases:           []string{"hbs", "html.hbs", "html.handlebars", "htmlbars"},
 		CaseInsensitive:   true,
 		DisableAutodetect: disableAutodetect,
-		Mode: Mode{
-			SubLanguage: []string{"xml"},
-			Contains: []*Mode{
-				escape,
-				preventEscape,
-				CommentMode(`\{\{!--`, `--\}\}`),
-				CommentMode(`\{\{!`, `\}\}`),
-				rawOpen,
-				{
-					ClassName: "template-tag",
-					Begin:     `\{\{\{\{\/`,
-					End:       `\}\}\}\}`,
-					Contains:  []*Mode{closingBlock},
-				},
-				{ClassName: "template-tag", Begin: `\{\{#`, End: `\}\}`, Contains: []*Mode{openingBlock}},
-				elseMode,
-				elseIfMode,
-				{ClassName: "template-tag", Begin: `\{\{\/`, End: `\}\}`, Contains: []*Mode{closingBlock}},
-				{ClassName: "template-variable", Begin: `\{\{\{`, End: `\}\}\}`, Contains: []*Mode{basicMustache}},
-				{ClassName: "template-variable", Begin: `\{\{`, End: `\}\}`, Contains: []*Mode{basicMustache}},
+		SubLanguage:       []string{"xml"},
+		Contains: []*Mode{
+			escape,
+			preventEscape,
+			CommentMode(`\{\{!--`, `--\}\}`),
+			CommentMode(`\{\{!`, `\}\}`),
+			rawOpen,
+			{
+				ClassName: "template-tag",
+				Begin:     `\{\{\{\{\/`,
+				End:       `\}\}\}\}`,
+				Contains:  []*Mode{closingBlock},
 			},
+			{ClassName: "template-tag", Begin: `\{\{#`, End: `\}\}`, Contains: []*Mode{openingBlock}},
+			elseMode,
+			elseIfMode,
+			{ClassName: "template-tag", Begin: `\{\{\/`, End: `\}\}`, Contains: []*Mode{closingBlock}},
+			{ClassName: "template-variable", Begin: `\{\{\{`, End: `\}\}\}`, Contains: []*Mode{basicMustache}},
+			{ClassName: "template-variable", Begin: `\{\{`, End: `\}\}`, Contains: []*Mode{basicMustache}},
 		},
 	}
 }

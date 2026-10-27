@@ -33,7 +33,7 @@ func TestBashUpdateThrottleCoalesces(t *testing.T) {
 	if delay <= 0 || delay > BashUpdateThrottleMS {
 		t.Fatalf("delay = %v, want (0, %v]", delay, BashUpdateThrottleMS)
 	}
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		emitNow, _ := throttle.mark()
 		if emitNow {
 			t.Fatalf("burst chunk %d emitted inside the interval", i)

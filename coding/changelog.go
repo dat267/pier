@@ -241,7 +241,7 @@ func CompareChangelogVersions(v1 ChangelogEntry, v2 ChangelogEntry) int {
 func GetNewChangelogEntries(entries []ChangelogEntry, lastVersion string) []ChangelogEntry {
 	parts := strings.Split(lastVersion, ".")
 	numbers := make([]int, 0, 3)
-	for index := 0; index < 3; index++ {
+	for index := range 3 {
 		value := 0
 		if index < len(parts) {
 			parsed, err := strconv.Atoi(strings.TrimSpace(parts[index]))

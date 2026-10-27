@@ -94,24 +94,22 @@ func Puppet() *Language {
 	return &Language{
 		Name:    "Puppet",
 		Aliases: []string{"pp"},
-		Mode: Mode{
-			Contains: []*Mode{
-				CommentMode(`#`, `$`),
-				variable,
-				strBase,
-				{
-					BeginKeywords: "class",
-					End:           `\{|;`,
-					Illegal:       `=`,
-					Contains:      []*Mode{title, CommentMode(`#`, `$`)},
-				},
-				{
-					BeginKeywords: "define",
-					End:           `\{`,
-					Contains:      []*Mode{{ClassName: "section", Begin: IdentRe, EndsParent: true}},
-				},
-				resource,
+		Contains: []*Mode{
+			CommentMode(`#`, `$`),
+			variable,
+			strBase,
+			{
+				BeginKeywords: "class",
+				End:           `\{|;`,
+				Illegal:       `=`,
+				Contains:      []*Mode{title, CommentMode(`#`, `$`)},
 			},
+			{
+				BeginKeywords: "define",
+				End:           `\{`,
+				Contains:      []*Mode{{ClassName: "section", Begin: IdentRe, EndsParent: true}},
+			},
+			resource,
 		},
 	}
 }

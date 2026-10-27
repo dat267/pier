@@ -367,7 +367,7 @@ func firstNonEmpty(values ...string) string {
 func parseAWSINI(content string) map[string]map[string]string {
 	sections := map[string]map[string]string{}
 	current := ""
-	for _, line := range strings.Split(content, "\n") {
+	for line := range strings.SplitSeq(content, "\n") {
 		trimmed := strings.TrimSpace(line)
 		if trimmed == "" || strings.HasPrefix(trimmed, "#") || strings.HasPrefix(trimmed, ";") {
 			continue

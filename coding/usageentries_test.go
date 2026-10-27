@@ -12,7 +12,7 @@ import (
 // tokens to the session totals (usage-totals.ts checks `entry.type === "usage"`,
 // getSessionStats adds it to the running totals). The port dropped both.
 func TestUsageEntriesAreAttributed(t *testing.T) {
-	manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: boolPtr(false)})
+	manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: new(false)})
 	manager.AppendMessage(&ai.AssistantMessage{
 		Provider: "anthropic", Model: "sonnet", Content: ai.ContentList{ai.TextContent{Text: "a"}},
 		Usage: ai.Usage{Input: 10, Cost: ai.UsageCost{Total: 0.1}}, StopReason: ai.StopStop,

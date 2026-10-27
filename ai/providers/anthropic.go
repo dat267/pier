@@ -58,7 +58,7 @@ func AnthropicAPIKeyAuth() *ai.ApiKeyAuth {
 					return nil, err
 				}
 				return &ai.AuthResult{
-					Auth:   ai.ModelAuth{Headers: ai.ProviderHeaders{"Authorization": anthropicStrPtr("Bearer " + authToken)}},
+					Auth:   ai.ModelAuth{Headers: ai.ProviderHeaders{"Authorization": new("Bearer " + authToken)}},
 					Source: AnthropicAuthTokenEnv,
 				}, nil
 			}
@@ -76,8 +76,6 @@ func AnthropicAPIKeyAuth() *ai.ApiKeyAuth {
 		},
 	}
 }
-
-func anthropicStrPtr(s string) *string { return &s }
 
 func ctxErrOf(ctx context.Context) error {
 	if ctx == nil {

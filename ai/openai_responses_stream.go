@@ -71,7 +71,7 @@ func BuildOpenAIResponsesParamsWithProviders(
 		Model:  model.ID,
 		Input:  input,
 		Stream: true,
-		Store:  boolPtr(false),
+		Store:  new(false),
 	}
 	if (cacheRetention != CacheRetentionNone || model.API == APIAzureOpenAIResponses) && options.SessionID != "" {
 		clamped := ClampOpenAIPromptCacheKey(options.SessionID)

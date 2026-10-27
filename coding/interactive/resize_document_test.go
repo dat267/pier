@@ -28,7 +28,7 @@ func TestAppTranscriptResizeUsesBudgetedDocument(t *testing.T) {
 	app, cleanup := newTestAppB(t)
 	defer cleanup()
 	cold := 0
-	for i := 0; i < 130; i++ {
+	for i := range 130 {
 		app.chat.AddChild(&resizeProbe{cold: &cold, text: fmt.Sprint(i)})
 	}
 	app.documentContainer.Render(80)
@@ -42,7 +42,7 @@ func TestAppTranscriptResizeUsesBudgetedDocument(t *testing.T) {
 func TestTranscriptResizeRestartsForLatestWidthAndChildren(t *testing.T) {
 	chat := &tui.Container{}
 	cold := 0
-	for i := 0; i < 130; i++ {
+	for i := range 130 {
 		chat.AddChild(&resizeProbe{cold: &cold, text: fmt.Sprint(i)})
 	}
 	document := newResizeDocument(chat, func() {})
@@ -50,7 +50,7 @@ func TestTranscriptResizeRestartsForLatestWidthAndChildren(t *testing.T) {
 	document.Render(81)
 	document.Render(82)
 	chat.AddChild(&resizeProbe{cold: &cold, text: "new"})
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		document.Render(82)
 	}
 	lines := document.Render(82)
@@ -62,7 +62,7 @@ func TestTranscriptResizeRestartsForLatestWidthAndChildren(t *testing.T) {
 func TestTranscriptResizeYieldsBetweenWarmChunks(t *testing.T) {
 	chat := &tui.Container{}
 	cold := 0
-	for i := 0; i < 130; i++ {
+	for i := range 130 {
 		chat.AddChild(&resizeProbe{cold: &cold, text: fmt.Sprint(i)})
 	}
 	wakes := 0
@@ -79,7 +79,7 @@ func TestTranscriptResizeYieldsBetweenWarmChunks(t *testing.T) {
 	if first[0] != old[0] || wakes == 0 {
 		t.Fatal("resize did not retain complete frame and schedule continuation")
 	}
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		parent.Render(81)
 	}
 	final := parent.Render(81)
@@ -94,7 +94,7 @@ func TestTranscriptResizeYieldsBetweenWarmChunks(t *testing.T) {
 func TestTranscriptResizeRerendersMarkdownWidth(t *testing.T) {
 	mdTheme := GetMarkdownTheme()
 	chat := &tui.Container{}
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		text := "# Heading\n\nA long paragraph that must wrap differently at each width, repeated for the test body. "
 		chat.AddChild(tui.NewMarkdown(text+text, 1, 0, mdTheme, nil, tui.MarkdownOptions{}))
 	}

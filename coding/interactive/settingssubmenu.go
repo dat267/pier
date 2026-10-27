@@ -1,6 +1,8 @@
 package interactive
 
 import (
+	"maps"
+
 	"github.com/dat267/pier/tui"
 )
 
@@ -178,9 +180,7 @@ func NewSteppedSubmenu(steps []SteppedSubmenuStep, onComplete func(map[string]st
 		options:    options,
 		context:    map[string]string{},
 	}
-	for key, value := range options.InitialContext {
-		component.context[key] = value
-	}
+	maps.Copy(component.context, options.InitialContext)
 	startAt := 0
 	if options.StartAtStep != nil {
 		startAt = *options.StartAtStep
@@ -218,9 +218,7 @@ func (c *SteppedSubmenu) buildStep(stepIndex int) interface {
 				return
 			}
 			snapshot := map[string]string{}
-			for key, entry := range c.context {
-				snapshot[key] = entry
-			}
+			maps.Copy(snapshot, c.context)
 			if c.onComplete != nil {
 				c.onComplete(snapshot)
 			}
@@ -261,9 +259,7 @@ func (c *SteppedSubmenu) Invalidate() {
 // Context returns the accumulated step selections.
 func (c *SteppedSubmenu) Context() map[string]string {
 	out := map[string]string{}
-	for key, value := range c.context {
-		out[key] = value
-	}
+	maps.Copy(out, c.context)
 	return out
 }
 

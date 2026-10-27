@@ -66,10 +66,9 @@ func TestModelsMergesProviderResolvedEnvIntoStreamOptions(t *testing.T) {
 	_, err := models.CompleteSimple(envModel, ai.Context{
 		Messages: []ai.Message{fauxUserMsg("hi", 1)},
 	}, &ai.ModelsSimpleStreamOptions{
-		SimpleStreamOptions: ai.SimpleStreamOptions{StreamOptions: ai.StreamOptions{
-			APIKey: "request-key",
-			Env:    ai.ProviderEnv{"REQUEST_ONLY": "request", "SHARED": "request"},
-		}},
+
+		APIKey: "request-key",
+		Env:    ai.ProviderEnv{"REQUEST_ONLY": "request", "SHARED": "request"},
 	})
 	if err != nil {
 		t.Fatal(err)

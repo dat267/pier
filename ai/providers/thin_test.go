@@ -207,7 +207,7 @@ func TestOpenCodeSessionHeaderWrapping(t *testing.T) {
 	}
 	// The simple path forwards too.
 	wrapped.StreamSimple(&ai.Model{}, ai.TranscriptContext{}, &ai.SimpleStreamOptions{
-		StreamOptions: ai.StreamOptions{SessionID: "session-2"},
+		SessionID: "session-2",
 	})
 	if captured == nil || captured.Headers == nil || *captured.Headers[OpenCodeSessionHeader] != "session-2" {
 		t.Fatalf("headers = %#v", captured)
@@ -250,7 +250,7 @@ func TestGitHubCopilotModelFiltering(t *testing.T) {
 	// An OAuth credential restricts models to the account's available ids.
 	rawIDs, _ := json.Marshal([]string{models[0].ID})
 	credential := &ai.Credential{Type: ai.CredentialOAuth, OAuth: &ai.OAuthCredential{
-		OAuthCredentials: ai.OAuthCredentials{Extra: map[string]json.RawMessage{"availableModelIds": rawIDs}},
+		Extra: map[string]json.RawMessage{"availableModelIds": rawIDs},
 	}}
 	filtered := filterModelsForCredential(provider, models, credential)
 	if len(filtered) != 1 || filtered[0].ID != models[0].ID {
@@ -258,7 +258,7 @@ func TestGitHubCopilotModelFiltering(t *testing.T) {
 	}
 	// A malformed list falls back to every model.
 	bad := &ai.Credential{Type: ai.CredentialOAuth, OAuth: &ai.OAuthCredential{
-		OAuthCredentials: ai.OAuthCredentials{Extra: map[string]json.RawMessage{"availableModelIds": json.RawMessage(`"nope"`)}},
+		Extra: map[string]json.RawMessage{"availableModelIds": json.RawMessage(`"nope"`)},
 	}}
 	if got := filterModelsForCredential(provider, models, bad); len(got) != len(models) {
 		t.Fatalf("malformed filtered = %d", len(got))

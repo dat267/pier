@@ -251,7 +251,7 @@ func TestImagesModelsGenerateImagesErrors(t *testing.T) {
 	defer server.Close()
 	failing := *model
 	failing.BaseURL = server.URL
-	result = registry.GenerateImages(&failing, ImagesContext{}, &ImagesOptions{StreamOptions: StreamOptions{APIKey: "key"}})
+	result = registry.GenerateImages(&failing, ImagesContext{}, &ImagesOptions{APIKey: "key"})
 	if result.StopReason != ImagesStopError || result.ErrorMessage == nil ||
 		!strings.Contains(*result.ErrorMessage, "401") {
 		t.Fatalf("result = %+v", result)
@@ -261,7 +261,7 @@ func TestImagesModelsGenerateImagesErrors(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	result = registry.GenerateImages(&failing, ImagesContext{}, &ImagesOptions{
-		StreamOptions: StreamOptions{APIKey: "key", Ctx: ctx},
+		APIKey: "key", Ctx: ctx,
 	})
 	if result.StopReason != ImagesStopAborted {
 		t.Fatalf("result = %+v", result)

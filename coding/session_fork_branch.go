@@ -69,7 +69,7 @@ func writeForkedSession(targetCwd string, sessionDir string, parentSession *stri
 	newSessionFile := filepath.Join(dir, fmt.Sprintf("%s_%s.jsonl", fileTimestamp, newSessionID))
 
 	newHeader := SessionHeader{
-		Version:       intPtr(CurrentSessionVersion),
+		Version:       new(CurrentSessionVersion),
 		ID:            newSessionID,
 		Timestamp:     timestamp,
 		Cwd:           resolvedTargetCwd,

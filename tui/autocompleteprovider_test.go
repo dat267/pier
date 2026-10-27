@@ -20,7 +20,7 @@ const autocompleteFixtureFiles = "alpha.txt,beta.md,gamma/one.txt,gamma/two.txt,
 
 func buildAutocompleteFixture(t *testing.T, root string) {
 	t.Helper()
-	for _, entry := range strings.Split(autocompleteFixtureFiles, ",") {
+	for entry := range strings.SplitSeq(autocompleteFixtureFiles, ",") {
 		isDir := strings.HasSuffix(entry, "/")
 		full := filepath.Join(root, filepath.FromSlash(strings.TrimSuffix(entry, "/")))
 		if isDir {

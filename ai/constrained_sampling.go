@@ -3,6 +3,7 @@ package ai
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -55,10 +56,8 @@ func schemaAllowsNull(data json.RawMessage) bool {
 		return false
 	}
 	if t, ok := node.raw("type"); ok {
-		for _, ty := range schemaTypes(t) {
-			if ty == "null" {
-				return true
-			}
+		if slices.Contains(schemaTypes(t), "null") {
+			return true
 		}
 	}
 	if c, ok := node.raw("const"); ok && string(c) == "null" {
@@ -77,10 +76,8 @@ func schemaAllowsNull(data json.RawMessage) bool {
 	if anyOf, ok := node.raw("anyOf"); ok {
 		var list []json.RawMessage
 		if err := jsonUnmarshalStrict(anyOf, &list); err == nil {
-			for _, variant := range list {
-				if schemaAllowsNull(variant) {
-					return true
-				}
+			if slices.ContainsFunc(list, schemaAllowsNull) {
+				return true
 			}
 		}
 	}

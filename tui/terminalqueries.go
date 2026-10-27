@@ -81,7 +81,7 @@ const (
 var terminalColorQuery = func() string {
 	var b strings.Builder
 	b.WriteString("\x1b]10;?\x07\x1b]11;?\x07")
-	for index := 0; index < terminalPaletteSize; index++ {
+	for index := range terminalPaletteSize {
 		fmt.Fprintf(&b, "\x1b]4;%d;?\x07", index)
 	}
 	b.WriteString("\x1b[c")

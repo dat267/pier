@@ -436,7 +436,7 @@ func TestImageTranscoding(t *testing.T) {
 		image := NewImageComponent(jpeg, "image/jpeg", ImageTheme{FallbackColor: func(value string) string { return value }}, ImageOptions{}, nil)
 		image.Render(80)
 		render(jpeg, "image/jpeg") // New instance hits the shared cache.
-		for index := 0; index < 40; index++ {
+		for index := range 40 {
 			render("other-"+strconv.Itoa(index), "image/jpeg")
 		}
 		image.Invalidate()

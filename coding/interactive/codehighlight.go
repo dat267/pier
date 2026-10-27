@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/dat267/pier/internal/highlight"
@@ -90,13 +91,13 @@ func scopeHighlightFormatter(scope string) (highlightFormatter, bool) {
 	if f, ok := exactHighlightFormatter(scope); ok {
 		return f, true
 	}
-	if i := strings.IndexByte(scope, '.'); i != -1 {
-		if f, ok := exactHighlightFormatter(scope[:i]); ok {
+	if before, _, ok := strings.Cut(scope, "."); ok {
+		if f, ok := exactHighlightFormatter(before); ok {
 			return f, true
 		}
 	}
-	if i := strings.IndexByte(scope, '-'); i != -1 {
-		if f, ok := exactHighlightFormatter(scope[:i]); ok {
+	if before, _, ok := strings.Cut(scope, "-"); ok {
+		if f, ok := exactHighlightFormatter(before); ok {
 			return f, true
 		}
 	}
@@ -107,11 +108,11 @@ func scopeHighlightFormatter(scope string) (highlightFormatter, bool) {
 // innermost scope with a formatter wins. The CLI theme sets no default, so an
 // unstyled fragment stays unstyled.
 func activeHighlightFormatter(scopes []string) (highlightFormatter, bool) {
-	for i := len(scopes) - 1; i >= 0; i-- {
-		if scopes[i] == "" {
+	for _, scope := range slices.Backward(scopes) {
+		if scope == "" {
 			continue
 		}
-		if f, ok := scopeHighlightFormatter(scopes[i]); ok {
+		if f, ok := scopeHighlightFormatter(scope); ok {
 			return f, true
 		}
 	}

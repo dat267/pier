@@ -120,7 +120,7 @@ func TestLayoutFrameAgainstUpstreamGolden(t *testing.T) {
 	// 2. VStack filling the frame.
 	frame("vstack", NewVStack([]Component{probe("aa"), probe("bb"), probe("cc")}, StackOptions{}), 4, 6)
 	// 3. VStack with a gap.
-	gapOne := intPtrValue(1)
+	gapOne := new(1)
 	frame("vstack-gap", NewVStack([]Component{probe("aa"), probe("bb")}, StackOptions{Gap: gapOne}), 4, 5)
 	// 4. HStack filling the frame.
 	frame("hstack", NewHStack([]Component{probe("ab"), probe("cd")}, StackOptions{}), 6, 2)

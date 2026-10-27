@@ -333,7 +333,7 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 	// explicitly because Go map iteration would make wildcard selections unstable.
 	toolByName := CreateAllTools(cwd, &ToolsOptions{
 		Read: &ReadToolOptions{
-			AutoResizeImages: boolPtr(settingsManager.GetImageAutoResize()),
+			AutoResizeImages: new(settingsManager.GetImageAutoResize()),
 			Model: func() *ai.Model {
 				if sessionForTools == nil {
 					return nil

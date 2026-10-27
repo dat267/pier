@@ -319,8 +319,8 @@ func NewApp(options AppOptions) *App {
 		ShowHardwareCursor:         options.Settings.GetShowHardwareCursor(),
 		LogDirectory:               options.AgentDir,
 		Terminal:                   terminal,
-		FullscreenCopyOnSelect:     appBoolPtr(options.Settings.GetFullscreenCopyOnSelect()),
-		FullscreenWheelScrollLines: appWheelScrollLinesPtr(options.Settings.GetFullscreenWheelScrollLines()),
+		FullscreenCopyOnSelect:     new(options.Settings.GetFullscreenCopyOnSelect()),
+		FullscreenWheelScrollLines: new(options.Settings.GetFullscreenWheelScrollLines()),
 		OnRightClickPaste:          app.handleRightClickPaste,
 	})
 	app.initialUI = aInitialUI
@@ -566,8 +566,8 @@ func NewApp(options AppOptions) *App {
 				ShowHardwareCursor:         options.Settings.GetShowHardwareCursor(),
 				LogDirectory:               options.AgentDir,
 				Terminal:                   terminal,
-				FullscreenCopyOnSelect:     appBoolPtr(options.Settings.GetFullscreenCopyOnSelect()),
-				FullscreenWheelScrollLines: appWheelScrollLinesPtr(options.Settings.GetFullscreenWheelScrollLines()),
+				FullscreenCopyOnSelect:     new(options.Settings.GetFullscreenCopyOnSelect()),
+				FullscreenWheelScrollLines: new(options.Settings.GetFullscreenWheelScrollLines()),
 				OnRightClickPaste:          app.handleRightClickPaste,
 			})
 		},
@@ -1484,10 +1484,6 @@ func (a themeSettingsControllerAdapter) SetThemeSetting(theme string) error {
 }
 
 // --- adapters ---------------------------------------------------------------
-
-func appBoolPtr(value bool) *bool { return &value }
-
-func appWheelScrollLinesPtr(value tui.WheelScrollLines) *tui.WheelScrollLines { return &value }
 
 // themeUIAdapter adapts tui.TUI to ThemeControllerUI.
 type themeUIAdapter struct{ ui tui.TUI }

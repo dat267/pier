@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/dat267/pier/ai"
@@ -20,12 +21,7 @@ func enabledIdsContains(enabled EnabledIds, id string) bool {
 	if enabled.All {
 		return true
 	}
-	for _, candidate := range enabled.IDs {
-		if candidate == id {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(enabled.IDs, id)
 }
 
 func cloneEnabled(enabled EnabledIds) EnabledIds {
@@ -39,13 +35,7 @@ func normalizeEnabled(result []string, allIDs []string) EnabledIds {
 	if len(result) == len(allIDs) {
 		covered := true
 		for _, id := range result {
-			found := false
-			for _, allID := range allIDs {
-				if id == allID {
-					found = true
-					break
-				}
-			}
+			found := slices.Contains(allIDs, id)
 			if !found {
 				covered = false
 				break
@@ -88,13 +78,7 @@ func enableAllModels(enabled EnabledIds, allIDs []string, targetIDs []string, ha
 	}
 	result := append([]string(nil), enabled.IDs...)
 	for _, id := range targets {
-		found := false
-		for _, candidate := range result {
-			if candidate == id {
-				found = true
-				break
-			}
-		}
+		found := slices.Contains(result, id)
 		if !found {
 			result = append(result, id)
 		}
@@ -107,13 +91,7 @@ func clearAllModels(enabled EnabledIds, allIDs []string, targetIDs []string, has
 		if hasTargets {
 			result := make([]string, 0, len(allIDs))
 			for _, id := range allIDs {
-				excluded := false
-				for _, target := range targetIDs {
-					if target == id {
-						excluded = true
-						break
-					}
-				}
+				excluded := slices.Contains(targetIDs, id)
 				if !excluded {
 					result = append(result, id)
 				}

@@ -118,24 +118,22 @@ func Kotlin() *Language {
 	})
 
 	return &Language{
-		Name:    "Kotlin",
-		Aliases: []string{"kt", "kts"},
-		Mode: Mode{
-			Keywords: keywords,
-			Contains: []*Mode{
-				javadoc,
-				CLineCommentMode,
-				nestedComment,
-				keywordsWithLabel,
-				label,
-				annotationUseSite,
-				annotation,
-				function,
-				classMode,
-				stringMode,
-				{ClassName: "meta", Begin: `^#!/usr/bin/env`, End: `$`, Illegal: `\n`},
-				javaNumeric(),
-			},
+		Name:     "Kotlin",
+		Aliases:  []string{"kt", "kts"},
+		Keywords: keywords,
+		Contains: []*Mode{
+			javadoc,
+			CLineCommentMode,
+			nestedComment,
+			keywordsWithLabel,
+			label,
+			annotationUseSite,
+			annotation,
+			function,
+			classMode,
+			stringMode,
+			{ClassName: "meta", Begin: `^#!/usr/bin/env`, End: `$`, Illegal: `\n`},
+			javaNumeric(),
 		},
 	}
 }

@@ -61,9 +61,8 @@ func TestAgentLoopIdentity(t *testing.T) {
 				captured = options.Identity
 				return mock(model, transcript, options)
 			}
-			config := &AgentLoopConfig{Model: createModel(), SimpleStreamOptions: ai.SimpleStreamOptions{
-				StreamOptions: ai.StreamOptions{Identity: tc.identity},
-			}}
+			config := &AgentLoopConfig{Model: createModel(),
+				Identity: tc.identity}
 			drainAgentStream(t, AgentLoop([]ai.Message{createUserMessage("hello")}, AgentContext{}, config, nil, streamFn))
 			if captured == nil || captured.Attribution != tc.wantAttribution {
 				t.Fatalf("identity = %+v", captured)

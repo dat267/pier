@@ -10,14 +10,12 @@ import (
 
 func goalViewForTest(objective string, phase goal.GoalPhase, turns int) *goal.GoalView {
 	return &goal.GoalView{
-		GoalSnapshot: goal.GoalSnapshot{
-			ID:        "goal-test",
-			Revision:  2,
-			Objective: objective,
-			Phase:     phase,
-			CreatedAt: 1,
-			UpdatedAt: 2,
-		},
+		ID:           "goal-test",
+		Revision:     2,
+		Objective:    objective,
+		Phase:        phase,
+		CreatedAt:    1,
+		UpdatedAt:    2,
 		Armed:        true,
 		TurnsStarted: turns,
 	}

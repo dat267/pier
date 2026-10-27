@@ -109,7 +109,7 @@ func readTIFFOrientation(data []byte, tiffStart int) int {
 		return 1
 	}
 	entryCount := read16(ifdStart)
-	for index := 0; index < entryCount; index++ {
+	for index := range entryCount {
 		entryPos := ifdStart + 2 + index*12
 		if entryPos+12 > len(data) {
 			return 1
@@ -139,8 +139,8 @@ func ApplyExifOrientation(img image.Image, orientation int) image.Image {
 		dstWidth, dstHeight = height, width
 	}
 	dst := image.NewRGBA(image.Rect(0, 0, dstWidth, dstHeight))
-	for sourceY := 0; sourceY < height; sourceY++ {
-		for sourceX := 0; sourceX < width; sourceX++ {
+	for sourceY := range height {
+		for sourceX := range width {
 			var destX, destY int
 			switch orientation {
 			case 2:

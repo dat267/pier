@@ -32,7 +32,7 @@ func TestBashExpandedComponentMatchesReference(t *testing.T) {
 	widths := []int{40, 73, 40} // a width change forces the full path
 
 	corpus := &strings.Builder{}
-	for i := 0; i < 40; i++ {
+	for i := range 40 {
 		fmt.Fprintf(corpus, "line %d with enough words to wrap around the narrow width here\n", i)
 		corpus.WriteString("a partial line")
 	}
@@ -70,7 +70,7 @@ func TestBashExpandedStreamingIsLinear(t *testing.T) {
 	var output strings.Builder
 	output.Grow(1 << 20)
 	start := time.Now()
-	for i := 0; i < 20000; i++ {
+	for i := range 20000 {
 		fmt.Fprintf(&output, "ok  github.com/dat267/pier/coding  0.12s (line %d)\n", i)
 		if i%100 == 0 {
 			component.output = output.String()

@@ -32,9 +32,8 @@ func TestModelsStreamSetupFailureOnCancelReportsAbort(t *testing.T) {
 			Name: "test",
 			Refresh: func(_ *OAuthCredential, _ context.Context) (*OAuthCredential, error) {
 				cancel()
-				return &OAuthCredential{OAuthCredentials: OAuthCredentials{
-					Access: "a2", Refresh: "r2", Expires: time.Now().Add(time.Hour).UnixMilli(),
-				}}, nil
+				return &OAuthCredential{
+					Access: "a2", Refresh: "r2", Expires: time.Now().Add(time.Hour).UnixMilli()}, nil
 			},
 			ToAuth: func(credential *OAuthCredential) (*ModelAuth, error) {
 				return &ModelAuth{APIKey: credential.Access}, nil
@@ -55,7 +54,7 @@ func TestModelsStreamSetupFailureOnCancelReportsAbort(t *testing.T) {
 		t.Fatal("model missing")
 	}
 	message, _ := models.Stream(model, Context{}, &ModelsStreamOptions{
-		StreamOptions: StreamOptions{Ctx: ctx},
+		Ctx: ctx,
 	}).Result(context.Background())
 	if message.StopReason != StopError || message.ErrorMessage == nil ||
 		*message.ErrorMessage != RequestAbortedMessage {

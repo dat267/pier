@@ -106,8 +106,8 @@ func ParseArgs(args []string) *Args {
 		switch {
 		case arg == "--":
 			for _, positional := range args[i+1:] {
-				if strings.HasPrefix(positional, "@") {
-					result.FileArgs = append(result.FileArgs, strings.TrimPrefix(positional, "@"))
+				if after, ok := strings.CutPrefix(positional, "@"); ok {
+					result.FileArgs = append(result.FileArgs, after)
 				} else {
 					result.Messages = append(result.Messages, positional)
 				}

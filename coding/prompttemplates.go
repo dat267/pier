@@ -211,7 +211,7 @@ func loadTemplateWithDiagnostics(filePath string, sourceInfo SourceInfo) (*Promp
 		description = ""
 	}
 	if description == "" {
-		for _, line := range strings.Split(parsed.Body, "\n") {
+		for line := range strings.SplitSeq(parsed.Body, "\n") {
 			if ai.JSTrim(line) == "" {
 				continue
 			}

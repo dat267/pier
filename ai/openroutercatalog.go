@@ -156,12 +156,10 @@ func openRouterModelCost(pricing openRouterPricing) ModelCost {
 		}
 		cost.Tiers = append(cost.Tiers, ModelCostTier{
 			InputTokensAbove: *override.MinPromptTokens,
-			ModelCostRates: ModelCostRates{
-				Input:      openRouterPerMillion(override.Prompt, base.Input),
-				Output:     openRouterPerMillion(override.Completion, base.Output),
-				CacheRead:  openRouterPerMillion(override.InputCacheRead, base.CacheRead),
-				CacheWrite: openRouterPerMillion(override.InputCacheWrite, base.CacheWrite),
-			},
+			Input:            openRouterPerMillion(override.Prompt, base.Input),
+			Output:           openRouterPerMillion(override.Completion, base.Output),
+			CacheRead:        openRouterPerMillion(override.InputCacheRead, base.CacheRead),
+			CacheWrite:       openRouterPerMillion(override.InputCacheWrite, base.CacheWrite),
 		})
 	}
 	return cost

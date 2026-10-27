@@ -102,12 +102,10 @@ func MoonScript() *Language {
 	contains = append(contains, CommentMode(`--`, `$`), function, anonymous, classMode, nameMode)
 
 	return &Language{
-		Name:    "MoonScript",
-		Aliases: []string{"moon"},
-		Mode: Mode{
-			Keywords: keywords,
-			Illegal:  `/\*`,
-			Contains: contains,
-		},
+		Name:     "MoonScript",
+		Aliases:  []string{"moon"},
+		Keywords: keywords,
+		Illegal:  `/\*`,
+		Contains: contains,
 	}
 }

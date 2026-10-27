@@ -231,7 +231,7 @@ func TestMcpConnectionRetriesExpiredSession(t *testing.T) {
 	connection, opened := mcpTestConnection(t, config, []func() mcp.Transport{
 		func() mcp.Transport {
 			_, client := newMCPFakeServer(t, false)
-			return &failingTransport{Transport: client, method: "tools/call", err: &mcp.McpSessionExpiredError{McpHttpError: mcp.McpHttpError{Status: 404, Msg: "gone"}}}
+			return &failingTransport{Transport: client, method: "tools/call", err: &mcp.McpSessionExpiredError{Status: 404, Msg: "gone"}}
 		},
 		func() mcp.Transport {
 			_, client := newMCPFakeServer(t, false)
@@ -393,7 +393,7 @@ func TestMcpConnectionAsksOAuthServersToSignIn(t *testing.T) {
 			return &failingTransport{
 				Transport: client, method: "initialize",
 				err: &mcp.McpAuthRequiredError{
-					McpHttpError:    mcp.McpHttpError{Status: 401, Msg: "unauthorized"},
+					Status: 401, Msg: "unauthorized",
 					WWWAuthenticate: challenge,
 				},
 			}

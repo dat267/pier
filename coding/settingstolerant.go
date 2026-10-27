@@ -9,21 +9,7 @@ import (
 
 // jsonUnmarshaler is encoding/json's Unmarshaler, checked on a pointer to the
 // target type (custom unions such as QuietStartupSetting decode themselves).
-var jsonUnmarshaler = reflect.TypeOf((*json.Unmarshaler)(nil)).Elem()
-
-// decodeSettingsTolerant decodes a settings JSON object into target (a pointer
-// to Settings), keeping every member whose JSON shape the typed field can hold.
-// A member the typed struct cannot represent — for example `"enabled": "yes"` —
-// only leaves that member at its zero value, so the getter's default applies.
-// The reference parses the raw object and defaults each member individually, so
-// one mistyped value must not discard the rest of the file.
-func decodeSettingsTolerant(encoded []byte, target any) {
-	value := reflect.ValueOf(target)
-	if value.Kind() != reflect.Pointer || value.IsNil() {
-		return
-	}
-	decodeTolerantValue(encoded, value.Elem())
-}
+var jsonUnmarshaler = reflect.TypeFor[json.Unmarshaler]()
 
 // decodeSettingsTolerantWithRejects is decodeSettingsTolerant for a top-level
 // settings object, returning the known member names that were present but whose

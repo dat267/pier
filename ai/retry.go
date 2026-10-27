@@ -76,8 +76,7 @@ func parseJSFloatPrefix(value string) (float64, bool) {
 func isRetryableProviderError(err error) bool {
 	pe, ok := err.(*ProviderError)
 	if !ok {
-		var requestErr *url.Error
-		if errors.As(err, &requestErr) {
+		if requestErr, ok := errors.AsType[*url.Error](err); ok {
 			if errors.Is(requestErr.Err, context.Canceled) {
 				return false
 			}

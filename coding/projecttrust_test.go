@@ -31,10 +31,10 @@ func TestToolTrustStoreRoundTrip(t *testing.T) {
 	if err := os.MkdirAll(other, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.Set(project, boolPointer(true)); err != nil {
+	if err := store.Set(project, new(true)); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.Set(other, boolPointer(false)); err != nil {
+	if err := store.Set(other, new(false)); err != nil {
 		t.Fatal(err)
 	}
 	raw, err := os.ReadFile(store.TrustPath())
@@ -63,7 +63,7 @@ func TestToolTrustStoreRoundTrip(t *testing.T) {
 		t.Fatalf("entry = %+v", entry)
 	}
 	// A nearer entry wins.
-	if err := store.Set(nested, boolPointer(false)); err != nil {
+	if err := store.Set(nested, new(false)); err != nil {
 		t.Fatal(err)
 	}
 	if decision := store.Get(nested); decision == nil || *decision {
@@ -77,7 +77,7 @@ func TestToolTrustStoreRoundTrip(t *testing.T) {
 		t.Fatalf("decision = %v", decision)
 	}
 	if err := store.SetMany([]ProjectTrustUpdate{
-		{Path: project, Decision: boolPointer(true)},
+		{Path: project, Decision: new(true)},
 		{Path: nested, Decision: nil},
 	}); err != nil {
 		t.Fatal(err)
@@ -194,7 +194,7 @@ func TestResolveProjectTrusted(t *testing.T) {
 
 	// The override wins.
 	trusted, err := ResolveProjectTrusted(ResolveProjectTrustedOptions{
-		Cwd: project, TrustStore: store, TrustOverride: boolPointer(true),
+		Cwd: project, TrustStore: store, TrustOverride: new(true),
 	})
 	if err != nil || !trusted {
 		t.Fatalf("trusted = %v err = %v", trusted, err)
@@ -208,7 +208,7 @@ func TestResolveProjectTrusted(t *testing.T) {
 		t.Fatal("plain folder must be trusted")
 	}
 	// The stored decision wins over the default.
-	if err := store.Set(project, boolPointer(true)); err != nil {
+	if err := store.Set(project, new(true)); err != nil {
 		t.Fatal(err)
 	}
 	if trusted, _ := ResolveProjectTrusted(ResolveProjectTrustedOptions{
@@ -406,7 +406,7 @@ func TestWaitForPipeDrain(t *testing.T) {
 	startedCh <- struct{}{}
 	startedCh <- struct{}{}
 	go func() {
-		for index := 0; index < 5; index++ {
+		for range 5 {
 			activity <- struct{}{}
 			timeSleepMS(20)
 		}

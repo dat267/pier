@@ -14,7 +14,7 @@ import (
 // the core's contract directly.
 
 func fauxDeferredOpts() *ai.SimpleStreamOptions {
-	return &ai.SimpleStreamOptions{StreamOptions: ai.StreamOptions{Deferred: &ai.DeferredRequest{}}}
+	return &ai.SimpleStreamOptions{Deferred: &ai.DeferredRequest{}}
 }
 
 func TestFauxDeferredReturnsHandleThenScriptedResponse(t *testing.T) {

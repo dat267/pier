@@ -83,9 +83,9 @@ func TestEstimateContextTokensPrefersUsage(t *testing.T) {
 
 func TestFindCutPoint(t *testing.T) {
 	// Build a session: 10 user/assistant turns of ~100 tokens each.
-	m := NewSessionManager("/tmp", &SessionManagerOptions{Persist: boolPtr(false)})
+	m := NewSessionManager("/tmp", &SessionManagerOptions{Persist: new(false)})
 	var entries []SessionEntry
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		m.AppendMessage(createUserMessage(strings.Repeat("u", 400))) // ~100 tokens
 		m.AppendMessage(createAssistantMessageT(strings.Repeat("a", 400)))
 	}
@@ -115,7 +115,7 @@ func TestFindCutPoint(t *testing.T) {
 }
 
 func TestFindCutPointNeverSplitsToolResult(t *testing.T) {
-	m := NewSessionManager("/tmp", &SessionManagerOptions{Persist: boolPtr(false)})
+	m := NewSessionManager("/tmp", &SessionManagerOptions{Persist: new(false)})
 	m.AppendMessage(createUserMessage(strings.Repeat("u", 2000))) // big turn
 	entries := m.GetEntries()
 	userEntry := entries[0]
@@ -185,7 +185,7 @@ func TestFileOperationsFromNestedToolCalls(t *testing.T) {
 			{ID: "n1", Name: "read", Arguments: json.RawMessage(`{"path":"script-read.txt"}`)},
 			{ID: "n2", Name: "write", Arguments: json.RawMessage(`{"path":"script-write.txt"}`)},
 			{ID: "n3", Name: "edit", Arguments: json.RawMessage(`{"path":"script-edit.txt"}`)},
-			{ID: "n4", Name: "read", ArgumentsBytes: intPtr(9000)},
+			{ID: "n4", Name: "read", ArgumentsBytes: new(9000)},
 		}},
 	}, fileOps)
 
@@ -238,8 +238,8 @@ func TestSerializeConversation(t *testing.T) {
 }
 
 func TestConvertToLlmCustomRoles(t *testing.T) {
-	bashMsg := CreateBashExecutionMessage("ls -la", "file1", intPtr(0), false, false, "", false, 100, nil)
-	excluded := CreateBashExecutionMessage("secret", "", intPtr(0), false, false, "", true, 101, nil)
+	bashMsg := CreateBashExecutionMessage("ls -la", "file1", new(0), false, false, "", false, 100, nil)
+	excluded := CreateBashExecutionMessage("secret", "", new(0), false, false, "", true, 101, nil)
 	compacted := CreateCompactionSummaryMessage("the summary", 1000, 102)
 	branch := CreateBranchSummaryMessage("branch summary", "root", 103)
 	messages := []ai.Message{createUserMessage("hi"), bashMsg, excluded, compacted, branch}
@@ -291,8 +291,8 @@ func TestCombineUsage(t *testing.T) {
 func TestPrepareAndCompactFlow(t *testing.T) {
 	// A session with enough tokens to trigger a cut, summarized by a scripted
 	// stream function.
-	m := NewSessionManager("/tmp", &SessionManagerOptions{Persist: boolPtr(false)})
-	for i := 0; i < 6; i++ {
+	m := NewSessionManager("/tmp", &SessionManagerOptions{Persist: new(false)})
+	for range 6 {
 		m.AppendMessage(createUserMessage(strings.Repeat("u", 800)))
 		m.AppendMessage(createAssistantMessageT(strings.Repeat("a", 800)))
 	}
@@ -348,13 +348,13 @@ func TestSummarizationFailureGuards(t *testing.T) {
 	if got := GetSummarizationFailure(response, "Summarization"); !strings.Contains(got, "token cap") {
 		t.Fatalf("failure = %q", got)
 	}
-	errored := &ai.AssistantMessage{StopReason: ai.StopError, ErrorMessage: strPtrOf("boom")}
+	errored := &ai.AssistantMessage{StopReason: ai.StopError, ErrorMessage: new("boom")}
 	if got := GetSummarizationFailure(errored, "Summarization"); got != "Summarization failed: boom" {
 		t.Fatalf("failure = %q", got)
 	}
 	// Upstream's `errorMessage || "Unknown error"` treats an empty message as
 	// missing.
-	empty := &ai.AssistantMessage{StopReason: ai.StopError, ErrorMessage: strPtrOf("")}
+	empty := &ai.AssistantMessage{StopReason: ai.StopError, ErrorMessage: new("")}
 	if got := GetSummarizationFailure(empty, "Summarization"); got != "Summarization failed: Unknown error" {
 		t.Fatalf("empty failure = %q", got)
 	}
@@ -520,7 +520,7 @@ func TestPrepareCompactionAdvancesPastRecoveryOmission(t *testing.T) {
 	m.AppendMessage(createUserMessage("third question"))
 	failedID := m.AppendMessage(&ai.AssistantMessage{
 		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m", StopReason: ai.StopError,
-		ErrorMessage: strPtr("prompt is too long: 2000 tokens > 1000 maximum"),
+		ErrorMessage: new("prompt is too long: 2000 tokens > 1000 maximum"),
 	})
 	if _, err := m.AppendContextEdit(failedID, json.RawMessage("null")); err != nil {
 		t.Fatal(err)
@@ -562,8 +562,8 @@ func TestPrepareCompactionAdvancesPastRecoveryOmission(t *testing.T) {
 // as large as the whole context, and reasoning shares the cap on the providers
 // that bill thinking against it.
 func TestSummarizationSendsNoOutputLimit(t *testing.T) {
-	m := NewSessionManager("/tmp", &SessionManagerOptions{Persist: boolPtr(false)})
-	for i := 0; i < 3; i++ {
+	m := NewSessionManager("/tmp", &SessionManagerOptions{Persist: new(false)})
+	for range 3 {
 		m.AppendMessage(createUserMessage(strings.Repeat("u", 400)))
 		m.AppendMessage(createAssistantMessageT(strings.Repeat("a", 400)))
 	}
@@ -755,7 +755,7 @@ func capModelStreamFn(t *testing.T, maxMessages int, requests *int) StreamFnFn {
 // see which chunk a summary came from.
 func lastConversationMarker(prompt string) string {
 	marker := ""
-	for _, line := range strings.Split(prompt, "\n") {
+	for line := range strings.SplitSeq(prompt, "\n") {
 		if after, ok := strings.CutPrefix(line, "[User]: "); ok {
 			marker = after
 		}
@@ -769,7 +769,7 @@ func lastConversationMarker(prompt string) string {
 func TestSummarizationSplitsTheInputWhenTheCapKeepsHitting(t *testing.T) {
 	requests := 0
 	messages := make([]ai.Message, 0, 8)
-	for index := 0; index < 8; index++ {
+	for index := range 8 {
 		messages = append(messages, &ai.UserMessage{
 			Content: ai.StringOrBlocks{Text: fmt.Sprintf("chunk-%d %s", index, strings.Repeat("x", 200))},
 		})
@@ -803,7 +803,7 @@ func TestSummarizationSplitStaysBounded(t *testing.T) {
 		return stream
 	}
 	messages := make([]ai.Message, 0, 16)
-	for index := 0; index < 16; index++ {
+	for index := range 16 {
 		messages = append(messages, &ai.UserMessage{Content: ai.StringOrBlocks{Text: fmt.Sprintf("chunk-%d", index)}})
 	}
 	model := &ai.Model{ID: "mock", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 200000, MaxTokens: 64000}
@@ -1019,7 +1019,7 @@ func TestTurnPrefixSummaryMergeKeepsItsOwnSections(t *testing.T) {
 // the last compaction, the conversation summary is skipped, so the instructions
 // were dropped entirely.
 func TestTurnPrefixSummaryAppliesCompactInstructions(t *testing.T) {
-	m := NewSessionManager("/tmp", &SessionManagerOptions{Persist: boolPtr(false)})
+	m := NewSessionManager("/tmp", &SessionManagerOptions{Persist: new(false)})
 	m.AppendMessage(createUserMessage("earlier question"))
 	m.AppendMessage(createAssistantMessageT("earlier answer"))
 	// A user message inside the turn being split becomes the turn prefix.

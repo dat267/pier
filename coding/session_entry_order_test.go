@@ -30,7 +30,7 @@ func TestAppendedEntryKeyOrderMatchesReference(t *testing.T) {
 	}
 
 	byType := map[string][]string{}
-	for _, line := range strings.Split(strings.TrimRight(string(data), "\n"), "\n") {
+	for line := range strings.SplitSeq(strings.TrimRight(string(data), "\n"), "\n") {
 		keys, entryType := objectKeys(t, line)
 		if entryType == "custom" || entryType == "custom_message" || entryType == "usage" || entryType == "branch_summary" {
 			// Two custom_message rows are expected; keep both.

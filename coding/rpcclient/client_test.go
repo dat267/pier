@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"maps"
 	"os"
 	"strings"
 	"testing"
@@ -77,9 +78,7 @@ func TestRPCClientFakeServer(t *testing.T) {
 func startFakeClient(t *testing.T, env map[string]string) *RpcClient {
 	t.Helper()
 	variables := map[string]string{"PIER_RPC_CLIENT_FAKE": "1"}
-	for key, value := range env {
-		variables[key] = value
-	}
+	maps.Copy(variables, env)
 	client := New(Options{
 		CLIPath:        os.Args[0],
 		PeerArgs:       []string{"-test.run=^TestRPCClientFakeServer$"},

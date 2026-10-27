@@ -9,7 +9,7 @@ import (
 // over many text lines in a container.
 func benchmarkLayoutTree(lines int) Component {
 	content := &Container{}
-	for index := 0; index < lines; index++ {
+	for index := range lines {
 		content.AddChild(NewText(fmt.Sprintf("message line %d with some words to wrap", index), 0, 0, nil))
 	}
 	return NewScrollView(content, ScrollViewOptions{})
@@ -29,7 +29,7 @@ func BenchmarkRenderLayoutFrameScrollView(b *testing.B) {
 
 func BenchmarkRenderLayoutFrameNestedBoxes(b *testing.B) {
 	root := NewBox(0, 0, nil)
-	for index := 0; index < 50; index++ {
+	for index := range 50 {
 		child := NewBox(0, 0, nil)
 		child.AddChild(NewText(fmt.Sprintf("row %d", index), 0, 0, nil))
 		root.AddChild(child)

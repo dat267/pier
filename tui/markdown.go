@@ -442,20 +442,11 @@ func (m *Markdown) Render(width int) []string {
 		total = len(blocks)
 		matched = matchBlockKeys(blocks, 0, total, m.cacheTokenKeys)
 	}
-	reuse := matched - 1
-	if reuse < windowBase {
-		reuse = windowBase
-	}
-	if reuse > total-1 {
-		reuse = total - 1
-	}
-	if reuse < 0 {
-		reuse = 0
-	}
+	reuse := max(min(max(matched-1, windowBase), total-1), 0)
 
 	renderer := markdown.NewRenderer(m.renderOptions())
 	finals := make([][]string, total)
-	for index := 0; index < reuse; index++ {
+	for index := range reuse {
 		finals[index] = m.cacheTokenLines[index]
 	}
 	for index := reuse; index < total; index++ {
@@ -495,13 +486,7 @@ func (m *Markdown) Render(width int) []string {
 	// window never moves behind the current base.
 	nextBase := 0
 	if len(blocks) > 0 {
-		nextBase = windowBase + markdown.FirstUnstable(blocks, normalizedText) - 1
-		if nextBase < windowBase {
-			nextBase = windowBase
-		}
-		if nextBase > total-1 {
-			nextBase = total - 1
-		}
+		nextBase = min(max(windowBase+markdown.FirstUnstable(blocks, normalizedText)-1, windowBase), total-1)
 	}
 	m.cacheWindowBase = nextBase
 	if nextBase <= 0 {
@@ -564,10 +549,7 @@ func (m *Markdown) canReuseLex(normalizedText string, width int) bool {
 // matchBlockKeys returns how many leading blocks of the re-lexed tail agree with
 // the cached keys, starting at the reused prefix's base.
 func matchBlockKeys(blocks []*markdown.Block, base int, total int, previous []mdBlockKey) int {
-	limit := total
-	if len(previous) < limit {
-		limit = len(previous)
-	}
+	limit := min(len(previous), total)
 	matched := base
 	for matched < limit && sameMdBlockKey(blocks[matched-base], previous[matched]) {
 		matched++

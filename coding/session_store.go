@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -524,7 +525,7 @@ func skipJSONValue(s []byte) (consumed int, ok bool) {
 			return 4, true
 		}
 	default:
-		for i := 0; i < len(s); i++ {
+		for i := range s {
 			switch {
 			case s[i] >= '0' && s[i] <= '9', s[i] == '-', s[i] == '+', s[i] == '.', s[i] == 'e', s[i] == 'E':
 			default:
@@ -564,13 +565,11 @@ func scanSessionRange(chunk []byte, fast bool) []FileEntry {
 		if fast {
 			if meta, ok := scanSessionLine(line); ok && meta.typ == "message" && meta.id != "" {
 				entry := &SessionEntry{
-					Type: meta.typ,
-					SessionEntryBase: SessionEntryBase{
-						ID:        meta.id,
-						ParentID:  meta.parentID,
-						Timestamp: meta.timestamp,
-					},
-					Message: json.RawMessage(meta.message),
+					Type:      meta.typ,
+					ID:        meta.id,
+					ParentID:  meta.parentID,
+					Timestamp: meta.timestamp,
+					Message:   json.RawMessage(meta.message),
 				}
 				entry.raw = json.RawMessage(line)
 				entries = append(entries, FileEntry{Entry: entry})
@@ -596,10 +595,7 @@ func scanSessionRanges(data []byte, workers int) [][2]int {
 	ranges := make([][2]int, workers)
 	start := 0
 	for worker := 1; worker <= workers; worker++ {
-		end := len(data) * worker / workers
-		if end < start {
-			end = start
-		}
+		end := max(len(data)*worker/workers, start)
 		if worker < workers && end > 0 && end < len(data) && data[end-1] != '\n' {
 			if newline := bytes.IndexByte(data[end:], '\n'); newline >= 0 {
 				end += newline + 1
@@ -722,11 +718,11 @@ func entryTypeFast(line string) (string, bool) {
 		return "", false
 	}
 	rest := line[len(prefix):]
-	end := strings.IndexByte(rest, '"')
-	if end < 0 {
+	before, _, ok := strings.Cut(rest, "\"")
+	if !ok {
 		return "", false
 	}
-	return rest[:end], true
+	return before, true
 }
 
 func UnmarshalFileEntry(line string) (*FileEntry, error) {
@@ -813,7 +809,7 @@ func AssertValidSessionID(id string) error {
 // ~4.3 s window identical, so the retry loop burned 100 UUIDs and the fallback
 // handed out full-length ids.
 func generateID(byID map[string]*SessionEntry) string {
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		id := strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(UUIDv7(), "-", ""), "_", ""), ".", "")
 		id = id[len(id)-8:]
 		if _, taken := byID[id]; !taken {
@@ -1018,8 +1014,8 @@ func getSessionContextSettingsFromPointers(path []*SessionEntry) (thinkingLevel 
 	// AppendCompaction paid under the session lock.
 	thinkingLevel = "off"
 	foundThinking := false
-	for i := len(path) - 1; i >= 0; i-- {
-		entry := path[i]
+	for _, entry := range slices.Backward(path) {
+
 		if !foundThinking && entry.Type == "thinking_level_change" {
 			thinkingLevel = entry.ThinkingLevel
 			foundThinking = true
@@ -1358,7 +1354,7 @@ func LoadEntriesFromFile(filePath string) ([]FileEntry, error) {
 	}
 	var entries []FileEntry
 	text := string(data)
-	for _, line := range strings.Split(text, "\n") {
+	for line := range strings.SplitSeq(text, "\n") {
 		if strings.TrimSpace(line) == "" {
 			continue
 		}

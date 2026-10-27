@@ -25,7 +25,7 @@ func TestAnthropicStreamUsageAlwaysReportsCacheWrite1h(t *testing.T) {
 	model.BaseURL = server.URL
 	stream := StreamAnthropic(model, NormalizeContext(Context{
 		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-	}), &AnthropicOptions{StreamOptions: StreamOptions{APIKey: "test-key"}})
+	}), &AnthropicOptions{APIKey: "test-key"})
 	msg, err := stream.Result(context.Background())
 	if err != nil {
 		t.Fatal(err)

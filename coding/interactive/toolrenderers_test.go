@@ -390,7 +390,7 @@ func TestFormatSearchResultExpandedShowsAllLines(t *testing.T) {
 	InitTheme("dark", false)
 	theme := ActiveTheme()
 	var lines []string
-	for i := 0; i < 25; i++ {
+	for i := range 25 {
 		lines = append(lines, fmt.Sprintf("line %d", i))
 	}
 	result := &SortToolResultContent{Content: []ToolResultContent{{Type: "text", Text: strings.Join(lines, "\n")}}}

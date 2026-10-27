@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -167,12 +168,7 @@ func vertexRequestURL(model *Model, project, location string, express bool) (str
 // version segment.
 func baseURLIncludesAPIVersion(baseURL string) bool {
 	if parsed, err := url.Parse(baseURL); err == nil {
-		for _, part := range strings.Split(parsed.Path, "/") {
-			if apiVersionPattern.MatchString(part) {
-				return true
-			}
-		}
-		return false
+		return slices.ContainsFunc(strings.Split(parsed.Path, "/"), apiVersionPattern.MatchString)
 	}
 	return baseURLAPIVersionPattern.MatchString(baseURL)
 }
@@ -236,9 +232,8 @@ func StreamGoogleVertexSimple(model *Model, context TranscriptContext, options *
 	}
 	stream := NewAssistantMessageEventStream()
 	go func() {
-		vertexOptions := &GoogleVertexOptions{GoogleOptions: GoogleOptions{
-			StreamOptions: withSimpleMaxTokens(model, context, options.StreamOptions), ToolChoice: deref(options.ToolChoice),
-		}}
+		vertexOptions := &GoogleVertexOptions{
+			StreamOptions: withSimpleMaxTokens(model, context, options.StreamOptions), ToolChoice: deref(options.ToolChoice)}
 		if options.Reasoning == "" {
 			vertexOptions.Thinking = &GoogleThinkingOption{Enabled: false}
 			forwardStream(stream, StreamGoogleVertex(model, context, vertexOptions))

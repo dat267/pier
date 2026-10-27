@@ -68,7 +68,7 @@ func TestFoldReplaysLifecycleAndTurns(t *testing.T) {
 }
 
 func TestFoldRestoresCumulativeUsage(t *testing.T) {
-	budget := &GoalBudget{TimeLimitMs: i64(1000), TokenLimit: i64(500), CostLimitUsd: f64(2)}
+	budget := &GoalBudget{TimeLimitMs: new(int64(1000)), TokenLimit: new(int64(500)), CostLimitUsd: new(float64(2))}
 	g := createTestGoal("obj", t0, budget)
 	folded, err := FoldGoal([]CustomEntry{
 		changeEntry(OpCreate, &g, t0, nil),
@@ -87,7 +87,7 @@ func TestFoldRestoresCumulativeUsage(t *testing.T) {
 }
 
 func TestFoldResetsUsageWhenANewGoalReplacesACompletedOne(t *testing.T) {
-	first := createTestGoal("first", t0, &GoalBudget{TokenLimit: i64(500)})
+	first := createTestGoal("first", t0, &GoalBudget{TokenLimit: new(int64(500))})
 	done := first
 	done.Phase, done.Revision, done.UpdatedAt = PhaseComplete, 2, t0+2
 	next := createTestGoal("second", t0+3, nil)
@@ -252,7 +252,7 @@ func TestGoalStatusPreservesTheFullObjective(t *testing.T) {
 }
 
 func TestGoalStatusReportsLimitsAndSpentUsage(t *testing.T) {
-	snapshot := createTestGoal("obj", t0, &GoalBudget{TimeLimitMs: i64(8 * 3_600_000), TokenLimit: i64(500_000), CostLimitUsd: f64(10)})
+	snapshot := createTestGoal("obj", t0, &GoalBudget{TimeLimitMs: new(int64(8 * 3_600_000)), TokenLimit: new(int64(500_000)), CostLimitUsd: new(float64(10))})
 	g := GoalView{GoalSnapshot: snapshot, TurnsStarted: 2, UsedTokens: 100_000, UsedCostUsd: 2.5}
 	message := GoalStatusMessage(&g, testTime(t0))
 	if !regexp.MustCompile(`Budget: time \d+/480m, tokens 100000/500000, reported cost \$2\.50/\$10\.00`).MatchString(message) {
@@ -387,6 +387,4 @@ func TestChangeEntryJSONByteParity(t *testing.T) {
 	}
 }
 
-func i64(v int64) *int64     { return &v }
-func f64(v float64) *float64 { return &v }
-func itoa(v int64) string    { return strconv.FormatInt(v, 10) }
+func itoa(v int64) string { return strconv.FormatInt(v, 10) }

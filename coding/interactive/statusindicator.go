@@ -280,7 +280,7 @@ func (c *BranchSummaryMessageComponent) updateDisplay() {
 			return nil
 		}
 		c.SetExpanded(!c.expanded)
-		return &tui.TuiMouseDispatchResult{TuiMouseEventResult: tui.TuiMouseEventResult{Handled: true}}
+		return &tui.TuiMouseDispatchResult{Handled: true}
 	}))
 }
 
@@ -348,6 +348,6 @@ func (c *CompactionSummaryMessageComponent) updateDisplay() {
 			return nil
 		}
 		c.SetExpanded(!c.expanded)
-		return &tui.TuiMouseDispatchResult{TuiMouseEventResult: tui.TuiMouseEventResult{Handled: true}}
+		return &tui.TuiMouseDispatchResult{Handled: true}
 	}))
 }

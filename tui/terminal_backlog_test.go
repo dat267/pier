@@ -45,7 +45,7 @@ func TestProcessTerminalBacklogDuringPausedConsole(t *testing.T) {
 	const frame = "\x1b[31mα\x1b[0m"
 	submitted := make(chan struct{})
 	go func() {
-		for i := 0; i < 64; i++ {
+		for range 64 {
 			terminal.BeginFrame()
 			terminal.Write(frame)
 			terminal.EndFrame()

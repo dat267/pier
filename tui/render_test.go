@@ -199,7 +199,7 @@ func TestCompositeOverlays(t *testing.T) {
 	renderer := NewRenderer(terminal)
 	renderer.AddChild(&staticComponent{lines: []string{"base-line-1", "base-line-2"}})
 	renderer.ShowOverlay(&staticComponent{lines: []string{"OVR1", "OVR2"}},
-		&OverlayOptions{Width: intPtr(8), Anchor: OverlayAnchorTopLeft})
+		&OverlayOptions{Width: new(8), Anchor: OverlayAnchorTopLeft})
 
 	out := renderer.CompositeOverlays([]string{"base-line-1", "base-line-2"}, 20, 6)
 	if len(out) != 6 {
@@ -245,7 +245,7 @@ func TestContainerRenderAndMouse(t *testing.T) {
 	}
 
 	// A hit on the second child's row is forwarded with local coordinates.
-	hit := &mouseRecordingComponent{staticComponent: staticComponent{lines: []string{"ccc"}}}
+	hit := &mouseRecordingComponent{lines: []string{"ccc"}}
 	container.RemoveChild(second)
 	container.AddChild(hit)
 	container.Render(3)
@@ -272,7 +272,7 @@ type mouseRecordingComponent struct {
 
 func (m *mouseRecordingComponent) HandleMouse(event TuiMouseEvent) *TuiMouseDispatchResult {
 	m.last = event
-	return &TuiMouseDispatchResult{TuiMouseEventResult: TuiMouseEventResult{Handled: true}}
+	return &TuiMouseDispatchResult{Handled: true}
 }
 
 // TestRendererFocus verifies focus flags and focus changes.
@@ -525,7 +525,7 @@ func TestOverlayBoundsAndGetBounds(t *testing.T) {
 	renderer := NewRenderer(&fakeTerminal{width: 20, height: 6})
 	renderer.AddChild(&staticComponent{lines: []string{"base"}})
 	overlay := &staticComponent{lines: []string{"X"}}
-	handle := renderer.ShowOverlay(overlay, &OverlayOptions{Width: intPtr(6), Anchor: OverlayAnchorTopLeft})
+	handle := renderer.ShowOverlay(overlay, &OverlayOptions{Width: new(6), Anchor: OverlayAnchorTopLeft})
 
 	if _, ok := handle.GetBounds(); ok {
 		t.Fatal("bounds available before a composited render")
@@ -552,8 +552,6 @@ func TestOverlayBoundsAndGetBounds(t *testing.T) {
 		t.Fatal("Unfocus() did not release focus")
 	}
 }
-
-func intPtr(v int) *int { return &v }
 
 // TestRendererStopFlushesAfterThePostStopHook pins the exit ordering: the
 // post-stop hook queues the alt-screen exit on the async writer, and a caller

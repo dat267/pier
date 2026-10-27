@@ -28,47 +28,45 @@ func Elm() *Language {
 
 	return &Language{
 		Name: "Elm",
-		Mode: Mode{
-			Keywords: Keywords{
-				"keyword": "let in if then else case of where module import exposing type alias as infix infixl infixr port " +
-					"effect command subscription",
+		Keywords: Keywords{
+			"keyword": "let in if then else case of where module import exposing type alias as infix infixl infixr port " +
+				"effect command subscription",
+		},
+		Illegal: `;`,
+		Contains: []*Mode{
+			{
+				BeginKeywords: "port effect module",
+				End:           `exposing`,
+				Keywords:      Keywords{"keyword": "port effect module where command subscription exposing"},
+				Contains:      []*Mode{list, comment},
+				Illegal:       `\W\.|;`,
 			},
-			Illegal: `;`,
-			Contains: []*Mode{
-				{
-					BeginKeywords: "port effect module",
-					End:           `exposing`,
-					Keywords:      Keywords{"keyword": "port effect module where command subscription exposing"},
-					Contains:      []*Mode{list, comment},
-					Illegal:       `\W\.|;`,
-				},
-				{
-					Begin:    `import`,
-					End:      `$`,
-					Keywords: Keywords{"keyword": "import as exposing"},
-					Contains: []*Mode{list, comment},
-					Illegal:  `\W\.|;`,
-				},
-				{
-					Begin:    `type`,
-					End:      `$`,
-					Keywords: Keywords{"keyword": "type alias"},
-					Contains: []*Mode{constructor, list, record, comment},
-				},
-				{
-					BeginKeywords: "infix infixl infixr",
-					End:           `$`,
-					Contains:      []*Mode{CNumberMode, comment},
-				},
-				{Begin: `port`, End: `$`, Keywords: Keywords{"keyword": "port"}, Contains: []*Mode{comment}},
-				character,
-				QuoteStringMode,
-				CNumberMode,
-				constructor,
-				title,
-				comment,
-				{Begin: `->|<-`},
+			{
+				Begin:    `import`,
+				End:      `$`,
+				Keywords: Keywords{"keyword": "import as exposing"},
+				Contains: []*Mode{list, comment},
+				Illegal:  `\W\.|;`,
 			},
+			{
+				Begin:    `type`,
+				End:      `$`,
+				Keywords: Keywords{"keyword": "type alias"},
+				Contains: []*Mode{constructor, list, record, comment},
+			},
+			{
+				BeginKeywords: "infix infixl infixr",
+				End:           `$`,
+				Contains:      []*Mode{CNumberMode, comment},
+			},
+			{Begin: `port`, End: `$`, Keywords: Keywords{"keyword": "port"}, Contains: []*Mode{comment}},
+			character,
+			QuoteStringMode,
+			CNumberMode,
+			constructor,
+			title,
+			comment,
+			{Begin: `->|<-`},
 		},
 	}
 }

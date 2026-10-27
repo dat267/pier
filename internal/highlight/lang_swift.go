@@ -397,8 +397,8 @@ func Swift() *Language {
 	contains = append(contains, typeMode, tuple)
 
 	return &Language{
-		Name: "Swift",
-		Mode: Mode{Keywords: keywords, Contains: contains},
+		Name:     "Swift",
+		Keywords: keywords, Contains: contains,
 	}
 }
 

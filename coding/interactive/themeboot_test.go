@@ -3,6 +3,7 @@ package interactive
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/dat267/pier/coding"
@@ -96,12 +97,7 @@ func TestThemeBootProjectThemesNeedTrust(t *testing.T) {
 }
 
 func containsTheme(names []string, want string) bool {
-	for _, name := range names {
-		if name == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(names, want)
 }
 
 // TestThemeBootDetectsTrueColorFromEnvironment ports the truecolor branch of

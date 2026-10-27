@@ -23,12 +23,11 @@ func TestOpenAIStreamFailsOnStreamedErrorPayload(t *testing.T) {
 	var providerEvents int
 	stream := StreamOpenAICompletions(model, NormalizeContext(Context{
 		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-	}), &OpenAICompletionsOptions{StreamOptions: StreamOptions{
+	}), &OpenAICompletionsOptions{
 		APIKey: "test-key",
 		OnProviderStreamEvent: func(data json.RawMessage, eventModel *Model) {
 			providerEvents++
-		},
-	}})
+		}})
 
 	var types []string
 	for {

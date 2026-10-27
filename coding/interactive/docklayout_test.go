@@ -22,7 +22,7 @@ func TestDockPinnedAfterScroll(t *testing.T) {
 	screen.DisableAutoRender()
 
 	// populate
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		app.events.HandleEvent(&coding.SessionEvent{Type: coding.SessionMessageStart, Agent: agentEvent("message_start", &ai.UserMessage{Content: ai.StringOrBlocks{Text: fmt.Sprintf("message %d", i)}})})
 		app.events.HandleEvent(&coding.SessionEvent{Type: coding.SessionMessageEnd, Agent: agentEvent("message_end", &ai.UserMessage{Content: ai.StringOrBlocks{Text: "x"}})})
 	}

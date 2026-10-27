@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -2448,7 +2449,7 @@ func (s *AltScreen) doRender() {
 
 	clearRowsBeforeKittyImages := redrawImages && s.imageProtocol == "kitty" && containsImageLine(screen) && isWezTerm
 	if clearRowsBeforeKittyImages {
-		for row := 0; row < height; row++ {
+		for row := range height {
 			previous := ""
 			if row < len(s.previousScreen) {
 				previous = s.previousScreen[row]
@@ -2461,8 +2462,8 @@ func (s *AltScreen) doRender() {
 		// WezTerm erases intersecting kitty image cells when a later row write
 		// touches a covered row, so draw every non-image line first and the
 		// image placements last (upstream drawKittyImagesLast).
-		for pass := 0; pass < 2; pass++ {
-			for row := 0; row < height; row++ {
+		for pass := range 2 {
+			for row := range height {
 				previous := ""
 				if row < len(s.previousScreen) {
 					previous = s.previousScreen[row]
@@ -2481,7 +2482,7 @@ func (s *AltScreen) doRender() {
 			}
 		}
 	} else {
-		for row := 0; row < height; row++ {
+		for row := range height {
 			previous := ""
 			if row < len(s.previousScreen) {
 				previous = s.previousScreen[row]
@@ -2548,12 +2549,7 @@ func (s *AltScreen) rowsAndCursorUnchanged(screen []string, row, col int, hasCur
 }
 
 func containsImageLine(lines []string) bool {
-	for _, line := range lines {
-		if IsImageLine(line) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(lines, IsImageLine)
 }
 
 var (

@@ -37,13 +37,11 @@ func TaggerScript() *Language {
 
 	return &Language{
 		Name: "Tagger Script",
-		Mode: Mode{
-			Contains: []*Mode{
-				comment,
-				function,
-				{ClassName: "variable", Begin: `%[_a-zA-Z0-9:]*`, End: `%`},
-				{ClassName: "symbol", Begin: `\\.`},
-			},
+		Contains: []*Mode{
+			comment,
+			function,
+			{ClassName: "variable", Begin: `%[_a-zA-Z0-9:]*`, End: `%`},
+			{ClassName: "symbol", Begin: `\\.`},
 		},
 	}
 }

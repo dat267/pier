@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	jsonv2 "encoding/json/v2"
 	"fmt"
+	"maps"
+	"slices"
 	"sort"
 )
 
@@ -205,12 +207,7 @@ func (m *SystemMessage) SetSection(name string, value *string) {
 }
 
 func (m *SystemMessage) hasSectionName(name string) bool {
-	for _, n := range m.sectionsOrder {
-		if n == name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(m.sectionsOrder, name)
 }
 
 // sectionNames returns section names in declaration order, appending any
@@ -243,9 +240,7 @@ func (m *SystemMessage) Clone() *SystemMessage {
 		Timestamp:     m.Timestamp,
 		sectionsOrder: append([]string{}, m.sectionsOrder...),
 	}
-	for k, v := range m.Sections {
-		out.Sections[k] = v
-	}
+	maps.Copy(out.Sections, m.Sections)
 	return out
 }
 

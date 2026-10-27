@@ -107,10 +107,7 @@ func EncodeKitty(base64Data string, options KittyEncodeOptions) string {
 	offset := 0
 	isFirst := true
 	for offset < len(base64Data) {
-		end := offset + chunkSize
-		if end > len(base64Data) {
-			end = len(base64Data)
-		}
+		end := min(offset+chunkSize, len(base64Data))
 		chunk := base64Data[offset:end]
 		isLast := offset+chunkSize >= len(base64Data)
 		switch {
@@ -334,7 +331,7 @@ func GetKittyImagePlacement(line string) (KittyImagePlacement, bool) {
 	}
 
 	var kept []string
-	for _, control := range strings.Split(controls, ",") {
+	for control := range strings.SplitSeq(controls, ",") {
 		key, _, _ := strings.Cut(control, "=")
 		if kittyPlacementControlKeys[key] {
 			kept = append(kept, control)
@@ -364,25 +361,19 @@ func CropKittyImageLine(line string, hiddenRows int, visibleRows int) string {
 	if !ok || match == nil || hiddenRows < 0 || hiddenRows >= metadata.Rows || visibleRows <= 0 {
 		return line
 	}
-	croppedRows := visibleRows
-	if metadata.Rows-hiddenRows < croppedRows {
-		croppedRows = metadata.Rows - hiddenRows
-	}
+	croppedRows := min(metadata.Rows-hiddenRows, visibleRows)
 	if hiddenRows == 0 && croppedRows == metadata.Rows {
 		return line
 	}
 	sourceY := int(math.Floor(float64(metadata.HeightPx*hiddenRows) / float64(metadata.Rows)))
 	sourceEnd := int(math.Ceil(float64(metadata.HeightPx*(hiddenRows+croppedRows)) / float64(metadata.Rows)))
-	sourceHeight := metadata.HeightPx
-	if sourceEnd < sourceHeight {
-		sourceHeight = sourceEnd
-	}
+	sourceHeight := min(sourceEnd, metadata.HeightPx)
 	sourceHeight -= sourceY
 	if sourceHeight < 1 {
 		sourceHeight = 1
 	}
 	var controls []string
-	for _, control := range strings.Split(line[match[2]:match[3]], ",") {
+	for control := range strings.SplitSeq(line[match[2]:match[3]], ",") {
 		if !kittyCropDropPattern.MatchString(control) {
 			controls = append(controls, control)
 		}
@@ -406,25 +397,13 @@ func chooseLessDistortedCellCount(upperCount int, idealCount float64) int {
 
 // CalculateImageCellSize converts pixel dimensions to terminal cells.
 func CalculateImageCellSize(imageDimensions ImageDimensions, maxWidthCells int, maxHeightCells *int, cellDimensions CellDimensions, optimizeAspectRatio bool) ImageCellSize {
-	maxWidth := maxWidthCells
-	if maxWidth < 1 {
-		maxWidth = 1
-	}
+	maxWidth := max(maxWidthCells, 1)
 	var maxHeight int
 	if maxHeightCells != nil {
-		maxHeight = *maxHeightCells
-		if maxHeight < 1 {
-			maxHeight = 1
-		}
+		maxHeight = max(*maxHeightCells, 1)
 	}
-	imageWidth := imageDimensions.WidthPx
-	if imageWidth < 1 {
-		imageWidth = 1
-	}
-	imageHeight := imageDimensions.HeightPx
-	if imageHeight < 1 {
-		imageHeight = 1
-	}
+	imageWidth := max(imageDimensions.WidthPx, 1)
+	imageHeight := max(imageDimensions.HeightPx, 1)
 	widthScale := float64(maxWidth*cellDimensions.WidthPx) / float64(imageWidth)
 	heightScale := widthScale
 	if maxHeightCells != nil {
@@ -433,18 +412,9 @@ func CalculateImageCellSize(imageDimensions ImageDimensions, maxWidthCells int, 
 	scale := math.Min(widthScale, heightScale)
 	scaledWidthPx := float64(imageWidth) * scale
 	scaledHeightPx := float64(imageHeight) * scale
-	columns := int(math.Ceil(scaledWidthPx / float64(cellDimensions.WidthPx)))
-	if columns < 1 {
-		columns = 1
-	}
-	if columns > maxWidth {
-		columns = maxWidth
-	}
+	columns := min(max(int(math.Ceil(scaledWidthPx/float64(cellDimensions.WidthPx))), 1), maxWidth)
 	heightRows := scaledHeightPx / float64(cellDimensions.HeightPx)
-	rows := int(math.Ceil(heightRows))
-	if rows < 1 {
-		rows = 1
-	}
+	rows := max(int(math.Ceil(heightRows)), 1)
 	if maxHeightCells != nil && rows > maxHeight {
 		rows = maxHeight
 	}

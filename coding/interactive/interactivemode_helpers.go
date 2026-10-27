@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"context"
+	"maps"
 	"os/exec"
 	"strings"
 	"sync"
@@ -214,9 +215,7 @@ type AutocompleteSession interface {
 // SkillCommands returns the registered skill commands (test helper).
 func (w *AutocompleteWiring) SkillCommands() map[string]string {
 	copied := map[string]string{}
-	for key, value := range w.skillCommands {
-		copied[key] = value
-	}
+	maps.Copy(copied, w.skillCommands)
 	return copied
 }
 

@@ -207,7 +207,7 @@ func TestLoopScheduleDefersPaintsUntilOutputDrains(t *testing.T) {
 		h := newScheduleHarness()
 		defer h.schedule.close()
 		h.host.outputBytes = 256 * 1024
-		for i := 0; i < 100; i++ {
+		for range 100 {
 			h.host.pushRenderTick()
 			h.schedule.paintIfRequested()
 			h.schedule.paintNow() // resize and animation use this path too
@@ -242,7 +242,7 @@ func TestDeferredPaintRetryIsNotPostponedByRenderRequests(t *testing.T) {
 		defer h.schedule.close()
 		h.host.outputBytes = 256 * 1024
 		h.schedule.paintNow()
-		for i := 0; i < 8; i++ {
+		for range 8 {
 			time.Sleep(time.Millisecond)
 			h.host.pushRenderTick()
 			h.schedule.paintIfRequested()

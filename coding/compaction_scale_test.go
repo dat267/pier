@@ -17,7 +17,7 @@ import (
 func TestPrepareCompactionProjectsTheContextOnce(t *testing.T) {
 	build := func(rounds int) []SessionEntry {
 		m, _ := newTestSession(t)
-		for i := 0; i < rounds; i++ {
+		for range rounds {
 			m.AppendMessage(createUserMessage(strings.Repeat("u", 400)))
 			m.AppendMessage(assistantTestMessage())
 		}

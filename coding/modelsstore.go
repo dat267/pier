@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -364,10 +365,8 @@ func (s *FileModelsStore) Delete(providerID string, ctx context.Context) error {
 }
 
 func appendModelsOrder(order []string, providerID string) []string {
-	for _, key := range order {
-		if key == providerID {
-			return order
-		}
+	if slices.Contains(order, providerID) {
+		return order
 	}
 	return append(append([]string{}, order...), providerID)
 }

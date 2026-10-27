@@ -10,7 +10,7 @@ import (
 // TestCustomEntryDataField guards D129: the custom entry payload serializes as
 // `data` (upstream CustomEntry.data), not `details`.
 func TestCustomEntryDataField(t *testing.T) {
-	manager := NewSessionManager("/tmp/proj", &SessionManagerOptions{Persist: boolPtr(false)})
+	manager := NewSessionManager("/tmp/proj", &SessionManagerOptions{Persist: new(false)})
 	payload := json.RawMessage(`{"hello":"world"}`)
 	manager.AppendCustomEntry("note", payload)
 
@@ -54,7 +54,7 @@ var entryIDPattern = regexp.MustCompile(`^[0-9a-f]{8}$`)
 // ids where upstream has 8.
 func TestEntryIDsAreShortAndRandom(t *testing.T) {
 	m := newTestSessionForProjection(t)
-	for i := 0; i < 8; i++ {
+	for range 8 {
 		m.AppendMessage(createUserMessage("a message that gets an entry id"))
 	}
 

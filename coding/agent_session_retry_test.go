@@ -152,7 +152,7 @@ func TestContextOverflowIsNotRetried(t *testing.T) {
 	// A context-length error is not retryable.
 	overflow := &ai.AssistantMessage{
 		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",
-		StopReason: ai.StopError, ErrorMessage: strPtr("This model's maximum context length is 4096 tokens"),
+		StopReason: ai.StopError, ErrorMessage: new("This model's maximum context length is 4096 tokens"),
 	}
 	if session.IsRetryableError(overflow) {
 		t.Fatal("context length errors must not be retried")
@@ -167,7 +167,7 @@ func TestContextOverflowIsNotRetried(t *testing.T) {
 	// Usage beyond the context window is an overflow as well.
 	overUsage := &ai.AssistantMessage{
 		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",
-		StopReason: ai.StopError, ErrorMessage: strPtr("bad request"),
+		StopReason: ai.StopError, ErrorMessage: new("bad request"),
 		Usage: ai.Usage{Input: 2000, TotalTokens: 2000},
 	}
 	if session.IsRetryableError(overUsage) {
@@ -176,7 +176,7 @@ func TestContextOverflowIsNotRetried(t *testing.T) {
 	// A transient error is retryable.
 	transient := &ai.AssistantMessage{
 		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",
-		StopReason: ai.StopError, ErrorMessage: strPtr("overloaded_error"),
+		StopReason: ai.StopError, ErrorMessage: new("overloaded_error"),
 	}
 	if !session.IsRetryableError(transient) {
 		t.Fatal("overloaded errors must be retried")
@@ -262,7 +262,7 @@ func TestRetrySettingsToggle(t *testing.T) {
 	session.SetRetryEnabled(true)
 	message := &ai.AssistantMessage{
 		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",
-		StopReason: ai.StopError, ErrorMessage: strPtr("overloaded_error"),
+		StopReason: ai.StopError, ErrorMessage: new("overloaded_error"),
 	}
 	retry, err := session.PrepareRetry(ctxpkg.Background(), message)
 	if err != nil || !retry {

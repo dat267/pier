@@ -105,7 +105,7 @@ func TestLoadEntriesBufferedParallelMatchesEager(t *testing.T) {
 	b.WriteString(`{"type":"message","id":"long","parentId":null,"timestamp":"t","message":{"role":"user","content":"`)
 	b.WriteString(strings.Repeat("L", parallelSessionScanBytes+1))
 	b.WriteString(`"}}` + "\n")
-	for i := 0; i < 2000; i++ {
+	for i := range 2000 {
 		fmt.Fprintf(&b, `{"type":"message","id":"m%04d","parentId":null,"timestamp":"t","message":{"role":"assistant","content":"reply %d"}}`+"\n", i, i)
 	}
 	dir := t.TempDir()
@@ -209,7 +209,7 @@ func TestSkipJSONStringEscapeHandling(t *testing.T) {
 func TestSkipJSONStringMatchesEncodingJSON(t *testing.T) {
 	rng := rand.New(rand.NewSource(1))
 	alphabet := []rune{'a', '"', '\\', '\n', '\t', '\u0000', 'é', '中', '\u2028', '\uFFFD'}
-	for i := 0; i < 2000; i++ {
+	for range 2000 {
 		var sb strings.Builder
 		for j := 0; j < rng.Intn(40); j++ {
 			sb.WriteRune(alphabet[rng.Intn(len(alphabet))])
@@ -305,7 +305,7 @@ func TestLoadEntriesBufferedAllocatesLikeTheFile(t *testing.T) {
 	b.WriteString(`{"type":"session","version":3,"id":"s1","timestamp":"t0","cwd":"/tmp"}` + "\n")
 	content := `{"type":"message","id":"m%06d","parentId":null,"timestamp":"t","message":{"role":"user","content":"` +
 		strings.Repeat("x", 1800) + `"}}`
-	for i := 0; i < 2000; i++ {
+	for i := range 2000 {
 		b.WriteString(fmt.Sprintf(content, i))
 		b.WriteString("\n")
 	}

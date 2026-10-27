@@ -88,7 +88,7 @@ func TestApplyModelsJSONCustomModels(t *testing.T) {
 		API:     ai.APIOpenAICompletions,
 		Models: []ModelsJSONModel{
 			{ID: "custom-model", Name: "Custom", SamplingParamsByThinkingLevel: map[string]map[string]any{"high": {"temperature": 0.8}}},
-			{ID: "builtin-model", Name: "Replaced", ContextWindow: floatPtr(1000)},
+			{ID: "builtin-model", Name: "Replaced", ContextWindow: new(float64(1000))},
 		},
 	}
 	models, err := applyModelsJSON("custom", []*ai.Model{anthropicBaseModel()}, config)
@@ -161,12 +161,12 @@ func TestApplyModelsJSONErrors(t *testing.T) {
 	}
 	// Positive contextWindow/maxTokens only.
 	if _, err := applyModelsJSON("p", nil, &ModelsJSONProvider{API: ai.APIOpenAICompletions, BaseURL: "https://x",
-		Models: []ModelsJSONModel{{ID: "m", ContextWindow: floatPtr(0)}}}); err == nil ||
+		Models: []ModelsJSONModel{{ID: "m", ContextWindow: new(float64(0))}}}); err == nil ||
 		err.Error() != "Provider p, model m: invalid contextWindow" {
 		t.Fatalf("err = %v", err)
 	}
 	if _, err := applyModelsJSON("p", nil, &ModelsJSONProvider{API: ai.APIOpenAICompletions, BaseURL: "https://x",
-		Models: []ModelsJSONModel{{ID: "m", MaxTokens: floatPtr(-1)}}}); err == nil ||
+		Models: []ModelsJSONModel{{ID: "m", MaxTokens: new(float64(-1))}}}); err == nil ||
 		err.Error() != "Provider p, model m: invalid maxTokens" {
 		t.Fatalf("err = %v", err)
 	}
@@ -179,7 +179,7 @@ func TestApplyModelsJSONErrors(t *testing.T) {
 
 func TestApplyModelOverride(t *testing.T) {
 	base := anthropicBaseModel()
-	base.ThinkingLevelMap = ai.ThinkingLevelMap{ai.ThinkLow: strPtr("low")}
+	base.ThinkingLevelMap = ai.ThinkingLevelMap{ai.ThinkLow: new("low")}
 	base.SamplingParams = map[string]json.RawMessage{"temperature": json.RawMessage("0.1")}
 	base.SamplingParamsByThinkingLevel = map[string]map[string]json.RawMessage{
 		"high": {"temperature": json.RawMessage("0.8"), "top_p": json.RawMessage("0.9")},
@@ -188,18 +188,18 @@ func TestApplyModelOverride(t *testing.T) {
 
 	override := ModelsJSONModelOverride{
 		Name:             "Overridden",
-		Reasoning:        boolPtr(true),
-		ThinkingLevelMap: ai.ThinkingLevelMap{ai.ThinkHigh: strPtr("high"), ai.ThinkLow: nil},
+		Reasoning:        new(true),
+		ThinkingLevelMap: ai.ThinkingLevelMap{ai.ThinkHigh: new("high"), ai.ThinkLow: nil},
 		Input:            []string{"text", "image"},
-		Cost:             &ModelsJSONCostOverride{Input: floatPtr(1), Tiers: []ModelsJSONCostTier{{InputTokensAbove: 100, ModelsJSONCostRates: ModelsJSONCostRates{Input: 2, Output: 3, CacheRead: 4, CacheWrite: 5}}}},
-		ContextWindow:    floatPtr(500),
-		MaxTokens:        floatPtr(100),
+		Cost:             &ModelsJSONCostOverride{Input: new(float64(1)), Tiers: []ModelsJSONCostTier{{InputTokensAbove: 100, Input: 2, Output: 3, CacheRead: 4, CacheWrite: 5}}},
+		ContextWindow:    new(float64(500)),
+		MaxTokens:        new(float64(100)),
 		SamplingParams:   map[string]any{"temperature": 0.7, "topP": 0.9},
 		SamplingParamsByThinkingLevel: map[string]map[string]any{
 			"high": {"temperature": 0.5},
 			"low":  {"top_k": 20},
 		},
-		Compat: &ModelsJSONCompat{SupportsTemperature: boolPtr(true)},
+		Compat: &ModelsJSONCompat{SupportsTemperature: new(true)},
 	}
 	updated, err := applyModelOverride(base, override)
 	if err != nil {
@@ -255,16 +255,16 @@ func TestApplyModelOverride(t *testing.T) {
 
 func TestMergeCompatNested(t *testing.T) {
 	base := &ai.ModelCompat{OpenAICompletions: &ai.OpenAICompletionsCompat{
-		SupportsStore: boolPtr(true),
+		SupportsStore: new(true),
 		ChatTemplateKwargs: map[string]json.RawMessage{
 			"a": json.RawMessage("1"), "b": json.RawMessage("2"),
 		},
-		OpenRouterRouting: &ai.OpenRouterRouting{Zdr: boolPtr(true)},
+		OpenRouterRouting: &ai.OpenRouterRouting{Zdr: new(true)},
 	}}
 	override := &ModelsJSONCompat{
-		SupportsStore:      boolPtr(false),
+		SupportsStore:      new(false),
 		ChatTemplateKwargs: map[string]ModelsJSONChatTemplateKwarg{"b": {Scalar: float64(20)}, "c": {Scalar: "x"}},
-		OpenRouterRouting:  &ModelsJSONOpenRouterRouting{Zdr: boolPtr(false), Order: []string{"a"}},
+		OpenRouterRouting:  &ModelsJSONOpenRouterRouting{Zdr: new(false), Order: []string{"a"}},
 	}
 	merged, err := mergeCompatJSON(ai.APIOpenAICompletions, base, override)
 	if err != nil {
@@ -292,7 +292,7 @@ func TestMergeCompatNested(t *testing.T) {
 	}
 	// A nil base still decodes the override for the model's api.
 	only, err := mergeCompatJSON(ai.APIAnthropicMessages, nil, &ModelsJSONCompat{
-		ForceAdaptiveThinking: boolPtr(true),
+		ForceAdaptiveThinking: new(true),
 	})
 	if err != nil || only == nil || only.AnthropicMessages == nil || only.AnthropicMessages.ForceAdaptiveThinking == nil {
 		t.Fatalf("only = %+v err = %v", only, err)
@@ -522,5 +522,3 @@ func TestConfiguredHeadersAndStatus(t *testing.T) {
 		t.Fatalf("status = %+v", status)
 	}
 }
-
-func floatPtr(value float64) *float64 { return &value }

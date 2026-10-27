@@ -404,7 +404,7 @@ func TestAppInstallsTheTranscriptSelectionReset(t *testing.T) {
 func TestAppInitSetsTerminalTitle(t *testing.T) {
 	app, cleanup := newTestApp(t)
 	defer cleanup()
-	terminal := &titleTerminal{fakeRendererTerminal: fakeRendererTerminal{width: 80, height: 24}}
+	terminal := &titleTerminal{width: 80, height: 24}
 	app.lifecycle.options.Terminal = terminal
 	app.events.Init()
 	if len(terminal.titles) == 0 {

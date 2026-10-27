@@ -42,7 +42,7 @@ func TestCompactionRecoversResumedOverflow(t *testing.T) {
 	seedBranch(t, session)
 	session.Sessions.AppendMessage(&ai.AssistantMessage{
 		API: model.API, Provider: model.Provider, Model: model.ID, Timestamp: timeNowMS(),
-		StopReason: ai.StopError, ErrorMessage: strPtr("prompt is too long: 2000 tokens > 1000 maximum"),
+		StopReason: ai.StopError, ErrorMessage: new("prompt is too long: 2000 tokens > 1000 maximum"),
 	})
 	// Match SDK resume: load persisted messages directly, without message_end events.
 	session.Agent.SetMessages(session.Sessions.Projection().Messages)

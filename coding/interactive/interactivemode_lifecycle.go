@@ -520,7 +520,6 @@ func (l *Lifecycle) RegisterSignalHandlers() {
 		}
 	}
 	for _, sig := range signals {
-		sig := sig
 		cleanup := register(sig, func() {
 			if sink := l.options.SignalSink; sink != nil {
 				sink(sig)

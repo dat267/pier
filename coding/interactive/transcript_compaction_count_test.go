@@ -13,9 +13,9 @@ import (
 // need not materialize a full descriptor snapshot to compute that number.
 func TestTranscriptCompactionNoticeDoesNotCopyHistory(t *testing.T) {
 	renderer, _ := newTranscriptTestRenderer(t, false)
-	manager := coding.NewSessionManager(t.TempDir(), &coding.SessionManagerOptions{Persist: boolPtr(false)})
+	manager := coding.NewSessionManager(t.TempDir(), &coding.SessionManagerOptions{Persist: new(false)})
 	last := ""
-	for i := 0; i < 512; i++ {
+	for range 512 {
 		last = manager.AppendCustomEntry("hidden", nil)
 	}
 	manager.AppendCompaction("old branch", last, 100, nil, false, nil)

@@ -35,10 +35,8 @@ func EBNF() *Language {
 	}
 
 	return &Language{
-		Name: "Extended Backus-Naur Form",
-		Mode: Mode{
-			Illegal:  `\S`,
-			Contains: []*Mode{comment, nonTerminal, ruleBody},
-		},
+		Name:     "Extended Backus-Naur Form",
+		Illegal:  `\S`,
+		Contains: []*Mode{comment, nonTerminal, ruleBody},
 	}
 }

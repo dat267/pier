@@ -23,13 +23,11 @@ func TestPiMessagesRequestPreservesMemberOrder(t *testing.T) {
 
 	payloads := make(chan string, 1)
 	stream := StreamPiMessages(piMessagesModel(server.URL), piMessagesContext(), &PiMessagesOptions{
-		StreamOptions: StreamOptions{
-			APIKey: "token", Temperature: wirePtrFloat(0.5), MaxTokens: new(16),
-			CacheRetention: CacheRetentionLong, SessionID: "session-1",
-			OnPayload: func(payload json.RawMessage, _ *Model) json.RawMessage {
-				payloads <- string(payload)
-				return nil
-			},
+		APIKey: "token", Temperature: new(0.5), MaxTokens: new(16),
+		CacheRetention: CacheRetentionLong, SessionID: "session-1",
+		OnPayload: func(payload json.RawMessage, _ *Model) json.RawMessage {
+			payloads <- string(payload)
+			return nil
 		},
 		Reasoning: "high", ToolChoice: json.RawMessage(`{"type":"function","name":"lookup"}`),
 	})
@@ -63,11 +61,9 @@ func TestPiMessagesSendsPayloadReplacementVerbatim(t *testing.T) {
 			}))
 			defer server.Close()
 			stream := StreamPiMessages(piMessagesModel(server.URL), piMessagesContext(), &PiMessagesOptions{
-				StreamOptions: StreamOptions{
-					APIKey: "token",
-					OnPayload: func(json.RawMessage, *Model) json.RawMessage {
-						return json.RawMessage(replacement)
-					},
+				APIKey: "token",
+				OnPayload: func(json.RawMessage, *Model) json.RawMessage {
+					return json.RawMessage(replacement)
 				},
 			})
 			if _, err := stream.Result(context.Background()); err != nil {

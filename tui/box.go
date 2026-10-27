@@ -163,7 +163,7 @@ func (b *Box) firstChangedChildLine() int {
 		}
 		lines := b.childLines[i]
 		common := min(len(cached), len(lines))
-		for j := 0; j < common; j++ {
+		for j := range common {
 			if cached[j] != lines[j] {
 				return global + j
 			}

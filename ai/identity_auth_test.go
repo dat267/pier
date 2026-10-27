@@ -14,9 +14,9 @@ func TestResolvedAuthOpenCodeSessionHeaders(t *testing.T) {
 		requestHeaders ProviderHeaders
 		want           *string
 	}{
-		{"session default", nil, nil, strPtr("session-1")},
-		{"auth override", ProviderHeaders{"X-OpenCode-Session": strPtr("auth")}, nil, strPtr("auth")},
-		{"caller override", ProviderHeaders{"X-OpenCode-Session": strPtr("auth")}, ProviderHeaders{"x-opencode-session": strPtr("caller")}, strPtr("caller")},
+		{"session default", nil, nil, new("session-1")},
+		{"auth override", ProviderHeaders{"X-OpenCode-Session": new("auth")}, nil, new("auth")},
+		{"caller override", ProviderHeaders{"X-OpenCode-Session": new("auth")}, ProviderHeaders{"x-opencode-session": new("caller")}, new("caller")},
 		{"caller removal", nil, ProviderHeaders{"X-OpenCode-Session": nil}, nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

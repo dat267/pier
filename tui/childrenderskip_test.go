@@ -96,11 +96,11 @@ func TestContainerWithoutSkipRendersChildrenEveryFrame(t *testing.T) {
 func benchSkipChat(tools, outputLines int, skip bool) *Container {
 	chat := &Container{SkipUnchangedChildren: skip}
 	var sb strings.Builder
-	for i := 0; i < outputLines; i++ {
+	for range outputLines {
 		sb.WriteString("some tool output line with several words to wrap around the terminal width\n")
 	}
 	output := sb.String()
-	for i := 0; i < tools; i++ {
+	for range tools {
 		child := &countingVersioned{Container: &Container{}}
 		box := NewBox(2, 1, func(value string) string { return "\x1b[48;2;1;1;1m" + value + "\x1b[0m" })
 		box.AddChild(NewMouseRegion(NewText(output, 0, 0, nil), nil))

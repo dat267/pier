@@ -79,26 +79,24 @@ func Ada() *Language {
 	return &Language{
 		Name:            "Ada",
 		CaseInsensitive: true,
-		Mode: Mode{
-			Keywords: Keywords{
-				"keyword": "abort else new return abs elsif not reverse abstract end accept entry select access exception of " +
-					"separate aliased exit or some all others subtype and for out synchronized array function overriding " +
-					"at tagged generic package task begin goto pragma terminate body private then if procedure type case " +
-					"in protected constant interface is raise use declare range delay limited record when delta loop rem " +
-					"while digits renames with do mod requeue xor",
-				"literal": "True False",
-			},
-			Contains: []*Mode{
-				comments,
-				{ClassName: "string", Begin: `"`, End: `"`, Contains: []*Mode{{Begin: `""`, HasRelevance: true, Relevance: 0}}},
-				{ClassName: "string", Begin: `'.'`},
-				{ClassName: "number", Begin: numberRe, HasRelevance: true, Relevance: 0},
-				{ClassName: "symbol", Begin: "'" + idRegex},
-				packageMode,
-				functionMode,
-				typeMode,
-				varDecls,
-			},
+		Keywords: Keywords{
+			"keyword": "abort else new return abs elsif not reverse abstract end accept entry select access exception of " +
+				"separate aliased exit or some all others subtype and for out synchronized array function overriding " +
+				"at tagged generic package task begin goto pragma terminate body private then if procedure type case " +
+				"in protected constant interface is raise use declare range delay limited record when delta loop rem " +
+				"while digits renames with do mod requeue xor",
+			"literal": "True False",
+		},
+		Contains: []*Mode{
+			comments,
+			{ClassName: "string", Begin: `"`, End: `"`, Contains: []*Mode{{Begin: `""`, HasRelevance: true, Relevance: 0}}},
+			{ClassName: "string", Begin: `'.'`},
+			{ClassName: "number", Begin: numberRe, HasRelevance: true, Relevance: 0},
+			{ClassName: "symbol", Begin: "'" + idRegex},
+			packageMode,
+			functionMode,
+			typeMode,
+			varDecls,
 		},
 	}
 }

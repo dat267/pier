@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"encoding/json"
+	"maps"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -53,9 +54,7 @@ func Keybindings() (map[string]tui.KeybindingDefinition, []string) {
 func KeybindingsFor(goos string, env func(string) string) (map[string]tui.KeybindingDefinition, []string) {
 	definitions := map[string]tui.KeybindingDefinition{}
 	order := make([]string, 0, len(tui.TUIKeybindings)+len(AppKeybindingNames))
-	for key, definition := range tui.TUIKeybindings {
-		definitions[key] = definition
-	}
+	maps.Copy(definitions, tui.TUIKeybindings)
 	for _, key := range tuiKeybindingOrderForOrdering() {
 		order = append(order, key)
 	}

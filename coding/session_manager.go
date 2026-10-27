@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -171,7 +172,7 @@ func (m *SessionManager) NewSession(options *NewSessionOptions) string {
 	}
 	timestamp := sessionTimestamp()
 	header := SessionHeader{
-		Version:   intPtr(CurrentSessionVersion),
+		Version:   new(CurrentSessionVersion),
 		ID:        m.sessionID,
 		Timestamp: timestamp,
 		Cwd:       m.cwd,
@@ -198,8 +199,6 @@ func (m *SessionManager) NewSession(options *NewSessionOptions) string {
 	}
 	return m.sessionFile
 }
-
-func intPtr(n int) *int { return &n }
 
 // sessionTimestampFormatter is JavaScript's Date.prototype.toISOString(): UTC
 // with exactly three fractional digits. Upstream stamps every session header
@@ -296,7 +295,7 @@ func ContinueRecentSession(cwd string, sessionDir string) (*SessionManager, erro
 // InMemorySession builds a non-persisting session, optionally from entries
 // (SessionManager.inMemory).
 func InMemorySession(cwd string, options *NewSessionOptions, entries []FileEntry) *SessionManager {
-	m := NewSessionManager(cwd, &SessionManagerOptions{Persist: boolPtr(false)})
+	m := NewSessionManager(cwd, &SessionManagerOptions{Persist: new(false)})
 	if len(entries) > 0 {
 		m.loadEntries(entries, options)
 	}
@@ -511,12 +510,10 @@ func (m *SessionManager) appendEntry(entry *SessionEntry) string {
 // nextEntry builds an entry child of the current leaf.
 func (m *SessionManager) nextEntry(entryType string) SessionEntry {
 	return SessionEntry{
-		Type: entryType,
-		SessionEntryBase: SessionEntryBase{
-			ID:        generateID(m.byID),
-			ParentID:  m.leafID,
-			Timestamp: sessionTimestamp(),
-		},
+		Type:      entryType,
+		ID:        generateID(m.byID),
+		ParentID:  m.leafID,
+		Timestamp: sessionTimestamp(),
 	}
 }
 
@@ -579,7 +576,7 @@ func (m *SessionManager) AppendCompaction(summary string, firstKeptEntryID strin
 	entry.Details = details
 	entry.Usage = usage
 	if fromHook {
-		entry.FromHook = boolPtr(true)
+		entry.FromHook = new(true)
 	}
 	if systemMessage != nil {
 		// The recorded system message carries the compaction's own timestamp
@@ -623,8 +620,8 @@ func (m *SessionManager) GetSessionName() string {
 	// entry (440 B each, ~84 MB at 40k entries) under m.mu was stalling the UI
 	// loop: 80 of 134 event-apply stall records caught it inside that copy, and
 	// 20 more waited for the lock in CacheMissFor.
-	for i := len(m.fileEntries) - 1; i >= 0; i-- {
-		entry := m.fileEntries[i].Entry
+	for _, v := range slices.Backward(m.fileEntries) {
+		entry := v.Entry
 		if entry == nil || entry.Type != "session_info" {
 			continue
 		}
@@ -935,7 +932,7 @@ func (m *SessionManager) BranchWithSummary(branchFromID string, summary string, 
 	entry.Details = details
 	entry.Usage = usage
 	if fromHook {
-		entry.FromHook = boolPtr(true)
+		entry.FromHook = new(true)
 	}
 	return m.appendEntry(&entry)
 }
@@ -958,7 +955,7 @@ func (m *SessionManager) CreateBranchedSession(leafID string) (string, error) {
 	newSessionFile := filepath.Join(m.sessionDir, fmt.Sprintf("%s_%s.jsonl", fileTimestamp, newSessionID))
 
 	header := SessionHeader{
-		Version:   intPtr(CurrentSessionVersion),
+		Version:   new(CurrentSessionVersion),
 		ID:        newSessionID,
 		Timestamp: timestamp,
 		Cwd:       m.cwd,
@@ -1032,9 +1029,7 @@ func (m *SessionManager) CreateBranchedSession(leafID string) (string, error) {
 		parent := pathParentID
 		entry := &SessionEntry{
 			Type: "label",
-			SessionEntryBase: SessionEntryBase{
-				ID: generateID(retained), ParentID: &parent, Timestamp: label.Timestamp,
-			},
+			ID:   generateID(retained), ParentID: &parent, Timestamp: label.Timestamp,
 			TargetID: label.TargetID, Label: label.Label,
 		}
 		retained[entry.ID] = entry

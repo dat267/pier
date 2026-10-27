@@ -15,23 +15,21 @@ func STEP21() *Language {
 		Name:            "STEP Part 21",
 		Aliases:         []string{"p21", "step", "stp"},
 		CaseInsensitive: true,
-		Mode: Mode{
-			Keywords: Keywords{
-				"$pattern": "[A-Z_][A-Z0-9_.]*",
-				"keyword":  "HEADER ENDSEC DATA",
-			},
-			Contains: []*Mode{
-				{ClassName: "meta", Begin: `ISO-10303-21;`, HasRelevance: true, Relevance: 10},
-				{ClassName: "meta", Begin: `END-ISO-10303-21;`, HasRelevance: true, Relevance: 10},
-				CLineCommentMode,
-				CBlockCommentMode,
-				CommentMode(`/\*\*!`, `\*/`),
-				CNumberMode,
-				apos,
-				quote,
-				{ClassName: "string", Begin: `'`, End: `'`},
-				symbolBase,
-			},
+		Keywords: Keywords{
+			"$pattern": "[A-Z_][A-Z0-9_.]*",
+			"keyword":  "HEADER ENDSEC DATA",
+		},
+		Contains: []*Mode{
+			{ClassName: "meta", Begin: `ISO-10303-21;`, HasRelevance: true, Relevance: 10},
+			{ClassName: "meta", Begin: `END-ISO-10303-21;`, HasRelevance: true, Relevance: 10},
+			CLineCommentMode,
+			CBlockCommentMode,
+			CommentMode(`/\*\*!`, `\*/`),
+			CNumberMode,
+			apos,
+			quote,
+			{ClassName: "string", Begin: `'`, End: `'`},
+			symbolBase,
 		},
 	}
 }

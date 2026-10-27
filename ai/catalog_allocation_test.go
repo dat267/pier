@@ -16,7 +16,7 @@ func TestCatalogDecodeAllocationBudget(t *testing.T) {
 	const count = 64
 	var input strings.Builder
 	input.WriteString(`{"providers":{"test":{"openai-completions":{`)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		if i > 0 {
 			input.WriteByte(',')
 		}

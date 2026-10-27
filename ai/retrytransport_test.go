@@ -16,7 +16,6 @@ func TestTransportAbortsAreRetryable(t *testing.T) {
 		"unexpected EOF",
 	}
 	for _, message := range messages {
-		message := message
 		response := &AssistantMessage{StopReason: StopError, ErrorMessage: &message}
 		if !IsRetryableAssistantError(response) {
 			t.Errorf("a dead socket was not retried: %q", message)
@@ -54,7 +53,6 @@ func TestBusyAndCanceledStreamErrorsAreRetryable(t *testing.T) {
 		"The pending stream has been canceled (cause: null)",
 	}
 	for _, message := range messages {
-		message := message
 		response := &AssistantMessage{StopReason: StopError, ErrorMessage: &message}
 		if !IsRetryableAssistantError(response) {
 			t.Errorf("a transient provider error was not retried: %q", message)
@@ -83,7 +81,6 @@ func TestHTTP2StreamErrorsAreRetryable(t *testing.T) {
 		`http2: server sent GOAWAY and closed the connection`,
 	}
 	for _, message := range messages {
-		message := message
 		response := &AssistantMessage{StopReason: StopError, ErrorMessage: &message}
 		if !IsRetryableAssistantError(response) {
 			t.Errorf("an HTTP/2 stream reset was not retried: %q", message)
@@ -100,7 +97,6 @@ func TestTemporaryServiceAndForwardedStreamErrorsAreRetryable(t *testing.T) {
 		"Unable to forward upstream stream",
 	}
 	for _, message := range messages {
-		message := message
 		response := &AssistantMessage{StopReason: StopError, ErrorMessage: &message}
 		if !IsRetryableAssistantError(response) {
 			t.Errorf("a transient provider error was not retried: %q", message)
@@ -113,7 +109,6 @@ func TestChatGPTSubscriptionUnavailableIsRetryable(t *testing.T) {
 		"subscription_sharing_usage_unavailable",
 		"subscription_sharing_user_unavailable",
 	} {
-		message := message
 		response := &AssistantMessage{StopReason: StopError, ErrorMessage: &message}
 		if !IsRetryableAssistantError(response) {
 			t.Errorf("a ChatGPT subscription unavailability error was not retried: %q", message)

@@ -75,7 +75,7 @@ func TestTruncateTailLinesMatchesTruncateTail(t *testing.T) {
 func TestTruncateTailLinesDoesNotJoinTheTailProbe(t *testing.T) {
 	lines := make([]string, 0, 5000)
 	total := 0
-	for i := 0; i < 5000; i++ {
+	for i := range 5000 {
 		line := fmt.Sprintf("line %d of the build log", i)
 		lines = append(lines, line)
 		total += len(line) + 1

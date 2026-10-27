@@ -16,7 +16,7 @@ func TestTerminalImageGoldens(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, line := range strings.Split(strings.TrimSuffix(string(data), "\n"), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSuffix(string(data), "\n"), "\n") {
 		label, encoded, ok := strings.Cut(line, " => ")
 		if !ok {
 			t.Fatalf("bad golden line: %q", line)

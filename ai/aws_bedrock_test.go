@@ -218,21 +218,21 @@ func TestBedrockCredentialsResolution(t *testing.T) {
 func TestBedrockBearerTokenResolution(t *testing.T) {
 	// An explicit option wins over the environment.
 	token, use, skip := ResolveBedrockBearerToken(&BedrockOptions{
-		StreamOptions: StreamOptions{APIKey: "option-token", Env: ProviderEnv{"AWS_BEARER_TOKEN_BEDROCK": "env-token"}},
+		APIKey: "option-token", Env: ProviderEnv{"AWS_BEARER_TOKEN_BEDROCK": "env-token"},
 	})
 	if token != "option-token" || !use || skip {
 		t.Fatalf("token = %q use = %v skip = %v", token, use, skip)
 	}
 	// The environment fallback.
 	token, use, _ = ResolveBedrockBearerToken(&BedrockOptions{
-		StreamOptions: StreamOptions{Env: ProviderEnv{"AWS_BEARER_TOKEN_BEDROCK": "env-token"}},
+		Env: ProviderEnv{"AWS_BEARER_TOKEN_BEDROCK": "env-token"},
 	})
 	if token != "env-token" || !use {
 		t.Fatalf("token = %q use = %v", token, use)
 	}
 	// AWS_BEDROCK_SKIP_AUTH=1 disables bearer auth.
 	token, use, skip = ResolveBedrockBearerToken(&BedrockOptions{
-		StreamOptions: StreamOptions{APIKey: "option-token", Env: ProviderEnv{"AWS_BEDROCK_SKIP_AUTH": "1"}},
+		APIKey: "option-token", Env: ProviderEnv{"AWS_BEDROCK_SKIP_AUTH": "1"},
 	})
 	if token != "option-token" || use || !skip {
 		t.Fatalf("token = %q use = %v skip = %v", token, use, skip)

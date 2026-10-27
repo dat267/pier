@@ -12,7 +12,7 @@ import (
 // streaming command. Clean text must be returned as-is.
 func TestSanitizeBinaryOutputKeepsCleanTextUnchanged(t *testing.T) {
 	lines := make([]string, 0, 2000)
-	for i := 0; i < 2000; i++ {
+	for range 2000 {
 		lines = append(lines, "build line with some tabs\tand 中文 text")
 	}
 	clean := strings.Join(lines, "\n")

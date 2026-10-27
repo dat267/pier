@@ -186,7 +186,7 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 	}
 	if usable {
 		count := 0
-		for i := 0; i < 256; i++ {
+		for i := range 256 {
 			if union[i] {
 				count++
 			}

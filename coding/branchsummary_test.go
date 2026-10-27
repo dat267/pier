@@ -15,9 +15,9 @@ import (
 func branchEntries() []SessionEntry {
 	parent := "root"
 	return []SessionEntry{
-		{Type: "message", SessionEntryBase: SessionEntryBase{ID: "root", Timestamp: "2024-01-01T00:00:00Z"},
+		{Type: "message", ID: "root", Timestamp: "2024-01-01T00:00:00Z",
 			Message: mustJSONMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "start"}})},
-		{Type: "message", SessionEntryBase: SessionEntryBase{ID: "a1", ParentID: &parent, Timestamp: "2024-01-01T00:01:00Z"},
+		{Type: "message", ID: "a1", ParentID: &parent, Timestamp: "2024-01-01T00:01:00Z",
 			Message: mustJSONMessage(&ai.AssistantMessage{
 				API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",
 				Content: ai.ContentList{
@@ -26,12 +26,12 @@ func branchEntries() []SessionEntry {
 				},
 				StopReason: ai.StopStop,
 			})},
-		{Type: "message", SessionEntryBase: SessionEntryBase{ID: "a2", ParentID: strPtr("a1"), Timestamp: "2024-01-01T00:02:00Z"},
+		{Type: "message", ID: "a2", ParentID: new("a1"), Timestamp: "2024-01-01T00:02:00Z",
 			Message: mustJSONMessage(&ai.ToolResultMessage{
 				ToolCallID: "call-1", ToolName: "read",
 				Content: ai.UserContentList{ai.TextContent{Text: "file body"}},
 			})},
-		{Type: "message", SessionEntryBase: SessionEntryBase{ID: "a3", ParentID: strPtr("a2"), Timestamp: "2024-01-01T00:03:00Z"},
+		{Type: "message", ID: "a3", ParentID: new("a2"), Timestamp: "2024-01-01T00:03:00Z",
 			Message: mustJSONMessage(&ai.AssistantMessage{
 				API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",
 				Content: ai.ContentList{

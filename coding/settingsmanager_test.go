@@ -638,7 +638,7 @@ func TestSettingsMigrations(t *testing.T) {
 func TestSettingsDeepMerge(t *testing.T) {
 	enabled := false
 	base := &Settings{
-		Compaction: &SettingsCompaction{Enabled: &enabled, ReserveTokens: int64Ptr(100)},
+		Compaction: &SettingsCompaction{Enabled: &enabled, ReserveTokens: new(int64(100))},
 		Extensions: []string{"/a"},
 	}
 	keepRecent := int64(50)
@@ -661,8 +661,6 @@ func TestSettingsDeepMerge(t *testing.T) {
 		t.Fatalf("extensions = %#v", merged.Extensions)
 	}
 }
-
-func int64Ptr(value int64) *int64 { return &value }
 
 func TestSettingsCompactionTokenResolution(t *testing.T) {
 	manager := NewInMemorySettingsManager(nil, SettingsManagerCreateOptions{})
@@ -697,7 +695,7 @@ func TestSettingsCompactionTokenResolution(t *testing.T) {
 }
 
 func TestSettingsManagerInMemoryRoundTrip(t *testing.T) {
-	manager := NewInMemorySettingsManager(&Settings{Theme: strPtr("dark")}, SettingsManagerCreateOptions{})
+	manager := NewInMemorySettingsManager(&Settings{Theme: new("dark")}, SettingsManagerCreateOptions{})
 	manager.SetDefaultModelAndProvider("anthropic", "claude-opus-4-8")
 	manager.SetModelThinkingLevel("anthropic", "claude-opus-4-8", "high")
 	if level := manager.GetModelThinkingLevel("anthropic", "claude-opus-4-8"); level == nil || *level != "high" {
@@ -727,8 +725,6 @@ func TestSettingsManagerInMemoryRoundTrip(t *testing.T) {
 		t.Fatalf("global theme = %v", global.Theme)
 	}
 }
-
-func strPtr(value string) *string { return &value }
 
 // SetX hands persistence to the off-loop queue: the calling goroutine (the UI
 // loop in interactive mode) must not wait on the storage lock, whose retries

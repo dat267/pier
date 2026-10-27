@@ -149,12 +149,11 @@ func RequestRadiusOAuthToken(ctx context.Context, gateway string, fields map[str
 	if payload.Scope != "" {
 		extra["scope"] = jsonRawString(payload.Scope)
 	}
-	return &OAuthCredential{OAuthCredentials: OAuthCredentials{
+	return &OAuthCredential{
 		Access:  payload.AccessToken,
 		Refresh: payload.RefreshToken,
 		Expires: time.Now().UnixMilli() + payload.ExpiresIn*1000 - radiusTokenSkewMS,
-		Extra:   extra,
-	}}, nil
+		Extra:   extra}, nil
 }
 
 // RadiusCallbackServer is the Radius loopback callback server. When the fixed

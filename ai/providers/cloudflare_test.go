@@ -179,7 +179,7 @@ func TestCloudflareStreamsResolveModelBeforeDispatch(t *testing.T) {
 	// The simple path resolves too.
 	seen = nil
 	wrapped.StreamSimple(model, ai.TranscriptContext{}, &ai.SimpleStreamOptions{
-		StreamOptions: ai.StreamOptions{Env: ai.ProviderEnv{CloudflareAccountIDEnv: "acct2"}},
+		Env: ai.ProviderEnv{CloudflareAccountIDEnv: "acct2"},
 	})
 	if seen == nil || !strings.Contains(seen.BaseURL, "/accounts/acct2/") {
 		t.Fatalf("model = %+v", seen)

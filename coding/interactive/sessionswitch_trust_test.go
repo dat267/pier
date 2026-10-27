@@ -42,8 +42,8 @@ func projectThemeOf(manager *coding.SettingsManager) string {
 func TestSwitchResolvesProjectTrustForTheNewCwd(t *testing.T) {
 	decisions := map[string]*bool{
 		"undecided":           nil,
-		"store says trust":    boolRef(true),
-		"store says no trust": boolRef(false),
+		"store says trust":    new(true),
+		"store says no trust": new(false),
 		"override":            nil, // with --approve below
 	}
 	for _, name := range []string{"undecided", "store says trust", "store says no trust", "override"} {
@@ -89,8 +89,6 @@ func expectedProjectTheme(trusted bool) string {
 	return ""
 }
 
-func boolRef(value bool) *bool { return &value }
-
 // A switch within the same project must not re-resolve anything: the project's
 // trust was decided at startup, and re-asking the store here could only disagree
 // with what the user already answered.
@@ -101,7 +99,7 @@ func TestSwitchWithinTheSameCwdKeepsTheTrustDecision(t *testing.T) {
 
 	target := makePersistedSession(t, cwd, "same project")
 	store := coding.NewProjectTrustStore(app.options.AgentDir)
-	if err := store.Set(cwd, boolRef(false)); err != nil {
+	if err := store.Set(cwd, new(false)); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := app.switchSession(context.Background(), target.GetSessionFile(), ""); err != nil {
@@ -130,7 +128,7 @@ func TestSwitchReusesTheTrustDecisionPerProject(t *testing.T) {
 	}
 
 	// A decision for that project appears after the fact...
-	if err := coding.NewProjectTrustStore(app.options.AgentDir).Set(first, boolRef(true)); err != nil {
+	if err := coding.NewProjectTrustStore(app.options.AgentDir).Set(first, new(true)); err != nil {
 		t.Fatal(err)
 	}
 	// ...and a switch away and back must not pick it up: the answer is already

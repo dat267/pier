@@ -119,7 +119,7 @@ func parseSemver(value string) (semver, bool) {
 }
 
 func validPrereleaseIdentifiers(value string) bool {
-	for _, identifier := range strings.Split(value, ".") {
+	for identifier := range strings.SplitSeq(value, ".") {
 		if identifier == "" {
 			return false
 		}
@@ -140,7 +140,7 @@ func validPrereleaseIdentifiers(value string) bool {
 }
 
 func validBuildIdentifiers(value string) bool {
-	for _, identifier := range strings.Split(value, ".") {
+	for identifier := range strings.SplitSeq(value, ".") {
 		if identifier == "" {
 			return false
 		}
@@ -200,11 +200,8 @@ func (v semver) compare(other semver) int {
 	if len(other.prerelease) == 0 {
 		return -1
 	}
-	length := len(v.prerelease)
-	if len(other.prerelease) < length {
-		length = len(other.prerelease)
-	}
-	for index := 0; index < length; index++ {
+	length := min(len(other.prerelease), len(v.prerelease))
+	for index := range length {
 		left, right := v.prerelease[index], other.prerelease[index]
 		leftNumeric, rightNumeric := isSemverNumeric(left), isSemverNumeric(right)
 		switch {

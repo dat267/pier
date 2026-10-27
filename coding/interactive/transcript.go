@@ -3,6 +3,8 @@ package interactive
 import (
 	"context"
 	"encoding/json"
+	"maps"
+	"slices"
 	"sort"
 	"strconv"
 	"sync"
@@ -422,10 +424,7 @@ func (r *TranscriptRenderer) RenderSessionItems(items []RenderSessionItem, updat
 		r.Chat = realChat
 
 		children := collector.Children
-		cut := len(children) - lazyTranscriptWindowComponents
-		if cut < 0 {
-			cut = 0
-		}
+		cut := max(len(children)-lazyTranscriptWindowComponents, 0)
 		r.deferredComponents = children[:cut:cut]
 		for _, component := range children[cut:] {
 			realChat.AddChild(component)
@@ -681,9 +680,7 @@ func (r *TranscriptRenderer) renderSessionItems(items []RenderSessionItem, updat
 		r.AddMessageToChat(item.Message, populateHistory)
 	}
 
-	for toolCallID, component := range renderedPendingTools {
-		r.pendingTools[toolCallID] = component
-	}
+	maps.Copy(r.pendingTools, renderedPendingTools)
 	r.requestRender()
 }
 
@@ -879,8 +876,8 @@ func (r *TranscriptRenderer) MaybeShowThinkingDropNotice(message *ai.AssistantMe
 
 	previousDroppedCount := 0
 	branch := r.SessionInfo.GetBranch("")
-	for index := len(branch) - 1; index >= 0; index-- {
-		entry := branch[index]
+	for _, entry := range slices.Backward(branch) {
+
 		if entry.Type != "message" || len(entry.Message) == 0 {
 			continue
 		}

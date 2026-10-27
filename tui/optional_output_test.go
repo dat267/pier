@@ -48,7 +48,7 @@ func TestOptionalMetadataDoesNotGrowBlockedConsoleFIFO(t *testing.T) {
 		prefix := strings.Repeat("x", 256*1024)
 		terminal.Write(prefix)
 		synctest.Wait()
-		for i := 0; i < 64; i++ {
+		for i := range 64 {
 			terminal.SetTitle("title" + strconv.Itoa(i))
 			terminal.SetProgress(true)
 		}

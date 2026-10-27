@@ -2,6 +2,7 @@ package coding
 
 import (
 	"encoding/json"
+	"slices"
 
 	"github.com/dat267/pier/ai"
 )
@@ -160,15 +161,13 @@ func (m *SessionManager) MessageEntryID(message ai.Message) string {
 	m.mu.Lock()
 	path := m.branchPointersLocked("")
 	m.mu.Unlock()
-	for index := len(path) - 1; index >= 0; index-- {
-		entry := path[index]
+	for _, entry := range slices.Backward(path) {
+
 		if entry.Type != "message" {
 			continue
 		}
-		for _, candidate := range m.messages.messages(entry) {
-			if candidate == message {
-				return entry.ID
-			}
+		if slices.Contains(m.messages.messages(entry), message) {
+			return entry.ID
 		}
 	}
 	return ""
@@ -254,8 +253,8 @@ func contextEntryYieldsMessage(entry *SessionEntry) bool {
 // scans the path forward and lets later entries win, so the answer is the last
 // model_change entry or assistant message.
 func contextModelRef(path []*SessionEntry) (provider string, modelID string) {
-	for i := len(path) - 1; i >= 0; i-- {
-		entry := path[i]
+	for _, entry := range slices.Backward(path) {
+
 		switch entry.Type {
 		case "model_change":
 			return entry.Provider, entry.ModelID

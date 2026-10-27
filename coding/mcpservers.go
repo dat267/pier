@@ -2,8 +2,10 @@ package coding
 
 import (
 	"fmt"
+	"maps"
 	"net/url"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -189,12 +191,7 @@ func IsLoopbackRedirectURI(value string) bool {
 
 func isMcpLoopbackHost(host string) bool {
 	host = strings.ToLower(strings.Trim(host, "[]"))
-	for _, candidate := range mcpLoopbackHosts {
-		if host == candidate {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(mcpLoopbackHosts, host)
 }
 
 // mcpToolPatternRegexp compiles a `*`-pattern into an anchored regexp (upstream
@@ -487,9 +484,7 @@ func validateMcpOAuth(value any) (*McpOAuthConfig, string) {
 // resolveExposureAliases).
 func resolveMcpExposureAliases(value map[string]any) map[string]any {
 	resolved := make(map[string]any, len(value))
-	for key, entry := range value {
-		resolved[key] = entry
-	}
+	maps.Copy(resolved, value)
 	if exposure, ok := value["exposure"]; ok {
 		resolved["exposure"] = resolveMcpExposureAlias(exposure)
 	}

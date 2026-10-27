@@ -40,7 +40,7 @@ func TestSessionTimestampsMatchJavaScriptISOShape(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, line := range strings.Split(strings.TrimRight(string(data), "\n"), "\n") {
+	for line := range strings.SplitSeq(strings.TrimRight(string(data), "\n"), "\n") {
 		entry, err := UnmarshalFileEntry(line)
 		if err != nil {
 			t.Fatalf("parse %q: %v", line, err)

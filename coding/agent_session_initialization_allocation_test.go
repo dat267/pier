@@ -15,8 +15,8 @@ func TestAgentSessionInitializationDoesNotCopyHistory(t *testing.T) {
 	cwd := t.TempDir()
 	entries := make([]FileEntry, count+1)
 	entries[0].Header = &SessionHeader{Version: &version, ID: "session", Cwd: cwd}
-	for i := 0; i < count; i++ {
-		entries[i+1].Entry = &SessionEntry{Type: "custom", SessionEntryBase: SessionEntryBase{ID: fmt.Sprint(i)}, CustomType: "test"}
+	for i := range count {
+		entries[i+1].Entry = &SessionEntry{Type: "custom", ID: fmt.Sprint(i), CustomType: "test"}
 	}
 	manager := InMemorySession(cwd, nil, entries)
 	config := &SessionConfig{Cwd: cwd, Sessions: manager, StreamFn: mockSessionStreamFn()}

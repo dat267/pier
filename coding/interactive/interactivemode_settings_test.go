@@ -115,7 +115,7 @@ func TestSettingsConfigAssembly(t *testing.T) {
 	settings.SetFullscreenScrollbar("hidden")
 	settings.SetFullscreenCopyOnSelect(false)
 	settings.SetFullscreenWheelScrollLines(tui.FixedWheelScrollLines(5))
-	settings.SetWarnings(coding.SettingsWarnings{AnthropicExtraUsage: boolPtr(false)})
+	settings.SetWarnings(coding.SettingsWarnings{AnthropicExtraUsage: new(false)})
 	session.model = &ai.Model{ID: "claude-x", Provider: "anthropic", Reasoning: true}
 	session.models = []*ai.Model{session.model}
 
@@ -298,7 +298,7 @@ func TestSettingsCallbacks(t *testing.T) {
 	if settings.GetFullscreenWheelScrollLines() != tui.FixedWheelScrollLines(2) {
 		t.Fatalf("wheel scroll lines = %#v", settings.GetFullscreenWheelScrollLines())
 	}
-	callbacks.OnWarningsChange(WarningSettings{AnthropicExtraUsage: boolPtr(false)})
+	callbacks.OnWarningsChange(WarningSettings{AnthropicExtraUsage: new(false)})
 	if warnings := settings.GetWarnings(); warnings.AnthropicExtraUsage == nil || *warnings.AnthropicExtraUsage {
 		t.Fatalf("warnings = %+v", warnings)
 	}

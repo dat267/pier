@@ -28,14 +28,12 @@ func Diff() *Language {
 	return &Language{
 		Name:    "Diff",
 		Aliases: []string{"patch"},
-		Mode: Mode{
-			Contains: []*Mode{
-				meta,
-				comment,
-				{ClassName: "addition", Begin: `^\+`, End: `$`},
-				{ClassName: "deletion", Begin: `^-`, End: `$`},
-				{ClassName: "addition", Begin: `^!`, End: `$`},
-			},
+		Contains: []*Mode{
+			meta,
+			comment,
+			{ClassName: "addition", Begin: `^\+`, End: `$`},
+			{ClassName: "deletion", Begin: `^-`, End: `$`},
+			{ClassName: "addition", Begin: `^!`, End: `$`},
 		},
 	}
 }

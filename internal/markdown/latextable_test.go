@@ -1,6 +1,7 @@
 package markdown
 
 import (
+	"slices"
 	"strings"
 	"testing"
 )
@@ -102,10 +103,5 @@ func TestRendererUnclosedMathBeforeTable(t *testing.T) {
 }
 
 func containsKind(kinds []BlockKind, want BlockKind) bool {
-	for _, kind := range kinds {
-		if kind == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(kinds, want)
 }

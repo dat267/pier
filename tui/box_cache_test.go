@@ -8,7 +8,7 @@ import (
 
 func makeWarmBox(lines int) *Box {
 	var sb strings.Builder
-	for i := 0; i < lines; i++ {
+	for i := range lines {
 		fmt.Fprintf(&sb, "line %d\n", i)
 	}
 	box := NewBox(1, 1, func(text string) string { return "<bg>" + text + "</bg>" })
@@ -78,7 +78,7 @@ func BenchmarkBoxWarmRender(b *testing.B) {
 func TestBoxReappliesBackgroundOnlyToTheChangedSuffix(t *testing.T) {
 	calls := 0
 	var sb strings.Builder
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		fmt.Fprintf(&sb, "line %d\n", i)
 	}
 	body := strings.TrimSuffix(sb.String(), "\n")
@@ -109,7 +109,7 @@ func TestBoxReusesPrefixForAnInPlaceContainerChange(t *testing.T) {
 	calls := 0
 	container := &Container{}
 	var sb strings.Builder
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		fmt.Fprintf(&sb, "line %d\n", i)
 	}
 	container.AddChild(NewText(strings.TrimSuffix(sb.String(), "\n"), 0, 0, nil))

@@ -322,7 +322,7 @@ func TestMainScreenTermuxHeightChange(t *testing.T) {
 
 		steps := []mainScreenStep{
 			{Lines: []string{"a", "b", "c", "d"}},
-			{Lines: []string{"a", "b", "c", "d"}, Rows: intPtr(3)},
+			{Lines: []string{"a", "b", "c", "d"}, Rows: new(3)},
 		}
 		var writes []string
 		for _, step := range steps {

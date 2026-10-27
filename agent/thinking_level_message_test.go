@@ -18,9 +18,9 @@ func TestAssistantMessageRecordsRequestedThinkingLevel(t *testing.T) {
 			[]ai.Message{createUserMessage("hi")},
 			AgentContext{},
 			&AgentLoopConfig{
-				Model:               createModel(),
-				ConvertToLlm:        identityConverter,
-				SimpleStreamOptions: ai.SimpleStreamOptions{Reasoning: level},
+				Model:        createModel(),
+				ConvertToLlm: identityConverter,
+				Reasoning:    level,
 			},
 			context.Background(),
 			func(AgentEvent) error { return nil },

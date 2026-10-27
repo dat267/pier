@@ -205,7 +205,7 @@ func TestTypingLatencyDuringToolCall(t *testing.T) {
 	defer cleanup()
 
 	// A transcript with history, so the paint has real work to do.
-	for i := 0; i < 120; i++ {
+	for i := range 120 {
 		app.events.HandleEvent(&coding.SessionEvent{
 			Type: coding.SessionMessageStart,
 			Agent: agentEvent("message_start", &ai.UserMessage{

@@ -19,16 +19,15 @@ func TestImageRequestIdentityHeaders(t *testing.T) {
 			}))
 			defer server.Close()
 			model := &ImagesModel{ID: "image-model", API: KnownImagesApiOpenRouter, Provider: "openrouter", BaseURL: server.URL}
-			options := &ImagesOptions{StreamOptions: StreamOptions{
-				APIKey: "token", Identity: &ClientIdentity{UserAgent: "image-agent", Attribution: PIAttribution},
-			}}
+			options := &ImagesOptions{
+				APIKey: "token", Identity: &ClientIdentity{UserAgent: "image-agent", Attribution: PIAttribution}}
 			wantAgent, wantTitle := "image-agent", "pi"
 			if mode != "identity" {
 				model.Headers = map[string]string{"User-Agent": "model-agent", "X-OpenRouter-Title": "model-title"}
 				wantAgent, wantTitle = "model-agent", "model-title"
 			}
 			if mode == "request override" {
-				options.Headers = ProviderHeaders{"user-agent": strPtr("request-agent"), "x-openrouter-title": strPtr("request-title")}
+				options.Headers = ProviderHeaders{"user-agent": new("request-agent"), "x-openrouter-title": new("request-title")}
 				wantAgent, wantTitle = "request-agent", "request-title"
 			}
 			if mode == "remove" {

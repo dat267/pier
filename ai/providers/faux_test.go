@@ -3,6 +3,7 @@ package providers
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"testing"
 	"time"
 
@@ -45,7 +46,7 @@ func TestFauxEstimatesUsage(t *testing.T) {
 	model := core.GetModel("")
 
 	ctx := ai.Context{
-		SystemPrompt: strPtr("Be concise."),
+		SystemPrompt: new("Be concise."),
 		Messages:     []ai.Message{fauxUserMsg("hi there", time.Now().UnixMilli())},
 	}
 	response := fauxComplete(t, core, model, ctx, nil)
@@ -63,8 +64,6 @@ func TestFauxEstimatesUsage(t *testing.T) {
 		t.Fatalf("callCount = %d; want 1", core.State().CallCount)
 	}
 }
-
-func strPtr(s string) *string { return &s }
 
 func TestFauxHelperBlocks(t *testing.T) {
 	core := NewFauxCore(FauxOptions{})
@@ -276,7 +275,7 @@ func TestFauxEstimatesPromptAndOutputTokensFromSerializedContext(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := ai.Context{
-		SystemPrompt: strPtr("sys"),
+		SystemPrompt: new("sys"),
 		Messages: []ai.Message{
 			&ai.UserMessage{
 				Content: ai.StringOrBlocks{Blocks: ai.ContentList{
@@ -330,14 +329,14 @@ func TestFauxCacheIsolation(t *testing.T) {
 	ctx := ai.Context{Messages: []ai.Message{fauxUserMsg("hello", 1)}}
 	model := core.GetModel("")
 
-	first := fauxComplete(t, core, model, ctx, &ai.SimpleStreamOptions{StreamOptions: ai.StreamOptions{SessionID: "session-1", CacheRetention: ai.CacheRetentionShort}})
+	first := fauxComplete(t, core, model, ctx, &ai.SimpleStreamOptions{SessionID: "session-1", CacheRetention: ai.CacheRetentionShort})
 	if first.Usage.CacheWrite <= 0 {
 		t.Fatalf("first cacheWrite = %d", first.Usage.CacheWrite)
 	}
 	ctx.Messages = append(ctx.Messages, first)
 	ctx.Messages = append(ctx.Messages, fauxUserMsg("follow up", 2))
 
-	second := fauxComplete(t, core, model, ctx, &ai.SimpleStreamOptions{StreamOptions: ai.StreamOptions{SessionID: "session-2", CacheRetention: ai.CacheRetentionShort}})
+	second := fauxComplete(t, core, model, ctx, &ai.SimpleStreamOptions{SessionID: "session-2", CacheRetention: ai.CacheRetentionShort})
 	if second.Usage.CacheRead != 0 || second.Usage.CacheWrite <= 0 {
 		t.Fatalf("second cache = %d/%d", second.Usage.CacheRead, second.Usage.CacheWrite)
 	}
@@ -355,19 +354,19 @@ func TestFauxPromptCachingPerSession(t *testing.T) {
 		{Message: FauxAssistantMessage("second", FauxMessageOptions{})},
 	})
 	ctx := ai.Context{
-		SystemPrompt: strPtr("Be concise."),
+		SystemPrompt: new("Be concise."),
 		Messages:     []ai.Message{fauxUserMsg("hello", 1)},
 	}
 	model := core.GetModel("")
 
-	first := fauxComplete(t, core, model, ctx, &ai.SimpleStreamOptions{StreamOptions: ai.StreamOptions{SessionID: "session-1", CacheRetention: ai.CacheRetentionShort}})
+	first := fauxComplete(t, core, model, ctx, &ai.SimpleStreamOptions{SessionID: "session-1", CacheRetention: ai.CacheRetentionShort})
 	if first.Usage.CacheRead != 0 || first.Usage.CacheWrite <= 0 {
 		t.Fatalf("first cache = %d/%d", first.Usage.CacheRead, first.Usage.CacheWrite)
 	}
 	ctx.Messages = append(ctx.Messages, first)
 	ctx.Messages = append(ctx.Messages, fauxUserMsg("follow up", 2))
 
-	second := fauxComplete(t, core, model, ctx, &ai.SimpleStreamOptions{StreamOptions: ai.StreamOptions{SessionID: "session-1", CacheRetention: ai.CacheRetentionShort}})
+	second := fauxComplete(t, core, model, ctx, &ai.SimpleStreamOptions{SessionID: "session-1", CacheRetention: ai.CacheRetentionShort})
 	if second.Usage.CacheRead <= 0 {
 		t.Fatalf("second cacheRead = %d; want > 0", second.Usage.CacheRead)
 	}
@@ -385,7 +384,7 @@ func TestFauxPromptCacheCountsToFirstDifference(t *testing.T) {
 	})
 	model := core.GetModel("")
 	options := func() *ai.SimpleStreamOptions {
-		return &ai.SimpleStreamOptions{StreamOptions: ai.StreamOptions{SessionID: "session-1", CacheRetention: ai.CacheRetentionShort}}
+		return &ai.SimpleStreamOptions{SessionID: "session-1", CacheRetention: ai.CacheRetentionShort}
 	}
 
 	fauxComplete(t, core, model, ai.Context{Messages: []ai.Message{fauxUserMsg("hello world", 1)}}, options())
@@ -437,10 +436,10 @@ func TestFauxNoCachingWhenRetentionNone(t *testing.T) {
 	ctx := ai.Context{Messages: []ai.Message{fauxUserMsg("hello", 1)}}
 	model := core.GetModel("")
 
-	fauxComplete(t, core, model, ctx, &ai.SimpleStreamOptions{StreamOptions: ai.StreamOptions{SessionID: "session-1", CacheRetention: ai.CacheRetentionNone}})
+	fauxComplete(t, core, model, ctx, &ai.SimpleStreamOptions{SessionID: "session-1", CacheRetention: ai.CacheRetentionNone})
 	ctx.Messages = append(ctx.Messages, FauxAssistantMessage("first", FauxMessageOptions{}))
 	ctx.Messages = append(ctx.Messages, fauxUserMsg("follow up", 2))
-	second := fauxComplete(t, core, model, ctx, &ai.SimpleStreamOptions{StreamOptions: ai.StreamOptions{SessionID: "session-1", CacheRetention: ai.CacheRetentionNone}})
+	second := fauxComplete(t, core, model, ctx, &ai.SimpleStreamOptions{SessionID: "session-1", CacheRetention: ai.CacheRetentionNone})
 	if second.Usage.CacheRead != 0 || second.Usage.CacheWrite != 0 {
 		t.Fatalf("cache = %d/%d; want 0/0", second.Usage.CacheRead, second.Usage.CacheWrite)
 	}
@@ -468,12 +467,7 @@ func TestFauxStreamsDeltas(t *testing.T) {
 	}
 
 	contains := func(list []string, want string) bool {
-		for _, v := range list {
-			if v == want {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(list, want)
 	}
 	for _, want := range []string{"thinking_start", "thinking_delta", "text_start", "text_delta", "toolcall_start", "toolcall_delta", "toolcall_end"} {
 		if !contains(events, want) {
@@ -589,7 +583,7 @@ func TestFauxAbortBeforeFirstChunk(t *testing.T) {
 	cancel()
 	events := fauxCollectEvents(t, core.Stream(core.GetModel(""),
 		ai.NormalizeContext(ai.Context{Messages: []ai.Message{fauxUserMsg("hi", 1)}}),
-		&ai.SimpleStreamOptions{StreamOptions: ai.StreamOptions{Ctx: ctx}}))
+		&ai.SimpleStreamOptions{Ctx: ctx}))
 	if len(events) != 1 {
 		t.Fatalf("events = %d; want 1", len(events))
 	}
@@ -607,7 +601,7 @@ func TestFauxAbortMidTextStream(t *testing.T) {
 	textDeltaCount := 0
 	stream := core.Stream(core.GetModel(""),
 		ai.NormalizeContext(ai.Context{Messages: []ai.Message{fauxUserMsg("hi", 1)}}),
-		&ai.SimpleStreamOptions{StreamOptions: ai.StreamOptions{Ctx: ctx}})
+		&ai.SimpleStreamOptions{Ctx: ctx})
 	for {
 		event, ok := stream.Next(context.Background())
 		if !ok {
@@ -641,7 +635,7 @@ func TestFauxAbortMidThinkingStream(t *testing.T) {
 	thinkingDeltaCount := 0
 	stream := core.Stream(core.GetModel(""),
 		ai.NormalizeContext(ai.Context{Messages: []ai.Message{fauxUserMsg("hi", 1)}}),
-		&ai.SimpleStreamOptions{StreamOptions: ai.StreamOptions{Ctx: ctx}})
+		&ai.SimpleStreamOptions{Ctx: ctx})
 	for {
 		event, ok := stream.Next(context.Background())
 		if !ok {
@@ -676,7 +670,7 @@ func TestFauxAbortMidToolcallStream(t *testing.T) {
 	toolCallDeltaCount := 0
 	stream := core.Stream(core.GetModel(""),
 		ai.NormalizeContext(ai.Context{Messages: []ai.Message{fauxUserMsg("hi", 1)}}),
-		&ai.SimpleStreamOptions{StreamOptions: ai.StreamOptions{Ctx: ctx}})
+		&ai.SimpleStreamOptions{Ctx: ctx})
 	for {
 		event, ok := stream.Next(context.Background())
 		if !ok {
@@ -700,10 +694,5 @@ func TestFauxAbortMidToolcallStream(t *testing.T) {
 }
 
 func containsString(list []string, want string) bool {
-	for _, v := range list {
-		if v == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(list, want)
 }

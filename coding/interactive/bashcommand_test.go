@@ -331,7 +331,7 @@ func TestBashFrameJoinsTheTranscriptWhileTheModelStreams(t *testing.T) {
 	waitUntil(5*time.Second, "the session to start streaming", func() bool { return app.session.IsStreaming() })
 
 	var output strings.Builder
-	for i := 0; i < 30; i++ {
+	for range 30 {
 		output.WriteString("dua output line\n")
 	}
 	command := "sleep 0.3\ncat <<'EOF'\n" + output.String() + "EOF"

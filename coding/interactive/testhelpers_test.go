@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"encoding/json"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -78,12 +79,7 @@ func assertPanics(t *testing.T, label string, fn func()) {
 }
 
 func containsString(values []string, value string) bool {
-	for _, candidate := range values {
-		if candidate == value {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, value)
 }
 
 func mustParseJSON(t *testing.T, text string) any {

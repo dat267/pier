@@ -42,11 +42,9 @@ func JSON() *Language {
 	arrayValue.Contains = types
 
 	return &Language{
-		Name: "JSON",
-		Mode: Mode{
-			Keywords: literals,
-			Illegal:  `\S`,
-			Contains: types,
-		},
+		Name:     "JSON",
+		Keywords: literals,
+		Illegal:  `\S`,
+		Contains: types,
 	}
 }

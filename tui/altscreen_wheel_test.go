@@ -15,7 +15,7 @@ func (c *wheelRecorder) HandleMouse(event TuiMouseEvent) *TuiMouseDispatchResult
 		return nil
 	}
 	c.deltas = append(c.deltas, event.WheelDelta)
-	return &TuiMouseDispatchResult{TuiMouseEventResult: TuiMouseEventResult{Handled: true}}
+	return &TuiMouseDispatchResult{Handled: true}
 }
 
 type focusedWheelOverlay struct {
@@ -44,7 +44,7 @@ func TestAltScreenUnhandledWheelScrollsBehindFocusedOverlay(t *testing.T) {
 	}
 
 	overlay := &focusedWheelOverlay{}
-	screen.ShowOverlay(overlay, &OverlayOptions{Anchor: OverlayAnchorTopLeft, Width: intPtr(10)})
+	screen.ShowOverlay(overlay, &OverlayOptions{Anchor: OverlayAnchorTopLeft, Width: new(10)})
 	screen.HandleTerminalInput("\x1b[<64;3;1M")
 
 	if got := screen.ViewportTop(); got >= before {

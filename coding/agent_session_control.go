@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -50,9 +51,6 @@ type ModelCycleResult struct {
 	ThinkingLevel ai.ThinkingLevel
 	IsScoped      bool
 }
-
-// agentTool aliases the agent tool type for the control surface.
-type agentTool = agent.AgentTool
 
 // AgentSessionControl holds the optional runtime collaborators and mutation
 // state ported here.
@@ -776,13 +774,7 @@ func (s *AgentSession) SetThinkingLevel(level ai.ThinkingLevel, optionList ...Mo
 	}
 	available := s.GetAvailableThinkingLevels()
 	effective := level
-	found := false
-	for _, candidate := range available {
-		if candidate == level {
-			found = true
-			break
-		}
-	}
+	found := slices.Contains(available, level)
 	if !found {
 		effective = s.clampThinkingLevel(level)
 	}
@@ -883,8 +875,8 @@ func (s *AgentSession) emitModelSelect(model, previous *ai.Model, source string)
 // when there is none (port of getLastAssistantText).
 func (s *AgentSession) GetLastAssistantText() string {
 	messages := s.Messages()
-	for index := len(messages) - 1; index >= 0; index-- {
-		assistant, ok := messages[index].(*ai.AssistantMessage)
+	for _, message := range slices.Backward(messages) {
+		assistant, ok := message.(*ai.AssistantMessage)
 		if !ok {
 			continue
 		}

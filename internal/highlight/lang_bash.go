@@ -1,5 +1,7 @@
 package highlight
 
+import "strings"
+
 func init() { RegisterLanguage("bash", Bash()) }
 
 // Bash returns the Bash language definition (a port of languages/bash.js).
@@ -97,33 +99,31 @@ func Bash() *Language {
 	}
 
 	return &Language{
-		Name:    "Bash",
-		Aliases: []string{"sh", "zsh"},
-		Mode: Mode{
-			Keywords: keywords,
-			Contains: []*Mode{
-				Shebang(binary, 10),
-				Shebang("", 0),
-				function,
-				arithmetic,
-				HashCommentMode,
-				hereDoc,
-				quoteString,
-				escapedQuote,
-				aposString,
-				varMode,
-			},
+		Name:     "Bash",
+		Aliases:  []string{"sh", "zsh"},
+		Keywords: keywords,
+		Contains: []*Mode{
+			Shebang(binary, 10),
+			Shebang("", 0),
+			function,
+			arithmetic,
+			HashCommentMode,
+			hereDoc,
+			quoteString,
+			escapedQuote,
+			aposString,
+			varMode,
 		},
 	}
 }
 
 func joinStrings(values []string, sep string) string {
-	out := ""
+	var out strings.Builder
 	for i, v := range values {
 		if i > 0 {
-			out += sep
+			out.WriteString(sep)
 		}
-		out += v
+		out.WriteString(v)
 	}
-	return out
+	return out.String()
 }

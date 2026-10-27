@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	"github.com/dat267/pier/ai"
 )
@@ -249,10 +250,8 @@ func (s *AgentSession) omitRecoveryAttempt(assistant *ai.AssistantMessage) error
 		if index > 0 {
 			target = toolResults[index-1]
 		}
-		for _, message := range agentMessages {
-			if message == target {
-				return fmt.Errorf("Cannot persist recovery omission because a projected message has no source entry")
-			}
+		if slices.Contains(agentMessages, target) {
+			return fmt.Errorf("Cannot persist recovery omission because a projected message has no source entry")
 		}
 	}
 	for _, id := range ids {

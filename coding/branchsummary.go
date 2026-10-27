@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/dat267/pier/ai"
@@ -58,9 +59,9 @@ func CollectEntriesForBranchSummary(session *SessionManager, oldLeafID, targetID
 	// targetPath is root-first: iterate backwards for the deepest common node.
 	commonAncestorID := ""
 	hasAncestor := false
-	for index := len(targetPath) - 1; index >= 0; index-- {
-		if oldPath[targetPath[index].ID] {
-			commonAncestorID = targetPath[index].ID
+	for _, t := range slices.Backward(targetPath) {
+		if oldPath[t.ID] {
+			commonAncestorID = t.ID
 			hasAncestor = true
 			break
 		}
@@ -301,9 +302,7 @@ func GenerateBranchSummary(entries []SessionEntry, options GenerateBranchSummary
 		Messages:     summarizationMessages,
 	})
 	requestOptions := &ai.SimpleStreamOptions{
-		StreamOptions: ai.StreamOptions{
-			APIKey: options.APIKey, Headers: options.Headers,
-		},
+		APIKey: options.APIKey, Headers: options.Headers,
 	}
 	if len(options.Env) > 0 {
 		requestOptions.Env = options.Env

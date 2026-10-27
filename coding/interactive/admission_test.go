@@ -33,7 +33,7 @@ func TestInputPaintsDuringBlockedClipboardBurst(t *testing.T) {
 	defer unblock()
 	burst := make(chan struct{})
 	app.ui.Post(func() {
-		for i := 0; i < 65; i++ {
+		for i := range 65 {
 			app.commands.CopyToClipboard(strconv.Itoa(i))
 		}
 		close(burst)
@@ -61,7 +61,7 @@ func TestRejectedReloadRestoresEditor(t *testing.T) {
 	release := make(chan struct{})
 	var workers sync.WaitGroup
 	defer func() { close(release); workers.Wait() }()
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		workers.Add(1)
 		app.runDetached(func(context.Context) error { defer workers.Done(); <-release; return nil })
 	}
@@ -88,7 +88,7 @@ func TestDetachedAdmissionBoundsBurstAndReportsBusy(t *testing.T) {
 	var workers sync.WaitGroup
 	defer func() { close(release); workers.Wait() }()
 	accepted := 0
-	for i := 0; i < 65; i++ {
+	for range 65 {
 		workers.Add(1)
 		if admission.runDetached(func(context.Context) error { defer workers.Done(); <-release; return nil }) {
 			accepted++
@@ -179,7 +179,7 @@ func TestThemeAdmissionKeepsOnlyNewestPendingSelection(t *testing.T) {
 	}
 	app.theme.Preview("light")
 	<-started
-	for i := 0; i < 64; i++ {
+	for range 64 {
 		app.theme.Preview("light")
 	}
 	app.theme.SetThemeSetting("dark")

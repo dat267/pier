@@ -162,19 +162,17 @@ func XML() *Language {
 			"html", "xhtml", "rss", "atom", "xjb", "xsd", "xsl", "plist", "wsf", "svg",
 		},
 		CaseInsensitive: true,
-		Mode: Mode{
-			Contains: []*Mode{
-				meta,
-				commentRule,
-				cdata,
-				entities,
-				processingInstruction,
-				styleTag,
-				scriptTag,
-				fragmentTag,
-				openTag,
-				closeTag,
-			},
+		Contains: []*Mode{
+			meta,
+			commentRule,
+			cdata,
+			entities,
+			processingInstruction,
+			styleTag,
+			scriptTag,
+			fragmentTag,
+			openTag,
+			closeTag,
 		},
 	}
 }

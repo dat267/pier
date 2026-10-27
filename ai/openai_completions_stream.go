@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 )
@@ -759,8 +760,8 @@ func outputIndexForCall(output *AssistantMessage, block *openaiStreamingToolCall
 	}
 	// Match by reference from the last known output push: fall back to the
 	// last toolcall entry.
-	for i := len(output.Content) - 1; i >= 0; i-- {
-		if _, ok := output.Content[i].(ToolCall); ok {
+	for i, v := range slices.Backward(output.Content) {
+		if _, ok := v.(ToolCall); ok {
 			return i
 		}
 	}

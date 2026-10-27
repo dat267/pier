@@ -47,50 +47,48 @@ func Haxe() *Language {
 	return &Language{
 		Name:    "Haxe",
 		Aliases: []string{"hx"},
-		Mode: Mode{
-			Keywords: Keywords{
-				"keyword": "break case cast catch continue default do dynamic else enum extern for function here if import in " +
-					"inline never new override package private get set public return static super switch this throw trace " +
-					"try typedef untyped using var while Int Float String Bool Dynamic Void Array ",
-				"built_in": "trace this",
-				"literal":  "true false null _",
+		Keywords: Keywords{
+			"keyword": "break case cast catch continue default do dynamic else enum extern for function here if import in " +
+				"inline never new override package private get set public return static super switch this throw trace " +
+				"try typedef untyped using var while Int Float String Bool Dynamic Void Array ",
+			"built_in": "trace this",
+			"literal":  "true false null _",
+		},
+		Illegal: `<//`,
+		Contains: []*Mode{
+			singleString,
+			QuoteStringMode,
+			CLineCommentMode,
+			CBlockCommentMode,
+			CNumberMode,
+			{ClassName: "meta", Begin: `@:`, End: `$`},
+			{
+				ClassName: "meta",
+				Begin:     `#`,
+				End:       `$`,
+				Keywords:  Keywords{"meta-keyword": "if else elseif end error"},
 			},
-			Illegal: `<//`,
-			Contains: []*Mode{
-				singleString,
-				QuoteStringMode,
-				CLineCommentMode,
-				CBlockCommentMode,
-				CNumberMode,
-				{ClassName: "meta", Begin: `@:`, End: `$`},
-				{
-					ClassName: "meta",
-					Begin:     `#`,
-					End:       `$`,
-					Keywords:  Keywords{"meta-keyword": "if else elseif end error"},
-				},
-				{
-					ClassName:    "type",
-					Begin:        `:[ \t]*`,
-					End:          `[^A-Za-z0-9_ \t\->]`,
-					ExcludeBegin: true,
-					ExcludeEnd:   true,
-					HasRelevance: true,
-					Relevance:    0,
-				},
-				{ClassName: "type", Begin: `:[ \t]*`, End: `\W`, ExcludeBegin: true, ExcludeEnd: true},
-				{ClassName: "type", Begin: `new *`, End: `\W`, ExcludeBegin: true, ExcludeEnd: true},
-				{ClassName: "class", BeginKeywords: "enum", End: `\{`, Contains: []*Mode{TitleMode}},
-				abstractClass,
-				classMode,
-				{
-					ClassName:     "function",
-					BeginKeywords: "function",
-					End:           `\(`,
-					ExcludeEnd:    true,
-					Illegal:       `\S`,
-					Contains:      []*Mode{TitleMode},
-				},
+			{
+				ClassName:    "type",
+				Begin:        `:[ \t]*`,
+				End:          `[^A-Za-z0-9_ \t\->]`,
+				ExcludeBegin: true,
+				ExcludeEnd:   true,
+				HasRelevance: true,
+				Relevance:    0,
+			},
+			{ClassName: "type", Begin: `:[ \t]*`, End: `\W`, ExcludeBegin: true, ExcludeEnd: true},
+			{ClassName: "type", Begin: `new *`, End: `\W`, ExcludeBegin: true, ExcludeEnd: true},
+			{ClassName: "class", BeginKeywords: "enum", End: `\{`, Contains: []*Mode{TitleMode}},
+			abstractClass,
+			classMode,
+			{
+				ClassName:     "function",
+				BeginKeywords: "function",
+				End:           `\(`,
+				ExcludeEnd:    true,
+				Illegal:       `\S`,
+				Contains:      []*Mode{TitleMode},
 			},
 		},
 	}

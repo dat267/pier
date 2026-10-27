@@ -85,12 +85,10 @@ func CreateAssistantMessageDiagnostic(typ string, err error, details json.RawMes
 	return AssistantMessageDiagnostic{
 		Type:      typ,
 		Timestamp: time.Now().UnixMilli(),
-		Error:     ptrDiagnosticError(ExtractDiagnosticError(err)),
+		Error:     new(ExtractDiagnosticError(err)),
 		Details:   details,
 	}
 }
-
-func ptrDiagnosticError(e DiagnosticErrorInfo) *DiagnosticErrorInfo { return &e }
 
 // AppendAssistantMessageDiagnostic appends to a message's diagnostics.
 func AppendAssistantMessageDiagnostic(message *AssistantMessage, diagnostic AssistantMessageDiagnostic) {

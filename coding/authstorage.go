@@ -6,11 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -834,9 +836,7 @@ func (s *AuthStorage) Modify(providerID string, fn func(*ai.Credential) (*ai.Cre
 			return LockResult{Result: credentialPointer(currentData[providerID])}, nil
 		}
 		merged := authStorageData{}
-		for key, value := range currentData {
-			merged[key] = value
-		}
+		maps.Copy(merged, currentData)
 		merged[providerID] = *next
 		latestData = merged
 		latestOrder = appendProviderOrder(currentOrder, providerID)
@@ -857,10 +857,8 @@ func (s *AuthStorage) Modify(providerID string, fn func(*ai.Credential) (*ai.Cre
 
 // appendProviderOrder appends a provider id to the observed order when new.
 func appendProviderOrder(order []string, providerID string) []string {
-	for _, key := range order {
-		if key == providerID {
-			return order
-		}
+	if slices.Contains(order, providerID) {
+		return order
 	}
 	return append(append([]string{}, order...), providerID)
 }

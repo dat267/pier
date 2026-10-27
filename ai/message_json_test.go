@@ -12,7 +12,7 @@ import (
 func TestContentBlockRoundTrip(t *testing.T) {
 	content := ContentList{
 		TextContent{Text: "hello"},
-		ThinkingContent{Thinking: "hmm", ThinkingSignature: strptr("sig"), Redacted: false},
+		ThinkingContent{Thinking: "hmm", ThinkingSignature: new("sig"), Redacted: false},
 		ImageContent{Data: "aGk=", MimeType: "image/png"},
 		ToolCall{ID: "call1", Name: "read", Arguments: json.RawMessage(`{"path":"x"}`)},
 	}
@@ -49,7 +49,7 @@ func TestContentBlockRoundTrip(t *testing.T) {
 }
 
 func TestRedactedThinkingRoundTrip(t *testing.T) {
-	enc, err := json.Marshal(ThinkingContent{Thinking: "", ThinkingSignature: strptr("encrypted"), Redacted: true})
+	enc, err := json.Marshal(ThinkingContent{Thinking: "", ThinkingSignature: new("encrypted"), Redacted: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,8 +57,6 @@ func TestRedactedThinkingRoundTrip(t *testing.T) {
 		t.Fatalf("got %s", enc)
 	}
 }
-
-func strptr(s string) *string { return &s }
 
 func TestSystemMessageSectionOrderPreserved(t *testing.T) {
 	raw := `{"content":"base","sections":{"zeta":"Z","alpha":"A","mid":null},"timestamp":0}`
@@ -105,11 +103,11 @@ func TestSystemMessageReplayThenEncode(t *testing.T) {
 	}
 
 	head := &SystemMessage{Content: StringOrBlocks{Text: "base"}, Timestamp: 0}
-	head.SetSection("rules", strptr("<rules>old</rules>"))
-	head.SetSection("docs", strptr("<docs>d</docs>"))
+	head.SetSection("rules", new("<rules>old</rules>"))
+	head.SetSection("docs", new("<docs>d</docs>"))
 	head.ToolsAdded = []Tool{{Name: "t1", Description: "d", Parameters: json.RawMessage(`{"type":"object"}`)}}
 	late := &SystemMessage{Content: StringOrBlocks{Text: "updated"}, Timestamp: 2}
-	late.SetSection("rules", strptr("<rules>new</rules>"))
+	late.SetSection("rules", new("<rules>new</rules>"))
 	late.SetSection("docs", nil)
 
 	replayed := GetCurrentSystemMessage([]Message{head, late})
@@ -314,7 +312,6 @@ func TestMarshalMessageKeepsRoleFirst(t *testing.T) {
 		},
 	}
 	for _, testCase := range cases {
-		testCase := testCase
 		t.Run(testCase.name, func(t *testing.T) {
 			enc, err := MarshalMessage(testCase.message)
 			if err != nil {

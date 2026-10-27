@@ -3,6 +3,7 @@ package coding
 import (
 	"context"
 	"encoding/json"
+	"slices"
 
 	"github.com/dat267/pier/ai"
 )
@@ -88,8 +89,8 @@ func IsVirtualModel(model *ai.Model) bool {
 // FindLatestResponse is the latest successful assistant response; failed or
 // aborted requests are skipped.
 func FindLatestResponse(messages []ai.Message) *ai.AssistantMessage {
-	for index := len(messages) - 1; index >= 0; index-- {
-		assistant, ok := messages[index].(*ai.AssistantMessage)
+	for _, message := range slices.Backward(messages) {
+		assistant, ok := message.(*ai.AssistantMessage)
 		if !ok {
 			continue
 		}
@@ -119,8 +120,8 @@ func probeMessage(raw json.RawMessage) messageProbe {
 // model_change holds until the next model_change; otherwise the latest physical
 // response wins. A virtual model that is no longer registered does not hold.
 func GetBranchSelection(branch []SessionEntry, getModel func(provider, modelID string) *ai.Model) *ModelRouteSelection {
-	for index := len(branch) - 1; index >= 0; index-- {
-		entry := branch[index]
+	for index, entry := range slices.Backward(branch) {
+
 		if entry.Type == "model_change" {
 			return &ModelRouteSelection{Provider: entry.Provider, ModelID: entry.ModelID}
 		}
@@ -161,8 +162,8 @@ func findLastModelChange(branch []SessionEntry, before int) *ModelRouteSelection
 // GetVirtualModelState is the latest router state a branch stores for a virtual
 // model.
 func GetVirtualModelState(branch []SessionEntry, provider, modelID string) (json.RawMessage, bool) {
-	for index := len(branch) - 1; index >= 0; index-- {
-		entry := branch[index]
+	for _, entry := range slices.Backward(branch) {
+
 		if entry.Type != "custom" || entry.CustomType != VirtualModelStateEntry {
 			continue
 		}

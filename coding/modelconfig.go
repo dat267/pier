@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -43,11 +44,11 @@ func StripJSONComments(input string) string {
 			return match
 		}
 		// match is ",<whitespace><closing brace>"; keep the tail after the comma.
-		commaIndex := strings.Index(match, ",")
-		if commaIndex < 0 {
+		_, after, ok := strings.Cut(match, ",")
+		if !ok {
 			return match
 		}
-		return match[commaIndex+1:]
+		return after
 	})
 }
 
@@ -1086,10 +1087,5 @@ func maxItemsMessage(count int) string {
 }
 
 func containsString(values []string, wanted string) bool {
-	for _, value := range values {
-		if value == wanted {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, wanted)
 }

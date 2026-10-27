@@ -16,7 +16,7 @@ func promptSessionForTests(t *testing.T, options *CreateAgentSessionOptions) (st
 		AuthPath:        filepath.Join(agentDir, "auth.json"),
 		ModelsPath:      filepath.Join(agentDir, "models.json"),
 		Credentials:     newMemoryCredentialStore(),
-		RefreshOnCreate: boolPtr(false),
+		RefreshOnCreate: new(false),
 	})
 	if err != nil {
 		t.Fatal(err)

@@ -53,7 +53,7 @@ func TestExportSessionToHTML(t *testing.T) {
 	InitTheme("dark", false)
 
 	dir := t.TempDir()
-	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: boolPtr(true)})
+	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: new(true)})
 	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic"}
 	agentSession, sessionErr := coding.NewAgentSession(&coding.SessionConfig{
 		Cwd: dir, Model: model, StreamFn: func(*ai.Model, ai.TranscriptContext, *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
@@ -142,12 +142,12 @@ func TestExportSessionToHTML(t *testing.T) {
 // TestExportSessionToHTMLErrors pins the upstream error messages.
 func TestExportSessionToHTMLErrors(t *testing.T) {
 	dir := t.TempDir()
-	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: boolPtr(true)})
+	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: new(true)})
 	session := &AppSession{AgentSession: &coding.AgentSession{Sessions: manager}}
 	if _, err := session.ExportSessionToHTML("", ""); err == nil || err.Error() != "Nothing to export yet - start a conversation first" {
 		t.Fatalf("err = %v", err)
 	}
-	empty := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: boolPtr(false)})
+	empty := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: new(false)})
 	bare := &AppSession{AgentSession: &coding.AgentSession{Sessions: empty}}
 	if _, err := bare.ExportSessionToHTML("", ""); err == nil || err.Error() != "Cannot export in-memory session to HTML" {
 		t.Fatalf("err = %v", err)
@@ -165,7 +165,7 @@ func TestExportHiddenMessageToggle(t *testing.T) {
 	InitTheme("dark", false)
 
 	dir := t.TempDir()
-	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: boolPtr(true)})
+	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: new(true)})
 	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hi"}})
 	manager.AppendCustomMessageEntry("preset-state", json.RawMessage(`"hidden payload"`), false, nil)
 
@@ -215,7 +215,7 @@ func TestExportFromFile(t *testing.T) {
 	InitTheme("dark", false)
 
 	dir := t.TempDir()
-	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: boolPtr(true)})
+	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: new(true)})
 	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "export me"}})
 	manager.AppendMessage(&ai.AssistantMessage{
 		Content: ai.ContentList{ai.TextContent{Text: "here you go"}}, StopReason: ai.StopStop,
@@ -306,7 +306,7 @@ func TestExportFromFileDefaultOutputName(t *testing.T) {
 	InitTheme("dark", false)
 
 	dir := t.TempDir()
-	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: boolPtr(true)})
+	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: new(true)})
 	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hi"}})
 	manager.AppendMessage(&ai.AssistantMessage{
 		Content: ai.ContentList{ai.TextContent{Text: "hello"}}, StopReason: ai.StopStop,
@@ -355,7 +355,7 @@ func TestExportSessionToHTMLPackageFunction(t *testing.T) {
 	InitTheme("dark", false)
 
 	dir := t.TempDir()
-	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: boolPtr(true)})
+	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{Persist: new(true)})
 	agentSession, err := coding.NewAgentSession(&coding.SessionConfig{
 		Cwd: dir, Model: &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic"},
 		StreamFn: func(*ai.Model, ai.TranscriptContext, *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {

@@ -76,7 +76,7 @@ func (c *SkillInvocationMessageComponent) updateDisplay() {
 			return nil
 		}
 		c.SetExpanded(!c.expanded)
-		return &tui.TuiMouseDispatchResult{TuiMouseEventResult: tui.TuiMouseEventResult{Handled: true}}
+		return &tui.TuiMouseDispatchResult{Handled: true}
 	}))
 }
 
@@ -283,7 +283,7 @@ func buildDaxnutsImage() []string {
 	var lines []string
 	for row := 0; row < daxnutsHeight; row += 2 {
 		var builder strings.Builder
-		for x := 0; x < daxnutsWidth; x++ {
+		for x := range daxnutsWidth {
 			top := pixels[row][x]
 			bottom := top
 			if row+1 < daxnutsHeight {
@@ -301,9 +301,9 @@ func buildDaxnutsImage() []string {
 
 func parseDaxnutsPixels() [][][3]int {
 	pixels := make([][][3]int, 0, daxnutsHeight)
-	for y := 0; y < daxnutsHeight; y++ {
+	for y := range daxnutsHeight {
 		row := make([][3]int, 0, daxnutsWidth)
-		for x := 0; x < daxnutsWidth; x++ {
+		for x := range daxnutsWidth {
 			index := (y*daxnutsWidth + x) * 6
 			r := parseHexByte(daxnutsRGBHexData[index : index+2])
 			g := parseHexByte(daxnutsRGBHexData[index+2 : index+4])
@@ -470,9 +470,9 @@ func arminChar(x int, row int) string {
 func ArminFinalGrid() [][]string {
 	displayHeight := (arminHeight + 1) / 2
 	grid := make([][]string, 0, displayHeight)
-	for row := 0; row < displayHeight; row++ {
+	for row := range displayHeight {
 		line := make([]string, 0, arminWidth)
-		for x := 0; x < arminWidth; x++ {
+		for x := range arminWidth {
 			line = append(line, arminChar(x, row))
 		}
 		grid = append(grid, line)
@@ -568,8 +568,8 @@ func (c *ArminComponent) initEffect() {
 
 func shuffledPositions(rng *rand.Rand, rows int, columns int) [][2]int {
 	positions := make([][2]int, 0, rows*columns)
-	for row := 0; row < rows; row++ {
-		for x := 0; x < columns; x++ {
+	for row := range rows {
+		for x := range columns {
 			positions = append(positions, [2]int{row, x})
 		}
 	}
@@ -634,7 +634,7 @@ func (c *ArminComponent) tickTypewriter() bool {
 	state := c.effectState
 	pos := state["pos"].(int)
 	const pixelsPerFrame = 3
-	for i := 0; i < pixelsPerFrame; i++ {
+	for range pixelsPerFrame {
 		row := pos / arminWidth
 		x := pos % arminWidth
 		if row >= len(c.grid) {
@@ -665,7 +665,7 @@ func (c *ArminComponent) tickRain() bool {
 	displayHeight := len(c.grid)
 	allSettled := true
 	c.grid = c.emptyGrid()
-	for x := 0; x < arminWidth; x++ {
+	for x := range arminWidth {
 		drop := drops[x]
 		// Draw the settled pixels for this column.
 		for row := displayHeight - 1; row >= displayHeight-drop["settled"]; row-- {
@@ -710,7 +710,7 @@ func (c *ArminComponent) tickFade() bool {
 	positions := state["positions"].([][2]int)
 	idx := state["idx"].(int)
 	const pixelsPerFrame = 15
-	for i := 0; i < pixelsPerFrame; i++ {
+	for range pixelsPerFrame {
 		if idx >= len(positions) {
 			state["idx"] = idx
 			return true
@@ -785,7 +785,7 @@ func (c *ArminComponent) tickDissolve() bool {
 	positions := state["positions"].([][2]int)
 	idx := state["idx"].(int)
 	const pixelsPerFrame = 20
-	for i := 0; i < pixelsPerFrame; i++ {
+	for range pixelsPerFrame {
 		if idx >= len(positions) {
 			state["idx"] = idx
 			return true

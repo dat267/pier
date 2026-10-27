@@ -21,13 +21,13 @@ type formEntry struct {
 // without `=` has an empty value, and `+`/percent escapes are decoded.
 func NewOrderedForm(rawQuery string) *OrderedForm {
 	form := &OrderedForm{}
-	for _, part := range strings.Split(rawQuery, "&") {
+	for part := range strings.SplitSeq(rawQuery, "&") {
 		if part == "" {
 			continue
 		}
 		name, value := part, ""
-		if index := strings.IndexByte(part, '='); index >= 0 {
-			name, value = part[:index], part[index+1:]
+		if before, after, ok := strings.Cut(part, "="); ok {
+			name, value = before, after
 		}
 		form.entries = append(form.entries, formEntry{
 			name:  decodeFormComponent(name),

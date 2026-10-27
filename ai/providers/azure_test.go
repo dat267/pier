@@ -129,7 +129,6 @@ func TestWithPayloadModelKeepsTheRestByteForByte(t *testing.T) {
 		},
 	}
 	for _, testCase := range cases {
-		testCase := testCase
 		t.Run(testCase.name, func(t *testing.T) {
 			if got := string(withPayloadModel([]byte(testCase.payload), "b")); got != testCase.want {
 				t.Fatalf("got  %s\nwant %s", got, testCase.want)

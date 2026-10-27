@@ -111,35 +111,33 @@ func Arcade() *Language {
 	return &Language{
 		// Note: the reference also sets `illegal: /#(?!!)/`; RE2 has no negative
 		// lookahead, so a stray `#` is not rejected here.
-		Name: "ArcGIS Arcade",
-		Mode: Mode{
-			Keywords: keywords,
-			Contains: []*Mode{
-				AposStringMode,
-				QuoteStringMode,
-				templateString,
-				CLineCommentMode,
-				CBlockCommentMode,
-				symbol,
-				number,
-				attrContainer,
-				valueContainer,
-				{
-					ClassName:     "function",
-					BeginKeywords: "function",
-					End:           `\{`,
-					ExcludeEnd:    true,
-					Illegal:       `\[|%`,
-					Contains: []*Mode{
-						Variant(TitleMode, func(m *Mode) { m.Begin = identRe }),
-						{
-							ClassName:    "params",
-							Begin:        `\(`,
-							End:          `\)`,
-							ExcludeBegin: true,
-							ExcludeEnd:   true,
-							Contains:     paramsContains,
-						},
+		Name:     "ArcGIS Arcade",
+		Keywords: keywords,
+		Contains: []*Mode{
+			AposStringMode,
+			QuoteStringMode,
+			templateString,
+			CLineCommentMode,
+			CBlockCommentMode,
+			symbol,
+			number,
+			attrContainer,
+			valueContainer,
+			{
+				ClassName:     "function",
+				BeginKeywords: "function",
+				End:           `\{`,
+				ExcludeEnd:    true,
+				Illegal:       `\[|%`,
+				Contains: []*Mode{
+					Variant(TitleMode, func(m *Mode) { m.Begin = identRe }),
+					{
+						ClassName:    "params",
+						Begin:        `\(`,
+						End:          `\)`,
+						ExcludeBegin: true,
+						ExcludeEnd:   true,
+						Contains:     paramsContains,
 					},
 				},
 			},

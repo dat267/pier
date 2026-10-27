@@ -91,9 +91,8 @@ func TestModelsDefaultIdentity(t *testing.T) {
 		t.Fatalf("default identity = %+v", captured)
 	}
 	request := &ClientIdentity{VersionSet: true, AttributionSet: true}
-	if _, err := models.CompleteSimple(model, Context{}, &ModelsSimpleStreamOptions{SimpleStreamOptions: SimpleStreamOptions{
-		StreamOptions: StreamOptions{Identity: request},
-	}}); err != nil {
+	if _, err := models.CompleteSimple(model, Context{}, &ModelsSimpleStreamOptions{
+		Identity: request}); err != nil {
 		t.Fatal(err)
 	}
 	if captured == nil || captured.UserAgent != "short" || captured.Version != "" || !captured.VersionSet || captured.Attribution != nil || !captured.AttributionSet {

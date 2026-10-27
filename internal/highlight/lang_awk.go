@@ -34,17 +34,15 @@ func Awk() *Language {
 
 	return &Language{
 		Name: "Awk",
-		Mode: Mode{
-			Keywords: Keywords{
-				"keyword": "BEGIN END if else while do for in break continue delete next nextfile function func exit|10",
-			},
-			Contains: []*Mode{
-				variable,
-				str,
-				RegexpMode,
-				HashCommentMode,
-				NumberMode,
-			},
+		Keywords: Keywords{
+			"keyword": "BEGIN END if else while do for in break continue delete next nextfile function func exit|10",
+		},
+		Contains: []*Mode{
+			variable,
+			str,
+			RegexpMode,
+			HashCommentMode,
+			NumberMode,
 		},
 	}
 }

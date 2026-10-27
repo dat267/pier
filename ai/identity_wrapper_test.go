@@ -57,7 +57,7 @@ func TestWithClientIdentityPrecedence(t *testing.T) {
 		t.Fatalf("wrapped identity = %+v", captured)
 	}
 	request := &ClientIdentity{AttributionSet: true, VersionSet: true}
-	options := &ModelsSimpleStreamOptions{SimpleStreamOptions: SimpleStreamOptions{StreamOptions: StreamOptions{Identity: request}}}
+	options := &ModelsSimpleStreamOptions{Identity: request}
 	if _, err := wrapped.CompleteSimple(model, Context{}, options); err != nil {
 		t.Fatal(err)
 	}

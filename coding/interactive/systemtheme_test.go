@@ -44,8 +44,6 @@ func systemTestHex(t *testing.T, hex string) tui.RgbColor {
 	return tui.RgbColor{R: int(value >> 16 & 0xff), G: int(value >> 8 & 0xff), B: int(value & 0xff)}
 }
 
-func systemTestFloat(value float64) *float64 { return &value }
-
 var systemTestPalette = []string{
 	"#21222c", "#ff5555", "#50fa7b", "#f1fa8c", "#bd93f9", "#ff79c6", "#8be9fd", "#f8f8f2",
 	"#6272a4", "#ff6e6e", "#69ff94", "#ffffa5", "#d6acff", "#ff92df", "#a4ffff", "#ffffff",
@@ -67,7 +65,7 @@ func systemTestInput(t *testing.T, name string) SystemThemeInput {
 		return SystemThemeInput{Background: &background, Foreground: &foreground, Palette: palette()}
 	case "draculaGray":
 		input := systemTestInput(t, "dracula")
-		input.Saturation = systemTestFloat(0)
+		input.Saturation = new(float64(0))
 		return input
 	case "solarizedLight":
 		background := systemTestHex(t, "#fdf6e3")
@@ -83,7 +81,7 @@ func systemTestInput(t *testing.T, name string) SystemThemeInput {
 	case "noColorsLight":
 		return SystemThemeInput{AppearanceHint: "light"}
 	case "noColorsGray":
-		return SystemThemeInput{Saturation: systemTestFloat(0)}
+		return SystemThemeInput{Saturation: new(float64(0))}
 	}
 	t.Fatalf("unknown golden case %q", name)
 	return SystemThemeInput{}
@@ -237,7 +235,7 @@ func TestSystemThemeUsesTerminalColors(t *testing.T) {
 // TestSystemThemeGrayscale is upstream's zero-saturation assertion.
 func TestSystemThemeGrayscale(t *testing.T) {
 	input := systemTestInput(t, "dracula")
-	input.Saturation = systemTestFloat(0)
+	input.Saturation = new(float64(0))
 	value := GenerateSystemThemeColors(input).Colors["error"]
 	hex, ok := value.(string)
 	if !ok {
@@ -262,7 +260,7 @@ func TestSystemThemeIndexedFallback(t *testing.T) {
 	if !systemHasString(got.Dim, "muted") {
 		t.Errorf("dim = %v", got.Dim)
 	}
-	if value := GenerateSystemThemeColors(SystemThemeInput{Saturation: systemTestFloat(0)}).Colors["error"]; value != "" {
+	if value := GenerateSystemThemeColors(SystemThemeInput{Saturation: new(float64(0))}).Colors["error"]; value != "" {
 		t.Errorf("zero saturation error = %v (want \"\")", value)
 	}
 }

@@ -20,7 +20,7 @@ func jsonEventGoldens(t *testing.T) map[string]string {
 		t.Fatal(err)
 	}
 	out := map[string]string{}
-	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(string(data)), "\n") {
 		label, wire, ok := strings.Cut(line, " => ")
 		if !ok {
 			t.Fatalf("invalid golden line: %s", line)
@@ -78,7 +78,7 @@ func TestJSONSessionEventsMatchUpstream(t *testing.T) {
 	tool := func() *agent.AgentEvent {
 		return &agent.AgentEvent{ToolCallID: "c", ToolName: "read", Args: args, PartialResult: result, Result: result, DurationMs: &duration}
 	}
-	entry := &SessionEntry{Type: "custom", SessionEntryBase: SessionEntryBase{ID: "e", Timestamp: "2026-01-01T00:00:00Z"}, CustomType: "test", Data: args}
+	entry := &SessionEntry{Type: "custom", ID: "e", Timestamp: "2026-01-01T00:00:00Z", CustomType: "test", Data: args}
 	compaction := &CompactionResult{Summary: "summary", FirstKeptEntryID: "e", TokensBefore: 10, EstimatedTokensAfter: 2, Usage: usage, Details: args}
 	cases := []struct {
 		label string
@@ -190,7 +190,7 @@ func TestPrintModeJSONPreservesTerminalPayloads(t *testing.T) {
 		t.Fatalf("exit = %d", code)
 	}
 	seen := map[string]bool{}
-	for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(output), "\n") {
 		var event map[string]json.RawMessage
 		if err := json.Unmarshal([]byte(line), &event); err != nil {
 			t.Fatal(err)

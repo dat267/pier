@@ -3,6 +3,7 @@ package tui
 import (
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -852,8 +853,8 @@ func (t *Renderer) IsOverlayFocused() bool {
 // DispatchMouseToOverlay dispatches to the visually topmost overlay under the
 // pointer, reporting whether an overlay captured the point.
 func (t *Renderer) DispatchMouseToOverlay(event TuiMouseEvent) (bool, *TuiMouseDispatchResult) {
-	for index := len(t.renderedOverlayLayouts) - 1; index >= 0; index-- {
-		layout := t.renderedOverlayLayouts[index]
+	for _, layout := range slices.Backward(t.renderedOverlayLayouts) {
+
 		if event.ScreenX < layout.col || event.ScreenX >= layout.col+layout.width ||
 			event.ScreenY < layout.row || event.ScreenY >= layout.row+layout.height {
 			continue
@@ -879,8 +880,8 @@ func (t *Renderer) DispatchMouseToOverlay(event TuiMouseEvent) (bool, *TuiMouseD
 // ResolveMouseFocusTarget keeps overlay containers as keyboard focus owners
 // when a nested control is clicked.
 func (t *Renderer) ResolveMouseFocusTarget(component Component) Component {
-	for index := len(t.overlays.Entries()) - 1; index >= 0; index-- {
-		overlay := t.overlays.Entries()[index]
+	for _, overlay := range slices.Backward(t.overlays.Entries()) {
+
 		if t.overlays.Visible(overlay) && t.containsComponent(overlay.component, component) {
 			return overlay.component
 		}

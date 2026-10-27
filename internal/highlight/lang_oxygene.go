@@ -68,19 +68,17 @@ func Oxygene() *Language {
 	return &Language{
 		Name:            "Oxygene",
 		CaseInsensitive: true,
-		Mode: Mode{
-			Keywords: keywords,
-			Illegal:  `("|\$[G-Zg-z]|\/\*|</|=>|->)`,
-			Contains: []*Mode{
-				curlyComment,
-				parenComment,
-				CLineCommentMode,
-				str,
-				charString,
-				NumberMode,
-				function,
-				classMode,
-			},
+		Keywords:        keywords,
+		Illegal:         `("|\$[G-Zg-z]|\/\*|</|=>|->)`,
+		Contains: []*Mode{
+			curlyComment,
+			parenComment,
+			CLineCommentMode,
+			str,
+			charString,
+			NumberMode,
+			function,
+			classMode,
 		},
 	}
 }

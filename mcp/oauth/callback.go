@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -118,12 +119,7 @@ func bracketHost(host string) string {
 }
 
 func containsPath(paths []string, path string) bool {
-	for _, candidate := range paths {
-		if candidate == path {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(paths, path)
 }
 
 func hasColon(host string) bool {

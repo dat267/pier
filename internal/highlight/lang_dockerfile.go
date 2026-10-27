@@ -10,24 +10,22 @@ func Dockerfile() *Language {
 		Name:            "Dockerfile",
 		Aliases:         []string{"docker"},
 		CaseInsensitive: true,
-		Mode: Mode{
-			Keywords: Keywords{
-				"keyword": "from maintainer expose env arg user onbuild stopsignal",
-			},
-			Contains: []*Mode{
-				HashCommentMode,
-				AposStringMode,
-				QuoteStringMode,
-				NumberMode,
-				{
-					BeginKeywords: "run cmd entrypoint volume add copy workdir label healthcheck shell",
-					Starts: &Mode{
-						End:         `[^\\]$`,
-						SubLanguage: []string{"bash"},
-					},
+		Keywords: Keywords{
+			"keyword": "from maintainer expose env arg user onbuild stopsignal",
+		},
+		Contains: []*Mode{
+			HashCommentMode,
+			AposStringMode,
+			QuoteStringMode,
+			NumberMode,
+			{
+				BeginKeywords: "run cmd entrypoint volume add copy workdir label healthcheck shell",
+				Starts: &Mode{
+					End:         `[^\\]$`,
+					SubLanguage: []string{"bash"},
 				},
 			},
-			Illegal: "</",
 		},
+		Illegal: "</",
 	}
 }

@@ -128,7 +128,7 @@ func TestRPCGetTree(t *testing.T) {
 	session := rpcTestSession(t)
 	rootID := session.Sessions.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "first"}})
 	leafID := session.Sessions.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "second"}})
-	if _, err := session.Sessions.AppendLabelChange(leafID, strPtr("checkpoint")); err != nil {
+	if _, err := session.Sessions.AppendLabelChange(leafID, new("checkpoint")); err != nil {
 		t.Fatal(err)
 	}
 

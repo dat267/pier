@@ -191,9 +191,8 @@ func (s *SelectList) HandleMouse(event TuiMouseEvent) *TuiMouseDispatchResult {
 		if s.selectedIndex != previousIndex {
 			s.notifySelectionChange()
 		}
-		return &TuiMouseDispatchResult{TuiMouseEventResult: TuiMouseEventResult{
-			Handled: true, Render: s.selectedIndex != previousIndex, HasRender: true,
-		}}
+		return &TuiMouseDispatchResult{
+			Handled: true, Render: s.selectedIndex != previousIndex, HasRender: true}
 	}
 	// Hover must not change selection: the visible range is centered on it.
 	if event.Button != MouseButtonLeft || (event.Type != MousePress && event.Type != MouseClick) {
@@ -212,7 +211,7 @@ func (s *SelectList) HandleMouse(event TuiMouseEvent) *TuiMouseDispatchResult {
 			s.selectedIndex = itemIndex
 			s.notifySelectionChange()
 		}
-		return &TuiMouseDispatchResult{TuiMouseEventResult: TuiMouseEventResult{Handled: true, Focus: true}}
+		return &TuiMouseDispatchResult{Handled: true, Focus: true}
 	}
 	// click
 	clickedIndex := itemIndex
@@ -228,7 +227,7 @@ func (s *SelectList) HandleMouse(event TuiMouseEvent) *TuiMouseDispatchResult {
 	if s.selectedIndex >= 0 && s.selectedIndex < len(s.filteredItems) && s.OnSelect != nil {
 		s.OnSelect(s.filteredItems[s.selectedIndex])
 	}
-	return &TuiMouseDispatchResult{TuiMouseEventResult: TuiMouseEventResult{Handled: true}}
+	return &TuiMouseDispatchResult{Handled: true}
 }
 
 // HandleInput processes navigation keys.
@@ -532,10 +531,7 @@ func (l *Loader) AnimationFrame(now time.Time) (bool, time.Duration) {
 	if interval <= 0 {
 		interval = time.Duration(defaultLoaderIntervalMS) * time.Millisecond
 	}
-	elapsed := now.Sub(l.startedAt)
-	if elapsed < 0 {
-		elapsed = 0
-	}
+	elapsed := max(now.Sub(l.startedAt), 0)
 	next := interval - (elapsed % interval)
 	return true, next
 }
@@ -786,10 +782,7 @@ func (c *AltScreenFlashContainer) AnimationFrame(now time.Time) (bool, time.Dura
 			next = entry.expiresAt
 		}
 	}
-	delay := next.Sub(now)
-	if delay < 0 {
-		delay = 0
-	}
+	delay := max(next.Sub(now), 0)
 	return true, delay
 }
 

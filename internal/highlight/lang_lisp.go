@@ -60,20 +60,18 @@ func Lisp() *Language {
 	body.Contains = []*Mode{quoted, quotedAtom, list, literal, number, str, comment, variable, keyword, mec, ident}
 
 	return &Language{
-		Name: "Lisp",
-		Mode: Mode{
-			Illegal: `\S`,
-			Contains: []*Mode{
-				number,
-				Shebang("", 0),
-				literal,
-				str,
-				comment,
-				quoted,
-				quotedAtom,
-				list,
-				ident,
-			},
+		Name:    "Lisp",
+		Illegal: `\S`,
+		Contains: []*Mode{
+			number,
+			Shebang("", 0),
+			literal,
+			str,
+			comment,
+			quoted,
+			quotedAtom,
+			list,
+			ident,
 		},
 	}
 }

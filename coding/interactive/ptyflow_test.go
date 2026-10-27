@@ -186,7 +186,7 @@ func TestTranscriptScrollsWithoutStalling(t *testing.T) {
 	// range only exists after a layout pass fixes its content and viewport
 	// heights. Events go through the producer queue the loop drains, so the test
 	// never touches a container the loop is rendering.
-	for i := 0; i < 60; i++ {
+	for i := range 60 {
 		app.sessionEvents.enqueue(&coding.SessionEvent{
 			Type: coding.SessionMessageStart,
 			Agent: agentEvent("message_start", &ai.UserMessage{

@@ -171,9 +171,7 @@ func Lasso() *Language {
 		Name:            "Lasso",
 		Aliases:         []string{"ls", "lassoscript"},
 		CaseInsensitive: true,
-		Mode: Mode{
-			Keywords: keywords,
-			Contains: contains,
-		},
+		Keywords:        keywords,
+		Contains:        contains,
 	}
 }

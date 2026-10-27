@@ -371,7 +371,7 @@ func TestFindMostRecentSessionStopsAtTheNewestCandidate(t *testing.T) {
 func TestBuildSessionInfoDoesNotCopyTheWholeFile(t *testing.T) {
 	var buf strings.Builder
 	buf.WriteString(`{"type":"session","version":3,"id":"s1","timestamp":"t0","cwd":"/tmp"}` + "\n")
-	for i := 0; i < 20000; i++ {
+	for i := range 20000 {
 		fmt.Fprintf(&buf, `{"type":"message","id":"m%06d","parentId":null,"timestamp":"t","message":{"role":"user","content":"hello %d"}}`+"\n", i, i)
 	}
 	dir := t.TempDir()
@@ -530,7 +530,7 @@ func TestGetSessionNameDoesNotAllocateProportionalToEntryCount(t *testing.T) {
 		// entries — the realistic worst case for the scan, and the case where
 		// copying them was easy to mistake for O(1) work.
 		m.fileEntries = append(m.fileEntries, FileEntry{Entry: &SessionEntry{Type: "session_info", Name: &name}})
-		for i := 0; i < n; i++ {
+		for range n {
 			m.fileEntries = append(m.fileEntries, FileEntry{Entry: &SessionEntry{Type: "custom_message", CustomType: "filler"}})
 		}
 		return m
@@ -553,7 +553,7 @@ func writeSessionHeaderFile(t *testing.T, dir, cwd, id string, modified time.Tim
 	t.Helper()
 	header := SessionHeader{
 		ID: id, Timestamp: modified.UTC().Format("2006-01-02T15:04:05.000Z"),
-		Cwd: cwd, Version: intPtr(CurrentSessionVersion),
+		Cwd: cwd, Version: new(CurrentSessionVersion),
 	}
 	line, err := MarshalFileEntry(FileEntry{Header: &header})
 	if err != nil {

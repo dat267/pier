@@ -80,7 +80,7 @@ func TestSettingsSchemaFieldsRoundTrip(t *testing.T) {
 	}
 	// Valid union values are needed for their custom decoders.
 	settings.QuietStartup = &QuietStartupSetting{Header: true}
-	settings.CacheWarming = strPtr(CacheWarmingOff)
+	settings.CacheWarming = new(CacheWarmingOff)
 	manager := NewInMemorySettingsManager(settings, SettingsManagerCreateOptions{})
 	manager.Reload()
 	got := reflect.ValueOf(manager.GetGlobalSettings()).Elem()

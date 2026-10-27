@@ -41,7 +41,7 @@ func TestAuthLogoutSelectorLabelsNonSubscriptionAccounts(t *testing.T) {
 				return &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "synthetic-key"}}, nil
 			}
 			return &ai.Credential{Type: ai.CredentialOAuth, OAuth: &ai.OAuthCredential{
-				OAuthCredentials: ai.OAuthCredentials{Access: "synthetic-access", Refresh: "synthetic-refresh", Expires: 4102444800000},
+				Access: "synthetic-access", Refresh: "synthetic-refresh", Expires: 4102444800000,
 			}}, nil
 		}, context.Background())
 		if err != nil {

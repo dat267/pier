@@ -233,13 +233,7 @@ func (c *LoginDialogComponent) ShowSelect(message string, options []ai.AuthSelec
 			Value: option.ID, Label: option.Label, Description: option.Description,
 		})
 	}
-	visible := len(items)
-	if visible > loginSelectVisibleRows {
-		visible = loginSelectVisibleRows
-	}
-	if visible < 1 {
-		visible = 1
-	}
+	visible := max(min(len(items), loginSelectVisibleRows), 1)
 	results := make(chan LoginInputResult, 1)
 	c.runOnUI(func() {
 		theme := ActiveTheme()

@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"math"
+	"slices"
 	"sync"
 	"time"
 
@@ -222,13 +224,7 @@ func (c *Client) connectInitialize(ctx context.Context, transport Transport) (*p
 	if err != nil {
 		return nil, err
 	}
-	supported := false
-	for _, version := range protocol.SupportedProtocolVersions {
-		if version == result.ProtocolVersion {
-			supported = true
-			break
-		}
-	}
+	supported := slices.Contains(protocol.SupportedProtocolVersions, result.ProtocolVersion)
 	if !supported {
 		return nil, fmt.Errorf("MCP server selected unsupported protocol version %s", result.ProtocolVersion)
 	}
@@ -558,9 +554,7 @@ func withProgressToken(params any, token int64) (json.RawMessage, error) {
 	var merged map[string]any
 	if object, ok := params.(map[string]any); ok && object != nil {
 		merged = make(map[string]any, len(object)+1)
-		for key, value := range object {
-			merged[key] = value
-		}
+		maps.Copy(merged, object)
 	} else if params != nil {
 		var decoded map[string]any
 		enc, err := protocol.MarshalJSON(params)
@@ -578,9 +572,7 @@ func withProgressToken(params any, token int64) (json.RawMessage, error) {
 	// last, so the token always wins.
 	meta := map[string]any{}
 	if existing, ok := merged["_meta"].(map[string]any); ok && existing != nil {
-		for key, value := range existing {
-			meta[key] = value
-		}
+		maps.Copy(meta, existing)
 	}
 	meta["progressToken"] = token
 	merged["_meta"] = meta

@@ -127,7 +127,7 @@ func TestRendererTerminalQueries(t *testing.T) {
 // substring.
 func waitForWrite(t *testing.T, terminal *fakeTerminal, substring string) {
 	t.Helper()
-	for i := 0; i < 20000; i++ {
+	for range 20000 {
 		if terminal.hasWrite(substring) {
 			return
 		}
@@ -226,7 +226,7 @@ func TestParseOscColorResponse(t *testing.T) {
 // writes.
 func waitForWritesAfter(t *testing.T, terminal *fakeTerminal, before int) {
 	t.Helper()
-	for i := 0; i < 20000; i++ {
+	for range 20000 {
 		if terminal.writeCount() > before {
 			return
 		}
@@ -274,7 +274,7 @@ func TestRendererQueryTerminalColorsResolvesOnAllReplies(t *testing.T) {
 	}
 	renderer.HandleTerminalInput("\x1b]10;#ffffff\x07")
 	renderer.HandleTerminalInput("\x1b]11;rgb:0000/0000/0000\x1b\\")
-	for index := 0; index < 16; index++ {
+	for index := range 16 {
 		renderer.HandleTerminalInput(fmt.Sprintf("\x1b]4;%d;#000000\x07", index))
 	}
 	got := <-results
@@ -304,7 +304,7 @@ func TestRendererQueryTerminalColorsResolvesOnDA1(t *testing.T) {
 	}
 	first := run(func() {
 		renderer.HandleTerminalInput("\x1b]11;#000000\x07")
-		for index := 0; index < 8; index++ {
+		for index := range 8 {
 			renderer.HandleTerminalInput(fmt.Sprintf("\x1b]4;%d;#000000\x07", index))
 		}
 		renderer.HandleTerminalInput("\x1b[?62;22c")

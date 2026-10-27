@@ -653,8 +653,8 @@ func (s *AgentSession) willRetryAfterAgentEnd(event *agent.AgentEvent) bool {
 	if attempt >= settings.MaxRetries {
 		return false
 	}
-	for i := len(event.Messages) - 1; i >= 0; i-- {
-		if assistant, ok := event.Messages[i].(*ai.AssistantMessage); ok {
+	for _, v := range slices.Backward(event.Messages) {
+		if assistant, ok := v.(*ai.AssistantMessage); ok {
 			return s.IsRetryableError(assistant)
 		}
 	}

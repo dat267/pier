@@ -229,8 +229,6 @@ func YAML() *Language {
 		Name:            "YAML",
 		Aliases:         []string{"yml"},
 		CaseInsensitive: true,
-		Mode: Mode{
-			Contains: modes,
-		},
+		Contains:        modes,
 	}
 }

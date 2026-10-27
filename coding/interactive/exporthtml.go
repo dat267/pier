@@ -188,7 +188,7 @@ func AnsiToHTML(text string) string {
 		params := []int{0}
 		if paramStr != "" {
 			params = params[:0]
-			for _, part := range strings.Split(paramStr, ";") {
+			for part := range strings.SplitSeq(paramStr, ";") {
 				value, err := strconv.Atoi(part)
 				if err != nil || value == 0 {
 					value = 0
@@ -243,7 +243,7 @@ func parseExportColor(color string) (r, g, b int, ok bool) {
 	hex := exportHexColorRegex.FindStringSubmatch(color)
 	if hex != nil {
 		values := make([]int, 3)
-		for i := 0; i < 3; i++ {
+		for i := range 3 {
 			value, err := strconv.ParseInt(hex[i+1], 16, 32)
 			if err != nil {
 				return 0, 0, 0, false
@@ -255,7 +255,7 @@ func parseExportColor(color string) (r, g, b int, ok bool) {
 	rgb := exportRGBColorRegex.FindStringSubmatch(color)
 	if rgb != nil {
 		values := make([]int, 3)
-		for i := 0; i < 3; i++ {
+		for i := range 3 {
 			value, err := strconv.Atoi(rgb[i+1])
 			if err != nil {
 				return 0, 0, 0, false

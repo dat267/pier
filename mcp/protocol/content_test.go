@@ -11,12 +11,12 @@ import (
 
 func TestToLlmContentPassesTextAndImages(t *testing.T) {
 	blocks := []ContentBlock{
-		{Type: "text", Text: "hello", Annotations: &ContentAnnotations{Priority: floatPtr(1)}},
+		{Type: "text", Text: "hello", Annotations: &ContentAnnotations{Priority: new(float64(1))}},
 		{Type: "image", Data: "aW1n", MimeType: "image/png", Meta: json.RawMessage(`{"x":1}`)},
 		{Type: "audio", Data: "YXVk", MimeType: "audio/wav"},
 		{Type: "resource_link", URI: "file:///a.txt", Name: "a.txt"},
 		{Type: "resource", Resource: &ResourceContents{URI: "file:///b.txt", Text: "inline", TextArm: true}},
-		{Type: "resource", Resource: &ResourceContents{URI: "file:///c.png", MimeType: strPtr("image/png"), Blob: "Yw=="}},
+		{Type: "resource", Resource: &ResourceContents{URI: "file:///c.png", MimeType: new("image/png"), Blob: "Yw=="}},
 		{Type: "resource", Resource: &ResourceContents{URI: "file:///d.bin", Blob: "ZA=="}},
 	}
 	got := Content(&CallToolResult{Content: blocks})
@@ -58,9 +58,6 @@ func TestToLlmContentFallsBackToStructuredJSON(t *testing.T) {
 		t.Fatalf("with blocks = %#v", got[0])
 	}
 }
-
-func floatPtr(f float64) *float64 { return &f }
-func strPtr(s string) *string     { return &s }
 
 // The resource arm is discriminated by key presence upstream ("text" in
 // resource and "blob" in resource), so an empty payload keeps its arm (D181).

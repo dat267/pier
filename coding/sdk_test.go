@@ -23,7 +23,7 @@ func TestCreateAgentSessionDefaults(t *testing.T) {
 		AuthPath:        filepath.Join(GetAgentDir(), "auth.json"),
 		ModelsPath:      filepath.Join(GetAgentDir(), "models.json"),
 		Credentials:     newMemoryCredentialStore(),
-		RefreshOnCreate: boolPtr(false),
+		RefreshOnCreate: new(false),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -84,7 +84,7 @@ func TestCreateAgentSessionModelResolveAndPersist(t *testing.T) {
 		AuthPath:        filepath.Join(GetAgentDir(), "auth.json"),
 		ModelsPath:      filepath.Join(GetAgentDir(), "models.json"),
 		Credentials:     newMemoryCredentialStore(),
-		RefreshOnCreate: boolPtr(false),
+		RefreshOnCreate: new(false),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -352,7 +352,7 @@ func TestCreateAgentSessionToolSelection(t *testing.T) {
 		AuthPath:        filepath.Join(GetAgentDir(), "auth.json"),
 		ModelsPath:      filepath.Join(GetAgentDir(), "models.json"),
 		Credentials:     newMemoryCredentialStore(),
-		RefreshOnCreate: boolPtr(false),
+		RefreshOnCreate: new(false),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -642,7 +642,7 @@ func TestCreateAgentSessionPatternSelectionPreservesRegistryOrder(t *testing.T) 
 	runtime := testSessionRuntime(t)
 	settings := NewSettingsManagerFromFiles(t.TempDir(), t.TempDir(), SettingsManagerCreateOptions{})
 	want := "read,bash,powershell,edit,write,grep,find,ls,set_goal"
-	for attempt := 0; attempt < 8; attempt++ {
+	for attempt := range 8 {
 		session, err := CreateAgentSession(ctxpkg.Background(), &CreateAgentSessionOptions{
 			Cwd: t.TempDir(), ModelRuntime: runtime, SettingsManager: settings,
 			Tools: []ToolName{"*"},
@@ -681,7 +681,7 @@ func TestCreateAgentSessionBlockImages(t *testing.T) {
 		AuthPath:        filepath.Join(GetAgentDir(), "auth.json"),
 		ModelsPath:      filepath.Join(GetAgentDir(), "models.json"),
 		Credentials:     newMemoryCredentialStore(),
-		RefreshOnCreate: boolPtr(false),
+		RefreshOnCreate: new(false),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -742,7 +742,7 @@ func TestCreateAgentSessionRequestOptions(t *testing.T) {
 		AuthPath:        filepath.Join(GetAgentDir(), "auth.json"),
 		ModelsPath:      filepath.Join(GetAgentDir(), "models.json"),
 		Credentials:     newMemoryCredentialStore(),
-		RefreshOnCreate: boolPtr(false),
+		RefreshOnCreate: new(false),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -839,7 +839,7 @@ func TestHTTPIdleTimeoutReachesTheRequest(t *testing.T) {
 		AuthPath:        filepath.Join(GetAgentDir(), "auth.json"),
 		ModelsPath:      filepath.Join(GetAgentDir(), "models.json"),
 		Credentials:     newMemoryCredentialStore(),
-		RefreshOnCreate: boolPtr(false),
+		RefreshOnCreate: new(false),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -909,7 +909,7 @@ func TestCreateAgentSessionCacheWarmerStarts(t *testing.T) {
 		AuthPath:        filepath.Join(GetAgentDir(), "auth.json"),
 		ModelsPath:      filepath.Join(GetAgentDir(), "models.json"),
 		Credentials:     newMemoryCredentialStore(),
-		RefreshOnCreate: boolPtr(false),
+		RefreshOnCreate: new(false),
 	})
 	if err != nil {
 		t.Fatal(err)

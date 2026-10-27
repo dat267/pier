@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 )
 
@@ -54,12 +55,7 @@ func ExtensionForImageMimeType(mimeType string) string {
 
 func isSupportedImageMimeType(mimeType string) bool {
 	base := baseImageMimeType(mimeType)
-	for _, supported := range supportedImageMimeTypes {
-		if supported == base {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(supportedImageMimeTypes, base)
 }
 
 // selectPreferredImageMimeType picks the first supported type in preference
@@ -326,7 +322,7 @@ func readClipboardFilePathsWith(ctx context.Context, goos string, getenv func(st
 }
 
 func containsURIList(data []byte) bool {
-	for _, line := range strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n") {
+	for line := range strings.SplitSeq(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n") {
 		if strings.TrimSpace(line) == "text/uri-list" {
 			return true
 		}
@@ -336,7 +332,7 @@ func containsURIList(data []byte) bool {
 
 func parsePathLines(data []byte) []string {
 	var paths []string
-	for _, line := range strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n") {
+	for line := range strings.SplitSeq(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n") {
 		if trimmed := strings.TrimSpace(line); trimmed != "" {
 			paths = append(paths, trimmed)
 		}
@@ -348,7 +344,7 @@ func parsePathLines(data []byte) []string {
 // with '#', and file URLs become local paths. Plain lines pass through.
 func parseURIList(data []byte) []string {
 	var paths []string
-	for _, line := range strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n") {
+	for line := range strings.SplitSeq(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n") {
 		trimmed := strings.TrimSpace(line)
 		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
 			continue

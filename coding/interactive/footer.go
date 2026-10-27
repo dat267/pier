@@ -3,6 +3,7 @@ package interactive
 import (
 	"math"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -150,12 +151,12 @@ func FooterTruncateLeft(text string, maxWidth int) string {
 	runes := []rune(text)
 	var out []rune
 	w := 0
-	for index := len(runes) - 1; index >= 0; index-- {
-		cw := tui.VisibleWidth(string(runes[index]))
+	for _, rune0 := range slices.Backward(runes) {
+		cw := tui.VisibleWidth(string(rune0))
 		if w+cw > maxWidth-3 {
 			break
 		}
-		out = append([]rune{runes[index]}, out...)
+		out = append([]rune{rune0}, out...)
 		w += cw
 	}
 	return "..." + string(out)

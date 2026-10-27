@@ -119,10 +119,7 @@ func GetCodexRetryAfterDelayMS(headers http.Header) (time.Duration, bool) {
 		return time.Duration(seconds * float64(time.Second)), true
 	}
 	if when, err := http.ParseTime(retryAfter); err == nil {
-		delay := time.Until(when)
-		if delay < 0 {
-			delay = 0
-		}
+		delay := max(time.Until(when), 0)
 		return delay, true
 	}
 	return 0, false
@@ -256,10 +253,7 @@ func ParseCodexErrorResponse(status int, statusText, raw string) CodexErrorRespo
 			}
 			when := ""
 			if err.ResetsAt != nil {
-				mins := (*err.ResetsAt*1000 - time.Now().UnixMilli()) / 60000
-				if mins < 0 {
-					mins = 0
-				}
+				mins := max((*err.ResetsAt*1000-time.Now().UnixMilli())/60000, 0)
 				when = fmt.Sprintf(" Try again in ~%d min.", mins)
 			}
 			friendly = strings.TrimSpace(fmt.Sprintf("You have hit your ChatGPT usage limit%s.%s", plan, when))

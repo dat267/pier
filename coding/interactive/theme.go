@@ -5,6 +5,7 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"sort"
@@ -361,9 +362,7 @@ func (t *Theme) Colors() map[string]tui.Color {
 		}
 	}
 	colors := make(map[string]tui.Color, len(t.concreteColors)+len(t.defaultForegroundTokens)+len(t.defaultBackgroundTokens))
-	for token, color := range t.concreteColors {
-		colors[token] = color
-	}
+	maps.Copy(colors, t.concreteColors)
 	for _, token := range t.defaultForegroundTokens {
 		colors[token] = foreground
 	}
@@ -584,9 +583,7 @@ func ResolveThemeColors(colors map[string]ColorValue, vars map[string]ColorValue
 
 func withThemeColorFallbacks(colors map[string]ColorValue) map[string]ColorValue {
 	result := make(map[string]ColorValue, len(colors)+5)
-	for key, value := range colors {
-		result[key] = value
-	}
+	maps.Copy(result, colors)
 	if _, ok := result["scrollbarTrack"]; !ok {
 		result["scrollbarTrack"] = colors["muted"]
 	}
@@ -604,9 +601,7 @@ func withThemeColorFallbacks(colors map[string]ColorValue) map[string]ColorValue
 
 func withBackgroundFallbacks(colors map[string]ColorValue) map[string]ColorValue {
 	result := make(map[string]ColorValue, len(colors)+1)
-	for key, value := range colors {
-		result[key] = value
-	}
+	maps.Copy(result, colors)
 	if _, ok := result["searchMatchBg"]; !ok {
 		result["searchMatchBg"] = colors["selectedBg"]
 	}
@@ -823,7 +818,7 @@ func pierAccentWithContrast(channels tui.OklchChannels, appearance string, surfa
 		return candidate(maxOffset)
 	}
 	low, high := 0.0, maxOffset
-	for index := 0; index < 24; index++ {
+	for range 24 {
 		middle := (low + high) / 2
 		if readable(candidate(middle)) {
 			high = middle
@@ -1313,9 +1308,7 @@ func registeredThemesSnapshot() map[string]*Theme {
 	registered := themeState.registered.Load()
 	out := map[string]*Theme{}
 	if registered != nil {
-		for name, theme := range *registered {
-			out[name] = theme
-		}
+		maps.Copy(out, *registered)
 	}
 	return out
 }
@@ -1494,9 +1487,7 @@ func startThemeWatcherContext(ctx context.Context, themeName string) {
 				}
 				if registered := themeState.registered.Load(); registered != nil {
 					updated := make(map[string]*Theme, len(*registered)+1)
-					for name, theme := range *registered {
-						updated[name] = theme
-					}
+					maps.Copy(updated, *registered)
 					updated[themeName] = reloaded
 					themeState.registered.Store(&updated)
 				}

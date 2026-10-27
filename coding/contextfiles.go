@@ -30,8 +30,8 @@ func FindGitPaths(cwd string) *GitPaths {
 					return nil
 				}
 				trimmed := strings.TrimSpace(DecodeUTF8WithReplacement(content))
-				if strings.HasPrefix(trimmed, "gitdir: ") {
-					gitDir := resolveFrom(dir, strings.TrimSpace(strings.TrimPrefix(trimmed, "gitdir: ")))
+				if after, ok := strings.CutPrefix(trimmed, "gitdir: "); ok {
+					gitDir := resolveFrom(dir, strings.TrimSpace(after))
 					headPath := filepath.Join(gitDir, "HEAD")
 					if !fileExists(headPath) {
 						return nil

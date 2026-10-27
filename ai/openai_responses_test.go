@@ -31,14 +31,14 @@ func testResponsesModel() *Model {
 func TestConfigurationUpdateEffortKeepsThePromptCache(t *testing.T) {
 	model := testResponsesModel()
 	model.Compat = &ModelCompat{OpenAIResponses: &OpenAIResponsesCompat{
-		SupportsMidConvoEffort: boolPtrT(true),
+		SupportsMidConvoEffort: new(true),
 	}}
-	model.ThinkingLevelMap = map[ThinkingLevel]*string{ThinkHigh: strPtrT("high")}
+	model.ThinkingLevelMap = map[ThinkingLevel]*string{ThinkHigh: new("high")}
 	ctx := NormalizeContext(Context{
 		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
 	})
 	params, err := BuildOpenAIResponsesParams(model, ctx, &OpenAIResponsesOptions{
-		StreamOptions:   StreamOptions{APIKey: "sk-test"},
+		APIKey:          "sk-test",
 		ReasoningEffort: ThinkHigh,
 	}, nil, nil)
 	if err != nil {
@@ -66,7 +66,7 @@ func TestConfigurationUpdateEffortKeepsThePromptCache(t *testing.T) {
 	oauth.Compat = model.Compat
 	oauth.ThinkingLevelMap = model.ThinkingLevelMap
 	effort := getConfigurationUpdateEffort(oauth, &OpenAIResponsesOptions{
-		StreamOptions:   StreamOptions{APIKey: "oauth-token"},
+		APIKey:          "oauth-token",
 		ReasoningEffort: ThinkHigh,
 	}, GetOpenAIResponsesCompat(oauth))
 	if effort != "" {
@@ -123,7 +123,7 @@ func TestResponsesCompatAndCacheFields(t *testing.T) {
 	// and the 24h retention field is suppressed.
 	model := testResponsesModel()
 	model.Compat = &ModelCompat{OpenAIResponses: &OpenAIResponsesCompat{
-		SupportsExplicitPromptCacheMode: boolPtrT(true),
+		SupportsExplicitPromptCacheMode: new(true),
 	}}
 	compat = GetOpenAIResponsesCompat(model)
 	if retention := GetPromptCacheRetention(compat, CacheRetentionLong); retention != "" {
@@ -148,7 +148,7 @@ func TestResponsesCompatAndCacheFields(t *testing.T) {
 func TestBuildResponsesParamsOmitsZeroMaxTokens(t *testing.T) {
 	zero := 0
 	params, err := BuildOpenAIResponsesParams(testResponsesModel(), NormalizeContext(Context{}),
-		&OpenAIResponsesOptions{StreamOptions: StreamOptions{MaxTokens: &zero}}, nil, nil)
+		&OpenAIResponsesOptions{MaxTokens: &zero}, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,16 +161,14 @@ func TestBuildResponsesParams(t *testing.T) {
 	model := testResponsesModel()
 	tool := Tool{Name: "read_file", Description: "Reads", Parameters: json.RawMessage(`{"type":"object","properties":{}}`)}
 	ctx := NormalizeContext(Context{
-		SystemPrompt: strPtrT("sys"),
+		SystemPrompt: new("sys"),
 		Messages:     []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
 		Tools:        []Tool{tool},
 	})
 	maxTokens := 8 // below the API minimum of 16
 	params, err := BuildOpenAIResponsesParams(model, ctx, &OpenAIResponsesOptions{
-		StreamOptions: StreamOptions{
-			SessionID: "sess", MaxTokens: &maxTokens,
-			CacheRetention: CacheRetentionLong,
-		},
+		SessionID: "sess", MaxTokens: &maxTokens,
+		CacheRetention:  CacheRetentionLong,
 		ReasoningEffort: ThinkHigh,
 		ServiceTier:     "flex",
 	}, nil, nil)
@@ -224,7 +222,7 @@ func TestConvertResponsesMessages(t *testing.T) {
 		&UserMessage{Content: StringOrBlocks{Text: "hello"}, Timestamp: 1},
 		&AssistantMessage{
 			Content: ContentList{
-				ThinkingContent{Thinking: "hmm", ThinkingSignature: strPtrT(`{"type":"reasoning","id":"rs_1","summary":[]}`)},
+				ThinkingContent{Thinking: "hmm", ThinkingSignature: new(`{"type":"reasoning","id":"rs_1","summary":[]}`)},
 				TextContent{Text: "answer"},
 				ToolCall{ID: "call_1|fc_1", Name: "bash", Arguments: json.RawMessage(`{"cmd":"ls"}`)},
 			},
@@ -357,7 +355,7 @@ func TestProcessResponsesStreamTextAndReasoning(t *testing.T) {
 	var providerEventModel *Model
 	stream := StreamOpenAIResponses(model, NormalizeContext(Context{
 		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-	}), &OpenAIResponsesOptions{StreamOptions: StreamOptions{
+	}), &OpenAIResponsesOptions{
 		APIKey: "k",
 		OnProviderStreamEvent: func(data json.RawMessage, eventModel *Model) {
 			var event struct {
@@ -369,8 +367,7 @@ func TestProcessResponsesStreamTextAndReasoning(t *testing.T) {
 			}
 			providerEventTypes = append(providerEventTypes, event.Type)
 			providerEventModel = eventModel
-		},
-	}})
+		}})
 
 	var types []string
 	var text, thinking string
@@ -460,7 +457,7 @@ func TestProcessResponsesStreamFunctionCallAndErrors(t *testing.T) {
 		model := testResponsesModel()
 		model.BaseURL = server.URL
 		stream := StreamOpenAIResponses(model, NormalizeContext(Context{}),
-			&OpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+			&OpenAIResponsesOptions{APIKey: "k"})
 		msg, err := stream.Result(context.Background())
 		if err != nil {
 			t.Fatal(err)
@@ -483,7 +480,7 @@ func TestProcessResponsesStreamFunctionCallAndErrors(t *testing.T) {
 		model := testResponsesModel()
 		model.BaseURL = server.URL
 		stream := StreamOpenAIResponses(model, NormalizeContext(Context{}),
-			&OpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+			&OpenAIResponsesOptions{APIKey: "k"})
 		msg, _ := stream.Result(context.Background())
 		if msg.StopReason != StopError || msg.ErrorMessage == nil || !strings.Contains(*msg.ErrorMessage, "server_error: boom") {
 			t.Fatalf("message = %+v", msg)
@@ -502,7 +499,7 @@ func TestProcessResponsesStreamFunctionCallAndErrors(t *testing.T) {
 		model := testResponsesModel()
 		model.BaseURL = server.URL
 		stream := StreamOpenAIResponses(model, NormalizeContext(Context{}),
-			&OpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+			&OpenAIResponsesOptions{APIKey: "k"})
 		msg, _ := stream.Result(context.Background())
 		if msg.StopReason != StopError || msg.ErrorMessage == nil || *msg.ErrorMessage != want {
 			t.Fatalf("message = %+v", msg)
@@ -518,7 +515,7 @@ func TestProcessResponsesStreamFunctionCallAndErrors(t *testing.T) {
 		model := testResponsesModel()
 		model.BaseURL = server.URL
 		stream := StreamOpenAIResponses(model, NormalizeContext(Context{}),
-			&OpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+			&OpenAIResponsesOptions{APIKey: "k"})
 		msg, _ := stream.Result(context.Background())
 		if msg.StopReason != StopError || msg.ErrorMessage == nil || *msg.ErrorMessage != "boom" {
 			t.Fatalf("message = %+v", msg)
@@ -533,7 +530,7 @@ func TestProcessResponsesStreamFunctionCallAndErrors(t *testing.T) {
 		model := testResponsesModel()
 		model.BaseURL = server.URL
 		stream := StreamOpenAIResponses(model, NormalizeContext(Context{}),
-			&OpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+			&OpenAIResponsesOptions{APIKey: "k"})
 		msg, _ := stream.Result(context.Background())
 		if msg.StopReason != StopError || !strings.Contains(*msg.ErrorMessage, "before a terminal response event") {
 			t.Fatalf("message = %+v", msg)
@@ -556,7 +553,7 @@ func TestProcessResponsesStreamFunctionCallAndErrors(t *testing.T) {
 		model := testResponsesModel()
 		model.BaseURL = server.URL
 		stream := StreamOpenAIResponses(model, NormalizeContext(Context{}),
-			&OpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+			&OpenAIResponsesOptions{APIKey: "k"})
 		msg, _ := stream.Result(context.Background())
 		if msg.StopReason != StopError || msg.ErrorMessage == nil || !strings.Contains(*msg.ErrorMessage, want) {
 			t.Fatalf("message = %+v", msg)
@@ -593,7 +590,7 @@ func TestProcessResponsesStreamFunctionCallAndErrors(t *testing.T) {
 		model := testResponsesModel()
 		model.BaseURL = server.URL
 		stream := StreamOpenAIResponses(model, NormalizeContext(Context{}),
-			&OpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+			&OpenAIResponsesOptions{APIKey: "k"})
 		msg, _ := stream.Result(context.Background())
 		if msg.StopReason != StopLength || msg.RawStopReason == nil || *msg.RawStopReason != "incomplete.max_output_tokens" {
 			t.Fatalf("message = %+v", msg)
@@ -617,8 +614,6 @@ func TestServiceTierPricing(t *testing.T) {
 		t.Fatal("gpt-5.5 priority multiplier")
 	}
 }
-
-func strPtrT(s string) *string { return &s }
 
 // TestConvertResponsesMessagesDropsMismatchedItemIds ports constrained-sampling.test.ts
 // "drops foreign item ids when replaying grammar calls as custom Responses
@@ -721,7 +716,7 @@ func TestOpenAIResponsesChatGPTLimitHints(t *testing.T) {
 			model := testResponsesModel()
 			model.BaseURL = server.URL
 			stream := StreamOpenAIResponses(model, NormalizeContext(Context{}),
-				&OpenAIResponsesOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+				&OpenAIResponsesOptions{APIKey: "k"})
 			msg, _ := stream.Result(context.Background())
 			if msg.ErrorMessage == nil {
 				t.Fatalf("message = %+v; want a provider error", msg)

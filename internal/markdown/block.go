@@ -447,10 +447,7 @@ func listItemStart(line string) (contentIndent int, ordered bool, ok bool) {
 			break
 		}
 	}
-	contentIndent = columnAt(line, i)
-	if contentIndent > 24 {
-		contentIndent = 24
-	}
+	contentIndent = min(columnAt(line, i), 24)
 	return contentIndent, ordered, true
 }
 

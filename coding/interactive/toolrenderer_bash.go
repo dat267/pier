@@ -132,10 +132,7 @@ func (c *bashPreviewComponent) Render(width int) []string {
 	}
 
 	tail := c.tailVisualLines(width)
-	skipped := c.visualLineCount(width) - len(tail)
-	if skipped < 0 {
-		skipped = 0
-	}
+	skipped := max(c.visualLineCount(width)-len(tail), 0)
 
 	lines := make([]string, 0, len(tail)+2)
 	lines = append(lines, "")
@@ -260,16 +257,13 @@ func (c *bashPreviewComponent) visualLineCount(width int) int {
 		state.countedText = ""
 		state.totalVisual = 0
 	}
-	contentWidth := width
-	if contentWidth < 1 {
-		contentWidth = 1
-	}
+	contentWidth := max(width, 1)
 	consumed := len(state.countedText)
 	rest := c.output[consumed:]
 	if lastNewline := strings.LastIndexByte(rest, '\n'); lastNewline >= 0 {
 		complete := rest[:lastNewline+1]
 		body := complete[:len(complete)-1]
-		for _, line := range strings.Split(body, "\n") {
+		for line := range strings.SplitSeq(body, "\n") {
 			if count, ok := plainWrappedLineCount(line, contentWidth); ok {
 				state.totalVisual += count
 			} else {
@@ -292,7 +286,7 @@ func (c *bashPreviewComponent) visualLineCount(width int) int {
 func (c *bashPreviewComponent) tailVisualLines(width int) []string {
 	suffix := c.output
 	end := len(suffix)
-	for i := 0; i < bashPreviewLines; i++ {
+	for range bashPreviewLines {
 		index := strings.LastIndexByte(suffix[:end], '\n')
 		if index < 0 {
 			end = 0

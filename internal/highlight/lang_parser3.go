@@ -15,21 +15,19 @@ func Parser3() *Language {
 	remComment.Contains = append(remComment.Contains, curlySubcomment)
 
 	return &Language{
-		Name: "Parser3",
-		Mode: Mode{
-			SubLanguage:  []string{"xml"},
-			HasRelevance: true,
-			Relevance:    0,
-			Contains: []*Mode{
-				CommentMode(`^#`, `$`),
-				remComment,
-				{ClassName: "meta", Begin: `^@(?:BASE|USE|CLASS|OPTIONS)$`, HasRelevance: true, Relevance: 10},
-				{ClassName: "title", Begin: `@[\w\-]+\[[\w^;\-]*\](?:\[[\w^;\-]*\])?(?:.*)$`},
-				{ClassName: "variable", Begin: `\$\{?[\w\-.:]+\}?`},
-				{ClassName: "keyword", Begin: `\^[\w\-.:]+`},
-				{ClassName: "number", Begin: `\^#[0-9a-fA-F]+`},
-				CNumberMode,
-			},
+		Name:         "Parser3",
+		SubLanguage:  []string{"xml"},
+		HasRelevance: true,
+		Relevance:    0,
+		Contains: []*Mode{
+			CommentMode(`^#`, `$`),
+			remComment,
+			{ClassName: "meta", Begin: `^@(?:BASE|USE|CLASS|OPTIONS)$`, HasRelevance: true, Relevance: 10},
+			{ClassName: "title", Begin: `@[\w\-]+\[[\w^;\-]*\](?:\[[\w^;\-]*\])?(?:.*)$`},
+			{ClassName: "variable", Begin: `\$\{?[\w\-.:]+\}?`},
+			{ClassName: "keyword", Begin: `\^[\w\-.:]+`},
+			{ClassName: "number", Begin: `\^#[0-9a-fA-F]+`},
+			CNumberMode,
 		},
 	}
 }

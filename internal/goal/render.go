@@ -38,7 +38,7 @@ func ClickToExpand(render func(expanded bool) tui.Component, initiallyExpanded b
 		}
 		mutable.expanded = !mutable.expanded
 		mutable.child = render(mutable.expanded)
-		return &tui.TuiMouseDispatchResult{TuiMouseEventResult: tui.TuiMouseEventResult{Handled: true}}
+		return &tui.TuiMouseDispatchResult{Handled: true}
 	})
 	return &clickToExpandComponent{mutable: mutable, region: region}
 }

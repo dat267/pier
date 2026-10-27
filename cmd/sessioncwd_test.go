@@ -32,7 +32,7 @@ func TestContinueCLIUsesPhysicalWorkingDirectory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("continue CLI: %v: %s", err, output)
 	}
-	for _, line := range strings.Split(string(output), "\n") {
+	for line := range strings.SplitSeq(string(output), "\n") {
 		var header struct {
 			Type string `json:"type"`
 			ID   string `json:"id"`

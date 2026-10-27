@@ -18,10 +18,8 @@ func JuliaRepl() *Language {
 	return &Language{
 		Name:    "Julia REPL",
 		Aliases: []string{"jldoctest"},
-		Mode: Mode{
-			Contains: []*Mode{
-				{ClassName: "meta", Begin: `^julia>`, HasRelevance: true, Relevance: 10, Starts: starts},
-			},
+		Contains: []*Mode{
+			{ClassName: "meta", Begin: `^julia>`, HasRelevance: true, Relevance: 10, Starts: starts},
 		},
 	}
 }

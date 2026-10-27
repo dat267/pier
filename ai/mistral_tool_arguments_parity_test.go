@@ -22,7 +22,7 @@ func TestMistralDefaultsAbsentToolArgumentsToObjectDelta(t *testing.T) {
 			server := sseServer(t, []string{body}, nil)
 			defer server.Close()
 			stream := StreamMistralConversations(mistralModel(server.URL), mistralUserContext(), &MistralOptions{
-				StreamOptions: StreamOptions{APIKey: "test-key"},
+				APIKey: "test-key",
 			})
 			var deltas []string
 			for {

@@ -38,7 +38,7 @@ func TestStreamableHTTPCanceledTokenWaitDoesNotDispatch(t *testing.T) {
 			auth := &heldTokenProvider{entered: make(chan struct{}), release: make(chan struct{})}
 			calls := 0
 			transport := NewStreamableHttpTransport(StreamableHttpTransportOptions{
-				URL: "https://invalid.test", AuthProvider: auth, OpenGetStream: boolPtr(false),
+				URL: "https://invalid.test", AuthProvider: auth, OpenGetStream: new(false),
 				Fetch: func(context.Context, *http.Request) (*http.Response, error) {
 					calls++
 					return &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": {"application/json"}}, Body: io.NopCloser(strings.NewReader(`{"jsonrpc":"2.0","id":1,"result":{}}`))}, nil

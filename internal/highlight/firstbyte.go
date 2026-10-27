@@ -2,6 +2,7 @@ package highlight
 
 import (
 	"regexp/syntax"
+	"slices"
 	"strings"
 	"unicode"
 )
@@ -31,7 +32,7 @@ func ruleFirstByteSet(expr string, caseInsensitive bool) (string, bool) {
 	var set [256]bool
 	addFirstBytes(&set, parsed)
 	var b strings.Builder
-	for i := 0; i < 256; i++ {
+	for i := range 256 {
 		if set[i] {
 			b.WriteByte(byte(i))
 		}
@@ -113,12 +114,7 @@ func leadingContextSensitive(re *syntax.Regexp) bool {
 		}
 		return false
 	case syntax.OpAlternate:
-		for _, sub := range re.Sub {
-			if leadingContextSensitive(sub) {
-				return true
-			}
-		}
-		return false
+		return slices.ContainsFunc(re.Sub, leadingContextSensitive)
 	case syntax.OpPlus, syntax.OpStar, syntax.OpQuest, syntax.OpRepeat:
 		return leadingContextSensitive(re.Sub[0])
 	default:
@@ -180,10 +176,7 @@ func addRuneFirstByte(set *[256]bool, r rune) {
 
 func addRuneRangeFirstBytes(set *[256]bool, lo, hi rune) {
 	if lo < 0x80 {
-		end := hi
-		if end > 0x7F {
-			end = 0x7F
-		}
+		end := min(hi, 0x7F)
 		for r := lo; r <= end; r++ {
 			set[byte(r)] = true
 		}

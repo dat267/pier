@@ -77,14 +77,11 @@ func updateWriteHighlightCacheIncremental(cache *writeHighlightCache, rawPath st
 		cache.normalizedLines = append(cache.normalizedLines, segments[i])
 		cache.highlightedLines = append(cache.highlightedLines, highlightSingleLine(segments[i], cache.lang))
 	}
-	prefixCount := writePartialFullHighlightLines
-	if prefixCount > len(cache.normalizedLines) {
-		prefixCount = len(cache.normalizedLines)
-	}
+	prefixCount := min(writePartialFullHighlightLines, len(cache.normalizedLines))
 	if prefixCount > 0 {
 		prefixSource := strings.Join(cache.normalizedLines[:prefixCount], "\n")
 		prefixHighlighted := highlightCode(prefixSource, cache.lang, ActiveTheme())
-		for i := 0; i < prefixCount; i++ {
+		for i := range prefixCount {
 			if i < len(prefixHighlighted) {
 				cache.highlightedLines[i] = prefixHighlighted[i]
 			} else {

@@ -95,7 +95,7 @@ func benchmarkMarkdownStream(b *testing.B, reuse bool) {
 	theme := mdTestTheme()
 	var prefix strings.Builder
 	var prefixes []string
-	for i := 0; i < 200; i++ {
+	for range 200 {
 		prefix.WriteString("Paragraph with **bold** and `code` and a [link](https://example.com).\n\n")
 		prefixes = append(prefixes, prefix.String())
 	}

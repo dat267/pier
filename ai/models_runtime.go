@@ -3,6 +3,8 @@ package ai
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 	"sort"
 	"sync"
 	"time"
@@ -950,9 +952,7 @@ func MergeHeaders(base, override ProviderHeaders) ProviderHeaders {
 		return nil
 	}
 	merged := ProviderHeaders{}
-	for k, v := range base {
-		merged[k] = v
-	}
+	maps.Copy(merged, base)
 	for name, value := range override {
 		lower := lowerName(name)
 		for existing := range merged {
@@ -1041,12 +1041,8 @@ func ApplyResolvedAuth(model *Model, auth ModelAuth, resolutionEnv ProviderEnv, 
 	var env ProviderEnv
 	if resolutionEnv != nil || options.Env != nil {
 		env = ProviderEnv{}
-		for k, v := range resolutionEnv {
-			env[k] = v
-		}
-		for k, v := range options.Env {
-			env[k] = v
-		}
+		maps.Copy(env, resolutionEnv)
+		maps.Copy(env, options.Env)
 	}
 	requestOptions := options
 	requestOptions.APIKey = apiKey
@@ -1196,10 +1192,8 @@ func GetSupportedThinkingLevels(model *Model) []ModelThinkingLevel {
 // ClampThinkingLevel clamps a requested level to the model's support.
 func ClampThinkingLevel(model *Model, level ModelThinkingLevel) ModelThinkingLevel {
 	available := GetSupportedThinkingLevels(model)
-	for _, a := range available {
-		if a == level {
-			return level
-		}
+	if slices.Contains(available, level) {
+		return level
 	}
 	requestedIndex := -1
 	for i, l := range extendedThinkingLevels {

@@ -22,7 +22,7 @@ func TestBoxPreparedFrameRejectsWrongGeometryAndBackground(t *testing.T) {
 }
 
 func TestBoxPreparedFramePreservesOwnerMouseTargets(t *testing.T) {
-	hit := &mouseRecordingComponent{staticComponent: staticComponent{lines: []string{"x", "y"}}}
+	hit := &mouseRecordingComponent{lines: []string{"x", "y"}}
 	box := NewBox(1, 1, nil)
 	box.AddChild(hit)
 	prepared := NewBox(1, 1, nil)

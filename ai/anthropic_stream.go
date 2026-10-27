@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -57,14 +58,14 @@ func (d *SSEDecoder) decodeLine(line string) *ServerSentEvent {
 	if strings.HasPrefix(line, ":") {
 		return nil
 	}
-	delimiterIndex := strings.Index(line, ":")
+	before, after, ok := strings.Cut(line, ":")
 	fieldName := line
 	value := ""
-	if delimiterIndex == -1 {
+	if !ok {
 		fieldName = line
 	} else {
-		fieldName = line[:delimiterIndex]
-		value = line[delimiterIndex+1:]
+		fieldName = before
+		value = after
 		if strings.HasPrefix(value, " ") {
 			value = value[1:]
 		}
@@ -870,17 +871,13 @@ func hasPreferredStrictAnthropicTools(model *Model, context TranscriptContext) b
 		strict, unset, err := ResolveJSONSchemaStrictSampling(tool, true, AnthropicStrictUnsupportedKeyword)
 		return err == nil && strict && !unset
 	}
-	for _, tool := range GetCurrentTools(context.Messages) {
-		if isPreferredStrict(tool) {
-			return true
-		}
+	if slices.ContainsFunc(GetCurrentTools(context.Messages), isPreferredStrict) {
+		return true
 	}
 	for _, message := range context.Messages {
 		if system, ok := message.(*SystemMessage); ok {
-			for _, tool := range system.ToolsAdded {
-				if isPreferredStrict(tool) {
-					return true
-				}
+			if slices.ContainsFunc(system.ToolsAdded, isPreferredStrict) {
+				return true
 			}
 		}
 	}
@@ -980,7 +977,7 @@ func StreamAnthropicSimple(model *Model, context TranscriptContext, options *Sim
 		model.Compat.AnthropicMessages.ForceAdaptiveThinking != nil && *model.Compat.AnthropicMessages.ForceAdaptiveThinking
 	if forcedAdaptive {
 		effort := mapThinkingLevelToEffort(model, options.Reasoning)
-		base.ThinkingEnabled = boolPtr(true)
+		base.ThinkingEnabled = new(true)
 		base.Effort = effort
 		return StreamAnthropic(model, context, &base)
 	}
@@ -989,7 +986,7 @@ func StreamAnthropicSimple(model *Model, context TranscriptContext, options *Sim
 	maxTokens, thinkingBudget := AdjustMaxTokensForThinking(baseMaxTokens, int(model.MaxTokens), options.Reasoning, options.ThinkingBudgets)
 	clamped := ClampMaxTokensToContext(model, context, maxTokens)
 	base.MaxTokens = &clamped
-	base.ThinkingEnabled = boolPtr(true)
+	base.ThinkingEnabled = new(true)
 	budget := min(thinkingBudget, max(0, clamped-MinAnswerTokens))
 	base.ThinkingBudgetTokens = &budget
 	return StreamAnthropic(model, context, &base)

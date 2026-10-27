@@ -58,17 +58,16 @@ func TestStreamAnthropicTextFlow(t *testing.T) {
 
 	var providerEventCount int
 	stream := StreamAnthropic(model, NormalizeContext(Context{
-		SystemPrompt: strPtr("sys"),
+		SystemPrompt: new("sys"),
 		Messages:     []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-	}), &AnthropicOptions{StreamOptions: StreamOptions{
+	}), &AnthropicOptions{
 		APIKey: "test-key",
 		OnProviderStreamEvent: func(data json.RawMessage, eventModel *Model) {
 			if eventModel != model || !json.Valid(data) {
 				t.Errorf("provider callback data/model = %s/%p", data, eventModel)
 			}
 			providerEventCount++
-		},
-	}})
+		}})
 
 	var types []string
 	var text string
@@ -162,7 +161,7 @@ func TestStreamAnthropicTextDeltasAllocateLinearly(t *testing.T) {
 	transcript := NormalizeContext(Context{Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}}})
 	var before, after runtime.MemStats
 	runtime.ReadMemStats(&before)
-	message, err := StreamAnthropic(model, transcript, &AnthropicOptions{StreamOptions: StreamOptions{APIKey: "test-key"}}).Result(context.Background())
+	message, err := StreamAnthropic(model, transcript, &AnthropicOptions{APIKey: "test-key"}).Result(context.Background())
 	runtime.ReadMemStats(&after)
 	if err != nil {
 		t.Fatalf("stream result: %v", err)
@@ -198,7 +197,7 @@ func TestStreamAnthropicToolUseWithPartialJSON(t *testing.T) {
 
 	stream := StreamAnthropic(model, NormalizeContext(Context{
 		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "list"}, Timestamp: 1}},
-	}), &AnthropicOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+	}), &AnthropicOptions{APIKey: "k"})
 
 	var deltas []string
 	var finalCall *ToolCall
@@ -251,7 +250,7 @@ func TestStreamAnthropicThinkingAndRedacted(t *testing.T) {
 
 	stream := StreamAnthropic(model, NormalizeContext(Context{
 		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-	}), &AnthropicOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+	}), &AnthropicOptions{APIKey: "k"})
 
 	var events0 []string
 	for {
@@ -287,7 +286,7 @@ func TestStreamAnthropicErrorPaths(t *testing.T) {
 		defer server.Close()
 		stream := StreamAnthropic(model, NormalizeContext(Context{
 			Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-		}), &AnthropicOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+		}), &AnthropicOptions{APIKey: "k"})
 		msg, _ := stream.Result(context.Background())
 		if msg.StopReason != StopError || msg.ErrorMessage == nil || !strings.Contains(*msg.ErrorMessage, "overloaded") {
 			t.Fatalf("message = %+v", msg)
@@ -303,7 +302,7 @@ func TestStreamAnthropicErrorPaths(t *testing.T) {
 		defer server.Close()
 		stream := StreamAnthropic(model, NormalizeContext(Context{
 			Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-		}), &AnthropicOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+		}), &AnthropicOptions{APIKey: "k"})
 		msg, _ := stream.Result(context.Background())
 		if msg.StopReason != StopError || !strings.Contains(*msg.ErrorMessage, "ended before message_stop") {
 			t.Fatalf("message = %+v", msg)
@@ -339,7 +338,7 @@ func TestStreamAnthropicErrorPaths(t *testing.T) {
 		defer server.Close()
 		stream := StreamAnthropic(model, NormalizeContext(Context{
 			Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-		}), &AnthropicOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+		}), &AnthropicOptions{APIKey: "k"})
 		msg, _ := stream.Result(context.Background())
 		if msg.StopReason != StopError || !strings.Contains(*msg.ErrorMessage, "Unhandled stop reason: mystery") {
 			t.Fatalf("message = %+v", msg)
@@ -357,7 +356,7 @@ func TestStreamAnthropicErrorPaths(t *testing.T) {
 		defer server.Close()
 		stream := StreamAnthropic(model, NormalizeContext(Context{
 			Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-		}), &AnthropicOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+		}), &AnthropicOptions{APIKey: "k"})
 		msg, _ := stream.Result(context.Background())
 		if msg.StopReason != StopError || *msg.ErrorMessage != "nope" {
 			t.Fatalf("message = %+v", msg)
@@ -409,7 +408,7 @@ func TestStreamAnthropicRetriesPreferredToolsWithoutStrictAfterGrammarRejection(
 	model.BaseURL = server.URL
 	defer server.Close()
 
-	message, err := StreamAnthropic(model, transcript, &AnthropicOptions{StreamOptions: StreamOptions{APIKey: "test-key"}}).Result(context.Background())
+	message, err := StreamAnthropic(model, transcript, &AnthropicOptions{APIKey: "test-key"}).Result(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -459,7 +458,7 @@ func TestStreamAnthropicHTTPRetry(t *testing.T) {
 	maxRetries := 5
 	stream := StreamAnthropic(model, NormalizeContext(Context{
 		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-	}), &AnthropicOptions{StreamOptions: StreamOptions{APIKey: "k", MaxRetries: &maxRetries}})
+	}), &AnthropicOptions{APIKey: "k", MaxRetries: &maxRetries})
 	msg, err := stream.Result(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -486,7 +485,7 @@ func TestStreamAnthropicRetryDelayCapFails(t *testing.T) {
 	maxRetries := 3
 	stream := StreamAnthropic(model, NormalizeContext(Context{
 		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-	}), &AnthropicOptions{StreamOptions: StreamOptions{APIKey: "k", MaxRetries: &maxRetries}})
+	}), &AnthropicOptions{APIKey: "k", MaxRetries: &maxRetries})
 	msg, _ := stream.Result(context.Background())
 	if msg.StopReason != StopError || !strings.Contains(*msg.ErrorMessage, "Server requested 120s retry delay") {
 		t.Fatalf("message = %+v", msg)
@@ -516,7 +515,7 @@ func TestStreamAnthropicAbort(t *testing.T) {
 	defer cancel()
 	stream := StreamAnthropic(model, NormalizeContext(Context{
 		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-	}), &AnthropicOptions{StreamOptions: StreamOptions{APIKey: "k", Ctx: ctx}})
+	}), &AnthropicOptions{APIKey: "k", Ctx: ctx})
 
 	// Wait for start, then abort.
 	deadline := time.Now().Add(5 * time.Second)
@@ -556,7 +555,7 @@ func TestStreamAnthropicSimpleMapping(t *testing.T) {
 
 	stream := StreamAnthropicSimple(model, NormalizeContext(Context{
 		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-	}), &SimpleStreamOptions{StreamOptions: StreamOptions{APIKey: "k"}})
+	}), &SimpleStreamOptions{APIKey: "k"})
 	msg, err := stream.Result(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -571,7 +570,7 @@ func TestStreamAnthropicSimpleMapping(t *testing.T) {
 	// Reasoning low → budget-based thinking with 2048 budget.
 	stream = StreamAnthropicSimple(model, NormalizeContext(Context{
 		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-	}), &SimpleStreamOptions{StreamOptions: StreamOptions{APIKey: "k"}, Reasoning: ThinkLow})
+	}), &SimpleStreamOptions{APIKey: "k", Reasoning: ThinkLow})
 	if _, err := stream.Result(context.Background()); err != nil {
 		t.Fatal(err)
 	}

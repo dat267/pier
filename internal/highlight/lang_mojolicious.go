@@ -7,19 +7,17 @@ func init() { RegisterLanguage("mojolicious", Mojolicious()) }
 // run Perl.
 func Mojolicious() *Language {
 	return &Language{
-		Name: "Mojolicious",
-		Mode: Mode{
-			SubLanguage: []string{"xml"},
-			Contains: []*Mode{
-				{ClassName: "meta", Begin: `^__(END|DATA)__$`},
-				{Begin: `^\s*%{1,2}={0,2}`, End: `$`, SubLanguage: []string{"perl"}},
-				{
-					Begin:        `<%{1,2}={0,2}`,
-					End:          `={0,1}%>`,
-					SubLanguage:  []string{"perl"},
-					ExcludeBegin: true,
-					ExcludeEnd:   true,
-				},
+		Name:        "Mojolicious",
+		SubLanguage: []string{"xml"},
+		Contains: []*Mode{
+			{ClassName: "meta", Begin: `^__(END|DATA)__$`},
+			{Begin: `^\s*%{1,2}={0,2}`, End: `$`, SubLanguage: []string{"perl"}},
+			{
+				Begin:        `<%{1,2}={0,2}`,
+				End:          `={0,1}%>`,
+				SubLanguage:  []string{"perl"},
+				ExcludeBegin: true,
+				ExcludeEnd:   true,
 			},
 		},
 	}

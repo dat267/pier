@@ -13,21 +13,19 @@ func PHPTemplate() *Language {
 		m.Skip = true
 	}
 	return &Language{
-		Name: "PHP template",
-		Mode: Mode{
-			SubLanguage: []string{"xml"},
-			Contains: []*Mode{
-				{
-					Begin:       `<\?(php|=)?`,
-					End:         `\?>`,
-					SubLanguage: []string{"php"},
-					Contains: []*Mode{
-						{Begin: `/\*`, End: `\*/`, Skip: true},
-						{Begin: `b"`, End: `"`, Skip: true},
-						{Begin: `b'`, End: `'`, Skip: true},
-						Variant(AposStringMode, plainString),
-						Variant(QuoteStringMode, plainString),
-					},
+		Name:        "PHP template",
+		SubLanguage: []string{"xml"},
+		Contains: []*Mode{
+			{
+				Begin:       `<\?(php|=)?`,
+				End:         `\?>`,
+				SubLanguage: []string{"php"},
+				Contains: []*Mode{
+					{Begin: `/\*`, End: `\*/`, Skip: true},
+					{Begin: `b"`, End: `"`, Skip: true},
+					{Begin: `b'`, End: `'`, Skip: true},
+					Variant(AposStringMode, plainString),
+					Variant(QuoteStringMode, plainString),
 				},
 			},
 		},

@@ -68,7 +68,7 @@ func TestCreateAgentSessionNoSkillsSkipsTrustedDefaults(t *testing.T) {
 			cwd, agentDir := t.TempDir(), GetAgentDir()
 			writeSkill(t, filepath.Join(cwd, ".pi", "skills"), "project-default", "Project default")
 			writeSkill(t, filepath.Join(agentDir, "skills"), "user-default", "User default")
-			settings := NewSettingsManagerFromFiles(cwd, agentDir, SettingsManagerCreateOptions{ProjectTrusted: boolPtr(true)})
+			settings := NewSettingsManagerFromFiles(cwd, agentDir, SettingsManagerCreateOptions{ProjectTrusted: new(true)})
 			paths, want := []string{}, []string{}
 			if explicit {
 				path := t.TempDir()
@@ -137,7 +137,7 @@ func testSessionRuntime(t *testing.T) *ModelRuntime {
 		AuthPath:        filepath.Join(GetAgentDir(), "auth.json"),
 		ModelsPath:      filepath.Join(GetAgentDir(), "models.json"),
 		Credentials:     newMemoryCredentialStore(),
-		RefreshOnCreate: boolPtr(false),
+		RefreshOnCreate: new(false),
 	})
 	if err != nil {
 		t.Fatal(err)

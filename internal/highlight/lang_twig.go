@@ -43,22 +43,20 @@ func Twig() *Language {
 		Name:            "Twig",
 		Aliases:         []string{"craftcms"},
 		CaseInsensitive: true,
-		Mode: Mode{
-			SubLanguage: []string{"xml"},
-			Contains: []*Mode{
-				CommentMode(`\{#`, `#\}`),
-				{
-					ClassName: "template-tag",
-					Begin:     `\{%`,
-					End:       `%\}`,
-					Contains:  []*Mode{nameMode},
-				},
-				{
-					ClassName: "template-variable",
-					Begin:     `\{\{`,
-					End:       `\}\}`,
-					Contains:  []*Mode{Self, filter, functions},
-				},
+		SubLanguage:     []string{"xml"},
+		Contains: []*Mode{
+			CommentMode(`\{#`, `#\}`),
+			{
+				ClassName: "template-tag",
+				Begin:     `\{%`,
+				End:       `%\}`,
+				Contains:  []*Mode{nameMode},
+			},
+			{
+				ClassName: "template-variable",
+				Begin:     `\{\{`,
+				End:       `\}\}`,
+				Contains:  []*Mode{Self, filter, functions},
 			},
 		},
 	}

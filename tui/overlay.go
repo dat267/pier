@@ -79,28 +79,28 @@ func parsePercentValue(value string) (float64, bool) {
 	negative := strings.HasPrefix(number, "-")
 	number = strings.TrimPrefix(number, "-")
 	parts := strings.SplitN(number, ".", 2)
-	integer := ""
+	var integer strings.Builder
 	for _, digit := range parts[0] {
 		if digit < '0' || digit > '9' {
 			return 0, false
 		}
-		integer += string(digit)
+		integer.WriteString(string(digit))
 	}
-	fraction := ""
+	var fraction strings.Builder
 	if len(parts) == 2 {
 		for _, digit := range parts[1] {
 			if digit < '0' || digit > '9' {
 				return 0, false
 			}
-			fraction += string(digit)
+			fraction.WriteString(string(digit))
 		}
 	}
 	value_ := 0.0
-	for _, digit := range integer {
+	for _, digit := range integer.String() {
 		value_ = value_*10 + float64(digit-'0')
 	}
 	scale := 0.1
-	for _, digit := range fraction {
+	for _, digit := range fraction.String() {
 		value_ += float64(digit-'0') * scale
 		scale *= 0.1
 	}

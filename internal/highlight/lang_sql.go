@@ -104,25 +104,23 @@ func SQL() *Language {
 	return &Language{
 		Name:            "SQL",
 		CaseInsensitive: true,
-		Mode: Mode{
-			Keywords: rootKeywords,
-			Illegal:  `[{}]|<\/`,
-			Contains: []*Mode{
-				{Begin: "(create table|insert into|primary key|foreign key|not null|alter table|add constraint|grouping sets|on overflow|character set|respect nulls|ignore nulls|nulls first|nulls last|depth first|breadth first)", Keywords: comboKeywords},
-				{ClassName: "type", Begin: "(double precision|large object|with timezone|without timezone)"},
-				{Begin: "\\b(abs|acos|array_agg|asin|atan|avg|cast|ceil|ceiling|coalesce|corr|cos|cosh|count|covar_pop|covar_samp|cume_dist|dense_rank|deref|element|exp|extract|first_value|floor|json_array|json_arrayagg|json_exists|json_object|json_objectagg|json_query|json_table|json_table_primitive|json_value|lag|last_value|lead|listagg|ln|log|log10|lower|max|min|mod|nth_value|ntile|nullif|percent_rank|percentile_cont|percentile_disc|position|position_regex|power|rank|regr_avgx|regr_avgy|regr_count|regr_intercept|regr_r2|regr_slope|regr_sxx|regr_sxy|regr_syy|row_number|sin|sinh|sqrt|stddev_pop|stddev_samp|substring|substring_regex|sum|tan|tanh|translate|translate_regex|treat|trim|trim_array|unnest|upper|value_of|var_pop|var_samp|width_bucket)\\s*\\(", Keywords: funcKeywords},
-				{ClassName: "variable", Begin: `@[a-z0-9]+`},
-				str,
-				quotedIdentifier,
-				CNumberMode,
-				CBlockCommentMode,
-				CommentMode(`--`, `$`),
-				{
-					ClassName:    "operator",
-					Begin:        `[-+*/=%^~]|&&?|\|\|?|!=?|<(?:=>?|<|>)?|>[>=]?`,
-					HasRelevance: true,
-					Relevance:    0,
-				},
+		Keywords:        rootKeywords,
+		Illegal:         `[{}]|<\/`,
+		Contains: []*Mode{
+			{Begin: "(create table|insert into|primary key|foreign key|not null|alter table|add constraint|grouping sets|on overflow|character set|respect nulls|ignore nulls|nulls first|nulls last|depth first|breadth first)", Keywords: comboKeywords},
+			{ClassName: "type", Begin: "(double precision|large object|with timezone|without timezone)"},
+			{Begin: "\\b(abs|acos|array_agg|asin|atan|avg|cast|ceil|ceiling|coalesce|corr|cos|cosh|count|covar_pop|covar_samp|cume_dist|dense_rank|deref|element|exp|extract|first_value|floor|json_array|json_arrayagg|json_exists|json_object|json_objectagg|json_query|json_table|json_table_primitive|json_value|lag|last_value|lead|listagg|ln|log|log10|lower|max|min|mod|nth_value|ntile|nullif|percent_rank|percentile_cont|percentile_disc|position|position_regex|power|rank|regr_avgx|regr_avgy|regr_count|regr_intercept|regr_r2|regr_slope|regr_sxx|regr_sxy|regr_syy|row_number|sin|sinh|sqrt|stddev_pop|stddev_samp|substring|substring_regex|sum|tan|tanh|translate|translate_regex|treat|trim|trim_array|unnest|upper|value_of|var_pop|var_samp|width_bucket)\\s*\\(", Keywords: funcKeywords},
+			{ClassName: "variable", Begin: `@[a-z0-9]+`},
+			str,
+			quotedIdentifier,
+			CNumberMode,
+			CBlockCommentMode,
+			CommentMode(`--`, `$`),
+			{
+				ClassName:    "operator",
+				Begin:        `[-+*/=%^~]|&&?|\|\|?|!=?|<(?:=>?|<|>)?|>[>=]?`,
+				HasRelevance: true,
+				Relevance:    0,
 			},
 		},
 	}

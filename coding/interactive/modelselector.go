@@ -467,7 +467,7 @@ func (c *ModelSelectorComponent) updateList() {
 
 	switch {
 	case c.errorMessage != "":
-		for _, line := range strings.Split(c.errorMessage, "\n") {
+		for line := range strings.SplitSeq(c.errorMessage, "\n") {
 			c.listContainer.AddChild(tui.NewText(theme.Fg("error", line), 0, 0, nil))
 		}
 	case len(c.filteredModels) == 0:

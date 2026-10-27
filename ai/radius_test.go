@@ -85,9 +85,8 @@ func TestGetRadiusModels(t *testing.T) {
 			"cost": map[string]any{"input": 1, "output": 2}, "contextWindow": float64(1000), "maxTokens": float64(100),
 		}},
 	})
-	credential := &OAuthCredential{OAuthCredentials: OAuthCredentials{
-		Access: "token", Extra: map[string]json.RawMessage{RadiusCredentialConfigKey: configJSON},
-	}}
+	credential := &OAuthCredential{
+		Access: "token", Extra: map[string]json.RawMessage{RadiusCredentialConfigKey: configJSON}}
 	models := GetRadiusModels("radius", credential)
 	if len(models) != 1 {
 		t.Fatalf("models = %+v", models)
@@ -101,9 +100,8 @@ func TestGetRadiusModels(t *testing.T) {
 		t.Fatalf("models = %+v", got)
 	}
 	// A malformed cached config yields nothing.
-	bad := &OAuthCredential{OAuthCredentials: OAuthCredentials{
-		Extra: map[string]json.RawMessage{RadiusCredentialConfigKey: json.RawMessage(`"nope"`)},
-	}}
+	bad := &OAuthCredential{
+		Extra: map[string]json.RawMessage{RadiusCredentialConfigKey: json.RawMessage(`"nope"`)}}
 	if got := GetRadiusModels("radius", bad); len(got) != 0 {
 		t.Fatalf("models = %+v", got)
 	}
@@ -485,7 +483,7 @@ func TestCreateRadiusOAuthDefinition(t *testing.T) {
 	if err == nil || err.Error() != "Unknown Radius sign-in method: other" {
 		t.Fatalf("err = %v", err)
 	}
-	modelAuth, err := auth.ToAuth(&OAuthCredential{OAuthCredentials: OAuthCredentials{Access: "access"}})
+	modelAuth, err := auth.ToAuth(&OAuthCredential{Access: "access"})
 	if err != nil || modelAuth.APIKey != "access" {
 		t.Fatalf("model auth = %+v err = %v", modelAuth, err)
 	}

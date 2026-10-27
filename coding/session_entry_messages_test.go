@@ -11,7 +11,7 @@ import (
 // Reference: pi v1.4.0 (4a080252), sessionEntryToContextMessages returns the
 // particular entry's message, never another entry's data with a matching ID.
 func TestEntryMessagesCachesOnlyCanonicalPayloads(t *testing.T) {
-	manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: boolPtr(false)})
+	manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: new(false)})
 	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "original"}, Timestamp: 1})
 	entry := manager.GetEntries()[0]
 	cached := manager.Projection().Messages[0]

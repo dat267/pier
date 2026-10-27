@@ -79,7 +79,7 @@ func TestMarkdownStreamingReusesStablePrefix(t *testing.T) {
 func TestMarkdownStreamingIncrementalLexRendersTail(t *testing.T) {
 	theme := mdTestTheme()
 	var builder strings.Builder
-	for i := 0; i < 400; i++ {
+	for range 400 {
 		builder.WriteString("Paragraph with **bold** and `code` and a [link](https://example.com).\n\n")
 	}
 	message := builder.String()

@@ -143,24 +143,9 @@ func visibleStackEntryList(entries []StackLayoutEntry, viewport LayoutViewport) 
 }
 
 func clampStackSize(size int, entry StackLayoutEntry) int {
-	minSize := entry.MinSize
-	if minSize < 0 {
-		minSize = 0
-	}
-	maxSize := entry.MaxSize
-	if maxSize < minSize {
-		maxSize = minSize
-	}
-	value := size
-	if value < 0 {
-		value = 0
-	}
-	if value < minSize {
-		value = minSize
-	}
-	if value > maxSize {
-		value = maxSize
-	}
+	minSize := max(entry.MinSize, 0)
+	maxSize := max(entry.MaxSize, minSize)
+	value := min(max(max(size, 0), minSize), maxSize)
 	return value
 }
 

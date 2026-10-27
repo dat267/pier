@@ -27,29 +27,27 @@ func Roboconf() *Language {
 		Name:            "Roboconf",
 		Aliases:         []string{"graph", "instances"},
 		CaseInsensitive: true,
-		Mode: Mode{
-			Keywords: Keywords{"keyword": "import"},
-			Contains: []*Mode{
-				{
-					Begin:    `^facet ` + identifier,
-					End:      `\}`,
-					Keywords: Keywords{"keyword": "facet"},
-					Contains: []*Mode{property, HashCommentMode},
-				},
-				{
-					Begin:    `^\s*instance of ` + identifier,
-					End:      `\}`,
-					Keywords: Keywords{"keyword": "name count channels instance-data instance-state instance of"},
-					Illegal:  `\S`,
-					Contains: []*Mode{Self, property, HashCommentMode},
-				},
-				{
-					Begin:    `^` + identifier,
-					End:      `\}`,
-					Contains: []*Mode{property, HashCommentMode},
-				},
-				HashCommentMode,
+		Keywords:        Keywords{"keyword": "import"},
+		Contains: []*Mode{
+			{
+				Begin:    `^facet ` + identifier,
+				End:      `\}`,
+				Keywords: Keywords{"keyword": "facet"},
+				Contains: []*Mode{property, HashCommentMode},
 			},
+			{
+				Begin:    `^\s*instance of ` + identifier,
+				End:      `\}`,
+				Keywords: Keywords{"keyword": "name count channels instance-data instance-state instance of"},
+				Illegal:  `\S`,
+				Contains: []*Mode{Self, property, HashCommentMode},
+			},
+			{
+				Begin:    `^` + identifier,
+				End:      `\}`,
+				Contains: []*Mode{property, HashCommentMode},
+			},
+			HashCommentMode,
 		},
 	}
 }

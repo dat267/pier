@@ -91,8 +91,8 @@ func ConsumeSseStream(body io.Reader, options ConsumeSseOptions) error {
 			return nil
 		}
 		field, value := line, ""
-		if colon := strings.Index(line, ":"); colon >= 0 {
-			field, value = line[:colon], line[colon+1:]
+		if before, after, ok := strings.Cut(line, ":"); ok {
+			field, value = before, after
 			if strings.HasPrefix(value, " ") {
 				value = value[1:]
 			}
@@ -610,7 +610,7 @@ func (t *StreamableHttpTransport) checkResponse(response *http.Response) error {
 	text := jsSlice(string(body), 0, maxErrorBodyChars)
 	if response.StatusCode == http.StatusUnauthorized {
 		return &McpAuthRequiredError{
-			McpHttpError:    McpHttpError{Status: 401, Body: text, Msg: "MCP server requires authentication"},
+			Status: 401, Body: text, Msg: "MCP server requires authentication",
 			WWWAuthenticate: response.Header.Get("www-authenticate"),
 		}
 	}
@@ -618,7 +618,7 @@ func (t *StreamableHttpTransport) checkResponse(response *http.Response) error {
 	hasSession := t.sessionID != ""
 	t.mu.Unlock()
 	if response.StatusCode == http.StatusNotFound && hasSession {
-		return &McpSessionExpiredError{McpHttpError: McpHttpError{Status: 404, Body: text, Msg: "MCP session expired"}}
+		return &McpSessionExpiredError{Status: 404, Body: text, Msg: "MCP session expired"}
 	}
 	return &McpHttpError{Status: response.StatusCode, Body: text, Msg: describeHttpFailure(response.StatusCode, text)}
 }
@@ -908,7 +908,7 @@ func (t *StreamableHttpTransport) reconnectDelay(attempt int, serverDelayMs *int
 		initial = t.options.Reconnect.InitialDelayMs
 	}
 	delay := initial
-	for i := 0; i < attempt; i++ {
+	for range attempt {
 		if delay*2 > t.maxDelay() {
 			delay = t.maxDelay()
 			break

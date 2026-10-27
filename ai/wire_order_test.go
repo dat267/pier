@@ -5,11 +5,6 @@ import (
 	"testing"
 )
 
-func wirePtrBool(b bool) *bool        { return &b }
-func wirePtrInt64(i int64) *int64     { return &i }
-func wirePtrFloat(f float64) *float64 { return &f }
-func wirePtrString(s string) *string  { return &s }
-
 func assertWireKeys(t *testing.T, encoded []byte, want ...string) {
 	t.Helper()
 	got := orderedKeys(encoded)
@@ -26,9 +21,9 @@ func TestOpenAICompletionsParamsEmitJavaScriptKeyOrder(t *testing.T) {
 	params := &OpenAICompletionsParams{
 		Model: "m", Messages: []OpenAIMessage{{Role: "user", Content: []byte(`"hi"`)}}, Stream: true,
 		StreamOptions:       &OpenAIStreamOptions{IncludeUsage: true},
-		Store:               wirePtrBool(false),
-		MaxCompletionTokens: wirePtrInt64(100),
-		Temperature:         wirePtrFloat(0.3),
+		Store:               new(false),
+		MaxCompletionTokens: new(int64(100)),
+		Temperature:         new(0.3),
 	}
 	encoded, err := MarshalJSON(params)
 	if err != nil {
@@ -43,9 +38,9 @@ func TestOpenAICompletionsToolFieldsKeepUpstreamOrder(t *testing.T) {
 	params := &OpenAICompletionsParams{
 		Model: "m", Messages: []OpenAIMessage{{Role: "user", Content: []byte(`"hi"`)}}, Stream: true,
 		Tools:      []OpenAITool{{Type: "function", Function: &OpenAIFunctionDef{Name: "f"}}},
-		ToolStream: wirePtrBool(true),
+		ToolStream: new(true),
 		ToolChoice: []byte(`"auto"`),
-		Priority:   wirePtrFloat(1),
+		Priority:   new(float64(1)),
 	}
 	encoded, err := MarshalJSON(params)
 	if err != nil {
@@ -60,7 +55,7 @@ func TestOpenAICompletionsThinkingFieldsKeepUpstreamOrder(t *testing.T) {
 	zai := &OpenAICompletionsParams{
 		Model: "m", Messages: []OpenAIMessage{{Role: "user", Content: []byte(`"hi"`)}}, Stream: true,
 		Thinking:        &OpenAIThinkingParam{Type: "enabled"},
-		ReasoningEffort: wirePtrString("high"),
+		ReasoningEffort: new("high"),
 	}
 	encoded, err := MarshalJSON(zai)
 	if err != nil {
@@ -70,8 +65,8 @@ func TestOpenAICompletionsThinkingFieldsKeepUpstreamOrder(t *testing.T) {
 
 	together := &OpenAICompletionsParams{
 		Model: "m", Messages: []OpenAIMessage{{Role: "user", Content: []byte(`"hi"`)}}, Stream: true,
-		ReasoningObj:    &OpenAIReasoningParam{Enabled: wirePtrBool(true)},
-		ReasoningEffort: wirePtrString("high"),
+		ReasoningObj:    &OpenAIReasoningParam{Enabled: new(true)},
+		ReasoningEffort: new("high"),
 	}
 	encoded, err = MarshalJSON(together)
 	if err != nil {
@@ -87,12 +82,12 @@ func TestOpenAIResponsesParamsEmitJavaScriptKeyOrder(t *testing.T) {
 		Model:              "m",
 		Input:              []byte(`[]`),
 		Stream:             true,
-		PromptCacheKey:     wirePtrString("sess"),
+		PromptCacheKey:     new("sess"),
 		PromptCacheOptions: &OpenAIPromptCacheOptions{Mode: "explicit"},
-		Store:              wirePtrBool(false),
-		MaxOutputTokens:    wirePtrInt64(16),
-		Temperature:        wirePtrFloat(0.3),
-		ServiceTier:        wirePtrString("priority"),
+		Store:              new(false),
+		MaxOutputTokens:    new(int64(16)),
+		Temperature:        new(0.3),
+		ServiceTier:        new("priority"),
 	}
 	encoded, err := MarshalJSON(params)
 	if err != nil {

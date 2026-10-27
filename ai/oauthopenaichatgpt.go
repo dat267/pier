@@ -385,15 +385,14 @@ func openAIChatGPTCredentialFromToken(token *openAIChatGPTTokenResponse, clientI
 	if err != nil {
 		return nil, err
 	}
-	return &OAuthCredential{OAuthCredentials: OAuthCredentials{
+	return &OAuthCredential{
 		Access:  token.AccessToken,
 		Refresh: token.RefreshToken,
 		Expires: time.Now().UnixMilli() + int64(token.ExpiresIn*1000) - OpenAIChatGPTCredentialMargin,
 		Extra: map[string]json.RawMessage{
 			"clientId": jsonRawString(clientID),
 			"scopes":   encodedScopes,
-		},
-	}}, nil
+		}}, nil
 }
 
 // ExchangeOpenAIChatGPTAuthorizationCode exchanges a code for tokens with the

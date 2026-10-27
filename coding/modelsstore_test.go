@@ -224,7 +224,7 @@ func TestFileModelsStoreConcurrentWrites(t *testing.T) {
 	ctx := ctxpkg.Background()
 
 	var waitGroup sync.WaitGroup
-	for index := 0; index < 8; index++ {
+	for index := range 8 {
 		waitGroup.Add(1)
 		go func(index int) {
 			defer waitGroup.Done()
@@ -247,7 +247,7 @@ func TestFileModelsStoreConcurrentWrites(t *testing.T) {
 	if len(onDisk) != 8 {
 		t.Fatalf("on disk = %v", onDisk)
 	}
-	for index := 0; index < 8; index++ {
+	for index := range 8 {
 		providerID := "provider-" + string(rune('a'+index))
 		entry, err := store.Read(providerID, ctx)
 		if err != nil || entry == nil || entry.Models[0].ID != "model-"+providerID {

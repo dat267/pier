@@ -172,11 +172,11 @@ func TestPierThemeSelection(t *testing.T) {
 	useBuiltinPierThemeForTest(t)
 
 	// A bare name resolves to itself.
-	if got, ok := ResolveThemeSetting(strPtr("light"), TerminalThemeDark); !ok || got != "light" {
+	if got, ok := ResolveThemeSetting(new("light"), TerminalThemeDark); !ok || got != "light" {
 		t.Errorf("ResolveThemeSetting(light) = %q, %v", got, ok)
 	}
 	// An auto pair resolves against the terminal's background.
-	auto := strPtr("light/dark")
+	auto := new("light/dark")
 	if got, ok := ResolveThemeSetting(auto, TerminalThemeLight); !ok || got != "light" {
 		t.Errorf("auto on a light terminal = %q, %v", got, ok)
 	}

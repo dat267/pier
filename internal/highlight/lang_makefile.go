@@ -64,21 +64,19 @@ func Makefile() *Language {
 	return &Language{
 		Name:    "Makefile",
 		Aliases: []string{"mk", "mak", "make"},
-		Mode: Mode{
-			Keywords: Keywords{
-				"$pattern": `[\w-]+`,
-				"keyword": "define endef undefine ifdef ifndef ifeq ifneq else endif " +
-					"include -include sinclude override export unexport private vpath",
-			},
-			Contains: []*Mode{
-				HashCommentMode,
-				variable,
-				quoteString,
-				funcMode,
-				assignment,
-				meta,
-				target,
-			},
+		Keywords: Keywords{
+			"$pattern": `[\w-]+`,
+			"keyword": "define endef undefine ifdef ifndef ifeq ifneq else endif " +
+				"include -include sinclude override export unexport private vpath",
+		},
+		Contains: []*Mode{
+			HashCommentMode,
+			variable,
+			quoteString,
+			funcMode,
+			assignment,
+			meta,
+			target,
 		},
 	}
 }

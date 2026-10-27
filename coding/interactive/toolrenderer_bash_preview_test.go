@@ -60,7 +60,7 @@ func TestBashPreviewIncrementalMatchesFull(t *testing.T) {
 	checkBashPreviewPrefixes(t, theme, "one\n\ntwo 中文\n\x1b[31mred\x1b[0m\n\ttabbed\nlast", 1, []int{20, 60})
 
 	var sb strings.Builder
-	for i := 0; i < 18; i++ {
+	for i := range 18 {
 		switch i % 6 {
 		case 0:
 			fmt.Fprintf(&sb, "line %d: %s\n", i, strings.Repeat("word ", 30))
@@ -101,7 +101,7 @@ func BenchmarkBashPreviewChunk(b *testing.B) {
 	for _, startLines := range []int{200, 1000} {
 		b.Run(fmt.Sprintf("start=%d/incremental", startLines), func(b *testing.B) {
 			var sb strings.Builder
-			for i := 0; i < startLines; i++ {
+			for i := range startLines {
 				fmt.Fprintf(&sb, "line %d: compiler output with some text and \x1b[32mcolour\x1b[0m here\n", i)
 			}
 			state := &bashResultState{}
@@ -116,7 +116,7 @@ func BenchmarkBashPreviewChunk(b *testing.B) {
 		})
 		b.Run(fmt.Sprintf("start=%d/full", startLines), func(b *testing.B) {
 			var sb strings.Builder
-			for i := 0; i < startLines; i++ {
+			for i := range startLines {
 				fmt.Fprintf(&sb, "line %d: compiler output with some text and \x1b[32mcolour\x1b[0m here\n", i)
 			}
 			b.ResetTimer()
@@ -130,7 +130,7 @@ func BenchmarkBashPreviewChunk(b *testing.B) {
 
 func BenchmarkGetTextOutput1000(b *testing.B) {
 	var sb strings.Builder
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		fmt.Fprintf(&sb, "line %d: compiler output with some text and \x1b[32mcolour\x1b[0m here\n", i)
 	}
 	result := &SortToolResultContent{Content: []ToolResultContent{{Type: "text", Text: sb.String()}}}

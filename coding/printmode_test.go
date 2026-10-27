@@ -86,7 +86,7 @@ func TestPrintModeReportsPersistenceFailure(t *testing.T) {
 					t.Fatal("persistence diagnostic leaked into stdout")
 				}
 				if mode == CLIModeJSON {
-					for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
+					for line := range strings.SplitSeq(strings.TrimSpace(output), "\n") {
 						if !json.Valid([]byte(line)) {
 							t.Fatalf("invalid JSON stdout line: %q", line)
 						}

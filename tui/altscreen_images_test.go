@@ -54,7 +54,7 @@ func TestPrepareKittyScreenEvictsOffscreenBeyondLimits(t *testing.T) {
 	if evicted == "" {
 		t.Fatal("expected evictions")
 	}
-	for id := 0; id < 3; id++ {
+	for id := range 3 {
 		if !strings.Contains(evicted, DeleteKittyImage(200+id)) {
 			t.Fatalf("missing eviction for %d: %q", 200+id, evicted)
 		}

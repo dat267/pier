@@ -208,14 +208,12 @@ func TestStreamPiMessagesAssemblesEvents(t *testing.T) {
 	model := piMessagesModel(server.URL)
 	var providerEventCount int
 	stream := StreamPiMessages(model, piMessagesContext(), &PiMessagesOptions{
-		StreamOptions: StreamOptions{
-			APIKey: "radius-token", SessionID: "session-1",
-			OnProviderStreamEvent: func(data json.RawMessage, eventModel *Model) {
-				if eventModel != model || !json.Valid(data) {
-					t.Errorf("provider callback data/model = %s/%p", data, eventModel)
-				}
-				providerEventCount++
-			},
+		APIKey: "radius-token", SessionID: "session-1",
+		OnProviderStreamEvent: func(data json.RawMessage, eventModel *Model) {
+			if eventModel != model || !json.Valid(data) {
+				t.Errorf("provider callback data/model = %s/%p", data, eventModel)
+			}
+			providerEventCount++
 		},
 		Reasoning:  ThinkHigh,
 		ToolChoice: json.RawMessage(`"auto"`),
@@ -293,7 +291,7 @@ func TestStreamPiMessagesErrorResponse(t *testing.T) {
 	defer server.Close()
 
 	stream := StreamPiMessages(piMessagesModel(server.URL), piMessagesContext(), &PiMessagesOptions{
-		StreamOptions: StreamOptions{APIKey: "token"},
+		APIKey: "token",
 	})
 	message, err := stream.Result(context.Background())
 	if err != nil {
@@ -323,7 +321,7 @@ func TestStreamPiMessagesErrorResponse(t *testing.T) {
 	}))
 	defer plainServer.Close()
 	stream = StreamPiMessages(piMessagesModel(plainServer.URL), piMessagesContext(), &PiMessagesOptions{
-		StreamOptions: StreamOptions{APIKey: "token"},
+		APIKey: "token",
 	})
 	message, _ = stream.Result(context.Background())
 	if message.ErrorMessage == nil || !strings.Contains(*message.ErrorMessage, "upstream exploded") {
@@ -351,7 +349,7 @@ func TestStreamPiMessagesFailures(t *testing.T) {
 	}))
 	defer server.Close()
 	stream = StreamPiMessages(piMessagesModel(server.URL), piMessagesContext(), &PiMessagesOptions{
-		StreamOptions: StreamOptions{APIKey: "token"},
+		APIKey: "token",
 	})
 	message, _ = stream.Result(context.Background())
 	if message.ErrorMessage == nil || !strings.Contains(*message.ErrorMessage, "stream ended without a terminal event") {
@@ -366,7 +364,7 @@ func TestStreamPiMessagesFailures(t *testing.T) {
 	}))
 	defer server.Close()
 	stream = StreamPiMessages(piMessagesModel(server.URL), piMessagesContext(), &PiMessagesOptions{
-		StreamOptions: StreamOptions{APIKey: "token"},
+		APIKey: "token",
 	})
 	message, _ = stream.Result(context.Background())
 	if message.StopReason != StopError || message.ErrorMessage == nil || *message.ErrorMessage != "policy blocked" {
@@ -402,9 +400,9 @@ func TestStreamPiMessagesSimple(t *testing.T) {
 	defer server.Close()
 
 	stream := StreamPiMessagesSimple(piMessagesModel(server.URL), piMessagesContext(), &SimpleStreamOptions{
-		StreamOptions: StreamOptions{APIKey: "token"},
-		Reasoning:     ThinkLow,
-		ToolChoice:    toolChoicePtr(ToolChoiceAuto),
+		APIKey:     "token",
+		Reasoning:  ThinkLow,
+		ToolChoice: new(ToolChoiceAuto),
 	})
 	if _, err := stream.Result(context.Background()); err != nil {
 		t.Fatal(err)
@@ -414,5 +412,3 @@ func TestStreamPiMessagesSimple(t *testing.T) {
 		t.Fatalf("options = %#v", options)
 	}
 }
-
-func toolChoicePtr(value ToolChoice) *ToolChoice { return &value }

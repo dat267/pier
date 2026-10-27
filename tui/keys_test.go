@@ -72,8 +72,8 @@ func TestKeysAgainstUpstreamGolden(t *testing.T) {
 	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.HasPrefix(line, "# kitty=") {
-			kittyActive = strings.TrimPrefix(line, "# kitty=") == "true"
+		if after, ok := strings.CutPrefix(line, "# kitty="); ok {
+			kittyActive = after == "true"
 			continue
 		}
 		if line == "" {
@@ -172,12 +172,12 @@ func TestKeysAgainstUpstreamGolden(t *testing.T) {
 // splitGoldenLeft splits a golden left-hand side into the command, the JSON
 // string literal (which may contain spaces), and any trailing key id.
 func splitGoldenLeft(left string) (command string, dataLiteral string, extra string) {
-	space := strings.IndexByte(left, ' ')
-	if space == -1 {
+	before, after, ok := strings.Cut(left, " ")
+	if !ok {
 		return left, "", ""
 	}
-	command = left[:space]
-	rest := left[space+1:]
+	command = before
+	rest := after
 	if !strings.HasPrefix(rest, "\"") {
 		return command, rest, ""
 	}

@@ -478,10 +478,9 @@ func OpenAICodexCredentialsFromToken(token *OpenAICodexTokenResponse) (*OAuthCre
 	if accountID == "" {
 		return nil, fmt.Errorf("Failed to extract accountId from token")
 	}
-	return &OAuthCredential{OAuthCredentials: OAuthCredentials{
+	return &OAuthCredential{
 		Access: token.Access, Refresh: token.Refresh, Expires: token.Expires,
-		Extra: map[string]json.RawMessage{"accountId": jsonRawString(accountID)},
-	}}, nil
+		Extra: map[string]json.RawMessage{"accountId": jsonRawString(accountID)}}, nil
 }
 
 // LoginOpenAICodexDeviceCode runs the device-code login path.

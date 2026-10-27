@@ -16,11 +16,9 @@ func testAnthropicModel() *Model {
 		BaseURL: "https://api.anthropic.com", Reasoning: true, Input: []string{"text", "image"},
 		Cost:          ModelCost{ModelCostRates: ModelCostRates{Input: 5, Output: 25, CacheRead: 0.5, CacheWrite: 6.25}},
 		ContextWindow: 200000, MaxTokens: 64000,
-		Compat: &ModelCompat{AnthropicMessages: &AnthropicMessagesCompat{SupportsStrictTools: boolPtrT(true)}},
+		Compat: &ModelCompat{AnthropicMessages: &AnthropicMessagesCompat{SupportsStrictTools: new(true)}},
 	}
 }
-
-func boolPtrT(b bool) *bool { return &b }
 
 func build(t *testing.T, model *Model, messages []Message, options *AnthropicOptions) *AnthropicMessageCreateParams {
 	t.Helper()
@@ -58,7 +56,7 @@ func TestBuildParamsThinkingBudgetAndDisabled(t *testing.T) {
 
 	// Budget-based thinking.
 	budget := 2048
-	params := build(t, model, nil, &AnthropicOptions{ThinkingEnabled: boolPtrT(true), ThinkingBudgetTokens: &budget})
+	params := build(t, model, nil, &AnthropicOptions{ThinkingEnabled: new(true), ThinkingBudgetTokens: &budget})
 	if params.Thinking == nil || params.Thinking.Type != "enabled" || *params.Thinking.BudgetTokens != 2048 {
 		t.Fatalf("thinking = %+v", params.Thinking)
 	}
@@ -81,7 +79,7 @@ func TestBuildParamsThinkingBudgetAndDisabled(t *testing.T) {
 	}
 
 	// Explicit thinking off → disabled block.
-	params = build(t, model, nil, &AnthropicOptions{ThinkingEnabled: boolPtrT(false)})
+	params = build(t, model, nil, &AnthropicOptions{ThinkingEnabled: new(false)})
 	if params.Thinking == nil || params.Thinking.Type != "disabled" {
 		t.Fatalf("thinking = %+v", params.Thinking)
 	}
@@ -204,7 +202,7 @@ func TestAnthropicManagedEffortRespectsOffSupport(t *testing.T) {
 		model := &Model{
 			ID: "claude-opus-5", API: APIAnthropicMessages, Provider: "anthropic",
 			Reasoning: true, ThinkingLevelMap: map[ThinkingLevel]*string{},
-			Compat: &ModelCompat{AnthropicMessages: &AnthropicMessagesCompat{SupportsMidConvoEffort: boolPtrT(true)}},
+			Compat: &ModelCompat{AnthropicMessages: &AnthropicMessagesCompat{SupportsMidConvoEffort: new(true)}},
 		}
 		if hasOff {
 			model.ThinkingLevelMap[ThinkOff] = off
@@ -409,7 +407,7 @@ func TestNormalizeAnthropicToolCallID(t *testing.T) {
 	}
 	// OpenAI Responses ids are 450+ chars with special characters.
 	long := "resp|" + string(make([]byte, 0)) + "abc$def"
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		long += "|xyz"
 	}
 	got := NormalizeAnthropicToolCallID(long)
@@ -469,7 +467,7 @@ func TestBuildAnthropicOAuthCompactionOmitsCacheControl(t *testing.T) {
 	// mode; compaction's cacheRetention=none must not add cache_control blocks.
 	params, err := BuildAnthropicParams(testAnthropicModel(), NormalizeContext(Context{
 		Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "Summarize session"}}},
-	}), true, &AnthropicOptions{StreamOptions: StreamOptions{CacheRetention: CacheRetentionNone}})
+	}), true, &AnthropicOptions{CacheRetention: CacheRetentionNone})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -517,7 +515,7 @@ func TestGetCacheControlRetention(t *testing.T) {
 func TestAnthropicOAuthSystemPrompt(t *testing.T) {
 	model := testAnthropicModel()
 	params, err := BuildAnthropicParams(model, NormalizeContext(Context{
-		SystemPrompt: strPtr("Be helpful."),
+		SystemPrompt: new("Be helpful."),
 		Messages:     []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
 	}), true, nil)
 	if err != nil {

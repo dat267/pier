@@ -53,7 +53,7 @@ func allocBytesPerRun(runs int, fn func()) uint64 {
 	var before, after runtime.MemStats
 	runtime.GC()
 	runtime.ReadMemStats(&before)
-	for i := 0; i < runs; i++ {
+	for range runs {
 		fn()
 	}
 	runtime.ReadMemStats(&after)

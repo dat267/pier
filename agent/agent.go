@@ -566,23 +566,19 @@ func (a *Agent) createLoopConfig(skipInitialSteeringPoll bool) *AgentLoopConfig 
 		reasoning = ""
 	}
 	config := &AgentLoopConfig{
-		SimpleStreamOptions: ai.SimpleStreamOptions{
-			StreamOptions: ai.StreamOptions{
-				SessionID:             a.SessionID,
-				Identity:              a.Identity,
-				Transport:             a.Transport,
-				MaxRetryDelayMs:       a.MaxRetryDelayMS,
-				OnPayload:             a.OnPayload,
-				OnResponse:            a.OnResponse,
-				OnProviderStreamEvent: a.OnProviderStreamEvent,
-			},
-			Reasoning: reasoning,
-		},
-		Model:            state.Model,
-		ConvertToLlm:     a.ConvertToLlm,
-		TransformContext: a.TransformContext,
-		GetAPIKey:        a.GetAPIKey,
-		ToolExecution:    a.ToolExecution,
+		SessionID:             a.SessionID,
+		Identity:              a.Identity,
+		Transport:             a.Transport,
+		MaxRetryDelayMs:       a.MaxRetryDelayMS,
+		OnPayload:             a.OnPayload,
+		OnResponse:            a.OnResponse,
+		OnProviderStreamEvent: a.OnProviderStreamEvent,
+		Reasoning:             reasoning,
+		Model:                 state.Model,
+		ConvertToLlm:          a.ConvertToLlm,
+		TransformContext:      a.TransformContext,
+		GetAPIKey:             a.GetAPIKey,
+		ToolExecution:         a.ToolExecution,
 	}
 	if a.ThinkingBudgets != nil {
 		config.ThinkingBudgets = a.ThinkingBudgets

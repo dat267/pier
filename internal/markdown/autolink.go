@@ -1,6 +1,7 @@
 package markdown
 
 import (
+	"slices"
 	"strings"
 	"unicode/utf8"
 )
@@ -131,9 +132,9 @@ func matchBareEmail(src string, i int) (int, bool) {
 	// previous group's end before the group's dot, which always passes.
 	for {
 		last := groups[len(groups)-1]
-		for k := len(last) - 1; k >= 0; k-- {
-			if last[k]+1 >= len(src) || (src[last[k]+1] != '-' && src[last[k]+1] != '_') {
-				return last[k] + 1, true
+		for _, l := range slices.Backward(last) {
+			if l+1 >= len(src) || (src[l+1] != '-' && src[l+1] != '_') {
+				return l + 1, true
 			}
 		}
 		groups = groups[:len(groups)-1]

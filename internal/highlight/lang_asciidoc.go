@@ -144,6 +144,6 @@ func init() {
 		Name:            "AsciiDoc",
 		Aliases:         []string{"adoc"},
 		CaseInsensitive: false,
-		Mode:            Mode{Contains: []*Mode{asciidocM0, asciidocM3, asciidocM5, asciidocM6, asciidocM7, asciidocM10, asciidocM11, asciidocM12, asciidocM13, asciidocM14, asciidocM16, asciidocM17, asciidocM18, asciidocM19, asciidocM20, asciidocM21, asciidocM22, asciidocM23, asciidocM24, asciidocM25, asciidocM26, asciidocM27, asciidocM28, asciidocM29, asciidocM30, asciidocM31, asciidocM33, asciidocM36, asciidocM37, asciidocM38, asciidocM39, asciidocM40}},
+		Contains:        []*Mode{asciidocM0, asciidocM3, asciidocM5, asciidocM6, asciidocM7, asciidocM10, asciidocM11, asciidocM12, asciidocM13, asciidocM14, asciidocM16, asciidocM17, asciidocM18, asciidocM19, asciidocM20, asciidocM21, asciidocM22, asciidocM23, asciidocM24, asciidocM25, asciidocM26, asciidocM27, asciidocM28, asciidocM29, asciidocM30, asciidocM31, asciidocM33, asciidocM36, asciidocM37, asciidocM38, asciidocM39, asciidocM40},
 	})
 }

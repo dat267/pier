@@ -63,7 +63,7 @@ func wrapStyled(s string, width int) []string {
 		width = 1
 	}
 	var out []string
-	for _, line := range strings.Split(s, "\n") {
+	for line := range strings.SplitSeq(s, "\n") {
 		out = append(out, wrapStyledLine(line, width)...)
 	}
 	return out

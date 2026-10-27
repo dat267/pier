@@ -8,28 +8,26 @@ func init() { RegisterLanguage("dsconfig", DSConfig()) }
 // always ends immediately after it, so no end is needed.
 func DSConfig() *Language {
 	return &Language{
-		Mode: Mode{
-			Keywords: Keywords{
-				"keyword": "dsconfig",
+		Keywords: Keywords{
+			"keyword": "dsconfig",
+		},
+		Contains: []*Mode{
+			{ClassName: "keyword", Begin: `^dsconfig`, End: `\s`, ExcludeEnd: true, HasRelevance: true, Relevance: 10},
+			{
+				ClassName:    "built_in",
+				Begin:        `(list|create|get|set|delete)-(\w+)`,
+				End:          `\s`,
+				ExcludeEnd:   true,
+				Illegal:      `!@#$%^&*()`,
+				HasRelevance: true,
+				Relevance:    10,
 			},
-			Contains: []*Mode{
-				{ClassName: "keyword", Begin: `^dsconfig`, End: `\s`, ExcludeEnd: true, HasRelevance: true, Relevance: 10},
-				{
-					ClassName:    "built_in",
-					Begin:        `(list|create|get|set|delete)-(\w+)`,
-					End:          `\s`,
-					ExcludeEnd:   true,
-					Illegal:      `!@#$%^&*()`,
-					HasRelevance: true,
-					Relevance:    10,
-				},
-				{ClassName: "built_in", Begin: `--(\w+)`, End: `\s`, ExcludeEnd: true},
-				{ClassName: "string", Begin: `"`, End: `"`},
-				{ClassName: "string", Begin: `'`, End: `'`},
-				{ClassName: "string", Begin: `[\w\-?]+:\w+`, End: `\W`, HasRelevance: true, Relevance: 0},
-				{ClassName: "string", Begin: `\w+(\-\w+)*`, HasRelevance: true, Relevance: 0},
-				HashCommentMode,
-			},
+			{ClassName: "built_in", Begin: `--(\w+)`, End: `\s`, ExcludeEnd: true},
+			{ClassName: "string", Begin: `"`, End: `"`},
+			{ClassName: "string", Begin: `'`, End: `'`},
+			{ClassName: "string", Begin: `[\w\-?]+:\w+`, End: `\W`, HasRelevance: true, Relevance: 0},
+			{ClassName: "string", Begin: `\w+(\-\w+)*`, HasRelevance: true, Relevance: 0},
+			HashCommentMode,
 		},
 	}
 }

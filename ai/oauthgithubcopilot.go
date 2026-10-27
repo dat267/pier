@@ -81,11 +81,11 @@ func GitHubCopilotURLsFor(domain string) GitHubCopilotURLs {
 // GetBaseURLFromCopilotToken extracts the proxy endpoint from a Copilot token
 // (`proxy-ep=proxy.individual.githubcopilot.com;` -> https://api.individual...).
 func GetBaseURLFromCopilotToken(token string) (string, bool) {
-	index := strings.Index(token, "proxy-ep=")
-	if index == -1 {
+	_, after, ok := strings.Cut(token, "proxy-ep=")
+	if !ok {
 		return "", false
 	}
-	rest := token[index+len("proxy-ep="):]
+	rest := after
 	end := strings.Index(rest, ";")
 	if end == -1 {
 		end = len(rest)
@@ -479,12 +479,11 @@ func RefreshGitHubCopilotAccessToken(ctx context.Context, refreshToken, enterpri
 		return nil, fmt.Errorf("Invalid Copilot token response fields")
 	}
 	extra := map[string]json.RawMessage{CopilotEnterpriseURLKey: jsonRawString(enterpriseDomain)}
-	return &OAuthCredential{OAuthCredentials: OAuthCredentials{
+	return &OAuthCredential{
 		Refresh: refreshToken,
 		Access:  token,
 		Expires: int64(expiresAt)*1000 - 5*60*1000,
-		Extra:   extra,
-	}}, nil
+		Extra:   extra}, nil
 }
 
 // RefreshGitHubCopilotToken refreshes the Copilot token and its model list.

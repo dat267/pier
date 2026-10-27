@@ -171,7 +171,7 @@ func TestXaiDeviceCodeFlow(t *testing.T) {
 			t.Fatalf("err = %v", err)
 		}
 		_, err = PollXaiForTokens(context.Background(), &XaiDeviceCode{
-			DeviceCode: "d", VerificationURI: "https://x.ai/d", ExpiresInSeconds: 60, IntervalSeconds: intPtr(1),
+			DeviceCode: "d", VerificationURI: "https://x.ai/d", ExpiresInSeconds: 60, IntervalSeconds: new(1),
 		})
 		if err == nil || err.Error() != "xAI device authorization was denied" {
 			t.Fatalf("err = %v", err)
@@ -404,7 +404,7 @@ func TestDeviceFlowAuthDefinitions(t *testing.T) {
 		xai.LoginLabel != "Sign in with SuperGrok or X Premium" {
 		t.Fatalf("xai = %+v", xai)
 	}
-	modelAuth, err := xai.ToAuth(&OAuthCredential{OAuthCredentials: OAuthCredentials{Access: "access"}})
+	modelAuth, err := xai.ToAuth(&OAuthCredential{Access: "access"})
 	if err != nil || modelAuth.APIKey != "access" {
 		t.Fatalf("model auth = %+v err = %v", modelAuth, err)
 	}
@@ -413,7 +413,7 @@ func TestDeviceFlowAuthDefinitions(t *testing.T) {
 	if kimi.Name != "Kimi Code (subscription)" || kimi.LoginLabel != "Sign in with Kimi Code" {
 		t.Fatalf("kimi = %+v", kimi)
 	}
-	modelAuth, err = kimi.ToAuth(&OAuthCredential{OAuthCredentials: OAuthCredentials{Access: "access"}})
+	modelAuth, err = kimi.ToAuth(&OAuthCredential{Access: "access"})
 	if err != nil || modelAuth.Headers["Authorization"] == nil || *modelAuth.Headers["Authorization"] != "Bearer access" {
 		t.Fatalf("model auth = %+v err = %v", modelAuth, err)
 	}

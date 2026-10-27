@@ -155,7 +155,7 @@ func benchmarkIncrementalRender(b *testing.B, prefixes []string) {
 func growingParagraphPrefixes(lines int) []string {
 	prefixes := make([]string, lines)
 	var sb strings.Builder
-	for i := 0; i < lines; i++ {
+	for i := range lines {
 		sb.WriteString("Paragraph with **bold** and `code` and a [link](https://example.com).\n\n")
 		prefixes[i] = sb.String()
 	}
@@ -202,7 +202,7 @@ func TestFirstUnstableMarksOnlyExtendableBlocks(t *testing.T) {
 	if first < len(blocks)-2 || first > len(blocks)-1 {
 		t.Fatalf("FirstUnstable = %d, want %d..%d", first, len(blocks)-2, len(blocks)-1)
 	}
-	for i := 0; i < first; i++ {
+	for i := range first {
 		if got := LexFrom(src, blocks[i].Start); len(got) == 0 {
 			t.Fatalf("stable block %d re-lexes empty", i)
 		}

@@ -11,7 +11,7 @@ func ClojureRepl() *Language {
 		Starts:    &Mode{End: `$`, SubLanguage: []string{"clojure"}},
 	}
 	return &Language{
-		Name: "Clojure REPL",
-		Mode: Mode{Contains: []*Mode{meta}},
+		Name:     "Clojure REPL",
+		Contains: []*Mode{meta},
 	}
 }

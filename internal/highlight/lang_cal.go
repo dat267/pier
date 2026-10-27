@@ -47,18 +47,16 @@ func CAL() *Language {
 	return &Language{
 		Name:            "C/AL",
 		CaseInsensitive: true,
-		Mode: Mode{
-			Keywords: Keywords{"keyword": keyword, "literal": "false true"},
-			Illegal:  `/\*`,
-			Contains: []*Mode{
-				str,
-				charString,
-				date,
-				dblQuoted,
-				NumberMode,
-				object,
-				procedure,
-			},
+		Keywords:        Keywords{"keyword": keyword, "literal": "false true"},
+		Illegal:         `/\*`,
+		Contains: []*Mode{
+			str,
+			charString,
+			date,
+			dblQuoted,
+			NumberMode,
+			object,
+			procedure,
 		},
 	}
 }

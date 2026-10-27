@@ -60,10 +60,10 @@ func TestStripAnsiMatchesPattern(t *testing.T) {
 		"A", "P", "R", "T", "Z", "a", "g", "o", "r", "s", "t", "z", " ", "x", "\x1b]0;t", "\x1b\\",
 	}
 	rng := rand.New(rand.NewSource(1))
-	for i := 0; i < 30000; i++ {
+	for i := range 30000 {
 		var sb strings.Builder
 		parts := rng.Intn(8)
-		for j := 0; j < parts; j++ {
+		for range parts {
 			sb.WriteString(alphabet[rng.Intn(len(alphabet))])
 		}
 		value := sb.String()
@@ -75,7 +75,7 @@ func TestStripAnsiMatchesPattern(t *testing.T) {
 
 func BenchmarkStripAnsiColoured(b *testing.B) {
 	var sb strings.Builder
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		sb.WriteString("line: \x1b[32mok\x1b[0m and \x1b[1;31mfail\x1b[0m and \x1b]0;t\x07 text\n")
 	}
 	value := sb.String()
@@ -88,7 +88,7 @@ func BenchmarkStripAnsiColoured(b *testing.B) {
 
 func BenchmarkStripAnsiPatternReference(b *testing.B) {
 	var sb strings.Builder
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		sb.WriteString("line: \x1b[32mok\x1b[0m and \x1b[1;31mfail\x1b[0m and \x1b]0;t\x07 text\n")
 	}
 	value := sb.String()

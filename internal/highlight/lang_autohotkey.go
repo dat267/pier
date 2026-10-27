@@ -36,25 +36,23 @@ func AutoHotkey() *Language {
 		Name:            "AutoHotkey",
 		Aliases:         []string{"ahk"},
 		CaseInsensitive: true,
-		Mode: Mode{
-			Keywords: Keywords{
-				"keyword":  "Break Continue Critical Exit ExitApp Gosub Goto New OnExit Pause return SetBatchLines SetTimer Suspend Thread Throw Until ahk_id ahk_class ahk_pid ahk_exe ahk_group",
-				"literal":  "true false NOT AND OR",
-				"built_in": "ComSpec Clipboard ClipboardAll ErrorLevel",
-			},
-			Contains: []*Mode{
-				backtick,
-				str,
-				comment,
-				CBlockCommentMode,
-				{ClassName: "number", Begin: NumberRe, HasRelevance: true, Relevance: 0},
-				{ClassName: "variable", Begin: `%[a-zA-Z0-9#_$@]+%`},
-				{ClassName: "built_in", Begin: `^\s*\w+\s*(,|%)`},
-				titleBase,
-				{ClassName: "meta", Begin: `^\s*#\w+`, End: `$`, HasRelevance: true, Relevance: 0},
-				{ClassName: "built_in", Begin: `A_[a-zA-Z0-9]+`},
-				{Begin: `,\s*,`},
-			},
+		Keywords: Keywords{
+			"keyword":  "Break Continue Critical Exit ExitApp Gosub Goto New OnExit Pause return SetBatchLines SetTimer Suspend Thread Throw Until ahk_id ahk_class ahk_pid ahk_exe ahk_group",
+			"literal":  "true false NOT AND OR",
+			"built_in": "ComSpec Clipboard ClipboardAll ErrorLevel",
+		},
+		Contains: []*Mode{
+			backtick,
+			str,
+			comment,
+			CBlockCommentMode,
+			{ClassName: "number", Begin: NumberRe, HasRelevance: true, Relevance: 0},
+			{ClassName: "variable", Begin: `%[a-zA-Z0-9#_$@]+%`},
+			{ClassName: "built_in", Begin: `^\s*\w+\s*(,|%)`},
+			titleBase,
+			{ClassName: "meta", Begin: `^\s*#\w+`, End: `$`, HasRelevance: true, Relevance: 0},
+			{ClassName: "built_in", Begin: `A_[a-zA-Z0-9]+`},
+			{Begin: `,\s*,`},
 		},
 	}
 }

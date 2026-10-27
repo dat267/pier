@@ -270,14 +270,12 @@ func TestModelSelectorRefreshApplyStaysOnTheLoop(t *testing.T) {
 	// owner renders. With the inline fallback this is a concurrent mutation of
 	// the list container (`updateList`) and its read (`Render`).
 	var worker sync.WaitGroup
-	worker.Add(1)
-	go func() {
-		defer worker.Done()
-		for i := 0; i < 200; i++ {
+	worker.Go(func() {
+		for range 200 {
 			component.postApply(func() { component.updateList() })
 		}
-	}()
-	for i := 0; i < 200; i++ {
+	})
+	for range 200 {
 		_ = component.Render(80)
 	}
 	worker.Wait()

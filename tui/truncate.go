@@ -15,10 +15,7 @@ func truncateFragmentToWidth(text string, maxWidth int) (string, int) {
 		return "", 0
 	}
 	if isPrintableASCII(text) {
-		limit := maxWidth
-		if limit > len(text) {
-			limit = len(text)
-		}
+		limit := min(maxWidth, len(text))
 		return text[:limit], limit
 	}
 
@@ -123,10 +120,7 @@ func finalizeTruncatedResult(prefix string, prefixWidth int, ellipsis string, el
 		result = prefix + hyperlinkClose + reset
 	}
 	if pad {
-		padding := maxWidth - visible
-		if padding < 0 {
-			padding = 0
-		}
+		padding := max(maxWidth-visible, 0)
 		result += strings.Repeat(" ", padding)
 	}
 	return result
@@ -270,10 +264,7 @@ func TruncateToWidth(text string, maxWidth int, ellipsis string, pad bool) strin
 
 	if !overflowed && exhaustedInput {
 		if pad {
-			padding := maxWidth - visibleSoFar
-			if padding < 0 {
-				padding = 0
-			}
+			padding := max(maxWidth-visibleSoFar, 0)
 			return text + strings.Repeat(" ", padding)
 		}
 		return text

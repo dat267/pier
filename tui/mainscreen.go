@@ -100,7 +100,7 @@ func parseKittyImageHeader(line string) (kittyImageHeader, bool) {
 	paramsEnd += paramsStart
 
 	header := kittyImageHeader{Rows: 1}
-	for _, param := range strings.Split(line[paramsStart:paramsEnd], ",") {
+	for param := range strings.SplitSeq(line[paramsStart:paramsEnd], ",") {
 		key, value, ok := strings.Cut(param, "=")
 		if !ok {
 			continue
@@ -450,7 +450,7 @@ func (s *MainScreen) doRender() {
 	firstChanged := -1
 	lastChanged := -1
 	maxLines := max(len(newLines), len(s.previousLines))
-	for i := 0; i < maxLines; i++ {
+	for i := range maxLines {
 		oldLine := ""
 		if i < len(s.previousLines) {
 			oldLine = s.previousLines[i]
@@ -515,7 +515,7 @@ func (s *MainScreen) doRender() {
 			if extraLines > 0 && clearStartOffset > 0 {
 				output.Append("\x1b[" + strconv.Itoa(clearStartOffset) + "B")
 			}
-			for i := 0; i < extraLines; i++ {
+			for i := range extraLines {
 				output.Append("\r\x1b[2K")
 				if i < extraLines-1 {
 					output.Append("\x1b[1B")

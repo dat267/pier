@@ -53,7 +53,6 @@ type Mode struct {
 	beforeBegin func(m *match, resp *Response)
 
 	cachedVariants []*Mode
-	frozen         bool
 }
 
 // Keywords maps a className to a space-separated word list whose entries may
@@ -396,7 +395,7 @@ func compileKeywords(raw Keywords, caseInsensitive bool) map[string]keywordData 
 	out := map[string]keywordData{}
 	var compileList func(className, words string)
 	compileList = func(className, words string) {
-		for _, keyword := range strings.Split(words, " ") {
+		for keyword := range strings.SplitSeq(words, " ") {
 			if keyword == "" {
 				continue
 			}

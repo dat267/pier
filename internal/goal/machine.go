@@ -290,7 +290,7 @@ func (m *GoalMachine) pausedMessage() []Effect {
 
 func (m *GoalMachine) goalUpdate(goalID string, rawRevision any, rawAction, blockedReason string) DispatchResult {
 	if rawAction != "complete" && rawAction != "blocked" && rawAction != "clear" {
-		return DispatchResult{Reply: stringPtr(fmt.Sprintf(`Unknown action %s. Use "complete", "blocked", or "clear".`, jsonQuote(rawAction))), IsError: true}
+		return DispatchResult{Reply: new(fmt.Sprintf(`Unknown action %s. Use "complete", "blocked", or "clear".`, jsonQuote(rawAction))), IsError: true}
 	}
 	revision, ok := coerceRevision(rawRevision)
 	if !ok {
@@ -298,17 +298,17 @@ func (m *GoalMachine) goalUpdate(goalID string, rawRevision any, rawAction, bloc
 		if m.view != nil {
 			current = strconv.Itoa(m.view.Revision)
 		}
-		return DispatchResult{Reply: stringPtr(fmt.Sprintf("revision is required — the exact number from get_goal (current goal revision: %s).", current)), IsError: true}
+		return DispatchResult{Reply: new(fmt.Sprintf("revision is required — the exact number from get_goal (current goal revision: %s).", current)), IsError: true}
 	}
 	if m.view == nil {
-		return DispatchResult{Reply: stringPtr("No goal is set."), IsError: true}
+		return DispatchResult{Reply: new("No goal is set."), IsError: true}
 	}
 	if goalID != m.view.ID {
 		// Name the current ref — the model can retry without a get_goal round trip.
-		return DispatchResult{Reply: stringPtr(fmt.Sprintf(`Unknown goal id "%s". Current goal: %s rev %d. Retry with these values.`, goalID, m.view.ID, m.view.Revision)), IsError: true}
+		return DispatchResult{Reply: new(fmt.Sprintf(`Unknown goal id "%s". Current goal: %s rev %d. Retry with these values.`, goalID, m.view.ID, m.view.Revision)), IsError: true}
 	}
 	if revision != m.view.Revision {
-		return DispatchResult{Reply: stringPtr(fmt.Sprintf("Stale ref: you sent revision %d, current is %d (id %s). Retry with these values.", revision, m.view.Revision, m.view.ID)), IsError: true}
+		return DispatchResult{Reply: new(fmt.Sprintf("Stale ref: you sent revision %d, current is %d (id %s). Retry with these values.", revision, m.view.Revision, m.view.ID)), IsError: true}
 	}
 
 	// D232: the agent may clear its own goal (upstream keeps clear human-only).
@@ -316,7 +316,7 @@ func (m *GoalMachine) goalUpdate(goalID string, rawRevision any, rawAction, bloc
 	if rawAction == "clear" {
 		result := m.goalClear(goalID, revision)
 		if !result.IsError {
-			result.Reply = stringPtr("Goal cleared. Goal work has stopped.")
+			result.Reply = new("Goal cleared. Goal work has stopped.")
 		}
 		return result
 	}
@@ -331,19 +331,19 @@ func (m *GoalMachine) goalUpdate(goalID string, rawRevision any, rawAction, bloc
 		m.pendingTurn = nil
 		effects, err := m.commit(OpComplete, &next, nil)
 		if err != nil {
-			return DispatchResult{Reply: stringPtr(err.Error()), IsError: true}
+			return DispatchResult{Reply: new(err.Error()), IsError: true}
 		}
 		effects = append(effects, m.wrapup("complete", next.Objective, ""))
-		return DispatchResult{Effects: effects, Reply: stringPtr("Goal marked complete. Stop goal work.")}
+		return DispatchResult{Effects: effects, Reply: new("Goal marked complete. Stop goal work.")}
 	}
 
 	// action == "blocked"
 	if m.view.TurnsStarted < BlockedAfterTurns {
-		return DispatchResult{Reply: stringPtr(fmt.Sprintf("Cannot block before %d consecutive goal rounds (current: %d). Keep working or try a different approach.", BlockedAfterTurns, m.view.TurnsStarted)), IsError: true}
+		return DispatchResult{Reply: new(fmt.Sprintf("Cannot block before %d consecutive goal rounds (current: %d). Keep working or try a different approach.", BlockedAfterTurns, m.view.TurnsStarted)), IsError: true}
 	}
 	reason := ai.JSTrim(blockedReason)
 	if reason == "" {
-		return DispatchResult{Reply: stringPtr("blocked_reason is required."), IsError: true}
+		return DispatchResult{Reply: new("blocked_reason is required."), IsError: true}
 	}
 	stop := &BlockedReason{Code: "model-reported", Message: reason}
 	next := m.view.GoalSnapshot
@@ -354,10 +354,10 @@ func (m *GoalMachine) goalUpdate(goalID string, rawRevision any, rawAction, bloc
 	m.armed = false
 	effects, err := m.commit(OpBlock, &next, nil)
 	if err != nil {
-		return DispatchResult{Reply: stringPtr(err.Error()), IsError: true}
+		return DispatchResult{Reply: new(err.Error()), IsError: true}
 	}
 	effects = append(effects, m.wrapup("blocked", next.Objective, reason))
-	return DispatchResult{Effects: effects, Reply: stringPtr("Goal blocked. Stop goal work.")}
+	return DispatchResult{Effects: effects, Reply: new("Goal blocked. Stop goal work.")}
 }
 
 // queueRound reserves the next round: set pendingTurn and emit the prompt.
@@ -415,25 +415,25 @@ func (m *GoalMachine) commit(operation GoalOperation, next *GoalSnapshot, cleare
 
 func (m *GoalMachine) goalCreate(objective string, budget *GoalBudget) DispatchResult {
 	if m.view != nil && m.view.Phase != PhaseComplete {
-		return DispatchResult{Reply: stringPtr("A goal already exists. Clear it first."), IsError: true}
+		return DispatchResult{Reply: new("A goal already exists. Clear it first."), IsError: true}
 	}
 	next := CreateGoalState(objective, m.now(), budget)
 	m.armed = true
 	m.createdThisRun = true
 	effects, err := m.commit(OpCreate, &next, nil)
 	if err != nil {
-		return DispatchResult{Reply: stringPtr(err.Error()), IsError: true}
+		return DispatchResult{Reply: new(err.Error()), IsError: true}
 	}
 	// The id must reach model context here — the completion call depends on it.
-	return DispatchResult{Effects: effects, Reply: stringPtr(fmt.Sprintf("Goal created (id %s, revision %d).", next.ID, next.Revision))}
+	return DispatchResult{Effects: effects, Reply: new(fmt.Sprintf("Goal created (id %s, revision %d).", next.ID, next.Revision))}
 }
 
 func (m *GoalMachine) goalResume() DispatchResult {
 	if m.view == nil || (m.view.Phase == PhaseActive && m.armed) {
-		return DispatchResult{Reply: stringPtr("No stopped goal to resume."), IsError: true}
+		return DispatchResult{Reply: new("No stopped goal to resume."), IsError: true}
 	}
 	if stopReason := budgetStopReason(m.view, m.now().UnixMilli()); stopReason != nil {
-		return DispatchResult{Reply: stringPtr(stopReason.Message + " Start a new goal with a larger budget."), IsError: true}
+		return DispatchResult{Reply: new(stopReason.Message + " Start a new goal with a larger budget."), IsError: true}
 	}
 	next := m.view.GoalSnapshot
 	next.Phase = PhaseActive
@@ -444,7 +444,7 @@ func (m *GoalMachine) goalResume() DispatchResult {
 	m.pendingTurn = nil
 	effects, err := m.commit(OpResume, &next, nil)
 	if err != nil {
-		return DispatchResult{Reply: stringPtr(err.Error()), IsError: true}
+		return DispatchResult{Reply: new(err.Error()), IsError: true}
 	}
 	return DispatchResult{Effects: append(effects, m.queueRound()...)}
 }
@@ -582,7 +582,7 @@ func (m *GoalMachine) agentBeforeSettle(outcome string, hasPendingMessages bool,
 
 func (m *GoalMachine) goalPause() DispatchResult {
 	if m.view == nil || m.view.Phase != PhaseActive {
-		return DispatchResult{Reply: stringPtr("No active goal."), IsError: true}
+		return DispatchResult{Reply: new("No active goal."), IsError: true}
 	}
 	m.armed = false
 	next := m.view.GoalSnapshot
@@ -592,24 +592,24 @@ func (m *GoalMachine) goalPause() DispatchResult {
 	next.UpdatedAt = m.now().UnixMilli()
 	effects, err := m.commit(OpPause, &next, nil)
 	if err != nil {
-		return DispatchResult{Reply: stringPtr(err.Error()), IsError: true}
+		return DispatchResult{Reply: new(err.Error()), IsError: true}
 	}
 	return DispatchResult{Effects: append(effects, m.pausedMessage()...)}
 }
 
 func (m *GoalMachine) goalClear(id string, revision int) DispatchResult {
 	if m.view == nil {
-		return DispatchResult{Reply: stringPtr("No goal is set."), IsError: true}
+		return DispatchResult{Reply: new("No goal is set."), IsError: true}
 	}
 	if id != m.view.ID {
-		return DispatchResult{Reply: stringPtr("clear of unknown goal"), IsError: true}
+		return DispatchResult{Reply: new("clear of unknown goal"), IsError: true}
 	}
 	if revision != m.view.Revision {
-		return DispatchResult{Reply: stringPtr(fmt.Sprintf("stale clear: expected revision %d", m.view.Revision)), IsError: true}
+		return DispatchResult{Reply: new(fmt.Sprintf("stale clear: expected revision %d", m.view.Revision)), IsError: true}
 	}
 	effects, err := m.commit(OpClear, nil, &ClearedRef{ID: id, Revision: revision})
 	if err != nil {
-		return DispatchResult{Reply: stringPtr(err.Error()), IsError: true}
+		return DispatchResult{Reply: new(err.Error()), IsError: true}
 	}
 	m.armed = false
 	m.pendingTurn = nil
@@ -625,7 +625,7 @@ func (m *GoalMachine) goalAgentSet(objective string, budget *GoalBudget) Dispatc
 	}
 	cleared, err := m.commit(OpClear, nil, &ClearedRef{ID: m.view.ID, Revision: m.view.Revision})
 	if err != nil {
-		return DispatchResult{Reply: stringPtr(err.Error()), IsError: true}
+		return DispatchResult{Reply: new(err.Error()), IsError: true}
 	}
 	next := CreateGoalState(objective, m.now(), budget)
 	m.armed = true
@@ -633,22 +633,22 @@ func (m *GoalMachine) goalAgentSet(objective string, budget *GoalBudget) Dispatc
 	m.pendingTurn = nil
 	created, err := m.commit(OpCreate, &next, nil)
 	if err != nil {
-		return DispatchResult{Reply: stringPtr(err.Error()), IsError: true}
+		return DispatchResult{Reply: new(err.Error()), IsError: true}
 	}
-	return DispatchResult{Effects: append(cleared, created...), Reply: stringPtr(fmt.Sprintf("Goal replaced (id %s, revision %d).", next.ID, next.Revision))}
+	return DispatchResult{Effects: append(cleared, created...), Reply: new(fmt.Sprintf("Goal replaced (id %s, revision %d).", next.ID, next.Revision))}
 }
 
 // goalSet creates the goal and queues its first round (the idle /goal set).
 func (m *GoalMachine) goalSet(objective string, budget *GoalBudget) DispatchResult {
 	if m.view != nil && m.view.Phase != PhaseComplete {
-		return DispatchResult{Reply: stringPtr("An unfinished goal exists. /goal clear first (or /goal edit once implemented)."), IsError: true}
+		return DispatchResult{Reply: new("An unfinished goal exists. /goal clear first (or /goal edit once implemented)."), IsError: true}
 	}
 	next := CreateGoalState(objective, m.now(), budget)
 	m.armed = true
 	m.pendingTurn = nil
 	effects, err := m.commit(OpCreate, &next, nil)
 	if err != nil {
-		return DispatchResult{Reply: stringPtr(err.Error()), IsError: true}
+		return DispatchResult{Reply: new(err.Error()), IsError: true}
 	}
 	return DispatchResult{Effects: append(effects, m.queueRound()...)}
 }
@@ -662,14 +662,14 @@ func (m *GoalMachine) goalReplace(objective string, budget *GoalBudget) Dispatch
 	}
 	cleared, err := m.commit(OpClear, nil, &ClearedRef{ID: m.view.ID, Revision: m.view.Revision})
 	if err != nil {
-		return DispatchResult{Reply: stringPtr(err.Error()), IsError: true}
+		return DispatchResult{Reply: new(err.Error()), IsError: true}
 	}
 	next := CreateGoalState(objective, m.now(), budget)
 	m.armed = true
 	m.pendingTurn = nil
 	created, err := m.commit(OpCreate, &next, nil)
 	if err != nil {
-		return DispatchResult{Reply: stringPtr(err.Error()), IsError: true}
+		return DispatchResult{Reply: new(err.Error()), IsError: true}
 	}
 	return DispatchResult{Effects: append(append(cleared, created...), m.queueRound()...)}
 }
@@ -715,8 +715,6 @@ func (m *GoalMachine) sessionStart(entries []CustomEntry, reason string) Dispatc
 
 	return DispatchResult{Effects: []Effect{}}
 }
-
-func stringPtr(value string) *string { return &value }
 
 func coerceRevision(raw any) (int, bool) {
 	switch typed := raw.(type) {

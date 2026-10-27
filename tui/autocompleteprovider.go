@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -64,7 +65,7 @@ func buildFdPathQuery(query string) string {
 
 	separatorPattern := "[\\\\/]"
 	var segments []string
-	for _, segment := range strings.Split(trimmed, "/") {
+	for segment := range strings.SplitSeq(trimmed, "/") {
 		if segment == "" {
 			continue
 		}
@@ -220,12 +221,7 @@ func buildCompletionValue(path string, isDirectory bool, isAtPrefix bool, isQuot
 // autocompleteSeparatorCharIn reports whether the path contains a separator
 // character (whitespace or CJK punctuation).
 func autocompleteSeparatorCharIn(text string) bool {
-	for _, character := range []rune(text) {
-		if isAutocompleteSeparator(character) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc([]rune(text), isAutocompleteSeparator)
 }
 
 // walkDirectoryWithFd walks a directory tree with fd.
@@ -262,7 +258,7 @@ func walkDirectoryWithFd(ctx context.Context, baseDir string, fdPath string, que
 	}
 
 	var results []fileEntry
-	for _, line := range strings.Split(jsTrim(stdout.String()), "\n") {
+	for line := range strings.SplitSeq(jsTrim(stdout.String()), "\n") {
 		if line == "" {
 			continue
 		}
@@ -410,13 +406,7 @@ func (p *CombinedAutocompleteProvider) ApplyCompletion(lines []string, cursorLin
 	if cursorLine >= 0 && cursorLine < len(lines) {
 		currentLine = lines[cursorLine]
 	}
-	prefixStart := cursorCol - len(prefix)
-	if prefixStart < 0 {
-		prefixStart = 0
-	}
-	if prefixStart > len(currentLine) {
-		prefixStart = len(currentLine)
-	}
+	prefixStart := min(max(cursorCol-len(prefix), 0), len(currentLine))
 	if cursorCol > len(currentLine) {
 		cursorCol = len(currentLine)
 	}
@@ -880,7 +870,7 @@ func localeCompareLike(a string, b string) int {
 
 func splitNonEmpty(value string, separator string) []string {
 	var result []string
-	for _, part := range strings.Split(value, separator) {
+	for part := range strings.SplitSeq(value, separator) {
 		if part != "" {
 			result = append(result, part)
 		}

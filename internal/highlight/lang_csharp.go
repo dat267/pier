@@ -148,31 +148,29 @@ func CSharp() *Language {
 	}
 
 	return &Language{
-		Name:    "C#",
-		Aliases: []string{"cs", "c#"},
-		Mode: Mode{
-			Keywords: keywords,
-			Illegal:  `::`,
-			Contains: []*Mode{
-				docComment,
-				CLineCommentMode,
-				CBlockCommentMode,
-				{
-					ClassName: "meta",
-					Begin:     `#`,
-					End:       `$`,
-					Keywords:  Keywords{"meta-keyword": "if else elif endif define undef warning error line region endregion pragma checksum"},
-				},
-				stringMode,
-				numbers,
-				classMode,
-				namespaceMode,
-				recordMode,
-				attribute,
-				{BeginKeywords: "new return throw await else", HasRelevance: true, Relevance: 0},
-				functionMode,
-				atIdentifier,
+		Name:     "C#",
+		Aliases:  []string{"cs", "c#"},
+		Keywords: keywords,
+		Illegal:  `::`,
+		Contains: []*Mode{
+			docComment,
+			CLineCommentMode,
+			CBlockCommentMode,
+			{
+				ClassName: "meta",
+				Begin:     `#`,
+				End:       `$`,
+				Keywords:  Keywords{"meta-keyword": "if else elif endif define undef warning error line region endregion pragma checksum"},
 			},
+			stringMode,
+			numbers,
+			classMode,
+			namespaceMode,
+			recordMode,
+			attribute,
+			{BeginKeywords: "new return throw await else", HasRelevance: true, Relevance: 0},
+			functionMode,
+			atIdentifier,
 		},
 	}
 }

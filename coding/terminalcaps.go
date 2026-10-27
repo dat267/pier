@@ -141,7 +141,7 @@ func TmuxForwardsHyperlinks() bool {
 	if err != nil {
 		return false
 	}
-	for _, feature := range strings.Split(string(output), ",") {
+	for feature := range strings.SplitSeq(string(output), ",") {
 		if strings.TrimSpace(feature) == "hyperlinks" {
 			return true
 		}

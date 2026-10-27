@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -309,8 +310,8 @@ type CompactionContextUsageEstimate struct {
 func EstimateContextTokens(messages []ai.Message) CompactionContextUsageEstimate {
 	usageInfo := -1
 	var usage ai.Usage
-	for i := len(messages) - 1; i >= 0; i-- {
-		if u := getAssistantUsage(messages[i]); u != nil {
+	for i, message := range slices.Backward(messages) {
+		if u := getAssistantUsage(message); u != nil {
 			usage = *u
 			usageInfo = i
 			break
@@ -418,12 +419,7 @@ func isTurnStartEntry(entry *SessionEntry) bool {
 	if entry.Type == "compaction" {
 		return false
 	}
-	for _, message := range SessionEntryToContextMessages(entry) {
-		if isTurnStartMessage(message) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(SessionEntryToContextMessages(entry), isTurnStartMessage)
 }
 
 // findValidCutPoints finds indices of context-visible user-like or assistant
@@ -435,11 +431,8 @@ func findValidCutPoints(entries []SessionEntry, startIndex, endIndex int) []int 
 		if entry.Type == "compaction" {
 			continue
 		}
-		for _, message := range SessionEntryToContextMessages(&entry) {
-			if isCutPointMessage(message) {
-				cutPoints = append(cutPoints, i)
-				break
-			}
+		if slices.ContainsFunc(SessionEntryToContextMessages(&entry), isCutPointMessage) {
+			cutPoints = append(cutPoints, i)
 		}
 	}
 	return cutPoints
@@ -471,12 +464,7 @@ func isProjectedTurnStart(entry ProjectedEntry) bool {
 	if entry.Source.Type == "compaction" {
 		return false
 	}
-	for _, message := range entry.Messages {
-		if isTurnStartMessage(message) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(entry.Messages, isTurnStartMessage)
 }
 
 // findProjectedTurnStartIndex finds the projected turn start containing
@@ -517,11 +505,8 @@ func findProjectedCutPoint(entries []ProjectedEntry, startIndex, endIndex, keepR
 		if entries[i].Source.Type == "compaction" {
 			continue
 		}
-		for _, message := range entries[i].Messages {
-			if isCutPointMessage(message) {
-				cutPoints = append(cutPoints, i)
-				break
-			}
+		if slices.ContainsFunc(entries[i].Messages, isCutPointMessage) {
+			cutPoints = append(cutPoints, i)
 		}
 	}
 	if len(cutPoints) == 0 {
@@ -1422,7 +1407,7 @@ func summarizeChunks(
 // summarizationContext wraps a prompt in the summarization request.
 func summarizationContext(promptText string) ai.TranscriptContext {
 	return ai.NormalizeContext(ai.Context{
-		SystemPrompt: strPtrOf(SummarizationSystemPrompt),
+		SystemPrompt: new(SummarizationSystemPrompt),
 		Messages: []ai.Message{&ai.UserMessage{
 			Content:   ai.StringOrBlocks{Blocks: ai.ContentList{ai.TextContent{Text: promptText}}},
 			Timestamp: time.Now().UnixMilli(),
@@ -1539,13 +1524,11 @@ func requestSummarization(
 	escalation *summarizationEscalation,
 ) (*ai.AssistantMessage, error) {
 	streamOptions := ai.SimpleStreamOptions{
-		StreamOptions: ai.StreamOptions{
-			APIKey:    options.APIKey,
-			Ctx:       options.Ctx,
-			Env:       ai.ProviderEnv(options.Env),
-			SessionID: options.SessionID,
-			Headers:   stringHeaders(options.Headers),
-		},
+		APIKey:    options.APIKey,
+		Ctx:       options.Ctx,
+		Env:       ai.ProviderEnv(options.Env),
+		SessionID: options.SessionID,
+		Headers:   stringHeaders(options.Headers),
 	}
 	if reasoningEnabled {
 		streamOptions.Reasoning = reasoning
@@ -1557,8 +1540,6 @@ func requestSummarization(
 	}
 	return response, err
 }
-
-func strPtrOf(s string) *string { return &s }
 
 // contentTextOf joins assistant content text with newlines.
 func contentTextOf(content ai.ContentList) string {

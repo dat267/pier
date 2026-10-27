@@ -25,7 +25,7 @@ func TestMistralContinuedToolCallClosesTextBlock(t *testing.T) {
 	server := sseServer(t, []string{sse.String()}, nil)
 	defer server.Close()
 	stream := StreamMistralConversations(mistralModel(server.URL), mistralUserContext(), &MistralOptions{
-		StreamOptions: StreamOptions{APIKey: "test-key"},
+		APIKey: "test-key",
 	})
 	var types []string
 	for {

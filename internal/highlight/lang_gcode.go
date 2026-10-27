@@ -41,12 +41,10 @@ func GCode() *Language {
 		Name:            "G-code (ISO 6983)",
 		Aliases:         []string{"nc"},
 		CaseInsensitive: true,
-		Mode: Mode{
-			Keywords: Keywords{
-				"$pattern": "[A-Z_][A-Z0-9_.]*",
-				"keyword":  "IF DO WHILE ENDWHILE CALL ENDIF SUB ENDSUB GOTO REPEAT ENDREPEAT EQ LT GT NE GE LE OR XOR",
-			},
-			Contains: contains,
+		Keywords: Keywords{
+			"$pattern": "[A-Z_][A-Z0-9_.]*",
+			"keyword":  "IF DO WHILE ENDWHILE CALL ENDIF SUB ENDSUB GOTO REPEAT ENDREPEAT EQ LT GT NE GE LE OR XOR",
 		},
+		Contains: contains,
 	}
 }

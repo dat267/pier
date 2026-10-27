@@ -47,7 +47,7 @@ func init() {
 		Aliases:          []string{"mma", "wl"},
 		CaseInsensitive:  false,
 		ClassNameAliases: map[string]string{"brace": "punctuation", "pattern": "type", "slot": "type", "symbol": "variable", "named-character": "variable", "builtin-symbol": "built_in", "message-name": "string"},
-		Mode:             Mode{Contains: []*Mode{mathematicaM0, mathematicaM3, mathematicaM4, mathematicaM5, mathematicaM6, mathematicaM9, mathematicaM10, mathematicaM12, mathematicaM13, mathematicaM14}},
+		Contains:         []*Mode{mathematicaM0, mathematicaM3, mathematicaM4, mathematicaM5, mathematicaM6, mathematicaM9, mathematicaM10, mathematicaM12, mathematicaM13, mathematicaM14},
 	})
 }
 

@@ -167,18 +167,18 @@ func TestConvertMcpResultResourceLinksAndBinaries(t *testing.T) {
 		Content: []protocol.ContentBlock{
 			{
 				Type: protocol.ContentTypeResourceLink, URI: "docs://guide", Name: "guide",
-				Title: stringPtr("The Guide"), MimeType: "text/markdown", Size: &size, Description: &description,
+				Title: new("The Guide"), MimeType: "text/markdown", Size: &size, Description: &description,
 			},
 			{
 				Type: protocol.ContentTypeResource,
 				Resource: &protocol.ResourceContents{
-					URI: "file:///r/report.pdf", MimeType: stringPtr("application/pdf"), Blob: "JVBERg==", BlobArm: true,
+					URI: "file:///r/report.pdf", MimeType: new("application/pdf"), Blob: "JVBERg==", BlobArm: true,
 				},
 			},
 			{
 				Type: protocol.ContentTypeResource,
 				Resource: &protocol.ResourceContents{
-					URI: "docs://logo", MimeType: stringPtr("image/png"), Blob: "AAAA", BlobArm: true,
+					URI: "docs://logo", MimeType: new("image/png"), Blob: "AAAA", BlobArm: true,
 				},
 			},
 		},

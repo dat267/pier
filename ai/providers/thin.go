@@ -3,6 +3,7 @@ package providers
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 
 	"github.com/dat267/pier/ai"
 )
@@ -113,9 +114,7 @@ func EnvAPIKeyProvider(spec EnvAPIKeyProviderSpec) *ai.Provider {
 		}
 	} else {
 		options.ByAPI = map[string]ai.ProviderStreams{}
-		for api, implementation := range streams {
-			options.ByAPI[api] = implementation
-		}
+		maps.Copy(options.ByAPI, streams)
 	}
 	return ai.CreateProvider(options)
 }
@@ -167,9 +166,7 @@ func WithOpenCodeSessionHeader(streams ai.ProviderStreams) ai.ProviderStreams {
 			}
 		}
 		headers := ai.ProviderHeaders{}
-		for name, value := range options.Headers {
-			headers[name] = value
-		}
+		maps.Copy(headers, options.Headers)
 		session := options.SessionID
 		headers[OpenCodeSessionHeader] = &session
 		cloned := *options
@@ -434,7 +431,7 @@ type googleVertexStreams struct{}
 
 func (googleVertexStreams) Stream(model *ai.Model, context ai.TranscriptContext, options *ai.StreamOptions) *ai.AssistantMessageEventStream {
 	return ai.StreamGoogleVertex(model, context, &ai.GoogleVertexOptions{
-		GoogleOptions: ai.GoogleOptions{StreamOptions: derefStreamOptions(options)},
+		StreamOptions: derefStreamOptions(options),
 	})
 }
 
@@ -447,7 +444,7 @@ type azureOpenAIResponsesStreams struct{}
 
 func (azureOpenAIResponsesStreams) Stream(model *ai.Model, context ai.TranscriptContext, options *ai.StreamOptions) *ai.AssistantMessageEventStream {
 	return ai.StreamAzureOpenAIResponses(model, context, &ai.AzureOpenAIResponsesOptions{
-		OpenAIResponsesOptions: ai.OpenAIResponsesOptions{StreamOptions: derefStreamOptions(options)},
+		StreamOptions: derefStreamOptions(options),
 	})
 }
 

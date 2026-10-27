@@ -55,7 +55,6 @@ func TestHyperlinksSupported(t *testing.T) {
 		{name: "apple terminal", env: map[string]string{"TERM_PROGRAM": "Apple_Terminal"}, want: false},
 	}
 	for _, testCase := range cases {
-		testCase := testCase
 		t.Run(testCase.name, func(t *testing.T) {
 			platform := testCase.platform
 			if platform == "" {
@@ -139,7 +138,6 @@ func TestDetectTerminalCapabilities(t *testing.T) {
 			wantImages: "kitty", wantTrue: false, wantLinks: true,
 		},
 	} {
-		testCase := testCase
 		t.Run(testCase.name, func(t *testing.T) {
 			platform := testCase.platform
 			if platform == "" {

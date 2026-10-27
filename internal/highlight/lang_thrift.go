@@ -12,30 +12,28 @@ func Thrift() *Language {
 	const builtInTypes = "bool byte i16 i32 i64 double string binary"
 	return &Language{
 		Name: "Thrift",
-		Mode: Mode{
-			Keywords: Keywords{
-				"keyword":  "namespace const typedef struct enum service exception void oneway set list map required optional",
-				"built_in": builtInTypes,
-				"literal":  "true false",
+		Keywords: Keywords{
+			"keyword":  "namespace const typedef struct enum service exception void oneway set list map required optional",
+			"built_in": builtInTypes,
+			"literal":  "true false",
+		},
+		Contains: []*Mode{
+			QuoteStringMode,
+			NumberMode,
+			CLineCommentMode,
+			CBlockCommentMode,
+			{
+				ClassName:     "class",
+				BeginKeywords: "struct enum service exception",
+				End:           `\{`,
+				Illegal:       `\n`,
+				Contains:      []*Mode{title},
 			},
-			Contains: []*Mode{
-				QuoteStringMode,
-				NumberMode,
-				CLineCommentMode,
-				CBlockCommentMode,
-				{
-					ClassName:     "class",
-					BeginKeywords: "struct enum service exception",
-					End:           `\{`,
-					Illegal:       `\n`,
-					Contains:      []*Mode{title},
-				},
-				{
-					Begin:    `\b(set|list|map)\s*<`,
-					End:      `>`,
-					Keywords: Keywords{"keyword": builtInTypes},
-					Contains: []*Mode{Self},
-				},
+			{
+				Begin:    `\b(set|list|map)\s*<`,
+				End:      `>`,
+				Keywords: Keywords{"keyword": builtInTypes},
+				Contains: []*Mode{Self},
 			},
 		},
 	}

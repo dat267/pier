@@ -157,7 +157,7 @@ func TestFooterTruncateLeft(t *testing.T) {
 // TestFooterLine ports format.test.ts footerLine cases.
 func TestFooterLine(t *testing.T) {
 	usage := &coding.ContextUsageReport{
-		Tokens: nil, ContextWindow: 1000000, Percent: floatPtr(3.456),
+		Tokens: nil, ContextWindow: 1000000, Percent: new(3.456),
 	}
 	base := FooterInput{Cwd: "/home/dat/proj", ModelID: "deepseek-v4-flash"}
 
@@ -196,7 +196,7 @@ func TestFooterLine(t *testing.T) {
 	}
 
 	// Statuses are part of the truncated line.
-	fifty := &coding.ContextUsageReport{ContextWindow: 1000000, Percent: floatPtr(50)}
+	fifty := &coding.ContextUsageReport{ContextWindow: 1000000, Percent: new(float64(50))}
 	twoStatuses := withUsage(base, fifty)
 	twoStatuses.Statuses = []string{"yolo", "second-status"}
 	line = FooterLine(twoStatuses, 24)
@@ -257,8 +257,6 @@ func TestFooterComponentRendersSingleDimLine(t *testing.T) {
 func TestAgentSessionSatisfiesFooterSession(t *testing.T) {
 	var _ FooterSession = (*coding.AgentSession)(nil)
 }
-
-func floatPtr(v float64) *float64 { return &v }
 
 // Upstream sanitizeStatusText replaces newlines, tabs and carriage returns
 // with spaces, collapses space runs, and trims the ends.

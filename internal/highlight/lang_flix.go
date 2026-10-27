@@ -24,19 +24,17 @@ func Flix() *Language {
 
 	return &Language{
 		Name: "Flix",
-		Mode: Mode{
-			Keywords: Keywords{
-				"literal": "true false",
-				"keyword": "case class def else enum if impl import in lat rel index let match namespace switch type yield with",
-			},
-			Contains: []*Mode{
-				CLineCommentMode,
-				CBlockCommentMode,
-				char,
-				strBase,
-				method,
-				CNumberMode,
-			},
+		Keywords: Keywords{
+			"literal": "true false",
+			"keyword": "case class def else enum if impl import in lat rel index let match namespace switch type yield with",
+		},
+		Contains: []*Mode{
+			CLineCommentMode,
+			CBlockCommentMode,
+			char,
+			strBase,
+			method,
+			CNumberMode,
 		},
 	}
 }

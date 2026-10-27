@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"maps"
 	"slices"
 	"sort"
 	"strconv"
@@ -525,9 +526,7 @@ func NewSettingsSelectorComponent(config SettingsConfig, callbacks SettingsCallb
 	cycleThinkingKey := KeyDisplayText("app.thinking.cycle")
 	currentWarnings := config.Warnings
 	currentModelThinkingLevels := map[string]string{}
-	for key, value := range config.ModelThinkingLevels {
-		currentModelThinkingLevels[key] = value
-	}
+	maps.Copy(currentModelThinkingLevels, config.ModelThinkingLevels)
 	defaultModelByValue := map[string]*ai.Model{}
 	for _, model := range config.AvailableDefaultModels {
 		defaultModelByValue[modelSettingKey(model)] = model

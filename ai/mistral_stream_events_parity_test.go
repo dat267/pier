@@ -38,8 +38,8 @@ func TestMistralStreamEventsMatchUpstream(t *testing.T) {
 			}))
 			defer server.Close()
 			model := mistralModel(server.URL)
-			model.Cost = ModelCost{ModelCostRates: ModelCostRates{Input: 2, Output: 6, CacheRead: 0.5}}
-			stream := StreamMistralConversations(model, mistralUserContext(), &MistralOptions{StreamOptions: StreamOptions{APIKey: "test-key"}})
+			model.Cost = ModelCost{Input: 2, Output: 6, CacheRead: 0.5}
+			stream := StreamMistralConversations(model, mistralUserContext(), &MistralOptions{APIKey: "test-key"})
 			var got []string
 			for {
 				event, ok := stream.Next(context.Background())

@@ -2,6 +2,7 @@ package coding
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/dat267/pier/agent"
 	"github.com/dat267/pier/ai"
@@ -46,12 +47,7 @@ var AllToolNames = []ToolName{
 
 // IsToolName reports whether a name is a built-in tool.
 func IsToolName(name string) bool {
-	for _, candidate := range AllToolNames {
-		if candidate == name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(AllToolNames, name)
 }
 
 // ToolsOptions carry the per-tool options for the tool-set constructors.

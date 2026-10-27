@@ -44,7 +44,7 @@ func TestCacheWarmerSkipsRefreshPastDispatchDeadline(t *testing.T) {
 					time.Sleep(fixture.decisionDelay)
 					return CacheWarmingActionWarm
 				}
-				warmer.Start(CacheWarmRequest{Model: model, Options: &ai.SimpleStreamOptions{StreamOptions: ai.StreamOptions{CacheRetention: ai.CacheRetentionShort}}}, func() bool { return true })
+				warmer.Start(CacheWarmRequest{Model: model, Options: &ai.SimpleStreamOptions{CacheRetention: ai.CacheRetentionShort}}, func() bool { return true })
 				time.Sleep(time.Second + fixture.modeDelay + fixture.decisionDelay + time.Millisecond)
 				synctest.Wait()
 				if got := requests.Load(); got != fixture.wantRequests {

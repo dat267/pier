@@ -99,10 +99,8 @@ func Scheme() *Language {
 	contains = append(contains, comments...)
 
 	return &Language{
-		Name: "Scheme",
-		Mode: Mode{
-			Illegal:  `\S`,
-			Contains: contains,
-		},
+		Name:     "Scheme",
+		Illegal:  `\S`,
+		Contains: contains,
 	}
 }

@@ -17,7 +17,7 @@ func sessionFileRoles(t *testing.T, path string) []string {
 		t.Fatal(err)
 	}
 	var roles []string
-	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(string(data)), "\n") {
 		if line == "" {
 			continue
 		}
@@ -92,7 +92,7 @@ func TestSessionManagerPersistStopsAtAssistant(t *testing.T) {
 		m, _ := newTestSession(t)
 		m.AppendMessage(createUserMessage("one"))
 		m.AppendMessage(assistantTestMessage())
-		for i := 0; i < filler; i++ {
+		for range filler {
 			m.AppendMessage(createUserMessage("filler"))
 		}
 		return m

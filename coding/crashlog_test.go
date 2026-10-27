@@ -38,7 +38,7 @@ func TestRecordAndReadCrashLog(t *testing.T) {
 	}
 
 	// Records accumulate and cap at five.
-	for index := 0; index < 7; index++ {
+	for range 7 {
 		RecordCrash(CrashInput{Kind: CrashKindFatalError, Error: errors.New("again")}, path)
 	}
 	records := ReadCrashLog(path)

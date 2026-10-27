@@ -663,7 +663,7 @@ func runFlow(ctx context.Context, provider OAuthClientProvider, options FlowOpti
 		}
 	}
 	if client == nil && clientDocument != nil {
-		client = &OAuthClientInformationFull{OAuthClientInformation: OAuthClientInformation{ClientID: clientDocument.URL}}
+		client = &OAuthClientInformationFull{ClientID: clientDocument.URL}
 	}
 	if client == nil {
 		if options.AuthorizationCode != "" {

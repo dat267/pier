@@ -24,7 +24,7 @@ func allocatedBytesPerRun(t *testing.T, runs int, fn func()) int64 {
 	fn() // warm lazily built state, the way testing.AllocsPerRun does
 	var before, after runtime.MemStats
 	runtime.ReadMemStats(&before)
-	for i := 0; i < runs; i++ {
+	for range runs {
 		fn()
 	}
 	runtime.ReadMemStats(&after)

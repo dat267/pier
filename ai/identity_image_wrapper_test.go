@@ -47,7 +47,7 @@ func TestWithImagesClientIdentityPrecedence(t *testing.T) {
 		t.Fatalf("wrapped identity = %+v", captured)
 	}
 	request := &ClientIdentity{AttributionSet: true, VersionSet: true}
-	options := &ImagesOptions{StreamOptions: StreamOptions{Identity: request}}
+	options := &ImagesOptions{Identity: request}
 	wrapped.GenerateImages(model, ImagesContext{}, options)
 	if captured.Attribution != nil || captured.Version != "" || !captured.VersionSet || captured.UserAgent != "short" {
 		t.Fatalf("request identity = %+v", captured)

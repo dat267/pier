@@ -25,7 +25,7 @@ func TestClipboardFallbackUsesOptionalTerminalSink(t *testing.T) {
 	base, cleanup := newTestAppB(t)
 	defer cleanup()
 	options := base.options
-	terminal := &optionalClipboardTerminal{fakeRendererTerminal: fakeRendererTerminal{width: 80, height: 24}}
+	terminal := &optionalClipboardTerminal{width: 80, height: 24}
 	options.Terminal = terminal
 	app := NewApp(options)
 	defer app.Close()

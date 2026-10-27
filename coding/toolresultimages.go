@@ -2,6 +2,7 @@ package coding
 
 import (
 	"encoding/base64"
+	"strings"
 
 	"github.com/dat267/pier/ai"
 )
@@ -77,14 +78,14 @@ func NormalizeToolResultImages(content ai.UserContentList, options *NormalizeToo
 		}
 		normalized = append(normalized, ai.ImageContent{Data: processed.Data, MimeType: processed.MimeType})
 		if len(processed.Hints) > 0 {
-			hints := ""
+			var hints strings.Builder
 			for index, hint := range processed.Hints {
 				if index > 0 {
-					hints += "\n"
+					hints.WriteString("\n")
 				}
-				hints += hint
+				hints.WriteString(hint)
 			}
-			normalized = append(normalized, ai.TextContent{Text: hints})
+			normalized = append(normalized, ai.TextContent{Text: hints.String()})
 		}
 		changed = true
 	}

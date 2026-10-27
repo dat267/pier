@@ -36,16 +36,9 @@ type DiffChange struct {
 }
 
 type diffComponent struct {
-	count    int
-	added    bool
-	removed  bool
-	previous *diffComponent
-	value    string
-}
-
-type diffPath struct {
-	oldPos int
-	last   *diffComponent
+	count   int
+	added   bool
+	removed bool
 }
 
 // DiffWords computes a word-level diff between two strings, mirroring
@@ -338,10 +331,7 @@ func overlapCount(a string, b string) int {
 	if len(a) > len(b) {
 		startA = len(a) - len(b)
 	}
-	endB := len(b)
-	if len(a) < len(b) {
-		endB = len(a)
-	}
+	endB := min(len(a), len(b))
 	mapping := make([]int, max(1, endB))
 	k := 0
 	if endB > 0 {
@@ -404,8 +394,8 @@ func RenderIntraLineDiff(oldContent string, newContent string) (string, string) 
 	wordDiff := DiffWords(oldContent, newContent)
 	theme := ActiveTheme()
 
-	removedLine := ""
-	addedLine := ""
+	var removedLine strings.Builder
+	var addedLine strings.Builder
 	isFirstRemoved := true
 	isFirstAdded := true
 
@@ -416,29 +406,29 @@ func RenderIntraLineDiff(oldContent string, newContent string) (string, string) 
 			if isFirstRemoved {
 				leading := leadingWs(value)
 				value = value[len(leading):]
-				removedLine += leading
+				removedLine.WriteString(leading)
 				isFirstRemoved = false
 			}
 			if value != "" {
-				removedLine += theme.Inverse(value)
+				removedLine.WriteString(theme.Inverse(value))
 			}
 		case part.Added:
 			value := part.Value
 			if isFirstAdded {
 				leading := leadingWs(value)
 				value = value[len(leading):]
-				addedLine += leading
+				addedLine.WriteString(leading)
 				isFirstAdded = false
 			}
 			if value != "" {
-				addedLine += theme.Inverse(value)
+				addedLine.WriteString(theme.Inverse(value))
 			}
 		default:
-			removedLine += part.Value
-			addedLine += part.Value
+			removedLine.WriteString(part.Value)
+			addedLine.WriteString(part.Value)
 		}
 	}
-	return removedLine, addedLine
+	return removedLine.String(), addedLine.String()
 }
 
 // RenderDiff renders a diff string with colored lines and intra-line change

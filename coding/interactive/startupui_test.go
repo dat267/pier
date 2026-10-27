@@ -19,7 +19,7 @@ func startupSelectorPrompt(t *testing.T, keys string) (string, bool, []string) {
 	SetStyleColorsEnabled(true)
 	InitTheme("dark", false)
 
-	terminal := &scriptedTerminal{fakeRendererTerminal: fakeRendererTerminal{width: 80, height: 24}, started: make(chan struct{})}
+	terminal := &scriptedTerminal{width: 80, height: 24, started: make(chan struct{})}
 	type answer struct {
 		label string
 		ok    bool

@@ -80,11 +80,9 @@ func Julia() *Language {
 	interpolation.Contains = defaults
 
 	return &Language{
-		Name: "Julia",
-		Mode: Mode{
-			Keywords: keywords,
-			Illegal:  `<\/`,
-			Contains: defaults,
-		},
+		Name:     "Julia",
+		Keywords: keywords,
+		Illegal:  `<\/`,
+		Contains: defaults,
 	}
 }

@@ -307,13 +307,12 @@ func TestGitHubCopilotOAuthDefinition(t *testing.T) {
 	if auth.Name != "GitHub Copilot" || !auth.IsSubscription {
 		t.Fatalf("auth = %+v", auth)
 	}
-	credential := &OAuthCredential{OAuthCredentials: OAuthCredentials{
+	credential := &OAuthCredential{
 		Access: "tid=1;proxy-ep=proxy.business.githubcopilot.com;",
 		Extra: map[string]json.RawMessage{
 			CopilotEnterpriseURLKey:  jsonRawString("company.ghe.com"),
 			CopilotAvailableModelKey: jsonRawStringSlice([]string{"gpt-5"}),
-		},
-	}}
+		}}
 	modelAuth, err := auth.ToAuth(credential)
 	if err != nil {
 		t.Fatal(err)
@@ -326,7 +325,7 @@ func TestGitHubCopilotOAuthDefinition(t *testing.T) {
 		t.Fatalf("domain = %s", domain)
 	}
 	// A credential without extras falls back to the public endpoint.
-	modelAuth, err = auth.ToAuth(&OAuthCredential{OAuthCredentials: OAuthCredentials{Access: "tid=1"}})
+	modelAuth, err = auth.ToAuth(&OAuthCredential{Access: "tid=1"})
 	if err != nil || modelAuth.BaseURL != "https://api.individual.githubcopilot.com" {
 		t.Fatalf("model auth = %+v err = %v", modelAuth, err)
 	}

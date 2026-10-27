@@ -26,7 +26,7 @@ func TestSessionWritesLandInOrderOnTheQueue(t *testing.T) {
 	m.AppendMessage(createAssistantMessageT("seed"))
 	const n = 50
 	want := []string{"session", "message"} // header, then the seed message
-	for i := 0; i < n; i++ {
+	for range n {
 		m.AppendMessage(createUserMessage("message number"))
 		m.AppendSessionInfo("name")
 		want = append(want, "message", "session_info")

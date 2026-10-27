@@ -73,7 +73,7 @@ func TestResumedSessionAsksTrustForItsOwnProject(t *testing.T) {
 
 	t.Run("stored decision", func(t *testing.T) {
 		session := startPierConfigured(t, func(agentDir string) {
-			if err := coding.NewProjectTrustStore(agentDir).Set(project, boolRef(true)); err != nil {
+			if err := coding.NewProjectTrustStore(agentDir).Set(project, new(true)); err != nil {
 				t.Fatal(err)
 			}
 		}, "--session", sessionFile)
@@ -90,7 +90,7 @@ func TestResumedSessionAsksTrustForItsOwnProject(t *testing.T) {
 
 	t.Run("stored refusal", func(t *testing.T) {
 		session := startPierConfigured(t, func(agentDir string) {
-			if err := coding.NewProjectTrustStore(agentDir).Set(project, boolRef(false)); err != nil {
+			if err := coding.NewProjectTrustStore(agentDir).Set(project, new(false)); err != nil {
 				t.Fatal(err)
 			}
 		}, "--session", sessionFile)

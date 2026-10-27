@@ -325,7 +325,7 @@ func TestSessionCompactEventOnError(t *testing.T) {
 		go func() {
 			message := &ai.AssistantMessage{
 				API: ai.APIAnthropicMessages, Provider: failModel.Provider, Model: failModel.ID,
-				StopReason: ai.StopError, ErrorMessage: strPtr("summarizer exploded"),
+				StopReason: ai.StopError, ErrorMessage: new("summarizer exploded"),
 			}
 			stream.Push(ai.AssistantMessageEvent{Type: ai.EventError, Reason: ai.StopError, Error: message})
 		}()

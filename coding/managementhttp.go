@@ -36,10 +36,7 @@ type FetchRetryOptions struct {
 func FetchWithRetry(ctx context.Context, request *http.Request, client *http.Client, options FetchRetryOptions) (*http.Response, error) {
 	maxRetries := 2
 	if options.MaxRetries != nil {
-		maxRetries = *options.MaxRetries
-		if maxRetries < 0 {
-			maxRetries = 0
-		}
+		maxRetries = max(*options.MaxRetries, 0)
 	}
 	retryOnStatus := true
 	if options.RetryOnStatus != nil {

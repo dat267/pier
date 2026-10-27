@@ -59,14 +59,12 @@ func Properties() *Language {
 	return &Language{
 		Name:            ".properties",
 		CaseInsensitive: true,
-		Mode: Mode{
-			Illegal: `\S`,
-			Contains: []*Mode{
-				CommentMode(`^\s*[!#]`, `$`),
-				key,
-				otherKey,
-				{ClassName: "attr", HasRelevance: true, Relevance: 0, Begin: keyOther + ws0 + `$`},
-			},
+		Illegal:         `\S`,
+		Contains: []*Mode{
+			CommentMode(`^\s*[!#]`, `$`),
+			key,
+			otherKey,
+			{ClassName: "attr", HasRelevance: true, Relevance: 0, Begin: keyOther + ws0 + `$`},
 		},
 	}
 }

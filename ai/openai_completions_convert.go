@@ -416,9 +416,9 @@ func ConvertOpenAICompletionsTools(tools []Tool, compat ResolvedOpenAICompletion
 		}
 		var strictField *bool
 		if supportsStrictMode && !unset {
-			strictField = boolPtr(strict)
+			strictField = new(strict)
 		} else if supportsStrictMode {
-			strictField = boolPtr(false)
+			strictField = new(false)
 		}
 		out = append(out, OpenAITool{
 			Type: "function",
@@ -565,13 +565,13 @@ func BuildOpenAICompletionsParams(model *Model, context TranscriptContext, optio
 		params.StreamOptions = &OpenAIStreamOptions{IncludeUsage: true}
 	}
 	if compat.SupportsStore {
-		params.Store = boolPtr(false)
+		params.Store = new(false)
 	}
 	if options.MaxTokens != nil && *options.MaxTokens != 0 {
 		if compat.MaxTokensField == "max_tokens" {
-			params.MaxTokens = int64Ptr(int64(*options.MaxTokens))
+			params.MaxTokens = new(int64(*options.MaxTokens))
 		} else {
-			params.MaxCompletionTokens = int64Ptr(int64(*options.MaxTokens))
+			params.MaxCompletionTokens = new(int64(*options.MaxTokens))
 		}
 	}
 	if options.Temperature != nil {
@@ -584,7 +584,7 @@ func BuildOpenAICompletionsParams(model *Model, context TranscriptContext, optio
 		}
 		params.Tools = tools
 		if compat.ZaiToolStream {
-			params.ToolStream = boolPtr(true)
+			params.ToolStream = new(true)
 		}
 	} else if hasOpenAIToolHistory(context.Messages) {
 		// Anthropic (via LiteLLM/proxy) requires the tools param when the
@@ -616,7 +616,7 @@ func BuildOpenAICompletionsParams(model *Model, context TranscriptContext, optio
 			}
 		}
 	} else if compat.ThinkingFormat == "qwen" && model.Reasoning {
-		params.EnableThinking = boolPtr(options.ReasoningEffort != "")
+		params.EnableThinking = new(options.ReasoningEffort != "")
 		if options.ReasoningEffort != "" && compat.SupportsReasoningEffort {
 			if effort := resolveLevelMapValue(model, options.ReasoningEffort, true); effort != nil {
 				params.ReasoningEffort = effort
@@ -677,7 +677,7 @@ func BuildOpenAICompletionsParams(model *Model, context TranscriptContext, optio
 			params.ReasoningObj = &OpenAIReasoningParam{Effort: effort}
 		}
 	} else if compat.ThinkingFormat == "together" && model.Reasoning {
-		params.ReasoningObj = &OpenAIReasoningParam{Enabled: boolPtr(options.ReasoningEffort != "")}
+		params.ReasoningObj = &OpenAIReasoningParam{Enabled: new(options.ReasoningEffort != "")}
 		if options.ReasoningEffort != "" && compat.SupportsReasoningEffort {
 			params.ReasoningEffort = resolveLevelMapValue(model, options.ReasoningEffort, true)
 		}
@@ -699,7 +699,7 @@ func BuildOpenAICompletionsParams(model *Model, context TranscriptContext, optio
 	// thinking format.
 	if field := ResolveThinkingTokenBudgetField(*compat); field != "" {
 		if budget := resolveClampedThinkingBudget(model, options, params); budget != nil {
-			params.ThinkingTokenBudget = int64Ptr(int64(*budget))
+			params.ThinkingTokenBudget = new(int64(*budget))
 			params.ThinkingTokenBudgetField = field
 		}
 	}
@@ -734,8 +734,6 @@ func BuildOpenAICompletionsParams(model *Model, context TranscriptContext, optio
 	return params, nil
 }
 
-func int64Ptr(v int64) *int64 { return &v }
-
 // resolveLevelMapValue maps a thinking level through thinkingLevelMap.
 // fallbackToRequested: when nothing is mapped, return the requested level
 // itself (upstream `?? options.reasoningEffort`).
@@ -747,7 +745,7 @@ func resolveLevelMapValue(model *Model, level ThinkingLevel, fallbackToRequested
 		return nil // explicit null: unsupported
 	}
 	if fallbackToRequested && level != "" {
-		return ptrString(level)
+		return new(level)
 	}
 	return nil
 }

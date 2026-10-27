@@ -78,15 +78,15 @@ func ToGoogleThinkingLevel(level ResolvedGoogleThinkingLevel) GoogleApiThinkingL
 // style.
 func GetDisabledGoogleThinkingConfig(model *Model) *GoogleThinkingConfig {
 	if !UsesGoogleThinkingLevel(model) {
-		return &GoogleThinkingConfig{ThinkingBudget: intPtr(0)}
+		return &GoogleThinkingConfig{ThinkingBudget: new(0)}
 	}
 	fallback := ClampThinkingLevel(model, ThinkOff)
 	if fallback == ThinkOff {
-		return &GoogleThinkingConfig{ThinkingBudget: intPtr(0)}
+		return &GoogleThinkingConfig{ThinkingBudget: new(0)}
 	}
 	resolved, err := ResolveGoogleThinkingLevel(model, fallback)
 	if err != nil {
-		return &GoogleThinkingConfig{ThinkingBudget: intPtr(0)}
+		return &GoogleThinkingConfig{ThinkingBudget: new(0)}
 	}
 	return &GoogleThinkingConfig{ThinkingLevel: ToGoogleThinkingLevel(resolved)}
 }

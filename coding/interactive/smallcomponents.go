@@ -189,7 +189,6 @@ type BorderedLoader struct {
 	cancellable  bool
 	loader       *tui.Loader
 	cancelLoader *tui.CancellableLoader
-	onAbort      func()
 }
 
 // NewBorderedLoader creates the bordered loader.

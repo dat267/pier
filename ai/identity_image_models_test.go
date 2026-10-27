@@ -32,7 +32,7 @@ func TestImagesModelsDefaultIdentity(t *testing.T) {
 			t.Fatalf("resolved %t: default identity = %+v", resolved, captured)
 		}
 		request := &ClientIdentity{AttributionSet: true}
-		models.GenerateImages(model, ImagesContext{}, &ImagesOptions{StreamOptions: StreamOptions{Identity: request}})
+		models.GenerateImages(model, ImagesContext{}, &ImagesOptions{Identity: request})
 		if captured == nil || captured.UserAgent != "short" || captured.Attribution != nil || !captured.AttributionSet {
 			t.Fatalf("resolved %t: request identity = %+v", resolved, captured)
 		}

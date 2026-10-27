@@ -223,7 +223,7 @@ func TestSessionSelectorWiring(t *testing.T) {
 	editorContainer := &tui.Container{}
 	editor := NewCustomEditor(editorTestHost{}, tui.EditorTheme{}, NewAppKeybindingsManager(nil, ""), CustomEditorOptions{})
 	editorContainer.AddChild(editor)
-	manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: boolPtr(false)})
+	manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: new(false)})
 	wiring := &SessionWiring{
 		Slot:        NewSelectorSlot(screen, editorContainer, editor),
 		SessionInfo: manager,

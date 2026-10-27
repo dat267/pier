@@ -234,7 +234,7 @@ var ansiPattern = regexp.MustCompile(`\x1b\][^\x07]*\x07|\x1b\[[0-9;?]*[a-zA-Z]|
 func unwrapped(output string) string {
 	output = ansiPattern.ReplaceAllString(output, "")
 	var joined strings.Builder
-	for _, line := range strings.Split(output, "\n") {
+	for line := range strings.SplitSeq(output, "\n") {
 		joined.WriteString(strings.TrimSpace(line))
 	}
 	return joined.String()

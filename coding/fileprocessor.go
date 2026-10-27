@@ -316,7 +316,7 @@ func scaleImageBilinear(source image.Image, width, height int) *image.RGBA {
 	}
 	scaleX := float64(sourceWidth) / float64(width)
 	scaleY := float64(sourceHeight) / float64(height)
-	for y := 0; y < height; y++ {
+	for y := range height {
 		sourceY := (float64(y)+0.5)*scaleY - 0.5
 		y0 := int(math.Floor(sourceY))
 		weightY := sourceY - float64(y0)
@@ -324,7 +324,7 @@ func scaleImageBilinear(source image.Image, width, height int) *image.RGBA {
 			y0, weightY = 0, 0
 		}
 		y1 := min(y0+1, sourceHeight-1)
-		for x := 0; x < width; x++ {
+		for x := range width {
 			sourceX := (float64(x)+0.5)*scaleX - 0.5
 			x0 := int(math.Floor(sourceX))
 			weightX := sourceX - float64(x0)

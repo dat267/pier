@@ -11,6 +11,8 @@ package tui
 // overlayHost seam, so the machine is testable with no renderer and no terminal.
 // The renderer keeps its public overlay methods and forwards here.
 
+import "slices"
+
 // overlayHost is the renderer's half of the machine's questions. The methods are
 // unexported so the renderer needs no new public surface to satisfy it.
 type overlayHost interface {
@@ -67,12 +69,7 @@ func (s *overlayStack) HasEntries() bool { return len(s.entries) > 0 }
 
 // HasVisible reports whether any overlay is visible.
 func (s *overlayStack) HasVisible() bool {
-	for _, entry := range s.entries {
-		if s.Visible(entry) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(s.entries, s.Visible)
 }
 
 // IsFocused reports whether the focused component is a visible overlay.

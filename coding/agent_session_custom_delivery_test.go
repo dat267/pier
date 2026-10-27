@@ -56,7 +56,7 @@ func TestContextOnlyCustomMessagePublishesLifecycle(t *testing.T) {
 		}
 		events = append(events, event.Type)
 	})
-	if err := session.SendMessage(context.Background(), custom, &SendMessageOptions{TriggerTurn: boolPtr(false)}); err != nil {
+	if err := session.SendMessage(context.Background(), custom, &SendMessageOptions{TriggerTurn: new(false)}); err != nil {
 		t.Fatal(err)
 	}
 	if len(events) != 2 || events[0] != SessionMessageStart || events[1] != SessionMessageEnd {
@@ -80,7 +80,7 @@ func TestContextOnlyCustomMessageReachesNextTurn(t *testing.T) {
 	turns := 0
 	session.Subscribe(func(event *SessionEvent) {
 		if event.Type == SessionTurnEnd && turns == 1 {
-			if err := session.SendMessage(context.Background(), custom, &SendMessageOptions{TriggerTurn: boolPtr(false)}); err != nil {
+			if err := session.SendMessage(context.Background(), custom, &SendMessageOptions{TriggerTurn: new(false)}); err != nil {
 				t.Error(err)
 			}
 		}

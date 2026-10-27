@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"context"
+	"maps"
 	"sync/atomic"
 
 	"github.com/dat267/pier/ai"
@@ -63,9 +64,7 @@ func (c *ModelCatalogRefreshCoordinator) publishIfAbsent(runtime ModelCatalogRun
 			return false
 		}
 		next := make(map[ModelCatalogRuntime]*activeCatalogRefresh, len(current)+1)
-		for key, value := range current {
-			next[key] = value
-		}
+		maps.Copy(next, current)
 		next[runtime] = entry
 		if c.active.CompareAndSwap(previous, &next) {
 			return true

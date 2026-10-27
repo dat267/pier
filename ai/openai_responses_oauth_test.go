@@ -24,15 +24,13 @@ func TestResponsesChatGPTFieldOmissionIsCredentialSpecific(t *testing.T) {
 			model := testResponsesModel()
 			model.Provider, model.BaseURL = test.provider, test.baseURL
 			model.Compat = &ModelCompat{OpenAIResponses: &OpenAIResponsesCompat{
-				SupportsExplicitPromptCacheMode: boolPtrT(test.explicit),
+				SupportsExplicitPromptCacheMode: new(test.explicit),
 			}}
 			maxTokens := 4096
 			temperature := 0.2
 			params, err := BuildOpenAIResponsesParams(model, TranscriptContext{}, &OpenAIResponsesOptions{
-				StreamOptions: StreamOptions{
-					APIKey: test.apiKey, CacheRetention: CacheRetentionLong, SessionID: "session",
-					MaxTokens: &maxTokens, Temperature: &temperature,
-				},
+				APIKey: test.apiKey, CacheRetention: CacheRetentionLong, SessionID: "session",
+				MaxTokens: &maxTokens, Temperature: &temperature,
 			}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
@@ -69,15 +67,13 @@ func TestResponsesChatGPTFieldOmissionIsCredentialSpecific(t *testing.T) {
 func TestResponsesChatGPTCompactionOmitsUnsupportedFields(t *testing.T) {
 	model := testResponsesModel()
 	model.Compat = &ModelCompat{OpenAIResponses: &OpenAIResponsesCompat{
-		SupportsExplicitPromptCacheMode: boolPtrT(true),
+		SupportsExplicitPromptCacheMode: new(true),
 	}}
 	maxTokens := 4096
 	temperature := 0.2
 	params, err := BuildOpenAIResponsesParams(model, TranscriptContext{}, &OpenAIResponsesOptions{
-		StreamOptions: StreamOptions{
-			APIKey: "oauth-access-token", CacheRetention: CacheRetentionNone,
-			MaxTokens: &maxTokens, Temperature: &temperature,
-		},
+		APIKey: "oauth-access-token", CacheRetention: CacheRetentionNone,
+		MaxTokens: &maxTokens, Temperature: &temperature,
 	}, nil, nil)
 	if err != nil {
 		t.Fatal(err)

@@ -72,7 +72,7 @@ func TestAppendContextEditValidation(t *testing.T) {
 	if _, err := manager.AppendContextEdit("missing", json.RawMessage("null")); err == nil {
 		t.Fatal("a missing target must be rejected")
 	}
-	labelID, err := manager.AppendLabelChange(messageID, strPtrForContextEdit("x"))
+	labelID, err := manager.AppendLabelChange(messageID, new("x"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,8 +80,6 @@ func TestAppendContextEditValidation(t *testing.T) {
 		t.Fatal("a label must not be editable")
 	}
 }
-
-func strPtrForContextEdit(value string) *string { return &value }
 
 // TestContextEditEntryRoundTrips pins that a context_edit line keeps its
 // replacement through load and rewrite.

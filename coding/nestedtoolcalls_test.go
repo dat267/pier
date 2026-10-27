@@ -84,7 +84,7 @@ func TestNestedCallRecorderLimits(t *testing.T) {
 	perCall := &ai.NestedToolCallRecord{}
 	_ = perCall
 	chunk := ai.ToolCall{ID: "c", Name: "t", Arguments: json.RawMessage(`"` + strings.Repeat("a", NestedCallLimits.MaxArgumentBytesPerCall-10) + `"`)}
-	for index := 0; index < 5; index++ {
+	for range 5 {
 		total.Start(chunk)
 	}
 	if snapshot := total.Snapshot(); snapshot == nil || snapshot.Complete {

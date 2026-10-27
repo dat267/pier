@@ -8,7 +8,7 @@ import (
 
 func makeWarmContainer(lines int) *Container {
 	var sb strings.Builder
-	for i := 0; i < lines; i++ {
+	for i := range lines {
 		fmt.Fprintf(&sb, "line %d\n", i)
 	}
 	container := &Container{}
@@ -93,7 +93,7 @@ func BenchmarkContainerWarmRender(b *testing.B) {
 // child, which is what made a long session stutter for ~100 ms a frame.
 func TestContainerRenderReusesPrefixOnTailChange(t *testing.T) {
 	container := &Container{}
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		container.AddChild(NewText(fmt.Sprintf("child %d", i), 0, 0, nil))
 	}
 	tail := NewText("tail", 0, 0, nil)

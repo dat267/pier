@@ -48,9 +48,9 @@ func TestFetchWithRetryKeepsBodyReadableWithAttemptTimeout(t *testing.T) {
 // TestFetchWithRetryRetriesOnAttemptTimeout keeps the per-attempt abort
 // observable: a hung attempt is retried and the second response is returned.
 func TestFetchWithRetryRetriesOnAttemptTimeout(t *testing.T) {
-	var attempts int32
+	var attempts atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if atomic.AddInt32(&attempts, 1) == 1 {
+		if attempts.Add(1) == 1 {
 			time.Sleep(500 * time.Millisecond)
 			return
 		}
@@ -80,7 +80,7 @@ func TestFetchWithRetryRetriesOnAttemptTimeout(t *testing.T) {
 	if string(body) != "ok" {
 		t.Fatalf("body = %q", body)
 	}
-	if got := atomic.LoadInt32(&attempts); got != 2 {
+	if got := attempts.Load(); got != 2 {
 		t.Fatalf("attempts = %d, want 2", got)
 	}
 }

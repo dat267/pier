@@ -79,7 +79,7 @@ func TestUIStateWidgets(t *testing.T) {
 
 	// Truncation at the line limit adds the note.
 	many := make([]string, 0, MaxWidgetLines+3)
-	for i := 0; i < MaxWidgetLines+3; i++ {
+	for range MaxWidgetLines + 3 {
 		many = append(many, "line")
 	}
 	state.SetExtensionWidget("w3", many, true, ExtensionWidgetOptions{})
@@ -203,7 +203,7 @@ func TestUIStateHiddenThinkingLabel(t *testing.T) {
 	state, _ := newUIStateTestState(t, false)
 	assistant := NewAssistantMessageComponent(nil, false, nil, "", 0, nil)
 	state.ChatContainer.AddChild(assistant)
-	state.SetHiddenThinkingLabel(strPtr("Hidden"))
+	state.SetHiddenThinkingLabel(new("Hidden"))
 	if assistant.hiddenThinkingLabel != "Hidden" {
 		t.Fatalf("label = %q", assistant.hiddenThinkingLabel)
 	}
@@ -315,7 +315,7 @@ func TestUIStateReset(t *testing.T) {
 	state.FooterData = nil
 	state.SetExtensionWidget("w", []string{"x"}, true, ExtensionWidgetOptions{})
 	state.ShowWorkingStatusIndicator("off")
-	state.SetHiddenThinkingLabel(strPtr("Custom"))
+	state.SetHiddenThinkingLabel(new("Custom"))
 	state.ResetExtensionUI()
 	if len(state.WidgetKeysAbove()) != 0 {
 		t.Fatal("widgets not cleared")

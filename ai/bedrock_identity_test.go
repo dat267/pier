@@ -20,10 +20,10 @@ func TestBedrockIdentityHeaderOverrides(t *testing.T) {
 		headers ProviderHeaders
 		want    string
 	}{
-		{"caller override", ProviderHeaders{"user-agent": strPtr("caller")}, "caller"},
+		{"caller override", ProviderHeaders{"user-agent": new("caller")}, "caller"},
 		{"null ignored", ProviderHeaders{"user-agent": nil}, "pi"},
-		{"empty override", ProviderHeaders{"user-agent": strPtr("")}, ""},
-		{"reserved ignored", ProviderHeaders{"x-amz-user-agent": strPtr("caller")}, "pi"},
+		{"empty override", ProviderHeaders{"user-agent": new("")}, ""},
+		{"reserved ignored", ProviderHeaders{"x-amz-user-agent": new("caller")}, "pi"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var captured http.Request
@@ -33,10 +33,9 @@ func TestBedrockIdentityHeaderOverrides(t *testing.T) {
 			}, &captured, nil)
 			message, err := StreamBedrockConverseSimple(bedrockTestModel(server.URL), TranscriptContext{Messages: []Message{
 				&UserMessage{Content: StringOrBlocks{Text: "hello"}},
-			}}, &SimpleStreamOptions{StreamOptions: StreamOptions{
+			}}, &SimpleStreamOptions{
 				Identity: &ClientIdentity{UserAgent: "short"}, Headers: tc.headers,
-				Env: ProviderEnv{"AWS_ACCESS_KEY_ID": "AKID", "AWS_SECRET_ACCESS_KEY": "SECRET", "AWS_REGION": "us-west-2"},
-			}}).Result(bgCtx())
+				Env: ProviderEnv{"AWS_ACCESS_KEY_ID": "AKID", "AWS_SECRET_ACCESS_KEY": "SECRET", "AWS_REGION": "us-west-2"}}).Result(bgCtx())
 			if err != nil || message.StopReason != StopStop {
 				t.Fatalf("message = %+v; err = %v", message, err)
 			}
@@ -77,7 +76,7 @@ func TestBedrockIdentityHeaders(t *testing.T) {
 			server := bedrockTestServer(t, frames, &captured, nil)
 			message, err := StreamBedrockConverseSimple(bedrockTestModel(server.URL), TranscriptContext{Messages: []Message{
 				&UserMessage{Content: StringOrBlocks{Text: "hello"}},
-			}}, &SimpleStreamOptions{StreamOptions: StreamOptions{APIKey: "token", Identity: tc.Identity}}).Result(bgCtx())
+			}}, &SimpleStreamOptions{APIKey: "token", Identity: tc.Identity}).Result(bgCtx())
 			if err != nil || message.StopReason != StopStop {
 				t.Fatalf("message = %+v; err = %v", message, err)
 			}

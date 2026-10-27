@@ -3,6 +3,7 @@ package interactive
 import (
 	"bufio"
 	"encoding/json"
+	"maps"
 	"os"
 	"strings"
 	"testing"
@@ -272,9 +273,7 @@ func TestGetResolvedThemeColorsConvertsOklch(t *testing.T) {
 	clone := *base
 	clone.Name = "oklchtheme"
 	clone.Colors = map[string]ColorValue{}
-	for key, value := range base.Colors {
-		clone.Colors[key] = value
-	}
+	maps.Copy(clone.Colors, base.Colors)
 	clone.Colors["accent"] = ColorValue{Value: "oklch(70% 0.1 200)"}
 	SetRegisteredThemes([]*Theme{CreateTheme(&clone, "", "")})
 	t.Cleanup(func() { SetRegisteredThemes(nil) })

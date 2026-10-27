@@ -121,7 +121,7 @@ func TestVisibleWidthCache(t *testing.T) {
 		t.Fatalf("width = %d vs %d", first, second)
 	}
 	// Cache churn keeps results stable.
-	for index := 0; index < 600; index++ {
+	for index := range 600 {
 		VisibleWidth(strings.Repeat("x", index+1) + "日")
 	}
 	if got := VisibleWidth("日本語テスト"); got != 12 {

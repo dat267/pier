@@ -78,8 +78,8 @@ func isDiscoveryMiss(status int) bool {
 // pathSuffix is the path part of a `/.well-known/<kind><path>` URL; empty
 // for the root path.
 func pathSuffix(pathname string) string {
-	if strings.HasSuffix(pathname, "/") {
-		return strings.TrimSuffix(pathname, "/")
+	if before, ok := strings.CutSuffix(pathname, "/"); ok {
+		return before
 	}
 	return pathname
 }
@@ -406,16 +406,14 @@ func DiscoverOAuthServerInfo(ctx context.Context, serverURL string, options Disc
 // validation failures on the optional protected-resource document are
 // swallowed, network failures are not.
 func isNetworkError(err error) bool {
-	var status *statusError
-	if errors.As(err, &status) {
+	if _, ok := errors.AsType[*statusError](err); ok {
 		return false
 	}
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) ||
 		errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
 		return true
 	}
-	var requestErr *url.Error
-	if errors.As(err, &requestErr) {
+	if _, ok := errors.AsType[*url.Error](err); ok {
 		return true
 	}
 	var networkErr net.Error

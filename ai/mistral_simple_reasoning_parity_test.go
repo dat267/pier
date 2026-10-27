@@ -41,12 +41,12 @@ func TestMistralSimpleReasoningMatchesUpstream(t *testing.T) {
 			var got reasoningPayload
 			stream := StreamMistralConversationsSimple(&fixture.Model, mistralUserContext(), &SimpleStreamOptions{
 				Reasoning: fixture.Reasoning,
-				StreamOptions: StreamOptions{APIKey: "test-key", OnPayload: func(payload json.RawMessage, model *Model) json.RawMessage {
+				APIKey:    "test-key", OnPayload: func(payload json.RawMessage, model *Model) json.RawMessage {
 					if err := json.Unmarshal(payload, &got); err != nil {
 						t.Error(err)
 					}
 					return nil
-				}},
+				},
 			})
 			message, err := stream.Result(context.Background())
 			if err != nil {

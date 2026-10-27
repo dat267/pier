@@ -12,7 +12,7 @@ func TestRequestRenderCoalescesIntoTicks(t *testing.T) {
 	screen := NewMainScreen(terminal, false, "")
 	screen.EnableRenderTicks()
 
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		screen.RequestRender(false)
 	}
 	if got := len(screen.RenderTicks()); got != 1 {

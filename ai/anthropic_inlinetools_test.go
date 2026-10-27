@@ -2,6 +2,7 @@ package ai
 
 import (
 	"encoding/json"
+	"slices"
 	"testing"
 )
 
@@ -18,8 +19,8 @@ func TestAnthropicInlineToolChanges(t *testing.T) {
 		ID: "claude-opus-4-7", Provider: "anthropic", API: APIAnthropicMessages,
 		ContextWindow: 200000, MaxTokens: 8192,
 		Compat: &ModelCompat{AnthropicMessages: &AnthropicMessagesCompat{
-			SupportsMidConvoSystemMessages: boolPtrForBedrock(true),
-			SupportsMidConvoToolChanges:    boolPtrForBedrock(true),
+			SupportsMidConvoSystemMessages: new(true),
+			SupportsMidConvoToolChanges:    new(true),
 		}},
 	}
 	context := TranscriptContext{Messages: []Message{
@@ -84,12 +85,7 @@ func TestAnthropicInlineToolChanges(t *testing.T) {
 }
 
 func containsBeta(betas []string, want string) bool {
-	for _, beta := range betas {
-		if beta == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(betas, want)
 }
 
 func containsInlineDefinition(t *testing.T, messages []AnthropicMessage, name string) bool {

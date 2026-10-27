@@ -62,7 +62,6 @@ func TestFormatProgramStatus(t *testing.T) {
 		},
 	}
 	for _, testCase := range cases {
-		testCase := testCase
 		t.Run(testCase.name, func(t *testing.T) {
 			if got := FormatProgramStatus(testCase.status); got != testCase.want {
 				t.Fatalf("got  %q\nwant %q", got, testCase.want)
@@ -74,11 +73,11 @@ func TestFormatProgramStatus(t *testing.T) {
 // The decoded message limit keeps the encoded report inside the spec's 2732-byte limit.
 func TestFormatProgramStatusTruncatesTheMessage(t *testing.T) {
 	status := FormatProgramStatus(ProgramStatus{State: ProgramStatusError, Message: strings.Repeat("a", 4000)})
-	index := strings.Index(status, "msg=")
-	if index < 0 {
+	_, after, ok := strings.Cut(status, "msg=")
+	if !ok {
 		t.Fatalf("no message in %q", status[:40])
 	}
-	encoded := strings.TrimSuffix(status[index+len("msg="):], "\x1b\\")
+	encoded := strings.TrimSuffix(after, "\x1b\\")
 	decoded, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil {
 		t.Fatal(err)
@@ -96,11 +95,11 @@ func TestFormatProgramStatusTruncatesTheMessage(t *testing.T) {
 // A multi-byte rune is never cut in half by the byte limit.
 func TestFormatProgramStatusKeepsRunesWhole(t *testing.T) {
 	status := FormatProgramStatus(ProgramStatus{State: ProgramStatusError, Message: strings.Repeat("é", 2000)})
-	index := strings.Index(status, "msg=")
-	if index < 0 {
+	_, after, ok := strings.Cut(status, "msg=")
+	if !ok {
 		t.Fatal("no message")
 	}
-	encoded := strings.TrimSuffix(status[index+len("msg="):], "\x1b\\")
+	encoded := strings.TrimSuffix(after, "\x1b\\")
 	decoded, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil {
 		t.Fatal(err)

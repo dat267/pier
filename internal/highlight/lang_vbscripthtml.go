@@ -6,12 +6,10 @@ func init() { RegisterLanguage("vbscript-html", VBScriptHTML()) }
 // languages/vbscript-html.js).
 func VBScriptHTML() *Language {
 	return &Language{
-		Name: "VBScript in HTML",
-		Mode: Mode{
-			SubLanguage: []string{"xml"},
-			Contains: []*Mode{
-				{Begin: `<%`, End: `%>`, SubLanguage: []string{"vbscript"}},
-			},
+		Name:        "VBScript in HTML",
+		SubLanguage: []string{"xml"},
+		Contains: []*Mode{
+			{Begin: `<%`, End: `%>`, SubLanguage: []string{"vbscript"}},
 		},
 	}
 }

@@ -234,7 +234,7 @@ func (c *ToolExecutionComponent) createResultRegion(component tui.Component) *tu
 			return nil
 		}
 		c.SetExpanded(!c.expanded)
-		return &tui.TuiMouseDispatchResult{TuiMouseEventResult: tui.TuiMouseEventResult{Handled: true}}
+		return &tui.TuiMouseDispatchResult{Handled: true}
 	})
 }
 

@@ -78,7 +78,7 @@ func TestSessionTreeOrdersChildrenByJavaScriptTime(t *testing.T) {
 		{"same millisecond", "2026-10-20T00:00:00.0009Z", "2026-10-20T00:00:00.0001Z", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: boolPtr(false)})
+			manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: new(false)})
 			root := manager.AppendMessage(createUserMessage("root"))
 			first := manager.AppendMessage(createUserMessage("first"))
 			if err := manager.Branch(root); err != nil {

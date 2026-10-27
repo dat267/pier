@@ -15,7 +15,7 @@ func reloadSessionForTests(t *testing.T, cwd, agentDir string) (*AgentSession, *
 		AuthPath:        filepath.Join(agentDir, "auth.json"),
 		ModelsPath:      filepath.Join(agentDir, "models.json"),
 		Credentials:     newMemoryCredentialStore(),
-		RefreshOnCreate: boolPtr(false),
+		RefreshOnCreate: new(false),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -88,7 +88,7 @@ func TestReloadKeepsTheActiveTools(t *testing.T) {
 		AuthPath:        filepath.Join(GetAgentDir(), "auth.json"),
 		ModelsPath:      filepath.Join(GetAgentDir(), "models.json"),
 		Credentials:     newMemoryCredentialStore(),
-		RefreshOnCreate: boolPtr(false),
+		RefreshOnCreate: new(false),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -164,7 +164,7 @@ func TestReloadRereadsTheTrustGate(t *testing.T) {
 		AuthPath:        filepath.Join(agentDir, "auth.json"),
 		ModelsPath:      filepath.Join(agentDir, "models.json"),
 		Credentials:     newMemoryCredentialStore(),
-		RefreshOnCreate: boolPtr(false),
+		RefreshOnCreate: new(false),
 	})
 	if err != nil {
 		t.Fatal(err)

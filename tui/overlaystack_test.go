@@ -26,7 +26,7 @@ func (h *fakeOverlayHost) componentMounted(component Component) bool {
 }
 
 func newTestOverlayStack() (*overlayStack, *fakeOverlayHost, *focusComponent) {
-	root := &focusComponent{staticComponent: staticComponent{lines: []string{"root"}}}
+	root := &focusComponent{lines: []string{"root"}}
 	host := &fakeOverlayHost{cols: 80, rows: 24, mounted: map[Component]bool{root: true}}
 	stack := newOverlayStack(host)
 	stack.SetFocus(root)
@@ -34,7 +34,7 @@ func newTestOverlayStack() (*overlayStack, *fakeOverlayHost, *focusComponent) {
 }
 
 func mountedFocusComponent(host *fakeOverlayHost, line string) *focusComponent {
-	component := &focusComponent{staticComponent: staticComponent{lines: []string{line}}}
+	component := &focusComponent{lines: []string{line}}
 	host.mounted[component] = true
 	return component
 }

@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"regexp"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -126,13 +127,7 @@ func getTemplateEnvVarNames(parts []templatePart) []string {
 		if !part.isEnv {
 			continue
 		}
-		found := false
-		for _, name := range names {
-			if name == part.value {
-				found = true
-				break
-			}
-		}
+		found := slices.Contains(names, part.value)
 		if !found {
 			names = append(names, part.value)
 		}

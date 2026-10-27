@@ -148,19 +148,17 @@ func Markdown() *Language {
 	return &Language{
 		Name:    "Markdown",
 		Aliases: []string{"md", "mkdown", "mkd"},
-		Mode: Mode{
-			Contains: []*Mode{
-				header,
-				inlineHTML,
-				list,
-				bold,
-				italic,
-				blockquote,
-				code,
-				horizontalRule,
-				link,
-				linkReference,
-			},
+		Contains: []*Mode{
+			header,
+			inlineHTML,
+			list,
+			bold,
+			italic,
+			blockquote,
+			code,
+			horizontalRule,
+			link,
+			linkReference,
 		},
 	}
 }

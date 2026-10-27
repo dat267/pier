@@ -129,11 +129,11 @@ func normalizeOAuthHTTPURL(raw string) (*url.URL, string, bool) {
 		return nil, "", false
 	}
 	if parsed.Host == "" {
-		colon := strings.IndexByte(raw, ':')
-		if colon < 0 {
+		_, after, ok := strings.Cut(raw, ":")
+		if !ok {
 			return nil, "", false
 		}
-		remainder := strings.ReplaceAll(raw[colon+1:], string('\\'), "/")
+		remainder := strings.ReplaceAll(after, string('\\'), "/")
 		remainder = strings.TrimLeft(remainder, "/")
 		if remainder == "" {
 			return nil, "", false
@@ -230,11 +230,10 @@ func xaiCredentialsFromTokenResponse(body map[string]any, previousRefreshToken s
 			return nil, err
 		}
 	}
-	return &OAuthCredential{OAuthCredentials: OAuthCredentials{
+	return &OAuthCredential{
 		Access:  access,
 		Refresh: refresh,
-		Expires: time.Now().UnixMilli() + int64(expiresIn)*1000 - xaiRefreshSkewMS,
-	}}, nil
+		Expires: time.Now().UnixMilli() + int64(expiresIn)*1000 - xaiRefreshSkewMS}, nil
 }
 
 // RequestXaiDeviceCode starts the xAI device authorization.
@@ -628,9 +627,8 @@ func LoginKimiCoding(interaction *AuthInteraction) (*OAuthCredential, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &OAuthCredential{OAuthCredentials: OAuthCredentials{
-		Access: token.Access, Refresh: token.Refresh, Expires: token.Expires,
-	}}, nil
+	return &OAuthCredential{
+		Access: token.Access, Refresh: token.Refresh, Expires: token.Expires}, nil
 }
 
 // KimiCodingOAuth is the Kimi Code OAuth auth definition (upstream
@@ -649,9 +647,8 @@ func KimiCodingOAuth() *OAuthAuth {
 			if err != nil {
 				return nil, err
 			}
-			return &OAuthCredential{OAuthCredentials: OAuthCredentials{
-				Access: token.Access, Refresh: token.Refresh, Expires: token.Expires,
-			}}, nil
+			return &OAuthCredential{
+				Access: token.Access, Refresh: token.Refresh, Expires: token.Expires}, nil
 		},
 		ToAuth: func(credential *OAuthCredential) (*ModelAuth, error) {
 			if credential == nil {

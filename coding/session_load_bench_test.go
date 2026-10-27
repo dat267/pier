@@ -25,7 +25,7 @@ func buildSessionFixture(tb testing.TB, history, tail int) (path string, size in
 			id(i), nullOrID(prev), text)
 		prev = id(i)
 	}
-	for i := 0; i < history; i++ {
+	for i := range history {
 		writeMessage(i)
 	}
 	fmt.Fprintf(&buf, `{"type":"compaction","id":"c1","parentId":%q,"timestamp":"t","summary":"summary","firstKeptEntryId":%q}`+"\n", prev, prev)

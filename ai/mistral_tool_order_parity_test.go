@@ -21,7 +21,7 @@ func TestMistralToolCallsEndInFirstSeenOrder(t *testing.T) {
 	server := sseServer(t, []string{body.String()}, nil)
 	defer server.Close()
 	stream := StreamMistralConversations(mistralModel(server.URL), mistralUserContext(), &MistralOptions{
-		StreamOptions: StreamOptions{APIKey: "test-key"},
+		APIKey: "test-key",
 	})
 	var got []string
 	for {

@@ -397,7 +397,7 @@ func TestEventDispatcherCompaction(t *testing.T) {
 
 	// A successful compaction rebuilds the chat from the session context. The
 	// context's first entry must be the latest compaction.
-	manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: boolPtr(false)})
+	manager := coding.NewSessionManager("/tmp/proj", &coding.SessionManagerOptions{Persist: new(false)})
 	manager.AppendMessage(ai.Message(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "old"}}))
 	manager.AppendCompaction("earlier", "", 10, nil, false, nil)
 	dispatcher.SessionInfo = manager

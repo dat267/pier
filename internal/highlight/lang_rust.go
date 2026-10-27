@@ -67,60 +67,58 @@ func Rust() *Language {
 	return &Language{
 		Name:    "Rust",
 		Aliases: []string{"rs"},
-		Mode: Mode{
-			Keywords: Keywords{
-				"$pattern": IdentRe + `!?`,
-				"keyword":  keywords,
-				"literal":  "true false Some None Ok Err",
-				"built_in": builtins,
+		Keywords: Keywords{
+			"$pattern": IdentRe + `!?`,
+			"keyword":  keywords,
+			"literal":  "true false Some None Ok Err",
+			"built_in": builtins,
+		},
+		Illegal: `</`,
+		Contains: []*Mode{
+			CLineCommentMode,
+			blockComment,
+			Variant(QuoteStringMode, func(m *Mode) { m.Begin = `b?"`; m.Illegal = "" }),
+			{
+				ClassName: "string",
+				Variants: []*Mode{
+					rustRawString(),
+					{ClassName: "string", Begin: `b?'\\?(x\w{2}|u\w{4}|U\w{8}|.)'`},
+				},
 			},
-			Illegal: `</`,
-			Contains: []*Mode{
-				CLineCommentMode,
-				blockComment,
-				Variant(QuoteStringMode, func(m *Mode) { m.Begin = `b?"`; m.Illegal = "" }),
-				{
-					ClassName: "string",
-					Variants: []*Mode{
-						rustRawString(),
-						{ClassName: "string", Begin: `b?'\\?(x\w{2}|u\w{4}|U\w{8}|.)'`},
-					},
-				},
-				{ClassName: "symbol", Begin: `'[a-zA-Z_][a-zA-Z0-9_]*`},
-				numbers,
-				{
-					ClassName:     "function",
-					BeginKeywords: "fn",
-					End:           `(\(|<)`,
-					ExcludeEnd:    true,
-					Contains:      []*Mode{UnderscoreTitleMode},
-				},
-				{
-					ClassName: "meta",
-					Begin:     `#!?\[`,
-					End:       `\]`,
-					Contains:  []*Mode{{ClassName: "meta-string", Begin: `"`, End: `"`}},
-				},
-				{
-					ClassName:     "class",
-					BeginKeywords: "type",
-					End:           `;`,
-					Contains:      []*Mode{titleEndsParent},
-					Illegal:       `\S`,
-				},
-				{
-					ClassName:     "class",
-					BeginKeywords: "trait enum struct union",
-					End:           `\{`,
-					Contains:      []*Mode{titleEndsParent},
-					Illegal:       `[\w\d]`,
-				},
-				{
-					Begin:    IdentRe + `::`,
-					Keywords: Keywords{"built_in": builtins},
-				},
-				{Begin: `->`},
+			{ClassName: "symbol", Begin: `'[a-zA-Z_][a-zA-Z0-9_]*`},
+			numbers,
+			{
+				ClassName:     "function",
+				BeginKeywords: "fn",
+				End:           `(\(|<)`,
+				ExcludeEnd:    true,
+				Contains:      []*Mode{UnderscoreTitleMode},
 			},
+			{
+				ClassName: "meta",
+				Begin:     `#!?\[`,
+				End:       `\]`,
+				Contains:  []*Mode{{ClassName: "meta-string", Begin: `"`, End: `"`}},
+			},
+			{
+				ClassName:     "class",
+				BeginKeywords: "type",
+				End:           `;`,
+				Contains:      []*Mode{titleEndsParent},
+				Illegal:       `\S`,
+			},
+			{
+				ClassName:     "class",
+				BeginKeywords: "trait enum struct union",
+				End:           `\{`,
+				Contains:      []*Mode{titleEndsParent},
+				Illegal:       `[\w\d]`,
+			},
+			{
+				Begin:    IdentRe + `::`,
+				Keywords: Keywords{"built_in": builtins},
+			},
+			{Begin: `->`},
 		},
 	}
 }

@@ -74,11 +74,9 @@ func Nginx() *Language {
 	}
 
 	return &Language{
-		Name:    "Nginx config",
-		Aliases: []string{"nginxconf"},
-		Mode: Mode{
-			Illegal:  `[^\s\}]`,
-			Contains: []*Mode{HashCommentMode, section, attribute},
-		},
+		Name:     "Nginx config",
+		Aliases:  []string{"nginxconf"},
+		Illegal:  `[^\s\}]`,
+		Contains: []*Mode{HashCommentMode, section, attribute},
 	}
 }

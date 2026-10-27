@@ -71,18 +71,16 @@ func Delphi() *Language {
 			"dpr", "dfm", "pas", "pascal", "freepascal", "lazarus", "lpr", "lfm",
 		},
 		CaseInsensitive: true,
-		Mode: Mode{
-			Keywords: Keywords{"keyword": keywords},
-			Illegal:  `"|\$[G-Zg-z]|\/\*|<\/|\|`,
-			Contains: append([]*Mode{
-				str,
-				charString,
-				NumberMode,
-				number,
-				classMode,
-				function,
-				directive,
-			}, commentModes...),
-		},
+		Keywords:        Keywords{"keyword": keywords},
+		Illegal:         `"|\$[G-Zg-z]|\/\*|<\/|\|`,
+		Contains: append([]*Mode{
+			str,
+			charString,
+			NumberMode,
+			number,
+			classMode,
+			function,
+			directive,
+		}, commentModes...),
 	}
 }

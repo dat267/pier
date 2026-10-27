@@ -20,9 +20,9 @@ func TestMessageCacheDecodesAnEntryOnce(t *testing.T) {
 		t.Fatal(err)
 	}
 	entry := SessionEntry{
-		Type:             "message",
-		SessionEntryBase: SessionEntryBase{ID: "entry-1"},
-		Message:          raw,
+		Type:    "message",
+		ID:      "entry-1",
+		Message: raw,
 	}
 	if messages := cache.messages(&entry); len(messages) != 1 {
 		t.Fatalf("messages = %#v", messages)
@@ -54,7 +54,7 @@ func TestMessageCacheDecodesAnEntryOnce(t *testing.T) {
 	}
 
 	// Non-message entries have no role.
-	custom := SessionEntry{Type: "compaction", SessionEntryBase: SessionEntryBase{ID: "entry-2"}, Summary: "summary"}
+	custom := SessionEntry{Type: "compaction", ID: "entry-2", Summary: "summary"}
 	if role := cache.role(&custom); role != "" {
 		t.Fatalf("role = %q for a compaction entry", role)
 	}

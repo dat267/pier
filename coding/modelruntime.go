@@ -3,6 +3,7 @@ package coding
 import (
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -186,9 +187,7 @@ func CreateModelRuntime(options CreateModelRuntimeOptions) (*ModelRuntime, error
 	for _, provider := range providers.ExtensionProviders() {
 		runtime.defaults[provider.ID] = provider
 	}
-	for id, provider := range runtime.defaults {
-		runtime.builtins[id] = provider
-	}
+	maps.Copy(runtime.builtins, runtime.defaults)
 	runtime.models = ai.CreateModels(&ai.CreateModelsOptions{Credentials: credentials, ModelsStore: modelsStore})
 	runtime.rebuildProviders()
 	runtime.configureRadiusProviders()
@@ -227,9 +226,7 @@ func lookupEnv(name string) (string, bool) { return os.LookupEnv(name) }
 // Radius providers from models.json.
 func (r *ModelRuntime) configureRadiusProviders() {
 	r.builtins = map[string]*ai.Provider{}
-	for id, provider := range r.defaults {
-		r.builtins[id] = provider
-	}
+	maps.Copy(r.builtins, r.defaults)
 	for _, providerID := range r.config.GetProviderIDs() {
 		config := r.config.GetProvider(providerID)
 		if config == nil || config.OAuth != "radius" || config.BaseURL == "" {
@@ -489,9 +486,7 @@ func (r *ModelRuntime) refreshProviderAvailability(providerID string, ctx contex
 		stored[id] = true
 	}
 	authByProvider := map[string]*ai.AuthCheck{}
-	for id, check := range r.snapshot.Auth {
-		authByProvider[id] = check
-	}
+	maps.Copy(authByProvider, r.snapshot.Auth)
 	if auth != nil {
 		configured[providerID] = true
 		authByProvider[providerID] = auth
@@ -661,13 +656,9 @@ func (r *ModelRuntime) GetAuthForModel(model *ai.Model, overrides *ModelRuntimeA
 		return resolution, err
 	}
 	env := map[string]string{}
-	for key, value := range resolution.Env {
-		env[key] = value
-	}
+	maps.Copy(env, resolution.Env)
 	if overrides != nil {
-		for key, value := range overrides.Env {
-			env[key] = value
-		}
+		maps.Copy(env, overrides.Env)
 	}
 	configuredHeaders, err := ResolveConfiguredModelHeaders(model, r.config.GetProvider(model.Provider), env)
 	if err != nil {
@@ -871,12 +862,8 @@ func (r *ModelRuntime) PrepareRequest(model *ai.Model, apiKey string, env map[st
 		merged = transformHeaders(merged)
 	}
 	mergedEnv := map[string]string{}
-	for key, value := range resolution.Env {
-		mergedEnv[key] = value
-	}
-	for key, value := range env {
-		mergedEnv[key] = value
-	}
+	maps.Copy(mergedEnv, resolution.Env)
+	maps.Copy(mergedEnv, env)
 	requestModel := model
 	if resolution.Auth.BaseURL != "" {
 		copied := *model
@@ -898,7 +885,7 @@ func (r *ModelRuntime) PrepareRequest(model *ai.Model, apiKey string, env map[st
 			APIKey: resolvedAPIKey, Headers: merged, Env: finalEnv,
 		},
 		SimpleOptions: &ai.SimpleStreamOptions{
-			StreamOptions: ai.StreamOptions{APIKey: resolvedAPIKey, Headers: merged, Env: finalEnv},
+			APIKey: resolvedAPIKey, Headers: merged, Env: finalEnv,
 		},
 	}, nil
 }
@@ -1113,9 +1100,7 @@ func (r *ModelRuntime) Refresh(ctx context.Context, options *ModelsRefreshCallOp
 		Ctx:          ctx,
 	})
 	errors := map[string]error{}
-	for providerID, err := range result.Errors {
-		errors[providerID] = err
-	}
+	maps.Copy(errors, result.Errors)
 	r.updateModelSnapshot()
 	if len(options.Providers) > 0 {
 		for _, providerID := range uniqueStrings(options.Providers) {

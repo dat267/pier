@@ -50,15 +50,13 @@ func Smali() *Language {
 
 	return &Language{
 		Name: "Smali",
-		Mode: Mode{
-			Contains: []*Mode{
-				{ClassName: "string", Begin: `"`, End: `"`, HasRelevance: true, Relevance: 0},
-				comment,
-				keyword,
-				builtIn,
-				{ClassName: "class", Begin: `L[^\(;:\n]*;`, HasRelevance: true, Relevance: 0},
-				{Begin: `[vp][0-9]+`},
-			},
+		Contains: []*Mode{
+			{ClassName: "string", Begin: `"`, End: `"`, HasRelevance: true, Relevance: 0},
+			comment,
+			keyword,
+			builtIn,
+			{ClassName: "class", Begin: `L[^\(;:\n]*;`, HasRelevance: true, Relevance: 0},
+			{Begin: `[vp][0-9]+`},
 		},
 	}
 }

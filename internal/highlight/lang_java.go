@@ -126,25 +126,23 @@ func Java() *Language {
 	}
 
 	return &Language{
-		Name:    "Java",
-		Aliases: []string{"jsp"},
-		Mode: Mode{
-			Keywords: Keywords{"keyword": keywords},
-			Illegal:  `</|#`,
-			Contains: []*Mode{
-				javadoc,
-				importMode,
-				CLineCommentMode,
-				CBlockCommentMode,
-				AposStringMode,
-				QuoteStringMode,
-				classMode,
-				{BeginKeywords: "new throw return else", HasRelevance: true, Relevance: 0},
-				recordMode,
-				functionMode,
-				number,
-				annotation,
-			},
+		Name:     "Java",
+		Aliases:  []string{"jsp"},
+		Keywords: Keywords{"keyword": keywords},
+		Illegal:  `</|#`,
+		Contains: []*Mode{
+			javadoc,
+			importMode,
+			CLineCommentMode,
+			CBlockCommentMode,
+			AposStringMode,
+			QuoteStringMode,
+			classMode,
+			{BeginKeywords: "new throw return else", HasRelevance: true, Relevance: 0},
+			recordMode,
+			functionMode,
+			number,
+			annotation,
 		},
 	}
 }

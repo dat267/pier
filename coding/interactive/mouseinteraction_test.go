@@ -36,7 +36,7 @@ func TestMouseMotionBurstDoesNotRepaint(t *testing.T) {
 	// SGR 35 = 32 (motion) + 3 (no button held): the report a bare pointer
 	// movement produces.
 	move := "\x1b[<35;50;8M"
-	for i := 0; i < 60; i++ {
+	for range 60 {
 		app.postTerminalInput(move)
 	}
 	app.postTerminalInput("z")

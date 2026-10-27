@@ -79,13 +79,11 @@ func HTTP() *Language {
 	return &Language{
 		Name:    "HTTP",
 		Aliases: []string{"https"},
-		Mode: Mode{
-			Illegal: `\S`,
-			Contains: []*Mode{
-				response,
-				request,
-				Variant(header, func(m *Mode) { m.HasRelevance = true; m.Relevance = 0 }),
-			},
+		Illegal: `\S`,
+		Contains: []*Mode{
+			response,
+			request,
+			Variant(header, func(m *Mode) { m.HasRelevance = true; m.Relevance = 0 }),
 		},
 	}
 }

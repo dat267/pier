@@ -156,7 +156,7 @@ func TestCheckCompactionOverflowError(t *testing.T) {
 	// Case 1: an error overflow drops the failed message, compacts, and retries.
 	failed := &ai.AssistantMessage{
 		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m", Timestamp: timeNowMS(),
-		StopReason: ai.StopError, ErrorMessage: strPtr("prompt is too long: 2000 tokens > 1000 maximum"),
+		StopReason: ai.StopError, ErrorMessage: new("prompt is too long: 2000 tokens > 1000 maximum"),
 	}
 	messages := append(session.Agent.State().Messages, ai.Message(failed))
 	session.Agent.SetMessages(messages)
@@ -203,7 +203,7 @@ func TestCheckCompactionOverflowError(t *testing.T) {
 	// A second overflow cannot recover again.
 	second := &ai.AssistantMessage{
 		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m", Timestamp: timeNowMS() + 1000,
-		StopReason: ai.StopError, ErrorMessage: strPtr("prompt is too long: 2000 tokens > 1000 maximum"),
+		StopReason: ai.StopError, ErrorMessage: new("prompt is too long: 2000 tokens > 1000 maximum"),
 	}
 	session.Agent.SetMessages([]ai.Message{second})
 	events := []*SessionEvent{}
@@ -246,7 +246,7 @@ func TestCheckCompactionGuards(t *testing.T) {
 	// A different model's overflow is ignored.
 	other := &ai.AssistantMessage{
 		API: ai.APIOpenAICompletions, Provider: "openai", Model: "other", Timestamp: timeNowMS(),
-		StopReason: ai.StopError, ErrorMessage: strPtr("prompt is too long: 2000 tokens > 1000 maximum"),
+		StopReason: ai.StopError, ErrorMessage: new("prompt is too long: 2000 tokens > 1000 maximum"),
 	}
 	if compacted, err := session.CheckCompaction(ctxpkg.Background(), other, true); err != nil || compacted {
 		t.Fatalf("other model = %v err = %v", compacted, err)
@@ -563,7 +563,7 @@ func TestCheckCompactionIgnoresOmittedAssistant(t *testing.T) {
 
 	failed := &ai.AssistantMessage{
 		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m", Timestamp: timeNowMS(),
-		StopReason: ai.StopError, ErrorMessage: strPtr("prompt is too long: 2000 tokens > 1000 maximum"),
+		StopReason: ai.StopError, ErrorMessage: new("prompt is too long: 2000 tokens > 1000 maximum"),
 	}
 	failedID := session.Sessions.AppendMessage(failed)
 	session.entryIDsByMessage = map[ai.Message]string{ai.Message(failed): failedID}

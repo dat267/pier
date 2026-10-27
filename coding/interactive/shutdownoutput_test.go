@@ -30,7 +30,7 @@ func (t *shutdownOutputTerminal) WriteShutdownOutput(text string) bool {
 // D200: even a successful initial flush cannot make a later direct stdout
 // write safe. The optional hint must use the same FIFO and remaining budget.
 func TestGracefulShutdownQueuesResumeHintOnTerminal(t *testing.T) {
-	terminal := &shutdownOutputTerminal{fakeRendererTerminal: fakeRendererTerminal{width: 80, height: 24}, complete: true}
+	terminal := &shutdownOutputTerminal{width: 80, height: 24, complete: true}
 	direct := false
 	lifecycle := NewLifecycle(LifecycleOptions{
 		UI: tui.NewMainScreen(terminal, false, ""), Terminal: terminal,
@@ -62,7 +62,7 @@ func TestCloseFinishesGracefulTerminalOutput(t *testing.T) {
 // D200: a terminal timeout must not be followed by a synchronous console
 // write, and permanent writer admission must close before os.Exit is invoked.
 func TestGracefulShutdownSkipsResumeHintAfterOutputTimeout(t *testing.T) {
-	terminal := &shutdownOutputTerminal{fakeRendererTerminal: fakeRendererTerminal{width: 80, height: 24}}
+	terminal := &shutdownOutputTerminal{width: 80, height: 24}
 	direct := false
 	exited := false
 	lifecycle := NewLifecycle(LifecycleOptions{

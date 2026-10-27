@@ -16,8 +16,8 @@ func TestGetEntriesAllocationBudget(t *testing.T) {
 	entries := make([]FileEntry, count+1)
 	version := CurrentSessionVersion
 	entries[0].Header = &SessionHeader{Version: &version, ID: "session", Cwd: t.TempDir()}
-	for i := 0; i < count; i++ {
-		entries[i+1].Entry = &SessionEntry{Type: "custom", SessionEntryBase: SessionEntryBase{ID: fmt.Sprint(i)}, CustomType: "test"}
+	for i := range count {
+		entries[i+1].Entry = &SessionEntry{Type: "custom", ID: fmt.Sprint(i), CustomType: "test"}
 	}
 	manager := InMemorySession(entries[0].Header.Cwd, nil, entries)
 	var before, after runtime.MemStats

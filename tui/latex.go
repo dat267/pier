@@ -233,7 +233,7 @@ func renderLayout(source string, nodes []*latexLayoutNode) latexLayout {
 	var renderedLines []string
 	firstBaseline := 0
 
-	for _, sourceLine := range strings.Split(source, "\n") {
+	for sourceLine := range strings.SplitSeq(source, "\n") {
 		var layouts []latexLayout
 		position := 0
 		var previousNode *latexLayoutNode

@@ -93,7 +93,7 @@ func TestRunLoopWithBlockedConsole(t *testing.T) {
 			case <-time.After(2 * time.Second):
 				t.Fatal("session events stopped draining while the console was blocked")
 			}
-			for i := 0; i < 64; i++ {
+			for range 64 {
 				inputs <- "x"
 			}
 			inputs <- "check"

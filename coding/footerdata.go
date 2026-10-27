@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"maps"
 	"os"
 	"strings"
 	"sync"
@@ -99,9 +100,7 @@ func (f *FooterDataProvider) GetExtensionStatuses() map[string]string {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	copyOf := make(map[string]string, len(f.statuses))
-	for key, value := range f.statuses {
-		copyOf[key] = value
-	}
+	maps.Copy(copyOf, f.statuses)
 	return copyOf
 }
 

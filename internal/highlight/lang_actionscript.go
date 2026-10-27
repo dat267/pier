@@ -45,38 +45,36 @@ func ActionScript() *Language {
 	return &Language{
 		Name:    "ActionScript",
 		Aliases: []string{"as"},
-		Mode: Mode{
-			Keywords: Keywords{
-				"keyword": "as break case catch class const continue default delete do dynamic each else extends final finally " +
-					"for function get if implements import in include instanceof interface internal is namespace native " +
-					"new override package private protected public return set static super switch this throw try typeof " +
-					"use var void while with",
-				"literal": "true false null undefined",
+		Keywords: Keywords{
+			"keyword": "as break case catch class const continue default delete do dynamic each else extends final finally " +
+				"for function get if implements import in include instanceof interface internal is namespace native " +
+				"new override package private protected public return set static super switch this throw try typeof " +
+				"use var void while with",
+			"literal": "true false null undefined",
+		},
+		Illegal: `#`,
+		Contains: []*Mode{
+			AposStringMode,
+			QuoteStringMode,
+			CLineCommentMode,
+			CBlockCommentMode,
+			CNumberMode,
+			{ClassName: "class", BeginKeywords: "package", End: `\{`, Contains: []*Mode{TitleMode}},
+			{
+				ClassName:     "class",
+				BeginKeywords: "class interface",
+				End:           `\{`,
+				ExcludeEnd:    true,
+				Contains:      []*Mode{{BeginKeywords: "extends implements"}, TitleMode},
 			},
-			Illegal: `#`,
-			Contains: []*Mode{
-				AposStringMode,
-				QuoteStringMode,
-				CLineCommentMode,
-				CBlockCommentMode,
-				CNumberMode,
-				{ClassName: "class", BeginKeywords: "package", End: `\{`, Contains: []*Mode{TitleMode}},
-				{
-					ClassName:     "class",
-					BeginKeywords: "class interface",
-					End:           `\{`,
-					ExcludeEnd:    true,
-					Contains:      []*Mode{{BeginKeywords: "extends implements"}, TitleMode},
-				},
-				{
-					ClassName:     "meta",
-					BeginKeywords: "import include",
-					End:           `;`,
-					Keywords:      Keywords{"meta-keyword": "import include"},
-				},
-				function,
-				MethodGuard,
+			{
+				ClassName:     "meta",
+				BeginKeywords: "import include",
+				End:           `;`,
+				Keywords:      Keywords{"meta-keyword": "import include"},
 			},
+			function,
+			MethodGuard,
 		},
 	}
 }

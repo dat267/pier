@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"maps"
 	"net/http"
 	"net/url"
 	"runtime"
@@ -192,9 +193,7 @@ func IdentityHeaders(model *Model, identity *ClientIdentity) map[string]string {
 
 func identityHeaders(provider ProviderId, baseURL string, identity *ClientIdentity) map[string]string {
 	headers := map[string]string{"User-Agent": FormatUserAgent(identity)}
-	for key, value := range attributionHeaders(provider, baseURL, identity) {
-		headers[key] = value
-	}
+	maps.Copy(headers, attributionHeaders(provider, baseURL, identity))
 	return headers
 }
 

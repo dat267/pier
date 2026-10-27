@@ -27,9 +27,8 @@ func TestStreamProxyPreservesNullHeaderOverrides(t *testing.T) {
 	model := &ai.Model{ID: "m", Provider: "p", API: ai.APIOpenAIResponses}
 	_, err := StreamProxy(model, proxyContext(), ProxyStreamOptions{
 		ProxyURL: server.URL,
-		SimpleStreamOptions: ai.SimpleStreamOptions{StreamOptions: ai.StreamOptions{
-			Headers: ai.ProviderHeaders{"X-Remove": nil, "X-Send": &value},
-		}},
+
+		Headers: ai.ProviderHeaders{"X-Remove": nil, "X-Send": &value},
 	}).Result(context.Background())
 	if err != nil {
 		t.Fatal(err)

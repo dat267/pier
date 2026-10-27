@@ -276,10 +276,7 @@ func (s *InteractiveUIState) SetExtensionWidget(key string, content []string, ha
 	}
 
 	container := &tui.Container{}
-	limit := len(content)
-	if limit > MaxWidgetLines {
-		limit = MaxWidgetLines
-	}
+	limit := min(len(content), MaxWidgetLines)
 	for _, line := range content[:limit] {
 		container.AddChild(tui.NewText(line, 1, 0, nil))
 	}

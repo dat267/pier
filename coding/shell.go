@@ -84,7 +84,7 @@ func normalizeWindowsPath(path string) string {
 		path = path[2:]
 	}
 	var parts []string
-	for _, part := range strings.Split(path, `\`) {
+	for part := range strings.SplitSeq(path, `\`) {
 		switch part {
 		case "", ".":
 			continue
@@ -111,16 +111,6 @@ func normalizeWindowsPath(path string) string {
 func shellPathExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
-}
-
-// firstExistingPath returns the first candidate that exists.
-func firstExistingPath(candidates ...string) string {
-	for _, candidate := range candidates {
-		if candidate != "" && shellPathExists(candidate) {
-			return candidate
-		}
-	}
-	return ""
 }
 
 func bashShellConfig(shell string) ShellConfig {

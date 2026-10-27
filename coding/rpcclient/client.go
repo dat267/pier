@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"os/exec"
 	"runtime"
@@ -530,9 +531,7 @@ func (c *RpcClient) send(command map[string]any) (*response, error) {
 		return nil, fmt.Errorf("Timeout waiting for response to %s. Stderr: %s", commandName, c.Stderr())
 	}
 	full := make(map[string]any, len(command)+1)
-	for key, value := range command {
-		full[key] = value
-	}
+	maps.Copy(full, command)
 	full["id"] = id
 	encoded, err := ai.MarshalJSON(full)
 	if err != nil {
@@ -586,8 +585,7 @@ func (c *RpcClient) processExitError(waitErr error) error {
 	if waitErr == nil {
 		code = "0"
 	}
-	var exit *exec.ExitError
-	if errors.As(waitErr, &exit) {
+	if exit, ok := errors.AsType[*exec.ExitError](waitErr); ok {
 		if exit.ExitCode() >= 0 {
 			code = strconv.Itoa(exit.ExitCode())
 		}

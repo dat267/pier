@@ -319,8 +319,8 @@ func TestStreamProxyAbortsWhenResponseHeadersIdle(t *testing.T) {
 	model := &ai.Model{ID: "m", Provider: "p", API: ai.APIOpenAIResponses}
 	timeout := 200
 	result, err := StreamProxy(model, proxyContext(), ProxyStreamOptions{
-		SimpleStreamOptions: ai.SimpleStreamOptions{TimeoutMs: &timeout},
-		ProxyURL:            server.URL, AuthToken: "tok",
+		TimeoutMs: &timeout,
+		ProxyURL:  server.URL, AuthToken: "tok",
 	}).Result(context.Background())
 	if err != nil {
 		t.Fatal(err)

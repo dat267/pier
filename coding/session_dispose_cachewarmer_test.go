@@ -36,7 +36,7 @@ func TestDisposeStopsSessionCacheWarming(t *testing.T) {
 				var notifications atomic.Int64
 				warmer.OnWarmed = func(*SessionEntry) { notifications.Add(1) }
 				warmer.Decide = func(CacheWarmingDecisionEvent) CacheWarmingAction { return CacheWarmingActionWarm }
-				warmer.Start(CacheWarmRequest{Model: model, Options: &ai.SimpleStreamOptions{StreamOptions: ai.StreamOptions{Ctx: context.Background()}}}, func() bool { return true })
+				warmer.Start(CacheWarmRequest{Model: model, Options: &ai.SimpleStreamOptions{Ctx: context.Background()}}, func() bool { return true })
 				if status := warmer.Status(); status.State != "scheduled" {
 					t.Fatalf("warm run was not scheduled: %+v", status)
 				}

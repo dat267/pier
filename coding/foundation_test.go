@@ -55,18 +55,16 @@ func TestEventBusDispatchAndErrors(t *testing.T) {
 func TestEventBusConcurrent(t *testing.T) {
 	bus := CreateEventBus()
 	var count atomic.Int64
-	for index := 0; index < 8; index++ {
+	for range 8 {
 		bus.On("load", func(data any) { count.Add(1) })
 	}
 	var waitGroup sync.WaitGroup
-	for index := 0; index < 4; index++ {
-		waitGroup.Add(1)
-		go func() {
-			defer waitGroup.Done()
-			for event := 0; event < 25; event++ {
+	for range 4 {
+		waitGroup.Go(func() {
+			for range 25 {
 				bus.Emit("load", nil)
 			}
-		}()
+		})
 	}
 	waitGroup.Wait()
 	if count.Load() != 8*100 {
@@ -509,7 +507,7 @@ func TestLocalShellOperationsTimeout(t *testing.T) {
 
 func TestTempFileID(t *testing.T) {
 	seen := map[string]bool{}
-	for index := 0; index < 64; index++ {
+	for range 64 {
 		id := tempFileID()
 		if len(id) != 16 {
 			t.Fatalf("id = %q", id)
@@ -528,7 +526,7 @@ func TestTempFileID(t *testing.T) {
 // or the notices and the /session panel would report different numbers than the
 // live notice path.
 func TestManagerCacheWasteMatchesTheFullScan(t *testing.T) {
-	manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: boolPtr(false)})
+	manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: new(false)})
 	manager.AppendMessage(&ai.AssistantMessage{
 		Provider: "anthropic", Model: "sonnet", Timestamp: 1000,
 		Usage:      ai.Usage{Input: 1000, CacheRead: 0, CacheWrite: 10000, TotalTokens: 11000, Cost: ai.UsageCost{CacheRead: 0.001}},
@@ -580,7 +578,7 @@ func TestManagerCacheWasteMatchesTheFullScan(t *testing.T) {
 // The transcript keys its notices by the memoized message pointer, so the folded
 // misses must carry that shared message, not a fresh decode.
 func TestManagerCacheMissesCarryTheMemoizedMessage(t *testing.T) {
-	manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: boolPtr(false)})
+	manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: new(false)})
 	manager.AppendMessage(&ai.AssistantMessage{
 		Provider: "anthropic", Model: "sonnet", Timestamp: 1000,
 		Usage:      ai.Usage{Input: 1000, CacheWrite: 10000, TotalTokens: 11000, Cost: ai.UsageCost{CacheRead: 0.001}},
@@ -606,14 +604,14 @@ func TestManagerCacheMissesCarryTheMemoizedMessage(t *testing.T) {
 // The transcript rebuild calls this on the UI loop, so the folded scan must not
 // decode the session: only the misses it counts may touch the message memo.
 func TestManagerCacheMissScanDoesNotDecodeTheSession(t *testing.T) {
-	manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: boolPtr(false)})
+	manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: new(false)})
 	// A cache hit, then a re-billed turn: one miss out of many entries.
 	manager.AppendMessage(&ai.AssistantMessage{
 		Provider: "anthropic", Model: "sonnet", Timestamp: 1000,
 		Usage:      ai.Usage{Input: 1000, CacheWrite: 10000, TotalTokens: 11000, Cost: ai.UsageCost{CacheRead: 0.001}},
 		StopReason: ai.StopStop,
 	})
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}})
 		manager.AppendMessage(&ai.AssistantMessage{
 			Provider: "anthropic", Model: "sonnet", Timestamp: int64(2000 + i),
@@ -655,7 +653,7 @@ func TestManagerCacheMissScanDoesNotDecodeTheSession(t *testing.T) {
 // message bodies — so it is read from the content array in that same pass. These
 // numbers must match what decoding every message would give.
 func TestManagerSessionStatsMatchesDecoding(t *testing.T) {
-	manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: boolPtr(false)})
+	manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: new(false)})
 	manager.AppendMessage(&ai.SystemMessage{Content: ai.StringOrBlocks{Text: "you are a tool"}})
 	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "run it"}})
 	manager.AppendMessage(&ai.AssistantMessage{
@@ -701,9 +699,9 @@ func TestManagerSessionStatsMatchesDecoding(t *testing.T) {
 
 // The folded usage breakdown must equal the reference walk over the entries.
 func TestManagerUsageBreakdownMatchesTheReference(t *testing.T) {
-	manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: boolPtr(false)})
+	manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: new(false)})
 	manager.AppendMessage(&ai.AssistantMessage{
-		Provider: "anthropic", Model: "sonnet", ResponseModel: stringPtr("sonnet-4"),
+		Provider: "anthropic", Model: "sonnet", ResponseModel: new("sonnet-4"),
 		Content: ai.ContentList{ai.TextContent{Text: "a"}},
 		Usage:   ai.Usage{Input: 100, Output: 10, Cost: ai.UsageCost{Total: 0.5}}, StopReason: ai.StopStop,
 	})
@@ -728,5 +726,3 @@ func TestManagerUsageBreakdownMatchesTheReference(t *testing.T) {
 		}
 	}
 }
-
-func stringPtr(value string) *string { return &value }

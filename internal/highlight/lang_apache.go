@@ -50,9 +50,7 @@ func Apache() *Language {
 		Name:            "Apache config",
 		Aliases:         []string{"apacheconf"},
 		CaseInsensitive: true,
-		Mode: Mode{
-			Illegal:  `\S`,
-			Contains: []*Mode{HashCommentMode, section, attribute},
-		},
+		Illegal:         `\S`,
+		Contains:        []*Mode{HashCommentMode, section, attribute},
 	}
 }

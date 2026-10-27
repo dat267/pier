@@ -305,7 +305,7 @@ func appendPiMessagesRewriteDiagnostic(message *AssistantMessage, rewrite *PiMes
 // parsePiMessagesEvent decodes one SSE block.
 func parsePiMessagesEvent(raw string) (*PiMessagesEvent, error) {
 	data := ""
-	for _, line := range strings.Split(raw, "\n") {
+	for line := range strings.SplitSeq(raw, "\n") {
 		if strings.HasPrefix(line, "data:") {
 			data = strings.TrimSpace(line[5:])
 			break

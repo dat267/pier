@@ -45,11 +45,11 @@ func TestGoogleStreamEventsMatchUpstream(t *testing.T) {
 			model.ID = "gemini-3-pro"
 			model.Name = "Gemini 3 Pro"
 			model.BaseURL = server.URL + "/v1beta"
-			model.Cost = ModelCost{ModelCostRates: ModelCostRates{Input: 2, Output: 12, CacheRead: 0.5}}
+			model.Cost = ModelCost{Input: 2, Output: 12, CacheRead: 0.5}
 
 			stream := StreamGoogleGenerativeAI(model, NormalizeContext(Context{
 				Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
-			}), &GoogleOptions{StreamOptions: StreamOptions{APIKey: "test-key"}})
+			}), &GoogleOptions{APIKey: "test-key"})
 
 			var got []string
 			for {

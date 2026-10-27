@@ -508,9 +508,7 @@ func (r *rpcRuntime) startPrompt(command rpcCommand) error {
 		r.runCtx, r.runCancel = context.WithCancel(r.ctx)
 	}
 	ctx := r.runCtx
-	r.workers.Add(1)
-	go func() {
-		defer r.workers.Done()
+	r.workers.Go(func() {
 		var released sync.Once
 		release := func() { released.Do(func() { close(ready); <-r.promptSlots }) }
 		defer release()
@@ -540,19 +538,17 @@ func (r *rpcRuntime) startPrompt(command rpcCommand) error {
 		if !accepted {
 			_ = r.respond(command, nil, false, err)
 		}
-	}()
+	})
 	return nil
 }
 
 // startBlocking runs a command that can outlive one read-loop iteration and
 // responds when it finishes.
 func (r *rpcRuntime) startBlocking(command rpcCommand) error {
-	r.workers.Add(1)
-	go func() {
-		defer r.workers.Done()
+	r.workers.Go(func() {
 		data, hasData, commandErr := r.handle(command)
 		_ = r.respond(command, data, hasData, commandErr)
-	}()
+	})
 	return nil
 }
 

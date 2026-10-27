@@ -12,7 +12,7 @@ import (
 func TestCreateAgentSessionDoesNotInjectSandboxPolicy(t *testing.T) {
 	tempAgentDir(t)
 	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
-		Credentials: newMemoryCredentialStore(), RefreshOnCreate: boolPtr(false),
+		Credentials: newMemoryCredentialStore(), RefreshOnCreate: new(false),
 	})
 	if err != nil {
 		t.Fatal(err)

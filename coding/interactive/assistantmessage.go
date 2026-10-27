@@ -1,6 +1,8 @@
 package interactive
 
 import (
+	"strings"
+
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/tui"
 )
@@ -306,7 +308,7 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 				if c.lastMessage != nil {
 					c.UpdateContent(c.lastMessage, c.isStreaming)
 				}
-				return &tui.TuiMouseDispatchResult{TuiMouseEventResult: tui.TuiMouseEventResult{Handled: true}}
+				return &tui.TuiMouseDispatchResult{Handled: true}
 			}))
 			if hasVisibleContentAfter {
 				c.contentContainer.AddChild(tui.NewSpacer(1))
@@ -354,14 +356,14 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 func trimmedNonEmpty(value string) bool { return ai.JSTrim(value) != "" }
 
 func joinThinkingBlocks(blocks []string) string {
-	result := ""
+	var result strings.Builder
 	for index, block := range blocks {
 		if index > 0 {
-			result += "\n\n"
+			result.WriteString("\n\n")
 		}
-		result += block
+		result.WriteString(block)
 	}
-	return result
+	return result.String()
 }
 
 var _ tui.Component = (*AssistantMessageComponent)(nil)

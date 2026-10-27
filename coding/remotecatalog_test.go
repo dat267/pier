@@ -90,7 +90,7 @@ func TestOpenRouterRefreshUsesTheKeySpecificModelCatalog(t *testing.T) {
 	credentials.entries["openrouter"] = &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "user-key"}}
 	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
 		Credentials: credentials, ModelsPath: modelsPath, ModelsStore: NewInMemoryCodingAgentModelsStore(),
-		CatalogBaseURL: server.URL, AllowModelNetwork: true, RefreshOnCreate: boolPtr(false),
+		CatalogBaseURL: server.URL, AllowModelNetwork: true, RefreshOnCreate: new(false),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -320,7 +320,7 @@ func TestModelRuntimeRefreshesBuiltinRemoteCatalogs(t *testing.T) {
 	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
 		DisableModelsJSON: true, Credentials: credentials,
 		ModelsStore: NewInMemoryCodingAgentModelsStore(), CatalogBaseURL: server.URL,
-		AllowModelNetwork: true, RefreshOnCreate: boolPtr(false),
+		AllowModelNetwork: true, RefreshOnCreate: new(false),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -370,7 +370,7 @@ func TestCreateModelRuntimeOfflineCreateLoadsTheStoreWithoutNetwork(t *testing.T
 	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
 		DisableModelsJSON: true, Credentials: credentials,
 		ModelsStore: store, CatalogBaseURL: server.URL,
-		AllowModelNetwork: false, RefreshOnCreate: boolPtr(true),
+		AllowModelNetwork: false, RefreshOnCreate: new(true),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -449,7 +449,7 @@ func TestBuiltinSlashCommands(t *testing.T) {
 func TestMergeCatalogModels(t *testing.T) {
 	build := func(count int) []*ai.Model {
 		models := make([]*ai.Model, 0, count)
-		for i := 0; i < count; i++ {
+		for i := range count {
 			models = append(models, &ai.Model{ID: fmt.Sprintf("m%d", i), Provider: "p"})
 		}
 		return models
@@ -482,7 +482,7 @@ func TestMergeCatalogModels(t *testing.T) {
 	// probe is wall clock, not AllocsPerRun.)
 	prefixed := func(count int, prefix string) []*ai.Model {
 		models := make([]*ai.Model, 0, count)
-		for i := 0; i < count; i++ {
+		for i := range count {
 			models = append(models, &ai.Model{ID: prefix + fmt.Sprintf("%d", i), Provider: "p"})
 		}
 		return models

@@ -230,9 +230,8 @@ func (s *SettingsList) HandleMouse(event TuiMouseEvent) *TuiMouseDispatchResult 
 		}
 		previousIndex := s.selectedIndex
 		s.selectedIndex = max(0, min(len(displayItems)-1, s.selectedIndex+delta))
-		return &TuiMouseDispatchResult{TuiMouseEventResult: TuiMouseEventResult{
-			Handled: true, Render: s.selectedIndex != previousIndex, HasRender: true,
-		}}
+		return &TuiMouseDispatchResult{
+			Handled: true, Render: s.selectedIndex != previousIndex, HasRender: true}
 	}
 	// Hover must not change selection.
 	if event.Button != MouseButtonLeft || (event.Type != MousePress && event.Type != MouseClick) {
@@ -252,7 +251,7 @@ func (s *SettingsList) HandleMouse(event TuiMouseEvent) *TuiMouseDispatchResult 
 		s.mousePressedIndex = itemIndex
 		s.hasMousePressed = true
 		s.selectedIndex = itemIndex
-		return &TuiMouseDispatchResult{TuiMouseEventResult: TuiMouseEventResult{Handled: true, Focus: true}}
+		return &TuiMouseDispatchResult{Handled: true, Focus: true}
 	}
 	// click
 	s.selectedIndex = itemIndex
@@ -261,7 +260,7 @@ func (s *SettingsList) HandleMouse(event TuiMouseEvent) *TuiMouseDispatchResult 
 	}
 	s.hasMousePressed = false
 	s.activateItem()
-	return &TuiMouseDispatchResult{TuiMouseEventResult: TuiMouseEventResult{Handled: true}}
+	return &TuiMouseDispatchResult{Handled: true}
 }
 
 // HandleInput processes navigation, activation, and search input.

@@ -46,5 +46,5 @@ func Prolog() *Language {
 	root := append([]*Mode{}, inner...)
 	root = append(root, &Mode{Begin: `\.$`})
 
-	return &Language{Name: "Prolog", Mode: Mode{Contains: root}}
+	return &Language{Name: "Prolog", Contains: root}
 }

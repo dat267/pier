@@ -112,10 +112,7 @@ func PollOAuthDeviceCodeFlow[T any](options OAuthDeviceCodePollOptions[T]) (T, e
 	if options.IntervalSeconds != nil {
 		intervalSeconds = *options.IntervalSeconds
 	}
-	interval := time.Duration(intervalSeconds) * time.Second
-	if interval < deviceCodeMinimumIntervalMS*time.Millisecond {
-		interval = deviceCodeMinimumIntervalMS * time.Millisecond
-	}
+	interval := max(time.Duration(intervalSeconds)*time.Second, deviceCodeMinimumIntervalMS*time.Millisecond)
 
 	slowDownResponses := 0
 	remaining := func() (time.Duration, bool) {
@@ -127,10 +124,7 @@ func PollOAuthDeviceCodeFlow[T any](options OAuthDeviceCodePollOptions[T]) (T, e
 	}
 	if options.WaitBeforeFirstPoll {
 		if left, ok := remaining(); ok {
-			wait := interval
-			if left < wait {
-				wait = left
-			}
+			wait := min(left, interval)
 			if err := deviceCodeSleep(options.Ctx, wait, DeviceCodeCancelMessage); err != nil {
 				return zero, err
 			}
@@ -156,10 +150,7 @@ func PollOAuthDeviceCodeFlow[T any](options OAuthDeviceCodePollOptions[T]) (T, e
 		case "slow_down":
 			slowDownResponses++
 			if result.IntervalSeconds != nil && *result.IntervalSeconds > 0 {
-				interval = time.Duration(*result.IntervalSeconds) * time.Second
-				if interval < deviceCodeMinimumIntervalMS*time.Millisecond {
-					interval = deviceCodeMinimumIntervalMS * time.Millisecond
-				}
+				interval = max(time.Duration(*result.IntervalSeconds)*time.Second, deviceCodeMinimumIntervalMS*time.Millisecond)
 			} else {
 				interval += deviceCodeSlowDownIntervalIncrement
 			}
@@ -169,10 +160,7 @@ func PollOAuthDeviceCodeFlow[T any](options OAuthDeviceCodePollOptions[T]) (T, e
 		if !ok || left <= 0 {
 			break
 		}
-		wait := interval
-		if left < wait {
-			wait = left
-		}
+		wait := min(left, interval)
 		if err := deviceCodeSleep(options.Ctx, wait, DeviceCodeCancelMessage); err != nil {
 			return zero, err
 		}

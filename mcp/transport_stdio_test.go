@@ -258,7 +258,7 @@ func TestStdioTransportKillsStubbornServerIncludingChildren(t *testing.T) {
 		t.Fatalf("close took %s", elapsed)
 	}
 	// The grandchild must be gone: the group kill reached it.
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		alive, err := processAlive(grandchild)
 		if err != nil {
 			t.Fatalf("probe err = %v", err)

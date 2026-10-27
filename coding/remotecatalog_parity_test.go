@@ -37,7 +37,7 @@ func TestRemoteCatalogMissingRetainsCachedBody(t *testing.T) {
 				base := ai.CreateProvider(ai.CreateProviderOptions{ID: "p", Models: []*ai.Model{{ID: "builtin", Provider: "p"}}})
 				provider := WithRemoteCatalog(base, "https://catalog.invalid", 0, false, fetch)
 				if err := provider.RefreshModels(&ai.RefreshModelsContext{
-					Ctx: ctx, Stored: stored, AllowNetwork: true, Force: boolPtr(true),
+					Ctx: ctx, Stored: stored, AllowNetwork: true, Force: new(true),
 					Publish: func(p ai.ModelsPublication) bool {
 						if p.Update != nil {
 							p.Update()

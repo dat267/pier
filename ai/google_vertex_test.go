@@ -119,9 +119,9 @@ func TestVertexStreamWithAPIKey(t *testing.T) {
 		&UserMessage{Content: StringOrBlocks{Text: "hello"}, Timestamp: 1},
 	}}
 	stream := StreamGoogleVertex(model, context, &GoogleVertexOptions{
-		GoogleOptions: GoogleOptions{StreamOptions: StreamOptions{APIKey: "AIzaSyRealKey"}},
-		Project:       "test-project",
-		Location:      "us-central1",
+		APIKey:   "AIzaSyRealKey",
+		Project:  "test-project",
+		Location: "us-central1",
 	})
 	message, err := stream.Result(ctxpkg.Background())
 	if err != nil {
@@ -193,9 +193,9 @@ func TestVertexStreamUsesADCRefreshToken(t *testing.T) {
 	}}
 	// The ADC marker falls back to credentials instead of sending an API key.
 	stream := StreamGoogleVertex(model, context, &GoogleVertexOptions{
-		GoogleOptions: GoogleOptions{StreamOptions: StreamOptions{APIKey: GCPVertexCredentialsMarker}},
-		Project:       "test-project",
-		Location:      "us-central1",
+		APIKey:   GCPVertexCredentialsMarker,
+		Project:  "test-project",
+		Location: "us-central1",
 	})
 	if _, err := stream.Result(ctxpkg.Background()); err != nil {
 		t.Fatalf("err = %v", err)
@@ -308,8 +308,8 @@ func TestStreamGoogleVertexSimpleThinking(t *testing.T) {
 	// Vertex with a custom base URL still needs project and location unless an
 	// API key short-circuits them.
 	stream := StreamGoogleVertexSimple(model, context, &SimpleStreamOptions{
-		StreamOptions: StreamOptions{APIKey: "AIzaSyRealKey"},
-		Reasoning:     ThinkHigh,
+		APIKey:    "AIzaSyRealKey",
+		Reasoning: ThinkHigh,
 	})
 	if _, err := stream.Result(ctxpkg.Background()); err != nil {
 		t.Fatalf("err = %v", err)

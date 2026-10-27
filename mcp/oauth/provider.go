@@ -195,7 +195,7 @@ func NewMcpOAuthProvider(options McpOAuthProviderOptions) *McpOAuthProvider {
 	}
 	var configuredClient *OAuthClientInformationFull
 	if options.ClientID != "" {
-		configuredClient = &OAuthClientInformationFull{OAuthClientInformation: OAuthClientInformation{ClientID: options.ClientID}}
+		configuredClient = &OAuthClientInformationFull{ClientID: options.ClientID}
 		if options.ClientSecret != "" {
 			secret := options.ClientSecret
 			configuredClient.ClientSecret = &secret

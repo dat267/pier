@@ -18,7 +18,7 @@ func thinkingSweepChat(t *testing.T, count int) (*QueueController, []*AssistantM
 
 	chat := &tui.Container{}
 	components := make([]*AssistantMessageComponent, 0, count)
-	for i := 0; i < count; i++ {
+	for range count {
 		message := &ai.AssistantMessage{
 			API: ai.APIAnthropicMessages, Provider: "test", Model: "m",
 			Content: ai.ContentList{
@@ -56,7 +56,7 @@ func TestThinkingSweepIsChunked(t *testing.T) {
 	// already, which is exactly the freeze this exists to avoid — so this is the
 	// assertion that fails if the chunking goes away.
 	deferred := 0
-	for index := 0; index < windowStart; index++ {
+	for index := range windowStart {
 		if showsThinking(components[index]) {
 			deferred++
 		}

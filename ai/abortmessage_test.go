@@ -26,7 +26,7 @@ func TestCanceledRequestReportsAbortMessage(t *testing.T) {
 			stream: func(ctx context.Context, model *Model) *AssistantMessageEventStream {
 				return StreamOpenAICompletionsSimple(model, NormalizeContext(Context{Messages: []Message{
 					&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
-				}}), &SimpleStreamOptions{StreamOptions: StreamOptions{APIKey: "k", Ctx: ctx}})
+				}}), &SimpleStreamOptions{APIKey: "k", Ctx: ctx})
 			},
 		},
 		{
@@ -35,7 +35,7 @@ func TestCanceledRequestReportsAbortMessage(t *testing.T) {
 			stream: func(ctx context.Context, model *Model) *AssistantMessageEventStream {
 				return StreamOpenAIResponsesSimple(model, NormalizeContext(Context{Messages: []Message{
 					&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
-				}}), &SimpleStreamOptions{StreamOptions: StreamOptions{APIKey: "k", Ctx: ctx}})
+				}}), &SimpleStreamOptions{APIKey: "k", Ctx: ctx})
 			},
 		},
 	}

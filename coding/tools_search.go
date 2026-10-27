@@ -179,7 +179,7 @@ func CreateFindTool(cwd string) agent.AgentTool {
 			}
 
 			var relativized []string
-			for _, rawLine := range strings.Split(output, "\n") {
+			for rawLine := range strings.SplitSeq(output, "\n") {
 				line := strings.TrimRight(rawLine, "\r")
 				if line == "" {
 					continue
@@ -489,7 +489,7 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 			}
 			if linesTruncated {
 				notices = append(notices, fmt.Sprintf("Some lines truncated to %d chars. Use read tool to see full lines", GrepMaxLineLength))
-				details.LinesTruncated = boolPtr(true)
+				details.LinesTruncated = new(true)
 			}
 			if len(notices) > 0 {
 				output += "\n\n[" + strings.Join(notices, ". ") + "]"

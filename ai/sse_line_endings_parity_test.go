@@ -52,7 +52,7 @@ func TestOpenAICRFrameEmitsBeforeNextChunk(t *testing.T) {
 	defer cancel()
 	model := testOpenAIModel()
 	model.BaseURL = server.URL
-	stream := StreamOpenAICompletions(model, NormalizeContext(Context{}), &OpenAICompletionsOptions{StreamOptions: StreamOptions{APIKey: "fixture", Ctx: ctx}})
+	stream := StreamOpenAICompletions(model, NormalizeContext(Context{}), &OpenAICompletionsOptions{APIKey: "fixture", Ctx: ctx})
 	gotDelta := false
 	for {
 		event, ok := stream.Next(ctx)
@@ -117,7 +117,7 @@ func TestOpenAICompletionsAcceptsSSELineEndings(t *testing.T) {
 		model := testOpenAIModel()
 		model.BaseURL = server.URL
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		message, err := StreamOpenAICompletions(model, NormalizeContext(Context{}), &OpenAICompletionsOptions{StreamOptions: StreamOptions{APIKey: "fixture"}}).Result(ctx)
+		message, err := StreamOpenAICompletions(model, NormalizeContext(Context{}), &OpenAICompletionsOptions{APIKey: "fixture"}).Result(ctx)
 		cancel()
 		server.Close()
 		if err != nil || len(message.Content) != 1 || message.Content[0].(TextContent).Text != "hello" || message.StopReason != StopStop {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 
 	"github.com/dat267/pier/ai"
 )
@@ -94,9 +95,7 @@ func (r *ModelRegistry) GetAPIKeyAndHeaders(model *ai.Model) ResolvedRequestAuth
 		return ResolvedRequestAuth{OK: true, Headers: compatibility.Headers}
 	}
 	env := map[string]string{}
-	for key, value := range resolution.Env {
-		env[key] = value
-	}
+	maps.Copy(env, resolution.Env)
 	if len(env) == 0 {
 		env = nil
 	}

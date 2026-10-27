@@ -49,7 +49,7 @@ func TestGetPromptCacheTTLMs(t *testing.T) {
 	if ttl, ok := GetPromptCacheTTLMs(model, nil); !ok || ttl != 11_000 {
 		t.Fatalf("ttl = %d ok = %v", ttl, ok)
 	}
-	long := &ai.SimpleStreamOptions{StreamOptions: ai.StreamOptions{CacheRetention: ai.CacheRetentionLong}}
+	long := &ai.SimpleStreamOptions{CacheRetention: ai.CacheRetentionLong}
 	if ttl, ok := GetPromptCacheTTLMs(model, long); !ok || ttl != 3_600_000 {
 		t.Fatalf("ttl = %d ok = %v", ttl, ok)
 	}
@@ -59,7 +59,7 @@ func TestGetPromptCacheTTLMs(t *testing.T) {
 		t.Fatalf("ttl = %d ok = %v", ttl, ok)
 	}
 	// Caching off disables warming.
-	none := &ai.SimpleStreamOptions{StreamOptions: ai.StreamOptions{CacheRetention: ai.CacheRetentionNone}}
+	none := &ai.SimpleStreamOptions{CacheRetention: ai.CacheRetentionNone}
 	if _, ok := GetPromptCacheTTLMs(model, none); ok {
 		t.Fatal("retention none must disable warming")
 	}
@@ -87,7 +87,7 @@ func TestIsCacheWarmingReplayable(t *testing.T) {
 	}
 	// Adaptive thinking is forced: the replay is safe.
 	adaptive := warmerModel()
-	adaptive.Compat = &ai.ModelCompat{AnthropicMessages: &ai.AnthropicMessagesCompat{ForceAdaptiveThinking: boolPtr(true)}}
+	adaptive.Compat = &ai.ModelCompat{AnthropicMessages: &ai.AnthropicMessagesCompat{ForceAdaptiveThinking: new(true)}}
 	if !IsCacheWarmingReplayable(adaptive, reasoning) {
 		t.Fatal("adaptive thinking must replay")
 	}
@@ -106,7 +106,7 @@ func newTestWarmer(t *testing.T, model *ai.Model, mode CacheWarmingMode) (*Cache
 				Content:       ai.ContentList{ai.TextContent{Text: "warm"}},
 				StopReason:    ai.StopStop,
 				Usage:         ai.Usage{Input: 1000, CacheRead: 900, Output: 1, TotalTokens: 1001, Cost: ai.UsageCost{Total: 0.0003}},
-				ResponseModel: strPtr(streamModel.ID),
+				ResponseModel: new(streamModel.ID),
 			}
 			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: message})
 		}()
@@ -146,7 +146,7 @@ func TestCacheWarmerStartStopReasons(t *testing.T) {
 	}
 
 	// Retention none is reported distinctly.
-	none := &ai.SimpleStreamOptions{StreamOptions: ai.StreamOptions{CacheRetention: ai.CacheRetentionNone}}
+	none := &ai.SimpleStreamOptions{CacheRetention: ai.CacheRetentionNone}
 	warmer.Start(CacheWarmRequest{Model: model, Options: none}, func() bool { return true })
 	if status := warmer.Status(); status.Reason != "request disabled prompt caching" {
 		t.Fatalf("status = %+v", status)
@@ -185,7 +185,7 @@ func TestCacheWarmerEconomicsAndWarm(t *testing.T) {
 	// The decision override is installed before Start so the timer goroutine
 	// observes it without a race.
 	warmer.Decide = func(event CacheWarmingDecisionEvent) CacheWarmingAction { return CacheWarmingActionWarm }
-	warmer.Start(CacheWarmRequest{Model: model, Options: &ai.SimpleStreamOptions{StreamOptions: ai.StreamOptions{MaxTokens: intPtr(100)}}}, func() bool { return true })
+	warmer.Start(CacheWarmRequest{Model: model, Options: &ai.SimpleStreamOptions{MaxTokens: new(100)}}, func() bool { return true })
 
 	// Right after Start the run is in the streaming phase (probability 1);
 	// settling the agent moves it to idle without stopping (mode idle).

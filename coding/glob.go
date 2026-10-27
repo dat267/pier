@@ -3,6 +3,7 @@ package coding
 import (
 	"math"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -232,13 +233,7 @@ func expandBraceSequence(body string, isAlpha bool) (values []string) {
 	if reverse {
 		step = -step
 	}
-	padded := false
-	for _, part := range parts {
-		if globPaddedSequenceRegex.MatchString(part) {
-			padded = true
-			break
-		}
-	}
+	padded := slices.ContainsFunc(parts, globPaddedSequenceRegex.MatchString)
 	total := 0
 	for value := from; (!reverse && value <= to) || (reverse && value >= to); value += step {
 		if len(values) >= globBraceExpansionMax {

@@ -135,7 +135,7 @@ func TestProcessImagePassesThroughSmallImages(t *testing.T) {
 	}
 
 	// Without auto-resize the original bytes are returned with a conversion hint.
-	result = ProcessImage(data, "image/jpg", &ProcessImageOptions{AutoResizeImages: boolPtr(false)})
+	result = ProcessImage(data, "image/jpg", &ProcessImageOptions{AutoResizeImages: new(false)})
 	if !result.OK || len(result.Hints) != 0 {
 		t.Fatalf("result = %+v", result)
 	}

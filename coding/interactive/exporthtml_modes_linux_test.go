@@ -42,7 +42,7 @@ func TestExportSessionToHTMLUsesNodeDefaultFileMode(t *testing.T) {
 	defer syscall.Umask(oldMask)
 
 	root := t.TempDir()
-	manager := coding.NewSessionManager(root, &coding.SessionManagerOptions{Persist: boolPtr(true)})
+	manager := coding.NewSessionManager(root, &coding.SessionManagerOptions{Persist: new(true)})
 	model := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic"}
 	agentSession, err := coding.NewAgentSession(&coding.SessionConfig{
 		Cwd: root, Model: model,

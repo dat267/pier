@@ -23,7 +23,7 @@ func BenchmarkStreamingAssistantDelta(b *testing.B) {
 	screen.DisableAutoRender()
 
 	// A warm transcript to render around.
-	for i := 0; i < 200; i++ {
+	for i := range 200 {
 		assistant := &ai.AssistantMessage{
 			API: ai.APIAnthropicMessages, Provider: "test", Model: "m",
 			StopReason: ai.StopStop,
@@ -39,7 +39,7 @@ func BenchmarkStreamingAssistantDelta(b *testing.B) {
 	}
 
 	var paragraphs []string
-	for i := 0; i < 400; i++ {
+	for i := range 400 {
 		paragraphs = append(paragraphs, fmt.Sprintf(
 			"Paragraph %d with **bold**, `code` and a [link](https://example.com/%d) that wraps.\n\n", i, i))
 	}

@@ -3,6 +3,7 @@ package interactive
 import (
 	"encoding/json"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -262,12 +263,12 @@ func (t *TreeList) flattenTree(roots []*coding.SessionTreeNode) []*flatNode {
 			node := preOrder[len(preOrder)-1]
 			preOrder = preOrder[:len(preOrder)-1]
 			allNodes = append(allNodes, node)
-			for index := len(node.Children) - 1; index >= 0; index-- {
-				preOrder = append(preOrder, node.Children[index])
+			for _, v := range slices.Backward(node.Children) {
+				preOrder = append(preOrder, v)
 			}
 		}
-		for index := len(allNodes) - 1; index >= 0; index-- {
-			node := allNodes[index]
+		for _, node := range slices.Backward(allNodes) {
+
 			has := t.currentLeafID != nil && node.Entry.ID == *t.currentLeafID
 			for _, child := range node.Children {
 				if containsActive[child] {
@@ -285,14 +286,14 @@ func (t *TreeList) flattenTree(roots []*coding.SessionTreeNode) []*flatNode {
 	})
 
 	var stack []treeStackItem
-	for index := len(orderedRoots) - 1; index >= 0; index-- {
+	for index, orderedRoot := range slices.Backward(orderedRoots) {
 		isLast := index == len(orderedRoots)-1
 		indent := 0
 		if multipleRoots {
 			indent = 1
 		}
 		stack = append(stack, treeStackItem{
-			node: orderedRoots[index], indent: indent, justBranched: multipleRoots,
+			node: orderedRoot, indent: indent, justBranched: multipleRoots,
 			showConnector: multipleRoots, isLast: isLast, isVirtualRootChild: multipleRoots,
 		})
 	}
@@ -348,10 +349,10 @@ func (t *TreeList) flattenTree(roots []*coding.SessionTreeNode) []*flatNode {
 				gutterInfo{Position: connectorPosition, Show: !item.isLast})
 		}
 
-		for index := len(orderedChildren) - 1; index >= 0; index-- {
+		for index, o := range slices.Backward(orderedChildren) {
 			childIsLast := index == len(orderedChildren)-1
 			stack = append(stack, treeStackItem{
-				node: orderedChildren[index], indent: childIndent, justBranched: multipleChildren,
+				node: o, indent: childIndent, justBranched: multipleChildren,
 				showConnector: multipleChildren, isLast: childIsLast, gutters: childGutters,
 			})
 		}
@@ -523,14 +524,14 @@ func (t *TreeList) recalculateVisualStructure() {
 		isVirtualRootChild bool
 	}
 	var stack []recalcItem
-	for index := len(visibleRootIDs) - 1; index >= 0; index-- {
+	for index, visibleRootID := range slices.Backward(visibleRootIDs) {
 		isLast := index == len(visibleRootIDs)-1
 		indent := 0
 		if t.multipleRoots {
 			indent = 1
 		}
 		stack = append(stack, recalcItem{
-			nodeID: visibleRootIDs[index], indent: indent, justBranched: t.multipleRoots,
+			nodeID: visibleRootID, indent: indent, justBranched: t.multipleRoots,
 			showConnector: t.multipleRoots, isLast: isLast, isVirtualRootChild: t.multipleRoots,
 		})
 	}
@@ -571,10 +572,10 @@ func (t *TreeList) recalculateVisualStructure() {
 				gutterInfo{Position: connectorPosition, Show: !item.isLast})
 		}
 
-		for index := len(children) - 1; index >= 0; index-- {
+		for index, c := range slices.Backward(children) {
 			childIsLast := index == len(children)-1
 			stack = append(stack, recalcItem{
-				nodeID: children[index], indent: childIndent, justBranched: multipleChildren,
+				nodeID: c, indent: childIndent, justBranched: multipleChildren,
 				showConnector: multipleChildren, isLast: childIsLast, gutters: childGutters,
 			})
 		}
@@ -766,7 +767,7 @@ func (t *TreeList) Render(width int) []string {
 		totalChars := displayIndent * 3
 		prefixChars := make([]string, 0, totalChars)
 		isFolded := t.foldedNodes[entry.ID]
-		for index := 0; index < totalChars; index++ {
+		for index := range totalChars {
 			level := index / 3
 			posInLevel := index % 3
 

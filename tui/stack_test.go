@@ -31,8 +31,8 @@ func loadLayoutGolden(t *testing.T) (sizes map[string][]int, renders map[string]
 			t.Fatalf("bad golden line %q", line)
 		}
 		left, right := parts[0], parts[1]
-		if strings.HasPrefix(left, "sizes ") {
-			label := strings.TrimPrefix(left, "sizes ")
+		if after, ok := strings.CutPrefix(left, "sizes "); ok {
+			label := after
 			var values []int
 			if err := json.Unmarshal([]byte(right), &values); err != nil {
 				t.Fatalf("bad sizes %q: %v", line, err)
@@ -77,8 +77,6 @@ func equalInts(got []int, want []int) bool {
 	return true
 }
 
-func intPtrValue(v int) *int { return &v }
-
 // TestAllocateStackSizesAgainstUpstreamGolden verifies the flex sizing
 // algorithm against the upstream outputs.
 func TestAllocateStackSizesAgainstUpstreamGolden(t *testing.T) {
@@ -96,21 +94,21 @@ func TestAllocateStackSizesAgainstUpstreamGolden(t *testing.T) {
 		gap       int
 	}{
 		{"no-available", []StackLayoutEntry{entry(StackEntryOptions{}), entry(StackEntryOptions{}), entry(StackEntryOptions{})}, []int{2, 3, 4}, nil, 0},
-		{"grow-default-none", []StackLayoutEntry{entry(StackEntryOptions{}), entry(StackEntryOptions{})}, []int{2, 3}, intPtrValue(20), 0},
-		{"grow", []StackLayoutEntry{entry(StackEntryOptions{Grow: intPtrValue(1)}), entry(StackEntryOptions{Grow: intPtrValue(1)})}, []int{2, 3}, intPtrValue(20), 0},
-		{"grow-weighted", []StackLayoutEntry{entry(StackEntryOptions{Grow: intPtrValue(1)}), entry(StackEntryOptions{Grow: intPtrValue(3)})}, []int{2, 3}, intPtrValue(20), 0},
-		{"grow-with-gap", []StackLayoutEntry{entry(StackEntryOptions{Grow: intPtrValue(1)}), entry(StackEntryOptions{Grow: intPtrValue(1)})}, []int{2, 3}, intPtrValue(21), 1},
-		{"grow-max", []StackLayoutEntry{entry(StackEntryOptions{Grow: intPtrValue(1), MaxSize: intPtrValue(5)}), entry(StackEntryOptions{Grow: intPtrValue(1)})}, []int{2, 3}, intPtrValue(30), 0},
-		{"shrink", []StackLayoutEntry{entry(StackEntryOptions{}), entry(StackEntryOptions{})}, []int{10, 10}, intPtrValue(12), 0},
-		{"shrink-min", []StackLayoutEntry{entry(StackEntryOptions{MinSize: intPtrValue(6)}), entry(StackEntryOptions{})}, []int{10, 10}, intPtrValue(8), 0},
-		{"basis-fixed", []StackLayoutEntry{entry(StackEntryOptions{Basis: FixedBasis(5)}), entry(StackEntryOptions{})}, []int{1, 1}, intPtrValue(20), 0},
-		{"basis-auto", []StackLayoutEntry{entry(StackEntryOptions{Basis: AutoBasis()}), entry(StackEntryOptions{})}, []int{4, 1}, intPtrValue(20), 0},
-		{"grow-and-shrink", []StackLayoutEntry{entry(StackEntryOptions{Grow: intPtrValue(2)}), entry(StackEntryOptions{Shrink: intPtrValue(2)}), entry(StackEntryOptions{})}, []int{5, 15, 5}, intPtrValue(20), 1},
-		{"clamp-negative", []StackLayoutEntry{entry(StackEntryOptions{Basis: FixedBasis(-3), MinSize: intPtrValue(1)}), entry(StackEntryOptions{})}, []int{1, 1}, intPtrValue(10), 0},
-		{"min-over-max", []StackLayoutEntry{entry(StackEntryOptions{MinSize: intPtrValue(9), MaxSize: intPtrValue(4)}), entry(StackEntryOptions{})}, []int{1, 1}, intPtrValue(10), 0},
-		{"zero-entries", nil, nil, intPtrValue(10), 0},
-		{"single-grow", []StackLayoutEntry{entry(StackEntryOptions{Grow: intPtrValue(1)})}, []int{3}, intPtrValue(10), 0},
-		{"shrink-below", []StackLayoutEntry{entry(StackEntryOptions{}), entry(StackEntryOptions{})}, []int{1, 1}, intPtrValue(0), 0},
+		{"grow-default-none", []StackLayoutEntry{entry(StackEntryOptions{}), entry(StackEntryOptions{})}, []int{2, 3}, new(20), 0},
+		{"grow", []StackLayoutEntry{entry(StackEntryOptions{Grow: new(1)}), entry(StackEntryOptions{Grow: new(1)})}, []int{2, 3}, new(20), 0},
+		{"grow-weighted", []StackLayoutEntry{entry(StackEntryOptions{Grow: new(1)}), entry(StackEntryOptions{Grow: new(3)})}, []int{2, 3}, new(20), 0},
+		{"grow-with-gap", []StackLayoutEntry{entry(StackEntryOptions{Grow: new(1)}), entry(StackEntryOptions{Grow: new(1)})}, []int{2, 3}, new(21), 1},
+		{"grow-max", []StackLayoutEntry{entry(StackEntryOptions{Grow: new(1), MaxSize: new(5)}), entry(StackEntryOptions{Grow: new(1)})}, []int{2, 3}, new(30), 0},
+		{"shrink", []StackLayoutEntry{entry(StackEntryOptions{}), entry(StackEntryOptions{})}, []int{10, 10}, new(12), 0},
+		{"shrink-min", []StackLayoutEntry{entry(StackEntryOptions{MinSize: new(6)}), entry(StackEntryOptions{})}, []int{10, 10}, new(8), 0},
+		{"basis-fixed", []StackLayoutEntry{entry(StackEntryOptions{Basis: FixedBasis(5)}), entry(StackEntryOptions{})}, []int{1, 1}, new(20), 0},
+		{"basis-auto", []StackLayoutEntry{entry(StackEntryOptions{Basis: AutoBasis()}), entry(StackEntryOptions{})}, []int{4, 1}, new(20), 0},
+		{"grow-and-shrink", []StackLayoutEntry{entry(StackEntryOptions{Grow: new(2)}), entry(StackEntryOptions{Shrink: new(2)}), entry(StackEntryOptions{})}, []int{5, 15, 5}, new(20), 1},
+		{"clamp-negative", []StackLayoutEntry{entry(StackEntryOptions{Basis: FixedBasis(-3), MinSize: new(1)}), entry(StackEntryOptions{})}, []int{1, 1}, new(10), 0},
+		{"min-over-max", []StackLayoutEntry{entry(StackEntryOptions{MinSize: new(9), MaxSize: new(4)}), entry(StackEntryOptions{})}, []int{1, 1}, new(10), 0},
+		{"zero-entries", nil, nil, new(10), 0},
+		{"single-grow", []StackLayoutEntry{entry(StackEntryOptions{Grow: new(1)})}, []int{3}, new(10), 0},
+		{"shrink-below", []StackLayoutEntry{entry(StackEntryOptions{}), entry(StackEntryOptions{})}, []int{1, 1}, new(0), 0},
 	}
 
 	for _, tc := range cases {
@@ -237,7 +235,7 @@ func TestTextAgainstUpstreamGolden(t *testing.T) {
 // TestStackLayoutNode verifies the layout-node view of a stack.
 func TestStackLayoutNode(t *testing.T) {
 	stack := NewVStack([]Component{linesComponent("a")}, StackOptions{Align: "center"})
-	stack.AddChild(linesComponent("b"), StackEntryOptions{Grow: intPtrValue(2), Basis: FixedBasis(3)})
+	stack.AddChild(linesComponent("b"), StackEntryOptions{Grow: new(2), Basis: FixedBasis(3)})
 
 	node, ok := GetLayoutNode(stack)
 	if !ok {

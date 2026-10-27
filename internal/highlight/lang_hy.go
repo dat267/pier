@@ -63,20 +63,18 @@ func Hy() *Language {
 	return &Language{
 		Name:    "Hy",
 		Aliases: []string{"hylang"},
-		Mode: Mode{
-			Illegal: `\S`,
-			Contains: []*Mode{
-				Shebang("", 0),
-				list,
-				str,
-				hint,
-				hintCol,
-				comment,
-				key,
-				collection,
-				number,
-				literal,
-			},
+		Illegal: `\S`,
+		Contains: []*Mode{
+			Shebang("", 0),
+			list,
+			str,
+			hint,
+			hintCol,
+			comment,
+			key,
+			collection,
+			number,
+			literal,
 		},
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -447,8 +448,8 @@ func goalAgentAborted(event *agent.AgentEvent) bool {
 	if event == nil {
 		return false
 	}
-	for index := len(event.Messages) - 1; index >= 0; index-- {
-		if assistant, ok := event.Messages[index].(*ai.AssistantMessage); ok {
+	for _, v := range slices.Backward(event.Messages) {
+		if assistant, ok := v.(*ai.AssistantMessage); ok {
 			return assistant.StopReason == ai.StopAborted
 		}
 	}
@@ -466,8 +467,8 @@ func goalOutcome(event *agent.AgentEvent, aborted bool, willRetry bool) string {
 		return "retrying"
 	}
 	if event != nil {
-		for index := len(event.Messages) - 1; index >= 0; index-- {
-			if assistant, ok := event.Messages[index].(*ai.AssistantMessage); ok {
+		for _, v := range slices.Backward(event.Messages) {
+			if assistant, ok := v.(*ai.AssistantMessage); ok {
 				if assistant.StopReason == ai.StopError {
 					return "error"
 				}

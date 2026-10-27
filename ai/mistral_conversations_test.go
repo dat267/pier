@@ -88,9 +88,9 @@ func TestMistralWirePayloadRenamesKeys(t *testing.T) {
 	maxTokens := 100
 	temperature := 0.5
 	payload, err := buildMistralChatPayload(model, mistralUserContext(), mistralUserContext().Messages, &MistralOptions{
-		StreamOptions: StreamOptions{MaxTokens: &maxTokens, Temperature: &temperature},
-		ToolChoice:    "auto",
-		PromptMode:    "reasoning",
+		MaxTokens: &maxTokens, Temperature: &temperature,
+		ToolChoice: "auto",
+		PromptMode: "reasoning",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -288,14 +288,12 @@ func TestMistralStreamEndToEnd(t *testing.T) {
 	model := mistralModel(server.URL)
 	var providerEventCount int
 	stream := StreamMistralConversations(model, mistralUserContext(), &MistralOptions{
-		StreamOptions: StreamOptions{
-			APIKey: "test-key", SessionID: "session-1",
-			OnProviderStreamEvent: func(data json.RawMessage, eventModel *Model) {
-				if eventModel != model || !json.Valid(data) {
-					t.Errorf("provider callback data/model = %s/%p", data, eventModel)
-				}
-				providerEventCount++
-			},
+		APIKey: "test-key", SessionID: "session-1",
+		OnProviderStreamEvent: func(data json.RawMessage, eventModel *Model) {
+			if eventModel != model || !json.Valid(data) {
+				t.Errorf("provider callback data/model = %s/%p", data, eventModel)
+			}
+			providerEventCount++
 		},
 	})
 	message, err := stream.Result(ctxpkg.Background())
@@ -369,7 +367,7 @@ func TestMistralActiveStreamOutlivesTheIdleTimeout(t *testing.T) {
 
 	// Five 10ms gaps total 50ms, well past the 30ms timeout.
 	stream := StreamMistralConversations(mistralModel(server.URL), mistralUserContext(), &MistralOptions{
-		StreamOptions: StreamOptions{APIKey: "test", TimeoutMs: intPtrT(30)},
+		APIKey: "test", TimeoutMs: new(30),
 	})
 	message, err := stream.Result(ctxpkg.Background())
 	if err != nil {
@@ -393,7 +391,7 @@ func TestMistralStreamErrors(t *testing.T) {
 
 	model := mistralModel(server.URL)
 	stream := StreamMistralConversations(model, mistralUserContext(), &MistralOptions{
-		StreamOptions: StreamOptions{APIKey: "bad"},
+		APIKey: "bad",
 	})
 	message, err := stream.Result(ctxpkg.Background())
 	if err != nil {
@@ -423,7 +421,7 @@ func TestMistralStreamErrors(t *testing.T) {
 	}))
 	defer badServer.Close()
 	stream = StreamMistralConversations(mistralModel(badServer.URL), mistralUserContext(), &MistralOptions{
-		StreamOptions: StreamOptions{APIKey: "key"},
+		APIKey: "key",
 	})
 	message, err = stream.Result(ctxpkg.Background())
 	if err != nil {

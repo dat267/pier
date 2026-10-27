@@ -169,7 +169,7 @@ func parseAWSEventStreamHeaderValue(raw []byte, offset int, valueType byte) (any
 // varint with the high bit of the last byte as the terminator).
 func readAWSVarint(raw []byte, offset int) (uint64, int, error) {
 	var value uint64
-	for index := 0; index < 4; index++ {
+	for index := range 4 {
 		if offset+index >= len(raw) {
 			return 0, 0, &AWSEventStreamError{Message: "AWS event stream varint is truncated"}
 		}

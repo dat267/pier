@@ -1,5 +1,7 @@
 package highlight
 
+import "strings"
+
 func init() { RegisterLanguage("dart", Dart()) }
 
 // Dart returns the Dart language definition (a port of languages/dart.js).
@@ -65,37 +67,35 @@ func Dart() *Language {
 
 	return &Language{
 		Name: "Dart",
-		Mode: Mode{
-			Keywords: Keywords{
-				"$pattern": `[A-Za-z][A-Za-z0-9_]*\??`,
-				"keyword": "abstract as assert async await break case catch class const continue covariant default deferred do " +
-					"dynamic else enum export extends extension external factory false final finally for Function get hide if " +
-					"implements import in inferface is late library mixin new null on operator part required rethrow return set " +
-					"show static super switch sync this throw true try typedef var void while with yield",
-				"built_in": joinSpace(builtIns),
-			},
-			Contains: []*Mode{
-				stringMode,
-				docComment,
-				tripleSlash,
-				CLineCommentMode,
-				CBlockCommentMode,
-				classMode,
-				CNumberMode,
-				{ClassName: "meta", Begin: `@[A-Za-z]+`},
-				{Begin: `=>`},
-			},
+		Keywords: Keywords{
+			"$pattern": `[A-Za-z][A-Za-z0-9_]*\??`,
+			"keyword": "abstract as assert async await break case catch class const continue covariant default deferred do " +
+				"dynamic else enum export extends extension external factory false final finally for Function get hide if " +
+				"implements import in inferface is late library mixin new null on operator part required rethrow return set " +
+				"show static super switch sync this throw true try typedef var void while with yield",
+			"built_in": joinSpace(builtIns),
+		},
+		Contains: []*Mode{
+			stringMode,
+			docComment,
+			tripleSlash,
+			CLineCommentMode,
+			CBlockCommentMode,
+			classMode,
+			CNumberMode,
+			{ClassName: "meta", Begin: `@[A-Za-z]+`},
+			{Begin: `=>`},
 		},
 	}
 }
 
 func joinSpace(values []string) string {
-	out := ""
+	var out strings.Builder
 	for i, v := range values {
 		if i > 0 {
-			out += " "
+			out.WriteString(" ")
 		}
-		out += v
+		out.WriteString(v)
 	}
-	return out
+	return out.String()
 }

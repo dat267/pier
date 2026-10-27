@@ -596,7 +596,7 @@ func (w *RunWiring) drainReadyRawInput() {
 	if w.RawTerminal == nil || w.UI == nil {
 		return
 	}
-	for drained := 0; drained < loopInputCapacity; drained++ {
+	for range loopInputCapacity {
 		select {
 		case raw, ok := <-w.RawInputs:
 			if !ok {
@@ -700,7 +700,6 @@ func (w *RunWiring) runLoop(ctx context.Context, initialWork []string, initialIm
 	var animationCh <-chan time.Time
 
 	for index, text := range initialWork {
-		text := text
 		// The first starts, the rest queue behind it. Upstream attaches the @file
 		// images to the initial message, so only the first prompt carries them.
 		images := initialImages

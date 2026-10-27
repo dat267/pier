@@ -90,12 +90,10 @@ func TestGroupConcurrentQueueCreation(t *testing.T) {
 	const n = 32
 	var wg sync.WaitGroup
 	var ran atomic.Int32
-	for i := 0; i < n; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range n {
+		wg.Go(func() {
 			g.Queue().Go(func() { ran.Add(1) })
-		}()
+		})
 	}
 	wg.Wait()
 	g.FlushAll()

@@ -43,10 +43,9 @@ func TestRequestIdentityHeaders(t *testing.T) {
 					defer server.Close()
 					model := &Model{ID: "test-model", API: tc.api, Provider: "openrouter", BaseURL: server.URL,
 						ContextWindow: 10000, MaxTokens: 100, Input: []string{"text"}}
-					options := &SimpleStreamOptions{StreamOptions: StreamOptions{
+					options := &SimpleStreamOptions{
 						APIKey: "AIzaSyRealKey", Transport: TransportSSE,
-						Identity: &ClientIdentity{UserAgent: "acme/1.0", Attribution: PIAttribution},
-					}}
+						Identity: &ClientIdentity{UserAgent: "acme/1.0", Attribution: PIAttribution}}
 					if tc.name == "codex" {
 						options.APIKey = codexToken(t, "acct-1")
 					}
@@ -64,7 +63,7 @@ func TestRequestIdentityHeaders(t *testing.T) {
 						wantAgent, wantTitle = "model-agent", "model-title"
 					}
 					if mode == "request override" {
-						options.Headers = ProviderHeaders{"user-agent": strPtr("request-agent"), "x-openrouter-title": strPtr("request-title")}
+						options.Headers = ProviderHeaders{"user-agent": new("request-agent"), "x-openrouter-title": new("request-title")}
 						wantAgent, wantTitle = "request-agent", "request-title"
 					}
 					if mode == "remove" {

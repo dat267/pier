@@ -17,8 +17,7 @@ func TestQueueRunsTasksInSubmissionOrder(t *testing.T) {
 	q := New()
 	var mu sync.Mutex
 	var order []int
-	for i := 0; i < 50; i++ {
-		i := i
+	for i := range 50 {
 		q.Go(func() {
 			mu.Lock()
 			defer mu.Unlock()
@@ -90,12 +89,10 @@ func TestQueueConcurrentSubmitsKeepOrderPerSubmission(t *testing.T) {
 	const n = 200
 	var counter atomic.Int64
 	var wg sync.WaitGroup
-	for i := 0; i < n; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range n {
+		wg.Go(func() {
 			q.Go(func() { counter.Add(1) })
-		}()
+		})
 	}
 	wg.Wait()
 	q.Flush()

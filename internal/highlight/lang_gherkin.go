@@ -10,24 +10,22 @@ func Gherkin() *Language {
 	return &Language{
 		Name:    "Gherkin",
 		Aliases: []string{"feature"},
-		Mode: Mode{
-			Keywords: Keywords{
-				"keyword": "Feature Background Ability Business Need Scenario Scenarios Scenario " +
-					"Outline Scenario Template Examples Given And Then But When",
+		Keywords: Keywords{
+			"keyword": "Feature Background Ability Business Need Scenario Scenarios Scenario " +
+				"Outline Scenario Template Examples Given And Then But When",
+		},
+		Contains: []*Mode{
+			{ClassName: "symbol", Begin: `\*`, HasRelevance: true, Relevance: 0},
+			{ClassName: "meta", Begin: `@[^@\s]+`},
+			{
+				Begin:    `\|`,
+				End:      `\|\w*$`,
+				Contains: []*Mode{{ClassName: "string", Begin: `[^|]+`}},
 			},
-			Contains: []*Mode{
-				{ClassName: "symbol", Begin: `\*`, HasRelevance: true, Relevance: 0},
-				{ClassName: "meta", Begin: `@[^@\s]+`},
-				{
-					Begin:    `\|`,
-					End:      `\|\w*$`,
-					Contains: []*Mode{{ClassName: "string", Begin: `[^|]+`}},
-				},
-				{ClassName: "variable", Begin: `<`, End: `>`},
-				HashCommentMode,
-				{ClassName: "string", Begin: `"""`, End: `"""`},
-				QuoteStringMode,
-			},
+			{ClassName: "variable", Begin: `<`, End: `>`},
+			HashCommentMode,
+			{ClassName: "string", Begin: `"""`, End: `"""`},
+			QuoteStringMode,
 		},
 	}
 }

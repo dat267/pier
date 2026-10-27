@@ -1254,9 +1254,7 @@ func (c *SessionSelectorComponent) loadScope(scope SessionScope) {
 	c.header.SetLoading(true)
 	c.requestRenderNow()
 
-	c.loads.Add(1)
-	go func() {
-		defer c.loads.Done()
+	c.loads.Go(func() {
 		// The worker is a pure producer: results are handed to the loop, which
 		// owns the selector state (stage 4). Cancellation is observed through
 		// the load context instead of shared state.
@@ -1320,7 +1318,7 @@ func (c *SessionSelectorComponent) loadScope(scope SessionScope) {
 			}
 			c.requestRenderNow()
 		})
-	}()
+	})
 }
 
 // postApply hands a background loader result to the UI loop through the Post

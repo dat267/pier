@@ -559,8 +559,8 @@ func googleAPIErrorMessage(status int, statusLine, contentType string, raw []byt
 // same value fetch exposes as Response.statusText.
 func googleStatusText(statusLine string, status int) string {
 	prefix := strconv.Itoa(status) + " "
-	if strings.HasPrefix(statusLine, prefix) {
-		return strings.TrimPrefix(statusLine, prefix)
+	if after, ok := strings.CutPrefix(statusLine, prefix); ok {
+		return after
 	}
 	return http.StatusText(status)
 }

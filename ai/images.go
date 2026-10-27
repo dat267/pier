@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"sync"
 	"time"
 )
@@ -453,12 +454,8 @@ func aiMergeProviderHeaders(base, overrides ProviderHeaders) ProviderHeaders {
 		return nil
 	}
 	merged := ProviderHeaders{}
-	for name, value := range base {
-		merged[name] = value
-	}
-	for name, value := range overrides {
-		merged[name] = value
-	}
+	maps.Copy(merged, base)
+	maps.Copy(merged, overrides)
 	return merged
 }
 
@@ -467,12 +464,8 @@ func aiMergeProviderEnv(base, overrides ProviderEnv) ProviderEnv {
 		return nil
 	}
 	merged := ProviderEnv{}
-	for key, value := range base {
-		merged[key] = value
-	}
-	for key, value := range overrides {
-		merged[key] = value
-	}
+	maps.Copy(merged, base)
+	maps.Copy(merged, overrides)
 	return merged
 }
 

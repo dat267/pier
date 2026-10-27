@@ -39,11 +39,7 @@ func GetCacheWarmingDelayMS(ttlMS int64) (int64, bool) {
 	delay := int64(1)
 	ninety := int64(float64(ttlMS) * 0.9)
 	margin := ttlMS - 10_000
-	if ninety < margin {
-		delay = ninety
-	} else {
-		delay = margin
-	}
+	delay = min(ninety, margin)
 	return delay, true
 }
 
