@@ -198,8 +198,12 @@ func TestModelArgumentCompletionReusesSearchItemsBetweenKeystrokes(t *testing.T)
 	}
 	allocated := after.TotalAlloc - before.TotalAlloc
 	t.Logf("cached completion over %d models allocated %d bytes", modelCount, allocated)
-	if allocated > 16*1024 {
-		t.Fatalf("cached completion over %d models allocated %d bytes, want less than %d", modelCount, allocated, 16*1024)
+	// The window counts every goroutine's allocations, including work a previous
+	// app-loop test left running; with -count>1 and a narrowed selection that is
+	// ~28 KiB. A cache miss rebuilds all 4096 items (~262 KiB), so this budget
+	// still separates reuse from a rebuild while tolerating that background work.
+	if allocated > 64*1024 {
+		t.Fatalf("cached completion over %d models allocated %d bytes, want less than %d", modelCount, allocated, 64*1024)
 	}
 }
 
