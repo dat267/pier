@@ -285,3 +285,37 @@ func TestFileModelsStoreParseErrors(t *testing.T) {
 		t.Fatalf("entry = %+v err = %v", entry, err)
 	}
 }
+
+// pi v1.4.0 core/models-store.ts parses the file with JSON.parse and does not
+// catch, so a malformed store makes writes throw and the file is never
+// rewritten. Pier's read path tolerates malformed content as empty (see
+// TestFileModelsStoreParseErrors), but a write must not treat that tolerance
+// as proof the other providers are gone: it rejects the store and leaves it
+// untouched for the user to repair (D282).
+func TestFileModelsStoreWriteRejectsMalformedAndNonObjectJSON(t *testing.T) {
+	for _, corrupt := range []string{
+		`{"anthropic":{"models":[]},"broken":`,
+		`null`,
+		`[]`,
+		`{"anthropic":{"models":[]}}trailing`,
+	} {
+		path := filepath.Join(t.TempDir(), "models-store.json")
+		if err := os.WriteFile(path, []byte(corrupt), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		store := NewFileModelsStore(path)
+		if err := store.Write("openai", sampleEntry("gpt-5"), ctxpkg.Background()); err == nil {
+			t.Fatalf("%q: write accepted a corrupt store", corrupt)
+		}
+		if err := store.Delete("anthropic", ctxpkg.Background()); err == nil {
+			t.Fatalf("%q: delete accepted a corrupt store", corrupt)
+		}
+		if after, err := os.ReadFile(path); err != nil || string(after) != corrupt {
+			t.Fatalf("%q: file = %q, err = %v; want it untouched", corrupt, after, err)
+		}
+		// The tolerant read still reports no entry rather than failing startup.
+		if entry, err := store.Read("anthropic", ctxpkg.Background()); err != nil || entry != nil {
+			t.Fatalf("%q: read = %+v, %v; want the tolerant empty read", corrupt, entry, err)
+		}
+	}
+}

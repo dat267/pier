@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -124,40 +126,56 @@ func NewFileModelsStore(path string) *FileModelsStore {
 	return store
 }
 
-// parseStoredModels parses models-store.json, preserving provider order.
-func parseStoredModels(content *string) (storedModels, []string) {
+// parseStoredModels parses models-store.json, preserving provider order. A
+// malformed file or a non-object top level is an error, like the reference's
+// uncaught JSON.parse; callers must not treat it as an empty store and rewrite
+// the file (D282).
+func parseStoredModels(content *string) (storedModels, []string, error) {
 	data := storedModels{}
 	if content == nil || *content == "" {
-		return data, nil
+		return data, nil, nil
 	}
 	raw := []byte(StripBom(*content))
 	decoder := json.NewDecoder(strings.NewReader(string(raw)))
 	token, err := decoder.Token()
-	if err != nil || token != json.Delim('{') {
-		return data, nil
+	if err != nil {
+		return nil, nil, err
+	}
+	if token != json.Delim('{') {
+		return nil, nil, fmt.Errorf("Invalid models store: expected an object")
 	}
 	var order []string
 	for decoder.More() {
 		nameToken, err := decoder.Token()
 		if err != nil {
-			return storedModels{}, nil
+			return nil, nil, err
 		}
 		name, ok := nameToken.(string)
 		if !ok {
-			return storedModels{}, nil
+			return nil, nil, fmt.Errorf("Invalid models store: expected an object key")
 		}
 		var entryRaw json.RawMessage
 		if err := decoder.Decode(&entryRaw); err != nil {
-			return storedModels{}, nil
+			return nil, nil, err
 		}
 		var entry ai.ModelsStoreEntry
 		if err := json.Unmarshal(entryRaw, &entry); err != nil {
-			return storedModels{}, nil
+			return nil, nil, err
 		}
 		data[name] = &entry
 		order = append(order, name)
 	}
-	return data, order
+	if token, err := decoder.Token(); err != nil || token != json.Delim('}') {
+		if err != nil {
+			return nil, nil, err
+		}
+		return nil, nil, fmt.Errorf("Invalid models store: expected the object to end")
+	}
+	// JSON.parse rejects trailing content; the decoder stops at the closing brace.
+	if _, err := decoder.Token(); err != io.EOF {
+		return nil, nil, fmt.Errorf("Invalid models store: unexpected content after the object")
+	}
+	return data, order, nil
 }
 
 // marshalStoredModels renders models-store.json like JSON.stringify(data, null, 2).
@@ -225,7 +243,14 @@ func (s *FileModelsStore) snapshot() (storedModels, []string) {
 
 func (s *FileModelsStore) reloadFromStorage(ctx context.Context) (storedModels, error) {
 	result, err := s.storage.WithLockAsync(ctx, func(content *string) (LockResult, error) {
-		data, order := parseStoredModels(content)
+		data, order, parseErr := parseStoredModels(content)
+		if parseErr != nil {
+			// Documented tolerance: malformed content reads as an empty store so
+			// startup still works. The write paths reject it instead, so a refresh
+			// cannot overwrite the file this tolerant read could not understand
+			// (D282).
+			data, order = storedModels{}, nil
+		}
 		var revision *string
 		if value, ok := GetFileRevision(s.path); ok {
 			revision = &value
@@ -319,7 +344,10 @@ func (s *FileModelsStore) Write(providerID string, entry *ai.ModelsStoreEntry, c
 	var latest storedModels
 	var latestOrder []string
 	_, err := s.storage.WithLockAsync(ctx, func(content *string) (LockResult, error) {
-		current, order := parseStoredModels(content)
+		current, order, err := parseStoredModels(content)
+		if err != nil {
+			return LockResult{}, err
+		}
 		current[providerID] = cloneModelsStoreEntry(entry)
 		latest = current
 		latestOrder = appendModelsOrder(order, providerID)
@@ -344,7 +372,10 @@ func (s *FileModelsStore) Delete(providerID string, ctx context.Context) error {
 	var latest storedModels
 	var latestOrder []string
 	_, err := s.storage.WithLockAsync(ctx, func(content *string) (LockResult, error) {
-		current, order := parseStoredModels(content)
+		current, order, err := parseStoredModels(content)
+		if err != nil {
+			return LockResult{}, err
+		}
 		delete(current, providerID)
 		latest = current
 		latestOrder = removeProviderOrder(order, providerID)

@@ -3955,6 +3955,27 @@ unchanged.
 Test: `TestEditorRendersWideGraphemeInNarrowTerminal` (normal-width control and
 isolated narrow render, with a child-only stack limit).
 
+### D282
+
+**A malformed `models-store.json` reads as empty but is never overwritten.**
+
+Reference: pi v1.4.0 (`4a080252`), `packages/coding-agent/src/core/models-store.ts`
+parses the file with an uncaught `JSON.parse`, so malformed content makes
+`read`, `write` and `delete` throw, and no write rewrites the file. A non-object
+top level (`null`, an array, trailing content) likewise throws or, for an array,
+drops the entry being written.
+
+Pier's read path keeps its established tolerance: malformed content yields an
+empty store, so startup still falls back to the built-in catalogs. Its write and
+delete paths reject a file they cannot parse, or whose top level is not an
+object, and leave it untouched, so a catalog refresh cannot replace every other
+provider's stored entry with the one being written. Reads stay available while
+mutations refuse to destroy unreadable content.
+
+Test: `TestFileModelsStoreWriteRejectsMalformedAndNonObjectJSON`
+(`coding/modelsstore_test.go`), with the read tolerance pinned by
+`TestFileModelsStoreParseErrors`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.
