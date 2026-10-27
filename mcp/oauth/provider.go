@@ -173,7 +173,7 @@ func canonicalMcpServerURL(raw string) string {
 func NewMcpOAuthProvider(options McpOAuthProviderOptions) *McpOAuthProvider {
 	options.ServerURL = canonicalMcpServerURL(options.ServerURL)
 	metadata := options.ClientMetadata
-	if len(metadata.RedirectURIs) == 0 {
+	if metadata.RedirectURIs == nil {
 		metadata.RedirectURIs = []string{options.RedirectURL}
 	}
 	if metadata.GrantTypes == nil {
