@@ -1557,7 +1557,9 @@ on replacement using `sessionManager.getCwd()`, `resolveProjectTrusted`, and
 - `SettingsManager.RebindProject` repoints all holders after resolving trust
   with `hasUI` false: undecided projects remain untrusted, with no mid-session
   prompt. Run overrides (`--use-theme`) and `applySettingsDependentUI` reapply,
-  matching upstream `applyRuntimeSettings`.
+  matching upstream `applyRuntimeSettings`. Accepted saves retain their
+  submission's storage and diagnostic path; an old project's completion cannot
+  clear the new project's dirty retry state.
 
 Trust answers cache per project for the run, seeded at boot. Project
 `.pi/themes` loads only when trusted; theme sources reinstall after the initial

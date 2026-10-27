@@ -517,6 +517,8 @@ type SettingsManager struct {
 	projectSettings *Settings
 	settings        *Settings
 	projectTrusted  bool
+	// projectBinding separates dirty-state acknowledgments across RebindProject.
+	projectBinding uint64
 
 	modifiedFields        map[string]bool
 	modifiedNestedFields  map[string]map[string]bool
@@ -587,6 +589,7 @@ func (m *SettingsManager) RebindProject(cwd string, trusted bool) {
 	m.agentDir = resolvedAgentDir
 	m.storage = NewFileSettingsStorage(resolvedCwd, resolvedAgentDir)
 	m.settingsPaths = settingsPathsFor(resolvedCwd, resolvedAgentDir)
+	m.projectBinding++
 	m.projectTrusted = trusted
 	m.modifiedProjectFields = map[string]bool{}
 	m.modifiedProjectNested = map[string]map[string]bool{}
@@ -1299,23 +1302,32 @@ func (m *SettingsManager) save() {
 // only on success, so a failed persist keeps its fields marked and the next
 // save retries them. Errors surface through DrainErrors as before.
 func (m *SettingsManager) persistScoped(scope SettingsScope, snapshot *Settings, modified map[string]bool, nested map[string]map[string]bool) {
+	// D160: an accepted save belongs to its submission's project binding,
+	// even if RebindProject runs before the worker reaches it.
+	storage := m.storage
 	if m.persistQueue == nil {
 		// The caller holds m.mu (the mutator that called save); use the locked
 		// variants.
-		if err := m.persistScopedSettings(scope, snapshot, modified, nested); err != nil {
+		if err := m.persistScopedSettings(storage, scope, snapshot, modified, nested); err != nil {
 			m.recordErrorLocked(scope, err)
 			return
 		}
 		m.clearModifiedScope(scope)
 		return
 	}
+	path := m.settingsPaths[scope]
+	binding := m.projectBinding
 	run := func() {
-		if err := m.persistScopedSettings(scope, snapshot, modified, nested); err != nil {
-			m.recordError(scope, err)
+		if err := m.persistScopedSettings(storage, scope, snapshot, modified, nested); err != nil {
+			m.mu.Lock()
+			m.errors = append(m.errors, SettingsError{Scope: scope, Path: path, Error: err})
+			m.mu.Unlock()
 			return
 		}
 		m.mu.Lock()
-		m.clearPersistedFields(scope, snapshot, modified)
+		if scope == SettingsScopeGlobal || binding == m.projectBinding {
+			m.clearPersistedFields(scope, snapshot, modified)
+		}
 		m.mu.Unlock()
 	}
 	m.persistQueue.Go(run)
@@ -1382,12 +1394,13 @@ func (m *SettingsManager) updateProjectSettings(field string, update func(*Setti
 }
 
 func (m *SettingsManager) persistScopedSettings(
+	storage SettingsStorage,
 	scope SettingsScope,
 	snapshot *Settings,
 	modified map[string]bool,
 	modifiedNested map[string]map[string]bool,
 ) error {
-	return m.storage.WithLock(scope, func(current *string) *string {
+	return storage.WithLock(scope, func(current *string) *string {
 		// The merge base is the raw file object (upstream merges into the parsed
 		// JSON, never through its typed view): unknown keys and values the
 		// settings type cannot represent survive a save instead of the file
