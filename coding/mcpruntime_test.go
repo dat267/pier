@@ -630,3 +630,108 @@ func TestMcpConnectionAdvertisesRootsAsFileURLAndTrimsInstructions(t *testing.T)
 		t.Fatalf("instructions = %v; want JavaScript-trimmed text", connection.Instructions)
 	}
 }
+
+// pi v1.4.0 runtime.ts getClient shares one in-flight connect that is aborted
+// only by close(); a caller's own signal does not drive it. Two concurrent
+// first calls therefore both connect when one caller cancels.
+func TestMcpConcurrentConnectSurvivesInitiatorCancellation(t *testing.T) {
+	clientTransport, serverTransport := mcp.CreateInMemoryTransportPair()
+	initializeStarted := make(chan struct{})
+	releaseInitialize := make(chan struct{})
+	var startedOnce sync.Once
+	serverTransport.OnMessage(func(message mcp.Message) {
+		request, ok := message.(*protocol.JsonRpcRequest)
+		if !ok {
+			return
+		}
+		var result any
+		var failure *protocol.McpError
+		switch request.Method {
+		case "initialize":
+			startedOnce.Do(func() { close(initializeStarted) })
+			<-releaseInitialize
+			result = map[string]any{
+				"protocolVersion": protocol.LatestProtocolVersion,
+				"capabilities":    map[string]any{"tools": map[string]any{}},
+				"serverInfo":      map[string]any{"name": "fake", "version": "1.0.0"},
+			}
+		case "tools/list":
+			result = map[string]any{"tools": []any{}}
+		default:
+			failure = &protocol.McpError{Code: protocol.JSONRPCErrorCode.MethodNotFound, Msg: "Method not found"}
+		}
+		response := protocol.JsonRpcResponse{JSONRPC: protocol.JSONRPCVersion, ID: request.ID}
+		if failure != nil {
+			response.Error = &protocol.JsonRpcErrorObject{Code: failure.Code, Message: failure.Msg}
+		} else {
+			encoded, err := json.Marshal(result)
+			if err != nil {
+				return
+			}
+			response.Result = encoded
+		}
+		_ = serverTransport.Send(context.Background(), response)
+	})
+	if err := serverTransport.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	connection := NewMcpServerConnection(McpServerConnectionOptions{
+		Entry: McpServerEntry{Name: "slow", Config: &McpServerConfig{Command: "unused"}},
+		CreateTransport: func(McpServerEntry, string, mcp.AuthProvider) (mcp.Transport, error) {
+			return clientTransport, nil
+		},
+		Credentials: NewMemoryMcpOAuthCredentialStore(),
+	})
+	t.Cleanup(func() { _ = connection.Close(context.Background()) })
+
+	initiatorCtx, cancelInitiator := context.WithCancel(context.Background())
+	initiatorDone := make(chan error, 1)
+	go func() {
+		_, err := connection.GetClient(initiatorCtx)
+		initiatorDone <- err
+	}()
+	select {
+	case <-initializeStarted:
+	case <-time.After(2 * time.Second):
+		t.Fatal("connect never reached initialize")
+	}
+
+	waiterDone := make(chan error, 1)
+	go func() {
+		_, err := connection.GetClient(context.Background())
+		waiterDone <- err
+	}()
+	// The waiter has joined the in-flight connect.
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		connection.mu.Lock()
+		waiting := connection.opening != nil
+		connection.mu.Unlock()
+		if waiting || time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(time.Millisecond)
+	}
+
+	cancelInitiator()
+	close(releaseInitialize)
+	select {
+	case <-initiatorDone:
+	case <-time.After(2 * time.Second):
+		t.Fatal("cancelled initiator did not return")
+	}
+	select {
+	case err := <-waiterDone:
+		if err != nil {
+			t.Fatalf("concurrent caller failed because another caller cancelled: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("concurrent caller did not settle")
+	}
+	connection.mu.Lock()
+	state := connection.State
+	connection.mu.Unlock()
+	if state != McpServerConnected {
+		t.Fatalf("state after a concurrent connect = %q, want connected", state)
+	}
+}

@@ -286,27 +286,44 @@ func (c *McpServerConnection) GetClient(ctx context.Context) (*mcp.Client, error
 		return nil, err
 	}
 	done := make(chan struct{})
-	connectCtx, cancel := context.WithCancel(ctx)
+	// Upstream's shared connect is aborted only by close(), not by the caller
+	// whose call started it (runtime.ts getClient): a second caller waiting on
+	// the same connect must not fail because the first caller cancelled. The
+	// starting caller still returns on its own context, leaving the connect to
+	// finish for the waiting caller.
+	connectCtx, cancel := context.WithCancel(context.Background())
 	c.opening = done
 	c.openingCancel = cancel
 	c.toolsReady = false
 	c.mu.Unlock()
 
-	client, err := c.open(connectCtx)
+	go func() {
+		_, err := c.open(connectCtx)
+		c.mu.Lock()
+		if c.closed && err == nil {
+			err = fmt.Errorf("MCP server %q is shut down", c.Entry.Name)
+		}
+		c.opening = nil
+		c.openingCancel = nil
+		c.openingClient = nil
+		c.openingErr = err
+		c.mu.Unlock()
+		cancel()
+		close(done)
+	}()
 
-	c.mu.Lock()
-	if c.closed && err == nil {
-		client = nil
-		err = fmt.Errorf("MCP server %q is shut down", c.Entry.Name)
+	select {
+	case <-done:
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	}
-	c.opening = nil
-	c.openingCancel = nil
-	c.openingClient = nil
-	c.openingErr = err
+	c.mu.Lock()
+	client, err := c.client, c.openingErr
 	c.mu.Unlock()
-	cancel()
-	close(done)
-	return client, err
+	if client != nil {
+		return client, nil
+	}
+	return nil, err
 }
 
 // CallTool runs a tool call, reconnecting when needed (upstream callTool).
