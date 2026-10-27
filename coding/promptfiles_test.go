@@ -7,6 +7,25 @@ import (
 	"testing"
 )
 
+// pi v1.4.0 (4a080252), resource-loader.ts reload tests !appendSources:
+// an explicit [] is truthy and suppresses APPEND_SYSTEM.md discovery, while
+// an absent appendSystemPrompt source discovers the default file.
+func TestEmptyAppendSourcesSuppressPromptFileDiscovery(t *testing.T) {
+	cwd, agentDir := t.TempDir(), t.TempDir()
+	writePromptTestFile(t, filepath.Join(agentDir, "APPEND_SYSTEM.md"), "discovered append")
+	control := LoadPromptOverrides(PromptFileSources{Cwd: cwd, AgentDir: agentDir})
+	if control.AppendSystemPrompt != "discovered append" {
+		t.Fatalf("absent append sources did not discover default: %+v", control)
+	}
+
+	overrides := LoadPromptOverrides(PromptFileSources{
+		Cwd: cwd, AgentDir: agentDir, AppendSystemPrompt: []string{},
+	})
+	if overrides.AppendSystemPrompt != "" || len(overrides.SourcePaths) != 0 {
+		t.Fatalf("explicit empty append sources discovered a file: %+v", overrides)
+	}
+}
+
 func writePromptTestFile(t *testing.T, path string, content string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {

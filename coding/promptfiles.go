@@ -74,7 +74,8 @@ type PromptFileSources struct {
 	// A non-nil empty value suppresses file discovery (upstream distinguishes
 	// an explicit source from an absent one).
 	SystemPrompt *string
-	// AppendSystemPrompt are the --append-system-prompt sources.
+	// AppendSystemPrompt are the --append-system-prompt sources. Nil discovers
+	// APPEND_SYSTEM.md; an explicit empty slice suppresses discovery.
 	AppendSystemPrompt []string
 }
 
@@ -106,7 +107,7 @@ func LoadPromptOverrides(sources PromptFileSources) PromptOverrides {
 		overrides.SourcePaths = append(overrides.SourcePaths, file)
 	}
 
-	if len(sources.AppendSystemPrompt) > 0 {
+	if sources.AppendSystemPrompt != nil {
 		parts := make([]string, 0, len(sources.AppendSystemPrompt))
 		for _, source := range sources.AppendSystemPrompt {
 			if text := ResolvePromptInput(source); text != "" {
