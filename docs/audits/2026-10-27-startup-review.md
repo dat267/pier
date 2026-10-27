@@ -94,4 +94,22 @@ were not added to the repository.
 No local race run was performed; CI remains the race gate. Cross-build/vet is
 not an OS-runtime test, and the timings do not establish cold-filesystem or
 full-MCP startup performance. No dependency installation, reference checkout
-change, binary installation, push or release was performed.
+change, binary installation, push or release was performed during the review.
+
+## CR-075: replace an environment-dependent allocation ceiling
+
+Release CI run `40447600971` on `e066990` reported no data race, but failed both
+race-enabled repetitions of `TestBranchPreparationAllocationsStayLinear`:
+1,960,632 and 2,135,824 allocated bytes exceeded its 1,048,576-byte ceiling.
+That ceiling assumed every decoder/runtime configuration stayed below 2 KiB per
+message instead of directly testing the regression's scaling property.
+
+The guard now compares 512 and 2,048 messages, with enough token budget to keep
+both complete inputs and explicit chronological-order checks. Four times the
+input may allocate at most six times as much, allowing linear decoder overhead
+without accepting the old growing-slice prepend implementation. A saved
+pre-CR-062 implementation fails the revised guard: allocations grow from
+2,318,864 to 35,687,080 bytes. The current append-and-reverse implementation uses
+64,112 and 281,184 bytes locally and passes 20 runs each at `GOMAXPROCS=1` and
+`8`. No production code or CI gate was disabled. Releasing still requires a
+green race-enabled CI run on the correction's exact commit.
