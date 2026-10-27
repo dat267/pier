@@ -37,7 +37,7 @@ func (s *InMemoryCodingAgentModelsStore) Read(providerID string, ctx context.Con
 	if !ok {
 		return nil, nil
 	}
-	return cloneModelsStoreEntry(entry), nil
+	return entry.Clone(), nil
 }
 
 // Write stores a clone of the catalog.
@@ -310,7 +310,7 @@ func (s *FileModelsStore) Read(providerID string, ctx context.Context) (*ai.Mode
 	if !ok || entry == nil {
 		return nil, nil
 	}
-	return cloneModelsStoreEntry(entry), nil
+	return entry.Clone(), nil
 }
 
 // Write stores a provider's catalog.

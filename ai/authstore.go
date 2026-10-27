@@ -201,16 +201,7 @@ func (s *InMemoryModelsStore) Read(providerID string, ctx context.Context) (*Mod
 	if !ok {
 		return nil, nil
 	}
-	// structuredClone equivalent.
-	enc, err := MarshalJSON(entry)
-	if err != nil {
-		return nil, err
-	}
-	var out ModelsStoreEntry
-	if err := jsonUnmarshalStrict(enc, &out); err != nil {
-		return nil, err
-	}
-	return &out, nil
+	return entry.Clone(), nil
 }
 
 func (s *InMemoryModelsStore) Write(providerID string, entry *ModelsStoreEntry, ctx context.Context) error {
