@@ -5,7 +5,9 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"maps"
 	"net"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -102,6 +104,41 @@ func cloneState(state *McpOAuthState) *McpOAuthState {
 		if discovery.ResourceMetadataURL != nil {
 			resourceURL := *discovery.ResourceMetadataURL
 			discovery.ResourceMetadataURL = &resourceURL
+		}
+		if discovery.AuthorizationServerMetadata != nil {
+			metadata := *discovery.AuthorizationServerMetadata
+			metadata.ScopesSupported = slices.Clone(metadata.ScopesSupported)
+			metadata.ResponseTypesSupported = slices.Clone(metadata.ResponseTypesSupported)
+			metadata.GrantTypesSupported = slices.Clone(metadata.GrantTypesSupported)
+			metadata.TokenEndpointAuthMethodsSupported = slices.Clone(metadata.TokenEndpointAuthMethodsSupported)
+			metadata.CodeChallengeMethodsSupported = slices.Clone(metadata.CodeChallengeMethodsSupported)
+			if metadata.RegistrationEndpoint != nil {
+				endpoint := *metadata.RegistrationEndpoint
+				metadata.RegistrationEndpoint = &endpoint
+			}
+			if metadata.ClientIDMetadataDocumentSupported != nil {
+				supported := *metadata.ClientIDMetadataDocumentSupported
+				metadata.ClientIDMetadataDocumentSupported = &supported
+			}
+			if metadata.AuthorizationResponseIssParameterSupported != nil {
+				supported := *metadata.AuthorizationResponseIssParameterSupported
+				metadata.AuthorizationResponseIssParameterSupported = &supported
+			}
+			metadata.Extra = maps.Clone(metadata.Extra)
+			for key, raw := range metadata.Extra {
+				metadata.Extra[key] = slices.Clone(raw)
+			}
+			discovery.AuthorizationServerMetadata = &metadata
+		}
+		if discovery.ResourceMetadata != nil {
+			metadata := *discovery.ResourceMetadata
+			metadata.AuthorizationServers = slices.Clone(metadata.AuthorizationServers)
+			metadata.ScopesSupported = slices.Clone(metadata.ScopesSupported)
+			metadata.Extra = maps.Clone(metadata.Extra)
+			for key, raw := range metadata.Extra {
+				metadata.Extra[key] = slices.Clone(raw)
+			}
+			discovery.ResourceMetadata = &metadata
 		}
 		out.Discovery = &discovery
 	}
