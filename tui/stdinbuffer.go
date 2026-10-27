@@ -243,6 +243,7 @@ type StdinBuffer struct {
 	OnPaste func(content string)
 
 	buffer          string
+	utf8Pending     string // terminal bytes awaiting a complete UTF-8 character
 	pendingDeadline time.Time
 	timeoutMS       int
 	escapeTimeoutMS int
@@ -286,6 +287,25 @@ func NewStdinBuffer(options StdinBufferOptions) *StdinBuffer {
 // Process feeds input data through the buffer.
 func (b *StdinBuffer) Process(data []byte) {
 	b.ProcessString(string(data))
+}
+
+// processUTF8Input mirrors terminal.ts stdin.setEncoding("utf8") before
+// StdinBuffer receives text. Keep this separate from Process: its legacy raw
+// Buffer API intentionally interprets a lone high byte as an Alt-key sequence.
+// The terminal's input consumer owns both this decoder and sequence assembly.
+func (b *StdinBuffer) processUTF8Input(data []byte) {
+	input := b.utf8Pending + string(data)
+	var decoded strings.Builder
+	consumed := 0
+	for consumed < len(input) && utf8.FullRuneInString(input[consumed:]) {
+		codepoint, size := utf8.DecodeRuneInString(input[consumed:])
+		decoded.WriteRune(codepoint)
+		consumed += size
+	}
+	b.utf8Pending = input[consumed:]
+	if decoded.Len() > 0 {
+		b.ProcessString(decoded.String())
+	}
 }
 
 // ProcessString feeds string input through the buffer.
@@ -495,6 +515,7 @@ func (b *StdinBuffer) Flush() []string {
 func (b *StdinBuffer) Clear() {
 	b.pendingDeadline = time.Time{}
 	b.buffer = ""
+	b.utf8Pending = ""
 	b.flushedHead = ""
 	b.pasteMode = false
 	b.pasteBuffer = nil

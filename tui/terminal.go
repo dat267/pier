@@ -365,7 +365,7 @@ func (t *ProcessTerminal) readStdin() {
 					handler(string(data))
 				}
 			} else if buffer := t.legacyStdinBuffer.Load(); buffer != nil {
-				buffer.Process(data)
+				buffer.processUTF8Input(data)
 			}
 		}
 		if err != nil {
@@ -429,7 +429,7 @@ func (t *ProcessTerminal) FeedInput(raw []byte) []string {
 	buffer.OnPaste = func(content string) {
 		sequences = append(sequences, "\x1b[200~"+content+"\x1b[201~")
 	}
-	buffer.Process(raw)
+	buffer.processUTF8Input(raw)
 	return sequences
 }
 
