@@ -2,11 +2,10 @@
 
 Read this first. Deep dives: `docs/PORTING.md` (authoritative per-area status,
 pin), `docs/DIVERGENCES.md` (intentional differences), `ARCHITECTURE.md`,
-`docs/locks.md`, `docs/rpc.md`, `docs/terminal-output.md`. `docs/audits/` holds
-the dated review ledgers: per-area and per-lens coverage, confirmed finding
-resolutions with replayable evidence, and unresolved leads that are not yet
-reproducible enough for `TODO.md`. `README.md` is the user-facing summary, not
-the port status.
+`docs/locks.md`, `docs/rpc.md`, `docs/terminal-output.md`. `TIMELINE.md` is the
+concise review chronology: each window's coverage, findings with commit IDs, and
+the gates that passed. `README.md` is the user-facing summary, not the port
+status.
 
 ## What this is
 

@@ -271,8 +271,8 @@ D165/D218 retain the listener-driven background probe and off-loop query wait,
 and D193/D219 retain Pier's intentional panel and accent differences.
 
 **Time-bounded follow-up audit (2026-10-24).** The
-[audit ledger](audits/2026-10-24-parity.md) records source coverage, the fixed
-window and verification against pi v1.4.0. Red-first regressions cover provider
+[review timeline](../TIMELINE.md) records source coverage, the fixed window and
+verification against pi v1.4.0. Red-first regressions cover provider
 auth/payload hooks, proxy null headers, CLI and skill diagnostics, RPC listener
 failures, Markdown inline parsing (including gfm bare autolinks), language lookup
 and YAML highlighting, and MCP OAuth/content/transport boundaries. A seeded
@@ -426,8 +426,8 @@ covers ordinary/extra paths, aliases, pending redirects and IPv4/IPv6. The Go
 worker bridge clears consumed queue slots so completed closures no longer
 retain session snapshots through the backing array. Its channel-scheduled,
 weak-reference regression fails before the change and passes after it. The
-[coverage ledger](audits/2026-10-25-codebase-audit.md) records the partial
-review and remaining work, not a claim of exhaustive safety.
+[review timeline](../TIMELINE.md) records the partial review and remaining work,
+not a claim of exhaustive safety.
 
 The next review slice fixes the typed RPC client's subprocess lifecycle
 (`modes/rpc/rpc-client.ts`, `modes/rpc/jsonl.ts`): listener-initiated `Stop` no

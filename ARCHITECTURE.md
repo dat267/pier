@@ -178,7 +178,7 @@ with historical measurements retained to explain the design.
   generic SDK writes remain unbounded. **D202** adds admission for interactive
   OSC 52 packets on clipboard workers, and newest-pending title/progress hints;
   essential protocol/lifecycle writes do not wait. The inventory, packet limits
-  and oversized-title exception are in [terminal-output.md](terminal-output.md).
+  and oversized-title exception are in [terminal-output.md](docs/terminal-output.md).
   Startup screens and standalone renderer clients are unchanged.
 - **D203 transcript resize preparation yields cooperatively.** The composed chat
   document retains its last complete frame while warming at most 64 children
