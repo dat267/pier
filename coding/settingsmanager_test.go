@@ -935,6 +935,38 @@ func TestSettingsRetryRetainsNewerValueAfterQueuedSaveFails(t *testing.T) {
 	}
 }
 
+// pi v1.4.0 (4a080252), settings-manager.ts persistScopedSettings lets
+// JSON.parse failures reach enqueueWrite's diagnostic path, retaining dirty
+// fields for retry rather than acknowledging a skipped write.
+func TestSettingsSaveReportsExternalMalformedJSONAndRetries(t *testing.T) {
+	agentDir, projectDir := settingsDirs(t)
+	path := filepath.Join(agentDir, "settings.json")
+	writeSettingsFile(t, path, `{"theme":"light"}`)
+	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+
+	const malformed = `{"theme":`
+	writeSettingsFile(t, path, malformed)
+	manager.SetTheme("dark")
+	failures := manager.DrainErrors()
+	if len(failures) != 1 || failures[0].Scope != SettingsScopeGlobal || failures[0].Path != path {
+		t.Errorf("malformed external settings must report a save error: %+v", failures)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != malformed {
+		t.Fatalf("malformed external settings were overwritten: %s", data)
+	}
+
+	writeSettingsFile(t, path, `{"theme":"light"}`)
+	manager.SetDefaultProvider("openai")
+	saved := readSettingsFile(t, path)
+	if saved["theme"] != "dark" || saved["defaultProvider"] != "openai" {
+		t.Fatalf("recovered save did not retry skipped settings: %#v", saved)
+	}
+}
+
 // Port of the fullscreenWheelScrollLines cases in upstream
 // settings-manager.test.ts (f1927c2d5): default "auto", clamped 1..100, and the
 // two settings.json forms.

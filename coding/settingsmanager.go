@@ -1400,7 +1400,8 @@ func (m *SettingsManager) persistScopedSettings(
 	modified map[string]bool,
 	modifiedNested map[string]map[string]bool,
 ) error {
-	return storage.WithLock(scope, func(current *string) *string {
+	var parseErr error
+	err := storage.WithLock(scope, func(current *string) *string {
 		// The merge base is the raw file object (upstream merges into the parsed
 		// JSON, never through its typed view): unknown keys and values the
 		// settings type cannot represent survive a save instead of the file
@@ -1411,6 +1412,7 @@ func (m *SettingsManager) persistScopedSettings(
 			text := StripBom(*current)
 			var raw map[string]any
 			if err := json.Unmarshal([]byte(text), &raw); err != nil {
+				parseErr = err
 				return nil
 			}
 			fileKeys = settingsRawKeyOrder(text)
@@ -1449,6 +1451,7 @@ func (m *SettingsManager) persistScopedSettings(
 		content := marshalSettingsMapIndent(fileKeys, merged)
 		return &content
 	})
+	return errors.Join(err, parseErr)
 }
 
 func copyStringSet(source map[string]bool) map[string]bool {
