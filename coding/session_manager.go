@@ -865,6 +865,29 @@ func (m *SessionManager) GetHeader() *SessionHeader {
 	return nil
 }
 
+// hasEntries uses the ID index like upstream getEntryCount, without copying a
+// history snapshot merely to test emptiness during agent-session construction.
+func (m *SessionManager) hasEntries() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return len(m.byID) > 0
+}
+
+// GetCompactionCount counts persisted compactions across every branch, like
+// renderInitialMessages's getEntries().filter(...) in the reference, without
+// allocating a full history snapshot. No cached counter needs invalidation.
+func (m *SessionManager) GetCompactionCount() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	count := 0
+	for _, fileEntry := range m.fileEntries {
+		if entry := fileEntry.Entry; entry != nil && entry.Type == "compaction" {
+			count++
+		}
+	}
+	return count
+}
+
 // GetEntries returns all entries (excluding the header).
 func (m *SessionManager) GetEntries() []SessionEntry {
 	m.mu.Lock()
@@ -1392,6 +1415,11 @@ func (m *SessionManager) getEntriesLocked() []SessionEntry {
 	var out []SessionEntry
 	for _, entry := range m.fileEntries {
 		if entry.Entry != nil {
+			if out == nil {
+				// GetEntries is a full snapshot: reserve its upper bound once,
+				// but keep the header-only result nil as before.
+				out = make([]SessionEntry, 0, len(m.fileEntries))
+			}
 			out = append(out, *entry.Entry)
 		}
 	}

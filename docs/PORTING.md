@@ -10,6 +10,13 @@ Reference pin: `4a080252` (Release v1.4.0), read from the `./pi` checkout.
 `ai/models_catalog.json` is regenerated from the pin's own generator
 (`packages/ai/scripts/generate-models.ts --strict --data-only`, which fetches
 models.dev) through `scripts/gen_catalog.py`.
+The embedded catalog stays lazy and decodes each descriptor once, retaining raw
+compatibility overrides until the enclosing API selects their type. Sampling
+parameter insertion-order scans run only for nonempty parameter maps. This
+removes per-model JSON round trips without changing model bytes or availability
+(`ai/src/model-catalog.ts`, `providers/openai.models.ts`). An allocation regression
+and the existing catalog benchmark cover the startup cost; decoder regressions
+retain sampling order and select compatibility types by the enclosing API.
 
 The v1.4.0 remote-catalog follow-up retains cached bodies on 404/501 while
 invalidating freshness and the ETag (`core/remote-catalog-provider.ts`). Both
@@ -23,9 +30,13 @@ persisted model-array order for both wrappers. D271 distinguishes a genuinely
 empty catalog from an existing cached body and documents legacy-null repair.
 Model JSON decoding also selects compatibility overrides by the enclosing API
 rather than guessing from their keys (`ai/src/types.ts`, `api/openai-completions.ts`
-`getCompat`). JSON-based model-store clones now retain sampling-parameter order,
-including thinking-level overrides (`core/models-store.ts`, `api/simple-options.ts`).
-Regressions cover both in-memory stores, file storage and captured request bytes.
+`getCompat`). Model-store clones retain sampling-parameter order, including
+thinking-level overrides (`core/models-store.ts`, `api/simple-options.ts`).
+Reads deep-copy validated descriptor fields without another JSON round trip;
+loaded JSON provenance stays immutable and preserves unknown fields and order.
+Writes still validate and normalize through JSON, and empty reads retain D271's
+array shape. An allocation regression covers all three stores; nested-mutation,
+file-storage and captured-request tests cover isolation and serialized bytes.
 Both remote-catalog wrappers resolve the absolute provider endpoint from the base
 origin, discarding a base path/query/fragment and encoding the provider ID like
 `encodeURIComponent` (`core/remote-catalog-provider.ts`, `requestCatalog`).
@@ -46,6 +57,22 @@ the pin's leading-slash preprocessing and nested-rule prefixes preserved
 (`core/skills.ts`, `prefixIgnorePattern`/`loadSkillsFromDirInternal`). A
 source-generated 24-case corpus covers `.gitignore`, `.ignore`, `.fdignore`,
 negation and directory pruning; Go tests also check the resulting skill prompt.
+
+Session entry snapshots reserve their slice once rather than repeatedly
+copying a growing descriptor array during transcript replay
+(`core/session-manager.ts`, `getEntries`). Agent-session construction tests the
+existing ID index instead of requesting a full snapshot merely to check
+emptiness, like the pin's `getEntryCount`. Allocation regressions also check
+independent descriptor values, the nil snapshot for an empty manager, and that
+resumed initialization does not append another initial tool declaration.
+Transcript replay also borrows decoded canonical entry messages from the session
+cache rather than parsing their JSON again, matching the pin's persisted-object
+identity (`interactive-mode.ts`, `renderSessionEntries`). It retains original
+transcript text and history, not context-edit replacements; standalone or changed
+payload buffers bypass the cache even when their IDs collide. Regressions cover
+those boundaries, read-only model context, replayed cache-miss notices and large
+cached payloads. The compaction status counts all persisted branches directly,
+without another descriptor snapshot or an invalidation-prone cached counter.
 
 Session branch forks also recreate resolved bookmarks for retained entries,
 including labels recorded outside the chosen path, preserving label timestamps

@@ -427,7 +427,7 @@ func NewAgentSession(config *SessionConfig) (*AgentSession, error) {
 	// only the later additions) — the reference has the same defect (D237).
 	// Append it once, only for a session with no prior entries and no
 	// caller-supplied initial messages.
-	if len(config.InitialMessages) == 0 && len(sessionManager.GetEntries()) == 0 {
+	if len(config.InitialMessages) == 0 && !sessionManager.hasEntries() {
 		if messages := s.Agent.State().Messages; len(messages) > 0 {
 			if first, ok := messages[0].(*ai.SystemMessage); ok && len(first.ToolsAdded) > 0 {
 				sessionManager.AppendMessage(first)

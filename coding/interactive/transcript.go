@@ -712,7 +712,12 @@ func (r *TranscriptRenderer) RenderSessionEntries(entries []coding.SessionEntry,
 			}
 			continue
 		}
-		messages := coding.SessionEntryToContextMessages(entry)
+		var messages []ai.Message
+		if r.SessionInfo != nil {
+			messages = r.SessionInfo.EntryMessages(entry)
+		} else {
+			messages = coding.SessionEntryToContextMessages(entry)
+		}
 		if (entry.Type == "compaction" || entry.Type == "branch_summary") && entry.Usage != nil && len(messages) > 0 {
 			for _, message := range messages {
 				appendItem(RenderSessionItem{Message: message}, at)
@@ -950,13 +955,7 @@ func (r *TranscriptRenderer) RenderInitialMessages() {
 		r.RenderProjectTrustWarning()
 	}
 
-	allEntries := r.SessionInfo.GetEntries()
-	compactionCount := 0
-	for _, entry := range allEntries {
-		if entry.Type == "compaction" {
-			compactionCount++
-		}
-	}
+	compactionCount := r.SessionInfo.GetCompactionCount()
 	if compactionCount > 0 {
 		times := itoa(compactionCount) + " times"
 		if compactionCount == 1 {

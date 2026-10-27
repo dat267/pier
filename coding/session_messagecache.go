@@ -141,6 +141,27 @@ func decodeEntryRole(entry *SessionEntry) string {
 	return header.Role
 }
 
+// EntryMessages returns an entry's original messages, before context edits.
+// Like pi's sessionEntryToContextMessages, replay keeps the persisted message
+// identity. Borrowed messages are read-only, as with Projection. Only canonical
+// message payloads use the manager's cache: callers can also render standalone
+// or modified entries, which must not reuse another entry's decoded content.
+func (m *SessionManager) EntryMessages(entry *SessionEntry) []ai.Message {
+	if entry.Type != "message" || entry.ID == "" {
+		return SessionEntryToContextMessages(entry)
+	}
+	m.mu.Lock()
+	canonical := m.byID[entry.ID]
+	m.mu.Unlock()
+	if canonical == nil || canonical.Type != "message" || len(canonical.Message) != len(entry.Message) {
+		return SessionEntryToContextMessages(entry)
+	}
+	if len(entry.Message) > 0 && &canonical.Message[0] != &entry.Message[0] {
+		return SessionEntryToContextMessages(entry)
+	}
+	return m.messages.messages(canonical)
+}
+
 // projectedMessages projects an entry's LLM messages, reading through the
 // session's cache when there is one. A nil cache is the reference path used by
 // BuildSessionContext and BuildContextEntries.
