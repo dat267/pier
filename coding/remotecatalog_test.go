@@ -1,8 +1,10 @@
 package coding
 
 import (
+	"context"
 	ctxpkg "context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -497,4 +499,42 @@ func TestMergeCatalogModels(t *testing.T) {
 	if elapsed > time.Second {
 		t.Fatalf("merge of 120k models took %v; the id lookup is not linear", elapsed)
 	}
+}
+
+// pi v1.4.0 refreshModels receives a required AbortSignal, so a Go caller that
+// omits RefreshModelsContext.Ctx gets the wrappers' background fallback; the
+// nil check must cover every use (it used to run after a direct Ctx.Err()).
+func TestRemoteCatalogRefreshToleratesMissingContext(t *testing.T) {
+	noPanic := func(t *testing.T) {
+		if recovered := recover(); recovered != nil {
+			t.Fatalf("refresh panicked on a missing context: %v", recovered)
+		}
+	}
+	fetch := func(context.Context, *http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`[]`))}, nil
+	}
+	base := catalogProvider(t)
+	remote := WithRemoteCatalog(base, "https://catalog.invalid", 0, false, fetch)
+	func() {
+		defer noPanic(t)
+		if err := remote.RefreshModels(&ai.RefreshModelsContext{
+			AllowNetwork: true,
+			Publish:      func(ai.ModelsPublication) bool { return true },
+		}); err != nil {
+			t.Fatalf("remote refresh: %v", err)
+		}
+	}()
+
+	personalized := WithPersonalizedCatalog(catalogProvider(t),
+		func(catalog []*ai.Model, _ *ai.RefreshModelsContext) ([]*ai.Model, error) { return catalog, nil },
+		"https://catalog.invalid", 0, false, fetch)
+	func() {
+		defer noPanic(t)
+		if err := personalized.RefreshModels(&ai.RefreshModelsContext{
+			AllowNetwork: true,
+			Publish:      func(ai.ModelsPublication) bool { return true },
+		}); err != nil {
+			t.Fatalf("personalized refresh: %v", err)
+		}
+	}()
 }

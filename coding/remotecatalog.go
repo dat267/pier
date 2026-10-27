@@ -228,7 +228,13 @@ func WithRemoteCatalog(provider *ai.Provider, catalogBaseURL string, localGenera
 		if !published {
 			return nil
 		}
-		if !refresh.AllowNetwork || refresh.Ctx.Err() != nil {
+		// Upstream receives a required AbortSignal; a Go caller may omit Ctx, so
+		// resolve the background fallback before the first nil-sensitive check.
+		ctx := refresh.Ctx
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		if !refresh.AllowNetwork || ctx.Err() != nil {
 			return nil
 		}
 		force := refresh.Force != nil && *refresh.Force
@@ -237,10 +243,6 @@ func WithRemoteCatalog(provider *ai.Provider, catalogBaseURL string, localGenera
 			return nil
 		}
 
-		ctx := refresh.Ctx
-		if ctx == nil {
-			ctx = context.Background()
-		}
 		// Only revalidate when a cached body backs the validator, so a 304 can
 		// never leave the overlay empty.
 		validator := ""
@@ -430,7 +432,7 @@ func WithPersonalizedCatalog(
 		if err != nil {
 			return err
 		}
-		if refresh.Ctx.Err() != nil {
+		if ctx.Err() != nil {
 			return nil
 		}
 		entry := &ai.ModelsStoreEntry{Models: personalized}
