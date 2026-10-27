@@ -115,10 +115,10 @@ func codexRetryHeaderNumber(value string) (float64, bool) {
 	return number, true
 }
 
-// codexRetryDelay converts milliseconds to a duration, saturating instead of
+// retryHeaderDelay converts milliseconds to a duration, saturating instead of
 // wrapping so an absurd server delay still trips the cap in
 // ValidateCodexRetryDelay (upstream keeps it finite and validates it).
-func codexRetryDelay(milliseconds float64) time.Duration {
+func retryHeaderDelay(milliseconds float64) time.Duration {
 	const maxMilliseconds = float64(math.MaxInt64) / float64(time.Millisecond)
 	if milliseconds >= maxMilliseconds {
 		return time.Duration(math.MaxInt64)
@@ -130,7 +130,7 @@ func codexRetryDelay(milliseconds float64) time.Duration {
 func GetCodexRetryAfterDelayMS(headers http.Header) (time.Duration, bool) {
 	if millis := headers.Get("retry-after-ms"); millis != "" {
 		if value, ok := codexRetryHeaderNumber(millis); ok {
-			return codexRetryDelay(max(value, 0)), true
+			return retryHeaderDelay(max(value, 0)), true
 		}
 	}
 	retryAfter := headers.Get("retry-after")
@@ -138,7 +138,7 @@ func GetCodexRetryAfterDelayMS(headers http.Header) (time.Duration, bool) {
 		return 0, false
 	}
 	if seconds, ok := codexRetryHeaderNumber(retryAfter); ok {
-		return codexRetryDelay(max(seconds*1000, 0)), true
+		return retryHeaderDelay(max(seconds*1000, 0)), true
 	}
 	if when, err := http.ParseTime(retryAfter); err == nil {
 		delay := max(time.Until(when), 0)

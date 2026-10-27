@@ -470,3 +470,57 @@ func TestAnthropicCallbackServerFallsBackToAFreePort(t *testing.T) {
 }
 
 func itoaAnthropicPort() string { return fmt.Sprintf("%d", AnthropicCallbackPort) }
+
+// Copilot's 429 retry parses retry-after with Number.parseFloat and gives up
+// when the resulting delay is not finite (auth/oauth/github-copilot.ts).
+func TestCopilotRetryAfterUsesJavaScriptParseFloat(t *testing.T) {
+	delays := fastOAuthRetries(t)
+	respond := func(header string) (*httptest.Server, *int) {
+		calls := new(int)
+		server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+			*calls++
+			writer.Header().Set("retry-after", header)
+			writer.WriteHeader(http.StatusTooManyRequests)
+		}))
+		return server, calls
+	}
+	buildRequest := func(url string) func(context.Context) (*http.Request, error) {
+		return func(ctx context.Context) (*http.Request, error) {
+			return http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		}
+	}
+
+	// A non-finite delay returns the 429 instead of retrying.
+	for _, value := range []string{"Infinity", "-Infinity", "NaN"} {
+		server, calls := respond(value)
+		response, err := FetchWithCopilotRateLimitRetry(context.Background(), server.URL, buildRequest(server.URL),
+			CopilotRetryPolicy{MaxRetries: 2, MaxElapsedMS: 60_000})
+		if err != nil || response == nil || response.StatusCode != http.StatusTooManyRequests {
+			t.Fatalf("retry-after %q: response = %v err = %v", value, response, err)
+		}
+		response.Body.Close()
+		if *calls != 1 {
+			t.Fatalf("retry-after %q: calls = %d, want the first 429 returned", value, *calls)
+		}
+		server.Close()
+	}
+	if len(*delays) != 0 {
+		t.Fatalf("non-finite retry-after slept: %v", *delays)
+	}
+
+	// parseFloat takes a numeric prefix: "5abc" is 5 seconds.
+	server, calls := respond("5abc")
+	response, err := FetchWithCopilotRateLimitRetry(context.Background(), server.URL, buildRequest(server.URL),
+		CopilotRetryPolicy{MaxRetries: 1, MaxElapsedMS: 60_000})
+	if err != nil || response == nil || response.StatusCode != http.StatusTooManyRequests {
+		t.Fatalf("prefix retry-after: response = %v err = %v", response, err)
+	}
+	response.Body.Close()
+	server.Close()
+	if *calls != 2 {
+		t.Fatalf("prefix retry-after calls = %d, want one retry", *calls)
+	}
+	if len(*delays) != 1 || (*delays)[0] != 5*time.Second {
+		t.Fatalf("prefix retry-after delays = %v, want 5s", *delays)
+	}
+}

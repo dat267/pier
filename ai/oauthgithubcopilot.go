@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -263,10 +263,16 @@ func FetchWithCopilotRateLimitRetry(
 
 		delay := time.Duration(500*(1<<retry)) * time.Millisecond
 		if retryAfter := response.Header.Get("retry-after"); retryAfter != "" {
-			if seconds, err := strconv.ParseFloat(retryAfter, 64); err == nil {
-				delay = time.Duration(seconds * float64(time.Second))
+			// Upstream uses Number.parseFloat: a numeric prefix counts, a
+			// non-finite result gives up on the retry, and only a value with no
+			// numeric prefix falls back to the HTTP-date form.
+			if seconds, ok := parseJSFloatPrefix(retryAfter); ok {
+				if math.IsNaN(seconds) || math.IsInf(seconds, 0) {
+					return response, nil
+				}
+				delay = retryHeaderDelay(max(seconds*1000, 0))
 			} else if when, err := http.ParseTime(retryAfter); err == nil {
-				delay = time.Until(when)
+				delay = max(time.Until(when), 0)
 			} else {
 				return response, nil
 			}
