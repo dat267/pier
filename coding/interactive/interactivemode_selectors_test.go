@@ -80,6 +80,35 @@ func newSelectorTestWiring(t *testing.T) (*SelectorWiring, *selectorTestSession,
 	return wiring, session, editorContainer, editor
 }
 
+// pi v1.4.0 (4a080252), interactive-mode.ts showSelector closes over the
+// selector's own dispose callback, not the current slot's disposer. A stale
+// async completion must not cancel a replacement selector's background work.
+func TestSelectorSlotStaleDoneDoesNotDisposeReplacement(t *testing.T) {
+	component := &staticRendererComponent{lines: []string{"selector"}}
+	slot := NewSelectorSlot(nil, &tui.Container{}, component)
+	var staleDone, currentDone func()
+	oldDisposals, newDisposals := 0, 0
+	slot.Show(func(done func()) CreatedSelector {
+		staleDone = done
+		return CreatedSelector{Component: component, Dispose: func() { oldDisposals++ }}
+	})
+	slot.Show(func(done func()) CreatedSelector {
+		currentDone = done
+		return CreatedSelector{Component: component, Dispose: func() { newDisposals++ }}
+	})
+	if oldDisposals != 1 || newDisposals != 0 {
+		t.Fatalf("replacement disposals = old:%d new:%d", oldDisposals, newDisposals)
+	}
+	staleDone()
+	if newDisposals != 0 || !slot.HasActiveSelector() {
+		t.Fatalf("stale completion touched replacement: disposals=%d active=%v", newDisposals, slot.HasActiveSelector())
+	}
+	currentDone()
+	if newDisposals != 1 || slot.HasActiveSelector() {
+		t.Fatalf("current completion failed to close itself: disposals=%d active=%v", newDisposals, slot.HasActiveSelector())
+	}
+}
+
 // TestSelectorSlot covers the editor-replacement plumbing.
 func TestSelectorSlot(t *testing.T) {
 	wiring, _, container, editor := newSelectorTestWiring(t)

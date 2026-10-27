@@ -69,9 +69,10 @@ func (s *SelectorSlot) DisposeActiveSelector() {
 func (s *SelectorSlot) Show(create func(done func()) CreatedSelector) {
 	token := s.nextToken
 	s.nextToken++
+	var dispose func()
 	done := func() {
-		if s.activeDispose != nil {
-			s.activeDispose()
+		if dispose != nil {
+			dispose()
 		}
 		if s.activeToken == nil || *s.activeToken != token {
 			return
@@ -89,9 +90,10 @@ func (s *SelectorSlot) Show(create func(done func()) CreatedSelector) {
 		}
 	}
 	created := create(done)
+	dispose = created.Dispose
 	s.DisposeActiveSelector()
 	s.activeToken = &token
-	s.activeDispose = created.Dispose
+	s.activeDispose = dispose
 	if s.EditorContainer != nil {
 		s.EditorContainer.Clear()
 		s.EditorContainer.AddChild(created.Component)
