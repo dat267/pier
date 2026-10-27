@@ -319,3 +319,26 @@ func TestFileModelsStoreWriteRejectsMalformedAndNonObjectJSON(t *testing.T) {
 		}
 	}
 }
+
+// failingLockBackend fails every locked operation.
+type failingLockBackend struct{ err error }
+
+func (b failingLockBackend) WithLock(func(*string) (LockResult, error)) (any, error) {
+	return nil, b.err
+}
+
+func (b failingLockBackend) WithLockAsync(ctxpkg.Context, func(*string) (LockResult, error)) (any, error) {
+	return nil, b.err
+}
+
+// pi v1.4.0 core/models-store.ts readLatest awaits the shared reload promise,
+// so a lock or read failure rejects the read; it does not fall back to the old
+// snapshot.
+func TestFileModelsStorePropagatesReloadFailure(t *testing.T) {
+	store := NewFileModelsStore(filepath.Join(t.TempDir(), "models-store.json"))
+	failure := errors.New("lock timeout")
+	store.storage = failingLockBackend{err: failure}
+	if entry, err := store.Read("openai", ctxpkg.Background()); !errors.Is(err, failure) || entry != nil {
+		t.Fatalf("read = %+v, %v; want the reload failure", entry, err)
+	}
+}

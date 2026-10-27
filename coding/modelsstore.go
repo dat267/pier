@@ -301,11 +301,10 @@ func (s *FileModelsStore) readLatest(ctx context.Context) (storedModels, error) 
 	select {
 	case <-reload.done:
 		s.releaseReload(reload)
-		if reload.err != nil {
-			data, _ := s.snapshot()
-			return data, nil
-		}
-		return reload.result, nil
+		// The reference awaits the shared reload promise, so a lock or read
+		// failure rejects the read instead of serving the previous snapshot.
+		// Malformed content is not an error: the parser tolerates it (D282).
+		return reload.result, reload.err
 	case <-ctx.Done():
 		s.releaseReload(reload)
 		data, _ := s.snapshot()
