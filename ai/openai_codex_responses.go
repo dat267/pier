@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -98,25 +99,46 @@ func IsCodexRetryableError(status int, errorText string) bool {
 	return codexRetryableTextPattern.MatchString(errorText)
 }
 
+// codexRetryHeaderNumber parses a retry header like the reference's Number():
+// JavaScript whitespace is trimmed, and non-finite values or Go-only numeric
+// separators count as absent. Hexadecimal integer forms are not used by retry
+// headers and fall back like any other unparseable value.
+func codexRetryHeaderNumber(value string) (float64, bool) {
+	text := JSTrim(value)
+	if text == "" || strings.ContainsRune(text, '_') {
+		return 0, false
+	}
+	number, err := strconv.ParseFloat(text, 64)
+	if err != nil || math.IsNaN(number) || math.IsInf(number, 0) {
+		return 0, false
+	}
+	return number, true
+}
+
+// codexRetryDelay converts milliseconds to a duration, saturating instead of
+// wrapping so an absurd server delay still trips the cap in
+// ValidateCodexRetryDelay (upstream keeps it finite and validates it).
+func codexRetryDelay(milliseconds float64) time.Duration {
+	const maxMilliseconds = float64(math.MaxInt64) / float64(time.Millisecond)
+	if milliseconds >= maxMilliseconds {
+		return time.Duration(math.MaxInt64)
+	}
+	return time.Duration(milliseconds) * time.Millisecond
+}
+
 // GetCodexRetryAfterDelayMS reads retry-after-ms/retry-after headers.
 func GetCodexRetryAfterDelayMS(headers http.Header) (time.Duration, bool) {
 	if millis := headers.Get("retry-after-ms"); millis != "" {
-		if value, err := strconv.ParseFloat(millis, 64); err == nil {
-			if value < 0 {
-				value = 0
-			}
-			return time.Duration(value) * time.Millisecond, true
+		if value, ok := codexRetryHeaderNumber(millis); ok {
+			return codexRetryDelay(max(value, 0)), true
 		}
 	}
 	retryAfter := headers.Get("retry-after")
 	if retryAfter == "" {
 		return 0, false
 	}
-	if seconds, err := strconv.ParseFloat(retryAfter, 64); err == nil {
-		if seconds < 0 {
-			seconds = 0
-		}
-		return time.Duration(seconds * float64(time.Second)), true
+	if seconds, ok := codexRetryHeaderNumber(retryAfter); ok {
+		return codexRetryDelay(max(seconds*1000, 0)), true
 	}
 	if when, err := http.ParseTime(retryAfter); err == nil {
 		delay := max(time.Until(when), 0)

@@ -159,6 +159,31 @@ func TestCodexRetryClassification(t *testing.T) {
 	if _, ok := GetCodexRetryAfterDelayMS(http.Header{}); ok {
 		t.Fatal("no header means no delay")
 	}
+	// Number() semantics: non-finite values and Go-only separators are absent,
+	// so the next header (or the backoff) applies.
+	for _, invalid := range []string{"Infinity", "-Infinity", "NaN", "1_0"} {
+		headers = http.Header{}
+		headers.Set("retry-after-ms", invalid)
+		headers.Set("retry-after", "2")
+		if delay, ok := GetCodexRetryAfterDelayMS(headers); !ok || delay != 2*time.Second {
+			t.Fatalf("retry-after-ms %q: delay = %v ok = %v; want the retry-after fallback", invalid, delay, ok)
+		}
+		headers = http.Header{}
+		headers.Set("retry-after", invalid)
+		if _, ok := GetCodexRetryAfterDelayMS(headers); ok {
+			t.Fatalf("retry-after %q: got a delay, want none", invalid)
+		}
+	}
+	// A huge finite delay must exceed the cap rather than overflow negative.
+	headers = http.Header{}
+	headers.Set("retry-after", "1e300")
+	delay, ok := GetCodexRetryAfterDelayMS(headers)
+	if !ok {
+		t.Fatal("huge delay should still be a server-provided delay")
+	}
+	if _, err := ValidateCodexRetryDelay(delay, nil); err == nil {
+		t.Fatalf("huge delay %v bypassed the retry-delay cap", delay)
+	}
 
 	// The delay is bounded by maxRetryDelayMs.
 	maxDelay := 1000
