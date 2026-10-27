@@ -56,11 +56,20 @@ func TestDisposeCancelsActiveBranchSummary(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var runs atomic.Int64
-	summary := summarizingStreamFn(t, &runs, "branch summary text long enough to pass the usability check")
-	session.CompactionStreamFn = func(model *ai.Model, transcript ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+	session.CompactionStreamFn = func(_ *ai.Model, _ ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
 		session.Dispose()
-		return summary(model, transcript, options)
+		if options.Ctx == nil || options.Ctx.Err() != context.Canceled {
+			t.Fatal("disposal did not cancel the forwarded branch-summary context")
+		}
+		// Model a cancellation-aware provider. A fake that completes with
+		// success after ignoring Ctx races EventStream.Result's ready-result
+		// path and tests scheduling rather than disposal (CR-074).
+		stream := ai.NewAssistantMessageEventStream()
+		stream.Push(ai.AssistantMessageEvent{
+			Type: ai.EventError, Reason: ai.StopAborted,
+			Error: &ai.AssistantMessage{StopReason: ai.StopAborted},
+		})
+		return stream
 	}
 	result, err := session.NavigateTree(context.Background(), rootID, NavigateTreeOptions{Summarize: true})
 	if err != nil {
