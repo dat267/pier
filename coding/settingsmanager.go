@@ -1315,10 +1315,34 @@ func (m *SettingsManager) persistScoped(scope SettingsScope, snapshot *Settings,
 			return
 		}
 		m.mu.Lock()
-		m.clearModifiedScope(scope)
+		m.clearPersistedFields(scope, snapshot, modified)
 		m.mu.Unlock()
 	}
 	m.persistQueue.Go(run)
+}
+
+// clearPersistedFields retires only fields this successful write submitted,
+// and only when their current values still match that snapshot. A later
+// mutation must remain dirty if its queued write fails.
+// D280: upstream enqueueWrite clears the whole scope after every successful
+// task, which can erase dirty fields belonging to a later failed task.
+func (m *SettingsManager) clearPersistedFields(scope SettingsScope, snapshot *Settings, modified map[string]bool) {
+	var current *Settings
+	var dirty map[string]bool
+	var nested map[string]map[string]bool
+	if scope == SettingsScopeGlobal {
+		current, dirty, nested = m.globalSettings, m.modifiedFields, m.modifiedNestedFields
+	} else {
+		current, dirty, nested = m.projectSettings, m.modifiedProjectFields, m.modifiedProjectNested
+	}
+	submittedValues := settingsToMap(snapshot)
+	currentValues := settingsToMap(current)
+	for field := range modified {
+		if reflect.DeepEqual(submittedValues[field], currentValues[field]) {
+			delete(dirty, field)
+			delete(nested, field)
+		}
+	}
 }
 
 // FlushPersists blocks until every queued settings persist has finished. Tests

@@ -843,6 +843,98 @@ func TestSettingsPersistWritesNoNullKeys(t *testing.T) {
 	}
 }
 
+type queuedFailureSettingsStorage struct {
+	contents     map[SettingsScope]string
+	writes       int
+	firstWrite   chan struct{}
+	releaseFirst chan struct{}
+}
+
+func (s *queuedFailureSettingsStorage) WithLock(scope SettingsScope, fn func(current *string) *string) error {
+	var current *string
+	if text, ok := s.contents[scope]; ok {
+		current = &text
+	}
+	next := fn(current)
+	if next == nil {
+		return nil
+	}
+	s.writes++
+	switch s.writes {
+	case 1:
+		close(s.firstWrite)
+		<-s.releaseFirst
+	case 2:
+		return os.ErrPermission
+	}
+	s.contents[scope] = *next
+	return nil
+}
+
+// Reference: pi v1.4.0 (4a080252), settings-manager.ts enqueueWrite/save.
+// D280 retains later dirty fields when an older queued task succeeds.
+func TestSettingsRetryRetainsChangesAfterOverlappingQueuedSaveFails(t *testing.T) {
+	storage := &queuedFailureSettingsStorage{
+		contents:     map[SettingsScope]string{SettingsScopeGlobal: `{"theme":"light"}`},
+		firstWrite:   make(chan struct{}),
+		releaseFirst: make(chan struct{}),
+	}
+	queue := offloop.New()
+	defer queue.Stop()
+	manager := newSettingsManagerFromStorage(storage, SettingsManagerCreateOptions{PersistQueue: queue}, nil)
+
+	manager.SetTheme("dark")
+	<-storage.firstWrite
+	manager.SetDefaultThinkingLevel("high")
+	close(storage.releaseFirst)
+	manager.FlushPersists()
+	if failures := manager.DrainErrors(); len(failures) != 1 {
+		t.Fatalf("write failures = %+v, want one", failures)
+	}
+
+	manager.SetDefaultProvider("openai")
+	manager.FlushPersists()
+	var saved map[string]any
+	if err := json.Unmarshal([]byte(storage.contents[SettingsScopeGlobal]), &saved); err != nil {
+		t.Fatal(err)
+	}
+	if saved["defaultThinkingLevel"] != "high" || saved["theme"] != "dark" || saved["defaultProvider"] != "openai" {
+		t.Fatalf("next save did not retain settings: %#v", saved)
+	}
+}
+
+// D280: an earlier successful theme snapshot must not clear a newer value of
+// that same setting if the newer write fails (pi v1.4.0 settings-manager.ts).
+func TestSettingsRetryRetainsNewerValueAfterQueuedSaveFails(t *testing.T) {
+	storage := &queuedFailureSettingsStorage{
+		contents:     map[SettingsScope]string{SettingsScopeGlobal: `{"theme":"light"}`},
+		firstWrite:   make(chan struct{}),
+		releaseFirst: make(chan struct{}),
+	}
+	queue := offloop.New()
+	defer queue.Stop()
+	manager := newSettingsManagerFromStorage(storage, SettingsManagerCreateOptions{PersistQueue: queue}, nil)
+
+	manager.SetTheme("dark")
+	<-storage.firstWrite
+	manager.SetTheme("blue")
+	close(storage.releaseFirst)
+	manager.FlushPersists()
+	if failures := manager.DrainErrors(); len(failures) != 1 {
+		t.Fatalf("write failures = %+v, want one", failures)
+	}
+
+	manager.SetDefaultProvider("openai")
+	manager.FlushPersists()
+	var saved map[string]any
+	if err := json.Unmarshal([]byte(storage.contents[SettingsScopeGlobal]), &saved); err != nil {
+		t.Fatal(err)
+	}
+	if saved["theme"] != "blue" || saved["defaultProvider"] != "openai" {
+		t.Fatalf("next save did not retry newer setting value: %#v", saved)
+	}
+}
+
 // Port of the fullscreenWheelScrollLines cases in upstream
 // settings-manager.test.ts (f1927c2d5): default "auto", clamped 1..100, and the
 // two settings.json forms.

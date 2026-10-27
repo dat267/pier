@@ -1196,13 +1196,13 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D279)
+## Deliberate divergences from pi (D1–D280)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D279**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D280**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation. What is ported per area, and the review history behind each
 fix, is in [CHANGES.md](CHANGES.md).
 
@@ -3915,6 +3915,24 @@ notice, and nested paths).
 
 Tests: `TestReadToolMatchesUpstreamTextPath`, `TestReadToolMissingFileError`
 (`coding/read_tool_parity_test.go`).
+
+### D280
+
+**An older successful queued settings write does not clear newer dirty values.**
+
+Reference: pi v1.4.0 (`4a080252`), `packages/coding-agent/src/core/
+settings-manager.ts` clears the whole modified-field set after each successful
+queued task. If another setter runs while that task is pending, its fields are
+already in the shared set; an earlier success can clear them before a later
+write fails. Subsequent saves then omit those failed changes.
+
+Pier's queued worker clears only the fields in the completed task's snapshot,
+and only if the current value still equals the persisted snapshot. Later fields
+and newer values remain dirty for retry. This intentional reliability fix is a
+narrow divergence from upstream; synchronous writes still clear under the
+manager lock.
+
+Test: `TestSettingsRetryRetainsChangesAfterOverlappingQueuedSaveFails`.
 
 ## Lock inventory
 
