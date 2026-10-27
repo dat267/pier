@@ -844,7 +844,7 @@ func (e *Editor) expandPasteMarkersLocked(text string) string {
 	result := text
 	for pasteID, pasteContent := range e.pastes {
 		markerRegex := mustCompileRegex(`\[paste #` + itoa(pasteID) + `( (\+\d+ lines|\d+ chars))?\]`)
-		result = markerRegex.ReplaceAllString(result, pasteContent)
+		result = markerRegex.ReplaceAllLiteralString(result, pasteContent)
 	}
 	return result
 }
