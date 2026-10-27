@@ -4,10 +4,12 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"strings"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/dat267/pier/ai"
@@ -245,6 +247,40 @@ func TestModelSelectorSelectNoDeadlock(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("onSelect not called")
 	}
+}
+
+// pi v1.4.0 (4a080252), model-selector.ts refreshModels keeps timeout state
+// separately from cleanup. A completed worker's deferred cancel must not turn
+// an ordinary refresh error into a timeout when its UI post runs later.
+func TestModelSelectorQueuedRefreshErrorKeepsOriginalDiagnostic(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	InitTheme("dark", false)
+	synctest.Test(t, func(t *testing.T) {
+		runtime := &modelTestRuntime{
+			models: testModels(),
+			refresh: func() (ai.ModelsRefreshResult, error) {
+				return ai.ModelsRefreshResult{}, errors.New("catalog offline")
+			},
+		}
+		posted := make(chan func(), 1)
+		component := NewModelSelectorComponent(nil, func(fn func()) { posted <- fn }, nil,
+			runtime, nil, nil, nil, "", nil, nil)
+		defer component.Dispose()
+		synctest.Wait() // worker has returned and run its deferred cancellation
+		select {
+		case apply := <-posted:
+			apply()
+		default:
+			t.Fatal("refresh worker did not post its result")
+		}
+		rendered := strings.Join(component.Render(100), "\n")
+		if !strings.Contains(rendered, "Could not refresh model catalogs: catalog offline") || strings.Contains(rendered, "timed out") {
+			t.Fatalf("refresh diagnostic changed after worker cleanup: %s", coding.StripAnsi(rendered))
+		}
+	})
 }
 
 // TestModelSelectorRefreshApplyStaysOnTheLoop pins the stage-4 invariant: the

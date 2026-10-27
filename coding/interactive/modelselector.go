@@ -206,6 +206,9 @@ func (c *ModelSelectorComponent) startRefresh() {
 	go func() {
 		defer cancel()
 		result, err := RefreshModelCatalogs(ctx, c.runtime)
+		// Snapshot the outcome before deferred cleanup cancels ctx, or a
+		// delayed owner-loop apply would mislabel every error as a timeout.
+		timedOut := ctx.Err() == context.DeadlineExceeded
 		// The refresh worker is a pure producer: it hands the outcome to the
 		// loop, which owns the selector state (stage 4).
 		c.postApply(func() {
@@ -216,12 +219,12 @@ func (c *ModelSelectorComponent) startRefresh() {
 			switch {
 			case err != nil:
 				c.refreshStatusMessage = ""
-				if ctx.Err() != nil {
+				if timedOut {
 					c.errorMessage = "Model refresh timed out; showing cached models."
 				} else {
 					c.errorMessage = "Could not refresh model catalogs: " + err.Error()
 				}
-			case result.Aborted && ctx.Err() != nil:
+			case result.Aborted && timedOut:
 				c.errorMessage = "Model refresh timed out; showing cached models."
 			case len(result.Errors) == 1:
 				key := firstErrorKey(result.Errors)
