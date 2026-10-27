@@ -7,7 +7,7 @@ withdrawn, historical and removed-code rows are pruned. The range is
 **D1–D279**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation.
 
-Related documents: [port status](PORTING.md), [architecture](architecture.md),
+Related documents: [port status](PORTING.md), [architecture](../ARCHITECTURE.md),
 [lock inventory](locks.md), and [terminal-output audit](terminal-output.md).
 
 ## D41
@@ -122,7 +122,7 @@ and `ctx.Done()`. Blocking work runs off-loop; streaming partials coalesce
 latest-wins. Input/signals, selector callbacks, and lifecycle callbacks also
 apply on that loop (stages 3–4). Upstream awaits prompts on the JS event loop.
 D144/D145 define input/render ownership; D196/D197 define queue ordering and
-fairness. [architecture.md](architecture.md) holds the full design.
+fairness. [architecture.md](../ARCHITECTURE.md) holds the full design.
 
 ## D144
 

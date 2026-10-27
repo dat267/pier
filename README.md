@@ -52,7 +52,7 @@ Stdio RPC (`pier --mode rpc`) and its supported commands are documented in
 
 Packages follow pi's layout. The interactive UI has a single owner loop, session
 projections supply model context, and persisted JSON preserves JavaScript key
-ordering. See [architecture and performance](docs/architecture.md),
+ordering. See [architecture and performance](ARCHITECTURE.md),
 [lock ownership](docs/locks.md), and
 [terminal output policy](docs/terminal-output.md). Development guidance is in
 [AGENTS.md](AGENTS.md).

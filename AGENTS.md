@@ -1,7 +1,7 @@
 # AGENTS.md
 
 Read this first. Deep dives: `docs/PORTING.md` (authoritative per-area status,
-pin), `docs/DIVERGENCES.md` (intentional differences), `docs/architecture.md`,
+pin), `docs/DIVERGENCES.md` (intentional differences), `ARCHITECTURE.md`,
 `docs/locks.md`, `docs/rpc.md`, `docs/terminal-output.md`. `docs/audits/` holds
 the dated review ledgers: per-area and per-lens coverage, confirmed finding
 resolutions with replayable evidence, and unresolved leads that are not yet
@@ -86,7 +86,7 @@ per message, or run a value-shaped loop on the UI thread.
 
 `interactive-mode.ts` is one large class; the port splits it into wirings
 composed in `coding/interactive/app.go`, and the session projection lives in one
-module cached by branch version (`docs/architecture.md`).
+module cached by branch version (`ARCHITECTURE.md`).
 
 ## Conventions and gotchas
 

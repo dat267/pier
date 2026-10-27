@@ -39,7 +39,7 @@ func BenchmarkTranscriptFrameCold(b *testing.B) {
 // revision once. The curve is ~50 us at 500 message pairs, ~150 us at 2,000 and
 // ~1.4 ms at 8,000 (down from ~74 us, ~260 us and ~2.0 ms before the fast path).
 // This pins the curve so a regression, or the global-revision follow-up
-// described in docs/architecture.md, is visible.
+// described in ARCHITECTURE.md, is visible.
 func BenchmarkTranscriptFrameScaling(b *testing.B) {
 	for _, messages := range []int{500, 2000, 8000} {
 		b.Run(itoa(messages)+"msgs", func(b *testing.B) {
