@@ -101,7 +101,7 @@ clean:
 
 # The reference checkout is only as useful as the tags it holds: a diff against "the
 # latest pi" reads them, and a checkout at the wrong tag silently answers the wrong
-# question. The pin itself is in docs/PORTING.md; these read and check that state.
+# question. The pin itself is in CHANGES.md; these read and check that state.
 # Fetch upstream tags into ./pi without moving it off the pinned tag.
 reference-fetch:
 	git -C pi fetch --tags --quiet origin
@@ -110,7 +110,7 @@ reference-fetch:
 # Reads local state only, so it works offline; `just reference-fetch` refreshes the
 # tags it can see. It fails when the checkout is at another tag, because that is the
 # state in which an "against upstream" review quietly becomes wrong.
-# Check that ./pi is at the pin in docs/PORTING.md, and report upstream's drift.
+# Check that ./pi is at the pin in CHANGES.md, and report upstream's drift.
 reference:
 	#!/usr/bin/env bash
 	set -euo pipefail
@@ -118,27 +118,27 @@ reference:
 	if [[ ! -d pi/.git ]]; then
 		echo "reference: no ./pi checkout; clone it at the pin:" >&2
 		echo "      git clone https://github.com/earendil-works/pi pi" >&2
-		echo "      git -C pi checkout --detach v1.4.0   # the pin, see docs/PORTING.md" >&2
+		echo "      git -C pi checkout --detach v1.4.0   # the pin, see CHANGES.md" >&2
 		exit 1
 	fi
 
 	# "Reference pin: `4a080252` (Release v1.4.0), read from the `./pi` checkout."
-	pin_commit="$(sed -n 's/^Reference pin: `\([0-9a-f]*\)`.*/\1/p' docs/PORTING.md | head -1)"
-	pin_tag="$(sed -n 's/^Reference pin: `[0-9a-f]*` (Release \([^)]*\)).*/\1/p' docs/PORTING.md | head -1)"
+	pin_commit="$(sed -n 's/^Reference pin: `\([0-9a-f]*\)`.*/\1/p' CHANGES.md | head -1)"
+	pin_tag="$(sed -n 's/^Reference pin: `[0-9a-f]*` (Release \([^)]*\)).*/\1/p' CHANGES.md | head -1)"
 	if [[ -z "$pin_commit" || -z "$pin_tag" ]]; then
-		echo "reference: no pin in docs/PORTING.md (expected a 'Reference pin:' line)" >&2
+		echo "reference: no pin in CHANGES.md (expected a 'Reference pin:' line)" >&2
 		exit 1
 	fi
 
 	head_commit="$(git -C pi rev-parse HEAD)"
 	at="$(git -C pi describe --tags --exact-match HEAD 2>/dev/null || git -C pi describe --tags --always HEAD)"
-	echo "pin:      $pin_tag ($pin_commit), from docs/PORTING.md"
+	echo "pin:      $pin_tag ($pin_commit), from CHANGES.md"
 	echo "checkout: $at ($(git -C pi rev-parse --short HEAD))"
 
 	latest="$(git -C pi tag --sort=-v:refname | head -1)"
 	if [[ -n "$latest" && "$latest" != "$pin_tag" ]]; then
 		behind="$(git -C pi rev-list --count "$pin_tag..$latest" 2>/dev/null || echo '?')"
-		echo "upstream: $latest is $behind commit(s) past the pin; not ported (see the known drift in docs/PORTING.md)"
+		echo "upstream: $latest is $behind commit(s) past the pin; not ported (see the known drift in CHANGES.md)"
 	fi
 
 	if [[ "$head_commit" == "$pin_commit"* ]]; then

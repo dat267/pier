@@ -1,11 +1,11 @@
 # AGENTS.md
 
-Read this first. Deep dives: `docs/PORTING.md` (authoritative per-area status,
-pin), `docs/DIVERGENCES.md` (intentional differences), `ARCHITECTURE.md`,
-`docs/locks.md`, `docs/rpc.md`, `docs/terminal-output.md`. `TIMELINE.md` is the
-concise review chronology: each window's coverage, findings with commit IDs, and
-the gates that passed. `README.md` is the user-facing summary, not the port
-status.
+Read this first. Deep dives: `CHANGES.md` (release history, the review
+chronology with per-window findings and commit IDs, and the authoritative
+per-area status and pin), `ARCHITECTURE.md` (design, measurements, lock
+inventory and the D-rows) and `README.md` (user-facing usage, including the
+stdio RPC contract). `TODO.md` holds reproduced, unresolved findings.
+`README.md` is the user-facing summary, not the port status.
 
 ## What this is
 
@@ -29,7 +29,7 @@ tag a review read.
    `ai.MarshalJSON`, never `encoding/json.Marshal`. JS insertion order matters.
 3. **JS semantics where pi relies on them**: object order, `JSON.stringify`,
    truthiness at API boundaries. Departures get a **D-row** comment with the
-   reproducing scenario and an entry in `docs/DIVERGENCES.md`.
+   reproducing scenario and an entry in `ARCHITECTURE.md`'s D-rows.
 4. **Every behavior change is test-observed**; Go-only tests cite upstream.
 
 ## Layout
@@ -73,8 +73,8 @@ The UI is a single-writer loop; upstream is single-threaded and every Go lock
 bridges that gap (D143). Producers only enqueue, and blocking work (turns,
 session writes, settings, themes, transcript pre-rendering, clipboard) runs
 off-loop. Ownership, shutdown draining, admission bounds, terminal output and
-tool-frame lifecycle are documented row by row in `docs/DIVERGENCES.md` and
-`docs/locks.md`; workers never mutate attached UI state, never run user code
+tool-frame lifecycle are documented row by row in `ARCHITECTURE.md` and the
+`## Lock inventory` there; workers never mutate attached UI state, never run user code
 under a retained mutex, and callbacks are snapshotted under the lock and
 delivered outside it.
 
@@ -120,4 +120,4 @@ module cached by branch version (`ARCHITECTURE.md`).
 
 Native (Bun FFI) clipboard; Photon's Lanczos3/WebP/BMP decoding; extensions and
 the package manager; a full stdio RPC milestone; Mermaid rendering. See
-`docs/PORTING.md` and `docs/DIVERGENCES.md` for the rationale.
+`ARCHITECTURE.md` for the rationale and `CHANGES.md` for what is covered.

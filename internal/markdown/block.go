@@ -281,7 +281,7 @@ func (l *blockLexer) lexFence(start int, marker, info string) (*Block, int, bool
 // spaces), not mid-paragraph. Upstream's block extension `start` hook matches
 // any `$$`/`\[` with up to three leading spaces and Marked reads that index as
 // the end of the preceding paragraph, so `a $$x^2$$ b` splits; reproducing it
-// would also import the quadratic scan that hook costs. See docs/DIVERGENCES.md.
+// would also import the quadratic scan that hook costs. See ARCHITECTURE.md.
 func isLatexBlockStart(line string) bool {
 	i, width := skipIndent(line, 4)
 	if width >= 4 || i >= len(line) {

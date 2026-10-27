@@ -3,7 +3,7 @@
 package interactive
 
 // PTY harness plus the watchdog self-test. The mutex-deadlock flow
-// tests that used to live here are gone: docs/locks.md records that the stage-4
+// tests that used to live here are gone: ARCHITECTURE.md records that the stage-4
 // refactor retired every UI mutex, so a goroutine parked on a sync.Mutex while
 // the loop waits cannot occur in this architecture, and internal/uiblock proves
 // the weaker property statically in milliseconds rather than driving the real

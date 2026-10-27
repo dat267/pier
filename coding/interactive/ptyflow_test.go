@@ -1,7 +1,7 @@
 package interactive
 
 // Functional replacements for the PTY flow tests removed with the
-// watchdog suite (see ptywatch_test.go's header and docs/locks.md): driving the
+// watchdog suite (see ptywatch_test.go's header and ARCHITECTURE.md): driving the
 // real binary through a pty proved the mutex-deadlock class cannot happen, but
 // the stage-4 refactor retired every UI mutex, so the class is structurally
 // gone and the same flows assert their *functional* behavior here instead, on
@@ -137,7 +137,7 @@ func TestQuitCommandShutsDown(t *testing.T) {
 // TestModelSelectorOpensAndCloses covers the model-selector PTY flow's
 // functional shape: /model replaces the editor with the selector and cancelling
 // restores it. The mutex assertion that flow carried is gone with the locks
-// (docs/locks.md); what remains worth pinning is that the slot round-trips and
+// (ARCHITECTURE.md); what remains worth pinning is that the slot round-trips and
 // the editor comes back.
 func TestModelSelectorOpensAndCloses(t *testing.T) {
 	app, cleanup := newTestApp(t)
@@ -172,7 +172,7 @@ func TestModelSelectorOpensAndCloses(t *testing.T) {
 
 // TestTranscriptScrollsWithoutStalling covers the scroll PTY flow's functional
 // shape: scrolling a filled transcript moves the viewport off the end and back.
-// The old flow's mutex assertion is gone with the locks (docs/locks.md); this
+// The old flow's mutex assertion is gone with the locks (ARCHITECTURE.md); this
 // pins the observable scroll state instead of "nothing panicked".
 func TestTranscriptScrollsWithoutStalling(t *testing.T) {
 	// Fullscreen: the transcript scroll view is laid out by the fullscreen

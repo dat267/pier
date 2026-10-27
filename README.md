@@ -5,8 +5,8 @@ pier is a terminal-based AI coding agent and a from-scratch Go port of
 
 ## Reference and scope
 
-The reference pin is pi v1.4.0 (`4a080252`). See [port status](docs/PORTING.md)
-for coverage and [divergences](docs/DIVERGENCES.md) for deliberate differences.
+The reference pin is pi v1.4.0 (`4a080252`). See [CHANGES.md](CHANGES.md)
+for coverage and [ARCHITECTURE.md](ARCHITECTURE.md) for deliberate differences.
 The extension system is out of scope; `/goal` is built in.
 
 There is no built-in filesystem sandbox. Shell, write, and edit tools run with
@@ -46,13 +46,13 @@ opens the provider authorization page in your browser.
 The built-in `/goal` command tracks multi-round objectives in session history.
 The agent can inspect and update goals with the `get_goal` and `set_goal` tools.
 Stdio RPC (`pier --mode rpc`) and its supported commands are documented in
-[docs/rpc.md](docs/rpc.md).
+[the RPC contract](ARCHITECTURE.md#stdio-rpc).
 
 ## Design and contributor docs
 
 Packages follow pi's layout. The interactive UI has a single owner loop, session
 projections supply model context, and persisted JSON preserves JavaScript key
 ordering. See [architecture and performance](ARCHITECTURE.md),
-[lock ownership](docs/locks.md), and
-[terminal output policy](docs/terminal-output.md). Development guidance is in
+[ARCHITECTURE.md](ARCHITECTURE.md), and
+[ARCHITECTURE.md](ARCHITECTURE.md). Development guidance is in
 [AGENTS.md](AGENTS.md).
