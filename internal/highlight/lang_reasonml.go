@@ -61,24 +61,26 @@ func ReasonML() *Language {
 		},
 	}
 
+	// typingMode is named because the reference pushes the module-access mode
+	// into paramsContents after this literal is built. A JavaScript array is a
+	// reference, so upstream's typing mode receives that entry; a Go slice header
+	// is copied here, so the append below has to be installed explicitly.
+	typingMode := &Mode{
+		ClassName:    "typing",
+		Begin:        `:`,
+		End:          `(,|\n)`,
+		ReturnBegin:  true,
+		HasRelevance: true,
+		Relevance:    0,
+		Contains:     paramsContents,
+	}
 	paramsMode := &Mode{
 		ClassName:    "params",
 		Begin:        reIdent,
 		End:          `(,|\n|\))`,
 		HasRelevance: true,
 		Relevance:    0,
-		Contains: []*Mode{
-			operatorMode,
-			{
-				ClassName:    "typing",
-				Begin:        `:`,
-				End:          `(,|\n)`,
-				ReturnBegin:  true,
-				HasRelevance: true,
-				Relevance:    0,
-				Contains:     paramsContents,
-			},
-		},
+		Contains:     []*Mode{operatorMode, typingMode},
 	}
 
 	functionBlock := &Mode{ClassName: "function", Keywords: keywords, HasRelevance: true, Relevance: 0}
@@ -162,6 +164,7 @@ func ReasonML() *Language {
 	}
 
 	paramsContents = append(paramsContents, moduleAccess)
+	typingMode.Contains = paramsContents
 
 	comment := CommentMode(`/\*`, `\*/`)
 	comment.Illegal = `^(#,\/\/)`
