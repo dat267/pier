@@ -528,6 +528,9 @@ func (b *InMemoryAuthStorageBackend) WithLockAsync(ctx context.Context, fn func(
 		}
 		b.mu.Lock()
 		result, err := fn(b.value)
+		if err == nil {
+			err = ctx.Err()
+		}
 		if err == nil && result.Next != nil {
 			b.value = result.Next
 		}
