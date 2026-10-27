@@ -450,6 +450,7 @@ func ExportFromFile(inputPath string, outputPath string, themeName string) (stri
 
 	html := GenerateSessionHTML(data, themeName)
 
+	outputPath = coding.NormalizePath(outputPath, coding.PathInputOptions{})
 	if outputPath == "" {
 		base := strings.TrimSuffix(filepath.Base(resolvedInput), ".jsonl")
 		outputPath = coding.AppName + "-session-" + base + ".html"
@@ -512,6 +513,7 @@ func ExportSessionToHTML(session *coding.AgentSession, outputPath string, themeN
 
 	html := GenerateSessionHTML(data, themeName)
 
+	outputPath = coding.NormalizePath(outputPath, coding.PathInputOptions{})
 	if outputPath == "" {
 		base := filepath.Base(sessionFile)
 		base = strings.TrimSuffix(base, ".jsonl")

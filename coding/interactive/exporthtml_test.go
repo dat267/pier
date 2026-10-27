@@ -12,6 +12,66 @@ import (
 	"github.com/dat267/pier/coding"
 )
 
+// pi v1.4.0 (4a080252), core/export-html/index.ts exportFromFile applies
+// normalizePath to an explicit outputPath, including home-directory expansion.
+func TestExportFromFileExpandsHomeOutputPath(t *testing.T) {
+	dir, home := t.TempDir(), t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{SessionDir: dir})
+	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hi"}})
+	manager.AppendMessage(&ai.AssistantMessage{
+		Content: ai.ContentList{ai.TextContent{Text: "hello"}}, StopReason: ai.StopStop,
+	})
+
+	got, err := ExportFromFile(manager.GetSessionFile(), "~/export.html", "dark")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join(home, "export.html")
+	if got != want {
+		t.Fatalf("output path = %q, want %q", got, want)
+	}
+	if _, err := os.Stat(want); err != nil {
+		t.Fatalf("expanded export missing: %v", err)
+	}
+}
+
+// pi v1.4.0 (4a080252), core/export-html/index.ts exportSessionToHtml uses
+// the same normalizePath rule for the live /export and RPC export_html paths.
+func TestExportSessionToHTMLExpandsHomeOutputPath(t *testing.T) {
+	dir, home := t.TempDir(), t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	manager := coding.NewSessionManager(dir, &coding.SessionManagerOptions{SessionDir: dir})
+	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hi"}})
+	manager.AppendMessage(&ai.AssistantMessage{
+		Content: ai.ContentList{ai.TextContent{Text: "hello"}}, StopReason: ai.StopStop,
+	})
+	session, err := coding.NewAgentSession(&coding.SessionConfig{
+		Cwd: dir, Model: &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic"},
+		StreamFn: func(*ai.Model, ai.TranscriptContext, *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+			return nil
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Dispose()
+	session.Sessions = manager
+	got, err := ExportSessionToHTML(session, "~/export.html", "dark")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join(home, "export.html")
+	if got != want {
+		t.Fatalf("output path = %q, want %q", got, want)
+	}
+	if _, err := os.Stat(want); err != nil {
+		t.Fatalf("expanded export missing: %v", err)
+	}
+}
+
 // TestAnsiToHTML pins the converter against upstream ansi-to-html.ts
 // semantics: SGR styling spans, 256-color and RGB extensions, resets, and
 // HTML escaping of the payload text.
