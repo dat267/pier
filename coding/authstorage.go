@@ -635,43 +635,50 @@ func newAuthStorageFromBackend(storage AuthStorageBackend, authPath *string) *Au
 // parseAuthStorageData parses auth.json content into credentials plus the
 // top-level key order (upstream preserves insertion order through parse and
 // stringify).
-func parseAuthStorageData(content *string) (authStorageData, []string) {
+func parseAuthStorageData(content *string) (authStorageData, []string, error) {
 	data := authStorageData{}
 	if content == nil || *content == "" {
-		return data, nil
+		return data, nil, nil
 	}
 	raw := []byte(StripBom(*content))
+	// JSON.parse rejects the complete document, including a missing closing
+	// delimiter or trailing garbage. Do not turn corruption into an empty
+	// credential store that a later mutation would overwrite.
+	if !json.Valid(raw) {
+		var value any
+		return nil, nil, json.Unmarshal(raw, &value)
+	}
 	// The key order comes from the raw JSON, because Go maps have none.
 	decoder := json.NewDecoder(strings.NewReader(string(raw)))
 	token, err := decoder.Token()
 	if err != nil || token != json.Delim('{') {
-		return data, nil
+		return data, nil, nil
 	}
 	var order []string
 	for decoder.More() {
 		nameToken, err := decoder.Token()
 		if err != nil {
-			return authStorageData{}, nil
+			return authStorageData{}, nil, nil
 		}
 		name, ok := nameToken.(string)
 		if !ok {
-			return authStorageData{}, nil
+			return authStorageData{}, nil, nil
 		}
 		var credentialRaw json.RawMessage
 		if err := decoder.Decode(&credentialRaw); err != nil {
-			return authStorageData{}, nil
+			return authStorageData{}, nil, nil
 		}
 		var credential ai.Credential
 		if err := json.Unmarshal(credentialRaw, &credential); err != nil {
-			return authStorageData{}, nil
+			return authStorageData{}, nil, nil
 		}
 		if credential.Type == "" {
-			return authStorageData{}, nil
+			return authStorageData{}, nil, nil
 		}
 		data[name] = credential
 		order = append(order, name)
 	}
-	return data, order
+	return data, order, nil
 }
 
 // marshalAuthStorageData renders auth.json like JSON.stringify(data, null, 2):
@@ -766,7 +773,10 @@ func (s *AuthStorage) Reload() {
 			revision = &value
 		}
 	}
-	data, order := parseAuthStorageData(content)
+	data, order, err := parseAuthStorageData(content)
+	if err != nil {
+		return
+	}
 	s.updateReadState(data, order, revision)
 }
 
@@ -820,7 +830,10 @@ func (s *AuthStorage) Modify(providerID string, fn func(*ai.Credential) (*ai.Cre
 	var revision *string
 
 	result, err := s.storage.WithLockAsync(ctx, func(content *string) (LockResult, error) {
-		currentData, currentOrder := parseAuthStorageData(content)
+		currentData, currentOrder, err := parseAuthStorageData(content)
+		if err != nil {
+			return LockResult{}, err
+		}
 		next, err := fn(credentialPointer(currentData[providerID]))
 		if err != nil {
 			return LockResult{}, err
@@ -871,7 +884,10 @@ func (s *AuthStorage) Delete(providerID string, ctx context.Context) error {
 	s.mu.Unlock()
 
 	_, err := s.storage.WithLockAsync(ctx, func(content *string) (LockResult, error) {
-		currentData, currentOrder := parseAuthStorageData(content)
+		currentData, currentOrder, err := parseAuthStorageData(content)
+		if err != nil {
+			return LockResult{}, err
+		}
 		delete(currentData, providerID)
 		latestData = currentData
 		latestOrder = removeProviderOrder(currentOrder, providerID)
@@ -978,7 +994,10 @@ func (s *AuthStorage) snapshot() authStorageData {
 
 func (s *AuthStorage) reloadFromStorageAsync(ctx context.Context) (authStorageData, error) {
 	result, err := s.storage.WithLockAsync(ctx, func(content *string) (LockResult, error) {
-		currentData, currentOrder := parseAuthStorageData(content)
+		currentData, currentOrder, err := parseAuthStorageData(content)
+		if err != nil {
+			return LockResult{}, err
+		}
 		var revision *string
 		if s.authPath != "" {
 			if value, ok := GetFileRevision(s.authPath); ok {
