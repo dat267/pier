@@ -97,4 +97,12 @@ func TestReadPipedStdinTrimsLikeUpstream(t *testing.T) {
 	if got := read(" \n\t\n"); got != "" {
 		t.Fatalf("whitespace-only stdin = %q; want empty", got)
 	}
+	// String.prototype.trim removes U+FEFF but not U+0085 (NEL); Go's
+	// TrimSpace does the reverse.
+	if got := read("\uFEFFpiped\uFEFF"); got != "piped" {
+		t.Fatalf("BOM-padded stdin = %q; want the JS-trimmed text", got)
+	}
+	if got := read("\u0085"); got != "\u0085" {
+		t.Fatalf("NEL-only stdin = %q; want the NEL kept", got)
+	}
 }

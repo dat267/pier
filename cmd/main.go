@@ -644,8 +644,10 @@ func readPipedStdin() (string, bool, error) {
 	}
 	// Upstream trims the piped content and treats whitespace-only input as
 	// absent (readPipedStdin: `data.trim() || undefined`), so a prompt from
-	// `echo ... | pier -p` carries no trailing newline.
-	return strings.TrimSpace(string(data)), true, nil
+	// `echo ... | pier -p` carries no trailing newline. String.prototype.trim is
+	// the ECMAScript whitespace class (it removes U+FEFF and keeps U+0085), not
+	// Go's unicode.IsSpace.
+	return ai.JSTrim(string(data)), true, nil
 }
 
 // applyThemeSources performs the theme boot's source stage (ThemeBoot owns the
