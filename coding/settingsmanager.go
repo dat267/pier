@@ -602,7 +602,7 @@ func (m *SettingsManager) RebindProject(cwd string, trusted bool) {
 	m.projectSettingsLoadError = projectErr
 	m.projectRejected = projectRejected
 	if projectErr != nil {
-		m.recordError(SettingsScopeProject, projectErr)
+		m.recordErrorLocked(SettingsScopeProject, projectErr)
 	}
 	m.settings = mergeSettingsWithRejects(m.globalSettings, m.projectSettings, m.projectRejected)
 }
