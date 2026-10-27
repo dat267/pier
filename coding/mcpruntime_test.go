@@ -735,3 +735,67 @@ func TestMcpConcurrentConnectSurvivesInitiatorCancellation(t *testing.T) {
 		t.Fatalf("state after a concurrent connect = %q, want connected", state)
 	}
 }
+
+// The connection-scoped connect outlives an initiator that already returned on
+// its own context; Close must still abort it and wait for it (CR-097 follow-up).
+func TestMcpConnectionCloseAbortsConnectAfterInitiatorLeft(t *testing.T) {
+	clientTransport, serverTransport := mcp.CreateInMemoryTransportPair()
+	initializeStarted := make(chan struct{})
+	release := make(chan struct{})
+	defer close(release)
+	var startedOnce sync.Once
+	serverTransport.OnMessage(func(message mcp.Message) {
+		request, ok := message.(*protocol.JsonRpcRequest)
+		if ok && request.Method == "initialize" {
+			startedOnce.Do(func() { close(initializeStarted) })
+			<-release
+		}
+	})
+	if err := serverTransport.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	connection := NewMcpServerConnection(McpServerConnectionOptions{
+		Entry: McpServerEntry{Name: "slow", Config: &McpServerConfig{Command: "unused"}},
+		CreateTransport: func(McpServerEntry, string, mcp.AuthProvider) (mcp.Transport, error) {
+			return clientTransport, nil
+		},
+		Credentials: NewMemoryMcpOAuthCredentialStore(),
+	})
+	t.Cleanup(func() { _ = connection.Close(context.Background()) })
+
+	initiatorCtx, cancelInitiator := context.WithCancel(context.Background())
+	initiatorDone := make(chan error, 1)
+	go func() {
+		_, err := connection.GetClient(initiatorCtx)
+		initiatorDone <- err
+	}()
+	select {
+	case <-initializeStarted:
+	case <-time.After(2 * time.Second):
+		t.Fatal("connect never reached initialize")
+	}
+	cancelInitiator()
+	select {
+	case <-initiatorDone:
+	case <-time.After(2 * time.Second):
+		t.Fatal("cancelled initiator did not return")
+	}
+
+	closeDone := make(chan error, 1)
+	go func() { closeDone <- connection.Close(context.Background()) }()
+	select {
+	case err := <-closeDone:
+		if err != nil {
+			t.Fatalf("close: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Close did not abort the abandoned connect")
+	}
+	connection.mu.Lock()
+	state := connection.State
+	opening := connection.opening
+	connection.mu.Unlock()
+	if state != McpServerClosed || opening != nil {
+		t.Fatalf("state=%q opening=%v after Close", state, opening)
+	}
+}
