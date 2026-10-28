@@ -299,18 +299,24 @@ func (w *AuthWiring) ShowLoginAuthTypeSelector(ctx context.Context, providerOpti
 	})
 }
 
+// loginProviderEmptyMessage is the status for an empty login-provider list
+// (upstream showLoginProviderSelector).
+func loginProviderEmptyMessage(authType string) string {
+	switch authType {
+	case "oauth":
+		return "No account providers available."
+	case "api_key":
+		return "No API key providers available."
+	default:
+		return "No login providers available."
+	}
+}
+
 // ShowLoginProviderSelector shows the login provider list.
 func (w *AuthWiring) ShowLoginProviderSelector(ctx context.Context, authType string, initialSearchInput string) {
 	providerOptions := w.GetLoginProviderOptions(authType)
 	if len(providerOptions) == 0 {
-		message := "No login providers available."
-		switch authType {
-		case "oauth":
-			message = "No subscription providers available."
-		case "api_key":
-			message = "No API key providers available."
-		}
-		w.showStatus(message)
+		w.showStatus(loginProviderEmptyMessage(authType))
 		return
 	}
 	w.Slot.Show(func(done func()) CreatedSelector {

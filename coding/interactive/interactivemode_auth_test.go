@@ -312,3 +312,17 @@ func TestAuthCompleteAuthentication(t *testing.T) {
 	}
 	_ = warnings
 }
+
+// pi v1.4.0 interactive-mode.ts showLoginProviderSelector words the empty list
+// per auth type: account providers for OAuth, API key providers otherwise.
+func TestLoginProviderEmptyMessagesMatchUpstream(t *testing.T) {
+	for _, testCase := range []struct{ authType, want string }{
+		{"oauth", "No account providers available."},
+		{"api_key", "No API key providers available."},
+		{"", "No login providers available."},
+	} {
+		if got := loginProviderEmptyMessage(testCase.authType); got != testCase.want {
+			t.Fatalf("loginProviderEmptyMessage(%q) = %q, want %q", testCase.authType, got, testCase.want)
+		}
+	}
+}
