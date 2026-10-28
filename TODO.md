@@ -7,6 +7,7 @@
 ## Medium
 
 - CR-127: Trust-store read/parse/lock errors are swallowed as “no decision”; with `defaultProjectTrust: "always"`, a malformed `trust.json` can turn a stored denial into a trusted project. Upstream errors instead; changing trust-failure handling awaits approval.
+- CR-138: A 71-byte PNG with unallocatable dimensions panics in ProcessImage's decoder instead of returning an image-omission result. Reproduced; repair parked at the audit deadline.
 
 ## Low
 
