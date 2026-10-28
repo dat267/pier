@@ -1,6 +1,7 @@
 package highlight
 
 import (
+	"math"
 	"strings"
 	"unicode/utf8"
 )
@@ -98,7 +99,7 @@ type highlighter struct {
 	top              *modeInstance
 	emitter          *emitter
 	modeBuffer       string
-	relevance        int
+	relevance        float64
 	index            int
 	iterations       int
 	resumeScanAtSame bool
@@ -175,7 +176,7 @@ func highlightWithContinuation(lang *compiledLanguage, code string, ignoreIllega
 
 	return &Result{
 		Language:  lang.name,
-		Relevance: h.relevance,
+		Relevance: floorRelevance(h.relevance),
 		Nodes:     h.emitter.root.Children,
 		top:       h.top,
 	}
@@ -300,7 +301,7 @@ func (h *highlighter) processSubLanguage() {
 		}
 	}
 	if h.top.mode.relevance > 0 {
-		h.relevance += result.Relevance
+		h.relevance += float64(result.Relevance)
 	}
 	h.emitter.addSublanguage(nodesEmitter(result.Nodes), name)
 }
@@ -439,7 +440,7 @@ func (h *highlighter) doEndMatch(m *match) int {
 			h.emitter.closeNode()
 		}
 		if !h.top.mode.skip && len(h.top.mode.subLanguage) == 0 {
-			h.relevance += h.top.mode.relevance
+			h.relevance += float64(h.top.mode.relevance)
 		}
 		h.top = h.top.parent
 		if h.top == endMode.parent {
@@ -519,6 +520,16 @@ func (h *highlighter) processLexeme(textBefore string, m *match) int {
 	}
 	h.modeBuffer += lexeme
 	return len(lexeme)
+}
+
+// floorRelevance ports the reference's Math.floor(relevance). A NaN score (a
+// malformed keyword table yielding Number("abc")) becomes 0: JSON.stringify(NaN)
+// is null upstream, and no in-tree language produces one.
+func floorRelevance(value float64) int {
+	if math.IsNaN(value) {
+		return 0
+	}
+	return int(math.Floor(value))
 }
 
 // highlightAuto picks the registered language in subset with the highest

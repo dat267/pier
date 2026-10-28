@@ -69,11 +69,22 @@ add('crystal', 'require "json"');
 add('crystal', 'x = %r(a)');
 add('crystal', "x = 'a'");
 // Whole-fixture controls so the corpus also covers ordinary code.
-// javascript and perl whole-fixture controls are excluded while CR-168 tracks the
-// remaining per-occurrence deltas inside strings; every minimal case above is covered.
-for (const language of ['hsp', 'nsis', 'tcl', 'fortran', 'lsl', 'ruby', 'csharp', 'kotlin', 'java', 'xml', 'markdown', 'less', 'typescript', 'crystal']) {
+// Whole-fixture controls: every language whose relevance this corpus pins.
+for (const language of ['hsp', 'nsis', 'tcl', 'fortran', 'lsl', 'ruby', 'csharp', 'kotlin', 'java', 'xml', 'markdown', 'less', 'javascript', 'typescript', 'perl', 'erlang', 'crystal']) {
   const file = fileFor(language);
   if (!file) continue;
   add(language, fs.readFileSync(path.join(root, 'internal/highlight/testdata', file), 'utf8'));
 }
+// Variant expansion inherits the wrapper's contains, class, keywords and
+// sub-language (core.js inherit); nested emphasis, perl interpolation and the
+// JSDoc space eater are the cases that needed it.
+add('markdown', 'd** and *italic*');
+add('markdown', 'Some **bold** and *italic* and `code`.');
+add('perl', 'my $interp = "name=$name count=$count";');
+add('perl', 'my $qq = qq{interpolated $name};');
+add('ruby', "        heredoc #{@value} text");
+add('javascript', '/**\n * @param {string} name the name\n * @returns {Demo}\n */');
+add('javascript', '/**\n * @retur\u2028ns {Demo}\n */');
+add('erlang', '-module(main).\n-export([main/0, add/2]).');
+add('dart', '/// See [the docs](https://dart.dev).');
 process.stdout.write(JSON.stringify(cases, null, 1) + '\n');

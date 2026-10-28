@@ -400,7 +400,15 @@
   "relevance": 82
  },
  {
-  "name": "typescript-50",
+  "name": "javascript-50",
+  "language": "javascript",
+  "code": "#!/usr/bin/env node\n'use strict';\n\n/**\n * A demo class.\n * @param {string} name the name\n * @returns {Demo}\n */\nclass Demo extends Base {\n  #count = 42;\n  constructor(name) {\n    super();\n    this.name = name;\n  }\n\n  get label() { return `demo ${this.name}`; }\n  set label(value) { this.name = value; }\n\n  async run(items) {\n    // a line comment\n    /* a block comment */\n    const ratio = 1.5e-3;\n    const hex = 0x1f, bin = 0b1010, big = 123n;\n    const re = /[a-z]+\\/[0-9]{2}/gi;\n    const arrow = (a, b) => a + b;\n    const obj = { name: 'pier', count: hex, nested: { ok: true } };\n    const [first, ...rest] = items;\n    const html = html`<div class=\"box\">${this.name}</div>`;\n    const css = css`.box { color: #fff; }`;\n    if (this.#count > 0 && rest.length) {\n      console.log(html, css, ratio, bin, big, re, arrow(1, 2), obj, first);\n    }\n    return <Box name={this.name} count={this.#count} />;\n  }\n}\n\nfunction helper(a, b) {\n  return a * b;\n}\n\nconst fn = function named(x) { return x; };\nexport default Demo;\n",
+  "html": "<span class=\"hljs-meta\">#!/usr/bin/env node</span>\n<span class=\"hljs-meta\">&#x27;use strict&#x27;</span>;\n\n<span class=\"hljs-comment\">/**\n * A demo class.\n * <span class=\"hljs-doctag\">@param <span class=\"hljs-type\">{string}</span> </span>name the name\n * <span class=\"hljs-doctag\">@returns <span class=\"hljs-type\">{Demo}</span></span>\n */</span>\n<span class=\"hljs-class\"><span class=\"hljs-keyword\">class</span> <span class=\"hljs-title\">Demo</span> <span class=\"hljs-keyword\">extends</span> <span class=\"hljs-title\">Base</span> </span>{\n  #count = <span class=\"hljs-number\">42</span>;\n  <span class=\"hljs-function\"><span class=\"hljs-title\">constructor</span>(<span class=\"hljs-params\">name</span>)</span> {\n    <span class=\"hljs-built_in\">super</span>();\n    <span class=\"hljs-built_in\">this</span>.name = name;\n  }\n\n  <span class=\"hljs-keyword\">get</span> <span class=\"hljs-title\">label</span>() { <span class=\"hljs-keyword\">return</span> <span class=\"hljs-string\">`demo <span class=\"hljs-subst\">${<span class=\"hljs-built_in\">this</span>.name}</span>`</span>; }\n  <span class=\"hljs-keyword\">set</span> <span class=\"hljs-title\">label</span>(<span class=\"hljs-params\">value</span>) { <span class=\"hljs-built_in\">this</span>.name = value; }\n\n  <span class=\"hljs-keyword\">async</span> <span class=\"hljs-function\"><span class=\"hljs-title\">run</span>(<span class=\"hljs-params\">items</span>)</span> {\n    <span class=\"hljs-comment\">// a line comment</span>\n    <span class=\"hljs-comment\">/* a block comment */</span>\n    <span class=\"hljs-keyword\">const</span> ratio = <span class=\"hljs-number\">1.5e-3</span>;\n    <span class=\"hljs-keyword\">const</span> hex = <span class=\"hljs-number\">0x1f</span>, bin = <span class=\"hljs-number\">0b1010</span>, big = <span class=\"hljs-number\">123n</span>;\n    <span class=\"hljs-keyword\">const</span> re = <span class=\"hljs-regexp\">/[a-z]+\\/[0-9]{2}/gi</span>;\n    <span class=\"hljs-keyword\">const</span> arrow = <span class=\"hljs-function\">(<span class=\"hljs-params\">a, b</span>) =&gt;</span> a + b;\n    <span class=\"hljs-keyword\">const</span> obj = { <span class=\"hljs-attr\">name</span>: <span class=\"hljs-string\">&#x27;pier&#x27;</span>, <span class=\"hljs-attr\">count</span>: hex, <span class=\"hljs-attr\">nested</span>: { <span class=\"hljs-attr\">ok</span>: <span class=\"hljs-literal\">true</span> } };\n    <span class=\"hljs-keyword\">const</span> [first, ...rest] = items;\n    <span class=\"hljs-keyword\">const</span> html = html`<span class=\"xml\"><span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">div</span> <span class=\"hljs-attr\">class</span>=<span class=\"hljs-string\">&quot;box&quot;</span>&gt;</span></span><span class=\"hljs-subst\">${<span class=\"hljs-built_in\">this</span>.name}</span><span class=\"xml\"><span class=\"hljs-tag\">&lt;/<span class=\"hljs-name\">div</span>&gt;</span>`</span>;\n    <span class=\"hljs-keyword\">const</span> css = css`<span class=\"css\"><span class=\"hljs-selector-class\">.box</span> { <span class=\"hljs-attribute\">color</span>: <span class=\"hljs-number\">#fff</span>; }`</span>;\n    <span class=\"hljs-keyword\">if</span> (<span class=\"hljs-built_in\">this</span>.#count &gt; <span class=\"hljs-number\">0</span> &amp;&amp; rest.length) {\n      <span class=\"hljs-built_in\">console</span>.log(html, css, ratio, bin, big, re, arrow(<span class=\"hljs-number\">1</span>, <span class=\"hljs-number\">2</span>), obj, first);\n    }\n    <span class=\"hljs-keyword\">return</span> <span class=\"xml\"><span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">Box</span> <span class=\"hljs-attr\">name</span>=<span class=\"hljs-string\">{this.name}</span> <span class=\"hljs-attr\">count</span>=<span class=\"hljs-string\">{this.#count}</span> /&gt;</span></span>;\n  }\n}\n\n<span class=\"hljs-function\"><span class=\"hljs-keyword\">function</span> <span class=\"hljs-title\">helper</span>(<span class=\"hljs-params\">a, b</span>) </span>{\n  <span class=\"hljs-keyword\">return</span> a * b;\n}\n\n<span class=\"hljs-keyword\">const</span> fn = <span class=\"hljs-function\"><span class=\"hljs-keyword\">function</span> <span class=\"hljs-title\">named</span>(<span class=\"hljs-params\">x</span>) </span>{ <span class=\"hljs-keyword\">return</span> x; };\n<span class=\"hljs-keyword\">export</span> <span class=\"hljs-keyword\">default</span> Demo;\n",
+  "illegal": false,
+  "relevance": 81
+ },
+ {
+  "name": "typescript-51",
   "language": "typescript",
   "code": "'use strict';\n\n/** A demo class. */\n@sealed\nexport default class Demo<T extends object> implements Runnable {\n  private readonly count: number = 42;\n  protected items: string[] = [];\n\n  constructor(public name: string, private config: Config = {}) {\n    super();\n  }\n\n  async run(items?: T[]): Promise<void> {\n    const ratio: number = 1.5e-3;\n    const re: RegExp = /[a-z]+/gi;\n    const label: string = `demo ${this.name}`;\n    const obj: Config = { name: 'pier', count: this.count };\n    if (this.count > 0 && items?.length) {\n      console.log(label, obj, ratio, re);\n    }\n    return <div className=\"box\">{this.name}</div>;\n  }\n}\n\nnamespace Demo.Utils {\n  export function helper(a: number, b: number): number {\n    return a * b;\n  }\n}\n\ninterface Config {\n  name?: string;\n  count?: number;\n}\n\ntype Alias = Config | null;\n\nenum Color { Red, Green, Blue }\n\nconst fn: (x: number) => number = (x) => x;\n",
   "html": "<span class=\"hljs-meta\">&#x27;use strict&#x27;</span>;\n\n<span class=\"hljs-comment\">/** A demo class. */</span>\n<span class=\"hljs-meta\">@sealed</span>\n<span class=\"hljs-keyword\">export</span> <span class=\"hljs-keyword\">default</span> <span class=\"hljs-class\"><span class=\"hljs-keyword\">class</span> <span class=\"hljs-title\">Demo</span>&lt;<span class=\"hljs-title\">T</span> <span class=\"hljs-keyword\">extends</span> <span class=\"hljs-title\">object</span>&gt; <span class=\"hljs-title\">implements</span> <span class=\"hljs-title\">Runnable</span> </span>{\n  <span class=\"hljs-keyword\">private</span> <span class=\"hljs-keyword\">readonly</span> count: <span class=\"hljs-built_in\">number</span> = <span class=\"hljs-number\">42</span>;\n  <span class=\"hljs-keyword\">protected</span> items: <span class=\"hljs-built_in\">string</span>[] = [];\n\n  <span class=\"hljs-function\"><span class=\"hljs-title\">constructor</span>(<span class=\"hljs-params\"><span class=\"hljs-keyword\">public</span> name: <span class=\"hljs-built_in\">string</span>, <span class=\"hljs-keyword\">private</span> config: Config = {}</span>)</span> {\n    <span class=\"hljs-built_in\">super</span>();\n  }\n\n  <span class=\"hljs-keyword\">async</span> run(items?: T[]): <span class=\"hljs-built_in\">Promise</span>&lt;<span class=\"hljs-built_in\">void</span>&gt; {\n    <span class=\"hljs-keyword\">const</span> ratio: <span class=\"hljs-built_in\">number</span> = <span class=\"hljs-number\">1.5e-3</span>;\n    <span class=\"hljs-keyword\">const</span> re: <span class=\"hljs-built_in\">RegExp</span> = <span class=\"hljs-regexp\">/[a-z]+/gi</span>;\n    <span class=\"hljs-keyword\">const</span> label: <span class=\"hljs-built_in\">string</span> = <span class=\"hljs-string\">`demo <span class=\"hljs-subst\">${<span class=\"hljs-built_in\">this</span>.name}</span>`</span>;\n    <span class=\"hljs-keyword\">const</span> obj: Config = { <span class=\"hljs-attr\">name</span>: <span class=\"hljs-string\">&#x27;pier&#x27;</span>, <span class=\"hljs-attr\">count</span>: <span class=\"hljs-built_in\">this</span>.count };\n    <span class=\"hljs-keyword\">if</span> (<span class=\"hljs-built_in\">this</span>.count &gt; <span class=\"hljs-number\">0</span> &amp;&amp; items?.length) {\n      <span class=\"hljs-built_in\">console</span>.log(label, obj, ratio, re);\n    }\n    <span class=\"hljs-keyword\">return</span> <span class=\"xml\"><span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">div</span> <span class=\"hljs-attr\">className</span>=<span class=\"hljs-string\">&quot;box&quot;</span>&gt;</span>{this.name}<span class=\"hljs-tag\">&lt;/<span class=\"hljs-name\">div</span>&gt;</span></span>;\n  }\n}\n\n<span class=\"hljs-keyword\">namespace</span> Demo.Utils {\n  <span class=\"hljs-keyword\">export</span> <span class=\"hljs-function\"><span class=\"hljs-keyword\">function</span> <span class=\"hljs-title\">helper</span>(<span class=\"hljs-params\">a: <span class=\"hljs-built_in\">number</span>, b: <span class=\"hljs-built_in\">number</span></span>): <span class=\"hljs-title\">number</span> </span>{\n    <span class=\"hljs-keyword\">return</span> a * b;\n  }\n}\n\n<span class=\"hljs-keyword\">interface</span> Config {\n  name?: <span class=\"hljs-built_in\">string</span>;\n  count?: <span class=\"hljs-built_in\">number</span>;\n}\n\n<span class=\"hljs-keyword\">type</span> Alias = Config | <span class=\"hljs-literal\">null</span>;\n\n<span class=\"hljs-built_in\">enum</span> Color { Red, Green, Blue }\n\n<span class=\"hljs-keyword\">const</span> fn: <span class=\"hljs-function\">(<span class=\"hljs-params\">x: <span class=\"hljs-built_in\">number</span></span>) =&gt;</span> <span class=\"hljs-built_in\">number</span> = <span class=\"hljs-function\">(<span class=\"hljs-params\">x</span>) =&gt;</span> x;\n",
@@ -408,11 +416,99 @@
   "relevance": 70
  },
  {
-  "name": "crystal-51",
+  "name": "perl-52",
+  "language": "perl",
+  "code": "#!/usr/bin/env perl\nuse strict;\nuse warnings;\nuse feature 'say';\n\n# a comment\nmy $name = \"pier\";\nmy @items = (1, 2, 3);\nmy %map = (name => 'pier', count => 42);\nmy $ref = { key => 'value' };\n\n=pod\nA block comment.\n=cut\n\nsub describe {\n    my ($label, $count) = @_;\n    my $interp = \"name=$name count=$count\";\n    my $raw = 'single quoted';\n    my $qq = qq{interpolated $name};\n    my $re = qr/[a-z]+\\/[0-9]{2}/i;\n    my $match = $label =~ m/(\\w+)/;\n    (my $sub = $label) =~ s/\\s+/_/g;\n    (my $tr = $label) =~ tr/a-z/A-Z/;\n    my $num = 0x1f + 0b1010 + 1.5e-3;\n    say $interp, $raw, $qq, $re, $match, $sub, $tr, $num;\n    return $label;\n}\n\ndescribe($name, 42);\n",
+  "html": "<span class=\"hljs-comment\">#!/usr/bin/env perl</span>\n<span class=\"hljs-keyword\">use</span> strict;\n<span class=\"hljs-keyword\">use</span> warnings;\n<span class=\"hljs-keyword\">use</span> feature <span class=\"hljs-string\">&#x27;say&#x27;</span>;\n\n<span class=\"hljs-comment\"># a comment</span>\n<span class=\"hljs-keyword\">my</span> $name = <span class=\"hljs-string\">&quot;pier&quot;</span>;\n<span class=\"hljs-keyword\">my</span> @items = (<span class=\"hljs-number\">1</span>, <span class=\"hljs-number\">2</span>, <span class=\"hljs-number\">3</span>);\n<span class=\"hljs-keyword\">my</span> %map = (<span class=\"hljs-string\">name =&gt;</span> <span class=\"hljs-string\">&#x27;pier&#x27;</span>, <span class=\"hljs-string\">count =&gt;</span> <span class=\"hljs-number\">42</span>);\n<span class=\"hljs-keyword\">my</span> $ref = { <span class=\"hljs-string\">key =&gt;</span> <span class=\"hljs-string\">&#x27;value&#x27;</span> };\n\n<span class=\"hljs-comment\">=pod\nA block comment.\n=cut</span>\n\n<span class=\"hljs-function\"><span class=\"hljs-keyword\">sub</span> <span class=\"hljs-title\">describe</span> </span>{\n    <span class=\"hljs-keyword\">my</span> ($label, $count) = @_;\n    <span class=\"hljs-keyword\">my</span> $interp = <span class=\"hljs-string\">&quot;name=$name count=$count&quot;</span>;\n    <span class=\"hljs-keyword\">my</span> $raw = <span class=\"hljs-string\">&#x27;single quoted&#x27;</span>;\n    <span class=\"hljs-keyword\">my</span> $qq = <span class=\"hljs-string\">qq{interpolated $name}</span>;\n    <span class=\"hljs-keyword\">my</span> $re = <span class=\"hljs-regexp\">qr/[a-z]+\\/[0-9]{2}/i</span>;\n    <span class=\"hljs-keyword\">my</span> $match = $label =~ <span class=\"hljs-regexp\">m/(\\w+)/</span>;\n    (<span class=\"hljs-keyword\">my</span> $sub = $label) =~ <span class=\"hljs-regexp\">s/\\s+/_/g</span>;\n    (<span class=\"hljs-keyword\">my</span> $tr = $label) =~ <span class=\"hljs-regexp\">tr/a-z/A-Z/</span>;\n    <span class=\"hljs-keyword\">my</span> $num = <span class=\"hljs-number\">0x1f</span> + 0b101<span class=\"hljs-number\">0</span> + <span class=\"hljs-number\">1.5</span>e-<span class=\"hljs-number\">3</span>;\n    <span class=\"hljs-keyword\">say</span> $interp, $raw, $qq, $re, $match, $sub, $tr, $num;\n    <span class=\"hljs-keyword\">return</span> $label;\n}\n\ndescribe($name, <span class=\"hljs-number\">42</span>);\n",
+  "illegal": false,
+  "relevance": 76
+ },
+ {
+  "name": "erlang-53",
+  "language": "erlang",
+  "code": "-module(main).\n-export([main/0, add/2]).\n\nmain() ->\n    io:format(\"Hello, ~s~n\", [\"world\"]),\n    add(1, 2).\n\nadd(A, B) ->\n    A + B.\n\n-record(person, {name, age}).\n",
+  "html": "<span class=\"hljs-keyword\">-module</span><span class=\"hljs-params\">(main)</span>.\n<span class=\"hljs-keyword\">-export</span><span class=\"hljs-params\">([main/<span class=\"hljs-number\">0</span>, add/<span class=\"hljs-number\">2</span>])</span>.\n\n<span class=\"hljs-function\"><span class=\"hljs-title\">main</span><span class=\"hljs-params\">()</span> -&gt;</span>\n    io:format(<span class=\"hljs-string\">&quot;Hello, ~s~n&quot;</span>, [<span class=\"hljs-string\">&quot;world&quot;</span>]),\n    add(<span class=\"hljs-number\">1</span>, <span class=\"hljs-number\">2</span>).\n\n<span class=\"hljs-function\"><span class=\"hljs-title\">add</span><span class=\"hljs-params\">(A, B)</span> -&gt;</span>\n    A + B.\n\n<span class=\"hljs-keyword\">-record</span><span class=\"hljs-params\">(person, {name, age})</span>.\n",
+  "illegal": false,
+  "relevance": 15
+ },
+ {
+  "name": "crystal-54",
   "language": "crystal",
   "code": "require \"json\"\n\nmodule Greeter\n  class Person\n    getter name : String\n\n    def initialize(@name : String)\n    end\n\n    def greet\n      puts \"Hello, #{@name}!\"\n    end\n  end\nend\n\nperson = Greeter::Person.new(\"world\")\nperson.greet\n\nx = 0xFF_u8\ny = 3.14_f64\nregex = /abc/i\nstr = %q(hello)\nsym = :ok\n",
   "html": "<span class=\"hljs-keyword\">require</span> <span class=\"hljs-string\">&quot;json&quot;</span>\n\n<span class=\"hljs-class\"><span class=\"hljs-keyword\">module</span> <span class=\"hljs-title\">Greeter</span></span>\n  <span class=\"hljs-class\"><span class=\"hljs-keyword\">class</span> <span class=\"hljs-title\">Person</span></span>\n    getter name : String\n\n    <span class=\"hljs-function\"><span class=\"hljs-keyword\">def</span> <span class=\"hljs-title\">initialize</span></span>(@name : String)\n    <span class=\"hljs-keyword\">end</span>\n\n    <span class=\"hljs-function\"><span class=\"hljs-keyword\">def</span> <span class=\"hljs-title\">greet</span></span>\n      puts <span class=\"hljs-string\">&quot;Hello, <span class=\"hljs-subst\">#{@name}</span>!&quot;</span>\n    <span class=\"hljs-keyword\">end</span>\n  <span class=\"hljs-keyword\">end</span>\n<span class=\"hljs-keyword\">end</span>\n\nperson = <span class=\"hljs-symbol\">Greeter:</span>:Person.new(<span class=\"hljs-string\">&quot;world&quot;</span>)\nperson.greet\n\nx = <span class=\"hljs-number\">0xFF_u8</span>\ny = <span class=\"hljs-number\">3.14_f64</span>\nregex = <span class=\"hljs-regexp\">/abc/i</span>\nstr = <span class=\"hljs-string\">%q(hello)</span>\nsym = :ok\n",
   "illegal": false,
   "relevance": 11
+ },
+ {
+  "name": "markdown-55",
+  "language": "markdown",
+  "code": "d** and *italic*",
+  "html": "d<span class=\"hljs-strong\">** and <span class=\"hljs-emphasis\">*italic*</span></span>",
+  "illegal": false,
+  "relevance": 1
+ },
+ {
+  "name": "markdown-56",
+  "language": "markdown",
+  "code": "Some **bold** and *italic* and `code`.",
+  "html": "Some <span class=\"hljs-strong\">**bold**</span> and <span class=\"hljs-emphasis\">*italic*</span> and <span class=\"hljs-code\">`code`</span>.",
+  "illegal": false,
+  "relevance": 3
+ },
+ {
+  "name": "perl-57",
+  "language": "perl",
+  "code": "my $interp = \"name=$name count=$count\";",
+  "html": "<span class=\"hljs-keyword\">my</span> $interp = <span class=\"hljs-string\">&quot;name=$name count=$count&quot;</span>;",
+  "illegal": false,
+  "relevance": 5
+ },
+ {
+  "name": "perl-58",
+  "language": "perl",
+  "code": "my $qq = qq{interpolated $name};",
+  "html": "<span class=\"hljs-keyword\">my</span> $qq = <span class=\"hljs-string\">qq{interpolated $name}</span>;",
+  "illegal": false,
+  "relevance": 8
+ },
+ {
+  "name": "ruby-59",
+  "language": "ruby",
+  "code": "        heredoc #{@value} text",
+  "html": "        heredoc <span class=\"hljs-comment\">#{<span class=\"hljs-doctag\">@value</span>} text</span>",
+  "illegal": false,
+  "relevance": 2
+ },
+ {
+  "name": "javascript-60",
+  "language": "javascript",
+  "code": "/**\n * @param {string} name the name\n * @returns {Demo}\n */",
+  "html": "<span class=\"hljs-comment\">/**\n * <span class=\"hljs-doctag\">@param <span class=\"hljs-type\">{string}</span> </span>name the name\n * <span class=\"hljs-doctag\">@returns <span class=\"hljs-type\">{Demo}</span></span>\n */</span>",
+  "illegal": false,
+  "relevance": 3
+ },
+ {
+  "name": "javascript-61",
+  "language": "javascript",
+  "code": "/**\n * @retur ns {Demo}\n */",
+  "html": "<span class=\"hljs-comment\">/**\n * <span class=\"hljs-doctag\">@retur </span>ns {Demo}\n */</span>",
+  "illegal": false,
+  "relevance": 1
+ },
+ {
+  "name": "erlang-62",
+  "language": "erlang",
+  "code": "-module(main).\n-export([main/0, add/2]).",
+  "html": "<span class=\"hljs-keyword\">-module</span><span class=\"hljs-params\">(main)</span>.\n<span class=\"hljs-keyword\">-export</span><span class=\"hljs-params\">([main/<span class=\"hljs-number\">0</span>, add/<span class=\"hljs-number\">2</span>])</span>.",
+  "illegal": false,
+  "relevance": 5
+ },
+ {
+  "name": "dart-63",
+  "language": "dart",
+  "code": "/// See [the docs](https://dart.dev).",
+  "html": "<span class=\"hljs-comment\">/// <span class=\"markdown\">See [<span class=\"hljs-string\">the docs</span>](<span class=\"hljs-link\">https://dart.dev</span>).</span></span>",
+  "illegal": false,
+  "relevance": 1
  }
 ]

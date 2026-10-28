@@ -7,7 +7,8 @@ import (
 
 func init() { RegisterLanguage("ruby", Ruby()) }
 
-func rubyDoctag() *Mode { return Zero(Mode{ClassName: "doctag", Begin: `@[A-Za-z]+`}) }
+// rubyDoctag is a plain doctag: the reference declares no relevance for it.
+func rubyDoctag() *Mode { return &Mode{ClassName: "doctag", Begin: `@[A-Za-z]+`} }
 
 // rubyHeredocBegin implements the reference's `<<[-~]?'?(\w+)\n(?:[^\n]*\n)*?\s*\1\b`
 // backreference rule: the closing name must equal the opening name.

@@ -2,6 +2,7 @@ package highlight
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -100,7 +101,7 @@ func Zero(m Mode) *Mode {
 
 type keywordData struct {
 	className string
-	relevance int
+	relevance float64
 }
 
 type compiledMode struct {
@@ -442,13 +443,15 @@ func orderedKeywordClasses(raw Keywords) []string {
 	return append(out, rest...)
 }
 
-func scoreForKeyword(parts ...string) int {
+func scoreForKeyword(parts ...string) float64 {
 	keyword := parts[0]
 	if len(parts) > 1 && parts[1] != "" {
-		n, err := strconv.Atoi(parts[1])
-		if err == nil {
+		// The reference numbers the suffix with Number(), so a fractional score
+		// (erlang's `|1.5`) survives to the final Math.floor.
+		if n, err := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64); err == nil {
 			return n
 		}
+		return math.NaN()
 	}
 	if commonKeyword(keyword) {
 		return 0
@@ -473,18 +476,41 @@ func dependencyOnParent(mode *Mode) bool {
 func expandOrCloneMode(mode *Mode) []*Mode {
 	if len(mode.Variants) > 0 {
 		if mode.cachedVariants == nil {
-			// highlight.js expands raw variants through inherit(mode, variant), so
-			// a variant keeps the wrapper's relevance unless it sets its own.
+			// highlight.js expands raw variants through inherit(mode, variant), so a
+			// variant keeps the wrapper's relevance and, when it declares none, its
+			// class, contains, keywords and sub-language. Port entries use nil for
+			// "not declared" (an explicit empty slice stays empty), which is what
+			// makes the merge safe without tracking declarations.
 			variants := make([]*Mode, len(mode.Variants))
 			for i, variant := range mode.Variants {
+				inherited := cloneMode(variant)
+				changed := false
 				if mode.HasRelevance && !variant.HasRelevance {
-					inherited := cloneMode(variant)
 					inherited.HasRelevance = true
 					inherited.Relevance = mode.Relevance
-					variants[i] = inherited
+					changed = true
+				}
+				if inherited.ClassName == "" && mode.ClassName != "" {
+					inherited.ClassName = mode.ClassName
+					changed = true
+				}
+				if inherited.Contains == nil && mode.Contains != nil {
+					inherited.Contains = mode.Contains
+					changed = true
+				}
+				if inherited.Keywords == nil && mode.Keywords != nil {
+					inherited.Keywords = mode.Keywords
+					changed = true
+				}
+				if inherited.SubLanguage == nil && mode.SubLanguage != nil {
+					inherited.SubLanguage = mode.SubLanguage
+					changed = true
+				}
+				if !changed {
+					variants[i] = variant
 					continue
 				}
-				variants[i] = variant
+				variants[i] = inherited
 			}
 			mode.cachedVariants = variants
 		}

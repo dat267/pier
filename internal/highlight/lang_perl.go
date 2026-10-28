@@ -131,18 +131,22 @@ func Perl() *Language {
 	perlComment := commentMode(`^=\w`, `=cut`)
 	perlComment.EndsWithParent = true
 
+	// Every variant here declares no contains, so inflection (SUBST/VAR) comes from
+	// the wrapper through variant expansion.
 	stringMode := &Mode{
 		ClassName: "string",
 		Contains:  stringContains,
 		Variants: []*Mode{
-			{ClassName: "string", Begin: `q[qwxr]?\s*\(`, End: `\)`, HasRelevance: true, Relevance: 5},
-			{ClassName: "string", Begin: `q[qwxr]?\s*\[`, End: `\]`, HasRelevance: true, Relevance: 5},
-			{ClassName: "string", Begin: `q[qwxr]?\s*\{`, End: `\}`, HasRelevance: true, Relevance: 5},
-			{ClassName: "string", Begin: `q[qwxr]?\s*\|`, End: `\|`, HasRelevance: true, Relevance: 5},
-			{ClassName: "string", Begin: `q[qwxr]?\s*<`, End: `>`, HasRelevance: true, Relevance: 5},
-			{ClassName: "string", Begin: `qw\s+q`, End: `q`, HasRelevance: true, Relevance: 5},
+			{ClassName: "string", Begin: `q[qwxr]?\s*\(`, End: `\)`, HasRelevance: true, Relevance: 5, Contains: stringContains},
+			{ClassName: "string", Begin: `q[qwxr]?\s*\[`, End: `\]`, HasRelevance: true, Relevance: 5, Contains: stringContains},
+			{ClassName: "string", Begin: `q[qwxr]?\s*\{`, End: `\}`, HasRelevance: true, Relevance: 5, Contains: stringContains},
+			{ClassName: "string", Begin: `q[qwxr]?\s*\|`, End: `\|`, HasRelevance: true, Relevance: 5, Contains: stringContains},
+			{ClassName: "string", Begin: `q[qwxr]?\s*<`, End: `>`, HasRelevance: true, Relevance: 5, Contains: stringContains},
+			{ClassName: "string", Begin: `qw\s+q`, End: `q`, HasRelevance: true, Relevance: 5, Contains: stringContains},
 			{ClassName: "string", Begin: `'`, End: `'`, Contains: []*Mode{BackslashEscape}},
-			{ClassName: "string", Begin: `"`, End: `"`},
+			// The reference gives this variant no `contains`, so it inherits the
+			// wrapper's STRING_CONTAINS (interpolation) from variant expansion.
+			{ClassName: "string", Begin: `"`, End: `"`, Contains: stringContains},
 			{ClassName: "string", Begin: "`", End: "`", Contains: []*Mode{BackslashEscape}},
 			Zero(Mode{ClassName: "string", Begin: `\{\w+\}`}),
 			Zero(Mode{ClassName: "string", Begin: `-?\w+\s*=>`}),

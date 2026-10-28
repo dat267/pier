@@ -57,10 +57,14 @@ func jsJSDoc() *Mode {
 		Contains: []*Mode{
 			Zero(Mode{ClassName: "type", Begin: `\{`, End: `\}`}),
 			variable,
-			Zero(Mode{Begin: `[ \t\r\f\v]`}),
+			// The space eater is `(?=[^\n])\s` in the reference, i.e. one
+			// ECMAScript whitespace character that is not a newline (U+2028 included).
+			Zero(Mode{Begin: "[\t\v\f \r\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]"}),
 		},
 	}
-	mode.Contains = []*Mode{doctag}
+	// core.js COMMENT always appends the phrasal-words and TODO doctag contains
+	// after the caller's own, so the JSDoc rule carries them too.
+	mode.Contains = []*Mode{doctag, PhrasalWordsMode, Zero(Mode{ClassName: "doctag", Begin: `(?:TODO|FIXME|NOTE|BUG|OPTIMIZE|HACK|XXX):`})}
 	return mode
 }
 
