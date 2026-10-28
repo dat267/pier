@@ -173,6 +173,27 @@ type OpenAIResponsesTool struct {
 	DeferLoading *bool                `json:"defer_loading,omitempty"`
 }
 
+// MarshalJSON keeps the existing Go format descriptor while emitting the flat
+// Responses grammar shape. Chat Completions uses the nested descriptor instead.
+func (tool OpenAIResponsesTool) MarshalJSON() ([]byte, error) {
+	var format any
+	if tool.Format != nil {
+		format = struct {
+			Type string `json:"type"`
+			OpenAIGrammarDef
+		}{tool.Format.Type, tool.Format.Grammar}
+	}
+	return MarshalJSON(struct {
+		Type         string          `json:"type"`
+		Name         string          `json:"name"`
+		Description  string          `json:"description"`
+		Parameters   json.RawMessage `json:"parameters,omitempty"`
+		Strict       *bool           `json:"strict,omitempty"`
+		Format       any             `json:"format,omitempty"`
+		DeferLoading *bool           `json:"defer_loading,omitempty"`
+	}{tool.Type, tool.Name, tool.Description, tool.Parameters, tool.Strict, format, tool.DeferLoading})
+}
+
 // ConvertResponsesToolsOptions tune tool conversion.
 type ConvertResponsesToolsOptions struct {
 	Strict                     *bool

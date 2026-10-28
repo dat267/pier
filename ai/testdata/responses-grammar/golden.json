@@ -1,0 +1,159 @@
+[
+  {
+    "name": "regex",
+    "tools": [
+      {
+        "name": "expression",
+        "description": "An expression",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "payload": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "payload"
+          ]
+        },
+        "constrainedSampling": {
+          "type": "grammar",
+          "variants": {
+            "openai_regex": "[0-9]+"
+          }
+        }
+      }
+    ],
+    "options": {
+      "supportsStrictMode": false,
+      "supportsOpenAIGrammarTools": true
+    },
+    "expected": "[{\"type\":\"custom\",\"name\":\"expression\",\"description\":\"An expression\",\"format\":{\"type\":\"grammar\",\"syntax\":\"regex\",\"definition\":\"[0-9]+\"}}]"
+  },
+  {
+    "name": "lark",
+    "tools": [
+      {
+        "name": "expression",
+        "description": "An expression",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "payload": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "payload"
+          ]
+        },
+        "constrainedSampling": {
+          "type": "grammar",
+          "variants": {
+            "openai_lark": "start: \"hello\""
+          }
+        }
+      }
+    ],
+    "options": {
+      "supportsStrictMode": false,
+      "supportsOpenAIGrammarTools": true
+    },
+    "expected": "[{\"type\":\"custom\",\"name\":\"expression\",\"description\":\"An expression\",\"format\":{\"type\":\"grammar\",\"syntax\":\"lark\",\"definition\":\"start: \\\"hello\\\"\"}}]"
+  },
+  {
+    "name": "prefer-lark",
+    "tools": [
+      {
+        "name": "expression",
+        "description": "An expression",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "payload": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "payload"
+          ]
+        },
+        "constrainedSampling": {
+          "type": "grammar",
+          "variants": {
+            "openai_regex": "[0-9]+",
+            "openai_lark": "start: \"hello\""
+          }
+        }
+      }
+    ],
+    "options": {
+      "supportsStrictMode": false,
+      "supportsOpenAIGrammarTools": true
+    },
+    "expected": "[{\"type\":\"custom\",\"name\":\"expression\",\"description\":\"An expression\",\"format\":{\"type\":\"grammar\",\"syntax\":\"lark\",\"definition\":\"start: \\\"hello\\\"\"}}]"
+  },
+  {
+    "name": "deferred",
+    "tools": [
+      {
+        "name": "expression",
+        "description": "An expression",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "payload": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "payload"
+          ]
+        },
+        "constrainedSampling": {
+          "type": "grammar",
+          "variants": {
+            "openai_regex": "[0-9]+"
+          }
+        }
+      }
+    ],
+    "options": {
+      "supportsStrictMode": false,
+      "supportsOpenAIGrammarTools": true,
+      "toolSearchResult": true
+    },
+    "expected": "[{\"type\":\"custom\",\"name\":\"expression\",\"description\":\"An expression\",\"format\":{\"type\":\"grammar\",\"syntax\":\"regex\",\"definition\":\"[0-9]+\"},\"defer_loading\":true}]"
+  },
+  {
+    "name": "unsupported-grammar",
+    "tools": [
+      {
+        "name": "expression",
+        "description": "An expression",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "payload": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "payload"
+          ]
+        },
+        "constrainedSampling": {
+          "type": "grammar",
+          "variants": {
+            "openai_regex": "[0-9]+"
+          }
+        }
+      }
+    ],
+    "options": {
+      "supportsStrictMode": false,
+      "supportsOpenAIGrammarTools": false
+    },
+    "expected": "[{\"type\":\"function\",\"name\":\"expression\",\"description\":\"An expression\",\"parameters\":{\"type\":\"object\",\"properties\":{\"payload\":{\"type\":\"string\"}},\"required\":[\"payload\"]}}]"
+  }
+]
