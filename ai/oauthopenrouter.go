@@ -120,7 +120,7 @@ func ExchangeOpenRouterAuthorizationCode(ctx context.Context, code, verifier str
 	request.Header.Set("accept", "application/json")
 	request.Header.Set("content-type", "application/json")
 
-	response, err := http.DefaultClient.Do(request)
+	response, err := doFetchRequest(request)
 	if err != nil {
 		if ctx != nil && ctx.Err() != nil {
 			return nil, fmt.Errorf("Login cancelled")

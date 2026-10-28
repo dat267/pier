@@ -366,7 +366,7 @@ func requestMistralStream(ctx ctxpkg.Context, model *Model, body []byte, options
 			req.Header.Set("x-affinity", options.SessionID)
 		}
 
-		hresp, rerr := http.DefaultClient.Do(req)
+		hresp, rerr := doFetchRequest(req)
 		if rerr != nil {
 			return nil, rerr
 		}

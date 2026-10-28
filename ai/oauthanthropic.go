@@ -241,7 +241,7 @@ func postOAuthJSON(ctx context.Context, requestURL string, body map[string]any) 
 	}
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Accept", "application/json")
-	response, err := http.DefaultClient.Do(request)
+	response, err := doFetchRequest(request)
 	if err != nil {
 		return "", err
 	}

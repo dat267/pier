@@ -52,7 +52,7 @@ func PersonalizeOpenRouterCatalog(catalog []*Model, refresh *RefreshModelsContex
 	}
 	request.Header.Set("Accept", "application/json")
 	request.Header.Set("Authorization", "Bearer "+key)
-	response, err := http.DefaultClient.Do(request)
+	response, err := doFetchRequest(request)
 	if err != nil {
 		return nil, err
 	}

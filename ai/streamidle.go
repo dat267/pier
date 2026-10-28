@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strings"
 	"sync/atomic"
 	"time"
 )
@@ -139,17 +141,60 @@ func (b *cancelOnCloseBody) Close() error {
 	return err
 }
 
+// doFetchRequest retains the configured client while applying fetch's redirect
+// credential rule. Go otherwise trusts same-host port changes and subdomains.
+// D284: retain configured redirect hooks and the existing ten-hop Go limit.
+func doFetchRequest(req *http.Request) (*http.Response, error) {
+	client := *http.DefaultClient
+	checkRedirect := client.CheckRedirect
+	crossedOrigin := false
+	client.CheckRedirect = func(next *http.Request, via []*http.Request) error {
+		crossedOrigin = crossedOrigin || requestOrigin(next.URL) != requestOrigin(via[len(via)-1].URL)
+		var err error
+		if checkRedirect != nil {
+			err = checkRedirect(next, via)
+		} else if len(via) >= 10 {
+			err = fmt.Errorf("stopped after 10 redirects")
+		}
+		// Go can copy headers from the initial request again on later hops.
+		// Once fetch strips credentials, they stay stripped for the chain.
+		if crossedOrigin {
+			for name := range next.Header {
+				switch strings.ToLower(name) {
+				case "authorization", "cookie", "proxy-authorization":
+					delete(next.Header, name)
+				}
+			}
+		}
+		return err
+	}
+	return client.Do(req)
+}
+
+func requestOrigin(u *url.URL) [3]string {
+	scheme, port := strings.ToLower(u.Scheme), u.Port()
+	if port == "" {
+		switch scheme {
+		case "http":
+			port = "80"
+		case "https":
+			port = "443"
+		}
+	}
+	return [3]string{scheme, strings.ToLower(u.Hostname()), port}
+}
+
 // DoProviderRequest issues a provider request bounded by the settings-backed idle
 // timeout. A nil or non-positive timeout sends the request unbounded, as before.
 // The returned body must be closed; closing it also releases the request context.
 func DoProviderRequest(req *http.Request, timeoutMS *int) (*http.Response, error) {
 	if timeoutMS == nil || *timeoutMS <= 0 {
-		return http.DefaultClient.Do(req)
+		return doFetchRequest(req)
 	}
 	parent := req.Context()
 	ctx, cancel := context.WithCancel(parent)
 	body := newIdleBody(parent, cancel, time.Duration(*timeoutMS)*time.Millisecond)
-	resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+	resp, err := doFetchRequest(req.WithContext(ctx))
 	if err != nil {
 		body.timer.Stop()
 		cancel()
@@ -176,7 +221,7 @@ var defaultBoundedRequestTimeout = 60 * time.Second
 // closing the response releases it.
 func doBoundedRequest(req *http.Request) (*http.Response, error) {
 	ctx, cancel := context.WithTimeout(req.Context(), defaultBoundedRequestTimeout)
-	resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+	resp, err := doFetchRequest(req.WithContext(ctx))
 	if err != nil {
 		cancel()
 		return nil, err

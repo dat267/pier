@@ -3071,6 +3071,18 @@ and processes.
 Tests: `TestFileSettingsStorageConcurrentFirstWrites`,
 `TestSettingsProjectDirectoryCreation`.
 
+### D284
+
+**AI requests retain Go client hooks and the ten-redirect limit.**
+
+Reference: pi v1.4.0 (`4a080252`), `packages/ai/src/api/openai-responses.ts`
+uses the SDK's fetch transport. Pier removes authorization, cookies and proxy
+credentials after an origin change and keeps them removed on subsequent hops,
+but retains the configured `http.DefaultClient` transport, timeout and redirect
+hook, and its existing default ten-hop limit rather than fetch's twenty.
+The global client and original request headers are not mutated.
+Tests: `TestResponsesRedirectCredentials`, `TestProviderRequestRedirectPolicy`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

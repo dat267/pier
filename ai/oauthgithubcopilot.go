@@ -252,7 +252,7 @@ func FetchWithCopilotRateLimitRetry(
 			cancel()
 			return nil, err
 		}
-		response, err := http.DefaultClient.Do(request)
+		response, err := doFetchRequest(request)
 		cancel()
 		if err != nil {
 			return nil, err

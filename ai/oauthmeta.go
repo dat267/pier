@@ -80,7 +80,7 @@ func metaRequestContext(ctx context.Context) (context.Context, context.CancelFun
 // metaDo runs one request and decodes a JSON object body. The status is
 // returned even on an error response so callers can branch on it.
 func metaDo(request *http.Request, loginCtx context.Context) (int, map[string]any, error) {
-	response, err := http.DefaultClient.Do(request)
+	response, err := doFetchRequest(request)
 	if err != nil {
 		if loginCtx != nil && loginCtx.Err() != nil {
 			return 0, nil, fmt.Errorf("%s", DeviceCodeCancelMessage)
