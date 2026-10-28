@@ -66,7 +66,10 @@ func init() {
 	rM23 = &Mode{ClassName: "string", Begin: "[rR]'(-*)\\[", End: "\\](-*)'"}
 	rM24 = &Mode{ClassName: "string", Begin: "\"", End: "\"", HasRelevance: true, Relevance: 0}
 	rM25 = &Mode{ClassName: "string", Begin: "'", End: "'", HasRelevance: true, Relevance: 0}
-	rM26 = &Mode{Begin: "([^a-zA-Z0-9._])", BeginFollowedBy: "", HasRelevance: true, Relevance: 0}
+	// The reference's beforeMatch extension qualifies the number with a
+	// lookahead for one of the variants, so a non-identifier character does not
+	// start the mode unless a number follows it.
+	rM26 = &Mode{Begin: "([^a-zA-Z0-9._])", BeginFollowedBy: `0[xX][0-9a-fA-F]+\.[0-9a-fA-F]*[pP][+-]?\d+i?|0[xX][0-9a-fA-F]+([pP][+-]?\d+)?[Li]?|(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?[Li]?`, HasRelevance: true, Relevance: 0}
 	rM27 = &Mode{HasRelevance: true, Relevance: 0}
 	rM28 = &Mode{ClassName: "number", EndsParent: true, HasRelevance: true, Relevance: 0}
 	rM29 = &Mode{ClassName: "number", Match: "0[xX][0-9a-fA-F]+\\.[0-9a-fA-F]*[pP][+-]?\\d+i?", EndsParent: true, HasRelevance: true, Relevance: 0}
