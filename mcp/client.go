@@ -643,9 +643,13 @@ func (c *Client) handleRequest(message *protocol.JsonRpcRequest) {
 			ID:      message.ID,
 			Error:   &protocol.JsonRpcErrorObject{Code: protocol.JSONRPCErrorCode.MethodNotFound, Message: fmt.Sprintf("Method not found: %s", message.Method)},
 		}
-		if err := transport.Send(context.Background(), errorResponse); err != nil {
-			c.emitError(err)
-		}
+		// Like a registered handler's response, this write must not retain
+		// the inbound reader while the transport waits for output capacity.
+		go func() {
+			if err := transport.Send(context.Background(), errorResponse); err != nil {
+				c.emitError(err)
+			}
+		}()
 		return
 	}
 	ctx, cancel := context.WithCancel(context.Background())

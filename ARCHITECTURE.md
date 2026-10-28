@@ -3185,7 +3185,8 @@ MCP listener registries retain stable entry pointers, so slice growth and
 snapshot compaction cannot invalidate unsubscribe handles. Callbacks remain
 outside their existing registry mutexes. `mcp.Client.mu` admits incoming request
 cancellation before its handler starts on a worker; the stdio reader remains
-free to dispatch cancellation notifications. Close snapshots and clears incoming
+free to dispatch cancellation notifications. Unknown-method error replies also
+write off-reader, so output backpressure cannot stall unrelated responses. Close snapshots and clears incoming
 cancellation handles under the mutex, then invokes them outside it. User handlers
 run outside locks and their panics are converted to JSON-RPC error responses.
 No new mutex or interactive UI worker is introduced. In-memory transports use
