@@ -11,22 +11,6 @@ func Crmsh() *Language {
 		"rsc_ticket acl_target acl_group user role tag xml"
 	const propertySets = "property rsc_defaults op_defaults"
 
-	property := &Mode{
-		ClassName:  "attribute",
-		Begin:      `[a-zA-Z-_]+`,
-		End:        `\s*:`,
-		ExcludeEnd: true,
-		Starts: &Mode{
-			End:          `;`,
-			HasRelevance: true,
-			Relevance:    0,
-			Contains: []*Mode{
-				{ClassName: "variable", Begin: `\.[a-zA-Z-_]+`},
-				{ClassName: "keyword", Begin: `\(optional\)`},
-			},
-		},
-	}
-
 	return &Language{
 		Name:            "crmsh",
 		Aliases:         []string{"crm", "pcmk"},
@@ -39,24 +23,6 @@ func Crmsh() *Language {
 		},
 		Contains: []*Mode{
 			HashCommentMode,
-			{
-				Begin:    `^facet ` + `[a-zA-Z-_][^\n{]+\{`,
-				End:      `\}`,
-				Keywords: Keywords{"keyword": "facet"},
-				Contains: []*Mode{property, HashCommentMode},
-			},
-			{
-				Begin:    `^\s*instance of ` + `[a-zA-Z-_][^\n{]+\{`,
-				End:      `\}`,
-				Keywords: Keywords{"keyword": "name count channels instance-data instance-state instance of"},
-				Illegal:  `\S`,
-				Contains: []*Mode{Self, property, HashCommentMode},
-			},
-			{
-				Begin:    `^` + `[a-zA-Z-_][^\n{]+\{`,
-				End:      `\}`,
-				Contains: []*Mode{property, HashCommentMode},
-			},
 			{
 				BeginKeywords: "node",
 				Starts: &Mode{

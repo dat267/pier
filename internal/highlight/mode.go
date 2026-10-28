@@ -473,7 +473,20 @@ func dependencyOnParent(mode *Mode) bool {
 func expandOrCloneMode(mode *Mode) []*Mode {
 	if len(mode.Variants) > 0 {
 		if mode.cachedVariants == nil {
-			mode.cachedVariants = mode.Variants
+			// highlight.js expands raw variants through inherit(mode, variant), so
+			// a variant keeps the wrapper's relevance unless it sets its own.
+			variants := make([]*Mode, len(mode.Variants))
+			for i, variant := range mode.Variants {
+				if mode.HasRelevance && !variant.HasRelevance {
+					inherited := cloneMode(variant)
+					inherited.HasRelevance = true
+					inherited.Relevance = mode.Relevance
+					variants[i] = inherited
+					continue
+				}
+				variants[i] = variant
+			}
+			mode.cachedVariants = variants
 		}
 		return mode.cachedVariants
 	}

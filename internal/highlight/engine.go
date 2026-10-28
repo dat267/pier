@@ -523,7 +523,9 @@ func highlightAuto(code string, subset []string) (*Result, string) {
 		if err != nil || lang.disableAutodetect {
 			continue
 		}
-		result := highlightWith(lang, code, true)
+		// The reference's highlightAuto highlights candidates with
+		// ignoreIllegals false, unlike a named subLanguage.
+		result := highlightWith(lang, code, false)
 		if result.Relevance > best.Relevance {
 			best = result
 			bestName = lang.name

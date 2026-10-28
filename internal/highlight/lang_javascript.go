@@ -40,7 +40,7 @@ func jsJSDoc() *Mode {
 			resp.IgnoreMatch()
 		}
 	}
-	variable := &Mode{ClassName: "variable", Begin: jsIdentRe, EndsParent: true}
+	variable := Zero(Mode{ClassName: "variable", Begin: jsIdentRe, EndsParent: true})
 	variable.beforeBegin = func(m *match, resp *Response) {
 		rest := m.input[m.index+len(m.lexeme):]
 		i := 0
@@ -329,8 +329,8 @@ func buildJS(typescript bool) *Language {
 	}
 	keywordGuard := &Mode{
 		Variants: []*Mode{
-			{Begin: `\.` + jsIdentRe},
-			{Begin: `\$` + jsIdentRe},
+			{Begin: `\.` + jsIdentRe, HasRelevance: true, Relevance: 0},
+			{Begin: `\$` + jsIdentRe, HasRelevance: true, Relevance: 0},
 		},
 		HasRelevance: true,
 		Relevance:    0,

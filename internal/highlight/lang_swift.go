@@ -101,7 +101,7 @@ func Swift() *Language {
 
 	keywords := Keywords{
 		"$pattern": eitherJoin([]string{`\b\w+`, `#\w+`}),
-		"keyword":  strings.Join(append(append([]string{}, swiftKeywords...), swiftNumberSignKeywords...), " "),
+		"keyword":  strings.Join(append(append([]string{}, swiftKeywords...), swiftNumberSignKeywords...), " ") + " _|0",
 		"literal":  strings.Join(swiftLiterals, " "),
 	}
 
