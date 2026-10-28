@@ -243,7 +243,11 @@ func CreateProvider(input CreateProviderOptions) *Provider {
 			checkedAt := timeNowMS()
 			context.Publish(ModelsPublication{
 				Persist: &ModelsStoreEntry{Models: refreshed, CheckedAt: &checkedAt},
-				Update:  func() { dynamicModels = refreshed },
+				Update: func() {
+					dynamicMu.Lock()
+					dynamicModels = refreshed
+					dynamicMu.Unlock()
+				},
 			})
 			return nil
 		}
