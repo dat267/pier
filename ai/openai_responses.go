@@ -605,7 +605,7 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 			callID, _, _ := strings.Cut(m.ToolCallID, "|")
 			output := convertResponsesToolResultOutput(model, m.Content)
 			itemType := "function_call_output"
-			if len(options.GrammarToolInputProperties) > 0 && options.GrammarToolInputProperties[m.ToolName] != "" {
+			if _, ok := options.GrammarToolInputProperties[m.ToolName]; ok {
 				itemType = "custom_tool_call_output"
 			}
 			messages = append(messages, mustMarshalJSON(orderKeys(map[string]any{
@@ -704,10 +704,7 @@ func convertResponsesAssistantMessage(model *Model, m *AssistantMessage, msgInde
 			if len(parts) > 1 {
 				itemID = parts[1]
 			}
-			customInputProperty := ""
-			if options.GrammarToolInputProperties != nil {
-				customInputProperty = options.GrammarToolInputProperties[b.Name]
-			}
+			customInputProperty, isCustomTool := options.GrammarToolInputProperties[b.Name]
 
 			// Different-model messages omit the item id entirely to avoid pairing
 			// validation. So do ids that do not match the replayed item type:
@@ -716,7 +713,7 @@ func convertResponsesAssistantMessage(model *Model, m *AssistantMessage, msgInde
 			// switch between the two types when grammar tool support differs
 			// (bc2d8dc1c).
 			itemIdPrefix := "fc_"
-			if customInputProperty != "" {
+			if isCustomTool {
 				itemIdPrefix = "ctc_"
 			}
 			if isDifferentModel || !strings.HasPrefix(itemID, itemIdPrefix) {
@@ -725,7 +722,7 @@ func convertResponsesAssistantMessage(model *Model, m *AssistantMessage, msgInde
 
 			var item map[string]any
 			var keys []string
-			if customInputProperty != "" {
+			if isCustomTool {
 				input, err := GetGrammarToolInput(b.Name, b.Arguments, customInputProperty)
 				if err != nil {
 					return nil, err

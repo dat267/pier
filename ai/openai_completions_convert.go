@@ -232,10 +232,11 @@ func ConvertOpenAICompletionsMessages(
 			if len(toolCalls) > 0 {
 				for _, tc := range toolCalls {
 					var customInputProperty string
-					if options != nil && options.GrammarToolInputProperties != nil {
-						customInputProperty = options.GrammarToolInputProperties[tc.Name]
+					var isCustomTool bool
+					if options != nil {
+						customInputProperty, isCustomTool = options.GrammarToolInputProperties[tc.Name]
 					}
-					if customInputProperty != "" {
+					if isCustomTool {
 						input, err := GetGrammarToolInput(tc.Name, tc.Arguments, customInputProperty)
 						if err != nil {
 							panic(err)
