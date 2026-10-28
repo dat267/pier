@@ -212,7 +212,6 @@ func CreateProvider(input CreateProviderOptions) *Provider {
 	if input.FetchModels != nil {
 		fetch := input.FetchModels
 		p.RefreshModels = func(context *RefreshModelsContext) error {
-			dynamicMu.Lock()
 			if context.Stored != nil {
 				var restored []*Model
 				for _, model := range context.Stored.Models {
@@ -221,15 +220,16 @@ func CreateProvider(input CreateProviderOptions) *Provider {
 					}
 				}
 				published := context.Publish(ModelsPublication{
-					Update: func() { dynamicModels = restored },
+					Update: func() {
+						dynamicMu.Lock()
+						dynamicModels = restored
+						dynamicMu.Unlock()
+					},
 				})
-				dynamicMu.Unlock()
 				if !published {
 					return nil
 				}
-				dynamicMu.Lock()
 			}
-			dynamicMu.Unlock()
 			if !context.AllowNetwork || ctxDone(context.Ctx) {
 				return nil
 			}
