@@ -1471,6 +1471,16 @@ review rather than PTY driving. `TestApiKeyLoginRunsOffTheUILoop` dispatches,
 renders, and routes input on one loop, failing with
 "the login flow is running on the UI loop" rather than hanging.
 
+The Radius login menu likewise uses the owner-loop animation scheduler instead
+of `radius-login-selector.ts`'s 50ms interval: the selected row shimmers on idle
+frames without a timer mutating attached UI state. Its auth-method selector
+shows the upstream intro and posts responses back to the waiting login worker.
+The post-login MCP offer reads/writes global config on an app-owned mandatory
+queue, posts the dialog/result on the owner loop, and reloads only after a
+consented write succeeds; shutdown drains accepted writes.
+Tests: `TestRadiusLoginMenuShimmersOnlyWhileSelected`,
+`TestRadiusLoginSelectIntro`, `TestRadiusMcpOfferMatchesUpstream`.
+
 ### D157
 
 **Home-path completion splits raw input before cleaning.**
@@ -1829,6 +1839,9 @@ for exposure, namespaces, codemode, `tool_search`, resources, `/mcp` UI, and
 - OAuth uses a per-process credential store, not `auth.json`; `/mcp` sign-in
   persistence is unported. `read_mcp_resource` is absent, so resource links do
   not advertise it.
+- Radius OAuth login offers the upstream global provider-auth MCP setup.
+  It preserves unrelated config and indentation, replaces MCP OAuth with
+  `auth.provider` only after consent, and reloads the MCP manager afterward.
 - Definitions omit upstream renderers, output schema, and annotations;
   interactive MCP calls use generic tool rendering. `isError` stays a flagged
   `agent.AgentToolResult`, preserving converted content and details through the

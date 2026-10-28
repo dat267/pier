@@ -1,0 +1,201 @@
+[
+  {
+    "name": "missing-yes",
+    "initial": null,
+    "choice": "Yes",
+    "offer": true,
+    "error": false,
+    "reloads": 1,
+    "expected": "{\n  \"mcpServers\": {\n    \"radius\": {\n      \"url\": \"https://radius.pi.dev/mcp\",\n      \"auth\": {\n        \"provider\": \"radius\"\n      }\n    }\n  }\n}\n"
+  },
+  {
+    "name": "missing-no",
+    "initial": null,
+    "choice": "No",
+    "offer": true,
+    "error": false,
+    "reloads": 0,
+    "expected": null
+  },
+  {
+    "name": "missing-cancel",
+    "initial": null,
+    "choice": "cancel",
+    "offer": true,
+    "error": false,
+    "reloads": 0,
+    "expected": null
+  },
+  {
+    "name": "empty-object",
+    "initial": "{}",
+    "choice": "Yes",
+    "offer": true,
+    "error": false,
+    "reloads": 1,
+    "expected": "{\n  \"mcpServers\": {\n    \"radius\": {\n      \"url\": \"https://radius.pi.dev/mcp\",\n      \"auth\": {\n        \"provider\": \"radius\"\n      }\n    }\n  }\n}\n"
+  },
+  {
+    "name": "matching-url-only",
+    "initial": "{\"mcpServers\":{\"radius\":{\"url\":\"https://radius.pi.dev/mcp\"}}}",
+    "choice": "Yes",
+    "offer": true,
+    "error": false,
+    "reloads": 1,
+    "expected": "{\n  \"mcpServers\": {\n    \"radius\": {\n      \"url\": \"https://radius.pi.dev/mcp\",\n      \"auth\": {\n        \"provider\": \"radius\"\n      }\n    }\n  }\n}\n"
+  },
+  {
+    "name": "custom-config",
+    "initial": "{\n\t\"vendor\": \"<keep>&\",\n\t\"mcpServers\": {\n\t\t\"tools\": {\"url\":\"https://radius.pi.dev/mcp///\",\"headers\":{\"Z\":\"z\",\"A\":\"a\"},\"oauth\":{\"clientId\":\"old\"},\"toolExposure\":{\"z*\":\"direct\",\"*\":\"hidden\"},\"vendor\":{\"z\":1,\"a\":2}}\n\t},\n\t\"autoEnableCodemode\": false\n}",
+    "choice": "Yes",
+    "offer": true,
+    "error": false,
+    "reloads": 1,
+    "expected": "{\n\t\"vendor\": \"<keep>&\",\n\t\"mcpServers\": {\n\t\t\"tools\": {\n\t\t\t\"url\": \"https://radius.pi.dev/mcp///\",\n\t\t\t\"headers\": {\n\t\t\t\t\"Z\": \"z\",\n\t\t\t\t\"A\": \"a\"\n\t\t\t},\n\t\t\t\"toolExposure\": {\n\t\t\t\t\"z*\": \"direct\",\n\t\t\t\t\"*\": \"hidden\"\n\t\t\t},\n\t\t\t\"vendor\": {\n\t\t\t\t\"z\": 1,\n\t\t\t\t\"a\": 2\n\t\t\t},\n\t\t\t\"auth\": {\n\t\t\t\t\"provider\": \"radius\"\n\t\t\t}\n\t\t}\n\t},\n\t\"autoEnableCodemode\": false\n}\n"
+  },
+  {
+    "name": "already-configured",
+    "initial": "{\"mcpServers\":{\"tools\":{\"url\":\"https://radius.pi.dev/mcp/\",\"auth\":{\"provider\":\"radius\"}}}}",
+    "choice": "Yes",
+    "offer": false,
+    "error": false,
+    "reloads": 0,
+    "expected": "{\"mcpServers\":{\"tools\":{\"url\":\"https://radius.pi.dev/mcp/\",\"auth\":{\"provider\":\"radius\"}}}}"
+  },
+  {
+    "name": "different-provider",
+    "initial": "{\"mcpServers\":{\"tools\":{\"url\":\"https://radius.pi.dev/mcp\",\"auth\":{\"provider\":\"other\"}}}}",
+    "choice": "Yes",
+    "offer": true,
+    "error": false,
+    "reloads": 1,
+    "expected": "{\n  \"mcpServers\": {\n    \"tools\": {\n      \"url\": \"https://radius.pi.dev/mcp\",\n      \"auth\": {\n        \"provider\": \"radius\"\n      }\n    }\n  }\n}\n"
+  },
+  {
+    "name": "name-collision",
+    "initial": "{\"mcpServers\":{\"radius\":{\"command\":\"unused\"}}}",
+    "choice": "Yes",
+    "offer": true,
+    "error": false,
+    "reloads": 1,
+    "expected": "{\n  \"mcpServers\": {\n    \"radius\": {\n      \"command\": \"unused\"\n    },\n    \"radius-mcp\": {\n      \"url\": \"https://radius.pi.dev/mcp\",\n      \"auth\": {\n        \"provider\": \"radius\"\n      }\n    }\n  }\n}\n"
+  },
+  {
+    "name": "both-names-used",
+    "initial": "{\"mcpServers\":{\"radius\":{\"command\":\"unused\"},\"radius-mcp\":{\"command\":\"also-unused\"}}}",
+    "choice": "Yes",
+    "offer": true,
+    "error": false,
+    "reloads": 1,
+    "expected": "{\n  \"mcpServers\": {\n    \"radius\": {\n      \"command\": \"unused\"\n    },\n    \"radius-mcp\": {\n      \"url\": \"https://radius.pi.dev/mcp\",\n      \"auth\": {\n        \"provider\": \"radius\"\n      }\n    }\n  }\n}\n"
+  },
+  {
+    "name": "first-endpoint",
+    "initial": "{\"mcpServers\":{\"first\":{\"url\":\"https://radius.pi.dev/mcp\"},\"second\":{\"url\":\"https://radius.pi.dev/mcp\"}}}",
+    "choice": "Yes",
+    "offer": true,
+    "error": false,
+    "reloads": 1,
+    "expected": "{\n  \"mcpServers\": {\n    \"first\": {\n      \"url\": \"https://radius.pi.dev/mcp\",\n      \"auth\": {\n        \"provider\": \"radius\"\n      }\n    },\n    \"second\": {\n      \"url\": \"https://radius.pi.dev/mcp\"\n    }\n  }\n}\n"
+  },
+  {
+    "name": "project-excluded",
+    "initial": null,
+    "project": "{\"mcpServers\":{\"radius\":{\"url\":\"https://radius.pi.dev/mcp\",\"auth\":{\"provider\":\"radius\"}}}}",
+    "choice": "Yes",
+    "offer": true,
+    "error": false,
+    "reloads": 1,
+    "expected": "{\n  \"mcpServers\": {\n    \"radius\": {\n      \"url\": \"https://radius.pi.dev/mcp\",\n      \"auth\": {\n        \"provider\": \"radius\"\n      }\n    }\n  }\n}\n"
+  },
+  {
+    "name": "bom",
+    "initial": "﻿{\n    \"mcpServers\": {}\n}",
+    "choice": "Yes",
+    "offer": true,
+    "error": false,
+    "reloads": 1,
+    "expected": "{\n    \"mcpServers\": {\n        \"radius\": {\n            \"url\": \"https://radius.pi.dev/mcp\",\n            \"auth\": {\n                \"provider\": \"radius\"\n            }\n        }\n    }\n}\n"
+  },
+  {
+    "name": "long-indent",
+    "initial": "{\n            \"mcpServers\": {}\n}",
+    "choice": "Yes",
+    "offer": true,
+    "error": false,
+    "reloads": 1,
+    "expected": "{\n          \"mcpServers\": {\n                    \"radius\": {\n                              \"url\": \"https://radius.pi.dev/mcp\",\n                              \"auth\": {\n                                        \"provider\": \"radius\"\n                              }\n                    }\n          }\n}\n"
+  },
+  {
+    "name": "truncated-object",
+    "initial": "{",
+    "choice": "Yes",
+    "offer": true,
+    "error": true,
+    "reloads": 0,
+    "expected": "{"
+  },
+  {
+    "name": "truncated-close",
+    "initial": "{\"mcpServers\":{}",
+    "choice": "Yes",
+    "offer": true,
+    "error": true,
+    "reloads": 0,
+    "expected": "{\"mcpServers\":{}"
+  },
+  {
+    "name": "trailing-json",
+    "initial": "{\"mcpServers\":{}} {}",
+    "choice": "Yes",
+    "offer": true,
+    "error": true,
+    "reloads": 0,
+    "expected": "{\"mcpServers\":{}} {}"
+  },
+  {
+    "name": "duplicate-keys",
+    "initial": "{\"mcpServers\":{\"radius\":{\"url\":\"https://radius.pi.dev/mcp\"}},\"note\":1,\"note\":2}",
+    "choice": "Yes",
+    "offer": true,
+    "error": false,
+    "reloads": 1,
+    "expected": "{\n  \"mcpServers\": {\n    \"radius\": {\n      \"url\": \"https://radius.pi.dev/mcp\",\n      \"auth\": {\n        \"provider\": \"radius\"\n      }\n    }\n  },\n  \"note\": 2\n}\n"
+  },
+  {
+    "name": "malformed",
+    "initial": "{broken",
+    "choice": "Yes",
+    "offer": true,
+    "error": true,
+    "reloads": 0,
+    "expected": "{broken"
+  },
+  {
+    "name": "null",
+    "initial": "null",
+    "choice": "Yes",
+    "offer": true,
+    "error": true,
+    "reloads": 0,
+    "expected": "null"
+  },
+  {
+    "name": "array",
+    "initial": "[]",
+    "choice": "Yes",
+    "offer": true,
+    "error": true,
+    "reloads": 0,
+    "expected": "[]"
+  },
+  {
+    "name": "bad-servers",
+    "initial": "{\"mcpServers\":null}",
+    "choice": "Yes",
+    "offer": true,
+    "error": true,
+    "reloads": 0,
+    "expected": "{\"mcpServers\":null}"
+  }
+]

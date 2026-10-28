@@ -3,12 +3,14 @@ package interactive
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
+	"github.com/dat267/pier/internal/offloop"
 	"github.com/dat267/pier/tui"
 )
 
@@ -63,6 +65,11 @@ type AuthWiring struct {
 	AuthPath string
 	// DocsPath is the docs directory (amazon-bedrock details).
 	DocsPath string
+	// Radius MCP configuration is read/written off-loop; the app drains writes
+	// before shutdown and reloads only after an accepted update succeeds.
+	AgentDir        string
+	McpConfigQueue  *offloop.Queue
+	OnMcpConfigured func()
 	// ScheduleTimer schedules the refresh timeout (test seam).
 	ScheduleTimer func(ms int, fn func()) func()
 	// OnPromptShown runs after a dialog prompt is created (test seam).
@@ -210,13 +217,17 @@ func (w *AuthWiring) HandleLoginCommand(ctx context.Context, providerRef string)
 
 // StartProviderLogin starts the provider's login flow.
 func (w *AuthWiring) StartProviderLogin(ctx context.Context, providerOption AuthSelectorProvider) {
+	w.startProviderLogin(ctx, providerOption, nil)
+}
+
+func (w *AuthWiring) startProviderLogin(ctx context.Context, providerOption AuthSelectorProvider, onBack func()) {
 	switch {
 	case providerOption.AuthType == "oauth":
-		w.ShowLoginDialog(ctx, providerOption.ID, providerOption.Name)
+		w.showLoginDialog(ctx, providerOption.ID, providerOption.Name, onBack)
 	case hasInteractiveLogin(providerOption.Method):
-		w.ShowApiKeyLoginDialog(ctx, providerOption.ID, providerOption.Name)
+		w.showApiKeyLoginDialog(ctx, providerOption.ID, providerOption.Name, onBack)
 	default:
-		w.ShowAmbientAuthDialog(providerOption)
+		w.showAmbientAuthDialog(providerOption, onBack)
 	}
 }
 
@@ -232,6 +243,18 @@ func hasInteractiveLogin(method any) bool {
 
 // ShowLoginAuthTypeSelector shows the auth-type picker.
 func (w *AuthWiring) ShowLoginAuthTypeSelector(ctx context.Context, providerOptions []AuthSelectorProvider) {
+	var radiusOption *AuthSelectorProvider
+	radiusText, radiusLabel := "", ""
+	if providerOptions == nil {
+		for _, provider := range w.GetLoginProviderOptions("oauth") {
+			if provider.ID == "radius" {
+				radiusOption = &provider
+				radiusText = "Sign in with " + provider.Name
+				radiusLabel = radiusText + formatAuthSelectorProviderStatus(provider)
+				break
+			}
+		}
+	}
 	oauthLabel := "Sign in with an account"
 	for _, provider := range providerOptions {
 		if provider.AuthType != "oauth" {
@@ -259,6 +282,9 @@ func (w *AuthWiring) ShowLoginAuthTypeSelector(ctx context.Context, providerOpti
 	if available["api_key"] {
 		options = append(options, apiKeyLabel)
 	}
+	if radiusOption != nil {
+		options = append(options, radiusLabel)
+	}
 	if len(options) == 0 {
 		w.showStatus("No login methods available.")
 		return
@@ -273,29 +299,39 @@ func (w *AuthWiring) ShowLoginAuthTypeSelector(ctx context.Context, providerOpti
 		title = "Select authentication method for " + providerOptions[0].Name + ":"
 	}
 	w.Slot.Show(func(done func()) CreatedSelector {
-		selector := NewExtensionSelectorComponent(title, options,
-			func(option string) {
-				done()
-				authType := "api_key"
-				if option == oauthLabel {
-					authType = "oauth"
-				}
-				if providerOptions != nil {
-					for _, provider := range providerOptions {
-						if provider.AuthType == authType {
-							w.StartProviderLogin(ctx, provider)
-							return
-						}
+		onSelect := func(option string) {
+			done()
+			if radiusOption != nil && option == radiusLabel {
+				w.startProviderLogin(ctx, *radiusOption, func() { w.ShowLoginAuthTypeSelector(ctx, nil) })
+				return
+			}
+			authType := "api_key"
+			if option == oauthLabel {
+				authType = "oauth"
+			}
+			if providerOptions != nil {
+				for _, provider := range providerOptions {
+					if provider.AuthType == authType {
+						w.startProviderLogin(ctx, provider, func() {
+							w.ShowLoginAuthTypeSelector(ctx, providerOptions)
+						})
+						return
 					}
-					return
 				}
-				w.ShowLoginProviderSelector(ctx, authType, "")
-			},
-			func() {
-				done()
-				w.requestRender()
-			})
-		return CreatedSelector{Component: selector, Focus: selector}
+				return
+			}
+			w.ShowLoginProviderSelector(ctx, authType, "")
+		}
+		onCancel := func() {
+			done()
+			w.requestRender()
+		}
+		if radiusOption != nil {
+			selector := newRadiusLoginMenu(title, options, radiusLabel, radiusText, onSelect, onCancel)
+			return CreatedSelector{Component: selector, Focus: selector, Dispose: selector.Dispose}
+		}
+		selector := NewExtensionSelectorComponent(title, options, onSelect, onCancel)
+		return CreatedSelector{Component: selector, Focus: selector, Dispose: selector.Dispose}
 	})
 }
 
@@ -325,7 +361,9 @@ func (w *AuthWiring) ShowLoginProviderSelector(ctx context.Context, authType str
 				done()
 				for _, provider := range providerOptions {
 					if provider.ID == providerID && provider.AuthType == selectedAuthType {
-						w.StartProviderLogin(ctx, provider)
+						w.startProviderLogin(ctx, provider, func() {
+							w.ShowLoginProviderSelector(ctx, authType, initialSearchInput)
+						})
 						return
 					}
 				}
@@ -399,6 +437,51 @@ func (w *AuthWiring) ShowOAuthSelector(ctx context.Context, mode string) {
 			"")
 		return CreatedSelector{Component: selector, Focus: selector}
 	})
+}
+
+func (w *AuthWiring) showAuthSelect(dialog *LoginDialogComponent, prompt ai.AuthPrompt) (string, error) {
+	var response <-chan LoginInputResult
+	if dialog.providerID != "radius" {
+		response = dialog.ShowSelect(prompt.Message, prompt.SelectOptions)
+	} else {
+		results := make(chan LoginInputResult, 1)
+		response = results
+		w.post(func() {
+			labels := make([]string, 0, len(prompt.SelectOptions))
+			for _, option := range prompt.SelectOptions {
+				labels = append(labels, option.Label)
+			}
+			w.Slot.Show(func(done func()) CreatedSelector {
+				finish := func(result LoginInputResult) {
+					done()
+					w.showDialog(dialog)
+					results <- result
+				}
+				selector := NewExtensionSelectorComponent(prompt.Message, labels,
+					func(label string) {
+						for _, option := range prompt.SelectOptions {
+							if option.Label == label && option.ID != "" {
+								finish(LoginInputResult{Value: option.ID})
+								return
+							}
+						}
+						finish(LoginInputResult{Err: errLoginCancelled{}})
+					},
+					func() { finish(LoginInputResult{Err: errLoginCancelled{}}) },
+					ExtensionSelectorOptions{Description: "Radius is a service crafted for Pi by the builders of Pi, Earendil Works"})
+				return CreatedSelector{Component: selector, Focus: selector, Dispose: selector.Dispose}
+			})
+		})
+	}
+	select {
+	case result := <-response:
+		if result.Err != nil {
+			return "", errLoginCancelled{}
+		}
+		return result.Value, nil
+	case <-dialog.Aborted():
+		return "", errLoginCancelled{}
+	}
 }
 
 // ShowAuthPrompt maps an auth prompt onto the dialog.
@@ -481,7 +564,7 @@ func (w *AuthWiring) post(fn func()) {
 // touches the UI only through posted mutations (the dialog marshals its own).
 // The continuation runs on the loop, because restoring the editor, reporting
 // errors and synchronizing the model all mutate UI and session state.
-func (w *AuthWiring) startLogin(ctx context.Context, dialog *LoginDialogComponent, providerID string, providerName string, authType string, previousModel *ai.Model) {
+func (w *AuthWiring) startLogin(ctx context.Context, dialog *LoginDialogComponent, providerID string, providerName string, authType string, previousModel *ai.Model, onBack func()) {
 	go func() {
 		// A login waits on the user, which is what the terminal reports as blocked (#10607).
 		if w.ProgramStatus != nil {
@@ -501,23 +584,37 @@ func (w *AuthWiring) startLogin(ctx context.Context, dialog *LoginDialogComponen
 					syncPrefix, failurePrefix = "Saved API key for", "Failed to save API key for"
 				}
 				w.reportLoginError(err, providerName, syncPrefix, failurePrefix)
+				if err.Error() == "Login cancelled" && onBack != nil {
+					onBack()
+				}
 				return
 			}
 			w.CompleteProviderAuthentication(ctx, providerID, providerName, authType, previousModel)
+			if providerID == "radius" && authType == "oauth" {
+				w.offerRadiusMcpServer(providerName)
+			}
 		})
 	}()
 }
 
 // ShowLoginDialog runs an OAuth login.
 func (w *AuthWiring) ShowLoginDialog(ctx context.Context, providerID string, providerName string) {
+	w.showLoginDialog(ctx, providerID, providerName, nil)
+}
+
+func (w *AuthWiring) showLoginDialog(ctx context.Context, providerID string, providerName string, onBack func()) {
 	previousModel := w.Session.Model()
 	dialog := w.newLoginDialog(providerID, providerName, "", func(bool, string) {})
 	w.showDialog(dialog)
-	w.startLogin(ctx, dialog, providerID, providerName, "oauth", previousModel)
+	w.startLogin(ctx, dialog, providerID, providerName, "oauth", previousModel, onBack)
 }
 
 // ShowApiKeyLoginDialog runs an API-key login.
 func (w *AuthWiring) ShowApiKeyLoginDialog(ctx context.Context, providerID string, providerName string) {
+	w.showApiKeyLoginDialog(ctx, providerID, providerName, nil)
+}
+
+func (w *AuthWiring) showApiKeyLoginDialog(ctx context.Context, providerID string, providerName string, onBack func()) {
 	previousModel := w.Session.Model()
 	dialog := w.newLoginDialog(providerID, providerName, "", func(bool, string) {})
 	if providerID == "amazon-bedrock" {
@@ -533,7 +630,46 @@ func (w *AuthWiring) ShowApiKeyLoginDialog(ctx context.Context, providerID strin
 		})
 	}
 	w.showDialog(dialog)
-	w.startLogin(ctx, dialog, providerID, providerName, "api_key", previousModel)
+	w.startLogin(ctx, dialog, providerID, providerName, "api_key", previousModel, onBack)
+}
+
+// offerRadiusMcpServer ports the post-OAuth offer in interactive-mode.ts.
+// Only global config is considered; provider auth is forbidden in project config.
+func (w *AuthWiring) offerRadiusMcpServer(providerName string) {
+	if w.McpConfigQueue == nil {
+		return
+	}
+	agentDir := w.AgentDir
+	mcpPath := filepath.Join(agentDir, "mcp.json")
+	w.McpConfigQueue.Go(func() {
+		name, config := coding.PrepareRadiusMcpServerConfig(agentDir)
+		if config == nil {
+			return
+		}
+		w.post(func() {
+			w.Slot.Show(func(done func()) CreatedSelector {
+				selector := NewExtensionSelectorComponent("Configure "+providerName+" MCP in "+mcpPath+"?", []string{"Yes", "No"},
+					func(option string) {
+						done()
+						if option != "Yes" {
+							return
+						}
+						w.McpConfigQueue.Go(func() {
+							_, err := coding.AddMcpServerConfig(mcpPath, name, config)
+							w.post(func() {
+								if err != nil {
+									w.showError("Could not update " + mcpPath + ": " + err.Error())
+								} else if w.OnMcpConfigured != nil {
+									w.OnMcpConfigured()
+								}
+							})
+						})
+					},
+					func() { done(); w.requestRender() })
+				return CreatedSelector{Component: selector, Focus: selector, Dispose: selector.Dispose}
+			})
+		})
+	})
 }
 
 func (w *AuthWiring) reportLoginError(err error, providerName string, syncPrefix string, failurePrefix string) {
@@ -566,7 +702,16 @@ func (w *AuthWiring) showDialog(dialog *LoginDialogComponent) {
 
 // ShowAmbientAuthDialog shows the ambient-auth info dialog.
 func (w *AuthWiring) ShowAmbientAuthDialog(providerOption AuthSelectorProvider) {
-	dialog := w.newLoginDialog(providerOption.ID, providerOption.Name, providerOption.Name+" setup", func(bool, string) { w.restoreEditor() })
+	w.showAmbientAuthDialog(providerOption, nil)
+}
+
+func (w *AuthWiring) showAmbientAuthDialog(providerOption AuthSelectorProvider, onBack func()) {
+	dialog := w.newLoginDialog(providerOption.ID, providerOption.Name, providerOption.Name+" setup", func(bool, string) {
+		w.restoreEditor()
+		if onBack != nil {
+			onBack()
+		}
+	})
 	methodName := "Authentication"
 	switch typed := providerOption.Method.(type) {
 	case *ai.ApiKeyAuth:
@@ -710,26 +855,16 @@ func modelsForProvider(models []*ai.Model, providerID string) []*ai.Model {
 
 // newAuthWiring assembles the AuthWiring (port of the corresponding InteractiveMode wiring).
 func newAuthWiring(app *App) *AuthWiring {
-	return &AuthWiring{
-		// The login flow's select step (upstream's extension-UI select): the
-		// Bedrock auth-method prompt and its profile picker go through here.
-		ShowAuthSelect: func(dialog *LoginDialogComponent, prompt ai.AuthPrompt) (string, error) {
-			select {
-			case result := <-dialog.ShowSelect(prompt.Message, prompt.SelectOptions):
-				if result.Err != nil {
-					return "", errors.New("Login cancelled")
-				}
-				return result.Value, nil
-			case <-dialog.Aborted():
-				return "", errors.New("Login cancelled")
-			}
-		},
+	wiring := &AuthWiring{
 		// The model-catalog refresh after a login is given a ceiling so a stalled
 		// provider cannot hang the flow (upstream scheduleTimer).
 		ScheduleTimer: func(ms int, fn func()) func() {
 			timer := time.AfterFunc(time.Duration(ms)*time.Millisecond, fn)
 			return func() { timer.Stop() }
 		},
+		AgentDir:                     app.mcpAgentDir,
+		McpConfigQueue:               app.offloopGroup.Queue(),
+		OnMcpConfigured:              func() { app.commands.HandleReloadCommand() },
 		CopyClipboard:                app.copyClipboardAsync,
 		Slot:                         app.slot,
 		EditorContainer:              app.editorContainer,
@@ -745,4 +880,6 @@ func newAuthWiring(app *App) *AuthWiring {
 		OnAuthenticated:              func(model *ai.Model, hasModel bool) {},
 		RequestRender:                func() { app.ui.RequestRender(false) },
 		AuthPath:                     coding.GetAgentDir() + "/auth.json"}
+	wiring.ShowAuthSelect = wiring.showAuthSelect
+	return wiring
 }

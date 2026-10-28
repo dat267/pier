@@ -395,7 +395,7 @@ func (c *OAuthSelectorComponent) updateList() {
 	for i := startIndex; i < endIndex; i++ {
 		provider := c.filteredProviders[i]
 		isSelected := i == c.selectedIndex
-		statusIndicator := c.formatStatusIndicator(provider)
+		statusIndicator := formatAuthSelectorProviderStatus(provider)
 		authTypeLabel := ""
 		if c.showAuthTypeLabels {
 			authTypeLabel = theme.Fg("muted", " ["+formatAuthSelectorProviderType(provider.AuthType, provider.Subscription)+"]")
@@ -427,7 +427,7 @@ func (c *OAuthSelectorComponent) updateList() {
 
 var envVarRegex = regexp.MustCompile(`^[A-Z][A-Z0-9_]*(?:, [A-Z][A-Z0-9_]*)*$`)
 
-func (c *OAuthSelectorComponent) formatStatusIndicator(provider AuthSelectorProvider) string {
+func formatAuthSelectorProviderStatus(provider AuthSelectorProvider) string {
 	theme := ActiveTheme()
 	if provider.Status == nil {
 		return theme.Fg("muted", " • not configured")

@@ -15,9 +15,8 @@ import (
 // (project entries replace global ones with the same name). Both use the
 // `mcpServers` shape shared by other MCP clients.
 //
-// The `/mcp` config writers (upstream updateMcpServerConfig,
-// addMcpServerConfig, removeMcpServerConfig) belong to the `/mcp` command,
-// which the port does not have yet; only loading is ported here.
+// AddMcpServerConfig also supports the post-login Radius MCP offer. The other
+// `/mcp` config writers (update/remove) and the `/mcp` command remain unported.
 
 // McpServerScope names where an entry came from.
 type McpServerScope string

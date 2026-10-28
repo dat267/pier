@@ -40,6 +40,7 @@ type LoginInputResult struct {
 type LoginDialogComponent struct {
 	*tui.Container
 
+	providerID       string
 	contentContainer *tui.Container
 	input            *tui.Input
 	host             tui.RenderRequester
@@ -73,6 +74,7 @@ func NewLoginDialogComponent(host tui.RenderRequester, post func(func()), provid
 
 	component := &LoginDialogComponent{
 		Container:  &tui.Container{},
+		providerID: providerID,
 		host:       host,
 		post:       post,
 		onComplete: onComplete,
