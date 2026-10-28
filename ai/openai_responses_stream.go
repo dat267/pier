@@ -278,7 +278,7 @@ type responsesItem struct {
 	ID        string  `json:"id"`
 	CallID    string  `json:"call_id"`
 	Name      string  `json:"name"`
-	Input     string  `json:"input,omitempty"`
+	Input     *string `json:"input,omitempty"`
 	Arguments string  `json:"arguments,omitempty"`
 	Namespace *string `json:"namespace,omitempty"`
 	Phase     string  `json:"phase,omitempty"`
@@ -415,7 +415,7 @@ func ProcessResponsesStream(
 			}
 			call := ToolCall{
 				ID: item.CallID + "|" + item.ID, Name: item.Name,
-				Arguments: mustMarshalJSON(map[string]string{inputProperty: item.Input}),
+				Arguments: mustMarshalJSON(map[string]string{inputProperty: deref(item.Input)}),
 				Namespace: item.Namespace,
 			}
 			output.Content = append(output.Content, call)
@@ -759,9 +759,9 @@ func ProcessResponsesStream(
 				stream.Push(AssistantMessageEvent{Type: EventToolcallEnd, ContentIndex: slot.contentIndex, ToolCall: &call, Partial: output})
 				delete(outputSlots, event.OutputIndex)
 			case item.Type == "custom_tool_call" && slot != nil && slot.kind == "toolCall" && slot.toolCall.customInput != nil:
-				nextInput := item.Input
-				if nextInput == "" {
-					nextInput = customToolCallInput(slot)
+				nextInput := customToolCallInput(slot)
+				if item.Input != nil {
+					nextInput = *item.Input
 				}
 				pushToolCallDelta(slot, appendCustomToolCallInput(slot, nextInput, true))
 				if item.Namespace != nil {
