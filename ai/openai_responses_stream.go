@@ -901,13 +901,13 @@ func mapResponsesStopReason(status string, incompleteReason string) (StopReason,
 	}
 }
 
-// getServiceTierCostMultiplier: flex halves cost; priority doubles (2.5x on
+// getServiceTierCostMultiplier: flex halves cost; priority/fast doubles (2.5x on
 // gpt-5.5).
 func getServiceTierCostMultiplier(model *Model, serviceTier string) float64 {
 	switch serviceTier {
 	case "flex":
 		return 0.5
-	case "priority":
+	case "priority", "fast":
 		if model.ID == "gpt-5.5" {
 			return 2.5
 		}

@@ -16,13 +16,17 @@ func TestResponsesPricesTheReturnedServiceTier(t *testing.T) {
 	for _, c := range []struct {
 		name, request, response string
 		want                    float64
+		modelID                 string
 	}{
-		{"response priority", "", `,"service_tier":"priority"`, 20},
-		{"response flex", "", `,"service_tier":"flex"`, 5},
-		{"response overrides request", "flex", `,"service_tier":"priority"`, 20},
-		{"response default overrides request", "priority", `,"service_tier":"default"`, 10},
-		{"request fallback", "priority", "", 20},
-		{"default", "", "", 10},
+		{"response priority", "", `,"service_tier":"priority"`, 20, ""},
+		{"response flex", "", `,"service_tier":"flex"`, 5, ""},
+		{"response overrides request", "flex", `,"service_tier":"priority"`, 20, ""},
+		{"response default overrides request", "priority", `,"service_tier":"default"`, 10, ""},
+		{"request fallback", "priority", "", 20, ""},
+		{"default", "", "", 10, ""},
+		{"response fast", "", `,"service_tier":"fast"`, 20, ""},
+		{"response fast gpt-5.5", "", `,"service_tier":"fast"`, 25, "gpt-5.5"},
+		{"request fast fallback", "fast", "", 20, ""},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -31,6 +35,9 @@ func TestResponsesPricesTheReturnedServiceTier(t *testing.T) {
 			}))
 			defer server.Close()
 			model := testResponsesModel()
+			if c.modelID != "" {
+				model.ID = c.modelID
+			}
 			model.BaseURL = server.URL
 			model.Cost = ModelCost{Input: 1, Output: 2, CacheRead: 3, CacheWrite: 4}
 			result, err := StreamOpenAIResponses(model, TranscriptContext{Messages: []Message{
