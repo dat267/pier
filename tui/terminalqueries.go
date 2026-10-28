@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -68,6 +69,7 @@ type terminalQueries struct {
 	// and owner-loop input dispatch. Listener delivery stays outside it.
 	colorMu                     sync.Mutex
 	pendingTerminalColorQueries []*pendingTerminalColorQuery
+	pendingColorSchemeQueries   []chan TerminalColorScheme
 }
 
 const (
@@ -310,13 +312,19 @@ func (q *terminalQueries) completeTerminalColorQueryLocked(query *pendingTermina
 // (`CSI ? 996 n`).
 func (q *terminalQueries) QueryColorScheme(writer terminalQueryWriter, timeoutMS int) (TerminalColorScheme, bool) {
 	results := make(chan TerminalColorScheme, 1)
-	unsubscribe := q.OnColorSchemeChange(func(scheme TerminalColorScheme) {
-		select {
-		case results <- scheme:
-		default:
+	q.colorMu.Lock()
+	q.pendingColorSchemeQueries = append(q.pendingColorSchemeQueries, results)
+	q.colorMu.Unlock()
+	defer func() {
+		q.colorMu.Lock()
+		for index, pending := range q.pendingColorSchemeQueries {
+			if pending == results {
+				q.pendingColorSchemeQueries = slices.Delete(q.pendingColorSchemeQueries, index, index+1)
+				break
+			}
 		}
-	})
-	defer unsubscribe()
+		q.colorMu.Unlock()
+	}()
 	if writer == nil {
 		return "", false
 	}
@@ -413,9 +421,16 @@ func (q *terminalQueries) ConsumeInput(data string) bool {
 	if !ok {
 		return false
 	}
+	q.colorMu.Lock()
+	pending := q.pendingColorSchemeQueries
+	q.pendingColorSchemeQueries = nil
+	q.colorMu.Unlock()
 	listeners := append([]colorSchemeListener{}, q.colorSchemeListeners...)
 	for _, entry := range listeners {
 		entry.listener(scheme)
+	}
+	for _, result := range pending {
+		result <- scheme
 	}
 	return true
 }

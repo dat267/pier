@@ -1460,10 +1460,13 @@ Before the merge, a timeout applied after the standalone listener's reply zeroed
 the background and the system theme lost the terminal's real appearance.
 Tests: `TestStaleSystemColorSnapshotDoesNotClobberLateBackground`.
 
-The retained blocking OSC 11 background helper also uses the existing query
-handoff mutex for its queue and timeout/reply settlement, rather than racing
-its off-loop wait against owner input dispatch. It adds no UI-state lock, and
-listeners still run after unlocking. Test: `TestBackgroundQueryTimeoutReplyRace`.
+The retained blocking OSC 11 background and color-scheme helpers also use the
+existing query handoff mutex for pending requests and timeout/reply settlement.
+Scheme waiters are separate from owner-only listener registries; off-loop cleanup
+never mutates attached callbacks. Listeners run after unlocking and before the
+scheme waiters receive their results. No UI-state lock is added.
+Tests: `TestBackgroundQueryTimeoutReplyRace`,
+`TestColorSchemeQueryTimeoutReplyRace`, `TestColorSchemeQueryWaitsForPriorListeners`.
 
 Tests: `TestProbeSystemColorsDoesNotBlockTheCaller`
 (`coding/interactive/interactive_test.go`) and
@@ -3196,7 +3199,7 @@ own mutex, so no UI lock or off-loop path is introduced.
 | `resizeWatcherMu` | `tui/terminal_windows.go` | the Windows console-resize poller's stop/done channels | **retained**: the poller runs off the loop; `Stop` signals it without joining, so an admitted callback finishes instead of deadlocking (CR-063) |
 | `prerenderState.mu` | `coding/interactive/transcript.go` | the transcript warm-ahead handoff (ready chunk, width, generation) | **retained**: loop ↔ warm-worker handoff, not UI state |
 | `systemThemeState.mu` | `coding/interactive/theme.go` | the terminal-report colors the system theme is generated from (written by the terminal query reply path, read at theme load) | **retained**: a pointer swap of two values, never UI state |
-| `terminalQueries.colorMu` | `tui/terminalqueries.go` | pending combined/background query queues and settlement shared by blocking waits and owner-loop reply dispatch; listener registries remain owner-only and delivery runs after unlocking | **retained**: query handoff bookkeeping, not UI state |
+| `terminalQueries.colorMu` | `tui/terminalqueries.go` | pending combined/background/scheme query queues and settlement shared by blocking waits and owner-loop reply dispatch; listener registries remain owner-only and delivery runs after unlocking | **retained**: query handoff bookkeeping, not UI state |
 | `FooterDataProvider.mu` | `coding/footerdata.go` | cwd/git/status + listener registry, shared with its 500 ms git-HEAD watcher | **retained (D149)**: closing it needs the poll result posted to the loop and the listener fan-out delivered outside the lock; a `coding/` change outside this refactor |
 | `AgentSession.promptOptionsMu` | `coding/agent_session.go` | `SystemPromptOptions`, re-read by the prompt/tool loadout between turns | **retained**: the work goroutine re-applies the loadout while the UI loop rebuilds the options on `/reload` and tool changes; only a struct copy is taken under it |
 | `cellDimensionsState.mu` | `tui/terminalimage.go` | the global terminal cell pixel size, written by the size-report reply and read during image layout | **retained**: package-global value shared with the terminal query path, not UI state |
