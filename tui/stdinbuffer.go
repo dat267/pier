@@ -44,9 +44,9 @@ func isCompleteSequence(data string) seqStatus {
 
 	switch {
 	case startsWith(afterEsc, "["):
-		// Old-style mouse sequence: ESC[M + 3 bytes = 6 total.
+		// Old-style mouse sequence: ESC[M followed by three characters.
 		if startsWith(afterEsc, "[M") {
-			if len(data) >= 6 {
+			if runeCount(data) >= 6 {
 				return seqComplete
 			}
 			return seqIncomplete

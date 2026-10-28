@@ -1349,8 +1349,9 @@ func (s *AltScreen) parseWheelEvent(data string) (altWheelEvent, bool) {
 		}
 		return altWheelEvent{Direction: dir, X: atoiSafe(match[2]) - 1, Y: atoiSafe(match[3]) - 1, Button: button}, true
 	}
-	if len(data) == 6 && strings.HasPrefix(data, "\x1b[M") {
-		button := int(data[3]) - 32
+	if strings.HasPrefix(data, "\x1b[M") && runeCount(data) == 6 {
+		payload := []rune(data[3:])
+		button := int(payload[0]) - 32
 		if button&64 == 0 {
 			return altWheelEvent{}, false
 		}
@@ -1362,7 +1363,7 @@ func (s *AltScreen) parseWheelEvent(data string) (altWheelEvent, bool) {
 		if direction == 0 {
 			dir = -1
 		}
-		return altWheelEvent{Direction: dir, X: int(data[4]) - 33, Y: int(data[5]) - 33, Button: button}, true
+		return altWheelEvent{Direction: dir, X: int(payload[1]) - 33, Y: int(payload[2]) - 33, Button: button}, true
 	}
 	return altWheelEvent{}, false
 }
@@ -2231,7 +2232,7 @@ func (s *AltScreen) isMouseSequence(data string) bool {
 	if truncatedSgrMouseRegex.MatchString(data) {
 		return true
 	}
-	return len(data) == 6 && strings.HasPrefix(data, "\x1b[M")
+	return strings.HasPrefix(data, "\x1b[M") && runeCount(data) == 6
 }
 
 func (s *AltScreen) compositeScrollToEndIndicator(screen []string, layout LayoutFrame, width int) []string {
