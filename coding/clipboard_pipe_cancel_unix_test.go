@@ -52,10 +52,14 @@ func testClipboardInheritedPipeCancellation(t *testing.T, input string) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	done := make(chan []byte, 1)
+	var inputText *string
+	if input != "" {
+		inputText = &input
+	}
 	go func() {
 		// The child waits on a FIFO, not a timed sleep. Its PID is handed
 		// through a separate FIFO so cancellation follows pipe inheritance.
-		done <- runClipboardCommand(ctx, sh, []string{"-c", `(read -r ignored < "$2") <&0 & printf '%s\n' "$!" > "$1"; read -r parent < "$2"`, "fixture", readyPath, holdPath}, clipboardCommandOptions{input: input, timeoutMS: 5000})
+		done <- runClipboardCommand(ctx, sh, []string{"-c", `(read -r ignored < "$2") <&0 & printf '%s\n' "$!" > "$1"; read -r parent < "$2"`, "fixture", readyPath, holdPath}, clipboardCommandOptions{input: inputText, timeoutMS: 5000})
 	}()
 	line, err := bufio.NewReader(ready).ReadString('\n')
 	if err != nil {

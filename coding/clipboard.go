@@ -30,7 +30,7 @@ const MaxOSC52EncodedLength = 100_000
 const clipboardMaxBufferBytes = 50 * 1024 * 1024
 
 type clipboardCommandOptions struct {
-	input     string
+	input     *string // nil reads; a non-nil empty string still writes
 	timeoutMS int
 	// maxBufferBytes caps collected output like the reference's option; zero
 	// means the reference's 50 MiB default.
@@ -49,12 +49,9 @@ func runClipboardCommand(ctx context.Context, command string, args []string, opt
 	defer cancel()
 	cmd := exec.CommandContext(commandCtx, command, args...)
 	detachClipboardCommand(cmd)
-	if options.input != "" {
-		cmd.Stdout = nil
-	}
 	cmd.Stderr = nil
 	cmd.Env = os.Environ()
-	if options.input == "" {
+	if options.input == nil {
 		// The reference aborts the reader once its collected output exceeds
 		// maxBufferBytes (clipboard-command.ts), so reading stops one byte past
 		// the cap instead of buffering an unbounded clipboard.
@@ -99,7 +96,7 @@ func runClipboardCommand(ctx context.Context, command string, args []string, opt
 		// Upstream ignores stdin errors when a writer exits early. Own this
 		// pipe explicitly so cancellation can close it even if a descendant
 		// retains the reader after the direct child has been killed.
-		_, _ = io.WriteString(stdin, options.input)
+		_, _ = io.WriteString(stdin, *options.input)
 		_ = stdin.Close()
 		close(written)
 	}()
@@ -221,7 +218,7 @@ func copyTextToClipboardWith(ctx context.Context, goos string, getenv func(strin
 	}
 	copied := false
 	for _, command := range copyCommandsFor(goos, getenv) {
-		if run(ctx, command[0], command[1:], clipboardCommandOptions{input: text, timeoutMS: 5000}) != nil {
+		if run(ctx, command[0], command[1:], clipboardCommandOptions{input: &text, timeoutMS: 5000}) != nil {
 			copied = true
 			break
 		}
