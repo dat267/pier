@@ -13,7 +13,7 @@ func BASIC() *Language {
 	return &Language{
 		Name:            "BASIC",
 		CaseInsensitive: true,
-		Illegal:         `^\.`,
+		Illegal:         `^.`,
 		Keywords: Keywords{
 			"$pattern": "[a-zA-Z][a-zA-Z0-9_$%!#]*",
 			"keyword": "ABS ASC AND ATN AUTO|0 BEEP BLOAD|10 BSAVE|10 CALL CALLS CDBL CHAIN CHDIR CHR$|10 CINT CIRCLE CLEAR " +
