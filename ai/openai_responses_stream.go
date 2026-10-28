@@ -721,7 +721,7 @@ func ProcessResponsesStream(
 				} else if joined := strings.Join(contentTexts, "\n\n"); joined != "" {
 					slot.thinking.Thinking = joined
 				}
-				signature := string(event.Item)
+				signature := string(mustMarshalJSON(event.Item))
 				slot.thinking.ThinkingSignature = &signature
 				reasoningSlotsByID[item.ID] = slot
 				updateContent(slot)

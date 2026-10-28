@@ -31,6 +31,22 @@ func TestResponsesBackfillsEncryptedReasoningContent(t *testing.T) {
 	itemDone := `{"type":"response.output_item.done","output_index":0,"item":{"type":"reasoning","id":"rs_1","summary":[{"text":"plan"}]}}`
 	added := `{"type":"response.output_item.added","output_index":0,"item":{"type":"reasoning","id":"rs_1"}}`
 
+	t.Run("signature-stringifies-the-decoded-item", func(t *testing.T) {
+		msg := run([]string{
+			added,
+			`{"type":"response.output_item.done","output_index":0,"item":{ "type": "reasoning", "id": "rs_1", "summary": [], "encrypted_content": "enc", "custom": { "z": 1, "a": 2 } }}`,
+			`{"type":"response.completed","response":{"status":"completed","output":[]}}`,
+		})
+		block, ok := msg.Content[0].(ThinkingContent)
+		if !ok || block.ThinkingSignature == nil {
+			t.Fatalf("content = %+v", msg.Content)
+		}
+		want := `{"type":"reasoning","id":"rs_1","summary":[],"encrypted_content":"enc","custom":{"z":1,"a":2}}`
+		if *block.ThinkingSignature != want {
+			t.Fatalf("signature = %s, want %s", *block.ThinkingSignature, want)
+		}
+	})
+
 	t.Run("backfilled", func(t *testing.T) {
 		msg := run([]string{
 			`{"type":"response.created","response":{"id":"resp_1"}}`,
