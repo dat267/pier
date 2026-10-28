@@ -1,12 +1,10 @@
 package highlight
 
-import "regexp"
-
 func init() { RegisterLanguage("mipsasm", MIPSASM()) }
 
 // mipsasmCommentGuard is the reference's `(?!\s*$)` lookahead on the comment
 // rule: a `;` or `#` at the end of a line is not a comment.
-var mipsasmCommentGuard = regexp.MustCompile(`\A\s*$`)
+var mipsasmCommentGuard = mustCompileJS(`\A\s*$`)
 
 // MIPSASM returns the MIPS Assembly language definition (a port of
 // languages/mipsasm.js).

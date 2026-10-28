@@ -1,11 +1,9 @@
 package highlight
 
-import "regexp"
-
 func init() { RegisterLanguage("armasm", ARMAsm()) }
 
 // armasmMnemonicGuard is the reference's `(?=\s)` after each mnemonic.
-var armasmMnemonicGuard = regexp.MustCompile(`\A\s`)
+var armasmMnemonicGuard = mustCompileJS(`\A\s`)
 
 // ARMAsm returns the ARM Assembly language definition (a port of
 // languages/armasm.js). The mnemonic rule's trailing `(?=\s)` lookahead

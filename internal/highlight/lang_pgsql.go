@@ -1,12 +1,10 @@
 package highlight
 
-import "regexp"
-
 func init() { RegisterLanguage("pgsql", PostgreSQL()) }
 
 // pgsqlRangeGuard is the reference's `(?!\s*(BETWEEN|UNBOUNDED|CURRENT|[-0-9]+))`
 // after `\bRANGE`.
-var pgsqlRangeGuard = regexp.MustCompile("\\A\\s*(BETWEEN|UNBOUNDED|CURRENT|[-0-9]+)")
+var pgsqlRangeGuard = mustCompileJS("\\A\\s*(BETWEEN|UNBOUNDED|CURRENT|[-0-9]+)")
 
 // PostgreSQL returns the PostgreSQL and PL/pgSQL language definition (a port of
 // languages/pgsql.js). It is standalone (it does not extend sql).

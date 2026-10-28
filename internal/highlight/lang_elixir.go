@@ -1,16 +1,15 @@
 package highlight
 
 import (
-	"regexp"
 	"strings"
 )
 
 func init() { RegisterLanguage("elixir", Elixir()) }
 
 var (
-	elixirSigilDelimiters = regexp.MustCompile(`\A[/|([{<"']`)
-	elixirSymbolGuard     = regexp.MustCompile(`\A[\s:]`)
-	elixirRegexpGuard     = regexp.MustCompile(`\A\d+\s*[,\]]`)
+	elixirSigilDelimiters = mustCompileJS(`\A[/|([{<"']`)
+	elixirSymbolGuard     = mustCompileJS(`\A[\s:]`)
+	elixirRegexpGuard     = mustCompileJS(`\A\d+\s*[,\]]`)
 )
 
 // Elixir returns the Elixir language definition (a port of languages/elixir.js).

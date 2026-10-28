@@ -1,7 +1,5 @@
 package highlight
 
-import "regexp"
-
 // Common modes and patterns exported by the reference core (core.js), reused by
 // language definitions.
 
@@ -125,7 +123,7 @@ func Shebang(binary string, relevance int) *Mode {
 
 // regexpStart matches a whole regex on one line; it replaces REGEXP_MODE's
 // `(?=\/[^/\n]*\/)` lookahead.
-var regexpStart = regexp.MustCompile(`\A\/[^\/\n]*\/`)
+var regexpStart = mustCompileJS(`\A\/[^\/\n]*\/`)
 
 // RegexpMode matches a JavaScript regular-expression literal (core.js
 // REGEXP_MODE, with its lookahead turned into a guard).

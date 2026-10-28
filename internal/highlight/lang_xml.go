@@ -1,7 +1,5 @@
 package highlight
 
-import "regexp"
-
 func init() { RegisterLanguage("xml", XML()) }
 
 func isWhitespaceByte(b byte) bool {
@@ -17,8 +15,8 @@ func XML() *Language {
 	const tagNameRe = `[A-Z_]([A-Z0-9_.-]*:)?[A-Z0-9_.-]*`
 	const xmlIdentRe = `[A-Za-z0-9._:-]+`
 
-	openTagGuard := regexp.MustCompile(`(?mi)\A(?:` + tagNameRe + `)(?:/>|>|\s)`)
-	closeTagGuard := regexp.MustCompile(`(?mi)\A(?:` + tagNameRe + `)>`)
+	openTagGuard := mustCompileJS(`(?mi)\A(?:` + tagNameRe + `)(?:/>|>|\s)`)
+	closeTagGuard := mustCompileJS(`(?mi)\A(?:` + tagNameRe + `)>`)
 
 	entities := &Mode{ClassName: "symbol", Begin: `&[a-z]+;|&#[0-9]+;|&#x[a-f0-9]+;`}
 	metaKeywords := &Mode{

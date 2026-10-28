@@ -1,7 +1,6 @@
 package highlight
 
 import (
-	"regexp"
 	"strings"
 )
 
@@ -160,7 +159,7 @@ func Ruby() *Language {
 		},
 	})
 	// The reference's `def\s+(?=RUBY_METHOD_RE\s*(\(|;|$))` lookahead.
-	defGuard := regexp.MustCompile(`\A` + rubyMethodRe + `\s*(\(|;|$)`)
+	defGuard := mustCompileJS(`\A` + rubyMethodRe + `\s*(\(|;|$)`)
 	functionMode.beforeBegin = func(m *match, resp *Response) {
 		if !defGuard.MatchString(m.input[m.index+len(m.lexeme):]) {
 			resp.IgnoreMatch()

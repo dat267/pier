@@ -1,7 +1,6 @@
 package highlight
 
 import (
-	"regexp"
 	"strings"
 )
 
@@ -402,4 +401,4 @@ func Swift() *Language {
 	}
 }
 
-var swiftDotKeywordGuard = regexp.MustCompile(`\A(?:\bProtocol\b|\bType\b|\binit\b|\bself\b)`)
+var swiftDotKeywordGuard = mustCompileJS(`\A(?:\bProtocol\b|\bType\b|\binit\b|\bself\b)`)

@@ -1,12 +1,10 @@
 package highlight
 
-import "regexp"
-
 func init() { RegisterLanguage("makefile", Makefile()) }
 
 // makefileAssignGuard is the reference's `(?=[:+?]?=)` lookahead: RE2 has none,
 // so the assignment rule matches the target and checks the following bytes.
-var makefileAssignGuard = regexp.MustCompile(`[:+?]?=`)
+var makefileAssignGuard = mustCompileJS(`[:+?]?=`)
 
 // Makefile returns the Makefile language definition (a port of
 // languages/makefile.js).

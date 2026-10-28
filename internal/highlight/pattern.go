@@ -148,6 +148,16 @@ func normalizeUnicodeEscapes(src string) string {
 	return b.String()
 }
 
+// mustCompileJS compiles a package-level guard with the same JavaScript
+// semantics as the mode patterns it stands in for.
+func mustCompileJS(src string) *patternRegexp {
+	re, err := compilePattern(src, "m")
+	if err != nil {
+		panic(err)
+	}
+	return re
+}
+
 // compilePattern compiles a highlight.js regex source with the given flags.
 // Only the flags that affect matching (i, m, s) are meaningful to RE2; the
 // stateful ones (g, y) are ignored.

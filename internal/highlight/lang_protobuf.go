@@ -1,12 +1,10 @@
 package highlight
 
-import "regexp"
-
 func init() { RegisterLanguage("protobuf", Protobuf()) }
 
 // protobufEnumGuard is the reference's `(?=\s*=[^\n]+;$)` lookahead on the
 // enum-item relevance rule.
-var protobufEnumGuard = regexp.MustCompile(`\s*=[^\n]+;$`)
+var protobufEnumGuard = mustCompileJS(`\s*=[^\n]+;$`)
 
 // Protobuf returns the Protocol Buffers language definition (a port of
 // languages/protobuf.js).

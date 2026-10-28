@@ -1,4 +1,1 @@
 # Reproduced audit findings
-
-## Low
-

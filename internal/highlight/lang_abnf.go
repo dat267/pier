@@ -1,11 +1,9 @@
 package highlight
 
-import "regexp"
-
 func init() { RegisterLanguage("abnf", ABNF()) }
 
 // abnfRuleGuard is the reference's `(?=\s*=)` lookahead for a rule declaration.
-var abnfRuleGuard = regexp.MustCompile(`\s*=`)
+var abnfRuleGuard = mustCompileJS(`\s*=`)
 
 // ABNF returns the Augmented Backus-Naur Form language definition (a port of
 // languages/abnf.js).

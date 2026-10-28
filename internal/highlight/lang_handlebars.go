@@ -1,7 +1,6 @@
 package highlight
 
 import (
-	"regexp"
 	"strings"
 )
 
@@ -11,8 +10,8 @@ func init() {
 }
 
 var (
-	handlebarsDoubleBrace = regexp.MustCompile(`\A\{\{`)
-	handlebarsElse        = regexp.MustCompile(`\Aelse\}\}`)
+	handlebarsDoubleBrace = mustCompileJS(`\A\{\{`)
+	handlebarsElse        = mustCompileJS(`\Aelse\}\}`)
 )
 
 // handlebarsLanguage builds the Handlebars definition. htmlbars is the same

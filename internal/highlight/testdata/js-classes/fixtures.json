@@ -747,19 +747,91 @@
   ],
   "highlights": [
     {
-      "name": "ini-0",
+      "name": "guard-0-ini",
+      "language": "ini",
+      "code": "key = true",
+      "html": "<span class=\"hljs-attr\">key</span> = <span class=\"hljs-literal\">true</span>"
+    },
+    {
+      "name": "guard-1-ini",
+      "language": "ini",
+      "code": "key\u000b= true",
+      "html": "<span class=\"hljs-attr\">key</span>\u000b= <span class=\"hljs-literal\">true</span>"
+    },
+    {
+      "name": "guard-2-ini",
+      "language": "ini",
+      "code": "key = true",
+      "html": "<span class=\"hljs-attr\">key</span> = <span class=\"hljs-literal\">true</span>"
+    },
+    {
+      "name": "guard-3-javascript",
+      "language": "javascript",
+      "code": "const o = {a : 1};",
+      "html": "<span class=\"hljs-keyword\">const</span> o = {<span class=\"hljs-attr\">a</span> : <span class=\"hljs-number\">1</span>};"
+    },
+    {
+      "name": "guard-4-javascript",
+      "language": "javascript",
+      "code": "const o = {a\u000b: 1};",
+      "html": "<span class=\"hljs-keyword\">const</span> o = {<span class=\"hljs-attr\">a</span>\u000b: <span class=\"hljs-number\">1</span>};"
+    },
+    {
+      "name": "guard-5-xml",
+      "language": "xml",
+      "code": "<a href=\"x\">y</a>",
+      "html": "<span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">a</span> <span class=\"hljs-attr\">href</span>=<span class=\"hljs-string\">&quot;x&quot;</span>&gt;</span>y<span class=\"hljs-tag\">&lt;/<span class=\"hljs-name\">a</span>&gt;</span>"
+    },
+    {
+      "name": "guard-6-elixir",
+      "language": "elixir",
+      "code": ": sym",
+      "html": ": sym"
+    },
+    {
+      "name": "guard-7-armasm",
+      "language": "armasm",
+      "code": " mov r0, r1",
+      "html": " <span class=\"hljs-keyword\">mov</span> <span class=\"hljs-built_in\">r0</span>, <span class=\"hljs-built_in\">r1</span>"
+    },
+    {
+      "name": "guard-8-pgsql",
+      "language": "pgsql",
+      "code": "x BETWEEN 1 AND 2",
+      "html": "x <span class=\"hljs-keyword\">BETWEEN</span> <span class=\"hljs-number\">1</span> <span class=\"hljs-keyword\">AND</span> <span class=\"hljs-number\">2</span>"
+    },
+    {
+      "name": "guard-9-shell",
+      "language": "shell",
+      "code": "echo hi ",
+      "html": "echo hi "
+    },
+    {
+      "name": "guard-10-protobuf",
+      "language": "protobuf",
+      "code": "x = 1; ",
+      "html": "x = <span class=\"hljs-number\">1</span>; "
+    },
+    {
+      "name": "guard-11-markdown",
+      "language": "markdown",
+      "code": "Title\n--- ",
+      "html": "Title\n--- "
+    },
+    {
+      "name": "ini-12",
       "language": "ini",
       "code": "; comment [section] key = true",
       "html": "<span class=\"hljs-comment\">; comment</span> <span class=\"hljs-section\">[section]</span> <span class=\"hljs-attr\">key</span> = <span class=\"hljs-literal\">true</span>"
     },
     {
-      "name": "ini-1",
+      "name": "ini-13",
       "language": "ini",
       "code": "; comment [section] key = true",
       "html": "<span class=\"hljs-comment\">; comment</span> <span class=\"hljs-section\">[section]</span> <span class=\"hljs-attr\">key</span> = <span class=\"hljs-literal\">true</span>"
     },
     {
-      "name": "ini-2",
+      "name": "ini-14",
       "language": "ini",
       "code": "; comment x\nkey = true",
       "html": "<span class=\"hljs-comment\">; comment x</span>\n<span class=\"hljs-attr\">key</span> = <span class=\"hljs-literal\">true</span>"

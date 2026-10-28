@@ -1,12 +1,10 @@
 package highlight
 
-import (
-	"regexp"
-)
+import ()
 
 func init() { RegisterLanguage("lua", Lua()) }
 
-var luaLongBracketStart = regexp.MustCompile(`\A\[=*\[`)
+var luaLongBracketStart = mustCompileJS(`\A\[=*\[`)
 
 // Lua returns the Lua language definition (a port of languages/lua.js).
 func Lua() *Language {

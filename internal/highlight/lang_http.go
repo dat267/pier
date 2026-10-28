@@ -1,15 +1,13 @@
 package highlight
 
-import "regexp"
-
 func init() { RegisterLanguage("http", HTTP()) }
 
 // The response and request rules open with a zero-width lookahead at the line
 // start; RE2 has none, so each becomes a beforeBegin guard.
 var (
-	httpVersionGuard = regexp.MustCompile(`\AHTTP/(2|1\.[01]) \d{3}`)
-	httpRequestGuard = regexp.MustCompile(`\A[A-Z]+ .* HTTP/(2|1\.[01])$`)
-	httpHeaderGuard  = regexp.MustCompile(`\A:\s`)
+	httpVersionGuard = mustCompileJS(`\AHTTP/(2|1\.[01]) \d{3}`)
+	httpRequestGuard = mustCompileJS(`\A[A-Z]+ .* HTTP/(2|1\.[01])$`)
+	httpHeaderGuard  = mustCompileJS(`\A:\s`)
 )
 
 // HTTP returns the HTTP language definition (a port of languages/http.js).

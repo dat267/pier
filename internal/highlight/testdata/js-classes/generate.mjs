@@ -16,8 +16,20 @@ for (const [source,name] of [[String.raw`\S`,'not-space'],[String.raw`\s`,'space
   }
 }
 const hljs=require(path.join(root,'pi/node_modules/highlight.js/lib/index.js'));
-for (const code of ['; comment\u2028[section]\u2028key = true','; comment\u2029[section]\u2029key = true','; comment\u00a0x\nkey = true']) {
-  highlights.push({name:'ini-'+highlights.length,language:'ini',code,html:hljs.highlight(code,{language:'ini'}).value});
+const cases=[
+  ['ini','key\u00a0= true'],['ini','key\v= true'],['ini','key =\u00a0true'],
+  ['javascript','const o = {a\u00a0: 1};'],['javascript','const o = {a\v: 1};'],
+  ['xml','<a\u00a0href="x">y</a>'],['elixir',':\u00a0sym'],['armasm','\u00a0mov r0, r1'],
+  ['pgsql','x\u00a0BETWEEN 1 AND 2'],['shell','echo hi\u00a0'],
+  ['protobuf','x = 1;\u00a0'],['markdown','Title\n---\u00a0'],
+];
+for (const [language,code] of cases) {
+  highlights.push({name:'guard-'+highlights.length+'-'+language,language,code,html:hljs.highlight(code,{language}).value});
+}
+for (const [language,code] of [
+  ['ini','; comment\u2028[section]\u2028key = true'],['ini','; comment\u2029[section]\u2029key = true'],['ini','; comment\u00a0x\nkey = true'],
+]) {
+  highlights.push({name:'ini-'+highlights.length,language,code,html:hljs.highlight(code,{language}).value});
 }
 const output=path.join(root,'internal/highlight/testdata/js-classes/fixtures.json');
 fs.writeFileSync(output,JSON.stringify({regex,highlights},null,2)+'\n');

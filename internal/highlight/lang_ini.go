@@ -1,11 +1,9 @@
 package highlight
 
-import "regexp"
-
 func init() { RegisterLanguage("ini", INI()) }
 
 // iniKeyGuard is the reference's `(?=\s*=\s*[^#\s])` lookahead on the dotted key.
-var iniKeyGuard = regexp.MustCompile(`\A\s*=\s*[^#\s]`)
+var iniKeyGuard = mustCompileJS(`\A\s*=\s*[^#\s]`)
 
 // INI returns the TOML/INI language definition (a port of languages/ini.js).
 func INI() *Language {
@@ -53,7 +51,7 @@ func INI() *Language {
 
 	const anyKey = `([A-Za-z0-9_-]+|"(\\"|[^"])*"|'[^']*')`
 	// A rejected lookahead must leave the character for the root illegal rule.
-	keyPattern := regexp.MustCompile(`\A` + anyKey + `(\s*\.\s*` + anyKey + `)*`)
+	keyPattern := mustCompileJS(`\A` + anyKey + `(\s*\.\s*` + anyKey + `)*`)
 	dottedKey := &Mode{
 		ClassName:   "attr",
 		ManualFirst: `-_"'0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ`,

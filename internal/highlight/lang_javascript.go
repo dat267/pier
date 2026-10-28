@@ -1,7 +1,6 @@
 package highlight
 
 import (
-	"regexp"
 	"strings"
 )
 
@@ -11,9 +10,9 @@ func init() {
 }
 
 var (
-	jsObjectAttrGuard = regexp.MustCompile(`(?m)\A(?:((//.*$)|(/\*(\*[^/]|[^*])*\*/))\s*)*` + jsIdentRe + `\s*:`)
-	jsAttrNameGuard   = regexp.MustCompile(`\A\s*:`)
-	jsGetSetGuard     = regexp.MustCompile(`\A` + jsIdentRe + `\(`)
+	jsObjectAttrGuard = mustCompileJS(`(?m)\A(?:((//.*$)|(/\*(\*[^/]|[^*])*\*/))\s*)*` + jsIdentRe + `\s*:`)
+	jsAttrNameGuard   = mustCompileJS(`\A\s*:`)
+	jsGetSetGuard     = mustCompileJS(`\A` + jsIdentRe + `\(`)
 )
 
 const jsIdentRe = `[A-Za-z$_][0-9A-Za-z$_]*`

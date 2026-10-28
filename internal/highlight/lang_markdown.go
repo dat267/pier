@@ -1,7 +1,5 @@
 package highlight
 
-import "regexp"
-
 func init() { RegisterLanguage("markdown", Markdown()) }
 
 // Markdown returns the Markdown language definition (a port of
@@ -118,7 +116,7 @@ func Markdown() *Language {
 	// `(?=^.+?\n[=-]{2,}$)`; RE2 has none, so match `^` and guard on the two
 	// lines. A consuming begin with returnBegin instead would close the section
 	// before the underline.
-	setextGuard := regexp.MustCompile(`(?m)\A.+?\n[=-]{2,}$`)
+	setextGuard := mustCompileJS(`(?m)\A.+?\n[=-]{2,}$`)
 	setext := &Mode{
 		ClassName: "section",
 		Begin:     `^`,
