@@ -47,8 +47,12 @@ func ResolveProjectTrusted(options ResolveProjectTrustedOptions) (bool, error) {
 	if !HasTrustRequiringProjectResources(options.Cwd) {
 		return true, nil
 	}
-	if decision := options.TrustStore.Get(options.Cwd); decision != nil {
-		return *decision, nil
+	entry, err := options.TrustStore.ReadEntry(options.Cwd)
+	if err != nil {
+		return false, err
+	}
+	if entry != nil {
+		return entry.Decision, nil
 	}
 
 	defaultTrust := options.DefaultProjectTrust

@@ -156,7 +156,13 @@ func (w *TrustCrashWiring) MaybeSaveImplicitProjectTrustAfterReload(autoTrustOnR
 		return false
 	}
 	store := coding.NewProjectTrustStore(w.AgentDir)
-	existing := store.GetEntry(cwd)
+	existing, err := store.ReadEntry(cwd)
+	if err != nil {
+		if w.ShowError != nil {
+			w.ShowError("Could not save project trust after reload: " + err.Error())
+		}
+		return false
+	}
 	if existing != nil {
 		return false
 	}

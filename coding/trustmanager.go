@@ -262,7 +262,8 @@ func NewProjectTrustStore(agentDir string) *ProjectTrustStore {
 // TrustPath is the store's file path.
 func (s *ProjectTrustStore) TrustPath() string { return s.trustPath }
 
-// Get returns the trust decision for a cwd (nil when unknown).
+// Get returns the trust decision for a cwd (nil when unknown), and panics with
+// an error on store failures, like GetEntry.
 func (s *ProjectTrustStore) Get(cwd string) ProjectTrustDecision {
 	entry := s.GetEntry(cwd)
 	if entry == nil {
@@ -271,18 +272,29 @@ func (s *ProjectTrustStore) Get(cwd string) ProjectTrustDecision {
 	return new(entry.Decision)
 }
 
-// GetEntry returns the nearest trust entry for a cwd.
+// GetEntry returns the nearest trust entry for a cwd. Like upstream, it panics
+// with an error on store failures; use ReadEntry for the error-returning form.
 func (s *ProjectTrustStore) GetEntry(cwd string) *ProjectTrustStoreEntry {
+	entry, err := s.ReadEntry(cwd)
+	if err != nil {
+		panic(err)
+	}
+	return entry
+}
+
+// ReadEntry returns the nearest trust entry, distinguishing an unknown decision
+// from a read, parse or lock failure.
+func (s *ProjectTrustStore) ReadEntry(cwd string) (*ProjectTrustStoreEntry, error) {
 	release, err := acquireTrustLockSync(s.trustPath)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	defer release()
 	data, err := readTrustFile(s.trustPath)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return findNearestTrustEntry(data, cwd)
+	return findNearestTrustEntry(data, cwd), nil
 }
 
 // Set records one decision.

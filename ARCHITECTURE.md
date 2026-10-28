@@ -628,7 +628,11 @@ on replacement using `sessionManager.getCwd()`, `resolveProjectTrusted`, and
 Trust answers cache per project for the run, seeded at boot. Project
 `.pi/themes` loads only when trusted; theme sources reinstall after the initial
 trust decision because the `-r` picker needs themes before project resources
-are readable.
+are readable. Trust-store read, parse and lock failures stop resolution before
+any default or prompt. `ProjectTrustStore.Get`/`GetEntry` preserve their nullable
+signatures but panic with the store error, matching upstream's throwing getters;
+`ReadEntry` provides the error-returning form used by resolution and UI callers.
+UI failures are reported without saving or claiming a successful trust change.
 
 Extensions remain absent (D41). The model runtime remains process-wide:
 `models.json` is agent-dir scoped on both sides, so switches do not change its

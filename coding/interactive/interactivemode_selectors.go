@@ -314,7 +314,11 @@ func (w *SelectorWiring) ShowTrustSelector() {
 	}
 	cwd := w.SessionInfo.GetCwd()
 	store := coding.NewProjectTrustStore(w.AgentDir)
-	savedDecision := store.GetEntry(cwd)
+	savedDecision, err := store.ReadEntry(cwd)
+	if err != nil {
+		w.showError("Could not read project trust: " + err.Error())
+		return
+	}
 	projectTrusted := true
 	if w.Settings != nil {
 		projectTrusted = w.Settings.IsProjectTrusted()
@@ -325,7 +329,10 @@ func (w *SelectorWiring) ShowTrustSelector() {
 			SavedDecision:  savedDecision,
 			ProjectTrusted: projectTrusted,
 			OnSelect: func(selection TrustSelection) {
-				_ = store.SetMany(selection.Updates)
+				if err := store.SetMany(selection.Updates); err != nil {
+					w.showError("Could not save project trust: " + err.Error())
+					return
+				}
 				done()
 				state := "untrusted"
 				if selection.Trusted {
