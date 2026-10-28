@@ -54,5 +54,8 @@ func Arduino() *Language {
 		"rect line open seek fill size turn stop home find step tone sqrt RSSI SSID end bit tan cos " +
 		"sin pow map abs max min get run put"
 	lang.Aliases = []string{"ino"}
+	// The reference marks Arduino as a superset of C++ so auto-detection prefers
+	// C++ when the two tie.
+	lang.SupersetOf = "cpp"
 	return lang
 }

@@ -375,8 +375,9 @@ func (m *multiRegex) execScan(s string, lastIndex int, jsLines bool, ws *jsWorks
 				break
 			}
 		}
-		if manualAbs >= 0 && (regexAbs < 0 || manualAbs <= regexAbs) {
-			return &match{
+		var regexMatch, manualMatch *match
+		if manualAbs >= 0 {
+			manualMatch = &match{
 				index:    manualAbs,
 				lexeme:   s[manualAbs:manualEnd],
 				typ:      manualHit.data.typ,
@@ -387,9 +388,8 @@ func (m *multiRegex) execScan(s string, lastIndex int, jsLines bool, ws *jsWorks
 		}
 		if regexAbs >= 0 {
 			if !m.verifyStart || regexAbs == 0 {
-				return m.buildMatch(s, search, regexLoc)
-			}
-			if m.prefixedRe != nil {
+				regexMatch = m.buildMatch(s, search, regexLoc)
+			} else if m.prefixedRe != nil {
 				// Rebuild the match from the prefixed result: the leading wildcard
 				// consumes the real preceding byte, so `^`/`\b` are evaluated in
 				// context and the correct rule wins. Returning the slice match
@@ -398,11 +398,30 @@ func (m *multiRegex) execScan(s string, lastIndex int, jsLines bool, ws *jsWorks
 				_, width := utf8.DecodeLastRuneInString(s[:regexAbs])
 				base := regexAbs - width
 				if vloc := m.prefixedRe.findSubmatchWS(s[base:], jsLines, ws); vloc != nil && vloc[0] == 0 {
-					return m.buildMatch(s, base, vloc)
+					regexMatch = m.buildMatch(s, base, vloc)
 				}
 			}
-			search = regexAbs + 1
-			continue
+			if regexMatch == nil {
+				search = regexAbs + 1
+				continue
+			}
+		}
+		// Rules are evaluated in declaration order, so at the same position the
+		// earlier rule wins; a manual rule stands in for its own regex rule and
+		// must not preempt an earlier one.
+		switch {
+		case regexMatch != nil && manualMatch != nil:
+			if manualMatch.index < regexMatch.index {
+				return manualMatch
+			}
+			if manualMatch.index > regexMatch.index || manualMatch.position >= regexMatch.position {
+				return regexMatch
+			}
+			return manualMatch
+		case manualMatch != nil:
+			return manualMatch
+		case regexMatch != nil:
+			return regexMatch
 		}
 		return nil
 	}

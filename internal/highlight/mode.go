@@ -66,7 +66,10 @@ type Language struct {
 	Aliases           []string
 	CaseInsensitive   bool
 	DisableAutodetect bool
-	ClassNameAliases  map[string]string
+	// SupersetOf names the language this one extends; auto-detection prefers
+	// the base language when the two tie (core.js highlightAuto).
+	SupersetOf       string
+	ClassNameAliases map[string]string
 	Mode
 }
 

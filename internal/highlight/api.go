@@ -17,6 +17,7 @@ type compiledLanguage struct {
 	flags             string
 	classNameAliases  map[string]string
 	disableAutodetect bool
+	supersetOf        string
 	root              *compiledMode
 }
 
@@ -37,6 +38,13 @@ func RegisterLanguage(name string, language *Language) {
 	for _, alias := range language.Aliases {
 		registry[alias] = language
 	}
+}
+
+// autoDetectionOrder returns the canonical language names in the reference's
+// registration order (generated in lang_order.go), which is what core.js
+// highlightAuto iterates and uses to settle equal-relevance ties.
+func autoDetectionOrder() []string {
+	return append([]string(nil), referenceLanguageOrder...)
 }
 
 // supportsLanguage reports whether a language (or alias) is registered.
@@ -84,6 +92,7 @@ func getCompiledLanguage(name string) (*compiledLanguage, error) {
 		flags:             flags,
 		classNameAliases:  language.ClassNameAliases,
 		disableAutodetect: language.DisableAutodetect,
+		supersetOf:        language.SupersetOf,
 		root:              root,
 	}
 	compiledLanguages[name] = lang

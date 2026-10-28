@@ -2,6 +2,7 @@ package highlight
 
 import (
 	"math"
+	"sort"
 	"strings"
 	"unicode/utf8"
 )
@@ -541,24 +542,53 @@ func highlightAuto(code string, subset []string) (*Result, string) {
 	// empty, so `subLanguage: []` (e.g. HTTP's body) auto-detects against every
 	// language rather than disabling highlighting.
 	if len(subset) == 0 {
-		subset = Languages()
+		subset = autoDetectionOrder()
 	}
-	best := &Result{Nodes: []*Node{{Text: code}}}
-	bestName := ""
+	type candidate struct {
+		result *Result
+		name   string
+		base   string // supersetOf, for the tie-break
+	}
+	// The reference unshifts the plaintext result, so it wins a tie against any
+	// language that scores the same.
+	candidates := []candidate{{result: &Result{Nodes: []*Node{{Text: code}}}}}
+	// The reference iterates canonical names only; a subset built from
+	// Languages() also contains aliases, and scoring the same language twice
+	// would let its alias position settle a tie.
+	seen := make(map[string]bool, len(subset))
 	for _, name := range subset {
 		lang, err := getCompiledLanguage(name)
-		if err != nil || lang.disableAutodetect {
+		if err != nil || lang.disableAutodetect || seen[lang.name] {
 			continue
 		}
+		seen[lang.name] = true
 		// The reference's highlightAuto highlights candidates with
 		// ignoreIllegals false, unlike a named subLanguage.
-		result := highlightWith(lang, code, false)
-		if result.Relevance > best.Relevance {
-			best = result
-			bestName = lang.name
-		}
+		candidates = append(candidates, candidate{
+			result: highlightWith(lang, code, false),
+			name:   lang.name,
+			base:   lang.supersetOf,
+		})
 	}
-	return best, bestName
+	// Sort by relevance, then let the base language win a tie, otherwise keep
+	// the original order, which is the reference's registration order (core.js
+	// highlightAuto).
+	sort.SliceStable(candidates, func(i, j int) bool {
+		left, right := candidates[i], candidates[j]
+		if left.result.Relevance != right.result.Relevance {
+			return left.result.Relevance > right.result.Relevance
+		}
+		if left.name != "" && right.name != "" {
+			if left.base == right.name {
+				return false
+			}
+			if right.base == left.name {
+				return true
+			}
+		}
+		return false
+	})
+	return candidates[0].result, candidates[0].name
 }
 
 func nodesEmitter(nodes []*Node) *emitter {

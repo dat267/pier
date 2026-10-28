@@ -18,12 +18,15 @@ func TestRelevanceMatchesUpstream(t *testing.T) {
 		t.Fatal(err)
 	}
 	var cases []struct {
-		Name      string
-		Language  string
-		Code      string
-		HTML      string
-		Illegal   bool
-		Relevance int
+		Name            string
+		Language        string
+		Code            string
+		HTML            string
+		Illegal         bool
+		Relevance       int
+		Auto            bool
+		Second          *string
+		SecondRelevance *int
 	}
 	if err := json.Unmarshal(data, &cases); err != nil {
 		t.Fatal(err)
@@ -33,6 +36,18 @@ func TestRelevanceMatchesUpstream(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
+			if c.Auto {
+				// core.js highlightAuto: relevance first, then the base language,
+				// then registration order.
+				result, name := highlightAuto(c.Code, nil)
+				if name != c.Language || result.Relevance != c.Relevance {
+					t.Fatalf("auto = %s %d; want %s %d", name, result.Relevance, c.Language, c.Relevance)
+				}
+				if got := RenderHTML(result.Nodes); got != c.HTML {
+					t.Fatalf("auto HTML = %q; want %q", got, c.HTML)
+				}
+				return
+			}
 			result, err := Highlight(c.Code, c.Language)
 			if err != nil {
 				t.Fatal(err)

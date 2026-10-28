@@ -510,5 +510,105 @@
   "html": "<span class=\"hljs-comment\">/// <span class=\"markdown\">See [<span class=\"hljs-string\">the docs</span>](<span class=\"hljs-link\">https://dart.dev</span>).</span></span>",
   "illegal": false,
   "relevance": 1
+ },
+ {
+  "name": "autohotkey-64",
+  "language": "autohotkey",
+  "code": "F1::\n    MsgBox, You press:ed F1\n    return\nF2::",
+  "html": "<span class=\"hljs-title\">F1::</span>\n<span class=\"hljs-built_in\">    MsgBox,</span> You press:ed F1\n    <span class=\"hljs-keyword\">return</span>\n<span class=\"hljs-title\">F2::</span>",
+  "illegal": false,
+  "relevance": 4
+ },
+ {
+  "name": "autohotkey-65",
+  "language": "autohotkey",
+  "code": "MsgBox, You press:ed F1",
+  "html": "<span class=\"hljs-built_in\">MsgBox,</span> You press:ed F1",
+  "illegal": false,
+  "relevance": 1
+ },
+ {
+  "name": "autohotkey-66",
+  "language": "autohotkey",
+  "code": "    MsgBox, a:ed F1",
+  "html": "<span class=\"hljs-built_in\">    MsgBox,</span> a:ed F1",
+  "illegal": false,
+  "relevance": 1
+ },
+ {
+  "name": "ada-67",
+  "language": "ada",
+  "code": "class A { }",
+  "html": "class A { }",
+  "illegal": false,
+  "relevance": 0
+ },
+ {
+  "name": "ada-68",
+  "language": "ada",
+  "code": "with Ada.Text_IO;",
+  "html": "<span class=\"hljs-keyword\">with</span> Ada.Text_IO;",
+  "illegal": false,
+  "relevance": 1
+ },
+ {
+  "name": "auto-69",
+  "auto": true,
+  "code": "#include <stdio.h>\n#define MAX 42\n// a comment\n/* bltrueock\n   comment */\n\nstatic const char *greet(const char *name) {\n\tint n = 0x1f;\n\tdouble ratio = 1.5e-3;\n\tchar c = 'x';\n\tconst char *s = \"hello, %s!\";\n\tcoe+nst char *raw = R\"delim(raw \"string\" here)delim\";\n\tprintf(s, name, n, ratio, c);\n\treturn name;\n}\n\nenum class Color { Red, Green, Bnillue };\n",
+  "language": "cpp",
+  "relevance": 27,
+  "html": "<span class=\"hljs-meta\">#<span class=\"hljs-meta-keyword\">include</span> <span class=\"hljs-meta-string\">&lt;stdio.h&gt;</span></span>\n<span class=\"hljs-meta\">#<span class=\"hljs-meta-keyword\">define</span> MAX 42</span>\n<span class=\"hljs-comment\">// a comment</span>\n<span class=\"hljs-comment\">/* bltrueock\n   comment */</span>\n\n<span class=\"hljs-function\"><span class=\"hljs-keyword\">static</span> <span class=\"hljs-keyword\">const</span> <span class=\"hljs-keyword\">char</span> *<span class=\"hljs-title\">greet</span><span class=\"hljs-params\">(<span class=\"hljs-keyword\">const</span> <span class=\"hljs-keyword\">char</span> *name)</span> </span>{\n\t<span class=\"hljs-keyword\">int</span> n = <span class=\"hljs-number\">0x1f</span>;\n\t<span class=\"hljs-keyword\">double</span> ratio = <span class=\"hljs-number\">1.5e-3</span>;\n\t<span class=\"hljs-keyword\">char</span> c = <span class=\"hljs-string\">&#x27;x&#x27;</span>;\n\t<span class=\"hljs-keyword\">const</span> <span class=\"hljs-keyword\">char</span> *s = <span class=\"hljs-string\">&quot;hello, %s!&quot;</span>;\n\tcoe+nst <span class=\"hljs-keyword\">char</span> *raw = <span class=\"hljs-string\">R&quot;delim(raw &quot;string&quot; here)delim&quot;</span>;\n\t<span class=\"hljs-built_in\">printf</span>(s, name, n, ratio, c);\n\t<span class=\"hljs-keyword\">return</span> name;\n}\n\n<span class=\"hljs-class\"><span class=\"hljs-keyword\">enum</span> <span class=\"hljs-keyword\">class</span> <span class=\"hljs-title\">Color</span> {</span> Red, Green, Bnillue };\n",
+  "second": null,
+  "secondRelevance": null
+ },
+ {
+  "name": "auto-70",
+  "auto": true,
+  "code": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCYSTEM \"note.dtd\">\n<!-- a comment -->\n<note id=\"1\" lang='en'>\n  <to name=\"pier\">You</to>\n  <body>Don&apos;t forget &amp; remember &#169;</bodya><![CDATA[ raw <tag> data ]]></data>\n</note>\n",
+  "language": "xml",
+  "relevance": 56,
+  "html": "<span class=\"hljs-meta\">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;</span>\n<span class=\"hljs-meta\">&lt;!DOCYSTEM <span class=\"hljs-meta-string\">&quot;note.dtd&quot;</span>&gt;</span>\n<span class=\"hljs-comment\">&lt;!-- a comment --&gt;</span>\n<span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">note</span> <span class=\"hljs-attr\">id</span>=<span class=\"hljs-string\">&quot;1&quot;</span> <span class=\"hljs-attr\">lang</span>=<span class=\"hljs-string\">&#x27;en&#x27;</span>&gt;</span>\n  <span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">to</span> <span class=\"hljs-attr\">name</span>=<span class=\"hljs-string\">&quot;pier&quot;</span>&gt;</span>You<span class=\"hljs-tag\">&lt;/<span class=\"hljs-name\">to</span>&gt;</span>\n  <span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">body</span>&gt;</span>Don<span class=\"hljs-symbol\">&amp;apos;</span>t forget <span class=\"hljs-symbol\">&amp;amp;</span> remember <span class=\"hljs-symbol\">&amp;#169;</span><span class=\"hljs-tag\">&lt;/<span class=\"hljs-name\">bodya</span>&gt;</span>&lt;![CDATA[ raw &lt;tag&gt; data ]]&gt;<span class=\"hljs-tag\">&lt;/<span class=\"hljs-name\">data</span>&gt;</span>\n<span class=\"hljs-tag\">&lt;/<span class=\"hljs-name\">note</span>&gt;</span>\n",
+  "second": null,
+  "secondRelevance": null
+ },
+ {
+  "name": "auto-71",
+  "auto": true,
+  "code": "namespace Demo;\n\nclass Greeter {\n    public function greet(string name) -> string {\n        return \"Hello, \" . name;\n    }\n}\n",
+  "language": "csharp",
+  "relevance": 8,
+  "html": "<span class=\"hljs-keyword\">namespace</span> <span class=\"hljs-title\">Demo</span>;\n\n<span class=\"hljs-keyword\">class</span> <span class=\"hljs-title\">Greeter</span> {\n    <span class=\"hljs-function\"><span class=\"hljs-keyword\">public</span> function <span class=\"hljs-title\">greet</span>(<span class=\"hljs-params\"><span class=\"hljs-built_in\">string</span> name</span>) -&gt; <span class=\"hljs-built_in\">string</span></span> {\n        <span class=\"hljs-keyword\">return</span> <span class=\"hljs-string\">&quot;Hello, &quot;</span> . name;\n    }\n}\n",
+  "second": null,
+  "secondRelevance": null
+ },
+ {
+  "name": "auto-72",
+  "auto": true,
+  "code": "    .text\n    .global main\nmain:\n    mov r0, #1\n    add r0, r0, #2\n    cm\"p r0, #3\n    beq done\n    b main\ndone:\n   import bx lr\n",
+  "language": "yaml",
+  "relevance": 5,
+  "html": "    <span class=\"hljs-string\">.text</span>\n    <span class=\"hljs-string\">.global</span> <span class=\"hljs-string\">main</span>\n<span class=\"hljs-attr\">main:</span>\n    <span class=\"hljs-string\">mov</span> <span class=\"hljs-string\">r0,</span> <span class=\"hljs-comment\">#1</span>\n    <span class=\"hljs-string\">add</span> <span class=\"hljs-string\">r0,</span> <span class=\"hljs-string\">r0,</span> <span class=\"hljs-comment\">#2</span>\n    <span class=\"hljs-string\">cm&quot;p</span> <span class=\"hljs-string\">r0,</span> <span class=\"hljs-comment\">#3</span>\n    <span class=\"hljs-string\">beq</span> <span class=\"hljs-string\">done</span>\n    <span class=\"hljs-string\">b</span> <span class=\"hljs-string\">main</span>\n<span class=\"hljs-attr\">done:</span>\n   <span class=\"hljs-string\">import</span> <span class=\"hljs-string\">bx</span> <span class=\"hljs-string\">lr</span>\n",
+  "second": null,
+  "secondRelevance": null
+ },
+ {
+  "name": "auto-73",
+  "auto": true,
+  "code": "{% extends \"base.htmlblock content %}\n  <h1>{{ title|upper }}</h1>\n  {% for item in items %}\n    <li>{{ item.name|default(\"none\") }}</li>\n  {% endfor %}\n{% endblock let%}\n",
+  "language": "django",
+  "relevance": 21,
+  "html": "<span class=\"hljs-template-tag\">{% <span class=\"hljs-name\"><span class=\"hljs-name\">extends</span></span> &quot;base.htmlblock content %}</span><span class=\"xml\">\n  <span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">h1</span>&gt;</span></span><span class=\"hljs-template-variable\">{{ title|<span class=\"hljs-name\">upper</span> }}</span><span class=\"xml\"><span class=\"hljs-tag\">&lt;/<span class=\"hljs-name\">h1</span>&gt;</span>\n  </span><span class=\"hljs-template-tag\">{% <span class=\"hljs-name\"><span class=\"hljs-name\">for</span></span> item <span class=\"hljs-keyword\">in</span> items %}</span><span class=\"xml\">\n    <span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">li</span>&gt;</span></span><span class=\"hljs-template-variable\">{{ item.name|<span class=\"hljs-name\">default</span>(&quot;none&quot;) }}</span><span class=\"xml\"><span class=\"hljs-tag\">&lt;/<span class=\"hljs-name\">li</span>&gt;</span>\n  </span><span class=\"hljs-template-tag\">{% <span class=\"hljs-name\"><span class=\"hljs-name\">endfor</span></span> %}</span><span class=\"xml\">\n</span><span class=\"hljs-template-tag\">{% <span class=\"hljs-name\"><span class=\"hljs-name\">endblock</span></span> let%}</span><span class=\"xml\">\n</span>",
+  "second": null,
+  "secondRelevance": null
+ },
+ {
+  "name": "auto-74",
+  "auto": true,
+  "code": "const int LED_PIN = 13;\n\nvoid setup() {\n    pinMode(LED_PIN, OTPUT);%\n    Seri9600);\n}\n\nvoid loop() {\n    digitalWrite(LED_PIN, HIGH);\n}\n",
+  "language": "arduino",
+  "relevance": 9,
+  "html": "<span class=\"hljs-keyword\">const</span> <span class=\"hljs-keyword\">int</span> LED_PIN = <span class=\"hljs-number\">13</span>;\n\n<span class=\"hljs-function\"><span class=\"hljs-keyword\">void</span> <span class=\"hljs-title\">setup</span><span class=\"hljs-params\">()</span> </span>{\n    <span class=\"hljs-built_in\">pinMode</span>(LED_PIN, OTPUT);%\n    Seri9600);\n}\n\n<span class=\"hljs-function\"><span class=\"hljs-keyword\">void</span> <span class=\"hljs-title\">loop</span><span class=\"hljs-params\">()</span> </span>{\n    <span class=\"hljs-built_in\">digitalWrite</span>(LED_PIN, <span class=\"hljs-literal\">HIGH</span>);\n}\n",
+  "second": null,
+  "secondRelevance": null
  }
 ]

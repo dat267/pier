@@ -11,9 +11,10 @@ func Ada() *Language {
 	const basedLiteralRe = integerRe + `#` + basedIntegerRe + `(\.` + basedIntegerRe + `)?` + `#` + `(` + exponentRe + `)?`
 	numberRe := `\b(` + basedLiteralRe + `|` + decimalLiteralRe + `)`
 	const idRegex = `[A-Za-z](_?[A-Za-z0-9.])*`
-	// The reference's BAD_CHARS is `[]\{\}%#'"`, whose `[]` never matches; the
-	// effective set is the braces, percent, hash, apostrophe and quote.
-	const badChars = `[{}%#'"]`
+	// The reference's BAD_CHARS is the regex `([]\{\}%#'")`, whose empty class
+	// `[]` never matches in JavaScript, so the illegal rule never fires. The
+	// port previously used the intended-looking set and aborted valid input.
+	const badChars = MatchNothingRe
 
 	comments := CommentMode(`--`, `$`)
 

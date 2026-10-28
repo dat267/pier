@@ -1773,6 +1773,14 @@ dependency:
 `github.com/alecthomas/chroma/v3` and its `dlclark/regexp2` indirect dependency
 stay removed, keeping the binary and startup gains that removal produced.
 
+Auto-detection follows `core.js highlightAuto`: relevance first, then the base
+language of a `supersetOf` pair (Arduino prefers C++), then the reference's
+registration order, which `lang_order.go` holds as a generated list because Go
+registration order is alphabetical and upstream registers `xml` and `yaml`
+early. Manual begins (used where RE2 cannot express a rule) take part in the
+same rule ordering: at one position the earlier rule wins, as in the reference's
+alternation.
+
 `RegexpMode` collapses the reference's zero-width outer regexp rule and its
 inner `regexp` rule into one mode with `relevance: 2`: the port's lookahead guard
 replaces the outer rule (RE2 has no lookaround), so both relevance
