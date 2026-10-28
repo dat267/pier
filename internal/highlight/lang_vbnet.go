@@ -35,7 +35,7 @@ func VBNet() *Language {
 	commentBase := CommentMode(``, `$`)
 	remVariant := Variant(commentBase, func(m *Mode) { m.Begin = `([\t ]|^)REM` })
 	remVariant.beforeBegin = func(m *match, resp *Response) {
-		if end := m.index + len(m.lexeme); end >= len(m.input) || !isWhitespaceByte(m.input[end]) {
+		if end := m.index + len(m.lexeme); end >= len(m.input) || !isJSWhitespaceAt(m.input, end) {
 			resp.IgnoreMatch()
 		}
 	}

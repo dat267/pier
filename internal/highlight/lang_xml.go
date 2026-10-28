@@ -1,13 +1,17 @@
 package highlight
 
+import "unicode/utf8"
+
 func init() { RegisterLanguage("xml", XML()) }
 
-func isWhitespaceByte(b byte) bool {
-	switch b {
-	case ' ', '\t', '\n', '\r', '\f', '\v':
+// isJSWhitespaceAt reports ECMAScript whitespace at a byte offset.
+func isJSWhitespaceAt(s string, i int) bool {
+	r, _ := utf8.DecodeRuneInString(s[i:])
+	switch r {
+	case '\t', '\n', '\v', '\f', '\r', ' ', 0xa0, 0x1680, 0x2028, 0x2029, 0x202f, 0x205f, 0x3000, 0xfeff:
 		return true
 	}
-	return false
+	return r >= 0x2000 && r <= 0x200a
 }
 
 // XML returns the HTML/XML language definition (a port of languages/xml.js).
@@ -105,7 +109,7 @@ func XML() *Language {
 	}
 	styleTag.beforeBegin = func(m *match, resp *Response) {
 		next := m.index + len(m.lexeme)
-		if next < len(m.input) && m.input[next] != '>' && !isWhitespaceByte(m.input[next]) {
+		if next < len(m.input) && m.input[next] != '>' && !isJSWhitespaceAt(m.input, next) {
 			resp.IgnoreMatch()
 		}
 	}
@@ -123,7 +127,7 @@ func XML() *Language {
 	}
 	scriptTag.beforeBegin = func(m *match, resp *Response) {
 		next := m.index + len(m.lexeme)
-		if next < len(m.input) && m.input[next] != '>' && !isWhitespaceByte(m.input[next]) {
+		if next < len(m.input) && m.input[next] != '>' && !isJSWhitespaceAt(m.input, next) {
 			resp.IgnoreMatch()
 		}
 	}

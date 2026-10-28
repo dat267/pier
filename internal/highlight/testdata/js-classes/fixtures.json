@@ -819,19 +819,61 @@
       "html": "Title\n--- "
     },
     {
-      "name": "ini-12",
+      "name": "guard-12-markdown",
+      "language": "markdown",
+      "code": "- item",
+      "html": "<span class=\"hljs-bullet\">-</span> item"
+    },
+    {
+      "name": "guard-13-markdown",
+      "language": "markdown",
+      "code": "1. item",
+      "html": "<span class=\"hljs-bullet\">1.</span> item"
+    },
+    {
+      "name": "guard-14-markdown",
+      "language": "markdown",
+      "code": "-\u000bitem",
+      "html": "<span class=\"hljs-bullet\">-</span>\u000bitem"
+    },
+    {
+      "name": "guard-15-xml",
+      "language": "xml",
+      "code": "<script src=\"x\">var a = 1;</script>",
+      "html": "<span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">script</span> <span class=\"hljs-attr\">src</span>=<span class=\"hljs-string\">&quot;x&quot;</span>&gt;</span><span class=\"javascript\"><span class=\"hljs-keyword\">var</span> a = <span class=\"hljs-number\">1</span>;</span><span class=\"hljs-tag\">&lt;/<span class=\"hljs-name\">script</span>&gt;</span>"
+    },
+    {
+      "name": "guard-16-xml",
+      "language": "xml",
+      "code": "<style >a { color: red; }</style>",
+      "html": "<span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">style</span> &gt;</span><span class=\"css\"><span class=\"hljs-selector-tag\">a</span> { <span class=\"hljs-attribute\">color</span>: red; }</span><span class=\"hljs-tag\">&lt;/<span class=\"hljs-name\">style</span>&gt;</span>"
+    },
+    {
+      "name": "guard-17-ruby",
+      "language": "ruby",
+      "code": "x = : sym",
+      "html": "x = : sym"
+    },
+    {
+      "name": "guard-18-vbnet",
+      "language": "vbnet",
+      "code": "x = 1\nREM comment",
+      "html": "x = <span class=\"hljs-number\">1</span>\n<span class=\"hljs-comment\">REM comment</span>"
+    },
+    {
+      "name": "ini-19",
       "language": "ini",
       "code": "; comment [section] key = true",
       "html": "<span class=\"hljs-comment\">; comment</span> <span class=\"hljs-section\">[section]</span> <span class=\"hljs-attr\">key</span> = <span class=\"hljs-literal\">true</span>"
     },
     {
-      "name": "ini-13",
+      "name": "ini-20",
       "language": "ini",
       "code": "; comment [section] key = true",
       "html": "<span class=\"hljs-comment\">; comment</span> <span class=\"hljs-section\">[section]</span> <span class=\"hljs-attr\">key</span> = <span class=\"hljs-literal\">true</span>"
     },
     {
-      "name": "ini-14",
+      "name": "ini-21",
       "language": "ini",
       "code": "; comment x\nkey = true",
       "html": "<span class=\"hljs-comment\">; comment x</span>\n<span class=\"hljs-attr\">key</span> = <span class=\"hljs-literal\">true</span>"

@@ -2,6 +2,7 @@ package highlight
 
 import (
 	"strings"
+	"unicode/utf8"
 )
 
 func init() { RegisterLanguage("ruby", Ruby()) }
@@ -45,8 +46,12 @@ func rubyHeredocBegin(s string, pos int) (int, bool) {
 			i += nl + 1
 		}
 		j := 0
-		for j < len(line) && isWhitespaceByte(line[j]) {
-			j++
+		for j < len(line) {
+			r, width := utf8.DecodeRuneInString(line[j:])
+			if !isJSWhitespaceAt(line, j) || r == utf8.RuneError && width == 1 {
+				break
+			}
+			j += width
 		}
 		rest := line[j:]
 		if strings.HasPrefix(rest, name) && (len(rest) == len(name) || !isWordByte(rest[len(name)])) {
@@ -176,7 +181,7 @@ func Ruby() *Language {
 	}
 	symbolColon.beforeBegin = func(m *match, resp *Response) {
 		next := m.index + len(m.lexeme)
-		if next < len(m.input) && isWhitespaceByte(m.input[next]) {
+		if next < len(m.input) && isJSWhitespaceAt(m.input, next) {
 			resp.IgnoreMatch()
 		}
 	}

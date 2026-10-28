@@ -169,7 +169,7 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 	usable := true
 	var union [256]bool
 	for i, source := range m.regexes {
-		set, ok := ruleFirstByteSet(source, caseInsensitive)
+		set, ok := ruleFirstByteSet(normalizePattern(source), caseInsensitive)
 		if !ok {
 			usable = false
 			break

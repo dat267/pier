@@ -22,6 +22,9 @@ const cases=[
   ['xml','<a\u00a0href="x">y</a>'],['elixir',':\u00a0sym'],['armasm','\u00a0mov r0, r1'],
   ['pgsql','x\u00a0BETWEEN 1 AND 2'],['shell','echo hi\u00a0'],
   ['protobuf','x = 1;\u00a0'],['markdown','Title\n---\u00a0'],
+  ['markdown','-\u00a0item'],['markdown','1.\u00a0item'],['markdown','-\vitem'],
+  ['xml','<script\u00a0src="x">var a = 1;</script>'],['xml','<style\u00a0>a { color: red; }</style>'],
+  ['ruby','x = :\u00a0sym'],['vbnet','x = 1\nREM\u00a0comment'],
 ];
 for (const [language,code] of cases) {
   highlights.push({name:'guard-'+highlights.length+'-'+language,language,code,html:hljs.highlight(code,{language}).value});

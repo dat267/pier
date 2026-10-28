@@ -41,7 +41,7 @@ func Markdown() *Language {
 	}
 	list.beforeBegin = func(m *match, resp *Response) {
 		next := m.index + len(m.lexeme)
-		if next >= len(m.input) || !isWhitespaceByte(m.input[next]) {
+		if next >= len(m.input) || !isJSWhitespaceAt(m.input, next) {
 			resp.IgnoreMatch()
 		}
 	}
