@@ -562,16 +562,21 @@ func (m *Models) GetProvider(id string) *Provider {
 // Best-effort: a panicking provider yields no models.
 func (m *Models) GetModels(providerID string) []*Model {
 	m.mu.Lock()
-	defer m.mu.Unlock()
 	if providerID != "" {
 		entry, ok := m.providers[providerID]
+		m.mu.Unlock()
 		if !ok {
 			return nil
 		}
 		return safeModels(entry)
 	}
-	var models []*Model
+	providers := make([]*Provider, 0, len(m.providers))
 	for _, entry := range m.providers {
+		providers = append(providers, entry)
+	}
+	m.mu.Unlock()
+	var models []*Model
+	for _, entry := range providers {
 		models = append(models, safeModels(entry)...)
 	}
 	return models
