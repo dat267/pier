@@ -89,3 +89,33 @@ func TestAppendGrammarToolInputJSONDeltaSlicesBytes(t *testing.T) {
 		t.Fatalf("second delta = %q", delta)
 	}
 }
+
+// pi v1.4.0 api/constrained-sampling.ts includes the offending keyword value
+// in the provider rejection: `${key}: ${JSON.stringify(value)} is unsupported`.
+func TestStrictSamplingErrorIncludesTheRejectedValue(t *testing.T) {
+	for _, testCase := range []struct{ schema, want string }{
+		{
+			`{"type":"object","properties":{"n":{"type":"number","maximum":10}},"required":["n"]}`,
+			`Tool "t" requires JSON-schema constrained sampling, but maximum: 10 is unsupported.`,
+		},
+		{
+			`{"type":"object","properties":{"s":{"type":"string","format":"weird"}},"required":["s"]}`,
+			`Tool "t" requires JSON-schema constrained sampling, but format: "weird" is unsupported.`,
+		},
+		{
+			`{"type":"object","properties":{"s":{"type":"string","format":5}},"required":["s"]}`,
+			`Tool "t" requires JSON-schema constrained sampling, but format: 5 is unsupported.`,
+		},
+	} {
+		tool := Tool{
+			Name: "t", Parameters: json.RawMessage(testCase.schema),
+			ConstrainedSampling: ConstrainedSamplingValue{
+				Set: true, Config: &ConstrainedSamplingConfig{Type: "json_schema", Strict: "require"},
+			},
+		}
+		_, _, err := ResolveJSONSchemaStrictSampling(tool, true, AnthropicStrictUnsupportedKeyword)
+		if err == nil || err.Error() != testCase.want {
+			t.Fatalf("schema %s err = %v; want %q", testCase.schema, err, testCase.want)
+		}
+	}
+}

@@ -116,6 +116,20 @@ var anthropicStrictStringFormats = map[string]bool{
 	"email": true, "hostname": true, "uri": true, "ipv4": true, "ipv6": true, "uuid": true,
 }
 
+// jsonStringifySchemaValue renders a raw schema value the way JSON.stringify
+// renders the parsed value, or the raw bytes when it cannot be parsed.
+func jsonStringifySchemaValue(raw json.RawMessage) string {
+	var value any
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return string(raw)
+	}
+	encoded, err := MarshalJSON(value)
+	if err != nil {
+		return string(raw)
+	}
+	return string(encoded)
+}
+
 func makeSchemaNodeStrict(node *orderedJSONFields, check UnsupportedStrictSchemaKeywordCheck) error {
 	for _, key := range unsupportedStrictSchemaKeys {
 		if _, ok := node.raw(key); ok {
@@ -125,7 +139,9 @@ func makeSchemaNodeStrict(node *orderedJSONFields, check UnsupportedStrictSchema
 	if check != nil {
 		for _, key := range node.keys {
 			if check(key, node.values[key]) {
-				return &strictSchemaError{msg: key + " is unsupported"}
+				// Upstream reports `key: JSON.stringify(value) is unsupported`;
+				// the parsed round trip canonicalizes escapes and numbers.
+				return &strictSchemaError{msg: key + ": " + jsonStringifySchemaValue(node.values[key]) + " is unsupported"}
 			}
 		}
 	}
