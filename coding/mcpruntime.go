@@ -103,6 +103,14 @@ type McpServerConnectionOptions struct {
 	OnChange func(connection *McpServerConnection)
 }
 
+// mcpOpenResult publishes one shared attempt's immutable outcome by closing done.
+// Waiters must not read a later attachment, disconnect, or retry's outcome.
+type mcpOpenResult struct {
+	done   chan struct{}
+	client *mcp.Client
+	err    error
+}
+
 // McpServerConnection is one configured server (upstream McpServerConnection).
 // It reconnects lazily when a call finds the connection gone.
 type McpServerConnection struct {
@@ -119,10 +127,9 @@ type McpServerConnection struct {
 	Challenge *oauth.OAuthChallenge
 
 	client          *mcp.Client
-	opening         chan struct{}
+	opening         *mcpOpenResult
 	openingCancel   context.CancelFunc
 	openingClient   *mcp.Client
-	openingErr      error
 	toolsReady      bool
 	closed          bool
 	stderrTail      string
@@ -269,61 +276,42 @@ func (c *McpServerConnection) GetClient(ctx context.Context) (*mcp.Client, error
 		c.mu.Unlock()
 		return client, nil
 	}
-	if c.opening != nil {
-		done := c.opening
+	opening := c.opening
+	if opening == nil {
+		opening = &mcpOpenResult{done: make(chan struct{})}
+		// The shared connect outlives individual callers. Only Close cancels
+		// its work; each caller can still stop waiting on its own context.
+		connectCtx, cancel := context.WithCancel(context.Background())
+		c.opening = opening
+		c.openingCancel = cancel
+		c.toolsReady = false
 		c.mu.Unlock()
-		select {
-		case <-done:
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		}
-		c.mu.Lock()
-		client, err := c.client, c.openingErr
-		c.mu.Unlock()
-		if client != nil {
-			return client, nil
-		}
-		return nil, err
-	}
-	done := make(chan struct{})
-	// Upstream's shared connect is aborted only by close(), not by the caller
-	// whose call started it (runtime.ts getClient): a second caller waiting on
-	// the same connect must not fail because the first caller cancelled. The
-	// starting caller still returns on its own context, leaving the connect to
-	// finish for the waiting caller.
-	connectCtx, cancel := context.WithCancel(context.Background())
-	c.opening = done
-	c.openingCancel = cancel
-	c.toolsReady = false
-	c.mu.Unlock()
 
-	go func() {
-		_, err := c.open(connectCtx)
-		c.mu.Lock()
-		if c.closed && err == nil {
-			err = fmt.Errorf("MCP server %q is shut down", c.Entry.Name)
-		}
-		c.opening = nil
-		c.openingCancel = nil
-		c.openingClient = nil
-		c.openingErr = err
+		go func() {
+			client, err := c.open(connectCtx)
+			c.mu.Lock()
+			if c.closed && err == nil {
+				client = nil
+				err = fmt.Errorf("MCP server %q is shut down", c.Entry.Name)
+			}
+			c.opening = nil
+			c.openingCancel = nil
+			c.openingClient = nil
+			opening.client, opening.err = client, err
+			c.mu.Unlock()
+			cancel()
+			close(opening.done)
+		}()
+	} else {
 		c.mu.Unlock()
-		cancel()
-		close(done)
-	}()
+	}
 
 	select {
-	case <-done:
+	case <-opening.done:
+		return opening.client, opening.err
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
-	c.mu.Lock()
-	client, err := c.client, c.openingErr
-	c.mu.Unlock()
-	if client != nil {
-		return client, nil
-	}
-	return nil, err
 }
 
 // CallTool runs a tool call, reconnecting when needed (upstream callTool).
@@ -432,7 +420,6 @@ func (c *McpServerConnection) dropClient(ctx context.Context, client *mcp.Client
 	_ = client.Close(ctx)
 }
 
-// mcpOpenResult carries the client and the error of one open.
 // open connects with retries for transient HTTP failures (upstream open).
 func (c *McpServerConnection) open(ctx context.Context) (*mcp.Client, error) {
 	c.mu.Lock()
@@ -656,7 +643,7 @@ func (c *McpServerConnection) Close(ctx context.Context) error {
 		_ = openingClient.Close(ctx)
 	}
 	if opening != nil {
-		<-opening
+		<-opening.done
 	}
 	return nil
 }

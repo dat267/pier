@@ -3121,6 +3121,14 @@ notification callbacks may reenter `Snapshot`. Deferred idle round workers also
 check their goal id, revision and pending turn before starting, so a stopped or
 superseded reservation cannot launch later.
 
+`coding.McpServerConnection.mu` protects attachment, shared-open admission and
+lifecycle. Each attempt publishes its own client/error before closing its done
+channel; caller cancellation only stops waiting, while `Close` cancels the open.
+Tool-change handlers run discovery off the transport reader, and the live client
+owns request timeout/close cancellation. Stale results are rejected under the
+connection mutex. Manager error queries snapshot state and diagnostic together;
+callbacks remain outside locks. No new mutex or UI-state worker is introduced.
+
 MCP listener registries retain stable entry pointers, so slice growth and
 snapshot compaction cannot invalidate unsubscribe handles. Callbacks remain
 outside their existing registry mutexes. `mcp.Client.mu` admits incoming request
