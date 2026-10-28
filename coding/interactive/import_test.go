@@ -242,3 +242,32 @@ func transcriptContains(app *App, needle string) bool {
 	}
 	return false
 }
+
+// pi v1.4.0 agent-session-runtime.ts throws SessionImportFileNotFoundError for
+// a missing /import path, and interactive-mode.ts reports that class with
+// showError; only other errors take handleFatalRuntimeError.
+func TestImportMissingFileReportsAnErrorWithoutExiting(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	withSessionDir(t, app)
+
+	wiring := newCommandWiring(app)
+	errorsShown := []string{}
+	wiring.ShowError = func(message string) { errorsShown = append(errorsShown, message) }
+	wiring.ShowExtensionConfirm = func(_ context.Context, _, _ string, onAnswer func(bool)) { onAnswer(true) }
+	fatal := false
+	wiring.HandleFatalRuntimeError = func(context.Context, string, error) { fatal = true }
+
+	missing := filepath.Join(t.TempDir(), "nope.jsonl")
+	wiring.HandleImportCommand(context.Background(), "/import "+missing)
+	if fatal {
+		t.Fatal("/import of a missing file took the fatal-runtime path")
+	}
+	if len(errorsShown) == 0 {
+		t.Fatal("no error was shown")
+	}
+	want := "Failed to import session: File not found: " + missing
+	if errorsShown[len(errorsShown)-1] != want {
+		t.Fatalf("error = %q, want %q", errorsShown[len(errorsShown)-1], want)
+	}
+}

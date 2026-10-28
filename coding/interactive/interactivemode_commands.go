@@ -220,6 +220,11 @@ func (w *CommandWiring) HandleImportCommand(ctx context.Context, text string) {
 			w.showStatus("Session imported from: " + inputPath)
 			return
 		}
+		var notFound *SessionImportFileNotFoundError
+		if errors.As(err, &notFound) {
+			w.showError("Failed to import session: " + notFound.Error())
+			return
+		}
 		var cwdErr *coding.MissingSessionCwdError
 		if w.PromptForMissingCwd != nil && errors.As(err, &cwdErr) {
 			w.PromptForMissingCwd(ctx, cwdErr.Issue, func(selectedCwd string, selected bool) {

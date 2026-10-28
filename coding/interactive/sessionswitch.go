@@ -32,6 +32,13 @@ func (a *App) switchSession(ctx context.Context, sessionPath string, cwdOverride
 	return a.applySessionReplacement(sessionManager)
 }
 
+// SessionImportFileNotFoundError is returned when /import names a JSONL path
+// that does not exist (upstream agent-session-runtime.ts
+// SessionImportFileNotFoundError; the command reports it without exiting).
+type SessionImportFileNotFoundError struct{ FilePath string }
+
+func (e *SessionImportFileNotFoundError) Error() string { return "File not found: " + e.FilePath }
+
 // importFromJSONL imports a session file into the current session directory and
 // switches to it (upstream AgentSessionRuntime.importFromJsonl). The file is
 // copied rather than opened in place so the imported session becomes part of
@@ -40,7 +47,7 @@ func (a *App) switchSession(ctx context.Context, sessionPath string, cwdOverride
 func (a *App) importFromJSONL(_ context.Context, inputPath string, cwdOverride string) (*SessionSwitchResult, error) {
 	resolved := coding.ResolvePath(inputPath, "", coding.PathInputOptions{})
 	if _, err := os.Stat(resolved); err != nil {
-		return nil, fmt.Errorf("File not found: %s", resolved)
+		return nil, &SessionImportFileNotFoundError{FilePath: resolved}
 	}
 
 	sessionDir := a.sessionMgr.GetSessionDir()
