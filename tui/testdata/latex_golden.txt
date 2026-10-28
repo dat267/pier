@@ -220,3 +220,15 @@ latex unclosed-brace => null
 latex unclosed-brace@display => null
 latex env-unknown => null
 latex env-unknown@display => null
+latex empty-frac => "()/()"
+latex empty-frac@display => "\n─"
+latex empty-num-frac => "()/b"
+latex empty-num-frac@display => "\n─\nb"
+latex empty-den-frac => "a/()"
+latex empty-den-frac@display => "a\n─"
+latex empty-sqrt => "√()"
+latex empty-sqrt@display => "√()"
+latex empty-frac-inline => "a = ()/()"
+latex empty-frac-inline@display => "\na = ─"
+latex stacked-empty-frac => "(()/())/x"
+latex stacked-empty-frac@display => "()/()\n─────\n  x"
