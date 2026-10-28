@@ -564,7 +564,9 @@ func (s *AgentSession) resolvedSystemPromptOptions() (BuildSystemPromptOptions, 
 	if !ok {
 		return options, false
 	}
+	s.control.stateMu.Lock()
 	options.SelectedTools = selectedRegistryTools(options.SelectedTools, s.control.Tools)
+	s.control.stateMu.Unlock()
 	options.ToolSnippets, options.ToolGuidelines = s.toolPromptContributions()
 	return options, true
 }
