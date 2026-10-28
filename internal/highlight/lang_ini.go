@@ -52,18 +52,23 @@ func INI() *Language {
 	}
 
 	const anyKey = `([A-Za-z0-9_-]+|"(\\"|[^"])*"|'[^']*')`
+	// A rejected lookahead must leave the character for the root illegal rule.
+	keyPattern := regexp.MustCompile(`\A` + anyKey + `(\s*\.\s*` + anyKey + `)*`)
 	dottedKey := &Mode{
-		ClassName: "attr",
-		Begin:     anyKey + `(\s*\.\s*` + anyKey + `)*`,
+		ClassName:   "attr",
+		ManualFirst: `-_"'0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ`,
+		ManualBegin: func(s string, pos int) (int, bool) {
+			loc := keyPattern.FindStringIndex(s[pos:])
+			if loc == nil {
+				return 0, false
+			}
+			end := pos + loc[1]
+			return end, iniKeyGuard.MatchString(s[end:])
+		},
 		Starts: &Mode{
 			End:      `$`,
 			Contains: []*Mode{comments, array, literals, variables, strings, numbers},
 		},
-	}
-	dottedKey.beforeBegin = func(m *match, resp *Response) {
-		if !iniKeyGuard.MatchString(m.input[m.index+len(m.lexeme):]) {
-			resp.IgnoreMatch()
-		}
 	}
 
 	return &Language{
