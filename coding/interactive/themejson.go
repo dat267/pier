@@ -101,8 +101,7 @@ var optionalThemeColors = []string{
 // ValidateThemeJSON validates a theme document and returns it.
 func ValidateThemeJSON(label string, raw json.RawMessage) (*ThemeJSON, error) {
 	var theme ThemeJSON
-	decoder := json.NewDecoder(strings.NewReader(string(raw)))
-	if err := decoder.Decode(&theme); err != nil {
+	if err := json.Unmarshal(raw, &theme); err != nil {
 		return nil, fmt.Errorf("Invalid theme %q: expected an object with a \"colors\" map.", label)
 	}
 	if theme.Colors == nil {
