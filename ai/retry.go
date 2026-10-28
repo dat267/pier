@@ -346,8 +346,43 @@ func RetryAssistantCall(
 	}
 }
 
+// buildProviderErrorPattern joins the reference's /i patterns as one regexp.
+// The reference regexes have no /s flag, so `.` excludes CR, U+2028 and U+2029
+// as well as LF; Go's `.` only excludes LF, so translate the dots (leaving
+// escapes and character classes alone).
+func buildProviderErrorPattern(patterns []string) *regexp.Regexp {
+	var builder strings.Builder
+	builder.WriteString("(?i)")
+	for index, pattern := range patterns {
+		if index > 0 {
+			builder.WriteByte('|')
+		}
+		inClass := false
+		for position := 0; position < len(pattern); position++ {
+			char := pattern[position]
+			switch {
+			case char == '\\' && position+1 < len(pattern):
+				builder.WriteByte(char)
+				position++
+				builder.WriteByte(pattern[position])
+			case char == '[':
+				inClass = true
+				builder.WriteByte(char)
+			case char == ']' && inClass:
+				inClass = false
+				builder.WriteByte(char)
+			case char == '.' && !inClass:
+				builder.WriteString(`[^\n\r\x{2028}\x{2029}]`)
+			default:
+				builder.WriteByte(char)
+			}
+		}
+	}
+	return regexp.MustCompile(builder.String())
+}
+
 // Non-retryable provider limit errors (subscription/account limits, billing).
-var nonRetryableProviderLimitErrorPattern = regexp.MustCompile(`(?i)` + strings.Join([]string{
+var nonRetryableProviderLimitErrorPattern = buildProviderErrorPattern([]string{
 	`GoUsageLimitError`, `FreeUsageLimitError`,
 	`Monthly usage limit reached`, `available balance`,
 	`insufficient_quota`, `out of budget`, `quota exceeded`, `billing`,
@@ -357,10 +392,10 @@ var nonRetryableProviderLimitErrorPattern = regexp.MustCompile(`(?i)` + strings.
 	// Sign in with ChatGPT on a ChatGPT Business plan: a usage limit set by the
 	// workspace admin. Only the admin can raise it (upstream v1.4.0 cedefc532).
 	`subscription_sharing_workplace_individual_usage_limit_exceeded`,
-}, "|"))
+})
 
 // Retryable provider/transport errors.
-var retryableProviderErrorPattern = regexp.MustCompile(`(?i)` + strings.Join([]string{
+var retryableProviderErrorPattern = buildProviderErrorPattern([]string{
 	`overloaded`, `server_busy`, `servers are currently busy`, `currently experiencing high demand`, `model is at capacity`, `rate.?limit`, `too many requests`,
 	// A status code only when it stands alone: digits inside a request id or a
 	// byte count are not a status code (upstream v1.4.0 6e491cfa9, #11057).
@@ -404,7 +439,7 @@ var retryableProviderErrorPattern = regexp.MustCompile(`(?i)` + strings.Join([]s
 	// Sign in with ChatGPT: usage or user data temporarily unavailable. Usage
 	// failures can arrive mid-stream without an HTTP 503 in the message.
 	`subscription_sharing_usage_unavailable`, `subscription_sharing_user_unavailable`,
-}, "|"))
+})
 
 // IsRetryableAssistantError classifies whether a failed assistant message
 // looks like a transient provider or transport error.

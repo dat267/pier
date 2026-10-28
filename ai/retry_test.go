@@ -195,3 +195,18 @@ func TestChatGPTWorkspaceLimitIsNotRetryable(t *testing.T) {
 		t.Fatal("a shared subscription limit must not be retried")
 	}
 }
+
+// pi v1.4.0 utils/retry.ts builds JavaScript regexes without /s, so `.` does
+// not match CR, U+2028 or U+2029 (Go's `.` only excludes LF).
+func TestRetryableErrorPatternUsesJavaScriptDot(t *testing.T) {
+	for _, text := range []string{"rate\rlimit", "rate\u2028limit", "rate\u2029limit", "rate\nlimit"} {
+		message := &AssistantMessage{StopReason: StopError, ErrorMessage: &text}
+		if IsRetryableAssistantError(message) {
+			t.Errorf("%q must not be retryable", text)
+		}
+	}
+	message := &AssistantMessage{StopReason: StopError, ErrorMessage: new("rate limit")}
+	if !IsRetryableAssistantError(message) {
+		t.Fatal("ASCII rate limit must stay retryable")
+	}
+}
