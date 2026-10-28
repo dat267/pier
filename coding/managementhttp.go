@@ -50,10 +50,14 @@ func FetchWithRetry(ctx context.Context, request *http.Request, client *http.Cli
 	if baseCtx == nil {
 		baseCtx = context.Background()
 	}
+	var overallCancel context.CancelFunc
 	if options.TimeoutMS != nil && *options.TimeoutMS > 0 {
-		var cancel context.CancelFunc
-		baseCtx, cancel = context.WithTimeout(baseCtx, time.Duration(*options.TimeoutMS)*time.Millisecond)
-		defer cancel()
+		baseCtx, overallCancel = context.WithTimeout(baseCtx, time.Duration(*options.TimeoutMS)*time.Millisecond)
+		defer func() {
+			if overallCancel != nil {
+				overallCancel()
+			}
+		}()
 	}
 
 	for attempt := 0; ; attempt++ {
@@ -94,6 +98,12 @@ func FetchWithRetry(ctx context.Context, request *http.Request, client *http.Cli
 				// body closes, as upstream leaves the attempt signal alone.
 				response.Body = &cancelOnCloseBody{ReadCloser: response.Body, cancel: attemptCancel}
 			}
+			if overallCancel != nil && response.Body != nil {
+				// Transfer the total budget too: headers do not finish the
+				// returned body, and its deadline must remain in effect.
+				response.Body = &cancelOnCloseBody{ReadCloser: response.Body, cancel: overallCancel}
+				overallCancel = nil
+			}
 			return response, nil
 		}
 		// Discard the body before retrying; the response is being abandoned.
@@ -113,7 +123,7 @@ func PiUserAgent(version string) string {
 	return fmt.Sprintf("pi/%s (%s; %s; %s)", version, runtime.GOOS, runtime.Version(), runtime.GOARCH)
 }
 
-// cancelOnCloseBody cancels the per-attempt context when the caller closes the
+// cancelOnCloseBody cancels a request timeout context when the caller closes the
 // response body. Canceling it inside FetchWithRetry (immediately after Do)
 // aborts the body read, so the attempt budget is released on close instead.
 type cancelOnCloseBody struct {
