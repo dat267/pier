@@ -38,7 +38,7 @@ func (c *ColorValue) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 	index := 0
-	if err := json.Unmarshal(data, &index); err != nil {
+	if err := json.Unmarshal(data, &index); err != nil || trimmed == "null" {
 		return fmt.Errorf("theme color must be a string or an integer")
 	}
 	c.Index = index
