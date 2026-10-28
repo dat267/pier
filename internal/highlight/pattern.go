@@ -48,12 +48,15 @@ func hasBackreference(src string) bool {
 // whitespace classes use ECMAScript's WhiteSpace + LineTerminator set rather
 // than Go's ASCII-only `\s`. `[\s\S]` is the reference's any-character idiom.
 func preparePattern(src string) string {
-	return augmentSurrogateClasses(expandClassComplements(normalizePattern(src)))
+	src = normalizeJSEscapes(src)
+	src = normalizeJSBracesAndClasses(src)
+	src = normalizeWhitespaceClasses(src)
+	src = expandClassComplements(src)
+	return augmentSurrogateClasses(src)
 }
 
 func normalizePattern(src string) string {
-	src = normalizeUnicodeEscapes(src)
-	return normalizeWhitespaceClasses(src)
+	return normalizeWhitespaceClasses(normalizeJSEscapes(src))
 }
 
 // jsSpaceRunes is ECMAScript WhiteSpace plus LineTerminator.
@@ -112,42 +115,6 @@ func normalizeWhitespaceClasses(src string) string {
 		}
 		b.WriteByte(c)
 		i++
-	}
-	return b.String()
-}
-
-func normalizeUnicodeEscapes(src string) string {
-	if !strings.Contains(src, `\u`) {
-		return src
-	}
-	var b strings.Builder
-	b.Grow(len(src))
-	for i := 0; i < len(src); {
-		if src[i] != '\\' || i+1 >= len(src) {
-			b.WriteByte(src[i])
-			i++
-			continue
-		}
-		if src[i+1] == 'u' {
-			if i+2 < len(src) && src[i+2] == '{' {
-				// \u{XXXX} -> \x{XXXX}
-				b.WriteString(`\x`)
-				i += 2
-				continue
-			}
-			if i+5 < len(src) {
-				b.WriteString(`\x{`)
-				b.WriteString(src[i+2 : i+6])
-				b.WriteByte('}')
-				i += 6
-				continue
-			}
-		}
-		// Any other escape, including an escaped backslash, is copied verbatim
-		// so `\\u` is not mistaken for a unicode escape.
-		b.WriteByte(src[i])
-		b.WriteByte(src[i+1])
-		i += 2
 	}
 	return b.String()
 }

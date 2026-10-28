@@ -4,7 +4,7 @@ func init() { RegisterLanguage("json", JSON()) }
 
 // JSON returns the JSON language definition (a port of languages/json.js).
 func JSON() *Language {
-	const nonWhitespace = `[^\t\n\v\f\r \x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}]`
+	const nonWhitespace = "[^\t\n\v\f\r \u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF]"
 	literals := Keywords{"literal": "true false null"}
 
 	valueContainer := &Mode{

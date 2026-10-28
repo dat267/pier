@@ -83,9 +83,11 @@ func TestPatternsAreRE2Compatible(t *testing.T) {
 
 func TestNormalizePattern(t *testing.T) {
 	cases := []struct{ in, want string }{
-		{`\u00A8`, `\x{00A8}`},
-		{`[\u00B2-\u00B5]`, `[\x{00B2}-\x{00B5}]`},
-		{`\u{1F600}`, `\x{1F600}`},
+		{`\u00A8`, `\x{00a8}`},
+		{`[\u00B2-\u00B5]`, `[\x{00b2}-\x{00b5}]`},
+		// Without /u, \u{...} is not a code-point escape: it is an identity
+		// escape for "u" followed by a brace expression (Annex B).
+		{`\u{1F600}`, `u{1F600}`},
 		{`\w+`, `\w+`},
 		{`\/\*\*`, `\/\*\*`},
 	}
