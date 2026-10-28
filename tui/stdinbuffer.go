@@ -193,7 +193,10 @@ func extractCompleteSequences(buffer string) (sequences []string, remainder stri
 					pos += seqEnd
 					break
 				} else if status == seqIncomplete {
-					seqEnd++
+					// Advance a character, not a byte: ESC + a Unicode key is
+					// complete only after the whole UTF-8 rune is present.
+					_, size := utf8.DecodeRuneInString(remaining[seqEnd:])
+					seqEnd += max(size, 1)
 				} else {
 					// Should not happen when starting with ESC.
 					sequences = append(sequences, candidate)
