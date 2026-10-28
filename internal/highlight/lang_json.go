@@ -4,6 +4,7 @@ func init() { RegisterLanguage("json", JSON()) }
 
 // JSON returns the JSON language definition (a port of languages/json.js).
 func JSON() *Language {
+	const nonWhitespace = `[^\t\n\v\f\r \x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}]`
 	literals := Keywords{"literal": "true false null"}
 
 	valueContainer := &Mode{
@@ -17,7 +18,7 @@ func JSON() *Language {
 	object := &Mode{
 		Begin:   `\{`,
 		End:     `\}`,
-		Illegal: `\S`,
+		Illegal: nonWhitespace,
 		Contains: []*Mode{
 			{ClassName: "attr", Begin: `"`, End: `"`, Contains: []*Mode{BackslashEscape}, Illegal: `\n`},
 			withColon,
@@ -28,7 +29,7 @@ func JSON() *Language {
 	array := &Mode{
 		Begin:   `\[`,
 		End:     `\]`,
-		Illegal: `\S`,
+		Illegal: nonWhitespace,
 		Contains: []*Mode{
 			arrayValue,
 		},
@@ -44,7 +45,7 @@ func JSON() *Language {
 	return &Language{
 		Name:     "JSON",
 		Keywords: literals,
-		Illegal:  `\S`,
+		Illegal:  nonWhitespace,
 		Contains: types,
 	}
 }
