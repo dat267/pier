@@ -211,10 +211,14 @@ func TestTranscriptScrollsWithoutStalling(t *testing.T) {
 		return postValue(app, func() int { return len(app.chat.Children) }) >= 60
 	}, 60*time.Second)
 
-	// The loop lays the transcript out on its next beat; the scroll range only
-	// exists once the viewport has a height.
+	// The loop lays the transcript out on its next beat. Wait for the scroll
+	// RANGE (following-end pinned above the top), not just a viewport height:
+	// the previous frame's content may still fit, and scroll-view.ts's
+	// scrollToStart only leaves follow-end when it has a range to leave from
+	// (CR-166). Waiting on the viewport alone could scroll before the range
+	// existed and then poll a state that cannot change until a later layout.
 	waitForConditionWithin(t, func() bool {
-		return postValue(app, scroll.ViewportHeight) > 0
+		return postValue(app, scroll.ScrollTop) > 0
 	}, 30*time.Second)
 
 	// Scrolling to the top on the loop must leave the end. The callback only
