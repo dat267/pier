@@ -507,7 +507,8 @@ func (c *McpServerConnection) connectOnce(ctx context.Context) (*mcp.Client, err
 		return nil, err
 	}
 	client.OnNotification("notifications/tools/list_changed", func(json.RawMessage) {
-		c.refreshTools(ctx, client)
+		// Keep the transport reader free to deliver the tools/list response.
+		go c.refreshTools(ctx, client)
 	})
 	client.OnClose(func() {
 		c.handleClientClose(client, transport)
