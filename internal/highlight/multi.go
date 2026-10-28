@@ -102,7 +102,7 @@ func newMultiRegex() *multiRegex {
 }
 
 func (m *multiRegex) addRule(source string, data matchData) {
-	m.addRuleAt(source, m.position, data)
+	m.addRuleAt(encodeCodeUnitsString(source), m.position, data)
 	m.position++
 }
 
@@ -144,7 +144,7 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 		}
 		joined = b.String()
 		parsedExpr = "(?" + flags + ")" + joined
-		re, err := compilePattern(joined, flags)
+		re, err := compileEncodedPattern(joined, flags)
 		if err != nil {
 			return err
 		}
@@ -155,7 +155,7 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 				// The DOTALL flag is scoped to the leading wildcard: applying it to the
 				// whole pattern would make every rule's `.` cross newlines, unlike the
 				// reference, whose rules are compiled without `s`.
-				if prefixed, err := compilePattern(`\A(?s:.)`+`(?:`+joined+`)`, flags); err == nil {
+				if prefixed, err := compileEncodedPattern(`\A(?s:.)`+`(?:`+joined+`)`, flags); err == nil {
 					m.prefixedRe = prefixed
 				}
 			}
@@ -169,7 +169,7 @@ func (m *multiRegex) compile(caseInsensitive bool) error {
 	usable := true
 	var union [256]bool
 	for i, source := range m.regexes {
-		set, ok := ruleFirstByteSet(normalizePattern(source), caseInsensitive)
+		set, ok := ruleFirstByteSet(preparePattern(source), caseInsensitive)
 		if !ok {
 			usable = false
 			break
@@ -252,12 +252,12 @@ func (m *multiRegex) subMatcher(b byte) *multiRegex {
 		body.WriteByte(')')
 	}
 	body.WriteByte(')')
-	re, err := compilePattern(`\A`+body.String(), m.flags)
+	re, err := compileEncodedPattern(`\A`+body.String(), m.flags)
 	if err != nil {
 		return nil
 	}
 	sub.matcherRe = re
-	if prefixed, err := compilePattern(`\A(?s:.)`+body.String(), m.flags); err == nil {
+	if prefixed, err := compileEncodedPattern(`\A(?s:.)`+body.String(), m.flags); err == nil {
 		sub.prefixedRe = prefixed
 	}
 	m.subs[b] = sub

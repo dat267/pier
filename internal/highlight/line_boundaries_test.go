@@ -32,7 +32,17 @@ func TestJavaScriptLineBoundaries(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got := re.FindStringSubmatchIndex(tc.Input); !reflect.DeepEqual(got, tc.Indices) {
+			encoded := encodeCodeUnitsString(tc.Input)
+			match := re.FindStringSubmatchIndex(encoded)
+			var got []int
+			for _, offset := range match {
+				if offset < 0 {
+					got = append(got, -1)
+					continue
+				}
+				got = append(got, decodedByteOffset(encoded, offset))
+			}
+			if !reflect.DeepEqual(got, tc.Indices) {
 				t.Fatalf("matches = %v; want %v", got, tc.Indices)
 			}
 		})

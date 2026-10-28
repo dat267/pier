@@ -2,6 +2,7 @@ package highlight
 
 import (
 	"strings"
+	"unicode/utf8"
 )
 
 // This file ports highlight.js's `_highlight` scan loop (core.js).
@@ -346,7 +347,9 @@ func (h *highlighter) doIgnore(lexeme string) int {
 	h.lastMatch = nil
 	if h.top.regexIndex == 0 {
 		if lexeme != "" {
-			h.modeBuffer += lexeme[:1]
+			_, width := utf8.DecodeRuneInString(lexeme)
+			h.modeBuffer += lexeme[:width]
+			return width
 		}
 		return 1
 	}
@@ -373,7 +376,7 @@ func (h *highlighter) doBeginMatch(m *match) int {
 
 	var endOverride *patternRegexp
 	if newMode.endSameAsBegin {
-		if re, err := compilePattern(escapeLiteral(lexeme), h.lang.flags); err == nil {
+		if re, err := compileEncodedPattern(escapeLiteral(lexeme), h.lang.flags); err == nil {
 			endOverride = re
 		}
 	}
@@ -457,7 +460,9 @@ func (h *highlighter) processLexeme(textBefore string, m *match) int {
 		h.lastMatch.index == m.index && lexeme == "" {
 		// A zero-width begin/end collision: emit one character and advance.
 		if m.index < len(m.input) {
-			h.modeBuffer += m.input[m.index : m.index+1]
+			_, width := utf8.DecodeRuneInString(m.input[m.index:])
+			h.modeBuffer += m.input[m.index : m.index+width]
+			return width
 		}
 		return 1
 	}
@@ -471,6 +476,10 @@ func (h *highlighter) processLexeme(textBefore string, m *match) int {
 			return 0
 		}
 		if lexeme == "" {
+			if m.index < len(m.input) {
+				_, width := utf8.DecodeRuneInString(m.input[m.index:])
+				return width
+			}
 			return 1
 		}
 		h.modeBuffer += lexeme
@@ -485,8 +494,9 @@ func (h *highlighter) processLexeme(textBefore string, m *match) int {
 			// zero-width end forever; consume one byte instead, which is what an end
 			// that simply did not match there would do.
 			if m.index < len(m.input) {
-				h.modeBuffer += m.input[m.index : m.index+1]
-				return 1
+				_, width := utf8.DecodeRuneInString(m.input[m.index:])
+				h.modeBuffer += m.input[m.index : m.index+width]
+				return width
 			}
 			return 0
 		}

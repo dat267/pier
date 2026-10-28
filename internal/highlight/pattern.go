@@ -47,6 +47,10 @@ func hasBackreference(src string) bool {
 // have a direct equivalent: `\uXXXX` and `\u{...}` become `\x{...}`, and the
 // whitespace classes use ECMAScript's WhiteSpace + LineTerminator set rather
 // than Go's ASCII-only `\s`. `[\s\S]` is the reference's any-character idiom.
+func preparePattern(src string) string {
+	return augmentSurrogateClasses(expandClassComplements(normalizePattern(src)))
+}
+
 func normalizePattern(src string) string {
 	src = normalizeUnicodeEscapes(src)
 	return normalizeWhitespaceClasses(src)
@@ -162,6 +166,12 @@ func mustCompileJS(src string) *patternRegexp {
 // Only the flags that affect matching (i, m, s) are meaningful to RE2; the
 // stateful ones (g, y) are ignored.
 func compilePattern(src string, flags string) (*patternRegexp, error) {
+	return compileEncodedPattern(encodeCodeUnitsString(src), flags)
+}
+
+// compileEncodedPattern compiles source whose astral characters are already
+// represented as code-unit runes.
+func compileEncodedPattern(src string, flags string) (*patternRegexp, error) {
 	var goFlags strings.Builder
 	// highlight.js always compiles with the multiline flag (langRe).
 	goFlags.WriteString("m")
@@ -173,7 +183,7 @@ func compilePattern(src string, flags string) (*patternRegexp, error) {
 			goFlags.WriteString("s")
 		}
 	}
-	expression := "(?" + goFlags.String() + ")" + normalizePattern(src)
+	expression := "(?" + goFlags.String() + ")" + preparePattern(src)
 	re, err := regexp.Compile(expression)
 	if err != nil {
 		return nil, err

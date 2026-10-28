@@ -1,0 +1,4789 @@
+{
+  "units": [
+    {
+      "name": "unit-0-.",
+      "source": ".",
+      "input": "😀",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "unit-1-^.$",
+      "source": "^.$",
+      "input": "😀",
+      "indices": null
+    },
+    {
+      "name": "unit-2-^..$",
+      "source": "^..$",
+      "input": "😀",
+      "indices": [
+        0,
+        2
+      ]
+    },
+    {
+      "name": "unit-3-(.)(.)",
+      "source": "(.)(.)",
+      "input": "😀",
+      "indices": [
+        0,
+        2,
+        0,
+        1,
+        1,
+        2
+      ]
+    },
+    {
+      "name": "unit-4-[\\s\\S]",
+      "source": "[\\s\\S]",
+      "input": "😀",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "unit-5-[\\s\\S]{2}",
+      "source": "[\\s\\S]{2}",
+      "input": "😀",
+      "indices": [
+        0,
+        2
+      ]
+    },
+    {
+      "name": "unit-6-\\w",
+      "source": "\\w",
+      "input": "😀",
+      "indices": null
+    },
+    {
+      "name": "unit-7-😀",
+      "source": "😀",
+      "input": "😀",
+      "indices": [
+        0,
+        2
+      ]
+    },
+    {
+      "name": "unit-8-[😀]",
+      "source": "[😀]",
+      "input": "😀",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "unit-9-[^x]+",
+      "source": "[^x]+",
+      "input": "😀x",
+      "indices": [
+        0,
+        2
+      ]
+    },
+    {
+      "name": "unit-10-a.c",
+      "source": "a.c",
+      "input": "a😀c",
+      "indices": null
+    },
+    {
+      "name": "unit-11-^.+$",
+      "source": "^.+$",
+      "input": "a😀b",
+      "indices": [
+        0,
+        4
+      ]
+    },
+    {
+      "name": "unit-12-[a\\Sb]",
+      "source": "[a\\Sb]",
+      "input": "a",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "unit-13-[a\\Sb]",
+      "source": "[a\\Sb]",
+      "input": " ",
+      "indices": null
+    },
+    {
+      "name": "unit-14-[a\\Sb]",
+      "source": "[a\\Sb]",
+      "input": "",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "unit-15-[a\\Sb]",
+      "source": "[a\\Sb]",
+      "input": "😀",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "unit-16-[\\S]",
+      "source": "[\\S]",
+      "input": " ",
+      "indices": null
+    },
+    {
+      "name": "unit-17-[\\S]",
+      "source": "[\\S]",
+      "input": "x",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "unit-18-[^\\S]",
+      "source": "[^\\S]",
+      "input": " ",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "unit-19-[^\\S]",
+      "source": "[^\\S]",
+      "input": " ",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "unit-20-[^\\S]",
+      "source": "[^\\S]",
+      "input": "x",
+      "indices": null
+    },
+    {
+      "name": "unit-21-[^\\s\\S]",
+      "source": "[^\\s\\S]",
+      "input": "x",
+      "indices": null
+    },
+    {
+      "name": "unit-22-[\\S\\n]",
+      "source": "[\\S\\n]",
+      "input": "\n",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "unit-23-[\\S-]",
+      "source": "[\\S-]",
+      "input": "-",
+      "indices": [
+        0,
+        1
+      ]
+    }
+  ],
+  "highlights": [
+    {
+      "name": "json-0",
+      "language": "json",
+      "code": "{ 😀",
+      "html": "{ 😀"
+    },
+    {
+      "name": "json-1",
+      "language": "json",
+      "code": "😀{",
+      "html": "😀{"
+    },
+    {
+      "name": "json-2",
+      "language": "json",
+      "code": "{",
+      "html": "{"
+    },
+    {
+      "name": "json-3",
+      "language": "json",
+      "code": "{",
+      "html": "{"
+    },
+    {
+      "name": "go-0",
+      "language": "go",
+      "code": "// Package demo does nothing. 😀",
+      "html": "<span class=\"hljs-comment\">// Package demo does nothing. 😀</span>"
+    },
+    {
+      "name": "go-1",
+      "language": "go",
+      "code": "😀// Package demo does nothing.",
+      "html": "😀<span class=\"hljs-comment\">// Package demo does nothing.</span>"
+    },
+    {
+      "name": "go-2",
+      "language": "go",
+      "code": "// Package demo does nothing.",
+      "html": "<span class=\"hljs-comment\">// Package demo does nothing.</span>"
+    },
+    {
+      "name": "go-3",
+      "language": "go",
+      "code": "// Package demo does nothing.",
+      "html": "<span class=\"hljs-comment\">// Package demo does nothing.</span>"
+    },
+    {
+      "name": "nix-0",
+      "language": "nix",
+      "code": "{ pkgs ? import <nixpkgs> {} }: 😀",
+      "html": "{ pkgs ? <span class=\"hljs-built_in\">import</span> &lt;nixpkgs&gt; {} }: 😀"
+    },
+    {
+      "name": "nix-1",
+      "language": "nix",
+      "code": "😀{ pkgs ? import <nixpkgs> {} }:",
+      "html": "😀{ pkgs ? <span class=\"hljs-built_in\">import</span> &lt;nixpkgs&gt; {} }:"
+    },
+    {
+      "name": "nix-2",
+      "language": "nix",
+      "code": "{ pkgs ? import <nixpkgs> {} }:",
+      "html": "{ pkgs ? <span class=\"hljs-built_in\">import</span> &lt;nixpkgs&gt; {} }:"
+    },
+    {
+      "name": "nix-3",
+      "language": "nix",
+      "code": "{ pkgs ? import <nixpkgs> {} }:",
+      "html": "{ pkgs ? <span class=\"hljs-built_in\">import</span> &lt;nixpkgs&gt; {} }:"
+    },
+    {
+      "name": "lua-0",
+      "language": "lua",
+      "code": "-- a line comment 😀",
+      "html": "<span class=\"hljs-comment\">-- a line comment 😀</span>"
+    },
+    {
+      "name": "lua-1",
+      "language": "lua",
+      "code": "😀-- a line comment",
+      "html": "😀<span class=\"hljs-comment\">-- a line comment</span>"
+    },
+    {
+      "name": "lua-2",
+      "language": "lua",
+      "code": "-- a line comment",
+      "html": "<span class=\"hljs-comment\">-- a line comment</span>"
+    },
+    {
+      "name": "lua-3",
+      "language": "lua",
+      "code": "-- a line comment",
+      "html": "<span class=\"hljs-comment\">-- a line comment</span>"
+    },
+    {
+      "name": "bash-0",
+      "language": "bash",
+      "code": "#!/usr/bin/env bash 😀",
+      "html": "<span class=\"hljs-meta\">#!/usr/bin/env bash 😀</span>"
+    },
+    {
+      "name": "bash-1",
+      "language": "bash",
+      "code": "😀#!/usr/bin/env bash",
+      "html": "😀<span class=\"hljs-comment\">#!/usr/bin/env bash</span>"
+    },
+    {
+      "name": "bash-2",
+      "language": "bash",
+      "code": "#!/usr/bin/env bash",
+      "html": "<span class=\"hljs-meta\">#!/usr/bin/env bash</span>"
+    },
+    {
+      "name": "bash-3",
+      "language": "bash",
+      "code": "#!/usr/bin/env bash",
+      "html": "<span class=\"hljs-meta\">#!/usr/bin/env bash</span>"
+    },
+    {
+      "name": "c-0",
+      "language": "c",
+      "code": "#include <stdio.h> 😀",
+      "html": "<span class=\"hljs-meta\">#<span class=\"hljs-meta-keyword\">include</span> <span class=\"hljs-meta-string\">&lt;stdio.h&gt;</span> 😀</span>"
+    },
+    {
+      "name": "c-1",
+      "language": "c",
+      "code": "😀#include <stdio.h>",
+      "html": "😀<span class=\"hljs-meta\">#<span class=\"hljs-meta-keyword\">include</span> <span class=\"hljs-meta-string\">&lt;stdio.h&gt;</span></span>"
+    },
+    {
+      "name": "c-2",
+      "language": "c",
+      "code": "#include <stdio.h>",
+      "html": "<span class=\"hljs-meta\">#<span class=\"hljs-meta-keyword\">include</span> <span class=\"hljs-meta-string\">&lt;stdio.h&gt;</span></span>"
+    },
+    {
+      "name": "c-3",
+      "language": "c",
+      "code": "#include <stdio.h>",
+      "html": "<span class=\"hljs-meta\">#<span class=\"hljs-meta-keyword\">include</span> <span class=\"hljs-meta-string\">&lt;stdio.h&gt;</span></span>"
+    },
+    {
+      "name": "cpp-0",
+      "language": "cpp",
+      "code": "#include <vector> 😀",
+      "html": "<span class=\"hljs-meta\">#<span class=\"hljs-meta-keyword\">include</span> <span class=\"hljs-meta-string\">&lt;vector&gt;</span> 😀</span>"
+    },
+    {
+      "name": "cpp-1",
+      "language": "cpp",
+      "code": "😀#include <vector>",
+      "html": "😀<span class=\"hljs-meta\">#<span class=\"hljs-meta-keyword\">include</span> <span class=\"hljs-meta-string\">&lt;vector&gt;</span></span>"
+    },
+    {
+      "name": "cpp-2",
+      "language": "cpp",
+      "code": "#include <vector>",
+      "html": "<span class=\"hljs-meta\">#<span class=\"hljs-meta-keyword\">include</span> <span class=\"hljs-meta-string\">&lt;vector&gt;</span></span>"
+    },
+    {
+      "name": "cpp-3",
+      "language": "cpp",
+      "code": "#include <vector>",
+      "html": "<span class=\"hljs-meta\">#<span class=\"hljs-meta-keyword\">include</span> <span class=\"hljs-meta-string\">&lt;vector&gt;</span></span>"
+    },
+    {
+      "name": "csharp-0",
+      "language": "csharp",
+      "code": "using System; 😀",
+      "html": "<span class=\"hljs-keyword\">using</span> System; 😀"
+    },
+    {
+      "name": "csharp-1",
+      "language": "csharp",
+      "code": "😀using System;",
+      "html": "😀<span class=\"hljs-keyword\">using</span> System;"
+    },
+    {
+      "name": "csharp-2",
+      "language": "csharp",
+      "code": "using System;",
+      "html": "<span class=\"hljs-keyword\">using</span> System;"
+    },
+    {
+      "name": "csharp-3",
+      "language": "csharp",
+      "code": "using System;",
+      "html": "<span class=\"hljs-keyword\">using</span> System;"
+    },
+    {
+      "name": "css-0",
+      "language": "css",
+      "code": "/* a comment */ 😀",
+      "html": "<span class=\"hljs-comment\">/* a comment */</span> 😀"
+    },
+    {
+      "name": "css-1",
+      "language": "css",
+      "code": "😀/* a comment */",
+      "html": "😀<span class=\"hljs-comment\">/* a comment */</span>"
+    },
+    {
+      "name": "css-2",
+      "language": "css",
+      "code": "/* a comment */",
+      "html": "<span class=\"hljs-comment\">/* a comment */</span>"
+    },
+    {
+      "name": "css-3",
+      "language": "css",
+      "code": "/* a comment */",
+      "html": "<span class=\"hljs-comment\">/* a comment */</span>"
+    },
+    {
+      "name": "dart-0",
+      "language": "dart",
+      "code": "import 'dart:async'; 😀",
+      "html": "<span class=\"hljs-keyword\">import</span> <span class=\"hljs-string\">&#x27;dart:async&#x27;</span>; 😀"
+    },
+    {
+      "name": "dart-1",
+      "language": "dart",
+      "code": "😀import 'dart:async';",
+      "html": "😀<span class=\"hljs-keyword\">import</span> <span class=\"hljs-string\">&#x27;dart:async&#x27;</span>;"
+    },
+    {
+      "name": "dart-2",
+      "language": "dart",
+      "code": "import 'dart:async';",
+      "html": "<span class=\"hljs-keyword\">import</span> <span class=\"hljs-string\">&#x27;dart:async&#x27;</span>;"
+    },
+    {
+      "name": "dart-3",
+      "language": "dart",
+      "code": "import 'dart:async';",
+      "html": "<span class=\"hljs-keyword\">import</span> <span class=\"hljs-string\">&#x27;dart:async&#x27;</span>;"
+    },
+    {
+      "name": "groovy-0",
+      "language": "groovy",
+      "code": "#!/usr/bin/env groovy 😀",
+      "html": "<span class=\"hljs-meta\">#!/usr/bin/env groovy 😀</span>"
+    },
+    {
+      "name": "groovy-1",
+      "language": "groovy",
+      "code": "😀#!/usr/bin/env groovy",
+      "html": "😀#!/usr/bin/env groovy"
+    },
+    {
+      "name": "groovy-2",
+      "language": "groovy",
+      "code": "#!/usr/bin/env groovy",
+      "html": "<span class=\"hljs-meta\">#!/usr/bin/env groovy</span>"
+    },
+    {
+      "name": "groovy-3",
+      "language": "groovy",
+      "code": "#!/usr/bin/env groovy",
+      "html": "<span class=\"hljs-meta\">#!/usr/bin/env groovy</span>"
+    },
+    {
+      "name": "java-0",
+      "language": "java",
+      "code": "package com.example; 😀",
+      "html": "<span class=\"hljs-keyword\">package</span> com.example; 😀"
+    },
+    {
+      "name": "java-1",
+      "language": "java",
+      "code": "😀package com.example;",
+      "html": "😀<span class=\"hljs-keyword\">package</span> com.example;"
+    },
+    {
+      "name": "java-2",
+      "language": "java",
+      "code": "package com.example;",
+      "html": "<span class=\"hljs-keyword\">package</span> com.example;"
+    },
+    {
+      "name": "java-3",
+      "language": "java",
+      "code": "package com.example;",
+      "html": "<span class=\"hljs-keyword\">package</span> com.example;"
+    },
+    {
+      "name": "javascript-0",
+      "language": "javascript",
+      "code": "#!/usr/bin/env node 😀",
+      "html": "<span class=\"hljs-meta\">#!/usr/bin/env node 😀</span>"
+    },
+    {
+      "name": "javascript-1",
+      "language": "javascript",
+      "code": "😀#!/usr/bin/env node",
+      "html": "😀#!/usr/bin/env node"
+    },
+    {
+      "name": "javascript-2",
+      "language": "javascript",
+      "code": "#!/usr/bin/env node",
+      "html": "<span class=\"hljs-meta\">#!/usr/bin/env node</span>"
+    },
+    {
+      "name": "javascript-3",
+      "language": "javascript",
+      "code": "#!/usr/bin/env node",
+      "html": "<span class=\"hljs-meta\">#!/usr/bin/env node</span>"
+    },
+    {
+      "name": "kotlin-0",
+      "language": "kotlin",
+      "code": "package com.example 😀",
+      "html": "<span class=\"hljs-keyword\">package</span> com.example 😀"
+    },
+    {
+      "name": "kotlin-1",
+      "language": "kotlin",
+      "code": "😀package com.example",
+      "html": "😀<span class=\"hljs-keyword\">package</span> com.example"
+    },
+    {
+      "name": "kotlin-2",
+      "language": "kotlin",
+      "code": "package com.example",
+      "html": "<span class=\"hljs-keyword\">package</span> com.example"
+    },
+    {
+      "name": "kotlin-3",
+      "language": "kotlin",
+      "code": "package com.example",
+      "html": "<span class=\"hljs-keyword\">package</span> com.example"
+    },
+    {
+      "name": "markdown-0",
+      "language": "markdown",
+      "code": "# Title 😀",
+      "html": "<span class=\"hljs-section\"># Title 😀</span>"
+    },
+    {
+      "name": "markdown-1",
+      "language": "markdown",
+      "code": "😀# Title",
+      "html": "😀# Title"
+    },
+    {
+      "name": "markdown-2",
+      "language": "markdown",
+      "code": "# Title",
+      "html": "<span class=\"hljs-section\"># Title</span>"
+    },
+    {
+      "name": "markdown-3",
+      "language": "markdown",
+      "code": "# Title",
+      "html": "<span class=\"hljs-section\"># Title</span>"
+    },
+    {
+      "name": "php-0",
+      "language": "php",
+      "code": "<?php 😀",
+      "html": "<span class=\"hljs-meta\">&lt;?php</span> 😀"
+    },
+    {
+      "name": "php-1",
+      "language": "php",
+      "code": "😀<?php",
+      "html": "😀<span class=\"hljs-meta\">&lt;?php</span>"
+    },
+    {
+      "name": "php-2",
+      "language": "php",
+      "code": "<?php",
+      "html": "<span class=\"hljs-meta\">&lt;?php</span>"
+    },
+    {
+      "name": "php-3",
+      "language": "php",
+      "code": "<?php",
+      "html": "<span class=\"hljs-meta\">&lt;?php</span>"
+    },
+    {
+      "name": "perl-0",
+      "language": "perl",
+      "code": "#!/usr/bin/env perl 😀",
+      "html": "<span class=\"hljs-comment\">#!/usr/bin/env perl 😀</span>"
+    },
+    {
+      "name": "perl-1",
+      "language": "perl",
+      "code": "😀#!/usr/bin/env perl",
+      "html": "😀<span class=\"hljs-comment\">#!/usr/bin/env perl</span>"
+    },
+    {
+      "name": "perl-2",
+      "language": "perl",
+      "code": "#!/usr/bin/env perl",
+      "html": "<span class=\"hljs-comment\">#!/usr/bin/env perl</span>"
+    },
+    {
+      "name": "perl-3",
+      "language": "perl",
+      "code": "#!/usr/bin/env perl",
+      "html": "<span class=\"hljs-comment\">#!/usr/bin/env perl</span>"
+    },
+    {
+      "name": "python-0",
+      "language": "python",
+      "code": "#!/usr/bin/env python3 😀",
+      "html": "<span class=\"hljs-comment\">#!/usr/bin/env python3 😀</span>"
+    },
+    {
+      "name": "python-1",
+      "language": "python",
+      "code": "😀#!/usr/bin/env python3",
+      "html": "😀<span class=\"hljs-comment\">#!/usr/bin/env python3</span>"
+    },
+    {
+      "name": "python-2",
+      "language": "python",
+      "code": "#!/usr/bin/env python3",
+      "html": "<span class=\"hljs-comment\">#!/usr/bin/env python3</span>"
+    },
+    {
+      "name": "python-3",
+      "language": "python",
+      "code": "#!/usr/bin/env python3",
+      "html": "<span class=\"hljs-comment\">#!/usr/bin/env python3</span>"
+    },
+    {
+      "name": "ruby-0",
+      "language": "ruby",
+      "code": "#!/usr/bin/env ruby 😀",
+      "html": "<span class=\"hljs-meta\">#!/usr/bin/env ruby 😀</span>"
+    },
+    {
+      "name": "ruby-1",
+      "language": "ruby",
+      "code": "😀#!/usr/bin/env ruby",
+      "html": "😀<span class=\"hljs-comment\">#!/usr/bin/env ruby</span>"
+    },
+    {
+      "name": "ruby-2",
+      "language": "ruby",
+      "code": "#!/usr/bin/env ruby",
+      "html": "<span class=\"hljs-meta\">#!/usr/bin/env ruby</span>"
+    },
+    {
+      "name": "ruby-3",
+      "language": "ruby",
+      "code": "#!/usr/bin/env ruby",
+      "html": "<span class=\"hljs-meta\">#!/usr/bin/env ruby</span>"
+    },
+    {
+      "name": "rust-0",
+      "language": "rust",
+      "code": "//! Crate docs 😀",
+      "html": "<span class=\"hljs-comment\">//! Crate docs 😀</span>"
+    },
+    {
+      "name": "rust-1",
+      "language": "rust",
+      "code": "😀//! Crate docs",
+      "html": "😀<span class=\"hljs-comment\">//! Crate docs</span>"
+    },
+    {
+      "name": "rust-2",
+      "language": "rust",
+      "code": "//! Crate docs",
+      "html": "<span class=\"hljs-comment\">//! Crate docs</span>"
+    },
+    {
+      "name": "rust-3",
+      "language": "rust",
+      "code": "//! Crate docs",
+      "html": "<span class=\"hljs-comment\">//! Crate docs</span>"
+    },
+    {
+      "name": "scala-0",
+      "language": "scala",
+      "code": "package com.example 😀",
+      "html": "<span class=\"hljs-keyword\">package</span> com.example 😀"
+    },
+    {
+      "name": "scala-1",
+      "language": "scala",
+      "code": "😀package com.example",
+      "html": "😀<span class=\"hljs-keyword\">package</span> com.example"
+    },
+    {
+      "name": "scala-2",
+      "language": "scala",
+      "code": "package com.example",
+      "html": "<span class=\"hljs-keyword\">package</span> com.example"
+    },
+    {
+      "name": "scala-3",
+      "language": "scala",
+      "code": "package com.example",
+      "html": "<span class=\"hljs-keyword\">package</span> com.example"
+    },
+    {
+      "name": "swift-0",
+      "language": "swift",
+      "code": "import Foundation 😀",
+      "html": "<span class=\"hljs-keyword\">import</span> Foundation 😀"
+    },
+    {
+      "name": "swift-1",
+      "language": "swift",
+      "code": "😀import Foundation",
+      "html": "😀<span class=\"hljs-keyword\">import</span> Foundation"
+    },
+    {
+      "name": "swift-2",
+      "language": "swift",
+      "code": "import Foundation",
+      "html": "<span class=\"hljs-keyword\">import</span> Foundation"
+    },
+    {
+      "name": "swift-3",
+      "language": "swift",
+      "code": "import Foundation",
+      "html": "<span class=\"hljs-keyword\">import</span> Foundation"
+    },
+    {
+      "name": "typescript-0",
+      "language": "typescript",
+      "code": "'use strict'; 😀",
+      "html": "<span class=\"hljs-meta\">&#x27;use strict&#x27;</span>; 😀"
+    },
+    {
+      "name": "typescript-1",
+      "language": "typescript",
+      "code": "😀'use strict';",
+      "html": "😀<span class=\"hljs-string\">&#x27;use strict&#x27;</span>;"
+    },
+    {
+      "name": "typescript-2",
+      "language": "typescript",
+      "code": "'use strict';",
+      "html": "<span class=\"hljs-meta\">&#x27;use strict&#x27;</span>;"
+    },
+    {
+      "name": "typescript-3",
+      "language": "typescript",
+      "code": "'use strict';",
+      "html": "<span class=\"hljs-meta\">&#x27;use strict&#x27;</span>;"
+    },
+    {
+      "name": "xml-0",
+      "language": "xml",
+      "code": "<?xml version=\"1.0\" encoding=\"UTF-8\"?> 😀",
+      "html": "<span class=\"hljs-meta\">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;</span> 😀"
+    },
+    {
+      "name": "xml-1",
+      "language": "xml",
+      "code": "😀<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
+      "html": "😀<span class=\"hljs-meta\">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;</span>"
+    },
+    {
+      "name": "xml-2",
+      "language": "xml",
+      "code": "<?xml version=\"😀1.0\" encoding=\"UTF-8\"?>",
+      "html": "<span class=\"hljs-meta\">&lt;?xml version=&quot;😀1.0&quot; encoding=&quot;UTF-8&quot;?&gt;</span>"
+    },
+    {
+      "name": "xml-3",
+      "language": "xml",
+      "code": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
+      "html": "<span class=\"hljs-meta\">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;</span>"
+    },
+    {
+      "name": "plaintext-0",
+      "language": "plaintext",
+      "code": "plain text: < > & \" ' / 😀",
+      "html": "plain text: &lt; &gt; &amp; &quot; &#x27; / 😀"
+    },
+    {
+      "name": "plaintext-1",
+      "language": "plaintext",
+      "code": "😀plain text: < > & \" ' /",
+      "html": "😀plain text: &lt; &gt; &amp; &quot; &#x27; /"
+    },
+    {
+      "name": "plaintext-2",
+      "language": "plaintext",
+      "code": "plain text: < > & \"😀 ' /",
+      "html": "plain text: &lt; &gt; &amp; &quot;😀 &#x27; /"
+    },
+    {
+      "name": "plaintext-3",
+      "language": "plaintext",
+      "code": "plain text: < > & \" ' /",
+      "html": "plain text: &lt; &gt; &amp; &quot; &#x27; /"
+    },
+    {
+      "name": "dockerfile-0",
+      "language": "dockerfile",
+      "code": "# syntax=docker/dockerfile:1.7 😀",
+      "html": "<span class=\"hljs-comment\"># syntax=docker/dockerfile:1.7 😀</span>"
+    },
+    {
+      "name": "dockerfile-1",
+      "language": "dockerfile",
+      "code": "😀# syntax=docker/dockerfile:1.7",
+      "html": "😀<span class=\"hljs-comment\"># syntax=docker/dockerfile:1.7</span>"
+    },
+    {
+      "name": "dockerfile-2",
+      "language": "dockerfile",
+      "code": "# syntax=docker/dockerfile:1.7",
+      "html": "<span class=\"hljs-comment\"># syntax=docker/dockerfile:1.7</span>"
+    },
+    {
+      "name": "dockerfile-3",
+      "language": "dockerfile",
+      "code": "# syntax=docker/dockerfile:1.7",
+      "html": "<span class=\"hljs-comment\"># syntax=docker/dockerfile:1.7</span>"
+    },
+    {
+      "name": "diff-0",
+      "language": "diff",
+      "code": "diff --git a/src/main.go b/src/main.go 😀",
+      "html": "<span class=\"hljs-comment\">diff --git a/src/main.go b/src/main.go 😀</span>"
+    },
+    {
+      "name": "diff-1",
+      "language": "diff",
+      "code": "😀diff --git a/src/main.go b/src/main.go",
+      "html": "😀diff --git a/src/main.go b/src/main.go"
+    },
+    {
+      "name": "diff-2",
+      "language": "diff",
+      "code": "diff --git a/src/main.go b/src/main.go",
+      "html": "<span class=\"hljs-comment\">diff --git a/src/main.go b/src/main.go</span>"
+    },
+    {
+      "name": "diff-3",
+      "language": "diff",
+      "code": "diff --git a/src/main.go b/src/main.go",
+      "html": "<span class=\"hljs-comment\">diff --git a/src/main.go b/src/main.go</span>"
+    },
+    {
+      "name": "brainfuck-0",
+      "language": "brainfuck",
+      "code": "+++++ +++++             initialize counter (cell #0) to 10 😀",
+      "html": "++<span class=\"hljs-literal\">+</span><span class=\"hljs-literal\">+</span><span class=\"hljs-literal\">+</span> ++<span class=\"hljs-literal\">+</span><span class=\"hljs-literal\">+</span><span class=\"hljs-literal\">+</span>             <span class=\"hljs-comment\">initialize</span> <span class=\"hljs-comment\">counter</span> <span class=\"hljs-comment\">(cell</span> <span class=\"hljs-comment\">#0)</span> <span class=\"hljs-comment\">to</span> <span class=\"hljs-comment\">10</span> <span class=\"hljs-comment\">😀</span>"
+    },
+    {
+      "name": "brainfuck-1",
+      "language": "brainfuck",
+      "code": "😀+++++ +++++             initialize counter (cell #0) to 10",
+      "html": "<span class=\"hljs-comment\">😀</span>++<span class=\"hljs-literal\">+</span><span class=\"hljs-literal\">+</span><span class=\"hljs-literal\">+</span> ++<span class=\"hljs-literal\">+</span><span class=\"hljs-literal\">+</span><span class=\"hljs-literal\">+</span>             <span class=\"hljs-comment\">initialize</span> <span class=\"hljs-comment\">counter</span> <span class=\"hljs-comment\">(cell</span> <span class=\"hljs-comment\">#0)</span> <span class=\"hljs-comment\">to</span> <span class=\"hljs-comment\">10</span>"
+    },
+    {
+      "name": "brainfuck-2",
+      "language": "brainfuck",
+      "code": "+++++ +++++             initialize counter (cell #0) to 10",
+      "html": "++<span class=\"hljs-literal\">+</span><span class=\"hljs-literal\">+</span><span class=\"hljs-literal\">+</span> ++<span class=\"hljs-literal\">+</span><span class=\"hljs-literal\">+</span><span class=\"hljs-literal\">+</span>             <span class=\"hljs-comment\">initialize</span> <span class=\"hljs-comment\">counter</span> <span class=\"hljs-comment\">(cell</span> <span class=\"hljs-comment\">#0)</span> <span class=\"hljs-comment\">to</span> <span class=\"hljs-comment\">10</span>"
+    },
+    {
+      "name": "brainfuck-3",
+      "language": "brainfuck",
+      "code": "+++++ +++++             initialize counter (cell #0) to 10",
+      "html": "++<span class=\"hljs-literal\">+</span><span class=\"hljs-literal\">+</span><span class=\"hljs-literal\">+</span> ++<span class=\"hljs-literal\">+</span><span class=\"hljs-literal\">+</span><span class=\"hljs-literal\">+</span>             <span class=\"hljs-comment\">initialize</span> <span class=\"hljs-comment\">counter</span> <span class=\"hljs-comment\">(cell</span> <span class=\"hljs-comment\">#0)</span> <span class=\"hljs-comment\">to</span> <span class=\"hljs-comment\">10</span>"
+    },
+    {
+      "name": "dns-0",
+      "language": "dns",
+      "code": "$ORIGIN example.com. 😀",
+      "html": "<span class=\"hljs-meta\">$ORIGIN</span> example.com. 😀"
+    },
+    {
+      "name": "dns-1",
+      "language": "dns",
+      "code": "😀$ORIGIN example.com.",
+      "html": "😀$ORIGIN example.com."
+    },
+    {
+      "name": "dns-2",
+      "language": "dns",
+      "code": "$ORIGIN example.com.",
+      "html": "<span class=\"hljs-meta\">$ORIGIN</span> example.com."
+    },
+    {
+      "name": "dns-3",
+      "language": "dns",
+      "code": "$ORIGIN example.com.",
+      "html": "<span class=\"hljs-meta\">$ORIGIN</span> example.com."
+    },
+    {
+      "name": "properties-0",
+      "language": "properties",
+      "code": "# a hash comment 😀",
+      "html": "<span class=\"hljs-comment\"># a hash comment 😀</span>"
+    },
+    {
+      "name": "properties-1",
+      "language": "properties",
+      "code": "😀# a hash comment",
+      "html": "<span class=\"hljs-meta\">😀#</span> <span class=\"hljs-string\">a hash comment</span>"
+    },
+    {
+      "name": "properties-2",
+      "language": "properties",
+      "code": "# a hash comment",
+      "html": "<span class=\"hljs-comment\"># a hash comment</span>"
+    },
+    {
+      "name": "properties-3",
+      "language": "properties",
+      "code": "# a hash comment",
+      "html": "<span class=\"hljs-comment\"># a hash comment</span>"
+    },
+    {
+      "name": "makefile-0",
+      "language": "makefile",
+      "code": "# Makefile sample 😀",
+      "html": "<span class=\"hljs-comment\"># Makefile sample 😀</span>"
+    },
+    {
+      "name": "makefile-1",
+      "language": "makefile",
+      "code": "😀# Makefile sample",
+      "html": "😀<span class=\"hljs-comment\"># Makefile sample</span>"
+    },
+    {
+      "name": "makefile-2",
+      "language": "makefile",
+      "code": "# Makefile sample",
+      "html": "<span class=\"hljs-comment\"># Makefile sample</span>"
+    },
+    {
+      "name": "makefile-3",
+      "language": "makefile",
+      "code": "# Makefile sample",
+      "html": "<span class=\"hljs-comment\"># Makefile sample</span>"
+    },
+    {
+      "name": "bnf-0",
+      "language": "bnf",
+      "code": "<grammar> ::= <rule> | <grammar> <rule> 😀",
+      "html": "<span class=\"hljs-attribute\">&lt;grammar&gt;</span> ::= &lt;rule&gt; | &lt;grammar&gt; &lt;rule&gt; 😀"
+    },
+    {
+      "name": "bnf-1",
+      "language": "bnf",
+      "code": "😀<grammar> ::= <rule> | <grammar> <rule>",
+      "html": "😀<span class=\"hljs-attribute\">&lt;grammar&gt;</span> ::= &lt;rule&gt; | &lt;grammar&gt; &lt;rule&gt;"
+    },
+    {
+      "name": "bnf-2",
+      "language": "bnf",
+      "code": "<grammar> ::= <rule> | <grammar> <rule>",
+      "html": "<span class=\"hljs-attribute\">&lt;grammar&gt;</span> ::= &lt;rule&gt; | &lt;grammar&gt; &lt;rule&gt;"
+    },
+    {
+      "name": "bnf-3",
+      "language": "bnf",
+      "code": "<grammar> ::= <rule> | <grammar> <rule>",
+      "html": "<span class=\"hljs-attribute\">&lt;grammar&gt;</span> ::= &lt;rule&gt; | &lt;grammar&gt; &lt;rule&gt;"
+    },
+    {
+      "name": "ebnf-0",
+      "language": "ebnf",
+      "code": "(* EBNF sample *) 😀",
+      "html": "(* EBNF sample *) 😀"
+    },
+    {
+      "name": "ebnf-1",
+      "language": "ebnf",
+      "code": "😀(* EBNF sample *)",
+      "html": "😀(* EBNF sample *)"
+    },
+    {
+      "name": "ebnf-2",
+      "language": "ebnf",
+      "code": "(* EBNF sample *)",
+      "html": "<span class=\"hljs-comment\">(* EBNF sample *)</span>"
+    },
+    {
+      "name": "ebnf-3",
+      "language": "ebnf",
+      "code": "(* EBNF sample *)",
+      "html": "<span class=\"hljs-comment\">(* EBNF sample *)</span>"
+    },
+    {
+      "name": "abnf-0",
+      "language": "abnf",
+      "code": "; ABNF sample 😀",
+      "html": "<span class=\"hljs-comment\">; ABNF sample 😀</span>"
+    },
+    {
+      "name": "abnf-1",
+      "language": "abnf",
+      "code": "😀; ABNF sample",
+      "html": "😀<span class=\"hljs-comment\">; ABNF sample</span>"
+    },
+    {
+      "name": "abnf-2",
+      "language": "abnf",
+      "code": "; ABNF sample",
+      "html": "<span class=\"hljs-comment\">; ABNF sample</span>"
+    },
+    {
+      "name": "abnf-3",
+      "language": "abnf",
+      "code": "; ABNF sample",
+      "html": "<span class=\"hljs-comment\">; ABNF sample</span>"
+    },
+    {
+      "name": "ldif-0",
+      "language": "ldif",
+      "code": "dn: uid=alice,dc=example,dc=com 😀",
+      "html": "<span class=\"hljs-attribute\">dn</span>: uid=alice,dc=example,dc=com 😀"
+    },
+    {
+      "name": "ldif-1",
+      "language": "ldif",
+      "code": "😀dn: uid=alice,dc=example,dc=com",
+      "html": "😀dn: uid=alice,dc=example,dc=com"
+    },
+    {
+      "name": "ldif-2",
+      "language": "ldif",
+      "code": "dn: uid=alice,dc=example,dc=com",
+      "html": "<span class=\"hljs-attribute\">dn</span>: uid=alice,dc=example,dc=com"
+    },
+    {
+      "name": "ldif-3",
+      "language": "ldif",
+      "code": "dn: uid=alice,dc=example,dc=com",
+      "html": "<span class=\"hljs-attribute\">dn</span>: uid=alice,dc=example,dc=com"
+    },
+    {
+      "name": "dos-0",
+      "language": "dos",
+      "code": "@echo off 😀",
+      "html": "@<span class=\"hljs-built_in\">echo</span> off 😀"
+    },
+    {
+      "name": "dos-1",
+      "language": "dos",
+      "code": "😀@echo off",
+      "html": "😀@<span class=\"hljs-built_in\">echo</span> off"
+    },
+    {
+      "name": "dos-2",
+      "language": "dos",
+      "code": "@echo off",
+      "html": "@<span class=\"hljs-built_in\">echo</span> off"
+    },
+    {
+      "name": "dos-3",
+      "language": "dos",
+      "code": "@echo off",
+      "html": "@<span class=\"hljs-built_in\">echo</span> off"
+    },
+    {
+      "name": "subunit-0",
+      "language": "subunit",
+      "code": "test: test_name 😀",
+      "html": "<span class=\"hljs-keyword\">test: test</span>_name 😀"
+    },
+    {
+      "name": "subunit-1",
+      "language": "subunit",
+      "code": "😀test: test_name",
+      "html": "😀test: test_name"
+    },
+    {
+      "name": "subunit-2",
+      "language": "subunit",
+      "code": "test: test_name",
+      "html": "<span class=\"hljs-keyword\">test: test</span>_name"
+    },
+    {
+      "name": "subunit-3",
+      "language": "subunit",
+      "code": "test: test_name",
+      "html": "<span class=\"hljs-keyword\">test: test</span>_name"
+    },
+    {
+      "name": "fix-0",
+      "language": "fix",
+      "code": "8=FIX.4.2\u00019=12\u000135=D\u000149=SENDER\u000156=TARGET\u000110=000\u0001␁ 😀",
+      "html": "<span class=\"hljs-attr\">8</span>=<span class=\"hljs-string\">FIX.4.2</span>\u0001<span class=\"hljs-attr\">9</span>=<span class=\"hljs-string\">12</span>\u0001<span class=\"hljs-attr\">35</span>=<span class=\"hljs-string\">D</span>\u0001<span class=\"hljs-attr\">49</span>=<span class=\"hljs-string\">SENDER</span>\u0001<span class=\"hljs-attr\">56</span>=<span class=\"hljs-string\">TARGET</span>\u0001<span class=\"hljs-attr\">10</span>=<span class=\"hljs-string\">000</span>\u0001␁<span class=\"hljs-attr\"> 😀</span>"
+    },
+    {
+      "name": "fix-1",
+      "language": "fix",
+      "code": "😀8=FIX.4.2\u00019=12\u000135=D\u000149=SENDER\u000156=TARGET\u000110=000\u0001␁",
+      "html": "<span class=\"hljs-attr\">😀8</span>=<span class=\"hljs-string\">FIX.4.2</span>\u0001<span class=\"hljs-attr\">9</span>=<span class=\"hljs-string\">12</span>\u0001<span class=\"hljs-attr\">35</span>=<span class=\"hljs-string\">D</span>\u0001<span class=\"hljs-attr\">49</span>=<span class=\"hljs-string\">SENDER</span>\u0001<span class=\"hljs-attr\">56</span>=<span class=\"hljs-string\">TARGET</span>\u0001<span class=\"hljs-attr\">10</span>=<span class=\"hljs-string\">000</span>\u0001␁"
+    },
+    {
+      "name": "fix-2",
+      "language": "fix",
+      "code": "8=FIX.4.2\u00019=12\u000135=D\u000149=SENDER\u000156=TARGET\u000110=000\u0001␁",
+      "html": "<span class=\"hljs-attr\">8</span>=<span class=\"hljs-string\">FIX.4.2</span>\u0001<span class=\"hljs-attr\">9</span>=<span class=\"hljs-string\">12</span>\u0001<span class=\"hljs-attr\">35</span>=<span class=\"hljs-string\">D</span>\u0001<span class=\"hljs-attr\">49</span>=<span class=\"hljs-string\">SENDER</span>\u0001<span class=\"hljs-attr\">56</span>=<span class=\"hljs-string\">TARGET</span>\u0001<span class=\"hljs-attr\">10</span>=<span class=\"hljs-string\">000</span>\u0001␁"
+    },
+    {
+      "name": "fix-3",
+      "language": "fix",
+      "code": "8=FIX.4.2\u00019=12\u000135=D\u000149=SENDER\u000156=TARGET\u000110=000\u0001␁",
+      "html": "<span class=\"hljs-attr\">8</span>=<span class=\"hljs-string\">FIX.4.2</span>\u0001<span class=\"hljs-attr\">9</span>=<span class=\"hljs-string\">12</span>\u0001<span class=\"hljs-attr\">35</span>=<span class=\"hljs-string\">D</span>\u0001<span class=\"hljs-attr\">49</span>=<span class=\"hljs-string\">SENDER</span>\u0001<span class=\"hljs-attr\">56</span>=<span class=\"hljs-string\">TARGET</span>\u0001<span class=\"hljs-attr\">10</span>=<span class=\"hljs-string\">000</span>\u0001␁"
+    },
+    {
+      "name": "excel-0",
+      "language": "excel",
+      "code": "=SUM(A1:B2) + IF(GT(3,2), 1, 0) 😀",
+      "html": "=<span class=\"hljs-built_in\">SUM</span>(<span class=\"hljs-symbol\">A1</span>:<span class=\"hljs-symbol\">B2</span>) + <span class=\"hljs-built_in\">IF</span>(GT(<span class=\"hljs-number\">3</span>,<span class=\"hljs-number\">2</span>), <span class=\"hljs-number\">1</span>, <span class=\"hljs-number\">0</span>) 😀"
+    },
+    {
+      "name": "excel-1",
+      "language": "excel",
+      "code": "😀=SUM(A1:B2) + IF(GT(3,2), 1, 0)",
+      "html": "😀=<span class=\"hljs-built_in\">SUM</span>(<span class=\"hljs-symbol\">A1</span>:<span class=\"hljs-symbol\">B2</span>) + <span class=\"hljs-built_in\">IF</span>(GT(<span class=\"hljs-number\">3</span>,<span class=\"hljs-number\">2</span>), <span class=\"hljs-number\">1</span>, <span class=\"hljs-number\">0</span>)"
+    },
+    {
+      "name": "excel-2",
+      "language": "excel",
+      "code": "=SUM(A1:B2) + IF(GT(3,2), 1, 0)",
+      "html": "=<span class=\"hljs-built_in\">SUM</span>(<span class=\"hljs-symbol\">A1</span>:<span class=\"hljs-symbol\">B2</span>) + <span class=\"hljs-built_in\">IF</span>(GT(<span class=\"hljs-number\">3</span>,<span class=\"hljs-number\">2</span>), <span class=\"hljs-number\">1</span>, <span class=\"hljs-number\">0</span>)"
+    },
+    {
+      "name": "excel-3",
+      "language": "excel",
+      "code": "=SUM(A1:B2) + IF(GT(3,2), 1, 0)",
+      "html": "=<span class=\"hljs-built_in\">SUM</span>(<span class=\"hljs-symbol\">A1</span>:<span class=\"hljs-symbol\">B2</span>) + <span class=\"hljs-built_in\">IF</span>(GT(<span class=\"hljs-number\">3</span>,<span class=\"hljs-number\">2</span>), <span class=\"hljs-number\">1</span>, <span class=\"hljs-number\">0</span>)"
+    },
+    {
+      "name": "accesslog-0",
+      "language": "accesslog",
+      "code": "127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326 \"http://www.example.com/start.html\" \"Mozilla/4.08 [en] (Win98; I ;Nav)\" 😀",
+      "html": "<span class=\"hljs-number\">127.0.0.1</span> - frank <span class=\"hljs-string\">[10/Oct/2000:13:55:36 -0700]</span> <span class=\"hljs-string\">&quot;<span class=\"hljs-keyword\">GET</span> /apache_pb.gif HTTP/1.0&quot;</span> <span class=\"hljs-number\">200</span> <span class=\"hljs-number\">2326</span> <span class=\"hljs-string\">&quot;http://www.example.com/start.html&quot;</span> <span class=\"hljs-string\">&quot;Mozilla/4.08 [en] (Win98; I ;Nav)&quot;</span> 😀"
+    },
+    {
+      "name": "accesslog-1",
+      "language": "accesslog",
+      "code": "😀127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326 \"http://www.example.com/start.html\" \"Mozilla/4.08 [en] (Win98; I ;Nav)\"",
+      "html": "😀<span class=\"hljs-number\">127</span>.<span class=\"hljs-number\">0</span>.<span class=\"hljs-number\">0</span>.<span class=\"hljs-number\">1</span> - frank <span class=\"hljs-string\">[10/Oct/2000:13:55:36 -0700]</span> <span class=\"hljs-string\">&quot;<span class=\"hljs-keyword\">GET</span> /apache_pb.gif HTTP/1.0&quot;</span> <span class=\"hljs-number\">200</span> <span class=\"hljs-number\">2326</span> <span class=\"hljs-string\">&quot;http://www.example.com/start.html&quot;</span> <span class=\"hljs-string\">&quot;Mozilla/4.08 [en] (Win98; I ;Nav)&quot;</span>"
+    },
+    {
+      "name": "accesslog-2",
+      "language": "accesslog",
+      "code": "127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700] \"😀GET /apache_pb.gif HTTP/1.0\" 200 2326 \"http://www.example.com/start.html\" \"Mozilla/4.08 [en] (Win98; I ;Nav)\"",
+      "html": "<span class=\"hljs-number\">127.0.0.1</span> - frank <span class=\"hljs-string\">[10/Oct/2000:13:55:36 -0700]</span> <span class=\"hljs-string\">&quot;😀GET /apache_pb.gif HTTP/1.0&quot;</span> <span class=\"hljs-number\">200</span> <span class=\"hljs-number\">2326</span> <span class=\"hljs-string\">&quot;http://www.example.com/start.html&quot;</span> <span class=\"hljs-string\">&quot;Mozilla/4.08 [en] (Win98; I ;Nav)&quot;</span>"
+    },
+    {
+      "name": "accesslog-3",
+      "language": "accesslog",
+      "code": "127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326 \"http://www.example.com/start.html\" \"Mozilla/4.08 [en] (Win98; I ;Nav)\"",
+      "html": "<span class=\"hljs-number\">127.0.0.1</span> - frank <span class=\"hljs-string\">[10/Oct/2000:13:55:36 -0700]</span> <span class=\"hljs-string\">&quot;<span class=\"hljs-keyword\">GET</span> /apache_pb.gif HTTP/1.0&quot;</span> <span class=\"hljs-number\">200</span> <span class=\"hljs-number\">2326</span> <span class=\"hljs-string\">&quot;http://www.example.com/start.html&quot;</span> <span class=\"hljs-string\">&quot;Mozilla/4.08 [en] (Win98; I ;Nav)&quot;</span>"
+    },
+    {
+      "name": "mizar-0",
+      "language": "mizar",
+      "code": "environ 😀",
+      "html": "<span class=\"hljs-keyword\">environ</span> 😀"
+    },
+    {
+      "name": "mizar-1",
+      "language": "mizar",
+      "code": "😀environ",
+      "html": "😀<span class=\"hljs-keyword\">environ</span>"
+    },
+    {
+      "name": "mizar-2",
+      "language": "mizar",
+      "code": "environ",
+      "html": "<span class=\"hljs-keyword\">environ</span>"
+    },
+    {
+      "name": "mizar-3",
+      "language": "mizar",
+      "code": "environ",
+      "html": "<span class=\"hljs-keyword\">environ</span>"
+    },
+    {
+      "name": "golo-0",
+      "language": "golo",
+      "code": "module hello 😀",
+      "html": "<span class=\"hljs-keyword\">module</span> hello 😀"
+    },
+    {
+      "name": "golo-1",
+      "language": "golo",
+      "code": "😀module hello",
+      "html": "😀<span class=\"hljs-keyword\">module</span> hello"
+    },
+    {
+      "name": "golo-2",
+      "language": "golo",
+      "code": "module hello",
+      "html": "<span class=\"hljs-keyword\">module</span> hello"
+    },
+    {
+      "name": "golo-3",
+      "language": "golo",
+      "code": "module hello",
+      "html": "<span class=\"hljs-keyword\">module</span> hello"
+    },
+    {
+      "name": "csp-0",
+      "language": "csp",
+      "code": "Content-Security-Policy: default-src 'self'; script-src 'unsafe-inline' https://example.com; img-src * 😀",
+      "html": "<span class=\"hljs-attribute\">Content-Security-Policy</span>: <span class=\"hljs-keyword\">default-src</span> <span class=\"hljs-string\">&#x27;self&#x27;</span>; <span class=\"hljs-keyword\">script-src</span> <span class=\"hljs-string\">&#x27;unsafe-inline&#x27;</span> https://example.com; <span class=\"hljs-keyword\">img-src</span> * 😀"
+    },
+    {
+      "name": "csp-1",
+      "language": "csp",
+      "code": "😀Content-Security-Policy: default-src 'self'; script-src 'unsafe-inline' https://example.com; img-src *",
+      "html": "😀Content-Security-Policy: <span class=\"hljs-keyword\">default-src</span> <span class=\"hljs-string\">&#x27;self&#x27;</span>; <span class=\"hljs-keyword\">script-src</span> <span class=\"hljs-string\">&#x27;unsafe-inline&#x27;</span> https://example.com; <span class=\"hljs-keyword\">img-src</span> *"
+    },
+    {
+      "name": "csp-2",
+      "language": "csp",
+      "code": "Content-Security-Policy: default-src 'self'; script-src 'unsafe-inline' https://example.com; img-src *",
+      "html": "<span class=\"hljs-attribute\">Content-Security-Policy</span>: <span class=\"hljs-keyword\">default-src</span> <span class=\"hljs-string\">&#x27;self&#x27;</span>; <span class=\"hljs-keyword\">script-src</span> <span class=\"hljs-string\">&#x27;unsafe-inline&#x27;</span> https://example.com; <span class=\"hljs-keyword\">img-src</span> *"
+    },
+    {
+      "name": "csp-3",
+      "language": "csp",
+      "code": "Content-Security-Policy: default-src 'self'; script-src 'unsafe-inline' https://example.com; img-src *",
+      "html": "<span class=\"hljs-attribute\">Content-Security-Policy</span>: <span class=\"hljs-keyword\">default-src</span> <span class=\"hljs-string\">&#x27;self&#x27;</span>; <span class=\"hljs-keyword\">script-src</span> <span class=\"hljs-string\">&#x27;unsafe-inline&#x27;</span> https://example.com; <span class=\"hljs-keyword\">img-src</span> *"
+    },
+    {
+      "name": "q-0",
+      "language": "q",
+      "code": "/ this is a comment 😀",
+      "html": "/ this is a comment 😀"
+    },
+    {
+      "name": "q-1",
+      "language": "q",
+      "code": "😀/ this is a comment",
+      "html": "😀/ this is a comment"
+    },
+    {
+      "name": "q-2",
+      "language": "q",
+      "code": "/ this is a comment",
+      "html": "/ this is a comment"
+    },
+    {
+      "name": "q-3",
+      "language": "q",
+      "code": "/ this is a comment",
+      "html": "/ this is a comment"
+    },
+    {
+      "name": "rib-0",
+      "language": "rib",
+      "code": "# A RIB comment 😀",
+      "html": "<span class=\"hljs-comment\"># A RIB comment 😀</span>"
+    },
+    {
+      "name": "rib-1",
+      "language": "rib",
+      "code": "😀# A RIB comment",
+      "html": "😀<span class=\"hljs-comment\"># A RIB comment</span>"
+    },
+    {
+      "name": "rib-2",
+      "language": "rib",
+      "code": "# A RIB comment",
+      "html": "<span class=\"hljs-comment\"># A RIB comment</span>"
+    },
+    {
+      "name": "rib-3",
+      "language": "rib",
+      "code": "# A RIB comment",
+      "html": "<span class=\"hljs-comment\"># A RIB comment</span>"
+    },
+    {
+      "name": "clean-0",
+      "language": "clean",
+      "code": "module hello 😀",
+      "html": "<span class=\"hljs-keyword\">module</span> hello 😀"
+    },
+    {
+      "name": "clean-1",
+      "language": "clean",
+      "code": "😀module hello",
+      "html": "😀<span class=\"hljs-keyword\">module</span> hello"
+    },
+    {
+      "name": "clean-2",
+      "language": "clean",
+      "code": "module hello",
+      "html": "<span class=\"hljs-keyword\">module</span> hello"
+    },
+    {
+      "name": "clean-3",
+      "language": "clean",
+      "code": "module hello",
+      "html": "<span class=\"hljs-keyword\">module</span> hello"
+    },
+    {
+      "name": "profile-0",
+      "language": "profile",
+      "code": "         100 function calls (90 primitive calls) in 0.001 seconds 😀",
+      "html": "         <span class=\"hljs-number\">100</span> function calls (<span class=\"hljs-number\">90</span> primitive calls) in <span class=\"hljs-number\">0.001</span> seconds 😀"
+    },
+    {
+      "name": "profile-1",
+      "language": "profile",
+      "code": "😀         100 function calls (90 primitive calls) in 0.001 seconds",
+      "html": "😀         <span class=\"hljs-number\">100</span> function calls (<span class=\"hljs-number\">90</span> primitive calls) in <span class=\"hljs-number\">0.001</span> seconds"
+    },
+    {
+      "name": "profile-2",
+      "language": "profile",
+      "code": "         100 function calls (90 primitive calls) in 0.001 seconds",
+      "html": "         <span class=\"hljs-number\">100</span> function calls (<span class=\"hljs-number\">90</span> primitive calls) in <span class=\"hljs-number\">0.001</span> seconds"
+    },
+    {
+      "name": "profile-3",
+      "language": "profile",
+      "code": "         100 function calls (90 primitive calls) in 0.001 seconds",
+      "html": "         <span class=\"hljs-number\">100</span> function calls (<span class=\"hljs-number\">90</span> primitive calls) in <span class=\"hljs-number\">0.001</span> seconds"
+    },
+    {
+      "name": "gradle-0",
+      "language": "gradle",
+      "code": "plugins { 😀",
+      "html": "plugins { 😀"
+    },
+    {
+      "name": "gradle-1",
+      "language": "gradle",
+      "code": "😀plugins {",
+      "html": "😀plugins {"
+    },
+    {
+      "name": "gradle-2",
+      "language": "gradle",
+      "code": "plugins {",
+      "html": "plugins {"
+    },
+    {
+      "name": "gradle-3",
+      "language": "gradle",
+      "code": "plugins {",
+      "html": "plugins {"
+    },
+    {
+      "name": "protobuf-0",
+      "language": "protobuf",
+      "code": "syntax = \"proto3\"; 😀",
+      "html": "syntax = <span class=\"hljs-string\">&quot;proto3&quot;</span>; 😀"
+    },
+    {
+      "name": "protobuf-1",
+      "language": "protobuf",
+      "code": "😀syntax = \"proto3\";",
+      "html": "😀syntax = <span class=\"hljs-string\">&quot;proto3&quot;</span>;"
+    },
+    {
+      "name": "protobuf-2",
+      "language": "protobuf",
+      "code": "syntax = \"😀proto3\";",
+      "html": "syntax = <span class=\"hljs-string\">&quot;😀proto3&quot;</span>;"
+    },
+    {
+      "name": "protobuf-3",
+      "language": "protobuf",
+      "code": "syntax = \"proto3\";",
+      "html": "syntax = <span class=\"hljs-string\">&quot;proto3&quot;</span>;"
+    },
+    {
+      "name": "gherkin-0",
+      "language": "gherkin",
+      "code": "@smoke 😀",
+      "html": "<span class=\"hljs-meta\">@smoke</span> 😀"
+    },
+    {
+      "name": "gherkin-1",
+      "language": "gherkin",
+      "code": "😀@smoke",
+      "html": "😀<span class=\"hljs-meta\">@smoke</span>"
+    },
+    {
+      "name": "gherkin-2",
+      "language": "gherkin",
+      "code": "@smoke",
+      "html": "<span class=\"hljs-meta\">@smoke</span>"
+    },
+    {
+      "name": "gherkin-3",
+      "language": "gherkin",
+      "code": "@smoke",
+      "html": "<span class=\"hljs-meta\">@smoke</span>"
+    },
+    {
+      "name": "leaf-0",
+      "language": "leaf",
+      "code": "#extend(\"base\") 😀",
+      "html": "<span class=\"hljs-function\"><span class=\"hljs-keyword\">#</span><span class=\"hljs-title\">extend</span><span class=\"hljs-params\">(<span class=\"hljs-string\">&quot;base&quot;</span>)</span></span> 😀"
+    },
+    {
+      "name": "leaf-1",
+      "language": "leaf",
+      "code": "😀#extend(\"base\")",
+      "html": "😀<span class=\"hljs-function\"><span class=\"hljs-keyword\">#</span><span class=\"hljs-title\">extend</span><span class=\"hljs-params\">(<span class=\"hljs-string\">&quot;base&quot;</span>)</span></span>"
+    },
+    {
+      "name": "leaf-2",
+      "language": "leaf",
+      "code": "#extend(\"😀base\")",
+      "html": "<span class=\"hljs-function\"><span class=\"hljs-keyword\">#</span><span class=\"hljs-title\">extend</span><span class=\"hljs-params\">(<span class=\"hljs-string\">&quot;😀base&quot;</span>)</span></span>"
+    },
+    {
+      "name": "leaf-3",
+      "language": "leaf",
+      "code": "#extend(\"base\")",
+      "html": "<span class=\"hljs-function\"><span class=\"hljs-keyword\">#</span><span class=\"hljs-title\">extend</span><span class=\"hljs-params\">(<span class=\"hljs-string\">&quot;base&quot;</span>)</span></span>"
+    },
+    {
+      "name": "rsl-0",
+      "language": "rsl",
+      "code": "/* a block comment */ 😀",
+      "html": "<span class=\"hljs-comment\">/* a block comment */</span> 😀"
+    },
+    {
+      "name": "rsl-1",
+      "language": "rsl",
+      "code": "😀/* a block comment */",
+      "html": "😀<span class=\"hljs-comment\">/* a block comment */</span>"
+    },
+    {
+      "name": "rsl-2",
+      "language": "rsl",
+      "code": "/* a block comment */",
+      "html": "<span class=\"hljs-comment\">/* a block comment */</span>"
+    },
+    {
+      "name": "rsl-3",
+      "language": "rsl",
+      "code": "/* a block comment */",
+      "html": "<span class=\"hljs-comment\">/* a block comment */</span>"
+    },
+    {
+      "name": "thrift-0",
+      "language": "thrift",
+      "code": "namespace go demo 😀",
+      "html": "<span class=\"hljs-keyword\">namespace</span> go demo 😀"
+    },
+    {
+      "name": "thrift-1",
+      "language": "thrift",
+      "code": "😀namespace go demo",
+      "html": "😀<span class=\"hljs-keyword\">namespace</span> go demo"
+    },
+    {
+      "name": "thrift-2",
+      "language": "thrift",
+      "code": "namespace go demo",
+      "html": "<span class=\"hljs-keyword\">namespace</span> go demo"
+    },
+    {
+      "name": "thrift-3",
+      "language": "thrift",
+      "code": "namespace go demo",
+      "html": "<span class=\"hljs-keyword\">namespace</span> go demo"
+    },
+    {
+      "name": "taggerscript-0",
+      "language": "taggerscript",
+      "code": "$set(_albumartist,$_artist) 😀",
+      "html": "<span class=\"hljs-keyword\">$set</span>(_albumartist,$_artist) 😀"
+    },
+    {
+      "name": "taggerscript-1",
+      "language": "taggerscript",
+      "code": "😀$set(_albumartist,$_artist)",
+      "html": "😀<span class=\"hljs-keyword\">$set</span>(_albumartist,$_artist)"
+    },
+    {
+      "name": "taggerscript-2",
+      "language": "taggerscript",
+      "code": "$set(_albumartist,$_artist)",
+      "html": "<span class=\"hljs-keyword\">$set</span>(_albumartist,$_artist)"
+    },
+    {
+      "name": "taggerscript-3",
+      "language": "taggerscript",
+      "code": "$set(_albumartist,$_artist)",
+      "html": "<span class=\"hljs-keyword\">$set</span>(_albumartist,$_artist)"
+    },
+    {
+      "name": "parser3-0",
+      "language": "parser3",
+      "code": "# comment 😀",
+      "html": "<span class=\"hljs-comment\"># comment 😀</span>"
+    },
+    {
+      "name": "parser3-1",
+      "language": "parser3",
+      "code": "😀# comment",
+      "html": "<span class=\"xml\">😀# comment</span>"
+    },
+    {
+      "name": "parser3-2",
+      "language": "parser3",
+      "code": "# comment",
+      "html": "<span class=\"hljs-comment\"># comment</span>"
+    },
+    {
+      "name": "parser3-3",
+      "language": "parser3",
+      "code": "# comment",
+      "html": "<span class=\"hljs-comment\"># comment</span>"
+    },
+    {
+      "name": "pf-0",
+      "language": "pf",
+      "code": "# pf.conf sample 😀",
+      "html": "<span class=\"hljs-comment\"># pf.conf sample 😀</span>"
+    },
+    {
+      "name": "pf-1",
+      "language": "pf",
+      "code": "😀# pf.conf sample",
+      "html": "😀<span class=\"hljs-comment\"># pf.conf sample</span>"
+    },
+    {
+      "name": "pf-2",
+      "language": "pf",
+      "code": "# pf.conf sample",
+      "html": "<span class=\"hljs-comment\"># pf.conf sample</span>"
+    },
+    {
+      "name": "pf-3",
+      "language": "pf",
+      "code": "# pf.conf sample",
+      "html": "<span class=\"hljs-comment\"># pf.conf sample</span>"
+    },
+    {
+      "name": "vala-0",
+      "language": "vala",
+      "code": "using GLib; 😀",
+      "html": "<span class=\"hljs-keyword\">using</span> <span class=\"hljs-built_in\">GLib</span>; 😀"
+    },
+    {
+      "name": "vala-1",
+      "language": "vala",
+      "code": "😀using GLib;",
+      "html": "😀<span class=\"hljs-keyword\">using</span> <span class=\"hljs-built_in\">GLib</span>;"
+    },
+    {
+      "name": "vala-2",
+      "language": "vala",
+      "code": "using GLib;",
+      "html": "<span class=\"hljs-keyword\">using</span> <span class=\"hljs-built_in\">GLib</span>;"
+    },
+    {
+      "name": "vala-3",
+      "language": "vala",
+      "code": "using GLib;",
+      "html": "<span class=\"hljs-keyword\">using</span> <span class=\"hljs-built_in\">GLib</span>;"
+    },
+    {
+      "name": "jboss-cli-0",
+      "language": "jboss-cli",
+      "code": "# JBoss CLI sample 😀",
+      "html": "<span class=\"hljs-comment\"># JBoss CLI sample 😀</span>"
+    },
+    {
+      "name": "jboss-cli-1",
+      "language": "jboss-cli",
+      "code": "😀# JBoss CLI sample",
+      "html": "😀<span class=\"hljs-comment\"># JBoss CLI sample</span>"
+    },
+    {
+      "name": "jboss-cli-2",
+      "language": "jboss-cli",
+      "code": "# JBoss CLI sample",
+      "html": "<span class=\"hljs-comment\"># JBoss CLI sample</span>"
+    },
+    {
+      "name": "jboss-cli-3",
+      "language": "jboss-cli",
+      "code": "# JBoss CLI sample",
+      "html": "<span class=\"hljs-comment\"># JBoss CLI sample</span>"
+    },
+    {
+      "name": "smalltalk-0",
+      "language": "smalltalk",
+      "code": "\"a comment\" 😀",
+      "html": "<span class=\"hljs-comment\">&quot;a comment&quot;</span> 😀"
+    },
+    {
+      "name": "smalltalk-1",
+      "language": "smalltalk",
+      "code": "😀\"a comment\"",
+      "html": "😀<span class=\"hljs-comment\">&quot;a comment&quot;</span>"
+    },
+    {
+      "name": "smalltalk-2",
+      "language": "smalltalk",
+      "code": "\"😀a comment\"",
+      "html": "<span class=\"hljs-comment\">&quot;😀a comment&quot;</span>"
+    },
+    {
+      "name": "smalltalk-3",
+      "language": "smalltalk",
+      "code": "\"a comment\"",
+      "html": "<span class=\"hljs-comment\">&quot;a comment&quot;</span>"
+    },
+    {
+      "name": "processing-0",
+      "language": "processing",
+      "code": "int radius = 40; 😀",
+      "html": "<span class=\"hljs-built_in\">int</span> radius = <span class=\"hljs-number\">40</span>; 😀"
+    },
+    {
+      "name": "processing-1",
+      "language": "processing",
+      "code": "😀int radius = 40;",
+      "html": "😀<span class=\"hljs-built_in\">int</span> radius = <span class=\"hljs-number\">40</span>;"
+    },
+    {
+      "name": "processing-2",
+      "language": "processing",
+      "code": "int radius = 40;",
+      "html": "<span class=\"hljs-built_in\">int</span> radius = <span class=\"hljs-number\">40</span>;"
+    },
+    {
+      "name": "processing-3",
+      "language": "processing",
+      "code": "int radius = 40;",
+      "html": "<span class=\"hljs-built_in\">int</span> radius = <span class=\"hljs-number\">40</span>;"
+    },
+    {
+      "name": "capnproto-0",
+      "language": "capnproto",
+      "code": "@0xbf5147cbbecf40c1; 😀",
+      "html": "<span class=\"hljs-meta\">@0xbf5147cbbecf40c1;</span> 😀"
+    },
+    {
+      "name": "capnproto-1",
+      "language": "capnproto",
+      "code": "😀@0xbf5147cbbecf40c1;",
+      "html": "😀<span class=\"hljs-meta\">@0xbf5147cbbecf40c1;</span>"
+    },
+    {
+      "name": "capnproto-2",
+      "language": "capnproto",
+      "code": "@0xbf5147cbbecf40c1;",
+      "html": "<span class=\"hljs-meta\">@0xbf5147cbbecf40c1;</span>"
+    },
+    {
+      "name": "capnproto-3",
+      "language": "capnproto",
+      "code": "@0xbf5147cbbecf40c1;",
+      "html": "<span class=\"hljs-meta\">@0xbf5147cbbecf40c1;</span>"
+    },
+    {
+      "name": "basic-0",
+      "language": "basic",
+      "code": "10 REM Hello World program 😀",
+      "html": "<span class=\"hljs-symbol\">10 </span><span class=\"hljs-comment\">REM Hello World program 😀</span>"
+    },
+    {
+      "name": "basic-1",
+      "language": "basic",
+      "code": "😀10 REM Hello World program",
+      "html": "😀10 REM Hello World program"
+    },
+    {
+      "name": "basic-2",
+      "language": "basic",
+      "code": "10 REM Hello World program",
+      "html": "<span class=\"hljs-symbol\">10 </span><span class=\"hljs-comment\">REM Hello World program</span>"
+    },
+    {
+      "name": "basic-3",
+      "language": "basic",
+      "code": "10 REM Hello World program",
+      "html": "<span class=\"hljs-symbol\">10 </span><span class=\"hljs-comment\">REM Hello World program</span>"
+    },
+    {
+      "name": "dsconfig-0",
+      "language": "dsconfig",
+      "code": "dsconfig create-backend --backend-name userRoot --type je --set enabled:true 😀",
+      "html": "<span class=\"hljs-keyword\">dsconfig</span> <span class=\"hljs-built_in\">create-backend</span> <span class=\"hljs-built_in\">--backend-name</span> <span class=\"hljs-string\">userRoot</span> <span class=\"hljs-built_in\">--type</span> <span class=\"hljs-string\">je</span> <span class=\"hljs-built_in\">--set</span> <span class=\"hljs-string\">enabled:true </span>😀"
+    },
+    {
+      "name": "dsconfig-1",
+      "language": "dsconfig",
+      "code": "😀dsconfig create-backend --backend-name userRoot --type je --set enabled:true",
+      "html": "😀<span class=\"hljs-string\">dsconfig</span> <span class=\"hljs-built_in\">create-backend</span> <span class=\"hljs-built_in\">--backend-name</span> <span class=\"hljs-string\">userRoot</span> <span class=\"hljs-built_in\">--type</span> <span class=\"hljs-string\">je</span> <span class=\"hljs-built_in\">--set</span> <span class=\"hljs-string\">enabled:true</span>"
+    },
+    {
+      "name": "dsconfig-2",
+      "language": "dsconfig",
+      "code": "dsconfig create-backend --backend-name userRoot --type je --set enabled:true",
+      "html": "<span class=\"hljs-keyword\">dsconfig</span> <span class=\"hljs-built_in\">create-backend</span> <span class=\"hljs-built_in\">--backend-name</span> <span class=\"hljs-string\">userRoot</span> <span class=\"hljs-built_in\">--type</span> <span class=\"hljs-string\">je</span> <span class=\"hljs-built_in\">--set</span> <span class=\"hljs-string\">enabled:true</span>"
+    },
+    {
+      "name": "dsconfig-3",
+      "language": "dsconfig",
+      "code": "dsconfig create-backend --backend-name userRoot --type je --set enabled:true",
+      "html": "<span class=\"hljs-keyword\">dsconfig</span> <span class=\"hljs-built_in\">create-backend</span> <span class=\"hljs-built_in\">--backend-name</span> <span class=\"hljs-string\">userRoot</span> <span class=\"hljs-built_in\">--type</span> <span class=\"hljs-string\">je</span> <span class=\"hljs-built_in\">--set</span> <span class=\"hljs-string\">enabled:true</span>"
+    },
+    {
+      "name": "step21-0",
+      "language": "step21",
+      "code": "ISO-10303-21; 😀",
+      "html": "<span class=\"hljs-meta\">ISO-10303-21;</span> 😀"
+    },
+    {
+      "name": "step21-1",
+      "language": "step21",
+      "code": "😀ISO-10303-21;",
+      "html": "😀<span class=\"hljs-meta\">ISO-10303-21;</span>"
+    },
+    {
+      "name": "step21-2",
+      "language": "step21",
+      "code": "ISO-10303-21;",
+      "html": "<span class=\"hljs-meta\">ISO-10303-21;</span>"
+    },
+    {
+      "name": "step21-3",
+      "language": "step21",
+      "code": "ISO-10303-21;",
+      "html": "<span class=\"hljs-meta\">ISO-10303-21;</span>"
+    },
+    {
+      "name": "inform7-0",
+      "language": "inform7",
+      "code": "\"Hello [the player]\" 😀",
+      "html": "<span class=\"hljs-string\">&quot;Hello <span class=\"hljs-subst\">[the player]</span>&quot;</span> 😀"
+    },
+    {
+      "name": "inform7-1",
+      "language": "inform7",
+      "code": "😀\"Hello [the player]\"",
+      "html": "😀<span class=\"hljs-string\">&quot;Hello <span class=\"hljs-subst\">[the player]</span>&quot;</span>"
+    },
+    {
+      "name": "inform7-2",
+      "language": "inform7",
+      "code": "\"😀Hello [the player]\"",
+      "html": "<span class=\"hljs-string\">&quot;😀Hello <span class=\"hljs-subst\">[the player]</span>&quot;</span>"
+    },
+    {
+      "name": "inform7-3",
+      "language": "inform7",
+      "code": "\"Hello [the player]\"",
+      "html": "<span class=\"hljs-string\">&quot;Hello <span class=\"hljs-subst\">[the player]</span>&quot;</span>"
+    },
+    {
+      "name": "vhdl-0",
+      "language": "vhdl",
+      "code": "library ieee; 😀",
+      "html": "<span class=\"hljs-keyword\">library</span> ieee; 😀"
+    },
+    {
+      "name": "vhdl-1",
+      "language": "vhdl",
+      "code": "😀library ieee;",
+      "html": "😀<span class=\"hljs-keyword\">library</span> ieee;"
+    },
+    {
+      "name": "vhdl-2",
+      "language": "vhdl",
+      "code": "library ieee;",
+      "html": "<span class=\"hljs-keyword\">library</span> ieee;"
+    },
+    {
+      "name": "vhdl-3",
+      "language": "vhdl",
+      "code": "library ieee;",
+      "html": "<span class=\"hljs-keyword\">library</span> ieee;"
+    },
+    {
+      "name": "awk-0",
+      "language": "awk",
+      "code": "#!/usr/bin/awk -f 😀",
+      "html": "<span class=\"hljs-comment\">#!/usr/bin/awk -f 😀</span>"
+    },
+    {
+      "name": "awk-1",
+      "language": "awk",
+      "code": "😀#!/usr/bin/awk -f",
+      "html": "😀<span class=\"hljs-comment\">#!/usr/bin/awk -f</span>"
+    },
+    {
+      "name": "awk-2",
+      "language": "awk",
+      "code": "#!/usr/bin/awk -f",
+      "html": "<span class=\"hljs-comment\">#!/usr/bin/awk -f</span>"
+    },
+    {
+      "name": "awk-3",
+      "language": "awk",
+      "code": "#!/usr/bin/awk -f",
+      "html": "<span class=\"hljs-comment\">#!/usr/bin/awk -f</span>"
+    },
+    {
+      "name": "scilab-0",
+      "language": "scilab",
+      "code": "function y = square(x) 😀",
+      "html": "<span class=\"hljs-function\"><span class=\"hljs-keyword\">function</span> <span class=\"hljs-title\">y</span> = <span class=\"hljs-title\">square</span><span class=\"hljs-params\">(x)</span> 😀</span>"
+    },
+    {
+      "name": "scilab-1",
+      "language": "scilab",
+      "code": "😀function y = square(x)",
+      "html": "😀<span class=\"hljs-function\"><span class=\"hljs-keyword\">function</span> <span class=\"hljs-title\">y</span> = <span class=\"hljs-title\">square</span><span class=\"hljs-params\">(x)</span></span>"
+    },
+    {
+      "name": "scilab-2",
+      "language": "scilab",
+      "code": "function y = square(x)",
+      "html": "<span class=\"hljs-function\"><span class=\"hljs-keyword\">function</span> <span class=\"hljs-title\">y</span> = <span class=\"hljs-title\">square</span><span class=\"hljs-params\">(x)</span></span>"
+    },
+    {
+      "name": "scilab-3",
+      "language": "scilab",
+      "code": "function y = square(x)",
+      "html": "<span class=\"hljs-function\"><span class=\"hljs-keyword\">function</span> <span class=\"hljs-title\">y</span> = <span class=\"hljs-title\">square</span><span class=\"hljs-params\">(x)</span></span>"
+    },
+    {
+      "name": "n1ql-0",
+      "language": "n1ql",
+      "code": "SELECT name, age 😀",
+      "html": "<span class=\"hljs-keyword\">SELECT</span> name, age 😀"
+    },
+    {
+      "name": "n1ql-1",
+      "language": "n1ql",
+      "code": "😀SELECT name, age",
+      "html": "😀<span class=\"hljs-keyword\">SELECT</span> name, age"
+    },
+    {
+      "name": "n1ql-2",
+      "language": "n1ql",
+      "code": "SELECT name, age",
+      "html": "<span class=\"hljs-keyword\">SELECT</span> name, age"
+    },
+    {
+      "name": "n1ql-3",
+      "language": "n1ql",
+      "code": "SELECT name, age",
+      "html": "<span class=\"hljs-keyword\">SELECT</span> name, age"
+    },
+    {
+      "name": "apache-0",
+      "language": "apache",
+      "code": "# Apache config sample 😀",
+      "html": "<span class=\"hljs-comment\"># Apache config sample 😀</span>"
+    },
+    {
+      "name": "apache-1",
+      "language": "apache",
+      "code": "😀# Apache config sample",
+      "html": "😀# Apache config sample"
+    },
+    {
+      "name": "apache-2",
+      "language": "apache",
+      "code": "# Apache config sample",
+      "html": "<span class=\"hljs-comment\"># Apache config sample</span>"
+    },
+    {
+      "name": "apache-3",
+      "language": "apache",
+      "code": "# Apache config sample",
+      "html": "<span class=\"hljs-comment\"># Apache config sample</span>"
+    },
+    {
+      "name": "applescript-0",
+      "language": "applescript",
+      "code": "tell application \"Finder\" 😀",
+      "html": "<span class=\"hljs-keyword\">tell</span> <span class=\"hljs-built_in\">application</span> <span class=\"hljs-string\">&quot;Finder&quot;</span> 😀"
+    },
+    {
+      "name": "applescript-1",
+      "language": "applescript",
+      "code": "😀tell application \"Finder\"",
+      "html": "😀<span class=\"hljs-keyword\">tell</span> <span class=\"hljs-built_in\">application</span> <span class=\"hljs-string\">&quot;Finder&quot;</span>"
+    },
+    {
+      "name": "applescript-2",
+      "language": "applescript",
+      "code": "tell application \"😀Finder\"",
+      "html": "<span class=\"hljs-keyword\">tell</span> <span class=\"hljs-built_in\">application</span> <span class=\"hljs-string\">&quot;😀Finder&quot;</span>"
+    },
+    {
+      "name": "applescript-3",
+      "language": "applescript",
+      "code": "tell application \"Finder\"",
+      "html": "<span class=\"hljs-keyword\">tell</span> <span class=\"hljs-built_in\">application</span> <span class=\"hljs-string\">&quot;Finder&quot;</span>"
+    },
+    {
+      "name": "autohotkey-0",
+      "language": "autohotkey",
+      "code": "; AutoHotkey sample 😀",
+      "html": "<span class=\"hljs-comment\">; AutoHotkey sample 😀</span>"
+    },
+    {
+      "name": "autohotkey-1",
+      "language": "autohotkey",
+      "code": "😀; AutoHotkey sample",
+      "html": "😀<span class=\"hljs-comment\">; AutoHotkey sample</span>"
+    },
+    {
+      "name": "autohotkey-2",
+      "language": "autohotkey",
+      "code": "; AutoHotkey sample",
+      "html": "<span class=\"hljs-comment\">; AutoHotkey sample</span>"
+    },
+    {
+      "name": "autohotkey-3",
+      "language": "autohotkey",
+      "code": "; AutoHotkey sample",
+      "html": "<span class=\"hljs-comment\">; AutoHotkey sample</span>"
+    },
+    {
+      "name": "avrasm-0",
+      "language": "avrasm",
+      "code": ".include \"m328pdef.inc\" 😀",
+      "html": "<span class=\"hljs-meta\">.include</span> <span class=\"hljs-string\">&quot;m328pdef.inc&quot;</span> 😀"
+    },
+    {
+      "name": "avrasm-1",
+      "language": "avrasm",
+      "code": "😀.include \"m328pdef.inc\"",
+      "html": "😀<span class=\"hljs-meta\">.include</span> <span class=\"hljs-string\">&quot;m328pdef.inc&quot;</span>"
+    },
+    {
+      "name": "avrasm-2",
+      "language": "avrasm",
+      "code": ".include \"😀m328pdef.inc\"",
+      "html": "<span class=\"hljs-meta\">.include</span> <span class=\"hljs-string\">&quot;😀m328pdef.inc&quot;</span>"
+    },
+    {
+      "name": "avrasm-3",
+      "language": "avrasm",
+      "code": ".include \"m328pdef.inc\"",
+      "html": "<span class=\"hljs-meta\">.include</span> <span class=\"hljs-string\">&quot;m328pdef.inc&quot;</span>"
+    },
+    {
+      "name": "axapta-0",
+      "language": "axapta",
+      "code": "class MyClass extends Object 😀",
+      "html": "<span class=\"hljs-class\"><span class=\"hljs-keyword\">class</span> <span class=\"hljs-title\">MyClass</span> <span class=\"hljs-keyword\">extends</span> <span class=\"hljs-title\">Object</span> 😀</span>"
+    },
+    {
+      "name": "axapta-1",
+      "language": "axapta",
+      "code": "😀class MyClass extends Object",
+      "html": "😀<span class=\"hljs-class\"><span class=\"hljs-keyword\">class</span> <span class=\"hljs-title\">MyClass</span> <span class=\"hljs-keyword\">extends</span> <span class=\"hljs-title\">Object</span></span>"
+    },
+    {
+      "name": "axapta-2",
+      "language": "axapta",
+      "code": "class MyClass extends Object",
+      "html": "<span class=\"hljs-class\"><span class=\"hljs-keyword\">class</span> <span class=\"hljs-title\">MyClass</span> <span class=\"hljs-keyword\">extends</span> <span class=\"hljs-title\">Object</span></span>"
+    },
+    {
+      "name": "axapta-3",
+      "language": "axapta",
+      "code": "class MyClass extends Object",
+      "html": "<span class=\"hljs-class\"><span class=\"hljs-keyword\">class</span> <span class=\"hljs-title\">MyClass</span> <span class=\"hljs-keyword\">extends</span> <span class=\"hljs-title\">Object</span></span>"
+    },
+    {
+      "name": "cal-0",
+      "language": "cal",
+      "code": "OBJECT Codeunit 50000 My Codeunit 😀",
+      "html": "<span class=\"hljs-class\"><span class=\"hljs-title\">OBJECT</span></span> Codeunit <span class=\"hljs-number\">50000</span> My Codeunit 😀"
+    },
+    {
+      "name": "cal-1",
+      "language": "cal",
+      "code": "😀OBJECT Codeunit 50000 My Codeunit",
+      "html": "😀<span class=\"hljs-class\"><span class=\"hljs-title\">OBJECT</span></span> Codeunit <span class=\"hljs-number\">50000</span> My Codeunit"
+    },
+    {
+      "name": "cal-2",
+      "language": "cal",
+      "code": "OBJECT Codeunit 50000 My Codeunit",
+      "html": "<span class=\"hljs-class\"><span class=\"hljs-title\">OBJECT</span></span> Codeunit <span class=\"hljs-number\">50000</span> My Codeunit"
+    },
+    {
+      "name": "cal-3",
+      "language": "cal",
+      "code": "OBJECT Codeunit 50000 My Codeunit",
+      "html": "<span class=\"hljs-class\"><span class=\"hljs-title\">OBJECT</span></span> Codeunit <span class=\"hljs-number\">50000</span> My Codeunit"
+    },
+    {
+      "name": "dts-0",
+      "language": "dts",
+      "code": "/dts-v1/; 😀",
+      "html": "<span class=\"hljs-meta-keyword\">/dts-v1/</span>; 😀"
+    },
+    {
+      "name": "dts-1",
+      "language": "dts",
+      "code": "😀/dts-v1/;",
+      "html": "😀<span class=\"hljs-meta-keyword\">/dts-v1/</span>;"
+    },
+    {
+      "name": "dts-2",
+      "language": "dts",
+      "code": "/dts-v1/;",
+      "html": "<span class=\"hljs-meta-keyword\">/dts-v1/</span>;"
+    },
+    {
+      "name": "dts-3",
+      "language": "dts",
+      "code": "/dts-v1/;",
+      "html": "<span class=\"hljs-meta-keyword\">/dts-v1/</span>;"
+    },
+    {
+      "name": "cmake-0",
+      "language": "cmake",
+      "code": "cmake_minimum_required(VERSION 3.20) 😀",
+      "html": "<span class=\"hljs-keyword\">cmake_minimum_required</span>(VERSION <span class=\"hljs-number\">3.20</span>) 😀"
+    },
+    {
+      "name": "cmake-1",
+      "language": "cmake",
+      "code": "😀cmake_minimum_required(VERSION 3.20)",
+      "html": "😀<span class=\"hljs-keyword\">cmake_minimum_required</span>(VERSION <span class=\"hljs-number\">3.20</span>)"
+    },
+    {
+      "name": "cmake-2",
+      "language": "cmake",
+      "code": "cmake_minimum_required(VERSION 3.20)",
+      "html": "<span class=\"hljs-keyword\">cmake_minimum_required</span>(VERSION <span class=\"hljs-number\">3.20</span>)"
+    },
+    {
+      "name": "cmake-3",
+      "language": "cmake",
+      "code": "cmake_minimum_required(VERSION 3.20)",
+      "html": "<span class=\"hljs-keyword\">cmake_minimum_required</span>(VERSION <span class=\"hljs-number\">3.20</span>)"
+    },
+    {
+      "name": "mipsasm-0",
+      "language": "mipsasm",
+      "code": ".text 😀",
+      "html": "<span class=\"hljs-meta\">.text</span> 😀"
+    },
+    {
+      "name": "mipsasm-1",
+      "language": "mipsasm",
+      "code": "😀.text",
+      "html": "😀<span class=\"hljs-meta\">.text</span>"
+    },
+    {
+      "name": "mipsasm-2",
+      "language": "mipsasm",
+      "code": ".text",
+      "html": "<span class=\"hljs-meta\">.text</span>"
+    },
+    {
+      "name": "mipsasm-3",
+      "language": "mipsasm",
+      "code": ".text",
+      "html": "<span class=\"hljs-meta\">.text</span>"
+    },
+    {
+      "name": "llvm-0",
+      "language": "llvm",
+      "code": "; ModuleID = 'demo' 😀",
+      "html": "<span class=\"hljs-comment\">; ModuleID = &#x27;demo&#x27; 😀</span>"
+    },
+    {
+      "name": "llvm-1",
+      "language": "llvm",
+      "code": "😀; ModuleID = 'demo'",
+      "html": "😀<span class=\"hljs-comment\">; ModuleID = &#x27;demo&#x27;</span>"
+    },
+    {
+      "name": "llvm-2",
+      "language": "llvm",
+      "code": "; ModuleID = 'demo'",
+      "html": "<span class=\"hljs-comment\">; ModuleID = &#x27;demo&#x27;</span>"
+    },
+    {
+      "name": "llvm-3",
+      "language": "llvm",
+      "code": "; ModuleID = 'demo'",
+      "html": "<span class=\"hljs-comment\">; ModuleID = &#x27;demo&#x27;</span>"
+    },
+    {
+      "name": "shell-0",
+      "language": "shell",
+      "code": "$ ls -la 😀",
+      "html": "<span class=\"hljs-meta\">$</span><span class=\"bash\"> ls -la 😀</span>"
+    },
+    {
+      "name": "shell-1",
+      "language": "shell",
+      "code": "😀$ ls -la",
+      "html": "😀$ ls -la"
+    },
+    {
+      "name": "shell-2",
+      "language": "shell",
+      "code": "$ ls -la",
+      "html": "<span class=\"hljs-meta\">$</span><span class=\"bash\"> ls -la</span>"
+    },
+    {
+      "name": "shell-3",
+      "language": "shell",
+      "code": "$ ls -la",
+      "html": "<span class=\"hljs-meta\">$</span><span class=\"bash\"> ls -la</span>"
+    },
+    {
+      "name": "python-repl-0",
+      "language": "python-repl",
+      "code": ">>> print(\"hello\") 😀",
+      "html": "<span class=\"hljs-meta\">&gt;&gt;&gt;</span> <span class=\"python\"><span class=\"hljs-built_in\">print</span>(<span class=\"hljs-string\">&quot;hello&quot;</span>) 😀</span>"
+    },
+    {
+      "name": "python-repl-1",
+      "language": "python-repl",
+      "code": "😀>>> print(\"hello\")",
+      "html": "😀&gt;&gt;&gt; print(&quot;hello&quot;)"
+    },
+    {
+      "name": "python-repl-2",
+      "language": "python-repl",
+      "code": ">>> print(\"😀hello\")",
+      "html": "<span class=\"hljs-meta\">&gt;&gt;&gt;</span> <span class=\"python\"><span class=\"hljs-built_in\">print</span>(<span class=\"hljs-string\">&quot;😀hello&quot;</span>)</span>"
+    },
+    {
+      "name": "python-repl-3",
+      "language": "python-repl",
+      "code": ">>> print(\"hello\")",
+      "html": "<span class=\"hljs-meta\">&gt;&gt;&gt;</span> <span class=\"python\"><span class=\"hljs-built_in\">print</span>(<span class=\"hljs-string\">&quot;hello&quot;</span>)</span>"
+    },
+    {
+      "name": "node-repl-0",
+      "language": "node-repl",
+      "code": "> const x = 1 + 2 😀",
+      "html": "<span class=\"hljs-meta\">&gt;</span> <span class=\"javascript\"><span class=\"hljs-keyword\">const</span> x = <span class=\"hljs-number\">1</span> + <span class=\"hljs-number\">2</span> 😀</span>"
+    },
+    {
+      "name": "node-repl-1",
+      "language": "node-repl",
+      "code": "😀> const x = 1 + 2",
+      "html": "😀&gt; const x = 1 + 2"
+    },
+    {
+      "name": "node-repl-2",
+      "language": "node-repl",
+      "code": "> const x = 1 + 2",
+      "html": "<span class=\"hljs-meta\">&gt;</span> <span class=\"javascript\"><span class=\"hljs-keyword\">const</span> x = <span class=\"hljs-number\">1</span> + <span class=\"hljs-number\">2</span></span>"
+    },
+    {
+      "name": "node-repl-3",
+      "language": "node-repl",
+      "code": "> const x = 1 + 2",
+      "html": "<span class=\"hljs-meta\">&gt;</span> <span class=\"javascript\"><span class=\"hljs-keyword\">const</span> x = <span class=\"hljs-number\">1</span> + <span class=\"hljs-number\">2</span></span>"
+    },
+    {
+      "name": "mojolicious-0",
+      "language": "mojolicious",
+      "code": "% my $title = 'Hello'; 😀",
+      "html": "<span class=\"perl\">% <span class=\"hljs-keyword\">my</span> $title = <span class=\"hljs-string\">&#x27;Hello&#x27;</span>; 😀</span>"
+    },
+    {
+      "name": "mojolicious-1",
+      "language": "mojolicious",
+      "code": "😀% my $title = 'Hello';",
+      "html": "<span class=\"xml\">😀% my $title = &#x27;Hello&#x27;;</span>"
+    },
+    {
+      "name": "mojolicious-2",
+      "language": "mojolicious",
+      "code": "% my $title = 'Hello';",
+      "html": "<span class=\"perl\">% <span class=\"hljs-keyword\">my</span> $title = <span class=\"hljs-string\">&#x27;Hello&#x27;</span>;</span>"
+    },
+    {
+      "name": "mojolicious-3",
+      "language": "mojolicious",
+      "code": "% my $title = 'Hello';",
+      "html": "<span class=\"perl\">% <span class=\"hljs-keyword\">my</span> $title = <span class=\"hljs-string\">&#x27;Hello&#x27;</span>;</span>"
+    },
+    {
+      "name": "erlang-repl-0",
+      "language": "erlang-repl",
+      "code": "1> c(main). 😀",
+      "html": "<span class=\"hljs-meta\">1&gt; </span>c(main). 😀"
+    },
+    {
+      "name": "erlang-repl-1",
+      "language": "erlang-repl",
+      "code": "😀1> c(main).",
+      "html": "😀<span class=\"hljs-number\">1</span>&gt; c(main)."
+    },
+    {
+      "name": "erlang-repl-2",
+      "language": "erlang-repl",
+      "code": "1> c(main).",
+      "html": "<span class=\"hljs-meta\">1&gt; </span>c(main)."
+    },
+    {
+      "name": "erlang-repl-3",
+      "language": "erlang-repl",
+      "code": "1> c(main).",
+      "html": "<span class=\"hljs-meta\">1&gt; </span>c(main)."
+    },
+    {
+      "name": "clojure-0",
+      "language": "clojure",
+      "code": "(ns demo.core 😀",
+      "html": "(<span class=\"hljs-name\"><span class=\"hljs-builtin-name\">ns</span></span> demo.core 😀"
+    },
+    {
+      "name": "clojure-1",
+      "language": "clojure",
+      "code": "😀(ns demo.core",
+      "html": "😀(ns demo.core"
+    },
+    {
+      "name": "clojure-2",
+      "language": "clojure",
+      "code": "(ns demo.core",
+      "html": "(<span class=\"hljs-name\"><span class=\"hljs-builtin-name\">ns</span></span> demo.core"
+    },
+    {
+      "name": "clojure-3",
+      "language": "clojure",
+      "code": "(ns demo.core",
+      "html": "(<span class=\"hljs-name\"><span class=\"hljs-builtin-name\">ns</span></span> demo.core"
+    },
+    {
+      "name": "clojure-repl-0",
+      "language": "clojure-repl",
+      "code": "user=> (def x 1) 😀",
+      "html": "<span class=\"hljs-meta\">user=&gt;</span><span class=\"clojure\"> (<span class=\"hljs-keyword\">def</span> <span class=\"hljs-title\">x</span> <span class=\"hljs-number\">1</span>) 😀</span>"
+    },
+    {
+      "name": "clojure-repl-1",
+      "language": "clojure-repl",
+      "code": "😀user=> (def x 1)",
+      "html": "😀user=&gt; (def x 1)"
+    },
+    {
+      "name": "clojure-repl-2",
+      "language": "clojure-repl",
+      "code": "user=> (def x 1)",
+      "html": "<span class=\"hljs-meta\">user=&gt;</span><span class=\"clojure\"> (<span class=\"hljs-keyword\">def</span> <span class=\"hljs-title\">x</span> <span class=\"hljs-number\">1</span>)</span>"
+    },
+    {
+      "name": "clojure-repl-3",
+      "language": "clojure-repl",
+      "code": "user=> (def x 1)",
+      "html": "<span class=\"hljs-meta\">user=&gt;</span><span class=\"clojure\"> (<span class=\"hljs-keyword\">def</span> <span class=\"hljs-title\">x</span> <span class=\"hljs-number\">1</span>)</span>"
+    },
+    {
+      "name": "flix-0",
+      "language": "flix",
+      "code": "def main(args: Array[String]): Int = { 😀",
+      "html": "<span class=\"hljs-function\"><span class=\"hljs-keyword\">def</span> <span class=\"hljs-title\">main</span></span>(args: Array[String]): Int = { 😀"
+    },
+    {
+      "name": "flix-1",
+      "language": "flix",
+      "code": "😀def main(args: Array[String]): Int = {",
+      "html": "😀<span class=\"hljs-function\"><span class=\"hljs-keyword\">def</span> <span class=\"hljs-title\">main</span></span>(args: Array[String]): Int = {"
+    },
+    {
+      "name": "flix-2",
+      "language": "flix",
+      "code": "def main(args: Array[String]): Int = {",
+      "html": "<span class=\"hljs-function\"><span class=\"hljs-keyword\">def</span> <span class=\"hljs-title\">main</span></span>(args: Array[String]): Int = {"
+    },
+    {
+      "name": "flix-3",
+      "language": "flix",
+      "code": "def main(args: Array[String]): Int = {",
+      "html": "<span class=\"hljs-function\"><span class=\"hljs-keyword\">def</span> <span class=\"hljs-title\">main</span></span>(args: Array[String]): Int = {"
+    },
+    {
+      "name": "ceylon-0",
+      "language": "ceylon",
+      "code": "shared void run() { 😀",
+      "html": "<span class=\"hljs-keyword\">shared</span> <span class=\"hljs-keyword\">void</span> run() { 😀"
+    },
+    {
+      "name": "ceylon-1",
+      "language": "ceylon",
+      "code": "😀shared void run() {",
+      "html": "😀<span class=\"hljs-keyword\">shared</span> <span class=\"hljs-keyword\">void</span> run() {"
+    },
+    {
+      "name": "ceylon-2",
+      "language": "ceylon",
+      "code": "shared void run() {",
+      "html": "<span class=\"hljs-keyword\">shared</span> <span class=\"hljs-keyword\">void</span> run() {"
+    },
+    {
+      "name": "ceylon-3",
+      "language": "ceylon",
+      "code": "shared void run() {",
+      "html": "<span class=\"hljs-keyword\">shared</span> <span class=\"hljs-keyword\">void</span> run() {"
+    },
+    {
+      "name": "prolog-0",
+      "language": "prolog",
+      "code": "parent(alice, bob). 😀",
+      "html": "parent(alice, bob). 😀"
+    },
+    {
+      "name": "prolog-1",
+      "language": "prolog",
+      "code": "😀parent(alice, bob).",
+      "html": "😀parent(alice, bob)."
+    },
+    {
+      "name": "prolog-2",
+      "language": "prolog",
+      "code": "parent(alice, bob).",
+      "html": "parent(alice, bob)."
+    },
+    {
+      "name": "prolog-3",
+      "language": "prolog",
+      "code": "parent(alice, bob).",
+      "html": "parent(alice, bob)."
+    },
+    {
+      "name": "http-0",
+      "language": "http",
+      "code": "HTTP/1.1 200 OK 😀",
+      "html": "<span class=\"hljs-meta\">HTTP/1.1</span> <span class=\"hljs-number\">200</span> OK 😀"
+    },
+    {
+      "name": "http-1",
+      "language": "http",
+      "code": "😀HTTP/1.1 200 OK",
+      "html": "😀HTTP/1.1 200 OK"
+    },
+    {
+      "name": "http-2",
+      "language": "http",
+      "code": "HTTP/1.1 200 OK",
+      "html": "<span class=\"hljs-meta\">HTTP/1.1</span> <span class=\"hljs-number\">200</span> OK"
+    },
+    {
+      "name": "http-3",
+      "language": "http",
+      "code": "HTTP/1.1 200 OK",
+      "html": "<span class=\"hljs-meta\">HTTP/1.1</span> <span class=\"hljs-number\">200</span> OK"
+    },
+    {
+      "name": "erb-0",
+      "language": "erb",
+      "code": "<%# a comment %> 😀",
+      "html": "<span class=\"hljs-comment\">&lt;%# a comment %&gt;</span><span class=\"xml\"> 😀</span>"
+    },
+    {
+      "name": "erb-1",
+      "language": "erb",
+      "code": "😀<%# a comment %>",
+      "html": "<span class=\"xml\">😀</span><span class=\"hljs-comment\">&lt;%# a comment %&gt;</span>"
+    },
+    {
+      "name": "erb-2",
+      "language": "erb",
+      "code": "<%# a comment %>",
+      "html": "<span class=\"hljs-comment\">&lt;%# a comment %&gt;</span>"
+    },
+    {
+      "name": "erb-3",
+      "language": "erb",
+      "code": "<%# a comment %>",
+      "html": "<span class=\"hljs-comment\">&lt;%# a comment %&gt;</span>"
+    },
+    {
+      "name": "dust-0",
+      "language": "dust",
+      "code": "{@user} 😀",
+      "html": "<span class=\"hljs-template-variable\">{@user}</span><span class=\"xml\"> 😀</span>"
+    },
+    {
+      "name": "dust-1",
+      "language": "dust",
+      "code": "😀{@user}",
+      "html": "<span class=\"xml\">😀</span><span class=\"hljs-template-variable\">{@user}</span>"
+    },
+    {
+      "name": "dust-2",
+      "language": "dust",
+      "code": "{@user}",
+      "html": "<span class=\"hljs-template-variable\">{@user}</span>"
+    },
+    {
+      "name": "dust-3",
+      "language": "dust",
+      "code": "{@user}",
+      "html": "<span class=\"hljs-template-variable\">{@user}</span>"
+    },
+    {
+      "name": "php-template-0",
+      "language": "php-template",
+      "code": "<?php $title = 'Hello'; ?> 😀",
+      "html": "<span class=\"php\"><span class=\"hljs-meta\">&lt;?php</span> <span class=\"hljs-variable\">$title</span> = <span class=\"hljs-string\">&#x27;Hello&#x27;</span>; <span class=\"hljs-meta\">?&gt;</span></span><span class=\"xml\"> 😀</span>"
+    },
+    {
+      "name": "php-template-1",
+      "language": "php-template",
+      "code": "😀<?php $title = 'Hello'; ?>",
+      "html": "<span class=\"xml\">😀</span><span class=\"php\"><span class=\"hljs-meta\">&lt;?php</span> <span class=\"hljs-variable\">$title</span> = <span class=\"hljs-string\">&#x27;Hello&#x27;</span>; <span class=\"hljs-meta\">?&gt;</span></span>"
+    },
+    {
+      "name": "php-template-2",
+      "language": "php-template",
+      "code": "<?php $title = 'Hello'; ?>",
+      "html": "<span class=\"php\"><span class=\"hljs-meta\">&lt;?php</span> <span class=\"hljs-variable\">$title</span> = <span class=\"hljs-string\">&#x27;Hello&#x27;</span>; <span class=\"hljs-meta\">?&gt;</span></span>"
+    },
+    {
+      "name": "php-template-3",
+      "language": "php-template",
+      "code": "<?php $title = 'Hello'; ?>",
+      "html": "<span class=\"php\"><span class=\"hljs-meta\">&lt;?php</span> <span class=\"hljs-variable\">$title</span> = <span class=\"hljs-string\">&#x27;Hello&#x27;</span>; <span class=\"hljs-meta\">?&gt;</span></span>"
+    },
+    {
+      "name": "roboconf-0",
+      "language": "roboconf",
+      "code": "# Roboconf graph 😀",
+      "html": "<span class=\"hljs-comment\"># Roboconf graph 😀</span>"
+    },
+    {
+      "name": "roboconf-1",
+      "language": "roboconf",
+      "code": "😀# Roboconf graph",
+      "html": "😀<span class=\"hljs-comment\"># Roboconf graph</span>"
+    },
+    {
+      "name": "roboconf-2",
+      "language": "roboconf",
+      "code": "# Roboconf graph",
+      "html": "<span class=\"hljs-comment\"># Roboconf graph</span>"
+    },
+    {
+      "name": "roboconf-3",
+      "language": "roboconf",
+      "code": "# Roboconf graph",
+      "html": "<span class=\"hljs-comment\"># Roboconf graph</span>"
+    },
+    {
+      "name": "pony-0",
+      "language": "pony",
+      "code": "actor Main 😀",
+      "html": "<span class=\"hljs-keyword\">actor</span> <span class=\"hljs-type\">Main</span> 😀"
+    },
+    {
+      "name": "pony-1",
+      "language": "pony",
+      "code": "😀actor Main",
+      "html": "😀<span class=\"hljs-keyword\">actor</span> <span class=\"hljs-type\">Main</span>"
+    },
+    {
+      "name": "pony-2",
+      "language": "pony",
+      "code": "actor Main",
+      "html": "<span class=\"hljs-keyword\">actor</span> <span class=\"hljs-type\">Main</span>"
+    },
+    {
+      "name": "pony-3",
+      "language": "pony",
+      "code": "actor Main",
+      "html": "<span class=\"hljs-keyword\">actor</span> <span class=\"hljs-type\">Main</span>"
+    },
+    {
+      "name": "fsharp-0",
+      "language": "fsharp",
+      "code": "module Demo 😀",
+      "html": "<span class=\"hljs-keyword\">module</span> Demo 😀"
+    },
+    {
+      "name": "fsharp-1",
+      "language": "fsharp",
+      "code": "😀module Demo",
+      "html": "😀<span class=\"hljs-keyword\">module</span> Demo"
+    },
+    {
+      "name": "fsharp-2",
+      "language": "fsharp",
+      "code": "module Demo",
+      "html": "<span class=\"hljs-keyword\">module</span> Demo"
+    },
+    {
+      "name": "fsharp-3",
+      "language": "fsharp",
+      "code": "module Demo",
+      "html": "<span class=\"hljs-keyword\">module</span> Demo"
+    },
+    {
+      "name": "openscad-0",
+      "language": "openscad",
+      "code": "module ring(radius, thickness) { 😀",
+      "html": "<span class=\"hljs-function\"><span class=\"hljs-keyword\">module</span> <span class=\"hljs-title\">ring</span><span class=\"hljs-params\">(radius, thickness)</span> {</span> 😀"
+    },
+    {
+      "name": "openscad-1",
+      "language": "openscad",
+      "code": "😀module ring(radius, thickness) {",
+      "html": "😀<span class=\"hljs-function\"><span class=\"hljs-keyword\">module</span> <span class=\"hljs-title\">ring</span><span class=\"hljs-params\">(radius, thickness)</span> {</span>"
+    },
+    {
+      "name": "openscad-2",
+      "language": "openscad",
+      "code": "module ring(radius, thickness) {",
+      "html": "<span class=\"hljs-function\"><span class=\"hljs-keyword\">module</span> <span class=\"hljs-title\">ring</span><span class=\"hljs-params\">(radius, thickness)</span> {</span>"
+    },
+    {
+      "name": "openscad-3",
+      "language": "openscad",
+      "code": "module ring(radius, thickness) {",
+      "html": "<span class=\"hljs-function\"><span class=\"hljs-keyword\">module</span> <span class=\"hljs-title\">ring</span><span class=\"hljs-params\">(radius, thickness)</span> {</span>"
+    },
+    {
+      "name": "nim-0",
+      "language": "nim",
+      "code": "import std/strformat 😀",
+      "html": "<span class=\"hljs-keyword\">import</span> std/strformat 😀"
+    },
+    {
+      "name": "nim-1",
+      "language": "nim",
+      "code": "😀import std/strformat",
+      "html": "😀<span class=\"hljs-keyword\">import</span> std/strformat"
+    },
+    {
+      "name": "nim-2",
+      "language": "nim",
+      "code": "import std/strformat",
+      "html": "<span class=\"hljs-keyword\">import</span> std/strformat"
+    },
+    {
+      "name": "nim-3",
+      "language": "nim",
+      "code": "import std/strformat",
+      "html": "<span class=\"hljs-keyword\">import</span> std/strformat"
+    },
+    {
+      "name": "gcode-0",
+      "language": "gcode",
+      "code": "% 😀",
+      "html": "<span class=\"hljs-meta\">%</span> 😀"
+    },
+    {
+      "name": "gcode-1",
+      "language": "gcode",
+      "code": "😀%",
+      "html": "😀<span class=\"hljs-meta\">%</span>"
+    },
+    {
+      "name": "gcode-2",
+      "language": "gcode",
+      "code": "%",
+      "html": "<span class=\"hljs-meta\">%</span>"
+    },
+    {
+      "name": "gcode-3",
+      "language": "gcode",
+      "code": "%",
+      "html": "<span class=\"hljs-meta\">%</span>"
+    },
+    {
+      "name": "delphi-0",
+      "language": "delphi",
+      "code": "program Hello; 😀",
+      "html": "<span class=\"hljs-keyword\">program</span> Hello; 😀"
+    },
+    {
+      "name": "delphi-1",
+      "language": "delphi",
+      "code": "😀program Hello;",
+      "html": "😀<span class=\"hljs-keyword\">program</span> Hello;"
+    },
+    {
+      "name": "delphi-2",
+      "language": "delphi",
+      "code": "program Hello;",
+      "html": "<span class=\"hljs-keyword\">program</span> Hello;"
+    },
+    {
+      "name": "delphi-3",
+      "language": "delphi",
+      "code": "program Hello;",
+      "html": "<span class=\"hljs-keyword\">program</span> Hello;"
+    },
+    {
+      "name": "tcl-0",
+      "language": "tcl",
+      "code": "# a comment 😀",
+      "html": "<span class=\"hljs-comment\"># a comment 😀</span>"
+    },
+    {
+      "name": "tcl-1",
+      "language": "tcl",
+      "code": "😀# a comment",
+      "html": "😀# a comment"
+    },
+    {
+      "name": "tcl-2",
+      "language": "tcl",
+      "code": "# a comment",
+      "html": "<span class=\"hljs-comment\"># a comment</span>"
+    },
+    {
+      "name": "tcl-3",
+      "language": "tcl",
+      "code": "# a comment",
+      "html": "<span class=\"hljs-comment\"># a comment</span>"
+    },
+    {
+      "name": "xl-0",
+      "language": "xl",
+      "code": "import \"io\" 😀",
+      "html": "<span class=\"hljs-keyword\">import</span> <span class=\"hljs-string\">&quot;io&quot;</span> 😀"
+    },
+    {
+      "name": "xl-1",
+      "language": "xl",
+      "code": "😀import \"io\"",
+      "html": "😀<span class=\"hljs-keyword\">import</span> <span class=\"hljs-string\">&quot;io&quot;</span>"
+    },
+    {
+      "name": "xl-2",
+      "language": "xl",
+      "code": "import \"😀io\"",
+      "html": "<span class=\"hljs-keyword\">import</span> <span class=\"hljs-string\">&quot;😀io&quot;</span>"
+    },
+    {
+      "name": "xl-3",
+      "language": "xl",
+      "code": "import \"io\"",
+      "html": "<span class=\"hljs-keyword\">import</span> <span class=\"hljs-string\">&quot;io&quot;</span>"
+    },
+    {
+      "name": "verilog-0",
+      "language": "verilog",
+      "code": "module counter ( 😀",
+      "html": "<span class=\"hljs-keyword\">module</span> counter ( 😀"
+    },
+    {
+      "name": "verilog-1",
+      "language": "verilog",
+      "code": "😀module counter (",
+      "html": "😀<span class=\"hljs-keyword\">module</span> counter ("
+    },
+    {
+      "name": "verilog-2",
+      "language": "verilog",
+      "code": "module counter (",
+      "html": "<span class=\"hljs-keyword\">module</span> counter ("
+    },
+    {
+      "name": "verilog-3",
+      "language": "verilog",
+      "code": "module counter (",
+      "html": "<span class=\"hljs-keyword\">module</span> counter ("
+    },
+    {
+      "name": "nginx-0",
+      "language": "nginx",
+      "code": "user  nginx; 😀",
+      "html": "user  nginx; 😀"
+    },
+    {
+      "name": "nginx-1",
+      "language": "nginx",
+      "code": "😀user  nginx;",
+      "html": "😀user  nginx;"
+    },
+    {
+      "name": "nginx-2",
+      "language": "nginx",
+      "code": "user  nginx;",
+      "html": "<span class=\"hljs-attribute\">user</span>  nginx;"
+    },
+    {
+      "name": "nginx-3",
+      "language": "nginx",
+      "code": "user  nginx;",
+      "html": "<span class=\"hljs-attribute\">user</span>  nginx;"
+    },
+    {
+      "name": "monkey-0",
+      "language": "monkey",
+      "code": "Strict 😀",
+      "html": "<span class=\"hljs-meta\">Strict</span> 😀"
+    },
+    {
+      "name": "monkey-1",
+      "language": "monkey",
+      "code": "😀Strict",
+      "html": "😀Strict"
+    },
+    {
+      "name": "monkey-2",
+      "language": "monkey",
+      "code": "Strict",
+      "html": "<span class=\"hljs-meta\">Strict</span>"
+    },
+    {
+      "name": "monkey-3",
+      "language": "monkey",
+      "code": "Strict",
+      "html": "<span class=\"hljs-meta\">Strict</span>"
+    },
+    {
+      "name": "smali-0",
+      "language": "smali",
+      "code": ".class public Lcom/example/Main; 😀",
+      "html": "<span class=\"hljs-keyword\">.class</span><span class=\"hljs-keyword\"> public</span> <span class=\"hljs-class\">Lcom/example/Main;</span> 😀"
+    },
+    {
+      "name": "smali-1",
+      "language": "smali",
+      "code": "😀.class public Lcom/example/Main;",
+      "html": "😀.class<span class=\"hljs-keyword\"> public</span> <span class=\"hljs-class\">Lcom/example/Main;</span>"
+    },
+    {
+      "name": "smali-2",
+      "language": "smali",
+      "code": ".class public Lcom/example/Main;",
+      "html": "<span class=\"hljs-keyword\">.class</span><span class=\"hljs-keyword\"> public</span> <span class=\"hljs-class\">Lcom/example/Main;</span>"
+    },
+    {
+      "name": "smali-3",
+      "language": "smali",
+      "code": ".class public Lcom/example/Main;",
+      "html": "<span class=\"hljs-keyword\">.class</span><span class=\"hljs-keyword\"> public</span> <span class=\"hljs-class\">Lcom/example/Main;</span>"
+    },
+    {
+      "name": "tp-0",
+      "language": "tp",
+      "code": "/PROG  TEST 😀",
+      "html": "<span class=\"hljs-keyword\">/PROG</span>  TEST 😀"
+    },
+    {
+      "name": "tp-1",
+      "language": "tp",
+      "code": "😀/PROG  TEST",
+      "html": "😀<span class=\"hljs-keyword\">/PROG</span>  TEST"
+    },
+    {
+      "name": "tp-2",
+      "language": "tp",
+      "code": "/PROG  TEST",
+      "html": "<span class=\"hljs-keyword\">/PROG</span>  TEST"
+    },
+    {
+      "name": "tp-3",
+      "language": "tp",
+      "code": "/PROG  TEST",
+      "html": "<span class=\"hljs-keyword\">/PROG</span>  TEST"
+    },
+    {
+      "name": "actionscript-0",
+      "language": "actionscript",
+      "code": "package com.example { 😀",
+      "html": "<span class=\"hljs-class\"><span class=\"hljs-keyword\">package</span> <span class=\"hljs-title\">com</span>.<span class=\"hljs-title\">example</span> {</span> 😀"
+    },
+    {
+      "name": "actionscript-1",
+      "language": "actionscript",
+      "code": "😀package com.example {",
+      "html": "😀<span class=\"hljs-class\"><span class=\"hljs-keyword\">package</span> <span class=\"hljs-title\">com</span>.<span class=\"hljs-title\">example</span> {</span>"
+    },
+    {
+      "name": "actionscript-2",
+      "language": "actionscript",
+      "code": "package com.example {",
+      "html": "<span class=\"hljs-class\"><span class=\"hljs-keyword\">package</span> <span class=\"hljs-title\">com</span>.<span class=\"hljs-title\">example</span> {</span>"
+    },
+    {
+      "name": "actionscript-3",
+      "language": "actionscript",
+      "code": "package com.example {",
+      "html": "<span class=\"hljs-class\"><span class=\"hljs-keyword\">package</span> <span class=\"hljs-title\">com</span>.<span class=\"hljs-title\">example</span> {</span>"
+    },
+    {
+      "name": "ini-0",
+      "language": "ini",
+      "code": "# a comment 😀",
+      "html": "<span class=\"hljs-comment\"># a comment 😀</span>"
+    },
+    {
+      "name": "ini-1",
+      "language": "ini",
+      "code": "😀# a comment",
+      "html": "😀# a comment"
+    },
+    {
+      "name": "ini-2",
+      "language": "ini",
+      "code": "# a comment",
+      "html": "<span class=\"hljs-comment\"># a comment</span>"
+    },
+    {
+      "name": "ini-3",
+      "language": "ini",
+      "code": "# a comment",
+      "html": "<span class=\"hljs-comment\"># a comment</span>"
+    },
+    {
+      "name": "matlab-0",
+      "language": "matlab",
+      "code": "function y = square(x) 😀",
+      "html": "<span class=\"hljs-function\"><span class=\"hljs-keyword\">function</span> <span class=\"hljs-title\">y</span> = <span class=\"hljs-title\">square</span><span class=\"hljs-params\">(x)</span> 😀</span>"
+    },
+    {
+      "name": "matlab-1",
+      "language": "matlab",
+      "code": "😀function y = square(x)",
+      "html": "😀<span class=\"hljs-function\"><span class=\"hljs-keyword\">function</span> <span class=\"hljs-title\">y</span> = <span class=\"hljs-title\">square</span><span class=\"hljs-params\">(x)</span></span>"
+    },
+    {
+      "name": "matlab-2",
+      "language": "matlab",
+      "code": "function y = square(x)",
+      "html": "<span class=\"hljs-function\"><span class=\"hljs-keyword\">function</span> <span class=\"hljs-title\">y</span> = <span class=\"hljs-title\">square</span><span class=\"hljs-params\">(x)</span></span>"
+    },
+    {
+      "name": "matlab-3",
+      "language": "matlab",
+      "code": "function y = square(x)",
+      "html": "<span class=\"hljs-function\"><span class=\"hljs-keyword\">function</span> <span class=\"hljs-title\">y</span> = <span class=\"hljs-title\">square</span><span class=\"hljs-params\">(x)</span></span>"
+    },
+    {
+      "name": "elm-0",
+      "language": "elm",
+      "code": "module Main exposing (main, add) 😀",
+      "html": "<span class=\"hljs-keyword\">module</span> Main <span class=\"hljs-keyword\">exposing</span> (main, add) 😀"
+    },
+    {
+      "name": "elm-1",
+      "language": "elm",
+      "code": "😀module Main exposing (main, add)",
+      "html": "😀<span class=\"hljs-keyword\">module</span> Main <span class=\"hljs-keyword\">exposing</span> (main, add)"
+    },
+    {
+      "name": "elm-2",
+      "language": "elm",
+      "code": "module Main exposing (main, add)",
+      "html": "<span class=\"hljs-keyword\">module</span> Main <span class=\"hljs-keyword\">exposing</span> (main, add)"
+    },
+    {
+      "name": "elm-3",
+      "language": "elm",
+      "code": "module Main exposing (main, add)",
+      "html": "<span class=\"hljs-keyword\">module</span> Main <span class=\"hljs-keyword\">exposing</span> (main, add)"
+    },
+    {
+      "name": "sml-0",
+      "language": "sml",
+      "code": "structure Main = struct 😀",
+      "html": "<span class=\"hljs-keyword\">structure</span> <span class=\"hljs-type\">Main</span> = <span class=\"hljs-keyword\">struct</span> 😀"
+    },
+    {
+      "name": "sml-1",
+      "language": "sml",
+      "code": "😀structure Main = struct",
+      "html": "😀<span class=\"hljs-keyword\">structure</span> <span class=\"hljs-type\">Main</span> = <span class=\"hljs-keyword\">struct</span>"
+    },
+    {
+      "name": "sml-2",
+      "language": "sml",
+      "code": "structure Main = struct",
+      "html": "<span class=\"hljs-keyword\">structure</span> <span class=\"hljs-type\">Main</span> = <span class=\"hljs-keyword\">struct</span>"
+    },
+    {
+      "name": "sml-3",
+      "language": "sml",
+      "code": "structure Main = struct",
+      "html": "<span class=\"hljs-keyword\">structure</span> <span class=\"hljs-type\">Main</span> = <span class=\"hljs-keyword\">struct</span>"
+    },
+    {
+      "name": "haskell-0",
+      "language": "haskell",
+      "code": "module Main (main) where 😀",
+      "html": "<span class=\"hljs-keyword\">module</span> Main (<span class=\"hljs-title\">main</span>) <span class=\"hljs-keyword\">where</span> 😀"
+    },
+    {
+      "name": "haskell-1",
+      "language": "haskell",
+      "code": "😀module Main (main) where",
+      "html": "😀<span class=\"hljs-keyword\">module</span> Main (<span class=\"hljs-title\">main</span>) <span class=\"hljs-keyword\">where</span>"
+    },
+    {
+      "name": "haskell-2",
+      "language": "haskell",
+      "code": "module Main (main) where",
+      "html": "<span class=\"hljs-keyword\">module</span> Main (<span class=\"hljs-title\">main</span>) <span class=\"hljs-keyword\">where</span>"
+    },
+    {
+      "name": "haskell-3",
+      "language": "haskell",
+      "code": "module Main (main) where",
+      "html": "<span class=\"hljs-keyword\">module</span> Main (<span class=\"hljs-title\">main</span>) <span class=\"hljs-keyword\">where</span>"
+    },
+    {
+      "name": "ocaml-0",
+      "language": "ocaml",
+      "code": "let rec fact n = 😀",
+      "html": "<span class=\"hljs-keyword\">let</span> <span class=\"hljs-keyword\">rec</span> fact n = 😀"
+    },
+    {
+      "name": "ocaml-1",
+      "language": "ocaml",
+      "code": "😀let rec fact n =",
+      "html": "😀<span class=\"hljs-keyword\">let</span> <span class=\"hljs-keyword\">rec</span> fact n ="
+    },
+    {
+      "name": "ocaml-2",
+      "language": "ocaml",
+      "code": "let rec fact n =",
+      "html": "<span class=\"hljs-keyword\">let</span> <span class=\"hljs-keyword\">rec</span> fact n ="
+    },
+    {
+      "name": "ocaml-3",
+      "language": "ocaml",
+      "code": "let rec fact n =",
+      "html": "<span class=\"hljs-keyword\">let</span> <span class=\"hljs-keyword\">rec</span> fact n ="
+    },
+    {
+      "name": "erlang-0",
+      "language": "erlang",
+      "code": "-module(main). 😀",
+      "html": "<span class=\"hljs-keyword\">-module</span><span class=\"hljs-params\">(main)</span>. 😀"
+    },
+    {
+      "name": "erlang-1",
+      "language": "erlang",
+      "code": "😀-module(main).",
+      "html": "😀-module(main)."
+    },
+    {
+      "name": "erlang-2",
+      "language": "erlang",
+      "code": "-module(main).",
+      "html": "<span class=\"hljs-keyword\">-module</span><span class=\"hljs-params\">(main)</span>."
+    },
+    {
+      "name": "erlang-3",
+      "language": "erlang",
+      "code": "-module(main).",
+      "html": "<span class=\"hljs-keyword\">-module</span><span class=\"hljs-params\">(main)</span>."
+    },
+    {
+      "name": "haxe-0",
+      "language": "haxe",
+      "code": "package demo; 😀",
+      "html": "<span class=\"hljs-keyword\">package</span> demo; 😀"
+    },
+    {
+      "name": "haxe-1",
+      "language": "haxe",
+      "code": "😀package demo;",
+      "html": "😀<span class=\"hljs-keyword\">package</span> demo;"
+    },
+    {
+      "name": "haxe-2",
+      "language": "haxe",
+      "code": "package demo;",
+      "html": "<span class=\"hljs-keyword\">package</span> demo;"
+    },
+    {
+      "name": "haxe-3",
+      "language": "haxe",
+      "code": "package demo;",
+      "html": "<span class=\"hljs-keyword\">package</span> demo;"
+    },
+    {
+      "name": "angelscript-0",
+      "language": "angelscript",
+      "code": "class Shape { 😀",
+      "html": "<span class=\"hljs-keyword\">class</span> <span class=\"hljs-symbol\">Shape</span> { 😀"
+    },
+    {
+      "name": "angelscript-1",
+      "language": "angelscript",
+      "code": "😀class Shape {",
+      "html": "😀<span class=\"hljs-keyword\">class</span> <span class=\"hljs-symbol\">Shape</span> {"
+    },
+    {
+      "name": "angelscript-2",
+      "language": "angelscript",
+      "code": "class Shape {",
+      "html": "<span class=\"hljs-keyword\">class</span> <span class=\"hljs-symbol\">Shape</span> {"
+    },
+    {
+      "name": "angelscript-3",
+      "language": "angelscript",
+      "code": "class Shape {",
+      "html": "<span class=\"hljs-keyword\">class</span> <span class=\"hljs-symbol\">Shape</span> {"
+    },
+    {
+      "name": "oxygene-0",
+      "language": "oxygene",
+      "code": "namespace Demo; 😀",
+      "html": "<span class=\"hljs-keyword\">namespace</span> Demo; 😀"
+    },
+    {
+      "name": "oxygene-1",
+      "language": "oxygene",
+      "code": "😀namespace Demo;",
+      "html": "😀<span class=\"hljs-keyword\">namespace</span> Demo;"
+    },
+    {
+      "name": "oxygene-2",
+      "language": "oxygene",
+      "code": "namespace Demo;",
+      "html": "<span class=\"hljs-keyword\">namespace</span> Demo;"
+    },
+    {
+      "name": "oxygene-3",
+      "language": "oxygene",
+      "code": "namespace Demo;",
+      "html": "<span class=\"hljs-keyword\">namespace</span> Demo;"
+    },
+    {
+      "name": "mercury-0",
+      "language": "mercury",
+      "code": ":- module hello. 😀",
+      "html": ":- <span class=\"hljs-keyword\">module</span> hello. 😀"
+    },
+    {
+      "name": "mercury-1",
+      "language": "mercury",
+      "code": "😀:- module hello.",
+      "html": "😀:- <span class=\"hljs-keyword\">module</span> hello."
+    },
+    {
+      "name": "mercury-2",
+      "language": "mercury",
+      "code": ":- module hello.",
+      "html": ":- <span class=\"hljs-keyword\">module</span> hello."
+    },
+    {
+      "name": "mercury-3",
+      "language": "mercury",
+      "code": ":- module hello.",
+      "html": ":- <span class=\"hljs-keyword\">module</span> hello."
+    },
+    {
+      "name": "lisp-0",
+      "language": "lisp",
+      "code": "(defun factorial (n) 😀",
+      "html": "(<span class=\"hljs-name\">defun</span> factorial (<span class=\"hljs-name\">n</span>) 😀"
+    },
+    {
+      "name": "lisp-1",
+      "language": "lisp",
+      "code": "😀(defun factorial (n)",
+      "html": "😀(defun factorial (n)"
+    },
+    {
+      "name": "lisp-2",
+      "language": "lisp",
+      "code": "(defun factorial (n)",
+      "html": "(<span class=\"hljs-name\">defun</span> factorial (<span class=\"hljs-name\">n</span>)"
+    },
+    {
+      "name": "lisp-3",
+      "language": "lisp",
+      "code": "(defun factorial (n)",
+      "html": "(<span class=\"hljs-name\">defun</span> factorial (<span class=\"hljs-name\">n</span>)"
+    },
+    {
+      "name": "zephir-0",
+      "language": "zephir",
+      "code": "namespace Demo; 😀",
+      "html": "<span class=\"hljs-keyword\">namespace</span> <span class=\"hljs-title\">Demo</span>; 😀"
+    },
+    {
+      "name": "zephir-1",
+      "language": "zephir",
+      "code": "😀namespace Demo;",
+      "html": "😀<span class=\"hljs-keyword\">namespace</span> <span class=\"hljs-title\">Demo</span>;"
+    },
+    {
+      "name": "zephir-2",
+      "language": "zephir",
+      "code": "namespace Demo;",
+      "html": "<span class=\"hljs-keyword\">namespace</span> <span class=\"hljs-title\">Demo</span>;"
+    },
+    {
+      "name": "zephir-3",
+      "language": "zephir",
+      "code": "namespace Demo;",
+      "html": "<span class=\"hljs-keyword\">namespace</span> <span class=\"hljs-title\">Demo</span>;"
+    },
+    {
+      "name": "hsp-0",
+      "language": "hsp",
+      "code": "#const TITLE \"HSP Sample\" 😀",
+      "html": "<span class=\"hljs-meta\">#<span class=\"hljs-meta-keyword\">const</span> TITLE <span class=\"hljs-meta-string\">&quot;HSP Sample&quot;</span> 😀</span>"
+    },
+    {
+      "name": "hsp-1",
+      "language": "hsp",
+      "code": "😀#const TITLE \"HSP Sample\"",
+      "html": "😀<span class=\"hljs-meta\">#<span class=\"hljs-meta-keyword\">const</span> TITLE <span class=\"hljs-meta-string\">&quot;HSP Sample&quot;</span></span>"
+    },
+    {
+      "name": "hsp-2",
+      "language": "hsp",
+      "code": "#const TITLE \"😀HSP Sample\"",
+      "html": "<span class=\"hljs-meta\">#<span class=\"hljs-meta-keyword\">const</span> TITLE <span class=\"hljs-meta-string\">&quot;😀HSP Sample&quot;</span></span>"
+    },
+    {
+      "name": "hsp-3",
+      "language": "hsp",
+      "code": "#const TITLE \"HSP Sample\"",
+      "html": "<span class=\"hljs-meta\">#<span class=\"hljs-meta-keyword\">const</span> TITLE <span class=\"hljs-meta-string\">&quot;HSP Sample&quot;</span></span>"
+    },
+    {
+      "name": "moonscript-0",
+      "language": "moonscript",
+      "code": "class Animal 😀",
+      "html": "<span class=\"hljs-class\"><span class=\"hljs-keyword\">class</span> <span class=\"hljs-title\">Animal</span> 😀</span>"
+    },
+    {
+      "name": "moonscript-1",
+      "language": "moonscript",
+      "code": "😀class Animal",
+      "html": "😀<span class=\"hljs-class\"><span class=\"hljs-keyword\">class</span> <span class=\"hljs-title\">Animal</span></span>"
+    },
+    {
+      "name": "moonscript-2",
+      "language": "moonscript",
+      "code": "class Animal",
+      "html": "<span class=\"hljs-class\"><span class=\"hljs-keyword\">class</span> <span class=\"hljs-title\">Animal</span></span>"
+    },
+    {
+      "name": "moonscript-3",
+      "language": "moonscript",
+      "code": "class Animal",
+      "html": "<span class=\"hljs-class\"><span class=\"hljs-keyword\">class</span> <span class=\"hljs-title\">Animal</span></span>"
+    },
+    {
+      "name": "vbscript-0",
+      "language": "vbscript",
+      "code": "' a comment 😀",
+      "html": "<span class=\"hljs-comment\">&#x27; a comment 😀</span>"
+    },
+    {
+      "name": "vbscript-1",
+      "language": "vbscript",
+      "code": "😀' a comment",
+      "html": "😀<span class=\"hljs-comment\">&#x27; a comment</span>"
+    },
+    {
+      "name": "vbscript-2",
+      "language": "vbscript",
+      "code": "' a comment",
+      "html": "<span class=\"hljs-comment\">&#x27; a comment</span>"
+    },
+    {
+      "name": "vbscript-3",
+      "language": "vbscript",
+      "code": "' a comment",
+      "html": "<span class=\"hljs-comment\">&#x27; a comment</span>"
+    },
+    {
+      "name": "crmsh-0",
+      "language": "crmsh",
+      "code": "node server1 😀",
+      "html": "<span class=\"hljs-keyword\">node</span> <span class=\"hljs-title\">server1</span> 😀"
+    },
+    {
+      "name": "crmsh-1",
+      "language": "crmsh",
+      "code": "😀node server1",
+      "html": "😀<span class=\"hljs-keyword\">node</span> <span class=\"hljs-title\">server1</span>"
+    },
+    {
+      "name": "crmsh-2",
+      "language": "crmsh",
+      "code": "node server1",
+      "html": "<span class=\"hljs-keyword\">node</span> <span class=\"hljs-title\">server1</span>"
+    },
+    {
+      "name": "crmsh-3",
+      "language": "crmsh",
+      "code": "node server1",
+      "html": "<span class=\"hljs-keyword\">node</span> <span class=\"hljs-title\">server1</span>"
+    },
+    {
+      "name": "armasm-0",
+      "language": "armasm",
+      "code": "    .text 😀",
+      "html": "    <span class=\"hljs-meta\">.text</span> 😀"
+    },
+    {
+      "name": "armasm-1",
+      "language": "armasm",
+      "code": "😀    .text",
+      "html": "😀    <span class=\"hljs-meta\">.text</span>"
+    },
+    {
+      "name": "armasm-2",
+      "language": "armasm",
+      "code": "    .text",
+      "html": "    <span class=\"hljs-meta\">.text</span>"
+    },
+    {
+      "name": "armasm-3",
+      "language": "armasm",
+      "code": "    .text",
+      "html": "    <span class=\"hljs-meta\">.text</span>"
+    },
+    {
+      "name": "purebasic-0",
+      "language": "purebasic",
+      "code": "Procedure Add(a.i, b.i) 😀",
+      "html": "<span class=\"hljs-function\"><span class=\"hljs-keyword\">Procedure</span> <span class=\"hljs-title\">Add</span></span>(a.i, b.i) 😀"
+    },
+    {
+      "name": "purebasic-1",
+      "language": "purebasic",
+      "code": "😀Procedure Add(a.i, b.i)",
+      "html": "😀<span class=\"hljs-function\"><span class=\"hljs-keyword\">Procedure</span> <span class=\"hljs-title\">Add</span></span>(a.i, b.i)"
+    },
+    {
+      "name": "purebasic-2",
+      "language": "purebasic",
+      "code": "Procedure Add(a.i, b.i)",
+      "html": "<span class=\"hljs-function\"><span class=\"hljs-keyword\">Procedure</span> <span class=\"hljs-title\">Add</span></span>(a.i, b.i)"
+    },
+    {
+      "name": "purebasic-3",
+      "language": "purebasic",
+      "code": "Procedure Add(a.i, b.i)",
+      "html": "<span class=\"hljs-function\"><span class=\"hljs-keyword\">Procedure</span> <span class=\"hljs-title\">Add</span></span>(a.i, b.i)"
+    },
+    {
+      "name": "arcade-0",
+      "language": "arcade",
+      "code": "var scores = [1, 2, 3]; 😀",
+      "html": "<span class=\"hljs-keyword\">var</span> scores = [<span class=\"hljs-number\">1</span>, <span class=\"hljs-number\">2</span>, <span class=\"hljs-number\">3</span>]; 😀"
+    },
+    {
+      "name": "arcade-1",
+      "language": "arcade",
+      "code": "😀var scores = [1, 2, 3];",
+      "html": "😀<span class=\"hljs-keyword\">var</span> scores = [<span class=\"hljs-number\">1</span>, <span class=\"hljs-number\">2</span>, <span class=\"hljs-number\">3</span>];"
+    },
+    {
+      "name": "arcade-2",
+      "language": "arcade",
+      "code": "var scores = [1, 2, 3];",
+      "html": "<span class=\"hljs-keyword\">var</span> scores = [<span class=\"hljs-number\">1</span>, <span class=\"hljs-number\">2</span>, <span class=\"hljs-number\">3</span>];"
+    },
+    {
+      "name": "arcade-3",
+      "language": "arcade",
+      "code": "var scores = [1, 2, 3];",
+      "html": "<span class=\"hljs-keyword\">var</span> scores = [<span class=\"hljs-number\">1</span>, <span class=\"hljs-number\">2</span>, <span class=\"hljs-number\">3</span>];"
+    },
+    {
+      "name": "hy-0",
+      "language": "hy",
+      "code": "(defn greet [name] 😀",
+      "html": "(<span class=\"hljs-name\"><span class=\"hljs-builtin-name\">defn</span></span> greet [name] 😀"
+    },
+    {
+      "name": "hy-1",
+      "language": "hy",
+      "code": "😀(defn greet [name]",
+      "html": "😀(defn greet [name]"
+    },
+    {
+      "name": "hy-2",
+      "language": "hy",
+      "code": "(defn greet [name]",
+      "html": "(<span class=\"hljs-name\"><span class=\"hljs-builtin-name\">defn</span></span> greet [name]"
+    },
+    {
+      "name": "hy-3",
+      "language": "hy",
+      "code": "(defn greet [name]",
+      "html": "(<span class=\"hljs-name\"><span class=\"hljs-builtin-name\">defn</span></span> greet [name]"
+    },
+    {
+      "name": "ruleslanguage-0",
+      "language": "ruleslanguage",
+      "code": "# a hash comment 😀",
+      "html": "<span class=\"hljs-literal\"># </span>a hash comment 😀"
+    },
+    {
+      "name": "ruleslanguage-1",
+      "language": "ruleslanguage",
+      "code": "😀# a hash comment",
+      "html": "😀<span class=\"hljs-literal\"># </span>a hash comment"
+    },
+    {
+      "name": "ruleslanguage-2",
+      "language": "ruleslanguage",
+      "code": "# a hash comment",
+      "html": "<span class=\"hljs-literal\"># </span>a hash comment"
+    },
+    {
+      "name": "ruleslanguage-3",
+      "language": "ruleslanguage",
+      "code": "# a hash comment",
+      "html": "<span class=\"hljs-literal\"># </span>a hash comment"
+    },
+    {
+      "name": "coq-0",
+      "language": "coq",
+      "code": "Require Import Coq.Init.Nat. 😀",
+      "html": "<span class=\"hljs-keyword\">Require</span> <span class=\"hljs-keyword\">Import</span> Coq.Init.Nat. 😀"
+    },
+    {
+      "name": "coq-1",
+      "language": "coq",
+      "code": "😀Require Import Coq.Init.Nat.",
+      "html": "😀<span class=\"hljs-keyword\">Require</span> <span class=\"hljs-keyword\">Import</span> Coq.Init.Nat."
+    },
+    {
+      "name": "coq-2",
+      "language": "coq",
+      "code": "Require Import Coq.Init.Nat.",
+      "html": "<span class=\"hljs-keyword\">Require</span> <span class=\"hljs-keyword\">Import</span> Coq.Init.Nat."
+    },
+    {
+      "name": "coq-3",
+      "language": "coq",
+      "code": "Require Import Coq.Init.Nat.",
+      "html": "<span class=\"hljs-keyword\">Require</span> <span class=\"hljs-keyword\">Import</span> Coq.Init.Nat."
+    },
+    {
+      "name": "aspectj-0",
+      "language": "aspectj",
+      "code": "package demo; 😀",
+      "html": "<span class=\"hljs-keyword\">package</span> demo; 😀"
+    },
+    {
+      "name": "aspectj-1",
+      "language": "aspectj",
+      "code": "😀package demo;",
+      "html": "😀<span class=\"hljs-keyword\">package</span> demo;"
+    },
+    {
+      "name": "aspectj-2",
+      "language": "aspectj",
+      "code": "package demo;",
+      "html": "<span class=\"hljs-keyword\">package</span> demo;"
+    },
+    {
+      "name": "aspectj-3",
+      "language": "aspectj",
+      "code": "package demo;",
+      "html": "<span class=\"hljs-keyword\">package</span> demo;"
+    },
+    {
+      "name": "routeros-0",
+      "language": "routeros",
+      "code": "# a comment 😀",
+      "html": "<span class=\"hljs-comment\"># a comment 😀</span>"
+    },
+    {
+      "name": "routeros-1",
+      "language": "routeros",
+      "code": "😀# a comment",
+      "html": "😀# a comment"
+    },
+    {
+      "name": "routeros-2",
+      "language": "routeros",
+      "code": "# a comment",
+      "html": "<span class=\"hljs-comment\"># a comment</span>"
+    },
+    {
+      "name": "routeros-3",
+      "language": "routeros",
+      "code": "# a comment",
+      "html": "<span class=\"hljs-comment\"># a comment</span>"
+    },
+    {
+      "name": "gams-0",
+      "language": "gams",
+      "code": "$ontext 😀",
+      "html": "<span class=\"hljs-comment\">$ontext 😀</span>"
+    },
+    {
+      "name": "gams-1",
+      "language": "gams",
+      "code": "😀$ontext",
+      "html": "😀<span class=\"hljs-symbol\">$</span>ontext"
+    },
+    {
+      "name": "gams-2",
+      "language": "gams",
+      "code": "$ontext",
+      "html": "<span class=\"hljs-comment\">$ontext</span>"
+    },
+    {
+      "name": "gams-3",
+      "language": "gams",
+      "code": "$ontext",
+      "html": "<span class=\"hljs-comment\">$ontext</span>"
+    },
+    {
+      "name": "nsis-0",
+      "language": "nsis",
+      "code": "; NSIS sample 😀",
+      "html": "<span class=\"hljs-comment\">; NSIS sample 😀</span>"
+    },
+    {
+      "name": "nsis-1",
+      "language": "nsis",
+      "code": "😀; NSIS sample",
+      "html": "😀<span class=\"hljs-comment\">; NSIS sample</span>"
+    },
+    {
+      "name": "nsis-2",
+      "language": "nsis",
+      "code": "; NSIS sample",
+      "html": "<span class=\"hljs-comment\">; NSIS sample</span>"
+    },
+    {
+      "name": "nsis-3",
+      "language": "nsis",
+      "code": "; NSIS sample",
+      "html": "<span class=\"hljs-comment\">; NSIS sample</span>"
+    },
+    {
+      "name": "fortran-0",
+      "language": "fortran",
+      "code": "program hello 😀",
+      "html": "<span class=\"hljs-function\"><span class=\"hljs-keyword\">program</span></span> hello 😀"
+    },
+    {
+      "name": "fortran-1",
+      "language": "fortran",
+      "code": "😀program hello",
+      "html": "😀<span class=\"hljs-function\"><span class=\"hljs-keyword\">program</span></span> hello"
+    },
+    {
+      "name": "fortran-2",
+      "language": "fortran",
+      "code": "program hello",
+      "html": "<span class=\"hljs-function\"><span class=\"hljs-keyword\">program</span></span> hello"
+    },
+    {
+      "name": "fortran-3",
+      "language": "fortran",
+      "code": "program hello",
+      "html": "<span class=\"hljs-function\"><span class=\"hljs-keyword\">program</span></span> hello"
+    },
+    {
+      "name": "irpf90-0",
+      "language": "irpf90",
+      "code": "program test 😀",
+      "html": "<span class=\"hljs-function\"><span class=\"hljs-keyword\">program</span></span> test 😀"
+    },
+    {
+      "name": "irpf90-1",
+      "language": "irpf90",
+      "code": "😀program test",
+      "html": "😀<span class=\"hljs-function\"><span class=\"hljs-keyword\">program</span></span> test"
+    },
+    {
+      "name": "irpf90-2",
+      "language": "irpf90",
+      "code": "program test",
+      "html": "<span class=\"hljs-function\"><span class=\"hljs-keyword\">program</span></span> test"
+    },
+    {
+      "name": "irpf90-3",
+      "language": "irpf90",
+      "code": "program test",
+      "html": "<span class=\"hljs-function\"><span class=\"hljs-keyword\">program</span></span> test"
+    },
+    {
+      "name": "django-0",
+      "language": "django",
+      "code": "{% load static %} 😀",
+      "html": "<span class=\"hljs-template-tag\">{% <span class=\"hljs-name\"><span class=\"hljs-name\">load</span></span> static %}</span><span class=\"xml\"> 😀</span>"
+    },
+    {
+      "name": "django-1",
+      "language": "django",
+      "code": "😀{% load static %}",
+      "html": "<span class=\"xml\">😀</span><span class=\"hljs-template-tag\">{% <span class=\"hljs-name\"><span class=\"hljs-name\">load</span></span> static %}</span>"
+    },
+    {
+      "name": "django-2",
+      "language": "django",
+      "code": "{% load static %}",
+      "html": "<span class=\"hljs-template-tag\">{% <span class=\"hljs-name\"><span class=\"hljs-name\">load</span></span> static %}</span>"
+    },
+    {
+      "name": "django-3",
+      "language": "django",
+      "code": "{% load static %}",
+      "html": "<span class=\"hljs-template-tag\">{% <span class=\"hljs-name\"><span class=\"hljs-name\">load</span></span> static %}</span>"
+    },
+    {
+      "name": "twig-0",
+      "language": "twig",
+      "code": "{% extends \"base.html\" %} 😀",
+      "html": "<span class=\"hljs-template-tag\">{% <span class=\"hljs-name\"><span class=\"hljs-keyword\">extends</span></span> &quot;base.html&quot; %}</span><span class=\"xml\"> 😀</span>"
+    },
+    {
+      "name": "twig-1",
+      "language": "twig",
+      "code": "😀{% extends \"base.html\" %}",
+      "html": "<span class=\"xml\">😀</span><span class=\"hljs-template-tag\">{% <span class=\"hljs-name\"><span class=\"hljs-keyword\">extends</span></span> &quot;base.html&quot; %}</span>"
+    },
+    {
+      "name": "twig-2",
+      "language": "twig",
+      "code": "{% extends \"😀base.html\" %}",
+      "html": "<span class=\"hljs-template-tag\">{% <span class=\"hljs-name\"><span class=\"hljs-keyword\">extends</span></span> &quot;😀base.html&quot; %}</span>"
+    },
+    {
+      "name": "twig-3",
+      "language": "twig",
+      "code": "{% extends \"base.html\" %}",
+      "html": "<span class=\"hljs-template-tag\">{% <span class=\"hljs-name\"><span class=\"hljs-keyword\">extends</span></span> &quot;base.html&quot; %}</span>"
+    },
+    {
+      "name": "haml-0",
+      "language": "haml",
+      "code": "!!! 5 😀",
+      "html": "!!! 5 😀"
+    },
+    {
+      "name": "haml-1",
+      "language": "haml",
+      "code": "😀!!! 5",
+      "html": "😀!!! 5"
+    },
+    {
+      "name": "haml-2",
+      "language": "haml",
+      "code": "!!! 5",
+      "html": "<span class=\"hljs-meta\">!!! 5</span>"
+    },
+    {
+      "name": "haml-3",
+      "language": "haml",
+      "code": "!!! 5",
+      "html": "<span class=\"hljs-meta\">!!! 5</span>"
+    },
+    {
+      "name": "vbscript-html-0",
+      "language": "vbscript-html",
+      "code": "<html> 😀",
+      "html": "<span class=\"xml\"><span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">html</span>&gt;</span> 😀</span>"
+    },
+    {
+      "name": "vbscript-html-1",
+      "language": "vbscript-html",
+      "code": "😀<html>",
+      "html": "<span class=\"xml\">😀<span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">html</span>&gt;</span></span>"
+    },
+    {
+      "name": "vbscript-html-2",
+      "language": "vbscript-html",
+      "code": "<html>",
+      "html": "<span class=\"xml\"><span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">html</span>&gt;</span></span>"
+    },
+    {
+      "name": "vbscript-html-3",
+      "language": "vbscript-html",
+      "code": "<html>",
+      "html": "<span class=\"xml\"><span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">html</span>&gt;</span></span>"
+    },
+    {
+      "name": "handlebars-0",
+      "language": "handlebars",
+      "code": "<div class=\"entry\"> 😀",
+      "html": "<span class=\"xml\"><span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">div</span> <span class=\"hljs-attr\">class</span>=<span class=\"hljs-string\">&quot;entry&quot;</span>&gt;</span> 😀</span>"
+    },
+    {
+      "name": "handlebars-1",
+      "language": "handlebars",
+      "code": "😀<div class=\"entry\">",
+      "html": "<span class=\"xml\">😀<span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">div</span> <span class=\"hljs-attr\">class</span>=<span class=\"hljs-string\">&quot;entry&quot;</span>&gt;</span></span>"
+    },
+    {
+      "name": "handlebars-2",
+      "language": "handlebars",
+      "code": "<div class=\"😀entry\">",
+      "html": "<span class=\"xml\"><span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">div</span> <span class=\"hljs-attr\">class</span>=<span class=\"hljs-string\">&quot;😀entry&quot;</span>&gt;</span></span>"
+    },
+    {
+      "name": "handlebars-3",
+      "language": "handlebars",
+      "code": "<div class=\"entry\">",
+      "html": "<span class=\"xml\"><span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">div</span> <span class=\"hljs-attr\">class</span>=<span class=\"hljs-string\">&quot;entry&quot;</span>&gt;</span></span>"
+    },
+    {
+      "name": "htmlbars-0",
+      "language": "htmlbars",
+      "code": "<ul> 😀",
+      "html": "<span class=\"xml\"><span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">ul</span>&gt;</span> 😀</span>"
+    },
+    {
+      "name": "htmlbars-1",
+      "language": "htmlbars",
+      "code": "😀<ul>",
+      "html": "<span class=\"xml\">😀<span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">ul</span>&gt;</span></span>"
+    },
+    {
+      "name": "htmlbars-2",
+      "language": "htmlbars",
+      "code": "<ul>",
+      "html": "<span class=\"xml\"><span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">ul</span>&gt;</span></span>"
+    },
+    {
+      "name": "htmlbars-3",
+      "language": "htmlbars",
+      "code": "<ul>",
+      "html": "<span class=\"xml\"><span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">ul</span>&gt;</span></span>"
+    },
+    {
+      "name": "cos-0",
+      "language": "cos",
+      "code": "Class Demo.Person 😀",
+      "html": "<span class=\"hljs-keyword\">Class</span> Demo.Person 😀"
+    },
+    {
+      "name": "cos-1",
+      "language": "cos",
+      "code": "😀Class Demo.Person",
+      "html": "😀<span class=\"hljs-keyword\">Class</span> Demo.Person"
+    },
+    {
+      "name": "cos-2",
+      "language": "cos",
+      "code": "Class Demo.Person",
+      "html": "<span class=\"hljs-keyword\">Class</span> Demo.Person"
+    },
+    {
+      "name": "cos-3",
+      "language": "cos",
+      "code": "Class Demo.Person",
+      "html": "<span class=\"hljs-keyword\">Class</span> Demo.Person"
+    },
+    {
+      "name": "elixir-0",
+      "language": "elixir",
+      "code": "defmodule Demo do 😀",
+      "html": "<span class=\"hljs-class\"><span class=\"hljs-keyword\">defmodule</span> <span class=\"hljs-title\">Demo</span></span> <span class=\"hljs-keyword\">do</span> 😀"
+    },
+    {
+      "name": "elixir-1",
+      "language": "elixir",
+      "code": "😀defmodule Demo do",
+      "html": "😀<span class=\"hljs-class\"><span class=\"hljs-keyword\">defmodule</span> <span class=\"hljs-title\">Demo</span></span> <span class=\"hljs-keyword\">do</span>"
+    },
+    {
+      "name": "elixir-2",
+      "language": "elixir",
+      "code": "defmodule Demo do",
+      "html": "<span class=\"hljs-class\"><span class=\"hljs-keyword\">defmodule</span> <span class=\"hljs-title\">Demo</span></span> <span class=\"hljs-keyword\">do</span>"
+    },
+    {
+      "name": "elixir-3",
+      "language": "elixir",
+      "code": "defmodule Demo do",
+      "html": "<span class=\"hljs-class\"><span class=\"hljs-keyword\">defmodule</span> <span class=\"hljs-title\">Demo</span></span> <span class=\"hljs-keyword\">do</span>"
+    },
+    {
+      "name": "qml-0",
+      "language": "qml",
+      "code": "import QtQuick 2.15 😀",
+      "html": "<span class=\"hljs-keyword\">import</span> QtQuick <span class=\"hljs-number\">2.15</span> 😀"
+    },
+    {
+      "name": "qml-1",
+      "language": "qml",
+      "code": "😀import QtQuick 2.15",
+      "html": "😀<span class=\"hljs-keyword\">import</span> QtQuick <span class=\"hljs-number\">2.15</span>"
+    },
+    {
+      "name": "qml-2",
+      "language": "qml",
+      "code": "import QtQuick 2.15",
+      "html": "<span class=\"hljs-keyword\">import</span> QtQuick <span class=\"hljs-number\">2.15</span>"
+    },
+    {
+      "name": "qml-3",
+      "language": "qml",
+      "code": "import QtQuick 2.15",
+      "html": "<span class=\"hljs-keyword\">import</span> QtQuick <span class=\"hljs-number\">2.15</span>"
+    },
+    {
+      "name": "c-like-0",
+      "language": "c-like",
+      "code": "#include <iostream> 😀",
+      "html": "<span class=\"hljs-meta\">#<span class=\"hljs-meta-keyword\">include</span> <span class=\"hljs-meta-string\">&lt;iostream&gt;</span> 😀</span>"
+    },
+    {
+      "name": "c-like-1",
+      "language": "c-like",
+      "code": "😀#include <iostream>",
+      "html": "😀<span class=\"hljs-meta\">#<span class=\"hljs-meta-keyword\">include</span> <span class=\"hljs-meta-string\">&lt;iostream&gt;</span></span>"
+    },
+    {
+      "name": "c-like-2",
+      "language": "c-like",
+      "code": "#include <iostream>",
+      "html": "<span class=\"hljs-meta\">#<span class=\"hljs-meta-keyword\">include</span> <span class=\"hljs-meta-string\">&lt;iostream&gt;</span></span>"
+    },
+    {
+      "name": "c-like-3",
+      "language": "c-like",
+      "code": "#include <iostream>",
+      "html": "<span class=\"hljs-meta\">#<span class=\"hljs-meta-keyword\">include</span> <span class=\"hljs-meta-string\">&lt;iostream&gt;</span></span>"
+    },
+    {
+      "name": "arduino-0",
+      "language": "arduino",
+      "code": "const int LED_PIN = 13; 😀",
+      "html": "<span class=\"hljs-keyword\">const</span> <span class=\"hljs-keyword\">int</span> LED_PIN = <span class=\"hljs-number\">13</span>; 😀"
+    },
+    {
+      "name": "arduino-1",
+      "language": "arduino",
+      "code": "😀const int LED_PIN = 13;",
+      "html": "😀<span class=\"hljs-keyword\">const</span> <span class=\"hljs-keyword\">int</span> LED_PIN = <span class=\"hljs-number\">13</span>;"
+    },
+    {
+      "name": "arduino-2",
+      "language": "arduino",
+      "code": "const int LED_PIN = 13;",
+      "html": "<span class=\"hljs-keyword\">const</span> <span class=\"hljs-keyword\">int</span> LED_PIN = <span class=\"hljs-number\">13</span>;"
+    },
+    {
+      "name": "arduino-3",
+      "language": "arduino",
+      "code": "const int LED_PIN = 13;",
+      "html": "<span class=\"hljs-keyword\">const</span> <span class=\"hljs-keyword\">int</span> LED_PIN = <span class=\"hljs-number\">13</span>;"
+    },
+    {
+      "name": "objectivec-0",
+      "language": "objectivec",
+      "code": "#import <Foundation/Foundation.h> 😀",
+      "html": "<span class=\"hljs-meta\">#import <span class=\"hljs-meta-string\">&lt;Foundation/Foundation.h&gt; 😀</span></span>"
+    },
+    {
+      "name": "objectivec-1",
+      "language": "objectivec",
+      "code": "😀#import <Foundation/Foundation.h>",
+      "html": "😀<span class=\"hljs-meta\">#import <span class=\"hljs-meta-string\">&lt;Foundation/Foundation.h&gt;</span></span>"
+    },
+    {
+      "name": "objectivec-2",
+      "language": "objectivec",
+      "code": "#import <Foundation/Foundation.h>",
+      "html": "<span class=\"hljs-meta\">#import <span class=\"hljs-meta-string\">&lt;Foundation/Foundation.h&gt;</span></span>"
+    },
+    {
+      "name": "objectivec-3",
+      "language": "objectivec",
+      "code": "#import <Foundation/Foundation.h>",
+      "html": "<span class=\"hljs-meta\">#import <span class=\"hljs-meta-string\">&lt;Foundation/Foundation.h&gt;</span></span>"
+    },
+    {
+      "name": "sql-0",
+      "language": "sql",
+      "code": "-- a comment 😀",
+      "html": "<span class=\"hljs-comment\">-- a comment 😀</span>"
+    },
+    {
+      "name": "sql-1",
+      "language": "sql",
+      "code": "😀-- a comment",
+      "html": "😀<span class=\"hljs-comment\">-- a comment</span>"
+    },
+    {
+      "name": "sql-2",
+      "language": "sql",
+      "code": "-- a comment",
+      "html": "<span class=\"hljs-comment\">-- a comment</span>"
+    },
+    {
+      "name": "sql-3",
+      "language": "sql",
+      "code": "-- a comment",
+      "html": "<span class=\"hljs-comment\">-- a comment</span>"
+    },
+    {
+      "name": "sql_more-0",
+      "language": "sql_more",
+      "code": "-- MySQL sample 😀",
+      "html": "<span class=\"hljs-comment\">-- MySQL sample 😀</span>"
+    },
+    {
+      "name": "sql_more-1",
+      "language": "sql_more",
+      "code": "😀-- MySQL sample",
+      "html": "😀<span class=\"hljs-comment\">-- MySQL sample</span>"
+    },
+    {
+      "name": "sql_more-2",
+      "language": "sql_more",
+      "code": "-- MySQL sample",
+      "html": "<span class=\"hljs-comment\">-- MySQL sample</span>"
+    },
+    {
+      "name": "sql_more-3",
+      "language": "sql_more",
+      "code": "-- MySQL sample",
+      "html": "<span class=\"hljs-comment\">-- MySQL sample</span>"
+    },
+    {
+      "name": "pgsql-0",
+      "language": "pgsql",
+      "code": "-- PostgreSQL sample 😀",
+      "html": "<span class=\"hljs-comment\">-- PostgreSQL sample 😀</span>"
+    },
+    {
+      "name": "pgsql-1",
+      "language": "pgsql",
+      "code": "😀-- PostgreSQL sample",
+      "html": "😀<span class=\"hljs-comment\">-- PostgreSQL sample</span>"
+    },
+    {
+      "name": "pgsql-2",
+      "language": "pgsql",
+      "code": "-- PostgreSQL sample",
+      "html": "<span class=\"hljs-comment\">-- PostgreSQL sample</span>"
+    },
+    {
+      "name": "pgsql-3",
+      "language": "pgsql",
+      "code": "-- PostgreSQL sample",
+      "html": "<span class=\"hljs-comment\">-- PostgreSQL sample</span>"
+    },
+    {
+      "name": "d-0",
+      "language": "d",
+      "code": "import std.stdio; 😀",
+      "html": "<span class=\"hljs-keyword\">import</span> std.stdio; 😀"
+    },
+    {
+      "name": "d-1",
+      "language": "d",
+      "code": "😀import std.stdio;",
+      "html": "😀<span class=\"hljs-keyword\">import</span> std.stdio;"
+    },
+    {
+      "name": "d-2",
+      "language": "d",
+      "code": "import std.stdio;",
+      "html": "<span class=\"hljs-keyword\">import</span> std.stdio;"
+    },
+    {
+      "name": "d-3",
+      "language": "d",
+      "code": "import std.stdio;",
+      "html": "<span class=\"hljs-keyword\">import</span> std.stdio;"
+    },
+    {
+      "name": "crystal-0",
+      "language": "crystal",
+      "code": "require \"json\" 😀",
+      "html": "<span class=\"hljs-keyword\">require</span> <span class=\"hljs-string\">&quot;json&quot;</span> 😀"
+    },
+    {
+      "name": "crystal-1",
+      "language": "crystal",
+      "code": "😀require \"json\"",
+      "html": "😀<span class=\"hljs-keyword\">require</span> <span class=\"hljs-string\">&quot;json&quot;</span>"
+    },
+    {
+      "name": "crystal-2",
+      "language": "crystal",
+      "code": "require \"😀json\"",
+      "html": "<span class=\"hljs-keyword\">require</span> <span class=\"hljs-string\">&quot;😀json&quot;</span>"
+    },
+    {
+      "name": "crystal-3",
+      "language": "crystal",
+      "code": "require \"json\"",
+      "html": "<span class=\"hljs-keyword\">require</span> <span class=\"hljs-string\">&quot;json&quot;</span>"
+    },
+    {
+      "name": "reasonml-0",
+      "language": "reasonml",
+      "code": "/* a comment */ 😀",
+      "html": "<span class=\"hljs-comment\">/* a comment */</span> 😀"
+    },
+    {
+      "name": "reasonml-1",
+      "language": "reasonml",
+      "code": "😀/* a comment */",
+      "html": "😀<span class=\"hljs-comment\">/* a comment */</span>"
+    },
+    {
+      "name": "reasonml-2",
+      "language": "reasonml",
+      "code": "/* a comment */",
+      "html": "<span class=\"hljs-comment\">/* a comment */</span>"
+    },
+    {
+      "name": "reasonml-3",
+      "language": "reasonml",
+      "code": "/* a comment */",
+      "html": "<span class=\"hljs-comment\">/* a comment */</span>"
+    },
+    {
+      "name": "puppet-0",
+      "language": "puppet",
+      "code": "# a comment 😀",
+      "html": "<span class=\"hljs-comment\"># a comment 😀</span>"
+    },
+    {
+      "name": "puppet-1",
+      "language": "puppet",
+      "code": "😀# a comment",
+      "html": "😀<span class=\"hljs-comment\"># a comment</span>"
+    },
+    {
+      "name": "puppet-2",
+      "language": "puppet",
+      "code": "# a comment",
+      "html": "<span class=\"hljs-comment\"># a comment</span>"
+    },
+    {
+      "name": "puppet-3",
+      "language": "puppet",
+      "code": "# a comment",
+      "html": "<span class=\"hljs-comment\"># a comment</span>"
+    },
+    {
+      "name": "vbnet-0",
+      "language": "vbnet",
+      "code": "' a comment 😀",
+      "html": "<span class=\"hljs-comment\">&#x27; a comment 😀</span>"
+    },
+    {
+      "name": "vbnet-1",
+      "language": "vbnet",
+      "code": "😀' a comment",
+      "html": "😀<span class=\"hljs-comment\">&#x27; a comment</span>"
+    },
+    {
+      "name": "vbnet-2",
+      "language": "vbnet",
+      "code": "' a comment",
+      "html": "<span class=\"hljs-comment\">&#x27; a comment</span>"
+    },
+    {
+      "name": "vbnet-3",
+      "language": "vbnet",
+      "code": "' a comment",
+      "html": "<span class=\"hljs-comment\">&#x27; a comment</span>"
+    },
+    {
+      "name": "julia-0",
+      "language": "julia",
+      "code": "# a comment 😀",
+      "html": "<span class=\"hljs-comment\"># a comment 😀</span>"
+    },
+    {
+      "name": "julia-1",
+      "language": "julia",
+      "code": "😀# a comment",
+      "html": "😀<span class=\"hljs-comment\"># a comment</span>"
+    },
+    {
+      "name": "julia-2",
+      "language": "julia",
+      "code": "# a comment",
+      "html": "<span class=\"hljs-comment\"># a comment</span>"
+    },
+    {
+      "name": "julia-3",
+      "language": "julia",
+      "code": "# a comment",
+      "html": "<span class=\"hljs-comment\"># a comment</span>"
+    },
+    {
+      "name": "julia-repl-0",
+      "language": "julia-repl",
+      "code": "julia> function foo(x) 😀",
+      "html": "<span class=\"hljs-meta\">julia&gt;</span><span class=\"julia\"> <span class=\"hljs-keyword\">function</span> foo(x) 😀</span>"
+    },
+    {
+      "name": "julia-repl-1",
+      "language": "julia-repl",
+      "code": "😀julia> function foo(x)",
+      "html": "😀julia&gt; function foo(x)"
+    },
+    {
+      "name": "julia-repl-2",
+      "language": "julia-repl",
+      "code": "julia> function foo(x)",
+      "html": "<span class=\"hljs-meta\">julia&gt;</span><span class=\"julia\"> <span class=\"hljs-keyword\">function</span> foo(x)</span>"
+    },
+    {
+      "name": "julia-repl-3",
+      "language": "julia-repl",
+      "code": "julia> function foo(x)",
+      "html": "<span class=\"hljs-meta\">julia&gt;</span><span class=\"julia\"> <span class=\"hljs-keyword\">function</span> foo(x)</span>"
+    },
+    {
+      "name": "yaml-0",
+      "language": "yaml",
+      "code": "# a comment 😀",
+      "html": "<span class=\"hljs-comment\"># a comment 😀</span>"
+    },
+    {
+      "name": "yaml-1",
+      "language": "yaml",
+      "code": "😀# a comment",
+      "html": "<span class=\"hljs-string\">😀#</span> <span class=\"hljs-string\">a</span> <span class=\"hljs-string\">comment</span>"
+    },
+    {
+      "name": "yaml-2",
+      "language": "yaml",
+      "code": "# a comment",
+      "html": "<span class=\"hljs-comment\"># a comment</span>"
+    },
+    {
+      "name": "yaml-3",
+      "language": "yaml",
+      "code": "# a comment",
+      "html": "<span class=\"hljs-comment\"># a comment</span>"
+    },
+    {
+      "name": "tap-0",
+      "language": "tap",
+      "code": "TAP version 13 😀",
+      "html": "TAP version<span class=\"hljs-number\"> 13 </span>😀"
+    },
+    {
+      "name": "tap-1",
+      "language": "tap",
+      "code": "😀TAP version 13",
+      "html": "😀TAP version 13"
+    },
+    {
+      "name": "tap-2",
+      "language": "tap",
+      "code": "TAP version 13",
+      "html": "<span class=\"hljs-meta\">TAP version 13</span>"
+    },
+    {
+      "name": "tap-3",
+      "language": "tap",
+      "code": "TAP version 13",
+      "html": "<span class=\"hljs-meta\">TAP version 13</span>"
+    },
+    {
+      "name": "powershell-0",
+      "language": "powershell",
+      "code": "# a comment 😀",
+      "html": "<span class=\"hljs-comment\"># a comment 😀</span>"
+    },
+    {
+      "name": "powershell-1",
+      "language": "powershell",
+      "code": "😀# a comment",
+      "html": "😀<span class=\"hljs-comment\"># a comment</span>"
+    },
+    {
+      "name": "powershell-2",
+      "language": "powershell",
+      "code": "# a comment",
+      "html": "<span class=\"hljs-comment\"># a comment</span>"
+    },
+    {
+      "name": "powershell-3",
+      "language": "powershell",
+      "code": "# a comment",
+      "html": "<span class=\"hljs-comment\"># a comment</span>"
+    },
+    {
+      "name": "glsl-0",
+      "language": "glsl",
+      "code": "// a comment 😀",
+      "html": "<span class=\"hljs-comment\">// a comment 😀</span>"
+    },
+    {
+      "name": "glsl-1",
+      "language": "glsl",
+      "code": "😀// a comment",
+      "html": "😀<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "glsl-2",
+      "language": "glsl",
+      "code": "// a comment",
+      "html": "<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "glsl-3",
+      "language": "glsl",
+      "code": "// a comment",
+      "html": "<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "autoit-0",
+      "language": "autoit",
+      "code": "; a comment 😀",
+      "html": "<span class=\"hljs-comment\">; a comment 😀</span>"
+    },
+    {
+      "name": "autoit-1",
+      "language": "autoit",
+      "code": "😀; a comment",
+      "html": "😀<span class=\"hljs-comment\">; a comment</span>"
+    },
+    {
+      "name": "autoit-2",
+      "language": "autoit",
+      "code": "; a comment",
+      "html": "<span class=\"hljs-comment\">; a comment</span>"
+    },
+    {
+      "name": "autoit-3",
+      "language": "autoit",
+      "code": "; a comment",
+      "html": "<span class=\"hljs-comment\">; a comment</span>"
+    },
+    {
+      "name": "xquery-0",
+      "language": "xquery",
+      "code": "(: a comment :) 😀",
+      "html": "<span class=\"hljs-comment\">(: a comment :)</span> 😀"
+    },
+    {
+      "name": "xquery-1",
+      "language": "xquery",
+      "code": "😀(: a comment :)",
+      "html": "😀<span class=\"hljs-comment\">(: a comment :)</span>"
+    },
+    {
+      "name": "xquery-2",
+      "language": "xquery",
+      "code": "(: a comment :)",
+      "html": "<span class=\"hljs-comment\">(: a comment :)</span>"
+    },
+    {
+      "name": "xquery-3",
+      "language": "xquery",
+      "code": "(: a comment :)",
+      "html": "<span class=\"hljs-comment\">(: a comment :)</span>"
+    },
+    {
+      "name": "ada-0",
+      "language": "ada",
+      "code": "-- a comment 😀",
+      "html": "<span class=\"hljs-comment\">-- a comment 😀</span>"
+    },
+    {
+      "name": "ada-1",
+      "language": "ada",
+      "code": "😀-- a comment",
+      "html": "😀<span class=\"hljs-comment\">-- a comment</span>"
+    },
+    {
+      "name": "ada-2",
+      "language": "ada",
+      "code": "-- a comment",
+      "html": "<span class=\"hljs-comment\">-- a comment</span>"
+    },
+    {
+      "name": "ada-3",
+      "language": "ada",
+      "code": "-- a comment",
+      "html": "<span class=\"hljs-comment\">-- a comment</span>"
+    },
+    {
+      "name": "scheme-0",
+      "language": "scheme",
+      "code": "; a comment 😀",
+      "html": "<span class=\"hljs-comment\">; a comment 😀</span>"
+    },
+    {
+      "name": "scheme-1",
+      "language": "scheme",
+      "code": "😀; a comment",
+      "html": "😀; a comment"
+    },
+    {
+      "name": "scheme-2",
+      "language": "scheme",
+      "code": "; a comment",
+      "html": "<span class=\"hljs-comment\">; a comment</span>"
+    },
+    {
+      "name": "scheme-3",
+      "language": "scheme",
+      "code": "; a comment",
+      "html": "<span class=\"hljs-comment\">; a comment</span>"
+    },
+    {
+      "name": "lasso-0",
+      "language": "lasso",
+      "code": "// a comment 😀",
+      "html": "<span class=\"hljs-comment\">// a comment 😀</span>"
+    },
+    {
+      "name": "lasso-1",
+      "language": "lasso",
+      "code": "😀// a comment",
+      "html": "😀<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "lasso-2",
+      "language": "lasso",
+      "code": "// a comment",
+      "html": "<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "lasso-3",
+      "language": "lasso",
+      "code": "// a comment",
+      "html": "<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "sas-0",
+      "language": "sas",
+      "code": "/* a block comment */ 😀",
+      "html": "<span class=\"hljs-comment\">/* a block comment */</span> 😀"
+    },
+    {
+      "name": "sas-1",
+      "language": "sas",
+      "code": "😀/* a block comment */",
+      "html": "😀<span class=\"hljs-comment\">/* a block comment */</span>"
+    },
+    {
+      "name": "sas-2",
+      "language": "sas",
+      "code": "/* a block comment */",
+      "html": "<span class=\"hljs-comment\">/* a block comment */</span>"
+    },
+    {
+      "name": "sas-3",
+      "language": "sas",
+      "code": "/* a block comment */",
+      "html": "<span class=\"hljs-comment\">/* a block comment */</span>"
+    },
+    {
+      "name": "gauss-0",
+      "language": "gauss",
+      "code": "// a comment 😀",
+      "html": "<span class=\"hljs-comment\">// a comment 😀</span>"
+    },
+    {
+      "name": "gauss-1",
+      "language": "gauss",
+      "code": "😀// a comment",
+      "html": "😀<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "gauss-2",
+      "language": "gauss",
+      "code": "// a comment",
+      "html": "<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "gauss-3",
+      "language": "gauss",
+      "code": "// a comment",
+      "html": "<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "mel-0",
+      "language": "mel",
+      "code": "// a comment 😀",
+      "html": "<span class=\"hljs-comment\">// a comment 😀</span>"
+    },
+    {
+      "name": "mel-1",
+      "language": "mel",
+      "code": "😀// a comment",
+      "html": "😀<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "mel-2",
+      "language": "mel",
+      "code": "// a comment",
+      "html": "<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "mel-3",
+      "language": "mel",
+      "code": "// a comment",
+      "html": "<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "stata-0",
+      "language": "stata",
+      "code": "* a comment 😀",
+      "html": "<span class=\"hljs-comment\">* a comment 😀</span>"
+    },
+    {
+      "name": "stata-1",
+      "language": "stata",
+      "code": "😀* a comment",
+      "html": "😀* a comment"
+    },
+    {
+      "name": "stata-2",
+      "language": "stata",
+      "code": "* a comment",
+      "html": "<span class=\"hljs-comment\">* a comment</span>"
+    },
+    {
+      "name": "stata-3",
+      "language": "stata",
+      "code": "* a comment",
+      "html": "<span class=\"hljs-comment\">* a comment</span>"
+    },
+    {
+      "name": "stan-0",
+      "language": "stan",
+      "code": "// a comment 😀",
+      "html": "<span class=\"hljs-comment\">// a comment 😀</span>"
+    },
+    {
+      "name": "stan-1",
+      "language": "stan",
+      "code": "😀// a comment",
+      "html": "😀<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "stan-2",
+      "language": "stan",
+      "code": "// a comment",
+      "html": "<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "stan-3",
+      "language": "stan",
+      "code": "// a comment",
+      "html": "<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "vim-0",
+      "language": "vim",
+      "code": "\" a comment 😀",
+      "html": "<span class=\"hljs-comment\">&quot; a comment 😀</span>"
+    },
+    {
+      "name": "vim-1",
+      "language": "vim",
+      "code": "😀\" a comment",
+      "html": "😀<span class=\"hljs-comment\">&quot; a comment</span>"
+    },
+    {
+      "name": "vim-2",
+      "language": "vim",
+      "code": "\"😀 a comment",
+      "html": "<span class=\"hljs-comment\">&quot;😀 a comment</span>"
+    },
+    {
+      "name": "vim-3",
+      "language": "vim",
+      "code": "\" a comment",
+      "html": "<span class=\"hljs-comment\">&quot; a comment</span>"
+    },
+    {
+      "name": "lsl-0",
+      "language": "lsl",
+      "code": "// a comment 😀",
+      "html": "<span class=\"hljs-comment\">// a comment 😀</span>"
+    },
+    {
+      "name": "lsl-1",
+      "language": "lsl",
+      "code": "😀// a comment",
+      "html": "😀<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "lsl-2",
+      "language": "lsl",
+      "code": "// a comment",
+      "html": "<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "lsl-3",
+      "language": "lsl",
+      "code": "// a comment",
+      "html": "<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "livecodeserver-0",
+      "language": "livecodeserver",
+      "code": "-- a comment 😀",
+      "html": "<span class=\"hljs-comment\">-- a comment 😀</span>"
+    },
+    {
+      "name": "livecodeserver-1",
+      "language": "livecodeserver",
+      "code": "😀-- a comment",
+      "html": "😀<span class=\"hljs-comment\">-- a comment</span>"
+    },
+    {
+      "name": "livecodeserver-2",
+      "language": "livecodeserver",
+      "code": "-- a comment",
+      "html": "<span class=\"hljs-comment\">-- a comment</span>"
+    },
+    {
+      "name": "livecodeserver-3",
+      "language": "livecodeserver",
+      "code": "-- a comment",
+      "html": "<span class=\"hljs-comment\">-- a comment</span>"
+    },
+    {
+      "name": "maxima-0",
+      "language": "maxima",
+      "code": "/* a comment */ 😀",
+      "html": "<span class=\"hljs-comment\">/* a comment */</span> 😀"
+    },
+    {
+      "name": "maxima-1",
+      "language": "maxima",
+      "code": "😀/* a comment */",
+      "html": "😀<span class=\"hljs-comment\">/* a comment */</span>"
+    },
+    {
+      "name": "maxima-2",
+      "language": "maxima",
+      "code": "/* a comment */",
+      "html": "<span class=\"hljs-comment\">/* a comment */</span>"
+    },
+    {
+      "name": "maxima-3",
+      "language": "maxima",
+      "code": "/* a comment */",
+      "html": "<span class=\"hljs-comment\">/* a comment */</span>"
+    },
+    {
+      "name": "sqf-0",
+      "language": "sqf",
+      "code": "// a comment 😀",
+      "html": "<span class=\"hljs-comment\">// a comment 😀</span>"
+    },
+    {
+      "name": "sqf-1",
+      "language": "sqf",
+      "code": "😀// a comment",
+      "html": "😀<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "sqf-2",
+      "language": "sqf",
+      "code": "// a comment",
+      "html": "<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "sqf-3",
+      "language": "sqf",
+      "code": "// a comment",
+      "html": "<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "x86asm-0",
+      "language": "x86asm",
+      "code": "; a comment 😀",
+      "html": "<span class=\"hljs-comment\">; a comment 😀</span>"
+    },
+    {
+      "name": "x86asm-1",
+      "language": "x86asm",
+      "code": "😀; a comment",
+      "html": "😀<span class=\"hljs-comment\">; a comment</span>"
+    },
+    {
+      "name": "x86asm-2",
+      "language": "x86asm",
+      "code": "; a comment",
+      "html": "<span class=\"hljs-comment\">; a comment</span>"
+    },
+    {
+      "name": "x86asm-3",
+      "language": "x86asm",
+      "code": "; a comment",
+      "html": "<span class=\"hljs-comment\">; a comment</span>"
+    },
+    {
+      "name": "gml-0",
+      "language": "gml",
+      "code": "// a comment 😀",
+      "html": "<span class=\"hljs-comment\">// a comment 😀</span>"
+    },
+    {
+      "name": "gml-1",
+      "language": "gml",
+      "code": "😀// a comment",
+      "html": "😀<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "gml-2",
+      "language": "gml",
+      "code": "// a comment",
+      "html": "<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "gml-3",
+      "language": "gml",
+      "code": "// a comment",
+      "html": "<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "1c-0",
+      "language": "1c",
+      "code": "// комментарий 😀",
+      "html": "<span class=\"hljs-comment\">// комментарий 😀</span>"
+    },
+    {
+      "name": "1c-1",
+      "language": "1c",
+      "code": "😀// комментарий",
+      "html": "😀<span class=\"hljs-comment\">// комментарий</span>"
+    },
+    {
+      "name": "1c-2",
+      "language": "1c",
+      "code": "// комментарий",
+      "html": "<span class=\"hljs-comment\">// комментарий</span>"
+    },
+    {
+      "name": "1c-3",
+      "language": "1c",
+      "code": "// комментарий",
+      "html": "<span class=\"hljs-comment\">// комментарий</span>"
+    },
+    {
+      "name": "isbl-0",
+      "language": "isbl",
+      "code": "// комментарий 😀",
+      "html": "<span class=\"hljs-comment\">// комментарий 😀</span>"
+    },
+    {
+      "name": "isbl-1",
+      "language": "isbl",
+      "code": "😀// комментарий",
+      "html": "😀<span class=\"hljs-comment\">// комментарий</span>"
+    },
+    {
+      "name": "isbl-2",
+      "language": "isbl",
+      "code": "// комментарий",
+      "html": "<span class=\"hljs-comment\">// комментарий</span>"
+    },
+    {
+      "name": "isbl-3",
+      "language": "isbl",
+      "code": "// комментарий",
+      "html": "<span class=\"hljs-comment\">// комментарий</span>"
+    },
+    {
+      "name": "scss-0",
+      "language": "scss",
+      "code": "// a comment 😀",
+      "html": "<span class=\"hljs-comment\">// a comment 😀</span>"
+    },
+    {
+      "name": "scss-1",
+      "language": "scss",
+      "code": "😀// a comment",
+      "html": "😀<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "scss-2",
+      "language": "scss",
+      "code": "// a comment",
+      "html": "<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "scss-3",
+      "language": "scss",
+      "code": "// a comment",
+      "html": "<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "stylus-0",
+      "language": "stylus",
+      "code": "// a comment 😀",
+      "html": "<span class=\"hljs-comment\">// a comment 😀</span>"
+    },
+    {
+      "name": "stylus-1",
+      "language": "stylus",
+      "code": "😀// a comment",
+      "html": "😀<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "stylus-2",
+      "language": "stylus",
+      "code": "// a comment",
+      "html": "<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "stylus-3",
+      "language": "stylus",
+      "code": "// a comment",
+      "html": "<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "latex-0",
+      "language": "latex",
+      "code": "\\documentclass{article} 😀",
+      "html": "<span class=\"hljs-keyword\">\\documentclass</span>{article} 😀"
+    },
+    {
+      "name": "latex-1",
+      "language": "latex",
+      "code": "😀\\documentclass{article}",
+      "html": "😀<span class=\"hljs-keyword\">\\documentclass</span>{article}"
+    },
+    {
+      "name": "latex-2",
+      "language": "latex",
+      "code": "\\documentclass{article}",
+      "html": "<span class=\"hljs-keyword\">\\documentclass</span>{article}"
+    },
+    {
+      "name": "latex-3",
+      "language": "latex",
+      "code": "\\😀documentclass{article}",
+      "html": "<span class=\"hljs-keyword\">\\\ud83d</span>\ude00documentclass{article}"
+    },
+    {
+      "name": "less-0",
+      "language": "less",
+      "code": "// a comment 😀",
+      "html": "<span class=\"hljs-comment\">// a comment 😀</span>"
+    },
+    {
+      "name": "less-1",
+      "language": "less",
+      "code": "😀// a comment",
+      "html": "😀<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "less-2",
+      "language": "less",
+      "code": "// a comment",
+      "html": "<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "less-3",
+      "language": "less",
+      "code": "// a comment",
+      "html": "<span class=\"hljs-comment\">// a comment</span>"
+    },
+    {
+      "name": "livescript-0",
+      "language": "livescript",
+      "code": "# a comment 😀",
+      "html": "<span class=\"hljs-comment\"># a comment 😀</span>"
+    },
+    {
+      "name": "livescript-1",
+      "language": "livescript",
+      "code": "😀# a comment",
+      "html": "😀<span class=\"hljs-comment\"># a comment</span>"
+    },
+    {
+      "name": "livescript-2",
+      "language": "livescript",
+      "code": "# a comment",
+      "html": "<span class=\"hljs-comment\"># a comment</span>"
+    },
+    {
+      "name": "livescript-3",
+      "language": "livescript",
+      "code": "# a comment",
+      "html": "<span class=\"hljs-comment\"># a comment</span>"
+    },
+    {
+      "name": "coffeescript-0",
+      "language": "coffeescript",
+      "code": "# a comment 😀",
+      "html": "<span class=\"hljs-comment\"># a comment 😀</span>"
+    },
+    {
+      "name": "coffeescript-1",
+      "language": "coffeescript",
+      "code": "😀# a comment",
+      "html": "😀<span class=\"hljs-comment\"># a comment</span>"
+    },
+    {
+      "name": "coffeescript-2",
+      "language": "coffeescript",
+      "code": "# a comment",
+      "html": "<span class=\"hljs-comment\"># a comment</span>"
+    },
+    {
+      "name": "coffeescript-3",
+      "language": "coffeescript",
+      "code": "# a comment",
+      "html": "<span class=\"hljs-comment\"># a comment</span>"
+    },
+    {
+      "name": "asciidoc-0",
+      "language": "asciidoc",
+      "code": "= Document Title 😀",
+      "html": "<span class=\"hljs-section\">= Document Title 😀</span>"
+    },
+    {
+      "name": "asciidoc-1",
+      "language": "asciidoc",
+      "code": "😀= Document Title",
+      "html": "😀= Document Title"
+    },
+    {
+      "name": "asciidoc-2",
+      "language": "asciidoc",
+      "code": "= Document Title",
+      "html": "<span class=\"hljs-section\">= Document Title</span>"
+    },
+    {
+      "name": "asciidoc-3",
+      "language": "asciidoc",
+      "code": "= Document Title",
+      "html": "<span class=\"hljs-section\">= Document Title</span>"
+    },
+    {
+      "name": "r-0",
+      "language": "r",
+      "code": "# A comment 😀",
+      "html": "<span class=\"hljs-comment\"># A comment 😀</span>"
+    },
+    {
+      "name": "r-1",
+      "language": "r",
+      "code": "😀# A comment",
+      "html": "😀<span class=\"hljs-comment\"># A comment</span>"
+    },
+    {
+      "name": "r-2",
+      "language": "r",
+      "code": "# A comment",
+      "html": "<span class=\"hljs-comment\"># A comment</span>"
+    },
+    {
+      "name": "r-3",
+      "language": "r",
+      "code": "# A comment",
+      "html": "<span class=\"hljs-comment\"># A comment</span>"
+    },
+    {
+      "name": "mathematica-0",
+      "language": "mathematica",
+      "code": "(* A comment *) 😀",
+      "html": "<span class=\"hljs-comment\">(* A comment *)</span> 😀"
+    },
+    {
+      "name": "mathematica-1",
+      "language": "mathematica",
+      "code": "😀(* A comment *)",
+      "html": "😀<span class=\"hljs-comment\">(* A comment *)</span>"
+    },
+    {
+      "name": "mathematica-2",
+      "language": "mathematica",
+      "code": "(* A comment *)",
+      "html": "<span class=\"hljs-comment\">(* A comment *)</span>"
+    },
+    {
+      "name": "mathematica-3",
+      "language": "mathematica",
+      "code": "(* A comment *)",
+      "html": "<span class=\"hljs-comment\">(* A comment *)</span>"
+    }
+  ]
+}

@@ -122,7 +122,12 @@ func HighlightWith(code, language string, ignoreIllegals bool) (*Result, error) 
 	if err != nil {
 		return nil, err
 	}
-	return highlightWith(lang, code, ignoreIllegals), nil
+	encoded, astral := encodeCodeUnits(code)
+	result := highlightWith(lang, encoded, ignoreIllegals)
+	if astral {
+		result.Nodes = decodeCodeUnitNodes(result.Nodes)
+	}
+	return result, nil
 }
 
 // Languages returns the sorted names of every registered language.

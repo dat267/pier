@@ -16,4 +16,7 @@
 // are normalized for the whitespace classes, and input containing CR, U+2028 or
 // U+2029 is matched by a small Thompson VM over the same compiled program with
 // JS assertions and dot semantics, so LF-only documents keep the RE2 path.
+// Astral characters are stored as their two UTF-16 surrogate units for matching
+// and restored to characters in the returned tree, matching JavaScript's
+// code-unit indexing for dots, quantifiers, classes and offsets.
 package highlight

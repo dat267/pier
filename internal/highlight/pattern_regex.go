@@ -12,6 +12,8 @@ import (
 // terminators it executes the same regular language with JS assertions and
 // dots, without normalizing text or consuming an assertion's boundary.
 // The program is immutable after compilation; matching storage is call-owned.
+// Matching input is always the code-unit encoding from codeunits.go; public
+// regexp-style methods therefore expect encoded text.
 type patternRegexp struct {
 	*regexp.Regexp
 	lineSensitive bool
