@@ -3184,6 +3184,13 @@ identity-safe release primitive; its trust decision policy is unchanged.
 No credential callback runs under the lease's bookkeeping mutex.
 Test: `TestAuthStorageLostLeaseDoesNotCommitOrReleaseSuccessor`.
 
+Auth mutations also retain the parsed raw document: modifying/deleting one
+provider re-encodes only that provider, leaving unsupported credentials and
+unknown members of other credentials intact, like upstream's object spread.
+The typed read view skips unreadable entries without discarding readable
+siblings. The source-generated `auth-preservation` corpus checks persisted
+bytes through the public storage API.
+
 Settings storage uses a `settings.json.lock` directory, matching proper-lockfile.
 It reclaims artifacts older than 10 seconds (including legacy regular files),
 refreshes live leases every 5 seconds, and joins its refresher before release.

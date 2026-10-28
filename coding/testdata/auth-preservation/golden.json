@@ -1,0 +1,50 @@
+[
+  {
+    "name": "future-type",
+    "initial": "{\"known\":{\"type\":\"api_key\",\"key\":\"synthetic-known\",\"vendor\":{\"z\":1,\"a\":\"<keep>\"}},\"future\":{\"type\":\"future\",\"opaque\":\"synthetic-future\"}}",
+    "op": "modify",
+    "expected": "{\n  \"known\": {\n    \"type\": \"api_key\",\n    \"key\": \"synthetic-known\",\n    \"vendor\": {\n      \"z\": 1,\n      \"a\": \"<keep>\"\n    }\n  },\n  \"future\": {\n    \"type\": \"future\",\n    \"opaque\": \"synthetic-future\"\n  },\n  \"added\": {\n    \"type\": \"api_key\",\n    \"key\": \"synthetic-added\"\n  }\n}"
+  },
+  {
+    "name": "future-type",
+    "initial": "{\"known\":{\"type\":\"api_key\",\"key\":\"synthetic-known\",\"vendor\":{\"z\":1,\"a\":\"<keep>\"}},\"future\":{\"type\":\"future\",\"opaque\":\"synthetic-future\"}}",
+    "op": "delete",
+    "expected": "{\n  \"future\": {\n    \"type\": \"future\",\n    \"opaque\": \"synthetic-future\"\n  }\n}"
+  },
+  {
+    "name": "mistyped-key",
+    "initial": "{\"known\":{\"type\":\"api_key\",\"key\":\"synthetic-known\"},\"mistyped\":{\"type\":\"api_key\",\"key\":5}}",
+    "op": "modify",
+    "expected": "{\n  \"known\": {\n    \"type\": \"api_key\",\n    \"key\": \"synthetic-known\"\n  },\n  \"mistyped\": {\n    \"type\": \"api_key\",\n    \"key\": 5\n  },\n  \"added\": {\n    \"type\": \"api_key\",\n    \"key\": \"synthetic-added\"\n  }\n}"
+  },
+  {
+    "name": "mistyped-key",
+    "initial": "{\"known\":{\"type\":\"api_key\",\"key\":\"synthetic-known\"},\"mistyped\":{\"type\":\"api_key\",\"key\":5}}",
+    "op": "delete",
+    "expected": "{\n  \"mistyped\": {\n    \"type\": \"api_key\",\n    \"key\": 5\n  }\n}"
+  },
+  {
+    "name": "known-extra",
+    "initial": "{\"known\":{\"type\":\"api_key\",\"key\":\"synthetic-known\",\"vendor\":{\"z\":1,\"a\":\"<keep>\"}}}",
+    "op": "modify",
+    "expected": "{\n  \"known\": {\n    \"type\": \"api_key\",\n    \"key\": \"synthetic-known\",\n    \"vendor\": {\n      \"z\": 1,\n      \"a\": \"<keep>\"\n    }\n  },\n  \"added\": {\n    \"type\": \"api_key\",\n    \"key\": \"synthetic-added\"\n  }\n}"
+  },
+  {
+    "name": "known-extra",
+    "initial": "{\"known\":{\"type\":\"api_key\",\"key\":\"synthetic-known\",\"vendor\":{\"z\":1,\"a\":\"<keep>\"}}}",
+    "op": "delete",
+    "expected": "{}"
+  },
+  {
+    "name": "control",
+    "initial": "{\"known\":{\"type\":\"api_key\",\"key\":\"synthetic-known\"}}",
+    "op": "modify",
+    "expected": "{\n  \"known\": {\n    \"type\": \"api_key\",\n    \"key\": \"synthetic-known\"\n  },\n  \"added\": {\n    \"type\": \"api_key\",\n    \"key\": \"synthetic-added\"\n  }\n}"
+  },
+  {
+    "name": "control",
+    "initial": "{\"known\":{\"type\":\"api_key\",\"key\":\"synthetic-known\"}}",
+    "op": "delete",
+    "expected": "{}"
+  }
+]

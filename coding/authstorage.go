@@ -734,15 +734,45 @@ func parseAuthStorageData(content *string) (authStorageData, []string, error) {
 		}
 		var credential ai.Credential
 		if err := json.Unmarshal(credentialRaw, &credential); err != nil {
-			return authStorageData{}, nil, nil
+			// Keep readable siblings in the typed view. Mutations preserve this
+			// unsupported entry from the raw document rather than rewriting it.
+			continue
 		}
 		if credential.Type == "" {
-			return authStorageData{}, nil, nil
+			continue
 		}
 		data[name] = credential
 		order = append(order, name)
 	}
 	return data, order, nil
+}
+
+// marshalAuthStorageMutation changes only the requested provider in the parsed
+// document, like upstream's object spread/delete. Re-encoding every typed
+// credential would discard unknown members or entire unsupported entries.
+func marshalAuthStorageMutation(content *string, providerID string, next *ai.Credential) ([]byte, error) {
+	var keys []string
+	values := map[string]json.RawMessage{}
+	if content != nil && *content != "" {
+		if order, raw, err := readJSONObjectOrdered([]byte(StripBom(*content))); err == nil {
+			keys, values = order, raw
+		}
+		// The caller already validated JSON. Retain the existing empty-store
+		// behavior for a non-object document; only object members are preserved.
+	}
+	if next == nil {
+		delete(values, providerID)
+	} else {
+		encoded, err := ai.MarshalJSON(next)
+		if err != nil {
+			return nil, err
+		}
+		if _, exists := values[providerID]; !exists {
+			keys = append(keys, providerID)
+		}
+		values[providerID] = encoded
+	}
+	return ai.MarshalIndentJSON(marshalOrderedObject(keys, values))
 }
 
 // marshalAuthStorageData renders auth.json like JSON.stringify(data, null, 2):
@@ -917,7 +947,7 @@ func (s *AuthStorage) Modify(providerID string, fn func(*ai.Credential) (*ai.Cre
 		merged[providerID] = *next
 		latestData = merged
 		latestOrder = appendProviderOrder(currentOrder, providerID)
-		encoded, err := marshalAuthStorageData(merged, latestOrder)
+		encoded, err := marshalAuthStorageMutation(content, providerID, next)
 		if err != nil {
 			return LockResult{}, err
 		}
@@ -955,7 +985,7 @@ func (s *AuthStorage) Delete(providerID string, ctx context.Context) error {
 		delete(currentData, providerID)
 		latestData = currentData
 		latestOrder = removeProviderOrder(currentOrder, providerID)
-		encoded, err := marshalAuthStorageData(currentData, latestOrder)
+		encoded, err := marshalAuthStorageMutation(content, providerID, nil)
 		if err != nil {
 			return LockResult{}, err
 		}
