@@ -24,6 +24,10 @@ type Result struct {
 	Relevance int
 	Nodes     []*Node
 	Illegal   bool
+
+	// top is the mode instance the scan finished in, used to continue a named
+	// sublanguage across segments.
+	top *modeInstance
 }
 
 type modeInstance struct {
@@ -99,7 +103,7 @@ type highlighter struct {
 	iterations       int
 	resumeScanAtSame bool
 	lastMatch        *match
-	continuations    map[string]*compiledMode
+	continuations    map[string]*modeInstance
 	ignoreIllegals   bool
 	illegal          bool
 	jsLines          bool
@@ -109,15 +113,25 @@ type highlighter struct {
 const noMatch = -1
 
 func highlightWith(lang *compiledLanguage, code string, ignoreIllegals bool) *Result {
+	return highlightWithContinuation(lang, code, ignoreIllegals, nil)
+}
+
+// highlightWithContinuation resumes a named sublanguage's previous top mode,
+// as the reference's `_highlight(..., continuation)` does.
+func highlightWithContinuation(lang *compiledLanguage, code string, ignoreIllegals bool, continuation *modeInstance) *Result {
 	h := &highlighter{
 		lang:           lang,
 		rootMode:       lang.root,
 		emitter:        newEmitter(),
-		continuations:  map[string]*compiledMode{},
+		continuations:  map[string]*modeInstance{},
 		ignoreIllegals: ignoreIllegals,
 		jsLines:        nonLFLineEnds(code),
 	}
-	h.top = &modeInstance{mode: lang.root, data: map[string]string{}}
+	if continuation != nil {
+		h.top = continuation
+	} else {
+		h.top = &modeInstance{mode: lang.root, data: map[string]string{}}
+	}
 	h.processContinuations()
 	h.top.regexIndex = 0
 
@@ -163,6 +177,7 @@ func highlightWith(lang *compiledLanguage, code string, ignoreIllegals bool) *Re
 		Language:  lang.name,
 		Relevance: h.relevance,
 		Nodes:     h.emitter.root.Children,
+		top:       h.top,
 	}
 }
 
@@ -275,7 +290,8 @@ func (h *highlighter) processSubLanguage() {
 			h.emitter.addText(h.modeBuffer)
 			return
 		}
-		result = highlightWith(sub, h.modeBuffer, true)
+		result = highlightWithContinuation(sub, h.modeBuffer, true, h.continuations[name])
+		h.continuations[name] = result.top
 	} else {
 		result, name = highlightAuto(h.modeBuffer, h.top.mode.subLanguage)
 		if result == nil {

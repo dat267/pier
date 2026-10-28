@@ -1,0 +1,26 @@
+[
+  {
+    "name": "case-0-shell",
+    "language": "shell",
+    "code": "$ echo \"a\n$ b\"\n",
+    "html": "<span class=\"hljs-meta\">$</span><span class=\"bash\"> <span class=\"hljs-built_in\">echo</span> <span class=\"hljs-string\">&quot;a</span></span>\n<span class=\"hljs-meta\">$</span><span class=\"bash\"><span class=\"hljs-string\"> b&quot;</span></span>\n"
+  },
+  {
+    "name": "case-1-shell",
+    "language": "shell",
+    "code": "$ echo \"a\n# b\"\n",
+    "html": "<span class=\"hljs-meta\">$</span><span class=\"bash\"> <span class=\"hljs-built_in\">echo</span> <span class=\"hljs-string\">&quot;a</span></span>\n<span class=\"hljs-meta\">#</span><span class=\"bash\"><span class=\"hljs-string\"> b&quot;</span></span>\n"
+  },
+  {
+    "name": "case-2-shell",
+    "language": "shell",
+    "code": "$ 'a\n$ b'\n",
+    "html": "<span class=\"hljs-meta\">$</span><span class=\"bash\"> <span class=\"hljs-string\">&#x27;a</span></span>\n<span class=\"hljs-meta\">$</span><span class=\"bash\"><span class=\"hljs-string\"> b&#x27;</span></span>\n"
+  },
+  {
+    "name": "case-3-shell",
+    "language": "shell",
+    "code": "$ echo \"a\n> b\"\n",
+    "html": "<span class=\"hljs-meta\">$</span><span class=\"bash\"> <span class=\"hljs-built_in\">echo</span> <span class=\"hljs-string\">&quot;a</span></span>\n<span class=\"hljs-meta\">&gt;</span><span class=\"bash\"><span class=\"hljs-string\"> b&quot;</span></span>\n"
+  }
+]
