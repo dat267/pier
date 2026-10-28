@@ -2,25 +2,14 @@ package highlight
 
 func init() { RegisterLanguage("stylus", Stylus()) }
 
-// stylusSelector builds a stylus selector rule whose reference begin ends with
-// `(?=[.\s\n[:,(])`: the name must be followed by one of those bytes. That
-// lookahead becomes a beforeBegin guard.
+// stylusSelector preserves the reference's trailing `(?=[.\s\n[:,(])`
+// lookahead, including JavaScript whitespace and rejection at EOF.
 func stylusSelector(className, begin string) *Mode {
-	m := &Mode{ClassName: className, Begin: begin}
-	m.beforeBegin = func(x *match, resp *Response) {
-		if end := x.index + len(x.lexeme); end < len(x.input) && !stylusSelectorEnd(x.input[end]) {
-			resp.IgnoreMatch()
-		}
+	return &Mode{
+		ClassName:       className,
+		Begin:           begin,
+		BeginFollowedBy: `[.\[:,(\t\n\v\f\r \x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}]`,
 	}
-	return m
-}
-
-func stylusSelectorEnd(b byte) bool {
-	switch b {
-	case '.', '[', ':', ',', '(':
-		return true
-	}
-	return isWhitespaceByte(b)
 }
 
 // Stylus returns the Stylus language definition (a port of languages/stylus.js).
