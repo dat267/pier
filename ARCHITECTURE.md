@@ -516,8 +516,9 @@ waited on `ShowAuthPrompt` input that only the blocked UI loop could deliver.
 OAuth device flows, API-key entry, and Bedrock method/profile selects hung.
 Upstream's await yields; Go's wait does not.
 
-`AuthWiring.startLogin` runs the shared flow on a goroutine, then posts editor
-restoration, error reporting, and `CompleteProviderAuthentication`.
+`AuthWiring.startLogin` reports blocked status on-owner, runs the shared flow
+on a goroutine, then posts status clearing, editor restoration, error reporting,
+and `CompleteProviderAuthentication`.
 `LoginDialogComponent` marshals `Show*` mutations with `post`; prompt channels
 are created synchronously and browser exec stays on the flow goroutine. Nil
 `post` applies inline for tests. This was the fifth deadlock, found by source

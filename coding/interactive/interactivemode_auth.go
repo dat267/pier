@@ -565,18 +565,19 @@ func (w *AuthWiring) post(fn func()) {
 // The continuation runs on the loop, because restoring the editor, reporting
 // errors and synchronizing the model all mutate UI and session state.
 func (w *AuthWiring) startLogin(ctx context.Context, dialog *LoginDialogComponent, providerID string, providerName string, authType string, previousModel *ai.Model, onBack func()) {
+	// ProgramStatusReporter belongs to the UI owner, just like the dialog.
+	// Report before dispatching work, then clear only on the completion post.
+	if w.ProgramStatus != nil {
+		w.ProgramStatus.SetBlocked("login", &BlockedStatus{
+			Kind: tui.ProgramStatusKindAuth, Message: "Log in to " + providerID,
+		})
+	}
 	go func() {
-		// A login waits on the user, which is what the terminal reports as blocked (#10607).
-		if w.ProgramStatus != nil {
-			w.ProgramStatus.SetBlocked("login", &BlockedStatus{
-				Kind: tui.ProgramStatusKindAuth, Message: "Log in to " + providerID,
-			})
-		}
 		err := w.LoginProvider(ctx, dialog, providerID, authType)
-		if w.ProgramStatus != nil {
-			w.ProgramStatus.SetBlocked("login", nil)
-		}
 		w.post(func() {
+			if w.ProgramStatus != nil {
+				w.ProgramStatus.SetBlocked("login", nil)
+			}
 			w.restoreEditor()
 			if err != nil {
 				syncPrefix, failurePrefix := "Logged in to", "Failed to login to"
