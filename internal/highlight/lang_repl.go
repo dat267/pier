@@ -1,14 +1,11 @@
 package highlight
 
 // replPromptLookahead implements the reference's `(?=[ ]|$)` lookahead after a
-// REPL prompt: the next byte must be a space, a newline, or end of input.
+// REPL prompt: the next character must be a space, a JavaScript line
+// terminator (which `$` matches before), or end of input.
 func replPromptLookahead(m *match) bool {
 	pos := m.index + len(m.lexeme)
-	if pos >= len(m.input) {
-		return true
-	}
-	c := m.input[pos]
-	return c == ' ' || c == '\n'
+	return pos >= len(m.input) || m.input[pos] == ' ' || jsLineTerminatorAt(m.input, pos)
 }
 
 func init() {

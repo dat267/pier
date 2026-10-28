@@ -1,0 +1,92 @@
+[
+  {
+    "name": "case-0-python-repl",
+    "language": "python-repl",
+    "code": ">>> print(1)",
+    "html": "<span class=\"hljs-meta\">&gt;&gt;&gt;</span> print(1)"
+  },
+  {
+    "name": "case-1-python-repl",
+    "language": "python-repl",
+    "code": ">>> print(1)",
+    "html": "<span class=\"hljs-meta\">&gt;&gt;&gt;</span> print(1)"
+  },
+  {
+    "name": "case-2-python-repl",
+    "language": "python-repl",
+    "code": ">>>\rprint(1)",
+    "html": "<span class=\"hljs-meta\">&gt;&gt;&gt;</span>\rprint(1)"
+  },
+  {
+    "name": "case-3-python-repl",
+    "language": "python-repl",
+    "code": ">>>\r\nprint(1)",
+    "html": "<span class=\"hljs-meta\">&gt;&gt;&gt;</span>\r\nprint(1)"
+  },
+  {
+    "name": "case-4-python-repl",
+    "language": "python-repl",
+    "code": "... x",
+    "html": "<span class=\"hljs-meta\">...</span> x"
+  },
+  {
+    "name": "case-5-node-repl",
+    "language": "node-repl",
+    "code": "> const x = 1",
+    "html": "<span class=\"hljs-meta\">&gt;</span> const x = 1"
+  },
+  {
+    "name": "case-6-node-repl",
+    "language": "node-repl",
+    "code": "> const x = 1",
+    "html": "<span class=\"hljs-meta\">&gt;</span> const x = 1"
+  },
+  {
+    "name": "case-7-node-repl",
+    "language": "node-repl",
+    "code": ">\rconst x = 1",
+    "html": "<span class=\"hljs-meta\">&gt;</span>\rconst x = 1"
+  },
+  {
+    "name": "case-8-yaml",
+    "language": "yaml",
+    "code": "name: demo",
+    "html": "<span class=\"hljs-attr\">name:</span> <span class=\"hljs-string\">demo</span>"
+  },
+  {
+    "name": "case-9-yaml",
+    "language": "yaml",
+    "code": "name: demo",
+    "html": "<span class=\"hljs-attr\">name:</span> <span class=\"hljs-string\">demo</span>"
+  },
+  {
+    "name": "case-10-yaml",
+    "language": "yaml",
+    "code": "name:\rdemo",
+    "html": "<span class=\"hljs-attr\">name:</span>\r<span class=\"hljs-string\">demo</span>"
+  },
+  {
+    "name": "case-11-yaml",
+    "language": "yaml",
+    "code": "- item",
+    "html": "<span class=\"hljs-bullet\">-</span> <span class=\"hljs-string\">item</span>"
+  },
+  {
+    "name": "case-12-yaml",
+    "language": "yaml",
+    "code": "-\ritem",
+    "html": "<span class=\"hljs-bullet\">-</span>\r<span class=\"hljs-string\">item</span>"
+  },
+  {
+    "name": "case-13-yaml",
+    "language": "yaml",
+    "code": "name: demo",
+    "html": "<span class=\"hljs-string\">name:</span> <span class=\"hljs-string\">demo</span>"
+  },
+  {
+    "name": "case-14-yaml",
+    "language": "yaml",
+    "code": "name:　demo",
+    "html": "<span class=\"hljs-string\">name:</span>　<span class=\"hljs-string\">demo</span>"
+  }
+]

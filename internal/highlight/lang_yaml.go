@@ -16,8 +16,7 @@ func yamlAfterColon(m *match) bool {
 	if end >= len(m.input) {
 		return true
 	}
-	c := m.input[end]
-	return c == ' ' || c == '\t' || c == '\n'
+	return m.input[end] == ' ' || m.input[end] == '\t' || jsLineTerminatorAt(m.input, end)
 }
 
 // yamlAfterDash is the reference's `(?=[ ]|$)` after a block-sequence bullet.
@@ -26,7 +25,7 @@ func yamlAfterDash(m *match) bool {
 	if end >= len(m.input) {
 		return true
 	}
-	return m.input[end] == ' ' || m.input[end] == '\n'
+	return m.input[end] == ' ' || jsLineTerminatorAt(m.input, end)
 }
 
 // yamlWordFirsts is the first-byte set of `\w`: the unquoted key's manual
@@ -49,7 +48,7 @@ func yamlKeyEnd(s string, pos int) (int, bool) {
 		if s[i] != ':' {
 			continue
 		}
-		if i+1 >= len(s) || s[i+1] == ' ' || s[i+1] == '\t' || s[i+1] == '\n' {
+		if i+1 >= len(s) || s[i+1] == ' ' || s[i+1] == '\t' || jsLineTerminatorAt(s, i+1) {
 			return i + 1, true
 		}
 	}
