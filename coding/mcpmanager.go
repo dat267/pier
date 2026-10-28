@@ -189,10 +189,11 @@ func (m *McpManager) ConnectionErrors() []string {
 	var errors []string
 	for _, connection := range m.Connections() {
 		connection.mu.Lock()
-		failed := connection.State == McpServerFailed && connection.Error != ""
+		message := connection.Error
+		failed := connection.State == McpServerFailed && message != ""
 		connection.mu.Unlock()
 		if failed {
-			errors = append(errors, "MCP server \""+connection.Name()+"\" failed to connect: "+connection.Error)
+			errors = append(errors, "MCP server \""+connection.Name()+"\" failed to connect: "+message)
 		}
 	}
 	return errors
