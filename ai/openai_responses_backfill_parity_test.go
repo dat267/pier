@@ -64,6 +64,22 @@ func TestResponsesBackfillsEncryptedReasoningContent(t *testing.T) {
 		}
 	})
 
+	t.Run("empty-terminal-content-is-ignored", func(t *testing.T) {
+		msg := run([]string{
+			added,
+			itemDone,
+			`{"type":"response.completed","response":{"status":"completed","output":[{"type":"reasoning","id":"rs_1","encrypted_content":""}]}}`,
+		})
+		block, ok := msg.Content[0].(ThinkingContent)
+		if !ok || block.ThinkingSignature == nil {
+			t.Fatalf("content = %+v", msg.Content)
+		}
+		want := `{"type":"reasoning","id":"rs_1","summary":[{"text":"plan"}]}`
+		if *block.ThinkingSignature != want {
+			t.Fatalf("signature = %s, want %s", *block.ThinkingSignature, want)
+		}
+	})
+
 	t.Run("already-present", func(t *testing.T) {
 		msg := run([]string{
 			`{"type":"response.created","response":{"id":"resp_1"}}`,

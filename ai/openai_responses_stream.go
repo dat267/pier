@@ -496,7 +496,7 @@ func ProcessResponsesStream(
 	backfillReasoningSignatures := func(responseOutput []json.RawMessage) {
 		for _, raw := range responseOutput {
 			var item responsesItem
-			if jsonUnmarshalStrict(raw, &item) != nil || item.Type != "reasoning" || item.EncryptedContent == nil {
+			if jsonUnmarshalStrict(raw, &item) != nil || item.Type != "reasoning" || item.EncryptedContent == nil || *item.EncryptedContent == "" {
 				continue
 			}
 			slot := reasoningSlotsByID[item.ID]
