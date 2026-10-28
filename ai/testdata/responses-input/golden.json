@@ -264,5 +264,62 @@
       }
     ],
     "input": "[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"look up\"}]},{\"type\":\"function_call\",\"id\":\"fc_lxmq3j1alksqn\",\"call_id\":\"call_1\",\"name\":\"lookup\",\"arguments\":\"{\\\"z\\\":\\\"value\\\",\\\"a\\\":1}\"},{\"type\":\"function_call_output\",\"call_id\":\"call_1\",\"output\":\"found\"}]"
+  },
+  {
+    "name": "empty-transcript",
+    "model": {
+      "api": "openai-responses",
+      "id": "gpt-5",
+      "provider": "openai",
+      "reasoning": true,
+      "input": [
+        "text",
+        "image"
+      ]
+    },
+    "messages": [],
+    "input": "[]"
+  },
+  {
+    "name": "empty-user-blocks",
+    "model": {
+      "api": "openai-responses",
+      "id": "gpt-5",
+      "provider": "openai",
+      "reasoning": true,
+      "input": [
+        "text",
+        "image"
+      ]
+    },
+    "messages": [
+      {
+        "role": "user",
+        "content": [],
+        "timestamp": 1
+      }
+    ],
+    "input": "[]"
+  },
+  {
+    "name": "empty-system-content",
+    "model": {
+      "api": "openai-responses",
+      "id": "gpt-5",
+      "provider": "openai",
+      "reasoning": true,
+      "input": [
+        "text",
+        "image"
+      ]
+    },
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "timestamp": 1
+      }
+    ],
+    "input": "[]"
   }
 ]

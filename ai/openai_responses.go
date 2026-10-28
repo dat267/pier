@@ -370,7 +370,7 @@ func ConvertResponsesMessages(model *Model, context TranscriptContext, options *
 		options = &ConvertResponsesMessagesOptions{}
 	}
 	normalizedContext := ResolveTranscript(context, options.SupportsMidConvoSystemMessages)
-	var messages []responseInputItem
+	messages := []responseInputItem{}
 
 	providers := options.ToolCallProviders
 	if providers == nil {

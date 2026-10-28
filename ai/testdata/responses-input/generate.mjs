@@ -27,6 +27,11 @@ for (const { name, id = "call_1|fc_1", source = {}, namespace } of [
 	];
 	fixtures.push({ name, model, messages });
 }
+fixtures.push(
+	{ name: "empty-transcript", model, messages: [] },
+	{ name: "empty-user-blocks", model, messages: [{ role: "user", content: [], timestamp: 1 }] },
+	{ name: "empty-system-content", model, messages: [{ role: "system", content: "", timestamp: 1 }] },
+);
 for (const fixture of fixtures) {
 	fixture.input = JSON.stringify(convertResponsesMessages(fixture.model, { messages: fixture.messages }, new Set(["openai", "openai-codex", "opencode"])));
 }
