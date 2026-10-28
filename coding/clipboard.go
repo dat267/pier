@@ -49,10 +49,7 @@ func runClipboardCommand(ctx context.Context, command string, args []string, opt
 	defer cancel()
 	cmd := exec.CommandContext(commandCtx, command, args...)
 	detachClipboardCommand(cmd)
-	if options.input == "" {
-		cmd.Stdin = nil
-	} else {
-		cmd.Stdin = strings.NewReader(options.input)
+	if options.input != "" {
 		cmd.Stdout = nil
 	}
 	cmd.Stderr = nil
@@ -72,6 +69,10 @@ func runClipboardCommand(ctx context.Context, command string, args []string, opt
 		if err := cmd.Start(); err != nil {
 			return nil
 		}
+		// A daemonized descendant may retain stdout after the direct child
+		// exits. Match upstream abort's stdout.destroy(), not just child.kill().
+		stopRead := context.AfterFunc(commandCtx, func() { _ = stdout.Close() })
+		defer stopRead()
 		output, readErr := io.ReadAll(io.LimitReader(stdout, int64(limit)+1))
 		if readErr != nil || len(output) > limit {
 			_ = cmd.Process.Kill()
@@ -84,7 +85,27 @@ func runClipboardCommand(ctx context.Context, command string, args []string, opt
 		}
 		return output
 	}
-	if err := cmd.Run(); err != nil {
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return nil
+	}
+	if err := cmd.Start(); err != nil {
+		return nil
+	}
+	stopWrite := context.AfterFunc(commandCtx, func() { _ = stdin.Close() })
+	defer stopWrite()
+	written := make(chan struct{})
+	go func() {
+		// Upstream ignores stdin errors when a writer exits early. Own this
+		// pipe explicitly so cancellation can close it even if a descendant
+		// retains the reader after the direct child has been killed.
+		_, _ = io.WriteString(stdin, options.input)
+		_ = stdin.Close()
+		close(written)
+	}()
+	waitErr := cmd.Wait()
+	<-written
+	if waitErr != nil || commandCtx.Err() != nil {
 		return nil
 	}
 	return []byte{}

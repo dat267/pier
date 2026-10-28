@@ -1045,7 +1045,10 @@ after cancellation.
 
 Cancellation does not kill arbitrary goroutines, reads, preparation, or legacy
 clipboard providers; late results are ignored and clipboard subprocess timeouts
-remain. This original policy did not cover process-wide copy queues/detached
+remain. Clipboard subprocess cancellation closes the parent's reader/writer
+pipes as well as killing the direct child, so daemonized descendants cannot
+strand a pipe read or input-copy goroutine after timeout. The descendants
+are not killed merely for retaining clipboard ownership. This original policy did not cover process-wide copy queues/detached
 work; D200 extends ownership and bounds permanent terminal exit. Session/provider
 serialization is unchanged; accepted saves still have no timeout.
 
