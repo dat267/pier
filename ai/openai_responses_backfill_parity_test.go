@@ -91,8 +91,9 @@ func TestResponsesBackfillsEncryptedReasoningContent(t *testing.T) {
 		if !ok || block.ThinkingSignature == nil {
 			t.Fatalf("content = %+v", msg.Content)
 		}
-		if !strings.HasSuffix(*block.ThinkingSignature, `"encrypted_content":"filled"}`) {
-			t.Fatalf("signature = %s", *block.ThinkingSignature)
+		want := `{"type":"reasoning","id":"rs_1","summary":[],"encrypted_content":"filled"}`
+		if *block.ThinkingSignature != want {
+			t.Fatalf("signature = %s, want %s", *block.ThinkingSignature, want)
 		}
 	})
 }

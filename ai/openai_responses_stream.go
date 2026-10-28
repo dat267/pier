@@ -503,27 +503,25 @@ func ProcessResponsesStream(
 			if slot == nil || slot.thinking == nil || slot.thinking.ThinkingSignature == nil || *slot.thinking.ThinkingSignature == "" {
 				continue
 			}
-			// Upstream skips only when the stored item's field is truthy, and
-			// appends the field last (`{...storedItem, encrypted_content}`).
-			var stored struct {
-				EncryptedContent *string `json:"encrypted_content"`
-			}
-			if jsonUnmarshalStrict(json.RawMessage(*slot.thinking.ThinkingSignature), &stored) != nil {
+			// Match `{...storedItem, encrypted_content}`: replace an existing
+			// empty member without moving its key or appending a duplicate.
+			stored, err := decodeOrderedJSONFields(json.RawMessage(*slot.thinking.ThinkingSignature))
+			if err != nil {
 				continue
 			}
-			if stored.EncryptedContent != nil && *stored.EncryptedContent != "" {
+			if raw, ok := stored.raw("encrypted_content"); ok {
+				var encrypted string
+				if jsonUnmarshalStrict(raw, &encrypted) != nil || encrypted != "" {
+					continue
+				}
+			}
+			encrypted, _ := MarshalJSON(*item.EncryptedContent)
+			stored.set("encrypted_content", encrypted)
+			encoded, err := stored.marshal()
+			if err != nil {
 				continue
 			}
-			object := strings.TrimSpace(*slot.thinking.ThinkingSignature)
-			if !strings.HasPrefix(object, "{") || !strings.HasSuffix(object, "}") {
-				continue
-			}
-			enc, _ := MarshalJSON(*item.EncryptedContent)
-			merged := object[:len(object)-1]
-			if strings.TrimSpace(merged) != "{" {
-				merged += ","
-			}
-			signature := merged + `"encrypted_content":` + string(enc) + "}"
+			signature := string(encoded)
 			slot.thinking.ThinkingSignature = &signature
 			// The block inside output.Content is a copy; write it back so the
 			// persisted and emitted message carries the merged signature.
