@@ -204,9 +204,9 @@ func acquireTrustLockSync(path string) (func(), error) {
 	const delayMs = 20
 	var lastErr error
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		release, err := acquireAuthLockDir(path)
+		lock, err := acquireAuthLockDir(path)
 		if err == nil {
-			return release, nil
+			return lock.release, nil
 		}
 		lastErr = err
 		if attempt == maxAttempts {

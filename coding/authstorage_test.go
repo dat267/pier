@@ -346,7 +346,7 @@ func TestAuthStorageLockingAndCancellation(t *testing.T) {
 		defer close(done)
 		// The sync path retries for ~200ms then succeeds once released.
 		time.Sleep(50 * time.Millisecond)
-		release()
+		release.release()
 	}()
 	if _, err := storage.Modify("late", func(current *ai.Credential) (*ai.Credential, error) {
 		return &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: "sk-late"}}, nil
@@ -442,7 +442,7 @@ func TestAuthLockStaleness(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err = %v", err)
 	}
-	release()
+	release.release()
 	if PathExists(lockPath) {
 		t.Fatal("lock must be released")
 	}
@@ -452,7 +452,7 @@ func TestAuthLockStaleness(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer release()
+	defer release.release()
 	if _, err := acquireAuthLockDir(target); !errors.Is(err, errAuthLocked) {
 		t.Fatalf("err = %v", err)
 	}

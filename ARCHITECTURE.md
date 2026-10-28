@@ -3175,6 +3175,15 @@ closed on startup failure and by their respective readers after startup.
 reset checks close again afterwards, so a final buffered read or an in-flight
 timer callback cannot rearm a response that has already closed.
 
+Auth storage's `authFileLock` owns a directory identity, not merely a pathname.
+Auth transactions check that identity before and after their callback/write;
+a lost lease fails instead of committing. Its refresher only touches its own
+directory, and release joins the refresher before removing that directory,
+never a successor's lock after stale recovery. The trust store shares the
+identity-safe release primitive; its trust decision policy is unchanged.
+No credential callback runs under the lease's bookkeeping mutex.
+Test: `TestAuthStorageLostLeaseDoesNotCommitOrReleaseSuccessor`.
+
 Settings storage uses a `settings.json.lock` directory, matching proper-lockfile.
 It reclaims artifacts older than 10 seconds (including legacy regular files),
 refreshes live leases every 5 seconds, and joins its refresher before release.

@@ -29,7 +29,7 @@ import (
 // proper-lockfile (a lock *directory* with staleness detection and an
 // onCompromised callback). The Go backend uses an explicit result/next pair and
 // a lock directory with the same staleness window; "compromised" is detected by
-// observing that the held lock directory disappeared.
+// observing that the held lock directory disappeared or changed identity.
 
 // LockResult is the outcome of a locked read-modify-write. Next is written back
 // when non-nil (upstream's `next` field).
@@ -88,7 +88,7 @@ func authLockDir(path string) string { return path + ".lock" }
 
 // acquireAuthLockSync retries for a short window, mirroring
 // acquireLockSyncWithRetry (10 attempts, 20ms apart).
-func (b *FileAuthStorageBackend) acquireAuthLockSync() (func(), error) {
+func (b *FileAuthStorageBackend) acquireAuthLockSync() (*authFileLock, error) {
 	const maxAttempts = 10
 	const delayMs = 20
 	var lastErr error
@@ -120,13 +120,13 @@ func authLockRetryKind(err error) string {
 
 // acquireAuthLockDir creates the lock directory, treating a stale directory as
 // free.
-func acquireAuthLockDir(path string) (func(), error) {
+func acquireAuthLockDir(path string) (*authFileLock, error) {
 	lockPath := authLockDir(path)
 	info, err := os.Stat(lockPath)
 	if err == nil {
 		if time.Since(info.ModTime()) > authLockStaleMs*time.Millisecond {
 			// Stale: the holder died. Remove and retry.
-			if removeErr := os.RemoveAll(lockPath); removeErr != nil {
+			if removeErr := os.Remove(lockPath); removeErr != nil {
 				return nil, removeErr
 			}
 		} else {
@@ -139,34 +139,77 @@ func acquireAuthLockDir(path string) (func(), error) {
 		}
 		return nil, err
 	}
-	// Keep the mtime fresh so a long-held lock is not treated as stale.
-	stop := make(chan struct{})
-	var stopOnce sync.Once
-	go func() {
-		ticker := time.NewTicker(authLockStaleMs / 3 * time.Millisecond)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-stop:
-				return
-			case <-ticker.C:
+	owned, err := os.Stat(lockPath)
+	if err != nil {
+		return nil, err
+	}
+	lock := &authFileLock{path: lockPath, owned: owned, stop: make(chan struct{}), done: make(chan struct{})}
+	go lock.refresh()
+	return lock, nil
+}
+
+// A lock belongs to its directory identity, not just its path: after stale
+// recovery the old holder must not refresh, write through, or remove a new
+// holder's lease. Join the refresher before release so it cannot touch a
+// successor after the directory has been removed.
+type authFileLock struct {
+	path        string
+	owned       os.FileInfo
+	stop, done  chan struct{}
+	once        sync.Once
+	mu          sync.Mutex
+	compromised error
+}
+
+func (l *authFileLock) checkLocked() error {
+	if l.compromised == nil {
+		current, err := os.Stat(l.path)
+		if err != nil || !os.SameFile(l.owned, current) {
+			l.compromised = fmt.Errorf("Auth storage lock was compromised: %s", l.path)
+		}
+	}
+	return l.compromised
+}
+
+func (l *authFileLock) check() error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.checkLocked()
+}
+
+func (l *authFileLock) refresh() {
+	defer close(l.done)
+	ticker := time.NewTicker(authLockStaleMs / 3 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-l.stop:
+			return
+		case <-ticker.C:
+			l.mu.Lock()
+			if l.checkLocked() == nil {
 				now := time.Now()
-				_ = os.Chtimes(lockPath, now, now)
+				if err := os.Chtimes(l.path, now, now); err != nil {
+					l.compromised = fmt.Errorf("Auth storage lock was compromised: %w", err)
+				}
+			}
+			failed := l.compromised != nil
+			l.mu.Unlock()
+			if failed {
+				return
 			}
 		}
-	}()
-	released := false
-	var releaseMu sync.Mutex
-	return func() {
-		releaseMu.Lock()
-		defer releaseMu.Unlock()
-		if released {
-			return
+	}
+}
+
+func (l *authFileLock) release() {
+	l.once.Do(func() {
+		close(l.stop)
+		<-l.done
+		if l.check() == nil {
+			_ = os.Remove(l.path)
 		}
-		released = true
-		stopOnce.Do(func() { close(stop) })
-		_ = os.RemoveAll(lockPath)
-	}, nil
+	})
 }
 
 const (
@@ -184,7 +227,10 @@ func (b *FileAuthStorageBackend) WithLock(fn func(current *string) (LockResult, 
 	if err != nil {
 		return nil, err
 	}
-	defer release()
+	defer release.release()
+	if err := release.check(); err != nil {
+		return nil, err
+	}
 
 	// The file is created inside the lock: creating it before locking lets a
 	// concurrent writer's content be truncated by the empty placeholder.
@@ -205,10 +251,16 @@ func (b *FileAuthStorageBackend) WithLock(fn func(current *string) (LockResult, 
 	if err != nil {
 		return nil, err
 	}
+	if err := release.check(); err != nil {
+		return nil, err
+	}
 	if result.Next != nil {
 		if err := writeFileMode(b.authPath, *result.Next, authFileWriteMode); err != nil {
 			return nil, err
 		}
+	}
+	if err := release.check(); err != nil {
+		return nil, err
 	}
 	return result.Result, nil
 }
@@ -227,7 +279,10 @@ func (b *FileAuthStorageBackend) WithLockAsync(ctx context.Context, fn func(curr
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = release() }()
+	defer release.release()
+	if err := release.check(); err != nil {
+		return nil, err
+	}
 
 	if err := b.ensureFileExists(); err != nil {
 		return nil, err
@@ -252,17 +307,23 @@ func (b *FileAuthStorageBackend) WithLockAsync(ctx context.Context, fn func(curr
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
+	if err := release.check(); err != nil {
+		return nil, err
+	}
 	if result.Next != nil {
 		if err := writeFileMode(b.authPath, *result.Next, authFileWriteMode); err != nil {
 			return nil, err
 		}
+	}
+	if err := release.check(); err != nil {
+		return nil, err
 	}
 	return result.Result, nil
 }
 
 // acquireAuthLockAsync waits for the lock until the stale deadline, backing off
 // exponentially with jitter.
-func (b *FileAuthStorageBackend) acquireAuthLockAsync(ctx context.Context) (func() error, error) {
+func (b *FileAuthStorageBackend) acquireAuthLockAsync(ctx context.Context) (*authFileLock, error) {
 	const maxDelayMs = 2_000
 	deadline := time.Now().Add(authLockStaleMs * time.Millisecond)
 	retry := 0
@@ -273,7 +334,7 @@ func (b *FileAuthStorageBackend) acquireAuthLockAsync(ctx context.Context) (func
 		}
 		release, err := acquireAuthLockDir(b.authPath)
 		if err == nil {
-			return func() error { release(); return nil }, nil
+			return release, nil
 		}
 		if err := ctx.Err(); err != nil {
 			return nil, err
