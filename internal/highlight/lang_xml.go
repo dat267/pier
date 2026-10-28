@@ -41,7 +41,9 @@ func XML() *Language {
 		Contains: []*Mode{
 			Zero(Mode{ClassName: "attr", Begin: xmlIdentRe}),
 			{
-				Begin: `=\s*`,
+				Begin:        `=\s*`,
+				HasRelevance: true,
+				Relevance:    0,
 				Contains: []*Mode{
 					{
 						ClassName:  "string",

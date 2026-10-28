@@ -61,6 +61,16 @@ func commentMode(begin, end string) *Mode {
 // pass options (relevance, returnEnd, ...) set them on the returned mode.
 func CommentMode(begin, end string) *Mode { return commentMode(begin, end) }
 
+// ZeroComment is COMMENT(begin, end, {relevance: 0}): the reference's
+// convention for a separator comment that should not score a language on its
+// own.
+func ZeroComment(begin, end string) *Mode {
+	mode := commentMode(begin, end)
+	mode.HasRelevance = true
+	mode.Relevance = 0
+	return mode
+}
+
 // CLineCommentMode matches `// ...` comments.
 var CLineCommentMode = commentMode(`//`, `$`)
 
@@ -132,6 +142,11 @@ var RegexpMode = &Mode{
 	Begin:     `\/`,
 	End:       `\/[gimuy]*`,
 	Illegal:   `\n`,
+	// The reference nests a zero-width outer rule (relevance 1) around this
+	// inner rule (relevance 1); the port's lookahead guard replaces the outer
+	// rule, so both contributions land on this single mode (CR-167).
+	HasRelevance: true,
+	Relevance:    2,
 	Contains: []*Mode{
 		BackslashEscape,
 		Zero(Mode{Begin: `\[`, End: `\]`, Contains: []*Mode{BackslashEscape}}),

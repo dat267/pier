@@ -4,11 +4,11 @@ func init() { RegisterLanguage("tcl", Tcl()) }
 
 // Tcl returns the Tcl language definition (a port of languages/tcl.js).
 func Tcl() *Language {
+	// hljs.BINARY_NUMBER_MODE and hljs.C_NUMBER_MODE carry relevance 0; the
+	// wrapper itself keeps the reference's default 1.
 	number := &Mode{ClassName: "number"}
-	number.Variants = []*Mode{
-		Variant(number, func(m *Mode) { m.Begin = BinaryNumberRe }),
-		Variant(number, func(m *Mode) { m.Begin = CNumberRe }),
-	}
+	zeroVariants := []*Mode{Zero(Mode{ClassName: "number", Begin: BinaryNumberRe}), Zero(Mode{ClassName: "number", Begin: CNumberRe})}
+	number.Variants = zeroVariants
 
 	title := &Mode{
 		ClassName:      "title",

@@ -59,9 +59,11 @@ func Markdown() *Language {
 	linkBase := &Mode{
 		ReturnBegin: true,
 		Contains: []*Mode{
-			{ClassName: "string", Begin: `\[`, End: `\]`, ExcludeBegin: true, ReturnEnd: true},
-			{ClassName: "link", Begin: `\]\(`, End: `\)`, ExcludeBegin: true, ExcludeEnd: true},
-			{ClassName: "symbol", Begin: `\]\[`, End: `\]`, ExcludeBegin: true, ExcludeEnd: true},
+			// The reference zeroes these three: a bare bracket pair must not
+			// score the language as a link on its own.
+			Zero(Mode{ClassName: "string", Begin: `\[`, End: `\]`, ExcludeBegin: true, ReturnEnd: true}),
+			Zero(Mode{ClassName: "link", Begin: `\]\(`, End: `\)`, ExcludeBegin: true, ExcludeEnd: true}),
+			Zero(Mode{ClassName: "symbol", Begin: `\]\[`, End: `\]`, ExcludeBegin: true, ExcludeEnd: true}),
 		},
 	}
 	linkBase.Variants = []*Mode{

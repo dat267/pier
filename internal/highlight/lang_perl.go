@@ -81,10 +81,12 @@ func Perl() *Language {
 	for i := range varMode.Variants {
 		if i == 1 {
 			v := varMode.Variants[i]
+			// The reference's trailing `(?![A-Za-z])(?![@$%])` succeeds at the
+			// end of the input, so only a following letter or sigil rejects
+			// the match.
 			v.beforeBegin = func(m *match, resp *Response) {
 				next := m.index + len(m.lexeme)
 				if next >= len(m.input) {
-					resp.IgnoreMatch()
 					return
 				}
 				b := m.input[next]

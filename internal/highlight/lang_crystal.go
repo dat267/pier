@@ -32,7 +32,8 @@ func Crystal() *Language {
 		Variant(expansionBase, func(m *Mode) { m.Begin = `\{%`; m.End = `%\}` }),
 	}
 
-	stringBase := &Mode{ClassName: "string", Contains: []*Mode{BackslashEscape, subst}}
+	// STRING carries relevance 0; its variants inherit it (verified against the engine).
+	stringBase := &Mode{ClassName: "string", HasRelevance: true, Relevance: 0, Contains: []*Mode{BackslashEscape, subst}}
 	stringBase.Variants = []*Mode{
 		Variant(stringBase, func(m *Mode) { m.Begin = `'`; m.End = `'` }),
 		Variant(stringBase, func(m *Mode) { m.Begin = `"`; m.End = `"` }),
@@ -79,7 +80,8 @@ func Crystal() *Language {
 		}
 	}
 
-	regexp2Base := &Mode{ClassName: "regexp", Contains: []*Mode{BackslashEscape, subst}}
+	// REGEXP2 carries relevance 0; its variants inherit it.
+	regexp2Base := &Mode{ClassName: "regexp", HasRelevance: true, Relevance: 0, Contains: []*Mode{BackslashEscape, subst}}
 	regexp2Base.Variants = []*Mode{
 		Variant(regexp2Base, func(m *Mode) { m.Begin = `%r\(`; m.End = `\)`; m.Contains = recursiveParen(`\(`, `\)`) }),
 		Variant(regexp2Base, func(m *Mode) { m.Begin = `%r\[`; m.End = `\]`; m.Contains = recursiveParen(`\[`, `\]`) }),

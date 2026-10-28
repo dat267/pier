@@ -73,7 +73,7 @@ func NSIS() *Language {
 		Contains: []*Mode{
 			HashCommentMode,
 			CBlockCommentMode,
-			CommentMode(`;`, `$`),
+			ZeroComment(`;`, `$`),
 			{ClassName: "function", BeginKeywords: "Function PageEx Section SectionGroup", End: `$`},
 			stringBase,
 			compiler,

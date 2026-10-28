@@ -150,7 +150,8 @@ func buildJS(typescript bool) *Language {
 		Contains:  []*Mode{BackslashEscape, subst},
 	}
 
-	decorator := Zero(Mode{ClassName: "meta", Begin: `@` + jsIdentRe})
+	// The reference declares no relevance here, so it keeps the default 1.
+	decorator := &Mode{ClassName: "meta", Begin: `@` + jsIdentRe}
 	comment := jsComment()
 
 	substInternals := []*Mode{
@@ -327,6 +328,7 @@ func buildJS(typescript bool) *Language {
 		Relevance:    10,
 		Begin:        useStrictBegin,
 	}
+	// The reference zeroes the wrapper; variants inherit that relevance.
 	keywordGuard := &Mode{
 		Variants: []*Mode{
 			{Begin: `\.` + jsIdentRe, HasRelevance: true, Relevance: 0},

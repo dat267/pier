@@ -78,7 +78,9 @@ func CSharp() *Language {
 	doctag := &Mode{
 		ClassName: "doctag",
 		Variants: []*Mode{
-			{ClassName: "doctag", Begin: `///`},
+			// Only the `///` variant is zeroed in the reference; its siblings keep
+			// the default relevance.
+			{ClassName: "doctag", Begin: `///`, HasRelevance: true, Relevance: 0},
 			{ClassName: "doctag", Begin: `<!--|-->`},
 			{ClassName: "doctag", Begin: `</?`, End: `>`},
 		},
@@ -127,11 +129,13 @@ func CSharp() *Language {
 		ExcludeEnd:  true,
 		Keywords:    keywords,
 		Contains: []*Mode{
-			{BeginKeywords: strings.Join(functionModifiers, " ")},
+			{BeginKeywords: strings.Join(functionModifiers, " "), HasRelevance: true, Relevance: 0},
 			{
-				Begin:       IdentRe + `\s*(<.+>\s*)?\(`,
-				ReturnBegin: true,
-				Contains:    []*Mode{TitleMode, genericModifier},
+				Begin:        IdentRe + `\s*(<.+>\s*)?\(`,
+				ReturnBegin:  true,
+				HasRelevance: true,
+				Relevance:    0,
+				Contains:     []*Mode{TitleMode, genericModifier},
 			},
 			{
 				ClassName:    "params",
@@ -140,6 +144,8 @@ func CSharp() *Language {
 				ExcludeBegin: true,
 				ExcludeEnd:   true,
 				Keywords:     keywords,
+				HasRelevance: true,
+				Relevance:    0,
 				Contains:     []*Mode{stringMode, numbers, CBlockCommentMode},
 			},
 			CLineCommentMode,

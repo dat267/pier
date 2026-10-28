@@ -178,6 +178,8 @@ func Ruby() *Language {
 			stringMode,
 			{Begin: rubyMethodRe},
 		},
+		HasRelevance: true,
+		Relevance:    0,
 	}
 	symbolColon.beforeBegin = func(m *match, resp *Response) {
 		next := m.index + len(m.lexeme)

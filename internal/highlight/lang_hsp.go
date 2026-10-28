@@ -59,7 +59,7 @@ func HSP() *Language {
 			QuoteStringMode,
 			AposStringMode,
 			{ClassName: "string", Begin: `\{"`, End: `"\}`, Contains: []*Mode{BackslashEscape}},
-			CommentMode(`;`, `$`),
+			ZeroComment(`;`, `$`),
 			meta,
 			{ClassName: "symbol", Begin: `^\*(\w+|@)`},
 			NumberMode,

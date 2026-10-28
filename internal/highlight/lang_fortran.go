@@ -21,6 +21,8 @@ func Fortran() *Language {
 		Contains:      []*Mode{UnderscoreTitleMode, params},
 	}
 
+	// The wrapper is zeroed and its variants inherit that relevance, matching
+	// the reference's variant expansion.
 	stringBase := &Mode{ClassName: "string", HasRelevance: true, Relevance: 0}
 	stringBase.Variants = []*Mode{
 		Variant(stringBase, func(m *Mode) {
