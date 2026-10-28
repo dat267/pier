@@ -496,7 +496,7 @@ func streamAssistantResponse(
 	addedPartial := false
 
 	for {
-		event, ok := response.Next(settlementContext)
+		event, ok := response.NextSnapshot(settlementContext)
 		if !ok {
 			break
 		}

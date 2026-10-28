@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"math"
+	"slices"
 	"sync"
 	"time"
 )
@@ -243,6 +244,16 @@ func NewAssistantMessageEventStream() *AssistantMessageEventStream {
 // Push forwards an event, timing a response's final message (upstream
 // AssistantMessageEventStream.push).
 func (s *AssistantMessageEventStream) Push(event AssistantMessageEvent) {
+	if event.Partial != nil && event.partialSnapshot == nil {
+		// D285: providers replace value blocks as they accumulate deltas.
+		// Capture the message fields and block slots before returning to that
+		// producer; copying them later on the consumer goroutine would race.
+		// Immutable text/JSON payloads stay shared, avoiding a full-prefix copy.
+		snapshot := *event.Partial
+		snapshot.Content = slices.Clone(event.Partial.Content)
+		snapshot.Diagnostics = slices.Clone(event.Partial.Diagnostics)
+		event.partialSnapshot = &snapshot
+	}
 	switch event.Type {
 	case EventDone:
 		s.timeMessage(event.Message)
@@ -250,6 +261,19 @@ func (s *AssistantMessageEventStream) Push(event AssistantMessageEvent) {
 		s.timeMessage(event.Error)
 	}
 	s.EventStream.Push(event)
+}
+
+// NextSnapshot returns an event whose Partial is the response at Push time,
+// safe to retain across further provider updates. The existing Next method
+// keeps upstream's shared live Partial helper; concurrent consumers such as
+// the agent use this owned handoff instead. Producers must publish via Push.
+func (s *AssistantMessageEventStream) NextSnapshot(ctx context.Context) (AssistantMessageEvent, bool) {
+	event, ok := s.EventStream.Next(ctx)
+	if event.partialSnapshot != nil {
+		event.Partial = event.partialSnapshot
+		event.partialSnapshot = nil
+	}
+	return event, ok
 }
 
 // End settles the stream, timing a result passed directly to it (upstream

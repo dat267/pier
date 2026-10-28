@@ -26,7 +26,9 @@ const (
 // Updates and done must never appear before start.
 //
 // Partial is the shared live response-so-far helper, not an event-time
-// snapshot. Text and thinking blocks are empty when their *_start event is
+// snapshot. Use AssistantMessageEventStream.NextSnapshot for concurrent reads
+// or retention across provider updates; its block payloads are read-only.
+// Text and thinking blocks are empty when their *_start event is
 // emitted and grow only through their corresponding *_delta events until the
 // authoritative *_end. Redacted thinking may be complete at start and emit
 // no deltas. Tool-call arguments at toolcall_start are provider-specific;
@@ -37,6 +39,10 @@ type AssistantMessageEvent struct {
 	// Partial is the live response-so-far. Set on every event except done
 	// and error.
 	Partial *AssistantMessage `json:"partial,omitempty"`
+
+	// partialSnapshot is captured by Push on the provider goroutine. NextSnapshot
+	// uses this owned handoff without changing Partial's live-helper contract.
+	partialSnapshot *AssistantMessage
 
 	// ContentIndex is set on the *_start/*_delta/*_end events.
 	ContentIndex int `json:"contentIndex,omitempty"`

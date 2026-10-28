@@ -254,13 +254,13 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D281)
+## Deliberate divergences from pi (D1–D285)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D281**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D285**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation. Port and review history are available with `git log --oneline`.
 
 ### D41
@@ -3086,6 +3086,34 @@ but retains the configured `http.DefaultClient` transport, timeout and redirect
 hook, and its existing default ten-hop limit rather than fetch's twenty.
 The global client and original request headers are not mutated.
 Tests: `TestResponsesRedirectCredentials`, `TestProviderRequestRedirectPolicy`.
+
+### D285
+
+**Agent stream delivery uses producer-captured read-only partial snapshots.**
+
+Reference: pi v1.4.0 (`4a080252`), `packages/ai/src/utils/event-stream.ts`,
+`types.ts` and `packages/agent/src/agent-loop.ts` `streamAssistantResponse`.
+Upstream's provider partial is a shared live helper, and the agent spreads its
+fields on one JavaScript thread. In Go, the provider and agent run concurrently:
+copying the live struct or serializing its content on the agent/UI goroutine
+races with the provider's next delta, even before the UI event handoff.
+
+`AssistantMessageEventStream.Push` captures message fields, content slots and
+diagnostic slots on the producing goroutine. Published block values and their
+text/JSON payloads stay read-only; copying slots does not copy the growing text
+prefix. Forwarding streams retain the original capture instead of re-reading the
+live helper on a different worker. `NextSnapshot` selects that read-only view,
+and the agent uses it for both its message and inner event. The existing `Next`
+and serialized event shape retain the upstream shared-live `Partial` contract;
+callers that need concurrent read/retention use `NextSnapshot` instead. Producers
+must publish through `AssistantMessageEventStream.Push`.
+
+No UI-state lock, callback queue, or provider/session JSON field is added.
+Tests: `TestAgentOwnsProxyPartialsDuringStreaming` reproduces mutation of an
+emitted event without the race detector, and also covers the race under `-race`;
+`TestAssistantStreamSnapshotDoesNotChangeLiveNext` and
+`TestAssistantStreamForwardingPreservesProducerSnapshot` preserve the old helper
+and forwarded snapshots.
 
 ## Lock inventory
 
