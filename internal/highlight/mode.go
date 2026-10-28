@@ -2,7 +2,6 @@ package highlight
 
 import (
 	"fmt"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -117,14 +116,14 @@ type compiledMode struct {
 	endsWithParent bool
 
 	keywords         map[string]keywordData
-	keywordPatternRe *regexp.Regexp
+	keywordPatternRe *patternRegexp
 	// keywordWord is set when the keyword pattern is the default `\w+`, which
 	// can be scanned without the regexp engine (and its per-call allocation).
 	keywordWord   bool
-	beginRe       *regexp.Regexp
+	beginRe       *patternRegexp
 	beginSource   string
-	endRe         *regexp.Regexp
-	illegalRe     *regexp.Regexp
+	endRe         *patternRegexp
+	illegalRe     *patternRegexp
 	illegalSource string
 	terminatorEnd string
 	contains      []*compiledMode
@@ -160,7 +159,7 @@ type compiler struct {
 	compiled map[*Mode]*compiledMode
 }
 
-func (c *compiler) langRe(src string) (*regexp.Regexp, error) {
+func (c *compiler) langRe(src string) (*patternRegexp, error) {
 	flags := "m"
 	if c.language.CaseInsensitive {
 		flags += "i"

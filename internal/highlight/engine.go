@@ -1,7 +1,6 @@
 package highlight
 
 import (
-	"regexp"
 	"strings"
 )
 
@@ -29,7 +28,7 @@ type Result struct {
 type modeInstance struct {
 	mode       *compiledMode
 	parent     *modeInstance
-	endRe      *regexp.Regexp
+	endRe      *patternRegexp
 	data       map[string]string
 	regexIndex int
 }
@@ -102,6 +101,8 @@ type highlighter struct {
 	continuations    map[string]*compiledMode
 	ignoreIllegals   bool
 	illegal          bool
+	jsLines          bool
+	regexWS          jsWorkspace
 }
 
 const noMatch = -1
@@ -113,6 +114,7 @@ func highlightWith(lang *compiledLanguage, code string, ignoreIllegals bool) *Re
 		emitter:        newEmitter(),
 		continuations:  map[string]*compiledMode{},
 		ignoreIllegals: ignoreIllegals,
+		jsLines:        nonLFLineEnds(code),
 	}
 	h.top = &modeInstance{mode: lang.root, data: map[string]string{}}
 	h.processContinuations()
@@ -125,7 +127,7 @@ func highlightWith(lang *compiledLanguage, code string, ignoreIllegals bool) *Re
 		} else {
 			h.top.regexIndex = 0
 		}
-		m, next := h.top.mode.matcher.exec(code, h.index, h.top.regexIndex)
+		m, next := h.top.mode.matcher.exec(code, h.index, h.top.regexIndex, h.jsLines, &h.regexWS)
 		h.top.regexIndex = next
 		if m == nil {
 			break
@@ -295,7 +297,7 @@ func (h *highlighter) processBuffer() {
 	h.modeBuffer = ""
 }
 
-func (h *highlighter) startNewMode(mode *compiledMode, endRe *regexp.Regexp, data map[string]string) {
+func (h *highlighter) startNewMode(mode *compiledMode, endRe *patternRegexp, data map[string]string) {
 	if mode.className != "" {
 		className := mode.className
 		if alias, ok := h.lang.classNameAliases[className]; ok {
@@ -314,7 +316,7 @@ func (h *highlighter) endOfMode(mode *modeInstance, m *match, remainder string) 
 	if endRe == nil {
 		endRe = mode.mode.endRe
 	}
-	matched := endRe != nil && startsWith(endRe, remainder)
+	matched := endRe != nil && h.lineStartsWith(endRe, remainder)
 	if matched {
 		if mode.mode.onEnd != nil {
 			resp := &Response{data: mode.data}
@@ -369,7 +371,7 @@ func (h *highlighter) doBeginMatch(m *match) int {
 		}
 	}
 
-	var endOverride *regexp.Regexp
+	var endOverride *patternRegexp
 	if newMode.endSameAsBegin {
 		if re, err := compilePattern(escapeLiteral(lexeme), h.lang.flags); err == nil {
 			endOverride = re
@@ -426,7 +428,7 @@ func (h *highlighter) doEndMatch(m *match) int {
 		}
 	}
 	if endMode.mode.starts != nil {
-		var endOverride *regexp.Regexp
+		var endOverride *patternRegexp
 		if endMode.mode.starts.endSameAsBegin {
 			endOverride = endMode.endRe
 			if endOverride == nil {
@@ -524,8 +526,15 @@ func nodesEmitter(nodes []*Node) *emitter {
 	return &emitter{root: root, stack: []*Node{root}}
 }
 
-func startsWith(re *regexp.Regexp, s string) bool {
+func startsWith(re interface{ FindStringIndex(string) []int }, s string) bool {
 	loc := re.FindStringIndex(s)
+	return loc != nil && loc[0] == 0
+}
+
+// lineStartsWith evaluates an assertion at the match's position with JavaScript
+// line terminators, reusing this highlight's matching storage.
+func (h *highlighter) lineStartsWith(re *patternRegexp, s string) bool {
+	loc := re.findIndexWS(s, h.jsLines, &h.regexWS)
 	return loc != nil && loc[0] == 0
 }
 

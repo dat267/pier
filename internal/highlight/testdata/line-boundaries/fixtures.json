@@ -1,0 +1,878 @@
+{
+  "regex": [
+    {
+      "name": "lf-anchors",
+      "source": "^foo$",
+      "input": "before\nfoo\nafter",
+      "flags": "m",
+      "indices": [
+        7,
+        10
+      ]
+    },
+    {
+      "name": "lf-dot",
+      "source": "(.+)",
+      "input": "aa\nbb",
+      "flags": "m",
+      "indices": [
+        0,
+        2,
+        0,
+        2
+      ]
+    },
+    {
+      "name": "lf-class",
+      "source": "([^\\n]+)",
+      "input": "aa\nbb",
+      "flags": "m",
+      "indices": [
+        0,
+        2,
+        0,
+        2
+      ]
+    },
+    {
+      "name": "lf-empty",
+      "source": "^^$$",
+      "input": "\n",
+      "flags": "m",
+      "indices": [
+        0,
+        0
+      ]
+    },
+    {
+      "name": "lf-captures",
+      "source": "^(a+?)(a*)$",
+      "input": "before\naaaa\nafter",
+      "flags": "m",
+      "indices": [
+        7,
+        11,
+        7,
+        8,
+        8,
+        11
+      ]
+    },
+    {
+      "name": "lf-dotall",
+      "source": "^(.+)$",
+      "input": "aa\nbb",
+      "flags": "ms",
+      "indices": [
+        0,
+        5,
+        0,
+        5
+      ]
+    },
+    {
+      "name": "cr-anchors",
+      "source": "^foo$",
+      "input": "before\rfoo\rafter",
+      "flags": "m",
+      "indices": [
+        7,
+        10
+      ]
+    },
+    {
+      "name": "cr-dot",
+      "source": "(.+)",
+      "input": "aa\rbb",
+      "flags": "m",
+      "indices": [
+        0,
+        2,
+        0,
+        2
+      ]
+    },
+    {
+      "name": "cr-class",
+      "source": "([^\\n]+)",
+      "input": "aa\rbb",
+      "flags": "m",
+      "indices": [
+        0,
+        5,
+        0,
+        5
+      ]
+    },
+    {
+      "name": "cr-empty",
+      "source": "^^$$",
+      "input": "\r",
+      "flags": "m",
+      "indices": [
+        0,
+        0
+      ]
+    },
+    {
+      "name": "cr-captures",
+      "source": "^(a+?)(a*)$",
+      "input": "before\raaaa\rafter",
+      "flags": "m",
+      "indices": [
+        7,
+        11,
+        7,
+        8,
+        8,
+        11
+      ]
+    },
+    {
+      "name": "cr-dotall",
+      "source": "^(.+)$",
+      "input": "aa\rbb",
+      "flags": "ms",
+      "indices": [
+        0,
+        5,
+        0,
+        5
+      ]
+    },
+    {
+      "name": "crlf-anchors",
+      "source": "^foo$",
+      "input": "before\r\nfoo\r\nafter",
+      "flags": "m",
+      "indices": [
+        8,
+        11
+      ]
+    },
+    {
+      "name": "crlf-dot",
+      "source": "(.+)",
+      "input": "aa\r\nbb",
+      "flags": "m",
+      "indices": [
+        0,
+        2,
+        0,
+        2
+      ]
+    },
+    {
+      "name": "crlf-class",
+      "source": "([^\\n]+)",
+      "input": "aa\r\nbb",
+      "flags": "m",
+      "indices": [
+        0,
+        3,
+        0,
+        3
+      ]
+    },
+    {
+      "name": "crlf-empty",
+      "source": "^^$$",
+      "input": "\r\n",
+      "flags": "m",
+      "indices": [
+        0,
+        0
+      ]
+    },
+    {
+      "name": "crlf-captures",
+      "source": "^(a+?)(a*)$",
+      "input": "before\r\naaaa\r\nafter",
+      "flags": "m",
+      "indices": [
+        8,
+        12,
+        8,
+        9,
+        9,
+        12
+      ]
+    },
+    {
+      "name": "crlf-dotall",
+      "source": "^(.+)$",
+      "input": "aa\r\nbb",
+      "flags": "ms",
+      "indices": [
+        0,
+        6,
+        0,
+        6
+      ]
+    },
+    {
+      "name": "ls-anchors",
+      "source": "^foo$",
+      "input": "before foo after",
+      "flags": "m",
+      "indices": [
+        9,
+        12
+      ]
+    },
+    {
+      "name": "ls-dot",
+      "source": "(.+)",
+      "input": "aa bb",
+      "flags": "m",
+      "indices": [
+        0,
+        2,
+        0,
+        2
+      ]
+    },
+    {
+      "name": "ls-class",
+      "source": "([^\\n]+)",
+      "input": "aa bb",
+      "flags": "m",
+      "indices": [
+        0,
+        7,
+        0,
+        7
+      ]
+    },
+    {
+      "name": "ls-empty",
+      "source": "^^$$",
+      "input": " ",
+      "flags": "m",
+      "indices": [
+        0,
+        0
+      ]
+    },
+    {
+      "name": "ls-captures",
+      "source": "^(a+?)(a*)$",
+      "input": "before aaaa after",
+      "flags": "m",
+      "indices": [
+        9,
+        13,
+        9,
+        10,
+        10,
+        13
+      ]
+    },
+    {
+      "name": "ls-dotall",
+      "source": "^(.+)$",
+      "input": "aa bb",
+      "flags": "ms",
+      "indices": [
+        0,
+        7,
+        0,
+        7
+      ]
+    },
+    {
+      "name": "ps-anchors",
+      "source": "^foo$",
+      "input": "before foo after",
+      "flags": "m",
+      "indices": [
+        9,
+        12
+      ]
+    },
+    {
+      "name": "ps-dot",
+      "source": "(.+)",
+      "input": "aa bb",
+      "flags": "m",
+      "indices": [
+        0,
+        2,
+        0,
+        2
+      ]
+    },
+    {
+      "name": "ps-class",
+      "source": "([^\\n]+)",
+      "input": "aa bb",
+      "flags": "m",
+      "indices": [
+        0,
+        7,
+        0,
+        7
+      ]
+    },
+    {
+      "name": "ps-empty",
+      "source": "^^$$",
+      "input": " ",
+      "flags": "m",
+      "indices": [
+        0,
+        0
+      ]
+    },
+    {
+      "name": "ps-captures",
+      "source": "^(a+?)(a*)$",
+      "input": "before aaaa after",
+      "flags": "m",
+      "indices": [
+        9,
+        13,
+        9,
+        10,
+        10,
+        13
+      ]
+    },
+    {
+      "name": "ps-dotall",
+      "source": "^(.+)$",
+      "input": "aa bb",
+      "flags": "ms",
+      "indices": [
+        0,
+        7,
+        0,
+        7
+      ]
+    },
+    {
+      "name": "nel-anchors",
+      "source": "^foo$",
+      "input": "beforefooafter",
+      "flags": "m",
+      "indices": null
+    },
+    {
+      "name": "nel-dot",
+      "source": "(.+)",
+      "input": "aabb",
+      "flags": "m",
+      "indices": [
+        0,
+        6,
+        0,
+        6
+      ]
+    },
+    {
+      "name": "nel-class",
+      "source": "([^\\n]+)",
+      "input": "aabb",
+      "flags": "m",
+      "indices": [
+        0,
+        6,
+        0,
+        6
+      ]
+    },
+    {
+      "name": "nel-empty",
+      "source": "^^$$",
+      "input": "",
+      "flags": "m",
+      "indices": null
+    },
+    {
+      "name": "nel-captures",
+      "source": "^(a+?)(a*)$",
+      "input": "beforeaaaaafter",
+      "flags": "m",
+      "indices": null
+    },
+    {
+      "name": "nel-dotall",
+      "source": "^(.+)$",
+      "input": "aabb",
+      "flags": "ms",
+      "indices": [
+        0,
+        6,
+        0,
+        6
+      ]
+    },
+    {
+      "name": "alternative-fallback",
+      "source": "(^foo|foo)",
+      "input": "xfoo\r",
+      "flags": "m",
+      "indices": [
+        1,
+        4,
+        1,
+        4
+      ]
+    },
+    {
+      "name": "alternative-at-line",
+      "source": "(^foo|foo)",
+      "input": "x foo",
+      "flags": "m",
+      "indices": [
+        4,
+        7,
+        4,
+        7
+      ]
+    },
+    {
+      "name": "literal-cr-before-anchor",
+      "source": "(\\r)^foo$",
+      "input": "before\rfoo",
+      "flags": "m",
+      "indices": [
+        6,
+        10,
+        6,
+        7
+      ]
+    },
+    {
+      "name": "literal-ls-before-anchor",
+      "source": "( )^foo$",
+      "input": "before foo",
+      "flags": "m",
+      "indices": [
+        6,
+        12,
+        6,
+        9
+      ]
+    },
+    {
+      "name": "lazy-literal-cr",
+      "source": "(.*?)(\\r)(.*)",
+      "input": "aa\rbb",
+      "flags": "m",
+      "indices": [
+        0,
+        5,
+        0,
+        2,
+        2,
+        3,
+        3,
+        5
+      ]
+    },
+    {
+      "name": "literal-cr",
+      "source": "(\\r)",
+      "input": "aa\rbb",
+      "flags": "m",
+      "indices": [
+        2,
+        3,
+        2,
+        3
+      ]
+    },
+    {
+      "name": "literal-ls",
+      "source": "( )",
+      "input": "aa bb",
+      "flags": "m",
+      "indices": [
+        2,
+        5,
+        2,
+        5
+      ]
+    },
+    {
+      "name": "greedy-alternative",
+      "source": "(a+|ab)",
+      "input": "\r aaab",
+      "flags": "m",
+      "indices": [
+        2,
+        5,
+        2,
+        5
+      ]
+    },
+    {
+      "name": "lazy-alternative",
+      "source": "(a+?|ab)",
+      "input": "\r aaab",
+      "flags": "m",
+      "indices": [
+        2,
+        3,
+        2,
+        3
+      ]
+    },
+    {
+      "name": "optional-capture",
+      "source": "(a)?b",
+      "input": "\r b",
+      "flags": "m",
+      "indices": [
+        2,
+        3,
+        -1,
+        -1
+      ]
+    },
+    {
+      "name": "multibyte-before-cr",
+      "source": "é\r foo",
+      "input": "xé\rfoo",
+      "flags": "m",
+      "indices": null
+    },
+    {
+      "name": "astral-before-ls",
+      "source": "😀 foo",
+      "input": "x😀 foo",
+      "flags": "m",
+      "indices": [
+        1,
+        11
+      ]
+    }
+  ],
+  "highlights": [
+    {
+      "name": "lf-go-0",
+      "language": "go",
+      "code": "// comment\npackage demo",
+      "html": "<span class=\"hljs-comment\">// comment</span>\n<span class=\"hljs-keyword\">package</span> demo"
+    },
+    {
+      "name": "lf-javascript-1",
+      "language": "javascript",
+      "code": "// comment\nconst value = 1;",
+      "html": "<span class=\"hljs-comment\">// comment</span>\n<span class=\"hljs-keyword\">const</span> value = <span class=\"hljs-number\">1</span>;"
+    },
+    {
+      "name": "lf-python-2",
+      "language": "python",
+      "code": "# comment\nreturn True",
+      "html": "<span class=\"hljs-comment\"># comment</span>\n<span class=\"hljs-keyword\">return</span> <span class=\"hljs-literal\">True</span>"
+    },
+    {
+      "name": "lf-markdown-3",
+      "language": "markdown",
+      "code": "# Heading\n## Next",
+      "html": "<span class=\"hljs-section\"># Heading</span>\n<span class=\"hljs-section\">## Next</span>"
+    },
+    {
+      "name": "lf-ini-4",
+      "language": "ini",
+      "code": "; comment\n[section]\nkey = true",
+      "html": "<span class=\"hljs-comment\">; comment</span>\n<span class=\"hljs-section\">[section]</span>\n<span class=\"hljs-attr\">key</span> = <span class=\"hljs-literal\">true</span>"
+    },
+    {
+      "name": "lf-javascript-5",
+      "language": "javascript",
+      "code": "const value = \"a\nb\";",
+      "html": "const value = &quot;a\nb&quot;;"
+    },
+    {
+      "name": "lf-go-6",
+      "language": "go",
+      "code": "var café = 1\n// note\npackage demo",
+      "html": "<span class=\"hljs-keyword\">var</span> café = <span class=\"hljs-number\">1</span>\n<span class=\"hljs-comment\">// note</span>\n<span class=\"hljs-keyword\">package</span> demo"
+    },
+    {
+      "name": "lf-javascript-7",
+      "language": "javascript",
+      "code": "const café = \"é\";\n// note\nconst next = 1;",
+      "html": "<span class=\"hljs-keyword\">const</span> café = <span class=\"hljs-string\">&quot;é&quot;</span>;\n<span class=\"hljs-comment\">// note</span>\n<span class=\"hljs-keyword\">const</span> next = <span class=\"hljs-number\">1</span>;"
+    },
+    {
+      "name": "lf-markdown-8",
+      "language": "markdown",
+      "code": "😀\n# Heading\n## Next",
+      "html": "😀\n<span class=\"hljs-section\"># Heading</span>\n<span class=\"hljs-section\">## Next</span>"
+    },
+    {
+      "name": "cr-go-9",
+      "language": "go",
+      "code": "// comment\rpackage demo",
+      "html": "<span class=\"hljs-comment\">// comment</span>\r<span class=\"hljs-keyword\">package</span> demo"
+    },
+    {
+      "name": "cr-javascript-10",
+      "language": "javascript",
+      "code": "// comment\rconst value = 1;",
+      "html": "<span class=\"hljs-comment\">// comment</span>\r<span class=\"hljs-keyword\">const</span> value = <span class=\"hljs-number\">1</span>;"
+    },
+    {
+      "name": "cr-python-11",
+      "language": "python",
+      "code": "# comment\rreturn True",
+      "html": "<span class=\"hljs-comment\"># comment</span>\r<span class=\"hljs-keyword\">return</span> <span class=\"hljs-literal\">True</span>"
+    },
+    {
+      "name": "cr-markdown-12",
+      "language": "markdown",
+      "code": "# Heading\r## Next",
+      "html": "<span class=\"hljs-section\"># Heading</span>\r<span class=\"hljs-section\">## Next</span>"
+    },
+    {
+      "name": "cr-ini-13",
+      "language": "ini",
+      "code": "; comment\r[section]\rkey = true",
+      "html": "<span class=\"hljs-comment\">; comment</span>\r<span class=\"hljs-section\">[section]</span>\r<span class=\"hljs-attr\">key</span> = <span class=\"hljs-literal\">true</span>"
+    },
+    {
+      "name": "cr-javascript-14",
+      "language": "javascript",
+      "code": "const value = \"a\rb\";",
+      "html": "<span class=\"hljs-keyword\">const</span> value = <span class=\"hljs-string\">&quot;a\rb&quot;</span>;"
+    },
+    {
+      "name": "cr-go-15",
+      "language": "go",
+      "code": "var café = 1\r// note\rpackage demo",
+      "html": "<span class=\"hljs-keyword\">var</span> café = <span class=\"hljs-number\">1</span>\r<span class=\"hljs-comment\">// note</span>\r<span class=\"hljs-keyword\">package</span> demo"
+    },
+    {
+      "name": "cr-javascript-16",
+      "language": "javascript",
+      "code": "const café = \"é\";\r// note\rconst next = 1;",
+      "html": "<span class=\"hljs-keyword\">const</span> café = <span class=\"hljs-string\">&quot;é&quot;</span>;\r<span class=\"hljs-comment\">// note</span>\r<span class=\"hljs-keyword\">const</span> next = <span class=\"hljs-number\">1</span>;"
+    },
+    {
+      "name": "cr-markdown-17",
+      "language": "markdown",
+      "code": "😀\r# Heading\r## Next",
+      "html": "😀\r<span class=\"hljs-section\"># Heading</span>\r<span class=\"hljs-section\">## Next</span>"
+    },
+    {
+      "name": "crlf-go-18",
+      "language": "go",
+      "code": "// comment\r\npackage demo",
+      "html": "<span class=\"hljs-comment\">// comment</span>\r\n<span class=\"hljs-keyword\">package</span> demo"
+    },
+    {
+      "name": "crlf-javascript-19",
+      "language": "javascript",
+      "code": "// comment\r\nconst value = 1;",
+      "html": "<span class=\"hljs-comment\">// comment</span>\r\n<span class=\"hljs-keyword\">const</span> value = <span class=\"hljs-number\">1</span>;"
+    },
+    {
+      "name": "crlf-python-20",
+      "language": "python",
+      "code": "# comment\r\nreturn True",
+      "html": "<span class=\"hljs-comment\"># comment</span>\r\n<span class=\"hljs-keyword\">return</span> <span class=\"hljs-literal\">True</span>"
+    },
+    {
+      "name": "crlf-markdown-21",
+      "language": "markdown",
+      "code": "# Heading\r\n## Next",
+      "html": "<span class=\"hljs-section\"># Heading</span>\r\n<span class=\"hljs-section\">## Next</span>"
+    },
+    {
+      "name": "crlf-ini-22",
+      "language": "ini",
+      "code": "; comment\r\n[section]\r\nkey = true",
+      "html": "<span class=\"hljs-comment\">; comment</span>\r\n<span class=\"hljs-section\">[section]</span>\r\n<span class=\"hljs-attr\">key</span> = <span class=\"hljs-literal\">true</span>"
+    },
+    {
+      "name": "crlf-javascript-23",
+      "language": "javascript",
+      "code": "const value = \"a\r\nb\";",
+      "html": "const value = &quot;a\r\nb&quot;;"
+    },
+    {
+      "name": "crlf-go-24",
+      "language": "go",
+      "code": "var café = 1\r\n// note\r\npackage demo",
+      "html": "<span class=\"hljs-keyword\">var</span> café = <span class=\"hljs-number\">1</span>\r\n<span class=\"hljs-comment\">// note</span>\r\n<span class=\"hljs-keyword\">package</span> demo"
+    },
+    {
+      "name": "crlf-javascript-25",
+      "language": "javascript",
+      "code": "const café = \"é\";\r\n// note\r\nconst next = 1;",
+      "html": "<span class=\"hljs-keyword\">const</span> café = <span class=\"hljs-string\">&quot;é&quot;</span>;\r\n<span class=\"hljs-comment\">// note</span>\r\n<span class=\"hljs-keyword\">const</span> next = <span class=\"hljs-number\">1</span>;"
+    },
+    {
+      "name": "crlf-markdown-26",
+      "language": "markdown",
+      "code": "😀\r\n# Heading\r\n## Next",
+      "html": "😀\r\n<span class=\"hljs-section\"># Heading</span>\r\n<span class=\"hljs-section\">## Next</span>"
+    },
+    {
+      "name": "ls-go-27",
+      "language": "go",
+      "code": "// comment package demo",
+      "html": "<span class=\"hljs-comment\">// comment</span> <span class=\"hljs-keyword\">package</span> demo"
+    },
+    {
+      "name": "ls-javascript-28",
+      "language": "javascript",
+      "code": "// comment const value = 1;",
+      "html": "<span class=\"hljs-comment\">// comment</span> <span class=\"hljs-keyword\">const</span> value = <span class=\"hljs-number\">1</span>;"
+    },
+    {
+      "name": "ls-python-29",
+      "language": "python",
+      "code": "# comment return True",
+      "html": "<span class=\"hljs-comment\"># comment</span> <span class=\"hljs-keyword\">return</span> <span class=\"hljs-literal\">True</span>"
+    },
+    {
+      "name": "ls-markdown-30",
+      "language": "markdown",
+      "code": "# Heading ## Next",
+      "html": "<span class=\"hljs-section\"># Heading</span> <span class=\"hljs-section\">## Next</span>"
+    },
+    {
+      "name": "ls-ini-31",
+      "language": "ini",
+      "code": "; comment [section] key = true",
+      "html": "<span class=\"hljs-comment\">; comment</span> <span class=\"hljs-section\">[section]</span> <span class=\"hljs-attr\">key</span> = <span class=\"hljs-literal\">true</span>"
+    },
+    {
+      "name": "ls-javascript-32",
+      "language": "javascript",
+      "code": "const value = \"a b\";",
+      "html": "<span class=\"hljs-keyword\">const</span> value = <span class=\"hljs-string\">&quot;a b&quot;</span>;"
+    },
+    {
+      "name": "ls-go-33",
+      "language": "go",
+      "code": "var café = 1 // note package demo",
+      "html": "<span class=\"hljs-keyword\">var</span> café = <span class=\"hljs-number\">1</span> <span class=\"hljs-comment\">// note</span> <span class=\"hljs-keyword\">package</span> demo"
+    },
+    {
+      "name": "ls-javascript-34",
+      "language": "javascript",
+      "code": "const café = \"é\"; // note const next = 1;",
+      "html": "<span class=\"hljs-keyword\">const</span> café = <span class=\"hljs-string\">&quot;é&quot;</span>; <span class=\"hljs-comment\">// note</span> <span class=\"hljs-keyword\">const</span> next = <span class=\"hljs-number\">1</span>;"
+    },
+    {
+      "name": "ls-markdown-35",
+      "language": "markdown",
+      "code": "😀 # Heading ## Next",
+      "html": "😀 <span class=\"hljs-section\"># Heading</span> <span class=\"hljs-section\">## Next</span>"
+    },
+    {
+      "name": "ps-go-36",
+      "language": "go",
+      "code": "// comment package demo",
+      "html": "<span class=\"hljs-comment\">// comment</span> <span class=\"hljs-keyword\">package</span> demo"
+    },
+    {
+      "name": "ps-javascript-37",
+      "language": "javascript",
+      "code": "// comment const value = 1;",
+      "html": "<span class=\"hljs-comment\">// comment</span> <span class=\"hljs-keyword\">const</span> value = <span class=\"hljs-number\">1</span>;"
+    },
+    {
+      "name": "ps-python-38",
+      "language": "python",
+      "code": "# comment return True",
+      "html": "<span class=\"hljs-comment\"># comment</span> <span class=\"hljs-keyword\">return</span> <span class=\"hljs-literal\">True</span>"
+    },
+    {
+      "name": "ps-markdown-39",
+      "language": "markdown",
+      "code": "# Heading ## Next",
+      "html": "<span class=\"hljs-section\"># Heading</span> <span class=\"hljs-section\">## Next</span>"
+    },
+    {
+      "name": "ps-ini-40",
+      "language": "ini",
+      "code": "; comment [section] key = true",
+      "html": "<span class=\"hljs-comment\">; comment</span> <span class=\"hljs-section\">[section]</span> <span class=\"hljs-attr\">key</span> = <span class=\"hljs-literal\">true</span>"
+    },
+    {
+      "name": "ps-javascript-41",
+      "language": "javascript",
+      "code": "const value = \"a b\";",
+      "html": "<span class=\"hljs-keyword\">const</span> value = <span class=\"hljs-string\">&quot;a b&quot;</span>;"
+    },
+    {
+      "name": "ps-go-42",
+      "language": "go",
+      "code": "var café = 1 // note package demo",
+      "html": "<span class=\"hljs-keyword\">var</span> café = <span class=\"hljs-number\">1</span> <span class=\"hljs-comment\">// note</span> <span class=\"hljs-keyword\">package</span> demo"
+    },
+    {
+      "name": "ps-javascript-43",
+      "language": "javascript",
+      "code": "const café = \"é\"; // note const next = 1;",
+      "html": "<span class=\"hljs-keyword\">const</span> café = <span class=\"hljs-string\">&quot;é&quot;</span>; <span class=\"hljs-comment\">// note</span> <span class=\"hljs-keyword\">const</span> next = <span class=\"hljs-number\">1</span>;"
+    },
+    {
+      "name": "ps-markdown-44",
+      "language": "markdown",
+      "code": "😀 # Heading ## Next",
+      "html": "😀 <span class=\"hljs-section\"># Heading</span> <span class=\"hljs-section\">## Next</span>"
+    },
+    {
+      "name": "nel-go-45",
+      "language": "go",
+      "code": "// commentpackage demo",
+      "html": "<span class=\"hljs-comment\">// commentpackage demo</span>"
+    },
+    {
+      "name": "nel-javascript-46",
+      "language": "javascript",
+      "code": "// commentconst value = 1;",
+      "html": "<span class=\"hljs-comment\">// commentconst value = 1;</span>"
+    },
+    {
+      "name": "nel-python-47",
+      "language": "python",
+      "code": "# commentreturn True",
+      "html": "<span class=\"hljs-comment\"># commentreturn True</span>"
+    },
+    {
+      "name": "nel-markdown-48",
+      "language": "markdown",
+      "code": "# Heading## Next",
+      "html": "<span class=\"hljs-section\"># Heading## Next</span>"
+    },
+    {
+      "name": "nel-ini-49",
+      "language": "ini",
+      "code": "; comment[section]key = true",
+      "html": "<span class=\"hljs-comment\">; comment[section]key = true</span>"
+    },
+    {
+      "name": "nel-javascript-50",
+      "language": "javascript",
+      "code": "const value = \"ab\";",
+      "html": "<span class=\"hljs-keyword\">const</span> value = <span class=\"hljs-string\">&quot;ab&quot;</span>;"
+    },
+    {
+      "name": "nel-go-51",
+      "language": "go",
+      "code": "var café = 1// notepackage demo",
+      "html": "<span class=\"hljs-keyword\">var</span> café = <span class=\"hljs-number\">1</span><span class=\"hljs-comment\">// notepackage demo</span>"
+    },
+    {
+      "name": "nel-javascript-52",
+      "language": "javascript",
+      "code": "const café = \"é\";// noteconst next = 1;",
+      "html": "<span class=\"hljs-keyword\">const</span> café = <span class=\"hljs-string\">&quot;é&quot;</span>;<span class=\"hljs-comment\">// noteconst next = 1;</span>"
+    },
+    {
+      "name": "nel-markdown-53",
+      "language": "markdown",
+      "code": "😀# Heading## Next",
+      "html": "😀# Heading## Next"
+    }
+  ]
+}

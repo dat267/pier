@@ -10,4 +10,10 @@
 // RE2-compatible; the rest (lookaround, backreferences, `\uXXXX` escapes) are
 // normalized or given an explicit equivalent here. pattern_test.go checks the
 // whole set against a snapshot of the reference's compiled regexes.
+//
+// JavaScript and RE2 disagree about line boundaries and whitespace: JS ^/$
+// recognize CR, LF, U+2028 and U+2029, and its \s is Unicode-aware. Patterns
+// are normalized for the whitespace classes, and input containing CR, U+2028 or
+// U+2029 is matched by a small Thompson VM over the same compiled program with
+// JS assertions and dot semantics, so LF-only documents keep the RE2 path.
 package highlight

@@ -1,0 +1,768 @@
+{
+  "regex": [
+    {
+      "name": "not-space-space",
+      "source": "\\S",
+      "input": " ",
+      "indices": null
+    },
+    {
+      "name": "not-space-tab",
+      "source": "\\S",
+      "input": "\t",
+      "indices": null
+    },
+    {
+      "name": "not-space-vt",
+      "source": "\\S",
+      "input": "\u000b",
+      "indices": null
+    },
+    {
+      "name": "not-space-ff",
+      "source": "\\S",
+      "input": "\f",
+      "indices": null
+    },
+    {
+      "name": "not-space-cr",
+      "source": "\\S",
+      "input": "\r",
+      "indices": null
+    },
+    {
+      "name": "not-space-lf",
+      "source": "\\S",
+      "input": "\n",
+      "indices": null
+    },
+    {
+      "name": "not-space-nbsp",
+      "source": "\\S",
+      "input": " ",
+      "indices": null
+    },
+    {
+      "name": "not-space-ogham",
+      "source": "\\S",
+      "input": " ",
+      "indices": null
+    },
+    {
+      "name": "not-space-enquad",
+      "source": "\\S",
+      "input": " ",
+      "indices": null
+    },
+    {
+      "name": "not-space-hair",
+      "source": "\\S",
+      "input": " ",
+      "indices": null
+    },
+    {
+      "name": "not-space-ls",
+      "source": "\\S",
+      "input": " ",
+      "indices": null
+    },
+    {
+      "name": "not-space-ps",
+      "source": "\\S",
+      "input": " ",
+      "indices": null
+    },
+    {
+      "name": "not-space-nnbsp",
+      "source": "\\S",
+      "input": " ",
+      "indices": null
+    },
+    {
+      "name": "not-space-mmsp",
+      "source": "\\S",
+      "input": " ",
+      "indices": null
+    },
+    {
+      "name": "not-space-ideo",
+      "source": "\\S",
+      "input": "　",
+      "indices": null
+    },
+    {
+      "name": "not-space-bom",
+      "source": "\\S",
+      "input": "﻿",
+      "indices": null
+    },
+    {
+      "name": "not-space-nel",
+      "source": "\\S",
+      "input": "",
+      "indices": [
+        0,
+        2
+      ]
+    },
+    {
+      "name": "not-space-zero",
+      "source": "\\S",
+      "input": "​",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "not-space-letter",
+      "source": "\\S",
+      "input": "a",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "space-class-space",
+      "source": "\\s",
+      "input": " ",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "space-class-tab",
+      "source": "\\s",
+      "input": "\t",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "space-class-vt",
+      "source": "\\s",
+      "input": "\u000b",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "space-class-ff",
+      "source": "\\s",
+      "input": "\f",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "space-class-cr",
+      "source": "\\s",
+      "input": "\r",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "space-class-lf",
+      "source": "\\s",
+      "input": "\n",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "space-class-nbsp",
+      "source": "\\s",
+      "input": " ",
+      "indices": [
+        0,
+        2
+      ]
+    },
+    {
+      "name": "space-class-ogham",
+      "source": "\\s",
+      "input": " ",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "space-class-enquad",
+      "source": "\\s",
+      "input": " ",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "space-class-hair",
+      "source": "\\s",
+      "input": " ",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "space-class-ls",
+      "source": "\\s",
+      "input": " ",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "space-class-ps",
+      "source": "\\s",
+      "input": " ",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "space-class-nnbsp",
+      "source": "\\s",
+      "input": " ",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "space-class-mmsp",
+      "source": "\\s",
+      "input": " ",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "space-class-ideo",
+      "source": "\\s",
+      "input": "　",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "space-class-bom",
+      "source": "\\s",
+      "input": "﻿",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "space-class-nel",
+      "source": "\\s",
+      "input": "",
+      "indices": null
+    },
+    {
+      "name": "space-class-zero",
+      "source": "\\s",
+      "input": "​",
+      "indices": null
+    },
+    {
+      "name": "space-class-letter",
+      "source": "\\s",
+      "input": "a",
+      "indices": null
+    },
+    {
+      "name": "not-space-colon-space",
+      "source": "^[^\\s:]+$",
+      "input": " ",
+      "indices": null
+    },
+    {
+      "name": "not-space-colon-tab",
+      "source": "^[^\\s:]+$",
+      "input": "\t",
+      "indices": null
+    },
+    {
+      "name": "not-space-colon-vt",
+      "source": "^[^\\s:]+$",
+      "input": "\u000b",
+      "indices": null
+    },
+    {
+      "name": "not-space-colon-ff",
+      "source": "^[^\\s:]+$",
+      "input": "\f",
+      "indices": null
+    },
+    {
+      "name": "not-space-colon-cr",
+      "source": "^[^\\s:]+$",
+      "input": "\r",
+      "indices": null
+    },
+    {
+      "name": "not-space-colon-lf",
+      "source": "^[^\\s:]+$",
+      "input": "\n",
+      "indices": null
+    },
+    {
+      "name": "not-space-colon-nbsp",
+      "source": "^[^\\s:]+$",
+      "input": " ",
+      "indices": null
+    },
+    {
+      "name": "not-space-colon-ogham",
+      "source": "^[^\\s:]+$",
+      "input": " ",
+      "indices": null
+    },
+    {
+      "name": "not-space-colon-enquad",
+      "source": "^[^\\s:]+$",
+      "input": " ",
+      "indices": null
+    },
+    {
+      "name": "not-space-colon-hair",
+      "source": "^[^\\s:]+$",
+      "input": " ",
+      "indices": null
+    },
+    {
+      "name": "not-space-colon-ls",
+      "source": "^[^\\s:]+$",
+      "input": " ",
+      "indices": null
+    },
+    {
+      "name": "not-space-colon-ps",
+      "source": "^[^\\s:]+$",
+      "input": " ",
+      "indices": null
+    },
+    {
+      "name": "not-space-colon-nnbsp",
+      "source": "^[^\\s:]+$",
+      "input": " ",
+      "indices": null
+    },
+    {
+      "name": "not-space-colon-mmsp",
+      "source": "^[^\\s:]+$",
+      "input": " ",
+      "indices": null
+    },
+    {
+      "name": "not-space-colon-ideo",
+      "source": "^[^\\s:]+$",
+      "input": "　",
+      "indices": null
+    },
+    {
+      "name": "not-space-colon-bom",
+      "source": "^[^\\s:]+$",
+      "input": "﻿",
+      "indices": null
+    },
+    {
+      "name": "not-space-colon-nel",
+      "source": "^[^\\s:]+$",
+      "input": "",
+      "indices": [
+        0,
+        2
+      ]
+    },
+    {
+      "name": "not-space-colon-zero",
+      "source": "^[^\\s:]+$",
+      "input": "​",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "not-space-colon-letter",
+      "source": "^[^\\s:]+$",
+      "input": "a",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "any-char-space",
+      "source": "[\\s\\S]",
+      "input": " ",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "any-char-tab",
+      "source": "[\\s\\S]",
+      "input": "\t",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "any-char-vt",
+      "source": "[\\s\\S]",
+      "input": "\u000b",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "any-char-ff",
+      "source": "[\\s\\S]",
+      "input": "\f",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "any-char-cr",
+      "source": "[\\s\\S]",
+      "input": "\r",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "any-char-lf",
+      "source": "[\\s\\S]",
+      "input": "\n",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "any-char-nbsp",
+      "source": "[\\s\\S]",
+      "input": " ",
+      "indices": [
+        0,
+        2
+      ]
+    },
+    {
+      "name": "any-char-ogham",
+      "source": "[\\s\\S]",
+      "input": " ",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "any-char-enquad",
+      "source": "[\\s\\S]",
+      "input": " ",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "any-char-hair",
+      "source": "[\\s\\S]",
+      "input": " ",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "any-char-ls",
+      "source": "[\\s\\S]",
+      "input": " ",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "any-char-ps",
+      "source": "[\\s\\S]",
+      "input": " ",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "any-char-nnbsp",
+      "source": "[\\s\\S]",
+      "input": " ",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "any-char-mmsp",
+      "source": "[\\s\\S]",
+      "input": " ",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "any-char-ideo",
+      "source": "[\\s\\S]",
+      "input": "　",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "any-char-bom",
+      "source": "[\\s\\S]",
+      "input": "﻿",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "any-char-nel",
+      "source": "[\\s\\S]",
+      "input": "",
+      "indices": [
+        0,
+        2
+      ]
+    },
+    {
+      "name": "any-char-zero",
+      "source": "[\\s\\S]",
+      "input": "​",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "any-char-letter",
+      "source": "[\\s\\S]",
+      "input": "a",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "word-or-space-space",
+      "source": "[\\w\\s]+",
+      "input": " ",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "word-or-space-tab",
+      "source": "[\\w\\s]+",
+      "input": "\t",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "word-or-space-vt",
+      "source": "[\\w\\s]+",
+      "input": "\u000b",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "word-or-space-ff",
+      "source": "[\\w\\s]+",
+      "input": "\f",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "word-or-space-cr",
+      "source": "[\\w\\s]+",
+      "input": "\r",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "word-or-space-lf",
+      "source": "[\\w\\s]+",
+      "input": "\n",
+      "indices": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "word-or-space-nbsp",
+      "source": "[\\w\\s]+",
+      "input": " ",
+      "indices": [
+        0,
+        2
+      ]
+    },
+    {
+      "name": "word-or-space-ogham",
+      "source": "[\\w\\s]+",
+      "input": " ",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "word-or-space-enquad",
+      "source": "[\\w\\s]+",
+      "input": " ",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "word-or-space-hair",
+      "source": "[\\w\\s]+",
+      "input": " ",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "word-or-space-ls",
+      "source": "[\\w\\s]+",
+      "input": " ",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "word-or-space-ps",
+      "source": "[\\w\\s]+",
+      "input": " ",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "word-or-space-nnbsp",
+      "source": "[\\w\\s]+",
+      "input": " ",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "word-or-space-mmsp",
+      "source": "[\\w\\s]+",
+      "input": " ",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "word-or-space-ideo",
+      "source": "[\\w\\s]+",
+      "input": "　",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "word-or-space-bom",
+      "source": "[\\w\\s]+",
+      "input": "﻿",
+      "indices": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "word-or-space-nel",
+      "source": "[\\w\\s]+",
+      "input": "",
+      "indices": null
+    },
+    {
+      "name": "word-or-space-zero",
+      "source": "[\\w\\s]+",
+      "input": "​",
+      "indices": null
+    },
+    {
+      "name": "word-or-space-letter",
+      "source": "[\\w\\s]+",
+      "input": "a",
+      "indices": [
+        0,
+        1
+      ]
+    }
+  ],
+  "highlights": [
+    {
+      "name": "ini-0",
+      "language": "ini",
+      "code": "; comment [section] key = true",
+      "html": "<span class=\"hljs-comment\">; comment</span> <span class=\"hljs-section\">[section]</span> <span class=\"hljs-attr\">key</span> = <span class=\"hljs-literal\">true</span>"
+    },
+    {
+      "name": "ini-1",
+      "language": "ini",
+      "code": "; comment [section] key = true",
+      "html": "<span class=\"hljs-comment\">; comment</span> <span class=\"hljs-section\">[section]</span> <span class=\"hljs-attr\">key</span> = <span class=\"hljs-literal\">true</span>"
+    },
+    {
+      "name": "ini-2",
+      "language": "ini",
+      "code": "; comment x\nkey = true",
+      "html": "<span class=\"hljs-comment\">; comment x</span>\n<span class=\"hljs-attr\">key</span> = <span class=\"hljs-literal\">true</span>"
+    }
+  ]
+}

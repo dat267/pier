@@ -1,9 +1,9 @@
 package highlight
 
 import (
-	"regexp"
 	"strings"
 	"sync"
+	"unicode/utf8"
 )
 
 // This file ports highlight.js's MultiRegex and ResumableMultiRegex (core.js).
@@ -68,7 +68,7 @@ type multiRegex struct {
 	datas        []matchData
 	matchAt      int
 	position     int
-	matcherRe    *regexp.Regexp
+	matcherRe    *patternRegexp
 	flags        string
 	// dispatch selects the rules that can begin at the current byte and matches
 	// only those, anchored, instead of running the whole alternation's NFA.
@@ -91,10 +91,10 @@ type multiRegex struct {
 	// prefixed with a single-char wildcard) decides whether a boundary match
 	// also matches with the real preceding byte.
 	verifyStart bool
-	// prefixedRe is the anchored form that consumes the real preceding byte
+	// prefixedRe is the anchored form that consumes the real preceding rune
 	// before the rules, so a match at the search position is checked with the
 	// correct \b/^ context without a bit-state verify pass.
-	prefixedRe *regexp.Regexp
+	prefixedRe *patternRegexp
 }
 
 func newMultiRegex() *multiRegex {
@@ -265,7 +265,7 @@ func (m *multiRegex) subMatcher(b byte) *multiRegex {
 }
 
 // exec finds the leftmost match at or after lastIndex.
-func (m *multiRegex) exec(s string, lastIndex int) *match {
+func (m *multiRegex) exec(s string, lastIndex int, jsLines bool, ws *jsWorkspace) *match {
 	if m.matcherRe == nil && len(m.manuals) == 0 {
 		return nil
 	}
@@ -273,12 +273,12 @@ func (m *multiRegex) exec(s string, lastIndex int) *match {
 		return nil
 	}
 	if m.dispatch {
-		return m.execDispatch(s, lastIndex)
+		return m.execDispatch(s, lastIndex, jsLines, ws)
 	}
-	return m.execScan(s, lastIndex)
+	return m.execScan(s, lastIndex, jsLines, ws)
 }
 
-func (m *multiRegex) execDispatch(s string, lastIndex int) *match {
+func (m *multiRegex) execDispatch(s string, lastIndex int, jsLines bool, ws *jsWorkspace) *match {
 	search := lastIndex
 	for search <= len(s) {
 		candidate := m.indexFirstByte(s, search)
@@ -291,14 +291,16 @@ func (m *multiRegex) execDispatch(s string, lastIndex int) *match {
 		var regexMatch, manualMatch *match
 		if sub := m.subMatcher(b); sub != nil {
 			if search == 0 {
-				if loc := sub.matcherRe.FindStringSubmatchIndex(s[0:]); loc != nil {
+				if loc := sub.matcherRe.findSubmatchWS(s, jsLines, ws); loc != nil {
 					regexMatch = sub.buildMatch(s, 0, loc)
 				}
 			} else if sub.prefixedRe != nil {
-				if loc := sub.prefixedRe.FindStringSubmatchIndex(s[search-1:]); loc != nil {
-					regexMatch = sub.buildMatch(s, search-1, loc)
+				_, width := utf8.DecodeLastRuneInString(s[:search])
+				base := search - width
+				if loc := sub.prefixedRe.findSubmatchWS(s[base:], jsLines, ws); loc != nil {
+					regexMatch = sub.buildMatch(s, base, loc)
 				}
-			} else if loc := sub.matcherRe.FindStringSubmatchIndex(s[search:]); loc != nil {
+			} else if loc := sub.matcherRe.findSubmatchWS(s[search:], jsLines, ws); loc != nil {
 				regexMatch = sub.buildMatch(s, search, loc)
 			}
 		}
@@ -335,7 +337,7 @@ func (m *multiRegex) execDispatch(s string, lastIndex int) *match {
 // execScan is the joined-alternation path used when per-byte dispatch is not
 // available. Manual rules are tested position by position against the leftmost
 // regex match.
-func (m *multiRegex) execScan(s string, lastIndex int) *match {
+func (m *multiRegex) execScan(s string, lastIndex int, jsLines bool, ws *jsWorkspace) *match {
 	search := lastIndex
 	for search <= len(s) {
 		regexAbs := -1
@@ -348,7 +350,7 @@ func (m *multiRegex) execScan(s string, lastIndex int) *match {
 				}
 				search = candidate
 			}
-			regexLoc = m.matcherRe.FindStringSubmatchIndex(s[search:])
+			regexLoc = m.matcherRe.findSubmatchWS(s[search:], jsLines, ws)
 			if regexLoc != nil {
 				regexAbs = search + regexLoc[0]
 			}
@@ -393,8 +395,10 @@ func (m *multiRegex) execScan(s string, lastIndex int) *match {
 				// context and the correct rule wins. Returning the slice match
 				// instead would keep a rule that only matched because the slice
 				// boundary looked like a line start.
-				if vloc := m.prefixedRe.FindStringSubmatchIndex(s[regexAbs-1:]); vloc != nil && vloc[0] == 0 {
-					return m.buildMatch(s, regexAbs-1, vloc)
+				_, width := utf8.DecodeLastRuneInString(s[:regexAbs])
+				base := regexAbs - width
+				if vloc := m.prefixedRe.findSubmatchWS(s[base:], jsLines, ws); vloc != nil && vloc[0] == 0 {
+					return m.buildMatch(s, base, vloc)
 				}
 			}
 			search = regexAbs + 1
@@ -514,14 +518,14 @@ func (r *resumableMultiRegex) getMatcher(index int) *multiRegex {
 
 // exec scans from lastIndex starting at regexIndex and returns the match and the
 // next regexIndex.
-func (r *resumableMultiRegex) exec(s string, lastIndex, regexIndex int) (*match, int) {
+func (r *resumableMultiRegex) exec(s string, lastIndex, regexIndex int, jsLines bool, ws *jsWorkspace) (*match, int) {
 	matcher := r.getMatcher(regexIndex)
-	result := matcher.exec(s, lastIndex)
+	result := matcher.exec(s, lastIndex, jsLines, ws)
 	base := regexIndex
 	if regexIndex != 0 {
 		if result == nil || result.index != lastIndex {
 			full := r.getMatcher(0)
-			result = full.exec(s, lastIndex+1)
+			result = full.exec(s, lastIndex+1, jsLines, ws)
 			// The fallback result comes from the full matcher, so its rule position
 			// is already absolute. Adding the partial index to it (what the
 			// reference does, relying on its shared rule objects) overshoots and
