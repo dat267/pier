@@ -1296,10 +1296,11 @@ func renderLatexImpl(source string, options RenderLatexOptions) (string, bool) {
 	}
 	trimmed := make([]string, 0, len(lines))
 	for _, line := range lines {
-		if indentation > len(line) {
-			indentation = len(line)
-		}
-		trimmed = append(trimmed, strings.TrimRight(line[indentation:], " "))
+		// Slice every line with the one computed indentation, like the
+		// reference's line.slice(indentation) (which clamps per line): a
+		// shorter earlier line must not reduce it for the lines after it.
+		start := min(indentation, len(line))
+		trimmed = append(trimmed, strings.TrimRight(line[start:], " "))
 	}
 	return strings.ReplaceAll(strings.TrimRight(strings.Join(trimmed, "\n"), " \t\n\r\v\f\u00a0"), latexProtectedSpace, " "), true
 }

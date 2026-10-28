@@ -102,3 +102,13 @@ func TestLatexAgainstUpstreamGolden(t *testing.T) {
 		}
 	}
 }
+
+// pi v1.4.0 latex.ts renderLatex computes the indentation once over non-empty
+// lines and slices every line with it (Array.prototype.slice clamps), so an
+// empty/short leading line cannot reduce the indentation of later lines.
+func TestLatexDisplayIndentationSurvivesShortLeadingLines(t *testing.T) {
+	got, ok := RenderLatex(`\frac{}{}`, RenderLatexOptions{Display: true})
+	if !ok || got != "\n─" {
+		t.Fatalf("empty fraction = %q, %v; want %q", got, ok, "\n─")
+	}
+}
