@@ -46,10 +46,13 @@ func XML() *Language {
 					{
 						ClassName:  "string",
 						EndsParent: true,
+						// Each variant inherits EndsParent from the wrapper in
+						// highlight.js; the port expands raw variants directly, so
+						// every one must carry it.
 						Variants: []*Mode{
-							{ClassName: "string", Begin: `"`, End: `"`, Contains: []*Mode{entities}},
-							{ClassName: "string", Begin: `'`, End: `'`, Contains: []*Mode{entities}},
-							{ClassName: "string", Begin: "[^\\s\"'=<>`]+"},
+							{ClassName: "string", Begin: `"`, End: `"`, EndsParent: true, Contains: []*Mode{entities}},
+							{ClassName: "string", Begin: `'`, End: `'`, EndsParent: true, Contains: []*Mode{entities}},
+							{ClassName: "string", Begin: "[^\\s\"'=<>`]+", EndsParent: true},
 						},
 					},
 				},

@@ -26,6 +26,7 @@ const cases=[
   ['xml','<script\u00a0src="x">var a = 1;</script>'],['xml','<style\u00a0>a { color: red; }</style>'],
   ['xml','<script>y</script>'],['xml','<script\u00a0src="x">y</script>'],['xml','<style>y</style>'],
   ['markdown','```xml\n<script>y</script>\n```'],
+  ['xml','<note id="x"y lang=\'en\'>'],['xml','<note id="😀"y lang=\'en\'>'],
   ['ruby','x = :\u00a0sym'],['vbnet','x = 1\nREM\u00a0comment'],
 ];
 for (const [language,code] of cases) {

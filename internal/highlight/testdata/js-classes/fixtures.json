@@ -873,31 +873,43 @@
       "html": "<span class=\"hljs-code\">```xml\n&lt;script&gt;y&lt;/script&gt;\n```</span>"
     },
     {
-      "name": "guard-21-ruby",
+      "name": "guard-21-xml",
+      "language": "xml",
+      "code": "<note id=\"x\"y lang='en'>",
+      "html": "<span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">note</span> <span class=\"hljs-attr\">id</span>=<span class=\"hljs-string\">&quot;x&quot;</span><span class=\"hljs-attr\">y</span> <span class=\"hljs-attr\">lang</span>=<span class=\"hljs-string\">&#x27;en&#x27;</span>&gt;</span>"
+    },
+    {
+      "name": "guard-22-xml",
+      "language": "xml",
+      "code": "<note id=\"😀\"y lang='en'>",
+      "html": "<span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">note</span> <span class=\"hljs-attr\">id</span>=<span class=\"hljs-string\">&quot;😀&quot;</span><span class=\"hljs-attr\">y</span> <span class=\"hljs-attr\">lang</span>=<span class=\"hljs-string\">&#x27;en&#x27;</span>&gt;</span>"
+    },
+    {
+      "name": "guard-23-ruby",
       "language": "ruby",
       "code": "x = : sym",
       "html": "x = : sym"
     },
     {
-      "name": "guard-22-vbnet",
+      "name": "guard-24-vbnet",
       "language": "vbnet",
       "code": "x = 1\nREM comment",
       "html": "x = <span class=\"hljs-number\">1</span>\n<span class=\"hljs-comment\">REM comment</span>"
     },
     {
-      "name": "ini-23",
+      "name": "ini-25",
       "language": "ini",
       "code": "; comment [section] key = true",
       "html": "<span class=\"hljs-comment\">; comment</span> <span class=\"hljs-section\">[section]</span> <span class=\"hljs-attr\">key</span> = <span class=\"hljs-literal\">true</span>"
     },
     {
-      "name": "ini-24",
+      "name": "ini-26",
       "language": "ini",
       "code": "; comment [section] key = true",
       "html": "<span class=\"hljs-comment\">; comment</span> <span class=\"hljs-section\">[section]</span> <span class=\"hljs-attr\">key</span> = <span class=\"hljs-literal\">true</span>"
     },
     {
-      "name": "ini-25",
+      "name": "ini-27",
       "language": "ini",
       "code": "; comment x\nkey = true",
       "html": "<span class=\"hljs-comment\">; comment x</span>\n<span class=\"hljs-attr\">key</span> = <span class=\"hljs-literal\">true</span>"
