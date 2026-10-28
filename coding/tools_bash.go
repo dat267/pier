@@ -474,14 +474,14 @@ func BashToolDescription(shellName string) string {
 		shellName, DefaultMaxLines, DefaultMaxBytes/1024)
 }
 
-var bashSchemaJSON = mustMarshalJSON(map[string]any{
+var bashSchemaJSON = mustMarshalJSON(json.RawMessage(`{
 	"type": "object",
-	"properties": map[string]any{
-		"command": map[string]any{"type": "string", "description": "Shell command to execute"},
-		"timeout": numSchema("Timeout in seconds (optional, no default timeout)"),
-	},
-	"required": []string{"command"},
-})
+	"required": ["command"],
+	"properties": {
+		"command": {"type": "string", "description": "Shell command to execute"},
+		"timeout": {"type": "number", "description": "Timeout in seconds (optional, no default timeout)"}
+	}
+}`))
 
 const (
 	maxTimeoutMS      = 2_147_483_647

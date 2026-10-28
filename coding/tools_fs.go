@@ -21,10 +21,6 @@ import (
 // renderers, which are host surface). Schemas match the TypeBox-generated
 // JSON.
 
-func numSchema(description string) map[string]any {
-	return map[string]any{"type": "number", "description": description}
-}
-
 // --- read ---
 
 // ReadToolOptions tune the read tool.
@@ -44,15 +40,15 @@ type ReadToolDetails struct {
 }
 
 // readSchemaJSON mirrors the TypeBox schema.
-var readSchemaJSON = mustMarshalJSON(map[string]any{
+var readSchemaJSON = mustMarshalJSON(json.RawMessage(`{
 	"type": "object",
-	"properties": map[string]any{
-		"path":   map[string]any{"type": "string", "description": "Path to the file to read (relative or absolute)"},
-		"offset": numSchema("Line number to start reading from (1-indexed)"),
-		"limit":  numSchema("Maximum number of lines to read"),
-	},
-	"required": []string{"path"},
-})
+	"required": ["path"],
+	"properties": {
+		"path": {"type": "string", "description": "Path to the file to read (relative or absolute)"},
+		"offset": {"type": "number", "description": "Line number to start reading from (1-indexed)"},
+		"limit": {"type": "number", "description": "Maximum number of lines to read"}
+	}
+}`))
 
 // ReadToolDescription is upstream's read description.
 const ReadToolDescription = "Read the contents of a file. Supports text files and images (jpg, png, gif, webp, bmp). Images are sent as attachments. For text files, output is truncated to 2000 lines or 50KB (whichever is hit first). Use offset/limit for large files. When you need the full file, continue with offset until complete."
@@ -249,14 +245,14 @@ func readImageFile(absolutePath, mimeType, originalPath string, autoResize bool,
 // WriteToolDescription is upstream's write description.
 const WriteToolDescription = "Write content to a file. Creates the file if it doesn't exist, overwrites if it does. Automatically creates parent directories."
 
-var writeSchemaJSON = mustMarshalJSON(map[string]any{
+var writeSchemaJSON = mustMarshalJSON(json.RawMessage(`{
 	"type": "object",
-	"properties": map[string]any{
-		"path":    map[string]any{"type": "string", "description": "Path to the file to write (relative or absolute)"},
-		"content": map[string]any{"type": "string", "description": "Content to write to the file"},
-	},
-	"required": []string{"path", "content"},
-})
+	"required": ["path", "content"],
+	"properties": {
+		"path": {"type": "string", "description": "Path to the file to write (relative or absolute)"},
+		"content": {"type": "string", "description": "Content to write to the file"}
+	}
+}`))
 
 // CreateWriteTool builds the write tool.
 func CreateWriteTool(cwd string) agent.AgentTool {
@@ -315,13 +311,13 @@ type LsToolDetails struct {
 // LsToolDescription is upstream's ls description.
 const LsToolDescription = "List directory contents. Returns entries sorted alphabetically, with '/' suffix for directories. Includes dotfiles. Output is truncated to 500 entries or 50KB (whichever is hit first)."
 
-var lsSchemaJSON = mustMarshalJSON(map[string]any{
+var lsSchemaJSON = mustMarshalJSON(json.RawMessage(`{
 	"type": "object",
-	"properties": map[string]any{
-		"path":  map[string]any{"type": "string", "description": "Directory to list (default: current directory)"},
-		"limit": numSchema("Maximum number of entries to return (default: 500)"),
-	},
-})
+	"properties": {
+		"path": {"type": "string", "description": "Directory to list (default: current directory)"},
+		"limit": {"type": "number", "description": "Maximum number of entries to return (default: 500)"}
+	}
+}`))
 
 const lsDefaultLimit = 500
 

@@ -87,32 +87,26 @@ var EditToolSystemPromptGuidelines = []string{
 	"Keep edits[].oldText as small as possible while still being unique in the file. Do not pad with large unchanged regions.",
 }
 
-// actual edit schema built once with the nested replaceEditSchema.
-var editSchema = func() json.RawMessage {
-	schema, err := ai.MarshalJSON(map[string]any{
-		"type": "object",
-		"properties": map[string]any{
-			"path": map[string]any{"type": "string", "description": "Path to the file to edit (relative or absolute)"},
-			"edits": map[string]any{
-				"type":        "array",
-				"description": "One or more targeted replacements. Each edit is matched against the original file, not incrementally. Do not include overlapping or nested edits. If two changes touch the same block or nearby lines, merge them into one edit instead.",
-				"items": map[string]any{
-					"type": "object",
-					"properties": map[string]any{
-						"oldText": map[string]any{"type": "string", "description": "Exact text for one targeted replacement. It must be unique in the original file and must not overlap with any other edits[].oldText in the same call."},
-						"newText": map[string]any{"type": "string", "description": "Replacement text for this targeted edit."},
-					},
-					"required": []string{"oldText", "newText"},
-				},
+// The nested edit schema keeps TypeBox's object and property insertion order.
+var editSchema = mustMarshalJSON(json.RawMessage(`{
+	"type": "object",
+	"required": ["path", "edits"],
+	"properties": {
+		"path": {"type": "string", "description": "Path to the file to edit (relative or absolute)"},
+		"edits": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"required": ["oldText", "newText"],
+				"properties": {
+					"oldText": {"type": "string", "description": "Exact text for one targeted replacement. It must be unique in the original file and must not overlap with any other edits[].oldText in the same call."},
+					"newText": {"type": "string", "description": "Replacement text for this targeted edit."}
+				}
 			},
-		},
-		"required": []string{"path", "edits"},
-	})
-	if err != nil {
-		panic(err)
+			"description": "One or more targeted replacements. Each edit is matched against the original file, not incrementally. Do not include overlapping or nested edits. If two changes touch the same block or nearby lines, merge them into one edit instead."
+		}
 	}
-	return schema
-}()
+}`))
 
 // PrepareEditArguments ports the edit tool's prepareArguments shim: JSON-
 // string edits arrays, single-edit objects, and the legacy oldText/newText

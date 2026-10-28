@@ -32,15 +32,15 @@ type FindToolDetails struct {
 	ResultLimitReached *float64          `json:"resultLimitReached,omitempty"`
 }
 
-var findSchemaJSON = mustMarshalJSON(map[string]any{
+var findSchemaJSON = mustMarshalJSON(json.RawMessage(`{
 	"type": "object",
-	"properties": map[string]any{
-		"pattern": map[string]any{"type": "string", "description": "Glob pattern to match files, e.g. '*.ts', '**/*.json', or 'src/**/*.spec.ts'"},
-		"path":    map[string]any{"type": "string", "description": "Directory to search in (default: current directory)"},
-		"limit":   numSchema("Maximum number of results (default: 1000)"),
-	},
-	"required": []string{"pattern"},
-})
+	"required": ["pattern"],
+	"properties": {
+		"pattern": {"type": "string", "description": "Glob pattern to match files, e.g. '*.ts', '**/*.json', or 'src/**/*.spec.ts'"},
+		"path": {"type": "string", "description": "Directory to search in (default: current directory)"},
+		"limit": {"type": "number", "description": "Maximum number of results (default: 1000)"}
+	}
+}`))
 
 // RelativizeFindResultPath relativizes a find result against the search
 // root and normalizes to posix separators.
@@ -230,19 +230,19 @@ type GrepToolDetails struct {
 	LinesTruncated    *bool             `json:"linesTruncated,omitempty"`
 }
 
-var grepSchemaJSON = mustMarshalJSON(map[string]any{
+var grepSchemaJSON = mustMarshalJSON(json.RawMessage(`{
 	"type": "object",
-	"properties": map[string]any{
-		"pattern":    map[string]any{"type": "string", "description": "Search pattern (regex or literal string)"},
-		"path":       map[string]any{"type": "string", "description": "Directory or file to search (default: current directory)"},
-		"glob":       map[string]any{"type": "string", "description": "Filter files by glob pattern, e.g. '*.ts' or '**/*.spec.ts'"},
-		"ignoreCase": map[string]any{"type": "boolean", "description": "Case-insensitive search (default: false)"},
-		"literal":    map[string]any{"type": "boolean", "description": "Treat pattern as literal string instead of regex (default: false)"},
-		"context":    numSchema("Number of lines to show before and after each match (default: 0)"),
-		"limit":      numSchema("Maximum number of matches to return (default: 100)"),
-	},
-	"required": []string{"pattern"},
-})
+	"required": ["pattern"],
+	"properties": {
+		"pattern": {"type": "string", "description": "Search pattern (regex or literal string)"},
+		"path": {"type": "string", "description": "Directory or file to search (default: current directory)"},
+		"glob": {"type": "string", "description": "Filter files by glob pattern, e.g. '*.ts' or '**/*.spec.ts'"},
+		"ignoreCase": {"type": "boolean", "description": "Case-insensitive search (default: false)"},
+		"literal": {"type": "boolean", "description": "Treat pattern as literal string instead of regex (default: false)"},
+		"context": {"type": "number", "description": "Number of lines to show before and after each match (default: 0)"},
+		"limit": {"type": "number", "description": "Maximum number of matches to return (default: 100)"}
+	}
+}`))
 
 // rgMatchEvent is one ripgrep --json event.
 type rgMatchEvent struct {
