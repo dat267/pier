@@ -580,16 +580,17 @@ func ProcessResponsesStream(
 			output.Usage.Reasoning = &reasoning
 		}
 		CalculateCost(model, &output.Usage)
-		if options != nil && options.ServiceTier != "" {
-			serviceTier := options.ServiceTier
-			if response.ServiceTier != nil {
-				serviceTier = *response.ServiceTier
-			}
-			if options.ResolveServiceTier != nil {
-				serviceTier = options.ResolveServiceTier(response.ServiceTier, options.ServiceTier)
-			}
-			applyServiceTierPricing(&output.Usage, serviceTier, model)
+		serviceTier := ""
+		if options != nil {
+			serviceTier = options.ServiceTier
 		}
+		if response.ServiceTier != nil {
+			serviceTier = *response.ServiceTier
+		}
+		if options != nil && options.ResolveServiceTier != nil {
+			serviceTier = options.ResolveServiceTier(response.ServiceTier, options.ServiceTier)
+		}
+		applyServiceTierPricing(&output.Usage, serviceTier, model)
 		status := response.Status
 		incompleteReason := ""
 		if response.IncompleteDetails != nil {
