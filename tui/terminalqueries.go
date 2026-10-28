@@ -45,9 +45,9 @@ type backgroundListener struct {
 	listener func(RgbColor)
 }
 
-// terminalQueries owns the query protocol's state: the pending OSC 11 queries,
-// the reply registries and the notification toggle. Registration and reply
-// dispatch both happen on the owner loop, so the registries need no lock.
+// terminalQueries owns the pending queries, reply registries and notification
+// toggle. Listener registries belong to the owner loop; blocking query waits
+// share their settlement bookkeeping with it through colorMu.
 type terminalQueries struct {
 	// started/stopped mirror the terminal's lifecycle: a notification toggle
 	// requested before Start only flips the flag, and Start replays it once raw
@@ -64,8 +64,8 @@ type terminalQueries struct {
 	backgroundListeners  []backgroundListener
 	nextBackgroundID     int
 
-	// colorMu guards the terminal-colors query queue, which the blocking caller
-	// appends to while the owner loop's input dispatch reads it.
+	// colorMu guards query queues and settlement shared by blocking callers
+	// and owner-loop input dispatch. Listener delivery stays outside it.
 	colorMu                     sync.Mutex
 	pendingTerminalColorQueries []*pendingTerminalColorQuery
 }
@@ -146,8 +146,10 @@ func (q *terminalQueries) RequestBackground(writer terminalQueryWriter) {
 // ok=false on timeout or an unparsable reply.
 func (q *terminalQueries) QueryBackground(writer terminalQueryWriter, timeoutMS int) (RgbColor, bool) {
 	query := &pendingOSC11Query{result: make(chan osc11Result, 1)}
+	q.colorMu.Lock()
 	q.pendingOSC11Queries = append(q.pendingOSC11Queries, query)
 	q.pendingOSC11Replies++
+	q.colorMu.Unlock()
 	if writer == nil {
 		return RgbColor{}, false
 	}
@@ -159,9 +161,9 @@ func (q *terminalQueries) QueryBackground(writer terminalQueryWriter, timeoutMS 
 	case result := <-query.result:
 		return result.color, result.ok
 	case <-timer.C:
-		if !query.settled {
-			query.settled = true
-		}
+		q.colorMu.Lock()
+		query.settled = true
+		q.colorMu.Unlock()
 		return RgbColor{}, false
 	}
 }
@@ -423,6 +425,7 @@ func (q *terminalQueries) ConsumeInput(data string) bool {
 func (q *terminalQueries) resolveBackgroundResponse(data string) {
 	color, ok := ParseOsc11BackgroundColor(data)
 
+	q.colorMu.Lock()
 	if q.pendingOSC11Replies > 0 {
 		q.pendingOSC11Replies--
 		var query *pendingOSC11Query
@@ -438,6 +441,7 @@ func (q *terminalQueries) resolveBackgroundResponse(data string) {
 			}
 		}
 	}
+	q.colorMu.Unlock()
 
 	if ok && len(q.backgroundListeners) > 0 {
 		listeners := append([]backgroundListener{}, q.backgroundListeners...)
