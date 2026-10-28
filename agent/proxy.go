@@ -209,6 +209,10 @@ func StreamProxy(model *ai.Model, context ai.TranscriptContext, options ProxyStr
 				}
 			}
 			if readErr != nil {
+				if ctx.Err() != nil {
+					fail(ai.StopAborted, "Request aborted by user")
+					return
+				}
 				if readErr != io.EOF {
 					fail(ai.StopError, readErr.Error())
 					return
