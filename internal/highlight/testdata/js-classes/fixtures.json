@@ -849,31 +849,55 @@
       "html": "<span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">style</span> &gt;</span><span class=\"css\"><span class=\"hljs-selector-tag\">a</span> { <span class=\"hljs-attribute\">color</span>: red; }</span><span class=\"hljs-tag\">&lt;/<span class=\"hljs-name\">style</span>&gt;</span>"
     },
     {
-      "name": "guard-17-ruby",
+      "name": "guard-17-xml",
+      "language": "xml",
+      "code": "<script>y</script>",
+      "html": "<span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">script</span>&gt;</span>y<span class=\"hljs-tag\">&lt;/<span class=\"hljs-name\">script</span>&gt;</span>"
+    },
+    {
+      "name": "guard-18-xml",
+      "language": "xml",
+      "code": "<script src=\"x\">y</script>",
+      "html": "<span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">script</span> <span class=\"hljs-attr\">src</span>=<span class=\"hljs-string\">&quot;x&quot;</span>&gt;</span>y<span class=\"hljs-tag\">&lt;/<span class=\"hljs-name\">script</span>&gt;</span>"
+    },
+    {
+      "name": "guard-19-xml",
+      "language": "xml",
+      "code": "<style>y</style>",
+      "html": "<span class=\"hljs-tag\">&lt;<span class=\"hljs-name\">style</span>&gt;</span>y<span class=\"hljs-tag\">&lt;/<span class=\"hljs-name\">style</span>&gt;</span>"
+    },
+    {
+      "name": "guard-20-markdown",
+      "language": "markdown",
+      "code": "```xml\n<script>y</script>\n```",
+      "html": "<span class=\"hljs-code\">```xml\n&lt;script&gt;y&lt;/script&gt;\n```</span>"
+    },
+    {
+      "name": "guard-21-ruby",
       "language": "ruby",
       "code": "x = : sym",
       "html": "x = : sym"
     },
     {
-      "name": "guard-18-vbnet",
+      "name": "guard-22-vbnet",
       "language": "vbnet",
       "code": "x = 1\nREM comment",
       "html": "x = <span class=\"hljs-number\">1</span>\n<span class=\"hljs-comment\">REM comment</span>"
     },
     {
-      "name": "ini-19",
+      "name": "ini-23",
       "language": "ini",
       "code": "; comment [section] key = true",
       "html": "<span class=\"hljs-comment\">; comment</span> <span class=\"hljs-section\">[section]</span> <span class=\"hljs-attr\">key</span> = <span class=\"hljs-literal\">true</span>"
     },
     {
-      "name": "ini-20",
+      "name": "ini-24",
       "language": "ini",
       "code": "; comment [section] key = true",
       "html": "<span class=\"hljs-comment\">; comment</span> <span class=\"hljs-section\">[section]</span> <span class=\"hljs-attr\">key</span> = <span class=\"hljs-literal\">true</span>"
     },
     {
-      "name": "ini-21",
+      "name": "ini-25",
       "language": "ini",
       "code": "; comment x\nkey = true",
       "html": "<span class=\"hljs-comment\">; comment x</span>\n<span class=\"hljs-attr\">key</span> = <span class=\"hljs-literal\">true</span>"

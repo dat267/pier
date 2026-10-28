@@ -497,7 +497,8 @@ func (h *highlighter) processLexeme(textBefore string, m *match) int {
 
 // highlightAuto picks the registered language in subset with the highest
 // relevance, approximating the reference's highlightAuto for sub-language
-// detection.
+// detection. Like highlightAuto, plain text is always a candidate and wins a
+// relevance tie because it is added first.
 func highlightAuto(code string, subset []string) (*Result, string) {
 	// The reference's `_processSubLanguage` passes `undefined` when the subset is
 	// empty, so `subLanguage: []` (e.g. HTTP's body) auto-detects against every
@@ -505,7 +506,7 @@ func highlightAuto(code string, subset []string) (*Result, string) {
 	if len(subset) == 0 {
 		subset = Languages()
 	}
-	var best *Result
+	best := &Result{Nodes: []*Node{{Text: code}}}
 	bestName := ""
 	for _, name := range subset {
 		lang, err := getCompiledLanguage(name)
@@ -513,7 +514,7 @@ func highlightAuto(code string, subset []string) (*Result, string) {
 			continue
 		}
 		result := highlightWith(lang, code, true)
-		if best == nil || result.Relevance > best.Relevance {
+		if result.Relevance > best.Relevance {
 			best = result
 			bestName = lang.name
 		}
