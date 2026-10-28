@@ -1,58 +1,45 @@
 # pier, a Go coding agent
 
 pier is a terminal-based AI coding agent and a from-scratch Go port of
-[Mario Zechner's pi](https://github.com/earendil-works/pi).
+[Mario Zechner's pi](https://github.com/earendil-works/pi). It is pinned to pi
+v1.4.0 (`4a080252`); use `git log` for release/change history and
+[ARCHITECTURE.md](ARCHITECTURE.md) for design and deliberate differences.
 
-## Reference and scope
+There is no built-in filesystem sandbox: shell, write and edit tools use your OS
+permissions, including outside the workspace. Use external confinement.
 
-The reference pin is pi v1.4.0 (`4a080252`). See [CHANGES.md](CHANGES.md)
-for coverage and [ARCHITECTURE.md](ARCHITECTURE.md) for deliberate differences.
-The extension system is out of scope; `/goal` is built in.
+## Build and install
 
-There is no built-in filesystem sandbox. Shell, write, and edit tools run with
-your OS permissions, including outside the workspace. Use external confinement.
-
-## Build and test
-
-Requires Go 1.27 or later.
+Requires Go 1.27+.
 
 ```sh
 just build       # creates bin/pier
-just check       # formatting, vet, and tests
+just check       # format, vet, tests
 ./bin/pier --help
 ```
 
-Without `just`, use `go build -o bin/pier .` and `go test -count=1 ./...`.
-
-## Install
-
-Install from source with `just install`, or download a release asset and its
-`.sha256` file from [GitHub Releases](https://github.com/dat267/pier/releases).
-Verify the checksum with `sha256sum` or `Get-FileHash` before installing.
-Assets cover Linux (amd64 and arm64), Android (arm64), Windows (amd64 and
-arm64), and macOS (amd64 and arm64). Run `pier update` to update an existing
-installation on each platform. macOS releases are not notarized. The arm64
-binary is ad-hoc signed; the amd64 binary is unsigned. A browser-downloaded
-copy may need `xattr -d com.apple.quarantine` before it runs.
+Install with `just install` or download a release and its `.sha256` file from
+[GitHub Releases](https://github.com/dat267/pier/releases). Verify the checksum
+with `sha256sum` or `Get-FileHash`. Assets cover Linux (amd64/arm64), Android
+(arm64), Windows (amd64/arm64), and macOS (amd64/arm64). Run `pier update` to
+update. macOS binaries are not notarized: arm64 is ad-hoc signed; amd64 is
+unsigned. A downloaded binary may require `xattr -d com.apple.quarantine`.
 
 ## Use
 
-Run `pier` for interactive mode. Use `pier -c` to continue the newest session,
-`pier -r` to choose a session, `pier -p` for print mode, or `pier --mode json`
-for JSON events. `--model`, `--provider`, `--offline`, and `--help` are also
-available. MCP servers configured in settings provide agent tools, and `/login`
-opens the provider authorization page in your browser.
+Run `pier` for interactive mode. `pier -c` continues the latest session,
+`pier -r` selects a session, `pier -p` prints, and `pier --mode json` emits JSON
+events. Options include `--model`, `--provider`, `--offline` and `--help`.
+Configure MCP servers in settings to add tools; `/login` opens provider
+authorization in a browser.
 
-The built-in `/goal` command tracks multi-round objectives in session history.
-The agent can inspect and update goals with the `get_goal` and `set_goal` tools.
-Stdio RPC (`pier --mode rpc`) and its supported commands are documented in
-[the RPC contract](ARCHITECTURE.md#stdio-rpc).
+`/goal` tracks multi-round objectives in session history. The agent can manage
+them with `get_goal` and `set_goal`. Stdio RPC (`pier --mode rpc`) is documented
+in [the RPC contract](ARCHITECTURE.md#stdio-rpc).
 
-## Design and contributor docs
+## Development
 
-Packages follow pi's layout. The interactive UI has a single owner loop, session
-projections supply model context, and persisted JSON preserves JavaScript key
-ordering. See [architecture and performance](ARCHITECTURE.md),
-[ARCHITECTURE.md](ARCHITECTURE.md), and
-[ARCHITECTURE.md](ARCHITECTURE.md). Development guidance is in
-[AGENTS.md](AGENTS.md).
+Packages follow pi's layout. The UI uses a single owner loop; session projections
+build model context, and persisted JSON preserves JavaScript key order. See
+[AGENTS.md](AGENTS.md) for contributor rules, [ARCHITECTURE.md](ARCHITECTURE.md)
+for design details; use `git log` for coverage and change history.

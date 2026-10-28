@@ -70,9 +70,8 @@ const validateCases = [
   ["oauth-callback-query", "srv", { url: "https://example.com/mcp", oauth: { callbackUrl: "http://localhost/cb?x=1" } }],
   ["oauth-callback-port-mismatch", "srv", { url: "https://example.com/mcp", oauth: { callbackUrl: "http://localhost:8080/cb", callbackPort: 8081 } }],
   ["oauth-client-name-blank", "srv", { url: "https://example.com/mcp", oauth: { clientName: "  " } }],
-  // `oauth.clientRegistration` (CIMD) is deliberately unported: CHANGES.md
-  // records the field and the /mcp sign-in UI as out of scope, so its three
-  // validation rules are not pinned here.
+  // This field and the /mcp sign-in UI are out of scope, so its three validation
+  // rules are not pinned here.
   ["oauth-metadata-http-remote", "srv", { url: "https://example.com/mcp", oauth: { authServerMetadataUrl: "http://example.com/meta" } }],
   ["oauth-metadata-https", "srv", { url: "https://example.com/mcp", oauth: { authServerMetadataUrl: "https://example.com/meta" } }],
   ["oauth-metadata-invalid", "srv", { url: "https://example.com/mcp", oauth: { authServerMetadataUrl: "not a url" } }],

@@ -1,3 +1,3 @@
 # Reproduced audit findings
 
-No confirmed unresolved findings.
+No reproduced, unresolved findings.
