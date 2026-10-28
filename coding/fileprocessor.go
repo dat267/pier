@@ -174,6 +174,19 @@ func conversionHint(from, to string) string {
 	return fmt.Sprintf("[Image converted from %s to %s.]", from, to)
 }
 
+// decodeInlineImage contains decoder panics like upstream's Photon try/catch.
+// In particular, Go decoders can panic on unallocatable image dimensions.
+func decodeInlineImage(data []byte) (source image.Image, err error) {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			source = nil
+			err = fmt.Errorf("image decoding failed: %v", recovered)
+		}
+	}()
+	source, _, err = image.Decode(bytes.NewReader(data))
+	return source, err
+}
+
 // resizeInlineImage returns the encoded image, or nil when it cannot be fitted.
 //
 // The strategy is upstream resizeImageInProcess's: fit to the max dimensions,
@@ -185,7 +198,7 @@ func conversionHint(from, to string) string {
 func resizeInlineImage(data []byte, mimeType string, options ImageResizeOptions) *ResizedImage {
 	inputBase64Size := int64(len(data)+2) / 3 * 4
 
-	source, _, err := image.Decode(bytes.NewReader(data))
+	source, err := decodeInlineImage(data)
 	if err != nil {
 		return nil
 	}

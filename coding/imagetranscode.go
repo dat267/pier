@@ -9,7 +9,6 @@ package coding
 import (
 	"bytes"
 	"encoding/base64"
-	"image"
 	_ "image/gif"
 	_ "image/jpeg"
 	"image/png"
@@ -25,7 +24,7 @@ func EncodeImageAsPNG(base64Data string, mimeType string) (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	source, _, err := image.Decode(bytes.NewReader(decoded))
+	source, err := decodeInlineImage(decoded)
 	if err != nil {
 		return "", false
 	}
