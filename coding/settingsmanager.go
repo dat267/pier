@@ -342,42 +342,29 @@ func (s *FileSettingsStorage) WithLock(scope SettingsScope, fn func(current *str
 	if scope == SettingsScopeProject {
 		path = s.ProjectSettingsPath
 	}
-	dir := filepath.Dir(path)
-
-	var release func()
-	var err error
-	exists := fileExists(path)
-	if exists {
-		release, err = acquireLockWithRetry(path)
-		if err != nil {
-			return err
-		}
-		defer release()
+	// D283: unlike JS's synchronous withLock callbacks, Go callers can race
+	// even on the first write. Create the parent and lock before reading,
+	// including read-only loads, rather than invoking the callback unlocked.
+	if err := os.MkdirAll(filepath.Dir(path), 0o777); err != nil {
+		return err
 	}
+	release, err := acquireLockWithRetry(path)
+	if err != nil {
+		return err
+	}
+	defer release()
+
 	var current *string
-	if exists {
-		content, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
+	content, err := os.ReadFile(path)
+	if err == nil {
 		text := string(content)
 		current = &text
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
 	}
 	next := fn(current)
 	if next == nil {
 		return nil
-	}
-	if !fileExists(dir) {
-		if err := os.MkdirAll(dir, 0o777); err != nil {
-			return err
-		}
-	}
-	if release == nil {
-		release, err = acquireLockWithRetry(path)
-		if err != nil {
-			return err
-		}
-		defer release()
 	}
 	return os.WriteFile(path, []byte(*next), 0o666)
 }

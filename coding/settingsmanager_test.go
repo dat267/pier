@@ -289,10 +289,14 @@ func TestSettingsProjectDirectoryCreation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Reading must not create the project config directory.
+	// D283: lock-before-read creates the parent but not the settings file.
+	// Upstream core/settings-manager.ts avoids both on read-only loads.
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
-	if fileExists(projectConfigDir) {
-		t.Fatal("reading project settings must not create the config directory")
+	if !fileExists(projectConfigDir) {
+		t.Fatal("reading project settings must create the parent for locking")
+	}
+	if fileExists(filepath.Join(projectConfigDir, "settings.json")) {
+		t.Fatal("reading project settings must not create the settings file")
 	}
 	if theme := manager.GetTheme(); theme == nil || *theme != "dark" {
 		t.Fatalf("theme = %v", theme)

@@ -3976,6 +3976,26 @@ Test: `TestFileModelsStoreWriteRejectsMalformedAndNonObjectJSON`
 (`coding/modelsstore_test.go`), with the read tolerance pinned by
 `TestFileModelsStoreParseErrors`.
 
+### D283
+
+**Settings transactions lock before the first read, even for a missing file.**
+
+Reference: pi v1.4.0 (`4a080252`), `packages/coding-agent/src/core/settings-manager.ts`
+`FileSettingsStorage.withLock` invokes the callback before locking when the file
+is absent. Two concurrent Go callers can both read absence and overwrite one
+another's first update; JavaScript's synchronous callbacks cannot overlap in
+one process.
+
+Pier creates the parent directory and acquires the existing file lock before
+reading, for both existing and missing settings files. Read-only loads therefore
+create missing settings directories (but never a settings file), and may report
+parent-directory or lock failures. This avoids replaying callbacks or adding a
+second locking protocol and serializes first writers across storage instances
+and processes.
+
+Tests: `TestFileSettingsStorageConcurrentFirstWrites`,
+`TestSettingsProjectDirectoryCreation`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.
