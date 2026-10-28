@@ -174,6 +174,11 @@ type ProviderImages interface {
 	GenerateImages(model *ImagesModel, context ImagesContext, options *ImagesOptions) *AssistantImages
 }
 
+type imagesRefreshAttempt struct {
+	done sync.WaitGroup
+	err  error
+}
+
 // ImagesProvider is one image-generation provider (upstream ImagesProvider).
 type ImagesProvider struct {
 	ID   string
@@ -182,7 +187,7 @@ type ImagesProvider struct {
 
 	mu        sync.Mutex
 	models    []*ImagesModel
-	inflight  *sync.WaitGroup
+	inflight  *imagesRefreshAttempt
 	refreshFn func() ([]*ImagesModel, error)
 	generate  ProviderImages
 }
@@ -235,11 +240,11 @@ func (p *ImagesProvider) RefreshModels() error {
 	if p.inflight != nil {
 		wait := p.inflight
 		p.mu.Unlock()
-		wait.Wait()
-		return nil
+		wait.done.Wait()
+		return wait.err
 	}
-	inflight := &sync.WaitGroup{}
-	inflight.Add(1)
+	inflight := &imagesRefreshAttempt{}
+	inflight.done.Add(1)
 	p.inflight = inflight
 	refresh := p.refreshFn
 	p.mu.Unlock()
@@ -249,9 +254,10 @@ func (p *ImagesProvider) RefreshModels() error {
 	if err == nil {
 		p.models = models
 	}
+	inflight.err = err
 	p.inflight = nil
 	p.mu.Unlock()
-	inflight.Done()
+	inflight.done.Done()
 	return err
 }
 
