@@ -1,0 +1,268 @@
+[
+  {
+    "name": "retained-item-id",
+    "model": {
+      "api": "openai-responses",
+      "id": "gpt-5",
+      "provider": "openai",
+      "reasoning": true,
+      "input": [
+        "text",
+        "image"
+      ]
+    },
+    "messages": [
+      {
+        "role": "user",
+        "content": "look up",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "api": "openai-responses",
+        "provider": "openai",
+        "model": "gpt-5",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "call_1|fc_1",
+            "name": "lookup",
+            "arguments": {
+              "z": "value",
+              "a": 1
+            }
+          }
+        ],
+        "stopReason": "toolUse",
+        "timestamp": 2
+      },
+      {
+        "role": "toolResult",
+        "toolName": "lookup",
+        "toolCallId": "call_1|fc_1",
+        "content": [
+          {
+            "type": "text",
+            "text": "found"
+          }
+        ],
+        "isError": false,
+        "timestamp": 3
+      }
+    ],
+    "input": "[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"look up\"}]},{\"type\":\"function_call\",\"id\":\"fc_1\",\"call_id\":\"call_1\",\"name\":\"lookup\",\"arguments\":\"{\\\"z\\\":\\\"value\\\",\\\"a\\\":1}\"},{\"type\":\"function_call_output\",\"call_id\":\"call_1\",\"output\":\"found\"}]"
+  },
+  {
+    "name": "retained-item-id-with-namespace",
+    "model": {
+      "api": "openai-responses",
+      "id": "gpt-5",
+      "provider": "openai",
+      "reasoning": true,
+      "input": [
+        "text",
+        "image"
+      ]
+    },
+    "messages": [
+      {
+        "role": "user",
+        "content": "look up",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "api": "openai-responses",
+        "provider": "openai",
+        "model": "gpt-5",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "call_1|fc_1",
+            "name": "lookup",
+            "arguments": {
+              "z": "value",
+              "a": 1
+            },
+            "namespace": "tools"
+          }
+        ],
+        "stopReason": "toolUse",
+        "timestamp": 2
+      },
+      {
+        "role": "toolResult",
+        "toolName": "lookup",
+        "toolCallId": "call_1|fc_1",
+        "content": [
+          {
+            "type": "text",
+            "text": "found"
+          }
+        ],
+        "isError": false,
+        "timestamp": 3
+      }
+    ],
+    "input": "[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"look up\"}]},{\"type\":\"function_call\",\"id\":\"fc_1\",\"call_id\":\"call_1\",\"name\":\"lookup\",\"arguments\":\"{\\\"z\\\":\\\"value\\\",\\\"a\\\":1}\",\"namespace\":\"tools\"},{\"type\":\"function_call_output\",\"call_id\":\"call_1\",\"output\":\"found\"}]"
+  },
+  {
+    "name": "different-model-omits-item-id",
+    "model": {
+      "api": "openai-responses",
+      "id": "gpt-5",
+      "provider": "openai",
+      "reasoning": true,
+      "input": [
+        "text",
+        "image"
+      ]
+    },
+    "messages": [
+      {
+        "role": "user",
+        "content": "look up",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "api": "openai-responses",
+        "provider": "openai",
+        "model": "gpt-5-mini",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "call_1|fc_1",
+            "name": "lookup",
+            "arguments": {
+              "z": "value",
+              "a": 1
+            }
+          }
+        ],
+        "stopReason": "toolUse",
+        "timestamp": 2
+      },
+      {
+        "role": "toolResult",
+        "toolName": "lookup",
+        "toolCallId": "call_1|fc_1",
+        "content": [
+          {
+            "type": "text",
+            "text": "found"
+          }
+        ],
+        "isError": false,
+        "timestamp": 3
+      }
+    ],
+    "input": "[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"look up\"}]},{\"type\":\"function_call\",\"call_id\":\"call_1\",\"name\":\"lookup\",\"arguments\":\"{\\\"z\\\":\\\"value\\\",\\\"a\\\":1}\"},{\"type\":\"function_call_output\",\"call_id\":\"call_1\",\"output\":\"found\"}]"
+  },
+  {
+    "name": "no-item-id",
+    "model": {
+      "api": "openai-responses",
+      "id": "gpt-5",
+      "provider": "openai",
+      "reasoning": true,
+      "input": [
+        "text",
+        "image"
+      ]
+    },
+    "messages": [
+      {
+        "role": "user",
+        "content": "look up",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "api": "openai-responses",
+        "provider": "openai",
+        "model": "gpt-5",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "call_1",
+            "name": "lookup",
+            "arguments": {
+              "z": "value",
+              "a": 1
+            }
+          }
+        ],
+        "stopReason": "toolUse",
+        "timestamp": 2
+      },
+      {
+        "role": "toolResult",
+        "toolName": "lookup",
+        "toolCallId": "call_1",
+        "content": [
+          {
+            "type": "text",
+            "text": "found"
+          }
+        ],
+        "isError": false,
+        "timestamp": 3
+      }
+    ],
+    "input": "[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"look up\"}]},{\"type\":\"function_call\",\"call_id\":\"call_1\",\"name\":\"lookup\",\"arguments\":\"{\\\"z\\\":\\\"value\\\",\\\"a\\\":1}\"},{\"type\":\"function_call_output\",\"call_id\":\"call_1\",\"output\":\"found\"}]"
+  },
+  {
+    "name": "foreign-item-id",
+    "model": {
+      "api": "openai-responses",
+      "id": "gpt-5",
+      "provider": "openai",
+      "reasoning": true,
+      "input": [
+        "text",
+        "image"
+      ]
+    },
+    "messages": [
+      {
+        "role": "user",
+        "content": "look up",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "model": "claude",
+        "content": [
+          {
+            "type": "toolCall",
+            "id": "call_1|fc_1",
+            "name": "lookup",
+            "arguments": {
+              "z": "value",
+              "a": 1
+            }
+          }
+        ],
+        "stopReason": "toolUse",
+        "timestamp": 2
+      },
+      {
+        "role": "toolResult",
+        "toolName": "lookup",
+        "toolCallId": "call_1|fc_1",
+        "content": [
+          {
+            "type": "text",
+            "text": "found"
+          }
+        ],
+        "isError": false,
+        "timestamp": 3
+      }
+    ],
+    "input": "[{\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"look up\"}]},{\"type\":\"function_call\",\"id\":\"fc_lxmq3j1alksqn\",\"call_id\":\"call_1\",\"name\":\"lookup\",\"arguments\":\"{\\\"z\\\":\\\"value\\\",\\\"a\\\":1}\"},{\"type\":\"function_call_output\",\"call_id\":\"call_1\",\"output\":\"found\"}]"
+  }
+]

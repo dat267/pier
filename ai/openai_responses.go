@@ -713,17 +713,16 @@ func convertResponsesAssistantMessage(model *Model, m *AssistantMessage, msgInde
 					"type": "custom_tool_call", "call_id": callID, "name": b.Name,
 					"input": SanitizeSurrogates(input),
 				}
-				keys = []string{"type", "call_id", "name", "input"}
+				keys = []string{"type", "id", "call_id", "name", "input"}
 			} else {
 				item = map[string]any{
 					"type": "function_call", "call_id": callID, "name": b.Name,
 					"arguments": string(mustMarshalJSON(json.RawMessage(b.Arguments))),
 				}
-				keys = []string{"type", "call_id", "name", "arguments"}
+				keys = []string{"type", "id", "call_id", "name", "arguments"}
 			}
 			if itemID != "" {
 				item["id"] = itemID
-				keys = append(keys, "id")
 			}
 			if isSameModel && b.Namespace != nil {
 				item["namespace"] = *b.Namespace
