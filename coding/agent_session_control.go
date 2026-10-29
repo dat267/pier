@@ -607,7 +607,7 @@ func (s *AgentSession) preparePromptAndToolLoadout() *ai.SystemMessage {
 		return nil
 	}
 	message := &ai.SystemMessage{Content: ai.StringOrBlocks{Text: ""}, Timestamp: time.Now().UnixMilli()}
-	for _, name := range append([]string{"preamble"}, sectionInsertionOrder(built)...) {
+	for _, name := range append([]string{"preamble"}, sectionInsertionOrder(built, options.CustomSectionOrder)...) {
 		if value, ok := patch[name]; ok {
 			message.SetSection(name, value)
 		}

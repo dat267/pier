@@ -3387,6 +3387,18 @@ Tests: `TestGlobalSettingsFileUsesPrivateMode`,
 paths are not accidentally chmodded; Linux `TestEnsurePrivateDirectoryRejectsSymlink`
 prevents chmod from following an agent-directory symlink.
 
+### D301
+
+**Custom prompt-section order must be supplied explicitly for Go maps.**
+
+Reference: pi v1.4.0 `packages/coding-agent/src/core/system-prompt.ts` inserts
+custom sections through `Object.entries`, preserving JavaScript property order.
+Go maps have no insertion order, so Pier accepts `CustomSectionOrder` to preserve
+the caller's intended order; custom names omitted from that slice are sorted
+lexically for deterministic output. Tests reproduce both explicit ordering and
+the fallback. The `prepareLoadout` extension hook itself remains out of scope
+under D41.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

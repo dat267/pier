@@ -42,6 +42,8 @@ type BuildSystemPromptOptions struct {
 	PromptSourcePaths []string
 	// Sections: additional XML-wrapped prompt sections keyed by tag name.
 	Sections map[string]string
+	// CustomSectionOrder preserves the insertion order of Sections; omitted names sort deterministically.
+	CustomSectionOrder []string
 	// Cwd is the working directory.
 	Cwd string
 	// ContextFiles are pre-loaded context files.
@@ -272,9 +274,9 @@ func BuildSystemPromptSections(input BuildSystemPromptOptions) (SystemPromptSect
 	}
 
 	sections := SystemPromptSections{"preamble": promptSections["preamble"]}
-	// Upstream renders sections in INSERTION order: preamble, tools, rules,
+	// Upstream renders sections in insertion order: preamble, tools, rules,
 	// addendum, project_context, skills, cwd, then custom sections (D176 drops
-	// upstream's `docs` section).
+	// upstream's `docs` section). CustomSectionOrder carries custom map order.
 	knownOrder := []string{"tools", "rules", "addendum", "project_context", "skills", "cwd"}
 	rendered := map[string]bool{"preamble": true}
 	for _, name := range knownOrder {
@@ -296,19 +298,29 @@ func BuildSystemPromptSections(input BuildSystemPromptOptions) (SystemPromptSect
 	return sections, nil
 }
 
-// sectionInsertionOrder recovers the render order: known sections in their
-// fixed sequence, then custom sections sorted.
-func sectionInsertionOrder(sections SystemPromptSections) []string {
+// sectionInsertionOrder recovers the render order: known sections first,
+// then custom sections in caller order, with unspecified names sorted.
+func sectionInsertionOrder(sections SystemPromptSections, customOrder []string) []string {
 	knownOrder := []string{"tools", "rules", "addendum", "project_context", "skills", "cwd"}
 	var out []string
+	seen := map[string]bool{"preamble": true}
 	for _, name := range knownOrder {
 		if _, ok := sections[name]; ok {
 			out = append(out, name)
+			seen[name] = true
 		}
 	}
+	for _, name := range customOrder {
+		if _, ok := sections[name]; ok && !seen[name] {
+			out = append(out, name)
+			seen[name] = true
+		}
+	}
+	// D301: names without an explicit order have no Go map insertion order;
+	// sort them deterministically after the caller-supplied names.
 	var custom []string
 	for name := range sections {
-		if !contains(knownOrder, name) && name != "preamble" {
+		if !seen[name] {
 			custom = append(custom, name)
 		}
 	}
@@ -349,7 +361,7 @@ func BuildSystemPrompt(input BuildSystemPromptOptions) (string, error) {
 	// insertion order — preamble first, then the section order fixed above.
 	parts := []string{content}
 	if sections != nil {
-		orderedNames := append([]string{"preamble"}, sectionInsertionOrder(sections)...)
+		orderedNames := append([]string{"preamble"}, sectionInsertionOrder(sections, input.CustomSectionOrder)...)
 		for _, name := range orderedNames {
 			if value, ok := sections[name]; ok {
 				parts = append(parts, value)
