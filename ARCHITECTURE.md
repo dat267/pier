@@ -254,13 +254,13 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D302)
+## Deliberate divergences from pi (D1–D303)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D302**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D303**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation. Port and review history are available with `git log --oneline`.
 
 ### D41
@@ -3414,6 +3414,25 @@ returns `McpConnectionClosedError` instead. No callback runs under that mutex.
 
 Test: `TestClientConnectDoesNotResurrectClosedConnection` gates send completion
 and checks explicit close, peer drop, and an ordinary successful-connect control.
+
+### D303
+
+**Session-search regexes use Go's RE2 syntax, not JavaScript's.**
+
+Reference: pi v1.4.0
+`packages/coding-agent/src/modes/interactive/components/session-selector-search.ts`
+`parseSearchQuery` compiles `re:` patterns with `new RegExp(pattern, "i")`.
+Pier compiles `regexp.Compile("(?i)" + pattern)`: RE2 has no lookaround or
+backreferences, so patterns upstream accepts (`(?=...)`, `\1`) are parse
+errors and therefore select nothing. Patterns both engines support behave the
+same, including case-insensitive leftmost matching and the score
+`UTF-16 index × 0.1`. Everything else in the query language (quoted phrases,
+unclosed-quote fallback, name filter, relevance ordering) is unchanged; the
+differential corpus of 130 queries over 60 sessions matched upstream, error
+text aside.
+
+Test: `TestSessionSearchRegexUsesRE2Syntax` pins the rejected constructs and a
+matching plain pattern.
 
 ## Lock inventory
 
