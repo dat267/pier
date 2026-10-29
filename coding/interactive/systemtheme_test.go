@@ -359,6 +359,7 @@ func TestSystemThemeFaintTokens(t *testing.T) {
 // registry: "system" is listed first and its ANSI surface is built from the
 // terminal colors.
 func TestSystemThemeWiring(t *testing.T) {
+	t.Cleanup(func() { SetSystemTerminalColors(tui.TerminalColors{}) })
 	SetCustomThemesDir(t.TempDir())
 	SetRegisteredThemes(nil)
 	SetTrueColorSupport(true)
