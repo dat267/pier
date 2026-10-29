@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"errors"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -676,7 +678,7 @@ func (s *MainScreen) reportOverwideLine(lines []string, index int, width int) er
 	}
 	builder.WriteString("\n")
 	_ = os.MkdirAll(strings.TrimSuffix(crashLogPath, "/pi-tui-crash.log"), 0o755)
-	_ = os.WriteFile(crashLogPath, []byte(builder.String()), 0o644)
+	_ = writePrivateTuiCrashLog(crashLogPath, []byte(builder.String()))
 
 	s.Stop(TuiStopOptions{})
 	err := &overwideLineError{index: index, width: VisibleWidth(lines[index]), terminal: width, logPath: crashLogPath}
@@ -684,6 +686,21 @@ func (s *MainScreen) reportOverwideLine(lines []string, index int, width int) er
 		s.OnRenderError(err)
 	}
 	return err
+}
+
+func writePrivateTuiCrashLog(path string, data []byte) error {
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
+	if err != nil {
+		return err
+	}
+	if err := file.Chmod(0o600); err != nil {
+		return errors.Join(err, file.Close())
+	}
+	written, writeErr := file.Write(data)
+	if writeErr == nil && written != len(data) {
+		writeErr = io.ErrShortWrite
+	}
+	return errors.Join(writeErr, file.Close())
 }
 
 // overwideLineError reports a rendered line wider than the terminal.

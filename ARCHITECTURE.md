@@ -254,13 +254,13 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D296)
+## Deliberate divergences from pi (D1–D297)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D296**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D297**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation. Port and review history are available with `git log --oneline`.
 
 ### D41
@@ -3323,6 +3323,18 @@ Windows inherited ACLs are not changed.
 
 Test: `TestCrashLogUsesPrivateMode` checks new and existing files under umask
 000.
+
+### D297
+
+**TUI overwide-line crash logs are private on POSIX.**
+
+Reference: pi v1.4.0 `packages/tui/src/tui-main-screen.ts` writes all rendered
+lines to `pi-tui-crash.log` with `writeFileSync` defaults. Rendered output may
+contain secrets. Pier creates and rewrites the diagnostic with mode 0600;
+Windows inherited ACLs are not changed.
+
+Test: Linux `TestMainScreenCrashLogUsesPrivateMode` checks new and existing
+files.
 
 ## Lock inventory
 
