@@ -107,11 +107,13 @@ func yamlQuotedScalar(value string) string {
 			continue
 		}
 		length := 0
+		utf16Escape := false
 		switch body[i] {
 		case 'x':
 			length = 2
 		case 'u':
 			length = 4
+			utf16Escape = true
 		case 'U':
 			length = 8
 		}
@@ -119,10 +121,28 @@ func yamlQuotedScalar(value string) string {
 			return body
 		}
 		code, err := strconv.ParseUint(body[i+1:i+1+length], 16, 32)
-		if err != nil || !utf8.ValidRune(rune(code)) {
+		if err != nil {
 			return body
 		}
-		out.WriteRune(rune(code))
+		codePoint := rune(code)
+		if utf16Escape && codePoint >= 0xd800 && codePoint <= 0xdbff {
+			lowEscape := i + length + 1
+			if lowEscape+6 > len(body) || body[lowEscape] != '\\' || body[lowEscape+1] != 'u' {
+				return body
+			}
+			low, err := strconv.ParseUint(body[lowEscape+2:lowEscape+6], 16, 16)
+			if err != nil || low < 0xdc00 || low > 0xdfff {
+				return body
+			}
+			codePoint = rune(0x10000 + (uint64(codePoint-0xd800) << 10) + (low - 0xdc00))
+			out.WriteRune(codePoint)
+			i += length + 6
+			continue
+		}
+		if !utf8.ValidRune(codePoint) {
+			return body
+		}
+		out.WriteRune(codePoint)
 		i += length
 	}
 	return out.String()
