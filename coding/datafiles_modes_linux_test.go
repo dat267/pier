@@ -10,13 +10,41 @@ import (
 	"testing"
 )
 
-// Upstream settings-manager.ts writes settings with Node's default mode.
-func TestSettingsFileUsesNodeDefaultMode(t *testing.T) {
+// pi v1.4.0 packages/coding-agent/src/core/settings-manager.ts writes
+// project settings with Node's default mode.
+func TestProjectSettingsFileUsesNodeDefaultMode(t *testing.T) {
 	oldMask := syscall.Umask(0)
 	defer syscall.Umask(oldMask)
 	root := t.TempDir()
 	storage := NewFileSettingsStorage(filepath.Join(root, "project"), filepath.Join(root, "agent"))
 	value := `{"defaultModel":"m"}`
+	if err := storage.WithLock(SettingsScopeProject, func(*string) *string { return &value }); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(storage.ProjectSettingsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := info.Mode().Perm(); got != 0o666 {
+		t.Fatalf("settings mode = %#o; want Node default %#o", got, 0o666)
+	}
+	dirInfo, err := os.Stat(filepath.Dir(storage.ProjectSettingsPath))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := dirInfo.Mode().Perm(); got != 0o777 {
+		t.Fatalf("settings directory mode = %#o; want Node default %#o", got, 0o777)
+	}
+}
+
+// pi v1.4.0 packages/coding-agent/src/core/settings-manager.ts uses the Node
+// default mode; global settings can contain proxy credentials and stay private.
+func TestGlobalSettingsFileUsesPrivateMode(t *testing.T) {
+	oldMask := syscall.Umask(0)
+	defer syscall.Umask(oldMask)
+	root := t.TempDir()
+	storage := NewFileSettingsStorage(filepath.Join(root, "project"), filepath.Join(root, "agent"))
+	value := `{"httpProxy":"http://user:secret@proxy"}`
 	if err := storage.WithLock(SettingsScopeGlobal, func(*string) *string { return &value }); err != nil {
 		t.Fatal(err)
 	}
@@ -24,15 +52,22 @@ func TestSettingsFileUsesNodeDefaultMode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := info.Mode().Perm(); got != 0o666 {
-		t.Fatalf("settings mode = %#o; want Node default %#o", got, 0o666)
+	if got := info.Mode().Perm(); got != 0o600 {
+		t.Fatalf("global settings mode = %#o, want %#o", got, 0o600)
 	}
-	dirInfo, err := os.Stat(filepath.Dir(storage.GlobalSettingsPath))
+	if err := os.Chmod(storage.GlobalSettingsPath, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	value = `{"theme":"dark"}`
+	if err := storage.WithLock(SettingsScopeGlobal, func(*string) *string { return &value }); err != nil {
+		t.Fatal(err)
+	}
+	info, err = os.Stat(storage.GlobalSettingsPath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := dirInfo.Mode().Perm(); got != 0o777 {
-		t.Fatalf("settings directory mode = %#o; want Node default %#o", got, 0o777)
+	if got := info.Mode().Perm(); got != 0o600 {
+		t.Fatalf("replaced global settings mode = %#o, want %#o", got, 0o600)
 	}
 }
 

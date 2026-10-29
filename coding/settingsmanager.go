@@ -371,6 +371,9 @@ func (s *FileSettingsStorage) WithLock(scope SettingsScope, fn func(current *str
 	if !lock.stillOwned() {
 		return fmt.Errorf("settings lock was lost before committing %s", path)
 	}
+	if scope == SettingsScopeGlobal {
+		return writePrivateFile(path, []byte(*next))
+	}
 	return os.WriteFile(path, []byte(*next), 0o666)
 }
 
