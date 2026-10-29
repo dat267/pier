@@ -195,6 +195,9 @@ func writeTrustFile(path string, data trustFile) error {
 	return os.WriteFile(path, []byte(builder.String()), 0o666)
 }
 
+// pi v1.4.0 trust-manager.ts uses proper-lockfile's 10s default stale period.
+const trustLockStaleMs = 10_000
+
 // acquireTrustLockSync locks the trust file with the shared retry policy.
 func acquireTrustLockSync(path string) (func(), error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o777); err != nil {
@@ -204,7 +207,7 @@ func acquireTrustLockSync(path string) (func(), error) {
 	const delayMs = 20
 	var lastErr error
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		lock, err := acquireAuthLockDir(path)
+		lock, err := acquireAuthLockDirWithStale(path, trustLockStaleMs)
 		if err == nil {
 			return lock.release, nil
 		}

@@ -84,6 +84,25 @@ func TestToolTrustStoreRoundTrip(t *testing.T) {
 	}
 }
 
+// pi v1.4.0 packages/coding-agent/src/core/trust-manager.ts calls lockSync
+// without a stale option; pinned proper-lockfile defaults to 10s
+// (pi/node_modules/proper-lockfile/lib/lockfile.js). A 15s-old lock is stale.
+func TestProjectTrustStoreReclaimsUpstreamStaleLock(t *testing.T) {
+	dir := t.TempDir()
+	store := NewProjectTrustStore(dir)
+	lockPath := store.TrustPath() + ".lock"
+	if err := os.Mkdir(lockPath, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	staleAt := time.Now().Add(-15 * time.Second)
+	if err := os.Chtimes(lockPath, staleAt, staleAt); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.ReadEntry(dir); err != nil {
+		t.Fatalf("ReadEntry should reclaim the upstream-stale lock: %v", err)
+	}
+}
+
 func TestToolTrustStoreValidation(t *testing.T) {
 	dir := t.TempDir()
 	store := NewProjectTrustStore(dir)

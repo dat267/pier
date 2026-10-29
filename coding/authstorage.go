@@ -122,10 +122,14 @@ func authLockRetryKind(err error) string {
 // acquireAuthLockDir creates the lock directory, treating a stale directory as
 // free.
 func acquireAuthLockDir(path string) (*authFileLock, error) {
+	return acquireAuthLockDirWithStale(path, authLockStaleMs)
+}
+
+func acquireAuthLockDirWithStale(path string, staleMs int) (*authFileLock, error) {
 	lockPath := authLockDir(path)
 	info, err := os.Stat(lockPath)
 	if err == nil {
-		if time.Since(info.ModTime()) > authLockStaleMs*time.Millisecond {
+		if time.Since(info.ModTime()) > time.Duration(staleMs)*time.Millisecond {
 			// Stale: the holder died. Remove and retry.
 			if removeErr := os.Remove(lockPath); removeErr != nil {
 				return nil, removeErr
@@ -144,7 +148,7 @@ func acquireAuthLockDir(path string) (*authFileLock, error) {
 	if err != nil {
 		return nil, err
 	}
-	lock := &authFileLock{path: lockPath, owned: owned, stop: make(chan struct{}), done: make(chan struct{})}
+	lock := &authFileLock{path: lockPath, owned: owned, staleMs: staleMs, stop: make(chan struct{}), done: make(chan struct{})}
 	go lock.refresh()
 	return lock, nil
 }
@@ -156,6 +160,7 @@ func acquireAuthLockDir(path string) (*authFileLock, error) {
 type authFileLock struct {
 	path        string
 	owned       os.FileInfo
+	staleMs     int
 	stop, done  chan struct{}
 	once        sync.Once
 	mu          sync.Mutex
@@ -180,7 +185,7 @@ func (l *authFileLock) check() error {
 
 func (l *authFileLock) refresh() {
 	defer close(l.done)
-	ticker := time.NewTicker(authLockStaleMs / 3 * time.Millisecond)
+	ticker := time.NewTicker(time.Duration(l.staleMs/3) * time.Millisecond)
 	defer ticker.Stop()
 	for {
 		select {
