@@ -286,11 +286,48 @@ func NewStreamableHttpTransport(options StreamableHttpTransportOptions) *Streama
 		options:   options,
 		parsedURL: parsed,
 		urlErr:    err,
-		client:    &http.Client{},
+		client:    &http.Client{CheckRedirect: checkHttpRedirect},
 		stopCtx:   stopCtx,
 		stop:      stop,
 	}
 	return t
+}
+
+// checkHttpRedirect preserves net/http's ten-hop limit while matching Fetch's
+// removal of authentication headers when a redirect changes origin.
+func checkHttpRedirect(request *http.Request, via []*http.Request) error {
+	if len(via) >= 10 {
+		return fmt.Errorf("stopped after 10 redirects")
+	}
+	if len(via) > 0 && !sameHttpOrigin(via[len(via)-1].URL, request.URL) {
+		for _, name := range []string{"Authorization", "Proxy-Authorization", "Cookie", "Cookie2"} {
+			request.Header.Del(name)
+		}
+	}
+	return nil
+}
+
+func sameHttpOrigin(a, b *url.URL) bool {
+	if !strings.EqualFold(a.Scheme, b.Scheme) || !strings.EqualFold(a.Hostname(), b.Hostname()) {
+		return false
+	}
+	port := func(value *url.URL) string {
+		if specified := value.Port(); specified != "" {
+			if number, err := strconv.Atoi(specified); err == nil {
+				return strconv.Itoa(number)
+			}
+			return specified
+		}
+		switch strings.ToLower(value.Scheme) {
+		case "http":
+			return "80"
+		case "https":
+			return "443"
+		default:
+			return ""
+		}
+	}
+	return port(a) == port(b)
 }
 
 // SessionID returns the server-assigned session, once known.
