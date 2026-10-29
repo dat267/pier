@@ -96,8 +96,9 @@ func TestTrustFileUsesNodeDefaultMode(t *testing.T) {
 	}
 }
 
-// Upstream crash-log.ts writes crash logs with Node's default mode.
-func TestCrashLogUsesNodeDefaultMode(t *testing.T) {
+// pi v1.4.0 packages/coding-agent/src/core/crash-log.ts writes crash logs
+// with Node's default mode; Pier protects potentially sensitive error details.
+func TestCrashLogUsesPrivateMode(t *testing.T) {
 	oldMask := syscall.Umask(0)
 	defer syscall.Umask(oldMask)
 	path := filepath.Join(t.TempDir(), "agent", "crash.log")
@@ -108,8 +109,21 @@ func TestCrashLogUsesNodeDefaultMode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := info.Mode().Perm(); got != 0o666 {
-		t.Fatalf("crash log mode = %#o; want Node default %#o", got, 0o666)
+	if got := info.Mode().Perm(); got != 0o600 {
+		t.Fatalf("crash log mode = %#o, want %#o", got, 0o600)
+	}
+	if err := os.Chmod(path, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if RecordCrash(CrashInput{Error: errors.New("replacement")}, path) == nil {
+		t.Fatal("replacement crash record was not persisted")
+	}
+	info, err = os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := info.Mode().Perm(); got != 0o600 {
+		t.Fatalf("replaced crash log mode = %#o, want %#o", got, 0o600)
 	}
 	dirInfo, err := os.Stat(filepath.Dir(path))
 	if err != nil {

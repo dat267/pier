@@ -81,7 +81,7 @@ func writeCrashLog(records []CrashRecord, path string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, append(encoded, '\n'), 0o666)
+	return writePrivateFile(path, append(encoded, '\n'))
 }
 
 // CrashInput describes a crash to persist.
