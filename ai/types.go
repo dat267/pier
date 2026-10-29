@@ -141,7 +141,9 @@ type StreamOptions struct {
 	// Nil means context.Background().
 	Ctx    context.Context
 	APIKey string
-	Env    ProviderEnv
+	// APIKeySet distinguishes an explicit empty key from an omitted key.
+	APIKeySet bool
+	Env       ProviderEnv
 	// Headers are merged with provider defaults; caller values override
 	// default headers. A nil value suppresses a default header.
 	Headers ProviderHeaders

@@ -13,6 +13,27 @@ import (
 
 // Tests for image-models.ts and api/openrouter-images.ts.
 
+type captureImagesOptions struct{ apiKey string }
+
+func (capture *captureImagesOptions) GenerateImages(_ *ImagesModel, _ ImagesContext, options *ImagesOptions) *AssistantImages {
+	capture.apiKey = options.APIKey
+	return &AssistantImages{}
+}
+
+func TestImagesModelsPreservesExplicitEmptyAPIKey(t *testing.T) {
+	model := &ImagesModel{ID: "image", Provider: "provider", API: KnownImagesApiOpenRouter}
+	capture := &captureImagesOptions{}
+	registry := CreateImagesModels(&CreateModelsOptions{Credentials: staticCredentialStore("provider", "stored-key"), AuthContext: &fakeAuthContext{env: map[string]string{"IMAGE_KEY": "ambient-key"}}})
+	registry.SetProvider(CreateImagesProvider(ImageProviderOptions{
+		ID: "provider", Models: []*ImagesModel{model},
+		Auth: ProviderAuth{APIKey: EnvApiKeyAuth("key", []string{"IMAGE_KEY"})}, API: capture,
+	}))
+	registry.GenerateImages(model, ImagesContext{}, &ImagesOptions{StreamOptions: StreamOptions{APIKey: "", APIKeySet: true}})
+	if capture.apiKey != "" {
+		t.Fatalf("provider received API key %q, want explicit empty override", capture.apiKey)
+	}
+}
+
 func TestImageCatalog(t *testing.T) {
 	if err := ImageCatalogError(); err != nil {
 		t.Fatalf("catalog error: %v", err)

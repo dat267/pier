@@ -414,7 +414,7 @@ func (m *ImagesModels) GenerateImages(model *ImagesModel, context ImagesContext,
 		return imagesError(model, fmt.Sprintf("Unknown provider: %s", model.Provider), options)
 	}
 	resolution, err := m.GetAuth(model.Provider, &AuthResolutionOverrides{
-		APIKey: options.APIKey, Env: options.Env, Ctx: options.Ctx,
+		APIKey: options.APIKey, APIKeySet: options.APIKeySet, Env: options.Env, Ctx: options.Ctx,
 	})
 	if err != nil {
 		return imagesError(model, err.Error(), options)
@@ -431,7 +431,7 @@ func (m *ImagesModels) GenerateImages(model *ImagesModel, context ImagesContext,
 	}
 	// Explicit request options win per field; headers/env merge per key.
 	apiKey := options.APIKey
-	if apiKey == "" {
+	if !options.APIKeySet && apiKey == "" {
 		apiKey = auth.APIKey
 	}
 	headers := aiMergeProviderHeaders(auth.Headers, options.Headers)

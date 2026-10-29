@@ -1004,9 +1004,9 @@ func (m *Models) applyAuth(model *Model, options *ModelsStreamOptions) (*Model, 
 		return nil, nil, err
 	}
 	resolution, err := m.GetAuthForModel(model, &AuthResolutionOverrides{
-		APIKey: options.APIKey,
-		Env:    options.Env,
-		Ctx:    options.Ctx,
+		APIKey: options.APIKey, APIKeySet: options.APIKeySet,
+		Env: options.Env,
+		Ctx: options.Ctx,
 	})
 	if err != nil {
 		return nil, nil, err
@@ -1027,7 +1027,7 @@ func (m *Models) applyAuth(model *Model, options *ModelsStreamOptions) (*Model, 
 // preparation; credential resolution stays with each layer.
 func ApplyResolvedAuth(model *Model, auth ModelAuth, resolutionEnv ProviderEnv, options StreamOptions) (*Model, StreamOptions) {
 	apiKey := options.APIKey
-	if apiKey == "" {
+	if !options.APIKeySet && apiKey == "" {
 		apiKey = auth.APIKey
 	}
 	requestModel := model

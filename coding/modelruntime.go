@@ -960,7 +960,7 @@ func (r *ModelRuntime) prepareStreamRequest(model *ai.Model, options *ai.ModelsS
 		return nil, ai.NewModelsError(ai.ErrCodeProvider, fmt.Sprintf("Unknown provider: %s", model.Provider), nil)
 	}
 	resolution, err := r.GetAuthForModel(model, &ModelRuntimeAuthOverrides{
-		APIKey: requestOptions.APIKey, Env: requestOptions.Env, Ctx: requestOptions.Ctx,
+		APIKey: requestOptions.APIKey, APIKeySet: requestOptions.APIKeySet, Env: requestOptions.Env, Ctx: requestOptions.Ctx,
 	})
 	if err != nil {
 		return nil, err
