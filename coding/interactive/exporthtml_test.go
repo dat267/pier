@@ -103,6 +103,40 @@ func TestAnsiToHTML(t *testing.T) {
 	}
 }
 
+// pi v1.4.0 packages/coding-agent/src/modes/interactive/theme/theme.ts
+// catches invalid export color resolution instead of crashing the HTML export.
+func TestGetThemeExportColorsInvalidVariableReturnsEmpty(t *testing.T) {
+	dir := t.TempDir()
+	SetCustomThemesDir(dir)
+	SetRegisteredThemes(nil)
+	t.Cleanup(func() {
+		SetCustomThemesDir("")
+		SetRegisteredThemes(nil)
+	})
+	colors := make(map[string]string, len(requiredThemeColors))
+	for _, key := range requiredThemeColors {
+		colors[key] = "#123456"
+	}
+	document, err := json.Marshal(map[string]any{
+		"name":   "invalid-export-color",
+		"colors": colors,
+		"export": map[string]string{"pageBg": "missing-variable"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "invalid.json"), document, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	pageBg, cardBg, infoBg, err := GetThemeExportColors("invalid-export-color")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pageBg != "" || cardBg != "" || infoBg != "" {
+		t.Fatalf("invalid export colors = %q %q %q, want all empty", pageBg, cardBg, infoBg)
+	}
+}
+
 // TestExportSessionToHTML drives a real session file through the exporter
 // and pins the document structure plus the embedded session payload.
 func TestExportSessionToHTML(t *testing.T) {

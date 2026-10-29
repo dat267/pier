@@ -129,6 +129,11 @@ func IsLightTheme(themeName string) bool { return themeName == "light" }
 // (upstream getThemeExportColors: var references resolved, palette indexes
 // converted to hex).
 func GetThemeExportColors(themeName string) (pageBg string, cardBg string, infoBg string, err error) {
+	defer func() {
+		if recover() != nil {
+			pageBg, cardBg, infoBg, err = "", "", "", nil
+		}
+	}()
 	name := themeName
 	if name == "" {
 		name = CurrentThemeName()
