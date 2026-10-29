@@ -211,6 +211,64 @@ func TestVertexStreamUsesADCRefreshToken(t *testing.T) {
 	}
 }
 
+// Pinned google-vertex.ts constructs a fresh GoogleGenAI per stream; its ADC
+// client rereads an authorized-user key file when credentials are rotated.
+func TestVertexAuthorizedUserCredentialRotationInvalidatesTokenCache(t *testing.T) {
+	vertexTokenCache.mu.Lock()
+	vertexTokenCache.entries = map[string]cachedVertexToken{}
+	vertexTokenCache.mu.Unlock()
+
+	requests := make(chan string, 2)
+	tokenServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if err := request.ParseForm(); err != nil {
+			http.Error(writer, err.Error(), http.StatusBadRequest)
+			return
+		}
+		refreshToken := request.Form.Get("refresh_token")
+		requests <- refreshToken
+		accessToken := "access-one"
+		if refreshToken == "refresh-two" {
+			accessToken = "access-two"
+		}
+		writer.Header().Set("Content-Type", "application/json")
+		_, _ = writer.Write([]byte(`{"expires_in":3600,"access_token":"` + accessToken + `"}`))
+	}))
+	defer tokenServer.Close()
+
+	credentialsPath := filepath.Join(t.TempDir(), "adc.json")
+	writeCredentials := func(refreshToken string) {
+		t.Helper()
+		credentials, err := json.Marshal(map[string]string{
+			"type": "authorized_user", "client_id": "client-id", "client_secret": "client-secret",
+			"refresh_token": refreshToken, "token_uri": tokenServer.URL,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(credentialsPath, credentials, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeCredentials("refresh-one")
+	env := ProviderEnv{"GOOGLE_APPLICATION_CREDENTIALS": credentialsPath}
+	first, err := vertexAccessToken(ctxpkg.Background(), env)
+	if err != nil || first != "access-one" {
+		t.Fatalf("first token = %q err = %v", first, err)
+	}
+	if got := <-requests; got != "refresh-one" {
+		t.Fatalf("first refresh token = %q", got)
+	}
+
+	writeCredentials("refresh-two")
+	second, err := vertexAccessToken(ctxpkg.Background(), env)
+	if err != nil || second != "access-two" {
+		t.Fatalf("rotated token = %q err = %v; want access-two", second, err)
+	}
+	if got := <-requests; got != "refresh-two" {
+		t.Fatalf("second refresh token = %q; want refresh-two", got)
+	}
+}
+
 func TestVertexExplicitEmptyAPIKeyDoesNotFallBackToEnv(t *testing.T) {
 	t.Setenv("GOOGLE_CLOUD_API_KEY", "AIzaSyAmbient")
 	t.Setenv("GOOGLE_APPLICATION_CREDENTIALS", filepath.Join(t.TempDir(), "missing-adc.json"))

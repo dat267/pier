@@ -3,6 +3,8 @@ package ai
 import (
 	"bytes"
 	ctxpkg "context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -288,8 +290,9 @@ var vertexTokenCache = struct {
 }{entries: map[string]cachedVertexToken{}}
 
 type cachedVertexToken struct {
-	token   string
-	expires time.Time
+	token       string
+	expires     time.Time
+	fingerprint string
 }
 
 // vertexAccessToken resolves an ADC access token: an authorized-user
@@ -311,7 +314,7 @@ func vertexAccessToken(ctx ctxpkg.Context, env ProviderEnv) (string, error) {
 			return "", err
 		}
 		if credentials != nil {
-			return refreshAuthorizedUserToken(ctx, path, credentials)
+			return refreshAuthorizedUserToken(ctx, "authorized-user:"+path, credentials)
 		}
 	}
 	return metadataAccessToken(ctx, env)
@@ -364,8 +367,12 @@ func readAuthorizedUserCredentials(path string) (*authorizedUserCredentials, err
 }
 
 func refreshAuthorizedUserToken(ctx ctxpkg.Context, cacheKey string, credentials *authorizedUserCredentials) (string, error) {
+	encodedCredentials, _ := json.Marshal(credentials)
+	fingerprint := sha256.Sum256(encodedCredentials)
+	fingerprintText := hex.EncodeToString(fingerprint[:])
 	vertexTokenCache.mu.Lock()
-	if cached, ok := vertexTokenCache.entries[cacheKey]; ok && cached.token != "" && time.Now().Before(cached.expires) {
+	if cached, ok := vertexTokenCache.entries[cacheKey]; ok && cached.token != "" &&
+		cached.fingerprint == fingerprintText && time.Now().Before(cached.expires) {
 		vertexTokenCache.mu.Unlock()
 		return cached.token, nil
 	}
@@ -416,7 +423,9 @@ func refreshAuthorizedUserToken(ctx ctxpkg.Context, cacheKey string, credentials
 	// Refresh a minute early to avoid using an expired token.
 	expires := time.Now().Add(time.Duration(expiresIn)*time.Second - time.Minute)
 	vertexTokenCache.mu.Lock()
-	vertexTokenCache.entries[cacheKey] = cachedVertexToken{token: payload.AccessToken, expires: expires}
+	vertexTokenCache.entries[cacheKey] = cachedVertexToken{
+		token: payload.AccessToken, expires: expires, fingerprint: fingerprintText,
+	}
 	vertexTokenCache.mu.Unlock()
 	return payload.AccessToken, nil
 }
