@@ -253,10 +253,13 @@ func FetchWithCopilotRateLimitRetry(
 			return nil, err
 		}
 		response, err := doFetchRequest(request)
-		cancel()
 		if err != nil {
+			cancel()
 			return nil, err
 		}
+		// Headers do not finish the response. Keep the attempt budget alive
+		// until the caller consumes and closes the body, or we discard it.
+		response.Body = &cancelOnCloseBody{ReadCloser: response.Body, cancel: cancel}
 		if response.StatusCode != http.StatusTooManyRequests || retry == policy.MaxRetries {
 			return response, nil
 		}
@@ -283,7 +286,7 @@ func FetchWithCopilotRateLimitRetry(
 		if !deadline.IsZero() && delay >= time.Until(deadline) {
 			return response, nil
 		}
-		_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 1<<16))
+		// Cancel an abandoned rate-limit body without waiting for its bytes.
 		response.Body.Close()
 		if err := oauthRetrySleep(ctx, delay, "Login cancelled"); err != nil {
 			return nil, err
