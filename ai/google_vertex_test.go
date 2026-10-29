@@ -211,6 +211,29 @@ func TestVertexStreamUsesADCRefreshToken(t *testing.T) {
 	}
 }
 
+func TestVertexExplicitEmptyAPIKeyDoesNotFallBackToEnv(t *testing.T) {
+	t.Setenv("GOOGLE_CLOUD_API_KEY", "AIzaSyAmbient")
+	t.Setenv("GOOGLE_APPLICATION_CREDENTIALS", filepath.Join(t.TempDir(), "missing-adc.json"))
+	t.Setenv("GCE_METADATA_HOST", "127.0.0.1:1")
+	vertexTokenCache.mu.Lock()
+	vertexTokenCache.entries = map[string]cachedVertexToken{}
+	vertexTokenCache.mu.Unlock()
+	model := &Model{ID: "gemini-3-flash-preview", API: APIGoogleVertex, Provider: "google-vertex",
+		BaseURL: "https://example.invalid", ContextWindow: 1000, MaxTokens: 100}
+	context := TranscriptContext{Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hello"}, Timestamp: 1}}}
+	stream := StreamGoogleVertex(model, context, &GoogleVertexOptions{
+		GoogleOptions: GoogleOptions{APIKey: "", APIKeySet: true}, Project: "test-project", Location: "us-central1",
+	})
+	message, err := stream.Result(ctxpkg.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if message.StopReason != StopError || message.ErrorMessage == nil ||
+		!strings.Contains(*message.ErrorMessage, "could not read Google credentials") {
+		t.Fatalf("message error = %q; want ADC lookup, not GOOGLE_CLOUD_API_KEY fallback", *message.ErrorMessage)
+	}
+}
+
 func TestVertexStreamRequiresProjectAndLocation(t *testing.T) {
 	model := &Model{
 		ID: "gemini-3-flash-preview", API: APIGoogleVertex, Provider: "google-vertex",

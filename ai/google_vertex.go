@@ -54,7 +54,7 @@ func StreamGoogleVertex(model *Model, context TranscriptContext, options *Google
 	if googleOptions.Env == nil {
 		googleOptions.Env = providerEnvMap()
 	}
-	if googleOptions.APIKey == "" {
+	if googleOptions.APIKey == "" && !googleOptions.APIKeySet {
 		googleOptions.APIKey = GetProviderEnvValueOr("GOOGLE_CLOUD_API_KEY", googleOptions.Env)
 	}
 	if project == "" {
