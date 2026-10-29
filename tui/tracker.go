@@ -63,6 +63,26 @@ type ansiCodeTracker struct {
 	activeHyperlink                       *osc8Hyperlink
 }
 
+// sgrParameters returns the parameters of the leftmost ESC[<digits;>m inside
+// a consumed code, like upstream's /\[([\d;]*)m/ match (CR-212). A
+// truncated CSI followed by a real reset is one greedily consumed code; the
+// embedded reset still has to apply.
+func sgrParameters(code string) (string, bool) {
+	for start := 0; start+2 < len(code); start++ {
+		if code[start] != 0x1b || code[start+1] != '[' {
+			continue
+		}
+		end := start + 2
+		for end < len(code) && (code[end] == ';' || (code[end] >= '0' && code[end] <= '9')) {
+			end++
+		}
+		if end < len(code) && code[end] == 'm' {
+			return code[start+2 : end], true
+		}
+	}
+	return "", false
+}
+
 // process consumes one terminal sequence, updating tracked SGR state.
 func (t *ansiCodeTracker) process(ansiCode string) {
 	if hyperlink, ok := parseOsc8Hyperlink(ansiCode); ok {
@@ -75,8 +95,10 @@ func (t *ansiCodeTracker) process(ansiCode string) {
 	// Extract the parameters between ESC [ and m. Parse the ';'-separated
 	// parameters in place: strings.Split allocated a []string for every code,
 	// and the tracker runs over every visible line of every frame.
-	inner := strings.TrimPrefix(ansiCode, "\x1b[")
-	inner = strings.TrimSuffix(inner, "m")
+	inner, ok := sgrParameters(ansiCode)
+	if !ok {
+		return
+	}
 	if inner == "" || inner == "0" {
 		t.reset()
 		return
