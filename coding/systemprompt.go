@@ -286,7 +286,7 @@ func BuildSystemPromptSections(input BuildSystemPromptOptions) (SystemPromptSect
 		}
 	}
 	var customNames []string
-	for name := range customSections {
+	for name := range promptSections {
 		if !rendered[name] {
 			customNames = append(customNames, name)
 		}
