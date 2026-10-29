@@ -38,22 +38,37 @@ type PrintModeOptions struct {
 // plus Go's blocking write give ordering and backpressure, and headless
 // diagnostics are written to stderr directly.
 type printStdout struct {
-	mu sync.Mutex
-	w  *bufio.Writer
+	mu  sync.Mutex
+	w   *bufio.Writer
+	err error
 }
 
 func (p *printStdout) writeLine(line string) {
 	p.mu.Lock()
-	defer p.mu.Unlock()
-	_, _ = p.w.WriteString(line)
-	_ = p.w.WriteByte('\n')
-	_ = p.w.Flush()
+	if p.err != nil {
+		p.mu.Unlock()
+		return
+	}
+	_, err := p.w.WriteString(line)
+	if err == nil {
+		err = p.w.WriteByte('\n')
+	}
+	if err == nil {
+		err = p.w.Flush()
+	}
+	if err != nil {
+		p.err = err
+	}
+	p.mu.Unlock()
 }
 
-func (p *printStdout) flush() {
+func (p *printStdout) flush() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	_ = p.w.Flush()
+	if p.err == nil {
+		p.err = p.w.Flush()
+	}
+	return p.err
 }
 
 // RunPrintMode returns 0 on success, 1 on prompt/persistence failure,
@@ -101,7 +116,9 @@ func RunPrintMode(session *AgentSession, sessions *SessionManager, options Print
 		if writeErr != nil {
 			exitCode = 1
 		}
-		out.flush()
+		if out.flush() != nil {
+			exitCode = 1
+		}
 		if signalCode != 0 {
 			exitCode = signalCode
 		}

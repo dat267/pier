@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -94,6 +95,27 @@ func TestPrintModeReportsPersistenceFailure(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+// Pinned pi/packages/coding-agent/src/core/output-guard.ts exits with status
+// 1 after a non-retriable stdout write failure.
+func TestPrintModeReportsStdoutWriteFailure(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("/dev/full is Linux-specific")
+	}
+	full, err := os.OpenFile("/dev/full", os.O_WRONLY, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer full.Close()
+	savedStdout := os.Stdout
+	os.Stdout = full
+	defer func() { os.Stdout = savedStdout }()
+
+	session, sessions := newPrintSession(t, createAssistantMessageT("reply"))
+	if code := RunPrintMode(session, sessions, PrintModeOptions{Mode: CLIModeText, InitialMessage: "prompt"}); code != 1 {
+		t.Fatalf("exit code = %d, want 1 when stdout rejects output", code)
 	}
 }
 
