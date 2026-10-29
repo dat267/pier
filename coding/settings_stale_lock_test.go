@@ -38,6 +38,65 @@ func TestSettingsLiveLockDoesNotBecomeStale(t *testing.T) {
 	})
 }
 
+// pi v1.4.0 core/settings-manager.ts also commits within its lock callback;
+// this port hardens the lock owner check so a displaced writer cannot overwrite
+// the successor's settings. The lock rename models stale-lock reclamation without
+// depending on a ten-second sleep or process suspension.
+func TestSettingsDisplacedWriterCannotCommit(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+	if err := os.WriteFile(path, []byte(`{"original":true}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	first := NewFileSettingsStorage(dir, dir)
+	entered, finish := make(chan struct{}), make(chan struct{})
+	firstDone := make(chan error, 1)
+	go func() {
+		firstDone <- first.WithLock(SettingsScopeGlobal, func(*string) *string {
+			close(entered)
+			<-finish
+			next := `{"stale":true}`
+			return &next
+		})
+	}()
+	<-entered
+	lockPath := path + ".lock"
+	if err := os.Rename(lockPath, lockPath+".expired"); err != nil {
+		close(finish)
+		<-firstDone
+		t.Fatal(err)
+	}
+	secondEntered, finishSecond := make(chan struct{}), make(chan struct{})
+	secondDone := make(chan error, 1)
+	go func() {
+		storage := NewFileSettingsStorage(dir, dir)
+		secondDone <- storage.WithLock(SettingsScopeGlobal, func(*string) *string {
+			close(secondEntered)
+			<-finishSecond
+			next := `{"successor":true}`
+			return &next
+		})
+	}()
+	<-secondEntered
+	close(finish)
+	if err := <-firstDone; err == nil {
+		t.Error("displaced settings writer committed without owning the lock")
+	}
+	if raw, err := os.ReadFile(path); err != nil || string(raw) != `{"original":true}` {
+		t.Errorf("displaced writer changed settings: %q, %v", raw, err)
+	}
+	if _, err := os.Stat(lockPath); err != nil {
+		t.Errorf("displaced writer removed the successor's lock: %v", err)
+	}
+	close(finishSecond)
+	if err := <-secondDone; err != nil {
+		t.Fatal(err)
+	}
+	if raw, err := os.ReadFile(path); err != nil || string(raw) != `{"successor":true}` {
+		t.Errorf("successor did not commit: %q, %v", raw, err)
+	}
+}
+
 func TestSettingsSaveRecoversStaleLock(t *testing.T) {
 	for _, directory := range []bool{true, false} {
 		t.Run(map[bool]string{true: "directory", false: "legacy file"}[directory], func(t *testing.T) {

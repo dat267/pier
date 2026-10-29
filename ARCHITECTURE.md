@@ -254,13 +254,13 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D285)
+## Deliberate divergences from pi (D1–D288)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D285**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D288**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation. Port and review history are available with `git log --oneline`.
 
 ### D41
@@ -3183,6 +3183,25 @@ two disconnected parent cycles in a bounded child process and checks branch,
 projection-path, and branch-summary traversal, including one acyclic control
 in the existing session-manager suite.
 
+### D288
+
+**A settings writer that loses its lock lease does not commit its pending write.**
+
+Reference: pi v1.4.0 (`4a080252`),
+`packages/coding-agent/src/core/settings-manager.ts` writes from inside
+`FileSettingsStorage.withLock`; the pinned implementation relies on
+`proper-lockfile` and has no explicit ownership check before the write. Pier checks
+that the acquired lock directory still has the same file identity after the
+callback and before committing, preventing a suspended writer from overwriting a
+successor after stale-lock reclamation. This is a deliberate concurrency-hardening
+divergence. The identity check is not an atomic fencing token, so a lock can still
+be replaced in the narrow interval between the check and the write.
+
+Test: `TestSettingsDisplacedWriterCannotCommit` blocks a holder, replaces its
+lock directory, gives the replacement lock to a successor, and verifies that the
+displaced holder fails without overwriting the original settings or removing the
+successor's lock.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.
@@ -3291,8 +3310,9 @@ bytes through the public storage API.
 Settings storage uses a `settings.json.lock` directory, matching proper-lockfile.
 It reclaims artifacts older than 10 seconds (including legacy regular files),
 refreshes live leases every 5 seconds, and joins its refresher before release.
-Release checks file identity before removing the lock. Storage callbacks and
-file I/O remain off the interactive owner loop; no new UI-state lock is added.
+Release checks file identity before removing the lock; a write callback also
+checks identity before commit (D288). Storage callbacks and file I/O remain off
+the interactive owner loop; no new UI-state lock is added.
 
 D205 adds no lock: tool result generations, displayed lines and shell elapsed
 state stay on-owner. Workers mutate only private component snapshots and return

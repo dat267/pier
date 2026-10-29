@@ -348,11 +348,11 @@ func (s *FileSettingsStorage) WithLock(scope SettingsScope, fn func(current *str
 	if err := os.MkdirAll(filepath.Dir(path), 0o777); err != nil {
 		return err
 	}
-	release, err := acquireLockWithRetry(path)
+	lock, err := acquireLockWithRetry(path)
 	if err != nil {
 		return err
 	}
-	defer release()
+	defer lock.release()
 
 	var current *string
 	content, err := os.ReadFile(path)
@@ -366,12 +366,40 @@ func (s *FileSettingsStorage) WithLock(scope SettingsScope, fn func(current *str
 	if next == nil {
 		return nil
 	}
+	// A suspended holder may resume after its stale lock was reclaimed. Do not
+	// let it commit over the settings being written by the successor.
+	if !lock.stillOwned() {
+		return fmt.Errorf("settings lock was lost before committing %s", path)
+	}
 	return os.WriteFile(path, []byte(*next), 0o666)
+}
+
+type settingsFileLock struct {
+	path  string
+	owned os.FileInfo
+	stop  chan struct{}
+	done  chan struct{}
+	once  sync.Once
+}
+
+func (lock *settingsFileLock) stillOwned() bool {
+	current, err := os.Stat(lock.path)
+	return err == nil && os.SameFile(lock.owned, current)
+}
+
+func (lock *settingsFileLock) release() {
+	lock.once.Do(func() {
+		close(lock.stop)
+		<-lock.done
+		if lock.stillOwned() {
+			_ = os.Remove(lock.path)
+		}
+	})
 }
 
 // acquireLockWithRetry mirrors proper-lockfile's lockSync plus upstream's
 // 10 attempts with 20ms delays.
-func acquireLockWithRetry(path string) (func(), error) {
+func acquireLockWithRetry(path string) (*settingsFileLock, error) {
 	const maxAttempts = 10
 	const delay = 20 * time.Millisecond
 	lockPath := path + ".lock"
@@ -403,27 +431,23 @@ func acquireLockWithRetry(path string) (func(), error) {
 
 // maintainSettingsLock mirrors proper-lockfile's five-second lease refresh.
 // Stop and join the refresher before removal, so it cannot touch a later owner.
-func maintainSettingsLock(path string) (func(), error) {
+func maintainSettingsLock(path string) (*settingsFileLock, error) {
 	owned, err := os.Stat(path)
 	if err != nil {
 		_ = os.Remove(path)
 		return nil, err
 	}
-	stillOwned := func() bool {
-		current, err := os.Stat(path)
-		return err == nil && os.SameFile(owned, current)
-	}
-	stop, done := make(chan struct{}), make(chan struct{})
+	lock := &settingsFileLock{path: path, owned: owned, stop: make(chan struct{}), done: make(chan struct{})}
 	go func() {
-		defer close(done)
+		defer close(lock.done)
 		ticker := time.NewTicker(5 * time.Second)
 		defer ticker.Stop()
 		for {
 			select {
-			case <-stop:
+			case <-lock.stop:
 				return
 			case now := <-ticker.C:
-				if !stillOwned() {
+				if !lock.stillOwned() {
 					return
 				}
 				if err := os.Chtimes(path, now, now); err != nil {
@@ -432,16 +456,7 @@ func maintainSettingsLock(path string) (func(), error) {
 			}
 		}
 	}()
-	var once sync.Once
-	return func() {
-		once.Do(func() {
-			close(stop)
-			<-done
-			if stillOwned() {
-				_ = os.Remove(path)
-			}
-		})
-	}, nil
+	return lock, nil
 }
 
 // InMemorySettingsStorage is the process-local storage backend.

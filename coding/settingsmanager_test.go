@@ -742,7 +742,7 @@ func TestSettingsSetDoesNotBlockOnTheStorageLock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer lock()
+	defer lock.release()
 
 	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{
 		PersistQueue: offloop.New(),
