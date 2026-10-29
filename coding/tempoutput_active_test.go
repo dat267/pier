@@ -6,7 +6,10 @@ import (
 )
 
 func TestTempOutputSweepKeepsAnotherAccumulatorFile(t *testing.T) {
-	t.Setenv("TMPDIR", t.TempDir())
+	tempDir := t.TempDir()
+	t.Setenv("TMPDIR", tempDir)
+	t.Setenv("TMP", tempDir)
+	t.Setenv("TEMP", tempDir)
 
 	active := NewOutputAccumulator(1, 1, "pi-output")
 	if err := active.Append([]byte("large output")); err != nil {
