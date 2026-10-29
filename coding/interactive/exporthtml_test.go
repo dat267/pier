@@ -103,6 +103,41 @@ func TestAnsiToHTML(t *testing.T) {
 	}
 }
 
+// pi v1.4.0 packages/coding-agent/src/modes/interactive/theme/theme-schema.ts
+// accepts string export colors, packages/coding-agent/src/modes/interactive/theme/theme.ts
+// returns them raw, and packages/coding-agent/src/core/export-html/index.ts
+// inserts them into a style element. Guard that context.
+func TestGenerateSessionHTMLEscapesCustomExportCSS(t *testing.T) {
+	dir := t.TempDir()
+	SetCustomThemesDir(dir)
+	SetRegisteredThemes(nil)
+	t.Cleanup(func() {
+		SetCustomThemesDir("")
+		SetRegisteredThemes(nil)
+	})
+	colors := make(map[string]string, len(requiredThemeColors))
+	for _, key := range requiredThemeColors {
+		colors[key] = "#123456"
+	}
+	document, err := json.Marshal(map[string]any{
+		"name":   "hostile-export-color",
+		"colors": colors,
+		"export": map[string]string{
+			"pageBg": `#123456</style><script>window.injected=1</script><style>`,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "hostile.json"), document, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got := GenerateSessionHTML(&exportSessionData{}, "hostile-export-color")
+	if strings.Contains(got, `</style><script>window.injected=1</script>`) {
+		t.Fatal("custom export color escaped the style element")
+	}
+}
+
 // pi v1.4.0 packages/coding-agent/src/modes/interactive/theme/theme.ts
 // catches invalid export color resolution instead of crashing the HTML export.
 func TestGetThemeExportColorsInvalidVariableReturnsEmpty(t *testing.T) {

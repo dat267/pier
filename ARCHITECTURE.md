@@ -254,13 +254,13 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D290)
+## Deliberate divergences from pi (D1–D291)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D290**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D291**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation. Port and review history are available with `git log --oneline`.
 
 ### D41
@@ -3240,6 +3240,22 @@ Tests: `TestApplyLineResetsStripsUnsafeOSC` covers BEL, ESC-ST, C1 ST,
 unterminated controls, image lines and OSC 8;
 `TestProcessTerminalSetTitleStripsControlCharacters` verifies the emitted OSC 0
 sequence cannot be terminated by title content.
+
+### D291
+
+**Custom export colors are validated before HTML interpolation.**
+
+Reference: pi v1.4.0 `packages/coding-agent/src/modes/interactive/theme/theme-schema.ts`
+accepts string color values; `packages/coding-agent/src/modes/interactive/theme/theme.ts`
+`getThemeExportColors` returns custom CSS strings, and
+`packages/coding-agent/src/core/export-html/index.ts` inserts them into the
+`<style>` element. A color such as
+`#123456</style><script>…` closes the style element and executes when the export
+is opened. Pier now validates export values with its color parser and
+omits invalid values. This is an intentional export-security divergence.
+
+Test: `TestGenerateSessionHTMLEscapesCustomExportCSS` reproduces and prevents
+an injected script in the generated style element.
 
 ## Lock inventory
 
