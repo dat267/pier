@@ -120,6 +120,30 @@ func TestResolveProviderAuthStoredCredentialOwnsProvider(t *testing.T) {
 	}
 }
 
+func TestResolveProviderAuthExplicitEmptyAPIKeyOverridesStoredOAuth(t *testing.T) {
+	store := NewInMemoryCredentialStore()
+	if _, err := store.Modify("p", func(*Credential) (*Credential, error) {
+		return &Credential{Type: CredentialOAuth, OAuth: &OAuthCredential{Access: "stored-oauth", Expires: time.Now().Add(time.Hour).UnixMilli()}}, nil
+	}, bgCtx()); err != nil {
+		t.Fatal(err)
+	}
+	auth := ProviderAuth{
+		OAuth: &OAuthAuth{ToAuth: func(credential *OAuthCredential) (*ModelAuth, error) {
+			return &ModelAuth{APIKey: credential.Access}, nil
+		}},
+		APIKey: &ApiKeyAuth{Resolve: func(input AuthResolveInput) (*AuthResult, error) {
+			return nil, nil
+		}},
+	}
+	resolution, err := ResolveProviderAuth("p", auth, store, &fakeAuthContext{env: map[string]string{}}, &AuthResolutionOverrides{APIKey: "", APIKeySet: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resolution != nil {
+		t.Fatalf("explicit empty API key override returned stored OAuth auth: %+v", resolution)
+	}
+}
+
 func TestModelsLoginForwardsApplicationName(t *testing.T) {
 	var received string
 	models := CreateModels(nil)

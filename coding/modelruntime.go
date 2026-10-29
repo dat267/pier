@@ -59,7 +59,9 @@ type CreateModelRuntimeOptions struct {
 // ModelRuntimeAuthOverrides are per-request auth overrides.
 type ModelRuntimeAuthOverrides struct {
 	APIKey string
-	Env    map[string]string
+	// APIKeySet distinguishes an explicit empty API-key override from omission.
+	APIKeySet bool
+	Env       map[string]string
 	// Ctx cancels auth resolution for this request.
 	Ctx context.Context
 	// MinOAuthValidityMS requires this much remaining OAuth validity; defaults
@@ -679,7 +681,7 @@ func authOverrides(overrides *ModelRuntimeAuthOverrides) *ai.AuthResolutionOverr
 	if overrides == nil {
 		return nil
 	}
-	resolved := &ai.AuthResolutionOverrides{APIKey: overrides.APIKey, Env: overrides.Env, Ctx: overrides.Ctx}
+	resolved := &ai.AuthResolutionOverrides{APIKey: overrides.APIKey, APIKeySet: overrides.APIKeySet, Env: overrides.Env, Ctx: overrides.Ctx}
 	if overrides.MinOAuthValidityMS != nil {
 		resolved.MinOAuthValidityMS = *overrides.MinOAuthValidityMS
 	}

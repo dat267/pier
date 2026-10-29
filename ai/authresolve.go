@@ -47,7 +47,9 @@ func NewModelsError(code ModelsErrorCode, message string, cause error) *ModelsEr
 // AuthResolutionOverrides tunes auth resolution.
 type AuthResolutionOverrides struct {
 	APIKey string
-	Env    ProviderEnv
+	// APIKeySet distinguishes an explicit empty API-key override from omission.
+	APIKeySet bool
+	Env       ProviderEnv
 	// MinOAuthValidityMS requires this much remaining OAuth-token validity;
 	// defaults to five minutes.
 	MinOAuthValidityMS int64
@@ -76,7 +78,7 @@ func ResolveProviderAuth(providerID string, auth ProviderAuth, credentials Crede
 		requestAuthContext = overlayEnvAuthContext(authContext, overrides.Env)
 	}
 
-	if overrides != nil && overrides.APIKey != "" && auth.APIKey != nil {
+	if overrides != nil && (overrides.APIKeySet || overrides.APIKey != "") && auth.APIKey != nil {
 		return resolveAPIKey(requestAuthContext, auth.APIKey, providerID, &ApiKeyCredential{
 			Key: overrides.APIKey,
 			Env: overrides.Env,
