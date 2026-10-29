@@ -17,3 +17,24 @@ func TestFrontmatterQuotedScalarEscapes(t *testing.T) {
 		}
 	}
 }
+
+// pi v1.4.0 utils/frontmatter.ts uses the YAML core schema to distinguish
+// numeric scalars from strings; Go's strconv grammar is not identical.
+func TestFrontmatterPlainScalarTypesMatchYamlCore(t *testing.T) {
+	for _, tc := range []struct {
+		value     string
+		nonString bool
+	}{
+		{value: "1_000", nonString: false},
+		{value: "+0xFF", nonString: false},
+		{value: "0xFF", nonString: true},
+		{value: "0x1p3", nonString: false},
+		{value: "1e400", nonString: true},
+		{value: "1e-4000", nonString: true},
+	} {
+		parsed := ParseFrontmatter("---\ndescription: " + tc.value + "\n---\nbody")
+		if got := parsed.NonStrings["description"]; got != tc.nonString {
+			t.Errorf("%q NonStrings = %t; want %t", tc.value, got, tc.nonString)
+		}
+	}
+}

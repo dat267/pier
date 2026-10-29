@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -158,10 +159,24 @@ func yamlPlainScalarIsString(value string) bool {
 	case "nan", "+nan", "-nan", "inf", "+inf", "-inf", "infinity", "+infinity", "-infinity":
 		return true
 	}
+	if strings.Contains(value, "_") {
+		return true
+	}
+	unsigned := value
+	if strings.HasPrefix(value, "+") || strings.HasPrefix(value, "-") {
+		unsigned = value[1:]
+		lower := strings.ToLower(unsigned)
+		if strings.HasPrefix(lower, "0x") || strings.HasPrefix(lower, "0o") || strings.HasPrefix(lower, "0b") {
+			return true
+		}
+	}
 	if _, err := strconv.ParseInt(value, 0, 64); err == nil {
 		return false
 	}
-	if _, err := strconv.ParseFloat(value, 64); err == nil {
+	if strings.HasPrefix(strings.ToLower(value), "0x") {
+		return true
+	}
+	if _, err := strconv.ParseFloat(value, 64); err == nil || errors.Is(err, strconv.ErrRange) {
 		return false
 	}
 	if strings.HasPrefix(value, "[") || strings.HasPrefix(value, "{") || strings.HasPrefix(value, "|") || strings.HasPrefix(value, ">") {
