@@ -92,6 +92,8 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 	// the temp file once it is created.
 	flushedChunks := 0
 	var mu sync.Mutex
+	var callbackQueue []string
+	callbackDraining := false
 
 	ensureTempFile := func() error {
 		if tempFilePath != "" {
@@ -148,28 +150,52 @@ func ExecuteBashWithOperations(ctx context.Context, command, cwd string, operati
 			}
 		}
 
-		// Stream to the callback.
+		// Queue callbacks in output order; user callbacks run after releasing mu.
 		if options.OnChunk != nil {
-			options.OnChunk(text)
+			callbackQueue = append(callbackQueue, text)
 		}
+	}
+
+	// One caller drains callbacks outside the state lock. Reentrant OnData calls
+	// enqueue behind the active callback and return, avoiding lock re-entrancy.
+	drainCallbacks := func() {
+		mu.Lock()
+		if callbackDraining {
+			mu.Unlock()
+			return
+		}
+		callbackDraining = true
+		for len(callbackQueue) > 0 {
+			chunk := callbackQueue[0]
+			callbackQueue[0] = ""
+			callbackQueue = callbackQueue[1:]
+			callback := options.OnChunk
+			mu.Unlock()
+			callback(chunk)
+			mu.Lock()
+		}
+		callbackDraining = false
+		mu.Unlock()
 	}
 
 	onData := func(data []byte) {
 		mu.Lock()
-		defer mu.Unlock()
 		complete, pending := splitIncompleteAnsiSuffix(pendingAnsi + string(data))
 		pendingAnsi = pending
 		appendOutput(decoder.decode([]byte(complete), false))
+		mu.Unlock()
+		drainCallbacks()
 	}
 
 	flushPendingAnsi := func() {
 		mu.Lock()
-		defer mu.Unlock()
 		if pendingAnsi != "" {
 			appendOutput(decoder.decode([]byte(pendingAnsi), false))
 			pendingAnsi = ""
 		}
 		appendOutput(decoder.decode(nil, true))
+		mu.Unlock()
+		drainCallbacks()
 	}
 
 	finishTempFile := func() {
