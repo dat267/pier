@@ -193,6 +193,10 @@ type RpcClient struct {
 	process     *exec.Cmd
 	stdin       io.WriteCloser
 	started     bool
+	stopping    bool
+	startDone   chan struct{}
+	startCancel context.CancelFunc
+	stopDone    chan struct{}
 	exitErr     error
 	processDone chan struct{}
 	pending     map[string]*pendingRequest
@@ -208,6 +212,8 @@ type RpcClient struct {
 	// sendFunc replaces the process transport in tests, like upstream's
 	// overridable send.
 	sendFunc func(command map[string]any) (*response, error)
+	// startCommand lets lifecycle tests hold the process before OS spawn.
+	startCommand func(context.Context, *exec.Cmd) error
 }
 
 // eventListener carries the unsubscribe identity for one subscription.
@@ -253,19 +259,32 @@ func (c *RpcClient) OnEvent(listener EventListener) func() {
 // Start spawns the child process and begins reading its stdout. Canceling ctx
 // terminates the child.
 func (c *RpcClient) Start(ctx context.Context) error {
+	startCtx, cancelStart := context.WithCancel(ctx)
+	startDone := make(chan struct{})
 	c.mu.Lock()
-	if c.started {
+	if c.started || c.stopping {
 		c.mu.Unlock()
+		cancelStart()
 		return errors.New("Client already started")
 	}
 	c.started = true // Reserve admission before spawning outside the data mutex.
+	c.startDone = startDone
+	c.startCancel = cancelStart
 	c.mu.Unlock()
 	spawned := false
 	defer func() {
+		c.mu.Lock()
+		if c.startDone == startDone {
+			c.startDone = nil
+			if !spawned && !c.stopping {
+				c.started = false
+				c.startCancel = nil
+			}
+		}
+		close(startDone)
+		c.mu.Unlock()
 		if !spawned {
-			c.mu.Lock()
-			c.started = false
-			c.mu.Unlock()
+			cancelStart()
 		}
 	}()
 
@@ -287,7 +306,7 @@ func (c *RpcClient) Start(ctx context.Context) error {
 		args = append(args, c.options.Args...)
 	}
 
-	command := exec.CommandContext(ctx, cliPath, args...)
+	command := exec.CommandContext(startCtx, cliPath, args...)
 	command.Dir = c.options.Cwd
 	command.Env = os.Environ()
 	for key, value := range c.options.Env {
@@ -313,7 +332,11 @@ func (c *RpcClient) Start(ctx context.Context) error {
 	}
 	defer stderrWriter.Close()
 	command.Stdout, command.Stderr = stdoutWriter, stderrWriter
-	if err := command.Start(); err != nil {
+	startCommand := c.startCommand
+	if startCommand == nil {
+		startCommand = func(_ context.Context, command *exec.Cmd) error { return command.Start() }
+	}
+	if err := startCommand(startCtx, command); err != nil {
 		_ = stdin.Close()
 		_ = stdout.Close()
 		_ = stderr.Close()
@@ -356,7 +379,7 @@ func (c *RpcClient) Start(ctx context.Context) error {
 	timer := time.NewTimer(100 * time.Millisecond)
 	select {
 	case <-timer.C:
-	case <-ctx.Done():
+	case <-startCtx.Done():
 		timer.Stop()
 	}
 	c.mu.Lock()
@@ -365,7 +388,7 @@ func (c *RpcClient) Start(ctx context.Context) error {
 	if exitErr != nil {
 		return exitErr
 	}
-	if err := ctx.Err(); err != nil {
+	if err := startCtx.Err(); err != nil {
 		return err
 	}
 	return nil
@@ -374,36 +397,74 @@ func (c *RpcClient) Start(ctx context.Context) error {
 // Stop terminates the child, escalating to a kill after one second.
 func (c *RpcClient) Stop() {
 	c.mu.Lock()
-	command := c.process
-	done := c.processDone
-	if command == nil || command.Process == nil {
+	if c.stopping {
+		done := c.stopDone
 		c.mu.Unlock()
-		return
-	}
-	c.process = nil
-	c.stdin = nil
-	process := command.Process
-	c.mu.Unlock()
-
-	if runtime.GOOS == "windows" {
-		_ = process.Kill()
-	} else {
-		_ = process.Signal(syscall.SIGTERM)
-	}
-	if done != nil {
-		select {
-		case <-done:
-		case <-time.After(time.Second):
-			_ = process.Kill()
+		if done != nil {
 			<-done
 		}
+		return
 	}
-	// A listener can call Stop from the stdout reader. Join only process exit,
-	// not the reader callbacks, which would make that listener wait on itself.
-	c.mu.Lock()
-	c.pending = map[string]*pendingRequest{}
-	c.started = false
+	c.stopping = true
+	stopDone := make(chan struct{})
+	c.stopDone = stopDone
 	c.mu.Unlock()
+	defer func() {
+		c.mu.Lock()
+		c.pending = map[string]*pendingRequest{}
+		c.started = false
+		c.stopping = false
+		c.startCancel = nil
+		c.stopDone = nil
+		close(stopDone)
+		c.mu.Unlock()
+	}()
+
+	for {
+		c.mu.Lock()
+		command := c.process
+		done := c.processDone
+		startDone := c.startDone
+		startCancel := c.startCancel
+		if command == nil || command.Process == nil {
+			c.mu.Unlock()
+			if startDone == nil {
+				return
+			}
+			if startCancel != nil {
+				startCancel()
+			}
+			<-startDone
+			continue
+		}
+		c.process = nil
+		c.stdin = nil
+		process := command.Process
+		c.mu.Unlock()
+
+		if runtime.GOOS == "windows" {
+			_ = process.Kill()
+		} else {
+			_ = process.Signal(syscall.SIGTERM)
+		}
+		if done != nil {
+			select {
+			case <-done:
+			case <-time.After(time.Second):
+				_ = process.Kill()
+				<-done
+			}
+		}
+		if startDone != nil {
+			<-startDone
+		}
+		if startCancel != nil {
+			startCancel()
+		}
+		// A listener can call Stop from the stdout reader. Join only process
+		// exit, not the reader callbacks, which would make it wait on itself.
+		return
+	}
 }
 
 func (c *RpcClient) drainStderr(stderr io.Reader) {
