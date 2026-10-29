@@ -3135,6 +3135,32 @@ emitted event without the race detector, and also covers the race under `-race`;
 `TestAssistantStreamForwardingPreservesProducerSnapshot` preserve the old helper
 and forwarded snapshots.
 
+### D286
+
+**The prompt keeps file writes on `edit` and `write` instead of the shell.**
+
+Upstream pi v1.4.0 (`4a080252`) contributes only `Use write only for new files
+or complete rewrites` and the edit guidelines, so nothing stops a model from
+rewriting files with redirection, `sed`, or an inline script — edits that bypass
+the tool's diff preview and byte-exact replacement. Pier adds one rule when a
+shell tool and at least one file tool are selected:
+
+- `Do not write or edit files through bash (redirection, heredocs, sed, perl,
+  python); use edit or write.`
+
+It names `PowerShell` instead of `bash` when only that shell is selected, names
+only the file tools actually available, and is omitted when neither `edit` nor
+`write` is present, since the instruction would then point at a missing tool.
+This follows jcode, whose system prompt carries the same instruction ("Edit
+files with `edit`, `replace`, `apply_patch`, or `write`, not sed, perl, or Python
+scripts in bash").
+
+The rule is built in `buildRules`, not in the per-tool contributions, so the
+upstream-cited snippet and guideline tables stay byte-comparable with pi.
+Tests: `TestSystemPromptForbidsShellFileWrites`,
+`TestSystemPromptShellWriteRuleNamesTheAvailableFileTool` and
+`TestSystemPromptShellWriteRuleNeedsAFileTool`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

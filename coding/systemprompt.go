@@ -131,6 +131,28 @@ func buildRules(selectedTools []string, toolGuidelines map[string][]string, prom
 		}
 	}
 
+	// D286: keep file writes on the file tools. Upstream's tool contributions
+	// never say this, so a model may edit through shell redirection or sed;
+	// jcode's prompt states the same rule ("Edit files with edit, replace,
+	// apply_patch, or write, not sed, perl, or Python scripts in bash").
+	if hasBash || hasPowerShell {
+		var fileTools []string
+		if contains(selectedTools, ToolNameEdit) {
+			fileTools = append(fileTools, ToolNameEdit)
+		}
+		if contains(selectedTools, ToolNameWrite) {
+			fileTools = append(fileTools, ToolNameWrite)
+		}
+		if len(fileTools) > 0 {
+			shell := "bash"
+			if !hasBash {
+				shell = "PowerShell"
+			}
+			addRule(fmt.Sprintf("Do not write or edit files through %s (redirection, heredocs, sed, perl, python); use %s.",
+				shell, strings.Join(fileTools, " or ")))
+		}
+	}
+
 	for _, name := range selectedTools {
 		for _, rule := range toolGuidelines[name] {
 			addRule(rule)

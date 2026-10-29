@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -71,10 +72,46 @@ func TestSystemPromptSectionsMatchUpstream(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			// D176: the port omits upstream's docs section.
 			delete(sections, "docs")
+			// D286: the port adds one rule upstream lacks. The golden stays the
+			// upstream output, so drop the line here and assert its presence
+			// separately: a regenerated golden must not hide a lost rule.
+			hadShellWriteRule := strings.Contains(sections["rules"], shellWriteRulePrefix)
+			if rules, ok := sections["rules"]; ok {
+				sections["rules"] = stripShellWriteRules(rules)
+			}
+			if hadShellWriteRule != shellWriteRuleCases[name] {
+				t.Errorf("shell-write rule present = %v, want %v", hadShellWriteRule, shellWriteRuleCases[name])
+			}
 			if !reflect.DeepEqual(map[string]string(sections), want.Sections) {
 				t.Errorf("sections = %#v, want %#v", sections, want.Sections)
 			}
 		})
 	}
+}
+
+// shellWriteRuleCases lists the cases that carry the D286 rule: a shell tool and
+// edit or write selected, including the omitted-list defaults.
+var shellWriteRuleCases = map[string]bool{
+	"defaults":            true,
+	"cwd-windows":         true,
+	"custom-section":      true,
+	"snippets-guidelines": true,
+}
+
+// shellWriteRulePrefix identifies the D286 rule line.
+const shellWriteRulePrefix = "- Do not write or edit files through "
+
+// stripShellWriteRules removes the D286 rule line from a rules section.
+func stripShellWriteRules(rules string) string {
+	lines := strings.Split(rules, "\n")
+	kept := lines[:0]
+	for _, line := range lines {
+		if strings.HasPrefix(line, shellWriteRulePrefix) {
+			continue
+		}
+		kept = append(kept, line)
+	}
+	return strings.Join(kept, "\n")
 }
