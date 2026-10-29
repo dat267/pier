@@ -36,12 +36,20 @@ type ProviderError struct {
 func (e *ProviderError) Error() string { return e.Message }
 
 const defaultMaxRetryDelayMS = 60_000
+const maxJavascriptTimeoutMS int64 = 1<<31 - 1
+
+func javascriptTimeoutDuration(delayMS int64) time.Duration {
+	if delayMS < 1 || delayMS > maxJavascriptTimeoutMS {
+		delayMS = 1
+	}
+	return time.Duration(delayMS) * time.Millisecond
+}
 
 var providerRetrySleep = func(ctx context.Context, delayMS int64) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	timer := time.NewTimer(time.Duration(max(0, delayMS)) * time.Millisecond)
+	timer := time.NewTimer(javascriptTimeoutDuration(max(0, delayMS)))
 	defer timer.Stop()
 	select {
 	case <-timer.C:
@@ -327,7 +335,7 @@ func RetryAssistantCall(
 		}
 
 		select {
-		case <-time.After(time.Duration(delayMS) * time.Millisecond):
+		case <-time.After(javascriptTimeoutDuration(delayMS)):
 		case <-ctx.Done():
 			// Aborts during backoff normalize to an aborted AssistantMessage.
 			if err := finish(false, attempt, lastErrorMessage); err != nil {
