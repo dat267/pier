@@ -11,9 +11,10 @@ import (
 	"github.com/dat267/pier/ai"
 )
 
-// session-manager.ts uses Node's default modes: 0777 for directories and 0666
-// for session files, each filtered by the process umask.
-func TestSessionManagerPersistsFilesWithNodeDefaultMode(t *testing.T) {
+// pi v1.4.0 packages/coding-agent/src/core/session-manager.ts and
+// session-export.ts use Node defaults; Pier's
+// owner-only modes are the D289 security divergence.
+func TestSessionManagerPersistsFilesWithPrivateMode(t *testing.T) {
 	oldMask := syscall.Umask(0)
 	defer syscall.Umask(oldMask)
 	root := t.TempDir()
@@ -26,8 +27,40 @@ func TestSessionManagerPersistsFilesWithNodeDefaultMode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := info.Mode().Perm(); got != 0o666 {
-		t.Fatalf("manager session file mode = %#o; want Node default %#o", got, 0o666)
+	if got := info.Mode().Perm(); got != 0o600 {
+		t.Fatalf("manager session file mode = %#o; want private %#o", got, 0o600)
+	}
+}
+
+func TestOpeningExistingSessionMakesFilePrivate(t *testing.T) {
+	manager, _ := newTestSession(t)
+	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "persist"}})
+	if err := manager.FlushWrites(); err != nil {
+		t.Fatal(err)
+	}
+	path, dir := manager.GetSessionFile(), manager.GetSessionDir()
+	if err := os.Chmod(path, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := OpenSession(path, dir, ""); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := info.Mode().Perm(); got != 0o600 {
+		t.Fatalf("opened session file mode = %#o; want private %#o", got, 0o600)
+	}
+	dirInfo, err := os.Stat(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := dirInfo.Mode().Perm(); got != 0o700 {
+		t.Fatalf("opened session directory mode = %#o; want private %#o", got, 0o700)
 	}
 }
 
@@ -70,11 +103,14 @@ func TestListAllSessionsSkipsInvalidUTF8DirectoryNames(t *testing.T) {
 	}
 }
 
-func TestSessionFileUsesNodeDefaultMode(t *testing.T) {
+func TestSessionFileUsesPrivateMode(t *testing.T) {
 	oldMask := syscall.Umask(0)
 	defer syscall.Umask(oldMask)
 
 	file := filepath.Join(t.TempDir(), "session.jsonl")
+	if err := os.WriteFile(file, []byte("old"), 0o666); err != nil {
+		t.Fatal(err)
+	}
 	if err := writeSessionEntries(file, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -82,12 +118,12 @@ func TestSessionFileUsesNodeDefaultMode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := fileInfo.Mode().Perm(); got != 0o666 {
-		t.Fatalf("session file mode = %#o; want Node default %#o", got, 0o666)
+	if got := fileInfo.Mode().Perm(); got != 0o600 {
+		t.Fatalf("session file mode = %#o; want private %#o", got, 0o600)
 	}
 }
 
-func TestForkedSessionUsesNodeDefaultModes(t *testing.T) {
+func TestForkedSessionUsesPrivateModes(t *testing.T) {
 	oldMask := syscall.Umask(0)
 	defer syscall.Umask(oldMask)
 
@@ -101,34 +137,40 @@ func TestForkedSessionUsesNodeDefaultModes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := fileInfo.Mode().Perm(); got != 0o666 {
-		t.Errorf("forked session mode = %#o; want Node default %#o", got, 0o666)
+	if got := fileInfo.Mode().Perm(); got != 0o600 {
+		t.Errorf("forked session mode = %#o; want private %#o", got, 0o600)
 	}
 	dirInfo, err := os.Stat(forkDir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := dirInfo.Mode().Perm(); got != 0o777 {
-		t.Errorf("forked session directory mode = %#o; want Node default %#o", got, 0o777)
+	if got := dirInfo.Mode().Perm(); got != 0o700 {
+		t.Errorf("forked session directory mode = %#o; want private %#o", got, 0o700)
 	}
 }
 
-func TestSessionManagerUsesNodeDefaultDirectoryMode(t *testing.T) {
+func TestSessionManagerUsesPrivateDirectoryMode(t *testing.T) {
 	oldMask := syscall.Umask(0)
 	defer syscall.Umask(oldMask)
 
 	dir := filepath.Join(t.TempDir(), "sessions")
+	if err := os.MkdirAll(dir, 0o777); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(dir, 0o777); err != nil {
+		t.Fatal(err)
+	}
 	_ = NewSessionManager(t.TempDir(), &SessionManagerOptions{SessionDir: dir})
 	info, err := os.Stat(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := info.Mode().Perm(); got != 0o777 {
-		t.Fatalf("session manager directory mode = %#o; want Node default %#o", got, 0o777)
+	if got := info.Mode().Perm(); got != 0o700 {
+		t.Fatalf("session manager directory mode = %#o; want private %#o", got, 0o700)
 	}
 }
 
-func TestSessionExportUsesNodeDefaultDirectoryMode(t *testing.T) {
+func TestSessionExportUsesPrivateDirectoryMode(t *testing.T) {
 	oldMask := syscall.Umask(0)
 	defer syscall.Umask(oldMask)
 
@@ -141,17 +183,20 @@ func TestSessionExportUsesNodeDefaultDirectoryMode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := info.Mode().Perm(); got != 0o777 {
-		t.Fatalf("export directory mode = %#o; want Node default %#o", got, 0o777)
+	if got := info.Mode().Perm(); got != 0o700 {
+		t.Fatalf("export directory mode = %#o; want private %#o", got, 0o700)
 	}
 }
 
-func TestSessionExportUsesNodeDefaultFileMode(t *testing.T) {
+func TestSessionExportUsesPrivateFileMode(t *testing.T) {
 	oldMask := syscall.Umask(0)
 	defer syscall.Umask(oldMask)
 
 	manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: new(false)})
 	path := filepath.Join(t.TempDir(), "export.jsonl")
+	if err := os.WriteFile(path, []byte("old"), 0o666); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := ExportSessionToJsonl(manager, path, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -159,22 +204,27 @@ func TestSessionExportUsesNodeDefaultFileMode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := info.Mode().Perm(); got != 0o666 {
-		t.Fatalf("export file mode = %#o; want Node default %#o", got, 0o666)
+	if got := info.Mode().Perm(); got != 0o600 {
+		t.Fatalf("export file mode = %#o; want private %#o", got, 0o600)
 	}
 }
 
-func TestSessionDirectoryUsesNodeDefaultMode(t *testing.T) {
+func TestSessionDirectoryUsesPrivateMode(t *testing.T) {
 	oldMask := syscall.Umask(0)
 	defer syscall.Umask(oldMask)
 
 	root := t.TempDir()
-	dir := DefaultSessionDir(filepath.Join(root, "project"), filepath.Join(root, "agent"))
+	cwd, agentDir := filepath.Join(root, "project"), filepath.Join(root, "agent")
+	dir := DefaultSessionDir(cwd, agentDir)
+	if err := os.Chmod(dir, 0o777); err != nil {
+		t.Fatal(err)
+	}
+	dir = DefaultSessionDir(cwd, agentDir)
 	dirInfo, err := os.Stat(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := dirInfo.Mode().Perm(); got != 0o777 {
-		t.Fatalf("session directory mode = %#o; want Node default %#o", got, 0o777)
+	if got := dirInfo.Mode().Perm(); got != 0o700 {
+		t.Fatalf("session directory mode = %#o; want private %#o", got, 0o700)
 	}
 }

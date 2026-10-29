@@ -51,8 +51,8 @@ func writeForkedSession(targetCwd string, sessionDir string, parentSession *stri
 	} else {
 		dir = DefaultSessionDir(resolvedTargetCwd, "")
 	}
-	if _, err := os.Stat(dir); err != nil {
-		_ = os.MkdirAll(dir, 0o777)
+	if err := EnsurePrivateSessionDir(dir); err != nil {
+		return nil, err
 	}
 
 	if options != nil && options.ID != "" {
@@ -81,7 +81,7 @@ func writeForkedSession(targetCwd string, sessionDir string, parentSession *stri
 	}
 
 	// flag: "wx" — refuse to clobber an existing file.
-	file, err := os.OpenFile(newSessionFile, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o666)
+	file, err := openPrivateSessionFile(newSessionFile, os.O_WRONLY|os.O_CREATE|os.O_EXCL)
 	if err != nil {
 		return nil, err
 	}

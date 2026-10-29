@@ -12,8 +12,10 @@ import (
 	"github.com/dat267/pier/coding"
 )
 
-// Upstream node:fs copyFileSync preserves the imported session's permissions.
-func TestImportSessionDirectoryUsesNodeDefaultMode(t *testing.T) {
+// pi v1.4.0 packages/coding-agent/src/core/agent-session-runtime.ts uses
+// copyFileSync, preserving source mode;
+// Pier's private import mode is the D289 security divergence.
+func TestImportSessionDirectoryUsesPrivateMode(t *testing.T) {
 	app, cleanup := newTestApp(t)
 	defer cleanup()
 	root := t.TempDir()
@@ -32,12 +34,12 @@ func TestImportSessionDirectoryUsesNodeDefaultMode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := info.Mode().Perm(); got != 0o777 {
-		t.Fatalf("import session directory mode = %#o; want Node default %#o", got, 0o777)
+	if got := info.Mode().Perm(); got != 0o700 {
+		t.Fatalf("import session directory mode = %#o; want private %#o", got, 0o700)
 	}
 }
 
-func TestImportSessionPreservesSourceMode(t *testing.T) {
+func TestImportedSessionUsesPrivateMode(t *testing.T) {
 	app, cleanup := newTestApp(t)
 	defer cleanup()
 	sessionDir := withSessionDir(t, app)
@@ -45,7 +47,6 @@ func TestImportSessionPreservesSourceMode(t *testing.T) {
 	if err := os.Chmod(source, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	// copyFileSync preserves the source mode rather than applying the current umask.
 	oldMask := syscall.Umask(0o077)
 	defer syscall.Umask(oldMask)
 	newCommandWiring(app).HandleImportCommand(context.Background(), "/import "+source)
@@ -56,7 +57,7 @@ func TestImportSessionPreservesSourceMode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := info.Mode().Perm(); got != 0o644 {
-		t.Fatalf("imported session mode = %#o; want source mode 0644", got)
+	if got := info.Mode().Perm(); got != 0o600 {
+		t.Fatalf("imported session mode = %#o; want private 0600", got)
 	}
 }

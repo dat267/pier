@@ -254,13 +254,13 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D288)
+## Deliberate divergences from pi (D1–D289)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D288**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D289**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation. Port and review history are available with `git log --oneline`.
 
 ### D41
@@ -3201,6 +3201,27 @@ Test: `TestSettingsDisplacedWriterCannotCommit` blocks a holder, replaces its
 lock directory, gives the replacement lock to a successor, and verifies that the
 displaced holder fails without overwriting the original settings or removing the
 successor's lock.
+
+### D289
+
+**Session JSONL storage is private to the owning user on POSIX systems.**
+
+Reference: pi v1.4.0 (`4a080252`), `packages/coding-agent/src/core/session-manager.ts`
+and `packages/coding-agent/src/core/session-export.ts` use Node's default
+0666/0777 creation modes, filtered by umask; `packages/coding-agent/src/core/agent-session-runtime.ts`
+preserves imported source modes with `copyFileSync`. Pier creates and rewrites session JSONL files with mode 0600,
+uses mode 0700 for session directories, hardens existing session files and known
+session directories when opened, and does not copy source permissions to imported
+sessions. Newly created export parent directories use 0700; explicitly selected
+existing export directories retain their permissions. On Windows these POSIX
+mode bits do not replace inherited ACLs; this hardening addresses the reproduced
+permissive-umask exposure on POSIX.
+
+Tests: `TestSessionManagerPersistsFilesWithPrivateMode`,
+`TestOpeningExistingSessionMakesFilePrivate`, `TestForkedSessionUsesPrivateModes`,
+`TestSessionManagerUsesPrivateDirectoryMode`, `TestSessionDirectoryUsesPrivateMode`,
+`TestSessionExportUsesPrivateDirectoryMode`, `TestSessionExportUsesPrivateFileMode`,
+and `TestImportedSessionUsesPrivateMode`.
 
 ## Lock inventory
 

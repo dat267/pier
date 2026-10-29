@@ -141,7 +141,7 @@ func NewSessionManager(cwd string, options *SessionManagerOptions) *SessionManag
 	}
 	var directoryErr error
 	if persist && m.sessionDir != "" {
-		directoryErr = os.MkdirAll(m.sessionDir, 0o777)
+		directoryErr = EnsurePrivateSessionDir(m.sessionDir)
 	}
 	m.NewSession(nil)
 	if directoryErr != nil {
@@ -220,6 +220,11 @@ func sessionFileTimestamp(timestamp string) string {
 // OpenSession loads a session file (SessionManager.open).
 func OpenSession(path string, sessionDir string, cwdOverride string) (*SessionManager, error) {
 	resolvedPath := ResolvePath(path, "", PathInputOptions{})
+	if info, err := os.Stat(resolvedPath); err == nil && info.Mode().IsRegular() {
+		if err := os.Chmod(resolvedPath, 0o600); err != nil {
+			return nil, err
+		}
+	}
 	m := &SessionManager{
 		persist:         true,
 		writeState:      &sessionWriteState{initialized: true, claimed: true},
@@ -245,6 +250,9 @@ func OpenSession(path string, sessionDir string, cwdOverride string) (*SessionMa
 	m.cwd = ResolvePath(cwd, "", PathInputOptions{})
 	if sessionDir != "" {
 		m.sessionDir = NormalizePath(sessionDir, PathInputOptions{})
+		if err := EnsurePrivateSessionDir(m.sessionDir); err != nil {
+			return nil, err
+		}
 	} else {
 		m.sessionDir = filepath.Dir(resolvedPath)
 	}

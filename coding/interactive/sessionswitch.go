@@ -57,7 +57,7 @@ func (a *App) importFromJSONL(_ context.Context, inputPath string, cwdOverride s
 		// manager would have resolved at creation.
 		sessionDir = coding.DefaultSessionDir(a.sessionMgr.GetCwd(), "")
 	}
-	if err := os.MkdirAll(sessionDir, 0o777); err != nil {
+	if err := coding.EnsurePrivateSessionDir(sessionDir); err != nil {
 		return nil, err
 	}
 	destination := filepath.Join(sessionDir, filepath.Base(resolved))
@@ -86,27 +86,19 @@ func (a *App) importFromJSONL(_ context.Context, inputPath string, cwdOverride s
 	return a.applySessionReplacement(sessionManager)
 }
 
-// copyFileExclusive copies src to dst, refusing to overwrite (upstream's
-// COPYFILE_EXCL).
+// copyFileExclusive copies src to dst, refusing to overwrite. Unlike upstream's
+// COPYFILE_EXCL, the destination retains owner-only permissions (D289).
 func copyFileExclusive(src string, dst string) error {
 	source, err := os.Open(src)
 	if err != nil {
 		return err
 	}
 	defer source.Close()
-	sourceInfo, err := source.Stat()
-	if err != nil {
-		return err
-	}
 	destination, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return err
 	}
 	if _, err := io.Copy(destination, source); err != nil {
-		destination.Close()
-		return err
-	}
-	if err := destination.Chmod(sourceInfo.Mode().Perm()); err != nil {
 		destination.Close()
 		return err
 	}

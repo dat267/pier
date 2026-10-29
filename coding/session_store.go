@@ -680,7 +680,7 @@ func LoadEntriesFromFileBuffered(filePath string) ([]FileEntry, []byte, bool, er
 		return nil, data, fast, nil
 	}
 	if !bytes.HasSuffix(data, []byte("\n")) && len(data) > 0 {
-		_ = os.WriteFile(resolved, append(append([]byte{}, data...), '\n'), 0o644)
+		_ = writePrivateSessionFile(resolved, append(append([]byte{}, data...), '\n'))
 	}
 	return entries, data, fast, nil
 }
@@ -1341,9 +1341,7 @@ func DefaultSessionDir(cwd string, agentDir string) string {
 		return r
 	}, safe)
 	dir := filepath.Join(agentDir, "sessions", safe)
-	if _, err := os.Stat(dir); err != nil {
-		_ = os.MkdirAll(dir, 0o777)
-	}
+	_ = EnsurePrivateSessionDir(dir)
 	return dir
 }
 
@@ -1377,7 +1375,7 @@ func LoadEntriesFromFile(filePath string) ([]FileEntry, error) {
 		return nil, nil
 	}
 	if !strings.HasSuffix(text, "\n") && text != "" {
-		_ = os.WriteFile(resolved, []byte(text+"\n"), 0o644)
+		_ = writePrivateSessionFile(resolved, []byte(text+"\n"))
 	}
 	return entries, nil
 }

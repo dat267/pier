@@ -67,16 +67,14 @@ func ExportSessionToJsonl(sessionManager *SessionManager, outputPath string, cre
 		filePath = ResolvePath("session-"+sessionFileTimestamp(sessionTimestamp())+".jsonl", "", PathInputOptions{})
 	}
 	dir := filepath.Dir(filePath)
-	if !PathExists(dir) {
-		if err := os.MkdirAll(dir, 0o777); err != nil {
-			return "", err
-		}
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return "", err
 	}
 	serialized, err := serializeSessionBranch(sessionManager, createTrailingEntries)
 	if err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(filePath, []byte(serialized), 0o666); err != nil {
+	if err := writePrivateSessionFile(filePath, []byte(serialized)); err != nil {
 		return "", err
 	}
 	return filePath, nil
