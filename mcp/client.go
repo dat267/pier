@@ -233,6 +233,12 @@ func (c *Client) connectInitialize(ctx context.Context, transport Transport) (*p
 		return nil, err
 	}
 	c.mu.Lock()
+	// D302: Close/drop may win while the initialized notification completes.
+	// Do not resurrect a closed client when an already-dispatched send returns.
+	if c.state != StateConnecting {
+		c.mu.Unlock()
+		return nil, &protocol.McpConnectionClosedError{}
+	}
 	c.protocolVersionValue = result.ProtocolVersion
 	c.serverInfo = &result.ServerInfo
 	c.serverCapabilities = &result.Capabilities

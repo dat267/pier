@@ -254,13 +254,13 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D300)
+## Deliberate divergences from pi (D1–D302)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D300**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D302**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation. Port and review history are available with `git log --oneline`.
 
 ### D41
@@ -3400,6 +3400,20 @@ through prompt rendering and session patches: overriding a base section keeps
 its slot, while a built-in name absent from the base follows custom order.
 Tests reproduce explicit ordering, the fallback, and newly added built-in names.
 The `prepareLoadout` extension hook itself remains out of scope under D41.
+
+### D302
+
+**MCP initialization cannot resurrect a closed client.**
+
+Reference: pi v1.4.0 `packages/mcp/src/client.ts` sets `connected` after awaiting
+`notifications/initialized` without rechecking closure. If that send has already
+dispatched but completes after client close or a transport drop, upstream returns
+success and changes `closed` back to `connected`. Pier rechecks `connecting` under
+the client mutex before publishing metadata or connected state; a winning close
+returns `McpConnectionClosedError` instead. No callback runs under that mutex.
+
+Test: `TestClientConnectDoesNotResurrectClosedConnection` gates send completion
+and checks explicit close, peer drop, and an ordinary successful-connect control.
 
 ## Lock inventory
 
