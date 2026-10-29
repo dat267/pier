@@ -387,18 +387,25 @@ func (t *StdioTransport) Close(ctx context.Context) error {
 	if closeTimeoutMs == 0 {
 		closeTimeoutMs = defaultCloseTimeoutMs
 	}
-	_ = t.closeStdin()
-	grace := StdinCloseGraceMs
-	if closeTimeoutMs < int64(grace) {
-		grace = int(closeTimeoutMs)
+	grace := int64(StdinCloseGraceMs)
+	if closeTimeoutMs < grace {
+		grace = closeTimeoutMs
 	}
+	graceTimer := time.NewTimer(javascriptTimerDuration(grace))
+	defer graceTimer.Stop()
+	killTimer := time.NewTimer(javascriptTimerDuration(grace + closeTimeoutMs))
+	defer killTimer.Stop()
+	_ = t.closeStdin()
 	select {
 	case <-t.exitCh:
-	case <-time.After(time.Duration(grace) * time.Millisecond):
+	case <-killTimer.C:
+		killProcessTree(pid, syscall.SIGKILL)
+		<-t.exitCh
+	case <-graceTimer.C:
 		killProcessTree(pid, syscall.SIGTERM)
 		select {
 		case <-t.exitCh:
-		case <-time.After(time.Duration(closeTimeoutMs) * time.Millisecond):
+		case <-killTimer.C:
 			killProcessTree(pid, syscall.SIGKILL)
 			<-t.exitCh
 		}

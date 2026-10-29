@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -38,7 +39,11 @@ func main() {
 	for {
 		line, err := reader.ReadString('\n')
 		if line == "" && err != nil {
-			select {} // stdin EOF ignored, like upstream
+			// A bare select{} triggers Go's deadlock detector, unlike Node's
+			// event loop. Keep the fixture alive until the transport kills it.
+			for {
+				time.Sleep(time.Hour)
+			}
 		}
 		line = trimLine(line)
 		if line == "" {

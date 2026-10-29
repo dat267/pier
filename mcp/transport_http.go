@@ -24,7 +24,6 @@ import (
 const (
 	maxErrorBodyChars          = 8 * 1024
 	errorMessageBodyChars      = 500
-	maxJavascriptTimeoutMs     = 1<<31 - 1
 	defaultReconnectInitialMs  = 1000
 	defaultReconnectMaxMs      = 30000
 	defaultReconnectMaxRetries = 5
@@ -986,13 +985,9 @@ func (t *StreamableHttpTransport) maxRetries() int {
 
 // sleep waits; false means the transport closed while waiting.
 func (t *StreamableHttpTransport) sleep(ms int64) bool {
-	// Node/Bun setTimeout clamps values outside [1, 2^31-1] to 1ms. Match
-	// the pinned transport instead of overflowing time.Duration or sleeping
-	// for days on an untrusted SSE retry field.
-	if ms < 1 || ms > maxJavascriptTimeoutMs {
-		ms = 1
-	}
-	timer := time.NewTimer(time.Duration(ms) * time.Millisecond)
+	// Match setTimeout's clamping instead of overflowing time.Duration or
+	// sleeping for days on an untrusted SSE retry field.
+	timer := time.NewTimer(javascriptTimerDuration(ms))
 	select {
 	case <-timer.C:
 		return true
