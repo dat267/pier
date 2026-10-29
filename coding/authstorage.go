@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -754,11 +755,23 @@ func marshalAuthStorageMutation(content *string, providerID string, next *ai.Cre
 	var keys []string
 	values := map[string]json.RawMessage{}
 	if content != nil && *content != "" {
-		if order, raw, err := readJSONObjectOrdered([]byte(StripBom(*content))); err == nil {
+		rawContent := []byte(StripBom(*content))
+		if order, raw, err := readJSONObjectOrdered(rawContent); err == nil {
 			keys, values = order, raw
+		} else if trimmed := bytes.TrimSpace(rawContent); len(trimmed) > 0 && trimmed[0] == '[' {
+			// JavaScript object spread copies array elements to enumerable index
+			// properties. Preserve them when auth.json has a valid array root.
+			var entries []json.RawMessage
+			if err := json.Unmarshal(trimmed, &entries); err == nil {
+				for index, entry := range entries {
+					key := strconv.Itoa(index)
+					keys = append(keys, key)
+					values[key] = entry
+				}
+			}
 		}
-		// The caller already validated JSON. Retain the existing empty-store
-		// behavior for a non-object document; only object members are preserved.
+		// The caller already validated JSON. Other non-object roots retain
+		// their existing handling.
 	}
 	if next == nil {
 		delete(values, providerID)
