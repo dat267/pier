@@ -252,9 +252,11 @@ type AnthropicToolChoice struct {
 
 // AnthropicThinking is the thinking request configuration.
 type AnthropicThinking struct {
-	Type         string                         `json:"type"` // "adaptive" | "enabled" | "disabled"
-	Display      *AnthropicThinkingDisplay      `json:"display,omitempty"`
-	BudgetTokens *int                           `json:"budget_tokens,omitempty"`
+	Type         string                    `json:"type"` // "adaptive" | "enabled" | "disabled"
+	BudgetTokens *int                      `json:"budget_tokens,omitempty"`
+	Display      *AnthropicThinkingDisplay `json:"display,omitempty"`
+	// CR-214: upstream emits budget-based thinking as type,budget_tokens,display
+	// and adaptive thinking as type,display,block_binding.
 	BlockBinding *AnthropicThinkingBlockBinding `json:"block_binding,omitempty"`
 }
 
