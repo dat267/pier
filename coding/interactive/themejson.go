@@ -129,6 +129,13 @@ func ValidateThemeJSON(label string, raw json.RawMessage) (*ThemeJSON, error) {
 	// Upstream's ColorValueSchema requires an integer color index in [0, 255]
 	// and an appearance of "dark" or "light".
 	var otherErrors []string
+	allowedColorNames := make(map[string]struct{}, len(requiredThemeColors)+len(optionalThemeColors))
+	for _, name := range requiredThemeColors {
+		allowedColorNames[name] = struct{}{}
+	}
+	for _, name := range optionalThemeColors {
+		allowedColorNames[name] = struct{}{}
+	}
 	checkColor := func(path string, color ColorValue) {
 		if color.IsIndex && (color.Index < 0 || color.Index > 255) {
 			otherErrors = append(otherErrors, fmt.Sprintf("  - %s: color index must be between 0 and 255", path))
@@ -136,6 +143,9 @@ func ValidateThemeJSON(label string, raw json.RawMessage) (*ThemeJSON, error) {
 	}
 	for name, color := range theme.Colors {
 		checkColor("/colors/"+name, color)
+		if _, ok := allowedColorNames[name]; !ok {
+			otherErrors = append(otherErrors, fmt.Sprintf("  - /colors/%s: additional properties are not allowed", name))
+		}
 	}
 	for name, color := range theme.Vars {
 		checkColor("/vars/"+name, color)

@@ -35,6 +35,27 @@ func TestThemeValidationRejectsNullColorValues(t *testing.T) {
 	}
 }
 
+// pi v1.4.0 (4a080252), packages/coding-agent/src/modes/interactive/theme/theme-schema.ts
+// ThemeColorsSchema rejects color keys that are not declared theme tokens.
+func TestThemeValidationRejectsUnknownColorTokens(t *testing.T) {
+	valid, err := os.ReadFile("themes/dark.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document map[string]any
+	if err := json.Unmarshal(valid, &document); err != nil {
+		t.Fatal(err)
+	}
+	document["colors"].(map[string]any)["not-a-theme-token"] = "#123456"
+	encoded, err := ai.MarshalJSON(document)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ValidateThemeJSON("invalid", encoded); err == nil {
+		t.Fatal("theme with an unknown color token was accepted")
+	}
+}
+
 // pi v1.4.0 (4a080252), theme.ts parseThemeJsonContent parses the entire document
 // with JSON.parse before calling theme-schema.ts validateThemeJson.
 func TestThemeValidationRejectsTrailingJSONData(t *testing.T) {

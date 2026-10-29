@@ -172,6 +172,38 @@ func TestGetThemeExportColorsInvalidVariableReturnsEmpty(t *testing.T) {
 	}
 }
 
+// pi v1.4.0 packages/coding-agent/src/modes/interactive/theme/theme-schema.ts
+// rejects unknown color keys; packages/coding-agent/src/core/export-html/index.ts
+// emits accepted keys as CSS vars.
+func TestGenerateSessionHTMLRejectsUnknownThemeColorKey(t *testing.T) {
+	dir := t.TempDir()
+	SetCustomThemesDir(dir)
+	SetRegisteredThemes(nil)
+	t.Cleanup(func() {
+		SetCustomThemesDir("")
+		SetRegisteredThemes(nil)
+	})
+	colors := make(map[string]string, len(requiredThemeColors)+1)
+	for _, key := range requiredThemeColors {
+		colors[key] = "#123456"
+	}
+	colors[`bad</style><script>window.injected=2</script><style>`] = "#123456"
+	document, err := json.Marshal(map[string]any{
+		"name":   "unknown-color-key",
+		"colors": colors,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "unknown.json"), document, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got := GenerateSessionHTML(&exportSessionData{}, "unknown-color-key")
+	if strings.Contains(got, `</style><script>window.injected=2</script>`) {
+		t.Fatal("unknown theme color key escaped into the HTML style element")
+	}
+}
+
 // TestExportSessionToHTML drives a real session file through the exporter
 // and pins the document structure plus the embedded session payload.
 func TestExportSessionToHTML(t *testing.T) {
