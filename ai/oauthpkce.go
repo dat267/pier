@@ -56,6 +56,20 @@ type OAuthDeviceCodePollResult[T any] struct {
 	Value T
 }
 
+// deviceCodeIntervalDuration converts server-provided seconds without
+// overflowing, preserving the setTimeout-compatible sleep range.
+func deviceCodeIntervalDuration(intervalSeconds int) time.Duration {
+	if intervalSeconds < 1 {
+		return deviceCodeMinimumIntervalMS * time.Millisecond
+	}
+	if int64(intervalSeconds) > maxJavascriptTimeoutMS/1000 {
+		// Preserve an above-range delay until the setTimeout-compatible sleep
+		// clamps it; multiplying an arbitrary server integer can overflow.
+		return time.Duration(maxJavascriptTimeoutMS+1) * time.Millisecond
+	}
+	return max(time.Duration(intervalSeconds)*time.Second, deviceCodeMinimumIntervalMS*time.Millisecond)
+}
+
 // deviceCodeSleep is the poll loop's sleep. RFC 8628's interval is in whole
 // seconds and is floored at one, so a flow that polls a few times costs real
 // seconds; the OAuth tests assert which polls happen, never how long they take,
@@ -86,7 +100,7 @@ func AbortableSleep(ctx context.Context, duration time.Duration, cancelMessage s
 			return fmt.Errorf("%s", cancelMessage)
 		}
 	}
-	timer := time.NewTimer(duration)
+	timer := time.NewTimer(javascriptTimeoutDuration(duration.Milliseconds()))
 	defer timer.Stop()
 	if ctx == nil {
 		<-timer.C
@@ -112,7 +126,7 @@ func PollOAuthDeviceCodeFlow[T any](options OAuthDeviceCodePollOptions[T]) (T, e
 	if options.IntervalSeconds != nil {
 		intervalSeconds = *options.IntervalSeconds
 	}
-	interval := max(time.Duration(intervalSeconds)*time.Second, deviceCodeMinimumIntervalMS*time.Millisecond)
+	interval := deviceCodeIntervalDuration(intervalSeconds)
 
 	slowDownResponses := 0
 	remaining := func() (time.Duration, bool) {
@@ -150,7 +164,7 @@ func PollOAuthDeviceCodeFlow[T any](options OAuthDeviceCodePollOptions[T]) (T, e
 		case "slow_down":
 			slowDownResponses++
 			if result.IntervalSeconds != nil && *result.IntervalSeconds > 0 {
-				interval = max(time.Duration(*result.IntervalSeconds)*time.Second, deviceCodeMinimumIntervalMS*time.Millisecond)
+				interval = deviceCodeIntervalDuration(*result.IntervalSeconds)
 			} else {
 				interval += deviceCodeSlowDownIntervalIncrement
 			}
