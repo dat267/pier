@@ -27,6 +27,17 @@ func (s *AgentSession) IsRetryableError(message *ai.AssistantMessage) bool {
 	return ai.IsRetryableAssistantError(message)
 }
 
+const maxJavascriptTimeoutMS int64 = 1<<31 - 1
+
+// retryTimerDuration matches the setTimeout range used by the upstream sleep
+// helper: Node/Bun clamp out-of-range delays to 1ms.
+func retryTimerDuration(delayMS int64) time.Duration {
+	if delayMS < 1 || delayMS > maxJavascriptTimeoutMS {
+		delayMS = 1
+	}
+	return time.Duration(delayMS) * time.Millisecond
+}
+
 // retrySettings resolves the retry policy from settings or the session config.
 func (s *AgentSession) retrySettings() *ai.RetryPolicy {
 	if s.control.Settings != nil {
@@ -87,7 +98,7 @@ func (s *AgentSession) PrepareRetry(ctx context.Context, message *ai.AssistantMe
 	s.retryActive = true
 	s.mu.Unlock()
 
-	timer := time.NewTimer(time.Duration(delayMS) * time.Millisecond)
+	timer := time.NewTimer(retryTimerDuration(delayMS))
 	defer timer.Stop()
 	select {
 	case <-timer.C:
