@@ -193,7 +193,9 @@ func (o *OutputAccumulator) CloseTempFile() error {
 	}
 	file := o.tempFile
 	o.tempFile = nil
-	return file.Close()
+	err := file.Close()
+	unregisterActiveTempOutput(o.tempFilePath)
+	return err
 }
 
 // GetLastLineBytes reports the current (possibly open) line's size.
@@ -387,7 +389,7 @@ func (o *OutputAccumulator) ensureTempFileLocked() error {
 		return err
 	}
 	path := filepath.Join(os.TempDir(), fmt.Sprintf("%s-%s.log", o.tempFilePrefix, hex.EncodeToString(id)))
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+	file, err := createActiveTempOutput(path)
 	if err != nil {
 		return err
 	}

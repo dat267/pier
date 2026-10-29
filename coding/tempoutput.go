@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -23,6 +24,25 @@ import (
 // may occupy. One oversized command still fits; the pile does not grow.
 const tempOutputBudgetBytes int64 = 256 << 20
 
+var activeTempOutputMu sync.Mutex
+var activeTempOutputFiles = make(map[string]struct{})
+
+func createActiveTempOutput(path string) (*os.File, error) {
+	activeTempOutputMu.Lock()
+	defer activeTempOutputMu.Unlock()
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+	if err == nil {
+		activeTempOutputFiles[path] = struct{}{}
+	}
+	return file, err
+}
+
+func unregisterActiveTempOutput(path string) {
+	activeTempOutputMu.Lock()
+	delete(activeTempOutputFiles, path)
+	activeTempOutputMu.Unlock()
+}
+
 // tempOutputPrefixes are the file name prefixes the port writes full output
 // under: the bash tool's executor, the shared output accumulator (used by the
 // bash and PowerShell tools, and "pi-output" by default).
@@ -37,6 +57,8 @@ var tempOutputPrefixes = []string{"pi-bash-", "pi-output-", "pi-powershell-"}
 // error here is ignored. Returns how many files were removed and the bytes they
 // held.
 func sweepTempOutputFiles(dir, keep string, budget int64) (int, int64) {
+	activeTempOutputMu.Lock()
+	defer activeTempOutputMu.Unlock()
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return 0, 0
@@ -50,7 +72,11 @@ func sweepTempOutputFiles(dir, keep string, budget int64) (int, int64) {
 	var files []scratchFile
 	var total int64
 	for _, entry := range entries {
+		path := filepath.Join(dir, entry.Name())
 		if !entry.Type().IsRegular() || entry.Name() == keepName || !isTempOutputName(entry.Name()) {
+			continue
+		}
+		if _, active := activeTempOutputFiles[path]; active {
 			continue
 		}
 		info, err := entry.Info()

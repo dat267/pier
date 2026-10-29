@@ -648,9 +648,13 @@ Upstream leaves truncated output files to the OS. On this host, one 174 MB
 command persisted for days; after three days, 230 files occupied 442 MB of
 scratch RAM on tmpfs. Pier sweeps oldest-first when creating a log, down to
 256 MB, covering `pi-bash-<id>.log`, `pi-output`, and `pi-powershell` prefixes.
-The active file, unrelated tool logs, and matching directory names are never
-touched. The model still receives "[Output truncated. Full output: <path>]".
-`TestSweepTempOutputFiles` checks exclusions and oldest-first order.
+The file being created and other output files still open by this process,
+unrelated tool logs, and matching directory names are never touched. Closed
+files remain eligible for the budget sweep. Files open by another pier process
+are not visible to this process's active-file registry and remain subject to the
+oldest-first sweep. The model still receives
+"[Output truncated. Full output: <path>]". `TestSweepTempOutputFiles` checks
+exclusions and oldest-first order.
 
 The sweep stops at the tool-output prefixes on purpose. MCP output files
 (`pi-mcp-<hex>.txt` and binary resource dumps, written by `SaveMcpToTempFile`
