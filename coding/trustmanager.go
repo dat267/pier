@@ -192,7 +192,7 @@ func writeTrustFile(path string, data trustFile) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o777); err != nil {
 		return err
 	}
-	return os.WriteFile(path, []byte(builder.String()), 0o666)
+	return writePrivateFile(path, []byte(builder.String()))
 }
 
 // pi v1.4.0 trust-manager.ts uses proper-lockfile's 10s default stale period.

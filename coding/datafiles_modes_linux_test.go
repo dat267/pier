@@ -71,8 +71,9 @@ func TestGlobalSettingsFileUsesPrivateMode(t *testing.T) {
 	}
 }
 
-// Upstream trust-manager.ts writes trust.json with Node's default mode.
-func TestTrustFileUsesNodeDefaultMode(t *testing.T) {
+// pi v1.4.0 packages/coding-agent/src/core/trust-manager.ts uses Node defaults;
+// Pier keeps the trust decision and project paths owner-only.
+func TestTrustFileUsesPrivateMode(t *testing.T) {
 	oldMask := syscall.Umask(0)
 	defer syscall.Umask(oldMask)
 	store := NewProjectTrustStore(t.TempDir())
@@ -84,8 +85,22 @@ func TestTrustFileUsesNodeDefaultMode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := info.Mode().Perm(); got != 0o666 {
-		t.Fatalf("trust file mode = %#o; want Node default %#o", got, 0o666)
+	if got := info.Mode().Perm(); got != 0o600 {
+		t.Fatalf("trust file mode = %#o, want %#o", got, 0o600)
+	}
+	if err := os.Chmod(store.TrustPath(), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	trusted = false
+	if err := store.Set(t.TempDir(), &trusted); err != nil {
+		t.Fatal(err)
+	}
+	info, err = os.Stat(store.TrustPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := info.Mode().Perm(); got != 0o600 {
+		t.Fatalf("replaced trust file mode = %#o, want %#o", got, 0o600)
 	}
 	dirInfo, err := os.Stat(filepath.Dir(store.TrustPath()))
 	if err != nil {
