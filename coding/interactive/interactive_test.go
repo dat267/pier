@@ -680,6 +680,8 @@ func TestThemeControllerLifecycle(t *testing.T) {
 // applyFromSettings selects system and does not persist
 // an environment-derived light/dark theme.
 func TestThemeControllerUsesSystemThemeWhenUnset(t *testing.T) {
+	SetSystemTerminalColors(tui.TerminalColors{})
+	SetSystemTerminalColorScheme(nil)
 	t.Setenv("COLORFGBG", "")
 	t.Cleanup(func() {
 		SetSystemTerminalColors(tui.TerminalColors{})
