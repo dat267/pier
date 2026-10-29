@@ -241,7 +241,8 @@ func (t *StdioTransport) watchExit(cmd *exec.Cmd, pid int) {
 	t.finishClose()
 }
 
-// finishClose runs once: report a truncated tail and emit close.
+// finishClose runs once and emits close. As in upstream stdio.ts,
+// bytes after the last newline are ignored because they never formed a message.
 func (t *StdioTransport) finishClose() {
 	t.mu.Lock()
 	if t.closeReported {
@@ -249,12 +250,8 @@ func (t *StdioTransport) finishClose() {
 		return
 	}
 	t.closeReported = true
-	remainder := t.stdoutBuffer
 	t.stdoutBuffer = nil
 	t.mu.Unlock()
-	if len(bytes.TrimSpace(remainder)) > 0 {
-		t.emitError(fmt.Errorf("MCP stdio server closed with an incomplete JSON-RPC message"))
-	}
 	t.emitClose()
 }
 

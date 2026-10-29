@@ -26,6 +26,10 @@ var (
 
 func TestMain(m *testing.M) {
 	if helper := os.Getenv("PIER_MCP_UTF8_HELPER"); helper != "" {
+		if helper == "partial" {
+			_, _ = os.Stdout.Write([]byte(`{"jsonrpc":"2.0"}`))
+			return
+		}
 		_, _ = os.Stdout.Write([]byte("{\"jsonrpc\":\"2.0\",\"method\":\"\xff\xff\"}\n"))
 		_, _ = os.Stderr.Write([]byte("\ufeff\xff\xff"))
 		if helper == "wait" {

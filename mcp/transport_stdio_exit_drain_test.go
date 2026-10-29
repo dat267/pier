@@ -12,6 +12,30 @@ import (
 // pi v1.4.0 transports/stdio.ts finalizes on ChildProcess.close, after stdout
 // and stderr have drained, not on process exit. A listener may initiate close
 // without preventing the remaining pipe data or the final close notification.
+func TestStdioExitIgnoresUnterminatedOutput(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	transport := NewStdioTransport(StdioTransportOptions{Command: os.Args[0], Env: map[string]string{"PIER_MCP_UTF8_HELPER": "partial"}})
+	t.Cleanup(func() { _ = transport.Close(context.Background()) })
+	errors := make(chan error, 1)
+	transport.OnError(func(err error) { errors <- err })
+	closed := make(chan struct{})
+	transport.OnClose(func() { close(closed) })
+	if err := transport.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-closed:
+	case <-ctx.Done():
+		t.Fatal("close notification did not arrive:", ctx.Err())
+	}
+	select {
+	case err := <-errors:
+		t.Fatalf("unterminated stdout emitted error %q", err)
+	default:
+	}
+}
+
 func TestStdioExitDrainsOutputBeforeCloseEvent(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
