@@ -152,7 +152,9 @@ func NewSessionManager(cwd string, options *SessionManagerOptions) *SessionManag
 
 // NewSessionOptions are NewSession inputs.
 type NewSessionOptions struct {
-	ID            string
+	ID string
+	// IDSet distinguishes an explicitly empty ID from an omitted ID.
+	IDSet         bool
 	ParentSession *string
 }
 
@@ -160,12 +162,13 @@ type NewSessionOptions struct {
 func (m *SessionManager) NewSession(options *NewSessionOptions) string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if options != nil && options.ID != "" {
+	idSet := options != nil && (options.IDSet || options.ID != "")
+	if idSet {
 		if err := AssertValidSessionID(options.ID); err != nil {
 			panic(err)
 		}
 	}
-	if options != nil && options.ID != "" {
+	if idSet {
 		m.sessionID = options.ID
 	} else {
 		m.sessionID = UUIDv7()

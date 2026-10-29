@@ -55,13 +55,14 @@ func writeForkedSession(targetCwd string, sessionDir string, parentSession *stri
 		return nil, err
 	}
 
-	if options != nil && options.ID != "" {
+	idSet := options != nil && (options.IDSet || options.ID != "")
+	if idSet {
 		if err := AssertValidSessionID(options.ID); err != nil {
 			return nil, err
 		}
 	}
 	newSessionID := UUIDv7()
-	if options != nil && options.ID != "" {
+	if idSet {
 		newSessionID = options.ID
 	}
 	timestamp := sessionTimestamp()

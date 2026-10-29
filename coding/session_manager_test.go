@@ -163,6 +163,16 @@ func TestSessionManagerModelAndThinkingLevelChanges(t *testing.T) {
 	}
 }
 
+func TestNewSessionRejectsExplicitEmptyID(t *testing.T) {
+	manager := NewSessionManager(t.TempDir(), &SessionManagerOptions{Persist: new(false)})
+	defer func() {
+		if recover() == nil {
+			t.Fatal("expected an explicitly empty session ID to panic as invalid")
+		}
+	}()
+	manager.NewSession(&NewSessionOptions{ID: "", IDSet: true})
+}
+
 func TestSessionManagerPersistAndReload(t *testing.T) {
 	dir := t.TempDir()
 	m := NewSessionManager(dir, &SessionManagerOptions{SessionDir: filepath.Join(dir, "sessions")})

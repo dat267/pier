@@ -85,6 +85,15 @@ func TestForkSessionInvalidIDRejected(t *testing.T) {
 	}
 }
 
+func TestForkSessionRejectsExplicitEmptyID(t *testing.T) {
+	t.Setenv("PI_CODING_AGENT_DIR", t.TempDir())
+	source := NewSessionManager(t.TempDir(), nil)
+	source.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: "hello"}})
+	if _, err := ForkSession(source.GetSessionFile(), t.TempDir(), "", &NewSessionOptions{ID: "", IDSet: true}); err == nil {
+		t.Fatal("expected an error for an explicitly empty fork id")
+	}
+}
+
 func TestForkSessionEmptySourceRejected(t *testing.T) {
 	t.Setenv("PI_CODING_AGENT_DIR", t.TempDir())
 	if _, err := ForkSession("/nonexistent/session.jsonl", t.TempDir(), "", nil); err == nil {
