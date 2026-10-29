@@ -23,6 +23,8 @@ type BuildSystemPromptOptions struct {
 	CustomPrompt string
 	// ForceSystemPrompt is an exact full prompt replacement.
 	ForceSystemPrompt string
+	// ForceSystemPromptSet distinguishes an explicitly empty replacement from unset.
+	ForceSystemPromptSet bool
 	// SelectedTools to include in the prompt (default: read, bash, edit, write).
 	SelectedTools []string
 	// HiddenTools are selected tools whose declarations are omitted from the prompt.
@@ -326,7 +328,7 @@ func sortNames(names []string) {
 // is opaque (content only, no sections); otherwise the structured sections
 // carry the prompt.
 func BuildSystemPromptState(input BuildSystemPromptOptions) (content string, sections SystemPromptSections, err error) {
-	if input.ForceSystemPrompt != "" {
+	if input.ForceSystemPromptSet || input.ForceSystemPrompt != "" {
 		return input.ForceSystemPrompt, nil, nil
 	}
 	sections, err = BuildSystemPromptSections(input)
