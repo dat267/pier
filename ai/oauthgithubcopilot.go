@@ -232,7 +232,7 @@ func FetchWithCopilotRateLimitRetry(
 	requestURL string,
 	buildRequest func(ctx context.Context) (*http.Request, error),
 	policy CopilotRetryPolicy,
-) (*http.Response, error) {
+) (result *http.Response, err error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -243,6 +243,16 @@ func FetchWithCopilotRateLimitRetry(
 	deadline := time.Time{}
 	if retryBudget > 0 {
 		deadline = time.Now().Add(retryBudget)
+		var cancelBudget context.CancelFunc
+		ctx, cancelBudget = context.WithTimeout(ctx, retryBudget)
+		defer func() {
+			if result == nil {
+				cancelBudget()
+			} else {
+				// The shared budget also covers the returned response body.
+				result.Body = &cancelOnCloseBody{ReadCloser: result.Body, cancel: cancelBudget}
+			}
+		}()
 	}
 
 	for retry := 0; ; retry++ {
