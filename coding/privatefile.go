@@ -14,8 +14,20 @@ func ensurePrivateDirectory(path string) error {
 	if clean == "." || clean == ".." || (filepath.IsAbs(clean) && filepath.Dir(clean) == clean) {
 		return fmt.Errorf("refusing to restrict permissions on %q", path)
 	}
+	if info, err := os.Lstat(path); err == nil && info.Mode()&os.ModeSymlink != 0 {
+		return fmt.Errorf("refusing to restrict symlink %q", path)
+	} else if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
 	if err := os.MkdirAll(path, 0o700); err != nil {
 		return err
+	}
+	info, err := os.Lstat(path)
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		return fmt.Errorf("refusing to restrict non-directory %q", path)
 	}
 	return os.Chmod(path, 0o700)
 }

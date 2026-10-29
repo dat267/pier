@@ -4,6 +4,7 @@ package coding
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -25,5 +26,26 @@ func TestEnsurePrivateDirectoryRejectsBroadPaths(t *testing.T) {
 				t.Fatalf("permissions changed from %#o to %#o", before.Mode().Perm(), after.Mode().Perm())
 			}
 		})
+	}
+}
+
+func TestEnsurePrivateDirectoryRejectsSymlink(t *testing.T) {
+	target := t.TempDir()
+	if err := os.Chmod(target, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(t.TempDir(), "agent")
+	if err := os.Symlink(target, link); err != nil {
+		t.Fatal(err)
+	}
+	if err := ensurePrivateDirectory(link); err == nil {
+		t.Fatal("ensurePrivateDirectory accepted a symlink")
+	}
+	info, err := os.Stat(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := info.Mode().Perm(); got != 0o755 {
+		t.Fatalf("symlink target mode = %#o, want %#o", got, 0o755)
 	}
 }

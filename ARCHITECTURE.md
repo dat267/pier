@@ -3384,7 +3384,8 @@ Tests: `TestGlobalSettingsFileUsesPrivateMode`,
 `TestLoadMcpConfigHardensExistingAgentDir`, and
 `TestTrustFileUsesPrivateMode` check creation or repair under umask 000. Linux
 `TestEnsurePrivateDirectoryRejectsBroadPaths` ensures cwd, parent, and root
-paths are not accidentally chmodded.
+paths are not accidentally chmodded; Linux `TestEnsurePrivateDirectoryRejectsSymlink`
+prevents chmod from following an agent-directory symlink.
 
 ## Lock inventory
 
