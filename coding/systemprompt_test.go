@@ -99,6 +99,53 @@ func TestBuildSystemPromptSectionNameValidation(t *testing.T) {
 	}
 }
 
+// Ported from pi v1.4.0 packages/coding-agent/test/system-prompt.test.ts, "hidden tools".
+func TestBuildSystemPromptHidesToolsFromPrompt(t *testing.T) {
+	sections, err := BuildSystemPromptSections(BuildSystemPromptOptions{
+		Cwd:           "/p",
+		SelectedTools: []string{"read", "bash", "run"},
+		HiddenTools:   []string{"read", "bash"},
+		ToolSnippets:  map[string]string{"read": "Read files", "bash": "Run commands", "run": "Run tasks"},
+		ToolGuidelines: map[string][]string{
+			"read": {"Use read for files."},
+			"bash": {"Use bash for commands."},
+			"run":  {"Prefer run."},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(sections["tools"], "read:") ||
+		strings.Contains(sections["tools"], "bash:") ||
+		!strings.Contains(sections["tools"], "run: Run tasks") {
+		t.Fatalf("tools section = %q", sections["tools"])
+	}
+	if strings.Contains(sections["rules"], "Use read for files.") ||
+		strings.Contains(sections["rules"], "Use bash for commands.") ||
+		!strings.Contains(sections["rules"], "Prefer run.") {
+		t.Fatalf("rules section = %q", sections["rules"])
+	}
+}
+
+// Ported from pi v1.4.0 packages/coding-agent/test/system-prompt.test.ts, "keeps skills without naming a hidden reader".
+func TestBuildSystemPromptUsesIndirectSkillsReaderWhenReadersHidden(t *testing.T) {
+	sections, err := BuildSystemPromptSections(BuildSystemPromptOptions{
+		Cwd:           "/p",
+		SelectedTools: []string{"read", "bash", "run"},
+		HiddenTools:   []string{"read", "bash"},
+		Skills:        []Skill{{Name: "demo", Description: "Demo skill", FilePath: "/skills/demo/SKILL.md"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(sections["skills"], "Load a skill's file when the task matches its description.") {
+		t.Fatalf("skills section = %q", sections["skills"])
+	}
+	if strings.Contains(sections["skills"], "Use the read tool") || strings.Contains(sections["skills"], "Use bash") {
+		t.Fatalf("skills section names a hidden reader: %q", sections["skills"])
+	}
+}
+
 func TestBuildSystemPromptForced(t *testing.T) {
 	content, sections, err := BuildSystemPromptState(BuildSystemPromptOptions{
 		Cwd: "/p", ForceSystemPrompt: "Opaque prompt.",

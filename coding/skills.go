@@ -904,8 +904,11 @@ func FormatSkillsForPrompt(skills []Skill, fileReadTool string) string {
 		"",
 		"<available_skills>",
 	}
-	if fileReadTool == "bash" {
+	switch fileReadTool {
+	case "bash":
 		lines[1] = "Use bash to load a skill's file when the task matches its description."
+	case "indirect":
+		lines[1] = "Load a skill's file when the task matches its description."
 	}
 	for _, skill := range visible {
 		lines = append(lines,

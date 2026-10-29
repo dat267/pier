@@ -25,6 +25,8 @@ type BuildSystemPromptOptions struct {
 	ForceSystemPrompt string
 	// SelectedTools to include in the prompt (default: read, bash, edit, write).
 	SelectedTools []string
+	// HiddenTools are selected tools whose declarations are omitted from the prompt.
+	HiddenTools []string
 	// ToolSnippets: one-line tool descriptions keyed by tool name.
 	ToolSnippets map[string]string
 	// ToolGuidelines: guideline bullets per tool.
@@ -183,6 +185,16 @@ func BuildSystemPromptSections(input BuildSystemPromptOptions) (SystemPromptSect
 	if selectedTools == nil {
 		selectedTools = []string{"read", "bash", "edit", "write"}
 	}
+	hiddenTools := make(map[string]bool, len(input.HiddenTools))
+	for _, name := range input.HiddenTools {
+		hiddenTools[name] = true
+	}
+	declaredTools := make([]string, 0, len(selectedTools))
+	for _, name := range selectedTools {
+		if !hiddenTools[name] {
+			declaredTools = append(declaredTools, name)
+		}
+	}
 	toolSnippets := input.ToolSnippets
 	toolGuidelines := input.ToolGuidelines
 	promptGuidelines := input.PromptGuidelines
@@ -204,7 +216,7 @@ func BuildSystemPromptSections(input BuildSystemPromptOptions) (SystemPromptSect
 	} else {
 		promptSections["preamble"] = "You are an expert coding assistant operating inside pi, a coding agent harness. You help users by reading files, executing commands, editing code, and writing new files."
 		var visibleTools []string
-		for _, name := range selectedTools {
+		for _, name := range declaredTools {
 			if toolSnippets[name] != "" {
 				visibleTools = append(visibleTools, name)
 			}
@@ -220,7 +232,7 @@ func BuildSystemPromptSections(input BuildSystemPromptOptions) (SystemPromptSect
 			tools = "(none)"
 		}
 		promptSections["tools"] = tools + "\n\nIn addition to the tools above, you may have access to other custom tools depending on the project."
-		promptSections["rules"] = buildRules(selectedTools, toolGuidelines, promptGuidelines)
+		promptSections["rules"] = buildRules(declaredTools, toolGuidelines, promptGuidelines)
 		// D176: upstream emits a `docs` section (the Pi documentation index).
 		// It routed the model to pi's docs/examples tree, which a pier install
 		// does not ship — the routing table names extensions.md, themes.md,
@@ -236,10 +248,13 @@ func BuildSystemPromptSections(input BuildSystemPromptOptions) (SystemPromptSect
 	}
 	skillFileReadTool := ""
 	for _, tool := range []string{"read", "bash"} {
-		if contains(selectedTools, tool) {
+		if contains(declaredTools, tool) {
 			skillFileReadTool = tool
 			break
 		}
+	}
+	if skillFileReadTool == "" && (contains(selectedTools, "read") || contains(selectedTools, "bash")) {
+		skillFileReadTool = "indirect"
 	}
 	if skillFileReadTool != "" && len(skills) > 0 {
 		skillsPrompt := ai.JSTrim(FormatSkillsForPrompt(skills, skillFileReadTool))
