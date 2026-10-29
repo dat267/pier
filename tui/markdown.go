@@ -623,11 +623,9 @@ var _ Component = (*Markdown)(nil)
 
 // Hyperlink wraps text in an OSC 8 hyperlink.
 func Hyperlink(text string, url string) string {
-	terminator := "\x1b\\"
-	if strings.Contains(text, "\x07") {
-		terminator = "\x07"
-	}
-	return "\x1b]8;;" + url + terminator + text + "\x1b]8;;" + terminator
+	// Both OSC 8 sequences always end with ST, like upstream: the link text
+	// is payload and must not change the framing (CR-211).
+	return "\x1b]8;;" + url + "\x1b\\" + text + "\x1b]8;;\x1b\\"
 }
 
 // RenderLatexOptions configure the LaTeX renderer.
