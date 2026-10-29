@@ -665,7 +665,9 @@ func BuildOpenAICompletionsParams(model *Model, context TranscriptContext, optio
 		if options.ReasoningEffort != "" {
 			params.ReasoningObj = &OpenAIReasoningParam{Effort: resolveLevelMapValue(model, options.ReasoningEffort, true)}
 		} else if !thinkingLevelMapOffIsNull(model) {
-			if mapped := resolveLevelMapValue(model, ThinkOff, true); mapped != nil {
+			// Upstream sends `thinkingLevelMap?.off ?? "none"`: a missing off
+			// mapping means "none", not the literal level name (CR-213).
+			if mapped := resolveLevelMapValue(model, ThinkOff, false); mapped != nil {
 				params.ReasoningObj = &OpenAIReasoningParam{Effort: mapped}
 			} else {
 				none := "none"
