@@ -868,10 +868,10 @@ func (c *Client) armTimeoutLocked(id int64, entry *pendingRequest) {
 	if entry.timer != nil {
 		entry.timer.Stop()
 	}
-	if entry.timeoutMs <= 0 || entry.timeoutMs > 1<<53 {
+	if entry.timeoutMs <= 0 {
 		return
 	}
-	entry.timer = time.AfterFunc(time.Duration(entry.timeoutMs)*time.Millisecond, func() {
+	entry.timer = time.AfterFunc(javascriptTimerDuration(entry.timeoutMs), func() {
 		c.cancelPending(id, &protocol.McpTimeoutError{TimeoutMs: entry.timeoutMs}, entry.cancellable, "Request timed out")
 	})
 }
