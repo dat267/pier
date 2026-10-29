@@ -715,7 +715,8 @@ func discardBody(response *http.Response) {
 	if response == nil || response.Body == nil {
 		return
 	}
-	_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 4096))
+	// Match Fetch body.cancel(): ignored bodies must not delay acknowledgment,
+	// auth recovery, or shutdown while waiting for bytes we will never use.
 	_ = response.Body.Close()
 }
 
