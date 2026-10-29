@@ -162,6 +162,10 @@ func yamlPlainScalarIsString(value string) bool {
 	if strings.Contains(value, "_") {
 		return true
 	}
+	// Go accepts uppercase X/O prefixes here, but YAML keeps them as strings.
+	if strings.HasPrefix(value, "0X") || strings.HasPrefix(value, "0O") {
+		return true
+	}
 	unsigned := value
 	if strings.HasPrefix(value, "+") || strings.HasPrefix(value, "-") {
 		unsigned = value[1:]
