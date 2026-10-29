@@ -521,7 +521,7 @@ func (s *AgentSession) Subscribe(listener SessionEventListener) func() {
 		defer s.listenerMu.Unlock()
 		for i, k := range s.listeners {
 			if k == key {
-				s.listeners = append(s.listeners[:i], s.listeners[i+1:]...)
+				s.listeners = slices.Delete(s.listeners, i, i+1)
 				return
 			}
 		}
