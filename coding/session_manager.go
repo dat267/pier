@@ -802,8 +802,13 @@ func (m *SessionManager) branchPointersLocked(fromID string) []*SessionEntry {
 		}
 	}
 	var path []*SessionEntry
+	seen := make(map[string]struct{})
 	current := m.byID[startID]
 	for current != nil {
+		if _, exists := seen[current.ID]; exists {
+			break
+		}
+		seen[current.ID] = struct{}{}
 		path = append(path, current)
 		if current.ParentID != nil {
 			current = m.byID[*current.ParentID]

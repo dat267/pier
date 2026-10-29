@@ -966,7 +966,8 @@ func GetLatestCompactionEntry(entries []SessionEntry) *SessionEntry {
 	return nil
 }
 
-// buildSessionPath walks the parent chain from the leaf to the root.
+// buildSessionPath walks the parent chain from the leaf to the root. D287:
+// malformed persisted graphs stop at the first repeated ID instead of looping.
 func buildSessionPath(entries []SessionEntry, leafID *string, byID map[string]*SessionEntry) []SessionEntry {
 	if byID == nil {
 		byID = map[string]*SessionEntry{}
@@ -988,8 +989,13 @@ func buildSessionPath(entries []SessionEntry, leafID *string, byID map[string]*S
 		return nil
 	}
 	var path []SessionEntry
+	seen := make(map[string]struct{})
 	current := leaf
 	for current != nil {
+		if _, exists := seen[current.ID]; exists {
+			break
+		}
+		seen[current.ID] = struct{}{}
 		path = append(path, *current)
 		if current.ParentID != nil {
 			current = byID[*current.ParentID]

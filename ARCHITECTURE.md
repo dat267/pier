@@ -3161,6 +3161,24 @@ Tests: `TestSystemPromptForbidsShellFileWrites`,
 `TestSystemPromptShellWriteRuleNamesTheAvailableFileTool` and
 `TestSystemPromptShellWriteRuleNeedsAFileTool`.
 
+### D287
+
+**Malformed session parent cycles terminate instead of hanging branch walks.**
+
+Reference: pi v1.4.0 (`4a080252`), `packages/coding-agent/src/core/session-manager.ts`
+`buildSessionPath` follows `parentId` without cycle detection. A valid JSONL file
+with two entries pointing to each other therefore loops indefinitely when
+`GetBranch` or a context projection walks from the leaf. Pier stops at the first
+repeated entry ID in branch, projection, and branch-summary walks; a cycle is
+represented once in root-to-leaf traversal order. This changes only malformed
+session graphs and avoids wedging the agent while preserving their readable
+entries.
+
+Test: `TestSessionParentCycleDoesNotHang` opens a synthetic session containing
+two disconnected parent cycles in a bounded child process and checks branch,
+projection-path, and branch-summary traversal, including one acyclic control
+in the existing session-manager suite.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

@@ -68,8 +68,13 @@ func CollectEntriesForBranchSummary(session *SessionManager, oldLeafID, targetID
 	}
 
 	var entries []SessionEntry
+	seen := map[string]struct{}{}
 	current := oldLeafID
 	for current != "" && current != commonAncestorID {
+		if _, exists := seen[current]; exists {
+			break
+		}
+		seen[current] = struct{}{}
 		entry := session.GetEntry(current)
 		if entry == nil {
 			break
