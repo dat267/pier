@@ -188,8 +188,12 @@ type StreamableHttpReconnectOptions struct {
 	// InitialDelayMs delays the first reconnection attempt, unless the
 	// server sent a `retry` field. Default: 1000.
 	InitialDelayMs int64
+	// InitialDelayMsSet distinguishes an explicit zero from the default.
+	InitialDelayMsSet bool
 	// MaxDelayMs bounds the exponential backoff. Default: 30000.
 	MaxDelayMs int64
+	// MaxDelayMsSet distinguishes an explicit zero from the default.
+	MaxDelayMsSet bool
 	// MaxRetries is the number of consecutive failed attempts before giving
 	// up on a stream. Default: 5.
 	MaxRetries int
@@ -944,22 +948,28 @@ func (t *StreamableHttpTransport) reconnectDelay(attempt int, serverDelayMs *int
 		return *serverDelayMs
 	}
 	initial := int64(defaultReconnectInitialMs)
-	if t.options.Reconnect != nil && t.options.Reconnect.InitialDelayMs != 0 {
+	if t.options.Reconnect != nil && (t.options.Reconnect.InitialDelayMsSet || t.options.Reconnect.InitialDelayMs != 0) {
 		initial = t.options.Reconnect.InitialDelayMs
 	}
 	delay := initial
+	maxDelay := t.maxDelay()
+	if delay > maxDelay {
+		return maxDelay
+	}
 	for range attempt {
-		if delay*2 > t.maxDelay() {
-			delay = t.maxDelay()
-			break
+		if delay > 0 && delay > maxDelay/2 {
+			return maxDelay
 		}
 		delay *= 2
+	}
+	if delay > maxDelay {
+		return maxDelay
 	}
 	return delay
 }
 
 func (t *StreamableHttpTransport) maxDelay() int64 {
-	if t.options.Reconnect != nil && t.options.Reconnect.MaxDelayMs != 0 {
+	if t.options.Reconnect != nil && (t.options.Reconnect.MaxDelayMsSet || t.options.Reconnect.MaxDelayMs != 0) {
 		return t.options.Reconnect.MaxDelayMs
 	}
 	return defaultReconnectMaxMs

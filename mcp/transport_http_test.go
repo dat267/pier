@@ -541,6 +541,87 @@ func TestStreamableHTTPMaxRetriesZeroDisablesReconnect(t *testing.T) {
 	}
 }
 
+// pi v1.4.0 (4a080252), packages/mcp/src/transports/streamable-http.ts:
+// an explicit zero initialDelayMs skips backoff; only undefined uses 1000 ms.
+func TestStreamableHTTPZeroInitialDelayReconnectsImmediately(t *testing.T) {
+	var mu sync.Mutex
+	gets := 0
+	secondGet := make(chan struct{}, 1)
+	var fixture *httpFixture
+	fixture = newHTTPFixture(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			fixture.protocolHandler(w, r, nil)
+			return
+		}
+		mu.Lock()
+		gets++
+		current := gets
+		mu.Unlock()
+		if current == 2 {
+			secondGet <- struct{}{}
+		}
+		w.Header().Set("content-type", "text/event-stream")
+	})
+	defer fixture.close(t)
+
+	client := NewClient(ClientOptions{Name: "http-test", Version: "1.0.0"})
+	zeroRetries := 1
+	if _, err := client.Connect(context.Background(), NewStreamableHttpTransport(StreamableHttpTransportOptions{
+		URL:       fixture.url,
+		Reconnect: &StreamableHttpReconnectOptions{InitialDelayMs: 0, InitialDelayMsSet: true, MaxRetries: zeroRetries},
+	})); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-secondGet:
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("explicit zero initial delay did not reconnect promptly")
+	}
+	if err := client.Close(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// pi v1.4.0 (4a080252), packages/mcp/src/transports/streamable-http.ts:
+// maxDelayMs=0 clamps exponential backoff to zero instead of using its default.
+func TestStreamableHTTPZeroMaxDelayClampsBackoff(t *testing.T) {
+	var mu sync.Mutex
+	gets := 0
+	secondGet := make(chan struct{}, 1)
+	var fixture *httpFixture
+	fixture = newHTTPFixture(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			fixture.protocolHandler(w, r, nil)
+			return
+		}
+		mu.Lock()
+		gets++
+		current := gets
+		mu.Unlock()
+		if current == 2 {
+			secondGet <- struct{}{}
+		}
+		w.Header().Set("content-type", "text/event-stream")
+	})
+	defer fixture.close(t)
+
+	client := NewClient(ClientOptions{Name: "http-test", Version: "1.0.0"})
+	if _, err := client.Connect(context.Background(), NewStreamableHttpTransport(StreamableHttpTransportOptions{
+		URL:       fixture.url,
+		Reconnect: &StreamableHttpReconnectOptions{InitialDelayMs: 500, MaxDelayMs: 0, MaxDelayMsSet: true, MaxRetries: 1},
+	})); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-secondGet:
+	case <-time.After(250 * time.Millisecond):
+		t.Fatal("explicit zero max delay did not clamp reconnect backoff")
+	}
+	if err := client.Close(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestStreamableHTTPReconnectsGetStream(t *testing.T) {
 	var mu sync.Mutex
 	gets := 0
