@@ -254,13 +254,13 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D298)
+## Deliberate divergences from pi (D1–D299)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D298**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D299**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation. Port and review history are available with `git log --oneline`.
 
 ### D41
@@ -3348,6 +3348,18 @@ it with mode 0600. Windows inherited ACLs are not changed.
 
 Test: `TestTrustFileUsesPrivateMode` checks new and existing files under umask
 000.
+
+### D299
+
+**Opt-in TUI terminal-write logs are private on POSIX.**
+
+Reference: pi v1.4.0 `packages/tui/src/terminal.ts` appends raw terminal
+output to `PI_TUI_WRITE_LOG` with Node defaults. The capture can include
+prompts and responses. Pier creates and updates these logs with mode 0600;
+Windows inherited ACLs are not changed.
+
+Test: Linux `TestTerminalWriteLogUsesPrivateMode` checks new and existing
+files under umask 000.
 
 ## Lock inventory
 

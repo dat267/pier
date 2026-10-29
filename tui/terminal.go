@@ -872,9 +872,11 @@ func (t *ProcessTerminal) writeDirect(data string) {
 	}
 	_, _ = t.stdout.WriteString(data)
 	if t.writeLogPath != "" {
-		f, err := os.OpenFile(t.writeLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+		f, err := os.OpenFile(t.writeLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 		if err == nil {
-			_, _ = f.WriteString(data)
+			if err := f.Chmod(0o600); err == nil {
+				_, _ = f.WriteString(data)
+			}
 			_ = f.Close()
 		}
 	}
