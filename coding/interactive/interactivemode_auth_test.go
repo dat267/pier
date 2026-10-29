@@ -207,6 +207,25 @@ func TestAuthShowAuthPrompt(t *testing.T) {
 	if gotErr == nil {
 		t.Fatalf("expected cancellation, got %q", gotValue)
 	}
+
+	// A concurrent browser callback cancels manual input without cancelling the
+	// login dialog itself (upstream callback-server.ts's manualAbort signal).
+	promptCtx, cancelPrompt := context.WithCancel(context.Background())
+	defer cancelPrompt()
+	dialog = NewLoginDialogComponent(nil, nil, "p", nil, "", "")
+	done = make(chan struct{})
+	go func() {
+		defer close(done)
+		gotValue, gotErr = wiring.ShowAuthPrompt(dialog, ai.AuthPrompt{
+			Type: ai.AuthPromptManualCode, Message: "code", Ctx: promptCtx,
+		})
+	}()
+	<-promptReady
+	cancelPrompt()
+	<-done
+	if gotErr == nil {
+		t.Fatalf("expected prompt-context cancellation, got %q", gotValue)
+	}
 }
 
 // TestAuthNotifyDialog covers the event mapping.
