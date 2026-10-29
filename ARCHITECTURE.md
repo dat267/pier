@@ -3395,9 +3395,11 @@ Reference: pi v1.4.0 `packages/coding-agent/src/core/system-prompt.ts` inserts
 custom sections through `Object.entries`, preserving JavaScript property order.
 Go maps have no insertion order, so Pier accepts `CustomSectionOrder` to preserve
 the caller's intended order; custom names omitted from that slice are sorted
-lexically for deterministic output. Tests reproduce both explicit ordering and
-the fallback. The `prepareLoadout` extension hook itself remains out of scope
-under D41.
+lexically for deterministic output. The builder retains first-insertion order
+through prompt rendering and session patches: overriding a base section keeps
+its slot, while a built-in name absent from the base follows custom order.
+Tests reproduce explicit ordering, the fallback, and newly added built-in names.
+The `prepareLoadout` extension hook itself remains out of scope under D41.
 
 ## Lock inventory
 

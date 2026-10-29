@@ -181,6 +181,12 @@ func contains(list []string, want string) bool { return slices.Contains(list, wa
 // BuildSystemPromptSections builds the ordered prompt sections
 // (port of buildSystemPromptSections).
 func BuildSystemPromptSections(input BuildSystemPromptOptions) (SystemPromptSections, error) {
+	sections, _, err := buildSystemPromptSections(input)
+	return sections, err
+}
+
+// buildSystemPromptSections retains first-insertion order alongside the public map.
+func buildSystemPromptSections(input BuildSystemPromptOptions) (SystemPromptSections, []string, error) {
 	// Only an omitted list gets the default tools (upstream's `??`): an
 	// explicit empty list means the session has no tools, so the rules and the
 	// skill-reader check must see it empty. Session callers always pass the
@@ -210,7 +216,7 @@ func BuildSystemPromptSections(input BuildSystemPromptOptions) (SystemPromptSect
 
 	for name := range customSections {
 		if !systemPromptSectionName.MatchString(name) || name == "preamble" {
-			return nil, fmt.Errorf("Invalid system prompt section name: %s", name)
+			return nil, nil, fmt.Errorf("Invalid system prompt section name: %s", name)
 		}
 	}
 
@@ -267,49 +273,33 @@ func BuildSystemPromptSections(input BuildSystemPromptOptions) (SystemPromptSect
 		}
 	}
 	promptSections["cwd"] = strings.ReplaceAll(cwd, "\\", "/")
-	for name, content := range customSections {
-		if content != "" {
+	// Capture the base order before custom sections are merged. Overriding an
+	// existing name keeps its slot; a previously absent built-in name is new.
+	order := []string{"preamble"}
+	for _, name := range []string{"tools", "rules", "addendum", "project_context", "skills", "cwd"} {
+		if _, ok := promptSections[name]; ok {
+			order = append(order, name)
+		}
+	}
+	for _, name := range orderedCustomSectionNames(customSections, input.CustomSectionOrder) {
+		if content := customSections[name]; content != "" {
+			if _, exists := promptSections[name]; !exists {
+				order = append(order, name)
+			}
 			promptSections[name] = content
 		}
 	}
 
 	sections := SystemPromptSections{"preamble": promptSections["preamble"]}
-	// Upstream renders sections in insertion order: preamble, tools, rules,
-	// addendum, project_context, skills, cwd, then custom sections (D176 drops
-	// upstream's `docs` section). CustomSectionOrder carries custom map order.
-	knownOrder := []string{"tools", "rules", "addendum", "project_context", "skills", "cwd"}
-	rendered := map[string]bool{"preamble": true}
-	for _, name := range knownOrder {
-		if content, ok := promptSections[name]; ok {
-			sections[name] = fmt.Sprintf("<%s>\n%s\n</%s>", name, content, name)
-			rendered[name] = true
-		}
-	}
-	var customNames []string
-	for name := range promptSections {
-		if !rendered[name] {
-			customNames = append(customNames, name)
-		}
-	}
-	sortNames(customNames)
-	for _, name := range customNames {
+	for _, name := range order[1:] {
 		sections[name] = fmt.Sprintf("<%s>\n%s\n</%s>", name, promptSections[name], name)
 	}
-	return sections, nil
+	return sections, order, nil
 }
 
-// sectionInsertionOrder recovers the render order: known sections first,
-// then custom sections in caller order, with unspecified names sorted.
-func sectionInsertionOrder(sections SystemPromptSections, customOrder []string) []string {
-	knownOrder := []string{"tools", "rules", "addendum", "project_context", "skills", "cwd"}
+func orderedCustomSectionNames(sections map[string]string, customOrder []string) []string {
 	var out []string
-	seen := map[string]bool{"preamble": true}
-	for _, name := range knownOrder {
-		if _, ok := sections[name]; ok {
-			out = append(out, name)
-			seen[name] = true
-		}
-	}
+	seen := map[string]bool{}
 	for _, name := range customOrder {
 		if _, ok := sections[name]; ok && !seen[name] {
 			out = append(out, name)
@@ -340,20 +330,22 @@ func sortNames(names []string) {
 // is opaque (content only, no sections); otherwise the structured sections
 // carry the prompt.
 func BuildSystemPromptState(input BuildSystemPromptOptions) (content string, sections SystemPromptSections, err error) {
+	content, sections, _, err = buildSystemPromptState(input)
+	return content, sections, err
+}
+
+func buildSystemPromptState(input BuildSystemPromptOptions) (string, SystemPromptSections, []string, error) {
 	if input.ForceSystemPromptSet || input.ForceSystemPrompt != "" {
-		return input.ForceSystemPrompt, nil, nil
+		return input.ForceSystemPrompt, nil, nil, nil
 	}
-	sections, err = BuildSystemPromptSections(input)
-	if err != nil {
-		return "", nil, err
-	}
-	return "", sections, nil
+	sections, order, err := buildSystemPromptSections(input)
+	return "", sections, order, err
 }
 
 // BuildSystemPrompt renders the prompt text exactly as the transcript's
 // system message replays it.
 func BuildSystemPrompt(input BuildSystemPromptOptions) (string, error) {
-	content, sections, err := BuildSystemPromptState(input)
+	content, sections, order, err := buildSystemPromptState(input)
 	if err != nil {
 		return "", err
 	}
@@ -361,8 +353,7 @@ func BuildSystemPrompt(input BuildSystemPromptOptions) (string, error) {
 	// insertion order — preamble first, then the section order fixed above.
 	parts := []string{content}
 	if sections != nil {
-		orderedNames := append([]string{"preamble"}, sectionInsertionOrder(sections, input.CustomSectionOrder)...)
-		for _, name := range orderedNames {
+		for _, name := range order {
 			if value, ok := sections[name]; ok {
 				parts = append(parts, value)
 			}

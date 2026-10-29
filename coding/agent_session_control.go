@@ -598,7 +598,7 @@ func (s *AgentSession) preparePromptAndToolLoadout() *ai.SystemMessage {
 			}
 		}
 	}
-	built, err := BuildSystemPromptSections(options)
+	built, order, err := buildSystemPromptSections(options)
 	if err != nil {
 		return nil
 	}
@@ -607,7 +607,7 @@ func (s *AgentSession) preparePromptAndToolLoadout() *ai.SystemMessage {
 		return nil
 	}
 	message := &ai.SystemMessage{Content: ai.StringOrBlocks{Text: ""}, Timestamp: time.Now().UnixMilli()}
-	for _, name := range append([]string{"preamble"}, sectionInsertionOrder(built, options.CustomSectionOrder)...) {
+	for _, name := range order {
 		if value, ok := patch[name]; ok {
 			message.SetSection(name, value)
 		}
