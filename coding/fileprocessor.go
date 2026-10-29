@@ -224,6 +224,9 @@ func resizeInlineImage(data []byte, mimeType string, options ImageResizeOptions)
 	}
 
 	width, height := inlineImageTargetSize(originalWidth, originalHeight, options)
+	if width <= 0 || height <= 0 {
+		return nil
+	}
 	for {
 		scaled := scaleImageBilinear(source, width, height)
 		for _, candidate := range encodeImageCandidates(scaled, options.JPEGQuality) {

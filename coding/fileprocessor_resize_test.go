@@ -114,6 +114,16 @@ func TestResizeInlineImageShrinksToFitTheByteBudget(t *testing.T) {
 	}
 }
 
+// Pinned image-resize-core.ts catches Photon resize failures and returns null;
+// a non-positive target must not become a successful invalid-dimension image.
+func TestProcessImageInvalidResizeDimensionsReturnOmission(t *testing.T) {
+	options := ImageResizeOptions{MaxWidth: -1, MaxHeight: 2, MaxBytes: 100_000, JPEGQuality: 80}
+	result := ProcessImage(solidPNG(t, 2, 2), "image/png", &ProcessImageOptions{ResizeOptions: &options})
+	if result.OK || !strings.Contains(result.Message, "could not be resized") {
+		t.Fatalf("result = %+v; want the normal resize omission", result)
+	}
+}
+
 func TestResizeInlineImageRejectsUndecodableBytes(t *testing.T) {
 	if resized := resizeInlineImage([]byte("not an image"), "image/png", DefaultImageResizeOptions); resized != nil {
 		t.Fatalf("undecodable bytes produced %#v", resized)
