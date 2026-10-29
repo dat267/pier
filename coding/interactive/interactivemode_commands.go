@@ -818,7 +818,7 @@ func WriteDebugLogFile(content string) error {
 	if err := os.MkdirAll(filepath.Dir(debugLogPath), 0o777); err != nil {
 		return err
 	}
-	return os.WriteFile(debugLogPath, []byte(content), 0o666)
+	return writePrivateFile(debugLogPath, []byte(content))
 }
 
 // newCommandWiring assembles the CommandWiring (port of the corresponding InteractiveMode wiring).

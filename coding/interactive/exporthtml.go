@@ -457,7 +457,7 @@ func ExportFromFile(inputPath string, outputPath string, themeName string) (stri
 		base := strings.TrimSuffix(filepath.Base(resolvedInput), ".jsonl")
 		outputPath = coding.AppName + "-session-" + base + ".html"
 	}
-	if err := writePrivateExportFile(outputPath, []byte(html)); err != nil {
+	if err := writePrivateFile(outputPath, []byte(html)); err != nil {
 		return "", err
 	}
 	return outputPath, nil
@@ -521,13 +521,13 @@ func ExportSessionToHTML(session *coding.AgentSession, outputPath string, themeN
 		base = strings.TrimSuffix(base, ".jsonl")
 		outputPath = coding.AppName + "-session-" + base + ".html"
 	}
-	if err := writePrivateExportFile(outputPath, []byte(html)); err != nil {
+	if err := writePrivateFile(outputPath, []byte(html)); err != nil {
 		return "", err
 	}
 	return outputPath, nil
 }
 
-func writePrivateExportFile(path string, data []byte) error {
+func writePrivateFile(path string, data []byte) error {
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 	if err != nil {
 		return err

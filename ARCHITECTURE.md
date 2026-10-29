@@ -254,13 +254,13 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D292)
+## Deliberate divergences from pi (D1–D293)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D292**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D293**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation. Port and review history are available with `git log --oneline`.
 
 ### D41
@@ -3269,6 +3269,20 @@ readable under permissive umasks. Windows inherited ACLs are not changed.
 
 Test: `TestExportHTMLWritesPrivateFiles` checks both export entry points under
 umask 000, including pre-existing 0644 destinations.
+
+### D293
+
+**Debug log files are private on POSIX.**
+
+Reference: pi v1.4.0 `packages/coding-agent/src/modes/interactive/interactive-mode.ts`
+creates the debug log with `writeFileSync` defaults after recursively creating
+its parent directory. The debug log includes rendered UI lines and agent
+context messages. Pier writes the file with mode 0600, including when replacing
+an existing file; its parent directory policy is unchanged. Windows inherited
+ACLs are not modified.
+
+Test: `TestWriteDebugLogFileUsesPrivateMode` checks new and existing files
+under umask 000.
 
 ## Lock inventory
 
