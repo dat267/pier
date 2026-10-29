@@ -501,6 +501,10 @@ func (w *AuthWiring) ShowAuthPrompt(dialog *LoginDialogComponent, prompt ai.Auth
 	if w.OnPromptShown != nil {
 		w.OnPromptShown()
 	}
+	var promptDone <-chan struct{}
+	if prompt.Ctx != nil {
+		promptDone = prompt.Ctx.Done()
+	}
 	select {
 	case result := <-response:
 		if result.Err != nil {
@@ -508,6 +512,8 @@ func (w *AuthWiring) ShowAuthPrompt(dialog *LoginDialogComponent, prompt ai.Auth
 		}
 		return result.Value, nil
 	case <-dialog.Aborted():
+		return "", errors.New("Login cancelled")
+	case <-promptDone:
 		return "", errors.New("Login cancelled")
 	}
 }

@@ -376,6 +376,7 @@ func LoginAnthropic(interaction *AuthInteraction) (*OAuthCredential, error) {
 	go func() {
 		input, perr := interaction.Prompt(AuthPrompt{
 			Type:        AuthPromptManualCode,
+			Ctx:         manualCtx,
 			Message:     "Complete login in your browser, or paste the authorization code / redirect URL here:",
 			Placeholder: redirectURI,
 		})
@@ -399,6 +400,7 @@ func LoginAnthropic(interaction *AuthInteraction) (*OAuthCredential, error) {
 		result, ok = server.WaitForCode(manualCtx)
 	}
 	if ok && result.Code != "" {
+		cancelManual()
 		code = result.Code
 		state = result.State
 	} else {

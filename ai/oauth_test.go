@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -335,6 +336,77 @@ func TestLoginAnthropicManualCode(t *testing.T) {
 		notified[1].Type != AuthEventProgress {
 		t.Fatalf("notifications = %+v", notified)
 	}
+}
+
+// Matches pinned pi/packages/ai/src/auth/oauth/callback-server.ts, which aborts
+// the concurrent manual prompt when a browser callback wins.
+func TestLoginAnthropicCallbackUnblocksManualPrompt(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		_, _ = writer.Write([]byte(`{"access_token":"callback-access","refresh_token":"callback-refresh","expires_in":60}`))
+	}))
+	defer server.Close()
+
+	promptStarted := make(chan struct{})
+	promptRelease := make(chan struct{})
+	promptReturned := make(chan struct{})
+	authURL := make(chan string, 1)
+	loginDone := make(chan error, 1)
+	withTokenURL(t, server.URL, func() {
+		go func() {
+			_, err := LoginAnthropic(&AuthInteraction{
+				Ctx: context.Background(),
+				Prompt: func(prompt AuthPrompt) (string, error) {
+					close(promptStarted)
+					select {
+					case <-prompt.Ctx.Done():
+						close(promptReturned)
+						return "", errors.New("prompt cancelled after callback")
+					case <-promptRelease:
+						close(promptReturned)
+						return "", errors.New("prompt was not cancelled")
+					}
+				},
+				Notify: func(event AuthEvent) {
+					if event.Type == AuthEventAuthURL {
+						authURL <- event.URL
+					}
+				},
+			})
+			loginDone <- err
+		}()
+
+		select {
+		case <-promptStarted:
+		case <-time.After(2 * time.Second):
+			close(promptRelease)
+			t.Fatal("manual prompt did not start")
+		}
+		loginURL := <-authURL
+		parsed, err := url.Parse(loginURL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		redirectURI, err := url.Parse(parsed.Query().Get("redirect_uri"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		callbackURL := redirectURI.String() + "?code=browser-code&state=" + url.QueryEscape(parsed.Query().Get("state"))
+		response, err := http.Get(callbackURL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		response.Body.Close()
+		if err := <-loginDone; err != nil {
+			t.Fatalf("LoginAnthropic: %v", err)
+		}
+		select {
+		case <-promptReturned:
+		case <-time.After(100 * time.Millisecond):
+			close(promptRelease)
+			<-promptReturned
+			t.Fatal("browser callback returned without unblocking the manual prompt")
+		}
+	})
 }
 
 func TestAnthropicOAuthDefinition(t *testing.T) {

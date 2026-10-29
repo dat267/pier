@@ -274,7 +274,9 @@ const (
 
 // AuthPrompt is a prompt shown to the user during login.
 type AuthPrompt struct {
-	Type        AuthPromptKind
+	Type AuthPromptKind
+	// Ctx is cancelled when a concurrent browser callback wins over this prompt.
+	Ctx         context.Context
 	Message     string
 	Placeholder string
 	// Select options (Type == "select").
