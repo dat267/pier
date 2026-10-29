@@ -37,8 +37,12 @@ type McpOutputSaver func(data []byte, extension string) (string, error)
 
 // SaveMcpToTempFile writes data to a private temp file (upstream saveToTempFile).
 func SaveMcpToTempFile(data []byte, extension string) (string, error) {
+	return saveMcpToTempFile(data, extension, rand.Read)
+}
+
+func saveMcpToTempFile(data []byte, extension string, readRandom func([]byte) (int, error)) (string, error) {
 	random := make([]byte, 8)
-	if _, err := rand.Read(random); err != nil {
+	if _, err := readRandom(random); err != nil {
 		return "", err
 	}
 	path := filepath.Join(os.TempDir(), "pi-mcp-"+hex.EncodeToString(random)+extension)
