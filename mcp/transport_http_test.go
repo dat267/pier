@@ -498,6 +498,49 @@ func TestStreamableHTTPFailsRequestWhoseStreamEndsWithoutAnswer(t *testing.T) {
 	}
 }
 
+// pi v1.4.0 (4a080252), packages/mcp/src/transports/streamable-http.ts:
+// optional maxRetries defaults to five, but an explicit zero disables retries.
+func TestStreamableHTTPMaxRetriesZeroDisablesReconnect(t *testing.T) {
+	var mu sync.Mutex
+	gets := 0
+	var fixture *httpFixture
+	fixture = newHTTPFixture(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			fixture.protocolHandler(w, r, nil)
+			return
+		}
+		mu.Lock()
+		gets++
+		mu.Unlock()
+		w.Header().Set("content-type", "text/event-stream")
+	})
+	defer fixture.close(t)
+
+	client := NewClient(ClientOptions{Name: "http-test", Version: "1.0.0"})
+	dropped := make(chan error, 1)
+	client.OnError(func(err error) { dropped <- err })
+	if _, err := client.Connect(context.Background(), NewStreamableHttpTransport(StreamableHttpTransportOptions{
+		URL:       fixture.url,
+		Reconnect: &StreamableHttpReconnectOptions{InitialDelayMs: 1, MaxRetries: 0, MaxRetriesSet: true},
+	})); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-dropped:
+	case <-time.After(2 * time.Second):
+		t.Fatal("stream did not report its drop")
+	}
+	mu.Lock()
+	got := gets
+	mu.Unlock()
+	if got != 1 {
+		t.Fatalf("GET attempts = %d, want one when MaxRetries is explicitly zero", got)
+	}
+	if err := client.Close(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestStreamableHTTPReconnectsGetStream(t *testing.T) {
 	var mu sync.Mutex
 	gets := 0

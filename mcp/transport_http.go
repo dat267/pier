@@ -193,6 +193,9 @@ type StreamableHttpReconnectOptions struct {
 	// MaxRetries is the number of consecutive failed attempts before giving
 	// up on a stream. Default: 5.
 	MaxRetries int
+	// MaxRetriesSet distinguishes an explicit zero from the default value.
+	// Set it when MaxRetries is zero to disable reconnect attempts.
+	MaxRetriesSet bool
 }
 
 // StreamableHttpTransportOptions configures the transport (upstream
@@ -963,7 +966,7 @@ func (t *StreamableHttpTransport) maxDelay() int64 {
 }
 
 func (t *StreamableHttpTransport) maxRetries() int {
-	if t.options.Reconnect != nil && t.options.Reconnect.MaxRetries != 0 {
+	if t.options.Reconnect != nil && (t.options.Reconnect.MaxRetriesSet || t.options.Reconnect.MaxRetries != 0) {
 		return t.options.Reconnect.MaxRetries
 	}
 	return defaultReconnectMaxRetries
