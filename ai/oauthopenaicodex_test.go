@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 )
 
 // Tests for auth/oauth/openai-codex.ts.
@@ -378,6 +380,74 @@ func withCodexURLs(t *testing.T, base string, run func()) {
 // TestOpenAICodexCallbackPortInUse pins the paste fallback: the fixed port is
 // shared with the Codex CLI, so when it is held the server reports no callback
 // and the login falls back to the pasted redirect URL (openai-codex.ts).
+// Matches pinned pi/packages/ai/src/auth/oauth/callback-server.ts, which aborts
+// the concurrent manual prompt when a browser callback wins.
+func TestLoginOpenAICodexCallbackUnblocksManualPrompt(t *testing.T) {
+	host := oauthCallbackHost()
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, OpenAICodexCallbackPort))
+	if err != nil {
+		t.Skipf("port %d is not free: %v", OpenAICodexCallbackPort, err)
+	}
+	listener.Close()
+
+	tokenServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		_, _ = fmt.Fprintf(writer, `{"access_token":%q,"refresh_token":"refresh","expires_in":3600}`,
+			codexAccessToken(t, "acct_callback"))
+	}))
+	defer tokenServer.Close()
+	previousTokenURL := openAICodexTokenURL
+	openAICodexTokenURL = tokenServer.URL
+	defer func() { openAICodexTokenURL = previousTokenURL }()
+
+	promptStarted := make(chan struct{})
+	promptReturned := make(chan struct{})
+	authURL := make(chan string, 1)
+	loginDone := make(chan error, 1)
+	go func() {
+		_, loginErr := LoginOpenAICodex(&AuthInteraction{
+			Ctx: context.Background(),
+			Prompt: func(prompt AuthPrompt) (string, error) {
+				close(promptStarted)
+				select {
+				case <-prompt.Ctx.Done():
+					close(promptReturned)
+					return "", errors.New("prompt cancelled after callback")
+				}
+			},
+			Notify: func(event AuthEvent) {
+				if event.Type == AuthEventAuthURL {
+					authURL <- event.URL
+				}
+			},
+		})
+		loginDone <- loginErr
+	}()
+	select {
+	case <-promptStarted:
+	case <-time.After(2 * time.Second):
+		t.Fatal("manual prompt did not start")
+	}
+	loginURL, err := url.Parse(<-authURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	callbackURL := fmt.Sprintf("http://localhost:%d/auth/callback?code=browser-code&state=%s",
+		OpenAICodexCallbackPort, url.QueryEscape(loginURL.Query().Get("state")))
+	response, err := http.Get(callbackURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+	if err := <-loginDone; err != nil {
+		t.Fatalf("LoginOpenAICodex: %v", err)
+	}
+	select {
+	case <-promptReturned:
+	case <-time.After(time.Second):
+		t.Fatal("browser callback returned without unblocking the manual prompt")
+	}
+}
+
 func TestOpenAICodexCallbackPortInUse(t *testing.T) {
 	host := oauthCallbackHost()
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, OpenAICodexCallbackPort))

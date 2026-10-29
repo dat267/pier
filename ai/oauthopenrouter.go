@@ -365,6 +365,8 @@ func LoginOpenRouter(interaction *AuthInteraction) (*OAuthCredential, error) {
 		return nil, err
 	}
 	defer callback.Close()
+	manualCtx, cancelManual := context.WithCancel(ctx)
+	defer cancelManual()
 
 	type manualResult struct {
 		input string
@@ -374,6 +376,7 @@ func LoginOpenRouter(interaction *AuthInteraction) (*OAuthCredential, error) {
 	go func() {
 		input, perr := interaction.Prompt(AuthPrompt{
 			Type:        AuthPromptManualCode,
+			Ctx:         manualCtx,
 			Message:     "Complete sign-in in your browser, or paste the authorization code / redirect URL here:",
 			Placeholder: callback.CallbackURL,
 		})
@@ -408,6 +411,7 @@ func LoginOpenRouter(interaction *AuthInteraction) (*OAuthCredential, error) {
 		return nil, waitErr
 	}
 	if credential != nil {
+		cancelManual()
 		return credential, nil
 	}
 	manual := <-manualCh

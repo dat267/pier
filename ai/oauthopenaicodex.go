@@ -529,6 +529,8 @@ func LoginOpenAICodex(interaction *AuthInteraction) (*OAuthCredential, error) {
 	}
 	server := StartOpenAICodexCallbackServer(flow.State)
 	defer server.Close()
+	manualCtx, cancelManual := context.WithCancel(ctx)
+	defer cancelManual()
 
 	type manualResult struct {
 		input string
@@ -538,6 +540,7 @@ func LoginOpenAICodex(interaction *AuthInteraction) (*OAuthCredential, error) {
 	go func() {
 		input, perr := interaction.Prompt(AuthPrompt{
 			Type:        AuthPromptManualCode,
+			Ctx:         manualCtx,
 			Message:     "Complete login in your browser, or paste the authorization code / redirect URL here:",
 			Placeholder: OpenAICodexRedirectURI,
 		})
@@ -556,6 +559,7 @@ func LoginOpenAICodex(interaction *AuthInteraction) (*OAuthCredential, error) {
 	code := ""
 	callbackCode, ok := server.WaitForCode()
 	if ok && callbackCode != "" {
+		cancelManual()
 		code = callbackCode
 	} else {
 		manual := <-manualCh

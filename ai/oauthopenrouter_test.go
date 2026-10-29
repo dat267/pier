@@ -3,12 +3,14 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 )
 
 // Tests for auth/oauth/openrouter.ts.
@@ -312,6 +314,70 @@ func TestLoginOpenRouterManualPath(t *testing.T) {
 		})
 		if err == nil || err.Error() != "Missing authorization code" {
 			t.Fatalf("err = %v", err)
+		}
+	})
+}
+
+// Matches pinned pi/packages/ai/src/auth/oauth/callback-server.ts, which aborts
+// the concurrent manual prompt when a browser callback wins.
+func TestLoginOpenRouterCallbackUnblocksManualPrompt(t *testing.T) {
+	tokenServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "application/json")
+		_, _ = writer.Write([]byte(`{"key":"sk-callback"}`))
+	}))
+	defer tokenServer.Close()
+
+	promptStarted := make(chan struct{})
+	promptReturned := make(chan struct{})
+	authURL := make(chan string, 1)
+	loginDone := make(chan error, 1)
+	withOpenRouterTokenURL(t, tokenServer.URL, func() {
+		go func() {
+			_, err := LoginOpenRouter(&AuthInteraction{
+				Ctx: context.Background(),
+				Prompt: func(prompt AuthPrompt) (string, error) {
+					close(promptStarted)
+					select {
+					case <-prompt.Ctx.Done():
+						close(promptReturned)
+						return "", errors.New("prompt cancelled after callback")
+					}
+				},
+				Notify: func(event AuthEvent) {
+					if event.Type == AuthEventAuthURL {
+						authURL <- event.URL
+					}
+				},
+			})
+			loginDone <- err
+		}()
+
+		select {
+		case <-promptStarted:
+		case <-time.After(2 * time.Second):
+			t.Fatal("manual prompt did not start")
+		}
+		loginURL, err := url.Parse(<-authURL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		callbackURL, err := url.Parse(loginURL.Query().Get("callback_url"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		callbackURL.RawQuery = url.Values{"code": {"browser-code"}}.Encode()
+		response, err := http.Get(callbackURL.String())
+		if err != nil {
+			t.Fatal(err)
+		}
+		response.Body.Close()
+		if err := <-loginDone; err != nil {
+			t.Fatalf("LoginOpenRouter: %v", err)
+		}
+		select {
+		case <-promptReturned:
+		case <-time.After(time.Second):
+			t.Fatal("browser callback returned without unblocking the manual prompt")
 		}
 	})
 }
