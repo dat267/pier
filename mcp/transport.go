@@ -35,8 +35,8 @@ type Transport interface {
 	SetProtocolVersion(version string)
 }
 
-// listenerEntry is one registered listener; removal marks it and emission
-// compacts.
+// listenerEntry is a stable registration identity. Removal unlinks it from
+// its registry while preserving already-admitted callback snapshots.
 type listenerEntry[T any] struct {
 	fn      T
 	removed bool
@@ -76,8 +76,25 @@ func (b *transportEvents) register[T any](set *[]*listenerEntry[T], fn T) func()
 	return func() {
 		b.mu.Lock()
 		defer b.mu.Unlock()
-		token.removed = true
+		*set = removeListener(*set, token)
 	}
+}
+
+// removeListener unlinks one identity without retaining it in the backing tail.
+// The caller holds the registry mutex; callback functions remain immutable.
+func removeListener[T any](set []*listenerEntry[T], token *listenerEntry[T]) []*listenerEntry[T] {
+	if token.removed {
+		return set
+	}
+	token.removed = true
+	for index, entry := range set {
+		if entry == token {
+			copy(set[index:], set[index+1:])
+			set[len(set)-1] = nil
+			return set[:len(set)-1]
+		}
+	}
+	return set
 }
 
 // snapshotLocked collects the live listeners and compacts; the caller holds

@@ -290,7 +290,12 @@ func (c *Client) OnNotification(method string, listener func(json.RawMessage)) f
 	return func() {
 		c.notificationMu.Lock()
 		defer c.notificationMu.Unlock()
-		entry.removed = true
+		listeners := removeListener(c.notificationListeners[method], entry)
+		if len(listeners) == 0 {
+			delete(c.notificationListeners, method)
+		} else {
+			c.notificationListeners[method] = listeners
+		}
 	}
 }
 
@@ -303,7 +308,7 @@ func (c *Client) OnError(listener func(error)) func() {
 	return func() {
 		c.mu.Lock()
 		defer c.mu.Unlock()
-		token.removed = true
+		c.errorListeners = removeListener(c.errorListeners, token)
 	}
 }
 
@@ -317,7 +322,7 @@ func (c *Client) OnClose(listener func()) func() {
 	return func() {
 		c.mu.Lock()
 		defer c.mu.Unlock()
-		token.removed = true
+		c.closeListeners = removeListener(c.closeListeners, token)
 	}
 }
 

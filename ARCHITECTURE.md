@@ -3468,8 +3468,11 @@ connection mutex. Manager error queries snapshot state and diagnostic together;
 callbacks remain outside locks. No new mutex or UI-state worker is introduced.
 
 MCP listener registries retain stable entry pointers, so slice growth and
-snapshot compaction cannot invalidate unsubscribe handles. Callbacks remain
-outside their existing registry mutexes. `mcp.Client.mu` admits incoming request
+snapshot compaction cannot invalidate unsubscribe handles. Unsubscribe unlinks
+the entry and clears the backing-array slot under that same mutex, releasing
+captured state while preserving already-admitted immutable callback snapshots.
+Empty notification-method registries are removed. Callbacks remain outside
+their existing registry mutexes. `mcp.Client.mu` admits incoming request
 cancellation before its handler starts on a worker; the stdio reader remains
 free to dispatch cancellation notifications. Unknown-method error replies also
 write off-reader, so output backpressure cannot stall unrelated responses. Close snapshots and clears incoming
