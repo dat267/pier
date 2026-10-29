@@ -10,6 +10,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unicode"
 
 	"golang.org/x/term"
 )
@@ -1164,11 +1165,20 @@ func (t *ProcessTerminal) ClearScreen() {
 	t.writeLocked("\x1b[2J\x1b[H")
 }
 
-// SetTitle sets the terminal window title (OSC 0;title BEL).
+// SetTitle sets the terminal window title, removing control characters (D290).
 func (t *ProcessTerminal) SetTitle(title string) {
 	t.writeMu.Lock()
 	defer t.writeMu.Unlock()
-	t.writeHintLocked(0, "\x1b]0;"+title+"\x07")
+	t.writeHintLocked(0, "\x1b]0;"+sanitizeTerminalTitle(title)+"\x07")
+}
+
+func sanitizeTerminalTitle(title string) string {
+	return strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return -1
+		}
+		return r
+	}, title)
 }
 
 // SetProgramStatus reports what the program is doing (OSC 7501). The report goes out only

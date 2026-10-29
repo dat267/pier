@@ -419,6 +419,56 @@ func TestApplyLineResets(t *testing.T) {
 	}
 }
 
+// pi v1.4.0 packages/tui/src/tui.ts applyLineResets passes OSC controls through;
+// Pier suppresses clipboard/title controls while retaining image and hyperlinks.
+func TestApplyLineResetsStripsUnsafeOSC(t *testing.T) {
+	renderer := NewRenderer(&fakeTerminal{width: 20, height: 6})
+	osc52Bell := "\x1b]52;c;Zm9v\x07"
+	osc52ST := "\u009d52;c;YmFy\u009c"
+	osc52EscST := "\x1b]52;p;YmF6\x1b\\"
+	osc52Unterminated := "\x1b]52;c;YmFk"
+	oscTitles := []string{"\x1b]0;window\x07", "\x1b]1;icon\x07", "\x1b]2;window\x07"}
+	image := "\x1b_Gimage"
+	link := "\x1b]8;;https://example.com\x07linked\x1b]8;;\x07"
+	lines := []string{
+		"safe" + osc52Bell + "tail", "left" + osc52ST + "right",
+		"escaped" + osc52EscST + "done", "before" + osc52Unterminated,
+		"before" + strings.Join(oscTitles, "middle") + "after",
+		"quote\u201d" + osc52Bell + "tail",
+		"payload\x1b]52;c;prefix\u201csuffix\x07tail",
+		image + osc52Bell + "tail", link + osc52Bell,
+	}
+	out := renderer.ApplyLineResets(lines)
+	want := []string{
+		"safetail" + segmentReset,
+		"leftright" + segmentReset,
+		"escapeddone" + segmentReset,
+		"before" + segmentReset,
+		"beforemiddlemiddleafter" + segmentReset,
+		"quote\u201dtail" + segmentReset,
+		"payloadtail" + segmentReset,
+		image + "tail",
+		link + segmentReset,
+	}
+	for i := range want {
+		if out[i] != want[i] {
+			t.Errorf("line %d = %q, want %q", i, out[i], want[i])
+		}
+	}
+}
+
+func TestStripUnsafeOSCDoesNotAllocateForOrdinaryText(t *testing.T) {
+	text := strings.Repeat("ordinary terminal output ", 32)
+	var got string
+	allocs := testing.AllocsPerRun(100, func() { got = stripUnsafeOSC(text) })
+	if got != text {
+		t.Fatalf("stripUnsafeOSC changed ordinary text: %q", got)
+	}
+	if allocs != 0 {
+		t.Fatalf("stripUnsafeOSC allocated %.2f times per ordinary line, want 0", allocs)
+	}
+}
+
 // TestExtractCursorPosition verifies marker positioning and stripping.
 func TestExtractCursorPosition(t *testing.T) {
 	renderer := NewRenderer(&fakeTerminal{width: 20, height: 6})

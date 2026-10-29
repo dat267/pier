@@ -33,6 +33,19 @@ func TestProcessTerminalWriteDoesNotBlockOnAPausedConsole(t *testing.T) {
 	terminal.flushWrites()
 }
 
+// pi v1.4.0 packages/tui/src/terminal.ts setTitle writes the title verbatim;
+// Pier removes controls so the title cannot terminate its OSC 0 sequence.
+func TestProcessTerminalSetTitleStripsControlCharacters(t *testing.T) {
+	terminal := NewProcessTerminal(nil, nil)
+	writes := make(chan string, 1)
+	terminal.writeFn = func(data string) { writes <- data }
+	terminal.SetTitle("safe\x1b]52;c;Zm9v\x07tail\nname")
+	terminal.flushWrites()
+	if got, want := <-writes, "\x1b]0;safe]52;c;Zm9vtailname\x07"; got != want {
+		t.Fatalf("title output = %q, want %q", got, want)
+	}
+}
+
 func TestProcessTerminalWritesInOrder(t *testing.T) {
 	terminal := NewProcessTerminal(nil, nil)
 	var mu sync.Mutex

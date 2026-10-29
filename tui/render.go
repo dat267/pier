@@ -8,6 +8,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unicode/utf8"
 )
 
 // Port of the renderer base (src/tui.ts TuiBase): focus, the overlay stack,
@@ -1004,20 +1005,97 @@ func sortOverlaysByFocusOrder(entries []*overlayEntry) {
 	}
 }
 
-// ApplyLineResets appends the segment reset to every non-image line. In
-// low-bandwidth mode a line with no hyperlink needs only the SGR reset, so the
-// 7-byte OSC 8 close is dropped.
+// ApplyLineResets removes unsafe OSC controls (D290) and appends the
+// segment reset to every non-image line. In low-bandwidth mode a line with no
+// hyperlink needs only the SGR reset, so the 7-byte OSC 8 close is dropped.
 func (t *Renderer) ApplyLineResets(lines []string) []string {
 	for i, line := range lines {
+		line = stripUnsafeOSC(line)
 		if !IsImageLine(line) {
 			reset := segmentReset
 			if LowBandwidth() && !lineHasHyperlink(line) {
 				reset = "\x1b[0m"
 			}
 			lines[i] = NormalizeTerminalOutput(line) + reset
+		} else {
+			lines[i] = line
 		}
 	}
 	return lines
+}
+
+// stripUnsafeOSC removes clipboard and title OSC operations while preserving
+// other sequences used by the renderer, including OSC 8 hyperlinks and images.
+func stripUnsafeOSC(text string) string {
+	var result strings.Builder
+	cursor := 0
+	for scan := 0; scan < len(text); {
+		start, prefixLen := nextOSCStart(text, scan)
+		if start < 0 {
+			break
+		}
+		bodyStart := start + prefixLen
+		end, terminatorLen := findOSCTerminator(text, bodyStart)
+		if end < 0 {
+			if isUnsafeOSCPayload(text[bodyStart:]) {
+				result.WriteString(text[cursor:start])
+				return result.String()
+			}
+			break
+		}
+		if isUnsafeOSCPayload(text[bodyStart:end]) {
+			result.WriteString(text[cursor:start])
+			cursor = end + terminatorLen
+		}
+		scan = end + terminatorLen
+	}
+	if cursor == 0 {
+		return text
+	}
+	result.WriteString(text[cursor:])
+	return result.String()
+}
+
+func isUnsafeOSCPayload(payload string) bool {
+	return strings.HasPrefix(payload, "52;") || strings.HasPrefix(payload, "0;") ||
+		strings.HasPrefix(payload, "1;") || strings.HasPrefix(payload, "2;")
+}
+
+func nextOSCStart(text string, from int) (int, int) {
+	for i := from; i < len(text); {
+		if text[i] == '\x1b' && i+1 < len(text) && text[i+1] == ']' {
+			return i, 2
+		}
+		if text[i] == 0x9d {
+			return i, 1
+		}
+		if text[i] == 0xc2 && i+1 < len(text) && text[i+1] == 0x9d {
+			return i, 2
+		}
+		_, size := utf8.DecodeRuneInString(text[i:])
+		i += size
+	}
+	return -1, 0
+}
+
+func findOSCTerminator(text string, from int) (int, int) {
+	for i := from; i < len(text); {
+		switch text[i] {
+		case '\a', 0x9c:
+			return i, 1
+		case '\x1b':
+			if i+1 < len(text) && text[i+1] == '\\' {
+				return i, 2
+			}
+		case 0xc2:
+			if i+1 < len(text) && text[i+1] == 0x9c {
+				return i, 2
+			}
+		}
+		_, size := utf8.DecodeRuneInString(text[i:])
+		i += size
+	}
+	return -1, 0
 }
 
 // lineHasHyperlink reports whether the line opens an OSC 8 hyperlink (a

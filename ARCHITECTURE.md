@@ -254,13 +254,13 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D289)
+## Deliberate divergences from pi (D1–D290)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D289**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D290**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation. Port and review history are available with `git log --oneline`.
 
 ### D41
@@ -3222,6 +3222,24 @@ Tests: `TestSessionManagerPersistsFilesWithPrivateMode`,
 `TestSessionManagerUsesPrivateDirectoryMode`, `TestSessionDirectoryUsesPrivateMode`,
 `TestSessionExportUsesPrivateDirectoryMode`, `TestSessionExportUsesPrivateFileMode`,
 and `TestImportedSessionUsesPrivateMode`.
+
+### D290
+
+**Rendered OSC 0/1/2/52 controls and terminal-title control characters are suppressed.**
+
+Reference: pi v1.4.0 `packages/tui/src/tui.ts` `applyLineResets` and
+`packages/tui/src/utils.ts` `normalizeTerminalOutput` pass OSC 52 through;
+`packages/tui/src/terminal.ts` `setTitle` wraps the provided title without
+removing control characters. Pier removes OSC
+0/1/2 title changes and OSC 52 clipboard operations at the final rendered-line
+boundary while preserving OSC 8 hyperlinks and supported image sequences; it
+also strips Unicode control characters from OSC 0 title text. This is a
+deliberate terminal-output security divergence.
+
+Tests: `TestApplyLineResetsStripsUnsafeOSC` covers BEL, ESC-ST, C1 ST,
+unterminated controls, image lines and OSC 8;
+`TestProcessTerminalSetTitleStripsControlCharacters` verifies the emitted OSC 0
+sequence cannot be terminated by title content.
 
 ## Lock inventory
 
