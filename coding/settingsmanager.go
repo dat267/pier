@@ -345,8 +345,16 @@ func (s *FileSettingsStorage) WithLock(scope SettingsScope, fn func(current *str
 	// D283: unlike JS's synchronous withLock callbacks, Go callers can race
 	// even on the first write. Create the parent and lock before reading,
 	// including read-only loads, rather than invoking the callback unlocked.
-	if err := os.MkdirAll(filepath.Dir(path), 0o777); err != nil {
-		return err
+	// D300: global settings share a directory with credentials and trust data,
+	// so harden it even when an older process created it with broad permissions.
+	var dirErr error
+	if scope == SettingsScopeGlobal {
+		dirErr = ensurePrivateDirectory(filepath.Dir(path))
+	} else {
+		dirErr = os.MkdirAll(filepath.Dir(path), 0o777)
+	}
+	if dirErr != nil {
+		return dirErr
 	}
 	lock, err := acquireLockWithRetry(path)
 	if err != nil {

@@ -69,7 +69,13 @@ type McpConfigLoadOptions struct {
 // configuration (upstream loadMcpConfig).
 func LoadMcpConfig(options McpConfigLoadOptions) LoadedMcpConfig {
 	state := &mcpConfigState{servers: map[string]McpServerEntry{}, order: []string{}}
-	readMcpConfigFile(filepath.Join(options.AgentDir, "mcp.json"), McpScopeGlobal, state)
+	if options.AgentDir == "" {
+		readMcpConfigFile(filepath.Join(options.AgentDir, "mcp.json"), McpScopeGlobal, state)
+	} else if err := ensurePrivateDirectory(options.AgentDir); err != nil {
+		state.errors = append(state.errors, fmt.Sprintf("Could not secure agent directory %s: %v", options.AgentDir, err))
+	} else {
+		readMcpConfigFile(filepath.Join(options.AgentDir, "mcp.json"), McpScopeGlobal, state)
+	}
 	projectConfig := ""
 	if options.ProjectTrusted {
 		projectConfig = filepath.Join(options.Cwd, ConfigDirName, "mcp.json")

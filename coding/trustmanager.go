@@ -189,7 +189,7 @@ func writeTrustFile(path string, data trustFile) error {
 		builder.WriteString("\n")
 	}
 	builder.WriteString("}\n")
-	if err := os.MkdirAll(filepath.Dir(path), 0o777); err != nil {
+	if err := ensurePrivateDirectory(filepath.Dir(path)); err != nil {
 		return err
 	}
 	return writePrivateFile(path, []byte(builder.String()))
@@ -200,7 +200,7 @@ const trustLockStaleMs = 10_000
 
 // acquireTrustLockSync locks the trust file with the shared retry policy.
 func acquireTrustLockSync(path string) (func(), error) {
-	if err := os.MkdirAll(filepath.Dir(path), 0o777); err != nil {
+	if err := ensurePrivateDirectory(filepath.Dir(path)); err != nil {
 		return nil, err
 	}
 	const maxAttempts = 10

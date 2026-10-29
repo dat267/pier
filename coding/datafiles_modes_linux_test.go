@@ -55,7 +55,17 @@ func TestGlobalSettingsFileUsesPrivateMode(t *testing.T) {
 	if got := info.Mode().Perm(); got != 0o600 {
 		t.Fatalf("global settings mode = %#o, want %#o", got, 0o600)
 	}
+	dirInfo, err := os.Stat(filepath.Dir(storage.GlobalSettingsPath))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := dirInfo.Mode().Perm(); got != 0o700 {
+		t.Fatalf("global settings directory mode = %#o, want %#o", got, 0o700)
+	}
 	if err := os.Chmod(storage.GlobalSettingsPath, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(filepath.Dir(storage.GlobalSettingsPath), 0o777); err != nil {
 		t.Fatal(err)
 	}
 	value = `{"theme":"dark"}`
@@ -69,6 +79,13 @@ func TestGlobalSettingsFileUsesPrivateMode(t *testing.T) {
 	if got := info.Mode().Perm(); got != 0o600 {
 		t.Fatalf("replaced global settings mode = %#o, want %#o", got, 0o600)
 	}
+	dirInfo, err = os.Stat(filepath.Dir(storage.GlobalSettingsPath))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := dirInfo.Mode().Perm(); got != 0o700 {
+		t.Fatalf("replaced global settings directory mode = %#o, want %#o", got, 0o700)
+	}
 }
 
 // pi v1.4.0 packages/coding-agent/src/core/trust-manager.ts uses Node defaults;
@@ -76,7 +93,7 @@ func TestGlobalSettingsFileUsesPrivateMode(t *testing.T) {
 func TestTrustFileUsesPrivateMode(t *testing.T) {
 	oldMask := syscall.Umask(0)
 	defer syscall.Umask(oldMask)
-	store := NewProjectTrustStore(t.TempDir())
+	store := NewProjectTrustStore(filepath.Join(t.TempDir(), "agent"))
 	trusted := true
 	if err := store.Set(t.TempDir(), &trusted); err != nil {
 		t.Fatal(err)
@@ -106,8 +123,8 @@ func TestTrustFileUsesPrivateMode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := dirInfo.Mode().Perm(); got != 0o777 {
-		t.Fatalf("trust directory mode = %#o; want Node default %#o", got, 0o777)
+	if got := dirInfo.Mode().Perm(); got != 0o700 {
+		t.Fatalf("trust directory mode = %#o, want %#o", got, 0o700)
 	}
 }
 

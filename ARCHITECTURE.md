@@ -254,13 +254,13 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D299)
+## Deliberate divergences from pi (D1–D300)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D299**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D300**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation. Port and review history are available with `git log --oneline`.
 
 ### D41
@@ -3292,8 +3292,9 @@ Reference: pi v1.4.0 `packages/coding-agent/src/extensions/mcp/config.ts`
 uses `writeFileSync` defaults, honoring the process umask and preserving
 existing modes. MCP configuration may contain authorization headers or other
 credentials. Pier creates and rewrites configured files with mode 0600;
-Windows inherited ACLs are not changed. This is an intentional
-credential-privacy divergence.
+the global agent-data directory is hardened to 0700 when settings or global
+MCP configuration is accessed (D300). Windows inherited ACLs are not changed.
+This is an intentional credential-privacy divergence.
 
 Test: `TestAddMcpServerConfigUsesPrivateFileMode` checks new and existing files
 under umask 000.
@@ -3305,7 +3306,8 @@ under umask 000.
 Reference: pi v1.4.0 `packages/coding-agent/src/core/settings-manager.ts`
 uses `writeFileSync` defaults for both scopes. Global settings can contain
 proxy credentials, so Pier creates and rewrites global `settings.json` with
-mode 0600. Project settings keep the upstream umask-based mode for repository
+mode 0600; global settings access hardens the agent-data directory to mode
+0700 (D300). Project settings keep the upstream umask-based mode for repository
 sharing. Windows inherited ACLs are not changed.
 
 Tests: `TestGlobalSettingsFileUsesPrivateMode` checks new and existing global
@@ -3318,8 +3320,8 @@ unchanged project file behavior.
 
 Reference: pi v1.4.0 `packages/coding-agent/src/core/crash-log.ts` uses
 `writeFileSync` defaults. Crash records may contain error details, stack paths,
-session paths, and cwd. Pier writes new and updated crash logs with mode 0600;
-Windows inherited ACLs are not changed.
+session paths, and cwd. Pier writes new and updated crash logs with mode
+0600. Windows inherited ACLs are not changed.
 
 Test: `TestCrashLogUsesPrivateMode` checks new and existing files under umask
 000.
@@ -3344,7 +3346,8 @@ Reference: pi v1.4.0 `packages/coding-agent/src/core/trust-manager.ts` writes
 `trust.json` with `writeFileSync` defaults. The file controls whether project
 resources are trusted and contains project paths; another local user able to
 modify it could silently authorize project resources. Pier creates and rewrites
-it with mode 0600. Windows inherited ACLs are not changed.
+it with mode 0600; the trust store hardens its agent-data directory to mode
+0700 before access (D300). Windows inherited ACLs are not changed.
 
 Test: `TestTrustFileUsesPrivateMode` checks new and existing files under umask
 000.
@@ -3360,6 +3363,27 @@ Windows inherited ACLs are not changed.
 
 Test: Linux `TestTerminalWriteLogUsesPrivateMode` checks new and existing
 files under umask 000.
+
+### D300
+
+**Global agent-data directories are private on POSIX.**
+
+Reference: pi v1.4.0 `packages/coding-agent/src/core/settings-manager.ts`
+creates the global settings directory with Node defaults, while
+`packages/coding-agent/src/core/auth-storage.ts` requests mode 0700 only when
+creating a missing auth directory. Existing directories can stay world-writable;
+mode-0600 files inside them can still be replaced by another local user. Pier
+creates and hardens the global agent directory to mode 0700 before reading or
+writing global settings; the MCP loader and trust store also harden their
+explicit agent directory before accessing global config or trust decisions.
+Project `.pi` directories retain their existing shareable permissions. Windows
+inherited ACLs are not changed.
+
+Tests: `TestGlobalSettingsFileUsesPrivateMode`,
+`TestLoadMcpConfigHardensExistingAgentDir`, and `TestTrustFileUsesPrivateMode`
+check creation or repair under umask 000. Linux
+`TestEnsurePrivateDirectoryRejectsBroadPaths` ensures cwd, parent, and root
+paths are not accidentally chmodded.
 
 ## Lock inventory
 

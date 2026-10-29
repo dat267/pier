@@ -45,3 +45,25 @@ func TestAddMcpServerConfigUsesPrivateFileMode(t *testing.T) {
 		})
 	}
 }
+
+// pi v1.4.0 packages/coding-agent/src/extensions/mcp/config.ts reads mcp.json
+// from the agent directory; secure it before consuming global configuration.
+func TestLoadMcpConfigHardensExistingAgentDir(t *testing.T) {
+	oldMask := syscall.Umask(0)
+	defer syscall.Umask(oldMask)
+	dir := filepath.Join(t.TempDir(), "agent")
+	if err := os.MkdirAll(dir, 0o777); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(dir, 0o777); err != nil {
+		t.Fatal(err)
+	}
+	_ = LoadMcpConfig(McpConfigLoadOptions{AgentDir: dir})
+	info, err := os.Stat(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := info.Mode().Perm(); got != 0o700 {
+		t.Fatalf("MCP agent directory mode = %#o, want %#o", got, 0o700)
+	}
+}

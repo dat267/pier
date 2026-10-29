@@ -2,9 +2,23 @@ package coding
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 )
+
+// ensurePrivateDirectory creates or hardens a directory for global agent data.
+func ensurePrivateDirectory(path string) error {
+	clean := filepath.Clean(path)
+	if clean == "." || clean == ".." || (filepath.IsAbs(clean) && filepath.Dir(clean) == clean) {
+		return fmt.Errorf("refusing to restrict permissions on %q", path)
+	}
+	if err := os.MkdirAll(path, 0o700); err != nil {
+		return err
+	}
+	return os.Chmod(path, 0o700)
+}
 
 // writePrivateFile creates or replaces private user data with owner-only mode.
 func writePrivateFile(path string, data []byte) error {
