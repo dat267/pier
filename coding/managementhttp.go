@@ -106,9 +106,9 @@ func FetchWithRetry(ctx context.Context, request *http.Request, client *http.Cli
 			}
 			return response, nil
 		}
-		// Discard the body before retrying; the response is being abandoned.
+		// Upstream cancels the abandoned body. Do not drain it: an error
+		// response may stall and consume the budget before we can retry.
 		if response.Body != nil {
-			_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 1<<20))
 			_ = response.Body.Close()
 		}
 		if attemptCancel != nil {
