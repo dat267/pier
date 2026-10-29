@@ -62,6 +62,15 @@ type OAuthCallbackServer struct {
 	pending map[string]*pendingCallback
 }
 
+const maxJavascriptTimeoutMs int64 = 1<<31 - 1
+
+func callbackTimerDuration(ms int64) time.Duration {
+	if ms < 1 || ms > maxJavascriptTimeoutMs {
+		ms = 1
+	}
+	return time.Duration(ms) * time.Millisecond
+}
+
 type pendingCallback struct {
 	ch    chan callbackResult
 	timer *time.Timer
@@ -146,7 +155,7 @@ func (s *OAuthCallbackServer) WaitForCallback(state string, path ...string) (OAu
 		return OAuthCallback{}, fmt.Errorf("OAuth state is already pending")
 	}
 	entry := &pendingCallback{ch: make(chan callbackResult, 1), path: expectedPath}
-	entry.timer = time.AfterFunc(time.Duration(s.timeoutMs)*time.Millisecond, func() {
+	entry.timer = time.AfterFunc(callbackTimerDuration(s.timeoutMs), func() {
 		s.expirePending(state, entry)
 	})
 	s.pending[state] = entry
