@@ -1661,11 +1661,30 @@ func findWordWithSegmentation(text string, cursor int, e *Editor, backward bool)
 	// The editor's segmentation merges paste markers into atomic segments; the
 	// generic word navigation already treats single-paste-marker segments as
 	// atomic, so the segmenter output is passed through.
-	segments := e.segmentLocked(text, "word")
+	//
+	// Upstream segments only the text before the cursor (backward) or from it
+	// (forward), so a word-like segment never extends past the cursor. Passing
+	// the whole line made a cursor inside a word land before the word start on
+	// the backward move (a negative column, which the next edit sliced with)
+	// and left the forward move with nothing to advance over (CR-210).
+	cursor = clampEditorCursor(text, cursor)
 	if backward {
-		return findWordBackwardSegments(text, cursor, segments)
+		prefix := text[:cursor]
+		return findWordBackwardSegments(prefix, cursor, e.segmentLocked(prefix, "word"))
 	}
-	return findWordForwardSegments(text, cursor, segments)
+	suffix := text[cursor:]
+	return cursor + findWordForwardSegments(suffix, 0, e.segmentLocked(suffix, "word"))
+}
+
+// clampEditorCursor keeps a cursor inside the text and on a UTF-8 boundary, so
+// the prefix/suffix handed to the segmenter is valid even if a caller supplied
+// an offset that splits a rune (the word-navigation contract is byte offsets).
+func clampEditorCursor(text string, cursor int) int {
+	cursor = min(max(cursor, 0), len(text))
+	for cursor > 0 && cursor < len(text) && text[cursor]&0xC0 == 0x80 {
+		cursor--
+	}
+	return cursor
 }
 
 func findWordBackwardSegments(text string, cursor int, segments []editorSegment) int {
