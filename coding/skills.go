@@ -170,11 +170,15 @@ func yamlPlainScalarIsString(value string) bool {
 			return true
 		}
 	}
+	lower := strings.ToLower(value)
+	if strings.HasPrefix(lower, "0b") {
+		return true
+	}
 	if _, err := strconv.ParseInt(value, 0, 64); err == nil {
 		return false
 	}
-	if strings.HasPrefix(strings.ToLower(value), "0x") {
-		return true
+	if matched, valid := yamlRadixInteger(lower); matched {
+		return !valid
 	}
 	if _, err := strconv.ParseFloat(value, 64); err == nil || errors.Is(err, strconv.ErrRange) {
 		return false
@@ -183,6 +187,35 @@ func yamlPlainScalarIsString(value string) bool {
 		return false
 	}
 	return true
+}
+
+func yamlRadixInteger(value string) (matched, valid bool) {
+	prefix, base := "", 0
+	switch {
+	case strings.HasPrefix(value, "0x"):
+		prefix, base = "0x", 16
+	case strings.HasPrefix(value, "0o"):
+		prefix, base = "0o", 8
+	default:
+		return false, false
+	}
+	digits := value[len(prefix):]
+	if digits == "" {
+		return true, false
+	}
+	for _, digit := range digits {
+		if digit >= '0' && digit <= '9' {
+			if int(digit-'0') >= base {
+				return true, false
+			}
+			continue
+		}
+		if base == 16 && digit >= 'a' && digit <= 'f' {
+			continue
+		}
+		return true, false
+	}
+	return true, true
 }
 
 func yamlInlineCommentIndex(value string) int {
