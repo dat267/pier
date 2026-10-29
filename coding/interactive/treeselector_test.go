@@ -327,6 +327,15 @@ func contextEditTree(replacement json.RawMessage) []*coding.SessionTreeNode {
 // tree-selector.ts treats context_edit as a settings/bookkeeping entry, so the
 // default filter hides it. The port omitted it from isSettingsEntry and showed
 // an empty row.
+func TestTreeSelectorBackspaceRemovesWholeUnicodeSearchCharacter(t *testing.T) {
+	list := NewTreeList(customMessageNode(json.RawMessage(`"café"`)), nil, 40, nil, FilterAll)
+	list.searchQuery = "café"
+	list.HandleInput("\x7f")
+	if got, want := list.GetSearchQuery(), "caf"; got != want {
+		t.Fatalf("search query after backspace = %q, want %q", got, want)
+	}
+}
+
 func TestTreeSelectorHidesContextEditEntriesByDefault(t *testing.T) {
 	InitTheme("dark", false)
 	list := NewTreeList(contextEditTree(json.RawMessage("null")), nil, 40, nil, FilterDefault)

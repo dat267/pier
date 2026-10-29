@@ -1238,7 +1238,8 @@ func (t *TreeList) HandleInput(keyData string) {
 		t.ApplyFilter()
 	case kb.Matches(keyData, "tui.editor.deleteCharBackward"):
 		if len(t.searchQuery) > 0 {
-			t.searchQuery = t.searchQuery[:len(t.searchQuery)-1]
+			runes := []rune(t.searchQuery)
+			t.searchQuery = string(runes[:len(runes)-1])
 			t.foldedNodes = map[string]bool{}
 			t.ApplyFilter()
 		}
