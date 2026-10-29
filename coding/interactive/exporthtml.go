@@ -14,7 +14,9 @@ import (
 	_ "embed"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"path/filepath"
@@ -455,7 +457,7 @@ func ExportFromFile(inputPath string, outputPath string, themeName string) (stri
 		base := strings.TrimSuffix(filepath.Base(resolvedInput), ".jsonl")
 		outputPath = coding.AppName + "-session-" + base + ".html"
 	}
-	if err := os.WriteFile(outputPath, []byte(html), 0o666); err != nil {
+	if err := writePrivateExportFile(outputPath, []byte(html)); err != nil {
 		return "", err
 	}
 	return outputPath, nil
@@ -519,10 +521,25 @@ func ExportSessionToHTML(session *coding.AgentSession, outputPath string, themeN
 		base = strings.TrimSuffix(base, ".jsonl")
 		outputPath = coding.AppName + "-session-" + base + ".html"
 	}
-	if err := os.WriteFile(outputPath, []byte(html), 0o666); err != nil {
+	if err := writePrivateExportFile(outputPath, []byte(html)); err != nil {
 		return "", err
 	}
 	return outputPath, nil
+}
+
+func writePrivateExportFile(path string, data []byte) error {
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
+	if err != nil {
+		return err
+	}
+	if err := file.Chmod(0o600); err != nil {
+		return errors.Join(err, file.Close())
+	}
+	written, writeErr := file.Write(data)
+	if writeErr == nil && written != len(data) {
+		writeErr = io.ErrShortWrite
+	}
+	return errors.Join(writeErr, file.Close())
 }
 
 // ExportSessionToHTML exports the current session branch to an HTML file
