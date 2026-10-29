@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -380,6 +381,70 @@ func TestLoginOpenRouterCallbackUnblocksManualPrompt(t *testing.T) {
 			t.Fatal("browser callback returned without unblocking the manual prompt")
 		}
 	})
+}
+
+// Matches pinned callback-server.ts: callback settlement cancels the manual prompt,
+// including when the server reports an authorization error.
+func TestLoginOpenRouterCallbackErrorUnblocksManualPrompt(t *testing.T) {
+	promptStarted := make(chan struct{})
+	promptReturned := make(chan struct{})
+	promptRelease := make(chan struct{})
+	var releaseOnce sync.Once
+	releasePrompt := func() { releaseOnce.Do(func() { close(promptRelease) }) }
+	defer releasePrompt()
+	authURL := make(chan string, 1)
+	loginDone := make(chan error, 1)
+	go func() {
+		_, err := LoginOpenRouter(&AuthInteraction{
+			Ctx: context.Background(),
+			Prompt: func(prompt AuthPrompt) (string, error) {
+				close(promptStarted)
+				select {
+				case <-prompt.Ctx.Done():
+					close(promptReturned)
+					return "", errors.New("prompt cancelled after callback error")
+				case <-promptRelease:
+					close(promptReturned)
+					return "", errors.New("prompt was not cancelled")
+				}
+			},
+			Notify: func(event AuthEvent) {
+				if event.Type == AuthEventAuthURL {
+					authURL <- event.URL
+				}
+			},
+		})
+		loginDone <- err
+	}()
+	select {
+	case <-promptStarted:
+	case <-time.After(2 * time.Second):
+		t.Fatal("manual prompt did not start")
+	}
+	loginURL, err := url.Parse(<-authURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	callbackURL, err := url.Parse(loginURL.Query().Get("callback_url"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	callbackURL.RawQuery = url.Values{"error": {"access_denied"}}.Encode()
+	response, err := http.Get(callbackURL.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+	if err := <-loginDone; err == nil || !strings.Contains(err.Error(), "OpenRouter authorization failed") {
+		t.Fatalf("LoginOpenRouter error = %v", err)
+	}
+	select {
+	case <-promptReturned:
+	case <-time.After(time.Second):
+		releasePrompt()
+		<-promptReturned
+		t.Fatal("callback error returned without unblocking the manual prompt")
+	}
 }
 
 func TestOpenRouterOAuthDefinition(t *testing.T) {
