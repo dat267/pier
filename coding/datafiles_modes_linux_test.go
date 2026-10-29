@@ -3,6 +3,7 @@
 package coding
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -85,6 +86,30 @@ func TestGlobalSettingsFileUsesPrivateMode(t *testing.T) {
 	}
 	if got := dirInfo.Mode().Perm(); got != 0o700 {
 		t.Fatalf("replaced global settings directory mode = %#o, want %#o", got, 0o700)
+	}
+}
+
+// pi v1.4.0 packages/coding-agent/src/core/auth-storage.ts requests mode
+// 0700 only while creating a missing auth parent; an existing public dir stays public.
+func TestAuthStorageHardensExistingParentDirectory(t *testing.T) {
+	oldMask := syscall.Umask(0)
+	defer syscall.Umask(oldMask)
+	agentDir := filepath.Join(t.TempDir(), "agent")
+	if err := os.MkdirAll(agentDir, 0o777); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(agentDir, 0o777); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := NewAuthStorage(filepath.Join(agentDir, "auth.json")).List(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(agentDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := info.Mode().Perm(); got != 0o700 {
+		t.Fatalf("auth parent directory mode = %#o, want %#o", got, 0o700)
 	}
 }
 

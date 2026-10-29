@@ -3374,14 +3374,15 @@ creates the global settings directory with Node defaults, while
 creating a missing auth directory. Existing directories can stay world-writable;
 mode-0600 files inside them can still be replaced by another local user. Pier
 creates and hardens the global agent directory to mode 0700 before reading or
-writing global settings; the MCP loader and trust store also harden their
-explicit agent directory before accessing global config or trust decisions.
-Project `.pi` directories retain their existing shareable permissions. Windows
-inherited ACLs are not changed.
+writing global settings, auth, MCP, or trust data. The MCP loader and trust
+store also harden their explicit agent directory before access. Project `.pi`
+directories retain their existing shareable permissions. Windows inherited
+ACLs are not changed.
 
 Tests: `TestGlobalSettingsFileUsesPrivateMode`,
-`TestLoadMcpConfigHardensExistingAgentDir`, and `TestTrustFileUsesPrivateMode`
-check creation or repair under umask 000. Linux
+`TestAuthStorageHardensExistingParentDirectory`,
+`TestLoadMcpConfigHardensExistingAgentDir`, and
+`TestTrustFileUsesPrivateMode` check creation or repair under umask 000. Linux
 `TestEnsurePrivateDirectoryRejectsBroadPaths` ensures cwd, parent, and root
 paths are not accidentally chmodded.
 

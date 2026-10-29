@@ -70,11 +70,7 @@ func NewFileAuthStorageBackend(authPath string) *FileAuthStorageBackend {
 }
 
 func (b *FileAuthStorageBackend) ensureParentDir() error {
-	dir := filepath.Dir(b.authPath)
-	if PathExists(dir) {
-		return nil
-	}
-	return os.MkdirAll(dir, 0o700)
+	return ensurePrivateDirectory(filepath.Dir(b.authPath))
 }
 
 func (b *FileAuthStorageBackend) ensureFileExists() error {
