@@ -3,7 +3,9 @@ package coding
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -69,5 +71,20 @@ func AddMcpServerConfig(path, name string, config json.RawMessage) (bool, error)
 	if err := os.MkdirAll(filepath.Dir(path), 0o777); err != nil {
 		return false, err
 	}
-	return replaced, os.WriteFile(path, output.Bytes(), 0o666)
+	return replaced, writePrivateMcpConfig(path, output.Bytes())
+}
+
+func writePrivateMcpConfig(path string, data []byte) error {
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
+	if err != nil {
+		return err
+	}
+	if err := file.Chmod(0o600); err != nil {
+		return errors.Join(err, file.Close())
+	}
+	written, writeErr := file.Write(data)
+	if writeErr == nil && written != len(data) {
+		writeErr = io.ErrShortWrite
+	}
+	return errors.Join(writeErr, file.Close())
 }
