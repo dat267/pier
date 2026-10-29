@@ -604,6 +604,7 @@ func requestGoogleStream(ctx context.Context, model *Model, body []byte, options
 // iterateGoogleChunks decodes the Gemini SSE stream.
 func iterateGoogleChunks(ctx context.Context, body io.Reader, emit func(chunk *googleChunk)) error {
 	scanner := bufio.NewScanner(body)
+	scanner.Split(newSSELineSplitter())
 	scanner.Buffer(make([]byte, 0, 64*1024), 16*1024*1024)
 	decoder := &SSEDecoder{}
 	process := func(data string) {
