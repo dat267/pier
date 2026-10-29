@@ -1,7 +1,6 @@
 package ai
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -835,9 +834,7 @@ func ProcessResponsesStream(
 // iterateResponsesEvents decodes the Responses SSE stream, stopping at
 // [DONE].
 func iterateResponsesEvents(ctx context.Context, body io.Reader, emit func(event *responsesStreamEvent)) error {
-	scanner := bufio.NewScanner(body)
-	scanner.Split(newSSELineSplitter())
-	scanner.Buffer(make([]byte, 0, 64*1024), 16*1024*1024)
+	scanner := newSSEScanner(body)
 	decoder := &SSEDecoder{}
 	for scanner.Scan() {
 		if ctxErr(ctx) != nil {

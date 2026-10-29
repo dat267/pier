@@ -3,11 +3,19 @@ package ai
 import (
 	"bufio"
 	"bytes"
+	"io"
 )
 
 // newSSELineSplitter recognizes the CR, LF and CRLF boundaries accepted by the
 // reference's SSE decoders. A CR completes a line immediately; a following LF
 // is consumed as its continuation even when it arrives in the next read.
+func newSSEScanner(body io.Reader) *bufio.Scanner {
+	scanner := bufio.NewScanner(body)
+	scanner.Split(newSSELineSplitter())
+	scanner.Buffer(make([]byte, 0, 64*1024), int(^uint(0)>>1))
+	return scanner
+}
+
 func newSSELineSplitter() bufio.SplitFunc {
 	skipLF := false
 	return func(data []byte, atEOF bool) (advance int, token []byte, err error) {

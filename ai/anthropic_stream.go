@@ -1,7 +1,6 @@
 package ai
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -205,9 +204,7 @@ type anthropicStreamUsage struct {
 // message_stop (port of iterateAnthropicEvents). Events are delivered to the
 // returned channel; the error is non-nil when iteration terminated early.
 func IterateAnthropicEvents(ctx context.Context, body io.Reader, emit func(anthropicStreamEvent)) error {
-	scanner := bufio.NewScanner(unicode.UTF8BOM.NewDecoder().Reader(body))
-	scanner.Split(newSSELineSplitter())
-	scanner.Buffer(make([]byte, 0, 64*1024), 16*1024*1024)
+	scanner := newSSEScanner(unicode.UTF8BOM.NewDecoder().Reader(body))
 	decoder := &SSEDecoder{}
 	sawMessageStart := false
 	sawMessageEnd := false
