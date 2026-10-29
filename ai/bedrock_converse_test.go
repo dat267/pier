@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -758,6 +760,48 @@ func TestBedrockStreamSigV4AndErrors(t *testing.T) {
 	if message.StopReason != StopError || message.ErrorMessage == nil ||
 		*message.ErrorMessage != "Unknown: no access" {
 		t.Fatalf("message = %+v", message)
+	}
+}
+
+// Pinned bedrock-converse-stream.ts passes the selected profile to the SDK;
+// the SDK resolves its region from that profile's shared config file.
+func TestBedrockProfileConfigRegionSignsRequestsInThatRegion(t *testing.T) {
+	for _, name := range []string{"AWS_PROFILE", "AWS_REGION", "AWS_DEFAULT_REGION"} {
+		t.Setenv(name, "")
+	}
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config")
+	credentialsPath := filepath.Join(dir, "credentials")
+	if err := os.WriteFile(configPath, []byte("[profile work]\nregion = us-west-2\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(credentialsPath, []byte("[work]\naws_access_key_id = AKID\naws_secret_access_key = SECRET\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, profileSource := range []string{"option", "environment"} {
+		t.Run(profileSource, func(t *testing.T) {
+			frames := [][]byte{bedrockEventFrame("messageStart", map[string]any{"role": "assistant"})}
+			var captured http.Request
+			server := bedrockTestServer(t, frames, &captured, nil)
+			env := ProviderEnv{
+				"AWS_CONFIG_FILE": configPath, "AWS_SHARED_CREDENTIALS_FILE": credentialsPath,
+			}
+			options := &BedrockOptions{Env: env}
+			if profileSource == "option" {
+				options.Profile = "work"
+			} else {
+				env["AWS_PROFILE"] = "work"
+			}
+			stream := StreamBedrockConverse(bedrockTestModel(server.URL), TranscriptContext{Messages: []Message{
+				&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
+			}}, options)
+			_, _ = stream.Result(context.Background())
+			authorization := captured.Header.Get("Authorization")
+			if !strings.Contains(authorization, "/us-west-2/bedrock/aws4_request") {
+				t.Fatalf("authorization = %q; want profile region us-west-2", authorization)
+			}
+		})
 	}
 }
 

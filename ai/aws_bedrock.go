@@ -294,6 +294,33 @@ func IsGovCloudBedrockTarget(model *Model, options *BedrockOptions) bool {
 	return strings.HasPrefix(modelID, "us-gov.") || strings.HasPrefix(modelID, "arn:aws-us-gov:")
 }
 
+// ResolveAWSProfileRegion loads the region for a named profile from the shared
+// AWS config file (upstream delegates to the SDK's default region chain).
+func ResolveAWSProfileRegion(profile string, env ProviderEnv) string {
+	if profile == "" {
+		return ""
+	}
+	configPath := GetProviderEnvValueOr("AWS_CONFIG_FILE", env)
+	if configPath == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return ""
+		}
+		configPath = filepath.Join(home, ".aws", "config")
+	}
+	raw, err := os.ReadFile(configPath)
+	if err != nil {
+		return ""
+	}
+	sections := parseAWSINI(string(raw))
+	for _, name := range []string{"profile " + profile, profile} {
+		if values, ok := sections[name]; ok && values["region"] != "" {
+			return values["region"]
+		}
+	}
+	return ""
+}
+
 // ResolveAWSProfileCredentials loads credentials for a named profile from
 // ~/.aws/credentials and ~/.aws/config (upstream delegates to the SDK's default
 // chain; the Go port implements the file-based subset).
@@ -430,7 +457,7 @@ func MapBedrockStopReason(reason string) (StopReason, string) {
 }
 
 // ResolveBedrockRegion implements the region resolution order: an
-// ARN-embedded region wins, then the configured region, then the endpoint
+// ARN-embedded region wins, then configured/profile region, then the endpoint
 // region when the endpoint is explicit, then us-east-1.
 func ResolveBedrockRegion(model *Model, options *BedrockOptions, configuredRegion, endpointRegion string, useExplicitEndpoint, hasAmbientConfiguredProfile bool) string {
 	if model != nil {
@@ -440,6 +467,18 @@ func ResolveBedrockRegion(model *Model, options *BedrockOptions, configuredRegio
 	}
 	if configuredRegion != "" {
 		return configuredRegion
+	}
+	profile := ""
+	var env ProviderEnv
+	if options != nil {
+		env = options.Env
+		profile = options.Profile
+		if profile == "" {
+			profile = GetProviderEnvValueOr("AWS_PROFILE", options.Env)
+		}
+	}
+	if profileRegion := ResolveAWSProfileRegion(profile, env); profileRegion != "" {
+		return profileRegion
 	}
 	if endpointRegion != "" && useExplicitEndpoint {
 		return endpointRegion
