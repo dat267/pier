@@ -65,7 +65,8 @@ func discard(response *http.Response) {
 	if response == nil || response.Body == nil {
 		return
 	}
-	_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 4096))
+	// Like upstream body.cancel(), abandon the response without waiting for
+	// bytes that could stall discovery's next candidate until timeout.
 	_ = response.Body.Close()
 }
 
