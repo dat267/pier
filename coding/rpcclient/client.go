@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -247,7 +248,7 @@ func (c *RpcClient) OnEvent(listener EventListener) func() {
 			c.mu.Lock()
 			for index, entry := range c.listeners {
 				if entry.id == id {
-					c.listeners = append(c.listeners[:index], c.listeners[index+1:]...)
+					c.listeners = slices.Delete(c.listeners, index, index+1)
 					break
 				}
 			}
