@@ -400,7 +400,10 @@ func toReplacements(matched []matchedEdit) []textReplacement {
 // "\ No newline at end of file" marker; hunks group like structuredPatch
 // (an unchanged run of at most 2*context lines joins two hunks).
 func GenerateUnifiedPatch(path, oldContent, newContent string, contextLines int) string {
-	if contextLines <= 0 {
+	if contextLines < 0 {
+		// jsdiff's structuredPatch has no default for a negative context; the
+		// port keeps the display default rather than reproducing its slice
+		// quirks. Zero is meaningful (one hunk per change, no context).
 		contextLines = 4
 	}
 	oldTokens := splitPatchTokens(oldContent)
@@ -599,7 +602,10 @@ type diffOp struct {
 // GenerateDiffString builds the display-oriented diff with line numbers and
 // context collapsing (port of generateDiffString).
 func GenerateDiffString(oldContent, newContent string, contextLines int) (diff string, firstChangedLine int, ok bool) {
-	if contextLines == 0 {
+	if contextLines < 0 {
+		// jsdiff has no default for a negative context; the port keeps the
+		// display default rather than reproducing its slice quirks. Zero is
+		// meaningful: no context lines, only the skipped-run markers.
 		contextLines = 4
 	}
 	// diffLines() diffs newline-carrying tokens, so a line without its trailing
