@@ -5,6 +5,8 @@ import (
 	"testing"
 )
 
+// D161 diverges from pi v1.4.0's core/tools/output-accumulator.ts scratch
+// retention; the budget sweep must not evict a separate active accumulator.
 func TestTempOutputSweepKeepsAnotherAccumulatorFile(t *testing.T) {
 	tempDir := t.TempDir()
 	t.Setenv("TMPDIR", tempDir)
