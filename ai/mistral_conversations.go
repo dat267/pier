@@ -326,10 +326,11 @@ func requestMistralStream(ctx ctxpkg.Context, model *Model, body []byte, options
 	base.Path = strings.TrimRight(base.Path, "/") + "/"
 	requestURL := base.ResolveReference(&url.URL{Path: "v1/chat/completions"}).String()
 
-	timeout := 60 * time.Second
-	if options.TimeoutMs != nil && *options.TimeoutMs > 0 {
-		timeout = time.Duration(*options.TimeoutMs) * time.Millisecond
+	timeoutMS := int64(60_000)
+	if options.TimeoutMs != nil {
+		timeoutMS = int64(*options.TimeoutMs)
 	}
+	timeout := javascriptTimeoutDuration(timeoutMS)
 	// Upstream timeoutMs bounds response headers only; an active Mistral stream
 	// must stay alive for as long as its body continues producing data.
 	requestCtx, cancel := ctxpkg.WithCancel(ctx)
@@ -388,7 +389,7 @@ func requestMistralStream(ctx ctxpkg.Context, model *Model, body []byte, options
 	if err != nil {
 		cancel()
 		if timedOut && ctxErr(ctx) == nil {
-			return nil, fmt.Errorf("Mistral response headers timed out after %dms", timeout.Milliseconds())
+			return nil, fmt.Errorf("Mistral response headers timed out after %dms", timeoutMS)
 		}
 		return nil, err
 	}
