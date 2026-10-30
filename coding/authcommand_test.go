@@ -119,6 +119,22 @@ func TestRunAuthCommandHelpUsesTheInvokedName(t *testing.T) {
 	}
 }
 
+// pi v1.4.0 main.ts runAuthCommand reports unknownFlags.keys().next(), preserving argv order.
+func TestRunAuthCommandReportsFirstUnknownOption(t *testing.T) {
+	for attempt := 0; attempt < 32; attempt++ {
+		var stdout, stderr bytes.Buffer
+		handled, code := RunAuthCommandNamed("pier", []string{
+			"auth", "check", "--provider", "anthropic", "--first", "--second",
+		}, &stdout, &stderr)
+		if !handled || code != 1 {
+			t.Fatalf("handled=%v code=%d stderr=%s", handled, code, stderr.String())
+		}
+		if !strings.Contains(stderr.String(), `Unknown option --first for "auth check".`) {
+			t.Fatalf("attempt %d reported a non-first option:\n%s", attempt, stderr.String())
+		}
+	}
+}
+
 // The unknown-option hint names the invoked binary too.
 func TestRunAuthCommandUnknownOptionUsesTheInvokedName(t *testing.T) {
 	var stdout, stderr bytes.Buffer

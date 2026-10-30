@@ -189,9 +189,8 @@ func validateAuthCommandArgs(args *Args, kind AuthCommandKind) (string, string, 
 	provider := strings.TrimSpace(derefString(args.Provider))
 	model := strings.TrimSpace(derefString(args.Model))
 	if len(args.UnknownFlags) > 0 {
-		for option := range args.UnknownFlags {
-			return "", "", &AuthCommandError{Message: fmt.Sprintf("Unknown option --%s for %q.", option, authCommandName(kind))}
-		}
+		option := args.firstUnknownFlag()
+		return "", "", &AuthCommandError{Message: fmt.Sprintf("Unknown option --%s for %q.", option, authCommandName(kind))}
 	}
 	if args.APIKey != nil || len(args.Messages) > 0 || len(args.FileArgs) > 0 {
 		return "", "", &AuthCommandError{Message: "Auth commands only accept --provider and --model"}
@@ -478,10 +477,8 @@ func RunAuthCommandNamed(appName string, args []string, stdout, stderr io.Writer
 	}
 	parsed := ParseArgs(command.Args)
 	if len(parsed.UnknownFlags) > 0 {
-		for option := range parsed.UnknownFlags {
-			fmt.Fprintf(stderr, "Unknown option --%s for %q.\n", option, authCommandName(command.Kind))
-			break
-		}
+		option := parsed.firstUnknownFlag()
+		fmt.Fprintf(stderr, "Unknown option --%s for %q.\n", option, authCommandName(command.Kind))
 		fmt.Fprintf(stderr, "Use \"%s --help\" or \"%s\".\n", appName, authCommandUsage(appName, command.Kind))
 		return true, 1
 	}

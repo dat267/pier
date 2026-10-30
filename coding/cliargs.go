@@ -69,7 +69,9 @@ type Args struct {
 	FileArgs             []string
 	// UnknownFlags are flags that may belong to extensions.
 	UnknownFlags map[string]any
-	Diagnostics  []CLIDiagnostic
+	// UnknownFlagOrder retains their argv insertion order, matching JavaScript Map.
+	UnknownFlagOrder []string
+	Diagnostics      []CLIDiagnostic
 }
 
 // CLIDiagnostic is one parse diagnostic.
@@ -352,18 +354,18 @@ func ParseArgs(args []string) *Args {
 			result.FileArgs = append(result.FileArgs, strings.TrimPrefix(arg, "@"))
 		case strings.HasPrefix(arg, "--"):
 			if eqIndex := strings.Index(arg, "="); eqIndex != -1 {
-				result.UnknownFlags[arg[2:eqIndex]] = arg[eqIndex+1:]
+				setUnknownFlag(result, arg[2:eqIndex], arg[eqIndex+1:])
 			} else {
 				flagName := arg[2:]
 				if i+1 < len(args) {
 					candidate := args[i+1]
 					if !strings.HasPrefix(candidate, "-") && !strings.HasPrefix(candidate, "@") {
-						result.UnknownFlags[flagName] = candidate
+						setUnknownFlag(result, flagName, candidate)
 						i++
 						continue
 					}
 				}
-				result.UnknownFlags[flagName] = true
+				setUnknownFlag(result, flagName, true)
 			}
 		case strings.HasPrefix(arg, "-"):
 			result.Diagnostics = append(result.Diagnostics, CLIDiagnostic{Type: "error", Message: "Unknown option: " + arg})
@@ -379,9 +381,29 @@ func ParseArgs(args []string) *Args {
 // upstream's parse chain falls through: a long flag lands in unknownFlags like
 // an unknown extension flag, and a short flag reports "Unknown option"
 // (cli/args.ts guards each case with i + 1 < args.length).
+func setUnknownFlag(result *Args, name string, value any) {
+	if _, exists := result.UnknownFlags[name]; !exists {
+		result.UnknownFlagOrder = append(result.UnknownFlagOrder, name)
+	}
+	result.UnknownFlags[name] = value
+}
+
+func (args *Args) firstUnknownFlag() string {
+	if len(args.UnknownFlagOrder) > 0 {
+		return args.UnknownFlagOrder[0]
+	}
+	first := ""
+	for option := range args.UnknownFlags {
+		if first == "" || option < first {
+			first = option
+		}
+	}
+	return first
+}
+
 func missingFlagValue(result *Args, arg string) {
 	if strings.HasPrefix(arg, "--") {
-		result.UnknownFlags[arg[2:]] = true
+		setUnknownFlag(result, arg[2:], true)
 		return
 	}
 	result.Diagnostics = append(result.Diagnostics, CLIDiagnostic{Type: "error", Message: "Unknown option: " + arg})
