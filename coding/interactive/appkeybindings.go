@@ -270,14 +270,23 @@ func ToKeybindingsConfig(value map[string]json.RawMessage) map[string][]string {
 		trimmed := strings.TrimSpace(string(raw))
 		if strings.HasPrefix(trimmed, `"`) {
 			var single string
-			if err := json.Unmarshal(raw, &single); err == nil {
+			if err := json.Unmarshal(raw, &single); err == nil && tui.IsValidKeyID(single) {
 				config[key] = []string{single}
 			}
 			continue
 		}
 		var list []string
 		if err := json.Unmarshal(raw, &list); err == nil {
-			config[key] = list
+			valid := true
+			for _, keyID := range list {
+				if !tui.IsValidKeyID(keyID) {
+					valid = false
+					break
+				}
+			}
+			if valid {
+				config[key] = list
+			}
 		}
 	}
 	return config

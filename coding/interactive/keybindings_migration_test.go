@@ -49,6 +49,31 @@ func TestCreateAppKeybindingsMigrationUsesReferenceOrder(t *testing.T) {
 	}
 }
 
+// Pinned key-id-schema.ts rejects values outside the KeyId pattern.
+func TestAppKeybindingsIgnoreInvalidUserKeyIDs(t *testing.T) {
+	agentDir := t.TempDir()
+	path := filepath.Join(agentDir, "keybindings.json")
+	if err := os.WriteFile(path, []byte(`{"app.clear":"bogus"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manager := CreateAppKeybindings(agentDir)
+	if got := manager.GetKeys("app.clear"); len(got) != 1 || got[0] != "ctrl+c" {
+		t.Fatalf("invalid user keybinding resolved to %v; want default ctrl+c", got)
+	}
+}
+
+func TestAppKeybindingsRejectInvalidMemberFromUserKeyIDArray(t *testing.T) {
+	agentDir := t.TempDir()
+	path := filepath.Join(agentDir, "keybindings.json")
+	if err := os.WriteFile(path, []byte(`{"app.clear":["ctrl+x","bogus"]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manager := CreateAppKeybindings(agentDir)
+	if got := manager.GetKeys("app.clear"); len(got) != 1 || got[0] != "ctrl+c" {
+		t.Fatalf("invalid user keybinding array resolved to %v; want default ctrl+c", got)
+	}
+}
+
 // The migration keeps the namespaced value when both names exist and leaves a
 // non-legacy file untouched.
 func TestCreateAppKeybindingsMigrationKeepsModernValues(t *testing.T) {

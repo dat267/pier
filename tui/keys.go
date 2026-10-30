@@ -9,6 +9,7 @@ package tui
 
 import (
 	"os"
+	"reflect"
 	"regexp"
 	"slices"
 	"strconv"
@@ -684,6 +685,38 @@ func parseKeyID(keyID string) (parsedKeyID, bool) {
 		*modifier = true
 		key = key[len(prefix):]
 	}
+}
+
+// IsValidKeyID reports whether a key identifier matches the upstream KeyId schema.
+func IsValidKeyID(keyID KeyId) bool {
+	remaining := keyID
+	seen := map[string]bool{}
+	for {
+		separator := strings.IndexByte(remaining, '+')
+		if separator < 0 {
+			break
+		}
+		modifier := remaining[:separator]
+		if modifier != "ctrl" && modifier != "shift" && modifier != "alt" && modifier != "super" {
+			break
+		}
+		if seen[modifier] {
+			return false
+		}
+		seen[modifier] = true
+		remaining = remaining[separator+1:]
+	}
+	if len(remaining) == 1 && (remaining[0] >= 'a' && remaining[0] <= 'z' || remaining[0] >= '0' && remaining[0] <= '9') {
+		return true
+	}
+	keyValues := reflect.ValueOf(Key)
+	for i := 0; i < keyValues.NumField(); i++ {
+		field := keyValues.Field(i)
+		if field.Kind() == reflect.String && field.String() == remaining {
+			return true
+		}
+	}
+	return false
 }
 
 // MatchesKey matches input data against a key identifier string.
