@@ -10,6 +10,15 @@ type diagnosticCodeError struct{ code any }
 func (e diagnosticCodeError) Error() string  { return "boom" }
 func (e diagnosticCodeError) ErrorCode() any { return e.code }
 
+// Reference: pi v1.4.0 utils/diagnostics.ts reads Error.name; Go uses the
+// dynamic type name when an error does not provide Namer.
+func TestDiagnosticErrorUsesGoTypeNameWithoutNamer(t *testing.T) {
+	info := ExtractDiagnosticError(diagnosticCodeError{code: "x"})
+	if info.Name == nil || *info.Name != "ai.diagnosticCodeError" {
+		t.Fatalf("name = %v, want Go dynamic type name", info.Name)
+	}
+}
+
 // Diagnostics are persisted with JSON.stringify, which does not HTML-escape.
 func TestDiagnosticCodeDoesNotHTMLEscape(t *testing.T) {
 	info := ExtractDiagnosticError(diagnosticCodeError{code: "a < b & c > d"})

@@ -3724,6 +3724,19 @@ Reproducer: `TestEstimateContextTokensMatchesUpstream` in
 `coding/estimate_parity_test.go` maps upstream's null golden value to the Go
 `-1` sentinel.
 
+### D320
+
+**Diagnostic error names use Go types when no explicit name is available.**
+
+Reference: pi v1.4.0 (`4a080252`), `packages/ai/src/utils/diagnostics.ts`
+reads the JavaScript `Error.name` property. Go errors have no corresponding
+field, so `ExtractDiagnosticError` uses an explicit `Namer` when provided and
+the dynamic Go type otherwise. This makes diagnostic metadata language-specific
+instead of always synthesizing the JavaScript default name `Error`.
+
+Reproducer: `TestDiagnosticErrorUsesGoTypeNameWithoutNamer` in
+`ai/diagnostics_test.go`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

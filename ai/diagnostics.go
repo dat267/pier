@@ -39,9 +39,8 @@ func FormatThrownValue(err error) string {
 }
 
 // ExtractDiagnosticError builds a DiagnosticErrorInfo from a Go error.
-// Go errors have no name/stack split like JS Errors, so Name is derived from
-// the error's dynamic type when it implements Namer, and Stack from a
-// StackFormatter.
+// Go errors have no name/stack split like JS Errors; D320 uses Namer when
+// provided and otherwise records the Go dynamic type as Name.
 type Namer interface{ ErrorName() string }
 type StackFormatter interface{ ErrorStack() string }
 
