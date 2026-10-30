@@ -8,7 +8,8 @@ import (
 
 // InitialPrompt is upstream buildInitialMessage's result (cli/initial-message.ts):
 // the composed first user message, the images belonging to it, and the
-// positional messages still queued behind it.
+// positional messages still queued behind it. D318: unlike upstream's
+// parsed.messages.shift(), BuildInitialPrompt leaves its caller's slice intact.
 type InitialPrompt struct {
 	Message string
 	Images  []ai.ImageContent

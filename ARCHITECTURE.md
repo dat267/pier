@@ -254,13 +254,13 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D317)
+## Deliberate divergences from pi (D1–D318)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D317**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D318**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation. Port and review history are available with `git log --oneline`.
 
 ### D41
@@ -3694,6 +3694,20 @@ coercions covered by `ai/validation_test.go`. Other constraints such as
 not constrain Go validation. For example, a string failing a schema `pattern`
 can still be accepted; `TestValidateToolArgumentsLeavesUnsupportedPatternUnconstrained`
 reproduces this intentional boundary.
+
+### D318
+
+**BuildInitialPrompt preserves the caller's message slice.**
+
+Reference: pi v1.4.0 (`4a080252`),
+`packages/coding-agent/src/cli/initial-message.ts` shifts the first positional
+message from `parsed.messages` in place. Go's exported `BuildInitialPrompt`
+returns the remaining messages in `InitialPrompt.Rest` without mutating the
+input slice. This preserves caller ownership; the composed prompt and queued
+messages are otherwise unchanged.
+
+Reproducer: `TestBuildInitialPromptDoesNotMutateMessages` in
+`coding/cliinitial_test.go`.
 
 ## Lock inventory
 
