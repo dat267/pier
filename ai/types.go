@@ -149,15 +149,18 @@ type StreamOptions struct {
 	Headers ProviderHeaders
 	// Identity selects the User-Agent and provider attribution headers.
 	// Nil sends the detailed pi user agent with no attribution.
-	Identity                  *ClientIdentity
-	Temperature               *float64
-	SamplingParams            SamplingParams
-	SamplingParamsOrder       []string
-	MaxTokens                 *int
-	Transport                 Transport
-	CacheRetention            CacheRetention
-	SessionID                 string
-	TimeoutMs                 *int
+	Identity            *ClientIdentity
+	Temperature         *float64
+	SamplingParams      SamplingParams
+	SamplingParamsOrder []string
+	MaxTokens           *int
+	Transport           Transport
+	CacheRetention      CacheRetention
+	SessionID           string
+	// TimeoutMs is the provider request's SDK timeout, when supported.
+	TimeoutMs *int
+	// HTTPIdleTimeoutMs is the independent global Undici dispatcher timeout.
+	HTTPIdleTimeoutMs         *int
 	MaxRetries                *int
 	MaxRetryDelayMs           *int
 	Metadata                  map[string]json.RawMessage

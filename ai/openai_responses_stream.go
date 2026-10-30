@@ -1109,7 +1109,7 @@ func streamOpenAIResponses(model *Model, context TranscriptContext, options *Ope
 				if nerr != nil {
 					return nil, nerr
 				}
-				hresp, rerr := DoProviderRequestWithSDKTimeout(req, options.TimeoutMs)
+				hresp, rerr := DoProviderRequestWithSDKTimeoutAndIdle(req, options.TimeoutMs, options.HTTPIdleTimeoutMs)
 				if rerr != nil {
 					return nil, rerr
 				}

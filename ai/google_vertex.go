@@ -211,7 +211,7 @@ func retryVertexRequest(
 			req.Header.Set(name, value)
 		}
 		applyProviderHeaders(req.Header, options.Headers)
-		resp, err := DoProviderRequest(req, options.TimeoutMs)
+		resp, err := DoProviderRequestWithIdleTimeout(req, options.TimeoutMs, options.HTTPIdleTimeoutMs)
 		if err != nil {
 			return nil, err
 		}

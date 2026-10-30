@@ -333,14 +333,20 @@ func requestMistralStream(ctx ctxpkg.Context, model *Model, body []byte, options
 	if timeoutMS < 0 || timeoutMS > maxAbortSignalTimeoutMS {
 		return nil, fmt.Errorf("The value of \"delay\" is out of range. It must be >= 0 && <= %d. Received %d", maxAbortSignalTimeoutMS, timeoutMS)
 	}
-	timeout := javascriptTimeoutDuration(timeoutMS)
+	headerTimeout := javascriptTimeoutDuration(timeoutMS)
+	if options.HTTPIdleTimeoutMs != nil && *options.HTTPIdleTimeoutMs > 0 {
+		idleHeaderTimeout := idleTimeoutDuration(*options.HTTPIdleTimeoutMs)
+		if idleHeaderTimeout < headerTimeout {
+			headerTimeout = idleHeaderTimeout
+		}
+	}
 	// Upstream timeoutMs bounds response headers only; an active Mistral stream
 	// must stay alive for as long as its body continues producing data.
 	requestCtx, cancel := ctxpkg.WithCancel(ctx)
 	var headerMu sync.Mutex
 	headersReceived := false
 	headerTimedOut := false
-	headerTimer := time.AfterFunc(timeout, func() {
+	headerTimer := time.AfterFunc(headerTimeout, func() {
 		headerMu.Lock()
 		defer headerMu.Unlock()
 		if !headersReceived {
@@ -399,7 +405,8 @@ func requestMistralStream(ctx ctxpkg.Context, model *Model, body []byte, options
 	// The guard watches the caller's context and cancels the request context;
 	// watching requestCtx itself would make its own cancellation look like a
 	// user abort.
-	resp.Body = guardIdleBody(ctx, cancel, resp.Body, options.TimeoutMs)
+	bodyIdleTimeoutMS := firstTimeout(options.HTTPIdleTimeoutMs, options.TimeoutMs)
+	resp.Body = guardIdleBody(ctx, cancel, resp.Body, bodyIdleTimeoutMS)
 	return resp, nil
 }
 

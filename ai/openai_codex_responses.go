@@ -656,7 +656,7 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 			// Upstream arms the headers timeout around the fetch alone and leaves
 			// the body alone; the shared guard bounds the headers wait and keeps
 			// the body alive only while it produces data (D40).
-			response, err = DoProviderRequestWithAbortSignalTimeout(request, options.TimeoutMs)
+			response, err = DoProviderRequestWithAbortSignalTimeoutAndIdle(request, options.TimeoutMs, options.HTTPIdleTimeoutMs)
 			if err != nil {
 				var idle *idleTimeoutError
 				if errors.As(err, &idle) && !idle.afterHeaders && ctxErr(ctx) == nil {

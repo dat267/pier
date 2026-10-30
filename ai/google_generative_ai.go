@@ -580,7 +580,7 @@ func requestGoogleStream(ctx context.Context, model *Model, body []byte, options
 			req.Header.Set(name, value)
 		}
 		applyProviderHeaders(req.Header, options.Headers)
-		hresp, rerr := DoProviderRequest(req, options.TimeoutMs)
+		hresp, rerr := DoProviderRequestWithIdleTimeout(req, options.TimeoutMs, options.HTTPIdleTimeoutMs)
 		if rerr != nil {
 			return nil, rerr
 		}

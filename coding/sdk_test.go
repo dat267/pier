@@ -797,6 +797,9 @@ func TestCreateAgentSessionRequestOptions(t *testing.T) {
 	if captured.TimeoutMs == nil || *captured.TimeoutMs != 45000 {
 		t.Fatalf("timeout = %v", captured.TimeoutMs)
 	}
+	if captured.HTTPIdleTimeoutMs == nil || *captured.HTTPIdleTimeoutMs != 0 {
+		t.Fatalf("HTTP idle timeout = %v, want disabled independently of provider timeout", captured.HTTPIdleTimeoutMs)
+	}
 	if captured.MaxRetries == nil || *captured.MaxRetries != 7 {
 		t.Fatalf("maxRetries = %v", captured.MaxRetries)
 	}
@@ -829,10 +832,10 @@ func TestCreateAgentSessionRequestOptions(t *testing.T) {
 	}
 }
 
-// The HTTP idle timeout setting reaches the wire as the per-request timeout, which
-// is why /settings takes effect without a restart. There is no dispatcher to
-// reconfigure: mutating the shared transport on a settings change is a data race
-// (D40), so the value is read when each request's options are built.
+// The global HTTP idle timeout and provider SDK timeout are propagated
+// separately, so provider retry overrides cannot replace the dispatcher's body
+// idle limit. Per-request values are rebuilt after settings changes instead of
+// mutating the shared transport (D40).
 func TestHTTPIdleTimeoutReachesTheRequest(t *testing.T) {
 	tempAgentDir(t)
 	runtime, err := CreateModelRuntime(CreateModelRuntimeOptions{
@@ -897,9 +900,16 @@ func TestHTTPIdleTimeoutReachesTheRequest(t *testing.T) {
 	if got := requestTimeout(t, `{"httpIdleTimeoutMs":60000}`); got != 60_000 {
 		t.Fatalf("timeout = %d, want the configured 60000", got)
 	}
-	// "disabled" is the max-int32 sentinel: effectively no timeout.
+	if captured.HTTPIdleTimeoutMs == nil || *captured.HTTPIdleTimeoutMs != 60_000 {
+		t.Fatalf("HTTP idle timeout = %v, want 60000", captured.HTTPIdleTimeoutMs)
+	}
+	// "disabled" is the max-int32 sentinel for the SDK timeout, while the
+	// independent dispatcher body-idle timeout is explicitly disabled.
 	if got := requestTimeout(t, `{"httpIdleTimeoutMs":"disabled"}`); got != 2147483647 {
 		t.Fatalf("disabled timeout = %d, want the no-timeout sentinel", got)
+	}
+	if captured.HTTPIdleTimeoutMs == nil || *captured.HTTPIdleTimeoutMs != 0 {
+		t.Fatalf("disabled HTTP idle timeout = %v, want 0", captured.HTTPIdleTimeoutMs)
 	}
 }
 

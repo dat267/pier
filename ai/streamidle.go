@@ -81,6 +81,10 @@ func (b *idleStreamBody) resetTimer() {
 	if b.timer == nil || b.closed.Load() {
 		return
 	}
+	if b.timeout <= 0 {
+		b.timer.Stop()
+		return
+	}
 	b.timer.Reset(b.timeout)
 	// Close can stop the timer between the first check and Reset. Stop it
 	// again if that happened, including resets from an in-flight callback.
@@ -105,7 +109,9 @@ func newIdleBody(parent context.Context, cancel context.CancelFunc, timeout time
 
 func newIdleBodyWithTimeouts(parent context.Context, cancel context.CancelFunc, headerTimeout, bodyTimeout time.Duration) *idleStreamBody {
 	body := &idleStreamBody{parent: parent, cancel: cancel, headerTimeout: headerTimeout, timeout: bodyTimeout}
-	body.timer = time.AfterFunc(headerTimeout, body.fire)
+	if headerTimeout > 0 {
+		body.timer = time.AfterFunc(headerTimeout, body.fire)
+	}
 	return body
 }
 
@@ -209,39 +215,70 @@ func requestOrigin(u *url.URL) [3]string {
 // response headers and body reads. A nil or non-positive timeout is unbounded.
 // The returned body must be closed to release its request context.
 func DoProviderRequest(req *http.Request, timeoutMS *int) (*http.Response, error) {
-	if timeoutMS == nil || *timeoutMS <= 0 {
+	return DoProviderRequestWithIdleTimeout(req, timeoutMS, nil)
+}
+
+// DoProviderRequestWithIdleTimeout keeps the provider request timeout and the
+// global dispatcher idle timeout separate. With no explicit dispatcher value,
+// timeoutMS remains the fallback for direct callers predating settings wiring.
+func DoProviderRequestWithIdleTimeout(req *http.Request, timeoutMS, idleTimeoutMS *int) (*http.Response, error) {
+	idleTimeoutMS = firstTimeout(idleTimeoutMS, timeoutMS)
+	if idleTimeoutMS == nil || *idleTimeoutMS <= 0 {
 		return doFetchRequest(req)
 	}
-	timeout := idleTimeoutDuration(*timeoutMS)
+	timeout := idleTimeoutDuration(*idleTimeoutMS)
 	return doProviderRequestWithTimeouts(req, timeout, timeout)
 }
 
-// DoProviderRequestWithSDKTimeout also applies the Node setTimeout-backed
-// deadline used by OpenAI and Anthropic SDK requests while awaiting headers.
-// Undici's body idle timeout remains the configured raw delay after headers.
+// DoProviderRequestWithSDKTimeout applies Node's setTimeout-backed provider SDK
+// deadline while awaiting headers. Undici's body idle timeout stays separate.
 func DoProviderRequestWithSDKTimeout(req *http.Request, timeoutMS *int) (*http.Response, error) {
-	if timeoutMS == nil || *timeoutMS <= 0 {
-		return DoProviderRequest(req, timeoutMS)
+	return DoProviderRequestWithSDKTimeoutAndIdle(req, timeoutMS, nil)
+}
+
+// DoProviderRequestWithSDKTimeoutAndIdle applies the SDK header timeout and the
+// independent Undici dispatcher idle timeout.
+func DoProviderRequestWithSDKTimeoutAndIdle(req *http.Request, timeoutMS, idleTimeoutMS *int) (*http.Response, error) {
+	idleTimeoutMS = firstTimeout(idleTimeoutMS, timeoutMS)
+	var headerTimeout, bodyTimeout time.Duration
+	if idleTimeoutMS != nil && *idleTimeoutMS > 0 {
+		bodyTimeout = idleTimeoutDuration(*idleTimeoutMS)
+		headerTimeout = bodyTimeout
 	}
-	headerTimeout := javascriptTimeoutDuration(int64(*timeoutMS))
-	bodyTimeout := idleTimeoutDuration(*timeoutMS)
+	if timeoutMS != nil && *timeoutMS > 0 {
+		sdkHeaderTimeout := javascriptTimeoutDuration(int64(*timeoutMS))
+		if headerTimeout == 0 || sdkHeaderTimeout < headerTimeout {
+			headerTimeout = sdkHeaderTimeout
+		}
+	}
+	if headerTimeout == 0 && bodyTimeout == 0 {
+		return doFetchRequest(req)
+	}
 	return doProviderRequestWithTimeouts(req, headerTimeout, bodyTimeout)
 }
 
 // DoProviderRequestWithAbortSignalTimeout mirrors the Codex fetch deadline.
 func DoProviderRequestWithAbortSignalTimeout(req *http.Request, timeoutMS *int) (*http.Response, error) {
-	if timeoutMS == nil || *timeoutMS == 0 {
-		return DoProviderRequest(req, timeoutMS)
-	}
-	if *timeoutMS < 0 {
+	return DoProviderRequestWithAbortSignalTimeoutAndIdle(req, timeoutMS, nil)
+}
+
+// DoProviderRequestWithAbortSignalTimeoutAndIdle mirrors Codex's AbortSignal
+// header deadline and the independent Undici dispatcher idle timeout.
+func DoProviderRequestWithAbortSignalTimeoutAndIdle(req *http.Request, timeoutMS, idleTimeoutMS *int) (*http.Response, error) {
+	if timeoutMS != nil && *timeoutMS < 0 {
 		return nil, fmt.Errorf("Invalid timeoutMs: %d", *timeoutMS)
 	}
-	if int64(*timeoutMS) > maxAbortSignalTimeoutMS {
+	if timeoutMS != nil && int64(*timeoutMS) > maxAbortSignalTimeoutMS {
 		return nil, fmt.Errorf("The value of \"delay\" is out of range. It must be >= 0 && <= %d. Received %d", maxAbortSignalTimeoutMS, *timeoutMS)
 	}
-	headerTimeout := javascriptTimeoutDuration(int64(*timeoutMS))
-	bodyTimeout := idleTimeoutDuration(*timeoutMS)
-	return doProviderRequestWithTimeouts(req, headerTimeout, bodyTimeout)
+	return DoProviderRequestWithSDKTimeoutAndIdle(req, timeoutMS, idleTimeoutMS)
+}
+
+func firstTimeout(primary, fallback *int) *int {
+	if primary != nil {
+		return primary
+	}
+	return fallback
 }
 
 func doProviderRequestWithTimeouts(req *http.Request, headerTimeout, bodyTimeout time.Duration) (*http.Response, error) {

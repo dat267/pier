@@ -426,7 +426,7 @@ func StreamPiMessages(model *Model, context TranscriptContext, options *PiMessag
 		request.Header.Set("accept", "text/event-stream")
 		request.Header.Set("content-type", "application/json")
 		applyProviderHeaders(request.Header, options.Headers)
-		response, err := DoProviderRequest(request, options.TimeoutMs)
+		response, err := DoProviderRequestWithIdleTimeout(request, options.TimeoutMs, options.HTTPIdleTimeoutMs)
 		if err != nil {
 			fail(err)
 			return

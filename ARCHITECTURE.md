@@ -2321,29 +2321,34 @@ Tests: `TestBashCommandFromTheEditor`,
 
 **The settings-backed HTTP idle timeout bounds provider requests.**
 
-Reference: `core/http-dispatcher.ts` sets undici's `headersTimeout` and
-`bodyTimeout` to the configured idle timeout, and the provider APIs pass
-`timeoutMs` into their requests (`api/anthropic-messages.ts`,
-`api/openai-completions.ts`, `api/openai-responses.ts`,
-`api/google-generative-ai.ts`, `api/google-vertex.ts`,
-`api/openai-codex-responses.ts`, `api/openrouter-images.ts`; Bedrock's API takes
-no `timeoutMs` and relies on the dispatcher alone). Go's `http.Transport` has no
-per-request header timeout, and writing `ResponseHeaderTimeout` on the process-wide
-`http.DefaultTransport` races with in-flight requests (D40). The port arms one
+Reference: `core/http-dispatcher.ts` sets Undici's `headersTimeout` and
+`bodyTimeout` from the global idle setting. `core/sdk.ts` separately sets the
+provider request's `timeoutMs` from `retry.provider.timeoutMs`, falling back to
+the effective idle timeout only when no provider override exists. OpenAI,
+Anthropic, Codex, and OpenRouter image APIs pass `timeoutMs` to their client
+requests; Google, Vertex, and Bedrock rely on the dispatcher timeout. Go's
+`http.Transport` has no per-request header timeout, and writing
+`ResponseHeaderTimeout` on the process-wide `http.DefaultTransport` races with
+in-flight requests (D40). The port arms one
 timer per provider request (`ai/streamidle.go`), including the single-request
 OpenRouter image generation. Dispatcher-only requests use the
 raw settings delay for both header and body idle phases, matching Undici's
-FastTimer. OpenAI, Anthropic, and OpenRouter image SDK requests also have a Node
-`setTimeout` deadline around `fetch` (`pi/node_modules/openai/src/client.ts`,
-`pi/node_modules/@anthropic-ai/sdk/src/client.ts`): the port uses that timer
-semantics while waiting for headers, then switches to the raw Undici body idle
-delay after headers arrive. In either case every body read re-arms the timer, so
-only silence fails the stream and a stream that keeps producing data outlives
-the timeout. The timer counts time blocked in a body read, not wall-clock
+FastTimer. `coding/sdk.go` passes the global setting separately from the
+provider SDK `TimeoutMs`; a provider retry override therefore cannot shorten
+the body-idle setting. OpenAI, Anthropic, and OpenRouter image SDK requests also
+have a Node `setTimeout` deadline around `fetch`
+(`pi/node_modules/openai/src/client.ts`,
+`pi/node_modules/@anthropic-ai/sdk/src/client.ts`): the port uses the smaller of
+that SDK deadline and the global header-idle timeout, then switches to the raw
+Undici body-idle delay after headers arrive. In either case every body read
+re-arms the timer, so only silence fails the stream and a stream that keeps
+producing data outlives the timeout. The timer counts time blocked in a body
+read, not wall-clock
 silence: a callback that fires while the consumer is processing re-arms instead
 of cancelling, and the deadline runs from the last delivered bytes, so a loaded
 machine, a GC pause or a slow renderer cannot abort a connection whose bytes
-already arrived. A nil or non-positive timeout sends the request unbounded.
+already arrived. A nil or non-positive global idle setting disables only the
+Undici bound; an SDK header deadline remains independent.
 
 Close marks the body closed before stopping the timer; resets check that flag
 again afterwards. A pending read returning buffered bytes after close, or a late
@@ -2382,8 +2387,12 @@ Tests: `TestProviderStreamsAbortWhenResponseHeadersIdle`,
 `TestProviderDispatcherHeaderTimerKeepsLargeFastTimerDelay`,
 `TestCodexAbortSignalHeaderTimerClampsLargeDelay`,
 `TestCodexAbortSignalRejectsOutOfRangeDelayBeforeFetch`,
-`TestCodexRejectsNegativeTimeoutBeforeFetch` and
-`TestGuardIdleBodyPreservesFastTimerDelayAndSaturatesDuration`.
+`TestCodexRejectsNegativeTimeoutBeforeFetch`,
+`TestSDKTimeoutDoesNotReplaceDispatcherBodyIdleTimeout`,
+`TestMistralSDKTimeoutDoesNotReplaceDispatcherBodyIdleTimeout`,
+`TestDispatcherOnlyTimeoutIgnoresProviderOverride`,
+`TestCreateAgentSessionRequestOptions`, `TestHTTPIdleTimeoutReachesTheRequest`,
+and `TestGuardIdleBodyPreservesFastTimerDelayAndSaturatesDuration`.
 
 ### D255
 

@@ -453,6 +453,12 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		if effectiveTimeout == 0 {
 			effectiveTimeout = 2147483647
 		}
+		// Preserve the global dispatcher idle bound separately from a
+		// provider retry timeout override; SDK deadlines end at response headers.
+		if merged.HTTPIdleTimeoutMs == nil {
+			idle := int(idleTimeout)
+			merged.HTTPIdleTimeoutMs = &idle
+		}
 		if merged.TimeoutMs == nil {
 			timeout := int(effectiveTimeout)
 			if providerRetry.TimeoutMS != nil {
