@@ -34,6 +34,8 @@ func SelectSession(options SelectSessionOptions) string {
 		showHardwareCursor = options.Settings.GetShowHardwareCursor()
 		clearOnShrink = options.Settings.GetClearOnShrink()
 	}
+	keybindings := CreateAppKeybindings(coding.GetAgentDir())
+	tui.SetKeybindings(keybindings.KeybindingsManager)
 	ui := tui.NewMainScreen(terminal, showHardwareCursor, coding.GetAgentDir())
 	ui.SetClearOnShrink(clearOnShrink)
 
@@ -63,7 +65,7 @@ func SelectSession(options SelectSessionOptions) string {
 		// Loader results must apply inside the picker's render pass (Post
 		// drains at the start of doRender), never inline from the loader
 		// goroutine (stage 4).
-		SessionSelectorOptions{Post: ui.Post, ShowRenameHint: false, Keybindings: tui.GetKeybindings()},
+		SessionSelectorOptions{Post: ui.Post, ShowRenameHint: false, Keybindings: keybindings.KeybindingsManager},
 	)
 	ui.AddChild(selector)
 	ui.SetFocus(selector.GetSessionList())
