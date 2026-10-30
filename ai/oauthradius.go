@@ -31,6 +31,20 @@ const (
 // RadiusRedirectURI is the OAuth redirect URI.
 const RadiusRedirectURI = "http://" + radiusCallbackHost + ":1456" + RadiusCallbackPath
 
+// radiusGatewayEndpointURL mirrors new URL(endpoint, gateway): API endpoints
+// are rooted at the gateway origin even when its configured URL has a path.
+func radiusGatewayEndpointURL(gateway, endpoint string) (string, error) {
+	base, err := url.Parse(gateway)
+	if err != nil {
+		return "", err
+	}
+	resolved, err := base.Parse(endpoint)
+	if err != nil {
+		return "", err
+	}
+	return resolved.String(), nil
+}
+
 // RadiusOAuthOptions configure the Radius OAuth flow.
 type RadiusOAuthOptions struct {
 	Name    string
@@ -53,7 +67,10 @@ func (e *radiusOAuthResponseError) Error() string { return e.ErrorMessage }
 
 // LoadRadiusOAuthDiscovery fetches the gateway's OAuth discovery document.
 func LoadRadiusOAuthDiscovery(ctx context.Context, gateway string) (*RadiusOAuthDiscovery, error) {
-	requestURL := strings.TrimRight(gateway, "/") + "/v1/oauth"
+	requestURL, err := radiusGatewayEndpointURL(gateway, "/v1/oauth")
+	if err != nil {
+		return nil, err
+	}
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
 	if err != nil {
 		return nil, err
@@ -117,7 +134,10 @@ func RequestRadiusOAuthToken(ctx context.Context, gateway string, fields map[str
 	for key, value := range fields {
 		form.Set(key, value)
 	}
-	requestURL := strings.TrimRight(gateway, "/") + "/v1/oauth/token"
+	requestURL, err := radiusGatewayEndpointURL(gateway, "/v1/oauth/token")
+	if err != nil {
+		return nil, err
+	}
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, requestURL, strings.NewReader(form.Encode()))
 	if err != nil {
 		return nil, err
@@ -328,7 +348,10 @@ func RequestRadiusDeviceAuthorization(ctx context.Context, gateway string) (*Rad
 	form := url.Values{}
 	form.Set("client_id", RadiusOAuthClientID)
 	form.Set("scope", RadiusOAuthScope)
-	requestURL := strings.TrimRight(gateway, "/") + "/v1/oauth/device"
+	requestURL, err := radiusGatewayEndpointURL(gateway, "/v1/oauth/device")
+	if err != nil {
+		return nil, err
+	}
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, requestURL, strings.NewReader(form.Encode()))
 	if err != nil {
 		return nil, err

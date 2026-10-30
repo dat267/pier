@@ -184,6 +184,46 @@ func TestTruncateRadiusHTTPBodyUsesJavaScriptStringUnits(t *testing.T) {
 	}
 }
 
+// Pinned radius.ts and radius-config.ts use new URL("/v1/...", gateway),
+// which roots API endpoints at the gateway origin rather than beneath its path.
+func TestRadiusEndpointsResolveFromGatewayOrigin(t *testing.T) {
+	var paths []string
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		paths = append(paths, request.URL.Path)
+		writer.Header().Set("Content-Type", "application/json")
+		switch request.URL.Path {
+		case "/v1/oauth":
+			_, _ = writer.Write([]byte(`{"authorizationEndpoint":"https://auth.example/authorize"}`))
+		case "/v1/oauth/token":
+			_, _ = writer.Write([]byte(`{"access_token":"access","refresh_token":"refresh","expires_in":3600}`))
+		case "/v1/oauth/device":
+			_, _ = writer.Write([]byte(`{"device_code":"device","user_code":"user","verification_uri":"https://auth.example/device","expires_in":600}`))
+		case "/v1/config":
+			_, _ = writer.Write([]byte(`{"baseUrl":"https://api.example/v1","models":[]}`))
+		default:
+			writer.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+	gateway := server.URL + "/proxy/base"
+
+	if _, err := LoadRadiusOAuthDiscovery(context.Background(), gateway); err != nil {
+		t.Fatalf("load discovery: %v", err)
+	}
+	if _, err := RequestRadiusOAuthToken(context.Background(), gateway, map[string]string{"grant_type": "refresh_token"}); err != nil {
+		t.Fatalf("request token: %v", err)
+	}
+	if _, err := RequestRadiusDeviceAuthorization(context.Background(), gateway); err != nil {
+		t.Fatalf("request device authorization: %v", err)
+	}
+	if _, err := LoadRadiusGatewayConfig(context.Background(), gateway, ""); err != nil {
+		t.Fatalf("load catalog: %v", err)
+	}
+	if got, want := strings.Join(paths, ","), "/v1/oauth,/v1/oauth/token,/v1/oauth/device,/v1/config"; got != want {
+		t.Fatalf("request paths = %q, want %q", got, want)
+	}
+}
+
 func TestRadiusProviderRefresh(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")

@@ -205,7 +205,10 @@ func truncateHTTPBody(body string) string {
 // LoadRadiusGatewayConfig fetches the gateway model catalogue (upstream
 // loadRadiusGatewayConfig). The gateway is overridable for tests.
 func LoadRadiusGatewayConfig(ctx context.Context, gateway, apiKey string) (*RadiusGatewayConfig, error) {
-	requestURL := strings.TrimRight(gateway, "/") + "/v1/config"
+	requestURL, err := radiusGatewayEndpointURL(gateway, "/v1/config")
+	if err != nil {
+		return nil, err
+	}
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
 	if err != nil {
 		return nil, err
