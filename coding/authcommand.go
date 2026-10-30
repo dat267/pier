@@ -122,6 +122,10 @@ func parseAuthMinExpiry(value string) (int64, bool) {
 // ParseAuthCommand parses `pi auth ...`; nil means the invocation is not an
 // auth command.
 func ParseAuthCommand(args []string) (*AuthCommand, error) {
+	return parseAuthCommandNamed(AppName, args)
+}
+
+func parseAuthCommandNamed(appName string, args []string) (*AuthCommand, error) {
 	if len(args) == 0 || args[0] != "auth" {
 		return nil, nil
 	}
@@ -143,7 +147,7 @@ func ParseAuthCommand(args []string) (*AuthCommand, error) {
 		}
 		return nil, &AuthCommandError{Message: fmt.Sprintf(
 			`Unknown auth command %q. Use "%s auth print-api-key", "%s auth print-bearer-token", or "%s auth check".`,
-			name, AppName, AppName, AppName)}
+			name, appName, appName, appName)}
 	}
 	command := &AuthCommand{Kind: kind}
 	for index := 2; index < len(args); index++ {
@@ -471,7 +475,7 @@ func RunAuthCommandNamed(appName string, args []string, stdout, stderr io.Writer
 		fmt.Fprint(stdout, PrintAuthCommandHelp(appName))
 		return true, 0
 	}
-	command, err := ParseAuthCommand(args)
+	command, err := parseAuthCommandNamed(appName, args)
 	if err != nil {
 		fmt.Fprintf(stderr, "Error: %s\n", authCommandErrorMessage(err, "Failed to parse auth command"))
 		return true, 1

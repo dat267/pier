@@ -135,6 +135,19 @@ func TestRunAuthCommandReportsFirstUnknownOption(t *testing.T) {
 	}
 }
 
+// pi v1.4.0 packages/coding-agent/src/cli/auth-command.ts uses APP_NAME in
+// unknown-subcommand guidance; the port substitutes the invoked binary name.
+func TestRunAuthCommandUnknownSubcommandUsesTheInvokedName(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	handled, code := RunAuthCommandNamed("pier", []string{"auth", "unknown"}, &stdout, &stderr)
+	if !handled || code != 1 {
+		t.Fatalf("handled=%v code=%d stderr=%s", handled, code, stderr.String())
+	}
+	if !strings.Contains(stderr.String(), `Use "pier auth print-api-key"`) || strings.Contains(stderr.String(), `Use "pi auth`) {
+		t.Fatalf("unknown-command guidance does not name the invoked binary:\n%s", stderr.String())
+	}
+}
+
 // The unknown-option hint names the invoked binary too.
 func TestRunAuthCommandUnknownOptionUsesTheInvokedName(t *testing.T) {
 	var stdout, stderr bytes.Buffer
