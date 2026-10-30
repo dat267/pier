@@ -9,6 +9,8 @@ import (
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
+	"golang.org/x/text/collate"
+	"golang.org/x/text/language"
 )
 
 // Port of src/modes/interactive/components/model-selector.ts and
@@ -318,6 +320,7 @@ func (c *ModelSelectorComponent) dispose() {
 
 func (c *ModelSelectorComponent) sortModels(models []modelItem) []modelItem {
 	sorted := append([]modelItem(nil), models...)
+	collator := collate.New(language.Und)
 	sort.SliceStable(sorted, func(a, b int) bool {
 		aCurrent := ai.ModelsAreEqual(c.currentModel, sorted[a].model)
 		bCurrent := ai.ModelsAreEqual(c.currentModel, sorted[b].model)
@@ -329,7 +332,8 @@ func (c *ModelSelectorComponent) sortModels(models []modelItem) []modelItem {
 		if aDefault != bDefault {
 			return aDefault
 		}
-		return localeCompareTheme(sorted[a].provider, sorted[b].provider) < 0
+		// D257: use stable root collation rather than byte-order approximation.
+		return collator.CompareString(sorted[a].provider, sorted[b].provider) < 0
 	})
 	return sorted
 }

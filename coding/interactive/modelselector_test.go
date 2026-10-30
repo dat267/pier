@@ -103,6 +103,31 @@ func testModels() []*ai.Model {
 	}
 }
 
+// pi v1.4.0 model-selector.ts sorts provider IDs with localeCompare; under the
+// pinned English Node locale, lowercase sorts before uppercase.
+func TestModelSelectorProviderOrderMatchesUpstreamLocale(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	InitTheme("dark", false)
+
+	models := []*ai.Model{
+		{Provider: "A", ID: "upper", API: "openai"},
+		{Provider: "a", ID: "lower", API: "openai"},
+	}
+	component := NewModelSelectorComponent(nil, nil, nil, &fakeModelRuntime{models: models}, nil, nil, nil, "", nil, nil)
+	defer component.Dispose()
+	selected, ok := component.SelectedModel()
+	if !ok || selected.Provider != "a" {
+		provider := "<none>"
+		if selected != nil {
+			provider = string(selected.Provider)
+		}
+		t.Fatalf("first provider = %q; want lowercase provider first, as in pinned model-selector.ts", provider)
+	}
+}
+
 // TestModelSelectorsAgainstUpstreamGolden replays the selectors.
 func TestModelSelectorsAgainstUpstreamGolden(t *testing.T) {
 	SetCustomThemesDir(t.TempDir())
