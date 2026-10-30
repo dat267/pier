@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -14,6 +15,54 @@ import (
 
 // The same upstream retryBudgetSignal must survive a completed 429 attempt;
 // resetting the overall budget for the next attempt would exceed the bound.
+func TestCopilotRetryRejectsOutOfRangeBudgetBeforeRequest(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		attempts := 0
+		previous := http.DefaultClient
+		defer func() { http.DefaultClient = previous }()
+		http.DefaultClient = &http.Client{Transport: copilotBodyTransport(func(request *http.Request) (*http.Response, error) {
+			attempts++
+			return &http.Response{StatusCode: http.StatusOK, Body: http.NoBody}, nil
+		})}
+		const endpoint = "https://fixture.invalid/models"
+		response, err := ai.FetchWithCopilotRateLimitRetry(context.Background(), endpoint, func(ctx context.Context) (*http.Request, error) {
+			return http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+		}, ai.CopilotRetryPolicy{MaxRetries: 1, MaxElapsedMS: 4_294_967_296})
+		if response != nil {
+			response.Body.Close()
+		}
+		if err == nil || !strings.Contains(strings.ToLower(err.Error()), "out of range") || attempts != 0 {
+			t.Fatalf("error=%v attempts=%d; want AbortSignal range error before request", err, attempts)
+		}
+	})
+}
+
+func TestCopilotRetryLargeBudgetUsesJavaScriptTimerClamp(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		previous := http.DefaultClient
+		defer func() { http.DefaultClient = previous }()
+		attempts := 0
+		http.DefaultClient = &http.Client{Transport: copilotBodyTransport(func(request *http.Request) (*http.Response, error) {
+			attempts++
+			if attempts == 1 {
+				return &http.Response{StatusCode: http.StatusTooManyRequests, Header: http.Header{"Retry-After": {"0.1"}}, Body: http.NoBody}, nil
+			}
+			return &http.Response{StatusCode: http.StatusOK, Body: http.NoBody}, nil
+		})}
+		start := time.Now()
+		const endpoint = "https://fixture.invalid/models"
+		response, err := ai.FetchWithCopilotRateLimitRetry(context.Background(), endpoint, func(ctx context.Context) (*http.Request, error) {
+			return http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+		}, ai.CopilotRetryPolicy{MaxRetries: 1, MaxElapsedMS: 2_147_483_648})
+		if response != nil {
+			response.Body.Close()
+		}
+		if err == nil || time.Since(start) != time.Millisecond || attempts != 1 {
+			t.Fatalf("elapsed=%v error=%v attempts=%d; want 1ms budget abort before retry", time.Since(start), err, attempts)
+		}
+	})
+}
+
 func TestCopilotRetrySharesOverallBudgetAcrossAttempts(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		previous := http.DefaultClient
