@@ -77,7 +77,7 @@ func (OpenRouterImages) GenerateImages(model *ImagesModel, context ImagesContext
 			request.Header.Set(name, value)
 		}
 		applyProviderHeaders(request.Header, options.Headers)
-		hresp, rerr := DoProviderRequest(request, options.TimeoutMs)
+		hresp, rerr := DoProviderRequestWithSDKTimeout(request, options.TimeoutMs)
 		if rerr != nil {
 			return nil, rerr
 		}

@@ -24,7 +24,6 @@ const mistralToolCallIDLength = 9
 
 // maxMistralErrorBodyChars bounds error bodies.
 const maxMistralErrorBodyChars = 4000
-const maxAbortSignalTimeoutMS int64 = 1<<32 - 1
 
 // MistralReasoningEffort is Mistral's effort control.
 type MistralReasoningEffort = string

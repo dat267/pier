@@ -552,7 +552,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 				if berr != nil {
 					return nil, berr
 				}
-				hresp, rerr := DoProviderRequest(req, options.TimeoutMs)
+				hresp, rerr := DoProviderRequestWithSDKTimeout(req, options.TimeoutMs)
 				if rerr != nil {
 					return nil, rerr
 				}

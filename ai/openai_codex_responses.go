@@ -584,6 +584,10 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 			stream.Push(AssistantMessageEvent{Type: EventError, Reason: output.StopReason, Error: output})
 			stream.End(&output)
 		}
+		if options.TimeoutMs != nil && *options.TimeoutMs < 0 {
+			fail(fmt.Errorf("Invalid timeoutMs: %d", *options.TimeoutMs))
+			return
+		}
 		defer func() {
 			if r := recover(); r != nil {
 				if err, ok := r.(error); ok {
@@ -652,7 +656,7 @@ func StreamOpenAICodexResponses(model *Model, context TranscriptContext, options
 			// Upstream arms the headers timeout around the fetch alone and leaves
 			// the body alone; the shared guard bounds the headers wait and keeps
 			// the body alive only while it produces data (D40).
-			response, err = DoProviderRequest(request, options.TimeoutMs)
+			response, err = DoProviderRequestWithAbortSignalTimeout(request, options.TimeoutMs)
 			if err != nil {
 				var idle *idleTimeoutError
 				if errors.As(err, &idle) && !idle.afterHeaders && ctxErr(ctx) == nil {

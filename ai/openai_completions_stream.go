@@ -334,7 +334,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 					}
 				}
 				applyProviderHeaders(req.Header, options.Headers)
-				hresp, rerr := DoProviderRequest(req, options.TimeoutMs)
+				hresp, rerr := DoProviderRequestWithSDKTimeout(req, options.TimeoutMs)
 				if rerr != nil {
 					return nil, rerr
 				}

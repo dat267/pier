@@ -37,6 +37,7 @@ func (e *ProviderError) Error() string { return e.Message }
 
 const defaultMaxRetryDelayMS = 60_000
 const maxJavascriptTimeoutMS int64 = 1<<31 - 1
+const maxAbortSignalTimeoutMS int64 = 1<<32 - 1
 
 func javascriptTimeoutDuration(delayMS int64) time.Duration {
 	if delayMS < 1 || delayMS > maxJavascriptTimeoutMS {

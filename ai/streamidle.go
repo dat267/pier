@@ -11,12 +11,13 @@ import (
 	"time"
 )
 
-// Port of the idle timeout upstream installs on its HTTP dispatcher: the
-// settings-backed timeout is undici's headersTimeout (no response headers) and
-// its bodyTimeout (no body bytes), both in core/http-dispatcher.ts (D254). Go's
-// http.Transport cannot take either per request, so one timer is armed before
-// the request is sent and re-armed by every body read (D40). Cancelling the
-// request context is what aborts the in-flight read.
+// Port of the idle timeout upstream installs on its HTTP dispatcher:
+// core/http-dispatcher.ts sets Undici headersTimeout and bodyTimeout (D254).
+// Go's http.Transport cannot take either per request, so one timer is armed
+// before the request and re-armed by each body read (D40). Dispatcher-only
+// requests use the raw FastTimer delay in both phases. SDK-backed OpenAI and
+// Anthropic requests also use Node setTimeout while waiting for headers, then
+// switch to the raw Undici body delay after headers arrive.
 //
 // The timer counts time blocked waiting for bytes, not wall-clock silence: a
 // loaded machine, a GC pause or a slow consumer between reads cannot abort a
@@ -39,15 +40,16 @@ func (e *idleTimeoutError) Error() string {
 // idleStreamBody re-arms the idle timer on every read and reports the timeout as
 // its own error instead of the read error the cancellation produces.
 type idleStreamBody struct {
-	rc         io.ReadCloser
-	parent     context.Context
-	cancel     context.CancelFunc
-	timeout    time.Duration
-	timer      *time.Timer
-	gotHeaders atomic.Bool
-	blocked    atomic.Bool
-	fired      atomic.Bool
-	closed     atomic.Bool
+	rc            io.ReadCloser
+	parent        context.Context
+	cancel        context.CancelFunc
+	headerTimeout time.Duration
+	timeout       time.Duration
+	timer         *time.Timer
+	gotHeaders    atomic.Bool
+	blocked       atomic.Bool
+	fired         atomic.Bool
+	closed        atomic.Bool
 }
 
 func (b *idleStreamBody) Read(p []byte) (int, error) {
@@ -88,14 +90,33 @@ func (b *idleStreamBody) resetTimer() {
 }
 
 func (b *idleStreamBody) idleError() error {
-	return &idleTimeoutError{timeout: b.timeout, afterHeaders: b.gotHeaders.Load()}
+	afterHeaders := b.gotHeaders.Load()
+	timeout := b.timeout
+	if !afterHeaders {
+		timeout = b.headerTimeout
+	}
+	return &idleTimeoutError{timeout: timeout, afterHeaders: afterHeaders}
 }
 
 // newIdleBody arms the idle timer shared by every guarded request.
 func newIdleBody(parent context.Context, cancel context.CancelFunc, timeout time.Duration) *idleStreamBody {
-	body := &idleStreamBody{parent: parent, cancel: cancel, timeout: timeout}
-	body.timer = time.AfterFunc(timeout, body.fire)
+	return newIdleBodyWithTimeouts(parent, cancel, timeout, timeout)
+}
+
+func newIdleBodyWithTimeouts(parent context.Context, cancel context.CancelFunc, headerTimeout, bodyTimeout time.Duration) *idleStreamBody {
+	body := &idleStreamBody{parent: parent, cancel: cancel, headerTimeout: headerTimeout, timeout: bodyTimeout}
+	body.timer = time.AfterFunc(headerTimeout, body.fire)
 	return body
+}
+
+// idleTimeoutDuration preserves Undici FastTimer millisecond delays.
+// D305: saturate only when the delay cannot fit in Go's int64 nanoseconds.
+func idleTimeoutDuration(timeoutMS int) time.Duration {
+	const maxTimeoutMS = int64(1<<63-1) / int64(time.Millisecond)
+	if int64(timeoutMS) > maxTimeoutMS {
+		return time.Duration(1<<63 - 1)
+	}
+	return time.Duration(timeoutMS) * time.Millisecond
 }
 
 func (b *idleStreamBody) fire() {
@@ -122,7 +143,7 @@ func guardIdleBody(parent context.Context, cancel context.CancelFunc, body io.Re
 	if timeoutMS == nil || *timeoutMS <= 0 {
 		return &cancelOnCloseBody{ReadCloser: body, cancel: cancel}
 	}
-	guarded := newIdleBody(parent, cancel, time.Duration(*timeoutMS)*time.Millisecond)
+	guarded := newIdleBody(parent, cancel, idleTimeoutDuration(*timeoutMS))
 	guarded.gotHeaders.Store(true)
 	guarded.rc = body
 	return guarded
@@ -184,16 +205,49 @@ func requestOrigin(u *url.URL) [3]string {
 	return [3]string{scheme, strings.ToLower(u.Hostname()), port}
 }
 
-// DoProviderRequest issues a provider request bounded by the settings-backed idle
-// timeout. A nil or non-positive timeout sends the request unbounded, as before.
-// The returned body must be closed; closing it also releases the request context.
+// DoProviderRequest applies the settings-backed Undici idle timeout to both
+// response headers and body reads. A nil or non-positive timeout is unbounded.
+// The returned body must be closed to release its request context.
 func DoProviderRequest(req *http.Request, timeoutMS *int) (*http.Response, error) {
 	if timeoutMS == nil || *timeoutMS <= 0 {
 		return doFetchRequest(req)
 	}
+	timeout := idleTimeoutDuration(*timeoutMS)
+	return doProviderRequestWithTimeouts(req, timeout, timeout)
+}
+
+// DoProviderRequestWithSDKTimeout also applies the Node setTimeout-backed
+// deadline used by OpenAI and Anthropic SDK requests while awaiting headers.
+// Undici's body idle timeout remains the configured raw delay after headers.
+func DoProviderRequestWithSDKTimeout(req *http.Request, timeoutMS *int) (*http.Response, error) {
+	if timeoutMS == nil || *timeoutMS <= 0 {
+		return DoProviderRequest(req, timeoutMS)
+	}
+	headerTimeout := javascriptTimeoutDuration(int64(*timeoutMS))
+	bodyTimeout := idleTimeoutDuration(*timeoutMS)
+	return doProviderRequestWithTimeouts(req, headerTimeout, bodyTimeout)
+}
+
+// DoProviderRequestWithAbortSignalTimeout mirrors the Codex fetch deadline.
+func DoProviderRequestWithAbortSignalTimeout(req *http.Request, timeoutMS *int) (*http.Response, error) {
+	if timeoutMS == nil || *timeoutMS == 0 {
+		return DoProviderRequest(req, timeoutMS)
+	}
+	if *timeoutMS < 0 {
+		return nil, fmt.Errorf("Invalid timeoutMs: %d", *timeoutMS)
+	}
+	if int64(*timeoutMS) > maxAbortSignalTimeoutMS {
+		return nil, fmt.Errorf("The value of \"delay\" is out of range. It must be >= 0 && <= %d. Received %d", maxAbortSignalTimeoutMS, *timeoutMS)
+	}
+	headerTimeout := javascriptTimeoutDuration(int64(*timeoutMS))
+	bodyTimeout := idleTimeoutDuration(*timeoutMS)
+	return doProviderRequestWithTimeouts(req, headerTimeout, bodyTimeout)
+}
+
+func doProviderRequestWithTimeouts(req *http.Request, headerTimeout, bodyTimeout time.Duration) (*http.Response, error) {
 	parent := req.Context()
 	ctx, cancel := context.WithCancel(parent)
-	body := newIdleBody(parent, cancel, time.Duration(*timeoutMS)*time.Millisecond)
+	body := newIdleBodyWithTimeouts(parent, cancel, headerTimeout, bodyTimeout)
 	resp, err := doFetchRequest(req.WithContext(ctx))
 	if err != nil {
 		body.timer.Stop()
@@ -205,6 +259,7 @@ func DoProviderRequest(req *http.Request, timeoutMS *int) (*http.Response, error
 	}
 	body.gotHeaders.Store(true)
 	body.rc = resp.Body
+	body.resetTimer()
 	resp.Body = body
 	return resp, nil
 }

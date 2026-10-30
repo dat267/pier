@@ -2329,17 +2329,21 @@ Reference: `core/http-dispatcher.ts` sets undici's `headersTimeout` and
 `api/openai-codex-responses.ts`, `api/openrouter-images.ts`; Bedrock's API takes
 no `timeoutMs` and relies on the dispatcher alone). Go's `http.Transport` has no
 per-request header timeout, and writing `ResponseHeaderTimeout` on the process-wide
-`http.DefaultTransport` races with in-flight requests (D40). The port instead
-arms one timer per provider request (`ai/streamidle.go`), including the
-single-request OpenRouter image generation: the request context is
-cancelled when no response headers arrive within the timeout, and every body
-read re-arms the timer, so only silence fails the stream and a stream that keeps
-producing data outlives the timeout. The timer counts time blocked in a body
-read, not wall-clock silence: a callback that fires while the consumer is
-processing re-arms instead of cancelling, and the deadline runs from the last
-delivered bytes, so a loaded machine, a GC pause or a slow renderer cannot
-abort a connection whose bytes already arrived. A nil or non-positive timeout
-sends the request unbounded.
+`http.DefaultTransport` races with in-flight requests (D40). The port arms one
+timer per provider request (`ai/streamidle.go`), including the single-request
+OpenRouter image generation. Dispatcher-only requests use the
+raw settings delay for both header and body idle phases, matching Undici's
+FastTimer. OpenAI, Anthropic, and OpenRouter image SDK requests also have a Node
+`setTimeout` deadline around `fetch` (`pi/node_modules/openai/src/client.ts`,
+`pi/node_modules/@anthropic-ai/sdk/src/client.ts`): the port uses that timer
+semantics while waiting for headers, then switches to the raw Undici body idle
+delay after headers arrive. In either case every body read re-arms the timer, so
+only silence fails the stream and a stream that keeps producing data outlives
+the timeout. The timer counts time blocked in a body read, not wall-clock
+silence: a callback that fires while the consumer is processing re-arms instead
+of cancelling, and the deadline runs from the last delivered bytes, so a loaded
+machine, a GC pause or a slow renderer cannot abort a connection whose bytes
+already arrived. A nil or non-positive timeout sends the request unbounded.
 
 Close marks the body closed before stopping the timer; resets check that flag
 again afterwards. A pending read returning buffered bytes after close, or a late
@@ -2348,7 +2352,8 @@ timer callback, cannot restart a timer that retains the closed response.
 sleeping.
 
 Codex keeps upstream's `Codex SSE response headers timed out` wording for the
-headers case, and Mistral keeps upstream's headers-only header timer and
+headers case; its `AbortSignal.timeout` header delay also keeps Node's 1ms clamp
+and uint32 range check. Mistral keeps upstream's headers-only header timer and
 `Mistral response headers timed out` wording (`ai/mistral_conversations.go`;
 upstream's `AbortSignal.timeout` wraps the headers only) while its body idles
 under the shared guard. The federation stream (`ai/pi_messages.go`) and the
@@ -2369,8 +2374,16 @@ Tests: `TestProviderStreamsAbortWhenResponseHeadersIdle`,
 `TestStreamMistralAbortsWhenStreamIdles`,
 `TestMistralActiveStreamOutlivesTheIdleTimeout`,
 `TestStreamProxyAbortsWhenResponseHeadersIdle`,
-`TestStreamCodexResponsesKeepsStreamingPastTheHeadersTimeout` and
-`TestOpenRouterImagesAbortsWhenResponseHeadersIdle`.
+`TestStreamCodexResponsesKeepsStreamingPastTheHeadersTimeout`,
+`TestOpenRouterImagesAbortsWhenResponseHeadersIdle`,
+`TestProviderHeaderTimerClampsLargeDelayToOneMillisecond`,
+`TestOpenAICompletionsUsesNodeHeaderTimeoutClamp`,
+`TestProviderRequestSeparatesHeaderAndBodyTimerSemantics`,
+`TestProviderDispatcherHeaderTimerKeepsLargeFastTimerDelay`,
+`TestCodexAbortSignalHeaderTimerClampsLargeDelay`,
+`TestCodexAbortSignalRejectsOutOfRangeDelayBeforeFetch`,
+`TestCodexRejectsNegativeTimeoutBeforeFetch` and
+`TestGuardIdleBodyPreservesFastTimerDelayAndSaturatesDuration`.
 
 ### D255
 
@@ -3453,6 +3466,21 @@ Tests: `TestAnthropicTokenExpiryDoesNotWrapForLargeLifetime`,
 `TestAnthropicTokenExpiryKeepsLargeNegativeLifetimeInPast`, and
 `TestOAuthExpiryRemainsFutureAcrossTokenParsers` reproduce overflow in the
 covered lifetime and absolute-expiry parsers.
+
+### D305
+
+**Provider body-idle delays beyond Go's duration range saturate at MaxInt64.**
+
+Reference: the pinned `core/http-dispatcher.ts` passes finite millisecond values
+to Undici FastTimer, whose numeric delay is not limited to Go's int64
+nanoseconds. `ai/streamidle.go` saturates only values above about 292 years to
+`time.Duration(math.MaxInt64)` instead of overflowing into an immediate timer.
+This boundary is not exactly representable in Go; the practical outcome remains
+a non-expiring timeout. Ordinary timeout settings remain exact. SDK header
+`setTimeout` delays use Node's separate signed-32-bit clamp as described in D254.
+
+Test: `TestGuardIdleBodyPreservesFastTimerDelayAndSaturatesDuration` pins both
+the raw delay above Node's timer range and saturation above Go's duration range.
 
 ## Lock inventory
 
