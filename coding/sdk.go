@@ -175,8 +175,10 @@ func CreateAgentSession(ctx context.Context, options *CreateAgentSessionOptions)
 		}
 	}
 
-	// A model cycle scope also seeds the model: with nothing named and a new
-	// session, the settings' default model is used when it is inside the scope and
+	// D321: the CLI's main.ts buildSessionOptions model seeding is folded into
+	// this shared Go constructor. A pure upstream sdk.ts caller only uses the
+	// scope for cycling. With nothing named and a new CLI session, the settings'
+	// default model is used when it is inside the scope and
 	// the first scoped model otherwise (upstream buildSessionOptions). This runs
 	// before the settings-default resolution because a scope is the more specific
 	// choice — with no scope at all, nothing here applies and the default wins as

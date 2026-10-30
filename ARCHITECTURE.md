@@ -3737,6 +3737,21 @@ instead of always synthesizing the JavaScript default name `Error`.
 Reproducer: `TestDiagnosticErrorUsesGoTypeNameWithoutNamer` in
 `ai/diagnostics_test.go`.
 
+### D321
+
+**The shared Go session constructor also applies CLI scoped-model seeding.**
+
+References: pi v1.4.0 (`4a080252`),
+`packages/coding-agent/src/core/sdk.ts` treats `scopedModels` as the model-cycle
+scope and resolves an initial model separately; `packages/coding-agent/src/main.ts`
+`buildSessionOptions` seeds a new CLI session from an in-scope settings default
+or the first scoped model. Pier folds that CLI step into `CreateAgentSession`,
+which is shared by the CLI and SDK. CLI behavior therefore matches the combined
+upstream path, while a direct Go SDK call with a scope can select a model where
+upstream `createAgentSession` alone would not.
+
+Reproducer: `TestScopedModelsSeedTheModel` in `coding/scopedmodel_test.go`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.
