@@ -4,9 +4,12 @@ import (
 	"bytes"
 	ctxpkg "context"
 	"errors"
+	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -160,6 +163,49 @@ func TestResolveConfigValueCommand(t *testing.T) {
 		t.Fatalf("value = %q", value)
 	}
 	ClearConfigValueCache()
+}
+
+// Pinned core/resolve-config-value.ts keeps one synchronous Map entry per
+// command; concurrent Go callers must share the same in-flight execution.
+func TestResolveConfigValueCommandCacheDeduplicatesConcurrentCalls(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("test command uses POSIX shell syntax")
+	}
+	ClearConfigValueCache()
+	defer ClearConfigValueCache()
+
+	marker := filepath.Join(t.TempDir(), "executions")
+	quotedMarker := "'" + strings.ReplaceAll(marker, "'", "'\\''") + "'"
+	config := "!printf x >> " + quotedMarker + "; sleep 0.3; printf cached"
+	const callers = 8
+	start := make(chan struct{})
+	var wait sync.WaitGroup
+	wait.Add(callers)
+	failures := make(chan error, callers)
+	for range callers {
+		go func() {
+			defer wait.Done()
+			<-start
+			value, ok := ResolveConfigValue(config, nil)
+			if !ok || value != "cached" {
+				failures <- fmt.Errorf("resolved = %q, %v", value, ok)
+			}
+		}()
+	}
+	close(start)
+	wait.Wait()
+	close(failures)
+	for err := range failures {
+		t.Error(err)
+	}
+
+	contents, err := os.ReadFile(marker)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := len(contents); got != 1 {
+		t.Fatalf("shell command executions = %d; want 1", got)
+	}
 }
 
 func TestResolveConfigValueOrThrow(t *testing.T) {

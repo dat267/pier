@@ -194,10 +194,19 @@ func IsConfigValueConfigured(config string, env map[string]string) bool {
 	return len(GetMissingConfigValueEnvVarNames(config, env)) == 0
 }
 
+// configCommandCall shares one in-flight shell command result among concurrent
+// callers, matching the synchronous upstream cache's single execution.
+type configCommandCall struct {
+	done  chan struct{}
+	value string
+	ok    bool
+}
+
 // configCommandCache caches shell command results for the process lifetime.
 var (
-	configCommandCacheMu sync.Mutex
-	configCommandCache   = map[string]*string{}
+	configCommandCacheMu       sync.Mutex
+	configCommandCache         = map[string]*string{}
+	configCommandCacheInflight = map[string]*configCommandCall{}
 )
 
 // ResolveConfigValue resolves a config value (API key, header value, ...) to an
@@ -372,6 +381,13 @@ func executeConfigCommand(commandConfig string, cached bool) (string, bool) {
 		}
 		return *value, true
 	}
+	if call := configCommandCacheInflight[commandConfig]; call != nil {
+		configCommandCacheMu.Unlock()
+		<-call.done
+		return call.value, call.ok
+	}
+	call := &configCommandCall{done: make(chan struct{})}
+	configCommandCacheInflight[commandConfig] = call
 	configCommandCacheMu.Unlock()
 
 	value, ok := executeConfigCommandUncached(commandConfig)
@@ -382,6 +398,9 @@ func executeConfigCommand(commandConfig string, cached bool) (string, bool) {
 	} else {
 		configCommandCache[commandConfig] = nil
 	}
+	call.value, call.ok = value, ok
+	delete(configCommandCacheInflight, commandConfig)
+	close(call.done)
 	configCommandCacheMu.Unlock()
 	return value, ok
 }
