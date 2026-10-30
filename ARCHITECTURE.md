@@ -3509,6 +3509,21 @@ cannot wrap into a short positive delay. Ordinary TTLs retain exact values.
 Test: `TestCacheWarmerStopsWhenTTLMillisecondsWouldOverflow` reproduces a
 large finite TTL wrapping into a scheduled near-term refresh.
 
+### D307
+
+**Legacy helpers expose a one-shot terminal color-scheme query.**
+
+Reference: pi v1.4.0 (`4a080252`), `packages/tui/src/tui.ts` exposes color-scheme
+report listeners and notification toggles, but no `CSI ? 996 n` query; the
+interactive `theme-controller.ts` subscribes to reports and requests terminal
+colors. Pier retains `Renderer.QueryTerminalColorScheme` and
+`DetectTerminalThemeForAuto` as compatibility helpers that send `CSI ? 996 n`
+and expect `CSI ? 997`; no first-party runtime caller uses these helpers. The
+active theme controller instead follows the upstream report/OSC-color path.
+
+Tests: `TestRendererTerminalQueries` and `TestTerminalDetection` cover the
+compatibility helpers.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

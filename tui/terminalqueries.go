@@ -9,10 +9,11 @@ import (
 	"time"
 )
 
-// Port of the terminal query protocol of upstream's TuiBase: the OSC 11
-// background-color query with its pending-query bookkeeping, the `CSI ? 996` /
-// `CSI ? 997` color-scheme pair, the listener registries that deliver replies,
-// and the `CSI ? 2031` notification toggle (D165).
+// Port of upstream TuiBase's terminal-color protocol: the OSC 11 background
+// query, `CSI ? 997` color-scheme reports, listener registries and the
+// `CSI ? 2031` notification toggle (D165). Pier's additional one-shot
+// `CSI ? 996 n` query is a compatibility helper absent from pinned pi and not
+// used by its interactive theme controller (D307).
 //
 // It is deliberately independent of the renderer: nothing here paints or
 // dispatches input, the writer arrives as a one-method seam on each call, and the
@@ -317,7 +318,7 @@ func (q *terminalQueries) completeTerminalColorQueryLocked(query *pendingTermina
 }
 
 // QueryColorScheme queries the terminal's color-scheme preference with DSR
-// (`CSI ? 996 n`).
+// (`CSI ? 996 n`; local compatibility helper, D307).
 func (q *terminalQueries) QueryColorScheme(writer terminalQueryWriter, timeoutMS int) (TerminalColorScheme, bool) {
 	results := make(chan TerminalColorScheme, 1)
 	q.colorMu.Lock()

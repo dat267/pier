@@ -1623,11 +1623,8 @@ type TerminalAutoThemeDetector interface {
 	QueryTerminalColorScheme(timeoutMs int) (TerminalTheme, bool)
 }
 
-// DetectTerminalBackgroundTheme queries the terminal background and falls back
-// to environment detection.
-//
-// Upstream runs the color-scheme and background queries concurrently; the Go
-// port queries them in sequence (D76).
+// DetectTerminalBackgroundTheme is a legacy helper that queries the terminal
+// background and falls back to environment detection.
 func DetectTerminalBackgroundTheme(ui TerminalBackgroundDetector, timeoutMs int, env func(string) string) TerminalThemeDetection {
 	if ui != nil {
 		if rgb, ok := ui.QueryTerminalBackgroundColor(timeoutMs); ok {
@@ -1643,8 +1640,10 @@ func DetectTerminalBackgroundTheme(ui TerminalBackgroundDetector, timeoutMs int,
 	return DetectTerminalBackgroundFromEnv(env)
 }
 
-// DetectTerminalThemeForAuto prefers the terminal color-scheme report and
-// falls back to the background detection.
+// DetectTerminalThemeForAuto is a legacy helper that probes Pier's local
+// color-scheme query, then falls back to the background detection in sequence.
+// Upstream instead listens for appearance reports and queries terminal colors
+// in its active theme controller (D307).
 func DetectTerminalThemeForAuto(ui TerminalAutoThemeDetector, timeoutMs int, env func(string) string) TerminalTheme {
 	if ui != nil {
 		if scheme, ok := ui.QueryTerminalColorScheme(timeoutMs); ok {
