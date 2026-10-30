@@ -2460,21 +2460,24 @@ Tests: `TestCanceledToolCallReportsOperationAborted`,
 
 ### D257
 
-**Model ordering uses locale-neutral collation.**
+**Model and footer-status ordering use locale-neutral collation.**
 
 Reference: pi v1.4.0 `core/model-resolver.ts`, `bestFuzzyMatch`,
 `cli/list-models.ts`, and `modes/interactive/components/model-selector.ts`
-sort providers and IDs by Node's default `localeCompare`. Pier uses
-`golang.org/x/text/collate` root collation in model resolution, CLI listing,
-and the interactive selector, rather than byte order or a host-selected
-locale. This restores the reported punctuation and case ordering
-(`model-2` over `model_1`, `model-Z` over `model-z`) while keeping model selection
-deterministic. On a Swedish Node host, `model-ä` ranks after `model-z`; Pier
-selects `model-z` regardless of the host locale. Locale and Unicode collation
-version differences are not an assertion of byte-identical ICU behavior.
+sort providers and IDs by Node's default `localeCompare`; the builtin footer
+(`modes/interactive/components/footer.ts`) sorts extension-status keys the same
+way. Pier uses `golang.org/x/text/collate` root collation in model resolution,
+CLI listing, the interactive selector, and footer status rendering, rather than
+byte order or a host-selected locale. This restores the reported punctuation
+and case ordering (`model-2` over `model_1`, `model-Z` over `model-z`) while
+keeping ordering deterministic. On a Swedish Node host, `model-ä` ranks after
+`model-z`; Pier selects `model-z` regardless of the host locale. Locale and
+Unicode collation version differences are not an assertion of byte-identical
+ICU behavior.
 
 Tests: `TestFuzzyModelAliasLocaleOrdering`, `TestListModelsTextUsesLocaleOrdering`,
-`TestModelSelectorProviderOrderMatchesUpstreamLocale`.
+`TestModelSelectorProviderOrderMatchesUpstreamLocale`,
+`TestFooterStatusesUseUpstreamLocaleOrdering`.
 
 ### D258
 

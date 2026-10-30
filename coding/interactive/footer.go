@@ -11,6 +11,8 @@ import (
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
+	"golang.org/x/text/collate"
+	"golang.org/x/text/language"
 )
 
 // The footer renders a single dim line: "3.5%/1M · <statuses> · model · cwd".
@@ -254,7 +256,11 @@ func (f *FooterComponent) Render(width int) []string {
 		for key := range extensionStatuses {
 			keys = append(keys, key)
 		}
-		sort.Strings(keys)
+		// D257: use locale-neutral collation rather than the host's ICU locale.
+		collator := collate.New(language.Und)
+		sort.Slice(keys, func(i, j int) bool {
+			return collator.CompareString(keys[i], keys[j]) < 0
+		})
 		for _, key := range keys {
 			statuses = append(statuses, sanitizeStatusText(extensionStatuses[key]))
 		}

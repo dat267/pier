@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/dat267/pier/ai"
@@ -284,5 +285,35 @@ func TestFooterStatusSanitizerKeepsNonCollapsedWhitespace(t *testing.T) {
 		if got := sanitizeStatusText(test.input); got != test.want {
 			t.Fatalf("sanitize(%q) = %q; want %q", test.input, got, test.want)
 		}
+	}
+}
+
+// pi v1.4.0 packages/coding-agent/src/modes/interactive/components/footer.ts
+// sorts extension status keys with JavaScript localeCompare before rendering.
+func TestFooterStatusesUseUpstreamLocaleOrdering(t *testing.T) {
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	InitTheme("dark", false)
+
+	path := filepath.Join(t.TempDir(), "session.jsonl")
+	if err := os.WriteFile(path, []byte("{\"type\":\"session\",\"version\":3,\"id\":\"s\",\"timestamp\":\"t\",\"cwd\":\"/p\"}\n"), 0o644); err != nil {
+		t.Fatalf("write session: %v", err)
+	}
+	manager, err := coding.OpenSession(path, "", "")
+	if err != nil {
+		t.Fatalf("open session: %v", err)
+	}
+	footer := NewFooterComponent(&fakeFooterSession{manager: manager}, &fakeFooterData{
+		statuses: map[string]string{"A": "upper", "a": "lower"},
+	})
+	lines := footer.Render(200)
+	if len(lines) != 1 {
+		t.Fatalf("footer lines = %d, want 1", len(lines))
+	}
+	line := coding.StripAnsi(lines[0])
+	if lower, upper := strings.Index(line, "lower"), strings.Index(line, "upper"); lower < 0 || upper < 0 || lower >= upper {
+		t.Fatalf("status order = %q, want locale order lower before upper", line)
 	}
 }
