@@ -369,7 +369,12 @@ func CreateLsTool(cwd string) agent.AgentTool {
 				effectiveLimit = *input.Limit
 			}
 
+			// D315: check after synchronous filesystem calls so cancellation cannot
+			// let a late directory listing resolve successfully.
 			info, err := os.Stat(dirPath)
+			if ctxErrOf(ctx) != nil {
+				return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
+			}
 			if err != nil {
 				return agent.AgentToolResult{}, fmt.Errorf("Path not found: %s", dirPath)
 			}
@@ -377,6 +382,9 @@ func CreateLsTool(cwd string) agent.AgentTool {
 				return agent.AgentToolResult{}, fmt.Errorf("Not a directory: %s", dirPath)
 			}
 			entries, err := os.ReadDir(dirPath)
+			if ctxErrOf(ctx) != nil {
+				return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
+			}
 			if err != nil {
 				return agent.AgentToolResult{}, fmt.Errorf("Cannot read directory: %s", err.Error())
 			}
@@ -397,6 +405,9 @@ func CreateLsTool(cwd string) agent.AgentTool {
 				}
 				fullPath := filepath.Join(dirPath, entry)
 				entryInfo, err := os.Stat(fullPath)
+				if ctxErrOf(ctx) != nil {
+					return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
+				}
 				if err != nil {
 					continue // skip entries we cannot stat
 				}
@@ -407,6 +418,9 @@ func CreateLsTool(cwd string) agent.AgentTool {
 				results = append(results, entry+suffix)
 			}
 
+			if ctxErrOf(ctx) != nil {
+				return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
+			}
 			if len(results) == 0 {
 				return agent.AgentToolResult{
 					Content: []ai.Content{ai.TextContent{Text: "(empty directory)"}},
@@ -433,6 +447,9 @@ func CreateLsTool(cwd string) agent.AgentTool {
 			var detailsJSON json.RawMessage
 			if len(notices) > 0 {
 				detailsJSON, _ = ai.MarshalJSON(details)
+			}
+			if ctxErrOf(ctx) != nil {
+				return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
 			}
 			return agent.AgentToolResult{
 				Content: []ai.Content{ai.TextContent{Text: output}},
