@@ -73,9 +73,17 @@ type terminalQueries struct {
 }
 
 const (
-	terminalPaletteSize     = 16
-	terminalColorReplyCount = 2 + terminalPaletteSize
+	terminalPaletteSize             = 16
+	terminalColorReplyCount         = 2 + terminalPaletteSize
+	maxTerminalQueryTimeoutMS int64 = 1<<31 - 1
 )
+
+func terminalQueryTimeoutDuration(timeoutMS int) time.Duration {
+	if timeoutMS < 1 || int64(timeoutMS) > maxTerminalQueryTimeoutMS {
+		return time.Millisecond
+	}
+	return time.Duration(timeoutMS) * time.Millisecond
+}
 
 // terminalColorQuery asks for the default foreground (OSC 10), background
 // (OSC 11) and all 16 palette colors (OSC 4), ended by a DA1 request that marks
@@ -157,7 +165,7 @@ func (q *terminalQueries) QueryBackground(writer terminalQueryWriter, timeoutMS 
 	}
 	writer.Write("\x1b]11;?\x07")
 
-	timer := time.NewTimer(time.Duration(timeoutMS) * time.Millisecond)
+	timer := time.NewTimer(terminalQueryTimeoutDuration(timeoutMS))
 	defer timer.Stop()
 	select {
 	case result := <-query.result:
@@ -199,7 +207,7 @@ func (q *terminalQueries) BeginTerminalColors(writer terminalQueryWriter) (Termi
 		writer.Write(terminalColorQuery)
 	}
 	return func(timeoutMS int, onLateReply func(TerminalColors)) TerminalColors {
-		timer := time.NewTimer(time.Duration(timeoutMS) * time.Millisecond)
+		timer := time.NewTimer(terminalQueryTimeoutDuration(timeoutMS))
 		defer timer.Stop()
 		select {
 		case colors := <-result:
@@ -330,7 +338,7 @@ func (q *terminalQueries) QueryColorScheme(writer terminalQueryWriter, timeoutMS
 	}
 	writer.Write("\x1b[?996n")
 
-	timer := time.NewTimer(time.Duration(timeoutMS) * time.Millisecond)
+	timer := time.NewTimer(terminalQueryTimeoutDuration(timeoutMS))
 	defer timer.Stop()
 	select {
 	case scheme := <-results:
