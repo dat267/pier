@@ -3,6 +3,7 @@ package coding
 import (
 	"maps"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -187,9 +188,14 @@ func (f *FooterDataProvider) Dispose() {
 
 func (f *FooterDataProvider) notifyBranchChange() {
 	f.mu.Lock()
-	callbacks := make([]func(), 0, len(f.callbacks))
-	for _, callback := range f.callbacks {
-		callbacks = append(callbacks, callback)
+	ids := make([]int, 0, len(f.callbacks))
+	for id := range f.callbacks {
+		ids = append(ids, id)
+	}
+	sort.Ints(ids)
+	callbacks := make([]func(), 0, len(ids))
+	for _, id := range ids {
+		callbacks = append(callbacks, f.callbacks[id])
 	}
 	f.mu.Unlock()
 	for _, callback := range callbacks {
