@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/ai"
 )
@@ -38,6 +39,18 @@ func TestNestedCallRecorder(t *testing.T) {
 	snapshot := recorder.Snapshot()
 	if snapshot == nil || !snapshot.Complete || len(snapshot.Calls) != 1 {
 		t.Fatalf("snapshot = %+v", snapshot)
+	}
+}
+
+// Reference: pi v1.4.0 (4a080252), packages/coding-agent/src/core/nested-tool-calls.ts
+// uses Math.round for elapsed performance.now() milliseconds.
+func TestNestedCallRecorderRoundsDurationLikeJavascript(t *testing.T) {
+	recorder := NewNestedCallRecorder()
+	record := recorder.Start(nestedCall("c/1", "tool"))
+	recorder.startedAt[record] = time.Now().Add(-1500 * time.Microsecond)
+	recorder.Finish(record, false, "")
+	if got := *record.DurationMs; got != 2 {
+		t.Fatalf("durationMs = %d, want Math.round(1.5) = 2", got)
 	}
 }
 

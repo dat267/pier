@@ -1,9 +1,9 @@
 package coding
 
 // Port of core/nested-tool-calls.ts: the record of the calls a tool makes while
-// it runs (`ctx.executeTool()`). The port has no nested-execution host (its
-// only triggers, codemode and extension tools, are out of scope), so this is
-// the data model and recorder used by the session record.
+// it runs (`ctx.executeTool()`). The nested-execution host and its codemode /
+// extension entrypoints are out of scope; Pier retains only the record model
+// and recorder for session compatibility (D308).
 
 import (
 	"encoding/json"
@@ -85,7 +85,7 @@ func (r *NestedCallRecorder) Finish(record *ai.NestedToolCallRecord, isError boo
 	if !ok {
 		started = time.Now()
 	}
-	duration := time.Since(started).Milliseconds()
+	duration := time.Since(started).Round(time.Millisecond).Milliseconds()
 	record.DurationMs = &duration
 	delete(r.startedAt, record)
 	if isError && errorText != "" {
