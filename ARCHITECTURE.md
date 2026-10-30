@@ -3524,6 +3524,23 @@ active theme controller instead follows the upstream report/OSC-color path.
 Tests: `TestRendererTerminalQueries` and `TestTerminalDetection` cover the
 compatibility helpers.
 
+### D308
+
+**Nested tool-call execution is absent; its session record is retained.**
+
+Reference: pi v1.4.0 (`4a080252`),
+`packages/coding-agent/src/core/nested-tool-calls.ts` and `agent-session.ts`
+execute nested tools through the agent pipeline, emit parent-linked events, and
+record nested usage on the caller's result. Pier keeps the nested-call data
+model and recorder for session compatibility, but has no nested-execution host.
+The upstream entrypoints are `ctx.executeTool()` from codemode/extension tools,
+which are out of scope in `AGENTS.md`; no first-party Go runtime caller uses the
+recorder. This is a deliberate feature omission, not evidence of parity for
+nested execution.
+
+Tests: `TestNestedCallRecorder`, `TestNestedCallRecorderLimits`, and
+`TestToolResultNestedCallsRoundTrip` cover the retained data-model surface.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.
