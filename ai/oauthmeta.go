@@ -52,11 +52,11 @@ func metaTrustedHTTPURL(value any) string {
 	if !ok || raw == "" {
 		return ""
 	}
-	parsed, err := url.Parse(raw)
-	if err != nil || (parsed.Scheme != "https" && parsed.Scheme != "http") {
+	_, normalized, ok := normalizeOAuthHTTPURL(raw)
+	if !ok {
 		return ""
 	}
-	return parsed.String()
+	return normalized
 }
 
 // metaErrorDetail renders the first present error detail field (upstream

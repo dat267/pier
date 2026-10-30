@@ -146,3 +146,34 @@ func TestMetaOAuthMintExpiredSession(t *testing.T) {
 		}
 	})
 }
+
+// Pinned auth/oauth/meta.ts validates verification_uri_complete with new URL()
+// and falls back to verification_uri when the complete URI is invalid.
+func TestMetaOAuthFallsBackFromInvalidCompleteVerificationURI(t *testing.T) {
+	fastDeviceCodeFlows(t)
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "application/json")
+		_, _ = writer.Write([]byte(`{"device_code":"device","user_code":"CODE","verification_uri_complete":"https://","verification_uri":"https://meta.example/device"}`))
+	}))
+	defer server.Close()
+
+	withMetaURLs(t, server.URL, func() {
+		ctx, cancel := context.WithCancel(context.Background())
+		var events []AuthEvent
+		_, err := MetaOAuth().Login(&AuthInteraction{
+			Ctx: ctx,
+			Notify: func(event AuthEvent) {
+				events = append(events, event)
+				if event.Type == AuthEventDeviceCode {
+					cancel()
+				}
+			},
+		})
+		if err == nil || err.Error() != DeviceCodeCancelMessage {
+			t.Fatalf("login error = %v; want canceled after device-code notification", err)
+		}
+		if len(events) != 1 || events[0].VerificationURI != "https://meta.example/device" {
+			t.Fatalf("device-code events = %+v; want fallback verification URI", events)
+		}
+	})
+}
