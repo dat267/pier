@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"math"
+	"strconv"
 	"strings"
 )
 
@@ -76,38 +78,52 @@ func parsePercentValue(value string) (float64, bool) {
 	if number == "" {
 		return 0, false
 	}
-	negative := strings.HasPrefix(number, "-")
-	number = strings.TrimPrefix(number, "-")
-	parts := strings.SplitN(number, ".", 2)
-	var integer strings.Builder
-	for _, digit := range parts[0] {
-		if digit < '0' || digit > '9' {
-			return 0, false
-		}
-		integer.WriteString(string(digit))
+	parts := strings.Split(number, ".")
+	if len(parts) > 2 || parts[0] == "" || (len(parts) == 2 && parts[1] == "") {
+		return 0, false
 	}
-	var fraction strings.Builder
-	if len(parts) == 2 {
-		for _, digit := range parts[1] {
+	for _, part := range parts {
+		for _, digit := range part {
 			if digit < '0' || digit > '9' {
 				return 0, false
 			}
-			fraction.WriteString(string(digit))
 		}
 	}
-	value_ := 0.0
-	for _, digit := range integer.String() {
-		value_ = value_*10 + float64(digit-'0')
+	percent, _ := strconv.ParseFloat(number, 64)
+	return percent, true
+}
+
+func percentOf(reference int, percent float64) int {
+	return floatToIntSaturated(math.Floor(float64(reference) * percent / 100))
+}
+
+func percentPosition(base int, reference int, percent float64) int {
+	value := float64(base) + math.Floor(float64(reference)*percent/100)
+	return floatToIntSaturated(value)
+}
+
+func floatToIntSaturated(value float64) int {
+	maxInt := int(^uint(0) >> 1)
+	minInt := -maxInt - 1
+	if value >= float64(maxInt) {
+		return maxInt
 	}
-	scale := 0.1
-	for _, digit := range fraction.String() {
-		value_ += float64(digit-'0') * scale
-		scale *= 0.1
+	if value <= float64(minInt) {
+		return minInt
 	}
-	if negative {
-		value_ = -value_
+	return int(value)
+}
+
+func addIntSaturated(a int, b int) int {
+	maxInt := int(^uint(0) >> 1)
+	minInt := -maxInt - 1
+	if b > 0 && a > maxInt-b {
+		return maxInt
 	}
-	return value_, true
+	if b < 0 && a < minInt-b {
+		return minInt
+	}
+	return a + b
 }
 
 // resolveOverlayLayout resolves the overlay width and position from options.
@@ -141,7 +157,7 @@ func resolveOverlayLayout(options *OverlayOptions, overlayHeight int, termWidth 
 		hasWidth = true
 	} else if opt.PercentWidth != "" {
 		if percent, ok := parsePercentValue(opt.PercentWidth); ok {
-			layoutWidth = int(float64(termWidth) * percent / 100)
+			layoutWidth = percentOf(termWidth, percent)
 			hasWidth = true
 		}
 	}
@@ -161,7 +177,7 @@ func resolveOverlayLayout(options *OverlayOptions, overlayHeight int, termWidth 
 		hasMax = true
 	} else if opt.PercentMaxHeight != "" {
 		if percent, ok := parsePercentValue(opt.PercentMaxHeight); ok {
-			maxHeight = int(float64(termHeight) * percent / 100)
+			maxHeight = percentOf(termHeight, percent)
 			hasMax = true
 		}
 	}
@@ -182,7 +198,7 @@ func resolveOverlayLayout(options *OverlayOptions, overlayHeight int, termWidth 
 	case opt.RowPercent != "":
 		if percent, ok := parsePercentValue(opt.RowPercent); ok {
 			maxRow := max(0, availHeight-effectiveHeight)
-			row = marginTop + int(float64(maxRow)*percent/100)
+			row = percentPosition(marginTop, maxRow, percent)
 		} else {
 			row = resolveAnchorRow(OverlayAnchorCenter, effectiveHeight, availHeight, marginTop)
 		}
@@ -201,7 +217,7 @@ func resolveOverlayLayout(options *OverlayOptions, overlayHeight int, termWidth 
 	case opt.ColPercent != "":
 		if percent, ok := parsePercentValue(opt.ColPercent); ok {
 			maxCol := max(0, availWidth-layoutWidth)
-			col = marginLeft + int(float64(maxCol)*percent/100)
+			col = percentPosition(marginLeft, maxCol, percent)
 		} else {
 			col = resolveAnchorCol(OverlayAnchorCenter, layoutWidth, availWidth, marginLeft)
 		}
@@ -214,8 +230,8 @@ func resolveOverlayLayout(options *OverlayOptions, overlayHeight int, termWidth 
 	}
 
 	// Offsets, then clamping within the margins.
-	row += opt.OffsetY
-	col += opt.OffsetX
+	row = addIntSaturated(row, opt.OffsetY)
+	col = addIntSaturated(col, opt.OffsetX)
 	row = max(marginTop, min(row, termHeight-marginBottom-effectiveHeight))
 	col = max(marginLeft, min(col, termWidth-marginRight-layoutWidth))
 

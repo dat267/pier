@@ -160,6 +160,48 @@ func TestResolveOverlayLayout(t *testing.T) {
 	}
 }
 
+// pi v1.4.0 packages/tui/src/tui.ts parseSizeValue accepts only positive
+// decimal percentages with at least one digit before the optional decimal.
+func TestResolveOverlayLayoutNegativePercentFallsBackLikeUpstream(t *testing.T) {
+	layout := resolveOverlayLayout(&OverlayOptions{PercentWidth: "-50%"}, 3, 40, 20)
+	if layout.Width != 40 || layout.Col != 0 {
+		t.Fatalf("negative width percent resolved to width=%d col=%d, want default width=40 col=0", layout.Width, layout.Col)
+	}
+}
+
+// pi v1.4.0 packages/tui/src/tui.ts keeps parsed Infinity until it clamps the
+// requested size or position to the terminal bounds.
+func TestResolveOverlayLayoutHugePercentagesSaturateAtBounds(t *testing.T) {
+	huge := strings.Repeat("9", 400) + "%"
+	cases := []struct {
+		name    string
+		options OverlayOptions
+		height  int
+		width   int
+		termH   int
+		wantW   int
+		wantRow int
+		wantCol int
+		wantMax int
+		hasMax  bool
+	}{
+		{"width", OverlayOptions{PercentWidth: huge}, 3, 40, 20, 40, 8, 0, 0, false},
+		{"max height", OverlayOptions{PercentMaxHeight: huge}, 30, 40, 20, 40, 0, 0, 20, true},
+		{"row", OverlayOptions{RowPercent: huge, OffsetY: 10}, 3, 40, 20, 40, 17, 0, 0, false},
+		{"column", OverlayOptions{Width: new(10), ColPercent: huge, OffsetX: 10}, 3, 40, 20, 10, 8, 30, 0, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			layout := resolveOverlayLayout(&tc.options, tc.height, tc.width, tc.termH)
+			if layout.Width != tc.wantW || layout.Row != tc.wantRow || layout.Col != tc.wantCol ||
+				layout.MaxHeight != tc.wantMax || layout.HasMax != tc.hasMax {
+				t.Fatalf("layout = %+v, want width=%d row=%d col=%d maxHeight=%d hasMax=%v",
+					layout, tc.wantW, tc.wantRow, tc.wantCol, tc.wantMax, tc.hasMax)
+			}
+		})
+	}
+}
+
 // TestCompositeTuiLine verifies the exact strings produced by upstream.
 func TestCompositeTuiLine(t *testing.T) {
 	cases := []struct {
