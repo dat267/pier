@@ -2362,8 +2362,9 @@ and uint32 range check. Mistral keeps upstream's headers-only header timer and
 `Mistral response headers timed out` wording (`ai/mistral_conversations.go`;
 upstream's `AbortSignal.timeout` wraps the headers only) while its body idles
 under the shared guard. The federation stream (`ai/pi_messages.go`) and the
-agent proxy stream (`agent/proxy.go`) are guarded the same way; both carry
-`TimeoutMs` through their options.
+agent proxy fetch (`agent/proxy.go`) use the global idle timeout. The proxy's
+provider `TimeoutMs` remains local and is not serialized, matching
+`agent/proxy.ts`.
 The port's other idle-timeout wording ("Provider response headers idle",
 "Provider stream idle") is its own: upstream surfaces undici's
 `Headers Timeout Error`/`Body Timeout Error` instead.
@@ -2389,6 +2390,7 @@ Tests: `TestProviderStreamsAbortWhenResponseHeadersIdle`,
 `TestCodexAbortSignalRejectsOutOfRangeDelayBeforeFetch`,
 `TestCodexRejectsNegativeTimeoutBeforeFetch`,
 `TestSDKTimeoutDoesNotReplaceDispatcherBodyIdleTimeout`,
+`TestStreamProxyUsesDispatcherIdleTimeoutNotProviderOverride`,
 `TestMistralSDKTimeoutDoesNotReplaceDispatcherBodyIdleTimeout`,
 `TestDispatcherOnlyTimeoutIgnoresProviderOverride`,
 `TestCreateAgentSessionRequestOptions`, `TestHTTPIdleTimeoutReachesTheRequest`,

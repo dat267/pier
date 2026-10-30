@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/dat267/pier/ai"
 )
@@ -298,6 +299,40 @@ func TestStreamProxyRejectsDeltaForOtherContent(t *testing.T) {
 	if result.StopReason != ai.StopError || result.ErrorMessage == nil ||
 		*result.ErrorMessage != "Received text_delta for non-text content" {
 		t.Fatalf("result = %+v; want the delta mismatch error", result)
+	}
+}
+
+// Upstream agent/proxy.ts omits the provider SDK timeout from the proxy fetch;
+// its headers/body bounds come from the global Undici dispatcher (D254).
+func TestStreamProxyUsesDispatcherIdleTimeoutNotProviderOverride(t *testing.T) {
+	release := make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-release:
+		case <-r.Context().Done():
+		}
+	}))
+	t.Cleanup(func() {
+		close(release)
+		server.Close()
+	})
+	requestCtx, cancelRequest := context.WithTimeout(context.Background(), 80*time.Millisecond)
+	defer cancelRequest()
+	waitCtx, cancelWait := context.WithTimeout(context.Background(), time.Second)
+	defer cancelWait()
+	providerTimeout := 10
+	dispatcherTimeout := 250
+	options := ProxyStreamOptions{ProxyURL: server.URL, AuthToken: "tok"}
+	options.Ctx = requestCtx
+	options.TimeoutMs = &providerTimeout
+	options.HTTPIdleTimeoutMs = &dispatcherTimeout
+	model := &ai.Model{ID: "m", Provider: "p", API: ai.APIOpenAIResponses}
+	result, err := StreamProxy(model, proxyContext(), options).Result(waitCtx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.StopReason != ai.StopAborted {
+		t.Fatalf("result = %+v; provider SDK timeout must not replace the dispatcher idle timeout", result)
 	}
 }
 
