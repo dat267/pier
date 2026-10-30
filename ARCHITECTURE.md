@@ -3558,6 +3558,25 @@ remains the supported contract. Do not claim parity for programmatic structured
 tool results or output-schema validation.
 
 
+### D310
+
+**The positional output-accumulator constructor treats zero limits as defaults.**
+
+Reference: pi v1.4.0 (`4a080252`),
+`packages/coding-agent/src/core/tools/output-accumulator.ts` uses nullish
+coalescing (`options.maxLines ?? DEFAULT_MAX_LINES` and the corresponding
+`maxBytes` expression), so an explicit zero remains zero. Pier's
+`NewOutputAccumulator(maxLines, maxBytes, prefix)` has positional integer
+arguments and uses zero to mean “use defaults”; this preserves the established
+Go constructor convention used by first-party shell callers, which pass zeros
+to request normal limits. No first-party shell path requests a zero-byte or
+zero-line display limit. The difference is confined to direct callers of this
+Go constructor.
+
+Reproducer: `TestOutputAccumulatorZeroLimitsUseGoDefaults` in
+`coding/outputaccumulator_utf8_test.go` records the Go side; the upstream
+constructor expression establishes the explicit-zero behavior.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

@@ -86,7 +86,9 @@ func (t *bashUpdateThrottle) take() bool {
 	return true
 }
 
-// NewOutputAccumulator builds an accumulator.
+// NewOutputAccumulator builds an accumulator. Zero limits select defaults in
+// this positional Go API; upstream's options object preserves explicit zero
+// (D310).
 func NewOutputAccumulator(maxLines, maxBytes int, tempFilePrefix string) *OutputAccumulator {
 	if maxLines == 0 {
 		maxLines = DefaultMaxLines

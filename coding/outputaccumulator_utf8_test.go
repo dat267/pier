@@ -5,6 +5,20 @@ import "testing"
 // Reference: pi v1.4.0 (4a080252),
 // packages/coding-agent/src/core/tools/output-accumulator.ts uses TextDecoder.
 // Expected strings were checked with that pinned Node runtime.
+func TestOutputAccumulatorZeroLimitsUseGoDefaults(t *testing.T) {
+	// D310: unlike upstream options with explicit maxLines/maxBytes = 0, this
+	// positional constructor treats zero as omitted and selects defaults.
+	accumulator := NewOutputAccumulator(0, 0, "")
+	if err := accumulator.Append([]byte("line\n")); err != nil {
+		t.Fatal(err)
+	}
+	accumulator.Finish()
+	defer accumulator.CloseTempFile()
+	if got := accumulator.Snapshot(false).Truncation.Truncated; got {
+		t.Fatal("zero limits should retain the Go constructor's default behavior")
+	}
+}
+
 func TestOutputAccumulatorMalformedUTF8MatchesTextDecoder(t *testing.T) {
 	for _, test := range []struct {
 		name   string
