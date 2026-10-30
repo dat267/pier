@@ -34,8 +34,20 @@ func TestRPCClientSignalExitPeer(t *testing.T) {
 	if err != nil {
 		os.Exit(2)
 	}
-	_ = process.Signal(syscall.SIGTERM)
-	os.Exit(0)
+	// Catch one signal before restoring the default action and sending it again.
+	// Calling os.Exit immediately after sending raced asynchronous delivery.
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGTERM)
+	if err := process.Signal(syscall.SIGTERM); err != nil {
+		os.Exit(2)
+	}
+	<-signals
+	signal.Stop(signals)
+	signal.Reset(syscall.SIGTERM)
+	if err := process.Signal(syscall.SIGTERM); err != nil {
+		os.Exit(2)
+	}
+	select {}
 }
 
 func TestRPCClientStopSignalPeer(t *testing.T) {
