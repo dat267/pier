@@ -9,30 +9,31 @@ import (
 	"github.com/dat267/pier/mcp/protocol"
 )
 
-// pi v1.4.0 transports/stdio.ts finalizes on ChildProcess.close, after stdout
-// and stderr have drained, not on process exit. A listener may initiate close
-// without preventing the remaining pipe data or the final close notification.
-func TestStdioExitIgnoresUnterminatedOutput(t *testing.T) {
+// pi v1.4.0 transports/stdio.ts reports a non-whitespace stdout tail as an
+// incomplete JSON-RPC message before emitting the child-close notification.
+func TestStdioExitReportsUnterminatedOutputBeforeClose(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	transport := NewStdioTransport(StdioTransportOptions{Command: os.Args[0], Env: map[string]string{"PIER_MCP_UTF8_HELPER": "partial"}})
 	t.Cleanup(func() { _ = transport.Close(context.Background()) })
-	errors := make(chan error, 1)
-	transport.OnError(func(err error) { errors <- err })
-	closed := make(chan struct{})
-	transport.OnClose(func() { close(closed) })
+	events := make(chan string, 2)
+	transport.OnError(func(err error) { events <- err.Error() })
+	transport.OnClose(func() { events <- "close" })
 	if err := transport.Start(ctx); err != nil {
 		t.Fatal(err)
 	}
-	select {
-	case <-closed:
-	case <-ctx.Done():
-		t.Fatal("close notification did not arrive:", ctx.Err())
-	}
-	select {
-	case err := <-errors:
-		t.Fatalf("unterminated stdout emitted error %q", err)
-	default:
+	for _, want := range []string{
+		"MCP stdio server closed with an incomplete JSON-RPC message",
+		"close",
+	} {
+		select {
+		case got := <-events:
+			if got != want {
+				t.Fatalf("event = %q, want %q", got, want)
+			}
+		case <-ctx.Done():
+			t.Fatalf("did not receive event %q: %v", want, ctx.Err())
+		}
 	}
 }
 
