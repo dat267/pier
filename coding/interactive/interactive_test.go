@@ -358,6 +358,7 @@ func TestCatalogRefreshCancellation(t *testing.T) {
 // TestThemeControllerProbesSystemColors pins that the controller stores the
 // terminal's reported colors and rebuilds the active system theme.
 func TestThemeControllerProbesSystemColors(t *testing.T) {
+	t.Cleanup(func() { SetSystemTerminalColors(tui.TerminalColors{}) })
 	dir := t.TempDir()
 	SetCustomThemesDir(dir)
 	SetRegisteredThemes(nil)
