@@ -22,6 +22,22 @@ import (
 
 // TestRPCClientFakeServer is the child process for the subprocess tests. It
 // speaks the RPC JSONL protocol on stdin/stdout.
+func TestRPCClientSignalExitPeer(t *testing.T) {
+	if os.Getenv("PIER_RPC_SIGNAL_EXIT_PEER") != "1" {
+		t.Skip("signal-exit peer only runs as a child process")
+	}
+	reader := bufio.NewReader(os.Stdin)
+	if _, err := reader.ReadBytes('\n'); err != nil {
+		os.Exit(2)
+	}
+	process, err := os.FindProcess(os.Getpid())
+	if err != nil {
+		os.Exit(2)
+	}
+	_ = process.Signal(syscall.SIGTERM)
+	os.Exit(0)
+}
+
 func TestRPCClientStopSignalPeer(t *testing.T) {
 	if os.Getenv("PIER_RPC_STOP_SIGNAL_PEER") != "1" {
 		t.Skip("signal peer only runs as a child process")
@@ -141,6 +157,26 @@ func TestClientStopDetachesStdoutBeforeTermination(t *testing.T) {
 			t.Fatal("event emitted during termination was dispatched after Stop")
 		}
 	case <-time.After(100 * time.Millisecond):
+	}
+}
+
+// pi v1.4.0 rpc-client.ts reports Node's signal name in process-exit errors.
+func TestClientSignalExitUsesNodeSignalName(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the child signal fixture uses SIGTERM")
+	}
+	client := New(Options{
+		CLIPath:        os.Args[0],
+		PeerArgs:       []string{"-test.run=^TestRPCClientSignalExitPeer$"},
+		Env:            map[string]string{"PIER_RPC_SIGNAL_EXIT_PEER": "1"},
+		RequestTimeout: 3 * time.Second,
+	})
+	if err := client.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer client.Stop()
+	if _, err := client.State(); err == nil || !strings.Contains(err.Error(), "signal=SIGTERM") {
+		t.Fatalf("signal exit error = %v, want Node signal name SIGTERM", err)
 	}
 }
 
