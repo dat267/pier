@@ -34,6 +34,8 @@ type EnvAPIKeyProviderSpec struct {
 	OpenCode bool
 	// SystemOneClassifier enables TypeSafe's structured-classification API.
 	SystemOneClassifier bool
+	// CloudflareSystemOneClassifier enables Workers AI's System One adapter.
+	CloudflareSystemOneClassifier bool
 	// Auth overrides the default env API-key auth (Cloudflare, Vertex).
 	Auth *ai.ApiKeyAuth
 	// WrapStreams wraps every implementation (Cloudflare placeholder
@@ -108,6 +110,10 @@ func EnvAPIKeyProvider(spec EnvAPIKeyProviderSpec) *ai.Provider {
 	if spec.SystemOneClassifier {
 		models = append(models, ai.GetBuiltinClassifierModels(spec.ID)...)
 		classifiers[ai.APITypeSafeSystemOne] = ai.TypeSafeSystemOne{}
+	}
+	if spec.CloudflareSystemOneClassifier {
+		models = append(models, ai.GetBuiltinClassifierModels(spec.ID)...)
+		classifiers[ai.APICloudflareWorkersAISystemOne] = CloudflareClassifier(ai.CloudflareWorkersAISystemOne{})
 	}
 	options := ai.CreateProviderOptions{
 		ID:          spec.ID,

@@ -6,14 +6,17 @@ import (
 	"sync"
 )
 
-// classifierCatalogData and typesafeClassifierCatalogData are generated from
-// pinned provider model data by scripts/gen_classifier_catalog.py.
+// Embedded classifier catalogs are generated from pinned provider model data
+// by scripts/gen_classifier_catalog.py.
 //
 //go:embed classifier_catalog.json
 var classifierCatalogData []byte
 
 //go:embed typesafe_classifier_catalog.json
 var typesafeClassifierCatalogData []byte
+
+//go:embed cloudflare_classifier_catalog.json
+var cloudflareClassifierCatalogData []byte
 
 var (
 	classifierCatalogOnce   sync.Once
@@ -32,15 +35,25 @@ func loadClassifierCatalog() {
 			classifierCatalogErr = err
 			return
 		}
-		for provider, models := range extraModels {
-			if classifierCatalogModels[provider] == nil {
-				classifierCatalogModels[provider] = map[string]*Model{}
-			}
-			for id, model := range models {
-				classifierCatalogModels[provider][id] = model
-			}
+		mergeClassifierCatalog(extraModels)
+		_, cloudflareModels, err := decodeCatalog(cloudflareClassifierCatalogData)
+		if err != nil {
+			classifierCatalogErr = err
+			return
 		}
+		mergeClassifierCatalog(cloudflareModels)
 	})
+}
+
+func mergeClassifierCatalog(extraModels map[string]map[string]*Model) {
+	for provider, models := range extraModels {
+		if classifierCatalogModels[provider] == nil {
+			classifierCatalogModels[provider] = map[string]*Model{}
+		}
+		for id, model := range models {
+			classifierCatalogModels[provider][id] = model
+		}
+	}
 }
 
 // GetBuiltinClassifierModel returns a supported generated classifier model.

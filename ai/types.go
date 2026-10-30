@@ -16,18 +16,19 @@ import (
 type KnownApi = string
 
 const (
-	APIOpenAICompletions    KnownApi = "openai-completions"
-	APIMistralConversations KnownApi = "mistral-conversations"
-	APIOpenAIResponses      KnownApi = "openai-responses"
-	APIAzureOpenAIResponses KnownApi = "azure-openai-responses"
-	APIOpenAICodexResponses KnownApi = "openai-codex-responses"
-	APIAnthropicMessages    KnownApi = "anthropic-messages"
-	APIBedrockConverse      KnownApi = "bedrock-converse-stream"
-	APIGoogleGenerativeAI   KnownApi = "google-generative-ai"
-	APIGoogleVertex         KnownApi = "google-vertex"
-	APIPiMessages           KnownApi = "pi-messages"
-	APIOpenAIDecisions      KnownApi = "openai-decisions"
-	APITypeSafeSystemOne    KnownApi = "typesafe-system-one"
+	APIOpenAICompletions            KnownApi = "openai-completions"
+	APIMistralConversations         KnownApi = "mistral-conversations"
+	APIOpenAIResponses              KnownApi = "openai-responses"
+	APIAzureOpenAIResponses         KnownApi = "azure-openai-responses"
+	APIOpenAICodexResponses         KnownApi = "openai-codex-responses"
+	APIAnthropicMessages            KnownApi = "anthropic-messages"
+	APIBedrockConverse              KnownApi = "bedrock-converse-stream"
+	APIGoogleGenerativeAI           KnownApi = "google-generative-ai"
+	APIGoogleVertex                 KnownApi = "google-vertex"
+	APIPiMessages                   KnownApi = "pi-messages"
+	APIOpenAIDecisions              KnownApi = "openai-decisions"
+	APITypeSafeSystemOne            KnownApi = "typesafe-system-one"
+	APICloudflareWorkersAISystemOne KnownApi = "cloudflare-workers-ai-system-one"
 )
 
 // Api is a known or custom API identifier.

@@ -70,7 +70,9 @@ auto-compaction and retry.
   `scripts/gen_classifier_catalog.py <scratch-pi> openai-decisions` for
   `ai/classifier_catalog.json` and
   `scripts/gen_classifier_catalog.py <scratch-pi> typesafe-system-one` for
-  `ai/typesafe_classifier_catalog.json`; the upstream generator fetches
+  `ai/typesafe_classifier_catalog.json` and
+  `scripts/gen_classifier_catalog.py <scratch-pi> cloudflare-workers-ai-system-one`
+  for `ai/cloudflare_classifier_catalog.json`; the upstream generator fetches
   models.dev and rewrites its checkout.
 - Upstream goldens in `*/testdata/` are Node-generated; regenerate as each
   fixture instructs and never hand-edit them.

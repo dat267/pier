@@ -201,7 +201,7 @@ func DecodeModelCompat(api Api, data []byte) (*ModelCompat, error) {
 	case APIBedrockConverse:
 		c.Bedrock = new(BedrockCompat)
 		err = jsonUnmarshalStrict(data, c.Bedrock)
-	case APITypeSafeSystemOne:
+	case APITypeSafeSystemOne, APICloudflareWorkersAISystemOne:
 		c.SystemOne = new(SystemOneCompat)
 		err = jsonUnmarshalStrict(data, c.SystemOne)
 	default:

@@ -219,6 +219,24 @@ func CloudflareStreams(streams ai.ProviderStreams) ai.ProviderStreams {
 	return cloudflareStreams{inner: streams}
 }
 
+// CloudflareClassifier resolves account/gateway URL placeholders before a
+// classifier request, matching upstream cloudflareClassifier.
+func CloudflareClassifier(classifier ai.ProviderClassifier) ai.ProviderClassifier {
+	return cloudflareClassifier{inner: classifier}
+}
+
+type cloudflareClassifier struct {
+	inner ai.ProviderClassifier
+}
+
+func (c cloudflareClassifier) Classify(model *ai.Model, context ai.ClassifierContext, options *ai.ClassifierOptions) *ai.ClassifierResult {
+	var env ai.ProviderEnv
+	if options != nil {
+		env = options.Env
+	}
+	return c.inner.Classify(ResolveCloudflareModel(model, env), context, options)
+}
+
 type cloudflareStreams struct {
 	inner ai.ProviderStreams
 }
@@ -245,7 +263,7 @@ func CloudflareWorkersAIProvider() *ai.Provider {
 	return EnvAPIKeyProvider(EnvAPIKeyProviderSpec{
 		ID: "cloudflare-workers-ai", Name: "Cloudflare Workers AI",
 		Auth: CloudflareWorkersAIAuth(), Completions: true,
-		WrapStreams: CloudflareStreams,
+		WrapStreams: CloudflareStreams, CloudflareSystemOneClassifier: true,
 	})
 }
 

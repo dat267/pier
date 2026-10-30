@@ -12,14 +12,49 @@ import (
 	"strings"
 )
 
-const systemOneLabel = "System One API"
+const (
+	systemOneLabel  = "System One API"
+	cloudflareLabel = "Cloudflare Workers AI"
+)
 
-// TypeSafeSystemOne implements TypeSafe's classifier protocol, also served by
-// OpenRouter, OpenCode and Vercel AI Gateway (pi v1.4.0 system-one-shared.ts).
+// TypeSafeSystemOne implements the shared TypeSafe classifier protocol used by
+// TypeSafe, OpenRouter, OpenCode and Vercel AI Gateway.
 type TypeSafeSystemOne struct{}
 
-func (TypeSafeSystemOne) Classify(model *Model, classifierContext ClassifierContext, options *ClassifierOptions) (result *ClassifierResult) {
-	if model.API != APITypeSafeSystemOne {
+// CloudflareWorkersAISystemOne implements the Workers AI /run envelope around
+// the same System One request and answer protocol.
+type CloudflareWorkersAISystemOne struct{}
+
+type systemOneTransport struct {
+	api                     Api
+	label                   string
+	path                    string
+	cloudflareEnvelope      bool
+	detectImageInput        func(*Model) string
+	sendImageOptInByDefault bool
+}
+
+var (
+	typeSafeSystemOneTransport = systemOneTransport{
+		api: APITypeSafeSystemOne, label: systemOneLabel, path: "systemone",
+		detectImageInput: typeSafeSystemOneImageInput, sendImageOptInByDefault: true,
+	}
+	cloudflareSystemOneTransport = systemOneTransport{
+		api: APICloudflareWorkersAISystemOne, label: cloudflareLabel, path: "run",
+		cloudflareEnvelope: true, detectImageInput: cloudflareSystemOneImageInput,
+	}
+)
+
+func (TypeSafeSystemOne) Classify(model *Model, classifierContext ClassifierContext, options *ClassifierOptions) *ClassifierResult {
+	return classifySystemOne(typeSafeSystemOneTransport, model, classifierContext, options)
+}
+
+func (CloudflareWorkersAISystemOne) Classify(model *Model, classifierContext ClassifierContext, options *ClassifierOptions) *ClassifierResult {
+	return classifySystemOne(cloudflareSystemOneTransport, model, classifierContext, options)
+}
+
+func classifySystemOne(transport systemOneTransport, model *Model, classifierContext ClassifierContext, options *ClassifierOptions) (result *ClassifierResult) {
+	if model.API != transport.api {
 		return classifierErrorResult(model, fmt.Errorf("Unsupported classifier API: %s", model.API), options)
 	}
 	if options == nil {
@@ -36,16 +71,21 @@ func (TypeSafeSystemOne) Classify(model *Model, classifierContext ClassifierCont
 		}
 	}()
 	if len(classifierContext.Images) > 0 && !containsString(model.Input, "image") {
-		return classifierFail(result, fmt.Errorf("%s does not support image input for %s", systemOneLabel, model.ID), options)
+		return classifierFail(result, fmt.Errorf("%s does not support image input for %s", transport.label, model.ID), options)
 	}
-	body, err := buildSystemOneRequest(model, classifierContext)
+	imageInput := resolveSystemOneImageInput(model, transport.detectImageInput)
+	requestBody, err := buildSystemOneRequest(model, classifierContext, transport.label, imageInput)
+	if err != nil {
+		return classifierFail(result, err, options)
+	}
+	payloadFields, err := wrapSystemOneRequest(model, requestBody, transport.cloudflareEnvelope)
 	if err != nil {
 		return classifierFail(result, err, options)
 	}
 	if options.APIKey == "" {
 		return classifierFail(result, fmt.Errorf("No API key for provider: %s", model.Provider), options)
 	}
-	payload, err := body.marshal()
+	payload, err := payloadFields.marshal()
 	if err != nil {
 		return classifierFail(result, err, options)
 	}
@@ -58,7 +98,7 @@ func (TypeSafeSystemOne) Classify(model *Model, classifierContext ClassifierCont
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	endpoint, err := systemOneURL(model.BaseURL)
+	endpoint, err := systemOneURL(model.BaseURL, transport.path)
 	if err != nil {
 		return classifierFail(result, err, options)
 	}
@@ -77,7 +117,7 @@ func (TypeSafeSystemOne) Classify(model *Model, classifierContext ClassifierCont
 		for name, value := range model.Headers {
 			request.Header.Set(name, value)
 		}
-		applyProviderHeaders(request.Header, systemOneRequestHeaders(model, classifierContext.Images, options))
+		applyProviderHeaders(request.Header, systemOneRequestHeaders(model, classifierContext.Images, options, transport.sendImageOptInByDefault))
 		response, err := DoProviderRequestWithAbortSignalTimeoutAndIdle(request, options.TimeoutMs, options.HTTPIdleTimeoutMs)
 		if err != nil {
 			return nil, err
@@ -92,7 +132,7 @@ func (TypeSafeSystemOne) Classify(model *Model, classifierContext ClassifierCont
 		}
 		return nil, &ProviderError{
 			Status: response.StatusCode, Headers: response.Header.Clone(),
-			Message: fmt.Sprintf("%s returned %d", systemOneLabel, response.StatusCode), Body: string(responseBody),
+			Message: fmt.Sprintf("%s returned %d", transport.label, response.StatusCode), Body: string(responseBody),
 		}
 	}, &ProviderRetryOptions{MaxRetries: &maxRetries, MaxRetryDelayMS: options.MaxRetryDelayMs})
 	if err != nil {
@@ -102,16 +142,16 @@ func (TypeSafeSystemOne) Classify(model *Model, classifierContext ClassifierCont
 		if errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil && options.TimeoutMs != nil {
 			return classifierFail(result, fmt.Errorf("Request timed out after %dms", *options.TimeoutMs), options)
 		}
-		return classifierFail(result, fmt.Errorf("%s", FormatProviderError(NormalizeProviderError(err), systemOneLabel+" error")), options)
+		return classifierFail(result, fmt.Errorf("%s", FormatProviderError(NormalizeProviderError(err), transport.label+" error")), options)
 	}
 	defer response.Body.Close()
 	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
 		return classifierFail(result, err, options)
 	}
-	responseFields, err := decodeOrderedJSONFields(responseBody)
+	responseFields, err := parseSystemOneResponse(responseBody, transport)
 	if err != nil {
-		return classifierFail(result, fmt.Errorf("%s returned an unexpected response", systemOneLabel), options)
+		return classifierFail(result, err, options)
 	}
 	answersRaw, _ := responseFields.raw("answers")
 	usageRaw, _ := responseFields.raw("usage")
@@ -119,7 +159,7 @@ func (TypeSafeSystemOne) Classify(model *Model, classifierContext ClassifierCont
 	if options.OnResponse != nil {
 		options.OnResponse(ProviderResponse{Status: response.StatusCode, Headers: responseHeaders(response.Header)}, model)
 	}
-	answers, order, err := parseSystemOneAnswers(answersRaw, classifierContext.Questions)
+	answers, order, err := parseSystemOneAnswers(answersRaw, classifierContext.Questions, transport.label)
 	if err != nil {
 		return classifierFail(result, err, options)
 	}
@@ -127,16 +167,57 @@ func (TypeSafeSystemOne) Classify(model *Model, classifierContext ClassifierCont
 	return result
 }
 
-func systemOneURL(base string) (string, error) {
+func systemOneURL(base, path string) (string, error) {
 	parsed, err := url.Parse(strings.TrimRight(base, "/") + "/")
 	if err != nil {
 		return "", err
 	}
-	return parsed.ResolveReference(&url.URL{Path: "systemone"}).String(), nil
+	return parsed.ResolveReference(&url.URL{Path: path}).String(), nil
 }
 
-func systemOneRequestHeaders(model *Model, images []ImageContent, options *ClassifierOptions) ProviderHeaders {
-	sendOptIn := model.Provider != "openrouter" && !strings.Contains(model.BaseURL, "openrouter.ai")
+func wrapSystemOneRequest(model *Model, request *orderedJSONFields, cloudflareEnvelope bool) (*orderedJSONFields, error) {
+	body := &orderedJSONFields{values: map[string]json.RawMessage{}}
+	if err := body.setAny("model", model.ID); err != nil {
+		return nil, err
+	}
+	if cloudflareEnvelope {
+		input, err := request.marshal()
+		if err != nil {
+			return nil, err
+		}
+		body.set("input", input)
+		return body, nil
+	}
+	for _, key := range request.keys {
+		value, _ := request.raw(key)
+		body.set(key, value)
+	}
+	return body, nil
+}
+
+func resolveSystemOneImageInput(model *Model, detect func(*Model) string) string {
+	if model.Compat != nil && model.Compat.SystemOne != nil && model.Compat.SystemOne.ImageInput != nil {
+		return *model.Compat.SystemOne.ImageInput
+	}
+	return detect(model)
+}
+
+func typeSafeSystemOneImageInput(model *Model) string {
+	if model.Provider == "openrouter" || strings.Contains(model.BaseURL, "openrouter.ai") {
+		return "state-image-urls"
+	}
+	return "assets"
+}
+
+func cloudflareSystemOneImageInput(model *Model) string {
+	if strings.HasPrefix(model.ID, "@cf/cloudflare/clef") {
+		return "images"
+	}
+	return "assets"
+}
+
+func systemOneRequestHeaders(model *Model, images []ImageContent, options *ClassifierOptions, sendImageOptInByDefault bool) ProviderHeaders {
+	sendOptIn := sendImageOptInByDefault && model.Provider != "openrouter" && !strings.Contains(model.BaseURL, "openrouter.ai")
 	if model.Compat != nil && model.Compat.SystemOne != nil && model.Compat.SystemOne.SendImageOptInHeader != nil {
 		sendOptIn = *model.Compat.SystemOne.SendImageOptInHeader
 	}
@@ -151,13 +232,13 @@ func systemOneRequestHeaders(model *Model, images []ImageContent, options *Class
 	return headers
 }
 
-func buildSystemOneRequest(model *Model, classifierContext ClassifierContext) (*orderedJSONFields, error) {
+func buildSystemOneRequest(model *Model, classifierContext ClassifierContext, label, imageInput string) (*orderedJSONFields, error) {
 	state := classifierContext.State
 	if len(state) == 0 {
 		state = json.RawMessage("{}")
 	}
 	if !json.Valid(state) {
-		return nil, fmt.Errorf("%s state must be valid JSON", systemOneLabel)
+		return nil, fmt.Errorf("%s state must be valid JSON", label)
 	}
 	questions := &orderedJSONFields{values: map[string]json.RawMessage{}}
 	for _, question := range classifierContext.Questions {
@@ -185,7 +266,7 @@ func buildSystemOneRequest(model *Model, classifierContext ClassifierContext) (*
 			}
 			criteria = boolCriteria
 		default:
-			return nil, fmt.Errorf("%s received invalid question type %q", systemOneLabel, question.Type)
+			return nil, fmt.Errorf("%s received invalid question type %q", label, question.Type)
 		}
 		questionFields := &orderedJSONFields{values: map[string]json.RawMessage{}}
 		if err := questionFields.setAny("type", wireType); err != nil {
@@ -210,9 +291,6 @@ func buildSystemOneRequest(model *Model, classifierContext ClassifierContext) (*
 		questions.set(question.Name, encoded)
 	}
 	request := &orderedJSONFields{values: map[string]json.RawMessage{}}
-	if err := request.setAny("model", model.ID); err != nil {
-		return nil, err
-	}
 	request.set("state", state)
 	questionJSON, err := questions.marshal()
 	if err != nil {
@@ -220,16 +298,15 @@ func buildSystemOneRequest(model *Model, classifierContext ClassifierContext) (*
 	}
 	request.set("questions", questionJSON)
 	if len(classifierContext.Images) > 0 {
-		compat := systemOneImageMode(model)
-		switch compat {
+		switch imageInput {
 		case "images":
 			if len(classifierContext.Images) > 4 {
-				return nil, fmt.Errorf("%s accepts at most 4 images for %s, got %d", systemOneLabel, model.ID, len(classifierContext.Images))
+				return nil, fmt.Errorf("%s accepts at most 4 images for %s, got %d", label, model.ID, len(classifierContext.Images))
 			}
 			dataURLs := make([]string, 0, len(classifierContext.Images))
 			for _, image := range classifierContext.Images {
 				if image.MimeType != "image/png" && image.MimeType != "image/jpeg" && image.MimeType != "image/webp" {
-					return nil, fmt.Errorf("%s accepts PNG, JPEG, and WebP images for %s, got %s", systemOneLabel, model.ID, image.MimeType)
+					return nil, fmt.Errorf("%s accepts PNG, JPEG, and WebP images for %s, got %s", label, model.ID, image.MimeType)
 				}
 				dataURLs = append(dataURLs, "data:"+image.MimeType+";base64,"+image.Data)
 			}
@@ -275,7 +352,7 @@ func buildSystemOneRequest(model *Model, classifierContext ClassifierContext) (*
 				case "image/jpeg":
 					format = "jpeg"
 				default:
-					return nil, fmt.Errorf("%s accepts PNG and JPEG images for %s, got %s", systemOneLabel, model.ID, image.MimeType)
+					return nil, fmt.Errorf("%s accepts PNG and JPEG images for %s, got %s", label, model.ID, image.MimeType)
 				}
 				name := fmt.Sprintf("<image-%d>", index+1)
 				keys = append(keys, name)
@@ -310,16 +387,6 @@ func buildSystemOneRequest(model *Model, classifierContext ClassifierContext) (*
 	return request, nil
 }
 
-func systemOneImageMode(model *Model) string {
-	if model.Compat != nil && model.Compat.SystemOne != nil && model.Compat.SystemOne.ImageInput != nil {
-		return *model.Compat.SystemOne.ImageInput
-	}
-	if model.Provider == "openrouter" || strings.Contains(model.BaseURL, "openrouter.ai") {
-		return "state-image-urls"
-	}
-	return "assets"
-}
-
 func appendImageNames(names []string, state json.RawMessage) []any {
 	result := make([]any, 0, len(names)+1)
 	for _, name := range names {
@@ -329,21 +396,21 @@ func appendImageNames(names []string, state json.RawMessage) []any {
 	return result
 }
 
-func parseSystemOneAnswers(raw json.RawMessage, questions []ClassifierQuestion) (map[string]ClassifierAnswer, []string, error) {
+func parseSystemOneAnswers(raw json.RawMessage, questions []ClassifierQuestion, label string) (map[string]ClassifierAnswer, []string, error) {
 	answersObject, err := decodeOrderedJSONFields(raw)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%s returned an unexpected response", systemOneLabel)
+		return nil, nil, fmt.Errorf("%s returned an unexpected response", label)
 	}
 	answers := make(map[string]ClassifierAnswer, len(questions))
 	order := make([]string, 0, len(questions))
 	for _, question := range questions {
 		answerRaw, ok := answersObject.raw(question.Name)
 		if !ok {
-			return nil, nil, fmt.Errorf("%s did not return an answer for %s", systemOneLabel, question.Name)
+			return nil, nil, fmt.Errorf("%s did not return an answer for %s", label, question.Name)
 		}
 		answer, err := decodeOrderedJSONFields(answerRaw)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%s did not return an answer for %s", systemOneLabel, question.Name)
+			return nil, nil, fmt.Errorf("%s did not return an answer for %s", label, question.Name)
 		}
 		typeRaw, _ := answer.raw("type")
 		answerType, _ := classifierString(typeRaw)
@@ -351,50 +418,50 @@ func parseSystemOneAnswers(raw json.RawMessage, questions []ClassifierQuestion) 
 		switch question.Type {
 		case "choice":
 			if answerType != "choice" {
-				return nil, nil, fmt.Errorf("%s did not return a choice answer for %s", systemOneLabel, question.Name)
+				return nil, nil, fmt.Errorf("%s did not return a choice answer for %s", label, question.Name)
 			}
 			parsed.Type = "choice"
 			choiceRaw, _ := answer.raw("choice")
 			if parsed.Choice, ok = classifierString(choiceRaw); !ok {
-				return nil, nil, fmt.Errorf("%s did not return a choice answer for %s", systemOneLabel, question.Name)
+				return nil, nil, fmt.Errorf("%s did not return a choice answer for %s", label, question.Name)
 			}
 			probabilitiesRaw, _ := answer.raw("probabilities")
-			probabilities, probabilityOrder, err := parseSystemOneProbabilities(probabilitiesRaw, question.Name)
+			probabilities, probabilityOrder, err := parseSystemOneProbabilities(probabilitiesRaw, question.Name, label)
 			if err != nil {
 				return nil, nil, err
 			}
 			parsed.Probabilities, parsed.ProbabilityOrder = probabilities, probabilityOrder
-			confidence, err := systemOneNumber(answer, "confidence", "confidence for "+question.Name)
+			confidence, err := systemOneNumber(answer, "confidence", "confidence for "+question.Name, label)
 			if err != nil {
 				return nil, nil, err
 			}
 			parsed.Confidence = &confidence
 		case "score":
 			if answerType != "score" {
-				return nil, nil, fmt.Errorf("%s did not return a score answer for %s", systemOneLabel, question.Name)
+				return nil, nil, fmt.Errorf("%s did not return a score answer for %s", label, question.Name)
 			}
 			parsed.Type = "score"
-			score, err := systemOneNumber(answer, "score", "score for "+question.Name)
+			score, err := systemOneNumber(answer, "score", "score for "+question.Name, label)
 			if err != nil {
 				return nil, nil, err
 			}
-			confidence, err := systemOneNumber(answer, "confidence", "confidence for "+question.Name)
+			confidence, err := systemOneNumber(answer, "confidence", "confidence for "+question.Name, label)
 			if err != nil {
 				return nil, nil, err
 			}
 			parsed.Score, parsed.Confidence = &score, &confidence
 		case "bool":
 			if answerType != "noul" {
-				return nil, nil, fmt.Errorf("%s did not return a bool answer for %s", systemOneLabel, question.Name)
+				return nil, nil, fmt.Errorf("%s did not return a bool answer for %s", label, question.Name)
 			}
 			parsed.Type = "bool"
-			probability, err := systemOneNumber(answer, "noul", "probability for "+question.Name)
+			probability, err := systemOneNumber(answer, "noul", "probability for "+question.Name, label)
 			if err != nil {
 				return nil, nil, err
 			}
 			parsed.Probability = &probability
 		default:
-			return nil, nil, fmt.Errorf("%s received invalid question type %q", systemOneLabel, question.Type)
+			return nil, nil, fmt.Errorf("%s received invalid question type %q", label, question.Type)
 		}
 		if _, exists := answers[question.Name]; !exists {
 			order = appendJSObjectKey(order, question.Name)
@@ -404,15 +471,15 @@ func parseSystemOneAnswers(raw json.RawMessage, questions []ClassifierQuestion) 
 	return answers, order, nil
 }
 
-func parseSystemOneProbabilities(raw json.RawMessage, question string) (map[string]float64, []string, error) {
+func parseSystemOneProbabilities(raw json.RawMessage, question, label string) (map[string]float64, []string, error) {
 	object, err := decodeOrderedJSONFields(raw)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%s returned invalid probabilities for %s", systemOneLabel, question)
+		return nil, nil, fmt.Errorf("%s returned invalid probabilities for %s", label, question)
 	}
 	probabilities := make(map[string]float64, len(object.keys))
 	order := make([]string, 0, len(object.keys))
 	for _, key := range object.keys {
-		value, err := systemOneNumber(object, key, "probability for "+question+"."+key)
+		value, err := systemOneNumber(object, key, "probability for "+question+"."+key, label)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -422,18 +489,18 @@ func parseSystemOneProbabilities(raw json.RawMessage, question string) (map[stri
 	return probabilities, order, nil
 }
 
-func systemOneNumber(object *orderedJSONFields, key, field string) (float64, error) {
+func systemOneNumber(object *orderedJSONFields, key, field, label string) (float64, error) {
 	raw, ok := object.raw(key)
 	if !ok {
-		return 0, fmt.Errorf("%s returned an invalid %s", systemOneLabel, field)
+		return 0, fmt.Errorf("%s returned an invalid %s", label, field)
 	}
 	var value any
 	if json.Unmarshal(raw, &value) != nil {
-		return 0, fmt.Errorf("%s returned an invalid %s", systemOneLabel, field)
+		return 0, fmt.Errorf("%s returned an invalid %s", label, field)
 	}
 	number, ok := value.(float64)
 	if !ok || math.IsNaN(number) || math.IsInf(number, 0) {
-		return 0, fmt.Errorf("%s returned an invalid %s", systemOneLabel, field)
+		return 0, fmt.Errorf("%s returned an invalid %s", label, field)
 	}
 	return number, nil
 }
