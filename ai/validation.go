@@ -15,12 +15,12 @@ import (
 
 // Port of utils/validation.ts: tool-argument validation with coercion.
 //
-// D-row D6: upstream validates with TypeBox (a full TypeBox/JSON-Schema
-// compiler). The Go port implements the JSON-Schema keyword subset TypeBox
-// schemas actually generate for tool parameters — type (incl. unions),
-// properties, required, items, additionalProperties, anyOf/oneOf/allOf,
-// enum/const — with upstream's exact coercion rules. Keywords outside the
-// subset (pattern, format, minimum, ...) do not constrain validation.
+// D317: upstream validates with TypeBox (a full TypeBox/JSON-Schema compiler).
+// The Go port implements the JSON-Schema keyword subset used by first-party
+// tool parameters — type (incl. unions), properties, required, items,
+// additionalProperties, anyOf/oneOf/allOf, enum/const. Unsupported keywords do
+// not constrain validation. Primitive coercions below match TypeBox for the
+// covered parameter types.
 
 type jsonSchema struct {
 	RejectAll               bool
@@ -448,8 +448,23 @@ func coercePrimitiveByType(value *schemaValue, typ string) *schemaValue {
 		if value.Null {
 			return &schemaValue{IsNumber: true, Number: 0}
 		}
+		if value.IsNumber && typ == "integer" {
+			return &schemaValue{IsNumber: true, Number: math.Trunc(value.Number)}
+		}
 		if value.IsString {
-			if parsed, ok := ParseJSNumberString(value.String); ok && (typ == "number" || parsed == math.Trunc(parsed)) {
+			parsed, ok := ParseJSNumberString(value.String)
+			if !ok {
+				switch strings.ToLower(value.String) {
+				case "true":
+					parsed, ok = 1, true
+				case "false":
+					parsed, ok = 0, true
+				}
+			}
+			if ok {
+				if typ == "integer" {
+					parsed = math.Trunc(parsed)
+				}
 				return &schemaValue{IsNumber: true, Number: parsed}
 			}
 		}
@@ -466,10 +481,10 @@ func coercePrimitiveByType(value *schemaValue, typ string) *schemaValue {
 			return &schemaValue{IsBool: true, Bool: false}
 		}
 		if value.IsString {
-			if value.String == "true" {
+			switch strings.ToLower(value.String) {
+			case "true", "1":
 				return &schemaValue{IsBool: true, Bool: true}
-			}
-			if value.String == "false" {
+			case "false", "0":
 				return &schemaValue{IsBool: true, Bool: false}
 			}
 		}
@@ -484,7 +499,7 @@ func coercePrimitiveByType(value *schemaValue, typ string) *schemaValue {
 		return value
 	case "string":
 		if value.Null {
-			return &schemaValue{IsString: true, String: ""}
+			return &schemaValue{IsString: true, String: "null"}
 		}
 		if value.IsNumber {
 			return &schemaValue{IsString: true, String: trimFloat(value.Number)}

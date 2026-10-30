@@ -6,6 +6,16 @@ import (
 	"testing"
 )
 
+// D317 reproducer: pi v1.4.0 utils/validation.ts delegates this constraint to
+// TypeBox and rejects the uppercase value; the Go keyword subset ignores pattern.
+func TestValidateToolArgumentsLeavesUnsupportedPatternUnconstrained(t *testing.T) {
+	tool := Tool{Name: "t", Parameters: json.RawMessage(`{"type":"object","properties":{"name":{"type":"string","pattern":"^[a-z]+$"}},"required":["name"]}`)}
+	got, err := ValidateToolArguments(tool, ToolCall{Name: "t", Arguments: json.RawMessage(`{"name":"UPPER"}`)})
+	if err != nil || string(got) != `{"name":"UPPER"}` {
+		t.Fatalf("result = %s, %v; want unsupported pattern to remain unconstrained", got, err)
+	}
+}
+
 // pi v1.4.0 utils/validation.ts validates enum/const with TypeBox on decoded
 // values, independent of JSON whitespace, number spelling and member order.
 func TestValidateToolArgumentsMatchesLiteralValues(t *testing.T) {
@@ -106,6 +116,66 @@ func TestValidateToolArgumentsRejectsNumericPrefixes(t *testing.T) {
 	result, err := ValidateToolArguments(tool, call)
 	if err != nil || string(result) != `{"x":16}` {
 		t.Fatalf("hex Number coercion = %s, %v; want 16", result, err)
+	}
+}
+
+// Reference: pi v1.4.0 (4a080252) packages/ai/src/utils/validation.ts and
+// TypeBox 1.3.27 value/convert/from_integer.mjs. Type.Integer truncates
+// numeric and numeric-string inputs before validation. Go carries the schema
+// as JSON without TypeBox's runtime kind metadata.
+func TestValidateToolArgumentsConvertsTypeBoxIntegers(t *testing.T) {
+	tool := Tool{Name: "t", Parameters: json.RawMessage(`{"type":"object","properties":{"n":{"type":"integer"}},"required":["n"]}`)}
+	for _, args := range []string{`{"n":3.7}`, `{"n":"3.7"}`} {
+		got, err := ValidateToolArguments(tool, ToolCall{Name: "t", Arguments: json.RawMessage(args)})
+		if err != nil || string(got) != `{"n":3}` {
+			t.Errorf("ValidateToolArguments(%s) = %s, %v; want {\"n\":3}", args, got, err)
+		}
+	}
+}
+
+// Reference: pi v1.4.0 (4a080252) packages/ai/src/utils/validation.ts and
+// TypeBox 1.3.27 value/convert/try/try_number.mjs.
+// Value.Convert accepts case-insensitive boolean words as numbers.
+func TestValidateToolArgumentsConvertsTypeBoxNumberWords(t *testing.T) {
+	tool := Tool{Name: "t", Parameters: json.RawMessage(`{"type":"object","properties":{"value":{"type":"number"}},"required":["value"]}`)}
+	for _, test := range []struct{ input, want string }{
+		{`"TRUE"`, `1`},
+		{`"False"`, `0`},
+	} {
+		got, err := ValidateToolArguments(tool, ToolCall{Name: "t", Arguments: json.RawMessage(`{"value":` + test.input + `}`)})
+		if err != nil || string(got) != `{"value":`+test.want+`}` {
+			t.Errorf("ValidateToolArguments(%s) = %s, %v; want %s", test.input, got, err, test.want)
+		}
+	}
+}
+
+// Reference: pi v1.4.0 (4a080252) packages/ai/src/utils/validation.ts and
+// TypeBox 1.3.27 value/convert/try/try_boolean.mjs.
+// Value.Convert accepts case-insensitive boolean strings and 0/1
+// strings before validation.
+func TestValidateToolArgumentsConvertsTypeBoxBooleanStrings(t *testing.T) {
+	tool := Tool{Name: "t", Parameters: json.RawMessage(`{"type":"object","properties":{"value":{"type":"boolean"}},"required":["value"]}`)}
+	for _, test := range []struct{ input, want string }{
+		{`"True"`, `true`},
+		{`"0"`, `false`},
+		{`"1"`, `true`},
+	} {
+		got, err := ValidateToolArguments(tool, ToolCall{Name: "t", Arguments: json.RawMessage(`{"value":` + test.input + `}`)})
+		if err != nil || string(got) != `{"value":`+test.want+`}` {
+			t.Errorf("ValidateToolArguments(%s) = %s, %v; want %s", test.input, got, err, test.want)
+		}
+	}
+}
+
+// Reference: pi v1.4.0 (4a080252) packages/ai/src/utils/validation.ts and
+// TypeBox 1.3.27 value/convert/try/try_string.mjs.
+// Value.Convert converts required null string fields with
+// String(null) before validation; optional nulls are handled separately.
+func TestValidateToolArgumentsConvertsRequiredNullStringLikeTypeBox(t *testing.T) {
+	tool := Tool{Name: "t", Parameters: json.RawMessage(`{"type":"object","properties":{"command":{"type":"string"}},"required":["command"]}`)}
+	got, err := ValidateToolArguments(tool, ToolCall{Name: "t", Arguments: json.RawMessage(`{"command":null}`)})
+	if err != nil || string(got) != `{"command":"null"}` {
+		t.Fatalf("ValidateToolArguments(null string) = %s, %v; want {\"command\":\"null\"}", got, err)
 	}
 }
 

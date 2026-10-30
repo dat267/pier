@@ -254,13 +254,13 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D316)
+## Deliberate divergences from pi (D1–D317)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D316**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D317**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation. Port and review history are available with `git log --oneline`.
 
 ### D41
@@ -3680,6 +3680,20 @@ Gists or collect and deliver bug report bundles. The associated `sessionShareDes
 absent because neither destination has an effect here. The live-service and
 sensitive-data consent flows are outside this port. Local HTML export is a
 separate supported operation.
+
+### D317
+
+**Tool validation does not implement the full TypeBox schema language.**
+
+Reference: pi v1.4.0 (`4a080252`), `packages/ai/src/utils/validation.ts`
+compiles and checks TypeBox schemas after applying `Value.Convert`. The Go
+validator supports the first-party subset of types, properties, required,
+items, additionalProperties, anyOf/oneOf/allOf, and enum/const, with primitive
+coercions covered by `ai/validation_test.go`. Other constraints such as
+`pattern`, `format`, `minimum`/`maximum`, string lengths, and array lengths do
+not constrain Go validation. For example, a string failing a schema `pattern`
+can still be accepted; `TestValidateToolArgumentsLeavesUnsupportedPatternUnconstrained`
+reproduces this intentional boundary.
 
 ## Lock inventory
 
