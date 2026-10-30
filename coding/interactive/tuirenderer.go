@@ -125,7 +125,7 @@ func CreateInteractiveTui(options InteractiveTuiOptions) tui.TUI {
 			}
 			clipboardScreen.Post(func() {
 				if altscreen, isAlt := clipboardScreen.(*tui.AltScreen); isAlt {
-					altscreen.Flash(err.Error(), 0)
+					altscreen.Flash(err.Error())
 				}
 			})
 		})

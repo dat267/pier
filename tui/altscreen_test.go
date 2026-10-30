@@ -85,7 +85,7 @@ func TestAltScreenAgainstUpstreamGolden(t *testing.T) {
 				inputHandler(input)
 			}
 			for _, flash := range step.Flashes {
-				screen.Flash(flash, 0)
+				screen.Flash(flash)
 			}
 			terminal.writes = nil
 			screen.RenderNow(false)

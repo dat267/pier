@@ -730,8 +730,8 @@ func stripZonePrefix(line string) string {
 }
 
 // Flash shows a transient message.
-func (s *AltScreen) Flash(message string, durationMS int) {
-	s.flashes.Flash(message, durationMS)
+func (s *AltScreen) Flash(message string, durationMS ...int) {
+	s.flashes.Flash(message, durationMS...)
 }
 
 // ---- Search ----
@@ -2002,7 +2002,7 @@ func (s *AltScreen) copyTextToClipboard(text string) bool {
 		handled, ok, message := s.copySelection(text)
 		if handled {
 			if ok {
-				s.Flash("Copied!", 0)
+				s.Flash("Copied!")
 			} else if message != "" {
 				s.Flash(message, copyErrorFlashDurationMS)
 			} else {
@@ -2012,7 +2012,7 @@ func (s *AltScreen) copyTextToClipboard(text string) bool {
 		}
 	}
 	s.Terminal.Write("\x1b]52;c;" + base64.StdEncoding.EncodeToString([]byte(text)) + "\x07")
-	s.Flash("Copied!", 0)
+	s.Flash("Copied!")
 	return true
 }
 

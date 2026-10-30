@@ -13,6 +13,7 @@ const (
 	defaultPrimaryColumnWidth = 32
 	primaryColumnGap          = 2
 	minDescriptionWidth       = 10
+	defaultFlashDurationMS    = 1000
 )
 
 func normalizeToSingleLine(text string) string {
@@ -746,15 +747,16 @@ func NewAltScreenFlashContainer(requestRender func()) *AltScreenFlashContainer {
 	return &AltScreenFlashContainer{requestRender: requestRender}
 }
 
-// Flash shows a message for the given duration.
-func (c *AltScreenFlashContainer) Flash(message string, durationMS int) {
-	if durationMS == 0 {
-		durationMS = 1000
+// Flash shows a message for the given duration, or for one second when omitted.
+func (c *AltScreenFlashContainer) Flash(message string, durationMS ...int) {
+	duration := defaultFlashDurationMS
+	if len(durationMS) > 0 {
+		duration = durationMS[0]
 	}
 	entry := flashEntry{
 		id:        c.nextID,
 		message:   message,
-		expiresAt: time.Now().Add(time.Duration(max(0, durationMS)) * time.Millisecond),
+		expiresAt: time.Now().Add(javascriptTimerDuration(int64(duration))),
 	}
 	c.nextID++
 	c.entries = append(c.entries, entry)

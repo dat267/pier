@@ -981,7 +981,7 @@ func (a *App) newLoopTui(options InteractiveTuiOptions) tui.TUI {
 			}
 			a.ui.Post(func() {
 				if screen, ok := a.currentRenderer().(*tui.AltScreen); ok {
-					screen.Flash(err.Error(), 0)
+					screen.Flash(err.Error())
 				}
 			})
 		})

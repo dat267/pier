@@ -403,7 +403,7 @@ func (w *CommandWiring) HandleCopyCommand(flashConfirmation bool, preferSelectio
 	}
 	if flashConfirmation {
 		if altScreen, isAlt := tuiConcrete(w.UI).(*tui.AltScreen); isAlt {
-			altScreen.Flash("Copied!", 0)
+			altScreen.Flash("Copied!")
 			return
 		}
 	}

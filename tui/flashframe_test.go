@@ -33,7 +33,7 @@ func TestFlashingScreenAsksForAFrameAtTheFlashExpiry(t *testing.T) {
 		t.Fatal("an idle alt screen asked for an animation frame")
 	}
 
-	screen.Flash("Copied!", 0) // 0 is upstream's default duration (1000ms)
+	screen.Flash("Copied!")
 
 	want, delay := screen.AnimationFrame(time.Now())
 	if !want {
@@ -47,9 +47,29 @@ func TestFlashingScreenAsksForAFrameAtTheFlashExpiry(t *testing.T) {
 // TestExpiredFlashIsGoneAndRepainted pins the other half: when the deadline
 // passes, the entry is dropped and a frame is asked for, the way upstream's timer
 // requests a render as it removes the entry.
+// pi v1.4.0 alt-screen-flash.ts defaults only an omitted duration; explicit
+// zero reaches setTimeout and uses JavaScript's 1ms timer minimum.
+func TestExplicitZeroFlashUsesTimerMinimum(t *testing.T) {
+	flashes := NewAltScreenFlashContainer(nil)
+	flashes.Flash("instant", 0)
+	want, delay := flashes.AnimationFrame(time.Now())
+	if !want || delay <= 0 || delay > 2*time.Millisecond {
+		t.Fatalf("zero-duration flash frame = (%t, %v), want a timer-minimum deadline", want, delay)
+	}
+}
+
+func TestOversizedFlashDurationUsesJavaScriptTimerClamp(t *testing.T) {
+	flashes := NewAltScreenFlashContainer(nil)
+	flashes.Flash("short-lived", 1<<31)
+	want, delay := flashes.AnimationFrame(time.Now())
+	if !want || delay <= 0 || delay > 2*time.Millisecond {
+		t.Fatalf("oversized flash frame = (%t, %v), want a 1ms JavaScript timer", want, delay)
+	}
+}
+
 func TestExpiredFlashIsGoneAndRepainted(t *testing.T) {
 	flashes := NewAltScreenFlashContainer(nil)
-	flashes.Flash("Copied!", 0)
+	flashes.Flash("Copied!")
 
 	later := time.Now().Add(2 * time.Second)
 	want, delay := flashes.AnimationFrame(later)
