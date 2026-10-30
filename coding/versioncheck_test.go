@@ -3,10 +3,12 @@ package coding
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -244,10 +246,15 @@ func TestHTTPDispatcherHelpers(t *testing.T) {
 	ApplyHTTPProxySettings("   ")
 }
 
+// Pi v1.4.0 at 4a080252 utils/pi-user-agent.ts delegates to
+// ai/utils/identity.ts. Keep management requests on the same detailed Go
+// runtime format as provider calls.
 func TestPiUserAgent(t *testing.T) {
 	agent := PiUserAgent("1.2.3")
-	if !strings.HasPrefix(agent, "pi/1.2.3 (") || !strings.Contains(agent, "go") {
-		t.Fatalf("agent = %q", agent)
+	goVersion := strings.TrimPrefix(runtime.Version(), "go")
+	want := fmt.Sprintf("pi/1.2.3 (%s; go/%s; %s)", runtime.GOOS, goVersion, runtime.GOARCH)
+	if agent != want {
+		t.Fatalf("agent = %q, want %q", agent, want)
 	}
 }
 

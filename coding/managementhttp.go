@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"runtime"
 	"time"
+
+	"github.com/dat267/pier/ai"
 )
 
 // Port of utils/management-http.ts and utils/pi-user-agent.ts.
@@ -140,10 +141,9 @@ func FetchWithRetry(ctx context.Context, request *http.Request, client *http.Cli
 	}
 }
 
-// PiUserAgent renders the pi user agent (port of getPiUserAgent; the JS runtime
-// token becomes the Go runtime version).
+// PiUserAgent renders the pi user agent (port of getPiUserAgent).
 func PiUserAgent(version string) string {
-	return fmt.Sprintf("pi/%s (%s; %s; %s)", version, runtime.GOOS, runtime.Version(), runtime.GOARCH)
+	return ai.FormatUserAgent(&ai.ClientIdentity{Version: version})
 }
 
 // cancelOnCloseBody cancels a request timeout context when the caller closes the
