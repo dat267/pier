@@ -123,6 +123,11 @@ func (a *App) sessionNew(ctx context.Context) (*SessionSwitchResult, error) {
 // createRuntime + rebindCurrentSession; the extension lifecycle events are
 // no-ops in this port, D41).
 func (a *App) applySessionReplacement(sessionManager *coding.SessionManager) (*SessionSwitchResult, error) {
+	a.teardownCurrentSession()
+	return a.bindSessionManager(sessionManager)
+}
+
+func (a *App) teardownCurrentSession() {
 	// teardownCurrent: settle any active response, dispose, unsubscribe.
 	a.session.Abort(context.Background())
 	a.session.Dispose()
@@ -130,7 +135,9 @@ func (a *App) applySessionReplacement(sessionManager *coding.SessionManager) (*S
 		a.unsubscribe()
 		a.unsubscribe = nil
 	}
+}
 
+func (a *App) bindSessionManager(sessionManager *coding.SessionManager) (*SessionSwitchResult, error) {
 	// The runtime is cwd-bound: upstream's createRuntime resolves the session's
 	// cwd's project trust and builds a settings manager for it, so a session from
 	// another directory gets that directory's settings, resources and trust
@@ -276,13 +283,29 @@ func (a *App) forkAtEntry(_ context.Context, entryID string, atPosition bool) (*
 		}
 	}
 
-	forked, err := coding.ForkSessionAtEntry(a.sessionMgr, targetLeafID, a.sessionMgr.GetCwd(), a.sessionMgr.GetSessionDir(), nil)
-	if err != nil {
-		return nil, err
-	}
-	result, err := a.applySessionReplacement(forked)
-	if err != nil {
-		return nil, err
+	var result *SessionSwitchResult
+	if a.sessionMgr.IsPersisted() {
+		forked, err := coding.ForkSessionAtEntry(a.sessionMgr, targetLeafID, a.sessionMgr.GetCwd(), a.sessionMgr.GetSessionDir(), nil)
+		if err != nil {
+			return nil, err
+		}
+		result, err = a.applySessionReplacement(forked)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		manager := a.sessionMgr
+		a.teardownCurrentSession()
+		if targetLeafID == "" {
+			manager.NewSession(nil)
+		} else if _, err := manager.CreateBranchedSession(targetLeafID); err != nil {
+			return nil, err
+		}
+		bound, err := a.bindSessionManager(manager)
+		if err != nil {
+			return nil, err
+		}
+		result = bound
 	}
 	return &SelectorForkResult{Cancelled: result.Cancelled, SelectedText: selectedText}, nil
 }

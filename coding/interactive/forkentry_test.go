@@ -75,6 +75,25 @@ func TestCloneCommandDuplicatesAtTheCurrentPosition(t *testing.T) {
 	}
 }
 
+// Reference: pi v1.4.0 (4a080252), packages/coding-agent/src/core/agent-session-runtime.ts:
+// fork keeps non-persisted sessions in their existing in-memory session manager.
+func TestCloneCommandKeepsNoSessionInMemory(t *testing.T) {
+	app, cleanup := newTestApp(t)
+	defer cleanup()
+	if app.sessionMgr.IsPersisted() {
+		t.Fatal("test session unexpectedly persists")
+	}
+	appendTurn(t, app, "hello")
+
+	if err := newSubmitWiring(app).Handlers.HandleCloneCommand(); err != nil {
+		t.Fatal(err)
+	}
+	persisted, file := app.sessionMgr.IsPersisted(), app.sessionMgr.GetSessionFile()
+	if persisted || file != "" {
+		t.Fatalf("cloning enabled persistence: persisted=%t file=%q", persisted, file)
+	}
+}
+
 // Forking "before" a user message leaves the message out and hands its text
 // back for the editor, which is what the message selector does.
 func TestForkAtEntryBeforeAMessage(t *testing.T) {
@@ -96,6 +115,10 @@ func TestForkAtEntryBeforeAMessage(t *testing.T) {
 	}
 	if texts := userMessageTexts(app); len(texts) != 0 {
 		t.Errorf("the fork kept %v, want the message left out", texts)
+	}
+	persisted, file := app.sessionMgr.IsPersisted(), app.sessionMgr.GetSessionFile()
+	if persisted || file != "" {
+		t.Errorf("forking enabled persistence: persisted=%t file=%q", persisted, file)
 	}
 	// The app-level fork re-records model/thinking entries on the new session, so
 	// a leaf exists again; the session-level test pins the fork's own leaf.
