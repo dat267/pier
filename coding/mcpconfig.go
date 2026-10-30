@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"maps"
 	"os"
 	"path/filepath"
@@ -294,6 +295,20 @@ func readJSONObjectOrdered(data []byte) ([]string, map[string]json.RawMessage, e
 			keys = append(keys, key)
 		}
 		values[key] = value
+	}
+	closing, err := decoder.Token()
+	if err != nil {
+		return nil, nil, err
+	}
+	if delimiter, ok := closing.(json.Delim); !ok || delimiter != '}' {
+		return nil, nil, fmt.Errorf("expected the end of a JSON object")
+	}
+	var trailing json.RawMessage
+	if err := decoder.Decode(&trailing); err != io.EOF {
+		if err == nil {
+			return nil, nil, fmt.Errorf("unexpected data after JSON object")
+		}
+		return nil, nil, err
 	}
 	return keys, values, nil
 }
