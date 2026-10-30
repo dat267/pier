@@ -35,6 +35,18 @@ func makeSessionFile(t *testing.T, cwd string) *coding.SessionManager {
 	return sm
 }
 
+// Reference: pi v1.4.0 packages/coding-agent/src/main.ts checks --version
+// before the later help handling.
+func TestExecuteVersionTakesPriorityOverHelp(t *testing.T) {
+	originalArgs := os.Args
+	os.Args = []string{"pier", "--help", "--version"}
+	defer func() { os.Args = originalArgs }()
+	stdout, stderr := captureStdio(t, Execute)
+	if stdout != coding.Version+"\n" || stderr != "" {
+		t.Fatalf("stdout=%q stderr=%q, want version only", stdout, stderr)
+	}
+}
+
 func TestResumeSessionByExactID(t *testing.T) {
 	isolatedAgentDir(t)
 	cwd := t.TempDir()

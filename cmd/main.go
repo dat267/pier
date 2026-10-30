@@ -99,12 +99,12 @@ func Execute() {
 		os.Exit(1)
 	}
 
-	if args.Help {
-		fmt.Print(coding.PrintHelpNamed(appName))
-		return
-	}
 	if args.Version {
 		fmt.Println(coding.Version)
+		return
+	}
+	if args.Help {
+		fmt.Print(coding.PrintHelpNamed(appName))
 		return
 	}
 	// --export renders a session file and exits before any runtime or TUI is
