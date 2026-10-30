@@ -107,6 +107,19 @@ func TestLoadMcpConfigMergesAndValidates(t *testing.T) {
 
 // TestLoadMcpConfigRejectsNamespaceClashes is upstream's #10239 regression:
 // names differing only in `-` and `_` would share a namespace.
+// Reference: pi v1.4.0 packages/coding-agent/src/extensions/mcp/config.ts
+// accepts only boolean autoEnableCodemode values; JSON null is not a boolean.
+func TestLoadMcpConfigRejectsNullAutoEnableCodemode(t *testing.T) {
+	agentDir, _ := writeMCPFile(t, `{"autoEnableCodemode":null,"mcpServers":{}}`, "")
+	loaded := LoadMcpConfig(McpConfigLoadOptions{AgentDir: agentDir})
+	if loaded.AutoEnableCodemode != nil {
+		t.Fatalf("autoEnableCodemode = %v, want unset after invalid null", *loaded.AutoEnableCodemode)
+	}
+	if len(loaded.Errors) != 1 || !strings.HasSuffix(loaded.Errors[0], "autoEnableCodemode must be a boolean") {
+		t.Fatalf("errors = %q", loaded.Errors)
+	}
+}
+
 func TestLoadMcpConfigRejectsNamespaceClashes(t *testing.T) {
 	global := `{ "mcpServers": { "work-files": { "command": "a" }, "work_files": { "command": "b" } } }`
 	agentDir, projectDir := writeMCPFile(t, global, "")

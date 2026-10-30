@@ -132,9 +132,9 @@ func readMcpConfigFile(path string, scope McpServerScope, state *mcpConfigState)
 	}
 
 	if raw, ok := values["autoEnableCodemode"]; ok {
-		var enabled bool
-		if err := json.Unmarshal(raw, &enabled); err == nil {
-			state.autoEnableCodemode = &enabled
+		var enabled *bool
+		if err := json.Unmarshal(raw, &enabled); err == nil && enabled != nil {
+			state.autoEnableCodemode = enabled
 		} else {
 			state.errors = append(state.errors, fmt.Sprintf("%s: autoEnableCodemode must be a boolean", path))
 		}
