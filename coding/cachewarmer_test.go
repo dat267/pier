@@ -3,6 +3,7 @@ package coding
 import (
 	ctxpkg "context"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -256,6 +257,44 @@ func TestCacheWarmerEconomicsAndWarm(t *testing.T) {
 	// The forced decision is an extension override, which the usage note carries.
 	if !strings.HasPrefix(text, "Cache warmed (extension override): $0.0003") {
 		t.Fatalf("text = %q", text)
+	}
+}
+
+// Reference: pi v1.4.0 (4a080252), core/cache-warmer.ts reads/writes the run
+// phase synchronously on one event loop; the Go port's status/settle/mode hooks
+// may run concurrently and must synchronize the same state.
+func TestCacheWarmerStatusConcurrentWithAgentSettle(t *testing.T) {
+	model := warmerModel()
+	model.PromptCache[ai.CacheRetentionShort] = 3600
+	warmer, manager, _ := newTestWarmer(t, model, CacheWarmingIdle)
+	defer warmer.Cancel()
+	manager.AppendMessage(&ai.AssistantMessage{
+		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",
+		Usage: ai.Usage{Input: 1000, TotalTokens: 1000},
+	})
+	warmer.Start(CacheWarmRequest{Model: model}, func() bool { return true })
+
+	for range 100 {
+		start := make(chan struct{})
+		var group sync.WaitGroup
+		group.Add(3)
+		go func() {
+			defer group.Done()
+			<-start
+			_ = warmer.Status()
+		}()
+		go func() {
+			defer group.Done()
+			<-start
+			warmer.OnModeChanged()
+		}()
+		go func() {
+			defer group.Done()
+			<-start
+			warmer.OnAgentSettled()
+		}()
+		close(start)
+		group.Wait()
 	}
 }
 

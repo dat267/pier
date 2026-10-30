@@ -404,15 +404,16 @@ func (w *CacheWarmer) schedule(run *cacheWarmingRun) {
 	// Keep half the planned pre-expiry margin for timer/policy delays. A late
 	// refresh risks paying to rewrite an expired cache rather than reading it.
 	run.refreshDeadlineAt = run.nextWarmAt + (run.ttlMS-run.delayMS)/2
+	phase := run.phase
 	deadline := run.startedAt + maxCacheWarmingAgeMS
-	if run.phase == "idle" {
+	if phase == "idle" {
 		deadline = run.startedAt + maxIdleCacheWarmingAgeMS
 	}
 	overdue := run.nextWarmAt > deadline || time.Now().UnixMilli() >= deadline
 	w.mu.Unlock()
 	if overdue {
 		reason := "one-hour safety limit reached"
-		if run.phase == "idle" {
+		if phase == "idle" {
 			reason = "30-minute idle safety limit reached"
 		}
 		w.stopRun(run, reason, nil)
@@ -582,13 +583,19 @@ func (w *CacheWarmer) modeStopReason(run *cacheWarmingRun) string {
 	if mode == CacheWarmingOff {
 		return "cache warming disabled"
 	}
-	if mode == CacheWarmingStreaming && run.phase == "idle" {
+	w.mu.Lock()
+	phase := run.phase
+	w.mu.Unlock()
+	if mode == CacheWarmingStreaming && phase == "idle" {
 		return "agent run settled"
 	}
 	return ""
 }
 
 func (w *CacheWarmer) evaluate(run *cacheWarmingRun) CacheWarmingDecision {
+	w.mu.Lock()
+	phase := run.phase
+	w.mu.Unlock()
 	model := run.request.Model
 	promptTokens := lastCacheWarmingPromptTokens(w.SessionManager.GetBranch(""))
 	cacheHitCost := cacheWarmingPrice(model, 0, 0, promptTokens, 0)
@@ -602,7 +609,7 @@ func (w *CacheWarmer) evaluate(run *cacheWarmingRun) CacheWarmingDecision {
 		missCost = 0
 	}
 	continuationProbability := 1.0
-	if run.phase == "idle" {
+	if phase == "idle" {
 		continuationProbability = idleCacheWarmingContinuationProbability
 	}
 	economicsAvailable := promptTokens > 0 && (cacheHitCost > 0 || cacheMissCost > 0)
@@ -612,7 +619,7 @@ func (w *CacheWarmer) evaluate(run *cacheWarmingRun) CacheWarmingDecision {
 		action = CacheWarmingActionWarm
 	}
 	return CacheWarmingDecision{
-		Phase: run.phase, WarmCost: warmCost, MissCost: missCost,
+		Phase: phase, WarmCost: warmCost, MissCost: missCost,
 		ContinuationProbability: continuationProbability, ExpectedSavings: expectedSavings,
 		EconomicsAvailable: economicsAvailable, Action: action,
 	}
