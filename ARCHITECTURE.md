@@ -254,13 +254,13 @@ The underlying CLI and session APIs may support operations that are not yet
 exposed through RPC. Unsupported commands fail explicitly; this milestone does
 not claim complete upstream RPC compatibility.
 
-## Deliberate divergences from pi (D1–D303)
+## Deliberate divergences from pi (D1–D316)
 
 Representative rationales for deliberate differences from pi: Go runtime
 constraints, corrected upstream defects, and project choices. D IDs also appear
 in code comments; not every ID has a full entry here, since closed, retired,
 withdrawn, historical and removed-code rows are pruned. The range is
-**D1–D303**. Entries are ordered numerically; overlapping rows refer to the
+**D1–D316**. Entries are ordered numerically; overlapping rows refer to the
 owning explanation. Port and review history are available with `git log --oneline`.
 
 ### D41
@@ -3664,6 +3664,19 @@ Reproducers: `TestReadToolReturnsAbortWhenCanceledDuringMimeSniff` in
 then releases the read and checks that Go returns an abort rather than a late
 success. `TestLsToolAbortsWhenCanceledDuringFilesystemWork` in
 `coding/ls_cancel_test.go` covers cancellation after the ls entry check.
+
+### D316
+
+**Interactive session sharing and bug reporting are not ported.**
+
+Reference: pi v1.4.0 (`4a080252`),
+`packages/coding-agent/src/modes/interactive/session-share.ts`, `bug-report.ts`,
+`interactive-mode.ts`, and `components/settings-selector.ts`. The port omits
+`/share` and `/bug`; it does not upload session transcripts to Radius/GitHub
+Gists or collect and deliver bug report bundles. The associated `sessionShareDestination` setting row is also
+absent because neither destination has an effect here. The live-service and
+sensitive-data consent flows are outside this port. Local HTML export is a
+separate supported operation.
 
 ## Lock inventory
 

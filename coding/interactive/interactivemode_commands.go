@@ -15,8 +15,8 @@ import (
 // Port of the remaining command handlers of
 // src/modes/interactive/interactive-mode.ts (getPathCommandArgument,
 // handleExport/Import/Copy/Name/Session/Hotkeys/Clear/Debug/Compact/Reload
-// commands, the easter eggs and stop). The share and bug-report flows and
-// the changelog command were removed; they are not part of this port.
+// commands, the easter eggs and stop). The session-share and bug-report flows
+// (D316) and the changelog command are not part of this port.
 //
 // Divergences: the runtime/clipboard/report collaborators are injected (D125);
 // the extension seams stay out of scope (D41).
