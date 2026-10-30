@@ -377,7 +377,9 @@ func (c *Client) ListResourcesPage(ctx context.Context, cursor *string, options 
 	if err != nil {
 		return nil, err
 	}
-	result := &protocol.ListResourcesResult{NextCursor: next}
+	result := &protocol.ListResourcesResult{
+		Resources: make([]protocol.Resource, 0, len(items)), NextCursor: next,
+	}
 	for _, item := range items {
 		resource, err := decodeResource(item)
 		if err != nil {
@@ -411,7 +413,9 @@ func (c *Client) ListResourceTemplatesPage(ctx context.Context, cursor *string, 
 	if err != nil {
 		return nil, err
 	}
-	result := &protocol.ListResourceTemplatesResult{NextCursor: next}
+	result := &protocol.ListResourceTemplatesResult{
+		ResourceTemplates: make([]protocol.ResourceTemplate, 0, len(items)), NextCursor: next,
+	}
 	for _, item := range items {
 		template, err := decodeResourceTemplate(item)
 		if err != nil {
