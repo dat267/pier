@@ -268,20 +268,24 @@ type StdinBufferOptions struct {
 	// Timeout is the maximum time to wait for an incomplete sequence such as
 	// CSI or mouse (default 50ms).
 	Timeout int
+	// TimeoutSet distinguishes an explicit zero from the default.
+	TimeoutSet bool
 	// EscapeTimeout is the maximum time to wait after a lone ESC before
 	// treating it as Escape (default 10ms). Increase for high-latency Alt+key
 	// input (SSH).
 	EscapeTimeout int
+	// EscapeTimeoutSet distinguishes an explicit zero from the default.
+	EscapeTimeoutSet bool
 }
 
 // NewStdinBuffer creates a buffer with the given options.
 func NewStdinBuffer(options StdinBufferOptions) *StdinBuffer {
 	timeoutMS := defaultSequenceTimeoutMS
-	if options.Timeout != 0 {
+	if options.TimeoutSet || options.Timeout != 0 {
 		timeoutMS = int(javascriptTimerDuration(int64(options.Timeout)) / time.Millisecond)
 	}
 	escapeTimeoutMS := defaultEscapeTimeoutMS
-	if options.EscapeTimeout != 0 {
+	if options.EscapeTimeoutSet || options.EscapeTimeout != 0 {
 		escapeTimeoutMS = int(javascriptTimerDuration(int64(options.EscapeTimeout)) / time.Millisecond)
 	}
 	return &StdinBuffer{timeoutMS: timeoutMS, escapeTimeoutMS: escapeTimeoutMS}
