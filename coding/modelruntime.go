@@ -202,7 +202,7 @@ func CreateModelRuntime(options CreateModelRuntimeOptions) (*ModelRuntime, error
 	}
 	var cancel context.CancelFunc
 	if refreshFromNetwork && options.ModelRefreshTimeoutMS != nil {
-		ctx, cancel = context.WithTimeout(ctx, time.Duration(*options.ModelRefreshTimeoutMS)*time.Millisecond)
+		ctx, cancel = context.WithTimeout(ctx, modelRefreshTimeoutDuration(*options.ModelRefreshTimeoutMS))
 	}
 	refreshOnCreate := options.RefreshOnCreate == nil || *options.RefreshOnCreate
 	if refreshOnCreate {
@@ -214,6 +214,17 @@ func CreateModelRuntime(options CreateModelRuntimeOptions) (*ModelRuntime, error
 		cancel()
 	}
 	return runtime, nil
+}
+
+// modelRefreshTimeoutDuration mirrors the setTimeout delay clamp used by
+// core/model-runtime.ts. Node schedules delays below 1ms or above 2^31-1ms at
+// 1ms; an omitted timeout remains distinct and does not call this helper.
+func modelRefreshTimeoutDuration(timeoutMS int64) time.Duration {
+	const maxTimerMS = int64(1<<31 - 1)
+	if timeoutMS < 1 || timeoutMS > maxTimerMS {
+		return time.Millisecond
+	}
+	return time.Duration(timeoutMS) * time.Millisecond
 }
 
 // isOfflineDisabled reports whether network access is allowed (PI_OFFLINE unset).
