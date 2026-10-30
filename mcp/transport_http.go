@@ -40,6 +40,8 @@ type SseEvent struct {
 // ConsumeSseOptions configures the SSE parser (upstream ConsumeSseOptions).
 type ConsumeSseOptions struct {
 	MaxEventBytes int64
+	// MaxEventBytesSet distinguishes an explicit zero limit from defaulting.
+	MaxEventBytesSet bool
 	// OnEvent is called for every complete event.
 	OnEvent func(SseEvent)
 	// OnID is called for every `id` field, including events without data
@@ -55,7 +57,7 @@ type ConsumeSseOptions struct {
 // data including the line joins.
 func ConsumeSseStream(body io.Reader, options ConsumeSseOptions) error {
 	maxEventBytes := options.MaxEventBytes
-	if maxEventBytes == 0 {
+	if maxEventBytes == 0 && !options.MaxEventBytesSet {
 		maxEventBytes = DefaultMaxMessageBytes
 	}
 	reader := bufio.NewReader(unicode.UTF8BOM.NewDecoder().Reader(body))
@@ -211,8 +213,10 @@ type StreamableHttpTransportOptions struct {
 	Fetch           func(ctx context.Context, request *http.Request) (*http.Response, error)
 	OpenGetStream   *bool
 	MaxMessageBytes int64
-	AuthProvider    AuthProvider
-	Reconnect       *StreamableHttpReconnectOptions
+	// MaxMessageBytesSet distinguishes an explicit zero limit from defaulting.
+	MaxMessageBytesSet bool
+	AuthProvider       AuthProvider
+	Reconnect          *StreamableHttpReconnectOptions
 }
 
 // McpHttpError is an HTTP-level transport failure (upstream McpHttpError).
@@ -724,11 +728,12 @@ func discardBody(response *http.Response) {
 func (t *StreamableHttpTransport) consumeSse(body io.ReadCloser, cursor *streamCursor, onMessage func(Message)) error {
 	defer body.Close()
 	maxEventBytes := t.options.MaxMessageBytes
-	if maxEventBytes == 0 {
+	if maxEventBytes == 0 && !t.options.MaxMessageBytesSet {
 		maxEventBytes = DefaultMaxMessageBytes
 	}
 	return ConsumeSseStream(body, ConsumeSseOptions{
-		MaxEventBytes: maxEventBytes,
+		MaxEventBytes:    maxEventBytes,
+		MaxEventBytesSet: true,
 		OnID: func(id string) {
 			cursor.lastEventID = &id
 		},
