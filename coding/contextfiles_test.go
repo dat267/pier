@@ -334,6 +334,31 @@ func TestOrdinaryRepoAndMissingGitdirClimbNormally(t *testing.T) {
 	}
 }
 
+func TestFindGitPathsRejectsUnreadableCommonDir(t *testing.T) {
+	// Reference: pi v1.4.0 (4a080252), footer-data-provider.ts catches a
+	// commondir read error and returns null for the whole git-path lookup.
+	main := filepath.Join(t.TempDir(), "main")
+	worktree := filepath.Join(main, "worktree")
+	gitDir := filepath.Join(main, ".git", "worktrees", "feat")
+	if err := os.MkdirAll(gitDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeContextFile(t, filepath.Join(main, ".git", "HEAD"), "ref: refs/heads/main\n")
+	writeContextFile(t, filepath.Join(gitDir, "HEAD"), "ref: refs/heads/feat\n")
+	if err := os.Mkdir(filepath.Join(gitDir, "commondir"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(worktree, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(worktree, ".git"), []byte("gitdir: "+gitDir+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if paths := FindGitPaths(worktree); paths != nil {
+		t.Fatalf("malformed commondir returned git paths: %+v", paths)
+	}
+}
+
 func TestFindGitPaths(t *testing.T) {
 	// An ordinary repository: .git is a directory with HEAD.
 	repo := filepath.Join(t.TempDir(), "repo")

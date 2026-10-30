@@ -38,7 +38,11 @@ func FindGitPaths(cwd string) *GitPaths {
 					}
 					commonGitDir := gitDir
 					commonDirPath := filepath.Join(gitDir, "commondir")
-					if content, err := os.ReadFile(commonDirPath); err == nil {
+					if _, err := os.Stat(commonDirPath); err == nil {
+						content, err := os.ReadFile(commonDirPath)
+						if err != nil {
+							return nil
+						}
 						commonGitDir = resolveFrom(gitDir, strings.TrimSpace(DecodeUTF8WithReplacement(content)))
 					}
 					return &GitPaths{RepoDir: dir, CommonGitDir: commonGitDir, HeadPath: headPath}
