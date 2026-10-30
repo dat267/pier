@@ -258,6 +258,16 @@ func TestPiUserAgent(t *testing.T) {
 	}
 }
 
+// Upstream getPiUserAgent always passes a defined version property, so empty
+// remains distinct from an omitted identity version.
+func TestPiUserAgentPreservesExplicitEmptyVersion(t *testing.T) {
+	goVersion := strings.TrimPrefix(runtime.Version(), "go")
+	want := fmt.Sprintf("pi/ (%s; go/%s; %s)", runtime.GOOS, goVersion, runtime.GOARCH)
+	if got := PiUserAgent(""); got != want {
+		t.Fatalf("agent = %q, want %q", got, want)
+	}
+}
+
 func TestSemverComparison(t *testing.T) {
 	cases := []struct {
 		left, right string

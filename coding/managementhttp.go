@@ -143,7 +143,7 @@ func FetchWithRetry(ctx context.Context, request *http.Request, client *http.Cli
 
 // PiUserAgent renders the pi user agent (port of getPiUserAgent).
 func PiUserAgent(version string) string {
-	return ai.FormatUserAgent(&ai.ClientIdentity{Version: version})
+	return ai.FormatUserAgent(&ai.ClientIdentity{Version: version, VersionSet: true})
 }
 
 // cancelOnCloseBody cancels a request timeout context when the caller closes the
