@@ -1010,16 +1010,13 @@ func (c *Client) emitError(err error) {
 	}
 }
 
-// decodeItems turns validated page objects into typed results.
-func decodeItems[T any](items []map[string]any) ([]T, error) {
+// decodeItems turns validated raw page entries into typed results without
+// rebuilding their nested JSON objects through unordered Go maps.
+func decodeItems[T any](items []validatedListItem) ([]T, error) {
 	out := make([]T, 0, len(items))
 	for _, item := range items {
-		enc, err := protocol.MarshalJSON(item)
-		if err != nil {
-			return nil, err
-		}
 		var decoded T
-		if err := json.Unmarshal(enc, &decoded); err != nil {
+		if err := json.Unmarshal(item.Raw, &decoded); err != nil {
 			return nil, err
 		}
 		out = append(out, decoded)
