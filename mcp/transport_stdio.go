@@ -40,7 +40,9 @@ type StdioTransportOptions struct {
 	Stderr          string // "pipe" (default) or "inherit"
 	OnStderr        func(chunk string)
 	MaxMessageBytes int64
-	MaxStderrBytes  int64
+	// MaxMessageBytesSet distinguishes an explicit zero limit from defaulting.
+	MaxMessageBytesSet bool
+	MaxStderrBytes     int64
 	// CloseTimeoutMs is how long the server gets after SIGTERM before
 	// SIGKILL. Default: 2000.
 	CloseTimeoutMs int64
@@ -259,7 +261,7 @@ func (t *StdioTransport) finishClose() {
 
 func (t *StdioTransport) handleStdout(chunk []byte) {
 	maxMessageBytes := t.options.MaxMessageBytes
-	if maxMessageBytes == 0 {
+	if maxMessageBytes == 0 && !t.options.MaxMessageBytesSet {
 		maxMessageBytes = DefaultMaxMessageBytes
 	}
 	var overflow bool
