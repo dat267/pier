@@ -476,7 +476,13 @@ func (s *AgentSession) Abort(ctx context.Context) {
 // mid-turn (`slow UI phase "raw-input" 188ms`, loop parked in waitForSessionIdle),
 // which upstream never pays because awaiting a promise yields to its event loop
 // (D168).
-func (s *AgentSession) AbortAsync() {
+func (s *AgentSession) AbortAsync() { s.abortAsync(true) }
+
+// AbortTurnAsync aborts the agent run, retry and compaction work without
+// cancelling independently running user Bash commands (as RPC `abort` requires).
+func (s *AgentSession) AbortTurnAsync() { s.abortAsync(false) }
+
+func (s *AgentSession) abortAsync(abortBash bool) {
 	state := s.prompt()
 	state.mu.Lock()
 	if state.runActive {
@@ -490,7 +496,9 @@ func (s *AgentSession) AbortAsync() {
 	s.AbortRetry()
 	s.AbortCompaction()
 	s.AbortBranchSummary()
-	s.AbortBash()
+	if abortBash {
+		s.AbortBash()
+	}
 	s.Agent.Abort()
 }
 

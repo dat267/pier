@@ -381,6 +381,35 @@ func TestRPCAbortBashCancelsRunningCommand(t *testing.T) {
 	}
 }
 
+// pi v1.4.0 rpc-mode.ts keeps abort and abort_bash separate: session.abort()
+// cancels the agent run, while only abort_bash cancels an active user command.
+func TestRPCAbortDoesNotCancelRunningBash(t *testing.T) {
+	if _, err := os.Stat("/bin/sh"); err != nil {
+		t.Skip("no shell available")
+	}
+	client := startRPCTest(t, rpcTestSession(t))
+	client.send(t, `{"id":"run","type":"bash","command":"printf ready; sleep 30; printf done"}`)
+	client.until(t, func(record map[string]any) bool {
+		return record["type"] == "bash_execution_update" && record["id"] == "run"
+	})
+	client.send(t, `{"id":"abort","type":"abort"}`)
+	firstResponse := client.until(t, func(record map[string]any) bool {
+		return record["type"] == "response" && (record["id"] == "abort" || record["id"] == "run")
+	})
+	if firstResponse["id"] != "abort" || firstResponse["success"] != true {
+		t.Fatalf("abort should settle independently of bash, first response = %+v", firstResponse)
+	}
+	client.send(t, `{"id":"stop","type":"abort_bash"}`)
+	responses := client.untilResponses(t, "stop", "run")
+	if responses["stop"]["success"] != true {
+		t.Fatalf("abort_bash response = %+v", responses["stop"])
+	}
+	data, ok := responses["run"]["data"].(map[string]any)
+	if !ok || responses["run"]["success"] != true || data["cancelled"] != true {
+		t.Fatalf("explicit abort_bash did not cancel bash: %+v", responses["run"])
+	}
+}
+
 // pi v1.4.0 requires the new command fields to have the right types.
 func TestRPCNewCommandFieldValidation(t *testing.T) {
 	records := runRPCScript(t, rpcTestSession(t),

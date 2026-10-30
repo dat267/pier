@@ -322,6 +322,16 @@ func (r *rpcRuntime) bindSession() {
 	})
 }
 
+// abortSessionRun matches upstream session.abort: it waits for agent and
+// compaction work to settle without touching independently running user Bash.
+func (r *rpcRuntime) abortSessionRun() {
+	if r.runCancel != nil {
+		r.runCancel()
+	}
+	r.session.AbortTurnAsync()
+	_ = r.session.waitForSessionIdle(r.ctx)
+}
+
 // settleWorkers cancels the current run, aborts bash/compaction/retry and waits
 // for in-flight command workers. It runs on the command owner, never a worker.
 func (r *rpcRuntime) settleWorkers() {
@@ -670,7 +680,7 @@ func (r *rpcRuntime) handle(command rpcCommand) (any, bool, error) {
 		}
 		return jsonEventObject{{"cancelled", false}}, true, nil
 	case "abort":
-		r.settleWorkers()
+		r.abortSessionRun()
 		return nil, false, nil
 	case "compact":
 		instructions := ""
