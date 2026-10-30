@@ -707,8 +707,13 @@ func (c *Client) handleRequest(message *protocol.JsonRpcRequest) {
 			if mcpErr, ok := err.(*protocol.McpError); ok {
 				responseError.Code = mcpErr.Code
 				responseError.Message = mcpErr.Msg
-				if raw, ok := mcpErr.Data.(json.RawMessage); ok {
-					responseError.Data = raw
+				if mcpErr.Data != nil {
+					data, marshalErr := protocol.MarshalJSON(mcpErr.Data)
+					if marshalErr != nil {
+						c.emitError(marshalErr)
+						return
+					}
+					responseError.Data = data
 				}
 			} else {
 				responseError.Message = err.Error()
