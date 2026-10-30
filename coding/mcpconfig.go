@@ -102,6 +102,9 @@ type mcpConfigState struct {
 func readMcpConfigFile(path string, scope McpServerScope, state *mcpConfigState) {
 	data, err := os.ReadFile(path)
 	if err != nil {
+		if !os.IsNotExist(err) {
+			state.errors = append(state.errors, fmt.Sprintf("%s: %s", path, err.Error()))
+		}
 		return
 	}
 	// A leading UTF-8 BOM (Windows PowerShell 5.1, many editors) would make the
