@@ -254,11 +254,10 @@ func (s *ScrollView) ScrollTo(scrollTop int, options ...ScrollToRequest) {
 	s.currentScrollTop = next
 	s.followingEnd = nextFollowingEnd
 	s.followSuppressedAtEnd = nextFollowSuppressedAtEnd
-	var callback func()
 	if moved {
 		s.markScrollbarActivityLocked()
-		callback = s.requestRenderCallback
 	}
+	callback := s.requestRenderCallback
 	if callback != nil {
 		callback()
 	}
