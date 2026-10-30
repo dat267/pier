@@ -43,6 +43,8 @@ type StdioTransportOptions struct {
 	// MaxMessageBytesSet distinguishes an explicit zero limit from defaulting.
 	MaxMessageBytesSet bool
 	MaxStderrBytes     int64
+	// MaxStderrBytesSet distinguishes explicit zero (no truncation) from defaulting.
+	MaxStderrBytesSet bool
 	// CloseTimeoutMs is how long the server gets after SIGTERM before
 	// SIGKILL. Default: 2000.
 	CloseTimeoutMs int64
@@ -312,12 +314,12 @@ func (t *StdioTransport) emitLine(text string) {
 
 func (t *StdioTransport) handleStderr(chunk []byte) {
 	maxStderrBytes := t.options.MaxStderrBytes
-	if maxStderrBytes == 0 {
+	if maxStderrBytes == 0 && !t.options.MaxStderrBytesSet {
 		maxStderrBytes = defaultMaxStderrBytes
 	}
 	t.mu.Lock()
 	t.stderrBuffer = append(t.stderrBuffer, chunk...)
-	if int64(len(t.stderrBuffer)) > maxStderrBytes {
+	if !(maxStderrBytes == 0 && t.options.MaxStderrBytesSet) && int64(len(t.stderrBuffer)) > maxStderrBytes {
 		start := int64(len(t.stderrBuffer)) - maxStderrBytes
 		if maxStderrBytes < 0 {
 			if maxStderrBytes < -int64(len(t.stderrBuffer)) {
