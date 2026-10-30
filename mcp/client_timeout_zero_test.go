@@ -25,7 +25,9 @@ func TestClientExplicitZeroTimeoutOverridesClientDefault(t *testing.T) {
 		<-release
 		return map[string]any{"content": []any{}}, nil
 	})
-	client := NewClient(ClientOptions{Name: "test-client", Version: "1.0.0", RequestTimeoutMs: 5})
+	// Keep initialize's default timeout generous under the race detector; the
+	// later caller deadline still distinguishes zero from this client default.
+	client := NewClient(ClientOptions{Name: "test-client", Version: "1.0.0", RequestTimeoutMs: 100})
 	if _, err := client.Connect(context.Background(), clientTransport); err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +36,7 @@ func TestClientExplicitZeroTimeoutOverridesClientDefault(t *testing.T) {
 		_ = client.Close(context.Background())
 	})
 
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 	_, err := client.CallTool(ctx, "wait", nil, RequestOptions{TimeoutMs: 0, TimeoutMsSet: true})
 	if _, ok := errors.AsType[*protocol.McpAbortError](err); !ok {
