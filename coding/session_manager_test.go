@@ -285,6 +285,62 @@ func TestFindMostRecentSessionEqualMtimesUseNativeDirectoryOrder(t *testing.T) {
 	}
 }
 
+// Reference: pi v1.4.0 (4a080252), session-manager.ts listAll preserves
+// native directory order when candidate mtime and basename tie.
+func TestListAllSessionsPreservesNativeOrderForDuplicateFilenames(t *testing.T) {
+	home := t.TempDir()
+	setHomeDir(t, home)
+	t.Setenv("PI_CODING_AGENT_DIR", filepath.Join(home, ".pi", "agent"))
+	sessionsDir := DefaultSessionsDir()
+	names := []string{"zeta", "alpha", "mu"}
+	for _, name := range names {
+		dir := filepath.Join(sessionsDir, name)
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		header, err := ai.MarshalJSON(map[string]any{
+			"type": "session", "version": 3, "id": name, "timestamp": "2020-01-01T00:00:00.000Z", "cwd": "/project",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		message, err := ai.MarshalJSON(map[string]any{
+			"type": "message", "id": "e" + name, "parentId": nil,
+			"timestamp": "2020-01-01T00:00:00.000Z",
+			"message":   map[string]any{"role": "user", "content": name, "timestamp": int64(1000)},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		path := filepath.Join(dir, "shared.jsonl")
+		if err := os.WriteFile(path, append(append(header, '\n'), message...), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	directory, err := os.Open(sessionsDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries, err := directory.ReadDir(-1)
+	closeErr := directory.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if len(entries) == 0 {
+		t.Fatal("session directory fixture is empty")
+	}
+	list := ListAllSessions("")
+	if len(list) != len(names) {
+		t.Fatalf("sessions = %d, want %d", len(list), len(names))
+	}
+	if list[0].ID != entries[0].Name() {
+		t.Fatalf("first session = %q, want native-order directory %q", list[0].ID, entries[0].Name())
+	}
+}
+
 func TestFindMostRecentSession(t *testing.T) {
 	dir := t.TempDir()
 	sessions := filepath.Join(dir, "sessions")

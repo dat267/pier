@@ -1452,7 +1452,12 @@ func ListAllSessions(sessionDir string) []SessionInfo {
 		return sortSessionInfos(listSessionsFromDir(sessionDir))
 	}
 	sessionsDir := DefaultSessionsDir()
-	entries, err := os.ReadDir(sessionsDir)
+	directory, err := os.Open(sessionsDir)
+	if err != nil {
+		return nil
+	}
+	entries, err := directory.ReadDir(-1)
+	_ = directory.Close()
 	if err != nil {
 		return nil
 	}
