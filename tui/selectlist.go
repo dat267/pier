@@ -553,6 +553,8 @@ func (l *Loader) SetIndicator(indicator *LoaderIndicatorOptions) {
 		interval := indicator.IntervalMS
 		if interval <= 0 {
 			interval = defaultLoaderIntervalMS
+		} else {
+			interval = int(javascriptTimerDuration(int64(interval)) / time.Millisecond)
 		}
 		l.intervalMS = interval
 	}
