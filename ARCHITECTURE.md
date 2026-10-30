@@ -3630,6 +3630,25 @@ Reproducers: `TestCalculateContextTokensUsesJSNumberRounding`,
 `TestEstimateContextTokensUsesJSNumberAddition`, and
 `TestCalculateContextTokensSaturatesBeyondGoInt` in `ai/estimate_test.go`.
 
+### D315
+
+**Read-tool cancellation cannot interrupt synchronous filesystem calls.**
+
+Reference: pi v1.4.0 (`4a080252`), `packages/coding-agent/src/core/tools/read.ts`
+installs an abort listener while awaiting path access, image detection, and file
+reads, rejecting with `Operation aborted` as soon as the signal fires. Go's
+`os.Stat`, MIME sniff, and `os.ReadFile` calls are synchronous and cannot be
+interrupted by a context. The read tool now checks cancellation after each
+filesystem or image-processing boundary and before returning, preventing a
+canceled operation from later resolving successfully. If a filesystem call is
+blocked, however, the caller still waits for that call to return. Running these
+calls in detached goroutines would leak work and is not done.
+
+Reproducer: `TestReadToolReturnsAbortWhenCanceledDuringMimeSniff` in
+`coding/read_cancel_unix_test.go` uses a FIFO to cancel during MIME detection,
+then releases the read and checks that Go returns an abort rather than a late
+success. The test also captures the remaining synchronous-call delay.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

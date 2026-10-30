@@ -85,16 +85,29 @@ func CreateReadTool(cwd string, options *ReadToolOptions) agent.AgentTool {
 			if _, err := os.Stat(absolutePath); err != nil {
 				return agent.AgentToolResult{}, err
 			}
+			// D315: synchronous filesystem calls cannot be interrupted, so sample
+			// cancellation at each boundary to prevent a late successful result.
+			if ctxErrOf(ctx) != nil {
+				return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
+			}
 
-			if mimeType, mimeErr := DetectSupportedImageMimeTypeFromFile(absolutePath); mimeErr != nil {
+			mimeType, mimeErr := DetectSupportedImageMimeTypeFromFile(absolutePath)
+			if mimeErr != nil {
 				return agent.AgentToolResult{}, mimeErr
-			} else if mimeType != "" {
-				return readImageFile(absolutePath, mimeType, input.Path, autoResize, modelFor)
+			}
+			if ctxErrOf(ctx) != nil {
+				return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
+			}
+			if mimeType != "" {
+				return readImageFile(ctx, absolutePath, mimeType, input.Path, autoResize, modelFor)
 			}
 
 			data, err := os.ReadFile(absolutePath)
 			if err != nil {
 				return agent.AgentToolResult{}, err
+			}
+			if ctxErrOf(ctx) != nil {
+				return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
 			}
 			textContent := DecodeUTF8WithReplacement(data)
 			allLines := strings.Split(textContent, "\n")
@@ -146,6 +159,9 @@ func CreateReadTool(cwd string, options *ReadToolOptions) agent.AgentTool {
 			var details json.RawMessage
 			if truncation.Truncated || truncation.FirstLineExceedsLimit {
 				details, _ = ai.MarshalJSON(ReadToolDetails{Truncation: &truncation})
+			}
+			if ctxErrOf(ctx) != nil {
+				return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
 			}
 			return agent.AgentToolResult{
 				Content: []ai.Content{ai.TextContent{Text: outputText}},
@@ -201,10 +217,13 @@ func imageResizeOptionsFor(model *ai.Model) ImageResizeOptions {
 // which resizes within the limits or reports an omission message; the processing
 // hints and the non-vision note are folded into the text, and the image content
 // is attached only when the processing succeeded.
-func readImageFile(absolutePath, mimeType, originalPath string, autoResize bool, modelFor func() *ai.Model) (agent.AgentToolResult, error) {
+func readImageFile(ctx context.Context, absolutePath, mimeType, originalPath string, autoResize bool, modelFor func() *ai.Model) (agent.AgentToolResult, error) {
 	data, err := os.ReadFile(absolutePath)
 	if err != nil {
 		return agent.AgentToolResult{}, err
+	}
+	if ctxErrOf(ctx) != nil {
+		return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
 	}
 	var model *ai.Model
 	if modelFor != nil {
@@ -215,6 +234,9 @@ func readImageFile(absolutePath, mimeType, originalPath string, autoResize bool,
 		AutoResizeImages: &autoResize,
 		ResizeOptions:    &resizeOptions,
 	})
+	if ctxErrOf(ctx) != nil {
+		return agent.AgentToolResult{}, fmt.Errorf("Operation aborted")
+	}
 	note := nonVisionImageNote(model)
 	if !processed.OK {
 		text := fmt.Sprintf("Read image file [%s]\n%s", mimeType, processed.Message)
