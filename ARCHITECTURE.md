@@ -3434,6 +3434,26 @@ text aside.
 Test: `TestSessionSearchRegexUsesRE2Syntax` pins the rejected constructs and a
 matching plain pattern.
 
+### D304
+
+**OAuth expiry timestamps saturate at Go's int64 millisecond bounds.**
+
+Reference: pi v1.4.0 OAuth providers calculate expiry with JavaScript Number
+arithmetic (`auth/oauth/anthropic.ts`, `auth/oauth/radius.ts`,
+`auth/oauth/xai.ts`, `auth/oauth/kimi-coding.ts`,
+`auth/oauth/openai-codex.ts`, `auth/oauth/openai-chatgpt.ts`, and
+`auth/oauth/github-copilot.ts`). Go stores `OAuthCredential.Expires` as int64
+Unix milliseconds, so finite JS deadlines outside that range cannot be
+represented exactly. `ai/oauth_expiry.go` saturates at the nearest bound to
+preserve whether the credential is in the future or past rather than wrapping
+into the opposite state. Ordinary provider lifetimes retain their exact
+millisecond values.
+
+Tests: `TestAnthropicTokenExpiryDoesNotWrapForLargeLifetime`,
+`TestAnthropicTokenExpiryKeepsLargeNegativeLifetimeInPast`, and
+`TestOAuthExpiryRemainsFutureAcrossTokenParsers` reproduce overflow in the
+covered lifetime and absolute-expiry parsers.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

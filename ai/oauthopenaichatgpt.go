@@ -388,7 +388,7 @@ func openAIChatGPTCredentialFromToken(token *openAIChatGPTTokenResponse, clientI
 	return &OAuthCredential{
 		Access:  token.AccessToken,
 		Refresh: token.RefreshToken,
-		Expires: time.Now().UnixMilli() + int64(token.ExpiresIn*1000) - OpenAIChatGPTCredentialMargin,
+		Expires: oauthExpiryFromLifetime(token.ExpiresIn, OpenAIChatGPTCredentialMargin),
 		Extra: map[string]json.RawMessage{
 			"clientId": jsonRawString(clientID),
 			"scopes":   encodedScopes,

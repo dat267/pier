@@ -233,7 +233,7 @@ func xaiCredentialsFromTokenResponse(body map[string]any, previousRefreshToken s
 	return &OAuthCredential{
 		Access:  access,
 		Refresh: refresh,
-		Expires: time.Now().UnixMilli() + int64(expiresIn)*1000 - xaiRefreshSkewMS}, nil
+		Expires: oauthExpiryFromLifetime(expiresIn, float64(xaiRefreshSkewMS))}, nil
 }
 
 // RequestXaiDeviceCode starts the xAI device authorization.
@@ -476,7 +476,7 @@ func parseKimiTokenResponse(body map[string]any, operation string) (*kimiTokenRe
 	}
 	return &kimiTokenResponse{
 		Access: access, Refresh: refresh,
-		Expires: time.Now().UnixMilli() + int64(expiresIn)*1000,
+		Expires: oauthExpiryFromLifetime(expiresIn, 0),
 	}, nil
 }
 

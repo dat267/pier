@@ -125,7 +125,7 @@ func ReadOpenAICodexTokenResponse(response *http.Response, operation string) (*O
 	return &OpenAICodexTokenResponse{
 		Access:  payload.AccessToken,
 		Refresh: payload.RefreshToken,
-		Expires: time.Now().UnixMilli() + int64(*payload.ExpiresIn)*1000,
+		Expires: oauthExpiryFromLifetime(*payload.ExpiresIn, 0),
 	}, nil
 }
 

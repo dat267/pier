@@ -281,7 +281,7 @@ func ExchangeAnthropicAuthorizationCode(ctx context.Context, code, state, verifi
 	return &OAuthCredential{
 		Refresh: tokenData.RefreshToken,
 		Access:  tokenData.AccessToken,
-		Expires: time.Now().UnixMilli() + tokenData.ExpiresIn*1000 - 5*60*1000}, nil
+		Expires: oauthExpiryFromLifetime(float64(tokenData.ExpiresIn), 5*60*1000)}, nil
 }
 
 // RefreshAnthropicToken refreshes an Anthropic OAuth credential (upstream
@@ -309,7 +309,7 @@ func RefreshAnthropicToken(ctx context.Context, refreshToken string) (*OAuthCred
 	return &OAuthCredential{
 		Refresh: data.RefreshToken,
 		Access:  data.AccessToken,
-		Expires: time.Now().UnixMilli() + data.ExpiresIn*1000 - 5*60*1000}, nil
+		Expires: oauthExpiryFromLifetime(float64(data.ExpiresIn), 5*60*1000)}, nil
 }
 
 // AnthropicAuthorizeURL builds the authorize URL for a PKCE challenge

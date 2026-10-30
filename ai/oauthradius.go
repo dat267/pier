@@ -152,7 +152,7 @@ func RequestRadiusOAuthToken(ctx context.Context, gateway string, fields map[str
 	return &OAuthCredential{
 		Access:  payload.AccessToken,
 		Refresh: payload.RefreshToken,
-		Expires: time.Now().UnixMilli() + payload.ExpiresIn*1000 - radiusTokenSkewMS,
+		Expires: oauthExpiryFromLifetime(float64(payload.ExpiresIn), float64(radiusTokenSkewMS)),
 		Extra:   extra}, nil
 }
 

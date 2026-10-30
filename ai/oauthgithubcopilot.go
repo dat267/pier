@@ -501,7 +501,7 @@ func RefreshGitHubCopilotAccessToken(ctx context.Context, refreshToken, enterpri
 	return &OAuthCredential{
 		Refresh: refreshToken,
 		Access:  token,
-		Expires: int64(expiresAt)*1000 - 5*60*1000,
+		Expires: oauthExpiryFromUnixSeconds(expiresAt, 5*60*1000),
 		Extra:   extra}, nil
 }
 
