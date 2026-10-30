@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -421,13 +422,21 @@ func refreshAuthorizedUserToken(ctx ctxpkg.Context, cacheKey string, credentials
 		expiresIn = 3600
 	}
 	// Refresh a minute early to avoid using an expired token.
-	expires := time.Now().Add(time.Duration(expiresIn)*time.Second - time.Minute)
+	expires := vertexTokenExpiry(expiresIn)
 	vertexTokenCache.mu.Lock()
 	vertexTokenCache.entries[cacheKey] = cachedVertexToken{
 		token: payload.AccessToken, expires: expires, fingerprint: fingerprintText,
 	}
 	vertexTokenCache.mu.Unlock()
 	return payload.AccessToken, nil
+}
+
+func vertexTokenExpiry(expiresIn int64) time.Time {
+	maxSeconds := int64(math.MaxInt64 / int64(time.Second))
+	if expiresIn > maxSeconds {
+		return time.Now().Add(time.Duration(math.MaxInt64) - time.Minute)
+	}
+	return time.Now().Add(time.Duration(expiresIn)*time.Second - time.Minute)
 }
 
 func metadataAccessToken(ctx ctxpkg.Context, env ProviderEnv) (string, error) {
@@ -471,7 +480,7 @@ func metadataAccessToken(ctx ctxpkg.Context, env ProviderEnv) (string, error) {
 	if expiresIn <= 0 {
 		expiresIn = 3600
 	}
-	expires := time.Now().Add(time.Duration(expiresIn)*time.Second - time.Minute)
+	expires := vertexTokenExpiry(expiresIn)
 	vertexTokenCache.mu.Lock()
 	vertexTokenCache.entries[cacheKey] = cachedVertexToken{token: payload.AccessToken, expires: expires}
 	vertexTokenCache.mu.Unlock()

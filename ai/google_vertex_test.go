@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
 
@@ -340,6 +341,38 @@ func TestVertexStreamServiceAccountCredentialsUnsupported(t *testing.T) {
 	if _, err := vertexAccessToken(ctxpkg.Background(), nil); err == nil ||
 		!strings.Contains(err.Error(), "service-account key files are not supported") {
 		t.Fatalf("err = %v", err)
+	}
+}
+
+// pi v1.4.0 google-vertex.ts uses GoogleGenAI's ADC flow; its pinned
+// google-auth-library computes expiry_date as Date.now() + expires_in * 1000.
+func TestVertexMetadataTokenLargeExpiryStaysCached(t *testing.T) {
+	var requests atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		requests.Add(1)
+		writer.Header().Set("Content-Type", "application/json")
+		_, _ = writer.Write([]byte(`{"access_token":"long-lived-token","expires_in":10000000000}`))
+	}))
+	defer server.Close()
+
+	vertexTokenCache.mu.Lock()
+	previous := vertexTokenCache.entries
+	vertexTokenCache.entries = map[string]cachedVertexToken{}
+	vertexTokenCache.mu.Unlock()
+	t.Cleanup(func() {
+		vertexTokenCache.mu.Lock()
+		vertexTokenCache.entries = previous
+		vertexTokenCache.mu.Unlock()
+	})
+	env := ProviderEnv{"GCE_METADATA_HOST": strings.TrimPrefix(server.URL, "http://")}
+	for i := 0; i < 2; i++ {
+		token, err := metadataAccessToken(ctxpkg.Background(), env)
+		if err != nil || token != "long-lived-token" {
+			t.Fatalf("request %d: token=%q err=%v", i+1, token, err)
+		}
+	}
+	if got := requests.Load(); got != 1 {
+		t.Fatalf("metadata requests = %d, want cached token after first request", got)
 	}
 }
 
