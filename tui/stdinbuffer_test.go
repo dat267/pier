@@ -203,6 +203,39 @@ func TestStdinBufferLoneEscape(t *testing.T) {
 	}
 }
 
+// TestStdinBufferTimeoutRecoversBatchedAltControlInput matches pinned pi
+// v1.4.0 (4a080252), packages/tui/src/stdin-buffer.ts: after the ambiguous-input
+// timeout, the Alt key and following text must be dispatched separately.
+func TestStdinBufferTimeoutRecoversBatchedAltControlInput(t *testing.T) {
+	for _, input := range []string{"\x1b]a", "\x1bPa", "\x1b_a"} {
+		buffer := NewStdinBuffer(StdinBufferOptions{Timeout: 10})
+		buffer.ProcessString(input)
+		deadline, ok := buffer.PendingTimeout()
+		if !ok {
+			t.Fatalf("no timeout for ambiguous Alt input %q", input)
+		}
+		got := buffer.FlushExpired(deadline)
+		want := []string{input[:2], input[2:]}
+		if strings.Join(got, "|") != strings.Join(want, "|") {
+			t.Fatalf("expired input = %q, want %q", got, want)
+		}
+	}
+}
+
+func TestStdinBufferTimeoutReparsesKeysAfterAmbiguousControlString(t *testing.T) {
+	buffer := NewStdinBuffer(StdinBufferOptions{Timeout: 10})
+	buffer.ProcessString("\x1b]a\r\x1b[A")
+	deadline, ok := buffer.PendingTimeout()
+	if !ok {
+		t.Fatal("no timeout for ambiguous Alt input")
+	}
+	got := buffer.FlushExpired(deadline)
+	want := []string{"\x1b]", "a", "\r", "\x1b[A"}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("expired input = %q, want %q", got, want)
+	}
+}
+
 func TestStdinBufferMixedContent(t *testing.T) {
 	buffer, emitted, resetEmitted := collectBuffer(StdinBufferOptions{Timeout: 10})
 

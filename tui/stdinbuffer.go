@@ -488,12 +488,33 @@ func (b *StdinBuffer) FlushExpired(now time.Time) []string {
 	if b.buffer == "" {
 		return nil
 	}
-	sequences := []string{b.buffer}
-	b.rememberFlushedHead(b.buffer)
+	sequence := b.buffer
+	b.rememberFlushedHead(sequence)
 	b.buffer = ""
 	b.pendingCodepoint = 0
 	b.hasPendingCodepoint = false
+	if len(sequence) > 2 && isControlString(sequence) {
+		return b.reprocessTimedOutControlString(sequence)
+	}
+	return []string{sequence}
+}
+
+// reprocessTimedOutControlString recovers an ambiguous Alt key and parses its
+// tail as input, matching upstream stdin-buffer.ts's timeout callback.
+func (b *StdinBuffer) reprocessTimedOutControlString(sequence string) []string {
+	sequences := []string{sequence[:2]}
+	// FlushExpired returns output instead of delivering it through OnData.
+	onData := b.OnData
+	b.OnData = func(sequence string) { sequences = append(sequences, sequence) }
+	defer func() { b.OnData = onData }()
+	b.process(sequence[2:])
 	return sequences
+}
+
+func isControlString(sequence string) bool {
+	return startsWith(sequence, stdinEscape+"]") ||
+		startsWith(sequence, stdinEscape+"P") ||
+		startsWith(sequence, stdinEscape+"_")
 }
 
 // rememberFlushedHead notes a flushed sequence that a following tail may
