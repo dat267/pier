@@ -15,6 +15,21 @@ import (
 // requests.
 var retryableStatusCodes = map[int]bool{408: true, 425: true, 429: true, 500: true, 502: true, 503: true, 504: true}
 
+const (
+	maxAbortSignalTimeoutMS int64 = 1<<32 - 1
+	maxNodeTimerDelayMS     int64 = 1<<31 - 1
+)
+
+func abortSignalTimeoutDuration(timeoutMS int64) (time.Duration, error) {
+	if timeoutMS < 0 || timeoutMS > maxAbortSignalTimeoutMS {
+		return 0, fmt.Errorf("The value of \"delay\" is out of range. It must be >= 0 && <= %d. Received %d", maxAbortSignalTimeoutMS, timeoutMS)
+	}
+	if timeoutMS > maxNodeTimerDelayMS {
+		timeoutMS = 1
+	}
+	return time.Duration(timeoutMS) * time.Millisecond, nil
+}
+
 // FetchRetryOptions bound the retry behavior.
 type FetchRetryOptions struct {
 	// MaxRetries is the number of additional attempts after the initial
@@ -52,7 +67,11 @@ func FetchWithRetry(ctx context.Context, request *http.Request, client *http.Cli
 	}
 	var overallCancel context.CancelFunc
 	if options.TimeoutMS != nil && *options.TimeoutMS > 0 {
-		baseCtx, overallCancel = context.WithTimeout(baseCtx, time.Duration(*options.TimeoutMS)*time.Millisecond)
+		timeout, err := abortSignalTimeoutDuration(*options.TimeoutMS)
+		if err != nil {
+			return nil, err
+		}
+		baseCtx, overallCancel = context.WithTimeout(baseCtx, timeout)
 		defer func() {
 			if overallCancel != nil {
 				overallCancel()
@@ -69,7 +88,11 @@ func FetchWithRetry(ctx context.Context, request *http.Request, client *http.Cli
 		attemptCtx := baseCtx
 		var attemptCancel context.CancelFunc
 		if options.AttemptTimeoutMS != nil && *options.AttemptTimeoutMS > 0 {
-			attemptCtx, attemptCancel = context.WithTimeout(baseCtx, time.Duration(*options.AttemptTimeoutMS)*time.Millisecond)
+			attemptTimeout, err := abortSignalTimeoutDuration(*options.AttemptTimeoutMS)
+			if err != nil {
+				return nil, err
+			}
+			attemptCtx, attemptCancel = context.WithTimeout(baseCtx, attemptTimeout)
 		}
 		attemptRequest := request.WithContext(attemptCtx)
 
