@@ -51,6 +51,20 @@ func TestNestedCallRecorderErrorTruncated(t *testing.T) {
 	}
 }
 
+// Reference: pi v1.4.0 (4a080252), packages/coding-agent/src/core/nested-tool-calls.ts
+// measures JSON.stringify(arguments) bytes, not the whitespace in the input encoding.
+func TestNestedCallRecorderMeasuresSerializedArgumentBytes(t *testing.T) {
+	arguments := json.RawMessage("{\n  \"x\": \"" + strings.Repeat("x", 8184) + "\"\n}")
+	recorder := NewNestedCallRecorder()
+	record := recorder.Start(ai.ToolCall{ID: "c", Name: "t", Arguments: arguments})
+	if record == nil || record.ArgumentsBytes != nil || len(record.Arguments) == 0 {
+		t.Fatalf("arguments at the serialized byte limit were omitted: %+v", record)
+	}
+	if len(record.Arguments) != NestedCallLimits.MaxArgumentBytesPerCall {
+		t.Fatalf("stored arguments = %d bytes, want compact JSON at the limit", len(record.Arguments))
+	}
+}
+
 // TestNestedCallRecorderLimits covers the count and argument-size limits.
 func TestNestedCallRecorderLimits(t *testing.T) {
 	// The call count caps at maxCalls and marks the record incomplete.

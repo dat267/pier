@@ -53,6 +53,11 @@ func (r *NestedCallRecorder) Start(toolCall ai.ToolCall) *ai.NestedToolCallRecor
 	if len(arguments) == 0 {
 		arguments = json.RawMessage("{}")
 	}
+	// Upstream receives an object and measures its JSON.stringify form; Go
+	// receives raw JSON, which may retain formatting whitespace.
+	if serialized, err := ai.MarshalJSON(arguments); err == nil {
+		arguments = serialized
+	}
 	size := len(arguments)
 	if size > NestedCallLimits.MaxArgumentBytesPerCall || r.argumentBytes+size > NestedCallLimits.MaxArgumentBytesTotal {
 		record.ArgumentsBytes = &size
