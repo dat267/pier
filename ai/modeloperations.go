@@ -1,8 +1,7 @@
 package ai
 
 // Port of the public half of utils/model-operations.ts: the model-type helpers
-// re-exported from models.ts. The port's catalog is chat-only, so the type is
-// "chat" unless a model explicitly carries one.
+// re-exported from models.ts. A missing type defaults to "chat".
 
 // GetModelType returns the model's type; a model without one is a chat model
 // (upstream getModelType).

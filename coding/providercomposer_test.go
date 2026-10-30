@@ -13,6 +13,35 @@ import (
 // Round 99 tests: the model composer (models.json layers) and the api-provider
 // registry.
 
+type providerComposerTestClassifier struct{}
+
+func (providerComposerTestClassifier) Classify(model *ai.Model, _ ai.ClassifierContext, _ *ai.ClassifierOptions) *ai.ClassifierResult {
+	return &ai.ClassifierResult{API: model.API, Provider: model.Provider, Model: model.ID, StopReason: ai.ClassifierStopStop}
+}
+
+// Reference: pi v1.4.0 packages/ai/src/models.ts createProvider and
+// packages/ai/src/providers/openai.ts classifier registration.
+func TestComposeModelProviderPreservesClassifierModelsAndDispatch(t *testing.T) {
+	classifier := &ai.Model{ID: "decision", API: ai.APIOpenAIDecisions, Provider: "openai", Type: "classifier"}
+	base := ai.CreateProvider(ai.CreateProviderOptions{
+		ID: "openai", Auth: ai.ProviderAuth{APIKey: &ai.ApiKeyAuth{Name: "OpenAI"}},
+		Models:          []*ai.Model{classifier},
+		Classifiers:     map[string]ai.ProviderClassifier{ai.APIOpenAIDecisions: providerComposerTestClassifier{}},
+		FilterAllModels: func(models []*ai.Model, _ *ai.Credential) []*ai.Model { return models },
+	})
+	composed, err := ComposeModelProvider("openai", base, &ModelConfig{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(composed.GetClassifierModels()) != 1 || composed.FilterAllModels == nil {
+		t.Fatalf("composed classifiers=%v filterAllModels=%v", composed.GetClassifierModels(), composed.FilterAllModels != nil)
+	}
+	result := composed.Classify(classifier, ai.ClassifierContext{}, nil)
+	if result.StopReason != ai.ClassifierStopStop {
+		t.Fatalf("classifier dispatch = %+v", result)
+	}
+}
+
 func TestAPIRegistryBuiltins(t *testing.T) {
 	apis := []ai.Api{
 		ai.APIAnthropicMessages, ai.APIOpenAICompletions, ai.APIOpenAIResponses,
@@ -80,6 +109,62 @@ func anthropicBaseProvider() *ai.Provider {
 		Models: []*ai.Model{anthropicBaseModel()},
 		Single: funcStreams{},
 	})
+}
+
+// Reference: pi v1.4.0 packages/coding-agent/src/core/provider-composer.ts
+// only matches chat models when applying models.json entries and finding defaults.
+func TestApplyModelsJSONMatchesChatWhenIDsOverlapClassifier(t *testing.T) {
+	classifier := &ai.Model{ID: "same", Name: "Classifier", API: ai.APIOpenAIDecisions, Provider: "openai", BaseURL: "https://openai.test/v1", Type: "classifier"}
+	chat := &ai.Model{ID: "same", Name: "Chat", API: ai.APIOpenAIResponses, Provider: "openai", BaseURL: "https://openai.test/v1", Type: "chat"}
+	models, err := applyModelsJSON("openai", []*ai.Model{classifier, chat}, &ModelsJSONProvider{
+		BaseURL: "https://configured.test/v1",
+		Models:  []ModelsJSONModel{{ID: "same", Name: "Configured"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(models) != 2 || models[0].Type != "classifier" || models[0].API != ai.APIOpenAIDecisions || models[1].Type != "" || models[1].API != ai.APIOpenAIResponses {
+		t.Fatalf("models = %+v", models)
+	}
+}
+
+// Reference: pi v1.4.0 packages/coding-agent/src/core/provider-composer.ts
+// applies models.json modelOverrides only to chat models.
+func TestComposeModelProviderAppliesOverridesOnlyToChat(t *testing.T) {
+	classifier := &ai.Model{ID: "same", Name: "Classifier", API: ai.APIOpenAIDecisions, Provider: "openai", BaseURL: "https://openai.test/v1", Type: "classifier", ContextWindow: 922000}
+	chat := &ai.Model{ID: "same", Name: "Chat", API: ai.APIOpenAIResponses, Provider: "openai", BaseURL: "https://openai.test/v1", Type: "chat", ContextWindow: 1000}
+	base := ai.CreateProvider(ai.CreateProviderOptions{
+		ID: "openai", Auth: ai.ProviderAuth{APIKey: &ai.ApiKeyAuth{Name: "OpenAI"}}, Models: []*ai.Model{classifier, chat},
+	})
+	config := &ModelConfig{providers: map[string]ModelsJSONProvider{
+		"openai": {ModelOverrides: map[string]ModelsJSONModelOverride{"same": {Name: "Configured"}}},
+	}}
+	provider, err := ComposeModelProvider("openai", base, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	models := provider.GetAllModels()
+	if len(models) != 2 || models[0].Type != "classifier" || models[0].Name != "Classifier" || models[1].Type != "chat" || models[1].Name != "Configured" {
+		t.Fatalf("models = %+v", models)
+	}
+}
+
+// Reference: pi v1.4.0 packages/coding-agent/src/core/provider-composer.ts rawModelHeaders applies models.json headers to chat only.
+func TestModelsJSONHeadersOnlyApplyToChatWhenIDsOverlapClassifier(t *testing.T) {
+	config := &ModelsJSONProvider{
+		ModelOverrides: map[string]ModelsJSONModelOverride{"same": {Headers: map[string]string{"X-Configured": "override"}}},
+		Models:         []ModelsJSONModel{{ID: "same", Headers: map[string]string{"X-Configured": "model"}}},
+	}
+	classifier := &ai.Model{ID: "same", Provider: "openai", API: ai.APIOpenAIDecisions, Type: "classifier"}
+	chat := &ai.Model{ID: "same", Provider: "openai", API: ai.APIOpenAIResponses, Type: "chat"}
+	classifierHeaders, err := ResolveConfiguredModelHeaders(classifier, config, nil)
+	if err != nil || len(classifierHeaders) != 0 {
+		t.Fatalf("classifier headers = %v, err = %v", classifierHeaders, err)
+	}
+	chatHeaders, err := ResolveConfiguredModelHeaders(chat, config, nil)
+	if err != nil || chatHeaders["X-Configured"] != "model" {
+		t.Fatalf("chat headers = %v, err = %v", chatHeaders, err)
+	}
 }
 
 func TestApplyModelsJSONCustomModels(t *testing.T) {

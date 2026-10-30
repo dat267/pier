@@ -19,6 +19,33 @@ import (
 // Round 114 tests: the remote catalog overlay, the bug-report zip archive, and
 // the built-in slash commands.
 
+// Keep the upstream classifier registration intact through Pier's catalog
+// wrappers (pi v1.4.0 packages/ai/src/providers/openai.ts).
+func TestRemoteCatalogWrappersPreserveClassifierCapabilities(t *testing.T) {
+	classifier := &ai.Model{ID: "decision", API: ai.APIOpenAIDecisions, Provider: "openai", Type: "classifier"}
+	base := ai.CreateProvider(ai.CreateProviderOptions{
+		ID: "openai", Auth: ai.ProviderAuth{APIKey: &ai.ApiKeyAuth{Name: "OpenAI"}},
+		Models:          []*ai.Model{classifier},
+		Classifiers:     map[string]ai.ProviderClassifier{ai.APIOpenAIDecisions: providerComposerTestClassifier{}},
+		FilterAllModels: func(models []*ai.Model, _ *ai.Credential) []*ai.Model { return models },
+		Single:          funcStreams{},
+	})
+	for name, provider := range map[string]*ai.Provider{
+		"remote":       WithRemoteCatalog(base, "https://catalog.example", 0, false, nil),
+		"personalized": WithPersonalizedCatalog(base, nil, "https://catalog.example", 0, false, nil),
+	} {
+		t.Run(name, func(t *testing.T) {
+			if len(provider.GetClassifierModels()) != 1 || provider.FilterAllModels == nil {
+				t.Fatalf("classifier models=%v filterAllModels=%v", provider.GetClassifierModels(), provider.FilterAllModels != nil)
+			}
+			result := provider.Classify(classifier, ai.ClassifierContext{}, nil)
+			if result.StopReason != ai.ClassifierStopStop {
+				t.Fatalf("classifier dispatch = %+v", result)
+			}
+		})
+	}
+}
+
 func catalogProvider(t *testing.T) *ai.Provider {
 	t.Helper()
 	return ai.CreateProvider(ai.CreateProviderOptions{

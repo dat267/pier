@@ -2,8 +2,10 @@ package providers
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -50,6 +52,110 @@ func TestOpenAIProviderUsesResponses(t *testing.T) {
 				t.Fatalf("stop reason = %q, want stop", message.StopReason)
 			}
 		})
+	}
+}
+
+// TestOpenAIProviderFiltersClassifierForChatGPTOAuth follows openai.ts, which
+// hides classifier models for ChatGPT OAuth credentials.
+func TestOpenAIProviderFiltersClassifierForChatGPTOAuth(t *testing.T) {
+	provider := OpenAIProvider()
+	models := append(provider.GetModels(), provider.GetClassifierModels()...)
+	oauthModels := provider.FilterAllModels(models, &ai.Credential{Type: ai.CredentialOAuth})
+	for _, model := range oauthModels {
+		if model.Type == "classifier" {
+			t.Fatalf("classifier model %s remained available to ChatGPT OAuth", model.ID)
+		}
+	}
+	apiKeyModels := provider.FilterAllModels(models, &ai.Credential{Type: ai.CredentialAPIKey})
+	if len(apiKeyModels) != len(models) {
+		t.Fatalf("API-key model count = %d, want %d", len(apiKeyModels), len(models))
+	}
+}
+
+// TestOpenAIProviderExposesDecisionsClassifier follows openai.ts and
+// openai.models.ts, which register and export the Decisions classifier model.
+func TestOpenAIProviderExposesDecisionsClassifier(t *testing.T) {
+	models := OpenAIProvider().GetClassifierModels()
+	if len(models) != 1 {
+		t.Fatalf("classifier models = %d, want one OpenAI Decisions model", len(models))
+	}
+	model := models[0]
+	if model.ID != "gpt-6-luna" || model.API != ai.APIOpenAIDecisions || model.Type != "classifier" {
+		t.Fatalf("classifier model = %+v", model)
+	}
+}
+
+// Reference: pi v1.4.0 packages/ai/src/api/openai-decisions.ts caps input at 128 images.
+func TestOpenAIProviderClassifiesRejectsMoreThan128Images(t *testing.T) {
+	requests := make(chan struct{}, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests <- struct{}{}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"answers":[]}`))
+	}))
+	defer server.Close()
+	model := &ai.Model{ID: "gpt-6-luna", API: ai.APIOpenAIDecisions, Provider: "openai", BaseURL: server.URL + "/v1", Type: "classifier", Input: []string{"text", "image"}}
+	images := make([]ai.ImageContent, 129)
+	result := OpenAIProvider().Classify(model, ai.ClassifierContext{State: json.RawMessage(`{}`), Images: images}, &ai.ClassifierOptions{StreamOptions: ai.StreamOptions{APIKey: "secret"}})
+	if len(requests) != 0 {
+		t.Fatalf("classifier made %d requests for oversized image input", len(requests))
+	}
+	if result.StopReason != ai.ClassifierStopError || result.ErrorMessage == nil || !strings.Contains(*result.ErrorMessage, "at most 128 images, got 129") {
+		t.Fatalf("oversized image result = %+v", result)
+	}
+}
+
+// Reference: pi v1.4.0 packages/ai/src/api/openai-decisions.ts and
+// packages/ai/test/openai-decisions.test.ts.
+func TestOpenAIProviderClassifiesWithDecisionsAPI(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/decisions" {
+			t.Errorf("request path = %q", r.URL.Path)
+		}
+		if got := r.Header.Get("Authorization"); got != "Bearer secret" {
+			t.Errorf("authorization = %q", got)
+		}
+		var request struct {
+			Model     string `json:"model"`
+			Input     string `json:"input"`
+			Questions []struct {
+				Type string `json:"type"`
+				Name string `json:"name"`
+			} `json:"questions"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			t.Errorf("decode request: %v", err)
+		}
+		if request.Model != "gpt-6-luna" || request.Input != `{"text":"hi"}` || len(request.Questions) != 1 || request.Questions[0] != (struct {
+			Type string `json:"type"`
+			Name string `json:"name"`
+		}{Type: "predicate", Name: "approved"}) {
+			t.Errorf("request = %+v", request)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"answers":[{"type":"predicate","name":"approved","probability":0.9}]}`))
+	}))
+	defer server.Close()
+
+	model := &ai.Model{
+		ID: "gpt-6-luna", Name: "GPT-6 Luna", API: ai.APIOpenAIDecisions,
+		Provider: "openai", BaseURL: server.URL + "/v1", Type: "classifier",
+		Input: []string{"text", "image"}, Cost: ai.ModelCost{ModelCostRates: ai.ModelCostRates{Input: 0.1}},
+		ContextWindow: 922000,
+	}
+	result := OpenAIProvider().Classify(model, ai.ClassifierContext{
+		State: json.RawMessage(`{"text":"hi"}`),
+		Questions: []ai.ClassifierQuestion{{
+			Name: "approved", Type: "bool", Instructions: "Is this approved?",
+			BoolCriteria: ai.ClassifierBoolCriteria{True: "yes", False: "no"},
+		}},
+	}, &ai.ClassifierOptions{StreamOptions: ai.StreamOptions{APIKey: "secret"}})
+	if result.StopReason != ai.ClassifierStopStop {
+		t.Fatalf("stop reason = %q; error = %v", result.StopReason, result.ErrorMessage)
+	}
+	answer, ok := result.Answers["approved"]
+	if !ok || answer.Type != "bool" || answer.Probability == nil || *answer.Probability != 0.9 {
+		t.Fatalf("answer = %+v", answer)
 	}
 }
 

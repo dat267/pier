@@ -63,27 +63,48 @@ type Provider struct {
 	getModels func() []*Model
 	// RefreshModels is the dynamic-provider refresh hook (nil for static).
 	RefreshModels func(context *RefreshModelsContext) error
-	// FilterModels is an optional provider policy for credential-specific
-	// model availability.
+	// FilterModels is an optional provider policy for credential-specific chat availability.
 	FilterModels func(models []*Model, credential *Credential) []*Model
+	// FilterAllModels applies credential-specific availability across model types.
+	FilterAllModels func(models []*Model, credential *Credential) []*Model
 
 	// streamsFor dispatches on model.api (single implementation or per-API map).
-	streamsFor func(model *Model) ProviderStreams
+	streamsFor  func(model *Model) ProviderStreams
+	classifiers map[string]ProviderClassifier
 	// hasDeferred mirrors createProvider's conditional deferred exposure.
 	hasDeferredFetch bool
 }
 
+// GetAllModels returns every current model, regardless of type.
+func (p *Provider) GetAllModels() []*Model { return p.getModels() }
+
 // GetModels returns the current known chat models, sync. Models without a
 // type and models explicitly typed "chat" are chat models (upstream models.ts).
-func (p *Provider) GetModels() []*Model {
+func (p *Provider) GetModels() []*Model { return p.GetModelsOfType("chat") }
+
+// GetModelsOfType returns the current models of one type. Missing model types
+// default to chat, matching upstream getModelType.
+func (p *Provider) GetModelsOfType(modelType string) []*Model {
 	models := p.getModels()
-	chatModels := make([]*Model, 0, len(models))
+	filtered := make([]*Model, 0, len(models))
 	for _, model := range models {
-		if model.Type == "" || model.Type == "chat" {
-			chatModels = append(chatModels, model)
+		typeName := model.Type
+		if typeName == "" {
+			typeName = "chat"
+		}
+		if typeName == modelType {
+			filtered = append(filtered, model)
 		}
 	}
-	return chatModels
+	return filtered
+}
+
+// GetClassifierModels returns the current classifier models.
+func (p *Provider) GetClassifierModels() []*Model { return p.GetModelsOfType("classifier") }
+
+// GetClassifierImplementations returns a snapshot of classifier API dispatchers.
+func (p *Provider) GetClassifierImplementations() map[string]ProviderClassifier {
+	return maps.Clone(p.classifiers)
 }
 
 // streamsForModel resolves the API implementation for a model.
@@ -101,6 +122,22 @@ func (p *Provider) StreamSimple(model *Model, context TranscriptContext, options
 	return dispatchStreams(p, model, func(s ProviderStreams) *AssistantMessageEventStream {
 		return s.StreamSimple(model, context, options)
 	})
+}
+
+// Classify dispatches a structured classification request to its model API.
+// Like upstream Provider.classify, it always returns a result instead of an error.
+func (p *Provider) Classify(model *Model, context ClassifierContext, options *ClassifierOptions) *ClassifierResult {
+	if model == nil {
+		return classifierErrorResult(&Model{}, NewModelsError(ErrCodeProvider, "Missing classifier model", nil), options)
+	}
+	if model.Type != "classifier" {
+		return classifierErrorResult(model, NewModelsError(ErrCodeProvider, fmt.Sprintf("Model %s/%s is not a classifier model", model.Provider, model.ID), nil), options)
+	}
+	implementation := p.classifiers[model.API]
+	if implementation == nil {
+		return classifierErrorResult(model, NewModelsError(ErrCodeProvider, fmt.Sprintf("Provider %s has no classifier implementation for %q", p.ID, model.API), nil), options)
+	}
+	return implementation.Classify(model, context, options)
 }
 
 func dispatchStreams(p *Provider, model *Model, run func(ProviderStreams) *AssistantMessageEventStream) *AssistantMessageEventStream {
@@ -159,10 +196,14 @@ type CreateProviderOptions struct {
 	// and publishes it transactionally.
 	FetchModels  func(context *RefreshModelsContext) ([]*Model, error)
 	FilterModels func(models []*Model, credential *Credential) []*Model
+	// FilterAllModels applies credential-specific availability across model types.
+	FilterAllModels func(models []*Model, credential *Credential) []*Model
 	// Single is one API implementation for all models.
 	Single ProviderStreams
 	// ByAPI dispatches on model.api for mixed-API providers.
 	ByAPI map[string]ProviderStreams
+	// Classifiers dispatches structured classification by model.api.
+	Classifiers map[string]ProviderClassifier
 }
 
 // CreateProvider builds a provider from parts. A single API streams all
@@ -182,7 +223,7 @@ func CreateProvider(input CreateProviderOptions) *Provider {
 		for _, model := range dynamicModels {
 			index := -1
 			for i, entry := range merged {
-				if entry.ID == model.ID {
+				if GetModelType(entry) == GetModelType(model) && entry.ID == model.ID {
 					index = i
 					break
 				}
@@ -206,14 +247,16 @@ func CreateProvider(input CreateProviderOptions) *Provider {
 	}
 
 	p := &Provider{
-		ID:           input.ID,
-		Name:         input.Name,
-		BaseURL:      input.BaseURL,
-		Headers:      input.Headers,
-		Auth:         input.Auth,
-		getModels:    currentModels,
-		FilterModels: input.FilterModels,
-		streamsFor:   streamsFor,
+		ID:              input.ID,
+		Name:            input.Name,
+		BaseURL:         input.BaseURL,
+		Headers:         input.Headers,
+		Auth:            input.Auth,
+		getModels:       currentModels,
+		FilterModels:    input.FilterModels,
+		FilterAllModels: input.FilterAllModels,
+		streamsFor:      streamsFor,
+		classifiers:     input.Classifiers,
 	}
 	if p.Name == "" {
 		p.Name = input.ID
@@ -436,6 +479,11 @@ type ModelsStreamOptions struct {
 	StreamOptions
 }
 
+// ModelsClassifierOptions are the classifier request options after Models auth transforms.
+type ModelsClassifierOptions struct {
+	ClassifierOptions
+}
+
 // ModelsSimpleStreamOptions is the SimpleStreamOptions variant.
 type ModelsSimpleStreamOptions struct {
 	SimpleStreamOptions
@@ -604,6 +652,48 @@ func safeModels(p *Provider) (out []*Model) {
 // GetModel returns one model by provider and id.
 func (m *Models) GetModel(providerID, id string) *Model {
 	for _, model := range m.GetModels(providerID) {
+		if model.ID == id {
+			return model
+		}
+	}
+	return nil
+}
+
+// GetClassifierModels returns last-known classifier models from one provider or all providers.
+func (m *Models) GetClassifierModels(providerID string) []*Model {
+	m.mu.Lock()
+	if providerID != "" {
+		provider, ok := m.providers[providerID]
+		m.mu.Unlock()
+		if !ok {
+			return nil
+		}
+		return safeClassifierModels(provider)
+	}
+	providers := make([]*Provider, 0, len(m.providers))
+	for _, provider := range m.providers {
+		providers = append(providers, provider)
+	}
+	m.mu.Unlock()
+	var models []*Model
+	for _, provider := range providers {
+		models = append(models, safeClassifierModels(provider)...)
+	}
+	return models
+}
+
+func safeClassifierModels(provider *Provider) (out []*Model) {
+	defer func() {
+		if recover() != nil {
+			out = nil
+		}
+	}()
+	return provider.GetClassifierModels()
+}
+
+// GetClassifierModel returns one classifier model by provider and ID.
+func (m *Models) GetClassifierModel(providerID, id string) *Model {
+	for _, model := range m.GetClassifierModels(providerID) {
 		if model.ID == id {
 			return model
 		}
@@ -933,6 +1023,75 @@ func (m *Models) GetAvailable(providerID string, ctx context.Context) ([]*Model,
 	return out, nil
 }
 
+// GetAllAvailable returns authenticated models of every type. Providers can
+// define an all-model filter; otherwise chat-only filters preserve other types.
+func (m *Models) GetAllAvailable(providerID string, ctx context.Context) ([]*Model, error) {
+	if err := ctxErr(ctx); err != nil {
+		return nil, err
+	}
+	var providers []*Provider
+	if providerID != "" {
+		m.mu.Lock()
+		if provider := m.providers[providerID]; provider != nil {
+			providers = []*Provider{provider}
+		}
+		m.mu.Unlock()
+	} else {
+		providers = m.GetProviders()
+	}
+	var out []*Model
+	for _, provider := range providers {
+		credential, err := readCredential(m.credentials, provider.ID, ctx)
+		if err != nil {
+			return nil, err
+		}
+		auth, err := m.checkProviderAuth(provider, credential, ctx)
+		if err != nil {
+			return nil, err
+		}
+		if auth == nil {
+			continue
+		}
+		models := provider.GetAllModels()
+		if provider.FilterAllModels != nil {
+			models = provider.FilterAllModels(models, credential)
+		} else if provider.FilterModels != nil {
+			availableChat := make(map[string]bool)
+			for _, model := range provider.FilterModels(provider.GetModels(), credential) {
+				availableChat[model.ID] = true
+			}
+			filtered := make([]*Model, 0, len(models))
+			for _, model := range models {
+				if (model.Type != "" && model.Type != "chat") || availableChat[model.ID] {
+					filtered = append(filtered, model)
+				}
+			}
+			models = filtered
+		}
+		out = append(out, models...)
+	}
+	return out, nil
+}
+
+// GetAvailableOfType returns authenticated models of one type.
+func (m *Models) GetAvailableOfType(modelType, providerID string, ctx context.Context) ([]*Model, error) {
+	models, err := m.GetAllAvailable(providerID, ctx)
+	if err != nil {
+		return nil, err
+	}
+	var available []*Model
+	for _, model := range models {
+		typeName := model.Type
+		if typeName == "" {
+			typeName = "chat"
+		}
+		if typeName == modelType {
+			available = append(available, model)
+		}
+	}
+	return available, nil
+}
+
 // GetAuth resolves provider-scoped auth by provider id.
 func (m *Models) GetAuth(providerID string, overrides *AuthResolutionOverrides) (*AuthResult, error) {
 	m.mu.Lock()
@@ -1069,6 +1228,40 @@ func ApplyResolvedAuth(model *Model, auth ModelAuth, resolutionEnv ProviderEnv, 
 	requestOptions.Env = env
 	requestOptions.TransformHeaders = nil
 	return requestModel, requestOptions
+}
+
+// Classify validates, resolves auth, and delegates a classifier request. Setup and
+// provider failures are returned as classifier results rather than Go errors.
+func (m *Models) Classify(model *Model, classifierContext ClassifierContext, options *ModelsClassifierOptions) *ClassifierResult {
+	if options == nil {
+		options = &ModelsClassifierOptions{}
+	}
+	if model == nil {
+		return classifierErrorResult(nil, NewModelsError(ErrCodeProvider, "Missing classifier model", nil), &options.ClassifierOptions)
+	}
+	if model.Type != "classifier" {
+		return classifierErrorResult(model, NewModelsError(ErrCodeProvider, fmt.Sprintf("Model %s/%s is not a classifier model", model.Provider, model.ID), nil), &options.ClassifierOptions)
+	}
+	if len(classifierContext.Images) > 0 && !containsString(model.Input, "image") {
+		return classifierErrorResult(model, NewModelsError(ErrCodeProvider, fmt.Sprintf("Model %s/%s does not accept image input", model.Provider, model.ID), nil), &options.ClassifierOptions)
+	}
+	provider, err := m.requireProvider(model)
+	if err != nil {
+		return classifierErrorResult(model, err, &options.ClassifierOptions)
+	}
+	if len(provider.classifiers) == 0 {
+		return classifierErrorResult(model, NewModelsError(ErrCodeProvider, fmt.Sprintf("Provider %s does not support classification", model.Provider), nil), &options.ClassifierOptions)
+	}
+	if provider.classifiers[model.API] == nil {
+		return classifierErrorResult(model, NewModelsError(ErrCodeProvider, fmt.Sprintf("Provider %s has no classifier implementation for %q", model.Provider, model.API), nil), &options.ClassifierOptions)
+	}
+	requestModel, requestOptions, err := m.applyAuth(model, &ModelsStreamOptions{StreamOptions: options.StreamOptions})
+	if err != nil {
+		return classifierErrorResult(model, err, &options.ClassifierOptions)
+	}
+	classifierOptions := options.ClassifierOptions
+	classifierOptions.StreamOptions = requestOptions.StreamOptions
+	return provider.Classify(requestModel, classifierContext, &classifierOptions)
 }
 
 // Stream normalizes the context, resolves auth, and delegates to the owning

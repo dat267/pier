@@ -144,6 +144,95 @@ func TestResolveProviderAuthExplicitEmptyAPIKeyOverridesStoredOAuth(t *testing.T
 	}
 }
 
+// Reference: pi v1.4.0 packages/ai/src/models.ts createProvider.currentModels
+// merges by both model type and ID, not ID alone.
+func TestProviderDynamicModelsMergeByTypeAndID(t *testing.T) {
+	chat := &Model{ID: "same-id", Provider: "p", API: APIOpenAIResponses, Type: "chat"}
+	classifier := &Model{ID: "same-id", Provider: "p", API: APIOpenAIDecisions, Type: "classifier"}
+	provider := CreateProvider(CreateProviderOptions{
+		ID: "p", Auth: ProviderAuth{APIKey: &ApiKeyAuth{Name: "test"}}, Models: []*Model{chat},
+		FetchModels: func(*RefreshModelsContext) ([]*Model, error) { return []*Model{classifier}, nil },
+	})
+	if err := provider.RefreshModels(&RefreshModelsContext{
+		AllowNetwork: true, Ctx: context.Background(),
+		Publish: func(publication ModelsPublication) bool {
+			if publication.Update != nil {
+				publication.Update()
+			}
+			return true
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	all := provider.GetAllModels()
+	if len(all) != 2 || len(provider.GetModels()) != 1 || len(provider.GetClassifierModels()) != 1 {
+		t.Fatalf("all=%v chat=%v classifiers=%v", all, provider.GetModels(), provider.GetClassifierModels())
+	}
+}
+
+// Reference: pi v1.4.0 packages/ai/src/models.ts createProvider.classify.
+func TestModelsClassifyReportsMissingClassifierApiImplementation(t *testing.T) {
+	model := &Model{ID: "decision", API: APIOpenAIDecisions, Provider: "p", Type: "classifier"}
+	provider := CreateProvider(CreateProviderOptions{
+		ID: "p", Auth: ProviderAuth{APIKey: &ApiKeyAuth{Name: "test"}}, Models: []*Model{model},
+		Classifiers: map[string]ProviderClassifier{"other-api": OpenAIDecisions{}},
+	})
+	models := CreateModels(nil)
+	models.SetProvider(provider)
+	result := models.Classify(model, ClassifierContext{}, nil)
+	if result.StopReason != ClassifierStopError || result.ErrorMessage == nil || *result.ErrorMessage != `Provider p has no classifier implementation for "openai-decisions"` {
+		t.Fatalf("result = %+v", result)
+	}
+}
+
+// Reference: pi v1.4.0 packages/ai/src/models.ts getAllAvailable() uses
+// filterAllModels for credential-specific visibility across model types.
+func TestModelsGetAvailableOfTypeUsesAllModelFilter(t *testing.T) {
+	credentials := NewInMemoryCredentialStore()
+	ctx := context.Background()
+	writeCredential := func(credential *Credential) {
+		t.Helper()
+		if _, err := credentials.Modify("openai", func(*Credential) (*Credential, error) { return credential, nil }, ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	chat := &Model{ID: "gpt-6-luna", Provider: "openai", Type: "chat"}
+	classifier := &Model{ID: "gpt-6-luna", Provider: "openai", Type: "classifier"}
+	provider := CreateProvider(CreateProviderOptions{
+		ID: "openai", Auth: ProviderAuth{APIKey: EnvApiKeyAuth("OpenAI", []string{"OPENAI_API_KEY"}), OAuth: &OAuthAuth{}},
+		Models: []*Model{chat, classifier},
+		FilterAllModels: func(models []*Model, credential *Credential) []*Model {
+			if credential == nil || credential.Type != CredentialOAuth {
+				return models
+			}
+			filtered := make([]*Model, 0, len(models))
+			for _, model := range models {
+				if model.Type != "classifier" {
+					filtered = append(filtered, model)
+				}
+			}
+			return filtered
+		},
+	})
+	models := CreateModels(&CreateModelsOptions{Credentials: credentials, AuthContext: &fakeAuthContext{env: map[string]string{"OPENAI_API_KEY": "key"}}})
+	models.SetProvider(provider)
+
+	writeCredential(&Credential{Type: CredentialAPIKey, APIKey: &ApiKeyCredential{Key: "key"}})
+	available, err := models.GetAvailableOfType("classifier", "openai", ctx)
+	if err != nil || len(available) != 1 || available[0] != classifier {
+		t.Fatalf("API-key classifiers = %v, %v", available, err)
+	}
+	writeCredential(&Credential{Type: CredentialOAuth, OAuth: &OAuthCredential{OAuthCredentials: OAuthCredentials{Access: "chatgpt"}}})
+	available, err = models.GetAvailableOfType("classifier", "openai", ctx)
+	if err != nil || len(available) != 0 {
+		t.Fatalf("OAuth classifiers = %v, %v", available, err)
+	}
+	all, err := models.GetAllAvailable("openai", ctx)
+	if err != nil || len(all) != 1 || all[0] != chat {
+		t.Fatalf("OAuth all-model availability = %v, %v", all, err)
+	}
+}
+
 func TestModelsApplyAuthPreservesExplicitEmptyAPIKey(t *testing.T) {
 	models := CreateModels(&CreateModelsOptions{Credentials: staticCredentialStore("p", "stored-key"), AuthContext: &fakeAuthContext{env: map[string]string{"KEY": "ambient-key"}}})
 	models.SetProvider(&Provider{ID: "p", Auth: ProviderAuth{APIKey: EnvApiKeyAuth("key", []string{"KEY"})}})

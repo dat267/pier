@@ -1,0 +1,41 @@
+{
+ "_meta": {
+  "generatedAt": "2026-10-13T07:41:52.494Z",
+  "schemaVersion": 6,
+  "upstreamManifestSHA256": "d7c1c3111684fc62975e420ee05116b05cd900f8b571155aaefff9b174dcc6fe"
+ },
+ "providers": {
+  "openai": {
+   "openai-decisions": {
+    "gpt-6-luna": {
+     "api": "openai-decisions",
+     "baseUrl": "https://api.openai.com/v1",
+     "contextWindow": 922000,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0.1,
+      "output": 0,
+      "tiers": [
+       {
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "input": 0.2,
+        "inputTokensAbove": 272000,
+        "output": 0
+       }
+      ]
+     },
+     "id": "gpt-6-luna",
+     "input": [
+      "text",
+      "image"
+     ],
+     "name": "GPT-6 Luna",
+     "provider": "openai",
+     "type": "classifier"
+    }
+   }
+  }
+ }
+}

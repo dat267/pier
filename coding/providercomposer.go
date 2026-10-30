@@ -439,19 +439,19 @@ func compatFromConfig(compat *ModelsJSONCompat, api ai.Api) *ai.ModelCompat {
 // custom definition.
 func findModelDefaults(models []*ai.Model, modelID, api string) *ai.Model {
 	for _, model := range models {
-		if model.ID == modelID {
+		if ai.GetModelType(model) == "chat" && model.ID == modelID {
 			return model
 		}
 	}
 	if api != "" {
 		for _, model := range models {
-			if model.API == api {
+			if ai.GetModelType(model) == "chat" && model.API == api {
 				return model
 			}
 		}
 	}
 	for _, model := range models {
-		if model.API == ai.APIOpenAICompletions {
+		if ai.GetModelType(model) == "chat" && model.API == ai.APIOpenAICompletions {
 			return model
 		}
 	}
@@ -491,7 +491,7 @@ func applyModelsJSON(providerID string, baseModels []*ai.Model, config *ModelsJS
 	for _, definition := range config.Models {
 		existingIndex := -1
 		for index, model := range models {
-			if model.ID == definition.ID {
+			if ai.GetModelType(model) == "chat" && model.ID == definition.ID {
 				existingIndex = index
 				break
 			}
@@ -765,7 +765,7 @@ func composeOAuthAuth(providerID string, base *ai.Provider, config *ModelsJSONPr
 
 // rawModelHeaders gathers the configured headers for one model.
 func rawModelHeaders(model *ai.Model, config *ModelsJSONProvider) map[string]string {
-	if config == nil {
+	if config == nil || ai.GetModelType(model) != "chat" {
 		return nil
 	}
 	headers := map[string]string{}
@@ -799,7 +799,7 @@ func ComposeModelProvider(providerID string, base *ai.Provider, modelConfig *Mod
 		}
 		out := make([]*ai.Model, 0, len(models))
 		for _, model := range models {
-			if config != nil {
+			if config != nil && ai.GetModelType(model) == "chat" {
 				if override, ok := config.ModelOverrides[model.ID]; ok {
 					applied, err := applyModelOverride(model, override)
 					if err != nil {
@@ -883,6 +883,10 @@ func ComposeModelProvider(providerID string, base *ai.Provider, modelConfig *Mod
 		implementation = funcStreamsWithDeferred{funcStreams: streams, base: base}
 	}
 
+	var classifiers map[string]ai.ProviderClassifier
+	if base != nil {
+		classifiers = base.GetClassifierImplementations()
+	}
 	provider := ai.CreateProvider(ai.CreateProviderOptions{
 		ID:           providerID,
 		Name:         name,
@@ -890,11 +894,13 @@ func ComposeModelProvider(providerID string, base *ai.Provider, modelConfig *Mod
 		Headers:      headers,
 		Auth:         ai.ProviderAuth{APIKey: apiKey, OAuth: oauth},
 		ModelsGetter: getModels,
+		Classifiers:  classifiers,
 		Single:       implementation,
 	})
 	if base != nil {
 		provider.RefreshModels = base.RefreshModels
 		provider.FilterModels = base.FilterModels
+		provider.FilterAllModels = base.FilterAllModels
 	}
 	return provider, nil
 }
@@ -932,7 +938,7 @@ func baseModels(base *ai.Provider) []*ai.Model {
 	if base == nil {
 		return nil
 	}
-	return base.GetModels()
+	return base.GetAllModels()
 }
 
 // ResolveConfiguredModelHeaders resolves the configured headers for one model.

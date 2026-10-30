@@ -40,6 +40,21 @@ func TestCatalogLoadsEveryModel(t *testing.T) {
 	}
 }
 
+// Reference: pi v1.4.0 packages/ai/src/providers/openai.models.ts exposes the
+// generated OPENAI_CLASSIFIER_MODELS catalog for openai-decisions.
+func TestOpenAIClassifierCatalogIncludesDecisionsModel(t *testing.T) {
+	model := GetBuiltinClassifierModel("openai", "gpt-6-luna")
+	if model == nil {
+		t.Fatal("openai classifier gpt-6-luna missing")
+	}
+	if model.Type != "classifier" || model.API != APIOpenAIDecisions || model.BaseURL != "https://api.openai.com/v1" {
+		t.Fatalf("classifier model = %+v", model)
+	}
+	if model.Cost.Input != 0.1 || model.Cost.Tiers[0].InputTokensAbove != 272000 || model.ContextWindow != 922000 {
+		t.Fatalf("classifier pricing/context = %+v, context %d", model.Cost, model.ContextWindow)
+	}
+}
+
 func TestOpenRouterPlaceholderPricesAreZero(t *testing.T) {
 	for _, modelID := range []string{"openrouter/auto", "openrouter/auto-beta", "typesafe/jev-router"} {
 		model := GetBuiltinModel("openrouter", modelID)

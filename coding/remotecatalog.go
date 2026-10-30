@@ -207,11 +207,13 @@ func WithRemoteCatalog(provider *ai.Provider, catalogBaseURL string, localGenera
 		// The baseline is the built-in catalog; the persisted pi.dev overlay
 		// merges over it by model id.
 		ModelsGetter: func() []*ai.Model {
-			return mergeCatalogModels(provider.GetModels(), chatCatalogModels(dynamicModels))
+			return mergeCatalogModels(provider.GetAllModels(), chatCatalogModels(dynamicModels))
 		},
-		Single: implementation,
+		Single:      implementation,
+		Classifiers: provider.GetClassifierImplementations(),
 	})
 	wrapped.FilterModels = provider.FilterModels
+	wrapped.FilterAllModels = provider.FilterAllModels
 
 	wrapped.RefreshModels = func(refresh *ai.RefreshModelsContext) error {
 		stored := refresh.Stored
@@ -347,10 +349,18 @@ func WithPersonalizedCatalog(
 	}
 	personalModels := []*ai.Model{}
 	getModels := func() []*ai.Model {
-		if len(personalModels) == 0 {
-			return chatCatalogModels(provider.GetModels())
+		chatModels := personalModels
+		if len(chatModels) == 0 {
+			chatModels = provider.GetModels()
 		}
-		return chatCatalogModels(personalModels)
+		allModels := provider.GetAllModels()
+		models := make([]*ai.Model, 0, len(allModels)+len(chatModels))
+		for _, model := range allModels {
+			if model.Type != "" && model.Type != "chat" {
+				models = append(models, model)
+			}
+		}
+		return append(models, chatCatalogModels(chatModels)...)
 	}
 	streams := funcStreams{
 		stream: func(model *ai.Model, transcript ai.TranscriptContext, options *ai.StreamOptions) *ai.AssistantMessageEventStream {
@@ -367,8 +377,10 @@ func WithPersonalizedCatalog(
 	wrapped := ai.CreateProvider(ai.CreateProviderOptions{
 		ID: provider.ID, Name: provider.Name, BaseURL: provider.BaseURL, Headers: provider.Headers,
 		Auth: provider.Auth, ModelsGetter: getModels, Single: implementation,
+		Classifiers: provider.GetClassifierImplementations(),
 	})
 	wrapped.FilterModels = provider.FilterModels
+	wrapped.FilterAllModels = provider.FilterAllModels
 	wrapped.RefreshModels = func(refresh *ai.RefreshModelsContext) error {
 		var stored []*ai.Model
 		if refresh.Stored != nil {

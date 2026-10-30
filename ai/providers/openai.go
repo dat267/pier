@@ -22,7 +22,8 @@ func (openaiCompletionsStreams) StreamSimple(model *ai.Model, context ai.Transcr
 
 // OpenAIProvider builds the built-in OpenAI provider (port of openaiProvider).
 func OpenAIProvider() *ai.Provider {
-	models := ai.GetBuiltinModels("openai")
+	models := append([]*ai.Model(nil), ai.GetBuiltinModels("openai")...)
+	models = append(models, ai.GetBuiltinClassifierModels("openai")...)
 	return ai.CreateProvider(ai.CreateProviderOptions{
 		ID:      "openai",
 		Name:    "OpenAI",
@@ -32,7 +33,22 @@ func OpenAIProvider() *ai.Provider {
 			OAuth:  ai.OpenAIChatGPTOAuth(),
 		},
 		Models: models,
+		FilterAllModels: func(models []*ai.Model, credential *ai.Credential) []*ai.Model {
+			if credential == nil || credential.Type != ai.CredentialOAuth {
+				return models
+			}
+			filtered := make([]*ai.Model, 0, len(models))
+			for _, model := range models {
+				if model.Type != "classifier" {
+					filtered = append(filtered, model)
+				}
+			}
+			return filtered
+		},
 		Single: openaiResponsesStreams{},
+		Classifiers: map[string]ai.ProviderClassifier{
+			ai.APIOpenAIDecisions: ai.OpenAIDecisions{},
+		},
 	})
 }
 
