@@ -210,7 +210,12 @@ func refreshStoredOAuthCredential(credentials CredentialStore, providerID string
 func resolveStoredOAuth(credentials CredentialStore, providerID string, oauth *OAuthAuth, stored *OAuthCredential, ctx context.Context, minOAuthValidityMS int64, minOAuthValidityMSSet bool) (*AuthResult, error) {
 	minimumValidityMS := max(minOAuthValidityMS, int64(oauthMinimumValidityMS))
 	expiresSoon := func(credential *OAuthCredential) bool {
-		return time.Now().UnixMilli()+minimumValidityMS >= credential.Expires
+		nowMS := time.Now().UnixMilli()
+		const maxInt64 = int64(1<<63 - 1)
+		if minimumValidityMS > 0 && nowMS > maxInt64-minimumValidityMS {
+			return true
+		}
+		return nowMS+minimumValidityMS >= credential.Expires
 	}
 	credential := stored
 

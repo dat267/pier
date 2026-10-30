@@ -298,6 +298,43 @@ func TestResolveStoredOAuthExplicitZeroStillAppliesPostRefreshFloor(t *testing.T
 	}
 }
 
+// Port of pi v1.4.0 packages/ai/src/auth/resolve.ts resolveStoredOAuth:
+// an unrepresentably large expiry threshold must not wrap into a valid token.
+func TestResolveStoredOAuthMaxValidityDoesNotWrap(t *testing.T) {
+	store := NewInMemoryCredentialStore()
+	if _, err := store.Modify("p", func(*Credential) (*Credential, error) {
+		return &Credential{Type: CredentialOAuth, OAuth: &OAuthCredential{OAuthCredentials{
+			Refresh: "r1", Access: "a1", Expires: nowUnixMilli() + 60*60_000,
+		}}}, nil
+	}, bgCtx()); err != nil {
+		t.Fatal(err)
+	}
+	refreshes := 0
+	oauth := &OAuthAuth{
+		Name: "Test OAuth",
+		Refresh: func(*OAuthCredential, context.Context) (*OAuthCredential, error) {
+			refreshes++
+			return &OAuthCredential{OAuthCredentials{
+				Refresh: "r2", Access: "a2", Expires: nowUnixMilli() + 10*60*60_000,
+			}}, nil
+		},
+		ToAuth: func(credential *OAuthCredential) (*ModelAuth, error) {
+			return &ModelAuth{APIKey: credential.Access}, nil
+		},
+	}
+	maximum := int64(1<<63 - 1)
+	_, err := ResolveProviderAuth("p", ProviderAuth{OAuth: oauth}, store, &fakeAuthContext{}, &AuthResolutionOverrides{
+		MinOAuthValidityMS:    maximum,
+		MinOAuthValidityMSSet: true,
+	})
+	if err == nil || err.Error() != "OAuth refresh returned a token that expires too soon for p" {
+		t.Fatalf("GetAuth error = %v, want too-soon error for unrepresentable validity", err)
+	}
+	if refreshes != 1 {
+		t.Fatalf("refreshes = %d, want 1", refreshes)
+	}
+}
+
 func TestResolveStoredOAuthRefreshesUnderLock(t *testing.T) {
 	// Upstream: double-checked locking — tokens with less than five minutes
 	// remaining lock, re-check, refresh once, persist before release.

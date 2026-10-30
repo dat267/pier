@@ -133,6 +133,19 @@ func TestRunAuthCommandUnknownOptionUsesTheInvokedName(t *testing.T) {
 
 // Upstream matches the raw arg with /^(\d+)(ms|s|m|h)$/iu, so surrounding
 // whitespace is rejected while the unit stays case-insensitive.
+// pi v1.4.0 packages/coding-agent/src/cli/auth-command.ts multiplies as a JS
+// Number and credential-print.ts forwards the result. Saturating at int64 max
+// preserves this duration's effective impossible-to-satisfy threshold.
+func TestParseAuthMinExpiryDoesNotWrap(t *testing.T) {
+	milliseconds, ok := parseAuthMinExpiry("3000000000000h")
+	if !ok {
+		t.Fatal("large but syntactically valid duration was rejected")
+	}
+	if want := int64(1<<63 - 1); milliseconds != want {
+		t.Fatalf("duration = %d ms, want saturated threshold %d", milliseconds, want)
+	}
+}
+
 func TestParseAuthMinExpiryRejectsWhitespace(t *testing.T) {
 	if _, ok := parseAuthMinExpiry(" 30m "); ok {
 		t.Fatal("whitespace-padded duration should be rejected")

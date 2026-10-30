@@ -100,19 +100,23 @@ func parseAuthMinExpiry(value string) (int64, bool) {
 		return 0, false
 	}
 	amount, err := strconv.ParseInt(match[1], 10, 64)
-	if err != nil {
+	if err != nil && !errors.Is(err, strconv.ErrRange) {
 		return 0, false
 	}
+	multiplier := int64(3_600_000)
 	switch match[2] {
 	case "ms":
-		return amount, true
+		multiplier = 1
 	case "s":
-		return amount * 1000, true
+		multiplier = 1000
 	case "m":
-		return amount * 60_000, true
-	default:
-		return amount * 3_600_000, true
+		multiplier = 60_000
 	}
+	const maxInt64 = int64(1<<63 - 1)
+	if err != nil || amount > maxInt64/multiplier {
+		return maxInt64, true
+	}
+	return amount * multiplier, true
 }
 
 // ParseAuthCommand parses `pi auth ...`; nil means the invocation is not an
