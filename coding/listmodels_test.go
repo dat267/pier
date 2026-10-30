@@ -119,6 +119,21 @@ func TestListModelsTextUsesLocaleOrdering(t *testing.T) {
 	}
 }
 
+// pi v1.4.0 packages/coding-agent/src/cli/list-models.ts measures widths with
+// JavaScript string.length, including two UTF-16 code units for each emoji.
+func TestListModelsTextUsesUTF16ColumnWidths(t *testing.T) {
+	models := []*ai.Model{listModel("😀😀😀😀😀", "m", 1, 1, false, "text")}
+	got := ListModelsText(models, "")
+	want := strings.Join([]string{
+		"provider    model  context  max-out  thinking  images",
+		"😀😀😀😀😀  m      1        1        no        no    ",
+		"",
+	}, "\n")
+	if got != want {
+		t.Fatalf("table = %q, want %q", got, want)
+	}
+}
+
 func TestListModelsTextNoModels(t *testing.T) {
 	got := ListModelsText(nil, "")
 	if !strings.HasPrefix(got, "No models available.") {

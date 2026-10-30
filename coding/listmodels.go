@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"unicode/utf8"
+	"unicode/utf16"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/tui"
@@ -101,7 +101,7 @@ func ListModelsText(models []*ai.Model, searchPattern string) string {
 	for _, row := range rows {
 		columns := row.columns()
 		for i, column := range columns {
-			if width := runeWidth(column); width > runeWidth(widths[i]) {
+			if width := utf16Length(column); width > utf16Length(widths[i]) {
 				widths[i] = column
 			}
 		}
@@ -122,7 +122,7 @@ func (r modelListRow) line(widths [6]string) string {
 	columns := r.columns()
 	padded := make([]string, 0, len(columns))
 	for i, column := range columns {
-		padded = append(padded, padEnd(column, runeWidth(widths[i])))
+		padded = append(padded, padEnd(column, utf16Length(widths[i])))
 	}
 	return strings.Join(padded, "  ")
 }
@@ -134,14 +134,17 @@ func yesNo(value bool) string {
 	return "no"
 }
 
-func runeWidth(value string) int {
-	return utf8.RuneCountInString(value)
+func utf16Length(value string) int {
+	length := 0
+	for _, r := range value {
+		length += utf16.RuneLen(r)
+	}
+	return length
 }
 
-// padEnd pads to a rune count, matching JavaScript's String.prototype.padEnd
-// for the ASCII model ids this renders.
+// padEnd pads to JavaScript's UTF-16 code-unit length.
 func padEnd(value string, width int) string {
-	if padding := width - runeWidth(value); padding > 0 {
+	if padding := width - utf16Length(value); padding > 0 {
 		return value + strings.Repeat(" ", padding)
 	}
 	return value
