@@ -188,6 +188,37 @@ func TestAgentResetRestoresBaseline(t *testing.T) {
 	}
 }
 
+// D312: Go snapshots listeners before dispatch; an unsubscribe from an earlier
+// callback takes effect on the next event. Upstream iterates its live Set, so
+// removing a later listener during dispatch skips it for the current event.
+func TestAgentUnsubscribeDuringDispatchUsesListenerSnapshot(t *testing.T) {
+	agent, err := NewAgent(&AgentOptions{StreamFn: unusedStreamFn()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var seen []string
+	var unsubscribeSecond func()
+	agent.Subscribe(func(event AgentEvent, _ context.Context) error {
+		if event.Type == TurnStart {
+			seen = append(seen, "first")
+			unsubscribeSecond()
+		}
+		return nil
+	})
+	unsubscribeSecond = agent.Subscribe(func(event AgentEvent, _ context.Context) error {
+		if event.Type == TurnStart {
+			seen = append(seen, "second")
+		}
+		return nil
+	})
+	if err := agent.processEvents(AgentEvent{Type: TurnStart}, context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(seen, ","); got != "first,second" {
+		t.Fatalf("listeners invoked = %q, want snapshot order", got)
+	}
+}
+
 func TestAgentSubscribeAndLifecycle(t *testing.T) {
 	streamFn, _ := mockStreamFn(createAssistantMessage(ai.ContentList{ai.TextContent{Text: "reply"}}, ai.StopStop))
 	agent, _ := NewAgent(&AgentOptions{StreamFn: streamFn})

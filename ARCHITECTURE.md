@@ -3595,6 +3595,23 @@ Reproducer: `TestToolUpdatesAreSerializedInCallOrder` in
 `agent/tool_prepare_panic_test.go` covers Go serialization; a pinned Bun probe
 with an async upstream listener observed five simultaneous callbacks.
 
+### D312
+
+**Listener subscription changes take effect on the next Go event.**
+
+Reference: pi v1.4.0 (`4a080252`), `packages/agent/src/agent.ts`
+`processEvents` iterates its live `Set`; if a listener unsubscribes a later
+listener during dispatch, that listener is skipped for the current event (and
+newly added listeners can be visited). Go snapshots listeners under
+`listenerMu` before releasing the lock and invoking callbacks, so subscription
+changes apply to subsequent events only. This is intentional to keep user code
+outside the mutex and make concurrent subscribe/unsubscribe safe, per the
+single-writer callback ownership rules in `AGENTS.md`.
+
+Reproducer: `TestAgentUnsubscribeDuringDispatchUsesListenerSnapshot` in
+`agent/agent_test.go` covers the Go contract; a pinned Bun probe showed the
+upstream live-Set case invokes only the first listener.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.
