@@ -26,6 +26,8 @@ func TestNormalizeAzureBaseURL(t *testing.T) {
 		{"https://my-resource.cognitiveservices.azure.com/openai/v1", "https://my-resource.cognitiveservices.azure.com/openai/v1"},
 		{"https://my-resource.services.ai.azure.com/openai/v1/responses", "https://my-resource.services.ai.azure.com/openai/v1"},
 		{"https://my-proxy.example.com/v1", "https://my-proxy.example.com/v1"},
+		{"HTTPS://MY-PROXY.EXAMPLE.COM:443/v1", "https://my-proxy.example.com/v1"},
+		{"HTTP://MY-PROXY.EXAMPLE.COM:80/v1", "http://my-proxy.example.com/v1"},
 		{"https://my-resource.openai.azure.com/openai?api-version=2024-12-01", "https://my-resource.openai.azure.com/openai/v1"},
 		// Query parameters on non-Azure hosts are preserved.
 		{"https://my-proxy.example.com/v1?custom=true", "https://my-proxy.example.com/v1?custom=true"},

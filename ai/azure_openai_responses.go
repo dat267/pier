@@ -73,10 +73,23 @@ func NormalizeAzureBaseURL(baseURL string) (string, error) {
 	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
 		return "", fmt.Errorf("Invalid Azure OpenAI base URL: %s", baseURL)
 	}
-	host := strings.ToLower(parsed.Hostname())
-	isAzureHost := strings.HasSuffix(host, ".openai.azure.com") ||
-		strings.HasSuffix(host, ".cognitiveservices.azure.com") ||
-		strings.HasSuffix(host, ".ai.azure.com")
+	parsed.Scheme = strings.ToLower(parsed.Scheme)
+	hostname := strings.ToLower(parsed.Hostname())
+	isAzureHost := strings.HasSuffix(hostname, ".openai.azure.com") ||
+		strings.HasSuffix(hostname, ".cognitiveservices.azure.com") ||
+		strings.HasSuffix(hostname, ".ai.azure.com")
+	host := hostname
+	port := parsed.Port()
+	if (parsed.Scheme == "http" && port == "80") || (parsed.Scheme == "https" && port == "443") {
+		port = ""
+	}
+	if strings.Contains(host, ":") {
+		host = "[" + host + "]"
+	}
+	if port != "" {
+		host += ":" + port
+	}
+	parsed.Host = host
 	normalizedPath := strings.TrimRight(parsed.Path, "/")
 
 	// Azure hosts get /openai/v1 as the base path so the SDK-style request
