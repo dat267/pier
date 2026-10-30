@@ -44,6 +44,8 @@ type StdioTransportOptions struct {
 	// CloseTimeoutMs is how long the server gets after SIGTERM before
 	// SIGKILL. Default: 2000.
 	CloseTimeoutMs int64
+	// CloseTimeoutMsSet distinguishes an explicit zero from the default.
+	CloseTimeoutMsSet bool
 }
 
 // StdioTransport runs a newline-delimited MCP server as a child process
@@ -384,7 +386,7 @@ func (t *StdioTransport) Close(ctx context.Context) error {
 	default:
 	}
 	closeTimeoutMs := t.options.CloseTimeoutMs
-	if closeTimeoutMs == 0 {
+	if closeTimeoutMs == 0 && !t.options.CloseTimeoutMsSet {
 		closeTimeoutMs = defaultCloseTimeoutMs
 	}
 	grace := int64(StdinCloseGraceMs)
