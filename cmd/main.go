@@ -875,6 +875,8 @@ var promptConfirm = func(message string) bool {
 // parses every stdout line, and upstream's takeOverStdout redirects stray writes
 // to stderr (the port has no takeover, D241), so the picker draws on stderr
 // there and on stdout in interactive mode.
+var sessionPickerIsTerminal = term.IsTerminal
+
 func sessionPickerOutput(headless bool) *os.File {
 	if headless {
 		return os.Stderr
@@ -1019,7 +1021,11 @@ func resumeSession(args *coding.Args, cwd string, agentDir string, settings *cod
 		// Upstream parsed.resume opens the interactive session picker. A headless
 		// mode keeps stdout for the protocol stream or the final text and draws the
 		// picker on stderr.
-		headless := args.Print || args.Mode == coding.CLIModeJSON
+		headless := args.Mode == coding.CLIModeRPC || resolvePrintMode(
+			args,
+			sessionPickerIsTerminal(int(os.Stdin.Fd())),
+			sessionPickerIsTerminal(int(os.Stdout.Fd())),
+		)
 		selected, ok := selectResumeSession(cwd, sessionDir, settings, headless)
 		if !ok {
 			return nil, errNoSessionSelected

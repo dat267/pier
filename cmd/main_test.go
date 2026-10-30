@@ -384,6 +384,10 @@ func TestResumeSessionGlobalPromptsForkOnDecline(t *testing.T) {
 // redirecting stray stdout writes to stderr (takeOverStdout). The port has no
 // stdout takeover (D241), so the picker's own terminal is pointed at stderr.
 func TestResumePickerKeepsStdoutCleanInHeadlessModes(t *testing.T) {
+	previousIsTerminal := sessionPickerIsTerminal
+	sessionPickerIsTerminal = func(int) bool { return true }
+	defer func() { sessionPickerIsTerminal = previousIsTerminal }()
+
 	if got := sessionPickerOutput(true); got != os.Stderr {
 		t.Fatalf("headless picker output = %v, want stderr", got)
 	}
@@ -414,5 +418,39 @@ func TestResumePickerKeepsStdoutCleanInHeadlessModes(t *testing.T) {
 		if sawHeadless != tc.want {
 			t.Fatalf("picker headless = %v for %+v, want %v", sawHeadless, tc.args, tc.want)
 		}
+	}
+}
+
+// pi v1.4.0 main.ts selects print mode whenever either standard stream is not
+// a TTY; its stdout takeover keeps the resume picker off the JSON/text stream.
+func TestResumePickerUsesStderrWhenPrintModeIsInferred(t *testing.T) {
+	previousIsTerminal := sessionPickerIsTerminal
+	sessionPickerIsTerminal = func(int) bool { return false }
+	defer func() { sessionPickerIsTerminal = previousIsTerminal }()
+
+	isolatedAgentDir(t)
+	readPipe, writePipe, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	previousStdout := os.Stdout
+	os.Stdout = writePipe
+	defer func() {
+		os.Stdout = previousStdout
+		_ = writePipe.Close()
+		_ = readPipe.Close()
+	}()
+
+	previous := selectResumeSession
+	var sawHeadless bool
+	selectResumeSession = func(cwd, sessionDir string, settings *coding.SettingsManager, headless bool) (string, bool) {
+		sawHeadless = headless
+		return "", false
+	}
+	defer func() { selectResumeSession = previous }()
+
+	_, _ = resumeSession(&coding.Args{Resume: true}, t.TempDir(), t.TempDir(), nil)
+	if !sawHeadless {
+		t.Fatal("resume picker used stdout although the non-TTY stream selects print mode")
 	}
 }
