@@ -179,6 +179,9 @@ func validateCallToolResult(raw json.RawMessage) (*protocol.CallToolResult, erro
 	if err := json.Unmarshal(raw, &result); err != nil {
 		return nil, invalid("Invalid MCP tools/call result")
 	}
+	if result.Content == nil {
+		result.Content = []protocol.ContentBlock{}
+	}
 	return &result, nil
 }
 

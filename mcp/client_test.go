@@ -556,13 +556,15 @@ func TestClientAcceptsOlderProtocolVersions(t *testing.T) {
 	}
 }
 
+// Reference: pi v1.4.0 packages/mcp/test/client.test.ts expects missing
+// content to default to a non-nil empty array.
 func TestClientDefaultsMissingToolResultContent(t *testing.T) {
 	client, server := connectTestClient(t)
 	server.setHandler("tools/call", func(*protocol.JsonRpcRequest) (any, error) {
 		return map[string]any{"structuredContent": map[string]any{"ok": true}}, nil
 	})
 	result, err := client.CallTool(context.Background(), "structured", nil, RequestOptions{})
-	if err != nil || result.Content != nil && len(result.Content) != 0 {
+	if err != nil || result.Content == nil || len(result.Content) != 0 {
 		t.Fatalf("result = %s err %v", jsonNormalize(t, result), err)
 	}
 	var structured map[string]any
