@@ -212,14 +212,13 @@ func (f *FooterDataProvider) Refresh() {
 		return
 	}
 	next, ok := f.resolveGitBranch()
-	previous := f.branch
+	changed := f.resolved && ((f.branch == nil && ok) || (f.branch != nil && (!ok || *f.branch != next)))
 	if !ok {
 		f.branch = nil
 	} else {
 		f.branch = &next
 	}
 	f.resolved = true
-	changed := previous != nil && (f.branch == nil || *previous != next)
 	f.mu.Unlock()
 	if changed {
 		f.notifyBranchChange()

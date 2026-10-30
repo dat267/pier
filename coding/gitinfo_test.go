@@ -29,6 +29,39 @@ func TestFooterDataProviderReplacesMalformedUTF8InHEAD(t *testing.T) {
 	}
 }
 
+// pi v1.4.0 packages/coding-agent/src/core/footer-data-provider.ts notifies
+// when a previously resolved null branch changes to a branch name.
+func TestFooterDataProviderNotifiesWhenBranchReturnsAfterHEADReadFailure(t *testing.T) {
+	repo := t.TempDir()
+	gitDir := filepath.Join(repo, ".git")
+	if err := os.MkdirAll(gitDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	head := filepath.Join(gitDir, "HEAD")
+	if err := os.WriteFile(head, []byte("ref: refs/heads/one\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	provider := NewFooterDataProvider(repo, FooterDataProviderOptions{DisableWatch: true})
+	defer provider.Dispose()
+	if branch, ok := provider.GetGitBranch(); !ok || branch != "one" {
+		t.Fatalf("initial branch = %q, %v; want one", branch, ok)
+	}
+
+	changes := 0
+	provider.OnBranchChange(func() { changes++ })
+	if err := os.Remove(head); err != nil {
+		t.Fatal(err)
+	}
+	provider.Refresh()
+	if err := os.WriteFile(head, []byte("ref: refs/heads/two\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	provider.Refresh()
+	if changes != 2 {
+		t.Fatalf("branch change notifications = %d, want 2 (missing HEAD and recovery)", changes)
+	}
+}
+
 // footer-data-provider.ts requests UTF-8 decoding for git's branch output.
 func TestResolveGitBranchReplacesMalformedUTF8(t *testing.T) {
 	if runtime.GOOS == "windows" {
