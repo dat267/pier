@@ -141,6 +141,49 @@ func TestEmptyHStackRenderReturnsEmptySlice(t *testing.T) {
 	}
 }
 
+// pi v1.4.0 packages/tui/src/components/stack.ts distribute multiplies JS
+// numbers before flooring the weighted share. The maximum safe integer weight
+// must not overflow Go's intermediate product.
+func TestAllocateStackSizesDoesNotOverflowSafeWeights(t *testing.T) {
+	const safeWeight int64 = 9_000_000_000_000_000
+	if int64(^uint(0)>>1) < safeWeight {
+		t.Skip("requires 64-bit int")
+	}
+	weight := int(safeWeight)
+	one := 1
+	entries := []StackLayoutEntry{
+		NewStackEntry(&staticComponent{}, StackEntryOptions{Grow: &weight}),
+		NewStackEntry(&staticComponent{}, StackEntryOptions{Grow: &one}),
+	}
+	available := 1100
+	got := AllocateStackSizes(entries, []int{0, 0}, &available, 0)
+	want := []int{1099, 1}
+	if !equalInts(got, want) {
+		t.Fatalf("weighted allocation = %v, want %v", got, want)
+	}
+}
+
+// pi v1.4.0 packages/tui/src/components/stack.ts distribute multiplies the
+// shrink weight and current size as JS numbers before flooring.
+func TestAllocateStackSizesDoesNotOverflowSafeShrinkWeights(t *testing.T) {
+	const safeWeight int64 = 9_000_000_000_000_000
+	if int64(^uint(0)>>1) < safeWeight {
+		t.Skip("requires 64-bit int")
+	}
+	weight := int(safeWeight)
+	one := 1
+	entries := []StackLayoutEntry{
+		NewStackEntry(&staticComponent{}, StackEntryOptions{Shrink: &weight}),
+		NewStackEntry(&staticComponent{}, StackEntryOptions{Shrink: &one}),
+	}
+	available := 1100
+	got := AllocateStackSizes(entries, []int{1100, 1100}, &available, 0)
+	want := []int{1, 1099}
+	if !equalInts(got, want) {
+		t.Fatalf("weighted shrink allocation = %v, want %v", got, want)
+	}
+}
+
 // sizedLinesComponent renders fixed lines padded to the width (the upstream
 // probe component).
 type sizedLinesComponent struct {

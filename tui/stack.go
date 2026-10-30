@@ -170,12 +170,12 @@ func distributeStackSizes(sizes []int, entries []StackLayoutEntry, amount int, m
 			return
 		}
 
-		totalWeight := 0
+		totalWeight := 0.0
 		for _, item := range candidates {
 			if mode == "grow" {
-				totalWeight += item.entry.Grow
+				totalWeight += float64(item.entry.Grow)
 			} else {
-				weight := item.entry.Shrink * max(1, sizes[item.index])
+				weight := float64(item.entry.Shrink) * float64(max(1, sizes[item.index]))
 				totalWeight += weight
 			}
 		}
@@ -184,13 +184,13 @@ func distributeStackSizes(sizes []int, entries []StackLayoutEntry, amount int, m
 			if remaining <= 0 {
 				break
 			}
-			weight := 0
+			weight := 0.0
 			if mode == "grow" {
-				weight = item.entry.Grow
+				weight = float64(item.entry.Grow)
 			} else {
-				weight = item.entry.Shrink * max(1, sizes[item.index])
+				weight = float64(item.entry.Shrink) * float64(max(1, sizes[item.index]))
 			}
-			proposed := max(1, remaining*weight/totalWeight)
+			proposed := max(1, int(math.Floor(float64(remaining)*weight/totalWeight)))
 			capacity := 0
 			if mode == "grow" {
 				capacity = item.entry.MaxSize - sizes[item.index]
