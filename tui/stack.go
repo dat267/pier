@@ -270,7 +270,7 @@ func (v *VStack) Render(width int) []string {
 	}
 	sizes := AllocateStackSizes(entries, intrinsic, nil, v.Gap)
 
-	var lines []string
+	lines := make([]string, 0)
 	for index := range entries {
 		if index > 0 {
 			for gap := 0; gap < v.Gap; gap++ {
@@ -305,7 +305,7 @@ func (h *HStack) Render(width int) []string {
 	viewport := LayoutViewport{Width: safeWidth, Height: math.MaxInt}
 	entries := visibleStackEntryList(h.Entries, viewport)
 	if len(entries) == 0 {
-		return nil
+		return []string{}
 	}
 
 	intrinsicWidths := make([]int, len(entries))

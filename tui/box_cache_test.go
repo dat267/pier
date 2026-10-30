@@ -6,6 +6,24 @@ import (
 	"testing"
 )
 
+// pi v1.4.0 packages/tui/src/components/box.ts render returns an empty array
+// when there are no children.
+func TestEmptyBoxRenderReturnsEmptySlice(t *testing.T) {
+	lines := NewBox(0, 0, nil).Render(10)
+	if lines == nil || len(lines) != 0 {
+		t.Fatalf("empty Box render = %#v, want non-nil empty slice", lines)
+	}
+}
+
+func TestBoxWithEmptyChildRenderReturnsEmptySlice(t *testing.T) {
+	box := NewBox(0, 0, nil)
+	box.AddChild(NewBox(0, 0, nil))
+	lines := box.Render(10)
+	if lines == nil || len(lines) != 0 {
+		t.Fatalf("Box with empty child render = %#v, want non-nil empty slice", lines)
+	}
+}
+
 func makeWarmBox(lines int) *Box {
 	var sb strings.Builder
 	for i := range lines {

@@ -123,6 +123,24 @@ func TestAllocateStackSizesAgainstUpstreamGolden(t *testing.T) {
 	}
 }
 
+// pi v1.4.0 packages/tui/src/components/v-stack.ts render returns an empty
+// array when the stack has no entries.
+func TestEmptyVStackRenderReturnsEmptySlice(t *testing.T) {
+	lines := NewVStack(nil, StackOptions{}).Render(10)
+	if lines == nil || len(lines) != 0 {
+		t.Fatalf("empty VStack render = %#v, want non-nil empty slice", lines)
+	}
+}
+
+// pi v1.4.0 packages/tui/src/components/h-stack.ts render returns an empty
+// array when the stack has no entries.
+func TestEmptyHStackRenderReturnsEmptySlice(t *testing.T) {
+	lines := NewHStack(nil, StackOptions{}).Render(10)
+	if lines == nil || len(lines) != 0 {
+		t.Fatalf("empty HStack render = %#v, want non-nil empty slice", lines)
+	}
+}
+
 // sizedLinesComponent renders fixed lines padded to the width (the upstream
 // probe component).
 type sizedLinesComponent struct {

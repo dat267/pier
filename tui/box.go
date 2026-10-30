@@ -212,7 +212,7 @@ func (b *Box) HandleMouse(event TuiMouseEvent) *TuiMouseDispatchResult {
 // Render renders the children with padding and background.
 func (b *Box) Render(width int) []string {
 	if len(b.Children) == 0 {
-		return nil
+		return []string{}
 	}
 
 	contentWidth := max(1, width-b.paddingX*2)
@@ -244,7 +244,7 @@ func (b *Box) Render(width int) []string {
 	b.mouseLayoutWidth = contentWidth
 
 	if totalLines == 0 {
-		return nil
+		return []string{}
 	}
 
 	bgSample := ""
