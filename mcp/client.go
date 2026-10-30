@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"maps"
 	"math"
+	"reflect"
 	"slices"
 	"sync"
 	"time"
@@ -690,7 +691,7 @@ func (c *Client) handleRequest(message *protocol.JsonRpcRequest) {
 			return handler(ctx, message.Params)
 		}()
 		if err == nil {
-			if result == nil {
+			if isNullishResult(result) {
 				result = map[string]any{}
 			}
 			enc, marshalErr := protocol.MarshalJSON(result)
@@ -725,6 +726,20 @@ func (c *Client) handleRequest(message *protocol.JsonRpcRequest) {
 			}
 		}
 	}()
+}
+
+// isNullishResult mirrors `result ?? {}` in client.ts handleRequest. A typed
+// nil Go value also serializes as JSON null, so normalize it like a nil result.
+func isNullishResult(result any) bool {
+	if result == nil {
+		return true
+	}
+	switch value := reflect.ValueOf(result); value.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return value.IsNil()
+	default:
+		return false
+	}
 }
 
 // handleNotification dispatches notifications (upstream handleNotification).

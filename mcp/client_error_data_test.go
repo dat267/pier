@@ -59,3 +59,44 @@ func TestClientServedRequestPreservesStructuredErrorData(t *testing.T) {
 		t.Fatal("no response to served request")
 	}
 }
+
+// Reference: pi v1.4.0 packages/mcp/src/client.ts handleRequest normalizes a
+// null handler result to an empty object with `result ?? {}`.
+func TestClientServedRequestNormalizesTypedNilResult(t *testing.T) {
+	client, server := connectTestClient(t)
+	defer func() {
+		if err := client.Close(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	client.SetRequestHandler("test/empty-result", func(context.Context, json.RawMessage) (any, error) {
+		var result map[string]any
+		return result, nil
+	})
+	responses := make(chan *protocol.JsonRpcResponse, 1)
+	server.transport.OnMessage(func(message Message) {
+		if response, ok := message.(*protocol.JsonRpcResponse); ok && response.ID == protocol.StringId("empty") {
+			responses <- response
+		}
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	if err := server.transport.Send(ctx, protocol.JsonRpcRequest{
+		JSONRPC: protocol.JSONRPCVersion,
+		ID:      protocol.StringId("empty"),
+		Method:  "test/empty-result",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case response := <-responses:
+		if string(response.Result) != `{}` {
+			t.Fatalf("result = %s, want {}", response.Result)
+		}
+	case <-ctx.Done():
+		t.Fatal("no response to served request")
+	}
+}
