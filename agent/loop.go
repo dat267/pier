@@ -1022,7 +1022,11 @@ func executePreparedToolCall(prepared *preparedToolCallValue, ctx context.Contex
 	// emitter cannot inflate the tool's own time (upstream captures it at the same point).
 	durationMS := roundDurationMilliseconds(time.Since(startedAt))
 	if errFromUpdate := updates.close(); errFromUpdate != nil {
-		err = errFromUpdate
+		// Upstream awaits the onUpdate promises; their rejection rejects the
+		// tool call itself, so the agent wrapper treats it as a run failure.
+		// Let the agent lifecycle recover this event-sink error instead of
+		// rewriting it as a model-facing tool result.
+		panic(errFromUpdate)
 	}
 	if err == nil {
 		return executedToolCallOutcome{result: result, isError: result.IsError, durationMS: durationMS}
