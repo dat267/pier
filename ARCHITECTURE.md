@@ -3609,8 +3609,8 @@ with an async upstream listener observed five simultaneous callbacks.
 Reference: pi v1.4.0 (`4a080252`), `packages/agent/src/agent.ts`
 `processEvents` iterates its live `Set`; if a listener unsubscribes a later
 listener during dispatch, that listener is skipped for the current event (and
-newly added listeners can be visited). Go snapshots listeners under
-`listenerMu` before releasing the lock and invoking callbacks, so subscription
+newly added listeners can be visited). Go snapshots listeners under `listenerMu`
+before releasing the lock and invoking callbacks, so subscription
 changes apply to subsequent events only. This is intentional to keep user code
 outside the mutex and make concurrent subscribe/unsubscribe safe, per the
 single-writer callback ownership rules in `AGENTS.md`.
@@ -3620,14 +3620,17 @@ Reproducer: `TestAgentUnsubscribeDuringDispatchUsesListenerSnapshot` in
 upstream live-Set case invokes only the first listener.
 
 The same snapshot contract applies to `mcp.Client.handleNotification` versus
-`packages/mcp/src/client.ts` `handleNotification`: an earlier callback can
+`packages/mcp/src/client.ts` `handleNotification`, and to MCP transport events
+versus `packages/mcp/src/transports/transport.ts`: an earlier callback can
 unsubscribe a later one in upstream's live `Set`, while Go invokes the
 already-admitted callback snapshot. This preserves the existing rule that user
-callbacks never run while the notification registry mutex is held.
+callbacks never run while the notification or transport registry mutex is held.
 
-Reproducer: `TestClientNotificationUnsubscribeDuringDispatchUsesSnapshot` in
-`mcp/client_notification_dispatch_test.go`; a Node probe against Set iteration
-observed only the first listener.
+Reproducers: `TestClientNotificationUnsubscribeDuringDispatchUsesSnapshot` in
+`mcp/client_notification_dispatch_test.go` and
+`TestTransportMessageUnsubscribeDuringDispatchUsesSnapshot` in
+`mcp/transport_events_test.go`; pinned Node Set iteration invokes only the first
+listener in each case.
 
 ### D313
 

@@ -3,7 +3,11 @@ package mcp
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
+	"time"
+
+	"github.com/dat267/pier/mcp/protocol"
 )
 
 // Reference: pi v1.4.0 packages/mcp/src/transports/transport.ts keeps listeners
@@ -18,6 +22,46 @@ func TestTransportUnsubscribeSurvivesListenerRegistration(t *testing.T) {
 	transport.EmitError(errors.New("probe"))
 	if first != 0 || second != 1 {
 		t.Fatalf("listener calls = (%d, %d), want (0, 1)", first, second)
+	}
+}
+
+// pi v1.4.0 transports/transport.ts iterates a live Set, so removing a later
+// listener during emit skips it. Go deliberately delivers its admitted snapshot.
+func TestTransportMessageUnsubscribeDuringDispatchUsesSnapshot(t *testing.T) {
+	client, server := CreateInMemoryTransportPair()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	defer client.Close(context.Background())
+	if err := client.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := server.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	var calls []string
+	delivered := make(chan struct{}, 2)
+	var removeSecond func()
+	server.OnMessage(func(Message) {
+		calls = append(calls, "first")
+		removeSecond()
+		delivered <- struct{}{}
+	})
+	removeSecond = server.OnMessage(func(Message) {
+		calls = append(calls, "second")
+		delivered <- struct{}{}
+	})
+	if err := client.Send(ctx, &protocol.JsonRpcNotification{JSONRPC: "2.0", Method: "probe"}); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		select {
+		case <-delivered:
+		case <-ctx.Done():
+			t.Fatalf("only delivered listeners %v", calls)
+		}
+	}
+	if !reflect.DeepEqual(calls, []string{"first", "second"}) {
+		t.Fatalf("callback snapshot = %v, want [first second]", calls)
 	}
 }
 
