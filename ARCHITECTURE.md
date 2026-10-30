@@ -3612,6 +3612,22 @@ Reproducer: `TestAgentUnsubscribeDuringDispatchUsesListenerSnapshot` in
 `agent/agent_test.go` covers the Go contract; a pinned Bun probe showed the
 upstream live-Set case invokes only the first listener.
 
+### D313
+
+**Context token totals follow JavaScript Number precision within Go's int range.**
+
+Reference: pi v1.4.0 (`4a080252`), `packages/ai/src/utils/estimate.ts`
+adds token usage and trailing estimates as JavaScript `Number`s. Go now rounds
+through `float64` for usage-field sums and context totals, so values above 2^53
+match JavaScript's loss of integer precision rather than retaining exact int64
+arithmetic. The public Go result uses `int`; values beyond that type's range
+saturate at its bounds because the corresponding JavaScript number cannot be
+represented. This boundary is limited to implausibly large reported usage.
+
+Reproducers: `TestCalculateContextTokensUsesJSNumberRounding`,
+`TestEstimateContextTokensUsesJSNumberAddition`, and
+`TestCalculateContextTokensSaturatesBeyondGoInt` in `ai/estimate_test.go`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

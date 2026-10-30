@@ -29,9 +29,25 @@ type ContextUsageEstimate struct {
 // CalculateContextTokens of a usage block.
 func CalculateContextTokens(usage Usage) int {
 	if usage.TotalTokens != 0 {
-		return int(usage.TotalTokens)
+		return jsNumberToInt(float64(usage.TotalTokens))
 	}
-	return int(usage.Input + usage.Output + usage.CacheRead + usage.CacheWrite)
+	total := float64(usage.Input) + float64(usage.Output) + float64(usage.CacheRead) + float64(usage.CacheWrite)
+	return jsNumberToInt(total)
+}
+
+// jsNumberToInt rounds int64-backed usage through JavaScript Number semantics.
+// D313: values outside Go int's range saturate because the port cannot represent
+// the corresponding JavaScript number in its result type.
+func jsNumberToInt(value float64) int {
+	maxInt := int(^uint(0) >> 1)
+	minInt := -maxInt - 1
+	if value >= float64(maxInt) {
+		return maxInt
+	}
+	if value <= float64(minInt) {
+		return minInt
+	}
+	return int(value)
 }
 
 func safeJSONStringify(v any) string {
@@ -178,18 +194,20 @@ func EstimateContextTokens(messages []Message) ContextUsageEstimate {
 	usage, index := getLastAssistantUsageInfo(messages)
 	if index >= 0 {
 		usageTokens := CalculateContextTokens(usage)
-		trailing := 0
+		trailingNumber := 0.0
 		for i := index + 1; i < len(messages); i++ {
-			trailing += EstimateMessageTokens(messages[i])
+			trailingNumber += float64(EstimateMessageTokens(messages[i]))
 		}
+		trailing := jsNumberToInt(trailingNumber)
 		return ContextUsageEstimate{
-			Tokens: usageTokens + trailing, UsageTokens: usageTokens,
+			Tokens: jsNumberToInt(float64(usageTokens) + trailingNumber), UsageTokens: usageTokens,
 			TrailingTokens: trailing, LastUsageIndex: index,
 		}
 	}
-	tokens := 0
+	tokenNumber := 0.0
 	for _, message := range messages {
-		tokens += EstimateMessageTokens(message)
+		tokenNumber += float64(EstimateMessageTokens(message))
 	}
+	tokens := jsNumberToInt(tokenNumber)
 	return ContextUsageEstimate{Tokens: tokens, UsageTokens: 0, TrailingTokens: tokens, LastUsageIndex: -1}
 }
