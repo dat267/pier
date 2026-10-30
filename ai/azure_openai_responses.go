@@ -90,13 +90,14 @@ func NormalizeAzureBaseURL(baseURL string) (string, error) {
 		host += ":" + port
 	}
 	parsed.Host = host
-	normalizedPath := strings.TrimRight(parsed.Path, "/")
+	normalizedPath := strings.TrimRight(parsed.EscapedPath(), "/")
 
 	// Azure hosts get /openai/v1 as the base path so the SDK-style request
 	// layout (`{base}/responses?api-version=v1`) works.
 	if isAzureHost && (normalizedPath == "" || normalizedPath == "/" ||
 		normalizedPath == "/openai" || normalizedPath == "/openai/v1/responses") {
 		parsed.Path = "/openai/v1"
+		parsed.RawPath = ""
 		parsed.RawQuery = ""
 	}
 	return strings.TrimRight(parsed.String(), "/"), nil
