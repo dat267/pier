@@ -2325,8 +2325,9 @@ Reference: `core/http-dispatcher.ts` sets Undici's `headersTimeout` and
 `bodyTimeout` from the global idle setting. `core/sdk.ts` separately sets the
 provider request's `timeoutMs` from `retry.provider.timeoutMs`, falling back to
 the effective idle timeout only when no provider override exists. OpenAI,
-Anthropic, Codex, and OpenRouter image APIs pass `timeoutMs` to their client
-requests; Google, Vertex, and Bedrock rely on the dispatcher timeout. Go's
+Anthropic, Codex, Mistral, and OpenRouter image APIs pass `timeoutMs` to their
+requests (`api/azure-openai-responses.ts` shares the OpenAI SDK); Google,
+Vertex, Bedrock, and Pi Messages rely on the dispatcher timeout. Go's
 `http.Transport` has no per-request header timeout, and writing
 `ResponseHeaderTimeout` on the process-wide `http.DefaultTransport` races with
 in-flight requests (D40). The port arms one
