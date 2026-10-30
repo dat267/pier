@@ -23,6 +23,7 @@ type SettingsSession interface {
 	SetAutoCompactionEnabled(enabled bool)
 	SetSteeringMode(mode coding.QueueMode)
 	SetFollowUpMode(mode coding.QueueMode)
+	SetTransport(transport ai.Transport)
 	SetCacheWarmingMode(mode coding.CacheWarmingMode)
 	SetThinkingLevel(level ai.ThinkingLevel, options ...coding.ModelMutationOptions)
 	IsStreaming() bool
@@ -224,6 +225,7 @@ func (w *SettingsWiring) BuildSettingsCallbacks(done func(), refresh func()) Set
 		OnFollowUpModeChange: func(mode string) { session.SetFollowUpMode(mode) },
 		OnTransportChange: func(transport ai.Transport) {
 			settings.SetTransport(transport)
+			session.SetTransport(transport)
 		},
 		OnHTTPIdleTimeoutMsChange: func(timeoutMS int64) {
 			// The value is written here and applied at the next start, where the

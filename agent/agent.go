@@ -557,9 +557,17 @@ func (a *Agent) createContextSnapshot() AgentContext {
 	}
 }
 
+// SetTransport changes the transport used by subsequent agent turns.
+func (a *Agent) SetTransport(transport ai.Transport) {
+	a.mu.Lock()
+	a.Transport = transport
+	a.mu.Unlock()
+}
+
 func (a *Agent) createLoopConfig(skipInitialSteeringPoll bool) *AgentLoopConfig {
 	a.mu.Lock()
 	state := *a.state
+	transport := a.Transport
 	a.mu.Unlock()
 	reasoning := state.ThinkingLevel
 	if reasoning == ai.ThinkOff {
@@ -568,7 +576,7 @@ func (a *Agent) createLoopConfig(skipInitialSteeringPoll bool) *AgentLoopConfig 
 	config := &AgentLoopConfig{
 		SessionID:             a.SessionID,
 		Identity:              a.Identity,
-		Transport:             a.Transport,
+		Transport:             transport,
 		MaxRetryDelayMs:       a.MaxRetryDelayMS,
 		OnPayload:             a.OnPayload,
 		OnResponse:            a.OnResponse,

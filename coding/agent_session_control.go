@@ -214,6 +214,9 @@ func (s *AgentSession) SetSteeringMode(mode QueueMode) { s.Agent.SetSteeringMode
 // SetFollowUpMode sets the follow-up drain mode.
 func (s *AgentSession) SetFollowUpMode(mode QueueMode) { s.Agent.SetFollowUpMode(mode) }
 
+// SetTransport changes the request transport for subsequent agent turns.
+func (s *AgentSession) SetTransport(transport ai.Transport) { s.Agent.SetTransport(transport) }
+
 // SyncQueueModesFromSettings applies the settings-backed queue modes.
 func (s *AgentSession) SyncQueueModesFromSettings() {
 	if s.control.Settings == nil {

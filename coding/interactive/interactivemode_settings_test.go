@@ -16,6 +16,7 @@ type settingsTestSession struct {
 	steering     coding.QueueMode
 	followUp     coding.QueueMode
 	cacheWarming string
+	transport    ai.Transport
 	thinking     ai.ThinkingLevel
 	streaming    bool
 }
@@ -28,6 +29,7 @@ func (s *settingsTestSession) FollowUpMode() coding.QueueMode        { return s.
 func (s *settingsTestSession) SetAutoCompactionEnabled(enabled bool) { s.autoCompact = enabled }
 func (s *settingsTestSession) SetSteeringMode(mode coding.QueueMode) { s.steering = mode }
 func (s *settingsTestSession) SetFollowUpMode(mode coding.QueueMode) { s.followUp = mode }
+func (s *settingsTestSession) SetTransport(transport ai.Transport)   { s.transport = transport }
 func (s *settingsTestSession) SetCacheWarmingMode(mode coding.CacheWarmingMode) {
 	s.cacheWarming = mode
 }
@@ -210,6 +212,12 @@ func TestSettingsCallbacks(t *testing.T) {
 	callbacks.OnSteeringModeChange("all")
 	if session.steering != "all" {
 		t.Fatal("steering not applied")
+	}
+	// pi v1.4.0 interactive-mode.ts updates both the stored setting and the
+	// active agent transport so the next turn uses the selected transport.
+	callbacks.OnTransportChange("websocket")
+	if settings.GetTransport() != "websocket" || session.transport != "websocket" {
+		t.Fatalf("transport setting/session = %q/%q, want websocket/websocket", settings.GetTransport(), session.transport)
 	}
 	// The value is written, not installed into the transport: there is no
 	// dispatcher to reconfigure, and mutating the live one races (D40). It reaches
