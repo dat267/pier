@@ -3,6 +3,7 @@ package coding
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 	"sync"
 	"time"
@@ -60,7 +61,22 @@ func GetPromptCacheTTLMs(model *ai.Model, options *ai.SimpleStreamOptions) (int6
 	if !ok {
 		return 0, false
 	}
-	return int64(seconds) * 1000, true
+	return promptCacheTTLMilliseconds(seconds), true
+}
+
+// promptCacheTTLMilliseconds saturates TTLs outside Go's int64 millisecond
+// range. The upstream keeps this product in JavaScript Number space; saturation
+// preserves far-future and past classifications instead of wrapping to a small
+// positive cache lifetime (D306).
+func promptCacheTTLMilliseconds(seconds int) int64 {
+	value := int64(seconds)
+	if value > math.MaxInt64/1000 {
+		return math.MaxInt64
+	}
+	if value < math.MinInt64/1000 {
+		return math.MinInt64
+	}
+	return value * 1000
 }
 
 func envOf(options *ai.SimpleStreamOptions) ai.ProviderEnv {

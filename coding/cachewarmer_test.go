@@ -70,6 +70,25 @@ func TestGetPromptCacheTTLMs(t *testing.T) {
 	}
 }
 
+// The pinned core/cache-warmer.ts keeps TTL multiplication in JavaScript
+// Number space and stops deadlines beyond MAX_WARMING_AGE_MS instead of
+// wrapping them into a near-term warm request.
+func TestCacheWarmerStopsWhenTTLMillisecondsWouldOverflow(t *testing.T) {
+	model := warmerModel()
+	model.PromptCache[ai.CacheRetentionShort] = 18_446_744_073_709_602
+	warmer, manager, _ := newTestWarmer(t, model, CacheWarmingStreaming)
+	manager.AppendMessage(&ai.AssistantMessage{
+		API: ai.APIAnthropicMessages, Provider: "anthropic", Model: "m",
+		Usage: ai.Usage{Input: 1000, TotalTokens: 1000},
+	})
+	warmer.Start(CacheWarmRequest{Model: model}, func() bool { return true })
+
+	status := warmer.Status()
+	if status.State != "inactive" || status.Reason != "one-hour safety limit reached" {
+		t.Fatalf("status = %+v, want inactive beyond the one-hour safety window", status)
+	}
+}
+
 func TestIsCacheWarmingReplayable(t *testing.T) {
 	// Non-Anthropic models and non-reasoning requests replay fine.
 	openai := &ai.Model{ID: "o", API: ai.APIOpenAICompletions, Provider: "openai"}

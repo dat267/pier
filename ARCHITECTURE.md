@@ -3494,6 +3494,21 @@ a non-expiring timeout. Ordinary timeout settings remain exact. SDK header
 Test: `TestGuardIdleBodyPreservesFastTimerDelayAndSaturatesDuration` pins both
 the raw delay above Node's timer range and saturation above Go's duration range.
 
+### D306
+
+**Extreme prompt-cache TTLs saturate at Go's int64 millisecond bounds.**
+
+Reference: pi v1.4.0 `core/cache-warmer.ts` multiplies model TTL seconds by
+1000 in JavaScript Number space and stops warming when a scheduled time exceeds
+its fixed one-hour safety window. Pier's `ModelPromptCache` stores seconds as a
+Go `int`, while cache-warmer calculations use int64 milliseconds. If that
+product cannot fit, `coding/cachewarmer.go` saturates to the nearest bound so a
+far-future lifetime remains outside the warming window and a past lifetime
+cannot wrap into a short positive delay. Ordinary TTLs retain exact values.
+
+Test: `TestCacheWarmerStopsWhenTTLMillisecondsWouldOverflow` reproduces a
+large finite TTL wrapping into a scheduled near-term refresh.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.
