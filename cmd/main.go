@@ -103,10 +103,6 @@ func Execute() {
 		fmt.Println(coding.Version)
 		return
 	}
-	if args.Help {
-		fmt.Print(coding.PrintHelpNamed(appName))
-		return
-	}
 	// --export renders a session file and exits before any runtime or TUI is
 	// built (upstream handles it right after --version). The output path is the
 	// first positional message, which is upstream's convention.
@@ -122,6 +118,10 @@ func Execute() {
 			os.Exit(1)
 		}
 		fmt.Println("Exported to: " + result)
+		return
+	}
+	if args.Help {
+		fmt.Print(coding.PrintHelpNamed(appName))
 		return
 	}
 	if err := run(appName, args); err != nil {

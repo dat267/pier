@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -44,6 +45,24 @@ func TestExecuteVersionTakesPriorityOverHelp(t *testing.T) {
 	stdout, stderr := captureStdio(t, Execute)
 	if stdout != coding.Version+"\n" || stderr != "" {
 		t.Fatalf("stdout=%q stderr=%q, want version only", stdout, stderr)
+	}
+}
+
+// Reference: pi v1.4.0 packages/coding-agent/src/main.ts handles --export
+// before its later help handling.
+func TestExecuteExportTakesPriorityOverHelp(t *testing.T) {
+	isolatedAgentDir(t)
+	source := makeSessionFile(t, t.TempDir()).GetSessionFile()
+	outputPath := filepath.Join(t.TempDir(), "export.html")
+	originalArgs := os.Args
+	os.Args = []string{"pier", "--help", "--export", source, outputPath}
+	defer func() { os.Args = originalArgs }()
+	stdout, stderr := captureStdio(t, Execute)
+	if !strings.Contains(stdout, "Exported to: "+outputPath) || strings.Contains(stdout, "Usage:") || stderr != "" {
+		t.Fatalf("stdout=%q stderr=%q", stdout, stderr)
+	}
+	if _, err := os.Stat(outputPath); err != nil {
+		t.Fatalf("export output: %v", err)
 	}
 }
 
