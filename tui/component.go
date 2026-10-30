@@ -466,6 +466,7 @@ func (c *Container) Render(width int) []string {
 	}
 	c.renderWalks++
 
+	oldSnapshotLen := len(c.childrenSnapshot)
 	// Snapshot the children: a child's Render may re-enter and mutate
 	// c.Children. The scratch buffer is reused, not reallocated.
 	if cap(c.childrenSnapshot) < len(c.Children) {
@@ -473,12 +474,17 @@ func (c *Container) Render(width int) []string {
 	}
 	c.childrenSnapshot = c.childrenSnapshot[:len(c.Children)]
 	copy(c.childrenSnapshot, c.Children)
+	if oldSnapshotLen > len(c.childrenSnapshot) {
+		clear(c.childrenSnapshot[len(c.childrenSnapshot):oldSnapshotLen])
+	}
 
+	oldMouseLayoutLen := len(c.mouseLayout)
 	if cap(c.mouseLayout) < len(c.childrenSnapshot) {
 		c.mouseLayout = make([]mouseChild, 0, len(c.childrenSnapshot))
 	} else {
 		c.mouseLayout = c.mouseLayout[:0]
 	}
+	oldChildRendersLen := len(c.childRenders)
 	if cap(c.childRenders) < len(c.childrenSnapshot) {
 		c.childRenders = make([][]string, len(c.childrenSnapshot))
 	}
@@ -494,6 +500,12 @@ func (c *Container) Render(width int) []string {
 			c.childRenders[i] = childLines
 		}
 		c.mouseLayout = append(c.mouseLayout, mouseChild{component: child, height: len(c.childRenders[i])})
+	}
+	if oldMouseLayoutLen > len(c.mouseLayout) {
+		clear(c.mouseLayout[len(c.mouseLayout):oldMouseLayoutLen])
+	}
+	if oldChildRendersLen > len(c.childRenders) {
+		clear(c.childRenders[len(c.childRenders):oldChildRendersLen])
 	}
 	c.mouseLayoutWidth = width
 
@@ -542,7 +554,15 @@ func (c *Container) Render(width int) []string {
 	c.cacheLines = lines
 
 	c.cacheChildren = append(c.cacheChildren[:0], c.childRenders...)
-	c.cacheChildComponents = append(c.cacheChildComponents[:0], c.childrenSnapshot...)
+	oldCacheChildComponentsLen := len(c.cacheChildComponents)
+	if cap(c.cacheChildComponents) < len(c.childrenSnapshot) {
+		c.cacheChildComponents = make([]Component, len(c.childrenSnapshot))
+	}
+	c.cacheChildComponents = c.cacheChildComponents[:len(c.childrenSnapshot)]
+	copy(c.cacheChildComponents, c.childrenSnapshot)
+	if oldCacheChildComponentsLen > len(c.cacheChildComponents) {
+		clear(c.cacheChildComponents[len(c.cacheChildComponents):oldCacheChildComponentsLen])
+	}
 	c.cacheChildVersions = c.cacheChildVersions[:0]
 	for i := range c.childrenSnapshot {
 		version := uint64(0)

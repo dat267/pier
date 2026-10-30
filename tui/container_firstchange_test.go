@@ -81,6 +81,32 @@ func TestContainerRemoveChildReleasesComponentReference(t *testing.T) {
 	}
 }
 
+// A rendered container keeps scratch and identity-cache slices for reuse. After
+// a structural shrink and the next render, their unused tails must not retain
+// components that upstream's fresh render arrays have discarded (pi v1.4.0,
+// packages/tui/src/tui.ts Container.render).
+func TestContainerRenderShrinkReleasesRemovedReferences(t *testing.T) {
+	child := &changingFlatLines{lines: []string{"private component state"}}
+	container := &Container{}
+	container.AddChild(child)
+	container.Render(80)
+	container.RemoveChild(child)
+	container.Render(80)
+
+	if refs := container.childrenSnapshot[:cap(container.childrenSnapshot)]; refs[0] != nil {
+		t.Fatal("render scratch retains removed child")
+	}
+	if refs := container.cacheChildComponents[:cap(container.cacheChildComponents)]; refs[0] != nil {
+		t.Fatal("identity cache retains removed child")
+	}
+	if refs := container.mouseLayout[:cap(container.mouseLayout)]; refs[0].component != nil {
+		t.Fatal("mouse layout retains removed child")
+	}
+	if refs := container.childRenders[:cap(container.childRenders)]; refs[0] != nil {
+		t.Fatal("render scratch retains removed child lines")
+	}
+}
+
 func BenchmarkContainerFirstChildChange(b *testing.B) {
 	child := &changingFlatLines{lines: make([]string, 30000)}
 	for i := range child.lines {
