@@ -942,7 +942,15 @@ func customThemeInfos() []ThemeInfo {
 		}
 	}
 	scanDir := func(dir string) {
-		entries, err := os.ReadDir(dir)
+		directory, err := os.Open(dir)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				warn(dir, err.Error())
+			}
+			return
+		}
+		entries, err := directory.ReadDir(-1)
+		_ = directory.Close()
 		if err != nil {
 			if !os.IsNotExist(err) {
 				warn(dir, err.Error())

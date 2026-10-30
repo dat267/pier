@@ -75,6 +75,43 @@ func TestLoadedThemeWarnings(t *testing.T) {
 	}
 }
 
+// Reference: pi v1.4.0 (4a080252), theme.ts getCustomThemeInfos visits
+// readdirSync entries in native order; the first same-name theme wins.
+func TestDiscoveredThemeCollisionUsesNativeEntryOrder(t *testing.T) {
+	dir := t.TempDir()
+	for _, filename := range []string{"zeta.json", "alpha.json", "mu.json"} {
+		writeThemeFile(t, dir, filename, "shared-native-order", "#123456")
+	}
+	handle, err := os.Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries, err := handle.ReadDir(-1)
+	closeErr := handle.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if len(entries) == 0 {
+		t.Fatal("theme fixture is empty")
+	}
+	wantPath := filepath.Join(dir, entries[0].Name())
+	SetCustomThemeSources(CustomThemeSources{Dir: dir})
+	t.Cleanup(func() { SetCustomThemeSources(CustomThemeSources{NoDiscovery: true}) })
+
+	for _, info := range AvailableThemesWithPaths() {
+		if info.Name == "shared-native-order" {
+			if info.Path != wantPath {
+				t.Fatalf("theme path = %q, want native first file %q", info.Path, wantPath)
+			}
+			return
+		}
+	}
+	t.Fatal("shared-native-order theme was not discovered")
+}
+
 // TestThemeCollisionsKeepFirstSource follows resource-loader.ts loadThemes and
 // dedupeThemes: defaults precede explicit paths, and duplicates are diagnosed.
 func TestThemeCollisionsKeepFirstSource(t *testing.T) {
