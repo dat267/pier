@@ -91,6 +91,9 @@ func NewScrollView(component Component, options ScrollViewOptions) *ScrollView {
 	view.hideDelayMS = 1000
 	if options.HasScrollbarHideDelay {
 		view.hideDelayMS = max(0, options.ScrollbarHideDelayMS)
+		if int64(view.hideDelayMS) > maxJavascriptTimerDelayMS {
+			view.hideDelayMS = 1
+		}
 	}
 	view.followingEnd = view.followEnd
 	view.Container.Children = append(view.Container.Children, component)
