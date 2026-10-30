@@ -328,16 +328,20 @@ func (w *CacheWarmer) OnAgentSettled() {
 		return
 	}
 	if w.GetMode() == CacheWarmingStreaming {
-		w.stop("agent run settled", nil)
+		w.stopRun(run, "agent run settled", nil)
 		return
 	}
 	w.mu.Lock()
+	if w.run != run {
+		w.mu.Unlock()
+		return
+	}
 	run.phase = "idle"
 	deadline := run.startedAt + maxIdleCacheWarmingAgeMS
 	overdue := run.nextWarmAt > deadline || time.Now().UnixMilli() >= deadline
 	w.mu.Unlock()
 	if overdue {
-		w.stop("30-minute idle safety limit reached", nil)
+		w.stopRun(run, "30-minute idle safety limit reached", nil)
 	}
 }
 
@@ -350,7 +354,7 @@ func (w *CacheWarmer) OnModeChanged() {
 		return
 	}
 	if reason := w.modeStopReason(run); reason != "" {
-		w.stop(reason, nil)
+		w.stopRun(run, reason, nil)
 	}
 }
 

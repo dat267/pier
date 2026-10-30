@@ -3622,9 +3622,9 @@ cancels its request context
 and releases `OnWarmed`. Refresh workers snapshot an admitted callback under
 that mutex and invoke it outside the lock; an already-admitted callback may
 finish without making disposal join itself. Host currency and mode callbacks run
-outside that mutex, so their stop is run-scoped: a stale refresh stops only while
-it is still the current run, matching the reference's single-threaded
-check-and-stop. No new worker or mutex is added.
+outside that mutex, so their stop is run-scoped: stale refreshes and lifecycle
+notifications stop only the run they observed, matching the reference's
+single-threaded check-and-stop. No new worker or mutex is added.
 
 `coding.GoalController.mu` serializes machine transitions with their durable
 append effects. A clear/create pair cannot interleave with another tool's
