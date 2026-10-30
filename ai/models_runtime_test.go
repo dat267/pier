@@ -505,6 +505,29 @@ func doneStream() *AssistantMessageEventStream {
 	return stream
 }
 
+// Reference: pi v1.4.0, packages/ai/src/models.ts getModels filters the
+// provider's all-type catalog to chat models. Image and classifier models have
+// separate model accessors.
+func TestProviderGetModelsReturnsChatTypesOnly(t *testing.T) {
+	provider := CreateProvider(CreateProviderOptions{
+		ID: "test",
+		Models: []*Model{
+			{ID: "chat", Type: "chat"},
+			{ID: "legacy"},
+			{ID: "image", Type: "image"},
+			{ID: "classifier", Type: "classifier"},
+		},
+	})
+	var got []string
+	for _, model := range provider.GetModels() {
+		got = append(got, model.ID)
+	}
+	want := []string{"chat", "legacy"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("Provider.GetModels() = %v, want chat models %v", got, want)
+	}
+}
+
 // Models.StreamSimple must resolve auth into the provider request and forward
 // the simple options (reasoning, tool choice, budgets) unchanged, applying the
 // header transform exactly once.

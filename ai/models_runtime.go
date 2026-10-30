@@ -73,8 +73,18 @@ type Provider struct {
 	hasDeferredFetch bool
 }
 
-// GetModels returns the current known models, sync.
-func (p *Provider) GetModels() []*Model { return p.getModels() }
+// GetModels returns the current known chat models, sync. Models without a
+// type and models explicitly typed "chat" are chat models (upstream models.ts).
+func (p *Provider) GetModels() []*Model {
+	models := p.getModels()
+	chatModels := make([]*Model, 0, len(models))
+	for _, model := range models {
+		if model.Type == "" || model.Type == "chat" {
+			chatModels = append(chatModels, model)
+		}
+	}
+	return chatModels
+}
 
 // streamsForModel resolves the API implementation for a model.
 func (p *Provider) streamsForModel(model *Model) ProviderStreams { return p.streamsFor(model) }
