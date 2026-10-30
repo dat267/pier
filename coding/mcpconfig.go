@@ -263,8 +263,8 @@ func mergeJSONObjects(base, override json.RawMessage) (json.RawMessage, error) {
 	return json.Marshal(baseObject)
 }
 
-// readJSONObjectOrdered decodes a JSON object, returning its keys in document
-// order with each value preserved as raw JSON.
+// readJSONObjectOrdered decodes a JSON object, returning each distinct key in
+// first document order with its last value, matching JSON.parse on duplicates.
 func readJSONObjectOrdered(data []byte) ([]string, map[string]json.RawMessage, error) {
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.UseNumber()
@@ -290,7 +290,9 @@ func readJSONObjectOrdered(data []byte) ([]string, map[string]json.RawMessage, e
 		if err := decoder.Decode(&value); err != nil {
 			return nil, nil, err
 		}
-		keys = append(keys, key)
+		if _, exists := values[key]; !exists {
+			keys = append(keys, key)
+		}
 		values[key] = value
 	}
 	return keys, values, nil
