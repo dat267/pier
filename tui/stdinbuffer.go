@@ -278,11 +278,11 @@ type StdinBufferOptions struct {
 func NewStdinBuffer(options StdinBufferOptions) *StdinBuffer {
 	timeoutMS := defaultSequenceTimeoutMS
 	if options.Timeout != 0 {
-		timeoutMS = options.Timeout
+		timeoutMS = int(javascriptTimerDuration(int64(options.Timeout)) / time.Millisecond)
 	}
 	escapeTimeoutMS := defaultEscapeTimeoutMS
 	if options.EscapeTimeout != 0 {
-		escapeTimeoutMS = options.EscapeTimeout
+		escapeTimeoutMS = int(javascriptTimerDuration(int64(options.EscapeTimeout)) / time.Millisecond)
 	}
 	return &StdinBuffer{timeoutMS: timeoutMS, escapeTimeoutMS: escapeTimeoutMS}
 }
