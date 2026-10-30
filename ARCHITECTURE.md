@@ -3614,6 +3614,16 @@ Reproducer: `TestAgentUnsubscribeDuringDispatchUsesListenerSnapshot` in
 `agent/agent_test.go` covers the Go contract; a pinned Bun probe showed the
 upstream live-Set case invokes only the first listener.
 
+The same snapshot contract applies to `mcp.Client.handleNotification` versus
+`packages/mcp/src/client.ts` `handleNotification`: an earlier callback can
+unsubscribe a later one in upstream's live `Set`, while Go invokes the
+already-admitted callback snapshot. This preserves the existing rule that user
+callbacks never run while the notification registry mutex is held.
+
+Reproducer: `TestClientNotificationUnsubscribeDuringDispatchUsesSnapshot` in
+`mcp/client_notification_dispatch_test.go`; a Node probe against Set iteration
+observed only the first listener.
+
 ### D313
 
 **Context token totals follow JavaScript Number precision within Go's int range.**

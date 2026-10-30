@@ -750,6 +750,8 @@ func (c *Client) handleNotification(message *protocol.JsonRpcNotification) {
 		c.handleCancelled(message.Params)
 	}
 	c.notificationMu.Lock()
+	// D312: listeners removed by an earlier callback remain admitted for this
+	// notification; callbacks run from the snapshot after unlocking.
 	entries := make([]*listenerEntry[func(json.RawMessage)], 0, len(c.notificationListeners[message.Method]))
 	for _, entry := range c.notificationListeners[message.Method] {
 		if !entry.removed {
