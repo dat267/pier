@@ -67,6 +67,11 @@ var TUIKeybindings = map[Keybinding]KeybindingDefinition{
 	"tui.altScreen.bottom":         {DefaultKeys: []string{"ctrl+end"}, Description: "Scroll viewport to bottom"},
 }
 
+// TUIKeybindingOrder returns built-in keybindings in upstream object-literal order.
+func TUIKeybindingOrder() []Keybinding {
+	return append([]Keybinding(nil), tuiKeybindingOrder...)
+}
+
 // tuiKeybindingOrder is the declaration order of the built-in keybindings
 // (upstream object literal order).
 var tuiKeybindingOrder = []Keybinding{

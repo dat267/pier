@@ -179,16 +179,10 @@ func pasteImageKeys(windows bool) []string {
 	return []string{"ctrl+v"}
 }
 
-// tuiKeybindingOrderForOrdering returns the TUI keybinding declaration order
-// by asking the TUI manager for its canonical order.
+// tuiKeybindingOrderForOrdering returns the declaration order from the pinned
+// TUI keybinding table.
 func tuiKeybindingOrderForOrdering() []string {
-	order := make([]string, 0, len(tui.TUIKeybindings))
-	manager := tui.NewKeybindingsManager(tui.TUIKeybindings, nil)
-	for key := range manager.GetResolvedBindings() {
-		order = append(order, key)
-	}
-	sort.Strings(order)
-	return order
+	return tui.TUIKeybindingOrder()
 }
 
 // KeybindingNameMigrations maps legacy keybinding names to their modern ids.

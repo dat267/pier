@@ -30,6 +30,25 @@ func TestCreateAppKeybindingsMigratesLegacyFile(t *testing.T) {
 	}
 }
 
+// Pinned keybindings.ts orders migrated keys by KEYBINDINGS declaration order,
+// not alphabetical order.
+func TestCreateAppKeybindingsMigrationUsesReferenceOrder(t *testing.T) {
+	agentDir := t.TempDir()
+	path := filepath.Join(agentDir, "keybindings.json")
+	if err := os.WriteFile(path, []byte(`{"cursorUp":"ctrl+u","cursorDown":"ctrl+d"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	CreateAppKeybindings(agentDir)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "{\n  \"tui.editor.cursorUp\": \"ctrl+u\",\n  \"tui.editor.cursorDown\": \"ctrl+d\"\n}\n"
+	if string(data) != want {
+		t.Fatalf("migrated keybindings.json = %q; want %q", data, want)
+	}
+}
+
 // The migration keeps the namespaced value when both names exist and leaves a
 // non-legacy file untouched.
 func TestCreateAppKeybindingsMigrationKeepsModernValues(t *testing.T) {
