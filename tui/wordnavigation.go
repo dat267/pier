@@ -20,8 +20,10 @@ func (s *UndoStack[S]) Pop() (S, bool) {
 	if len(s.stack) == 0 {
 		return zero, false
 	}
-	state := s.stack[len(s.stack)-1]
-	s.stack = s.stack[:len(s.stack)-1]
+	last := len(s.stack) - 1
+	state := s.stack[last]
+	s.stack[last] = zero
+	s.stack = s.stack[:last]
 	return state, true
 }
 
