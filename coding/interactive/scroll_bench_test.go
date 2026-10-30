@@ -138,7 +138,7 @@ func newTestAppB(tb testing.TB) (*App, func()) {
 	})
 	app.Init(context.Background())
 	return app, func() {
-		app.lifecycle.UnregisterSignalHandlers()
+		app.Close()
 		tui.SetKeybindings(previous)
 	}
 }
