@@ -194,7 +194,7 @@ func (w *CommandWiring) HandleExportCommand(ctx context.Context, text string) {
 // HandleImportCommand imports a session from JSONL.
 func (w *CommandWiring) HandleImportCommand(ctx context.Context, text string) {
 	inputPath, ok := GetPathCommandArgument(text, "/import")
-	if !ok {
+	if !ok || inputPath == "" {
 		w.showError("Usage: /import <path.jsonl>")
 		return
 	}

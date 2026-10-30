@@ -154,6 +154,16 @@ func TestCommandExportImport(t *testing.T) {
 	if errorsShown[len(errorsShown)-1] != "Usage: /import <path.jsonl>" {
 		t.Fatalf("errors = %v", errorsShown)
 	}
+	// Pinned interactive-mode.ts treats a quoted empty argument like no path.
+	emptyImportCalls := 0
+	wiring.ImportFromJSONL = func(_ context.Context, _ string, _ string) (bool, error) {
+		emptyImportCalls++
+		return false, nil
+	}
+	wiring.HandleImportCommand(context.Background(), `/import ""`)
+	if emptyImportCalls != 0 || errorsShown[len(errorsShown)-1] != "Usage: /import <path.jsonl>" {
+		t.Fatalf("empty import calls=%d errors=%v", emptyImportCalls, errorsShown)
+	}
 	// A declined confirm cancels.
 	wiring.ShowExtensionConfirm = func(_ context.Context, _, _ string, onAnswer func(bool)) { onAnswer(false) }
 	wiring.HandleImportCommand(context.Background(), "/import in.jsonl")
