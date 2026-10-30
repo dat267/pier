@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/internal/offloop"
 	"github.com/dat267/pier/tui"
 )
@@ -221,6 +222,105 @@ func TestSettingsErrorTracking(t *testing.T) {
 	}
 	if drained := manager.DrainErrors(); len(drained) != 0 {
 		t.Fatalf("drained = %+v", drained)
+	}
+}
+
+// Reference: pi v1.4.0 (4a080252) core/settings-manager.ts deepMergeObjects
+// skips undefined overrides but lets an explicit null project value replace
+// the global setting. A null is therefore a project-level reset.
+func TestSettingsProjectNullMasksGlobalDefaultProvider(t *testing.T) {
+	agentDir, projectDir := settingsDirs(t)
+	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"defaultProvider":"openai"}`)
+	writeSettingsFile(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"defaultProvider":null}`)
+
+	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	if got := manager.GetDefaultProvider(); got != nil {
+		t.Fatalf("project null left inherited default provider %q; want unset", *got)
+	}
+}
+
+// Nulls inside mergeable settings objects also replace inherited values in
+// pi v1.4.0 (4a080252) core/settings-manager.ts deepMergeObjects.
+func TestSettingsProjectNestedNullMasksGlobalCompactionEnabled(t *testing.T) {
+	agentDir, projectDir := settingsDirs(t)
+	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"compaction":{"enabled":false}}`)
+	writeSettingsFile(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"compaction":{"enabled":null}}`)
+
+	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	if got := manager.GetCompactionEnabled(); !got {
+		t.Fatal("project nested null retained the global false compaction setting; want upstream default true")
+	}
+}
+
+// pi v1.4.0 (4a080252) core/settings-manager.ts rejects null token settings
+// instead of treating them as an absent override.
+// Reference: pi v1.4.0 (4a080252) core/settings-manager.ts setCompactionEnabled.
+// A later setter replaces an explicit null with the new boolean.
+func TestSettingsCompactionSetterReplacesNull(t *testing.T) {
+	agentDir, projectDir := settingsDirs(t)
+	settingsPath := filepath.Join(agentDir, "settings.json")
+	writeSettingsFile(t, settingsPath, `{"compaction":{"enabled":null}}`)
+
+	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	manager.SetCompactionEnabled(false)
+	if manager.GetCompactionEnabled() {
+		t.Fatal("setting compaction false after null left it enabled")
+	}
+	if saved := readSettingsFile(t, settingsPath); saved["compaction"].(map[string]any)["enabled"] != false {
+		t.Fatalf("saved compaction.enabled = %#v; want false", saved["compaction"].(map[string]any)["enabled"])
+	}
+}
+
+// Nested struct nulls replace inherited values while sibling project values
+// remain intact (pi v1.4.0 (4a080252) core/settings-manager.ts).
+func TestSettingsProjectNestedNullMasksGlobalImageSetting(t *testing.T) {
+	agentDir, projectDir := settingsDirs(t)
+	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"images":{"autoResize":false,"blockImages":false}}`)
+	writeSettingsFile(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"images":{"autoResize":null,"blockImages":true}}`)
+
+	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	if !manager.GetImageAutoResize() || !manager.GetBlockImages() {
+		t.Fatalf("image settings autoResize=%v blockImages=%v; want defaults/sibling override true/true", manager.GetImageAutoResize(), manager.GetBlockImages())
+	}
+}
+
+func TestSettingsProjectOrdinaryCompactionNullIsInvalid(t *testing.T) {
+	agentDir, projectDir := settingsDirs(t)
+	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"compaction":{"reserveTokens":500}}`)
+	writeSettingsFile(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"compaction":{"reserveTokens":null}}`)
+
+	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	_, err := manager.GetCompactionReserveTokens(nil)
+	if err == nil || !strings.Contains(err.Error(), "Invalid compaction.reserveTokens setting: null") {
+		t.Fatalf("ordinary reserve-token null error = %v; want upstream invalid-null error", err)
+	}
+}
+
+// pi v1.4.0 (4a080252) core/settings-manager.ts validates nested model
+// overrides and reports null token values as invalid, not as absent overrides.
+func TestSettingsProjectModelOverrideNullIsInvalid(t *testing.T) {
+	agentDir, projectDir := settingsDirs(t)
+	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"compaction":{"reserveTokens":1000,"modelOverrides":{"anthropic/model":{"reserveTokens":200}}}}`)
+	writeSettingsFile(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"compaction":{"modelOverrides":{"anthropic/model":{"reserveTokens":null}}}}`)
+
+	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	_, err := manager.GetCompactionReserveTokens(&ai.Model{Provider: "anthropic", ID: "model"})
+	if err == nil || !strings.Contains(err.Error(), `modelOverrides["anthropic/model"].reserveTokens setting: null`) {
+		t.Fatalf("model reserve-token null error = %v; want the upstream invalid-null error", err)
+	}
+}
+
+// A null map entry remains an invalid non-object model override, per pi v1.4.0
+// (4a080252) core/settings-manager.ts getCompactionTokenSetting.
+func TestSettingsProjectModelOverrideEntryNullIsInvalid(t *testing.T) {
+	agentDir, projectDir := settingsDirs(t)
+	writeSettingsFile(t, filepath.Join(agentDir, "settings.json"), `{"compaction":{"modelOverrides":{"anthropic/model":{"reserveTokens":200}}}}`)
+	writeSettingsFile(t, filepath.Join(projectDir, ConfigDirName, "settings.json"), `{"compaction":{"modelOverrides":{"anthropic/model":null}}}`)
+
+	manager := NewSettingsManagerFromFiles(projectDir, agentDir, SettingsManagerCreateOptions{})
+	_, err := manager.GetCompactionReserveTokens(&ai.Model{Provider: "anthropic", ID: "model"})
+	if err == nil || !strings.Contains(err.Error(), `modelOverrides["anthropic/model"] setting: null`) {
+		t.Fatalf("model override entry null error = %v; want upstream invalid-null error", err)
 	}
 }
 

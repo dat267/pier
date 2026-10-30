@@ -12,11 +12,11 @@ import (
 var jsonUnmarshaler = reflect.TypeFor[json.Unmarshaler]()
 
 // decodeSettingsTolerantWithRejects is decodeSettingsTolerant for a top-level
-// settings object, returning the known member names that were present but whose
-// value the typed field could not hold. A project scope uses them to mask the
-// inherited global member, so a mistyped project value shadows the global one
-// (and falls back to the getter default) instead of letting the global value
-// show through.
+// settings object, returning the known member names that must shadow inherited
+// values. This includes values the typed field cannot hold and explicit nulls,
+// whose presence must be retained separately from the field's zero value. A
+// project scope uses them to mask the global member, matching upstream's
+// undefined-versus-null merge behavior.
 func decodeSettingsTolerantWithRejects(encoded []byte, target any) []string {
 	value := reflect.ValueOf(target)
 	if value.Kind() != reflect.Pointer || value.IsNil() || value.Elem().Kind() != reflect.Struct {
@@ -41,28 +41,154 @@ func decodeSettingsTolerantWithRejects(encoded []byte, target any) []string {
 		if !ok {
 			continue
 		}
-		if !decodeTolerantValue(member, value.Elem().Field(index)) {
-			rejected = append(rejected, name)
+		path := []string{name}
+		if bytes.Equal(bytes.TrimSpace(member), []byte("null")) {
+			rejected = append(rejected, encodeSettingsPath(path))
+			continue
 		}
+		if !decodeTolerantValue(member, value.Elem().Field(index)) {
+			rejected = append(rejected, encodeSettingsPath(path))
+			continue
+		}
+		rejected = append(rejected, explicitNullSettingsPaths(member, field.Type, path)...)
 	}
 	return rejected
 }
 
-// clearSettingsMember zeroes the field with the given JSON name, so a rejected
-// project member falls back to its getter default after the merge.
-func clearSettingsMember(settings *Settings, name string) {
-	value := reflect.ValueOf(settings).Elem()
-	typ := value.Type()
-	for index := 0; index < typ.NumField(); index++ {
-		field := typ.Field(index)
-		if field.PkgPath != "" {
-			continue
+// explicitNullSettingsPaths finds nested JSON nulls whose presence cannot be
+// represented by Settings' pointer-zero values. It follows structs and maps,
+// matching the object-recursive settings merge without treating array entries
+// as object overrides.
+func explicitNullSettingsPaths(raw []byte, typ reflect.Type, path []string) []string {
+	for typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
+	if reflect.PointerTo(typ).Implements(jsonUnmarshaler) {
+		return nil
+	}
+	trimmed := bytes.TrimSpace(raw)
+	if bytes.Equal(trimmed, []byte("null")) {
+		return []string{encodeSettingsPath(path)}
+	}
+	if typ.Kind() == reflect.Interface {
+		if len(trimmed) == 0 || trimmed[0] != '{' {
+			return nil
 		}
-		fieldName, _, _ := strings.Cut(field.Tag.Get("json"), ",")
-		if fieldName == name {
-			value.Field(index).SetZero()
+		typ = reflect.TypeFor[map[string]any]()
+	}
+	var members map[string]json.RawMessage
+	if json.Unmarshal(trimmed, &members) != nil || members == nil {
+		return nil
+	}
+	var out []string
+	switch typ.Kind() {
+	case reflect.Struct:
+		for index := 0; index < typ.NumField(); index++ {
+			field := typ.Field(index)
+			if field.PkgPath != "" {
+				continue
+			}
+			name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
+			if name == "" || name == "-" {
+				continue
+			}
+			member, ok := members[name]
+			if !ok {
+				continue
+			}
+			out = append(out, explicitNullSettingsPaths(member, field.Type, appendPath(path, name))...)
+		}
+	case reflect.Map:
+		if typ.Key().Kind() != reflect.String {
+			return nil
+		}
+		for name, member := range members {
+			out = append(out, explicitNullSettingsPaths(member, typ.Elem(), appendPath(path, name))...)
+		}
+	}
+	return out
+}
+
+func appendPath(path []string, segment string) []string {
+	out := make([]string, len(path)+1)
+	copy(out, path)
+	out[len(path)] = segment
+	return out
+}
+
+func encodeSettingsPath(path []string) string {
+	var encoded strings.Builder
+	for _, segment := range path {
+		encoded.WriteByte('/')
+		segment = strings.ReplaceAll(segment, "~", "~0")
+		segment = strings.ReplaceAll(segment, "/", "~1")
+		encoded.WriteString(segment)
+	}
+	return encoded.String()
+}
+
+func decodeSettingsPath(path string) []string {
+	if !strings.HasPrefix(path, "/") {
+		return []string{path}
+	}
+	parts := strings.Split(path[1:], "/")
+	for index, part := range parts {
+		part = strings.ReplaceAll(part, "~1", "/")
+		parts[index] = strings.ReplaceAll(part, "~0", "~")
+	}
+	return parts
+}
+
+// clearSettingsMember zeroes a rejected field path, so an explicit project
+// null or unsupported value falls back to the setting's default after merge.
+func clearSettingsMember(settings *Settings, path string) {
+	clearSettingsPath(reflect.ValueOf(settings).Elem(), decodeSettingsPath(path))
+}
+
+func clearSettingsPath(value reflect.Value, path []string) {
+	if len(path) == 0 {
+		if value.CanSet() {
+			value.SetZero()
+		}
+		return
+	}
+	for value.Kind() == reflect.Pointer || value.Kind() == reflect.Interface {
+		if value.IsNil() {
 			return
 		}
+		value = value.Elem()
+	}
+	switch value.Kind() {
+	case reflect.Struct:
+		typ := value.Type()
+		for index := 0; index < typ.NumField(); index++ {
+			field := typ.Field(index)
+			if field.PkgPath != "" {
+				continue
+			}
+			name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
+			if name == path[0] {
+				clearSettingsPath(value.Field(index), path[1:])
+				return
+			}
+		}
+	case reflect.Map:
+		if value.Type().Key().Kind() != reflect.String {
+			return
+		}
+		key := reflect.ValueOf(path[0]).Convert(value.Type().Key())
+		entry := value.MapIndex(key)
+		if !entry.IsValid() {
+			return
+		}
+		if len(path) == 1 {
+			value.SetMapIndex(key, reflect.Zero(value.Type().Elem()))
+			return
+		}
+		copy := reflect.New(entry.Type()).Elem()
+		copy.Set(entry)
+		clearSettingsPath(copy, path[1:])
+		value.SetMapIndex(key, copy)
 	}
 }
 

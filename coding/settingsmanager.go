@@ -98,16 +98,201 @@ func ParseHTTPIdleTimeoutMS(value any) (int64, bool) {
 
 // SettingsCompactionOverride are per-model compaction token overrides.
 type SettingsCompactionOverride struct {
-	ReserveTokens    *int64 `json:"reserveTokens,omitempty"`
-	KeepRecentTokens *int64 `json:"keepRecentTokens,omitempty"`
+	ReserveTokens        *int64 `json:"reserveTokens,omitempty"`
+	KeepRecentTokens     *int64 `json:"keepRecentTokens,omitempty"`
+	reserveTokensNull    bool
+	keepRecentTokensNull bool
+	entryNull            bool
+}
+
+// UnmarshalJSON keeps explicit null distinct from omission for validated token settings.
+func (override *SettingsCompactionOverride) UnmarshalJSON(data []byte) error {
+	if bytes.Equal(bytes.TrimSpace(data), []byte("null")) {
+		*override = SettingsCompactionOverride{entryNull: true}
+		return nil
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil || fields == nil {
+		return fmt.Errorf("invalid compaction model override")
+	}
+	var parsed SettingsCompactionOverride
+	if raw, ok := fields["reserveTokens"]; ok {
+		if bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+			parsed.reserveTokensNull = true
+		} else {
+			var value int64
+			if json.Unmarshal(raw, &value) == nil {
+				parsed.ReserveTokens = &value
+			}
+		}
+	}
+	if raw, ok := fields["keepRecentTokens"]; ok {
+		if bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+			parsed.keepRecentTokensNull = true
+		} else {
+			var value int64
+			if json.Unmarshal(raw, &value) == nil {
+				parsed.KeepRecentTokens = &value
+			}
+		}
+	}
+	*override = parsed
+	return nil
+}
+
+func (override SettingsCompactionOverride) MarshalJSON() ([]byte, error) {
+	if override.entryNull {
+		return []byte("null"), nil
+	}
+	var builder strings.Builder
+	builder.WriteByte('{')
+	first := true
+	if override.reserveTokensNull || override.ReserveTokens != nil {
+		value := any(override.ReserveTokens)
+		if override.reserveTokensNull {
+			value = nil
+		}
+		if err := appendSettingsJSONField(&builder, &first, "reserveTokens", value, override.reserveTokensNull); err != nil {
+			return nil, err
+		}
+	}
+	if override.keepRecentTokensNull || override.KeepRecentTokens != nil {
+		value := any(override.KeepRecentTokens)
+		if override.keepRecentTokensNull {
+			value = nil
+		}
+		if err := appendSettingsJSONField(&builder, &first, "keepRecentTokens", value, override.keepRecentTokensNull); err != nil {
+			return nil, err
+		}
+	}
+	builder.WriteByte('}')
+	return []byte(builder.String()), nil
 }
 
 // SettingsCompaction are the compaction settings.
 type SettingsCompaction struct {
-	Enabled          *bool                                 `json:"enabled,omitempty"`
-	ReserveTokens    *int64                                `json:"reserveTokens,omitempty"`
-	KeepRecentTokens *int64                                `json:"keepRecentTokens,omitempty"`
-	ModelOverrides   map[string]SettingsCompactionOverride `json:"modelOverrides,omitempty"`
+	Enabled              *bool                                 `json:"enabled,omitempty"`
+	ReserveTokens        *int64                                `json:"reserveTokens,omitempty"`
+	KeepRecentTokens     *int64                                `json:"keepRecentTokens,omitempty"`
+	ModelOverrides       map[string]SettingsCompactionOverride `json:"modelOverrides,omitempty"`
+	enabledNull          bool
+	reserveTokensNull    bool
+	keepRecentTokensNull bool
+	modelOverridesNull   bool
+}
+
+func (settings *SettingsCompaction) UnmarshalJSON(data []byte) error {
+	if bytes.Equal(bytes.TrimSpace(data), []byte("null")) {
+		*settings = SettingsCompaction{}
+		return nil
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil || fields == nil {
+		return fmt.Errorf("invalid compaction settings")
+	}
+	var parsed SettingsCompaction
+	if raw, ok := fields["enabled"]; ok {
+		if bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+			parsed.enabledNull = true
+		} else {
+			var value bool
+			if json.Unmarshal(raw, &value) == nil {
+				parsed.Enabled = &value
+			}
+		}
+	}
+	if raw, ok := fields["reserveTokens"]; ok {
+		if bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+			parsed.reserveTokensNull = true
+		} else {
+			var value int64
+			if json.Unmarshal(raw, &value) == nil {
+				parsed.ReserveTokens = &value
+			}
+		}
+	}
+	if raw, ok := fields["keepRecentTokens"]; ok {
+		if bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+			parsed.keepRecentTokensNull = true
+		} else {
+			var value int64
+			if json.Unmarshal(raw, &value) == nil {
+				parsed.KeepRecentTokens = &value
+			}
+		}
+	}
+	if raw, ok := fields["modelOverrides"]; ok {
+		if bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+			parsed.modelOverridesNull = true
+		} else {
+			var values map[string]SettingsCompactionOverride
+			if json.Unmarshal(raw, &values) == nil {
+				parsed.ModelOverrides = values
+			}
+		}
+	}
+	*settings = parsed
+	return nil
+}
+
+func (settings SettingsCompaction) MarshalJSON() ([]byte, error) {
+	var builder strings.Builder
+	builder.WriteByte('{')
+	first := true
+	for _, field := range []struct {
+		name  string
+		value any
+		null  bool
+	}{
+		{"enabled", settings.Enabled, settings.enabledNull},
+		{"reserveTokens", settings.ReserveTokens, settings.reserveTokensNull},
+		{"keepRecentTokens", settings.KeepRecentTokens, settings.keepRecentTokensNull},
+		{"modelOverrides", settings.ModelOverrides, settings.modelOverridesNull},
+	} {
+		if !field.null && isNilSettingsValue(field.value) {
+			continue
+		}
+		if err := appendSettingsJSONField(&builder, &first, field.name, field.value, field.null); err != nil {
+			return nil, err
+		}
+	}
+	builder.WriteByte('}')
+	return []byte(builder.String()), nil
+}
+
+func isNilSettingsValue(value any) bool {
+	if value == nil {
+		return true
+	}
+	reflected := reflect.ValueOf(value)
+	switch reflected.Kind() {
+	case reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return reflected.IsNil()
+	default:
+		return false
+	}
+}
+
+func appendSettingsJSONField(builder *strings.Builder, first *bool, name string, value any, explicitNull bool) error {
+	key, err := ai.MarshalJSON(name)
+	if err != nil {
+		return err
+	}
+	encoded := []byte("null")
+	if !explicitNull {
+		encoded, err = ai.MarshalJSON(value)
+		if err != nil {
+			return err
+		}
+	}
+	if !*first {
+		builder.WriteByte(',')
+	}
+	*first = false
+	builder.Write(key)
+	builder.WriteByte(':')
+	builder.Write(encoded)
+	return nil
 }
 
 // SettingsBranchSummary are the branch-summary settings.
@@ -540,8 +725,8 @@ type SettingsManager struct {
 
 	globalSettingsLoadError  error
 	projectSettingsLoadError error
-	// projectRejected lists project settings members whose JSON type the typed
-	// settings cannot hold; they mask the inherited global member.
+	// projectRejected lists project setting paths whose JSON null or unsupported
+	// value cannot be represented directly; they mask inherited global values.
 	projectRejected []string
 	errors          []SettingsError
 	settingsPaths   map[SettingsScope]string
@@ -951,9 +1136,6 @@ func deepMergeObjects(base, overrides map[string]any) map[string]any {
 	result := make(map[string]any, len(base)+len(overrides))
 	maps.Copy(result, base)
 	for key, overrideValue := range overrides {
-		if overrideValue == nil {
-			continue
-		}
 		baseValue, has := result[key]
 		baseObject, baseIsObject := baseValue.(map[string]any)
 		overrideObject, overrideIsObject := overrideValue.(map[string]any)
@@ -1760,6 +1942,7 @@ func (m *SettingsManager) SetCompactionEnabled(enabled bool) {
 		m.globalSettings.Compaction = &SettingsCompaction{}
 	}
 	m.globalSettings.Compaction.Enabled = &enabled
+	m.globalSettings.Compaction.enabledNull = false
 	m.markModified("compaction", "enabled")
 	m.save()
 }
@@ -1769,8 +1952,14 @@ func (m *SettingsManager) compactionTokenSetting(field string, model *ai.Model) 
 	var ordinary *int64
 	if compaction != nil {
 		if field == "reserveTokens" {
+			if compaction.reserveTokensNull {
+				return 0, fmt.Errorf("Invalid compaction.%s setting: null. Expected a non-negative safe integer.", field)
+			}
 			ordinary = compaction.ReserveTokens
 		} else {
+			if compaction.keepRecentTokensNull {
+				return 0, fmt.Errorf("Invalid compaction.%s setting: null. Expected a non-negative safe integer.", field)
+			}
 			ordinary = compaction.KeepRecentTokens
 		}
 	}
@@ -1782,9 +1971,18 @@ func (m *SettingsManager) compactionTokenSetting(field string, model *ai.Model) 
 	if model != nil && compaction != nil && compaction.ModelOverrides != nil {
 		modelKey := model.Provider + "/" + model.ID
 		if entry, ok := compaction.ModelOverrides[modelKey]; ok {
+			if entry.entryNull {
+				return 0, fmt.Errorf("Invalid compaction.modelOverrides[%q] setting: null. Expected an object.", modelKey)
+			}
 			if field == "reserveTokens" {
+				if entry.reserveTokensNull {
+					return 0, fmt.Errorf("Invalid compaction.modelOverrides[%q].%s setting: null. Expected a non-negative safe integer.", modelKey, field)
+				}
 				override = entry.ReserveTokens
 			} else {
+				if entry.keepRecentTokensNull {
+					return 0, fmt.Errorf("Invalid compaction.modelOverrides[%q].%s setting: null. Expected a non-negative safe integer.", modelKey, field)
+				}
 				override = entry.KeepRecentTokens
 			}
 			if override != nil && *override < 0 {
