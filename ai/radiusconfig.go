@@ -115,16 +115,37 @@ func radiusGatewayModelFromMap(record map[string]any) (RadiusGatewayModel, bool)
 
 func radiusCostFromMap(record map[string]any) ModelCost {
 	cost := ModelCost{}
-	read := func(key string) float64 {
-		if value, ok := record[key].(float64); ok {
+	read := func(values map[string]any, key string) float64 {
+		if value, ok := values[key].(float64); ok {
 			return value
 		}
 		return 0
 	}
-	cost.Input = read("input")
-	cost.Output = read("output")
-	cost.CacheRead = read("cacheRead")
-	cost.CacheWrite = read("cacheWrite")
+	cost.Input = read(record, "input")
+	cost.Output = read(record, "output")
+	cost.CacheRead = read(record, "cacheRead")
+	cost.CacheWrite = read(record, "cacheWrite")
+	if rawTiers, ok := record["tiers"].([]any); ok {
+		for _, rawTier := range rawTiers {
+			tierRecord, ok := rawTier.(map[string]any)
+			if !ok {
+				continue
+			}
+			threshold, ok := tierRecord["inputTokensAbove"].(float64)
+			if !ok {
+				continue
+			}
+			cost.Tiers = append(cost.Tiers, ModelCostTier{
+				InputTokensAbove: int64(threshold),
+				ModelCostRates: ModelCostRates{
+					Input:      read(tierRecord, "input"),
+					Output:     read(tierRecord, "output"),
+					CacheRead:  read(tierRecord, "cacheRead"),
+					CacheWrite: read(tierRecord, "cacheWrite"),
+				},
+			})
+		}
+	}
 	return cost
 }
 

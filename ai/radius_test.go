@@ -77,6 +77,26 @@ func TestRadiusGatewayConfigParsing(t *testing.T) {
 	}
 }
 
+func TestGetRadiusModelsPreservesCostTiers(t *testing.T) {
+	// Pinned providers/radius-config.ts shallow-copies valid catalog models,
+	// including the ModelCost tiers that downstream usage accounting applies.
+	credential := &OAuthCredential{Extra: map[string]json.RawMessage{
+		RadiusCredentialConfigKey: json.RawMessage(`{"baseUrl":"https://gateway.example","models":[{"id":"tiered","name":"Tiered","reasoning":false,"input":["text"],"cost":{"input":1,"output":2,"cacheRead":0.1,"cacheWrite":0,"tiers":[{"inputTokensAbove":100000,"input":0.5,"output":2.5,"cacheRead":0.05,"cacheWrite":0.625}]},"contextWindow":200000,"maxTokens":32000}]}`),
+	}}
+	models := GetRadiusModels("radius", credential)
+	if len(models) != 1 {
+		t.Fatalf("models = %+v", models)
+	}
+	cost := models[0].Cost
+	if cost.Input != 1 || cost.Output != 2 || cost.CacheRead != 0.1 || cost.CacheWrite != 0 || len(cost.Tiers) != 1 {
+		t.Fatalf("cost = %+v; want base rates and one request-wide tier", cost)
+	}
+	tier := cost.Tiers[0]
+	if tier.InputTokensAbove != 100000 || tier.Input != 0.5 || tier.Output != 2.5 || tier.CacheRead != 0.05 || tier.CacheWrite != 0.625 {
+		t.Fatalf("tier = %+v", tier)
+	}
+}
+
 func TestGetRadiusModels(t *testing.T) {
 	configJSON, _ := json.Marshal(map[string]any{
 		"baseUrl": "https://gateway.example",
