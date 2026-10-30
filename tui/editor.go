@@ -104,12 +104,13 @@ type Editor struct {
 	autocompleteMaxVisible int
 
 	// Autocomplete request state (owner loop only): startToken invalidates
-	// scheduled requests, requestID drops stale results, cancel aborts the
-	// in-flight provider call, debounce holds the pending timer.
-	autocompleteStartToken int
-	autocompleteRequestID  int
-	autocompleteCancel     context.CancelFunc
-	autocompleteDebounce   autocompleteTimer
+	// scheduled requests, requestID drops stale results, requestDone serializes
+	// provider tasks, cancel aborts the in-flight call, and debounce holds timer.
+	autocompleteStartToken  int
+	autocompleteRequestID   int
+	autocompleteRequestDone chan struct{}
+	autocompleteCancel      context.CancelFunc
+	autocompleteDebounce    autocompleteTimer
 
 	pastes       map[int]string
 	pasteCounter int
@@ -2128,27 +2129,47 @@ func (e *Editor) startAutocompleteRequestLocked(startToken int, force bool, expl
 		return
 	}
 
-	snapshotLines := append([]string(nil), e.state.lines...)
-	snapshotLine, snapshotCol := e.state.cursorLine, e.state.cursorCol
-	snapshotText := e.getTextLocked()
+	previousDone := e.autocompleteRequestDone
+	requestDone := make(chan struct{})
+	e.autocompleteRequestDone = requestDone
+	start := func() {
+		if e.autocompleteProvider == nil || startToken != e.autocompleteStartToken {
+			close(requestDone)
+			return
+		}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	e.autocompleteCancel = cancel
-	e.autocompleteRequestID++
-	requestID := e.autocompleteRequestID
-	provider := e.autocompleteProvider
+		snapshotLines := append([]string(nil), e.state.lines...)
+		snapshotLine, snapshotCol := e.state.cursorLine, e.state.cursorCol
+		snapshotText := e.getTextLocked()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		e.autocompleteCancel = cancel
+		e.autocompleteRequestID++
+		requestID := e.autocompleteRequestID
+		provider := e.autocompleteProvider
+		go func() {
+			suggestions := provider.GetSuggestions(ctx, snapshotLines, snapshotLine, snapshotCol, force)
+			poster.Post(func() {
+				defer close(requestDone)
+				if ctx.Err() != nil || requestID != e.autocompleteRequestID {
+					return
+				}
+				if e.getTextLocked() != snapshotText || e.state.cursorLine != snapshotLine || e.state.cursorCol != snapshotCol {
+					return
+				}
+				e.autocompleteCancel = nil
+				e.applyAutocompleteResultLocked(suggestions, force, explicitTab)
+			})
+		}()
+	}
+
+	if previousDone == nil {
+		start()
+		return
+	}
 	go func() {
-		suggestions := provider.GetSuggestions(ctx, snapshotLines, snapshotLine, snapshotCol, force)
-		poster.Post(func() {
-			if ctx.Err() != nil || requestID != e.autocompleteRequestID {
-				return
-			}
-			if e.getTextLocked() != snapshotText || e.state.cursorLine != snapshotLine || e.state.cursorCol != snapshotCol {
-				return
-			}
-			e.autocompleteCancel = nil
-			e.applyAutocompleteResultLocked(suggestions, force, explicitTab)
-		})
+		<-previousDone
+		poster.Post(start)
 	}()
 }
 

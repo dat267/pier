@@ -214,9 +214,89 @@ func TestEditorAutocompleteDebounceDecision(t *testing.T) {
 	}
 }
 
-// TestEditorAutocompleteDropsStaleResults follows editor.ts
-// isAutocompleteRequestCurrent: a superseded request's late result is discarded
-// and its AbortSignal is aborted.
+// TestEditorAutocompleteSerializesProviderRequests follows editor.ts
+// startAutocompleteRequest, which awaits the previous provider task before
+// starting a replacement request.
+func TestEditorAutocompleteSerializesProviderRequests(t *testing.T) {
+	saved := autocompleteDebounceDelay
+	autocompleteDebounceDelay = 0
+	defer func() { autocompleteDebounceDelay = saved }()
+
+	host := newLoopHost()
+	editor := NewEditor(host, editorTestTheme(), EditorOptions{})
+	provider := &serializedAutocompleteProvider{
+		firstStarted:  make(chan struct{}),
+		secondStarted: make(chan struct{}, 1),
+		releaseFirst:  make(chan struct{}),
+	}
+	editor.SetAutocompleteProvider(provider)
+	editor.HandleInput("@")
+	select {
+	case <-provider.firstStarted:
+	case <-time.After(5 * time.Second):
+		t.Fatal("first provider request did not start")
+	}
+
+	editor.HandleInput("m")
+	select {
+	case <-provider.secondStarted:
+		t.Fatal("second provider request overlapped the unfinished first request")
+	case <-time.After(30 * time.Millisecond):
+	}
+
+	close(provider.releaseFirst)
+	waitForAutocompleteProvider(t, host, provider.secondStarted)
+	host.waitPost(t)
+	host.drain()
+}
+
+func waitForAutocompleteProvider(t *testing.T, host *loopHost, started <-chan struct{}) {
+	t.Helper()
+	timer := time.NewTimer(5 * time.Second)
+	defer timer.Stop()
+	for {
+		select {
+		case <-started:
+			return
+		case <-host.posted:
+			host.drain()
+		case <-timer.C:
+			t.Fatal("provider request did not start")
+		}
+	}
+}
+
+type serializedAutocompleteProvider struct {
+	mu            sync.Mutex
+	calls         int
+	firstStarted  chan struct{}
+	secondStarted chan struct{}
+	releaseFirst  chan struct{}
+}
+
+func (p *serializedAutocompleteProvider) TriggerCharacters() []string { return nil }
+
+func (p *serializedAutocompleteProvider) GetSuggestions(context.Context, []string, int, int, bool) *AutocompleteSuggestions {
+	p.mu.Lock()
+	p.calls++
+	call := p.calls
+	p.mu.Unlock()
+	switch call {
+	case 1:
+		close(p.firstStarted)
+		<-p.releaseFirst
+	case 2:
+		p.secondStarted <- struct{}{}
+	}
+	return &AutocompleteSuggestions{Prefix: "@m", Items: []AutocompleteItem{{Value: "@main", Label: "main"}}}
+}
+
+func (p *serializedAutocompleteProvider) ApplyCompletion(lines []string, cursorLine int, cursorCol int, item AutocompleteItem, prefix string) CompletionResult {
+	return CompletionResult{Lines: lines, CursorLine: cursorLine, CursorCol: cursorCol}
+}
+
+// TestEditorAutocompleteDropsStaleResults verifies a superseded result is
+// discarded and its provider context is canceled.
 func TestEditorAutocompleteDropsStaleResults(t *testing.T) {
 	saved := autocompleteDebounceDelay
 	autocompleteDebounceDelay = 0
@@ -242,26 +322,17 @@ func TestEditorAutocompleteDropsStaleResults(t *testing.T) {
 	}
 	editor.SetAutocompleteProvider(second)
 	editor.HandleInput("b")
-	select {
-	case <-second.started:
-	case <-time.After(5 * time.Second):
-		t.Fatal("second provider was not called")
-	}
 	if ctx := first.firstContext(); ctx == nil || ctx.Err() == nil {
 		t.Fatal("the superseded request's context was not canceled")
 	}
 
+	// Upstream waits for the previous provider task to settle before invoking
+	// the replacement request, even when the old provider ignores cancellation.
+	close(releaseFirst)
+	waitForAutocompleteProvider(t, host, second.started)
 	host.waitPost(t)
 	host.drain()
 	if editor.autocompletePrefix != "@ab" {
 		t.Fatalf("prefix = %q, want the second request's @ab", editor.autocompletePrefix)
-	}
-
-	// The first request finishing now must not overwrite the second result.
-	close(releaseFirst)
-	host.waitPost(t)
-	host.drain()
-	if editor.autocompletePrefix != "@ab" {
-		t.Fatalf("stale result overwrote prefix: %q", editor.autocompletePrefix)
 	}
 }
