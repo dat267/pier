@@ -322,7 +322,8 @@ func validateMcpServerConfig(name string, raw any, toolExposureOrder []string) (
 			}
 			config.Headers = record
 		}
-		oauth, oauthError := validateMcpOAuth(value["oauth"])
+		oauthValue, hasOAuth := value["oauth"]
+		oauth, oauthError := validateMcpOAuth(oauthValue, hasOAuth)
 		if oauthError != "" {
 			return nil, fmt.Errorf("server %q: %s", name, oauthError)
 		}
@@ -399,8 +400,8 @@ func applyMcpServerConfigBase(config *McpServerConfig, value map[string]any) err
 
 // validateMcpOAuth validates the oauth object (upstream validateOAuth). An
 // empty string means valid.
-func validateMcpOAuth(value any) (*McpOAuthConfig, string) {
-	if value == nil {
+func validateMcpOAuth(value any, present bool) (*McpOAuthConfig, string) {
+	if !present {
 		return nil, ""
 	}
 	record, ok := mcpRecord(value)
