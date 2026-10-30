@@ -256,6 +256,10 @@ func CreateEditTool(cwd string) agent.AgentTool {
 					resultErr = err
 					return err
 				}
+				if ctxErrOf(ctx) != nil {
+					resultErr = fmt.Errorf("Operation aborted")
+					return resultErr
+				}
 				rawContent := DecodeUTF8WithReplacement(data)
 				// Strip the BOM before matching: the model will not include an
 				// invisible BOM in oldText.
