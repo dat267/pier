@@ -683,9 +683,14 @@ func skillEntryType(entry os.DirEntry, fullPath string) (isFile, isDirectory boo
 // readSkillDir reads one directory and parses the skill files directly inside
 // it. A subdirectory becomes an item; its scan is filled in by a later worker.
 func readSkillDir(dir, root string, source string, includeRootFiles bool, inheritedRules []skillIgnoreRule) *skillScanDir {
-	// ReadDir reports a missing or unreadable directory by itself; a separate
-	// os.Stat would double the walk's directory operations.
-	entries, err := os.ReadDir(dir)
+	// File.ReadDir preserves the filesystem's native entry order like upstream
+	// readdirSync; package-level os.ReadDir sorts entries by name.
+	directory, err := os.Open(dir)
+	if err != nil {
+		return &skillScanDir{}
+	}
+	entries, err := directory.ReadDir(-1)
+	_ = directory.Close()
 	if err != nil {
 		return &skillScanDir{}
 	}

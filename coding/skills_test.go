@@ -331,12 +331,74 @@ func TestLoadSkillsFromDirScansInReadDirOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	readNative := func(path string) []os.DirEntry {
+		t.Helper()
+		directory, err := os.Open(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		entries, err := directory.ReadDir(-1)
+		if closeErr := directory.Close(); closeErr != nil {
+			t.Fatal(closeErr)
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		return entries
+	}
+	var want []string
+	for _, entry := range readNative(root) {
+		switch entry.Name() {
+		case "a":
+			want = append(want, "a")
+		case "b":
+			for _, child := range readNative(filepath.Join(root, "b")) {
+				if child.Name() == "z" {
+					want = append(want, "z")
+				}
+			}
+		case "c.md":
+			want = append(want, "c")
+		}
+	}
 	result := LoadSkillsFromDir(root)
-	if got, want := strings.Join(skillNames(result), ","), "a,z,c"; got != want {
-		t.Fatalf("skills = %q, want %q", got, want)
+	if got := strings.Join(skillNames(result), ","); got != strings.Join(want, ",") {
+		t.Fatalf("skills = %q, want native depth-first order %q", got, strings.Join(want, ","))
 	}
 	if len(result.Diagnostics) != 0 {
 		t.Fatalf("diagnostics = %v", result.Diagnostics)
+	}
+}
+
+// Reference: pi v1.4.0 (4a080252), core/skills.ts uses readdirSync's native
+// directory order; Go's os.ReadDir sorts, so use File.ReadDir for parity.
+func TestLoadSkillsFromDirPreservesNativeEntryOrder(t *testing.T) {
+	root := t.TempDir()
+	for _, name := range []string{"zeta", "alpha", "mu"} {
+		writeSkill(t, root, name, "skill "+name)
+	}
+
+	dir, err := os.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries, err := dir.ReadDir(-1)
+	closeErr := dir.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	var want []string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			want = append(want, entry.Name())
+		}
+	}
+	result := LoadSkillsFromDir(root)
+	if got := strings.Join(skillNames(result), ","); got != strings.Join(want, ",") {
+		t.Fatalf("skills = %q, want native directory order %q", got, strings.Join(want, ","))
 	}
 }
 

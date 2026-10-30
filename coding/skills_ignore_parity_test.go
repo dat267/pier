@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -47,8 +48,11 @@ func TestSkillsIgnoreDiscoveryMatchesUpstream(t *testing.T) {
 			for _, skill := range loaded.Skills {
 				names = append(names, skill.Name)
 			}
-			if !reflect.DeepEqual(names, test.Names) {
-				t.Errorf("skill names = %v, want %v", names, test.Names)
+			sort.Strings(names)
+			wantNames := append([]string(nil), test.Names...)
+			sort.Strings(wantNames)
+			if !reflect.DeepEqual(names, wantNames) {
+				t.Errorf("skill names = %v, want %v", names, wantNames)
 			}
 			if len(loaded.Diagnostics) != 0 {
 				t.Errorf("diagnostics = %+v, want none", loaded.Diagnostics)
