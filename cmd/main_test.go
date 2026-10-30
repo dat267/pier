@@ -66,6 +66,25 @@ func TestExecuteExportTakesPriorityOverHelp(t *testing.T) {
 	}
 }
 
+// Reference: pi v1.4.0 packages/coding-agent/src/main.ts applies --offline
+// before dispatching auth and package commands.
+func TestExecuteAppliesOfflineModeBeforeAuthCommand(t *testing.T) {
+	isolatedAgentDir(t)
+	t.Setenv("PI_OFFLINE", "")
+	t.Setenv("PI_SKIP_VERSION_CHECK", "")
+	t.Setenv("OPENAI_API_KEY", "test-key")
+	originalArgs := os.Args
+	os.Args = []string{"pier", "auth", "check", "--provider", "openai", "--offline"}
+	defer func() { os.Args = originalArgs }()
+	_, stderr := captureStdio(t, Execute)
+	if stderr != "" {
+		t.Fatalf("stderr = %q", stderr)
+	}
+	if os.Getenv("PI_OFFLINE") != "1" || os.Getenv("PI_SKIP_VERSION_CHECK") != "1" {
+		t.Fatalf("offline flags = %q, %q", os.Getenv("PI_OFFLINE"), os.Getenv("PI_SKIP_VERSION_CHECK"))
+	}
+}
+
 func TestResumeSessionByExactID(t *testing.T) {
 	isolatedAgentDir(t)
 	cwd := t.TempDir()

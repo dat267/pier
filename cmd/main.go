@@ -64,6 +64,16 @@ func Execute() {
 	// Before anything can reach the network: android has no /etc/resolv.conf, so
 	// the pure-Go resolver needs a fallback there.
 	configureResolver()
+	// main.ts applies offline mode from the raw argv before auth/update
+	// commands, which are dispatched before ParseArgs below.
+	offlineFlag := false
+	for _, arg := range os.Args[1:] {
+		if arg == "--offline" {
+			offlineFlag = true
+			break
+		}
+	}
+	applyOfflineMode(&coding.Args{Offline: offlineFlag})
 	appName := executableName()
 	// `pi auth check|print-api-key|print-bearer-token` runs before anything
 	// else, off the raw argv (upstream runAuthCommand at the top of main).
