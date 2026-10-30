@@ -37,6 +37,11 @@ type gutterInfo struct {
 	Show     bool
 }
 
+type visibleChildrenKey struct {
+	EntryID string
+	IsRoot  bool
+}
+
 // flatNode is a flattened tree node with its visual structure.
 type flatNode struct {
 	Node               *coding.SessionTreeNode
@@ -138,7 +143,7 @@ type TreeList struct {
 	showLabelTimestamps bool
 	activePathIDs       map[string]bool
 	visibleParentMap    map[string]*string
-	visibleChildrenMap  map[string][]string
+	visibleChildrenMap  map[visibleChildrenKey][]string
 	lastSelectedID      *string
 	foldedNodes         map[string]bool
 
@@ -159,7 +164,7 @@ func NewTreeList(tree []*coding.SessionTreeNode, currentLeafID *string, maxVisib
 		toolCallMap:        map[string]toolCallInfo{},
 		activePathIDs:      map[string]bool{},
 		visibleParentMap:   map[string]*string{},
-		visibleChildrenMap: map[string][]string{},
+		visibleChildrenMap: map[visibleChildrenKey][]string{},
 		foldedNodes:        map[string]bool{},
 		now:                time.Now,
 	}
@@ -491,8 +496,8 @@ func (t *TreeList) recalculateVisualStructure() {
 	}
 
 	visibleParent := map[string]*string{}
-	visibleChildren := map[string][]string{}
-	rootKey := ""
+	visibleChildren := map[visibleChildrenKey][]string{}
+	rootKey := visibleChildrenKey{IsRoot: true}
 	visibleChildren[rootKey] = nil
 
 	for _, flatNode := range t.filteredNodes {
@@ -501,7 +506,7 @@ func (t *TreeList) recalculateVisualStructure() {
 		visibleParent[nodeID] = ancestorID
 		key := rootKey
 		if ancestorID != nil {
-			key = *ancestorID
+			key = visibleChildrenKey{EntryID: *ancestorID}
 		}
 		visibleChildren[key] = append(visibleChildren[key], nodeID)
 	}
@@ -550,7 +555,7 @@ func (t *TreeList) recalculateVisualStructure() {
 		flatNode.Gutters = item.gutters
 		flatNode.IsVirtualRootChild = item.isVirtualRootChild
 
-		children := visibleChildren[item.nodeID]
+		children := visibleChildren[visibleChildrenKey{EntryID: item.nodeID}]
 		multipleChildren := len(children) > 1
 
 		childIndent := item.indent
@@ -1283,7 +1288,7 @@ func indexOfFilterMode(mode FilterMode) int {
 }
 
 func (t *TreeList) isFoldable(entryID string) bool {
-	children := t.visibleChildrenMap[entryID]
+	children := t.visibleChildrenMap[visibleChildrenKey{EntryID: entryID}]
 	if len(children) == 0 {
 		return false
 	}
@@ -1291,7 +1296,7 @@ func (t *TreeList) isFoldable(entryID string) bool {
 	if parentID == nil {
 		return true
 	}
-	siblings := t.visibleChildrenMap[*parentID]
+	siblings := t.visibleChildrenMap[visibleChildrenKey{EntryID: *parentID}]
 	return len(siblings) > 1
 }
 
@@ -1308,7 +1313,7 @@ func (t *TreeList) findBranchSegmentStart(direction string) int {
 	currentID := selectedID
 	if direction == "down" {
 		for {
-			children := t.visibleChildrenMap[currentID]
+			children := t.visibleChildrenMap[visibleChildrenKey{EntryID: currentID}]
 			if len(children) == 0 {
 				return indexByEntryID[currentID]
 			}
@@ -1323,7 +1328,7 @@ func (t *TreeList) findBranchSegmentStart(direction string) int {
 		if parentID == nil {
 			return indexByEntryID[currentID]
 		}
-		children := t.visibleChildrenMap[*parentID]
+		children := t.visibleChildrenMap[visibleChildrenKey{EntryID: *parentID}]
 		if len(children) > 1 {
 			segmentStart := indexByEntryID[currentID]
 			if segmentStart < t.selectedIndex {

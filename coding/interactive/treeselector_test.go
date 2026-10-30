@@ -1,8 +1,10 @@
 package interactive
 
 import (
+	"context"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -180,6 +182,47 @@ func TestTreeSelectorHelpers(t *testing.T) {
 	}
 	if got := indexOfFilterMode(FilterLabeledOnly); got != 3 {
 		t.Fatalf("index = %d", got)
+	}
+}
+
+// pi v1.4.0 tree-selector.ts:464-475 keeps null separate from every entry ID.
+func TestTreeSelectorBranchNavigationDistinguishesEmptyRootID(t *testing.T) {
+	const childProcess = "PIER_TEST_TREE_EMPTY_ROOT_CHILD"
+	if os.Getenv(childProcess) == "1" {
+		rootID := ""
+		childID := "child"
+		root := &coding.SessionTreeNode{Entry: coding.SessionEntry{
+			ID: rootID, Type: "message", Message: json.RawMessage(`{"role":"user","content":"root"}`),
+		}}
+		root.Children = []*coding.SessionTreeNode{{Entry: coding.SessionEntry{
+			ID: childID, ParentID: &rootID, Type: "message", Message: json.RawMessage(`{"role":"user","content":"child"}`),
+		}}}
+
+		previous := tui.GetKeybindings()
+		tui.SetKeybindings(tui.NewKeybindingsManager(map[tui.Keybinding]tui.KeybindingDefinition{
+			"app.tree.unfoldOrDown": {DefaultKeys: []string{"x"}},
+		}, nil))
+		t.Cleanup(func() { tui.SetKeybindings(previous) })
+
+		list := NewTreeList([]*coding.SessionTreeNode{root}, nil, 20, &rootID, FilterAll)
+		list.HandleInput("x")
+		selected := list.GetSelectedNode()
+		if selected == nil || selected.Entry.ID != childID {
+			t.Fatalf("selected node = %+v, want child %q", selected, childID)
+		}
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestTreeSelectorBranchNavigationDistinguishesEmptyRootID$")
+	cmd.Env = append(os.Environ(), childProcess+"=1")
+	output, err := cmd.CombinedOutput()
+	if ctx.Err() != nil {
+		t.Fatalf("tree selector did not finish with an empty root ID: %s", output)
+	}
+	if err != nil {
+		t.Fatalf("tree selector child failed: %v\n%s", err, output)
 	}
 }
 
