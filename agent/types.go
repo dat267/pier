@@ -58,7 +58,9 @@ const (
 	QueueModeOneAtATime QueueMode = "one-at-a-time"
 )
 
-// AgentToolResult is the final or partial result produced by a tool.
+// AgentToolResult is the final or partial result produced by a tool. Upstream
+// structuredContent and outputSchema are omitted with their codemode/extension
+// consumer surface (D309).
 type AgentToolResult struct {
 	// Content is the text/image content returned to the model.
 	Content []ai.Content

@@ -3541,6 +3541,23 @@ nested execution.
 Tests: `TestNestedCallRecorder`, `TestNestedCallRecorderLimits`, and
 `TestToolResultNestedCallsRoundTrip` cover the retained data-model surface.
 
+### D309
+
+**Programmatic structured tool output and output-schema validation are absent.**
+
+Reference: pi v1.4.0 (`4a080252`), `packages/agent/src/types.ts` and
+`agent-loop.ts` carry `structuredContent` through tool results and hooks;
+`packages/coding-agent/src/core/tools/bash.ts` emits bounded machine-readable
+Bash output using `OutputAccumulator.readFullOutput`. Built-in `read`/`bash`
+output schemas and MCP/extension tools use this data for programmatic callers
+such as codemode scripts. Pier's `AgentToolResult` and `AfterToolCallResult` do
+not carry it, `AgentTool` has no `outputSchema`, and the output accumulator has
+no full-output reader. This is an intentional omission of the codemode and
+extension consumer surface excluded by `AGENTS.md`; text returned to the model
+remains the supported contract. Do not claim parity for programmatic structured
+tool results or output-schema validation.
+
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.
