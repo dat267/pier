@@ -10,7 +10,10 @@ import (
 	"encoding/json"
 	"maps"
 	"os"
+	"os/signal"
+	"runtime"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -19,6 +22,19 @@ import (
 
 // TestRPCClientFakeServer is the child process for the subprocess tests. It
 // speaks the RPC JSONL protocol on stdin/stdout.
+func TestRPCClientStopSignalPeer(t *testing.T) {
+	if os.Getenv("PIER_RPC_STOP_SIGNAL_PEER") != "1" {
+		t.Skip("signal peer only runs as a child process")
+	}
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGTERM)
+	defer signal.Stop(signals)
+	_, _ = os.Stdout.WriteString(`{"type":"ready"}` + "\n")
+	<-signals
+	_, _ = os.Stdout.WriteString(`{"type":"after_stop"}` + "\n")
+	_ = os.Stdout.Sync()
+}
+
 func TestRPCClientFakeServer(t *testing.T) {
 	if os.Getenv("PIER_RPC_CLIENT_FAKE") != "1" {
 		t.Skip("fake server only runs as a child process")
@@ -90,6 +106,42 @@ func startFakeClient(t *testing.T, env map[string]string) *RpcClient {
 		t.Fatalf("start: %v", err)
 	}
 	return client
+}
+
+// pi v1.4.0 rpc-client.ts detaches the JSONL reader before signalling the
+// child, so records emitted by its termination handler are not dispatched.
+func TestClientStopDetachesStdoutBeforeTermination(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the child signal fixture uses SIGTERM")
+	}
+	client := New(Options{
+		CLIPath:        os.Args[0],
+		PeerArgs:       []string{"-test.run=^TestRPCClientStopSignalPeer$"},
+		Env:            map[string]string{"PIER_RPC_STOP_SIGNAL_PEER": "1"},
+		RequestTimeout: 3 * time.Second,
+	})
+	seen := make(chan string, 2)
+	client.OnEvent(func(event Event) { seen <- event.Type() })
+	if err := client.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(client.Stop)
+	select {
+	case event := <-seen:
+		if event != "ready" {
+			t.Fatalf("startup event = %q", event)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("peer did not start")
+	}
+	client.Stop()
+	select {
+	case event := <-seen:
+		if event == "after_stop" {
+			t.Fatal("event emitted during termination was dispatched after Stop")
+		}
+	case <-time.After(100 * time.Millisecond):
+	}
 }
 
 func TestClientSubprocessRoundTrip(t *testing.T) {

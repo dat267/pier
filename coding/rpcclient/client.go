@@ -200,6 +200,7 @@ type RpcClient struct {
 	stopDone    chan struct{}
 	exitErr     error
 	processDone chan struct{}
+	readStop    chan struct{}
 	pending     map[string]*pendingRequest
 	nextID      int
 	listeners   []eventListener
@@ -347,10 +348,12 @@ func (c *RpcClient) Start(ctx context.Context) error {
 	_ = stdoutWriter.Close()
 	_ = stderrWriter.Close()
 
+	readStop := make(chan struct{})
 	c.mu.Lock()
 	c.process, c.stdin = command, stdin
 	c.exitErr = nil
 	c.processDone = make(chan struct{})
+	c.readStop = readStop
 	done := c.processDone
 	c.mu.Unlock()
 
@@ -360,7 +363,7 @@ func (c *RpcClient) Start(ctx context.Context) error {
 	}()
 	go func() {
 		defer stdout.Close()
-		c.readLines(stdout)
+		c.readLines(stdout, readStop)
 	}()
 	go func() {
 		waitErr := command.Wait()
@@ -440,8 +443,13 @@ func (c *RpcClient) Stop() {
 		}
 		c.process = nil
 		c.stdin = nil
+		readStop := c.readStop
+		c.readStop = nil
 		process := command.Process
 		c.mu.Unlock()
+		if readStop != nil {
+			close(readStop)
+		}
 
 		if runtime.GOOS == "windows" {
 			_ = process.Kill()
@@ -484,12 +492,17 @@ func (c *RpcClient) drainStderr(stderr io.Reader) {
 	}
 }
 
-func (c *RpcClient) readLines(stdout io.Reader) {
+func (c *RpcClient) readLines(stdout io.Reader, stop <-chan struct{}) {
 	reader := bufio.NewReader(stdout)
 	for {
 		line, err := reader.ReadBytes('\n')
 		if len(line) != 0 {
-			c.handleLine(strings.TrimSuffix(string(line), "\n"))
+			select {
+			case <-stop:
+				return
+			default:
+				c.handleLine(strings.TrimSuffix(string(line), "\n"))
+			}
 		}
 		if err != nil {
 			return
