@@ -1398,7 +1398,12 @@ func FindMostRecentSession(sessionDir string, cwd string) *string {
 	if cwd != "" {
 		resolvedCwd = ResolvePath(cwd, "", PathInputOptions{})
 	}
-	entries, err := os.ReadDir(sessionDir)
+	directory, err := os.Open(sessionDir)
+	if err != nil {
+		return nil
+	}
+	entries, err := directory.ReadDir(-1)
+	_ = directory.Close()
 	if err != nil {
 		return nil
 	}

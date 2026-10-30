@@ -247,6 +247,44 @@ func TestSessionMigrations(t *testing.T) {
 	}
 }
 
+// Reference: pi v1.4.0 (4a080252), session-manager.ts findMostRecentSession
+// sorts by mtime stably; equal mtimes retain readdirSync's native order.
+func TestFindMostRecentSessionEqualMtimesUseNativeDirectoryOrder(t *testing.T) {
+	sessions := t.TempDir()
+	modTime := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+	for _, name := range []string{"zeta", "alpha", "mu"} {
+		header, err := ai.MarshalJSON(map[string]any{
+			"type": "session", "version": 3, "id": name, "timestamp": "2020-01-01T00:00:00.000Z", "cwd": "/project",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		path := filepath.Join(sessions, name+".jsonl")
+		if err := os.WriteFile(path, append(header, '\n'), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chtimes(path, modTime, modTime); err != nil {
+			t.Fatal(err)
+		}
+	}
+	directory, err := os.Open(sessions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries, err := directory.ReadDir(-1)
+	closeErr := directory.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	want := filepath.Join(sessions, entries[0].Name())
+	if got := FindMostRecentSession(sessions, ""); got == nil || *got != want {
+		t.Fatalf("most recent = %v, want stable native-order winner %q", got, want)
+	}
+}
+
 func TestFindMostRecentSession(t *testing.T) {
 	dir := t.TempDir()
 	sessions := filepath.Join(dir, "sessions")
