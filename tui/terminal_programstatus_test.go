@@ -70,6 +70,38 @@ func TestTerminalProgramStatusQueryAndReport(t *testing.T) {
 	}
 }
 
+// Reference: pi v1.4.0 (4a080252), packages/tui/src/terminal.ts retains the
+// count of DA replies across restarts so an older reply cannot answer the new query.
+func TestOlderDeviceAttributesDoNotCancelRestartedProgramStatusQuery(t *testing.T) {
+	t.Setenv("PI_PROGRAM_STATUS", "")
+	terminal, _ := newRestartTestTerminal(t)
+	terminal.EnableRawInput()
+	terminal.Start(func(string) {}, nil)
+	terminal.Stop()
+	terminal.Start(func(string) {}, nil)
+	defer terminal.Stop()
+
+	// First DA belongs to the query before Stop. The new status reply must
+	// remain eligible until the DA for the latest query arrives.
+	terminal.FeedInput([]byte("\x1b[?1;2c"))
+	terminal.FeedInput([]byte(ProgramStatusQuery))
+	if !terminal.programStatusSupported {
+		t.Fatal("an older DA reply canceled the restarted program-status query")
+	}
+}
+
+// Reference: pi v1.4.0 (4a080252), terminal.ts only consumes a DA reply while
+// a keyboard-protocol query is outstanding; otherwise it forwards the reply.
+func TestUnrequestedDeviceAttributesAreForwarded(t *testing.T) {
+	terminal := NewProcessTerminal(nil, nil)
+	terminal.setupLegacyStdinBuffer()
+	const reply = "\x1b[?1;2c"
+	got := terminal.FeedInput([]byte(reply))
+	if len(got) != 1 || got[0] != reply {
+		t.Fatalf("unrequested DA reply = %q, want it forwarded as input", got)
+	}
+}
+
 // A DA sentinel that arrives first means the terminal did not answer the support query, so
 // reports stay off (upstream clears the pending flag when the last owed DA arrives).
 func TestTerminalProgramStatusStaysOffWhenDATakesTheQuery(t *testing.T) {

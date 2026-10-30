@@ -171,6 +171,9 @@ type ProcessTerminal struct {
 	useRawInput                       atomic.Bool
 	keyboardProtocolNegotiationBuffer string
 	negotiationDeadline               time.Time
+	// pendingKeyboardProtocolDeviceAttributes counts unanswered keyboard-protocol DA queries,
+	// including those from earlier starts whose replies may arrive after a restart.
+	pendingKeyboardProtocolDeviceAttributes int
 	// programStatus is the latest OSC 7501 status, kept so a restart reports it again.
 	programStatus ProgramStatus
 	// programStatusSet distinguishes a set status from the zero value, which is a clear.
@@ -504,6 +507,7 @@ func (t *ProcessTerminal) filterInputSequence(sequences []string, sequence strin
 func (t *ProcessTerminal) queryAndEnableKittyProtocol() {
 	t.writeMu.Lock()
 	t.keyboardProtocolPushed.Store(true)
+	t.pendingKeyboardProtocolDeviceAttributes++
 	t.clearKeyboardProtocolNegotiationBuffer()
 	// The OSC 7501 support query rides along with DA as its sentinel: a terminal that
 	// supports program status answers before DA, so DA arriving first means no support.
@@ -539,9 +543,18 @@ func (t *ProcessTerminal) handleKeyboardProtocolNegotiationSequence(negotiationS
 		return true
 	}
 
-	// This DA answers the latest query, which got no program status reply first.
+	// A DA reply is a negotiation response only when a keyboard-protocol query
+	// is outstanding. Earlier DAs can arrive after a restart, so only the last
+	// owed response settles the current program-status query.
 	t.writeMu.Lock()
-	t.programStatusQueryPending = false
+	if t.pendingKeyboardProtocolDeviceAttributes == 0 {
+		t.writeMu.Unlock()
+		return false
+	}
+	t.pendingKeyboardProtocolDeviceAttributes--
+	if t.pendingKeyboardProtocolDeviceAttributes == 0 {
+		t.programStatusQueryPending = false
+	}
 	t.writeMu.Unlock()
 	if !t.kittyProtocolActive.Load() {
 		t.enableModifyOtherKeys()
