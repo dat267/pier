@@ -64,6 +64,23 @@ func TestContainerShrinkClearsRemovedLineReferences(t *testing.T) {
 	}
 }
 
+// Pinned pi v1.4.0 tui.ts removes children with Array.splice, which releases
+// the removed component reference. Container.RemoveChild must not retain that
+// reference in the unused tail of its backing slice.
+func TestContainerRemoveChildReleasesComponentReference(t *testing.T) {
+	child := &changingFlatLines{lines: []string{"private component state"}}
+	container := &Container{}
+	container.AddChild(child)
+	container.RemoveChild(child)
+
+	if len(container.Children) != 0 {
+		t.Fatalf("children after removal = %d, want 0", len(container.Children))
+	}
+	if retained := container.Children[:cap(container.Children)]; retained[0] != nil {
+		t.Fatalf("removed child remains retained in slice capacity: %p", retained[0])
+	}
+}
+
 func BenchmarkContainerFirstChildChange(b *testing.B) {
 	child := &changingFlatLines{lines: make([]string, 30000)}
 	for i := range child.lines {

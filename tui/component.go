@@ -350,7 +350,10 @@ func (c *Container) InsertChildAt(index int, component Component) {
 func (c *Container) RemoveChild(component Component) {
 	for i, child := range c.Children {
 		if child == component {
-			c.Children = append(c.Children[:i], c.Children[i+1:]...)
+			last := len(c.Children) - 1
+			copy(c.Children[i:], c.Children[i+1:])
+			c.Children[last] = nil
+			c.Children = c.Children[:last]
 			c.dropRenderCache()
 			bumpAnimationTreeRevision()
 			return
