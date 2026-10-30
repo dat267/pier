@@ -45,6 +45,8 @@ type OAuthCallbackServerOptions struct {
 	ExtraPaths []string
 	// TimeoutMs bounds one pending callback. Default: 5 minutes.
 	TimeoutMs int64
+	// TimeoutMsSet distinguishes an explicit zero from the default.
+	TimeoutMsSet bool
 	// RenderPage renders the browser page as HTML; default is plain text.
 	RenderPage func(page OAuthCallbackPage) string
 }
@@ -98,7 +100,7 @@ func ListenCallbackServer(ctx context.Context, options OAuthCallbackServerOption
 		path = "/callback"
 	}
 	timeoutMs := options.TimeoutMs
-	if timeoutMs == 0 {
+	if timeoutMs == 0 && !options.TimeoutMsSet {
 		timeoutMs = 5 * 60000
 	}
 	listener, err := net.Listen("tcp", net.JoinHostPort(host, strconv.Itoa(options.Port)))
