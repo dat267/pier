@@ -263,7 +263,7 @@ type GenerateBranchSummaryOptions struct {
 	Ctx                 context.Context
 	CustomInstructions  string
 	ReplaceInstructions bool
-	ReserveTokens       int
+	ReserveTokens       *int
 	StreamFn            StreamFnFn
 	Retry               *ai.RetryPolicy
 	Callbacks           *SummarizationCallbacks
@@ -271,9 +271,9 @@ type GenerateBranchSummaryOptions struct {
 
 // GenerateBranchSummary summarizes the abandoned branch entries.
 func GenerateBranchSummary(entries []SessionEntry, options GenerateBranchSummaryOptions) (*BranchSummaryResult, error) {
-	reserveTokens := options.ReserveTokens
-	if reserveTokens == 0 {
-		reserveTokens = 16384
+	reserveTokens := 16384
+	if options.ReserveTokens != nil {
+		reserveTokens = *options.ReserveTokens
 	}
 	contextWindow := options.Model.ContextWindow
 	if contextWindow <= 0 {
@@ -438,7 +438,7 @@ func (s *AgentSession) NavigateTree(ctx context.Context, targetID string, option
 		result, err := GenerateBranchSummary(collection.Entries, GenerateBranchSummaryOptions{
 			Model: request.Model, APIKey: request.APIKey, Headers: request.Headers, Env: request.Env,
 			Ctx: summaryCtx, CustomInstructions: options.CustomInstructions,
-			ReplaceInstructions: options.ReplaceInstructions, ReserveTokens: reserveTokens,
+			ReplaceInstructions: options.ReplaceInstructions, ReserveTokens: &reserveTokens,
 			StreamFn:  s.compactionStreamFn(),
 			Retry:     s.retrySettings(),
 			Callbacks: s.summarizationRetryCallbacks("branchSummary"),

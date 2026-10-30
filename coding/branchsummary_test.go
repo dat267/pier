@@ -426,6 +426,57 @@ func TestNavigateTreeWithSummary(t *testing.T) {
 	}
 }
 
+// pi v1.4.0 defaults reserveTokens only when it is omitted; an explicit zero
+// in branchSummary settings leaves the entire model context available.
+func TestNavigateTreeHonorsZeroBranchSummaryReserve(t *testing.T) {
+	manager := sessionWithBranch(t)
+	rootID := manager.GetEntries()[0].ID
+	const longBranchText = "This branch text must remain in summary context. "
+	longText := strings.Repeat(longBranchText, 500)
+	manager.AppendMessage(&ai.UserMessage{Content: ai.StringOrBlocks{Text: longText}})
+
+	zero := int64(0)
+	settings := NewInMemorySettingsManager(&Settings{
+		BranchSummary: &SettingsBranchSummary{ReserveTokens: &zero},
+	}, SettingsManagerCreateOptions{})
+	session, err := NewAgentSession(&SessionConfig{
+		Cwd: t.TempDir(), Sessions: manager,
+		Model:    &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic", ContextWindow: 20000, MaxTokens: 8192},
+		StreamFn: stubStreamFn,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	session.control = &AgentSessionControl{Settings: settings}
+
+	calls := 0
+	included := false
+	session.CompactionStreamFn = func(model *ai.Model, context ai.TranscriptContext, _ *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+		calls++
+		for _, message := range context.Messages {
+			if user, ok := message.(*ai.UserMessage); ok {
+				included = strings.Contains(contentTextJoinedNoSep(user.Content), longBranchText)
+			}
+		}
+		stream := ai.NewAssistantMessageEventStream()
+		go func() {
+			message := &ai.AssistantMessage{
+				API: ai.APIAnthropicMessages, Provider: "anthropic", Model: model.ID,
+				Content: ai.ContentList{ai.TextContent{Text: "summary"}}, StopReason: ai.StopStop,
+			}
+			stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: message})
+		}()
+		return stream
+	}
+
+	if _, err := session.NavigateTree(ctxpkg.Background(), rootID, NavigateTreeOptions{Summarize: true}); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 1 || !included {
+		t.Fatalf("summary calls = %d, long branch text included = %v; want one call with the text", calls, included)
+	}
+}
+
 func TestRestoreToolsFromTranscript(t *testing.T) {
 	manager := newTestSessionManager(t)
 	session, err := NewAgentSession(&SessionConfig{
