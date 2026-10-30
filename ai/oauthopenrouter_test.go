@@ -25,6 +25,7 @@ func TestParseOpenRouterAuthorizationInput(t *testing.T) {
 		{"", "", false},
 		{"http://127.0.0.1:1234/oauth/callback/uuid?code=abc", "abc", true},
 		{"http:///127.0.0.1:1234/oauth/callback/uuid?code=abc", "abc", true},
+		{"?code=abc", "abc", true},
 		{"code=abc", "abc", true},
 		{"raw-code", "raw-code", true},
 		{"http://127.0.0.1:1234/oauth/callback/uuid", "", false},

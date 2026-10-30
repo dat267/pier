@@ -63,7 +63,8 @@ func ParseOpenRouterAuthorizationInput(input string) (string, bool) {
 		}
 	}
 	if strings.Contains(value, "code=") {
-		if values, err := url.ParseQuery(value); err == nil {
+		query := strings.TrimPrefix(value, "?")
+		if values, err := url.ParseQuery(query); err == nil {
 			if code := values.Get("code"); code != "" {
 				return code, true
 			}
