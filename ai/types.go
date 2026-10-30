@@ -27,6 +27,7 @@ const (
 	APIGoogleVertex         KnownApi = "google-vertex"
 	APIPiMessages           KnownApi = "pi-messages"
 	APIOpenAIDecisions      KnownApi = "openai-decisions"
+	APITypeSafeSystemOne    KnownApi = "typesafe-system-one"
 )
 
 // Api is a known or custom API identifier.

@@ -1,0 +1,571 @@
+{
+ "_meta": {
+  "generatedAt": "2026-10-13T07:41:52.494Z",
+  "schemaVersion": 6,
+  "upstreamManifestSHA256": "d7c1c3111684fc62975e420ee05116b05cd900f8b571155aaefff9b174dcc6fe"
+ },
+ "providers": {
+  "opencode": {
+   "typesafe-system-one": {
+    "jev-1.13": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://opencode.ai/zen/v1",
+     "contextWindow": 32000,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0.042,
+      "output": 0
+     },
+     "id": "jev-1.13",
+     "input": [
+      "text"
+     ],
+     "name": "Jev 1.13",
+     "provider": "opencode",
+     "type": "classifier"
+    },
+    "jev-1.13-free": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://opencode.ai/zen/v1",
+     "contextWindow": 32000,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0,
+      "output": 0
+     },
+     "id": "jev-1.13-free",
+     "input": [
+      "text"
+     ],
+     "name": "Jev 1.13 Free",
+     "provider": "opencode",
+     "type": "classifier"
+    }
+   }
+  },
+  "openrouter": {
+   "typesafe-system-one": {
+    "cloudflare/clef": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://openrouter.ai/api/v1",
+     "contextWindow": 16384,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0.042,
+      "output": 0
+     },
+     "id": "cloudflare/clef",
+     "input": [
+      "text",
+      "image"
+     ],
+     "name": "Cloudflare: Clef",
+     "provider": "openrouter",
+     "type": "classifier"
+    },
+    "cloudflare/clef-flash": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://openrouter.ai/api/v1",
+     "contextWindow": 16384,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0.021,
+      "output": 0
+     },
+     "id": "cloudflare/clef-flash",
+     "input": [
+      "text",
+      "image"
+     ],
+     "name": "Cloudflare: Clef Flash",
+     "provider": "openrouter",
+     "type": "classifier"
+    },
+    "cloudflare/clef-omni": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://openrouter.ai/api/v1",
+     "contextWindow": 65536,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0.15,
+      "output": 0
+     },
+     "id": "cloudflare/clef-omni",
+     "input": [
+      "text",
+      "image"
+     ],
+     "name": "Cloudflare: Clef Omni",
+     "provider": "openrouter",
+     "type": "classifier"
+    },
+    "inception/mercury-decide": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://openrouter.ai/api/v1",
+     "contextWindow": 65536,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0.02,
+      "output": 0
+     },
+     "id": "inception/mercury-decide",
+     "input": [
+      "text"
+     ],
+     "name": "Inception: Mercury Decide",
+     "provider": "openrouter",
+     "type": "classifier"
+    },
+    "inception/mercury-decide:free": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://openrouter.ai/api/v1",
+     "contextWindow": 65536,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0,
+      "output": 0
+     },
+     "id": "inception/mercury-decide:free",
+     "input": [
+      "text"
+     ],
+     "name": "Inception: Mercury Decide (free)",
+     "provider": "openrouter",
+     "type": "classifier"
+    },
+    "jaredpalmer/kev-4b": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://openrouter.ai/api/v1",
+     "contextWindow": 8192,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0.042,
+      "output": 0
+     },
+     "id": "jaredpalmer/kev-4b",
+     "input": [
+      "text"
+     ],
+     "name": "Jared Palmer: Kev 4B",
+     "provider": "openrouter",
+     "type": "classifier"
+    },
+    "liquid/d1": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://openrouter.ai/api/v1",
+     "contextWindow": 65536,
+     "cost": {
+      "cacheRead": 0.04,
+      "cacheWrite": 0,
+      "input": 0.04,
+      "output": 0
+     },
+     "id": "liquid/d1",
+     "input": [
+      "text"
+     ],
+     "name": "LiquidAI: d1",
+     "provider": "openrouter",
+     "type": "classifier"
+    },
+    "microsoft/microsoft-decision-1": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://openrouter.ai/api/v1",
+     "contextWindow": 32768,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0.042,
+      "output": 0
+     },
+     "id": "microsoft/microsoft-decision-1",
+     "input": [
+      "text"
+     ],
+     "name": "Microsoft: Microsoft-Decision-1",
+     "provider": "openrouter",
+     "type": "classifier"
+    },
+    "nace-ai/drex-v1.5": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://openrouter.ai/api/v1",
+     "contextWindow": 131072,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0.04,
+      "output": 0
+     },
+     "id": "nace-ai/drex-v1.5",
+     "input": [
+      "text"
+     ],
+     "name": "Nace.AI: Drex v1.5",
+     "provider": "openrouter",
+     "type": "classifier"
+    },
+    "nace-ai/drex-v2.0": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://openrouter.ai/api/v1",
+     "contextWindow": 131072,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0.06,
+      "output": 0
+     },
+     "id": "nace-ai/drex-v2.0",
+     "input": [
+      "text"
+     ],
+     "name": "Nace.AI: Drex v2.0",
+     "provider": "openrouter",
+     "type": "classifier"
+    },
+    "openai/gpt-6-luna-decisions": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://openrouter.ai/api/v1",
+     "contextWindow": 1050000,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0.1,
+      "output": 0
+     },
+     "id": "openai/gpt-6-luna-decisions",
+     "input": [
+      "text",
+      "image"
+     ],
+     "name": "OpenAI: GPT-6 Luna Decisions",
+     "provider": "openrouter",
+     "type": "classifier"
+    },
+    "perplexity/pplx-decider-v1.1-27b": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://openrouter.ai/api/v1",
+     "contextWindow": 262144,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0.02,
+      "output": 0
+     },
+     "id": "perplexity/pplx-decider-v1.1-27b",
+     "input": [
+      "text",
+      "image"
+     ],
+     "name": "Perplexity: Decider V1.1 27B",
+     "provider": "openrouter",
+     "type": "classifier"
+    },
+    "respan/span-01": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://openrouter.ai/api/v1",
+     "contextWindow": 4096,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0.02,
+      "output": 0
+     },
+     "id": "respan/span-01",
+     "input": [
+      "text"
+     ],
+     "name": "Respan: Span-01",
+     "provider": "openrouter",
+     "type": "classifier"
+    },
+    "respan/span-01-lite": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://openrouter.ai/api/v1",
+     "contextWindow": 4096,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0,
+      "output": 0
+     },
+     "id": "respan/span-01-lite",
+     "input": [
+      "text"
+     ],
+     "name": "Respan: Span-01 Lite",
+     "provider": "openrouter",
+     "type": "classifier"
+    },
+    "respan/span-01-lite:free": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://openrouter.ai/api/v1",
+     "contextWindow": 4096,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0,
+      "output": 0
+     },
+     "id": "respan/span-01-lite:free",
+     "input": [
+      "text"
+     ],
+     "name": "Respan: Span-01 Lite (free)",
+     "provider": "openrouter",
+     "type": "classifier"
+    },
+    "togethercomputer/tev1-4b-experimental": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://openrouter.ai/api/v1",
+     "contextWindow": 32768,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0.042,
+      "output": 0
+     },
+     "id": "togethercomputer/tev1-4b-experimental",
+     "input": [
+      "text"
+     ],
+     "name": "Together: Tev1 4B Experimental",
+     "provider": "openrouter",
+     "type": "classifier"
+    },
+    "typesafe/jev-1.13": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://openrouter.ai/api/v1",
+     "contextWindow": 64000,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0.042,
+      "output": 0
+     },
+     "id": "typesafe/jev-1.13",
+     "input": [
+      "text"
+     ],
+     "name": "TypeSafe: Jev 1.13",
+     "provider": "openrouter",
+     "type": "classifier"
+    },
+    "upstage/solar-decide": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://openrouter.ai/api/v1",
+     "contextWindow": 524288,
+     "cost": {
+      "cacheRead": 0.05,
+      "cacheWrite": 0,
+      "input": 0.05,
+      "output": 0
+     },
+     "id": "upstage/solar-decide",
+     "input": [
+      "text"
+     ],
+     "name": "Upstage: Solar Decide",
+     "provider": "openrouter",
+     "type": "classifier"
+    },
+    "upstage/solar-decide-flash": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://openrouter.ai/api/v1",
+     "contextWindow": 524288,
+     "cost": {
+      "cacheRead": 0.05,
+      "cacheWrite": 0,
+      "input": 0.05,
+      "output": 0
+     },
+     "id": "upstage/solar-decide-flash",
+     "input": [
+      "text"
+     ],
+     "name": "Upstage: Solar Decide Flash",
+     "provider": "openrouter",
+     "type": "classifier"
+    },
+    "~perplexity/pplx-decider-27b-latest": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://openrouter.ai/api/v1",
+     "contextWindow": 262144,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0.02,
+      "output": 0
+     },
+     "id": "~perplexity/pplx-decider-27b-latest",
+     "input": [
+      "text",
+      "image"
+     ],
+     "name": "Perplexity: Decider 27B Latest",
+     "provider": "openrouter",
+     "type": "classifier"
+    },
+    "~typesafe/jev-latest": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://openrouter.ai/api/v1",
+     "contextWindow": 64000,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0.042,
+      "output": 0
+     },
+     "id": "~typesafe/jev-latest",
+     "input": [
+      "text"
+     ],
+     "name": "TypeSafe: Jev Latest",
+     "provider": "openrouter",
+     "type": "classifier"
+    }
+   }
+  },
+  "typesafe": {
+   "typesafe-system-one": {
+    "jev-latest": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://api.typesafe.ai/v1/",
+     "contextWindow": 64000,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0,
+      "output": 0
+     },
+     "id": "jev-latest",
+     "input": [
+      "text"
+     ],
+     "name": "Jev",
+     "provider": "typesafe",
+     "type": "classifier"
+    }
+   }
+  },
+  "vercel-ai-gateway": {
+   "typesafe-system-one": {
+    "convaiinnovations/laya": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://ai-gateway.vercel.sh/typesafe/v1",
+     "contextWindow": 8192,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0,
+      "output": 0
+     },
+     "id": "convaiinnovations/laya",
+     "input": [
+      "text"
+     ],
+     "name": "Laya",
+     "provider": "vercel-ai-gateway",
+     "type": "classifier"
+    },
+    "convaiinnovations/laya-free": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://ai-gateway.vercel.sh/typesafe/v1",
+     "contextWindow": 8192,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0,
+      "output": 0
+     },
+     "id": "convaiinnovations/laya-free",
+     "input": [
+      "text"
+     ],
+     "name": "Laya (Free)",
+     "provider": "vercel-ai-gateway",
+     "type": "classifier"
+    },
+    "liquid/d1": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://ai-gateway.vercel.sh/typesafe/v1",
+     "contextWindow": 65536,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0.04,
+      "output": 0
+     },
+     "id": "liquid/d1",
+     "input": [
+      "text"
+     ],
+     "name": "Liquid d1",
+     "provider": "vercel-ai-gateway",
+     "type": "classifier"
+    },
+    "microsoft/microsoft-decision-1": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://ai-gateway.vercel.sh/typesafe/v1",
+     "contextWindow": 32768,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0.042,
+      "output": 0
+     },
+     "id": "microsoft/microsoft-decision-1",
+     "input": [
+      "text"
+     ],
+     "name": "Decision-1",
+     "provider": "vercel-ai-gateway",
+     "type": "classifier"
+    },
+    "openai/gpt-6-luna-decisions": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://ai-gateway.vercel.sh/typesafe/v1",
+     "contextWindow": 1050000,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0.1,
+      "output": 0
+     },
+     "id": "openai/gpt-6-luna-decisions",
+     "input": [
+      "text"
+     ],
+     "name": "GPT-6 Luna Decisions",
+     "provider": "vercel-ai-gateway",
+     "type": "classifier"
+    },
+    "typesafe-ai/jev": {
+     "api": "typesafe-system-one",
+     "baseUrl": "https://ai-gateway.vercel.sh/typesafe/v1",
+     "contextWindow": 32000,
+     "cost": {
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0.042,
+      "output": 0
+     },
+     "id": "typesafe-ai/jev",
+     "input": [
+      "text"
+     ],
+     "name": "Jev",
+     "provider": "vercel-ai-gateway",
+     "type": "classifier"
+    }
+   }
+  }
+ }
+}

@@ -3,6 +3,8 @@ package providers
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -52,6 +54,94 @@ func TestBuiltinProvidersCoverCatalogInOrder(t *testing.T) {
 		}
 		if byID[id] == nil {
 			t.Fatalf("catalog provider %s has no built-in factory", id)
+		}
+	}
+}
+
+// pi v1.4.0 at 4a080252 providers/all.ts includes typesafeProvider, whose
+// classifier model and transport are defined by typesafe.ts and
+// typesafe-system-one.ts.
+func TestTypeSafeSystemOneBuiltInProvider(t *testing.T) {
+	var provider *ai.Provider
+	for _, candidate := range BuiltinProviders() {
+		if candidate.ID == "typesafe" {
+			provider = candidate
+			break
+		}
+	}
+	if provider == nil {
+		t.Fatal("typesafe provider is missing from the built-in registry")
+	}
+	models := provider.GetClassifierModels()
+	if len(models) != 1 || models[0].ID != "jev-latest" || models[0].API != "typesafe-system-one" {
+		t.Fatalf("classifier models = %+v, want TypeSafe Jev System One model", models)
+	}
+	if provider.GetClassifierImplementations()["typesafe-system-one"] == nil {
+		t.Fatal("typesafe-system-one classifier implementation is missing")
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.URL.Path != "/v1/systemone" {
+			t.Errorf("path = %q, want /v1/systemone", request.URL.Path)
+		}
+		if request.Header.Get("Authorization") != "Bearer secret" {
+			t.Errorf("authorization = %q", request.Header.Get("Authorization"))
+		}
+		var payload struct {
+			Model     string                    `json:"model"`
+			Questions map[string]map[string]any `json:"questions"`
+		}
+		if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
+			t.Errorf("decode request: %v", err)
+		} else if payload.Model != models[0].ID || payload.Questions["approved"]["type"] != "noul" || payload.Questions["category"]["type"] != "choice" || payload.Questions["satisfaction"]["type"] != "score" {
+			t.Errorf("payload = %+v", payload)
+		}
+		writer.Header().Set("Content-Type", "application/json")
+		_, _ = writer.Write([]byte(`{"answers":{"category":{"type":"choice","choice":"success","probabilities":{"success":0.9,"failure":0.1},"confidence":0.8},"satisfaction":{"type":"score","score":2,"confidence":0.7},"approved":{"type":"noul","noul":0.95}},"usage":{"input_tokens":10,"output_tokens":2}}`))
+	}))
+	defer server.Close()
+	model := *models[0]
+	model.BaseURL = server.URL + "/v1/"
+	result := provider.Classify(&model, ai.ClassifierContext{
+		State: []byte(`{"text":"hello"}`),
+		Questions: []ai.ClassifierQuestion{
+			{Name: "category", Type: "choice", Instructions: "Classify", Choices: []ai.ClassifierChoice{{Value: "success", Description: "Successful"}, {Value: "failure", Description: "Failed"}}},
+			{Name: "satisfaction", Type: "score", Instructions: "Score", Levels: []string{"low", "neutral", "high"}},
+			{Name: "approved", Type: "bool", Instructions: "Approve?", BoolCriteria: ai.ClassifierBoolCriteria{True: "yes", False: "no"}},
+		},
+	}, &ai.ClassifierOptions{StreamOptions: ai.StreamOptions{APIKey: "secret"}})
+	if result.StopReason != ai.ClassifierStopStop || result.Answers["approved"].Probability == nil || *result.Answers["approved"].Probability != 0.95 {
+		t.Fatalf("classification = %+v", result)
+	}
+	if result.Answers["category"].Choice != "success" || result.Answers["category"].Probabilities["failure"] != 0.1 || result.Answers["category"].Confidence == nil || *result.Answers["category"].Confidence != 0.8 {
+		t.Fatalf("choice answer = %+v", result.Answers["category"])
+	}
+	if result.Answers["satisfaction"].Score == nil || *result.Answers["satisfaction"].Score != 2 || result.Answers["satisfaction"].Confidence == nil || *result.Answers["satisfaction"].Confidence != 0.7 {
+		t.Fatalf("score answer = %+v", result.Answers["satisfaction"])
+	}
+	if result.Usage == nil || result.Usage.Input != 10 || result.Usage.Output != 2 {
+		t.Fatalf("usage = %+v", result.Usage)
+	}
+}
+
+// Reference: pi v1.4.0 (4a080252) packages/ai/src/providers/all.ts and
+// providers/{opencode,openrouter,typesafe,vercel-ai-gateway}.ts register these
+// providers and their TypeSafe System One classifiers.
+func TestSystemOneClassifierProvidersAreRegistered(t *testing.T) {
+	byID := map[string]*ai.Provider{}
+	for _, provider := range BuiltinProviders() {
+		byID[provider.ID] = provider
+	}
+	for _, id := range []string{"opencode", "openrouter", "typesafe", "vercel-ai-gateway"} {
+		provider := byID[id]
+		if provider == nil {
+			t.Fatalf("%s provider is missing", id)
+		}
+		if len(provider.GetClassifierModels()) == 0 {
+			t.Errorf("%s has no built-in classifier models", id)
+		}
+		if provider.GetClassifierImplementations()[ai.APITypeSafeSystemOne] == nil {
+			t.Errorf("%s has no TypeSafe System One implementation", id)
 		}
 	}
 }

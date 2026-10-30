@@ -32,6 +32,8 @@ type EnvAPIKeyProviderSpec struct {
 	Azure       bool
 	// OpenCode wraps every implementation with the session header.
 	OpenCode bool
+	// SystemOneClassifier enables TypeSafe's structured-classification API.
+	SystemOneClassifier bool
 	// Auth overrides the default env API-key auth (Cloudflare, Vertex).
 	Auth *ai.ApiKeyAuth
 	// WrapStreams wraps every implementation (Cloudflare placeholder
@@ -101,12 +103,19 @@ func EnvAPIKeyProvider(spec EnvAPIKeyProviderSpec) *ai.Provider {
 	if spec.OAuth != nil {
 		auth.OAuth = spec.OAuth
 	}
+	models := ai.GetBuiltinModels(spec.ID)
+	classifiers := map[string]ai.ProviderClassifier{}
+	if spec.SystemOneClassifier {
+		models = append(models, ai.GetBuiltinClassifierModels(spec.ID)...)
+		classifiers[ai.APITypeSafeSystemOne] = ai.TypeSafeSystemOne{}
+	}
 	options := ai.CreateProviderOptions{
-		ID:      spec.ID,
-		Name:    spec.Name,
-		BaseURL: spec.BaseURL,
-		Auth:    auth,
-		Models:  ai.GetBuiltinModels(spec.ID),
+		ID:          spec.ID,
+		Name:        spec.Name,
+		BaseURL:     spec.BaseURL,
+		Auth:        auth,
+		Models:      models,
+		Classifiers: classifiers,
 	}
 	if len(streams) == 1 {
 		for _, implementation := range streams {
@@ -136,14 +145,15 @@ var ThinProviderSpecs = []EnvAPIKeyProviderSpec{
 	{ID: "moonshotai", Name: "Moonshot AI", BaseURL: "https://api.moonshot.ai/v1", EnvVars: []string{"MOONSHOT_API_KEY"}, Completions: true},
 	{ID: "moonshotai-cn", Name: "Moonshot AI CN", BaseURL: "https://api.moonshot.cn/v1", EnvVars: []string{"MOONSHOT_API_KEY"}, Completions: true},
 	{ID: "nvidia", Name: "NVIDIA", BaseURL: "https://integrate.api.nvidia.com/v1", EnvVars: []string{"NVIDIA_API_KEY"}, Completions: true},
-	{ID: "opencode", Name: "OpenCode Zen", EnvVars: []string{"OPENCODE_API_KEY"}, Anthropic: true, Google: true, Completions: true, Responses: true, OpenCode: true},
+	{ID: "opencode", Name: "OpenCode Zen", EnvVars: []string{"OPENCODE_API_KEY"}, Anthropic: true, Google: true, Completions: true, Responses: true, OpenCode: true, SystemOneClassifier: true},
 	{ID: "opencode-go", Name: "OpenCode Go", EnvVars: []string{"OPENCODE_API_KEY"}, Anthropic: true, Google: true, Completions: true, Responses: true, OpenCode: true},
-	{ID: "openrouter", Name: "OpenRouter", BaseURL: "https://openrouter.ai/api/v1", EnvVars: []string{"OPENROUTER_API_KEY"}, Anthropic: true, Completions: true},
+	{ID: "openrouter", Name: "OpenRouter", BaseURL: "https://openrouter.ai/api/v1", EnvVars: []string{"OPENROUTER_API_KEY"}, Anthropic: true, Completions: true, SystemOneClassifier: true},
 	{ID: "qwen-token-plan", Name: "Qwen Token Plan", BaseURL: "https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1", EnvVars: []string{"QWEN_TOKEN_PLAN_API_KEY"}, Completions: true},
 	{ID: "qwen-token-plan-cn", Name: "Qwen Token Plan CN", BaseURL: "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1", AuthName: "Qwen Token Plan CN API key", EnvVars: []string{"QWEN_TOKEN_PLAN_CN_API_KEY"}, Completions: true},
 	{ID: "qwen-token-plan-individual", Name: "Qwen Token Plan Individual", BaseURL: "https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1", AuthName: "Qwen Token Plan Individual API key", EnvVars: []string{"QWEN_TOKEN_PLAN_API_KEY"}, Completions: true},
 	{ID: "together", Name: "Together", BaseURL: "https://api.together.ai/v1", EnvVars: []string{"TOGETHER_API_KEY"}, Completions: true},
-	{ID: "vercel-ai-gateway", Name: "Vercel AI Gateway", BaseURL: "https://ai-gateway.vercel.sh", AuthName: "Vercel AI Gateway API key", EnvVars: []string{"AI_GATEWAY_API_KEY"}, Anthropic: true},
+	{ID: "typesafe", Name: "TypeSafe", AuthName: "TypeSafe API key", EnvVars: []string{"TYPESAFE_API_KEY"}, SystemOneClassifier: true},
+	{ID: "vercel-ai-gateway", Name: "Vercel AI Gateway", BaseURL: "https://ai-gateway.vercel.sh", AuthName: "Vercel AI Gateway API key", EnvVars: []string{"AI_GATEWAY_API_KEY"}, Anthropic: true, SystemOneClassifier: true},
 	{ID: "xai", Name: "xAI", BaseURL: "https://api.x.ai/v1", EnvVars: []string{"XAI_API_KEY"}, Responses: true},
 	{ID: "xiaomi", Name: "Xiaomi", BaseURL: "https://api.xiaomimimo.com/v1", EnvVars: []string{"XIAOMI_API_KEY"}, Completions: true},
 	{ID: "xiaomi-token-plan-ams", Name: "Xiaomi Token Plan AMS", BaseURL: "https://token-plan-ams.xiaomimimo.com/v1", AuthName: "Xiaomi Token Plan AMS API key", EnvVars: []string{"XIAOMI_TOKEN_PLAN_AMS_API_KEY"}, Completions: true},
@@ -309,7 +319,7 @@ var BuiltinProviderIDs = []string{
 	"google", "google-vertex", "groq", "huggingface", "kimi-coding", "meta", "minimax", "minimax-cn",
 	"mistral", "moonshotai", "moonshotai-cn", "nvidia", "openai", "openai-codex", "opencode",
 	"opencode-go", "openrouter", "qwen-token-plan", "qwen-token-plan-cn",
-	"qwen-token-plan-individual", "radius", "together", "vercel-ai-gateway", "xai", "xiaomi",
+	"qwen-token-plan-individual", "radius", "together", "typesafe", "vercel-ai-gateway", "xai", "xiaomi",
 	"xiaomi-token-plan-ams", "xiaomi-token-plan-cn", "xiaomi-token-plan-sgp", "zai", "zai-coding-cn",
 }
 

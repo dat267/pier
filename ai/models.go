@@ -140,6 +140,12 @@ type VercelGatewayRouting struct {
 	Order []string `json:"order,omitempty"`
 }
 
+// SystemOneCompat overrides image handling for a System One classifier model.
+type SystemOneCompat struct {
+	ImageInput           *string `json:"imageInput,omitempty"`
+	SendImageOptInHeader *bool   `json:"sendImageOptInHeader,omitempty"`
+}
+
 // ModelCompat is the union of per-API compat settings; exactly one arm is
 // populated, keyed by the model's API.
 type ModelCompat struct {
@@ -148,6 +154,7 @@ type ModelCompat struct {
 	AnthropicMessages    *AnthropicMessagesCompat
 	Bedrock              *BedrockCompat
 	MistralConversations *MistralConversationsCompat
+	SystemOne            *SystemOneCompat
 }
 
 func (c ModelCompat) MarshalJSON() ([]byte, error) {
@@ -162,6 +169,8 @@ func (c ModelCompat) MarshalJSON() ([]byte, error) {
 		return json.Marshal(c.Bedrock)
 	case c.MistralConversations != nil:
 		return json.Marshal(c.MistralConversations)
+	case c.SystemOne != nil:
+		return json.Marshal(c.SystemOne)
 	default:
 		return []byte("null"), nil
 	}
@@ -192,6 +201,9 @@ func DecodeModelCompat(api Api, data []byte) (*ModelCompat, error) {
 	case APIBedrockConverse:
 		c.Bedrock = new(BedrockCompat)
 		err = jsonUnmarshalStrict(data, c.Bedrock)
+	case APITypeSafeSystemOne:
+		c.SystemOne = new(SystemOneCompat)
+		err = jsonUnmarshalStrict(data, c.SystemOne)
 	default:
 		return nil, nil
 	}
@@ -226,6 +238,9 @@ func (c *ModelCompat) UnmarshalJSON(data []byte) error {
 	case len(keys) == 1 && has("supportsMidConvoSystemMessages"):
 		c.MistralConversations = new(MistralConversationsCompat)
 		return json.Unmarshal(data, c.MistralConversations)
+	case has("imageInput") || has("sendImageOptInHeader"):
+		c.SystemOne = new(SystemOneCompat)
+		return json.Unmarshal(data, c.SystemOne)
 	default:
 		c.OpenAIResponses = new(OpenAIResponsesCompat)
 		return json.Unmarshal(data, c.OpenAIResponses)

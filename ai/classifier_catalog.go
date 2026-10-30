@@ -6,12 +6,14 @@ import (
 	"sync"
 )
 
-// classifierCatalogData is generated from the pinned OpenAI model data by
-// scripts/gen_classifier_catalog.py. It contains only the classifier API that
-// currently has a Pier implementation.
+// classifierCatalogData and typesafeClassifierCatalogData are generated from
+// pinned provider model data by scripts/gen_classifier_catalog.py.
 //
 //go:embed classifier_catalog.json
 var classifierCatalogData []byte
+
+//go:embed typesafe_classifier_catalog.json
+var typesafeClassifierCatalogData []byte
 
 var (
 	classifierCatalogOnce   sync.Once
@@ -22,6 +24,22 @@ var (
 func loadClassifierCatalog() {
 	classifierCatalogOnce.Do(func() {
 		_, classifierCatalogModels, classifierCatalogErr = decodeCatalog(classifierCatalogData)
+		if classifierCatalogErr != nil {
+			return
+		}
+		_, extraModels, err := decodeCatalog(typesafeClassifierCatalogData)
+		if err != nil {
+			classifierCatalogErr = err
+			return
+		}
+		for provider, models := range extraModels {
+			if classifierCatalogModels[provider] == nil {
+				classifierCatalogModels[provider] = map[string]*Model{}
+			}
+			for id, model := range models {
+				classifierCatalogModels[provider][id] = model
+			}
+		}
 	})
 }
 

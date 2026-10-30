@@ -67,8 +67,11 @@ auto-compaction and retry.
 - Catalog JSON is generated, not hand-edited. Regenerate in a scratch copy of
   `./pi`: run upstream `generate-models.ts --strict --data-only`, then
   `scripts/gen_catalog.py`, `scripts/gen_image_catalog.py`, and
-  `scripts/gen_classifier_catalog.py <scratch-pi> openai-decisions` against that
-  copy; the upstream generator fetches models.dev and rewrites its checkout.
+  `scripts/gen_classifier_catalog.py <scratch-pi> openai-decisions` for
+  `ai/classifier_catalog.json` and
+  `scripts/gen_classifier_catalog.py <scratch-pi> typesafe-system-one` for
+  `ai/typesafe_classifier_catalog.json`; the upstream generator fetches
+  models.dev and rewrites its checkout.
 - Upstream goldens in `*/testdata/` are Node-generated; regenerate as each
   fixture instructs and never hand-edit them.
 
