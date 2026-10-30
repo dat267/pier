@@ -399,6 +399,24 @@ func TestPortReleaseCheck(t *testing.T) {
 	}
 }
 
+// Pinned utils/version-check.ts calls getLatestPiRelease without retry by
+// default; its version-check test asserts automatic checks make one request.
+func TestAutomaticPortReleaseCheckDoesNotRetry(t *testing.T) {
+	var attempts atomic.Int64
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		attempts.Add(1)
+		writer.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+
+	if release := checkForLatestPortReleaseFrom(context.Background(), server.URL, "1.0.0", server.Client()); release != nil {
+		t.Fatalf("release = %+v", release)
+	}
+	if got := attempts.Load(); got != 1 {
+		t.Fatalf("automatic version check made %d requests, want 1", got)
+	}
+}
+
 // Reference: pi v1.4.0 core/http-dispatcher.ts parses strings with Number(),
 // rejects nonfinite numbers and floors the resulting nonnegative value.
 func TestHTTPIdleTimeoutUsesJavaScriptNumberParsing(t *testing.T) {

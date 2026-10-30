@@ -259,7 +259,10 @@ func getLatestPortReleaseFrom(ctx context.Context, url, currentVersion string, c
 	}
 	request.Header.Set("User-Agent", PiUserAgent(currentVersion))
 	timeoutMS := DefaultVersionCheckTimeoutMS
-	response, err := FetchWithRetry(ctx, request, &noRedirect, FetchRetryOptions{TimeoutMS: &timeoutMS})
+	noRetries := 0
+	response, err := FetchWithRetry(ctx, request, &noRedirect, FetchRetryOptions{
+		TimeoutMS: &timeoutMS, MaxRetries: &noRetries,
+	})
 	if err != nil {
 		return nil, err
 	}
