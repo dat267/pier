@@ -283,12 +283,16 @@ func DiscoverAuthorizationServerMetadata(ctx context.Context, authorizationServe
 	if fetch == nil {
 		fetch = defaultFetch
 	}
+	protocolVersion := options.ProtocolVersion
+	if protocolVersion == "" {
+		protocolVersion = LatestProtocolVersion
+	}
 	for _, candidate := range BuildAuthorizationServerDiscoveryUrls(authorizationServerURL) {
 		parsed, err := url.Parse(candidate.URL)
 		if err != nil {
 			continue
 		}
-		response, err := fetchMetadata(ctx, fetch, parsed, options.ProtocolVersion)
+		response, err := fetchMetadata(ctx, fetch, parsed, protocolVersion)
 		if err != nil {
 			return nil, err
 		}

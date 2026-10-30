@@ -83,6 +83,33 @@ func TestBuildAuthorizationServerDiscoveryUrlsPreservesEscapedPath(t *testing.T)
 	}
 }
 
+// pi v1.4.0 at 4a080252 packages/mcp/src/oauth/discovery.ts defaults each
+// authorization-server metadata request to LATEST_PROTOCOL_VERSION when callers
+// omit protocolVersion.
+func TestDiscoverAuthorizationServerMetadataDefaultsProtocolVersion(t *testing.T) {
+	var versions []string
+	fetch := func(_ context.Context, request *http.Request) (*http.Response, error) {
+		versions = append(versions, request.Header.Get("MCP-Protocol-Version"))
+		return &http.Response{
+			StatusCode: http.StatusNotFound,
+			Header:     http.Header{},
+			Body:       io.NopCloser(strings.NewReader("")),
+		}, nil
+	}
+	metadata, err := DiscoverAuthorizationServerMetadata(context.Background(), "https://issuer.example", DiscoveryOptions{Fetch: fetch})
+	if err != nil || metadata != nil {
+		t.Fatalf("metadata = %+v, err = %v; want no discovered metadata", metadata, err)
+	}
+	if len(versions) != 2 {
+		t.Fatalf("protocol version headers = %v, want two candidate requests", versions)
+	}
+	for _, version := range versions {
+		if version != LatestProtocolVersion {
+			t.Errorf("MCP-Protocol-Version = %q, want %q", version, LatestProtocolVersion)
+		}
+	}
+}
+
 // SelectResource compares origins: the WHATWG origin lowercases the host and
 // drops a default port.
 func TestSelectResourceNormalizesOrigin(t *testing.T) {
