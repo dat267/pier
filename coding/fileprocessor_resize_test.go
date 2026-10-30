@@ -73,6 +73,21 @@ func TestResizeInlineImageFitsTheMaxDimensions(t *testing.T) {
 	}
 }
 
+// Pinned image-resize-core.ts defaults maxBytes to 4.5*1024*1024. An image
+// under that encoded size and within dimensions should pass through unchanged.
+func TestProcessImageUsesUpstreamDefaultByteLimit(t *testing.T) {
+	data := noisyPNG(t, 930, 930)
+	encodedSize := (len(data) + 2) / 3 * 4
+	if encodedSize <= 4_500_000 || encodedSize >= 4_718_592 {
+		t.Fatalf("fixture base64 size = %d; want between Go and upstream defaults", encodedSize)
+	}
+	result := ProcessImage(data, "image/png", nil)
+	if !result.OK || result.MimeType != "image/png" || len(result.Hints) != 0 ||
+		result.Data != base64.StdEncoding.EncodeToString(data) {
+		t.Fatalf("ProcessImage result = ok:%v mime:%q hints:%v; want unchanged PNG pass-through", result.OK, result.MimeType, result.Hints)
+	}
+}
+
 // TestResizeInlineImagePassesThroughWithinLimits pins the early return: bytes
 // inside every limit stay byte-identical.
 func TestResizeInlineImagePassesThroughWithinLimits(t *testing.T) {

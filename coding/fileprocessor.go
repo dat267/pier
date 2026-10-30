@@ -30,7 +30,7 @@ type ImageResizeOptions struct {
 var DefaultImageResizeOptions = ImageResizeOptions{
 	MaxWidth:    2000,
 	MaxHeight:   2000,
-	MaxBytes:    4_500_000, // 4.5MB of base64 payload, below Anthropic's 5MB limit
+	MaxBytes:    4_718_592, // 4.5 MiB of base64 payload, below Anthropic's 5MB limit
 	JPEGQuality: 80,
 }
 
