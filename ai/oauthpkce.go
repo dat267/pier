@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"math"
 	"time"
 )
 
@@ -118,9 +119,11 @@ func AbortableSleep(ctx context.Context, duration time.Duration, cancelMessage s
 // (upstream pollOAuthDeviceCodeFlow), applying RFC 8628 slow_down semantics.
 func PollOAuthDeviceCodeFlow[T any](options OAuthDeviceCodePollOptions[T]) (T, error) {
 	var zero T
-	deadline := time.Time{}
-	if options.ExpiresInSeconds != nil {
-		deadline = time.Now().Add(time.Duration(*options.ExpiresInSeconds) * time.Second)
+	startedAt := time.Now()
+	hasExpiration := options.ExpiresInSeconds != nil
+	expiresInSeconds := int64(0)
+	if hasExpiration {
+		expiresInSeconds = int64(*options.ExpiresInSeconds)
 	}
 	intervalSeconds := deviceCodeDefaultIntervalSeconds
 	if options.IntervalSeconds != nil {
@@ -130,10 +133,23 @@ func PollOAuthDeviceCodeFlow[T any](options OAuthDeviceCodePollOptions[T]) (T, e
 
 	slowDownResponses := 0
 	remaining := func() (time.Duration, bool) {
-		if deadline.IsZero() {
+		if !hasExpiration {
 			return time.Duration(1) << 62, true
 		}
-		left := time.Until(deadline)
+		elapsed := time.Since(startedAt)
+		if elapsed < 0 {
+			elapsed = 0
+		}
+		elapsedSeconds := int64(elapsed / time.Second)
+		if elapsedSeconds >= expiresInSeconds {
+			return 0, false
+		}
+		secondsLeft := expiresInSeconds - elapsedSeconds
+		maxSeconds := int64(math.MaxInt64 / int64(time.Second))
+		if secondsLeft > maxSeconds {
+			return time.Duration(math.MaxInt64), true
+		}
+		left := time.Duration(secondsLeft)*time.Second - elapsed%time.Second
 		return left, left > 0
 	}
 	if options.WaitBeforeFirstPoll {
