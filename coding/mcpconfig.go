@@ -8,6 +8,8 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -130,6 +132,7 @@ func readMcpConfigFile(path string, scope McpServerScope, state *mcpConfigState)
 			state.errors = append(state.errors, fmt.Sprintf("%s: %s", path, err.Error()))
 			return
 		}
+		serverKeys = mcpJavaScriptObjectKeyOrder(serverKeys)
 	}
 
 	if raw, ok := values["autoEnableCodemode"]; ok {
@@ -319,8 +322,8 @@ func isJSONObject(raw json.RawMessage) bool {
 	return len(trimmed) > 0 && trimmed[0] == '{'
 }
 
-// jsonObjectKeyOrder returns the keys of raw's named object field in document
-// order, or nil when the field is absent or not an object.
+// jsonObjectKeyOrder returns the keys of raw's named object field in
+// JavaScript Object.keys order, or nil when the field is absent or not an object.
 func jsonObjectKeyOrder(raw json.RawMessage, field string) []string {
 	_, values, err := readJSONObjectOrdered(raw)
 	if err != nil {
@@ -334,5 +337,51 @@ func jsonObjectKeyOrder(raw json.RawMessage, field string) []string {
 	if err != nil {
 		return nil
 	}
-	return keys
+	return mcpJavaScriptObjectKeyOrder(keys)
+}
+
+// mcpJavaScriptObjectKeyOrder matches Object.keys: array-index property names
+// sort numerically first, followed by other names in their insertion order.
+func mcpJavaScriptObjectKeyOrder(keys []string) []string {
+	type indexedKey struct {
+		name  string
+		index uint32
+	}
+	indices := make([]indexedKey, 0, len(keys))
+	ordinary := make([]string, 0, len(keys))
+	for _, key := range keys {
+		index, ok := mcpArrayIndex(key)
+		if !ok {
+			ordinary = append(ordinary, key)
+			continue
+		}
+		indices = append(indices, indexedKey{name: key, index: index})
+	}
+	sort.Slice(indices, func(i, j int) bool { return indices[i].index < indices[j].index })
+	ordered := make([]string, 0, len(keys))
+	for _, key := range indices {
+		ordered = append(ordered, key.name)
+	}
+	return append(ordered, ordinary...)
+}
+
+// mcpArrayIndex accepts the canonical array-index property names used by
+// JavaScript enumeration: decimal uint32 values except 2^32-1.
+func mcpArrayIndex(key string) (uint32, bool) {
+	if key == "0" {
+		return 0, true
+	}
+	if key == "" || key[0] == '0' {
+		return 0, false
+	}
+	for index := range len(key) {
+		if key[index] < '0' || key[index] > '9' {
+			return 0, false
+		}
+	}
+	value, err := strconv.ParseUint(key, 10, 32)
+	if err != nil || value == 1<<32-1 || strconv.FormatUint(value, 10) != key {
+		return 0, false
+	}
+	return uint32(value), true
 }
