@@ -110,8 +110,10 @@ func LoadPromptOverrides(sources PromptFileSources) PromptOverrides {
 	if sources.AppendSystemPrompt != nil {
 		parts := make([]string, 0, len(sources.AppendSystemPrompt))
 		for _, source := range sources.AppendSystemPrompt {
-			if text := ResolvePromptInput(source); text != "" {
-				parts = append(parts, text)
+			// An empty source resolves to undefined upstream, but an existing
+			// empty file resolves to "" and remains a join slot.
+			if source != "" {
+				parts = append(parts, ResolvePromptInput(source))
 			}
 			if path := promptSourcePath(source); path != "" {
 				overrides.SourcePaths = append(overrides.SourcePaths, path)

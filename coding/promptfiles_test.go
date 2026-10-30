@@ -75,6 +75,22 @@ func TestResolvePromptInputReplacesMalformedUTF8(t *testing.T) {
 // discoverSystemPromptFile / discoverAppendSystemPromptFile: the project's
 // .pi file wins while the project is trusted, the agent-dir file is the
 // fallback, and neither existing means no file.
+// Reference: pi v1.4.0 (4a080252), resource-loader.ts filters only undefined
+// append inputs; an empty file remains an empty slot when sources are joined.
+func TestLoadPromptOverridesPreservesEmptyAppendFileSlots(t *testing.T) {
+	emptyFile := filepath.Join(t.TempDir(), "empty.md")
+	writePromptTestFile(t, emptyFile, "")
+	overrides := LoadPromptOverrides(PromptFileSources{
+		AppendSystemPrompt: []string{emptyFile, "following"},
+	})
+	if overrides.AppendSystemPrompt != "\n\nfollowing" {
+		t.Fatalf("append prompt = %q, want empty-file slot followed by blank line", overrides.AppendSystemPrompt)
+	}
+	if len(overrides.SourcePaths) != 1 || overrides.SourcePaths[0] != emptyFile {
+		t.Fatalf("source paths = %#v, want empty file source", overrides.SourcePaths)
+	}
+}
+
 func TestPromptFileDiscoveryPrefersTheTrustedProject(t *testing.T) {
 	cwd, agentDir := t.TempDir(), t.TempDir()
 	projectSystem := filepath.Join(cwd, ConfigDirName, "SYSTEM.md")
