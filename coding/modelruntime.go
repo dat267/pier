@@ -695,6 +695,7 @@ func authOverrides(overrides *ModelRuntimeAuthOverrides) *ai.AuthResolutionOverr
 	resolved := &ai.AuthResolutionOverrides{APIKey: overrides.APIKey, APIKeySet: overrides.APIKeySet, Env: overrides.Env, Ctx: overrides.Ctx}
 	if overrides.MinOAuthValidityMS != nil {
 		resolved.MinOAuthValidityMS = *overrides.MinOAuthValidityMS
+		resolved.MinOAuthValidityMSSet = true
 	}
 	return resolved
 }

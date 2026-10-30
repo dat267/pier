@@ -53,7 +53,9 @@ type AuthResolutionOverrides struct {
 	// MinOAuthValidityMS requires this much remaining OAuth-token validity;
 	// defaults to five minutes.
 	MinOAuthValidityMS int64
-	Ctx                context.Context // upstream signal
+	// MinOAuthValidityMSSet distinguishes an explicit zero from omission.
+	MinOAuthValidityMSSet bool
+	Ctx                   context.Context // upstream signal
 }
 
 const (
@@ -91,7 +93,9 @@ func ResolveProviderAuth(providerID string, auth ProviderAuth, credentials Crede
 	}
 	if stored != nil {
 		if stored.Type == CredentialOAuth && auth.OAuth != nil {
-			return resolveStoredOAuth(credentials, providerID, auth.OAuth, stored.OAuth, ctx, overrides.minValidity())
+			minValidityMS := overrides.minValidity()
+			minValidityMSSet := overrides != nil && (overrides.MinOAuthValidityMSSet || overrides.MinOAuthValidityMS != 0)
+			return resolveStoredOAuth(credentials, providerID, auth.OAuth, stored.OAuth, ctx, minValidityMS, minValidityMSSet)
 		}
 		if stored.Type == CredentialAPIKey && auth.APIKey != nil {
 			credential := stored.APIKey
@@ -203,7 +207,7 @@ func refreshStoredOAuthCredential(credentials CredentialStore, providerID string
 // locking: tokens with less than five minutes remaining lock, re-check
 // expiry under the lock, refresh once globally, and persist the rotated
 // credential before release.
-func resolveStoredOAuth(credentials CredentialStore, providerID string, oauth *OAuthAuth, stored *OAuthCredential, ctx context.Context, minOAuthValidityMS int64) (*AuthResult, error) {
+func resolveStoredOAuth(credentials CredentialStore, providerID string, oauth *OAuthAuth, stored *OAuthCredential, ctx context.Context, minOAuthValidityMS int64, minOAuthValidityMSSet bool) (*AuthResult, error) {
 	minimumValidityMS := max(minOAuthValidityMS, int64(oauthMinimumValidityMS))
 	expiresSoon := func(credential *OAuthCredential) bool {
 		return time.Now().UnixMilli()+minimumValidityMS >= credential.Expires
@@ -231,7 +235,7 @@ func resolveStoredOAuth(credentials CredentialStore, providerID string, oauth *O
 		// The normal five-minute window triggers a refresh but does not impose
 		// a provider contract. Explicit callers (such as bearer-token export)
 		// do require the requested minimum after the refresh.
-		if minOAuthValidityMS != 0 && expiresSoon(credential) {
+		if minOAuthValidityMSSet && expiresSoon(credential) {
 			return nil, NewModelsError(ErrCodeOAuth, fmt.Sprintf("OAuth refresh returned a token that expires too soon for %s", providerID), nil)
 		}
 	}

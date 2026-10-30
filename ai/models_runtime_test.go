@@ -267,6 +267,37 @@ func TestModelsLoginForwardsApplicationName(t *testing.T) {
 	}
 }
 
+// Port of pi v1.4.0 packages/ai/src/auth/resolve.ts resolveStoredOAuth:
+// an explicitly supplied zero still activates its post-refresh five-minute floor.
+func TestResolveStoredOAuthExplicitZeroStillAppliesPostRefreshFloor(t *testing.T) {
+	store := NewInMemoryCredentialStore()
+	if _, err := store.Modify("p", func(*Credential) (*Credential, error) {
+		return &Credential{Type: CredentialOAuth, OAuth: &OAuthCredential{OAuthCredentials{
+			Refresh: "r1", Access: "a1", Expires: nowUnixMilli() + 60_000,
+		}}}, nil
+	}, bgCtx()); err != nil {
+		t.Fatal(err)
+	}
+	oauth := &OAuthAuth{
+		Name: "Test OAuth",
+		Refresh: func(*OAuthCredential, context.Context) (*OAuthCredential, error) {
+			return &OAuthCredential{OAuthCredentials{
+				Refresh: "r2", Access: "a2", Expires: nowUnixMilli() + 4*60_000,
+			}}, nil
+		},
+		ToAuth: func(credential *OAuthCredential) (*ModelAuth, error) {
+			return &ModelAuth{APIKey: credential.Access}, nil
+		},
+	}
+	_, err := ResolveProviderAuth("p", ProviderAuth{OAuth: oauth}, store, &fakeAuthContext{}, &AuthResolutionOverrides{
+		MinOAuthValidityMS:    0,
+		MinOAuthValidityMSSet: true,
+	})
+	if err == nil {
+		t.Fatal("explicit zero minimum accepted a refreshed token inside the five-minute floor")
+	}
+}
+
 func TestResolveStoredOAuthRefreshesUnderLock(t *testing.T) {
 	// Upstream: double-checked locking — tokens with less than five minutes
 	// remaining lock, re-check, refresh once, persist before release.

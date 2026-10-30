@@ -79,6 +79,35 @@ func (s *memoryCredentialStore) Delete(providerID string, ctx ctxpkg.Context) er
 	return nil
 }
 
+// pi v1.4.0 credential-print.ts passes minOAuthValidityMs when it is zero.
+func TestModelRuntimeGetAuthPreservesExplicitZeroOAuthValidity(t *testing.T) {
+	store := newMemoryCredentialStore()
+	store.entries["p"] = &ai.Credential{Type: ai.CredentialOAuth, OAuth: &ai.OAuthCredential{OAuthCredentials: ai.OAuthCredentials{
+		Refresh: "r1", Access: "a1", Expires: time.Now().Add(time.Minute).UnixMilli(),
+	}}}
+	provider := ai.CreateProvider(ai.CreateProviderOptions{
+		ID: "p", Name: "P",
+		Auth: ai.ProviderAuth{OAuth: &ai.OAuthAuth{
+			Refresh: func(*ai.OAuthCredential, ctxpkg.Context) (*ai.OAuthCredential, error) {
+				return &ai.OAuthCredential{OAuthCredentials: ai.OAuthCredentials{
+					Refresh: "r2", Access: "a2", Expires: time.Now().Add(4 * time.Minute).UnixMilli(),
+				}}, nil
+			},
+			ToAuth: func(credential *ai.OAuthCredential) (*ai.ModelAuth, error) {
+				return &ai.ModelAuth{APIKey: credential.Access}, nil
+			},
+		}},
+	})
+	models := ai.CreateModels(&ai.CreateModelsOptions{Credentials: store})
+	models.SetProvider(provider)
+	runtime := &ModelRuntime{models: models}
+	zero := int64(0)
+	_, err := runtime.GetAuth("p", &ModelRuntimeAuthOverrides{MinOAuthValidityMS: &zero})
+	if err == nil || err.Error() != "OAuth refresh returned a token that expires too soon for p" {
+		t.Fatalf("GetAuth error = %v, want too-soon error for explicit zero validity", err)
+	}
+}
+
 func TestModelsLoginLogout(t *testing.T) {
 	ctx := ctxpkg.Background()
 	store := newMemoryCredentialStore()
