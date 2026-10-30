@@ -245,7 +245,12 @@ func LoadTemplatesFromDir(dir string, getSourceInfo func(filePath string) Source
 
 func loadTemplatesWithDiagnostics(dir string, getSourceInfo func(filePath string) SourceInfo) LoadPromptTemplatesResult {
 	result := LoadPromptTemplatesResult{}
-	entries, err := os.ReadDir(dir)
+	directory, err := os.Open(dir)
+	if err != nil {
+		return result
+	}
+	entries, err := directory.ReadDir(-1)
+	_ = directory.Close()
 	if err != nil {
 		return result
 	}
