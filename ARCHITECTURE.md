@@ -900,8 +900,10 @@ for exposure, namespaces, codemode, `tool_search`, resources, `/mcp` UI, and
   `--tools`/`defaultTools` selection. `codemode`, `deferred`, and `hidden` tools
   register but are never exposed; there is no codemode or `tool_search`.
 - OAuth uses a per-process credential store, not `auth.json`; `/mcp` sign-in
-  persistence is unported. `read_mcp_resource` is absent, so resource links do
-  not advertise it.
+  persistence is unported. Accordingly, `oauth.clientRegistration: "cimd"` is
+  not carried through config/runtime: upstream's Client ID Metadata Document
+  selection is wired by `extensions/mcp/oauth.ts` for the unported sign-in flow.
+  `read_mcp_resource` is absent, so resource links do not advertise it.
 - Radius OAuth login offers the upstream global provider-auth MCP setup.
   It preserves unrelated config and indentation, replaces MCP OAuth with
   `auth.provider` only after consent, and reloads the MCP manager afterward.
