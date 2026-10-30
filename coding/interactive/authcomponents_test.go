@@ -333,7 +333,7 @@ func TestLoginDialogCancellation(t *testing.T) {
 	}
 }
 
-// TestBrowserOpenerHook verifies the injected browser opener (D92).
+// TestBrowserOpenerHook verifies the injected browser opener (D156).
 func TestBrowserOpenerHook(t *testing.T) {
 	SetCustomThemesDir(t.TempDir())
 	SetRegisteredThemes(nil)

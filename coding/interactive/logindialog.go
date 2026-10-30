@@ -10,9 +10,8 @@ import (
 // Port of src/modes/interactive/components/login-dialog.ts: the login dialog
 // that replaces the editor during the OAuth login flow.
 //
-// Divergences: the promise-returning prompts become result channels (D91) and
-// the browser opener is injected because the native helper is out of scope
-// (D92).
+// Divergences: prompts use result channels and browser opening stays on the
+// login-flow goroutine, with the opener injected for platform wiring (D156).
 
 // OpenBrowserFn opens a URL in the default browser.
 type OpenBrowserFn func(url string)
@@ -22,7 +21,7 @@ var browserOpener OpenBrowserFn = func(string) {}
 // BrowserOpener is the installed browser opener (for tests).
 func BrowserOpener() OpenBrowserFn { return browserOpener }
 
-// SetBrowserOpener installs the browser opener (D92).
+// SetBrowserOpener installs the browser opener (D156).
 func SetBrowserOpener(opener OpenBrowserFn) {
 	if opener == nil {
 		opener = func(string) {}

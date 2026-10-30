@@ -11,7 +11,7 @@ import (
 //
 // Divergences: the native (Bun FFI) clipboard has no Go counterpart (D106),
 // so copying uses the ported platform-command implementation; the browser
-// opener reuses the injected opener (D92).
+// opener reuses the injected opener (D156).
 
 // InteractiveTuiOptions configure the renderer.
 type InteractiveTuiOptions struct {
