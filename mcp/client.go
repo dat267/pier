@@ -39,6 +39,9 @@ type ClientOptions struct {
 	Capabilities     *protocol.ClientCapabilities
 	ProtocolVersion  string
 	RequestTimeoutMs int64
+	// RequestTimeoutMsSet distinguishes an explicit zero (no timeout) from
+	// the omitted option that selects the default timeout.
+	RequestTimeoutMsSet bool
 	// Roots are served from the roots/list handler; RootsFunc, when set,
 	// is called instead so the answer can change per request.
 	Roots     []protocol.Root
@@ -48,8 +51,11 @@ type ClientOptions struct {
 // RequestOptions mirrors McpRequestOptions. Cancellation is the request's
 // context (upstream's AbortSignal).
 type RequestOptions struct {
-	TimeoutMs  int64
-	OnProgress func(*protocol.ProgressNotification)
+	TimeoutMs int64
+	// TimeoutMsSet distinguishes an explicit zero (no timeout) from an
+	// omitted per-request timeout that inherits ClientOptions.
+	TimeoutMsSet bool
+	OnProgress   func(*protocol.ProgressNotification)
 }
 
 // RequestHandler serves a server-to-client request (upstream RequestHandler).
@@ -479,12 +485,12 @@ func (c *Client) request(ctx context.Context, method string, params any, options
 	c.mu.Lock()
 	id := c.nextRequestId
 	c.nextRequestId++
-	timeoutMs := options.TimeoutMs
-	if timeoutMs == 0 {
-		timeoutMs = c.options.RequestTimeoutMs
-	}
-	if timeoutMs == 0 {
+	timeoutMs := c.options.RequestTimeoutMs
+	if timeoutMs == 0 && !c.options.RequestTimeoutMsSet {
 		timeoutMs = DefaultRequestTimeoutMs
+	}
+	if options.TimeoutMsSet || options.TimeoutMs != 0 {
+		timeoutMs = options.TimeoutMs
 	}
 	entry := &pendingRequest{
 		ch:          make(chan pendingResult, 1),
