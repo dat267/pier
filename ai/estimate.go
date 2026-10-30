@@ -22,7 +22,8 @@ type ContextUsageEstimate struct {
 	UsageTokens int
 	// TrailingTokens is estimated tokens after that usage block.
 	TrailingTokens int
-	// LastUsageIndex is the applicable message index, or -1 when none exists.
+	// D319: LastUsageIndex is the applicable message index, or -1 when none exists,
+	// instead of upstream's nullable index.
 	LastUsageIndex int
 }
 

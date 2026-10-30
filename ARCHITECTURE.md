@@ -3709,6 +3709,21 @@ messages are otherwise unchanged.
 Reproducer: `TestBuildInitialPromptDoesNotMutateMessages` in
 `coding/cliinitial_test.go`.
 
+### D319
+
+**Context estimates use -1 for a missing usage index.**
+
+Reference: pi v1.4.0 (`4a080252`),
+`packages/ai/src/utils/estimate.ts` and
+`packages/coding-agent/src/core/compaction/compaction.ts` return `null` when
+no assistant usage applies. Go exposes `LastUsageIndex` as an `int` and uses
+`-1` for that case; valid indices remain unchanged. Callers should test for a
+nonnegative index rather than serialize this Go field as the upstream result.
+
+Reproducer: `TestEstimateContextTokensMatchesUpstream` in
+`coding/estimate_parity_test.go` maps upstream's null golden value to the Go
+`-1` sentinel.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

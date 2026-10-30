@@ -302,6 +302,7 @@ type CompactionContextUsageEstimate struct {
 	Tokens         int
 	UsageTokens    int
 	TrailingTokens int
+	// D319: no applicable usage uses -1 rather than upstream's null index.
 	LastUsageIndex int
 }
 
