@@ -14,9 +14,9 @@ import (
 
 // Port of the remaining command handlers of
 // src/modes/interactive/interactive-mode.ts (getPathCommandArgument,
-// handleExport/Import/Copy/Name/Session/Hotkeys/Clear/Debug/Compact/Reload
-// commands, the easter eggs and stop). The session-share and bug-report flows
-// (D316) and the changelog command are not part of this port.
+// handleExport/Import/Copy/Name/Session/Hotkeys/Clear/Debug/Compact/Reload/
+// Changelog commands, the easter eggs and stop). The session-share and
+// bug-report flows (D316) are not part of this port.
 //
 // Divergences: the runtime/clipboard/report collaborators are injected (D125);
 // the extension seams stay out of scope (D41).
@@ -640,10 +640,11 @@ func (w *CommandWiring) HandleChangelogCommand() {
 	entries := coding.ParseChangelog(coding.GetChangelogPath())
 	markdown := "No changelog entries found."
 	if len(entries) > 0 {
-		// parseChangelog returns the file order (newest first); upstream maps
-		// it straight through.
+		// parseChangelog returns newest first; upstream reverses this order
+		// before rendering the full changelog.
 		parts := make([]string, 0, len(entries))
-		for _, entry := range entries {
+		for index := len(entries) - 1; index >= 0; index-- {
+			entry := entries[index]
 			parts = append(parts, coding.NormalizeChangelogLinks(entry.Content, changelogEntryVersion(entry)))
 		}
 		markdown = strings.Join(parts, "\n\n")

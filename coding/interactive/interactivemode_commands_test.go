@@ -512,9 +512,9 @@ func TestClearCommandFatalError(t *testing.T) {
 	}
 }
 
-// TestCommandChangelogKeepsNewestFirst covers the /changelog ordering:
-// upstream maps parseChangelog's file order (newest first) straight through.
-func TestCommandChangelogKeepsNewestFirst(t *testing.T) {
+// pi v1.4.0 interactive-mode.ts reverses parseChangelog's newest-first file
+// order before rendering the /changelog transcript.
+func TestCommandChangelogDisplaysOldestFirst(t *testing.T) {
 	wiring, _, _ := newCommandTestWiring(t)
 	dir := t.TempDir()
 	coding.SetPackageDir(dir)
@@ -527,7 +527,7 @@ func TestCommandChangelogKeepsNewestFirst(t *testing.T) {
 	lines := coding.StripAnsi(strings.Join(wiring.Chat.Render(120), "\n"))
 	newIndex := strings.Index(lines, "New thing")
 	oldIndex := strings.Index(lines, "Old thing")
-	if newIndex < 0 || oldIndex < 0 || newIndex > oldIndex {
-		t.Fatalf("changelog order: new=%d old=%d\n%s", newIndex, oldIndex, lines)
+	if newIndex < 0 || oldIndex < 0 || oldIndex > newIndex {
+		t.Fatalf("changelog order: old=%d new=%d\n%s", oldIndex, newIndex, lines)
 	}
 }
