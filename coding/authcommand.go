@@ -289,7 +289,11 @@ func CheckProviderAuth(args *Args, runtime *ModelRuntime, refresh bool) (AuthChe
 		return AuthCheckResult{Status: AuthCheckNotReady, Provider: provider, Reason: AuthReasonCredentialsNotConfigured}, nil
 	}
 	if refresh {
-		if auth, err := runtime.GetAuth(provider, nil); err != nil || auth == nil {
+		auth, err := runtime.GetAuth(provider, nil)
+		if err != nil {
+			return AuthCheckResult{Status: AuthCheckInvalid, Provider: provider, Reason: AuthReasonInvalidState}, nil
+		}
+		if auth == nil {
 			return AuthCheckResult{Status: AuthCheckNotReady, Provider: provider, Reason: AuthReasonCredentialsNotConfigured}, nil
 		}
 	}

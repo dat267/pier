@@ -108,6 +108,36 @@ func TestModelRuntimeGetAuthPreservesExplicitZeroOAuthValidity(t *testing.T) {
 	}
 }
 
+// pi v1.4.0 packages/coding-agent/src/cli/auth-check.ts classifies refresh errors as invalid_state.
+func TestCheckProviderAuthRefreshFailureIsInvalid(t *testing.T) {
+	store := newMemoryCredentialStore()
+	store.entries["p"] = &ai.Credential{Type: ai.CredentialOAuth, OAuth: &ai.OAuthCredential{OAuthCredentials: ai.OAuthCredentials{
+		Refresh: "r1", Access: "a1", Expires: time.Now().Add(time.Minute).UnixMilli(),
+	}}}
+	provider := ai.CreateProvider(ai.CreateProviderOptions{
+		ID: "p", Name: "P",
+		Auth: ai.ProviderAuth{OAuth: &ai.OAuthAuth{
+			Refresh: func(*ai.OAuthCredential, ctxpkg.Context) (*ai.OAuthCredential, error) {
+				return nil, errors.New("refresh failed")
+			},
+			ToAuth: func(credential *ai.OAuthCredential) (*ai.ModelAuth, error) {
+				return &ai.ModelAuth{APIKey: credential.Access}, nil
+			},
+		}},
+	})
+	models := ai.CreateModels(&ai.CreateModelsOptions{Credentials: store})
+	models.SetProvider(provider)
+	runtime := &ModelRuntime{models: models, config: &ModelConfig{}}
+	providerID := "p"
+	result, err := CheckProviderAuth(&Args{Provider: &providerID}, runtime, true)
+	if err != nil {
+		t.Fatalf("CheckProviderAuth error = %v, want classified result", err)
+	}
+	if result.Status != AuthCheckInvalid || result.Reason != AuthReasonInvalidState {
+		t.Fatalf("CheckProviderAuth = %+v, want invalid_state", result)
+	}
+}
+
 func TestModelsLoginLogout(t *testing.T) {
 	ctx := ctxpkg.Background()
 	store := newMemoryCredentialStore()
