@@ -177,10 +177,10 @@ func TestParallelWorkerPanicReachesTheCaller(t *testing.T) {
 	}
 }
 
-// Tool updates are delivered in the order the tool emitted them, one at a time.
-// Upstream calls the sink synchronously inside onUpdate and awaits the queued
-// promises before tool_execution_end; the port spawned a goroutine per update,
-// so the sink was re-entered concurrently and order was lost.
+// D311: Go serializes updates within one tool invocation to preserve the
+// synchronous single-writer event-sink contract. Upstream agent-loop.ts starts
+// each onUpdate promise in call order and awaits Promise.all, so asynchronous
+// listeners may overlap even though their start order is preserved.
 func TestToolUpdatesAreSerializedInCallOrder(t *testing.T) {
 	var mu sync.Mutex
 	var order []string

@@ -911,10 +911,11 @@ func prepareToolCallUnprotected(
 	return prepareOutcome{prepared: &preparedToolCallValue{toolCall: toolCall, tool: tool, args: validatedArgs}}
 }
 
-// toolUpdateDispatcher delivers tool_execution_update events to the sink in the
-// order the tool emitted them, from one consumer goroutine. The tool never
-// blocks on a slow sink (upstream queues the update promises and awaits them
-// after execute returns), but the sink is never re-entered and order is kept.
+// toolUpdateDispatcher delivers tool_execution_update events to the sink in
+// order from one consumer goroutine. The tool never blocks on a slow sink. Go
+// serializes synchronous callbacks per invocation to preserve the single-writer
+// contract; upstream starts each update promise inline and awaits them together
+// (D311).
 type toolUpdateDispatcher struct {
 	mu      sync.Mutex
 	cond    *sync.Cond

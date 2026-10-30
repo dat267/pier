@@ -3577,6 +3577,24 @@ Reproducer: `TestOutputAccumulatorZeroLimitsUseGoDefaults` in
 `coding/outputaccumulator_utf8_test.go` records the Go side; the upstream
 constructor expression establishes the explicit-zero behavior.
 
+### D311
+
+**Tool-update listeners are serialized per Go tool invocation.**
+
+Reference: pi v1.4.0 (`4a080252`), `packages/agent/src/agent-loop.ts`
+invokes `emitToolExecutionUpdate` inline for each `onUpdate`, stores the
+returned promises, and awaits them together with `Promise.all`. An asynchronous
+upstream listener can therefore overlap later update listeners, although their
+invocation order follows the tool's updates. Go's `AgentEventSink` is
+synchronous; `toolUpdateDispatcher` drains one invocation's updates serially to
+preserve the single-writer callback contract in `AGENTS.md`. This can add
+latency when listeners block, but tool duration is captured before the update
+drain. This is an intentional concurrency difference, not timing parity.
+
+Reproducer: `TestToolUpdatesAreSerializedInCallOrder` in
+`agent/tool_prepare_panic_test.go` covers Go serialization; a pinned Bun probe
+with an async upstream listener observed five simultaneous callbacks.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.
