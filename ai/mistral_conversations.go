@@ -24,6 +24,7 @@ const mistralToolCallIDLength = 9
 
 // maxMistralErrorBodyChars bounds error bodies.
 const maxMistralErrorBodyChars = 4000
+const maxAbortSignalTimeoutMS int64 = 1<<32 - 1
 
 // MistralReasoningEffort is Mistral's effort control.
 type MistralReasoningEffort = string
@@ -329,6 +330,9 @@ func requestMistralStream(ctx ctxpkg.Context, model *Model, body []byte, options
 	timeoutMS := int64(60_000)
 	if options.TimeoutMs != nil {
 		timeoutMS = int64(*options.TimeoutMs)
+	}
+	if timeoutMS < 0 || timeoutMS > maxAbortSignalTimeoutMS {
+		return nil, fmt.Errorf("The value of \"delay\" is out of range. It must be >= 0 && <= %d. Received %d", maxAbortSignalTimeoutMS, timeoutMS)
 	}
 	timeout := javascriptTimeoutDuration(timeoutMS)
 	// Upstream timeoutMs bounds response headers only; an active Mistral stream
