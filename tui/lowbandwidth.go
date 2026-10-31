@@ -6,7 +6,7 @@ import "sync/atomic"
 var lowBandwidthEnabled atomic.Bool
 
 // SetLowBandwidth toggles the low-bandwidth render path for explicit renderer
-// clients. Interactive startup leaves it disabled to match upstream pi.
+// clients (D322). Interactive startup leaves it disabled to match upstream pi.
 func SetLowBandwidth(enabled bool) { lowBandwidthEnabled.Store(enabled) }
 
 // LowBandwidth reports whether the low-bandwidth render path is active.
