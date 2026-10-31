@@ -1,7 +1,6 @@
 package ai
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -40,30 +39,7 @@ func TestMistralStreamEventsMatchUpstream(t *testing.T) {
 			model := mistralModel(server.URL)
 			model.Cost = ModelCost{Input: 2, Output: 6, CacheRead: 0.5}
 			stream := StreamMistralConversations(model, mistralUserContext(), &MistralOptions{APIKey: "test-key"})
-			var got []string
-			for {
-				event, ok := stream.Next(context.Background())
-				if !ok {
-					break
-				}
-				encoded, err := json.Marshal(projectEvent(t, event))
-				if err != nil {
-					t.Fatal(err)
-				}
-				got = append(got, string(encoded))
-			}
-			if len(got) != len(fixture.Events) {
-				t.Fatalf("event count = %d, want %d\ngot: %v", len(got), len(fixture.Events), got)
-			}
-			for i, event := range fixture.Events {
-				want, err := json.Marshal(canonicalJSON(t, event))
-				if err != nil {
-					t.Fatal(err)
-				}
-				if got[i] != string(want) {
-					t.Errorf("event %d differs\n got: %s\nwant: %s", i, got[i], want)
-				}
-			}
+			checkProjectedEvents(t, stream, fixture.Events)
 		})
 	}
 }

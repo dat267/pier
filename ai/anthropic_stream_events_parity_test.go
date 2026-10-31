@@ -1,7 +1,6 @@
 package ai
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -53,31 +52,7 @@ func TestAnthropicStreamEventsMatchUpstream(t *testing.T) {
 				Messages: []Message{&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1}},
 			}), &AnthropicOptions{APIKey: "test-key"})
 
-			var got []string
-			for {
-				event, ok := stream.Next(context.Background())
-				if !ok {
-					break
-				}
-				encoded, err := json.Marshal(projectEvent(t, event))
-				if err != nil {
-					t.Fatalf("marshal projection: %v", err)
-				}
-				got = append(got, string(encoded))
-			}
-			if len(got) != len(fixture.Events) {
-				t.Fatalf("event count = %d, want %d\ngot: %v", len(got), len(fixture.Events), got)
-			}
-			for i := range fixture.Events {
-				wantBytes, err := json.Marshal(canonicalJSON(t, fixture.Events[i]))
-				if err != nil {
-					t.Fatal(err)
-				}
-				want := string(wantBytes)
-				if got[i] != want {
-					t.Errorf("event %d differs\n got: %s\nwant: %s", i, got[i], want)
-				}
-			}
+			checkProjectedEvents(t, stream, fixture.Events)
 		})
 	}
 }
