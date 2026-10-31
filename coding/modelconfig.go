@@ -3,6 +3,7 @@ package coding
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"math"
 	"os"
 	"regexp"
@@ -428,13 +429,7 @@ func validateModelsConfig(parsed any) []validationError {
 	}
 
 	var errors []validationError
-	names := make([]string, 0, len(providersObject))
-	for name := range providersObject {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	for _, providerID := range names {
+	for _, providerID := range slices.Sorted(maps.Keys(providersObject)) {
 		validateProvider(providersObject[providerID], "providers."+providerID, &errors)
 	}
 	return errors
@@ -471,12 +466,7 @@ func validateProvider(value any, path string, errors *[]validationError) {
 		if !ok {
 			*errors = append(*errors, validationError{path: path + ".modelOverrides", message: expectedMessage("object")})
 		} else {
-			names := make([]string, 0, len(overrideObject))
-			for name := range overrideObject {
-				names = append(names, name)
-			}
-			sort.Strings(names)
-			for _, name := range names {
+			for _, name := range slices.Sorted(maps.Keys(overrideObject)) {
 				validateModelOverride(overrideObject[name], fmt.Sprintf("%s.modelOverrides.%s", path, name), errors)
 			}
 		}
@@ -595,12 +585,7 @@ func validatePromptCache(record map[string]any, path string, errors *[]validatio
 		*errors = append(*errors, validationError{path: path + ".promptCache", message: expectedMessage("object")})
 		return
 	}
-	names := make([]string, 0, len(cache))
-	for name := range cache {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	for _, name := range names {
+	for _, name := range slices.Sorted(maps.Keys(cache)) {
 		seconds, ok := cache[name].(float64)
 		if !ok {
 			*errors = append(*errors, validationError{path: path + ".promptCache." + name, message: expectedMessage("number")})
@@ -802,12 +787,7 @@ func validateCompat(value any, path string, errors *[]validationError) {
 				*errors = append(*errors, validationError{path: fieldPath, message: expectedMessage("object")})
 				continue
 			}
-			names := make([]string, 0, len(record))
-			for name := range record {
-				names = append(names, name)
-			}
-			sort.Strings(names)
-			for _, name := range names {
+			for _, name := range slices.Sorted(maps.Keys(record)) {
 				validateChatTemplateKwarg(record[name], fieldPath+"."+name, errors)
 			}
 		case compatOpenRouterRouting:
@@ -1085,12 +1065,7 @@ func validateStringRecord(record map[string]any, name, path string, errors *[]va
 		*errors = append(*errors, validationError{path: path + "." + name, message: expectedMessage("object")})
 		return
 	}
-	names := make([]string, 0, len(object))
-	for key := range object {
-		names = append(names, key)
-	}
-	sort.Strings(names)
-	for _, key := range names {
+	for _, key := range slices.Sorted(maps.Keys(object)) {
 		if _, ok := object[key].(string); !ok {
 			*errors = append(*errors, validationError{
 				path:    fmt.Sprintf("%s.%s.%s", path, name, key),

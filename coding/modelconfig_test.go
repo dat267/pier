@@ -285,6 +285,23 @@ func TestModelConfigErrors(t *testing.T) {
 		t.Fatalf("error = %q", config.GetError())
 	}
 
+	// D34 preserves deterministic lexical paths with port-local messages for
+	// pi 4a080252 core/model-config.ts's schema errors, including nested records.
+	path := write(t, `{"providers":{"z":false,"a":{"headers":{"z":1,"a":1},"compat":{"chatTemplateKwargs":{"z":{"$var":"bad"},"a":{"$var":"bad"}}},"models":[{"id":"m","promptCache":{"z":0,"a":0}}],"modelOverrides":{"z":1,"a":1}}}}`)
+	want := "Invalid models.json schema:\n" +
+		"  - providers.a.headers.a: Expected string\n" +
+		"  - providers.a.headers.z: Expected string\n" +
+		"  - providers.a.compat.chatTemplateKwargs.a.$var: Expected union value\n" +
+		"  - providers.a.compat.chatTemplateKwargs.z.$var: Expected union value\n" +
+		"  - providers.a.models.0.promptCache.a: Expected number to be greater than 0\n" +
+		"  - providers.a.models.0.promptCache.z: Expected number to be greater than 0\n" +
+		"  - providers.a.modelOverrides.a: Expected object\n" +
+		"  - providers.a.modelOverrides.z: Expected object\n" +
+		"  - providers.z: Expected object\n\nFile: " + path
+	if got := LoadModelConfig(path).GetError(); got != want {
+		t.Fatalf("ordered schema error = %q, want %q", got, want)
+	}
+
 	// Load errors (a directory instead of a file).
 	config = LoadModelConfig(dir)
 	if !strings.HasPrefix(config.GetError(), "Failed to load models.json: ") {
