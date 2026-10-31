@@ -551,10 +551,16 @@ func (s *AgentSession) handleAgentEvent(event *agent.AgentEvent) {
 			s.mu.Lock()
 			s.overflowRecovery.attempted = false
 			if idx := indexOf(s.steeringMessages, messageText); idx != -1 {
-				s.steeringMessages = append(s.steeringMessages[:idx], s.steeringMessages[idx+1:]...)
+				last := len(s.steeringMessages) - 1
+				copy(s.steeringMessages[idx:], s.steeringMessages[idx+1:])
+				s.steeringMessages[last] = ""
+				s.steeringMessages = s.steeringMessages[:last]
 				changed = true
 			} else if idx := indexOf(s.followUpMessages, messageText); idx != -1 {
-				s.followUpMessages = append(s.followUpMessages[:idx], s.followUpMessages[idx+1:]...)
+				last := len(s.followUpMessages) - 1
+				copy(s.followUpMessages[idx:], s.followUpMessages[idx+1:])
+				s.followUpMessages[last] = ""
+				s.followUpMessages = s.followUpMessages[:last]
 				changed = true
 			}
 			s.mu.Unlock()
