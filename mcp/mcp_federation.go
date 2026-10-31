@@ -43,13 +43,16 @@ func (a *oauthAdapter) OnUnauthorized(ctx context.Context, info UnauthorizedInfo
 
 	a.mu.Lock()
 	if !insufficientScope && a.inFlight == nil && info.Token != "" {
+		// Tokens is user code and may re-enter this adapter. Recheck shared
+		// refresh admission under the lock after the callback returns.
+		a.mu.Unlock()
 		current, err := a.provider.Tokens(ctx)
 		if err == nil && current != nil && current.AccessToken != info.Token {
 			// Another request already refreshed; the retried request
 			// carries the new token.
-			a.mu.Unlock()
 			return nil
 		}
+		a.mu.Lock()
 	}
 	if a.inFlight == nil {
 		run := &refreshRun{}

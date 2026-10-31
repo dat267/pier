@@ -3986,6 +3986,7 @@ own mutex, so no UI lock or off-loop path is introduced.
 | `imageTranscodeState.mu` | `tui/imagecomponent.go` | the package-global image transcode cache, injected transcoder and registration generation | **retained**: shared decode cache, not UI state; converter callbacks run unlocked and superseded conversions cannot refill the replacement cache |
 | `modelCompletionCache.mu` | `coding/interactive/interactivemode_helpers.go` | the autocomplete model-item cache keyed by the session scope revision | **retained**: caches immutable item slices across completion queries, not UI state |
 | catalog wrapper local `modelsMu` | `coding/remotecatalog.go` | immutable remote/personalized overlay slice snapshots and swaps | **retained**: shared between refresh workers and catalog readers; callbacks and base-provider getters run after unlocking |
+| `oauthAdapter.mu` | `mcp/mcp_federation.go` | shared OAuth refresh admission (`inFlight`) | **retained**: provider token callbacks run unlocked and admission is rechecked afterward, so custom token stores can re-enter (`TestOAuthAdapterTokenCallbackCanReenter`) |
 
 `StreamableHttpTransport.Send` links its caller context to the transport stop
 context. Synchronous responses release that link on return; an SSE response
