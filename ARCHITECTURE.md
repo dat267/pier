@@ -551,8 +551,10 @@ Upstream's await yields; Go's wait does not.
 on a goroutine, then posts status clearing, editor restoration, error reporting,
 and `CompleteProviderAuthentication`.
 `LoginDialogComponent` marshals `Show*` mutations with `post`; prompt channels
-are created synchronously and browser exec stays on the flow goroutine. Nil
-`post` applies inline for tests. This was the fifth deadlock, found by source
+are created synchronously and browser launch stays on the flow goroutine.
+A successfully started launcher is waited for asynchronously so Unix child
+processes are reaped without blocking login (`TestOpenBrowserReapsExitedLauncher`).
+Nil `post` applies inline for tests. This was the fifth deadlock, found by source
 review rather than PTY driving. `TestApiKeyLoginRunsOffTheUILoop` dispatches,
 renders, and routes input on one loop, failing with
 "the login flow is running on the UI loop" rather than hanging.

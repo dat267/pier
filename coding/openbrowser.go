@@ -33,6 +33,7 @@ func OpenBrowser(target string) {
 	if err := command.Start(); err != nil {
 		return
 	}
-	// Detach: the launcher's exit is not awaited and its process is released.
-	_ = command.Process.Release()
+	// Like Node's unref(), return immediately but still reap the launcher
+	// after it exits. Process.Release alone leaves a zombie on Unix.
+	go func() { _ = command.Wait() }()
 }
