@@ -76,7 +76,7 @@ func NewExtensionSelectorComponent(title string, options []string, onSelect func
 
 type countdownHostAdapter struct{ ui tui.TUI }
 
-func (c countdownHostAdapter) RequestRender(force bool) { c.ui.RequestRender(force) }
+func (c countdownHostAdapter) Post(fn func()) { c.ui.Post(fn) }
 
 func (c *ExtensionSelectorComponent) updateList() {
 	theme := ActiveTheme()

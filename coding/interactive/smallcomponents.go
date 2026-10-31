@@ -3,6 +3,8 @@ package interactive
 import (
 	"runtime"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/dat267/pier/tui"
@@ -69,9 +71,9 @@ func RawKeyHint(key string, description string) string {
 	return theme.Fg("dim", FormatKeyText(key, KeyTextFormatOptions{})) + theme.Fg("muted", " "+description)
 }
 
-// CountdownTimerHost is the render request surface the timer needs.
+// CountdownTimerHost posts timer callbacks onto the UI owner loop.
 type CountdownTimerHost interface {
-	RequestRender(force bool)
+	Post(fn func())
 }
 
 // CountdownTimer ticks down a dialog timeout.
@@ -80,7 +82,9 @@ type CountdownTimer struct {
 	onTick   func(seconds int)
 	onExpire func()
 
-	stop chan struct{}
+	stop       chan struct{}
+	disposeOne sync.Once
+	disposed   atomic.Bool
 }
 
 // NewCountdownTimer creates and starts a countdown timer.
@@ -101,17 +105,27 @@ func NewCountdownTimer(timeoutMS int, host CountdownTimerHost, onTick func(secon
 				return
 			case <-ticker.C:
 				remainingSeconds--
-				if timer.onTick != nil {
-					timer.onTick(remainingSeconds)
+				seconds := remainingSeconds
+				deliverTick := func() {
+					if timer.disposed.Load() {
+						return
+					}
+					if timer.onTick != nil {
+						timer.onTick(seconds)
+					}
+					if seconds <= 0 {
+						timer.Dispose()
+						if timer.onExpire != nil {
+							timer.onExpire()
+						}
+					}
 				}
 				if timer.host != nil {
-					timer.host.RequestRender(false)
+					timer.host.Post(deliverTick)
+				} else {
+					deliverTick()
 				}
-				if remainingSeconds <= 0 {
-					timer.Dispose()
-					if timer.onExpire != nil {
-						timer.onExpire()
-					}
+				if seconds <= 0 {
 					return
 				}
 			}
@@ -122,10 +136,12 @@ func NewCountdownTimer(timeoutMS int, host CountdownTimerHost, onTick func(secon
 
 // Dispose stops the timer.
 func (t *CountdownTimer) Dispose() {
-	if t.stop != nil {
-		close(t.stop)
-		t.stop = nil
-	}
+	t.disposeOne.Do(func() {
+		t.disposed.Store(true)
+		if t.stop != nil {
+			close(t.stop)
+		}
+	})
 }
 
 // DynamicBorder is a border that adjusts to the viewport width.
