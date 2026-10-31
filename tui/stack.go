@@ -99,7 +99,10 @@ func (s *Stack) RemoveChild(component Component) {
 	s.Container.RemoveChild(component)
 	for i, entry := range s.Entries {
 		if entry.Component == component {
-			s.Entries = append(s.Entries[:i], s.Entries[i+1:]...)
+			last := len(s.Entries) - 1
+			copy(s.Entries[i:], s.Entries[i+1:])
+			s.Entries[last] = StackLayoutEntry{}
+			s.Entries = s.Entries[:last]
 			return
 		}
 	}

@@ -359,6 +359,23 @@ func TestStackAddRemoveClear(t *testing.T) {
 	}
 }
 
+// Pinned pi v1.4.0 packages/tui/src/components/stack.ts removes stack entries
+// with Array.splice, releasing the removed component reference.
+func TestStackRemoveChildReleasesEntryReference(t *testing.T) {
+	first := linesComponent("first")
+	removed := linesComponent("removed")
+	stack := NewVStack([]Component{first, removed}, StackOptions{})
+
+	stack.RemoveChild(removed)
+
+	if len(stack.Entries) != 1 || stack.Entries[0].Component != first {
+		t.Fatalf("entries after removal = %+v", stack.Entries)
+	}
+	if refs := stack.Entries[:cap(stack.Entries)]; refs[1].Component != nil {
+		t.Fatal("entries backing slice retains removed component")
+	}
+}
+
 // TestSpacer verifies the spacer component.
 func TestSpacer(t *testing.T) {
 	spacer := NewSpacer(3)
