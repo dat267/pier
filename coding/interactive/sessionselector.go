@@ -996,7 +996,9 @@ func NewSessionSelectorComponent(currentSessionsLoader SessionsLoader, allSessio
 	component.canRename = options.RenameSession != nil
 
 	component.header = NewSessionSelectorHeader(component.scope, component.sortMode, component.nameFilter, requestRender)
-	component.header.schedule = component.scheduleTimer
+	component.header.schedule = func(ms int, fn func()) {
+		component.scheduleTimer(ms, func() { component.postApply(fn) })
+	}
 	component.header.SetShowRenameHint(options.ShowRenameHint || component.canRename)
 
 	component.sessionList = NewSessionList(nil, false, component.sortMode, component.nameFilter, keybindings, options.CurrentSessionFilePath)
