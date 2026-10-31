@@ -489,22 +489,7 @@ func validateModelDefinition(value any, path string, errors *[]validationError) 
 	validateOptionalString(model, "name", path, true, errors)
 	validateOptionalString(model, "api", path, true, errors)
 	validateOptionalString(model, "baseUrl", path, true, errors)
-	validateOptionalBool(model, "reasoning", path, errors)
-	validateThinkingLevelMap(model, path, errors)
-	validateInputList(model, path, errors)
-	validateInputLimits(model, path, errors)
-	validatePromptCache(model, path, errors)
-	if cost, ok := model["cost"]; ok {
-		validateCost(cost, path+".cost", true, errors)
-	}
-	validatePositiveNumber(model, "contextWindow", path, errors)
-	validatePositiveNumber(model, "maxTokens", path, errors)
-	validateUnknownRecord(model, "samplingParams", path, errors)
-	validateSamplingParamsByThinkingLevel(model, path, errors)
-	validateStringRecord(model, "headers", path, errors)
-	if compat, ok := model["compat"]; ok {
-		validateCompat(compat, path+".compat", errors)
-	}
+	validateModelFields(model, path, true, errors)
 }
 
 func validateModelOverride(value any, path string, errors *[]validationError) {
@@ -514,13 +499,18 @@ func validateModelOverride(value any, path string, errors *[]validationError) {
 		return
 	}
 	validateOptionalString(model, "name", path, true, errors)
+	validateModelFields(model, path, false, errors)
+}
+
+// validateModelFields preserves the shared field order; override cost rates are optional.
+func validateModelFields(model map[string]any, path string, ratesRequired bool, errors *[]validationError) {
 	validateOptionalBool(model, "reasoning", path, errors)
 	validateThinkingLevelMap(model, path, errors)
 	validateInputList(model, path, errors)
 	validateInputLimits(model, path, errors)
 	validatePromptCache(model, path, errors)
 	if cost, ok := model["cost"]; ok {
-		validateCost(cost, path+".cost", false, errors)
+		validateCost(cost, path+".cost", ratesRequired, errors)
 	}
 	validatePositiveNumber(model, "contextWindow", path, errors)
 	validatePositiveNumber(model, "maxTokens", path, errors)
