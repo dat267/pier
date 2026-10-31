@@ -395,7 +395,11 @@ func (m *SessionManager) buildIndex() {
 	m.labelsByID = map[string]string{}
 	m.labelTimestamps = map[string]string{}
 	m.leafID = nil
+	m.branchCachePtrs = nil
+	m.branchCacheValues = nil
 	m.branchCacheValid = false
+	m.branchCacheHasValues = false
+	m.projection = projectionCache{}
 	// Re-seed the cache-miss scan state over the loaded entries, in file order.
 	m.cacheScan.reset()
 	for i := range m.fileEntries {
@@ -419,6 +423,7 @@ func (m *SessionManager) buildIndex() {
 			}
 		}
 	}
+	m.messages.retain(m.byID)
 }
 
 func (m *SessionManager) rewriteFile() {

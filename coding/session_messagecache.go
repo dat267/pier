@@ -104,6 +104,18 @@ func (c *messageCache) reset() {
 	c.mu.Unlock()
 }
 
+// retain drops memoized entries removed by an in-place fork while preserving
+// the decoded message identity for entries on the retained path.
+func (c *messageCache) retain(entries map[string]*SessionEntry) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for id := range c.byID {
+		if entries[id] == nil {
+			delete(c.byID, id)
+		}
+	}
+}
+
 // lookupLocked returns the entry's cache slot, creating the map on first use.
 func (c *messageCache) lookupLocked(id string) *cachedEntry {
 	if c.byID == nil {

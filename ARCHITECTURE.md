@@ -62,8 +62,11 @@ preserve JavaScript JSON bytes and key order through `ai.MarshalJSON`. Cached
 model/message reads preserve isolation and identity only at validated canonical
 boundaries; see D271–D273 and the session/model-store tests. Starting a new
 session drops manager-owned branch and projection caches so discarded history
-is no longer retained by them. Caller-held snapshots remain valid
-(`TestNewSessionReleasesPreviousPayload`).
+is no longer retained by them. In-place forks also clear stale branch/projection
+snapshots and prune decoded-message memos to the retained entry IDs, preserving
+kept message identity. Caller-held snapshots remain valid
+(`TestNewSessionReleasesPreviousPayload`,
+`TestCreateBranchedSessionReleasesDiscardedMessages`).
 
 ## Stdio RPC
 
