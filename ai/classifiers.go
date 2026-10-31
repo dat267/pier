@@ -66,7 +66,7 @@ func (answer ClassifierAnswer) MarshalJSON() ([]byte, error) {
 		if probabilities == nil {
 			probabilities = map[string]float64{}
 		}
-		values["probabilities"] = orderedClassifierProbabilities(probabilities, answer.ProbabilityOrder)
+		values["probabilities"] = orderedClassifierValues(probabilities, answer.ProbabilityOrder)
 		keys = append(keys, "probabilities")
 		if answer.Confidence != nil {
 			values["confidence"] = *answer.Confidence
@@ -90,7 +90,8 @@ func (answer ClassifierAnswer) MarshalJSON() ([]byte, error) {
 	return (&orderedMap{keys: keys, values: values}).MarshalJSON()
 }
 
-func orderedClassifierProbabilities(values map[string]float64, order []string) *orderedMap {
+// orderedClassifierValues shares the JavaScript key-order rules for both record types.
+func orderedClassifierValues[V float64 | ClassifierAnswer](values map[string]V, order []string) *orderedMap {
 	keys := append([]string(nil), order...)
 	var extras []string
 	for key := range values {
@@ -127,7 +128,7 @@ type ClassifierResult struct {
 func (result ClassifierResult) MarshalJSON() ([]byte, error) {
 	values := map[string]any{
 		"api": result.API, "provider": result.Provider, "model": result.Model,
-		"answers":    orderedClassifierAnswers(result.Answers, result.AnswerOrder),
+		"answers":    orderedClassifierValues(result.Answers, result.AnswerOrder),
 		"stopReason": result.StopReason, "timestamp": result.Timestamp,
 	}
 	keys := []string{"api", "provider", "model", "answers", "stopReason", "timestamp"}
@@ -140,25 +141,6 @@ func (result ClassifierResult) MarshalJSON() ([]byte, error) {
 		keys = append(keys, "errorMessage")
 	}
 	return (&orderedMap{keys: keys, values: values}).MarshalJSON()
-}
-
-func orderedClassifierAnswers(values map[string]ClassifierAnswer, order []string) *orderedMap {
-	keys := append([]string(nil), order...)
-	var extras []string
-	for key := range values {
-		if !containsString(keys, key) {
-			extras = append(extras, key)
-		}
-	}
-	sort.Strings(extras)
-	for _, key := range extras {
-		keys = appendJSObjectKey(keys, key)
-	}
-	ordered := &orderedMap{keys: keys, values: make(map[string]any, len(values))}
-	for key, value := range values {
-		ordered.values[key] = value
-	}
-	return ordered
 }
 
 // ClassifierStopReason labels a classifier result.
