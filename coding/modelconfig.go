@@ -3,6 +3,7 @@ package coding
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"regexp"
 	"slices"
@@ -17,9 +18,9 @@ import (
 //
 // D34: upstream validates with typebox and reports typebox's message texts.
 // The Go port reproduces the same schema (fields, types, required properties,
-// minLength, maxItems and literal unions) and upstream's error *paths*, but the
-// message text is the Go port's own phrasing ("Expected string" and similar)
-// rather than typebox's exact wording.
+// minLength, maxItems, integer and numeric bounds, and literal unions) and
+// upstream's error *paths*, but the message text is the Go port's own phrasing
+// ("Expected string" and similar) rather than typebox's exact wording.
 
 var (
 	jsonStringOrCommentPattern = regexp.MustCompile(`"(?:\\.|[^"\\])*"|//[^\n]*`)
@@ -499,8 +500,8 @@ func validateModelDefinition(value any, path string, errors *[]validationError) 
 	if cost, ok := model["cost"]; ok {
 		validateCost(cost, path+".cost", true, errors)
 	}
-	validateOptionalNumber(model, "contextWindow", path, errors)
-	validateOptionalNumber(model, "maxTokens", path, errors)
+	validatePositiveNumber(model, "contextWindow", path, errors)
+	validatePositiveNumber(model, "maxTokens", path, errors)
 	validateUnknownRecord(model, "samplingParams", path, errors)
 	validateSamplingParamsByThinkingLevel(model, path, errors)
 	validateStringRecord(model, "headers", path, errors)
@@ -523,8 +524,8 @@ func validateModelOverride(value any, path string, errors *[]validationError) {
 	if cost, ok := model["cost"]; ok {
 		validateCost(cost, path+".cost", false, errors)
 	}
-	validateOptionalNumber(model, "contextWindow", path, errors)
-	validateOptionalNumber(model, "maxTokens", path, errors)
+	validatePositiveNumber(model, "contextWindow", path, errors)
+	validatePositiveNumber(model, "maxTokens", path, errors)
 	validateUnknownRecord(model, "samplingParams", path, errors)
 	validateSamplingParamsByThinkingLevel(model, path, errors)
 	validateStringRecord(model, "headers", path, errors)
@@ -546,7 +547,7 @@ func validateInputLimits(record map[string]any, path string, errors *[]validatio
 		*errors = append(*errors, validationError{path: path + ".inputLimits", message: expectedMessage("object")})
 		return
 	}
-	validateOptionalNumber(limits, "maxRequestBytes", path+".inputLimits", errors)
+	validateIntegerRange(limits, "maxRequestBytes", path+".inputLimits", 1, 0, errors)
 	imagesValue, ok := limits["images"]
 	if !ok || imagesValue == nil {
 		return
@@ -556,8 +557,8 @@ func validateInputLimits(record map[string]any, path string, errors *[]validatio
 		*errors = append(*errors, validationError{path: path + ".inputLimits.images", message: expectedMessage("object")})
 		return
 	}
-	validateOptionalNumber(images, "maxPerMessage", path+".inputLimits.images", errors)
-	validateOptionalNumber(images, "maxPerRequest", path+".inputLimits.images", errors)
+	validateIntegerRange(images, "maxPerMessage", path+".inputLimits.images", 1, 0, errors)
+	validateIntegerRange(images, "maxPerRequest", path+".inputLimits.images", 1, 0, errors)
 	resizeValue, ok := images["resize"]
 	if !ok || resizeValue == nil {
 		return
@@ -568,10 +569,10 @@ func validateInputLimits(record map[string]any, path string, errors *[]validatio
 		return
 	}
 	resizePath := path + ".inputLimits.images.resize"
-	validateOptionalNumber(resize, "maxWidth", resizePath, errors)
-	validateOptionalNumber(resize, "maxHeight", resizePath, errors)
-	validateOptionalNumber(resize, "maxBytes", resizePath, errors)
-	validateOptionalNumber(resize, "jpegQuality", resizePath, errors)
+	validateIntegerRange(resize, "maxWidth", resizePath, 1, 0, errors)
+	validateIntegerRange(resize, "maxHeight", resizePath, 1, 0, errors)
+	validateIntegerRange(resize, "maxBytes", resizePath, 1, 0, errors)
+	validateIntegerRange(resize, "jpegQuality", resizePath, 1, 100, errors)
 }
 
 func validateThinkingLevelMap(record map[string]any, path string, errors *[]validationError) {
@@ -979,13 +980,47 @@ func validateOptionalBool(record map[string]any, name, path string, errors *[]va
 	}
 }
 
-func validateOptionalNumber(record map[string]any, name, path string, errors *[]validationError) {
+// validatePositiveNumber checks an optional number member above zero
+// (Type.Number with exclusiveMinimum 0).
+func validatePositiveNumber(record map[string]any, name, path string, errors *[]validationError) {
 	entry, ok := record[name]
 	if !ok {
 		return
 	}
-	if _, ok := entry.(float64); !ok {
+	value, ok := entry.(float64)
+	if !ok {
 		*errors = append(*errors, validationError{path: path + "." + name, message: expectedMessage("number")})
+		return
+	}
+	if !(value > 0) {
+		*errors = append(*errors, validationError{path: path + "." + name, message: "Expected number to be greater than 0"})
+	}
+}
+
+// validateIntegerRange checks an optional integer member within [minimum,
+// maximum]; a zero maximum means the schema has no upper bound.
+func validateIntegerRange(record map[string]any, name, path string, minimum, maximum float64, errors *[]validationError) {
+	entry, ok := record[name]
+	if !ok {
+		return
+	}
+	value, ok := entry.(float64)
+	if !ok || value != math.Trunc(value) {
+		*errors = append(*errors, validationError{path: path + "." + name, message: expectedMessage("integer")})
+		return
+	}
+	if value < minimum {
+		*errors = append(*errors, validationError{
+			path:    path + "." + name,
+			message: fmt.Sprintf("Expected number to be greater or equal to %d", int(minimum)),
+		})
+		return
+	}
+	if maximum > 0 && value > maximum {
+		*errors = append(*errors, validationError{
+			path:    path + "." + name,
+			message: fmt.Sprintf("Expected number to be less or equal to %d", int(maximum)),
+		})
 	}
 }
 
