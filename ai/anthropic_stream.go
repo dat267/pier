@@ -459,9 +459,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 			if ctxErr(ctx) != nil {
 				msg = RequestAbortedMessage
 			}
-			output.ErrorMessage = &msg
-			stream.Push(AssistantMessageEvent{Type: EventError, Reason: output.StopReason, Error: output})
-			stream.End(&output)
+			endStreamWithMessage(stream, output, msg)
 		}
 
 		defer func() {

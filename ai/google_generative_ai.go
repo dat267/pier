@@ -273,9 +273,7 @@ func streamGoogle(model *Model, context TranscriptContext, options *GoogleOption
 		fail := func(err error) {
 			output.StopReason = abortableStopReason(ctx)
 			message := FormatProviderError(NormalizeProviderError(err), "")
-			output.ErrorMessage = &message
-			stream.Push(AssistantMessageEvent{Type: EventError, Reason: output.StopReason, Error: output})
-			stream.End(&output)
+			endStreamWithMessage(stream, output, message)
 		}
 		defer func() {
 			if r := recover(); r != nil {

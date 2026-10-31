@@ -1050,9 +1050,7 @@ func streamOpenAIResponses(model *Model, context TranscriptContext, options *Ope
 			} else if strings.Contains(message, "subscription_sharing_workplace_individual_usage_limit_exceeded") {
 				message += "\n" + OpenAIChatGPTWorkspaceLimitHint
 			}
-			output.ErrorMessage = &message
-			stream.Push(AssistantMessageEvent{Type: EventError, Reason: output.StopReason, Error: output})
-			stream.End(&output)
+			endStreamWithMessage(stream, output, message)
 		}
 		defer func() {
 			if r := recover(); r != nil {

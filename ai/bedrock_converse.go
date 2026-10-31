@@ -732,12 +732,10 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 			finalizeAll()
 			output.StopReason = abortableStopReason(ctx)
 			message := FormatBedrockError(withBedrockStatus(err, status, headers))
-			output.ErrorMessage = &message
 			if output.StopReason == StopError {
 				AppendBedrockFailureDiagnostic(output, withBedrockStatus(err, status, headers), requestID)
 			}
-			stream.Push(AssistantMessageEvent{Type: EventError, Reason: output.StopReason, Error: output})
-			stream.End(&output)
+			endStreamWithMessage(stream, output, message)
 		}
 
 		defer func() {

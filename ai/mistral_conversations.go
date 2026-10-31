@@ -159,9 +159,7 @@ func StreamMistralConversations(model *Model, context TranscriptContext, options
 			if output.StopReason == StopAborted {
 				message = RequestAbortedMessage
 			}
-			output.ErrorMessage = &message
-			stream.Push(AssistantMessageEvent{Type: EventError, Reason: output.StopReason, Error: output})
-			stream.End(&output)
+			endStreamWithMessage(stream, output, message)
 		}
 		defer func() {
 			if r := recover(); r != nil {
