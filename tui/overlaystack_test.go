@@ -72,6 +72,43 @@ func TestOverlayStackRestoresFocusWhenTheTopOverlayHides(t *testing.T) {
 	}
 }
 
+// Pinned pi v1.4.0 packages/tui/src/tui.ts removes overlays with Array.pop,
+// which must release the removed entry from the retained stack capacity.
+func TestOverlayStackHideTopReleasesEntryReference(t *testing.T) {
+	stack, host, _ := newTestOverlayStack()
+	overlay := mountedFocusComponent(host, "overlay")
+	stack.Push(overlay, nil)
+
+	stack.HideTop()
+
+	if len(stack.entries) != 0 {
+		t.Fatalf("entries after HideTop = %d, want 0", len(stack.entries))
+	}
+	if refs := stack.entries[:cap(stack.entries)]; refs[0] != nil {
+		t.Fatal("overlay stack backing slice retains hidden entry")
+	}
+}
+
+// Pinned pi v1.4.0 packages/tui/src/tui.ts removes arbitrary overlays with
+// Array.splice, which must release the removed entry from retained capacity.
+func TestOverlayStackHideReleasesEntryReference(t *testing.T) {
+	stack, host, _ := newTestOverlayStack()
+	removed := mountedFocusComponent(host, "removed")
+	remaining := mountedFocusComponent(host, "remaining")
+	removedEntry := stack.Push(removed, nil)
+	remainingEntry := stack.Push(remaining, nil)
+
+	if !stack.Hide(removedEntry) {
+		t.Fatal("Hide did not remove the entry")
+	}
+	if len(stack.entries) != 1 || stack.entries[0] != remainingEntry {
+		t.Fatalf("entries after Hide = %v, want the remaining entry", stack.entries)
+	}
+	if refs := stack.entries[:cap(stack.entries)]; refs[1] != nil {
+		t.Fatal("overlay stack backing slice retains hidden entry")
+	}
+}
+
 // TestOverlayStackNonCapturingKeepsFocus covers the non-capturing overlay: it
 // never takes focus and is never the topmost capturing overlay.
 func TestOverlayStackNonCapturingKeepsFocus(t *testing.T) {

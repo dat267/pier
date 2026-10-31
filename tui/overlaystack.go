@@ -334,7 +334,10 @@ func (s *overlayStack) Hide(entry *overlayEntry) bool {
 	}
 	s.clearRestoreFor(entry)
 	s.retargetPreFocus(entry)
-	s.entries = append(s.entries[:index], s.entries[index+1:]...)
+	last := len(s.entries) - 1
+	copy(s.entries[index:], s.entries[index+1:])
+	s.entries[last] = nil
+	s.entries = s.entries[:last]
 	s.refocusAfterRemoval(entry)
 	return true
 }
@@ -344,10 +347,12 @@ func (s *overlayStack) HideTop() *overlayEntry {
 	if len(s.entries) == 0 {
 		return nil
 	}
-	overlay := s.entries[len(s.entries)-1]
+	last := len(s.entries) - 1
+	overlay := s.entries[last]
 	s.clearRestoreFor(overlay)
 	s.retargetPreFocus(overlay)
-	s.entries = s.entries[:len(s.entries)-1]
+	s.entries[last] = nil
+	s.entries = s.entries[:last]
 	s.refocusAfterRemoval(overlay)
 	return overlay
 }
