@@ -199,6 +199,10 @@ type ModelsJSONCompat struct {
 	AllowedFallbackModels           []ModelsJSONFallbackModel `json:"allowedFallbackModels,omitempty"`
 }
 
+// ModelsJSONPromptCache holds prompt-cache lifetimes in seconds per retention
+// tier, as written in models.json.
+type ModelsJSONPromptCache map[string]float64
+
 // ModelsJSONModel is one model definition in models.json.
 type ModelsJSONModel struct {
 	ID                                 string                    `json:"id"`
@@ -210,6 +214,7 @@ type ModelsJSONModel struct {
 	Input                              []string                  `json:"input,omitempty"`
 	InputLimits                        *ai.ModelInputLimits      `json:"inputLimits,omitempty"`
 	Cost                               *ModelsJSONCost           `json:"cost,omitempty"`
+	PromptCache                        ModelsJSONPromptCache     `json:"promptCache,omitempty"`
 	ContextWindow                      *float64                  `json:"contextWindow,omitempty"`
 	MaxTokens                          *float64                  `json:"maxTokens,omitempty"`
 	SamplingParams                     map[string]any            `json:"samplingParams,omitempty"`
@@ -228,6 +233,7 @@ type ModelsJSONModelOverride struct {
 	Input                              []string                  `json:"input,omitempty"`
 	InputLimits                        *ai.ModelInputLimits      `json:"inputLimits,omitempty"`
 	Cost                               *ModelsJSONCostOverride   `json:"cost,omitempty"`
+	PromptCache                        ModelsJSONPromptCache     `json:"promptCache,omitempty"`
 	ContextWindow                      *float64                  `json:"contextWindow,omitempty"`
 	MaxTokens                          *float64                  `json:"maxTokens,omitempty"`
 	SamplingParams                     map[string]any            `json:"samplingParams,omitempty"`
@@ -497,6 +503,7 @@ func validateModelDefinition(value any, path string, errors *[]validationError) 
 	validateThinkingLevelMap(model, path, errors)
 	validateInputList(model, path, errors)
 	validateInputLimits(model, path, errors)
+	validatePromptCache(model, path, errors)
 	if cost, ok := model["cost"]; ok {
 		validateCost(cost, path+".cost", true, errors)
 	}
@@ -521,6 +528,7 @@ func validateModelOverride(value any, path string, errors *[]validationError) {
 	validateThinkingLevelMap(model, path, errors)
 	validateInputList(model, path, errors)
 	validateInputLimits(model, path, errors)
+	validatePromptCache(model, path, errors)
 	if cost, ok := model["cost"]; ok {
 		validateCost(cost, path+".cost", false, errors)
 	}
@@ -573,6 +581,38 @@ func validateInputLimits(record map[string]any, path string, errors *[]validatio
 	validateIntegerRange(resize, "maxHeight", resizePath, 1, 0, errors)
 	validateIntegerRange(resize, "maxBytes", resizePath, 1, 0, errors)
 	validateIntegerRange(resize, "jpegQuality", resizePath, 1, 100, errors)
+}
+
+// validatePromptCache checks the promptCache block: an object whose tier values
+// are numbers above zero (Type.Number with exclusiveMinimum 0 per tier).
+func validatePromptCache(record map[string]any, path string, errors *[]validationError) {
+	value, ok := record["promptCache"]
+	if !ok {
+		return
+	}
+	cache, ok := value.(map[string]any)
+	if !ok {
+		*errors = append(*errors, validationError{path: path + ".promptCache", message: expectedMessage("object")})
+		return
+	}
+	names := make([]string, 0, len(cache))
+	for name := range cache {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		seconds, ok := cache[name].(float64)
+		if !ok {
+			*errors = append(*errors, validationError{path: path + ".promptCache." + name, message: expectedMessage("number")})
+			continue
+		}
+		if !(seconds > 0) {
+			*errors = append(*errors, validationError{
+				path:    path + ".promptCache." + name,
+				message: "Expected number to be greater than 0",
+			})
+		}
+	}
 }
 
 func validateThinkingLevelMap(record map[string]any, path string, errors *[]validationError) {

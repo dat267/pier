@@ -168,6 +168,12 @@ func applyModelOverride(model *ai.Model, override ModelsJSONModelOverride) (*ai.
 	if override.InputLimits != nil {
 		updated.InputLimits = mergeInputLimits(model.InputLimits, override.InputLimits)
 	}
+	if override.PromptCache != nil {
+		merged := ai.ModelPromptCache{}
+		maps.Copy(merged, model.PromptCache)
+		maps.Copy(merged, promptCacheFromJSON(override.PromptCache))
+		updated.PromptCache = merged
+	}
 	if override.Cost != nil {
 		cost := model.Cost
 		if override.Cost.Input != nil {
@@ -214,6 +220,19 @@ func applyModelOverride(model *ai.Model, override ModelsJSONModelOverride) (*ai.
 	}
 	updated.Compat = compat
 	return &updated, nil
+}
+
+// promptCacheFromJSON converts the seconds-per-tier map of models.json into
+// the model's prompt-cache lifetimes.
+func promptCacheFromJSON(values ModelsJSONPromptCache) ai.ModelPromptCache {
+	if len(values) == 0 {
+		return nil
+	}
+	out := make(ai.ModelPromptCache, len(values))
+	for retention, seconds := range values {
+		out[ai.CacheRetention(retention)] = int(seconds)
+	}
+	return out
 }
 
 func costTiersFromJSON(tiers []ModelsJSONCostTier) []ai.ModelCostTier {
@@ -305,6 +324,7 @@ func modelFromJSON(providerID string, definition ModelsJSONModel, providerConfig
 		Input:                              append([]string{}, input...),
 		InputLimits:                        definition.InputLimits,
 		Cost:                               cost,
+		PromptCache:                        promptCacheFromJSON(definition.PromptCache),
 		ContextWindow:                      contextWindow,
 		MaxTokens:                          maxTokens,
 		SamplingParams:                     samplingParams,
