@@ -60,7 +60,10 @@ byte-parity regressions.
 context. Do not rebuild it by hand or rescan entries per message. Session writes
 preserve JavaScript JSON bytes and key order through `ai.MarshalJSON`. Cached
 model/message reads preserve isolation and identity only at validated canonical
-boundaries; see D271–D273 and the session/model-store tests.
+boundaries; see D271–D273 and the session/model-store tests. Starting a new
+session drops manager-owned branch and projection caches so discarded history
+is no longer retained by them. Caller-held snapshots remain valid
+(`TestNewSessionReleasesPreviousPayload`).
 
 ## Stdio RPC
 

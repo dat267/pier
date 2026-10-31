@@ -188,6 +188,13 @@ func (m *SessionManager) NewSession(options *NewSessionOptions) string {
 	m.labelsByID = map[string]string{}
 	m.labelTimestamps = map[string]string{}
 	m.leafID = nil
+	// These read caches own old entries too. Drop references at reset rather
+	// than waiting for a later read to replace a stale cache.
+	m.branchCachePtrs = nil
+	m.branchCacheValues = nil
+	m.branchCacheValid = false
+	m.branchCacheHasValues = false
+	m.projection = projectionCache{}
 	m.messages.reset()
 	m.cacheScan.reset()
 	m.cacheSeedGen++
