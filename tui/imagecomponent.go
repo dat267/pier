@@ -206,23 +206,22 @@ func transcodeToPng(base64Data string, mimeType string) (string, bool) {
 		return *cached, true
 	}
 	png, ok := transcoder(base64Data, mimeType)
-	if !ok {
-		if imageTranscodeState.cache == nil {
-			imageTranscodeState.cache = map[string]*string{}
-		}
-		imageTranscodeState.cache[base64Data] = nil
-		return "", false
-	}
 	if imageTranscodeState.cache == nil {
 		imageTranscodeState.cache = map[string]*string{}
 	}
-	value := png
-	imageTranscodeState.cache[base64Data] = &value
+	var value *string
+	if ok {
+		value = &png
+	}
+	imageTranscodeState.cache[base64Data] = value
 	imageTranscodeState.order = append(imageTranscodeState.order, base64Data)
 	if len(imageTranscodeState.order) > imageTranscodeCacheLimit {
 		oldest := imageTranscodeState.order[0]
 		imageTranscodeState.order = imageTranscodeState.order[1:]
 		delete(imageTranscodeState.cache, oldest)
+	}
+	if !ok {
+		return "", false
 	}
 	return png, true
 }
