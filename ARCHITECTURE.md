@@ -3800,6 +3800,25 @@ Reproducers: `TestLowBandwidthDefaultsOffEvenOverSSH`,
 `TestMainScreenLowBandwidthTrimsTrailingSpaces`, and
 `TestAltScreenLowBandwidthSkipsNoOpFrame`.
 
+### D323
+
+**A failed post-compaction prompt restores every queued message exactly once.**
+
+Reference: pi v1.4.0
+`packages/coding-agent/src/modes/interactive/interactive-mode.ts`
+`flushCompactionQueue`. Upstream registers the prompt rejection handler, then
+`await`s the remaining messages into the session queue. The handler's
+microtask usually runs after the first `followUp`/`steer` has already queued
+that message, so `clearQueue` drops it and the restored copy is the only one;
+with more than one remaining message, the later iterations run after the
+clear and survive in both the session queue and the restored compaction
+queue. Pier restores, returns, and leaves every message in the restored queue
+only: the duplication in the multi-message microtask window is a timing
+artifact, not observable behaviour users can rely on, and it would display,
+restore and send the same message twice.
+
+Test: `TestCompactionQueueFailureDoesNotDuplicateQueuedMessages`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.
