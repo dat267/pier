@@ -7,6 +7,26 @@ import (
 	"strings"
 )
 
+// eachSettingsMember calls fn for every exported JSON-tagged struct field that
+// the document supplies a member for.
+func eachSettingsMember(typ reflect.Type, members map[string]json.RawMessage, fn func(index int, field reflect.StructField, name string, member json.RawMessage)) {
+	for index := 0; index < typ.NumField(); index++ {
+		field := typ.Field(index)
+		if field.PkgPath != "" {
+			continue
+		}
+		name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
+		if name == "" || name == "-" {
+			continue
+		}
+		member, ok := members[name]
+		if !ok {
+			continue
+		}
+		fn(index, field, name, member)
+	}
+}
+
 // jsonUnmarshaler is encoding/json's Unmarshaler, checked on a pointer to the
 // target type (custom unions such as QuietStartupSetting decode themselves).
 var jsonUnmarshaler = reflect.TypeFor[json.Unmarshaler]()
@@ -28,30 +48,18 @@ func decodeSettingsTolerantWithRejects(encoded []byte, target any) []string {
 	}
 	var rejected []string
 	typ := value.Elem().Type()
-	for index := 0; index < typ.NumField(); index++ {
-		field := typ.Field(index)
-		if field.PkgPath != "" {
-			continue
-		}
-		name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
-		if name == "" || name == "-" {
-			continue
-		}
-		member, ok := members[name]
-		if !ok {
-			continue
-		}
+	eachSettingsMember(typ, members, func(index int, field reflect.StructField, name string, member json.RawMessage) {
 		path := []string{name}
 		if bytes.Equal(bytes.TrimSpace(member), []byte("null")) {
 			rejected = append(rejected, encodeSettingsPath(path))
-			continue
+			return
 		}
 		if !decodeTolerantValue(member, value.Elem().Field(index)) {
 			rejected = append(rejected, encodeSettingsPath(path))
-			continue
+			return
 		}
 		rejected = append(rejected, explicitNullSettingsPaths(member, field.Type, path)...)
-	}
+	})
 	return rejected
 }
 
@@ -83,21 +91,9 @@ func explicitNullSettingsPaths(raw []byte, typ reflect.Type, path []string) []st
 	var out []string
 	switch typ.Kind() {
 	case reflect.Struct:
-		for index := 0; index < typ.NumField(); index++ {
-			field := typ.Field(index)
-			if field.PkgPath != "" {
-				continue
-			}
-			name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
-			if name == "" || name == "-" {
-				continue
-			}
-			member, ok := members[name]
-			if !ok {
-				continue
-			}
+		eachSettingsMember(typ, members, func(_ int, field reflect.StructField, name string, member json.RawMessage) {
 			out = append(out, explicitNullSettingsPaths(member, field.Type, appendPath(path, name))...)
-		}
+		})
 	case reflect.Map:
 		if typ.Key().Kind() != reflect.String {
 			return nil
@@ -276,23 +272,11 @@ func decodeTolerantStruct(raw []byte, target reflect.Value) bool {
 	acceptedObject := true
 	accepted := false
 	typ := target.Type()
-	for index := 0; index < typ.NumField(); index++ {
-		field := typ.Field(index)
-		if field.PkgPath != "" {
-			continue
-		}
-		name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
-		if name == "" || name == "-" {
-			continue
-		}
-		member, ok := members[name]
-		if !ok {
-			continue
-		}
+	eachSettingsMember(typ, members, func(index int, _ reflect.StructField, _ string, member json.RawMessage) {
 		if decodeTolerantValue(member, target.Field(index)) {
 			accepted = true
 		}
-	}
+	})
 	return accepted || acceptedObject
 }
 
