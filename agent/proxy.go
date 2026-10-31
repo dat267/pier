@@ -162,7 +162,11 @@ func StreamProxy(model *ai.Model, context ai.TranscriptContext, options ProxyStr
 					message = "Proxy error: " + errorData.Error
 				}
 			}
-			fail(ai.StopError, message)
+			reason := ai.StopError
+			if ctx.Err() != nil {
+				reason = ai.StopAborted
+			}
+			fail(reason, message)
 			return
 		}
 
