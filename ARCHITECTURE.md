@@ -853,9 +853,11 @@ The rest, including the preamble naming pi as the reference harness, is unchange
 
 Upstream kills by process-tree pid (`taskkill /F /T` on Windows), then waits for
 stdio to close. Background servers, `start /b`, or `setsid` descendants may keep
-inherited output pipes open beyond the killed tree. Pier closes output readers
-on kill and bounds draining with `waitForPipeDrain`, the existing grace helper
-based on upstream `waitForChildProcess`.
+inherited output pipes open beyond the killed tree. Both shell entry points
+close output readers on cancellation and bound post-exit draining with
+`waitForPipeDrain`. They wait for the direct child to exit before starting the
+100 ms idle grace, matching `packages/coding-agent/src/utils/child-process.ts`
+and preserving descendant output written shortly after shell exit.
 
 Windows additionally uses a job object: `TerminateJobObject` reaches children
 whose parent exited, unlike `taskkill /T`; assignment failure falls back to

@@ -359,11 +359,19 @@ func (o *localShellOperations) Exec(ctx context.Context, command, cwd string, ex
 	var timedOut atomic.Bool
 	var timeoutTimer *time.Timer
 	var killOnce sync.Once
+	var closeOnce sync.Once
+	closeOutput := func() {
+		closeOnce.Do(func() {
+			_ = stdout.Close()
+			_ = stderr.Close()
+		})
+	}
 	killTree := func() {
 		killOnce.Do(func() {
 			if cmd.Process != nil {
 				KillProcessTree(cmd.Process.Pid)
 			}
+			closeOutput()
 		})
 	}
 
@@ -418,13 +426,10 @@ func (o *localShellOperations) Exec(ctx context.Context, command, cwd string, ex
 		})
 	}
 
-	// Drain the output pipes before Wait: os/exec closes the pipes it created
-	// when Wait reaps the process, which can truncate unread data. The process
-	// exit already closes the write ends, so the readers see EOF here (D127).
-	// The grace timer re-arms on every chunk so a detached descendant that
-	// inherited the pipes cannot hang the drain (port of waitForChildProcess).
-	waitForPipeDrain(streamWG, activity, started)
-	waitErr := cmd.Wait()
+	// Observe direct-child exit before starting the output idle grace. This
+	// preserves late writes from descendants while cancellation still closes
+	// the readers to release a detached writer promptly.
+	waitErr := waitForProcessAndPipeDrain(cmd, streamWG, activity, started, closeOutput)
 	close(stopAbort)
 	if timeoutTimer != nil {
 		timeoutTimer.Stop()
@@ -509,6 +514,24 @@ const exitStdioGraceMS = 100
 // cannot hang the caller (port of waitForChildProcess). The idle window only
 // starts once both readers have actually read, so a slow schedule cannot
 // discard output that is already buffered.
+func waitForProcessAndPipeDrain(
+	cmd *exec.Cmd,
+	streams *sync.WaitGroup,
+	activity <-chan struct{},
+	started <-chan struct{},
+	closeOutput func(),
+) error {
+	state, err := cmd.Process.Wait()
+	cmd.ProcessState = state
+	if err == nil && state != nil && !state.Success() {
+		err = &exec.ExitError{ProcessState: state}
+	}
+	waitForPipeDrain(streams, activity, started)
+	closeOutput()
+	streams.Wait()
+	return err
+}
+
 func waitForPipeDrain(streams *sync.WaitGroup, activity <-chan struct{}, started <-chan struct{}) {
 	done := make(chan struct{})
 	go func() {

@@ -739,14 +739,10 @@ func CreateShellTool(cwd string, config ShellToolConfig, options *BashToolOption
 			streams.Add(2)
 			go drain(stdoutPipe)
 			go drain(stderrPipe)
-			// Drain before Wait: os/exec closes the pipes it created when Wait
-			// reaps the process, which can truncate unread data (D127). The grace
-			// window then stops a detached descendant that inherited the pipes
-			// from hanging the drain once the shell is gone (port of
-			// waitForChildProcess).
-			waitForPipeDrain(streams, activity, started)
-
-			waitErr := cmd.Wait()
+			// Observe direct-child exit before starting the output idle grace, as
+			// upstream waitForChildProcess does. Cancellation still closes the
+			// readers to release a detached writer promptly.
+			waitErr := waitForProcessAndPipeDrain(cmd, streams, activity, started, closeOutput)
 
 			// Upstream finishOutput: stop the pending update, flush one last
 			// streamed state, then take the final snapshot.

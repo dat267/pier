@@ -150,6 +150,79 @@ func TestBashStdoutAndStderr(t *testing.T) {
 	}
 }
 
+// pi v1.4.0 (4a080252), utils/child-process.ts starts its stdio idle grace
+// only after the direct child exits, preserving output from a descendant that
+// continues writing after its parent shell exits.
+func TestBashCapturesOutputWrittenAfterShellExit(t *testing.T) {
+	requirePosixShell(t)
+	dir := t.TempDir()
+	tool := CreateBashTool(dir, nil)
+	command := `(touch ready; sleep 0.45; printf late) & while [ ! -f ready ]; do sleep 0.01; done; sleep 0.4; exit 0`
+	params, _ := json.Marshal(map[string]string{"command": command})
+	result, err := tool.Execute("c", params, context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := result.Content[0].(ai.TextContent).Text
+	if !strings.Contains(text, "late") {
+		t.Fatalf("output = %q, want descendant output written after shell exit", text)
+	}
+}
+
+// ExecuteBash also preserves descendant output arriving during the post-exit grace.
+func TestExecuteBashCapturesOutputWrittenAfterShellExit(t *testing.T) {
+	requirePosixShell(t)
+	dir := t.TempDir()
+	command := `(touch ready; sleep 0.45; printf late) & while [ ! -f ready ]; do sleep 0.01; done; sleep 0.4; exit 0`
+	result, err := ExecuteBash(context.Background(), command, dir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result.Output, "late") {
+		t.Fatalf("output = %q, want descendant output written after shell exit", result.Output)
+	}
+}
+
+// D178: the session executor closes its read pipes on cancellation, even when
+// an escaped descendant continues writing to them.
+func TestExecuteBashAbortDoesNotWaitForDetachedWriter(t *testing.T) {
+	requirePosixShell(t)
+	if _, err := exec.LookPath("setsid"); err != nil {
+		t.Skip("requires setsid to detach the writer")
+	}
+	ctx, watchdog := context.WithTimeout(context.Background(), 3*time.Second)
+	defer watchdog()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	cancelledAt := make(chan time.Time, 1)
+	result, err := ExecuteBash(ctx, "setsid sh -c 'for i in $(seq 1 40); do echo tick; sleep 0.05; done' & echo started; sleep 15", t.TempDir(), &BashExecutorOptions{
+		Signal: ctx.Done(),
+		OnChunk: func(chunk string) {
+			if strings.Contains(chunk, "tick") {
+				select {
+				case cancelledAt <- time.Now():
+				default:
+				}
+				cancel()
+			}
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Cancelled {
+		t.Fatal("result was not marked cancelled")
+	}
+	select {
+	case at := <-cancelledAt:
+		if elapsed := time.Since(at); elapsed > time.Second {
+			t.Fatalf("abort took %v after cancellation while a detached writer held the pipe", elapsed)
+		}
+	default:
+		t.Fatal("command did not emit the cancellation trigger")
+	}
+}
+
 // bash.ts returns { isError: true } with the formatted output and truncation
 // details for a non-zero exit; only aborts and timeouts throw. The port
 // returned a Go error, which the loop turns into a bare result and drops the
