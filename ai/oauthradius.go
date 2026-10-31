@@ -128,13 +128,11 @@ func readRadiusOAuthError(response *http.Response, message string) error {
 	}
 }
 
-// RequestRadiusOAuthToken posts a token request to the gateway.
-func RequestRadiusOAuthToken(ctx context.Context, gateway string, fields map[string]string) (*OAuthCredential, error) {
-	form := url.Values{}
-	for key, value := range fields {
-		form.Set(key, value)
-	}
-	requestURL, err := radiusGatewayEndpointURL(gateway, "/v1/oauth/token")
+// postRadiusGatewayForm posts one form-encoded OAuth request to the gateway
+// and returns the decoded body, reporting cancellation the way every Radius
+// login step does.
+func postRadiusGatewayForm(ctx context.Context, gateway, path string, form url.Values, failurePrefix string) ([]byte, error) {
+	requestURL, err := radiusGatewayEndpointURL(gateway, path)
 	if err != nil {
 		return nil, err
 	}
@@ -153,9 +151,22 @@ func RequestRadiusOAuthToken(ctx context.Context, gateway string, fields map[str
 	}
 	defer response.Body.Close()
 	if response.StatusCode >= 400 {
-		return nil, readRadiusOAuthError(response, "Radius OAuth token request failed")
+		return nil, readRadiusOAuthError(response, failurePrefix)
 	}
 	raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
+	return raw, nil
+}
+
+// RequestRadiusOAuthToken posts a token request to the gateway.
+func RequestRadiusOAuthToken(ctx context.Context, gateway string, fields map[string]string) (*OAuthCredential, error) {
+	form := url.Values{}
+	for key, value := range fields {
+		form.Set(key, value)
+	}
+	raw, err := postRadiusGatewayForm(ctx, gateway, "/v1/oauth/token", form, "Radius OAuth token request failed")
+	if err != nil {
+		return nil, err
+	}
 	var payload struct {
 		AccessToken  string `json:"access_token"`
 		RefreshToken string `json:"refresh_token"`
@@ -348,28 +359,10 @@ func RequestRadiusDeviceAuthorization(ctx context.Context, gateway string) (*Rad
 	form := url.Values{}
 	form.Set("client_id", RadiusOAuthClientID)
 	form.Set("scope", RadiusOAuthScope)
-	requestURL, err := radiusGatewayEndpointURL(gateway, "/v1/oauth/device")
+	raw, err := postRadiusGatewayForm(ctx, gateway, "/v1/oauth/device", form, "Radius OAuth device authorization failed")
 	if err != nil {
 		return nil, err
 	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, requestURL, strings.NewReader(form.Encode()))
-	if err != nil {
-		return nil, err
-	}
-	request.Header.Set("accept", "application/json")
-	request.Header.Set("content-type", "application/x-www-form-urlencoded")
-	response, err := doBoundedRequest(request)
-	if err != nil {
-		if ctx != nil && ctx.Err() != nil {
-			return nil, fmt.Errorf("Login cancelled")
-		}
-		return nil, err
-	}
-	defer response.Body.Close()
-	if response.StatusCode >= 400 {
-		return nil, readRadiusOAuthError(response, "Radius OAuth device authorization failed")
-	}
-	raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
 	var payload map[string]any
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return nil, err
