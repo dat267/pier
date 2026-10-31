@@ -544,11 +544,11 @@ func parseLink(src string, i int, image bool, state *inlineState) (Inline, int, 
 	if end < 0 || end+1 >= len(src) || src[end+1] != '(' {
 		return Inline{}, 0, false
 	}
-	close := strings.IndexByte(src[end+2:], ')')
+	close := findLinkTargetClosing(src, end+2)
 	if close < 0 {
 		return Inline{}, 0, false
 	}
-	target := strings.TrimSpace(src[end+2 : end+2+close])
+	target := strings.TrimSpace(src[end+2 : close])
 	dest, title := splitLinkTarget(target)
 	label := strings.ReplaceAll(strings.ReplaceAll(src[open+1:end], `\[`, "["), `\]`, "]")
 	kind := InlineLink
@@ -570,7 +570,43 @@ func parseLink(src string, i int, image bool, state *inlineState) (Inline, int, 
 		}
 		state.linkEmitted = true
 	}
-	return Inline{Kind: kind, Text: label, Children: children, Dest: dest, Title: title}, end + 2 + close + 1, true
+	return Inline{Kind: kind, Text: label, Children: children, Dest: dest, Title: title}, close + 1, true
+}
+
+// findLinkTargetClosing skips nested URL parentheses and angle/quoted spans.
+func findLinkTargetClosing(src string, start int) int {
+	depth := 0
+	var closing byte
+	for i := start; i < len(src); i++ {
+		c := src[i]
+		if c == '\\' {
+			i++
+			continue
+		}
+		if closing != 0 {
+			if c == closing {
+				closing = 0
+			}
+			continue
+		}
+		switch c {
+		case '<':
+			closing = '>'
+		case '\'', '"':
+			previous, _ := utf8.DecodeLastRuneInString(src[start:i])
+			if depth == 0 && isWhitespaceRune(previous) {
+				closing = c
+			}
+		case '(':
+			depth++
+		case ')':
+			if depth == 0 {
+				return i
+			}
+			depth--
+		}
+	}
+	return -1
 }
 
 func splitLinkTarget(target string) (dest, title string) {
