@@ -68,7 +68,10 @@ func (b *Box) AddChild(component Component) {
 func (b *Box) RemoveChild(component Component) {
 	for i, child := range b.Children {
 		if child == component {
-			b.Children = append(b.Children[:i], b.Children[i+1:]...)
+			last := len(b.Children) - 1
+			copy(b.Children[i:], b.Children[i+1:])
+			b.Children[last] = nil
+			b.Children = b.Children[:last]
 			b.cache = nil
 			return
 		}
@@ -224,6 +227,8 @@ func (b *Box) Render(width int) []string {
 		leftPad = b.leftPadCache
 	}
 
+	oldChildLinesLen := len(b.childLines)
+	oldMouseLayoutLen := len(b.mouseLayout)
 	if cap(b.childLines) < len(b.Children) {
 		b.childLines = make([][]string, 0, len(b.Children))
 	} else {
@@ -240,6 +245,12 @@ func (b *Box) Render(width int) []string {
 		b.childLines = append(b.childLines, lines)
 		b.mouseLayout = append(b.mouseLayout, mouseChild{component: child, height: len(lines)})
 		totalLines += len(lines)
+	}
+	if oldChildLinesLen > len(b.childLines) {
+		clear(b.childLines[len(b.childLines):oldChildLinesLen])
+	}
+	if oldMouseLayoutLen > len(b.mouseLayout) {
+		clear(b.mouseLayout[len(b.mouseLayout):oldMouseLayoutLen])
 	}
 	b.mouseLayoutWidth = contentWidth
 
