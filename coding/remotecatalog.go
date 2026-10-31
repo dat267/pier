@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dat267/pier/ai"
@@ -173,7 +174,13 @@ func WithRemoteCatalog(provider *ai.Provider, catalogBaseURL string, localGenera
 			})
 		}
 	}
+	var modelsMu sync.Mutex
 	dynamicModels := []*ai.Model{}
+	setDynamicModels := func(models []*ai.Model) {
+		modelsMu.Lock()
+		dynamicModels = models
+		modelsMu.Unlock()
+	}
 
 	streams := funcStreams{
 		stream: func(model *ai.Model, context ai.TranscriptContext, options *ai.StreamOptions) *ai.AssistantMessageEventStream {
@@ -197,7 +204,10 @@ func WithRemoteCatalog(provider *ai.Provider, catalogBaseURL string, localGenera
 		// The baseline is the built-in catalog; the persisted pi.dev overlay
 		// merges over it by model id.
 		ModelsGetter: func() []*ai.Model {
-			return mergeCatalogModels(provider.GetAllModels(), dynamicModels)
+			modelsMu.Lock()
+			models := dynamicModels
+			modelsMu.Unlock()
+			return mergeCatalogModels(provider.GetAllModels(), models)
 		},
 		Single:      implementation,
 		Classifiers: provider.GetClassifierImplementations(),
@@ -215,7 +225,7 @@ func WithRemoteCatalog(provider *ai.Provider, catalogBaseURL string, localGenera
 			}
 		}
 		published := refresh.Publish(ai.ModelsPublication{
-			Update: func() { dynamicModels = kept },
+			Update: func() { setDynamicModels(kept) },
 		})
 		if !published {
 			return nil
@@ -306,7 +316,7 @@ func WithRemoteCatalog(provider *ai.Provider, catalogBaseURL string, localGenera
 		publishedModels := remoteCatalogModels(entry, localGeneratedAt, hasLocalGeneratedAt)
 		refresh.Publish(ai.ModelsPublication{
 			Persist: entry,
-			Update:  func() { dynamicModels = publishedModels },
+			Update:  func() { setDynamicModels(publishedModels) },
 		})
 		return nil
 	}
@@ -337,10 +347,19 @@ func WithPersonalizedCatalog(
 			return FetchWithRetry(ctx, request, http.DefaultClient, FetchRetryOptions{AttemptTimeoutMS: &attemptTimeout})
 		}
 	}
+	var modelsMu sync.Mutex
 	personalModels := []*ai.Model{}
+	setPersonalModels := func(models []*ai.Model) {
+		modelsMu.Lock()
+		personalModels = models
+		modelsMu.Unlock()
+	}
 	getModels := func() []*ai.Model {
-		if len(personalModels) > 0 {
-			return personalModels
+		modelsMu.Lock()
+		models := personalModels
+		modelsMu.Unlock()
+		if len(models) > 0 {
+			return models
 		}
 		return provider.GetAllModels()
 	}
@@ -372,7 +391,7 @@ func WithPersonalizedCatalog(
 				}
 			}
 		}
-		if !refresh.Publish(ai.ModelsPublication{Update: func() { personalModels = stored }}) {
+		if !refresh.Publish(ai.ModelsPublication{Update: func() { setPersonalModels(stored) }}) {
 			return nil
 		}
 		ctx := refresh.Ctx
@@ -434,7 +453,7 @@ func WithPersonalizedCatalog(
 		entry.CheckedAt = &checkedAt
 		refresh.Publish(ai.ModelsPublication{
 			Persist: entry,
-			Update:  func() { personalModels = personalized },
+			Update:  func() { setPersonalModels(personalized) },
 		})
 		return nil
 	}

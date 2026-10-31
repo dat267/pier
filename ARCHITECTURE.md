@@ -62,6 +62,9 @@ catalogs replace the complete list when nonempty, falling back to builtins only
 when empty. `GetAllModels` exposes every type, while `GetModels` filters chats;
 wrappers must not pre-filter their all-model getter or personalization input.
 `TestCatalogWrappersExposeCompleteModelLists` covers online and offline reads.
+Each wrapper protects its immutable overlay slice snapshot/swap with a local
+mutex. Base-provider getters and publication/personalization callbacks run
+outside it (`TestCatalogWrapperRefreshSynchronizesReads`).
 
 ## Session model
 
@@ -3955,6 +3958,7 @@ own mutex, so no UI lock or off-loop path is introduced.
 | `kittyRegistry.mu` | `tui/terminalimage.go` | the package-global kitty placement registry (order, id index, transmission generation) | **retained**: image-protocol bookkeeping, not UI state |
 | `imageTranscodeState.mu` | `tui/imagecomponent.go` | the package-global image transcode cache and injected transcoder | **retained**: shared decode cache, not UI state |
 | `modelCompletionCache.mu` | `coding/interactive/interactivemode_helpers.go` | the autocomplete model-item cache keyed by the session scope revision | **retained**: caches immutable item slices across completion queries, not UI state |
+| catalog wrapper local `modelsMu` | `coding/remotecatalog.go` | immutable remote/personalized overlay slice snapshots and swaps | **retained**: shared between refresh workers and catalog readers; callbacks and base-provider getters run after unlocking |
 
 `StreamableHttpTransport.Send` links its caller context to the transport stop
 context. Synchronous responses release that link on return; an SSE response
