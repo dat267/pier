@@ -255,21 +255,24 @@ type ExtensionWidgetOptions struct {
 	Placement string // "aboveEditor" | "belowEditor"
 }
 
-// SetExtensionWidget sets a widget from string lines (nil removes it).
-func (s *InteractiveUIState) SetExtensionWidget(key string, content []string, hasContent bool, options ExtensionWidgetOptions) {
-	placement := options.Placement
-	if placement == "" {
-		placement = "aboveEditor"
-	}
-	removeExisting := func(widgets map[string]tui.Component) {
+// prepareExtensionWidget resolves the placement and disposes any widget already
+// registered under key, returning the map the new widget belongs to.
+func (s *InteractiveUIState) prepareExtensionWidget(key string, options ExtensionWidgetOptions) map[string]tui.Component {
+	for _, widgets := range []map[string]tui.Component{s.extensionWidgetsAbove, s.extensionWidgetsBelow} {
 		if existing, ok := widgets[key]; ok {
 			disposeComponent(existing)
 			delete(widgets, key)
 		}
 	}
-	removeExisting(s.extensionWidgetsAbove)
-	removeExisting(s.extensionWidgetsBelow)
+	if options.Placement == "belowEditor" {
+		return s.extensionWidgetsBelow
+	}
+	return s.extensionWidgetsAbove
+}
 
+// SetExtensionWidget sets a widget from string lines (nil removes it).
+func (s *InteractiveUIState) SetExtensionWidget(key string, content []string, hasContent bool, options ExtensionWidgetOptions) {
+	target := s.prepareExtensionWidget(key, options)
 	if !hasContent {
 		s.RenderWidgets()
 		return
@@ -284,35 +287,16 @@ func (s *InteractiveUIState) SetExtensionWidget(key string, content []string, ha
 		container.AddChild(tui.NewText(ActiveTheme().Fg("muted", "... (widget truncated)"), 1, 0, nil))
 	}
 
-	target := s.extensionWidgetsAbove
-	if placement == "belowEditor" {
-		target = s.extensionWidgetsBelow
-	}
 	target[key] = container
 	s.RenderWidgets()
 }
 
 // SetExtensionWidgetComponent sets a widget from a component factory.
 func (s *InteractiveUIState) SetExtensionWidgetComponent(key string, component tui.Component, hasComponent bool, options ExtensionWidgetOptions) {
-	placement := options.Placement
-	if placement == "" {
-		placement = "aboveEditor"
-	}
-	removeExisting := func(widgets map[string]tui.Component) {
-		if existing, ok := widgets[key]; ok {
-			disposeComponent(existing)
-			delete(widgets, key)
-		}
-	}
-	removeExisting(s.extensionWidgetsAbove)
-	removeExisting(s.extensionWidgetsBelow)
+	target := s.prepareExtensionWidget(key, options)
 	if !hasComponent {
 		s.RenderWidgets()
 		return
-	}
-	target := s.extensionWidgetsAbove
-	if placement == "belowEditor" {
-		target = s.extensionWidgetsBelow
 	}
 	target[key] = component
 	s.RenderWidgets()
