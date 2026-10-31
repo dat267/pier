@@ -115,6 +115,7 @@ func (q *pendingMessageQueue) drain() []ai.Message {
 		return nil
 	}
 	first := q.messages[0]
+	q.messages[0] = nil
 	q.messages = q.messages[1:]
 	return []ai.Message{first}
 }
