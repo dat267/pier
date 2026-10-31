@@ -635,21 +635,8 @@ func iterateGoogleChunks(ctx context.Context, body io.Reader, emit func(chunk *g
 // StreamGoogleGenerativeAISimple maps reasoning levels onto the Google
 // thinking controls (port of streamSimple).
 func StreamGoogleGenerativeAISimple(model *Model, context TranscriptContext, options *SimpleStreamOptions) *AssistantMessageEventStream {
-	if options == nil {
-		options = &SimpleStreamOptions{}
-	}
-	stream := NewAssistantMessageEventStream()
-	if options.APIKey == "" {
-		go func() {
-			message := fmt.Sprintf("No API key for provider: %s", model.Provider)
-			msg := &AssistantMessage{
-				API: model.API, Provider: model.Provider, Model: model.ID,
-				Usage: Usage{Cost: UsageCost{}}, StopReason: StopError,
-				ErrorMessage: &message, Timestamp: time.Now().UnixMilli(),
-			}
-			stream.Push(AssistantMessageEvent{Type: EventError, Reason: StopError, Error: msg})
-			stream.End(&msg)
-		}()
+	stream, options, ok := startSimpleStream(model, options)
+	if !ok {
 		return stream
 	}
 	go func() {

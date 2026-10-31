@@ -1,5 +1,10 @@
 package ai
 
+import (
+	"fmt"
+	"time"
+)
+
 // Port of api/simple-options.ts.
 
 const (
@@ -10,6 +15,31 @@ const (
 	// shares the response ceiling.
 	MinAnswerTokens = 1024
 )
+
+// startSimpleStream performs the setup every simple stream entry point shares:
+// default the options, create the event stream, and end it with the
+// missing-key error when no API key is configured. ok is false when the caller
+// must return stream unchanged.
+func startSimpleStream(model *Model, options *SimpleStreamOptions) (stream *AssistantMessageEventStream, resolved *SimpleStreamOptions, ok bool) {
+	if options == nil {
+		options = &SimpleStreamOptions{}
+	}
+	stream = NewAssistantMessageEventStream()
+	if options.APIKey != "" {
+		return stream, options, true
+	}
+	go func() {
+		message := fmt.Sprintf("No API key for provider: %s", model.Provider)
+		msg := &AssistantMessage{
+			API: model.API, Provider: model.Provider, Model: model.ID,
+			Usage: Usage{Cost: UsageCost{}}, StopReason: StopError,
+			ErrorMessage: &message, Timestamp: time.Now().UnixMilli(),
+		}
+		stream.Push(AssistantMessageEvent{Type: EventError, Reason: StopError, Error: msg})
+		stream.End(&msg)
+	}()
+	return stream, options, false
+}
 
 // ClampMaxTokensToContext clamps a maxTokens value to what fits in the
 // context window alongside the current transcript.

@@ -245,21 +245,8 @@ func StreamMistralConversations(model *Model, context TranscriptContext, options
 // StreamMistralConversationsSimple maps simple options onto Mistral options
 // (upstream streamSimple).
 func StreamMistralConversationsSimple(model *Model, context TranscriptContext, options *SimpleStreamOptions) *AssistantMessageEventStream {
-	if options == nil {
-		options = &SimpleStreamOptions{}
-	}
-	stream := NewAssistantMessageEventStream()
-	if options.APIKey == "" {
-		go func() {
-			message := fmt.Sprintf("No API key for provider: %s", model.Provider)
-			msg := &AssistantMessage{
-				API: model.API, Provider: model.Provider, Model: model.ID,
-				Usage: Usage{Cost: UsageCost{}}, StopReason: StopError,
-				ErrorMessage: &message, Timestamp: time.Now().UnixMilli(),
-			}
-			stream.Push(AssistantMessageEvent{Type: EventError, Reason: StopError, Error: msg})
-			stream.End(&msg)
-		}()
+	stream, options, ok := startSimpleStream(model, options)
+	if !ok {
 		return stream
 	}
 	go func() {
