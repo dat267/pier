@@ -320,6 +320,19 @@ repairs the old permanent closed flag and restart reader admission.
 
 `StdinBuffer` uses callbacks instead of `EventEmitter`.
 
+### D75
+
+**Custom-theme watching polls file metadata instead of receiving filesystem events.**
+
+Pinned pi v1.4.0 `packages/coding-agent/src/modes/interactive/theme/theme.ts`
+watches the custom-theme directory and debounces a matching change for 100 ms.
+`coding/interactive/theme.go` polls the active file every 250 ms and reloads only
+when its modification time advances. An ordinary edit can therefore take an
+extra poll interval to appear; a replacement that preserves or backdates the
+mtime can be missed. The watcher keeps the last valid theme through temporary
+missing or invalid file states. This standard-library implementation avoids a
+filesystem-watcher dependency.
+
 ### D90
 
 Narrow runtime interfaces provide test seams across the wirings.
