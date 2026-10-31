@@ -124,16 +124,6 @@ func ParseRemoteCatalog(providerID string, value any) ([]*ai.Model, error) {
 	return models, nil
 }
 
-func chatCatalogModels(models []*ai.Model) []*ai.Model {
-	chat := make([]*ai.Model, 0, len(models))
-	for _, model := range models {
-		if ai.IsModelType(model, "chat") {
-			chat = append(chat, model)
-		}
-	}
-	return chat
-}
-
 // remoteCatalogModels decides which stored models are usable: a stored overlay
 // only applies when it is newer than the local generated catalog.
 func remoteCatalogModels(entry *ai.ModelsStoreEntry, localGeneratedAt int64, hasLocalGeneratedAt bool) []*ai.Model {
@@ -207,7 +197,7 @@ func WithRemoteCatalog(provider *ai.Provider, catalogBaseURL string, localGenera
 		// The baseline is the built-in catalog; the persisted pi.dev overlay
 		// merges over it by model id.
 		ModelsGetter: func() []*ai.Model {
-			return mergeCatalogModels(provider.GetAllModels(), chatCatalogModels(dynamicModels))
+			return mergeCatalogModels(provider.GetAllModels(), dynamicModels)
 		},
 		Single:      implementation,
 		Classifiers: provider.GetClassifierImplementations(),
@@ -349,18 +339,10 @@ func WithPersonalizedCatalog(
 	}
 	personalModels := []*ai.Model{}
 	getModels := func() []*ai.Model {
-		chatModels := personalModels
-		if len(chatModels) == 0 {
-			chatModels = provider.GetModels()
+		if len(personalModels) > 0 {
+			return personalModels
 		}
-		allModels := provider.GetAllModels()
-		models := make([]*ai.Model, 0, len(allModels)+len(chatModels))
-		for _, model := range allModels {
-			if model.Type != "" && model.Type != "chat" {
-				models = append(models, model)
-			}
-		}
-		return append(models, chatCatalogModels(chatModels)...)
+		return provider.GetAllModels()
 	}
 	streams := funcStreams{
 		stream: func(model *ai.Model, transcript ai.TranscriptContext, options *ai.StreamOptions) *ai.AssistantMessageEventStream {
@@ -439,7 +421,7 @@ func WithPersonalizedCatalog(
 				remote = parsed
 			}
 		}
-		catalog := mergeCatalogModels(provider.GetModels(), remote)
+		catalog := mergeCatalogModels(provider.GetAllModels(), remote)
 		personalized, err := personalize(catalog, refresh)
 		if err != nil {
 			return err

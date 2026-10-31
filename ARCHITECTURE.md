@@ -55,6 +55,14 @@ Startup timings used a warm filesystem with network and MCP disabled; they are
 not additive guarantees. Catalog and replay optimizations retain allocation and
 byte-parity regressions.
 
+## Model catalogs
+
+Remote overlays merge complete chat, image and classifier catalogs. Personalized
+catalogs replace the complete list when nonempty, falling back to builtins only
+when empty. `GetAllModels` exposes every type, while `GetModels` filters chats;
+wrappers must not pre-filter their all-model getter or personalization input.
+`TestCatalogWrappersExposeCompleteModelLists` covers online and offline reads.
+
 ## Session model
 
 `SessionManager.Projection` is the canonical branch-versioned view for model
