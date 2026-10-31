@@ -1,12 +1,14 @@
 package coding
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/dat267/pier/ai"
@@ -121,7 +123,10 @@ func bashShellConfig(shell string) ShellConfig {
 }
 
 // findExecutableOnPath resolves an executable the way upstream does: `where`
-// on Windows (verifying the file exists) and `which` elsewhere.
+// on Windows (verifying the file exists) and `which` elsewhere. Upstream bounds
+// the lookup with a 5s spawnSync timeout; shellLookupTimeout carries it.
+var shellLookupTimeout = 5 * time.Second
+
 // firstOutputLine is upstream's `stdout.trim().split(/\r?\n/)[0]`.
 func firstOutputLine(output []byte) string {
 	trimmed := ai.JSTrim(DecodeUTF8WithReplacement(output))
@@ -133,8 +138,10 @@ func firstOutputLine(output []byte) string {
 }
 
 func findExecutableOnPath(executable string) string {
+	ctx, cancel := context.WithTimeout(context.Background(), shellLookupTimeout)
+	defer cancel()
 	if runtime.GOOS == "windows" {
-		output, err := exec.Command("where", executable).Output()
+		output, err := exec.CommandContext(ctx, "where", executable).Output()
 		if err != nil {
 			return ""
 		}
@@ -148,7 +155,7 @@ func findExecutableOnPath(executable string) string {
 		}
 		return ""
 	}
-	output, err := exec.Command("which", executable).Output()
+	output, err := exec.CommandContext(ctx, "which", executable).Output()
 	if err != nil {
 		return ""
 	}
