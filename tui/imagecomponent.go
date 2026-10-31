@@ -177,6 +177,7 @@ const imageTranscodeCacheLimit = 32
 
 var imageTranscodeState struct {
 	mu         sync.Mutex
+	generation uint64
 	transcoder ImageTranscoder
 	cache      map[string]*string
 	order      []string
@@ -187,6 +188,7 @@ var imageTranscodeState struct {
 func SetImageTranscoder(transcoder ImageTranscoder) {
 	imageTranscodeState.mu.Lock()
 	defer imageTranscodeState.mu.Unlock()
+	imageTranscodeState.generation++
 	imageTranscodeState.transcoder = transcoder
 	imageTranscodeState.cache = nil
 	imageTranscodeState.order = nil
@@ -194,18 +196,33 @@ func SetImageTranscoder(transcoder ImageTranscoder) {
 
 func transcodeToPng(base64Data string, mimeType string) (string, bool) {
 	imageTranscodeState.mu.Lock()
-	defer imageTranscodeState.mu.Unlock()
 	transcoder := imageTranscodeState.transcoder
+	generation := imageTranscodeState.generation
 	if transcoder == nil {
+		imageTranscodeState.mu.Unlock()
 		return "", false
 	}
 	if cached, ok := imageTranscodeState.cache[base64Data]; ok {
+		imageTranscodeState.mu.Unlock()
 		if cached == nil {
 			return "", false
 		}
 		return *cached, true
 	}
+	imageTranscodeState.mu.Unlock()
+
 	png, ok := transcoder(base64Data, mimeType)
+	if !ok {
+		png = ""
+	}
+	imageTranscodeState.mu.Lock()
+	defer imageTranscodeState.mu.Unlock()
+	if generation != imageTranscodeState.generation {
+		return png, ok
+	}
+	if _, cached := imageTranscodeState.cache[base64Data]; cached {
+		return png, ok
+	}
 	if imageTranscodeState.cache == nil {
 		imageTranscodeState.cache = map[string]*string{}
 	}

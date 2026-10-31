@@ -3956,7 +3956,7 @@ own mutex, so no UI lock or off-loop path is introduced.
 | `AgentSession.promptOptionsMu` | `coding/agent_session.go` | `SystemPromptOptions`, re-read by the prompt/tool loadout between turns | **retained**: the work goroutine re-applies the loadout while the UI loop rebuilds the options on `/reload` and tool changes; only a struct copy is taken under it |
 | `cellDimensionsState.mu` | `tui/terminalimage.go` | the global terminal cell pixel size, written by the size-report reply and read during image layout | **retained**: package-global value shared with the terminal query path, not UI state |
 | `kittyRegistry.mu` | `tui/terminalimage.go` | the package-global kitty placement registry (order, id index, transmission generation) | **retained**: image-protocol bookkeeping, not UI state |
-| `imageTranscodeState.mu` | `tui/imagecomponent.go` | the package-global image transcode cache and injected transcoder | **retained**: shared decode cache, not UI state |
+| `imageTranscodeState.mu` | `tui/imagecomponent.go` | the package-global image transcode cache, injected transcoder and registration generation | **retained**: shared decode cache, not UI state; converter callbacks run unlocked and superseded conversions cannot refill the replacement cache |
 | `modelCompletionCache.mu` | `coding/interactive/interactivemode_helpers.go` | the autocomplete model-item cache keyed by the session scope revision | **retained**: caches immutable item slices across completion queries, not UI state |
 | catalog wrapper local `modelsMu` | `coding/remotecatalog.go` | immutable remote/personalized overlay slice snapshots and swaps | **retained**: shared between refresh workers and catalog readers; callbacks and base-provider getters run after unlocking |
 
