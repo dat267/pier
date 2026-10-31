@@ -1102,6 +1102,26 @@ type SessionInfo struct {
 	AllMessagesText   string
 }
 
+// scanSessionDir collects listing info for every session file in dir, without
+// sorting or cwd filtering.
+func scanSessionDir(dir string) []SessionInfo {
+	var sessions []SessionInfo
+	dirEntries, err := os.ReadDir(dir)
+	if err != nil {
+		return sessions
+	}
+	for _, dirEntry := range dirEntries {
+		name := DecodeUTF8WithReplacement([]byte(dirEntry.Name()))
+		if !strings.HasSuffix(name, ".jsonl") {
+			continue
+		}
+		if info := buildSessionInfo(filepath.Join(dir, name)); info != nil {
+			sessions = append(sessions, *info)
+		}
+	}
+	return sessions
+}
+
 // ListSessions lists sessions for a cwd's directory, newest first
 // (port of SessionManager.list; progress callback omitted).
 func ListSessions(cwd string, sessionDir string) []SessionInfo {
@@ -1113,22 +1133,11 @@ func ListSessions(cwd string, sessionDir string) []SessionInfo {
 	resolvedCwd := ResolvePath(cwd, "", PathInputOptions{})
 
 	var sessions []SessionInfo
-	dirEntries, err := os.ReadDir(dir)
-	if err != nil {
-		return sessions
-	}
-	for _, dirEntry := range dirEntries {
-		name := DecodeUTF8WithReplacement([]byte(dirEntry.Name()))
-		if !strings.HasSuffix(name, ".jsonl") {
+	for _, info := range scanSessionDir(dir) {
+		if filterCwd && ResolvePath(info.Cwd, "", PathInputOptions{}) != resolvedCwd {
 			continue
 		}
-		full := filepath.Join(dir, name)
-		if info := buildSessionInfo(full); info != nil {
-			if filterCwd && ResolvePath(info.Cwd, "", PathInputOptions{}) != resolvedCwd {
-				continue
-			}
-			sessions = append(sessions, *info)
-		}
+		sessions = append(sessions, info)
 	}
 	return sortSessionInfos(sessions)
 }
@@ -1503,22 +1512,7 @@ func sortSessionInfos(sessions []SessionInfo) []SessionInfo {
 // listSessionsFromDir scans one directory for session files without applying
 // any cwd filter (upstream listSessionsFromDir).
 func listSessionsFromDir(dir string) []SessionInfo {
-	var sessions []SessionInfo
-	dirEntries, err := os.ReadDir(dir)
-	if err != nil {
-		return sessions
-	}
-	for _, dirEntry := range dirEntries {
-		name := DecodeUTF8WithReplacement([]byte(dirEntry.Name()))
-		if !strings.HasSuffix(name, ".jsonl") {
-			continue
-		}
-		full := filepath.Join(dir, name)
-		if info := buildSessionInfo(full); info != nil {
-			sessions = append(sessions, *info)
-		}
-	}
-	return sortSessionInfos(sessions)
+	return sortSessionInfos(scanSessionDir(dir))
 }
 
 // messageListing is the listing view of one message: the role, the message
