@@ -839,6 +839,30 @@ func validateChatTemplateKwarg(value any, path string, errors *[]validationError
 	}
 }
 
+// validateStringArrayMembers reports members that are present but are not an
+// array of strings, using the shared path formatting.
+func validateStringArrayMembers(routing map[string]any, names []string, path string, errors *[]validationError) {
+	for _, name := range names {
+		entry, ok := routing[name]
+		if !ok {
+			continue
+		}
+		list, ok := entry.([]any)
+		if !ok {
+			*errors = append(*errors, validationError{path: path + "." + name, message: expectedMessage("array")})
+			continue
+		}
+		for index, item := range list {
+			if _, ok := item.(string); !ok {
+				*errors = append(*errors, validationError{
+					path:    fmt.Sprintf("%s.%s.%d", path, name, index),
+					message: expectedMessage("string"),
+				})
+			}
+		}
+	}
+}
+
 func validateOpenRouterRouting(value any, path string, errors *[]validationError) {
 	routing, ok := value.(map[string]any)
 	if !ok {
@@ -858,23 +882,7 @@ func validateOpenRouterRouting(value any, path string, errors *[]validationError
 			*errors = append(*errors, validationError{path: path + ".data_collection", message: "Expected union value"})
 		}
 	}
-	for _, name := range []string{"order", "only", "ignore", "quantizations"} {
-		if entry, ok := routing[name]; ok {
-			list, ok := entry.([]any)
-			if !ok {
-				*errors = append(*errors, validationError{path: path + "." + name, message: expectedMessage("array")})
-				continue
-			}
-			for index, item := range list {
-				if _, ok := item.(string); !ok {
-					*errors = append(*errors, validationError{
-						path:    fmt.Sprintf("%s.%s.%d", path, name, index),
-						message: expectedMessage("string"),
-					})
-				}
-			}
-		}
-	}
+	validateStringArrayMembers(routing, []string{"order", "only", "ignore", "quantizations"}, path, errors)
 	if entry, ok := routing["sort"]; ok {
 		switch typed := entry.(type) {
 		case string:
@@ -943,25 +951,7 @@ func validateVercelGatewayRouting(value any, path string, errors *[]validationEr
 		*errors = append(*errors, validationError{path: path, message: expectedMessage("object")})
 		return
 	}
-	for _, name := range []string{"only", "order"} {
-		entry, ok := routing[name]
-		if !ok {
-			continue
-		}
-		list, ok := entry.([]any)
-		if !ok {
-			*errors = append(*errors, validationError{path: path + "." + name, message: expectedMessage("array")})
-			continue
-		}
-		for index, item := range list {
-			if _, ok := item.(string); !ok {
-				*errors = append(*errors, validationError{
-					path:    fmt.Sprintf("%s.%s.%d", path, name, index),
-					message: expectedMessage("string"),
-				})
-			}
-		}
-	}
+	validateStringArrayMembers(routing, []string{"only", "order"}, path, errors)
 }
 
 func validateOptionalString(record map[string]any, name, path string, minLength bool, errors *[]validationError) {
