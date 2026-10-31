@@ -295,31 +295,7 @@ func (r *Renderer) defaultStylePrefixValue() string {
 	if r.hasDefaultPrefix {
 		return r.defaultPrefix
 	}
-
-	const sentinel = "\u0000"
-	styled := sentinel
-	if r.opts.Default.Color != nil {
-		styled = r.opts.Default.Color(styled)
-	}
-	if r.opts.Default.Bold {
-		styled = r.style.Bold(styled)
-	}
-	if r.opts.Default.Italic {
-		styled = r.style.Italic(styled)
-	}
-	if r.opts.Default.Strikethrough {
-		styled = r.style.Strikethrough(styled)
-	}
-	if r.opts.Default.Underline {
-		styled = r.style.Underline(styled)
-	}
-
-	sentinelIndex := strings.Index(styled, sentinel)
-	if sentinelIndex >= 0 {
-		r.defaultPrefix = styled[:sentinelIndex]
-	} else {
-		r.defaultPrefix = ""
-	}
+	r.defaultPrefix = r.stylePrefixOf(r.applyDefaultStyle)
 	r.hasDefaultPrefix = true
 	return r.defaultPrefix
 }
