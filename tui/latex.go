@@ -1062,7 +1062,9 @@ func (p *latexParser) parseEnvironment() string {
 	return body
 }
 
-func (p *latexParser) renderCases(body string) string {
+// renderLatexRows splits an environment body into rows of rendered cells,
+// dropping rows whose cells are all empty.
+func (p *latexParser) renderLatexRows(body string) [][]string {
 	var rows [][]string
 	for _, row := range p.splitEnvironmentRows(body) {
 		cells := strings.Split(row, "&")
@@ -1070,17 +1072,15 @@ func (p *latexParser) renderCases(body string) string {
 		for _, cell := range cells {
 			trimmed = append(trimmed, strings.TrimSpace(p.renderNested(cell, false)))
 		}
-		any := false
-		for _, cell := range trimmed {
-			if cell != "" {
-				any = true
-				break
-			}
-		}
-		if any {
+		if strings.Join(trimmed, "") != "" {
 			rows = append(rows, trimmed)
 		}
 	}
+	return rows
+}
+
+func (p *latexParser) renderCases(body string) string {
+	rows := p.renderLatexRows(body)
 
 	valueWidth := 0
 	for _, row := range rows {
@@ -1151,24 +1151,7 @@ func (p *latexParser) renderCases(body string) string {
 var latexTrailingCommaRegex = regexp.MustCompile(`,\s*$`)
 
 func (p *latexParser) renderMatrix(environment string, body string) string {
-	var matrix [][]string
-	for _, row := range p.splitEnvironmentRows(body) {
-		cells := strings.Split(row, "&")
-		trimmed := make([]string, 0, len(cells))
-		for _, cell := range cells {
-			trimmed = append(trimmed, strings.TrimSpace(p.renderNested(cell, false)))
-		}
-		any := false
-		for _, cell := range trimmed {
-			if cell != "" {
-				any = true
-				break
-			}
-		}
-		if any {
-			matrix = append(matrix, trimmed)
-		}
-	}
+	matrix := p.renderLatexRows(body)
 
 	columnCount := 0
 	for _, row := range matrix {
