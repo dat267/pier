@@ -1095,7 +1095,7 @@ func streamOpenAIResponses(model *Model, context TranscriptContext, options *Ope
 		requestErr := func() error {
 			var attemptErr error
 			resp, attemptErr = RetryProviderRequest(ctx, func() (*http.Response, error) {
-				body, berr := aiMarshalNoHTMLEscaping(payload)
+				body, berr := MarshalJSON(payload)
 				if berr != nil {
 					return nil, berr
 				}
@@ -1160,9 +1160,6 @@ func streamOpenAIResponses(model *Model, context TranscriptContext, options *Ope
 	}()
 	return stream
 }
-
-// aiMarshalNoHTMLEscaping marshals a request params value.
-func aiMarshalNoHTMLEscaping(v any) ([]byte, error) { return MarshalJSON(v) }
 
 // StreamOpenAIResponsesSimple maps reasoning levels (port of streamSimple).
 func StreamOpenAIResponsesSimple(model *Model, context TranscriptContext, options *SimpleStreamOptions) *AssistantMessageEventStream {
