@@ -324,7 +324,11 @@ func (c *QueueController) FlushCompactionQueue(ctx context.Context, willRetry bo
 	}
 
 	if err := c.Session.Prompt(ctx, firstPrompt.Text, &coding.PromptOptions{StreamingBehavior: firstPrompt.Mode}); err != nil {
+		// Upstream's rejection handler clears the session queue and restores every
+		// queued message before the pending rest is sent, so the restored messages
+		// must not also be queued here (they would be shown and sent twice).
 		restoreQueue(err)
+		return
 	}
 
 	for _, message := range rest {
