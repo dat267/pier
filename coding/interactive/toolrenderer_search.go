@@ -3,7 +3,6 @@ package interactive
 import (
 	"strings"
 
-	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/tui"
 )
 
@@ -11,23 +10,7 @@ func formatSearchResult(result *SortToolResultContent, options ToolRenderResultO
 	showImages bool, maxLines int) string {
 	output := strings.TrimSpace(GetTextOutput(result, showImages))
 	text := appendTruncatedLines("", output, expandedMaxLines(options, output, maxLines), theme)
-	matchLimit, truncated, maxBytes, extra := toolTruncationWarnings(result.Details)
-	if matchLimit != "" || truncated || len(extra) > 0 {
-		warnings := make([]string, 0, 3)
-		if matchLimit != "" {
-			warnings = append(warnings, matchLimit)
-		}
-		if truncated {
-			bytes := int64(maxBytes)
-			if bytes <= 0 {
-				bytes = int64(coding.DefaultMaxBytes)
-			}
-			warnings = append(warnings, coding.FormatSize(bytes)+" limit")
-		}
-		warnings = append(warnings, extra...)
-		text += "\n" + theme.Fg("warning", "[Truncated: "+strings.Join(warnings, ", ")+"]")
-	}
-	return text
+	return text + truncationSuffix(result.Details, theme)
 }
 
 // --- grep / find ------------------------------------------------------------
