@@ -203,6 +203,15 @@ func transcodeToPng(base64Data string, mimeType string) (string, bool) {
 		return "", false
 	}
 	if cached, ok := imageTranscodeState.cache[base64Data]; ok {
+		// Touch the entry so the bound evicts the least recently used source
+		// (upstream toPng deletes then re-sets on a hit).
+		for index, key := range imageTranscodeState.order {
+			if key == base64Data {
+				copy(imageTranscodeState.order[index:], imageTranscodeState.order[index+1:])
+				imageTranscodeState.order[len(imageTranscodeState.order)-1] = base64Data
+				break
+			}
+		}
 		imageTranscodeState.mu.Unlock()
 		if cached == nil {
 			return "", false
