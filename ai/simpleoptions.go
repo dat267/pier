@@ -41,6 +41,19 @@ func startSimpleStream(model *Model, options *SimpleStreamOptions) (stream *Assi
 	return stream, options, false
 }
 
+// endStreamWithError ends stream with the stop-error message every provider
+// builds for a request that never started.
+func endStreamWithError(stream *AssistantMessageEventStream, model *Model, text string) {
+	message := text
+	msg := &AssistantMessage{
+		API: model.API, Provider: model.Provider, Model: model.ID,
+		Usage: Usage{Cost: UsageCost{}}, StopReason: StopError,
+		ErrorMessage: &message, Timestamp: time.Now().UnixMilli(),
+	}
+	stream.Push(AssistantMessageEvent{Type: EventError, Reason: StopError, Error: msg})
+	stream.End(&msg)
+}
+
 // ClampMaxTokensToContext clamps a maxTokens value to what fits in the
 // context window alongside the current transcript.
 func ClampMaxTokensToContext(model *Model, context TranscriptContext, maxTokens int) int {

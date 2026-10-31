@@ -250,14 +250,7 @@ func StreamGoogleVertexSimple(model *Model, context TranscriptContext, options *
 		}
 		resolved, err := ResolveGoogleThinkingLevel(model, clamped)
 		if err != nil {
-			message := err.Error()
-			msg := &AssistantMessage{
-				API: model.API, Provider: model.Provider, Model: model.ID,
-				Usage: Usage{Cost: UsageCost{}}, StopReason: StopError,
-				ErrorMessage: &message, Timestamp: time.Now().UnixMilli(),
-			}
-			stream.Push(AssistantMessageEvent{Type: EventError, Reason: StopError, Error: msg})
-			stream.End(&msg)
+			endStreamWithError(stream, model, err.Error())
 			return
 		}
 		if UsesGoogleThinkingLevel(model) {

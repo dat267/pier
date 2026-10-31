@@ -945,15 +945,7 @@ func StreamAnthropicSimple(model *Model, context TranscriptContext, options *Sim
 	if !hasAuth {
 		stream := NewAssistantMessageEventStream()
 		go func() {
-			err := fmt.Errorf("No API key for provider: %s", model.Provider)
-			msgText := err.Error()
-			msg := &AssistantMessage{
-				API: model.API, Provider: model.Provider, Model: model.ID,
-				Usage: Usage{Cost: UsageCost{}}, StopReason: StopError,
-				ErrorMessage: &msgText, Timestamp: time.Now().UnixMilli(),
-			}
-			stream.Push(AssistantMessageEvent{Type: EventError, Reason: StopError, Error: msg})
-			stream.End(&msg)
+			endStreamWithError(stream, model, fmt.Sprintf("No API key for provider: %s", model.Provider))
 		}()
 		return stream
 	}
