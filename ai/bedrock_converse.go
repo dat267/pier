@@ -730,11 +730,7 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 		}
 		fail := func(err error, requestID string, status int, headers http.Header) {
 			finalizeAll()
-			if ctxErr(ctx) != nil {
-				output.StopReason = StopAborted
-			} else {
-				output.StopReason = StopError
-			}
+			output.StopReason = abortableStopReason(ctx)
 			message := FormatBedrockError(withBedrockStatus(err, status, headers))
 			output.ErrorMessage = &message
 			if output.StopReason == StopError {

@@ -238,11 +238,7 @@ func StreamOpenAICompletions(model *Model, context TranscriptContext, options *O
 					output.Content[i] = tc
 				}
 			}
-			if ctxErr(ctx) != nil {
-				output.StopReason = StopAborted
-			} else {
-				output.StopReason = StopError
-			}
+			output.StopReason = abortableStopReason(ctx)
 			norm := NormalizeProviderError(err)
 			message := FormatProviderError(norm, "")
 			// OpenRouter-style raw metadata deduplication.

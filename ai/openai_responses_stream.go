@@ -1039,11 +1039,7 @@ func streamOpenAIResponses(model *Model, context TranscriptContext, options *Ope
 					output.Content[i] = call
 				}
 			}
-			if ctxErr(ctx) != nil {
-				output.StopReason = StopAborted
-			} else {
-				output.StopReason = StopError
-			}
+			output.StopReason = abortableStopReason(ctx)
 			message := FormatProviderError(NormalizeProviderError(err), config.errorPrefix)
 			// Sign in with ChatGPT shares the subscription's usage limit with
 			// other apps (pi api/openai-responses.ts CHATGPT_USAGE_URL). On

@@ -454,11 +454,7 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 
 		fail := func(err error) {
 			finalizeBlocks()
-			if ctxErr(ctx) != nil {
-				output.StopReason = StopAborted
-			} else {
-				output.StopReason = StopError
-			}
+			output.StopReason = abortableStopReason(ctx)
 			msg := err.Error()
 			if ctxErr(ctx) != nil {
 				msg = RequestAbortedMessage

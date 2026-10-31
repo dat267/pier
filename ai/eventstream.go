@@ -8,6 +8,15 @@ import (
 	"time"
 )
 
+// abortableStopReason reports the stop reason for a failed request: a done
+// context is a cancellation, anything else an error.
+func abortableStopReason(ctx context.Context) StopReason {
+	if ctxErr(ctx) != nil {
+		return StopAborted
+	}
+	return StopError
+}
+
 // EventStream is a port of upstream's utils/event-stream.ts EventStream<T, R>:
 // a generic event stream with buffered FIFO delivery, waiting-consumer
 // registration order, a terminal event that fixes the final result, and

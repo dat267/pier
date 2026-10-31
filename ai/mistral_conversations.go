@@ -154,11 +154,7 @@ func StreamMistralConversations(model *Model, context TranscriptContext, options
 					output.Content[index] = call
 				}
 			}
-			if ctxErr(ctx) != nil {
-				output.StopReason = StopAborted
-			} else {
-				output.StopReason = StopError
-			}
+			output.StopReason = abortableStopReason(ctx)
 			message := FormatMistralError(err)
 			if output.StopReason == StopAborted {
 				message = RequestAbortedMessage
