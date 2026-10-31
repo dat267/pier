@@ -1606,7 +1606,9 @@ delivered by `SetUIHooks`, so the interactive mode sets its callbacks once and
 Idle round delivery uses the host work scheduler (D143). A queued closure
 checks that its goal id, revision and pending turn still identify an armed,
 active reservation before starting a run; pausing, clearing, replacing or
-pausing/resuming while it waits invalidates it. Already-started work retains
+pausing/resuming while it waits invalidates it. A rejected resume leaves
+activation unchanged, including for terminal completed goals
+(`TestGoalResumeLeavesCompletedGoalDisarmed`). Already-started work retains
 its existing cancellation policy. Tool exposure is synchronized before a
 trigger-turn message can start an idle model request inline, so the first round
 has the active goal's tools rather than waiting until that run returns.

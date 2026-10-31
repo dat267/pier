@@ -440,12 +440,12 @@ func (m *GoalMachine) goalResume() DispatchResult {
 	next.BlockedReason = nil
 	next.Revision = m.view.Revision + 1
 	next.UpdatedAt = m.now().UnixMilli()
-	m.armed = true
-	m.pendingTurn = nil
 	effects, err := m.commit(OpResume, &next, nil)
 	if err != nil {
 		return DispatchResult{Reply: new(err.Error()), IsError: true}
 	}
+	m.armed = true
+	m.pendingTurn = nil
 	return DispatchResult{Effects: append(effects, m.queueRound()...)}
 }
 
