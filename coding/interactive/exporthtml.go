@@ -418,10 +418,11 @@ func GenerateSessionHTML(data *exportSessionData, themeName string) string {
 
 	html := strings.Replace(exportTemplateHTML, "{{CSS}}", css, 1)
 	html = strings.Replace(html, "{{JS}}", exportTemplateJS, 1)
-	html = strings.Replace(html, "{{SESSION_DATA}}", sessionDataBase64, 1)
 	html = strings.Replace(html, "{{MARKED_JS}}", exportMarkedJS, 1)
 	html = strings.Replace(html, "{{MARKED_CJK_FRIENDLY_JS}}", exportMarkedCJKFriendlyJS, 1)
 	html = strings.Replace(html, "{{HIGHLIGHT_JS}}", exportHighlightJS, 1)
+	// Insert the large payload last so asset substitutions do not copy it.
+	html = strings.Replace(html, "{{SESSION_DATA}}", sessionDataBase64, 1)
 	return html
 }
 

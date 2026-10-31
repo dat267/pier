@@ -47,6 +47,7 @@ are recorded with the corresponding changes and regression tests.
 | Catalog decode | 69 ms / 16.2 MB | 17 ms / 2.45 MB | Decode each descriptor once |
 | Branch preparation, 8,000 messages | 540 MB / 253 ms | 1.07 MB / 10 ms | Reverse once instead of repeated prepends |
 | 8 MiB MCP SSE event | 8.6 GB / 2.49 s | 42 MB / 21 ms | Incremental line processing |
+| HTML generation, 2 MiB prompt (allocated bytes) | 36.8 MB | 28.6 MB | Insert base64 session payload after fixed assets |
 | Cold first interactive frame | 63.06 ms | 49.21 ms | Warm-filesystem tmux median |
 | Resume 56 MB session | 174.74 ms | 147.98 ms | Warm-filesystem tmux median |
 
