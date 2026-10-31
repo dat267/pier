@@ -396,12 +396,15 @@ func looksLikeDollarIdentifier(s string) bool {
 	if i == len(s) {
 		return true
 	}
-	// At most one trailing character that is not alphanumeric, `_` or whitespace.
-	if i != len(s)-1 {
+	// The non-Unicode JS regex permits one UTF-16 code unit as its suffix.
+	suffix, size := utf8.DecodeRuneInString(s[i:])
+	if i+size != len(s) || suffix > '\uffff' {
 		return false
 	}
-	c := s[i]
-	return !isAlnum(c) && c != '_' && !isWhitespaceRune(rune(c))
+	if suffix < utf8.RuneSelf && (isAlnum(byte(suffix)) || suffix == '_') {
+		return false
+	}
+	return !isWhitespaceRune(suffix)
 }
 
 // startsWithWord matches upstream's /^[A-Za-z_]/.

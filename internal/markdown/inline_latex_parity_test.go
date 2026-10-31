@@ -21,6 +21,16 @@ func TestInlineDollarDelimitersMatchUpstream(t *testing.T) {
 		{"$\ufeffx$", []Inline{{Kind: InlineText, Text: "$\ufeffx$"}}},
 		{"$x\u0085$", []Inline{{Kind: InlineLatex, Raw: "$x\u0085$", Text: "x\u0085"}}},
 		{"$x\ufeff$", []Inline{{Kind: InlineText, Text: "$x\ufeff$"}}},
+		// The identifier/currency suffix is one JS code unit, not one UTF-8 byte
+		// or one arbitrary rune (pi 4a080252 markdown.ts tokenizeInlineLatex).
+		{"$Xπ$word", []Inline{{Kind: InlineText, Text: "$Xπ$word"}}},
+		{"$X中$word", []Inline{{Kind: InlineText, Text: "$X中$word"}}},
+		{"$X\u0085$word", []Inline{{Kind: InlineText, Text: "$X\u0085$word"}}},
+		{"$X+$word", []Inline{{Kind: InlineText, Text: "$X+$word"}}},
+		{"$X😀$word", []Inline{{Kind: InlineLatex, Raw: "$X😀$", Text: "X😀"}, {Kind: InlineText, Text: "word"}}},
+		{"$Xππ$word", []Inline{{Kind: InlineLatex, Raw: "$Xππ$", Text: "Xππ"}, {Kind: InlineText, Text: "word"}}},
+		{"$xπ$word", []Inline{{Kind: InlineLatex, Raw: "$xπ$", Text: "xπ"}, {Kind: InlineText, Text: "word"}}},
+		{"$Xπ$", []Inline{{Kind: InlineLatex, Raw: "$Xπ$", Text: "Xπ"}}},
 	} {
 		if got := ParseInline(item.input); !reflect.DeepEqual(got, item.want) {
 			t.Errorf("ParseInline(%q) = %+v, want %+v", item.input, got, item.want)
