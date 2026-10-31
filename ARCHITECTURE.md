@@ -406,7 +406,11 @@ and `ctx.Done()`. Blocking work runs off-loop; streaming partials coalesce
 latest-wins. Input/signals, selector callbacks, and lifecycle callbacks also
 apply on that loop (stages 3–4). Upstream awaits prompts on the JS event loop.
 D144/D145 define input/render ownership; D196/D197 define queue ordering and
-fairness. [architecture.md](ARCHITECTURE.md) holds the full design.
+fairness. Session-selector loader posts recheck their captured load context
+when the owner executes them, so cancellation or refresh also invalidates
+already-queued progress/completions
+(`TestSessionSelectorRejectsPostedResultsAfterCancel`).
+[architecture.md](ARCHITECTURE.md) holds the full design.
 
 ### D144
 

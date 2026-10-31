@@ -1255,6 +1255,14 @@ func (c *SessionSelectorComponent) loadScope(scope SessionScope) {
 	c.requestRenderNow()
 
 	c.loads.Go(func() {
+		// A result can wait in the UI queue while its load is canceled.
+		postApply := func(fn func()) {
+			c.postApply(func() {
+				if ctx.Err() == nil {
+					fn()
+				}
+			})
+		}
 		// The worker is a pure producer: results are handed to the loop, which
 		// owns the selector state (stage 4). Cancellation is observed through
 		// the load context instead of shared state.
@@ -1264,7 +1272,7 @@ func (c *SessionSelectorComponent) loadScope(scope SessionScope) {
 			}
 			if partialSessions != nil {
 				sessions := append([]coding.SessionInfo{}, partialSessions...)
-				c.postApply(func() {
+				postApply(func() {
 					if scope == SessionScopeCurrent {
 						c.currentSessions = sessions
 					} else {
@@ -1275,7 +1283,7 @@ func (c *SessionSelectorComponent) loadScope(scope SessionScope) {
 					}
 				})
 			}
-			c.postApply(func() {
+			postApply(func() {
 				if scope != c.scope {
 					return
 				}
@@ -1297,7 +1305,7 @@ func (c *SessionSelectorComponent) loadScope(scope SessionScope) {
 		if err != nil {
 			message = err.Error()
 		}
-		c.postApply(func() {
+		postApply(func() {
 			if scope == SessionScopeCurrent {
 				c.currentSessions = sessions
 				c.currentLoad = nil
