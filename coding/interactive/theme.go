@@ -1448,7 +1448,7 @@ func startThemeWatcher(themeName string) {
 
 func startThemeWatcherContext(ctx context.Context, themeName string) {
 	stopThemeWatcher()
-	if themeName == "" || themeName == "dark" || themeName == "light" {
+	if themeName == "" || themeName == "dark" || themeName == "light" || themeName == SystemThemeName {
 		return
 	}
 	themeFile := customThemePathByName(themeName)
