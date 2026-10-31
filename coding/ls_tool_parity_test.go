@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/dat267/pier/ai"
 )
 
 // pi v1.4.0 (4a080252), core/tools/ls.ts with default operations.
@@ -66,39 +64,8 @@ func TestLsToolMatchesUpstream(t *testing.T) {
 				t.Fatal(err)
 			}
 			result, execErr := tool.Execute("call", encoded, context.Background(), nil)
-			if fixture.Expected.Error != "" {
-				if execErr == nil {
-					t.Fatalf("expected error %q, got success", fixture.Expected.Error)
-				}
-				want := strings.ReplaceAll(fixture.Expected.Error, "<dir>", dir)
-				if execErr.Error() != want {
-					t.Fatalf("error = %q, want %q", execErr.Error(), want)
-				}
-				return
-			}
-			if execErr != nil {
-				t.Fatalf("unexpected error: %v", execErr)
-			}
-			var text strings.Builder
-			for _, block := range result.Content {
-				if content, ok := block.(ai.TextContent); ok {
-					text.WriteString(content.Text)
-				}
-			}
-			if text.String() != fixture.Expected.Text {
-				t.Fatalf("text differs\n got: %q\nwant: %q", text.String(), fixture.Expected.Text)
-			}
-			gotDetails, err := json.Marshal(canonicalReadJSON(t, result.Details))
-			if err != nil {
-				t.Fatal(err)
-			}
-			wantDetails, err := json.Marshal(canonicalReadJSON(t, fixture.Expected.Details))
-			if err != nil {
-				t.Fatal(err)
-			}
-			if string(gotDetails) != string(wantDetails) {
-				t.Fatalf("details = %s, want %s", gotDetails, wantDetails)
-			}
+			wantError := strings.ReplaceAll(fixture.Expected.Error, "<dir>", dir)
+			checkParityToolResult(t, result, execErr, wantError, fixture.Expected.Text, fixture.Expected.Details)
 		})
 	}
 }

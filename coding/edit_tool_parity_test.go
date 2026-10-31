@@ -5,10 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
-
-	"github.com/dat267/pier/ai"
 )
 
 // pi v1.4.0 (4a080252), core/tools/edit.ts with default operations.
@@ -61,37 +58,8 @@ func TestEditToolMatchesUpstream(t *testing.T) {
 				t.Fatal(err)
 			}
 			result, execErr := tool.Execute("call", params, context.Background(), nil)
-			if fixture.Expected.Error != "" {
-				if execErr == nil {
-					t.Fatalf("expected error %q, got success", fixture.Expected.Error)
-				}
-				if execErr.Error() != fixture.Expected.Error {
-					t.Fatalf("error = %q, want %q", execErr.Error(), fixture.Expected.Error)
-				}
+			if !checkParityToolResult(t, result, execErr, fixture.Expected.Error, fixture.Expected.Text, fixture.Expected.Details) {
 				return
-			}
-			if execErr != nil {
-				t.Fatalf("unexpected error: %v", execErr)
-			}
-			var text strings.Builder
-			for _, block := range result.Content {
-				if content, ok := block.(ai.TextContent); ok {
-					text.WriteString(content.Text)
-				}
-			}
-			if text.String() != fixture.Expected.Text {
-				t.Fatalf("text differs\n got: %q\nwant: %q", text.String(), fixture.Expected.Text)
-			}
-			gotDetails, err := json.Marshal(canonicalReadJSON(t, result.Details))
-			if err != nil {
-				t.Fatal(err)
-			}
-			wantDetails, err := json.Marshal(canonicalReadJSON(t, fixture.Expected.Details))
-			if err != nil {
-				t.Fatal(err)
-			}
-			if string(gotDetails) != string(wantDetails) {
-				t.Fatalf("details = %s, want %s", gotDetails, wantDetails)
 			}
 			written, err := os.ReadFile(filepath.Join(dir, fixture.File))
 			if err != nil {
