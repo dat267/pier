@@ -56,12 +56,14 @@ func (b *Box) SetPaddingX(paddingX int) {
 	}
 	b.paddingX = paddingX
 	b.cache = nil
+	bumpContentRevision()
 }
 
 // AddChild appends a child.
 func (b *Box) AddChild(component Component) {
 	b.Children = append(b.Children, component)
 	b.cache = nil
+	bumpContentRevision()
 }
 
 // RemoveChild removes a child.
@@ -73,6 +75,7 @@ func (b *Box) RemoveChild(component Component) {
 			b.Children[last] = nil
 			b.Children = b.Children[:last]
 			b.cache = nil
+			bumpContentRevision()
 			return
 		}
 	}
@@ -82,6 +85,7 @@ func (b *Box) RemoveChild(component Component) {
 func (b *Box) Clear() {
 	b.Children = nil
 	b.cache = nil
+	bumpContentRevision()
 }
 
 // SetBgFn updates the background function. The cache is kept because the
@@ -91,6 +95,7 @@ func (b *Box) SetBgFn(bgFn func(text string) string) {
 	b.bgSample = ""
 	b.bgSampleSet = false
 	b.cache = nil
+	bumpContentRevision()
 }
 
 // childComponents implements childrenHolder.
