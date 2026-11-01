@@ -684,7 +684,11 @@ func formatCacheWarmingDecisionTime(nextWarmAt int64, now int64) string {
 	if nextWarmAt <= 0 || nextWarmAt <= now {
 		return "Decision now"
 	}
-	remainingSeconds := int((nextWarmAt - now + 999) / 1000)
+	remainingMS := nextWarmAt - now
+	remainingSeconds := int(remainingMS / 1000)
+	if remainingMS%1000 > 0 {
+		remainingSeconds++
+	}
 	hours := remainingSeconds / 3600
 	remainingSeconds %= 3600
 	minutes := remainingSeconds / 60

@@ -2,6 +2,7 @@ package coding
 
 import (
 	ctxpkg "context"
+	"fmt"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -378,6 +379,17 @@ func TestFormatCacheWarmingStatus(t *testing.T) {
 	// Decision now for an immediate refresh.
 	if got := FormatCacheWarmingStatus(CacheWarmingStatus{State: "scheduled", NextWarmAt: now, Decision: decision}, now); !strings.HasPrefix(got, "Decision now") {
 		t.Fatalf("got = %q", got)
+	}
+}
+
+func TestFormatCacheWarmingStatusFarFutureDoesNotOverflow(t *testing.T) {
+	maxInt64 := int64(^uint64(0) >> 1)
+	seconds := maxInt64/1000 + 1
+	want := fmt.Sprintf("Decision in %dh %dm %ds", seconds/3600, seconds%3600/60, seconds%60)
+	decision := &CacheWarmingDecision{EconomicsAvailable: true, Action: CacheWarmingActionWarm}
+	status := CacheWarmingStatus{State: "scheduled", NextWarmAt: maxInt64, Decision: decision}
+	if got := FormatCacheWarmingStatus(status, 0); !strings.HasPrefix(got, want) {
+		t.Fatalf("status = %q, want prefix %q", got, want)
 	}
 }
 
