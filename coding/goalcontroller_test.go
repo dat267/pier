@@ -38,13 +38,19 @@ type fakeGoalSink struct {
 	runs          int
 	branchEntries []goal.CustomEntry
 	retry         bool
+	emitted       []*SessionEntry
 }
 
-func (f *fakeGoalSink) AppendGoalEntry(entryType string, data json.RawMessage) {
+func (f *fakeGoalSink) AppendGoalEntry(entryType string, data json.RawMessage) *SessionEntry {
 	var decoded map[string]any
 	_ = json.Unmarshal(data, &decoded)
 	f.entries = append(f.entries, recordedGoalEntry{entryType: entryType, data: decoded})
 	f.rawEntries = append(f.rawEntries, append([]byte(nil), data...))
+	return &SessionEntry{Type: "custom", CustomType: entryType, Data: append(json.RawMessage(nil), data...)}
+}
+
+func (f *fakeGoalSink) EmitGoalEntryAppended(entry *SessionEntry) {
+	f.emitted = append(f.emitted, entry)
 }
 
 func (f *fakeGoalSink) SendGoalMessage(customType string, content string, display bool, details json.RawMessage, triggerTurn bool) {

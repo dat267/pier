@@ -22,8 +22,12 @@ import (
 // goalSink is the session surface the goal controller needs. The production
 // implementation wraps an AgentSession; tests use a fake.
 type goalSink interface {
-	// AppendGoalEntry persists a durable custom entry.
-	AppendGoalEntry(entryType string, data json.RawMessage)
+	// AppendGoalEntry persists a durable custom entry and returns it so the
+	// caller can publish the append after unlocking.
+	AppendGoalEntry(entryType string, data json.RawMessage) *SessionEntry
+	// EmitGoalEntryAppended publishes the entry to session listeners, which is
+	// what draws the card in a live transcript (upstream entry_appended).
+	EmitGoalEntryAppended(entry *SessionEntry)
 	// SendGoalMessage adds a continuation or wrap-up message to the model
 	// context without starting a run; the caller checked that one is active.
 	SendGoalMessage(customType string, content string, display bool, details json.RawMessage, triggerTurn bool)
@@ -55,10 +59,19 @@ func newSessionGoalSink(session *AgentSession) *sessionGoalSink {
 	return &sessionGoalSink{session: session}
 }
 
-func (s *sessionGoalSink) AppendGoalEntry(entryType string, data json.RawMessage) {
-	if s.session != nil && s.session.Sessions != nil {
-		s.session.Sessions.AppendCustomEntry(entryType, data)
+func (s *sessionGoalSink) AppendGoalEntry(entryType string, data json.RawMessage) *SessionEntry {
+	if s.session == nil || s.session.Sessions == nil {
+		return nil
 	}
+	id := s.session.Sessions.AppendCustomEntry(entryType, data)
+	return s.session.Sessions.GetEntry(id)
+}
+
+func (s *sessionGoalSink) EmitGoalEntryAppended(entry *SessionEntry) {
+	if s.session == nil || entry == nil {
+		return
+	}
+	s.session.emit(&SessionEvent{Type: SessionEntryAppended, Entry: entry})
 }
 
 func (s *sessionGoalSink) SendGoalMessage(customType string, content string, display bool, details json.RawMessage, triggerTurn bool) {
@@ -136,6 +149,9 @@ type GoalController struct {
 	// idle. A nil scheduler runs the delivery inline (SDK and print mode).
 	startWork func(fn func(context.Context) error)
 	pending   []goalNotice
+	// pendingEntryEvents are durable entries appended under mu, published to
+	// session listeners after unlocking.
+	pendingEntryEvents []*SessionEntry
 }
 
 // newGoalController creates a controller bound to a sink.
@@ -285,8 +301,24 @@ func (c *GoalController) appendGoalEntry(effect goal.AppendEntryEffect) bool {
 	if err != nil {
 		return false
 	}
-	c.sink.AppendGoalEntry(effect.EntryType, data)
+	if entry := c.sink.AppendGoalEntry(effect.EntryType, data); entry != nil {
+		// Published after unlocking: a session listener is user code and must
+		// not run under the controller lock.
+		c.pendingEntryEvents = append(c.pendingEntryEvents, entry)
+	}
 	return true
+}
+
+// emitPendingEntries publishes the durable entries appended under the lock.
+// applyTransition runs after unlocking, so listeners never observe the lock.
+func (c *GoalController) emitPendingEntries() {
+	c.mu.Lock()
+	entries := c.pendingEntryEvents
+	c.pendingEntryEvents = nil
+	c.mu.Unlock()
+	for _, entry := range entries {
+		c.sink.EmitGoalEntryAppended(entry)
+	}
 }
 
 // dispatchLocked keeps machine mutation and its durable records in one order.
@@ -314,6 +346,7 @@ func (c *GoalController) applyTransition(transition goalTransition) {
 		c.SyncTools()
 	}
 	c.Apply(transition.Effects)
+	c.emitPendingEntries()
 }
 
 // Apply executes the machine's effects against the session.
