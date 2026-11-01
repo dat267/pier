@@ -3858,6 +3858,30 @@ restore and send the same message twice.
 
 Test: `TestCompactionQueueFailureDoesNotDuplicateQueuedMessages`.
 
+### D324
+
+**OAuth discovery normalizes path dot segments and keeps every candidate on the
+issuer's origin.**
+
+Reference: pi v1.4.0 `packages/mcp/src/oauth/discovery.ts`. The reference builds
+its well-known URLs from WHATWG `URL.pathname`, which removes `.` and `..`
+segments while parsing (including the `%2e` spellings), so an issuer such as
+`https://as.example/a/../b` is discovered through
+`/.well-known/oauth-authorization-server/b`. Go's `url.URL.EscapedPath` keeps
+those segments, so `parseWHATWGURL` now applies the same normalization before
+any consumer reads the path (`mcp/oauth/url.go`). That covers the protected
+resource candidate, the authorization-server candidates and `SelectResource`'s
+path comparison (`TestDiscoverAuthorizationServerMetadataNormalizesDotSegments`,
+`TestBuildAuthorizationServerDiscoveryUrlsNormalizesDotSegments`,
+`TestSelectResourceComparesNormalizedPaths`).
+
+One reference quirk is intentionally not followed: for an issuer whose path
+begins with `//`, the reference resolves its third candidate against the origin
+as a protocol-relative path, so `https://h//x` probes host `x`. Pier keeps every
+candidate on the issuer's origin; the first two candidates already agree. Test:
+the `https://h//x` row in
+`TestBuildAuthorizationServerDiscoveryUrlsNormalizesDotSegments`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.
