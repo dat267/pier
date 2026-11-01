@@ -3897,7 +3897,11 @@ sink acquires `SessionManager.mu` for record append; interactive file I/O stays
 on the manager's existing write queue, while standalone callers retain their
 synchronous storage path. No user callbacks run in this locked phase. Tool
 exposure synchronization, notices and model work are applied after unlocking;
-notification callbacks may reenter `Snapshot`. Deferred idle round workers also
+notification callbacks may reenter `Snapshot`. Durable entry events share one
+publisher admitted under this mutex, with listener calls outside it. Reentrant
+transitions enqueue behind the current batch, so every subscriber sees
+clear/create entries in log order (`TestGoalEntryEventsKeepAppendOrderOnReentry`).
+Deferred idle round workers also
 check their goal id, revision and pending turn before starting, so a stopped or
 superseded reservation cannot launch later.
 

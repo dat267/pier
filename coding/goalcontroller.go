@@ -152,6 +152,7 @@ type GoalController struct {
 	// pendingEntryEvents are durable entries appended under mu, published to
 	// session listeners after unlocking.
 	pendingEntryEvents []*SessionEntry
+	emittingEntries    bool // one unlocked publisher, including callback reentry
 }
 
 // newGoalController creates a controller bound to a sink.
@@ -313,12 +314,22 @@ func (c *GoalController) appendGoalEntry(effect goal.AppendEntryEffect) bool {
 // applyTransition runs after unlocking, so listeners never observe the lock.
 func (c *GoalController) emitPendingEntries() {
 	c.mu.Lock()
-	entries := c.pendingEntryEvents
-	c.pendingEntryEvents = nil
-	c.mu.Unlock()
-	for _, entry := range entries {
-		c.sink.EmitGoalEntryAppended(entry)
+	if c.emittingEntries {
+		c.mu.Unlock()
+		return
 	}
+	c.emittingEntries = true
+	for len(c.pendingEntryEvents) > 0 {
+		entries := c.pendingEntryEvents
+		c.pendingEntryEvents = nil
+		c.mu.Unlock()
+		for _, entry := range entries {
+			c.sink.EmitGoalEntryAppended(entry)
+		}
+		c.mu.Lock()
+	}
+	c.emittingEntries = false
+	c.mu.Unlock()
 }
 
 // dispatchLocked keeps machine mutation and its durable records in one order.
