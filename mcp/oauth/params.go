@@ -1,6 +1,10 @@
 package oauth
 
-import "strings"
+import (
+	"strings"
+
+	"golang.org/x/text/encoding/unicode"
+)
 
 // OrderedForm is a URLSearchParams-compatible name/value list: entries keep
 // insertion order, `Set` replaces a name in place, and `Encode` serializes with
@@ -118,20 +122,24 @@ func encodeFormComponent(value string) string {
 // percent escapes are decoded; other bytes, including a malformed escape, stay
 // as they are.
 func decodeFormComponent(value string) string {
-	var builder strings.Builder
+	decoded := make([]byte, 0, len(value))
 	for index := 0; index < len(value); index++ {
 		char := value[index]
 		switch {
 		case char == '+':
-			builder.WriteByte(' ')
+			decoded = append(decoded, ' ')
 		case char == '%' && index+2 < len(value) && isHexDigit(value[index+1]) && isHexDigit(value[index+2]):
-			builder.WriteByte(unhexDigit(value[index+1])<<4 | unhexDigit(value[index+2]))
+			decoded = append(decoded, unhexDigit(value[index+1])<<4|unhexDigit(value[index+2]))
 			index += 2
 		default:
-			builder.WriteByte(char)
+			decoded = append(decoded, char)
 		}
 	}
-	return builder.String()
+	// URLSearchParams decodes the percent bytes and then UTF-8-decodes them
+	// (Encoding's UTF-8 decoder), so malformed sequences become U+FFFD rather
+	// than surviving into the serialized form.
+	translated, _ := unicode.UTF8.NewDecoder().Bytes(decoded)
+	return string(translated)
 }
 
 func isHexDigit(char byte) bool {
