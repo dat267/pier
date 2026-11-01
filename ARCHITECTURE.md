@@ -3958,6 +3958,20 @@ the overflow while preserving the interval boundary and future-timestamp behavio
 
 Test: `TestRemoteCatalogMinimumCheckedAtTriggersRefresh`.
 
+### D330
+
+**Positive MCP server timeouts remain active across int64 conversion bounds.**
+
+Reference: pi v1.4.0 `packages/coding-agent/src/extensions/mcp/runtime.ts`
+converts configured seconds to milliseconds, and `packages/mcp/src/client.ts`
+passes positive finite values to `setTimeout`. Pier stores request timeouts as
+int64 milliseconds. Conversion preserves ordinary truncation, clamps positive
+sub-millisecond values to 1ms, and saturates above int64 so the existing
+JavaScript-timer compatibility clamp handles oversized delays instead of
+interpreting a wrapped nonpositive value as no timeout.
+
+Test: `TestMcpServerTimeoutMsClampsConfiguredSeconds`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

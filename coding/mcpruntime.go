@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -181,9 +182,28 @@ func (c *McpServerConnection) Name() string { return c.Entry.Name }
 // TimeoutMs is the request timeout in milliseconds.
 func (c *McpServerConnection) TimeoutMs() int64 {
 	if c.Entry.Config.TimeoutSeconds != nil {
-		return int64(*c.Entry.Config.TimeoutSeconds * 1000)
+		return mcpTimeoutMilliseconds(*c.Entry.Config.TimeoutSeconds)
 	}
 	return McpDefaultTimeoutSeconds * 1000
+}
+
+// mcpTimeoutMilliseconds converts a valid positive timeout to the MCP client's
+// millisecond range. D330: preserve positive sub-ms timeouts and avoid int64 wrap.
+func mcpTimeoutMilliseconds(seconds float64) int64 {
+	milliseconds := seconds * 1000
+	if math.IsNaN(milliseconds) {
+		return 0
+	}
+	if milliseconds <= 0 {
+		return int64(milliseconds)
+	}
+	if milliseconds < 1 {
+		return 1
+	}
+	if milliseconds >= float64(math.MaxInt64) {
+		return math.MaxInt64
+	}
+	return int64(milliseconds)
 }
 
 // oauthURL is the server URL when the server authenticates with OAuth: HTTP
