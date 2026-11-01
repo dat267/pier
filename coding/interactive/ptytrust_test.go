@@ -8,6 +8,7 @@ package interactive
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -80,10 +81,11 @@ func TestResumedSessionAsksTrustForItsOwnProject(t *testing.T) {
 		if !session.waitForOutput("Press ctrl+o", 30*time.Second) {
 			t.Fatalf("pier did not finish starting:\n%s", session.output())
 		}
-		if session.waitForOutput("Trust project folder?", 2*time.Second) {
+		session.awaitSessionInfo(t)
+		if strings.Contains(session.output(), "Trust project folder?") {
 			t.Fatalf("a decided project was asked about anyway:\n%s", session.output())
 		}
-		if session.waitForOutput("This project is not trusted", 1*time.Second) {
+		if strings.Contains(session.output(), "This project is not trusted") {
 			t.Fatalf("a trusted project warned anyway:\n%s", session.output())
 		}
 	})

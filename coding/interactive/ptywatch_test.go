@@ -33,7 +33,8 @@ import (
 
 // ptySession is one pier process attached to a pseudo-terminal.
 type ptySession struct {
-	cmd *exec.Cmd
+	cmd    *exec.Cmd
+	master *os.File
 
 	mu   sync.Mutex
 	buf  bytes.Buffer
@@ -150,7 +151,7 @@ func startPierConfigured(t *testing.T, setup func(agentDir string), args ...stri
 	// and unblock the reader goroutine deterministically (a raw close does not
 	// interrupt an in-flight read on Linux).
 	masterFile := os.NewFile(uintptr(master), "pty-master")
-	session := &ptySession{done: make(chan struct{})}
+	session := &ptySession{master: masterFile, done: make(chan struct{})}
 
 	// Teardown: kill the child, close the last slave fd, unblock the reader via
 	// a past master read deadline, wait for it, then close the master. Order
@@ -209,6 +210,19 @@ func startPierConfigured(t *testing.T, setup func(agentDir string), args ...stri
 	}()
 
 	return session
+}
+
+// awaitSessionInfo uses a public command reply as a startup completion barrier.
+// The header can paint before startup warnings are added. Input commands only
+// run after initialization, and the reply follows the warnings in output order.
+func (s *ptySession) awaitSessionInfo(t *testing.T) {
+	t.Helper()
+	if _, err := s.master.Write([]byte("/session\r")); err != nil {
+		t.Fatal(err)
+	}
+	if !s.waitForOutput("Session Info", 30*time.Second) {
+		t.Fatalf("pier did not process the session command:\n%s", s.output())
+	}
 }
 
 // output returns everything the app has written so far.

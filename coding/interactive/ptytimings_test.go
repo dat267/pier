@@ -8,6 +8,7 @@ package interactive
 // part of a stutter report the UI-loop stall log cannot see.
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -49,7 +50,8 @@ func TestStartupTimingsAreOptIn(t *testing.T) {
 	if !session.waitForOutput("Press ctrl+o", 30*time.Second) {
 		t.Fatalf("pier did not start:\n%s", session.output())
 	}
-	if session.waitForOutput("Startup Timings", time.Second) {
+	session.awaitSessionInfo(t)
+	if strings.Contains(session.output(), "Startup Timings") {
 		t.Fatalf("timings printed without PI_TIMING:\n%s", session.output())
 	}
 }
