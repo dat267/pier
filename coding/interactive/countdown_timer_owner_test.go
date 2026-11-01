@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"strings"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -49,6 +50,18 @@ func TestCountdownTimerMaxIntTimeoutDoesNotOverflow(t *testing.T) {
 	want := maxInt/1000 + 1
 	if initialSeconds != want {
 		t.Fatalf("initial seconds for timeout %d = %d, want %d", maxInt, initialSeconds, want)
+	}
+}
+
+func TestRetryStatusMaxIntDelayDoesNotOverflow(t *testing.T) {
+	InitTheme("dark", false)
+	maxInt := int(^uint(0) >> 1)
+	status := NewRetryStatusIndicator(nil, 1, 3, maxInt)
+	defer status.Dispose()
+
+	want := "in " + itoa(maxInt/1000+1) + "s..."
+	if got := status.Text.Text(); !strings.Contains(got, want) {
+		t.Fatalf("retry status = %q, want substring %q", got, want)
 	}
 }
 

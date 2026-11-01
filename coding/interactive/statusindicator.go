@@ -95,7 +95,7 @@ func NewRetryStatusIndicator(host tui.RenderRequester, attempt int, maxAttempts 
 		StatusIndicator: NewStatusIndicator(StatusRetry, host,
 			func(spinner string) string { return ActiveTheme().Fg("warning", spinner) },
 			func(text string) string { return ActiveTheme().Fg("muted", text) },
-			retryMessage((delayMS+999)/1000), nil),
+			retryMessage(timeoutSeconds(delayMS)), nil),
 	}
 	if timerHost, ok := host.(CountdownTimerHost); ok {
 		indicator.countdown = NewCountdownTimer(delayMS, timerHost,

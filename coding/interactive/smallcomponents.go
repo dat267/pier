@@ -87,13 +87,18 @@ type CountdownTimer struct {
 	disposed   atomic.Bool
 }
 
+func timeoutSeconds(timeoutMS int) int {
+	seconds := timeoutMS / 1000
+	if timeoutMS%1000 > 0 {
+		seconds++
+	}
+	return seconds
+}
+
 // NewCountdownTimer creates and starts a countdown timer.
 func NewCountdownTimer(timeoutMS int, host CountdownTimerHost, onTick func(seconds int), onExpire func()) *CountdownTimer {
 	timer := &CountdownTimer{host: host, onTick: onTick, onExpire: onExpire}
-	remainingSeconds := timeoutMS / 1000
-	if timeoutMS%1000 > 0 {
-		remainingSeconds++
-	}
+	remainingSeconds := timeoutSeconds(timeoutMS)
 	if onTick != nil {
 		onTick(remainingSeconds)
 	}
