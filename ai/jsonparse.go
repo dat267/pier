@@ -475,22 +475,20 @@ func (p *partialParser) parsePartialString() (string, error) {
 		// first escape it rejects.
 		runStart := p.pos
 		end := runStart
-		decoded := ""
 		for {
 			size := escapeUnitLength(p.units, end)
-			if size == 0 {
+			if size == 0 || !validJSONEscapeAt(p.units, end, size) {
 				break
 			}
-			var out string
-			if err := json.Unmarshal([]byte(`"`+p.sliceUnits(runStart, end+size)+`"`), &out); err != nil {
-				break
-			}
-			decoded = out
 			end += size
 		}
 		if end == runStart {
 			// The first escape is invalid or truncated: stop the string here
 			// (everything from the backslash on is dropped).
+			return builder.String(), nil
+		}
+		var decoded string
+		if err := json.Unmarshal([]byte(`"`+p.sliceUnits(runStart, end)+`"`), &decoded); err != nil {
 			return builder.String(), nil
 		}
 		builder.WriteString(decoded)
@@ -521,6 +519,21 @@ func escapeUnitLength(units []uint16, pos int) int {
 		return 6
 	}
 	return 2
+}
+
+func validJSONEscapeAt(units []uint16, pos, size int) bool {
+	if size == 2 {
+		return strings.ContainsRune(validJSONEscapes, rune(units[pos+1]))
+	}
+	if size != 6 || units[pos+1] != 'u' {
+		return false
+	}
+	for _, digit := range units[pos+2 : pos+6] {
+		if !((digit >= '0' && digit <= '9') || (digit >= 'a' && digit <= 'f') || (digit >= 'A' && digit <= 'F')) {
+			return false
+		}
+	}
+	return true
 }
 
 // tryParseFullString parses a complete string; ok is false when truncated.

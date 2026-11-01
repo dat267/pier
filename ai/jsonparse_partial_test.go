@@ -1,8 +1,10 @@
 package ai
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 )
 
 // Reference: pi v1.4.0 utils/json-parse.ts parseStreamingJson falls back to the
@@ -45,5 +47,25 @@ func TestParseStreamingJSONRejectsExcessiveNesting(t *testing.T) {
 	input := `{"a":` + strings.Repeat("[", depth) + "0" + strings.Repeat("]", depth)
 	if got := string(ParseStreamingJSONText(input)); got != "{}" {
 		t.Fatalf("ParseStreamingJSONText at depth %d returned %d bytes, want {}", depth, len(got))
+	}
+}
+
+// Reference: pi v1.4.0 packages/ai/src/utils/json-parse.ts delegates partial
+// values to partial-json; streaming parse cost should not grow quadratically.
+func TestParseStreamingJSONLongEscapeRunIsEfficient(t *testing.T) {
+	const escapes = 10_000
+	input := `{"k":"` + strings.Repeat(`\n`, escapes)
+	start := time.Now()
+	raw := ParseStreamingJSONText(input)
+	elapsed := time.Since(start)
+	var got map[string]string
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("parse result is invalid JSON: %v", err)
+	}
+	if got["k"] != strings.Repeat("\n", escapes) {
+		t.Fatalf("decoded string length = %d, want %d", len(got["k"]), escapes)
+	}
+	if elapsed > time.Second {
+		t.Fatalf("parsing %d valid escapes took %v, want under 1s", escapes, elapsed)
 	}
 }
