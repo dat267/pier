@@ -40,6 +40,18 @@ func TestCountdownTimerPostsTicksToUIOwner(t *testing.T) {
 	})
 }
 
+func TestCountdownTimerMaxIntTimeoutDoesNotOverflow(t *testing.T) {
+	maxInt := int(^uint(0) >> 1)
+	var initialSeconds int
+	timer := NewCountdownTimer(maxInt, nil, func(seconds int) { initialSeconds = seconds }, nil)
+	defer timer.Dispose()
+
+	want := maxInt/1000 + 1
+	if initialSeconds != want {
+		t.Fatalf("initial seconds for timeout %d = %d, want %d", maxInt, initialSeconds, want)
+	}
+}
+
 func TestCountdownTimerDisposeSuppressesQueuedTick(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		host := &countdownPostTestHost{posts: make(chan func(), 1)}

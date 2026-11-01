@@ -90,7 +90,10 @@ type CountdownTimer struct {
 // NewCountdownTimer creates and starts a countdown timer.
 func NewCountdownTimer(timeoutMS int, host CountdownTimerHost, onTick func(seconds int), onExpire func()) *CountdownTimer {
 	timer := &CountdownTimer{host: host, onTick: onTick, onExpire: onExpire}
-	remainingSeconds := (timeoutMS + 999) / 1000
+	remainingSeconds := timeoutMS / 1000
+	if timeoutMS%1000 > 0 {
+		remainingSeconds++
+	}
 	if onTick != nil {
 		onTick(remainingSeconds)
 	}
