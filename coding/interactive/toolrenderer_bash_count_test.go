@@ -1,7 +1,10 @@
 package interactive
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -79,6 +82,22 @@ func TestPlainWrappedLineCountDeclinesNonPlainLines(t *testing.T) {
 // TestBashPreviewCountIsAllocationFree guards the UI-thread cost: counting a
 // 2000-line output used ~8000 allocations per call.
 func TestBashPreviewCountIsAllocationFree(t *testing.T) {
+	const childEnv = "PIER_TEST_BASH_PREVIEW_ALLOC_CHILD"
+	if os.Getenv(childEnv) != "1" {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestBashPreviewCountIsAllocationFree$")
+		command.Env = append(os.Environ(), childEnv+"=1")
+		output, err := command.CombinedOutput()
+		if ctx.Err() != nil {
+			t.Fatalf("isolated allocation probe timed out: %s", output)
+		}
+		if err != nil {
+			t.Fatalf("isolated allocation probe failed: %v\n%s", err, output)
+		}
+		return
+	}
+
 	SetCustomThemesDir(t.TempDir())
 	SetRegisteredThemes(nil)
 	SetTrueColorSupport(true)
