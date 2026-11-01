@@ -70,6 +70,7 @@ func loadGoldenFile(t *testing.T, path string) map[string]string {
 // TestEasterComponentsAgainstUpstreamGolden replays the skill/setup/
 // announcement renders.
 func TestEasterComponentsAgainstUpstreamGolden(t *testing.T) {
+	pinTUIKeybindings(t)
 	SetCustomThemesDir(t.TempDir())
 	SetRegisteredThemes(nil)
 	SetTrueColorSupport(true)

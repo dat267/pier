@@ -5,10 +5,19 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/dat267/pier/tui"
 )
 
 // Test helpers shared by the theme tests (the same JSON normalization used by
 // the tui golden tests).
+
+func pinTUIKeybindings(t *testing.T) {
+	t.Helper()
+	previous := tui.GetKeybindings()
+	tui.SetKeybindings(tui.NewKeybindingsManager(tui.TUIKeybindings, nil))
+	t.Cleanup(func() { tui.SetKeybindings(previous) })
+}
 
 func mustJSON(value any) string {
 	var builder strings.Builder

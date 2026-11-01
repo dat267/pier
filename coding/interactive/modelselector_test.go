@@ -130,6 +130,7 @@ func TestModelSelectorProviderOrderMatchesUpstreamLocale(t *testing.T) {
 
 // TestModelSelectorsAgainstUpstreamGolden replays the selectors.
 func TestModelSelectorsAgainstUpstreamGolden(t *testing.T) {
+	pinTUIKeybindings(t)
 	SetCustomThemesDir(t.TempDir())
 	SetRegisteredThemes(nil)
 	SetTrueColorSupport(true)
