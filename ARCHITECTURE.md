@@ -3945,6 +3945,19 @@ zero.
 
 Test: `TestMcpOAuthProviderSaturatesLargeTokenExpiry`.
 
+### D329
+
+**Remote-catalog freshness compares against a cutoff to avoid elapsed-time overflow.**
+
+Reference: pi v1.4.0 `packages/coding-agent/src/core/remote-catalog-provider.ts`
+compares `Date.now() - checkedAt` against the refresh interval using JavaScript
+Numbers. Pier persists `checkedAt` as int64 Unix milliseconds; subtracting an
+extreme persisted timestamp can wrap and make stale catalog data appear fresh.
+The equivalent strict cutoff comparison (`checkedAt > now - interval`) avoids
+the overflow while preserving the interval boundary and future-timestamp behavior.
+
+Test: `TestRemoteCatalogMinimumCheckedAtTriggersRefresh`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

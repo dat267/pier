@@ -240,8 +240,11 @@ func WithRemoteCatalog(provider *ai.Provider, catalogBaseURL string, localGenera
 			return nil
 		}
 		force := refresh.Force != nil && *refresh.Force
+		now := time.Now().UnixMilli()
+		// D329: compare against the freshness cutoff; subtracting a persisted
+		// int64 timestamp from now can overflow and make stale data appear fresh.
 		if !force && stored != nil && stored.CheckedAt != nil && stored.LastModified != nil &&
-			time.Now().UnixMilli()-*stored.CheckedAt < RemoteCatalogRefreshIntervalMS {
+			*stored.CheckedAt > now-RemoteCatalogRefreshIntervalMS {
 			return nil
 		}
 
