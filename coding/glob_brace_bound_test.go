@@ -122,8 +122,14 @@ func TestExpandBracesIsBounded(t *testing.T) {
 		t.Fatal("no expansions produced")
 	}
 
-	long := strings.Repeat("{a,b}", 1500)
+	// 65,536 possible 116-byte results reach the length cap before the count
+	// cap, without repeatedly rebuilding a 4 MB accumulator for 1,500 groups.
+	long := strings.Repeat("x", 100) + strings.Repeat("{a,b}", 16)
 	expanded = expandBraces(long)
+	// Node brace-expansion retains floor(4,000,000 / 116) whole results.
+	if len(expanded) != 34_482 {
+		t.Fatalf("length-bounded expansion produced %d results, want 34482", len(expanded))
+	}
 	total := 0
 	for _, entry := range expanded {
 		total += len(entry)
