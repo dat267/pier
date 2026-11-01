@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -153,6 +154,30 @@ func TestResolveFederationConfig(t *testing.T) {
 	}
 	if _, ok := ResolveFederationConfig(ProviderEnv{AnthropicFederationRuleIDEnv: "fdr"}); ok {
 		t.Fatal("the three required variables are needed")
+	}
+}
+
+// The pinned SDK's oidc-federation.ts adds finite expires_in as a JS Number;
+// token-cache.ts therefore reuses this far-future token rather than re-exchanging.
+func TestFederationTokenCacheLargeExpiryStaysCached(t *testing.T) {
+	var exchanges atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		exchanges.Add(1)
+		_, _ = w.Write([]byte(`{"access_token":"tok","expires_in":9223372036854775807}`))
+	}))
+	defer server.Close()
+	cache := NewFederationTokenCache(FederationConfig{
+		IdentityTokenFile: writeIdentityToken(t, "jwt"), FederationRuleID: "r", OrganizationID: "o",
+		BaseURL: server.URL, Now: func() time.Time { return time.Unix(1_000_000, 0) },
+	})
+
+	for call := 0; call < 2; call++ {
+		if token, err := cache.Token(context.Background()); err != nil || token != "tok" {
+			t.Fatalf("call %d: token=%q err=%v", call+1, token, err)
+		}
+	}
+	if got := exchanges.Load(); got != 1 {
+		t.Fatalf("exchanges = %d, want the far-future token to be reused", got)
 	}
 }
 

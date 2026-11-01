@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -280,7 +281,28 @@ func ExchangeFederationToken(ctx context.Context, config FederationConfig) (Fede
 	if config.Now != nil {
 		now = config.Now
 	}
-	return FederationToken{Token: decoded.AccessToken, ExpiresAtUnix: now().Unix() + int64(expiresIn)}, nil
+	return FederationToken{Token: decoded.AccessToken, ExpiresAtUnix: federationExpiryUnixSeconds(now().Unix(), expiresIn)}, nil
+}
+
+// federationExpiryUnixSeconds preserves expiry direction without overflowing
+// the Unix-second representation.
+// D326: upstream computes the deadline with JavaScript Number arithmetic; Go's
+// int64 Unix seconds saturate at their bounds to preserve future/past cache status.
+func federationExpiryUnixSeconds(nowUnix int64, expiresIn float64) int64 {
+	if expiresIn >= float64(math.MaxInt64) {
+		return math.MaxInt64
+	}
+	if expiresIn <= float64(math.MinInt64) {
+		return math.MinInt64
+	}
+	delta := int64(expiresIn)
+	if delta > 0 && nowUnix > math.MaxInt64-delta {
+		return math.MaxInt64
+	}
+	if delta < 0 && nowUnix < math.MinInt64-delta {
+		return math.MinInt64
+	}
+	return nowUnix + delta
 }
 
 func readIdentityToken(path string) (string, error) {

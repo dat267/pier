@@ -3900,6 +3900,22 @@ pass final decoding, and avoids unbounded recursion/time on provider input.
 
 Test: `TestParseStreamingJSONRejectsExcessiveNesting`.
 
+### D326
+
+**Federation token expiry saturates at int64 Unix-second bounds.**
+
+Reference: pi v1.4.0 at `4a080252f06caf63a525d7873c5d94d3c23887e0` delegates OIDC
+federation to the Anthropic SDK. Its TypeScript source
+`node_modules/@anthropic-ai/sdk/src/lib/credentials/oidc-federation.ts`
+computes `nowAsSeconds() + expiresIn` with finite JavaScript Number values;
+`token-cache.ts` reuses a token whose expiry remains far in the future. Pier
+stores this deadline as int64 Unix seconds. The federation conversion retains
+ordinary values and fractional truncation, but saturates when the converted
+lifetime or addition would exceed int64, preserving whether the token is future
+or past instead of wrapping it into the opposite cache state.
+
+Test: `TestFederationTokenCacheLargeExpiryStaysCached`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.
