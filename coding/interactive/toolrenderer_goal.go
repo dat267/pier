@@ -6,6 +6,7 @@ package interactive
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/dat267/pier/internal/goal"
 	"github.com/dat267/pier/tui"
@@ -75,15 +76,16 @@ var goalGetRenderers = ToolRenderers{
 	RenderResult: func(result *SortToolResultContent, options ToolRenderResultOptions, theme *Theme, context *ToolRenderContext) tui.Component {
 		details, ok := goalDetailsFromResult(result)
 		if !ok {
-			return goal.RenderGetGoalRenderResult(nil, theme)
+			return goal.RenderGetGoalRenderResult(nil, theme, context.Expanded)
 		}
-		return goal.RenderGetGoalRenderResult(goalViewFromDetails(details), theme)
+		return goal.RenderGetGoalRenderResult(goalViewFromDetails(details), theme, context.Expanded)
 	},
 }
 
 // goalSetRenderers renders the set_goal tool: an objective call sets/replaces
 // the goal, a status call ends it. A status or error result draws a phase card;
-// a successful objective set has no result card (upstream create_goal).
+// a successful objective set draws a compact outcome line under the objective
+// body (the durable goal entry card still follows the tool card).
 var goalSetRenderers = ToolRenderers{
 	RenderCall: func(args any, theme *Theme, context *ToolRenderContext) tui.Component {
 		argsMap := toolArgs(args)
@@ -101,7 +103,8 @@ var goalSetRenderers = ToolRenderers{
 			out.Text = text
 		}
 		action := ""
-		if details, ok := goalDetailsFromResult(result); ok {
+		details, hasDetails := goalDetailsFromResult(result)
+		if hasDetails {
 			action = goalActionFromDetails(details)
 			out.Action = action
 			if phase, has := goalPhaseFromDetails(details); has {
@@ -110,8 +113,19 @@ var goalSetRenderers = ToolRenderers{
 			}
 		}
 		if !result.IsError && action != "complete" && action != "blocked" && action != "clear" {
-			// An objective set has no result card; the generic body shows the reply.
-			return nil
+			// An objective set finishes as a compact outcome line; the call card
+			// already carries the objective body.
+			create := goal.SetGoalCreateResult{Text: out.Text}
+			if hasDetails {
+				if view := goalViewFromDetails(details); view != nil {
+					create.HasGoal = true
+					create.Revision = view.Revision
+				}
+			}
+			// The machine emits exactly "Goal replaced (...)" for a tombstone
+			// plus create, and "Goal created (...)" otherwise (D233).
+			create.Replaced = strings.HasPrefix(out.Text, "Goal replaced")
+			return goal.RenderSetGoalCreateResult(create, theme)
 		}
 		return goal.RenderSetGoalRenderResult(out, theme)
 	},

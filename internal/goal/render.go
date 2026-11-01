@@ -5,6 +5,8 @@ package goal
 import (
 	"fmt"
 	"regexp"
+	"strings"
+	"time"
 
 	"github.com/dat267/pier/ai"
 	"github.com/dat267/pier/tui"
@@ -205,25 +207,68 @@ func RenderGetGoalRenderCall(theme Theme) *tui.Text {
 	return tui.NewText(theme.Fg("toolTitle", "Get goal"), 0, 0, nil)
 }
 
-// RenderGetGoalRenderResult is the get_goal result card.
-func RenderGetGoalRenderResult(goal *GoalView, theme Theme) *tui.Text {
+// goalPreviewChars is the collapsed body budget for an objective or blocker.
+// The body wraps at the card width, so this is roughly two or three lines.
+const goalPreviewChars = 160
+
+// goalPreview trims a single-line goal text for a collapsed card, reporting
+// whether anything was cut so the card can offer the expand hint.
+func goalPreview(text string, expanded bool) (shown string, truncated bool) {
+	normalized := ai.JSTrim(goalWhitespace.ReplaceAllString(text, " "))
+	if expanded || ai.JSLength(normalized) <= goalPreviewChars {
+		return normalized, false
+	}
+	return TruncateObjective(normalized, goalPreviewChars), true
+}
+
+// RenderGetGoalRenderResult is the get_goal result card: the state line, then
+// the objective and any budget or blocker detail, mirroring the multi-line body
+// of the built-in tool cards.
+func RenderGetGoalRenderResult(goal *GoalView, theme Theme, expanded bool) *tui.Text {
 	if goal == nil {
 		return tui.NewText(theme.Fg("muted", "No goal set"), 0, 0, nil)
 	}
-	return tui.NewText(theme.Fg("toolTitle", fmt.Sprintf("%s · rev %d · %d rounds", goal.Phase, goal.Revision, goal.TurnsStarted)), 0, 0, nil)
+	state := fmt.Sprintf("%s · rev %d · %d rounds", goal.Phase, goal.Revision, goal.TurnsStarted)
+	if goal.Phase == PhaseActive && !goal.Armed {
+		state += " · disarmed"
+	}
+	stateColor := PhaseColor[goal.Phase]
+	if stateColor == "" {
+		stateColor = "success"
+	}
+	lines := []string{theme.Fg(stateColor, state)}
+
+	objective, truncated := goalPreview(goal.Objective, expanded)
+	lines = append(lines, theme.Fg("toolOutput", objective))
+	if truncated {
+		lines = append(lines, theme.Fg("muted", "(click or expand for full objective)"))
+	}
+	if goal.Budget != nil {
+		elapsed := time.Now().UnixMilli() - goal.CreatedAt
+		lines = append(lines, theme.Fg("muted", "budget: "+FormatBudget(goal.Budget, goal.UsedTokens, goal.UsedCostUsd, elapsed)))
+	}
+	if goal.BlockedReason != nil {
+		stopColor := PhaseColor[goal.Phase]
+		if stopColor == "" {
+			stopColor = "warning"
+		}
+		lines = append(lines, theme.Fg(stopColor, "reason: "+goal.BlockedReason.Code+": "+goal.BlockedReason.Message))
+	}
+	return tui.NewText(strings.Join(lines, "\n"), 0, 0, nil)
 }
 
-// RenderSetGoalRenderCall is the set_goal call card when an objective is set.
+// RenderSetGoalRenderCall is the set_goal call card when an objective is set:
+// a title line and the objective as a wrapped body, like the write card.
 func RenderSetGoalRenderCall(objective string, theme Theme, expanded bool) *tui.Text {
-	normalized := ai.JSTrim(goalWhitespace.ReplaceAllString(objective, " "))
-	truncated := !expanded && ai.JSLength(normalized) > 60
-	shown := objective
-	if !expanded {
-		shown = TruncateObjective(objective, 60)
+	shown, truncated := goalPreview(objective, expanded)
+	if shown == "" {
+		// Streaming arguments carry no objective yet; show a placeholder like
+		// the shell card does instead of an empty body.
+		shown = "…"
 	}
-	text := theme.Fg("toolTitle", "Set goal: "+shown)
+	text := theme.Fg("toolTitle", theme.Bold("Set goal")) + "\n\n" + theme.Fg("toolOutput", shown)
 	if truncated {
-		text += theme.Fg("muted", " (click or expand for full objective)")
+		text += theme.Fg("muted", "\n(click or expand for full objective)")
 	}
 	return tui.NewText(text, 0, 0, nil)
 }
@@ -238,15 +283,10 @@ func RenderSetGoalStatusRenderCall(action, blockedReason string, theme Theme, ex
 		text += theme.Fg("toolTitle", action)
 	}
 	if blockedReason != "" {
-		normalized := ai.JSTrim(goalWhitespace.ReplaceAllString(blockedReason, " "))
-		truncated := !expanded && ai.JSLength(normalized) > 60
-		shown := normalized
-		if !expanded {
-			shown = TruncateObjective(normalized, 60)
-		}
-		text += theme.Fg("dim", ": "+shown)
+		shown, truncated := goalPreview(blockedReason, expanded)
+		text += "\n\n" + theme.Fg("toolOutput", shown)
 		if truncated {
-			text += theme.Fg("muted", " (click or expand for full reason)")
+			text += theme.Fg("muted", "\n(click or expand for full reason)")
 		}
 	}
 	return tui.NewText(text, 0, 0, nil)
@@ -282,4 +322,31 @@ func RenderSetGoalRenderResult(result SetGoalResult, theme Theme) *tui.Text {
 		short = "Goal blocked ✓"
 	}
 	return tui.NewText(theme.Fg(PhaseColor[phase], short), 0, 0, nil)
+}
+
+// SetGoalCreateResult is the set_goal objective (create or replace) result card
+// input. The call card carries the objective, so the result reports only the
+// durable outcome.
+type SetGoalCreateResult struct {
+	IsError  bool
+	Replaced bool
+	HasGoal  bool
+	Revision int
+	Text     string
+}
+
+// RenderSetGoalCreateResult is the set_goal objective result card.
+func RenderSetGoalCreateResult(result SetGoalCreateResult, theme Theme) *tui.Text {
+	if result.IsError {
+		return tui.NewText(theme.Fg("error", result.Text), 0, 0, nil)
+	}
+	label := "Goal created ✓"
+	if result.Replaced {
+		label = "Goal replaced ✓"
+	}
+	text := theme.Fg(PhaseColor[PhaseActive], label)
+	if result.HasGoal {
+		text += theme.Fg("dim", fmt.Sprintf(" · rev %d", result.Revision))
+	}
+	return tui.NewText(text, 0, 0, nil)
 }

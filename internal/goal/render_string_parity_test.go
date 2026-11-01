@@ -10,7 +10,9 @@ import (
 // D223 reference: installed goal/render.ts measures JavaScript string length
 // before truncating cards and deciding whether to show the expansion hint.
 func TestGoalCardsUseJSLengthForExpansionHints(t *testing.T) {
-	objective := strings.Repeat("😀", 29) + "abc"
+	// 79 astral characters plus 3 ASCII units is 161 UTF-16 units, one past
+	// the wrapped body preview budget (goalPreviewChars).
+	objective := strings.Repeat("😀", 79) + "abc"
 	for _, item := range []struct {
 		name string
 		card tui.Component

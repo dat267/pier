@@ -20,6 +20,12 @@ func renderLines(component tui.Component, width int) string {
 	return strings.TrimRight(strings.Join(component.Render(width), "\n"), " \n")
 }
 
+// flatten collapses wrapped card output so tests can match a phrase across
+// line breaks without depending on the wrap points.
+func flatten(component tui.Component, width int) string {
+	return strings.Join(strings.Fields(renderLines(component, width)), " ")
+}
+
 func TestDisplayBodyStripsGoalTags(t *testing.T) {
 	cases := map[string]string{
 		"<goal_round>\nHello\n":                  "Hello",
@@ -144,11 +150,11 @@ func TestToolRenderers(t *testing.T) {
 	if RenderGetGoalRenderCall(stubTheme{}) == nil {
 		t.Fatal("get_goal call")
 	}
-	if RenderGetGoalRenderResult(nil, stubTheme{}) == nil {
+	if RenderGetGoalRenderResult(nil, stubTheme{}, false) == nil {
 		t.Fatal("get_goal nil result")
 	}
 	g := GoalView{GoalSnapshot: createTestGoal("test", t0, nil), TurnsStarted: 2}
-	if RenderGetGoalRenderResult(&g, stubTheme{}) == nil {
+	if RenderGetGoalRenderResult(&g, stubTheme{}, false) == nil {
 		t.Fatal("get_goal result")
 	}
 	if RenderSetGoalRenderCall("test", stubTheme{}, false) == nil {
@@ -166,26 +172,99 @@ func TestToolRenderers(t *testing.T) {
 }
 
 func TestCreateGoalCallFrameExpands(t *testing.T) {
-	objective := "Create a long goal with every acceptance criterion, constraint, expected output, and verification step included."
-	collapsed := renderLines(RenderSetGoalRenderCall(objective, stubTheme{}, false), 200)
-	if !strings.Contains(collapsed, "click or expand") || strings.Contains(collapsed, objective) {
+	objective := strings.Repeat("Create a long goal with every acceptance criterion and verification step. ", 4)
+	collapsed := flatten(RenderSetGoalRenderCall(objective, stubTheme{}, false), 200)
+	if !strings.Contains(collapsed, "click or expand") || strings.Contains(collapsed, strings.Join(strings.Fields(objective), " ")) {
 		t.Fatalf("collapsed frame: %q", collapsed)
 	}
-	expanded := renderLines(RenderSetGoalRenderCall(objective, stubTheme{}, true), 200)
-	if !strings.Contains(expanded, objective) {
+	expanded := flatten(RenderSetGoalRenderCall(objective, stubTheme{}, true), 200)
+	if !strings.Contains(expanded, strings.Join(strings.Fields(objective), " ")) {
 		t.Fatalf("expanded frame missing objective: %q", expanded)
 	}
 }
 
+// A create card is multi-line: a title line, then the objective body, so a goal
+// call reads like the built-in write card instead of one summary line.
+func TestCreateGoalCallFrameIsMultiline(t *testing.T) {
+	objective := "build a widget that renders the goal state"
+	component := RenderSetGoalRenderCall(objective, stubTheme{}, false)
+	lines := component.Render(80)
+	if len(lines) < 3 {
+		t.Fatalf("expected a title, spacer and objective body; got %q", lines)
+	}
+	text := strings.Join(lines, "\n")
+	if !strings.Contains(text, "Set goal") || !strings.Contains(text, objective) {
+		t.Fatalf("card = %q", text)
+	}
+	if strings.Contains(text, "click or expand") {
+		t.Fatalf("a short objective must not be truncated: %q", text)
+	}
+}
+
 func TestUpdateGoalCallFrameExpands(t *testing.T) {
-	reason := "The external dependency is unavailable, and the task cannot proceed until the service is restored."
-	collapsed := renderLines(RenderSetGoalStatusRenderCall("blocked", reason, stubTheme{}, false), 200)
-	if !strings.Contains(collapsed, "click or expand") || strings.Contains(collapsed, reason) {
+	reason := strings.Repeat("The external dependency is unavailable and the task cannot proceed. ", 4)
+	collapsed := flatten(RenderSetGoalStatusRenderCall("blocked", reason, stubTheme{}, false), 200)
+	if !strings.Contains(collapsed, "click or expand") || strings.Contains(collapsed, strings.Join(strings.Fields(reason), " ")) {
 		t.Fatalf("collapsed frame: %q", collapsed)
 	}
-	expanded := renderLines(RenderSetGoalStatusRenderCall("blocked", reason, stubTheme{}, true), 200)
-	if !strings.Contains(expanded, reason) {
+	expanded := flatten(RenderSetGoalStatusRenderCall("blocked", reason, stubTheme{}, true), 200)
+	if !strings.Contains(expanded, strings.Join(strings.Fields(reason), " ")) {
 		t.Fatalf("expanded frame missing reason: %q", expanded)
+	}
+}
+
+// get_goal reports the goal across several lines: state, objective, and the
+// budget or blocker detail when present.
+func TestGetGoalResultIsMultiline(t *testing.T) {
+	budget := &GoalBudget{TokenLimit: new(int64(500))}
+	g := GoalView{
+		GoalSnapshot: GoalSnapshot{
+			ID: "g1", Revision: 3, Objective: "ship the widget", Phase: PhasePaused,
+			BlockedReason: &BlockedReason{Code: "human-paused", Message: "Paused by user."},
+			Budget:        budget, CreatedAt: t0, UpdatedAt: t0,
+		},
+		TurnsStarted: 2, UsedTokens: 120,
+	}
+	lines := RenderGetGoalRenderResult(&g, stubTheme{}, false).Render(80)
+	text := flatten(RenderGetGoalRenderResult(&g, stubTheme{}, false), 80)
+	for _, want := range []string{
+		"paused · rev 3 · 2 rounds",
+		"ship the widget",
+		"budget: tokens 120/500",
+		"reason: human-paused: Paused by user.",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("card %q missing %q", text, want)
+		}
+	}
+	if len(lines) < 4 {
+		t.Fatalf("expected one line per detail, got %q", lines)
+	}
+	// A long objective is previewed with the expand hint, and expanding shows it.
+	long := strings.Repeat("objective sentence ", 20)
+	longGoal := GoalView{GoalSnapshot: GoalSnapshot{Revision: 1, Objective: long, Phase: PhaseActive}, Armed: true}
+	collapsed := flatten(RenderGetGoalRenderResult(&longGoal, stubTheme{}, false), 80)
+	if strings.Contains(collapsed, strings.Join(strings.Fields(long), " ")) || !strings.Contains(collapsed, "click or expand") {
+		t.Fatalf("collapsed objective: %q", collapsed)
+	}
+	expanded := flatten(RenderGetGoalRenderResult(&longGoal, stubTheme{}, true), 80)
+	if !strings.Contains(expanded, strings.Join(strings.Fields(long), " ")) {
+		t.Fatalf("expanded objective missing: %q", expanded)
+	}
+}
+
+func TestSetGoalCreateResultReportsOutcome(t *testing.T) {
+	created := renderLines(RenderSetGoalCreateResult(SetGoalCreateResult{HasGoal: true, Revision: 2}, stubTheme{}), 120)
+	if !strings.Contains(created, "Goal created") || !strings.Contains(created, "rev 2") {
+		t.Fatalf("created card = %q", created)
+	}
+	replaced := renderLines(RenderSetGoalCreateResult(SetGoalCreateResult{Replaced: true, HasGoal: true, Revision: 1}, stubTheme{}), 120)
+	if !strings.Contains(replaced, "Goal replaced") {
+		t.Fatalf("replaced card = %q", replaced)
+	}
+	errCard := renderLines(RenderSetGoalCreateResult(SetGoalCreateResult{IsError: true, Text: "Provide an objective"}, stubTheme{}), 120)
+	if !strings.Contains(errCard, "Provide an objective") {
+		t.Fatalf("error card = %q", errCard)
 	}
 }
 
