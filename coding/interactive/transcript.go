@@ -215,7 +215,10 @@ func (r *TranscriptRenderer) AddCustomEntryToChat(entry *coding.SessionEntry) {
 	if renderer == nil {
 		return
 	}
-	component := NewCustomEntryComponent(CustomEntry{CustomType: entry.CustomType, Data: entry.Raw()}, renderer)
+	// Renderers receive the entry's payload (upstream hands the entry to the
+	// extension renderer). Raw() is the whole session line and is empty for an
+	// entry that was just appended, so a live goal card would never draw.
+	component := NewCustomEntryComponent(CustomEntry{CustomType: entry.CustomType, Data: entry.Data}, renderer)
 	component.SetExpanded(r.Display.ToolOutputExpanded)
 	if !component.HasContent() {
 		return
