@@ -144,6 +144,22 @@ func TestListModelsTextNoModels(t *testing.T) {
 	}
 }
 
+// pi 4a080252 packages/coding-agent/src/cli/list-models.ts interpolates the
+// unmatched search pattern between literal quotes, without Go %q escaping.
+func TestListModelsTextPreservesUnmatchedSearchPattern(t *testing.T) {
+	models := []*ai.Model{listModel("vendor", "model", 1000, 1000, false, "text")}
+	for _, test := range []struct{ pattern, want string }{
+		{"missing", "No models matching \"missing\"\n"},
+		{`missing"quote`, "No models matching \"missing\"quote\"\n"},
+		{`missing\path`, "No models matching \"missing\\path\"\n"},
+		{"missing\nline", "No models matching \"missing\nline\"\n"},
+	} {
+		if got := ListModelsText(models, test.pattern); got != test.want {
+			t.Errorf("pattern %q: got %q, want %q", test.pattern, got, test.want)
+		}
+	}
+}
+
 func TestListModelsTextSearchFilter(t *testing.T) {
 	models := []*ai.Model{
 		listModel("anthropic", "claude-x", 1000, 1000, false, "text"),

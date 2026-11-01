@@ -1,7 +1,6 @@
 package coding
 
 import (
-	"fmt"
 	"math"
 	"sort"
 	"strconv"
@@ -71,7 +70,7 @@ func ListModelsText(models []*ai.Model, searchPattern string) string {
 		})
 	}
 	if len(filtered) == 0 {
-		return fmt.Sprintf("No models matching %q\n", searchPattern)
+		return "No models matching \"" + searchPattern + "\"\n"
 	}
 
 	// Provider, then model id. Filtering sorts by match score, so the order has
