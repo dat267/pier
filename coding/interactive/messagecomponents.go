@@ -162,6 +162,16 @@ func (c *CustomEntryComponent) SetExpanded(expanded bool) {
 	}
 }
 
+// HandleMouse forwards clicks and publishes renderer-local changes to the
+// transcript, which otherwise reuses this container's unchanged revision.
+func (c *CustomEntryComponent) HandleMouse(event tui.TuiMouseEvent) *tui.TuiMouseDispatchResult {
+	result := c.Container.HandleMouse(event)
+	if result != nil && result.Handled {
+		c.Container.MarkDirty()
+	}
+	return result
+}
+
 // Invalidate invalidates the children and rebuilds.
 func (c *CustomEntryComponent) Invalidate() {
 	c.Container.Invalidate()

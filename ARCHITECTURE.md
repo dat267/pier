@@ -1642,7 +1642,9 @@ objective as a wrapped body with a compact created/replaced outcome line, and
 `get_goal` shows state, objective, budget usage and any stop reason, with a
 click/expand preview for long text (`internal/goal/render.go`). Goal cards leave
 a blank line between their title and body, and creation tool cards separate
-the objective from the outcome with a blank line.
+the objective from the outcome with a blank line. Handled mouse events mark
+the custom-entry wrapper dirty, so renderer-local expand/collapse changes
+invalidate its revision and repaint in the cached transcript.
 
 Tests: `internal/goal`'s state/machine/command/render suites,
 `coding/goalcontroller_test.go` (effect application, replay, tool exposure,
