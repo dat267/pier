@@ -1646,6 +1646,15 @@ the objective from the outcome with a blank line. Handled mouse events mark
 the custom-entry wrapper dirty, so renderer-local expand/collapse changes
 invalidate its revision and repaint in the cached transcript.
 
+A successful objective `set_goal` action shows one tool card, rather than also
+showing its durable create and replacement-clear cards. This user-requested
+presentation difference matches the result's goal ID to the create card and,
+for a replacement, its immediately preceding clear record. The owner retains
+these component references only while objective tools are pending, then removes
+the redundant cards after success. Replay applies the same rule. Command-driven
+changes, errors and incomplete tool calls keep their lifecycle cards. All
+clear/create records and append events remain intact for persistence and replay.
+
 Tests: `internal/goal`'s state/machine/command/render suites,
 `coding/goalcontroller_test.go` (effect application, replay, tool exposure,
 continuation/error/abort outcomes) and

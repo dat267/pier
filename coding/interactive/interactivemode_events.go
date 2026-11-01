@@ -144,6 +144,9 @@ func (d *EventDispatcher) HandleEvent(event *coding.SessionEvent) {
 	switch event.Type {
 	case coding.SessionAgentStart:
 		d.pendingTools = map[string]*ToolExecutionComponent{}
+		if d.Transcript != nil {
+			d.Transcript.goalActions = goalActionCards{}
+		}
 		if d.hasRetryEscapeHandler && d.Editor != nil {
 			d.Editor.OnEscape = d.retryEscapeHandler
 			d.retryEscapeHandler = nil
@@ -227,6 +230,9 @@ func (d *EventDispatcher) HandleEvent(event *coding.SessionEvent) {
 		d.handleToolExecutionEnd(event)
 
 	case coding.SessionAgentEnd:
+		if d.Transcript != nil {
+			d.Transcript.goalActions = goalActionCards{}
+		}
 		if d.Settings != nil && d.Settings.GetShowTerminalProgress() && d.TerminalProgress != nil {
 			d.TerminalProgress(false)
 		}
@@ -504,6 +510,7 @@ func (d *EventDispatcher) handleToolExecutionStart(event *coding.SessionEvent) {
 		component.UpdateArgs(agentEvent.Args)
 	}
 	component.MarkExecutionStarted()
+	d.Transcript.goalActions.start(agentEvent.ToolName, agentEvent.ToolCallID, agentEvent.Args)
 	d.requestRender()
 }
 
@@ -536,6 +543,7 @@ func (d *EventDispatcher) handleToolExecutionEnd(event *coding.SessionEvent) {
 	// The recorded execution time comes from the agent event (upstream #10549).
 	component.SetResultDuration(agentEvent.DurationMs)
 	component.UpdateResult(result, false)
+	d.Transcript.goalActions.finish(agentEvent.ToolCallID, result, d.Transcript.Chat)
 	delete(d.pendingTools, agentEvent.ToolCallID)
 	d.requestRender()
 }

@@ -89,6 +89,7 @@ type TranscriptRenderer struct {
 	RenderProjectTrustWarning func()
 
 	pendingTools             map[string]*ToolExecutionComponent
+	goalActions              goalActionCards
 	lastStatusSpacer         *tui.Spacer
 	lastStatusText           *ThemedText
 	lastStatusMessage        string
@@ -223,6 +224,7 @@ func (r *TranscriptRenderer) AddCustomEntryToChat(entry *coding.SessionEntry) {
 	if !component.HasContent() {
 		return
 	}
+	r.goalActions.record(entry, component)
 	// Insert before the streaming component when present.
 	if r.StreamingComponent != nil {
 		for index, child := range r.Chat.Children {
@@ -566,6 +568,7 @@ func warmComponentsContext(ctx context.Context, components []tui.Component, widt
 }
 
 func (r *TranscriptRenderer) renderSessionItems(items []RenderSessionItem, updateFooter bool, populateHistory bool) {
+	r.goalActions = goalActionCards{}
 	r.pendingTools = map[string]*ToolExecutionComponent{}
 	renderedPendingTools := map[string]*ToolExecutionComponent{}
 
@@ -661,6 +664,7 @@ func (r *TranscriptRenderer) renderSessionItems(items []RenderSessionItem, updat
 					}, false)
 				} else {
 					renderedPendingTools[toolCall.ID] = component
+					r.goalActions.start(toolCall.Name, toolCall.ID, toolCall.Arguments)
 				}
 			}
 			if assistant.StopReason != ai.StopAborted && assistant.StopReason != ai.StopError {
@@ -674,7 +678,9 @@ func (r *TranscriptRenderer) renderSessionItems(items []RenderSessionItem, updat
 		if toolResult, ok := item.Message.(*ai.ToolResultMessage); ok {
 			if component, ok := renderedPendingTools[toolResult.ToolCallID]; ok {
 				component.SetResultDuration(toolResult.DurationMs)
-				component.UpdateResult(sortToolResultFromMessage(toolResult), false)
+				result := sortToolResultFromMessage(toolResult)
+				component.UpdateResult(result, false)
+				r.goalActions.finish(toolResult.ToolCallID, result, r.Chat)
 				delete(renderedPendingTools, toolResult.ToolCallID)
 			}
 			continue
