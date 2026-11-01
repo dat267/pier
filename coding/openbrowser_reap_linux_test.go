@@ -52,7 +52,7 @@ func TestOpenBrowserReapsExitedLauncher(t *testing.T) {
 	for time.Now().Before(deadline) {
 		var err error
 		stat, err = os.ReadFile(statPath)
-		if errors.Is(err, os.ErrNotExist) {
+		if errors.Is(err, os.ErrNotExist) || errors.Is(err, syscall.ESRCH) {
 			pid = 0
 			return
 		}
