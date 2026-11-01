@@ -296,13 +296,20 @@ func federationExpiryUnixSeconds(nowUnix int64, expiresIn float64) int64 {
 		return math.MinInt64
 	}
 	delta := int64(expiresIn)
-	if delta > 0 && nowUnix > math.MaxInt64-delta {
+	return saturatingAddUnixSeconds(nowUnix, delta)
+}
+
+// saturatingAddUnixSeconds bounds cache timestamps at the int64 Unix-second limits.
+// D327: a positive backoff that overflows must force refresh, not wrap the
+// threshold into the past and make an expired token appear fresh.
+func saturatingAddUnixSeconds(value, delta int64) int64 {
+	if delta > 0 && value > math.MaxInt64-delta {
 		return math.MaxInt64
 	}
-	if delta < 0 && nowUnix < math.MinInt64-delta {
+	if delta < 0 && value < math.MinInt64-delta {
 		return math.MinInt64
 	}
-	return nowUnix + delta
+	return value + delta
 }
 
 func readIdentityToken(path string) (string, error) {
@@ -344,7 +351,7 @@ func (c *FederationTokenCache) Token(ctx context.Context) (string, error) {
 		now = c.config.Now
 	}
 	c.mu.Lock()
-	if c.token != nil && now().Unix()+c.RefreshBackoff < c.token.ExpiresAtUnix {
+	if c.token != nil && saturatingAddUnixSeconds(now().Unix(), c.RefreshBackoff) < c.token.ExpiresAtUnix {
 		token := c.token.Token
 		c.mu.Unlock()
 		return token, nil

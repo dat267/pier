@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -178,6 +179,31 @@ func TestFederationTokenCacheLargeExpiryStaysCached(t *testing.T) {
 	}
 	if got := exchanges.Load(); got != 1 {
 		t.Fatalf("exchanges = %d, want the far-future token to be reused", got)
+	}
+}
+
+// The SDK's token-cache.ts compares remaining lifetime to its refresh threshold;
+// an extreme positive threshold must not make an almost expired token reusable.
+func TestFederationTokenCacheLargeRefreshBackoffDoesNotReuseExpiredToken(t *testing.T) {
+	var exchanges atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		exchanges.Add(1)
+		_, _ = w.Write([]byte(`{"access_token":"tok","expires_in":1}`))
+	}))
+	defer server.Close()
+	cache := NewFederationTokenCache(FederationConfig{
+		IdentityTokenFile: writeIdentityToken(t, "jwt"), FederationRuleID: "r", OrganizationID: "o",
+		BaseURL: server.URL, Now: func() time.Time { return time.Unix(1_000_000, 0) },
+	})
+	cache.RefreshBackoff = math.MaxInt64
+
+	for call := 0; call < 2; call++ {
+		if token, err := cache.Token(context.Background()); err != nil || token != "tok" {
+			t.Fatalf("call %d: token=%q err=%v", call+1, token, err)
+		}
+	}
+	if got := exchanges.Load(); got != 2 {
+		t.Fatalf("exchanges = %d, want expired token to refresh despite large backoff", got)
 	}
 }
 

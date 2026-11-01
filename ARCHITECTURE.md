@@ -3916,6 +3916,22 @@ or past instead of wrapping it into the opposite cache state.
 
 Test: `TestFederationTokenCacheLargeExpiryStaysCached`.
 
+### D327
+
+**Federation refresh-threshold arithmetic saturates at int64 Unix-second bounds.**
+
+Reference: the pinned Anthropic SDK source
+`node_modules/@anthropic-ai/sdk/src/lib/credentials/token-cache.ts` compares a
+cached token's remaining lifetime against the refresh thresholds before reuse.
+Pier's `FederationTokenCache.RefreshBackoff` is a configurable int64 seconds
+value; adding an extreme positive backoff to `now` must not wrap the threshold
+into the past and make an expired token appear fresh. The comparison uses
+saturating Unix-second addition so a positive backoff that exceeds int64
+forces refresh instead of wrapping into the past and making an expired token
+appear fresh.
+
+Test: `TestFederationTokenCacheLargeRefreshBackoffDoesNotReuseExpiredToken`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.
