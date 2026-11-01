@@ -25,6 +25,11 @@ import (
 
 const validJSONEscapes = `"\/bfnrt"`
 
+// maxPartialJSONDepth matches encoding/json's maximum accepted nesting depth.
+// Applying the same bound to streaming previews prevents the recursive partial
+// parser from bypassing that protection on malformed provider output.
+const maxPartialJSONDepth = 10_000
+
 // RepairJSON repairs malformed JSON string literals by escaping raw control
 // characters inside strings and doubling backslashes before invalid escape
 // characters (port of repairJson, operating on UTF-16 code units like the
@@ -295,14 +300,19 @@ func partialParse(text string) (*schemaValue, error) {
 	if err != nil {
 		return nil, err
 	}
+	if p.depthExceeded {
+		return nil, fmt.Errorf("partial json: nesting exceeds %d levels", maxPartialJSONDepth)
+	}
 	// Trailing whitespace only is fine; anything else is left partial.
 	p.skipWhitespace()
 	return v, nil
 }
 
 type partialParser struct {
-	units []uint16
-	pos   int
+	units         []uint16
+	pos           int
+	depth         int
+	depthExceeded bool
 }
 
 func (p *partialParser) peek() (uint16, bool) {
@@ -328,6 +338,14 @@ func (p *partialParser) parseValue() (*schemaValue, error) {
 	u, ok := p.peek()
 	if !ok {
 		return nil, fmt.Errorf("partial json: unexpected end of input")
+	}
+	if u == '{' || u == '[' {
+		if p.depth >= maxPartialJSONDepth {
+			p.depthExceeded = true
+			return nil, fmt.Errorf("partial json: nesting exceeds %d levels", maxPartialJSONDepth)
+		}
+		p.depth++
+		defer func() { p.depth-- }()
 	}
 	switch u {
 	case '{':

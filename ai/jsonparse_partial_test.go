@@ -1,6 +1,9 @@
 package ai
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // Reference: pi v1.4.0 utils/json-parse.ts parseStreamingJson falls back to the
 // npm partial-json package, which trims the document, completes a keyword
@@ -31,5 +34,16 @@ func TestParseStreamingJSONCompletesPartialLiterals(t *testing.T) {
 		if !equalJSONMaps(got, testCase.want) {
 			t.Errorf("parseStreamingJSONInto(%s) = %#v, want %#v", testCase.raw, got, testCase.want)
 		}
+	}
+}
+
+// The final tool-argument decoder rejects nesting beyond encoding/json's
+// 10,000-level limit. Streaming previews must not bypass that limit through
+// the recursive partial parser and spend unbounded time parsing the same value.
+func TestParseStreamingJSONRejectsExcessiveNesting(t *testing.T) {
+	const depth = 10_001
+	input := `{"a":` + strings.Repeat("[", depth) + "0" + strings.Repeat("]", depth)
+	if got := string(ParseStreamingJSONText(input)); got != "{}" {
+		t.Fatalf("ParseStreamingJSONText at depth %d returned %d bytes, want {}", depth, len(got))
 	}
 }

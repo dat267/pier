@@ -3882,6 +3882,24 @@ candidate on the issuer's origin; the first two candidates already agree. Test:
 the `https://h//x` row in
 `TestBuildAuthorizationServerDiscoveryUrlsNormalizesDotSegments`.
 
+### D325
+
+**Streaming JSON previews stop at the Go JSON decoder's nesting limit.**
+
+Reference: pi v1.4.0 `packages/ai/src/utils/json-parse.ts`
+`parseStreamingJson` falls back to `partial-json` and catches parser errors as
+an empty object. Pier's final tool-argument parser uses Go `encoding/json`,
+which rejects nesting deeper than 10,000 levels; before this bound, the
+recursive streaming fallback accepted such a prefix and the Anthropic stream
+reparsed it after every `input_json_delta`. A single 500 KB, depth-250,000
+synthetic provider argument took 15.69 seconds to parse. The partial parser now
+applies the Go decoder's 10,000-level bound and returns `{}` for deeper
+streaming previews. Completed arguments were already rejected by the final
+decoder. This intentionally changes only previews of arguments that cannot
+pass final decoding, and avoids unbounded recursion/time on provider input.
+
+Test: `TestParseStreamingJSONRejectsExcessiveNesting`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.
