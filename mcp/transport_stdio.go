@@ -344,9 +344,9 @@ func (t *StdioTransport) handleStderr(chunk []byte) {
 // stdin.
 func (t *StdioTransport) Send(ctx context.Context, message Message) error {
 	t.mu.Lock()
-	started, closed, stdin := t.started, t.closed, t.stdin
+	started, closed, child, stdin := t.started, t.closed, t.child, t.stdin
 	t.mu.Unlock()
-	if !started || closed || stdin == nil {
+	if !started || closed || child == nil || stdin == nil {
 		return &protocol.McpConnectionClosedError{}
 	}
 	payload, err := protocol.MarshalJSON(message)
