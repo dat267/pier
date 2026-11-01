@@ -1634,9 +1634,12 @@ filters them out, because `SetActiveToolsByName` owns pier's allowlist
 semantics. The `registerMessageRenderer` for hidden `pi-goal-event` messages is
 not ported (those messages are `display:false`, so the transcript never draws
 them); the `pi-goal` and `pi-goal-turn` entry renderers cover the visible
-cards. The tool cards are multi-line like the built-in ones: `set_goal` shows
-the objective as a wrapped body with a compact created/replaced outcome line,
-and `get_goal` shows state, objective, budget usage and any stop reason, with a
+cards. Durable entries are published as `entry_appended` events after the
+controller unlocks (upstream emits on append), and entry renderers receive the
+entry's payload, so a live transcript draws the goal cards without a reload.
+The tool cards are multi-line like the built-in ones: `set_goal` shows the
+objective as a wrapped body with a compact created/replaced outcome line, and
+`get_goal` shows state, objective, budget usage and any stop reason, with a
 click/expand preview for long text (`internal/goal/render.go`).
 
 Tests: `internal/goal`'s state/machine/command/render suites,
