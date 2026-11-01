@@ -906,7 +906,10 @@ func (t *TreeList) getEntryDisplayText(node *coding.SessionTreeNode, isSelected 
 	case "custom_message":
 		result = theme.Fg("customMessageLabel", "["+entry.CustomType+"]: ") + normalize(t.extractFullContent(entry.Content))
 	case "compaction":
-		tokens := (entry.TokensBefore + 500) / 1000
+		tokens := entry.TokensBefore / 1000
+		if entry.TokensBefore%1000 >= 500 {
+			tokens++
+		}
 		result = theme.Fg("borderAccent", "[compaction: "+itoa(int(tokens))+"k tokens]")
 	case "branch_summary":
 		result = theme.Fg("warning", "[branch summary]: ") + normalize(entry.Summary)

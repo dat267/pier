@@ -130,6 +130,21 @@ func TestTreeSelectorAgainstUpstreamGolden(t *testing.T) {
 	}
 }
 
+func TestTreeSelectorCompactionMaxTokensDoesNotOverflow(t *testing.T) {
+	InitTheme("dark", false)
+	maxInt64 := int64(^uint64(0) >> 1)
+	tokens := maxInt64 / 1000
+	if maxInt64%1000 >= 500 {
+		tokens++
+	}
+	entry := &coding.SessionTreeNode{Entry: coding.SessionEntry{Type: "compaction", TokensBefore: maxInt64}}
+	got := (&TreeList{}).getEntryDisplayText(entry, false)
+	want := "[compaction: " + itoa(int(tokens)) + "k tokens]"
+	if !strings.Contains(got, want) {
+		t.Fatalf("compaction label = %q, want substring %q", got, want)
+	}
+}
+
 // TestTreeSelectorHelpers covers the pure tree helpers.
 func TestTreeSelectorHelpers(t *testing.T) {
 	themes := []string{}
