@@ -1640,7 +1640,9 @@ entry's payload, so a live transcript draws the goal cards without a reload.
 The tool cards are multi-line like the built-in ones: `set_goal` shows the
 objective as a wrapped body with a compact created/replaced outcome line, and
 `get_goal` shows state, objective, budget usage and any stop reason, with a
-click/expand preview for long text (`internal/goal/render.go`).
+click/expand preview for long text (`internal/goal/render.go`). Goal cards leave
+a blank line between their title and body, and creation tool cards separate
+the objective from the outcome with a blank line.
 
 Tests: `internal/goal`'s state/machine/command/render suites,
 `coding/goalcontroller_test.go` (effect application, replay, tool exposure,

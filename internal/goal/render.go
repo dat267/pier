@@ -105,6 +105,9 @@ func RenderGoalCard(theme Theme, card GoalCard, expanded bool) *tui.Box {
 	if !expanded && ai.JSLength(body) > 80 {
 		body = TruncateObjective(body, 64) + " (click or expand for full text)"
 	}
+	if body != "" {
+		body = "\n" + body
+	}
 	box.AddChild(tui.NewText(theme.Fg("customMessageText", body), 0, 0, nil))
 	return box
 }
@@ -348,7 +351,8 @@ func RenderSetGoalCreateResult(result SetGoalCreateResult, theme Theme) *tui.Tex
 	if result.Replaced {
 		label = "Goal replaced ✓"
 	}
-	text := theme.Fg(PhaseColor[PhaseActive], label)
+	// Separate the outcome from the objective in the shared tool box.
+	text := "\n" + theme.Fg(PhaseColor[PhaseActive], label)
 	if result.HasGoal {
 		text += theme.Fg("dim", fmt.Sprintf(" · rev %d", result.Revision))
 	}

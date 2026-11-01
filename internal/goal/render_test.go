@@ -59,7 +59,7 @@ func TestRenderGoalCardReturnsABoxWithTwoChildren(t *testing.T) {
 func TestRenderGoalCardTruncatesAndHints(t *testing.T) {
 	long := strings.Repeat("a", 200)
 	card := RenderGoalCard(stubTheme{}, GoalCard{Label: "test", Body: long}, false)
-	rendered := strings.TrimRight(renderLines(card.Children[1], 500), "\n")
+	rendered := strings.TrimSpace(renderLines(card.Children[1], 500))
 	if !strings.Contains(rendered, "click or expand for full text") {
 		t.Fatalf("missing hint: %q", rendered)
 	}
@@ -71,8 +71,8 @@ func TestRenderGoalCardTruncatesAndHints(t *testing.T) {
 func TestRenderGoalCardShowsCompleteBodyWhenExpanded(t *testing.T) {
 	long := strings.Repeat("a", 200)
 	card := RenderGoalCard(stubTheme{}, GoalCard{Label: "test", Body: long}, true)
-	rendered := strings.TrimRight(renderLines(card.Children[1], 500), "\n")
-	if rendered != long {
+	rendered := joinTrimmed(card.Children[1], 500)
+	if rendered != "\n"+long {
 		t.Fatalf("got %q", rendered)
 	}
 }
