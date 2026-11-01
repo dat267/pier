@@ -256,6 +256,16 @@ func TestTranscriptNotices(t *testing.T) {
 	if !strings.Contains(lines, "Cache miss after 10m idle") {
 		t.Fatalf("idle notice = %q", lines)
 	}
+	maxInt64 := int64(^uint64(0) >> 1)
+	minutes := maxInt64 / 60000
+	if maxInt64%60000 >= 30000 {
+		minutes++
+	}
+	renderer.AddCacheMissNotice(coding.CacheMiss{MissedTokens: 30000, MissedCost: 0.5, IdleMs: maxInt64})
+	lines = strings.Join(renderChat(t, renderer.Chat), "\n")
+	if !strings.Contains(lines, "Cache miss after "+itoa(int(minutes))+"m idle") {
+		t.Fatalf("far-future idle notice = %q", lines)
+	}
 
 	// Compaction cost notices.
 	renderer.AddCompactionCostNotice(CompactionCostNotice{Kind: "compaction", Usage: ai.Usage{

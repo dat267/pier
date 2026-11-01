@@ -938,7 +938,11 @@ func (r *TranscriptRenderer) AddCacheMissNotice(miss coding.CacheMiss) {
 	if miss.ModelChanged {
 		label = "Cache miss after model switch"
 	} else if miss.IdleMs >= coding.CacheTTLMs {
-		label = "Cache miss after " + itoa(int((miss.IdleMs+30000)/60000)) + "m idle"
+		minutes := miss.IdleMs / 60000
+		if miss.IdleMs%60000 >= 30000 {
+			minutes++
+		}
+		label = "Cache miss after " + itoa(int(minutes)) + "m idle"
 	}
 	theme := ActiveTheme()
 	r.Chat.AddChild(tui.NewSpacer(1))
