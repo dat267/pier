@@ -193,7 +193,7 @@ func buildJS(typescript bool) *Language {
 
 	attrName := Zero(Mode{ClassName: "attr", Begin: jsIdentRe})
 	attrName.beforeBegin = func(m *match, resp *Response) {
-		if !jsAttrNameGuard.MatchString(m.input[m.index+len(m.lexeme):]) {
+		if !jsAttrNameGuard.MatchStringWS(m.input[m.index+len(m.lexeme):], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}
@@ -202,7 +202,7 @@ func buildJS(typescript bool) *Language {
 		Contains: []*Mode{attrName},
 	})
 	objectAttr.beforeBegin = func(m *match, resp *Response) {
-		if !jsObjectAttrGuard.MatchString(m.input[m.index+len(m.lexeme):]) {
+		if !jsObjectAttrGuard.MatchStringWS(m.input[m.index+len(m.lexeme):], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}
@@ -317,7 +317,7 @@ func buildJS(typescript bool) *Language {
 		},
 	}
 	getSet.beforeBegin = func(m *match, resp *Response) {
-		if !jsGetSetGuard.MatchString(m.input[m.index+len(m.lexeme):]) {
+		if !jsGetSetGuard.MatchStringWS(m.input[m.index+len(m.lexeme):], m.jsLines) {
 			resp.IgnoreMatch()
 		}
 	}

@@ -41,6 +41,9 @@ type match struct {
 	input     string
 	position  int
 	groupBase int
+	// jsLines is the document's line-terminator class, already derived by the
+	// highlighter, so callbacks can match a guard without rescanning the tail.
+	jsLines bool
 }
 
 // group returns the matched rule's capture group i, or "" when it did not
@@ -292,16 +295,16 @@ func (m *multiRegex) execDispatch(s string, lastIndex int, jsLines bool, ws *jsW
 		if sub := m.subMatcher(b); sub != nil {
 			if search == 0 {
 				if loc := sub.matcherRe.findSubmatchWS(s, jsLines, ws); loc != nil {
-					regexMatch = sub.buildMatch(s, 0, loc)
+					regexMatch = sub.buildMatch(s, 0, loc, jsLines)
 				}
 			} else if sub.prefixedRe != nil {
 				_, width := utf8.DecodeLastRuneInString(s[:search])
 				base := search - width
 				if loc := sub.prefixedRe.findSubmatchWS(s[base:], jsLines, ws); loc != nil {
-					regexMatch = sub.buildMatch(s, base, loc)
+					regexMatch = sub.buildMatch(s, base, loc, jsLines)
 				}
 			} else if loc := sub.matcherRe.findSubmatchWS(s[search:], jsLines, ws); loc != nil {
-				regexMatch = sub.buildMatch(s, search, loc)
+				regexMatch = sub.buildMatch(s, search, loc, jsLines)
 			}
 		}
 		for i := range m.manualByByte[b] {
@@ -314,6 +317,7 @@ func (m *multiRegex) execDispatch(s string, lastIndex int, jsLines bool, ws *jsW
 					rule:     mr.data.rule,
 					input:    s,
 					position: mr.data.position,
+					jsLines:  jsLines,
 				}
 				break
 			}
@@ -384,11 +388,12 @@ func (m *multiRegex) execScan(s string, lastIndex int, jsLines bool, ws *jsWorks
 				rule:     manualHit.data.rule,
 				input:    s,
 				position: manualHit.data.position,
+				jsLines:  jsLines,
 			}
 		}
 		if regexAbs >= 0 {
 			if !m.verifyStart || regexAbs == 0 {
-				regexMatch = m.buildMatch(s, search, regexLoc)
+				regexMatch = m.buildMatch(s, search, regexLoc, jsLines)
 			} else if m.prefixedRe != nil {
 				// Rebuild the match from the prefixed result: the leading wildcard
 				// consumes the real preceding byte, so `^`/`\b` are evaluated in
@@ -398,7 +403,7 @@ func (m *multiRegex) execScan(s string, lastIndex int, jsLines bool, ws *jsWorks
 				_, width := utf8.DecodeLastRuneInString(s[:regexAbs])
 				base := regexAbs - width
 				if vloc := m.prefixedRe.findSubmatchWS(s[base:], jsLines, ws); vloc != nil && vloc[0] == 0 {
-					regexMatch = m.buildMatch(s, base, vloc)
+					regexMatch = m.buildMatch(s, base, vloc, jsLines)
 				}
 			}
 			if regexMatch == nil {
@@ -429,7 +434,7 @@ func (m *multiRegex) execScan(s string, lastIndex int, jsLines bool, ws *jsWorks
 }
 
 // buildMatch builds a match from a submatch result relative to base.
-func (m *multiRegex) buildMatch(s string, base int, loc []int) *match {
+func (m *multiRegex) buildMatch(s string, base int, loc []int, jsLines bool) *match {
 	group := 1
 	for ; group < len(loc)/2; group++ {
 		if loc[2*group] >= 0 {
@@ -462,6 +467,7 @@ func (m *multiRegex) buildMatch(s string, base int, loc []int) *match {
 		input:     s,
 		position:  data.position,
 		groupBase: group,
+		jsLines:   jsLines,
 	}
 }
 
