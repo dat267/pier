@@ -115,6 +115,19 @@ func parseInline(src string, state *inlineState) []Inline {
 		return i + length, Inline{Kind: InlineLink, Text: text, Dest: dest, Children: []Inline{{Kind: InlineText, Text: text}}}, true
 	}
 
+	// A link needs "](" after its opener and a later ")" to close the target.
+	// Rejecting candidates without one keeps a long run of unmatched `[` linear
+	// instead of rescanning the tail for every character (M23).
+	linkOpen, linkClose, scannedLinks := -1, -1, false
+	linkCandidate := func(i int) bool {
+		if !scannedLinks {
+			scannedLinks = true
+			linkOpen = strings.LastIndex(src, "](")
+			linkClose = strings.LastIndexByte(src, ')')
+		}
+		return linkOpen >= i+1 && linkClose > linkOpen+1
+	}
+
 	i := 0
 	for i < len(src) {
 		if text.Len() > 0 {
@@ -230,7 +243,7 @@ func parseInline(src string, state *inlineState) []Inline {
 			text.WriteString(src[i:end])
 			i = end
 		case '!':
-			if i+1 < len(src) && src[i+1] == '[' {
+			if i+1 < len(src) && src[i+1] == '[' && linkCandidate(i+1) {
 				if inline, consumed, ok := parseLink(src, i, true, state); ok {
 					flush()
 					out = append(out, inline)
@@ -241,11 +254,13 @@ func parseInline(src string, state *inlineState) []Inline {
 			text.WriteByte(c)
 			i++
 		case '[':
-			if inline, consumed, ok := parseLink(src, i, false, state); ok {
-				flush()
-				out = append(out, inline)
-				i = consumed
-				continue
+			if linkCandidate(i) {
+				if inline, consumed, ok := parseLink(src, i, false, state); ok {
+					flush()
+					out = append(out, inline)
+					i = consumed
+					continue
+				}
 			}
 			text.WriteByte(c)
 			i++

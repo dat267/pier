@@ -50,6 +50,7 @@ are recorded with the corresponding changes and regression tests.
 | HTML generation, 2 MiB prompt (allocated bytes) | 36.8 MB | 28.6 MB | Insert base64 session payload after fixed assets |
 | Cold first interactive frame | 63.06 ms | 49.21 ms | Warm-filesystem tmux median |
 | Resume 56 MB session | 174.74 ms | 147.98 ms | Warm-filesystem tmux median |
+| Inline parse, 32 KB unmatched brackets | 748.7 ms | 0.57 ms | Reject impossible links before the tail scan |
 
 Startup timings used a warm filesystem with network and MCP disabled; they are
 not additive guarantees. Catalog and replay optimizations retain allocation and
