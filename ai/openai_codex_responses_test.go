@@ -222,6 +222,15 @@ func TestParseCodexErrorResponse(t *testing.T) {
 	}
 }
 
+// pi v1.4.0 openai-codex-responses.ts computes reset minutes with JavaScript
+// Number arithmetic; a large finite reset timestamp must not wrap to zero.
+func TestParseCodexErrorResponseLargeResetTimestampDoesNotWrap(t *testing.T) {
+	info := ParseCodexErrorResponse(http.StatusTooManyRequests, "Too Many Requests", `{"error":{"code":"usage_limit_reached","resets_at":9223372036854775807}}`)
+	if !strings.Contains(info.FriendlyMessage, "Try again in ~") || strings.Contains(info.FriendlyMessage, "Try again in ~0 min.") {
+		t.Fatalf("friendly message = %q, want positive future reset delay", info.FriendlyMessage)
+	}
+}
+
 func jsonNumber(value int64) string {
 	encoded, _ := json.Marshal(value)
 	return string(encoded)

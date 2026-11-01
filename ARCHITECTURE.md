@@ -3972,6 +3972,18 @@ interpreting a wrapped nonpositive value as no timeout.
 
 Test: `TestMcpServerTimeoutMsClampsConfiguredSeconds`.
 
+### D331
+
+**Codex error reset estimates avoid int64 timestamp multiplication overflow.**
+
+Reference: pi v1.4.0 `packages/ai/src/api/openai-codex-responses.ts` computes
+reset minutes from `resets_at * 1000 - Date.now()` using JavaScript Numbers.
+Pier preserves its existing int64 formatting for ordinary timestamps and uses
+JavaScript-number arithmetic/stringification only when a positive reset time
+exceeds int64 milliseconds, preventing far-future waits from wrapping to zero.
+
+Test: `TestParseCodexErrorResponseLargeResetTimestampDoesNotWrap`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

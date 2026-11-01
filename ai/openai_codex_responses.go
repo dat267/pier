@@ -275,8 +275,8 @@ func ParseCodexErrorResponse(status int, statusText, raw string) CodexErrorRespo
 			}
 			when := ""
 			if err.ResetsAt != nil {
-				mins := max((*err.ResetsAt*1000-time.Now().UnixMilli())/60000, 0)
-				when = fmt.Sprintf(" Try again in ~%d min.", mins)
+				mins := codexResetWaitMinutes(*err.ResetsAt, time.Now().UnixMilli())
+				when = fmt.Sprintf(" Try again in ~%s min.", mins)
 			}
 			friendly = strings.TrimSpace(fmt.Sprintf("You have hit your ChatGPT usage limit%s.%s", plan, when))
 		}
@@ -287,6 +287,20 @@ func ParseCodexErrorResponse(status int, statusText, raw string) CodexErrorRespo
 		}
 	}
 	return CodexErrorResponse{Message: message, FriendlyMessage: friendly}
+}
+
+// codexResetWaitMinutes converts a reset timestamp to the user-facing minute
+// estimate. D331: use JS-number arithmetic only when seconds-to-ms exceeds int64.
+func codexResetWaitMinutes(resetsAt, nowUnixMillis int64) string {
+	if resetsAt <= 0 {
+		return "0"
+	}
+	if resetsAt > math.MaxInt64/1000 {
+		minutes := math.Max(0, math.Round((float64(resetsAt)*1000-float64(nowUnixMillis))/60000))
+		return JSNumberToString(minutes)
+	}
+	minutes := max((resetsAt*1000-nowUnixMillis)/60000, 0)
+	return strconv.FormatInt(minutes, 10)
 }
 
 // codexUsageLimitPattern matches the usage-limit error codes.
