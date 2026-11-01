@@ -5,6 +5,7 @@ import (
 	"errors"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/dat267/pier/ai"
@@ -286,13 +287,12 @@ func (w *ModelWiring) ShowModelsSelector(ctx context.Context) {
 	}
 
 	w.Slot.Show(func(done func()) CreatedSelector {
-		disposed := false
-		timedOut := false
+		var disposed, timedOut atomic.Bool
 		refreshCtx, cancel := context.WithCancel(ctx)
 		var cancelTimer func()
 		if w.ScheduleTimer != nil {
 			cancelTimer = w.ScheduleTimer(15000, func() {
-				timedOut = true
+				timedOut.Store(true)
 				cancel()
 			})
 		}
@@ -331,14 +331,14 @@ func (w *ModelWiring) ShowModelsSelector(ctx context.Context) {
 
 		go func() {
 			result, err := RefreshModelCatalogs(refreshCtx, w.Session.ModelRuntime())
-			if disposed {
+			if disposed.Load() {
 				return
 			}
 			snapshot := w.Session.ModelRuntime().GetAvailableSnapshot()
 			// Mutations of the selector and the captured state are marshaled
 			// onto the UI side: serialized with renders and input.
 			w.UI.Post(func() {
-				if disposed {
+				if disposed.Load() {
 					return
 				}
 				availableModels = snapshot
@@ -358,11 +358,11 @@ func (w *ModelWiring) ShowModelsSelector(ctx context.Context) {
 				switch {
 				case err != nil:
 					message := "Could not refresh model catalogs: " + err.Error()
-					if timedOut {
+					if timedOut.Load() {
 						message = "Model refresh timed out; showing cached models."
 					}
 					selector.SetRefreshStatus(message, "warning")
-				case result.Aborted && timedOut:
+				case result.Aborted && timedOut.Load():
 					selector.SetRefreshStatus("Model refresh timed out; showing cached models.", "warning")
 				case len(result.Errors) > 0:
 					providers := make([]string, 0, len(result.Errors))
@@ -381,7 +381,7 @@ func (w *ModelWiring) ShowModelsSelector(ctx context.Context) {
 		return CreatedSelector{
 			Component: selector, Focus: selector,
 			Dispose: func() {
-				disposed = true
+				disposed.Store(true)
 				if cancelTimer != nil {
 					cancelTimer()
 				}
