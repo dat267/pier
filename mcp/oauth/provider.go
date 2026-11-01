@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"maps"
+	"math"
 	"net"
 	"slices"
 	"strings"
@@ -332,10 +333,23 @@ func (p *McpOAuthProvider) SaveTokens(ctx context.Context, tokens *OAuthTokens) 
 		if tokens.ExpiresIn == nil {
 			next.TokensExpireAt = nil
 		} else {
-			expire := time.Now().UnixMilli() + int64(*tokens.ExpiresIn*1000)
+			expire := mcpOAuthExpiryUnixMillis(time.Now().UnixMilli(), *tokens.ExpiresIn)
 			next.TokensExpireAt = &expire
 		}
 	})
+}
+
+// mcpOAuthExpiryUnixMillis stores the JS-style token expiry in Go's int64 range.
+// D328: saturate extreme lifetimes so far-future/past expiries do not wrap across zero.
+func mcpOAuthExpiryUnixMillis(nowUnixMillis int64, expiresInSeconds float64) int64 {
+	expiresAt := float64(nowUnixMillis) + expiresInSeconds*1000
+	if math.IsNaN(expiresAt) || expiresAt >= float64(math.MaxInt64) {
+		return math.MaxInt64
+	}
+	if expiresAt <= float64(math.MinInt64) {
+		return math.MinInt64
+	}
+	return int64(expiresAt)
 }
 
 // RedirectToAuthorization hands the authorization URL to the application

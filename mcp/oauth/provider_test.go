@@ -3,6 +3,7 @@ package oauth
 import (
 	"context"
 	"encoding/json"
+	"math"
 	"testing"
 )
 
@@ -87,6 +88,27 @@ func TestMemoryOAuthStateStoreIsolatesDiscoveryDocuments(t *testing.T) {
 				t.Error("protected-resource discovery document aliases caller-owned data")
 			}
 		})
+	}
+}
+
+// pi v1.4.0 mcp/src/oauth/provider.ts computes Date.now() + expires_in * 1000;
+// the stored int64 timestamp must preserve a far-future expiry instead of wrapping.
+func TestMcpOAuthProviderSaturatesLargeTokenExpiry(t *testing.T) {
+	store := &MemoryOAuthStateStore{}
+	provider := NewMcpOAuthProvider(McpOAuthProviderOptions{
+		ServerURL: "https://example.invalid/mcp", RedirectURL: "http://127.0.0.1/callback", Store: store,
+		OnRedirect: func(context.Context, string) error { return nil },
+	})
+	expiresIn := float64(1e16)
+	if err := provider.SaveTokens(context.Background(), &OAuthTokens{AccessToken: "token", ExpiresIn: &expiresIn}); err != nil {
+		t.Fatal(err)
+	}
+	state, err := store.Load(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.TokensExpireAt == nil || *state.TokensExpireAt != math.MaxInt64 {
+		t.Fatalf("tokensExpireAt = %v, want saturated far-future expiry", state.TokensExpireAt)
 	}
 }
 

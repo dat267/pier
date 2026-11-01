@@ -3932,6 +3932,19 @@ appear fresh.
 
 Test: `TestFederationTokenCacheLargeRefreshBackoffDoesNotReuseExpiredToken`.
 
+### D328
+
+**MCP OAuth token expiry saturates at int64 Unix-millisecond bounds.**
+
+Reference: pi v1.4.0 `packages/mcp/src/oauth/provider.ts` computes
+`Date.now() + expires_in * 1000` using JavaScript Numbers. Pier persists
+`TokensExpireAt` as int64 Unix milliseconds. `SaveTokens` preserves ordinary
+expiry arithmetic but saturates at int64 bounds when a finite lifetime cannot
+be represented, keeping far-future and far-past tokens from wrapping across
+zero.
+
+Test: `TestMcpOAuthProviderSaturatesLargeTokenExpiry`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.
