@@ -15,7 +15,7 @@ import (
 // output, while the Go transcript skips children with unchanged revisions.
 func TestGoalEntryClickUpdatesTranscript(t *testing.T) {
 	_ = newRendererTestTheme(t)
-	objective := strings.Repeat("acceptance criteria ", 12) + "verification finished"
+	objective := strings.TrimSpace(strings.Repeat("acceptance criterion line\n", 7)) + "verification finished"
 	data, err := json.Marshal(goal.GoalChangeEntry{
 		Operation: goal.OpCreate,
 		Goal: &goal.GoalSnapshot{ID: "g1", Revision: 1, Phase: goal.PhaseActive,
@@ -51,7 +51,7 @@ func TestGoalEntryClickUpdatesTranscript(t *testing.T) {
 // entry renderers. Exercise clicks through the same cached transcript boundary.
 func TestGoalToolClicksUpdateTranscript(t *testing.T) {
 	_ = newRendererTestTheme(t)
-	objective := strings.Repeat("acceptance criteria ", 12) + "verification finished"
+	objective := strings.TrimSpace(strings.Repeat("acceptance criterion line\n", 7)) + "verification finished"
 	for _, test := range []struct {
 		name    string
 		args    any

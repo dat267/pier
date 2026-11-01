@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dat267/pier/coding"
 	"github.com/dat267/pier/internal/goal"
 	"github.com/dat267/pier/tui"
 )
@@ -56,7 +57,7 @@ func TestGoalTurnEntryRendererRendersFlatLine(t *testing.T) {
 func TestGoalEntryCardTogglesOnLeftClick(t *testing.T) {
 	theme := newRendererTestTheme(t)
 	renderer := GoalEntryRenderer(goal.GoalCustomType)
-	objective := "complete the goal objective with all acceptance criteria and include all necessary verification steps"
+	objective := strings.TrimSpace(strings.Repeat("complete the goal objective with all acceptance criteria.\n", 7))
 	data, _ := json.Marshal(goal.GoalChangeEntry{
 		Operation: goal.OpCreate,
 		Goal:      &goal.GoalSnapshot{ID: "g1", Revision: 1, Objective: objective, Phase: goal.PhaseActive, CreatedAt: 1, UpdatedAt: 1},
@@ -69,14 +70,14 @@ func TestGoalEntryCardTogglesOnLeftClick(t *testing.T) {
 	if !ok {
 		t.Fatal("goal card must be clickable")
 	}
-	if collapsed := strings.Join(component.Render(200), "\n"); !strings.Contains(collapsed, "expand for full text") || strings.Contains(collapsed, objective) {
+	if collapsed := strings.Join(component.Render(200), "\n"); !strings.Contains(collapsed, "expand for full text") || strings.Contains(collapsed, "all acceptance criteria.\n") {
 		t.Fatalf("collapsed card = %q", collapsed)
 	}
 	handled := handler.HandleMouse(tui.TuiMouseEvent{Type: tui.MouseClick, Button: tui.MouseButtonLeft, X: 2, Y: 1})
 	if handled == nil || !handled.Handled {
 		t.Fatal("left click must be handled")
 	}
-	if expanded := strings.Join(component.Render(200), "\n"); !strings.Contains(expanded, objective) {
+	if expanded := coding.StripAnsi(strings.Join(component.Render(200), "\n")); !strings.Contains(strings.Join(strings.Fields(expanded), " "), strings.Join(strings.Fields(objective), " ")) {
 		t.Fatalf("expanded card = %q", expanded)
 	}
 }

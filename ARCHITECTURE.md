@@ -1646,6 +1646,11 @@ the objective from the outcome with a blank line. Handled mouse events mark
 the custom-entry wrapper dirty, so renderer-local expand/collapse changes
 invalidate its revision and repaint in the cached transcript.
 
+A collapsed goal card is capped by lines, not characters: the same five-line
+preview the shell card uses, followed by `... (N more lines, click or expand for
+full text)`. One long line is shown whole, and a collapsed preview keeps its
+first lines as written instead of flattening them.
+
 A successful objective `set_goal` action shows one tool card, rather than also
 showing its durable create and replacement-clear cards. This user-requested
 presentation difference matches the result's goal ID to the create card and,

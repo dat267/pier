@@ -38,9 +38,10 @@ func TestExpandedGoalCardsKeepLineBreaks(t *testing.T) {
 		t.Fatalf("expanded get_goal card flattened the objective lines: %q", get)
 	}
 
-	// The collapsed card still flattens to a single preview line.
+	// A collapsed card keeps its first lines as written; only past the line cap
+	// does it hide the rest behind the expansion hint (D223).
 	collapsed := joinTrimmed(RenderSetGoalRenderCall(objective, stubTheme{}, false), 200)
-	if strings.Contains(collapsed, "Ship the renderer\n") || !strings.Contains(collapsed, "Ship the renderer with two acceptance lines and a verification step") {
+	if !strings.Contains(collapsed, objective) || strings.Contains(collapsed, "click or expand") {
 		t.Fatalf("collapsed create card = %q", collapsed)
 	}
 }

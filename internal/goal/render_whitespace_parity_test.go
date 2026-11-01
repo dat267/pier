@@ -12,8 +12,9 @@ func TestGoalCallCardsPreserveNonJSWhitespace(t *testing.T) {
 	if want := "Set goal → blocked\n\n\u0085reason\u0085"; text != want {
 		t.Errorf("expanded reason=%q, want %q", text, want)
 	}
-	text = RenderSetGoalRenderCall("\u0085"+strings.Repeat("x", 159)+"\u0085", stubTheme{}, false).Text()
-	if !strings.Contains(text, "click or expand") {
-		t.Errorf("missing expansion hint for a 161-unit objective: %q", text)
+	objective := strings.TrimSpace(strings.Repeat("line\n", 7))
+	text = RenderSetGoalRenderCall(objective, stubTheme{}, false).Text()
+	if !strings.Contains(text, "(2 more lines") || !strings.Contains(text, "click or expand") {
+		t.Errorf("missing line-count expansion hint: %q", text)
 	}
 }

@@ -57,14 +57,14 @@ func TestRenderGoalCardReturnsABoxWithTwoChildren(t *testing.T) {
 }
 
 func TestRenderGoalCardTruncatesAndHints(t *testing.T) {
-	long := strings.Repeat("a", 200)
-	card := RenderGoalCard(stubTheme{}, GoalCard{Label: "test", Body: long}, false)
+	body := strings.Join([]string{"line 1", "line 2", "line 3", "line 4", "line 5", "line 6", "line 7"}, "\n")
+	card := RenderGoalCard(stubTheme{}, GoalCard{Label: "test", Body: body}, false)
 	rendered := strings.TrimSpace(renderLines(card.Children[1], 500))
-	if !strings.Contains(rendered, "click or expand for full text") {
+	if !strings.Contains(rendered, "(2 more lines, click or expand for full text)") {
 		t.Fatalf("missing hint: %q", rendered)
 	}
-	if len(rendered) >= len(long) {
-		t.Fatalf("not truncated: %q", rendered)
+	if strings.Contains(rendered, "line 6") || strings.Contains(rendered, "line 7") {
+		t.Fatalf("lines past the cap shown: %q", rendered)
 	}
 }
 
@@ -172,7 +172,7 @@ func TestToolRenderers(t *testing.T) {
 }
 
 func TestCreateGoalCallFrameExpands(t *testing.T) {
-	objective := strings.Repeat("Create a long goal with every acceptance criterion and verification step. ", 4)
+	objective := strings.TrimSpace(strings.Repeat("Create a long goal with every acceptance criterion and verification step.\n", 7))
 	collapsed := flatten(RenderSetGoalRenderCall(objective, stubTheme{}, false), 200)
 	if !strings.Contains(collapsed, "click or expand") || strings.Contains(collapsed, strings.Join(strings.Fields(objective), " ")) {
 		t.Fatalf("collapsed frame: %q", collapsed)
@@ -202,7 +202,7 @@ func TestCreateGoalCallFrameIsMultiline(t *testing.T) {
 }
 
 func TestUpdateGoalCallFrameExpands(t *testing.T) {
-	reason := strings.Repeat("The external dependency is unavailable and the task cannot proceed. ", 4)
+	reason := strings.TrimSpace(strings.Repeat("The external dependency is unavailable and the task cannot proceed.\n", 7))
 	collapsed := flatten(RenderSetGoalStatusRenderCall("blocked", reason, stubTheme{}, false), 200)
 	if !strings.Contains(collapsed, "click or expand") || strings.Contains(collapsed, strings.Join(strings.Fields(reason), " ")) {
 		t.Fatalf("collapsed frame: %q", collapsed)
@@ -241,7 +241,7 @@ func TestGetGoalResultIsMultiline(t *testing.T) {
 		t.Fatalf("expected one line per detail, got %q", lines)
 	}
 	// A long objective is previewed with the expand hint, and expanding shows it.
-	long := strings.Repeat("objective sentence ", 20)
+	long := strings.TrimSpace(strings.Repeat("objective sentence\n", 20))
 	longGoal := GoalView{GoalSnapshot: GoalSnapshot{Revision: 1, Objective: long, Phase: PhaseActive}, Armed: true}
 	collapsed := flatten(RenderGetGoalRenderResult(&longGoal, stubTheme{}, false), 80)
 	if strings.Contains(collapsed, strings.Join(strings.Fields(long), " ")) || !strings.Contains(collapsed, "click or expand") {
@@ -269,7 +269,7 @@ func TestSetGoalCreateResultReportsOutcome(t *testing.T) {
 }
 
 func TestClickToExpandTogglesOnLeftClick(t *testing.T) {
-	objective := "complete the goal objective with all acceptance criteria and include all necessary verification steps"
+	objective := strings.TrimSpace(strings.Repeat("complete the goal objective with all acceptance criteria.\n", 7))
 	render := func(expanded bool) tui.Component {
 		return RenderGoalChangeEntry(GoalChangeEntry{
 			Operation: OpCreate,
@@ -289,7 +289,7 @@ func TestClickToExpandTogglesOnLeftClick(t *testing.T) {
 		t.Fatal("left click must be handled")
 	}
 	expanded := renderLines(frame, 300)
-	if !strings.Contains(expanded, objective) {
+	if !strings.Contains(strings.Join(strings.Fields(expanded), " "), strings.Join(strings.Fields(objective), " ")) {
 		t.Fatalf("expected expanded frame: %q", expanded)
 	}
 }

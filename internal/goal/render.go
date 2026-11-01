@@ -102,8 +102,12 @@ func RenderGoalCard(theme Theme, card GoalCard, expanded bool) *tui.Box {
 	}
 	box.AddChild(tui.NewText(label, 0, 0, nil))
 	body := card.Body
-	if !expanded && ai.JSLength(body) > 80 {
-		body = TruncateObjective(body, 64) + " (click or expand for full text)"
+	if !expanded {
+		preview, hidden := goalPreview(body, false)
+		body = preview
+		if hidden > 0 {
+			body += goalHiddenHint(hidden)
+		}
 	}
 	if body != "" {
 		body = "\n" + body
@@ -210,22 +214,33 @@ func RenderGetGoalRenderCall(theme Theme) *tui.Text {
 	return tui.NewText(theme.Fg("toolTitle", "Get goal"), 0, 0, nil)
 }
 
-// goalPreviewChars is the collapsed body budget for an objective or blocker.
-// The body wraps at the card width, so this is roughly two or three lines.
-const goalPreviewChars = 160
+// goalPreviewLines is the collapsed body height for an objective or blocker: a
+// card shows this many lines and how many it hides, like the shell preview.
+// The cap counts lines, not characters, so one long line is shown whole.
+const goalPreviewLines = 5
 
-// goalPreview flattens goal text for a collapsed card and reports whether
-// anything was cut so the card can offer the expand hint. An expanded card
-// keeps the text as written, including its own line structure.
-func goalPreview(text string, expanded bool) (shown string, truncated bool) {
-	if expanded {
-		return text, false
+// goalPreview returns the text a collapsed card shows and the number of lines
+// it hides. An expanded card keeps the text as written, including its own line
+// structure; a collapsed one keeps its first lines unmangled rather than
+// flattening them into a summary.
+func goalPreview(text string, expanded bool) (shown string, hidden int) {
+	trimmed := ai.JSTrim(text)
+	if expanded || trimmed == "" {
+		return trimmed, 0
 	}
-	normalized := ai.JSTrim(goalWhitespace.ReplaceAllString(text, " "))
-	if ai.JSLength(normalized) <= goalPreviewChars {
-		return normalized, false
+	lines := strings.Split(trimmed, "\n")
+	if len(lines) <= goalPreviewLines {
+		return trimmed, 0
 	}
-	return TruncateObjective(normalized, goalPreviewChars), true
+	return strings.Join(lines[:goalPreviewLines], "\n"), len(lines) - goalPreviewLines
+}
+
+// goalHiddenHint is the hidden-line note under a collapsed preview, in the
+// shell card's "... (N earlier lines, ...)" shape. It names both ways to expand
+// instead of the shell's keybinding-only hint, because a goal card opens on a
+// click as well as on the expand key.
+func goalHiddenHint(hidden int) string {
+	return fmt.Sprintf("\n... (%d more lines, click or expand for full text)", hidden)
 }
 
 // RenderGetGoalRenderResult is the get_goal result card: the state line, then
@@ -245,10 +260,10 @@ func RenderGetGoalRenderResult(goal *GoalView, theme Theme, expanded bool) *tui.
 	}
 	lines := []string{theme.Fg(stateColor, state)}
 
-	objective, truncated := goalPreview(goal.Objective, expanded)
+	objective, hidden := goalPreview(goal.Objective, expanded)
 	lines = append(lines, theme.Fg("toolOutput", objective))
-	if truncated {
-		lines = append(lines, theme.Fg("muted", "(click or expand for full objective)"))
+	if hidden > 0 {
+		lines = append(lines, theme.Fg("muted", ai.JSTrim(goalHiddenHint(hidden))))
 	}
 	if goal.Budget != nil {
 		elapsed := time.Now().UnixMilli() - goal.CreatedAt
@@ -267,15 +282,15 @@ func RenderGetGoalRenderResult(goal *GoalView, theme Theme, expanded bool) *tui.
 // RenderSetGoalRenderCall is the set_goal call card when an objective is set:
 // a title line and the objective as a wrapped body, like the write card.
 func RenderSetGoalRenderCall(objective string, theme Theme, expanded bool) *tui.Text {
-	shown, truncated := goalPreview(objective, expanded)
+	shown, hidden := goalPreview(objective, expanded)
 	if shown == "" {
 		// Streaming arguments carry no objective yet; show a placeholder like
 		// the shell card does instead of an empty body.
 		shown = "…"
 	}
 	text := theme.Fg("toolTitle", theme.Bold("Set goal")) + "\n\n" + theme.Fg("toolOutput", shown)
-	if truncated {
-		text += theme.Fg("muted", "\n(click or expand for full objective)")
+	if hidden > 0 {
+		text += theme.Fg("muted", goalHiddenHint(hidden))
 	}
 	return tui.NewText(text, 0, 0, nil)
 }
@@ -290,10 +305,10 @@ func RenderSetGoalStatusRenderCall(action, blockedReason string, theme Theme, ex
 		text += theme.Fg("toolTitle", action)
 	}
 	if blockedReason != "" {
-		shown, truncated := goalPreview(blockedReason, expanded)
+		shown, hidden := goalPreview(blockedReason, expanded)
 		text += "\n\n" + theme.Fg("toolOutput", shown)
-		if truncated {
-			text += theme.Fg("muted", "\n(click or expand for full reason)")
+		if hidden > 0 {
+			text += theme.Fg("muted", goalHiddenHint(hidden))
 		}
 	}
 	return tui.NewText(text, 0, 0, nil)
