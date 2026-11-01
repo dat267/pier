@@ -211,11 +211,15 @@ func RenderGetGoalRenderCall(theme Theme) *tui.Text {
 // The body wraps at the card width, so this is roughly two or three lines.
 const goalPreviewChars = 160
 
-// goalPreview trims a single-line goal text for a collapsed card, reporting
-// whether anything was cut so the card can offer the expand hint.
+// goalPreview flattens goal text for a collapsed card and reports whether
+// anything was cut so the card can offer the expand hint. An expanded card
+// keeps the text as written, including its own line structure.
 func goalPreview(text string, expanded bool) (shown string, truncated bool) {
+	if expanded {
+		return text, false
+	}
 	normalized := ai.JSTrim(goalWhitespace.ReplaceAllString(text, " "))
-	if expanded || ai.JSLength(normalized) <= goalPreviewChars {
+	if ai.JSLength(normalized) <= goalPreviewChars {
 		return normalized, false
 	}
 	return TruncateObjective(normalized, goalPreviewChars), true
