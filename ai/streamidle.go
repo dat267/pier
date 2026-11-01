@@ -274,6 +274,34 @@ func DoProviderRequestWithAbortSignalTimeoutAndIdle(req *http.Request, timeoutMS
 	return DoProviderRequestWithSDKTimeoutAndIdle(req, timeoutMS, idleTimeoutMS)
 }
 
+// doClassifierRequest keeps a fetch-style timeout active through body consumption.
+// Classifier endpoints parse one JSON response rather than stream it, so the
+// timeout covers headers and all reads while the independent HTTP idle timeout
+// continues to bound silence.
+func doClassifierRequest(req *http.Request, timeoutMS, idleTimeoutMS *int) (*http.Response, error) {
+	if timeoutMS == nil {
+		return DoProviderRequestWithSDKTimeoutAndIdle(req, nil, idleTimeoutMS)
+	}
+	if *timeoutMS < 0 {
+		return nil, fmt.Errorf("Invalid timeoutMs: %d", *timeoutMS)
+	}
+	if int64(*timeoutMS) > maxAbortSignalTimeoutMS {
+		return nil, fmt.Errorf("The value of \"delay\" is out of range. It must be >= 0 && <= %d. Received %d", maxAbortSignalTimeoutMS, *timeoutMS)
+	}
+	ctx, cancel := context.WithTimeout(req.Context(), javascriptTimeoutDuration(int64(*timeoutMS)))
+	var bodyTimeout time.Duration
+	if idleTimeoutMS != nil && *idleTimeoutMS > 0 {
+		bodyTimeout = idleTimeoutDuration(*idleTimeoutMS)
+	}
+	response, err := doProviderRequestWithTimeouts(req.WithContext(ctx), bodyTimeout, bodyTimeout)
+	if err != nil {
+		cancel()
+		return nil, err
+	}
+	response.Body = &cancelOnCloseBody{ReadCloser: response.Body, cancel: cancel}
+	return response, nil
+}
+
 func firstTimeout(primary, fallback *int) *int {
 	if primary != nil {
 		return primary

@@ -79,7 +79,7 @@ func (OpenAIDecisions) Classify(model *Model, classifierContext ClassifierContex
 			request.Header.Set(name, value)
 		}
 		applyProviderHeaders(request.Header, options.Headers)
-		response, err := DoProviderRequestWithAbortSignalTimeoutAndIdle(request, options.TimeoutMs, options.HTTPIdleTimeoutMs)
+		response, err := doClassifierRequest(request, options.TimeoutMs, options.HTTPIdleTimeoutMs)
 		if err != nil {
 			return nil, err
 		}
@@ -112,6 +112,9 @@ func (OpenAIDecisions) Classify(model *Model, classifierContext ClassifierContex
 	defer response.Body.Close()
 	data, err := io.ReadAll(response.Body)
 	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil && options.TimeoutMs != nil {
+			return classifierFail(result, fmt.Errorf("Request timed out after %dms", *options.TimeoutMs), options)
+		}
 		return classifierFail(result, err, options)
 	}
 	var body struct {

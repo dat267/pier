@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 // Reference: pi v1.4.0 packages/ai/test/openai-decisions.test.ts maps the
@@ -489,5 +490,45 @@ func TestOpenAIDecisionsMapsQuestionVariantsAndPricesUsage(t *testing.T) {
 	stop, timestamp, usage := strings.Index(serialized, `"stopReason":"stop"`), strings.Index(serialized, `"timestamp":`), strings.Index(serialized, `"usage":`)
 	if stop < 0 || stop >= timestamp || timestamp >= usage {
 		t.Fatalf("result field order = %s", serialized)
+	}
+}
+
+// pi v1.4.0 classifier-shared.ts keeps AbortSignal.timeout active through
+// response.json(); classifier TimeoutMs is a whole-response deadline, not an
+// idle-between-reads timeout.
+func TestOpenAIDecisionsTimeoutCoversResponseBody(t *testing.T) {
+	const timeoutMS = 100
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		flusher := w.(http.Flusher)
+		flusher.Flush()
+		for range 8 {
+			select {
+			case <-r.Context().Done():
+				return
+			case <-time.After(25 * time.Millisecond):
+			}
+			_, _ = w.Write([]byte(" "))
+			flusher.Flush()
+		}
+		_, _ = w.Write([]byte(`{"answers":[]}`))
+	}))
+	defer server.Close()
+
+	model := &Model{ID: "classifier", API: APIOpenAIDecisions, Provider: "openai", BaseURL: server.URL, Type: "classifier"}
+	zeroRetries := 0
+	timeout := timeoutMS
+	idleTimeout := 2000
+	start := time.Now()
+	result := (OpenAIDecisions{}).Classify(model, ClassifierContext{State: json.RawMessage(`{}`)}, &ClassifierOptions{
+		StreamOptions: StreamOptions{APIKey: "synthetic", MaxRetries: &zeroRetries, TimeoutMs: &timeout, HTTPIdleTimeoutMs: &idleTimeout},
+	})
+	if result.StopReason != ClassifierStopError || result.ErrorMessage == nil ||
+		!strings.Contains(*result.ErrorMessage, "timed out after 100ms") {
+		t.Fatalf("result=%+v elapsed=%v; want whole-response timeout", result, time.Since(start))
+	}
+	if elapsed := time.Since(start); elapsed > time.Second {
+		t.Fatalf("timeout took %v; want prompt cancellation", elapsed)
 	}
 }

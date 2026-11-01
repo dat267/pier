@@ -118,7 +118,7 @@ func classifySystemOne(transport systemOneTransport, model *Model, classifierCon
 			request.Header.Set(name, value)
 		}
 		applyProviderHeaders(request.Header, systemOneRequestHeaders(model, classifierContext.Images, options, transport.sendImageOptInByDefault))
-		response, err := DoProviderRequestWithAbortSignalTimeoutAndIdle(request, options.TimeoutMs, options.HTTPIdleTimeoutMs)
+		response, err := doClassifierRequest(request, options.TimeoutMs, options.HTTPIdleTimeoutMs)
 		if err != nil {
 			return nil, err
 		}
@@ -147,6 +147,9 @@ func classifySystemOne(transport systemOneTransport, model *Model, classifierCon
 	defer response.Body.Close()
 	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil && options.TimeoutMs != nil {
+			return classifierFail(result, fmt.Errorf("Request timed out after %dms", *options.TimeoutMs), options)
+		}
 		return classifierFail(result, err, options)
 	}
 	responseFields, err := parseSystemOneResponse(responseBody, transport)
