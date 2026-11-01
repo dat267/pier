@@ -32,6 +32,58 @@ func TestGoalCreateCardSeparatesSections(t *testing.T) {
 	}
 }
 
+// D223: all goal tool sections use the same spacing. Upstream pi 4a080252
+// components/tool-execution.ts mounts call and result components consecutively,
+// so the native goal renderers own the blank line at their shared boundary.
+func TestGoalToolCardsSeparateEverySection(t *testing.T) {
+	_ = newRendererTestTheme(t)
+	for _, tc := range []struct {
+		name, tool, args, details, result, want string
+		isError                                 bool
+	}{
+		{name: "get", tool: "get_goal", args: `{}`, details: `{"goal":{"revision":1,"objective":"Ship the widget","phase":"active","armed":true}}`,
+			want: "Get goal\n\nactive · rev 1 · 0 rounds\n\nShip the widget"},
+		{name: "get empty", tool: "get_goal", args: `{}`, details: `{"goal":null}`,
+			want: "Get goal\n\nNo goal set"},
+		{name: "get details", tool: "get_goal", args: `{}`, details: `{"goal":{"revision":2,"objective":"Ship the widget","phase":"blocked","budget":{"tokenLimit":500},"usedTokens":120,"blockedReason":{"code":"dependency","message":"Waiting on access"}}}`,
+			want: "Get goal\n\nblocked · rev 2 · 0 rounds\n\nShip the widget\n\nbudget: tokens 120/500\nreason: dependency: Waiting on access"},
+		{name: "create", tool: "set_goal", args: `{"objective":"Ship the widget"}`, details: `{"goal":{"revision":1,"phase":"active"}}`,
+			want: "Set goal\n\nShip the widget\n\nGoal created ✓ · rev 1"},
+		{name: "replace", tool: "set_goal", args: `{"objective":"Ship the widget"}`, details: `{"goal":{"revision":1,"phase":"active"}}`, result: "Goal replaced (id g1, revision 1).",
+			want: "Set goal\n\nShip the widget\n\nGoal replaced ✓ · rev 1"},
+		{name: "complete", tool: "set_goal", args: `{"status":"complete"}`, details: `{"action":"complete","goal":{"phase":"complete"}}`,
+			want: "Set goal → complete\n\nGoal complete ✓"},
+		{name: "blocked", tool: "set_goal", args: `{"status":"blocked","blocked_reason":"Waiting on access"}`, details: `{"action":"blocked","goal":{"phase":"blocked"}}`,
+			want: "Set goal → blocked\n\nWaiting on access\n\nGoal blocked ✓"},
+		{name: "clear", tool: "set_goal", args: `{"status":"clear"}`, details: `{"action":"clear"}`,
+			want: "Set goal → clear\n\nGoal cleared ✓"},
+		{name: "status error", tool: "set_goal", args: `{"status":"complete"}`, isError: true, result: "No active goal",
+			want: "Set goal → complete\n\nNo active goal"},
+		{name: "create error", tool: "set_goal", args: `{"objective":"Ship the widget"}`, isError: true, result: "Could not save goal",
+			want: "Set goal\n\nShip the widget\n\nCould not save goal"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			card := NewToolExecutionComponent(tc.tool, "spacing", json.RawMessage(tc.args),
+				ToolExecutionOptions{}, WithBuiltInRenderers(tc.tool, nil), nil, t.TempDir())
+			result := &SortToolResultContent{IsError: tc.isError, Content: []ToolResultContent{{Type: "text", Text: tc.result}}}
+			if tc.details != "" {
+				result.Details = json.RawMessage(tc.details)
+			}
+			card.UpdateResult(result, false)
+			for _, expanded := range []bool{false, true} {
+				card.SetExpanded(expanded)
+				lines := card.Render(160)
+				for i, line := range lines {
+					lines[i] = strings.TrimSpace(coding.StripAnsi(line))
+				}
+				if got := strings.TrimSpace(strings.Join(lines, "\n")); got != tc.want {
+					t.Fatalf("expanded=%v sections:\n%q\nwant:\n%q", expanded, got, tc.want)
+				}
+			}
+		})
+	}
+}
+
 // D223: lifecycle cards use the same title/body separation as the tool card.
 func TestGoalEntryCardSeparatesTitleFromObjective(t *testing.T) {
 	theme := newRendererTestTheme(t)

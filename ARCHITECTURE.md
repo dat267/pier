@@ -1641,10 +1641,13 @@ The tool cards are multi-line like the built-in ones: `set_goal` shows the
 objective as a wrapped body with a compact created/replaced outcome line, and
 `get_goal` shows state, objective, budget usage and any stop reason, with a
 click/expand preview for long text (`internal/goal/render.go`). Goal cards leave
-a blank line between their title and body, and creation tool cards separate
-the objective from the outcome with a blank line. Handled mouse events mark
-the custom-entry wrapper dirty, so renderer-local expand/collapse changes
-invalidate its revision and repaint in the cached transcript.
+one blank line between nonempty sections: title, status, objective, optional
+budget/blocker details, and tool outcome (including errors). This applies to
+creation, completion, blocked, clear and empty-goal results as well as durable
+lifecycle cards. Label-only events and admitted-round entries remain compact.
+Handled mouse events mark the custom-entry wrapper dirty, so renderer-local
+expand/collapse changes invalidate its revision and repaint in the cached
+transcript.
 
 A collapsed goal card is capped by lines, not characters: the same five-line
 preview the shell card uses, followed by `... (N more lines, click or expand for

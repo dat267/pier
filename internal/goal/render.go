@@ -142,7 +142,7 @@ func RenderGoalChangeEntry(data GoalChangeEntry, theme Theme, expanded bool) *tu
 	if data.Goal != nil {
 		body = data.Goal.Objective
 		if data.Goal.BlockedReason != nil {
-			body += "\n" + data.Goal.BlockedReason.Code + ": " + data.Goal.BlockedReason.Message
+			body += "\n\n" + data.Goal.BlockedReason.Code + ": " + data.Goal.BlockedReason.Message
 		}
 		detail = fmt.Sprintf("rev %d", data.Goal.Revision)
 	}
@@ -248,7 +248,7 @@ func goalHiddenHint(hidden int) string {
 // of the built-in tool cards.
 func RenderGetGoalRenderResult(goal *GoalView, theme Theme, expanded bool) *tui.Text {
 	if goal == nil {
-		return tui.NewText(theme.Fg("muted", "No goal set"), 0, 0, nil)
+		return tui.NewText("\n"+theme.Fg("muted", "No goal set"), 0, 0, nil)
 	}
 	state := fmt.Sprintf("%s · rev %d · %d rounds", goal.Phase, goal.Revision, goal.TurnsStarted)
 	if goal.Phase == PhaseActive && !goal.Armed {
@@ -258,12 +258,15 @@ func RenderGetGoalRenderResult(goal *GoalView, theme Theme, expanded bool) *tui.
 	if stateColor == "" {
 		stateColor = "success"
 	}
-	lines := []string{theme.Fg(stateColor, state)}
+	lines := []string{"", theme.Fg(stateColor, state), ""}
 
 	objective, hidden := goalPreview(goal.Objective, expanded)
 	lines = append(lines, theme.Fg("toolOutput", objective))
 	if hidden > 0 {
 		lines = append(lines, theme.Fg("muted", ai.JSTrim(goalHiddenHint(hidden))))
+	}
+	if goal.Budget != nil || goal.BlockedReason != nil {
+		lines = append(lines, "")
 	}
 	if goal.Budget != nil {
 		elapsed := time.Now().UnixMilli() - goal.CreatedAt
@@ -328,7 +331,7 @@ type SetGoalResult struct {
 // RenderSetGoalRenderResult is the set_goal status result card.
 func RenderSetGoalRenderResult(result SetGoalResult, theme Theme) *tui.Text {
 	if result.IsError {
-		return tui.NewText(theme.Fg("error", result.Text), 0, 0, nil)
+		return tui.NewText("\n"+theme.Fg("error", result.Text), 0, 0, nil)
 	}
 	// Success repeats the durable entry card right below — collapse to a
 	// phase-colored status line instead of the full instruction text.
@@ -343,7 +346,7 @@ func RenderSetGoalRenderResult(result SetGoalResult, theme Theme) *tui.Text {
 	case phase == PhaseBlocked:
 		short = "Goal blocked ✓"
 	}
-	return tui.NewText(theme.Fg(PhaseColor[phase], short), 0, 0, nil)
+	return tui.NewText("\n"+theme.Fg(PhaseColor[phase], short), 0, 0, nil)
 }
 
 // SetGoalCreateResult is the set_goal objective (create or replace) result card
@@ -360,7 +363,7 @@ type SetGoalCreateResult struct {
 // RenderSetGoalCreateResult is the set_goal objective result card.
 func RenderSetGoalCreateResult(result SetGoalCreateResult, theme Theme) *tui.Text {
 	if result.IsError {
-		return tui.NewText(theme.Fg("error", result.Text), 0, 0, nil)
+		return tui.NewText("\n"+theme.Fg("error", result.Text), 0, 0, nil)
 	}
 	label := "Goal created ✓"
 	if result.Replaced {
