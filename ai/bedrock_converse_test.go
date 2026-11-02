@@ -905,3 +905,69 @@ func (c staticAuthContext) Env(name string) (string, bool) {
 }
 
 func (c staticAuthContext) FileExists(string) bool { return false }
+
+// pi v1.5.0 bedrock-converse-stream.ts retries a preferred strict tool once
+// without strict mode when Bedrock rejects it for strict-tool limits, and
+// records the fallback diagnostic.
+func TestBedrockStrictToolLimitFallsBack(t *testing.T) {
+	frames := [][]byte{
+		bedrockEventFrame("messageStart", map[string]any{"role": "assistant"}),
+		bedrockEventFrame("contentBlockDelta", map[string]any{"contentBlockIndex": 0, "delta": map[string]any{"text": "ok"}}),
+		bedrockEventFrame("contentBlockStop", map[string]any{"contentBlockIndex": 0}),
+		bedrockEventFrame("messageStop", map[string]any{"stopReason": "end_turn"}),
+	}
+	var bodies []map[string]any
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		requests++
+		raw, _ := io.ReadAll(request.Body)
+		var body map[string]any
+		_ = json.Unmarshal(raw, &body)
+		bodies = append(bodies, body)
+		if requests == 1 {
+			writer.Header().Set("x-amzn-errortype", "ValidationException")
+			writer.Header().Set("x-amzn-requestid", "req-1")
+			writer.WriteHeader(http.StatusBadRequest)
+			_, _ = writer.Write([]byte(`{"message":"Too many strict tools (20)"}`))
+			return
+		}
+		writer.Header().Set("x-amzn-requestid", "req-2")
+		writer.Header().Set("Content-Type", "application/vnd.amazon.eventstream")
+		writer.WriteHeader(http.StatusOK)
+		for _, frame := range frames {
+			_, _ = writer.Write(frame)
+		}
+	}))
+	defer server.Close()
+
+	model := bedrockTestModel(server.URL)
+	strictSupport := true
+	model.Compat = &ModelCompat{Bedrock: &BedrockCompat{SupportsStrictMode: &strictSupport}}
+	tool := Tool{
+		Name: "strict", Description: "strict tool",
+		Parameters:          json.RawMessage(`{"type":"object","properties":{"x":{"type":"string"}},"required":["x"],"additionalProperties":false}`),
+		ConstrainedSampling: ConstrainedSamplingValue{Set: true, Config: &ConstrainedSamplingConfig{Type: "json_schema", Strict: "prefer"}},
+	}
+	stream := StreamBedrockConverse(model, TranscriptContext{Messages: []Message{
+		&SystemMessage{Content: StringOrBlocks{Text: "be helpful"}, ToolsAdded: []Tool{tool}},
+		&UserMessage{Content: StringOrBlocks{Text: "hi"}, Timestamp: 1},
+	}}, &BedrockOptions{APIKey: "bearer-token", BearerToken: "bearer-token"})
+	message, err := stream.Result(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if message.StopReason != StopStop || requests != 2 {
+		t.Fatalf("stop=%s requests=%d", message.StopReason, requests)
+	}
+	first := bodies[0]["toolConfig"].(map[string]any)["tools"].([]any)[0].(map[string]any)["toolSpec"].(map[string]any)
+	second := bodies[1]["toolConfig"].(map[string]any)["tools"].([]any)[0].(map[string]any)["toolSpec"].(map[string]any)
+	if first["strict"] != true {
+		t.Fatalf("first toolSpec strict = %v", first["strict"])
+	}
+	if _, ok := second["strict"]; ok {
+		t.Fatalf("retry kept strict mode: %v", second)
+	}
+	if len(message.Diagnostics) != 1 || message.Diagnostics[0].Type != "bedrock_strict_tools_fallback" {
+		t.Fatalf("diagnostics = %+v", message.Diagnostics)
+	}
+}

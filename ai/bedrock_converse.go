@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -535,14 +536,34 @@ func decodeBedrockRedactedContent(signature *string) []byte {
 // convertToolConfig) and reports an invalid required strict schema so the
 // stream stops before the payload hook or HTTP.
 func convertBedrockToolConfig(tools []Tool, toolChoice string, toolChoiceName string, supportsStrictMode bool) (map[string]any, error) {
+	config, _, err := convertBedrockToolConfigWithPreferred(tools, toolChoice, toolChoiceName, supportsStrictMode, false)
+	return config, err
+}
+
+// convertBedrockToolConfigWithPreferred renders the tool configuration and
+// reports whether any strict tool was only preferred, so a strict-limit
+// ValidationException can retry without those tools (pi v1.5.0
+// bedrock-converse-stream.ts).
+func convertBedrockToolConfigWithPreferred(tools []Tool, toolChoice string, toolChoiceName string, supportsStrictMode bool, disablePreferredStrictTools bool) (map[string]any, bool, error) {
 	if len(tools) == 0 || toolChoice == "none" {
-		return nil, nil
+		return nil, false, nil
 	}
+	hasPreferredStrictTools := false
 	bedrockTools := make([]any, 0, len(tools))
 	for _, tool := range tools {
-		strict, unset, err := ResolveJSONSchemaStrictSampling(tool, supportsStrictMode, nil)
-		if err != nil {
-			return nil, err
+		preferred := PrefersJSONSchemaStrictSampling(tool)
+		var strict, unset bool
+		var err error
+		if disablePreferredStrictTools && preferred {
+			unset = true
+		} else {
+			strict, unset, err = ResolveJSONSchemaStrictSampling(tool, supportsStrictMode, nil)
+			if err != nil {
+				return nil, false, err
+			}
+		}
+		if strict && preferred {
+			hasPreferredStrictTools = true
 		}
 		spec := map[string]any{
 			"name":        tool.Name,
@@ -571,7 +592,7 @@ func convertBedrockToolConfig(tools []Tool, toolChoice string, toolChoiceName st
 	if choice != nil {
 		config["toolChoice"] = choice
 	}
-	return config, nil
+	return config, hasPreferredStrictTools, nil
 }
 
 var bedrockOpenAIGPTEffort = map[ThinkingLevel]string{
@@ -820,14 +841,6 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 		if toolChoice == "tool" && options.ToolChoiceName != "" {
 			toolChoice = "tool"
 		}
-		toolConfig, err := convertBedrockToolConfig(GetCurrentTools(normalizedContext.Messages), toolChoice, options.ToolChoiceName, supportsStrictMode)
-		if err != nil {
-			fail(err, "", 0, nil)
-			return
-		}
-		if toolConfig != nil {
-			commandInput["toolConfig"] = toolConfig
-		}
 		if additional := BuildBedrockAdditionalModelRequestFields(model, options); additional != nil {
 			encoded, err := marshalBedrockAdditionalFields(additional)
 			if err != nil {
@@ -844,77 +857,120 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 			}
 			commandInput["requestMetadata"] = metadata
 		}
-		var payload any = commandInput
-		requestModel := model
-		if options.OnPayload != nil {
-			// D-row D268: an image or redacted byte slice is base64 in this
-			// JSON hook, where upstream supplies a native Uint8Array.
-			hookPayload, err := marshalBedrockCommand(commandInput, true)
+
+		// A preferred strict tool can exceed Bedrock's strict-tool limits, which
+		// it reports as a ValidationException before streaming starts. Retry once
+		// without declaring those tools strict (pi v1.5.0
+		// bedrock-converse-stream.ts).
+		disablePreferredStrictTools := false
+		hasPreferredStrictTools := false
+		var response *http.Response
+		for {
+			delete(commandInput, "toolConfig")
+			toolConfig, hasPreferred, err := convertBedrockToolConfigWithPreferred(
+				GetCurrentTools(normalizedContext.Messages), toolChoice, options.ToolChoiceName,
+				supportsStrictMode, disablePreferredStrictTools)
 			if err != nil {
 				fail(err, "", 0, nil)
 				return
 			}
-			if next := options.OnPayload(hookPayload, model); next != nil {
-				var target struct {
-					ModelID string `json:"modelId"`
-				}
-				if err := jsonUnmarshalStrict(next, &target); err != nil {
+			if hasPreferred {
+				hasPreferredStrictTools = true
+			}
+			if toolConfig != nil {
+				commandInput["toolConfig"] = toolConfig
+			}
+
+			var payload any = commandInput
+			requestModel := model
+			if options.OnPayload != nil {
+				// D-row D268: an image or redacted byte slice is base64 in this
+				// JSON hook, where upstream supplies a native Uint8Array.
+				hookPayload, err := marshalBedrockCommand(commandInput, true)
+				if err != nil {
 					fail(err, "", 0, nil)
 					return
 				}
-				if target.ModelID == "" {
-					fail(fmt.Errorf("modelId is required"), "", 0, nil)
-					return
+				if next := options.OnPayload(hookPayload, model); next != nil {
+					var target struct {
+						ModelID string `json:"modelId"`
+					}
+					if err := jsonUnmarshalStrict(next, &target); err != nil {
+						fail(err, "", 0, nil)
+						return
+					}
+					if target.ModelID == "" {
+						fail(fmt.Errorf("modelId is required"), "", 0, nil)
+						return
+					}
+					copy := *model
+					copy.ID = target.ModelID
+					requestModel, payload = &copy, next
 				}
-				copy := *model
-				copy.ID = target.ModelID
-				requestModel, payload = &copy, next
 			}
-		}
-		body, err := marshalBedrockCommand(payload, false)
-		if err != nil {
-			fail(err, "", 0, nil)
-			return
-		}
-
-		requestURL := bedrockRequestURL(requestModel, region, useExplicitEndpoint)
-		customHeaders := map[string]string{}
-		for name, value := range options.Headers {
-			if value == nil {
-				continue
-			}
-			if !IsReservedBedrockHeader(name) {
-				customHeaders[name] = *value
-			}
-		}
-
-		request, err := http.NewRequestWithContext(ctx, http.MethodPost, requestURL, bytes.NewReader(body))
-		if err != nil {
-			fail(err, "", 0, nil)
-			return
-		}
-		request.Header.Set("content-type", "application/json")
-		// D-row D266: detailed mode sends pi/1.4.0 in both UA headers,
-		// without an aws-sdk-js/runtime prefix. The raw Go adapter emits
-		// the escaped identity contribution, not fabricated SDK metadata.
-		userAgent := bedrockIdentityUserAgent(options.Identity)
-		request.Header.Set("User-Agent", userAgent)
-		request.Header.Set("x-amz-user-agent", userAgent)
-		for name, value := range customHeaders {
-			request.Header.Set(name, value)
-		}
-		if useBearerToken {
-			request.Header.Set("Authorization", "Bearer "+bearerToken)
-		} else if !skipAuth || !credentials.IsZero() {
-			if _, err := SignAWSRequest(request, body, credentials, "bedrock", region, time.Now()); err != nil {
+			body, err := marshalBedrockCommand(payload, false)
+			if err != nil {
 				fail(err, "", 0, nil)
 				return
 			}
-		}
 
-		response, err := DoProviderRequestWithIdleTimeout(request, options.TimeoutMs, options.HTTPIdleTimeoutMs)
-		if err != nil {
-			fail(err, "", 0, nil)
+			requestURL := bedrockRequestURL(requestModel, region, useExplicitEndpoint)
+			customHeaders := map[string]string{}
+			for name, value := range options.Headers {
+				if value == nil {
+					continue
+				}
+				if !IsReservedBedrockHeader(name) {
+					customHeaders[name] = *value
+				}
+			}
+
+			request, err := http.NewRequestWithContext(ctx, http.MethodPost, requestURL, bytes.NewReader(body))
+			if err != nil {
+				fail(err, "", 0, nil)
+				return
+			}
+			request.Header.Set("content-type", "application/json")
+			// D-row D266: detailed mode sends pi/1.4.0 in both UA headers,
+			// without an aws-sdk-js/runtime prefix. The raw Go adapter emits
+			// the escaped identity contribution, not fabricated SDK metadata.
+			userAgent := bedrockIdentityUserAgent(options.Identity)
+			request.Header.Set("User-Agent", userAgent)
+			request.Header.Set("x-amz-user-agent", userAgent)
+			for name, value := range customHeaders {
+				request.Header.Set(name, value)
+			}
+			if useBearerToken {
+				request.Header.Set("Authorization", "Bearer "+bearerToken)
+			} else if !skipAuth || !credentials.IsZero() {
+				if _, err := SignAWSRequest(request, body, credentials, "bedrock", region, time.Now()); err != nil {
+					fail(err, "", 0, nil)
+					return
+				}
+			}
+
+			response, err = DoProviderRequestWithIdleTimeout(request, options.TimeoutMs, options.HTTPIdleTimeoutMs)
+			if err != nil {
+				fail(err, "", 0, nil)
+				return
+			}
+			if response.StatusCode < 400 {
+				break
+			}
+			raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
+			_ = response.Body.Close()
+			providerErr := bedrockHTTPError(response.StatusCode, response.Header, raw)
+			if !disablePreferredStrictTools && hasPreferredStrictTools && ctxErr(ctx) == nil &&
+				isBedrockStrictToolLimitError(providerErr) {
+				disablePreferredStrictTools = true
+				output.Diagnostics = append(output.Diagnostics, AssistantMessageDiagnostic{
+					Type: "bedrock_strict_tools_fallback", Timestamp: time.Now().UnixMilli(),
+					Error:   &DiagnosticErrorInfo{Message: providerErr.Error()},
+					Details: json.RawMessage(`{"reason":"strict_tool_limits_exceeded"}`),
+				})
+				continue
+			}
+			fail(providerErr, response.Header.Get("x-amzn-requestid"), response.StatusCode, response.Header)
 			return
 		}
 		defer response.Body.Close()
@@ -925,11 +981,6 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 				headers[strings.ToLower(name)] = strings.Join(values, ", ")
 			}
 			options.OnResponse(ProviderResponse{Status: response.StatusCode, Headers: headers}, model)
-		}
-		if response.StatusCode >= 400 {
-			raw, _ := io.ReadAll(io.LimitReader(response.Body, 1<<20))
-			fail(bedrockHTTPError(response.StatusCode, response.Header, raw), requestID, response.StatusCode, response.Header)
-			return
 		}
 
 		stream.Push(AssistantMessageEvent{Type: EventStart, Partial: output})
@@ -960,6 +1011,19 @@ func StreamBedrockConverse(model *Model, context TranscriptContext, options *Bed
 		stream.End(&output)
 	}()
 	return stream
+}
+
+// isBedrockStrictToolLimitError reports Bedrock's pre-stream ValidationException
+// for request strict-tool limits (pi v1.5.0 constrained-sampling.ts).
+func isBedrockStrictToolLimitError(err error) bool {
+	var providerErr *ProviderError
+	if !errors.As(err, &providerErr) || providerErr.Status != http.StatusBadRequest || providerErr.Code != "ValidationException" {
+		return false
+	}
+	message := providerErr.Message
+	return strings.Contains(message, "The compiled grammar is too large") ||
+		strings.Contains(message, "Too many strict tools (") ||
+		strings.Contains(message, "Schemas contains too many parameters with union types (")
 }
 
 func bedrockHTTPError(status int, headers http.Header, raw []byte) error {

@@ -328,6 +328,15 @@ func GetJSONSchemaToolParameters(tool Tool, strict bool) json.RawMessage {
 	return strictSchema
 }
 
+// PrefersJSONSchemaStrictSampling reports whether the tool asks for strict
+// JSON-schema sampling when the provider supports it (port of
+// prefersJsonSchemaStrictSampling).
+func PrefersJSONSchemaStrictSampling(tool Tool) bool {
+	config := tool.ConstrainedSampling
+	return config.Set && !config.False && config.Config != nil &&
+		config.Config.Type == "json_schema" && config.Config.Strict == "prefer"
+}
+
 // ResolveJSONSchemaStrictSampling resolves whether a tool's json_schema
 // constrained sampling applies (port of resolveJsonSchemaStrictSampling).
 func ResolveJSONSchemaStrictSampling(tool Tool, supportsStrictMode bool, check UnsupportedStrictSchemaKeywordCheck) (strict bool, unset bool, err error) {
