@@ -26,10 +26,20 @@ func TestPrintModeReturnStopsSignalWaiter(t *testing.T) {
 			t.Fatalf("exit = %d", code)
 		}
 	})
-	stack := make([]byte, 1<<20)
-	stack = stack[:runtime.Stack(stack, true)]
-	if strings.Contains(string(stack), "coding.RunPrintMode.func") {
-		t.Fatalf("print signal waiter survived return:\n%s", stack)
+	// The waiter closes signalDone before its goroutine has fully exited, so the
+	// stack can still show it for a scheduler tick after RunPrintMode returns.
+	// Poll briefly; a genuinely leaked waiter remains and fails the test.
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		stack := make([]byte, 1<<20)
+		stack = stack[:runtime.Stack(stack, true)]
+		if !strings.Contains(string(stack), "coding.RunPrintMode.func") {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("print signal waiter survived return:\n%s", stack)
+		}
+		time.Sleep(time.Millisecond)
 	}
 }
 
