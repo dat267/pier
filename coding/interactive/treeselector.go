@@ -50,6 +50,16 @@ type flatNode struct {
 	IsLast             bool
 	Gutters            []gutterInfo
 	IsVirtualRootChild bool
+
+	// The tree is immutable while the selector is open except for labels, so
+	// the decoded message and the lowercased searchable text are computed once
+	// per node instead of once per keystroke (M66).
+	messageDecoded  bool
+	message         treeMessage
+	searchTextCache string
+	searchTextKnown bool
+	hasTextKnown    bool
+	hasText         bool
 }
 
 type horizontalViewportRow struct {
@@ -385,9 +395,9 @@ func (t *TreeList) ApplyFilter() {
 		isCurrentLeaf := t.currentLeafID != nil && entry.ID == *t.currentLeafID
 
 		if entry.Type == "message" && !isCurrentLeaf {
-			message := decodeTreeMessage(entry.Message)
+			message := t.nodeMessage(flatNode)
 			if message.Role == "assistant" {
-				hasText := hasTextContent(message.Content)
+				hasText := t.nodeHasText(flatNode, message)
 				isErrorOrAborted := message.StopReason != "" && message.StopReason != "stop" && message.StopReason != "toolUse"
 				if !hasText && !isErrorOrAborted {
 					continue
@@ -401,9 +411,9 @@ func (t *TreeList) ApplyFilter() {
 		passesFilter := true
 		switch t.filterMode {
 		case FilterUserOnly:
-			passesFilter = entry.Type == "message" && decodeTreeMessage(entry.Message).Role == "user"
+			passesFilter = entry.Type == "message" && t.nodeMessage(flatNode).Role == "user"
 		case FilterNoTools:
-			passesFilter = !isSettingsEntry && !(entry.Type == "message" && decodeTreeMessage(entry.Message).Role == "toolResult")
+			passesFilter = !isSettingsEntry && !(entry.Type == "message" && t.nodeMessage(flatNode).Role == "toolResult")
 		case FilterLabeledOnly:
 			passesFilter = flatNode.Node.HasLabel
 		case FilterAll:
@@ -416,7 +426,7 @@ func (t *TreeList) ApplyFilter() {
 		}
 
 		if len(searchTokens) > 0 {
-			nodeText := ai.JSLower(t.getSearchableText(flatNode.Node))
+			nodeText := t.nodeSearchText(flatNode)
 			allMatch := true
 			for _, token := range searchTokens {
 				if !strings.Contains(nodeText, token) {
@@ -655,6 +665,36 @@ func (t *TreeList) getSearchableText(node *coding.SessionTreeNode) string {
 // Invalidate is a no-op.
 func (t *TreeList) Invalidate() {}
 
+// nodeMessage decodes a node's message once and reuses it across filter passes.
+func (t *TreeList) nodeMessage(id *flatNode) treeMessage {
+	if !id.messageDecoded {
+		id.message = decodeTreeMessage(id.Node.Entry.Message)
+		id.messageDecoded = true
+	}
+	return id.message
+}
+
+// nodeHasText reports whether a message carries text blocks, decoding the
+// content once per node rather than once per filter pass.
+func (t *TreeList) nodeHasText(id *flatNode, message treeMessage) bool {
+	if !id.hasTextKnown {
+		id.hasText = hasTextContent(message.Content)
+		id.hasTextKnown = true
+	}
+	return id.hasText
+}
+
+// nodeSearchText is nodeMessage for the searchable text: the lowercased form is
+// reused across keystrokes. A label is part of that text, so UpdateNodeLabel
+// drops the cached value.
+func (t *TreeList) nodeSearchText(id *flatNode) string {
+	if !id.searchTextKnown {
+		id.searchTextCache = ai.JSLower(t.getSearchableText(id.Node))
+		id.searchTextKnown = true
+	}
+	return id.searchTextCache
+}
+
 // GetSearchQuery returns the current search query.
 func (t *TreeList) GetSearchQuery() string { return t.searchQuery }
 
@@ -701,6 +741,9 @@ func (t *TreeList) UpdateNodeLabel(entryID string, label *string, labelTimestamp
 			flatNode.Node.HasLabel = false
 			flatNode.Node.LabelTimestamp = ""
 		}
+		// The label is part of the searchable text; drop the cached form.
+		flatNode.searchTextKnown = false
+		flatNode.searchTextCache = ""
 		return
 	}
 }
