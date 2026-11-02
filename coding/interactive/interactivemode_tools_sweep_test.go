@@ -253,3 +253,38 @@ func TestWiringChatResetDropsPendingSweeps(t *testing.T) {
 		})
 	}
 }
+
+// Rapid ctrl+o toggles while a sweep drains must converge on the last requested
+// state: each restart re-defers the remaining cards with the new target, and a
+// finished drain rebuilds every card exactly once for that target.
+func TestToolSweepConvergesAcrossRapidToggles(t *testing.T) {
+	controller, components := newSweepProbeController(100)
+	expanded := false
+	drain := func() {
+		for controller.MaterializeToolChunk() {
+		}
+	}
+	controller.SetToolsExpanded(true, &expanded, nil, nil)
+	controller.MaterializeToolChunk()
+	controller.SetToolsExpanded(false, &expanded, nil, nil)
+	drain()
+	controller.SetToolsExpanded(true, &expanded, nil, nil)
+	drain()
+	for index, component := range components {
+		if !component.expanded {
+			t.Fatalf("card %d not expanded after true-false-true", index)
+		}
+	}
+
+	controller.SetToolsExpanded(false, &expanded, nil, nil)
+	controller.MaterializeToolChunk()
+	controller.SetToolsExpanded(true, &expanded, nil, nil)
+	controller.MaterializeToolChunk()
+	controller.SetToolsExpanded(false, &expanded, nil, nil)
+	drain()
+	for index, component := range components {
+		if component.expanded {
+			t.Fatalf("card %d still expanded after a toggle ending collapsed", index)
+		}
+	}
+}
