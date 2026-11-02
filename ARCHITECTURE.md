@@ -4106,6 +4106,30 @@ state line now shows an unknown phase as `muted` instead of `success`.
 Tests: `TestGoalEntryRendererRendersUnknownPhase`,
 `TestSetGoalResultRendersUnknownPhase`.
 
+### D341
+
+**Successful remote JSON bodies are capped before they are buffered.**
+
+Reference: pi v1.4.0 (4a080252) parses classifier, MCP Streamable HTTP, and MCP
+OAuth responses without a byte cap. Those documents are untrusted network input
+from a provider, MCP server, or authorization server, and pier buffers them
+before validating, so an endpoint could exhaust process memory. Pier reads them
+through `internal/boundedio` and fails as a protocol error once the body exceeds
+the limit: 1 MiB for classifier, OAuth, and Vertex metadata-token documents, and
+16 MiB for the OpenRouter catalog and MCP JSON-RPC responses (the existing
+`MaxMessageBytes` default, shared with the SSE and stdio paths). Error bodies and
+SSE frames already had their own caps.
+
+Tests: `TestOpenAIDecisionsRejectsOversizedResponseBody`,
+`TestTypeSafeSystemOneRejectsOversizedResponseBody`,
+`TestPersonalizeOpenRouterCatalogRejectsOversizedResponseBody`,
+`TestVertexMetadataTokenRejectsOversizedResponseBody`,
+`TestStreamableHTTPRejectsOversizedJSONResponse`,
+`TestDiscoverProtectedResourceMetadataRejectsOversizedBody`,
+`TestExchangeAuthorizationCodeRejectsOversizedBody`,
+`TestRegisterClientRejectsOversizedBody`, plus the `internal/boundedio` unit
+controls.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

@@ -6,13 +6,17 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/dat267/pier/internal/boundedio"
 )
+
+// oauthResponseBodyLimit is declared in discovery.go; flow.go reuses it for
+// token and registration responses (D341).
 
 // Client auth methods (upstream ClientAuthMethod).
 const (
@@ -362,7 +366,7 @@ func tokenRequest(ctx context.Context, authorizationServerURL string, options To
 	if err != nil {
 		return nil, err
 	}
-	body, err := io.ReadAll(response.Body)
+	body, err := boundedio.ReadAll(response.Body, oauthResponseBodyLimit)
 	_ = response.Body.Close()
 	if err != nil {
 		return nil, err
@@ -471,7 +475,7 @@ func RegisterClient(ctx context.Context, authorizationServerURL string, options 
 	if err != nil {
 		return nil, err
 	}
-	text, err := io.ReadAll(response.Body)
+	text, err := boundedio.ReadAll(response.Body, oauthResponseBodyLimit)
 	_ = response.Body.Close()
 	if err != nil {
 		return nil, err

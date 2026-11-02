@@ -10,10 +10,17 @@ import (
 	"math"
 	"net/http"
 	"strings"
+
+	"github.com/dat267/pier/internal/boundedio"
 )
 
 const openAIDecisionsLabel = "OpenAI Decisions"
 const openAIDecisionsMaxImages = 128
+
+// classifierResponseBodyLimit bounds a successful classifier document. A real
+// response is a few KB; the cap only stops an endpoint from buffering without
+// bound before validation (D341).
+const classifierResponseBodyLimit = 1 << 20
 
 // OpenAIDecisions implements the first-party OpenAI Decisions classifier API
 // (pi v1.4.0 packages/ai/src/api/openai-decisions.ts).
@@ -110,7 +117,7 @@ func (OpenAIDecisions) Classify(model *Model, classifierContext ClassifierContex
 		return classifierFail(result, openAIDecisionsError(err), options)
 	}
 	defer response.Body.Close()
-	data, err := io.ReadAll(response.Body)
+	data, err := boundedio.ReadAll(response.Body, classifierResponseBodyLimit)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil && options.TimeoutMs != nil {
 			return classifierFail(result, fmt.Errorf("Request timed out after %dms", *options.TimeoutMs), options)

@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/dat267/pier/ai"
+	"github.com/dat267/pier/internal/boundedio"
 	"github.com/dat267/pier/mcp/protocol"
 	"golang.org/x/text/encoding/unicode"
 )
@@ -424,7 +425,7 @@ func (t *StreamableHttpTransport) Send(ctx context.Context, message Message) err
 	}
 	switch contentType(response) {
 	case "application/json":
-		data, readErr := io.ReadAll(response.Body)
+		data, readErr := boundedio.ReadAll(response.Body, t.maxMessageBytes())
 		_ = response.Body.Close()
 		if readErr != nil {
 			return readErr
@@ -724,13 +725,20 @@ func discardBody(response *http.Response) {
 	_ = response.Body.Close()
 }
 
+// maxMessageBytes resolves the per-message byte cap: the configured value, or
+// DefaultMaxMessageBytes when the caller did not set one. An explicit zero stays
+// zero (unbounded), matching the stdio transport's option.
+func (t *StreamableHttpTransport) maxMessageBytes() int64 {
+	if t.options.MaxMessageBytes == 0 && !t.options.MaxMessageBytesSet {
+		return DefaultMaxMessageBytes
+	}
+	return t.options.MaxMessageBytes
+}
+
 // consumeSse parses one SSE stream, tracking resumption state.
 func (t *StreamableHttpTransport) consumeSse(body io.ReadCloser, cursor *streamCursor, onMessage func(Message)) error {
 	defer body.Close()
-	maxEventBytes := t.options.MaxMessageBytes
-	if maxEventBytes == 0 && !t.options.MaxMessageBytesSet {
-		maxEventBytes = DefaultMaxMessageBytes
-	}
+	maxEventBytes := t.maxMessageBytes()
 	return ConsumeSseStream(body, ConsumeSseOptions{
 		MaxEventBytes:    maxEventBytes,
 		MaxEventBytesSet: true,

@@ -8,10 +8,17 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/dat267/pier/internal/boundedio"
 )
 
 const openRouterDefaultBaseURL = "https://openrouter.ai/api/v1"
 const openRouterUserModelsTimeout = 15 * time.Second
+
+// openRouterCatalogBodyLimit bounds the successful model-list document. It is
+// far above a real catalog (a few MB) and keeps a malicious or compromised
+// endpoint from buffering without bound (D341).
+const openRouterCatalogBodyLimit = 16 << 20
 
 // PersonalizeOpenRouterCatalog narrows an OpenRouter catalog to the chat models
 // available to the refreshing credential, using that key's model limits and prices.
@@ -66,7 +73,11 @@ func PersonalizeOpenRouterCatalog(catalog []*Model, refresh *RefreshModelsContex
 	var body struct {
 		Data json.RawMessage `json:"data"`
 	}
-	if err := json.NewDecoder(response.Body).Decode(&body); err != nil || len(body.Data) == 0 || body.Data[0] != '[' {
+	raw, err := boundedio.ReadAll(response.Body, openRouterCatalogBodyLimit)
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(raw, &body); err != nil || len(body.Data) == 0 || body.Data[0] != '[' {
 		return nil, fmt.Errorf("Invalid OpenRouter model list response")
 	}
 	var rows []json.RawMessage

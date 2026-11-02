@@ -13,8 +13,15 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/dat267/pier/internal/boundedio"
 	"github.com/dat267/pier/mcp/protocol"
 )
+
+// oauthResponseBodyLimit bounds a successful discovery, token, or registration
+// document. Real documents are a few KB; the cap keeps a misconfigured or
+// hostile authorization server from buffering without bound before validation
+// (D341).
+const oauthResponseBodyLimit = 1 << 20
 
 // McpFetch performs HTTP requests (upstream's fetch injection).
 type McpFetch func(ctx context.Context, request *http.Request) (*http.Response, error)
@@ -208,7 +215,7 @@ func DiscoverProtectedResourceMetadata(ctx context.Context, serverURL string, op
 		discard(response)
 		return nil, &statusError{message: fmt.Sprintf("HTTP %d loading OAuth protected resource metadata", status)}
 	}
-	body, err := io.ReadAll(response.Body)
+	body, err := boundedio.ReadAll(response.Body, oauthResponseBodyLimit)
 	_ = response.Body.Close()
 	if err != nil {
 		return nil, err
@@ -304,7 +311,7 @@ func DiscoverAuthorizationServerMetadata(ctx context.Context, authorizationServe
 			}
 			return nil, &statusError{message: fmt.Sprintf("HTTP %d loading authorization server metadata from %s", status, candidate.URL)}
 		}
-		body, err := io.ReadAll(response.Body)
+		body, err := boundedio.ReadAll(response.Body, oauthResponseBodyLimit)
 		_ = response.Body.Close()
 		if err != nil {
 			return nil, err
@@ -365,7 +372,7 @@ func DiscoverOAuthServerInfo(ctx context.Context, serverURL string, options Disc
 			discard(response)
 			return nil, &statusError{message: fmt.Sprintf("HTTP %d loading authorization server metadata from %s", status, parsed)}
 		}
-		body, err := io.ReadAll(response.Body)
+		body, err := boundedio.ReadAll(response.Body, oauthResponseBodyLimit)
 		_ = response.Body.Close()
 		if err != nil {
 			return nil, err

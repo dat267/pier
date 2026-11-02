@@ -10,12 +10,17 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/dat267/pier/internal/boundedio"
 )
 
 const (
 	systemOneLabel  = "System One API"
 	cloudflareLabel = "Cloudflare Workers AI"
 )
+
+// systemOneResponseBodyLimit bounds a successful classifier document (D341).
+const systemOneResponseBodyLimit = 1 << 20
 
 // TypeSafeSystemOne implements the shared TypeSafe classifier protocol used by
 // TypeSafe, OpenRouter, OpenCode and Vercel AI Gateway.
@@ -145,7 +150,7 @@ func classifySystemOne(transport systemOneTransport, model *Model, classifierCon
 		return classifierFail(result, fmt.Errorf("%s", FormatProviderError(NormalizeProviderError(err), transport.label+" error")), options)
 	}
 	defer response.Body.Close()
-	responseBody, err := io.ReadAll(response.Body)
+	responseBody, err := boundedio.ReadAll(response.Body, systemOneResponseBodyLimit)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil && options.TimeoutMs != nil {
 			return classifierFail(result, fmt.Errorf("Request timed out after %dms", *options.TimeoutMs), options)

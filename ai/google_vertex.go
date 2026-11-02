@@ -18,7 +18,14 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/dat267/pier/internal/boundedio"
 )
+
+// vertexMetadataTokenBodyLimit bounds the instance-metadata token document. A
+// real response is a fraction of a KB; the cap stops a misconfigured or hostile
+// metadata host from buffering without bound (D341).
+const vertexMetadataTokenBodyLimit = 1 << 20
 
 // Port of api/google-vertex.ts and the Google Application Default Credentials
 // resolution its client performs.
@@ -463,7 +470,11 @@ func metadataAccessToken(ctx ctxpkg.Context, env ProviderEnv) (string, error) {
 		AccessToken string `json:"access_token"`
 		ExpiresIn   int64  `json:"expires_in"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+	raw, err := boundedio.ReadAll(resp.Body, vertexMetadataTokenBodyLimit)
+	if err != nil {
+		return "", err
+	}
+	if err := json.Unmarshal(raw, &payload); err != nil {
 		return "", err
 	}
 	if payload.AccessToken == "" {
