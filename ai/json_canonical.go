@@ -32,9 +32,14 @@ func canonicalJavaScriptJSON(encoded []byte) ([]byte, error) {
 }
 
 type canonicalParser struct {
-	data []byte
-	pos  int
+	data  []byte
+	pos   int
+	depth int
 }
+
+// maxJSONNestingDepth mirrors the decoder's limit: accepting deeper input would
+// recurse until the stack fails on hostile input instead of reporting an error.
+const maxJSONNestingDepth = 10000
 
 func (p *canonicalParser) skipSpace() {
 	for p.pos < len(p.data) {
@@ -133,6 +138,11 @@ func (p *canonicalParser) number(out []byte) ([]byte, error) {
 }
 
 func (p *canonicalParser) array(out []byte) ([]byte, error) {
+	p.depth++
+	if p.depth > maxJSONNestingDepth {
+		return nil, fmt.Errorf("canonical JSON: exceeded max depth")
+	}
+	defer func() { p.depth-- }()
 	p.pos++
 	out = append(out, '[')
 	p.skipSpace()
@@ -165,6 +175,11 @@ func (p *canonicalParser) array(out []byte) ([]byte, error) {
 }
 
 func (p *canonicalParser) object(out []byte) ([]byte, error) {
+	p.depth++
+	if p.depth > maxJSONNestingDepth {
+		return nil, fmt.Errorf("canonical JSON: exceeded max depth")
+	}
+	defer func() { p.depth-- }()
 	p.pos++
 	p.skipSpace()
 	if p.pos < len(p.data) && p.data[p.pos] == '}' {

@@ -4259,9 +4259,13 @@ arrays append directly. `jsArrayIndexKey` validates digits before `ParseUint`,
 which allocated a syntax error for every ordinary key.
 
 Invalid input falls back to the decoder path, so the standard diagnostic
-wording callers report is unchanged (D269). The scanner's output is pinned
-byte-for-byte against that decoder oracle by `TestCanonicalizeMatchesReference`
-and `FuzzCanonicalizeMatchesReference` (614k inputs in a 30-second run).
+wording callers report is unchanged (D269). The scanner enforces the decoder's
+10,000-level nesting limit; without it, hostile deeply nested input recursed
+until the stack failed instead of reporting an error. The scanner's output is
+pinned byte-for-byte against that decoder oracle by
+`TestCanonicalizeMatchesReference` and `FuzzCanonicalizeMatchesReference` (614k
+inputs in a 30-second run), and `TestCanonicalizeRejectsExcessiveNesting` pins
+the boundary.
 Measured on the same body: canonical pass 55 → 11 ms and 456k → 148k
 allocations; `MarshalJSON` about 38 ms and 304k allocations (benchmarks
 `BenchmarkCanonicalizeLargeJSON`, `BenchmarkMarshalConversation`). Node

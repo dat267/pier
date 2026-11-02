@@ -139,3 +139,16 @@ func FuzzCanonicalizeMatchesReference(f *testing.F) {
 		}
 	})
 }
+
+// The decoder reference rejects nesting deeper than encoding/json's limit
+// (10,000); accepting it would recurse until the stack fails on hostile input.
+func TestCanonicalizeRejectsExcessiveNesting(t *testing.T) {
+	allowed := strings.Repeat("[", 10000) + strings.Repeat("]", 10000)
+	if _, err := canonicalJavaScriptJSON([]byte(allowed)); err != nil {
+		t.Fatalf("depth 10000: %v", err)
+	}
+	rejected := strings.Repeat("[", 10001) + strings.Repeat("]", 10001)
+	if _, err := canonicalJavaScriptJSON([]byte(rejected)); err == nil {
+		t.Fatal("depth 10001 was accepted")
+	}
+}
