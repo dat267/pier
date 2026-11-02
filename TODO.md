@@ -1,4 +1,3 @@
 # Reproduced audit findings
 
-- M95 (medium): the key parser ignores the F1-F12 forms added in v1.5.0: the numeric functional codes 11-24 (`\x1b[11~` ...), the F1/F2/F4 CSI forms (`\x1b[P/Q/S`, `\x1b[1;<mod>P/Q/S`), the legacy SS3/CSI/Linux-console sequences, the PUA exclusion that keeps unmapped kitty functional keys out of text, and the `P`/`Q`/`S` release/repeat markers. Those keys (and `shift+f1`, `ctrl+f5`) do not parse at all. Evidence: `tui/testdata/keys_golden.txt` regenerated from v1.5.0.
-- M96 (low): word wrap mishandles styled whitespace: a token whose codes close a styled word is treated as non-whitespace, dropped spaces lose their closing codes (so the style bleeds or reopens), long tokens are trimmed after the reset is appended, and strikethrough is not closed at line end. Pinned pi v1.5.0 fixes all four (utils.ts). Evidence: `tui/testdata/wrap/golden.json` regenerated from v1.5.0.
+No open findings.
