@@ -11,6 +11,8 @@ import (
 // merges an override over the base model's tiers
 // (`{ ...model.promptCache, ...override.promptCache }`). Without it, custom
 // models lose the cache-warming lifetimes built-in catalogs provide.
+// pi v1.4.0 providers/model-schema.ts accepts positive numeric prompt-cache
+// lifetimes and numeric cost-tier thresholds without upper bounds.
 func TestModelsJSONSaturatesLargePromptCacheAndCostNumbers(t *testing.T) {
 	base := ai.CreateProvider(ai.CreateProviderOptions{ID: "custom", Models: []*ai.Model{}})
 	config := &ModelConfig{providers: map[string]ModelsJSONProvider{
@@ -38,6 +40,8 @@ func TestModelsJSONSaturatesLargePromptCacheAndCostNumbers(t *testing.T) {
 	}
 }
 
+// pi v1.4.0 providers/model-schema.ts accepts numeric context/max limits and
+// core/provider-composer.ts applies both model definitions and overrides.
 func TestModelsJSONSaturatesLargeContextAndMaxTokenLimits(t *testing.T) {
 	large := float64(1e308)
 	builtin := &ai.Model{

@@ -227,6 +227,23 @@ func TestModelArgumentCompletionReusesSearchItemsBetweenKeystrokes(t *testing.T)
 }
 
 func TestModelArgumentCompletionEmptyPrefixReusesCachedScopeItems(t *testing.T) {
+	// Isolate the process-wide TotalAlloc delta from other package test activity.
+	const childEnv = "PIER_TEST_MODEL_COMPLETION_EMPTY_PREFIX_ALLOC_CHILD"
+	if os.Getenv(childEnv) != "1" {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestModelArgumentCompletionEmptyPrefixReusesCachedScopeItems$")
+		command.Env = append(os.Environ(), childEnv+"=1")
+		output, err := command.CombinedOutput()
+		if ctx.Err() != nil {
+			t.Fatalf("isolated allocation probe timed out: %s", output)
+		}
+		if err != nil {
+			t.Fatalf("isolated allocation probe failed: %v\n%s", err, output)
+		}
+		return
+	}
+
 	const modelCount = 4096
 	model := &ai.Model{Provider: "test", ID: "model"}
 	models := make([]coding.ScopedModel, modelCount)
