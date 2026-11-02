@@ -281,9 +281,11 @@ type GenerateBranchSummaryOptions struct {
 	CustomInstructions  string
 	ReplaceInstructions bool
 	ReserveTokens       *int
-	StreamFn            StreamFnFn
-	Retry               *ai.RetryPolicy
-	Callbacks           *SummarizationCallbacks
+	// ThinkingLevel is the session's level; a reasoning model summarizes at it.
+	ThinkingLevel ai.ThinkingLevel
+	StreamFn      StreamFnFn
+	Retry         *ai.RetryPolicy
+	Callbacks     *SummarizationCallbacks
 }
 
 // GenerateBranchSummary summarizes the abandoned branch entries.
@@ -325,6 +327,9 @@ func GenerateBranchSummary(entries []SessionEntry, options GenerateBranchSummary
 	})
 	requestOptions := &ai.SimpleStreamOptions{
 		APIKey: options.APIKey, Headers: options.Headers,
+	}
+	if summarizationReasoningEnabled(options.Model, options.ThinkingLevel) {
+		requestOptions.Reasoning = options.ThinkingLevel
 	}
 	if len(options.Env) > 0 {
 		requestOptions.Env = options.Env
@@ -456,9 +461,10 @@ func (s *AgentSession) NavigateTree(ctx context.Context, targetID string, option
 			Model: request.Model, APIKey: request.APIKey, Headers: request.Headers, Env: request.Env,
 			Ctx: summaryCtx, CustomInstructions: options.CustomInstructions,
 			ReplaceInstructions: options.ReplaceInstructions, ReserveTokens: &reserveTokens,
-			StreamFn:  s.compactionStreamFn(),
-			Retry:     s.retrySettings(),
-			Callbacks: s.summarizationRetryCallbacks("branchSummary"),
+			ThinkingLevel: s.ThinkingLevel(),
+			StreamFn:      s.compactionStreamFn(),
+			Retry:         s.retrySettings(),
+			Callbacks:     s.summarizationRetryCallbacks("branchSummary"),
 		})
 		if err != nil {
 			return nil, err

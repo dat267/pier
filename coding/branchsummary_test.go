@@ -784,6 +784,46 @@ func TestFreshSessionPersistsItsInitialToolDeclaration(t *testing.T) {
 // A branch summary takes no output limit either: upstream v1.4.0 6fcb48670
 // removed the hardcoded 4096 cap so the provider sizes the answer from the
 // request, like every other summary.
+// pi v1.5.0 269afc66a (#11482): a reasoning model summarizes a branch at the
+// session's thinking level, and an off level sends no reasoning at all.
+func TestBranchSummarySendsTheSessionThinkingLevel(t *testing.T) {
+	entries := branchEntries()
+	reasoningModel := &ai.Model{ID: "m", API: ai.APIAnthropicMessages, Provider: "anthropic",
+		ContextWindow: 100000, MaxTokens: 8192, Reasoning: true}
+	run := func(model *ai.Model, level ai.ThinkingLevel) ai.ThinkingLevel {
+		var seen ai.ThinkingLevel
+		streamFn := func(called *ai.Model, _ ai.TranscriptContext, options *ai.SimpleStreamOptions) *ai.AssistantMessageEventStream {
+			seen = options.Reasoning
+			stream := ai.NewAssistantMessageEventStream()
+			go func() {
+				stream.Push(ai.AssistantMessageEvent{Type: ai.EventDone, Reason: ai.StopStop, Message: &ai.AssistantMessage{
+					API: ai.APIAnthropicMessages, Provider: "anthropic", Model: called.ID,
+					Content:    ai.ContentList{ai.TextContent{Text: "## Goal\ndo the thing"}},
+					StopReason: ai.StopStop,
+				}})
+			}()
+			return stream
+		}
+		if _, err := GenerateBranchSummary(entries, GenerateBranchSummaryOptions{
+			Model: model, StreamFn: streamFn, Ctx: ctxpkg.Background(), ThinkingLevel: level,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return seen
+	}
+	if level := run(reasoningModel, ai.ThinkHigh); level != ai.ThinkHigh {
+		t.Fatalf("reasoning = %q, want %q", level, ai.ThinkHigh)
+	}
+	if level := run(reasoningModel, ai.ThinkOff); level != "" {
+		t.Fatalf("off level sent reasoning %q", level)
+	}
+	plainModel := *reasoningModel
+	plainModel.Reasoning = false
+	if level := run(&plainModel, ai.ThinkHigh); level != "" {
+		t.Fatalf("non-reasoning model sent reasoning %q", level)
+	}
+}
+
 func TestBranchSummarySendsNoOutputLimit(t *testing.T) {
 	entries := branchEntries()
 	var limit *int
