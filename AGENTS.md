@@ -15,6 +15,10 @@ unresolved findings.
 - Treat JSON as byte-parity: persist and send through `ai.MarshalJSON`, never
   `encoding/json.Marshal`. Preserve JavaScript key order, stringify behavior and
   truthiness where upstream depends on them.
+- Parity never outranks responsiveness. When an upstream behavior would add a
+  measured stall, a per-keystroke or per-frame cost, or worse UX, keep the port
+  fast and pleasant, and record the difference as a D-row instead of copying it.
+  A cache or fast path needs a measured baseline, not a guess.
 - Every behavior change needs a test citing the upstream source. Cite the
   upstream file/commit in the commit message, using `type(scope): summary`;
   document intentional differences with a reproducing D-row comment and an
