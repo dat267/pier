@@ -100,8 +100,11 @@ type ToolExecutionComponent struct {
 	outputPad int
 	// durationMs is the recorded execution time of the finished call, when the tool reported
 	// one.
-	durationMs    *int64
-	argsComplete  bool
+	durationMs   *int64
+	argsComplete bool
+	// argsPending records an updateArgs since the last display update; the next
+	// render applies it (pi v1.5.0 tool-execution.ts #9265).
+	argsPending   bool
 	result        *SortToolResultContent
 	hideComponent bool
 	frames        *toolFrames
@@ -239,9 +242,15 @@ func (c *ToolExecutionComponent) createResultRegion(component tui.Component) *tu
 }
 
 // UpdateArgs replaces the tool arguments.
+// UpdateArgs shows new partial arguments. Applied at the next render, so a call
+// streaming many argument deltas between two frames runs its renderer once per
+// frame, not once per delta (pi v1.5.0 tool-execution.ts #9265).
 func (c *ToolExecutionComponent) UpdateArgs(args any) {
 	c.args = args
-	c.updateDisplay()
+	c.argsPending = true
+	if c.host != nil {
+		c.host.RequestRender(false)
+	}
 }
 
 // MarkExecutionStarted records that execution began.
@@ -311,6 +320,9 @@ func (c *ToolExecutionComponent) Invalidate() {
 
 // Render renders the component.
 func (c *ToolExecutionComponent) Render(width int) []string {
+	if c.argsPending {
+		c.updateDisplay()
+	}
 	if c.hideComponent {
 		return nil
 	}
@@ -378,6 +390,7 @@ func (c *ToolExecutionComponent) HandleMouse(event tui.TuiMouseEvent) *tui.TuiMo
 }
 
 func (c *ToolExecutionComponent) updateDisplay() {
+	c.argsPending = false
 	theme := ActiveTheme()
 	var bgFn func(string) string
 	switch {
