@@ -4218,6 +4218,29 @@ Tests: `TestSetToolsExpandedRebuildsOnlyTheVisibleWindow`,
 `TestChatResetStopsBothSweeps`,
 `TestWiringChatResetDropsPendingSweeps`.
 
+### D351
+
+**A rejected-candidate run stops the dispatch scan after a fixed budget.**
+
+Reference: pi v1.5.0 runs highlight.js 10.7.3, whose sticky alternation rejects
+a long run with no matching rule in one engine pass. The Go port's per-byte
+dispatch retries an anchored submatcher at each candidate; every retry can scan
+the remaining tail before failing, so a rejected run was quadratic. Measured
+for `0x` repeated under JavaScript: 8 KiB took 0.40 s and 32 KiB 13.7 s, versus
+0.46 s in Node at 32 KiB. After 256 consecutive rejected candidates the port
+now returns no match, and the engine appends the remainder through the normal
+keyword pass (plain text for the rejected run). The same run now takes 23 ms at
+8 KiB and 0.22 s at 32 KiB, faster than the reference. Ordinary inputs find a
+match long before the budget; all generated goldens, the corpus, and the paired
+JavaScript/JSON/Python benchmarks are unchanged.
+
+The difference is bounded and only affects input past 256 rejected candidate
+bytes: rule highlighting resumes only at the next engine scan, while keywords
+still apply to the appended text. `TestRejectedCandidateRunStopsAtBudget` pins
+the short-run reference behavior and the budget cutoff, and
+`BenchmarkHighlightRejectedRun` keeps the cost visible; this is the same
+responsiveness trade as the existing iteration cap.
+
 ### D350
 
 **JSON canonicalization scans bytes instead of decoder tokens.**

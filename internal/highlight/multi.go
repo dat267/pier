@@ -281,8 +281,16 @@ func (m *multiRegex) exec(s string, lastIndex int, jsLines bool, ws *jsWorkspace
 	return m.execScan(s, lastIndex, jsLines, ws)
 }
 
+// maxRejectedCandidates bounds one dispatch scan. Each rejected candidate may
+// run an anchored submatcher that scans the tail before failing, so a long run
+// with no matching rule (e.g. repeated `0x` under JavaScript) is quadratic:
+// 8 KiB took 0.4 s and 32 KiB 13.7 s. Giving up there leaves the remainder as
+// plain text, the same responsiveness guard as the iteration cap (D351).
+const maxRejectedCandidates = 256
+
 func (m *multiRegex) execDispatch(s string, lastIndex int, jsLines bool, ws *jsWorkspace) *match {
 	search := lastIndex
+	rejected := 0
 	for search <= len(s) {
 		candidate := m.indexFirstByte(s, search)
 		if candidate < 0 {
@@ -332,6 +340,10 @@ func (m *multiRegex) execDispatch(s string, lastIndex int, jsLines bool, ws *jsW
 			return regexMatch
 		case manualMatch != nil:
 			return manualMatch
+		}
+		rejected++
+		if rejected >= maxRejectedCandidates {
+			return nil
 		}
 		search++
 	}

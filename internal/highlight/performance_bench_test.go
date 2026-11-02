@@ -58,3 +58,15 @@ func BenchmarkHighlightJSONDocument(b *testing.B) {
 		}
 	}
 }
+
+// A long run with no matching rule made each dispatched candidate rescan the
+// tail; the rejection budget bounds it (D351).
+func BenchmarkHighlightRejectedRun(b *testing.B) {
+	code := strings.Repeat("0x", 4*1024) // 8 KiB, no JavaScript rule matches
+	b.ReportAllocs()
+	for b.Loop() {
+		if _, err := HighlightWith(code, "javascript", true); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
