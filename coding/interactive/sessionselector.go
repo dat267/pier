@@ -483,6 +483,8 @@ type SessionList struct {
 	showPath                    bool
 	confirmingDeletePath        *string
 	currentSessionCanonicalPath string
+	// searchCache keeps the lowercased fields across keystrokes (M137).
+	searchCache *sessionSearchCache
 
 	OnSelect                   func(sessionPath string)
 	OnCancel                   func()
@@ -518,6 +520,7 @@ func NewSessionList(sessions []coding.SessionInfo, showCwd bool, sortMode SortMo
 		currentSessionCanonicalPath: sessionPathKey(currentSessionFilePath),
 		maxVisible:                  10,
 		now:                         time.Now,
+		searchCache:                 newSessionSearchCache(),
 	}
 	list.searchInput.OnSubmit = func(string) {
 		if list.selectedIndex >= 0 && list.selectedIndex < len(list.filtered) {
@@ -597,7 +600,7 @@ func (l *SessionList) FilterSessions(query string) {
 		roots := buildSessionTree(nameFiltered)
 		l.filtered = flattenSessionTree(roots)
 	} else {
-		filtered := FilterAndSortSessions(nameFiltered, query, l.sortMode, NameFilterAll)
+		filtered := FilterAndSortSessionsCached(nameFiltered, query, l.sortMode, NameFilterAll, l.searchCache)
 		l.filtered = make([]flatSessionNode, 0, len(filtered))
 		for _, session := range filtered {
 			l.filtered = append(l.filtered, flatSessionNode{Session: session, Depth: 0, IsLast: true})

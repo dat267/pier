@@ -90,3 +90,30 @@ func BenchmarkSessionSearchRelevance(b *testing.B) {
 		})
 	}
 }
+
+// The search cache is what keeps a keystroke off the lowercasing of every
+// session's message text: an unchanged session reuses its fields, and a changed
+// source invalidates only that session.
+func TestSessionSearchCacheReusesAndInvalidates(t *testing.T) {
+	cache := newSessionSearchCache()
+	session := coding.SessionInfo{ID: "s", Path: "/s.jsonl", Name: "name", Cwd: "/work", AllMessagesText: "text"}
+	first := cache.fields(session)
+	if again := cache.fields(session); again != first {
+		t.Fatal("unchanged session recomputed its fields")
+	}
+	renamed := session
+	renamed.Name = "renamed"
+	if cache.fields(renamed) == first {
+		t.Fatal("a renamed session reused stale fields")
+	}
+	appended := session
+	appended.AllMessagesText += " more"
+	if cache.fields(appended) == first {
+		t.Fatal("a grown transcript reused stale fields")
+	}
+	// A list without the session drops its entry.
+	cache.retain(map[string]bool{})
+	if len(cache.entries) != 0 {
+		t.Fatalf("cache kept %d entries after retain", len(cache.entries))
+	}
+}

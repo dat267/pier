@@ -294,8 +294,64 @@ func ParseSearchQuery(query string) ParsedSearchQuery {
 // separately, so a token never matches across field boundaries; different tokens
 // may match different fields (pi v1.5.0 8c03fef4d).
 func MatchSession(session coding.SessionInfo, parsed ParsedSearchQuery) MatchResult {
-	fields := &sessionSearchFields{session: session}
+	return matchSessionFields(&sessionSearchFields{session: session}, parsed)
+}
 
+// sessionSearchCache memoizes the lowercased fields the search matches against,
+// keyed by session path and invalidated when a matched field changes. Upstream
+// keeps the same cache per SessionInfo object (session-selector-search.ts), so a
+// keystroke stops re-lowercasing megabytes of message text.
+//
+// The cache is owned by the selector and used only on its loop.
+type sessionSearchCache struct {
+	entries map[string]*cachedSessionFields
+}
+
+type cachedSessionFields struct {
+	name, cwd, messages string // sources when the fields were computed
+	fields              sessionSearchFields
+}
+
+func newSessionSearchCache() *sessionSearchCache {
+	return &sessionSearchCache{entries: map[string]*cachedSessionFields{}}
+}
+
+// fields returns the cached fields for session, recomputing them when one of
+// the matched sources changed.
+func (c *sessionSearchCache) fields(session coding.SessionInfo) *sessionSearchFields {
+	if c == nil {
+		return &sessionSearchFields{session: session}
+	}
+	key := session.Path
+	if key == "" {
+		key = session.ID
+	}
+	cached := c.entries[key]
+	if cached == nil || cached.name != session.Name || cached.cwd != session.Cwd || cached.messages != session.AllMessagesText {
+		cached = &cachedSessionFields{name: session.Name, cwd: session.Cwd, messages: session.AllMessagesText}
+		if c.entries == nil {
+			c.entries = map[string]*cachedSessionFields{}
+		}
+		c.entries[key] = cached
+	}
+	cached.fields.session = session
+	return &cached.fields
+}
+
+// retain drops entries whose session was not part of the last list, like the
+// weak cache upstream dropping objects with their sessions.
+func (c *sessionSearchCache) retain(used map[string]bool) {
+	if c == nil {
+		return
+	}
+	for key := range c.entries {
+		if !used[key] {
+			delete(c.entries, key)
+		}
+	}
+}
+
+func matchSessionFields(fields *sessionSearchFields, parsed ParsedSearchQuery) MatchResult {
 	if parsed.Mode == "regex" {
 		if parsed.Regex == nil {
 			return MatchResult{}
@@ -330,6 +386,16 @@ func MatchSession(session coding.SessionInfo, parsed ParsedSearchQuery) MatchRes
 
 // FilterAndSortSessions filters and sorts sessions for the selector.
 func FilterAndSortSessions(sessions []coding.SessionInfo, query string, sortMode SortMode, nameFilter NameFilter) []coding.SessionInfo {
+	return filterAndSortSessions(sessions, query, sortMode, nameFilter, nil)
+}
+
+// FilterAndSortSessionsCached is FilterAndSortSessions with the selector's
+// per-session field cache.
+func FilterAndSortSessionsCached(sessions []coding.SessionInfo, query string, sortMode SortMode, nameFilter NameFilter, cache *sessionSearchCache) []coding.SessionInfo {
+	return filterAndSortSessions(sessions, query, sortMode, nameFilter, cache)
+}
+
+func filterAndSortSessions(sessions []coding.SessionInfo, query string, sortMode SortMode, nameFilter NameFilter, cache *sessionSearchCache) []coding.SessionInfo {
 	filtered := sessions
 	if nameFilter != NameFilterAll {
 		filtered = nil
@@ -348,13 +414,26 @@ func FilterAndSortSessions(sessions []coding.SessionInfo, query string, sortMode
 		return nil
 	}
 
+	used := map[string]bool{}
+	match := func(session coding.SessionInfo) MatchResult {
+		if cache != nil {
+			key := session.Path
+			if key == "" {
+				key = session.ID
+			}
+			used[key] = true
+		}
+		return matchSessionFields(cache.fields(session), parsed)
+	}
+
 	if sortMode == SortRecent {
 		var result []coding.SessionInfo
 		for _, session := range filtered {
-			if MatchSession(session, parsed).Matches {
+			if match(session).Matches {
 				result = append(result, session)
 			}
 		}
+		cache.retain(used)
 		return result
 	}
 
@@ -364,11 +443,12 @@ func FilterAndSortSessions(sessions []coding.SessionInfo, query string, sortMode
 	}
 	var scored []scoredSession
 	for _, session := range filtered {
-		match := MatchSession(session, parsed)
-		if match.Matches {
-			scored = append(scored, scoredSession{session: session, score: match.Score})
+		result := match(session)
+		if result.Matches {
+			scored = append(scored, scoredSession{session: session, score: result.Score})
 		}
 	}
+	cache.retain(used)
 	sort.SliceStable(scored, func(i, j int) bool {
 		if scored[i].score == scored[j].score {
 			return scored[i].session.Modified.After(scored[j].session.Modified)
