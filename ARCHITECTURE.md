@@ -4000,6 +4000,19 @@ intervals still pass through the existing JavaScript timer clamp.
 
 Test: `TestParseXaiDeviceCodeSaturatesLargeFiniteExpiry`.
 
+### D333
+
+**Mistral cached prompt tokens clamp before int64 conversion.**
+
+Reference: pi v1.4.0 `packages/ai/src/api/mistral-conversations.ts` computes
+`Math.min(promptTokens, Math.max(0, cachedTokens))` after accepting only finite
+numbers. Pier's cached-token count is stored as int64; clamp the finite provider
+number to the known prompt-token bound before conversion so huge values cannot
+wrap negative and become a false zero. Ordinary in-range conversion continues
+to truncate as before.
+
+Test: `TestMistralStreamClampsLargeCachedTokenUsage`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

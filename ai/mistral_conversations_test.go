@@ -261,6 +261,24 @@ func TestMistralToolCallIDNormalization(t *testing.T) {
 	}
 }
 
+func TestMistralStreamClampsLargeCachedTokenUsage(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "text/event-stream")
+		_, _ = writer.Write([]byte("data: " + `{"choices":[{"finish_reason":"stop","delta":{}}],"usage":{"prompt_tokens":100,"completion_tokens":0,"total_tokens":100,"prompt_tokens_details":{"cached_tokens":1e308}}}` + "\n\n"))
+		_, _ = writer.Write([]byte("data: [DONE]\n\n"))
+	}))
+	defer server.Close()
+
+	stream := StreamMistralConversations(mistralModel(server.URL), mistralUserContext(), &MistralOptions{APIKey: "test-key"})
+	message, err := stream.Result(ctxpkg.Background())
+	if err != nil {
+		t.Fatalf("err = %v", err)
+	}
+	if message.Usage.CacheRead != 100 || message.Usage.Input != 0 {
+		t.Fatalf("usage = %+v, want all 100 prompt tokens cached", message.Usage)
+	}
+}
+
 func TestMistralStreamEndToEnd(t *testing.T) {
 	var captured *http.Request
 	var body map[string]any

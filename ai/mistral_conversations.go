@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -985,7 +986,7 @@ func mistralCachedPromptTokens(raw json.RawMessage, promptTokens int64) int64 {
 		if !ok {
 			return 0, false
 		}
-		return int64(value), true
+		return mistralCachedTokenCount(value, promptTokens), true
 	}
 	for _, candidate := range []struct{ container, key string }{
 		{"promptTokensDetails", "cachedTokens"},
@@ -999,10 +1000,23 @@ func mistralCachedPromptTokens(raw json.RawMessage, promptTokens int64) int64 {
 	}
 	for _, key := range []string{"numCachedTokens", "num_cached_tokens"} {
 		if value, ok := usage[key].(float64); ok {
-			return min(promptTokens, max(0, int64(value)))
+			return min(promptTokens, max(0, mistralCachedTokenCount(value, promptTokens)))
 		}
 	}
 	return 0
+}
+
+// mistralCachedTokenCount clamps to the prompt count before converting the
+// provider's float, avoiding int64 overflow for finite out-of-range values
+// (D333).
+func mistralCachedTokenCount(value float64, promptTokens int64) int64 {
+	if math.IsNaN(value) || math.IsInf(value, 0) || value <= 0 {
+		return 0
+	}
+	if value >= float64(promptTokens) {
+		return promptTokens
+	}
+	return int64(value)
 }
 
 func buildMistralChatPayload(model *Model, context TranscriptContext, messages []Message, options *MistralOptions) (*mistralChatPayload, error) {
