@@ -523,6 +523,15 @@ const (
 	toolSweepChunkComponents = 8
 )
 
+// ResetSweeps drops any expansion sweep that has not finished. The deferred
+// cards belong to the transcript that is being replaced, so a session switch,
+// branch navigation, or compaction rebuild must not keep rebuilding them: the
+// loop would drain orphans and repaint the new transcript once per beat (M77).
+func (c *QueueController) ResetSweeps() {
+	c.deferredTools = nil
+	c.deferredThinking = nil
+}
+
 // HasToolChunk reports whether the ctrl+o sweep still has deferred cards (the
 // loop's pending-work arm).
 func (c *QueueController) HasToolChunk() bool {

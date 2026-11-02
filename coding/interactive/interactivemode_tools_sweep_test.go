@@ -186,3 +186,70 @@ func TestToolCardExpansionReachesDeferredCards(t *testing.T) {
 		}
 	}
 }
+
+// A session switch, branch navigation or compaction rebuild clears the chat
+// while a sweep may still be draining. The deferred cards belong to the
+// transcript that is being replaced, so the loop must stop rebuilding them
+// instead of touching orphans and repainting the new transcript once per beat
+// (M77).
+func TestChatResetStopsBothSweeps(t *testing.T) {
+	initSweepTheme(t)
+	controller, components := newSweepProbeController(100)
+	expanded := false
+	controller.SetToolsExpanded(true, &expanded, nil, nil)
+	for range 20 {
+		controller.Chat.AddChild(NewAssistantMessageComponent(nil, false, nil, "", 0, nil))
+	}
+	controller.UpdateThinkingBlockVisibility(true)
+	if !controller.HasToolChunk() || !controller.HasThinkingChunk() {
+		t.Fatal("both sweeps must be deferred for the reproduction")
+	}
+	calls := make([]int, len(components))
+	for index, component := range components {
+		calls[index] = component.calls
+	}
+
+	controller.Chat.Clear()
+	controller.ResetSweeps()
+
+	if controller.HasToolChunk() || controller.HasThinkingChunk() {
+		t.Fatal("a cleared chat must not leave a pending sweep")
+	}
+	if controller.MaterializeToolChunk() || controller.MaterializeThinkingChunk() {
+		t.Fatal("the drained sweeps must report no remaining work")
+	}
+	for index, component := range components {
+		if component.calls != calls[index] {
+			t.Fatalf("card %d was rebuilt after the chat was cleared", index)
+		}
+	}
+}
+
+// initSweepTheme gives components that theme their text a palette.
+func initSweepTheme(t *testing.T) {
+	t.Helper()
+	SetCustomThemesDir(t.TempDir())
+	SetRegisteredThemes(nil)
+	SetTrueColorSupport(true)
+	SetStyleColorsEnabled(true)
+	InitTheme("dark", false)
+}
+
+func TestWiringChatResetDropsPendingSweeps(t *testing.T) {
+	initSweepTheme(t)
+	for name, reset := range map[string]func(*StartupWiring){
+		"clear":  func(w *StartupWiring) { w.ClearChatAndRenderInitialMessages() },
+		"render": func(w *StartupWiring) { w.RenderCurrentSessionState() },
+	} {
+		t.Run(name, func(t *testing.T) {
+			controller, _ := newSweepProbeController(100)
+			expanded := false
+			controller.SetToolsExpanded(true, &expanded, nil, nil)
+			controller.UpdateThinkingBlockVisibility(true)
+			reset(&StartupWiring{Chat: controller.Chat, ResetSweeps: controller.ResetSweeps})
+			if controller.HasToolChunk() || controller.HasThinkingChunk() {
+				t.Fatal("the chat reset must drop the pending sweeps")
+			}
+		})
+	}
+}

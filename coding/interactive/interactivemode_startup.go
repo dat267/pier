@@ -55,6 +55,9 @@ type StartupWiring struct {
 	// ClearCompactionQueue drops the messages queued during a compaction that
 	// belonged to the session being replaced.
 	ClearCompactionQueue func()
+	// ResetSweeps drops the tool/thinking expansion sweeps that targeted the
+	// transcript being replaced (M77).
+	ResetSweeps func()
 	// RenderInitialMessages re-renders the initial transcript.
 	RenderInitialMessages func()
 	// ShowWarning/ShowError/ShowStatus report messages.
@@ -164,12 +167,24 @@ func (w *StartupWiring) CloseInputs() {
 	w.inputsClosedOnce.Do(func() { close(w.inputsClosed) })
 }
 
+// resetChat clears the transcript and drops the expansion sweeps that were
+// rebuilding its cards. Every caller that replaces the transcript goes through
+// here so a pending sweep cannot outlive the components it deferred (M77).
+func (w *StartupWiring) resetChat() {
+	if w.ResetSweeps != nil {
+		w.ResetSweeps()
+	}
+	if w.Chat != nil {
+		w.Chat.Clear()
+	}
+}
+
 // RebuildChatFromMessages re-renders the transcript from the session context.
 func (w *StartupWiring) RebuildChatFromMessages() {
 	if w.Chat == nil || w.SessionInfo == nil || w.Transcript == nil {
 		return
 	}
-	w.Chat.Clear()
+	w.resetChat()
 	// Upstream rebuildChatFromMessages uses the renderSessionEntries defaults:
 	// the footer is invalidated, the editor border refreshed, and the editor
 	// history repopulated.
@@ -181,9 +196,7 @@ func (w *StartupWiring) RebuildChatFromMessages() {
 // renderInitialMessages, so the fork line replaces what was on screen instead of
 // being appended after the abandoned branch.
 func (w *StartupWiring) ClearChatAndRenderInitialMessages() {
-	if w.Chat != nil {
-		w.Chat.Clear()
-	}
+	w.resetChat()
 	if w.RenderInitialMessages != nil {
 		w.RenderInitialMessages()
 	}
@@ -194,9 +207,7 @@ func (w *StartupWiring) RenderCurrentSessionState() {
 	if w.LoadedResources != nil {
 		w.LoadedResources.Clear()
 	}
-	if w.Chat != nil {
-		w.Chat.Clear()
-	}
+	w.resetChat()
 	if w.PendingMessages != nil {
 		w.PendingMessages.Clear()
 	}
@@ -375,5 +386,6 @@ func newStartupWiring(app *App) *StartupWiring {
 		// the transcript through this seam; leaving it unset made the reset a no-op.
 		RenderInitialMessages: func() { app.transcript.RenderInitialMessages() },
 		ClearCompactionQueue:  app.queue.ClearCompactionQueue,
+		ResetSweeps:           app.queue.ResetSweeps,
 	}
 }

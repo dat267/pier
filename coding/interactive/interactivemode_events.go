@@ -53,6 +53,9 @@ type EventDispatcher struct {
 	UpdateEditorBorderColor func()
 	// FlushCompactionQueue drains the queued compaction messages.
 	FlushCompactionQueue func(willRetry bool)
+	// ResetSweeps drops the expansion sweeps that targeted the transcript a
+	// compaction rebuild replaces (M77).
+	ResetSweeps func()
 	// StartWork runs blocking work off the UI loop. The flush can start a
 	// turn, so it must not run inside event application (which would stop the
 	// loop from draining that turn's events). Nil runs inline (tests).
@@ -592,6 +595,9 @@ func (d *EventDispatcher) handleCompactionEnd(event *coding.SessionEvent) {
 		if d.Transcript != nil && d.SessionInfo != nil {
 			entries := d.SessionInfo.BuildContextEntriesForLeaf()
 			if len(entries) > 0 && entries[0].Type == "compaction" {
+				if d.ResetSweeps != nil {
+					d.ResetSweeps()
+				}
 				d.Transcript.Chat.Clear()
 				// Upstream renderSessionEntries defaults: invalidate the footer,
 				// refresh the editor border, repopulate the editor history.

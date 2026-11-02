@@ -4197,13 +4197,22 @@ their previous rendering until their turn, which only a scroll into them could
 observe during the ~1 s catch-up. This mirrors the existing ctrl+t thinking
 sweep.
 
+A pending sweep belongs to the transcript it started on. `QueueController`
+outlives the chat children, so every transcript replacement (session switch,
+branch navigation, compaction rebuild) goes through `StartupWiring.resetChat` or
+`EventDispatcher.ResetSweeps` and calls `QueueController.ResetSweeps` before the
+children are dropped; otherwise the loop would keep rebuilding discarded cards
+and repaint the replacement transcript once per chunk (M77).
+
 Tests: `TestSetToolsExpandedRebuildsOnlyTheVisibleWindow`,
 `TestMaterializeToolChunkExpandsEveryDeferredCard`,
 `TestMaterializeToolChunkIsBounded`,
 `TestSetToolsExpandedRestartsPendingSweep`,
 `TestSetToolsExpandedReportsStatusImmediately`,
 `TestSetToolsExpandedNoOpKeepsDeferredWork`,
-`TestToolCardExpansionReachesDeferredCards`.
+`TestToolCardExpansionReachesDeferredCards`,
+`TestChatResetStopsBothSweeps`,
+`TestWiringChatResetDropsPendingSweeps`.
 
 ### D344
 
