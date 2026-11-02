@@ -186,30 +186,21 @@ func plainCodeBlock(code string, theme *Theme) []string {
 	return lines
 }
 
-// highlightCode is the reference's standalone highlightCode: a registered
-// language gets token colors, anything else gets the plain code-block color,
-// and an internal failure returns the raw lines.
+// highlightCode is the reference's highlightCode: a registered language gets
+// token colors, anything else gets the plain code-block color, and an internal
+// failure keeps that color too (pi v1.5.0 theme.ts).
 func highlightCode(code string, lang string, theme *Theme) []string {
-	return highlightCodeCore(code, lang, theme, true)
-}
-
-// HighlightCode renders a code block for the transcript's markdown theme. It
-// is highlightCode with the reference's markdown fallback: a failure leaves the
-// fence in the plain code-block color rather than dropping its styling.
-func HighlightCode(code string, lang string) []string {
-	return highlightCodeCore(code, lang, ActiveTheme(), false)
-}
-
-func highlightCodeCore(code string, lang string, theme *Theme, rawFallback bool) []string {
 	if !highlight.SupportsLanguage(lang) {
 		return plainCodeBlock(code, theme)
 	}
 	result, err := highlight.HighlightWith(code, lang, true)
 	if err != nil {
-		if rawFallback {
-			return strings.Split(code, "\n")
-		}
 		return plainCodeBlock(code, theme)
 	}
 	return strings.Split(renderHighlightedNodes(result.Nodes, theme), "\n")
+}
+
+// HighlightCode renders a code block for the transcript's markdown theme.
+func HighlightCode(code string, lang string) []string {
+	return highlightCode(code, lang, ActiveTheme())
 }
