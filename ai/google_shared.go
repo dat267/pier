@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -441,6 +442,90 @@ func sanitizeForOpenAPI(schema any) any {
 	}
 }
 
+// googleJSONSchemaNameMaps are schema keywords whose values map names to
+// subschemas, so their keys are not schema keywords (pi v1.5.0
+// google-shared.ts).
+var googleJSONSchemaNameMaps = map[string]bool{
+	"properties": true, "patternProperties": true, "$defs": true,
+	"definitions": true, "dependentSchemas": true, "dependencies": true,
+}
+
+// googleJSONSchemaSubschemas are keywords containing a subschema or an array of
+// subschemas, not literal data.
+var googleJSONSchemaSubschemas = map[string]bool{
+	"additionalProperties": true, "unevaluatedProperties": true, "propertyNames": true,
+	"items": true, "prefixItems": true, "additionalItems": true, "unevaluatedItems": true,
+	"contains": true, "allOf": true, "anyOf": true, "oneOf": true, "not": true,
+	"if": true, "then": true, "else": true, "contentSchema": true,
+}
+
+// rewriteGoogleConstAsEnum rewrites string and number `const` values to
+// single-value `enum`s: Gemini ignores `const` in parametersJsonSchema but
+// honors `enum` (pi v1.5.0 google-shared.ts). Member order is preserved, with
+// `enum` appended where the removed `const` leaves it, like the JS delete and
+// assignment.
+func rewriteGoogleConstAsEnum(raw json.RawMessage, isNameMap bool) json.RawMessage {
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) == 0 {
+		return raw
+	}
+	switch trimmed[0] {
+	case '[':
+		var items []json.RawMessage
+		if json.Unmarshal(trimmed, &items) != nil {
+			return raw
+		}
+		rewritten := make([]json.RawMessage, len(items))
+		for index, item := range items {
+			rewritten[index] = rewriteGoogleConstAsEnum(item, false)
+		}
+		encoded, err := MarshalJSON(rewritten)
+		if err != nil {
+			return raw
+		}
+		return encoded
+	case '{':
+		fields, err := decodeOrderedJSONFields(trimmed)
+		if err != nil {
+			return raw
+		}
+		rewriteConst := false
+		constValue := bytes.TrimSpace(fields.values["const"])
+		if !isNameMap && fields.values["enum"] == nil && len(constValue) > 0 &&
+			(constValue[0] == '"' || constValue[0] == '-' || (constValue[0] >= '0' && constValue[0] <= '9')) {
+			rewriteConst = true
+		}
+		out := &orderedJSONFields{}
+		for _, key := range fields.keys {
+			if rewriteConst && key == "const" {
+				continue
+			}
+			value := fields.values[key]
+			switch {
+			case isNameMap || googleJSONSchemaSubschemas[key]:
+				out.set(key, rewriteGoogleConstAsEnum(value, false))
+			case googleJSONSchemaNameMaps[key]:
+				out.set(key, rewriteGoogleConstAsEnum(value, true))
+			default:
+				out.set(key, value)
+			}
+		}
+		if rewriteConst {
+			enum := make([]byte, 0, len(constValue)+2)
+			enum = append(enum, '[')
+			enum = append(enum, constValue...)
+			enum = append(enum, ']')
+			out.set("enum", enum)
+		}
+		encoded, err := out.marshal()
+		if err != nil {
+			return raw
+		}
+		return encoded
+	}
+	return raw
+}
+
 // ConvertGoogleTools converts tools to Gemini functionDeclarations
 // (port of convertTools).
 func ConvertGoogleTools(tools []Tool, useParameters bool, supportsStrictMode bool) ([]GoogleToolGroup, error) {
@@ -460,7 +545,7 @@ func ConvertGoogleTools(tools []Tool, useParameters bool, supportsStrictMode boo
 			_ = jsonUnmarshalStrict(parameters, &decoded)
 			declaration.Parameters = mustMarshalJSON(sanitizeForOpenAPI(decoded))
 		} else {
-			declaration.ParametersJSONSchema = parameters
+			declaration.ParametersJSONSchema = rewriteGoogleConstAsEnum(parameters, false)
 		}
 		declarations = append(declarations, declaration)
 	}
