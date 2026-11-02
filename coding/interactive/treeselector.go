@@ -882,7 +882,7 @@ func (t *TreeList) getEntryDisplayText(node *coding.SessionTreeNode, isSelected 
 			case message.StopReason == "aborted":
 				result = theme.Fg("success", "assistant: ") + theme.Fg("muted", "(aborted)")
 			case message.ErrorMessage != "":
-				errMsg := ai.JSSlice(normalize(message.ErrorMessage), 0, 80)
+				errMsg := ai.JSSlice(normalize(tui.SanitizeUntrustedText(message.ErrorMessage)), 0, 80)
 				result = theme.Fg("success", "assistant: ") + theme.Fg("error", errMsg)
 			default:
 				result = theme.Fg("success", "assistant: ") + theme.Fg("muted", "(no content)")

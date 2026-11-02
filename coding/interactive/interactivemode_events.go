@@ -616,7 +616,7 @@ func (d *EventDispatcher) handleCompactionEnd(event *coding.SessionEvent) {
 		} else if d.Transcript != nil {
 			theme := ActiveTheme()
 			d.Transcript.Chat.AddChild(tui.NewSpacer(1))
-			d.Transcript.Chat.AddChild(tui.NewText(theme.Fg("error", event.ErrorMessage), 1, 0, nil))
+			d.Transcript.Chat.AddChild(tui.NewText(theme.Fg("error", tui.SanitizeUntrustedText(event.ErrorMessage)), 1, 0, nil))
 		}
 	}
 	if d.FlushCompactionQueue != nil {

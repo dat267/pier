@@ -4130,6 +4130,31 @@ Tests: `TestOpenAIDecisionsRejectsOversizedResponseBody`,
 `TestRegisterClientRejectsOversizedBody`, plus the `internal/boundedio` unit
 controls.
 
+### D342
+
+**Model, provider, and MCP text is stripped of terminal controls before it is
+rendered.**
+
+Reference: pi v1.4.0 (4a080252) `packages/coding-agent` renders assistant text,
+thinking, and provider error text as-is; `packages/tui/src/tui.ts`
+`applyLineResets` also passes CSI controls through, keeping only the D290 OSC
+filter. A provider or model that returns `ESC[2J` therefore clears the user's
+screen, and cursor/mode controls can do worse. Pier treats that text as data:
+`tui.SanitizeUntrustedText` removes every escape sequence (CSI, OSC, DCS, SOS,
+PM, APC, and single-character escapes) and every C0/C1 control except newline
+and tab, and it runs on assistant text and thinking before Markdown rendering,
+on assistant abort/error lines, on chat errors and warnings, on transcript
+status text, on compaction error text, and on the tree selector's error preview.
+Renderer-generated styling, hyperlinks, and image escapes are unaffected
+because they are applied after sanitizing.
+
+Tests: `TestAssistantTextCannotEmitTerminalControls`,
+`TestAssistantThinkingCannotEmitTerminalControls`,
+`TestAssistantErrorMessageCannotEmitTerminalControls`,
+`TestChatErrorCannotEmitTerminalControls`,
+`TestStatusCannotEmitTerminalControls`, and the `tui`
+`SanitizeUntrustedText` unit table.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

@@ -189,7 +189,7 @@ func (w *RunWiring) ShowChatError(message string) {
 	if w.Chat == nil {
 		return
 	}
-	errorMessage := message
+	errorMessage := tui.SanitizeUntrustedText(message)
 	outputPad := w.Display.OutputPad
 	w.Chat.AddChild(tui.NewSpacer(1))
 	w.Chat.AddChild(NewThemedText(func() string { return ActiveTheme().Fg("error", "Error: "+errorMessage) }, outputPad, 0))
@@ -201,7 +201,7 @@ func (w *RunWiring) ShowChatWarning(message string) {
 	if w.Chat == nil {
 		return
 	}
-	warningMessage := message
+	warningMessage := tui.SanitizeUntrustedText(message)
 	w.Chat.AddChild(tui.NewSpacer(1))
 	w.Chat.AddChild(NewThemedText(func() string { return ActiveTheme().Fg("warning", "Warning: "+warningMessage) }, 1, 0))
 	w.requestRender()

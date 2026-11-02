@@ -178,6 +178,9 @@ func (r *TranscriptRenderer) ShowManagedToolStatus(status ManagedToolStatus) {
 
 // ShowStatus shows a status message, replacing a previous consecutive status.
 func (r *TranscriptRenderer) ShowStatus(message string) {
+	// Status text can carry a provider error, i.e. remote data; the terminal
+	// must never execute its control sequences (D342).
+	message = tui.SanitizeUntrustedText(message)
 	children := r.Chat.Children
 	var last, secondLast tui.Component
 	if len(children) > 0 {

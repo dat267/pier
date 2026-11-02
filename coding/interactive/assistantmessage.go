@@ -232,7 +232,7 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 			markdown.Options = tui.MarkdownOptions{
 				Transform: CreateMarkdownTransform("assistant", c.isStreaming, c.transformers),
 			}
-			markdown.SetTextIfChanged(ai.JSTrim(content.Text))
+			markdown.SetTextIfChanged(ai.JSTrim(tui.SanitizeUntrustedText(content.Text)))
 			c.blockComponents[key] = markdown
 			c.contentContainer.AddChild(markdown)
 		case ai.ThinkingContent:
@@ -240,7 +240,7 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 			for ; i < len(blocks); i++ {
 				if thinking, ok := blocks[i].(ai.ThinkingContent); ok {
 					if trimmedNonEmpty(thinking.Thinking) {
-						thinkingBlocks = append(thinkingBlocks, ai.JSTrim(thinking.Thinking))
+						thinkingBlocks = append(thinkingBlocks, ai.JSTrim(tui.SanitizeUntrustedText(thinking.Thinking)))
 					}
 					continue
 				}
@@ -333,14 +333,14 @@ func (c *AssistantMessageComponent) UpdateContent(message *ai.AssistantMessage, 
 	case !hasToolCalls && stopReason == "aborted":
 		abortMessage := "Operation aborted"
 		if message.ErrorMessage != nil && *message.ErrorMessage != "" && *message.ErrorMessage != "Request was aborted" {
-			abortMessage = *message.ErrorMessage
+			abortMessage = tui.SanitizeUntrustedText(*message.ErrorMessage)
 		}
 		c.contentContainer.AddChild(tui.NewSpacer(1))
 		c.contentContainer.AddChild(tui.NewText(theme.Fg("error", abortMessage), c.outputPad, 0, nil))
 	case !hasToolCalls && stopReason == "error":
 		errorMessage := "Unknown error"
 		if message.ErrorMessage != nil && *message.ErrorMessage != "" {
-			errorMessage = *message.ErrorMessage
+			errorMessage = tui.SanitizeUntrustedText(*message.ErrorMessage)
 		}
 		c.contentContainer.AddChild(tui.NewSpacer(1))
 		c.contentContainer.AddChild(tui.NewText(theme.Fg("error", "Error: "+errorMessage), c.outputPad, 0, nil))
