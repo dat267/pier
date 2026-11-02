@@ -416,8 +416,9 @@ func CreateGrepTool(cwd string) agent.AgentTool {
 				content, err := os.ReadFile(filePath)
 				lines := []string{}
 				if err == nil {
+					// Only CRLF is normalized; a lone CR stays in its line
+					// (pi v1.5.0 grep.ts).
 					text := strings.ReplaceAll(DecodeUTF8WithReplacement(content), "\r\n", "\n")
-					text = strings.ReplaceAll(text, "\r", "\n")
 					lines = strings.Split(text, "\n")
 				}
 				fileCache[filePath] = lines

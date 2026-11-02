@@ -356,3 +356,23 @@ func TestGrepToolIgnoresRipgrepConfig(t *testing.T) {
 		t.Fatalf("regex search lost its match: %q", text)
 	}
 }
+
+// pi v1.5.0 grep.ts normalizes only CRLF when it reads a file for context, so a
+// lone CR does not start a new line and the line numbers that follow it stay
+// those ripgrep reported (the output still strips the CR itself).
+func TestGrepToolDoesNotSplitOnLoneCarriageReturn(t *testing.T) {
+	requireBinary(t, "rg")
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "mac.txt"), []byte("alpha\rbeta\ngamma\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	tool := CreateGrepTool(dir)
+	result := execTool(t, tool, `{"pattern":"gamma"}`)
+	text := result.Content[0].(ai.TextContent).Text
+	if !strings.Contains(text, "mac.txt:2: gamma") {
+		t.Fatalf("grep = %q", text)
+	}
+	if strings.Contains(text, "mac.txt:3:") {
+		t.Fatalf("a lone CR split the file: %q", text)
+	}
+}

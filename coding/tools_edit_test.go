@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -251,5 +252,16 @@ func TestPrepareEditArgumentsPreservesKeyOrder(t *testing.T) {
 		if got != test.want {
 			t.Fatalf("PrepareEditArguments(%s) = %s; want %s", test.input, got, test.want)
 		}
+	}
+}
+
+// pi v1.5.0 edit.ts replaces the four v1.4.0 edit guidelines with two.
+func TestEditToolPromptGuidelinesMatchV150(t *testing.T) {
+	want := []string{
+		"Use edit for targeted changes. Batch changes to one file in a single call.",
+		"Each edits[].oldText must exactly and uniquely match the original file. Keep matches short and non-overlapping; merge nearby changes without including large unchanged regions.",
+	}
+	if !reflect.DeepEqual(EditToolSystemPromptGuidelines, want) {
+		t.Fatalf("guidelines = %q", EditToolSystemPromptGuidelines)
 	}
 }
