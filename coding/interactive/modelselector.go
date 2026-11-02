@@ -463,8 +463,14 @@ func (c *ModelSelectorComponent) updateList() {
 		if isSelected {
 			modelText = theme.Fg("accent", item.id)
 		}
+		// Show the display name only when it adds words the id does not
+		// (pi v1.5.0 model-search.ts getDistinctModelName).
+		nameText := ""
+		if name, ok := GetDistinctModelName(item.id, item.model.Name); ok {
+			nameText = theme.Fg("muted", " ("+name+")")
+		}
 		providerBadge := theme.Fg("muted", "["+item.provider+"]")
-		c.listContainer.AddChild(tui.NewText(cursor+currentMarker+modelText+" "+providerBadge+defaultBadge, 0, 0, nil))
+		c.listContainer.AddChild(tui.NewText(cursor+currentMarker+modelText+nameText+" "+providerBadge+defaultBadge, 0, 0, nil))
 	}
 
 	if startIndex > 0 || endIndex < len(c.filteredModels) {

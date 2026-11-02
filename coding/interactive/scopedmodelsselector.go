@@ -430,14 +430,20 @@ func (c *ScopedModelsSelectorComponent) updateList() {
 			modelText = theme.Fg("accent", styledID)
 		}
 		providerBadge := theme.Fg("muted", " [unavailable]")
+		nameText := ""
 		if item.model != nil {
 			providerBadge = theme.Fg("muted", " ["+string(item.model.Provider)+"]")
+			// The display name is shown only when it adds words the id does not
+			// (pi v1.5.0 model-search.ts getDistinctModelName).
+			if name, ok := GetDistinctModelName(item.model.ID, item.model.Name); ok {
+				nameText = theme.Fg("muted", " ("+name+")")
+			}
 		}
 		status := "  "
 		if item.model != nil && item.enabled {
 			status = theme.Fg("accent", "✓ ")
 		}
-		c.listContainer.AddChild(tui.NewText(prefix+status+modelText+providerBadge, 0, 0, nil))
+		c.listContainer.AddChild(tui.NewText(prefix+status+modelText+nameText+providerBadge, 0, 0, nil))
 	}
 
 	if startIndex > 0 || endIndex < len(c.filteredItems) {

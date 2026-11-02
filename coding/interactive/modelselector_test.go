@@ -346,3 +346,27 @@ func TestModelSelectorRefreshApplyStaysOnTheLoop(t *testing.T) {
 		t.Fatalf("a worker apply ran off-loop: status = %q", component.refreshStatusMessage)
 	}
 }
+
+// pi v1.5.0 model-search.ts getDistinctModelName: a name is shown only when it
+// adds words the id does not.
+func TestGetDistinctModelName(t *testing.T) {
+	cases := []struct {
+		id   string
+		name string
+		want string
+		ok   bool
+	}{
+		{"minimax/minimax-m3", "MiniMax M3 [rasmus@openrouter, parasail]", "MiniMax M3 [rasmus@openrouter, parasail]", true},
+		{"claude-3", "Claude 3", "", false},
+		{"gpt-5", "GPT-5", "", false},
+		{"eu.anthropic.claude-sonnet-4-5-20250929-v1:0", "Claude Sonnet 4.5 (EU)", "", false},
+		{"mistral-small-2603", "4", "4", true},
+		{"gpt-5", "  ", "", false},
+	}
+	for _, probe := range cases {
+		got, ok := GetDistinctModelName(probe.id, probe.name)
+		if got != probe.want || ok != probe.ok {
+			t.Fatalf("GetDistinctModelName(%q, %q) = %q,%v; want %q,%v", probe.id, probe.name, got, ok, probe.want, probe.ok)
+		}
+	}
+}
