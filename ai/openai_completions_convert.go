@@ -484,6 +484,12 @@ func ParseChunkUsage(raw []byte, model *Model) Usage {
 	}
 	usage.Reasoning = &reasoning
 	CalculateCost(model, &usage)
+	if IsOpenRouterModel(model) {
+		var accounting OpenRouterUsageAccounting
+		if jsonUnmarshalStrict(raw, &accounting) == nil {
+			ApplyOpenRouterReportedCost(&usage, accounting)
+		}
+	}
 	return usage
 }
 

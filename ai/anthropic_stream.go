@@ -197,6 +197,8 @@ type anthropicStreamUsage struct {
 	OutputTokensDetails *struct {
 		ThinkingTokens *int64 `json:"thinking_tokens"`
 	} `json:"output_tokens_details,omitempty"`
+	// OpenRouter adds its billing block to streamed usage at runtime.
+	OpenRouterUsageAccounting
 }
 
 // IterateAnthropicEvents decodes the response body into wire events, throwing
@@ -638,6 +640,9 @@ func StreamAnthropic(model *Model, context TranscriptContext, options *Anthropic
 			}
 			output.Usage.TotalTokens = output.Usage.Input + output.Usage.Output + output.Usage.CacheRead + output.Usage.CacheWrite
 			CalculateCost(usageModel, &output.Usage)
+			if IsOpenRouterModel(model) {
+				ApplyOpenRouterReportedCost(&output.Usage, u.OpenRouterUsageAccounting)
+			}
 		}
 
 		iterErr := IterateAnthropicEvents(ctx, resp.Body, func(event anthropicStreamEvent) {
