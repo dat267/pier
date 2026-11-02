@@ -226,6 +226,22 @@ func TestResolveProjectTrusted(t *testing.T) {
 	if trusted, _ := ResolveProjectTrusted(ResolveProjectTrustedOptions{Cwd: plain, TrustStore: store}); !trusted {
 		t.Fatal("plain folder must be trusted")
 	}
+	// A saved "Do not trust" survives a project that currently has nothing
+	// trust-requiring: project settings and themes stay ignored (pi v1.5.0
+	// 31ade0e0d, #10947).
+	if err := store.Set(plain, new(false)); err != nil {
+		t.Fatal(err)
+	}
+	if trusted, err := ResolveProjectTrusted(ResolveProjectTrustedOptions{Cwd: plain, TrustStore: store}); err != nil || trusted {
+		t.Fatalf("saved untrusted decision ignored: trusted = %v err = %v", trusted, err)
+	}
+	if err := store.Set(plain, nil); err != nil {
+		t.Fatal(err)
+	}
+	if trusted, _ := ResolveProjectTrusted(ResolveProjectTrustedOptions{Cwd: plain, TrustStore: store}); !trusted {
+		t.Fatal("a cleared decision must be trusted again")
+	}
+
 	// The stored decision wins over the default.
 	if err := store.Set(project, new(true)); err != nil {
 		t.Fatal(err)

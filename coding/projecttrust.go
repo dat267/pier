@@ -45,6 +45,18 @@ func ResolveProjectTrusted(options ResolveProjectTrustedOptions) (bool, error) {
 		return *options.TrustOverride, nil
 	}
 	if !HasTrustRequiringProjectResources(options.Cwd) {
+		// A saved decision survives a project that currently has nothing
+		// trust-requiring, so an explicit "Do not trust" keeps project settings
+		// and themes out (pi v1.5.0 31ade0e0d, #10947).
+		if options.TrustStore != nil {
+			entry, err := options.TrustStore.ReadEntry(options.Cwd)
+			if err != nil {
+				return false, err
+			}
+			if entry != nil {
+				return entry.Decision, nil
+			}
+		}
 		return true, nil
 	}
 	entry, err := options.TrustStore.ReadEntry(options.Cwd)
