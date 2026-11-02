@@ -426,6 +426,7 @@ func TestHTTPIdleTimeoutUsesJavaScriptNumberParsing(t *testing.T) {
 		valid bool
 	}{
 		{"30000ms", 0, false}, {"1 2", 0, false}, {"0x10", 16, true}, {"0b10", 2, true}, {"0o10", 8, true},
+		{"1e308", int64(^uint64(0) >> 1), true},
 		{"+30000", 30000, true}, {".5", 0, true}, {"NaN", 0, false}, {"Infinity", 0, false},
 		{math.NaN(), 0, false}, {math.Inf(1), 0, false}, {math.Inf(-1), 0, false},
 	} {

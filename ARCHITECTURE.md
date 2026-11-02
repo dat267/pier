@@ -4025,6 +4025,18 @@ large positive catalog numbers negative. In-range values preserve truncation.
 
 Test: `TestRadiusGatewayConfigSaturatesLargeNumericFields`.
 
+### D335
+
+**Finite HTTP idle timeout settings saturate at int64 milliseconds.**
+
+Reference: pi v1.4.0 `packages/coding-agent/src/core/http-dispatcher.ts`
+accepts finite nonnegative JavaScript numbers and floors them. Pier stores the
+setting as int64 milliseconds, so finite values beyond that representation now
+saturate at MaxInt64 rather than wrapping negative and being treated as a
+negative/no-timer setting. Ordinary values retain truncation.
+
+Test: `TestHTTPIdleTimeoutUsesJavaScriptNumberParsing`.
+
 ## Lock inventory
 
 Retained and retired locks, and the invariant that governs retirement.

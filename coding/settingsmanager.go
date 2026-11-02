@@ -80,6 +80,9 @@ func ParseHTTPIdleTimeoutMS(value any) (int64, bool) {
 		if math.IsNaN(typed) || math.IsInf(typed, 0) || typed < 0 {
 			return 0, false
 		}
+		if typed >= float64(math.MaxInt64) { // D335: preserve nonnegative timeout for out-of-range finite values.
+			return math.MaxInt64, true
+		}
 		return int64(typed), true
 	case int:
 		if typed < 0 {
