@@ -1720,7 +1720,12 @@ a bracket counter that accepted invalid escapes, raw control characters,
 leading zeros and trailing commas and could turn a corrupt line into a message
 shell (`TestLoadEntriesBufferedRejectsInvalidMessageJSON`,
 `FuzzSessionScanAcceptsOnlyValidJSON`). Strict scanning costs about 2x the
-metadata scan (3 MiB: 2.4 ms to 5.7 ms; still about 600 MB/s).
+metadata scan (3 MiB: 2.4 ms to 5.7 ms; still about 600 MB/s). The fast string
+reader also rejects invalid UTF-8 so the caller decodes it like `JSON.parse`
+(replacement characters); previously a malformed role or id kept its raw bytes
+and the listing disagreed with the typed decode
+(`TestSessionScanRejectsInvalidUTF8Strings`,
+`FuzzScanListingMessageMatchesDecode`).
 
 Measured on a 100 MiB session (30,314 messages): `buildSessionInfo` 1.7s to
 0.3s, and a 105 MiB session directory lists in 0.3s instead of 2.0s.

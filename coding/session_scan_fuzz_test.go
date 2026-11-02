@@ -90,3 +90,27 @@ func TestSessionScanRejectsRawControlInStrings(t *testing.T) {
 		}
 	}
 }
+
+// Raw invalid UTF-8 must fall back to the decoder, which replaces it with
+// U+FFFD; returning the raw bytes made the listing role/text disagree with the
+// typed decode (M147).
+func TestSessionScanRejectsInvalidUTF8Strings(t *testing.T) {
+	for _, line := range []string{
+		"{\"type\":\"mes\x95sage\",\"id\":\"a\",\"timestamp\":\"t\",\"message\":{}}",
+		"{\"type\":\"message\",\"id\":\"a\x95\",\"timestamp\":\"t\",\"message\":{}}",
+		"{\"type\":\"message\",\"id\":\"a\",\"timestamp\":\"t\x95\",\"message\":{}}",
+		"{\"type\":\"message\",\"id\":\"a\",\"timestamp\":\"t\",\"parentId\":\"p\x95\",\"message\":{}}",
+	} {
+		if meta, ok := scanSessionLine([]byte(line)); ok {
+			t.Fatalf("scanner accepted invalid UTF-8 in %q: %+v", line, meta)
+		}
+	}
+	if listing := scanListingMessage([]byte("{\"role\":\"\x95\"}")); listing.ok {
+		t.Fatalf("listing accepted invalid UTF-8 role: %+v", listing)
+	}
+	// String content takes the unescape fallback, which replaces invalid UTF-8
+	// exactly like the typed decoder.
+	if listing := scanListingMessage([]byte("{\"role\":\"user\",\"content\":\"\x95\"}")); !listing.ok || listing.text != "\uFFFD" {
+		t.Fatalf("listing content = %+v; want U+FFFD", listing)
+	}
+}

@@ -19,6 +19,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/dat267/pier/ai"
 )
@@ -450,7 +451,13 @@ func scanPlainStringBytes(s []byte) (content []byte, consumed int, ok bool) {
 	for i := 1; i < len(s); i++ {
 		switch s[i] {
 		case '"':
-			return s[1:i:i], i + 1, true
+			content := s[1:i:i]
+			// The typed decoder replaces invalid UTF-8 with U+FFFD; the fast
+			// path must not pass the raw bytes through (M147).
+			if !utf8.Valid(content) {
+				return nil, 0, false
+			}
+			return content, i + 1, true
 		case '\\':
 			return nil, 0, false
 		}
