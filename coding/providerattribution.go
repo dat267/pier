@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/dat267/pier/ai"
 )
@@ -43,8 +44,13 @@ func IsInstallTelemetryEnabledWithEnv(settingsManager *SettingsManager, telemetr
 
 // RuntimeCredentials overlays non-persistent runtime API keys on a credential
 // store (port of core/runtime-credentials.ts).
+//
+// ModelRuntime serializes writes per provider, but reads (GetAuth,
+// GetAvailable) run on turn goroutines, so the override map needs its own lock
+// (M69). Store calls happen outside it: the store has its own admission.
 type RuntimeCredentials struct {
 	store     ai.CredentialStore
+	mu        sync.RWMutex
 	overrides map[string]string
 }
 
@@ -55,16 +61,22 @@ func NewRuntimeCredentials(store ai.CredentialStore) *RuntimeCredentials {
 
 // SetRuntimeAPIKey records a runtime API key for a provider.
 func (r *RuntimeCredentials) SetRuntimeAPIKey(providerID, apiKey string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.overrides[providerID] = apiKey
 }
 
 // RemoveRuntimeAPIKey drops a runtime API key for a provider.
 func (r *RuntimeCredentials) RemoveRuntimeAPIKey(providerID string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	delete(r.overrides, providerID)
 }
 
 // HasRuntimeAPIKey reports whether a runtime API key is set.
 func (r *RuntimeCredentials) HasRuntimeAPIKey(providerID string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	_, ok := r.overrides[providerID]
 	return ok
 }
@@ -74,7 +86,10 @@ func (r *RuntimeCredentials) Read(providerID string, ctx context.Context) (*ai.C
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	if override, ok := r.overrides[providerID]; ok {
+	r.mu.RLock()
+	override, ok := r.overrides[providerID]
+	r.mu.RUnlock()
+	if ok {
 		return &ai.Credential{Type: ai.CredentialAPIKey, APIKey: &ai.ApiKeyCredential{Key: override}}, nil
 	}
 	return r.store.Read(providerID, ctx)
@@ -89,6 +104,13 @@ func (r *RuntimeCredentials) List(ctx context.Context) ([]ai.CredentialInfo, err
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
+	r.mu.RLock()
+	overrides := make(map[string]string, len(r.overrides))
+	for providerID, key := range r.overrides {
+		overrides[providerID] = key
+	}
+	r.mu.RUnlock()
+
 	byProvider := map[string]ai.CredentialInfo{}
 	var order []string
 	for _, entry := range entries {
@@ -97,7 +119,7 @@ func (r *RuntimeCredentials) List(ctx context.Context) ([]ai.CredentialInfo, err
 		}
 		byProvider[entry.ProviderID] = entry
 	}
-	for providerID := range r.overrides {
+	for providerID := range overrides {
 		if _, seen := byProvider[providerID]; !seen {
 			order = append(order, providerID)
 		}
@@ -124,7 +146,9 @@ func (r *RuntimeCredentials) Delete(providerID string, ctx context.Context) erro
 	if err != nil {
 		return err
 	}
+	r.mu.Lock()
 	delete(r.overrides, providerID)
+	r.mu.Unlock()
 	return nil
 }
 

@@ -568,3 +568,29 @@ func TestIsTruthyEnvFlag(t *testing.T) {
 		}
 	}
 }
+
+// Runtime overrides are process-wide: ModelRuntime queues writes per provider
+// but reads (GetAuth/GetAvailable) run on turn goroutines, so the map itself
+// must be safe for concurrent use (M69).
+func TestRuntimeCredentialsConcurrentOverrideAccess(t *testing.T) {
+	ctx := ctxpkg.Background()
+	overlay := NewRuntimeCredentials(&memoryCredentials{entries: map[string]*ai.Credential{}})
+	var wait sync.WaitGroup
+	wait.Add(2)
+	go func() {
+		defer wait.Done()
+		for index := 0; index < 500; index++ {
+			overlay.SetRuntimeAPIKey("openai", "key")
+			overlay.RemoveRuntimeAPIKey("openai")
+		}
+	}()
+	go func() {
+		defer wait.Done()
+		for index := 0; index < 500; index++ {
+			_, _ = overlay.Read("openai", ctx)
+			_ = overlay.HasRuntimeAPIKey("openai")
+			_, _ = overlay.List(ctx)
+		}
+	}()
+	wait.Wait()
+}
