@@ -104,9 +104,18 @@ func appendJSObjectKey(keys []string, key string) []string {
 }
 
 func jsArrayIndexKey(key string) (uint64, bool) {
-	if key == "" || (len(key) > 1 && key[0] == '0') {
+	if key == "" || (len(key) > 1 && key[0] == '0') || len(key) > 10 {
 		return 0, false
 	}
-	index, err := strconv.ParseUint(key, 10, 32)
-	return index, err == nil && index < 1<<32-1
+	// Validate digits before parsing: ParseUint allocates a syntax error for
+	// every ordinary (non-index) JSON key, which dominated canonicalization
+	// allocations (M143).
+	var index uint64
+	for i := 0; i < len(key); i++ {
+		if key[i] < '0' || key[i] > '9' {
+			return 0, false
+		}
+		index = index*10 + uint64(key[i]-'0')
+	}
+	return index, index < 1<<32-1
 }

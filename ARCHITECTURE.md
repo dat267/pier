@@ -4218,6 +4218,33 @@ Tests: `TestSetToolsExpandedRebuildsOnlyTheVisibleWindow`,
 `TestChatResetStopsBothSweeps`,
 `TestWiringChatResetDropsPendingSweeps`.
 
+### D350
+
+**JSON canonicalization scans bytes instead of decoder tokens.**
+
+Reference: pi v1.5.0 `JSON.stringify` produces JavaScript key order, escaping
+and number text; `ai.MarshalJSON` canonicalizes Go output to those bytes. The
+decoder-based pass (`json.Decoder.Token` recursively, plus a fresh encoder per
+string) cost 55 ms and 456k allocations on a 754 KB conversation body, and
+`MarshalJSON` took about 90–100 ms end to end. The replacement parses one value
+with a byte scanner into a single output buffer, decodes strings with the same
+lone-surrogate and invalid-UTF-8 replacement rules, keeps `JSON.stringify`'s
+control-character escapes and literal U+2028/U+2029, and reuses
+`javascriptJSONNumber`/`appendJSObjectKey` for number text and index-key order.
+Objects still buffer their fields, since keys are reordered and deduplicated;
+arrays append directly. `jsArrayIndexKey` validates digits before `ParseUint`,
+which allocated a syntax error for every ordinary key.
+
+Invalid input falls back to the decoder path, so the standard diagnostic
+wording callers report is unchanged (D269). The scanner's output is pinned
+byte-for-byte against that decoder oracle by `TestCanonicalizeMatchesReference`
+and `FuzzCanonicalizeMatchesReference` (614k inputs in a 30-second run).
+Measured on the same body: canonical pass 55 → 11 ms and 456k → 148k
+allocations; `MarshalJSON` about 38 ms and 304k allocations (benchmarks
+`BenchmarkCanonicalizeLargeJSON`, `BenchmarkMarshalConversation`). Node
+`JSON.stringify` remains faster (about 1.1 ms); the remaining port cost is the
+per-message nested canonicalization and byte-parity transforms, tracked as M143.
+
 ### D349
 
 **Word diffs trim like JavaScript and tokenize without per-token regexes.**
