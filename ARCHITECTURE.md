@@ -3965,10 +3965,12 @@ Test: `TestRemoteCatalogMinimumCheckedAtTriggersRefresh`.
 Reference: pi v1.4.0 `packages/coding-agent/src/extensions/mcp/runtime.ts`
 converts configured seconds to milliseconds, and `packages/mcp/src/client.ts`
 passes positive finite values to `setTimeout`. Pier stores request timeouts as
-int64 milliseconds. Conversion preserves ordinary truncation, clamps positive
-sub-millisecond values to 1ms, and saturates above int64 so the existing
-JavaScript-timer compatibility clamp handles oversized delays instead of
-interpreting a wrapped nonpositive value as no timeout.
+int64 milliseconds. Conversion preserves ordinary truncation, clamps finite
+positive sub-millisecond values to 1ms, and saturates finite oversized delays
+so the existing JavaScript-timer compatibility clamp handles them. If the
+seconds-to-milliseconds product is non-finite, the runtime passes an explicit
+zero to preserve the upstream no-timer behavior instead of falling back to a
+Go default.
 
 Test: `TestMcpServerTimeoutMsClampsConfiguredSeconds`.
 

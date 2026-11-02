@@ -187,11 +187,11 @@ func (c *McpServerConnection) TimeoutMs() int64 {
 	return McpDefaultTimeoutSeconds * 1000
 }
 
-// mcpTimeoutMilliseconds converts a valid positive timeout to the MCP client's
-// millisecond range. D330: preserve positive sub-ms timeouts and avoid int64 wrap.
+// mcpTimeoutMilliseconds converts a configured timeout to the MCP client's
+// millisecond range. D330: preserve finite positive timers and non-finite no-timeout values.
 func mcpTimeoutMilliseconds(seconds float64) int64 {
 	milliseconds := seconds * 1000
-	if math.IsNaN(milliseconds) {
+	if math.IsNaN(milliseconds) || math.IsInf(milliseconds, 0) {
 		return 0
 	}
 	if milliseconds <= 0 {
@@ -481,10 +481,11 @@ func (c *McpServerConnection) connectOnce(ctx context.Context) (*mcp.Client, err
 		roots = append(roots, protocol.Root{URI: pathToFileURL(c.cwd), Name: &name})
 	}
 	client := mcp.NewClient(mcp.ClientOptions{
-		Name:             "pi",
-		Version:          Version,
-		RequestTimeoutMs: c.TimeoutMs(),
-		Roots:            roots,
+		Name:                "pi",
+		Version:             Version,
+		RequestTimeoutMs:    c.TimeoutMs(),
+		RequestTimeoutMsSet: true,
+		Roots:               roots,
 	})
 	c.mu.Lock()
 	if c.closed {

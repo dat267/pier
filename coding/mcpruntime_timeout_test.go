@@ -17,6 +17,7 @@ func TestMcpServerTimeoutMsClampsConfiguredSeconds(t *testing.T) {
 		{name: "sub-millisecond", seconds: 0.000001, want: 1},
 		{name: "ordinary fractional", seconds: 1.5, want: 1500},
 		{name: "above int64 range", seconds: 1e16, want: math.MaxInt64},
+		{name: "non-finite milliseconds from finite seconds", seconds: 1e308, want: 0},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			connection := NewMcpServerConnection(McpServerConnectionOptions{Entry: McpServerEntry{
