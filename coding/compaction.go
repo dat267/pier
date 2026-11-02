@@ -945,6 +945,11 @@ func CombineUsage(first, second ai.Usage) ai.Usage {
 			Total:      first.Cost.Total + second.Cost.Total,
 		},
 	}
+	// A sum is provider-reported only when every part is (pi v1.5.0
+	// usage-totals.ts).
+	fromProvider := first.Cost.TotalFromProvider != nil && *first.Cost.TotalFromProvider &&
+		second.Cost.TotalFromProvider != nil && *second.Cost.TotalFromProvider
+	out.Cost.TotalFromProvider = &fromProvider
 	if first.CacheWrite1h != nil || second.CacheWrite1h != nil {
 		v := int64(0)
 		if first.CacheWrite1h != nil {

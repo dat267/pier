@@ -1165,7 +1165,7 @@ func ListSessions(cwd string, sessionDir string) []SessionInfo {
 
 	var sessions []SessionInfo
 	for _, info := range scanSessionDir(dir) {
-		if filterCwd && ResolvePath(info.Cwd, "", PathInputOptions{}) != resolvedCwd {
+		if filterCwd && !PathsEqual(ResolvePath(info.Cwd, "", PathInputOptions{}), resolvedCwd) {
 			continue
 		}
 		sessions = append(sessions, info)

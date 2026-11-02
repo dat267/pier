@@ -57,12 +57,27 @@ func normalizeTrustCwd(cwd string) string {
 	return CanonicalizePath(ResolvePath(cwd, "", PathInputOptions{}))
 }
 
+// findTrustFileKeys returns the trust file keys naming path. Usually one;
+// several on Windows when saved with different casing (pi v1.5.0
+// trust-manager.ts).
+func findTrustFileKeys(data trustFile, path string) []string {
+	var keys []string
+	for key := range data {
+		if PathsEqual(key, path) {
+			keys = append(keys, key)
+		}
+	}
+	return keys
+}
+
 // findNearestTrustEntry walks up from cwd looking for a decision.
 func findNearestTrustEntry(data trustFile, cwd string) *ProjectTrustStoreEntry {
 	currentDir := normalizeTrustCwd(cwd)
 	for {
-		if value, ok := data[currentDir]; ok && value != nil {
-			return &ProjectTrustStoreEntry{Path: currentDir, Decision: *value}
+		for _, key := range findTrustFileKeys(data, currentDir) {
+			if decision := data[key]; decision != nil {
+				return &ProjectTrustStoreEntry{Path: key, Decision: *decision}
+			}
 		}
 		parentDir := filepath.Dir(currentDir)
 		if parentDir == currentDir {
@@ -241,7 +256,7 @@ func HasTrustRequiringProjectResources(cwd string) bool {
 	}
 	for {
 		agentsSkillsDir := filepath.Join(currentDir, ".agents", "skills")
-		if agentsSkillsDir != userAgentsSkillsDir && PathExists(agentsSkillsDir) {
+		if !PathsEqual(agentsSkillsDir, userAgentsSkillsDir) && PathExists(agentsSkillsDir) {
 			return true
 		}
 		parentDir := filepath.Dir(currentDir)
@@ -318,6 +333,11 @@ func (s *ProjectTrustStore) SetMany(decisions []ProjectTrustUpdate) error {
 	}
 	for _, update := range decisions {
 		key := normalizeTrustCwd(update.Path)
+		// Replace every case variant so a Windows store does not accumulate
+		// duplicates (pi v1.5.0 trust-manager.ts).
+		for _, existingKey := range findTrustFileKeys(data, key) {
+			delete(data, existingKey)
+		}
 		if update.Decision == nil {
 			delete(data, key)
 			continue

@@ -286,6 +286,21 @@ func TestCombineUsage(t *testing.T) {
 	if combined.Reasoning == nil || *combined.Reasoning != 12 {
 		t.Fatalf("reasoning = %v", combined.Reasoning)
 	}
+	// A sum is provider-reported only when every part is (pi v1.5.0
+	// usage-totals.ts).
+	yes, no := true, false
+	first.Cost.TotalFromProvider, second.Cost.TotalFromProvider = &yes, &yes
+	if got := CombineUsage(first, second).Cost.TotalFromProvider; got == nil || !*got {
+		t.Fatalf("both reported: %v", got)
+	}
+	second.Cost.TotalFromProvider = &no
+	if got := CombineUsage(first, second).Cost.TotalFromProvider; got == nil || *got {
+		t.Fatalf("one estimated: %v", got)
+	}
+	second.Cost.TotalFromProvider = nil
+	if got := CombineUsage(first, second).Cost.TotalFromProvider; got == nil || *got {
+		t.Fatalf("unknown part: %v", got)
+	}
 }
 
 func TestPrepareAndCompactFlow(t *testing.T) {

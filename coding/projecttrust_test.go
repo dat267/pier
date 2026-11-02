@@ -1,6 +1,7 @@
 package coding
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -510,5 +511,40 @@ func TestProviderLoginHelpNamesDocsWhenTheyExist(t *testing.T) {
 	help := GetProviderLoginHelp()
 	if !strings.Contains(help, filepath.Join("docs", "providers.md")) || !strings.Contains(help, filepath.Join("docs", "models.md")) {
 		t.Fatalf("login help lost the shipped docs paths: %q", help)
+	}
+}
+
+// pi v1.5.0 trust-manager.ts matches trust keys with pathsEqual and deletes
+// every case/normalization variant on write, so a Windows store cannot keep a
+// stale duplicate.
+func TestProjectTrustStoreMatchesNormalizedKeys(t *testing.T) {
+	dir := t.TempDir()
+	store := NewProjectTrustStore(dir)
+	project := filepath.Join(dir, "proj")
+	variant := filepath.Join(dir, ".", "proj")
+	contents := `{"` + strings.ReplaceAll(variant, `\`, `\\`) + `": true}`
+	if err := os.WriteFile(store.TrustPath(), []byte(contents), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	entry, err := store.ReadEntry(project)
+	if err != nil || entry == nil || !entry.Decision {
+		t.Fatalf("entry = %+v err = %v", entry, err)
+	}
+	if err := store.Set(project, new(false)); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(store.TrustPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var data map[string]any
+	if err := json.Unmarshal(raw, &data); err != nil {
+		t.Fatal(err)
+	}
+	if len(data) != 1 {
+		t.Fatalf("trust file kept %d keys: %s", len(data), raw)
+	}
+	if entry, err := store.ReadEntry(project); err != nil || entry == nil || entry.Decision {
+		t.Fatalf("decision not replaced: %+v err = %v", entry, err)
 	}
 }

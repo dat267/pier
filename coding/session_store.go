@@ -1432,7 +1432,7 @@ func FindMostRecentSession(sessionDir string, cwd string) *string {
 		if header == nil {
 			continue
 		}
-		if resolvedCwd != "" && (header.Cwd == "" || ResolvePath(header.Cwd, "", PathInputOptions{}) != resolvedCwd) {
+		if resolvedCwd != "" && (header.Cwd == "" || !PathsEqual(ResolvePath(header.Cwd, "", PathInputOptions{}), resolvedCwd)) {
 			continue
 		}
 		path := file.path
