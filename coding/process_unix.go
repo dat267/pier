@@ -4,6 +4,7 @@ package coding
 
 import (
 	"os/exec"
+	"runtime"
 	"sync"
 	"syscall"
 )
@@ -18,7 +19,16 @@ func configureDetachedCommand(cmd *exec.Cmd) {
 // killProcessTreePlatform kills the process group with SIGKILL, falling back to
 // the single process if the group kill fails (upstream killProcessTree, the
 // non-win32 branch).
+//
+// Darwin signals group members individually after releasing the group lock, so
+// a killed child can wake its waiting shell and let `a; b` start b during a
+// cancellation. Stopping the group first reduces that race; SIGKILL still
+// reaches stopped processes. Linux signals the shell before a child's exit can
+// be observed, so it needs no stop (pi v1.5.0 shell.ts, #11252).
 func killProcessTreePlatform(pid int) {
+	if runtime.GOOS == "darwin" {
+		_ = syscall.Kill(-pid, syscall.SIGSTOP)
+	}
 	if err := syscall.Kill(-pid, syscall.SIGKILL); err != nil {
 		_ = syscall.Kill(pid, syscall.SIGKILL)
 	}
