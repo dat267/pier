@@ -1,7 +1,7 @@
 # Architecture and performance
 
-This is the design reference for `pier`, a Go port of pi v1.4.0
-(`4a080252`). [AGENTS.md](AGENTS.md) contains contributor rules; use `git log`
+This is the design reference for `pier`, a Go port of pi v1.5.0
+(`f9a26365`). [AGENTS.md](AGENTS.md) contains contributor rules; use `git log`
 for release and review history. The D-rows below record deliberate differences;
 record deliberate differences; the lock inventory is the source of truth for
 retained and retired UI locks.

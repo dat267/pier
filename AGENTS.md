@@ -7,9 +7,11 @@ unresolved findings.
 
 ## Upstream parity
 
-- `./pi` is the pinned upstream implementation (v1.4.0, `4a080252`); pier is a
+- `./pi` is the pinned upstream implementation (v1.5.0, `f9a26365`); pier is a
   near-identical Go port. Read its TypeScript to preserve behavior, not an
-  installed bundle. `just reference` verifies the pin.
+  installed bundle. `just reference` verifies the pin. D-rows and test comments
+  cite the revision a behavior was verified against, so older ones still name
+  v1.4.0 on purpose.
 - Treat JSON as byte-parity: persist and send through `ai.MarshalJSON`, never
   `encoding/json.Marshal`. Preserve JavaScript key order, stringify behavior and
   truthiness where upstream depends on them.

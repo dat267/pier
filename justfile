@@ -118,12 +118,13 @@ reference:
 	if [[ ! -d pi/.git ]]; then
 		echo "reference: no ./pi checkout; clone it at the pin:" >&2
 		echo "      git clone https://github.com/earendil-works/pi pi" >&2
-		echo "      git -C pi checkout --detach v1.4.0   # the pin, see AGENTS.md" >&2
+		echo "      git -C pi checkout --detach <tag>   # the pin in AGENTS.md" >&2
 		exit 1
 	fi
 
-	# "./pi is read-only and pinned to v1.4.0 (`4a080252`)."
-	pin_commit="$(sed -n 's/.*upstream implementation (v1\.4\.0, `\([0-9a-f]*\)`).*/\1/p' AGENTS.md | head -1)"
+	# "./pi is read-only and pinned to vX.Y.Z (`<commit>`)." Both halves come from
+	# that one line, so a pin bump edits AGENTS.md and nothing here.
+	pin_commit="$(sed -n 's/.*upstream implementation (v[0-9.]*, `\([0-9a-f]*\)`).*/\1/p' AGENTS.md | head -1)"
 	pin_tag="$(sed -n 's/.*upstream implementation (\(v[0-9.]*\), `[0-9a-f]*`).*/\1/p' AGENTS.md | head -1)"
 	if [[ -z "$pin_commit" || -z "$pin_tag" ]]; then
 		echo "reference: no pi pin in AGENTS.md" >&2
