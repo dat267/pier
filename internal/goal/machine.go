@@ -723,12 +723,25 @@ func coerceRevision(raw any) (int, bool) {
 	case int:
 		return typed, true
 	case int64:
-		return int(typed), true
-	case float64:
-		if math.IsNaN(typed) || math.IsInf(typed, 0) {
+		if int64(int(typed)) != typed {
 			return 0, false
 		}
 		return int(typed), true
+	case float64:
+		// Accept only an exact integer that fits an int: truncating 1.5 would
+		// match revision 1, and an out-of-range value would convert to an
+		// implementation-defined negative.
+		if math.IsNaN(typed) || math.IsInf(typed, 0) || typed != math.Trunc(typed) {
+			return 0, false
+		}
+		if typed < math.MinInt64 || typed >= float64(math.MaxInt64) {
+			return 0, false
+		}
+		converted := int(typed)
+		if int64(converted) != int64(typed) {
+			return 0, false
+		}
+		return converted, true
 	case string:
 		parsed, err := strconv.Atoi(typed)
 		if err != nil {

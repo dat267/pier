@@ -931,3 +931,31 @@ func TestTurnEntryUsageIsAccumulated(t *testing.T) {
 		t.Fatalf("unexpected cumulative usage: %+v", m.Snapshot().Goal)
 	}
 }
+
+// coerceRevision accepts only an exact integer revision: a fractional float must
+// not match the current revision, and an out-of-range one must not overflow into
+// a negative int in the reply.
+func TestGoalUpdateRejectsInexactRevision(t *testing.T) {
+	machine := NewGoalMachine()
+	machine.Dispatch(GoalCreateEvent{Objective: "probe"})
+	snapshot := machine.Snapshot()
+	if snapshot.Goal == nil {
+		t.Fatal("no goal created")
+	}
+	for _, revision := range []any{1.5, 1e300, -1e300, float64(1<<62) * 4} {
+		result := machine.Dispatch(GoalUpdateEvent{GoalID: snapshot.Goal.ID, Revision: revision, Action: "complete"})
+		if !result.IsError {
+			t.Fatalf("revision %v accepted: %+v", revision, result)
+		}
+		if result.Reply != nil && strings.Contains(*result.Reply, "-9223372036854775808") {
+			t.Fatalf("revision %v overflowed in reply %q", revision, *result.Reply)
+		}
+	}
+	if got := machine.Snapshot().Goal.Phase; got == PhaseComplete {
+		t.Fatal("a non-integer revision completed the goal")
+	}
+	result := machine.Dispatch(GoalUpdateEvent{GoalID: snapshot.Goal.ID, Revision: float64(1), Action: "complete"})
+	if result.IsError {
+		t.Fatalf("exact integer revision rejected: %+v", result)
+	}
+}
